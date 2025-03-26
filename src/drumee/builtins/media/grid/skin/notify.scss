@@ -1,0 +1,68 @@
+@import 'mixins/drumee';
+
+&-notify{
+  &__container{
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    z-index: 500;
+    &[data-count="0"]{
+      visibility: hidden;
+    }
+  }
+  &__count{
+    //margin: 2px auto;
+    //$line:15px    
+    text-align: center;
+    width:18px;
+    height:18px;
+    background-color: $core-default-background;//#ffffff;
+    overflow: hidden;
+    margin:-5px; //-6px;
+    border-radius: 50%;
+    border: 1.3px solid $core-default-border-notification;//#B6BFCA;
+    transition-property: opacity;
+    transition-duration: 0.9s;
+    align-items: center;
+    align-content: center;
+    display: flex;
+    justify-content: center;
+    justify-items: center;
+    flex-direction: column;    
+    @include typo($line:16px,$size:10px,$weight:300,$color:$core-neutral-text-notification);//#626262);//$core-tertiary-text-color);
+    &[data-refresh="1"]{
+      opacity: 0;
+    }
+    &[data-type="private"]{
+      border: $team-notifycount-border 2px solid; //1.5px
+      background-color: $team-default-background;//white;
+      color:$team-text-notification;//#ab47bc;
+      line-height:16px;
+    }
+    &[data-type="folder"]{
+      border: 2px solid $folder-notifycount-border; //#75b1fc
+      background-color: $folder-default-background;//white;
+      color:$folder-text-notification;//#468ee5;
+      line-height:15px;
+    }
+    &[data-type="public"]{
+      border: #18a3ac 2px solid; //1.5px
+      background-color: white;
+      color:#18a3ac;
+      line-height:15px;
+    }
+    &[data-type="share"]{
+      border: $share-notifycount-border 2px solid; //1.5px
+      background-color: $share-default-background;//white;
+      color:$share-text-notification;//$sharebox-text-color;
+      line-height:15px;
+    }
+  }
+}
+
+
+
+
+
+
+

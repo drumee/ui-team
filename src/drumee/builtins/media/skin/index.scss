@@ -1,0 +1,68 @@
+@import "mixins/drumee.scss";
+
+.media {
+  &__ui {
+    &[data-raised="1"] {
+      z-index: 1000;
+    }
+    &[data-disabled="1"] {
+      opacity: 0.5;
+    }
+    &[data-opened="1"] {
+      border: solid #476390 2px;
+      .media-grid__container {
+        &:after {
+          content: " ";
+          position: absolute;
+          display: block;
+          width: 100%;
+          height: 100%;
+          border: solid #ffffff 1px;
+          top: 0;
+          left: 0;
+          border-radius: $default-border-radius-tiny;//3px;
+        }
+      }
+      .notify__count {
+        display: none;
+      }
+    }
+    &[data-read="1"] {
+      .notify__count {
+        display: none;
+      }
+    }
+    &[data-count="0"] {
+      display: none;
+    }
+    .forbiden-block__icon {
+      width: 12px;
+      height: 12px;
+    }
+    &[data-shift="top"] {
+      &:after {
+        content:" ";
+        width: 100%;
+        height: 1px;
+        background-color: blue;
+        position: absolute;
+        top: 100%;
+      }
+    }
+    &[data-shift="bottom"] {
+      &:after {
+        content:" ";
+        width: 100%;
+        height: 1px;
+        background-color: blue;
+        position: absolute;
+        top: -1px;
+      }
+    }
+  }
+  .preview.drumee-spinner {
+    position: absolute;
+  }
+  @import "contextmenu.scss";
+  @import "failed-upload.scss";
+}

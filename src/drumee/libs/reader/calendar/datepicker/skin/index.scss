@@ -1,0 +1,9 @@
+.calendar-datepicker {
+  &__wrapper {
+    position: fixed!important;
+    background-color: #ccc!important;
+    width: 300px;
+    height: 200px;
+    z-index: 999999;
+  }
+}

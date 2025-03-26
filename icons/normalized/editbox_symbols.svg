@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 49.3 (51167) - http://www.bohemiancoding.com/sketch -->
+    <title>Path 7</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Symbols" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Button/symbol_normal" transform="translate(-7.000000, -7.000000)" fill="#89929E" fill-rule="nonzero">
+            <g id="Group" transform="translate(7.000000, 7.000000)">
+                <path d="M0.241363473,1.35241951 C-0.274043412,0.852797084 0.0920572834,0 0.810499456,0 L16,0 L16,1.58151477 L2.77478162,1.58151477 L8.83646291,7.45755568 C9.15620124,7.76750195 9.15548648,8.27331593 8.83489237,8.58239823 L2.7824303,14.41753 L16,14.41753 L16,15.9990448 L0.810499456,15.9990448 C0.090989742,15.9990448 -0.274625299,15.1440819 0.242934014,14.645107 L7.11719919,8.01768119 L0.241363473,1.35241951 Z" id="Path-7"></path>
+            </g>
+        </g>
+    </g>
+</svg>

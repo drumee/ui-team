@@ -1,0 +1,22 @@
+//[data-flow].window, .window {
+// [data-flow] is no longer necessary, and it has some performance cost
+.window-popup {
+  &__container{
+    transform: translateX(-50%);
+    background-color: #FFFFFF;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 0 7px 0 rgba(0, 0, 0, 0.14), 0 0 6px 0 #F8FAFC, 0 3px 5px 0 rgba(0, 0, 0, 0.2);
+    &.small{
+      width: 550px;
+      height: 300px;
+      padding: 40px;
+      top:60px;
+      border-radius: 6px; //4px;
+    }
+  }
+  &__title{
+    @include typo($weight:400, $size:24px, $line:32px, $color:$egrey-2f);
+  }
+}
+

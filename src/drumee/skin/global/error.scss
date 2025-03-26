@@ -1,0 +1,65 @@
+/* =================================================================== *
+   #   Copyright Xialia.com  2011-2019                                    *
+   #   FILE : src/drumee/skin/global/error
+   #   TYPE : Global styles, for the whole platform
+   # ==================================================================== */
+
+
+@import '../mixins/typo.scss';
+@import '../mixins/colors/index.scss';
+@import '../mixins/vendor.scss';
+@import '../mixins/z-index.scss';
+@import '../mixins/utils.scss';
+   
+
+.error-box{
+ 
+    color: #ea4d44;// red;
+    .inline-error{
+        top : -50px;
+    }
+}
+.core-failover{
+  width: 160px;
+  height: auto;
+  background: white;
+  border-radius: 6px; //4px;
+  padding : 5px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+  &__header{
+    width: 100%;
+    justify-content: space-between;
+    display: flex;
+    margin-bottom: 10px;
+    &:before{
+      content: "😱";
+
+    }
+  }
+  &__text{
+    text-align: center;
+    @include typo($line:14px,$size:12px,$weight:300,$color:#2F2F2F);  
+    margin-bottom: 5px;      
+  }
+  &__report{
+    text-align: center;
+    margin-bottom: 10px;
+    @include typo($line:17px,$size:13px,$weight:400,$color:#2F2F2F);          
+  }
+  &__close{
+    color: #B6BFCA;
+    cursor: pointer;
+    height: 14px;
+    width: 14px;
+    right: 0;
+    padding: 2px;
+    margin-left: auto;
+    margin-right: 0;
+    svg{
+      height: 100%;
+      width: 100%;  
+    }
+  }
+}

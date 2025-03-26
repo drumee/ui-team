@@ -1,0 +1,37 @@
+
+@mixin container-row($bgcolor:transparent, $map:$row){
+    @include container($map);
+    background-color: $bgcolor;
+    position:relative;
+}
+
+@mixin xia-flex-grid-at($columns:12) {
+    @for $loc from 1 through $columns {
+	@for $span from 1 through ($columns - $loc) {
+	    .flexbox-#{$loc}-#{$span}{
+		position:relative;
+		@include span(isolate $span at $loc of $columns inside no-gutters); 
+	    }  
+	}
+    }
+}
+
+@mixin xia-flex-grid($columns:12) {
+    @for $span from 1 through $columns {
+	.flexbox-#{$span} {
+	    position:relative;
+	    @include span($span of $columns no-gutters); 
+	}
+    }
+}
+
+@mixin xia-pseudo-flex($columns:12) {
+    @for $span from 1 through $columns {
+	.flexgrid-#{$span} {
+	    position:relative;
+	    display:inline-block;
+	    width:100%;
+	    /*@include span($span of $columns no-gutters); */
+	}
+    }
+}

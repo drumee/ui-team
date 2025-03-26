@@ -1,0 +1,40 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : builtins/sandbox/skin/sandbox
+#   TYPE : Module
+# ===================================================================**/
+@import 'mixins/drumee.scss';
+@import '../../skin/index.scss';
+.window-analytics-transfer {
+  &__ui{
+    height: 800px;
+    max-height: calc(100vh - 90px);
+    width: 600px;
+    align-items: center;
+    min-width: 195px;    
+    background-color: $core-default-background;
+    left: calc(50vw - 300px);
+    top: 80px;
+    overflow: hidden;
+  }
+  // &__main{
+  //   width: 100%;
+  //   height: 100%;
+  //   align-items: center;   
+  // }
+  // &__body{
+  //   width: 100%;
+  //   height: calc(100% - 44px);
+  //   align-items: flex-start;   
+  //   align-content: flex-start;   
+  // }
+
+  &__header, &__command{
+    background-color:$core-default-background-alert;//rgb(253, 74, 119);
+  }
+
+  .chart-line{
+    height: 33.33%;
+    width: 100%;
+  }
+}

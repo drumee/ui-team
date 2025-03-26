@@ -1,0 +1,16 @@
+&-inbound{
+  &__main{
+    width:100%;
+    height:100%;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+  }
+  &__message{
+    &.drumee-text{
+      width: 400px;
+      border-radius: 4px;
+      @include typo($size:14px,$line:20px,$weight:400,$color:$default-text-color);
+    }
+  }
+}

@@ -1,0 +1,104 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/widget/email-input-item/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.email-input-item {
+  &__ui {
+    background-color: inherit; 
+    height: auto;
+    padding-bottom:0px;
+  }
+
+  &__main {
+    background-color: inherit; 
+  }
+
+  &__container {
+    align-items: baseline;
+    background-color: inherit; 
+  }
+
+  &__icon {
+    cursor: pointer;
+
+    &.radio-icon {
+      height: 16px;
+      overflow: hidden;
+      width: 16px;
+      margin-left:8px;
+      top:3px;
+
+      &:before {
+        background-color: transparent;
+        border-radius: 100%;
+        border: 1.5px solid $eviolet;
+        box-sizing: border-box;
+        content: '';
+        display: block;
+        height: 16px;
+        left: 0;
+        position: absolute;
+        width: 16px;
+        z-index: 0;
+      }
+      
+      &:after {
+        background-color: $eviolet !important;
+        border-radius: 100%;
+        border: 1.5px solid transparent;
+        box-sizing: border-box;
+        content: '';
+        display: block;
+        height: 16px;
+        left: 0;
+        position: absolute;
+        transform: scale(.6);
+        width: 16px;
+        z-index: 0;
+      }
+
+      &[data-state='0']:after {
+        background-color: transparent !important;
+      }
+
+      & .svg-inner{
+        display:none;
+      }
+    }
+
+    &.category {
+      align-items: baseline;
+      color: $eblue;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      min-width: 42px;
+
+      & svg {
+        height: 11px;
+        margin-right: 2px;
+        width: 6px;
+      }
+    }
+    
+    &.destroy-tag {
+      color   : $core-default-icon-neutral;
+      height  : 16px;
+      width   : 24px; //25px;
+      z-index : 50!important;
+      opacity: 0.65;
+      padding: 1px;
+      svg{
+        margin-top: 2px;
+        margin-left: 5px;
+      }
+      &:hover{
+        color:$core-default-icon-hover;
+        opacity: 1;
+      }
+    }
+  }
+}

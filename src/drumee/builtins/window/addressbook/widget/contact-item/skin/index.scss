@@ -1,0 +1,139 @@
+@import 'mixins/drumee';
+
+.contact-item {
+  &__ui {
+    background-color: inherit;
+    cursor: pointer;
+    overflow: hidden;
+    @include typo( $color : $ab-default-text-color);
+
+    &:hover,
+    &[data-active=active],
+    &[data-radio=on] {
+      background: $ab-default-background-hover;
+      
+      & .profile-icon,
+      & .note-reader{
+        color: $ab-default-text-hover;
+      }
+    }
+  }
+  
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    background-color: inherit;
+  }
+
+  &__icon {
+    color:$ab-default-icon-neutral;
+    height: 28px; 
+    width: 25px; 
+    min-width: 25px;
+    margin-top: -1px; 
+    margin-left: 2px;
+
+    & .note-reader {
+      &:hover {
+      color:$ab-default-icon-hover;
+      }
+    }
+    &.memory{
+      height: 22px;
+      margin-top:  2px;
+      width:22px;
+      min-width:22px;
+      margin-left: 5px;
+    }
+    &.sent {
+      height: 24px;
+      margin-top: 0px;
+      width: 24px;
+      &.user-help{
+        height: 31px;
+        margin-top: -4px;
+        width:31px;
+        min-width: 31px;
+      }
+    }
+  }
+  &__profile {
+    &.user-profile__ui {
+      border-radius: 50%;
+      height:29px; 
+      width:29px; 
+      margin-top: -2px;
+
+      &[data-default="1"]{
+        border: none;
+      }
+    }
+  }
+}
+
+
+
+.widget-contacts__item {
+  & .contact-item {
+    padding-left: 14px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    margin: 1px 0px 0px 1px;
+    
+    height: 35px;
+    @include typo( $size :14px, $line: 16px);
+    
+    &__profile {
+      & section {
+        font-size: 80%;
+      }
+    }
+
+    &__name {
+      @include typo( $size :14px, $line: 16px, $color: $ab-default-text-color);
+      margin-top: 3px;
+      overflow:hidden;
+      padding: 2px 3px 3px 15px;
+      width: 200px;
+      @include overflow-text;
+
+      & .inner.note-content {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+.addressbook-widget-search__item {
+  & .contact-item {
+    padding: 4px 5px 3px 12px; 
+    height: 33px;
+    @include typo($size:12px, $line: 14px);
+
+    &__icon{
+      color: $ab-default-icon-neutral;
+      height: 28px;
+      
+      width: 25px;
+      &:hover{
+        color:$ab-default-icon-reverse;
+      }
+    }
+    &__profile {
+      color: $ab-default-user-icon ;
+      height: 29px;
+     
+      width: 29px;
+    }
+
+    &__profile {
+      & section {
+        font-size: 70%;
+      }
+    }
+  }
+}

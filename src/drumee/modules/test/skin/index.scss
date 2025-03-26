@@ -1,0 +1,90 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : builtins/sandbox/skin/sandbox
+#   TYPE : Module
+# ===================================================================**/
+@import 'mixins/drumee.scss';
+
+.module-test {
+  &__ui{
+    width: 100vw;
+    height: 100vh;
+    align-items: center;
+    min-width: 195px;    
+    padding: 20px;
+  }
+  &__main{
+    width: 100%;
+    height: 100%;
+    align-items: center;   
+  }
+  &__body{
+    width: 100%;
+    height: calc(100% - 42px);
+    align-items: flex-start;   
+    align-content: flex-start;   
+  }
+
+  &__header, &__command{
+    width: 100%;
+    height: 42px;
+    justify-content: center;
+    justify-items: center;
+    align-items: center;
+    align-content: center;
+  }
+  
+  &__title{
+    @include typo($size: 28px, $line: 38px, $color: $default-text-color);
+  }
+
+  &__service{
+    @include typo($size: 16px, $line: 24px, $color: $default-text-color);
+    height: 42px;
+    align-items: center;
+    align-content: center;
+    &.title{
+      &[data-state="0"]{
+        visibility: hidden;
+      }      
+    }
+    &.running{
+      color: green;
+      &[data-error="1"]{
+        color: red;
+      }
+    }
+  }
+
+  &__console{
+    width: 100%;
+    height: calc(100% - 84px);
+  }
+
+  &__results{
+    width: 100%;
+    max-height: 100%;
+  }
+
+  &__button {
+    width: auto;
+    background-color:$btn-commit-background; // $btn-primary-background; 
+    height: 46px;
+    border-radius: $default-border-radius;
+    text-align: center;
+    @include typo($line: 22px, $size: 16px, $weight: 300, $color: $btn-commit-text);
+    justify-content: center;
+    margin: auto;
+    align-content: center;
+    align-items: center;
+    padding: 10px;
+    cursor: pointer;
+  }
+
+  &__graph-container, &__chart-line{
+    height: 500px;
+    .chart-line{
+      height: 100%;
+    }
+  }
+}

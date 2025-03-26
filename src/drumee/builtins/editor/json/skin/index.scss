@@ -1,0 +1,100 @@
+/*====================================================================
+  Copyright Xialia.com  2011-2016
+  FILE : src/drumee/builtins/editor/json/skin/jed-style
+  TYPE : Style
+ ==================================================================== */
+ @import 'mixins/typo.scss';
+ @import 'mixins/colors/index.scss';
+ @import 'mixins/vendor.scss';
+ 
+
+.editor-json{
+	&__ui{
+		position: fixed !important;
+		background-color : white;
+		top : 60px;
+		left: calc(50vw - 380px);
+		width: 760px;
+		height: 80vh;
+	}
+	&__handle{
+		width: 100%;
+		height: 30px;
+		background-color : rgb(160, 218, 191);
+		//padding : 20px;
+	}
+	&__main{
+		width: 100%;
+		height: 100%;
+		background: white;
+		//padding : 20px;
+	}
+	&__content{
+		width: 100%;
+		height: 100%;
+		//padding : 20px;
+	}
+	&__button{
+    margin: auto;
+    min-width: 101px;
+    border: 1px solid #DDE2E8;
+    border-radius: 2px;
+    justify-content: center;
+    cursor: pointer;
+		@include typo($size:12px,$line:14px,$color:#494949,$weight:400);
+		padding: 10px 20px;
+    &:hover{
+			box-shadow: 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
+    }
+		&.validate{
+			background-color :#18AC72;;
+			color: white;
+		}
+		&.preview{
+			background-color :#FA8540;;
+			color: white;
+		}
+	}
+	&__command{
+		height: 60px;
+		margin: 0 auto;
+		background: white;
+	}
+	div.jsoneditor-tree{
+		overflow: scroll;
+	}
+	.jsoneditor-mode-tree{
+		// max-height: 80%;
+		background: white;
+	}
+}
+// .jed-ui{
+//   height : 100% !important;
+//   .jed-outer{
+// 		background-color : white;
+//   }
+// 	.jed-main{
+// 		margin-left: 50px;
+// 		background-color: white;
+// 	}
+// 	.action-btn.preview{
+// 		.inner{
+// 			line-height: 1.5;
+// 		}
+// 		.fa{
+// 			font-size: 5px;
+// 		}
+// 		&[data-state="0"]{
+// 			opacity:0.5;
+// 		}
+// 	}
+// 	.footer, .header{
+// 		height : 60px;
+// 		margin  : 0 auto;
+// 		max-width : 80vw;
+// 	}
+// 	.jsoneditor-mode-tree{
+// 		max-height: calc(100vh - 160px);
+// 		overflow: scroll;
+// 	}
+// }

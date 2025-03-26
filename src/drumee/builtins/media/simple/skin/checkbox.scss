@@ -1,0 +1,33 @@
+
+&__checkbox{
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  left: 24px;
+  top: 5px;  
+  visibility: hidden;
+  cursor: pointer;
+  text-align: center;
+  background-color: transparent; 
+  padding: 4px 6px 6px 4px;
+  &[data-hover="on"]{
+    visibility: visible;
+    svg{
+      border: 1px solid orange;
+    }
+  }
+  &[data-selected="1"]{
+    visibility: visible;
+    svg{
+      // visibility: visible;
+      fill: orange;
+      border: 1px solid orange;
+      background-color: $white; 
+    }
+  }
+  &--icon{
+    pointer-events: none;
+    background-color: $white; 
+    fill: $ewhite;
+  }
+}

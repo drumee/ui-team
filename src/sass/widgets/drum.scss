@@ -1,0 +1,224 @@
+.threads{
+    .drumate{
+	margin-top:$xia-margin-small !important;
+    }
+    .status{
+	visibility:hidden;
+	position:absolute;
+	right:0;
+	top:-5px;
+	color: $xia-color-drak-gray;
+	&[data-active="new"]{
+	    font-weight: bold;
+	}
+	&[data-shown="on"]{
+	    visibility:visible;
+	}
+	@include transition-property(opacity);
+	@include transition-duration(0.5s);
+	@include transition-timing-function(ease-in);
+    }
+    .xia-thread{
+	border-bottom: 1px solid #eaeaea;
+	padding: $xia-padding $xia-padding-small $xia-padding 0;
+	.fixed-width{
+	    min-width:70px;
+	}
+    }
+    #xui-container-footer, .spinner{
+	@extend .xia-center;
+    }
+    i.author-name{
+	margin-left: $xia-margin-small;
+	&[data-active="new"]{
+	font-weight: bold;
+	}
+    }
+    li.flow-vertical{
+	background:rgba(247,247,247, .8);
+	margin-bottom:$xia-margin-tiny;
+	&[data-rank="0"]{
+	    background:transparent;
+	    margin-bottom:$xia-margin;
+	}
+    }
+    .xia-drum{
+	&:first-child{
+	    margin-left: 55px;
+	    margin-top: -30px;
+	}
+    }
+
+    .attachment {
+	.vignette{
+	    max-width: 80px;
+	    padding: 0 0px;
+	    margin-right: 10px;
+	    .filename, .user-filename{
+		height:15px;
+		overflow:hidden;
+	    }
+	    img{
+		height:80px;
+	    }
+	    i.fa{
+		font-size: 80px;
+		color: $xia-light-blue;
+	    }
+	}
+	.loading{
+	    img{
+		height:40px !important;
+		width:40px !important;
+	    }
+	}
+    }
+}
+
+.blog{
+    .article{
+	border-bottom-color: #922;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+	padding-bottom: 10px;
+	margin-top:5px;
+	.title{
+	    font-family: Georgia,'Times new roman',serif;
+	    color: #900;
+	    font-size: 25px;
+	    margin: 0 0 12px 0 !important;
+	}
+	.control{
+	    position: absolute;
+	    right: 0;
+	    font-size: 12px;
+	    font-weight: 100;
+	    color: #aaaaaa;
+	    visibility:hidden;
+	    &[data-visible="yes"]{
+		visibility:visible;
+	    }
+	    &:hover{
+		color: text-contrast($xia-dd-highlight-color);;
+		background-color: $xia-dd-highlight-color;
+	    }
+	}
+	.summary{
+	}
+	.content{
+	}
+	.author{
+	    font-size: 0.84em;
+	    font-family: Helvetica,arial,sans-serif;
+	    border: 0;
+	    margin: 10px 0 0 0;
+	    padding: 0 0 15px 0;
+	    overflow: hidden;
+	}
+    }
+}
+
+.banner{
+    min-height: 90px;
+    background-position-y: 64%;
+    background-repeat: no-repeat;
+    background-size: 100%;
+    background-repeat: no-repeat;
+    background-position-y: 60%;
+    .name{
+	font-size: 30px;
+	font-family: Satisfy;
+	    color: yellow;
+	    padding-top: 10px;
+    }
+    .description{
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	background:rgba(238,238,238, 0.4);
+	padding: 10px;
+	border-radius: 5px 0;
+    }
+}
+.slider{
+    position:absolute;
+    top:0;
+    left:0;
+    bottom:0;
+    width:15px;
+    background:rgba(200,200,200,0.3);
+    >div{
+	height:100%;
+    }
+}
+
+.comment-list{
+    padding: 5px 0 0 5px !important;
+    .drumate img {
+	height: 48px !important;
+	width: 48px !important;
+    }
+    .author-name{
+	color:#128ee9 !important;
+    }
+    .moment{
+	font-size: 12px;
+	color: #888;
+	padding-left: 5px;
+	vertical-align: bottom;
+	font-weight: normal;
+	line-height: 16px;
+	vertical-align: bottom;
+    }
+    .comment-text{
+	white-space: pre;
+	word-wrap: break-word;
+	font-size: 12px;
+	color: #444;
+	padding-left: 5px;
+    }
+    .rating{
+	position: absolute;
+	right: 0;
+    }
+    .delete{
+	position: absolute;
+	right: 0;
+	top: 0;
+	color: #bbb;
+	font-size: 14px;
+	&:hover{
+	    color: #555;
+	}
+    }
+}
+
+.rss-item{
+    padding: 20px 10px 10px 10px;
+    &:hover{
+	background-color:#eeeeee;
+    }
+    .date{
+	color: #888888;
+	font: normal 12px/14px Nexa-Light, arial, sans serif;	
+    }
+    .title{
+	font: normal 18px/24px Nexa-Light, arial, sans serif;
+	font-weight:bold;
+	color: #333333;
+	&:hover{
+	    opacity: .7;
+	    text-decoration: none !important;
+	}
+    }
+    .description{
+	img{
+	    max-height:60px;
+	    padding:5px 15px 5px 5px;
+	    max-width: 120px;
+	}
+	.text{
+	    padding:5px;
+	}
+    }
+}

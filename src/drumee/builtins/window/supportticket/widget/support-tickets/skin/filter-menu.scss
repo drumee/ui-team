@@ -1,0 +1,133 @@
+&-filter-menu {
+  &__wrapper {
+    &[data-state="1"] {
+      & .trigger-icon {
+        color: $bigchat-default-icon-active;
+      }
+    }
+
+    & .menu-topic-items {
+      background-color: $bigchat-default-background;
+      box-shadow:$drumee-container-dropdown;
+      border-radius:$default-border-radius;
+      max-width: 202px;
+      min-width: 170px;
+      width: 100% !important;
+      padding-bottom: 5px;
+      &__wrapper{
+        left: -40px;
+        padding:10px;
+        top: 26px;
+      } 
+
+      &:before {
+        background-color: $bigchat-default-background;
+        box-shadow:$drumee-shadow-container;
+        content: "";
+        height: 10px;
+        left: 12px;
+        position: absolute;
+        top: -5px;
+        transform: rotate(45deg);
+        width: 10px;
+      }
+
+      &:after {
+        background: $bigchat-default-background;
+        border-radius:$default-border-radius-top;
+        content: "";
+        height: 10px;
+        left: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
+    }
+  }
+
+  &__icon {
+    cursor: pointer;
+
+    &.trigger-icon {
+      align-items: center;
+      box-sizing: border-box;
+      color: $bigchat-default-icon-neutral ;
+      height: 12px;
+      right: 25px;
+      top: 12px;
+      width: 12px;
+
+      &.ticket-filter{
+        width:15px;
+        height: 15px;
+      }
+      
+      svg {
+        &:hover {
+          color:$bigchat-default-icon-hover ;
+          opacity: 1;
+        }
+      }
+    }
+    
+    &.checkbox {
+      border-radius: $default-checkbox-border-radius;
+      border:1px solid $bigchat-default-checkbox-border;//$default-checkbox;
+      box-shadow: none;
+      color: $bigchat-default-checkbox-background;//$default-background;
+      height: 14px;
+      width: 14px;
+      background:white;
+
+      &[data-state="1"] {
+        border: 1px solid $bigchat-default-checkbox-border;//$default-checkbox;
+        box-shadow: none;
+        color: $core-default-checkbox-checked ;// $checkbox-active;
+      }
+    }
+  }
+
+  &__item-wrapper {
+    width: 100%;
+  }
+  
+  &__item {
+    align-items: baseline;
+    cursor: pointer;
+    padding: 5px 10px 5px 25px;
+    margin-bottom:  1px;
+    height: 24px;
+
+    &:hover {
+      background-color: $bigchat-default-background-hover ;  
+      color : $bigchat-default-text-hover ;
+      & .menu-item {
+        color: $bigchat-default-text-hover ;
+      }
+
+      .checkbox[data-state="1"] {
+        box-shadow: none;
+        border: 1px solid $bigchat-checkbox-checked-border-reverse;
+        border-radius:$default-checkbox-border-radius;
+      }
+    }
+  }
+
+  &__note {    
+    padding-top: 0px;
+    bottom: 2px;
+    @include typo($size: 12px, $weight: 300, $line: 14px, $color:$bigchat-default-text-color);
+
+    &.title {     
+      align-items: center;
+      height: 20px;
+      justify-content: center;
+      margin-top: 10px;
+      @include typo($size: 14px, $weight: 300, $line: 14px, $color:$bigchat-default-text-title);
+    }
+
+    &.menu-item {
+      left: 10px;
+    }
+  }
+}

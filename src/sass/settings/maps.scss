@@ -1,0 +1,75 @@
+/* ==========================================================
+ * COMMONLY USED MAPS FOR SUSY 2
+ * ========================================================== */
+
+$root: (
+  flow: ltr,
+  math: fluid,
+  output: float,
+  gutter-position: after,
+  container: 100%,
+  container-position: center,
+  columns: 1,
+  gutters: 0,
+  column-width: false,
+  global-box-sizing: (border-box),
+  last-flow: to,
+);
+
+$wrapper: (
+  flow: ltr,
+  math: fluid,
+  output: float,
+  gutter-position: inside,
+  container: 60em,
+  container-position: center,
+  columns: 12,
+  gutters: 0,
+  column-width: false,
+  global-box-sizing: border-box,
+  last-flow: to,
+);
+
+$row: (
+  flow: ltr,
+  math: fluid,
+  output: float,
+  gutter-position: inside,
+  container: 100%,
+  container-position: center,
+  columns: 12,
+  gutters: 0,
+  column-width: false,
+  global-box-sizing: (border-box),
+  last-flow: to
+);
+
+
+$header: (
+  container: auto,
+  columns: (1 5 2),
+  gutters: 5px,
+  gutter-position: inside,
+  math: fluid,
+  output: float,
+  last-flow: to,
+);
+
+$thread-dmail: (
+  container: auto,
+  columns: (1 5 2),
+  gutters: .25,
+  gutter-position: inside,
+  math: fluid,
+  output: float,
+);
+
+$thread-drum: (
+  container: auto,
+  columns: (1 5 2),
+  gutters: .25,
+  gutter-position: inside,
+  math: fluid,
+  output: float,
+);
+

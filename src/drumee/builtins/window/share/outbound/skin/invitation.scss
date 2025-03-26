@@ -1,0 +1,23 @@
+.invitation{
+  &-shareeroll__label, &-settings__label{
+    
+      @include typo($color:#FA8540,$size:16px,$line:19px,$weight:400);
+    
+  }
+  // &-settings__label{
+  //     @include typo($color:#FA8540,$size:16px,$line:19px,$weight:400);
+  //   }
+  // }
+  &-searchbox{
+    &__header.note-reader{
+      display: none;
+    }
+  }
+  &.sharees-roll {
+    width: 360px;
+    .invitation__container-sharee{
+      width: 100% !important;
+    }
+  }
+}
+

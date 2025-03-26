@@ -1,0 +1,99 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : src/drumee/libs/reader/avatar/skin/avatar-widget.scss
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+
+@import 'mixins/colors/index.scss';
+@import 'mixins/typo.scss';
+@import 'mixins/border.scss';
+@import 'mixins/exports.scss';
+
+
+.user-profile{
+  &__ui{
+    padding: 0;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: $default-border-radius-tiny;//3px;
+    &[data-default="1"]{
+      color: $core-default-icon-reverse;//white;
+      svg{
+        fill: $core-default-icon-reverse;  
+      }
+    }
+
+    &[data-online="1"],&[data-online="2"] {
+      &:before {
+        background-color: $ab-contact-online-color;
+        border-radius: 50%;
+        box-shadow: 0 0 0 1px $white;
+        content: " ";
+        height: 8px;
+        left: 24px;
+        position: absolute;
+        top: 3px;
+        width: 8px;
+        z-index: 9;
+      }
+    }
+    &[data-online="2"]{
+      &:before{
+        background-color: $core-default-background-alert;//$default-backround-alert;// #18ac72;
+      }
+    }
+    &.no-online-status{
+      &:before {
+        display: none;
+      }
+    }
+  }
+  &__main{
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;    img{
+      object-position:50% 50%;
+      width:100%;      
+      height:100%;
+      object-fit:cover;      
+    }
+  }
+
+  &__icon{
+    width:100%;      
+    height:100%;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+    justify-items: center;
+  }
+
+  &__initiales{
+    position: absolute;
+    text-transform : uppercase;
+    .note-content{
+      @include typo($size:13px,$line:15px,$weight:400,$color:$ewhite);
+      margin:auto;
+    }
+  }
+  &__picture{
+    position: absolute;
+  }
+  &__progress{
+    &.outer{
+      width:100%;      
+      height:100%;
+      position: absolute;
+      left: 0;
+      top: 1px;
+      background: transparent;
+    }
+    &.fg{
+      stroke: #4A90E2;
+      stroke-width: 10px;
+    }
+  }
+}

@@ -1,0 +1,144 @@
+@import "mixins/typo.scss";
+@mixin granula($color) {
+  .calendar-month__name .root-node {
+    color: $color;
+  }
+  &:hover, &.--current {
+    .calendar-month__name .root-node {
+      border-bottom-color: $color;
+    }
+  }
+  &:hover {
+    .calendar-month {
+      &__month-name, &__date .root-node {
+        opacity: 1
+      }
+    }
+  }
+  .calendar-month__date {
+    &.--selected, &:hover {
+      .root-node:before {
+        border-color: $color;
+      }
+    }
+    &.--current {
+      .root-node {
+        color: $color
+      }
+    }
+    &.--weekend {
+      &:after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: $color;
+        opacity: .033;
+        border-radius: 3px;
+      }
+    }
+  }
+}
+.calendar-month {
+  padding: 10px;
+  border-radius: 9px;
+  cursor: none;
+  height: 100%;
+  &__name  {
+    .note-content {
+      width: 100%;
+    }
+    .root-node {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      height: 22px;
+      border-bottom: 2px solid #d3d0d0;
+      padding-bottom: 3px;
+      margin-bottom: 2px;
+      letter-spacing: 4px!important;
+      text-indent: 6px!important;
+      @include typo($color: #2e2e2e, $size: 17px, $line: 22px, $weight: 400);
+    }
+  }
+  &:hover, &.--inactive:hover, &.--current {
+    transition: all 0.4s cubic-bezier(0.58, 0.37, 0, 0.98);
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+  }
+  &.--inactive {
+    .calendar-grid-screen-year__month-name {
+      opacity: .6
+    }
+  }
+  &.--december, &.--january, &.--february {
+    @include granula(#310062f2);
+  }
+  &.--march, &.--april, &.--may {
+    @include granula(#940670f2);
+  }
+  &.--june, &.--july, &.--august {
+    @include granula(#028a19f2);
+  }
+  &.--september, &.--october, &.--november {
+    @include granula(#a50e0ef2);
+  }
+  &__week {
+    .--inactive {
+      .root-node {
+        opacity: .6
+      }
+    }
+    justify-items: center;
+    &.--names {
+      pointer-events: none;
+      .root-node {
+        color: #637280;
+      }
+    }
+
+  }
+  &__date {
+    &.--inactive {
+      .root-node {
+        opacity: .6;
+      }
+    }
+    &.--hidden .root-node {
+      visibility: hidden;
+    }
+    position: relative;
+    width: 20px;
+    height: 20px;
+    margin: 3px;
+    .note-reader, .note-content {
+      width: 20px;
+      height: 20px;
+      align-content: center;
+      justify-content: center;
+    }
+    .root-node {
+      display: flex;
+      width: 20px;
+      text-align: center;
+      align-content: center;
+      justify-content: center;
+      @include typo($color: #393939, $size: 10px, $line: 22px, $weight: 400);
+      &:before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        border: 2px solid transparent;
+        box-sizing: content-box;
+        transform: translate(-50%,-50%);
+        opacity: .8;
+      }
+    }
+  }
+}

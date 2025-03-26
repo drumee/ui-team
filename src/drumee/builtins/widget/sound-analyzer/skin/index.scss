@@ -1,0 +1,21 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/widget/sound-analyzer/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.sound-analyzer{
+  &__ui{
+    width: 100%;
+    height: 100%;
+  }
+  &__main{
+    width: 100%;
+    height: 100%;
+  }
+  &__container{
+    width: 100%;
+    height: 100%;
+  }
+}

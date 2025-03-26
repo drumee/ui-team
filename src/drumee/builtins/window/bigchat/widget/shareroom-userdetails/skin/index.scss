@@ -1,0 +1,22 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /ui/src/drumee/builtins/window/bigchat/widget/shareroom-userdetails/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.widget-shareroomUserdetails{
+  &__ui,
+  &__main,
+  &__container {
+    background-color: inherit;
+    height: 100%;
+    width: 100%;
+  }
+
+  &__item.list{
+    height: calc(100% - 55px);
+    margin: 30px auto auto auto;
+    max-width: 270px;
+  }
+}

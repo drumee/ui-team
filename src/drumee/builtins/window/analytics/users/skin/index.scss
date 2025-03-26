@@ -1,0 +1,28 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : builtins/sandbox/skin/sandbox
+#   TYPE : Module
+# ===================================================================**/
+@import 'mixins/drumee.scss';
+@import '../../skin/index.scss';
+.window-analytics-users {
+  &__ui{
+    height: 550px;
+    width: 600px;
+    align-items: center;
+    min-width: 195px;    
+    background-color: white;
+    left: calc(50vw - 300px);
+    top: 80px;
+    overflow: hidden;
+  }
+
+  &__header, &__command{
+    background-color: $eorange-dark;//rgb(240, 79, 4);
+  }
+  
+  .chart-line{
+    height: 100%;
+    width: 100%;
+  }
+}

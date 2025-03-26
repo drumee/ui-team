@@ -1,0 +1,69 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/modules/welcome/signin/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+
+@import '../../../../skin/mixins/drumee.scss';
+
+.welcome-signin-cross-signin {
+  &__container {
+    border-radius: $default-border-radius;
+    align-items: center;
+    background-color: $core-default-background;//$default-block-background;
+    max-height: 310px;//290px;
+    height: 100%;
+    width: 100%;
+    max-width: 530px;//510px;
+    margin: 0 auto;
+    padding:35px 37px 30px; //22px;
+  }
+  &__title {
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    align-items: center;
+    @include typo($size: 20px, $line: 28px, $weight: 500, $color: $core-default-text-title);
+    u{
+      text-decoration: underline;
+      font-style: italic;
+    }
+  }
+  &__text {
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    @include typo($size: 15px, $line: 24px, $weight: 400, $color: $core-default-text-color);
+    &-container{
+      margin: 22px 30px;//12px auto;      
+    }
+    u{
+      @include typo($size: 15px, $line: 24px, $weight: 400, $color: $core-secondary-text-color);//$eblue);
+      font-style: italic;
+    }
+  }
+  &__choice {
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    @include typo($size: 14px, $line: 18px, $weight: 300, $color: $core-default-text-color);
+  }
+  &__buttons{
+    justify-items: center;
+    justify-content: space-around;
+    margin-top: 10px;
+  }
+  &__button{
+    cursor: pointer;
+    border-radius: $default-border-radius;
+    border-color: $eblue;//$default-text-title;
+    border-width: 2px;
+    border-style: solid;
+    width: 45%;
+    padding: 10px;
+    u{
+      text-decoration: underline;
+      font-style: italic;
+    }
+  }
+}

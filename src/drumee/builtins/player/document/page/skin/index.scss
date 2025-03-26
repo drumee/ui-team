@@ -1,0 +1,54 @@
+@import 'mixins/drumee.scss';
+@import "pdfjs-dist/web/pdf_viewer.css";
+
+.pdfViewer {
+  --scale-factor: 1.1;
+}
+
+.player-page {
+  &__ui {
+    background-color: $multimedia-player-doc-background; //$player-image-background;
+    overflow: hidden;
+    height: auto;
+    min-height: 100px;
+    min-width: 100px;
+    width: 100%;
+    margin-bottom: 10px;
+    box-shadow: none;
+    z-index: 10;
+  }
+
+  &__text-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 0.3;
+    line-height: 1.0;
+    z-index: 100;
+
+    span {
+      user-select: text;
+
+      &::selection {
+        color: transparent;
+        background: yellow;
+      }
+    }
+  }
+
+  .image-viewer {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    flex-flow: nowrap;
+    //height: 100%;
+    justify-content: center;
+    justify-items: center;
+    min-height: 80px;
+    width: 100%;
+
+  }
+}

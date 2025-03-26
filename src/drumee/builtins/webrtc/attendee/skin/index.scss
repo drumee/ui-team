@@ -1,0 +1,147 @@
+@import "mixins/drumee";
+
+@keyframes changeScale {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.3);
+  }
+}
+
+.webrtc-attendee {
+  &__ui {
+    margin: 1px 0 0;
+    padding-left: 10px;
+    height: 38px;
+    padding-top: 5px;
+    cursor: pointer;
+
+    &[data-nocontact="1"] {
+      display: none;
+    }
+
+    &:hover,
+    &[data-active="active"],
+    &[data-radio="on"] {
+      background: $eviolet;
+
+      & .profile-icon,
+      & .status,
+      & .note-reader {
+        color: $white;
+      }
+    }
+
+    &:hover {
+      .webrtc-attendee__icon {
+        &[data-online="0"] {
+          display: none;
+        }
+
+        &[data-online="1"] {
+          color: $white;
+        }
+      }
+    }
+
+    .user-profile {
+      width: 29px;
+      height: 29px;
+      min-width: 29px;
+      margin-right: 16px;
+      border-radius: 15px;
+      background-color: $core-default-user-icon;
+
+      svg {
+        padding: 6px;
+        background-color: $core-default-user-icon;
+      }
+
+      &[data-default="1"] {
+        border: none;
+      }
+    }
+  }
+
+  &__main {
+    align-items: center;
+    height: 100%;
+  }
+
+  &__name {
+    background-color: inherit;
+    @include typo($size: 14px, $line: 16px, $weight: 300, $color: $core-default-text-color);
+    margin: 1px 0 0;
+    width: calc(100% - 110px);
+    height: 100%;
+    align-items: center;
+    @include overflow-text;
+
+    .inner {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      width: calc(100% - 16px);
+    }
+  }
+
+  &__status {
+    min-width: 100px;
+    height: 100%;
+    justify-items: right;
+    align-items: center;
+    position: absolute;
+    right: 10px;
+    flex-direction: row;
+    text-align: right;
+    justify-content: right;
+    @include typo($size: 12px, $line: 14px, $weight: 300, $color: $core-default-text-color);
+
+    &[data-online="2"] {
+      color: $core-default-text-alert;
+    }
+
+    &[data-online="0"] {
+      display: none;
+    }
+
+    .drumee-text {
+      border: 1px solid $core-default-frame;
+      border-radius: 4px;
+      padding: 2px 4px;
+      min-width: 75px;
+      text-align: center;
+
+      &:hover {
+        border: 1px solid white;
+      }
+    }
+  }
+
+  &__icon {
+    height: 25px;
+    width: 27px;
+    padding: 2px;
+    margin-right: 10px;
+    color: $white;
+
+    &[data-invite="1"] {
+      color: $core-default-background-alert;
+      animation-duration: 1s;
+      animation-name: changeScale;
+      animation-iteration-count: infinite;
+      animation-direction: alternate;
+      color: $core-button-accept ;
+
+      &[data-state="0"] {
+        display: flex;
+      }
+    }
+
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+}

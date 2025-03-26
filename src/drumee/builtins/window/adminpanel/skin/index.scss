@@ -1,0 +1,137 @@
+@import 'mixins/drumee';
+.window-admin-panel {
+  @import './search';
+  &__ui {
+    background-color: inherit;
+  }
+
+  &__main {
+    background-color:$admin-default-background ;
+  }
+
+  &__container {
+    background-color: inherit;
+  }
+
+  &__body {
+    height    : 100% !important;
+    margin    : 0 auto;
+    min-height: auto !important;
+    min-width : auto !important;
+    overflow  : hidden;
+    width     : 100% !important;
+
+    &.window__body {
+      align-items: start !important;
+      padding: 0;
+      border-radius:$default-border-radius-right;
+    }
+  }
+
+  &__progress {
+    position: absolute;
+    width : 200px;
+    height : 200px;
+    left: calc(50% - 100px);
+    top: calc(50% - 100px);
+  }
+
+  &__page_dropdown {
+    cursor: pointer;
+  }
+
+  &__header {
+    background-color: $admin-background-header ;
+    border-bottom: none;
+  }
+
+  &-topbar {
+    &__content {
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      width: 100%;
+
+      & .title {
+        text-align: center;
+        @include typo($size: 18px, $line: 19px, $color: $admin-default-text-reverse);
+
+        & .note-content {
+          width: 100%;
+
+          & .root-node {
+            text-overflow: ellipsis;
+            @include overflow-text;
+          }
+        }
+      }
+    }
+
+    &__control {
+      position: relative;
+      right: 0px;
+    }
+  }
+
+  &__page-dropdown {
+    width: 180px;
+  }
+
+  &__dropdown_main,
+  &__dropdown_container {
+    height: 100%;
+    width: 100%;
+  }
+
+  
+  &[data-size="min"] {
+    & .window-admin-panel {
+      &__page-dropdown {
+        width: 60px;
+      }
+    }
+
+    & .window-admin-panel-topbar {
+      &__content {
+        width: 69%;
+  
+        & .title {
+          align-items: center;
+          height: 100%;
+          overflow: hidden;
+          width: 100%;
+          @include typo($size: 15px, $line: 15px, $color: $admin-default-text-reverse);
+  
+          & .note-content {
+            width: 100%;
+  
+            & .root-node {
+              text-overflow: ellipsis;
+              @include overflow-text;
+            }
+          }
+        }
+      }
+    }
+
+    & .widget-dropdown-menu-menu {
+      &__wrapper {
+        & .menu-items {
+          left: 12px;
+          
+          &:before {
+            left: 8px;
+          }
+        }
+      }
+
+      &__input_wrapper {
+        width: 20px;
+
+        & .note-reader {
+          display: none;
+        }
+      }
+    }
+  }
+}

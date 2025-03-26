@@ -1,0 +1,49 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/builtins/window/supportticket/widget/notification/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.support-ticket-widget-notification {
+  &__ui {
+    background-color: $eorange;
+    border-radius: 2px;
+    box-shadow: $drumee-shadow-main;
+    color: $white;
+    cursor: pointer;
+    flex-shrink: 0;
+    right: 25px;
+    position: absolute;
+    top: -16px;
+    z-index: 1000;
+  }
+
+  &__icon {
+    &[data-over="yes"] {
+      &:after {
+        background-color: transparent;
+        border: 2px solid $eorange;
+        content: "";
+        height: 80px;
+        left: -20px;
+        position: absolute;
+        top: -20px;
+        width: 80px;
+      }
+    }
+  }
+
+  &__digit {
+    @include typo($size: 9px, $color: $default-text-reverse);
+    align-items: center;
+    background-color: $bigchat-default-background-alert ;
+    border-radius: 50%;
+    font-weight: bold;
+    height: 19px;
+    justify-content: center;
+    margin:10px 8px 8px;
+    position: absolute;
+    width: 19px;
+  }
+}

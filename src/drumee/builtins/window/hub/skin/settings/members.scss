@@ -1,0 +1,46 @@
+&-members{
+  &__ui{
+    position: absolute;
+    height: auto;
+    border-radius: $default-border-radius;//4px;
+    width: 290px;
+    z-index: 100;
+    background-color: $default-background;   //#FFFFFF;
+    box-shadow: 0 5px 8px 1px rgba(192, 197, 209, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);  
+  }
+  &-member__ui{
+    width: 100%;
+    .member{
+      .avatar{
+        padding: 10px;
+        margin-left: -10px;
+        width: 29px;
+        height: 29px;
+        border-radius: 50%;
+        margin-left: 0px;
+        margin-right: 10px;
+        background: lightgray;        
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: 50% 50%;      }
+      .name{
+        width: 220px;
+        padding: 0 10px 0 0;
+        @include typo($size:14px,$line:30px,$weight:400,$color:$default-text-color)//#494949);
+      }
+    }
+  }
+
+  &__label{
+    width: 100%;
+    // font-size: 12px;
+    // letter-spacing: 0em;
+    // line-height: 16px;
+    // color: #4A90E2;
+    // -moz-osx-font-smoothing: grayscale;
+    // -webkit-font-smoothing: antialiased;
+    // font-family: "Roboto-Regular", sans-serif;    
+    // @include typo($size:12px,$line:16px,$weight:400,$color:#4A90E2)
+    @include typo($size:14px,$line:16px,$weight:400,$color:$eblue);
+  }
+}

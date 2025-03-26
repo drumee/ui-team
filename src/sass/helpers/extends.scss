@@ -1,0 +1,103 @@
+%xia-container {
+  @include display-flex();
+  min-height: 750px;
+}
+
+%table-cell{
+    display: table-cell;
+}
+
+%space-vertical{
+    width: 1%;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+%full-width {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+%float-right{
+  float: right;
+}
+
+%text-shadow{
+    @include text-shadow(0 1px 0 rgba(0,0,0,0.2));
+}
+
+%vertical-text{
+    @include transform(rotate(-90deg));
+    @include transform(origin(0 0));
+}
+
+%box-shadow{
+    @include box-shadow(0 1px 0 rgba(0,0,0,0.2));
+}
+
+%border-blue{
+    border: 1px solid darken($xia-btn-bg-color, 10%);
+}
+
+%border-grey{
+    border: 1px solid darken($xia-bg-color, 10%);
+}
+
+%negative-left{
+    margin-left: -1px;
+}
+
+%blank-box{
+    @include box-shadow(none);
+    width: $xia-btn-height;
+    height: $xia-btn-height;
+    background:transparent;
+    &:hover,&:active {
+	background:transparent !important;
+    }
+    pointer:none;
+}
+
+/* ============================================
+ * Tints
+ * ============================================ */
+%tint-none{
+    @extend %text-shadow;
+    color: text-contrast($xia-bg-color);
+    background: transparent !important;
+    border: none !important;
+}
+
+/* ============================================
+ * Buttons
+ * ============================================ */
+%btn-rounded{
+    @include button-rounded;
+}
+
+%btn-circle-smal{
+    @include button-circle($circle-size:floor(1.2*$base-line-height));
+}
+
+%btn-circle-big{
+    @include button-circle($circle-size:92px);
+}
+
+/* ============================================
+ * Margins
+ * ============================================ */
+
+%margin-vertical-small {
+    margin:$xia-margin-small 0;
+}
+
+%divider{
+    height: 1px;
+    margin: 9px 0;
+    overflow: hidden;
+    background-color: #e5e5e5;
+}
+
+%align-center{
+    @include xia-align();
+}

@@ -1,0 +1,59 @@
+
+.shape-square-right{
+    border-radius : 5px;
+    border-right: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    @extend %align-center;
+    /* @include xia-align(flex-end, center); */
+}
+
+.shape-square-left{
+    border-radius : 5px;
+    border-bottom-left-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    @extend %align-center;
+}
+
+.shape-rounded{
+    border-radius: $xia-btn-border-radius !important;
+    @extend %align-center;
+}
+
+.shape-circle-small{
+    @include button-circle($circle-size:floor(1.2*$base-line-height), $shadow:non);
+    @extend %align-center;
+}
+
+.shape-circle-large{
+    @include button-circle($circle-size:90px);
+    @extend %align-center;
+}
+
+.shape-square{
+    border-bottom-left-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    @extend %align-center;
+}
+
+.shape-square{
+    border-bottom-left-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    @extend %align-center;
+}
+
+.border-light{
+    border: 1px solid #eee;
+}
+
+.drumee-section{
+    border-bottom: solid 1px $drumee-black;
+}
+
+.circle-130{
+    width: 130px;
+    height: 130px;
+    margin: auto;
+    border-radius: 50%;
+    overflow: hidden;
+}

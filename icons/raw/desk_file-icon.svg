@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 21.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Слой_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 125 113" style="enable-background:new 0 0 125 113;" xml:space="preserve">
+<style type="text/css">
+	.st0{filter:url(#filter-2);}
+	.st1{fill:#FFFFFF;}
+	.st2{fill:#DDE2E8;fill-opacity:0;}
+</style>
+<filter  filterUnits="objectBoundingBox" height="223.5%" id="filter-2" width="207.5%" x="-53.8%" y="-45.7%">
+	<feOffset  dx="0" dy="2" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset>
+	<feGaussianBlur  in="shadowOffsetOuter1" result="shadowBlurOuter1" stdDeviation="7"></feGaussianBlur>
+	
+		<feColorMatrix  in="shadowBlurOuter1" result="shadowMatrixOuter1" type="matrix" values="0 0 0 0 0.760784314   0 0 0 0 0.725490196   0 0 0 0 0.796078431  0 0 0 0 0">
+		</feColorMatrix>
+	<feOffset  dx="0" dy="6" in="SourceAlpha" result="shadowOffsetOuter2"></feOffset>
+	<feGaussianBlur  in="shadowOffsetOuter2" result="shadowBlurOuter2" stdDeviation="8"></feGaussianBlur>
+	
+		<feColorMatrix  in="shadowBlurOuter2" result="shadowMatrixOuter2" type="matrix" values="0 0 0 0 0.335389192   0 0 0 0 0.254004902   0 0 0 0 0.444993622  0 0 0 0.0808990036 0">
+		</feColorMatrix>
+	<feMorphology  in="SourceAlpha" operator="dilate" radius="0.5" result="shadowSpreadOuter3"></feMorphology>
+	<feOffset  dx="0" dy="5" in="shadowSpreadOuter3" result="shadowOffsetOuter3"></feOffset>
+	<feGaussianBlur  in="shadowOffsetOuter3" result="shadowBlurOuter3" stdDeviation="4"></feGaussianBlur>
+	
+		<feColorMatrix  in="shadowBlurOuter3" result="shadowMatrixOuter3" type="matrix" values="0 0 0 0 0.248950965   0 0 0 0 0.309221484   0 0 0 0 0.459183673  0 0 0 0.125622736 0">
+		</feColorMatrix>
+	<feMerge>
+		<feMergeNode  in="shadowMatrixOuter1"></feMergeNode>
+		<feMergeNode  in="shadowMatrixOuter2"></feMergeNode>
+		<feMergeNode  in="shadowMatrixOuter3"></feMergeNode>
+	</feMerge>
+</filter>
+<title>Group 11</title>
+<desc>Created with Sketch.</desc>
+<g id="Page-1-Copy">
+	<g id="Desktop-S7" transform="translate(-564.000000, -145.000000)">
+		<g id="Documents_x2F_Music" transform="translate(580.000000, 81.000000)">
+			<g id="Group-11" transform="translate(0.000000, 74.000000)">
+				<g id="Rectangle-7">
+					<g class="st0">
+						<path id="path-1_2_" d="M14,14V0h75c2.2,0,4,1.8,4,4v73c0,2.2-1.8,4-4,4H4c-2.2,0-4-1.8-4-4V14H14z"/>
+					</g>
+					<g>
+						<path id="path-1_1_" class="st1" d="M14,14V0h75c2.2,0,4,1.8,4,4v73c0,2.2-1.8,4-4,4H4c-2.2,0-4-1.8-4-4V14H14z"/>
+					</g>
+				</g>
+				<polygon id="Path-2" class="st2" points="14,0 0,14 14,14 				"/>
+			</g>
+		</g>
+	</g>
+</g>
+</svg>

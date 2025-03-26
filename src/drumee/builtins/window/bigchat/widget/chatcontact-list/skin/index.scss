@@ -1,0 +1,112 @@
+@import 'mixins/drumee';
+
+.widget-chatcontactList {
+	&__ui{
+		background-color: $bigchat-default-block-background;
+		width: calc(100% - 0px);
+	}
+	
+	&__main {
+		background-color: inherit;
+		height: 100%;
+	}
+	
+  &__container {
+		background-color: inherit;
+		height: 100%;
+		overflow: hidden;
+
+		.drumee-spinner {
+			height: 30px;
+			width: 30px;
+		}
+	}
+	
+	&-header {
+		height: 34px;
+		width :	100%;
+		justify-content: center;
+		
+		&__title {			
+			@include typo($size: 15px, $line: 16px, $color: $bigchat-text-title);
+			padding-bottom: 8px;
+			padding-top: 6px;
+
+			.inner {
+				margin-top: 5px;
+				padding-left:0px;
+			}
+		}
+
+		&__icon {
+			background-color: $white;
+			cursor: pointer;
+			margin: 5px;
+			position: absolute;
+			right: 0;
+				
+			& svg {
+				fill :$bigchat-default-icon-neutral;
+			}
+		}
+	}
+
+	&__separator {
+		background-color: $bigchat-default-separator;
+		border-radius: 1px;
+		height: 1px;
+		margin: 3px 0 0px 0;
+		
+		width: 100%;
+	}
+
+	&-content {
+		margin: 1px 0 0 0.5px;
+		padding-bottom: 5px;
+		padding-left: 14px;
+		padding-top: 5px;
+		margin-top:5px;
+
+		&__items {
+			width: 100%;
+		}
+		
+		&__icon {
+			& svg {
+				fill : $bigchat-default-user-icon ;
+				height: 29px;
+				width: 29px;
+			}
+		}
+		
+		&__name {			
+			margin-top: 4px;
+			padding: 3px 3px 3px 15px;
+			@include typo($size: 14px, $line: 16px, $color:$bigchat-default-text-color);
+			@include overflow-text;
+			.inner{
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+		}
+	}
+
+	&__item {
+		height: calc(100% - 40px);
+		margin-top: -1px;
+		width: 100%;
+		
+		& .drumee-spinner {
+			height: 35px;
+			margin: auto;
+			overflow: hidden;
+			width : 35px;
+		}
+	}
+	
+	&__contacts {
+		height:100%;
+		overflow:hidden;
+	}
+}

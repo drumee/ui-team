@@ -1,0 +1,719 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : desk/skin/desk-wap.scss
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+
+.wap {
+  border-radius: 4px;
+  width: calc(100vw - 60px);
+  min-width: 688px;
+  // height: calc(100vh - 80px - 20px);
+  min-height: calc(100vh - 80px - 20px); //80 is heigh of topbar, 20 is margin from bottom page
+  background-color: #FFFFFF;
+  box-shadow: 0 7px 20px 0 rgba(86, 65, 113, 0.08), 0 3px 17px 0 rgba(194, 185, 203, 0);
+  //temp start
+  &.sharing-temp {
+    .menu-items {
+      background: white;
+      top: 100%;
+      white-space: nowrap;
+      position: absolute;
+      box-shadow: 0 0 2px 0 rgba(0,0,0,0.5);
+      z-index: 99999!important;
+      padding: 10px;
+    }
+  }
+  .top-bar {
+    .top-bar__logo {
+      color: #8d98cc;
+    }
+    .top-bar__pagename-text {
+      @include typo($color: $egrey-49,$size:24px,$line:36px,$weight:300);
+    }
+    .top-bar__button {
+      box-shadow: 0 1px 3px 0 rgba(0,0,0,0.14), 1px 2px 2px 0 rgba(0,0,0,0.1), 0 4px 4px 0 rgba(209,221,245,0.2);
+      cursor: pointer;
+      height: 36px;
+      text-transform: uppercase;
+      width: 115px;
+      @include typo($color: $ewhite,$size:12px,$line:14px,$weight:500);
+      &.top-bar__button--primary {
+        background-color: $eorange;
+      }
+      &.top-bar__button--secondary {
+        background-color: $egreen;
+      }
+    }
+  }
+  .content {
+    .content__inner {
+      flex-wrap: wrap;
+    }
+    .content__header {
+      color: $egrey-49;
+    }
+    .content__header-text {
+      @include typo($color: $egrey-49,$size:18px,$line:40px,$weight:300);
+    }
+    .content__label {
+      @include typo($color: $egrey-49,$size:18px,$line:21px,$weight:300);
+      &.content__label--link {
+        color: #4A90E2;
+      }
+      &.content__label--private {
+        color: #AB47BC;
+      }
+      &.content__label--public {
+        color: $egreen;
+      }
+      &.content__label--hightlighted {
+        color: $egreen;
+      }
+      &.content__label--uppercase {
+        text-transform: uppercase;
+      }
+      &.content__label--bold {
+        @include typo($color:$egrey-49,$size:14px,$line:36px,$weight:500);
+      }
+    }
+    .content__text {
+      @include typo($color: $egrey-78,$size:14px,$line:16px,$weight:300);
+    }
+    .content__btn {
+      cursor: pointer;
+      height: 36px;
+      width: 150px;
+      border: 1px solid #DDE2E8;
+      border-radius: 2px;
+      justify-content: center;
+      // text-transform: uppercase;
+      @include typo($color: $egrey-49,$size:16px,$line:34px,$weight:400);
+      &.content__btn--small {
+        @include typo($color: $ewhite,$size:14px,$line:34px,$weight:400);
+      }
+      &.content__btn--accent {
+        border-color: $egreen-soft;
+        background-color: $egreen-soft;
+        color: $ewhite;
+      }
+      &.content__btn--big {
+        width: 182px;
+      }
+      &.content__btn--large {
+        width: 200px;
+      }
+      &.content__btn--small-text {
+        font-size: 14px;
+      }
+      &.content__btn--my-pc {
+        color: #4A90E2;
+      }
+      &.content__btn--grey {
+        border-color: #89929E;
+        background-color: #89929E;
+        color: $ewhite;
+      }
+      &.content__btn--drumee-drive {
+        color: $egreen;
+      }
+      &.content__btn--delete {
+        border-color: #FF7479;
+        background-color: #FF7479;
+        color: $ewhite;
+      }
+      &:hover, &[data-state="1"], &[data-radio="on"] {
+        border-color: $eviolet;
+        background-color: $eviolet;
+        color: $ewhite;
+      }
+    }
+  }
+  .card {
+    flex-shrink: 0;
+    .card__name {
+      color: $egrey-49;
+    }
+    .card__name-text {
+      @include typo($color: $egrey-49,$size:18px,$line:21px,$weight:300);
+    }
+    .card__footer-btn {
+      align-self: center;
+      cursor: pointer;
+      width: 171px;
+      height: 34px;
+      border-radius: 2px;
+      border: 1px solid #DDE2E8;
+      @include typo($color: $egrey-49,$size:14px,$line:34px,$weight:400);
+    }
+  }
+  .chips {
+    .chips-item {
+      width: 112px;
+      height: 67px;
+      box-shadow: 0 2px 4px 0 rgba(208,208,222,0.55);
+      background-color: #FCFCFD;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .chips-item__header {
+      @include typo($color: $egrey-49,$size:14px,$line:22px,$weight:300);
+    }
+    .chips-item__number {
+      @include typo($color: $egrey-49,$size:16px,$line:19px,$weight:500);
+    }
+  }
+  .analytics-blocks {
+    .analytics-blocks__header {
+      margin-bottom: 22px;
+      @include typo($color: $egrey-49,$size:14px,$line:16px,$weight:300);
+    }
+    .analytics-blocks__number {
+      cursor: pointer;
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: 0.9px solid #EFF4FC;
+      .note-content {
+        width: 70px;
+        height: 70px;
+        text-align: center;
+        border: 3px solid #EFF4FC;
+        border-radius: 50%;
+        @include typo($color:#476390,$size:16px,$line:64px,$weight:500);
+      }
+    }
+  }
+  .diff {
+    .diff__icon {
+      box-shadow: 0 0 2px 0 rgba(0,0,0,0.1), 0 4px 4px 0 rgba(209,221,245,0.2);
+      border-radius: 2px;
+      cursor: pointer;
+      flex-direction: row-reverse;
+      @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+      .svg-inner {
+        width: 16px;
+        height: 16px;
+        margin-left: 15px;
+      }
+      &.diff__icon--private {
+        background-color: #AB47BC;
+        color: white;
+      }
+      &.diff__icon--conf {
+        background-color: #EA4D44;
+        color: white;
+      }
+    }
+    .diff__item {
+      width: 150px;
+      height: 46px;
+      border: 1px solid #F7F7F9;
+      border-radius: 2px;
+      cursor: pointer;
+      .diff__text {
+        @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+      }
+      .diff__number {
+        @include typo($line:16px,$size:14px,$weight:500,$color:#4A90E2);
+      }
+    }
+  }
+  .other {
+    .other__label {
+      width: 135px;
+      @include typo($line:26px,$size:14px,$weight:300,$color:$egrey-49);
+    }
+    .other__line {
+      cursor: pointer;
+    }
+    .other__link {
+      @include typo($line:26px,$size:14px,$weight:300,$color:#476390);
+    }
+    .other__lang-number {
+      @include typo($line:26px,$size:12px,$weight:300,$color:#476390);
+    }
+  }
+  .messages {
+    position: fixed;
+    width: $wrapper-width;
+    bottom: 10px;
+    .messages__btn {
+      background-color: $ewhite;
+      width: 119px;
+      height: 34px;
+      border-radius: 2px;
+      box-shadow: 0 2px 5px 1px rgba(0,0,0,0.09), 0 3px 5px 0 rgba(0,0,0,0.08), 0 3px 9px 0 rgba(194,185,203,0);
+      cursor: pointer;
+    }
+    .messages__label {
+      @include typo($line:14px,$size:12px,$weight:300,$color: $egrey-49);
+    }
+    .messages__number {
+      height: 14px;
+      width: 14px;
+      background-color: #4A90E2;
+      border-radius: 2px;
+      @include typo($line:14px,$size:10px,$weight:400,$color: $ewhite);
+    }
+  }
+  .nav {
+    .nav__text {
+      cursor: pointer;
+      border-radius: 2px;
+      white-space: nowrap;
+      padding: 0 33px;
+      margin: 0 2px;
+      @include typo($line:36px,$size:16px,$weight:400,$color: $egrey-49);
+      &:hover {
+        color: $eviolet;
+      }
+      &[data-state="1"], &[data-radio="on"] {
+        background-color: $eviolet;
+        &, &:hover {
+          color: $ewhite;
+        }
+      }
+      &--icon {
+        .note-content {
+          display: none;
+        }
+      }
+      @media (max-width: $md) {
+        padding: 0 10px!important;
+        margin: 0 8px;
+        width: auto!important;
+        &--icon {
+          svg {
+            display: none;
+          }
+          .note-content {
+            display: inline;
+            line-height: 20px;
+          }
+        }
+      }
+    }
+  }
+  .domain-choose {
+    .domain-choose__block {
+      height: 154px;
+      width: 248px;
+      border-radius: 2px;
+      box-shadow: 0 2px 5px 1px rgba(0,0,0,0.09), 0 3px 5px 0 rgba(0,0,0,0.08), 0 3px 9px 0 rgba(194,185,203,0);
+    }
+    .domain-choose__header {
+      @include typo($line:16px,$size:14px,$weight:300,$color: $egrey-49);
+    }
+    .domain-choose__details {
+      @include typo($line:16px,$size:14px,$weight:300,$color: $epink);
+    }
+  }
+  .input {
+    //border: 1px solid #DDE2E8;
+    .input__field {
+      width: 266px;
+      height: 46px;
+      input {
+        @include typo($line:21px,$size:18px,$weight:300,$color: $egrey-89);
+        @include placeholder-input{color: $egrey-89};
+      }
+    }
+    .input__text {
+      width: 112px;
+      height: 46px;
+      border-left: 1px solid #DDE2E8;
+      @include typo($line:46px,$size:16px,$weight:300,$color: #4A90E2);
+    }
+    .input__select {
+      .menu-items {
+        margin-top: 6px;
+        width: 112px;
+        border: 1px solid #DDE2E8;
+      }
+    }
+    .input__select-item {
+      height: 24px;
+      border-radius: 2px;
+      cursor: pointer;
+      @include typo($line:19px,$size:16px,$weight:300,$color: #4A90E2);
+      &:hover, &[data-radio="on"], &[data-state="1"] {
+        background-color: #879BFF;
+        color: $ewhite;
+      }
+    }
+  }
+  .domain-comp {
+    flex-wrap: wrap;
+    width: 400px;
+    .domain-comp__name {
+      flex-basis: 80px;
+      text-align: center;
+      cursor: pointer;
+      border: 2px solid transparent;
+      @include typo($line:16px,$size:14px,$weight:400,$color: $egrey-49);
+      .svg-inner {
+        width: 35px;
+        height: 35px;
+        margin-bottom: 10px;
+        float: none;
+      }
+      &:hover, &[data-state="1"], &[data-radio="on"] {
+        border: 2px solid $eviolet;
+      }
+    }
+  }
+  .search {
+    .search__field {
+      padding: 0 10px;
+      input {
+        @include typo($line:26px,$size:14px,$weight:300,$color: $egrey-89);
+        @include placeholder-input{color: $egrey-89};
+        border-bottom: 1px solid $egrey-89;
+        &:focus {
+          border-bottom: 1px solid $eviolet;
+        }
+      }
+    }
+  }
+  .plain-text {
+    width: 380px;
+    @include typo($line:16px,$size:12px,$weight:300,$color: $egrey-49);
+  }
+  .redirect {
+    .redirect__item {
+      width: 223px;
+      border-bottom: 1px solid #DDE2E8;
+    }
+  }
+  .dragndrop {
+    width: 370px;
+    border: 2px dashed #CACACA;
+    background-color: #FBFBFB;
+    cursor: pointer;
+    .dragndrop__text {
+      @include typo($line:16px,$size:14px,$weight:300,$color: $egrey-49);
+    }
+  }
+  .language {
+    flex-wrap: wrap;
+    width: 400px;
+    .languange__selector {
+      flex-basis: 25%;
+      cursor: pointer;
+    }
+    .language__existing {
+      @include typo($line:16px,$size:14px,$weight:400,$color: $egrey-49);
+      .svg-inner {
+        height: 40px;
+        margin-bottom: 5px;
+      }
+    }
+    .language__add {
+      background-color: #FBFBFB;
+      color: $egrey-78;
+      border-radius: 2px;
+    }
+  }
+  .spaceblock {
+    .spaceblock__text {
+      @include typo($line:11px,$size:11px,$weight:400,$color: $egrey-89);
+    }
+  }
+  .bar {
+    width: 580px;
+    .bar-line {
+      height: 10px;
+      border-radius: 5px;
+    }
+    .bar-empty {
+      background-color: #f3f9fe;
+      width: 100%;
+    }
+    .bar-other {
+      position: absolute;
+      top: 0;
+    }
+  }
+  .attention {
+    background-color: #F7F7F9;
+    border-radius: 2px;
+    width: 580px;
+    // .attention__text {
+      
+      // }
+    }
+    .privacy-options {
+      width: 678px;
+      .privacy-options__btn {
+        flex-direction: row-reverse;
+        cursor: pointer;
+        text-transform: capitalize;
+        border-radius: 2px;
+        box-shadow: 0 1px 5px 0px rgba(0, 0, 0, 0.3), 0 0 2px 0 rgba(0, 0, 0, 0.1);
+        @include typo($line:16px,$size:14px,$weight:300,$color:#2F2F2F);
+        &[data-state="1"], [data-radio="on"] {
+          &.privacy-options__btn--private {
+            background-color: #AB47BC;
+            color: $ewhite;
+          }
+          // &.privacy-options__btn--private {
+            //     background-color: $eorange;
+            //     color: $ewhite;
+            // }
+            &.privacy-options__btn--public {
+              background-color: $egreen;
+              color: $ewhite;
+            }
+          }
+          .svg-inner {
+            width: 14px;
+            height: 14px;
+            margin-left: 15px;
+          }
+        }
+      }
+      .diffusion-opt {
+        flex-direction: column;
+        position: absolute;
+        right: 90px;
+        top: -10px;
+        @include typo($line:21px,$size:14px,$weight:300,$color:$egrey-89);
+        .svg-inner {
+          width: 37px;
+          height: 29px;
+          margin-bottom: 25px;
+        }
+      }
+      .modal {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(74, 74, 74, 0.4);
+        border-radius: 2px;
+        .modal__inner {
+          background-color: $ewhite;
+          box-shadow: 0 0 7px 0 rgba(0,0,0,0.14), 0 0 6px 0 #F8FAFC;
+          border-radius: 2px;
+        }
+        .modal__close {
+          color: #B6BFCA;
+          position: absolute;
+          top: 0;
+          right: 0;
+          cursor: pointer;
+        }
+        .modal__text {
+          @include typo($line:21px,$size:14px,$weight:300,$color:$egrey-78);
+          &.modal__text--bold {
+            @include typo($line:21px,$size:14px,$weight:500,$color:$egrey-78);
+          }
+        }
+        .modal__contact-name {
+          max-width: 200px;
+          @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+        }
+      }
+      .auth-people {
+        .auth-people__settings {
+          visibility: hidden;
+        }
+        .auth-people__number {
+          border: 1px solid #DDE2E8;
+          width: 25px;
+          height: 25px;
+          border-radius: 50%;
+          @include typo($line:25px,$size:16px,$weight:500,$color:#4A90E2);
+        }
+        .auth-people__search {
+          width: 170px;
+          .auth-people__search-block {
+            border-bottom: 1px solid #DDE2E8;
+            input {
+              @include typo($line:24px,$size:12px,$weight:300,$color:$egrey-89);
+            }
+          }
+        }
+        .auth-people__action-icon {
+          visibility: hidden;
+        }
+        .auth-people__table {
+          width: 825px;
+        }
+        .auth-people__table-small {
+          width: 354px;
+        }
+        .auth-people__th {
+          border-bottom: 1px solid #dde2e8;
+          text-transform: uppercase;
+          width: 99%;
+          @include typo($line:13px,$size:11px,$weight:300,$color:$egrey-49);
+          &.auth-people__th--small {
+            text-transform: none;
+          }
+        }
+        .auth-people__tr {
+          border-bottom: 1px solid #dde2e8;
+          width: 99%;
+          height: 34px;
+          @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+          &:hover {
+            background-color: #f7f7f9;
+            .auth-people__action-icon {
+              visibility: visible;
+              cursor: pointer;
+            }
+          }
+          &.auth-people__tr--contacts {
+            &:hover {
+              color: $ewhite;
+              background-color: $eviolet;
+              .auth-people__action-icon {
+                color: $ewhite;
+              }
+            }
+          }
+        }
+        .auth-people__td {
+          height: 33px;
+          align-items: center;
+          flex-shrink: 0;
+          &.auth-people__td--name,
+          &.auth-people__td--email,
+          &.auth-people__td--name,
+          &.auth-people__td--pages,
+          &.auth-people__td--changes,
+          &.auth-people__td--c-email,
+          &.auth-people__td--c-name,
+          &.auth-people__td--website,
+          &.auth-people__td--telephone {
+            white-space: nowrap;
+            overflow: hidden;
+            .note-content {
+              overflow: hidden;
+            }
+            .root-node {
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+          }
+          &.auth-people__td--website {width: 270px;}
+          &.auth-people__td--name {width: 234px;}
+          &.auth-people__td--email {width: 212px;}
+          &.auth-people__td--access {width: 50px;}
+          &.auth-people__td--created,
+          &.auth-people__td--edited {width: 55px}
+          &.auth-people__td--version {width: 80px;}
+          &.auth-people__td--date {width: 130px;}
+          &.auth-people__td--name,
+          &.auth-people__td--pages {width: 205px;}
+          &.auth-people__td--changes {width: 190px;}
+          
+          &.auth-people__td--check {width: 50px;}
+          &.auth-people__td--c-name,
+          &.auth-people__td--c-email {width: 220px;}
+          &.auth-people__td--c-phone {width: 100px;}
+          &.auth-people__td--c-modify {width: 42px;}
+          
+          &.auth-people__td--h-version {width: 83px;}
+          &.auth-people__td--h-date {width: 90px;}
+          &.auth-people__td--telephone,
+          &.auth-people__td--h-modification {width: 156px;}
+        }
+        .auth-people__add-modal {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 100%;
+          background: rgba(255,255,255,0.9);
+        }
+      }
+      .add-people {
+        .add-people__header {
+          @include typo($line:25px,$size:22px,$weight:400,$color:$egrey-89);
+        }
+        .add-people__text {
+          @include typo($line:16px,$size:14px,$weight:400,$color:#EA4D44);
+        }
+        .add-people__menu {
+          width: 170px;
+          .menu-items {
+            width: 100%;
+            padding: 4px 0;
+            border-radius: 2px;
+            background-color: #FFFFFF;
+            box-shadow: 0 0 7px 0 rgba(0,0,0,0.14), 0 0 6px 0 #F8FAFC, 0 10px 14px 0 rgba(0,0,0,0.2);
+          }
+        }
+        .add-people__menu-header {
+          position: relative;
+          @include typo($line:26px,$size:14px,$weight:300,$color:$egrey-89);
+          &:after {
+            content: " ";
+            position: absolute;
+            right: -23px;
+            align-self: center;
+            width: 0;
+            height: 0;
+            border-top: 5px solid $egrey-49;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+          }
+        }
+        .add-people__menu-item {
+          cursor: pointer;
+          position: relative;
+          @include typo($line:36px,$size:15px,$weight:300,$color:$egrey-89);
+          &:before {
+            content: " ";
+            position: absolute;
+            left: 8px;
+            margin: 11px 0;
+            width: 14px;
+            height: 14px;
+            border: 1px solid #DDE2E8;
+            border-radius: 50%;
+          }
+          &:hover, &[data-radio="on"],&[data-state="1"] {
+            &:after {
+              content: " ";
+              position: absolute;
+              left: 8px;
+              margin: 13px 2px;
+              width: 10px;
+              height: 10px;
+              background-color: #879BFF;
+              border-radius: 50%;
+            }
+          }
+        }
+        .add-people__menu-text {
+          @include typo($line:36px,$size:15px,$weight:300,$color:$egrey-89);
+        }
+        .add-people__search-field {
+          margin-right: 3px;
+          @include typo($line:36px,$size:15px,$weight:300,$color:$egrey-89);
+          input {
+            width: 20px;
+            border-bottom: 1px solid #DDE2E8;
+          }
+        }
+      }
+      .select-dates {
+        .select-dates__label {
+          @include typo($line:14px,$size:12px,$weight:300,$color:$egrey-89);
+        }
+        .select-dates__field {
+          width: 57px;
+          border-bottom: 1px solid #DDE2E8;
+          input {
+            text-align: center;
+            @include typo($line:20px,$size:12px,$weight:300,$color:$egrey-49);
+          }
+        }
+      }
+    }

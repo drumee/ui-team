@@ -1,0 +1,71 @@
+[
+  {
+    "ord": 1,
+    "ln": "fr",
+    "category": "Utiliser le bureau",
+    "category_desc": "Par contenus, il faut entendre tout élément présent sur le bureau Drumee. Ces éléments se déclinent sous deux formes principales : les dossiers et les fichiers.<br>- Dans les dossiers, on trouve le dossier personnel de couleur bleue, la boîte de transfert de couleur orange et le dossier partagé interne de couleur violette ; <br>- Dans les fichiers simples, on trouve le document, l’image, la photo, la vidéo...",
+    "metadata": [
+      {
+        "LH": "Importer des contenus depuis votre ordinateur",
+        "RH": "Que ce soient des fichiers simples ou des dossiers, vous pouvez effectuer un <span>« glisser/déposer »</span> directement depuis votre ordinateur.<br>Une deuxième solution pour importer un ou plusieurs fichiers simples consiste à cliquer sur le bouton <span class=\"help-button desktop-desksettings\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-desktop_desksettings\"></use></svg></span> positionné en haut du bureau Drumee, à droite de la barre « Chercher », puis, à cliquer sur le bouton « Importer »."
+      },
+      {
+        "LH": "Ouvrir un contenu et le déplacer",
+        "RH": "<span>Cliquez</span> sur un contenu. Une fenêtre s'ouvre s'il s'agit d'un dossier, le fichier simple quant à lui s’ouvre en mode aperçu. Pour déplacer le contenu ouvert, <span> faîtes un clic continu</span> sur le bandeau de couleur du haut. Pour modifier leur taille, <span>étirez les côtés</span>."
+      },
+      {
+        "LH": "Organiser ses contenus sur le bureau",
+        "RH": "<span>Cliquez en continu</span> sur une <span>icône</span> (représentant le contenu à bouger) et déplacez-la entre deux autres items.<br> Si les icônes à déplacer sont l’une à côté de l’autre, vous pouvez effectuer une <span>sélection multiple</span> en effectuant un clic continu de manière à englober les icônes souhaitées (un rectangle se forme sur le fond du bureau). Ainsi, vous déplacez en même temps plusieurs contenus. <br>Une autre façon de réaliser une sélection multiple consiste à sélectionner via la case de sélection (positionnée au coin gauche en haut) les icônes à déplacer."
+      },
+      {
+        "LH": "Créer et utiliser un premier dossier",
+        "RH": "<span>Cliquez</span> sur le bouton <span class=\"help-button folder\"><svg> <use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-raw-drumee-folder-blue\"></use></svg></span> situé dans la barre du bas : il se crée sur le bureau. Nommez-le. Puis, <span>cliquez</span> dessus pour l’ouvrir, <span>glissez/déposez</span>, à l’intérieur, des contenus de votre bureau Drumee et/ou des fichiers simples/dossiers de votre ordinateur."
+        
+      },
+      {
+        "LH": "Placer un contenu à la poubelle",
+        "RH": "<span>Survolez l'icône</span> et cliquez sur la case de sélection (positionnée au coin gauche en haut). Puis, <span>cliquez</span> sur le bouton <span class=\"help-button trash\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-trash\"></use></svg></span> situé à droite dans la barre du bas. <br>Un autre moyen consiste à <span>glisser/déposer</span> l'icône directement sur le bouton <span class=\"help-button trash\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-trash\"></use></svg></span>   ."
+      }
+    ]
+  },
+  {
+    "ord": 2,
+    "ln": "fr",
+    "category": "Communiquer",
+    "category_desc": "Pour les <span>communications internes</span> (possibles uniquement avec les contacts ayant accepté l'invitation), vous pouvez utiliser le <span>tchat/visio interne</span>. <br>Pour les <span>communications externes</span> [possibles avec tous vos contacts (inscrits ou non à Drumee)], vous devez utiliser l’<span>appel/visio externe</span>.",
+    "metadata": [
+      {
+        "LH": "Inviter un premier contact",
+        "RH": "<span>Cliquez</span> sur le bouton <span class=\"help-button desktop-contactbook\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-desktop_contactbook\"></use></svg></span> positionné dans la barre du bas. Une fois la fenêtre ouverte, <span>cliquez</span> sur le bouton <span class=\"help-button add-contact\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-add-contact\"></use></svg></span> (positionné dans le bandeau de couleur du haut), précisez le mail du contact, puis invitez-le.<br>Il est également possible d’inviter un contact, en cliquant sur le bouton <span class=\"help-button add-contact\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-add-contact\"></use></svg></span> situé en haut du bureau Drumee, à gauche de la barre « Chercher »."
+      },
+      {
+        "LH": "Tchat, appel vidéo avec des contacts internes",
+        "RH": "<span>Cliquez</span> sur le bouton <span class=\"help-button chat-visio\"><svg> <use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-chat-visio\"></use></svg></span> dans la barre du bas. Vous pouvez tchater, envoyer des contenus, réaliser un appel vidéo (il vous faut au moins un premier contact)."
+      },
+      {
+        "LH": "Appel vidéo avec des contacts externes",
+        "RH": "<span>Cliquez</span> sur le bouton <span class=\"help-button area-code\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-area-code\"></use></svg></span> situé dans la barre du bas. Une fois la fenêtre ouverte, <span>cliquez</span> sur le bouton <span>« + »</span>, placé à gauche dans le bandeau coloré de la fenêtre, pour créer une nouvelle réunion. Renseignez les informations et invitez les contacts."
+      }
+    ]
+  },
+  {
+    "ord": 3,
+    "ln": "fr",
+    "category": "Partager, transférer des contenus",
+    "category_desc": "Pour transférer des contenus en externe (hors du carnet d’adresses de Drumee), on crée des <span>« boîtes de transfert externe »</span>.<br> Pour partager des contenus en interne (càd avec des contacts ayant accepté votre invitation effectuée via Drumee), on crée des <span>« dossiers partagés internes »</span>.",
+    "metadata": [
+      {
+        "LH": "Créer une « boîte de transfert externe »",
+        "RH": "<span>Cliquez</span> sur le bouton <span class=\"help-button transfer-box\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-raw-drumee-folder-orange\"></use></svg></span> situé dans la barre du bas. Lorsque la boîte est créée sur le bureau, cliquez dessus pour l'ouvrir, <span>glissez-y</span> le(s) contenu(s) à transférer. Puis, <span>cliquez</span> sur le bouton <span class=\"help-button sharebox-bell\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-sharebox-bell\"></use></svg></span> placé en haut à gauche dans le bandeau coloré, pour adresser un mail de notification et <span>envoyez</span>."
+      },
+      {
+        "LH": "Créer un « dossier partagé interne »",
+        "RH": "Le dossier partagé interne peut être envoyé si et seulement si vos contacts ont accepté votre invitation à vous rejoindre sur Drumee.<br><span>Cliquez</span> sur le bouton <span class=\"help-button shared-folder\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-raw-drumee-folder-purple\"></use></svg></span> situé dans la barre du bas. Une fois le dossier partagé interne créé sur le bureau, cliquez dessus pour l'ouvrir, <span>glissez-y</span> le(s) contenu(s) que vous souhaitez partager et <span>envoyez</span>."
+      },
+      {
+        "LH": "Gérer les boîtes de transfert / les dossiers partagés",
+        "RH": "Lorsqu’une boîte de transfert externe ou un dossier partagé interne est ouvert, pour les paramétrer ou les supprimer, <span>cliquez</span> sur le bouton <span class=\"help-button editbox-cog\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-editbox_cog\"></use></svg></span> positionné dans le bandeau coloré de la boîte de transfert externe ou du dossier partagé interne. <span>Paramétrez-les</span> en précisant les droits, la liste des contacts, etc... et/ou <span>supprimez-les</span> en cliquant sur le bouton <span class=\"help-button trash\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-trash\"></use></svg></span> situé à gauche de la fenêtre."
+      }
+    ]
+  }
+]

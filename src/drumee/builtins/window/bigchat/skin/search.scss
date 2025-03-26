@@ -1,0 +1,109 @@
+&-search {
+  &__wrapper {
+    z-index: 10;
+  }
+
+  &[data-status="open"] {
+    display: flex;
+  }
+
+  &[data-status="closed"] {
+    display: none;
+  }
+  
+  &__box {
+    padding: 10px 10px 0 0;
+  }
+
+  &__icon {
+    color:$bigchat-default-icon-reverse;
+    cursor: pointer;
+    height: 24px;
+    margin: auto 10px auto 5px;
+    padding: 3px;
+    width: 24px;
+
+    &:hover {
+      color:$bigchat-default-icon-hover ;
+    }
+  }
+
+  &__bar {
+    border-bottom: 1px solid $bigchat-default-window-header-search;
+    width: 100%;
+
+    & input {
+      @include typo($size: 15px,$line: 16px, $color:$bigchat-default-text-reverse);
+      background-color: transparent;
+      margin-top: 2px;
+      width: 100%;
+
+      &::placeholder {
+        @include typo($size: 15px,$weight: 300,$line: 16px, $color: $bigchat-default-text-reverse);
+      }
+    }
+  }
+}
+
+// Layout for responsive
+&[data-size="max"] {
+  & .search-wrapper {
+    &[data-mode="open"] {
+      width: 35%;
+    }
+  }
+}
+
+&[data-size="medium"] {
+  & .search-wrapper {
+    &[data-mode="open"] {
+      width: 32%;
+    }
+  }
+}
+
+&[data-size="min"] {
+  & .search-wrapper {
+    &[data-mode="open"] {
+      width: 80%;
+    }
+  }
+}
+
+&[data-size="max"],
+&[data-size="medium"],
+&[data-size="min"] {
+  & .search-wrapper {
+    & .search-result-box {
+      max-width: 270px;
+      width: 95%;
+    }
+
+    &[data-mode="open"] {
+      background: $bigchat-background-header;
+      border-radius:6px 0 0 0;
+      height: 44px;
+      left: 40px;
+      position: absolute;
+      z-index: 10000;
+      
+      & .search-box {
+        display : flex;
+      }
+
+      & .search-min-icon {
+        display : none;
+      }
+    }
+
+    &[data-mode="closed"] {
+      & .search-min-icon {
+        display : flex;
+      }
+
+      & .search-box {
+        display : none;
+      }
+    }
+  }
+}

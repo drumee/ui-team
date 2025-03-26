@@ -1,0 +1,11 @@
+{
+	// Add the snippets for scss 
+	"typo": {
+		"scope": "scss",
+		"prefix": ["typo"],
+		"body": [
+			"@include typo(\\$size: ${1:16px}, \\$color: ${2:\\$eblue});$0"
+		],
+		"description": "to add the text size and color"
+	}
+}

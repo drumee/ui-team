@@ -1,0 +1,88 @@
+&-reply {
+  &__main {
+    background-color: $dgc-chat-reply-bg;
+    border-radius: 2px 4px 4px 2px;
+    height: 100%;
+    min-width: 100px;
+    padding: 5px;
+    width: calc(100% - 10px);
+    margin-bottom: 3px;;
+  }
+
+  &__container {
+    height: 100%;
+    padding-left: 5px;
+    width: 100%;
+  }
+
+  &__wrapper {
+    height: 100%;
+    width: 100%;
+
+    &.attachment {
+      align-items: center;
+      justify-content: center;
+      max-width: 40px;
+    }
+  }
+
+  &__note {
+    &.name {
+      @include typo($size: 12px, $line: 14px);
+      padding-bottom: 3px;
+      padding-top:3px;
+      text-transform: capitalize;
+    }
+
+    &.conversation {
+      overflow: hidden;
+
+      & .note-content {
+        @include typo($size: 12px, $line: 14px, $weight: 400, $color: $egrey-2f);
+        overflow: hidden;
+        word-wrap: break-word;
+  
+        & a {
+          color: $eblue;
+  
+          &:hover{
+            color: $dgc-chat-hover; 
+          }
+        }
+      }
+    }
+  }
+
+  &__icon {
+    color: $egrey-89;
+    cursor: pointer;
+
+    &.close-icon {
+      height: 8px;
+      width: 8px;
+      position: absolute;
+      right: 2px;
+      top: 2px;
+      
+    }
+  }
+
+  &__media-attachment {
+    height: 26px;
+    overflow: hidden;
+    width: 30px;
+
+    & .widget-chatItem__attachment-wrapper {
+      &.media-grid__ui {
+        background: inherit;
+        height: 100%;
+        margin: 0;
+        width: 100%;
+
+        & .filename {
+          display: none;
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+@import 'mixins/drumee';
+
+.notification-file {
+  &__ui {
+    width: 159px;
+    border-radius: 2px;
+    margin-left: 15px;
+    padding-bottom: 2px;
+    padding-top: 2px;
+    height: 20px;
+    min-height: 25px;
+  }
+
+  &__filename {
+    width: 120px;
+    cursor: pointer;
+    margin-left: 36px;
+    @include typo($size: 11px, $line: 12px, $weight: 400, $color: $core-secondary-text-color );
+    @include overflow-text();
+
+    & .note-content {
+      text-overflow: ellipsis;
+    }
+
+    &:hover {
+      color: #879BFF;
+    }
+  }
+
+  &__main {
+    background-color: inherit;
+    max-height: 300px;
+  }
+
+  &__container {
+    background-color: inherit;
+  }
+}

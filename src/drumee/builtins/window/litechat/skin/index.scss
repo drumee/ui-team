@@ -1,0 +1,307 @@
+@import 'mixins/drumee';
+
+.window-litechat {
+  @import 'builtins/webrtc/skin/topbar';
+  @import 'attachment';
+  @import 'message-options';
+  @import 'reply-message';
+  
+  &__ui {
+    height: 500px;
+    overflow: hidden;
+  }
+
+  &__main {
+    height: inherit;
+    height: 100%;
+    width: 100%;
+    background-color: $core-default-background;
+  }
+
+  &__container {
+    background-color: inherit;
+
+		.drumee-spinner {
+			width: 30px;
+			height: 30px;
+    }
+  }
+  
+  &__chat-content {
+    height:100%;
+    overflow: hidden;
+    width: 100%;
+
+    .drumee-spinner {
+      height: 50px;
+      margin: auto;
+      top: 40%;
+      width : 50px;
+      z-index: 9999;
+    }
+  }
+
+  &__body {
+    height: 100%;
+    overflow-x: hidden;
+    padding-bottom: 5px;
+
+    .no-content {
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      width: 100%;
+    }
+  }
+
+  &__messages {
+    height: inherit;
+    width: 100%;
+    @include typo($line: 16px, $size: 14px,$color: $core-default-text-color);
+
+    & .smart-container {
+      height: 100%;
+    }
+  }
+
+  &__message-options-wrapper {
+    display: none !important;
+    height: 100%;
+    min-height: 65px;
+    padding-bottom: 10px;
+  }
+  
+  &__messenger-wrapper {
+    border-top: 1px solid $core-default-separator;//$default-separator;
+  }
+
+  &__messenger {
+    height: 100%;
+
+    & .lib-messenger {
+      &__content {
+        background-color:  $dgc-messenger-bg;
+        border-radius: $default-border-radius;
+        margin-left:10px;
+
+        .note-content {
+          cursor: text;
+          max-height: 171px;
+          min-height: 21px;
+          overflow-y: auto;
+          padding: 10px 10px;
+          white-space: pre-wrap;
+          @include typo($line: 14px, $size: 13px,  $color: $core-default-text-color);//$weight: 300,
+
+          &::-webkit-scrollbar {
+            height: 100%;
+            width: 3px;
+          }
+      
+          &::-webkit-scrollbar-thumb {
+            background-color: $default-scrollbar-color;
+            cursor: pointer;
+          }
+
+          &::before {
+            text-transform: capitalize;
+            @include typo($line: 14px, $size: 12px, $weight: 300, $color:$core-default-text-placeholder);
+          }
+        }
+      }
+
+      &__wrapper-popup.dialog__wrapper[data-state="open"] {
+        box-shadow: $drumee-shadow-box;
+        min-height: 180px;
+        width: 319px;
+      }
+      
+      &__emojis-roll {
+        height: 170px;
+      }
+
+      &__icon {
+        height: 23px;
+        margin: 5px 8px;
+        padding: 0px;
+        width: 20px;
+
+        &.attach {
+          margin: 5px 2px;
+          &:hover {
+            color: $core-default-icon-hover;
+          }
+        }
+      }
+    }
+  }
+  
+  &__drag-drop-wrapper {
+    background:$core-default-background;
+    display: none !important;
+    height: 100%;
+    padding: 10px;
+    position: absolute;
+    width: 100%;
+    z-index: 99999;
+  }
+
+  &__drag-drop {
+    align-items: center;
+    border-radius: $default-border-radius;
+    border: 1px dashed $egreen;
+    box-sizing: border-box;
+    display: flex;
+    height: inherit;
+    justify-content: center;
+    width: inherit;
+
+    & .note-content {
+      height: 38px;
+      min-width: 140px;
+      @include typo($line:19px, $size:16px, $weight:300, $color:$egreen);
+    }
+  }
+
+  &__action-buttons {
+    margin-bottom:-2px;
+    width: 100%;
+  }
+
+  &__message-count {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    width: 100%;
+  }
+
+  &__icon {
+    &.delete-icon {
+      color: $btn-caution-border;
+      height: 11px;
+      margin-right: 10px;
+      width: 13px;
+    }
+
+    &:hover{
+      color: $btn-caution-border-hover;
+    }
+  }
+
+  &__note {
+    &.counter {
+      padding: 3px 0 4px 0;
+      @include typo($size: 12px, $line: 20px, $weight:300, $color: $core-default-text-color);
+    }
+  }
+
+  &__ack-wrapper {
+    height: 100%;
+    margin-bottom: 5px;
+    max-height: 50px;
+    max-width: 345px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+
+    & .preset-acknowledge { 
+      &__main {
+        background-color: $dgc-chat-reply-bg;
+        border-radius: $default-border-radius;
+        padding: 10px 40px;
+      }
+
+      &__container {
+        height: 100%;
+        justify-content: center;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+
+        & .icon {
+          height: 18px;
+          margin-left: -5px;
+          position: absolute;
+          width: 18px;
+        }
+
+        & .note-reader {
+          padding-left: 25px;
+          margin-top: auto;
+          margin-bottom: auto;
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $egrey-89);
+        }
+      }
+    }
+  }
+
+  &__buttons-wrapper {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    width: 100%;
+
+    & .button {
+      align-items: center;
+      border-radius: $default-border-radius;
+      height:26px;
+      justify-content: center;
+      margin: 0 2%;
+      max-width:93px;
+      min-width: 93px;
+      width:100%;
+    }
+  }
+
+  &__button-confirm {
+    background-color: $core-default-background; 
+    border: 0.5px solid $btn-commit-border;
+    justify-content: center;
+    @include typo($size: 13px, $line: 12px, $color: $btn-commit-backgroundless-text);
+
+    &:hover {
+      border:2px solid $btn-commit-border-hover;
+      color: $btn-commit-text-hover;
+    }
+  }
+
+  &__button-delete {
+    border: 0.5px solid $btn-caution-border;
+    justify-content: center;
+    @include typo($size: 13px, $line: 12px, $color: $btn-caution-backgroundless-text);//$eorange-dark);
+
+    &:hover {
+      border:2px solid $btn-caution-border-hover;
+      color: $btn-caution-text-hover;
+
+      svg {
+        color: $btn-caution-text-hover;
+      }
+    }
+
+    &[data-active="no"] {
+      cursor: not-allowed !important;
+      opacity: 0.4;
+    }
+  }
+
+  &__button-cancel {
+    border:  1px solid $btn-rollback-border;
+    justify-content: center;
+    @include typo($size: 13px, $line: 12px, $color: $btn-rollback-text);
+
+    &:hover {
+      border:2px solid $btn-rollback-border-hover;
+      color: $btn-rollback-text-hover;
+    }
+  }
+
+  &_read-only-msg {
+    align-items: center;
+    background: hsla(0,0%,78.4%,.5);//rgba(137, 146, 158, 0.2);
+    height: 40px;
+    justify-content: center;
+    @include typo($size: 12px,  $color: $eblue);//$weight:300,
+  }
+}
+

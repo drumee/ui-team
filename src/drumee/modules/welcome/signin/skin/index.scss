@@ -1,0 +1,455 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/modules/welcome/signin/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+
+@import '../../../../skin/mixins/drumee.scss';
+@import 'cross-signin';
+@import 'gateway';
+@import 'url';
+
+.welcome-signin {
+  &__ui,
+  &__main,
+  &__container,
+  &__items {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__ui {
+    padding-top: 70px;
+    &[data-mode="reconnect"]{
+      background: radial-gradient(109.24% 109.24% at 21.67% 0,rgba(91,115,210,.4) 0,#606889 100%),#879bff;
+      padding: 0;
+    }
+  }
+
+  &__content {
+    height: auto;
+    width: 100%;
+  }
+
+  &__header {
+    height: auto;
+    width: 100%;
+    &[data-mode="reconnect"]{
+      display: none;
+      // height: 40px;
+      // justify-content: center;
+    }
+  }
+
+  &__header-content {
+    align-items: center;
+    &[data-mode="reconnect"]{
+      max-height: 30px;
+    }
+  }
+
+  &__items {
+    align-items: center;
+    justify-content: start;
+    margin: 0 auto 0;
+    max-width: 350px;
+    min-width: 320px;
+    width: auto;
+    padding-top: 40px;
+
+    &[data-mode="reconnect"]{
+      min-height: 0;
+      padding-top: 10px;
+      min-height: 300px;
+    }
+
+    &.content{
+      align-items: center;
+      justify-content: center;
+    }
+
+    & .welcome__pw-meter.wrapper {
+      margin-top: 28px;
+    }
+    
+    &.welcome__row {
+      &[data-status="error"] {
+        border-radius:$default-border-radius;
+        border: 2px solid $core-default-border-error;
+      }
+    }
+  }
+
+  &__wrapper {
+    align-items: center;
+    height: 70px;
+    justify-content: center;
+    margin: 5px 0; //10px 0;
+    max-height: 70px;
+    width: 100%;
+    &[data-mode="reconnect"]{
+      height: 60px;
+    }
+
+    &.helper {
+      margin: 0;
+      height: 120px;
+      // max-height: 20px;
+    }
+
+    &.no-code {
+      &[data-mode="closed"] {
+        display: none;
+      }
+    }
+    &.password{
+      input{
+        margin-left: 55px;
+      }
+    }
+  }
+
+
+  &__row {
+    align-items: center;
+    background-color: $core-default-block-background;
+    border-radius:$default-border-radius;
+    height: 100%;
+    max-height: 56px;
+    width: 100%;
+
+    &.mobile-title,
+    &.email-title {
+      margin-bottom: 60px;
+    }
+
+    &.without-icon,
+    &.no-background {
+      background-color: transparent;
+    }
+
+    &.company{
+      background-color: transparent;
+    }
+
+    &.helper,
+    &.message-wrapper {
+      justify-content: center;
+    }
+    
+    .welcome__icon {
+      height: 24px;
+      margin: auto 24px;
+      position: absolute;
+      width: 24px;
+    }
+
+    .welcome__entry {
+      padding-left: 65px;
+    }
+
+    &.mobile-number {
+      max-height: 70px;
+    }
+    
+    &.company-url {
+      //top: 60px;
+      & .drumee-text{
+        margin: 0px -20px;
+        @include typo($size: 16px, $line: 16px, $color: $white-f9);
+      }
+    }
+    &.buttons-wrapper,
+    &.message-wrapper {
+      margin: 15px 0;
+      height: 60px;
+      &.message.no-background {
+        width:100%;
+        height: auto;
+      }
+    }
+
+    &.buttons-wrapper,
+    &.message-wrapper {
+      &[data-mode="closed"] {
+        display: none;
+      }
+      
+      &[data-error="yes"] {
+        opacity: .5;
+        pointer-events: none;
+      }
+    }
+
+    & .welcome__entry {
+      height: 100%;
+      padding: 0;
+      &[data-status="error"] {
+        border-radius:$default-border-radius;
+        border: 2px solid $core-default-border-error;
+      }
+    }
+  }
+
+  &__mobile-wrapper {
+    justify-content: center;
+    padding-top: 10px;
+  }
+
+  &__note {
+    @include typo($size: 20px, $line: 28px,$weight:400, $color: $core-default-text-reverse);
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    &[data-state="reconnect"]{
+      @include typo($size: 14px, $line: 20px,$weight:300, $color:$core-default-text-reverse);
+    }
+
+    &.header {
+      @include typo($size: 38px, $line: 45px,$weight:500, $color:$core-default-text-reverse);
+      &[data-mode="reconnect"]{
+        @include typo($size: 12px, $line: 12px,$weight:300, $color:$core-default-text-reverse);
+      }  
+    }
+    &.sub-header{
+      padding-top: 20px;
+    }
+
+    &.steps {
+      color: $white-f7;
+      top: 30px;
+    }
+
+    &.drumee-com {
+      @include typo($size: 20px, $line: 28px,$weight:500,$color:$white-f9);
+      position: absolute;
+      right: -130px;
+    }
+
+    &.input-label {
+      max-width: 110px;
+      text-align: right;
+      width: 100%;
+    }
+
+    &.password-tips {
+      @include typo($size: 12px, $line: 16px, $weight:400, $color: $white-f9);
+      padding-top: 47px;
+    }
+
+    &.mobile-number {
+      align-items: center;
+      width: 376px;
+      margin-top: -5px;
+    }
+
+    &.mobile {
+      justify-content: center;
+      width: 100%;
+    }
+
+    &.helper,
+    &.not-now {
+      @include typo($size: 16px, $line: 16px, $color: $white-f9);
+      width: 100%;
+    }
+
+    &.helper,
+    &.title {
+      justify-content: center;
+    }
+
+    &.forgot-password {
+      justify-content: center;
+      //justify-content: flex-start;
+    }
+
+    &.no-account {
+      justify-content: flex-end;
+    }
+    
+    &.text-underline {
+      cursor: pointer;
+      text-decoration-line: underline;
+      &:hover {
+        color:$eviolet;//#6a85ff; 
+      }
+    }
+  }
+
+  &__icon {
+    color: $core-default-icon-neutral;//$egrey-89;
+    cursor: pointer;
+    height: 18px;
+    width: 18px; //20px;
+
+    &.input-wrapper {
+      position: absolute;
+      margin:12px 20px;// 8px 12px 12px 15px;
+    }
+
+    &.mobile,
+    &.mobile-number,
+    &.acknowledgment {
+      color: $core-default-text-reverse;
+    }
+
+    &.mobile,
+    &.mobile-number {
+      height: 20px;
+      width: 20px;
+    }
+
+    &.mobile-number,
+    &.acknowledgment {
+      right: 10px;
+      top: 5px;
+    }
+
+    &.email {
+      height:21px;
+      left: 2px;
+      top: 5px;
+      width: 21px;
+
+      svg {
+        fill:#2F2F2F;
+        opacity:0.8;
+      }
+    }
+
+    &.lock {
+      left: -2px;
+    }
+
+    &.code {
+      height: 22px;
+      width: 22px;
+    }
+  }
+
+  &__protocol{
+    position: relative;
+  }
+  &__entry {
+    & input {
+      border-bottom: none;
+      border-radius:0 6px 6px 0px;
+      padding: 4px;
+      @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
+
+      &::placeholder {
+        @include typo($size: 19px, $line: 28px, $weight: 300, $color:$connect-text-placeholder);
+      }
+    }
+
+    &[data-status="error"] {
+      border-radius:$default-border-radius;
+      border: 2px solid $core-default-border-error;
+    }
+
+    & .entry-reminder_error {
+      display: none;
+    }
+
+    &.with-icon {
+      height: 100%;
+      padding: 0 0 0 55px;
+      width: 100%;
+    }
+    
+    &.input-box {
+      border-radius:$default-border-radius;
+      align-items: center;
+      background-color: $core-default-background;
+      height: 56px;
+      width: 100%;
+
+      & input {
+        padding-left: 10px;
+      }
+    }
+
+    .pw-shower {
+      cursor: pointer;
+      left: auto;
+      right : 10px;
+    }
+
+  }
+
+  .pw-shower {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    color: $egrey-2f;
+    opacity: 0.7;
+  }
+
+  &__button-confirm {
+    @include typo($size: 20px, $line: 28px, $color: $default-text-reverse);
+    align-items: center;
+    background-color: $egreen-soft;
+    border-radius:$default-border-radius;
+    cursor: pointer;
+    height: 100%;
+    justify-content: center;
+    width: 100%;
+
+    &:hover {
+      box-shadow: 0 0 13px 0 rgba(169,186,255,.5);
+    }
+  }
+
+  &-go {
+    @include typo($color: $core-default-text-reverse, $size: 18px, $line: 21px, $weight: 300);
+    align-items: center;
+    background-color: $egreen-soft;
+    cursor: pointer;
+    justify-content: center;
+    opacity: 0.2;
+    pointer-events: none;
+    width: 100%;
+
+    &[data-device="mobile"] {
+      @include typo($color: $core-default-text-reverse, $size: 16px, $line: 13px, $weight: 300);
+    }
+
+    &[data-mode="1"]{
+      opacity: 1;
+      pointer-events:auto;
+    }
+
+    &[data-error="1"] {
+      background-color: transparent;
+      opacity: 1;
+    }
+  }
+
+  .drumee-api-popup__ui{
+    position: absolute;
+  }
+  
+  // for loader -- Do not remove
+  @keyframes loader {
+    0% { transform: rotate(0deg); }
+    100% {  transform: rotate(359deg); }
+  }
+
+  &__icon {
+    &.loader {
+      color: transparent;
+      height: 142px;
+      width: 140px;
+      animation: loader 2s linear infinite;
+    }
+  }
+
+  &__waiting {
+    height: 100px;
+    left: calc(50vw - 50px);
+    position: absolute;
+    top: calc(50vh - 50px);
+    width: 100px;
+  }
+}

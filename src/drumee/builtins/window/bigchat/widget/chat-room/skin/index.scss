@@ -1,0 +1,196 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/window/bigchat/widget/chat-room/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.chat-room {
+  @import './action-menu';
+  @import './popup';
+
+  &__ui {
+    background-color: inherit;
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  &__main {
+    background-color: inherit;
+    height: inherit;
+    overflow: hidden;
+  }
+
+  &__container {
+    background-color: inherit;
+    height: inherit;
+    overflow: hidden;
+  }
+
+  &-header {
+    height: 34px;
+    padding: 4px 3px 5px 15px;
+    top: 2px;
+		width :	100%;
+
+    &__left_icon_wrapper {
+      align-items: center;
+      width: 34px;
+    }
+    
+    &__title {
+      justify-content: center;
+      width: 100%;
+    }
+
+    &__note {
+
+      &.title {
+        cursor: pointer;
+        max-width: 170px;
+        overflow:hidden;
+        padding: 4px 6px;
+        white-space: nowrap;
+        @include typo($size: 15px, $line: 16px, $color: $bigchat-text-title); 
+    
+        @include overflow-text;
+        .inner {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        &.private-room{
+          cursor: default;
+        }
+      }
+
+      &.share-room {
+        &:hover {
+          color: $bigchat-backgroundless-text-hover;
+        }
+      }
+    }
+    
+    & .user-profile {
+      border-radius: 50%;
+      height: 29px;
+      top: -1px;
+      width: 29px;
+      
+      & .note-content{
+        @include typo($size: 11px, $line: 11px);
+      }
+    }
+
+    &__icon {
+      color:$bigchat-default-icon-neutral;
+      cursor: pointer;
+
+      &.connector {
+        height: 20px;
+        position: absolute;
+        right: 15px;
+        top: 6px;
+        width: 20px;
+  
+        & svg {
+          fill: $bigchat-default-icon-neutral;
+          opacity: 0.85;
+          &:hover {
+            fill: $bigchat-default-icon-hover;
+            opacity: 1;
+          }
+        }
+      }
+    }
+  }
+
+  &__profile {
+    &.customer {
+      & .user-profile__icon {
+        background-color: $bigchat-default-user-icon !important;
+      }
+    }
+  }
+
+  &__separator {
+		background-color: $bigchat-default-separator;
+		border-radius: 1px;
+		height: 1px;
+		margin: 3px 0px 0px;
+  //  opacity: 0.2;
+		width: 100%;
+  }
+
+  &__content {
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+  }
+  
+  &__icon {
+    cursor: pointer;
+    height: 26px;
+    width: 25px;
+  }
+
+  &-footer {
+    &__shareroom,
+    &__privateroom {
+      height:70px;
+      width:100%;
+      
+      & .buttons {
+        justify-content: center;//space-around;
+        margin-top: auto;
+        margin-bottom: auto;
+      }
+
+      & .button {
+        border-radius:$default-border-radius;
+       //border-radius: 2px;
+       //margin: 0 10% 0 2%; // 0px 13px;
+        min-height: 35px;
+        min-width: 115px;
+        text-align: center;
+        width: auto;
+        & .note-content {
+          margin:auto
+        }
+      }
+
+      & .button-cancel{
+       // background: $egrey-b6; //$egrey-89;
+        border:1px solid $btn-rollback-border  ;
+        padding:0 12px;
+        justify-content: center;
+        cursor:pointer;
+        margin-right: 4%;
+        margin-left: 0;
+        @include typo($size: 15px, $line: 20px, $color: $btn-rollback-text );//$btn-commit-text);
+
+        &:hover {
+         // background: $egrey-78;
+         border:2px solid $btn-rollback-border-hover ;
+         color:$btn-rollback-text-hover;  
+        }
+      }
+
+      & .button-confirm {     
+        background:$btn-commit-background;       
+       // border:1px solid $btn-rollback-border;//$ab-input-border-grey; //$dgc-chatroom-scbtn; 
+        padding:0 12px;
+        justify-content: center;
+        cursor:pointer;
+        margin-left: 4%;
+        @include typo($size: 15px, $line: 19px, $color: $btn-commit-text); 
+
+        &:hover {
+          background-color: $btn-commit-background-hover ;
+         // background: $white-f9;
+        }
+      }
+    }
+  }
+}

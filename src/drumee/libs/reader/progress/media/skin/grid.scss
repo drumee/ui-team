@@ -1,0 +1,92 @@
+@import 'mixins/drumee';
+.svg-progress{
+  &__main{
+    width: 100%;
+    height: 100%;
+    justify-content: space-between;
+  }
+  &__container{
+    &-header{
+      justify-content: space-between;
+    }
+    &-body{
+      width: 100%;
+      height: 100%;
+      position: absolute;
+    }
+    &-footer{
+      justify-content: space-around;
+    }
+  }
+  &__value{
+    &-filesize{
+      letter-spacing: 0.09px;
+      @include typo($line:13px,$size:11px,$weight:300,$color:#2F2F2F);
+    }
+    &-percent{
+      letter-spacing: 0.09px;
+      @include typo($line:13px,$size:11px,$weight:300,$color:#18A3AC);      
+    }
+    &-filename{
+      white-space: nowrap;
+      width: 100%;
+      overflow: hidden;
+      .drumee-text {
+        width: 93px;
+        padding: 0 10px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        @include typo($line:14px,$size:12px,$weight:300,$color:#18A3AC); 
+        letter-spacing: 0.1px;
+        text-align: center;
+      }
+      &[data-visible="no"]{
+        display: none;
+        pointer-events: none;
+      }
+    }
+  }
+  &__chart{
+    width: 30px;
+    height: 30px;
+    left: calc(50% - 15px);
+    top: calc(50% - 15px);
+    position: absolute;
+    svg{
+      width: 100%;
+      height: 100%;
+      fill: transparent;
+      stroke-linecap: round;    
+    }    
+    &--bg{
+      stroke: #d0d2d6;
+      stroke-width: 20;      
+    }
+    &--fg{
+      stroke: #18a3ac;
+      stroke-width: 20;
+      stroke-linecap: round; 
+      transition: stroke-dashoffset 1s linear;      
+    }
+    &--inner{
+      fill: transparent;
+    }
+  }
+  &__close{
+    width: 11px;
+    height: 11px;
+    position: absolute;
+    padding: 0px;
+    left: calc(50% - 5.5px);
+    top: calc(50% - 8.5px);
+    svg{
+      width: 100%;
+      height: 100%;
+      fill: #EA4D44;
+    }    
+    &[data-cancelable="no"]{
+      display: none;
+      pointer-events: none;
+    }
+  }
+}

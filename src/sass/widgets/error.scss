@@ -1,0 +1,28 @@
+%xia-error-box{
+    background: none repeat scroll 0 0 $xia-color-error;
+    //@include background(linear-gradient(top,  lighten($xia-color-error, 10%), darken($xia-color-error, 5%)));
+    color: white;
+    position: absolute;
+    border: solid red !important;
+    list-style: none outside none;
+    text-align: left;
+    display: block;
+}
+
+.xia-error-box {
+  @extend %xia-error-box;
+  top: 5px;
+  right: 5px;
+}
+
+.xia-error-box[data-anchor=bottom-left] {
+  @extend %xia-error-box;
+  top: 102%;
+  left: 5px;
+}
+
+.xia-error-box[data-error=off]{
+  background: none repeat scroll 0 0 white;
+  display:none;
+}
+

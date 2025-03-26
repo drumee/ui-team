@@ -1,0 +1,47 @@
+.media-row {
+  &__checkbox{
+    left: -70px;
+    position: absolute;    
+  }
+  width: 14px;
+  height: 14px;
+  padding: 1px;
+  border: 1px solid #FA8540;
+  fill: $ewhite;
+  background: $ewhite;
+  border-radius: 2px;
+  display: none;
+  position: absolute;
+  left: -30px;
+  top: 5px;
+  z-index: 1000;
+  &[data-hover="on"] { 
+    background-color: #879BFF;
+    color: $ewhite;
+    .media__container {
+      .filename {
+        color: $ewhite;
+      }
+      .icon {
+        fill: #FA8540;
+      }
+      .media-checkbox {
+        display: block;
+      }
+      .file-info {
+        color: $ewhite;
+      }
+    }
+    .media-sharing-wrapper {
+      visibility: visible;
+      fill: $ewhite;
+    }
+  }
+}
+&[data-selected="1"] {
+  color: $ewhite;
+  .media-checkbox {
+    display: block;
+    fill: #FA8540;
+  }
+}

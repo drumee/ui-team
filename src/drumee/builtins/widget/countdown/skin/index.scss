@@ -1,0 +1,30 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/widget/countdown/js/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.countdown-timer {
+  &__ui {
+    align-items: center;
+    background-color: inherit;
+    display: flex;
+  }
+
+  &__main,
+  &__container {
+    height: 100%;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &__container {
+    padding: 2px;
+  }
+
+  &__counter {
+    @include typo($size: inherit, $line: inherit, $color: inherit);
+  }
+}

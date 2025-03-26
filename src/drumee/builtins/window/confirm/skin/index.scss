@@ -1,0 +1,197 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/builtins/window/confirm/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.window-confirm {
+  &__ui {
+    background-color: $core-default-background;
+    border-radius: $default-border-radius;
+    padding: 20px;
+    width: auto;
+    height: auto;
+    max-height: 100%;
+    max-width: 100%;
+    min-height: 300px;
+    min-width: 490px;
+    overflow: hidden;
+    position: absolute;
+    justify-content: flex-start;
+    align-items: center;
+
+    &[data-type="confirm"] {
+      background-color: $core-default-background;
+      border-radius: $default-border-radius;
+      padding: 20px;
+      width: auto;
+      height: auto;
+      max-height: 100%;
+      max-width: 100%;
+      min-height: 300px;
+      min-width: 490px;
+      overflow: hidden;
+      position: absolute;
+    }
+
+    &[data-maxsize="1"] {
+      max-height: 400px;
+      max-width: 600px;
+      background-color: $core-default-background;
+
+    }
+
+    &[data-maxsize="0"] {
+      max-height: 400px;
+      max-width: 560px;
+      background-color: $core-default-background;
+
+    }
+  }
+
+  &__main {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__topbar {
+    height: 40px;
+    opacity: 1 !important;
+    width: 100%;
+  }
+
+  &__body {
+    align-content: center;
+    flex: 1;
+    height: 100%;
+    justify-content: center;
+    padding: 0 10px;
+    width: 100%;
+  }
+
+  &-topbar {
+    &__container {
+      border-bottom: 1px solid transparent;
+      border-radius: $default-border-radius-top;
+      flex: 1;
+    }
+
+    &__control {
+      height: 100%;
+      position: absolute;
+      right: 0;
+
+      .icon {
+        color: $egrey-b6;
+        margin: 10px;
+        opacity: 0.5;
+      }
+    }
+  }
+
+  &__title {
+    align-content: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    @include typo($size: 16px, $line: 25px, $color: $core-default-text-color);
+
+    & .name {
+      top: 24px;
+      @include typo($size: 22px, $line: 26px, $color: $core-default-text-alert); // $window-confirm-default-title-color);
+    }
+  }
+
+  &__message {
+    //text-align: center;
+    justify-content: center;
+    padding: 31px 10px 5px; //5px 10px 5px 10px;
+    margin: 0 auto;
+    @include typo($weight: 300, $size: 16px, $line: 26px, $color: $core-default-text-color);
+
+    &.trash {
+      width: 50px;
+      margin: 10px 0;
+      @include typo($weight: 300, $size: 16px, $line: 26px, $color: violet);
+    }
+
+    &.delete-team {
+      max-width: 450px;
+    }
+  }
+
+  @media (max-width: $tablet) {
+    &__message {
+      margin: 0 26px;
+    }
+  }
+
+  &__buttons {
+    align-content: center;
+    height: 110px;
+    justify-content: center; //pace-evenly;
+    padding-top: 25px;
+    width: 100%;
+
+    .button {
+      align-content: center;
+      align-items: center;
+      border-radius: $default-border-radius;
+      cursor: pointer;
+      height: 35px;
+      justify-content: center;
+      text-align: center;
+      width: 115px;
+      margin: 0 3%;
+    }
+
+    &.intro-popup .button {
+      height: 56px;
+      width: 200px;
+    }
+  }
+
+  &__button-secondary {
+    border: 1px solid $btn-rollback-border;
+    @include typo($size: 16px, $line: 18px, $color: $btn-rollback-text );
+
+    &:hover {
+      border: 2px solid $btn-rollback-border-hover;
+      color: $btn-rollback-text-hover;
+    }
+
+    &.forbiden {
+      height: 32px; //35px;
+      margin-left: 0;
+      width: 90px;
+    }
+
+  }
+
+  &__button-primary {
+    background-color: $btn-commit-background;
+    border: 0px;
+    @include typo($size: 16px, $line: 18px, $color: $btn-commit-text);
+
+    &:hover {
+      background-color: $btn-commit-background-hover;
+    }
+
+    &.large {
+      min-width: 115px;
+      padding: 0 10px;
+      width: auto;
+    }
+  }
+
+  &__button-danger {
+    background-color: $btn-caution-background;
+    border: 0px;
+    @include typo($size: 16px, $line: 18px, $color: $btn-caution-text);
+
+    &:hover {
+      background-color: $btn-caution-background-hover ;
+    }
+  }
+}

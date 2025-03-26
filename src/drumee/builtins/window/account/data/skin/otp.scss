@@ -1,0 +1,139 @@
+@import 'mixins/drumee';
+
+.account-data-deletion-otp {
+  &__main {
+    margin: 20px 0;
+  }
+
+  &__tips {
+    justify-content: center;
+    height: 40px;
+    @include typo($size: 16px, $line: 26px, $color: $account-default-text-color, $weight: 300);
+
+    &[data-error="1"] {
+      color: $account-default-text-error;
+    }
+  }
+
+  &__row {
+    justify-content: space-around;
+  }
+
+  &__code {
+    height: 40px;
+    width: 140px;
+    margin: 0 auto;
+    padding-top: 15px;
+
+    & input {
+      background-color: transparent;
+      border-bottom: 1px solid $account-default-entry-border-bottom;
+      border-radius: 0px;
+      width: 100%;
+      margin-left: 0px;
+      @include typo($size: 16px, $line: 19px, $color: $account-default-text-color);
+
+      &::placeholder {
+
+        @include typo($size: 16px, $weight: 300, $line: 19px, $color: $account-default-text-placeholder);
+      }
+
+      &:focus {
+        border-color: $eblue;
+        outline: none;
+
+        @include placeholder-input {
+          @include typo($size: 16px, $weight: 400, $line: 19px, $color: $account-text-placeholder-focus);
+        }
+      }
+    }
+  }
+
+  &__no-code {
+
+    @include typo($size: 16px, $line: 18px, $color: $account-default-text-color, $weight: 300);
+    justify-content: center;
+    justify-items: center;
+    transition: height 1s;
+    overflow: hidden;
+    margin-top: 20px;
+
+    &[data-mode="closed"] {
+      height: 0;
+    }
+
+    &[data-mode="open"] {
+      height: 40px;
+    }
+  }
+
+  &__btn {
+    outline: none;
+    cursor: pointer;
+    justify-content: center;
+    border-radius: $default-border-radius;
+    @include typo($size: 13px, $line: 18px, $color: $btn-rollback-text, $weight: 300);
+    color: $btn-rollback-text;
+    background-color: $btn-rollback-background;
+    border: 1px solid $btn-rollback-border;
+
+    &:hover {
+      border: 2px solid $btn-rollback-border-hover;
+      color: $btn-rollback-text-hover;
+    }
+
+    &.go {
+      width: 70px;
+      color: $btn-commit-text;
+      background-color: $btn-commit-background;
+    }
+
+    &[data-role="commit"] {
+      color: $btn-commit-text;
+      background-color: $btn-commit-background;
+      border-color: $btn-commit-border;
+
+      &:hover {
+        border-color: 1px solid $btn-commit-border-hover;
+      }
+    }
+
+    &[data-state="0"] {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  &__note {
+    &.sent {
+      position: absolute;
+      transition: height 1s;
+      overflow: hidden;
+      transition: height 1s;
+
+      &[data-mode="closed"] {
+        height: 0;
+      }
+
+      &[data-mode="open"] {
+        width: 30px;
+        height: 30px;
+      }
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
+
+  &__message {
+    .l-1 {
+      @include typo($size: 12px, $line: 18px, $color: $btn-rollback-text, $weight: 300);
+    }
+
+    .l-2 {
+      @include typo($size: 12px, $line: 18px, $color: $account-default-text-caution, $weight: 400);
+    }
+  }
+}

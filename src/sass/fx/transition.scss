@@ -1,0 +1,84 @@
+.transition-2{
+    @include transition(all ease-in-out 2s);
+}
+.transition-3{
+    @include transition(all ease-in-out 3s);
+}
+.transition-4{
+    @include transition(all ease-in-out 4s);
+}
+.transition-5{
+    @include transition(all ease-in-out 5s);
+}
+.transition-geo{
+    @include transition(height ease-in-out .5s, width ease-in-out .5s);
+}
+.transition-height{
+    @include transition(height ease-in-out .5s);
+}
+.transition-width{
+    @include transition(width ease-in-out .5s);
+}
+
+.transition-fade-left{
+    @include transition(opacity ease-in-out .5s, left ease-in-out .5s);
+}
+
+.transition-fade{
+    @include transition(opacity ease-in-out .5s, background ease-in-out .5s);
+}
+
+.transition-bg{
+    @include transition(background-size ease-in-out .5s);
+}
+
+.transition-margin{
+    @include transition(margin ease-in-out .5s);
+}
+.transition-top{
+    @include transition(top ease-in-out .5s);
+}
+.transition-left{
+    @include transition(left ease-in-out .5s);
+}
+
+input{
+    &[type="text"], &[type="password"]{
+	@include transition(border-color ease-in-out .5s, box-shadow ease-in-out .5s);
+    }
+}
+.transition-y{
+    >div{
+	top:-800px;
+	@include transition(ease-in-out .5s);
+    }
+}
+/* .fx-slide{ */
+/*     @include transition(ease-in-out .5s); */
+/*     &[data-from="top"]{ */
+/* 	top:-500px; */
+/*     } */
+/*     &[data-from="left"]{ */
+/* 	left:-800px; */
+/*     } */
+/*     &[data-from="right"]{ */
+/* 	right:-800px; */
+/*     } */
+/*     &[data-from="bottom"]{ */
+/* 	bottom:-800px; */
+/*     } */
+/* } */
+
+.transition-all{
+    @include transition(all ease-in-out .5s);
+}
+.transition-1, .transition-long{
+    @include transition(all ease-in-out 1s);
+}
+.transition-border{
+    @include transition(border ease-in-out .5s);
+}
+
+.slide-x{
+    @include transition(left ease-in-out .5s, right ease-in-out .5s);
+}

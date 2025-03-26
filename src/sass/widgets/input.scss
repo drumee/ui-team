@@ -1,0 +1,177 @@
+.xia-input {
+  @extend %full-width;
+  position: relative;
+  display: table;
+  border-collapse: separate;
+  &:not(:last-child){
+      margin-bottom: $xia-margin-small !important;
+  }
+  .xia-btn{
+      height:33px;
+  }
+}
+
+.xia-input-addon {
+    @extend %space-vertical;
+    @extend %table-cell;
+    font-size: $base-font-size;
+    line-height: 1;
+    text-align: center;
+    background-color: #eee;
+    border: 1px solid #ccc;
+    border-radius: $xia-btn-border-radius;
+    min-width:50px;
+    color:$xia-dark-blue;
+}
+
+%input-shape {
+    @extend %table-cell;
+    height: $xia-btn-height;
+    font-size: $base-font-size;
+    /* color: #555; */
+    vertical-align: middle;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: $xia-btn-border-radius;
+    @include box-shadow(inset 0 1px 1px rgba(0,0,0,0.075));
+    &:focus{
+	border-color: #66afe9;
+	outline: 0;
+	@include box-shadow(inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, 0.6));
+    }
+    &[data-error="on"]{
+	border-color: #eeafe9;
+	outline: 0;
+	@include box-shadow(inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, 0.6));
+    }
+}
+.input-rounded-shape {
+    font-size: $base-font-size;
+    border-radius: $xia-btn-border-radius;
+    @extend %input-shape;
+}
+.input-square-shape {
+    padding: 5px;
+    font-size: 12px;
+    border-radius: 0;
+    @extend %input-shape;
+}
+
+
+.tooltips {
+    position: relative;
+    display: flex;
+    left: -125px;
+    top: 30px;
+    cursor: default;
+  .inner {
+      padding:5px;
+      position: absolute;
+      min-width:250px;
+      min-height:20px;
+      color: $xia-dark-blue;
+      text-align: center;
+      font-size: $base-font-size;
+      background-color: $xia-bgcolor-menu;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: $xia-btn-border-radius;
+      @include box-shadow(0 6px 12px rgba(0,0,0,0.175));
+      background-clip: padding-box;
+      &:after {
+	  content: '';
+	  position: absolute;
+	  top: -12px;
+	  left: 50%;
+	  margin-left: -8px;
+	  width: 0;
+	  height: 0;
+	  border-bottom: 12px solid $xia-color-red;
+	  border-right: 8px solid transparent;
+	  border-left: 8px solid transparent;
+      }
+  }
+}
+.smart-input{
+    img{
+	width:23px;
+	height:23px;
+    }
+    i.picto-left{
+	    font-size: 22px !important;
+    }
+    i.picto-right{
+	    font-size: 16px !important;
+    }
+    .xia-input-addon{
+	min-width:40px;
+    }
+}
+.input-error{
+    background: red;
+    color: white;
+    height: auto;
+    padding:5px;
+    margin: 5px;
+    position:absolute;
+    top:0;
+    right:0;
+    margin-left: 44px;
+    overflow: hidden;
+}
+
+.input-column{
+    padding: 6px 6px;
+    font-size: 13px;
+    border-radius: 4px;
+    height: 28px;
+    color: #555;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    &:focus{
+	border-color: #66afe9;
+	outline: 0;
+	@include box-shadow(inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, 0.6));
+    }
+    &[data-error="on"]{
+	border-color: #eeafe9;
+	outline: 0;
+	@include box-shadow(inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, 0.6));
+    }
+}
+
+.input-addon {
+    flex-direction: row;
+    justify-content: center;
+    font-size: $base-font-size;
+    font-weight: normal;
+    white-space: nowrap;
+    background-color: #eee;
+    border: 1px solid #ccc;
+    border-radius: $xia-btn-border-radius;
+    min-width:50px;
+    height: auto;
+    color:$xia-dark-blue;
+    i.fa{
+	margin-left: 10px;
+	margin-top: 8px;
+    }
+}
+.input-label{
+    padding:10px;
+    background-color: #eee;
+    border: 1px solid #ccc;
+    color:$xia-dark-blue;
+}
+.input-content{
+    padding-left:10px;
+    border: 1px solid #ccc;
+    color:$xia-dark-blue;
+}
+.input-params{
+    max-width: 600px;
+    margin:auto;
+}
+/* .check-box{ */
+/*     border: 1px solid #ccc; */
+/*     border-radius: 4px; */
+/* } */

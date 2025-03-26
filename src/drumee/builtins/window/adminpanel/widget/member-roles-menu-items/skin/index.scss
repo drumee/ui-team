@@ -1,0 +1,64 @@
+@import 'mixins/drumee';
+
+.widget-member-rolesMenu-items {
+  &__ui {
+    background-color: inherit;
+    &:hover{
+      *{
+      background-color:$admin-default-background-hover;
+      color:$admin-default-text-hover;
+      svg{
+         border-radius: $default-border-radius-tiny; 
+      }
+      &.checkbox[data-state="1"] {
+        box-shadow: none;
+        color: $admin-checkbox-checked-reverse;
+        border: 1px solid $admin-checkbox-checked-border-reverse;
+        border-radius:$default-checkbox-border-radius;
+      }
+      }
+    }
+  }
+
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    background-color: inherit;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0px 14px;
+  }
+
+  &__note {
+    max-width: 105px;
+    width: 100%;
+    @include typo($size: 12px,$weight:300,  $line: 24px, $color: $admin-default-text-color);
+    @include overflow-text;
+   .inner{
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__icon {
+    box-shadow: none;
+    cursor: pointer;
+    margin-left: 0px; 
+    border:1px solid $admin-default-checkbox-border;
+    color:$admin-default-checkbox-background;
+    border-radius:$default-checkbox-border-radius;
+    svg{
+      width: 14px;
+      height: 14px; 
+    }
+    &[data-state="1"] {
+      box-shadow: none;
+     
+      border: 1px solid $admin-default-checkbox-border;
+      color:$admin-default-checkbox-checked ;
+    }
+  }
+}

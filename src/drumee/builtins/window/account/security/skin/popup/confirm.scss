@@ -1,0 +1,86 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : 
+#   TYPE : 
+# ===================================================================**/
+// @import 'mixins/typo.scss';
+// @import 'mixins/colors/index.scss';
+// @import 'mixins/vendor.scss';
+@import 'mixins/drumee';
+
+.account-security{
+  &__popup{
+    &.dialog__wrapper{
+      position: absolute;
+      &[data-state="open"]{
+        z-index: 70000 !important;
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: rgba($color: #000000, $alpha: 0.2);
+      }  
+    }
+    &-confirm{
+      &.main{
+        height: 370px;
+        width: 680px;
+        border-radius: $default-border-radius-tiny;
+        background-color: $account-default-background;  
+        box-shadow: 0 0 7px 0 rgba(0,0,0,0.14), 0 10px 14px 0 rgba(0,0,0,0.2);
+        margin: auto;
+      }
+      &__buttons{
+        justify-content: space-between;
+        width:350px;
+        top:-50px;
+        left:174px;
+      }  
+      &.title{
+        height: 28px;
+        width: 255px;
+       // padding-right:101px;
+        @include typo($size:24px,$line:28px,$color:$account-default-text-color,$weight:300);
+        top:50px;
+        left:234px;
+      }  
+      &.text{
+        height: 100%;
+        width: 100%;
+        @include typo($size:18px,$line:26px,$color:$egrey-89,$weight:300);
+        //top:108px;
+        padding-left:85px;
+        padding-right:85px;
+        padding-top:102px;
+        text-align: center;
+      }
+    }
+  }
+
+  /*&__title-confirm{
+    @include typo($size:16px,$line:19px,$color:#4A90E2,$weight:500);
+    width: 276px;
+    margin-top:10px;
+  }
+  /*&__text-history{
+    height: 220px;
+    width: 100%;
+    margin-top:7px;
+    margin-left:48px;
+    padding-right:101px;
+    @include typo($size:14px,$line:20px,$color:#2F2F2F,$weight:300);
+  }
+  &__icon{
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    position: absolute;
+    right: 0;
+    padding: 12px;    
+    color:rgba(208, 206, 206, 1);
+  }*/
+}
+
+
+

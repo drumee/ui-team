@@ -1,0 +1,105 @@
+@import 'mixins/drumee';
+
+.window-addressbook {
+  & .widget_tag {
+    background: $ab-default-background;
+    border-radius: $default-border-radius-left;
+    min-width: 186px;
+    padding: 0;
+  }
+
+  & .widget_contacts {
+    min-width: 260px;
+  }
+
+  &[data-size="min"] {
+    &[data-view-instance="3"] {
+      .breadcrumb-icon.next{
+        display:none;
+        left:-8px;
+        top: 16px;
+      }
+      .tags-list, .contact-wrapper {
+        display : none;
+      }
+
+      .max-content{
+        display: flex;
+        flex : 1;
+      }
+      .widget-contact-detail__wrapper.header{
+        padding-left: 35px;
+      }      
+    }
+
+    &[data-view-instance="2" ]{
+      .tags-list, .max-content {
+        display : none;
+      }
+
+      .contact-wrapper{
+        display: flex;
+        flex:1;
+      }
+    }
+
+    &[data-view-instance="1"] {
+      .breadcrumb-icon.back{
+        display:none;
+      }
+      .contact-wrapper, .max-content {
+        display : none;
+      }
+      
+      .tags-list{
+        display: flex;
+        flex:1;
+      }
+    }
+  }
+
+  &[data-size="medium"]{
+    &[data-view-instance="2"], &[data-view-instance="3"]{
+      .breadcrumb-icon.next{
+        display:none;
+        top: 16px;//17px;
+        left:-8px; // 3px;
+      }
+      .tags-list{
+        display : none;
+      }      
+      .contact-wrapper{
+        display : flex;
+        flex : 2;
+      }
+      .max-content{
+        display : flex;
+        flex : 3;
+      }
+    }
+    &[data-view-instance="1"]{
+      .breadcrumb-icon.back{
+        display:none;
+      }
+      .tags-list{
+        display : flex;
+        flex : 1;
+      }
+      .contact-wrapper{
+        display : flex;
+        flex : 2;
+      }
+      .max-content{
+        display : none;
+      }
+    }
+  }
+  &[data-size="max"]{
+    .breadcrumb-icon{
+      display:none;
+    }
+  /*  .widget-contactForm__container{
+      align-items: center;
+    }    */
+  }
+}

@@ -1,0 +1,118 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/modules/desk/wm/dock/widget/dock-minifier/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.widget-dock-minifier {
+  &__ui,
+  &__main,
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__main.application::after {
+    background-color: $core-default-background;
+    content: " ";
+    height: 90%;
+    margin-left: 7px;
+    width: 1px;
+  }
+
+
+  &__notification_wrapper {   
+    align-items: center;
+    background: $core-dock-notification;
+    border-radius: 14px;
+    font-size: 9px;
+    height: 14px;
+    justify-content: center;
+    padding: 2px;
+    position: absolute;
+    right: 11px;
+    width: 14px;
+    z-index: 2;
+    @include typo($size: 9px, $color: $core-default-text-reverse);//$ewhite);
+  }
+
+  .menu-topic[data-state="1"]{
+    .menu-topic-trigger {
+      color: $core-default-icon-hover !important;
+    }
+  }
+
+  &__wrapper {
+    & .menu-topic-trigger {
+      color   : $ewhite;
+      cursor  : pointer;
+      height  : 40px;
+      width   : 65px;
+
+      &:hover {
+        color:$core-default-icon-hover;
+      }
+    }
+
+    & .menu-topic-items {
+      background-color: rgb(47 47 47 / 20%);
+      border-radius: $default-border-radius;
+      box-shadow: $drumee-container-dropdown;
+      min-height: 200px;
+      transform: matrix(1, 0, 0, 1, 0, 0) !important;
+      width: 100% !important;
+
+      &__wrapper {
+        backdrop-filter: blur(27px);
+        bottom: 58px;
+        display: flex;
+        flex-direction: row;
+        left: 50%;
+        overflow: visible!important;
+        padding-bottom: 5px;
+        position: fixed !important;
+        right: 0;
+        transform: translateX(-50%);
+        width: calc( 100% - 8px);
+        max-width: 690px;
+      }
+    }
+  }
+
+  &__docker-menu {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__icons-list {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    justify-content: center;
+    max-height: calc(100vh - 190px);
+    width: 100%;
+    &::after {
+      content: " ";
+      position: absolute;
+      left: 30px;
+      bottom: -5px;
+      z-index: 1;
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 5px solid rgb(47 47 47 / 16%);
+    }
+  }
+
+  &__icons-scroll {
+    display: grid;
+    grid-gap: 1rem;
+    grid-template-columns: repeat(auto-fill,93px);
+    grid-template-rows: repeat(auto-fill,76px);
+    margin: 1rem 0;
+    min-height: 100px;
+    padding: 0 1rem;
+  }
+}

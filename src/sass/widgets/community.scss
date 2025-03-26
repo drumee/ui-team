@@ -1,0 +1,122 @@
+.community{
+    >a{
+	img{
+	    width:65px;
+	}
+    }
+}
+
+.vibes{
+    min-width:200px;
+    .community[data-msg-count="0"]{
+	display:none;
+    }
+    .community{
+	a{
+	    >img{
+		width:25px;
+	    }
+	}
+	span{
+	    position: absolute;
+	    display: inline;
+	    margin-left: $xia-margin-small;
+	    margin-top:$xia-margin-tiny;
+	}
+	.counter{
+	    right:0;
+	    @include button-circle($circle-size:14px, $font-size:$xia-medium-fs, $shadow:no);
+	    color: white;
+	    background: $xia-color-red;
+	    text-align: center;
+	    font-size:9px;
+	}
+    }
+}
+
+.area-container{
+    >:first-child{
+	margin-bottom:10px;
+    }
+}
+.area-header{
+    height: 150px;
+    box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.3);
+    //box-shadow: 0px 1px 1px rgba(0,0,0,0.4);
+    padding: 10px;
+    .picture{
+	@include clip-path(circle(60px at center));
+	min-height:130px;
+	img{
+	    width:128px !important;
+	}
+    }
+    label{
+	font-weight: bold;
+    }
+}
+.space-list{
+    .hub, .space{
+	cursor: pointer;
+	height: 80px;
+	padding: 5px;
+	box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.3);
+	margin-bottom: 5px;
+	position: relative;
+	&:hover{
+	    box-shadow: 0px 0px 1px 1px rgba(0, 0, 150, 0.5);
+	}
+    }
+    .picture{
+	border-right: 3px;
+	margin-right:10px;
+	.status{
+	    img{
+		border-radius: 4px;
+		width:70px!important; //128px !important;
+		height:70px!important; //128px !important;
+	    }
+	    &[data-active="frozen"]{
+		background-image: url('../../../static/img/bg/lock.jpg');
+		background-repeat: no-repeat;
+		background-position-x: 50%;
+		background-position-y: 50%;
+		background-size: contain;
+		img{
+		    opacity:0.5;
+		}
+	    }
+	}
+    }
+    ul{
+	width: 100%;
+    }
+}
+
+.testItem, .scrolling-item{
+    img{
+	height:40px;
+    }
+}
+
+.hub-params{
+    max-width: 960px;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    .properties{
+	min-width: 650px;
+	top:0;
+	padding:5px;
+	width: 60%;
+	margin-right:2%;
+    }
+    .context{
+	padding:5px;
+	min-width:300px;
+	top:34px;
+	margin:0;
+	width: 38%;
+	top:0;
+    }
+
+}

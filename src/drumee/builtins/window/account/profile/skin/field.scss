@@ -1,0 +1,172 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2022
+#   FILE : /ui/src/drumee/builtins/window/account/profile/skin/field.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.account-field {
+
+  &__address-wrapper {
+    padding-top:4px;
+  }
+
+  &__main {
+    max-width: 510px;
+    min-height: 35px;
+    width: 100%;
+  }
+
+  &__container {
+    height: 100%;
+    //padding-left: 45px;
+    margin-left: 45px;
+    width: 100%;
+
+    &.static-mode:hover {
+      background-color:$account-default-background-hover;
+      
+      *{
+        background-color:$account-default-background-hover;
+        color: $account-default-text-hover;
+      }
+
+      & .action-item {
+        visibility: visible;
+      }
+
+      & .navigation {
+        & .note-content {
+          width: 100%;
+        }
+        
+        & section {
+         // background: $default-background;
+          color:$account-default-text-reverse; // $default-background-hover;
+          border: 1px solid $ewhite;
+          padding:  5px;
+          border-radius:$default-border-radius;
+          cursor:pointer;
+        }
+      }
+    }
+  }
+
+  &__title {
+    @include typo($size: 24px, $line: 32px, $weight: 300, $color:$account-default-text-color);
+  }
+
+  &__label {
+    &-container {
+      align-items: center;
+      justify-content:center;
+      width:125px; //135px;
+    }
+
+    &-text {
+      text-align:left;
+      @include typo($size: 16px, $line: 21px, $color: $core-secondary-text-color);
+
+      &.error {
+        color: $account-default-text-error ;//#fe6790;
+        //font-weight: 400;
+      }
+    }
+  }
+
+  &__options-wrapper {
+    align-items: center;
+    background-color: $account-default-background;//$ewhite;
+    
+    &.action-item {
+      align-items: center;
+      height: 100%;
+      position: absolute;
+      right: 20px; //-5px;
+      visibility: hidden;
+    }
+  }
+
+  &__entry {
+    &.address {
+      padding-bottom: 8px;
+      left: -18px;
+    }
+  }
+
+  &__note {
+    align-items: center;
+    @include typo($size: 16px, $line: 27px, $color: $account-default-text-color);
+    
+    &.navigation {
+      left: -8px;
+      min-width: 80px; //100px;
+      text-align: center;
+      @include typo($size: 11px, $line: 13px, $color: $eviolet);
+    }
+  }
+
+  &__icon {
+    &-container {
+      width: 125px; //135px;
+    }
+
+    &-picto {
+      color: $account-field-icon;//$eblue;
+      height: 29px;
+      margin-bottom:auto;
+      margin-left:50px;
+      margin-top:2px;
+      opacity:0.8;
+      width: 29px;
+    }
+
+    &.edit-icon {
+      cursor: pointer;
+      height: 16px;
+      margin-right:16px;
+      width: 17px;
+    }
+  }
+
+  &__button-confirm {
+    border-radius: $default-border-radius;
+    align-items: center;
+    background-color: $btn-commit-background; 
+    border: 1px solid $btn-commit-border ;
+    cursor: pointer;
+    height: 24px;//25px;
+    justify-content: center;
+    left: 30px;
+    top: 5px;
+    width: 24px;// 30px;
+    @include typo($size: 11px, $line: 14px, $color: $btn-commit-text);
+
+    &.address {
+      top: 0px; //25px;
+    }
+
+    &:hover {
+      background-color:$btn-commit-background-hover;
+    }
+  }
+
+  input {
+    @include typo($size: 16px, $line: 27px, $color: $account-default-text-color);
+    background: transparent;;
+    border-bottom:1px solid $account-default-entry-border-bottom;//$eviolet;
+    cursor: text;
+    text-overflow: ellipsis;
+    width: 200px;
+    &::placeholder{
+      @include typo($size: 16px, $line: 27px,$weight: 300, $color: $account-default-text-placeholder);
+    }
+  }
+}
+
+.dialog__wrapper {
+  &.unlock {
+    position: absolute;
+    left: calc(50% - 285px);
+  }
+}

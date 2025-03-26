@@ -1,0 +1,192 @@
+@import 'mixins/drumee';
+
+.invitation-searchbox {
+  &__ui {
+    margin: 0;
+    min-height : 36px;
+    width: 100%;
+  }
+
+  &__main {
+    height: auto;
+    width: 100%;
+    z-index: 10;
+  }
+
+  &__title {
+    height: 30px;
+    justify-content: center;
+    padding: 0 30px;
+    @include typo($size:14px,$line:30px,$color:$core-default-text-title,$weight:300);
+  }
+
+  &__container {
+    &-selection {
+      margin-top: 27px;
+    }
+
+    &-results {
+      align-self: center;
+      background: $core-default-background;
+      border-radius:$default-border-radius;
+      box-shadow: $drumee-shadow-box;
+      margin: auto;
+      max-height:216px;
+      min-height:0;
+      position: absolute;
+      top: 5px;
+      width: 260px;
+      padding: 5px 10px 0px 10px;
+    }
+
+    &-commands {
+      justify-content: center;
+      width: 100%;
+
+      &[data-active="0"] {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+
+      .dialog__button--submit {
+        margin: unset;
+      }
+    }
+
+    &-options {
+      &[data-active="0"] {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+    }
+
+    &-buttons {
+      color: #89929E;
+      margin: auto;
+
+      &[data-state="0"] {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+
+      &--option {
+        cursor: pointer;
+        height: 30px;
+        margin : 0 10px;
+        padding: 5px;
+        width: 30px;
+
+        &[data-state="1"] {
+          background-color: #879BFF;
+          border-radius: $default-checkbox-border-radius;
+          color: $ewhite;
+        }
+      }
+    }
+  }
+
+  &__button {
+    align-items: center;
+    background-color: $btn-rollback-background;
+    border-radius: $default-border-radius;
+    border: 1px solid $btn-rollback-border;
+    cursor: pointer;
+    height: 28px;
+    justify-content: center;
+    margin: auto;
+    min-width: 68px;
+    width: auto;
+    padding: 14px;
+    @include typo($size: 15px, $line:20px, $color: $btn-rollback-text);
+
+    &:hover {
+      border: 1px solid $btn-rollback-border-hover;
+      color:$btn-rollback-text-hover;
+    }
+  }
+
+  &__header {
+    justify-content: center;
+    @include typo($size:14px,$line:16px,$color:$emauve-dark,$weight:400);
+  }
+
+  &__list {
+    &-results {
+      border-radius: 2px;
+      margin-top:10px;
+      max-height: 200px;
+      overflow: hidden;
+      @import "scrollbar.scss";
+    }
+  }
+
+  &__field {
+    color: $emauve-lighter;
+    line-height: 26px;
+    width: 82px;
+    z-index: auto;
+  }
+
+  &__input {
+    &--inline {
+      border: 1px solid transparent;
+      height: 36px;
+      margin: 0 0 0 0px;
+      padding-top: 9px;
+      top: 10px;
+      width : 100%;
+
+      .entry-search__main {
+        width : 100%;
+      }
+
+      .entry-search__widget {
+        width : 98%;
+        top:-10px;
+        left: 5px;
+      }
+
+      input {
+        background: transparent; 
+        border-bottom: 1px solid $core-default-entry-border-bottom;
+        flex-shrink: 0;
+        margin: 0 auto;
+        min-height: 0;
+        padding: 0 2px;
+        width: 100%;
+        @include typo($color:  $core-default-text-color, $size:14px, $line:28px, $weight:400);
+        @include placeholder-input {
+          @include typo($color: $core-default-text-placeholder, $size:14px, $line:28px, $weight:300);
+        }
+      }
+    }
+  }
+
+  &__icon {
+    color: $core-default-icon-neutral;
+    cursor: pointer;
+    height:22px;
+    margin: auto 2px auto 0;
+    opacity: 0.85;
+    width: 26px;
+   
+    
+    &[data-state="1"] {
+      border-radius: $border-radius-small;
+      border: 1px solid $core-default-border-success;
+      color: $core-default-text-success;
+      padding: 3px;
+      height: 20px;
+      width: 20px;
+
+      &:hover {
+        background: $state-1-typo ;
+        color: $white;
+      }
+    }
+
+    &:hover {
+      color: $core-default-icon-hover;
+    }
+  }
+}

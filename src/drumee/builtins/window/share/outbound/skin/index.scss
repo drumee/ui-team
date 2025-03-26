@@ -1,0 +1,113 @@
+@import 'mixins/colors/index.scss';
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/exports.scss';
+@import 'mixins/handles.scss';
+@import 'mixins/utils.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/z-index.scss';
+@import 'mixins/drumee';
+
+.share-outbound{
+  &__ui{
+    // top: 55px;
+    left: calc(50% - 175px);
+    top : 60px;
+    width: 350px;    
+    height: auto;
+    min-height: 227px;
+    position: absolute;
+    background: $default-background; 
+    border-radius: $default-border-radius;
+    display: flex;    
+    box-shadow:$drumee-shadow-container;
+    //box-shadow: 0 0 7px 0 rgba(0,0,0,0.14);
+    //transform: translateY(50%);
+//    justify-content: center;
+  }
+  .preset-acknowledge__main{
+    margin: auto;
+  }
+  &__main{
+    min-height: 250px; //227px;
+    width: 100%;
+  }
+  &__container{
+    z-index: 1;
+    flex : 1;
+    &-public-link{
+      top : 0;
+      left: 0;
+      //color: #B6BFCA;
+      color: $default-icon-neutral;
+      opacity: 0.75;
+      position: absolute;
+      margin: 6px;
+      z-index: 999999;
+      cursor: pointer;
+      &:hover{
+        color:$default-icon-hover;
+      }
+    }
+    .dialog__wrapper.settings{
+      margin: 30px auto ; //15px auto;      
+    }
+    .invitation-permission__ui{
+      margin:1px 43px;
+    }
+    .invitation-permission__ui:before {
+      left: 235px;
+    }
+  }
+  &__icon{
+    width: 24px; //26px;
+    height: 24px; //26px;
+    padding: 5px;
+    &[data-link="1"]{
+      color:$default-icon-reverse;  
+      background-color:$default-background-hover ;// #879BFF;
+      opacity: 1;
+    }
+    &.link{
+      border-radius: 15px;
+      border: 1px solid $egrey-8d ;
+      overflow: hidden;
+      left: 0;    
+      &:hover{
+        border:1px solid $eviolet;
+      }  
+    }
+    &.acknowledge{
+      color: #18AC72;
+      width: 32px;
+      height: 32px;
+      margin: 45px auto 19px auto;
+    }
+  }
+  &__title{
+    @include typo($color:$eorange ,$size:16px,$line:19px,$weight:400);//#FA8540
+    &.acknowledge{
+      margin: auto;
+      text-align: center;
+    }
+    .create{
+      cursor: pointer;
+      @include typo($color:$egrey-89,$size:16px,$line:19px,$weight:400);
+    }
+  }
+  &__text{
+    width: 262px;
+    height: 64px;
+    margin: 0 auto 74px auto;
+    text-align: center;
+    &.ack-delete{
+      margin: auto;
+    }
+    @include typo($color:$egrey-78,$size:18px,$line:32px,$weight:400);
+  }
+  &__wrapper{
+    position: absolute;
+    width: 100%;
+  }
+  @import 'invitation';
+}

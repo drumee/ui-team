@@ -1,0 +1,18 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/libs/reader/text/editable/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.libs-note{
+  &__ui{
+    background-color: inherit;
+  }
+  &__main{
+    background-color: inherit;
+  }
+  &__container{
+    background-color: inherit;
+  }
+}

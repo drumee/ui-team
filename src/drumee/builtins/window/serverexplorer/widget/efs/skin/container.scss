@@ -1,0 +1,133 @@
+&__container {
+  width: 100%;
+  height: 100%;
+  border-radius:$default-border-radius;
+
+  &:after {
+    content: " ";
+    width: calc(100% - 12px);
+    height: calc(100% - 25px);
+    border: 1px dashed white;
+    position: absolute;
+    top: 19px;
+    left: 6px;
+    border-radius:$default-border-radius;
+    display: none;
+  }
+
+  &[data-over="over"] {
+    &:after {
+      display: block;
+    }
+    &.document, &.image, &.other, &.video {
+      &:after {
+        border: 1px dashed black;
+      }
+    }
+  }
+
+  .preview-icon {
+    right: 0;
+    width: 37px;
+    height: 30px;
+    margin:0 auto;
+    position: absolute;
+    top : 16px;
+    fill: #879BFF;
+    left: 0;
+
+    &.folder {
+      display: none;
+    }
+
+    &.video {
+      fill:hsla(0,0%,98%,.8);
+      stroke:transparent;
+    }
+
+    &.document {
+      fill: $ewhite;
+    }
+
+    &.extension{
+      fill:white;
+    }
+  }
+
+  &[data-hub="1"] {
+    &::before {
+      border-left: 8px solid transparent;
+      border-radius: 0 3px 0 0;
+      border-top: 8px solid $folder-main-before-color;
+      content: " ";
+      position: absolute;
+      right:10px;
+      top: 5px;
+      width: 48px;
+    }
+  }
+
+  &[data-hover="on"] {
+    border-radius: $default-border-radius;
+    box-shadow: $drumee-shadow-container;
+    z-index : 100;
+
+    .media-form__input {
+      height: 20px;
+      bottom: 0;
+      input {
+        line-height: 20px;
+        min-height: 20px;
+      }
+    }
+    .filename{
+      &.document{
+        background :$core-default-block-background;
+      }
+    }
+  }
+
+  &[data-icontype="vector"]{
+    .preview{
+      display: none;
+    }
+  }
+
+  &[data-icontype="vignette"]{
+    &:before, &:after{
+      display: none;
+    }
+  }
+
+  & .drumee-loading-wrapper {
+    left: 55%;
+    top: 90%;
+  }
+
+  &.folder {
+    background-color: #00417a;
+    &:before {
+      content: " ";
+      position: absolute;
+      top: 0;
+      right: 0;
+      border-top: 13px solid #005db7;
+      border-left: 13px solid transparent;
+      border-right: 13px solid #005db7;
+      border-radius: 0 6px 0 0;
+      width: 62px;
+      z-index: 1;
+    }
+
+    &[data-hover="on"] {
+      &:before {
+        height: 0;
+      }
+      .media-efs__container {
+        .filename-tooltips {
+          background-color: $folder-main-background-filename;
+        }
+      }
+    }
+  }
+}

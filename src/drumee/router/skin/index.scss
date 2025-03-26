@@ -1,0 +1,109 @@
+/* =================================================================== *
+#   Copyright Xialia.com  2011-2016                                    *
+#   FILE : src/drumee/router/skin/router-main
+#   TYPE : Global styles, for the whole platform
+# ==================================================================== */
+
+@import '../../skin/mixins/drumee.scss';
+
+.body.box {
+  visibility: visible;
+}
+
+@import "exception/main";
+
+.router {
+  &__warning {
+    &--network {
+      justify-content: center;
+      border-radius: 4px;
+      width: 300px;
+      position: fixed;
+      cursor: pointer;
+      @include typo($color: #fa8540, $size: 28px, $line: 33px, $weight: 300);
+      top: 5px;
+      left: calc(50% - 150px);
+      padding: 20px;
+      border: 3px red solid;
+      background-color: rgba(250, 200, 20, .5);
+
+      &.down {
+        height: 40px;
+        width: 267.88px;
+        //transform: scaleX(-1);
+        border-radius: 2px;
+        background-color: #FFFFFF;
+        box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
+        @include typo($color: #EA4D44, $size: 16px, $line: 19px);
+      }
+    }
+  }
+}
+
+.drumee-router {
+  &__ui {
+    width: 100%;
+    height: 100%;
+    min-width: 100vw;
+    min-height: 100vh;
+  }
+
+  &__header {
+    width: 100%;
+    height: auto;
+    z-index: 1;
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__body {
+    width: 100%;
+    height: 100%;
+    min-width: 100vw;
+    min-height: 100vh;
+  }
+
+  &__wallpaper {
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+    top: 0;
+    overflow: hidden;
+    z-index: -1;
+  }
+
+  &__footer {
+    width: 100%;
+  }
+
+  &__modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    overflow: visible;
+    z-index: 11100;
+  }
+
+  &__debugger {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    overflow: visible;
+  }
+
+  &__dialog {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    overflow: visible;
+  }
+}

@@ -1,0 +1,132 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2022
+#   FILE : /src/drumee/modules/dmz/sharebox/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.dmz-sharebox,
+.dmz-meeting {
+  @import '../../skin/header';
+  @import '../../skin/footer';  
+  @import './info-menu';
+  @import './password';
+
+  &__ui,
+  &__main,
+  &__container,
+  &__content {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__background {
+    background: radial-gradient(109.24% 109.24% at 21.67% 0%, rgba(91, 115, 210, 0.4) 0%, #5B73D2 100%), #879BFF;
+    height: 100vh;
+    position: absolute;
+    width: 100%;
+
+    @media(max-height:630px) and (min-height:0px) {
+      height: 100vh;
+      top: 0px;
+    }
+
+    &[data-device="mobile"] {
+      margin-top: -31px;
+    }
+
+    .image-smart__ui {
+      filter: blur(0);
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 40%;
+      transition: all 4s;
+      width: 100%;
+
+      &[data-quality="low"] {
+        filter: blur(10px);
+        object-position: 50% 0;
+        transition: all 4s;
+      }
+    }
+  }
+
+  &__header {
+    height: 90px;
+    width: 100%;
+
+    &[data-device="mobile"] {
+      height: 120px;
+    }
+  }
+
+  &__footer {
+    height: 160px;
+
+    position: absolute;
+    width: 100%;
+    bottom: 0;
+    z-index: 2000;
+
+    &[data-device="mobile"] {
+      height: 55px;
+      position: fixed;
+    }
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &-desk__container {
+    width: 100%;
+  }
+  &-desk__wrapper {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__content {
+    z-index: 1200;
+
+    &.desk-content {
+      width: calc(100% - 10px);
+      &.dmz-wm__ui {
+        background: transparent;
+        border-radius: 6px;
+        min-height: 320px;
+        min-width: 360px;
+        z-index: 1000;
+        align-items: center;
+        align-content: center;
+        justify-content: center;
+        justify-items: center;
+      }
+    }
+  }
+
+  &__note {
+    @include typo($size: 20px, $line: 28px, $weight: 400, $color: $dmz-default-text-reverse);
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+  }
+
+  &__footer-note {
+    @include typo($size: 16px, $line: 20px, $weight: 400, $color: $dmz-default-text-reverse);
+    bottom: 6px;
+    justify-content: flex-end;
+    height: 25px;
+    right: 15px;
+    text-decoration: underline;
+  }
+
+  &__home {
+    position: absolute;
+    top: calc(50vh - 30px);
+    left: calc(50% - 150px);
+    width: 300px;
+    justify-content: center;
+    @include typo($line: 60px, $size: 40px, $weight: 400, $color: $dmz-default-text-reverse);
+  }
+}

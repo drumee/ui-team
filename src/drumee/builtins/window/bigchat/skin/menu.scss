@@ -1,0 +1,122 @@
+&-menu {
+  &__dropdown{
+    z-index: 9999;
+  }
+
+  &__wrapper {
+    padding-left: 15px;
+    z-index: 999 !important;
+
+    &[data-state="1"] {
+      & .menu-trigger {
+        background-color: $bigchat-default-background;
+        border-radius:$default-border-radius;
+      }
+
+      & .dropdown-toggle-icon {
+        color: $bigchat-background-header ;
+      }
+    }
+
+    & .menu-topic-items {
+      border-radius:$default-border-radius;
+      box-shadow: $drumee-shadow-container;
+      background-color: $bigchat-default-background;
+      width: 285px;
+      padding-bottom: 10px;
+      &__wrapper{
+        left: -20%;
+        top : 24px;
+        padding:10px;
+      }
+      &:before {
+        background-color: $bigchat-default-background;
+        content: "";
+        height: 10px;
+        left: 20px;
+        position: absolute;
+        top: -4px;
+        transform: rotate(45deg);
+        width: 10px;
+      }
+
+      &:after {
+        background: $bigchat-default-background;
+        content: "";
+        height: 10px;
+        left: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
+    }
+  }
+
+  &__icon {
+    height :16px;
+    width : 16px;
+    &.dropdown-toggle-icon {
+      color: $bigchat-default-icon-reverse;
+      cursor: pointer;
+      height: 24px;
+      padding: 2.5px; 
+      width: 24px;
+      &:hover{
+        color: $bigchat-default-icon-hover ;
+      }
+    }
+
+    &.dropdown-icon {
+      margin-right: 10px;
+      margin-top: 10px;
+
+      & svg {
+        fill: $bigchat-default-icon-menu-dropdown;
+      }
+
+      &.contactbook{
+        margin-left: -1px; 
+        margin-right: 8px;
+        margin-top: -1px;
+        width: 24px;
+        height: 22px;
+        padding: 1px;
+      }
+    }
+  }
+
+  &__items-wrapper,
+  &__items {
+    width: 100%;
+  }
+
+  &__item {
+    cursor: pointer;
+    padding:6px 20px;
+
+    &:hover {
+      background-color: $bigchat-default-background-hover ;
+      color : $bigchat-default-text-hover ;
+
+      & .window-bigchat-menu__name{
+        color:$bigchat-default-text-hover; 
+      }
+      
+      & svg {
+        fill: $bigchat-default-icon-reverse;   
+      }
+    }
+  }
+
+  &__name {    
+    padding-top: 2px;
+    padding-left: 8px;
+    @include typo($size:14px, $weight: 300, $line:16px, $color: $bigchat-default-text-color);
+    &.invitation{
+      margin-top: 10px;
+    }
+    &.contactbook{
+      margin-left: -5px;
+    }
+  }
+}

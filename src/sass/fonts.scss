@@ -1,0 +1,84 @@
+
+@font-face {
+  font-family: 'Antic-Regular';
+  src: url('#{$xia-font-path}/Antic-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Dooling-Bold';
+  src: url('#{$xia-font-path}/DoolingBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Source-Sans-Pro';
+  src: url('#{$xia-font-path}/SourceSansPro-ExtraLight.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'ShadowsIntoLight';
+  src: url('#{$xia-font-path}/ShadowsIntoLight.ttf') format('truetype'),
+  url('#{$xia-font-path}/ShadowsIntoLight.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'ChunkFiveRegular';
+  src: url('#{$xia-font-path}/Chunkfive.otf') format('embedded-opentype');
+}
+
+@font-face {
+  font-family: 'Satisfy';
+  src: local('Satisfy'),url('#{$xia-font-path}/Satisfy.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Verdana';
+  src: local('Verdana'),url('#{$xia-font-path}/Verdana.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Oswald';
+  src: local('Oswald'),url('#{$xia-font-path}/Oswald-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: Nexa-Bold;
+    font-weight: 500;
+    src: local('Nexa Bold'),url("#{$xia-font-path}/Nexa-Bold.otf") format("opentype");
+}
+@font-face {
+    font-family: Nexa-Light;
+    font-weight: 250;
+    src: local('Nexa Light'), url("#{$xia-font-path}/Nexa-Light.otf") format("opentype");
+}
+
+@font-face {
+  font-family: 'Avenir';
+  src: local('Avenir'),url('#{$xia-font-path}/AvenirLTStd-Medium.otf');
+}
+@font-face {
+  font-family: 'Avenir-Oblique';
+  src: local('Avenir'),url('#{$xia-font-path}/AvenirLTStd-MediumOblique.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'Avenir-Black';
+  src: local('Avenir'),url('#{$xia-font-path}/AvenirLTStd-Heavy.otf') format('opentype');
+}
+
+@font-face {
+    font-family: 'Raleway-ExtraLight';
+    src: url("#{$xia-font-path}/Raleway-ExtraLight.ttf") format("truetype");
+}
+@font-face {
+    font-family: 'Raleway-Regular';
+    src: url("#{$xia-font-path}/Raleway-Regular.ttf") format("truetype");
+}
+@font-face {
+    font-family: 'Raleway-extra-light';
+    src: url("#{$xia-font-path}/Raleway-ExtraLight.ttf") format("truetype");
+}
+@font-face {
+    font-family: 'Raleway-regular';
+    src: url("#{$xia-font-path}/Raleway-Regular.ttf") format("truetype");
+}
+
+

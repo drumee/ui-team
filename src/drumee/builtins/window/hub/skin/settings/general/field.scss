@@ -1,0 +1,39 @@
+// desk/skin/hub/settings/general/field
+
+&__field{
+  z-index: auto;
+  display: flex;
+  &[data-radio="on"]{
+    z-index: 100000;
+  }
+  &:hover{
+    &[data-edit="0"]{
+      background-color:$default-background-hover;// #879BFF;
+      color:$default-text-reverse; // #FFFFFF;    
+      .hub-icon{
+        visibility: visible;
+      }
+    }
+  }
+  &-label{
+    width: 82px;
+    line-height: 26px;
+    color:$emauve-lighter;// #d66fe8;
+  }
+  &-value{
+    color:$egrey-89;// #89929E;
+    width: 120px;
+    height: 26px;
+    line-height: 26px;
+  }
+  &-icon{
+    visibility: hidden;
+    cursor: pointer;
+    color:$default-icon-neutral;// #89929E;
+    width: 20px;
+    height: 20px;
+    padding: 3px;
+  }
+  @import "administrator.scss";
+  @import "owner.scss";
+}

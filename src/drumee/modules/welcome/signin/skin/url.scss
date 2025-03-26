@@ -1,0 +1,84 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/modules/welcome/signin/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+
+@import '../../../../skin/mixins/drumee.scss';
+
+.welcome-signin-url {
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  &__header {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__title {
+    @include typo($size: 28px, $line: 45px, $weight: 400, $color: $core-default-text-reverse);
+  }
+
+  &__entry {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    background-color: $core-default-background;
+    max-width: 280px;
+    width: 100%;
+    border-radius: $default-border-radius;
+    &[data-status="error"] {
+      border-radius: $default-border-radius;
+      border: 2px solid $core-default-border-error;
+    }
+  }
+
+  &__input {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    max-width: 280px;
+    & input {
+      @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
+      border-bottom: none;
+      border-radius: 0 6px 6px 0px;
+      padding: 5px;
+      padding-left: 15px;
+
+      &::placeholder {
+        @include typo($size: 18px, $line: 28px, $weight: 300, $color: $connect-text-placeholder);
+      }
+    }
+  }
+
+  &__protocol {
+    @include typo($size: 18px, $line: 28px, $color: $white-f9);
+    position: absolute;
+    right: 104%;
+  }
+
+  &__domain {
+    @include typo($size: 18px, $line: 28px, $color: $white-f9);
+    left: 102%;
+    position: absolute;
+  }
+
+  &__button-wrapper {
+    align-content: center;
+    justify-content: center;
+    margin: 25px 0;
+    height: 60px;
+    max-width: 280px;
+    width: 100%;
+  }
+
+  &__alt {
+    margin-top: 35px;
+    @include typo($size: 18px, $line: 28px, $color: $white-f9);
+    text-decoration: underline;
+  }
+
+}

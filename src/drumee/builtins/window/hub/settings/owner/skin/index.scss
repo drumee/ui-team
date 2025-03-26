@@ -1,0 +1,64 @@
+@import 'mixins/drumee';
+
+
+.hub-owner{
+  &__main{
+    width: 100%;
+  }
+  .invitation-sharee{
+    &[data-me="1"]{
+      pointer-events: none;
+      opacity: 0.3;//0.6;
+    }
+  }
+  &__transferee{
+    @include typo($color:$emauve-dark ,$size:14px,$line:26px,$weight:400);//#AB47BC
+  }
+  &__dialog.dialog__wrapper{
+    position: absolute;
+    width: 0;
+    left: 0%;
+    top: 100%;
+    z-index:1000;
+    .invitation-shareeroll{
+      margin-top: 5px;
+      max-height: 260px;
+    }
+    .invitation-shareeroll__label{
+      margin-top: 25px;
+    } 
+  }
+  .invitation__container-sharee, .invitation-settings__ui{
+   box-shadow: $drumee-shadow-box;
+   // box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    min-height: 219px;
+    background-color: $core-default-background;  
+    width: 360px;
+    //min-width: 385px;
+    border-radius:$default-border-radius;
+  }
+  .invitation-recipient__ui{
+    width: 100%;
+  }
+  .invitation-settings__list-destination{
+    .invitation-recipient__ui{
+      width: 148px;
+    }  
+  }
+  .invitation-settings__button{
+    margin : 10px auto 40px auto;
+  }
+  .invitation-shareeroll__list{
+    margin-top: 20px;
+    max-height: 180px;
+  }
+  // .invitation__item{
+  //   width: 100%;
+  //   background-color: $ewhite;
+  // }
+  /*&__button{
+    color:red;
+    width: 12px;
+    height:12px;
+  }*/
+}

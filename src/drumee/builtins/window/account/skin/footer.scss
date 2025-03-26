@@ -1,0 +1,50 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : src/drumee/builtins/desk/skin/account
+#   TYPE : Account Main Style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.account{
+  &__footer{
+    width:100%;
+    justify-content:center;
+    justify-items:center;
+    align-content:center;
+    align-items:center;
+    //padding: 5px;
+    padding: 5px 0px 5px 5px;
+    margin-bottom: 40px;
+    margin-top: 45px; //40px; //20px;
+    
+  }
+
+  &__btn{
+    height: 35px; //36px
+    min-width: 115px; //170px;
+    width: auto;
+    padding: 0 15px;
+    //top: -71px;
+    margin: auto;
+    //margin-left: 45px;
+    border-radius:$default-border-radius;
+    justify-content: center;
+    background-color:$btn-commit-background; 
+    border: 1px solid $btn-commit-border ;
+    @include typo($size:16px,$line:34px,$color:$btn-commit-text,$weight:400);//$color:#879bff
+    cursor: pointer;
+    align-items: center;
+    &:hover{
+      background-color:$btn-commit-background-hover ;
+      border-color: $btn-commit-border-hover  ;
+    }
+    &.delete{
+      background-color:$btn-caution-background ;//$btn-tertiary-background; 
+      border: 1px solid $btn-caution-border; //#ff7479;
+      &:hover{
+        background-color:$btn-caution-background-hover ;
+        border-color: $btn-caution-border-hover ;
+      }
+    }
+  }
+}

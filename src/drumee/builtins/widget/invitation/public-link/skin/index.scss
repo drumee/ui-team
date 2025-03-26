@@ -1,0 +1,127 @@
+@import 'mixins/colors/index.scss';
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/exports.scss';
+@import 'mixins/handles.scss';
+@import 'mixins/utils.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/z-index.scss';
+@import 'mixins/drumee';
+
+.invitation-publiclink {
+  &__ui {
+    background-color:$core-default-background; //$default-block-background;  
+    border-radius: $default-border-radius;
+    margin: 0px 25px;
+    box-shadow: $drumee-shadow-box;
+  //  box-shadow: 0 5px 3px 0 rgba(218,227,239,.14), 0 1px 1px 0 rgba(0,0,0,.12), 0 2px 5px 0 rgba(218,227,239,.46);
+  }
+  &__content {
+    //margin-top: 20px;
+    margin: 22px auto 0;
+    width: 100%;
+    word-break: break-word;
+  }
+  &__main {
+    width: 300px;
+    min-height: 217px;
+    flex: 1;
+    border-radius: $default-border-radius;
+  }
+  &__command {
+    &.icons{
+      margin-top: auto;
+      margin-top: 15px;
+      margin-bottom: 10px;
+    }
+    &.button{
+      margin-top: 15px;//10px;
+      margin-bottom: auto;
+    }
+  }
+  &__icon{
+    color:  $core-default-icon-neutral;// #787B7F; //$egrey-89;//
+    justify-content: center;
+    cursor: pointer;
+    margin: auto;
+    padding: 6px;
+    width: 30px;
+    height: 30px;
+    border-radius:$default-border-radius;
+    &.copy{
+      opacity:0.85;
+    }
+    &.delete{
+      opacity:  0.75;
+    }
+      &[data-state="1"]{
+      background-color: $eviolet ;//#879BFF;
+      color: $core-default-icon-reverse;
+    }
+    &:hover {
+      border: solid 1px $eviolet ;// #879BFF;
+      opacity:1;
+      color: $core-default-icon-hover;
+    }
+  }
+  
+  &__header {
+    justify-content: center;
+    @include typo($line:20px,$size:16px,$weight:400,$color:$sharebox-text-color);
+  }
+
+  &__btn {
+    border-radius: $default-border-radius;//6px; 
+    cursor: pointer;
+    @include typo($line:25px,$size:16px,$weight:400,$color:$btn-rollback-text);//$size:14px
+    padding: 0 12px;
+    margin: auto;
+    //min-width: 101px;
+    width: 110px;
+    height: 32px;//28px; //27px;
+    border: 1px solid $btn-rollback-border;
+    border-radius: 6px;
+    justify-content: center;
+    align-items: center;
+    &:hover{
+      border: 2px solid $btn-rollback-border-hover;
+      color:$btn-rollback-text-hover;    
+    }
+  }
+  &__link {
+    text-align: left;
+    margin-top: 20px;
+    padding: 0 20px;
+    cursor: pointer;
+    @include typo($color:$eblue,$size:12px,$line:16px,$weight:300);//$line:14px
+    &:hover{
+      text-decoration-line: underline;
+    }
+  }  
+  &__wrapper{
+    top:-40px;
+    padding-top: 16px;
+    background-color:  $core-default-block-background;    
+    .invitation-permission__ui{
+      background-color: $core-default-block-background; //$white;
+      margin:-33px 20px; //-45px 20px;//-48px 20px;
+      box-shadow: $drumee-shadow-block;
+    }
+  } 
+  .dialog__wrapper{
+    margin: 0 auto; //15px auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    //margin: 15px 0 10px;
+    //margin: 15px auto;
+    align-items: center;
+  }
+  .invitation-permission{
+    &::before{
+      position: absolute;
+      left: 69px;
+      top: -8px;
+    }
+  }
+}

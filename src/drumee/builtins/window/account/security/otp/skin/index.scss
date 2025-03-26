@@ -1,0 +1,99 @@
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/drumee';
+
+.security-otp {
+
+  &__ui {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 150px;
+    padding: 14px;
+    width: 320px;
+    background-color: $account-default-block-background;
+    border-radius: $default-border-radius;
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+  }
+
+  &__content {
+    width: 100%;
+    height: 35px;
+    justify-content: center;
+  }
+
+
+  &__status {
+    justify-content: center;
+    text-align: center;
+    @include typo($size: 16px,
+      $line: 21px,
+      $color: $account-default-text-color,
+      $weight: 400);
+    align-content: center;
+    flex-wrap: wrap;
+
+    &.button {
+      min-width: 120px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    &.disbale {
+      border: 1px solid #787679;
+      color: #787679;
+    }
+
+    &.enable {
+      border: 1px solid #AB47BC;
+      color: #AB47BC;
+    }
+  }
+
+  &__icon {
+    height: 33px;
+    width: 33px;
+    padding: 7px;
+    color: $account-checkbox-svg-hover;
+  }
+
+  &__checkbox {
+    height: 22px;
+    width: 22px;
+    padding: 3px;
+    color: #18A3AC;
+  }
+
+  &__button {
+    background-color: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    height: 35px;
+    margin-left: 10px;
+    text-align: center;
+    width: max-content;
+    padding: 0 14px;
+    z-index: 1;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: center;
+    @include typo($size: 16px, $line: 35px, $color: $btn-commit-text);
+  }
+
+  &__selector {
+    width: 100%;
+    height: auto;
+    padding: 5px 10px;
+    justify-content: space-between;
+    border: 1px solid lightgrey;
+    margin: 5px 0;
+    border-radius: $default-border-radius;
+    cursor: pointer;
+  }
+}

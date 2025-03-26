@@ -1,0 +1,101 @@
+&-menu {
+  &__dropdown {
+    align-items: center;
+    height: 100%;
+  }
+
+  &__wrapper {
+    &[data-state="1"] {
+      & .trigger-icon {
+        color: $eviolet;
+      }
+    }
+
+    & .menu-items {
+      background-color: $default-background;
+      border-radius:$default-border-radius;
+      box-shadow: $drumee-shadow-container;
+      left: -140px;
+      max-width: 160px;
+      min-width: 160px;
+      padding: 10px 0;
+      top: 35px !important;
+      width: 100% !important;
+
+      &:before {
+        background-color: $default-background;
+        box-shadow: $drumee-container-before;
+        content: "";
+        height: 10px;
+        left: 145px;
+        position: absolute;
+        top: -5px;
+        transform: rotate(45deg);
+        width: 10px;
+      }
+
+      &:after {
+        background: $default-background;
+        border-radius:$default-border-radius-top;
+        content: "";
+        height: 10px;
+        left: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
+    }
+  }
+
+  &__icon {
+    align-items: center;
+    color: $default-icon-reverse;
+    cursor: pointer;
+
+    &.trigger-icon {
+      box-sizing: border-box;
+      height: 26px;
+      margin: 2px;
+      padding: 4px;
+      right: 5px;
+      width: 26px;
+    }
+    
+    svg {
+      &:hover {
+        color:$default-icon-hover;
+        opacity: 1;
+      }
+    }
+  }
+
+  &__items-wrapper .box,
+  &__item-wrapper {
+    width: 100%;
+  }
+  
+  &__item {
+    cursor: pointer;
+    padding: 8px 8px 5px 17px;
+    margin-bottom:  1px;
+
+    &:hover {
+      background-color: $default-background-hover;
+      color : $default-text-reverse; 
+
+      & .name {
+        color:$default-text-reverse; 
+      }
+      
+      & svg {
+        fill: $default-icon-reverse;
+      }
+    }
+  }
+
+  &__note {
+    @include typo($size: 13px, $weight: 300, $line: 14px, $color:$default-text-color);
+    padding-top: 0px;
+    bottom: 2px;
+  }
+}

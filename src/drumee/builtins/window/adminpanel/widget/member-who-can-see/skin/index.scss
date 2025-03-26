@@ -1,0 +1,292 @@
+@import 'mixins/drumee';
+
+.widget-member-whoCanSee {  
+  @import './filter-dropdown.scss';
+
+  &__ui,
+  &__main,
+  &__container,
+  &__header,
+  &__filter,
+  &__content,
+  &__member-list,
+  &__action-items,
+  &__footer {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__ui {
+    border-radius:$default-border-radius;
+    background-color: $admin-default-background;
+    max-height:calc(100% - 53px);
+    max-width: 360px;
+    min-width: 300px;
+    top: -14px;
+  }
+
+  &__header {
+    align-items: flex-end;
+    justify-content: center;
+    max-height: 40px;
+    padding-bottom: 5px;
+    margin-bottom: 15px; 
+    margin-top: 10px;
+  }
+
+  &__filter {
+    align-items: baseline;
+    justify-content: center;
+    height: 40px;
+    width: 100%;
+    padding: 0 10px 0 35px;
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &__content {
+    margin: auto;
+    max-width: calc(100% - 15px);
+    overflow: hidden;
+  }
+  
+  &__member-list {
+    & *::-webkit-scrollbar {
+      height: 100%;
+      width: 5px !important;
+    }
+    
+    & *::-webkit-scrollbar-thumb {
+      background-color: $default-scrollbar-color;
+      cursor: pointer;
+    }
+  }
+  
+  &__selection-content {
+    width: 100%;
+    
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &__action-items {
+    align-items: flex-end;
+    height: 50px;
+    justify-content: space-evenly;
+    width: 100%;
+  }
+
+  &__footer {
+    justify-content: center;
+    max-height: 55px;
+  }
+
+  &__note {
+    justify-content: center;
+    @include typo($size: 14px, $line: 16px, $color: $admin-default-text-color);
+    
+    &.title {
+      @include typo($size: 18px, $line: 19px, $color: $admin-default-text-title);
+    }
+
+    &.search-title {
+      margin-top: 10px;
+      @include typo($size: 14px, $line: 14px, $weight: 300, $color: $admin-default-text-color);
+    }
+
+    &.action-item {
+      font-style: italic;
+      right: 25px;
+      @include typo($size: 11px, $line: 13px, $color: $admin-secondary-text-color);
+    }
+    
+    &.filter-label {
+      justify-content:  flex-start;
+      width: 33%;
+    
+      @include typo($size: 16px, $line: 16px, $color: $admin-authorized-filter-text);
+      top: -2px;
+    }
+
+    &.text-underline {
+      cursor: pointer;
+      text-decoration: underline;
+      &:hover {
+        color:$admin-backgroundless-text-hover;
+      }
+    }
+  }
+
+  &__icon {
+    cursor: pointer;
+
+    &.close {
+      color: $admin-default-thinline-icon;
+      height: 12px;
+      margin: 10px;
+      position: absolute;
+      right: 5px;
+      top:-10px; 
+      width: 12px;
+      
+      &:hover {
+        color: $admin-default-thinline-icon-hover;
+      }
+    }
+
+    &.search-icon {
+      height: 18px;
+      opacity: 0.5;
+      right: 5px; 
+      top: 3px;
+      width: 18px;
+      &:hover{
+        color:$admin-default-icon-hover;
+      }
+    }
+
+    &.search-toggle-icon {
+      height: 12px;
+      opacity: 0.5;
+      right: 50px;
+      top: 2px;
+      width: 25px;
+      &.magnifying-glass{
+        width:28px;
+        position: absolute;
+        right: 35px;
+        top: 5px;
+        
+        min-width: 17px; 
+        min-height: 17px;
+        z-index: 10;
+        &:hover{
+          color:$admin-default-icon-hover;
+        }
+      }
+    }
+
+    &.search-close-icon {
+      height: 10px;
+      opacity: 0.6;
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 10px;
+      opacity: 0.6;
+
+      &:hover {
+        color: $admin-default-thinline-icon-hover;
+      }
+    }
+    
+    &.choose-all {
+      color: $eviolet;
+      height: 14px;
+      margin-left: 10px;
+      width: 14px;
+    }
+  }
+
+  &__search {
+    justify-content: center;
+    padding-bottom: 5px;
+    width: 100%;
+
+    &.search-result-header {
+      max-width: 340px;
+      min-width: 280px;
+    }
+    
+    &.entry {
+      background: transparent;
+      border-radius: 2px;
+      height: 100%;
+      max-height: 30px;
+      max-width: 260px;
+      min-height: 20px;
+      min-width: 200px;
+      width: 100%;
+    }
+
+    & input {
+      border-bottom: 1px solid $admin-default-entry-border-bottom;
+      width: 100%;
+      margin-left:20px;
+      @include typo($size: 15px, $line: 16px, $color: $admin-default-text-color);
+      
+      &::placeholder {
+        @include typo($size: 15px, $line: 16px, $weight: 300, $color: $admin-default-text-placeholder);
+      }
+    }
+  }
+
+  &__search-wrapper {
+    align-items: baseline;
+    height: 30px;
+    justify-content: center;
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &__search-result-wrapper {
+    background: $white;
+    height: 90%;
+    position: absolute;
+    top: 30px;
+    width: 100%;
+    z-index: 99;
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &__list {
+    height: calc(100% - 50px);
+    margin-bottom: 10px;
+    min-height: 180px;
+    width: 100%;
+
+    & .smart-container {
+      height: 100%;
+      padding: 10px;
+      width: 100%;
+    }
+  }
+
+  &__button-cancel {
+    border: 1px solid $btn-rollback-border;
+    border-radius:$default-border-radius;
+    @include typo( $size: 16px, $line: 16px, $color: $btn-rollback-text);
+  }
+
+  &__button-confirm {
+    align-items: center;
+    background-color: $btn-commit-background;
+    border-radius: $default-border-radius;
+    border: 1px solid $btn-commit-border;
+    height: 35px;
+    justify-content: center;
+    padding: 0 5px;
+    width: 115px;
+    @include typo( $size: 15px, $line: 16px, $color:$btn-commit-text);
+
+    &:hover {
+      border:$btn-commit-border-hover;
+      background-color:$btn-commit-background-hover;   
+    }
+  }
+
+  .drumee-spinner {
+		height: 35px;
+    margin: auto;
+    top: 20px;
+    width : 35px;
+  }
+}

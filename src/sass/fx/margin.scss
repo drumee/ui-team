@@ -1,0 +1,24 @@
+.margin-bottom {
+    margin-bottom: $xia-margin !important;
+    width:100%;
+}
+.margin-bottom-small {
+    margin-bottom: $xia-margin-small !important;
+    width:100%;
+}
+
+.margin-right-small {
+    margin-right:$xia-margin-small;
+}
+
+.margin-top-small {
+    margin-top:$xia-margin-small;
+}
+
+.margin-top-tiny {
+    margin-right:$xia-margin-tiny;
+}
+
+.margin-vertical-small {
+   @extend %margin-vertical-small;
+}

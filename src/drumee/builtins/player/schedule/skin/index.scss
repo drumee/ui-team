@@ -1,0 +1,405 @@
+@import 'mixins/drumee';
+
+.player-schedule-topbar {
+  @import 'topbar';
+}
+
+.player-schedule {
+  @import 'attendee';
+}
+
+.player-schedule {
+  &__ui {
+    background-color:$core-default-background;  
+    border-radius: $default-border-radius;
+    box-shadow:$drumee-shadow-container;
+    display: flex;  
+    flex-direction: column;
+    height: 384px;
+    left: calc(50vw - 300px);
+    min-height: 340px !important;
+    min-width : 300px;
+    overflow: visible;
+    width: 626px;
+    height: auto !important;
+
+    &[data-device="mobile"] {
+      height:100vh;
+      left: 0;
+      top:0;
+      width:100vw;
+    }
+
+    &[data-tmp="1"] {
+      z-index: 9000 !important;
+    }
+  }
+
+  &__main {
+    align-items: center;
+    height:100%;
+    width:100%;
+  }
+
+  &__details {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    padding: 0px 10px 0px 10px;
+    margin: auto;//0 0 10px 20px;
+    width: 100%;
+  }
+
+  &__header {
+    background-color: $sharebox-main;
+    border-bottom: none;
+    border-radius:$default-border-radius-top;
+    height: 44px;
+    min-height: 44px;
+    width: 100%;
+  }
+
+  &__title {
+    @include typo($size:16px,$line:30px,$weight:400,$color:$sharebox-main);
+    justify-content: center;
+    padding:20px 9px 0px 10px;
+  }
+
+  &__icon {
+    border-radius:$default-border-radius; 
+    // border: 1px $default-icon-reverse solid;
+    color: $core-special-schedule-icon;
+    height: 30px;
+    margin-right: 5px;
+    min-width:30px;
+    padding:3px;
+    width: 30px;
+    &.date  {
+      opacity: 0.7;
+    }
+    &.description {
+      opacity:0.8;
+    }
+
+    &.attendees {
+      border:0;
+      color:$core-default-icon-reverse; 
+      height: 23px;
+      left: 15px;
+      margin-top: -1px;
+      width: 23px;
+    }
+  
+    &.contact {
+      opacity: 0.8;
+      padding: 0px;
+    }
+
+    &.desktopgroup {
+      margin-top: 9px;
+    }
+
+    &:hover {
+      opacity:1;
+    }
+  }
+
+  &__tooltips.schedule-tooltips{
+    background-color: $core-background-tooltips;
+    border-radius:$default-border-radius-small;// $default-border-radius-tiny;
+    opacity:1;
+    padding: 8px;
+    position: absolute;
+    bottom: -30px;//-40px;
+    white-space: nowrap;
+    z-index: 10;
+    user-select: none;
+    left:-14px;// -100%;
+    @include typo($size: 11px, $line: 10px, $weight: 400, $color: $core-default-text-color); //$line: 14px,
+
+    &::before {
+      background: $core-background-tooltips;
+      top: -5px;//-4px;
+      content: " ";
+      height: 10px;
+      left: calc(50% - 37px);//calc(50% - 7px);
+      position: absolute;
+      transform: rotate(45deg);
+      width:  12px;
+      z-index: 1;
+    }
+    &.copy-btn-tooltip{
+      left: -40px;
+      &::before {
+       left: calc(50% - -2px);// calc(50% - 4px);
+      }
+    }
+  }
+
+  &__body {
+    height: 100%;
+    width: 100%;
+    top: 0px;
+  }
+
+  &__footer {
+    height: 100%;
+    justify-content: space-evenly;
+    width: 100%;
+  }
+
+  &__main-view {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__main-content{
+    flex-direction: column;
+    height: auto;
+    min-height: 100%;
+    width: 100%;
+
+    &[data-flow="x"] {
+      flex-direction: row-reverse;
+    }
+  }
+
+  &__container {
+    margin-top: 12px;
+    width: 371px;
+    &.view-mode{
+      &:hover{
+        background-color: $core-default-background-hover;//#879bff;
+        color: $core-default-text-hover; //#fff;
+        & .player-schedule__text, .player-schedule__icon{
+          color: $ewhite;  
+        }
+        & .player-schedule__edit-icon{
+          color: $ewhite;  
+          cursor:pointer;
+          display:flex;
+        }
+      }
+    }
+
+    &.description {
+      min-height: auto;
+    }
+  }
+
+  &__text {
+    display: flex;
+    flex: 1;
+    max-height: 89px;
+    overflow: auto;
+    @include typo($color:$core-default-text-color, $weight: 400, $line: 30px, $size: 14px);
+    &.date{
+      & .note-content{
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  &__container-body{
+    flex:1;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 0px 7px 2px 10px;
+    overflow: hidden;
+    
+  }
+
+  & .delete-btn{
+    position: absolute;
+    left: 0px;
+    height: 20px;
+    width: 20px;
+    margin: 20px;
+    color: $core-default-icon-neutral;
+    cursor: pointer;
+    z-index: 10;
+  }
+
+  &__buttons {
+    align-items: center;
+    height: 60px;
+    justify-content: center;//space-evenly;
+    width: 100%;
+    padding: 20px 0px;
+  }
+  & .button {
+    cursor: pointer;
+    &.copy-button{
+      position: absolute;
+      right: 0px;
+      margin: 4px;
+      z-index: 99;
+    }
+    &.text {
+      align-items:center;
+      border-radius:$default-border-radius;
+      height: 35px;
+      justify-content: center;
+      max-width: 200px;
+      min-width: 120px;
+      padding: 0 10px;
+      margin: 0 3%;
+      @include typo($size: 16px, $line: 19px, $color:$btn-commit-text);   
+    }
+
+    &.primary {
+      background-color:$btn-commit-background; 
+      
+      &:hover {
+        background-color:$btn-commit-background-hover   
+      } 
+    }
+
+    &.secondery {
+      background-color: $btn-rollback-background;
+      border: 2px solid $btn-rollback-border;
+      color:$btn-rollback-text;
+
+      &:hover {
+        color:  $btn-rollback-text-hover;
+        border:$btn-rollback-border-hover 2px solid;
+      }
+    }
+
+    &.icon {
+      align-items:center;
+      border-radius:$default-border-radius;
+      color: $core-default-icon-neutral;   
+      height: 25px;
+      margin:0 3%;
+      opacity: 0.75;
+      padding:1px;
+      top:10px;
+      width: 25px;
+
+      &:hover {
+        color:$core-default-icon-hover;
+      }
+    }
+  }
+
+  &__acknowledge {
+  /*  position: absolute;
+    top: 10px;//20px;
+    margin-left:30px;*/
+    border-radius: 3px;
+    justify-items: center;
+    justify-content: center;
+    @include typo($color: $core-default-text-color, $weight: 400, $line: 30px, $size: 12px);
+    .drumee-svg {
+      color: $core-default-icon-success;
+      height: 20px;
+      padding: 2px;
+      width: 25px;
+    }
+    .text {
+      padding-left: 10px;
+    }
+  }
+
+  &__bdy_footer{
+    // overflow-y: auto;
+    width: 100%;
+    background: $core-default-background; //white;
+    border-radius: 0px 0px 5px 5px;
+    padding-bottom: 10px;
+  }
+
+  &__edit-icon {
+    height: 20px;
+    color: grey;
+    width: 20px;
+    padding: 0px 0px 0px 5px;
+    display:none;
+  }
+  &__entry{
+    width:100%;
+    & input {
+      width: calc( 100% - 10px );
+      background: $core-default-block-background;//#f2f2f2;
+      color: $core-default-text-color; //#2f2f2f;
+      width: 98%;
+      height: 25px;
+      padding-left: 5px;
+      border-radius: 2px;
+      // overflow: hidden;
+      // text-overflow: ellipsis;
+      // white-space: nowrap; 
+    }
+  }
+  &__entry {
+    &.message {
+      width: 100%;
+      & textarea {
+        background: $core-default-block-background;
+        border-radius: $default-border-radius;
+        border: none;
+        outline: none;
+        padding:10px 5px 10px;
+        resize: none;
+        width: 99%;
+        margin: 3px 0px 1px 0px;
+        min-height: 77px;
+        @include typo($size: 14px, $line: 22px, $color: $core-default-text-color);//$size: 16px, $line: 21px,
+
+        &::placeholder {
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $core-default-text-placeholder);
+        }
+      }
+    }
+  }
+  &__ok-btn {
+    background: $btn-commit-background;
+    border-radius: $default-border-radius;
+    padding: 5px;
+    margin-left:5px; 
+    margin:3px;
+    cursor: pointer;
+    width: 26px;//24px;
+    height: 26px;//24px;
+    justify-content: center;
+    align-items: center;
+    @include typo($size: 12px, $color: $white);
+    &:hover{
+      background-color:$btn-commit-background-hover;
+    }
+  }
+
+  &__wrapper--modal.dialog__wrapper,
+  &__dialog-overlay {
+    position: absolute;
+    height: auto;
+    &[data-state="open"] {
+      width: 100%;
+      height: calc(100% );
+      left: 0;
+      right: 0;
+      top: 0px;
+      bottom: 0;
+      justify-items: center;
+      align-items: center;
+      border-radius: $default-border-radius-bottom;
+      background-color: $core-transparency-container-overlay;//$transparency-container-overlay;
+    }
+  }
+
+}
+
+.player {
+  &__dialog-overlay {
+    background-color: rgb(0 0 0 / 30%);// .3);
+    height: calc(100% - 44px);
+    position: absolute;
+    top: 44px;
+    width: 100%;
+  }
+}

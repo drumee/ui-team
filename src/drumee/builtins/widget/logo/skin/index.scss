@@ -1,0 +1,49 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2024
+#   FILE : /src/drumee/builtins/widget/logo/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.custom-logo {
+  &__ui {
+    background-color: inherit;
+    width: 100%;
+    width: 100%;
+  }
+
+  &__main {
+    background-color: inherit;
+    width: 100%;
+    width: 100%;
+  }
+
+  &__container {
+    width: 100%;
+    width: 100%;
+    padding: 10px;
+    background-color: inherit;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &__text {
+    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+    text-align: center;
+
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
+  &__image {
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    height: 45px;
+    width: 45px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 5px;
+  }
+}

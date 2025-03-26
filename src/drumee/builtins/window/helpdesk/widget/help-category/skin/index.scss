@@ -1,0 +1,81 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/builtins/window/helpdesk/widget/help-category/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.widget-help-category {
+  &__ui,
+  &__main,
+  &__container,
+  &__header,
+  &__body,
+  &__content {
+    height: 100%;
+    width: 100%;
+  }
+  
+  &__ui {
+    height: auto;
+    padding: 5px 10px;
+  }
+
+  &__container {
+    padding: 0 5px;
+  }
+
+  &__header {
+    padding: 5px 15px;
+  }
+
+  &__body {
+    padding-top: 10px;
+  }
+
+  &__title {
+    align-items: center;
+    height: 30px;
+    padding: 5px;
+    width: 100%;
+  }
+  
+  &__separator {
+    background-color: $helpdesk-separator-color;//$hd-default-separator-color;
+    height: 1px;
+    margin: 5px;
+    width: 100%;
+  }
+
+  &__description {
+    height: auto;
+    padding: 10px 30px;
+    width: 100%;
+  }
+
+  &__note {
+    &.header {
+      align-items: center;
+      margin: 4px 0;
+      @include typo($size: 12px, $line: 14px, $weight: 300italic, $color: $helpdesk-default-text-color);
+    }
+
+    &.title {
+      padding: 15px;
+      @include typo($size: 16px, $line: 18px, $weight: 700, $color: $helpdesk-default-text-color);
+    }
+
+    &.description {
+      align-items: center;
+      text-align: justify;
+      @include typo($size: 14px, $line: 1.4, $weight: 300italic, $color: $helpdesk-default-text-color);
+    }
+
+    span {
+      font-weight: bold;
+    }
+    u {
+      text-decoration: underline;
+    }
+  }
+}

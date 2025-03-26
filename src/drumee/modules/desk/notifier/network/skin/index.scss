@@ -1,0 +1,90 @@
+@import 'mixins/colors/index.scss';
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/exports.scss';
+@import 'mixins/handles.scss';
+@import 'mixins/utils.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/z-index.scss';
+
+.notifier-network{
+  &__ui{
+    position: absolute;
+   /* width: 100%;
+    height: 100%;*/
+    display: none;
+    user-select: none;
+    &[data-state="open"]{
+      display: flex;
+      z-index: 100;
+      width:100%;
+      height: 35px;
+      background-color:#FFFFFF;
+      border-radius:2px;
+      &[data-device="mobile"]{
+        width: 190px;
+      }
+    }
+  }
+
+  &__main{
+    width:100%;
+    height:100%;
+    background-color: rgba(242, 142, 136, 0.15);
+    margin-top: 2px;
+    margin-bottom:2.5px;
+    margin-left: 3px;
+    margin-right:3px;
+    &[data-device="mobile"]{
+      height:26px;
+    }
+    .dialog__button--close{
+      right:12px;
+      top: 2px;
+    }
+  }
+
+  &__icon{
+    height:100%;
+    &.down{
+      width:53px;
+      padding: 5px;
+      margin-left: 23px;
+      color:grey;
+      &[data-device="mobile"]{
+        margin-left:0px;
+        top:0px;
+        width:36px;
+      }
+
+    }
+    &.unstable{
+      width:38px;
+      color:#ea4d44;
+      margin-left:23px;
+    }
+    &.close{
+      cursor: pointer;
+      width: 36px;
+      color: gray;
+      padding: 7px;
+      margin-right: 20px;
+    }
+  }
+
+  &__text{
+    width: 100%;
+    text-align: left;
+    height: 100%;
+    @include typo($color:#ea4d44, $size: 16px, $line: 19px); 
+    margin-left:40px;
+    align-items:center;
+    @media(max-width:400px){
+      @include typo($color:#ea4d44, $size: 13px, $line: 19px); 
+      margin-left:11px;
+    }
+    &.unstable{
+      margin-left:31px;
+    }
+  }
+}

@@ -1,0 +1,69 @@
+/************************************************************
+        Share box - External transfer box : colors used
+************************************************************/
+
+
+$sharebox-border                          : #fa8540;
+$share-box-default-color                  : #FCB58C;
+$share-box-topbar-container               : #FA8540;
+$sharebox-main-background-filename        : #ffccaf;//folder name hover background
+$sharebox-notification-cancel-btn-border  : #DDE2E8;
+
+
+/**background**/ 
+$sharebox-main-light                  : #f78d4f;//thumbnail (border and background) old : #fdaa7a; 
+$sharebox-main                        : #EF6500;//#fa8540;
+$sharebox-background-header           : $sharebox-main;
+
+
+$share-background-header              : $sharebox-main;
+$share-default-background             : $core-default-background;
+$share-default-block-background       : $core-default-block-background;
+$share-default-background-tooltips    : $core-background-tooltips;//#e8e8e8;
+$share-default-background-hover       : $core-default-background-hover;
+//$team-background-chatmessenger      : $core-background-chatmessenger;
+
+
+
+/**text**/
+$sharebox-text-color                  : $sharebox-main;
+$sharebox-text-color-legend           : $sharebox-main;
+$share-default-text-color             : $core-default-text-color;
+$share-default-text-reverse           : $core-default-text-reverse; 
+$share-default-text-tooltips          : $core-default-text-tooltips;
+$share-default-text-error             : $core-default-text-error ;
+$share-default-text-placeholder       : $core-default-text-placeholder;
+$share-text-placeholder-focus         : $core-focus-text-placeholder;
+$share-secondary-text-color           : $core-secondary-text-color;
+$share-default-text-hover             : $core-default-text-hover;
+$share-default-text-success           : $core-default-text-success;
+$share-text-notification              : $sharebox-main;
+//$team-default-text-title              : $core-default-text-title;
+
+/**icon**/
+$share-default-icon-neutral            : $core-default-icon-neutral;
+$share-default-icon-reverse            : $core-default-icon-reverse ;
+$share-default-icon-hover              : $core-default-icon-hover;
+$share-default-icon-success            : $core-default-icon-success;
+$share-default-thinline-icon           : $core-default-thinline-icon;
+$share-default-thinline-icon-hover     : $core-default-thinline-icon-hover; //close icon
+$share-default-user-icon               : $core-default-user-icon;
+$share-default-icon-error              : #ea4d44;
+//$share-special-icon                : $teamroom-main-light;
+
+/**checkbox**/
+$share-default-checkbox-border         : $core-default-checkbox-border;
+$share-default-checkbox-checked        : $core-default-checkbox-checked;
+$share-default-checkbox-background     : $core-default-checkbox-background;
+$share-checkbox-checked-border-reverse : $core-checkbox-checked-border-reverse;
+$share-checkbox-checked-reverse        : $core-checkbox-checked-reverse;
+
+/**border**/
+$share-notifycount-border               : $sharebox-main-light;
+$share-default-border-error             : $core-default-border-error;
+$share-border-frame                     : $sharebox-main;
+$share-default-entry-border-bottom      : $core-default-entry-border-bottom;
+$share-focus-border-placeholder         : $core-focus-border-placeholder;
+$share-default-border-alert             : $core-default-border-alert;
+
+

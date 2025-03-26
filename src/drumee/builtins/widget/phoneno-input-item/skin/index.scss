@@ -1,0 +1,94 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/widget/phoneno-input-item/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.phoneno-input-item {
+  &__ui {
+    background-color: inherit; 
+    height: auto;
+    padding-bottom:0px;
+    left:-6px;//-4px;
+  }
+
+  &__main {
+    background-color: inherit; 
+  }
+
+  &__container {
+    align-items: baseline;
+    background-color: inherit; 
+  }
+
+  &__area-code {
+    width: 19%;//12%;
+  }
+
+  &__entry {
+    &.phoneno-item {
+      width: 49.2%;//54.2%;
+
+      .showerror{
+        overflow: visible;
+        white-space: nowrap;
+      }
+    }
+
+    &.area-code {
+      top: -3px;
+      .showerror{
+        overflow: visible;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  &__note {
+    &.area-code  {
+      @include typo($size: 16px, $color: $core-tertiary-text-color);//$egrey-89);
+      right: 2px;
+     // top: 2px;
+    }
+  }
+
+  &__icon {
+    cursor: pointer;
+
+    &.category {
+      align-items: baseline;
+      color: $eblue;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      min-width: 42px;
+
+      & svg{
+        height: 11px;
+        margin-right: 2px;
+        width: 6px;
+      }
+
+    }
+
+    &.destroy-tag {
+      color: $core-default-icon-neutral;
+      height: 16px;
+      opacity: 0.65;
+      width: 24px;
+      z-index: 50 !important;
+      padding: 1px;
+
+      &:hover {
+        color: $core-default-icon-hover;
+        opacity: 1;//0.85;
+      }
+
+      svg {
+        margin-top: 2px;
+        margin-left: 4px;
+      }
+    }
+  }
+}

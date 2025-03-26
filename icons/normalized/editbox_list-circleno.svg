@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="10px" height="10px" viewBox="0 0 10 10" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 48.1 (47250) - http://www.bohemiancoding.com/sketch -->
+    <title>Oval</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Editbox/button" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-624.000000, -525.000000)">
+        <g id="Paragraph_normal-Copy" transform="translate(479.000000, 116.000000)" fill="#879BFF" fill-rule="nonzero">
+            <g id="pop-up" transform="translate(60.000000, 172.000000)">
+                <g id="grid-copy" transform="translate(8.000000, 185.000000)">
+                    <g id="Group-2" transform="translate(0.000000, 6.000000)">
+                        <path d="M82,55 C84.209139,55 86,53.209139 86,51 C86,48.790861 84.209139,47 82,47 C79.790861,47 78,48.790861 78,51 C78,53.209139 79.790861,55 82,55 Z M82,56 C79.2385763,56 77,53.7614237 77,51 C77,48.2385763 79.2385763,46 82,46 C84.7614237,46 87,48.2385763 87,51 C87,53.7614237 84.7614237,56 82,56 Z" id="Oval"></path>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

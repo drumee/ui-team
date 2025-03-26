@@ -1,0 +1,156 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : src/drumee/builtins/desk/skin/account
+#   TYPE : Account Main Style
+# ===================================================================**/
+
+//  NOT USED //
+
+.desk-data,
+.desk-security {
+  width: 100%;
+  height: 100%;
+  // max-height: 460px;
+  padding: 40px 0;
+  &__block {
+    width: 100%;
+    max-width: 360px;
+    padding-top: 40px;
+    min-width: 300px;
+    position: relative;
+    border: #1aa3ac solid 1px;
+  }
+  &__header {
+    justify-content: center;
+    margin-bottom: 30px;
+    @include typo($size:20px,$line:24px,$color:#4a90e2,$weight:400);
+  }
+  &__inner {
+    height: 100%;
+    // max-height: 460px;
+  }
+  &__wrapper {
+    width: 100%;
+    flex-wrap: wrap;
+    margin: 0 auto;
+    .slimScrollDiv{
+      width: 100% !important;
+      .list-content{
+        width: 100% !important;
+      }
+    }
+  }
+  &__column {
+    @media (min-width: 1300px) {
+      &:after {
+        content: " ";
+        position: absolute;
+        right: -1px;
+        top: 15%;
+        height: 70%;
+        width: 1px;
+        background-color: #4a90e2;
+      }
+    }
+  } 
+}
+
+
+.desk-security {
+  &__item {
+    padding: 20px 0 14px;
+    background-color: #fafafb;
+    border-radius: 4px;
+    width: 320px;
+    height: 115px;
+    position: relative;
+    margin-bottom: 25px;
+    &-label {
+      @include typo($size:18px,$line:21px,$color:$egrey-2f,$weight:400);
+    }
+    &-button {
+      background-color: #a0a7b1;
+      height: 35px;
+      width: 120px;
+      cursor: pointer;
+      border-radius: 2px;
+      justify-content: center;
+      @include typo($size:16px,$line:35px,$color:$ewhite,$weight:400);
+    }
+    &-comming {
+      @include typo($size:16px,$line:35px,$color:#879bff,$weight:400);
+      font-style: italic;
+      &:after {
+        content: "..."
+      }
+    }
+    &-icon {
+      position: absolute;
+      left: 40px;
+      top: 50%; 
+      transform: translate(0,-50%);
+      &--password {
+        color: #af51bf;
+      }
+      &--email {
+        color: #fe6790;
+      }
+      &--phone {
+        color: #879bff;
+      }
+      &--sms {
+        color: #fa8a48;
+      }
+      &--ip {
+        color: #b1bdfd;
+      }
+      &--usb {
+        color: #1aa3ac;
+      }
+    }
+    .editbox-toggle {
+      @include typo($size:14px,$line:35px,$color:#DDE2E8,$weight:400);
+      &:after {
+        width: 12px;
+        background-color: #DDE2E8;
+        top: 15px;
+      }
+      &.editbox-toggle--left {
+        padding-right: 24px;
+      }
+      &.editbox-toggle--right {
+        padding-left: 24px;
+      }
+      &[data-radio="on"] {
+        color: #879BFF;
+        &:after {
+          top: 11px;
+          background-color: #879BFF;
+        }
+        &.editbox-toggle--left {
+          padding-right: 24px;
+        }
+        &.editbox-toggle--right {
+          padding-left: 24px;
+        }
+      }
+    }
+  }
+}
+
+  
+.pie {
+  path {
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.71, -0.62, 0.7, 2);
+  }
+  circle {
+    transition: all 0.1s ease;
+  }
+  line,
+  circle,
+  text {
+    pointer-events: none;
+  }
+}
+

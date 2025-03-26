@@ -1,0 +1,36 @@
+/** ================================================================== *
+#   Copyright Xialia.com 2011-2021
+#   FILE : /src/drumee/builtins/window/account/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+@import "topbar";
+@import "container";
+@import "footer";
+
+.window-account {
+  &__ui {
+    background-color:$account-default-background;//$default-background;   
+    left: 10px;
+    top: 10px;
+    width: calc(100vw - 20px);
+    height: calc(100vh - 80px);
+    min-height: 600px;
+    min-width: 800px;
+    position: absolute;
+  }
+
+  &__main {
+    height: 100%; 
+    width: 100%;
+  }
+
+  &__body {
+    background-color:$account-default-background;// $default-background;   
+    border-radius:$default-border-radius;
+    height: 100%;
+    overflow: auto;
+    width: 100%;
+  }
+}

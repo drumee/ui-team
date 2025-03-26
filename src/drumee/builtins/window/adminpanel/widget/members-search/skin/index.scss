@@ -1,0 +1,58 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/window/addressbook/widget/search/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.widget-members-search {
+  &__ui {
+    background-color: $admin-default-background;
+    border-radius: $default-border-radius;
+    box-shadow:$drumee-shadow-container;
+    font-family: Roboto-Regular,sans-serif;
+    left: 32px;
+    padding:10px;//20px;
+    width: 210px;
+    z-index: 99;
+    min-width: 238px;
+    top: 16px;
+  }
+
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    background-color: inherit;
+    width : 100%;
+  }
+
+  &__header {
+    margin-bottom: 7px;//14px;
+  }
+
+  &__title {
+    margin:  5px auto;// 20px auto 0px auto;
+    padding-top: 10px; //15px;
+    @include typo($size: 14px, $line: 14px,$weight: 300, $color: $admin-default-text-title); //$size: 14px
+  }
+
+  &__icon {
+    color: $admin-default-icon-neutral;
+    cursor: pointer;
+    height  : 11px;
+    margin: 10px 10px 0px 0px;
+    position: absolute;
+    right: 0;
+    width: 11px;
+    &.close-icon{
+      color: $admin-default-thinline-icon;
+      margin: 0px -2px 0 0;//-9px -9px 0 0;
+      &:hover{
+        color:$admin-default-thinline-icon-hover;
+      }
+    }
+  }
+}
+

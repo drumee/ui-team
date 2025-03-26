@@ -1,0 +1,100 @@
+/************************************************************
+                        Drumee Transfer : colors used
+************************************************************/
+
+
+
+/**background**/ 
+$dt-default-background              : $core-default-background;
+$dt-default-block-background        : $core-default-block-background;
+$dt-default-input-background        : #F5F5F5;
+$dt-default-background-hover        : $core-default-background-hover;//#879BFF;
+$dt-form-background                 : #E7ECF3;
+$dt-success-wrapper-background      : #5A70D5;
+$dt-footer-background               : #5A70D5;
+$dt-background-tooltips-on          : #89929e;
+$dt-default-filename-tooltips-on    : #ffffff;
+$dt-background-tooltips             : $core-background-tooltips;
+$dt-transparency-container-overlay  : $core-transparency-container-overlay;
+$dt-reciver-filelist-background     : #F5F5F5;
+
+/**text**/
+$dt-form-default-text               : #4A4A4A;
+$dt-default-text-color              : $core-default-text-color;
+$dt-default-error-text              : $core-default-text-error;
+$dt-default-text-success            : $core-default-text-success;
+$dt-default-text-reverse            : $core-default-text-reverse;
+$dt-tertiary-text-color             : $core-tertiary-text-color;
+$dt-text-placeholder                : $core-default-text-placeholder;
+$dt-focus-text-placeholder          : $core-focus-text-placeholder;//+300
+$dt-backgroundless-text-hover       : $core-backgroundless-text-hover;
+$dt-secondary-text-color            : $core-secondary-text-color;//#0566D7;
+$dt-delete-title-text-color         : #FA8540;
+$dt-delete-ack-info-text-color      : #54595f;
+$dt-default-colored-title           : #FFC000;
+$dt-advertisement-title-color       : #FDD835;
+$dt-reciver-box-header-text         : $core-secondary-text-color;//#5A70D5;
+
+/*Welcome level footer link*/
+$dt-link-text-color                 : #FDD835;
+$dt-link-text-color-hover           : #b6bfca;
+
+
+/**icon**/
+$dt-default-icon-reverse            : $core-default-icon-reverse;
+$dt-default-icon-neutral            : $core-default-icon-neutral;
+$dt-default-icon-hover              : $core-default-icon-hover;
+$dt-default-thinline-icon-hover     : $core-default-thinline-icon-hover;
+$dt-default-thinline-icon           : $core-default-thinline-icon;
+$dt-default-icon                    : #B6BFCA;
+$dt-default-icon-delete             : #89929E;
+$dt-secondary-icon-color            : #4a90e2;//#0566D7;
+$dt-success-icon-color              : #18AC72;
+$dt-default-colored-icon            : #FFC000;
+
+
+/**switch**/
+$dt-toggle-switch-on                : #18AC72;
+$dt-toggle-switch-off               : #4A4A4A;
+$dt-toggle-background               : $core-toggle-background;
+$dt-toggle-switch-radio             : #18AC72;
+
+/**border**/
+$dt-form-input-border                : $core-default-frame;//#B6BFCA;
+$dt-form-error-border                : $core-default-border-error;
+$dt-default-border-notification      : $core-default-border-notification;
+$dt-drag-border                      : #FFFFFF;
+$dt-default-action-btn-border-color  : #FFFFFF;
+$dt-focus-border-placeholder         : $core-focus-border-placeholder;
+
+
+/**button**/
+/*text*/
+$dt-text-btn-accept                 : $dt-default-text-reverse;
+$dt-btn-rollback-text               : #89929e;//$btn-rollback-text; #b6bfca;
+$dt-btn-rollback-text-hover         : #879BFF;//$btn-rollback-text-hover
+$dt-btn-signup                      : #18AC73;
+
+/*background*/
+$dt-btn-accept                      : $core-button-accept;
+$dt-btn-commit                      : #18a3ac;//$btn-commit-background; #51B052;
+//$dt-btn-accept-secondary            : #18A3AC;  
+$dt-btn-commit-background-hover     : #16959e;//$btn-commit-background-hover;
+$dt-btn-signup-background-hover     : #18AC72;
+
+$dt-btn-delete-background           : #ff7479;//$btn-commit-background-hover;
+$dt-btn-delete-background-hover     : #f3595f;//$btn-commit-background-hover;
+$dt-btn-delete-border-hover         : #16959e;//$btn-commit-border-hover;
+
+/*border*/
+//$dt-btn-previous                    : #D6E0EC;
+$dt-action-btn-border-color         : #FFFFFF;
+$dt-btn-commit-border-hover         : #16959e;//$btn-commit-border-hover;
+$dt-btn-rollback-border             : #DDE2E8;//$btn-rollback-border;
+$dt-btn-rollback-border-hover       : #879BFF;//$btn-rollback-border-hover
+$dt-btn-signup-border-hover         : #18AC72;
+
+/*shadow*/
+$dt-btn-box-shadow                  : rgb(169 186 255 / 50%);//0.5);
+$dt-btn-cancel-box-shadow           : rgb(168 255 255 / 50%);//0.5);
+

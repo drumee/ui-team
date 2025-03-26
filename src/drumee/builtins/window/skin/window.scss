@@ -1,0 +1,128 @@
+@import "mixins/drumee";
+@import "warning.scss";
+
+.window {
+  /*--- Common styles for all groups of windows ---*/
+  &__ui {
+    position: absolute;
+    background: transparent;
+    min-width: 340px;
+    min-height: 300px;
+    z-index: 1000;
+    border-radius: $default-border-radius;
+    box-shadow: $drumee-shadow-main;
+    overflow: visible;
+    max-width: 100vw;
+    max-height: calc(100vh - 48px);
+    &[data-state="1"] {
+      z-index: 10000 !important;
+    }
+    &[data-state="0"] {
+      .window__header {
+        opacity: 0.4;
+      }
+    }
+    &[data-minimize="1"] {
+      display: none;
+    }
+    &[data-dialog="open"] {
+      .window__wrapper--modal.dialog__wrapper {
+        pointer-events: none;
+        opacity: 0.4;
+      }
+    }
+  }
+  &__content-row {
+    width: 100%;
+    height: calc(100% - 48px);
+    min-width: 810px;
+    .smart-container{
+      direction:rtl; 
+      .media-row{
+        direction:ltr; 
+      }
+    }
+  }
+  &__wrapper-modal {
+    top: 0;
+    left: 0;
+    position: fixed;
+    align-items: center;
+    justify-content: center;
+    &[data-state="open"] {
+      width: 100%;
+      height: 100%;
+      background: $core-transparency-container-overlay; //rgba(0,0,0, .3);
+      right: 0;
+      bottom: 0;
+    }
+    .drumee-spinner {
+      width: 150px;
+      height: 150px;
+      background: $core-default-background; // white;
+      top: calc(50% - 75px);
+      left: calc(50% - 75px);
+      border-radius: $default-border-radius; //4px;
+      padding: 20px;
+      .root-node {
+        position: absolute;
+      }
+    }
+  }
+
+  &__wrapper-tooltips {
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    position: fixed;
+  }
+
+  &__upload-tooltips {
+    min-width: 98px;
+    min-height: 32px;
+    background: $core-default-background; //$ewhite;
+    box-shadow: 0px 0px 31px 0 rgba(0, 0, 0, 0.4);
+    padding: 10px;
+    @include typo($size: 12px, $line: 30px, $color: $core-tertiary-text-color, $weight: 300);//$egrey-89
+    border-radius: $default-border-radius; //4px;
+    left: calc(24px - 50%);
+    top: -18px;
+    position: absolute;
+    &:before {
+      content: " ";
+      width: 10px;
+      height: 10px;
+      background-color: $core-default-block-background; //#F7F7F9;
+      position: absolute;
+      top: -3px;
+      left: calc(50% - 5px);
+      transform: rotate(45deg);
+    }
+  }
+
+  &__wrapper--modal.dialog__wrapper,
+  &__dialog-overlay {
+    position: absolute;
+    height: auto;
+    &[data-state="open"] {
+      width: 100%;
+      height: calc(100% - 42px);
+      left: 0;
+      right: 0;
+      top: 44px;
+      bottom: 0;
+      justify-items: center;
+      align-items: center;
+      border-radius: $default-border-radius-bottom;
+      background-color: $core-transparency-container-overlay;
+    }
+  }
+  
+  @import "group/header/main.scss";
+  @import "group/header/breadcrumbs.scss";
+  @import "group/body/filter.scss";
+  @import "group/body/main.scss";
+  @import "group/body/contextmenu.scss";
+  @import "group/popup.scss";
+}

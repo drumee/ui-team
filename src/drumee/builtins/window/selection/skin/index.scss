@@ -1,0 +1,35 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : desk/skin/desk-wap.scss
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+
+.desk-selection {
+  &__ui{
+    position: fixed;
+    left: 0;
+    top: 0;
+    overflow: visible;
+    width    : 0;
+    height   : 0;
+    z-index: 0;
+    &[data-state="1"]{
+      z-index: 1100;
+    }
+    &[data-state="2"]{
+      z-index: 60000; // Must be higher than data-state=open
+    }
+  }
+  &__bbox{
+    position : absolute;
+    &[data-state="1"]{
+      border: 1px solid white;
+      z-index: 10;
+      background: rgba(0,0,0, .2);      
+    }
+    &[data-state="0"]{
+      border: none;
+      z-index: 0;
+    }
+  }
+}

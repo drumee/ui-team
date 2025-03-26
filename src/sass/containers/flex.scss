@@ -1,0 +1,95 @@
+
+.xia-space-between {
+    @include xia-align($justify:space-around, $align:flex-end);
+}
+
+.xia-center{
+    @include xia-align();
+}
+
+.xia-top-left{
+    @include xia-align($justify:flex-start, $align:flex-start);
+}
+
+.xia-top-center{
+    @include xia-align($align:flex-start, $justify:center);
+}
+
+.xia-top-right {
+    @include xia-align($align:flex-start, $justify:flex-end);
+}
+
+.xia-right{
+    @include xia-align($justify:flex-end);
+}
+
+.xia-bottom-right{
+    @include xia-align($align:flex-end, $justify:flex-end);
+}
+
+.xia-left{
+    @include xia-align($justify:flex-start);
+}
+
+.xia-left-middle{
+    @include xia-align($justify:flex-start, $align:center);
+}
+
+.flow-root {
+    @include xia-container($direction:column, $margin:"0 auto");
+}
+
+.flow-horizontal,.flow-footer,.flow-h, .flow-x   {
+    @include xia-container();
+}
+
+.flow-vertical, .flow-v, .flow-y{
+    height: auto;
+    @include xia-container($direction:column, $margin:"0");
+}
+.container, .widget, .collection{
+    &[data-flow="vertical"],&[data-flow="v"],&[data-flow="x"] {
+	height: auto;
+	@include xia-container($direction:column, $margin:"0");
+    }
+    &[data-flow="horizontal"],&[data-flow="h"],&[data-flow="y"],&[data-flow="slide"] {
+	@include xia-container();
+    }
+    &[data-flow="root"],&[data-flow="page"],&[data-flow="r"],&[data-flow="slider"],&[data-flow="slideshow"]{
+	@include xia-container($direction:column, $margin:"0 auto");
+    }
+    &[data-flow="layer"]{
+	height: auto;
+	width:auto;
+	min-width:10px;
+	min-height:10px;
+	position:absolute;
+    }
+    &[data-flow="free"]{
+	position:absolute;
+    }
+}
+.widget{
+    &[data-direction="horizontal"],&[data-direction="h"],&[data-direction="y"]{
+	@include xia-container();
+    }
+    &[data-direction="vertical"],&[data-direction="v"],&[data-direction="x"] {
+	height: auto;
+	@include xia-container($direction:column, $margin:"0");
+    }
+}
+/* @media only screen and (min-device-width : 768px)  */
+/* and (max-device-width : 1024px)  */
+/* and (orientation : landscape) */
+/* { */
+/*     #wrapper{ */
+/* 	max-width:1024px; */
+/*     } */
+/* } */
+
+/* #wrapper{ */
+/*     min-width:960px; */
+/*     .pitch{ */
+/* 	min-height: 290px; */
+/*     } */
+/* } */

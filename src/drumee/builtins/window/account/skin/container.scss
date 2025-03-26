@@ -1,0 +1,40 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/builtins/window/account/skin/container.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.window-account {
+  &__container {
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .hilight {
+    color : #4a90e2;
+    font-weight: bold;
+  }
+}
+
+.account {
+  &__title {
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+    width: 336px;
+    margin-bottom: 10px;
+    @include typo($size:16px,$line:28px,$color: $account-default-text-title);
+    &.user-language-fr {
+      width: 436px;
+      margin-left:24px;
+    }
+    &.account-data__button{
+      cursor:default;
+     /* &:hover{
+        color:$account-backgroundless-text-hover;
+      }*/
+    }
+  }
+}

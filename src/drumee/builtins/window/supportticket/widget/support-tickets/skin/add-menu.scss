@@ -1,0 +1,121 @@
+&-add-menu {
+  &__wrapper {
+    &[data-state="1"] {
+      & .trigger-icon {
+        color: $bigchat-default-icon-active;
+      }
+    }
+
+    & .menu-topic-items {
+      &__wrapper{
+        left: -32px;//-20px;
+        padding: 10px;
+        &[data-direction="down"]{
+          top: 24px;
+        }
+      }
+      border-radius:$default-border-radius;
+      background-color:$bigchat-default-background;
+      box-shadow: $drumee-container-dropdown;
+      max-width: 202px;
+      min-width:142px;// 202px;
+      padding: 11px;
+      width: 100%;
+//        padding: 11px;
+//        left: -33px;
+//        &[data-direction="down"]{
+//          top: 24px;
+//        }
+//      }
+//      border-radius:$default-border-radius;
+//      background-color: $default-background;
+//      box-shadow: $drumee-shadow-container;
+//      max-width: 202px;
+//      min-width: 202px;
+//      width: 100%;
+
+
+      &:before {
+        background-color: $bigchat-default-background;
+        box-shadow: $drumee-container-before;
+        content: "";
+        height: 10px;
+        left: 12px;
+        position: absolute;
+        top: -5px;
+        transform: rotate(45deg);
+        width: 10px;
+      }
+
+      &:after {
+        background: $bigchat-default-background;
+        border-radius:$default-border-radius-top;
+        content: "";
+        height: 10px;
+        left: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
+    }
+  }
+
+  &__icon {
+    align-items: center;
+    color: $bigchat-default-icon-neutral;
+    cursor: pointer;
+    //opacity:0.85;
+
+    &.trigger-icon {
+      box-sizing: border-box;
+      height: 12px;
+      right: 10px;
+      top: 12px;
+      width: 12px;
+    }
+    &.ticket_add{
+      opacity:0.85;
+    }
+    &.ticket-filter{
+      width:14px;
+      height: 14px;
+    }
+    
+    svg {
+      &:hover {
+        color:$bigchat-default-icon-hover ;
+        opacity: 1;
+      }
+    }
+  }
+
+  &__item-wrapper {
+    width: 100%;
+  }
+  
+  &__item {
+    cursor: pointer;
+    padding: 6px 18px;//6px 10px 5px 25px;
+  //  margin-bottom:  1px;
+    margin-top: 4px;
+
+    &:hover {
+      background-color: $bigchat-default-background-hover ;
+      color : $bigchat-default-text-hover ; 
+
+      & .menu-item {
+        color: $bigchat-default-text-hover ;
+      }
+      
+      & svg {
+        fill:$bigchat-default-text-reverse;
+      }
+    }
+  }
+
+  &__note {    
+    padding-top: 0px;
+    @include typo($size: 13px, $weight: 300, $line: 14px,$bigchat-default-text-color);
+  //  bottom: 2px;
+  }
+}

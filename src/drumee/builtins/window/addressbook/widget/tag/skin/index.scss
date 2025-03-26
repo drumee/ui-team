@@ -1,0 +1,225 @@
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/exports.scss';
+@import 'mixins/handles.scss';
+@import 'mixins/utils.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/z-index.scss';
+@import 'mixins/drumee';
+
+
+.widget-tag {
+	&__ui {
+		border-radius:$default-border-radius-left;
+		height: 100%;
+		width: 100%;
+	}
+
+	&__main {
+		height: 100%;
+		overflow: hidden;
+	}
+	
+	&__container {
+		background-color: inherit;
+		height: 100%;
+  }
+
+	&__header {
+		height: 34px;
+		padding: 5px;
+		width :	100%;
+	}
+	
+	&__separator {
+		background-color: $ab-default-separator;
+		border-radius: 1px;
+		height: 1px;
+		margin: 3px 0 0 0px;
+		//opacity: 0.2;
+	}
+
+	&-content {
+		height: 100%;
+		margin: -1px -4px 0px 0px;
+		overflow: hidden;
+		width: 100%;
+
+		&__main {
+		//	margin-bottom: 1px;
+		  margin-top: 1px;
+		}
+
+		&__digit {
+			z-index: 2!important;
+			align-items: center;
+			@include typo($color: $bigchat-default-text-reverse, $weight:100, $line:1, $size: 10px);
+			background-color:$bigchat-special-tag-note-chat ;
+			border-radius: 50%;
+			height: 16px;
+			justify-content: center;
+			position: absolute;
+			width:16px;
+			left: 10px;
+  		top: 9px;
+		}
+
+		&__container {
+			height: 35px;
+		}
+
+		&__note {
+			left:-3px;
+		  top: 1px;//0px;//2px;
+		}
+
+		&__items {
+			height: 99%;//100%;
+			overflow: hidden;
+			width: 100%;
+		}
+
+		&__item {
+			height: 100%;
+			overflow: hidden;
+			padding-bottom: 15px;
+			width: calc(100% - 0px);
+			top:-1px;
+
+			& .smart-container {
+				overflow-x: hidden;
+				width: 100%;
+
+				margin: 1px 0 0;
+			}
+
+			& .tag-sortable-placeholder {
+				background: $ab-default-background-hover;
+				height:24px;
+				opacity: 0.3;
+				width: 100%;
+			}
+		}
+
+		&__container {
+			cursor: pointer;
+			margin: 0px 0.5px 0px 0px;
+			padding-bottom: 5px;
+			padding-left: 32px;
+			padding-top: 5px;
+			width: 100%;
+			@include typo($size: 14px, $line: 16px, $color: $ab-special-tag-color);
+
+			&.chat {
+				color: $bigchat-special-tag-color !important;
+			}
+
+			&.addressbook-widget-tag-item__ui {
+				height: 30px;
+			}
+
+			&.min-view {
+				padding: 2px 0px 2px 42px;
+			}
+
+			&[data-active="active"],
+      &[data-radio="on"],
+      &:hover {
+				background: $ab-default-background-hover ;
+				color	: $ab-default-text-hover !important;
+				width: 100%;
+     		}
+		}
+	}
+
+	&__note {
+		&.title {
+			justify-content: center;
+			padding-bottom: 8px;
+			padding-top: 6px;
+			width: 100%;
+			@include typo($size: 15px, $line: 16px, $color: $ab-text-title);
+		}
+	}
+
+	&__icon {
+		box-sizing: border-box;
+		color: $ab-default-icon-neutral;
+		cursor: pointer;
+		height: 27px;
+		opacity:0.85;
+		padding: 7.5px;
+		position: absolute;
+		right: 3px;
+		top: 5px;
+		width: 27px;
+		
+		& svg {
+			fill : $ab-default-icon-neutral;
+			opacity: 0.85;
+
+			&:hover {
+				fill : $ab-default-icon-hover;
+				opacity:1;
+			}
+		}
+	}
+
+	&__shareroom-wrapper,
+	&__support-wrapper  {
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    height: 30px;
+    justify-content: start;
+    margin: 0px .5px 1px 0;
+    padding-bottom: 7px;
+    padding-left:30px;
+		padding-top: 7px;
+		width: 100%;
+		@include typo($size: 14px, $line: 16px, $color: $ab-special-tag-color);
+
+		&.chat {
+			color: $bigchat-special-tag-color !important;
+		}
+		
+    &[data-active="active"],
+    &[data-radio="on"],
+    &:hover {
+      background: $ab-default-background-hover;
+      color	: $ab-default-text-hover !important;
+
+      & .addressbook-widget-tag-item__container {
+        color	: $ab-default-text-hover !important;
+			}
+			
+      & .addressbook-widget-tag-item__name{
+        @include overflow-text;
+      }
+	}
+	}
+
+	&__sharechat_notify,
+	&__supportchat_notify {
+		&[data-state="0"] {
+			visibility: hidden;
+		}
+	}
+
+	// &__support_name {
+  // 	margin-left: -4px;
+  // }
+
+	&__chat_note {
+    //color: $eblue;
+    height: 9px;//15px
+		margin-left:-19px;//-22px;//-28px;
+    margin-right: 10px;
+		margin-top:0px;// 3px;
+		width: 9px;//15px;
+		background-color: $ab-special-tag-note-chat;//#1187f6;//$eblue;
+    border-radius: 50%;
+    border: 1px solid $ewhite;
+	}
+	
+}

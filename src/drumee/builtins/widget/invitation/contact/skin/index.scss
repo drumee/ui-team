@@ -1,0 +1,70 @@
+@import 'mixins/colors/index.scss';
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/exports.scss';
+@import 'mixins/handles.scss';
+@import 'mixins/utils.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/z-index.scss';
+
+.invitation-contact{
+  &__ui{
+    height: auto;
+    width: 100%;
+    background:$default-block-background;  // #F8F8F8;
+    height: 36px;
+    position: relative;
+    cursor: pointer;    
+    padding: 0 10px;
+    &:hover{
+      background-color:$default-background-hover;
+      color: $default-text-reverse;    
+    }      
+    &[data-state="1"]{
+      svg{
+        visibility: visible;
+      }
+    }
+  }
+  &__main{
+    &[data-state="1"]{
+      svg{
+        visibility: visible;
+      }
+    }
+  }
+  &__checkbox{
+    width: 16px;
+    height: 16px;
+    padding: 2px;
+    margin: 5px 0;
+    border: 1px solid $eviolet;
+    border-radius: $default-checkbox-border-radius;
+    svg{
+      visibility: hidden;
+    }
+  }
+  &__avatar{
+    width: 29px;
+    height: 29px;
+    min-width: 29px;
+    min-height: 29px;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: 50% 50%;
+    border-radius: 15px;
+    overflow: hidden;    
+    margin-right: 10px;
+  }
+  &__label{
+    @include typo($color:$default-text-color,$size:12px,$line:16px,$weight:300);    
+    width: 100%;
+    &:hover{
+      .tooltips{
+        visibility: visible;
+        margin-top : -1em;
+        width: 100%;
+      }
+    }
+  }
+}

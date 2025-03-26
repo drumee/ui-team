@@ -1,0 +1,19 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : desk/skin/media/grid
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+.shortcut-container{
+  left:44px;
+  width: 14px;
+  height: 14px;
+  position: absolute;
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  svg{
+    transform:rotate(-90deg);
+  }
+}

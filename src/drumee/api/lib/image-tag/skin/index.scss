@@ -1,0 +1,14 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2022
+# ===================================================================**/
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/vendor.scss';
+
+.drumee-api-image-tag {
+
+  &__ui, 
+  &__main {
+    display: none;
+  }
+}

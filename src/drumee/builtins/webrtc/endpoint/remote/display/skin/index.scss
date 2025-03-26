@@ -1,0 +1,107 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/player/stream/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.remote-display{
+  @import 'builtins/webrtc/skin/avatar';
+  @import 'builtins/webrtc/skin/video';
+  &__ui{
+    // height: 120px;
+    // width: 220px;
+    min-height: 220px;
+    min-width: 220px;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+  &__main{
+    height: 100%;
+    width: 100%;
+    justify-content: center;
+    align-items: center;  
+    video {
+      height: 100%;
+      width: 100%;
+    }
+  }
+  &__user{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-content: center;
+    align-items: center;  
+  }
+
+  &__audio{
+    position: absolute;
+    color: $main-grey;
+    visibility: hidden;
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+    &[data-state="0"]{
+      visibility: visible;
+      color: $ewhite;//white;
+      &:before{
+        content : " ";
+        position: absolute;
+        height: 2px;
+        width: 18px;
+        top: 12px;
+        left: 6px;
+        background-color: red;
+        transform-origin : 50% 50%;
+        transform: rotate(-45deg);
+      }
+    }
+  }
+  &__fullscreen{
+    position: absolute;
+    background: rgb(0,0,0,0.4);
+    color: $ewhite;
+    height: 30px;
+    width: 30px;
+    border-radius: 5px;
+    padding: 2px;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+  }
+
+}
+
+.webrtc-remote-display {
+  &__ui {
+    width: 100%;
+    overflow: hidden;
+  }
+  &__main{
+    width: 100%;
+    height: 100%;
+  }
+  &__video{
+    width: 100%;
+    height: 100%;
+  }
+  &__loader{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-content: center;
+    align-items: center;  
+    z-index: 1000;
+    background-color: $core-default-background;
+  }
+  &__message{
+    text-align: center;
+    width: auto;
+    margin-top: 34px;
+    @include typo($size:16px,$line:20px,$weight:400,$color:$core-default-text-color);
+  }
+
+}

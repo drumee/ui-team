@@ -1,0 +1,95 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/modules/account/securiry/selector/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.securiry-switcher{
+  &__ui {
+    justify-content: space-between;
+    height:20px;
+  }
+  &__text{
+    background-color: #fff;
+    border: 1px solid #ECEDEE;
+    border-radius: 4px 0 0 4px;
+  }
+  // &__info{
+  //   width: 20px;
+  //   height: 19px;
+  //   color:#DDE2E8;
+  //   top:26px;
+  //   right:15px;
+  //   position: absolute;
+  // }
+  &__switch{
+    border:1px solid transparent;
+    border-radius: 0 4px 4px 0;
+    // padding-left:9px;
+    // padding-top:26px;
+    // padding-bottom:25px;
+    // padding-right:3px;
+    // background-color: #F7F7F9;
+    // width: 416px;
+    .change{
+      &::before{
+        background-color:#4040ff;
+        opacity:0.7;
+        width: 12px;
+        height: 12px;     
+        padding-left: 0px;
+        padding-top:4px;
+        padding-bottom:3px;
+        padding-right:0px; 
+      }
+      &::after{
+        background-color:#4040ff;
+        opacity: 0.7;
+        width: 12px;
+        height: 12px;  
+        padding-left: 0px;
+        padding-top:4px;
+        padding-bottom:3px;
+        padding-right:0px;      
+        //margin-left:10px;
+      }
+      .inner{
+        width: 24px;
+        height: 4px;
+        border-radius: 4px;
+        background-color:#DDE2E8;
+      }
+    }
+    .button-switch__toggle{
+      &.on{
+        //height: 19px;
+        width: auto;
+        //color: #879BFF;
+        line-height: 19px;
+        text-align: left;
+        @include typo($size:18px,$line:19px,$color:#879bff);
+        &[data-state="0"]{
+          color: #d2d9db;
+        }
+      }
+    }
+    .button-switch__toggle{
+      &.off{     
+        //height: 19px;
+        width: 133px;
+        //color: #787B7F;
+        line-height: 19px;
+        text-align: right;
+        margin-left:19px;
+        @include typo($size:18px,$line:19px,$color:#d2d9db);
+        &[data-state="0"]{
+          color:#879bff;
+        }
+      }
+      &.change{
+        margin-right: 12px ;
+      }
+    }
+  }
+}

@@ -1,0 +1,114 @@
+@import 'mixins/drumee';
+
+.widget-chatcontactItem {
+  &__ui {
+    background-color: inherit;
+    cursor: pointer;
+    margin: 1px 0 0 0;
+    min-width:130px;
+    padding-bottom: 5px;
+    padding-left: 14px;
+    padding-top: 3px;
+    @include typo( $size:14px, $line:16px, $color : $bigchat-default-text-color);
+    &:hover,
+    &[data-active=active],
+    &[data-radio=on] {
+      background:$bigchat-default-background-hover;
+      & .profile-icon,
+      & .note-reader {
+        color:$bigchat-default-text-hover;
+      }
+    }
+  }
+
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    background-color: inherit;
+  }
+
+  &__icon {
+    color: $bigchat-default-icon-neutral;
+    height: 22px; 
+    width: 25px; 
+    margin-top: auto;
+    margin-bottom: auto;
+    margin-left: 2px;
+  }
+
+  &__profile {
+    &.user-profile__ui {
+      border-radius: 50%;
+      height:29px; 
+      width: 29px;
+      min-width: 29px;
+      margin-bottom: auto;
+      margin-top: auto;
+      
+      &[data-default="1"]{
+        border: none;
+      }
+    }
+  }
+
+  &__note {
+    &.name {
+      margin-top: 3px;
+      padding: 3px 35px 2px 15px; 
+      max-width: 187px;
+      user-select: text;
+      @include typo( $size :14px, $line: 16px, $color: $bigchat-default-text-color);
+      .inner{
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        @include overflow-text;
+      }
+    }
+
+    &.message {
+      padding-left: 15px; 
+    
+      max-width: 160px;
+      user-select: text;
+      @include typo( $size: 11px, $line: 12px, $weight: 300, $color: $bigchat-tertiary-text-color); 
+      .inner{
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      & section {
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 100%;
+      }
+    }
+
+    &.time {
+      padding-right: 10px;
+      padding-top: 8px; 
+      position: absolute;
+      right: 0;
+      @include typo( $size: 10px, $line: 11px, $color: $bigchat-tertiary-text-color);
+    }
+  }
+
+  &__digit{ 
+    align-items: center;
+    background-color:$bigchat-special-tag-note-chat;
+    border-radius: 50%;
+    height: 16px;
+    justify-content: center;
+    
+    margin: 6px 0 0px -7px;
+    position: absolute;
+    width:16px;
+    z-index: 2!important;
+    @include typo($color: $white, $weight:100, $line:1, $size: 10px);
+  }
+}

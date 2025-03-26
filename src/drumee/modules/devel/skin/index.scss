@@ -1,0 +1,17 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : src/drumee/builtins/welcome/skin/welcome-main.scss
+#   TYPE : Backoffice User Settings Styles
+# ===================================================================**/
+@import 'mixins/drumee.scss';
+
+.devel-router {
+
+  &__ui{
+    width: 100vw;
+    height: 100vh;
+    align-items: center;
+    min-width: 195px;    
+  }
+
+}

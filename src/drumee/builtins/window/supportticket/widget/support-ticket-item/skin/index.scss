@@ -1,0 +1,134 @@
+@import 'mixins/drumee';
+
+.widget-support-ticket-item {
+  &__ui {
+    background-color: inherit;
+    cursor: pointer;
+    margin: 0px 0 1px 0;
+    min-width:130px;
+    padding-bottom: 5px;
+    padding-left: 14px;
+    padding-top: 5px;
+    @include typo($size:14px, $line:16px, $color : $bigchat-default-text-color);
+
+    &:hover,
+    &[data-active=active],
+    &[data-radio=on] {
+      background: $bigchat-default-background-hover;
+
+      & .profile-icon,
+      & .note-reader {
+        color: $bigchat-default-text-hover ;
+      }
+    }
+
+    &[data-online="1"]{
+      &::before {
+        background-color:$bigchat-contact-online-color;
+        border-radius: 15px;
+        content: " ";
+        height: 8px;
+        margin: 3.7% 0px 0px 16%;
+        position: absolute;
+        width: 8px;
+        z-index: 1;
+      }
+    }
+  }
+
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    background-color: inherit;
+  }
+
+  &__icon {
+    color: $bigchat-default-icon-neutral ;
+    height: 22px;
+    margin-bottom: auto;
+    margin-left: 2px;
+    margin-top: auto;
+    width: 25px;
+  }
+
+  &__profile {
+    &.user-profile__ui {
+      border-radius: 50%;
+      height:29px;
+      margin-bottom: auto;
+      margin-top: auto;
+      width: 29px;
+      
+      &[data-default="1"]{
+        border: none;
+      }
+    }
+
+    &.customer {
+      & .user-profile__icon {
+        background-color: $bigchat-default-user-icon  !important;
+      }
+    }
+  }
+
+  &__note {
+    &.name {      
+      margin-left: 5px;
+      margin-top: 1px;
+      max-width: 150px;
+      padding: 6px 3px 3px 9px;
+      @include typo( $size :14px, $line: 16px, $color: $bigchat-default-text-color);
+      .inner {
+        text-overflow: ellipsis;
+        @include overflow-text;
+      }
+
+      &.customer {
+        margin-left: 0;
+      }
+    }
+
+    &.message {      
+      padding-bottom: 2px;
+      padding-left: 10px;
+      @include typo($size: 10px, $line: 12px, $weight: 300, $color: $bigchat-tertiary-text-color);
+
+      & section {
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 100%;
+      }
+    }
+
+    &.status {     
+      justify-content: center;
+      padding-right: 2px;
+      padding-top: 2px;
+      position: absolute;
+      right: 1px;
+      text-align: center;
+      @include typo($size: 9px, $line: 11px, $color: $bigchat-tertiary-text-color);
+
+      &.customer {
+        padding-top: 2px;
+      }
+    }
+  }
+
+  &__digit {
+    align-items: center;
+    background-color:$bigchat-special-tag-note-chat;
+    border-radius: 50%;
+    height: 16px;
+    justify-content: center;
+    margin: -5% -3px 0px;
+    position: absolute;
+    width:16px;
+    z-index: 2!important;
+    @include typo($color: $bigchat-default-text-reverse, $weight:100, $line:1, $size: 10px);
+  }
+}

@@ -1,0 +1,88 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/widget/address-input-item/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.address-input-item {
+  &__ui {
+    background-color: inherit;
+    height: auto;
+    padding-bottom:10px;
+  }
+
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    background-color: inherit;
+  }
+
+  &__entry-wrapper {
+    overflow: hidden;
+    width: 100%;
+  }
+
+  &__entry {
+
+    &.entry {
+      width: 100%;
+    }
+
+    &.form-input {
+      height:auto;
+      padding-bottom: 7px; //12px;
+
+      & input {
+        width: 100%;
+        padding-right: 10px;
+      }
+    }
+  }
+
+  &__icon {
+    cursor: pointer;
+
+    &.ab_address {
+      color:$core-tertiary-text-color;// $egrey-89;
+      cursor: unset;
+      height: 24px;
+      margin: 0 5%;
+      width : 24px;
+    }
+
+    &.category {
+      align-items: baseline;
+      color: $eblue;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      min-width: 42px;
+
+      & svg {
+        height: 11px;
+        margin-right: 2px;
+        width: 6px;
+      }
+    }
+
+    &.destroy-tag {
+      color   : $core-default-icon-neutral;
+      height  : 16px;
+      width   : 24px; //25px;
+      z-index : 50 !important;
+      opacity: 0.65;
+      padding: 1px;
+      &:hover{
+        opacity:1;
+        color:$core-default-icon-hover;
+      }
+      svg{
+        margin-top: 0px;
+        margin-left: 2px;
+      }
+    }
+  }
+}

@@ -1,0 +1,374 @@
+$roboto-light: "Roboto-Light", sans-serif;
+$roboto-lightitalic: "Roboto-LightItalic", sans-serif;
+$roboto: "Roboto-Regular", sans-serif;
+$roboto-italic: "Roboto-Italic", sans-serif;
+$roboto-medium: "Roboto-Medium", sans-serif;
+$roboto-mediumitalic: "Roboto-MediumItalic", sans-serif;
+$roboto-bold: "Roboto-Bold", sans-serif;
+$roboto-bolditalic: "Roboto-BoldItalic", sans-serif;
+
+$main-typo-light: $roboto-light;
+$main-typo: $roboto;
+$main-typo-medium: $roboto-medium;
+$main-typo-bold: $roboto-bold;
+$main-typo-lightitalic: $roboto-lightitalic;
+$main-typoitalic: $roboto-italic;
+$main-typo-mediumitalic: $roboto-mediumitalic;
+$main-typo-bolditalic: $roboto-bolditalic;
+
+@mixin heading1($color: white, $weight: 400) {
+  font-size: 26px;
+  letter-spacing: 0.05em;
+  color: $color;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+
+  @if $weight ==400 {
+    font-family: $main-typo;
+  }
+
+  @else if $weight ==300 {
+    font-family: $main-typo-light;
+  }
+
+  @else if $weight ==500 {
+    font-family: $main-typo-medium;
+  }
+
+  @else if $weight ==700 {
+    font-family: $main-typo-bold;
+  }
+
+  @else if $weight ==300italic {
+    font-family: $main-typo-lightitalic;
+  }
+
+  @else if $weight ==400italic {
+    font-family: $main-typoitalic;
+  }
+
+  @else if $weight ==500italic {
+    font-family: $main-typo-mediumitalic;
+  }
+
+  @else if $weight ==700italic {
+    font-family: $main-typo-bolditalic;
+  }
+}
+
+@mixin title1($color: white, $weight: 500, $line: 1) {
+  font-size: 16px;
+  letter-spacing: 0.05em;
+  line-height: $line;
+  color: $color;
+  text-transform: capitalize;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+
+  @if $weight ==400 {
+    font-family: $main-typo;
+  }
+
+  @else if $weight ==300 {
+    font-family: $main-typo-light;
+  }
+
+  @else if $weight ==500 {
+    font-family: $main-typo-medium;
+  }
+
+  @else if $weight ==700 {
+    font-family: $main-typo-bold;
+  }
+
+  @else if $weight ==300italic {
+    font-family: $main-typo-lightitalic;
+  }
+
+  @else if $weight ==400italic {
+    font-family: $main-typoitalic;
+  }
+
+  @else if $weight ==500italic {
+    font-family: $main-typo-mediumitalic;
+  }
+
+  @else if $weight ==700italic {
+    font-family: $main-typo-bolditalic;
+  }
+}
+
+@mixin title2white($color: white, $weight: 400, $line: 1) {
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  line-height: $line;
+  color: $color;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+
+  @if $weight ==400 {
+    font-family: $main-typo;
+  }
+
+  @else if $weight ==300 {
+    font-family: $main-typo-light;
+  }
+
+  @else if $weight ==500 {
+    font-family: $main-typo-medium;
+  }
+
+  @else if $weight ==700 {
+    font-family: $main-typo-bold;
+  }
+
+  @else if $weight ==300italic {
+    font-family: $main-typo-lightitalic;
+  }
+
+  @else if $weight ==400italic {
+    font-family: $main-typoitalic;
+  }
+
+  @else if $weight ==500italic {
+    font-family: $main-typo-mediumitalic;
+  }
+
+  @else if $weight ==700italic {
+    font-family: $main-typo-bolditalic;
+  }
+}
+
+@mixin title2grey($color: grey, $weight: 400, $line: 1) {
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  line-height: $line;
+  color: $color;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+
+  @if $weight ==400 {
+    font-family: $main-typo;
+  }
+
+  @else if $weight ==300 {
+    font-family: $main-typo-light;
+  }
+
+  @else if $weight ==500 {
+    font-family: $main-typo-medium;
+  }
+
+  @else if $weight ==700 {
+    font-family: $main-typo-bold;
+  }
+
+  @else if $weight ==300italic {
+    font-family: $main-typo-lightitalic;
+  }
+
+  @else if $weight ==400italic {
+    font-family: $main-typoitalic;
+  }
+
+  @else if $weight ==500italic {
+    font-family: $main-typo-mediumitalic;
+  }
+
+  @else if $weight ==700italic {
+    font-family: $main-typo-bolditalic;
+  }
+}
+
+@mixin title3($color: white,
+  $weight: 500,
+  $line: 1,
+  $size: 12px,
+  $letter: 0.05em) {
+  font-size: $size;
+  letter-spacing: $letter;
+  line-height: $line;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+
+  @if $weight ==400 {
+    font-family: $main-typo;
+  }
+
+  @else if $weight ==300 {
+    font-family: $main-typo-light;
+  }
+
+  @else if $weight ==500 {
+    font-family: $main-typo-medium;
+  }
+
+  @else if $weight ==700 {
+    font-family: $main-typo-bold;
+  }
+
+  @else if $weight ==300italic {
+    font-family: $main-typo-lightitalic;
+  }
+
+  @else if $weight ==4001 {
+    font-family: $main-typoitalic;
+  }
+
+  @else if $weight ==500italic {
+    font-family: $main-typo-mediumitalic;
+  }
+
+  @else if $weight ==700italic {
+    font-family: $main-typo-bolditalic;
+  }
+}
+
+@mixin text1($color: white, $weight: 400italic, $line: 1) {
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  line-height: $line;
+  color: $color;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+
+  @if $weight ==400 {
+    font-family: $main-typo;
+  }
+
+  @else if $weight ==300 {
+    font-family: $main-typo-light;
+  }
+
+  @else if $weight ==500 {
+    font-family: $main-typo-medium;
+  }
+
+  @else if $weight ==700 {
+    font-family: $main-typo-bold;
+  }
+
+  @else if $weight ==300italic {
+    font-family: $main-typo-lightitalic;
+  }
+
+  @else if $weight ==400italic {
+    font-family: $main-typoitalic;
+  }
+
+  @else if $weight ==500italic {
+    font-family: $main-typo-mediumitalic;
+  }
+
+  @else if $weight ==700italic {
+    font-family: $main-typo-bolditalic;
+  }
+}
+
+@mixin photoeditorbig($color: white, $weight: 500, $line: 1) {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  line-height: $line;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+
+  @if $weight ==400 {
+    font-family: $main-typo;
+  }
+
+  @else if $weight ==300 {
+    font-family: $main-typo-light;
+  }
+
+  @else if $weight ==500 {
+    font-family: $main-typo-medium;
+  }
+
+  @else if $weight ==700 {
+    font-family: $main-typo-bold;
+  }
+
+  @else if $weight ==300italic {
+    font-family: $main-typo-lightitalic;
+  }
+
+  @else if $weight ==400italic {
+    font-family: $main-typoitalic;
+  }
+
+  @else if $weight ==500italic {
+    font-family: $main-typo-mediumitalic;
+  }
+
+  @else if $weight ==700italic {
+    font-family: $main-typo-bolditalic;
+  }
+}
+
+/**all others should be deprecated except this one**/
+@mixin typo($color: inherit,
+  $weight: 400,
+  $line: 1,
+  $size: 12px,
+  $letter: 0em) {
+  font-size: $size;
+  letter-spacing: $letter;
+  line-height: $line;
+
+  @if not($color ==inherit or $color ==null) {
+    color: $color;
+  }
+
+  @if $weight ==400 {
+    font-family: $main-typo;
+  }
+
+  @else if $weight ==300 {
+    font-family: $main-typo-light;
+  }
+
+  @else if $weight ==500 {
+    font-family: $main-typo-medium;
+  }
+
+  @else if $weight ==700 {
+    font-family: $main-typo-bold;
+  }
+
+  @else if $weight ==300italic {
+    font-family: $main-typo-lightitalic;
+  }
+
+  @else if $weight ==4001 {
+    font-family: $main-typoitalic;
+  }
+
+  @else if $weight ==500italic {
+    font-family: $main-typo-mediumitalic;
+  }
+
+  @else if $weight ==700italic {
+    font-family: $main-typo-bolditalic;
+  }
+}
+
+/**all others should be deprecated except this one**/
+
+@mixin license-trial() {
+  content: attr(data-version);
+  position: absolute;
+  transform-origin: center;
+  transform: rotate(45deg);
+  pointer-events: none;
+  opacity: 0.3;
+  background: white;
+  padding: 20px 10px;
+  border-radius: 6px;
+  border: 0.5px solid lightblue;
+  z-index: 1000;
+  white-space: pre;
+  text-align: center;
+  width: 150%;
+  white-space: break-spaces;
+}

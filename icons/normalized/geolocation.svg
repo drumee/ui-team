@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="25px" height="32px" viewBox="0 0 25 32" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 61.2 (89653) - https://sketch.com -->
+    <title>icons/event/participants copy 3</title>
+    <desc>Created with Sketch.</desc>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Account-Default" transform="translate(-557.000000, -598.000000)" fill="#4A90E2" stroke="#FFFFFF" stroke-width="0.766666667">
+            <g id="1-" transform="translate(30.000000, 80.000000)">
+                <g id="icons/event/participants-copy-3">
+                    <g transform="translate(528.000000, 519.000000)">
+                        <path d="M11.5,0 C17.8512746,0 23,4.9927034 23,11.1515152 C23,15.2573897 19.1666667,21.7624402 11.5,30.6666667 C3.83333333,21.7624402 0,15.2573897 0,11.1515152 C0,4.9927034 5.14872538,0 11.5,0 Z M11.5,2.78787879 C6.73654403,2.78787879 2.875,6.53240634 2.875,11.1515152 C2.875,14.0326386 5.73239464,19.1908058 11.5,26.2511322 L12.1651184,25.429304 C17.4873204,18.7897455 20.125,13.9196534 20.125,11.1515152 C20.125,6.53240634 16.263456,2.78787879 11.5,2.78787879 Z M11.5,6.96969697 C13.0878187,6.96969697 14.375,8.21787282 14.375,9.75757576 C14.375,11.2972787 13.0878187,12.5454545 11.5,12.5454545 C9.91218134,12.5454545 8.625,11.2972787 8.625,9.75757576 C8.625,8.21787282 9.91218134,6.96969697 11.5,6.96969697 Z" id="Shape"></path>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

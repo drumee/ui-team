@@ -1,0 +1,66 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : src/drumee/libs/reader/avatar/skin/avatar-widget.scss
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.user-avatar{
+  &__ui{
+    padding: 0;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: $default-border-radius;//3px;
+    user-select: none;
+   // box-shadow:$drumee-shadow-topbar;
+    //box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
+    cursor: pointer;
+    overflow: hidden;
+    &[data-default="1"]{
+      color: $ewhite;     
+      padding: 8px;
+      //opacity:1;
+      opacity:0.6;
+      //border: 1px solid white;
+      &[data-device=mobile]{
+        width:35px;
+        height:35px;
+        padding:7px;
+        right:10px;
+        //top:3px;
+      }
+      svg{
+        fill: $core-default-icon-reverse;  
+      }
+    }
+  }
+  &__main{
+    width: 100%;
+    height: 100%;
+    img{
+      object-position:50% 50%;
+      width:100%;      
+      height:100%;
+      object-fit:cover;      
+    }
+  }
+  &__icon{
+    width:100%;      
+    height:100%;
+  }
+  &__progress{
+    &.outer{
+      width:100%;      
+      height:100%;
+      position: absolute;
+      left: 0;
+      top: 1px;
+      background: transparent;
+    }
+    &.fg{
+      stroke: #4A90E2;
+      stroke-width: 10px;
+    }
+  }
+}

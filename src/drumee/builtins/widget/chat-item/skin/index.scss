@@ -1,0 +1,433 @@
+@import 'mixins/drumee';
+
+.widget-chatItem {
+  @import './attachment';
+  @import './menu';
+  @import './reply-message';
+
+  &__ui {
+    background-color: $core-default-background;
+    width: calc(100% - 70px);
+    @include typo($size: 12px, $line: 14px);
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+    align-items: center;
+    min-height: 38px;
+
+    &[data-radio="on"] {
+      .widget-chatItem__main {
+        background-color: $dgc-chat-forward-bg;
+      }
+    }
+
+    &.me {
+
+      width: calc(100% - 1px);
+      align-items: flex-end;
+    }
+
+    &.other {
+      margin: 9px 0px -3px auto;
+      padding-left: 14px;
+      width: 100%;
+      align-items: flex-start;
+    }
+
+    &.private &.ticket {
+      .other {
+        padding-left: 10px;
+      }
+    }
+  }
+
+  &__main {
+    width: 100%;
+    border-radius: 6px;
+    max-width: 85%;
+    min-width: 110px;
+    padding: 6px 15px 2px 5px;
+    width: fit-content;
+    display: flex;
+    flex-direction: column-reverse;
+    &[data-active="yes"] {
+      width: calc(100% - 70px);
+      margin-right: 35px;
+    }
+
+    &[data-preattachment="1"] {
+      max-width: 85%;
+      border-radius: $default-border-radius;
+      min-width: 110px;
+      padding: 6px 15px 2px 5px;
+      width: fit-content;
+      display: flex;
+      flex-direction: column-reverse;
+
+      &::before {
+        content: " ";
+        position: relative;
+        min-height: 100px;
+        height: 103px;
+        width: 100%;
+      }
+    }
+
+    &.other {
+      margin-left: 32px;
+
+      &.private,
+      &.ticket {
+        margin-left: 0;
+      }
+    }
+
+    &.me {
+      background-color: $dgc-chat-item-me-bg;
+      max-width: 85%;
+      margin: 0 14px 0 auto;
+    }
+
+    &.other {
+      background-color: $dgc-chat-other-bg;
+      border: 1px solid $dgc-chat-other-bg;
+      box-sizing: border-box;
+      margin-left: 4px;
+      max-width: 90%;
+
+      &.private,
+      &.ticket {
+        margin-left: 0;
+      }
+
+      &.share {
+        padding-left: 40px;
+      }
+    }
+
+    &.forward {
+      background-color: $dgc-chat-reply-bg;
+    }
+
+    &[data-selected="1"] {
+      background-color: $dgc-chat-forward-bg;
+
+      color: $dgc-text-reverse;
+
+      & a {
+        color: $dgc-text-reverse;
+
+        &:hover {
+          color: $egrey-e8;
+        }
+      }
+    }
+  }
+
+  &__message {
+    &-row {
+      width: 100%;
+    }
+
+    &-container {
+      width: 100%;
+      user-select: text;
+      justify-content: flex-end;
+      flex-direction: column;
+    }
+
+    &-selector-wrapper {
+      margin-right: 10px;
+      margin: 5px;
+      position: absolute;
+      right: -30px;
+      top: 12px;
+
+      &.selector-wrapper {
+        display: none;
+      }
+    }
+
+    &-content {
+
+      justify-content: flex-end;
+      display: flex;
+      flex-direction: column;
+      margin-left: 5px;
+    }
+
+    &-footer {
+      display: flex;
+      flex-direction: row;
+      align-content: space-between;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 5px;
+
+      & .readed-icon {
+        margin: -4px 1px 0px;
+        visibility: hidden;
+
+        &[data-is_seen='1'] {
+          visibility: visible;
+        }
+
+        &.other {
+          display: none;
+        }
+      }
+
+    }
+
+    &-date {
+      margin-top: -2px;
+      @include typo($size: 10px, $line: 9px, $weight: 300, $color : $dgc-tertiary-text-color);
+
+      &.me {
+        margin-top: 0px;
+        @include typo($size: 10px, $line: 9px, $weight: 500, $color : $dgc-tertiary-text-color);
+      }
+
+      &.other {
+        margin-top: 0px;
+      }
+    }
+
+  }
+
+  &__forward-tag-wrapper {
+    padding-top: 5px;
+    margin-bottom: -5px;
+  }
+
+  &__icon {
+    &-read {
+      color: $dgc-icon-color;
+      height: 14px;
+      left: 3px;
+      width: 14px;
+    }
+
+    &.checkbox {
+      border-radius: $default-checkbox-border-radius;
+      border: 1.5px solid $core-default-checkbox-border;
+      color: $core-default-checkbox-background;
+      cursor: pointer;
+      height: 15px;
+      width: 15px;
+      margin-right: 14px;
+      margin-left: auto;
+
+      &[data-selected="1"] {
+        border: 1px solid $core-default-checkbox-border;
+        color: $core-default-checkbox-checked ;
+
+
+
+        svg {
+          visibility: visible;
+        }
+      }
+    }
+
+    &.forward-icon {
+      color: $dgc-icon-color;
+      height: 20px;
+      width: 17px;
+    }
+  }
+
+  &__note {
+    &.forward {
+      padding-left: 4px;
+      padding-top: 4px;
+      text-transform: capitalize;
+      @include typo($size: 12px, $line: 12px, $color: $dgc-secondary-text-color);
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+  &__dategroup,
+  &__date-of-day {
+    align-items: center;
+    width: 100%;
+
+    & .note-content {
+      height: 20px;
+      margin: auto;
+      max-width: 200px;
+      width: 82px;
+      @include typo($size: 11px, $line: 20px, $color: $dgc-tertiary-text-color);
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+
+      & section {
+        height: 22px;
+        letter-spacing: 0;
+        margin: auto;
+        min-width: 80px;
+        padding: 5px;
+        text-align: center;
+      }
+    }
+  }
+
+  &__dateofday {
+    height: 20px;
+    margin: auto;
+    max-width: 200px;
+    width: 82px;
+    @include typo($size: 11px, $line: 12px, $color: $dgc-tertiary-text-color);
+  }
+
+  &__profile {
+    box-shadow: none;
+    margin-right: 5px;
+    position: absolute;
+    width: 30px;
+    height: 100%;
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    top: 5px;
+    left: 5px;
+
+
+    &.user-profile {
+      &__ui {
+        overflow: visible;
+        border-radius: 50%;
+        height: 29px;
+        width: 29px;
+      }
+    }
+
+    & .user-profile {
+
+      &__icon {
+        height: 100%;
+        @include typo($size: 9px, $line: 10px);
+      }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+  }
+
+  &__content {
+    border-bottom: 1px solid $dgc-chat-border;
+    width: 100%;
+  }
+
+  &__name {
+
+    margin-bottom: -3px;
+    padding-top: 5px;
+    text-transform: capitalize;
+    white-space: nowrap;
+    width: 121px;
+    @include typo($size: 11px, $line: 10px, $weight: 400, $color: $core-default-text-color);
+
+    & .inner.note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+
+  &__messages {
+    height: calc(100% - 80px);
+    width: 100%;
+  }
+
+  &__messenger {
+    height: 80px;
+    width: 100%;
+    z-index: 99;
+  }
+
+  &__conversation {
+    user-select: text;
+    align-items: center;
+
+    max-width: 100%;
+    overflow: hidden;
+    padding: 6px 15px 2px 5px;
+
+    &.call-type {
+      flex-direction: row;
+      display: flex;
+    }
+
+
+    &.me {
+      justify-content: flex-end;
+    }
+
+    &-content {
+      overflow: hidden;
+      word-wrap: break-word;
+      @include typo($size: 12px, $line: 14px, $weight: 400, $color: $egrey-26);
+
+      & a {
+        color: $dgc-secondary-text-color;
+
+        &:hover {
+          color: $dgc-chat-hover;
+        }
+      }
+    }
+
+    &-icon {
+      background: transparent;
+      color: transparent;
+      height: 20px;
+      margin-right: 4px;
+      width: 20px;
+    }
+
+    &__call_text {
+      padding: 0px 5px;
+      user-select: none;
+    }
+  }
+
+  &__call-duration {
+    margin-left: 10px;
+    @include typo($size: 13px, $line: 14px, $weight: 400, $color: $core-default-text-title);
+  }
+
+  &__media-attachment {
+    overflow: hidden;
+  }
+
+  &__attachment,
+  &__date,
+  &__name {
+    &.me {
+      flex-direction: row-reverse;
+    }
+  }
+
+}

@@ -1,0 +1,11 @@
+@import 'mixins/drumee';
+.widget-dropdown-menu {
+  @import './card-menu';
+
+  &__ui,
+  &__main,
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+}

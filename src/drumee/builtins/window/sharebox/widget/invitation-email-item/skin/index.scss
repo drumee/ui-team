@@ -1,0 +1,156 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : src/drumee/builtins/window/sharebox/widget/invitation-email-item/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import "mixins/drumee";
+
+.widget-invitation-email-item {
+
+  @include typo($size: 14px, $line: 16px, $color: $share-default-text-color);
+  height: 35px;
+  margin: 1px 0px 0px 0px;
+  padding-bottom: 5px;
+  padding-top: 5px;
+  &__container {
+    align-items: center;
+  }
+
+  &__ui {
+    @include typo($color: $share-default-text-color);
+    background-color: inherit;
+    cursor: pointer;
+    transition: all 0.1s linear;
+    padding-left: 10px;
+    padding-right: 10px;
+    &:hover,
+    &[data-active="active"],
+    &[data-radio="on"] {
+      background: $share-default-background-hover ;//$eviolet;
+      & .profile-icon,
+      & .name.note-reader {
+        @include typo($size: 14px, $line: 16px, $color: $share-default-text-hover); // $white;
+      }
+    }
+    & .options-wrapper {
+      visibility: hidden;
+    }
+
+    &:hover {
+      & .options-wrapper {
+        visibility: visible;
+      }
+      & .option-icons {
+        color: $share-default-icon-reverse; //$ewhite;
+        border: none;
+        &.checkbox[data-state="1"] {
+          box-shadow: none;
+          color: $share-checkbox-checked-reverse; //$ewhite;
+          border: 1px solid $share-checkbox-checked-border-reverse;
+        }
+      }
+    }
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &__list {
+    height: 35px;
+    // margin: 1px 0 0;
+    padding-bottom: 5px;
+    padding-left: 12px; //14px;
+    padding-top: 5px;
+  }
+
+  &__main,
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__options {
+    // position: absolute;
+    right: 0;
+  }
+
+  &__icon {
+    color: $share-default-icon-neutral; //$egrey-89;
+    cursor: pointer;
+    &.option-icons {
+      height: 15px;
+    }
+    &.remove-admin {
+      height: 23px;//13px;
+      width:23px;// 13px;
+      opacity: 0.85;
+      padding-left: 10px;
+      margin-right: -10px;
+    }
+  }
+
+  &__profile {
+    &.user-profile__ui {
+      border-radius: 50%;
+      height: 29px; //27px;
+      width: 29px; //27px;
+      bottom: 2px; // 1px;
+      min-width: 29px;
+      &[data-default="1"] {
+        border: none;
+      }
+    }
+
+    & section {
+      font-size: 80%;
+    }
+  }
+
+  &__mid-wrapper {
+    flex: 1;
+  }
+
+  &__profileicon {
+    background: $share-default-user-icon;//$default-icon-neutral;//$egrey-8d;
+    opacity: 0.6;
+    width: 29px;//26px;
+    height:29px;// 26px;
+    min-width: 29px;
+    min-height: 29px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    margin-right: 5px;
+    margin-left: 3px;
+    .drumee-text{
+      @include typo($size: 15px,$weight:400, $color: $share-default-text-color);//$default-icon-neutral);
+      opacity:1
+    }
+  }
+  &__mid-wrapper {
+    @include typo($size: 14px, $color: $share-default-text-color);
+    overflow: hidden;
+    flex: 1;
+    max-width: calc(100% - 54px);
+    padding-right: 5px;
+    padding-left: 5px;
+    max-width: 170px;
+    .note-content{
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 170px;
+    }
+  }
+  &__sufix-wrapper {
+    margin-right: 5px;
+  }
+  &__note.name{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 170px;
+  }
+
+}

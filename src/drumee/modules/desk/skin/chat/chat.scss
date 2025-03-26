@@ -1,0 +1,107 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : src/drumee/builtins/desk/skin/account
+#   TYPE : Account Main Style
+# ===================================================================**/
+
+.desk-chat {
+  z-index: 999;
+  &.dialog__wrapper{
+    position: fixed;
+    bottom: 6px;
+    right: 6px;
+  }
+  .dialog__wrapper{
+    &.emojis{
+      position: absolute;
+      background-color: white;
+      top: -120px;
+      width: 100%;
+      height: 120px;
+    }
+  }
+  &__ui {
+    padding: 10px;
+    height: auto;
+    width: auto;
+    background-color: $ewhite;
+    box-shadow: 0 6px 10px 1px rgba(63, 79, 117, 0.13), 0 7px 20px 0 rgba(86, 65, 113, 0.08), 0 3px 17px 0 rgba(194, 185, 203, 0);
+  }
+  &__container{
+    &-recipient{
+      width: 100%;
+      @include typo($line:16px,$size:12px,$weight:400,$color:$egrey-49);
+      .label{
+        width: auto;
+        min-width: 70px;
+      }
+      .email{
+        @include overflow-text;
+      }
+    }
+  }
+  &__emojis{
+    &-roll{
+      .list-content{
+        display: flex;
+        flex-flow: wrap;
+        align-content: flex-start;
+      }
+    }
+    &-item{
+      cursor: pointer;
+      user-select: none;
+      width: 36px;
+      height: 36px;
+    }
+  }
+  &__button{
+    &.chat{
+      cursor: pointer;
+    }
+  }
+  &__message{
+    @include typo($line:16px,$size:12px,$weight:400,$color:#333);
+    .text{
+      width: 100%;
+      min-height: 2em;
+      display: block;
+      border: 1px solid #aaa;      
+    }
+    .submit{
+      cursor: pointer;
+    }
+  }
+  &__close {
+    color: #B6BFCA;
+    position: absolute;
+    top: 0;
+    right: 0;
+    cursor: pointer;
+  }
+}
+
+.desk-chat{
+  .invitation{
+    &__ui{
+      width: 300px;
+      height: auto;
+    }
+    @import "../invitation/recipient.scss";
+
+    &-searchbox{
+      &__header.note-reader{
+        display: none;
+      }
+    }
+    &-recipient__main {
+      padding-left: 26px!important;
+    }
+    &.sharees-roll {
+      .invitation__container-sharee{
+        width: 100% !important;
+      }
+    }
+  }  
+}
+

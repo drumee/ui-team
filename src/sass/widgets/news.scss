@@ -1,0 +1,77 @@
+.xia-news-region {
+    height:140px;
+    width:100%;
+    background:#f4f4e5;/*fallback*/
+    background:rgba(214,214,214,0.4);
+    overflow:hidden;
+    position:absolute;
+    left:0;
+    top:480px;
+}
+.xia-news-region .xia-news {
+    width:1000px;
+    margin:0 auto;
+    position:relative;
+}
+.xia-news-region .xia-news .xia-news-list {
+    width: 680px;
+    height:110px;
+    padding:0px;
+    margin:0 auto;
+    overflow:hidden;
+    position:relative;
+}
+.xia-news-region .xia-news .xia-news-list .xia-news-container {
+  width:100000px;
+  overflow:hidden;
+  position:absolute;
+  left:0;top:30px;
+}
+.xia-news-region .xia-news .xia-news-list .xia-news-container .xiaDrumThread {
+  width: 680px;
+  border:none;
+  padding:0;
+  float:left;
+}
+.xia-news-region .xia-news .xia-news-list .xia-news-container .xiaDrumThread .xiaThreadHead-Details {
+  margin:0 0 0 100px;
+}
+.xia-news-region .xia-news .xia-news-list .xia-news-container .xiaDrumThread .xiaDrumItemRow {
+  text-align:left;
+}
+.xia-news-region .xia-news .xia-news-list .xia-news-container .xiaDrumThread .xiaDrumItemRow .xiaDrumAuthorName {
+  color:#0071bc;
+  font-weight:bold;
+  text-transform:uppercase;
+}
+.xia-news-region .xia-news .xia-news-list .xia-news-container .xiaDrumThread .xiaDrumItemRow .xiaDrumContent {
+  color:#525251;
+  display:block;
+  margin:0 30px 0 0;
+  padding:5px 0 0 0;
+}
+.xia-news-region .xia-news .xia-newsArrow {
+  position:absolute;
+  top:0;
+  height:140px;
+  width:26px;
+  background-color:transparent;
+  background-repeat:no-repeat;
+  cursor:pointer;
+}
+.xia-news-region .xia-news .xia-newsArrow.left {
+  left:0;
+  background-image:url(../../../../static/img/sprites/feeds-arrows.png);
+  background-position:0 0;
+}
+.xia-news-region .xia-news .xia-newsArrow.left:hover {
+  background-position:0 -140px;
+}
+.xia-news-region .xia-news .xia-newsArrow.right {
+  right:0;
+  background-image:url(../../../../static/img/sprites/feeds-arrows.png);
+  background-position:-26px 0;
+}
+.xia-news-region .xia-news .xia-newsArrow.right:hover {
+  background-position:-26px -140px;
+}

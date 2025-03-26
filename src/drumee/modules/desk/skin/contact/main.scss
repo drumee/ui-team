@@ -1,0 +1,32 @@
+.contact__main{
+  &-container{
+  }
+  &-row{
+    width: 100%;
+    .member{
+      .avatar{
+        padding: 10px;
+        margin-left: -10px;
+        width: 29px;
+        height: 29px;
+        border-radius: 50%;
+        margin-left: 0px;
+        margin-right: 10px;
+        background: lightgray;        
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: 50% 50%;      }
+      .name{
+        width: 220px;
+        padding: 0 10px 0 0;
+        font-size: 14px;
+        letter-spacing: 0em;
+        line-height: 30px;
+        color: #494949;
+        -moz-osx-font-smoothing: grayscale;
+        -webkit-font-smoothing: antialiased;
+        font-family: "Roboto-Light", sans-serif;
+      }
+    }
+  }
+}

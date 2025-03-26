@@ -1,0 +1,42 @@
+@import 'mixins/drumee';
+
+.progress-bar{
+  &__ui{
+    width : 100%;
+    align-items: center;
+    background-color: inherit;
+    @include typo($size:14px,$line:24px,$color:$btn-rollback-text,$weight:300);
+  }
+  &__main{
+    width : 100%;
+    height : 100%;
+    background-color: inherit;
+  }
+  &__row{
+    width: 100%;
+    height: auto;    
+    align-items: center;
+    .bar{
+      height: 2px;
+      width: calc(100% - 160px);
+      background-color: $progress-line-text;
+      &-value{
+        transition: width 0.5s;
+        height: 4px;
+        width: 0%;
+        background-color: $progress-line-text;
+        &[data-transition="0"]{
+          transition:none;
+        }
+      }
+    }
+    .loaded{
+      width: 80px;
+      justify-content: start;
+    }
+    .total{
+      width: 80px;
+      justify-content: end;
+    }
+  }
+}

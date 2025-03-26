@@ -1,0 +1,42 @@
+@import 'mixins/drumee';
+
+.shareroom-userItem{
+  &__ui{
+    background-color: inherit;
+    padding: 5px 0px;
+  }
+  &__main{
+    background-color: inherit;
+  }
+  &__container{
+    align-items: center;
+    background-color: inherit;
+  }
+  &__profile{
+    border-radius: 50%;
+    height: 29px; 
+    margin-right: 15px;
+    width: 29px; 
+    & .note-content{
+      @include typo($size: 11px, $line: 11px);
+    }
+  }
+  &__name{
+    flex:1;
+   
+    & .note-content {
+      @include typo($size: 14px, $line: 14px, $color: $bigchat-default-text-color,$weight:400);
+      max-width: 140px;
+      @include overflow-text;
+    }
+  }
+  &__role{
+    justify-content: center;
+    width: 81px; 
+   
+    & .note-content {
+      @include typo($size: 12px, $line: 14px, $color: $bigchat-secondary-text-color ,$weight:400);
+      padding-left: 3px;
+    }
+  }
+}

@@ -1,0 +1,13 @@
+.button{
+  &--plus{
+    width: 14px;
+    height: 14px;
+    padding: 3px;
+    margin: 10px 0 0 16px;
+    background: #FA8540;
+    border-radius: 2px;
+    color:$ewhite;// #FFFFFF;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+}

@@ -1,0 +1,30 @@
+@mixin gpos($rs:1,$re:1,$cs:1,$ce:1)  {
+  grid-row-start: $rs;
+  grid-row-end: $re;
+  grid-column-start: $cs;
+  grid-column-end: $ce;
+}
+@mixin gc() {
+  align-self: center;
+  justify-self: center;
+}
+.addressbook {
+  //render
+  position: fixed;
+  top: 80px;
+  left: 30px;
+  min-width: 1306px;
+  width: calc(100% - 60px);
+  height: calc(100% - 100px);
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 6px 10px 1px rgba(63, 79, 117, 0.13), 0 7px 20px 0 rgba(86, 65, 113, 0.08), 0 3px 17px 0 rgba(194, 185, 203, 0);
+  //grid
+  display: grid;
+  grid-template-rows: 45px 25px auto 36px 30px;
+  grid-template-columns: 30px 97px auto 97px 30px;
+  //common elements
+  @import "common";
+  @import "list";
+  @import "dialog";
+}

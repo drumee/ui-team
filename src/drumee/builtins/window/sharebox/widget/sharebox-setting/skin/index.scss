@@ -1,0 +1,436 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2022
+#   FILE : src/drumee/builtins/window/sharebox/widget/sharebox-setting/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import "mixins/drumee";
+
+.widget-sharebox-setting {
+  @import 'validity';
+
+  &__ui {
+    width: 410px;
+    position: absolute;
+    height: auto !important;
+    background-color: $share-default-background;
+    border-radius: $default-border-radius-bottom;
+    align-items: center;
+    min-height: 345px;
+    box-shadow: $drumee-shadow-container;
+  }
+  &__container {
+    padding: 20px 10px 10px 10px;
+    justify-content: center;
+  }
+  & .button {
+    cursor: pointer;
+  }
+
+  & .dialog__button--close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: $share-default-thinline-icon;// #b6bfca;
+    cursor: pointer;
+    z-index: 2;
+    &:hover{
+      color:$share-default-thinline-icon-hover;
+    }
+  }
+  &__body-main {
+    width: calc(100% - 20px);
+  }
+  &__copy-text-wrapper  {
+    align-items: center;
+    @include typo($size: 12px, $color:$share-default-text-color);//$default-text-success
+    .icon {
+      height: 14px;//16px
+      width: 38px;//22px;
+      margin:0 0px 0 20x;//0 4px 0 12px;;//
+      color: $share-default-icon-success;
+    }
+  }
+  &__copy-success {
+    @include typo($size: 12px, $color: $share-default-text-color);
+  }
+  &__action-button {
+    align-items: center;
+    justify-content: center;
+  }
+  &__icon.destroy {
+    color: $share-default-icon-neutral;
+    position: absolute;
+    width: 19px;
+    height: 19px;
+    opacity: 0.65;
+    visibility: visible;
+    padding: 2px; //3px;
+    left: 11px;//5px;
+    top: 7px;//5px;
+    z-index: 2;
+    cursor: pointer;
+    &:hover {
+      svg {
+        opacity: 1;
+        color: $share-default-icon-hover;
+      }
+    }
+  }
+
+/*  &__body-main {
+    width: calc(100% - 20px);
+  }*/
+  &__setting-main{
+    padding-left: 20px;
+    padding-top: 10px;
+    margin-bottom:-7px;// -10px;
+  }
+
+  &__page_title {
+    justify-content: center;
+  }
+
+  &__page-title-note {
+    margin: 10px 0px 16px 0px;
+    @include typo($size: 16px, $color: $sharebox-text-color);
+  }
+  &__password-view-row{
+    &:hover{
+      background-color: $share-default-background-hover;
+      color:$share-default-text-hover; 
+      *{
+        background-color: $share-default-background-hover;
+        color:$share-default-text-hover; 
+      }
+    }
+  }
+  &__rights-wrapper{
+    padding-left: 3px;
+    margin-left: -2px;
+    &:hover{
+      background-color: $share-default-background-hover;
+      color:$share-default-text-hover; 
+      *{
+        background-color: $share-default-background-hover;
+        color:$share-default-text-hover; 
+      }
+
+      &[data-state="1"],
+      &.selected {
+        color: $share-default-checkbox-checked;//$checkbox-active;
+        border: 1px solid $share-checkbox-checked-border-reverse;//white;
+        color:$share-checkbox-checked-reverse; 
+      }
+      .widget-sharebox-setting__inline-action-btn{
+        background-color: $btn-commit-background-hover;
+        .drumee-text{
+          background-color:$btn-commit-background-hover;
+        }
+      }
+      .widget-sharebox-setting{
+        &-permission__icon{
+          .checkbox[data-state="1"]{
+            color: $share-checkbox-checked-reverse; //$ewhite;
+            border: 1px solid $share-checkbox-checked-border-reverse;
+            border-radius:$default-checkbox-border-radius;
+          }
+        }
+      }
+      .checkbox{
+        &[data-state="1"]{
+          border:1px solid $share-checkbox-checked-border-reverse;
+        } 
+      }
+    }
+  }
+
+  &__password-holder {
+    margin-left: -5px;
+  }
+
+  &__settings_wrapper {
+    justify-content: center;
+    background: $share-default-block-background;  
+    border-radius:$default-border-radius;// 2px;
+    padding: 9px 0;//0px 10px 10px 10px;
+    margin: 10px 8px 0 10px;//10px;
+  }
+  &__row-item {
+   // margin-top: 10px;
+   margin-bottom: 10px;
+   //padding-right:14px;
+   padding-left: 12px;
+  }
+  &__legend {
+    width: 100px; //80px;
+    padding-top: 2px;
+    @include typo($color:$sharebox-text-color-legend,$size:14px,$line:26px,$weight:400);
+  //  margin-left:20px;
+    flex-shrink: 0;
+    //left: 15px;
+  }
+  &__setting-item {
+    flex: 1;
+    min-width: 180px;
+    width: 249px;//256px;
+    padding-left:2px;//5px;
+  }
+  &__button {
+    margin-left: -1px;
+    border: 1px solid $share-default-entry-border-bottom;
+    border-radius: $default-border-radius;
+    padding: 3px 10px;//1px 6px;
+    cursor: pointer;
+    @include typo($size: 14px, $color: $share-default-text-color, $weight:300,);//$size: 13px
+    &:hover {
+      background:$share-default-background-hover;//$eviolet;
+      color:$share-default-text-hover;// $ewhite;
+    }
+  }
+
+  /*** Permission block  ***/
+  &-permission__item {
+    height: 26px;
+    align-items: center;
+  }
+
+  &-permission__icon.checkbox {
+    width: 15px;
+    height: 15px;
+    border: 1px solid $share-default-checkbox-border;
+    border-radius: $default-checkbox-border-radius;
+    cursor: pointer;
+    color:$share-default-checkbox-background;
+
+    &[data-state="1"],
+    &.selected {
+      color:$share-default-checkbox-checked;
+      border: 1px solid $share-default-checkbox-border;
+    }
+
+    &[data-state="0"],
+    &.unselected {
+      color: transparent;
+    }
+  }
+  &-permission__note {
+    margin-right: 20px;//15px;
+    margin-left: 3px;//5px;
+    @include typo($color:$share-default-text-color,$size:14px,$weight:300);//($size: 13px, $color: $egrey-78);
+    &:hover{
+      color:$share-default-text-hover; 
+    }
+  }
+
+  /*** Valid For  ***/
+
+  &__month_entry,
+  &__hours_entry {
+    width: 23px;//28px;
+    height: 23px;
+    background-color: $share-default-background;
+    border-radius:$default-border-radius;
+    & input::-webkit-outer-spin-button,
+    & input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+      &:hover{
+        background-color: $share-default-background-hover;
+        color: $share-default-text-hover;//#fff;
+        border: $ewhite 1px solid;
+      }
+    }
+
+    /* Firefox */
+    & input[type="number"] {
+      -moz-appearance: textfield;
+      border-bottom: none;
+      text-align: center;
+      padding-right:2px;// 0px;
+      @include typo($line: 29px, $size: 14px, $weight: 400, $color: $share-default-text-color);
+      @include placeholder-input {
+        @include typo($line: 29px, $size: 14px, $weight: 300, $color: $share-default-text-placeholder); //#89929e
+      }
+    }
+  }
+/*  &__validity-wrapper {
+    align-items: center;
+    margin-bottom: 0px;
+  }*/
+  &__validity-caption {
+    padding-right: 15px;
+    @include typo($size: 14px, $weight: 300, $color: $share-default-text-color);// $egrey-78);  $weight: 400,
+  }
+
+  /* Notification Block */
+  &__notification-block_wrapper {
+    justify-content: center;
+    margin: 20px 0px;
+  }
+
+  &__notification-title {
+    justify-content: center;
+    margin-bottom: 10px;
+    @include typo($size: 16px, $color: $sharebox-text-color);
+  }
+  &__action-button {
+    background: $btn-rollback-background;
+    border:1px solid $btn-rollback-border;
+    border-radius: $default-border-radius;
+    padding:0 12px;//5px 9px;
+    margin:15px auto 0px;//15px auto 10px;
+    cursor: pointer;
+    height: 35px;
+    min-width: 115px;
+    align-items: center;
+    justify-content: center;
+    @include typo($size: 15px,$line: 25px, $color: $btn-rollback-text);
+    &:hover{
+      border:2px solid $btn-rollback-border-hover;
+      color: $btn-rollback-text-hover;
+    }
+    &.save{
+      background:$btn-commit-background;       
+      border:1px solid $btn-commit-border;//$btn-rollback-border;
+      margin-left: 10px;
+      @include typo($size: 15px,$line: 25px, $color:$btn-commit-text);
+      &:hover{
+        border:1px;
+        background-color: $btn-commit-text-hover;//$btn-rollback-text-hover;
+      }
+    }
+  }
+  &__inline-action-btn {
+    background: $btn-commit-background;
+    border-radius: $default-border-radius;
+    padding: 5px;//3px 5px;
+   // margin: auto;
+    margin-left:5px;//13px;//20px;
+    cursor: pointer;
+    width: 26px;//24px;
+    height: 26px;//24px;
+    justify-content: center;
+    align-items: center;
+    @include typo($size: 12px, $color:$btn-commit-text);
+    &:hover{
+      background-color:$btn-commit-background-hover;
+    }
+    &.first{
+      margin-left:20px;//28px;//15px;
+    }
+    &.middle{
+      margin-left: -2px;//9px;//20px;
+    }
+  }
+
+  &__inline-edit-icon {
+    height: 18px;
+    width: 18px;
+    margin: 3px 5px 3px 12px;
+    color: $share-default-block-background; //must follow the background color
+    padding-right: 5px;
+    opacity: 0.85;
+    svg{
+      margin-left: 2px;
+    }
+    &:hover{
+      opacity: 1;
+      background-color: $share-default-background-hover;
+      color:$share-default-icon-reverse;
+    //  color:$default-thinline-icon-hover;
+    }
+    &.btn-first{
+      margin-left: 66px;//73px;//55px;//136px;
+      margin-right: 8px;
+    }
+    &.btn-middle{
+      margin-left:5px;//13px;
+      margin-right: 7px;
+    }
+  }
+  &__password-info-icon {
+    width: 14px;//16px;
+    height: 14px;//16px;
+    padding: 0;
+    margin: auto auto auto 14px;
+    left: 15px;
+    color: $share-default-icon-neutral;
+    :hover{
+      color:$share-default-thinline-icon-hover;
+    }
+    .widget-sharebox-setting__tooltips {
+      top: calc(100% + 5px);
+      left:-42px;// 50%;
+      transform: translate(-50%, 0);
+      border-radius: $default-border-radius; //4px;
+      width: 210px;// 264px;
+      height: auto;
+      padding: 6px;//12px 18px;
+      text-align:justify;
+      position: absolute;
+      background-color: $share-default-background-tooltips;
+      z-index: 100;
+      @include typo($line:14px,$size:11px,$weight:400,$color:$share-default-text-tooltips);
+    //  @include typo($line: 16px, $size: 14px, $weight: 400, $color: $default-text-color); //$egrey-2f
+ /*     &:after {
+        content: "";
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        transform: rotate(45deg);
+        background: $default-border-notification; // white;
+        top: -3px;
+        left: calc(50% - 5px);
+      }*/
+    }
+  }
+  &__password-view-txt{
+    padding-right: 10px;
+    @include typo($line:26px,$size:14px,$weight:300,$color:$share-default-text-color);//$line:23px $size:13px,$weight:400,
+    min-width: 145px;
+    padding-left: 5px;
+    &:hover{
+      color:$share-default-text-hover; 
+    }
+  }
+  &__password-wrapper {
+    margin-right: 25px;
+    & .entry-reminder {
+      width: 160px;
+      input{
+        @include typo($line:26px,$size:14px,$weight:400,$color:$share-default-text-color);//$size:13px
+        @include placeholder-input {
+          @include typo($line: 26px, $size: 14px, $weight: 300, $color: $share-default-text-placeholder); //#89929e $size:13px
+        }
+      }   
+    }
+    & .pw-shower {
+      top: 0px;
+      color: $share-default-icon-neutral;
+      right: -30px;
+      :hover{
+        color:$share-default-thinline-icon-hover;
+      }
+    }
+  }
+
+  .invitation-searchbox__icon{
+    width:24px;
+    height: 24px;
+  }
+  .schedule-recipient{
+    &__text{
+      padding:0 5px;
+      }
+    }
+    /*
+  .schedule-recipient-name{
+    padding: 0 10px 0 5px;//0 10px;
+    margin-left: 5px;
+  }
+  .schedule-recipient-icon{
+    width: 15px;
+    height: 16px;
+    margin-bottom: 2px;
+  }*/
+}

@@ -1,0 +1,91 @@
+@import 'mixins/drumee';
+
+.chat-forward-list-item {
+  &__ui {
+    background-color: inherit;
+    &:hover {
+      background-color: $bigchat-default-background-hover;
+      & .checkbox,
+      & .room-name {
+        color: $bigchat-default-text-hover ;
+        display: block;
+      }
+      
+      & .checkbox {
+        &[data-state="1"] {
+          box-shadow: none;
+          color: $bigchat-checkbox-checked-reverse;
+          border: 1px solid $bigchat-checkbox-checked-border-reverse;
+        }
+      }
+    }
+  }
+
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    background-color: inherit;
+  }
+
+  &__list {
+    padding:3px 18px 2px 19px; 
+    height: 35px;
+  }
+
+  &__profile {
+    &.user-profile__ui {
+      border-radius: 50%;
+      height:29px; 
+      width:29px; 
+      
+      &[data-default="1"] {
+        border: none;
+      }
+    }
+  }
+
+  &__icon {
+    color: $egrey-b6; 
+    cursor: pointer;
+
+    &.raw-drumee_projectroom {
+      height: 22px !important; 
+      width: 29px;
+      top: 4px;
+    }
+
+    &.display-icon {
+      height: 29px; 
+      width: 29px;
+      
+    }
+
+    &.checkbox {
+      display: none;
+      height: 15px;
+      margin-right: 18px;
+      margin-top: 7px; 
+      position: absolute;
+      right: 0;
+      width: 15px;
+
+      &[data-state="1"] {
+        box-shadow: none;
+        color:$bigchat-default-checkbox-checked;
+        border:1px solid $bigchat-default-checkbox-border;
+        display: flex;
+        border-radius:$default-checkbox-border-radius;
+      }
+    }
+  }
+
+  &__name {
+    margin-top: 3px;
+    padding: 5px 3px 3px 12px;
+    max-width: 165px;
+    @include typo( $size :14px, $line: 14px, $color: $bigchat-default-text-color);
+    @include overflow-text;    
+  }
+}

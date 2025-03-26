@@ -1,0 +1,22 @@
+/* ==========================================================
+ * VENDOR VARIABLES
+ * ========================================================== */
+
+@import "./globals";
+@import "./fonts";
+@import "./common";
+@import "./helpers";
+
+@include xia-fonts($name:huge, $size:$xia-huge-fs);
+@include xia-fonts($name:large, $size:$xia-large-fs);
+@include xia-fonts($name:normal, $size:$xia-normal-fs);
+@include xia-fonts($name:medium, $size:$xia-medium-fs);
+@include xia-fonts($name:small, $size:$xia-small-fs);
+@include xia-fonts($name:tiny, $size:$xia-tiny-fs);
+
+@include xia-font-size();
+@include xia-paddings();
+@include xia-margins();
+@include xia-min-dim();
+@include xia-opacity();
+

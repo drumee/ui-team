@@ -1,0 +1,57 @@
+@import 'mixins/drumee.scss';
+
+.list-smart {
+  &__container {
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 100%;
+
+    // for firefox scrollbar
+    scrollbar-color: $default-scrollbar-color $default-scrollbar-white;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+      cursor: pointer;
+      height: 100%;
+      margin-right:2px;
+      max-width: 3px;
+      width: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: $desk-scrollbar-color;
+      cursor: pointer;
+    }
+
+    &[data-flow="x"],
+    &[data-axis='x'] {
+      display: flex;
+      flex-direction: row;
+      max-height: unset;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      
+      &::-webkit-scrollbar {
+        cursor: pointer;
+        height: 3px;
+        max-height: 3px;
+        width: 100%;
+      }
+    }
+    &[data-type="trial"]::after{
+      @include license-trial();
+      @include typo($size:22px,$line:1.3,$color:$default-text-title);
+    }
+    &[data-type="error"]::after{
+      @include license-trial();
+      @include typo($size:30px,$line:1.3,$color:red);
+    }
+  }
+
+  .no-content {
+    @include typo($line: 14px, $size: 14px,$weight: 400, $color: $egrey-2f);
+    padding: 10px;
+  }
+}

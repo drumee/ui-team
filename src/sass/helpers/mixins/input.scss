@@ -1,0 +1,6 @@
+@mixin input-base($bgcolor:$xia-primary-color, $height:$base-line-height) {
+    height: $height;
+    padding: 0px 20px;
+    @include inline-block(middle);
+    color: text-contrast($bgcolor) !important;
+}

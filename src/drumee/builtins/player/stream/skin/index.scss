@@ -1,0 +1,86 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/player/stream/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.player-stream{
+  &__ui{
+    overflow: hidden;
+  }
+  &__main{
+    height: 100%;
+    width: 100%;
+  }
+  &__user{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-content: center;
+    align-items: center;  
+  }
+
+  &__avatar{
+    &[data-video="1"]{
+      visibility: hidden;
+    }
+    .user-profile{
+      width: 160px;
+      height: 160px;
+    }
+  }
+  &__label{
+    &[data-video="1"]{
+      visibility: hidden;
+    }
+    padding: 20px;
+    border-radius: 4px;
+    background-color: $main-grey;
+    @include typo($size:34px,$line:40px,$weight:400,$color:$ewhite);
+  }
+
+  &__micro{
+    position: absolute;
+    color: $main-grey;
+    visibility: hidden;
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+    &[data-muted="1"]{
+    visibility: visible;
+      &:before{
+        content : " ";
+        position: absolute;
+        height: 2px;
+        width: 25px;
+        top: 12px;
+        left: 10px;
+        background-color: red;
+        transform-origin : 50% 50%;
+        transform: rotate(-45deg);
+      }
+    }
+  }
+
+  &__video{
+    height: 100%;
+    width: 100%;
+    &[data-size="cover"]{
+      left: 50%;
+      // min-height: 100%;
+      // min-width: 100%;
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    background-color: black;
+    &[data-status="idle"]{
+      background-color: transparent;
+    }
+    &[data-video="0"]{
+      visibility: hidden;
+    }
+  }
+}

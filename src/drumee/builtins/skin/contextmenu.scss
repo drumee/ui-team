@@ -1,0 +1,102 @@
+/* =================================================================== *
+#   Copyright Xialia.com  2011-2016                                    *
+#   FILE : src/drumee/router/skin/router-main
+#   TYPE : Global styles, for the whole platform
+# ==================================================================== */
+
+@import 'mixins/drumee.scss';
+
+.drumee-contextmenu.drumee-box{
+ // padding: 5px 10px;//5px;
+  min-width: 90px;
+  background-color: $core-background-tooltips;
+  position: absolute;
+  border-radius: $default-border-radius;//4px;
+  overflow: hidden;
+  .contextmenu-item {
+    height: 36px;
+    align-items: center;
+    justify-items: center;
+    flex-direction: row;
+    display: flex;   
+    cursor: pointer;
+    padding: 10px;
+    white-space: nowrap;
+    @include typo($color:$core-default-text-color, $size: 12px, $line: 16px);
+    &:hover{
+      background-color: $core-default-background-hover;//$folder-main;
+      color: $core-default-text-reverse;
+      svg{
+        color: $core-default-text-reverse;
+        opacity: 1;
+      }
+    } 
+    &.flip-x{
+      svg{
+        transform:scaleX(-1);
+      }
+    }
+/*    &.copy{
+      svg{
+        color: #18ac72;
+      }
+    }
+    &.paste{
+      svg{
+        color: #879bff;
+      }
+    }*/
+    &.account{
+      svg{
+        opacity:1;
+        //color: #4a90e2;
+        padding: 0.5px;
+      }
+    }
+    &.link{
+      svg{
+        padding: 1.5px;
+      }
+    }
+    &.preferences{
+      svg{
+        opacity:1;
+        padding: 0px;
+        height: 21px;
+        width: 21px;
+      }
+    }
+/*    &.download{
+      svg{
+        color:#18a3ac;
+      }
+    }
+    &.upload{
+      svg{
+        color: #47638f;
+      }
+    }
+    &.unlock{
+      svg{
+        color:#787b7f;
+      }
+    }
+    &.lock{
+      svg{
+        color:#787b7f;
+      }
+    }*/
+    svg{
+      height: 20px;
+      width: 20px;        
+      margin-right: 5px;
+      padding: 1.5px;
+      color:$core-default-icon-neutral ;
+      opacity: 0.75;
+    }
+    .label{
+      padding: 1px 0 0 1px;
+    }
+  }
+}
+

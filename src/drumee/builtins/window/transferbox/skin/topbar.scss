@@ -1,0 +1,53 @@
+&-topbar {
+  &__container {
+    background-color: $share-box-topbar-container;
+    width: 100%;
+  }
+
+  &__switch-container {
+    align-items: center;
+    left: 45px;
+    width: 100%;
+  }
+
+  &__wrapper-title {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  &__control {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  &__note {
+    &.title {
+      @include typo($size: 18px, $line: 15px, $color: $core-default-text-reverse);
+      justify-content: flex-start;
+      max-width: 150px;
+      padding: 5px;
+      text-align: center;
+    }
+  }
+
+  &__icon {
+    color: $core-default-icon-reverse;
+    cursor: pointer;
+    height: 28px;
+    margin: 0px 5px 0 5px;
+    width: 28px;
+
+    &.switch-box {
+      &[data-state="0"] {
+        opacity: 0.5;
+      }
+    }
+  }
+
+  &-control {
+    .icon {
+      color:$core-default-icon-reverse;      
+    }
+  }
+}

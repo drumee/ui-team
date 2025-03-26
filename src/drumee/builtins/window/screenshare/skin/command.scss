@@ -1,0 +1,99 @@
+.window-webinar{
+  &__commands{
+    position: absolute;
+    bottom:20px; // 0;
+   // right: 40px; //10px;
+    height: 56px; //80px; //100px;
+    width: auto; //190px; //210px;
+    align-items: center;
+    justify-items: center;
+    justify-content: center;
+    z-index: 200;
+    background-color: $core-default-transparent-black;//$transparent-black;//rgba(0, 0, 0, 0.33);//($vdo-background-color;
+    border-radius:$default-border-radius;
+    margin-left:20%;
+    min-width: 209px;
+    margin-right: auto;
+    .ctrl-button{
+      width: 36px; //48px;
+      border-radius:$default-border-radius;
+      height: 36px; //30px;
+      padding:8px; // 5px;
+      border: 1.2px transparent solid;//$vdo-border-grey
+      background-color: $core-default-background;        
+      margin:0 7px; // 0 6px;
+      color: $egrey-b6; //grey;
+      cursor: pointer;
+      &.line{
+        background-color: $eorange-sunset ;//#ea4d44;
+        color:$ewhite;// #fff;
+        fill: none;
+        stroke-width: 0;
+        stroke: $ewhite;//#fff;
+        padding: 8px; //5px;
+        border: none;
+        margin-right:14px;
+        svg{
+          margin-top: 1px;
+          margin-left: 2px;
+        }
+      }
+      &.reject{
+        background-color: $multimedia-vdo-ctrl-button;//$vdo-ctrl-button;  //red;
+      }
+      &.screen{
+        color:$multimedia-vdo-button-accept;//$vdo-button-accept; // green;
+        padding: 3.5px;//8.5px;
+        margin-left: 14px;
+      /*  stroke-width: 1px;
+        stroke:$default-icon-reverse;*/
+
+
+        &[data-state="0"]{
+          color:$egrey-b6;//$default-icon-reverse;
+
+        }
+        &[data-state="0"]{
+          &:before{
+            content : " ";
+            position: absolute;
+            height: 2px;
+            width: 29px;
+            top: 15px; //12px;
+            left: 1px; //10px;
+            background-color: $multimedia-vdo-ctrl-button;// $vdo-ctrl-button; //red;
+            transform-origin : 50% 50%;
+            transform: rotate(-45deg);
+          }
+        }
+      }
+      &.accept{
+        color:$multimedia-vdo-button-accept; // green;
+      }
+      &[data-state="0"]{
+        color:$egrey-b6; //$egrey-89; #d3d3d3
+      }
+      &[data-state="0"]{
+        &:before{
+          content : " ";
+          position: absolute;
+          height: 2px;
+          width: 25px;
+          top: 16px; //12px;
+          left: 3px; //10px;
+          background-color: $multimedia-vdo-ctrl-button;//$vdo-ctrl-button; //red;
+          transform-origin : 50% 50%;
+          transform: rotate(-45deg);
+        }
+      }
+      &[data-online="1"]{
+        background-color: $multimedia-vdo-ctrl-button;//$vdo-ctrl-button; //red;
+        color: $ewhite;
+      }
+      &[data-enabled="0"]{
+        opacity: 0.3;
+        pointer-events: none;
+      }
+    }
+  }
+}

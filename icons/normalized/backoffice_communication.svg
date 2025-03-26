@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="19px" height="19px" viewBox="0 0 19 19" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51.2 (57519) - http://www.bohemiancoding.com/sketch -->
+    <title>Shape</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Symbols" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="baseline/chatbubble" transform="translate(-2.000000, -2.000000)" fill="#494949" fill-rule="nonzero">
+            <g id="baseline-chat_bubble_outline-24px">
+                <path d="M18.5,2 L3.83333333,2 C2.825,2 2,2.825 2,3.83333333 L2,20.3333333 L5.66666667,16.6666667 L18.5,16.6666667 C19.5083333,16.6666667 20.3333333,15.8416667 20.3333333,14.8333333 L20.3333333,3.83333333 C20.3333333,2.825 19.5083333,2 18.5,2 Z M18.5,14.8333333 L5.66666667,14.8333333 L3.83333333,16.6666667 L3.83333333,3.83333333 L18.5,3.83333333 L18.5,14.8333333 Z" id="Shape"></path>
+            </g>
+        </g>
+    </g>
+</svg>

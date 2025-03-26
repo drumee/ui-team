@@ -1,0 +1,140 @@
+
+@mixin xia-base($bgcolor:transparent, $padding:$xia-padding-vertical, $margin:0){
+    background-color: $bgcolor;
+    color: text-contrast($bgcolor);
+    padding: unquote($padding);
+    margin: unquote($margin);
+    outline: 0 !important;
+}
+
+// gradient
+@mixin xia-gradient($light:top, $bgcolor: #fff) {
+    background-color: $bgcolor;
+    @include background(linear-gradient($light,lighten($bgcolor, 5%), darken($bgcolor, 5%)));
+}
+
+// rotated-text
+@mixin rotated-text($num-letters: 100, $angle-span: 180deg,
+		    $angle-offset: 0deg, $tag:char) {
+  $angle-per-char: $angle-span / $num-letters;
+  @for $i from 1 through $num-letters {
+    #{$tag}#{$i} {
+	@include transform(rotate($angle-offset + $angle-per-char * $i))
+    }
+  }
+}
+
+
+// padding
+@mixin xia-paddings($list:2 5 10 15 20 30 40) {
+    @each $grid in $list{
+	.padding-left-#{$grid} {
+	    padding-left:#{$grid}px;
+	}
+	.padding-right-#{$grid} {
+	    padding-right:#{$grid}px;
+	}
+	.padding-top-#{$grid} {
+	    padding-top:#{$grid}px;
+	}
+	.padding-bottom-#{$grid} {
+	    padding-bottom:#{$grid}px;
+	}
+	.padding-#{$grid} {
+	    padding:#{$grid}px;
+	}
+    }
+}
+
+// margin
+@mixin xia-margins($list:0 2 5 10 15 20 30 40) {
+    @each $grid in $list{
+	.margin-left-#{$grid} {
+	    margin-left:#{$grid}px !important;
+	}
+	.margin-right-#{$grid} {
+	    margin-right:#{$grid}px !important;
+	}
+	.margin-top-#{$grid} {
+	    margin-top:#{$grid}px !important;
+	}
+	.margin-bottom-#{$grid} {
+	    margin-bottom:#{$grid}px !important;
+	}
+	.margin-#{$grid} {
+	    margin:#{$grid}px !important;
+	}
+    }
+}
+
+// margin
+@mixin xia-min-dim($list:40 60 80 100 120 140 160 180 200 250 300 350 400) {
+    @each $width in $list{
+	.min-width-#{$width} {
+	    min-width:#{$width}px !important;
+	}
+	.min-height-#{$width} {
+	    min-height:#{$width}px !important;
+	}
+    }
+}
+
+// margin
+@mixin xia-fonts($name, $size) {
+    .font-#{$name} {
+	font-size:#{$size};
+    }
+}
+
+@mixin xia-font-size($range:60) {
+    @for $size from 8 through $range{
+	.font-size-#{$size} {
+	    font-size:#{$size}px;
+	}
+    }
+}
+
+@mixin create-fonts($family:Antic-Regular, $start:10, $range:10, $pace:2) {
+    $n:$start;
+    @for $order from 1 through $range {
+	$n:$n + $pace;
+	.#{$family}-#{$n} {
+	    font-family: $family !important;
+	    font-size: #{$n}px !important;
+        }
+    }
+}
+
+// font-family
+@mixin font-family($list: Antic-Regular Circled DoolingBold ShadowsIntoLight VaguelyFatal Trebuchet_MS Satisfy Verdana){
+    @each $name in $list{
+	.fn-#{$name} {
+	    font-family:#{$name};
+	}
+    }
+}
+// font-family
+@mixin xia-opacity(){
+    @for $val from 1 through 9 {
+	$s:$val / 10;
+	.opacity-#{$val}{
+	    opacity:#{$s};
+	}
+    }
+}
+
+
+@mixin clip-path($clip) {
+  -webkit-clip-path: $clip;
+  -moz-clip-path: $clip;
+  -ms-clip-path: $clip;
+  clip-path: $clip;
+}
+
+@mixin circ-gradient($bg, $c1, $c2, $c3) {
+    background: $bg; /* For browsers that do not support gradients */
+    background: -webkit-radial-gradient($c1, $c2, $c3); /* Safari 5.1-6.0 */
+    background: -o-radial-gradient($c1, $c2, $c3); /* For Opera 11.6 to 12.0 */
+    background: -moz-radial-gradient($c1, $c2, $c3); /* For Firefox 3.6 to 15 */
+    background: radial-gradient($c1, $c2, $c3); /* Standard syntax (must be last) */
+}

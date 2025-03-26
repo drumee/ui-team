@@ -1,0 +1,142 @@
+&.hub {
+  .icon {
+    width: 25px;
+    height: 25px;
+    position: absolute;
+    top: 20px; //21px;
+    right: 0;
+    left: 0;
+    //margin: -3px auto;
+    margin: 0 auto;
+    fill:$core-default-icon-reverse;//$ewhite;
+    &.private{
+      padding: 3px;
+      top: 24px;
+    }
+    &.share{
+   //   padding: 1px;
+      width: 37px;
+      height: 37px;
+      top: 18px;//14px;
+    }
+  }
+  &:hover {
+    &:before {
+      height: 0;
+    }
+  }
+  &.public {
+    background-color: $website-main;
+    border-radius: $default-border-radius;//6px;
+    .media-form__input input {
+      background-color: #45b4bb;
+      color: $ewhite;
+    }
+    &:before {
+      content: " ";
+      position: absolute;
+      top: 0;
+      right: 0;
+      border-top: 13px solid $website-main-light; 
+      border-left: 13px solid transparent;
+      border-right: 13px solid $website-main-light; 
+      border-radius: 0 6px 0 0;
+      height: 0;
+      width: 62px;
+    }
+  }
+/*  &.share {
+    .media-notifications__title{
+      color: #ef6500;
+    }
+    .media-notifications__item.ack{
+      svg{
+        fill: #ef6500;
+        color: #ef6500;
+      }
+    }
+  }*/
+
+  &.dmz,&.share {
+    background-color: $sharebox-main; 
+    border-radius: $default-border-radius;
+    .media-form__input input {
+      background-color: #dd820b;
+      color: $share-default-text-reverse;
+    }
+    &:before {
+      content: " ";
+      position: absolute;
+      top: 0;
+      right: 0;
+      border-top: 13px solid $sharebox-main-light;
+      border-left: 13px solid transparent;
+      border-right: 13px solid $sharebox-main-light;
+      border-radius: 0 6px 0 0;
+      height: 0;
+      width: 62px;
+    }
+  }
+  &.private {
+    background-color:$teamroom-main ;
+    .media-form__input input {
+      background-color: #c05ed0;
+      color: $team-default-text-reverse;
+    }
+    &:before {
+      content: " ";
+      position: absolute;
+      top: 0;
+      right: 0;
+      border-top: 13px solid $teamroom-main-light ;
+      border-left: 13px solid transparent;
+      border-right: 13px solid $teamroom-main-light ;
+      border-radius: 0 6px 0 0;
+      height: 0;
+      width: 62px;
+    }
+  }
+}
+
+
+// MOUSE HOVER
+&.hub {
+  &[data-hover="on"] {
+    .media__container:after {
+      content: " ";
+      width: calc(100% - 12px);
+      height: calc(100% - 25px);
+      border: 1px dashed white;
+      position: absolute;
+      top: 19px;
+      left: 6px;
+      border-radius: 2px;
+      display: block;
+    }
+    &.public {
+      /*.filename {
+      //  color: $egrey-2f;
+        background-color: #90d1d6;
+      }*/
+      // .filename-tooltips{
+      //   background-color:  #90d1d6;
+      // }
+      .media-form__input input {
+        background-color: #45b4bb;
+      }
+    }
+    &.private {
+    /*  .filename {
+      // color: $egrey-2f;
+        background-color: #d5a3dd;
+      }*/
+      // .filename-tooltips{
+      //   background-color: #d5a3dd;
+      // }
+      .media-form__input input {
+        background-color: #c05ed0;
+      }
+    }
+  }
+}
+

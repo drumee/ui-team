@@ -1,0 +1,42 @@
+.editor {
+  &__ui {
+    &[data-state="1"] {
+      z-index: 10000 !important;
+    }
+  }
+}
+
+.editor-topbar {
+  &__control {
+    position: absolute;
+    right: 0;
+
+    .icon {
+      width: 12px;
+      height: 12px;
+      padding: 0;
+      color: $core-default-text-reverse;
+      cursor: pointer;
+      margin: auto 15px auto 0;
+    }
+  }
+
+  &__title {
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex: 1;
+    flex-direction: row;
+    height: 100%;
+    @include typo($size: 18px,
+      $line: 24px,
+      $weight: 400,
+      $color: $core-default-text-reverse );
+    @include overflow-text;
+
+    .icon {
+      width: 14px;
+      margin-left: 6px;
+    }
+  }
+}

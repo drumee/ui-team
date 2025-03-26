@@ -1,0 +1,46 @@
+.hub-settings{
+  &__container{
+    &-general{
+      width: 100%;    
+      background: #F8F8F8;
+      border-radius: 4px;    
+      white-space: nowrap;
+      overflow: visible;
+      margin-top: 10px;
+      padding : 9px 0;
+      letter-spacing: 0em;
+      @include typo($size:12px);
+      .input{
+        &--name{
+          border-bottom: 1px solid $entry-border-bottom;//#ECEDEE;
+          white-space: nowrap;
+          overflow: hidden;
+          // width: 130px;
+          width: 147px;
+          height: 22px;
+          margin-right: 6px;
+          // @include typo($color:#89929E,$size:12px,$line:26px);    
+          input {
+            background-color: transparent;
+            @include typo($color:$egrey-2f,$size:14px,$line:26px,$weight:400);    
+          }
+        }
+      }
+      .button{
+        &--ok{
+          height: 20px;
+          width: 20px;
+          border-radius: 2px;
+          background-color: #18AC72;
+          box-shadow: inset 0 1px 1px 0 rgba(0, 0, 0, 0.1);
+          display: flex;
+          justify-content: center;
+          cursor: pointer;
+          @include typo($color:#FFFFFF,$size:8px,$line:20px);    
+        }
+      }
+    }
+  }
+  @import "general/field.scss";
+}
+@import "./general/administrator.scss";

@@ -1,0 +1,155 @@
+@import 'mixins/drumee';
+
+.player-text {
+  &__ui {
+    background-color: $core-default-background;
+    width: 400px;
+    height: 480px;
+    top: 45px;
+    left: calc(50vw - 220px);
+    box-shadow: $drumee-shadow-container;
+    overflow: visible;
+    flex-direction: column;
+    display: flex;
+    border-radius: $default-border-radius;
+
+    &[data-device="mobile"] {
+      width: 100vw;
+      height: 100vh;
+      left: 0;
+      top: 0;
+    }
+  }
+
+  &-topbar {
+    &__container {
+      width: 100%;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    &__action {
+      align-items: center;
+      align-items: center;
+      position: absolute;
+      height: 100%;
+    }
+  }
+
+  &__header {
+    width: 100%;
+    height: 44px;
+    min-height: 44px;
+    border-bottom: none;
+    z-index: 200;
+    background-color: rebeccapurple;
+
+    &[data-header="0"] {
+      display: none;
+    }
+
+    .menu-items {
+      background: $core-default-background;
+      border-radius: $default-border-radius;
+    }
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    border-radius: $default-border-radius;
+    overflow: hidden;
+  }
+
+  &__body {
+    overflow: auto;
+    width: 100%;
+    height: calc(100% - 44px);
+    max-height: 100%;
+  }
+
+  &-topbar {
+    &__icon {
+      width: 16px;
+      height: 16px;
+      color: $core-default-text-reverse;
+      margin-left: 10px;
+      cursor: pointer;
+      z-index: 1000;
+
+      &.pin {
+        z-index: 1;
+
+        &[data-state="1"] {
+          svg {
+            transform: rotate(-45deg);
+          }
+
+          .tooltips {
+            display: none !important;
+          }
+        }
+
+        &[data-visibility="0"] {
+          visibility: hidden;
+          pointer-events: none;
+        }
+      }
+
+      .tooltips {
+        white-space: nowrap;
+        background-color: $core-background-tooltips;
+        border-radius: $default-border-radius-tiny;
+        width: fit-content;
+        position: absolute;
+        padding: 7px;
+        top: 18px;
+        @include typo($line: 15px, $size: 12px, $color: $core-default-text-color);
+
+      }
+    }
+  }
+
+  &__text-content {
+    width: 100%;
+    height: 100%;
+
+    @include typo($size: 13px, $line: 18px, $weight: 300, $color: $core-default-text-color);
+    padding: 15px 10px 10px 15px;
+    user-select: text;
+  }
+
+  .player-topbar {
+    &__control {
+      position: absolute;
+      right: 0;
+
+      .icon {
+        width: 12px;
+        height: 12px;
+        padding: 0;
+        color: $core-default-text-reverse;
+        cursor: pointer;
+        margin: auto 15px auto 0;
+      }
+    }
+
+    &__title {
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      flex: 1;
+      flex-direction: row;
+      height: 100%;
+      @include typo($size: 18px, $line: 24px, $weight: 400, $color: $core-default-text-reverse);
+      @include overflow-text;
+
+      .icon {
+        width: 14px;
+        margin-left: 6px;
+      }
+    }
+  }
+
+}

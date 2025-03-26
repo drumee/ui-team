@@ -1,0 +1,220 @@
+
+///* Smartphones (portrait) ----------- */
+//@media only screen 
+//and (max-device-width : 480px)
+//and (orientation: portrait){
+//    @include xia-gallery-columns($col:2, $width:470px);
+//}
+//
+///* Smartphones (landscape) ----------- */
+//@media only screen 
+//and (max-device-width : 800px)
+//and (orientation: landscape){
+//    @include xia-gallery-columns($col:2, $width:370px);
+//}
+//
+///* iPads (portrait) ----------- */
+//@media only screen and (min-device-width : 768px)
+//and (max-device-width : 1024px) 
+//and (orientation : portrait)
+//{
+//    @include xia-gallery-columns($col:2, $width:350px);
+//}
+//
+//
+///* iPads (landscape) ----------- */
+//@media only screen and (min-device-width : 768px) 
+//and (max-device-width : 1024px) 
+//and (orientation : landscape)
+//{
+//    @include xia-gallery-columns($col:3, $width:330px);
+//}
+//
+///* Desktops and laptops ----------- */
+//@include xia-gallery();
+//
+///* iPhone 4 ----------- */
+//@media
+//only screen and (-webkit-min-device-pixel-ratio : 1.5),
+//only screen and (min-device-pixel-ratio : 1.5) {
+//    @include xia-gallery-columns($col:1, $width:800px);
+//}
+
+
+//.xia-gallery{
+//    position:absolute;
+//    top:0;
+//    left:0;
+//    width: 100%;
+//    background: $xia-color-dark;
+//    color: text-contrast($xia-color-dark);
+//    z-index:$xia-z-index-higher;
+//    >.main-barre{
+//	position:fixed;
+//	width:100%;
+//	height:$xia-btn-height;
+//	@include single-box-shadow(rgba(255,255,255,0.95), 0px, 2px, 5px);
+//	background: rgba(200,200,200, 0.75);
+//	z-index:30000;
+//	>.flow-horizontal:first-child{
+//	    font-size:20px;
+//	}
+//    }
+//
+//    .container{
+//	margin-top:45px;
+//	margin-left:auto;
+//	margin-right:auto;
+//	@extend .xia-row;
+//	@include xia-flex-align($align:flex-start, $justify:space-between);
+//	.slide-mini{ 
+//	    width: auto;
+//	    padding-left:10px;
+//	    position:relative;
+//	    //border-radius: $xia-btn-border-radius;
+//	    &:hover{
+//	    	border-color: #66afe9;
+//	    	outline: 0;
+//	    	background:$xia-box-bg-color;
+//	    	color:$xia-color-dark;
+//	    	@include transition(background ease-in-out 0.8s, color ease-in-out 0.5s);
+//	    }
+//	    >.community{
+//		font-style: italic;
+//		position: absolute;
+//		bottom: 5px;
+//	    }
+//	    img{
+//		height: 300px;
+//	    }
+//	    >p{
+//	    	margin:0;
+//	    }
+//	    >.caption{
+//		text-align: justify;
+//		bottom: 0;
+//		margin-right: 5px;
+//		&[data-visible=off]{
+//		    display:none;
+//		}
+//		&[data-visible=on]{
+//		    display: block;
+//		}
+//	    }
+//	    &:last-child{
+//		padding-right: 10px;
+//	    }
+//	}
+//    }
+//}
+
+.xia-card{
+    width:auto;
+    display: inline-block;
+    position:relative;
+    padding-left: 5px;
+    padding-right: 5px;
+    cursor: pointer;
+    //border-radius: $xia-btn-border-radius;
+    >.community{
+	font-style: italic;
+	position: absolute;
+	bottom: 5px;
+	left:5px;
+	color:$xia-color-dark;
+	width:97%;
+	&:hover{
+	    border-color: #66afe9;
+	    outline: 0;
+	    background:rgba(55,55,55,0.5);
+	    color:$xia-color-bright;
+	    @include transition(background ease-in-out 0.8s, color ease-in-out 0.5s);
+	}
+    }
+    >.card{
+	padding: 2px 0;
+	>img{
+	    margin-top: 3px;
+	}
+    }
+    >.caption{
+	text-align: justify;
+	bottom: 0;
+	margin-right: 5px;
+	&[data-visible=off]{
+	    display:none;
+	}
+	&[data-visible=on]{
+	    display: block;
+	}
+    }
+    &:first-child{
+	padding-left: 5px;
+    }
+    &:last-child{
+	padding-right: 5px;
+    }
+}
+
+.gallery{
+    position:absolute;
+    top:0;
+    left:0;
+    width: 100%;
+    background: $xia-color-bright;
+    color: text-contrast($xia-color-dark);
+    z-index:$xia-z-index-higher;
+    >.bg{
+	position: fixed;
+	top: 0;
+	bottom: 0;
+	width: inherit;
+	background: black;
+	left: 0;
+	right: 0;
+	z-index: -1;
+    }
+    .media-item{
+	img{
+	    padding: 5px;
+	}
+    }
+    >.body{
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 40px;
+	width:100%;
+	/* .xia-cards-row{ */
+	/*     display: block; */
+	/*     width:100%; */
+	/*     white-space: nowrap; */
+	/*     >div{ */
+	/* 	@extend .xia-card; */
+	/*     } */
+	/* } */
+    }
+}
+
+.xia-slide{
+    display:inline-block;
+    width:100%;
+    min-width:$xia-page-width;
+    margin-top:20px;
+    .xui-close{
+	font-size:20px;
+	cursor:pointer;
+	margin-right:$xia-margin;
+	&:hover{
+	    color:$xia-hover-cross-color;
+	}
+    }
+    >div{
+	height:100%;
+    }
+    .slide-row{
+	height:100%;
+    }
+    #xui-slide-footer, #xia-slide-header{
+	min-height:15px;
+    }
+}

@@ -1,0 +1,150 @@
+
+
+//////////////////////////////////////////////////////////
+///////// BUTTON BASE ////////////////////////////////////
+//////////////////////////////////////////////////////////
+
+@mixin button-base($bgcolor: $xia-primary-color, $font-family:$xia-font-family, $color:'default',
+		   $font-weight:$xia-font-weight, $font-size:$base-font-size, $light:'top'){
+    background-color: $bgcolor;
+    @include background(linear-gradient($light,  lighten($bgcolor, 5%), darken($bgcolor, 5%)));
+    @include inline-block(middle);
+    border: 1px solid darken($bgcolor, 10%);
+    //font-weight: $font-weight !important;
+    //font-size: $font-size;
+    font-family: $font-family !important;
+    @if $color == 'default' {
+	color:  text-contrast($bgcolor) !important;
+    }
+    @else{
+	color: $color;
+    }
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 1);
+    margin: 0;
+    text-decoration: none !important;
+    text-align: center;
+    &:hover {
+        background-color: $bgcolor;
+        @include background(linear-gradient($light, lighten($bgcolor, 10%), darken($bgcolor, 10%)));
+    }
+    &:active {
+        //@include box-shadow(inset 0px 1px 3px rgba(0, 0, 0, .3), 0px 1px 0px rgba(255, 255, 255, 1));
+        text-shadow: 0px 1px 0px rgba(255, 255, 255, .4);
+        background: desaturate($bgcolor, 20%);
+        color: darken($bgcolor, 20%);
+    }
+    &:focus {
+        outline: none;
+    }
+}
+
+@mixin button-size($height:$base-line-height){
+    height: $height;
+    line-height: $height;
+    padding: 0px ($height * .8);
+}
+
+// DISABLED EFFECT
+@mixin button-disabled{
+    @include box-shadow(0px 1px 2px rgba(0, 0, 0, .10));
+    background: darken($xia-bg-color, 5%);
+    border: 1px solid darken($xia-bg-color, 10%);
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 1);
+    color: lighten($xia-color-color, 10%);
+    cursor: default;
+}
+
+
+// WRAPPER EFFECT
+@mixin button-wrap($radius: 200px, $color-start:#e3e3e3, $color-stop:#f2f2f2){
+    @include background(linear-gradient(top, $color-start, $color-stop));
+    @include border-radius($radius);
+    @include box-shadow(inset 0px 1px 3px rgba(0, 0, 0, 0.04));
+    padding: 10px;
+    display: inline-block;
+}
+
+// GLOW EFFECT
+@mixin button-glow(){
+    &{
+        @include glow;
+    }
+    &:active {
+        @include no_animation;
+        @include box-shadow(inset 0px 1px 3px rgba(0, 0, 0, .3), 0px 1px 0px rgba(255, 255, 255, 1));
+    }
+}
+
+
+//////////////////////////////////////////////////////////
+// SHAPES ////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+@mixin button-rounded($radius:3px){
+    @include box-shadow(inset 0px 1px 0px rgba(255, 255, 255, .5), 0px 1px 2px rgba(0, 0, 0, .15));
+    @include border-radius(3px);
+}
+
+@mixin button-pill($radius:50px){
+    @include box-shadow(inset 0px 1px 0px rgba(255, 255, 255, .5), 0px 1px 2px rgba(0, 0, 0, .15));
+    @include border-radius(50px);
+}
+    
+@mixin button-circle($circle-size:120px, $font-size:$xia-medium-fs, $shadow:yes){
+    @include border-radius($circle-size * 2);
+    @if $shadow == 'yes' {
+	@include box-shadow(inset 0px 1px 1px rgba(255, 255, 255, .5), 0px 1px 2px rgba(0, 0, 0, .20));
+    }
+    width: $circle-size;
+    line-height: $circle-size;
+    height: $circle-size;
+    padding: 0px;
+    border-width: 4px;
+}
+
+//////////////////////////////////////////////////////////
+// GRADIENT BUTTON ///////////////////////////////////////
+//////////////////////////////////////////////////////////
+
+@mixin button-gradient($bgcolor:$xia-primary-color, $light:top){
+  @include background(linear-gradient($light,lighten($bgcolor, 5%), darken($bgcolor, 5%)));
+  background-color: $bgcolor;
+  border-color: darken($bgcolor, 10%);
+  color: text-contrast($bgcolor);
+  text-shadow: 0 -1px 1px rgba(darken($bgcolor, 30%), 0.35);
+
+  &:hover {
+      background: tint($bgcolor, 80%);
+      @include box-shadow(inset 0 1px 0 lighten($bgcolor, 20%));
+  }
+  &:active {
+    background: tint($bgcolor, 80%);
+    color: darken($bgcolor, 20%);
+    @include box-shadow(inset 0 1px 0 lighten($bgcolor, 20%));
+  }
+}
+
+//////////////////////////////////////////////////////////
+////// FLAT BUTTON ///////////////////////////////////////
+//////////////////////////////////////////////////////////
+@mixin button-flat($bgcolor:$xia-primary-color){
+    @include box-shadow(none);
+    @include transition-property(background);
+    @include transition-duration(.3s);
+    background: $bgcolor;
+    color: text-contrast($bgcolor) !important;//  $font-color;
+    text-shadow: none;
+    border: none;
+    
+    &:hover {
+        background: lighten($bgcolor, 5%);
+    }
+    &:active {
+        @include transition-duration(0s);
+        background: desaturate($bgcolor, 20%);
+        color: darken($bgcolor, 15%);
+    }
+    &.disabled {
+        @include box-shadow(none);
+    }
+}
+

@@ -1,0 +1,107 @@
+/* ==================================================================== *
+*   FILE : src/drumee/skin/mixins/export
+*   TYPE : vendor prefixes for sass filess
+* ==================================================================== */
+
+/****************************Default************************************/
+$default-border-radius             : 6px;
+$default-border-radius-right       : 0 0 6px 0;
+$default-border-radius-left        : 0 0 0 6px;
+$default-border-radius-bottom      : 0 0 6px 6px;
+$default-border-radius-top         : 6px 6px 0px 0px;
+
+$default-border-radius-small       :    4px;
+$default-border-radius-bottom-small : 	0 0 4px 4px;
+$default-border-radius-top-small :    	4px 4px 0px 0px;
+
+$default-checkbox-border-radius    : $default-border-radius-small;
+$border-radius-small               : $default-border-radius-small;
+
+$default-border-radius-tiny        : 3px; 
+$default-border-radius-bottom-tiny :0 0 3px 3px;
+
+
+/****************************Topbar************************************/
+@mixin desk-topbar-border-radius() {
+  border-radius: 6px;
+}
+/*****************************Topbar***********************************/
+
+
+/****************************Video*****************************************/
+@mixin video-icon-border-radius() {
+  border-radius: 6px;
+}
+
+@mixin video-border-radius() {
+  border-radius: 6px;
+}
+/****************************Video********************************************/
+
+
+/*****************************Media******************************************/
+@mixin border-radius-small() {
+  border-radius:4px;
+}
+@mixin border-radius-medium() {
+  border-radius:6px;
+}
+
+//HUB
+@mixin border-radius-bottom-medium() {
+  border-radius:0 0 6px 6px;
+}
+//-window, background color block
+@mixin hub-border-radius-medium() {
+  border-radius:6px;
+}
+//-button (submit, ok, delete...)
+@mixin hub-bttn-border-radius-medium() {
+  border-radius:6px;
+}
+//-icon
+@mixin hub-icon-border-radius() {
+  border-radius: 6px;
+}
+//-checkbox
+@mixin hub-checkbox-border-radius() {
+  border-radius: 4px;
+}
+/******************************Media******************************************/
+
+
+/*********************************contact manager******************************/
+//window
+@mixin border-radius-right-medium() {
+  border-radius: 0 0 6px 0;
+}
+
+@mixin border-radius-left-medium() {
+  border-radius: 0 0 0 6px;
+}
+/***********************************Contact manager*************************/
+
+
+//welcome page (Ident,password), confirm, delete, Go...
+@mixin button-border-radius() {
+  border-radius: 6px;
+}
+
+
+
+//window, popup, account,pad
+@mixin border-radius-medium() {
+  border-radius:6px;
+}
+@mixin border-radius-bottom-medium(){
+  border-radius:0 0 6px 6px;
+}
+
+@mixin border-radius-big() {
+  border-radius:6px;
+}
+
+//widget-orange-icon,
+@mixin border-radius-tiny() {
+  border-radius:3px;
+}

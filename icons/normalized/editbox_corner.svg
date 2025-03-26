@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="15px" height="15px" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 48.1 (47250) - http://www.bohemiancoding.com/sketch -->
+    <title>Group</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Icon/corner_normal" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-8.000000, -7.000000)">
+        <g id="corner" fill="#89929E" fill-rule="nonzero">
+            <g id="Group" transform="translate(8.000000, 8.000000)">
+                <path d="M4.24965751e-18,0.5 L-4.24965751e-18,-0.5 L13.0625,-0.5 C13.8564093,-0.5 14.5,0.143590672 14.5,0.9375 L14.5,14 L13.5,14 L13.5,0.9375 C13.5,0.695875422 13.3041246,0.5 13.0625,0.5 L4.24965751e-18,0.5 Z" id="Path-2"></path>
+                <path d="M7,1 L7,-1 L12.125,-1 C13.7128187,-1 15,0.287181344 15,1.875 L15,7 L13,7 L13,1.875 C13,1.39175084 12.6082492,1 12.125,1 L7,1 Z" id="Path-2"></path>
+            </g>
+        </g>
+    </g>
+</svg>

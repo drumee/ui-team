@@ -1,0 +1,253 @@
+/* =================================================================== *
+#   Copyright Xialia.com  2011-2016                                    *
+#   FILE : src/drumee/router/skin/exception/main.scss
+#   TYPE : Global styles, for the whole platform
+# ==================================================================== */
+
+
+.exception-ui {
+  $prefix: &;
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: 999;
+  &[data-hide="1"] {
+    display: none !important;
+  }
+
+  &[data-active="on"] {
+    #{$prefix}__start {
+      background-color: red;
+    }
+  }
+  &[data-show="on"] {
+    &, #{$prefix}__block {
+      width: 100%;
+      height: 100%;
+    }
+    #{$prefix}__block {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #{$prefix}__start {
+      bottom: 0;
+      position: absolute;
+      left: 0;
+    }
+  }
+  &__start {
+    background-color: #4A90E2;
+    color: $ewhite;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 20px;
+    cursor: pointer;
+  }
+  &__wrapper {
+    width: calc(100% - 60px);
+    max-width: 1306px;
+    height: calc(100% - 60px);
+    max-height: 668px;
+    border-radius: 4px;
+    box-shadow: 0 6px 10px 1px rgba(63,79,117,0.13), 0 7px 20px 0 rgba(86,65,113,0.08), 0 3px 17px 0 rgba(194,185,203,0);
+    background-color: $ewhite;
+  }
+  &__header {
+    flex-wrap: wrap;
+    &-preheader {
+      white-space: nowrap;
+      @include typo($size:24px,$line:28px,$color:#4A90E2,$weight:400);
+      @media (min-width: 1200px) {
+        @include typo($size:22px,$line:36px,$weight:400,$color:$egrey-49);
+      }
+    }
+    &-tab {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      cursor: pointer;
+      @include typo($size:18px,$line:30px,$weight:300,$color:$egrey-49);
+      svg {
+        width: 16px;
+        height: 16px;
+        padding: 1px;
+        border: 1px solid #89929E;
+        border-radius: 2px;
+        margin-right: 16px;
+        color: $ewhite;
+      }
+      &[data-state="1"], &[data-radio="on"] {
+        color: #879BFF;
+        svg {
+          border-color: #879BFF;
+          color: #879BFF;
+        }
+      }
+      @media (min-width: 840px) {
+        // width: 320px;
+        // margin: 0 auto;
+        width: 120px!important;
+        height: 36px!important;
+        margin: 0 2px;
+        justify-content: center;
+        border-radius: 2px;
+        cursor: pointer;
+        @include typo($size:16px,$line:36px,$weight:400,$color:$egrey-49);
+        svg {
+          display: none;
+        }
+        &[data-radio="on"] {
+          background-color: #879BFF;
+          color: $ewhite;
+        }
+      }
+    }
+    &-checkbox {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      @include typo($size:18px,$line:30px,$weight:300,$color:$egrey-49);
+      svg {
+        width: 16px;
+        height: 16px;
+        padding: 1px;
+        border: 1px solid #89929E;
+        border-radius: 2px;
+        margin-right: 16px;
+        color: $ewhite;
+      }
+      &[data-state="1"], &[data-radio="on"] {
+        color: #879BFF;
+        svg {
+          border-color: #879BFF;
+          color: #879BFF;
+        }
+      }
+    }
+  }
+  &__label {
+    @include typo($size:24px,$line:28px,$color:#4A90E2,$weight:400);
+  }
+  &__field {
+    border-radius: 4px;
+    background-color: #F7F7F7;
+    border: none;
+    width: 100%;
+    input, textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      padding: 0;
+      @include typo($size:16px,$line:19px,$color:$egrey-2f,$weight:400);
+      @include placeholder-input{
+        @include typo($size:16px,$line:19px,$color:$egrey-89,$weight:400);
+      }
+    }
+  }
+  &__textarea {
+    height: 150px;
+    padding: 14px 16px;
+    textarea {
+      resize: none;
+      &:focus {
+        outline: none;
+      }
+    }
+    @media (min-width: 1200px) {
+      height: 276px;
+    }
+  }
+  &__input {
+    height: 46px;
+    padding: 0 16px;
+  }
+  &__row {
+    flex-wrap: wrap;
+    width: calc(100% - 40px);
+    height: calc(100% - 60px);
+  }
+  &__close {
+    z-index: 9999;
+  }
+  &__column {
+    $column: &;
+    &--left {
+      width: 100%;
+      @media (min-width: 1200px) {
+        max-width: 680px;
+        width: 100%;
+        flex-wrap: wrap;
+      }
+    }
+    &--right {
+      width: 100%;
+      @media (min-width: 1200px) {
+        width: 320px;
+        margin: 0 auto;
+      }
+    }
+    &-wrapper {
+      flex-wrap: wrap;
+      @media (min-width: 1200px) {
+        flex-wrap: nowrap;
+      }
+    }
+  }
+  // &__btn {
+  //   height: 36px;
+  //   width: 121px;
+  //   border-radius: 2px;
+  //   justify-content: center;
+  //   align-items: center;
+  //   position: relative;
+  //   cursor: pointer;
+  //   // box-shadow: 0 2px 4px 0 rgba(0,0,0,0.5), 0 8px 10px 1px rgba(0,0,0,0.14), 0 0 2px 0 rgba(0,0,0,0.1), 0 4px 4px 0 rgba(209,221,245,0.2);
+  //   &--normal {
+  //     border: 1px solid #DDE2E8;
+  //     background-color: #FFFFFF;
+  //     @include typo($size:16px,$line:19px,$color:$egrey-89,$weight:400);
+  //   }
+  //   &--accent {
+  //     border: 1px solid #18AC72;
+  //     background-color: #18AC72;
+  //     @include typo($size:16px,$line:19px,$color:$ewhite,$weight:400);
+  //   }
+  //   .tooltips {
+  //     position: absolute;
+  //     top: -180%;
+  //     right: 0;
+  //     opacity: 0;
+  //     background: $ewhite;
+  //     width: 300px;
+  //     text-align: center;
+  //     border-radius: 2px;
+  //     padding: 5px 10px;
+  //     box-shadow: 0px 1px 7px 0px rgba(0,0,0,0.1);
+  //     transition: opacity 0.4s ease-in-out;
+  //     @include typo($size:14px,$line:16px,$color:$egrey-89,$weight:400);
+  //     &[data-over="on"] {
+  //       opacity: 1;
+  //     }
+  //     &:before {
+  //       content: " ";
+  //       position: absolute;
+  //       bottom: -5px;
+  //       right: 55px;
+  //       transform: rotate(45deg);
+  //       background: $ewhite;
+  //       width: 8px;
+  //       height: 8px;
+  //       box-shadow: 0px 1px 7px 0px rgba(0, 0, 0, 0.1);
+  //     }
+  //     &:after {
+  //       content: " ";
+  //       position: absolute;
+  //       bottom: 0;
+  //       width: 100%;
+  //       height: 5px;
+  //       left: 0;
+  //       background: $ewhite;
+  //     }
+  //   }
+  // }
+}

@@ -1,0 +1,28 @@
+/************************************************************
+                        Channel: colors used
+************************************************************/
+
+/**background**/ 
+$folder-main                             : #1D8AEA;// also in channel and in $core-dock-notification
+$folder-main-light                       : #61AAF2; //thumbnail (border and background)
+$folder-main-before-color                : #E386B5; 
+$folder-main-background-filename         : #a3c6f2; //folder name hover background
+
+$folder-background-header                : $folder-main;
+$folder-default-background               : $core-default-background;
+
+
+/**text**/
+$folder-text-color                       : $folder-main;
+$folder-default-text-color               : $core-default-text-color;
+$folder-default-text-reverse             : $core-default-text-reverse; 
+$folder-text-notification                : $folder-main;
+
+
+/**icon**/ 
+$folder-default-icon-reverse             : $core-default-icon-reverse ;
+$folder-default-icon-hover               : $core-default-icon-hover;
+$folder-default-icon-neutral             : $core-default-icon-neutral;
+
+/**border**/
+$folder-notifycount-border               : $folder-main-light;

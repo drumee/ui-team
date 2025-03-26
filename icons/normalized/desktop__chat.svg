@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="20px" height="20px" viewBox="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51 (57462) - http://www.bohemiancoding.com/sketch -->
+    <title>chat-comment-oval-speech-bubble-with-text-lines</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1-Copy-5" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Desktop-33" transform="translate(-723.000000, -437.000000)">
+            <g id="Popups/share_Search_name" transform="translate(533.000000, 293.000000)" fill="#89929E" fill-rule="nonzero">
+                <g id="Group-6">
+                    <g id="Group-3" transform="translate(90.000000, 144.000000)">
+                        <g id="chat-comment-oval-speech-bubble-with-text-lines" transform="translate(100.000000, 0.000000)">
+                            <path d="M13.125,10.625 L6.875,10.625 C6.53,10.625 6.25,10.905 6.25,11.25 C6.25,11.595 6.53,11.875 6.875,11.875 L13.125,11.875 C13.47,11.875 13.75,11.595 13.75,11.25 C13.75,10.905 13.47,10.625 13.125,10.625 Z M14.375,6.875 L5.625,6.875 C5.28,6.875 5,7.155 5,7.5 C5,7.845 5.28,8.125 5.625,8.125 L14.375,8.125 C14.72,8.125 15,7.845 15,7.5 C15,7.155 14.72,6.875 14.375,6.875 Z M10,0 C4.47751634,0 0,3.91748366 0,8.75 C0,11.5118954 1.46562092,13.9706209 3.75,15.5743791 L3.75,20 L8.13062092,17.3418627 C8.73689542,17.4418954 9.36062092,17.5 10,17.5 C15.5231373,17.5 20,13.5825163 20,8.75 C20,3.91748366 15.5231373,0 10,0 Z M10,16.25 C9.27,16.25 8.565,16.165 7.88748366,16.0206209 L4.94496732,17.7893464 L4.98434641,14.8906209 C2.72875817,13.5337582 1.25,11.2912745 1.25,8.75 C1.25,4.60813725 5.16748366,1.25 10,1.25 C14.8325163,1.25 18.75,4.60813725 18.75,8.75 C18.75,12.8918627 14.8325163,16.25 10,16.25 Z" id="Shape"></path>
+                        </g>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

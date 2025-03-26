@@ -1,0 +1,87 @@
+.desk-module-payment-status-info {
+  .dialog__wrapper {
+    height: 0;
+    position: absolute;
+    width: 0;
+  }
+
+  &__main {
+    height: 360px;
+    min-width: 450px;
+    max-width: 600px;
+    width: 100%;
+  }
+
+  &__header {
+    height: 100%;
+    max-height: 75px;
+    width: 100%;
+  }
+
+  &__close {
+    right: 10px;
+    top: 10px;
+  }
+
+  &__icon {
+    &.close {
+      cursor: pointer;
+      color: #89929E;
+      height: 14px;
+      width: 14px;
+    }
+  }
+
+  &__content {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    width: 100%;
+  }
+
+  &__footer {
+    height: 100%;
+    justify-content: center;
+    max-height: 75px;
+    width: 100%;
+  }
+
+  &__note {
+    &.header {
+      @include typo($size:24px, $line: 30px, $weight:300, $color:$core-default-text-color);
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    &.content {
+      @include typo($size: 18px, $line: 24px, $weight:300, $color:$core-default-text-color);
+      justify-content: center;
+      text-align: center;
+      padding: 15px;
+      width: calc(100% - 25px);
+
+      p {
+        text-align: center;
+      }
+    }
+  }
+
+  &__btn-ok {
+    @include typo($size:16px, $line:28px, $color:$btn-rollback-text);
+    align-items: center;
+    cursor: pointer;
+    background-color: $btn-rollback-background;
+    border: 1px solid $btn-rollback-border ;   
+    border-radius: $default-border-radius;
+    height: 32px;
+    justify-content: center;
+    padding: 5px;
+    width: 90px;
+
+    &:hover{
+      border: 2px solid $btn-rollback-border-hover;
+      color: $btn-rollback-text-hover;
+    }
+  }
+}

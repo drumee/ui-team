@@ -1,0 +1,128 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/window/adminpanel/pages/domain-page/js/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.domain-page{
+  &__ui{
+    background-color: inherit;
+    height:100%;
+    padding:  0px 15px; //15px;//
+    width:100%;
+  }
+  &__main{  
+    align-items: center;
+    background-color: inherit;
+    height: 100%;
+    justify-content: center;
+    width: 100%;
+  }
+  &__container{
+    background-color: inherit;
+    width:100%;
+    flex: 1 1 auto;
+  }
+  &__body{
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    & .input_btn{
+      cursor: pointer;
+    }
+  }
+  &__footer{
+    justify-content: center;
+    margin-bottom: 30px; //;50px;
+  }
+
+  &__row_label.note-reader {
+    //@include typo($size: 20px, $line: 20px, $color: $egrey-2f); 
+    justify-content: flex-end;
+    text-align: right;
+    @include typo($size: 16px, $line: 24px, $color:$admin-default-text-color);// $egrey-49); 
+  }
+  &__row_form_field{
+    cursor: pointer;
+    @include typo($size: 16px, $line: 20px, $color: $admin-default-text-color); 
+    .copied-to-clipboard{
+      @include typo($size: 14px, $line: 20px, $color: $admin-default-text-color);//$weight:300
+      position: absolute;
+      left: -30px;
+      top:100%;
+    }
+  }
+  &__input_display{
+    cursor: default !important;
+  }
+  &__domain_form {
+    display: grid!important;
+    grid-row-gap: 40px;  //30px;
+    grid-template-rows: auto auto;
+    height: 175px; //165px; //
+    row-gap: 40px; //30px;
+    width: 100%;
+  }
+  &__form_row {
+    column-gap:20px;
+    display: grid !important;
+    grid-template-columns: 50% 50%;
+    min-height: 32px;
+    & .domain-page__entry[data-status=error] input {
+      border-color: $admin-default-border-error  !important; //#ff4578
+    }
+    & .entry-reminder__main input{
+      border-bottom: 1px solid $admin-default-entry-border-bottom;//$egrey-b6;
+      @include typo($size: 16px, $line: 24px, $color: $admin-default-text-color);//$egrey-3f);
+      
+      &:focus{     
+        border-color:$admin-focus-border-placeholder;//$eblue;   
+        &::placeholder {
+          color: $admin-text-placeholder-focus;// $eblue;
+        }
+      }
+      &::placeholder {
+        color: $admin-default-text-placeholder;//$egrey-b6;
+      }
+    }
+  }
+  &__link_display{
+    &.new{
+      @include typo($size: 16px, $line: 24px, $color: $egrey-b6);
+    }
+    &.view, &.edit{
+      @include typo($size: 16px, $line: 24px, $color: $admin-secondary-text-color);
+    }
+  }
+  &__button-confirm,
+  &__button_val{
+    align-items: center;
+    background:$btn-commit-background;    
+    border-radius: $default-border-radius;
+    @include typo($size: 16px, $line: 24px, $color: $btn-commit-text); //$size: 18px
+    height: 35px;//36px
+    justify-content: center;
+    width: 115px;//150px
+   // top:-20px;
+    &:hover{
+      background-color:$btn-commit-background-hover ;
+      //border-color: $btn-primary-border-hover;
+    }
+  }
+  &__button-cancel{
+    @include typo($size: 16px, $line: 24px, $color: $btn-rollback-text);
+    align-items: center;
+    background: $btn-rollback-background;
+    border-radius: $default-border-radius;
+    border:1px solid $btn-rollback-border   ;
+    height: 35px; //36px;
+    justify-content: center;
+    margin-right: 50px;
+    width: 115px; //150px;
+    &:hover{
+      border:2px solid $btn-rollback-border-hover;
+      color:$btn-rollback-text-hover;    
+    }
+  }
+}

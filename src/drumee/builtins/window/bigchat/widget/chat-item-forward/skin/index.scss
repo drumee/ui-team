@@ -1,0 +1,262 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/window/bigchat/widget/chat-item-forward/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.chat-item-forward {
+  &__ui,
+  &__main,
+  &__container,
+  &__header,
+  &__switch,
+  &__content,
+  &__footer {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__ui {
+    border-radius:$default-border-radius;
+    background-color: $bigchat-default-background; 
+    max-height: calc(100% - 48px);//calc(100% - 80px);
+    max-width: 410px;//360px;
+    min-width: 300px;
+  }
+
+  &__main {
+    background-color: inherit;
+    border-radius:$default-border-radius;
+  }
+
+  &__container {
+    background-color: inherit;
+    border-radius:$default-border-radius;
+  }
+
+  &__header {
+    align-items: center;
+    justify-content: center;
+    max-height: 40px;
+  }
+
+  &__switch {
+    justify-content: center;
+    max-height: 60px;
+    padding-top: 30px;
+  }
+
+  &__content {
+    overflow: hidden;
+    padding-top: 15px;
+    padding-bottom: 22px;
+
+    & *::-webkit-scrollbar {
+      height: 100%;
+      width: 3px; //2px;
+    }
+    
+    & *::-webkit-scrollbar-thumb {
+      background-color: $default-scrollbar-color;
+      cursor: pointer;
+    }
+  }
+
+  &__footer {
+    align-items: center;
+    //border-top: 1px solid $dgc-chat-border;
+    max-height: 80px; //50px;
+    padding-bottom:10px;//8px
+  }
+
+  &__room-content {
+    height:calc(100% - 10px);// calc(100% - 20px);
+    width: calc(100% - 2px);
+    
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &__search-wrapper {
+    justify-content: flex-end;
+    width: 78%;//100%;
+    //align-items: baseline;
+    //justify-content: center;
+    height:25px; // 40px;
+  }
+
+  &__search {
+    width: calc(100% - 90px);
+    padding-left: 14px; //15px;
+
+
+
+    & input {
+      border-bottom: 1px solid $bigchat-default-entry-border-bottom;
+      max-width: 210px;
+      width: 100%;
+      @include typo($size: 14px, $line: 14px, $color: $bigchat-default-text-color);//$size: 13px, 
+      
+      &::placeholder {
+        @include typo($size: 14px, $line: 14px, $weight: 300, $color: $bigchat-default-text-placeholder);//$size: 13px,
+      }
+    }
+  }
+
+  &__list {
+    height: 100%;
+    width: 100%;
+    padding-top:20px;//10px;
+    
+    & .smart-container {
+      border-radius:$default-border-radius;  
+      height: 100%;
+      padding:0 10px; //10px;//15px 0 10px 0; //20px 0 ;// 10px 0px;
+      width: 100%;
+      max-width:302px;//280px;
+     // min-height: 164px;
+      margin: 1px 40px;
+      top:-10px;
+    }
+  }
+
+  &__note {
+    &.title {
+      padding-top: 40px;
+      @include typo($size: 16px, $line: 21px, $color: $bigchat-default-text-title); //$size: 18px,
+    }
+    
+    &.switch-title {
+      align-items: center;
+      cursor: pointer;
+      height: 100%;
+      justify-content: center;
+      max-height:28px;// 25px;
+      max-width: 90px;//80px;
+      min-height:28px;
+      min-width: 90px;
+      width: 100%;
+      margin-left: 3%;
+      margin-right: 2%;
+      @include typo($size: 15px, $line: 14px, $weight: 300, $color: $bigchat-default-text-inactive ); //$size: 13px,$egrey-89
+
+      &[data-state="1"] {
+        border-radius:$default-border-radius;
+        @include typo($size: 14px, $line: 14px, $color: $bigchat-default-text-color);//$size: 13px,
+        background-color: $bigchat-button-background-active ;//$egrey-e8;
+        //border: 1px solid $egrey-e8;//$dgc-chatroom-scbtn;
+      }
+    }
+
+    &.counter {
+      @include typo($size: 12px, $line: 16px,$weight:300, $color: $bigchat-default-text-color);//$size: 15px,$color: $egrey-78
+      //padding: 20px;
+      align-items: flex-start;
+      justify-content: flex-end;
+      height: 25px;
+      width: 100%;
+      padding-right: 41px;//32px;
+    }
+
+    &.search-title {
+      @include typo($size: 14px, $line: 28px, $weight: 300, $color: $bigchat-default-text-title);//$size: 12px $line: 14px,
+      justify-content: center;
+      width: 100%;
+      top: 20px;
+      border-radius:$default-border-radius-top;
+     // background-color: #f7f7f9;
+      height: 100%;
+      padding: 10px 10px 10px 21px;//10px;
+      width: 100%;
+      max-width: 280px;
+      margin: 1px 40px;
+    }
+  }
+
+  &__icon {
+    color: $bigchat-default-icon-neutral;
+    cursor: pointer;
+    height: 16px;
+    width: 16px;
+
+    &.close {
+      color:$bigchat-default-thinline-icon;
+      height: 12px;
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 12px;
+      &:hover{
+        color:$bigchat-default-thinline-icon-hover;
+      }
+    }
+
+    &.search-icon {
+      height: 17px;//13px;
+      margin-right: 2px;
+      top: 4px;
+      width: 17px;//13px;
+    }
+
+    &.search-close-icon {
+      color:$bigchat-default-thinline-icon;
+      height: 10px; //8px;
+      position: absolute;
+      right: 98px;//50px; //16px;// 62px; 
+      top: -21px;//29px; //16px;
+      width:10px;//8px;
+      &:hover{
+        color:$bigchat-default-thinline-icon-hover;
+      }
+    }
+  }
+
+  &__contact-count {
+    align-items: center;
+    height: 100%;
+    width: 100%;
+  }
+
+  &__button-confirm {
+    border-radius:$default-border-radius;
+    @include typo($size: 16px, $line: 19px, $color: $btn-commit-text); //$size: 14px,
+    align-items: center;
+    background-color: $btn-commit-background;
+    border: 1px solid $btn-commit-border;
+    height: 100%;
+    justify-content: center;
+    //margin-right: 132px;
+    max-height: 35px;
+    max-width: 115px;
+    width: 100%;
+    margin-bottom: 10px;
+    margin-left: 2%;
+    padding: 7px;
+    &:hover{
+      background-color: $btn-commit-background-hover;
+      border: 1px solid $btn-commit-border-hover;
+    }
+  }
+
+  .drumee-spinner {
+		height: 35px;
+    margin: auto;
+    top: 20px;
+    width : 35px;
+  }
+
+  &__search-result-wrapper {
+    background: $bigchat-default-background; 
+    height: 90%;
+    position: absolute;
+    top: 18%;//16%;//10%;
+    width: 100%;
+    z-index: 99;
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+}

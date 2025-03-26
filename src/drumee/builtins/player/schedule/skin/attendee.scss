@@ -1,0 +1,40 @@
+
+
+&__attendees-list{
+  width: calc(100% - 50px);
+  height: auto;
+  min-height: 25px;//44px;
+  max-height: 244px;
+  border-bottom: none;
+}
+
+&__attendee{
+  width: 100%; //40px;
+  height: 26px; //40px;
+  padding: 2px 5px 0px;
+  @include typo($color:$core-default-text-color, $weight: 400, $line: 20px, $size: 14px);//$size: 16px
+  &:hover{
+    background-color: $core-default-background-hover;
+    color:$core-default-text-reverse; 
+  }
+  .name{
+    width: 35%;
+    white-space: nowrap;
+    overflow: hidden; 
+    padding-left: 5px;
+    .note-content{
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }  
+  }
+  .email{
+    width: calc(65% - 45px);//calc(65% - 35px);
+    padding-right: 5px;   
+    .note-content{
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}

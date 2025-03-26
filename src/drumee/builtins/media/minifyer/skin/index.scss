@@ -1,0 +1,120 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/builtins/media/minifyer/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.media-minifyer {
+  @import 'container.scss';
+  @import 'filename.scss';
+  @import 'hub.scss';
+  @import 'effects.scss';
+  //@import '../../skin/forbiden.scss';
+}
+
+.media-minifyer {
+  &__ui {
+    background-color: $core-default-background;
+    border-radius:$default-border-radius;
+    box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 0px 3px 0 rgba(86,65,113,0.08), 0 2px 8px 0 rgba(194,185,203,0);
+    cursor: pointer;
+    height: 75px;
+    position: relative;
+    user-select: none;
+    width: 90px;
+    top: 5px;
+    z-index: 100;
+
+    &.drumee-spinner {
+      box-shadow: none;
+      height: 75px;
+      padding: 10px;
+      width: 75px;
+
+      .inner-spinner {
+        position: absolute;
+      }
+    }
+
+    &[data-device="mobile"] {
+      height: 71px;
+      width: 83px;
+    }
+  }
+
+  &__content {
+    background-color:inherit;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  
+  &[data-hover="on"] {
+    box-shadow:$drumee-shadow-container;// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+
+    .media__container[data-icontype] {
+      z-index : 100; // Needed to make inner element receive event first
+    }
+  }
+
+  &__remove {
+    background-color: $core-default-background;    
+    border-radius: 50%;
+    border: 2px solid $core-default-border-notification;//$main-default-border;
+    color: $core-default-text-color;
+    height: 19px;
+    position: absolute;
+    right: -5px;
+    top: -5px;
+    visibility: hidden;
+    width: 19px;
+
+    &--icon {
+      fill: $core-default-thinline-icon;//$default-icon-neutral;
+      color: $core-default-thinline-icon;//$default-icon-neutral;
+      height: 7px;
+      margin: 4px;
+      width: 7px;
+
+      &:hover,
+      :focus {
+        fill:$core-default-thinline-icon-hover;
+        color:$core-default-thinline-icon-hover;
+      }
+    }
+    
+
+    &[data-hover="on"] {
+      visibility: visible;
+    }
+  }  
+
+  .preview {
+    border-radius: $default-border-radius;
+    &.image-capable {
+      background-position : center;
+      background-repeat   : no-repeat;
+      background-size     : cover;
+      opacity: 0.8;
+    }
+  }
+
+  .content-preview {
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+    word-break: break-word;
+  }
+
+  .drumee-spinner {
+    background: rgba(5,5,5, 0.5);
+    border-radius: 50%;  
+    height: 30px;
+    left: calc(50% - 15px);  
+    position: absolute;
+    top: calc(50% - 15px);
+    width: 30px;
+    z-index: 500;
+  }
+}

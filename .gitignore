@@ -1,0 +1,15 @@
+not-used.node_modules
+.DS_Store
+.Trash-1001/
+node_modules
+not-used.node_modules/
+*DEPRECATED*
+tmp/*
+kind/seeds/dynamic.js
+# .vscode/
+.vscode/launch.json
+*_tmp*
+._*
+t
+package-lock.json
+.dev-tools.rc/

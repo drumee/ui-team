@@ -1,0 +1,65 @@
+/************************************************************
+                        Account : colors used
+************************************************************/
+//src/drumee/builtins/window/account/security/skin/pad.scss ??
+$account-hover-color     : #879bff;
+$account-bg-grey-color   : #DDE2E8;
+
+/**background**/
+$account-default-background           : $core-default-background;
+$account-default-background-hover     : $core-default-background-hover;
+$account-background-header            : #18A3AC;
+$account-default-block-background     : $core-default-block-background;
+$account-default-background-inactive  : $core-default-background-inactive;
+$account-default-transparent-black    : $core-default-transparent-black;
+$account-background-tooltips          : $core-background-tooltips;
+
+/**text**/
+$account-default-text-color           : $core-default-text-color;
+$account-default-text-reverse         : $core-default-text-reverse; 
+$account-default-text-hover           : $core-default-text-hover;
+$account-backgroundless-text-hover    : $core-backgroundless-text-hover;
+$account-secondary-text-color         : $core-secondary-text-color;
+$account-default-text-placeholder     : $core-default-text-placeholder;
+$account-text-placeholder-focus       : $core-focus-text-placeholder;
+$account-default-text-success         :$core-default-text-success;
+$account-default-text-error           : $core-default-text-error ;
+$account-default-text-title           : $core-default-text-title;
+$account-default-text-caution         : $core-default-text-caution;
+$account-default-text-inactive        : $core-default-text-inactive;
+$account-default-text-alert           : $core-default-text-alert;
+//$account-security-text-color          : $core-security-text-color;    
+$account-default-text-tooltips	      : $core-default-text-tooltips;    
+
+/**icon**/
+$account-background-user-icon         : $core-background-user-icon; //Avatar
+$account-default-icon-neutral         : $core-default-icon-neutral;
+$account-default-icon-reverse         : $core-default-icon-reverse ;
+$account-default-thinline-icon        : $core-default-thinline-icon; //close icon
+$account-security-thinline-icon       : #787B7F; 
+$account-default-thinline-icon-hover  : $core-default-thinline-icon-hover; //close icon
+$account-field-icon	                  : #4a90e2;
+$account-default-icon-success         : $core-default-icon-success;
+$account-default-icon-hover           : $core-default-icon-hover;
+
+$account-phone-color                  : #879bff;
+$account-pass-color                   : #AB47BC;
+$account-email-color                  : #FE6790;
+$account-sms-color                    : #FA8A48;
+$account-ident-color                  : #18AC72;
+$account-ip-color                     : #B1BDFD;
+$account-usb-color                    : #1AA3AC;
+
+/**entry border bottom**/
+$account-default-entry-border-bottom  : $core-default-entry-border-bottom;
+$account-default-border-error         : $core-default-border-error;
+$account-security-entry-border-bottom : #b8b8b8;//$egrey-b8; 
+$account-default-separator            : $core-default-separator ;//#ECEDEE;
+
+/**toggle**/
+$account-toggle-switch-on        : $core-toggle-switch-on ;
+$account-toggle-switch-off       : $core-toggle-switch-off;
+$account-toggle-switch-radio     : $core-toggle-switch-radio ;
+$account-toggle-background       : $core-toggle-background ;
+
+$account-checkbox-svg-hover            :#18A3AC;//$egreen

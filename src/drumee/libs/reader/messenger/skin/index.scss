@@ -1,0 +1,128 @@
+@import 'mixins/drumee';
+
+.lib-messenger {
+  &__container {
+    align-items: flex-end;
+    padding: 5px 0px;
+  }
+
+  &__content {
+    flex-direction: row;
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+
+    .note-content {
+      width: 100%;
+      height: 100%;
+      outline: 0px solid transparent;
+      cursor: text;
+      overflow: hidden;
+      padding-top: 5px;
+    }
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__icon {
+    margin: 0 0 auto 0;
+    padding: 7px;
+    width: 40px;
+    height: 40px;
+    color:$core-default-icon-neutral;// #89929E;
+
+    &.emoji svg{
+      color: $core-special-icon-emoji;//#FA8540;
+      padding:2px;
+      cursor: pointer;
+      &:hover{
+        color: $core-default-icon-hover;
+      }
+    }
+    &.submit svg{
+      background-color: transparent;
+      fill: $eviolet ;
+      padding:2px;
+      margin-left:-3px;
+      cursor: pointer;
+    }
+    &.attach svg{
+      cursor: pointer;
+      padding:1px;
+    }
+
+  }
+
+  &__wrapper-popup.dialog__wrapper {
+    position: absolute;
+    bottom: calc(100% + 5px);
+    right: 6px;
+    background: $core-default-background;  //#f8f8f8;
+    box-shadow:$drumee-shadow-box;//0 0 7px 0 rgba(0,0,0,0.14);
+    border-radius:$default-border-radius;// 5px 5px 0px 0px;
+    padding: 5px 5px 0px 5px;
+    &[data-state="open"]{
+      width: 100%;
+      width: calc(100% - 15px);
+    }
+  }
+
+  &__emojis-roll{
+    height: 130px;
+    .list-smart__container{
+      display: flex;
+      padding: 10px;
+      flex-direction: column;      
+    }
+  }
+
+  &__emoji{
+    font-size: 2rem;
+    width: 100%;
+    justify-content: space-between;
+    letter-spacing: 3px;
+  }
+
+  &__container-emojis {
+    width: 100%;
+    background:$core-default-background; // #ffffff;
+  }
+
+  &__emojis-item {
+    justify-items: center;
+    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fill,28px) minmax(28px,30px);
+    grid-auto-rows: 28px;
+    grid-gap: 0.1rem;
+    align-items: center;
+    border: 1px lightgrey solid;
+    margin-top: 7px;
+    padding: 5px;
+    border-radius: $default-border-radius;
+    span{
+      width: 100%;
+      cursor: pointer;
+      height: 100%;
+      font-size: 28px;
+    }
+  }
+  &__emojis-latest {
+    font-size: 33px;
+    padding: 5px;
+    width: calc(100% - 25px);
+    margin: 0 auto 0 11px;
+    border-radius:$default-border-radius;
+    background: $core-default-background;
+    overflow: hidden;
+    padding: 5px;
+    border-radius: $default-border-radius;
+    border: 1px lightgrey solid;
+    span{
+      cursor: pointer;
+    }
+  }
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="15px" height="10px" viewBox="0 0 15 10" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 48.1 (47250) - http://www.bohemiancoding.com/sketch -->
+    <title>Group</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Icon/line" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-7.000000, -10.000000)">
+        <g id="Group" transform="translate(8.000000, 9.000000)" fill="#89929E" fill-rule="nonzero">
+            <polygon id="Line-7" points="7 2 7 1 14 1 14 2"></polygon>
+            <polygon id="Line-7" points="7 11 7 10 14 10 14 11"></polygon>
+            <polygon id="Line-7" points="7 8 7 7 14 7 14 8"></polygon>
+            <polygon id="Line-7" points="7 5 7 4 14 4 14 5"></polygon>
+            <g id="Group-2" transform="translate(2.000000, 3.500000) rotate(-90.000000) translate(-2.000000, -3.500000) translate(-1.500000, 1.500000)">
+                <polygon id="Line" points="0.62605768 2.5409554 0.62605768 1.5409554 4.53758703 1.5409554 4.53758703 2.5409554"></polygon>
+                <polygon id="Line-2" points="2.79289322 0.5 3.5 -0.207106781 5.78824561 2.08113883 5.08113883 2.78824561"></polygon>
+                <polygon id="Line-2" points="3.56300888 4.31175012 2.8559021 3.60464333 4.56300888 1.89753655 5.27011567 2.60464333"></polygon>
+            </g>
+            <g id="Group-2" transform="translate(2.000000, 8.500000) scale(1, -1) rotate(-90.000000) translate(-2.000000, -8.500000) translate(-1.500000, 6.500000)">
+                <polygon id="Line" points="0.62605768 2.5409554 0.62605768 1.5409554 4.53758703 1.5409554 4.53758703 2.5409554"></polygon>
+                <polygon id="Line-2" points="2.79289322 0.5 3.5 -0.207106781 5.78824561 2.08113883 5.08113883 2.78824561"></polygon>
+                <polygon id="Line-2" points="3.56300888 4.31175012 2.8559021 3.60464333 4.56300888 1.89753655 5.27011567 2.60464333"></polygon>
+            </g>
+        </g>
+    </g>
+</svg>

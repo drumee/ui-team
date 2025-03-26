@@ -1,0 +1,83 @@
+&-list {
+  &-wrapper {
+    @include gpos($rs:3,$re:4,$cs:3,$ce:4);
+    display: grid;
+    grid-template-rows: 20px 40px auto 20px;
+  }
+  @include gpos($rs:3,$re:4,$cs:1,$ce:1);
+  &--blacking {
+    @include gpos($rs:3,$re:4,$cs:2,$ce:3);
+  }
+  &--search-results {
+    @include gpos($rs:3,$re:4,$cs:2,$ce:3);
+  }
+  .scroll-wrapper {
+    .slimScrollDiv, .list-content {
+      width: inherit!important;
+      height: inherit!important;
+    }
+  }
+  &-row {
+    padding: 0 10px;
+    display: grid;
+    grid-template-columns: 30px 180px 160px 270px 100px auto;
+    grid-template-rows: repeat(auto-fill, 40px);
+    grid-gap: 18px;
+    border-bottom: 1px solid #e4e6e8;
+    cursor: pointer;
+    &--added {
+      background-color: #fa8540;
+      &:hover, &[data-radio="on"] {
+        background-color: #fa8540!important;
+      }
+      .addressbook-list-row-item {
+        color: #fff;
+        &.svg-wrapper {
+          visibility: visible;
+        }
+      }
+    }
+    &-item {
+      align-self: center;
+      pointer-events: none;
+      @include typo($color: #89929E,$weight: 400, $size: 12px);
+      &--special.svg-wrapper {
+        visibility: hidden;
+      }
+
+      &:last-child {
+        pointer-events: all;
+      }
+      svg {
+        fill: white;
+      }
+      &--tools {
+        visibility: hidden;
+        justify-self: center;
+        .svg-wrapper {
+          margin: 10px;
+          pointer-events: all;
+          &:first-child {
+            padding: 5px!important;
+          }
+        }
+      }
+    }
+    &:hover, &[data-radio="on"] {
+      background-color: #879BFF;
+      .addressbook-list-row-item {
+        color: white;
+        &--tools {
+          visibility: visible;
+        }
+      }
+    }
+    &--header {
+      pointer-events: none;
+      @include gpos($rs:2,$re:3,$cs:1,$ce:1);
+      * {
+        color: #4A90E2;
+      }
+    }
+  }
+}

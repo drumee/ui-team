@@ -1,0 +1,119 @@
+@import 'mixins/drumee';
+
+.widget-member-tagItem {
+  &__ui {
+    background-color: inherit;
+    height: 35px;
+    margin-top:0;
+    overflow: hidden;
+    width: 100%;
+
+    &[data-active="active"],
+    &[data-radio="on"],
+    &:hover {
+      background:$admin-default-background-hover;
+      color	:$admin-default-text-hover !important;
+      
+      & .form-tag {
+        background: transparent;
+        color	: inherit;
+      }
+
+      & .widget-member-tagItem__container {
+        &.editTag,
+        &.addTag {
+          & .destroy-tag {
+            color:$admin-default-icon-neutral  !important;
+          }
+        }
+      }
+      
+      & .widget-member-tagItem__note.name {
+        color :$admin-default-text-reverse  !important;
+        width: 120px;
+        @include overflow-text;
+      }
+      
+      & .edit-icon {
+        display: flex;
+      }
+    }
+    
+    &[data-form='on'] {
+      &[data-radio='on'],
+      &:hover {
+        background: transparent;
+        @include overflow-text;
+      }
+    }
+  }
+
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    cursor: pointer;
+    margin: 1px 0.5px 0px 0px;
+    padding-bottom: 5px;
+    padding-left: 27px; 
+    padding-top: 5px;
+    @include typo($size: 14px, $line: 14px, $color: $admin-default-text-color);
+  }
+
+  &__icon {
+    color : $admin-default-icon-reverse; 
+    height: 14px;
+    margin: 4px;
+    position: absolute;
+    right: 4px;
+    width : 14px;
+
+
+    &.edit-icon {
+      display : none;
+  /*    &:focus{
+        display: flex;
+        visibility: visible;
+      }*/
+    }
+
+    &.destroy-tag {
+      color: $admin-default-icon-neutral;
+      opacity: 0.75;
+    }
+  }
+
+  &__note {
+    &.name {
+      align-items: center;
+      width: 148px;
+      @include overflow-text;
+      .inner{
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  &__entry {
+    max-width: 117px;
+    & input {
+      background: $admin-default-background;
+      border-bottom: 1px solid $admin-default-entry-border-bottom;
+      cursor: text;
+      height: 25px;
+      &:hover {
+        border-color: $admin-focus-border-placeholder;
+      }
+      &:focus {
+        border-color: $admin-focus-border-placeholder;
+      }
+
+      &::placeholder {
+        @include typo($size: 14px, $line: 16px,$weight:300, $color: $admin-default-text-placeholder);
+      }
+    }
+  }
+}

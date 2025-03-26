@@ -1,0 +1,195 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : src/drumee/builtins/window/serverexplorer/widget/sv-new-folder/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.widget-sv-new-folder{
+  &__ui {
+    height: 100%;
+    width: 100%;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+    justify-items: center;
+    display: flex;
+    flex-direction: column;    
+  }
+
+  &__main {
+    align-items: center;
+    height: auto;
+  }
+
+   
+
+  &-popup {
+    &__main {
+      border-radius : $default-border-radius;
+      background-color: $bigchat-default-background;  
+      box-shadow: $drumee-shadow-popup;     
+      height: calc(100% - 20px);
+      max-height: 300px;
+      max-width: 550px;
+      min-height: 300px;
+      min-width: 320px;
+      width: calc( 100% - 20px);
+    }
+ 
+    &__close {
+      color: $bigchat-default-thinline-icon;
+      cursor: pointer;
+      height: 12px;
+      margin:10px;
+      position: absolute;
+      right: 5px;
+      top: 5px;
+      width: 12px;
+  
+      &:hover {
+        color:$bigchat-default-thinline-icon-hover;
+      }
+    }
+
+    &__body {
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+
+  .widget-sv-new-folder-form{
+    &__body{
+      align-items: center;
+      text-align: center;
+      height: 100%;
+      width: 100%;
+      justify-content: space-evenly;
+    }
+
+    &__wrapper{
+      .header {
+        width: 100%;
+        height: 100%;
+        max-height: 50px;
+        justify-content: center;
+        align-items: flex-start;
+      }
+    }
+  }
+
+  &__content {
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    padding: 0 10px;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__buttons-container {
+    margin-top: 45px;
+  }
+
+}
+
+
+.widget-sv-new-folder {
+  &__buttons-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+
+    & .button {
+      align-items: center;
+      height: 35px;
+      justify-content: center;
+      margin: 40px 0 0;
+      text-align: center;
+      min-width: 115px;
+      border-radius:$default-border-radius;
+    }
+
+    & .button:first-child {
+      margin-right:30px;// 50px;
+    }
+  }
+
+  &__button-cancel {
+    @include typo( $size: 16px, $line: 16px, $color: $btn-rollback-text);
+    border: 1px solid $btn-rollback-border;
+
+    &:hover {
+      border:2px solid $btn-rollback-border-hover;
+      color:$btn-rollback-text-hover; 
+    }
+  }
+
+  &__button-confirm {
+    @include typo( $size: 16px, $line: 16px, $color: $btn-caution-text);
+    background-color: $btn-commit-background;
+    color: $btn-commit-text;
+    max-width: 165px;
+    width: auto;
+    padding: 5px 10px;//5px
+    border: 1px solid $btn-rollback-border;
+
+    &:hover {
+      background-color: $btn-commit-background-hover; 
+    }
+
+
+ 
+  }
+}
+
+
+
+
+
+
+.widget-sv-new-folder-form{
+  &__note{
+    &.header {
+      margin: 10px 0px 25px 0px;
+      @include typo($size: 18px, $line: 16px, $color: $core-default-text-title);
+    }
+    &.lable {
+      margin: 0px 16px 0px 0px;
+    }
+  }
+
+  &__entry {
+    width: 100%;// 320px;
+    min-height:35px;
+  //  margin: 0 auto;
+    border: 1px solid transparent;
+    .input-details {
+      position: absolute;
+      @include typo($line: 29px, $size: 13px, $weight: 300, $color: $core-default-text-error);
+      right: 0px;
+      padding: 3px;
+    }
+    input {
+    //  width: 90%; //100%;
+      width: calc(100% - 5px);
+      margin: 0;
+      border-bottom: 1px solid $core-default-entry-border-bottom;
+      @include typo($line: 29px, $size: 16px, $weight: 400, $color: $core-default-text-color); 
+      @include placeholder-input {
+        @include typo($line: 29px, $size: 16px, $weight: 300, $color: $core-default-text-placeholder);
+      }
+      &:focus {
+        border-bottom: 1px solid $core-focus-border-placeholder ;
+        @include placeholder-input {
+          @include typo($line: 29px, $size: 16px, $weight: 300, $color: $core-focus-text-placeholder); 
+        }
+      }
+    }
+  }
+
+}

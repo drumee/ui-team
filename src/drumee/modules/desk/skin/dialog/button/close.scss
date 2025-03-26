@@ -1,0 +1,11 @@
+&--close{
+  position: absolute;
+  top: 0;
+  right: 0;
+  color: $core-default-thinline-icon;//#B6BFCA;
+  cursor: pointer;
+  z-index: 2;
+  &:hover{
+    color: $core-default-thinline-icon-hover;//$eviolet;
+  }
+}

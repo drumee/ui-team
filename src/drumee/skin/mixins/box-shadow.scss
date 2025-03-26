@@ -1,0 +1,83 @@
+/* ==================================================================== *
+*   FILE : src/drumee/skin/mixins/export
+*   TYPE : vendor prefixes for sass filess
+* ==================================================================== */
+
+/*****************************Window opening*****************/
+
+$drumee-shadow-main : 0 0px 8px 0 rgb(63 79 117 / 06%),0 -1px 16px 0 rgb(86 65 113 / 10%),0 2px 14px 0 rgb(194 185 203 / 04%);
+//0 8px 8px 0 rgba(63,79,117,.06), 0 6px 16px 0 rgba(86,65,113,.08), 0 2px 14px 0 rgba(194,185,203,0);
+
+/*****************************Window opening*****************/
+/*****************************Menu opening*****************/
+
+$drumee-shadow-container :0 5px 8px 1px rgb(63 79 117 /13%), 0 6px 16px 0 rgb(86 65 113 / 08%), 0 2px 14px 0 rgb(194 185 203 / 0%);// 0 10px 8px 1px rgba(63,79,117,.13), 0 6px 16px 0 rgba(86,65,113,.08), 0 2px 14px 0 rgba(194,185,203,0);
+
+/*****************************Menu opening*****************/
+
+/*****************************menu wrapper Before*****************/
+
+$drumee-container-before:0 -2px 8px 1px rgb(63 79 117 / 13%),0 5px 12px 0 rgb(86 65 113 /08%),0 -2px 4px 0 rgb(194 185 203 / 0%);
+
+/*****************************menu wrapper before*****************/
+
+/*****************************dropdown****************************/
+
+$drumee-container-dropdown :0 0px 8px 0 rgb(63 79 117 / 06%),0 -1px 16px 0 rgb(86 65 113 / 10%),0 2px 14px 0 rgb(194 185 203 / 04%);
+
+/*****************************dropdown****************************/
+
+/*****************************Topbar*****************/
+
+$drumee-shadow-topbar: 0 2px 2px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgb(86 65 113 / 08%), 0 2px 14px 0 rgb(194 185 203 / 0%);
+
+/*****************************Topbar*****************/
+
+/*****************************Account - préférence- language*****************/
+
+$drumee-shadow-accountlist:0 0px 5px 0px rgb(63 79 117 / 13%), 7px -6px 10px 0 rgb(86 65 113 / 08%), 0 2px 13px 0 rgb(194 185 203 / 0%);
+
+/*****************************Account - préférence- language*****************/
+
+/*****************************popup*****************/
+
+$drumee-shadow-popup:0 0 7px 0 rgb(0 0 0 / 14%), 0 0 6px 0 #f8fafc, 0 3px 5px 0 rgb(0 0 0 / 2%);
+
+/*****************************popup*****************/
+
+/*****************************block (droits)*****************/
+
+$drumee-shadow-block: 0 2px 6px 1px rgb(75 72 72 / 10%);//0 2px 6px 1px rgb(75 72 72 / 02%);
+
+/*****************************block (droits)*****************/
+
+/*****************************small container *****************/
+
+$drumee-shadow-box:0 2px 6px 1px rgb(75 72 72 / 10%);//0 2px 6px 1px rgb(75 72 72 / 2%);
+
+/*****************************small container *****************/
+
+@mixin box-shadow($size:13)  {
+  @if $size == 400 {
+    box-shadow: 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
+  } @else {
+    box-shadow: 0 0 7px 0 rgba(0, 0, 0, 0.14), 0 0 6px 0 #F8FAFC, 0 3px 5px 0 rgba(0, 0, 0, 0.2);  
+  } 
+}
+
+@mixin shadow-breadscrum() {
+  box-shadow: 0 6px 10px 1px rgba(63,79,117,.13), 0 7px 20px 0 rgba(86,65,113,.08), 0 3px 17px 0 rgba(194,185,203,0);
+  border-radius:0px 0px 6px 6px;
+  //box-shadow: 0 5px 8px 1px rgba(63,79,117,.13), 0 6px 16px 0 rgba(86,65,113,.08), 0 2px 14px 0 rgba(194,185,203,0);
+  background-color: $ewhite;
+}
+
+@mixin drumee-breadscrum() {
+  box-shadow: 0 5px 8px 1px rgba(63,79,117,.13), 0 6px 16px 0 rgba(86,65,113,.08), 0 2px 14px 0 rgba(194,185,203,0);
+  }
+
+
+
+
+
+

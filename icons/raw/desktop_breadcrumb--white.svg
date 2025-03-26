@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="12px" height="8px" viewBox="0 0 12 8" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
+    <title>Shape</title>
+    <desc>Created with Sketch.</desc>
+    <style type="text/css">
+        .desktop_breadcrumb-white{fill:#ffffff;}
+    </style>
+    <defs></defs>
+    <g id="Page-1-Copy-5" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Desktop-5" transform="translate(-153.000000, -102.000000)" fill="#89929E" fill-rule="nonzero">
+            <g id="Group-13" transform="translate(30.000000, 80.000000)">
+                <path class="desktop_breadcrumb-white" d="M131.728759,22.1710197 C131.509602,21.9429934 131.144851,21.9429934 130.918031,22.1710197 C130.698874,22.3913424 130.698874,22.7580333 130.918031,22.9778424 L133.045977,25.1171063 L123.567561,25.1171063 C123.251341,25.1176198 123,25.3702976 123,25.6881991 C123,26.0061006 123.251341,26.2669955 123.567561,26.2669955 L133.045977,26.2669955 L130.918031,28.3985558 C130.698874,28.6265821 130.698874,28.9937866 130.918031,29.2135957 C131.144851,29.441622 131.510112,29.441622 131.728759,29.2135957 L134.829885,26.0959758 C135.056705,25.8756531 135.056705,25.5089622 134.829885,25.2891531 L131.728759,22.1710197 Z" id="Shape"></path>
+            </g>
+        </g>
+    </g>
+</svg>

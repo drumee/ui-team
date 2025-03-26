@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="12px"
+   height="8px"
+   viewBox="0 0 12 8"
+   version="1.1"
+   id="svg3743"
+   sodipodi:docname="desktop_breadcrumb--black.svg"
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)">
+  <metadata
+     id="metadata3747">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>Shape</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1366"
+     inkscape:window-height="705"
+     id="namedview3745"
+     showgrid="false"
+     inkscape:zoom="67"
+     inkscape:cx="6"
+     inkscape:cy="4"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg3743" />
+  <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
+  <title
+     id="title3731">Shape</title>
+  <desc
+     id="desc3733">Created with Sketch.</desc>
+  <style
+     type="text/css"
+     id="style3735">
+        .desktop_breadcrumb{fill:#ffffff;}
+    </style>
+  <defs
+     id="defs3737" />
+  <g
+     id="Page-1-Copy-5"
+     stroke="none"
+     stroke-width="1"
+     fill="none"
+     fill-rule="evenodd"
+     style="fill:#333333">
+    <g
+       id="Desktop-5"
+       transform="translate(-153.000000, -102.000000)"
+       fill="#89929E"
+       fill-rule="nonzero"
+       style="fill:#333333">
+      <g
+         id="Group-13"
+         transform="translate(30.000000, 80.000000)"
+         style="fill:#333333">
+        <path
+           class="desktop_breadcrumb"
+           d="M131.728759,22.1710197 C131.509602,21.9429934 131.144851,21.9429934 130.918031,22.1710197 C130.698874,22.3913424 130.698874,22.7580333 130.918031,22.9778424 L133.045977,25.1171063 L123.567561,25.1171063 C123.251341,25.1176198 123,25.3702976 123,25.6881991 C123,26.0061006 123.251341,26.2669955 123.567561,26.2669955 L133.045977,26.2669955 L130.918031,28.3985558 C130.698874,28.6265821 130.698874,28.9937866 130.918031,29.2135957 C131.144851,29.441622 131.510112,29.441622 131.728759,29.2135957 L134.829885,26.0959758 C135.056705,25.8756531 135.056705,25.5089622 134.829885,25.2891531 L131.728759,22.1710197 Z"
+           id="Shape"
+           style="fill:#333333" />
+      </g>
+    </g>
+  </g>
+</svg>

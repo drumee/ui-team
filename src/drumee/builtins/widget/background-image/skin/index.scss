@@ -1,0 +1,54 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2023
+#   FILE : /src/drumee/builtins/widget/background-image/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.drumee-background {
+
+  &__ui,
+  &__main {
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    overflow: hidden;
+    background-color: transparent;
+    z-index: -1;
+  }
+  &__main {
+    &[data-noimage="1"]{
+      background-color: $main-blue;
+    }
+  }
+  &__wrapper {
+    background-size: cover;
+    background-position: 50% 50%;
+    top: 0;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: transparent;
+
+    &.preview {
+      z-index: 1;
+      filter: blur(2px);
+    }
+
+    &.preview[data-loading="0"] {
+      z-index: 0;
+    }
+
+    &.overlay {
+      z-index: 0;
+    }
+
+    &.overlay[data-loading="0"] {
+      z-index: 1;
+    }
+  }
+
+}

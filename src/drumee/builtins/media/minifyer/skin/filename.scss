@@ -1,0 +1,72 @@
+.filename {
+  border-radius:$default-border-radius-bottom;
+  cursor: pointer;
+  max-height: 31px;
+  overflow: hidden;
+  padding: 2px 11px;
+  position: absolute;
+  text-align: center;
+  text-overflow: ellipsis;
+  width: 100%;
+  @include typo($line:14px,$size:11px,$color:$core-default-text-color);
+
+  &.hub, &.folder {
+    color: $core-default-text-reverse;
+  }
+
+  &.audio, &.document, &.vector, &.other {
+    background-color:  $core-default-background; 
+    color: $core-default-text-color;
+  }
+
+  &.image,
+  &.video {
+    background :linear-gradient(180deg,hsla(0,0%,100%,.2),hsla(0,0%,100%,0.9));
+    color: $core-default-text-color;
+  }
+}
+
+.filename-tooltips {
+  background: $core-default-block-background;
+  border-radius: $default-border-radius-bottom-small;
+  display: none;
+  max-height: calc(100% - 5px);
+  max-width: 100%;
+  opacity: 0;
+  overflow-wrap: anywhere;
+  padding: 6px 4px;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 1ms;
+  white-space: pre-wrap;
+  @include typo($line:14px,$size:10px,$weight:400,$color:$core-default-text-color);
+
+  &[data-hover="on"] {
+    color: $core-default-text-color;
+    display: block;
+    opacity: 1;
+    overflow-wrap: break-word;
+    z-index: 20;
+
+    &.private {
+      background-color: #d5a3dd;
+    }
+
+    &.share {
+      background-color: #ffccaf;
+    }
+
+    &.public {
+      background-color: #57c297;
+    }
+          
+    &.folder {
+      background-color: #a3c6f2;
+    }
+
+    &.audio, &.document, &.vector, &.other {
+      background-color :$core-default-background-inactive;//$default-background-reverse;
+      color: $core-default-text-reverse;
+    }
+  }
+}

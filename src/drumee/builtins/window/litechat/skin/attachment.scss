@@ -1,0 +1,122 @@
+&__attachment-wrapper {
+  background-color:$core-default-background;  
+  height: 100%;
+  max-height: 100px;
+  width: 100%;
+
+  .drumee-spinner {
+    width: 48px;
+    height: 48px;
+    position: absolute;
+  }
+
+  & .media-wrapper__ui {
+    background-color: inherit;
+    height: inherit;
+    width: inherit;
+  }
+
+  & .list-smart {
+    height: inherit !important;
+    width: inherit;
+  }
+
+  & .media-grid {
+    &__ui {
+      background-color: inherit;
+      border-radius: $border-radius-small;
+      box-shadow: none;
+      height: 48px;
+      margin: 10px;
+      min-width: 56px;
+      width: 56px;
+
+      &[data-drag="on"] {
+        .media-grid__remove {
+          display: none;
+        }
+      }
+    }
+
+    &__container {
+      background-color:$core-default-background;    
+      overflow: hidden;
+
+      &[data-hover="on"] {
+        box-shadow: none;
+      }
+
+      &[data-icontype="vignette"] {
+        background: transparent;
+
+        & .filename {
+          display: none;
+        }
+      }
+
+      & .icon {
+        height: 20px;
+        margin: auto;
+        top: 5px;
+        width: 15px;
+      }
+    }
+
+    &__content {
+      align-items: center;
+      justify-content: center;
+    }
+    
+    &-notify__container {
+      display: none;
+    }
+
+    & .preview.image-capable {
+      height: 50px;
+      width: 50px;
+    }
+
+    & .filename {
+      cursor: pointer;
+      display: flex;
+      max-height: 30px;
+      max-width: 60px;
+      overflow: hidden;
+      padding: 0px;
+      position: absolute;
+      text-align: center;
+      text-overflow: ellipsis;
+      top: 26px;
+      width: 100%;
+      @include typo($size: 8px, $line: 10px, $weight: 300, $color: $core-default-text-color);
+    }
+    
+    &__remove {
+      background-color: $core-default-background;    
+      border-radius: 50%;
+      border: 1.5px solid $ewhite;
+      color: $egrey-2f;
+      height: 11px;
+      line-height: 16px;
+      position: absolute;
+      right: 3px;
+      top: -1px;
+      visibility: hidden;
+      width: 11px;
+
+      &--icon {
+        color:$core-default-thinline-icon;
+        padding: 0.5px;
+
+        &:hover,
+        :focus {
+          color:$core-default-thinline-icon-hover;
+        }
+      }
+      
+      &[data-hover="on"] {
+        visibility: visible;
+      }
+    }
+  }
+}

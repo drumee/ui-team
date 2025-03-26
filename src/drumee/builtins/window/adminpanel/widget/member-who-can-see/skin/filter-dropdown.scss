@@ -1,0 +1,145 @@
+&__dropdown {
+  width: 67%;
+}
+
+& .widget-dropdown-menu {
+  &-menu {
+    &__dropdown,
+    &__wrapper {
+      height: 100%;
+      left: 0;
+      top: 0;
+      width: 100%;
+    }
+
+    &__wrapper {
+      align-items: flex-start;
+      justify-content: center;
+
+      & .menu-trigger {
+        align-items: center;
+        height: 100%;
+        width: 100%;
+      }
+    }
+
+    &__input_wrapper {
+      background: $admin-default-background;
+      border-radius: $default-border-radius;
+      cursor: pointer;
+      height: 28px;
+      width: 100%;
+      .drumee-svg{
+        position: relative;
+        left:0;
+        right: unset;
+      }
+      & .note-reader {
+        justify-content: flex-start;
+        max-width: 200px;
+        overflow-x: hidden;
+        width: 200px;
+        @include typo($size: 14px, $line: 16px, $weight: 300, $color: $admin-authorized-filter-text);
+        padding-left: 0.3em;
+      }
+    }
+
+    &__icon-dropdown {
+      color: $admin-default-icon-neutral;
+      height: 14px; 
+      right: 36px; 
+      width: 12px;
+    }
+
+    &__items-wrapper {
+      padding: 5px 0px;
+    }
+
+    &__wrapper {
+      &[data-state="1"] {
+        & .trigger-icon {
+          color:$admin-default-icon-active;
+        }
+      }
+
+      & .menu-topic-items {
+        border-radius:$default-border-radius;
+        background-color: $admin-default-background;    
+        box-shadow: $drumee-shadow-container;
+        max-width: 190px;
+        min-width: 180px;
+        padding: 0 5px;
+        &__wrapper{
+          top: calc(100% - 10px);    
+          padding:10px;
+          left: -23px;
+        }
+
+        &:before {
+          background-color: $admin-default-background;
+          box-shadow: $drumee-container-before;
+          content: "";
+          height: 10px;
+          left: 13px;
+          position: absolute;
+          top: -5px;
+          transform: rotate(45deg);
+          width: 10px;
+        }
+
+        &:after {
+          background: $admin-default-background;
+          border-radius: $default-border-radius-top;
+          content: "";
+          height: 10px;
+          left: 0;
+          position: absolute;
+          top: 0;
+          width: 100%;
+        }
+      }
+    }
+
+    &__icon {
+      align-items: center;
+      color: $admin-default-icon-neutral;
+      cursor: pointer;
+
+      &.trigger-icon {
+        height: 16px;
+        width : 22px;
+      }
+    }
+
+    &__item {
+      cursor: pointer;
+      @include typo($size: 12px, $line: 14px, $color:$admin-default-text-color);
+      margin-bottom:  1px;
+      margin-top:  1px;
+      padding: 8px 8px 8px 10px;
+
+      &.disable {
+        opacity: 0.2;
+        pointer-events: none;
+      }
+
+      &:hover {
+        background-color: $admin-default-background-hover;
+        color :$admin-default-text-hover;
+
+        & .widget-dropdown-menu-menu__note {
+          color:$white;
+        }
+        
+        & svg {
+          fill: $white;
+        }
+      }
+    }
+
+    &__note {
+      padding-top: 0px;
+      @include typo( $size:14px, $weight: 300, $line: 14px, $color: $admin-default-text-color);
+    }
+  }
+}

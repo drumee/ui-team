@@ -1,0 +1,139 @@
+@import 'mixins/drumee';
+
+&-menu {
+  &__dropdown,
+  &__wrapper {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__wrapper {
+    justify-content: center;
+    align-items: center;
+
+    & .menu-topic-trigger {
+      align-items: center;
+      height: 100%
+    }
+  }
+
+  &__input_wrapper {
+    align-items: center;
+    background: $admin-default-background;
+    border-radius: $default-border-radius;
+    cursor: pointer;
+    height: 28px;
+    justify-content: space-evenly;
+    width: 120px;
+
+    & .note-reader {
+      justify-content: center;
+      width: 100%;
+      @include typo($size: 14px, $line: 14px,$color: $admin-default-text-color);
+    }     
+  }
+
+  &__icon-dropdown {
+    color: $admin-default-icon-neutral;
+    height: 12px;
+    position: absolute;
+    right: 5px;
+    width: 10px;
+  }
+
+  &__items-wrapper {
+    padding: 5px 0px;
+    width: 100%;
+  }
+
+  &__wrapper {
+    &[data-state="1"] {
+      & .trigger-icon {
+        color: $admin-default-icon-active;
+      }
+    }
+
+    & .menu-topic-items {
+      border-radius:$default-border-radius;
+      background-color: $admin-default-background;    
+      box-shadow: $drumee-shadow-container;
+      max-width: 130px;
+      min-width: 120px;
+      &__wrapper{
+        top: calc(100% - 10px);
+      
+      padding:10px;
+      }
+      &:before {
+        background-color: $admin-default-background;    
+        box-shadow: -4px -6px 10px 1px rgba(63,79, 117, 0.13);
+        content: "";
+        height: 10px;
+        left: calc(100% - 16px);
+        position: absolute;
+        top: -5px;
+        transform: rotate(45deg);
+        width: 10px;
+      }
+
+      &:after {
+        background: $admin-default-background;    
+        border-radius: $default-border-radius-top;
+        content: "";
+        height: 10px;
+        left: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
+    }
+  }
+
+  &__icon {
+    align-items: center;
+    color: $admin-default-icon-neutral;
+    cursor: pointer;
+
+    &.trigger-icon {
+      height: 16px;
+      width : 22px;
+    }
+  }
+
+  &__item {
+    cursor: pointer;
+    margin-bottom:  1px;
+    margin-top:  1px;
+    padding: 8px 8px 8px 10px;
+    @include typo($size: 12px, $line: 14px, $color:$admin-default-text-color);
+
+    &.disable {
+      opacity: 0.4;
+      pointer-events: none;
+      @include typo($size: 12px, $line: 14px,$weight:300,$color:$admin-default-background-inactive);
+    }
+
+    &:hover {
+      background-color: $admin-default-background-hover;
+      color : $admin-default-text-hover ; 
+
+      & .widget-dropdown-menu-menu__note {
+        color:$admin-default-text-hover; 
+      }
+      
+      & svg {
+        fill: $admin-default-icon-reverse;  
+      }
+    }
+  }
+
+  &__note {
+    padding-top: 0px;
+    @include typo( $size:14px, $weight: 300, $line: 14px, $color: $admin-default-text-color);
+
+    &.coming-soon {
+      opacity: 0.4;
+      padding-top: 5px;
+    }
+  }
+}

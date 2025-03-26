@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
+    <title>Group 11</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1-Copy" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Desktop-S9" transform="translate(-841.000000, -33.000000)" fill="#476390">
+            <g id="Group-9" transform="translate(421.000000, 20.000000)">
+                <g id="Icons/buttons/download" transform="translate(432.000000, 25.000000) scale(-1, 1) translate(-432.000000, -25.000000) translate(420.000000, 13.000000)">
+                    <g id="Group-11">
+                        <rect id="Rectangle-2" x="0" y="20.24" width="24" height="3.36"></rect>
+                        <polygon id="Rectangle-2" transform="translate(12.000000, 7.920000) rotate(90.000000) translate(-12.000000, -7.920000) " points="4.8 6.8 19.2 6.8 19.2 9.04 4.8 9.04"></polygon>
+                        <polygon id="Triangle" transform="translate(12.000000, 14.080000) scale(1, -1) translate(-12.000000, -14.080000) " points="12 10.16 19.2 18 4.8 18"></polygon>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

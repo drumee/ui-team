@@ -1,0 +1,327 @@
+.overlay {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+  background-color: rgba(0, 0, 0, 0.66);
+  &[data-state="1"] {
+    visibility: visible;
+  }
+}
+&-text {
+  @include typo($color: #89929E,$size:18px,$line:26px,$weight:300);
+  @include gpos($rs:2,$re:3,$cs:2,$ce:3);
+  @include gc();
+  text-align: center;
+}
+&-entry {
+  height: 36px;
+  input {
+    @include typo($color: #89929E,$size:12px,$line:36px,$weight:300);
+    border-bottom: 1px solid #DDE2E8;
+    position: relative;
+  }
+  &--search-field {
+    @include gpos($rs:2,$re:3,$cs:2,$ce:3);
+    .entry-wrapper:before {
+      content: "";
+      position: absolute;
+      top: 9px;
+      left: 6px;
+      z-index: 1;
+      pointer-events: none;
+      background: url(https://fonts.drumee.name/svg/without-classes/editbox_search.svg) center no-repeat;
+      background-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+    input {
+      padding-left: 36px;
+    }
+  }
+  &--form {
+    display: grid;
+    grid-template-columns: 60px auto;
+    .svg-wrapper {
+      @include gpos($rs:1,$re:2,$cs:1,$ce:2);
+      align-self: center;
+      svg {
+        fill: #89929E
+      }
+    }
+    .addressbook-entry {
+      @include gpos($rs:1,$re:2,$cs:2,$ce:3);
+    }
+    .svg-wrapper:last-child {
+      @include gpos($rs:1,$re:2,$cs:3,$ce:4);
+      padding: 3px!important;
+    }
+  }
+  &--firstname {
+    @include gpos($rs:1,$re:2,$cs:1,$ce:2);
+  }
+  &--secondname {
+    @include gpos($rs:1,$re:2,$cs:2,$ce:3);
+  }
+  &--id {
+    @include gpos($rs:2,$re:3,$cs:1,$ce:3);
+    width: 100%!important;
+  }
+  &--mail {
+    @include gpos($rs:3,$re:4,$cs:1,$ce:3);
+    width: 100%!important;
+  }
+  &--phonenumber {
+    @include gpos($rs:4,$re:5,$cs:1,$ce:3);
+    width: 100%;
+  }
+}
+&-pin {
+  @include gpos($rs:2,$re:3,$cs:2,$ce:3);
+  @include gc();
+  display: grid;
+  grid-template-columns: 30px auto;
+  grid-template-rows: 40px;
+  grid-gap: 18px;
+  pointer-events: none;
+}
+&-menu {
+  @include gpos($rs:2,$re:3,$cs:2,$ce:3);
+  @include gc();
+  .svg-wrapper {
+    width: 48px;
+    height: 48px;
+    padding: 10px;
+    cursor: pointer;
+    svg {
+      fill: #494949;
+    }
+    &:hover svg {
+      fill: #879BFF;
+    }
+  }
+}
+&-header {
+  @include typo($color: #494949,$size:22px,$line:26px,$weight:400);
+  &-ext {
+    @include gpos($rs:1,$re:2,$cs:2,$ce:3);
+    @include gc();
+    display: grid;
+    grid-template-columns: 40px auto 40px;
+    grid-template-rows: auto;
+    grid-gap: 18px;
+    .svg-wrapper {
+      cursor: pointer;
+      border-radius: 2px;
+      &[data-state="1"] {
+        background-color: #879BFF;
+        svg {
+          fill: white;
+        }
+      }
+      svg {
+        fill: #89929E;
+      }
+    }
+  }
+  &--main {
+    @include gpos($rs:2,$re:3,$cs:3,$ce:4);
+    @include gc();
+  }
+  &--list {
+    @include gpos($rs:1,$re:2,$cs:2,$ce:3);
+    @include gc();
+  }
+  &--add {
+    @include gpos($rs:1,$re:2,$cs:1,$ce:4);
+    @include typo($color: #FA8540,$size:24px,$line:28px,$weight:300);
+    justify-self: center;
+    align-self: self-start;
+  }
+  &--show-info {
+    @include gc();
+    @include typo($color: #FA8540,$size:24px,$line:28px,$weight:300);
+  }
+}
+&-avatar {
+  background-size: cover;
+  background-position: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  align-self: center;
+}
+&-close {
+  @include gpos($rs:1,$re:2,$cs:5,$ce:5);
+  justify-self: self-end;
+  align-self: self-start;
+  margin: 10px;
+  cursor: pointer;
+  svg {
+    fill: #B6BFCA;
+  }
+  &:hover svg {
+    fill: #98a0a9;
+  }
+  &--dialog {
+    @include gpos($rs:1,$re:2,$cs:3,$ce:3);
+  }
+//
+}
+&-button {
+  @include gc();
+  @include typo($color: #89929E,$size:16px,$line:36px,$weight:300);
+  border-radius: 4px;
+  width: 120px;
+  justify-content: center;
+  cursor: pointer;
+  &--blacklist {
+    justify-self: self-end;
+    border: 1px solid #89929E;
+    @include gpos($rs: 4, $re: 4, $cs: 4, $ce: 4);
+    &:hover {
+      border-color: #494949;
+      background-color: #494949;
+      color: white;
+    }
+  }
+}
+&-message {
+  @include gpos($rs:3,$re:4,$cs:1,$ce:4);
+  display: grid;
+  justify-self: center;
+  grid-template-rows: 16px 30px auto 16px;
+  grid-template-columns: 14px auto 14px;
+  background-color: #F7F7F7;
+  border-radius: 8px;
+  width: 377px;
+  &-header {
+    align-self: self-start;
+    @include gpos($rs:2,$re:3,$cs:2,$ce:3);
+    @include typo($line:19px,$size:16px,$weight:400,$color:#4A90E2);
+  }
+  &-text {
+    @include gpos($rs:3,$re:4,$cs:2,$ce:3);
+    textarea {
+      width: 100%;
+      height: 100%;
+      background-color: transparent;
+      border: none;
+      padding: 0;
+      resize: none;
+      &::placeholder {
+        @include typo($line:22px,$size:16px,$weight:400,$color:#89929E);
+      }
+      &:focus {
+        outline: none;
+      }
+    }
+  }
+}
+&-form {
+  display: grid;
+  @include gpos($rs:3,$re:4,$cs:2,$ce:3);
+  @include gc();
+  grid-template-columns: auto auto;
+  grid-template-rows: 50px 50px 50px 50px;
+  .addressbook-entry {
+    align-self: center;
+    width: 100%;
+    input {
+      @include typo($line:36px,$size:18px,$weight:300,$color:#89929E);
+      width: 100%;
+    }
+  }
+  &--non-drumee {
+    .addressbook-entry {
+      &--mail {
+        @include gpos($rs:2,$re:3,$cs:1,$ce:3);
+      }
+      &--phonenumber {
+        @include gpos($rs:3,$re:4,$cs:1,$ce:3);
+      }
+    }
+    .addressbook-checkbox {
+      @include gpos($rs:4,$re:5,$cs:1,$ce:3);
+      @include gc();
+      justify-content: center;
+      align-items: center;
+      display: flex;
+      &[data-state="1"] svg {
+        fill: black;
+      }
+      svg {
+        width: 12px!important;
+        height: 12px!important;
+        border-radius: 2px;
+        border: 1px solid #ccc;
+        padding: 2px;
+        margin-right: 10px;
+        fill: transparent;
+        cursor: pointer;
+
+      }
+      .label {
+        @include typo($line:14px,$size:12px,$weight:300,$color:#787B7F);
+      }
+    }
+  }
+  .addressbook-dialog-choise {
+    @include gpos($rs:5,$re:6,$cs:1,$ce:3);
+  }
+}
+&-create-group {
+  @include gpos($rs:3,$re:4,$cs:2,$ce:3);
+  justify-self: center;
+  display: grid;
+  grid-template-rows: 30px 80px 100px;
+  grid-template-columns: 312px;
+  .add-to-group {
+    @include gpos($rs:2,$re:3,$cs:1,$ce:3);
+    justify-self: center;
+    align-self: center;
+    margin-left: 200px;
+    cursor: pointer;
+    .note-content, .root-node {
+      display: block;
+      width: 16px;
+      height: 16px;
+      border-radius: 2px;
+      color: white;
+      font-weight: bold;
+      background-color: #FA8540;
+      pointer-events: none;
+      text-align: center;
+      @include typo($color: white,$size:12px,$line:16px,$weight:700);
+    }
+  }
+  .addressbook-entry {
+    @include gpos($rs:1,$re:2,$cs:1,$ce:3);
+    @include gc();
+    width: 180px;
+    justify-content: center;
+    &--search-field {
+      @include gpos($rs:2,$re:3,$cs:1,$ce:3);
+      &:before {
+        content: none;
+      }
+    }
+  }
+  .addressbook-list {
+    &--searching {
+      @include gpos($rs:3,$re:4,$cs:1,$ce:3);
+      border-top: 1px solid #DDE2E8;
+      border-bottom: 1px solid #DDE2E8;
+      .not-yet {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: inherit;
+        @include typo($line:22px,$size:14px,$weight:300,$color:#89929E);
+      }
+    }
+  }
+}

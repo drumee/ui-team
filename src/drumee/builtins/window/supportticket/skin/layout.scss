@@ -1,0 +1,47 @@
+.window-support-ticket {
+  & .support-ticket-list {
+    min-width: 260px;
+    background-color: $bigchat-default-block-background;
+  }
+
+  &[data-size="medium"],
+  &[data-size="max"] {
+    .breadcrumb-icon.back,
+    .breadcrumb-icon.next {
+      display: none;
+    }
+  }
+
+  &[data-size="min"] {
+    &[data-view-instance="3"] {
+      .breadcrumb-icon.next {
+        display:none;
+      }
+
+      .support-ticket-list {
+        display : none;
+      }
+
+      .max-content {
+        display: flex;
+        flex : 1;
+        border-radius:$default-border-radius-bottom;
+      }
+    }
+
+    &[data-view-instance="2" ] {
+      .breadcrumb-icon.back {
+        display:none;
+      }
+
+      .max-content {
+        display : none;
+      }
+
+      .support-ticket-list {
+        display: flex;
+        flex:1;
+      }
+    }
+  }
+}

@@ -1,0 +1,150 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/player/stream/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.remote-user{
+  @import 'builtins/webrtc/skin/avatar';
+  @import 'builtins/webrtc/skin/video';
+  &__ui{
+    height: 100%;
+    width: 100%;
+    //padding: 2px;
+    overflow: hidden;
+  }
+  &__main{
+    height: 100%;
+    width: 100%;
+    justify-content: center;
+    align-items: center;  
+    background-color: $multimedia-vdo-background-color;// rgb(112, 145, 194);
+    overflow: hidden;
+  }
+
+  &__label{
+    margin-top: 40px;
+    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $default-text-reverse);
+    .drumee-loading{
+      margin-left: 50%;
+      margin-top: -15px;
+    }
+  }
+
+  &__presenter-name{
+    position: absolute;
+    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $default-text-reverse);
+    .drumee-loading{
+      margin-left: 50%;
+      margin-top: -15px;
+    }
+    &[data-state="0"]{
+      display: none;
+    }
+  }
+
+  &__user{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-content: center;
+    align-items: center;  
+  }
+
+  &__error{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-content: center;
+    align-items: center;  
+    z-index: 50000;
+    .drumee-text{
+      @include typo($size: 14px, $line: 16px, $weight: 400, $color: $default-text-reverse);
+    }
+    &[data-error="0"]{
+      display: none;
+    }
+    &[data-error="1"]{
+      // background-color: $default-backround-alert;
+      background-color: rgba(0, 0,0, 0.5);
+      display: flex;
+    }
+    .drumee-text{
+      @include typo($size: 14px, $line: 16px, $weight: 400, $color: $default-text-reverse);
+    }
+  }
+
+  &__video {
+    &[data-presenter="true"]{
+      opacity: .1;
+    }
+  }
+
+  &__audio{
+    position: absolute;
+    color: $main-grey;
+    visibility: hidden;
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+    left: 10px;
+    top: 38px;
+    &[data-state="0"]{
+      visibility: visible;
+      color: $ewhite;  
+      z-index: 100000;
+      &:before{
+        content : " ";
+        position: absolute;
+        height: 2px;
+        width: 18px;
+        top: 12px;
+        left: 6px;
+        background-color: red;
+        transform-origin : 50% 50%;
+        transform: rotate(-45deg);
+      }
+    }
+  }
+  &__avatar{
+    position: absolute;
+    visibility: visible;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    justify-content: center;
+    align-content: center;
+    align-items: center;  
+    &[data-video="1"]{
+      visibility: hidden;
+    }
+    .user-profile__icon {
+      width: 120px;
+      height: 120px;
+    }
+    .user-profile__main {
+      background-color: #5E5E5E !important;
+      justify-content: center;
+      align-items: center;
+      img {
+        width: 100%;
+        height: 100%;
+      }
+    }
+    .user-profile__initiales {
+      border-radius: 100%;
+      .note-content {
+        font-size: 45px;
+        font-weight: bold;
+      }
+    }
+    .user-profile{
+      &:before{
+        visibility: hidden;
+      }
+    }
+  }
+}

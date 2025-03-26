@@ -1,0 +1,115 @@
+@import 'mixins/drumee';
+
+.media-devices {
+  &__topbar {
+    justify-content: space-between;
+    width: 300px;
+    margin-top: 10px;
+    padding: 5px 10px 5px 5px;
+    border-bottom: 1px solid $core-default-separator;
+  }
+
+  &__label {
+    &:hover {
+      color: $eviolet ;
+      cursor: pointer;
+    }
+  }
+
+  &__main {
+    height: 100%;
+    align-items: start;
+    justify-content: space-between;
+    background-color: $core-default-background;
+    border-radius: $default-border-radius;
+
+    .menu-topic-items {
+      &__wrapper {
+        left: -16px;
+        margin-top: -3px;
+        padding: 10px;
+        margin-top: -8px;
+
+      }
+
+      &:before {
+        content: " ";
+        width: 18px;
+        height: 18px;
+        background-color: $core-default-background;
+        position: absolute;
+        left: 21px;
+        top: -7px;
+        z-index: 1;
+        transform: rotate(45deg);
+      }
+    }
+
+    .menu-topic-trigger {
+      height: 100%;
+      align-items: center;
+    }
+  }
+
+  &__category {
+    margin-left: 10px;
+    width: auto;
+
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
+  &__list {
+    padding: 5px 10px 5px 5px;
+  }
+
+  &__tab {
+    @include typo($color: $main-grey, $size: 14px, $line: 19px, $weight: 400);
+    cursor: pointer;
+
+    &[data-radio="on"] {
+      color: $core-default-text-reverse;
+      background-color: $core-default-background-hover;
+      padding: 0 10px;
+    }
+
+    &[data-radio="off"] {
+      opacity: 0.5;
+      padding: 0 10px;
+    }
+  }
+
+  &__icon {
+    width: 40px;
+    height: 40px;
+    padding: 10px;
+    color: $ewhite;
+    cursor: pointer;
+
+    &.editbox_cog {
+      width: 18px;
+      height: 18px;
+      color: $ewhite;
+      cursor: pointer;
+      margin-left: 16px;
+      padding: 0px;
+    }
+
+    &:hover {
+      color: $eviolet ;
+      opacity: 1;
+    }
+  }
+
+  &__checkbox {
+    width: 20px;
+    height: 20px;
+    color: $egrey-2f;
+    padding: 3px;
+  }
+
+  &__label {
+    @include typo($color: $egrey-2f, $weight: 400, $line: 20px, $size: 12px);
+  }
+}

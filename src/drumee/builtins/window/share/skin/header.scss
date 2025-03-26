@@ -1,0 +1,156 @@
+&-header {
+  border-bottom: none;
+  min-height: 45px;
+  width: 100%;
+
+  &__container {
+    &.share {
+      background-color: $share-box-topbar-container;
+      width: 100%;
+    }
+  }
+
+  &__switch-container {
+    width: 100%;
+  }
+
+  &__wrapper-title {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  &__note {
+    &.title {
+      @include typo($size: 18px, $line: 15px, $color: $default-text-reverse);
+      justify-content: flex-start;
+      max-width: 150px;
+      padding: 5px;
+      text-align: center;
+    }
+  }
+
+  &__icon {
+    color: $default-icon-reverse;
+    cursor: pointer;
+    height: 28px;
+    margin: 0px 5px 0 5px;
+    width: 28px;
+
+    &.switch-box {
+      &[data-state="0"] {
+        opacity: 0.5;
+      }
+    }
+  }
+
+  &-control {
+    .icon {
+      color:$default-icon-reverse;      
+    }
+  }
+}
+
+
+.window {
+  &-topbar {
+    &__control {
+      justify-content: flex-end;
+      position: relative;
+      width: 100%;
+    }
+
+    &__container  {
+      &.share {
+        background-color: $share-box-topbar-container;
+      }
+    }
+  }
+
+  &__header {
+    border-bottom: none;
+    min-height: 34px;
+    
+    &-name {
+      color: $default-text-reverse;
+    };
+
+    &-switcher {
+      left: 50%;
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px !important;
+    }
+
+    &-control {
+      .icon {
+        color: $default-text-reverse;
+      }
+    }
+  }
+
+  .editbox-toggle {
+    max-width: 230px;
+    cursor: pointer;
+    @include overflow-text;
+    @include typo($size:18px,$line:24px,$weight:400,$color:$egrey-78);
+    &:after {
+      content: " ";
+      width: 22px;
+      height: 4px;
+      background-color: #D8D8D8;
+      position: absolute;
+      top: 10px;
+    }
+    &.editbox-toggle--left {
+      padding-right: 40px;
+      text-align: right;
+      &:after {
+          right: 0;
+          border-radius: 4px 0 0 4px;
+      }
+    }
+    &.editbox-toggle--right {
+      padding-left: 40px;
+      &:after {
+          left: 0;
+          border-radius: 0 4px 4px 0;
+      }
+    }
+    &[data-radio="on"] {
+      color: $egrey-2f;
+      max-width: 220px;
+      &:after {
+        content: " ";
+        width: 12px;
+        height: 12px;
+        background-color: #7D8EE2;
+        top: 6px;
+        position: absolute;
+        @include vendor(border-radius, 50%);
+      }
+      &.editbox-toggle--left {
+        padding-right: 30px;
+      }
+      &.editbox-toggle--right {
+        padding-left: 30px;
+      }
+    }
+  }
+  
+  .editbox-toggle__wrapper {
+    .editbox-toggle {
+      color: #FCB58C;
+      &:after {
+        background: #FCB58C;
+      }
+      &[data-radio="on"] {
+        color: $ewhite;
+        &:after {
+            background: white;
+        }
+      }
+    }
+  }
+}

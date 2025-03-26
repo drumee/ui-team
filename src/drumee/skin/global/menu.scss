@@ -1,0 +1,25 @@
+/* =================================================================== *
+   #   Copyright Xialia.com  2011-2019                                    *
+   #   FILE : src/drumee/skin/global/menu
+   #   TYPE : 
+   # ==================================================================== */
+
+
+
+.menu-topic{
+  .menu-trigger{
+    z-index: 2;
+  }
+  .menu-items{
+    &[data-state="0"],&[data-state="closed"]{
+      display: none;
+    }
+    &[data-state="1"],&[data-state="open"]{
+      z-index: 100 !important;
+      visibility: visible;
+    }
+    .root-node{
+      white-space: nowrap;
+    }
+  }
+}

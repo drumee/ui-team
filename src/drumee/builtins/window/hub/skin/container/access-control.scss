@@ -1,0 +1,13 @@
+&__container{
+  &--access-control{
+    .label{
+      font-size: 12px;
+      letter-spacing: 0em;
+      line-height: 16px;
+      color:$eblue ;// #4A90E2;
+      -moz-osx-font-smoothing: grayscale;
+      -webkit-font-smoothing: antialiased;
+      font-family: "Roboto-Regular", sans-serif;    
+    }
+  }
+}

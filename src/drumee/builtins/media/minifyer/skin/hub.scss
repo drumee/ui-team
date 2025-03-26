@@ -1,0 +1,101 @@
+
+
+&.hub {
+  .icon {
+    fill: $core-default-icon-reverse;
+    height: 25px;
+    left: 0;
+    margin: 0 auto;
+    position: absolute;
+    right: 0;
+    top: 20px;
+    width: 25px;
+
+    &.private {
+      padding: 3px;
+    }
+
+    &.share {
+      height: 37px;
+      top: 14px;
+      width: 37px;
+    }
+  }
+
+  &:hover {
+    &:before {
+      height: 0;
+    }
+  }
+
+  &.public {
+    background-color: $website-main;
+    border-radius: $default-border-radius;// 6px;
+    
+    &:before {
+      border-left: 13px solid transparent;
+      border-radius: 0 6px 0 0;
+      border-right: 13px solid $website-main-light; 
+      border-top: 13px solid $website-main-light; 
+      content: " ";
+      height: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 62px;
+    }
+  }
+
+  &.dmz, &.share {
+    background-color: $sharebox-main;
+    border-radius: $default-border-radius;
+
+    &:before {
+      border-left: 13px solid transparent;
+      border-radius: 0 6px 0 0;
+      border-right: 13px solid #f78d4f; 
+      border-top: 13px solid #f78d4f; 
+      content: " ";
+      height: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 62px;
+    }
+  }
+
+  &.private {
+    background-color:$teamroom-main;//$teamroom-background;
+
+    &:before {
+      border-left: 13px solid transparent;
+      border-radius: 0 6px 0 0;
+      border-right: 13px solid $teamroom-main-light;
+      border-top: 13px solid $teamroom-main-light;
+      content: " ";
+      height: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 62px;
+    }
+  }
+}
+
+// MOUSE HOVER
+&.hub {
+  &[data-hover="on"] {
+    .media__container:after {
+      border-radius: 2px;
+      border: 1px dashed white;
+      content: " ";
+      display: block;
+      height: calc(100% - 25px);
+      left: 6px;
+      position: absolute;
+      top: 19px;
+      width: calc(100% - 12px);
+    }
+  }
+}
+

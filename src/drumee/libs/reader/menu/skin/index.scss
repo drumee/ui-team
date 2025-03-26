@@ -1,0 +1,10 @@
+.menu-topic {
+  // &__ui {
+  //   z-index: 2;
+  // }
+  &-items__wrapper{
+    &[data-direction="down"]{
+      top:100%;
+    }
+  }
+}

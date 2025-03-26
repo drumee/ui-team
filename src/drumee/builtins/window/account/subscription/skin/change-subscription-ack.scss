@@ -1,0 +1,65 @@
+&-change-subscription-ack {
+  &__main {
+    align-items: center;
+    background:$core-default-background;
+    border-radius: $default-border-radius;
+    height: calc(100% - 400px);
+    justify-content: center;
+    max-width: 500px;
+    min-height: 275px;
+    min-width: 280px;
+    width: 100%;
+  }
+
+  &__note {
+    &.content {
+      @include typo($size: 16px, $line: 20px, $weight:300, $color: $core-default-text-color);
+      padding: 15px;
+    }
+  }
+
+  &__close {
+    color:$core-default-thinline-icon;
+    cursor: pointer;
+    margin: 10px;
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    z-index: 1;
+  }
+
+  &__icon {
+    &.close {
+      color: $core-default-thinline-icon;
+      cursor: pointer;
+      height: 12px;
+      width: 12px;
+      
+      &:hover {
+        color: $core-default-thinline-icon-hover;
+      }
+    }
+
+    &.success {
+      color: $core-default-icon-success;
+      height: 26px;
+      width: 36px;
+    }
+  }
+
+  &__btn-ok {
+    @include typo($size: 16px, $color: $core-backgroundless-text-hover);
+    align-items: center;
+    border-radius: $default-border-radius;
+    border: 1px solid $core-backgroundless-text-hover;
+    cursor: pointer;
+    height: 32px;
+    justify-content: center; 
+    margin-top: 30px;
+    width:90px;
+
+    &:hover {
+      border:2px solid $btn-rollback-border-hover;
+    }
+  }
+}

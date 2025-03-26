@@ -1,0 +1,12 @@
+
+@import 'mixins/drumee';
+
+.player-vector {
+  &__main {
+    width: 100%;
+    height: 100%;
+  }
+  &__container {
+    padding : 10px;
+  }
+}

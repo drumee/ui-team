@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="23px" height="18px" viewBox="0 0 23 18" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 48.1 (47250) - http://www.bohemiancoding.com/sketch -->
+    <title>Group 3</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Tab/animation_normal" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-13.000000, -15.000000)">
+        <g id="Group-3" transform="translate(13.000000, 15.000000)" fill="#FFFFFF">
+            <circle id="Oval" cx="1.5" cy="11.5" r="1.5"></circle>
+            <circle id="Oval" cx="5.5" cy="13.5" r="1.5"></circle>
+            <circle id="Oval" cx="11.5" cy="12.5" r="1.5"></circle>
+            <circle id="Oval" cx="14.5" cy="8.5" r="1.5"></circle>
+            <circle id="Oval" cx="8.5" cy="16.5" r="1.5"></circle>
+            <path d="M19.5,0 C17.575,0 16,1.575 16,3.5 C16,5.425 17.575,7 19.5,7 C21.425,7 23,5.425 23,3.5 C23,1.575 21.425,0 19.5,0 Z" id="Path"></path>
+        </g>
+    </g>
+</svg>

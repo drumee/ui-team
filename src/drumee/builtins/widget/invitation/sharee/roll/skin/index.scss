@@ -1,0 +1,53 @@
+@import 'mixins/drumee';
+
+.invitation-shareeroll {
+  &__ui {
+    align-items: center;
+    margin: 20px auto 0px;
+    max-height: 178px;
+    min-height: 36px;
+    width: 345px;
+  }
+
+  &__label {
+    justify-content: center;
+    @include typo($color: $teamroom-text-color, $size: 16px, $line: 22px, $weight: 400);
+
+    .content {
+      &[data-state="0"] {
+        visibility: hidden;
+      }
+    }
+  }
+
+  &__dialog-wrapper {
+    height: 0;
+    padding: 0;
+    position: absolute;
+    width: 100% !important;
+    
+    .invitation-permission__ui {
+      &:before {
+        left: 201px;
+      }
+    }
+  }
+
+  &__list {
+    margin-top: 13px;
+    max-height: 140px;
+    @import "scrollbar.scss";
+
+    .drumee-spinner {
+      height: 35px;
+      margin: auto;
+      width : 35px;
+    }
+
+    .placeholder--no-contact {
+      margin: 2px auto;
+      padding-left: 15px;
+      @include typo($color: $core-default-text-color, $size: 14px, $line: 26px, $weight: 400);
+    }
+  }
+}

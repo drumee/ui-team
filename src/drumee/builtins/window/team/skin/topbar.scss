@@ -1,0 +1,98 @@
+@import 'mixins/drumee';
+
+.window-team {
+ &-topbar {
+    &__container {
+      position: absolute;
+      height: 44px;
+    }
+
+    &__icon {
+      color: $team-default-icon-reverse;
+      cursor: pointer;
+      height:16px;
+      margin:auto 0px auto 15px;
+      padding:0px;
+      width:16px;
+
+      &:hover { 
+        color:$team-default-icon-hover;
+      }
+
+      &.link {
+        padding:1px;
+      }
+
+      &.contact {
+        margin-right:15px;
+      }
+
+      &.settings {
+        margin-left:2px;
+        padding:1px;
+      }
+
+      &.meeting {
+        border: none;
+        fill: none;
+        margin-left: 13px;
+        padding: 0; 
+        stroke-width: 0;
+        stroke:$ewhite; 
+      }
+      &:hover{
+        stroke: transparent;
+      }
+    }
+
+    &__menu-trigger {
+      padding:1px;
+      color:$team-default-icon-reverse;
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+      margin: auto 0 auto 15px;
+    }
+
+    &__menu {
+      &[data-state="1"] {
+        .menu-trigger {
+          opacity:0.4;
+        }
+      }
+      
+      .menu-items {
+        background-color:$team-default-background;
+        background-color: rgba(241, 227, 244, 0.25);
+        border-radius: 4px;
+        flex-direction: row;
+        height: 60% !important;
+        left:42px;
+        margin-top:9px;
+        min-width:112px;
+        padding-top: 0;
+        top: 0!important;
+      }
+
+      &:hover {
+        color: $team-default-background-hover;
+      }
+    }
+
+    &__count {
+      @include typo($size:8px, $line:12px, $weight:400, $color: $teamroom-text-color);
+      align-items: center;
+      background-color: $team-default-background;       
+      border-radius:50%;
+      height:12px;
+      justify-content: center;
+      right: 5px;
+      top: 8px;
+      width: 12px;
+
+      &[data-count="0"] {
+        display: none;
+      }
+    }
+  }
+}

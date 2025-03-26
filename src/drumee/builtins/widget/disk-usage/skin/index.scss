@@ -1,0 +1,125 @@
+@import "mixins/drumee";
+
+.disk-usage {
+  &__main {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    background-color: $core-default-background ;
+    border-radius: $default-border-radius;
+    align-items: center;
+    min-height: 345px;
+  }
+
+  &-title {
+    justify-content: center;
+    @include typo($color: $egreen, $size: 14px, $line: 16px, $weight: 400);
+  }
+
+  &__bar {
+    width: 100%;
+    justify-content: flex-end;
+    padding: 0 38px;
+  }
+
+  &__block {
+    &.bar {
+      height: 5px;
+    }
+
+    &.desk {
+      color: $core-default-icon-reverse;
+      background-color: $folder-main;
+    }
+
+    &.chat {
+      background-color: $dgc-chat-reply-bg;
+    }
+
+    &.share {
+      color: $core-default-icon-reverse;
+      background-color: $sharebox-main;
+    }
+
+    &.private {
+      color: $core-default-icon-reverse;
+      background-color: $teamroom-main;
+    }
+
+    &.detail {
+      width: 100px;
+      height: 100px;
+      padding: 5px;
+      justify-content: center;
+      align-content: center;
+      align-items: center;
+      box-shadow: $drumee-shadow-block;
+      border-radius: $default-border-radius-tiny;
+
+      .drumee-text {
+        text-align: center;
+      }
+    }
+
+    &.cursor {
+      @include typo($color: $egreen, $size: 14px, $line: 16px, $weight: 400);
+
+      &::before {
+        content: " ";
+        position: absolute;
+        background-color: $core-default-transparent-black;
+        height: 10px;
+        top: -3px;
+        transform: rotate(45deg);
+        width: 10px;
+        left: -5px;
+        z-index: 1;
+      }
+
+      .drumee-text {
+        background-color: white;
+        z-index: 100;
+        margin-left: -7px;
+        margin-top: 2px;
+        padding: 5px;
+      }
+    }
+  }
+
+  &__quota {
+    margin-left: auto;
+    margin-right: -40px;
+    @include typo($color: $egreen, $size: 14px, $line: 16px, $weight: 400);
+  }
+
+  &__rules {
+    height: 1px;
+    width: calc(100% - 172px);
+    position: absolute;
+    background-color: $core-default-transparent-black;
+    align-items: flex-start;
+    top: 10px;
+  }
+
+  &__blocks {
+    width: 100%;
+    padding: 10px 86px;
+    justify-content: flex-start;
+    @include typo($color: $egreen, $size: 14px, $line: 16px, $weight: 400);
+
+    &.bar {
+      height: 5px;
+      align-items: center;
+      margin: 25px auto 0 0;
+    }
+
+    &.cursor {
+      justify-content: flex-start;
+      padding-top: 0;
+    }
+
+    &.detail {
+      justify-content: space-between;
+    }
+  }
+}

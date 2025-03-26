@@ -1,0 +1,22 @@
+
+@import 'mixins/colors/index.scss';
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/exports.scss';
+@import 'mixins/handles.scss';
+@import 'mixins/utils.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/z-index.scss';
+
+.media-wrapper{
+  &__ui {
+    background-color:$channel-default-background;
+  }
+  &__body {
+    height: 100%;
+  }
+  & .list-content {
+    display: flex;
+    flex-wrap: wrap;
+  }
+} 

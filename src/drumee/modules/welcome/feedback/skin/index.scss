@@ -1,0 +1,100 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/modules/welcome/reset/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+
+@import 'mixins/drumee';
+
+.welcome-feedback {
+  &__ui{
+    width: 100%;
+  }
+  &__main{
+    width: 700px;
+    margin: 50px auto; 
+    padding: 20px;
+    background-color: $core-default-block-background; 
+    border-radius: $default-border-radius;
+    box-shadow: $drumee-shadow-popup;
+  }
+
+
+  &__row {
+    align-items: center;
+    width: 100%;
+  }
+  &__note {
+    width: 100%;
+
+    &.header {
+      justify-content: center;
+      text-align: center;
+      @include typo($size: 38px, $line: 45px, $color: $core-default-text-color);
+    }
+
+    &.message {
+      @include typo($size: 16px, $line: 22px, $color: $core-default-text-color);
+      padding: 30px;
+      text-align: left;
+      p{
+        line-height: 1.5;
+      }
+    }
+
+    &.input-label {
+      max-width: 110px;
+      text-align: right;
+      width: 100%;
+    }
+
+    
+    &.text-underline {
+      cursor: pointer;
+      text-decoration-line: underline;
+    }
+  }
+
+
+  &__entry {
+    height: 120px;
+    min-height: 120px;
+    margin: 10px 55px;
+    &[data-error="1"]{
+      border: 1px solid $core-default-border-error;// red;
+      border-radius: $default-border-radius;
+    }
+    & textarea {
+      border: 1px solid $egrey-89;//grey;
+      border-radius: $default-border-radius; 
+      resize: none;   
+      width: 100%;
+      height: 100%;
+      padding: 8px 0px 0px 10px;
+      @include typo($size: 16px, $line: 18px, $color: $core-default-text-color);
+      &::placeholder {
+        @include typo($size: 16px, $line: 18px, $weight: 400,$color: $egrey-b6);//$default-text-placeholder); //$egrey-b6);$weight: 300,
+      }
+    }
+  }
+
+  &__buttons-wrapper {
+    justify-content: center;
+    justify-items: center;
+  }
+
+  &__btn {
+    margin: 20px auto;
+    height: 35px;
+    align-items: center;
+    background-color: $btn-commit-background; 
+    border-radius: $default-border-radius;
+    cursor: pointer;
+    justify-content: center;
+    width: 115px;
+    @include typo($size: 16px, $line: 28px, $color: $btn-commit-text);//$size: 20px,
+    &:hover{
+      background-color: $btn-commit-background-hover;  //0 0 31px 0 rgba(169,186,255,.5);
+    }
+  }
+}

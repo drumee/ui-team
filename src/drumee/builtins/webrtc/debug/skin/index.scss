@@ -1,0 +1,146 @@
+@import 'mixins/drumee';
+.webrtc-debug{
+  &__ui{
+    min-width : 200px;
+    min-height: 100px;
+    width:100%;
+    height:100%;
+  }
+
+  &__main{
+    width:100%;
+    height:100%;
+    &[data-flow="x"]{
+      flex-direction: row-reverse;
+    }
+  }
+
+  &__container{
+    flex:1;
+    max-width:100%;
+    max-height:100%;
+    &.local{
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 160px;        
+    }
+  }
+
+  &__endpoints-container{
+    &[data-state="0"]{
+      display: none;
+    }
+    &[data-flow="x"]{
+      width: 100%;
+      height: 120px;
+      .webrtc-endpoint{
+        height: 100%;
+        width: 240px;;
+        &__video{
+          //flex: 1;
+          height : calc(100% - 20px);
+        }
+        &__name{
+          justify-content: center;
+          @include typo($size:14px,$line:20px,$weight:400,$color:$main-grey);
+        }
+      }
+      .placeholder-waiting{
+        height: 100%;
+        width: 20%;
+        align-items: center;
+        justify-items: center;
+        @include typo($size:18px,$line:28px,$weight:400,$color:$main-grey);
+      }
+    }
+    &[data-flow="y"]{
+      height: 100%;
+      width: 120px;
+      .list-smart__container{
+        height: 100%;
+      }
+      .webrtc-endpoint{
+        width: 100%;
+        height: 140px;
+      }
+      .placeholder-waiting{
+        width: 100%;
+        height: 20%;
+        align-items: center;
+        justify-items: center;
+        @include typo($size:18px,$line:28px,$weight:400,$color:$main-grey);
+      }
+    }
+  }
+  &__endpoint-local{
+    background-color: lightgrey;
+    position: absolute;
+    top: 40px;
+    right: 40px;
+    width: 120px;
+    height: 80px;
+  }
+  
+
+  &__player-stream{
+    flex:1;
+    height: 100%;
+    width: 100%;
+  }
+
+  &__no-device{
+    padding : 0 0 10px;
+    @include typo($size:18px,$line:24px,$weight:400,$color:#ffffff);
+  }
+
+  &__commands{
+    position: absolute;
+    bottom: 0;
+    right: 10px;
+    .ctrl-button{
+      width: 48px;
+      height: 30px;
+      padding: 5px;
+      border: 2px #787b7f solid;
+      background-color: #fff;
+      margin: 0 6px;
+      color: grey;
+      cursor: pointer;
+      &[data-state="0"]{
+        &:before{
+          content : " ";
+          position: absolute;
+          height: 2px;
+          width: 25px;
+          top: 12px;
+          left: 10px;
+          background-color: red;
+          transform-origin : 50% 50%;
+          transform: rotate(-45deg);
+        }
+      }
+      &[data-online="1"]{
+        background-color: red;
+        color: white;
+      }
+    }
+  }
+
+  &__video{
+    width:100%;
+    height:100%;
+    position: absolute;
+    z-index: 10;
+    &.local{
+      &[data-state="1"]{
+        width:120px;
+        height:80px;
+        bottom:0;
+        right: 0;
+        z-index: 100;
+      }
+    }
+  }
+}

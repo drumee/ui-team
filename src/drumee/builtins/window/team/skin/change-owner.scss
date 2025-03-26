@@ -1,0 +1,32 @@
+
+.window-team{
+  .window-confirm__main{
+    max-height:355px;// 350px; //320px;
+    border-radius:$default-border-radius-bottom;
+    background-color: $team-default-background;
+    width: 100%;//450px;
+  }
+
+  .window__change-owner{
+    width: 450px;
+    align-items: center;
+    align-content: center;
+    justify-items: center;
+    justify-content: center;
+    min-height: 220px;//282px; 
+    margin-left: auto;
+    margin-right: auto;
+    .title{
+      margin-top: 20px;
+    //  padding-bottom: 20px;
+      @include typo($size:18px,$line:16px,$weight:400,$color:$teamroom-text-color);
+    }
+    .information{
+      padding: 27px 50px;//10px 60px;
+      @include typo($size:16px,$line:1.5,$weight:400,$color:$team-default-text-color);//$size:14px,
+    }
+    .name{
+      @include typo($size:16px,$line:22px,$weight:400,$color:$team-secondary-text-color);//$size:14px,$weight:400,$line:16px
+    }
+  }
+}

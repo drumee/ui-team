@@ -1,0 +1,497 @@
+@import 'mixins/drumee';
+
+.addressbook-widget-contact-detail {
+
+  @import './action-menu.scss';
+  @import './popup.scss';
+
+  &.box {
+    background-color: $ab-default-background;
+  }
+
+  &__ui {
+    font-family: $roboto, sans-serif;
+    height: 100%;
+    width: 100%;
+  }
+
+  &__main {
+    height: 100%;
+    overflow-y: auto;
+    width: 100%;
+  }
+
+  &__container {
+    font-family: inherit;
+    height: 100%;
+  }
+
+  &__separator {
+    background-color: $ab-default-separator;
+    border-radius: 1px;
+    height: 1px;
+    margin: 2px 0 0 0px;
+
+    width: 100%;
+  }
+
+  &__wrapper {
+    padding-bottom: 17px;
+    width: 100%;
+
+    &.name {
+      padding-top: 44px;
+    }
+
+    &.header {
+      align-items: center;
+      justify-content: space-between;
+      padding: 0px 10px;
+    }
+
+    &.invite-header {
+      justify-content: center;
+    }
+
+    &.invite-button {
+      justify-content: center;
+      padding: 8% 0;
+    }
+
+    &.notifier {
+      align-items: center;
+      @include typo($size: 16px, $line: 19px, $color: $ab-default-text-success);
+    }
+
+    &.message {
+      padding-top: 0;
+    }
+  }
+
+  &__option-menu-wrapper {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    width: 35px;
+  }
+
+  &__profile-wrapper {
+    align-items: center;
+    flex: 1;
+    justify-content: center;
+    padding: 2px;
+    top: 0;
+  }
+
+  &__icon {
+    height: 26px;
+    margin-right: 25px;
+    margin-top: 5px;
+    opacity: 0.55;
+    width: 26px;
+    min-width: 26px;
+    min-height: 26px;
+
+    &.profile-signup {
+      height: 26px;
+      left: 2px;
+      opacity: 1;
+      top: -4px;
+      width: 29px;
+    }
+
+    &.tags {
+      margin-left: 1px;
+      padding: 1px;
+    }
+
+    &.email {
+      padding: 1px;
+      left: 2px;
+    }
+
+    &.account_phone {
+      top: -2px;
+      left: 2px;
+    }
+
+    &.ab_address {
+      height: 28px;
+      left: 2px;
+      opacity: .7;
+      top: -7px;
+    }
+
+    &.raw-ab_notes {
+      height: 28px;
+      opacity: 1;
+      width: 28px;
+      min-width: 28px;
+      min-height: 28px;
+    }
+
+    &.edit-icon {
+      cursor: pointer;
+      height: 15px;
+      margin: 0px;
+      opacity: 0.45;
+      right: 3px;
+      top: 3px;
+      width: 15px;
+    }
+
+    &.profile-icon {
+      color: $eblue;
+      height: 25px;
+      margin-right: 0px;
+      margin-top: 3px;
+      opacity: 0.8;
+      padding: 2px;
+      width: 25px;
+
+      &.sent {
+        margin-top: -2px;
+        width: 36px;
+        min-width: 36px;
+        height: 36px;
+        padding: 0;
+        margin-bottom: -3px;
+      }
+
+      &.memory {
+        padding: 1px;
+        margin-top: 5px;
+      }
+    }
+
+    &.surname {
+      height: 20px;
+      margin-top: 0;
+      width: 20px;
+    }
+
+    &.action-icon {
+      cursor: pointer;
+      height: 18px;
+      margin-right: 0;
+      width: 18px;
+
+      .tooltips {
+        border-radius: $default-border-radius;
+        @include typo($size: 11px, $line: 15px, $color: $ab-default-text-tooltips);
+        background-color: $ab-background-tooltips;
+        margin-left: -180px;
+        margin-top: 25px;
+        padding: 3px 10px 3px 10px;
+        text-align: center;
+        width: 200px;
+      }
+    }
+  }
+
+  &__profile {
+    &.avatar {
+      border-radius: 50%;
+      height: 29px;
+      margin-top: 3px;
+      width: 29px;
+    }
+
+    & .user-profile__initiales {
+      & .note-content {
+        @include typo($size: 11px, $line: 11px);
+      }
+    }
+  }
+
+  &__show {
+    height: 100%;
+    margin: auto;
+    min-width: 315px;
+    padding-bottom: 5px;
+  }
+
+  &__invite {
+    margin: auto;
+
+    & .message,
+    & .comment {
+      padding-bottom: 40px;
+    }
+  }
+
+  &__item {
+    justify-content: space-between;
+  }
+
+  &__items {
+    justify-content: space-between;
+    padding-top: 5px;
+    width: 100%;
+
+    &.email {
+      padding-left: 5px;
+    }
+
+    &.name {
+      left: 1.5px;
+    }
+
+    &.address {
+      flex: 1;
+
+      & .category {
+        width: 32px;
+      }
+    }
+  }
+
+  &__address {
+    flex: 1;
+    max-width: 217px;
+  }
+
+  &__note {
+    padding-bottom: 2px;
+    padding-left: 5px;
+    @include typo($size: 16px, $line: 19px, $color: $ab-default-text-color);
+
+    &.blocked {
+      @include typo($size: 12px, $line: 14px, $color: $ab-default-text-reverse);
+      align-items: center;
+      background: $ab-default-background-alert;
+      border-radius: $default-border-radius;
+      height: 24px;
+      justify-content: center;
+      top: 2px;
+      min-width: max-content;
+      padding: 0 10px;
+      margin-left: 55px;
+    }
+
+    &.fullname {
+      @include typo($size: 15px, $line: 16px, $color: $ab-secondary-text-color);
+      align-items: center;
+      max-width: 250px;
+      overflow: hidden;
+      padding: 0px 10px;
+      top: 2px;
+      white-space: nowrap;
+      width: auto;
+      @include overflow-text;
+
+      & .inner.note-content {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    &.label {
+      color: $ab-text-title;
+    }
+
+    &.tags {
+      padding-left: 4px;
+      padding-top: 5px;
+    }
+
+    &.firstname,
+    &.familyname {
+      padding-left: 5px;
+      overflow: hidden;
+      width: 220px;
+      @include overflow-text;
+
+      & .inner.note-content {
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    &.details {
+      justify-content: space-between;
+      padding-bottom: 4px;
+      padding-left: 0px;
+      padding-right: 5px;
+      width: 100%;
+
+      .inner {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      &.phone {
+        padding-left: 5px;
+      }
+
+      &.email {
+        padding-left: 0px;
+        white-space: nowrap;
+
+
+        width: 200px;
+
+        & .tooltips {
+          @include typo($size: 12px, $line: 12px, $color: $ab-default-text-tooltips);
+          background-color: $ab-background-tooltips;
+          border-radius: $default-border-radius;
+          height: 100%;
+          text-align: center;
+          top: -22px;
+          padding: 5px;
+          position: absolute;
+          width: fit-content;
+          z-index: 11;
+        }
+      }
+    }
+
+    &.category {
+      width: 32px;
+      color: $ab-secondary-text-color;
+    }
+
+    &.comment {
+      border-radius: $default-border-radius;
+      @include typo($size: 16px, $line: 20px, $color: $ab-default-text-color);
+      background-color: $ab-default-background;
+      border: 1px solid $ab-default-frame;
+      box-sizing: border-box;
+      height: 97%;
+      max-height: 150px;
+      min-height: 90px;
+      overflow-y: auto;
+      padding: 8px 6px 0px 6px;
+      width: 100%;
+      resize: none;
+
+      .inner {
+        white-space: normal;
+      }
+
+      &.details {
+        margin: 5px 3px;
+        max-width: 300px;
+        width: 100%;
+        word-break: break-all;
+      }
+    }
+
+    &.invite-info {
+      justify-content: center;
+    }
+
+    &.invite-button {
+      align-items: center;
+      background-color: $btn-commit-background;
+      border-radius: $default-border-radius;
+      border: 1px solid $btn-commit-border;
+      cursor: pointer;
+      height: 40px;
+      justify-content: center;
+      min-width: 115px;
+      padding: 5px;
+      text-align: center;
+      width: 170px;
+      @include typo($size: 16px, $line: 20px, $color: $btn-commit-text);
+
+      &.memory {
+        height: 60px;
+        min-width: 120px;
+        width: 190px;
+        @include typo($size: 16px, $line: 26px);
+      }
+
+      &:hover {
+        background-color: $btn-commit-background-hover;
+        border-color: $btn-commit-border-hover;
+      }
+    }
+  }
+
+  &__entry {
+    &.surname {
+      width: 80%;
+
+      & input {
+        border-bottom: 1px solid $ab-default-entry-border-bottom;
+        width: 100%;
+        @include typo($size: 16px, $line: 19px, $color: $ab-default-text-color);
+
+        &::placeholder {
+          text-transform: capitalize;
+          @include typo($size: 16px, $line: 19px, $weight: 300, $color: $ab-default-text-placeholder);
+        }
+      }
+    }
+
+    &.comment {
+      width: 100%;
+
+      & textarea {
+        border-radius: $default-border-radius;
+        @include typo($size: 12px, $line: 14px, $color: $ab-default-text-color);
+        background: $ab-default-block-background;
+        border: none;
+        outline: none;
+        padding: 10px;
+        resize: none;
+
+        &::placeholder {
+          @include typo($size: 12px, $line: 14px, $weight: 300, $color: $ab-default-text-placeholder);
+        }
+      }
+    }
+  }
+
+  &__buttons-wrapper {
+    justify-items: center;
+    width: 100%;
+
+    & .button {
+      align-items: center;
+      border-radius: $default-border-radius;
+      height: 35px;
+      justify-content: center;
+
+      width: 115px;
+      @include typo($size: 16px, $line: 19px);
+    }
+  }
+
+  &__button-cancel {
+    border: 1px solid $btn-rollback-border;
+    margin-right: 35px;
+    @include typo($weight: 300, $color: $btn-rollback-text);
+
+    &:hover {
+      border: 2px solid $btn-rollback-border-hover;
+      color: $btn-rollback-text-hover;
+    }
+  }
+
+  &__button-confirm {
+    background-color: $btn-commit-background;
+    margin-left: 35px;
+    @include typo($color: $btn-commit-text);
+
+    &:hover {
+      background-color: $btn-commit-background-hover;
+    }
+
+    &.destroy,
+    &.block {
+      background-color: $btn-caution-background;
+      border: 1px solid $btn-caution-border;
+      height: 35px;
+      width: 115px;
+
+      &:hover {
+        background-color: $btn-caution-background-hover;
+        border: 1px solid $btn-caution-border-hover;
+      }
+    }
+  }
+}

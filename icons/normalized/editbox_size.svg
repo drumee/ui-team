@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="13px" height="8px" viewBox="0 0 13 8" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 48.1 (47250) - http://www.bohemiancoding.com/sketch -->
+    <title>Bullet size</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="14" height="14"></rect>
+    </defs>
+    <g id="Icon/bullet_size" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-9.000000, -11.000000)">
+        <g id="Bullet-size" transform="translate(8.000000, 7.000000)">
+            <g id="Rectangle" opacity="0">
+                <use fill="#D8D8D8" fill-rule="evenodd" xlink:href="#path-1"></use>
+                <rect stroke="#979797" stroke-width="1" x="0.5" y="0.5" width="13" height="13"></rect>
+            </g>
+            <ellipse id="Oval" fill="#89929E" fill-rule="nonzero" cx="10.1670762" cy="7.96694215" rx="3.83292383" ry="3.96694215"></ellipse>
+            <ellipse id="Oval" fill="#89929E" fill-rule="nonzero" cx="2.91646191" cy="9.98347107" rx="1.91646191" ry="1.98347107"></ellipse>
+        </g>
+    </g>
+</svg>

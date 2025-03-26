@@ -1,0 +1,110 @@
+.drumee-demo{
+    .header{
+	height: 110px;
+	background-color: $xia-light-blue;
+	color: $xia-dark-blue;
+	.logo{
+	    img{
+		width: 110px;
+	    }
+	}
+	.content{
+	    font-family: Satisfy;
+	    font-size: 50px;
+	    position: absolute;
+	    left: 90px;
+	    top: 20px;
+	    line-height: 90px;
+	}
+    }
+    .higher-body{
+	background-color: $xia-dark-blue;
+	color:$xia-off-white;
+	padding: 20px 40px 20px 60px;
+    }
+    .lower-body{
+	padding: 20px 60px;
+    }
+}
+.faq{
+    font: 36px monospace;
+    position: absolute;
+    color: #afafaf;
+    font-weight: bold;
+    left: 0px;
+    top: 0;
+}
+.qna{
+    margin-let:30px;
+    &:first-child{
+	margin-let:10px;
+    }
+}
+.txt-split-12 {
+    font: 12px monospace;
+    position: absolute;
+    color: #1370b3;
+    font-weight: bold;
+    left: 0;
+    top: 0;
+}
+
+/* .line-editor{ */
+/*     .content{ */
+/* 	position: absolute; */
+/* 	left: 0; */
+/* 	top: 0; */
+/* 	padding: 5px; */
+/* 	&[data-mode="write"]{ */
+/* 	    visibility: hidden; */
+/* 	} */
+/* 	&[data-mode="read"]{ */
+/* 	    visibility: visible; */
+/* 	} */
+/*     } */
+/*     .entry{ */
+/* 	&[data-mode="write"]{ */
+/* 	    visibility: visible; */
+/* 	} */
+/* 	&[data-mode="read"]{ */
+/* 	visibility: hidden; */
+/* 	} */
+/*     } */
+/*     .placeholder{ */
+/* 	&[data-show="yes"]{ */
+/* 	    visibility: visible; */
+/* 	} */
+/* 	&[data-show="no"]{ */
+/* 	    visibility: hidden; */
+/* 	} */
+/*     } */
+/* } */
+
+.text{
+    .content{
+	position: relative;
+    }
+}
+
+.text-left{
+    text-align:left;
+    justify-content: center !important;
+}
+
+.text-right{
+    text-align:right;
+    justify-content: flex-end !important;
+}
+.indent-left{
+    @extend .text-left;
+    margin-top:5px;
+    margin-left:15px;
+}
+
+body.editor{
+    border: 1px solid #eeeeee;
+    margin: 0;
+    &[data-selected="on"]{
+	border: 2px solid #aaaaaa;
+    }
+}

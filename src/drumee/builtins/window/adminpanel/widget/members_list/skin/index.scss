@@ -1,0 +1,101 @@
+@import 'mixins/drumee';
+
+.widget-members-list {
+  @import './add-menu';
+  
+  &__ui {
+    width: 100%;
+    background-color: $admin-default-block-background;
+  }
+
+  &__main {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__header {
+    padding: 5px;
+		width :	100%;
+		height: 34px; 
+  }
+
+  &__separator {
+		background-color: $admin-default-separator;
+		border-radius: 1px;
+		height: 1px;
+		margin: 3px 0 0 0;
+		width: 100%;
+  }
+  
+  &-content {
+    padding-bottom: 5px;
+    padding-left: 14px;
+    padding-top: 5px;
+    margin-top: 5px;
+
+		&__items {
+			width: 100%;
+		}
+		
+    &__item {
+      height: calc(100% - 58px);
+      width: 100%;
+
+      & .smart-container {
+        height: 100%;
+        top: -1px;
+      }
+    }
+
+		&__icon {
+      color : $admin-default-user-icon;
+      height :29px;
+      width : 29px;
+		}
+		
+		&__note.name {      
+      margin-top: 4px; 
+      padding: 3px 3px 3px 15px;
+      @include typo($size: 14px, $line: 16px, $color: $admin-default-text-color);
+    }
+  }
+
+  &__note {
+    &.title {
+			margin-left: auto;
+		  margin-right: auto;
+      padding-top: 7px;
+      max-width: 170px;
+      width: 100%;
+      justify-content:center;
+      @include typo($size: 15px, $line: 16px, $color: $admin-text-title);
+      @include overflow-text;
+		}
+  }
+
+  &__icon {
+    cursor: pointer;
+    position: absolute;
+
+    &.add-member {
+      box-sizing: border-box;
+      color: $egrey-b6;
+      height: 26px;
+      margin: 3px 2px; 
+      padding: 7.5px; 
+      right: 10px;
+      width: 26px;
+    }
+  }
+
+  .drumee-spinner{
+		height: 35px;
+    margin: auto;
+    width : 35px;
+	}
+} 

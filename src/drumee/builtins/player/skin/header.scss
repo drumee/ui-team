@@ -1,0 +1,213 @@
+@import 'mixins/drumee';
+
+.player {
+  &__header {
+    background: $core-default-background;
+    border-radius: $default-border-radius-top;
+    color: $egrey-b6;
+    cursor: pointer;
+    flex-shrink: 0;
+    height: 44px;
+    position: relative;
+    z-index: 2;
+
+    &.container {
+      &:after {
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 0%, rgba(0, 0, 0, 0) 100%);
+        content: " ";
+        height: 7px;
+        position: absolute;
+        top: 100%;
+        width: 100%;
+      }
+    }
+
+    &.main {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  &__container {
+    z-index: 1;
+  }
+
+  &__title {
+    max-width: 170px;
+    @include typo($color: $multimedia-default-text-title , $size: 18px, $line: 42px, $weight: 300);
+    @include overflow-text;
+
+    .inner {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: default;
+    }
+  }
+
+  &__wrapper-info {
+    justify-content: center;
+    justify-items: center;
+    position: absolute;
+    top: 45px;
+    width: 100%;
+  }
+
+  &__info-container {
+    display: grid;
+    grid-auto-rows: 1rem;
+    grid-gap: 3px;
+    background-color: $folder-default-background;
+    border-radius: $default-border-radius;
+    box-shadow: $drumee-shadow-box;
+    padding: 8px;
+    top: -1px;
+    min-width: 265px;
+    width: 100%;
+
+    .info-status {
+      text-align: left;
+      width: 100%;
+      padding-left: 10px;
+      padding-top: 4px;
+      @include typo($color: $folder-default-text-color, $size: 12px, $line: 16px, $weight: 300);
+      @include overflow-text;
+
+      .icon {
+        width: 14px;
+        height: 14px;
+        color: $folder-default-icon-neutral;
+        padding: 0.5px;
+      }
+
+      .text {
+        margin-left: 6px;
+        display: flex;
+        flex-direction: row;
+        flex: 1;
+      }
+    }
+
+    .info-item {
+      @include typo($color: $folder-default-text-color, $size: 12px, $line: 16px, $weight: 300);
+      text-align: left;
+      width: 50%;
+      padding-left: 10px;
+      padding-top: 4px;
+      @include overflow-text;
+
+      &.value {
+        margin-left: 28px;
+        width: 37%;
+      }
+    }
+  }
+
+  &-topbar {
+    &__info {
+      height: 100%;
+
+      & .icon {
+        cursor: pointer;
+        margin: auto;
+
+        &.info {
+          height: 14px;
+          width: 14px;
+
+          svg {
+            color: $core-default-icon-neutral;
+
+            &:hover {
+              color: $core-default-icon-hover;
+            }
+          }
+        }
+
+        &:hover {
+          color: $core-default-icon-hover;
+          svg {
+            color: $core-default-icon-hover;
+          }
+        }
+      }
+    }
+
+    &__action {
+      height: 100%;
+      left: 0;
+      position: absolute;
+      z-index: 3;
+
+      .icon {
+        color: $core-default-icon-neutral;
+        cursor: pointer;
+        height: 14px;
+        margin: auto 13px auto 0;
+        width: 14px;
+
+        &.link {
+          width: 18px;
+          height: 18px;
+          margin-left: 7px;
+        }
+
+        &:hover {
+          color: $core-default-icon-hover;
+
+          svg {
+            color: $core-default-icon-hover;
+          }
+        }
+      }
+    }
+
+    &__control {
+      height: 100%;
+      position: absolute;
+      right: 0;
+      z-index: 1000;
+
+      .icon {
+        color: $core-default-icon-neutral;
+        cursor: pointer;
+        height: 12px;
+        margin: auto 15px auto 0;
+        padding: 0px;
+        width: 12px;
+
+        &:hover {
+          svg {
+            color: $core-default-icon-hover;
+          }
+        }
+
+        &.rotate {
+          width: 16px;
+          height: 20px;
+          margin-top: 8px;
+        }
+
+        &.fullscreen {
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+  }
+
+  .preset-acknowledge {
+    &__main {
+      height: 0;
+      left: 0;
+      position: absolute;
+      top: 44px;
+      width: 0;
+    }
+
+    &__container {
+      background-color: $core-default-background;
+      width: 320px;
+    }
+  }
+}

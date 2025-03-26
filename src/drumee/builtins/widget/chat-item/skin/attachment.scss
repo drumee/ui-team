@@ -1,0 +1,108 @@
+&__attachment-wrapper {
+  //height: 86px;
+  margin-bottom:4px;//8px;
+  z-index: 1 !important;
+  &-list {
+    //height: 100%;
+    flex: 1;
+    margin-top: 5px;
+    max-height: 120px;
+    min-height: 84px;
+    width: 100%;
+    & .smart-container {
+      height: calc(100% + 3px);
+    }
+    & .dialog__wrapper.box {
+      z-index: 10!important;
+    }
+    
+    & .media-wrapper__ui {
+      background-color: inherit;
+      height: inherit;
+      width: inherit;
+    }
+
+    & .list-smart {
+      height: inherit !important;
+      width: inherit;
+    }
+
+    & .media-grid {
+      &__ui {
+        background-color: inherit;
+        border-radius: 4px;
+        box-shadow: none;
+        height: 85px;
+        margin: 0px 4px;
+        min-width: 95px;
+        width: 95px;
+      }
+
+      &__container {
+        background-color: $core-default-background;    
+        border-radius: $default-border-radius;
+        overflow: hidden;
+
+        &[data-hover="on"] {
+          box-shadow: none;
+        }
+
+        &[data-icontype="vignette"] {
+          background: transparent;
+          
+          & .filename {
+            display: none;
+          }
+        }
+
+        & .icon {
+          height: 30px;
+          margin: auto;
+          top: 21px;
+          width: 37px;
+        }
+      }
+
+      &__content {
+        align-items: center;
+        justify-content: center;
+      }
+      
+      &-notify__container {
+        display: none;
+      }
+
+      & .preview.image-capable {
+        height: 80px;
+        width: 95px;
+      }
+
+      & .filename {
+        @include typo($size: 10px, $line: 12px, $weight: 300, $color: $core-default-text-color);
+        border-radius:$default-border-radius-bottom;
+        bottom: 1px;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        max-height: 26px;
+        overflow: hidden;
+        padding: 2px 11px;
+        position: absolute;
+        text-align: center;
+        text-overflow: ellipsis;
+        width: 100%;
+      }
+      
+      &__remove {
+        display : none;
+      }
+    }
+  }
+  .drumee-spinner{
+    top : 15px;
+    left: 15px;
+    width: 38px;
+    height: 38px;
+    position: absolute;
+  }
+}

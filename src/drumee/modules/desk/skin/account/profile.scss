@@ -1,0 +1,78 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : src/drumee/builtins/desk/skin/account
+#   TYPE : Account Main Style
+# ===================================================================**/
+
+.account-profile {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  &__form {
+    width: 100%;
+    align-items: center;
+    &-top {
+      min-height: calc(100vh - 450px);
+      width: calc(100% - 40px);
+      max-width: 620px;
+      @media (min-width: 1100px) {
+        min-height: calc(100vh - 340px);
+      }
+    }
+    &-label {
+      padding: 0 0 6px 10px;
+      @include typo($size:12px,$line:16px,$color:#4A90E2,$weight:400);
+    }
+    &-block {
+      background-color: #f9f9fa;
+      border-radius: 4px;
+      // padding: 20px 43px 0 43px;
+      padding: 20px 0 0;
+      align-items: center;
+    }
+    &-row { 
+      max-width: 530px;
+      width: 100%;
+      padding: 0 20px 0 65px;
+      justify-content: center;
+      position: relative;
+    }
+    &-wrapper {
+      width: calc(100% - 6px);
+    }
+  }
+  &__wrapper {
+    display: flex;
+    flex-direction: column;
+    }
+  &__avatar {
+    width: 100%;
+    height: 100px;
+    justify-content: center;
+    margin-top: 30px;
+    margin-bottom: -20px;
+    &-change {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+    }
+    &-btn {
+      background: #4A90E2;
+      border-radius: 50%;
+      color: $ewhite;
+      margin: 1px 7px;
+    }
+    &-image {
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    @media (min-width: 1100px) {
+      position: absolute;
+      left: -186px;
+      top: 80px;
+      width: 100px;
+      margin: 0;
+    }
+  }
+}
+

@@ -1,0 +1,112 @@
+@import 'mixins/drumee';
+.suggestion-contact-item {
+  &__ui {
+    background-color: inherit;
+    @include typo( $color : $share-default-text-color);//$egrey-2f);
+    cursor: pointer;
+    overflow: hidden;
+
+    &:hover,
+    &[data-active=active],
+    &[data-radio=on] {
+      background: $share-default-background-hover;
+      
+      & .profile-icon,
+      & .note-reader{
+        color: $share-default-text-hover ;//$white;
+      }
+    }
+  }
+  
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    background-color: inherit;
+  }
+
+  &__icon {
+    color: $share-default-icon-neutral; //$egrey-89;
+    height: 28px; //25px; //23px;
+    width: 25px; //22px;
+    margin-top: -1px; //2px;
+    margin-left: 2px;
+    & .note-reader{
+      &:hover{
+      color:$share-default-icon-hover;
+      }
+    }
+  }
+
+
+  &__profile {
+    &.user-profile__ui {
+      border-radius: 50%;
+      height:29px; //27px; //22px;
+      width:29px; //27px; //22px;
+      margin-top: -2px;
+
+      &[data-default="1"]{
+        border: none;
+      }
+    }
+  }
+}
+
+// custom css for respective loaders
+
+.widget-contacts__item {
+  & .contact-item {
+    @include typo( $size :14px, $line: 16px);
+    padding-left: 14px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    margin: 1px 0px 0px 1px;
+    height: 35px;
+
+    
+    &__profile {
+      & section {
+        font-size: 80%;
+      }
+    }
+
+    &__name {
+      @include typo( $size :14px, $line: 16px, $color: $share-default-text-color);//$egrey-2f );
+      padding: 3px 3px 3px 15px;
+      margin-top: 3px;
+      overflow:hidden;
+      width: 200px;
+      @include overflow-text;
+    }
+  }
+}
+
+.addressbook-widget-search__item {
+  & .contact-item {
+    @include typo($size:12px, $line: 14px);
+    padding: 4px 5px 3px 12px; //7px 5px 7px 15px;
+    height: 33px;
+
+    &__icon{
+      color: $share-default-icon-neutral; //$egrey-89;
+      height: 28px;
+      width: 25px;
+      &:hover{
+        color:$share-default-icon-reverse;
+      }
+    }
+    &__profile {
+      color: $share-default-user-icon;
+      height: 29px;
+      width: 29px;
+    }
+
+    &__profile {
+      & section {
+        font-size: 70%;
+      }
+    }
+  }
+}

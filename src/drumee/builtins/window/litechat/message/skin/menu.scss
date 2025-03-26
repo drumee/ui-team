@@ -1,0 +1,93 @@
+@import 'mixins/drumee';
+
+
+&-menu {
+  &__dropdown {
+    margin-right: 6px;
+    position: absolute;
+    right: 0;
+    top:3px;
+    z-index: 99999;
+
+    & .chat-item__dropdown-wrapper {
+      display: none;
+      &[data-state="1"]{
+        display:flex;
+      }
+    }
+  }
+
+  &__wrapper {
+    &.me {
+      & .menu-items {
+        left: -9px;
+        padding:10px 2px;
+      }
+    }
+
+    & .menu-topic-items {
+      background-color: $core-default-background;  
+      border-radius: $default-border-radius;
+      box-shadow: $drumee-container-dropdown;
+      min-width: 115px;
+      padding: 10px;
+
+      &__wrapper {
+        left: -115px;
+        padding: 10px;
+        top: 10px;
+      }
+    }
+  }
+
+  &__icon {
+    &.menu-icon {
+      background-color: $core-default-background-hover;
+      border-radius: $default-border-radius-tiny;
+      border: 1px solid $eviolet ;
+      color: $ewhite;
+      cursor: pointer;
+      height: 10px;
+      width: 10px;
+    }
+  }
+
+  &__item {
+    color: $egrey-89;
+    cursor: pointer;
+    height: 18px;
+    width: 18px;
+    margin: 2px 8px;
+    &:hover{
+      color:$eviolet;
+    }
+
+    &.forward-message {
+      height: 18px;
+      width: 22px;
+    }
+    &.delete-for-me{
+      padding: 1px;
+    }
+  }
+}
+
+// menu item custom css for last-child
+&__ui {
+  &:last-child {
+    & .widget-chatItem-menu {
+      &__icon {
+        &.menu-icon {
+          transform: rotateX(180deg);
+        }
+      }
+
+      &__wrapper {
+        & .menu-topic-items__wrapper {
+          left: -130px;
+          top: -60px;
+        }
+      }
+    }
+  }
+}

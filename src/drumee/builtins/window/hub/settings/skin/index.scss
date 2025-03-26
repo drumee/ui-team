@@ -1,0 +1,280 @@
+@import 'mixins/drumee';
+
+.hub-name {
+  &__error {
+    @include typo($color: $eorange-sunset, $size: 12px, $line: 16px, $weight: 400);
+    background-color: $core-default-background;
+    color: #EA4D44;
+    position: absolute;
+    border: 1px solid $eorange-sunset;
+    padding: 5px;
+    border-radius: 3px;
+    top: 0px;
+    left: 140px;
+  }
+}
+
+*.hub-settings {
+  &__ui {
+    width: 410px;
+    position: absolute;
+    height: auto !important;
+    background-color: $core-default-background ;
+    border-radius: $default-border-radius-bottom;
+    align-items: center;
+    min-height: 345px;
+    box-shadow: $drumee-shadow-container;
+  }
+
+
+  &__field {
+    color: $egreen; //#18A3AC;
+  }
+
+  &__header {
+    @include typo($color: $egreen, $size: 14px, $line: 16px, $weight: 400); //#18A3AC
+  }
+
+  &__label {
+    width: 120px;
+    flex-shrink: 0;
+    @include typo($color: $egreen, $size: 14px, $line: 26px, $weight: 400); //#18A3AC
+  }
+
+  &__container {
+    width: 100%;
+
+    &.wrapper-general {
+      width: 100%;
+      background-color: $core-default-block-background;
+      border-radius: $default-border-radius;
+      white-space: nowrap;
+      overflow: visible;
+      padding: 9px 0; // 9px 0 0 0px;
+      margin-top: 10px;
+    }
+
+    &.wrapper-list {
+      width: 100%;
+    }
+
+    &-button-ok {
+      margin: 0 20px 0 auto;
+    }
+
+    .invitation-permission__ui {
+      margin: 1px 20px;
+      left: 40px;
+      top: 55px;
+      z-index: 1000;
+    }
+
+    .invitation.invitation-permission__ui {
+      top: 0px;
+    }
+
+    .invitation.invitation-permission__ui:before {
+      left: 96px //235px;
+    }
+  }
+
+  &__field {
+    color: $emauve-lighter; // #d66fe8;
+  }
+
+  &__header {
+    @include typo($color: $teamroom-text-color, $size: 18px, $line: 19px, $weight: 400); //#AB47BC
+  }
+
+  &__title {
+    //margin-top: 7px;
+    margin-top: -3px;
+    @include typo($color: $teamroom-text-color, $size: 16px, $line: 22px, $weight: 400); //#AB47BC
+    // &--access{
+    //   margin-top: 22px;
+    //   @include typo($color:#AB47BC,$size:16px,$line:22px,$weight:400);
+    // }
+  }
+
+  &__label {
+    width: 120px;
+    margin-left: 20px;
+    // margin-right: 15px;
+    flex-shrink: 0;
+    @include typo($color: $teamroom-text-color, $size: 14px, $line: 26px, $weight: 400); //#AB47BC
+  }
+
+  &__icon.destroy {
+    color: $core-default-icon-neutral;
+    opacity: 0.65;
+    width: 19px;
+    height: 19px;
+    visibility: visible;
+    padding: 2px; //3px;
+    left: -187px;
+    margin-top: -18px;
+    cursor: pointer;
+
+    &:hover {
+      svg {
+        opacity: 1;
+        color: $core-default-icon-hover ;
+      }
+    }
+  }
+
+  &__input {
+    width: 150px;
+    flex-shrink: 0;
+
+    input {
+      @include typo($size: 14px, $line: 26px, $weight: 400, $color: $core-default-text-color);
+    }
+  }
+
+  &__item {
+    height: 28px;
+    align-items: center;
+    color: $ewhite;
+
+    &[data-edit="0"]:hover {
+      background-color: $core-default-background-hover;
+
+      /*      *{
+        color: $default-text-hover;
+      }*/
+      input {
+        @include placeholder-input {
+          color: $core-default-text-hover
+        }
+
+        ;
+      }
+
+      .hub-settings__icon {
+        visibility: visible;
+        border-radius: $default-border-radius;
+      }
+    }
+
+    &[data-edit="1"] {
+      .hub-settings__icon {
+        visibility: visible;
+        background-color: $core-default-icon-active ;
+        border-radius: $default-border-radius;
+      }
+    }
+
+    &[data-edit="1"] {
+      background-color: transparent;
+    }
+  }
+
+  &__value {
+    width: 160px;
+    max-width: 160px;
+    flex-shrink: 0;
+    @include typo($color: $core-default-text-color , $size: 14px, $line: 26px, $weight: 300); //$weight:400
+    @include overflow-text;
+
+    .inner {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__icon {
+    visibility: hidden;
+    cursor: pointer;
+
+    &.info {
+      width: 26px;
+      height: 26px;
+      padding: 6px;
+      margin-left: 25px; //20px;
+      margin-top: 0px;
+    }
+  }
+
+  &__permission {
+    top: 100%;
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%);
+  }
+
+  &__avatar {
+    width: 18px;
+    height: 18px;
+    background-size: 100%;
+    border-radius: 50%;
+
+    &-wrapper {
+      width: 150px;
+      flex-shrink: 0;
+      //overflow: hidden;
+    }
+  }
+
+  &__member-name {
+    max-width: 160px; //140px
+    @include typo($size: 14px, $line: 26px, $color: $core-default-text-color , $weight: 300); //#494949 $weight:400,
+    @include overflow-text;
+
+    .inner {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &:hover {
+      input {
+        @include placeholder-input {
+          color: $core-default-text-reverse
+        }
+
+        ;
+      }
+    }
+
+    &.administrator.several {
+      margin-left: 1px;
+      min-width: 36px;
+
+      .drumee-text {
+        text-overflow: clip;
+        width: 36px;
+      }
+    }
+  }
+
+
+
+  &-commands {
+    width: 100%;
+    justify-content: center;
+
+    .dialog__button--submit {
+      margin: unset;
+    }
+
+    &[data-active="0"] {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  .dialog__wrapper {
+    // position: absolute;
+    //position: relative;
+    width: 100%;
+    z-index: 1000;
+  }
+}
+
+.window__wrapper--modal {
+  position: absolute;
+  width: 0;
+  z-index: 1000;
+}

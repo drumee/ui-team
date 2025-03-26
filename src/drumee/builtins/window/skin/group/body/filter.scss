@@ -1,0 +1,45 @@
+&__filter {
+  &__main {
+    width: auto;
+    display: grid;
+    z-index: 100;
+    min-width: 810px;
+    grid-template-columns: 60px 60px minmax(310px, auto) 180px 120px 80px;
+    box-shadow: 0 1px 3px 2px rgba(63, 79, 117, 0.2), 0 2px 2px 2px hsla(0, 0%, 98%, 0.2), 0 4px 2px 4px rgba(194, 185, 203, 0);
+  }
+
+  &__column {
+    cursor: pointer;
+    height: 45px;
+    @include typo($size: 16px, $line: 45px, $color: $default-text-title); // $weight:300
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: center;
+    flex-wrap: wrap;
+    justify-items: center;
+    align-items: center;
+    svg {
+      width: 20px;
+      height: 20px;
+      padding: 4px;
+      margin-right: 5px;
+    }
+
+    &.name {
+      min-width: 310px;
+    }
+
+    &.date {
+      min-width: 160px;
+    }
+
+    &.size {
+      min-width: 140px;
+    }
+
+    &.type {
+      min-width: 62px;
+    }
+  }
+}

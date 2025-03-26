@@ -1,0 +1,250 @@
+@import 'mixins/drumee';
+
+.schedule-invitation {
+  &__ui {
+    align-items: center;
+    background-color: $core-default-background; //$ewhite;
+    box-shadow: $drumee-shadow-container;
+    height: auto;
+    position: absolute;
+    width: 100%;
+  }
+
+  &__title{
+    justify-content: center;
+    @include typo($size:16px,$line:22px,$weight:400,$color:$sharebox-text-color);//$size:18px
+  }
+  
+  &__main {
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  &__header {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+
+  &__body {
+    padding: 20px;
+  }
+
+  .invitation-searchbox__ui {
+    margin-bottom: 20px;
+  }
+
+  .invitation-searchbox__main {
+    height: 36px;
+  }
+
+  .invitation-searchbox__icon {
+    padding-left: 5px;
+    width: 34px;
+    height: 24px;
+    margin-right: 5px;
+
+    &[data-state="1"] {
+      border-radius: $border-radius-small;
+      border: 1px solid $core-default-border-success; //$default-text-success;
+      color: $core-default-text-success;
+      height: 20px;
+      padding: 3px;
+      width: 20px;
+
+      &:hover {
+        background: $state-1-typo;
+        color: #fff;
+      }
+    }
+  }
+
+  .invitation-recipient__label .note-content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__invitation {
+    width: 100%;
+    height: auto;
+    align-items: center;
+    padding: 15px 21px 0px 50px;
+    z-index: 1000;
+
+    &.recipients {
+      z-index: 1000;
+    }
+
+    .invitation-searchbox__input--inline {
+      margin: 0;
+    }
+  }
+
+  &__details {
+    width: 100%;
+    height: auto;
+    align-items: center;
+    margin: 10px 0;
+    padding: 0px 10px;
+  }
+
+  &__error {
+    @include typo($size: 14px, $weight: 300, $line: 21px, $color: $core-default-text-error);
+  }
+
+  &__recipients {
+    width: 100%;
+    height: auto;
+    align-items: center;
+    margin: 15px auto 0; //20px auto 0;
+
+    &-list {
+      max-height: 200px;
+      width: 100%;
+      height: auto;
+      padding: 0 30px;
+      margin-bottom: 10px;
+    }
+  }
+
+  &.invitation.invitation-searchbox {
+    margin-left: 20px;
+  }
+
+  &__description {
+    width: 100%;
+    justify-content: center;
+    justify-items: center;
+    align-items: center;
+
+    //  padding: 0 30px;
+    &-error {
+      align-items: center;
+      height: 30px;
+      padding: 15px 0;
+      text-align: center;
+      min-width: 200px;
+      @include typo($size: 16px, $weight: 300, $line: 21px, $color: $core-default-text-alert);
+    }
+  }
+
+  &__icon {
+    width: 27px; //24px;
+    height: 27px; //24px;
+    color: $core-special-schedule-icon; //$default-icon-neutral;
+
+    &.attendees {
+      opacity: 0.8;
+    }
+
+    &.date {
+      opacity: 0.7;
+      padding: 2px;
+    }
+
+    &.message {
+      opacity: 0.8;
+      margin-top: -53px;
+      padding: 1px;
+    }
+  }
+
+  &__entry {
+    min-width: 200px;
+    width: 100%;
+    @include typo($size: 14px, $line: 22px, $color: $core-default-text-color); //$size: 16px,$line: 21px,
+
+    &[data-status='error'] {
+      border-bottom: 1px solid $core-default-border-error;
+
+      & input:focus {
+        border-color: $core-default-border-error;
+      }
+    }
+
+    & input {
+      //  border-bottom: 1px solid $entry-border-bottom;
+      width: 100%;
+      height: 32px;
+      margin-left: 10px;
+      padding-left: 5px;
+      //  margin-bottom: -10px;
+      background: $core-default-block-background;
+      border-radius: $default-border-radius;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      @include typo($size: 14px, $line: 22px, $color: $core-default-text-color); //$size: 16px,$line: 21px,
+
+
+      &:focus {
+        border-color: $core-focus-border-placeholder; // $focus-border-bottom;
+
+        @include placeholder-input {
+          color: $core-focus-text-placeholder; // $focus-text-placeholder;
+        }
+      }
+
+      &::placeholder {
+        @include typo($size: 14px, $line: 21px, $weight: 300, $color: $core-default-text-placeholder); //$size: 16px,
+      }
+    }
+
+
+    &.date,
+    &.message {
+      width: 100%;
+
+
+      & textarea {
+        background: $core-default-block-background;
+        border-radius: $default-border-radius;
+        border: none;
+        outline: none;
+        padding: 10px 5px 10px;
+        resize: none;
+        margin-left: 10px;
+        width: 100%;
+        @include typo($size: 14px, $line: 22px, $color: $core-default-text-color); //$size: 16px, $line: 21px,
+
+        &::placeholder {
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $default-text-placeholder);
+        }
+      }
+    }
+
+    &.date {
+      margin-bottom: 10px;
+      margin-top: 10px;
+    }
+  }
+
+  &__buttons {
+    height: 60px;
+    justify-items: center;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding-left: 36px;
+
+    .button {
+      @include typo($size: 16px, $line: 19px, $color: $btn-commit-text);
+      background-color: $btn-commit-background;
+      align-items: center;
+      border-radius: $default-border-radius;
+      height: 44px;
+      justify-content: center;
+      padding: 5px;
+      margin: 0 10px;
+      flex: 1;
+    }
+
+    :hover {
+      background-color: $btn-commit-background-hover;
+    }
+  }
+}

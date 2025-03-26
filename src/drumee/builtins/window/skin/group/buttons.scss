@@ -1,0 +1,24 @@
+&__button-cancel {
+  border: 1px solid $btn-rollback-border;
+  width: 120px;
+  height: 46px;
+  border-radius: $default-border-radius;
+  text-align: center;
+  @include typo($line: 22px, $size: 16px, $weight: 300, $color: $btn-rollback-text);
+  justify-content: center;
+  padding-top: 12px;
+  &:hover {
+    border: 2px solid $btn-rollback-border-hover ;
+    color: $btn-rollback-text-hover;  
+  }
+}
+&__button-confirm {
+  width: 120px;
+  background-color:$btn-commit-background; // $btn-primary-background; 
+  height: 46px;
+  border-radius: $default-border-radius;
+  text-align: center;
+  @include typo($line: 22px, $size: 16px, $weight: 300, $color: $btn-commit-text);
+  justify-content: center;
+  padding-top: 12px;
+}

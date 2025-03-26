@@ -1,0 +1,13 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : src/drumee/libs/reader/avatar/skin/avatar-widget.scss
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.chart-mutiline{
+  &__ui{
+    width: 100%;
+    height: 100%;
+  }
+}

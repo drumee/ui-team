@@ -1,0 +1,14 @@
+&__endpoint-local {
+  background-color:rgba(0,0,0,.33);//#89929E;//$vdo-background-color;
+  position: absolute;
+  //top: 20px;
+  bottom: 10px;
+  right: 10px;//40px;
+  width: 120px;
+  height: 80px;
+  border-radius: $default-border-radius;
+  // @include video-border-radius();
+  //border-radius:6px;
+  border: 1px white solid;
+  z-index: 100;
+}

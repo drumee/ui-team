@@ -1,0 +1,149 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/builtins/window/addressbook/widget/tag-item/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+
+.addressbook-widget-tag-item {
+  &__ui {
+    background-color: inherit;
+    width: 100%;
+    margin-top:1px;
+    height: 35px;// 30px;
+    overflow: hidden;
+
+    &[data-active="active"],
+    &[data-radio="on"],
+    &:hover {
+      background: $ab-default-background-hover ;
+      color: $ab-default-text-hover !important;
+      
+      &.form-tag {
+        background: transparent;
+        color	: inherit;
+      }
+
+      & .addressbook-widget-tag-item__container {
+        &.editTag,
+        &.addTag {
+          & .destroy-tag {
+            color: $egrey-89 !important;
+          }
+        }
+      }
+
+      & .addressbook-widget-tag-item__note.name {
+        color : $ab-default-text-reverse !important;
+        width: 120px;
+        @include overflow-text;
+        .inner{
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+      
+      & .edit-icon {
+        display: flex;
+      }
+    }
+
+    &[data-form='on'] {
+      &[data-radio='on'],
+      &:hover {
+        background: transparent;
+        @include overflow-text;
+      }
+    }    
+  }
+
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    @include typo($size: 14px, $line: 14px, $color: $ab-default-text-color);
+    cursor: pointer;
+    margin: 1px 0.5px 0px 0px;
+    padding-bottom:4px;
+    padding-left: 15px;
+    padding-top: 4px;
+
+    &.min-view {
+      padding: 2px 0px 2px 42px;
+    }
+  }
+
+  &__note {
+    &.name { 
+      align-items: center;
+      width: 148px;
+      @include overflow-text;
+    }
+  }
+
+  &__icon {
+    color : $ab-default-icon-reverse;   
+    height: 14px;
+    margin: 3px 4px 4px;//4px;
+    position: absolute;
+    right: 4px;
+    width : 14px;
+
+    &.edit-icon {
+      display : none;
+    }
+
+    &.destroy-tag {
+      color: $ab-default-icon-neutral;
+      opacity:0.75;
+    }
+  }
+
+  &__entry {
+    max-width: 117px;
+    left: 13px;
+    overflow: hidden;
+    
+    & input {
+      @include typo($size: 14px, $line: 16px, $color: $ab-default-text-color);
+      background: $ab-default-block-background; //$white-f9;
+      border-bottom: 1px solid $ab-default-entry-border-bottom;
+      cursor: text;
+      height: 25px;
+      &:hover {
+        border-color: $ab-focus-border-placeholder;//$eblue;
+      }
+      &:focus {
+        border-color:$ab-focus-border-placeholder;
+      }
+
+      &::placeholder {
+        @include typo($size: 14px, $line: 16px,$weight:300, $color: $ab-default-text-placeholder);
+      }
+    }
+  }
+
+  &__chat_note{
+    align-items: center;
+  //  color:$eblue;
+    height: 9px;//14px
+    left:-1px;// -4px;
+    margin-bottom: auto;
+    margin-right: 5px;
+    margin-top: auto;
+    width: 9px;//14px
+    background-color: $ab-special-tag-note-chat;//#1187f6;//$eblue;
+    border-radius: 50%;
+    border: 1px solid $ewhite;
+    &:hover{
+      color:$ab-default-text-hover; 
+    }
+  }
+ 
+  &__chat_wrapper[data-state="0"] {
+    visibility: hidden;
+  }
+}

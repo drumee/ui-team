@@ -1,0 +1,32 @@
+&__helper-wrapper{
+  width: 90px;
+  height: 75px;
+  opacity: 1;
+  overflow : visible;
+  transform: scale(0.75);
+  //z-index : 10000;
+  z-index : 999999999999999;
+  box-shadow: none;
+  background-color: transparent;
+  @include typo($line:14px,$size:11px,$color:$core-default-text-color);
+
+  &.deleting {
+    background-color: $core-default-background;
+    transform: scale(1);
+    &:after, &:before {
+      display: none;
+    }
+
+    svg.icon,
+    .media-deletion-wrapper, 
+    .media-checkbox-wrapper,
+    .media-sharing-wrapper,
+    .media-grid__remove {
+      display: none;
+    }
+  }
+  .media-grid__remove {
+    display: none;
+  }
+}
+

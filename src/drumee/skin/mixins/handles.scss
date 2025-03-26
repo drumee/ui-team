@@ -1,0 +1,45 @@
+@mixin slidebar-h(){
+    width: 11px;
+    height: 11px;
+    left: -4px;
+    top: -4px;
+    cursor: pointer;
+    @include vendor(border-radius,50%);
+    @include vendor(box-shadow,0px 0px 4px 0px rgba(1, 1, 1, 0.47));
+    &:focus {
+        outline: none;
+    }
+    &:before, &:after {
+        display:none;
+    }
+}
+
+@mixin slidebar-v(){
+    width: 12px;
+    height: 6px;
+    left: -4px;
+    top: -3px;
+    cursor: pointer;
+    @include vendor(box-shadow,0px 0px 4px 0px rgba(1, 1, 1, 0.47));
+    &:focus {
+        outline: none;
+    }
+    &:before, &:after {
+        display: none;
+    }
+}
+
+
+@mixin style-button__global(){
+    width: 12px;
+    height: 6px;
+    left: -4px;
+    top: -3px;
+    @include vendor(box-shadow,0px 0px 4px 0px rgba(1, 1, 1, 0.47));
+    &:focus {
+        outline: none;
+    }
+    &:before, &:after {
+        display: none;
+    }
+}

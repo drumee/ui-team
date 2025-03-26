@@ -1,0 +1,165 @@
+.xia-btn-rounded{
+    @extend %btn-rounded;
+}
+
+.xia-btn-pill{
+    @include button-pill;
+}
+
+.xia-btn-glow{
+    @include glow;
+}
+
+.xia-btn-flat{
+    @include button-flat($bgcolor:$xia-action-color);
+}
+
+.xia-btn-circle-smal{
+    @extend %btn-circle-smal;
+}
+
+.xia-btn-circle-big{
+    @extend %btn-circle-big;
+}
+
+// Light source = left
+.xia-btnbase-light-l{
+    @extend .xia-btn-rounded;
+    @include button-base($bgcolor:$xia-action-color, $light:left);
+}
+
+
+// Light source = top
+.xia-btn-base-light-t{
+    @extend .xia-btn-rounded;
+    @include button-base($bgcolor:$xia-action-color, $light:top);
+}
+
+.xia-circle-small{
+    @extend .xia-btn-base-light-t;
+    @extend .xia-btn-circle-smal;
+    @extend .xia-btn-flat;
+}
+
+.xia-circle-big{
+    @extend .xia-btn-base-light-t;
+    @extend .xia-btn-circle-big;
+}
+
+.xia-btn-small{
+    @extend .xia-btn-base-light-t;
+    @include button-size;
+}
+
+.btn-top-light{
+    @extend %btn-rounded;
+    @include button-base($bgcolor:$xia-light-blue, $light:top, $color:$xia-dark-blue);
+}
+
+/*******************************************************/
+
+%xia-btn-flat {
+    display: inline-block;
+    height:$xia-btn-height;
+    margin-bottom: 0;
+    font-size: $base-font-size;
+    font-weight: normal;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    border-radius: $xia-btn-border-radius;
+    white-space: nowrap;
+}
+
+.xia-btn {
+    @extend %xia-btn-flat;
+    @extend %box-shadow;
+    min-width:50px;
+    &:hover{
+	@include box-shadow(1px 2px 10px rgba(0, 0, 0, 0.4));
+    }
+}
+
+/* .xia-btn-flat { */
+/*     @extend %xia-btn-flat; */
+/*     @include box-shadow(none); */
+/*     background:transparent; */
+/*     &:hover,&:active { */
+/* 	background:transparent !important; */
+/*     } */
+/* } */
+
+.xia-btn-close {
+    @extend %xia-btn-flat;
+    background:transparent;
+    font-size:$xia-large-fs;
+    &:hover,&:active {
+	color:red !important;
+	background:transparent !important;
+    }
+}
+
+.xia-btn-dropdown {
+    @extend .xia-btn;
+    padding-left: 16px;
+    padding-right: 16px;
+    margin-left: -3px;
+}
+
+.xia-btn-group{
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.btn-transparent {
+    @extend %align-center;
+    @include box-shadow(none);
+    background:transparent;
+    color:$xia-color-gray;
+    min-width:20px;
+    cursor:pointer;
+    &:hover,&:active {
+	border-radius: $xia-btn-border-radius !important;
+	background:rgba(20, 112, 179, 0.26) !important;
+    }
+}
+
+.btn-light-blue {
+    @extend %align-center;
+    @include box-shadow(none);
+    background:$xia-light-blue;
+    color:$xia-color-dark;
+    min-width:20px;
+    cursor:pointer;
+    &:hover,&:active {
+	border-radius: 4px !important;
+	background:$xia-off-white !important;
+    }
+}
+
+
+.btn-rounded-blue{
+    border-radius: $xia-btn-border-radius !important;
+    @extend %align-center;
+    @extend %text-shadow;
+    color: $xia-btn-color !important; //text-contrast($xia-btn-bg-color);
+    background-color: $xia-btn-bg-color !important;
+    border-color: $xia-btn-border-color !important;
+    cursor:pointer;
+}
+
+.btn-how-to{
+    border-radius: $xia-btn-border-radius !important;
+    border: #1370B3 solid thin;
+    padding: 10px;
+    @extend %align-center;
+    cursor:pointer;
+}
+
+.button-anchor, .button-trigger, .button-broadcast, .button-nested, .button-update, .button-toggle{
+    cursor:pointer;
+    .picto{
+	margin:auto;
+    }
+}

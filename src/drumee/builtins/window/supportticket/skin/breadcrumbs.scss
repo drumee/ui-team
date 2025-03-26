@@ -1,0 +1,115 @@
+@import 'mixins/drumee';
+
+&-breadcrumbs {
+  &__main {
+    height: 100%;
+    width: auto;
+    .menu-items {
+      left: 18px;
+      margin-top: -15px;
+    }
+  }
+
+  &__container {
+    align-items: center; 
+    border-radius:$default-border-radius;
+    height: 18px;
+    justify-content: center;
+    left: -6px; //3px;
+    position: absolute;
+    top:14px; // 17px;
+    z-index: 11;
+  }
+
+  &__digit {
+    align-items: center;
+    background-color: #1187f6;
+    border-radius: 50%;
+    height: 16px;
+    justify-content: center;
+    margin: -9px 0 0 0;
+    width: 16px;
+    z-index: 2!important;
+    line-height: 1;
+    color: #fff;
+    left: 18px;
+    font-size: 9px;
+    top: -2px;
+    cursor: pointer;
+  }
+
+  &__icon {
+    background-color:$bigchat-default-icon-neutral;
+    opacity:0.75;
+    color: $bigchat-default-icon-reverse;
+    cursor: pointer;
+    margin:0px 2px;
+    &:hover{
+      background-color: $bigchat-default-background-hover;
+      opacity:  1;
+    }
+    
+    &.breadcrumb-icon {
+      border-radius: $border-radius-small; //2px;
+      height: 18px; //20px;
+      padding: 5px;
+      width:18px; //20px;
+      top: -4px; //-2px;
+      left: 11px; //22px; //15px; //13px;
+    }
+
+    &.next {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__item {
+    cursor: pointer;
+    padding: 5px 15px;
+    white-space: nowrap;
+    width: 100%;
+    @include typo($size: 14px, $line: 18px, $weight: 300, $color:$bigchat-default-text-color); //$egrey-49);
+    @include overflow-text;
+
+    &:last-child {
+      color: $eviolet;
+    }
+  }
+
+  &__roll {
+    background: $bigchat-default-background;
+    border-radius: $border-radius-small; //4px;
+    box-shadow:$drumee-container-dropdown;// 0 6px 10px 1px rgba(63,79,117,0.13), 0 7px 20px 0 rgba(86,65,113,0.08), 0 3px 17px 0 rgba(194,185,203,0);
+    height: auto;
+    left: -12px;    
+    overflow: visible;
+    padding: 10px 0;
+    position: absolute;
+    top: 10px;
+    width: 109px;
+    z-index: 1000;
+    
+    &:before {
+      background-color: $bigchat-default-background;
+      box-shadow:$drumee-container-before;// 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
+      content: "";
+      height: 10px;
+      left: 2px;
+      position: absolute;
+      top: -4px;
+      transform: rotate(45deg);
+      width: 10px;
+    }
+
+    &:after {
+      background: $bigchat-default-background;
+      border-radius: $default-border-radius-top;
+      content: "";
+      height: 10px;
+      left: 0;
+      position: absolute;
+      top: 0;
+      width: 100%;
+    }
+  }
+}

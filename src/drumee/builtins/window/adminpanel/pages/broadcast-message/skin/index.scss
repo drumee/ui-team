@@ -1,0 +1,111 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/window/adminpanel/pages/broadcast-message/js/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.broadcast-message-page {
+  &__ui {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__main {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__header {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    max-height: 60px;
+    width: 100%;
+  }
+
+  &__content {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__footer {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    max-height: 80px;
+    width: 100%;
+  }
+
+  &__note {
+    &.header {
+      @include typo($size: 18px, $line: 16px, $color: $admin-secondary-text-color);
+    }
+  }
+
+  &__icon {
+    cursor: pointer;
+    
+    &.select-member {
+      color: $admin-secondary-text-color;
+      height: 18px;
+      left: 20px;
+      top: 1px;
+      width: 18px;
+    }
+  }
+
+  &__entry {
+    &.broadcast-message {
+      height: 100%;
+      width: 100%;
+
+      & textarea {
+        border-radius: $default-border-radius;
+        @include typo($size: 14px, $line: 20px, $color: $admin-default-text-color);
+        background: #f7f7f9 ; //$ap-textarea-background;
+        border: none;
+        height: 100%;
+        margin: auto;
+        max-height: 98%;
+        max-width: 80%;
+        min-width: 80%;
+        outline: none;
+        resize: none;
+        width: 100%;
+        padding: 15px 20px;
+
+        &::placeholder {
+          @include typo($size: 14px, $weight: 300, $color:$admin-default-text-placeholder);
+        }
+  
+        &:focus {
+          outline: none;
+        }
+      }
+    }
+  }
+
+  &__buttons-wrapper {
+    &.button {
+      border-radius:$default-border-radius;
+      @include typo ($size: 16px, $line: 18px, $color:$btn-commit-text);
+      align-items: center;
+      background: $btn-commit-background; //$egreen;
+      cursor: pointer;
+      height: 35px; //40px;
+      justify-content: center;
+      margin: auto;
+      width: 115px; // 80px;
+      &:hover{
+        background-color:$btn-commit-background-hover;
+        //border-color: $btn-primary-border-hover;
+      }
+    }
+  }
+}

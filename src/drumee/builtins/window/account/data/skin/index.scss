@@ -1,0 +1,169 @@
+@import 'mixins/drumee';
+@import 'deletion';
+@import 'otp';
+
+.window-confirm__ui{
+  max-width: 400px;
+}
+
+.account-data {
+  &__ui{
+    width: 100%;
+    min-height: 100%;
+    flex-direction: column;
+    @media (min-width: 800px) {
+      flex-direction: row;
+    }
+  }
+  &__main {
+    min-height: calc(100% - 100px);
+    overflow: auto;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__container {
+    flex-direction: column;
+    justify-content: center;
+    max-height: 100%;
+    min-height: calc(100% - 100px);
+    min-width: 420px;
+    overflow: auto;    
+    width: 100%;
+    @media (min-width: 800px) {
+      flex-direction: row;
+    }
+  }
+
+  &__wrong-link {
+    align-items: center;
+    flex: 1;
+    padding: 50px;
+  }
+
+  &__button{
+    cursor: pointer;
+  }
+
+  &__btn {
+    &.delete {  
+      background-color:$account-default-background;
+      border:none;
+      left: 641px;
+      margin-top: 6px;
+      margin:0;
+      padding: 0px 7px;
+      text-decoration-line: underline;
+      @include typo($size:12px,$line:24px,$color:$eorange-dark);  
+
+      &:hover {
+        color:$eorange-sunset ;
+        background-color:$account-default-background;  
+      }
+    }
+
+    &.download {
+      height: 40px;
+      margin-right: 122px;
+    }
+  }
+  
+  &__container{
+    width: 100%;
+    display: grid;
+    grid-auto-columns: 1fr 1fr;
+  }
+
+  &__block {
+    width: 100%;
+    min-height: calc(100% - 180px);
+  }
+
+  .chart-pie__ui {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    
+  }
+
+  &__chart {
+    max-height: calc(100% - 50px);
+    overflow: visible;
+    width: 100%;
+    height:100%;
+    display: grid; 
+    grid-auto-columns: 1fr 1fr;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      text {
+        @include typo($size:14px,$line:24px,$color:$account-default-text-reverse,$weight:400);
+      }
+    }
+  }
+
+  &__history {
+    height: calc(100% - 50px);
+    .smart-container {
+      height: 100%;
+      padding-left: 101px;
+    }
+
+    .log-row {
+      width: 100%;
+    }
+    .log-name{
+      min-width: 60%;
+      margin-right: 15px;
+    }
+    .log-name, .log-date{
+      @include typo($size:16px,$line:30px,$weight:300,$color:$account-default-text-color);
+    }
+    .log-date{
+      margin: 0 auto;
+      min-width: 50%;
+    }
+    
+    &-placeholder {
+      @include typo($size:18px,$line:45px,$color:$account-default-text-color,$weight:400);
+      svg {
+        width: 45px;
+        margin-right: 20px;
+      }
+    }
+  }
+  &__overlay{
+    position: absolute;
+    left: 0;
+    top:0;
+    .window-confirm, .window-downloader{
+      width: 500px;
+      height: auto;
+      padding: 10px;
+      top:0;
+      border-radius:$default-border-radius-bottom;
+    }
+    &[data-state="open"]{
+      right:0;
+      bottom:0;
+      background-color: $account-default-transparent-black;
+      justify-items:center;
+      align-items:center;
+      justify-content:center;
+      align-content:center;
+    }
+  }
+  &__acknowledge{
+    width: 315px;
+    margin:80px auto auto auto; 
+    &-text{
+      @include typo($size: 16px, $line: 26px, $color: $account-default-text-color);
+    }
+  }
+  &__footer{
+    max-width: 500px;
+    margin:0 auto 15px;
+  }
+}

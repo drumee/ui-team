@@ -1,0 +1,41 @@
+&__main{
+  .invitation{
+    &-settings__ui{
+      background-color: #ffffff;
+      width: 310px;
+      height: auto;
+      border-radius: 4px;
+      box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    }
+    &-permission__ui {
+      background-color: #F7F7F9;
+      width: 260px;
+      padding: 25px 45px 15px;
+      margin: 0 25px;
+      box-shadow: 0 5px 3px 0 rgba(218,227,239,0.14), 0 1px 1px 0 rgba(0,0,0,0.12), 0 2px 5px 0 rgba(218,227,239,0.46);
+      &:before {
+        content: " ";
+        width: 10px;
+        height: 10px;
+        background-color: #F7F7F9;
+        position: absolute;
+        top: -3px;
+        left: 227px;
+        transform: rotate(45deg);
+      }
+    }
+    &__container-sharee{
+      width: 100% !important;
+    }
+    &.sharees-roll .invitation-sharee__icon.remover[data-editable="0"] {
+      display: block;
+    }
+  }
+  .hub-settings__wrapper {
+    .invitation {
+      &-settings__ui {
+        box-shadow: none;
+      }
+    }
+  }
+}

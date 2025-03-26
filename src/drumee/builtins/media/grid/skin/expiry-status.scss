@@ -1,0 +1,49 @@
+@import 'mixins/drumee';
+
+&-expiry-status {
+  &__icon {
+    &.expiry-status {
+      color: $share-default-icon-reverse;
+      // cursor: help;
+      height: 18px;
+      width: 18px;
+      position: absolute;
+      right: 26px;
+      top: 20px;
+
+      & svg {
+        border: 0.8px solid $share-default-icon-reverse;
+        border-radius: 50%;
+      }
+
+      // &:hover {
+      //   & .tooltips {
+      //     display: flex !important;
+      //   }
+      // }
+
+      // & .tooltips {
+      //   @include typo($size: 12px, $line: 20px, $color: $share-default-text-tooltips);
+      //   background-color: $share-default-background-tooltips;
+      //   border-radius: $default-border-radius;
+      //   max-height: 90px;
+      //   min-height: 40px;
+      //   justify-content: center;
+      //   padding: 10px;
+      //   position: absolute;
+      //   right: 0px;
+      //   text-align: center;
+      //   top: 20px;
+      //   width: 270px;
+      //   z-index: 1;
+      // }
+    }
+  }
+}
+
+
+
+
+
+
+

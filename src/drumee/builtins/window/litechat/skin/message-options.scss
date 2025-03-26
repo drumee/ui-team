@@ -1,0 +1,30 @@
+&__main {
+  &[data-state="1"] {
+    & .widget-chatItem {
+      &__message-group {
+        margin-right:35px; // 30px;
+      }
+
+      &__message-selector-wrapper {
+        display: flex;
+      }
+
+      &-menu__dropdown {
+       &.chat-item__dropdown {
+         display: none;
+       } 
+      }
+    }
+    
+
+    & .widget-chat {
+      &__messenger {
+        display: none;
+      }
+      
+      &__message-options-wrapper {
+        display: flex !important;
+      }
+    }
+  }
+}

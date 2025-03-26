@@ -1,0 +1,153 @@
+@import 'mixins/drumee';
+
+.window-schedule {
+  @import 'topbar';
+  @import 'endpoint';
+  @import 'command';
+  @import 'inbound';
+  @import 'acknowledge';
+}
+
+
+.window-schedule {
+  &__ui {
+    background-color: $core-default-background;
+    width: 626px;
+    height: 525px;
+    box-shadow: $drumee-shadow-container;
+    overflow: visible;
+    min-width: 340px; 
+    min-height: 200px;
+    flex-direction: column;
+    display: flex;
+    left: calc(50vw - 300px);
+    top: 85px;
+
+    &[data-device="mobile"] {
+      width: 100vw;
+      height: 100vh;
+      left: 0;
+      top: 0;
+    }
+
+    &[data-tmp="1"] {
+      z-index: 9000 !important;
+    }
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  &__attendees {
+    min-width: 253px;
+    left: 0px;
+    top: -3px;
+    padding: 10px;
+    background-color: $core-default-background;
+    border-radius: $default-border-radius;
+    box-shadow: $drumee-shadow-box;
+    cursor: pointer;
+
+    &-list {
+      width: auto;
+      max-height: 300px;
+      max-width: 310px; //240px;
+      overflow-x: hidden;
+    }
+
+    &-title {
+      padding: 10px 0 15px 3px;
+      justify-content: center;
+      height: 20px;
+      @include typo($size: 14px, $line: 14px, $weight: 300, $color: $core-default-text-title); //$weight:400,
+    }
+
+    .conference-label {
+      align-items: center;
+      left: 20px;
+      @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+    }
+
+    .conference-checkbox {
+      width: 30px;
+      height: 30px;
+      padding: 7px;
+      margin-left: -9px; //13px;
+
+      &[data-state="1"] {
+        box-shadow: none;
+        color: $egreen-soft;
+      }
+    }
+  }
+
+  &__title {
+    padding: 10px 9px 10px 10px;
+    justify-content: center;
+    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $sharebox-main);
+  }
+
+  &__body {
+    width: 100%;
+    height: calc(100% - 44px);
+  }
+
+  &__main-view {
+    width: 100%;
+    height: 100%; //calc(100% - 44px);
+  }
+
+  &__main-content {
+    flex-direction: column;
+    height: auto;
+    width: 100%;
+    min-height: 100%;
+
+    &[data-flow="x"] {
+      flex-direction: row-reverse;
+    }
+  }
+
+  &__message {
+    position: absolute;
+    top: calc(50% - 20px);
+
+    .waiting {
+      padding: 10px;
+      background-color: grey;
+      margin: 10px;
+      border-radius: $default-border-radius-tiny; //3px;
+      @include typo($color: $core-default-text-reverse, $weight: 400, $line: 20px, $size: 16px);
+    }
+  }
+
+  &__wrapper--modal {
+    position: absolute;
+
+    &[data-state="open"] {
+      //position: absolue;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, .85);
+      left: 0;
+    }
+  }
+
+  .window-warning__body {
+    background-color: $core-default-background;
+    box-shadow: $drumee-shadow-box;
+    border: none;
+    min-width: 300px;
+    padding: 20px;
+    min-height: 200px;
+
+    .window-warning__content .drumee-text {
+      color: $default-text-color;
+      margin: 10px 0 10px 15px;
+    }
+  }
+}

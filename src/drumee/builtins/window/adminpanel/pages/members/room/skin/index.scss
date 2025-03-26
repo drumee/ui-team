@@ -1,0 +1,125 @@
+@import 'mixins/drumee';
+.members-room {  
+  @import './action-menu';
+
+  &__ui {
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  &__main {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__header-wrapper {
+    min-height: 35px; 
+  }
+
+  &-header {
+    height: 100%;
+    justify-content: space-between;
+    padding: 5px 5px 0px 5px;
+    width :	100%;
+    
+    &__title {
+      justify-content: center;
+      width: 100%;
+      top: 2px;
+    }
+
+    &__note {
+      &.title {
+        align-items: center;
+        cursor: pointer;
+        padding: 4px 4px 4px 10px;
+        @include typo($size: 15px, $line: 16px, $color: $admin-text-title);
+      }
+    }
+
+    & .user-profile {
+      border-radius: 50%;
+      height: 29px;
+      width: 29px;
+      top:-2px;
+      
+      & .note-content{
+        @include typo($size: 11px, $line: 11px);
+      }
+    }
+
+    &__wrapper {
+      align-items: center;
+
+      &.options-right {
+        right: 10px;
+      }
+
+      &.options-left {
+        left: 10px;
+      }
+    }
+
+    &__icon {
+      color: $admin-default-icon-neutral;
+      cursor: pointer;
+      height: 18px;
+      width: 18px;
+    }
+  }
+
+  &__separator {
+		background-color: $admin-default-separator;
+		border-radius: 1px;
+		height: 1px;
+		margin: 2px 0px 0px;
+		width: 100%;
+  }
+
+  &__content {
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  &__default-content {
+    height: 100%;
+    justify-content: center;
+    min-width: 280px;
+    text-align: center;
+    @include typo($size: 16px, $line: 30px, $color: $admin-default-text-inactive);
+  }
+
+  &__wrapper {
+    &.default-content {
+      align-items: center;
+      justify-content: center;
+    }
+  }
+  
+  &__icon {
+    &.add-member {
+      border-radius:$border-radius-small;
+      border: 1px solid $admin-default-entry-border-bottom;
+      box-sizing: border-box;
+      color: $egrey-89;
+      height: 30px;
+      margin: 0px 10px;
+      padding: 4px;
+      width: 30px;
+    }
+  }
+
+  
+  &__note {
+    &.default-content {
+      @include typo($size: 16px, $line: 36px,$color: $admin-default-text-inactive);
+    }
+  }
+}

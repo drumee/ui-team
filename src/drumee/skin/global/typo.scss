@@ -1,0 +1,70 @@
+$roboto: 'Roboto', sans-serif;
+
+$main-typo: $roboto;
+
+@mixin heading1 {
+    font-family: $main-typo;
+    font-size: 26px;
+    letter-spacing: 0.05em;
+    color: white;
+}
+
+@mixin title1 {
+    font-family: $main-typo;
+    font-weight: 500;
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    color: white;    
+    text-transform: capitalize; 
+}
+
+@mixin title2white {
+    font-family: $main-typo;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    color: white;    
+}
+
+@mixin title2grey {
+    font-family: $main-typo;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    color: grey;    
+}
+
+@mixin title3 {
+    font-family: $main-typo;
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    color: white;    
+}
+
+@mixin text1 {
+    font-family: $main-typo;
+    font-style: italic;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    color: white;    
+}
+
+@mixin photoeditorbig {
+    font-family: $main-typo;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    line-height: 1;
+}
+
+@mixin photoeditor_header {
+    font-family: $main-typo;
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 0.5em;
+    line-height: 1;
+}

@@ -1,0 +1,405 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : /src/drumee/builtins/window/account/security/skin/pad.scss
+#   TYPE : Component Style
+# ===================================================================**/
+@import "mixins/drumee";
+
+.security {
+  &__ui {
+    border-radius: $default-border-radius;
+    background-color: $account-default-block-background;
+    height: 150px;
+    min-height: 125px;
+    padding: 20px 20px 0px 14px;
+    width: 320px;
+    @include typo($size: 12px,
+      $line: 14px,
+      $weight: 400,
+      $color: $account-default-text-color );
+  }
+
+  .entry-reminder__component {
+    &[data-state="error"] {
+      border-bottom-color: $account-default-border-error;
+      border-bottom-style: solid;
+      border-bottom-width: 1px;
+    }
+  }
+
+  &-email {
+    .tooltips {
+      text-align: center;
+      line-height: 1.5;
+    }
+  }
+}
+
+.security-pad {
+  &.--command {
+    cursor: pointer;
+  }
+
+  &__buttons-wrapper {
+    justify-content: center;
+  }
+
+  &__label,
+  &__value {
+    justify-content: center;
+    margin-bottom: 15px;
+    text-align: center;
+    @include typo($size: 16px,
+      $line: 21px,
+      $color: $account-default-text-color,
+      $weight: 400);
+
+    &.info-msg {
+      @include typo($size: 12px,
+        $line: 14px,
+        $weight: 400,
+        $color: $account-default-text-alert );
+      top: 22px;
+    }
+  }
+
+  &__row {
+    width: 100%;
+    justify-content: center;
+  }
+
+  &__button {
+    background-color: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    height: 35px;
+    justify-content: center;
+    margin: auto;
+    text-align: center;
+    width: max-content; //115px;
+    padding: 0 24px; //0 7px;
+    z-index: 1;
+    @include typo($size: 16px, $line: 35px, $color: $btn-commit-text);
+
+    &.pass {
+      border: 1px solid $account-pass-color;
+      color: $account-pass-color;
+    }
+
+    &.email {
+      border: 1px solid $account-email-color;
+      color: $account-email-color;
+    }
+
+    &.ident {
+      border: 1px solid $account-ident-color;
+      color: $account-ident-color;
+    }
+
+    &.phone {
+      border: 1px solid $account-phone-color;
+      color: $account-phone-color;
+    }
+
+    &.sms {
+      border: 1px solid $account-sms-color;
+      color: $account-sms-color;
+    }
+
+    &.tbd {
+      background-color: transparent;
+      font-style: italic;
+      @include typo($size: 16px, $line: 35px, $weight: 400, $color: $eviolet);
+
+      &:after {
+        content: "...";
+      }
+    }
+
+    &.disable {
+      @include typo($size: 12px, $line: 14px, $color: #ff805c);
+      justify-content: center;
+      padding: 0 10px;
+      text-align: center;
+      pointer-events: none;
+      border: none !important;
+    }
+  }
+
+  &__icon {
+    height: 33px;
+    left: 10px;
+    padding: 4px;
+    position: absolute;
+    top: 45%;
+    transform: translate(0, -50%);
+    width: 33px;
+
+    &.pass {
+      color: $account-pass-color;
+      height: 36px;
+      width: 36px;
+    }
+
+    &.email {
+      color: $account-email-color;
+    }
+
+    &.ident {
+      color: $account-ident-color;
+    }
+
+    &.phone {
+      color: $account-phone-color;
+    }
+
+    &.sms {
+      color: $account-sms-color;
+      height: 37px;
+      width: 34px;
+    }
+
+    &.info {
+      height: 25px;
+      margin-left: 220px;
+      margin-top: -26px;
+      width: 25px;
+    }
+
+    &.tooltips {
+      background-color: $account-default-background;
+      border-radius: $default-border-radius;
+      height: 53px;
+      left: 106px;
+      overflow-wrap: break-word;
+      padding: 10px;
+      top: 74px;
+      width: 200px;
+    }
+
+    &.ip {
+      color: $account-ip-color;
+    }
+
+    &.usb {
+      color: $account-usb-color;
+    }
+  }
+
+  .editbox-toggle {
+    @include typo($size: 14px,
+      $line: 35px,
+      $weight: 400,
+      $color: $account-bg-grey-color );
+
+    &:after {
+      background-color: $account-bg-grey-color;
+      top: 15px;
+      width: 12px;
+    }
+
+    &.editbox-toggle--left {
+      padding-right: 24px;
+    }
+
+    &.editbox-toggle--right {
+      padding-left: 24px;
+    }
+
+    &[data-radio="on"] {
+      color: $account-hover-color;
+
+      &:after {
+        background-color: $account-hover-color;
+        top: 11px;
+      }
+
+      &.editbox-toggle--left {
+        padding-right: 24px;
+      }
+
+      &.editbox-toggle--right {
+        padding-left: 24px;
+      }
+    }
+  }
+}
+
+.security-entry {
+  &__entry {
+    width: 188px;
+    margin: auto;
+    padding-left: 15px;
+
+    input {
+      width: 90%;
+      border-bottom: 1px solid $account-security-entry-border-bottom;
+      @include typo($size: 15px,
+        $line: 20px,
+        $color: $account-default-text-color ); // $egrey-89); $weight:300,
+
+      &::placeholder {
+        @include typo($size: 15px,
+          $weight: 400,
+          $line: 19px,
+          $color: $account-default-text-placeholder );
+      }
+    }
+
+    &.areacode {
+      width: 50px;
+    }
+
+    &[data-error="1"] {
+      input {
+        border-bottom: 1px solid $account-default-border-error;
+      }
+    }
+  }
+
+  &__resend {
+    @include typo($size: 14px,
+      $line: 20px,
+      $weight: 300,
+      $color: $account-default-text-color );
+  }
+
+  &__note {
+    &.areacode {
+      align-items: center;
+    }
+  }
+
+  &__main {
+    background-color: $account-default-block-background; //$white-fb;
+    border-radius: $default-border-radius;
+    height: 100%;
+    left: 0;
+    min-height: 115px;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 10;
+    justify-content: center;
+    justify-items: center;
+    align-items: center;
+
+    .malformed {
+      @include typo($size: 14px,
+        $line: 20px,
+        $weight: 300,
+        $color: $account-default-text-error );
+      margin: auto;
+    }
+
+    .preset-acknowledge__container .icon {
+      color: $account-default-icon-success;
+      width: 30px;
+      height: 30px;
+      margin: 0px auto 20px;
+    }
+
+    .dialog__button--close {
+      padding: 13px !important; //13.5
+      top: -5px;
+      right: -4px;
+      color: $account-security-thinline-icon; //$egrey-78 ;
+
+      &:hover {
+        color: $account-default-thinline-icon-hover;
+      }
+    }
+
+    .preset-acknowledge__container .text {
+      @include typo($size: 12px,
+        $line: 19px,
+        $color: $account-default-text-color );
+    }
+  }
+
+  &__title {
+    margin-top: 20px;
+    @include typo($line: 36px,
+      $size: 16px,
+      $weight: 400,
+      $color: $account-default-text-color );
+    //margin: 20px auto 50px auto;
+  }
+
+  &__input {
+    height: 40px;
+    margin: auto;
+    width: 250px;
+
+    .entry-reminder__label {
+      margin-top: 0px;
+
+      &[data-state="1"] {
+        margin-top: 20px;
+      }
+    }
+
+    .entry-reminder__icon {
+      color: $account-default-icon-neutral; // $egrey-89; //$egrey-49;
+      height: 22px;
+      top: 7px;
+      width: 22px;
+
+      &.pw-shower {
+        height: 20px;
+        top: 0px; // -1px;
+        width: 20px;
+        right: -11px; // 17px;
+      }
+    }
+  }
+
+  &__button {
+    justify-content: center;
+    margin-bottom: auto;
+    margin-left: 40px;
+    margin-top: auto;
+    text-align: center;
+    width: 40px;
+
+    &.btn--go {
+      background-color: $btn-commit-background;
+      border-radius: 6px;
+      border: 1px solid $btn-commit-border;
+      height: 24px;
+      margin-bottom: auto;
+      margin-left: 0;
+      margin-top: auto;
+      text-align: center;
+      width: 24px;
+      @include typo($size: 11px, $line: 20px);
+
+      .inner {
+        margin-top: auto;
+      }
+
+      &[data-state="0"] {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+    }
+  }
+}
+
+.security__tooltips {
+  &.dialog__wrapper {
+    left: 100%;
+    min-width: 250px;
+    position: absolute;
+    top: 0;
+  }
+
+  &.--small {
+    background-color: $account-default-background;
+  }
+
+  &.--large {
+    background-color: $account-default-background;
+    min-width: 500px;
+  }
+}

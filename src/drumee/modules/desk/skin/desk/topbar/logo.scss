@@ -1,0 +1,46 @@
+.desk-module__logo {
+  &-container {
+    cursor: pointer;
+    height: 80px;
+    justify-content: center;
+    left: 30px;
+    position: absolute;
+    width: 40px;
+    z-index: 100;
+
+    &[data-device="mobile"] {
+      width: 35px;
+      height: 35px;
+      top: 21px;
+      left: 17px;
+    }
+  }
+
+  &-item {
+    width: 40px;
+    height: 40px;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 6px;
+    background-size: cover;
+    box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.1),
+      0 6px 16px 0 rgba(86, 85, 113, 0.08), 0 2px 14px 0 rgba(194, 195, 203, 0);
+
+    &[data-device="mobile"] {
+      width: 35px;
+      height: 35px;
+    }
+
+    &.hub {
+      &::after {
+        display: none;
+      }
+    }
+    
+    &:hover {
+      box-shadow: 0 2px 4px 3px rgba(63, 79, 117, 0.2),
+        0 2px 2px 2px hsla(0, 0%, 98%, 0.2),
+        0 6px 3px 5px rgba(194, 185, 203, 0);
+    }
+  }
+}

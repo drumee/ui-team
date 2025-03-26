@@ -1,0 +1,111 @@
+
+/* ==========================================================
+ * COMMONLY USED GLOBAL VARIABLES
+ * ========================================================== */
+$base-page-width   : 960px;
+$base-font-size    : 14px;
+$base-line-height  : 20px;
+$base-border       : 1px solid rgba(0,0,0,0.15);
+$base-bg-color     : #fff;
+$base-color        : #333;
+
+$glow_color: #2c9adb;
+$icons-spacing: 6px;
+
+
+
+/* ========== COLORS =============*/
+$drumee-green           : #36E692;
+$drumee-black           : #0a1119;
+$drumee-gray            : #cac8c8;
+$drumee-dark            : #0a1119;
+
+/* ========== TO BE REVIEWED =============*/
+$xia-light-blue         : #65abdf;
+$xia-dark-blue          : #1370b3;
+$xia-deep-blue          : #0E2344;
+$xia-off-white          : #FEFEFE;
+
+$xia-color-dark         : #333333;
+$xia-color-light-gray   : #EAEAEA;
+$xia-color-gray         : #BBBBBB;
+$xia-color-drak-gray    : gray;
+$xia-color-bright       : $xia-off-white;
+$xia-color-public       : #a49d83 !important;
+$xia-color-restricted   : #0baaaa !important;
+$xia-color-private      : #0071bc !important;
+$xia-color-red          : #ee2233;
+$xia-color-error        : $xia-color-red;
+$xia-color              : #494949;
+$progress-bar-green     : rgba(30,180,30,0.5);
+$bg-half-green          : rgba(30,180,30,0.5);
+$bg-quarter-green       : rgba(30,180,30,0.25);
+$bg-quarter-gray        : rgba(200,200,200,0.25);
+
+/* ========== BACKGROUND COLORS =============*/
+$xia-bgcolor-menu       : $base-bg-color;
+$xia-bgcolor-base       : #E4EFF6;
+$xia-btn-border-color   : #357ebd;
+$xia-btn-bg-color       : #1470B3; //#428bca;//#E4EFF6; //#428bca;
+$xia-btn-color          : #fff;
+$xia-hover-cross-color  : $xia-color-red;
+$xia-box-bg-color       : #F1F1F1;
+$xia-popup-bg-color     : rgba(250, 250, 250, 0.90);
+$xia-bg-color           : #F1F1F1;
+$xia-primary-color      : #00A1CB;
+$xia-action-color       : #7db500;
+$xia-highlight-color    : $xia-btn-bg-color;
+$xia-caution-color      : #E54028;
+
+$addon-padding          : 3px 12px;
+$input-padding          : 6px 12px;
+$xia-btn-padding        : 6px 12px;
+$xia-btn-height         : 35px;
+$xia-btn-border-radius  : 4px;
+
+$xia-video-height       : 470px;
+$xia-video-width        : 300px;
+
+
+$xia-dd-menu-padding    : 5px 0;
+$xia-dd-menu-margin     : 2px 0 0;
+$xia-dd-item-padding    : 3px 14px;
+$xia-dd-min-width       : 140px;
+$xia-dd-highlight-color : $xia-btn-bg-color;
+$xia-item-hover-color   : #CFE0EC;
+
+$xia-padding-horizontal : 0 10px;
+$xia-padding-vertical   : 10px 0;
+$xia-padding            : 10px;
+$xia-padding-small      : 5px;
+$xia-margin             : 10px;
+$xia-margin-small       : 5px;
+$xia-margin-tiny        : 3px;
+
+$xia-page-width         : 960px;
+$xia-content-min-height : 100px;
+$xia-content-min-width  : 100px;
+
+$xia-item-min-width     : 220px;
+$xia-item-min-height    : $base-line-height;
+
+$xia-font-version       : "1.0";
+$xia-font-path          : "../../../static/fonts" !default;
+$xia-font-weight        : 300;
+$xia-font-family        : Antic-Regular, Arial, Avenir, Avenir-Black, Avenir-Oblique, Calibri, Candara, CircledGeorgia, Helvetica, Nexa-Bold, Nexa-Light, Optima, Oswald, Raleway-ExtraLight, Raleway-Regular, Satisfy, Segoe, Tahoma, Trebuchet_MS, Verdana, sans-serif;
+
+// normal = 14px
+$xia-huge-fs  : $base-font-size + 12;
+$xia-large-fs : $base-font-size + 6;
+$xia-normal-fs: $base-font-size;
+$xia-medium-fs: $base-font-size - 2;
+$xia-small-fs : $base-font-size - 4;
+$xia-tiny-fs  : $base-font-size - 6;
+
+$xia-z-index-lowest : -3;
+$xia-z-index-lower  : -1;
+$xia-z-index-normal : 1;
+$xia-z-index-high   : 200;
+$xia-z-index-higher : 1000;
+$xia-z-index-draft  : $xia-z-index-higher;
+$xia-z-index-highest: 200000;

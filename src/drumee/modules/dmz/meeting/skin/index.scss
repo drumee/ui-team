@@ -1,0 +1,155 @@
+@import 'mixins/drumee';
+
+.dmz-meeting {
+  &-header__wrapper.buttons {
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  &__header-buttons {
+    width: auto;
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 75px;
+    align-items: center;
+  }
+
+  @import '../../skin/header';
+  @import '../../skin/footer';
+  @import './attendees.scss';
+  @import './devices.scss';
+  @import './username.scss';
+}
+
+
+.dmz-meeting {
+
+  &__ui {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    min-width: 300px;
+    min-height: 200px;
+    flex-direction: column;
+    display: flex;
+    left: 0;
+    top: 0;
+    justify-items: center;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+  }
+
+  &__main,
+  &__container,
+  &__content,
+  &-desk__container {
+    width: 100%;
+    height: 100%;
+  }
+
+  @import './lobby.scss';
+
+  &__action-buttons {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2000;
+  }
+
+  &-desk__wrapper {
+    .desk-content.dmz-wm__ui {
+      top: 0;
+    }
+  }
+
+  &__content {
+    z-index: 1200;
+
+    &.desk-content {
+      width: calc(100% - 10px);
+
+      .dmz-wm__icons-list {
+        display: none;
+      }
+
+      &.dmz-wm__ui {
+        top: 0;
+      }
+
+      .dmz-wm__windows-layer {
+        position: relative;
+        height: 100%;
+        width: 100%;
+        top: 0;
+        align-content: center;
+        align-items: center;
+        justify-content: center;
+        justify-items: center;
+      }
+    }
+  }
+
+  &__information {
+    width: 100%;
+    justify-items: center;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+    height: 100%;
+
+    &-title {
+      @include typo($size: 20px, $line: 28px, $weight: 400, $color: $dmz-default-text-color);
+      width: 100%;
+      padding: 20px;
+      margin: 20px 0;
+      justify-content: center;
+      text-align: center;
+    }
+
+    &-icon {
+      color: $eblue;
+      width: 50px;
+      height: 50px;
+    }
+
+    &-text {
+      @include typo($size: 18px, $line: 28px, $weight: 300, $color: $dmz-default-text-color);
+      width: 100%;
+      padding: 20px;
+      margin: 20px 0;
+      justify-content: center;
+      text-align: center;
+    }
+
+    &-buttons {
+      width: 100%;
+      justify-content: space-evenly;
+    }
+
+    &-button {
+      @include typo($color: $btn-commit-text, $size: 16px, $line: 21px, $weight: 400);
+      align-items: center;
+      background-color: $btn-commit-background;
+      cursor: pointer;
+      justify-content: center;
+      border-radius: $default-border-radius;
+      padding: 10px;
+      min-width: 180px;
+
+      &.close {
+        background-color: $core-default-background-caution;
+
+        &:hover {
+          background-color: $core-default-background-alert ;
+        }
+      }
+
+      &:hover {
+        background-color: $btn-commit-background-hover ;
+      }
+    }
+
+  }
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="13px" height="13px" viewBox="0 0 13 13" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
+    <title>Group 2</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Editbox-section" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Section-photo" transform="translate(-481.000000, -254.000000)" fill="#89929E">
+            <g id="Paralax" transform="translate(409.000000, 114.000000)">
+                <g id="Filter-pop-up-Copy-3" transform="translate(60.000000, 50.000000)">
+                    <g id="switch" transform="translate(12.000000, 87.000000)">
+                        <g id="Group-2" transform="translate(0.000000, 3.000000)">
+                            <g id="height-rectangular-shape-symbol" fill-rule="nonzero">
+                                <polygon id="Shape" points="12.8757474 0.741136842 12.8757474 0 11.0539684 0 11.0539684 0.741136842 11.5944947 0.741136842 11.5944947 6.07866316 11.0539684 6.07866316 11.0539684 6.8198 11.5944947 6.8198 11.5944947 12.1540421 11.0539684 12.1540421 11.0539684 12.8949053 12.8757474 12.8949053 12.8757474 12.1540421 12.3353579 12.1540421 12.3353579 6.8198 12.8757474 6.8198 12.8757474 6.07866316 12.3353579 6.07866316 12.3353579 0.741136842"></polygon>
+                                <path d="M0.0227157895,12.8984632 L9.92529474,12.8984632 L9.92529474,0 L0.0227157895,0 L0.0227157895,12.8984632 Z M0.825568421,0.802852632 L9.12244211,0.802852632 L9.12244211,12.0954737 L0.825568421,12.0954737 L0.825568421,0.802852632 Z" id="Shape"></path>
+                            </g>
+                            <circle id="Oval" stroke="#89929E" stroke-width="0.8" cx="3.75" cy="3.75" r="1"></circle>
+                            <polygon id="Path-3" points="2 11.0909091 3.09090909 9.05454545 4.18181818 11.0909091 6.36363636 6 8 11.0909091"></polygon>
+                        </g>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

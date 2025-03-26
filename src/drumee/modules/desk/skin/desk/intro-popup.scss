@@ -1,0 +1,150 @@
+.desk-module {
+  &-intro-popup {
+    &__main {
+      background: $core-default-background;
+      border-radius: $default-border-radius;
+      height: calc(100vh - 20px);
+      margin: auto;
+      max-height: 400px;
+      max-width: 600px;
+      min-height: 300px;
+      min-width: 360px;
+      overflow: hidden;
+      padding: 5px;
+      width: calc(100vw - 20px);
+
+      &[data-device="mobile"] {
+        max-height: unset;
+        height: auto;
+        width: 100vw;
+        flex-direction: column;
+      }
+    }
+
+    &__wrapper {
+      align-items: center;
+      justify-content: center;
+      padding: 5px;
+      width: 100%;
+
+      &.header {
+        align-items: flex-end;
+        height: 80px;
+        padding-top: 30px;
+      }
+
+      &.sub-title {
+        align-items: flex-start;
+        height: 80px;
+      }
+
+      &.content {
+        grid-gap: 10px;
+        justify-content: center;
+
+        &[data-device="mobile"] {
+          flex-direction: column;
+        }
+      }
+
+      &.footer {
+        height: 30px;
+        justify-content: flex-end;
+        padding-bottom: 10px;
+        padding-right: 20px;
+      }
+    }
+
+    &__close {
+      position: absolute;
+      right: 15px;
+      top: 15px;
+    }
+
+    &__item-wrapper {
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      width: 100%;
+
+      // &.image {
+      //   justify-content: flex-end;
+      // }
+
+      &.description {
+        grid-gap: 30px;
+      }
+    }
+
+    &__image {
+      width: calc(100% - 80px);
+    }
+
+    &__icon {
+      &.video {
+        color: $core-default-icon-reverse;
+        height: 26px;
+        width: 26px;
+      }
+
+      &.close {
+        color: $core-default-thinline-icon;
+        cursor: pointer;
+        height: 12px;
+        width: 12px;
+
+        &:hover {
+          color: $core-default-thinline-icon-hover;
+        }
+      }
+    }
+
+    &__buttons-wrapper {
+      align-items: center;
+      background-color: $btn-commit-background;
+      border-radius: 6px;
+      cursor: pointer;
+      justify-content: center;
+      width: calc(100% - 80px);
+      padding: 0 15px;
+    }
+
+    &__note {
+      &.title {
+        text-align: center;
+        @include typo($size: 26px, $line: 36px, $color: $core-default-text-title);
+      }
+
+      &.sub-title,
+      &.description {
+        @include typo($size: 16px, $line: 26px, $color: $core-default-text-color);
+      }
+
+      &.sub-title {
+        & span {
+          font-weight: 600;
+        }
+      }
+
+      &.description {
+        width: calc(100% - 80px);
+      }
+
+      &.btn {
+        min-width: 115px;
+        margin-left: 10px;
+        width: 100%;
+        @include typo($size: 16px, $line: 20px, $color: $core-default-text-reverse);
+      }
+
+      &.footer {
+        @include typo($size: 14px, $line: 18px, $color: $core-tertiary-text-color);
+      }
+
+      &.text-underline {
+        cursor: pointer;
+        text-decoration: underline;
+      }
+    }
+  }
+}

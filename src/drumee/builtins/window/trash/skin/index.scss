@@ -1,0 +1,70 @@
+@import 'mixins/drumee';
+
+.window-trash {
+  @import 'header';
+
+  .window-confirm {
+    &__main {
+      align-items: center;
+      background-color: $core-default-background;
+      border-radius: $default-border-radius;
+      height: 250px;
+      justify-content: space-around;
+      margin: auto;
+      width: 500px;
+    }
+
+    &__message {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    &__buttons {
+      width: 100%; //83%;
+    }
+  }
+
+  &__purge {
+    &-header {
+      width: 100%;
+    }
+
+    &-container {
+      position: absolute;
+      width: 100%;
+      height: calc(100% - 46px);
+      align-items: center;
+      justify-content: center;
+      justify-items: center;
+      align-content: center;
+      justify-content: center;
+      flex-wrap: nowrap;
+      top: 46px;
+      background-color: gba(137, 146, 158, 0.4);
+      padding: 10px;
+    }
+
+    &-content {
+      height: 200px;
+      width: 100%;
+      background: $core-default-background;
+      height: 200px;
+      justify-content: center;
+      border-radius: $default-border-radius;
+      padding: 10px;
+    }
+
+    &-progress {
+      background-color: $core-default-background;
+    }
+
+    &-title {
+      @include typo($size: 16px, $line: 22px, $weight: 400); //#E9223B);
+      padding: 0 7px;
+      justify-content: center;
+      justify-items: center;
+      display: flex;
+      flex-direction: row;
+    }
+  }
+}

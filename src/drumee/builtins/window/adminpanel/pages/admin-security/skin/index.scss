@@ -1,0 +1,94 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/window/adminpanel/pages/admin-settings/js/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.admin-security-page {
+  &__ui {
+    background-color: inherit;
+    width: 100%;
+    height: 100%;
+
+
+    & .fullwidth {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    background-color: inherit;
+    justify-content: center;
+    margin-top: 40px; //20px;
+  }
+  &__block_wrapper {
+    align-items: center;
+  }
+
+  &__block_title {
+    height: 28px;
+    width: 450px; //403px;
+    justify-content: center;
+    margin-bottom: 40px;
+    @include typo($size: 18px, $color:$admin-default-text-title); //$size: 24px
+  }
+
+  &__box-header {
+    height: 21px;
+    @include typo($size: 16px, $color: $admin-default-text-color); //$size: 18px,
+  }
+
+  &__box-set {
+    height: 116px;
+    background-color: $admin-default-block-background;//#F7F7F9;
+    border-radius: 6px;
+    margin-top: 20px;
+    width: 366px;
+    padding: 10px; //20px 10px;
+    justify-content: center;
+    align-items: center;
+  }
+  &__option-wrapper {
+    width: 215px;
+    margin-left: 20px;
+  }
+
+  &__option-label {
+   // @include typo($size: 14px, $color: $egrey-89);
+    @include typo($size: 16px, $color:$admin-default-text-color, $weight: 300);
+  }
+
+  &__option-item {
+    margin-top: 15px;
+    width: fit-content;
+
+    &[data-state="0"] {
+      .checkbox {
+        border: 1px solid $checkbox-unselected-color;
+        color: $white;
+      }
+    }
+
+    &[data-state="1"] {
+      .checkbox {
+        color: $checkbox-selected-color;
+        border: 1px solid $checkbox-selected-color;
+      }
+    }
+
+  }
+
+  &__icon.checkbox {
+    height: 14px;
+    width: 14px;
+    border-radius: 4px;
+    margin-right: 10px;
+
+  }
+}

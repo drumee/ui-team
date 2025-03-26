@@ -1,0 +1,70 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2022
+#   FILE : /ui/src/drumee/builtins/window/analytics/main-website/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee.scss';
+@import '../../skin/index.scss';
+
+.window-analytics-main-website {
+  @import './custom-range';
+  @import './form';
+
+  &__ui {
+    height: 600px;
+    max-height: calc(100vh - 90px);
+    width: 600px;
+    align-items: center;
+    min-width: 195px;    
+    background-color: $core-default-background;
+    left: calc(50vw - 300px);
+    top: 80px;
+    overflow: hidden;
+  }
+
+  &__main {
+    height: 100%;
+    padding: 10px;
+    width: 100%;
+  }
+
+  &__container {
+    align-items: center;
+    height: 100%;
+    max-height: 100px;
+    width: 100%;
+  }
+
+  &__form-elements {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__chart-container {
+    height: 100%;
+    justify-content: center;
+    width: 100%;
+  }
+
+  &__header, &__command {
+    background-color: $core-default-background-alert;
+  }
+
+  // css for empty data message
+  &-empty-data {
+    &__message-container{
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      width: 100%;
+    }
+
+    &__note {
+      &.message {
+        @include typo($size: 18px, $line: 36px, $color: $core-default-text-alert);
+        justify-content: center;
+        width: 100%;
+      }
+    }
+  }
+}

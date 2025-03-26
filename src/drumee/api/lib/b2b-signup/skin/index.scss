@@ -1,0 +1,111 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : src/drumee/builtins/welcome/skin/welcome-main.scss
+#   TYPE : Backoffice User Settings Styles
+# ===================================================================**/
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/vendor.scss';
+
+.api-b2b-signup {
+
+  &__ui{
+    width: 100%;
+    align-items: center;
+  }
+
+  &__main {
+    height: 100%;
+    left: 0;
+    width: 100%; 
+    align-items: center;
+  }
+  & .box, & .widget {
+    margin: 0px;
+  }
+
+  &__form_wrapper {
+    max-width: 350px;
+    align-items: center;
+    margin:auto;
+    font-size:16px;
+  }
+
+  & div[data-state='closed'] {
+    display: none !important;
+  }
+  & div[data-state='open'] {
+    display: flex !important;
+  }
+
+  & .input-wrapper {
+    padding: 2px;
+    width: 250px;
+    height: 46px;
+    border: 1px solid #89929e;
+    box-sizing: border-box;
+    border-radius: 6px;
+    margin-bottom: 18px;
+  }
+
+  & .input-icon-prefix{
+    width: 18px;
+    margin: 0px 9px 0px 10px;
+    color: #89929E;
+  }
+
+  & .entry-reminder__main{
+    height: 100%;
+  }
+
+  & .entry-reminder__component{
+    flex:1;
+    & .note-input{
+      border: 0px;
+      height: 100%;
+      flex:1;
+      &:focus{
+        border: 0px;
+        outline: none;
+      }
+    }
+  }
+
+  & .entry-reminder__ui {
+    width: 100%;
+  }
+  & .entry-reminder__input-wrap {
+    width: 100%;
+  }
+
+
+  & .action-btn {
+    width: 250px;
+    background: #18A3AC;
+    border-radius: 6px;
+    height: 45px;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 18px;
+    line-height: 28px;
+    cursor: pointer;
+  }
+
+  & .api__error-wrapper{
+    color:#EA4D44;
+  }
+  & .api__success-msg-wrapper {
+    align-items: center;
+  }
+  &__info_wrapper-icon{
+    color: #18AC72;
+    height: 38px;
+    margin: 20px 0px !important;;
+  }
+  & .api__success-message {
+    margin: auto;
+    @include typo($color:$core-default-text-color, $size: 18px);// $line:);
+   // font-size: 18px;
+  }
+}

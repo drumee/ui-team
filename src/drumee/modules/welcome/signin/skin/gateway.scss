@@ -1,0 +1,71 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/modules/welcome/signin/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+
+@import '../../../../skin/mixins/drumee.scss';
+
+.welcome-signin-gateway {
+  &__title{
+    align-items: center;
+    justify-content: center;
+    @include typo($size: 28px, $line: 28px,$weight:400, $color: $core-default-text-reverse);     
+    &[data-device="mobile"]{
+      .drumee-text{
+        text-align: center;
+      }
+    }
+ 
+  }
+
+  &__icons {
+    display: grid;
+    grid-template-rows: 50px;
+    grid-gap: .7rem;
+    color: $white-f7;
+    &.c-3{
+      grid-template-columns: 50px 50px 50px;
+    }
+    &.c-1{
+      grid-template-columns:  50px ;
+    }
+  }
+  &__buttons {
+    align-content: center;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    &[data-device="mobile"]{
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+  &__button {
+    width: 330px;
+    height: 220px;
+    align-items: center;
+    background-color: #393F9D;
+    margin: 20px;
+    border-radius: 13px;
+    justify-content: center;
+    cursor: pointer;
+  }
+  &__text{
+    margin-top: 35px;
+    &.company{
+      @include typo($size: 24px, $line: 28px,$weight:400, $color: #FCC101);      
+    }
+    &.personal{
+      @include typo($size: 24px, $line: 28px,$weight:400, $color: #48DEB7);      
+    }
+  }
+  &__icon {
+    width: 100%;
+    height: 100%;
+    &.icon-2{
+      top:-10px;
+    }
+  }
+
+}

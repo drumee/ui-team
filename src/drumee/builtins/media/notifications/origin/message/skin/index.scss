@@ -1,0 +1,43 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/media/notifications/origin/message/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.notification-message{
+  &__ui{
+    //min-height: 20px;
+    width:159px;
+    //background-color:#ECEDEE;
+    border-radius:2px;
+    margin-left: 15px;
+    padding-bottom: 2px;
+    padding-top:2px;
+    height:20px;
+    min-height:25px;
+    cursor: pointer;
+  }
+  &__hubname{
+    max-width:100px;
+    margin-left:36px;
+    margin-right:3px;
+    @include typo($size:11px,$line:12px,$weight:400,$color:$core-secondary-text-color);//#4A90E2);
+    @include overflow-text();
+  }
+  &__count{
+    border-radius:2px;
+    //border: 1px solid gray;
+    @include typo($size:11px,$line:12px,$weight:400,$color:$core-secondary-text-color);//#4A90E2);
+    padding: 1px 1px;
+  }
+  &__main{
+    width:175px;
+    background-color: inherit;
+    max-height: 300px;
+    align-items: center;
+  }
+  &__container{
+    background-color: inherit;
+  }
+}

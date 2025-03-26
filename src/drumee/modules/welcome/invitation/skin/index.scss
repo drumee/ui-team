@@ -1,0 +1,18 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/modules/welcome/invitation/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.invitation-{
+  &__ui{
+    background-color: inherit;
+  }
+  &__main{
+    background-color: inherit;
+  }
+  &__container{
+    background-color: inherit;
+  }
+}

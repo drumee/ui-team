@@ -1,0 +1,54 @@
+/* ==========================================================
+ * XIA SPRITES
+ * ========================================================== */
+
+$icons-spacing: 5px;
+
+@import "icons/*.png";
+@include all-icons-sprites;
+
+$backgrounds-spacing: 5px;
+
+@import "backgrounds/*.png";
+@include all-backgrounds-sprites;
+
+@import "logo/*.png";
+@include all-logo-sprites;
+
+.icons-flag{
+    padding-left: 26px !important;
+    height:100%;
+    margin-top: 16px !important;
+}
+
+
+.drumee-smiley{
+    @extend %btn-circle-big;
+    @include button-base($bgcolor:$xia-bgcolor-base, $light:left, $color:$xia-btn-bg-color);
+    font-size:75px !important;
+}
+
+.rotable {
+    font: 26px Monaco, MonoSpace;
+    height: 200px;
+    position: absolute;
+    width: 20px;
+    left: 0;
+    top: 0;
+    transform-origin: bottom center;
+}
+
+.smiley{
+    min-height:backgrounds-sprite-height(smiley-big);
+    min-width:backgrounds-sprite-width(smiley-big);
+    &[data-role=info]{
+	min-height:backgrounds-sprite-height(smiley-big);
+	min-width:backgrounds-sprite-width(smiley-big);
+	@extend .backgrounds-smiley-big;
+    }
+    &[data-role=error]{
+	min-height:backgrounds-sprite-height(error-big) + 2px;
+	width:backgrounds-sprite-width(error-big) + 2px;
+	@extend .backgrounds-error-big;
+    }
+}

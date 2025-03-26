@@ -1,0 +1,210 @@
+/* ==================================================================== *
+*   FILE : src/drumee/skin/mixins/vendor
+*   TYPE : vendor prefixes for sass filess
+* ==================================================================== */
+
+@mixin placeholder($color) {
+  &::-webkit-input-placeholder {
+    color: $color;
+  }
+  &::-moz-placeholder {
+    color: $color;
+  }
+  &:-ms-input-placeholder {
+    color: $color;
+  }
+  &:-moz-placeholder {
+    color: $color;
+  }
+}
+
+@mixin vendor($property, $val){
+  -webkit-#{$property}: $val;
+  -moz-#{$property}: $val;
+  -ms-#{$property}: $val;
+  #{$property}: $val;
+}
+
+@mixin vendor-ad($property-out, $property, $val){
+  #{$property-out}: -webkit-#{$property} ($val);
+  #{$property-out}: -moz-#{$property} ($val);
+  #{$property-out}: -ms-#{$property} ($val);
+  #{$property-out}: #{$property} ($val);
+}
+
+@mixin rotate($val){
+  -webkit-transform: rotate($val);
+  -moz-transform: rotate($val);
+  -ms-transform: rotate($val);
+  transform: rotate($val);
+}
+
+@mixin gradient($gradient...) {
+  background: -moz-linear-gradient($gradient);
+  background: -webkit-linear-gradient($gradient);
+  background: linear-gradient($gradient);
+}
+@mixin gradient_r($gradient...) {
+  background: -moz-radial-gradient($gradient);
+  background: -webkit-radial-gradient($gradient);
+  background: radial-gradient($gradient);
+}
+
+@mixin drumee-gradient {
+  background: #004f64; 
+  /*background: -moz-linear-gradient(left, $top-bar-left 0%, $top-bar-left 15%, $top-bar-left 31%, $top-bar-right 100%);
+  background: -webkit-linear-gradient(left, $top-bar-left 0%, $top-bar-left 15%, $top-bar-left 31%, $top-bar-right 100%);
+  background: linear-gradient(to right, $top-bar-left 0%, $top-bar-left 15%, $top-bar-left 31%, $top-bar-right 100%);*/
+}
+
+@mixin drumee-box-shadow-1 {
+  box-shadow: 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
+}
+// @mixin placeholder-prop($property, $val) {
+//   &::-webkit-input-placeholder {
+//     $property: $val;
+//   }
+//   &::-moz-placeholder {
+//     $property: $val;
+//   }
+//   &:-ms-input-placeholder {
+//     $property: $val;
+//   }
+//   &:-moz-placeholder {
+//     $property: $val;
+//   }
+//   &:placeholder {
+//     $property: $val;
+//   }
+// }
+
+@mixin justify($prop, $state:"!important") {
+  @if $state=="!important" {
+    display: flex!important;
+    -webkit-justify-content: $prop!important;
+    justify-content: $prop!important;
+  }
+  @else {
+    display: flex;
+    -webkit-justify-content: $prop;
+    justify-content: $prop;
+  }
+}
+
+@mixin align-content($prop, $state:"!important") {
+  @if $state=="!important" {
+    display: flex!important;
+    -webkit-align-content: $prop!important;
+    align-content: $prop!important;
+  }
+  @else {
+    display: flex;
+    -webkit-align-content: $prop;
+    align-content: $prop;
+  }
+}
+
+@mixin align-items($prop, $state:"!important") {
+  @if $state=="!important" {
+    display: flex!important;
+    -webkit-align-items: $prop!important;
+    align-items: $prop!important;
+  }
+  @else {
+    display: flex;
+    -webkit-align-items: $prop;
+    align-items: $prop;
+  }
+}
+
+@mixin margin-list($direction, $num, $pref:'') {
+  @for $i from 0 through $num {
+    @if $direction == margin-top           { .mt-#{$i} { #{$direction}: #{$i}px !important; } }
+    @else if $direction == margin-bottom   { .mb-#{$i} { #{$direction}: #{$i}px !important; } }
+    @else if $direction == margin-left     { .ml-#{$i} { #{$direction}: #{$i}px !important; } }
+    @else if $direction == margin-right    { .mr-#{$i} { #{$direction}: #{$i}px !important; } }
+    @else if $direction == margin-hor      { .mx-#{$i} { margin-left: #{$i}px !important; margin-right: #{$i}px !important; } }
+    @else if $direction == margin-vert     { .my-#{$i} { margin-top: #{$i}px !important; margin-bottom: #{$i}px !important; } }
+    @else if $direction == padding-top     { .pt-#{$i} { #{$direction}: #{$i}px !important; } }
+    @else if $direction == padding-hor     { .px-#{$i} { padding-left: #{$i}px !important; padding-right: #{$i}px !important; } }
+    @else if $direction == padding-vert    { .py-#{$i} { padding-top: #{$i}px !important; padding-bottom: #{$i}px !important; } }
+    @else if $direction == padding-bottom  { .pb-#{$i} { #{$direction}: #{$i}px !important; } }
+    @else if $direction == padding-left    { .pl-#{$i} { #{$direction}: #{$i}px !important; } }
+    @else if $direction == padding-right   { .pr-#{$i} { #{$direction}: #{$i}px !important; } }
+    @else if $direction == margin          { .m-#{$i} { #{$direction}: #{$i}px !important; } }
+    @else if $direction == padding         { .p-#{$i} { #{$direction}: #{$i}px !important; } }
+  }
+}
+
+@mixin margin-list-md($direction, $num, $pref:'') {
+  @media (max-width: 991px) {
+    @for $i from 0 through $num {
+      @if $direction == margin-top           { .mt-md-#{$i} { #{$direction}: #{$i}px !important; } }
+      @else if $direction == margin-bottom   { .mb-md-#{$i} { #{$direction}: #{$i}px !important; } }
+      @else if $direction == margin-left     { .ml-md-#{$i} { #{$direction}: #{$i}px !important; } }
+      @else if $direction == margin-right    { .mr-md-#{$i} { #{$direction}: #{$i}px !important; } }
+      @else if $direction == margin-hor      { .mx-md-#{$i} { margin-left: #{$i}px !important; margin-right: #{$i}px !important; } }
+      @else if $direction == margin-vert     { .my-md-#{$i} { margin-top: #{$i}px !important; margin-bottom: #{$i}px !important; } }
+      @else if $direction == padding-top     { .pt-md-#{$i} { #{$direction}: #{$i}px !important; } }
+      @else if $direction == padding-hor     { .px-md-#{$i} { padding-left: #{$i}px !important; padding-right: #{$i}px !important; } }
+      @else if $direction == padding-vert    { .py-md-#{$i} { padding-top: #{$i}px !important; padding-bottom: #{$i}px !important; } }
+      @else if $direction == padding-bottom  { .pb-md-#{$i} { #{$direction}: #{$i}px !important; } }
+      @else if $direction == padding-left    { .pl-md-#{$i} { #{$direction}: #{$i}px !important; } }
+      @else if $direction == padding-right   { .pr-md-#{$i} { #{$direction}: #{$i}px !important; } }
+      @else if $direction == margin          { .m-md-#{$i} { #{$direction}: #{$i}px !important; } }
+      @else if $direction == padding         { .p-md-#{$i} { #{$direction}: #{$i}px !important; } }
+    }
+  }
+}
+
+@mixin z-index($num) {
+  @for $i from 0 through $num {
+    .z#{$i} { z-index: #{$i}; }
+  }
+}
+
+
+@mixin arrow-position($apos, $btnnum, $spacing: between, $blockwidth: 218px, $asize: 9.9px, $adir: "left", $btnsize: 30px, $buttonblockwidth: 212px) {
+  $const: 1.5px + (($blockwidth - $buttonblockwidth)/2);
+  @if $spacing == between { 
+    &:before {
+      //#{$adir}: $const + (($blockwidth - ($btnsize * $btnnum))/($btnnum - 1)) + ($btnsize * $apos) + (($btnsize - $asize) / 2);  
+      $btnBetweenSpace: ($buttonblockwidth - ($btnsize * $btnnum))/($btnnum - 1);
+      $btnIsnideSpace: ($btnsize - $asize) / 2; 
+      //$btnMarginWidth = ($btnsize * ($apos - 1)
+      $marginLeft: ($btnsize * ($apos - 1)) + ($btnBetweenSpace * ($apos - 1)) + $btnIsnideSpace;
+      #{$adir}: $const + $marginLeft;
+      // padding: $const;
+      // margin: $marginLeft;
+    }
+  } 
+  @else if $spacing == evenly {
+    &:before {
+      //#{$adir}: $const + (($blockwidth - ($btnsize * $btnnum))/($btnnum - 1)) + ($btnsize * $apos) + (($btnsize - $asize) / 2);  
+      $btnBetweenSpace: ($blockwidth - ($btnsize * $btnnum))/($btnnum + 1);
+      $btnIsnideSpace: ($btnsize - $asize) / 2; 
+      //$btnMarginWidth = ($btnsize * ($apos - 1)
+      $marginLeft: ($btnsize * ($apos - 1)) + ($btnBetweenSpace * ($apos - 1)) + $btnIsnideSpace;
+      #{$adir}: $const + $marginLeft;
+    }
+  } 
+}
+
+@mixin placeholder-input {
+  &::-webkit-input-placeholder {@content};
+  &:-moz-placeholder           {@content};
+  &::-moz-placeholder          {@content};
+  &:-ms-input-placeholder      {@content};
+}
+
+@mixin overflow-text {
+  white-space: nowrap;
+  overflow: hidden;
+  .note-content {
+    overflow: hidden;
+  }
+  .root-node {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

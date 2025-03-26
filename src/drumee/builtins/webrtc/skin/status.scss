@@ -1,0 +1,33 @@
+&__status {
+  position: absolute;
+  width: 100%;
+  z-index: 1;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  margin-right: auto;
+  margin-left: auto;
+  margin-top:226px;
+  @include typo($color: $default-text-reverse, $weight: 300, $line: 19px, $size: 16px); //$egrey-89 $weight: 400, $default-text-color
+  &[data-state="connect"]{
+    color: $default-text-reverse;
+  }
+//  bottom: 88px;//68px;
+}
+
+&__peer-container {
+  width: 100%;
+  position: absolute;
+  height: 100%;
+  top: 0;
+  justify-content: center;
+  align-items: center;
+  .message-text {
+    position: absolute;
+    padding: 10px;
+    background-color: $core-default-transparent-black;
+    margin: 10px;
+    border-radius: $default-border-radius; //3px;
+    @include typo($color: $core-default-text-reverse, $weight: 400, $line: 20px, $size: 16px);
+  }
+}

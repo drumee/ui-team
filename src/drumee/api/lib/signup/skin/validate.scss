@@ -1,0 +1,24 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : src/drumee/builtins/welcome/skin/welcome-main.scss
+#   TYPE : Backoffice User Settings Styles
+# ===================================================================**/
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/vendor.scss';
+.welcome-signup{
+  &__main--container {
+    &.validate{
+      max-width: 600px;
+      transform: translateY(-50%);
+      height:460px;
+      &[data-device="mobile"]{
+        top:28px;
+        height:394px;
+        width:320px;
+        left:auto;
+        right:auto;
+      }
+    }
+  }
+}

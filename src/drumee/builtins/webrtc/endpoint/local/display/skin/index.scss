@@ -1,0 +1,21 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/player/endpoint/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.webrtc-local-display{
+  &__ui{
+    width: 100%;
+    height: 100%;
+    padding: 10px;    
+    overflow: hidden;
+    border-radius : $default-border-radius;
+  }
+  &__main{
+    height: 100%;
+    width: 100%;
+    
+  }
+}

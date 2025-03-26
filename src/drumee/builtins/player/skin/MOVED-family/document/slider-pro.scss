@@ -1,0 +1,82 @@
+
+.sp-horizontal {
+  .sp-arrows {
+    width: 100%;
+    left: 0;
+    top: 0;
+    height: 100%;
+    margin: 0;
+  }
+  .sp-full-screen-button {
+    opacity: 1;
+    left: 101px;
+    right: auto;
+    top: -25px;
+    -webkit-transform: none;
+    -ms-transform: none;
+    transform: none;
+    &:before {
+      content: " ";
+      background-image: url("https://fonts.drumee.name/svg/with-classes/desktop_fullview--grey.svg");
+      width: 12px;
+      height: 12px;
+      display: block;
+    }
+  }
+  .sp-next-arrow, .sp-previous-arrow {
+    // right: 0;
+    // left: auto;
+    width: 40px;
+    top: 0;
+    // background: rgba(255,255,255,0.2);
+    background-color: transparent;
+    transition: background-color .5s;
+    height: 100%;
+    &:hover {
+      background-color: rgba(255,255,255,0.2);
+    }
+    &:before, &:after {
+      width: 24px;
+      height: 4px;
+      border-radius: 4px;
+    }
+    &:before {
+      left: 20%;
+      top: 50%;
+      margin-top: -7px;
+      -webkit-transform: rotate(-45deg);
+      -ms-transform: rotate(-45deg);
+      transform: rotate(-45deg);
+    }
+    &:after {
+      left: 20%;
+      top: 50%;
+      margin-top: 8px;
+      -webkit-transform: rotate(45deg);
+      -ms-transform: rotate(45deg);
+      transform: rotate(45deg);
+    }
+  }
+  .sp-next-arrow {
+    right: 0;
+    left: auto;
+  }
+  .sp-previous-arrow {
+    right: auto;
+    left: 0;
+  }
+  .sp-fade-arrows {
+    opacity: 1;
+  }
+}
+
+.sp-thumbnails {
+  overflow: hidden;
+}
+.sp-thumbnail-container{
+  img{
+    width: 100% !important; 
+    height: 100% !important;
+    margin: 0 !important;
+  }
+}

@@ -1,0 +1,147 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : src/drumee/builtins/window/transferbox/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+
+@import 'mixins/drumee';
+
+.window-transfer-box {
+  @import './action-menu';
+  @import './topbar';
+  @import './model';
+  
+  &__ui {
+    background-color: inherit;
+  }
+
+  &__main {
+    background-color:$core-default-background ;// $white ;
+  }
+
+  &__container {
+    background-color: inherit;
+  }
+
+  &__body {
+    height    : 100% !important;
+    margin    : 0 auto;
+    min-height: auto !important;
+    min-width : auto !important;
+    overflow  : hidden;
+    width     : 100% !important;
+
+    &.window__body {
+      align-items: start !important;
+      padding: 0;
+      border-radius:$default-border-radius-right;
+    }
+  }
+
+  &__progress {
+    position: absolute;
+    width : 200px;
+    height : 200px;
+    left: calc(50% - 100px);
+    top: calc(50% - 100px);
+  }
+
+  &__page_dropdown {
+    cursor: pointer;
+  }
+
+  &__header {
+    background-color: $default-background-window-header;
+    border-bottom: none;
+  }
+
+  &-topbar {
+    &__content {
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      width: 100%;
+
+      & .title {
+        text-align: center;
+        @include typo($size: 18px, $line: 19px, $color: $core-default-text-reverse);//$size: 17px,
+
+        & .note-content {
+          width: 100%;
+
+          & .root-node {
+            @include overflow-text;
+            text-overflow: ellipsis;
+          }
+        }
+      }
+    }
+
+    &__control {
+      position: relative;
+      right: 0px;
+    }
+  }
+
+  &__page-dropdown {
+    width: 180px;
+  }
+
+  &__dropdown_main,
+  &__dropdown_container {
+    height: 100%;
+    width: 100%;
+  }
+
+  // customized css for topbar header
+  &[data-size="min"] {
+    & .window-admin-panel {
+      &__page-dropdown {
+        width: 60px;
+      }
+    }
+
+    & .window-admin-panel-topbar {
+      &__content {
+        width: 69%;
+  
+        & .title {
+          align-items: center;
+          height: 100%;
+          overflow: hidden;
+          width: 100%;
+          @include typo($size: 15px, $line: 15px, $color: $core-default-text-reverse);
+  
+          & .note-content {
+            width: 100%;
+  
+            & .root-node {
+              @include overflow-text;
+              text-overflow: ellipsis;
+            }
+          }
+        }
+      }
+    }
+
+    & .widget-dropdown-menu-menu {
+      &__wrapper {
+        & .menu-items {
+          left: 12px;
+          
+          &:before {
+            left: 8px;
+          }
+        }
+      }
+
+      &__input_wrapper {
+        width: 20px;
+
+        & .note-reader {
+          display: none;
+        }
+      }
+    }
+  }
+}

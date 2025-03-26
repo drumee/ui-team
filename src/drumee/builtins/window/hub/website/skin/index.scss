@@ -1,0 +1,138 @@
+@import 'mixins/colors/index.scss';
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/exports.scss';
+@import 'mixins/handles.scss';
+@import 'mixins/utils.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/z-index.scss';
+
+.hub-website{
+  &__ui{
+    width: 940px;
+    height: 620px;
+    padding: 40px 70px;
+    border-radius: 2px;
+    background-color: #fff;
+    margin: auto;
+    box-shadow: 0 0 7px 0 rgba(0,0,0,.14), 0 0 6px 0 #f8fafc, 0 3px 5px 0 rgba(0,0,0,.2);    
+  }
+  &__close{
+    color: #b6bfca;
+    position: absolute;
+    top: 0;
+    right: 0;
+    cursor: pointer;    
+  }
+  &__main{
+    width: 100%;
+    height: 100%;
+  }
+  &__container{
+    &-commands {
+      &[data-state="0"]{
+        opacity: 0.5;
+        pointer-events: none;
+      }
+    }
+    &-input {
+      width: 220px;
+      margin: 0 auto;
+      .input{
+          &[data-status="error"]{
+          border-color: transparent;
+          .input-details{
+            visibility: visible;
+            color: #ff4578;
+          }
+          input{
+            color: #ff4578;
+            border-color: #ff4578;          
+          }
+        }
+        input {
+          padding: 0 2px;
+          border-bottom: 1px solid #ECEDEE;
+          @include typo($line:29px,$size:18px,$weight:400,$color:$egrey-2f);
+          @include placeholder-input {
+            @include typo($line:29px,$size:18px,$weight:400,$color:$egrey-89);
+          }
+        }
+        .input-details{
+          visibility: hidden;
+          position: absolute;
+          top: 33px;
+          @include typo($line:12px,$size:11px,$weight:300,$color:#787b7f);
+        }
+      }
+      .domain{
+        position: absolute;
+        left: 100%;
+        margin-left: 10px;      
+        @include typo($line:24px,$size:18px,$weight:400,$color:#89929E);
+        &:before{
+          content: ".";
+        }
+      }
+    }
+  }
+  &__wrapper {
+    .warning {
+      position: absolute;
+      white-space: nowrap;
+      top: -43px;
+      right: -160px;
+      @include typo($line:21px,$size:16px,$color:#2F2F2F);
+    }
+  }
+  &__title{
+    @include typo($line:48px,$size:36px,$weight:300,$color:$egrey-2f);
+  }
+  &__text{
+    @include typo($line:19px,$size:14px,$weight:300,$color:#4A4A4A);
+    &--enjoyed{
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      background-color: #FA8540;
+      top: -30px;
+      right: -18px;
+      border-radius: 50%;
+      box-shadow: 0 6px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 17px 0 rgba(86, 65, 113, 0.08), 0 2px 16px 0 rgba(194, 185, 203, 0);
+      @include typo($line:13px,$size:10px,$color:white);
+    }
+  }
+  &__builder{
+    cursor: pointer;
+    width: 260px;
+    height: 260px;
+    padding: 38px 38px 38px 38px;
+    border-radius: 2px;
+    box-shadow: 0 5px 7px 1px rgba(63, 79, 117, 0.13), 0 0 14px 0 rgba(86, 65, 113, 0.08), 0 0 13px 0 rgba(194, 185, 203, 0);
+    border: 1px solid rgba(137, 146, 158, 0.2);
+    position: relative;   
+    &:hover{
+      box-shadow: 0 17px 28px 1px rgba(63, 79, 117, 0.13), 0 22px 49px 0 rgba(86, 65, 113, 0.08), 0 16px 32px 0 rgba(194, 185, 203, 0);
+    } 
+    &:after{
+      content: " ";
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 14px;
+      border-radius: 0 0 2px 2px;      
+    }
+    &.from-model{
+      margin-right: 60px;
+      &:after{
+        background-color: #FA8540;
+      }
+    }
+    &.from-scratch{
+      margin-left: 60px;
+      &:after{
+        background-color: #18A3AC;
+      }
+    }
+  }
+}

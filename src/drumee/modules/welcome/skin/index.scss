@@ -1,0 +1,599 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : src/drumee/builtins/welcome/skin/welcome-main.scss
+#   TYPE : Backoffice User Settings Styles
+# ===================================================================**/
+@import '../../../skin/mixins/drumee.scss';
+
+@import './loader.scss'; 
+.welcome-router {
+  @import "./multiple-sessions";
+  &__ui {
+    // background: radial-gradient(109.24% 109.24% at 21.67% 0,rgba(91,115,210,.4) 0,#5b73d2 100%),#879bff;
+    height: calc(40vh + 556px);
+    position: absolute;
+    width: 100%;
+  }
+
+  &__main {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+
+  &__modal {
+    &.wrapper {
+      position: absolute;
+      width: 0;
+      height: 0;
+      left : calc(50% - 300px);
+      top : calc(50% - 190px);
+      overflow: visible;
+
+      &[data-state="open"]{
+        left: 0;
+        top:0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.14)
+      }
+    }
+    &.container{
+      min-height: 380px;
+      width: 600px;
+      border-radius:$default-border-radius;//6px;
+      margin: auto;
+      background-color: $core-default-background; //$ewhite;
+      box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+      .welcome__message{
+        max-width: 273px;
+        @include typo($size:20px,$line:28px)
+      }
+    }
+
+    &.footer {
+      height: 100%;
+      max-height: 120px;
+      padding: 5px;
+      width: 100%;
+    }
+  }
+
+  &__dropdown{
+    width: auto;
+    position: absolute;
+    text-align: left;
+    left : -190px;
+    background-color: $core-default-background ; //#FFFFFF;
+    border-radius: 2px;
+    padding: 5px;
+    justify-content: space-between;
+    @include typo($color: $egrey-78, $size: 11px, $line: 13px, $weight: 300);
+    box-shadow: 0 0 7px 0 rgba(0, 0, 0, 0.14), 0 0 6px 0 #F8FAFC, 0 3px 5px 0 rgba(0, 0, 0, 0.2);
+  }
+
+}
+
+.welcome {
+  &__main {
+    &--container {
+      min-height: 487px;
+      width: 362px;
+      align-items: center;
+      justify-content: start;  
+      margin:10px auto 0px auto;
+
+      &[data-device="mobile"]{
+        width: 310px;
+        margin: -215px auto 0px auto;
+      }
+    }
+  }
+
+  &__entry {
+      width: 100%;
+      padding: 0 0 0 65px; //50px;
+
+    @media (max-width: $small) {
+      @include typo ($color: $core-default-text-color, $size: 14px, $line: 13px, $weight: 300);
+    }
+
+    input {
+      border: none;
+      border-radius:0 6px 6px 0px; //4px;
+      padding:4px 4px 4px 8px; //4px;
+      &::placeholder {
+        @include typo($size: 16px, $line: 18px, $weight: 300, $color:$core-default-text-placeholder); //$color: $egrey-b6);
+      }
+      @media (max-width: $small) {
+        @include typo ($color: $core-default-text-color, $size: 14px, $line: 13px, $weight: 300);
+      }
+    }
+  }
+
+  &__topbar {
+    height: 115px;
+    padding-left:30px;
+    padding-right: 15px;
+    padding-bottom: 0px;
+    padding-top:30px;
+    text-decoration: none;
+
+    &[data-device="mobile"] {
+      padding:20px 0 0 0; 
+      height: 120px;
+      flex-direction: column;
+    }
+
+    @media (max-width: $md)  {
+      flex-direction: column;
+    }
+
+    &-logo {
+      left: 80px;
+      position: absolute;
+
+      &[data-device="mobile"] {
+        width:100%;
+        left: 0;
+        position: relative;
+        padding-bottom:15px;
+      }
+    }
+
+    &__menu-container {
+      &[data-device="mobile"] {
+        justify-content: center;
+        margin-left:20px;
+      }
+    }
+  }
+
+  &__logo {
+    &.image {
+      height: auto;
+      width: 150px;
+      
+      &[data-device="mobile"] {
+        margin-left:auto;
+        margin-right:auto;
+      }
+    }
+    
+    &.text {
+      @include typo($color: $core-default-text-reverse, $size: 14px, $line: 20px, $weight: 300);
+
+      @media (max-width: $tablet) {
+        @include typo($color: $core-default-text-reverse, $size: 11.5px, $line: 20px, $weight: 300);
+      }
+
+      &[data-device="mobile"] {
+        margin-left:auto;
+        margin-right:auto;
+        @include typo($color:$core-default-text-reverse, $size: 10.5px, $line: 20px, $weight: 300);
+      }
+    }
+  }
+
+
+  &__note {
+    &.logo-slogan {
+      justify-content: center;
+      left: 2px;
+      top: 5px;
+      @include typo($size: 13px, $line: 13px, $color: $core-default-text-reverse);
+    }
+  }
+
+  &__title {
+    height: 111px;
+    margin-bottom: 322px;
+    width: 100%;
+    @include typo($color: $core-default-text-reverse, $size: 42px, $line: 52px, $weight: 300);
+
+    .inner {
+      text-align: center;
+      width: 100%; 
+      margin-top:255px;
+    }
+
+    &[data-device="mobile"] {
+      margin-bottom:290px;
+      @include typo($color: $core-default-text-reverse, $size: 26px, $line: 50px, $weight: 400);
+    }
+  }
+
+  &__progress {
+    height: 100%;
+    width: 100%;
+
+    circle {
+      fill: transparent;
+    }
+
+    &svg {
+      height: 44px;
+      width: 44px;
+    }
+
+    &.bg {
+      stroke: $ewhite;
+      stroke-width: 8px;
+      box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    }
+
+    &.fg {
+      stroke-width: 8px;
+      stroke: $egreen-soft;
+    }
+  }
+
+  &__acknowledge {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+
+    &.container{
+      background-color: $core-default-text-reverse;
+      border-radius:$default-border-radius-small;//4px;
+      box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+      height:364px;
+      width: 588px;
+
+      &[data-device=mobile] {
+        height:402px;
+        width:316px;
+      }
+    }
+
+    &.title {
+      text-align: center;
+      width:486px;
+      @include typo($color: $core-default-text-title, $size: 26px, $weight: 300, $line: 33px);
+
+      &[data-device=mobile] {
+        width:316px;
+        @include typo($color: $core-default-text-title, $size: 16px, $weight: 300, $line: 33px);
+      }
+    }
+
+    &.email {
+      margin-top: 26px;
+      text-shadow: 0 2px 4px 0 rgba(0,0,0,0.5);
+      width:208px;
+      @include typo($color:$core-default-text-title, $size:22px, $weight:300, $line:25px);
+
+      &[data-device=mobile] {
+        @include typo($color: $core-default-text-title, $size: 16px, $weight: 300, $line: 33px);
+      }
+    }
+
+    &.button {
+      background-color: $egreen-soft;
+      border-radius: 4px;
+      box-shadow: 0 4px 6px 1px rgba(63,79,117,0.13), 0 0 11px 0 rgba(86,65,113,0.08), 0 0 10px 0 rgba(194,185,203,0);
+      cursor: pointer;
+      height:36px;
+      text-align: center;
+      width:160px;
+      @include typo($color: $core-default-text-reverse, $size: 18px, $weight: 300, $line: 21px);
+
+      &[data-device=mobile] {
+        height:35px;
+        width: 130px;
+        @include typo($color: $core-default-text-reverse, $size: 14px, $weight: 300, $line: 21px);
+      }
+    }
+
+    &.tips {
+      height: 52px;
+      margin: 45px;
+      text-align: center;
+      width: 340px;
+      @include typo($color: $core-default-text-color, $size: 21px, $weight: 300, $line:26px);
+
+      &[data-device=mobile] {
+        @include typo($color:  $core-default-text-color, $size: 16px, $weight: 300, $line: 33px);
+      }
+    }
+  }
+
+  .widget__pw-meter {
+      &.wrapper {
+        border-radius: $default-border-radius-tiny;
+        height: 8px;
+        position: absolute;
+        top: 50px;
+        width: calc(100% - 0px);
+      }
+
+      &.bar-holder {
+        background: linear-gradient(90deg,red,#ff0 50%,green);
+        border-radius: $default-border-radius-tiny;
+        height:8px;
+        overflow: hidden;
+        position: absolute;
+        width: calc(100% - 25px);
+      }
+
+      &.score-limit {
+        border-bottom: 16px solid #18AC72;
+        border-left: 8px solid transparent;
+        border-top: 16px solid #18AC72;
+        border-right: 8px solid transparent;
+        height: 0;
+        position: absolute;
+        top: -12px;
+        width: 0;
+        z-index: 2;
+      }
+
+      &.strength {
+        background-color: $core-default-background;
+        height: 100%;
+        position: absolute;
+        width: 100%;
+      }
+
+      &.info {
+        color: $core-default-icon-reverse;
+        cursor: pointer;
+        height: 18px;
+        position: absolute;
+        right: 0px;
+        top: -4px;
+        width: 18px;
+        z-index: 10;
+
+        .tooltips {
+          border-radius:$default-border-radius;
+          @include typo($size: 16px, $line: 22px, $color: $core-security-text-color);
+          background-color: $core-background-tooltips;//$default-background-tooltips;
+          height: 100px;
+          margin-left: -305px;
+          margin-top: 30px;
+          padding: 18px;
+          text-align: center;
+          width: 330px;
+        }
+      }
+  }
+
+  &__row {
+    border-radius:$default-border-radius;
+    background-color:$core-default-background;
+    height: 55px;
+    margin: 10px 0;   
+    width: 100%;
+
+    // &[data-device="mobile"] {
+    //   height:44px;
+    //   margin:7px 0px;
+    //   top:-15px;
+    //   width:280px;
+    // }
+
+    &[data-error="1"] {
+      border: 1px solid $core-default-border-error;//$default-border-error;
+      border-radius: $default-border-radius;
+    }
+
+    &.go {
+      align-items: center;
+      background-color: $egreen-soft;
+      border-bottom-right-radius:  4px;
+      border-top-right-radius: 4px;
+      cursor: pointer;
+      justify-content: center;
+      opacity: 0.2;
+      pointer-events: none;
+      @include typo($color: $core-default-text-reverse, $size: 18px, $line: 21px, $weight: 300);
+
+      &[data-state="1"] {
+        opacity: 1;
+        pointer-events:auto;
+      }
+
+      &[data-error="1"] {
+        background-color: transparent;
+        border: 1px solid $core-default-border-error;
+        opacity: 1;
+      }
+    }
+
+    .entry-reminder__label {
+      &[data-state="1"] {
+        left:-51px;
+        top:33px;
+        @include typo($color: $eorange-sunset, $size: 18px, $line: 9px, $weight: 300);
+      }
+    }
+  }
+
+  &__message {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    width: 100%;
+    @include typo($color: $core-default-text-color, $size: 22px, $line: 24px);
+  }
+  
+  &__button {
+    @include typo($color: $core-default-text-reverse, $size: 18px, $line: 21px, $weight: 300);
+
+    &.go {
+  /*    border: 1px solid $white-f6;
+      box-shadow: 0 4px 6px 1px rgba(63,79,117,0.13), 0 0 11px 0 rgba(86,65,113,0.08), 0 0 10px 0 rgba(194,185,203,0);
+      color: $egrey-89;
+      cursor:pointer;
+      height: 36px;
+      width: 160px;*/
+      height: 35px;
+      cursor:pointer;
+      border-radius: $default-border-radius;
+      width: 110px;
+      border:1px solid $btn-rollback-border;
+      @include typo($size:16px, $color:$btn-rollback-text, $line:21px);
+      &:hover{
+        border:2px solid $btn-rollback-border-hover;
+        color: $btn-rollback-text-hover;   
+      }
+    }
+  }
+
+  &__icon {
+    color: $core-default-icon-neutral;
+    height: 24px;
+    margin:12px 20px;
+    position: absolute;
+    width: 24px;
+
+    &[data-device="mobile"] {
+      height:20px;
+      width:20px;
+    }
+
+    &.enveloppe {
+      opacity:0.4;
+    }
+
+    &.lock {
+      padding:2.5px;
+      svg {
+        fill:$egrey-2f;//#2f2f2f ;
+      }
+    }
+  }
+
+  &__error-wrapper {
+    height: 40px;
+    width: 300px;
+
+    &[data-error="0"] {
+      display: none;
+    }
+  }
+
+  &__error-message {
+    padding-left: 25px;
+    top:15px;
+    white-space: nowrap;
+    width: 500px;
+    @include typo($color: $core-default-text-error , $size: 18px, $line: 20px, $weight: 400);
+
+    &[data-device="mobile"] {
+      padding-left:66px;
+      top:-12px;
+      @include typo($color: $core-default-text-error , $size: 15px, $line: 20px, $weight: 400);
+    }
+
+    &[data-error="0"] {
+      display: none;
+    }
+  } 
+
+  &__hello {
+    margin: 195px auto auto auto;
+  }
+
+  &__footer {
+    margin: 120px auto auto auto;
+  }
+
+  &__privacy {
+    cursor: pointer;
+    text-decoration: underline;
+    @include typo($color: $blue-midnight, $size: 13px, $line: 0px, $weight: 300);
+
+    @media (max-width: $tablet) {
+      top:-15px;
+      @include typo($color: $blue-midnight, $size: 11px, $line: 21px, $weight: 300);
+    }
+
+    &[data-device="mobile"]{
+      @include typo($color: $blue-midnight, $size: 10px, $line: 22px, $weight: 300);
+    }
+
+    &[data-tab="hello"] {
+      color:$blue-midnight;
+    }
+
+    &[data-error="1"] {
+      text-decoration: none;
+      top:5px;
+      @include typo($color: $core-default-border-error , $size: 20px, $line: 0px, $weight: 300); //$red-brick
+
+      &[data-device="mobile"] {
+        margin-left:auto;
+        margin-right:auto;
+        top:4px;
+        @include typo($color: $core-default-border-error , $size: 11px, $line: 22px, $weight: 500);//$red-brick
+      }
+    }    
+  }
+
+  &__helper {
+    @include typo($color: $ewhite, $size: 16px, $line: 19px, $weight: 300);
+
+    &[data-device="mobile"] {
+      padding-left: 20px;
+      padding-right: 20px;
+      @include typo($color: $ewhite, $size: 14px, $line: 13px, $weight: 300);
+    }
+  }
+
+  &__requirements {
+    &.trigger {
+      color: $egrey-2f;
+      height: 14px;
+      width: 14px;
+    }
+
+    &.menu-topic {
+      margin-left : 10px;
+    
+      .menu-trigger {
+        margin: auto;
+      }
+
+      .menu-items {
+        background-color:$core-default-background;  // $white;
+        border-radius: $default-border-radius-small;//4px;
+        box-shadow: 0 2px 5px 1px rgba(0,0,0,0.09), 0 3px 5px 0 rgba(0,0,0,0.08), 0 3px 9px 0 rgba(194,185,203,0);
+        cursor: pointer; 
+        margin-top: -55px;
+        padding: 5px;
+
+        &::before {
+          background-color: $core-default-background;  //$ewhite;
+          content: "";
+          height: 8px;
+          left: -4px;
+          position: absolute;
+          top: calc(50% - 4px);
+          transform: rotate(45deg);
+          width: 8px;
+        }
+      }
+    }
+
+    &.item {
+      &--red {
+        @include typo($color: $eorange-sunset, $size: 10px, $line: 13px, $weight: 300);
+      }
+
+      &--green {
+        @include typo($color: $egreen, $size: 10px, $line: 13px, $weight: 300);
+      }
+    }
+  }
+}
+
+.welcome, .desk{
+  @import './supported-browsers.scss'; 
+}

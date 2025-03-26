@@ -1,0 +1,28 @@
+
+.player-document{
+  &__{
+    overflow: hidden;
+  }
+  &__main {
+    .image-viewer{
+      margin: 0 auto;
+    }
+    //@import "slider-pro.scss";
+  }
+  &__control{
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    right: 20px;
+    bottom: 60px;
+    .play-btn {
+      border-radius: 50%;
+      cursor: pointer;
+      background-color: rgba(255,255,255,0.8);
+      color: #18A3AC;
+      &[data-state="1"]{
+        padding: 10px !important;
+      }
+    }
+  }
+}

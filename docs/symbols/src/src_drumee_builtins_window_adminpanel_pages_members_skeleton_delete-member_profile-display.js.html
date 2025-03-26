@@ -1,0 +1,47 @@
+<html><head><meta http-equiv="content-type" content="text/html; charset=utf-8"> <style>
+	.KEYW {color: #933;}
+	.COMM {color: #bbb; font-style: italic;}
+	.NUMB {color: #393;}
+	.STRN {color: #393;}
+	.REGX {color: #339;}
+	.line {border-right: 1px dotted #666; color: #666; font-style: normal;}
+	</style></head><body><pre><span class='line'>  1</span> <span class="COMM">// ================================================================== *</span><span class="WHIT">
+<span class='line'>  2</span> </span><span class="COMM">//   Copyright Xialia.com  2011-2020</span><span class="WHIT">
+<span class='line'>  3</span> </span><span class="COMM">//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/skeleton/delete-member/profile-display.coffee</span><span class="WHIT">
+<span class='line'>  4</span> </span><span class="COMM">//   TYPE : Skeleton</span><span class="WHIT">
+<span class='line'>  5</span> </span><span class="COMM">// ===================================================================**/</span><span class="WHIT">
+<span class='line'>  6</span> 
+<span class='line'>  7</span> </span><span class="KEYW">function</span><span class="WHIT"> </span><span class="NAME">__skl_member_delete_profile_display</span><span class="WHIT"> </span><span class="PUNC">(</span><span class="NAME">_ui_</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>  8</span> </span><span class="WHIT">  </span><span class="KEYW">const</span><span class="WHIT"> </span><span class="NAME">data</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">_ui_.mget</span><span class="PUNC">(</span><span class="NAME">_a.member</span><span class="PUNC">)</span><span class="WHIT">
+<span class='line'>  9</span> 
+<span class='line'> 10</span> </span><span class="WHIT">  </span><span class="KEYW">const</span><span class="WHIT"> </span><span class="NAME">confirmProfileFig</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="TOKN">`</span><span class="NAME">$</span><span class="PUNC">{</span><span class="NAME">_ui_.fig.family</span><span class="PUNC">}</span><span class="PUNC">-</span><span class="KEYW">delete</span><span class="TOKN">`</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 11</span> 
+<span class='line'> 12</span> </span><span class="WHIT">  </span><span class="KEYW">const</span><span class="WHIT"> </span><span class="NAME">firstname</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">data</span><span class="PUNC">[</span><span class="NAME">_a.firstname</span><span class="PUNC">]</span><span class="WHIT"> </span><span class="PUNC">||</span><span class="WHIT"> </span><span class="STRN">''</span><span class="WHIT">
+<span class='line'> 13</span> </span><span class="WHIT">  </span><span class="KEYW">const</span><span class="WHIT"> </span><span class="NAME">lastname</span><span class="WHIT">  </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">data</span><span class="PUNC">[</span><span class="NAME">_a.lastname</span><span class="PUNC">]</span><span class="WHIT"> </span><span class="PUNC">||</span><span class="WHIT"> </span><span class="STRN">''</span><span class="WHIT">
+<span class='line'> 14</span> </span><span class="WHIT">  </span><span class="KEYW">const</span><span class="WHIT"> </span><span class="NAME">fullname</span><span class="WHIT">  </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">data</span><span class="PUNC">[</span><span class="NAME">_a.fullname</span><span class="PUNC">]</span><span class="WHIT"> </span><span class="PUNC">||</span><span class="WHIT"> </span><span class="PUNC">(</span><span class="NAME">firstname</span><span class="WHIT"> </span><span class="PUNC">+</span><span class="WHIT"> </span><span class="STRN">' '</span><span class="WHIT"> </span><span class="PUNC">+</span><span class="WHIT"> </span><span class="NAME">lastname</span><span class="PUNC">)</span><span class="WHIT">
+<span class='line'> 15</span> 
+<span class='line'> 16</span> </span><span class="WHIT">  </span><span class="KEYW">const</span><span class="WHIT"> </span><span class="NAME">profile_icon</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">Skeletons.UserProfile</span><span class="PUNC">(</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 17</span> </span><span class="WHIT">    </span><span class="NAME">className</span><span class="WHIT"> </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="TOKN">`</span><span class="NAME">$</span><span class="PUNC">{</span><span class="NAME">confirmProfileFig</span><span class="PUNC">}</span><span class="NAME">__profile</span><span class="WHIT"> </span><span class="NAME">avatar</span><span class="TOKN">`</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 18</span> </span><span class="WHIT">    </span><span class="NAME">id</span><span class="WHIT">        </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="NAME">data</span><span class="PUNC">[</span><span class="STRN">'drumate_id'</span><span class="PUNC">]</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 19</span> </span><span class="WHIT">    </span><span class="NAME">firstname</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 20</span> </span><span class="WHIT">    </span><span class="NAME">lastname</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 21</span> </span><span class="WHIT">    </span><span class="NAME">fullname</span><span class="WHIT">
+<span class='line'> 22</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 23</span> 
+<span class='line'> 24</span> </span><span class="WHIT">  </span><span class="KEYW">const</span><span class="WHIT"> </span><span class="NAME">a</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">Skeletons.Box.X</span><span class="PUNC">(</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 25</span> </span><span class="WHIT">    </span><span class="NAME">className</span><span class="WHIT">   </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="TOKN">`</span><span class="NAME">$</span><span class="PUNC">{</span><span class="NAME">confirmProfileFig</span><span class="PUNC">}</span><span class="NAME">__wrapper</span><span class="WHIT"> </span><span class="NAME">profile</span><span class="TOKN">`</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 26</span> </span><span class="WHIT">    </span><span class="NAME">debug</span><span class="WHIT">       </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="NAME">__filename</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 27</span> </span><span class="WHIT">    </span><span class="NAME">kids</span><span class="WHIT">        </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="PUNC">[</span><span class="WHIT">
+<span class='line'> 28</span> </span><span class="WHIT">      </span><span class="NAME">profile_icon</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 29</span> </span><span class="WHIT">      
+<span class='line'> 30</span>       </span><span class="NAME">Skeletons.Note</span><span class="PUNC">(</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 31</span> </span><span class="WHIT">        </span><span class="NAME">className</span><span class="WHIT"> </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="TOKN">`</span><span class="NAME">$</span><span class="PUNC">{</span><span class="NAME">confirmProfileFig</span><span class="PUNC">}</span><span class="NAME">__note</span><span class="WHIT"> </span><span class="NAME">fullname</span><span class="TOKN">`</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 32</span> </span><span class="WHIT">        </span><span class="NAME">content</span><span class="WHIT">   </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="NAME">fullname</span><span class="WHIT">
+<span class='line'> 33</span> </span><span class="WHIT">      </span><span class="PUNC">}</span><span class="PUNC">)</span><span class="WHIT">
+<span class='line'> 34</span> </span><span class="WHIT">    </span><span class="PUNC">]</span><span class="WHIT">
+<span class='line'> 35</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 36</span> 
+<span class='line'> 37</span> </span><span class="WHIT">  </span><span class="KEYW">return</span><span class="WHIT"> </span><span class="NAME">a</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 38</span> </span><span class="PUNC">}</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 39</span> 
+<span class='line'> 40</span> </span><span class="NAME">export</span><span class="WHIT"> </span><span class="KEYW">default</span><span class="WHIT"> </span><span class="NAME">__skl_member_delete_profile_display</span><span class="PUNC">;</span></pre></body></html>

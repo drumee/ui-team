@@ -1,0 +1,113 @@
+@import 'mixins/drumee';
+
+&-menu {
+  &__dropdown{
+    left: 20px;
+    top: 1px;
+  }
+
+  &__wrapper {
+    &[data-state="1"] {
+      & .trigger-icon {
+        color: $bigchat-default-icon-active;
+      }
+    }
+
+    & .menu-topic-items {
+      background-color: $bigchat-default-background; 
+      border-radius:$default-border-radius;
+      box-shadow: $drumee-container-dropdown;
+      margin-top: 0px;
+      min-width: 162px;
+      &__wrapper {
+        border-radius:$default-border-radius;
+        left: -179px;
+        padding: 10px;
+        top: 31px  !important;
+      }
+      
+      &:before {
+        background-color: $bigchat-default-background;     
+        box-shadow:$drumee-container-before;
+        content: "";
+        height: 10px;
+        position: absolute;
+        right: 8px;
+        top: -6px;
+        transform: rotate(45deg);
+        width: 10px;
+      }
+
+      &:after {
+        background: $bigchat-default-background;     
+        border-radius: $default-border-radius-top;
+        content: "";
+        height: 10px;
+        left: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
+    }
+  }
+
+  &__icon {
+    align-items: center;
+    color: $bigchat-default-icon-neutral ;
+    cursor: pointer;
+    
+    &.trigger-icon {
+      color: inherit;
+      height: 24px;
+      opacity: .45;
+      padding:3.5px;
+      right: 25px;
+      top: 3px;
+      width: 22.5px;
+    }
+
+    &:hover {
+      color: $bigchat-default-icon-hover ;
+    }
+  }
+  
+  &__items {
+    width: 100%;
+    margin-top: 2px;
+    padding-bottom: 5px;
+  }
+
+  &__item {
+    cursor: pointer;
+    margin-bottom:  1px;
+    padding: 10px 10px 5px 15px;
+
+    &:hover {
+      background-color: $bigchat-default-background-hover;
+      color: $bigchat-default-text-hover ; 
+
+      & .chat-room-menu__note {
+        color:$bigchat-default-text-hover ; 
+      }
+      
+      & svg {
+        fill: $bigchat-default-icon-reverse;      
+      }
+    }
+  }
+
+  &__note {
+    padding-top: 0px;
+    @include typo($size: 12px, $weight: 300, $line: 14px, $color: $bigchat-default-text-color);
+
+    &.coming-soon {
+      @include typo($size: 12px, $weight: 300, $line: 14px, $color: $bigchat-default-text-inactive);
+      opacity: 0.5;
+    }
+
+    &.copy-card {
+      margin-top: -12px;
+      padding-top: 20px;
+    }
+  }
+}

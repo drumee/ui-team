@@ -1,0 +1,20 @@
+@mixin xia-gallery-columns($col:1, $width:100%) {
+    .xia-gallery {
+	.container{
+	    @include column-count($col);
+	    width: $width;
+	}
+    }
+}
+
+@mixin xia-gallery() {
+    @for $c from 1 through 6 {
+	$min-width:$c * 320px + 1px;
+	$w:($c * 320px);
+	@media only screen and (min-width : $min-width)
+	{
+	    @include xia-gallery-columns($col:$c, $width:$w);
+	}
+    }
+}
+

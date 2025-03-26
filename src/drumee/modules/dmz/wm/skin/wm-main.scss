@@ -1,0 +1,134 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : src/drumee/builtins/dmz/skin/dmz-main.scss
+#   TYPE : Backoffice User Settings Styles
+# ===================================================================**/
+@import "mixins/drumee.scss";
+.dmz-wm {
+  &__windows-layer {
+    overflow: visible;
+    position: fixed;
+    height: 0;
+    left: 0;
+    top: 0;
+    width: 0;
+  }
+
+  &_ui {
+    background: transparent;
+    height: calc(100vh - 30px);
+    margin: auto;
+    width: 100%;
+  }
+
+  &.dmz {
+    position: relative;
+    background-color: transparent;
+    box-shadow: none;
+  }
+  
+  &__main {
+    width: 100%;
+    height: 100%;
+    min-height: calc(100vh - 160px);
+  }
+
+  &__icons-list {
+    width: 100%;
+
+    &.desk-content {
+      margin: 0 auto;
+
+      &.icons-list {
+        z-index: 1000;
+        height: 100%;
+        width: 100%;
+        max-height: calc(100vh - 190px);
+        &[data-type="evaluation"]::after{
+          @include license-trial();
+          @include typo($size:36px,$line:42px,$color:$default-text-title);
+          transform: none;
+          bottom: 0;
+          width: 100%;
+        }
+      }
+    }
+
+    & .media-grid .filename {
+      font-size: 12px;
+      min-height: 23px;
+    }
+  }
+
+  &__icons-scroll {
+    align-items: center;
+    display: grid;
+    grid-gap: 1rem;
+    grid-template-columns: repeat(auto-fill, 190px);
+    // grid-template-rows: repeat(auto-fill, 130px);
+    justify-content: center;
+    justify-items: center;
+    min-height: 130px;
+    padding-bottom: 16px;
+    grid-auto-rows: 150px;
+
+    &[data-device="mobile"] {
+      grid-template-columns: repeat(auto-fill, 160px);
+      grid-gap: 0.5rem;
+      grid-template-rows: repeat(auto-fill, 125px);
+    }
+
+    & .media-grid__ui {
+      & .filename {
+        @include typo($line: 14px, $size: 11px, $color: $core-default-text-color);
+        border-radius:$default-border-radius-bottom;
+        cursor: pointer;
+        left: 0px;
+        max-height: 31px;
+        overflow: hidden;
+        padding: 2px 12px;
+        position: absolute;
+        text-align: center;
+        text-overflow: ellipsis;
+        width: 100%;
+
+        &.hub, &.folder {
+          color: $core-default-text-reverse;
+        }
+
+        &.image,
+        &.video {
+          background :linear-gradient(180deg,hsla(0,0%,100%,.2),hsla(0,0%,100%,0.9));
+        }
+      }
+    }
+}
+
+  &__wrapper-modal {
+    top: 0;
+    left: 0;
+    position: fixed;
+    align-items: center;
+    justify-content: center;
+    &[data-state="open"] {
+      width: 100%;
+      height: 100%;
+      background: $core-transparency-container-overlay;//$transparency-container-overlay; //rgba(0,0,0, .3);
+      right: 0;
+      bottom: 0;
+    }
+    .drumee-spinner {
+      width: 150px;
+      height: 150px;
+      background: $core-default-background; // white;
+      top: calc(50% - 75px);
+      left: calc(50% - 75px);
+      border-radius: $default-border-radius; //4px;
+      padding: 20px;
+      .root-node {
+        position: absolute;
+      }
+    }
+  }
+
+}

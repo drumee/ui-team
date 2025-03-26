@@ -1,0 +1,60 @@
+// desk/skin/hub/settings/general/field
+.hub-administrator, .hub-owner{
+  &__dialog{
+    position: absolute;
+    top : 26px;
+    .invitation{
+      @import "../../../invitation/main.scss";
+      &__main{
+        .invitation__container-sharee{
+          width: 100% !important;
+        }
+      }
+      &.sharees-roll {
+        .invitation-sharee__container {
+          padding-left: 18px;
+        }
+      }
+    }
+    >.invitation.invitation-settings{
+      width: 330px;
+      z-index: 100;
+      left : -20px;
+      background-color:$default-background;   
+      padding: 20px 0 0;
+      box-shadow: 0 5px 8px 1px rgba(192, 197, 209, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);  
+    }  
+  }
+  // &__avatar{
+  //   // margin-right: -15px;
+  //   margin-right: 5px;
+  //   background-color: #D8D8D8;
+  //   z-index: auto;
+  //   .tooltips{
+  //     &::before{
+  //       content: " ";
+  //       width: 10px;
+  //       height: 10px;
+  //       background: white;
+  //       position: absolute;
+  //       bottom: -4px;
+  //       left: 4px;
+  //       transform: rotate(45deg);
+  //     }
+  //     display: none;
+  //     padding: 10px;
+  //     position: absolute;
+  //     top: -42px;
+  //     color: orange;
+  //     border-radius: 2px;
+  //     //overflow: hidden;
+  //     background-color: #FFFFFF;
+  //     box-shadow: 0 5px 8px 1px rgba(192, 197, 209, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);  
+  //   }
+  //   &:hover{
+  //     .tooltips{
+  //       display: flex;
+  //     }      
+  //   }
+  // }
+}

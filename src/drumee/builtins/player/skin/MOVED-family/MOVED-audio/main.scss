@@ -1,0 +1,114 @@
+
+.player-audio{
+  &.player-audio__ui{
+    height: 54px;
+    width: 320px;
+    min-height: 0;
+    border-radius: 6px;
+    box-shadow: rgba(63, 79, 117, 0.3) 0px 2px 8px 1px, rgba(86, 65, 113, 0.08) 0px 6px 16px 0px, rgba(194, 185, 203, 0) 0px 2px 14px 0px;
+  }
+
+  .bargraph {
+    position: relative;
+    pointer-events: none;
+    &__background {
+      color: #B6BFCA;
+    }
+    &__overlap {
+      box-shadow: none;
+      overflow: hidden;
+      // fill: #AB47BC;
+      height: 100%;
+      width: 20px;
+      position: absolute;
+      &-icon {
+        color: #AB47BC;
+        flex-shrink: 0;
+      }
+    }
+  }
+
+  &__close {
+    cursor: pointer;
+    color: #b6bfca;
+    position: absolute;
+    right: -9px;
+    top: -9px;
+    background: $ewhite;
+    border-radius: 50%;
+    box-shadow: 0 3px 4px 1px rgba(63, 79, 117, 0.13), 0 3px 9px 0 rgba(86, 65, 113, 0.08), 0 1px 8px 0 rgba(194, 185, 203, 0);
+  }
+  &__btn {
+    color: #b6bfca;
+    cursor: pointer;
+    &:hover {
+      border-radius: 2px;
+      background-color: #8698ff;
+      color: $ewhite;
+    }
+  }
+  &__name {
+    width: 100px;
+    flex-shrink: 0;
+    @include overflow-text;
+  }
+  &__trek {
+    @include overflow-text;
+    @include typo($color: $egrey-2f, $weight: 400, $line: 16px, $size: 14px);
+  }
+  &__artist {
+    @include overflow-text;
+    @include typo($color: $egrey-89, $weight: 300, $line: 11px, $size: 10px);
+  }
+  &__wrapper {
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  &__progress {
+    height: 4px;
+    flex-shrink: 0;
+    &-bar {
+      height: 4px;
+      cursor: pointer;
+    }
+    .noUi-target {
+      width: 100%;
+      height: 4px;
+      box-shadow: none;
+      border: none;
+      border-radius: 0;
+    }
+    .noUi-connect {
+      background: #fa8540;
+    }
+    .noUi-handle {
+      display: none;
+    }
+  }
+  &__volume {
+    .noUi-target {
+      border: none;
+      width: 21px;
+      height: 21px;
+      background: none;
+      box-shadow: none;
+    }
+    .noUi-connect {
+      background: none;
+      box-shadow: none;
+    }
+    .noUi-origin {
+      opacity: 0;
+    }
+    .noUi-horizontal .noUi-handle {
+      width: 4px;
+      height: 31px;
+      left: -2px;
+      top: -5px;
+      &:focus {
+        outline: none;
+      }
+    }
+  }
+}
+

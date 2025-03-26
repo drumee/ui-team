@@ -1,0 +1,38 @@
+/************************************************************
+                        Channel: colors used
+************************************************************/
+
+/**background**/ 
+$website-main                             : #18a3ac;//#dfb059;  //#18AC72;
+$website-main-light                       : #45b4bb;//#e4c07d;  //#45CC97;
+$website-main-background-filename         : #6dcad1;//#e7cfa2;  //#e6d5b8 
+//$website-main-before-color              : #E386B5; 
+
+$website-background-header                : $website-main;
+$website-default-background               : $core-default-background;
+
+
+/**text**/
+$website-text-color                       : $website-main;//#e7b351;//#18a3ac;//#18AC72;
+$website-default-text-color               : $core-default-text-color;
+$website-default-text-reverse             : $core-default-text-reverse; 
+$website-text-notification                : $website-main;
+//$website-notify-public-typo             :#18a3ac;
+
+
+/**icon**/ 
+$website-default-icon-reverse             : $core-default-icon-reverse ;
+$website-default-icon-hover               : $core-default-icon-hover;
+
+/**border**/
+$website-notify-public-border             : $website-main-light;//#e4c07d;  
+$website-notifycount-border               : $website-main;//#18a3ac;
+$website-border-frame                     : $website-main;
+
+
+
+
+
+
+
+

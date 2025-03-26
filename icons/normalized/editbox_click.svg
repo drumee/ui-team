@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="17px" height="16px" viewBox="0 0 17 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 49.3 (51167) - http://www.bohemiancoding.com/sketch -->
+    <title>click</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Symbols" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Button/click-Copy" transform="translate(-6.000000, -7.000000)" fill="#89929E">
+            <g id="click" transform="translate(6.000000, 7.000000)">
+                <g id="Group" transform="translate(7.000000, 6.000000)" fill-rule="nonzero">
+                    <path d="M9.70133333,3.06666667 L0.784,0.549333333 C0.72,0.528 0.634666667,0.549333333 0.570666667,0.613333333 C0.506666667,0.677333333 0.485333333,0.741333333 0.506666667,0.826666667 L2.96,9.808 C2.98133333,9.89333333 3.06666667,9.95733333 3.152,9.95733333 C3.152,9.95733333 3.152,9.95733333 3.17333333,9.95733333 C3.25866667,9.95733333 3.344,9.89333333 3.36533333,9.82933333 L5.15733333,5.2 L9.72266667,3.472 C9.808,3.42933333 9.872,3.36533333 9.85066667,3.25866667 C9.82933333,3.152 9.78666667,3.088 9.70133333,3.06666667 Z" id="Shape"></path>
+                </g>
+                <rect id="Rectangle-33" x="9" y="3" width="2" height="2" rx="1"></rect>
+                <rect id="Rectangle-33-Copy" x="12" y="0" width="2" height="2" rx="1"></rect>
+                <rect id="Rectangle-33-Copy-4" x="0" y="9" width="2" height="2" rx="1"></rect>
+                <rect id="Rectangle-33-Copy-3" x="3" y="8" width="2" height="2" rx="1"></rect>
+                <rect id="Rectangle-33-Copy-2" x="4" y="2" width="2" height="2" rx="1"></rect>
+                <rect id="Rectangle-33-Copy-5" x="2" y="0" width="2" height="2" rx="1"></rect>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -1,0 +1,154 @@
+&-form {
+  &__main {
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  &__container {
+    align-items: center;
+    width: 100%;
+  }
+
+  &__elements-wrapper {
+    width: 70%;
+    justify-content: center;
+
+    &.second-filter {
+      width: 80%;
+    }
+
+    & .input-icon-prefix {
+      color: $core-default-icon-neutral;
+      margin: 0px 10px;
+      min-height: 24px;
+      width: 24px;
+    }
+  }
+
+  &__custom-range-filter {
+    height: 100%;
+    justify-content: center;
+    max-height: 40px;
+    width: 100%;
+  }
+
+  &__datepicker-wrapper {
+    background: $core-default-block-background;
+    border-radius: 6px;
+    height: 100%;
+    margin: 0 20px;
+    width: 100%;
+
+    &.second-filter {
+      margin: 0 5px;
+    }
+
+    & .datepicker {
+      cursor: pointer;
+      height: 100%;
+      padding: 5px;
+      width: 100%;
+    }
+
+    & .daterangepicker {
+      display: flex;
+    }
+  }
+
+  &__datepicker {
+    @include typo($size: 14px, $line: 18px, $color: $core-default-text-color);
+    background: $core-default-block-background;
+    cursor: pointer;
+    height: 100%;
+    width: 100%;
+  }
+
+  &__custom-range-filter-wrapper,
+  &__filter-elements {
+    padding: 1px 15px;
+    width: 100%;
+
+    &.second-filter {
+      padding: 1px 1px;
+    }
+  }
+
+  &__filter-elements {
+    & .widget-dropdown-menu-menu {
+      &__wrapper {
+        & .menu-topic-items {
+          max-width: 150px;
+          max-height: 400px;
+          min-height: 300px;
+          overflow: auto;
+        }
+      }
+      &__input_wrapper {
+        background: $core-default-block-background;
+        height: 35px;
+        width: 170px;
+
+        & .note-reader {
+          align-items: center;
+          height: 100%;
+        }
+      }
+    }
+  }
+
+  &__filter-label {
+    @include typo($size: 14px, $line: 18px, $color: $core-default-text-title);
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+    width: 100%;
+  }
+
+  &__button-wrapper,
+  &__go-btn-wrapper {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+  }
+
+  &__button-wrapper {
+    width: 30%;
+
+    &.second-filter {
+      width: 20%;
+    }
+  }
+  
+  &__go-btn-wrapper {
+    padding-top: 35px;
+    width: 100%;
+  }
+
+  &__error-msg-wrapper {
+    align-items: center;
+    height: 25px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  &__button, &__error-message {
+    @include typo($size: 14px, $line: 18px, $color: $core-default-text-error);
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+  }
+
+  &__button.action-btn {
+    @include typo($size: 18px, $line: 26px, $color: $core-default-text-reverse);
+    align-items: center;
+    background: $core-button-accept;
+    border-radius: 6px;
+    cursor: pointer;
+    height: 36px;
+    justify-content: center;
+    width: 150px;
+  }
+}

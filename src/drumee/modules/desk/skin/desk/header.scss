@@ -1,0 +1,402 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : desk/skin/desk-header.scss
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+
+
+.desk__header{
+  @include typo($line:24px,$size:18px,$weight:400,$color:$ewhite);
+  .share-btn-count {
+    display: block;
+    position: absolute;
+    top: -40px;
+    right: 0;
+    width: 23px;
+    height: 23px;
+    background: #fff;
+    color: #4a90e2;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 23px;
+    font-size: 14px;
+    transform: translate(50%, -50%);
+  }
+
+  .menu-items {
+    top: -9px!important;
+    background-color: $ewhite;
+    border-radius: 4px;
+    height:57px !important;
+    padding-top:0px;
+    box-shadow: 0 -4px 8px 3px rgba(75, 72, 72, 0.22), 0 4px 8px 3px rgba(75, 72, 72, 0.22), 0 2px 14px 0 rgba(0, 0, 0, 0.22), 0 2px 12px 0 rgba(0, 0, 0, 0.22);
+    &::before {
+      content: " ";
+      width: 6px;
+      height: 6px;
+      background-color: $ewhite;
+      transform: rotate(45deg);
+      position: absolute;
+      top: 25px;
+    }
+    &:after {
+      content: " ";
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 5px;
+      background-color: $ewhite;
+    }
+  }
+}
+
+.desk__header{
+  &-icon {
+    border-radius: 15px;
+    background-color: #FFFFFF;
+    cursor: pointer;
+    transition: all 0.5s ease-in;
+    overflow: hidden;
+    @include typo($line:12px,$size:12px,$weight:300,$color:$egrey-78);
+    .note-content {
+      transition: all 0.5s ease-in;
+      width: 0;
+      visibility: hidden;
+      margin-left: 9px;
+    }
+    &:hover {
+      width: 100%!important;
+      .note-content {
+        width: 100%;
+        visibility: visible;
+      }
+    }
+  }
+}
+
+.desk__top {
+  border-bottom: 1px solid rgba(255,255,255,0.6);
+}
+
+.desk__input {
+  position: relative;
+  &-inner {
+    &-icon {
+      color: $egrey-89;
+      position: absolute;
+      left: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+  }
+  &-icon {
+    color: $ewhite;
+    flex-shrink: 0;
+    background-color: rgba(#FFFFFF, 0.2);
+    border-radius: 2px;
+    box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    cursor: pointer;
+    &:hover{
+      box-shadow: 0 5px 4px 3px rgba(255,255,255,0.3), 0 2px 2px 2px rgba(250,250,250,0.2), 0 6px 3px 5px rgba(194,185,203,0);
+    }
+    &--inverse {
+      background-color: rgba(221,226,232,0.2);
+    }
+    &--plus {
+      background-color: #FA8540;
+      &[data-over="yes"]{
+        &:after {
+          content: "";
+          position: absolute;
+          top: -20px;
+          left: -20px;
+          height: 80px;
+          width: 80px;
+          border: 2px solid #FA8540;
+          background-color: transparent;
+        }
+      }
+    }
+    &--settings {
+      background-color: #879BFF;
+      &[data-over="yes"]{
+        &:after {
+          content: "";
+          position: absolute;
+          top: -20px;
+          left: -20px;
+          height: 80px;
+          width: 80px;
+          border: 2px solid #879BFF;
+          background-color: transparent;
+        }
+      }
+    }
+    // &--inverse{
+    //   input {
+    //     background-color: rgba(221,226,232,0.2);
+    //     height: 30px;
+    //     color: #B6B6B6;
+    //   }
+    // }
+  }
+  &-wrapper {
+    position: absolute;
+    height: 100%;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    z-index: 1;
+    pointer-events: none;
+  }
+  // &.entry {
+  //   &:before {
+  //     content: " ";
+  //     position: absolute;
+  //     left: 0;
+  //     z-index: 1;
+  //     pointer-events: none;
+  //     background-image: url(https://fonts.drumee.name/svg/without-classes/editbox_search.svg);
+  //     // background-size: 28px;
+  //     background-size: 18px;
+  //     width: 40px;
+  //     height: 40px;
+  //     background-repeat: no-repeat;
+  //     background-position: center;
+  //   }
+  //   @media (min-width: 880px) { //800px
+  //     &:after {
+  //       content: " ";
+  //       position: absolute;
+  //       left: 40px;
+  //       top: 10px;
+  //       height: 20px;
+  //       width: 1px;
+  //       background-color: #F5F5F6;
+  //     }
+  //   }
+  // }
+  // input {
+  //   width: 40px;
+  //   padding: 0 20px;
+  //   border-radius: 2px;
+  //   box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+  //   transition: width 0.3s ease-in;
+  //   pointer-events: all;
+  //   @include typo($line:19px,$size:14px,$weight:300,$color:$egrey-2f);
+  //   @include placeholder-input{
+  //     @include typo($line:19px,$size:14px,$weight:300,$color:$egrey-89);
+  //   }
+  //   &:focus {
+  //     width: 320px;
+  //     padding: 0 10px 0 50px;
+  //   }
+  //   @media (min-width: 880px) { //800px
+  //     width: 320px;
+  //     padding: 0 10px 0 50px;
+  //   }
+  // }
+}
+
+.desk__menu{
+  z-index: 2;
+  &[data-radio="on"], &[data-state="1"] {
+    z-index: 10000;
+  }
+  &__container-plus{
+    padding-left: 10px;
+    //padding-right: 5px;
+  }
+  &--settings {
+    margin-right: 50px;
+    .menu-items {
+      left: calc(100% + 10px)!important;
+      width: 364px;
+      height: 58px;
+      justify-content: center;
+      &:before {left: -3px;}
+      &:after {
+        left: 0;
+        border-radius: 2px 0 0 2px;
+      }
+      &[data-action="0"]{
+        .context{
+          opacity: 0.5;
+          pointer-events: none;
+        }
+      }
+    }
+    @media (min-width: 880px) { //800px
+      margin-right: 190px;
+    }
+  }
+  // &--plus {
+  //   margin-left: 50px;
+  //   .menu-items {
+  //     width: 435px;
+  //     height: 58px;
+  //     right: calc(100% + 10px)!important;
+  //     justify-content: center;
+  //     &:before {
+  //       right: -3px;
+  //     }
+  //     &:after {
+  //       right: 0;
+  //       border-radius: 0 2px 2px 0;
+  //     }
+  //   }
+  //   @media (min-width: 880px) { //800px
+  //     margin-left: 190px;
+  //   }
+  // }
+  // &-block {
+  //   &:after {
+  //     content: " ";
+  //     width: 1px;
+  //     height: 32px;
+  //     position: absolute;
+  //     right: 0;
+  //     top: 8px;
+  //     background: #DDE2E8;
+  //   }
+  // }
+  // &-item {
+  //   flex-direction: column;
+  //   display: flex;
+  //   align-items: center;
+  //   justify-content: center;
+  //   cursor: pointer;
+  //   width   : 60px;
+  //   height  : 48px;
+  //   padding : 0;
+  //   @include typo($line:15px,$size:11px,$weight:300,$color:$egrey-2f);
+  //   svg {
+  //     width: 34px;
+  //     height: 34px;
+  //   }
+  //   &--big svg {
+  //     margin: 2px 0 0;
+  //     height: 29px;
+  //     width: 34px;
+  //   }
+  //   &.tbd{
+  //     opacity: 0.5;
+  //   }
+  //   &--text {
+  //     &.widget{
+  //       padding-right: 5px;
+  //     }
+  //     svg {
+  //       color: #4A90E2;
+  //       padding:5px;
+  //     }
+  //   }
+  //   &--folder svg {
+  //     color: #4A90E2;
+  //   }
+  //   &--green svg {
+  //     color: #128f5e;
+  //     padding:1.5px;
+  //   }
+  //   &--green label {
+  //     margin-top: 2px;
+  //   }
+  //   &--red {
+  //     &.widget{
+  //       padding-right: 14px;
+  //     }
+  //     svg {
+  //       padding: 5px;
+  //       color: #e8223b;
+  //     }
+  //   }
+  //   &--orange svg {color: #fa8540;}
+  //   &--violet svg {color: #ab47bc;}
+  //   &--pink svg {color: #ff4578;}
+  //   &--green-dark svg {color: #18A3AC;}
+  //   &--blue-dark svg {color: #47638f;}
+  //   &--hub svg {
+  //     color: #18A3AC;
+  //     padding:5px;
+  //   }
+  //   &--grey {
+  //     cursor: url("https://fonts.drumee.name/svg/with-classes/desktop_comingsoon.svg") 15 15, auto !important;
+  //     svg {
+  //       color: #c3c3c3;
+  //     }
+  //   }
+  //   &[class^="desk__menu-item"]:hover {
+  //     color: #879BFF;
+  //     svg {
+  //       color: #879BFF;
+  //     }
+  //   }
+  //   &[class^="desk__menu-item"]:focus, &[class^="desk__menu-item"]:active {
+  //     background-color: #879BFF;
+  //     color: $ewhite;
+  //     svg {
+  //       color: $ewhite;
+  //     }
+  //   }
+  // }
+}
+
+// .desk__filter{
+//   &-list.box {
+//     background-color: $ewhite;
+//     width: 174px;
+//     border-radius: 4px;
+//     box-shadow: 0 -4px 8px 3px rgba(75,72,72,0.22), 0 4px 8px 3px rgba(75,72,72,0.22), 0 5px 14px 0 rgba(43,16,80,0.42), 0 2px 12px 0 rgba(93,93,93,0.78);
+//     &--with-icon:before {
+//       content: " ";
+//       width: 20px;
+//       height: 20px;
+//       background: white;
+//       position: absolute;
+//       top: -4px;
+//       right: 30px;
+//       transform: rotate(45deg);
+//     }
+//   }
+//   &-icon--filter {
+//     background-color: rgba(#FFFFFF,0.2);
+//   }
+
+//   &-menu {
+//     .menu-items {
+//       left: 18px;
+//       margin-top: -5px;
+//     }
+//   }
+//   &-item {
+//     height: 24px;
+//     padding: 0 14px;
+//     cursor: pointer;
+//     @include typo($line:24px,$size:12px,$weight:400,$color:$egrey-78);
+//     &:hover {
+//       color: $eviolet;
+//     }
+//     &:active, &[data-state="1"], &[data-radio="on"] {
+//       background-color: $eviolet;
+//       color: $ewhite;
+//     }
+//   }
+//   &-input {
+//     &[data-state="0"] {
+//       position: relative;
+//       opacity: 0.5;
+//       &:after {
+//         position: absolute;
+//         content: " ";
+//         width: 100%;
+//         height: 100%;
+//         left: 0;
+//         top: 0;
+//         // background: $ewhite;
+//         // opacity: 0.5;
+//       }
+//     }
+//   }
+// }

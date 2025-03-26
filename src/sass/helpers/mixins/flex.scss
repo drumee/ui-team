@@ -1,0 +1,47 @@
+@mixin xia-container($bgcolor:transparent, $direction:row, $margin:0, $alpha:0.2){
+    @include display-flex();
+    @include flex-direction($direction);
+    margin: unquote($margin);
+    background-color: $bgcolor;
+    position:relative;
+}
+
+
+@mixin xia-align ($justify:center, $align:center){
+    @include display-flex();
+    @include justify-content($justify);
+    @include align-items($align);
+}
+
+
+
+@mixin xia-grids($ratios:12) {
+    @for $ratio from 1 through $ratios {
+	.flexgrid-#{$ratio}{
+	    position:relative;
+	    @include flex($ratio);
+	}
+    }
+}
+
+@mixin xia-boxes($orders:6, $ratios:12) {
+  @for $order from 1 through $orders {
+      @for $ratio from 1 through $ratios {
+	  .flexbox-#{$order}-#{$ratio}{
+	      position:relative;
+	      @include flex($ratio);
+	      @include order($order);
+	  }
+      }
+  }
+}
+
+@mixin xia-orders($orders:12) {
+    @for $order from 1 through $orders {
+	.order-#{$order} {
+	    position:relative;
+	    @include order($order);
+        }
+    }
+}
+

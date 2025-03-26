@@ -1,0 +1,372 @@
+@import "mixins/drumee";
+
+.window-connect {
+  @import "builtins/webrtc/skin/attendee";
+  @import "builtins/webrtc/skin/avatar";
+  @import 'builtins/webrtc/skin/topbar';
+  @import 'builtins/webrtc/skin/command';
+  @import 'builtins/webrtc/skin/local';
+  @import 'builtins/webrtc/skin/remote';
+  @import 'builtins/webrtc/skin/status';
+  @import 'builtins/webrtc/skin/sound-analyzer';
+}
+
+.window-connect {
+  &__ui {
+    background-color: $connect-default-background;
+    width: 440px;
+    height: 480px;
+    top: 85px;
+    left: calc(50vw - 220px);
+    box-shadow: $drumee-shadow-container;
+    overflow: visible;
+    flex-direction: column;
+    display: flex;
+
+    &[data-device="mobile"] {
+      width: 100vw;
+      height: 100vh;
+      left: 0;
+      top: 0;
+    }
+
+    &[data-tmp="1"] {
+      z-index: 9000 !important;
+    }
+  }
+
+  &__avatar {
+    &[data-state="open"] {
+      visibility: visible;
+      position: absolute;
+      z-index: 0 !important;
+    }
+  }
+
+  // &__presenter-list {
+  //   video {
+  //     transform: matrix(1, 0, 0, 1, 0, 0);
+  //   }
+  // }
+
+  // &__user_holder {
+  //   width: 100%;
+  //   height: 100%;
+
+  //   .window-connect__presenter-list {
+  //     &[data-open|="0"] {
+  //       flex: 0;
+  //     }
+
+  //     &[data-open|="1"] {
+  //       flex: 4;
+  //     }
+  //   }
+  // }
+
+  &__header {
+    background-color: $connect-background-header;
+    border-bottom: none;
+    height: 44px;
+    min-height: 44px;
+    width: 100%;
+    z-index: 1000;
+
+    .media-devices__list {
+      .menu-items {
+        left: 0;
+        background: $connect-default-background;
+      }
+    }
+  }
+
+  // &__body {
+  //   width: 100%;
+  //   justify-content: center;
+  //   height: calc(100% - 44px);
+  //   z-index: 100;
+  //   background-color: $connect-video-background;
+  //   box-shadow: $drumee-shadow-container;
+  //   border-radius: $default-border-radius-bottom; // $default-border-radius;
+  //   // grid-auto-flow: row;
+  //   // grid-auto-columns: auto;
+  //   // grid-template-columns: auto;
+  // }
+  &__body {
+    align-items: center;
+    justify-content: center;
+    background-color: $connect-video-background;
+    height: calc(100% - 44px);
+    z-index: 100;
+
+    .core-webrtc__ui {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+    }
+  }
+
+  &__presenter {
+    video {
+      transform: matrix(1, 0, 0, 1, 0, 0);
+    }
+  }
+
+  &__endpoints {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    &[data-mode="normal"]{
+      //grid-template-columns: repeat(auto-fill, 100%);
+      grid-template-columns: 0 100%;
+      grid-template-rows: 100%;
+    }
+    &[data-mode="presenter"]{
+      grid-template-columns: calc(100% - 200px) 200px;
+      grid-template-rows: 100%;
+      //grid-template-columns: repeat(auto-fill, minmax(100px, 100%) 120px);
+    }
+  }
+
+  &__avatar-container {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+
+    .user-profile {
+
+      &[data-online="1"],
+      &[data-online="2"] {
+        &:before {
+          visibility: hidden;
+        }
+      }
+
+      &[data-online="2"] {
+        &:before {
+          visibility: hidden;
+        }
+      }
+    }
+  }
+
+  &__avatar.user-profile {
+
+    &[data-online="1"],
+    &[data-online="2"] {
+      &:before {
+        visibility: hidden;
+      }
+    }
+
+    &[data-online="2"] {
+      &:before {
+        visibility: hidden;
+      }
+    }
+
+    .user-profile__icon {
+      width: 150px;
+      height: 150px;
+    }
+
+    .user-profile__main {
+      background-color: #5E5E5E !important;
+      justify-content: center;
+      align-items: center;
+
+      img {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    .user-profile__initiales {
+      border-radius: 100%;
+
+      .note-content {
+        font-size: 45px;
+        font-weight: bold;
+      }
+    }
+
+    &.user-profile__ui[data-default="1"] svg {
+      fill: $connect-default-icon-neutral;
+    }
+  }
+
+  &__uname,
+  &__commands {
+    background-color: $connect-transparent-background  !important;
+  }
+
+  &__status {
+
+    //color: $connect-header-text-color !important;
+    .text {
+      padding: 5px 10px;
+      background-color: $connect-transparent-background; //rgba(0,0,0,0.33);
+      border-radius: $default-border-radius;
+    }
+  }
+
+  &__confirm-container {
+    background-color: $core-default-background;
+    padding: 0 20px;
+    width: 260px;
+    height: 150px;
+    border-radius: 10px;
+  }
+
+  &__confirm {
+    background-color: transparent;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+
+    .confirm-message {
+      text-align: center;
+      padding: 0 10px;
+      @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+    }
+
+    .action-btn {
+      @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+      margin-top: 10px;
+
+      .buttons {
+        margin: 5px 10px;
+        border: 1px solid $btn-rollback-border; // #bdbdbd;
+        flex: 1;
+        align-items: center;
+        width: 100%;
+        padding: 5px;
+        display: flex;
+        justify-content: center;
+        border-radius: $default-border-radius;
+        height: 32px;
+        @include typo($size: 14px, $line: 20px, $color: $btn-rollback-text);
+
+        &:hover {
+          border: 2px solid $btn-rollback-border-hover;
+          @include typo($size: 14px, $line: 20px, $color: $btn-rollback-text-hover);
+        }
+      }
+    }
+  }
+
+  &__main {
+    display: grid;
+    grid-auto-flow: row;
+    height: 100%;
+    width: 100%;
+  }
+
+  &__main-content {
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+
+    // &[data-freeside|="x"],
+    // &[data-freeside="x"] {
+    //   flex-direction: row-reverse;
+
+    //   .window-connect__avatar {
+    //     display: none;
+    //   }
+    // }
+  }
+
+  &__main-view {
+    height: 100%;
+    width: 100%;
+
+    .user-profile {
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+  &__text {
+    &.local {
+      min-height: 30px;
+      //@include typo($color: $white, $line: 30px, $size: 18px);
+      @include typo($color: $connect-default-text-reverse, $weight: 400, $line: 30px, $size: 16px);
+      justify-content: center;
+    }
+
+    &.status {
+      //@include typo($color: $egrey-2f, $weight: 400, $line: 30px, $size: 18px);
+      @include typo($color: $connect-default-text-color, $line: 30px, $size: 16px);
+    }
+  }
+
+  &__attendees-title {
+    padding: 10px 0 15px 3px;
+    justify-content: center;
+    height: 20px;
+    @include typo($color: $connect-default-text-title, $line: 14px, $size: 15px);
+  }
+
+  &__message-container {
+    position: absolute;
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+
+    .message-text {
+      padding: 10px;
+      background-color: $core-default-transparent-black;
+      margin: auto 10px 90px 10px;
+      border-radius: $default-border-radius; //3px;
+      @include typo($color: $core-default-text-reverse, $weight: 400, $line: 20px, $size: 16px);
+    }
+  }
+
+  &__timer-container {
+    position: absolute;
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    align-items: center;
+    align-content: center;
+    justify-content: flex-start;
+
+    .timer-text {
+      padding: 10px;
+      background-color: $core-default-transparent-black;
+      margin: 10px;
+      border-radius: $default-border-radius; //3px;
+      @include typo($color: $core-default-text-reverse, $weight: 400, $line: 20px, $size: 16px);
+    }
+
+    .countdown-timer {
+      &__ui {
+        background-color: #fff;
+
+        .countdown-timer__counter {
+          padding: 5px 10px;
+        }
+      }
+    }
+  }
+
+  &__list {
+    & .menu-topic-items {
+      &__wrapper {
+        left: 5px;
+      }
+
+      &.menu-items {
+        height: 300px;
+        overflow-y: auto;
+      }
+    }
+  }
+}

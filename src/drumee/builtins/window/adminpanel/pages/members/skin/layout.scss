@@ -1,0 +1,100 @@
+.window-admin-panel{
+  &[data-size="min"] {
+    &[data-view-instance="3"] {
+      & .breadcrumb-icon{
+        &.next{
+          display: none;
+        }
+      }
+      .members_tags {
+        display:none;
+      }
+      .members_list {
+        display:none;
+      }
+      .member_room {
+        display:flex;
+        flex : 1;
+        border-radius: $default-border-radius-bottom;
+      }
+    }
+    &[data-view-instance="2"] {
+      .members_tags {
+        display:none;
+      }
+      .members_list {
+        display:flex;
+        flex : 1;
+        border-radius: $default-border-radius-bottom;
+      }
+      .member_room {
+        display:none;
+        border-radius: $default-border-radius-bottom;
+      }
+    }
+    &[data-view-instance="1"] {
+      & .breadcrumb-icon{
+        &.back{
+          display: none;
+        }
+      }
+      .members_tags {
+        display:flex;
+        flex : 1;
+      }
+      .members_list {
+        display:none;
+      }
+      .member_room {
+        display:none;
+      }
+    }
+  }
+  &[data-size="medium"] {
+    &[data-view-instance="2"], &[data-view-instance="3"]{ 
+      & .breadcrumb-icon{
+        &.next{
+          display: none;
+        }
+      }
+      .members_tags {
+        display:none;
+      }
+      .members_list {
+        display:flex;
+        flex : 2;
+        border-radius: $default-border-radius-left;
+      }
+      .member_room {
+        display:flex;
+        flex : 3;
+      }
+    }
+
+    &[data-view-instance="1"]{ 
+      & .breadcrumb-icon{
+        &.back{
+          display: none;
+        }
+      }
+      .members_tags {
+        display:flex;
+        flex : 1;
+      }
+      .members_list {
+        display:flex;
+        flex : 1;
+        
+      }
+      .member_room {
+        display:none;
+      }
+    }
+  }
+  &[data-size="max"] {
+    .breadcrumb-icon{
+      display:none;
+    }
+    // 
+  }
+}

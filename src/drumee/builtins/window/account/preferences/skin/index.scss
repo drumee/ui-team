@@ -1,0 +1,123 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/window/account/preferences/skin/index.scss
+#   TYPE : Account Main Style
+# ===================================================================**/
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/drumee';
+
+
+.account-preferences {
+  &__ui {
+    height: 100%;
+    //max-height: calc(100% - 80px);
+    width: 100%;
+    height: calc(100vh - 270px);
+  }
+
+  &__main {
+    height: 100%;
+    justify-content: space-between;
+    padding: 0 35px;
+    height: calc(100% - 70px);
+    @include typo($size: 16px, $line: 24px,$weight: 300, $color:$account-default-text-color);//$weight: 400
+  }
+
+  &__container {
+    height: 100%;
+  }
+
+  &__label {
+    cursor: default !important;
+    margin-bottom: 25px;
+    margin-left: 70px;
+    @include typo($size: 16px, $line: 24px, $color: $account-default-text-title);//$weight: 300,size: 15px,
+    &.language{
+      margin-left: 0px;
+    }
+  }
+
+
+  &__wallpapers {
+    height: 100%;
+    margin-bottom:3px;
+    margin-top:3px;
+    width: 80%;
+    max-height: calc(100vh - 220px);
+    &-list {
+      width: 100%;
+      height: 100%;
+
+      .smart-container {
+        align-content: flex-start;
+        display: flex;
+        display: grid;
+        flex-flow: wrap;
+        grid-gap: 1rem;
+        grid-template-columns: repeat(auto-fill,180px);
+        justify-content: center;
+        justify-items: center;
+        min-height: 100px;
+      }
+
+      .drumee-spinner {
+        height: 40px;
+        margin: auto;
+        overflow: hidden;
+        width: 40px;
+      }
+    }
+
+    &-items {
+      border-radius: $default-border-radius-small;//4px;
+      box-shadow:$drumee-shadow-container;
+      cursor: pointer;
+      width:100%;
+      height : 110px;
+    }
+  }
+
+  &__language {
+    height: 100%;
+    max-width: 190px;
+    width: calc(30% - 34px);
+    margin: 0 auto;
+
+    &-list {
+      box-shadow: $drumee-shadow-accountlist;
+      background-color: $account-default-background;     
+      border-radius: $default-border-radius;
+      height: 100%;
+      margin-bottom: 3px;
+      margin-top: 3px;
+      width: 100%;
+      
+      & .list-smart__container {
+        height: 100%;
+      }
+    }
+
+    &-item {
+      align-items: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: row;
+      height: 30px;
+      justify-content: flex-start;
+      padding: 0 20px;
+      top: 10px;
+      @include typo($size: 14px, $line: 34px, $weight:300, $color: $account-default-text-color);
+      svg {
+        height: 24px!important;
+        margin-right: 12px;
+        width: 24px!important;
+      }
+
+      &:hover {
+        color: $account-backgroundless-text-hover;
+      }
+    }
+  }
+}

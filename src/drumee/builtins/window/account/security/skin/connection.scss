@@ -1,0 +1,92 @@
+@import 'mixins/drumee';
+
+.account-security__log {
+  &--container {
+    position: relative;
+    width: 100%;
+    align-items: center
+  }
+
+  &--details {
+    position: absolute;
+    background: $account-default-background;
+    z-index: 10;
+    padding: 5px 10px;
+    border-radius: $default-border-radius-bottom;
+    min-width: 60%;
+    box-shadow: $drumee-shadow-block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    margin-top: 6px;
+  }
+
+  &--row {
+    padding: 5px 0px;
+    width: 80%;
+    margin-left: 5px;
+  }
+
+  &--name {
+    width: 50%;
+    padding-right: 5px;
+    @include typo ($line: 14px, $size: 12px, $color: $eblue );
+  }
+
+  &--value {
+    width: 50%;
+    padding-left: 5px;
+    @include typo ($line: 14px, $size: 12px, $color: $account-default-text-inactive);
+  }
+}
+
+.list-smart {
+  &__connection-field {
+    width: 35%;
+    min-width: 35%;
+    justify-content: space-around;
+    @include typo ($line: 14px, $color: $account-default-text-inactive, $size: 14px);
+
+    .inner {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    &.intime {
+      justify-content: left;
+      min-width: 37%;
+    }
+
+    &.city {
+      padding-right: 6px;
+
+      .inner {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  &__connection-log-row {
+    height: 29px;
+    padding: 9px 8px 0px 8px;
+    opacity: 0.5;
+    cursor: pointer;
+    @include typo ($line: 14px, $color: $account-default-text-inactive, $size: 14px);
+
+    &[data-status="active"] {
+      opacity: 1;
+      color: $egreen-soft;
+    }
+
+    &:hover {
+      background-color: $account-default-background-hover;
+
+      * {
+        color: $account-default-text-reverse;
+      }
+
+    }
+  }
+}

@@ -1,0 +1,89 @@
+&-breadcrumbs {
+  &__main {
+    height: 100%;
+    width: auto;
+    .menu-items {
+      left: 18px;
+      margin-top: -15px;
+    }
+  }
+
+  &__container {
+    align-items: center; 
+    border-radius: $default-border-radius-small;
+    height: 18px;
+    justify-content: center;
+    left: 3px;
+    position: absolute;
+    top: 17px;
+    z-index: 10;
+  }
+
+  &__icon {
+    background-color: $egrey-b6; 
+    color: $white;
+    cursor: pointer;
+    margin:-14px 2px; 
+
+    &.breadcrumb-icon {
+      border-radius: 2px;
+      height: 20px;
+      padding: 5px;
+      width: 20px;
+    }
+
+    &.next {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__item {
+    @include typo($size: 14px, $line: 18px, $weight: 300, $color:$egrey-49);
+    cursor: pointer;
+    padding: 5px 15px;
+    white-space: nowrap;
+    width: 100%;
+    @include overflow-text;
+
+    &:last-child {
+      color: $eviolet;
+    }
+  }
+
+  &__roll {
+    background: $admin-default-background;    
+    border-radius: $default-border-radius-small;
+    box-shadow: 0 6px 10px 1px rgba(63,79,117,0.13), 0 7px 20px 0 rgba(86,65,113,0.08), 0 3px 17px 0 rgba(194,185,203,0);
+    height: auto;
+    left: -12px;    
+    overflow: visible;
+    padding: 10px 0;
+    position: absolute;
+    top: 10px;
+    width: 109px;
+    z-index: 1000;
+    
+    &:before {
+      background-color: $admin-default-background;    
+      box-shadow:$drumee-container-before;
+      content: "";
+      height: 10px;
+      left: 2px;
+      position: absolute;
+      top: -4px;
+      transform: rotate(45deg);
+      width: 10px;
+    }
+
+    &:after {
+      background: $admin-default-background;    
+      border-radius: $default-border-radius-top;
+      content: "";
+      height: 10px;
+      left: 0;
+      position: absolute;
+      top: 0;
+      width: 100%;
+    }
+  }
+}

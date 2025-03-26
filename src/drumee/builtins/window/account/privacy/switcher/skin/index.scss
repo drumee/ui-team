@@ -1,0 +1,148 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/builtins/window/account/privacy/switcher/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.privacy-switcher {
+  &__ui {
+    margin: 25px auto;
+    justify-content: space-between;
+    height: 70px;
+    &.multi-line {
+      height: auto;
+    }
+  }
+
+  &__text {
+    background-color: $account-default-background;
+    border: 1px solid $account-default-separator;//#ECEDEE;
+    border-radius: 6px 0 0 6px;
+    padding-top:25px;
+    padding-left: 30px;
+    padding-right: 63px;
+    padding-bottom:24px;
+    width: 353px;
+
+    &.tbd {
+      @include typo($size:18px,$line:21px,$weight:300,$color:$account-default-text-color);//#787B7F);
+    }
+
+    &.multi-line {
+      @include typo($size:18px,$line:21px,$weight:300,$color:$account-default-text-color);//#787B7F);
+    }
+  }
+
+  &__info {
+    width: 20px;
+    height: 19px;
+    color:#DDE2E8;
+    top:26px;
+    right:15px;
+    position: absolute;
+
+    &.log {
+      color: $account-default-icon-neutral ;
+      height: 16px;
+      position: relative;
+      right: 35px;
+      top: 30px;
+      width: 16px;
+      cursor: pointer;
+      &:hover{
+       color:$account-default-icon-hover;
+      }
+    }
+
+    & .tooltips {
+      background-color: $account-background-tooltips ;
+      border-radius: $default-border-radius;
+      max-height: 120px;
+      min-height: 90px;
+      padding: 10px;
+      position: absolute;
+      right: 0px;
+      text-align: justify;
+      top: 20px;
+      width: 280px;
+      z-index: 1;
+      @include typo($size: 12px, $line: 18px, $color: $account-default-text-tooltips);
+    }
+  }
+  
+  &__switch{
+    border:1px solid transparent;
+    border-radius: 0 6px 6px 0;
+    padding-left:9px;
+    padding-top:26px;
+    padding-bottom:25px;
+    padding-right:3px;
+    background-color: $account-default-block-background ;
+    width: 416px;
+
+    &.log {
+      right: 16px;
+    }
+
+    .change{
+      &::before{
+        background-color:$account-toggle-switch-radio;//$ap-toggle-switch-radio; //#4040ff;
+        opacity:0.7;
+        width: 12px;
+        height: 12px;     
+        padding-left: 0px;
+        padding-top:4px;
+        padding-bottom:3px;
+        padding-right:0px; 
+      }
+      &::after{
+        background-color:$account-toggle-switch-radio  ;//$ap-toggle-switch-radio; //#4040ff;
+        opacity: 0.7;
+        width: 12px;
+        height: 12px;  
+        padding-left: 0px;
+        padding-top:4px;
+        padding-bottom:3px;
+        padding-right:0px;      
+        //margin-left:10px;
+      }
+      .inner{
+        width: 24px;
+        height: 4px;
+        border-radius: $default-border-radius-small;
+        background-color:$account-toggle-background ;//#DDE2E8;
+      }
+    }
+    .button-switch__toggle{
+      &.on{
+        //height: 19px;
+        width: auto;
+        //color: #879BFF;
+        line-height: 19px;
+        text-align: left;
+        @include typo($size:18px,$line:19px,$color:$account-toggle-switch-on);//#879bff);
+        &[data-state="0"]{
+          color: $account-toggle-switch-off;//$ap-toggle-switch-off; //#d2d9db;
+        }
+      }
+    }
+    .button-switch__toggle{
+      &.off{     
+        //height: 19px;
+        width: 133px;
+        //color: #787B7F;
+        line-height: 19px;
+        text-align: right;
+        margin-left:19px;
+        @include typo($size:18px,$line:19px,$color:$account-toggle-switch-off);//#d2d9db);
+        &[data-state="0"]{
+          color:$account-toggle-switch-on;//#879bff;
+        }
+      }
+      &.change{
+        margin-right: 12px ;
+      }
+    }
+  }
+}

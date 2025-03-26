@@ -1,0 +1,447 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/modules/desk/dock/js/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import '../../../../../skin/mixins/drumee.scss';
+
+.desk-dock {
+  @import 'forbiden';
+
+  &__ui {
+    bottom: 0px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    position: fixed;
+    width: 100%;
+    z-index: 10000;
+    left: 0;
+    right: 0;
+  }
+
+  &__main {
+    background-color: rgba(47, 47, 47, 0.2);
+    border-radius: $default-border-radius-top;
+    justify-content: center;
+    max-width: 100vw;
+    padding: 10px 5px;
+
+
+
+    &::before {
+      backdrop-filter: blur(27px);
+      border-radius: 6px 6px 0 0;
+      content: "";
+      height: 100%;
+      position: absolute;
+      top: 0px;
+      width: 100%;
+    }
+  }
+
+  &__action {
+    justify-content: center;
+  }
+
+  &__helper {
+    &-container {
+      position: absolute;
+      cursor: pointer;
+      top: -40px;
+      background-color: $core-background-tooltips; //$default-background-tooltips;
+      border-radius: $default-border-radius-tiny;
+      height: 30px;
+      align-items: center;
+      padding: 0 10px;
+
+      &[data-state="open"] {
+        z-index: 50 !important;
+      }
+
+      &::before {
+        background: $core-background-tooltips; //$default-background-tooltips;
+        bottom: -4px;
+        content: " ";
+        height: 10px;
+        left: calc(50% - 7px);
+        position: absolute;
+        transform: rotate(45deg);
+        width: 12px;
+        z-index: 1;
+      }
+
+      &::after {
+        // To prevent close on mouse out
+        background: transparent;
+        top: 100%;
+        content: " ";
+        height: 18px;
+        width: 100%;
+        z-index: 100;
+        position: absolute;
+        left: 0;
+      }
+    }
+
+    &-icon {
+      height: 30px;
+      width: 30px;
+      padding: 4px;
+
+      svg.helper {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    &-text {
+      white-space: nowrap;
+      @include typo($line: 15px, $size: 12px, $color: $core-default-text-color);
+    }
+  }
+
+  &__container.application {
+
+    &::after {
+      background-color: $core-default-background; //$ewhite;
+      content: " ";
+      height: 90%;
+      width: 1px;
+    }
+
+    &.launcher {
+      &[data-device="desktop"] {
+        &::after {
+          margin-left: 10px;
+          margin-right: 7px;
+        }
+      }
+    }
+
+    &.maker {
+      &[data-device="desktop"] {
+        &::after {
+          margin-left: 15px; // 5px;
+          margin-right: 7px;
+        }
+      }
+    }
+
+    &.launcher {
+      z-index: 100;
+    }
+  }
+
+  &__button {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    height: 50px; // 38px;
+    justify-content: center;
+    width: 78px; //60px;  
+
+    &[data-device="mobile"] {
+      width: 60px;
+      height: 40px;
+    }
+
+    svg {
+      background-clip: padding-box;
+      color: $core-default-icon-reverse; //$default-icon-reverse;
+      height: 43px;
+      width: 43px;
+
+      // &[data-device="mobile"] {
+      //   height: 25px;
+      //   width: 25px;
+      // }
+    }
+
+    &.launcher {
+      svg.addressbook {
+        padding: 2px;
+      }
+
+      svg.bigchat {
+        transform: rotateY(180deg);
+      }
+    }
+
+
+    .label {
+      // &[data-device="mobile"] {
+      //   line-height: 14px;
+      // }
+      overflow: hidden;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      width: 100%;
+      @include typo($line: 15px, $size: 12px, $color: $core-default-text-reverse); //$ewhite
+    }
+
+    &:hover {
+      opacity: 1;
+
+      * {
+        color: $core-default-icon-hover; //$eviolet;
+      }
+
+      .desk-dock__tooltips {
+        color: $core-default-text-color; //$default-text-color;
+      }
+
+      & .bigchat__btn-counter {
+        color: $ewhite;
+      }
+    }
+
+    &.maker {
+      &.folder {
+        svg {
+          color: $folder-main;
+        }
+      }
+
+      &.team {
+        svg {
+          color: $teamroom-main;
+        }
+      }
+
+      &.sharebox {
+        svg {
+          color: $sharebox-main;
+        }
+      }
+
+      &.note {
+        svg {
+          // color: $sharebox-main;
+          padding: 4px;
+        }
+      }
+
+      &.website {
+        opacity: 0.5;
+
+        &:hover {
+          opacity: 1;
+        }
+
+        svg {
+          color: $website-main;
+        }
+      }
+    }
+
+    &.launcher {
+      &.contact {
+        svg {
+          margin-left: 6px;
+          padding: 2px;
+        }
+      }
+
+      &.calendar {
+        opacity: 0.5;
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+
+      &.bigchat {
+        svg.bigchat {
+          margin-right: 0px;
+          transform: rotateY(180deg);
+        }
+      }
+
+      &.schedule {
+        svg {
+          margin-left: 3px;
+        }
+      }
+
+      &.conference {
+        svg {
+          margin-right: 0px;
+        }
+      }
+    }
+
+    & .launcher-icon {
+      &[data-is-active="on"] {
+        svg {
+          color: $eviolet !important;
+        }
+      }
+    }
+
+    &.trash {
+      &[data-over="yes"] {
+        border: 2px solid $eviolet;
+        border-radius: $default-border-radius;
+
+        svg {
+          color: $eviolet;
+        }
+
+        &:after {
+          border-radius: $default-border-radius;
+          content: " ";
+          height: 100%;
+          left: 0;
+          position: absolute;
+          top: 0;
+          width: 100%;
+        }
+      }
+
+      svg {
+        padding: 3px;
+      }
+    }
+
+    &.hub {
+      width: 65px;
+    }
+  }
+
+  &__tooltips {
+    background-color: $core-background-tooltips; //$default-background-tooltips;
+    border-radius: $default-border-radius-tiny;
+    opacity: 1;
+    padding: 8px;
+    position: absolute;
+    top: -40px; //-45px;
+    white-space: nowrap;
+    z-index: 10;
+    user-select: none;
+    @include typo($size: 11px, $line: 14px, $weight: 400, $color: $core-default-text-tooltips); // $default-text-color);
+
+    &::before {
+      background: $core-background-tooltips; //$default-background-tooltips;
+      bottom: -4px;
+      content: " ";
+      height: 10px;
+      left: calc(50% - 7px);
+      position: absolute;
+      transform: rotate(45deg);
+      width: 12px;
+      z-index: 1;
+    }
+  }
+
+  @media (max-width: $small) {
+    .desk-dock__container.application.maker {
+      display: none;
+    }
+
+    .desk-dock__container.mobile-launcher {
+      display: flex;
+    }
+
+    .desk-dock__container.application.launcher {
+      display: none;
+    }
+
+    // .launcher {
+    //   & .calendar, & .addressbook , & .schedule {
+    //     display:none;
+    //   }
+    // }
+  }
+
+  &__mobile-launch-wrapper {
+
+    @media (max-width: $small) {
+      .desk-dock__container.application.maker {
+        display: flex !important;
+        padding-bottom: 8px;
+      }
+
+      .desk-dock__container.application.launcher {
+        display: flex !important;
+      }
+
+      .desk-dock__container.application {
+        &::after {
+          background-color: transparent !important;
+          ;
+        }
+
+        &.hub {
+          &::after {
+            display: none;
+          }
+        }
+      }
+
+      .launcher {
+
+        & .calendar,
+        & .addressbook,
+        & .schedule {
+          display: flex !important;
+        }
+      }
+    }
+
+    & .menu-topic-items__wrapper {
+      background-color: rgba(47, 47, 47, .37);
+      backdrop-filter: blur(27px);
+      border-radius: 5px;
+      bottom: 39px;
+      display: flex;
+      flex-direction: row;
+      overflow: visible !important;
+      padding-bottom: 5px;
+      position: absolute !important;
+      left: -28px;
+      transform: translateX(-19%);
+      margin-bottom: 13px;
+      &[data-device="mobile"] {
+        left: -28px;
+      }
+
+      & .menu-topic-items {
+        padding-top: 3px;
+        transform: matrix(1, 0, 0, 1, 0, 0) !important;
+      }
+
+      & .desk-dock__docker-menu {
+        display: flex;
+        flex-direction: column;
+
+        &[data-device="mobile"] {
+          padding: 5px;
+        }
+
+        &.hub {
+          flex-direction: row;
+        }
+      }
+    }
+
+    &.hub {
+      & .menu-topic-items__wrapper {
+        bottom: 40px;
+        left: 12px;
+        margin-bottom: 22px;
+        max-width: 190px;
+      }
+    }
+  }
+
+  &__container.mobile-launcher {
+    display: none;
+  }
+
+  &__button.launcher.mobile-launcher {
+    padding: 15px;
+  }
+}

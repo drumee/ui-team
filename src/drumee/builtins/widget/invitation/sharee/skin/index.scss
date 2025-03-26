@@ -1,0 +1,118 @@
+@import 'mixins/colors/index.scss';
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/exports.scss';
+@import 'mixins/handles.scss';
+@import 'mixins/utils.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/z-index.scss';
+@import 'mixins/drumee';
+
+.invitation-sharee{
+  &__ui {
+    width: calc(100% - 30px);
+    border: 1px;
+    //margin-left:28px;
+    margin-left:26px;
+    padding-left:13px;
+    margin-right:28px;
+    &:hover {
+      background-color: $core-default-background-hover;//#879BFF;
+      color: $core-default-text-hover;//$ewhite;
+     // border-radius:4px;
+      .settings, .delete, .view {
+        visibility: visible;
+        color: $ewhite;
+      }
+      & .note-reader {
+        color:$core-default-text-hover;//$ewhite;
+      }
+    }
+  }
+  &__container {
+    align-items: center;
+    // padding-left: 10px;
+    height: 35px; //36px;
+    @include typo($color:$core-default-text-color,$size:14px,$line:36px,$weight:400);
+    cursor: pointer;
+  }
+
+  &__profile {
+    &.avatar {
+      width: 29px; //27px; //26px;
+      height: 29px; //27px; //26px;
+      margin-top: auto;
+      margin-bottom: auto;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: 50% 50%;
+      background-color:$core-default-user-icon;// #D8D8D8;
+      border-radius: 15px;
+      //overflow: hidden;
+      &.public{
+        padding: 6px;
+        color: $egrey-2f;
+        background-color: white;
+        border: 1px solid #D8D8D8;
+      }
+    }
+  }
+
+  &__label {
+    width: 166px;
+    padding: 0 0 0 14px;
+    @include overflow-text;
+    .inner{
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+  &__icon{
+    width: 14px;
+    height: 14px;
+    color: $core-default-icon-neutral;
+    // visibility: hidden;
+    cursor: pointer;
+    margin-right: 16px;
+    &.settings{
+      margin-left: auto;
+      &[data-editable="0"]{
+        display: none;
+        pointer-events: none;
+      }
+      svg{
+        position: absolute;
+      }          
+    }
+    &.delete{
+      &[data-editable="0"]{
+        display: none;
+        pointer-events: none;
+      }          
+    }
+  }
+}
+
+//   &__container-sharee{
+//     width: calc(100% - 82px);
+//   }
+//   &-settings{
+//     &__container{
+//       width: 82px;
+//       line-height: 26px;
+//       justify-content: center;
+//     }
+//     &__header {
+//       @include typo($color:#AB47BC,$size:16px,$line:16px,$weight:400);
+//     }
+//     &__button{
+//       &.dialog__button--submit{
+//         width: auto;
+//         &[data-editable="0"]{
+//           display: none;
+//         }
+//       }
+//     }    
+//   }
+// }

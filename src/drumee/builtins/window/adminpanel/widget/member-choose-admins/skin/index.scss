@@ -1,0 +1,270 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/window/adminpanel/widget/member_choose_admins/js/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.widget-member-chooseAdmins {
+  &__ui {
+    border-radius:$default-border-radius;
+    background-color: $admin-default-background;  
+    height: calc(100% - 20px);
+    max-height: 538px;
+    max-width: 410px;
+    min-height: 300px;
+    min-width: 320px;
+    width: calc( 100% - 20px);
+  }
+
+  &__main {
+    align-items: center;
+    height: 100%;
+    width: 100%;
+  }
+
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__header {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    max-height: 90px;
+    padding-top: 10px;
+    width: 100%;
+  }
+
+  &__content {
+    //height: 100%;
+    overflow: hidden;
+    width: 100%;
+    margin-top: 10px;
+    flex:1;
+    & *::-webkit-scrollbar {
+      height: 100%;
+      width: 2px;
+    }
+    
+    & *::-webkit-scrollbar-thumb {
+      background-color: $default-scrollbar-color;
+      cursor: pointer;
+    }
+  }
+
+  &__note {
+    justify-content: center;
+    width: 100%;
+
+    &.title {
+      @include typo($size: 16px, $line: 21px, $color:$admin-default-text-title);
+    }
+
+    &.info {
+      max-width: 237px;
+      @include typo($size: 14px, $line: 16px, $color:$admin-default-text-title);
+    }
+
+    &.search-title {
+      @include typo($size: 14px, $line: 14px, $weight: 300, $color: $admin-default-text-title);
+      margin-top: 10px;
+    }
+  }
+
+  &__icon {
+    cursor: pointer;
+
+    &.close {
+      color:$admin-default-thinline-icon;
+      height: 12px;
+      margin: 10px;
+      position: absolute;
+      right: 5px;
+      top: 5px;
+      width: 12px;
+      
+      &:hover {
+        color:$admin-default-thinline-icon-hover;
+      }
+    }
+
+    &.info {
+      color: $admin-default-icon-neutral;
+      height: 15px;
+      position: absolute;
+      right: 20%;
+      width: 15px;
+
+      & .tooltips {
+        background-color: $account-background-tooltips ;
+        border-radius: $default-border-radius;
+        max-height: 90px;
+        min-height: 60px;
+        padding: 10px;
+        position: absolute;
+        right: 0px;
+        text-align: justify;
+        top: 20px;
+        width: 250px;
+        z-index: 1;
+        @include typo($size: 12px, $line: 20px, $color: $account-default-text-tooltips);
+      }
+    }
+
+    &.search-icon {
+      color:$admin-default-icon-neutral;
+      height: 17px;
+      left: 12px;
+      min-width: 17px;
+      right: 0;
+      width: 17px;
+    }
+
+    &.search-close-icon {
+      height: 10px;
+      opacity: 0.6;
+      position: absolute;
+      right: -158px;
+      top: -33px;
+      width: 10px;
+
+      &:hover {
+        color: $admin-default-thinline-icon-hover;//$default-thinline-icon-hover;
+      }
+    }
+  }
+
+  &__members-content {
+    align-items: center;
+    width: 100%;
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &__search-wrapper {
+    justify-content: center;
+    max-width: 325px;
+    width: 100%;
+  }
+
+  &__search {
+    justify-content: center;
+    padding-bottom: 10px;
+    width: 100%;
+
+    &.search-result-header {
+      border-radius: $default-border-radius-top;
+      max-width: 380px;
+      min-width: 310px;
+    }
+    
+    &.entry {
+      background: transparent;
+      border-radius: 2px;
+      height: 100%;
+      max-height: 31px;
+      max-width: 380px;
+      min-height: 20px;
+      min-width: 310px;
+      width: 100%;
+    }
+
+    & input {
+      border-bottom: 1px solid $admin-default-entry-border-bottom;
+      margin-left: 24px;
+      width: 100%;
+      @include typo($size: 15px, $line: 16px, $color: $admin-default-text-color);
+      
+      &::placeholder {
+        @include typo($size: 15px, $line: 16px, $weight: 300, $color:$admin-default-text-placeholder);
+      }
+    }
+  }
+
+  &__list {
+    background: $admin-default-background;
+    border-radius:6px;
+    height: 100%;
+    margin-bottom: 10px;
+    max-width: 380px;
+    min-height: 180px;
+    min-width: 310px;
+    padding-top: 10px;
+    width: 100%;
+
+    & .smart-container {
+      height: 100%;
+      padding: 10px 14px;
+      width: 100%;
+    }
+  }
+
+  &__footer {
+    align-items: center;
+    height: 100%;
+    max-height:80px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  &__buttons-wrapper {
+    justify-content: center;
+    width: 100%;
+    padding-bottom: 15px;
+  }
+
+  &__button-cancel {
+    @include typo($size: 16px, $color: $btn-rollback-text);
+    align-items: center;
+    border-radius:$default-border-radius;
+    border: 1px solid $btn-rollback-border;
+    height: 35px;
+    justify-content: center; 
+    margin-right: 5%;
+    margin-top:5px;
+    text-align: center;
+    width: 115px;
+
+    &:hover {
+      border: 2px solid $btn-rollback-border-hover;
+      color:$btn-rollback-text-hover; 
+    }
+  }
+
+  &__button-confirm {
+    @include typo( $size: 15px, $line: 16px, $color: $btn-commit-text);
+    align-items: center;
+    background-color: $btn-commit-background;
+    border-radius:$default-border-radius;
+    border: 1px solid $btn-commit-border;
+    height: 35px;
+    justify-content: center; 
+    margin-left: 5%;
+    margin-top:5px;
+    padding: 0 5px;
+    text-align: center;
+    width: 115px;
+
+    &:hover{
+      background-color:$btn-commit-background-hover;
+      border-color: $btn-commit-border-hover; 
+    }
+  }
+  
+  &__search-result-wrapper {
+    background: $admin-default-background;
+    height: 90%;
+    position: absolute;
+    top: 10%;
+    width: 100%;
+    z-index: 99;
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+}

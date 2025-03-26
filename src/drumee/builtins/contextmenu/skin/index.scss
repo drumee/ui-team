@@ -1,0 +1,172 @@
+/* =================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/builtins/contextmenu/skin/index.scss
+#   TYPE : Style Component
+# ==================================================================== */
+
+@import 'mixins/drumee.scss';
+
+.drumee-contextmenu.drumee-box {
+  background-color: $core-default-block-background;//$core-background-tooltips;
+  border-radius: $default-border-radius;
+  min-width: 90px;
+  overflow: hidden;
+  position: absolute;
+  box-shadow:$drumee-shadow-container;
+
+  .contextmenu-item {
+    align-items: center;
+    cursor: pointer;
+    display: flex;   
+    flex-direction: row;
+    height: 36px;
+    justify-items: center;
+    padding: 10px;
+    white-space: nowrap;
+    @include typo($color:$core-default-text-color, $size: 12px, $line: 16px);
+    &[data-state='disable'] {
+      opacity: 0.35;
+      cursor: not-allowed;
+      &:hover {
+        background-color: transparent;
+        color: $core-default-text-color;
+        & svg {
+          color: $core-default-icon-neutral;
+        }
+      }
+    }
+
+    &:hover {
+      background-color: $core-default-background-hover;
+      color: $core-default-text-reverse;
+
+       svg {
+         color: $core-default-text-reverse;
+         opacity: 1;
+       }
+    }
+
+    &.separator {
+      background-color: $core-default-transparent-black;
+      height: 1px;
+      padding: 0px;
+    }
+
+    &.flip-x {
+      svg {
+        opacity: 1;
+        padding: 0;
+        transform:scaleX(-1);
+      }
+    }
+    &.desktop_rotate{
+      svg{
+        opacity: 1;
+        padding: 0px;
+      }
+    }
+    /*  &.copy{
+       svg{
+         color: #18ac72;
+       }
+     }
+     &.paste{
+       svg{
+         color: #879bff;
+       }
+    }*/
+
+    &.account {
+      svg {
+        opacity: 1;
+        //color: #4a90e2;
+        padding: 0.5px;
+      }
+    }
+
+    &.link {
+      svg {
+        padding: 2px;//1.5px;
+      }
+    }
+    
+    &.new-folder.blue {
+      svg {
+        color: $folder-main;
+      }
+    }
+
+    &.preferences {
+      svg {
+        height: 21px;
+        opacity:1;
+        padding: 0px;
+        width: 21px;
+      }
+    }
+    &.desk-background{
+      svg{
+        opacity: 1;
+      }
+    }
+    /* &.download{
+       svg{
+         color:#18a3ac;
+       }
+     }
+     &.upload{
+       svg{
+         color: #47638f;
+       }
+     }*/
+     &.unlock{
+       svg{
+         //color:#787b7f;
+         padding:2px;
+       }
+     }
+     &.lock{
+       svg{
+         //color:#787b7f;
+         padding:2px;
+       }
+     }
+     &.drumee-trash{
+       svg{
+         opacity: 1;
+         padding: 1px;
+       }
+     }
+     &.backoffice_public{
+      svg{
+        opacity: 1;
+        padding: 1px;
+      }
+    }
+    &.desk-background{
+      svg{
+        opacity: 1;
+        padding: 1px;
+      }
+    }
+    &.editbox_cog{
+      svg{
+        padding: 2px;
+      }
+    }
+
+    svg {
+      color:$core-default-icon-neutral ;
+      height: 20px;
+      margin-right: 5px;
+      opacity: 0.75;
+      padding: 1.5px;
+      width: 20px;        
+    }
+
+    .label{
+      padding: 1px 0 0 1px;
+    }
+  }
+}
+ 

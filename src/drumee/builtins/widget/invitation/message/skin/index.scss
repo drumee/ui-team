@@ -1,0 +1,121 @@
+@import 'mixins/drumee';
+
+.invitation-message {
+  &__ui {
+    height: auto;
+    width: 260px;
+    padding: 25px 25px 15px;
+    margin: 0 auto;
+    background-color: $core-default-block-background;
+    box-shadow: $drumee-shadow-box;
+    border-radius: $default-border-radius;
+    position: absolute;
+
+    &:before {
+      content: " ";
+      width: 10px;
+      height: 10px;
+      background-color: $core-default-block-background;
+      position: absolute;
+      top: -5px;
+      left: 150px;
+      transform: rotate(45deg);
+    }
+  }
+
+  &__button {
+    min-width: 68px;
+    width: auto;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    background-color: $btn-commit-background;
+    border-radius: $default-border-radius;
+    @include typo($line: 20px, $size: 14px, $color: $btn-commit-text);
+
+    &:hover {
+      background-color: $btn-commit-background-hover;
+    }
+  }
+
+  &__textarea {
+    width: 100%;
+    height: auto;
+    border: none;
+    background-color: transparent;
+    min-height: 0;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    margin: 0 auto;
+    padding: 0 2px;
+    @include typo($color: $core-default-text-color, $size: 14px, $line: 28px, $weight: 400);
+
+    textarea {
+      height: 35px;
+      min-height: 35px;
+      border: none;
+      resize: none;
+      cursor: text;
+      width: 100%;
+      margin: 0 auto;
+      padding: 6px 2px;
+      border-bottom: 1px solid $core-default-entry-border-bottom ;
+      flex-shrink: 0;
+      background: transparent;
+      letter-spacing: 0;
+      overflow-wrap: break-word;
+      @include typo($line: 18px, $size: 14px, $color: $core-default-text-color);
+
+      @include placeholder-input {
+        @include typo($color: $core-default-text-placeholder, $size: 14px, $line: 28px, $weight: 300);
+      }
+    }
+
+    &.input {
+      width: 100%;
+      height: auto;
+      min-height: 0em;
+      overflow-y: visible;
+      padding: 0 2px;
+      @include typo($color: $core-default-text-color, $size: 14px, $line: 28px, $weight: 400);
+    }
+
+    .entry-text {
+      width: 100%;
+      min-height: 0em;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  }
+}

@@ -1,0 +1,195 @@
+/* 
+  player/document/skin/document.scss
+*/
+@import 'slider-pro.css';
+@import 'slider-pro.scss';
+@import 'mixins/drumee.scss';
+
+.player-document {
+  &__ui {
+    background-color: $multimedia-player-doc-background;
+    width: 100%;
+  }
+
+  &__main {
+    height: 100%;
+    min-height: 300px;
+    min-width: 300px;
+    width: 100%;
+  }
+
+  &__progress {
+    &-container {
+      transition-property: opacity;
+      transition-duration: 1s;
+      position: absolute;
+      top: 45px;
+      left: 0;
+      width: calc(100% - 7px);
+      height: auto;
+      min-height: 3px;
+      background-color: rgba(0, 0, 0, 0.6);
+      z-index: 2000;
+      justify-content: flex-start;
+      display: flex;
+      margin: 0 10px 0 0;
+
+      &[data-state="0"] {
+        opacity: 0;
+        z-index: 0;
+      }
+    }
+
+    &-bar {
+      position: absolute;
+      height: 100%;
+      width: 0;
+      background-color: rgba(0, 0, 0, 0.4);
+      z-index: 1;
+    }
+
+    &-text {
+      position: absolute;
+      @include typo($color: $core-default-text-color, $size: 14px, $line: 15px, $weight: 300);
+      top: 10px;
+      left: 0;
+      width: 100%;
+      z-index: 2;
+      padding: 10px;
+      text-align: center;
+      justify-content: center;
+    }
+  }
+
+
+  &__error {
+    padding: 20px;
+    text-align: center;
+    @include typo($color: $core-default-text-error, $size: 16px, $line: 24px, $weight: 300);
+  }
+
+  &__list {
+    height: 100%;
+    max-height: 100%;
+    overflow-y: visible;
+    width: 100%;
+
+    .list-smart__container {
+      height: 100%;
+      margin-top: 15px;
+      padding: 0 10px;
+    }
+
+
+    & .list-smart__container::-webkit-scrollbar {
+      width: 7px !important;
+    }
+  }
+
+  &__control {
+    bottom: 60px;
+    height: 40px;
+    position: absolute;
+    right: 20px;
+    width: 40px;
+
+    .play-btn {
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      color: #18A3AC;
+      cursor: pointer;
+
+      &[data-state="1"] {
+        padding: 10px !important;
+      }
+    }
+  }
+
+  &__loading {
+    @include typo($color: $default-text-color, $size: 18px, $line: 42px, $weight: 300);
+    align-content: center;
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    justify-items: center;
+    text-align: center;
+  }
+
+  &__overlay {
+    background-color: $core-transparency-container-overlay ;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 10px;
+    z-index: 10;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+  }
+
+
+  &-new-content-popup {
+    &__container {
+      justify-content: space-evenly;
+      width: 100%;
+      height: 100%;
+      max-height: 300px;
+      max-width: 400px;
+      padding: 30px;
+      background-color: white;
+      border-radius: 5px;
+    }
+
+    &__note {
+      @include typo($size: 14px, $line: 1.3, $color: $core-default-text-color);
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+
+    &__buttons-wrapper {
+      justify-content: center;
+      width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+
+    &__button {
+      height: 25px;
+      width: auto;
+      justify-content: center;
+      align-items: center;
+      margin-right: 5%;
+      margin-top: 5px;
+      text-align: center;
+      border-radius: $default-border-radius;
+      cursor: pointer;
+      min-width: 75px;
+
+      &.cancel {
+        @include typo($size: 12px, $color: $btn-rollback-text);
+        border: 1px solid $btn-rollback-border;
+
+        &:hover {
+          border: 2px solid $btn-rollback-border-hover;
+          color: $btn-rollback-text-hover;
+        }
+      }
+
+      &.confirm {
+        @include typo($size: 12px, $line: 14px, $color: $btn-commit-text);
+        background-color: $btn-commit-background;
+        border: 1px solid $btn-commit-border;
+
+        &:hover {
+          background-color: $btn-commit-background-hover;
+          border-color: $btn-commit-border-hover;
+        }
+      }
+    }
+  }
+}

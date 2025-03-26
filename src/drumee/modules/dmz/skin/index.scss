@@ -1,0 +1,90 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/modules/dmz/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import 'mixins/drumee';
+@import '../wm/skin/wm-main.scss';
+
+.dmz-router {
+  @import './popup';
+
+  &__ui {
+    height: 100vh;
+    width: 100%;
+    position: absolute;
+  }
+
+  &__main,
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__container {
+    overflow: hidden;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+  }
+
+
+  &__note {
+    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+    text-align: center;
+  }
+}
+
+.dmz {
+  @import '../../welcome/skin/supported-browsers.scss';
+
+  &-supported-browsers {
+    &__container {
+      position: absolute;
+      background-color: $core-default-block-background;
+      z-index: 2000;
+    }
+
+    &__info {
+      display: none;
+      visibility: hidden;
+    }
+  }
+
+  &__logo {
+    &-wrapper {
+      align-items: center;
+      justify-content: flex-end;
+      max-width: 250px;
+      width: 24%;
+
+      &[data-device="mobile"] {
+        padding-bottom: 15px;
+        left: 0px;
+        display: none;
+      }
+    }
+
+    &-container {
+      width: 100%;
+      height: 100%;
+      justify-content: center;
+      padding: 5px;
+    }
+
+    &-item {
+      background-position: center center;
+      background-repeat: no-repeat;
+      background-size: contain;
+      margin-left: 20px;
+      height: 45px;
+      width: 45px;
+      border-radius: 3px;
+
+      &[data-device="mobile"] {
+        margin-left: 10px;
+      }
+    }
+  }
+
+}

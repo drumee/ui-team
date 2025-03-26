@@ -1,0 +1,58 @@
+/************************************************************
+                        Adressbook : colors used
+************************************************************/
+
+/**background**/ 
+$ab-background-header              : #556E7F; //#6994b1;
+$ab-default-background             : $core-default-background;
+$ab-default-background-hover       : $core-default-background-hover;
+$ab-default-block-background       : $core-default-block-background;
+$ab-transparency-container-overlay : $core-transparency-container-overlay;
+$ab-background-tooltips            : $core-background-tooltips;
+$ab-default-background-alert       : $core-default-background-alert;
+
+/**text**/
+$ab-special-tag-color               : #6994b1;//#18a3ac; 
+$ab-default-text-color              : $core-default-text-color;
+$ab-secondary-text-color            : $core-secondary-text-color;
+$ab-default-text-reverse            : $core-default-text-reverse; 
+$ab-default-text-title              : $core-default-text-title;//#556e7f;
+$ab-default-text-placeholder        : $core-default-text-placeholder;
+$ab-text-placeholder-focus          : $core-focus-text-placeholder;
+$ab-default-text-hover              : $core-default-text-hover;
+$ab-tertiary-text-color             : $core-tertiary-text-color;
+$ab-default-text-success            : $core-default-text-success;
+$ab-default-text-tooltips	          : $core-default-text-tooltips;
+$ab-default-text-notification       : $core-default-text-notification;
+$ab-text-title                      : $ab-default-text-title;//#556E7F;
+
+/**icon**/
+$ab-icon-header	                    : #556E7F;
+$ab-contact-online-color            : $core-contact-online-color ;
+$ab-default-icon-neutral            : $core-default-icon-neutral;
+$ab-default-icon-reverse            : $core-default-icon-reverse ;
+$ab-default-icon-active             : $core-default-icon-active;
+$ab-default-icon-hover              : $core-default-icon-hover;
+$ab-default-thinline-icon           : $core-default-thinline-icon; //close icon
+$ab-default-thinline-icon-hover     : $core-default-thinline-icon-hover; //close icon
+$ab-default-icon-success            : $core-default-icon-success;
+$ab-default-user-icon               : $core-default-user-icon;
+$ab-special-tag-note-chat           : $core-special-tag-note-chat;
+$ab-default-icon-menu-dropdown      : $core-default-icon-menu-dropdown; 
+
+
+$ab-default-checkbox-border         : $core-default-checkbox-border;
+$ab-default-checkbox-checked        : $core-default-checkbox-checked;
+$ab-default-checkbox-background     : $core-default-checkbox-background;
+$ab-checkbox-checked-reverse        : $core-checkbox-checked-reverse;
+$ab-checkbox-checked-border-reverse : $core-checkbox-checked-border-reverse;
+
+/**border**/
+$ab-default-entry-border-bottom     : $core-default-entry-border-bottom;
+$ab-default-border-error            : $core-default-border-error;
+$ab-focus-border-placeholder        : $core-focus-border-placeholder;
+$ab-default-separator               : $core-default-separator;//$ab-background-header;
+$ab-default-frame                   : $core-default-frame;
+$ab-default-window-header-search    : $core-default-window-header-search;
+//$ab-border-no-discussion            : $core-border-no-discussion ;
+

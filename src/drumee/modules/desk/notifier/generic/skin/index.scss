@@ -1,0 +1,48 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : desk/skin/desk-header.scss
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+.notifier-generic {
+  &__ui {
+    z-index: 1000;
+    background-color: #fa8540;
+    color: #fff;
+    flex-shrink: 0;
+    border-radius: 2px;
+    box-shadow: 0 5px 8px 1px rgba(63, 79, 117, .13), 0 6px 16px 0 rgba(86, 65, 113, .08), 0 2px 14px 0 rgba(194, 185, 203, 0);
+    cursor: pointer;
+    position: absolute;
+    top: -45%;
+    left: 55%;
+  }
+
+  &__icon {
+    &[data-over="yes"] {
+      &:after {
+        content: "";
+        position: absolute;
+        top: -20px;
+        left: -20px;
+        height: 80px;
+        width: 80px;
+        border: 2px solid #FA8540;
+        background-color: transparent;
+      }
+    }
+  }
+
+  &__digit {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 1);
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    color: #4a90e2;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    font-weight: bold;
+    margin: 8px;
+  }
+}

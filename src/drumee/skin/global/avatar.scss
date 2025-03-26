@@ -1,0 +1,32 @@
+/* =================================================================== *
+   #   Copyright Xialia.com  2011-2016                                    *
+   #   FILE : src/drumee/skin/global/avatar.scss
+   #   TYPE : Global styles, for the whole platform
+   # ==================================================================== */
+
+.user-profile{
+  &__ui{
+    padding: 0;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 3px;
+    box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
+    cursor: pointer;
+    overflow: hidden;
+    &[data-default="1"]{
+      color: $ewhite;
+      padding: 8px;
+      border: 1px solid white;
+      svg{
+        fill: white;
+      }
+    }
+    img{
+      object-position:50% 50%;
+      width:100%;      
+      height:100%;
+      object-fit:cover;      
+    }
+  }
+}

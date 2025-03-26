@@ -1,0 +1,183 @@
+.xia-modal-root {
+    @extend %xia-container;
+    @include justify-content(center);
+    @include align-items(center);
+    //background-color: rgba(170, 170, 170, 0.5);
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index: $xia-z-index-highest;
+    opacity:0;
+    &[data-state=open]{
+	@include background(linear-gradient(top,  rgba(200, 200, 200, .3), rgba(70, 70, 70, 0.5)));
+	opacity:1;
+    }
+
+}
+
+#xia-modal-wrapper, .modal-wrapper {
+    @include display-flex();
+    @include justify-content(center);
+    @include align-items(center);
+    min-height: 140px;
+    text-align: center;
+    min-width: 400px;
+    max-width: 100%;
+    @include transition(width ease-in-out 1s, height ease-in-out 1s);
+    .flow-vertical{
+	background-color:$xia-popup-bg-color;
+	border-radius:5px;
+    }
+    #xia-modal-header, modal-header{
+	@extend .xia-top-right;
+    }
+    #xia-modal-body{
+	min-height: 100px;
+    }
+    #xia-modal-content, .content{
+	margin: 0 20px 0 10px;
+	p{
+	    margin-top:0;
+	    line-height: 18px;
+	    padding-bottom: 15px;
+	}
+    }
+    .picto{
+	&[data-role=info]{
+	    min-height:backgrounds-sprite-height(smiley-big) + 2px;
+	    width:backgrounds-sprite-width(smiley-big) + 2px;
+	    @extend .backgrounds-smiley-big;
+	}
+	&[data-role=error]{
+	    min-height:backgrounds-sprite-height(error-big) + 2px;
+	    width:backgrounds-sprite-width(error-big) + 2px;
+	    @extend .backgrounds-error-big;
+	}
+    }
+    #xia-modal-footer{
+	@extend .xia-space-between;
+	    &[data-shown=off]{
+		visibility:visible;
+	    }
+    }
+}
+
+.tooltip-fixed{
+    background: rgba(250, 250, 250, .6);
+    margin-right: 10px;
+    min-width: 40%;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+    border: 1px solid #eaa;
+    color:#666;
+    padding-right: 20px;
+    padding: 5px 20px 5px;
+    text-align: right;
+}
+.tooltip{
+    border: 1px solid grey;
+    border-radius: 5px;
+    background: rgba(250, 250, 250, .7);
+    min-width: 80px;
+    height: 30px;
+    position: fixed;
+    z-index: 2000;
+    width: 50%;
+    top:initial;
+    right:initial;
+    bottom:initial;
+    left:initial;
+    &[data-size=full]{
+	width: 100%;
+	left: 0 !important;
+    }
+    &[data-anchor=center]{
+	margin: auto;
+	top: 50%;
+	left: 25%;
+    }
+    &[data-anchor=n]{
+	margin-left: auto;
+	margin-right: auto;
+	top: 0;
+	left: 25%;
+    }
+    &[data-anchor=ne]{
+	margin-left: 0;
+	margin-right: auto;
+	top: 50%;
+	right: 0;
+    }
+    &[data-anchor=e]{
+	margin: auto;
+	margin-right: 0;
+	right: 0;
+	top:50%;
+    }
+    &[data-anchor=se]{
+	margin-left: auto;
+	margin-right: 0;
+	bottom: 0;
+	right:0;
+    }
+    &[data-anchor=s]{
+	margin-left: auto;
+	margin-right: auto;
+	bottom: 0;
+	left:25%;
+    }
+    &[data-anchor=sw]{
+	margin-left: 0;
+	margin-right: auto;
+	bottom: 0;
+	left:0;
+    }
+    &[data-anchor=w]{
+	margin: auto;
+	margin-left: 0;
+	left: 0;
+	top:50%;
+    }
+    &[data-anchor=nw]{
+	margin-right: auto;
+	margin-left: 0;
+	top: 0;
+	left:0;
+    }
+}
+.modal-content{
+    p{
+	text-align: justify;
+    }
+}
+.popup-inline{
+    padding:20px;
+    width: 60em;
+    height: 30em;
+    margin:auto;
+}
+
+.gs-spinner{
+    .item{
+	width:20px;
+	height:20px;
+	background:blue;
+	position:absolute;
+	border-radius:50%;
+    }
+}
+.prompt.absolute{
+    width:50%;
+    min-width:500px;
+    margin:auto;
+}
+
+.popup-body{
+    .error{
+	color : red;
+    }
+}

@@ -1,0 +1,88 @@
+@import "mixins/drumee";
+.svg-progress {
+  &__main {
+    width: 100%;
+    height: 100%;
+    justify-content: space-between;
+    align-items: center;
+    flex-direction: row;
+    margin: 0 auto;
+  }
+  &__container {
+    &-name {
+      min-width: 300px;
+      width: 40%;
+      flex-shrink: 0;
+    }
+    &-progress {
+      min-width: 160px;
+      width: 25%;
+      height: 100%;
+      flex-shrink: 0;
+    }
+    &-size {
+      min-width: 140px;
+      width: 20%;
+      flex-shrink: 0;
+    }
+  }
+  &__value {
+    &-filesize {
+      @include typo($line: 14px, $size: 12px, $weight: 300, $color: #2f2f2f);
+      letter-spacing: 0.1px;
+    }
+    &-filename {
+      margin-left: 11px;
+      padding-right: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      .root-node {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        @include typo($line: 16px, $size: 14px, $weight: 300, $color: #494949);
+        letter-spacing: 0.1px;
+        text-align: left;
+      }
+      &[data-visible="no"] {
+        display: none;
+        pointer-events: none;
+      }
+    }
+  }
+  &__bar {
+    height: 4px;
+    width: 100px;
+    border-radius: 1.5px;
+    margin: auto 0 11px;
+    background-color: rgba(182, 191, 202, 0.36);
+    &-percent {
+      margin-left: -1em;
+      @include typo($line: 9px, $size: 9px, $weight: 300, $color: #18a3ac);
+      letter-spacing: 0.07px;
+    }
+    &--fg {
+      height: 100%;
+      transition: width 1s linear;
+      width: 0%;
+      border-radius: 1.5px;
+      background-color: #18a3ac;
+    }
+  }
+  &__close {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+    margin: 0 2px;
+    padding: 3.5px;
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: #fa8540;
+    }
+    &[data-cancelable="no"] {
+      display: none;
+      pointer-events: none;
+    }
+  }
+}

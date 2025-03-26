@@ -1,0 +1,51 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : desk/skin/desk-wap.scss
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+
+@import 'mixins/drumee';
+
+.desk-module__share-bar {
+  background: $egrey-e8;//rgba(137, 146, 158, 0.4);
+  box-shadow: 0 0px 4px $egrey-62;
+  width: 100%;
+  min-height: 50px;
+  z-index: 100;
+  align-items: center;
+  &-title{
+    @include typo($size: 18px, $line: 20px, $color: $default-text-color);//$egrey-2f);
+    flex:1;
+    justify-content: center;
+  }
+  &-timer {
+    margin-right: 10px;
+  }
+  & .share_bar_disconnect-btn {
+    @include typo($size: 14px, $line: 14px, $color: $default-text-reverse);//$btn-primary-color); //$size: 18px
+    align-items: center;
+    background:$core-default-background-alert;//$default-backround-alert ;// $eorange-dark ;
+    justify-content: center;
+    padding: 10px 18px;
+    margin-right: 10px;
+    border-radius:$default-border-radius;
+    cursor: pointer;
+    &:hover{
+      background:saturate($color:$eorange-dark, $amount: 10);
+    }
+  }
+}
+
+.desk{
+  &.share-mimic,&.share-victim{
+    & .desk-module__topbar-user-container, 
+    & .desk-module__topbar-notification-container {
+      top:70px;
+    }
+
+    & .desk-module__logo-item{
+      top:50px;
+    }
+  }
+
+}

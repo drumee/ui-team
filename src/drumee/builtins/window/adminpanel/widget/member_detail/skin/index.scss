@@ -1,0 +1,285 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2022
+#   FILE : /src/drumee/builtins/window/adminpanel/widget/member_detail/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.member-detail {
+  &__ui {
+    font-family : $roboto;
+    height: 100%;
+    width: 100%;
+  }
+
+  &__main {
+    height: 100%;
+    overflow-y: auto;
+    width: 100%;
+  }
+
+  &__status {
+    align-items: center;
+    background:$admin-default-background-alert;
+    color: $admin-default-text-reverse;
+    height: 100%;
+    justify-content: space-between;
+    max-height:35px;// 40px;
+    min-height: 35px;//40px;
+    opacity: 0.7; //0.8
+    width: 100%;
+  }
+
+  &__container {
+    height: 100%;
+    margin: auto;
+    min-width: 300px;
+    padding-bottom: 5px;
+  }
+
+  &__wrapper {
+    padding-bottom: 20px;
+
+    &.name {
+      margin-top: 44px;
+    }
+
+    &.member-action {
+      justify-content: center;
+    }
+  }
+
+  &__icon {
+    height: 26px;
+    margin-right: 25px; 
+    margin-top: 5px;
+   // opacity:0.55;
+    width: 26px;
+
+    &.name {
+      left: 4px;
+      opacity: 1;
+    }
+
+    &.email{
+      left: 4px;
+      width: 30px;
+      opacity:0.5; //0.55
+    }
+
+    &.ident {
+      height: 27px;
+      left: 4px;
+      opacity:0.6; //0.7
+      width: 27px;
+    }
+
+    &.mobile {
+      left:5px;
+      top:-2px;
+      opacity:0.5; //0.55;
+    }
+
+    &.address {
+      height: 28px;
+      left:2px;
+      opacity: 0.6;//.7;
+      top:-4px;
+    }
+
+    &.archive,
+    &.delete-member {
+      color:$admin-default-text-reverse;
+      height: 18px;
+      margin: 0;
+      opacity: 1;
+      right: 15px;
+      width: 18px;
+    }
+
+    &.status-info {
+      color: $admin-default-text-reverse;
+      height: 14px;
+      margin: 0;
+      opacity: 1;
+      left: 15px;
+      width: 14px;
+    }
+
+    &.not-verified-status {
+      color:$orange-lighter; //$eorange; 
+      height: 22px;
+      width: 22px;
+    }
+
+    &.verified-status {
+      color: $admin-default-icon-success;
+      border: 1px solid $admin-default-border-success;
+      width: 20px;
+      height: 15px;
+      margin-top: 9px;
+      border-radius: $default-checkbox-border-radius;
+    }
+  }
+
+  &__item {
+    justify-content: space-between;
+  }
+  
+  &__items {
+    justify-content: space-between;
+    padding-top: 5px;
+    width: 100%;
+    @include typo($size: 16px, $line: 19px, $color: $admin-default-text-color);
+
+    &.email,
+    &.mobile,
+    &.ident {
+      padding-left: 5px;
+    }
+    
+    &.name {
+      left: 1.5px;
+    }
+    
+    &.address {
+      flex:1;
+      width: 244px;
+    }
+  }
+
+  &__note {
+    padding-bottom: 2px;
+    padding-left: 5px;
+    @include typo($size: 16px, $line: 19px, $color: $admin-default-text-color);
+
+    &.firstname,
+    &.familyname {
+      padding-left: 1px;
+    }
+
+    &.firstname,
+    &.address {
+      padding-bottom: 7px;
+    }
+
+    &.address {
+      padding-left: 0;
+    }
+
+    &.member-status {
+      //color:$default-text-reverse;// $ewhite;
+      @include typo($size: 14px, $line: 15px, $color: $admin-default-text-reverse);
+    }
+
+    &.timestamp {
+      left: 10px;
+      max-width: 70px;
+      text-align: center;
+      top: 1px;
+      @include typo($size: 10px, $line: 15px, $color: $admin-default-text-reverse);
+    }
+
+    &.comment {
+      background-color: $admin-default-background;  
+      border-radius: $default-border-radius;
+      border: 1px solid $admin-default-frame;
+      box-sizing: border-box;
+      height: 100%;
+      margin-bottom: 5px;
+      margin-left:3px;
+      margin-top:5px;
+      max-height: 150px;
+      max-width: 250%;
+      min-height: 90px;
+      overflow-y: auto;
+      padding: 6px;
+      width: 100%;
+      @include typo( $size: 16px, $line: 20px, $color: $admin-default-text-color);
+    }
+
+    &.delete-action,
+    &.option {
+      max-width: 320px;
+      text-align: center;
+      min-width: 300px;
+      justify-content: center;
+      padding: 0;
+      margin-left: 16px;//0;
+      @include typo($size: 16px, $line: 20px, $color:$admin-default-text-alert);
+    }
+
+    &.email {
+      padding-left: 0px;
+      white-space: nowrap;
+      width: 220px;
+
+      & .inner {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      & .tooltips {
+        @include typo($size: 12px, $line: 12px, $color: $admin-default-text-tooltips);
+        background-color: $admin-background-tooltips;
+        border-radius: $default-border-radius;
+        height: 100%;
+        text-align: center;
+        top: -22px;
+        padding: 5px;
+        position: absolute;
+        width: fit-content;
+        z-index: 11;
+      }
+    }
+  }
+/*  &__buttons-wrapper-resend{
+    width: 400px;
+  }*/
+
+  &__button-action {  
+    border-radius:$default-border-radius;
+    height: 35px; //36px;
+    align-items: center;
+    justify-content: center; 
+    padding:0 5px;
+    //margin-top: 16px;
+    min-width: 115px;//130px;
+    margin-top: 30px ;//auto 0; //22px auto 0;
+    
+    &.button-delete{
+      border: 1px solid $btn-caution-border  ;
+      margin-left: -1%;
+      height: 40px;
+      min-width: 165px;
+      @include typo($size: 16px, $weight:400, $color:$btn-caution-backgroundless-text);
+      &:hover{
+        @include typo($size: 16px, $weight:400, $color:$btn-caution-text-hover);
+        border: 2px solid $btn-caution-border-hover;      
+      }
+    }
+    &.button-resend{
+      background-color: $btn-commit-background;     
+      margin-left: 2%;
+      height: 40px;
+      min-width: 165px;
+      @include typo($size: 16px, $weight:400, $color:$btn-commit-text);
+      &:hover {
+        background-color: $btn-commit-background-hover;
+      }
+    }
+  }
+  &__tooltips{
+    position:absolute;
+    padding:  6px;//3px 10px;
+    letter-spacing: 0;
+    width: 102px;//108px;//266px;
+    text-align: justify;
+    border-radius: $default-border-radius;
+    background-color: $admin-background-tooltips;
+    margin-left: -45px; //-215px;
+    margin-top: 22px; //16px;
+    @include typo($size: 11px, $line: 15px, $color:$admin-default-text-tooltips);
+  }
+}

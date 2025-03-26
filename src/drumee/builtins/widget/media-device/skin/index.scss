@@ -1,0 +1,40 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/window/conference/device/item/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.media-device{
+  &__ui{
+    cursor: pointer;
+  }
+  &__container{
+    height:30px;
+    align-items:center;
+  }
+  &__checkbox{
+    width: 14px;//20px;
+    height: 14px;//20px;
+  //  color : $egrey-2f;
+    border-radius: $default-checkbox-border-radius;
+    border: 1px solid $core-default-checkbox-border;//$default-checkbox;
+    color:$core-default-background;  
+
+    //left:-1px;
+    &[data-state="1"] {
+      box-shadow: none;
+      color:$core-default-checkbox-checked;// $checkbox-active; //$egreen-soft;
+      border: 1px solid $core-default-checkbox-border;//$default-checkbox;
+     // color: #6a85ff;
+    }
+  }
+
+  &__label{
+    //@include typo($color: $egrey-2f, $weight: 400, $line: 20px, $size: 12px);
+  //  left:8px;
+    width: 265px;//260px;
+    padding-left:5px;
+    @include typo($color: $egrey-2f, $weight: 400, $line: 26px, $size: 13px);
+  }
+}

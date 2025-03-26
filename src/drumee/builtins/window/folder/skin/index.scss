@@ -1,0 +1,112 @@
+@import 'mixins/drumee';
+
+.window-folder {
+  &__header {
+    border-bottom: none;
+    background-color: $folder-background-header ;
+    
+    &-title {
+      align-items: center;
+      @include typo($size:18px,$line:24px,$weight:400,$color:$folder-default-text-reverse);
+    }
+
+    &-control {
+      .icon {
+        color: $folder-default-icon-reverse;
+      }
+    }
+  }
+
+  &__icon {
+    cursor: pointer;
+    color: $folder-default-icon-reverse;
+
+    &-info {
+      cursor: pointer;
+      height: 25px;
+      margin: 0px 15px auto 5px;
+      min-width: 21px;
+      padding: 4px;
+      width: 21px;
+    }
+
+    &.download {
+      left: 20px;
+      width: 20px;
+      z-index: 1;
+    }
+
+    &:hover {
+      color: $folder-default-icon-hover;
+    }
+  }
+
+  &__title {
+    &-name {    
+      align-items: flex-start;
+      padding-left: 10px;
+      @include typo($size:18px,$line:24px,$weight:400,$color:$folder-default-text-reverse);
+      @include overflow-text;
+      .inner{
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+  &__wrapper-info{
+    position: absolute;
+    width: 0;
+    height: 0;
+    left: 50%;
+    .info.drumee-spinner{
+      width: 20px;
+      height: 20px;
+    }
+  }
+  &__info-container{
+    display: grid;
+    grid-auto-rows: 1rem;
+    grid-gap: 3px;
+    background-color: $folder-default-background;     
+    border-radius: $default-border-radius;
+    box-shadow: $drumee-shadow-box;
+    padding:8px; 
+    right: 126px;
+    top: 44px;
+    min-width: 265px;
+    width: 100%;
+    .info-status{
+      text-align: left;
+      width: 100%;
+      padding-left: 10px;
+      padding-top: 4px; 
+      @include typo($color: $folder-default-text-color,$size:12px,$line:16px,$weight:300);
+      @include overflow-text;
+      .icon{
+        width:14px;
+        height:14px;
+        padding: 0.5px;
+        color:$folder-default-icon-neutral;
+      }
+      .text{
+        margin-left: 6px;
+        display: flex;
+        flex-direction: row;
+        flex: 1;
+      }
+    }
+    .info-item {
+      text-align: left;
+      width: 50%;
+      padding-left: 10px;
+      padding-top: 4px; 
+      @include typo($color: $folder-default-text-color,$size:12px,$line:16px,$weight:300);
+      @include overflow-text;
+      &.value{
+        margin-left: 28px;
+        width: 37%;
+      }
+    }
+  }
+}

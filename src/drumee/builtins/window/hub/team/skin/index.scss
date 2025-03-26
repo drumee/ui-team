@@ -1,0 +1,206 @@
+@import "mixins/drumee.scss";
+.window-hub-team {
+
+  &__ui {
+    width: 570px;
+    top : 85px;
+    height: auto;
+    min-height: 386px;
+    border-radius: $default-border-radius; //6px;
+    margin: auto;
+  }
+  &__topbar {
+    background-color: $team-background-header ;
+    color: $team-default-text-reverse; 
+    border-radius: $default-border-radius-top; 
+    height: 44px;
+    .dialog__button--close {
+      color: $team-default-icon-reverse;
+      margin: 2px 0px auto 0;
+      :hover {
+        color: $team-default-thinline-icon-hover;
+      }
+    }
+    &.title {
+      // margin: auto 0 auto auto;
+      @include typo($line: 29px, $size: 18px, $weight: 400, $color: $team-default-text-reverse); //$ewhite);
+    }
+    &.icon {
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      margin: auto auto auto 14px;
+    }
+    .tooltips {
+      top: calc(100% + 5px);
+      left: 50%;
+      transform: translate(-50%, 0);
+      border-radius: $default-border-radius; //4px;
+      width: 264px;
+      height: auto;
+      padding: 12px 18px;
+      position: absolute;
+      background-color: $team-default-background-tooltips; //$teamroom-background-tooltips//#FFFFFF;
+      z-index: 100;
+      @include typo($line: 16px, $size: 14px, $weight: 400, $color: $team-default-text-tooltips); //$egrey-2f
+      &:after {
+        content: "";
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        transform: rotate(45deg);
+        background: $team-default-background ;
+        top: -3px;
+        left: calc(50% - 5px);
+      }
+    }
+  }
+  &__main {
+    width: 100%;
+    z-index: 60000; // higher than data-state=open
+    background-color: $team-default-background ;
+    justify-content: center;
+    align-items: center;
+  }
+  &__entry {
+    width: 100%;// 320px;
+    min-height:35px;
+  //  margin: 0 auto;
+    border: 1px solid transparent;
+    .input-details {
+      position: absolute;
+      @include typo($line: 29px, $size: 13px, $weight: 300, $color: $team-default-text-error);
+      right: 0px;
+      padding: 3px;
+    }
+    input {
+    //  width: 90%; //100%;
+      width: calc(100% - 5px);
+      margin: 0;
+      border-bottom: 1px solid $team-default-entry-border-bottom;
+      @include typo($line: 29px, $size: 16px, $weight: 400, $color: $team-default-text-color); 
+      @include placeholder-input {
+        @include typo($line: 29px, $size: 16px, $weight: 300, $color: $team-default-text-placeholder);
+      }
+      &:focus {
+        border-bottom: 1px solid $team-focus-border-placeholder ;
+        @include placeholder-input {
+          @include typo($line: 29px, $size: 16px, $weight: 300, $color: $team-text-placeholder-focus); 
+        }
+      }
+    }
+  }
+  .entry-search__ui {
+    margin: 0 0 20px 0;//20px 0;
+    input {
+      border-bottom: 1px solid $team-default-entry-border-bottom;
+      @include typo($line: 29px, $size: 16px, $weight: 400, $color: $team-default-text-color); 
+      @include placeholder-input {
+        @include typo($line: 29px, $size: 16px, $weight: 300, $color: $team-default-text-placeholder);
+      }
+      &:focus {
+        border-bottom: 1px solid $team-focus-border-placeholder;
+        @include placeholder-input {
+          @include typo($line: 29px,$size: 16px, $weight: 300, $color:  $team-text-placeholder-focus); 
+        }
+      }
+    }
+  }
+  &__wrapper {
+    position: absolute;
+    &.dialog__wrapper {
+      position: absolute;
+    }
+  }
+  &__container {
+    background-color: $team-default-background;
+    padding: 10px 10px 10px 40px;//10px;
+    width: 280px;
+    .invitation-settings__wrapper-options {
+      position: absolute;
+    }
+    &.--footer {
+      padding: 30px 0 40px 0;
+      background-color: $team-default-background;
+      z-index: 10000;
+      border-radius: $default-border-radius-bottom;
+      width: 100%;
+      &[data-active="0"] {
+        // z-index: 0 !important;
+        .btn {
+          opacity: 0.5;
+          pointer-events: none;
+        }
+      }
+    }
+  }
+  .invitation-settings__settings.dialog__wrapper {
+    position: absolute;
+    top: calc(100% - 15px);
+    .invitation-message__ui {
+      margin: 10px auto 0;
+      // left: 26px;
+      &:before {
+        left:154px;// 122px;
+        top: -4px;//-6px;
+        background-color: $team-default-block-background;
+      }
+    }
+    .invitation-permission__ui{
+      &:before{
+        left:71px;
+      }
+    }
+  }
+  &__title {
+    @include typo($line: 28px, $size: 24px, $weight: 400, $color: $team-default-text-title);
+  }
+  &__invitation {
+    width: 320px;
+    min-height: 100px;
+    margin: 20px auto auto; //30px auto auto auto;
+    z-index: 10;
+    .invitation-searchbox__ui {
+      margin: 0 auto;
+      width:258px;// 280px;
+      padding: 9px 0 0 7px;//9px 0 0 20px;
+    }
+    &[data-recipient="1"] {
+      margin: -10px auto auto auto;
+    }
+  }
+  .invitation-searchbox {
+    &__icon {
+      width: 25px; //35px;
+      height: 25px; //26px
+      margin: 5px 5px 0;//5px 14px auto 0;
+    }
+    &__button {
+      height: 32px;
+      min-width: 90px;
+    }
+    &__input--inline{
+      .entry-search__widget{
+        width: 100%;
+        left: 0px;
+      }
+    } 
+    &__container-results{
+      top:-1px;
+    }
+  }
+  .invitation__container-recipients {
+    width: 257px;
+    .invitation-recipient__main.existing{
+      height: 33px;
+    }
+  }
+  .invitation__container-recipients-roll{
+    margin: 25px auto 0;
+  }
+  .invitation__container-options{
+      margin-top:-20px !important;
+      margin-left: auto;
+      margin-right: auto;
+  }
+}

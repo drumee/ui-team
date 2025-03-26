@@ -1,0 +1,33 @@
+.player {
+  &__settings {
+    &-container {
+      height: 100%;
+      width: auto;
+    }
+
+    &-trigger {
+      height: 37px;
+      margin: auto 0;
+      padding: 11px;
+      width: 37px;
+    }
+
+    &-content {
+      height: 37px;
+      position: absolute;
+      right: 0;
+      width: 0;
+    }
+  }
+  
+  &__actions {
+    &-container {
+      height: 100%;
+      width: auto;
+
+      .icon {
+        width: 35px;
+      }
+    }
+  }
+}

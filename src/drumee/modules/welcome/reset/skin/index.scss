@@ -1,0 +1,321 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/modules/welcome/reset/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+
+@import 'mixins/drumee';
+
+.welcome-reset {
+  &__ui,
+  &__main,
+  &__container,
+  &__header,
+  &__content,
+  &__items {
+    height: 100%;
+    width: 100%;
+  }
+  
+  &__ui {
+    padding-top: 70px;
+  }
+
+  &__header {
+    max-height: 120px;
+  }
+
+  &__header-content {
+    align-items: center;
+  }
+
+  &__items {
+    align-items: center;
+    justify-content: start;
+    margin: 0 auto 0;
+    max-width: 320px;
+    min-height: 480px;
+    min-width: 320px;
+    width: 100%;
+    padding-top: 40px;
+
+    & .welcome__pw-meter {
+      &.wrapper {
+        margin-top: 28px;
+      }
+      
+      & .strength {
+        background-color: #ABAFC7;
+      }
+    }
+  }
+
+  &__wrapper {
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    margin: 5px 0;
+    max-height: 70px;
+    width: 100%;
+
+    &.no-code {
+      &[data-mode="closed"] {
+        display: none;
+      }
+    }
+  }
+
+  &__row {
+    border-radius:$default-border-radius;
+    align-items: center;
+    background-color: $core-default-block-background;
+    max-height: 56px;
+    height: 100%;
+    width: 100%;
+
+    &.mobile-title,
+    &.email-title {
+      margin-bottom: 60px;
+    }
+
+    &.without-icon,
+    &.no-background {
+      background-color: transparent;
+      &.title{
+      width:405px;
+      }
+    }
+
+    &.no-code,
+    &.message-wrapper {
+      justify-content: center;
+    }
+    
+    & .welcome__icon.lock {
+      padding: 0;
+      top: 5px;
+      svg {
+        fill: $egrey-2f;
+      }
+    }
+
+    &.mobile-number {
+      max-height: 70px;
+    }
+
+    &.buttons-wrapper,
+    &.message-wrapper {
+      margin: 75px 0 15px 0px;
+      &.message.no-background{
+        width:400px;
+      }
+      
+      &[data-mode="closed"] {
+        display: none;
+      }
+      
+      &[data-error="yes"] {
+        opacity: .5;
+        pointer-events: none;
+      }
+    }
+
+    & .welcome__entry {
+      height: 100%;
+
+      &[data-status="error"] {
+        border-radius:$default-border-radius;
+        border: 2px solid $core-default-border-error;//$eorange-sunset;
+      }
+    }
+  }
+
+  &__mobile-wrapper {
+    justify-content: center;
+    padding-top: 10px;
+  }
+
+  &__note {
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    @include typo($size: 20px, $line: 28px,$weight:400, $color: $core-default-text-reverse);
+
+    &.header {
+      @include typo($size: 38px, $line: 45px, $weight:500, $color: $core-default-text-reverse);
+    }
+
+    &.steps {
+      color: $white-f7;
+      top: 30px;
+    }
+
+    &.drumee-com {
+     // color: $white-f9;
+      position: absolute;
+      right: -130px;
+      @include typo($size: 20px, $line: 28px,$weight:500,$color:$white-f9);
+    }
+
+    &.input-label {
+      max-width: 110px;
+      text-align: right;
+      width: 100%;
+    }
+
+    &.password-tips {
+      padding-top: 47px;
+      @include typo($size: 12px, $line: 16px, $weight:400,$color: $white-f9);
+    }
+
+    &.mobile-number {
+      align-items: center;
+      width: 376px;
+      margin-top: -5px;
+    }
+
+    &.mobile {
+      justify-content: center;
+      width: 100%;
+    }
+
+    &.no-code,
+    &.not-now {
+      width: 100%;
+      @include typo($size: 16px, $line: 16px, $color: $white-f9);
+    }
+
+    &.no-code-text,
+    &.title {
+      justify-content: center;
+    }
+
+    &.resent-code {
+      justify-content: flex-start;
+    }
+
+    &.correct-number,
+    &.not-now {
+      justify-content: flex-end;
+    }
+    
+    &.text-underline {
+      cursor: pointer;
+      text-decoration-line: underline;
+      &:hover {
+        color:$eviolet;//#6a85ff; 
+      }
+    }
+  }
+
+  &__icon {
+    color: $core-default-icon-neutral;//$egrey-89;
+    cursor: pointer;
+    height: 18px;
+    width: 18px;
+
+    &.input-wrapper {
+      position: absolute;
+      margin: 12px 20px;
+    }
+
+    &.mobile,
+    &.mobile-number,
+    &.acknowledgment {
+      color: $core-default-text-reverse;;//$ewhite;
+    }
+
+    &.mobile,
+    &.mobile-number {
+      height: 20px;
+      width: 20px;
+    }
+
+    &.mobile-number,
+    &.acknowledgment {
+      right: 10px;
+      top: 5px;
+    }
+
+    &.email {
+      left: 0;
+      top: 6px; //8px;
+      width: 21px;
+      height:21px;
+      svg{
+        opacity:0.7;
+      }
+    }
+
+    &.code {
+      height: 22px;
+      width: 22px;
+    }
+  }
+
+  &__entry {
+    & input {
+      border-bottom: none;
+      @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
+
+      &::placeholder {
+        @include typo($size: 18px, $line: 28px, $weight: 300, $color: $core-default-text-placeholder); //$egrey-b6);
+      }
+    }
+
+    &[data-status="error"] {
+      border-radius:$default-border-radius;
+      border: 2px solid $core-default-border-error; //$eorange-sunset;
+    }
+
+    & .entry-reminder_error {
+      display: none;
+    }
+
+    &.with-icon {
+      height: 100%;
+      padding: 0 0 0 65px;//50px;
+      width: 100%;
+    }
+    
+    &.input-box {
+      border-radius:$default-border-radius;
+      align-items: center;
+      background-color: $core-default-background; //$ewhite;
+      height: 56px;
+      width: 100%;
+
+      & input {
+        padding-left: 10px;
+      }
+    }
+
+    .pw-shower {
+      cursor: pointer;
+      left: auto;
+      right : 10px;
+    }
+  }
+
+  .pw-shower {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    color: $egrey-2f;
+    opacity: 0.7;
+  }
+
+  &__button-confirm {
+    align-items: center;
+    background-color: $egreen-soft;
+    border-radius:$default-border-radius;
+    cursor: pointer;
+    height: 100%;
+    justify-content: center;
+    width: 100%;
+    @include typo($size: 20px, $line: 28px, $color: $core-default-text-reverse);
+    &:hover{
+      box-shadow: 0 0 13px 0 rgb(169 186 255 / 50%);
+    }
+  }
+}

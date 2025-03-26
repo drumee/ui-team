@@ -1,0 +1,70 @@
+[
+  {
+    "ord": 1,
+    "ln": "en",
+    "category": "Use the desktop",
+    "category_desc": "By contents, we must understand any element present on the Drumee desktop. These elements are declined in two main forms: the folders and the files. <br> - In the folders, we find the personal folder of blue color, the box of transfer in orange color and the internal shared folder in purple; <br> - In the simple files, we find the document, image, photo, video .... ",
+    "metadata": [
+      {
+        "LH": "Import content from your computer",
+        "RH": "Whether they are single files or folders, you can perform a <span>«drag and drop»</span> directly from your computer. <br> A second solution to import one or more single files is to click on the button <span class=\"help-button desktop-desksettings\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-desktop_desksettings\"></use></svg></span> positioned at the top of the Drumee desktop, to the right of the «Search» bar, then click on the «Import» button."
+      },
+      {
+        "LH": "Open content and move it",
+        "RH": "<span> Click </span> on a content. A window opens if it is a folder, while the single file opens in preview mode. To move the open content, <span> make a continuous click </span> on the top colored bar. To change their size, <span> stretch the sides </span>."
+      },
+      {
+        "LH": "Organize your content on the desktop",
+        "RH": "<span> Click continuously </span> on a <span> icon </span> (representing the content to move) and move it between two other items. <br> If the icons to move are next to each other on the other hand, you can perform a <span> multiple selection </span> by clicking continuously so as to encompass the desired icons (a rectangle is formed on the background of the desktop). Thus, you move several contents at the same time."
+      },
+      {
+        "LH": "Create and use a first folder",
+        "RH": "<span> Click </span> on the <span class=\"help-button folder\"><svg> <use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-raw-drumee-folder-blue\"></use></svg></span> located in the bottom bar: it is created on the desktop. Name it. Then <span> click </span> to open it, <span> drag & drop </span>, inside, contents of your Drumee desktop and / or simple files / folders on your computer."
+      },
+      {
+        "LH": "Place content in the trash",
+        "RH": "<span> Hover over the icon </span> and click on the selection box (positioned at the top left corner). Then, <span> click </span> on the button <span class=\"help-button trash\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-trash\"></use></svg></span> located on the right in the bottom bar. <br> Another way is to <span> drag and drop </span> the icon directly on the button <span class=\"help-button trash\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-trash\"></use></svg></span>   ."
+      }
+    ]
+  },
+  {
+    "ord": 2,
+    "ln": "en",
+    "category": "Communicate",
+    "category_desc": "For <span> internal communications </span> (only possible with contacts who have accepted the invitation), you can use the <span> chat / internal video </span>. <br> For <span> external communications </span> [possible with all your contacts (registered or not in Drumee)], you must use the <span> call / external video </span>.",
+    "metadata": [
+      {
+        "LH": "Invite a first contact",
+        "RH": "<span> Click </span> on the button  <span class=\"help-button desktop-contactbook\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-desktop_contactbook\"></use></svg></span>   positioned in the bottom bar. Once the window is open, <span> click </span> on the button  <span class=\"help-button add-contact\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-add-contact\"></use></svg></span> (positioned in the top color strip), specify the contact's email, then invite him. <br> It is also possible to invite a contact, by clicking on the button  <span class=\"help-button add-contact\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-add-contact\"></use></svg></span>   located at the top of the Drumee desktop, to the left of the « Search » bar."
+      },
+      {
+        "LH": "Chat, video call with internal contacts",
+        "RH": "<span> Click </span> on the button <span class=\"help-button chat-visio\"><svg> <use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-chat-visio\"></use></svg></span> in the bottom bar. You can chat, send items, make a video call (you need at least a first contact)."
+      },
+      {
+        "LH": "Video call with external contacts",
+        "RH": "<span> Click </span> on the button <span class=\"help-button area-code\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-area-code\"></use></svg></span> located in the bottom bar. Once the window is open, <span> click </span> on the <span> “+” </span> button, placed on the left in the colored banner of the window, to create a new meeting. Fill in the information and invite contacts."
+      }
+    ]
+  },
+  {
+    "ord": 3,
+    "ln": "en",
+    "category": "Share, transfer content",
+    "category_desc": "To transfer content externally (outside of Drumee's address book), <span> «external transfer boxes» </span> are created. <br> To share content internally (ie with contacts who have accepted your invitation via Drumee), we create <span> “internal shared folders” </span>.",
+    "metadata": [
+      {
+        "LH": "Create an «external transfer box»",
+        "RH": "<span> Click </span> on the button <span class=\"help-button transfer-box\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-raw-drumee-folder-orange\"></use></svg></span> located in the bottom bar. When the box is created on the desktop, click on it to open it, <span> drag in </span> the content (s) to transfer. Then, <span> click </span> on the button <span class=\"help-button sharebox-bell\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-sharebox-bell\"></use></svg></span> placed at the top left in the colored banner, to send an email from notification and <span> send </span>."
+      },
+      {
+        "LH": "Create an «internal shared folder»",
+        "RH": "The internal shared folder can be sent if and only if your contacts have accepted your invitation to join you on Drumee. <br> <span> Click </span> on the <span class=\"help-button shared-folder\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-raw-drumee-folder-purple\"></use></svg></span> located in the bottom bar. Once the internal shared folder is created on the desktop, click on it to open it, <span> drag </span> the content (s) you want to share and <span> send </span>."
+      },
+      {
+        "LH": "Manage transfer boxes / shared folders",
+        "RH": "When an external transfer box or an internal shared folder is open, to configure or delete them, <span> click </span> on the <span class=\"help-button editbox-cog\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-editbox_cog\"></use></svg></span> positioned in the colored banner of the external transfer box or internal shared folder. <span> Configure them </span> by specifying the rights, the list of contacts, etc ... and / or <span> delete them </span> by clicking on the <span class=\"help-button trash\"><svg><use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-drumee-trash\"></use></svg></span> located to the left of the window."
+      }
+    ]
+  }
+]

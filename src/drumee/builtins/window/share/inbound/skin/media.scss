@@ -1,0 +1,22 @@
+.share-inbound{
+  .media-thumbnail{
+    background: $ewhite;
+    border-radius: 1px;
+    margin-right: 70px;
+    box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13);
+    .icon {
+      width: 8px;
+      height: 9px;
+      top: 10px;
+    }
+    .media-ui-content {
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+  }
+  .media-sharing-wrapper{
+    display: none;
+  }
+}
+// @import "settings/invitation.scss";

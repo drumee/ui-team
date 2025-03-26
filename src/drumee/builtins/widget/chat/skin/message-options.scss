@@ -1,0 +1,54 @@
+&__main {
+  & .widget-chatItem {
+    .checkbox {
+      position: absolute;
+      right: 14px;
+      top: calc(50% - 7px);
+      border: 1px solid $core-default-checkbox-border;
+      svg{
+        fill: $core-default-checkbox-checked;
+        visibility: hidden;
+      };
+    }
+  }
+
+  &[data-selected="1"] {
+    & .widget-chatItem {
+      &__main.me{
+        margin-right: 60px
+      }
+      &__message-content {
+        margin-right: 35px; // 30px;
+      }
+
+      &__message-selector-wrapper {
+        display: flex;
+      }
+
+      &-menu__dropdown {
+        &.chat-item__dropdown {
+          display: none;
+        }
+      }
+    }
+
+
+    & .widget-chat {
+      &__messenger {
+        display: none;
+      }
+
+      &__message-options-wrapper {
+        display: flex !important;
+      }
+    }
+  }
+
+  &[data-selected="0"] {
+    & .widget-chatItem {
+      .checkbox {
+        display: none;
+      }
+    }
+  }
+}

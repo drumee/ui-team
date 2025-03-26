@@ -1,0 +1,18 @@
+//[data-flow].dialog, .dialog {
+.dialog {
+  &__button{
+    @import 'button/close.scss';
+    @import 'button/submit.scss';
+  }
+  &__container{
+    @import 'container/small.scss';
+  }
+  &__wrapper{
+    // position: absolute;
+    // width: 0;
+    // height: 0;
+    &--modal{
+      left: 50%;
+    }
+  }
+}

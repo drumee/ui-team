@@ -1,0 +1,110 @@
+.drumee-spinner{
+  // width: 50px;
+  // height: 50px;
+  // top: calc(50% - 25px);
+  // left: calc(50% - 25px);
+  width: 30px;
+  height: 30px;
+  top: calc(50% - 15px);
+  left: calc(50% - 15px);  
+  position: absolute;
+  z-index: 500;
+  /* opacity: .5; */
+  background: rgba(5,5,5, 0.5);
+  border-radius: 50%;  
+}
+
+.media-uploader, .svg-progress{
+  &__ui{
+    position: absolute;
+    background-color: $core-default-background;    //$ewhite;
+    z-index: 1000;
+    width: 100%;
+    height: 100%;
+    border-radius: $default-border-radius-small;
+    box-shadow: $drumee-shadow-container;//0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    left: 0;
+    top: 0;      
+  }
+  &__main{
+    width: 100%;
+    height: 100%;
+    justify-content: space-between;
+  }
+  &__container{
+    &-header{
+      justify-content: space-between;
+    }
+    &-body{
+      width: 100%;
+      height: 100%;
+      position: absolute;
+    }
+    &-footer{
+      justify-content: space-around;
+    }
+  }
+  &__value{
+    &-filesize{
+      letter-spacing: 0.09px;
+      @include typo($line:13px,$size:11px,$weight:300,$color:$core-default-text-color);
+    }
+    &-percent{
+      letter-spacing: 0.09px;
+      @include typo($line:13px,$size:11px,$weight:300,$color:$egreen );      
+    }
+    &-filename{
+      white-space: nowrap;
+      width: 100%;
+      overflow: hidden;
+      .drumee-text.inner {
+        width: 93px;
+        padding: 0 10px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        @include typo($line:14px,$size:12px,$weight:300,$color:$egreen); 
+        letter-spacing: 0.1px;
+        text-align: center;
+      }
+    }
+  }
+  &__chart{
+    width: 30px;
+    height: 30px;
+    left: calc(50% - 15px);
+    top: calc(50% - 15px);
+    position: absolute;
+    svg{
+      width: 100%;
+      height: 100%;
+      fill: transparent;
+      stroke-linecap: round;    
+    }    
+    &--bg{
+      stroke: #d0d2d6;
+      stroke-width: 20;      
+    }
+    &--fg{
+      stroke: $egreen ;
+      stroke-width: 20;
+      stroke-linecap: round; 
+      transition: stroke-dashoffset 1s linear;      
+    }
+    &--inner{
+      fill: transparent;
+    }
+  }
+  &__close{
+    width: 11px;
+    height: 11px;
+    position: absolute;
+    padding: 0px;
+    left: calc(50% - 5.5px);
+    top: calc(50% - 5.5px);
+    svg{
+      width: 100%;
+      height: 100%;
+      fill: $eorange-sunset;
+    }    
+  }
+}

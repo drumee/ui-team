@@ -1,0 +1,82 @@
+/************************************************************
+                        Bigchat : colors used
+************************************************************/
+
+
+
+/**background**/ 
+$bigchat-background-header               : #4B5DA8;
+$bigchat-default-background              : $core-default-background;
+$bigchat-default-background-hover        : $core-default-background-hover;
+$bigchat-default-block-background        : $core-default-block-background;
+$bigchat-transparency-container-overlay  : $core-transparency-container-overlay;
+$bigchat-button-background-active        : $core-button-background-active;
+$bigchat-default-background-alert        : $core-default-background-alert;
+
+/**text**/
+$bigchat-special-tag-color               : #4B5DA8;
+$bigchat-special-share-room-color        : #BD44D9;
+$bigchat-default-text-color              : $core-default-text-color;
+$bigchat-secondary-text-color            : $core-secondary-text-color;
+$bigchat-default-text-reverse            : $core-default-text-reverse; 
+$bigchat-default-text-title              : $core-default-text-title;
+$bigchat-default-text-placeholder        : $core-default-text-placeholder;
+$bigchat-default-text-hover              : $core-default-text-hover;
+$bigchat-tertiary-text-color             : $core-tertiary-text-color;
+$bigchat-default-text-inactive           : $core-default-text-inactive;
+$bigchat-backgroundless-text-hover       : $core-backgroundless-text-hover;
+$bigchat-text-title                      : $bigchat-default-text-title;//#4B5DA8; 
+
+/**icon**/
+$bigchat-icon-header                     : #4B5DA8;//#18a3ac;
+$bigchat-contact-online-color            : $core-contact-online-color ;
+$bigchat-default-icon-neutral            : $core-default-icon-neutral;
+$bigchat-default-icon-reverse            : $core-default-icon-reverse ;
+$bigchat-default-icon-active             : $core-default-icon-active;
+$bigchat-default-icon-hover              : $core-default-icon-hover;
+$bigchat-default-thinline-icon           : $core-default-thinline-icon; //close icon
+$bigchat-default-thinline-icon-hover     : $core-default-thinline-icon-hover; //close icon
+$bigchat-default-icon-success            : $core-default-icon-success;
+$bigchat-default-user-icon               : $core-default-user-icon;
+$bigchat-special-tag-note-chat           : $core-special-tag-note-chat;
+$bigchat-default-icon-menu-dropdown      : $core-default-icon-menu-dropdown;     
+
+$bigchat-default-checkbox-border         : $core-default-checkbox-border;
+$bigchat-default-checkbox-checked        : $core-default-checkbox-checked;
+$bigchat-default-checkbox-background     : $core-default-checkbox-background;
+$bigchat-checkbox-checked-reverse        : $core-checkbox-checked-reverse;
+$bigchat-checkbox-checked-border-reverse : $core-checkbox-checked-border-reverse;
+$bigchat-default-radio-active            : $core-default-radio-active;
+
+/**border**/
+$bigchat-default-entry-border-bottom     : $core-default-entry-border-bottom;
+
+$bigchat-default-separator               : $core-default-separator;//$bigchat-background-header;
+$bigchat-border-no-discussion            : $core-border-no-discussion ;
+$bigchat-default-window-header-search    : $core-default-window-header-search;
+
+/**status**/
+$bigchat-status-pill-new                 : #34a578;
+$bigchat-status-pill-doing               : #F0AD4E;
+$bigchat-status-pill-closed              : #7F8C8D;
+
+/** Chat **/
+$dgc-chat-item-me-bg                     : #F4F4F4;//#E4E9FF;
+$dgc-messenger-bg                        : $core-background-chatmessenger;// #F9F9F9;
+$dgc-messenger-border                    : $dgc-messenger-bg;
+$dgc-attachment-close-border             : #89929E;
+$dgc-chat-other-bg                       : #E4E9FF;//#F4F4F4;
+$dgc-chat-border                         : $core-default-separator;// old : #ECEDEE;
+$dgc-chat-hover                          : #78B3F8;
+$dgc-delete-bg                           : #EA4D44;
+$dgc-chat-reply-bg                       : rgba(74,144,226,0.1);
+$dgc-chat-ack-bg                         : #FFFFFF;
+$dgc-chat-error-ack-bg                   : #FFF0F2;
+$dgc-chat-error-ack-text-color           : #D76E30;
+$dgc-chat-error-ack-icon-color           : #CC4D09;
+$dgc-overlay-background                  : $core-transparency-container-overlay;//rgba(137, 146, 158, 0.4); 
+$dgc-text-reverse                        : $core-default-text-reverse;
+$dgc-chat-forward-bg                     : $core-default-background-hover;
+$dgc-secondary-text-color                : $core-secondary-text-color;
+$dgc-icon-color                          : #4a90e2;
+$dgc-tertiary-text-color                 : $core-tertiary-text-color;

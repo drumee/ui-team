@@ -1,0 +1,54 @@
+@import 'mixins/drumee';
+
+.addressbook-widget-notification {
+  &__ui {
+    background-color: $eorange;
+    border-radius: 2px;
+    box-shadow: $drumee-shadow-main;
+    color: $white;
+    cursor: pointer;
+    flex-shrink: 0;
+    left: 0;
+    position: absolute;
+    top: -2px;
+    z-index: 1000;
+
+    &.desk-dock {
+      left: 35px;
+      top: -12px;
+    }
+  }
+
+  &__icon {
+    &[data-over="yes"] {
+      &:after {
+        background-color: transparent;
+        border: 2px solid $eorange;
+        content: "";
+        height: 80px;
+        left: -20px;
+        position: absolute;
+        top: -20px;
+        width: 80px;
+      }
+    }
+  }
+
+  &__digit {
+    align-items: center;
+    background-color: $ab-default-background-alert;
+    border-radius: 50%;
+    height: 19px;
+    justify-content: center;
+    margin:10px 6px 8px;
+    position: absolute;
+    width: 19px;
+    @include typo($size: 10px, $weight:400, $color:$ab-default-text-reverse);
+    &[data-count="0"]{
+      display: none;
+    }
+    .inner{
+      @include typo($size: 10px, $weight:400, $color:$ab-default-text-reverse);
+    }
+  }
+}

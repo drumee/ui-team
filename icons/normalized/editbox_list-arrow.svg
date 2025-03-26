@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="9px" height="14px" viewBox="0 0 9 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 48.1 (47250) - http://www.bohemiancoding.com/sketch -->
+    <title>Group</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Editbox/button" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-592.000000, -523.000000)">
+        <g id="Paragraph_normal-Copy" transform="translate(479.000000, 116.000000)" fill="#89929E" fill-rule="nonzero">
+            <g id="pop-up" transform="translate(60.000000, 172.000000)">
+                <g id="grid-copy" transform="translate(8.000000, 185.000000)">
+                    <g id="Group-2" transform="translate(0.000000, 6.000000)">
+                        <g id="Group" transform="translate(45.000000, 44.000000)">
+                            <polygon id="Line" points="0.585786438 2 2 0.585786438 8.41421356 7 7 8.41421356"></polygon>
+                            <polygon id="Line" transform="translate(4.500000, 9.500000) scale(-1, 1) translate(-4.500000, -9.500000) " points="0.585786438 7 2 5.58578644 8.41421356 12 7 13.4142136"></polygon>
+                        </g>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

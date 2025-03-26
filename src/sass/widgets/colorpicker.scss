@@ -1,0 +1,86 @@
+.colorpicker-panel{
+    cursor:move !important;
+    color: #555 !important;
+    background: whitesmoke;
+    border: none;
+    padding: 10px !important;
+    z-index: 2000 !important;
+    .jPicker{
+	white-space: initial;
+	background-color: rgba(240,240,240, .7);
+	border: none;
+	font-family: Arial,Helvetica,Sans-Serif;
+	font-size: 12px !important;
+	margin: 0;
+	padding: 5px;
+	width: 534px;
+	div[class="Bar"] {
+	    height: 256px;
+	    width: 20px;
+	}
+	input{
+	    padding:0 !important;
+	}
+	.Grid {
+	    white-space: initial;
+	    text-align: center;
+	    padding: 0;
+	    margin: 0;
+	    width: 114px !important;
+	    span[class="QuickColor"] {
+		width: 19px;
+	    }
+	    span.QuickColor{
+		border: 1px solid #666;
+		height: 16px;
+		line-height: 16px;
+	    }
+	}
+	.Preview{
+	    div{
+		border: none;
+		height: 60px;
+		margin: 0 auto;
+		padding: 0;
+		width: 60px;
+		box-shadow: 0px 0px 1px rgba(90,90,90, .5);
+		.Active{
+		    border-bottom: 1px solid #333;
+		}
+		span{
+		    border: none;
+		}
+	    }
+	}
+    }
+    .jPicker{
+	div.Bar {
+	    border: none;
+	    box-shadow: -1px 0px 0px rgba(50,50,50, .3);
+	}
+    }
+    .jPicker{ 
+	div.Map {
+	    background-color: #fff;
+	    cursor: crosshair;
+	    height: 256px;
+	    border: none;
+	    margin: 0 10px 10px 10px;
+	    overflow: hidden;
+	    padding: 0;
+	    position: relative;
+	    box-shadow: 0px 0px 1px rgba(90,90,90, .5);
+	    width: 256px;
+	}
+	input{
+	    min-width: 12px !important;
+	    min-height: 12px !important;
+	}
+    }
+    .Text {
+	.AHex{
+	    margin-left: 15px;
+	    width: 51px;
+	}
+    }
+}

@@ -1,0 +1,32 @@
+.dmail-layout{
+    margin-right:$xia-margin;
+    @include transition-property(opacity);
+    @include transition-duration(0.5s);
+    @include transition-timing-function(ease-in);
+    .attachment{
+	&[data-count="0"]{
+	    visibility:hidden;
+	}
+    }
+    .date{
+	width:110px;
+    }
+    .fa-archive{
+	opacity:0.6;
+    }
+    .fa-circle{
+	color:$xia-color-red;
+    }
+    .xia-attachment {
+	display: flex;
+	flex-flow: row wrap;
+	justify-content: space-around;
+	.icon
+	{
+	    img{
+		height:150px;
+	    }
+	}
+    }
+}
+

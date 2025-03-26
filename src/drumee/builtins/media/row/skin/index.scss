@@ -1,0 +1,286 @@
+@import 'mixins/drumee';
+
+.media-row {
+  @import "access.scss";
+  @import "checkbox.scss";
+  @import "container.scss";
+  @import "filename.scss";
+  @import "hub.scss";
+  @import "helper.scss";
+  @import "progress.scss";
+  @import "share.scss";
+  @import "notify.scss";
+  @import "forbiden.scss";
+  @import "shortcut.scss";
+}
+
+.media-row {
+  &__ui {
+    height: 32px;
+    margin-top: 1px;
+    width: 100%;
+
+    &[data-opened="1"] {
+      background: #e8e8e8;
+      border: none;
+
+      &:after {
+        display: none;
+      }
+    }
+
+    &:hover,
+    &[data-radio="on"] {
+      background-color: $core-default-background-hover;
+      color: $core-default-text-reverse;
+    }
+
+    &:hover {
+      .media-checkbox {
+        display: block;
+      }
+
+      & .ok-button {
+        color: $core-default-text-hover;
+      }
+
+      & .icon--protected {
+        color: $core-default-icon-reverse;
+        fill: $core-default-icon-reverse;
+      }
+    }
+
+    &[data-radio="on"] {
+      & .filename {
+        color: $core-default-text-reverse;
+      }
+    }
+
+    .drumee-spinner {
+      position: absolute;
+      box-shadow: none;
+      height: 18px;
+      width: 18px;
+      left: 29px;
+    }
+  }
+
+  &__ghost {
+    border: #879BFF solid 1px;
+    height: 36px;
+    width: 50px;
+    overflow: visible;
+    z-index: 1000;
+  }
+
+  &__input {
+    //top: 10%;
+    height: 80%;
+    left: 119px; //147px;
+    position: absolute;
+    top: 12%; //20%;
+    width: calc(60% - 90px); //calc(40% - 90px);
+
+    .inner {
+      padding-top: 0px;
+    }
+
+    textarea {
+      border: 1px solid $egrey-e8; //$egrey-b6; //#B6BFCA;
+      background-color: $core-default-background;
+      min-height: 22px;
+      height: auto;
+      overflow: hidden;
+      resize: none;
+      @include typo($line: 21px, $size: 14px, $weight: 300, $color: $core-default-text-color);
+
+      &::placeholder {
+        @include typo($size: 14px, $line: 21px, $color: $core-default-text-placeholder); //$weight: 300,
+      }
+    }
+
+  }
+
+  &__main {
+    display: grid;
+    grid-template-columns: 60px 60px minmax(310px, auto) 180px 120px 80px;
+    align-items: center;
+    width: 100%;
+    @include typo($line: 33px, $size: 14px, $weight: 300, $color: $core-default-text-color); //$egrey-49
+
+    .preview {
+      position: relative;
+      width: 25px;
+      height: 25px;
+      flex-shrink: 0;
+      margin: auto 2px;
+      fill: $egrey-89; //$egrey-49;
+
+      .icon.document,
+      .icon.extension,
+      .icon.other {
+        height: 25px;
+        width: 25px;
+        fill: $ewhite;
+      }
+
+      .icon.video {
+        /*fill: tansparent;
+        stroke: rgba(135, 155, 255, 1);*/
+        fill: rgb(250 250 250 / 7%); //0.7);
+        stroke: transparent;
+        width: 16px;
+        height: 16px;
+        padding: 0.5px;
+      }
+
+      .icon.audio {
+        fill: #468ee5;
+        padding: 1.5px;
+      }
+
+      .icon.schedule {
+        fill: $orange-carrot;
+        stroke-width: 4px;
+      }
+
+      .icon.web {
+        padding: 3.5px;
+      }
+    }
+
+    .icon--shortcut {
+      width: 10px;
+      height: 10px;
+    }
+  }
+
+  &__field {
+    cursor: pointer;
+    height: 32px;
+
+    &-filename {
+      color: $core-default-text-color; //$egrey-2f;
+      min-width: 310px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      width: 100%;
+
+      .filename {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        visibility: visible;
+        width: 100%;
+      }
+
+      &:hover {
+        color: $core-default-text-hover; //white;
+      }
+
+      .edit {
+        width: 24px;
+        height: 24px;
+        margin-left: auto;
+        margin-right: 10px;
+
+        &.icon {
+          fill: white;
+          padding: 5px;
+          margin-left: 0px;
+          margin-top: 4px;
+          cursor: pointer;
+
+          &:hover {
+            fill: white;
+            visibility: visible;
+            z-index: 100;
+          }
+        }
+      }
+
+      .ok-button {
+        align-items: center;
+        background: $btn-commit-background;
+        border-radius: $default-border-radius-small; //4px;
+        border: 1px solid $btn-commit-background;
+        cursor: pointer;
+        height: 20px;
+        justify-content: center;
+        margin-left: -3px;
+        margin-top: 6px;
+        overflow: hidden;
+        text-align: center;
+        width: 30px;
+        @include typo($size: 12px, $line: 20px, $color: $core-default-text-reverse);
+
+        &:hover {
+          background: $btn-commit-background-hover;
+        }
+      }
+    }
+
+    &-preview {
+      min-width: 60px;
+
+      .protected {
+        left: 36px; //32px;
+        bottom: 12px; //8px;
+        width: 14px;
+        height: 14px;
+        position: absolute;
+        z-index: 100;
+      }
+
+      .icon--protected {
+        fill: $core-default-icon-neutral; //#89929e;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        top: 0;
+      }
+
+      .notification {
+        top: -4px; //-5px;
+        left: 28px;
+        z-index: 10;
+        position: absolute;
+
+        &[data-count="0"] {
+          visibility: hidden;
+        }
+      }
+
+      .icon {
+
+        &.other,
+        &.extension {
+          width: 25px;
+          height: 25px;
+        }
+
+        &.extension {
+          fill: $ewhite;
+        }
+      }
+
+      .image-capable {
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+    }
+
+    &-date {
+      min-width: 160px;
+    }
+
+    &-size {
+      min-width: 140px;
+    }
+
+    &-type {
+      min-width: 62px;
+    }
+  }
+}

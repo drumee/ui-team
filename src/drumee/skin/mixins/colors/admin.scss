@@ -1,0 +1,72 @@
+/************************************************************
+                        Admin : colors used
+************************************************************/
+
+$ap-textarea-placeholder    : #89929E;
+
+
+/**background**/ 
+$admin-default-background             : $core-default-background;
+$admin-default-background-hover       : $core-default-background-hover;
+$admin-background-header              : #18A3AC;
+$admin-default-block-background       : $core-default-block-background;
+$admin-default-background-error       : $core-default-background-error;
+$admin-transparency-container-overlay : $core-transparency-container-overlay;
+$admin-default-background-inactive    : $core-default-background-inactive;
+$admin-background-tooltips            : $core-background-tooltips;
+$admin-default-background-alert       : $core-default-background-alert;
+
+/**text**/
+$admin-default-text-color         : $core-default-text-color;
+$admin-secondary-text-color       : $core-secondary-text-color;
+$admin-default-text-reverse       : $core-default-text-reverse; 
+$admin-default-text-title         : $core-default-text-title;
+$admin-default-text-placeholder   : $core-default-text-placeholder;
+$admin-text-placeholder-focus     : $core-focus-text-placeholder;
+$admin-default-text-hover         : $core-default-text-hover;
+$admin-default-text-error         : $core-default-text-error ;
+$admin-default-text-caution       : $core-default-text-caution;
+$admin-default-text-alert         : $core-default-text-alert;
+$admin-default-text-inactive      : $core-default-text-inactive;
+$admin-backgroundless-text-hover  : $core-backgroundless-text-hover;
+$admin-tertiary-text-color        : $core-tertiary-text-color;
+$admin-default-text-success       : $core-default-text-success;
+$admin-default-text-tooltips	    : $core-default-text-tooltips;
+$admin-authorized-filter-text     : #494949;
+$admin-special-tag-color          : #18A3AC;//#bd44d9;
+$admin-text-title                 : $admin-default-text-title;//#18A3AC;
+
+/**icon**/
+$admin-default-icon-neutral            : $core-default-icon-neutral;
+$admin-default-icon-reverse            : $core-default-icon-reverse ;
+$admin-default-icon-active             : $core-default-icon-active;
+$admin-default-icon-hover              : $core-default-icon-hover;
+$admin-default-thinline-icon           : $core-default-thinline-icon; //close icon
+$admin-default-thinline-icon-hover     : $core-default-thinline-icon-hover; //close icon
+$admin-default-icon-success            : $core-default-icon-success;
+$admin-default-user-icon               : $core-default-user-icon;
+$admin-secondary-icon-color            : #4a90e2;
+//$admin-default-icon-menu-dropdown      : $core-default-icon-menu-dropdown; 
+
+$admin-default-checkbox-border         : $core-default-checkbox-border;
+$admin-default-checkbox-checked        : $core-default-checkbox-checked;
+$admin-default-checkbox-background     : $core-default-checkbox-background;
+$admin-checkbox-checked-reverse        : $core-checkbox-checked-reverse;
+$admin-checkbox-checked-border-reverse : $core-checkbox-checked-border-reverse;
+
+/**border**/
+$admin-default-entry-border-bottom  : $core-default-entry-border-bottom;
+$admin-default-border-error         : $core-default-border-error;
+$admin-focus-border-placeholder     : $core-focus-border-placeholder;
+$admin-default-separator            : $core-default-separator;
+$admin-default-border-success       : $core-default-border-success; 
+$admin-default-window-header-search	:	$core-default-window-header-search;
+$admin-default-frame                : $core-default-frame;
+//$admin-border-no-discussion         : $core-border-no-discussion ;
+
+
+/**toggle**/
+$admin-toggle-switch-on        : $core-toggle-switch-on ;
+$admin-toggle-switch-off       : $core-toggle-switch-off;
+$admin-toggle-switch-radio     : $core-toggle-switch-radio ;
+$admin-toggle-background       : $core-toggle-background ;

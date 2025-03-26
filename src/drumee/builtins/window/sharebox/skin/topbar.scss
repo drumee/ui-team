@@ -1,0 +1,154 @@
+@import 'mixins/drumee';
+
+.window-sharebox {
+  &-topbar {
+    &__container {
+      height: 44px;
+      position: absolute;
+      z-index: 1;
+    }
+
+    &__expiry-time-wrapper {
+      &[data-mode="open"] {
+        display: flex;
+      }
+
+      &[data-mode="closed"] {
+        display: none;
+      }
+    }
+
+    &__icon {
+      color: $share-default-icon-reverse;
+      cursor: pointer;
+      height: 16px;
+      margin: auto 0px auto 15px;
+      padding: 0px;
+      width: 16px;
+
+      &:hover {
+        color: $share-default-icon-hover;
+      }
+
+      &.link {
+        padding: 1px;
+      }
+
+      &.contact {
+        margin-right: 15px;
+      }
+
+      &.settings {
+        margin-left: 2px;
+        padding: 1px;
+      }
+
+      .tooltips {
+        @include typo($size: 12px, $line: 20px, $color: $share-default-text-tooltips);
+        background-color: $share-default-background-tooltips;
+        border-radius: $default-border-radius;
+        max-height: 90px;
+        min-height: 40px;
+        padding: 10px;
+        position: absolute;
+        left: 0px;
+        text-align: center;
+        top: -35px;
+        z-index: 1;
+        text-wrap: nowrap;
+      }
+
+      &.meeting {
+        border: none;
+        fill: none;
+        margin-left: 13px;
+        padding: 0;
+        stroke-width: 0;
+        stroke: $ewhite;
+      }
+
+      &.email-notification {
+        height: 20px;
+        width: 20px;
+      }
+
+      &.expiry-time {
+        color: $share-default-icon-reverse;
+        cursor: help;
+        height: 18px;
+        width: 18px;
+
+        & svg {
+          border: 0.8px solid $share-default-icon-reverse;
+          border-radius: 50%;
+        }
+
+        & .tooltips {
+          @include typo($size: 12px, $line: 20px, $color: $share-default-text-tooltips);
+          background-color: $share-default-background-tooltips;
+          border-radius: $default-border-radius;
+          max-height: 90px;
+          min-height: 40px;
+          padding: 10px;
+          position: absolute;
+          left: 0px;
+          text-align: center;
+          top: 20px;
+          width: 270px;
+          z-index: 1;
+        }
+      }
+    }
+
+    &__menu-trigger {
+      padding: 1px;
+      color: $share-default-icon-reverse; //$ewhite;
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+      margin: auto 0 auto 15px;
+    }
+
+    &__menu {
+      &[data-state="1"] {
+        .menu-trigger {
+          opacity: 0.4;
+        }
+      }
+
+      .menu-items {
+        background-color: $share-default-background;
+        background-color: rgba(241, 227, 244, 0.25);
+        border-radius: 4px;
+        flex-direction: row;
+        height: 60% !important;
+        left: 42px;
+        margin-top: 9px;
+        min-width: 112px;
+        padding-top: 0;
+        top: 0 !important;
+      }
+
+      &:hover {
+        color: $share-default-background-hover;
+      }
+    }
+
+    &__count {
+      @include typo($size: 8px, $line: 12px, $weight: 400, $color: $sharebox-text-color);
+      align-items: center;
+      background-color: $share-default-background;
+      border-radius: 50%;
+      height: 12px;
+      justify-content: center;
+      position: absolute;
+      right: 25px;
+      top: 8px;
+      width: 12px;
+
+      &[data-count="0"] {
+        display: none;
+      }
+    }
+  }
+}

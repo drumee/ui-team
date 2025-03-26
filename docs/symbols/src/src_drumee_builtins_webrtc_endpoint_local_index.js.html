@@ -1,0 +1,183 @@
+<html><head><meta http-equiv="content-type" content="text/html; charset=utf-8"> <style>
+	.KEYW {color: #933;}
+	.COMM {color: #bbb; font-style: italic;}
+	.NUMB {color: #393;}
+	.STRN {color: #393;}
+	.REGX {color: #339;}
+	.line {border-right: 1px dotted #666; color: #666; font-style: normal;}
+	</style></head><body><pre><span class='line'>  1</span> <span class="COMM">// ==================================================================== *</span><span class="WHIT">
+<span class='line'>  2</span> </span><span class="COMM">//   Copyright Xialia.com  2011-2018</span><span class="WHIT">
+<span class='line'>  3</span> </span><span class="COMM">//   FILE : </span><span class="WHIT">
+<span class='line'>  4</span> </span><span class="COMM">//   TYPE : </span><span class="WHIT">
+<span class='line'>  5</span> </span><span class="COMM">// ==================================================================== *</span><span class="WHIT">
+<span class='line'>  6</span> 
+<span class='line'>  7</span> </span><span class="NAME">__core</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">require</span><span class="PUNC">(</span><span class="STRN">'../core'</span><span class="PUNC">)</span><span class="WHIT">
+<span class='line'>  8</span> </span><span class="NAME">class</span><span class="WHIT"> </span><span class="NAME">__endpoint_local</span><span class="WHIT"> </span><span class="NAME">extends</span><span class="WHIT"> </span><span class="NAME">__core</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>  9</span> </span><span class="WHIT">  </span><span class="NAME">constructor</span><span class="PUNC">(</span><span class="PUNC">.</span><span class="PUNC">.</span><span class="PUNC">.</span><span class="NAME">args</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 10</span> </span><span class="WHIT">    </span><span class="NAME">super</span><span class="PUNC">(</span><span class="PUNC">.</span><span class="PUNC">.</span><span class="PUNC">.</span><span class="NAME">args</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 11</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'> 12</span> 
+<span class='line'> 13</span> 
+<span class='line'> 14</span> </span><span class="WHIT">  </span><span class="COMM">// ===========================================================</span><span class="WHIT">
+<span class='line'> 15</span> </span><span class="WHIT">  </span><span class="COMM">//</span><span class="WHIT">
+<span class='line'> 16</span> </span><span class="WHIT">  </span><span class="COMM">// ===========================================================</span><span class="WHIT">
+<span class='line'> 17</span> </span><span class="WHIT">  </span><span class="NAME">initialize</span><span class="PUNC">(</span><span class="NAME">opt</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 18</span> </span><span class="WHIT">    </span><span class="NAME">require</span><span class="PUNC">(</span><span class="STRN">'./skin'</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 19</span> </span><span class="WHIT">    </span><span class="NAME">this.model.atLeast</span><span class="PUNC">(</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 20</span> </span><span class="WHIT">      </span><span class="NAME">mute</span><span class="PUNC">:</span><span class="NUMB">1</span><span class="WHIT"> </span><span class="COMM">// To avoid Larsen</span><span class="WHIT">
+<span class='line'> 21</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 22</span> </span><span class="WHIT">    </span><span class="NAME">super.initialize</span><span class="PUNC">(</span><span class="NAME">opt</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 23</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'> 24</span> </span><span class="WHIT">  
+<span class='line'> 25</span>   </span><span class="COMM">/* 
+<span class='line'> 26</span>   * To inform others who is behind the particular localstream
+<span class='line'> 27</span>   * 
+<span class='line'> 28</span>   * ----------------------------------------------------------- */</span><span class="WHIT">
+<span class='line'> 29</span> </span><span class="WHIT">  </span><span class="NAME">sendSignaling</span><span class="PUNC">(</span><span class="NAME">data</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 30</span> </span><span class="WHIT">    </span><span class="KEYW">if</span><span class="PUNC">(</span><span class="PUNC">!</span><span class="NAME">this.stream</span><span class="WHIT"> </span><span class="PUNC">||</span><span class="WHIT"> </span><span class="NAME">this.stream.id</span><span class="PUNC">)</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 31</span> </span><span class="WHIT">      </span><span class="KEYW">return</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 32</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'> 33</span> </span><span class="WHIT">    </span><span class="NAME">let</span><span class="WHIT"> </span><span class="NAME">opt</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 34</span> </span><span class="WHIT">      </span><span class="NAME">service</span><span class="WHIT">     </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="NAME">_SVC.signaling.message</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 35</span> </span><span class="WHIT">      </span><span class="NAME">event</span><span class="WHIT">       </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="NAME">_e.update</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 36</span> </span><span class="WHIT">      </span><span class="NAME">stream_id</span><span class="WHIT">   </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="NAME">this.stream.id</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 37</span> </span><span class="WHIT">      </span><span class="PUNC">.</span><span class="PUNC">.</span><span class="PUNC">.</span><span class="NAME">this.api</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 38</span> </span><span class="WHIT">      </span><span class="PUNC">.</span><span class="PUNC">.</span><span class="PUNC">.</span><span class="NAME">data</span><span class="WHIT">
+<span class='line'> 39</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 40</span> </span><span class="WHIT">    </span><span class="NAME">this.postData</span><span class="PUNC">(</span><span class="NAME">opt</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 41</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'> 42</span> 
+<span class='line'> 43</span> 
+<span class='line'> 44</span> 
+<span class='line'> 45</span> </span><span class="WHIT">  </span><span class="COMM">// ===========================================================</span><span class="WHIT">
+<span class='line'> 46</span> </span><span class="WHIT">  </span><span class="COMM">//</span><span class="WHIT">
+<span class='line'> 47</span> </span><span class="WHIT">  </span><span class="COMM">// ===========================================================</span><span class="WHIT">
+<span class='line'> 48</span> </span><span class="WHIT">  </span><span class="NAME">onDomRefresh</span><span class="PUNC">(</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 49</span> </span><span class="WHIT">    </span><span class="NAME">this.start</span><span class="PUNC">(</span><span class="PUNC">)</span><span class="WHIT">
+<span class='line'> 50</span> </span><span class="WHIT">    </span><span class="PUNC">.</span><span class="NAME">then</span><span class="PUNC">(</span><span class="PUNC">(</span><span class="NAME">e</span><span class="PUNC">)</span><span class="PUNC">=</span><span class="PUNC">></span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 51</span> </span><span class="WHIT">      </span><span class="NAME">this.setupTrack</span><span class="PUNC">(</span><span class="NAME">_a.audio</span><span class="PUNC">,</span><span class="WHIT"> </span><span class="NAME">this.mget</span><span class="PUNC">(</span><span class="NAME">_a.audio</span><span class="PUNC">)</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 52</span> </span><span class="WHIT">      </span><span class="NAME">this.setupTrack</span><span class="PUNC">(</span><span class="NAME">_a.video</span><span class="PUNC">,</span><span class="WHIT"> </span><span class="NAME">this.mget</span><span class="PUNC">(</span><span class="NAME">_a.video</span><span class="PUNC">)</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 53</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="PUNC">)</span><span class="WHIT">
+<span class='line'> 54</span> </span><span class="WHIT">    </span><span class="PUNC">.</span><span class="KEYW">catch</span><span class="PUNC">(</span><span class="PUNC">(</span><span class="NAME">e</span><span class="PUNC">)</span><span class="PUNC">=</span><span class="PUNC">></span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 55</span> </span><span class="WHIT">      </span><span class="NAME">this.triggerHandlers</span><span class="PUNC">(</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 56</span> </span><span class="WHIT">        </span><span class="NAME">status</span><span class="WHIT"> </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="NAME">_a.error</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 57</span> </span><span class="WHIT">        </span><span class="NAME">service</span><span class="WHIT"> </span><span class="PUNC">:</span><span class="WHIT"> </span><span class="STRN">"devices-error"</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 58</span> </span><span class="WHIT">        </span><span class="NAME">error</span><span class="PUNC">:</span><span class="WHIT"> </span><span class="NAME">this.errorMessage</span><span class="WHIT">
+<span class='line'> 59</span> </span><span class="WHIT">      </span><span class="PUNC">}</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">  
+<span class='line'> 60</span>     </span><span class="PUNC">}</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 61</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'> 62</span> 
+<span class='line'> 63</span> </span><span class="WHIT">  </span><span class="COMM">/* --------------------------------------------------
+<span class='line'> 64</span>    * Once access to user media (micro and/or video)
+<span class='line'> 65</span>    * have been granted, pass stream provided by requestUserMedia to 
+<span class='line'> 66</span>    * widget *webrtc_endpoint*
+<span class='line'> 67</span>    * @params {object} {audio:boolean, video:boolean}
+<span class='line'> 68</span>    * -------------------------------------------------- */</span><span class="WHIT">
+<span class='line'> 69</span> </span><span class="WHIT">  </span><span class="NAME">async</span><span class="WHIT"> </span><span class="NAME">start</span><span class="PUNC">(</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 70</span> </span><span class="WHIT">    </span><span class="NAME">this.devices</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">await</span><span class="WHIT"> </span><span class="NAME">this.probeDevices</span><span class="PUNC">(</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 71</span> </span><span class="WHIT">    </span><span class="NAME">this.stream</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">await</span><span class="WHIT"> </span><span class="NAME">this.requestUserMedia</span><span class="PUNC">(</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 72</span> </span><span class="WHIT">    </span><span class="NAME">this.triggerHandlers</span><span class="PUNC">(</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 73</span> </span><span class="WHIT">      </span><span class="NAME">devices</span><span class="PUNC">:</span><span class="NAME">this.devices</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 74</span> </span><span class="WHIT">      </span><span class="NAME">stream</span><span class="PUNC">:</span><span class="NAME">this.stream</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 75</span> </span><span class="WHIT">      </span><span class="NAME">localStream</span><span class="PUNC">:</span><span class="NAME">this.stream</span><span class="PUNC">,</span><span class="WHIT">
+<span class='line'> 76</span> </span><span class="WHIT">      </span><span class="NAME">error</span><span class="PUNC">:</span><span class="WHIT"> </span><span class="NAME">this.errorMessage</span><span class="WHIT">
+<span class='line'> 77</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">  
+<span class='line'> 78</span>     </span><span class="NAME">this.feed</span><span class="PUNC">(</span><span class="NAME">require</span><span class="PUNC">(</span><span class="STRN">'./skeleton'</span><span class="PUNC">)</span><span class="PUNC">(</span><span class="KEYW">this</span><span class="PUNC">)</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 79</span> </span><span class="WHIT">    </span><span class="NAME">this.ratio</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">this.$el.width</span><span class="PUNC">(</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">/</span><span class="WHIT"> </span><span class="NAME">this.$el.height</span><span class="PUNC">(</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT"> 
+<span class='line'> 80</span>     </span><span class="NAME">this.setupTrack</span><span class="PUNC">(</span><span class="NAME">_a.video</span><span class="PUNC">,</span><span class="WHIT"> </span><span class="NAME">this.mget</span><span class="PUNC">(</span><span class="NAME">_a.video</span><span class="PUNC">)</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 81</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'> 82</span> 
+<span class='line'> 83</span> </span><span class="WHIT">  </span><span class="COMM">// ===========================================================</span><span class="WHIT">
+<span class='line'> 84</span> </span><span class="WHIT">  </span><span class="COMM">//</span><span class="WHIT">
+<span class='line'> 85</span> </span><span class="WHIT">  </span><span class="COMM">// ===========================================================</span><span class="WHIT">
+<span class='line'> 86</span> </span><span class="WHIT">  </span><span class="NAME">async</span><span class="WHIT"> </span><span class="NAME">probeDevices</span><span class="PUNC">(</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 87</span> </span><span class="WHIT">    </span><span class="KEYW">const</span><span class="WHIT"> </span><span class="NAME">self</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT">  </span><span class="KEYW">this</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 88</span> </span><span class="WHIT">    </span><span class="COMM">//self.debug("SELECT JJJJJJJ");</span><span class="WHIT">
+<span class='line'> 89</span> </span><span class="WHIT">    </span><span class="KEYW">if</span><span class="WHIT"> </span><span class="PUNC">(</span><span class="PUNC">!</span><span class="NAME">navigator.mediaDevices</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 90</span> </span><span class="WHIT">      </span><span class="NAME">this._failedToStart</span><span class="PUNC">(</span><span class="STRN">"No devices found"</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 91</span> </span><span class="WHIT">      </span><span class="KEYW">return</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 92</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'> 93</span> </span><span class="WHIT">    </span><span class="NAME">let</span><span class="WHIT"> </span><span class="NAME">devices</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="KEYW">null</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 94</span> </span><span class="WHIT">    </span><span class="KEYW">try</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 95</span> </span><span class="WHIT">      </span><span class="NAME">devices</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">await</span><span class="WHIT"> </span><span class="NAME">navigator.mediaDevices.enumerateDevices</span><span class="PUNC">(</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 96</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="KEYW">catch</span><span class="PUNC">(</span><span class="NAME">e</span><span class="PUNC">)</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'> 97</span> </span><span class="WHIT">      </span><span class="NAME">this._failedToStart</span><span class="PUNC">(</span><span class="NAME">e</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'> 98</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'> 99</span> </span><span class="WHIT">    </span><span class="KEYW">return</span><span class="WHIT"> </span><span class="NAME">devices</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>100</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'>101</span> 
+<span class='line'>102</span> </span><span class="WHIT">  </span><span class="COMM">// ===========================================================</span><span class="WHIT">
+<span class='line'>103</span> </span><span class="WHIT">  </span><span class="COMM">//</span><span class="WHIT">
+<span class='line'>104</span> </span><span class="WHIT">  </span><span class="COMM">// ===========================================================</span><span class="WHIT">
+<span class='line'>105</span> </span><span class="WHIT">  </span><span class="NAME">_failedToStart</span><span class="PUNC">(</span><span class="NAME">err</span><span class="PUNC">)</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>106</span> </span><span class="WHIT">    </span><span class="NAME">this.warn</span><span class="PUNC">(</span><span class="STRN">"FAILED TO GET USER DEVICE"</span><span class="PUNC">,</span><span class="WHIT"> </span><span class="NAME">err</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>107</span> </span><span class="WHIT">    </span><span class="NAME">window.__uu</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">err</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>108</span> </span><span class="WHIT">    </span><span class="NAME">let</span><span class="WHIT"> </span><span class="NAME">msg</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">err</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>109</span> </span><span class="WHIT">    </span><span class="KEYW">if</span><span class="PUNC">(</span><span class="NAME">err</span><span class="WHIT"> </span><span class="PUNC">!=</span><span class="WHIT"> </span><span class="KEYW">null</span><span class="WHIT"> </span><span class="PUNC">&&</span><span class="WHIT"> </span><span class="NAME">err.message</span><span class="PUNC">)</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>110</span> </span><span class="WHIT">      </span><span class="KEYW">switch</span><span class="PUNC">(</span><span class="NAME">err.name</span><span class="PUNC">)</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>111</span> </span><span class="WHIT">        </span><span class="KEYW">case</span><span class="WHIT"> </span><span class="STRN">"NotReadableError"</span><span class="PUNC">:</span><span class="WHIT">
+<span class='line'>112</span> </span><span class="WHIT">          </span><span class="NAME">msg</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="TOKN">`</span><span class="NAME">$</span><span class="PUNC">{</span><span class="NAME">err.message</span><span class="PUNC">}</span><span class="PUNC">.</span><span class="WHIT"> </span><span class="NAME">It</span><span class="STRN">'s likely already in use.`;
+<span class='line'>113</span>           break;
+<span class='line'>114</span>         default:
+<span class='line'>115</span>           msg = `${err.message}. Your browser doesn'</span><span class="NAME">t</span><span class="WHIT"> </span><span class="NAME">support</span><span class="WHIT"> </span><span class="NAME">video</span><span class="WHIT"> </span><span class="NAME">feature.</span><span class="TOKN">`</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>116</span> </span><span class="WHIT">      </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'>117</span> </span><span class="WHIT">      </span><span class="KEYW">if</span><span class="PUNC">(</span><span class="NAME">this.__content</span><span class="PUNC">)</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>118</span> </span><span class="WHIT">        </span><span class="NAME">this.__content.feed</span><span class="PUNC">(</span><span class="WHIT">
+<span class='line'>119</span> </span><span class="WHIT">          </span><span class="NAME">Skeletons.Note</span><span class="PUNC">(</span><span class="NAME">msg</span><span class="PUNC">,</span><span class="WHIT"> </span><span class="TOKN">`</span><span class="NAME">$</span><span class="PUNC">{</span><span class="NAME">this.fig.family</span><span class="PUNC">}</span><span class="NAME">__no</span><span class="PUNC">-</span><span class="NAME">device</span><span class="TOKN">`</span><span class="PUNC">)</span><span class="WHIT">
+<span class='line'>120</span> </span><span class="WHIT">        </span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>121</span> </span><span class="WHIT">      </span><span class="PUNC">}</span><span class="KEYW">else</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>122</span> </span><span class="WHIT">        </span><span class="NAME">this.feed</span><span class="PUNC">(</span><span class="WHIT">
+<span class='line'>123</span> </span><span class="WHIT">          </span><span class="NAME">Skeletons.Note</span><span class="PUNC">(</span><span class="NAME">msg</span><span class="PUNC">,</span><span class="WHIT"> </span><span class="TOKN">`</span><span class="NAME">$</span><span class="PUNC">{</span><span class="NAME">this.fig.family</span><span class="PUNC">}</span><span class="NAME">__no</span><span class="PUNC">-</span><span class="NAME">device</span><span class="TOKN">`</span><span class="PUNC">)</span><span class="WHIT">
+<span class='line'>124</span> </span><span class="WHIT">        </span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">  
+<span class='line'>125</span>       </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'>126</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'>127</span> </span><span class="WHIT">    </span><span class="NAME">this.errorMessage</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">msg</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>128</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>129</span> 
+<span class='line'>130</span> </span><span class="WHIT">  </span><span class="COMM">/* ------------------------------------------------------------
+<span class='line'>131</span>   * To request permission to access user media (micro and/or video)
+<span class='line'>132</span>   * @params {object} {audio:boolean, video:boolean}
+<span class='line'>133</span>   * @retturn stream bound to granted media
+<span class='line'>134</span>   * ------------------------------------------------------------ */</span><span class="WHIT">
+<span class='line'>135</span> </span><span class="WHIT">  </span><span class="NAME">async</span><span class="WHIT"> </span><span class="NAME">requestUserMedia</span><span class="PUNC">(</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>136</span> </span><span class="WHIT">    </span><span class="NAME">let</span><span class="WHIT"> </span><span class="NAME">constraints</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">require</span><span class="PUNC">(</span><span class="STRN">'./configs'</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>137</span> </span><span class="WHIT">    </span><span class="COMM">// if(localStorage.deviceId){</span><span class="WHIT">
+<span class='line'>138</span> </span><span class="WHIT">    </span><span class="COMM">//   constraints.video.deviceId = {</span><span class="WHIT">
+<span class='line'>139</span> </span><span class="WHIT">    </span><span class="COMM">//     exact: localStorage.deviceId</span><span class="WHIT">
+<span class='line'>140</span> </span><span class="WHIT">    </span><span class="COMM">//   }</span><span class="WHIT">
+<span class='line'>141</span> </span><span class="WHIT">    </span><span class="COMM">// }</span><span class="WHIT">
+<span class='line'>142</span> </span><span class="WHIT">    </span><span class="NAME">this.debug</span><span class="PUNC">(</span><span class="STRN">"XWQ requestUserMedia"</span><span class="PUNC">,</span><span class="WHIT"> </span><span class="NAME">constraints</span><span class="PUNC">,</span><span class="WHIT"> </span><span class="KEYW">this</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>143</span> </span><span class="WHIT">    </span><span class="NAME">let</span><span class="WHIT">  </span><span class="NAME">stream</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="KEYW">null</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>144</span> </span><span class="WHIT">    </span><span class="KEYW">if</span><span class="WHIT"> </span><span class="PUNC">(</span><span class="NAME">navigator.mediaDevices</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>145</span> </span><span class="WHIT">      </span><span class="NAME">stream</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">await</span><span class="WHIT"> </span><span class="NAME">navigator.mediaDevices.getUserMedia</span><span class="PUNC">(</span><span class="NAME">constraints</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>146</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'>147</span> </span><span class="WHIT">    </span><span class="KEYW">if</span><span class="PUNC">(</span><span class="PUNC">!</span><span class="NAME">stream</span><span class="PUNC">)</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>148</span> </span><span class="WHIT">      </span><span class="NAME">this.warn</span><span class="PUNC">(</span><span class="STRN">"KKKKKKKKKKK"</span><span class="PUNC">)</span><span class="WHIT">
+<span class='line'>149</span> </span><span class="WHIT">      </span><span class="NAME">this._failedToStart</span><span class="PUNC">(</span><span class="STRN">"No stream"</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>150</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'>151</span> </span><span class="WHIT">    </span><span class="KEYW">return</span><span class="WHIT"> </span><span class="NAME">stream</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>152</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="WHIT"> 
+<span class='line'>153</span> 
+<span class='line'>154</span>   </span><span class="COMM">/* ------------------------------------------------------------
+<span class='line'>155</span>   * To request permission to access user media (micro and/or video)
+<span class='line'>156</span>   * @params {object} {audio:boolean, video:boolean}
+<span class='line'>157</span>   * @retturn stream bound to granted media
+<span class='line'>158</span>   * ------------------------------------------------------------ */</span><span class="WHIT">
+<span class='line'>159</span> </span><span class="WHIT">  </span><span class="NAME">async</span><span class="WHIT"> </span><span class="NAME">changeDevice</span><span class="PUNC">(</span><span class="NAME">constraints</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>160</span> </span><span class="WHIT">    </span><span class="NAME">let</span><span class="WHIT">  </span><span class="NAME">stream</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="KEYW">null</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>161</span> </span><span class="WHIT">    </span><span class="KEYW">if</span><span class="WHIT"> </span><span class="PUNC">(</span><span class="NAME">navigator.mediaDevices</span><span class="PUNC">)</span><span class="WHIT"> </span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>162</span> </span><span class="WHIT">      </span><span class="NAME">stream</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">await</span><span class="WHIT"> </span><span class="NAME">navigator.mediaDevices.getUserMedia</span><span class="PUNC">(</span><span class="NAME">constraints</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>163</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'>164</span> </span><span class="WHIT">    </span><span class="KEYW">if</span><span class="PUNC">(</span><span class="PUNC">!</span><span class="NAME">stream</span><span class="PUNC">)</span><span class="PUNC">{</span><span class="WHIT">
+<span class='line'>165</span> </span><span class="WHIT">      </span><span class="NAME">this.warn</span><span class="PUNC">(</span><span class="STRN">"KKKKKKKKKKK"</span><span class="PUNC">)</span><span class="WHIT">
+<span class='line'>166</span> </span><span class="WHIT">      </span><span class="NAME">this._failedToStart</span><span class="PUNC">(</span><span class="STRN">"No stream"</span><span class="PUNC">)</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>167</span> </span><span class="WHIT">    </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'>168</span> </span><span class="WHIT">    </span><span class="NAME">this__video.el.srcObject</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">stream</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>169</span> </span><span class="WHIT">    </span><span class="NAME">this.stream</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">stream</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>170</span> </span><span class="WHIT">    </span><span class="KEYW">return</span><span class="WHIT"> </span><span class="NAME">stream</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>171</span> </span><span class="WHIT">  </span><span class="PUNC">}</span><span class="WHIT"> 
+<span class='line'>172</span> 
+<span class='line'>173</span> </span><span class="PUNC">}</span><span class="WHIT">
+<span class='line'>174</span> 
+<span class='line'>175</span> </span><span class="NAME">module.exports</span><span class="WHIT"> </span><span class="PUNC">=</span><span class="WHIT"> </span><span class="NAME">__endpoint_local</span><span class="PUNC">;</span><span class="WHIT">
+<span class='line'>176</span> </span></pre></body></html>

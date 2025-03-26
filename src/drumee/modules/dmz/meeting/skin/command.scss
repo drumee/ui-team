@@ -1,0 +1,93 @@
+@import 'mixins/drumee';
+
+&__commands{
+  position: relative;//absolute;
+  //bottom:10px;//0;
+ //right: 40px; //10px;
+  height: 53px;//80px; 
+  width: auto; //190px;
+  align-items: center;
+  justify-items: center;
+  justify-content: center;
+  z-index: 200;
+  background-color:$core-default-transparent-black;//rgba(0,0,0,0.33);
+  border-radius: $default-border-radius;
+ // margin-left:21%;
+  margin: 5px auto; 
+  .ctrl-button{
+    width: 36px; //48px;
+    border-radius: $default-border-radius;
+    height: 36px; //30px;
+    padding:8px; // 5px;
+    border: 1.2px transparent solid;//$vdo-border-grey
+    background-color:$core-default-background; 
+    margin:0 7px; // 0 6px;
+    color: $multimedia-vdo-icon;//$egrey-b6; 
+    cursor: pointer;
+    &.line{
+     background-color: $multimedia-vdo-ctrl-button;//$vdo-ctrl-button;
+     color:$core-default-icon-reverse; 
+     fill: none;
+     stroke-width: 0;//1.5px;
+     stroke:$core-default-icon-reverse; 
+     padding: 8px;//5px; 
+     border: none;
+     margin-right: 14px;
+     svg{
+      margin-top: 1px;
+      margin-left: 2px;
+     }
+    }
+    &.reject{
+      background-color: $multimedia-vdo-ctrl-button;//$vdo-ctrl-button; 
+    }
+    &.screen{
+      color:$multimedia-vdo-button-accept;//$vdo-button-accept;
+      padding: 3.5px;//8.5px;
+      margin-left:14px;
+      &[data-state="0"]{
+        color : $multimedia-vdo-icon;//$egrey-b6;
+      }
+      &[data-state="0"]{
+        &:before{
+          content : " ";
+          position: absolute;
+          height: 2px;
+          width: 31px;//29px;
+          top: 15px;//16px;
+          left: 1px;//0px;  
+          background-color: $multimedia-vdo-ctrl-button;//$vdo-ctrl-button; 
+          transform-origin : 50% 50%;
+          transform: rotate(-45deg);
+        }
+      }
+    }
+    &.accept{
+      color: $multimedia-vdo-button-accept;//$vdo-button-accept;
+    }
+    &[data-state="0"]{
+      color: $multimedia-vdo-icon;//$egrey-b6; 
+    }
+    &[data-state="0"]{
+      &:before{
+        content : " ";
+        position: absolute;
+        height: 2px;
+        width: 25px;
+        top: 16px; //12px;
+        left: 3px; //10px;
+        background-color: $multimedia-vdo-ctrl-button;//$vdo-ctrl-button;
+        transform-origin : 50% 50%;
+        transform: rotate(-45deg);
+      }
+    }
+    &[data-online="1"]{
+      background-color: $multimedia-vdo-ctrl-button;//$vdo-ctrl-button; 
+      color: $ewhite;
+    }
+    &[data-enabled="0"]{
+      opacity: 0.3;
+      pointer-events: none;
+    }
+  }
+}

@@ -1,0 +1,76 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : 
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+
+.desk-content {
+  margin: 0 auto;
+  .window-manager{
+    width: 100%;
+    height: 100%;
+    margin: auto;
+    &[data-selected="upload"] {
+      border:2px orange solid;
+    }
+  }
+  &.icons-list{
+    z-index: 1000;
+  }
+  // .list-content{
+  //   display: flex;
+  //   flex-flow: wrap;
+  //   align-content: flex-start;
+  // }
+  .tooltip-wrapper{
+      position: absolute;
+      left: 0;
+      top : 0;
+      width: 0;
+      height: 0;
+      overflow: visible;
+      z-index: 2000;
+  }
+
+  .desk-window-wrapper {
+    .slimScrollBarY {
+      //padding: 0 2px;
+      width: 7px;
+      // border-radius: 7px;
+      //background: transparent!important;
+      &:after {
+        content: " ";
+        //background: rgb(250, 133, 64);
+        position: absolute;
+        height: 100%;
+        width: 2px;
+        border-radius: 7px;
+        right: 3px;
+      }
+    }
+    .slimScrollRailY {
+      padding: 0px 2px;
+      //background: transparent!important;
+      &:after {
+        content: " ";
+        width: 7px;
+        height: 100%;
+        //background: rgb(255, 255, 255);
+        position: absolute;
+        border-radius: 7px;
+        right: 1px;
+      }
+    }
+  }
+}
+
+
+// .windows-layer{
+//   position: absolute;
+//   top : 0;
+//   left: 0;
+//   width: 0;
+//   height: 0;
+//   overflow: visible;
+//   user-select: none;
+// }

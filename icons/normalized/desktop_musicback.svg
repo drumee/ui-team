@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="17px" height="12px" viewBox="0 0 17 12" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 53.2 (72643) - https://sketchapp.com -->
+    <title>path-14</title>
+    <desc>Created with Sketch.</desc>
+    <g id="Page-1-Copy-5" stroke="none" stroke-width="1">
+        <g id="Music-player" transform="translate(-666.000000, -510.000000)">
+            <g id="Group-4">
+                <g id="Group-3" transform="translate(562.000000, 443.000000)">
+                    <g id="Group-2">
+                        <g id="Player">
+                            <path d="M106.184931,67.2378076 C105.248915,66.6141115 103.999828,67.289977 104,68.4200531 L104.00131,77.5803575 C104.001482,78.7101741 105.250247,79.3857367 106.186112,78.7622785 L110.823244,75.6732134 L110.823523,77.5803575 C110.823695,78.7101741 112.07246,79.3857367 113.008325,78.7622785 L119.882269,74.1831429 C120.723565,73.6227118 120.723651,72.379494 119.882419,71.8189548 L113.007143,67.2378076 C112.071128,66.6141115 110.822041,67.289977 110.822213,68.4200531 L110.822492,70.3279326 L106.184931,67.2378076 Z" id="path-14" transform="translate(112.256646, 73.000000) rotate(179.999936) translate(-112.256646, -73.000000) "></path>
+                        </g>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

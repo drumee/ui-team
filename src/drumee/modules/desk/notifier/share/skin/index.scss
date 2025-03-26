@@ -1,0 +1,68 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : desk/skin/desk-header.scss
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+
+@import 'mixins/drumee';
+
+.notifier-share{
+  &__ui{
+    z-index : 1000;
+    background-color: $transfert-main;  
+    color: $default-text-reverse; 
+    flex-shrink: 0;
+    border-radius:$default-border-radius;
+    box-shadow:$drumee-shadow-topbar;
+   // box-shadow: 0 5px 8px 1px rgba(63,79,117,.13), 0 6px 16px 0 rgba(86,65,113,.08), 0 2px 14px 0 rgba(194,185,203,0);
+    cursor: pointer;
+    &:hover{
+      box-shadow: 0 5px 4px 3px hsla(0,0%,100%,.3), 0 2px 2px 2px hsla(0,0%,98%,.2), 0 6px 3px 5px rgba(194,185,203,0);        
+    }
+  }
+  &__icon{ 
+    width: 40px;
+    height: 40px;
+    padding: 10px;
+    &[data-device=mobile]{
+      width: 35px;
+      height: 35px;
+      padding: 9px;
+    }
+    &[data-over="yes"]{
+      &:after {
+        content: "";
+        position: absolute;
+        top: -20px;
+        left: -20px;
+        height: 80px;
+        width: 80px;
+        border: 2px solid $transfert-border;//#FA8540;
+        background-color: transparent;
+      }
+    }
+  }
+  &__digit{ 
+    position: absolute;
+    top: -50%;
+    left: 50%;
+    background-color:$default-background;  
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    color: $eblue;//#4a90e2;
+    justify-content: center;
+    align-items: center;
+    font-size:12px;  
+    &[data-device="mobile"]{
+      font-size:11px;
+      width:16px;
+      height:16px;
+      left: 60%;
+    }
+    font-weight:bold;
+    //@include typo($color:#4a90e2, $size:12px, $weight:900, $line:10px);
+    margin:8px;
+
+  }
+}

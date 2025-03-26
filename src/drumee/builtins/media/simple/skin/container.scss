@@ -1,0 +1,25 @@
+
+&__container{
+  width:100%;
+  align-items: center;
+  //max-width: calc(100% - 60px);
+  .filename {
+    height: 30px;
+    min-width: 86px;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #494949;
+    margin-left: 5px;
+    font-size: 12px;
+  
+/*    &:hover{
+      // color:white;
+    }*/
+  }
+
+  .file-info {
+    @include typo($size:12px,$line:14px,$weight:300,$color:#000000);
+  }
+}

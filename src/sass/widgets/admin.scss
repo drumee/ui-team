@@ -1,0 +1,75 @@
+
+.admin-wrapper{
+    min-width : 960px;
+    min-height: 600px;
+    .fixed-barre{
+	min-height:40px;
+	z-index: 2000;
+	background: white;
+    }
+    .button{
+	@include button-circle($circle-size:32px);
+	background-color:darken($xia-btn-bg-color, 10%);
+	height:32px;
+	width:32px;
+	i{
+	    line-height: 35px;
+	    font-size: 25px;
+	}
+    }
+    .space-header{
+	background: #eee;
+	margin-bottom: 5px;
+	border-radius: 4px;
+	border: 1px #bbb solid;
+    }
+    .space-list{
+	position: fixed;
+	width:400px;
+	min-height:600px;
+	top: 50px;
+	padding-left:5px;
+	overflow:hidden;
+	ul.admin-list{
+	    overflow-x: hidden;
+	    overflow-y: auto;
+	    li{
+		&:first-child{
+		    margin-top: 5px;
+		}
+	    }
+	}
+    }
+
+    .properties{
+	min-height: $min-height;
+	min-width: 650px;
+	margin-top:34px;
+	margin-left: 410px;
+	margin-right:10px;
+	top:44px;
+	padding:5px;
+        border-left: #aaa solid thin;
+        border-right: #aaa solid thin;
+    }
+    .context{
+	padding:5px;
+	min-width:300px;
+	top:34px;
+	margin:0;
+	width: 180px;
+	z-index:$xia-z-index-draft + 1;
+	top:44px;
+    }
+    [data-active="on"]{
+	background:#eee;
+    }
+    [data-active="off"],[data-active="none"]{
+	background:white;
+    }
+    .search {
+	.xia-input{
+	    max-width: 390px;
+	}
+    }
+}

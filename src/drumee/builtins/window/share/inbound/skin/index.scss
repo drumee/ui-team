@@ -1,0 +1,177 @@
+@import 'mixins/colors/index.scss';
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/exports.scss';
+@import 'mixins/handles.scss';
+@import 'mixins/utils.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/z-index.scss';
+
+.share-inbound{
+  &__ui{
+    left: calc(50% - 175px);
+    display: flex;
+    width: 350px; //367px;
+    min-height: 227px;
+    top : 60px;
+    //transform: translateX(-50%);
+    height: auto;
+    position: absolute;
+    background-color:$default-background; 
+    border-radius: 4px;
+    align-items: center;
+    box-shadow: 0 0 7px 0 rgba(0, 0, 0, 0.14), 0 0 6px 0 #F8FAFC, 0 3px 5px 0 rgba(0, 0, 0, 0.2);  
+  }
+  &__main{
+    min-height: 227px;
+    height:auto;
+    width: 100%;
+  }
+  .invitation-settings{
+    z-index: 0;
+    background-color: #fff;
+    //width: 100%;
+    height: auto;
+    border-radius: 4px;
+    //min-width: 320px;
+    width:320px;
+   // top:20px; //30px;
+    margin:15px auto 0 auto;
+  }
+
+  &__button{
+    height: 35px;
+    width: 35px;
+    position: absolute;
+    right: 0;
+    z-index: 100;
+    padding: 10px;
+    cursor: pointer;
+    &-close{
+      height: 100%;
+      width: 100%;      
+    }
+  }
+
+  &__container{
+    z-index: 1;
+    flex: 1;
+  }
+  .invitation-settings__label{
+    @include typo($color:#FA8540,$size:16px,$line:19px,$weight:400);
+   // margin-top: 18px;
+  }
+  .u-jc-sa{
+    justify-content: space-around!important;
+  }
+
+  &__header{
+    // margin :10px auto 0 auto;
+    //@include typo($color:#FA8540,$size:18px,$line:24px,$weight:300);
+    @include typo($color:#FA8540,$size:16px,$line:19px,$weight:400);
+  }
+  .dialog__button--close{
+      position: absolute;
+      top: 0;
+      right: 0;
+      color: #b6bfca;
+      cursor: pointer;
+      z-index: 2;
+  }
+
+  &__roll{
+    &-sharers{
+      width : 290px;
+    }
+  }
+  &__dialog-wrapper{
+    position: absolute;
+  }
+}
+.inbound-sharer {
+  &__ui {
+    width: 100%;
+    height: 36px;
+    padding: 0 0 0 20px;
+    position: relative;
+    cursor: pointer;
+    @include typo($size:14px,$line:36px,$color:$egrey-49,$weight:400);
+  }
+  &__main {
+    align-items: center;
+  }
+  .media-ui-content{
+    height: 100%;
+    width: 100%;
+    
+    .preview, svg{
+      height: 100%;
+      width: 100%;  
+    }
+  }
+  .media-thumbnail{
+    margin-right: 20px;
+  }
+  .image-capable{
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  &__email {
+    width: 100px;
+    margin-right: 20px;
+    @include overflow-text;
+  }
+  &:hover{
+    background-color: #879BFF;      
+    color: $ewhite;
+    .check, .reject {
+      visibility: visible;
+    }
+    .reject, .chat {
+      color: $ewhite;
+    }
+    .check, .reject, .chat {
+      margin-right: 20px;
+      cursor: pointer;
+    }
+    // &__email {
+    // }
+  }
+  &__ok-btn {
+    flex-shrink: 0;
+    background: $ewhite;
+    border-radius: 50%;
+    width: 18px;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden;
+    @include typo($size:7px,$line:18px,$color:#1cad75,$weight:300);
+  }
+  &__icon {
+    &--check, &--reject{
+      // width: 36px;
+      // height: 36px;
+      visibility: hidden;
+    }
+  }
+  &__message{
+    background-color: $ewhite;
+    padding: 12px 14px;
+    border-radius: 2px;
+    box-shadow: 0 5px 8px 0 rgba(0, 0, 0, 0.14);  
+    @include typo($size:12px,$line:14px,$color:$egrey-2f,$weight:300);
+    &:before {
+      content: " ";
+      position: absolute;
+      top: -3px;
+      left: 18px;
+      width: 10px;
+      height: 10px;
+      background-color: $ewhite;
+      transform: rotate(45deg);
+    }
+  }
+}
+// @import "settings/invitation.scss";

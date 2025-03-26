@@ -1,0 +1,156 @@
+@import "header.scss";
+@import "topbar.scss";
+@import 'mixins/drumee';
+
+.player {
+  &-media {
+    box-shadow: $drumee-shadow-main;
+  }
+
+
+  &__ui {
+    background-color: $core-default-background;
+    border-radius: $default-border-radius;
+    box-shadow: $drumee-shadow-main;
+    min-height: 250px;
+    min-width: 340px;
+    z-index: 1000;
+
+    &[data-selected="upload"] {
+      border: 2px orange solid;
+    }
+
+    &[data-state="1"] {
+      z-index: 10000 !important; // highest level in window manager
+    }
+
+    &[data-state="0"] {
+      .player__header {
+        opacity: 0.7;
+      }
+    }
+
+    &[data-minimize="1"],
+    &[data-ready="0"] {
+      display: none;
+    }
+
+    &.window.viewer {
+      top: -110px;
+    }
+
+    img.smart-image {
+      height: 100%;
+      object-fit: contain;
+      object-position: 50% 50%;
+      width: 100%;
+    }
+
+    & .svg-progress__main {
+      background-color: $core-default-background;
+      border-radius: 5px;
+      bottom: 0;
+      height: 100px;
+      left: calc(50% - 50px);
+      position: absolute;
+      top: calc(100% - 170px);
+      width: 100px;
+      z-index: 300;
+    }
+  }
+
+  &__main {
+    border-radius: $default-border-radius;
+    box-shadow: $drumee-shadow-main;
+    height: 100%;
+    width: 100%;
+
+    &.player.document {
+      background-color: $multimedia-player-doc-background;
+    }
+  }
+
+  &__container {
+    background-color: $multimedia-player-doc-background;
+    border-radius: $default-border-radius-bottom;
+    height: calc(100% - 44px);
+    min-height: 200px;
+    overflow: hidden;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+
+    .image-viewer__progres {
+      height: 60px;
+      left: 50%;
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      z-index: 100;
+    }
+
+    &[data-type="evaluation"]::after {
+      @include license-trial();
+      @include typo($size: 22px, $line: 1.3, $color: $default-text-title);
+    }
+
+    .loader-progress {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+    }
+
+    .drumee-spinner {
+      height: 70px;
+      margin: auto;
+      width: 70px;
+    }
+  }
+
+  .widget.photo {
+    margin: 0 auto;
+  }
+
+  &-document {
+    .image-viewer {
+      border-top: solid rgba(20, 20, 20, .2) 10px;
+
+      &:first-child {
+        border-top: none;
+      }
+    }
+  }
+
+  .image-viewer {
+    height: 100%;
+    width: 100%;
+
+    .percent {
+      visibility: hidden;
+    }
+  }
+}
+
+.player {
+  &__dialog-overlay {
+    background-color: rgba(0, 0, 0, .3);
+    height: calc(100% - 44px);
+    position: absolute;
+    top: 44px;
+    width: 100%;
+  }
+
+  &__progress {
+    & .svg-progress__main {
+      background-color: $core-default-background;
+      border-radius: 5px;
+      height: 100px;
+      left: calc(50% - 50px);
+      position: absolute;
+      top: calc(100% - 100px);
+      width: 100px;
+      z-index: 300;
+    }
+  }
+}

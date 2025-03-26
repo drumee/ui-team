@@ -1,0 +1,46 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2022
+#   FILE : /src/drumee/modules/admin/locale/language/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.locale-language{
+  &__ui{
+    width: 100%;
+    margin-bottom: 13px;
+    border: 1px solid grey;
+    cursor: pointer;
+    //padding: 10px;
+  }
+  &__header{
+    width: 100%;
+    padding: 10px;
+    cursor: pointer;
+    &:hover{
+      background-color: #48AC72;
+    }
+  }
+  &__container{
+    background-color: inherit;
+  }
+  &__translation{
+    width: 100%;
+    padding: 5px 0;
+    border-bottom: 1px solid grey;
+    margin: 2px 0;
+    &::before{
+      content: attr(data-name);
+      //border: 1px solid grey;
+      width: 50px;
+      height: 100%;
+      background-color: #dde2e8;
+      margin-right: 10px;
+      padding: 0 0 0 5px;
+    }
+    .drumee-text{
+      width: calc(100% - 60px);
+    }
+  }
+
+}

@@ -1,0 +1,10 @@
+// for loader -- Do not remove
+.welcome {
+  &__loader {
+    margin: 0 auto 0;
+    
+    & .drumee-loading-wrapper {
+      top: 20%;
+    }
+  }
+}

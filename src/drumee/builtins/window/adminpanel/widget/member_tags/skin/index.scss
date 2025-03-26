@@ -1,0 +1,130 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2020
+#   FILE : /src/drumee/builtins/window/adminpanel/widget/member_tags/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.widget-member-tags {
+  &__ui {
+		width: 100%;
+		height: 100%;
+  }
+
+  &__main {
+	  overflow: hidden;
+	  height: 100%;
+  }
+
+  &__container {
+		background-color: inherit;
+		height: 100%;
+  }
+
+  &__header {
+	  height: 34px;
+	  padding: 5px;
+	  width :	100%;
+  }
+
+  &__separator {
+	  background-color: $admin-default-separator;
+	  border-radius: 1px;
+	  height: 1px;
+	  margin: 3px 0 0 0px;
+  }
+  
+  &-content {
+		height: 100%;
+		margin: 0px -4px 0px 0px;
+		overflow: hidden;
+		width: 100%;
+		
+		&__main {
+			margin-bottom: 1px;
+		}
+
+		&__container {
+			height: 35px;
+		}
+
+		&__note {
+			top: 2px;
+			left: -6px;
+		}
+
+		&__items {
+			height: 100%;
+			overflow:hidden;
+			width: 100%;
+		}
+
+		&__item {
+			height: 100%;
+			overflow: hidden;
+			padding-bottom: 15px;
+			width: calc(100% - 0px);//calc(100% - 2px);
+
+			& .smart-container {
+				overflow-x: hidden;
+				width:100%;
+			}
+
+			& .tag-sortable-placeholder {
+				background: $eviolet;
+				height:24px;
+				opacity: 0.3;
+				width: 100%;
+			}
+    }
+
+    &__container {
+			cursor: pointer;
+			//margin: 1px 0.5px 0px 0px;
+			margin: 0px 0.5px 0px 0px;
+			padding-bottom: 5px;
+			padding-left: 32px;
+			padding-top: 5px;
+			width: 100%;
+			@include typo($size: 14px, $line: 16px);
+			color: $admin-special-tag-color  !important; 
+
+
+      &[data-active="active"],
+      &[data-radio="on"],
+      &:hover {
+        background: $admin-default-background-hover;
+        color	: $admin-default-text-hover  !important;
+      }
+    }
+  }
+  
+  &__note {
+    &.title {
+			margin-left: auto;
+			margin-right: auto; //50px;
+			padding-bottom: 8px;
+			padding-top: 8px;
+			@include typo($size: 15px, $line: 16px, $color: $admin-text-title);//14px
+    }
+  }
+
+  &__icon {
+    box-sizing: border-box;
+    color: $admin-default-icon-neutral;//$egrey-b6;
+    cursor: pointer;
+    height: 27px; //26px;
+    margin: 2px;
+    padding: 7.5px; //6.5px;
+    position: absolute;
+    right: 10px;
+	width: 27px; //26px;
+	opacity:0.85;
+  }
+  svg {
+  &:hover{
+	color:$admin-default-icon-hover;
+	opacity: 1;
+  	}
+  }
+}

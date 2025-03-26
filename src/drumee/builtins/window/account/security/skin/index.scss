@@ -1,0 +1,89 @@
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/drumee';
+
+.account-security  {
+  @import './overlay-wrapper';
+
+  &__ui{
+    height: 100%;
+    display: flex;
+    flex-direction: column;    
+  }
+  &__main {
+    width:100%; //98%
+    height: calc(100% - 20px);
+    min-height: 150px;
+    margin-right: auto;
+    margin-left: auto;
+    margin-bottom: 10px;
+  }
+  &__inner{
+    height: 100%;
+  }
+  &__wrapper{
+    @media (max-width: 1100px) {
+      flex-direction: column !important;
+      align-items: center;
+    }
+  }
+  &__connection-log.container{
+    border-radius: $default-border-radius;
+    padding: 0px 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+  
+  &__modal{
+    &.dialog__wrapper{
+      position: absolute;
+      top: 0;
+      width: 0;
+      height: 0;
+      overflow: visible;
+    }
+  }
+  &__tooltips{
+    width: 500px;
+    background: $account-default-background; 
+  }
+
+  &__note {
+    &.info-message {
+      justify-content: center;
+      text-align: left;//center;
+      position: absolute;
+      padding: 258px 0 10px 11px;
+      @include typo($size: 12px, $line: 14px, $color:$account-default-text-alert);//$account-security-text-color); $eorange-crusta
+    }
+  }
+
+  &__icon {
+    &.close {
+      color:$account-default-thinline-icon;
+      cursor: pointer;
+      height: 10px;
+      padding: 0;
+      right: 10px;
+      top: 5px;
+      width: 10px;
+      
+      &:hover {
+        color: $account-default-thinline-icon-hover;
+      }
+    }
+  }
+  &__column{
+    display: grid;
+    grid-row-gap: 1rem;
+    grid-template-rows: repeat(3, 1fr);
+  }
+
+}
+
+@import "password-meter";
+@import "pad";
+@import 'popup/history';
+@import 'popup/confirm';
+@import 'connection';

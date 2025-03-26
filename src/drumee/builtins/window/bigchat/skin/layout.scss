@@ -1,0 +1,142 @@
+.window-bigchat {
+  & .widget_tag {
+    background: $bigchat-default-background;
+    height: 100%;
+    min-width: 205px;//186px;
+    overflow-y: hidden;
+    padding-bottom: 5px;
+    right: 1px;
+  }
+
+  & .contact-wrapper {
+    min-width: 255px;
+    background-color: $bigchat-default-block-background;
+    max-width: 255px;
+  }
+
+  &[data-size="min"] {
+    & .chat-room-header__left_icon_wrapper{
+      margin-left:20px;
+    }
+
+    &[data-view-instance="3"] {
+      .breadcrumb-icon.next{
+        display:none;
+      }
+
+      .tags-list, .contact-wrapper {
+        display : none;
+      }
+
+      .max-content{
+        display: flex;
+        flex : 1;
+        border-radius:$default-border-radius-bottom;
+      }
+    }
+
+    &[data-view-instance="2" ] {
+      .tags-list, .max-content {
+        display : none;
+      }
+
+      .contact-wrapper{
+        display: flex;
+        flex:1;
+      }
+    }
+
+    &[data-view-instance="1"] {
+      .breadcrumb-icon.back{
+        display:none;
+      }
+
+      .contact-wrapper, .max-content {
+        display : none;
+      }
+      
+      .tags-list{
+        display: flex;
+        flex:1;
+      }
+    }
+  }
+
+  &[data-size="medium"] {
+    &[data-view-instance="2"], &[data-view-instance="3"] {
+      .breadcrumb-icon.next {
+        display:none;
+      }
+
+      .tags-list {
+        display : none;
+      }
+
+      .contact-wrapper {
+        display : flex;
+        flex : 2;
+      }
+
+      .max-content {
+        display : flex;
+        flex : 3;
+      }
+    }
+
+    &[data-view-instance="1"] {
+      .breadcrumb-icon.back {
+        display:none;
+      }
+
+      .tags-list {
+        background: $bigchat-default-block-background;
+        display: flex;
+        flex: 2;
+        height: 100%;
+        min-width: 255px;
+        position: absolute;
+        width: 40%;
+        z-index: 10;
+        max-width: 255px;
+      }
+
+      .contact-wrapper {
+        display : flex;
+        flex : 2;
+      }
+
+      .max-content {
+        display : flex;
+        flex : 3;
+      }
+    }
+  }
+
+  &[data-size="max"] {
+    &[data-view-instance="1"] {
+      .breadcrumb-icon.back {
+        display:none;
+      }
+
+      .breadcrumb-icon.next {
+        transform: rotate(0deg) !important; 
+        display:none;
+      }
+    }
+
+    &[data-view-instance="2"], &[data-view-instance="3"] {      
+      .breadcrumb-icon.next {
+        display:none;
+      }
+
+      .breadcrumb-icon.back {
+        transform: rotate(180deg);
+        display:none;
+      }
+      
+      .tags-list {
+        display:none;
+      }
+    }
+  }
+}

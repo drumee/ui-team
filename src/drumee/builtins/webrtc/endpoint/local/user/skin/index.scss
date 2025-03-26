@@ -1,0 +1,139 @@
+@import 'mixins/drumee';
+
+.endpoint-local {
+  @import 'builtins/webrtc/skin/avatar';
+  @import 'builtins/webrtc/skin/video';
+
+  &__ui {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  &__main {
+    height: 100%;
+    width: 100%;
+    justify-items: center;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+    overflow: hidden;
+    border: 1px solid #313132;
+  }
+
+  &__user {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  &__avatar {
+    height: 100%;
+    width: 100%;
+
+    &[data-video="1"] {
+      display: none;
+    }
+
+    .user-profile {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__label {
+    position: absolute;
+    justify-content: center;
+    top: 10px;
+    left: 10px;
+    padding: 5px;
+    width: auto;
+    max-width: calc(100% - 20px);
+    background-color: $core-default-transparent-black ;
+    border-radius: $border-radius-small;
+    @include typo($size: 14px, $line: 16px, $weight: 300, $color: $core-default-text-reverse);
+
+    &[data-video="1"] {
+      visibility: hidden;
+    }
+  }
+
+  &__audio {
+    position: absolute;
+    color: $core-default-icon-neutral;
+    visibility: hidden;
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+
+    &[data-state="0"] {
+      visibility: visible;
+      color: $core-default-icon-reverse;
+      margin: 0px 0 0 4px;
+
+      &:before {
+        content: " ";
+        position: absolute;
+        height: 2px;
+        width: 20px;
+        top: 13px;
+        left: 4px;
+        background-color: $eorange-sunset;
+        transform-origin: 50% 50%;
+        transform: rotate(-45deg);
+      }
+    }
+  }
+
+  &__video {
+    width: 100%;
+    position: absolute;
+    background-color: $multimedia-vdo-background-color;
+
+    &[data-status="idle"] {
+      background-color: transparent;
+    }
+
+    &[data-state="0"] {
+      z-index: 0;
+      display: none;
+    }
+  }
+
+  &__avatar {
+    .user-profile__icon {
+      width: 150px;
+      height: 150px;
+    }
+
+    .user-profile__main {
+      background-color: #5E5E5E !important;
+      justify-content: center;
+      align-items: center;
+
+      img {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    .user-profile__initiales {
+      border-radius: 100%;
+
+      .note-content {
+        font-size: 45px;
+        font-weight: bold;
+      }
+    }
+
+    .user-profile {
+      &:before {
+        visibility: hidden;
+      }
+    }
+  }
+}

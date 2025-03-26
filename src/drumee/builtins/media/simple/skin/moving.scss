@@ -1,0 +1,94 @@
+&.moving {
+  position : absolute;
+  z-index : 999999999999999;
+  margin : 0;
+  max-width: 160px;
+  // transform: scale(0.75) !important;
+  overflow: hidden;
+  .moving-pin {
+    display: block;
+    position: absolute;
+    right: 0;
+    top: 0;
+    visibility: hidden;
+    svg {
+      position: absolute;
+      left: -13px;
+      top: -13px;
+      padding: 6px;
+      width: 26px;
+      height: 26px;
+      border: 1px solid #1aa972;
+      border-radius: 50%;
+      background: white;
+      fill: #1aa972;
+    }
+    span {
+      position: absolute;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 26px;
+      top: -46px;
+      background: white;
+      padding: 0 4px;
+      border-radius: 4px;
+      text-align: center;
+      color: #73a9e9;
+      font: 13px/26px "Roboto-Light", sans-serif;
+      &:after {
+        content: "";
+        display: block;
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translate(-50%, -2px);
+        border-left: 8px solid transparent;
+        border-top: 6px solid white;
+        border-right: 8px solid transparent;
+      }
+    }
+    &__taboo {
+      left: 0;
+      visibility: visible;
+      svg {
+        fill: #EA4D44;
+        border-color: #EA4D44;
+      }
+      span {
+        width: 260px;
+        color: #EA4D44;
+      }
+    }
+  }
+  .hub-menu-wrapper { //.preview,
+    display: none;
+  }
+  &:not(.hub) {
+    .icon {
+      display: none;
+      visibility: hidden;
+    }
+  }
+  &:not(.hub):not(.folder) {
+    .filename {
+      display: none;
+      visibility: hidden;
+    }
+  }
+  .media-deletion-wrapper, .media-checkbox-wrapper, .media-sharing-wrapper {
+    display: none;
+    visibility: hidden;
+  }
+  svg.icon {
+    display: flex!important;
+  }
+  .filename{
+    display: none;
+  }
+  &.video, &.document, &.audio {
+    .icon, .filename {
+      display: block !important;
+      visibility: visible !important;
+    }
+  }
+}

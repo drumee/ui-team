@@ -1,0 +1,66 @@
+$root: (
+  flow: ltr,
+  math: fluid,
+  output: float,
+  gutter-position: after,
+  container: 100%,
+  container-position: center,
+  columns: 1,
+  gutters: 0,
+  column-width: false,
+  global-box-sizing: content-box,
+  last-flow: to,
+);
+
+$wrapper: (
+  flow: ltr,
+  math: fluid,
+  output: float,
+  gutter-position: after,
+  container: 80em,
+  container-position: center,
+  columns: 12,
+  gutters: .25,
+  column-width: false,
+  global-box-sizing: content-box,
+  last-flow: to,
+  debug: (
+    image: hide,
+    color: rgba(#66f, .25),
+    output: background,
+    toggle: top right,
+  ),
+  use-custom: (
+    background-image: true,
+    background-options: false,
+    box-sizing: true,
+    clearfix: false,
+    rem: true,
+  )
+);
+
+$dmail-thread: (
+  container: auto,
+  columns: (1 5 2),
+  gutters: .25,
+  gutter-position: inside,
+  math: fluid,
+  output: float,
+);
+
+$map: (
+  container: auto,
+  columns: 8,
+  gutters: .25,
+  gutter-position: inside,
+  math: fluid,
+  output: isolate,
+);
+
+$map2: (
+  container: auto,
+  columns: (1 2 1),
+  gutters: .25,
+  gutter-position: inside,
+  math: fluid,
+);

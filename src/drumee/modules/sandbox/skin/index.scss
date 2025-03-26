@@ -1,0 +1,295 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : builtins/sandbox/skin/sandbox
+#   TYPE : Module
+# ===================================================================**/
+@import "jsoneditor";
+@import 'mixins/drumee';
+
+.sandbox {
+  &-wrapper {
+    width: 100vw;
+    height: 100vh;
+    background-color: white;
+  }
+
+  .snippet {
+    cursor: pointer;
+  }
+
+  &-header {
+    height: 70px;
+    justify-content: center;
+    align-content: center;
+    flex-wrap: wrap;
+  }
+
+  &-title {
+    font-size: 30px;
+    display: flex;
+    @include typo($color: #fa8540, $size: 28px, $line: 33px, $weight: 300);
+  }
+
+  &-tooltips {
+    height: 30px;
+    width: 30px;
+    border-radius: 50%;
+    border: 1px solid lightgray;
+    justify-content: center;
+    align-content: center;
+    flex-wrap: wrap;
+    margin: auto 0 auto 10px;
+    cursor: pointer;
+    @include typo($color: #adaba9, $size: 18px, $line: 33px, $weight: 300);
+  }
+
+  &-tips {
+    margin: 0 auto;
+    @include typo($color: #6f6e6d, $size: 16px, $line: 23px, $weight: 300);
+
+    li {
+      margin-left: 1em;
+
+      &::before {
+        content: "\27A1"
+      }
+    }
+  }
+
+  &-intro {
+    @include typo($color: #6f6e6d, $size: 16px, $line: 23px, $weight: 300);
+    background-color: rgb(237, 234, 232);
+    width: 100%;
+    padding: 10px;
+  }
+
+  &-console {
+    @include typo($color: #f40540, $size: 22px, $line: 32px, $weight: 300);
+    transition: background-color 2s cubic-bezier(0.71, -0.62, 0.7, 2);
+    width: 100%;
+    padding-left: 20px;
+    align-content: center;
+    flex-wrap: wrap;
+
+    &[data-poke="1"] {
+      background-color: rgb(11, 224, 61);
+    }
+  }
+
+  &-display {
+    width: 100%;
+    min-height: 65px;
+    font-size: 14px;
+    grid-template-columns: 3fr 4fr;
+    grid-gap: 1rem;
+    padding: 10px;
+  }
+
+  &-body {
+    width: 100%;
+    height: 100%;
+    font-size: 14px;
+    grid-template-columns: 1fr 2fr 4fr;
+    @include typo($color: #1c1b1b, $size: 16px, $line: 23px, $weight: 300);
+    padding: 10px;
+    grid-gap: 0.5rem;
+
+    .buttons.kinds {
+      background-color: rgb(239, 237, 235);
+    }
+
+    .buttons.run {
+      background-color: greenyellow;
+    }
+
+    .kind {
+      font-size: 17px;
+      color: #af1818;
+      margin: 0 auto;
+    }
+
+    .sandbox-menu-item {
+      padding-top: 20px;
+    }
+
+    .sandbox-trigger {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: aquamarine;
+    }
+  }
+
+  &-nav {
+    .buttons {
+      width: 100%;
+      padding: 5px;
+      margin: 0px 10px 5px 0;
+      background-color: rgb(203, 244, 231);
+      cursor: pointer;
+      border-radius: 3px;
+
+      &[data-radio="on"],
+      &[data-state="1"] {
+        background-color: rgb(27, 235, 8);
+      }
+    }
+  }
+
+  &-viewer {
+    .image-preview {
+      margin: 10px 0 0 0;
+    }
+
+    .images-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      padding-top: 5px;
+      padding-bottom: 5px;
+      padding-left: 5px;
+      padding-right: 20px !important;
+    }
+
+    .sandbox--radio-item {
+      padding: 10px;
+      border: 5px;
+
+      &[data-radio="on"],
+      &[data-state="1"] {
+        background-color: rgb(45, 238, 20);
+      }
+    }
+  }
+
+  &-nav,
+  &-editor,
+  &-viewer {
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 0 8px 0 rgb(63 79 117 / 6%), 0 -1px 16px 0 rgb(86 65 113 / 10%), 0 2px 14px 0 rgb(194 185 203 / 4%);
+  }
+
+  &-editor {
+    margin: 0;
+    max-height: calc(100% - 100px);
+    overflow: scroll;
+
+    .jsoneditor.jsoneditor-mode-tree {
+      border: none;
+      height: 100%;
+    }
+  }
+
+  &-viewer {
+    padding: 5px;
+    display: flex;
+    justify-content: center;
+    justify-items: center;
+    align-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+
+    .drumee-spinner {
+      width: 100px;
+      height: 100px;
+      position: absolute;
+      top: calc(50% - 50px);
+      left: calc(50% - 50px);
+
+      * {
+        position: absolute;
+      }
+    }
+
+    .enter-form {
+      width: 100% !important;
+    }
+  }
+
+  &-radio-button {
+    cursor: pointer;
+
+    &[data-state="1"] {
+      border-radius: 5px;
+      border: 1px solid darksalmon;
+    }
+  }
+}
+
+.module-sandbox {
+  &__menu-box {
+    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+
+    .menu-topic-trigger {
+      background: radial-gradient(109.24% 109.24% at 21.67% 0%, rgba(91, 115, 210, 0.4) 0%, #5B73D2 100%), #879BFF;
+      text-align: center;
+      cursor: pointer;
+      padding: 3px 10px;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+      border-bottom-right-radius: 6px;
+
+    }
+
+    .menu-topic-items {
+      background-color: #5B73D2;
+      padding: 5px 20px;
+      box-shadow: 0 0 8px 0 rgb(63 79 117 / 6%), 0 -1px 16px 0 rgb(86 65 113 / 10%), 0 2px 14px 0 rgb(194 185 203 / 4%);
+      border-bottom-left-radius: 6px;
+      border-bottom-right-radius: 6px;
+      cursor: pointer;
+    }
+
+    &.horizontal {
+      margin-top: 90px;
+    }
+
+    .t {
+      transform: rotate(90deg) translate(-18px, 19px);
+      transform-origin: 0;
+    }
+  }
+
+  &__menu-box-horizontal {
+    margin-top: 120px;
+    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+
+    .menu-topic-trigger {
+      background: radial-gradient(109.24% 109.24% at 21.67% 0%, rgba(91, 115, 210, 0.4) 0%, #5B73D2 100%), #879BFF;
+      text-align: center;
+      cursor: pointer;
+      padding: 3px 10px;
+      border-top-right-radius: 6px;
+      border-bottom-left-radius: 6px;
+      border-bottom-right-radius: 6px;
+      transform: rotate(90deg) translate(-18px, 19px);
+      transform-origin: 0;
+    }
+
+    .menu-topic-items {
+      background-color: #5B73D2;
+      padding: 5px 20px;
+      box-shadow: 0 0 8px 0 rgb(63 79 117 / 6%), 0 -1px 16px 0 rgb(86 65 113 / 10%), 0 2px 14px 0 rgb(194 185 203 / 4%);
+      border-top-right-radius: 6px;
+      border-bottom-right-radius: 6px;
+    }
+
+  }
+
+  &__menu-item {
+    cursor: pointer;
+  }
+
+  .countdown-timer {
+    &__main {
+      padding: 10px;
+      border: 1px solid lightgray;
+      border-radius: 5px;
+    }
+
+    &__counter {
+      font-size: 5rem;
+      color: limegreen;
+    }
+  }
+}

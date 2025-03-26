@@ -1,0 +1,101 @@
+@import 'mixins/drumee';
+
+.window-help-desk {
+  &__ui,
+  &__main,
+  &__body {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__ui {
+    top: 95px !important;
+  }
+
+  &__main {
+    background-color: $white;
+  }
+
+  &__container {
+    background-color: inherit;
+  }
+
+  &__header {
+    background-color: $helpdesk-background-header;
+    border-bottom: none;
+    height: 90px;
+  }
+
+  &-content__list{
+    max-height: 100%;
+    overflow-y: auto;
+  }
+
+  &-topbar {
+    &__container {
+      height: 100%;
+    }
+
+    &__content {
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      width: 100%;
+
+      & .title {
+        text-align: center;
+        @include typo($size: 22px, $line: 32px, $color: $helpdesk-default-text-reverse);
+        padding: 0;
+        & .note-content {
+          width: 100%;
+
+          & .root-node {
+            text-overflow: ellipsis;
+            @include overflow-text;
+          }
+        }
+      }
+    }
+
+    &__control {
+      & .icon {
+        color: $helpdesk-default-icon-reverse;
+        margin: 10px 8px;
+      }
+    }
+  }
+
+  &-content {
+    &__main,
+    &__container,
+    &__body,
+    &__list {
+      height: 100%;
+      width: 100%;
+    }
+
+    &__body {
+      overflow: hidden;
+      padding-right: 2px;
+      padding-top: 5px;
+    }
+
+    &__footer {
+      background-color: $helpdesk-default-block-background;
+      height: 60px;
+      justify-content: center;
+      padding: 10px 0px;
+      width: 100%;
+    }
+
+    &__note {
+      &.footer {
+        @include typo($size: 14px, $line: 16px, $color: $helpdesk-default-text-alert);
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        width: 100%;
+      }
+    }
+  }  
+}

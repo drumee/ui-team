@@ -1,0 +1,104 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2016
+#   FILE : /src/drumee/builtins/window/account/profile/skin/index.scss
+#   TYPE : Component Style
+# ===================================================================**/
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/drumee';
+
+.account-profile {
+  &__ui {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__main {
+    height: 100%;
+    margin-bottom: 120px;
+  }
+
+  &__container {
+    flex-direction: column;
+    justify-content: center;
+    min-width: 420px;
+    width: 100%;
+
+    @media (min-width: 800px) {
+      flex-direction: row;
+    }
+
+    &-avatar {
+      margin: 0 10px;
+      padding: 16px 0 0 0;
+    }
+
+    &-form {
+      height:100%;
+    }
+  }
+
+  &__form {
+    align-items: center;
+    min-height: 120px;
+    width: 530px; //470px;
+  }
+
+  &__label {
+    @include typo($size: 12px, $line: 16px, $color: $account-default-text-title);
+    padding: 0 0 6px 10px;
+  }
+
+  &__row {
+    border-radius: 3px;
+    justify-content: left;
+    margin-bottom:15px;
+    margin-top:5px;
+    max-width: 510px;
+    position: relative;
+    width: 100%;
+
+    // .account-field__entry {
+    //   &[data-locked="1"] {
+    //     cursor: text;
+    //     pointer-events: none;
+    //   }
+    // }
+    
+    // &:hover {
+    //   color: $default-text-hover;
+    //   background-color:$default-background-hover;
+
+    //   & .account-field__options-wrapper.action-item {
+    //     visibility: visible;
+    //   }
+    // }
+
+    // &.editable:hover {
+    //   *{
+    //     color: $default-text-hover;
+    //     background-color:$default-background-hover;
+
+    //     input {
+    //       @include placeholder-input{color: $ewhite};    
+    //     }
+    //   }
+    // }
+
+    // &.no-editable:hover {
+    // *{
+    //   color: $default-text-hover;
+    //   background-color: $default-background-hover;
+    //   visibility: visible;
+
+    //   input {
+    //     @include placeholder-input{color: $ewhite}; 
+    //   }
+    // }
+    // }
+  }
+}
+
+@import 'searchbox';
+@import 'field';

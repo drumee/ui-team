@@ -1,0 +1,267 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : desk/skin/desk-header.scss
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+@import 'logo.scss';
+@import 'user.scss';
+@import 'settings.scss';
+@import 'share-bar.scss';
+@import 'mixins/drumee';
+
+
+.desk-module {
+  &__topbar {
+    justify-content: space-evenly;
+    z-index: 11;
+    min-height: 80px;
+
+    &:hover {
+      z-index:auto;
+    }
+
+    &[data-device="mobile"] {
+      height: 80px;
+    }
+
+    &[data-state="1"] {
+      opacity: 0.5;
+      pointer-events: none;
+      z-index:60000;
+    }
+
+    &-notification-container {
+      height: 40px;
+      position: absolute;
+      right: 83px;
+      top: 20px;
+      width: 40px;
+      z-index: 999;
+      &[data-state="1"]{
+        z-index: 9999;
+      }
+    }
+  }
+
+  &__searchbox {
+    position: relative;
+    z-index: 1;
+  }
+  
+  &__avatar {
+    width: 100%;
+    height: 100%;
+
+    .user-avatar {
+      background-color:$core-background-user-icon ;//rgba(200, 200, 200, 0.5);
+      border-radius:$default-border-radius;
+      height: 100%;
+      position: absolute;
+      width: 100%;
+      &__ui[data-default="1"] {
+        opacity: 1;
+      }
+
+      &[data-default="1"][data-device="mobile"] {
+        right: 0;
+      }
+    }
+  }
+}
+
+.desk-topbar {
+  &__main {
+    align-items: center;
+    align-items: center;    
+    height: 80px;
+    justify-content: center;
+    padding: 0 30px;
+    &-menu{
+      max-width: 350px;
+    }
+  }
+
+  &__center {
+    align-items: center;
+    width: 100%;
+    max-width: calc(100% - 185px);
+    justify-content: center;
+    @include typo($color: $core-default-text-reverse,$size:18px,$line:24px,$weight:300);
+    &[data-device="mobile"] {
+      max-width: calc(100% - 85px);
+    }
+  }
+
+  &__searchbox {
+    &.outer {
+      background-color: $core-default-background;    
+      border-radius:$default-border-radius;//6px;
+      box-shadow:$drumee-shadow-topbar;
+      overflow: hidden;
+      transition: width 0.3s ease-in;
+      height: 40px;
+      min-width: 285px;
+      z-index: 21;
+      &[data-device="mobile"] {
+        min-width: 155px;
+      }
+    }
+
+    &.inner {
+      width: 100%;
+      &[data-device="mobile"]{
+        height:35px;
+        // width:190px;
+      }
+    }  
+
+    &.icon{
+      width: 40px;
+      height: 100%;
+      padding: 12px;
+      color: $main-grey ;
+      margin: 0 5px;
+    }
+
+    &.entry{
+      //width: 100%;
+      flex: 1;
+      @include typo($line:19px,$size:14px,$weight:300,$color:$core-default-text-color);
+
+      @include placeholder-input {
+        @include typo($line: 19px, $size: 17px, $weight: 300, $color: $core-default-text-placeholder);
+      }
+
+      @media(min-width:320px) {
+        cursor: auto;
+        @include typo($line: 19px, $size: 12px, $weight: 300, $color: $core-default-text-color);
+      }
+
+      &:focus {
+        padding: 0 10px 0 50px;
+        width: 320px;
+      }
+
+      // &:before{
+      //   background-image: url('/_/static/svg/without-classes/editbox_search.svg');
+      //   background-position: 50%;
+      //   background-repeat: no-repeat;
+      //   background-size: 18px;
+      //   content: " ";
+      //   height: 100%;
+      //   margin: 0 10px;
+      //   width: 40px;
+
+      //   @media(min-width:320px){
+      //     background-size: 15px;
+      //     height: 100%;
+      //     margin: 0 5px;
+      //   }
+      // }
+
+      &:after {
+        background-color: #F5F5F6;
+        content: " ";
+        height: 20px;
+        left: -10px;
+        position: absolute;
+        top: 10px;
+        width: 1px;
+      }
+    }
+
+    input, textarea {
+      border: none;
+      cursor: text;
+      margin: 4px auto 0;
+      min-height: 30px;
+      outline: none !important;
+      padding-left:5px;
+      resize: none;
+      width: 100%;
+      height: 100%;
+      @include typo($line:19px,$size:16px,$weight:300,$color:$core-default-text-color);
+
+      &::placeholder {
+        @include typo($size: 16px, $line: 19px, $weight: 300, $color:$core-default-text-placeholder);
+      }
+
+      @media(max-width:400px) {
+        cursor: text;
+        margin-top:5px;
+        padding-left:3px;
+        @include typo($line:19px,$size:12px,$weight:300,$color:$core-default-text-color);
+      }
+    }
+  }
+
+  &__icon {
+    background-color:hsla(0,0%,100%,0);
+    border-radius: 6px;
+    box-shadow: $drumee-shadow-topbar;//0 2px 2px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgb(86 65 113 / 8%), 0 2px 14px 0 rgb(194 185 203 / 0%);
+    color: $core-default-icon-reverse;
+    cursor: pointer;
+    flex-shrink: 0;
+    height: 40px;
+    padding: 10px;
+    width: 40px;
+
+    &[data-device="mobile"] {
+      height: 35px;
+      padding: 7px;
+      width: 35px;
+    }
+
+    &.contact {
+      background-color: $core-transparent-background-desktop-icon;// hsla(0,0%,78.4%,.5);
+      border-radius: $default-border-radius ;//6px;
+      padding: 8px;
+      right: 10px;
+      z-index: 31;
+    }
+
+    &:hover {
+      background-color: $core-default-background-hover;
+    }
+  }
+}
+
+.top-bar {
+  &-avatar {
+    cursor: pointer;
+    position: relative!important;
+  }
+
+  &-avatar-overlay {
+    height: 30px;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 30px;
+
+    &:hover {
+      box-shadow: 0 5px 4px 3px hsla(0,0%,100%,.3), 0 2px 2px 2px hsla(0,0%,98%,.2), 0 6px 3px 5px rgb(194 185 203 / 0%);        
+    }
+  }
+
+  &__pagename-text {
+    @include typo($color: $core-default-text-reverse,$size:24px,$line:36px,$weight:300);
+  }
+
+  &__button {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 14%), 1px 2px 2px 0 rgb(0 0 0 / 10%), 0 4px 4px 0 rgb(209 221 245 / 20%);
+    cursor: pointer;
+    height: 36px;
+    text-transform: uppercase;
+    width: 115px;
+    @include typo($color: $core-default-text-reverse,$size:12px,$line:14px,$weight:500);
+
+    &.primary {
+      background-color: $eorange;
+    }
+
+    &.secondary {
+      background-color: $egreen;
+    }
+  }
+}

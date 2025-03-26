@@ -1,0 +1,757 @@
+@import 'common';
+@import 'core';
+@import 'team';
+@import 'account';
+@import 'admin';
+@import 'editbox';
+@import 'addressbook';
+@import 'bigchat';
+@import 'channel';
+@import 'filter';
+@import 'folder';
+@import 'connect';
+@import 'multimedia';
+@import 'website';
+@import 'sharebox';
+@import 'sharebox';
+@import 'team';
+@import 'dmz';
+@import 'helpdesk';
+@import 'drumee-transfer';
+
+
+/************************************************************
+                        NEW COLORS
+************************************************************/
+/**************** Drumee: colors used ****************/
+
+/**transferbox**/
+$default-background-window-header      : #18A3AC; //background
+/**transferbox**/
+
+/**text**/
+$default-text-color            : $core-default-text-color;
+$default-text-placeholder      : $core-default-text-placeholder;
+$default-text-hover            : $core-default-text-hover ;
+$default-text-caution          : $core-default-text-caution;
+$default-text-title            : $core-default-text-title;
+$default-text-reverse          : $core-default-text-reverse;
+$default-text-alert            : $core-default-text-alert;
+$default-text-success          : $core-default-text-success;//#18AC72;
+$default-text-inactivated	     : $core-default-text-inactive;
+$default-text-error            : $core-default-text-error ;
+$focus-text-placeholder        : $core-focus-text-placeholder;
+
+/** border **/
+$entry-border-bottom          : $core-default-entry-border-bottom ;
+$focus-border-bottom          : $core-focus-border-placeholder;
+$default-border-notification  : #dde2e8;//$core-default-border-notification;//old :#dde2e8;//$egrey-e8
+$default-border-popup     	  : #dde2e8;//$core-default-border-popup;//#dde2e8;//$egrey-e8
+//$default-border-alert	      :#ff805c;
+$default-border-error         : $core-default-border-error;
+$default-separator            : $core-default-separator;
+
+/**scrollbar**/
+$default-scrollbar-color :rgb(250 133 64 / 60%); //rgb(250, 133, 64, 0.6);
+$desk-scrollbar-color: $default-scrollbar-color;
+$default-scrollbar-white : rgb(255 255 255);
+
+/************************ button : colors used**********************/
+$btn-rollback-text               : #89929e; //$egrey-89
+$btn-rollback-background         : #ffffff;//$ewhite; 
+$btn-rollback-border             : #DDE2E8; //$egrey-e8
+$btn-rollback-border-hover       : #879BFF; //$eviolet 
+$btn-rollback-text-hover         : #879BFF; //$eviolet 
+
+$btn-caution-text                : #FFFFFF; //$ewhite
+$btn-caution-backgroundless-text : #FF7479;//$eorange-dark 
+$btn-caution-background          : #FF7479;//$eorange-dark 
+$btn-caution-border              : #FF7479;//$eorange-dark 
+$btn-caution-border-hover        : #ea4d44;// $eorange-sunset  #d12c54;
+$btn-caution-text-hover          : #ea4d44;// $eorange-sunset #d12c54;
+$btn-caution-background-hover    : #ea4d44; //$eorange-sunset 
+
+$btn-commit-text                 : #FFFFFF; //$ewhite
+$btn-commit-backgroundless-text  : #18A3AC;  //$egreen ;
+$btn-commit-background           : #18A3AC;  //$egreen ;
+$btn-commit-border               : #18A3AC; //$egreen
+$btn-commit-border-hover         : #16959e; //$egreen-dark
+$btn-commit-text-hover           : #16959e; //$egreen-dark
+$btn-commit-background-hover     : #16959e; //$egreen-dark
+
+/************************ progress **********************/
+$progress-line-text             : #879bff;//#61AAF2; //$blue-light 
+$progress-line-background       : #879bff;//#61AAF2; //$blue-light 
+$progress-line-border           : #879bff;//#61AAF2; //$blue-light
+$progress-line-border-hover     : #879bff;//#61AAF2; //$blue-light
+
+$progress-circle-text           : #879bff;//#18A3AC; //$egreen 
+$progress-circle-background     : #879bff;//#18A3AC; //$egreen  
+$progress-circle-border         : #879bff;//#18A3AC; //$egreen 
+$progress-circle-border-hover   : #879bff;//#18A3AC; //$egreen  
+
+/************************ default **********************/
+$main-default-text         : $core-default-text-color;
+$main-default-typo         : $core-default-text-color;//$main-default-text;
+$main-default-border       :#89929e;
+$main-caution-text         :$core-default-text-caution;
+$main-caution-typo         :$core-default-text-caution;;//$main-caution-text;
+$main-caution-border       :#FF7479;
+$main-caution-background   :#FFFFFF;
+
+/************************ toggle state **********************/
+$state-0-text         :#2F2F2F;//#89929e;
+$state-0-typo         :#2F2F2F;// #89929e; // Shall be normalized to text
+$state-0-border       :#89929e;
+$state-0-background   :#FFFFFF;
+$state-1-typo         :#18A3AC; //$egreen #18AC72;
+$state-1-text         :#FFFFFF;//#18A3AC; //$egreen #18AC72;
+$state-1-border       :#18A3AC; //$egreen #18AC72;
+$state-1-background   :#18A3AC;//#FFFFFF;
+
+
+/************************ popup **********************/
+$popup-text                  :#89929e;
+$popup-typo                  :$popup-text;
+$popup-background            :#FFFFFF;
+
+/* *********** checkbox************** */
+$checkbox-unselected-color     : $state-0-typo;//#89929e;
+$checkbox-selected-color       : $state-1-typo; //#18A3AC; //$egreen  #18AC72;
+/**************** named colors ****************/
+
+/************************ Screenshare **********************/
+$conference-text                   :#fa8540;
+$conference-main                   :#fa8540;
+$conference-border                 :#fa8540;
+$conference-typo                   :#fa8540;
+
+//$sharebox-text                     :#fa8540;
+//$sharebox-main                     :#EF6500;//#fa8540;
+$sharebox-border                   :#fa8540;
+//$sharebox-typo                     :#EF6500;
+
+//$schedule-icon                     :#fa8540;
+
+$screenshare-text                  :#18a3ac;
+$screenshare-main                  :#18a3ac;
+$screenshare-border                :#18a3ac;
+$screenshare-typo                  :#18a3ac;
+
+/************************ Screenshare **********************/
+
+/************************************************************
+                        NEW COLORS
+************************************************************/
+
+$drumee-pink    : #ff3466;
+$darker-pink    : #f32855;
+$navy-color     : #00495c;  /* main background*/
+
+/** main-colors **/
+$main-pink      : #d02c54;
+$gradient-left  : #004f64;
+$gradient-right : #0a6277;
+$main-blue      : #4a90e2;//#0089db;
+$main-green     : #00c0a8;
+$main-yellow    : #fdd835;
+/** main-colors **/
+
+/*additional-colors**/
+$add-pink       : $drumee-pink;
+$add-blue       : #329cf8;
+$add-green      : #04dec2;
+$add-grey       : #7d97a2;
+$add-light-grey : #b7cedd;
+$dark-blue      : #003e4f;
+$add-yellow     : #beba48;
+$add-soft-green : #008c14;
+$add-orange     : #e0984e;
+$add-soft-blue  : #00b1d0;
+/*additional-colors**/
+
+/**grey add colors**/
+$main-grey       : #787878;
+/**grey add colors**/
+
+/**insert block**/
+$main-bg        : $navy-color;  /* main bbackground*/
+
+$toolbox-categories-body        : $gradient-left;
+$toolbox-categories-border      : rgb(255, 255, 255, 0.1);
+$toolbox-categories-icon        : #7194a0;
+$toolbox-categories-hover       : $add-blue;
+$toolbox-categories-active      : $main-blue;
+/**insert block**/
+
+/**top bar**/
+$top-bar-left   : #00495c; //top-bar gradient left
+$top-bar-right  : #006d87; //top-bar gradient right
+$top-bar-blue   : #0b6278;
+$top-bar-blue-active: #003e4e;
+$top-bar-blue-hover : rgb(0, 62, 78,0.5);
+$top-bar-border : #426b7e;
+$top-bar-header : #d8dadd;
+/**top bar**/
+
+$toolbox-handler: #0a6177;
+$toolbox-body   : $gradient-right;
+$toolbox-body--button: $gradient-right;
+$toolbox-footer : #003c50;
+
+$toolbox-orange : #E0984E;
+$toolbox-green  : #008C14;
+$toolbox-blue   : #00b1d0;
+$toolbox-yellow : #beba48;
+
+$toolbox-r-handler: #1c748d;
+$toolbox-r-body   : $top-bar-left;
+$toolbox-r-header-text   : $main-grey;
+
+$toolbox-text           : #ffffff;
+$toolbox-bg-text-hover  : #016276;
+
+$editbox-text       : #000000;
+$editbox-text-hover : #32d89a;
+$editbox-border     : #427b8d;
+$editbox-scrollbar  : #012a35;
+
+$editbox-toolbox-bg   : #1c748d;
+$editbox-toolbox-bg2  : #254a5d;//for palette for example
+$editbox-button-body  : #00495e;
+$editbox-button-grey  : #327282;
+
+$editbox-toolbox-document   : #0b6278;
+//$editbox-button-border: #114553;
+$editbox-button-border: #337283;
+
+$editbox-button-arrow       :     #B8B8B8;
+$editbox-button-arrow-active: $add-blue;
+$editbox-button-cross:     $darker-pink;
+
+$editbox-button-button-border:  #003d4e;
+$editbox-button-button-border-arrow: #619bf5;
+$editbox-button-button-border-lines: #a9b4ba;
+
+$editbox-number-bg       : #e8e8e8;
+$editbox-number-color    : #203c4a;
+$editbox-number-selector : #0a6278;
+$editbox-number-border   : #5f7c8a;
+
+$edit-spec-chars-hover   : $add-blue;
+$style-button--heading   : $add-blue;
+
+$editbox-button-link-active   : $add-blue;
+$editbox-button-link-hover    : $main-blue;
+
+$editbox-char-tab             : #e9e9e9;
+$editbox-char-tab-color       : #838383;
+
+$menu-items-border            : #7d97a2;
+$menu-items-slider            : #e8e8e8;
+
+$editbox-tick-svg 					: #7b929e;
+$editbox-tick-border  				: #e8e8e8;
+$editbox-tick-bg  	    			: #6cbfa7;
+
+/**button-editor**/
+$buttoneditor-btn-hover       : $add-blue;
+$buttoneditor-btn-active      : $main-blue;
+
+$buttoneditor-btn-icon        : silver;//temp waiting for kit
+$buttoneditor-border          : #396276;
+
+$buttoneditor-icon-position   : #8eaab3;
+$buttoneditor-icon-position   : #8eaab3;
+$buttoneditor-whitebox-border : #e9e9e9;
+
+$editor-whitebox-border       : #e9e9e9;
+$editor-grey-slidebar         : #dddddd;
+$editor-grey-slidebar-hover   : $add-blue;
+/**button-editor**/
+
+/**text-editor**/
+$texteditor-btn-hover       : $add-blue;
+$texteditor-btn-active      : $main-blue;
+$texteditor-tgl-bg-hover    : rgb(0, 62, 79, 0.5);
+$texteditor-tgl-cl-hover    : $main-blue;
+$texteditor-tgl-bg-active   : $dark-blue;
+
+$texteditor-list-item-hover : $add-blue;
+$texteditor-scrollbar       : $add-blue;
+$texteditor-scrollbar-hover : $add-blue;
+
+$texteditor-font-hover          : #0089dc;
+$texteditor-font-hover-border   : #0089db;
+
+$texteditor-toolbox-bar     : $gradient-right;
+$texteditor-toolbox-border  : $gradient-right;
+$texteditor-panel           : $gradient-left;
+$texteditor-panel-border    : #226d80;
+
+$texteditor-btn-long        : #8496a0;
+$texteditor-input-bg        : #8496a0;
+
+$texteditor-helper-color    : #737373;
+
+$texteditor-close-tooblox               : #b9b9b9;
+$texteditor-close-tooblox-cancel        : #0b6278;
+$texteditor-close-tooblox-cancel-hover  : $gradient-left;
+$texteditor-close-tooblox-ok            : $add-green;
+$texteditor-close-tooblox-ok-hover      : $main-green;
+/**text-editor**/
+
+/*editor new**/
+$editbox-collapse                    : $gradient-left;
+
+$editor-gradient-picker-active      : $add-blue;
+
+$editor-searchicon-link             : #bababa;
+$editor-searchicon-link-hover       : $add-blue;
+$editor-searchicon-link-active      : $main-blue;
+
+$editor-link-header                 : #fdd835;
+$editor-link-document-border        : #7d98a2;
+$editor-link-document-border-blue   : #619bf5;
+
+$editor-link-document-text1         : #747474;
+$editor-link-document-text2         : #b9b9b9;
+$editor-link-document-text1-light   : #bebebe;
+
+$editor-link-document-link          : #dddddd;
+$editor-link-document-link-hover    : $add-blue;
+$editor-link-document-link-active   : $main-blue;
+
+$editor-link-document-icon          : #d2d2d2;
+$editor-link-document-icon-grey     : #B8B8B8;
+$editor-link-document-icon-hover    : $add-blue;
+$editor-link-document-icon-active   : $main-blue;
+$editor-link-document-input-border  : $add-blue;
+
+$editor-link-internal-icon          : #747474;
+$editor-link-internal-icon-hover    : $add-blue;
+$editor-link-internal-icon-active   : $main-blue;
+
+$editor-input-border                : $add-blue; 
+/*editor new**/
+
+/**client side**/
+$alignment-border                   : #ff3466;
+
+/**client side**/
+
+/**general-manager**/
+$general-manager-label         : #aab9c1;
+$general-manager-icon-hover    : $add-blue;
+$general-manager-icon-active   : $main-blue;
+$general-manager-icon-border   : #395c6d;
+/**general-manager**/
+
+/*save style*/
+$save-style-header          : #bababa;
+$save-style-input-header    : $main-grey;
+/*save style*/
+
+/**sidebox**/
+$sidebox-bg             : $gradient-left;
+
+$sidebox-page           : #0a6278;
+$sidebox-page-hover     : $add-blue;
+$sidebox-page-active    : $main-blue;
+$sidebox-page-name      : #73858d;
+$sidebox-page-action-bg : #8496a0;//waiting for kit
+$sidebox-page-rename-bg : #0076aa;
+$sidebox-newpage-add    : $main-pink;
+$sidebox-newpage-add-hover: $add-pink;
+
+$sidebox-flexgrid-bg    : #dcdcdc;
+$sidebox-mapcursor      : $add-pink;
+
+$sidebox-popup-header   : #B8B8B8;
+$sidebox-popup-text     : $main-grey;
+
+$sidebox-btn-cancel       : #dcdcdc;
+$sidebox-btn-cancel-color : #484848;
+$sidebox-btn-confirm      : #d12c54;
+
+$sidebox-sidebtn        : $add-blue;
+
+$sidebox-block-header   : $main-yellow;
+
+$menu-ui-header         : #737373;
+$menu-ui-input-border   : #dcdcdc;
+$menu-ui-input-hover    : $add-blue;
+$menu-ui-input-active   : $main-blue;
+$menu-ui-btn-grey       : #484848;
+$menu-ui-btn-grey-bg    : #dcdcdc;
+$menu-ui-btn-green-bg   : #6cbfa7;
+$menu-ui-input-expl     : #B8B8B8;
+$menu-ui-input-bg       : #e8e8e8;
+
+$menu-ui-page-name       : #626262;
+$menu-ui-page-name-active: $add-blue;
+$menu-ui-page-name-hover : $main-blue;
+/**sidebox**/
+
+/** photo editor **/
+$phed-top-color         : #d8dadd;
+$phed-border-color      : #f1f1f1;
+$phed-menu-tab          : #b7b7b7;
+$phed-side-toolbox      : #787878;
+$phed-side-ratio        : #dcdcdc;
+$phed-center-text       : #d8d8d8;
+
+$phed-menu-tab-hover    : $add-blue;
+$phed-menu-tab-active   : $main-blue;
+
+$phed-btn-grey          : #ededed;//waiting for kit
+$phed-btn-grey-color    : #484848;//waiting for kit
+$phed-btn-green         : $main-green;//waiting for kit
+$phed-btn-green-hover   : $add-green;//waiting for kit
+
+$phed-ratio-header      : #484848;//waiting for kit
+$phed-ratio-label       : #B8B8B8;//waiting for kit
+$phed-ratio-btn         : #787878;//waiting for kit
+$phed-ratio-btn-before  : #dcdcdc;//waiting for kit
+$phed-ratio-btn-hover   : $add-blue;
+$phed-ratio-btn-active  : $main-blue;
+
+$phed-replace-bg        : rgb(6, 8, 9, 0.6);
+
+$phed-label-left        : #B8B8B8;
+
+$phed-button-disabled : #c1c1c1;
+$phed-slidebar-label  : #656565;
+
+$phed-slidebar-empty  : #cecece;
+$phed-slidebar-limits : #b5b5b5;
+$phed-slidebar-range  : #b3b3b3;
+
+$phed-scroll-blue       : $add-blue;
+$phed-scroll-blue-hover : $main-blue;
+
+$phed-border-style    : $main-grey;
+$phed-border-tab      : #e8e8e8;
+$phed-border-tab-hover: #6cbfa7;
+
+$phed-border-bg             : #fafafa;
+$phed-border-ticker         : $drumee-pink;
+$phed-border-ticker-hover   : $darker-pink;
+$phed-border-slidebar       : $drumee-pink;
+$phed-border-slidebar-hover : $darker-pink;
+$phed-border-button-arrow       : $drumee-pink;
+$phed-border-button-arrow-hover : $darker-pink;
+
+$phed-border-text               : $main-grey;
+$phed-border-slidebar-target    : #dcdcdc;
+
+$phed-border-btn-bg             : $main-blue;
+$phed-border-palette-switch     : #dcdcdc;
+
+$phed-link-switcher             : #e8e8e8;
+$phed-link-switcher-active      : $drumee-pink;
+$phed-link-switcher-tab         : #B8B8B8;
+$phed-link-switcher-tab-active  : $main-grey;
+
+$phed-link-page-name            : $main-grey;
+$phed-link-page-name-bg         : #e8e8e8;
+$phed-link-page-name-active     : $add-blue;
+$phed-link-page-name-hover      : $main-blue;
+
+$phed-link-heder                : #B8B8B8;
+/** photo editor **/
+
+$colorpicker-bg   : $gradient-left;
+$colorpicker-input-color   : #B8B8B8;
+$colorpicker-slidebar-input: #434343;
+$colorpicker-input-border  : #67818e;
+$colorpicker-bottom-color  : #d3d7da;
+
+
+//$editbox-border:  $drumee-pink;
+/* drive */
+$drive-button-bg         : #dcdcdc;
+$drive-button-text       : #5c5c5c;
+$drive-button-bg-pink    : #d12c54;
+$drive-import-btn-header : #737374;
+
+/**tunnel**/
+$tunnel-inner-bg         : #FEFEFF;
+
+$tunnel-header-color     : #1187F6;
+$tunnel-header-btn       : #FF4578;
+
+$tunnel-button-box-add   : #4184F3;
+$tunnel-button-box-start : #27AEA1;
+$tunnel-indicator        : #FF4578;
+
+$tunnel-slide-label      : #494949;
+$tunnel-pin              : #235DBC;
+$tunnel-slider           : #FF4578;
+/**tunnel**/
+
+
+
+/**media quries**/
+$md: 990px;
+$tablet:990px;
+$sd:750px;
+$medium:750px;
+$small:649px;
+$x-small: 361px;
+/*$height:750px;
+$sh:300px;
+/**media quries**/
+
+/** Media height  **/
+$hsmall:600px;
+/** Media height  **/
+
+
+/****************************** player ************************************
+$player-default-icon        : #494949;//$egrey-49
+$player-image-background    : #f2f2f2;
+/***************************** player ************************************/
+
+
+/*************************** share-box *******************************
+$share-box-default-color    : #FCB58C;
+$share-box-topbar-container : #FA8540;
+/** ***********************share-box ********************************/
+
+/**************************Share-room*****************************/
+//$dgc-share-room           :#BD44D9;//$emauve =$teamroom-text-color #AB47BC;
+/**************************Share-room*****************************/
+
+
+/**************************addressbook****************************/
+/* ********` Form **************
+$ab-input-border-grey    : #DDE2E8;//=$entry-border-bottom
+$ab-input-border-orange  : #FF7479;//$default-border-error
+$ab-input-border-red     : #FF7479;  //$default-border-error/old:red;
+$ab-input-placeholder    : #D0D0D0 ;//=$default-text-placeholder
+$ab-header-color         : #556E7F;
+/* Contact Form **
+
+$ab-delete-icon          : #89929e; //=$default-icon-neutral + opacity 0.6 /old :8A939F;
+$ab-separator            : $default-separator;// #ECEDEE;  $ab-widget-border : $default-separator;//#ECEDEE;
+$ab-all-contact          : $admin-member-tag-name-text-color;//#BD44D9;//=$emauve/old : #AB47BC;
+
+$entry-border-bottom      : $core-default-entry-border-bottom;
+$ab-input-border-grey	  : $core-default-entry-border-bottom;
+$ab-input-border-orange	  : $core-default-border-error;
+$ab-input-placeholder     : $core-default-text-placeholder;
+$ab-input-border-red      : $core-default-border-error ;
+$ab-delete-icon           : $core-default-icon-neutral;//$default-icon-neutral;// + opacity 0.6
+$ab-contact-online-color  : #32d89a;
+$ab-widget-border         : $core-default-separator ;
+$ab-separator             : $core-default-separator ;
+/**************************addressbook**************************/
+
+
+/**************************Bigchat**************************
+$dgc-messenger-bg         : #F9F9F9;
+//$dgc-attachment-box-shad  : #CCCCCC;//not used
+$dgc-chat-other-bg        : #F4F4F4;
+$dgc-chat-border          : #ECEDEE;
+$dgc-chat-hover           : #78B3F8;
+//$dgc-chat-main            : #78B3F8;///not used
+//$dgc-chatroom-scbtn       : #DDE2E8;//not used
+$dgc-delete-bg            : #EA4D44;
+$dgc-chat-reply-bg        : rgb(74,144,226,0.1);
+/**************************Bigchat**************************/
+
+
+/**************************AdminPanel **************************
+$ap-btn-orange              : #FF7479;   //$default-border-error
+$ap-btn-orange              : $core-default-border-error;
+$ap-grey-border             : #DDE2E8;
+$ap-status-bg               : #EA4D44;
+/*$ap-import-error-color      : #EA4D44; //$default-text-error   
+$ap-import-error-color      : $core-default-text-error;*
+$ap-toggle-switch-on        : #879BFF;
+$ap-toggle-switch-off       : #D2d9DB;
+$ap-toggle-switch-radio     : #4040FF;
+$ap-textarea-background     : #F1F1F6;
+$ap-textarea-placeholder    : #89929E;
+$ap-authorized-filter-text  : #494949;//#8F9499; #2F2F2F;
+/**************************AdminPanel **************************/
+
+
+/**************************Sharebox**************************
+$sharebox-notification-cancel-btn-border  : #DDE2E8;
+/**************************Sharebox**************************/
+
+
+/**************************DMZ**************************
+$dmz-default-action-btn-border-color : #FFFFFF;
+$dmz-default-footer-bg-color         : #4B62BB;
+$dmz-btn-open-desk-color             : #18AC72;
+$dmz-menu-icon-check-color           : #18AC72;
+$dmz-menu-icon-cross-color           : #EA4D44;
+/**************************DMZ**************************/
+
+
+/**************************Window Confirm Modal**************************/
+//$window-confirm-default-title-color   : #F99B64;// #FA8540;
+/**************************Window Confirm Modal**************************/
+
+
+/**overlay-wrapper**/ /**dialog-wrapper--modal**
+$dgc-overlay-background  : rgb(137, 146, 158, 0.4); //rgb(0,0,0,.55);
+/**overlay-wrapper**//**dialog-wrapper--modal**/
+
+
+/**************************Video**************************
+$vdo-ctrl-button         : $dgc-delete-bg;
+$vdo-button-accept       : $egreen-soft;
+$vdo-border-grey         : $core-default-entry-border-bottom;//$ab-input-border-grey;
+$vdo-background-color    : $egrey-26;//also in connect
+
+/**************************Video**************************/
+
+
+/**************************Audio**************************
+$audio-player-background  : #F1F3F4;
+$audio-player-black-bg    : #2F2F2F;
+$audio-player-icon-black  : #2F2F2F;
+/**************************Audio**************************/
+
+
+/**************************** Team *******************
+$teamroom-text-color              :#BD44D9;
+$teamroom-main                    :#BD44D9;// also in channel
+$teamroom-background              :#BD44D9;
+$teamroom-background-light        :#DA78E8;
+$teamroom-border                  :#d66fe8;
+/**************************** Team *******************
+
+
+/************************ Folder **********************
+$folder-text                  :#1D8AEA;//$blue #1E81F9;
+$folder-main                  :#1D8AEA;// also in channel
+$folder-background            :#1D8AEA;
+$folder-main-light            :#61AAF2;//$blue-light #68B4FF #57A7FF ;
+$folder-before-color          :#E386B5; //#FFA1A3;
+/************************ Folder **********************
+
+
+$dock-notification-background :#1D8AEA;//$blue #1E81F9;
+
+
+/***********************************tooltips*************************/
+//$tooltips-default-background     : $default-background-tooltips; //#e8e8e8
+/*******************************tooltips******************************/
+
+
+/**************************Helpdesk**************************
+$hd-default-header-color     : #B6BFCA;
+$hd-default-separator-color  : #329CF8;
+$hd-default-button-color     : #329CF8;
+$hd-default-footer-color     : #F7F7F7;
+$hd-footer-text-color        : #FD635B;
+/**************************Helpdesk**************************/
+
+
+/************************ Web site**********************
+$website-text                      :#e7b351;//#18a3ac;//#18AC72;//#18a3ac;
+$website-main                      :#dfb059;//#18a3ac;//#18AC72;// ;
+$website-notify-public-border      :#e4c07d;//#e4c07d;//#18a3ac;
+//$website-notify-public-typo      :#18a3ac;
+$website-main-light                :#e4c07d;//#45b4bb;//#45CC97;
+$website-background-header         : $website-main;
+$website-main-background-filename  :#e6d5b8;//#e7cfa2;
+************************ Web site**********************/
+
+
+//$drumee-light-grey                : #EDEDED;
+
+
+/************************************background-color****************************************/
+//$default-background-tooltips      : $core-background-tooltips;//#e8e8e8;// =$tooltips-default-background;
+//$tooltips-default-background      : $default-background-tooltips; //#e8e8e8
+//$default-background-popup         : rgb(137, 146, 158, 0.7);
+//$default-backround-alert          : $core-default-background-alert ;//#fd635b; //$orange-sunsetorange//#ff7479;//
+
+//$default-background-black         : #000000;
+//$default-background-reverse       : $core-default-background-inactive;//#89929e;
+
+//$default-background               : $core-default-background;
+//$default-block-background         : $core-default-block-background;
+//$default-background-hover         : $core-default-background-hover;
+
+    /**transparence**/
+//$transparent-black              : $core-default-transparent-black; 
+//$transparency-container-overlay : $core-transparency-container-overlay;//rgb(137,146,158,.4);//disabled container
+//$default-background-wrapper     : $transparency-container-overlay;//Inactive window; =$dgc-overlay-background;
+
+/************************************background-color****************************************/
+
+
+/*********************************icon*********************************************************/
+//$default-user-icon             : $core-default-user-icon ;
+//$default-icon-success          : $core-default-icon-success;
+//$default-thinline-icon-hover   : $core-default-thinline-icon-hover;
+//$default-icon-reverse          : $core-default-icon-reverse;
+//$default-icon-neutral          : $core-default-icon-neutral;
+//$default-thinline-icon         : $core-default-thinline-icon;
+//$default-icon-hover            : $core-default-icon-hover;
+  /**checkbox**/
+//$checkbox-svg-hover            :#18A3AC;//$egreen
+//$checkbox-active               : $core-default-checkbox-checked;//old:#6a85ff;//$eviolet-light;
+//$default-checkbox              : $core-default-checkbox-border; 
+/*********************************icon*********************************************************/
+
+
+/********************************tooltips*********************************
+$tooltips-default-background     : #E8E8E8;
+/*******************************tooltips***********************************/
+
+
+/******************************search-bar*old*******************************/ 
+//$search-bar-header       : #B8B8B8; //old
+/*************************search-bar*****************************************/
+
+
+/****************************general items********************************
+$default-user-icon          : $core-default-user-icon ;//#B6BFCA;//$egrey-b6
+/*****************************general items********************************/
+
+
+/**************************General**************************
+//$default-special-tag-color  : #18a3ac;// #159099;
+$default-special-tag-color  : #18a3ac;// #159099;
+$default-notification-bg    : #fd635b;
+/**************************General**************************/
+
+
+/************************ status pills **********************
+$default-status-new         : $bigchat-status-pill-new;// #34a578;//#18A3AC; #04a565
+$default-status-doing       : $bigchat-status-pill-doing;//#F0AD4E;
+$default-status-closed      : $bigchat-status-pill-closed;// #7F8C8D;
+************************ status pills **********************
+
+
+
+
+
+/* ******* button : old ******/
+$btn-primary-color             : $btn-commit-text;// #FFFFFF; //$ewhite
+$btn-primary-background        : $btn-commit-background;//#18A3AC;  //$egreen ;
+$btn-primary-border            : $btn-commit-border;//#18A3AC; //$egreen ;
+$btn-primary-border-hover      : $btn-commit-border-hover;// #16959e; //$egreen-dark
+$btn-primary-color-hover       : $btn-commit-text-hover ;// #16959e; //$egreen-dark
+$btn-primary-background-hover  : $btn-commit-background-hover;// #16959e; //$egreen-dark
+
+$btn-secondary-color           : $btn-rollback-text;// #89929e; //$egrey-89
+$btn-secondary-border          : $btn-rollback-border;//#DDE2E8; //$egrey-e8
+$btn-secondary-background      : $btn-rollback-background;//#ffffff; //$ewhite
+$btn-secondary-border-hover    : $btn-rollback-border-hover;//#879BFF; //$eviolet 
+$btn-secondary-color-hover     : $btn-rollback-text-hover;//#879BFF; //$eviolet 
+
+$btn-tertiary-color             : $btn-caution-text; //$ewhite #FFFFFF;
+$btn-tertiary-background        : $btn-caution-background;////$eorange-dark  #ea4d44; 
+$btn-tertiary-border            : $btn-caution-border;//#FF7479;//$eorange-dark  #ea4d44;
+$btn-tertiary-border-hover      : $btn-caution-border-hover;// #ea4d44;// $eorange-sunset  #d12c54;
+$btn-tertiary-color-hover       : #ea4d44;// $eorange-sunset #d12c54;
+$btn-tertiary-background-hover  : $btn-caution-background-hover;//#ea4d44; //$eorange-sunset 
