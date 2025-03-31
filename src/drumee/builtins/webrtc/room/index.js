@@ -391,7 +391,7 @@ class __webrtc_room extends __interact {
   /**
    * 
    */
-  openChat() {
+  openChat(cmd) {
     let opt = {
       kind: "window_channel",
       hub_id: this.mget(_a.hub_id),
@@ -517,7 +517,7 @@ class __webrtc_room extends __interact {
         break;
 
       case _a.chat:
-        this.openChat();
+        this.openChat(cmd);
         break;
 
       case "watermark":
@@ -531,7 +531,6 @@ class __webrtc_room extends __interact {
         super.onUiEvent(cmd, args);
     }
   }
-
 
   /**
    *

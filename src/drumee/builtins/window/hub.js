@@ -89,6 +89,10 @@ class __window_hub extends mfsInteract {
     this.fetchService(SERVICE.hub.get_attributes, {
       hub_id: this.mget(_a.hub_id)
     }).then((data) => {
+      if(!data || !data.hub_id){
+        this.feed(this.defaultSkeleton(this));
+        return;
+      }
       this.el.dataset.name = this.mget(_a.filename) || data.name;
       data.root_id = data.hub_id;
       this.mset(data);

@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : desk/mfs/interact
-//   TYPE :
-// ==================================================================== *
-
 
 const windowCore = require('./index');
 const { TweenMax } = require("gsap/all");
@@ -21,6 +15,7 @@ class __window_webrtc extends windowCore {
       filename: this.mget(_a.filename),
       nid: this.mget(_a.actual_home_id),
       trigger: this.get(_a.trigger),
+      area: this.mget(_a.area),
       args: {
         hub_id: this.mget(_a.hub_id),
         nid: this.mget(_a.actual_home_id),

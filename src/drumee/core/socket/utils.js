@@ -173,11 +173,12 @@ export async function doRequest(url, data) {
   return fetch(url, data).then(async response => {
     return handleResponse(this, response);
   }).catch(err => {
-    this.warn("Got error for while running service", url, err);
+    let message = `Got error while running service`
+    this.warn(`[176] ${message}`, this, url, err);
     if (_.isFunction(this.onServerComplain)) {
       this.onServerComplain(err);
     } else {
-      this.warn("Got error for while running service (rethrown)", err);
+      this.warn(`[176] ${message}`, url, err);
       throw (err);
     }
   });

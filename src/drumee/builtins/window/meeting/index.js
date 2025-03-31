@@ -1,10 +1,10 @@
 const __room = require('builtins/webrtc/room/jitsi');
 
 class __window_meeting extends __room {
-
-  // ===========================================================
-  //
-  // ===========================================================
+  /**
+   * 
+   * @param {*} opt 
+   */
   initialize(opt = {}) {
     require('./skin');
     this.service_class = 'meeting';
@@ -17,7 +17,8 @@ class __window_meeting extends __room {
     this.model.set({
       video: 0,
       audio: 1,
-      service_class: this.service_class
+      service_class: this.service_class,
+      
     })
     this.declareHandlers();
     if (!this.mget(_a.nid) && this.mget(_a.room_id)) this.mset({ nid: this.mget(_a.room_id) });
@@ -36,15 +37,14 @@ class __window_meeting extends __room {
     })
   }
 
-  // /**
-  //  * 
-  //  * @param {*} e 
-  //  * @param {*} ui 
-  //  * @param {*} anim 
-  //  */
+  /**
+   * 
+   * @param {*} e 
+   * @param {*} ui 
+   * @param {*} anim 
+   */
   _resize(e, ui, anim) {
     this.responsive();
-    //_.throttle(this.responsive.bind(this), 400);
     super._resize(e, ui, anim);
   }
 

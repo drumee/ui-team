@@ -55,7 +55,7 @@ class __drumee_box extends Marionette.CollectionView {
    * 
    */
   onServerComplain(xhr) {
-    this.warn("LOAD_EROR", xhr);
+    this.warn("[58] LOAD_ERROR", xhr);
     const err = xhr.error || xhr.responseJSON?.message || xhr.responseJSON?.error || xhr.responseText;
     switch (xhr.status) {
       case 400:
@@ -66,7 +66,6 @@ class __drumee_box extends Marionette.CollectionView {
         }
         break
     }
-
   }
 
 

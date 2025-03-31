@@ -14,7 +14,7 @@
     &::-webkit-scrollbar {
       cursor: pointer;
       height: 100%;
-      margin-right:2px;
+      margin-right: 2px;
       max-width: 3px;
       width: 3px;
     }
@@ -32,7 +32,7 @@
       max-width: 100%;
       overflow-x: auto;
       overflow-y: hidden;
-      
+
       &::-webkit-scrollbar {
         cursor: pointer;
         height: 3px;
@@ -40,18 +40,25 @@
         width: 100%;
       }
     }
-    &[data-type="trial"]::after{
+
+    &[data-type="trial"]::after {
       @include license-trial();
-      @include typo($size:22px,$line:1.3,$color:$default-text-title);
+      @include typo($size: 22px, $line: 1.3, $color: $default-text-title);
     }
-    &[data-type="error"]::after{
+
+    &[data-type="error"]::after {
       @include license-trial();
-      @include typo($size:30px,$line:1.3,$color:red);
+      @include typo($size: 30px, $line: 1.3, $color: red);
     }
   }
 
   .no-content {
-    @include typo($line: 14px, $size: 14px,$weight: 400, $color: $egrey-2f);
+    @include typo($line: 14px, $size: 14px, $weight: 400, $color: $egrey-2f);
+    padding: 10px;
+  }
+
+  .server-error {
+    @include typo($line: 14px, $size: 14px, $weight: 400, $color: red);
     padding: 10px;
   }
 }

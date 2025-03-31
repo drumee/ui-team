@@ -99,7 +99,6 @@ class __window_channel extends chatInteract {
    * @returns 
    */
   onPartReady(child, pn, section) {
-    this.debug("AAA:132 103", pn)
     switch (pn) {
       case 'load_channel_content':
         this.waitElement(child.el, this.loadContent());

@@ -125,7 +125,6 @@ class __window_litechat extends __room {
    * @returns 
    */
   __dispatchPush(service, data) {
-    // @debug "__dispatchPush" , service , data, @
     let svc = this.serviceName(service);
     this.debug(`AAA:132 service=${svc}`, data, this);
     switch (svc) {

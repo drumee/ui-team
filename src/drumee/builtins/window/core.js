@@ -1017,6 +1017,7 @@ class __window_core extends __utils {
    */
   onServerComplain(xhr) {
     const { error_code, error } = xhr;
+    this.warn("[1020] GOT SERVER COMPLAINS", xhr)
     if (/.+exceeded$/.test(error) || error_code == 402) {
       Butler.upgrade().then(() => {
         this.goodbye();

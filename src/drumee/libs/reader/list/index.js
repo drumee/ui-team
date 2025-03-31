@@ -481,7 +481,7 @@ class __list extends LetcBox {
    * 
    * @returns 
    */
-  isWaiting(){
+  isWaiting() {
     return this._waiting;
   }
 
@@ -553,7 +553,11 @@ class __list extends LetcBox {
   * @param {any} xhr 
   */
   onServerComplain(xhr) {
-    this.warn(`[ERROR:532]GOT SERVER COMPLAINS :`, xhr);
+    this.warn(`[556] GOT SERVER COMPLAINS`, xhr);
+    setTimeout(() => {
+      this.model.unset(_a.itemsOpt);
+      this.feed([Skeletons.Note(LOCALE.ERROR_SERVER, 'server-error')])
+    }, 1000)
     this.trigger(_e.error, this);
   }
 
@@ -640,7 +644,7 @@ class __list extends LetcBox {
     data = this.prepare(data);
     if (!this._started) {
       if (this.mget(_a.defaults)) {
-        setTimeout(()=>{
+        setTimeout(() => {
           this.collection.add(data);
         }, 300)
       } else {

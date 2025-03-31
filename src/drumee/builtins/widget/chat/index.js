@@ -1,8 +1,3 @@
-// ============================================================ *
-//   Copyright Xialia.com  2011-2024
-//   FILE : /src/drumee/builtins/widget/chat/index.coffee
-//   TYPE : Component
-// ============================================================ *
 
 const { copyToClipboard, dataTransfer } = require("core/utils")
 require('./skin');
@@ -61,6 +56,7 @@ class __widget_chat extends LetcBox {
       this.entityId = this.mget(_a.hub_id);
       this.storageKey = `${type}-${this.hubId}-${this.mget('ticket_id')}`;
     }
+    this.hubId = this.hubId || this.mget(_a.hub_id);
     this.declareHandlers();
     this.bindEvent(_a.live);
     this._newMsgCount = 0;
@@ -341,7 +337,7 @@ class __widget_chat extends LetcBox {
    * @returns 
    */
   onDomRefresh() {
-    return this.fetchService({
+    this.fetchService({
       service: SERVICE.media.home,
       hub_id: this.hubId
     }).then((data) => {

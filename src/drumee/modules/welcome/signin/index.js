@@ -98,8 +98,10 @@ class __welcome_signin extends __welcome_interact {
       pw = this.getPart("ref-password").getValue();
     } catch (error) { }
     if (_.isEmpty(pw) || _.isEmpty(ident)) {
-      this._button.el.dataset.state = 0;
-      this._button.el.dataset.error = 0;
+      if(this._button){
+        this._button.el.dataset.state = 0;
+        this._button.el.dataset.error = 0;  
+      }
       return false;
     }
 

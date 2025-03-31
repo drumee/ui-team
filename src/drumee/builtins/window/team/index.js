@@ -76,7 +76,9 @@ class __window_team extends __hub {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     switch (service) {
 
-      case "webinar": case "meeting": case "channel":
+      case "webinar": 
+      case "meeting": 
+      case "channel":
         opt = {
           kind: `window_${service}`,
           hub_id: this.mget(_a.hub_id),

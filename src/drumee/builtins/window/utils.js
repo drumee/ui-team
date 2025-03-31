@@ -790,6 +790,9 @@ class __window_mfs extends DrumeeMFS {
     ViewMode.set(DEFAULT, mode)
     this.viewMode = mode;
   }
+
+
+
 }
 
 module.exports = __window_mfs;

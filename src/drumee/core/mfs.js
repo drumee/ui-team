@@ -1,6 +1,7 @@
 const { filesize, dataTransfer } = require("core/utils")
 const { makeHeaders } = require("core/socket/utils")
 const PROPERTIES = [
+  _a.area,
   _a.actual_home_id,
   _a.ctime,
   _a.ext,
@@ -28,7 +29,7 @@ const PROPERTIES = [
  *
  */
 function svcUrl(o) {
-  let { svc, keysel} = bootstrap();
+  let { svc, keysel } = bootstrap();
   if (!_.isObject(o)) {
     return o;
   }
@@ -86,7 +87,7 @@ class __core_mfs extends LetcBox {
     this.isMfs = 1;
     if ([_a.hub, _a.folder].includes(this.mget(_a.filetype))) {
       this.mset({ filesize: 0 });
-    }else{
+    } else {
       this.mset({ filesize: parseInt(this.mget(_a.filesize)) });
     }
     this.metadata();
@@ -456,7 +457,7 @@ class __core_mfs extends LetcBox {
     let pn = `${this._id}-progres`;
     if (!document.getElementById(pn)) {
       let mode = 'grid';
-      if(this.getLogicalParent){
+      if (this.getLogicalParent) {
         mode = this.getLogicalParent().getViewMode();
       }
       this.append({
