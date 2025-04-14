@@ -28,6 +28,7 @@ module.exports = {
   media_preview: 'builtins/media/preview',
   media_row: 'builtins/media/row',
   media_simple: 'builtins/media/simple',
+  media_pseudo: 'builtins/media/pseudo',
   media_uploader: 'builtins/media/uploader',
   media: 'builtins/media/grid',
   public_link: 'builtins/widget/invitation/public-link',

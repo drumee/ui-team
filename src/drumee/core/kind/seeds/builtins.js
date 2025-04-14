@@ -46,6 +46,7 @@ const a = {
   media_preview:function(s,f){import('builtins/media/preview').then(m=>{s(m.default)}).catch(f)},
   media_row:function(s,f){import('builtins/media/row').then(m=>{s(m.default)}).catch(f)},
   media_simple:function(s,f){import('builtins/media/simple').then(m=>{s(m.default)}).catch(f)},
+  media_pseudo:function(s,f){import('builtins/media/pseudo').then(m=>{s(m.default)}).catch(f)},
   media_uploader:function(s,f){import('builtins/media/uploader').then(m=>{s(m.default)}).catch(f)},
   media:function(s,f){import('builtins/media/grid').then(m=>{s(m.default)}).catch(f)},
   public_link:function(s,f){import('builtins/widget/invitation/public-link').then(m=>{s(m.default)}).catch(f)},
