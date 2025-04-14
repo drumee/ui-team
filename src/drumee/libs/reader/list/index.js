@@ -581,6 +581,7 @@ class __list extends LetcBox {
         this.collection.cleanSet(phContent);
         this.__placeholder = this.children.last();
       }
+      this._eod();
       return;
     }
 
