@@ -4,8 +4,8 @@
 #   TYPE : Style Component
 # ===================================================================**/
 
-@import '../../../../skin/mixins/drumee.scss';
-
+@import "mixins/drumee";
+@import "index.electron";
 .window-manager {
   &__ui {
     background-color: transparent;

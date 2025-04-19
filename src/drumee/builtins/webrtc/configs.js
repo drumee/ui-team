@@ -5,8 +5,6 @@ const configuration = {
   iceServers: [
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'turns:turn.drumee.net:5349', username: 'turndr', credential: '7E7nQVua' },
-    { urls: 'stun:stun.1.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
   ]
 };
 

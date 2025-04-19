@@ -4,6 +4,7 @@
 #   TYPE : Backoffice Main Style
 # ===================================================================**/
 @import 'mixins/drumee';
+@import "../../skin/sync-menu.scss";
 
 .media-grid{
   @import "access.scss";

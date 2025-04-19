@@ -131,6 +131,7 @@ class __router_websocket extends LetcBox {
     opt = opt || {};
     let { token } = opt;
     let { websocketApi } = bootstrap();
+    console.log("AAA:162", { websocketApi })
     /** One Time Access Key*/
     if (token) {
       token = `&otak=${token}`;
@@ -262,7 +263,7 @@ class __router_websocket extends LetcBox {
       return;
     }
     if (this.timer) {
-      this.warn("Already connection pending> Skipped");
+      this.warn("Already connection pending. Skipped");
       this.timer = null;
     }
     this.postService(SERVICE.bootstrap.authn).then((r) => {

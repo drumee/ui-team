@@ -27,7 +27,7 @@ class ___window_help_desk extends __window_interact_singleton{
       const height = Math.min(_K.iconWidth * 5.5, window.innerHeight - 80);
       this.style.set({
         left   : (window.innerWidth - width - Wm.$el.offset().left - 10)/2,
-        top    : -Wm.$el.offset().top,
+        top    : 60, //-Wm.$el.offset().top,
         minHeight : 340,
         minWidth  : 340,
         height,

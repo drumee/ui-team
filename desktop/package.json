@@ -1,0 +1,140 @@
+{
+  "name": "drumee-desktop",
+  "productName": "Drumee",
+  "version": "2.8.1",
+  "description": "Collaboration autonomous system",
+  "main": "index.js",
+  "homepage": "https://drumee.com",
+  "author": "Somanos Sar <somanos@drumee.com> https://drumee.com",
+  "contributors": [
+    {
+      "name": "Somanos Sar",
+      "email": "somanos@drumee.com"
+    }
+  ],
+  "license": "ISC",
+  "build": {
+    "appId": "com.drumee.desktop",
+    "productName": "Drumee",
+    "artifactName": "drumee-${os}-${arch}.${ext}",
+    "afterPack": "scripts/sign",
+    "afterSign": "scripts/notarize",
+    "mac": {
+      "publish": {
+        "provider": "generic",
+        "url": "https://app.drumee.com/mac/release"
+      },
+      "target": [
+        {
+          "target": "default",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "entitlements/darwin.plist",
+      "entitlementsInherit": "entitlements/darwin.plist",
+      "provisioningProfile": "entitlements/drumeeuidesktop.provisionprofile",
+      "icon": "./icons/mac/icon.icns",
+      "category": "public.app-category.business",
+      "minimumSystemVersion": "10.11",
+      "extendInfo": {
+        "NSCameraUsageDescription": "This app requires camera access for conference usage.",
+        "NSMicrophoneUsageDescription": "This app requires microphone access for conference usage.",
+        "NSDesktopFolderUsageDescription": "This app requires folder access to sync local with remote files.",
+        "com.apple.security.device.audio-input": "Microphone permission is mandatory for conference",
+        "com.apple.security.device.camera": "Camera permission is optional for conference"
+      }
+    },
+    "win": {
+      "publish": {
+        "provider": "generic",
+        "url": "https://app.drumee.com/win/release"
+      },
+      "icon": "./icons/win/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "sign": "scripts/sign.js"
+    },
+    "linux": {
+      "publish": {
+        "provider": "generic",
+        "url": "https://app.drumee.com/linux/release"
+      },
+      "icon": "./icons/linux/icon.png",
+      "synopsis": "Drumee Desktop",
+      "category": "Utility",
+      "target": [
+        "7z",
+        "snap",
+        "deb",
+        "rpm"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "pack": "electron-builder --dir build",
+    "dist": "electron-builder",
+    "preinstall": "npm install better-sqlite3 --build-from-source --sqlite3=\"$(pwd)/sqlite-amalgamation\"",
+    "postinstall": "electron-builder install-app-deps",
+    "normal": "electron .",
+    "dev": "electron . --dev --open-dev --debugWatcher",
+    "demo": "electron . --dev",
+    "start:prod": "electron . --prod",
+    "build": "electron-builder",
+    "build:w": "npm rebuild && electron-builder -w",
+    "build:l": "electron-builder --linux",
+    "rebuild:l": "electron-builder --linux",
+    "build:m:w": "electron-builder -mw",
+    "build:mwl": "electron-builder -mwl",
+    "build:m": "electron-builder -c.mac.identity=null -m",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "generate:icon": "electron-icon-maker --input=./public/drumee.png --output=./"
+  },
+  "devDependencies": {
+    "@electron/notarize": "^2.0.0",
+    "@electron/osx-sign": "^1.3.1",
+    "@electron/rebuild": "^3.6.0",
+    "@mapbox/node-pre-gyp": "^1.0.11",
+    "electron": "^29.4.6",
+    "electron-builder": "^24.13.3",
+    "electron-reload": "^1.5.0",
+    "file-loader": "^6.2.0",
+    "nan": "github:tec27/nan#remove_accessor_signature",
+    "node-gyp": "^10.0.1",
+    "prebuild-install": "^7.1.1"
+  },
+  "dependencies": {
+    "backbone": "^1.4.1",
+    "better-sqlite3": "^9.6.0",
+    "check-disk-space": "^3.3.1",
+    "chokidar": "^3.5.3",
+    "dotenv": "^16.0.2",
+    "electron-log": "^4.4.8",
+    "electron-unhandled": "^4.0.1",
+    "electron-updater": "^6.3.9",
+    "electron-windows-badge": "^1.1.0",
+    "filesize": "^9.0.11",
+    "filewatcher": "^3.0.1",
+    "iconv-lite": "^0.6.3",
+    "jsonfile": "^6.1.0",
+    "lodash": "^4.17.21",
+    "node-file-encrypt": "^0.0.6",
+    "sound-play": "^1.1.0",
+    "stream-to-blob": "^2.0.1",
+    "yargs": "^17.7.2"
+  }
+}

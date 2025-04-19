@@ -53,6 +53,7 @@ class __text_editable extends Marionette.View {
     if (this.mget(_a.mode) === _a.interactive) {
       this.interactive = 1;
     }
+    this.bindEvent('live');
   }
 
   /**
@@ -848,6 +849,10 @@ class __text_editable extends Marionette.View {
       this.render();
       this.draw();
     } catch (error) { }
+  }
+
+  onWsMessage(service, data, options = {}) {
+    this.verbose("AAA:875", options.service, data.socket_id, data, options);
   }
 }
 __text_editable.initClass();

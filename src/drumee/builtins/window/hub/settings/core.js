@@ -11,6 +11,10 @@ class __hub_core extends LetcBox {
    * 
    * @param {*} opt 
    */
+  /**
+   * 
+   * @param {*} opt 
+   */
   initialize(opt) {
     super.initialize();
     if (this.mget(_a.authority) & (_K.permission.owner | _K.permission.admin)) {
@@ -25,6 +29,9 @@ class __hub_core extends LetcBox {
   /**
    * 
    */
+  /**
+   * 
+   */
   onRender() {
     super.onRender();
     this.el.dataset.edit = 0;
@@ -34,6 +41,7 @@ class __hub_core extends LetcBox {
       }
     });
   }
+
 
   /**
    * 
@@ -58,12 +66,16 @@ class __hub_core extends LetcBox {
    * @param {*} cmd 
    * @param {*} args 
    */
+  /**
+   * 
+   * @param {*} cmd 
+   * @param {*} args 
+   */
   onUiEvent(cmd, args) {
     if (!mouseDragged) {
       this.triggerMethod(CHANGE_RADIO, this);
     }
   }
-
 
 }
 

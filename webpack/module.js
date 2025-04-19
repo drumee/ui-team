@@ -1,19 +1,22 @@
 const {resolve} = require("path");
 const drumee_path = 'src/drumee/';
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
-module.exports = function(basedir){
+module.exports = function(basedir, mode){
+  let prodution = /^prod/.test(mode);
   a = {
     rules: [{
       test: /\.(sa|sc|c)ss$/,
 
       use: [
-        'style-loader',
+        prodution ? MiniCssExtractPlugin.loader : "style-loader",
         //MiniCssExtractPlugin.loader,
         {
           loader: 'css-loader',
           options: {
-            sourceMap: true,
-            importLoaders: 1
+            sourceMap: !prodution,
+            importLoaders: true,
+            url: false
           },
         },{
           loader: 'postcss-loader',

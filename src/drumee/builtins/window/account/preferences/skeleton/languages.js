@@ -1,7 +1,7 @@
 const CHANGE_LANG = 'change-lang';
 
 const __account_languages = function (_ui_) {
-  const { static, main_domain } = bootstrap();
+  const { static } = bootstrap();
   const a = Skeletons.List.Smart({
     debug: __filename,
     className: `${_ui_.fig.family}__language-list`,

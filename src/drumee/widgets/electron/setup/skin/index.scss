@@ -1,0 +1,140 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : desk/skin/media/grid
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+@import "mixins/drumee.scss";
+.electron-setup {
+  &__ui {
+    background-color: transparent;
+    max-width: 460px;
+    border-radius: $default-border-radius;
+    background-color: $core-background-tooltips;
+    padding: 20px;
+  }
+  
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    background-color: inherit;
+    border-radius: $default-border-radius;
+    padding: 20px 30px;
+    background-color: $core-background-tooltips;
+    min-width: 190px;
+    overflow: hidden;
+  }
+  &__heading {
+    padding: 10px;
+    @include typo($line: 23px, $size: 16px, $weight: 300, $color: $core-default-text-color);
+  }
+  &__row {
+    overflow: hidden;
+    transition: height 0.5s linear;
+    height: 25px;
+    .label-wrapper {
+      cursor: pointer;
+      padding: 0 10px;
+      @include typo($line: 23px, $size: 16px, $weight: 300, $color: $core-default-text-color);
+    }
+    &[data-radio="on"] {
+      height: 57px;
+      &.disabled {
+        height: 25px;
+      }
+    }
+    &[data-tooltips="on"] {
+      height: 57px;
+    }
+
+    .label-text {
+      cursor: pointer;
+      padding: 0 10px;
+      white-space: nowrap;
+      @include typo($line: 16px, $size: 12px, $weight: 300, $color: $core-default-text-color);
+    }
+    .checkbox {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      border: 1px solid #879bff;
+      margin: auto 5px auto 0;
+      color: transparent;
+      &[data-state="1"] {
+        color: darkblue;
+      }
+    }
+    .tooltips-trigger,
+    .checkbox {
+      width: 15px;
+      height: 15px;
+      margin: auto 0;
+      &[data-state="1"] {
+        color: darkblue;
+      }
+    }
+    .tooltips-trigger {
+      margin: auto 0 auto auto;
+    }
+
+    .radio-wrapper {
+      justify-content: space-between;
+      padding: 0 10px;
+    }
+  }
+  &__radiotoggle {
+    padding-left: 26px;
+    margin-top: 7px;
+    .togglebox {
+      color: transparent;
+      width: 15px;
+      height: 15px;
+      margin: auto 10px;
+      border: 1px solid #879bff;
+      border-radius: 3px;
+      &[data-state="1"] {
+        color: darkblue;
+      }
+    }
+    .radio-button {
+      margin-top: 5px;
+      white-space: nowrap;
+      @include typo($line: 14px, $size: 11px, $weight: 300, $color: $core-default-text-color);
+    }
+  }
+  &__tooltips-wrapper {
+    @include typo($line: 14px, $size: 12px, $weight: 300, $color: $core-default-text-color);
+    width: 100%;
+    max-width: 100vw;
+    background: $core-background-tooltips;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 20px;
+    .tips-note{
+      margin-top: 10px;
+      border-top: 1px solid gray;
+      padding-top: 5px;
+    }
+  }
+
+  &__buttons {
+    height: 60px;
+    width: 100%;
+    .button {
+      align-content: center;
+      align-items: center;
+      border-radius: 6px;
+      cursor: pointer;
+      height: 35px;
+      justify-content: center;
+      text-align: center;
+      width: 115px;
+      margin: 0 3%;
+      border: 1px solid #DDE2E8;
+      @include typo($line: 18px, $size: 16px, $weight: 300, $color: $core-default-text-color);
+    }
+    justify-content: center;
+    align-items: center;
+  }
+}

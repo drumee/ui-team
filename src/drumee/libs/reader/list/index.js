@@ -25,8 +25,7 @@ class __list extends LetcBox {
     this.model.atLeast({
       innerClass: _K.char.empty,
       flow: _a.vertical,
-      axis: _a.y,
-      pagelength: _K.pagelength
+      axis: _a.y
     });
     this.model.set(_a.widgetId, this._id);
     if (this.mget(_a.timer)) {
@@ -240,7 +239,6 @@ class __list extends LetcBox {
     }
     this.initCollectionEvents();
     this.start();
-    this.onMouseWheel()
 
   }
 
@@ -342,6 +340,8 @@ class __list extends LetcBox {
       this.$el.height(height);
       return this.style.set(_a.height, height);
     } else if (/[0-9]+([%|a-z|A-B]+)/.test(this.style.get(_a.height))) {
+      // if isNumeric @style.get(_a.height)
+      // height = parseInt @style.get(_a.height)
       return this.$el.height(this.style.get(_a.height)); //(height)
     }
   }
@@ -428,7 +428,6 @@ class __list extends LetcBox {
       opt.vhost = this.mget(_a.vhost);
     }
     delete opt.service;
-    opt.pagelength = this.mget('pagelength') || _K.pagelength;
     this.checkSpinner();
     this.fetchService(service, opt)
       .then(this.handleResponse.bind(this))
@@ -582,7 +581,6 @@ class __list extends LetcBox {
         this.collection.cleanSet(phContent);
         this.__placeholder = this.children.last();
       }
-      this._eod();
       return;
     }
 
@@ -608,8 +606,9 @@ class __list extends LetcBox {
       this.renderData(data);
     } catch (error) { }
 
-    if ((data[0] != null)) {
-      if (data.length < this.mget('pagelength')) {
+
+    if ((data[0] != null) && data[0].page) {
+      if (data.length < _K.pagelength) {
         this._eod();
         return;
       }

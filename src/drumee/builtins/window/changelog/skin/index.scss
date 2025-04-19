@@ -1,0 +1,466 @@
+@import 'mixins/colors/index.scss';
+@import 'mixins/typo.scss';
+@import 'mixins/colors/index.scss';
+@import 'mixins/exports.scss';
+@import 'mixins/handles.scss';
+@import 'mixins/utils.scss';
+@import 'mixins/vendor.scss';
+@import 'mixins/z-index.scss';
+@import 'mixins/drumee';
+@import 'content.scss';
+
+.window-changelog {
+  &__ui {
+    width: 880px;
+    max-width: 100vw;
+    height: auto;
+    left: calc(100vw - 440px);
+    top: 40px;
+    transition: height 0.5s linear;
+    max-height: calc(100vh - 40px);
+    height: calc(100% - 40px);
+  }
+
+  &__header {
+    border-bottom: none;
+    background-color: $folder-background-header ;
+
+    &-title {
+      @include typo($size: 16px, $line: 20px, $weight: 400, $color: $folder-default-text-reverse);
+      align-items: center;
+    }
+
+    &-control {
+      .icon {
+        color: $folder-default-icon-reverse;
+      }
+    }
+  }
+
+  &__main {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__container,
+  &__body {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__container {
+    padding: 20px 40px;
+  }
+
+  &__content {
+    padding: 20px 60px;
+    max-height: 100%;
+    overflow-y: auto;
+  }
+
+  &__checkbox {
+    justify-content: center;
+    justify-items: center;
+    align-items: center;
+    align-content: center;
+    display: flex;
+    flex-direction: row;
+    max-width: 230px;
+    min-width: 150px;
+
+    &[data-state="0"] {
+      svg {
+        color: transparent;
+        border: 1px solid $state-0-border;
+      }
+    }
+
+    svg {
+      color: $core-default-text-color;
+      border: 1px solid $state-1-border;
+      width: 12px;
+      height: 12px;
+      margin: 0 10px;
+    }
+
+    .label {
+      @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+      white-space: nowrap;
+    }
+  }
+
+  &__ack {
+    justify-content: center;
+    margin: auto;
+    @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+  }
+
+  &__link {
+    text-decoration: underline;
+    color: $add-blue;
+    cursor: pointer;
+  }
+
+  &__highlight {
+    // background-color:rgb(229, 235, 225);
+    // color: $add-blue;
+    text-decoration: underline;
+  }
+
+  &__separator {
+    width: 200px;
+    height: 1px;
+    margin: 0 auto 20px;
+    border: 0.5px solid rgb(206, 152, 36);
+  }
+
+  &__engine-off {
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 10px 25px; //10px 20px;
+    align-items: center;
+    justify-content: center;
+
+    .text {
+      max-width: 500px;
+      text-align: justify;
+      @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+    }
+
+    .desc-test {
+      max-width: 500px;
+      text-align: justify;
+      @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-security-text-color);
+    }
+  }
+
+  &__confirm-sync {
+    align-items: center;
+
+    .heading {
+      margin: 30px 0 20px;
+      @include typo($size: 18px, $line: 1.5, $weight: 300, $color: #EF6500);
+    }
+
+    .text {
+      margin: 20px 0;
+      width: 80%;
+      @include typo($size: 16px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+    }
+  }
+
+  &__help {
+    @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+
+    &.container {
+      width: 100%;
+      //margin-bottom: 20px;
+      padding: 10px 25px;
+      justify-content: center;
+      justify-items: center;
+      align-items: center;
+    }
+
+    &.text {
+      max-width: 500px;
+    }
+
+    &.summary {
+      text-align: justify;
+      width: 100%;
+      @include typo($size: 15px, $line: 1.5, $weight: 400, $color: $core-default-text-color);
+    }
+
+    &.title {
+      text-align: left;
+      width: 100%;
+      margin-bottom: 10px;
+      @include typo($size: 16px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+    }
+
+    &.tips {
+      text-align: justify;
+      margin-bottom: 15px;
+      @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+    }
+
+    &.info {
+      text-align: left;
+      width: 100%;
+      margin-bottom: 20px;
+      @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+    }
+  }
+
+  &__summary-header {
+    width: 100%;
+    margin-bottom: 10px;
+    justify-content: center;
+    padding: 10px 15px;
+
+    .text {
+      @include typo($size: 16px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+      text-align: justify;
+      max-width: 600px;
+    }
+
+    .desc {
+      @include typo($size: 16px, $line: 18px, $weight: 400, $color: $core-default-text-color);
+      text-align: left;
+    }
+
+    .info {
+      @include typo($size: 16px, $line: 18px, $weight: 400, $color: #EF6500);
+      text-align: left;
+    }
+  }
+
+  &__immediate-header {
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 10px 25px; //10px 20px;
+    justify-content: center;
+    align-items: center;
+
+    .text {
+      @include typo($size: 20px, $line: 18px, $weight: 400, $color: $core-focus-text-placeholder);
+      text-align: center;
+    }
+
+    .space {
+      margin-top: 30px;
+    }
+
+    .desc {
+      @include typo($size: 16px, $line: 18px, $weight: 400, $color: $core-default-text-color);
+      text-align: left;
+    }
+
+    .info {
+      @include typo($size: 16px, $line: 18px, $weight: 400, $color: #EF6500);
+      text-align: left;
+      width: 70%;
+    }
+  }
+
+  &__summary-content {
+    width: 100%;
+    //height: calc(100% - 180px);
+    height: auto;
+    align-items: start;
+    justify-content: center;
+  }
+
+  &__command {
+    width: 100%;
+    justify-items: center;
+    justify-content: space-around;
+    margin: 10px 0;
+    align-content: center;
+    flex-wrap: wrap;
+    height: 60px;
+    @include typo($size: 16px, $line: 18px, $weight: 400, $color: $core-default-text-color);
+
+    .button {
+      cursor: pointer;
+      min-height: 100%;
+      margin: 0 5px;
+      min-width: 150px;
+      max-width: 180px;
+      justify-content: center;
+      align-content: center;
+      align-items: center;
+      border-radius: 3px;
+      padding: 10px 10px;
+      text-align: center;
+      border: 1px $core-default-checkbox-border solid;
+
+      &:hover {
+        color: $folder-default-icon-hover;
+      }
+    }
+  }
+
+  &__question {
+    width: 100%;
+    justify-items: center;
+    justify-content: center;
+    margin: 16px 0;
+    @include typo($size: 16px, $line: 18px, $weight: 400, $color: $core-default-text-color);
+
+    .drumee-text {
+      align-content: center;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: #EF6500;
+
+      u {
+        color: $core-default-text-tooltips;
+        text-decoration: underline;
+      }
+    }
+  }
+
+  &__detail {
+    cursor: pointer;
+    width: 100%;
+    padding: 10px; // 25px;//10px 20px;
+
+    &[data-state="0"] {
+      display: none;
+    }
+
+    .count {
+      margin-right: 15px;
+    }
+
+    .text {
+      @include typo($size: 14px, $line: 18px, $weight: 400, $color: $core-default-text-color);
+    }
+  }
+
+  &__changes-container {
+    max-height: calc(100vh - 584px);
+    //overflow-y: auto;
+  }
+
+  &__list {
+    max-height: calc(100% - 35px);
+    height: auto;
+    flex: 1;
+  }
+
+  &__bound {
+    height: auto;
+    width: 50%;
+    padding: 20px;
+    background-color: $core-default-block-background;
+    margin: 0 10px;
+    border-radius: 10px;
+
+    &-name {
+      height: 35px;
+      align-content: center;
+      justify-content: center;
+      align-items: center;
+      white-space: nowrap;
+      @include typo($size: 18px, $line: 24px, $weight: 400, $color: $core-secondary-text-color);
+    }
+  }
+
+  &__icon {
+    cursor: pointer;
+    color: $folder-default-icon-reverse;
+
+    &-info {
+      cursor: pointer;
+      height: 25px;
+      margin: 0px 15px auto 5px;
+      min-width: 21px;
+      padding: 4px;
+      width: 21px;
+    }
+
+
+    &:hover {
+      color: $folder-default-icon-hover;
+    }
+  }
+
+  &__icons {
+    &.container {
+      justify-content: center;
+      align-items: center;
+    }
+
+    &.cross-icon {
+      height: 15px;
+      padding: 0;
+      margin: 10px;
+
+      svg {
+        fill: $core-default-text-error;
+      }
+    }
+
+    &.arrow-icon {
+      height: 15px;
+      padding: 0;
+      margin: 10px;
+
+      svg {
+        fill: $core-tertiary-text-color;
+      }
+    }
+
+    &.arrow-icon-info {
+      height: 15px;
+      padding: 0;
+      margin: 10px;
+      width: 25px;
+
+      svg {
+        fill: $core-tertiary-text-color;
+        transform: rotate(90deg);
+      }
+    }
+
+    &.cloud-icon {
+      height: 25px;
+      padding: 0;
+      margin: 0px;
+
+      svg {
+        fill: $core-tertiary-text-color;
+      }
+    }
+
+    &.cloud-icon-info {
+      height: 25px;
+      padding: 0;
+      margin: 0px;
+      width: 25px;
+
+      svg {
+        fill: $core-tertiary-text-color;
+      }
+    }
+
+    &.desktop-icon {
+      height: 25px;
+      padding: 0;
+      margin-bottom: 25px;
+
+      svg {
+        fill: $core-tertiary-text-color;
+      }
+    }
+
+    &.desktop-icon-info {
+      height: 25px;
+      padding: 0;
+      width: 25px;
+
+      svg {
+        fill: $core-tertiary-text-color;
+      }
+    }
+  }
+
+  &__title {
+    &-name {
+      align-items: flex-start;
+      padding-left: 10px; //11%;
+      @include overflow-text;
+      @include typo($size: 18px, $line: 24px, $weight: 400, $color: $folder-default-text-reverse); //$ewhite);
+
+      .inner {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+
+}

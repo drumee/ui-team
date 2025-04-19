@@ -42,7 +42,6 @@ module.exports = function (basedir) {
       'helper': resolve(basedir, drumee_modules, 'designer', 'skeleton', 'helper'),
       'hub': resolve(basedir, drumee_modules, 'hub'),
       'invitation': resolve(basedir, drumee_path, 'builtins', 'widget', 'invitation'),
-      'jquery_ui_custom': resolve(basedir, vendor_path, 'jquery-ui-1.12.1.custom'),
       'jitsi': resolve(basedir, vendor_path, 'lib-jitsi-meet/dist/umd'),
       'lex': resolve(basedir, drumee_path, 'lex'),
       'libs': resolve(basedir, drumee_path, 'libs'),

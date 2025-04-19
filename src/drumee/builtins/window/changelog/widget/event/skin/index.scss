@@ -1,0 +1,69 @@
+/* ==================================================================== *
+* Widget style automatically generated on 2024-11-15T14:23:21.137Z
+* npm run add-widget -- --fig=<grpup.family> --dest=/path/to/the/widget
+* ==================================================================== */
+@import 'mixins/drumee';
+
+.changelog-event {
+  &__ui {
+    background-color: inherit;
+    width: 100%;
+    margin: 3px 0;
+    
+    &:hover {
+      color: white;
+      background-color: $account-default-background-hover;
+    }
+  }
+
+  &__content {
+    width: 100%;
+    padding-left: 10px;
+    @include typo($size: 12px, $line: 16px);
+    align-content: start;
+    flex-wrap: wrap;
+    align-items: center;
+
+    &-filename.dest {
+      margin: 0 5px;
+
+      &::before {
+        color: $btn-caution-background;
+        content: "🠪";
+      }
+    }
+
+    &-content {
+      width: 100%;
+    }
+
+    &-icon {
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+      background-color: $btn-commit-background ;
+      color: white;
+      border-radius: 3px;
+      margin-right: 5px;
+
+      svg {
+        padding: 3px;
+      }
+
+      &:hover {
+        color: yellow;
+      }
+    }
+
+    &-action {
+      margin-right: 3px;
+      min-width: 60px;
+
+      &::after {
+        content: ":";
+        margin-right: 5px;
+      }
+    }
+  }
+
+}

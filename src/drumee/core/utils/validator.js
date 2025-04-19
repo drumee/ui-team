@@ -24,7 +24,7 @@ const validator = {
 
   phone(v) {
     if (v.trim() !== '') {
-      return v.isPhoneNumber();
+      return v.isPhoneNumer();
     }
     return true;
   },

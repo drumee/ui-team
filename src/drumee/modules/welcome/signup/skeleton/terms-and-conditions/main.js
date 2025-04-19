@@ -9,7 +9,7 @@
 // ===========================================================
 function __skl_welcome_signup_terms_and_conditions (_ui_) {
   const conditionsFig = `${_ui_.fig.family}-terms-and-conditions`
-  let path = location.pathname;
+  let path = bootstrap().appRoot;
   if(__BUILD__=='production') path = '/';
   //https://tunnel.drumee.com/termsandconditions/en/CGU_Drumee.html
   

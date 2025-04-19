@@ -1,0 +1,2382 @@
+{
+  "3g2": {
+    "key": "3g2",
+    "extension": "3g2",
+    "category": "video",
+    "mimetype": "video/3g2",
+    "capability": "rw-"
+  },
+  "3gp": {
+    "key": "3gp",
+    "extension": "3gp",
+    "category": "video",
+    "mimetype": "video/3gp",
+    "capability": "rw-"
+  },
+  "4xm": {
+    "key": "4xm",
+    "extension": "4xm",
+    "category": "video",
+    "mimetype": "video/4xm",
+    "capability": "r--"
+  },
+  "7z": {
+    "key": "7z",
+    "extension": "7z",
+    "category": "other",
+    "mimetype": "application/zip",
+    "capability": "---"
+  },
+  "IFF": {
+    "key": "IFF",
+    "extension": "IFF",
+    "category": "video",
+    "mimetype": "video/IFF",
+    "capability": "r--"
+  },
+  "ISS": {
+    "key": "ISS",
+    "extension": "ISS",
+    "category": "video",
+    "mimetype": "video/ISS",
+    "capability": "r--"
+  },
+  "MTV": {
+    "key": "MTV",
+    "extension": "MTV",
+    "category": "video",
+    "mimetype": "video/MTV",
+    "capability": "r--"
+  },
+  "RoQ": {
+    "key": "RoQ",
+    "extension": "RoQ",
+    "category": "video",
+    "mimetype": "video/RoQ",
+    "capability": "rw-"
+  },
+  "a64": {
+    "key": "a64",
+    "extension": "a64",
+    "category": "video",
+    "mimetype": "video/a64",
+    "capability": "-w-"
+  },
+  "aac": {
+    "key": "aac",
+    "extension": "aac",
+    "category": "video",
+    "mimetype": "video/aac",
+    "capability": "r--"
+  },
+  "ac3": {
+    "key": "ac3",
+    "extension": "ac3",
+    "category": "video",
+    "mimetype": "video/ac3",
+    "capability": "rw-"
+  },
+  "act": {
+    "key": "act",
+    "extension": "act",
+    "category": "video",
+    "mimetype": "video/act",
+    "capability": "r--"
+  },
+  "adf": {
+    "key": "adf",
+    "extension": "adf",
+    "category": "video",
+    "mimetype": "video/adf",
+    "capability": "r--"
+  },
+  "adts": {
+    "key": "adts",
+    "extension": "adts",
+    "category": "video",
+    "mimetype": "video/adts",
+    "capability": "-w-"
+  },
+  "adx": {
+    "key": "adx",
+    "extension": "adx",
+    "category": "video",
+    "mimetype": "video/adx",
+    "capability": "rw-"
+  },
+  "aea": {
+    "key": "aea",
+    "extension": "aea",
+    "category": "video",
+    "mimetype": "video/aea",
+    "capability": "r--"
+  },
+  "aiff": {
+    "key": "aiff",
+    "extension": "aiff",
+    "category": "video",
+    "mimetype": "video/aiff",
+    "capability": "rw-"
+  },
+  "alaw": {
+    "key": "alaw",
+    "extension": "alaw",
+    "category": "video",
+    "mimetype": "video/alaw",
+    "capability": "rw-"
+  },
+  "amr": {
+    "key": "amr",
+    "extension": "amr",
+    "category": "video",
+    "mimetype": "video/amr",
+    "capability": "rw-"
+  },
+  "anm": {
+    "key": "anm",
+    "extension": "anm",
+    "category": "video",
+    "mimetype": "video/anm",
+    "capability": "r--"
+  },
+  "apc": {
+    "key": "apc",
+    "extension": "apc",
+    "category": "video",
+    "mimetype": "video/apc",
+    "capability": "r--"
+  },
+  "ape": {
+    "key": "ape",
+    "extension": "ape",
+    "category": "video",
+    "mimetype": "video/ape",
+    "capability": "r--"
+  },
+  "applehttp": {
+    "key": "applehttp",
+    "extension": "applehttp",
+    "category": "video",
+    "mimetype": "video/applehttp",
+    "capability": "r--"
+  },
+  "iso": {
+    "key": "iso",
+    "extension": "iso",
+    "category": "other",
+    "mimetype": "application/iso-image",
+    "capability": "---"
+  },
+  "rar": {
+    "key": "rar",
+    "extension": "rar",
+    "category": "other",
+    "mimetype": "application/rar",
+    "capability": "---"
+  },
+  "gzip": {
+    "key": "gzip",
+    "extension": "gzip",
+    "category": "other",
+    "mimetype": "application/x-gzip",
+    "capability": "---"
+  },
+  "zip": {
+    "key": "zip",
+    "extension": "zip",
+    "category": "other",
+    "mimetype": "application/zip",
+    "capability": "---"
+  },
+  "art": {
+    "key": "art",
+    "extension": "art",
+    "category": "image",
+    "mimetype": "image/art",
+    "capability": "rw-"
+  },
+  "asf": {
+    "key": "asf",
+    "extension": "asf",
+    "category": "video",
+    "mimetype": "video/asf",
+    "capability": "rw-"
+  },
+  "asf_stream": {
+    "key": "asf_stream",
+    "extension": "asf_stream",
+    "category": "video",
+    "mimetype": "video/asf_stream",
+    "capability": "-w-"
+  },
+  "ass": {
+    "key": "ass",
+    "extension": "ass",
+    "category": "video",
+    "mimetype": "video/ass",
+    "capability": "rw-"
+  },
+  "au": {
+    "key": "au",
+    "extension": "au",
+    "category": "video",
+    "mimetype": "video/au",
+    "capability": "rw-"
+  },
+  "mp3": {
+    "key": "mp3",
+    "extension": "mp3",
+    "category": "audio",
+    "mimetype": "audio/mp3",
+    "capability": "---"
+  },
+  "ram": {
+    "key": "ram",
+    "extension": "ram",
+    "category": "audio",
+    "mimetype": "audio/ram",
+    "capability": "---"
+  },
+  "wav": {
+    "key": "wav",
+    "extension": "wav",
+    "category": "audio",
+    "mimetype": "audio/wav",
+    "capability": "---"
+  },
+  "wma": {
+    "key": "wma",
+    "extension": "wma",
+    "category": "audio",
+    "mimetype": "audio/wma",
+    "capability": "---"
+  },
+  "avi": {
+    "key": "avi",
+    "extension": "avi",
+    "category": "video",
+    "mimetype": "video/avi",
+    "capability": "rw-"
+  },
+  "avm2": {
+    "key": "avm2",
+    "extension": "avm2",
+    "category": "video",
+    "mimetype": "video/avm2",
+    "capability": "-w-"
+  },
+  "avs": {
+    "key": "avs",
+    "extension": "avs",
+    "category": "image",
+    "mimetype": "image/avs",
+    "capability": "rw+"
+  },
+  "bethsoftvid": {
+    "key": "bethsoftvid",
+    "extension": "bethsoftvid",
+    "category": "video",
+    "mimetype": "video/bethsoftvid",
+    "capability": "r--"
+  },
+  "bfi": {
+    "key": "bfi",
+    "extension": "bfi",
+    "category": "video",
+    "mimetype": "video/bfi",
+    "capability": "r--"
+  },
+  "bin": {
+    "key": "bin",
+    "extension": "bin",
+    "category": "video",
+    "mimetype": "video/bin",
+    "capability": "r--"
+  },
+  "bink": {
+    "key": "bink",
+    "extension": "bink",
+    "category": "video",
+    "mimetype": "video/bink",
+    "capability": "r--"
+  },
+  "bit": {
+    "key": "bit",
+    "extension": "bit",
+    "category": "video",
+    "mimetype": "video/bit",
+    "capability": "rw-"
+  },
+  "bmp": {
+    "key": "bmp",
+    "extension": "bmp",
+    "category": "image",
+    "mimetype": "image/bmp",
+    "capability": "rw-"
+  },
+  "bmv": {
+    "key": "bmv",
+    "extension": "bmv",
+    "category": "video",
+    "mimetype": "video/bmv",
+    "capability": "r--"
+  },
+  "braille": {
+    "key": "braille",
+    "extension": "braille",
+    "category": "image",
+    "mimetype": "image/braille",
+    "capability": "-w-"
+  },
+  "bz2": {
+    "key": "bz2",
+    "extension": "bz2",
+    "category": "other",
+    "mimetype": "application/bz2",
+    "capability": "---"
+  },
+  "c93": {
+    "key": "c93",
+    "extension": "c93",
+    "category": "video",
+    "mimetype": "video/c93",
+    "capability": "r--"
+  },
+  "caf": {
+    "key": "caf",
+    "extension": "caf",
+    "category": "video",
+    "mimetype": "video/caf",
+    "capability": "rw-"
+  },
+  "cals": {
+    "key": "cals",
+    "extension": "cals",
+    "category": "image",
+    "mimetype": "image/cals",
+    "capability": "r--"
+  },
+  "caption": {
+    "key": "caption",
+    "extension": "caption",
+    "category": "image",
+    "mimetype": "image/caption",
+    "capability": "r--"
+  },
+  "cavsvideo": {
+    "key": "cavsvideo",
+    "extension": "cavsvideo",
+    "category": "video",
+    "mimetype": "video/cavsvideo",
+    "capability": "rw-"
+  },
+  "cdg": {
+    "key": "cdg",
+    "extension": "cdg",
+    "category": "video",
+    "mimetype": "video/cdg",
+    "capability": "r--"
+  },
+  "cdxl": {
+    "key": "cdxl",
+    "extension": "cdxl",
+    "category": "video",
+    "mimetype": "video/cdxl",
+    "capability": "r--"
+  },
+  "cin": {
+    "key": "cin",
+    "extension": "cin",
+    "category": "image",
+    "mimetype": "image/cin",
+    "capability": "rw+"
+  },
+  "cip": {
+    "key": "cip",
+    "extension": "cip",
+    "category": "image",
+    "mimetype": "image/cip",
+    "capability": "-w-"
+  },
+  "clip": {
+    "key": "clip",
+    "extension": "clip",
+    "category": "image",
+    "mimetype": "image/clip",
+    "capability": "-w+"
+  },
+  "cmyk": {
+    "key": "cmyk",
+    "extension": "cmyk",
+    "category": "image",
+    "mimetype": "image/cmyk",
+    "capability": "rw+"
+  },
+  "cr2": {
+    "key": "cr2",
+    "extension": "cr2",
+    "category": "image",
+    "mimetype": "image/cr2",
+    "capability": "rw-"
+  },
+  "crc": {
+    "key": "crc",
+    "extension": "crc",
+    "category": "video",
+    "mimetype": "video/crc",
+    "capability": "-w-"
+  },
+  "css": {
+    "key": "css",
+    "extension": "css",
+    "category": "stylesheet",
+    "mimetype": "text/css",
+    "capability": "---"
+  },
+  "cur": {
+    "key": "cur",
+    "extension": "cur",
+    "category": "image",
+    "mimetype": "image/cur",
+    "capability": "rw-"
+  },
+  "cut": {
+    "key": "cut",
+    "extension": "cut",
+    "category": "image",
+    "mimetype": "image/cut",
+    "capability": "r--"
+  },
+  "daud": {
+    "key": "daud",
+    "extension": "daud",
+    "category": "video",
+    "mimetype": "video/daud",
+    "capability": "rw-"
+  },
+  "dcm": {
+    "key": "dcm",
+    "extension": "dcm",
+    "category": "image",
+    "mimetype": "image/dcm",
+    "capability": "r--"
+  },
+  "dds": {
+    "key": "dds",
+    "extension": "dds",
+    "category": "image",
+    "mimetype": "image/dds",
+    "capability": "r--"
+  },
+  "dfa": {
+    "key": "dfa",
+    "extension": "dfa",
+    "category": "video",
+    "mimetype": "video/dfa",
+    "capability": "r--"
+  },
+  "dirac": {
+    "key": "dirac",
+    "extension": "dirac",
+    "category": "video",
+    "mimetype": "video/dirac",
+    "capability": "rw-"
+  },
+  "dng": {
+    "key": "dng",
+    "extension": "dng",
+    "category": "image",
+    "mimetype": "image/dng",
+    "capability": "r--"
+  },
+  "dnxhd": {
+    "key": "dnxhd",
+    "extension": "dnxhd",
+    "category": "video",
+    "mimetype": "video/dnxhd",
+    "capability": "rw-"
+  },
+  "doc": {
+    "key": "doc",
+    "extension": "doc",
+    "category": "document",
+    "mimetype": "document/doc",
+    "capability": "g--"
+  },
+  "odt": {
+    "key": "odt",
+    "extension": "odt",
+    "category": "document",
+    "mimetype": "document/odt",
+    "capability": "g--"
+  },
+  "pdf": {
+    "key": "pdf",
+    "extension": "pdf",
+    "category": "document",
+    "mimetype": "document/pdf",
+    "capability": "g--"
+  },
+  "ppt": {
+    "key": "ppt",
+    "extension": "ppt",
+    "category": "document",
+    "mimetype": "document/ppt",
+    "capability": "g--"
+  },
+  "pptx": {
+    "key": "pptx",
+    "extension": "pptx",
+    "category": "document",
+    "mimetype": "document/pptx",
+    "capability": "g--"
+  },
+  "xls": {
+    "key": "xls",
+    "extension": "xls",
+    "category": "document",
+    "mimetype": "document/xls",
+    "capability": "g--"
+  },
+  "dot": {
+    "key": "dot",
+    "extension": "dot",
+    "category": "image",
+    "mimetype": "image/dot",
+    "capability": "---"
+  },
+  "dps": {
+    "key": "dps",
+    "extension": "dps",
+    "category": "image",
+    "mimetype": "image/dps",
+    "capability": "---"
+  },
+  "dpx": {
+    "key": "dpx",
+    "extension": "dpx",
+    "category": "image",
+    "mimetype": "image/dpx",
+    "capability": "rw-"
+  },
+  "dsicin": {
+    "key": "dsicin",
+    "extension": "dsicin",
+    "category": "video",
+    "mimetype": "video/dsicin",
+    "capability": "r--"
+  },
+  "dts": {
+    "key": "dts",
+    "extension": "dts",
+    "category": "video",
+    "mimetype": "video/dts",
+    "capability": "rw-"
+  },
+  "dv": {
+    "key": "dv",
+    "extension": "dv",
+    "category": "video",
+    "mimetype": "video/dv",
+    "capability": "rw-"
+  },
+  "dv1394": {
+    "key": "dv1394",
+    "extension": "dv1394",
+    "category": "video",
+    "mimetype": "video/dv1394",
+    "capability": "r--"
+  },
+  "dvd": {
+    "key": "dvd",
+    "extension": "dvd",
+    "category": "video",
+    "mimetype": "video/dvd",
+    "capability": "-w-"
+  },
+  "dxa": {
+    "key": "dxa",
+    "extension": "dxa",
+    "category": "video",
+    "mimetype": "video/dxa",
+    "capability": "r--"
+  },
+  "ea": {
+    "key": "ea",
+    "extension": "ea",
+    "category": "video",
+    "mimetype": "video/ea",
+    "capability": "r--"
+  },
+  "ea_cdata": {
+    "key": "ea_cdata",
+    "extension": "ea_cdata",
+    "category": "video",
+    "mimetype": "video/ea_cdata",
+    "capability": "r--"
+  },
+  "eac3": {
+    "key": "eac3",
+    "extension": "eac3",
+    "category": "video",
+    "mimetype": "video/eac3",
+    "capability": "rw-"
+  },
+  "ept": {
+    "key": "ept",
+    "extension": "ept",
+    "category": "image",
+    "mimetype": "image/ept",
+    "capability": "rw-"
+  },
+  "f32be": {
+    "key": "f32be",
+    "extension": "f32be",
+    "category": "video",
+    "mimetype": "video/f32be",
+    "capability": "rw-"
+  },
+  "f32le": {
+    "key": "f32le",
+    "extension": "f32le",
+    "category": "video",
+    "mimetype": "video/f32le",
+    "capability": "rw-"
+  },
+  "f64be": {
+    "key": "f64be",
+    "extension": "f64be",
+    "category": "video",
+    "mimetype": "video/f64be",
+    "capability": "rw-"
+  },
+  "f64le": {
+    "key": "f64le",
+    "extension": "f64le",
+    "category": "video",
+    "mimetype": "video/f64le",
+    "capability": "rw-"
+  },
+  "fax": {
+    "key": "fax",
+    "extension": "fax",
+    "category": "image",
+    "mimetype": "image/fax",
+    "capability": "rw+"
+  },
+  "fbdev": {
+    "key": "fbdev",
+    "extension": "fbdev",
+    "category": "video",
+    "mimetype": "video/fbdev",
+    "capability": "r--"
+  },
+  "ffm": {
+    "key": "ffm",
+    "extension": "ffm",
+    "category": "video",
+    "mimetype": "video/ffm",
+    "capability": "rw-"
+  },
+  "ffmetadata": {
+    "key": "ffmetadata",
+    "extension": "ffmetadata",
+    "category": "video",
+    "mimetype": "video/ffmetadata",
+    "capability": "rw-"
+  },
+  "film_cpk": {
+    "key": "film_cpk",
+    "extension": "film_cpk",
+    "category": "video",
+    "mimetype": "video/film_cpk",
+    "capability": "r--"
+  },
+  "filmstrip": {
+    "key": "filmstrip",
+    "extension": "filmstrip",
+    "category": "video",
+    "mimetype": "video/filmstrip",
+    "capability": "rw-"
+  },
+  "fits": {
+    "key": "fits",
+    "extension": "fits",
+    "category": "image",
+    "mimetype": "image/fits",
+    "capability": "rw-"
+  },
+  "flac": {
+    "key": "flac",
+    "extension": "flac",
+    "category": "video",
+    "mimetype": "video/flac",
+    "capability": "rw-"
+  },
+  "flic": {
+    "key": "flic",
+    "extension": "flic",
+    "category": "video",
+    "mimetype": "video/flic",
+    "capability": "r--"
+  },
+  "flv": {
+    "key": "flv",
+    "extension": "flv",
+    "category": "video",
+    "mimetype": "video/flv",
+    "capability": "rw-"
+  },
+  "framecrc": {
+    "key": "framecrc",
+    "extension": "framecrc",
+    "category": "video",
+    "mimetype": "video/framecrc",
+    "capability": "-w-"
+  },
+  "framemd5": {
+    "key": "framemd5",
+    "extension": "framemd5",
+    "category": "video",
+    "mimetype": "video/framemd5",
+    "capability": "-w-"
+  },
+  "fts": {
+    "key": "fts",
+    "extension": "fts",
+    "category": "image",
+    "mimetype": "image/fts",
+    "capability": "rw-"
+  },
+  "g722": {
+    "key": "g722",
+    "extension": "g722",
+    "category": "video",
+    "mimetype": "video/g722",
+    "capability": "rw-"
+  },
+  "g723_1": {
+    "key": "g723_1",
+    "extension": "g723_1",
+    "category": "video",
+    "mimetype": "video/g723_1",
+    "capability": "rw-"
+  },
+  "g729": {
+    "key": "g729",
+    "extension": "g729",
+    "category": "video",
+    "mimetype": "video/g729",
+    "capability": "r--"
+  },
+  "gif": {
+    "key": "gif",
+    "extension": "gif",
+    "category": "image",
+    "mimetype": "image/gif",
+    "capability": "rw+"
+  },
+  "gradient": {
+    "key": "gradient",
+    "extension": "gradient",
+    "category": "image",
+    "mimetype": "image/gradient",
+    "capability": "r--"
+  },
+  "gray": {
+    "key": "gray",
+    "extension": "gray",
+    "category": "image",
+    "mimetype": "image/gray",
+    "capability": "rw+"
+  },
+  "gsm": {
+    "key": "gsm",
+    "extension": "gsm",
+    "category": "video",
+    "mimetype": "video/gsm",
+    "capability": "r--"
+  },
+  "gxf": {
+    "key": "gxf",
+    "extension": "gxf",
+    "category": "video",
+    "mimetype": "video/gxf",
+    "capability": "rw-"
+  },
+  "gz": {
+    "key": "gz",
+    "extension": "gz",
+    "category": "other",
+    "mimetype": "application/x-gzip",
+    "capability": "---"
+  },
+  "h261": {
+    "key": "h261",
+    "extension": "h261",
+    "category": "video",
+    "mimetype": "video/h261",
+    "capability": "rw-"
+  },
+  "h263": {
+    "key": "h263",
+    "extension": "h263",
+    "category": "video",
+    "mimetype": "video/h263",
+    "capability": "rw-"
+  },
+  "h264": {
+    "key": "h264",
+    "extension": "h264",
+    "category": "video",
+    "mimetype": "video/h264",
+    "capability": "rw-"
+  },
+  "histogram": {
+    "key": "histogram",
+    "extension": "histogram",
+    "category": "image",
+    "mimetype": "image/histogram",
+    "capability": "-w-"
+  },
+  "hls": {
+    "key": "hls",
+    "extension": "hls",
+    "category": "video",
+    "mimetype": "video/hls",
+    "capability": "r--"
+  },
+  "hrz": {
+    "key": "hrz",
+    "extension": "hrz",
+    "category": "image",
+    "mimetype": "image/hrz",
+    "capability": "rw-"
+  },
+  "html": {
+    "key": "html",
+    "extension": "html",
+    "category": "web",
+    "mimetype": "text/html",
+    "capability": "-w-"
+  },
+  "ico": {
+    "key": "ico",
+    "extension": "ico",
+    "category": "image",
+    "mimetype": "video/ico",
+    "capability": "r--"
+  },
+  "icon": {
+    "key": "icon",
+    "extension": "icon",
+    "category": "image",
+    "mimetype": "image/icon",
+    "capability": "rw+"
+  },
+  "idcin": {
+    "key": "idcin",
+    "extension": "idcin",
+    "category": "video",
+    "mimetype": "video/idcin",
+    "capability": "r--"
+  },
+  "idf": {
+    "key": "idf",
+    "extension": "idf",
+    "category": "video",
+    "mimetype": "video/idf",
+    "capability": "r--"
+  },
+  "info": {
+    "key": "info",
+    "extension": "info",
+    "category": "image",
+    "mimetype": "image/info",
+    "capability": "-w+"
+  },
+  "inline": {
+    "key": "inline",
+    "extension": "inline",
+    "category": "image",
+    "mimetype": "image/inline",
+    "capability": "r--"
+  },
+  "ipl": {
+    "key": "ipl",
+    "extension": "ipl",
+    "category": "image",
+    "mimetype": "image/ipl",
+    "capability": "rw+"
+  },
+  "jp2": {
+    "key": "jp2",
+    "extension": "jp2",
+    "category": "image",
+    "mimetype": "image/jp2",
+    "capability": "rw-"
+  },
+  "jpc": {
+    "key": "jpc",
+    "extension": "jpc",
+    "category": "image",
+    "mimetype": "image/jpc",
+    "capability": "rw-"
+  },
+  "jpeg": {
+    "key": "jpeg",
+    "extension": "jpeg",
+    "category": "image",
+    "mimetype": "image/jpeg",
+    "capability": "rw-"
+  },
+  "jpg": {
+    "key": "jpg",
+    "extension": "jpg",
+    "category": "image",
+    "mimetype": "image/jpg",
+    "capability": "rw-"
+  },
+  "jpx": {
+    "key": "jpx",
+    "extension": "jpx",
+    "category": "image",
+    "mimetype": "image/jpx",
+    "capability": "rw-"
+  },
+  "label": {
+    "key": "label",
+    "extension": "label",
+    "category": "image",
+    "mimetype": "image/label",
+    "capability": "r--"
+  },
+  "map": {
+    "key": "map",
+    "extension": "map",
+    "category": "image",
+    "mimetype": "image/map",
+    "capability": "rw-"
+  },
+  "mat": {
+    "key": "mat",
+    "extension": "mat",
+    "category": "image",
+    "mimetype": "image/mat",
+    "capability": "rw+"
+  },
+  "matte": {
+    "key": "matte",
+    "extension": "matte",
+    "category": "image",
+    "mimetype": "image/matte",
+    "capability": "-w+"
+  },
+  "miff": {
+    "key": "miff",
+    "extension": "miff",
+    "category": "image",
+    "mimetype": "image/miff",
+    "capability": "rw+"
+  },
+  "mono": {
+    "key": "mono",
+    "extension": "mono",
+    "category": "image",
+    "mimetype": "image/mono",
+    "capability": "rw-"
+  },
+  "mpc": {
+    "key": "mpc",
+    "extension": "mpc",
+    "category": "image",
+    "mimetype": "image/mpc",
+    "capability": "rw+"
+  },
+  "msl": {
+    "key": "msl",
+    "extension": "msl",
+    "category": "image",
+    "mimetype": "image/msl",
+    "capability": "rw+"
+  },
+  "mvg": {
+    "key": "mvg",
+    "extension": "mvg",
+    "category": "image",
+    "mimetype": "image/mvg",
+    "capability": "rw-"
+  },
+  "null": {
+    "key": "null",
+    "extension": "null",
+    "category": "other",
+    "mimetype": "",
+    "capability": "---"
+  },
+  "otb": {
+    "key": "otb",
+    "extension": "otb",
+    "category": "image",
+    "mimetype": "image/otb",
+    "capability": "rw-"
+  },
+  "palm": {
+    "key": "palm",
+    "extension": "palm",
+    "category": "image",
+    "mimetype": "image/palm",
+    "capability": "rw+"
+  },
+  "pattern": {
+    "key": "pattern",
+    "extension": "pattern",
+    "category": "image",
+    "mimetype": "image/pattern",
+    "capability": "r--"
+  },
+  "pcd": {
+    "key": "pcd",
+    "extension": "pcd",
+    "category": "image",
+    "mimetype": "image/pcd",
+    "capability": "rw-"
+  },
+  "pcl": {
+    "key": "pcl",
+    "extension": "pcl",
+    "category": "image",
+    "mimetype": "image/pcl",
+    "capability": "rw+"
+  },
+  "pcx": {
+    "key": "pcx",
+    "extension": "pcx",
+    "category": "image",
+    "mimetype": "image/pcx",
+    "capability": "rw+"
+  },
+  "pdb": {
+    "key": "pdb",
+    "extension": "pdb",
+    "category": "image",
+    "mimetype": "image/pdb",
+    "capability": "rw+"
+  },
+  "pfm": {
+    "key": "pfm",
+    "extension": "pfm",
+    "category": "image",
+    "mimetype": "image/pfm",
+    "capability": "rw+"
+  },
+  "pgx": {
+    "key": "pgx",
+    "extension": "pgx",
+    "category": "image",
+    "mimetype": "image/pgx",
+    "capability": "r--"
+  },
+  "pict": {
+    "key": "pict",
+    "extension": "pict",
+    "category": "image",
+    "mimetype": "image/pict",
+    "capability": "rw-"
+  },
+  "pix": {
+    "key": "pix",
+    "extension": "pix",
+    "category": "image",
+    "mimetype": "image/pix",
+    "capability": "r--"
+  },
+  "plasma": {
+    "key": "plasma",
+    "extension": "plasma",
+    "category": "image",
+    "mimetype": "image/plasma",
+    "capability": "r--"
+  },
+  "png": {
+    "key": "png",
+    "extension": "png",
+    "category": "image",
+    "mimetype": "image/png",
+    "capability": "rw-"
+  },
+  "pnm": {
+    "key": "pnm",
+    "extension": "pnm",
+    "category": "image",
+    "mimetype": "image/pnm",
+    "capability": "rw+"
+  },
+  "preview": {
+    "key": "preview",
+    "extension": "preview",
+    "category": "image",
+    "mimetype": "image/preview",
+    "capability": "-w-"
+  },
+  "ps": {
+    "key": "ps",
+    "extension": "ps",
+    "category": "image",
+    "mimetype": "image/ps",
+    "capability": "rw-"
+  },
+  "ps2": {
+    "key": "ps2",
+    "extension": "ps2",
+    "category": "image",
+    "mimetype": "image/ps2",
+    "capability": "-w-"
+  },
+  "ps3": {
+    "key": "ps3",
+    "extension": "ps3",
+    "category": "image",
+    "mimetype": "image/ps3",
+    "capability": "-w+"
+  },
+  "psd": {
+    "key": "psd",
+    "extension": "psd",
+    "category": "image",
+    "mimetype": "image/psd",
+    "capability": "---"
+  },
+  "pwp": {
+    "key": "pwp",
+    "extension": "pwp",
+    "category": "image",
+    "mimetype": "image/pwp",
+    "capability": "r--"
+  },
+  "raw": {
+    "key": "raw",
+    "extension": "raw",
+    "category": "image",
+    "mimetype": "image/raw",
+    "capability": "rw+"
+  },
+  "rgb": {
+    "key": "rgb",
+    "extension": "rgb",
+    "category": "image",
+    "mimetype": "image/rgb",
+    "capability": "rw+"
+  },
+  "rla": {
+    "key": "rla",
+    "extension": "rla",
+    "category": "image",
+    "mimetype": "image/rla",
+    "capability": "r--"
+  },
+  "rle": {
+    "key": "rle",
+    "extension": "rle",
+    "category": "image",
+    "mimetype": "image/rle",
+    "capability": "r--"
+  },
+  "scr": {
+    "key": "scr",
+    "extension": "scr",
+    "category": "image",
+    "mimetype": "image/scr",
+    "capability": "r--"
+  },
+  "sct": {
+    "key": "sct",
+    "extension": "sct",
+    "category": "image",
+    "mimetype": "image/sct",
+    "capability": "r--"
+  },
+  "sfw": {
+    "key": "sfw",
+    "extension": "sfw",
+    "category": "image",
+    "mimetype": "image/sfw",
+    "capability": "r--"
+  },
+  "sgi": {
+    "key": "sgi",
+    "extension": "sgi",
+    "category": "image",
+    "mimetype": "image/sgi",
+    "capability": "rw+"
+  },
+  "stegano": {
+    "key": "stegano",
+    "extension": "stegano",
+    "category": "image",
+    "mimetype": "image/stegano",
+    "capability": "r--"
+  },
+  "sun": {
+    "key": "sun",
+    "extension": "sun",
+    "category": "image",
+    "mimetype": "image/sun",
+    "capability": "rw+"
+  },
+  "svg": {
+    "key": "svg",
+    "extension": "svg",
+    "category": "vector",
+    "mimetype": "image/svg",
+    "capability": "rw+"
+  },
+  "tga": {
+    "key": "tga",
+    "extension": "tga",
+    "category": "image",
+    "mimetype": "image/tga",
+    "capability": "rw+"
+  },
+  "thumbnail": {
+    "key": "thumbnail",
+    "extension": "thumbnail",
+    "category": "image",
+    "mimetype": "image/thumbnail",
+    "capability": "-w+"
+  },
+  "tif": {
+    "key": "tif",
+    "extension": "tif",
+    "category": "image",
+    "mimetype": "image/tif",
+    "capability": "rw+"
+  },
+  "tiff": {
+    "key": "tiff",
+    "extension": "tiff",
+    "category": "image",
+    "mimetype": "image/tiff",
+    "capability": "rw+"
+  },
+  "tile": {
+    "key": "tile",
+    "extension": "tile",
+    "category": "image",
+    "mimetype": "image/tile",
+    "capability": "r--"
+  },
+  "tim": {
+    "key": "tim",
+    "extension": "tim",
+    "category": "image",
+    "mimetype": "image/tim",
+    "capability": "r--"
+  },
+  "ttf": {
+    "key": "ttf",
+    "extension": "ttf",
+    "category": "image",
+    "mimetype": "image/ttf",
+    "capability": "r--"
+  },
+  "txt": {
+    "key": "txt",
+    "extension": "txt",
+    "category": "document",
+    "mimetype": "document/text",
+    "capability": "g--"
+  },
+  "uil": {
+    "key": "uil",
+    "extension": "uil",
+    "category": "image",
+    "mimetype": "image/uil",
+    "capability": "-w-"
+  },
+  "uyvy": {
+    "key": "uyvy",
+    "extension": "uyvy",
+    "category": "image",
+    "mimetype": "image/uyvy",
+    "capability": "rw-"
+  },
+  "vicar": {
+    "key": "vicar",
+    "extension": "vicar",
+    "category": "image",
+    "mimetype": "image/vicar",
+    "capability": "rw-"
+  },
+  "vid": {
+    "key": "vid",
+    "extension": "vid",
+    "category": "image",
+    "mimetype": "image/vid",
+    "capability": "rw+"
+  },
+  "viff": {
+    "key": "viff",
+    "extension": "viff",
+    "category": "image",
+    "mimetype": "image/viff",
+    "capability": "rw+"
+  },
+  "wbmp": {
+    "key": "wbmp",
+    "extension": "wbmp",
+    "category": "image",
+    "mimetype": "image/wbmp",
+    "capability": "rw-"
+  },
+  "wmf": {
+    "key": "wmf",
+    "extension": "wmf",
+    "category": "image",
+    "mimetype": "image/wmf",
+    "capability": "r--"
+  },
+  "wmz": {
+    "key": "wmz",
+    "extension": "wmz",
+    "category": "image",
+    "mimetype": "image/wmz",
+    "capability": "r--"
+  },
+  "wpg": {
+    "key": "wpg",
+    "extension": "wpg",
+    "category": "image",
+    "mimetype": "image/wpg",
+    "capability": "r--"
+  },
+  "x": {
+    "key": "x",
+    "extension": "x",
+    "category": "image",
+    "mimetype": "image/x",
+    "capability": "rw+"
+  },
+  "xbm": {
+    "key": "xbm",
+    "extension": "xbm",
+    "category": "image",
+    "mimetype": "image/xbm",
+    "capability": "rw-"
+  },
+  "xc": {
+    "key": "xc",
+    "extension": "xc",
+    "category": "image",
+    "mimetype": "image/xc",
+    "capability": "r--"
+  },
+  "xcf": {
+    "key": "xcf",
+    "extension": "xcf",
+    "category": "image",
+    "mimetype": "image/xcf",
+    "capability": "r--"
+  },
+  "xpm": {
+    "key": "xpm",
+    "extension": "xpm",
+    "category": "image",
+    "mimetype": "image/xpm",
+    "capability": "rw-"
+  },
+  "xps": {
+    "key": "xps",
+    "extension": "xps",
+    "category": "image",
+    "mimetype": "image/xps",
+    "capability": "r--"
+  },
+  "xwd": {
+    "key": "xwd",
+    "extension": "xwd",
+    "category": "image",
+    "mimetype": "image/xwd",
+    "capability": "rw-"
+  },
+  "ycbcr": {
+    "key": "ycbcr",
+    "extension": "ycbcr",
+    "category": "image",
+    "mimetype": "image/ycbcr",
+    "capability": "rw+"
+  },
+  "yuv": {
+    "key": "yuv",
+    "extension": "yuv",
+    "category": "image",
+    "mimetype": "image/yuv",
+    "capability": "rw-"
+  },
+  "image2": {
+    "key": "image2",
+    "extension": "image2",
+    "category": "video",
+    "mimetype": "video/image2",
+    "capability": "rw-"
+  },
+  "image2pipe": {
+    "key": "image2pipe",
+    "extension": "image2pipe",
+    "category": "video",
+    "mimetype": "video/image2pipe",
+    "capability": "rw-"
+  },
+  "ingenient": {
+    "key": "ingenient",
+    "extension": "ingenient",
+    "category": "video",
+    "mimetype": "video/ingenient",
+    "capability": "r--"
+  },
+  "ipmovie": {
+    "key": "ipmovie",
+    "extension": "ipmovie",
+    "category": "video",
+    "mimetype": "video/ipmovie",
+    "capability": "r--"
+  },
+  "ipod": {
+    "key": "ipod",
+    "extension": "ipod",
+    "category": "video",
+    "mimetype": "video/ipod",
+    "capability": "-w-"
+  },
+  "ismv": {
+    "key": "ismv",
+    "extension": "ismv",
+    "category": "video",
+    "mimetype": "video/ismv",
+    "capability": "-w-"
+  },
+  "iv8": {
+    "key": "iv8",
+    "extension": "iv8",
+    "category": "video",
+    "mimetype": "video/iv8",
+    "capability": "r--"
+  },
+  "ivf": {
+    "key": "ivf",
+    "extension": "ivf",
+    "category": "video",
+    "mimetype": "video/ivf",
+    "capability": "rw-"
+  },
+  "jv": {
+    "key": "jv",
+    "extension": "jv",
+    "category": "video",
+    "mimetype": "video/jv",
+    "capability": "r--"
+  },
+  "latm": {
+    "key": "latm",
+    "extension": "latm",
+    "category": "video",
+    "mimetype": "video/latm",
+    "capability": "rw-"
+  },
+  "lavfi": {
+    "key": "lavfi",
+    "extension": "lavfi",
+    "category": "video",
+    "mimetype": "video/lavfi",
+    "capability": "r--"
+  },
+  "lmlm4": {
+    "key": "lmlm4",
+    "extension": "lmlm4",
+    "category": "video",
+    "mimetype": "video/lmlm4",
+    "capability": "r--"
+  },
+  "loas": {
+    "key": "loas",
+    "extension": "loas",
+    "category": "video",
+    "mimetype": "video/loas",
+    "capability": "r--"
+  },
+  "lxf": {
+    "key": "lxf",
+    "extension": "lxf",
+    "category": "video",
+    "mimetype": "video/lxf",
+    "capability": "r--"
+  },
+  "m4a": {
+    "key": "m4a",
+    "extension": "m4a",
+    "category": "audio",
+    "mimetype": "audio/mp4",
+    "capability": "---"
+  },
+  "m4v": {
+    "key": "m4v",
+    "extension": "m4v",
+    "category": "video",
+    "mimetype": "video/m4v",
+    "capability": "rw-"
+  },
+  "matroska": {
+    "key": "matroska",
+    "extension": "matroska",
+    "category": "video",
+    "mimetype": "video/matroska",
+    "capability": "rw-"
+  },
+  "md5": {
+    "key": "md5",
+    "extension": "md5",
+    "category": "video",
+    "mimetype": "video/md5",
+    "capability": "-w-"
+  },
+  "mgsts": {
+    "key": "mgsts",
+    "extension": "mgsts",
+    "category": "video",
+    "mimetype": "video/mgsts",
+    "capability": "r--"
+  },
+  "microdvd": {
+    "key": "microdvd",
+    "extension": "microdvd",
+    "category": "video",
+    "mimetype": "video/microdvd",
+    "capability": "rw-"
+  },
+  "mj2": {
+    "key": "mj2",
+    "extension": "mj2",
+    "category": "video",
+    "mimetype": "video/mj2",
+    "capability": "r--"
+  },
+  "mjpeg": {
+    "key": "mjpeg",
+    "extension": "mjpeg",
+    "category": "video",
+    "mimetype": "video/mjpeg",
+    "capability": "rw-"
+  },
+  "mkvtimestamp_v2": {
+    "key": "mkvtimestamp_v2",
+    "extension": "mkvtimestamp_v2",
+    "category": "video",
+    "mimetype": "video/mkvtimestamp_v2",
+    "capability": "-w-"
+  },
+  "mlp": {
+    "key": "mlp",
+    "extension": "mlp",
+    "category": "video",
+    "mimetype": "video/mlp",
+    "capability": "rw-"
+  },
+  "mm": {
+    "key": "mm",
+    "extension": "mm",
+    "category": "video",
+    "mimetype": "video/mm",
+    "capability": "r--"
+  },
+  "mmf": {
+    "key": "mmf",
+    "extension": "mmf",
+    "category": "video",
+    "mimetype": "video/mmf",
+    "capability": "rw-"
+  },
+  "mov": {
+    "key": "mov",
+    "extension": "mov",
+    "category": "video",
+    "mimetype": "video/mov",
+    "capability": "rw-"
+  },
+  "mp2": {
+    "key": "mp2",
+    "extension": "mp2",
+    "category": "video",
+    "mimetype": "video/mp2",
+    "capability": "-w-"
+  },
+  "mp4": {
+    "key": "mp4",
+    "extension": "mp4",
+    "category": "video",
+    "mimetype": "video/mp4",
+    "capability": "rw-"
+  },
+  "mpc8": {
+    "key": "mpc8",
+    "extension": "mpc8",
+    "category": "video",
+    "mimetype": "video/mpc8",
+    "capability": "r--"
+  },
+  "mpeg": {
+    "key": "mpeg",
+    "extension": "mpeg",
+    "category": "video",
+    "mimetype": "video/mpeg",
+    "capability": "rw-"
+  },
+  "mpeg1video": {
+    "key": "mpeg1video",
+    "extension": "mpeg1video",
+    "category": "video",
+    "mimetype": "video/mpeg1video",
+    "capability": "-w-"
+  },
+  "mpeg2video": {
+    "key": "mpeg2video",
+    "extension": "mpeg2video",
+    "category": "video",
+    "mimetype": "video/mpeg2video",
+    "capability": "-w-"
+  },
+  "mpegts": {
+    "key": "mpegts",
+    "extension": "mpegts",
+    "category": "video",
+    "mimetype": "video/mpegts",
+    "capability": "rw-"
+  },
+  "mpegtsraw": {
+    "key": "mpegtsraw",
+    "extension": "mpegtsraw",
+    "category": "video",
+    "mimetype": "video/mpegtsraw",
+    "capability": "r--"
+  },
+  "mpegvideo": {
+    "key": "mpegvideo",
+    "extension": "mpegvideo",
+    "category": "video",
+    "mimetype": "video/mpegvideo",
+    "capability": "r--"
+  },
+  "mpjpeg": {
+    "key": "mpjpeg",
+    "extension": "mpjpeg",
+    "category": "video",
+    "mimetype": "video/mpjpeg",
+    "capability": "-w-"
+  },
+  "msnwctcp": {
+    "key": "msnwctcp",
+    "extension": "msnwctcp",
+    "category": "video",
+    "mimetype": "video/msnwctcp",
+    "capability": "r--"
+  },
+  "mulaw": {
+    "key": "mulaw",
+    "extension": "mulaw",
+    "category": "video",
+    "mimetype": "video/mulaw",
+    "capability": "rw-"
+  },
+  "mvi": {
+    "key": "mvi",
+    "extension": "mvi",
+    "category": "video",
+    "mimetype": "video/mvi",
+    "capability": "r--"
+  },
+  "mxf": {
+    "key": "mxf",
+    "extension": "mxf",
+    "category": "video",
+    "mimetype": "video/mxf",
+    "capability": "rw-"
+  },
+  "mxf_d10": {
+    "key": "mxf_d10",
+    "extension": "mxf_d10",
+    "category": "video",
+    "mimetype": "video/mxf_d10",
+    "capability": "-w-"
+  },
+  "mxg": {
+    "key": "mxg",
+    "extension": "mxg",
+    "category": "video",
+    "mimetype": "video/mxg",
+    "capability": "r--"
+  },
+  "nc": {
+    "key": "nc",
+    "extension": "nc",
+    "category": "video",
+    "mimetype": "video/nc",
+    "capability": "r--"
+  },
+  "nsv": {
+    "key": "nsv",
+    "extension": "nsv",
+    "category": "video",
+    "mimetype": "video/nsv",
+    "capability": "r--"
+  },
+  "nut": {
+    "key": "nut",
+    "extension": "nut",
+    "category": "video",
+    "mimetype": "video/nut",
+    "capability": "rw-"
+  },
+  "nuv": {
+    "key": "nuv",
+    "extension": "nuv",
+    "category": "video",
+    "mimetype": "video/nuv",
+    "capability": "r--"
+  },
+  "ogg": {
+    "key": "ogg",
+    "extension": "ogg",
+    "category": "video",
+    "mimetype": "video/ogg",
+    "capability": "rw-"
+  },
+  "ogv": {
+    "key": "ogv",
+    "extension": "ogv",
+    "category": "video",
+    "mimetype": "video/ogv",
+    "capability": "--"
+  },
+  "oma": {
+    "key": "oma",
+    "extension": "oma",
+    "category": "video",
+    "mimetype": "video/oma",
+    "capability": "rw-"
+  },
+  "oss": {
+    "key": "oss",
+    "extension": "oss",
+    "category": "video",
+    "mimetype": "video/oss",
+    "capability": "rw-"
+  },
+  "php": {
+    "key": "php",
+    "extension": "php",
+    "category": "other",
+    "mimetype": "text/php",
+    "capability": "---"
+  },
+  "pmp": {
+    "key": "pmp",
+    "extension": "pmp",
+    "category": "video",
+    "mimetype": "video/pmp",
+    "capability": "r--"
+  },
+  "psp": {
+    "key": "psp",
+    "extension": "psp",
+    "category": "video",
+    "mimetype": "video/psp",
+    "capability": "-w-"
+  },
+  "psxstr": {
+    "key": "psxstr",
+    "extension": "psxstr",
+    "category": "video",
+    "mimetype": "video/psxstr",
+    "capability": "r--"
+  },
+  "pva": {
+    "key": "pva",
+    "extension": "pva",
+    "category": "video",
+    "mimetype": "video/pva",
+    "capability": "r--"
+  },
+  "qcp": {
+    "key": "qcp",
+    "extension": "qcp",
+    "category": "video",
+    "mimetype": "video/qcp",
+    "capability": "r--"
+  },
+  "r3d": {
+    "key": "r3d",
+    "extension": "r3d",
+    "category": "video",
+    "mimetype": "video/r3d",
+    "capability": "r--"
+  },
+  "rawvideo": {
+    "key": "rawvideo",
+    "extension": "rawvideo",
+    "category": "video",
+    "mimetype": "video/rawvideo",
+    "capability": "rw-"
+  },
+  "rcv": {
+    "key": "rcv",
+    "extension": "rcv",
+    "category": "video",
+    "mimetype": "video/rcv",
+    "capability": "-w-"
+  },
+  "rl2": {
+    "key": "rl2",
+    "extension": "rl2",
+    "category": "video",
+    "mimetype": "video/rl2",
+    "capability": "r--"
+  },
+  "rm": {
+    "key": "rm",
+    "extension": "rm",
+    "category": "video",
+    "mimetype": "video/rm",
+    "capability": "rw-"
+  },
+  "rpl": {
+    "key": "rpl",
+    "extension": "rpl",
+    "category": "video",
+    "mimetype": "video/rpl",
+    "capability": "r--"
+  },
+  "rso": {
+    "key": "rso",
+    "extension": "rso",
+    "category": "video",
+    "mimetype": "video/rso",
+    "capability": "rw-"
+  },
+  "rtp": {
+    "key": "rtp",
+    "extension": "rtp",
+    "category": "video",
+    "mimetype": "video/rtp",
+    "capability": "rw-"
+  },
+  "rtsp": {
+    "key": "rtsp",
+    "extension": "rtsp",
+    "category": "video",
+    "mimetype": "video/rtsp",
+    "capability": "rw-"
+  },
+  "s16be": {
+    "key": "s16be",
+    "extension": "s16be",
+    "category": "video",
+    "mimetype": "video/s16be",
+    "capability": "rw-"
+  },
+  "s16le": {
+    "key": "s16le",
+    "extension": "s16le",
+    "category": "video",
+    "mimetype": "video/s16le",
+    "capability": "rw-"
+  },
+  "s24be": {
+    "key": "s24be",
+    "extension": "s24be",
+    "category": "video",
+    "mimetype": "video/s24be",
+    "capability": "rw-"
+  },
+  "s24le": {
+    "key": "s24le",
+    "extension": "s24le",
+    "category": "video",
+    "mimetype": "video/s24le",
+    "capability": "rw-"
+  },
+  "s32be": {
+    "key": "s32be",
+    "extension": "s32be",
+    "category": "video",
+    "mimetype": "video/s32be",
+    "capability": "rw-"
+  },
+  "s32le": {
+    "key": "s32le",
+    "extension": "s32le",
+    "category": "video",
+    "mimetype": "video/s32le",
+    "capability": "rw-"
+  },
+  "s8": {
+    "key": "s8",
+    "extension": "s8",
+    "category": "video",
+    "mimetype": "video/s8",
+    "capability": "rw-"
+  },
+  "sap": {
+    "key": "sap",
+    "extension": "sap",
+    "category": "video",
+    "mimetype": "video/sap",
+    "capability": "rw-"
+  },
+  "sass": {
+    "key": "sass",
+    "extension": "sass",
+    "category": "stylesheet",
+    "mimetype": "text/css",
+    "capability": "---"
+  },
+  "sbg": {
+    "key": "sbg",
+    "extension": "sbg",
+    "category": "video",
+    "mimetype": "video/sbg",
+    "capability": "r--"
+  },
+  "scss": {
+    "key": "scss",
+    "extension": "scss",
+    "category": "stylesheet",
+    "mimetype": "text/css",
+    "capability": "---"
+  },
+  "sdp": {
+    "key": "sdp",
+    "extension": "sdp",
+    "category": "video",
+    "mimetype": "video/sdp",
+    "capability": "r--"
+  },
+  "segment": {
+    "key": "segment",
+    "extension": "segment",
+    "category": "video",
+    "mimetype": "video/segment",
+    "capability": "-w-"
+  },
+  "shn": {
+    "key": "shn",
+    "extension": "shn",
+    "category": "video",
+    "mimetype": "video/shn",
+    "capability": "r--"
+  },
+  "siff": {
+    "key": "siff",
+    "extension": "siff",
+    "category": "video",
+    "mimetype": "video/siff",
+    "capability": "r--"
+  },
+  "smjpeg": {
+    "key": "smjpeg",
+    "extension": "smjpeg",
+    "category": "video",
+    "mimetype": "video/smjpeg",
+    "capability": "rw-"
+  },
+  "smk": {
+    "key": "smk",
+    "extension": "smk",
+    "category": "video",
+    "mimetype": "video/smk",
+    "capability": "r--"
+  },
+  "sol": {
+    "key": "sol",
+    "extension": "sol",
+    "category": "video",
+    "mimetype": "video/sol",
+    "capability": "r--"
+  },
+  "sox": {
+    "key": "sox",
+    "extension": "sox",
+    "category": "video",
+    "mimetype": "video/sox",
+    "capability": "rw-"
+  },
+  "spdif": {
+    "key": "spdif",
+    "extension": "spdif",
+    "category": "video",
+    "mimetype": "video/spdif",
+    "capability": "rw-"
+  },
+  "srt": {
+    "key": "srt",
+    "extension": "srt",
+    "category": "video",
+    "mimetype": "video/srt",
+    "capability": "rw-"
+  },
+  "svcd": {
+    "key": "svcd",
+    "extension": "svcd",
+    "category": "video",
+    "mimetype": "video/svcd",
+    "capability": "-w-"
+  },
+  "swf": {
+    "key": "swf",
+    "extension": "swf",
+    "category": "video",
+    "mimetype": "video/swf",
+    "capability": "rw-"
+  },
+  "tar.bz2": {
+    "key": "tar.bz2",
+    "extension": "tar.bz2",
+    "category": "other",
+    "mimetype": "application/bz2",
+    "capability": "---"
+  },
+  "tgz": {
+    "key": "tgz",
+    "extension": "tgz",
+    "category": "other",
+    "mimetype": "application/x-gzip",
+    "capability": "---"
+  },
+  "thp": {
+    "key": "thp",
+    "extension": "thp",
+    "category": "video",
+    "mimetype": "video/thp",
+    "capability": "r--"
+  },
+  "tiertexseq": {
+    "key": "tiertexseq",
+    "extension": "tiertexseq",
+    "category": "video",
+    "mimetype": "video/tiertexseq",
+    "capability": "r--"
+  },
+  "tmv": {
+    "key": "tmv",
+    "extension": "tmv",
+    "category": "video",
+    "mimetype": "video/tmv",
+    "capability": "r--"
+  },
+  "truehd": {
+    "key": "truehd",
+    "extension": "truehd",
+    "category": "video",
+    "mimetype": "video/truehd",
+    "capability": "rw-"
+  },
+  "tta": {
+    "key": "tta",
+    "extension": "tta",
+    "category": "video",
+    "mimetype": "video/tta",
+    "capability": "r--"
+  },
+  "tty": {
+    "key": "tty",
+    "extension": "tty",
+    "category": "video",
+    "mimetype": "video/tty",
+    "capability": "r--"
+  },
+  "txd": {
+    "key": "txd",
+    "extension": "txd",
+    "category": "video",
+    "mimetype": "video/txd",
+    "capability": "r--"
+  },
+  "u16be": {
+    "key": "u16be",
+    "extension": "u16be",
+    "category": "video",
+    "mimetype": "video/u16be",
+    "capability": "rw-"
+  },
+  "u16le": {
+    "key": "u16le",
+    "extension": "u16le",
+    "category": "video",
+    "mimetype": "video/u16le",
+    "capability": "rw-"
+  },
+  "u24be": {
+    "key": "u24be",
+    "extension": "u24be",
+    "category": "video",
+    "mimetype": "video/u24be",
+    "capability": "rw-"
+  },
+  "u24le": {
+    "key": "u24le",
+    "extension": "u24le",
+    "category": "video",
+    "mimetype": "video/u24le",
+    "capability": "rw-"
+  },
+  "u32be": {
+    "key": "u32be",
+    "extension": "u32be",
+    "category": "video",
+    "mimetype": "video/u32be",
+    "capability": "rw-"
+  },
+  "u32le": {
+    "key": "u32le",
+    "extension": "u32le",
+    "category": "video",
+    "mimetype": "video/u32le",
+    "capability": "rw-"
+  },
+  "u8": {
+    "key": "u8",
+    "extension": "u8",
+    "category": "video",
+    "mimetype": "video/u8",
+    "capability": "rw-"
+  },
+  "v4l2": {
+    "key": "v4l2",
+    "extension": "v4l2",
+    "category": "video",
+    "mimetype": "video/v4l2",
+    "capability": "r--"
+  },
+  "vc1": {
+    "key": "vc1",
+    "extension": "vc1",
+    "category": "video",
+    "mimetype": "video/vc1",
+    "capability": "r--"
+  },
+  "vc1test": {
+    "key": "vc1test",
+    "extension": "vc1test",
+    "category": "video",
+    "mimetype": "video/vc1test",
+    "capability": "r--"
+  },
+  "vcd": {
+    "key": "vcd",
+    "extension": "vcd",
+    "category": "video",
+    "mimetype": "video/vcd",
+    "capability": "-w-"
+  },
+  "video4linux2": {
+    "key": "video4linux2",
+    "extension": "video4linux2",
+    "category": "video",
+    "mimetype": "video/video4linux2",
+    "capability": "r--"
+  },
+  "vmd": {
+    "key": "vmd",
+    "extension": "vmd",
+    "category": "video",
+    "mimetype": "video/vmd",
+    "capability": "r--"
+  },
+  "vob": {
+    "key": "vob",
+    "extension": "vob",
+    "category": "video",
+    "mimetype": "video/vob",
+    "capability": "-w-"
+  },
+  "voc": {
+    "key": "voc",
+    "extension": "voc",
+    "category": "video",
+    "mimetype": "video/voc",
+    "capability": "rw-"
+  },
+  "vqf": {
+    "key": "vqf",
+    "extension": "vqf",
+    "category": "video",
+    "mimetype": "video/vqf",
+    "capability": "r--"
+  },
+  "w64": {
+    "key": "w64",
+    "extension": "w64",
+    "category": "video",
+    "mimetype": "video/w64",
+    "capability": "r--"
+  },
+  "wc3movie": {
+    "key": "wc3movie",
+    "extension": "wc3movie",
+    "category": "video",
+    "mimetype": "video/wc3movie",
+    "capability": "r--"
+  },
+  "webm": {
+    "key": "webm",
+    "extension": "webm",
+    "category": "video",
+    "mimetype": "video/webm",
+    "capability": "rw-"
+  },
+  "wmv": {
+    "key": "wmv",
+    "extension": "wmv",
+    "category": "video",
+    "mimetype": "video/wmv",
+    "capability": "rw-"
+  },
+  "wsaud": {
+    "key": "wsaud",
+    "extension": "wsaud",
+    "category": "video",
+    "mimetype": "video/wsaud",
+    "capability": "r--"
+  },
+  "wsvqa": {
+    "key": "wsvqa",
+    "extension": "wsvqa",
+    "category": "video",
+    "mimetype": "video/wsvqa",
+    "capability": "r--"
+  },
+  "wtv": {
+    "key": "wtv",
+    "extension": "wtv",
+    "category": "video",
+    "mimetype": "video/wtv",
+    "capability": "rw-"
+  },
+  "wv": {
+    "key": "wv",
+    "extension": "wv",
+    "category": "video",
+    "mimetype": "video/wv",
+    "capability": "r--"
+  },
+  "xa": {
+    "key": "xa",
+    "extension": "xa",
+    "category": "video",
+    "mimetype": "video/xa",
+    "capability": "r--"
+  },
+  "xbin": {
+    "key": "xbin",
+    "extension": "xbin",
+    "category": "video",
+    "mimetype": "video/xbin",
+    "capability": "r--"
+  },
+  "xmv": {
+    "key": "xmv",
+    "extension": "xmv",
+    "category": "video",
+    "mimetype": "video/xmv",
+    "capability": "r--"
+  },
+  "xwma": {
+    "key": "xwma",
+    "extension": "xwma",
+    "category": "video",
+    "mimetype": "video/xwma",
+    "capability": "r--"
+  },
+  "yop": {
+    "key": "yop",
+    "extension": "yop",
+    "category": "video",
+    "mimetype": "video/yop",
+    "capability": "r--"
+  },
+  "yuv4mpegpipe": {
+    "key": "yuv4mpegpipe",
+    "extension": "yuv4mpegpipe",
+    "category": "video",
+    "mimetype": "video/yuv4mpegpipe",
+    "capability": "rw-"
+  },
+  "webp": {
+    "key": "webp",
+    "extension": "webp",
+    "category": "image",
+    "mimetype": "image/webp",
+    "capability": "rw-"
+  },
+  "docx": {
+    "key": "docx",
+    "extension": "docx",
+    "category": "document",
+    "mimetype": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "capability": "g--"
+  },
+  "xlsx": {
+    "key": "xlsx",
+    "extension": "xlsx",
+    "category": "document",
+    "mimetype": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "capability": "g--"
+  },
+  "htm": {
+    "key": "htm",
+    "extension": "htm",
+    "category": "web",
+    "mimetype": "text/html",
+    "capability": "-w-"
+  },
+  "html5": {
+    "key": "html5",
+    "extension": "html5",
+    "category": "web",
+    "mimetype": "text/html",
+    "capability": "-w-"
+  },
+  "vcf": {
+    "key": "vcf",
+    "extension": "vcf",
+    "category": "other",
+    "mimetype": "text/plain",
+    "capability": "---"
+  },
+  "": {
+    "key": "",
+    "extension": "",
+    "category": "other",
+    "mimetype": "application/octet-stream",
+    "capability": "---"
+  },
+  "js": {
+    "key": "js",
+    "extension": "js",
+    "category": "script",
+    "mimetype": "text/javascript",
+    "capability": "---"
+  },
+  "jfif": {
+    "key": "jfif",
+    "extension": "jfif",
+    "category": "image",
+    "mimetype": "image/jpeg",
+    "capability": "rw-"
+  },
+  "ini": {
+    "key": "ini",
+    "extension": "ini",
+    "category": "settings",
+    "mimetype": "plain/text",
+    "capability": "---"
+  }
+}

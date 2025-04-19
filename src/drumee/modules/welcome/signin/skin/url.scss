@@ -10,6 +10,7 @@
   width: 100%;
   align-items: center;
   justify-content: center;
+
   &__header {
     width: 100%;
     align-items: center;
@@ -25,6 +26,18 @@
     align-items: center;
     justify-content: center;
     height: 60px;
+
+    &[data-status="error"] {
+      border-radius: $default-border-radius;
+      border: 2px solid $core-default-border-error;
+    }
+
+    &.url-bar {
+      height: 40px;
+      max-width: 800px;
+      width: calc(100% - 300px);
+    }
+
     background-color: $core-default-background;
     max-width: 280px;
     width: 100%;
@@ -41,6 +54,12 @@
     justify-content: center;
     height: 100%;
     max-width: 280px;
+
+    &.url-bar {
+      width: 100%;
+      max-width: 100%;
+    }
+
     & input {
       @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
       border-bottom: none;
@@ -73,6 +92,12 @@
     height: 60px;
     max-width: 280px;
     width: 100%;
+
+    &.url-bar {
+      width: 50px;
+      margin-left: 10px;
+      height: 40px;
+    }
   }
 
   &__alt {

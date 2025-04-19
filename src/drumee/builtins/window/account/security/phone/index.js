@@ -67,7 +67,7 @@ class __security_phone extends __pad {
     }
 
     const button = this.findPart('ref-button');
-    if (v.isPhoneNumber()) {
+    if (v.isPhoneNumer()) {
       button.el.dataset.state = 1;
       this.__refInput.hideError();
       return v;

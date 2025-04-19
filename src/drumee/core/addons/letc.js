@@ -780,7 +780,7 @@ View.prototype.refresh = function () {
   try {
     return this.$el.css(opt);
   } catch (e) {
-    return this.warn("Failed to refres with", opt);
+    return this.warn("Failed to refres with", e, opt);
   }
 };
 

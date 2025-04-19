@@ -1,9 +1,3 @@
-#!/usr/bin/env node
-// ================================  *
-//   Copyright Xialia.com  2013-2020 *
-//   FILE  : 
-//   TYPE  : Dev Builder
-// ================================  *
 
 const Fs = require('fs');
 const _ = require('lodash');

@@ -1,9 +1,3 @@
-// ============================================================== *
-//   Copyright Xialia.com  2011-2022
-//   FILE : src/drumee/router/cop
-//   TYPE :
-// ============================================================== *
-
 require("./skin");
 const { getModule } = require('../modules');
 const { filesize } = require("core/utils")
@@ -115,11 +109,6 @@ class __router_butler extends LetcBox {
       });
       this.feed(require("./skeleton/reconnect")(this));
       this.isRecconnecting = true;
-      // let p = await this.ensurePart("reconnect-popup");
-      // p.once("signed:in", () => {
-      //   this.isRecconnecting = false;
-      //   this.getPart("raw-content").goodbye();
-      // });
     });
   }
 

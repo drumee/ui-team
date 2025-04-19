@@ -3,9 +3,9 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { DuplicatesPlugin } = require("inspectpack/plugin");
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const { StatsWriterPlugin } = require("webpack-stats-plugin");
+const ElectronSync = require("./syncElectron");
 
 const Sync = require('./sync');
-
 
 const { exec } = require("shelljs");
 const { stdout } = exec("git log -1 --pretty=format:'%h:%H' --abbrev-commit", { silent: true });
@@ -54,7 +54,8 @@ module.exports = function (webpack, opt) {
     }),
     cssExtract,
     new webpack.DefinePlugin(pluginsOptions),
-    new Sync(opt)
+    new Sync(opt),
+    new ElectronSync(opt)
   ];
   return plugins;
 };

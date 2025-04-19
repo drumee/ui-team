@@ -4,7 +4,7 @@ const __topbar_control = function(ui) {
   if (ui.getViewMode() === _a.row) {
     state = 1;
   }
-  
+
   const filetype = ui.mget(_a.filetype);
 
   if(filetype === _a.image) {

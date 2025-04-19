@@ -96,19 +96,26 @@ class ___editor_note extends __player {
         let tags = _K.allowed_tag;
         tags.push(_K.tag.img);
         this.raise();
-        child.feed(Skeletons.RichText({
-          sys_pn: 'text-content',
-          name: _a.content,
-          role: 'editor',
-          readwrite: 1,
-          autofocus: 1,
-          service: _e.raise,
-          placeholder: LOCALE.NOTE,
-          autolink: 1,
-          tags,
-          className: `${this.fig.family}__text-content`,
-          ...opt
-        }))
+        if(this._error){
+          child.feed(Skeletons.Note({
+            className: `${this.fig.family}__text-content`,
+            content : this._error
+          }));
+        }else{
+          child.feed(Skeletons.RichText({
+            sys_pn: 'text-content',
+            name: _a.content,
+            role: 'editor',
+            readwrite: 1,
+            autofocus: 1,
+            service: _e.raise,
+            placeholder: LOCALE.NOTE,
+            autolink: 1,
+            tags,
+            className: `${this.fig.family}__text-content`,
+            ...opt
+          }))  
+        }
         //this.debug("AAA:31", child);
         break;
       case 'pin':
