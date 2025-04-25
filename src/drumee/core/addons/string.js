@@ -33,10 +33,13 @@ String.prototype.format = function () {
 };
 
 
-// --------------------
-// First latter to uppercase
-// --------------------
-String.prototype.ucFirst = function () { return this[0].toUpperCase() + this.slice(1); };
+/**
+ * 
+ * @returns 
+ */
+String.prototype.ucFirst = function () { 
+  return this[0].toUpperCase() + this.slice(1).toLowerCase()
+};
 
 
 /**
