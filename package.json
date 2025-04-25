@@ -141,6 +141,8 @@
   },
   "scripts": {
     "jitsi": "cd src/vendor/lib-jitsi-meet && npm run build",
+    "jitsi:init": "cd src/vendor/lib-jitsi-meet && npm i",
+    "postinstall": "npm run jitsi:init && npm run jitsi",
     "dev": "drumee-ui-devel",
     "deploy": "drumee-ui-deploy",
     "add-widget": "drumee-make-widget",
