@@ -116,7 +116,7 @@ function normalize() {
   if (OUTPUT_FILENAME == "[name].js") {
     opt.no_hash = 1;
   }
-  console.log({ opt })
+  console.log({ opt, BUILD_TARGET})
   return opt;
 }
 
@@ -136,5 +136,7 @@ module.exports = function () {
       pdfworkerLegacy = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.min.mjs');
       let dom = join(UI_SRC_PATH, 'src', 'drumee', 'index.dom');
       return makeOptions({ main, dom, pdfworker, pdfworkerLegacy }, opt);
+    default:
+      console.error(`The build target ${BUILD_TARGET} was unexpected`)
   }
 }
