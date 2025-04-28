@@ -18,9 +18,8 @@ class __module_plugins extends LetcBox {
    */
   route() {
     const event = new Event('drumee:plugins:ready');
+    this.debug("AAA:21 starting plugin router")
     document.dispatchEvent(event);
-    this.debug("AAA:29 starting plugin router")
-
   }
 
   /**

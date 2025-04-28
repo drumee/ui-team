@@ -15,7 +15,6 @@ class __list extends LetcBox {
     }
     super.initialize(opt);
     this.declareHandlers();
-    this.restart = this.start.bind(this);
     if (_.isEmpty(this.mget(_a.kids))) {
       this._started = false;
     } else {
@@ -73,6 +72,13 @@ class __list extends LetcBox {
     RADIO_BROADCAST.off(_e.responsive, this.responsive.bind(this));
   }
 
+  /**
+   * 
+   */
+  restart(){
+    this.trigger(_e.eod); //** Flush old listeningxs */
+    this.start(1)
+  }
 
   /**
   * 
@@ -129,13 +135,13 @@ class __list extends LetcBox {
   /**
    * 
    */
-  start() {
+  start(reset = 0) {
     this._curPage = 1;
     this._waiting = false; // wait util data received
     this._scrollY = 0;
     this._lastScrollTop = 0;
     this._initApi();
-    this.reset();
+    if (reset) this.reset();
     this._end_of_data = false;
     this._started = false;
     let fetched = this.fetch();

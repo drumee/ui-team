@@ -774,13 +774,13 @@ View.prototype.refresh = function () {
   if (this.style) {
     opt = this.style.toJSON() || {};
   } else {
-    opt = this.model.get(_a.styleOpt) || {};
+    opt = this.model.get(_a.style) || this.model.get(_a.styleOpt) || {};
   }
 
   try {
     return this.$el.css(opt);
   } catch (e) {
-    return this.warn("Failed to refres with", opt);
+    return this.warn("Failed to refres with", this, opt, e);
   }
 };
 
