@@ -61,6 +61,9 @@ const __media_skl_row = function (_ui_) {
     dataset: {
       role: _a.container,
     },
+    skip:{
+      filename : /^\./
+    },
     itemsOpt: {
       kind: 'media_row',
       flow: _a.x,
@@ -72,6 +75,10 @@ const __media_skl_row = function (_ui_) {
     vendorOpt: Preset.List.Orange_e,
     api: _ui_.getCurrentApi
   });
+  
+  if(localStorage.getItem("showHidden")){
+    delete list.skip;
+  }
 
   return a = Skeletons.Box.Y({
     debug: __filename,

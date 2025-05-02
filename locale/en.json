@@ -1898,5 +1898,8 @@
   "DELETED": "Deleted",
   "RESTORE_BEFORE_OPEN": "This item has been moved to the trash. You must first restore it by moving it to the desktop before you can open it again.",
   "TRASH_BEING_EMPTIED": "Your trash can is being emptied",
-  "NOTE_ON_DATE_X": "Note on {0}"
+  "NOTE_ON_DATE_X": "Note on {0}",
+  "POPUP_PERMISSION": "Please grant popup permission",
+  "SHOW_HIDDEN_FILES": "Show hidden files",
+  "HIDE_HIDDEN_FILES": "Hide system files"
 }

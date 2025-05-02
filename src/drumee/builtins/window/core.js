@@ -117,7 +117,7 @@ class __window_core extends __utils {
         localStorage.getItem("debugWindowContextmenu").split(/[ ,;:]+/)
       );
     }
-
+    items = items.concat("showHidden")
     return items;
   }
 
@@ -154,7 +154,7 @@ class __window_core extends __utils {
     if (this.iconsList == null || this.iconsList.isDestroyed()) {
       this.iconsList = this.findPart(_a.list);
     }
-    if(this.getViewMode() === _a.row){
+    if (this.getViewMode() === _a.row) {
       return;
     }
     if (!(_K.permission.modify & this.mget(_a.privilege))) {
@@ -645,7 +645,7 @@ class __window_core extends __utils {
    */
   updateTopbar(m, previous = 0) {
     let data = [];
-    if(this.isTrash) return;
+    if (this.isTrash) return;
     this.copyPropertiesFrom(m);
     if (m.isMfs || m.isFolder) {
       data = this.buildHistory(m);
@@ -696,7 +696,7 @@ class __window_core extends __utils {
    * @returns 
    */
   openContent(media, previous) {
-    if(this.isTrash){
+    if (this.isTrash) {
       this.mset(_a.cancel, LOCALE.OK);
       media.wait(0);
       this.confirm(LOCALE.RESTORE_BEFORE_OPEN, "bf1");
@@ -721,10 +721,10 @@ class __window_core extends __utils {
    */
   sortContent(cmd) {
     let order, name;
-    if(cmd){
+    if (cmd) {
       name = cmd.model.get(_a.name);
-      order = cmd.model.get(_a.state) ? "asc" : "desc";  
-    }else{
+      order = cmd.model.get(_a.state) ? "asc" : "desc";
+    } else {
       name = _a.filename;
       order = "asc";
     }
@@ -736,7 +736,7 @@ class __window_core extends __utils {
       case _a.ext:
         if (/^desc/.test(order)) {
           this.iconsList.collection.comparator = reverseSortBy(cmp);
-        }else{
+        } else {
           this.iconsList.collection.comparator = cmp;
         }
         this.iconsList.collection.sort();
@@ -873,7 +873,16 @@ class __window_core extends __utils {
 
       case _e.upload:
         return Wm.handleUpload();
-
+      case "show-hidden-files":
+        localStorage.setItem("showHidden", 'yes');
+        this.iconsList.model.unset('skip');
+        this.iconsList.restart();
+        break;
+      case "hide-hidden-files":
+        localStorage.removeItem("showHidden");
+        this.iconsList.model.set({ skip: { filename: /^\./ } })
+        this.iconsList.restart();
+        break;
       case "export-to-server":
       case "import-from-server":
         Wm.launch(

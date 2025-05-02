@@ -25,10 +25,15 @@ const __media_skl_grid = function(_ui_) {
     spinnerWait : 1500,
     spinner     : true,
     itemsOpt    : opt,
+    skip:{
+      filename : /^\./
+    },
     vendorOpt   : Preset.List.Orange_e,
     api         : _ui_.getCurrentApi
   });
-  
+  if(localStorage.getItem("showHidden")){
+    delete list.skip;
+  }
   const a = {
     kind      : KIND.box,
     debug     : __filename,

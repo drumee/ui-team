@@ -38,6 +38,7 @@ String.prototype.format = function () {
  * @returns 
  */
 String.prototype.ucFirst = function () { 
+  if(!this[0]) return ""
   return this[0].toUpperCase() + this.slice(1).toLowerCase()
 };
 
@@ -55,7 +56,7 @@ String.prototype.isPassPhrase = function () { return PP.test(this); };
 /**
  * 
  */
-String.prototype.isPhoneNumber = function () { return PHONENUM.test(this.trim()); };
+String.prototype.isPhoneNumer = function () { return PHONENUM.test(this.trim()); };
 
 /**
  * 

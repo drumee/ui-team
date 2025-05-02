@@ -113,5 +113,8 @@
   "DELETED": "Borrado",
   "RESTORE_BEFORE_OPEN": "Este artículo ha sido desechado. Primero debes restaurarlo moviéndolo al escritorio antes de poder abrirlo nuevamente.",
   "TRASH_BEING_EMPTIED": "Su bote de basura se está vaciando.",
-  "NOTE_ON_DATE_X": "Nota del {0}"
+  "NOTE_ON_DATE_X": "Nota del {0}",
+  "POPUP_PERMISSION": "Por favor, conceda permiso para ventanas emergentes",
+  "SHOW_HIDDEN_FILES": "Mostrar archivos ocultos",
+  "HIDE_HIDDEN_FILES": "Ocultar archivos del sistema"
 }
