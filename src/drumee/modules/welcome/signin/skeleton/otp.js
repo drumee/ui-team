@@ -11,7 +11,7 @@
 function __skl_welcome_signin_otp (_ui_) {
   const otpFig = _ui_.fig.family
 
-  const mobileNumber = _ui_.data.mobile || ''
+  const mobileNumber = _ui_.data?.mobile || ''
 
   const title = Skeletons.Box.X({
     className  : `${otpFig}__wrapper mobile-number`,
@@ -21,7 +21,7 @@ function __skl_welcome_signin_otp (_ui_) {
         kids       : [
           Skeletons.Note({
             className  : `${otpFig}__note mobile-number`,
-            content    : (mobileNumber.printf(LOCALE.ENTER_OTP_RECEIVED))//Enter sms code received on ******
+            content    : (mobileNumber.printf(LOCALE.ENTER_OTP_RECEIVED))
           })
         ]
       })

@@ -7,7 +7,7 @@
 const Rectangle = require('rectangle-node');
 
 class __media_pseudo extends LetcBox {
-
+  
   /**
    * 
    * @param {*} opt 
@@ -15,16 +15,16 @@ class __media_pseudo extends LetcBox {
   initialize(opt) {
     super.initialize();
     this.bbox = new Rectangle(0, 0, 99, 87);
-    this.isPseudo = true;
+    this.isPseudo =  true;
     this.mset({
-      kind: 'media_pseudo',
-      filetype: _a.pseudo
+      kind : 'media_pseudo',
+      filetype : _a.pseudo
     });
     this.model.atLeast({
-      state: 0,
-      aspect: _a.grid,
-      bubble: 0,
-      filename: LOCALE.PROCESSING
+      state    : 0,
+      aspect   : _a.grid,
+      bubble   : 0, 
+      filename : LOCALE.PROCESSING
     });
 
     this.logicalParent = this;
@@ -42,7 +42,7 @@ class __media_pseudo extends LetcBox {
    * 
    * @returns 
    */
-  dragEnter(e) {
+   dragEnter(e) {
     this._lastX = e.pageX - 50;
     this._lastY = e.pageY - 50;
   }
@@ -51,7 +51,7 @@ class __media_pseudo extends LetcBox {
    * 
    * @returns 
    */
-  dragOver(e) {
+   dragOver(e) {
     const x = e.pageX - 50;
     const y = e.pageY - 50;
     if ((Math.abs(this._lastX - x) < 3) && (Math.abs(this._lastY - y) < 3)) {
@@ -87,17 +87,36 @@ class __media_pseudo extends LetcBox {
 
   /**
    * 
+   * @param {*} e 
+   * @param {*} ui 
    */
-  overlaps() {
+  overlaps(r){
     this.warn("SHOUL NOT BE CALLED");
   }
 
-  /**
-  * 
-  */
-  wait() {
-    /** DO NOT DELETE */
-  }
+  // /**
+  //  * 
+  //  * @param {*} item 
+  //  * @param {*} threshold 
+  //  * @returns 
+  //  */
+  // intersect(item, threshold) {
+  //   let i;
+  //   if (threshold == null) { threshold = 0; }
+  //   try { 
+  //     i = item.bbox.intersection(this.bbox);
+  //   } catch (error) { 
+  //     this.warn("FAILED TO INTERSECT", item);
+  //   }
+  //   if ((i == null)) {
+  //     return 0;
+  //   }
+  //   //@debug "SSSSSSi#{i}SSSSS", (i.area() / @bbox.area()), item.bbox, @bbox
+  //   if (threshold) {
+  //     return (i.area() / this.bbox.area()) > threshold;
+  //   }
+  //   return (i.area() / this.bbox.area());
+  // }
 
 }
 __media_pseudo.initClass();

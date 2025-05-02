@@ -1,0 +1,74 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/widgets/electron/screen/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.screen-selector{
+  &__ui{
+    width: 100vw;
+    height: 100vh;
+    background-color:  rgb(255 255 255 / 85%); //rgb(255,255,255,85%);
+  }
+  &__main{
+    width: 100%;
+    height: 100%;    
+  }
+  &__header{
+    height: 80px;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    @include typo($weight:400, $size:18px, $line:28px, $color:$core-default-text-color); 
+    margin: 20px 0;
+  }
+  &__list{
+    width: 100%;
+    max-height: 100%;
+    height: calc(100% - 200px);
+    .smart-container{
+      justify-items: center;
+      justify-content: center;
+      display: grid;
+      grid-template-columns: repeat(auto-fill,200px) minmax(190px,200px);
+      grid-auto-rows: 160px;
+      grid-gap: 1rem;
+      min-height: 160px;
+      align-items: center;
+      height: 100%;
+      max-height: 100%;
+    }
+  }
+  &__command{
+    height: 60px;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  &__button{
+    background-color: $btn-commit-background ;
+    @include typo($color:$default-text-reverse,$size:16px,$line:16px,$weight:400);
+    height: 35px;
+    min-width: 115px;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    border-radius: 6px;
+    margin: 0 20px;
+    cursor: pointer;
+    &:hover{
+      background-color: $btn-commit-background-hover;
+    }
+    &.cancel{
+      &:hover{
+        color: $btn-rollback-text-hover;
+        border: 2px solid $btn-rollback-border-hover;
+      }
+      color: $btn-rollback-text;
+      background-color: $btn-rollback-background;
+      border: 1px solid $btn-rollback-border;
+    }
+  }
+}

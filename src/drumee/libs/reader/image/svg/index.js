@@ -166,7 +166,7 @@ class __drumee_svg extends Marionette.View {
           t.innerHTML = data;
         })
         .catch((e) => {
-          this.warn("Failed to load", url, e);
+          this.warn("Failed to load", url, e, this);
         });
     }
   }

@@ -36,6 +36,15 @@ class __welcome_router extends LetcBox {
     this.waitElement(this.el, () => {
       this.el.dataset.tab = this.tab;
     });
+    if (!bootstrap().online) {
+      this.mset({
+        logo: '../public/main.png'
+      });
+      this.feed(require('./skeleton').default(this, {
+        kind: 'welcome_offline',
+      }));
+      return
+    }
     let require_logout = 0;
     switch (this.tab) {
       case 'signup':

@@ -1,0 +1,90 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/modules/desk/wm/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+
+
+
+// css for Electron New Version check popup  --- do not remove
+.window-manager__wrapper-tooltips {
+  &.check-update {
+    background: #FFF;
+    height: auto;
+    width: auto;
+    max-width: 400px;
+    position: absolute;
+    top: unset;
+    bottom: 86px;
+    left: unset;
+    right: 10px;
+    border-radius: 6px;
+    padding: 10px;
+  }
+}
+
+.window-manager {
+  &-new-version-popup {
+    &__container {
+      height: auto;
+      justify-content: space-evenly;
+      width: 100%;
+    }
+
+    &__note {
+      @include typo($size: 14px, $line: 1.3, $color: $core-default-text-color);
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    &__progress{
+      width: 0;
+      height: 2px;
+      background-color:$btn-commit-background;
+      margin: 3px 0;
+      transition: width 1s linear;      
+    }
+    &__buttons-wrapper {
+      justify-content: center;
+      width: 100%;
+    }
+
+    &__button {
+      height: 25px;
+      width: auto;
+      justify-content: center;
+      align-items: center;
+      margin-right: 5%;
+      margin-top: 5px;
+      text-align: center;
+      border-radius: $default-border-radius;
+      cursor: pointer;
+      min-width: 75px;
+      &.cancel {
+        @include typo($size: 12px, $color: $btn-rollback-text);
+        border: 1px solid $btn-rollback-border;
+
+        &:hover {
+          border: 2px solid $btn-rollback-border-hover;
+          color: $btn-rollback-text-hover;
+        }
+      }
+
+      &.confirm {
+        @include typo($size: 12px, $line: 14px, $color: $btn-commit-text);
+        background-color: $btn-commit-background;
+        border: 1px solid $btn-commit-border;
+        &[data-state="0"]{
+          opacity: 0.5;
+          pointer-events: none;
+        }
+        &:hover {
+          background-color: $btn-commit-background-hover;
+          border-color: $btn-commit-border-hover;
+        }
+      }
+    }
+
+  }
+}

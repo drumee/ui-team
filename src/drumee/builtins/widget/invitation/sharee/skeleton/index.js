@@ -1,6 +1,5 @@
 
 const __sharee_editable=function(_ui_){
-
   let a;
   const firstname = _ui_.mget(_a.firstname) || '';
   const lastname  = _ui_.mget(_a.lastname) || '';

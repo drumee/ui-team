@@ -1,9 +1,3 @@
-#!/usr/bin/env node
-// ================================  *
-//   Copyright Xialia.com  2013-2020 *
-//   FILE  : 
-//   TYPE  : Dev Builder
-// ================================  *
 
 const Fs = require('fs');
 const _ = require('lodash');
@@ -107,6 +101,7 @@ function optimize(items) {
 function render(items) {
   const tpl_file = Path.resolve(__dirname, 'classes.tpl');
   const dest_file = Path.resolve(SRC_DIR, 'src/drumee/core/kind/seeds/builtins.js');
+  console.log("AAA:104", dest_file)
   if (!Fs.existsSync(tpl_file)) {
     fatal(`[Template not found]: ${tpl_file}`);
   }

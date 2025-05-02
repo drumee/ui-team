@@ -98,7 +98,7 @@ class __media_grid extends DrumeeMediaInteract {
     }
     this.selected = {};
     if (this.disabled) {
-      return; 
+      return;
     }
     this.rectangle = new Rectangle(
       ui.offset.left, ui.offset.top, ui.helper.width()*0.7, ui.helper.height()*0.7
@@ -111,7 +111,7 @@ class __media_grid extends DrumeeMediaInteract {
    * 
    * @param {*} side 
    */
-  shift(side){
+  shift(side) {
     let x;
     if (this._animIsActive) {
       return;
@@ -124,15 +124,15 @@ class __media_grid extends DrumeeMediaInteract {
       case _a.right:
         x = 15;
         break;
-      
-      default: 
-        x = 0; 
+
+      default:
+        x = 0;
     }
     this._shiftX = x; 
     TweenLite.to(this.$el, .2, {
       x,
-      onStart    : this._onStartShifting,
-      onComplete : this._onStopShifting
+      onStart: this._onStartShifting,
+      onComplete: this._onStopShifting
     });
     return this;
   }
@@ -140,7 +140,7 @@ class __media_grid extends DrumeeMediaInteract {
   /**
    * 
    */
-  resetMotion(){
+  resetMotion() {
     this.el.dataset.over = _a.off;
     this.el.dataset.hover = _a.off;
     this.shift();
@@ -173,7 +173,7 @@ class __media_grid extends DrumeeMediaInteract {
         this.setupInteract();
       };
     }
-    let change_icon = (icon, name)=>{
+    let change_icon = (icon, name) => {
       let el = document.createElement(_K.tag.div);
       el.innerHTML = require('../template/icon')(this, name, _a.href);
       el.className = `${this.fig.family}__pulse`;
@@ -181,16 +181,16 @@ class __media_grid extends DrumeeMediaInteract {
       icon.replaceWith(el);
       RADIO_BROADCAST.once('room-shutdown', reset_icon);
     }
-    switch(data.type){
-      case'meeting.start': 
+    switch (data.type) {
+      case 'meeting.start':
         let icon = document.getElementById(this._id + '-icon');
-        if(icon){
+        if (icon) {
           change_icon(icon, "drumee_teamroom_enter");
         }
-      break;
-      case'meeting.stop': 
+        break;
+      case 'meeting.stop':
         reset_icon(data);
-      break;
+        break;
     }
   }
 

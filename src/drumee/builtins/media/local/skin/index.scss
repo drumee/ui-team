@@ -1,0 +1,101 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/builtins/window/helpdesk/widget/help-item/skin/index.scss
+#   TYPE : Style Component
+# ===================================================================**/
+@import "mixins/drumee";
+
+.media-local {
+  &__ui,
+  &__main,
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__ui {
+    height: auto;
+    //margin: 5px 0px 5px 25px;//5px 0;
+    background-color: $core-default-block-background;
+    cursor: pointer;
+    //padding: 0 20px;
+    &[data-conflict="1"]{
+      background-color: red;
+    }
+  }
+
+  &__filepath {
+    &-container {
+      width: 100%;
+      margin-left: 20px;
+    }
+    align-items: center;
+    height: 100%;
+    //padding: 0 0 0 25px;
+    width: calc(100% - 30px);
+    @include typo($size: 12px, $line: 1.5, $color: $core-tertiary-text-color);
+    &.oldname,&.oldpath   {
+      color: $core-default-text-title;
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+  }
+
+  &__icon {
+    height: 30px;
+    width: 30px;
+    color: $ewhite;
+    border-radius: 3px;
+    &.changed{
+      height: 10px;
+      width: 10px;  
+    }
+    &.folder {
+      background-color: $folder-main; //#468ee5;
+      height: 20px;
+      &:before {
+        content: " ";
+        position: absolute;
+        top: 0;
+        right: 0;
+        border-top: 7px solid #61aaf2;
+        border-left: 7px solid transparent;
+        border-right: 14px solid #61aaf2;
+        border-radius: 0 6px 0 0;
+        width: 14px;
+      }
+    }
+    svg {
+      width: 30px;
+      height: 30px;
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: $default-border-radius;
+      padding: 2px;
+      fill: $core-default-icon-neutral;
+      &.document {
+        fill: $ewhite;
+      }
+    }
+  }
+  .contextmenu-item{
+    position:relative;
+    &.ignore{
+      &::before {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        height: 1px;
+        background: #c00;
+        content: " ";
+        width: 20px;
+        display: block;
+        transform: rotate(-45deg);
+      }
+      svg{
+        padding: 2px;
+        position:relative;
+      }
+    }
+  }
+}

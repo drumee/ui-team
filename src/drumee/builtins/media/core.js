@@ -326,8 +326,9 @@ class __media_core extends DrumeeMFS {
     if (this.mget(_a.filetype) == _a.vector) {
       f = "orig";
     }
+    let { url } = this.actualNode(f);
     this.mset({
-      url: this.actualNode(f).url,
+      url,
       type: this.mget(_a.filetype),
     });
   }
@@ -1523,6 +1524,8 @@ class __media_core extends DrumeeMFS {
     if (this.mget(_a.ext)) {
       name = `${value}.${this.mget(_a.ext)}`
     }
+
+    this.debug("AAA:1491", this)
     return this.getLogicalParent().sameFilename(this, name)
   }
 

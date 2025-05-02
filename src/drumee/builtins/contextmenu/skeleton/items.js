@@ -7,9 +7,9 @@
 const __button = function(_ui_, trigger, k){
   const pfx = `${_ui_.fig.group}__contextmenu-item contextmenu-item`;
   let button = Skeletons.Button.Label;
-  const icon = require('./icons')(_ui_);
+  const icon = {...require('./icons')(_ui_), ...require('./icons.electron')(_ui_)};
 
-  const cn = require('./classes')(_ui_);
+  const cn = {...require('./classes')(_ui_), ...require('./classes.electron')(_ui_)};
 
 
   let canPaste = _a.disable;
@@ -17,6 +17,7 @@ const __button = function(_ui_, trigger, k){
     canPaste = _a.open;
   }
   
+  //console.log('AAA:59', k, icon[k], icon);
 
   if (!icon[k]) {
     button = Skeletons.Note;
@@ -66,7 +67,7 @@ const __button = function(_ui_, trigger, k){
     update:button({label:LOCALE.UPDATE, service: _e.update}),
     upload:button({label:LOCALE.UPLOAD, service: _e.upload})
   };
-  
+  a = {...a, ...require('./items.electron')(_ui_, button)}
   if(a[k]) {
     const r = a[k]; 
     r.className = `${pfx}`;

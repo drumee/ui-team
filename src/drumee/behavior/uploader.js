@@ -9,7 +9,7 @@ class __bhv_uploader extends Marionette.Behavior {
     this._flagOn = this._flagOn.bind(this);
     this._flagOff = this._flagOff.bind(this);
     this._checkProfile = this._checkProfile.bind(this);
-    this._checkSiteLogo = this._checkSiteLogo.bind(this);
+    this._checkHostLogo = this._checkHostLogo.bind(this);
     this._checkUserProfile = this._checkUserProfile.bind(this);
     this._checkFile = this._checkFile.bind(this);
     this._getAccess = this._getAccess.bind(this);
@@ -149,7 +149,7 @@ class __bhv_uploader extends Marionette.Behavior {
 // ========================
 
 // ===========================================================
-// _checkSiteLogo
+// _checkHostLogo
 //
 // @param [Object] files
 //
@@ -172,14 +172,14 @@ class __bhv_uploader extends Marionette.Behavior {
 // ========================
 
 // ===========================================================
-// _checkSiteLogo
+// _checkHostLogo
 //
 // @param [Object] files
 //
 // @return [Object] 
 //
 // ===========================================================
-  _checkSiteLogo(files) {
+  _checkHostLogo(files) {
     this._checkProfile(files);
     const oid = this.view.get(_a.hub_id) || Host.get(_a.id);
     if ((oid === Host.get(_a.id)) && (Host.get(_a.privilege)&_K.privilege.admin)) {
@@ -252,7 +252,7 @@ class __bhv_uploader extends Marionette.Behavior {
   _getAccess(files, nid) {
     switch (nid) {
       case -3:
-        return this._checkSiteLogo(files);
+        return this._checkHostLogo(files);
       case -2:
         return this._checkUserProfile(files);
       case -1:

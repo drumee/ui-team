@@ -1,0 +1,112 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/modules/welcome/signin/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+
+@import 'mixins/drumee';
+
+.welcome-signin-url-bar {
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+
+
+  &__header {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    height: 80px;
+  }
+
+  &__tips {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 30px;
+  }
+
+  &__content {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+
+    .message-wrapper {
+      position: absolute;
+      top: 25px;
+    }
+  }
+
+  &__nav {
+    width: 100%;
+    height: 45px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__title {
+    @include typo($size: 28px, $line: 45px, $weight: 400, $color: $core-default-text-reverse);
+  }
+
+  &__input {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    max-width: 800px;
+    width: calc(100% - 300px);
+
+    background-color: $core-default-background;
+    border-radius: $default-border-radius;
+
+    & input {
+      @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
+      border-bottom: none;
+      border-radius: 0 6px 6px 0px;
+      padding: 5px;
+      padding-left: 15px;
+
+      &::placeholder {
+        @include typo($size: 18px, $line: 28px, $weight: 300, $color: $connect-text-placeholder);
+      }
+    }
+  }
+
+  &__protocol {
+    @include typo($size: 18px, $line: 28px, $color: $white-f9);
+    margin-right: 10px;
+    height: 100%;
+    align-items: center;
+    background-color: rgb(33, 33, 33, 0.2);
+    padding: 10px;
+    border-radius: 3px;
+    // position: absolute;
+    // right: 104%;
+  }
+
+
+  &__button-wrapper {
+    align-content: center;
+    justify-content: center;
+    width: 50px;
+    margin-left: 10px;
+    height: 100%;
+  }
+
+  &__history {
+    width: 100%;
+    margin-top: 70px;
+
+    .smart-container {
+      justify-items: center;
+      justify-content: center;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 194px) minmax(194px, 194px);
+      grid-auto-rows: 180px;
+      grid-gap: 1rem;
+      min-height: 100px;
+      align-items: center;
+      padding: 0.3rem 1rem 0rem 1rem;
+    }
+  }
+}

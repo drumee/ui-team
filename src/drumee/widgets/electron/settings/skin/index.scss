@@ -1,0 +1,109 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2019
+#   FILE : desk/skin/media/grid
+#   TYPE : Backoffice Main Style
+# ===================================================================**/
+@import "mixins/drumee.scss";
+.electron-settings {
+  &__ui {
+    position: absolute;
+    background-color: transparent;
+  }
+  &__main {
+    background-color: inherit;
+  }
+  &__container {
+    background-color: inherit;
+    border-radius: $default-border-radius;
+    padding: 16px 10px 10px 10px;
+    background-color: $core-default-block-background;   //$core-background-tooltips;
+    min-width: 190px;
+    overflow: hidden;
+    box-shadow:$drumee-shadow-container;
+  }
+  &__row {
+    overflow: hidden;
+    transition: height 0.5s linear;
+    height: 25px;
+    .label-wrapper {
+      cursor: pointer;
+      padding: 0 10px;
+      @include typo($line: 23px, $size: 16px, $weight: 300, $color: $core-default-text-color);
+    }
+    &[data-radio="on"] {
+      height: 57px;
+      &.disabled {
+        height: 25px;
+      }
+    }
+    &[data-tooltips="on"] {
+      height: 57px;
+    }
+
+    .label-text {
+      cursor: pointer;
+      padding: 0 10px;
+      white-space: nowrap;
+      @include typo($line: 16px, $size: 12px, $weight: 300, $color: $core-default-text-color);
+    }
+    .checkbox {
+      width: 10px;
+      height: 10px;
+      border-radius: $default-checkbox-border-radius;//$default-border-radius-tiny;3px;
+      border: 1px solid $core-default-checkbox-border;//#879bff;
+      margin: auto 5px auto 0;
+      color: transparent;
+      &[data-state="1"] {
+        color: rgb(64 64 255 / 85%);//darkblue;
+      }
+    }
+    .tooltips-trigger,
+    .checkbox {
+      width: 15px;
+      height: 15px;
+      margin: auto 0;
+      &[data-state="1"] {
+        color: rgb(64 64 255 / 85%);//darkblue;
+      }
+    }
+    .tooltips-trigger {
+      margin: auto 0 auto auto;
+      color:$core-default-icon-neutral;
+    }
+
+    .radio-wrapper {
+      justify-content: space-between;
+      padding: 0 10px;
+    }
+  }
+  &__radiotoggle {
+    padding-left: 26px;
+    margin-top: 7px;
+    .togglebox {
+      color: transparent;
+      width: 15px;
+      height: 15px;
+      margin: auto 10px;
+      border: 1px solid $core-default-checkbox-border;//#879bff;
+      border-radius: $default-checkbox-border-radius;//3px;
+      &[data-state="1"] {
+        color: rgb(64 64 255 / 85%);//darkblue;
+      }
+    }
+    .radio-button {
+      margin-top: 5px;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      @include typo($line: 14px, $size: 11px, $weight: 300, $color: $core-default-text-color);
+    }
+  }
+  &__tooltips-wrapper{
+    width: 320px;
+    max-width: 100vw;
+    position: absolute;
+    background: $core-background-tooltips;
+    padding: 10px;
+    border-radius: $default-border-radius;//6px;
+    @include typo($line: 14px, $size: 12px, $weight: 300, $color: $core-default-text-color);
+  }
+}

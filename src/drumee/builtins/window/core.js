@@ -2,7 +2,7 @@ const CHANGE_RADIO = "change:radio";
 const MEDIA_GRID = "media_grid";
 const MEDIA_ROW = "media_row";
 const EOD = "end:of:data";
-const __utils = require("./utils");
+const __utils = require("./utils.electron");
 const TIMERS = {
   reorder: null
 }

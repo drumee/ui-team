@@ -5,5 +5,5 @@ module.exports = {
   email_input_item            : './email-input-item/index',
   phoneno_input_item          : './phoneno-input-item/index',
   widget_chat                 : './chat',
-  widget_chat_item            : './chat-item',
+  widget_chat_item            : './chat-item/index.electron',
 };

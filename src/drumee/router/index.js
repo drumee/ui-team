@@ -137,6 +137,7 @@ class drumee_router extends LetcBox {
       return
     }
     this._wallpaper = wallpaper;
+    this.debug("AAA:141", { wallpaper }, bootstrap());
     this.ensurePart('wallpaper').then((p) => {
       let kind = 'drumee_background';
       if (wallpaper) {
@@ -339,6 +340,8 @@ class drumee_router extends LetcBox {
         kind = 'module_welcome';
       }
     }
+
+    this.debug("AAA:300", { kind, access })
     this.ensurePart('body').then(async (p) => {
       await Kind.waitFor(kind);
       p.feed({ kind, name: name });

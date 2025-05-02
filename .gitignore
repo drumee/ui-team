@@ -8,8 +8,15 @@ tmp/*
 kind/seeds/dynamic.js
 # .vscode/
 .vscode/launch.json
+dist
+dist-*
+drumee-dist
 *_tmp*
 ._*
 t
+store
+package-lock.*
+node_modules/
+*.code-workspace
 package-lock.json
 .dev-tools.rc/

@@ -8,7 +8,7 @@
 //
 // ===========================================================
 
-function __skl_welcome_signin_auth(_ui_) {
+function __skl_welcome_signin_auth(_ui_, username) {
   const fig = `${_ui_.fig.family}`;
   let dataset = _ui_.mget(_a.dataset) || {};
   let name = Organization.name();
@@ -36,7 +36,7 @@ function __skl_welcome_signin_auth(_ui_) {
 
   return {
     header,
-    content: require('./content')(_ui_)
+    content: require('./content')(_ui_, username)
   };
 
 };

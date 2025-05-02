@@ -271,8 +271,8 @@ class __player_document extends __core {
     } catch (e) {
       this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW, e);
     }
-
     let load_doc = (url) => {
+      this.debug("210:URL", url)
       let loader = getDocument({
         ...this._headers,
         url,

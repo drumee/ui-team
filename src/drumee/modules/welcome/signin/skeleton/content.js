@@ -4,7 +4,7 @@
  * TYPE : Skeleton
  * ===================================================================**/
 
-function __skl_welcome_signin_content(_ui_) {
+function __skl_welcome_signin_content(_ui_, username='') {
   const contentFig = _ui_.fig.family
   let dataset = _ui_.mget(_a.dataset) || {};
   const email = Skeletons.Box.X({

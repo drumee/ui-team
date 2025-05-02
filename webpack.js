@@ -95,14 +95,13 @@ function normalize() {
   }
 
   let endpointName = ENDPOINT || USER;
-  if(!BUILD_TARGET) BUILD_TARGET = 'app';
+  if (!BUILD_TARGET) BUILD_TARGET = 'app';
   let target = BUILD_TARGET;
   let public_path = `/-/${endpointName}/${target}/`;
   if (ENDPOINT == 'main') {
     public_path = `/-/${target}/`;
   }
   if (PUBLIC_PATH) public_path = PUBLIC_PATH;
-  
   const mode = UI_BUILD_MODE || 'development';
   let bundle_path = join(bundle_base, target);
   let opt = {
@@ -136,7 +135,12 @@ module.exports = function () {
       pdfworkerLegacy = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.min.mjs');
       let dom = join(UI_SRC_PATH, 'src', 'drumee', 'index.dom');
       return makeOptions({ main, dom, pdfworker, pdfworkerLegacy }, opt);
-    default:
-      console.error(`The build target ${BUILD_TARGET} was unexpected`)
-  }
+    case "desktop/dist-web":
+      main = join(UI_SRC_PATH, 'src', 'drumee', 'index.electron');
+      pdfworker = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'build', 'pdf.worker.min.mjs');
+      pdfworkerLegacy = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.min.mjs');
+      return makeOptions({ main, pdfworker, pdfworkerLegacy}, opt);
+      default:
+        console.error(`The build target ${BUILD_TARGET} was unexpected`)  
+    }
 }

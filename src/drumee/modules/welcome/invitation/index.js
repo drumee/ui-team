@@ -68,12 +68,12 @@ class __welcome_invitation extends __welcome_interact {
   /**
    *
   */
-  _checkInvitation () {
+  _checkInvitation() {
     if (!Visitor.isOnline()) {
       this._loadSignup();
       return;
     }
-    
+
     const userID = Visitor.id;
     return this.fetchService({
       service   : SERVICE.contact.invitation_status,
@@ -87,7 +87,7 @@ class __welcome_invitation extends __welcome_interact {
   /**
    * @param {Object} data
   */
-  _inviteResponse (data) {
+  _inviteResponse(data) {
     const {
       status
     } = data;
@@ -96,7 +96,7 @@ class __welcome_invitation extends __welcome_interact {
       case _a.invalid:
         return this._logOutExistingUser();
 
-      default: 
+      default:
         return this._loadDesk();
     }
   }

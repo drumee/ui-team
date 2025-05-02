@@ -1,3 +1,8 @@
+// ==================================================================== *
+//   Copyright Xialia.com  2011-2019
+//   FILE : src/drumee/core/utils
+//   TYPE : 
+// ==================================================================== *
 const PP = new RegExp(/^((.+){2,} *(.+){4,})|((.+){12,})$/);
 const EMAIL = new RegExp(/^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/);
 const PAGENAME = new RegExp(/(^(?!^(--|\#|\!|\?))[^(\/|\&)]+$)/);
@@ -38,6 +43,7 @@ String.prototype.format = function () {
  * @returns 
  */
 String.prototype.ucFirst = function () { 
+  if(!this[0]) return ""
   return this[0].toUpperCase() + this.slice(1).toLowerCase()
 };
 
@@ -55,7 +61,7 @@ String.prototype.isPassPhrase = function () { return PP.test(this); };
 /**
  * 
  */
-String.prototype.isPhoneNumber = function () { return PHONENUM.test(this.trim()); };
+String.prototype.isPhoneNumer = function () { return PHONENUM.test(this.trim()); };
 
 /**
  * 

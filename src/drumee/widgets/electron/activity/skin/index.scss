@@ -1,0 +1,61 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2022
+#   FILE : /src/drumee/widgets/electron/activity/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+@import 'mixins/drumee';
+
+.electron-activity{
+  &__ui{
+    width: 150px;
+    height:6px;
+    position:fixed;
+    z-index:10000;
+    bottom:0;
+    left:5px;
+    border:1px solid $egrey-b7;
+    background-color:$core-transparency-container-overlay;
+    overflow:hidden;
+  }
+  &__main{
+    height:100%;
+    width:100%;
+    overflow:hidden;
+  }
+  &__progress-container{
+    height:6px;
+    width:calc(100% - 6px);
+    overflow:hidden;
+  }
+  &__progress-item{
+    height:6px;
+    width:0;
+    left: 0;
+    bottom:0;
+    background: $egreen-soft-light;
+    transition-duration:0.5s;
+    transition-property:width;
+    position: absolute;
+    z-index:100;
+  }
+  &__progress-total{
+    height:6px;
+    width:0;
+    left: 0;
+    bottom:0;
+    background: $egrey-b7;
+    transition-duration:0.5s;
+    transition-property:width;
+    position: absolute;
+    z-index:10;
+  }
+  &__led{
+    height:6px;
+    width:6px;
+    background-color: $core-default-text-caution;
+    &[data-state="1"]{
+      background-color: rgb(137, 252, 6);
+    }
+    //color: white;
+  }
+}

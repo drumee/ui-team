@@ -79,7 +79,9 @@ class __account_preferences extends __core {
           hub_id: Visitor.id
         }).then(()=>{
           Drumee.locale(l);
-          uiRouter.restart();
+          setTimeout(()=>{
+            uiRouter.restart();
+          }, 2000);
         })
     }
   }

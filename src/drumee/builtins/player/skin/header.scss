@@ -104,6 +104,16 @@
   }
 
   &-topbar {
+    &__edit {
+      & .icon-edit {
+        border: 1px solid #333;
+        color: #333;
+        font-size: 12px;
+        height: 25px;
+        margin: auto 10px auto 10px;
+        padding: 3px 10px;
+      }
+    }
     &__info {
       height: 100%;
 

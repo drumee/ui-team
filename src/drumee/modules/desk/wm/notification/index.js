@@ -271,7 +271,6 @@ class __notification_panel extends LetcBox {
         p.el.show();
       }
       this._currentCount = count;
-
     })
   }
 

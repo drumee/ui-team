@@ -177,7 +177,7 @@ class __player_audio extends __window_interact_player {
    * @param {*} src
   */
   changeSource(src) {
-    this.__audio.el.pause();
+    if(this.__audio) this.__audio.el.pause();
     this.spinner(1);
     this.debug('changeSource', src, this)
     this.media = src;

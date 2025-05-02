@@ -162,21 +162,12 @@ class __account_data extends DrumeeMFS {
     this.mget('logicalParent').__wrapperOverlay.softClear()
   }
 
-
-  // // ===========================================================
-  // // 
-  // // ===========================================================
-  //   confirmDeletion() {
-  //     this.debug("CONFIRM leave");
-  //     this.postService(SERVICE.drumate.confirm_delete_account, {
-  //       secret: this._token,
-  //       hub_id : Visitor.id 
-  //     });
-  //   }
-
-  // ===========================================================
-  // 
-  // ===========================================================
+  /**
+   * 
+   * @param {*} data 
+   * @param {*} title 
+   * @param {*} subtitle 
+   */
   _display(data, title, subtitle) {
     if (data.disk) Visitor.set({ disk: data.disk });
     let disk = Visitor.get('disk');
