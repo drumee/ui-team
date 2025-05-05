@@ -445,6 +445,7 @@ class __media_interact extends media_core {
    *
    */
   setupInteract() {
+    if (this.mget(_a.interactive) === 0) return;
     let filetype = this.mget(_a.filetype);
     let f = filetype == _a.vector ? _a.orig : _a.vignette;
     const { url } = this.actualNode(f);

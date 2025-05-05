@@ -798,6 +798,8 @@ class __media_core extends DrumeeMFS {
     if (ownpath) {
       args.ownpath = ownpath;
       args.replace = 1;
+    } else {
+      if (this.mget(_a.ownpath)) args.ownpath = this.mget(_a.ownpath);
     }
     queue.add(args);
     this.type = null;

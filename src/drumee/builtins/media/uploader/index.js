@@ -89,7 +89,6 @@ class __media_uploader extends LetcBox {
         }
       }
     }
-    
     /** Still files in buffer */
     if (this._buffer.length) {
       let item = this._buffer.shift();
