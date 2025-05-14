@@ -56,7 +56,7 @@ String.prototype.isPassPhrase = function () { return PP.test(this); };
 /**
  * 
  */
-String.prototype.isPhoneNumer = function () { return PHONENUM.test(this.trim()); };
+String.prototype.isPhoneNumber = function () { return PHONENUM.test(this.trim()); };
 
 /**
  * 

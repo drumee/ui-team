@@ -100,6 +100,7 @@ class __window_interact_player extends __utils {
    * @param {*} cmd
    */
   selector(enable) {
+    if (typeof (Selector) === 'undefined') return;
     if (!Selector) return;
     if (enable) {
       Selector.enable();
