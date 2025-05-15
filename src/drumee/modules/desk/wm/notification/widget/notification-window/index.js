@@ -28,7 +28,6 @@ class __notification_window extends LetcBox {
   onPartReady(child, pn) {
     switch (pn) {
       case 'notification-list':
-        this.debug("AAQQA:40", this, this.mget('notificationData'));
         this.__notificationList.collection.comparator = (item) => -item.get("ctime")
         this.__notificationList.collection.sort();
         child.on(EOD, () => {
