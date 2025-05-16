@@ -315,7 +315,7 @@ class __widget_chat extends LetcBox {
    * 
    */
   hasAttachment() {
-    this.attachmentList.hasAttachment()
+    return this.attachmentList.hasAttachment()
   }
 
   /**
