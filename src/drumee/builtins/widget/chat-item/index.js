@@ -42,8 +42,6 @@ class ___widget_chatItem extends LetcBox {
       escapeContextmenu: true,
     }));
     child.onAddKid = () => {
-      // Why ?
-      //this.triggerHandlers({ service: "chat-item-child" });
       child.el.dataset.preattachment = '0';
     }
     this.waitElement(id, () => {

@@ -20,6 +20,14 @@ class __media_wrapper extends LetcBox {
   }
 
   /**
+  * 
+  */
+  onBeforeDestroy() {
+    /** Prevent updating on reload */
+    this.__content.onRemoveChild = null;
+  }
+
+  /**
    * 
    */
   addNewMedia(items) {
@@ -31,6 +39,7 @@ class __media_wrapper extends LetcBox {
       attachment.push(data);
       this.saveAttachment(attachment);
     }
+    if (_.isEmpty(items)) return;
     return this.__content.append(items);
   }
 
@@ -57,9 +66,16 @@ class __media_wrapper extends LetcBox {
     const storageKey = this.mget('storageKey');
     const data = sessionStorage.getItem(storageKey);
     if (_.isEmpty(data)) {
-      return {};
+      return [];
     }
-    return JSON.parse(data).attachment;
+    let { attachment } = JSON.parse(data) || {};
+    if (_.isEmpty(attachment)) {
+      return [];
+    }
+
+    return attachment.filter((e) => {
+      return e.nid && e.hub_id;
+    })
   }
 
   /**
@@ -97,7 +113,7 @@ class __media_wrapper extends LetcBox {
       return r.nid;
     });
     const storageKey = this.mget('storageKey');
-    const data = JSON.parse(sessionStorage.getItem(storageKey));
+    let data = JSON.parse(sessionStorage.getItem(storageKey));
     if (_.isEmpty(items)) return;
     if (_.isEmpty(data.attachment)) {
       data.attachment = items;
@@ -117,18 +133,25 @@ class __media_wrapper extends LetcBox {
    */
   updateAttachment() {
     let items = [];
-    for (let c of this.__content.children.toArray()) {
-      let m = c.model.toJSON();
+    for (let c of this.__content.collection.toArray()) {
+      let m = c.toJSON();
       delete m.uiHandler;
       delete m.partHandler;
       delete m.logicalParent;
       items.push(m)
     }
     const storageKey = this.mget('storageKey');
-    const data = JSON.parse(sessionStorage.getItem(storageKey)) || {};
+    let data = JSON.parse(sessionStorage.getItem(storageKey)) || {};
     data.attachment = items;
     sessionStorage.setItem(storageKey, JSON.stringify(data));
+    if (items.length) {
+      this.el.dataset.state = _a.open;
+    } else {
+      this.el.dataset.state = _a.closed;
+    }
+    this.trigger(_e.update)
   }
+
   /**
    * 
    */
@@ -149,8 +172,8 @@ class __media_wrapper extends LetcBox {
    * 
    */
   hasPendingUpload() {
-    for(let media of this.__content.children.toArray()){
-      if(media.isUploading) return true;
+    for (let media of this.__content.children.toArray()) {
+      if (media.isUploading) return true;
     }
     return false;
   }
@@ -158,8 +181,10 @@ class __media_wrapper extends LetcBox {
   /**
    * 
    */
-  hasAttachemt() {
-    return !this.__content.isEmpty()
+  hasAttachment() {
+    let attachment = this.getAttachment();
+    if (_.isEmpty(attachment) || !_.isArray(attachment)) return false;
+    return true;
   }
 
   /**
@@ -183,11 +208,25 @@ class __media_wrapper extends LetcBox {
   /**
    * 
    */
-  onPartReady(child, pn, section) {
+  onPartReady(child, pn) {
     switch (pn) {
       case _a.content:
+        let attachment = this.getAttachment();
+        if (_.isEmpty(attachment)) {
+          setTimeout(() => {
+            this.el.dataset.state = _a.closed;
+          }, 1000)
+        } else {
+          this.addNewMedia(attachment);
+          this.el.dataset.state = _a.open;
+        }
+        /**  */
+        child.onRemoveChild = (parent, c) => {
+          if (c.isLazyClass) return;
+          this.updateAttachment();
+        }
         child.onAddKid = c => {
-          if(c.isLazyClass) return;
+          if (c.isLazyClass) return;
           c.once(_e.restart, () => {
             this.updateAttachment();
           });
@@ -201,8 +240,12 @@ class __media_wrapper extends LetcBox {
  * 
  */
   loadAttachment() {
+    if (!this.hasAttachment()) {
+      this.el.dataset.state = _a.closed;
+      return;
+    }
+    this.el.dataset.state = _a.open;
     let attachment = this.getAttachment();
-    if (_.isEmpty(attachment) || !_.isArray(attachment)) return;
     let items = attachment.map(r => {
       let uiHandler = this.mget(_a.uiHandler);
       if (_.isArray(uiHandler)) {

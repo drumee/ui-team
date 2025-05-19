@@ -60,6 +60,7 @@ class __widget_chat extends LetcBox {
     this.declareHandlers();
     this.bindEvent(_a.live);
     this._newMsgCount = 0;
+
   }
 
   /**
@@ -82,6 +83,9 @@ class __widget_chat extends LetcBox {
    */
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    if (this.attachmentList) {
+      this.attachmentList.off("uploaded", this.showSend);
+    }
   }
 
   /**
@@ -213,7 +217,9 @@ class __widget_chat extends LetcBox {
           return att;
         });
     }
-    this.attachmentList.saveAttachment(uploads);
+    this.ensurePart('attachment-list').then((p) => {
+      p.saveAttachment(uploads);
+    });
   }
 
   /**
@@ -225,12 +231,6 @@ class __widget_chat extends LetcBox {
     });
   }
 
-  /**
-    * 
-    */
-  hasAttachment() {
-    return this.attachmentList.hasAttachment();
-  }
 
   /**
    * 
@@ -238,12 +238,14 @@ class __widget_chat extends LetcBox {
    */
   onPasteBase64(args) {
     if (args.type && /^data:image/.test(args.type)) {
+      let { chat_upload_id: nid, hub_id, home_id } = this.mget(_a.home);
       let pm = {
         respawn: 'media_paste',
         type: args.type,
         src: args.src,
-        nid: this.mget(_a.home).chat_upload_id,
-        hub_id: this.hubId
+        home_id,
+        nid,
+        hub_id,
       };
       this.insertMedia(pm);
     }
@@ -283,10 +285,12 @@ class __widget_chat extends LetcBox {
    */
   onPartReady(child, pn, section) {
     switch (pn) {
-      case "wrapper-attachment":
-        this.waitElement(child.el, () => {
-          this.attachMediaWrapper(child);
-        });
+      case "attachment-list":
+        this.attachmentList = child;
+        this.checkPendingContent();
+        child.on(_e.update, () => {
+          this.checkPendingContent();
+        })
         break;
       case _a.list:
         const type = this.mget(_a.type);
@@ -309,27 +313,22 @@ class __widget_chat extends LetcBox {
 
   /**
    * 
-   * @returns 
    */
+  hasAttachment() {
+    return this.attachmentList.hasAttachment()
+  }
 
-  async attachMediaWrapper(wrapper) {
-    wrapper.append({
-      kind: 'media_wrapper',
-      storageKey: this.storageKey,
-      uiHandler: [this],
-      sys_pn: "attachment-list"
-    });
-    const attachmentList = await this.ensurePart('attachment-list');
-    this.attachmentList = attachmentList;
-    attachmentList.on("uploaded", this.showSend);
-    let message = this.getStoredMessage();
-    const f = () => {
-      if (attachmentList.hasPendingUpload()) return;
-      if (!message.trim()) return;
-      this.showSend();
+  /**
+   * 
+   */
+  checkPendingContent() {
+    if (this.attachmentList.hasAttachment() || this.getStoredMessage()) {
+      this.showSend()
+    } else {
+      this.ensurePart(_a.message).then((p) => {
+        p.hideSend();
+      })
     }
-
-    return setTimeout(f, 1000);
   }
 
   /**
@@ -451,7 +450,7 @@ class __widget_chat extends LetcBox {
 
       case 'paste-file':
         if (args.file) {
-          this.pastFile(args.file);
+          this.pasteFile(args.file);
         }
         return;
 
@@ -473,7 +472,8 @@ class __widget_chat extends LetcBox {
   /**
    * @param  {File} args
    */
-  pastFile(file) {
+  pasteFile(file) {
+    let { chat_upload_id: nid, hub_id, home_id } = this.mget(_a.home);
     let pm = {
       kind: 'media_grid',
       phase: _a.upload,
@@ -483,8 +483,10 @@ class __widget_chat extends LetcBox {
       uiHandler: [this],
       file: file,
       destination: {
-        nid: this.mget(_a.home).chat_upload_id,
-        hub_id: this.hubId
+        destpath: "/",
+        nid,
+        hub_id,
+        home_id
       }
     };
     this.insertMedia(pm);
@@ -649,13 +651,13 @@ class __widget_chat extends LetcBox {
     if (!items.length) {
       return;
     }
-
+    this.debug("AAA:664", items)
     let list = this.attachmentList;
     if (list && !list.isDestroyed()) {
       list.addNewMedia(items);
       return;
     }
-    this.attachMediaWrapper(this.__wrapperAttachment, items);
+    //this.attachMediaWrapper(this.__wrapperAttachment, items);
   }
 
   /**
@@ -1037,18 +1039,11 @@ class __widget_chat extends LetcBox {
    * @param {*} data 
    */
   removeUploadFromChat(data) {
-    let media = this.attachmentList.getItemsByAttr(_a.nid, data.nid)[0];
+    let list = this.attachmentList;
+    if (!list) return;
+    let media = list.getItemsByAttr(_a.nid, data.nid)[0];
     if (!media) return;
-    const callback = () => {
-      this.attachmentList.updateAttachment();
-      if (this.attachmentList.container().isEmpty()) {
-        this.__wrapperAttachment.el.dataset.state = _a.closed;
-        if (_.isEmpty(this.__message.getMessage())) {
-          this.__message.hideSend();
-        }
-      }
-    }
-    media.goodbye({ callback });
+    media.goodbye();
   }
 
   /**

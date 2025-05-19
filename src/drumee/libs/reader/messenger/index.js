@@ -114,7 +114,7 @@ class __lib_messenger extends LetcBox {
   hasAttachment() {
     try {
       let h = this.getHandlers(_a.ui)[0];
-      if(h && _.isFunction(h.hasAttachment)){
+      if (h && _.isFunction(h.hasAttachment)) {
         return h.hasAttachment();
       }
     } catch (e) {
