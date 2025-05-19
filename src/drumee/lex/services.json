@@ -59,6 +59,7 @@
     "js": "bootstrap.js",
     "dom": "bootstrap.dom",
     "publicKey": "bootstrap.publicKey",
+    "getSyncTimes": "bootstrap.getSyncTimes",
     "authn": "bootstrap.authn"
   },
   "butler": {
@@ -260,6 +261,10 @@
     "validate_account_deletion_code": "drumate.validate_account_deletion_code",
     "validate_forgot_password_token": "drumate.validate_forgot_password_token",
     "verify_email": "drumate.verify_email"
+  },
+  "exchange": {
+    "server_export": "exchange.server_export",
+    "server_import": "exchange.server_import"
   },
   "font": {
     "font_list": "font.font_list",
@@ -514,6 +519,12 @@
     "create_table": "table.create_table",
     "delete_table": "table.delete_table",
     "fetch": "table.fetch"
+  },
+  "tag": {
+    "list": "tag.list",
+    "get_by_name": "tag.get_by_name",
+    "store": "tag.store",
+    "delete": "tag.delete"
   },
   "tagcontact": {
     "add": "tagcontact.add",

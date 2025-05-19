@@ -128,6 +128,17 @@ class __window_manager extends mfsInteract {
   }
 
   /**
+  *
+  */
+  handleUpload() {
+    let target = this.getActiveWindow();
+    return this.__fileselector.open((e) => {
+      if (target && target !== this) target.raise();
+      this.upload(e);
+    });
+  }
+
+  /**
    *
    * @param {*} e
    * @param {*} token
