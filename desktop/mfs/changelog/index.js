@@ -62,6 +62,7 @@ function selectLocalChanges() {
   for (let s of seq) {
     res.push(`${s} ${no_sys}`)
   }
+  console.log("AAA:65", res)
   return res;
 }
 
@@ -450,6 +451,8 @@ class Changelog extends mfsUtils {
 
   /**
    * Must be called before starting any scan
+   * Snapshot previous fsnode into fsnode_old
+   * fsnode must be populated only after this stage
    */
   prepare() {
     let { fsnode } = this.db.getRow(`SELECT count(*) fsnode FROM fsnode_old`);
@@ -514,14 +517,13 @@ class Changelog extends mfsUtils {
     let { id } = this.db.getRow(sql) || { id: 0 };
     let args = { hub_id: Account.user.get(Attr.id) };
     if (id) {
-      args.id = id;
+      args.id = id + 1;
     } else {
       args.last = 200;
     }
     args.exclude = this.getSyncDisabled();
 
     let data = await this.postService(SERVICES.changelog.read, args);
-
     this._populate = this.db.populate("remote_changelog", "INSERT OR IGNORE");
     const transaction = this.db.transaction((rows) => {
       for (const row of rows) {

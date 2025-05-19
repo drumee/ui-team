@@ -183,7 +183,6 @@ class __window_manager extends push {
           data.role = _a.url;
           let m = new Backbone.Model(data);
           opt.media = new k({ model: m });
-          // return this.launch({ kind: opt.kind, hub_id: opt.hub_id, type: opt.filetype, media: opt.media }, { explicit: 1 })
           return this.openFileLocation(opt.media);
         });
       })

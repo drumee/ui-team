@@ -38,10 +38,16 @@ const __icon = function (_ui_) {
     settings: 'editbox_cog',
     share_qrcode: 'editbox_link',
     shortcut: 'editbox_link',
+    showHidden: 'eye',
     unlock: 'protected-unlock',
     update: 'editbox_pencil',
     upload: 'desktop_upload'
   };
+  if (localStorage.getItem("showHidden")) {
+    a.showHidden = 'backoffice_preview';
+  } else {
+    a.showHidden = 'eye';
+  }
   return a;
 };
 

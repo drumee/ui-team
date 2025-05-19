@@ -1899,5 +1899,7 @@
   "RESTORE_BEFORE_OPEN": "该物品已被丢弃。您必须先将其移至桌面来恢复它，然后才能再次打开它。",
   "TRASH_BEING_EMPTIED": "您的垃圾箱正在被清空。",
   "NOTE_ON_DATE_X": "来自 {0} 的注释",
-  "POPUP_PERMISSION": "请授予弹出权限"
+  "POPUP_PERMISSION": "请授予弹出权限",
+  "SHOW_HIDDEN_FILES": "显示隐藏文件",
+  "HIDE_HIDDEN_FILES": "隐藏系统文件"
 }

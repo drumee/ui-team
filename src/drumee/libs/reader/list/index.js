@@ -74,7 +74,7 @@ class __list extends LetcBox {
   /**
    * 
    */
-  restart(){
+  restart() {
     this.trigger(_e.eod); //** Flush old listeningxs */
     this.start(1)
   }
@@ -647,7 +647,7 @@ class __list extends LetcBox {
     if (this._end_of_data) {
       return;
     }
-    data = this.prepare(data);
+    data = this.prepare(this.prepareData(data));
     if (!this._started) {
       if (this.mget(_a.defaults)) {
         setTimeout(() => {
@@ -688,10 +688,34 @@ class __list extends LetcBox {
 
   /**
    * 
+   */
+  prepareData(data) {
+    if (!_.isArray(data)) {
+      data = [data];
+    }
+    let skip = this.mget('skip');
+    if (!skip) return data;
+    for (let k in skip) {
+      data = data.filter((e) => {
+        this.debug("AAA:689", k, e[k], _.isString(skip[k]), skip[k])
+        if (_.isString(skip[k])) {
+          return e[k] != skip[k]
+        } else if (skip[k].test) {
+          return !skip[k].test(e[k])
+        }
+        return true
+      })
+    }
+    return data
+  }
+
+  /**
+   * 
    * @param {*} data 
    * @returns 
    */
   feed(data) {
+    data = this.prepareData(data);
     let kids = this.prepare(data);
     if (kids) {
       return this.collection.set(kids);

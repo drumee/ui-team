@@ -20,7 +20,6 @@ class __notification_panel extends LetcBox {
    * @param {*} opt 
    */
   initialize(opt = {}) {
-    // this.fig = 1;
     super.initialize(opt);
     require('./skin');
     this.declareHandlers();
@@ -39,6 +38,8 @@ class __notification_panel extends LetcBox {
     this._currentCount = 0;
     this._currentPayload = {};
     this.details = {};
+    this.onVisibilityChange = this.onVisibilityChange.bind(this)
+    document.addEventListener("visibilitychange", this.onVisibilityChange);
     this.bindWsEvents();
   }
 
@@ -71,8 +72,19 @@ class __notification_panel extends LetcBox {
   onDestroy() {
     RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off('notification:request', this.updateSubNotificationCount);
+    document.removeEventListener("visibilitychange", this.onVisibilityChange);
   }
 
+  /**
+   * 
+   * @param {*} e 
+   */
+  onVisibilityChange(e) {
+    if (!this.visible) {
+      this.getNotificationData(100);
+    }
+    this.visible = !document.hidden;
+  }
 
   /**
    * 
@@ -80,14 +92,8 @@ class __notification_panel extends LetcBox {
   onDomRefresh() {
     RADIO_BROADCAST.on('notification:request', this.updateSubNotificationCount);
     RADIO_NETWORK.on(_e.online, this.getNotificationData);
-    this.getNotificationData();
     this.visible = !document.hidden;
-    document.onvisibilitychange = async (e) => {
-      if (!this.visible) {
-        this.getNotificationData(100);
-      }
-      this.visible = !document.hidden;
-    }
+    this.getNotificationData();
   }
 
 
@@ -236,9 +242,7 @@ class __notification_panel extends LetcBox {
       res.totalChatCount += _.keys(this.summary[k]).length;
     }
     this.updateNotificationTitle();
-    //this.chatNotificationData = res;
     res.allConversationsCount = res.contactChatCount + res.teamChatCount;
-    // res.details = { ...this.details };
     RADIO_BROADCAST.trigger('notification:counts', res);
     RADIO_BROADCAST.trigger('notification:details', this.details);
     RADIO_BROADCAST.trigger('notification:summary', this.summary);
@@ -267,7 +271,6 @@ class __notification_panel extends LetcBox {
       if (!count) {
         p.el.hide();
       } else {
-        // p.render();
         p.el.show();
       }
       this._currentCount = count;
@@ -279,7 +282,6 @@ class __notification_panel extends LetcBox {
   */
   getNotificationData(timeout = 2000) {
     if (!Visitor.id || !Visitor.isOnline()) {
-      this.debug("AAAA:269 NOT READY", this);
       Visitor.once('online', () => {
         this.getNotificationData();
       })
@@ -305,7 +307,6 @@ class __notification_panel extends LetcBox {
     return this.postService(SERVICE.drumate.notification_center, {
       hub_id: Visitor.id
     }).then((data) => {
-      this.gossip("AAAA:259", data);
       this._buildNotifications(data);
       this.updateNotificationCount();
       if (this.notificationState) {
@@ -354,10 +355,6 @@ class __notification_panel extends LetcBox {
         }, 1000);
         return;
     }
-    // this.updateNotificationCount(options);
-    // if (this.notificationState) {
-    //   this.updateNotificationWindow(data, options)
-    // }
   }
 
   /**

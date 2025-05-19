@@ -1899,5 +1899,7 @@
   "RESTORE_BEFORE_OPEN": "Cet élement a été mis à la corbeille. Vous devez d'abord le restaurer en le déplaçant sur le bureau avant de pouvir l'ouvrir à nouveau. ",
   "TRASH_BEING_EMPTIED": "Votre poubelle est en train d'être vidée.",
   "NOTE_ON_DATE_X": "Note du {0}",
-  "POPUP_PERMISSION": "Veuillez accorder l'autorisation de pop-up"
+  "POPUP_PERMISSION": "Veuillez accorder l'autorisation de pop-up",
+  "SHOW_HIDDEN_FILES": "Montrer les fichiers cachés",
+  "HIDE_HIDDEN_FILES": "Cacher les fichiers système"
 }

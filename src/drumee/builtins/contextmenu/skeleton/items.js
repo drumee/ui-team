@@ -67,7 +67,12 @@ const __button = function(_ui_, trigger, k){
     update:button({label:LOCALE.UPDATE, service: _e.update}),
     upload:button({label:LOCALE.UPLOAD, service: _e.upload})
   };
-  a = {...a, ...require('./items.electron')(_ui_, button)}
+  if(localStorage.getItem("showHidden")){
+    a.showHidden = button({label: LOCALE.HIDE_HIDDEN_FILES, service: 'hide-hidden-files'});
+  }else{
+    a.showHidden = button({label: LOCALE.SHOW_HIDDEN_FILES, service: 'show-hidden-files'});
+  }
+
   if(a[k]) {
     const r = a[k]; 
     r.className = `${pfx}`;

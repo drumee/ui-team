@@ -20,7 +20,6 @@ class __window_mfs extends DrumeeMFS {
   initialize(opt) {
     this._watchdog(opt);
     super.initialize(opt);
-
     this.topbarHeight = this.configs().topbarHeight;
     this._synced = {};
     this.mset({ echoId: Visitor.get(_a.socket_id) + this.cid })
@@ -35,20 +34,93 @@ class __window_mfs extends DrumeeMFS {
     this.parentFolder = m.logicalParent || m.mget('logicalParent');
     if (this._responsive) RADIO_BROADCAST.on(_e.responsive, this._responsive);
     if (this._kbHandler) RADIO_KBD.on(_e.keyup, this._kbHandler);
+    this.onVisibilityChange = this.onVisibilityChange.bind(this)
+    document.addEventListener("visibilitychange", this.onVisibilityChange);
+    this._changelog_id = null;
+    this._goneHiddenTime = new Date().getTime();
+  }
+
+  /**
+   * 
+   * @param {*} e 
+   */
+  onVisibilityChange(e) {
+    this.visible = !document.hidden;
+    let now = new Date().getTime();
+    let prev = this._goneHiddenTime;
+    this._goneHiddenTime = now;
+    if ((now - prev) <= 5000) {
+      return;
+    }
+    if (document.hidden) {
+      return;
+    }
+    if (wsRouter.timestampAge() < 10000) return;
+    this._checkChangelog();
+  }
+
+
+  /**
+   * In case of updates through websocket were missing because of DOM gone idle for any reason
+   * Try tu refresh by looking into changelog
+   */
+  _checkChangelog() {
+    let pid = this.getCurrentNid();
+    let cur_hub_id = this.mget(_a.hub_id);
+    let args = { hub_id: this.mget(_a.hub_id) };
+    if (this._changelog_id) {
+      args.id = this._changelog_id;
+    } else {
+      args.last = 5;
+    }
+    let changed = 0;
+    this.fetchService(SERVICE.changelog.read, args).then((data = []) => {
+      if (!data.length) return;
+      let rows = data.filter((e) => {
+        const { src, dest, hub_id } = e;
+        if (!hub_id || !src) return false;
+        if (hub_id != cur_hub_id) return false;
+        if (_.isArray(src)) {
+          let s = src.filter((e) => {
+            if (e.parent_id != pid) return false;
+          })
+          changed = changed + s.length;
+        }
+        if (_.isArray(dest)) {
+          let s = dest.filter((e) => {
+            if (e.parent_id != pid) return false;
+          })
+          changed = changed + s.length;
+        }
+        if (src.hub_id && src.hub_id != cur_hub_id) return false;
+        if (dest.hub_id && dest.hub_id != cur_hub_id) return false;
+        if (src.parent_id == pid) return true;
+        if (dest.parent_id == pid) return true;
+        return false;
+      })
+      this._changelog_id = data[0].id + 1;
+      changed = changed + rows.length;
+      if (changed) {
+        this.fetchContent()
+      }
+    })
+
   }
 
   /**
    * 
    * @returns 
    */
-  onDestroy(opt) {
+  onBeforeDestroy(opt) {
     if (this._responsive) RADIO_BROADCAST.off(_e.responsive, this._responsive);
     if (this._kbHandler) RADIO_KBD.off(_e.keyup, this._kbHandler);
     Wm.off(WS_EVENT, this.handleWsEvent)
-    if (super.onDestroy) {
-      super.onDestroy(opt)
+    if (super.onBeforeDestroy) {
+      super.onBeforeDestroy(opt)
     }
+    document.removeEventListener("visibilitychange", this.onVisibilityChange);
   }
+
 
   /**
    * Ensure the widget will show.

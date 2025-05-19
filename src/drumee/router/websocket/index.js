@@ -9,7 +9,7 @@ const WEBSOCKET_MESSAGE = "websocket:message";
 const RECONNECT_INTERVAL = 5000;
 
 window.W3CWebSocket = W3CWebSocket;
-
+let TIMESTAMP = new Date().getTime();
 
 function __processMessage__(msg = {}) {
   if (this.isDestroyed()) {
@@ -22,10 +22,11 @@ function __processMessage__(msg = {}) {
   let options = payload.options || {};
   let model = payload.model;
   this.gossip(`[processMessage] service=${service}`, options, model);
+  TIMESTAMP = new Date().getTime();
+  this.triggerMethod(WEBSOCKET_MESSAGE, msg);
   if (this.onWsMessage) {
     return this.onWsMessage(service, model, options);
   }
-  this.triggerMethod(WEBSOCKET_MESSAGE, msg);
 }
 
 class __router_websocket extends LetcBox {
@@ -54,7 +55,6 @@ class __router_websocket extends LetcBox {
     });
     this._listeners = new Map();
     this._senders = new Map();
-    //this.bindEvent(_a.sys, _a.drumate, this);
     window.wsRouter = this;
     RADIO_NETWORK.trigger(_e.websocketReady, this);
     this.reconnectTimer = RECONNECT_INTERVAL;
@@ -157,6 +157,23 @@ class __router_websocket extends LetcBox {
     if (client) this.socket = client;
     //this.debug("AAAX:153 Binding", this.socket, this);
   }
+
+  /**
+   * 
+   * @returns 
+   */
+  lastTimestamp() {
+    return TIMESTAMP
+  }
+
+  /**
+   * 
+   * @returns 
+   */
+  timestampAge() {
+    return new Date().getTime() - TIMESTAMP;
+  }
+
   /**
    *
    * @param {*} client
@@ -175,7 +192,7 @@ class __router_websocket extends LetcBox {
         let error = "Too many reconnections failed. Giving up";
         setTimeout(() => {
           this._reconnect_count = 0;
-        }, 10 * 1000)  
+        }, 10 * 1000)
         this.warn(error);
         reject({ error });
         return;
