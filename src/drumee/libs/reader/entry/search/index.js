@@ -87,6 +87,14 @@ class __entry_search extends LetcBox {
     return this._input.getValue();
   }
 
+  /**
+   * 
+   * @returns 
+   */
+  setValue(v) {
+    return this._input.setValue(v);
+  }
+
 
   /**
    * 
