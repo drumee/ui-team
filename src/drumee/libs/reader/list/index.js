@@ -54,6 +54,7 @@ class __list extends LetcBox {
       });
     }
     RADIO_BROADCAST.on(_e.responsive, this.responsive.bind(this));
+    this._onMouseWheel = this._onMouseWheel.bind(this)
     this._initApi();
   }
 
@@ -65,7 +66,8 @@ class __list extends LetcBox {
     this.stopListening();
     try {
       this.__container.removeEventListener(_e.scroll, this._scrollHandler);
-      this.el.onmousewheel = null;
+      this.el.removeEventListener("mousewheel", this._onMouseWhee)
+      this.el.useMouseWheel = null;
     } catch (e) {
 
     }
@@ -246,8 +248,7 @@ class __list extends LetcBox {
     }
     this.initCollectionEvents();
     this.start();
-    this.onMouseWheel()
-
+    this.useMouseWheel()
   }
 
 
@@ -273,17 +274,8 @@ class __list extends LetcBox {
    * trigger scroll event we rely on mousewheel event 
    * to get more items
    */
-  onMouseWheel() {
-    this.el.addEventListener("mousewheel", (e) => {
-      if (!this.scrollY && !this._end_of_data) {
-        if (this._startAtBottom) {
-          if (e.deltaY < 0) this.fetch();
-        } else {
-          if (e.deltaY > 0) this.fetch();
-        }
-      }
-      this.trigger("mousewheel", e)
-    }, { passive: true })
+  async useMouseWheel() {
+    this.el.addEventListener("mousewheel", this._onMouseWheel, { passive: true })
   }
 
   /**
@@ -389,29 +381,23 @@ class __list extends LetcBox {
     if (!this.mget(_a.spinner)) {
       return;
     }
-    const f = () => {
-      const opt = { kind: 'spinner' }
-      if (this._startAtBottom) {
-        this.prepend(opt);
-        this.__spinner = this.children.first();
-      } else {
-        this.append(opt);
-        this.__spinner = this.children.last();
-      }
-    }
     const tw = this.mget(SPINNER_WAIT);
+    if (this._timeout) return;
+
     if (tw) {
-      if (!this._waiting) return;
-      this._timeout = setTimeout(f, tw);
+      this._timeout = setTimeout(() => {
+        this.spinner(1);
+        this._timeout = null;
+      }, tw);
     } else {
-      f();
+      this.spinner(1);
     }
   }
 
   /**
    * 
    */
-  fetch() {
+  fetch(spin = 0) {
     const { service } = this._api;
     if (!service) {
       return;
@@ -435,7 +421,11 @@ class __list extends LetcBox {
     }
     delete opt.service;
     opt.pagelength = this.mget('pagelength') || _K.pagelength;
-    this.checkSpinner();
+    if (spin) {
+      this.spinner(1)
+    } else {
+      this.checkSpinner();
+    }
     this.fetchService(service, opt)
       .then(this.handleResponse.bind(this))
       .catch(this.onServerComplain.bind(this));
@@ -444,13 +434,40 @@ class __list extends LetcBox {
 
   /**
    * 
+   * @param {*} e 
+   */
+  _onMouseWheel(e) {
+    this._onMouseWheelTimeout = setTimeout(() => {
+      if (this._scrolled) {
+        this.el.removeEventListener("mousewheel", this._onMouseWhee)
+        return; // this._onScroll has been called, no more ned 
+      }
+      if (!this.scrollY && !this._end_of_data) {
+        if (this._startAtBottom) {
+          if (e.deltaY < 0) this.fetch();
+        } else {
+          if (e.deltaY > 0) this.fetch();
+        }
+      }
+      this.trigger("mousewheel", e)
+    }, 500)
+  }
+
+  /**
+   * 
    */
   _onScroll(e, pos) {
+    this._scrolled = true; // Prevent mousewheel overrun
+    if(this._onMouseWheelTimeout){
+      this.el.removeEventListener("mousewheel", this._onMouseWhee)
+      clearTimeout(this._onMouseWheelTimeout)
+    }
     if (!this.__container) return;
     let dir;
     if (!this._ready || this._waiting) {
       return;
     }
+
     const st = this.__container.scrollTop;
     this.scrollY = st;
     this.scrollX = this.__container.scrollLeft;
@@ -470,18 +487,22 @@ class __list extends LetcBox {
     this._scrollY = this.scrollY;
     this._scrollX = this.scrollX;
     this.trigger(_e.scroll, this, e);
-    let f = () => {
+    setTimeout(() => {
       this._scrolling = false;
-    };
-    if (!this._startAtBottom) {
-      setTimeout(f, 3000);
-    }
+      this.spinner(0)
+    }, 3000);
     if (this._startAtBottom) {
       if ((dir === _a.down) || (st > 0)) {
         return;
       }
     }
-    this.fetch();
+    if (dir == _a.down) {
+      if ((this.scrollTop() + this.$el.height()) < this.scrollHeight()) return
+      this.fetch(1);
+      return
+    }
+    if (this.scrollTop()) return;
+    this.fetch(1);
   }
 
   /**
@@ -498,6 +519,14 @@ class __list extends LetcBox {
   getOffsetY() {
     if (!this.__container) return;
     return this.__container.scrollTop;
+  }
+
+  /**
+   * 
+   */
+  scrollHeight() {
+    if (!this.__container) return this.$el.height();
+    return this.__container.scrollHeight;
   }
 
   /**
@@ -545,9 +574,9 @@ class __list extends LetcBox {
     if (this.isEmpty()) return true;
     let last = this.children.last();
     if (!last) return true;
-    if (this.__spinner) {
-      return (last.mget(_a.kind) == this.__spinner.mget(_a.kind))
-    }
+    // if (this.__spinner) {
+    //   return (last.mget(_a.kind) == this.__spinner.mget(_a.kind))
+    // }
     return this.collection.length == 0;
   }
 
@@ -561,9 +590,16 @@ class __list extends LetcBox {
   */
   onServerComplain(xhr) {
     this.warn(`[556] GOT SERVER COMPLAINS`, xhr);
+    this._waiting = false;
+    this.spinner(0);
+    // if ((this.__spinner != null) && !this.__spinner.isDestroyed()) {
+    //   this.__spinner.cut();
+    // }
     setTimeout(() => {
+      let itemsOpt = this.mget(_a.itemsOpt);
       this.model.unset(_a.itemsOpt);
       this.feed([Skeletons.Note(LOCALE.ERROR_SERVER, 'server-error')])
+      this.mset({ itemsOpt })
     }, 1000)
     this.trigger(_e.error, this);
   }
@@ -573,14 +609,15 @@ class __list extends LetcBox {
    * 
    */
   handleResponse(data) {
-    this._waiting = false;
-    if (this._timeout) {
-      clearTimeout(this._timeout);
-      this._timeout = null;
-    }
-    if ((this.__spinner != null) && !this.__spinner.isDestroyed()) {
-      this.__spinner.cut();
-    }
+    // this._waiting = false;
+    // this.spinner(0)
+    // if (this._timeout) {
+    //   clearTimeout(this._timeout);
+    //   this._timeout = null;
+    // }
+    // if ((this.__spinner != null) && !this.__spinner.isDestroyed()) {
+    //   this.__spinner.cut();
+    // }
 
     const phContent = this.mget(_a.placeholder) || this.phContent;
     if (_.isEmpty(data) && phContent) {
@@ -628,10 +665,23 @@ class __list extends LetcBox {
   /**
    * 
    */
+  _stopSpinner() {
+    this.spinner(0);
+    this._waiting = false;
+    if (this._timeout) {
+      clearTimeout(this._timeout);
+      this._timeout = null;
+    }
+  }
+
+  /**
+   * 
+   */
   _eod() {
     this._end_of_data = true;
     this.trigger(_e.eod, this);
     this.status = _e.eod;
+    this._stopSpinner();
   }
 
   /**
@@ -677,6 +727,7 @@ class __list extends LetcBox {
         }
       }
     }
+    this._stopSpinner()
     if (this.mget('fetchButton')) {
       this.el.append(_button(this._id));
       this._fetchBtn = document.getElementById(`${this._id}-fetch`);
@@ -698,7 +749,6 @@ class __list extends LetcBox {
     if (!skip) return data;
     for (let k in skip) {
       data = data.filter((e) => {
-        this.debug("AAA:689", k, e[k], _.isString(skip[k]), skip[k])
         if (_.isString(skip[k])) {
           return e[k] != skip[k]
         } else if (skip[k].test) {
