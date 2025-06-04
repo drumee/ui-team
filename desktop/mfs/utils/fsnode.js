@@ -105,6 +105,16 @@ module.exports = function (worker) {
   /**
    * 
    */
+  function getRemovedEntities() {
+    let sql = `SELECT * FROM fsnode WHERE  
+       inode NOT IN (SELECT inode FROM inodes) AND effective AND nodetype!='system'`;
+    let rows = db.getRows(sql) || [];
+    return rows;
+  }
+
+  /**
+   * 
+   */
   function initChangesList(){
     let sql = `UPDATE fsnode SET changed=c.changed, effective=c.effective FROM 
       (SELECT IIF(h.md5 = r.md5Hash, 0, 1) changed, effective, r.filepath 
@@ -123,7 +133,7 @@ module.exports = function (worker) {
   }
 
   return {
-    rename, move, getChildrenInodes, unsyncedChildren, 
+    rename, move, getChildrenInodes, unsyncedChildren, getRemovedEntities,
     purgeZombies, getNewEntities, numberOfRows, initChangesList
   }
 }  

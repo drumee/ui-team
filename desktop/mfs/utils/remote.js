@@ -81,8 +81,10 @@ module.exports = function (worker) {
   * 
   */
   function getNewEntities() {
-    let sql = `SELECT * FROM remote WHERE effective AND pid!='0' AND 
-      filepath NOT IN (SELECT filepath FROM fsnode WHERE effective)`;
+    let sql = `SELECT * FROM remote WHERE effective AND pid!='0' AND effective 
+      AND filepath NOT IN (SELECT filepath FROM fsnode) 
+      AND filepath NOT IN 
+      (SELECT filepath FROM fsnode WHERE inode NOT IN (SELECT inode FROM inodes))`;
     let rows = db.getRows(sql) || [];
     return rows;
   }

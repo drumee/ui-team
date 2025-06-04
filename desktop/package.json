@@ -1,8 +1,8 @@
 {
-  "name": "drumee-desktop",
+  "name": "@drumee/ui-team-desktop",
   "productName": "Drumee",
   "version": "2.8.1",
-  "description": "Collaboration autonomous system",
+  "description": "Drumee Web Os User Interface with collaborative features for desktop",
   "main": "index.js",
   "homepage": "https://drumee.com",
   "author": "Somanos Sar <somanos@drumee.com> https://drumee.com",

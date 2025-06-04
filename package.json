@@ -1,23 +1,23 @@
 {
-  "name": "drumee-ui-desktop",
-  "description": "Drumee Web Os User Interface",
+  "name": "@drumee/ui-team",
+  "description": "Drumee Web Os User Interface with collaborative features",
   "version": "3.0.3",
   "homepage": "https://drumee.com",
   "author": "Somanos Sar <somanos@drumee.com> (http://drumee.com)",
   "repository": {
     "type": "git",
-    "url": "git@gitlab.drumee.in:drumee/ui.git"
+    "url": "git@github.com:drumee/ui-team.git"
   },
   "bugs": {
-    "url": "https://github.com/drumee/ui-team/issues"
+    "url": "https://github.com/drumee/ui-team/issues/"
   },
   "bin": {
     "seed-letc": "./webpack/seed/index.js"
   },
   "licenses": [
     {
-      "type": "Patent",
-      "url": "https://drumee.com/blob/master/LICENSE-Patent"
+      "type": "AGPL V3",
+      "url": "https://github.com/drumee/ui-team/blob/main/LICENSE"
     }
   ],
   "main": "src/drumee/index.electron.js",
@@ -30,7 +30,7 @@
       "last 1 version"
     ]
   },
-  "license": "SEE LICENSE IN https://drumee.com/blob/master/LICENSE-Patent",
+  "license": "SEE LICENSE IN https://github.com/drumee/ui-team/blob/main/LICENSE",
   "devDependencies": {
     "@babel/core": "^7.19.1",
     "@babel/preset-env": "^7.19.1",

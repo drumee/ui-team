@@ -231,7 +231,7 @@ class Worker extends Media {
     await this.populateRemote();
     await this.populateLocal();
     this.remote.initChangesList();
-    this.fsnode.purgeZombies();
+    //this.fsnode.purgeZombies();
     this.fsnode.initChangesList();
     this.syncOpt.initDefaults();
     this._populated = 1;
@@ -290,13 +290,19 @@ class Worker extends Media {
   syncInitialChanges() {
     let { engine, effective } = this.syncOpt.rootSettings();
     let changes = this.remote.getChangesList();
+    let localRemoved = this.fsnode.getRemovedEntities();
+    this.debug("AAA:294", localRemoved)
     let newLocal = this.fsnode.getNewEntities();
     let newRemote = this.remote.getNewEntities();
+    this.debug("AAA:297", newRemote)
     newLocal.map((e) => {
       this.takeLocalItem(e, Attr.created)
     })
     newRemote.map((e) => {
       this.takeRemoteItem(e, Attr.created)
+    })
+    localRemoved.map((e) => {
+      this.takeLocalItem(e, Attr.deleted)
     })
     changes.map((e) => {
       if (e.locMtime > e.mtime) {
@@ -622,6 +628,7 @@ class Worker extends Media {
         nodetype = Attr.file;
       }
       timestamp = Math.ceil(stat.miniData.mtimeMs / 1000);
+      /** Clean filepath with white space char */
       if (/^ | +$/.test(filename)) {
         let re = null;
         if (ext) {
