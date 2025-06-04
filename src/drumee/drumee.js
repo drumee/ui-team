@@ -96,13 +96,13 @@ class Drumee extends Marionette.Application {
     a.style.width = "100%";
     a.style.alignContent = "center";
     a.style.textAlign = "center";
-    let style = `style="text-decoration: none; color:white"`;
+    let style = `text-decoration: none; color:white`;
     console.trace()
     switch (data.status) {
-      case 404:
-        return a.innerHTML = require("./template/page/404")(b, data, style);
       case 403:
         return a.innerHTML = require("./template/page/403")(b, data, style);
+      case 404:
+        return a.innerHTML = require("./template/page/404")(b, data, style);
       case 500:
       case 501:
       case 502:
