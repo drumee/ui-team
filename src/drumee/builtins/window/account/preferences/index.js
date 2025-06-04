@@ -77,11 +77,10 @@ class __account_preferences extends __core {
           service: SERVICE.drumate.set_lang,
           Xlang: cmd.model.get(_a.value),
           hub_id: Visitor.id
-        }).then(()=>{
+        }).then((data)=>{
           Drumee.locale(l);
-          setTimeout(()=>{
-            uiRouter.restart();
-          }, 2000);
+          Visitor.set(data);
+          uiRouter.restart();
         })
     }
   }

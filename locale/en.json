@@ -1901,5 +1901,6 @@
   "NOTE_ON_DATE_X": "Note on {0}",
   "POPUP_PERMISSION": "Please grant popup permission",
   "SHOW_HIDDEN_FILES": "Show hidden files",
-  "HIDE_HIDDEN_FILES": "Hide system files"
+  "HIDE_HIDDEN_FILES": "Hide system files",
+  "GOTO_HOMEPAGE": "Go to the home page"
 }

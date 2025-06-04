@@ -1901,5 +1901,6 @@
   "NOTE_ON_DATE_X": "ចំណាំពី {0}",
   "POPUP_PERMISSION": "សូម​ផ្តល់​ការអនុញ្ញាត​ឱ្យ​លេច​ឡើង (popup)",
   "SHOW_HIDDEN_FILES": "បង្ហាញឯកសារដែលលាក់",
-  "HIDE_HIDDEN_FILES": "លាក់ឯកសារប្រព័ន្ធ"
+  "HIDE_HIDDEN_FILES": "លាក់ឯកសារប្រព័ន្ធ",
+  "GOTO_HOMEPAGE": "ទៅកាន់ទំព័រដើម"
 }

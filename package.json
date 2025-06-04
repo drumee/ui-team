@@ -1,7 +1,7 @@
 {
-  "name": "@drumee/ui-team",
-  "description": "Drumee Team UI",
-  "version": "3.0.0",
+  "name": "drumee-ui-desktop",
+  "description": "Drumee Web Os User Interface",
+  "version": "3.0.3",
   "homepage": "https://drumee.com",
   "author": "Somanos Sar <somanos@drumee.com> (http://drumee.com)",
   "repository": {
@@ -9,7 +9,7 @@
     "url": "git@gitlab.drumee.in:drumee/ui.git"
   },
   "bugs": {
-    "url": "https://drumee.com/"
+    "url": "https://github.com/drumee/ui-team/issues"
   },
   "bin": {
     "seed-letc": "./webpack/seed/index.js"

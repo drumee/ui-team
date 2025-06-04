@@ -1901,5 +1901,6 @@
   "NOTE_ON_DATE_X": "来自 {0} 的注释",
   "POPUP_PERMISSION": "请授予弹出权限",
   "SHOW_HIDDEN_FILES": "显示隐藏文件",
-  "HIDE_HIDDEN_FILES": "隐藏系统文件"
+  "HIDE_HIDDEN_FILES": "隐藏系统文件",
+  "GOTO_HOMEPAGE": "转至主页"
 }

@@ -116,5 +116,6 @@
   "NOTE_ON_DATE_X": "Nota del {0}",
   "POPUP_PERMISSION": "Por favor, conceda permiso para ventanas emergentes",
   "SHOW_HIDDEN_FILES": "Mostrar archivos ocultos",
-  "HIDE_HIDDEN_FILES": "Ocultar archivos del sistema"
+  "HIDE_HIDDEN_FILES": "Ocultar archivos del sistema",
+  "GOTO_HOMEPAGE": "Ir a la página de inicio"
 }

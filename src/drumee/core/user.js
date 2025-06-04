@@ -1,5 +1,13 @@
 
 const DISK_USAGE = 'disk_usage';
+const DATEFORMAT = {
+  en: "MM/DD/YYYY",
+  es: "DD/MM/YYYY",
+  fr: "DD/MM/YYYY",
+  km: "DD/MM/YYYY",
+  ru: "DD.MM.YYYY",
+  zh: "YYYY/MM/DD",
+}
 let defaultQuota;
 const { timestamp, randomString } = require("core/utils")
 
@@ -64,7 +72,7 @@ class __core_user extends Backbone.Model {
     })
 
     RADIO_MEDIA.on(_a.free, (data) => {
-      if(!data) return;
+      if (!data) return;
       let { disk_usage } = data;
       this.diskUsage(disk_usage);
     })
@@ -379,16 +387,21 @@ class __core_user extends Backbone.Model {
    * 
    */
   dateformat() {
-    const a = this.settings().dateformat || "DD/MM/YYYY";
-    return a;
+    let { dateformat: v } = this.settings() || {}
+    if (!v) {
+      v = DATEFORMAT[this.language()] || "DD/MM/YYYY"
+    }
+    return v;
   }
 
   /**
    * 
    */
   timeformat() {
-    const a = this.settings().timeformat || "DD/MM/YYYY - HH:mm:ss";
-    return a;
+    let { timeformat: v } = this.settings() || {};
+    if (v) return v;
+    let d = this.dateformat()
+    return `${d} - HH:mm:ss`
   }
 
   /**
@@ -533,7 +546,7 @@ class __core_user extends Backbone.Model {
    * @returns 
    */
   isGuest() {
-    return(this.get('is_guest'))
+    return (this.get('is_guest'))
   }
 
   /**
@@ -621,7 +634,7 @@ class __core_user extends Backbone.Model {
     if (this.parseModuleArgs().silent) return;
     if (url == null) {
       url = `${base}${_K.ringtones.incoming}`;
-    }else if(/^musics/.test(url)){
+    } else if (/^musics/.test(url)) {
       url = `${base}${url}`;
     }
     if (!/^http/.test(url)) {
@@ -686,8 +699,8 @@ class __core_user extends Backbone.Model {
    * @returns 
    */
   domainCan(permission, userPrivilege) {
-    if (userPrivilege == null) { 
-      userPrivilege = this.get(_a.privilege); 
+    if (userPrivilege == null) {
+      userPrivilege = this.get(_a.privilege);
     }
     return userPrivilege & permission;
   }

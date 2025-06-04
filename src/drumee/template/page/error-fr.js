@@ -1,9 +1,8 @@
-module.exports   = function(style){
+module.exports   = function(env, error, style){
   let html = `
     <div>Oups&nbsp;!</div> 
     <div>${location.host} est introuvable.</div> 
-    <a ${style} 
-    href=\"https://drumee.com/#/desk\">aller à votre bureau</a>
+    <a style="${style}" href="https://${env.main_domain}/#/welcome">${LOCALE.GOTO_HOMEPAGE}</a>
   `;
   return html;
 };

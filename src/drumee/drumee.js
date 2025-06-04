@@ -93,16 +93,23 @@ class Drumee extends Marionette.Application {
     body.style.fontFamily = "Roboto-Regular,sans-serif";
     const a = document.getElementById('--router');
     a.style.margin = "auto";
+    a.style.width = "100%";
     a.style.alignContent = "center";
     a.style.textAlign = "center";
-    let style = `style="text-decoration: none; color:white"`;
+    let style = `text-decoration: none; color:white`;
+    console.trace()
     switch (data.status) {
-      case 404:
-        return a.innerHTML = require("./template/page/404")(b, data, style);
       case 403:
         return a.innerHTML = require("./template/page/403")(b, data, style);
+      case 404:
+        return a.innerHTML = require("./template/page/404")(b, data, style);
+      case 500:
+      case 501:
       case 502:
-        return a.innerHTML = require("./template/page/502")(b, data, style);
+      case 503:
+      case 504:
+      case 505:
+        return a.innerHTML = require("./template/page/500")(b, data, style);
       default:
         return a.innerHTML = require("./template/page/failover")(b, data, style);
     }
