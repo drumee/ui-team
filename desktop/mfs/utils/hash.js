@@ -14,14 +14,10 @@
  * limitations under the License.
  * =============================================================================
  */
-const { isString } = require("lodash");
-const { normalize, dirname, join } = require("./path");
 const Attr = require("../../lex/attribute");
 
 const { createHash } = require('crypto');
-const {
-  createReadStream, mkdir, existsSync, createWriteStream
-} = require("fs");
+const { createReadStream, existsSync } = require("fs");
 
 module.exports = function (worker) {
   const db = worker.db;

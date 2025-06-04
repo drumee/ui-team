@@ -19,6 +19,7 @@ const { basename, isAbsolute } = require("path");
 const Fs = require("fs");
 const Attr = require("../lex/attribute");
 const FsWatcher = require("./core/fs-watcher");
+const TimeKeeper = require("./core/timeKeeper");
 const Changelog = require("./changelog");
 const IGNORED =
   /\.tmp$|\.db$|\~.+$|^__|Thumbs.db|.DS_Store|__MACOSX|.thumbnails|.swp/;
@@ -96,7 +97,6 @@ class Worker extends Media {
       "file.renamed": "onFileRenamed",
       "fs.add": "onFsAdd",
       "fs.mkdir": "onFsMkDir",
-      //      "fs.copy": "onFsCopy",
       "fs.remove": "onFsRemove",
       "fs.rename": "onFsRename",
       "fs.move": "onFsMove",
@@ -133,10 +133,10 @@ class Worker extends Media {
     global.MFS_HOME_ID = this.home_id;
     this.timestamp = new Date().getTime().toString();
 
-    this.local = {
-      ...this.local,
-      ...require("./utils/local")(this),
-    };
+    // this.local = {
+    //   ...this.local,
+    //   ...require("./utils/local")(this),
+    // };
 
     this.event = {
       ...this.event,
@@ -179,6 +179,12 @@ class Worker extends Media {
     });
 
     this.Changelog = new Changelog();
+    this.TimeKeeper = new TimeKeeper();
+    this.watcher = new FsWatcher({
+      home_id: this.home_id,
+      db: this.db,
+      user: Account.user,
+    });
   }
 
   /**
@@ -194,8 +200,8 @@ class Worker extends Media {
   /**
    *
    */
-  async populate(force = 0) {
-    this.debug("AAA:198 -- POPULATING");
+  async prepare(force = 0) {
+    this.debug("AAA:198 -- PREPARING WORKER");
     if (!Account.user.isOnline()) {
       this.warn("[178] POPULATE NOT ALLOWED IN ANOMYNOUS CONTEXT");
       return false;
@@ -208,7 +214,6 @@ class Worker extends Media {
       if (ARGV.reset) {
         this.clearPendingEntities();
         this.syncOpt.resetTables();
-        this.local.resetTables();
         this.remote.resetTables();
         if (Fs.existsSync(USER_HOME_DIR)) {
           Fs.rmSync(USER_HOME_DIR, { recursive: true });
@@ -223,15 +228,14 @@ class Worker extends Media {
         this.clearPendingEntities();
       }
     }
-    this.Changelog.prepare();
-    await this.populateTrash();
     await this.populateRemote();
     await this.populateLocal();
+    this.remote.initChangesList();
+    this.fsnode.purgeZombies();
+    this.fsnode.initChangesList();
     this.syncOpt.initDefaults();
     this._populated = 1;
-    await this.Changelog.populate();
     this.trigger('populated');
-
   }
 
   _sendEnv(channel, data) {
@@ -240,6 +244,7 @@ class Worker extends Media {
     data.settings.localRoot = localRoot.replace(/^\/+/, '~');
     webContents.send(channel, data);
   }
+
   /**
    * 
    */
@@ -265,73 +270,86 @@ class Worker extends Media {
   /**
    *
    */
-  async resync(opt = {}) {
+  async startSyncEngine(opt = {}) {
+    this.debug("AAA:274", this.syncOpt.rootSettings())
     let { channel, args } = opt;
     if (!Account.user.isOnline()) {
       this.debug("AAA:125 -- POPULATE NOT ALLOWED IN ANOMYNOUS CONTEXT");
       return false;
     }
-    this._populated = 0;
-    if (!opt.keepLocal) this.local.resetTables();
-    //this.fsnode.clear();
-    await this.populateTrash();
-    await this.populateRemote();
-    await this.populateLocal();
-    await this.checkLocalFiles();
-    this._populated = 1;
-    let r = await this.statesSummary();
-    if (channel) {
-      webContents.send(channel, r);
-    }
-    return r;
-  }
-  /**
-   *
-   */
-  start() {
-    mfsScheduler.start();
-  }
-
-  /**
-   *
-   */
-  stop() {
-    if (this.watcher) {
-      this.watcher.stop();
-    }
-  }
-
-  /**
-   *
-   */
-  pause(opt) {
-    let { channel, args } = opt;
-    if (this.watcher) {
-      this.watcher.pause();
-    }
-    webContents.send(channel, args);
-  }
-
-  /**
-   *
-   */
-  resume(opt) {
-    let { channel, args } = opt;
-    if (this.watcher) {
-      this.watcher.resume();
-    }
-    if (channel) {
-      webContents.send(channel, args);
-    }
-  }
-
-  /**
-   *
-   */
-  restart() {
-    this.start();
+    await this.prepare();
+    /** Wait for Account.socket_id */
+    this.syncInitialChanges();
     this.watcher.start();
   }
+
+
+  /**
+   *
+   */
+  syncInitialChanges() {
+    let { engine, effective } = this.syncOpt.rootSettings();
+    let changes = this.remote.getChangesList();
+    let newLocal = this.fsnode.getNewEntities();
+    let newRemote = this.remote.getNewEntities();
+    newLocal.map((e) => {
+      this.takeLocalItem(e, Attr.created)
+    })
+    newRemote.map((e) => {
+      this.takeRemoteItem(e, Attr.created)
+    })
+    changes.map((e) => {
+      if (e.locMtime > e.mtime) {
+        this.takeLocalItem(e, Attr.changed)
+      } else {
+        this.takeRemoteItem(e, Attr.changed);
+      }
+    })
+
+    this.debug("AAAA:1187 syncInitialChanges", engine, effective, newLocal, newRemote)
+
+  }
+
+  /**
+   *
+   */
+  // stop() {
+  //   if (this.watcher) {
+  //     this.watcher.stop();
+  //   }
+  // }
+
+  /**
+   *
+   */
+  // pause(opt) {
+  //   let { channel, args } = opt;
+  //   if (this.watcher) {
+  //     this.watcher.pause();
+  //   }
+  //   webContents.send(channel, args);
+  // }
+
+  /**
+   *
+   */
+  // resume(opt) {
+  //   let { channel, args } = opt;
+  //   if (this.watcher) {
+  //     this.watcher.resume();
+  //   }
+  //   if (channel) {
+  //     webContents.send(channel, args);
+  //   }
+  // }
+
+  /**
+   *
+   */
+  // restart() {
+  //   this.start();
+  //   this.watcher.start();
+  // }
 
   /**
    *
@@ -368,24 +386,24 @@ class Worker extends Media {
         mtimeMs: stat.mtimeMs,
       });
 
-      let rem = this.remote.row(f, Attr.filepath);
-      if (!rem) {
-        continue;
-      }
-      let hash = this.hash.row(f, Attr.filepath) || {};
-      if (rem.md5Hash && rem.md5Hash == hash.md5) continue;
-      this.local.upsert({
-        ...rem,
-        inode: stat.ino,
-        filename,
-        ext,
-        filepath,
-        filesize: stat.size,
-        atimeMs: stat.atimeMs,
-        birthtimeMs: stat.birthtimeMs,
-        mtimeMs: stat.mtimeMs,
-        ctimeMs: stat.ctimeMs,
-      });
+      // let rem = this.remote.row(f, Attr.filepath);
+      // if (!rem) {
+      //   continue;
+      // }
+      // let hash = this.hash.row(f, Attr.filepath) || {};
+      // if (rem.md5Hash && rem.md5Hash == hash.md5) continue;
+      // this.local.upsert({
+      //   ...rem,
+      //   inode: stat.ino,
+      //   filename,
+      //   ext,
+      //   filepath,
+      //   filesize: stat.size,
+      //   atimeMs: stat.atimeMs,
+      //   birthtimeMs: stat.birthtimeMs,
+      //   mtimeMs: stat.mtimeMs,
+      //   ctimeMs: stat.ctimeMs,
+      // });
     }
   }
 
@@ -393,10 +411,11 @@ class Worker extends Media {
    *
    */
   async checkMFS() {
-    this._populated = 0;
-    ARGV.resync = 0;
-    await this.checkLocalFiles();
-    return this.statesSummary();
+    deprecated
+    // this._populated = 0;
+    // ARGV.resync = 0;
+    // await this.checkLocalFiles();
+    // return this.statesSummary();
   }
 
   /**
@@ -438,6 +457,7 @@ class Worker extends Media {
       nid,
       home_id,
       pid: "0",
+      effective: this.syncOpt.getNodeState({ filepath: '/' }),
       hub_id,
       privilege: privilege.owner,
       isalink: 0,
@@ -474,6 +494,8 @@ class Worker extends Media {
         let absolute = isAbsolute(row.filepath);
         row.filepath = row.filepath.unixPath();
         if (!absolute) row.filepath = `/${row.filepath}`;
+        row.effective = this.syncOpt.getNodeState(row);
+        row.changed = null;
         if (/hub|folder/.test(row.filetype)) row.filesize = this.directorySize;
         populate.run(row);
       }
@@ -511,7 +533,11 @@ class Worker extends Media {
       let root = this.localFile(base_dir, Attr.absolute);
       let items = await this.walkDir(root);
       const transaction = this.db.transaction((rows) => {
-        this.populateLocalEntries(rows);
+        try {
+          this.populateLocalEntries(rows);
+        } catch (e) {
+          this.debug("Failed to populateLocalEntries ", e)
+        }
       });
       transaction(items);
       setTimeout(() => {
@@ -524,7 +550,6 @@ class Worker extends Media {
    *
    */
   async populateLocal() {
-    this.local.prepare();
     this.createLocalBase();
     return new Promise(async (resolve, reject) => {
       let diskFree = await this.diskFree();
@@ -538,18 +563,9 @@ class Worker extends Media {
       });
       transaction(items);
       this._ready = 1;
-      if (!this.watcher) {
-        this.watcher = new FsWatcher({
-          home_id: this.home_id,
-          db: this.db,
-          user: Account.user,
-        });
-        this.watcher.start();
-      }
-      this._ready = 1;
       setTimeout(() => {
         resolve();
-      }, 1000);
+      }, 500);
     });
   }
 
@@ -562,18 +578,43 @@ class Worker extends Media {
     let inode;
     let nodetype, filesize;
     let timestamp = new Date().getTime();
+    this.inodes.clear();
     let fsnode = this.db.populate("fsnode");
+    let inodes = this.db.populate("inodes");
     for (const i of rows) {
       let { filepath, stat } = i;
       if (!stat.ino) {
         continue;
       }
       inode = stat.ino; // Actual inode
+      inodes.run({ inode });
+      let changed = 0;
       let { filename, ext } = filepath.filename();
       if (this.isDirectory(i)) {
         filename = basename(filepath);
         ext = "";
       }
+
+      let { mtimeMs } = this.fsnode.row(stat.miniData, Attr.inode) || {};
+      if (mtimeMs == stat.mtimeMs) {
+        /** No changed since last start */
+        continue;
+      } else {
+        /** preserve mtime until next start or set by syncer */
+        stat.miniData.mtimeMs = mtimeMs || stat.miniData.ctimeMs;
+        changed = 1;
+        let opt = {
+          realpath: i.realpath,
+          filepath: i.filepath,
+          filesize: stat.size,
+          mtimeMs: stat.mtimeMs,
+          inode: stat.ino
+        };
+        if (!stat.isDirectory()) {
+          this.hash.getMd5(opt)
+        }
+      }
+
       filesize = stat.size;
       if (stat.isDirectory()) {
         nodetype = Attr.folder;
@@ -599,12 +640,14 @@ class Worker extends Media {
           let dest_path = this.localFile(filepath, Attr.location);
           Fs.renameSync(src_path, dest_path);
         } catch (e) {
-          this.warn("[544]", e);
+          this.warn("Got error while populating local entries", e);
         }
       }
       fsnode.run({
         ...stat.miniData,
         filename,
+        effective: this.syncOpt.getNodeState({ filepath }),
+        changed,
         ext,
         inode,
         filepath,
@@ -621,90 +664,91 @@ class Worker extends Media {
         Fs.chmodSync(p, mode);
       }
     }
-    this.local.syncFromRemote();
+    //this.local.syncFromRemote();
   }
 
   /**
    *
    * @param {*} data
    */
-  async setDefaultIgnre() {
-    let root = this.local.row({ nid: this.home_id }, Attr.nid);
-    if (!root) return;
-    if (!root.md5Hash) {
-      this.remote.ignoreHubs();
-      root.md5Hash = "".random();
-      this.local.update(Attr.nid, "md5Hash", root);
-    }
-  }
+  // async setDefaultIgnre() {
+  //   let root = this.local.row({ nid: this.home_id }, Attr.nid);
+  //   if (!root) return;
+  //   if (!root.md5Hash) {
+  //     this.remote.ignoreHubs();
+  //     root.md5Hash = "".random();
+  //     this.local.update(Attr.nid, "md5Hash", root);
+  //   }
+  // }
 
   /**
    *
    * @returns
    */
-  isRunning() {
-    return this.defaultFlags() & 0b10;
-  }
+  // isRunning() {
+  //   return this.defaultFlags() & 0b10;
+  // }
 
   /**
    *
    * @returns
    */
   async statesSummary(force = 0) {
-    await this.populate();
-    let { direction, mode, effective } = this.syncOpt.rootSettings();
-    let res = {
-      engine: effective,
-      effective,
-      mode,
-      direction,
-      changeRate: this.local.changeRate(),
-      error: this.get(Attr.error),
-      remote: {},
-      local: {},
-    };
-    // Change on local impact remote and reversely
-    const remote = () => {
-      return {
-        // moved: this.local.moved(),
-        // changed: this.local.changed(), //
-        // created: this.local.created(),
-        // renamed: this.local.renamed(), //
-        deleted: this.local.deleted(), //
-        // ignored: this.local.ignored(),
-      };
-    };
-    const local = () => {
-      return {
-        moved: this.remote.moved(),
-        changed: this.remote.changed(),
-        created: [],
-        renamed: this.remote.renamed(),
-        deleted: this.remote.deleted(),
-        ignored: this.remote.ignored(),
-      };
-    };
-    switch (direction) {
-      case "duplex":
-        res.local = local();
-        res.remote = remote();
-        break;
-      case "downstream":
-        res.local = local();
-        break;
-      case "upstream":
-        res.remote = remote();
-    }
-    return res;
+    depreacted
+    // await this.populate();
+    // let { direction, mode, effective } = this.syncOpt.rootSettings();
+    // let res = {
+    //   engine: effective,
+    //   effective,
+    //   mode,
+    //   direction,
+    //   changeRate: this.local.changeRate(),
+    //   error: this.get(Attr.error),
+    //   remote: {},
+    //   local: {},
+    // };
+    // // Change on local impact remote and reversely
+    // const remote = () => {
+    //   return {
+    //     // moved: this.local.moved(),
+    //     // changed: this.local.changed(), //
+    //     // created: this.local.created(),
+    //     // renamed: this.local.renamed(), //
+    //     deleted: this.local.deleted(), //
+    //     // ignored: this.local.ignored(),
+    //   };
+    // };
+    // const local = () => {
+    //   return {
+    //     moved: this.remote.moved(),
+    //     changed: this.remote.changed(),
+    //     created: [],
+    //     renamed: this.remote.renamed(),
+    //     deleted: this.remote.deleted(),
+    //     ignored: this.remote.ignored(),
+    //   };
+    // };
+    // switch (direction) {
+    //   case "duplex":
+    //     res.local = local();
+    //     res.remote = remote();
+    //     break;
+    //   case "downstream":
+    //     res.local = local();
+    //     break;
+    //   case "upstream":
+    //     res.remote = remote();
+    // }
+    // return res;
   }
 
   /**
    *
    * @returns
    */
-  readLocalState(arg) {
-    webContents.send(arg.channel, this.statesSummary());
-  }
+  // readLocalState(arg) {
+  //   webContents.send(arg.channel, this.statesSummary());
+  // }
 
   /**
    *
@@ -770,40 +814,40 @@ class Worker extends Media {
   /**
    *
    */
-  async createLocalNode(filepath, nid, pid) {
-    let root = this.local.row({ filepath }, Attr.filepath);
-    let stat;
-    if (!Fs.existsSync(filepath)) {
-      Fs.mkdirSync(filepath, {
-        recursive: true,
-      });
-    }
+  // async createLocalNode(filepath, nid, pid) {
+  //   let root = this.fsnode.row({ filepath }, Attr.filepath);
+  //   let stat;
+  //   if (!Fs.existsSync(filepath)) {
+  //     Fs.mkdirSync(filepath, {
+  //       recursive: true,
+  //     });
+  //   }
 
-    let timestamp = new Date().getTime();
-    if (!root) {
-      stat = Fs.statSync(filepath);
-      let data = {
-        filepath,
-        filename: basename(filepath),
-        hub_id: Account.user.get(Attr.id),
-        pid,
-        nid,
-        atimeMs: stat.atimeMs,
-        birthtimeMs: stat.birthtimeMs,
-        ctimeMs: stat.ctimeMs,
-        mtimeMs: stat.mtimeMs,
-        inode: stat.ino,
-        filetype: Attr.system,
-        filesize: stat.size,
-        timestamp,
-      };
-      this.debug("SCANNING", data, USER_HOME_DIR);
-      this.directorySize = stat.size;
-      this.local.upsert(data);
-    }
+  //   let timestamp = new Date().getTime();
+  //   if (!root) {
+  //     stat = Fs.statSync(filepath);
+  //     let data = {
+  //       filepath,
+  //       filename: basename(filepath),
+  //       hub_id: Account.user.get(Attr.id),
+  //       pid,
+  //       nid,
+  //       atimeMs: stat.atimeMs,
+  //       birthtimeMs: stat.birthtimeMs,
+  //       ctimeMs: stat.ctimeMs,
+  //       mtimeMs: stat.mtimeMs,
+  //       inode: stat.ino,
+  //       filetype: Attr.system,
+  //       filesize: stat.size,
+  //       timestamp,
+  //     };
+  //     this.debug("SCANNING", data, USER_HOME_DIR);
+  //     this.directorySize = stat.size;
+  //     this.fsnode.upsert(data);
+  //   }
 
-    return true;
-  }
+  //   return true;
+  // }
 
   /**
    *
@@ -832,7 +876,7 @@ class Worker extends Media {
       mtime: Math.round(stat.mtimeMs / 1000),
       inode: stat.ino,
     };
-    this.local.upsert(data);
+    //this.local.upsert(data);
     let filename = basename(USER_HOME_DIR);
     this.fsnode.upsert({
       ...data,
@@ -1076,19 +1120,19 @@ class Worker extends Media {
    */
   async deleteLocalFile(opt) {
     let { channel, args } = opt;
-    this.debug("AAA:150", args);
+    this.debug("AAA:150 deleteLocalFile", args);
     let stat;
     let filepath = this.normalizePathFromArgs(args);
 
     stat = this.localFile(filepath, Attr.stat);
-    if (_.isEmpty(stat)) {
-      if (this.isBranch(args)) {
-        this.local.deleteDirectory({ filepath });
-      } else {
-        this.local.remove({ filepath }, Attr.filepath);
-      }
-      return;
-    }
+    // if (_.isEmpty(stat)) {
+    //   if (this.isBranch(args)) {
+    //     this.local.deleteDirectory({ filepath });
+    //   } else {
+    //     this.local.remove({ filepath }, Attr.filepath);
+    //   }
+    //   return;
+    // }
     args.inode = stat.ino;
     if (stat.isDirectory()) {
       let { response } = await this.confirm({
@@ -1181,11 +1225,22 @@ class Worker extends Media {
   async getChangelog(opt) {
     let { channel, args } = opt;
     let { engine, effective } = this.syncOpt.rootSettings();
-    let remote = await this.Changelog.getRemoteChanges();
-    let local = await this.Changelog.getLocalChanges();
-
+    let changes = this.remote.getChangesList();
+    //this.debug("AAA:1217", changes, this.TimeKeeper.getTimeOffset())
+    let remote = [];
+    let local = [];
+    changes.map((e) => {
+      if (e.locMtime > e.mtime) {
+        local.push(e)
+      } else {
+        remote.push(e)
+      }
+    })
+    // let remote = await this.Changelog.getRemoteChanges();
+    // let local = await this.Changelog.getLocalChanges();
+    this.debug("AAAA:1187 getRemoteChanges", remote, local)
     // let conflict = await this.Changelog.getRemoteChanges();
-    webContents.send(channel, { remote, local, engine, effective });
+    webContents.send(channel, { remote: [], local: [], engine, effective });
   }
 
   /**
@@ -1199,7 +1254,7 @@ class Worker extends Media {
     let res = {
       total_size: Filesize(this.get("total_size"), { locale }),
       used_size: Filesize(this.get("used_size"), { locale }),
-      local_rows: this.local.numberOfRows(),
+      local_rows: this.fsnode.numberOfRows(),
       disk_free: Filesize(df.free, { locale }),
     };
     if (channel) {

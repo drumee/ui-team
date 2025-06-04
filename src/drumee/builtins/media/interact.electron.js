@@ -41,7 +41,7 @@ class __media_interact_electron extends __interact {
     const data = this.getDataForSync();
     if (!data) return;
     await mfsActivity.populatingCompleted();
-    let effective = await mfsActivity.syncEnabled();
+    let effective = mfsActivity.syncEnabled();
     if (!effective) {
       this.handleSyncIcon({ effective: 0 });
       return;
@@ -217,7 +217,9 @@ class __media_interact_electron extends __interact {
    */
   contextmenuItems() {
     let items = super.contextmenuItems();
+    this.debug("AAA:220", items)
     if (this.mget(EFFECTIVE)) items.unshift("showLocalLocation");
+    console.trace()
     return items;
   }
 
@@ -284,7 +286,7 @@ class __media_interact_electron extends __interact {
         break;
 
       case "enableSync":
-        let effective = await mfsActivity.syncEnabled();
+        let effective = mfsActivity.syncEnabled();
         if (!effective) {
           Wm.showSyncTiips()
           return;

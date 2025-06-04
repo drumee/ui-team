@@ -91,7 +91,7 @@
     "preinstall": "npm install better-sqlite3 --build-from-source --sqlite3=\"$(pwd)/sqlite-amalgamation\"",
     "postinstall": "electron-builder install-app-deps",
     "normal": "electron .",
-    "dev": "electron . --dev --open-dev --debugWatcher",
+    "dev": "electron . --dev --open-dev --debugWatcher --endpointPath=devel",
     "demo": "electron . --dev",
     "start:prod": "electron . --prod",
     "build": "electron-builder",

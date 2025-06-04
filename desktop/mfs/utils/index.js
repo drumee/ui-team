@@ -14,6 +14,7 @@
  * limitations under the License.
  * =============================================================================
  */
+
 const Attr = require("../../lex/attribute");
 const { permission } = require("../../lex/constants");
 const { isFunction, isArray, isString } = require("lodash");

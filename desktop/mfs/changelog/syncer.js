@@ -42,7 +42,7 @@ function selectLocalChanges() {
     let types = [
       "deleted", "created", "renamed", "moved", "changed", "copied", "cloned"
     ]
-    let b = `REPLACE INTO fschangelog SELECT NULL, NULL, f.nodetype || '.${types[i]}', f.*`;
+    let b = `REPLACE INTO fschangelog SELECT NULL, NULL, NULL, f.nodetype || '.${types[i]}', f.*`;
     if (!args) {
       return `${b}, NULL`
     }
@@ -439,9 +439,9 @@ class Changelog extends mfsUtils {
     if (!item.filepath || !item.ownpath || !item.event) return;
     item.filepath = normalize(item.filepath);
     item.ownpath = normalize(item.ownpath);
-    let effective = this.syncOpt.getNodeState(item)
+    let sync = this.syncOpt.getNodeState(item)
     this.debug("AAAA:442 getRemoteChanges", sync, item.filepath)
-    if (!effective) {
+    if (!this.syncOpt.getNodeState(item)) {
       return 0;
     }
     item.args = JSON.stringify({ src, dest });
@@ -479,7 +479,7 @@ class Changelog extends mfsUtils {
   async populateLocalChanges() {
     this.db.serialize(selectLocalChanges());
 
-    // await this.normalizeFs();
+    await this.normalizeFs();
     let seq = [
       /** Skip unchanged files */
       `UPDATE fschangelog SET synced=1 WHERE filepath IN (
@@ -497,14 +497,15 @@ class Changelog extends mfsUtils {
 
     ]
 
-    // this.db.serialize(seq);
+    this.db.serialize(seq);
   }
 
   /**
    * 
    */
   getSyncDisabled() {
-    let sql = `SELECT r.hub_id FROM remote r WHERE r.effective=0 AND r.filetype='hub'`;
+    let sql = `SELECT r.hub_id FROM remote r INNER JOIN syncOpt s 
+      ON r.filepath=s.filepath WHERE effective=0 AND r.filetype='hub'`;
     let rows = this.db.getRows(sql);
     let res = []
     for (let r of rows) {
@@ -512,11 +513,10 @@ class Changelog extends mfsUtils {
     }
     return res;
   }
-  
   /**
    * 
    */
-  async getRemoteChangelog() {
+  async populateRemoteChanges() {
     let sql = `SELECT max(id) id FROM remote_changelog`;
     let { id } = this.db.getRow(sql) || { id: 0 };
     let args = { hub_id: Account.user.get(Attr.id) };
@@ -565,7 +565,7 @@ class Changelog extends mfsUtils {
    */
   async populate() {
     await this.populateLocalChanges();
-    await this.getRemoteChangelog();
+    await this.populateRemoteChanges();
   }
   /**
    * 
@@ -621,7 +621,16 @@ class Changelog extends mfsUtils {
   * 
   */
   async getRemoteChanges(force = 0) {
-    let rows = this.remote.getChangesList(sql);
+    if (!this.syncOpt.rootSettings().effective) {
+      return []
+    }
+    if (!this._remoteLog || force) {
+      await this.populateRemoteChanges()
+    }
+    await this.normalizeRemote();
+
+    let sql = `SELECT * FROM remote_changelog WHERE (synced IS NULL OR synced=0) AND effective=1`;
+    let rows = this.db.getRows(sql);
     return rows;
   }
 

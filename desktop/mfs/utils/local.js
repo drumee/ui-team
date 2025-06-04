@@ -37,11 +37,12 @@ module.exports = function (worker) {
    */
   function syncFromRemote() {
     let sql = `REPLACE INTO local SELECT r.filepath, f.inode, r.nid, r.hub_id, 
-      r.pid, r.filename, r.filetype, r.filesize, r.ext, f.ctimeMs, f.birthtimeMs, 
+      r.pid, r.synced, r.effective, r.filename, r.filetype, r.filesize, r.ext, f.ctimeMs, f.birthtimeMs, 
       f.ctimeMs, f.mtimeMs, r.ctime, r.mtime FROM remote r INNER JOIN fsnode f ON 
       f.filepath=r.filepath`;
     db.serialize([sql]);
   }
+  
   /**
    *
    */

@@ -487,12 +487,16 @@ class Watcher extends mfsUtils {
     if (this.watcher) {
       this.watcher.close();
     }
-    this.watcher = watch(this.workingRoot,
-      { encoding: 'utf8', recursive: true }, (e, filename) => {
-        if (!filename) return;
-        if (IGNORED.test(filename)) return;
-        this.handleEvents(filename);
-      });
+    try {
+      this.watcher = watch(this.workingRoot,
+        { encoding: 'utf8', recursive: true }, (e, filename) => {
+          if (!filename) return;
+          if (IGNORED.test(filename)) return;
+          this.handleEvents(filename);
+        });
+    } catch (e) {
+      this.warn("Failed to initialize wtacher", e);
+    }
   }
 
   /**

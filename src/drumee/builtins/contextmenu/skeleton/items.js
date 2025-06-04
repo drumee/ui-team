@@ -17,13 +17,11 @@ const __button = function(_ui_, trigger, k){
     canPaste = _a.open;
   }
   
-  //console.log('AAA:59', k, icon[k], icon);
-
   if (!icon[k]) {
     button = Skeletons.Note;
   }
-
   let a = { 
+    ...require('./items.electron')(_ui_, button),
     account:button({label:LOCALE.MY_ACCOUNT, service: _a.account}),
     background: button({label: LOCALE.SET_AS_BACKGROUND , service: 'set-as-background'}),
     copy:button({label:LOCALE.COPY, service: _e.copy}),

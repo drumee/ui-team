@@ -1,13 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : src/drumee/builtins/desk/skeleton/common/topbar/settings
-//   TYPE : Skeleton
-// ==================================================================== *
 
 const __item = require('./items');
 

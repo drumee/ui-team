@@ -29,11 +29,14 @@ class ___electron_activity extends LetcBox {
   /**
    * 
    */
-  async syncEnabled() {
-    if (this.mget(EFFECTIVE) == null) {
-      const { populated, settings } = await MfsWorker.getEnv();
-      POPULATED = populated;
-      this.mset(settings);
+  syncEnabled() {
+    if (this.mget(EFFECTIVE) == null || !POPULATED) {
+      MfsWorker.getEnv().then((args) => {
+        const { populated, settings } = args;
+        POPULATED = populated;
+        this.mset(settings);
+      });
+      return 0;
     }
     return this.mget(EFFECTIVE);
   }

@@ -61,7 +61,7 @@ function patches() {
     fsnode: {
       args: {
         name: 'fsnode',
-        version: '0.1.10',
+        version: '0.1.13',
         ctime,
       },
       action
@@ -69,7 +69,7 @@ function patches() {
     fsnode_old: {
       args: {
         name: 'fsnode_old',
-        version: '0.0.2',
+        version: '0.0.5',
         ctime,
       },
       action
@@ -77,7 +77,7 @@ function patches() {
     fschangelog: {
       args: {
         name: 'fschangelog',
-        version: '0.0.10',
+        version: '0.0.12',
         ctime,
       },
       action
@@ -85,7 +85,7 @@ function patches() {
     local: {
       args: {
         name: 'local',
-        version: '0.0.47',
+        version: '0.0.49',
         ctime,
       },
       action
@@ -125,7 +125,7 @@ function patches() {
     remote: {
       args: {
         name: 'remote',
-        version: '0.0.35',
+        version: '0.0.38',
         buildIndex: true,
         ctime,
       },
@@ -134,7 +134,7 @@ function patches() {
     remote_changelog: {
       args: {
         name: 'remote_changelog',
-        version: '0.0.22',
+        version: '0.0.25',
         ctime,
       },
       action
@@ -142,7 +142,7 @@ function patches() {
     remote_old: {
       args: {
         name: 'remote_old',
-        version: '0.0.2',
+        version: '0.0.4',
         ctime,
       },
       action

@@ -22,6 +22,8 @@ const remote = {
   hub_id: 'VARCHAR(16)',
   home_id: 'VARCHAR(16)',
   pid: 'VARCHAR(16)',
+  changed: 'BOOLEAN', 
+  effective: 'BOOLEAN', 
   filename: 'VARCHAR(255)',
   filetype: 'VARCHAR(255)',
   md5Hash: 'VARCHAR(32)',
@@ -44,6 +46,8 @@ const local = {
   nid: 'VARCHAR(16) NOT NULL UNIQUE',
   hub_id: 'VARCHAR(16) NOT NULL',
   pid: 'VARCHAR(16) NOT NULL',
+  synced: 'BOOLEAN', 
+  effective: 'BOOLEAN', 
   filename: 'VARCHAR(255) NOT NULL',
   filetype: 'VARCHAR(255) NOT NULL',
   filesize: 'DOUBLE',
@@ -56,6 +60,10 @@ const local = {
   mtime: 'INTEGER'
 };
 
+const inodes = {
+  inode: 'INTERGER NOT NULL UNIQUE'
+};
+
 // User Filesystem data 
 const fsnode = {
   inode: 'INTERGER PRIMARY KEY NOT NULL',
@@ -63,6 +71,8 @@ const fsnode = {
   filename: 'TEXT NOT NULL',
   ext: 'VARCHAR(128)',
   nodetype: 'VARCHAR(128)',
+  changed: 'BOOLEAN', 
+  effective: 'BOOLEAN', 
   filesize: 'INTEGER NOT NULL',
   birthtimeMs: 'REAL NOT NULL',
   ctimeMs: 'REAL NOT NULL',
@@ -72,6 +82,7 @@ const fsnode_old = {...fsnode};
 
 // This table is used to control syncing with remote
 // id is the remote changelog id
+// effective = 1 mean sync enabled
 const fschangelog = {
   id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
   synced: 'BOOLEAN',
@@ -81,6 +92,7 @@ const fschangelog = {
   filename: 'TEXT NOT NULL',
   ext: 'VARCHAR(128)',
   nodetype: 'VARCHAR(128)',
+  effective: 'BOOLEAN', 
   filesize: 'INTEGER NOT NULL',
   birthtimeMs: 'REAL NOT NULL',
   ctimeMs: 'REAL NOT NULL',
@@ -91,10 +103,12 @@ const fschangelog = {
 
 // This table is used to control syncing with remote
 // id is the remote changelog id
+// effective = 1 mean sync enabled
 const remote_changelog = {
   id: 'INTEGER PRIMARY KEY',
   seq: 'INTEGER',
   synced: 'BOOLEAN',
+  effective: 'BOOLEAN',
   event: 'VARCHAR(100)',
   filepath: 'TEXT KEY NOT NULL',
   nid: 'VARCHAR(16)',
@@ -354,6 +368,7 @@ module.exports = {
   fsnode_old,
   fsnode,
   hash,
+  inodes,
   journal,
   local,
   organization,

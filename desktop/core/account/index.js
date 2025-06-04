@@ -204,7 +204,7 @@ class __core_account extends Bridge {
     this.scheduler = new Scheduler();
     this.syncParams = new Backbone.Model();
     try {
-      let params = await this.scheduler.warmup();
+      let params = await this.scheduler.prepare();
       this.syncParams.set(params);
     } catch (e) {
       console.error("SCHEDULER_ERROR: failed to prepare", e);
@@ -364,6 +364,31 @@ class __core_account extends Bridge {
       .catch((e) => {
         console.error("Caught error", e);
       });
+  }
+
+  /**
+   * 
+   */
+  ensureSocketUp() {
+    let timer;
+    let count = 0;
+    return new Promise((succeeded, failed) => {
+      let socket_id = this.get(Attr.socket_id)
+      if (socket_id) {
+        return succeeded(socket_id)
+      }
+      timer = setInterval(() => {
+        socket_id = this.get(Attr.socket_id)
+        if (socket_id) {
+          clearInterval(timer)
+          return succeeded(socket_id)
+        }
+        count++;
+        if (count > 10) {
+          succeeded(null)
+        }
+      }, 300)
+    })
   }
 
   /**

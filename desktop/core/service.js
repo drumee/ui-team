@@ -107,7 +107,6 @@ class __core_service extends __dialog {
   sendService(service, opt = {}, method = "POST", retry = 0) {
     let url = `${Account.bootstrap().svc}${service}`;
     this.debug("AAA:23 SERVICE=", url);
-    //console.trace();
     const data = JSON.stringify(opt);
 
     return new Promise((resolve, reject) => {

@@ -81,13 +81,49 @@ module.exports = function (worker) {
     }
     let sql = `
       SELECT * FROM fsnode WHERE  parentpath(filepath)=? 
-      AND filepath NOT IN (SELECT filepath FROM REMOTE WHERE pid=?)`
-      let rows = db.getRows(sql, node.filepath, pid) || [];
-      return rows;
+      AND filepath NOT IN (SELECT filepath FROM remote WHERE pid=?)`
+    let rows = db.getRows(sql, node.filepath, pid) || [];
+    return rows;
+  }
 
+  function numberOfRows() {
+    let sql = `SELECT count(*) count FROM fsnode WHERE nodetype!='system'`;
+    let r = db.getRow(sql);
+    return r.count || 0;
+  }
+
+  /**
+   * 
+   */
+  function getNewEntities() {
+    let sql = `SELECT * FROM fsnode WHERE effective AND 
+      filepath NOT IN (SELECT filepath FROM remote WHERE effective)`;
+    let rows = db.getRows(sql) || [];
+    return rows;
+  }
+
+  /**
+   * 
+   */
+  function initChangesList(){
+    let sql = `UPDATE fsnode SET changed=c.changed, effective=c.effective FROM 
+      (SELECT IIF(h.md5 = r.md5Hash, 0, 1) changed, effective, r.filepath 
+        FROM hash h INNER JOIN remote r on h.filepath=r.filepath
+      ) AS c WHERE c.filepath=fsnode.filepath`;
+    return db.run(sql);
+  }
+
+  /**
+    * 
+    * @param {*} node 
+    * @returns 
+    */
+  function purgeZombies() {
+    db.run(`DELETE FROM fsnode WHERE inode NOT IN (SELECT inode FROM inodes)`);
   }
 
   return {
-    rename, move, getChildrenInodes, unsyncedChildren
+    rename, move, getChildrenInodes, unsyncedChildren, 
+    purgeZombies, getNewEntities, numberOfRows, initChangesList
   }
 }  

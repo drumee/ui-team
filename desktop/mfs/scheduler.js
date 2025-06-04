@@ -128,36 +128,40 @@ class Scheduler extends mfsUtils {
   /**
    *
    */
-  async startSyncEngine(opt) {
+  async startSyncEngine(opt = {}) {
     let { channel, args } = opt;
-    let root = this.remote.show_root();
-    this.debug("startSyncEngine", this.syncOpt.rootState());
-    let items = this.remote.unsynced();
-    let res = {};
-    this.unsyncedItems = items.length || 1;
-    if (this.syncOpt.rootState()) {
+    //let root = this.remote.show_root();
+    // this.debug("startSyncEngine", this.syncOpt.rootState());
+    // let items = this.remote.unsynced();
+    // let res = {};
+    // this.unsyncedItems = items.length || 1;
+    this.worker.startSyncEngine().then(() => {
       this.set({ running: 1, ready: 1, frozen: 0 });
-      let items = this.remote.show_node(root);
-      let synced = 1;
-      if (items.length) {
-        for (let item of items) {
-          let loc = this.local.row(item, Attr.nid);
-          let exists = this.localFile(item);
-          if (!loc || !exists) {
-            await this.log({ ...item, name: "media.init" });
-            await this.waitForTask(item);
-            synced = 0;
-          }
-        }
-        if (synced) await this.next();
-      } else {
-        await this.pause();
-      }
+      let settings = this.syncOpt.rootSettings();
+      this.debug("AAAA:142", settings)
+      Account.syncParams.set(settings);
       Account.refreshMenu();
-    } else {
-      res = { error: "Cannot start over paused account" };
+    })
+    // let items = this.remote.show_node(root);
+    // let synced = 1;
+    // if (items.length) {
+    //   for (let item of items) {
+    //     let loc = this.local.row(item, Attr.nid);
+    //     let exists = this.localFile(item);
+    //     if (!loc || !exists) {
+    //       await this.log({ ...item, name: "media.init" });
+    //       await this.waitForTask(item);
+    //       synced = 0;
+    //     }
+    //   }
+    //   if (synced) await this.next();
+    // } else {
+    //   await this.pause();
+    // }
+
+    if (channel) {
+      webContents.send(channel, res);
     }
-    webContents.send(channel, res);
   }
 
   /**
@@ -317,10 +321,12 @@ class Scheduler extends mfsUtils {
   /**
    *
    */
-  async warmup() {
-    await this.worker.populate();
+  async prepare() {
+    // await this.worker.prepare();
     this.set({ running: 1, frozen: 0 });
     let settings = this.syncOpt.rootSettings();
+    this.debug("AAAA:325", settings)
+    await this.startSyncEngine()
     return settings;
   }
 
@@ -533,7 +539,7 @@ class Scheduler extends mfsUtils {
       this.debug("AAA:692 FROZEN", evt);
     }
     if (!this._timer) this.start();
-    if(!evt.name){
+    if (!evt.name) {
       this.debug("AAA:537 MISSING NAME", evt);
     }
     if (!evt.filepath) {

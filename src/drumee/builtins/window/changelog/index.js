@@ -44,25 +44,27 @@ class __window_changelog extends mfsInteract {
    */
   async removeItem(filepath) {
     this.debug("AAA:58 -- removeItem", filepath);
-    let changes = await this.getChangelog();
-    if (!this.hasChanges(changes)) {
-      this.suppress();
-    }
+
+    // let changes = await this.getChangelog();
+    // if (!this.hasChanges(changes)) {
+    //   this.suppress();
+    // }
   }
 
   /**
    * 
    */
   async _onTaskTerminated(evt) {
+    this.debug("AAA:57 -- r_onTaskTerminated", evt);
     if (this.isDestroyed()) {
       return
     }
-    let changes = await MfsWorker.getChangelog();
-    let gotChanges = this.hasChanges(changes);
-    if (!gotChanges) {
-      mfsActivity.off(`mfs-task-terminated:*`, this._onTaskTerminated);
-      this.goodbye();
-    }
+    // let changes = await MfsWorker.getChangelog();
+    // let gotChanges = this.hasChanges(changes);
+    // if (!gotChanges) {
+    //   mfsActivity.off(`mfs-task-terminated:*`, this._onTaskTerminated);
+    //   this.goodbye();
+    // }
   }
 
   /**

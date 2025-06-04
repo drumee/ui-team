@@ -18,7 +18,7 @@
 const _ = require("lodash");
 const _a = require("../../lex/attribute");
 const { escapePath } = require("../../utils/misc");
-const { dirname, join, extname, basename, normalize} = require("path");
+const { dirname, join, extname, basename, normalize } = require("path");
 
 /**
  *
@@ -57,31 +57,36 @@ module.exports = function (worker) {
     db.serialize(seq);
   }
 
-  //SELECT r.* FROM remote_tmp r INNER JOIN fsnode f ON f.filepath=r.filepath WHERE r.nid NOT IN (SELECT nid FROM remote)
+  /**
+   * 
+   */
+  function initChangesList() {
+    let sql = `UPDATE remote SET changed=c.changed FROM 
+      (SELECT IIF(h.md5 = r.md5Hash, 0, 1) changed, nid 
+        FROM hash h INNER JOIN remote r on h.filepath=r.filepath
+      ) AS c WHERE c.nid=remote.nid`;
+    return db.run(sql);
+  }
+
   /**
    *
    */
-  function buildChangesList(opt) {
-    console.log("AAA:71", { opt });
-    let seq = [
-      `DELETE FROM remote_renamed`,
-      `DELETE FROM remote_moved`,
-      `REPLACE INTO remote_changed SELECT r.* FROM local l 
-        INNER JOIN remote r ON l.nid=r.nid 
-        WHERE (l.md5Hash != r.md5Hash AND r.mtime > l.mtime) 
-        AND r.nid NOT IN (SELECT nid FROM trash)
-        AND l.filetype NOT IN('system', 'hub', 'folder')`,
-      `REPLACE INTO remote_renamed SELECT r.* FROM local l 
-        INNER JOIN remote r ON l.nid=r.nid AND l.pid=r.pid 
-        WHERE (l.filename != r.filename OR l.ext != r.ext) AND l.filetype!='system' 
-        AND r.mtime > l.mtime AND l.nid NOT IN (SELECT nid FROM trash)`,
-      `REPLACE INTO remote_moved SELECT r.* FROM local l 
-        INNER JOIN remote r ON l.nid=r.nid AND l.pid!=r.pid 
-        WHERE (l.filename = r.filename AND l.ext == r.ext) AND l.filetype!='system' 
-        AND r.mtime > l.mtime AND l.nid NOT IN (SELECT nid FROM trash)`,
-    ];
-    db.serialize(seq);
+  function getChangesList(opt) {
+    let sql = `SELECT r.*, ROUND(h.mtimeMs/1000) locMtime FROM remote r 
+      INNER JOIN hash h using(filepath) WHERE changed AND effective`;
+    return db.getRows(sql);
   }
+
+  /**
+  * 
+  */
+  function getNewEntities() {
+    let sql = `SELECT * FROM remote WHERE effective AND pid!='0' AND 
+      filepath NOT IN (SELECT filepath FROM fsnode WHERE effective)`;
+    let rows = db.getRows(sql) || [];
+    return rows;
+  }
+
 
   function created() {
     // All remote created are automatically the reference
@@ -206,9 +211,11 @@ module.exports = function (worker) {
    * @returns 
    */
   function unsynced() {
-    let sql = `SELECT * FROM remote_changelog WHERE synced=0 OR synced IS NULL ORDER BY id ASC`;
+    let sql = `SELECT * FROM remote WHERE synced=0 AND effective ORDER BY id ASC`;
     return db.getRows(sql);
   }
+
+
 
   /**
    * 
@@ -217,7 +224,6 @@ module.exports = function (worker) {
    */
   function exists(e) {
     let sql = `SELECT count(*) AS count FROM remote WHERE filepath=?`;
-    //console.log("AAA:93", sql, e.filepath)
     let r = db.getRow(sql, e.filepath) || { count: 0 };
     return r.count;
   }
@@ -407,7 +413,7 @@ module.exports = function (worker) {
       evt.home_id = home_id;
       evt.nid = nid;
     }
-    if(filepath) filepath = normalize(filepath);
+    if (filepath) filepath = normalize(filepath);
     return { ...evt, ownpath: filepath };
   }
 
@@ -439,7 +445,7 @@ module.exports = function (worker) {
   }
 
   return {
-    buildChangesList,
+    initChangesList,
     changed,
     containsHubs,
     created,
@@ -448,6 +454,8 @@ module.exports = function (worker) {
     deleteNode,
     exists,
     getHubData,
+    getChangesList,
+    getNewEntities,
     ensureOwnpath,
     ignored,
     ignoreHubs,

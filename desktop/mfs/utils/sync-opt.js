@@ -111,6 +111,7 @@ module.exports = function (worker) {
  */
 
   function rootState(evt) {
+    if (!Root) return 0;
     return Root.effective;
   }
 
@@ -173,7 +174,6 @@ module.exports = function (worker) {
         db.putInToTable('syncOpt', { ...parent, ...item });
       }
     }
-    node = getNode(item.filepath);
     if (node) return node;
     return getParentSettings(item)
   }
@@ -200,10 +200,27 @@ module.exports = function (worker) {
    * @param {*} item 
    */
   function changeTreeSettings(item, effective) {
+    let sql;
     if (/(^hub|folder)$/.test(item.filetype)) {
-      let sql = `UPDATE syncOpt SET effective=? WHERE regexp('^' || ?, filepath)`;
-      db.run(sql, effective, escapePath(item.filepath));
+      sql = [
+        `UPDATE syncOpt SET effective=? WHERE regexp('^' || ?, filepath)`,
+        `UPDATE remote SET effective=? WHERE regexp('^' || ?, filepath)`,
+        `UPDATE remote_changelog SET effective=? WHERE regexp('^' || ?, filepath)`,
+        `UPDATE fsnode SET effective=? WHERE regexp('^' || ?, filepath)`,
+        `UPDATE local SET effective=? WHERE regexp('^' || ?, filepath)`,
+        `UPDATE fschangelog SET effective=? WHERE regexp('^' || ?, filepath)`
+      ]
+      db.serialize(sql, effective, item.filepath);
     }
+    sql = [
+      `UPDATE syncOpt SET effective=? WHERE filepath=?`,
+      `UPDATE remote SET effective=? WHERE filepath=?`,
+      `UPDATE remote_changelog SET effective=? WHERE filepath=?`,
+      `UPDATE fsnode SET effective=? WHERE filepath=?`,
+      `UPDATE local SET effective=? WHERE filepath=?`,
+      `UPDATE fschangelog SET effective=? WHERE filepath=?`
+    ]
+    db.serialize(sql, effective, item.filepath);
   }
 
   /**
@@ -222,11 +239,8 @@ module.exports = function (worker) {
     let node;
     if (effective) {
       let self = getNode(item.filepath);
-      console.log("AAA:205", self, item)
       if (!self) {
-        console.log("AAA:205", self, item)
         node = { ...item, effective };
-        //node.args = JSON.stringify(node.args);
         db.putInToTable('syncOpt', node);
         changeTreeSettings(item, effective);
         return;
@@ -237,7 +251,6 @@ module.exports = function (worker) {
         parent = getNode(filepath);
         let ref = parent || Root;
         node = { ...ref, filepath, effective };
-        //node.args = JSON.stringify(node.args);
         db.putInToTable('syncOpt', node);
       }
     }

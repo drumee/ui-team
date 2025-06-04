@@ -78,7 +78,7 @@ async function requestRename(evt) {
   return new Promise(async (resolve, reject) => {
     this.postService(service, opt, { async: 1 })
       .then((data) => {
-        this.local.rename(data);
+        //this.local.rename(data);
         this.remote.rename(data);
         this.fsnode.rename(src, dest);
         resolve(Attr.terminated);
@@ -218,7 +218,7 @@ function _onTrashCompleted(data) {
   for (let node of data) {
     this.remote.removeNode(node);
     this.fsnode.removeNode(node);
-    this.local.removeNode(node);
+    //this.local.removeNode(node);
   }
 
 }
@@ -356,6 +356,7 @@ async function requestMove(evt) {
     action = Attr.copy;
     setPending(Attr.media, "media.copy", src.nid);
   }
+  let socket_id = await Account.ensureSocketUp()
   let opt = {
     nid,
     pid,
@@ -363,7 +364,7 @@ async function requestMove(evt) {
     action,
     recipient_id,
     notify: 1,
-    socket_id: Account.get(Attr.socket_id),
+    socket_id,
   };
 
   return new Promise(async (resolve, reject) => {
@@ -378,7 +379,7 @@ async function requestMove(evt) {
       data.args = { src, dest };
       if (action == Attr.move) {
         this.remote.move(src, dest);
-        this.local.move(src, dest);
+        //this.local.move(src, dest);
         this.fsnode.move(src, dest);
       } else {
         await this.onMediaCopy(data);
@@ -496,9 +497,10 @@ async function requestMkdir(evt) {
   if (fsnode && fsnode.filepath) {
     data.filepath = fsnode.filepath;
   }
-  this.local.upsert({ ...fsnode, ...data });
+  data.effective = this.syncOpt.getNodeState(data);
+  //this.local.upsert({ ...fsnode, ...data });
   this.remote.upsert(data);
-  this.syncOpt.getNodeSettings(data);
+  //this.syncOpt.getNodeSettings(data);
   this._sendEvent({ ...data, name: evt.name });
   setTimeout(() => {
     unsetPending(Attr.media, evt.filepath);
@@ -543,7 +545,9 @@ function onUploadSuccess(evt, attr, md5Hash) {
   } else {
     attr.nodetype = Attr.file;
   }
-  this.local.upsert(attr);
+  //this.local.upsert(attr);
+  attr.effective = this.syncOpt.getNodeState(attr);
+  attr.changed = 0;
   this.remote.upsert(attr);
   this.fsnode.upsert(attr);
   this._sendEvent(attr);
@@ -557,7 +561,7 @@ function onUploadSuccess(evt, attr, md5Hash) {
       filepath,
       md5: md5Hash
     }
-    if(locFile.inode) this.hash.upsert(locFile);
+    if (locFile.inode) this.hash.upsert(locFile);
   }
   this.debug(`${filepath} sucessfuly uploaded`);
 }
@@ -582,6 +586,8 @@ function onDownloadSuccess(evt, md5Hash) {
           }
         }
         if (attr.filepath) attr.file_path = attr.filepath;
+        attr.effective = this.syncOpt.getNodeState(attr);
+        attr.changed = 0;
         this.remote.upsert(attr);
 
         let { miniData } = this.localFile(evt, Attr.stat);
@@ -592,10 +598,7 @@ function onDownloadSuccess(evt, md5Hash) {
             filepath,
             md5: md5Hash
           });
-          this.local.upsert({
-            ...attr,
-            ...miniData,
-          });
+
           this.fsnode.upsert({
             ...attr,
             ...miniData,
@@ -769,10 +772,11 @@ function requestUpload(evt) {
 function _updateLocalItem(evt, dest, resolve) {
   let stat = this.localFile(dest, Attr.stat);
 
-  this.local.upsert({
-    ...evt,
-    ...stat.miniData,
-  });
+  // this.local.upsert({
+  //   ...evt,
+  //   ...stat.miniData,
+  // });
+  evt.effective = this.syncOpt.getNodeState(evt);
   this.remote.upsert({
     ...evt,
     filesize: stat.size,

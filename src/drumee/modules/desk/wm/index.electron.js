@@ -86,7 +86,6 @@ class __window_manager extends __wm {
    * @param {*} changes
    */
   async _showSyncDifferences(changes) {
-    this.debug("AAA:126", changes);
     this.modal({ kind: "window_changelog", screen: 'showChanges' });
   }
 
@@ -401,7 +400,7 @@ class __window_manager extends __wm {
       this.append({ kind: "electron_activity", signal: "mfs:activity" });
       window.mfsActivity = this.children.last();
       setTimeout(this.checkForUpdate.bind(this), 60 * 1000);
-      this.preset()
+      //this.preset() -- TODO keep window_changelog as daemon
     });
   }
 
@@ -458,18 +457,18 @@ class __window_manager extends __wm {
   async _showSettingChangeAlert(args) {
     let { engine, sync, direction, mode, effective } = args;
     this.mset({ engine, sync, sync_direction, sync_mode, effective });
-    this.debug("AAA:366", {
+    this.debug("AAA:366 _showSettingChangeAlert", {
       engine,
       sync,
       direction,
       mode,
       effective,
     });
-    let changes = await MfsWorker.getChangelog();
-    if (!this.hasChanges(changes)) {
-      return;
-    }
-    this.modal({ kind: "window_changelog", ...args, screen: 'showChanges' });
+    // let changes = await MfsWorker.getChangelog();
+    // if (!this.hasChanges(changes)) {
+    //   return;
+    // }
+    // this.modal({ kind: "window_changelog", ...args, screen: 'showChanges' });
   }
 
   /**

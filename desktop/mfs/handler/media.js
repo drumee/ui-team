@@ -70,7 +70,22 @@ async function onMediaInit(evt) {
     return _a.skip;
   }
 
-  let local = this.local.row(evt, _a.filepath, _a.nid);
+  if (!stat.ino) {
+    let res = await this.onMediaNew(evt);
+    return res;
+  }
+
+  let md5Hash = await this.hash.getMd5(stat);
+  let { filename, ext, filepath } = stat;
+  if (md5Hash && md5Hash == remote.md5Hash) {
+    if (!this.event.parseArgs(evt).force) {
+      this.fsnode.update(Attr.inode, "changed", 0);
+      return _a.synced;
+    }
+  }
+  return "conflict-local";
+
+  // let local = this.local.row(evt, _a.filepath, _a.nid);
   let hash = await this.hash.getMd5(evt);
   this.debug(`70: Remote md5=${remote.md5Hash}`, hash)
   if (!local) {
