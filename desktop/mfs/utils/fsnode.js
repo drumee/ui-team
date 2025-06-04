@@ -95,17 +95,19 @@ module.exports = function (worker) {
   /**
    * 
    */
-  function getNewEntities() {
+  function getNewEntities(max_id) {
     let sql = `SELECT * FROM fsnode WHERE effective AND 
-      filepath NOT IN (SELECT filepath FROM remote WHERE effective)`;
-    let rows = db.getRows(sql) || [];
+      filepath NOT IN (SELECT filepath FROM remote WHERE effective) AND 
+      filepath NOT IN (SELECT filepath FROM remote_changelog WHERE effective
+      AND event='media.remove' AND id>=?)`;
+    let rows = db.getRows(sql, max_id) || [];
     return rows;
   }
 
   /**
    * 
    */
-  function getRemovedEntities() {
+  function getDeletedEntities() {
     let sql = `SELECT * FROM fsnode WHERE  
        inode NOT IN (SELECT inode FROM inodes) AND effective AND nodetype!='system'`;
     let rows = db.getRows(sql) || [];
@@ -133,7 +135,7 @@ module.exports = function (worker) {
   }
 
   return {
-    rename, move, getChildrenInodes, unsyncedChildren, getRemovedEntities,
+    rename, move, getChildrenInodes, unsyncedChildren, getDeletedEntities,
     purgeZombies, getNewEntities, numberOfRows, initChangesList
   }
 }  

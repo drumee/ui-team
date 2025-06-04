@@ -446,6 +446,31 @@ module.exports = function (worker) {
     return r;
   }
 
+  /**
+  * 
+  */
+  function getSyncDisabledHubs() {
+    let sql = `SELECT r.hub_id FROM remote r INNER JOIN syncOpt s 
+      ON r.filepath=s.filepath WHERE r.effective=0 AND r.filetype='hub'`;
+    let rows = db.getRows(sql);
+    let res = []
+    for (let r of rows) {
+      res.push(r.hub_id)
+    }
+    return res;
+  }
+
+  /**
+  * 
+  */
+  function getDeletedEntities(max_id) {
+    let sql = `SELECT * FROM remote_changelog 
+      WHERE effective AND synced=0 AND event='media.remove'`;
+    let rows = db.getRows(sql);
+    return rows;
+  }
+
+
   return {
     initChangesList,
     changed,
@@ -458,6 +483,8 @@ module.exports = function (worker) {
     getHubData,
     getChangesList,
     getNewEntities,
+    getDeletedEntities,
+    getSyncDisabledHubs,
     ensureOwnpath,
     ignored,
     ignoreHubs,
@@ -475,4 +502,5 @@ module.exports = function (worker) {
     touch,
     unsynced,
   };
-};
+
+}

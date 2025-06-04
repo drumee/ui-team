@@ -279,7 +279,8 @@ class Worker extends Media {
     }
     await this.prepare();
     /** Wait for Account.socket_id */
-    this.syncInitialChanges();
+    // await this.getRemoteChangeLog()
+    await this.syncInitialChanges();
     this.watcher.start();
   }
 
@@ -287,22 +288,35 @@ class Worker extends Media {
   /**
    *
    */
-  syncInitialChanges() {
+  async syncInitialChanges() {
     let { engine, effective } = this.syncOpt.rootSettings();
+    let log_id = await this.Changelog.getRemoteChangelog();
+
     let changes = this.remote.getChangesList();
-    let localRemoved = this.fsnode.getRemovedEntities();
-    this.debug("AAA:294", localRemoved)
-    let newLocal = this.fsnode.getNewEntities();
+
+    let newLocal = this.fsnode.getNewEntities(log_id);
+    this.debug("AAA:299", { newLocal })
+
     let newRemote = this.remote.getNewEntities();
-    this.debug("AAA:297", newRemote)
+    this.debug("AAA:302", { newRemote })
+
+    let localDeleted = this.fsnode.getDeletedEntities();
+    this.debug("AAA:296", { localDeleted })
+
+    let remoteDeleted = this.remote.getDeletedEntities();
+    this.debug("AAA:307", { remoteDeleted })
+    // return
     newLocal.map((e) => {
       this.takeLocalItem(e, Attr.created)
     })
     newRemote.map((e) => {
       this.takeRemoteItem(e, Attr.created)
     })
-    localRemoved.map((e) => {
+    localDeleted.map((e) => {
       this.takeLocalItem(e, Attr.deleted)
+    })
+    remoteDeleted.map((e) => {
+      this.takeRemoteItem(e, Attr.deleted)
     })
     changes.map((e) => {
       if (e.locMtime > e.mtime) {

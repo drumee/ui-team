@@ -440,15 +440,15 @@ class Changelog extends mfsUtils {
     item.filepath = normalize(item.filepath);
     item.ownpath = normalize(item.ownpath);
     let effective = this.syncOpt.getNodeState(item)
-    this.debug("AAAA:442 getRemoteChanges", sync, item.filepath)
-    if (!effective) {
-      return 0;
-    }
+    this.debug("AAAA:442 getRemoteChanges", effective, item.filepath)
+    // if (!effective) {
+    //   return 0;
+    // }
     item.args = JSON.stringify({ src, dest });
     item.id = id;
     item.seq = seq;
     item.synced = synced;
-    item.effective = 1;
+    item.effective = effective;
     this._populate.run(item);
     return 1
   }
@@ -500,18 +500,6 @@ class Changelog extends mfsUtils {
     // this.db.serialize(seq);
   }
 
-  /**
-   * 
-   */
-  getSyncDisabled() {
-    let sql = `SELECT r.hub_id FROM remote r WHERE r.effective=0 AND r.filetype='hub'`;
-    let rows = this.db.getRows(sql);
-    let res = []
-    for (let r of rows) {
-      res.push(r.hub_id)
-    }
-    return res;
-  }
   
   /**
    * 
@@ -525,7 +513,7 @@ class Changelog extends mfsUtils {
     } else {
       args.last = 200;
     }
-    args.exclude = this.getSyncDisabled();
+    args.exclude = this.remote.getSyncDisabledHubs(); //getSyncDisabled();
 
     let data = await this.postService(SERVICES.changelog.read, args);
     this._populate = this.db.populate("remote_changelog", "INSERT OR IGNORE");
@@ -558,6 +546,7 @@ class Changelog extends mfsUtils {
     transaction(data);
     this._remoteLog = 1;
     this._populating = 0;
+    return id
   }
 
   /**
@@ -620,10 +609,10 @@ class Changelog extends mfsUtils {
   /**
   * 
   */
-  async getRemoteChanges(force = 0) {
-    let rows = this.remote.getChangesList(sql);
-    return rows;
-  }
+  // async getRemoteChanges(force = 0) {
+  //   let rows = this.remote.getChangesList(sql);
+  //   return rows;
+  // }
 
   /**
   * 
