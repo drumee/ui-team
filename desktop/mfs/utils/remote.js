@@ -68,26 +68,6 @@ module.exports = function (worker) {
     return db.run(sql);
   }
 
-  /**
-   *
-   */
-  function getChangesList(opt) {
-    let sql = `SELECT r.*, ROUND(h.mtimeMs/1000) locMtime FROM remote r 
-      INNER JOIN hash h using(filepath) WHERE changed AND effective`;
-    return db.getRows(sql);
-  }
-
-  /**
-  * 
-  */
-  function getNewEntities() {
-    let sql = `SELECT * FROM remote WHERE effective AND pid!='0' AND effective 
-      AND filepath NOT IN (SELECT filepath FROM fsnode) 
-      AND filepath NOT IN 
-      (SELECT filepath FROM fsnode WHERE inode NOT IN (SELECT inode FROM inodes))`;
-    let rows = db.getRows(sql) || [];
-    return rows;
-  }
 
 
   function created() {
@@ -461,14 +441,53 @@ module.exports = function (worker) {
   }
 
   /**
-  * 
+   * 
+   * @param {*} item 
+   * @returns 
+   */
+  function getSyncParams(item = {}) {
+    let { inode, nid, filepath } = item;
+    let sql = `SELECT 1 file_exists, 1 synced FROM hash h 
+      INNER JOIN remote r ON r.filepath=h.filepath 
+      WHERE r.md5Hash IS NOT NULL AND r.md5Hash=h.md5
+      AND (h.inode=? OR r.nid=? OR h.filepath=?);
+    `;
+    return db.getRow(sql, inode, nid, filepath) || {};
+  }
+
+  /**
+  * event=[remove, rename, replace, move, save]
   */
-  function getDeletedEntities(max_id) {
+  function getEntitiesChanges(event) {
     let sql = `SELECT * FROM remote_changelog 
-      WHERE effective AND synced=0 AND event='media.remove'`;
+      WHERE effective AND synced=0 AND event='media.${event}'`;
     let rows = db.getRows(sql);
     return rows;
   }
+
+ /**
+ * 
+ */
+  function getNewEntities() {
+    let sql = `SELECT *, 'media.new' event 
+      FROM remote WHERE effective AND pid!='0' AND effective 
+      AND filepath NOT IN (SELECT filepath FROM fsnode) 
+      AND filepath NOT IN 
+      (SELECT filepath FROM fsnode WHERE inode NOT IN (SELECT inode FROM inodes))`;
+    let rows = db.getRows(sql) || [];
+    return rows;
+  }
+
+  /**
+  *
+  */
+  function getChangesList(opt) {
+    let sql = `SELECT r.*, ROUND(h.mtimeMs/1000) locMtime, 'media.replace' event
+      FROM remote r 
+      INNER JOIN hash h using(filepath) WHERE changed AND effective`;
+    return db.getRows(sql);
+  }
+
 
 
   return {
@@ -483,8 +502,9 @@ module.exports = function (worker) {
     getHubData,
     getChangesList,
     getNewEntities,
-    getDeletedEntities,
+    getEntitiesChanges,
     getSyncDisabledHubs,
+    getSyncParams,
     ensureOwnpath,
     ignored,
     ignoreHubs,

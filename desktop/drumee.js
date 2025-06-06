@@ -1,8 +1,3 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2020
- * FILE : drumee-electron/index.js
- * TYPE : Skelton
- * ===================================================================**/
 
 const { resolve, join, dirname } = require('path');
 const { app, BrowserWindow, screen, net, Menu, nativeImage, Tray, shell, dialog } = require('electron');
@@ -15,7 +10,7 @@ global.win = null;
 const { sizeOfpending } = require("./mfs/core/locker");
 const { mkdirSync, existsSync, renameSync, symlinkSync } = require('fs');
 
-
+const { dev:dev_mode, open_dev, offline} = require("./args")
 /**
  * App main window will get created from the ready action.
  */
@@ -143,8 +138,12 @@ class Drumee {
 
   }
 
+  /**
+   * 
+   * @returns 
+   */
   isOnline() {
-    if (ARGV.dev && ARGV.offline) return false;
+    if (dev_mode && offline) return false;
     return net.online;
   }
 
@@ -214,9 +213,9 @@ class Drumee {
       return { action: 'deny' };
     });
 
-    if (ARGV.dev && ARGV.openDev) {
+    if (dev_mode && open_dev) {
+      console.log("Starting with DevTools open")
       this.webContents.openDevTools({ mode: 'detach' });
-      console.log("AAA:224", ARGV, w.webContents.openDevTools)
     }
 
     // App States
@@ -432,7 +431,7 @@ class Drumee {
       console.log("webContents ready");
       webContents.session.setCertificateVerifyProc((request, callback) => {
         let { hostname, certificate, validatedCertificate, verificationResult, errorCode } = request;
-        if (errorCode === 0 || ARGV.dev) {
+        if (errorCode === 0 || dev_mode) {
           callback(0);
           return;
         }
@@ -447,7 +446,7 @@ class Drumee {
         return;
       }
       global.Account = Account;
-      console.log("Preparing account", ARGV.dev, ARGV.openDev)
+      console.log("Preparing account", dev_mode, open_dev)
       Account.prepare().then(() => {
         console.log("Account prepared")
       }).catch((e) => {

@@ -15,7 +15,7 @@
  * =============================================================================
  */
 
-const _a = require("../../lex/attribute");
+const Attr = require("../../lex/attribute");
 const { copyFileSync, existsSync } = require('fs');
 const { shell } = require("electron");
 const { dialog } = require("electron");
@@ -28,19 +28,19 @@ const { showPending, isPending, setPending, unsetPending } = require("../core/lo
  * @returns
  */
 function _skipMediaSync(evt) {
-  if (evt.filepath == "/") return _a.ignored;
+  if (evt.filepath == "/") return Attr.ignored;
   const { direction, effective } = this.syncOpt.getNodeSettings(evt);
   if (!effective) {
     if (evt.name == "media.open") {
       return null;
     }
-    return _a.terminated;
+    return Attr.terminated;
   }
-  if (direction == _a.upstream) return _a.terminated;
+  if (direction == Attr.upstream) return Attr.terminated;
   if ([0, -1].includes(effective)) {
     let { syncEnabled, force } = this.event.parseArgs(evt);
     if (syncEnabled || force) return null;
-    return _a.ignored;
+    return Attr.ignored;
   }
   return null;
 }
@@ -50,24 +50,24 @@ function _skipMediaSync(evt) {
  */
 async function onMediaInit(evt) {
   let skip = this._skipMediaSync(evt);
-  let stat = this.localFile(evt, _a.stat);
+  let stat = this.localFile(evt, Attr.stat);
   if (skip) return skip;
 
   if (this.isBranch(evt)) {
     return await this.onFsMkDir(evt);
   }
 
-  if (isPending(_a.uploaded, stat.inode)) {
-    return _a.skip;
+  if (isPending(Attr.uploaded, stat.inode)) {
+    return Attr.skip;
   }
 
-  if (isPending(_a.downloaded, evt.filepath)) {
-    return _a.skip;
+  if (isPending(Attr.downloaded, evt.filepath)) {
+    return Attr.skip;
   }
 
-  let remote = this.remote.row(evt, _a.filepath, _a.nid);
+  let remote = this.remote.row(evt, Attr.filepath, Attr.nid);
   if (!remote) {
-    return _a.skip;
+    return Attr.skip;
   }
 
   if (!stat.ino) {
@@ -80,12 +80,12 @@ async function onMediaInit(evt) {
   if (md5Hash && md5Hash == remote.md5Hash) {
     if (!this.event.parseArgs(evt).force) {
       this.fsnode.update(Attr.inode, "changed", 0);
-      return _a.synced;
+      return Attr.synced;
     }
   }
   return "conflict-local";
 
-  // let local = this.local.row(evt, _a.filepath, _a.nid);
+  // let local = this.local.row(evt, Attr.filepath, Attr.nid);
   let hash = await this.hash.getMd5(evt);
   this.debug(`70: Remote md5=${remote.md5Hash}`, hash)
   if (!local) {
@@ -104,7 +104,7 @@ async function onMediaInit(evt) {
             ext,
             filepath,
           });
-          return _a.synced;
+          return Attr.synced;
         }
       }
       return "conflict-local";
@@ -114,7 +114,7 @@ async function onMediaInit(evt) {
   let sameTime = remote.mtime == local.mtime;
   if (unchanged && sameTime) {
     this.debug(`Remote md5=${remote.md5Hash}`, this.hash.getMd5(evt))
-    if (!this.event.parseArgs(evt).force) return _a.synced;
+    if (!this.event.parseArgs(evt).force) return Attr.synced;
   }
   res = await this.onMediaNew(evt);
   return res;
@@ -126,7 +126,7 @@ async function onMediaInit(evt) {
  * @returns
  */
 async function onMediaChange(evt) {
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 /**
@@ -146,40 +146,40 @@ async function onMediaCopy(evt) {
       nid: dest.nid,
       hub_id: dest.hub_id,
     })
-    if (!manifest[0]) return _a.terminated;
+    if (!manifest[0]) return Attr.terminated;
     for (let node of manifest[0]) {
       this.remote.upsert(node);
-      let destNode = this.localFile(node, _a.node);
+      let destNode = this.localFile(node, Attr.node);
       if (this.isBranch(node)) {
-        this.localFile(destNode, _a.mkdir);
+        this.localFile(destNode, Attr.mkdir);
       } else {
         let filepath = node.filepath.replace(re, "");
         filepath = join(srcBase, filepath);
-        let srcNode = this.localFile({ filepath }, _a.node);
+        let srcNode = this.localFile({ filepath }, Attr.node);
         if (existsSync(srcNode.realpath)) {
-          setPending(_a.created, destNode, filepath);
+          setPending(Attr.created, destNode, filepath);
           copyFileSync(srcNode.realpath, destNode.realpath);
         } else {
           await this._fetchFile(node);
           continue;
         }
       }
-      let { miniData } = this.localFile(destNode, _a.stat);
+      let { miniData } = this.localFile(destNode, Attr.stat);
       this.local.upsert({ ...node, ...miniData });
       this.fsnode.upsert({ ...destNode, ...miniData });
     }
   } else {
-    let srcNode = this.localFile(src, _a.node);
-    let destNode = this.localFile(dest, _a.node);
+    let srcNode = this.localFile(src, Attr.node);
+    let destNode = this.localFile(dest, Attr.node);
     const { filepath, inode } = destNode;
-    setPending(_a.created, destNode, filepath, inode);
+    setPending(Attr.created, destNode, filepath, inode);
     copyFileSync(srcNode.realpath, destNode.realpath);
     this.remote.upsert({ ...dest });
-    let { miniData } = this.localFile(dest, _a.stat);
+    let { miniData } = this.localFile(dest, Attr.stat);
     this.local.upsert({ ...dest, ...miniData, nodetype: Attr.file });
     this.fsnode.upsert({ ...destNode, ...miniData, nodetype: Attr.file });
   }
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 /**
@@ -199,7 +199,7 @@ function _relogEvent(evt, src, dest) {
   if (!dest.hub_id) dest.hub_id = src.hub_id;
   if (!dest.home_id) dest.hub_id = src.home_id;
   this.destination.upsert(dest);
-  src = this.source.row(evt, _a.eventId);
+  src = this.source.row(evt, Attr.eventId);
 }
 
 /**
@@ -212,24 +212,24 @@ async function onMediaMove(evt) {
   let { src, dest } = this.event.parseArgs(evt);
   if (!src || !dest) {
     this.debug("AAAA:127 -- FAILED onMediaMove", { evt, src, dest });
-    return _a.failed;
+    return Attr.failed;
   }
-  let stat = this.localFile(src, _a.stat);
+  let stat = this.localFile(src, Attr.stat);
   if (!stat.inode) {
     mfsScheduler.log({ ...dest, name: "media.init" });
-    return _a.terminated;
+    return Attr.terminated;
   }
-  showPending(_a.moved);
-  if (isPending(_a.moved, src.filepath)) {
+  showPending(Attr.moved);
+  if (isPending(Attr.moved, src.filepath)) {
     this.debug(`${evt.filepath} is being moved by local`);
     setTimeout(() => {
-      unsetPending(_a.moved, src.filepath);
+      unsetPending(Attr.moved, src.filepath);
     }, 2000);
     return
   }
 
   mfsScheduler.log({ ...evt, name: "fs.move" });
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 /**
@@ -239,10 +239,10 @@ async function onMediaMove(evt) {
 function onMediaRename(evt) {
   let skip = this._skipMediaSync(evt);
   if (skip) return skip;
-  if (isPending(_a.media, evt.nid)) {
+  if (isPending(Attr.media, evt.nid)) {
     this.debug(`${evt.filepath} is being renamed by local`);
     setTimeout(() => {
-      unsetPending(_a.media, evt.nid);
+      unsetPending(Attr.media, evt.nid);
     }, 2000);
     return
   }
@@ -251,7 +251,7 @@ function onMediaRename(evt) {
   if (!src || !dest) return;
 
   mfsScheduler.log({ ...evt, name: "fs.rename" });
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 /**
@@ -261,14 +261,14 @@ function onMediaRename(evt) {
 function onMediaRemove(evt) {
   let skip = this._skipMediaSync(evt);
   if (skip) return skip;
-  showPending(_a.trashed);
-  showPending(_a.removed);
+  showPending(Attr.trashed);
+  showPending(Attr.removed);
 
-  if (isPending(_a.trashed, evt.nid)) {
+  if (isPending(Attr.trashed, evt.nid)) {
     //this.debug({ LOCKED: evt.nid }, evt);
-    unsetPending(_a.trashed, evt.nid);
+    unsetPending(Attr.trashed, evt.nid);
     this.remote.removeNode(evt);
-    return _a.terminated;
+    return Attr.terminated;
   }
 
   if (!this.syncOpt.getNodeState(evt)) {
@@ -276,7 +276,7 @@ function onMediaRemove(evt) {
   } else {
     mfsScheduler.log({ ...evt, name: "fs.remove" });
   }
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 /**
@@ -284,12 +284,12 @@ function onMediaRemove(evt) {
  * @param {*} evt
  */
 async function _fetchFile(evt) {
-  if (evt.isalink && evt.filetype != _a.hub) {
-    return _a.skip;
+  if (evt.isalink && evt.filetype != Attr.hub) {
+    return Attr.skip;
   }
   if (this.isNodeUpToDate(evt)) {
     this.debug(`[skipped] ${evt.filepath} is already up to date`);
-    return _a.skip;
+    return Attr.skip;
   }
   try {
     await this.requestDownload(evt);
@@ -307,7 +307,7 @@ async function _fetchFile(evt) {
       dialog.showMessageBox(null, options);
     }
   }
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 /**
@@ -317,15 +317,15 @@ async function _fetchFile(evt) {
 async function onMediaNew(evt) {
   if (this.isBranch(evt)) {
     let { hubEvent } = this.event.parseArgs(evt);
-    if (evt.filetype == _a.hub && hubEvent == "media.new") {
+    if (evt.filetype == Attr.hub && hubEvent == "media.new") {
       let data = await this.postService(SERVICES.media.manifest, {
         nid: evt.home_id,
         hub_id: evt.hub_id,
       });
-      if (!data || !data[0]) return _a.terminated;
+      if (!data || !data[0]) return Attr.terminated;
       const root = { ...evt, filesize: 0 };
       this._updateRemote(data, { ...root, basedir: evt.filepath });
-      return _a.terminated;
+      return Attr.terminated;
     }
 
     let res = await this.onFsMkDir(evt);
@@ -366,8 +366,8 @@ async function onMediaUpdate(evt) {
  */
 async function onMediaAttributes(evt) {
   let data = await this.fetchService(SERVICES.media.get_node_attr, evt);
-  let local = this.local.row(data, _a.nid);
-  return _a.terminated;
+  let local = this.local.row(data, Attr.nid);
+  return Attr.terminated;
 }
 
 /**
@@ -401,16 +401,16 @@ function _updateRemote(data, opt = {}) {
 async function showNode(args) {
   let skip = this._skipMediaSync(args);
   if (skip) return skip;
-  if (!this.isBranch(args)) return _a.skip;
+  if (!this.isBranch(args)) return Attr.skip;
 
   let { hub_id, nid } = args;
-  if (args.filetype == _a.hub) {
-    let r = this.remote.row(args, _a.filepath);
-    if (!r || !r.home_id) return _a.skip;
+  if (args.filetype == Attr.hub) {
+    let r = this.remote.row(args, Attr.filepath);
+    if (!r || !r.home_id) return Attr.skip;
     nid = r.home_id;
     hub_id = args.hub_id;
   }
-  let stat = this.localFile(args, _a.stat);
+  let stat = this.localFile(args, Attr.stat);
 
   if (!stat || !stat.inode) {
     await this.onFsMkDir({ ...args });
@@ -435,15 +435,15 @@ async function showNode(args) {
 
   let i = 0;
   for (var item of items) {
-    let node = this.fsnode.row(item, _a.filepath, _a.inode);
+    let node = this.fsnode.row(item, Attr.filepath, Attr.inode);
     i++;
     if (!node) {
       pushLog(item, i, "media.init");
     } else {
-      let rem = this.remote.row(item, _a.nid);
-      let loc = this.local.row(item, _a.filepath, _a.nid);
+      let rem = this.remote.row(item, Attr.nid);
+      let loc = this.local.row(item, Attr.filepath, Attr.nid);
       if (loc && this.isBranch(item)) {
-        let stat = this.localFile(item, _a.stat);
+        let stat = this.localFile(item, Attr.stat);
         if (stat && stat.inode) {
           continue;
         }
@@ -459,13 +459,13 @@ async function showNode(args) {
   let nodes = this.fsnode.unsyncedChildren(args);
   for (var item of nodes) {
     i++;
-    if (item.nodetype == _a.folder) {
+    if (item.nodetype == Attr.folder) {
       pushLog(item, i, "folder.created");
-    } else if (item.nodetype == _a.file) {
+    } else if (item.nodetype == Attr.file) {
       pushLog(item, i, "file.created");
     }
   }
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 /**
@@ -475,13 +475,13 @@ async function showNode(args) {
  */
 async function onMediaOpen(args) {
   let filepath = this.normalizePathFromArgs(args);
-  let location = this.localFile(filepath, _a.absolute);
+  let location = this.localFile(filepath, Attr.absolute);
   let res = "";
   if (!this.isBranch(args)) {
     if (!location) {
       await this.requestDownload(args);
     }
-    location = this.localFile(filepath, _a.absolute);
+    location = this.localFile(filepath, Attr.absolute);
     res = await shell.openPath(location);
   } else {
     if (!location) {
@@ -499,7 +499,7 @@ async function onMediaOpen(args) {
   if (res != "") {
     this.debug("TODO send message to render to fallback into builtins/viewer");
   }
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 module.exports = {

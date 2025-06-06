@@ -42,6 +42,7 @@ class __drumee_electron extends Utils {
       }
     }
   }
+  
   /**
    * 
    * @returns 
@@ -213,64 +214,6 @@ class __drumee_electron extends Utils {
   url() {
     return "/";
   }
-
-
-  // /**
-  //  * 
-  //  */
-  // isDestroyed() {
-  //   return this._isDestroyed;
-  // }
-
-
-  // // ========================
-  // //
-  // // ========================
-  // error() {
-  //   const args = Array.prototype.slice.call(arguments);
-  //   args.unshift(`${this.constructor.name}: `);
-  //   console.error.apply(console, args);
-  // }
-
-  // // ========================
-  // //
-  // // ========================
-  // warn() {
-  //   const args = Array.prototype.slice.call(arguments);
-  //   args.unshift(`${this.constructor.name}: `);
-  //   console.warn.apply(console, args);
-  // }
-
-  // // ========================
-  // //
-  // // ========================
-  // info() {
-  //   const args = Array.prototype.slice.call(arguments);
-  //   args.unshift(`${this.constructor.name}: `);
-  //   console.info.apply(console, args);
-  // }
-
-
-  // // ========================
-  // //
-  // // ========================
-  // // debug(...args) {
-  // //   // const args = Array.prototype.slice.call(arguments);
-  // //   // args.unshift(`${this.constructor.name}: `);
-  // //   // console.debug.apply(console, args);
-  // //   console.debug(`[${new Date().getTime()}]${this.constructor.name}: `, ...args);
-  // // }
-
-
-  // // ========================
-  // //
-  // // ========================
-  // silly() {
-  //   const args = Array.prototype.slice.call(arguments);
-  //   args.unshift(`${this.constructor.name}: `);
-  //   console.log.apply(console, args);
-  // }
-
 
 }
 

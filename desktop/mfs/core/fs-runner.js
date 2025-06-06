@@ -25,7 +25,7 @@ const { setPending, showPending } = require("./locker");
  */
 const onFsAdd = function (evt) {
   let remote = this.remote.row(evt, _a.nid);
-  let local = this.local.row(evt, _a.nid);
+  // let local = this.local.row(evt, _a.nid);
 }
 
 /**
@@ -36,7 +36,7 @@ const onFsRemove = async function (evt) {
   let stat = this.localFile(evt, _a.stat);
   //this.debug("AAA:29 - onFsRemove", evt, stat);
   //this.removePendingEntity('local_created', evt);
-  this.local.removeNode(evt);
+  //this.local.removeNode(evt);
   this.remote.removeNode(evt);
   this.fsnode.removeNode(evt);
   this.syncOpt.removeNode(evt);
@@ -60,8 +60,6 @@ const onFsRemove = async function (evt) {
 const onFsRename = async function (evt) {
   let args = this.event.parseArgs(evt);
   let { src, dest } = args;
-  //this.removePendingEntity('local_renamed', evt);
-  //this.removePendingEntity('remote_renamed', evt);
   if (!src || !dest) {
     this.debug("AAA:145 - Source/destination corrupted.", src, dest, evt);
     return _a.failed;
@@ -69,10 +67,8 @@ const onFsRename = async function (evt) {
 
 
   let src_node = this.localFile(src, _a.node);
-  //this.debug("AAA:244 - onFsRename", { src_node, src, dest });
   if (!src_node.inode) {
     this.fsnode.removeNode(src);
-    this.local.removeNode(src);
     return _a.terminated;
   }
 
@@ -84,14 +80,12 @@ const onFsRename = async function (evt) {
   setPending(_a.renamed, evt, dest.inode);
 
   try {
-    //this.debug("AAAA:104", src);
     renameSync(src_node.realpath, dest_node.realpath);
   } catch (e) {
     this.debug("ERROR -- AAAA:92", e);
     return _a.failed;
   }
 
-  this.local.rename(evt);
   this.remote.rename(evt);
   this.fsnode.rename(src, dest);
 
@@ -104,18 +98,14 @@ const onFsRename = async function (evt) {
  */
 const onFsMove = async function (evt) {
   let { src, dest } = this.event.parseArgs(evt);
-  //this.removePendingEntity('local_moved', evt);
-  //this.removePendingEntity('remote_moved', evt);
   if (!src || !dest) {
     this.debug("AAA:88 - Source/destination corrupted.", src, dest, evt);
     return _a.failed;
   }
 
-  //this.debug("AAA:239 onFsMove", args, src, dest);
   let src_node = this.localFile(src, _a.node);
   if (!src_node.inode) {
     this.fsnode.removeNode(src);
-    this.local.removeNode(src);
     return _a.terminated;
   }
 
@@ -142,7 +132,7 @@ const onFsMove = async function (evt) {
     evt.error = e;
     return _a.failed;
   }
-  this.local.move(src, dest);
+  // this.local.move(src, dest);
   this.remote.move(src, dest);
   this.fsnode.move(src_node, dest);
 
@@ -195,7 +185,6 @@ const onFsMkDir = async function (evt) {
   }
 
   if (this.isNodeUpToDate(evt)) {
-    //this.debug("AAA:270 -- Already synced", evt);
     return _a.skip;
   }
 
@@ -205,18 +194,11 @@ const onFsMkDir = async function (evt) {
   }
   let node = this.localFile(evt, _a.node);
 
-  if (!node.inode) {
-    this.localFile(evt, _a.mkdir, evt);
-    node = this.localFile(evt, _a.node);
-    this.local.upsert({ ...evt, ...node });
-    return _a.terminated;
-  }
 
   const fsnode = this.fsnode.row(evt, _a.filepath);
   if (!fsnode) {
     this.fsnode.upsert(node);
   }
-  this.local.upsert({ ...remote, ...evt, ...node });
   return _a.terminated
 }
 

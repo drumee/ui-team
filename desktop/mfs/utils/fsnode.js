@@ -96,9 +96,11 @@ module.exports = function (worker) {
    * 
    */
   function getNewEntities(max_id) {
-    let sql = `SELECT * FROM fsnode WHERE effective AND 
-      filepath NOT IN (SELECT filepath FROM remote WHERE effective) AND 
-      filepath NOT IN (SELECT filepath FROM remote_changelog WHERE effective
+    let sql = `SELECT f.*, (nodetype || '.created') event, h.md5 md5Hash
+      FROM fsnode f LEFT JOIN hash h
+      WHERE effective AND 
+      f.filepath NOT IN (SELECT filepath FROM remote WHERE effective) AND 
+      f.filepath NOT IN (SELECT filepath FROM remote_changelog WHERE effective
       AND event='media.remove' AND id>=?)`;
     let rows = db.getRows(sql, max_id) || [];
     return rows;
@@ -108,7 +110,7 @@ module.exports = function (worker) {
    * 
    */
   function getDeletedEntities() {
-    let sql = `SELECT * FROM fsnode WHERE  
+    let sql = `SELECT *, (nodetype || '.deleted') event FROM fsnode WHERE  
        inode NOT IN (SELECT inode FROM inodes) AND effective AND nodetype!='system'`;
     let rows = db.getRows(sql) || [];
     return rows;

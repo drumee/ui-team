@@ -16,6 +16,7 @@
  */
 const { app } = require('electron');
 const { showVersion, checkVersion } = require('../../minishell/auto-update');
+const { local_bundle, debug_update } = require("../../../args")
 
 /**
  * Default Menu bar before login.
@@ -37,7 +38,7 @@ const defaultMenu = () => {
       }
     }
   ];
-  if (!ARGV['local-bundle'] || ARGV['debug-update']) {
+  if (!local_bundle || debug_update) {
     submenu.unshift({
       label: LOCALE.CHECK_UPDATE,
       click: () => {
@@ -55,7 +56,7 @@ const defaultMenu = () => {
     };
     submenu.splice(4, 0, logout)
     menu = [{ label: 'Drumee', submenu }];
-  } 
+  }
   return menu;
 };
 

@@ -22,8 +22,8 @@ const remote = {
   hub_id: 'VARCHAR(16)',
   home_id: 'VARCHAR(16)',
   pid: 'VARCHAR(16)',
-  changed: 'BOOLEAN', 
-  effective: 'BOOLEAN', 
+  changed: 'BOOLEAN',
+  effective: 'BOOLEAN',
   filename: 'VARCHAR(255)',
   filetype: 'VARCHAR(255)',
   md5Hash: 'VARCHAR(32)',
@@ -36,7 +36,7 @@ const remote = {
   mtime: 'INTEGER NOT NULL',
 };
 
-const remote_old = {...remote};
+const remote_old = { ...remote };
 
 // Local media manifest. This table is the snapshot of the remote media manifeste
 // when the the application start running. It's cleared on every launch.
@@ -46,8 +46,8 @@ const local = {
   nid: 'VARCHAR(16) NOT NULL UNIQUE',
   hub_id: 'VARCHAR(16) NOT NULL',
   pid: 'VARCHAR(16) NOT NULL',
-  synced: 'BOOLEAN', 
-  effective: 'BOOLEAN', 
+  synced: 'BOOLEAN',
+  effective: 'BOOLEAN',
   filename: 'VARCHAR(255) NOT NULL',
   filetype: 'VARCHAR(255) NOT NULL',
   filesize: 'DOUBLE',
@@ -71,14 +71,14 @@ const fsnode = {
   filename: 'TEXT NOT NULL',
   ext: 'VARCHAR(128)',
   nodetype: 'VARCHAR(128)',
-  changed: 'BOOLEAN', 
-  effective: 'BOOLEAN', 
+  changed: 'BOOLEAN',
+  effective: 'BOOLEAN',
   filesize: 'INTEGER NOT NULL',
   birthtimeMs: 'REAL NOT NULL',
   ctimeMs: 'REAL NOT NULL',
   mtimeMs: 'REAL NOT NULL',
 };
-const fsnode_old = {...fsnode};
+const fsnode_old = { ...fsnode };
 
 // This table is used to control syncing with remote
 // id is the remote changelog id
@@ -92,7 +92,7 @@ const fschangelog = {
   filename: 'TEXT NOT NULL',
   ext: 'VARCHAR(128)',
   nodetype: 'VARCHAR(128)',
-  effective: 'BOOLEAN', 
+  effective: 'BOOLEAN',
   filesize: 'INTEGER NOT NULL',
   birthtimeMs: 'REAL NOT NULL',
   ctimeMs: 'REAL NOT NULL',
@@ -123,6 +123,24 @@ const remote_changelog = {
   status: 'VARCHAR(255)',
   isalink: 'BOOLEAN',
   ext: 'VARCHAR(20)',
+  ctime: 'INTEGER NOT NULL',
+  mtime: 'INTEGER NOT NULL',
+  args: 'TEXT',
+};
+
+// This table is used merge changes from local and remote side
+// It's used to detect conflict changes and optimize them before
+// writing events into scheduler log
+const changelog_buffer = {
+  filepath: 'TEXT KEY NOT NULL',
+  event : 'VARCHAR(32)',
+  inode: 'INTERGER',
+  nid: 'VARCHAR(16)',
+  hub_id: 'VARCHAR(16)',
+  synced:  'BOOLEAN',
+  effective:  'BOOLEAN',
+  md5Hash: 'VARCHAR(200)',
+  filesize: 'DOUBLE',
   ctime: 'INTEGER NOT NULL',
   mtime: 'INTEGER NOT NULL',
   args: 'TEXT',
@@ -298,7 +316,7 @@ const syncOpt = {
   filepath: 'TEXT PRIMARY KEY NOT NULL',
   mode: 'VARCHAR(25)',
   effective: 'BOOLEAN',
-  direction:'VARCHAR(120) DEFAULT "duplex"',
+  direction: 'VARCHAR(120) DEFAULT "duplex"',
 };
 
 
@@ -354,8 +372,6 @@ const schema = {
   ctime: 'INTEGER NOT NULL',
 };
 
-
-
 module.exports = {
   callback,
   destination,
@@ -365,15 +381,16 @@ module.exports = {
   fschangelog,
   fsevent,
   fslog,
-  fsnode_old,
+  //fsnode_old,
   fsnode,
+  changelog_buffer,
   hash,
   inodes,
   journal,
-  local,
+  //local,
   organization,
   remote_changelog,
-  remote_old,
+  //remote_old,
   remote,
   schema,
   semaphore,

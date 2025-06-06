@@ -16,12 +16,12 @@
  */
 const { Menu } = require('electron');
 const defaultMenu = require('./defaultMenu');
-const _a = require('../../../lex/attribute');
 const { showVersion, checkVersion } = require('../../minishell/auto-update');
+const { dev: dev_mode, experimental, local_bundle, debug_update } = require("../../../args")
 
 const __core = require('../../../core');
 class __drumee_menu extends __core {
- 
+
   /**
    * 
    */
@@ -30,7 +30,6 @@ class __drumee_menu extends __core {
   }
 
 
-  // const dev = process.argv.indexOf('--dev') !== -1;
   /**
    * Menu builder for APP.
    * @param {*} online 
@@ -39,9 +38,9 @@ class __drumee_menu extends __core {
     let accounts = require('./accounts')();
     let menu = defaultMenu();
     menu = menu.concat(accounts);
-    if(syncParams){
+    if (syncParams) {
       let sync = require('./sync')(syncParams);
-      if(sync){
+      if (sync) {
         menu = menu.concat(sync);
       }
     }
@@ -52,12 +51,12 @@ class __drumee_menu extends __core {
         { label: LOCALE.UNDO, role: 'undo' },
         { label: LOCALE.REDO, role: 'redo' },
         { type: 'separator' },
-        { label: LOCALE.CUT,role: 'cut' },
+        { label: LOCALE.CUT, role: 'cut' },
         { label: LOCALE.COPY, role: 'copy' },
-        { label: LOCALE.PASTE,role: 'paste' }
+        { label: LOCALE.PASTE, role: 'paste' }
       ]
     })
-    if (ARGV.dev) {
+    if (dev_mode) {
       let submenu = [
         {
           label: "Dev Tool", click: () => {
@@ -82,13 +81,13 @@ class __drumee_menu extends __core {
       })
     }
 
-    if (ARGV.demo) {
+    if (experimental) {
       menu.push({
-        label: "Demo",
-        submenu:[
+        label: "Experimental",
+        submenu: [
           {
-            label: "Ransomeware", click: () => Account.service('ransomeware-demo', {  }),
-          },  
+            label: "Ransomeware", click: () => Account.service('ransomeware-demo', {}),
+          },
         ]
       })
     }
@@ -108,7 +107,7 @@ class __drumee_menu extends __core {
         }
       })
     }
-    if (!ARGV['local-bundle'] || ARGV['debug-update']) {
+    if (!local_bundle || debug_update) {
       help.submenu.push({
         label: LOCALE.CHECK_UPDATE,
         click: () => {

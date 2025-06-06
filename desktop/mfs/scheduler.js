@@ -130,37 +130,20 @@ class Scheduler extends mfsUtils {
    */
   async startSyncEngine(opt = {}) {
     let { channel, args } = opt;
-    //let root = this.remote.show_root();
-    // this.debug("startSyncEngine", this.syncOpt.rootState());
-    // let items = this.remote.unsynced();
-    // let res = {};
-    // this.unsyncedItems = items.length || 1;
-    this.worker.startSyncEngine().then(() => {
-      this.set({ running: 1, ready: 1, frozen: 0 });
+    if (Account.user.isOnline()) {
       let settings = this.syncOpt.rootSettings();
-      this.debug("AAAA:142", settings)
-      Account.syncParams.set(settings);
-      Account.refreshMenu();
-    })
-    // let items = this.remote.show_node(root);
-    // let synced = 1;
-    // if (items.length) {
-    //   for (let item of items) {
-    //     let loc = this.local.row(item, Attr.nid);
-    //     let exists = this.localFile(item);
-    //     if (!loc || !exists) {
-    //       await this.log({ ...item, name: "media.init" });
-    //       await this.waitForTask(item);
-    //       synced = 0;
-    //     }
-    //   }
-    //   if (synced) await this.next();
-    // } else {
-    //   await this.pause();
-    // }
-
+      this.debug("Starting Sync Scheduler", settings)
+      this.worker.startSyncEngine().then(() => {
+        this.set({ running: 1, ready: 1, frozen: 0 });
+        Account.syncParams.set(settings);
+        Account.refreshMenu();
+      })
+    } else {
+      this.debug("SYNC ALLOWED IN ANOMYNOUS CONTEXT");
+      args = { ...args, error: "PERMISSION_DENIED" }
+    }
     if (channel) {
-      webContents.send(channel, res);
+      webContents.send(channel, args);
     }
   }
 
@@ -169,8 +152,12 @@ class Scheduler extends mfsUtils {
    */
   async stopSyncEngine(opt) {
     this.set({ running: 0, frozen: 1 });
+    this.debug("Stopping Sync Scheduler")
+    let settings = this.syncOpt.changeSettings({ effective: 0 });
+    this.debug("Starting Sync Scheduler", settings)
     this.event.clear();
     clearInterval(this._timer);
+    this.worker.stopSyncEngine();
     if (opt) {
       let { channel } = opt;
       webContents.send(channel, {});
@@ -255,9 +242,9 @@ class Scheduler extends mfsUtils {
       return;
     }
     this.remote.clear();
-    this.local.clear();
-    // this.fsnode.clear();
-    // this.journal.clear();
+    this.fsnode.clear();
+    this.journal.clear();
+    // this.local.clear();
     await this.shutdown();
     this.debug(`Removing USER_HOME_DIR=${USER_HOME_DIR}...`);
     rmSync(USER_HOME_DIR, { recursive: true });
@@ -322,10 +309,8 @@ class Scheduler extends mfsUtils {
    *
    */
   async prepare() {
-    // await this.worker.prepare();
     this.set({ running: 1, frozen: 0 });
     let settings = this.syncOpt.rootSettings();
-    this.debug("AAAA:325", settings)
     await this.startSyncEngine()
     return settings;
   }
@@ -381,14 +366,6 @@ class Scheduler extends mfsUtils {
     this.worker.stop();
   }
 
-  /**
-   *
-   */
-  //  restart() {
-  //   this.worker.restart();
-  //   this.set({ running: 1 });
-  //   this.start();
-  // }
 
   /**
    *
@@ -416,8 +393,6 @@ class Scheduler extends mfsUtils {
    * @returns
    */
   prepareData(evt) {
-    //this.debug("AAA:476 -- prepareData", evt);
-    //let node, loc, eventId, src, dest;
     let { eventId, reuseEvent } = evt;
     let node, src, dest;
     switch (evt.name) {
@@ -432,15 +407,11 @@ class Scheduler extends mfsUtils {
           e.eventId = reuseEvent;
         }
         src = this.source.row(e, Attr.eventId);
-        //this.debug("AAA:501", src, e, Attr.eventId, eventId);
         if (!src) {
           arg = { ...evt, filepath: evt.src };
-          //this.debug("AAA:504", arg);
           src = { ...arg, ...this.fsnode.coalesce(arg, Attr.filepath, "local") };
-          // src = this.remote.coalesce(arg, Attr.filepath, 'local', 'fsnode');
         }
         src.eventId = eventId;
-        //this.debug("AAA:536", evt.name, evt.filepath, src);
         src.dirname = dirname(src.filepath);
         this.source.upsert(src);
 
@@ -453,7 +424,6 @@ class Scheduler extends mfsUtils {
         dest.eventId = eventId;
         dest.inode = src.inode;
         dest.dirname = dirname(dest.filepath);
-        //this.debug("AAA:522", evt.name, evt.filepath, dest);
         this.destination.upsert(dest);
         return;
       case "folder.moved":
@@ -566,9 +536,7 @@ class Scheduler extends mfsUtils {
       evt.args.syncId = syncId;
     }
 
-    //this.debug("AAA:605 [log] ",  evt);
     if (!shallSync && !evt.args.force) {
-      //this.debug(`AAA:659 -- IGNORED =${evt.filepath}`, evt);
       if (/^(file.modified|file.changed)$/.test(evt.name)) {
         this.shouldBypassIgnore(evt);
       }
@@ -600,13 +568,16 @@ class Scheduler extends mfsUtils {
       this.debug("AAA:742 -- can not run since there is pending alert");
       return;
     }
+    if(!Account.get(Attr.socket_id)){
+      this.debug("AAA:572 socket not bound yet");
+      return
+    }
     let events = this.event.log(new Date().getTime());
     let running = events.length;
     if (!running) {
       this.pause();
       return;
     }
-    //process.stdout.write(`Events queue... ${running.toString(3)} / ${pending.toString(3)}      \r`)
     this.sendMediaActivity({ events: running % 2 });
     let pending = this.task.pending();
     if (pending > this.maxTasks) {
@@ -648,12 +619,166 @@ class Scheduler extends mfsUtils {
   }
 
   /**
+  *
+  * @param {*} evt
+  */
+  applyRemoteChanges(changes) {
+    DEPRECATED
+    for (var c in changes) {
+      if (changes[c]) {
+        for (var item of changes[c]) {
+          this.takeRemoteItem(item, c);
+        }
+      }
+    }
+  }
+
+  /**
+  *
+  * @param {*} item
+  */
+  takeRemoteItem(item, type) {
+    DEPRECATED
+    // type = type || item.type;
+    // this.debug(`AAA:630 takeRemoteItem action=${type}`, item);
+    // switch (type) {
+    //   case Attr.created:
+    //     this.log({ ...item, name: "media.init" });
+    //     break;
+
+    //   case Attr.changed:
+    //     this.log({ ...item, name: "media.write" });
+    //     break;
+
+    //   case Attr.renamed:
+    //     this.log({ ...item, name: "fs.rename" });
+    //     break;
+
+    //   case Attr.deleted:
+    //     this.log({ ...item, name: "fs.remove" });
+    //     break;
+
+    //   case Attr.moved:
+    //     let src = this.localFile(item.src, Attr.node);
+    //     let dest = this.localFile(item.dest, Attr.node);
+    //     if (!src.inode || !dest.realpath) {
+    //       this.debug("Nothing to move", item, src, dest);
+    //     }
+    //     item.args = { ...item.args, src, dest };
+    //     this.log({ ...item, name: "fs.move" });
+    // }
+  }
+
+  /**
+ *
+ * @param {*} evt
+ */
+  applyLocalChanges(changes) {
+    DEPRECATED
+    // for (var c in changes) {
+    //   if (changes[c]) {
+    //     for (var media of changes[c]) {
+    //       this.takeLocalItem(media, c);
+    //     }
+    //   }
+    // }
+  }
+
+  /**
+  *
+  * @param {*} item
+  */
+  takeLocalItem(item, type) {
+    DEPRECATED
+    // let name, src, dest;
+    // this.debug(`AAA:680 takeLocalItem action=${type}`, item);
+    // let stat = this.localFile(item, Attr.stat);
+    // if (!stat.inode) {
+    //   let fsnode = this.fsnode.row(item, Attr.inode);
+    //   if (fsnode) {
+    //     item.filepath = fsnode.filepath;
+    //   } else {
+    //     stat = null;
+    //   }
+    // }
+    // if (!type) type = item.type;
+    // switch (type) {
+    //   case Attr.created:
+    //     if (!stat || !stat.ino) {
+    //       //this.removePendingEntity("local_created", item);
+    //       return;
+    //     }
+    //     if (stat.isDirectory()) {
+    //       name = `folder.created`;
+    //     } else {
+    //       name = `file.created`;
+    //     }
+    //     this.log({ ...item, name });
+    //     break;
+    //   case Attr.changed:
+    //     if (!stat) {
+    //       //this.removePendingEntity("local_changed", item);
+    //       return;
+    //     }
+    //     if (!stat.isDirectory())
+    //       this.log({
+    //         ...item,
+    //         name: "file.modified",
+    //         filepath: item.filepath,
+    //         filename: null,
+    //       });
+    //     break;
+    //   case Attr.renamed:
+    //     if (!item.src || !item.dest) {
+    //       //this.removePendingEntity("local_renamed", item);
+    //       return;
+    //     }
+    //     this.debug(`AAA:805 type=${type}`, item);
+    //     src = { ...item, ...this.fsnode.coalesce(item, Attr.filepath, "local") };
+    //     dest = { ...src };
+    //     dest.filepath = item.dest;
+    //     item.__oldItem = src;
+    //     item.__newItem = dest;
+    //     if (this.isBranch(item)) {
+    //       this.log({ ...item, name: "folder.renamed" });
+    //     } else {
+    //       this.log({ ...item, name: "file.renamed" });
+    //     }
+    //     break;
+    //   case Attr.deleted:
+    //     if (this.isBranch(item)) {
+    //       this.log({ ...item, name: "folder.deleted" });
+    //     } else {
+    //       this.log({ ...item, name: "file.deleted" });
+    //     }
+    //     break;
+    //   case Attr.moved:
+    //     if (!item.src || !item.dest) {
+    //       //this.removePendingEntity("local_moved", item);
+    //       return;
+    //     }
+    //     this.debug(`AAA:805 type=${type}`, item);
+    //     src = { ...item, ...this.fsnode.coalesce(item, Attr.filepath, "local") };
+    //     dest = { ...src };
+    //     dest.filepath = item.dest;
+    //     item.__oldItem = src;
+    //     item.__newItem = dest;
+    //     if (this.isBranch(item)) {
+    //       this.log({ ...item, name: "folder.moved" });
+    //     } else {
+    //       this.log({ ...item, name: "file.moved" });
+    //     }
+    //     break;
+    // }
+  }
+
+
+  /**
    * 
    */
   onNormalEnd(evt, state) {
     this.task.terminate(evt);
     this.sendMediaActivity({ ...evt, phase: "task-terminated" });
-    // this.debug(`[onNormalEnd]:616[${state}] ${evt.name} ${evt.filepath}`, evt);
     this.debug(`[onNormalEnd]:616[${state}] ${evt.name} ${evt.filepath}`);
     this.trigger(Attr.terminated, evt);
   }

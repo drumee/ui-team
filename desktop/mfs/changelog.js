@@ -15,10 +15,10 @@
  * =============================================================================
  */
 
-const Attr = require("../../lex/attribute");
-const { privilege } = require("../../lex/constants");
+const Attr = require("../lex/attribute");
+const { privilege } = require("../lex/constants");
 const { isEmpty, isArray, values } = require("lodash");
-const mfsUtils = require("../utils");
+const mfsUtils = require("./utils");
 const ACTIONS = Object.freeze({
   'media.upload': 'media.init',
   'media.move': 'media.move',
@@ -34,63 +34,6 @@ const SERVICES_MAP = {
 }
 const { normalize } = require("path");
 
-/**
- * 
- */
-function selectLocalChanges() {
-  function event(i, args) {
-    let types = [
-      "deleted", "created", "renamed", "moved", "changed", "copied", "cloned"
-    ]
-    let b = `REPLACE INTO fschangelog SELECT NULL, NULL, NULL, f.nodetype || '.${types[i]}', f.*`;
-    if (!args) {
-      return `${b}, NULL`
-    }
-    return `${b}, f.inode`
-  }
-  /** r: referance tbale */
-  /** d: destination table */
-  let seq = [
-    `${event(0, 0)} FROM fsnode_old f WHERE filepath NOT IN (SELECT filepath FROM fsnode)`,
-    `${event(1, 0)} FROM fsnode f WHERE filepath NOT IN (SELECT filepath FROM fsnode_old)`,
-    `${event(2, 1)} FROM fsnode f INNER join fsnode_old o on f.inode=o.inode WHERE f.filename!=o.filename`,
-    `${event(3, 1)} FROM fsnode f INNER join fsnode_old o on f.inode=o.inode WHERE f.filepath!=o.filepath AND f.filename=o.filename`,
-    `${event(4, 0)} FROM fsnode f INNER join fsnode_old o on f.inode=o.inode WHERE f.mtimeMs!=o.mtimeMs AND f.filename=o.filename AND f.nodetype='file'`,
-  ]
-  let res = [];
-  let no_sys = ` AND f.nodetype != 'system'`
-  for (let s of seq) {
-    res.push(`${s} ${no_sys}`)
-  }
-  console.log("AAA:65", res)
-  return res;
-}
-
-/**
- * 
- */
-function selectRemoteChanges() {
-  function event(i, args) {
-    let types = [
-      "deleted", "created", "renamed", "moved", "changed", "copied", "cloned"
-    ]
-    let b = `INSERT OR IGNORE INTO remote_changelog SELECT NULL, NULL, 'media.${types[i]}', r.*`;
-    if (!args) {
-      return `${b}, NULL`
-    }
-    return `${b}, r.nid`
-  }
-  /** r: referance tbale */
-  /** d: destination table */
-  let seq = [
-    `${event(0, 0)} FROM remote_old r WHERE filepath NOT IN (SELECT filepath FROM remote)`,
-    `${event(1, 0)} FROM remote r WHERE filepath NOT IN (SELECT filepath FROM remote_old)`,
-    `${event(2, 1)} FROM remote r INNER join remote_old o on r.nid=o.nid WHERE r.filename!=o.filename AND r.pid=o.pid `,
-    `${event(3, 1)} FROM remote r INNER join remote_old o on r.nid=o.nid WHERE r.filename=o.filename AND r.pid!=o.pid `,
-    `${event(4, 0)} FROM remote r INNER join remote_old o on r.nid=o.nid WHERE r.md5Hash!=o.md5Hash AND r.filename=o.filename AND r.filetype NOT IN('folder', 'hub', 'root')`,
-  ]
-  return seq;
-}
 
 /**
  * 
@@ -112,21 +55,257 @@ class Changelog extends mfsUtils {
 
     this.syncOpt = {
       ...this.syncOpt,
-      ...require("../utils/sync-opt")(this),
+      ...require("./utils/sync-opt")(this),
     };
 
     this.hash = {
       ...this.hash,
-      ...require("../utils/hash")(this),
+      ...require("./utils/hash")(this),
+    };
+
+    this.event = {
+      ...this.event,
+      ...require("./utils/event")(this),
     };
 
     this.remote = {
       ...this.remote,
-      ...require("../utils/remote")(this),
+      ...require("./utils/remote")(this),
+    };
+
+    this.fsnode = {
+      ...this.fsnode,
+      ...require("./utils/fsnode")(this),
+    };
+
+    this.buffer = {
+      ...this.changelog_buffer,
+      ...require("./utils/buffer")(this),
     };
 
     this.oldLog = {}
     mfsScheduler.on(Attr.terminated, this._onTaskEnded)
+  }
+
+  /**
+   * 
+   */
+  prepareLog(evt) {
+    if (!evt.name) return
+    let [type, event] = evt.name.split('.')
+    if (type == "media") {
+      switch (event) {
+        case Attr.created:
+          evt.name = "media.init";
+          return;
+
+        case Attr.changed:
+          evt.name = "media.write";
+          return;
+
+        case Attr.rename:
+          evt.name = "fs.rename";
+          return;
+
+        case Attr.deleted:
+          evt.name = "fs.remove";
+          return;
+
+        case Attr.moved:
+          let src = this.localFile(evt.src, Attr.node);
+          let dest = this.localFile(evt.dest, Attr.node);
+          if (!src.inode || !dest.realpath) {
+            this.debug("Nothing to move", evt, src, dest);
+            return;
+          }
+          evt.args = { ...evt.args, src, dest };
+          evt.name = "fs.move";
+          return
+      }
+      return
+    }
+    if (type == "fs") {
+      let stat = this.localFile(evt, Attr.stat);
+      if (!stat.inode) {
+        let fsnode = this.fsnode.row(evt, Attr.inode);
+        if (fsnode) {
+          evt.filepath = fsnode.filepath;
+        } else {
+          stat = null;
+        }
+      }
+      switch (event) {
+        case Attr.created:
+          if (!stat || !stat.ino) {
+            //this.removePendingEntity("local_created", evt);
+            return;
+          }
+          if (stat.isDirectory()) {
+            evt.name = `folder.created`;
+          } else {
+            evt.name = `file.created`;
+          }
+          break;
+        case Attr.changed:
+          if (!stat) {
+            //this.removePendingEntity("local_changed", evt);
+            return;
+          }
+          if (!stat.isDirectory()) {
+            evt.name = "file.modified";
+          }
+          return;
+        case Attr.renamed:
+          if (!evt.src || !evt.dest) {
+            //this.removePendingEntity("local_renamed", evt);
+            return;
+          }
+          src = { ...evt, ...this.fsnode.coalesce(evt, Attr.filepath, "local") };
+          dest = { ...src };
+          dest.filepath = evt.dest;
+          evt.__oldItem = src;
+          evt.__newItem = dest;
+          if (this.isBranch(evt)) {
+            evt.name = "folder.renamed";
+          } else {
+            evt.name = "file.renamed";
+          }
+          break;
+        case Attr.deleted:
+          if (this.isBranch(evt)) {
+            evt.name = "folder.deleted";
+          } else {
+            evt.name = "file.deleted";
+          }
+          break;
+        case Attr.moved:
+          if (!evt.src || !evt.dest) {
+            //this.removePendingEntity("local_moved", evt);
+            return;
+          }
+          src = { ...evt, ...this.fsnode.coalesce(evt, Attr.filepath, "local") };
+          dest = { ...src };
+          dest.filepath = evt.dest;
+          evt.__oldItem = src;
+          evt.__newItem = dest;
+          if (this.isBranch(evt)) {
+            evt.name = "folder.moved";
+          } else {
+            evt.name = "file.moved";
+          }
+          return;
+      }
+    }
+  }
+
+  /**
+  *
+  */
+  async syncInitialChanges() {
+    let { engine, effective } = this.syncOpt.rootSettings();
+    let log_id = await this.getRemoteChangelog();
+    let buffer = []
+    this.changelog_buffer.clear();
+    let newRemote = this.remote.getNewEntities();
+    //this.debug("AAA:146", { newRemote })
+    buffer = buffer.concat(newRemote)
+    // newRemote.map((e) => {
+    //   mfsScheduler.takeRemoteItem(e, Attr.created)
+    // })
+
+    let remoteMoved = this.remote.getEntitiesChanges('move');
+    //this.debug("AAA:162", { remoteMoved })
+    buffer = buffer.concat(remoteMoved)
+    // remoteMoved.map((e) => {
+    //   mfsScheduler.takeRemoteItem(e, Attr.renamed)
+    // })
+
+    let remoteRenamed = this.remote.getEntitiesChanges('rename');
+    //this.debug("AAA:158", { remoteRenamed })
+    buffer = buffer.concat(remoteRenamed)
+    // remoteRenamed.map((e) => {
+    //   mfsScheduler.takeRemoteItem(e, Attr.renamed)
+    // })
+
+    let newLocal = this.fsnode.getNewEntities(log_id);
+    //this.debug("AAA:164", { newLocal })
+    buffer = buffer.concat(newLocal)
+    // newLocal.map((e) => {
+    //   mfsScheduler.takeLocalItem(e, Attr.created)
+    // })
+
+
+    let localDeleted = this.fsnode.getDeletedEntities();
+    //this.debug("AAA:171", { localDeleted })
+    buffer = buffer.concat(localDeleted)
+    // localDeleted.map((e) => {
+    //   mfsScheduler.takeLocalItem(e, Attr.deleted)
+    // })
+
+    let remoteDeleted = this.remote.getEntitiesChanges('remove');
+    //this.debug("AAA:177", { remoteDeleted })
+    buffer = buffer.concat(remoteDeleted)
+    // remoteDeleted.map((e) => {
+    //   mfsScheduler.takeRemoteItem(e, Attr.deleted)
+    // })
+
+
+    let changes = this.remote.getChangesList();
+    buffer = buffer.concat(changes)
+    //this.debug("AAA:184", buffer)
+    // changes.map((e) => {
+    //   if (e.locMtime > e.mtime) {
+    //     mfsScheduler.takeLocalItem(e, Attr.changed)
+    //   } else {
+    //     mfsScheduler.takeRemoteItem(e, Attr.changed);
+    //   }
+    // })
+    const populate = this.db.populate("changelog_buffer");
+    const transaction = this.db.transaction((rows) => {
+      for (const row of rows) {
+        //if (IGNORED.test(row.filename)) continue;
+        if (row.effective == null) {
+          row.effective = this.syncOpt.getNodeState(row);
+        }
+        if (!row.effective || row.synced) {
+          continue;
+        }
+        row.inode = row.inode || 0;
+        row.nid = row.nid || '';
+        row.hub_id = row.hub_id || '';
+        row.synced = row.synced || 0;
+        row.md5Hash = row.md5Hash || null;
+        row.args = row.args || '{}';
+        if (row.ctimeMs) {
+          row.ctime = Math.round(row.ctimeMs / 1000)
+        }
+        if (row.mtimeMs) {
+          row.mtime = Math.round(row.mtimeMs / 1000)
+        }
+        populate.run(row);
+      }
+    });
+    transaction(buffer);
+
+    let log = this.buffer.getJournal();
+    let last = {};
+    let i = 0;
+    let res = log.filter((row) => {
+      let { name, filepath, ctime, mtime } = row;
+      if (name == last.name && filepath == last.filepath) {
+        //this.debug(`SKIPPING SAME`, name, filepath, ctime, mtime)
+        return false;
+      }
+      last.name = name;
+      last.filepath = filepath;
+      row.args = this.event.parseArgs(row);
+      this.prepareLog(row)
+      i++;
+      return true
+    })
+    mfsScheduler.log(res)
+    //this.debug("AAAA:1187 syncInitialChanges", i, res)
+
   }
 
   /**
@@ -421,7 +600,7 @@ class Changelog extends mfsUtils {
    * @param {*} row 
    * @returns 
    */
-  addEvent(row) {
+  unfoldEvent(row) {
     let { synced, id, timestamp, event, src, dest, seq } = row;
     if (src.md5Hash == null) {
       src.md5Hash = ""
@@ -439,16 +618,13 @@ class Changelog extends mfsUtils {
     if (!item.filepath || !item.ownpath || !item.event) return;
     item.filepath = normalize(item.filepath);
     item.ownpath = normalize(item.ownpath);
-    let sync = this.syncOpt.getNodeState(item)
-    this.debug("AAAA:442 getRemoteChanges", sync, item.filepath)
-    if (!this.syncOpt.getNodeState(item)) {
-      return 0;
-    }
+    let effective = this.syncOpt.getNodeState(item)
+    this.debug("AAAA:442 getRemoteChanges", effective, item.filepath)
     item.args = JSON.stringify({ src, dest });
     item.id = id;
     item.seq = seq;
     item.synced = synced;
-    item.effective = 1;
+    item.effective = effective;
     this._populate.run(item);
     return 1
   }
@@ -479,7 +655,7 @@ class Changelog extends mfsUtils {
   async populateLocalChanges() {
     this.db.serialize(selectLocalChanges());
 
-    await this.normalizeFs();
+    // await this.normalizeFs();
     let seq = [
       /** Skip unchanged files */
       `UPDATE fschangelog SET synced=1 WHERE filepath IN (
@@ -497,26 +673,14 @@ class Changelog extends mfsUtils {
 
     ]
 
-    this.db.serialize(seq);
+    // this.db.serialize(seq);
   }
+
 
   /**
    * 
    */
-  getSyncDisabled() {
-    let sql = `SELECT r.hub_id FROM remote r INNER JOIN syncOpt s 
-      ON r.filepath=s.filepath WHERE effective=0 AND r.filetype='hub'`;
-    let rows = this.db.getRows(sql);
-    let res = []
-    for (let r of rows) {
-      res.push(r.hub_id)
-    }
-    return res;
-  }
-  /**
-   * 
-   */
-  async populateRemoteChanges() {
+  async getRemoteChangelog() {
     let sql = `SELECT max(id) id FROM remote_changelog`;
     let { id } = this.db.getRow(sql) || { id: 0 };
     let args = { hub_id: Account.user.get(Attr.id) };
@@ -525,7 +689,7 @@ class Changelog extends mfsUtils {
     } else {
       args.last = 200;
     }
-    args.exclude = this.getSyncDisabled();
+    args.exclude = this.remote.getSyncDisabledHubs();
 
     let data = await this.postService(SERVICES.changelog.read, args);
     this._populate = this.db.populate("remote_changelog", "INSERT OR IGNORE");
@@ -541,7 +705,7 @@ class Changelog extends mfsUtils {
             } else {
               src.synced = 1;
             }
-            this.addEvent({ id, timestamp, event, src, seq })
+            this.unfoldEvent({ id, timestamp, event, src, seq })
             seq++;
           }
           continue
@@ -552,12 +716,13 @@ class Changelog extends mfsUtils {
           row.synced = 1;
         }
         row.seq = seq;
-        this.addEvent(row)
+        this.unfoldEvent(row)
       }
     });
     transaction(data);
     this._remoteLog = 1;
     this._populating = 0;
+    return id
   }
 
   /**
@@ -565,7 +730,7 @@ class Changelog extends mfsUtils {
    */
   async populate() {
     await this.populateLocalChanges();
-    await this.populateRemoteChanges();
+    await this.getRemoteChangelog();
   }
   /**
    * 
@@ -620,19 +785,10 @@ class Changelog extends mfsUtils {
   /**
   * 
   */
-  async getRemoteChanges(force = 0) {
-    if (!this.syncOpt.rootSettings().effective) {
-      return []
-    }
-    if (!this._remoteLog || force) {
-      await this.populateRemoteChanges()
-    }
-    await this.normalizeRemote();
-
-    let sql = `SELECT * FROM remote_changelog WHERE (synced IS NULL OR synced=0) AND effective=1`;
-    let rows = this.db.getRows(sql);
-    return rows;
-  }
+  // async getRemoteChanges(force = 0) {
+  //   let rows = this.remote.getChangesList(sql);
+  //   return rows;
+  // }
 
   /**
   * 

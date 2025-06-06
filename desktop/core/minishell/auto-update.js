@@ -19,6 +19,7 @@ const { autoUpdater } = require("electron-updater");
 const _a = require('../../lex/attribute');
 const Path = require('path');
 const Os = require('os');
+const { verbose, dev: dev_mode, fakeVersion } = require("../../args")
 
 let readyToInstall = false;
 let updateAvailable = false;
@@ -27,8 +28,7 @@ let downloaded = {};
 let CURRENT = {};
 
 function debug(...args) {
-  if (/update/.test(ARGV.debug)) {
-    // if (ARGV.silly) {
+  if (/update/.test(verbose > 2)) {
     console.log("UPDATER: ", ...args);
   }
 }
@@ -47,12 +47,6 @@ autoUpdater.on('update-available', (info) => {
 autoUpdater.on('error', (err) => {
   console.error('Error in auto-updater. ' + err);
   isUpdating = false;
-  // if (Account.user.isDevel()) {
-  //   if (/code signature/i.test(err)) {
-  //     readyToInstall = true;
-  //     return;
-  //   }
-  // }
 })
 
 /**
@@ -111,11 +105,11 @@ function promptUpdate(info = {}) {
 
 function checkForUpdates(args) {
   let res = {};
-  debug(`********* CHECKING NEW UPDATES ********. Current version=${global.CUR_VERSION}`, ARGV);
-  if (ARGV.fakeVersion) {
+  debug(`********* CHECKING NEW UPDATES ********. Current version=${global.CUR_VERSION}`);
+  if (dev_mode && fakeVersion) {
     return {
       readyToInstall: true,
-      version: ARGV.fakeVersion,
+      version: fakeVersion,
     }
   }
   return new Promise((resolve, reject) => {
@@ -128,18 +122,11 @@ function checkForUpdates(args) {
       };
       return resolve(res);
     }
-    // if (readyToInstall && CURRENT && CURRENT.updateInfo) {
-    //   return resolve({...CURRENT.updateInfo, readyToInstall});
-    // }
     autoUpdater.checkForUpdates().then((info) => {
       if (!info) {
         debug('********* NO UPDATES ******');
         return resolve(updateStatus(args));
       }
-      // if(app.getVersion() <= info.updateInfo.version){
-      //   console.log("NO NEW VERSION", app.getVersion(), info.updateInfo.version);
-      //   return resolve({});
-      // }
       debug('********* UPDATES CHECKED ******', info);
       resolve({ ...info.updateInfo, ...updateStatus(args) })
     }).catch((e) => {
@@ -240,8 +227,8 @@ function updateStatus(args) {
  */
 function checkAppImage() {
   let appImage = Path.join(__dirname, 'dist');
-  debug("AAAA:173", process.arch, appImage, app.arch, ARGV.dev);
-  debug("AAA:177", Os.arch(), Os.cpus(), app.getName(), app.getAppPath()); // print architecture 
-  debug("AAA:177", Os.platform(), Os.release(), Os.version(), Os.type()); // print system platform 
+  debug(process.arch, appImage, app.arch);
+  debug(Os.arch(), Os.cpus(), app.getName(), app.getAppPath());
+  debug(Os.platform(), Os.release(), Os.version(), Os.type());
 }
 module.exports = { quitAndInstall, checkVersion, downloadUpdate, showVersion, checkAppImage, checkForUpdates };

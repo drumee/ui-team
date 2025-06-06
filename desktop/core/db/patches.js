@@ -139,6 +139,14 @@ function patches() {
       },
       action
     },
+    changelog_buffer: {
+      args: {
+        name: 'changelog_buffer',
+        version: '0.0.4',
+        ctime,
+      },
+      action
+    },
     remote_old: {
       args: {
         name: 'remote_old',

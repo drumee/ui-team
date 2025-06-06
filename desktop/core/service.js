@@ -17,7 +17,8 @@
 const { net } = require("electron");
 const { createWriteStream, mkdirSync, existsSync } = require("fs");
 const { dirname } = require("path");
-//const { bootstrap } = require('../core/env');
+
+const { trace_service } = require("../args")
 
 const __dialog = require("./dialog");
 class __core_service extends __dialog {
@@ -37,13 +38,13 @@ class __core_service extends __dialog {
   downloadToFile(url, dest) {
     const request = net.request({
       url,
-      method:"GET",
+      method: "GET",
       useSessionCookies: true,
     });
     //this.debug("DOWNLOADING ", {url, dest});
     let dir = dirname(dest);
-    if(!existsSync(dir)){
-      mkdirSync(dir, {recursive:true});
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
     }
     let loaded = 0;
     let localStream = createWriteStream(dest);;
@@ -125,14 +126,13 @@ class __core_service extends __dialog {
       request.on("response", (response) => {
         switch (response.statusCode) {
           case 200:
-            if (ARGV.debugService)
+            if (trace_service){
               this.debug(`[OK] ${url} service=${service} `, opt);
+            }
             response.on("data", (chunk) => {
-              //this.debug("DADAD", chunk)
               res = `${res}${chunk}`;
             });
             response.on("end", () => {
-              //this.debug("AAA:35", response.headers);
               try {
                 let json = JSON.parse(res);
                 this.__header = response.headers;

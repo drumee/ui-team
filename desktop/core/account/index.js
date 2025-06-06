@@ -15,7 +15,7 @@
  * =============================================================================
  */
 
-const _ = require("lodash");
+const { isObject } = require("lodash");
 const Attr = require("../../lex/attribute");
 const Db = require("../db/connector");
 const { existsSync, renameSync, statSync, unlinkSync } = require("fs");
@@ -24,10 +24,11 @@ const Backbone = require("backbone");
 const { app, dialog, net, session } = require("electron");
 const User = require("./user");
 const menuBuilder = require("./menu/index");
-const { writeFileSync, readFileSync } = require("jsonfile");
+const { readFileSync } = require("jsonfile");
 const Scheduler = require("../../mfs/scheduler");
 const Bootstrap = require("./bootstrap");
 let { hash } = require("../../dist-web/index.json");
+const args = require("../../args")
 
 const Bridge = require("./bridge");
 
@@ -77,7 +78,7 @@ class __core_account extends Bridge {
     if (sid) {
       this.set({ sid });
     }
-    if (_.isObject(user)) {
+    if (isObject(user)) {
       this.user.clear();
       this.user.respawn(user);
       user.sid = sid;
@@ -85,7 +86,7 @@ class __core_account extends Bridge {
       user.email = user.profile.email;
       this.setUser(user);
     }
-    if (_.isObject(organization)) {
+    if (isObject(organization)) {
       this.organization.clear();
       this.organization.set(organization);
       this.setOrganization(organization);
@@ -131,7 +132,7 @@ class __core_account extends Bridge {
       origin = `https://${host}`;
     }
     const { appRoot } = Bootstrap;
-    endpointPath = ARGV.endpointPath || endpointPath || '/-/';
+    endpointPath = args.endpoint || endpointPath || '/-/';
     endpointPath = '/' + endpointPath.replace(/^\/+/, '');
     if (origin) {
       if (endpointPath == '/-/' || /^(live|main)$/.test(endpointPath)) {
@@ -160,8 +161,7 @@ class __core_account extends Bridge {
     if (host) {
       env.static = `https://${host}/-/static/`
     }
-    if (ARGV.dev) env.dev = ARGV.dev;
-    if (ARGV.demo) env.demo = ARGV.demo;
+    if (args.dev) env.dev = args.dev;
     return env;
   }
 
@@ -585,7 +585,7 @@ class __core_account extends Bridge {
       if (m.changed.syncSettings || m.changed.settings) {
         this.refreshMenu();
       }
-      if (new_lang || _.isObject(m.changed.organization)) {
+      if (new_lang || isObject(m.changed.organization)) {
         this.refreshMenu();
       }
     }

@@ -32,6 +32,8 @@ const Media = require("./media");
 const { sizeOfpending, pendingLocks } = require("./core/locker");
 const { shell, app } = require("electron");
 const HOME_REG = new RegExp(app.getPath('home'))
+const { dev: dev_mode, reset, resync } = require("../args")
+
 /**
  * App main window will get created from the ready action.
  */
@@ -209,9 +211,9 @@ class Worker extends Media {
     if (this._populated && !force) {
       return
     }
-
-    if (ARGV.dev) {
-      if (ARGV.reset) {
+    this._populated = 0;
+    if (dev_mode) {
+      if (reset) {
         this.clearPendingEntities();
         this.syncOpt.resetTables();
         this.remote.resetTables();
@@ -224,7 +226,7 @@ class Worker extends Media {
           });
         }
       }
-      if (ARGV.resync) {
+      if (resync) {
         this.clearPendingEntities();
       }
     }
@@ -271,105 +273,28 @@ class Worker extends Media {
    *
    */
   async startSyncEngine(opt = {}) {
-    this.debug("AAA:274", this.syncOpt.rootSettings())
-    let { channel, args } = opt;
-    if (!Account.user.isOnline()) {
-      this.debug("AAA:125 -- POPULATE NOT ALLOWED IN ANOMYNOUS CONTEXT");
-      return false;
+    let started;
+    try {
+      await this.prepare();
+      await this.Changelog.syncInitialChanges();
+      this.watcher.start();
+      started = 1;
+    } catch (e) {
+      started = 0;
+      this.warn("WARN[287: Failed to start sync engine", e)
     }
-    await this.prepare();
-    /** Wait for Account.socket_id */
-    // await this.getRemoteChangeLog()
-    await this.syncInitialChanges();
-    this.watcher.start();
-  }
-
-
-  /**
-   *
-   */
-  async syncInitialChanges() {
-    let { engine, effective } = this.syncOpt.rootSettings();
-    let log_id = await this.Changelog.getRemoteChangelog();
-
-    let changes = this.remote.getChangesList();
-
-    let newLocal = this.fsnode.getNewEntities(log_id);
-    this.debug("AAA:299", { newLocal })
-
-    let newRemote = this.remote.getNewEntities();
-    this.debug("AAA:302", { newRemote })
-
-    let localDeleted = this.fsnode.getDeletedEntities();
-    this.debug("AAA:296", { localDeleted })
-
-    let remoteDeleted = this.remote.getDeletedEntities();
-    this.debug("AAA:307", { remoteDeleted })
-    // return
-    newLocal.map((e) => {
-      this.takeLocalItem(e, Attr.created)
-    })
-    newRemote.map((e) => {
-      this.takeRemoteItem(e, Attr.created)
-    })
-    localDeleted.map((e) => {
-      this.takeLocalItem(e, Attr.deleted)
-    })
-    remoteDeleted.map((e) => {
-      this.takeRemoteItem(e, Attr.deleted)
-    })
-    changes.map((e) => {
-      if (e.locMtime > e.mtime) {
-        this.takeLocalItem(e, Attr.changed)
-      } else {
-        this.takeRemoteItem(e, Attr.changed);
-      }
-    })
-
-    this.debug("AAAA:1187 syncInitialChanges", engine, effective, newLocal, newRemote)
-
   }
 
   /**
    *
    */
-  // stop() {
-  //   if (this.watcher) {
-  //     this.watcher.stop();
-  //   }
-  // }
+  async stopSyncEngine(opt = {}) {
+    if (this.watcher) {
+      this.watcher.stop();
+    }
+  }
 
-  /**
-   *
-   */
-  // pause(opt) {
-  //   let { channel, args } = opt;
-  //   if (this.watcher) {
-  //     this.watcher.pause();
-  //   }
-  //   webContents.send(channel, args);
-  // }
 
-  /**
-   *
-   */
-  // resume(opt) {
-  //   let { channel, args } = opt;
-  //   if (this.watcher) {
-  //     this.watcher.resume();
-  //   }
-  //   if (channel) {
-  //     webContents.send(channel, args);
-  //   }
-  // }
-
-  /**
-   *
-   */
-  // restart() {
-  //   this.start();
-  //   this.watcher.start();
-  // }
 
   /**
    *
@@ -406,37 +331,9 @@ class Worker extends Media {
         mtimeMs: stat.mtimeMs,
       });
 
-      // let rem = this.remote.row(f, Attr.filepath);
-      // if (!rem) {
-      //   continue;
-      // }
-      // let hash = this.hash.row(f, Attr.filepath) || {};
-      // if (rem.md5Hash && rem.md5Hash == hash.md5) continue;
-      // this.local.upsert({
-      //   ...rem,
-      //   inode: stat.ino,
-      //   filename,
-      //   ext,
-      //   filepath,
-      //   filesize: stat.size,
-      //   atimeMs: stat.atimeMs,
-      //   birthtimeMs: stat.birthtimeMs,
-      //   mtimeMs: stat.mtimeMs,
-      //   ctimeMs: stat.ctimeMs,
-      // });
     }
   }
 
-  /**
-   *
-   */
-  async checkMFS() {
-    deprecated
-    // this._populated = 0;
-    // ARGV.resync = 0;
-    // await this.checkLocalFiles();
-    // return this.statesSummary();
-  }
 
   /**
    *
@@ -445,8 +342,6 @@ class Worker extends Media {
     let { channel, args } = opt;
     this.debug("aaa:375", r)
 
-    // let r = await this.checkMFS();
-    // this.debug("aaa:375", r)
     webContents.send(channel, args);
   }
 
@@ -688,88 +583,6 @@ class Worker extends Media {
     //this.local.syncFromRemote();
   }
 
-  /**
-   *
-   * @param {*} data
-   */
-  // async setDefaultIgnre() {
-  //   let root = this.local.row({ nid: this.home_id }, Attr.nid);
-  //   if (!root) return;
-  //   if (!root.md5Hash) {
-  //     this.remote.ignoreHubs();
-  //     root.md5Hash = "".random();
-  //     this.local.update(Attr.nid, "md5Hash", root);
-  //   }
-  // }
-
-  /**
-   *
-   * @returns
-   */
-  // isRunning() {
-  //   return this.defaultFlags() & 0b10;
-  // }
-
-  /**
-   *
-   * @returns
-   */
-  async statesSummary(force = 0) {
-    depreacted
-    // await this.populate();
-    // let { direction, mode, effective } = this.syncOpt.rootSettings();
-    // let res = {
-    //   engine: effective,
-    //   effective,
-    //   mode,
-    //   direction,
-    //   changeRate: this.local.changeRate(),
-    //   error: this.get(Attr.error),
-    //   remote: {},
-    //   local: {},
-    // };
-    // // Change on local impact remote and reversely
-    // const remote = () => {
-    //   return {
-    //     // moved: this.local.moved(),
-    //     // changed: this.local.changed(), //
-    //     // created: this.local.created(),
-    //     // renamed: this.local.renamed(), //
-    //     deleted: this.local.deleted(), //
-    //     // ignored: this.local.ignored(),
-    //   };
-    // };
-    // const local = () => {
-    //   return {
-    //     moved: this.remote.moved(),
-    //     changed: this.remote.changed(),
-    //     created: [],
-    //     renamed: this.remote.renamed(),
-    //     deleted: this.remote.deleted(),
-    //     ignored: this.remote.ignored(),
-    //   };
-    // };
-    // switch (direction) {
-    //   case "duplex":
-    //     res.local = local();
-    //     res.remote = remote();
-    //     break;
-    //   case "downstream":
-    //     res.local = local();
-    //     break;
-    //   case "upstream":
-    //     res.remote = remote();
-    // }
-    // return res;
-  }
-
-  /**
-   *
-   * @returns
-   */
-  // readLocalState(arg) {
-  //   webContents.send(arg.channel, this.statesSummary());
-  // }
 
   /**
    *
@@ -805,70 +618,35 @@ class Worker extends Media {
    *
    */
   getUnsyncedItems(opt) {
+    DEPRECATED
     let { channel, args } = opt;
-    let target = args.target;
-    let type = args.type;
-    let res = null;
-    if (/^(local|remote)$/.test(target)) {
-      let f = this[target][type];
-      if (f) res = f();
-    }
-    webContents.send(channel, res);
+    // let target = args.target;
+    // let type = args.type;
+    // let res = null;
+    // if (/^(local|remote)$/.test(target)) {
+    //   let f = this[target][type];
+    //   if (f) res = f();
+    // }
+    webContents.send(channel, {});
   }
 
   /**
    *
    */
   applyUnsyncedItem(args = {}) {
-    this.debug("AAA:525", args);
-    let target = args.target;
-    let type = args.type;
-    if (/^(local|remote)$/.test(target)) {
-      if (target == Attr.local) {
-        this.takeRemoteItem(args.item, type);
-      } else if (target == Attr.remote) {
-        this.takeLocalItem(args.item, type);
-      }
-    }
+    DEPRECATED
+    // this.debug("AAA:525", args);
+    // let target = args.target;
+    // let type = args.type;
+    // if (/^(local|remote)$/.test(target)) {
+    //   if (target == Attr.local) {
+    //     this.takeRemoteItem(args.item, type);
+    //   } else if (target == Attr.remote) {
+    //     this.takeLocalItem(args.item, type);
+    //   }
+    // }
   }
 
-  /**
-   *
-   */
-  // async createLocalNode(filepath, nid, pid) {
-  //   let root = this.fsnode.row({ filepath }, Attr.filepath);
-  //   let stat;
-  //   if (!Fs.existsSync(filepath)) {
-  //     Fs.mkdirSync(filepath, {
-  //       recursive: true,
-  //     });
-  //   }
-
-  //   let timestamp = new Date().getTime();
-  //   if (!root) {
-  //     stat = Fs.statSync(filepath);
-  //     let data = {
-  //       filepath,
-  //       filename: basename(filepath),
-  //       hub_id: Account.user.get(Attr.id),
-  //       pid,
-  //       nid,
-  //       atimeMs: stat.atimeMs,
-  //       birthtimeMs: stat.birthtimeMs,
-  //       ctimeMs: stat.ctimeMs,
-  //       mtimeMs: stat.mtimeMs,
-  //       inode: stat.ino,
-  //       filetype: Attr.system,
-  //       filesize: stat.size,
-  //       timestamp,
-  //     };
-  //     this.debug("SCANNING", data, USER_HOME_DIR);
-  //     this.directorySize = stat.size;
-  //     this.fsnode.upsert(data);
-  //   }
-
-  //   return true;
-  // }
 
   /**
    *
@@ -919,217 +697,74 @@ class Worker extends Media {
   }
 
 
-  /**
-   *
-   * @param {*} item
-   */
-  takeRemoteItem(item, type) {
-    type = type || item.type;
-    this.debug(`AAA:535 action=${type}`, item);
-    switch (type) {
-      case Attr.created:
-        mfsScheduler.log({ ...item, name: "media.init" });
-        break;
-
-      case Attr.changed:
-        mfsScheduler.log({ ...item, name: "media.write" });
-        break;
-
-      case Attr.renamed:
-        mfsScheduler.log({ ...item, name: "fs.rename" });
-        break;
-
-      case Attr.deleted:
-        mfsScheduler.log({ ...item, name: "fs.remove" });
-        break;
-
-      case Attr.moved:
-        let src = this.localFile(item.src, Attr.node);
-        let dest = this.localFile(item.dest, Attr.node);
-        if (!src.inode || !dest.realpath) {
-          this.debug("Nothing to move", item, src, dest);
-        }
-        item.args = { ...item.args, src, dest };
-        mfsScheduler.log({ ...item, name: "fs.move" });
-    }
-  }
-
-  /**
-   *
-   * @param {*} evt
-   */
-  takeFromRemote(changes) {
-    for (var c in changes) {
-      if (changes[c]) {
-        for (var item of changes[c]) {
-          this.takeRemoteItem(item, c);
-        }
-      }
-    }
-  }
-
-  /**
-   *
-   * @param {*} item
-   */
-  takeLocalItem(item, type) {
-    let name, src, dest;
-    let stat = this.localFile(item, Attr.stat);
-    if (!stat.inode) {
-      let fsnode = this.fsnode.row(item, Attr.inode);
-      if (fsnode) {
-        item.filepath = fsnode.filepath;
-      } else {
-        stat = null;
-      }
-    }
-    if (!type) type = item.type;
-    switch (type) {
-      case Attr.created:
-        if (!stat || !stat.ino) {
-          //this.removePendingEntity("local_created", item);
-          return;
-        }
-        if (stat.isDirectory()) {
-          name = `folder.created`;
-        } else {
-          name = `file.created`;
-        }
-        mfsScheduler.log({ ...item, name });
-        break;
-      case Attr.changed:
-        if (!stat) {
-          //this.removePendingEntity("local_changed", item);
-          return;
-        }
-        if (!stat.isDirectory())
-          mfsScheduler.log({
-            ...item,
-            name: "file.modified",
-            filepath: item.filepath,
-            filename: null,
-          });
-        break;
-      case Attr.renamed:
-        if (!item.src || !item.dest) {
-          //this.removePendingEntity("local_renamed", item);
-          return;
-        }
-        this.debug(`AAA:805 type=${type}`, item);
-        src = { ...item, ...this.fsnode.coalesce(item, Attr.filepath, "local") };
-        dest = { ...src };
-        dest.filepath = item.dest;
-        item.__oldItem = src;
-        item.__newItem = dest;
-        if (this.isBranch(item)) {
-          mfsScheduler.log({ ...item, name: "folder.renamed" });
-        } else {
-          mfsScheduler.log({ ...item, name: "file.renamed" });
-        }
-        break;
-      case Attr.deleted:
-        if (this.isBranch(item)) {
-          mfsScheduler.log({ ...item, name: "folder.deleted" });
-        } else {
-          mfsScheduler.log({ ...item, name: "file.deleted" });
-        }
-        break;
-      case Attr.moved:
-        if (!item.src || !item.dest) {
-          //this.removePendingEntity("local_moved", item);
-          return;
-        }
-        this.debug(`AAA:805 type=${type}`, item);
-        src = { ...item, ...this.fsnode.coalesce(item, Attr.filepath, "local") };
-        dest = { ...src };
-        dest.filepath = item.dest;
-        item.__oldItem = src;
-        item.__newItem = dest;
-        if (this.isBranch(item)) {
-          mfsScheduler.log({ ...item, name: "folder.moved" });
-        } else {
-          mfsScheduler.log({ ...item, name: "file.moved" });
-        }
-        break;
-    }
-  }
-
-  /**
-   *
-   * @param {*} evt
-   */
-  takeFromLocal(changes) {
-
-    for (var c in changes) {
-      if (changes[c]) {
-        for (var media of changes[c]) {
-          this.takeLocalItem(media, c);
-        }
-      }
-    }
-  }
 
   /**
    *
    */
   async syncAll(opt) {
     let { channel, args } = opt;
-    let changes = await this.statesSummary();
-    this.debug("AAA:607", changes);
-    for (let target of [Attr.remote, Attr.local]) {
-      for (let type in changes[target]) {
-        if (!changes[target][type]) continue;
-        let length = changes[target][type].length;
-        if (!length) continue;
-        let items = changes[target][type];
-        for (let item of items) {
-          item.target = target;
-          item.type = type;
-          this.onSyncItem(item);
-        }
-      }
-    }
+    DEPRECATED
+    // let changes = await this.statesSummary();
+    // this.debug("AAA:607", changes);
+    // for (let target of [Attr.remote, Attr.local]) {
+    //   for (let type in changes[target]) {
+    //     if (!changes[target][type]) continue;
+    //     let length = changes[target][type].length;
+    //     if (!length) continue;
+    //     let items = changes[target][type];
+    //     for (let item of items) {
+    //       item.target = target;
+    //       item.type = type;
+    //       this.onSyncItem(item);
+    //     }
+    //   }
+    // }
 
-    if (channel) webContents.send(channel, changes);
+    if (channel) webContents.send(channel, { error: "Deprecated" });
   }
 
   /**
    *
    */
   onSyncItem(item) {
-    this.debug("[976] onSyncItem", item);
-    item.args = { ...item.args, force: 1 };
-    switch (item.target) {
-      case "local":
-        this.takeRemoteItem(item, item.type);
-        break;
-      case "remote":
-        this.takeLocalItem(item, item.type);
-        break;
-    }
+    DEPRECATED
+    this.debug("[897] onSyncItem", DEPRECATED);
+    // item.args = { ...item.args, force: 1 };
+    // switch (item.target) {
+    //   case "local":
+    //     this.takeRemoteItem(item, item.type);
+    //     break;
+    //   case "remote":
+    //     this.takeLocalItem(item, item.type);
+    //     break;
+    // }
   }
 
   /**
    *
    */
   syncItem(opt) {
+    DEPRECATED
     let { channel, args } = opt;
-    switch (args.target) {
-      case "local":
-        this.takeRemoteItem(args, args.type);
-        break;
-      case "remote":
-        this.takeLocalItem(args, args.type);
-        break;
-    }
-    webContents.send(channel, args);
+    this.debug("[914] onSyncItem", DEPRECATED);
+    // switch (args.target) {
+    //   case "local":
+    //     this.takeRemoteItem(args, args.type);
+    //     break;
+    //   case "remote":
+    //     this.takeLocalItem(args, args.type);
+    //     break;
+    // }
+    webContents.send(channel, DEPRECATED);
   }
 
   /**
    *
    * @param {*} evt
    */
-  async onLocalMissing(evt) { }
+  async onLocalMissing(evt) {
+
+   }
 
   todo(args) {
     this.debug("TO BE DONE AAA:156", args);
@@ -1146,14 +781,6 @@ class Worker extends Media {
     let filepath = this.normalizePathFromArgs(args);
 
     stat = this.localFile(filepath, Attr.stat);
-    // if (_.isEmpty(stat)) {
-    //   if (this.isBranch(args)) {
-    //     this.local.deleteDirectory({ filepath });
-    //   } else {
-    //     this.local.remove({ filepath }, Attr.filepath);
-    //   }
-    //   return;
-    // }
     args.inode = stat.ino;
     if (stat.isDirectory()) {
       let { response } = await this.confirm({
@@ -1217,13 +844,7 @@ class Worker extends Media {
     }
 
     let data = this.syncOpt.getNodeSettings(args);
-    let sql = `SELECT 1 file_exists, 1 synced FROM hash h 
-      INNER JOIN remote r ON r.filepath=h.filepath 
-      WHERE r.md5Hash IS NOT NULL AND r.md5Hash=h.md5
-      AND (h.inode=? OR r.nid=? OR h.filepath=?);
-    `;
-    let { file_exists, synced } =
-      this.db.getRow(sql, args.inode, args.nid, args.filepath) || {};
+    let { file_exists, synced } = this.remote.getSyncParams(args);
 
     let params = {
       ...data,
@@ -1239,30 +860,6 @@ class Worker extends Media {
     webContents.send(channel, attr);
   }
 
-  /**
-   *
-   * @param {*} opt
-   */
-  async getChangelog(opt) {
-    let { channel, args } = opt;
-    let { engine, effective } = this.syncOpt.rootSettings();
-    let changes = this.remote.getChangesList();
-    //this.debug("AAA:1217", changes, this.TimeKeeper.getTimeOffset())
-    let remote = [];
-    let local = [];
-    changes.map((e) => {
-      if (e.locMtime > e.mtime) {
-        local.push(e)
-      } else {
-        remote.push(e)
-      }
-    })
-    // let remote = await this.Changelog.getRemoteChanges();
-    // let local = await this.Changelog.getLocalChanges();
-    this.debug("AAAA:1187 getRemoteChanges", remote, local)
-    // let conflict = await this.Changelog.getRemoteChanges();
-    webContents.send(channel, { remote: [], local: [], engine, effective });
-  }
 
   /**
    *
@@ -1346,38 +943,6 @@ class Worker extends Media {
 
   }
 
-  /**
-   * 
-   */
-  async enableImmateMode() {
-    let rows = this.syncOpt.getSyncTrees();
-    for (let row of rows) {
-      if (this.isBranch(row)) {
-        let nodes = this.remote.manifest(row.nid);
-        for (let node of nodes) {
-          if (this.isBranch) {
-            await this.showNode(node)
-          } else {
-            mfsScheduler.log({ ...file, name: "media.init" });
-          }
-        }
-      } else {
-        mfsScheduler.log({ ...row, name: "media.init" });
-      }
-    }
-    this.syncHomeFiles();
-  }
-
-  /**
-   * 
-   */
-  async enableEconomyMode() {
-    let nodes = this.syncOpt.getSyncTrees();
-    for (let node of nodes) {
-      await this.showNode(node)
-    }
-    this.syncHomeFiles();
-  }
 
   /**
  *
@@ -1409,16 +974,6 @@ class Worker extends Media {
   }
 
 
-  /**
-   *
-   * @param {*} args
-   */
-  async getSyncDifference(args = {}) {
-    let log = await this.Changelog.resync()
-    this.debug("RESYNC", log, this.home_id)
-    // let r = await this.checkMFS();
-    webContents.send("mfs-sync-difference", {});
-  }
 
 }
 

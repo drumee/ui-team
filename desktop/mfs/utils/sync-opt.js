@@ -70,7 +70,7 @@ module.exports = function (worker) {
  * @returns 
  */
 
-  function rootSettings(evt) {
+  function rootSettings() {
     if (!Root) return { pending: 1 };
     Root.sync = Root.effective;
     Root.engine = Root.effective;

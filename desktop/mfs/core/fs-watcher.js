@@ -22,6 +22,8 @@ const mfsUtils = require("../utils");
 const { shortPath, utf8ify } = require("../../utils/misc");
 const { isPending, unsetPending, clearPending, showPending } = require("./locker");
 let START_TIMER = 0;
+const { dev: dev_mode, trace_watcher } = require("../../args")
+
 class Watcher extends mfsUtils {
   /**
    *
@@ -36,11 +38,6 @@ class Watcher extends mfsUtils {
 
     this._done = true;
     this._moving = null;
-
-    this.local = {
-      ...this.local,
-      ...require("../utils/local")(this),
-    };
 
     this.remote = {
       ...this.remote,
@@ -91,6 +88,17 @@ class Watcher extends mfsUtils {
     if (this.watcher) {
       this.watcher.close();
       this.watcher = null;
+    }
+  }
+
+  /**
+   * 
+   * @param  {...any} args 
+   * @returns 
+   */
+  trace(...args) {
+    if (dev_mode && trace_watcher) {
+      this.debug(...args);
     }
   }
 
@@ -178,7 +186,7 @@ class Watcher extends mfsUtils {
     this.fslog.clearNode(evt);
     let { nodetype, eventtype, filepath } = evt;
     filepath = utf8ify(filepath);
-    this.debug(`Committing ${evt.name} on ${filepath} ${evt.inode}`);
+    this.trace(`Committing ${evt.name} on ${filepath} ${evt.inode}`);
     if (/\.(created|changed)$/.test(evt.name)) {
       let stat = this.localFile(evt, Attr.stat);
       if (stat.nodetype == Attr.file) {
@@ -250,7 +258,7 @@ class Watcher extends mfsUtils {
           }
         } else {
           let remote = this.remote.row(evt, Attr.filepath);
-          /* Fix me. When a is created, it looks like the watcher ignore it
+          /* Fix me. When a directory is created, it looks like the watcher ignore it
            * We need to restart it
           */
           START_TIMER = setTimeout(() => {
@@ -270,7 +278,7 @@ class Watcher extends mfsUtils {
         if (pending && pending.filepath) evt = pending;
         this.updateNode(evt, stat);
         if (pending) {
-          this.debug({ reason: `${filepath} is being created` });
+          this.trace({ reason: `${filepath} is being created` });
           unsetPending(Attr.created, filepath)
           return;
         }
@@ -279,14 +287,14 @@ class Watcher extends mfsUtils {
       case Attr.deleted:
       case Attr.removed:
         if (this.isPendingRemove(evt)) {
-          this.debug("Locked", { filepath });
+          this.trace("Locked", { filepath });
           return;
         }
         break;
 
       case Attr.renamed:
         if (isPending(Attr.renamed, inode, filepath)) {
-          this.debug({ reason: `${filepath} is being renamed` });
+          this.trace({ reason: `${filepath} is being renamed` });
           unsetPending(Attr.renamed, inode, filepath);
           return;
         }
@@ -295,7 +303,7 @@ class Watcher extends mfsUtils {
       case Attr.moved:
         showPending(Attr.moved);
         if (isPending(Attr.moved, inode, filepath)) {
-          this.debug({ reason: `${filepath} is being moved` });
+          this.trace({ reason: `${filepath} is being moved` });
           unsetPending(Attr.moved, inode, filepath);
           return;
         }
@@ -304,7 +312,7 @@ class Watcher extends mfsUtils {
       case Attr.cloned:
         let { src } = evt.args;
         if (isPending(Attr.created, inode, filepath)) {
-          this.debug({ reason: `${filepath} is being copied` });
+          this.trace({ reason: `${filepath} is being copied` });
           unsetPending(Attr.created, inode, filepath);
           return;
         }
@@ -312,7 +320,7 @@ class Watcher extends mfsUtils {
         break;
 
       default:
-        this.debug("AAA:291 -- UNEXPECTED EVENT", evt);
+        this.trace("AAA:291 -- UNEXPECTED EVENT", evt);
         return;
     }
     this.commit(evt);
@@ -339,7 +347,6 @@ class Watcher extends mfsUtils {
     let { filepath } = node;
     if (filepath) {
       this.remote.remove(node, Attr.filepath);
-      this.local.remove(node, Attr.filepath);
       this.syncOpt.remove(node, Attr.filepath);
       this.fsnode.remove(node, Attr.filepath);
     }
@@ -373,22 +380,21 @@ class Watcher extends mfsUtils {
     let evt;
     let args = {};
     const { filepath } = stat;
-    //this.debug("AAA:334", { filepath, filename, stat });
     if (isPending(Attr.downloaded, filepath)) {
-      this.debug({ reason: `${filepath} is being downloaded` });
+      this.trace({ reason: `${filepath} is being downloaded` });
       return;
     }
     if (isPending(Attr.media, filepath)) {
-      this.debug({ reason: `${filepath} is being created` });
+      this.trace({ reason: `${filepath} is being created` });
       return;
     }
 
     if (!stat.inode) {
       eventtype = Attr.deleted;
       node = this.fsnode.row({ filepath }, Attr.filepath);
-      this.debug("AAA:349", { filepath, filename, node });
+      this.trace("AAA:349", { filepath, filename, node });
       if (!node) {
-        this.debug("No record found for", stat, filepath);
+        this.trace("No record found for", stat, filepath);
         this.addFsNode(stat);
         clearPending(filepath);
         return;
@@ -399,7 +405,6 @@ class Watcher extends mfsUtils {
       evt = stat;
       node = this.fsnode.row(stat, Attr.inode);
       let dbg = {};
-      //this.debug("AAA:359", { filepath, filename, node });
       if (!node) {
         let remote = this.remote.row(stat, Attr.filepath);
         if (!remote) {
@@ -412,7 +417,6 @@ class Watcher extends mfsUtils {
         if (node.ext) filename = `${filename}.${node.ext}`;
         if (node.filepath == filepath) {
           if (node.mtimeMs == stat.mtimeMs) {
-            //this.debug("AAA:332 UNCHANGED", filepath);
             return;
           }
           eventtype = Attr.changed;
@@ -442,7 +446,7 @@ class Watcher extends mfsUtils {
               }
               dbg.old = old;
             }
-            this.debug("AAA:408", { eventtype, node, remote, old })
+            this.trace("AAA:408", { eventtype, node, remote, old })
           }
           if (/^(renamed|moved)/.test(eventtype)) {
             args = {
@@ -455,7 +459,7 @@ class Watcher extends mfsUtils {
     }
     let inode = evt.inode;
     if (!inode) {
-      this.debug("AAA:395 -- inode not found. Skipped.", evt);
+      /** Skip non existing entity */
       return;
     }
 
@@ -467,7 +471,7 @@ class Watcher extends mfsUtils {
 
     evt.eventtype = eventtype;
     evt.args = { ...args, origin: "local" };
-    this.debug("AAA:470", evt)
+    this.trace("AAA:470", evt)
     this.fslog.upsert(evt);
     this.timer[inode] = setTimeout(() => {
       this.dispatch(evt);
@@ -479,9 +483,9 @@ class Watcher extends mfsUtils {
    *
    */
   start() {
-    this.debug(`Preparing watch : ${this.workingRoot}`);
+    this.trace(`Preparing watch : ${this.workingRoot}`);
     if (!existsSync(this.workingRoot)) {
-      this.debug(`COULD NOT WATCH NON EXISTING ENTRY`, this.workingRoot);
+      this.trace(`COULD NOT WATCH NON EXISTING ENTRY`, this.workingRoot);
       reject();
     }
     if (this.watcher) {
@@ -504,12 +508,12 @@ class Watcher extends mfsUtils {
    * @param {*} args
    */
   fetchNode(args) {
-    this.debug("AAAA:199 -- FETCH", args);
+    this.trace("AAAA:199 -- FETCH", args);
     if (/^(delete|remove|rename)/.test(args.eventtype)) return;
     if (!args.nid) args.nid = args.pid;
     let items = this.remote.show_node(args);
     for (var item of items) {
-      if (!this.local.row(item, Attr.nid) || !this.localFile(item)) {
+      if (!this.fsnode.row(item, Attr.filepath) || !this.localFile(item)) {
         if (/^(hub|folder)$/.test(item.filetype)) {
           setTimeout(() => {
             mfsScheduler.log({ ...item, name: "media.init" });
@@ -535,8 +539,8 @@ class Watcher extends mfsUtils {
     let rem = this.remote.row(e, Attr.filepath);
     let { ctimeMs, mtimeMs } = stat;
     e = { ...e, ctimeMs, mtimeMs };
-    //this.debug("AAA:421 RESOLVE NEW NODE", stat, e);
-    //this.debug("AAA:401 CREATED:", e.filepath);
+    //this.trace("AAA:421 RESOLVE NEW NODE", stat, e);
+    //this.trace("AAA:401 CREATED:", e.filepath);
     if (rem && rem.nid) {
       e.eventtype = Attr.modified;
       e.name = `${e.nodetype}.${e.eventtype}`;
@@ -545,7 +549,6 @@ class Watcher extends mfsUtils {
       await mfsWorker.populateLocalNode(e.filepath);
     }
     this.oldFslog.upsert(e);
-    // resolve(e);
     if (stat.size > 0) {
       resolve(e);
     } else {
@@ -580,19 +583,19 @@ class Watcher extends mfsUtils {
    *
    */
   async onFileClose(evt, rem, md5Hash) {
-    let loc = this.local.row(evt, Attr.nid);
+    //let loc = this.local.row(evt, Attr.nid);
     //let rem = this.remote.row(evt, Attr.nid);
     let stat = this.localFile(evt, Attr.stat);
     if (!stat.ino) {
-      this.debug(`EEE:610 -- ENTITY_ERROR`, evt.filepath);
+      this.trace(`EEE:610 -- ENTITY_ERROR`, evt.filepath);
       this._clearDownloadLock(evt);
       this.trigger(`downloaded:${evt.filepath}`, evt);
       return;
     }
 
-    if (!loc) {
-      loc = rem;
-    }
+    // if (!loc) {
+    //   loc = rem;
+    // }
     let nodetype = Attr.file;
     if (this.isBranch(evt)) {
       nodetype = Attr.folder;
@@ -600,7 +603,7 @@ class Watcher extends mfsUtils {
     /** ********** TEMPORARILY DISABLED ******************
       if (!(permission.delete & evt.privilege) || !(permission.write & evt.privilege)) {
         let path = this.localFile(evt.filepath, Attr.location);
-        this.debug("AAA:627:CHMOD", evt.privilege, path);
+        this.trace("AAA:627:CHMOD", evt.privilege, path);
         try {
           Fs.chmodSync(path, Fs.constants.S_IRUSR | Fs.constants.S_IRGRP | Fs.constants.S_IROTH);
         } catch (e) {
@@ -630,23 +633,23 @@ class Watcher extends mfsUtils {
       mtimeMs: stat.mtimeMs,
     });
 
-    if (!loc) {
-      this.debug("AAA:313 CAN NOT UPDATE LOCAL", evt, loc);
-      this.trigger(`downloaded:${evt.filepath}`, evt);
-      return;
-    }
-    //this.debug("AAA:684:onFileClose", evt, loc, rem);
-    if (loc.nid && rem.nid) {
-      loc.inode = stat.ino;
-      loc.filesize = stat.size;
-      loc.atimeMs = stat.atimeMs;
-      loc.birthtimeMs = stat.birthtimeMs;
-      loc.ctimeMs = stat.ctimeMs;
-      loc.mtimeMs = stat.mtimeMs;
-      loc.ctime = rem.ctime || loc.ctime;
-      loc.mtime = rem.mtime || loc.mtime;
-      this.local.upsert(loc);
-    }
+    // if (!loc) {
+    //   this.trace("AAA:313 CAN NOT UPDATE LOCAL", evt, loc);
+    //   this.trigger(`downloaded:${evt.filepath}`, evt);
+    //   return;
+    // }
+    //this.trace("AAA:684:onFileClose", evt, loc, rem);
+    // if (loc.nid && rem.nid) {
+    //   loc.inode = stat.ino;
+    //   loc.filesize = stat.size;
+    //   loc.atimeMs = stat.atimeMs;
+    //   loc.birthtimeMs = stat.birthtimeMs;
+    //   loc.ctimeMs = stat.ctimeMs;
+    //   loc.mtimeMs = stat.mtimeMs;
+    //   loc.ctime = rem.ctime || loc.ctime;
+    //   loc.mtime = rem.mtime || loc.mtime;
+    //   this.local.upsert(loc);
+    // }
     this._clearDownloadLock(evt);
     this.trigger(`downloaded:${evt.filepath}`, evt);
   }
@@ -662,7 +665,7 @@ class Watcher extends mfsUtils {
     let done = 0;
     let trigger = `${type}:${filepath}`;
     this.fsevent.remove({ filepath }, Attr.filepath);
-    //this.debug("AAA:314 -- WAITING FOR", trigger);
+    //this.trace("AAA:314 -- WAITING FOR", trigger);
     if (timeout === null) timeout = 3000;
     return new Promise(async (resolve, reject) => {
       if (timeout > 0) {
@@ -673,7 +676,7 @@ class Watcher extends mfsUtils {
         }, timeout);
       }
       this.once(trigger, (e) => {
-        this.debug("AAA:529 -- RECEIVED", trigger);
+        this.trace("AAA:529 -- RECEIVED", trigger);
         if (done) return;
         done = 1;
         resolve(e);

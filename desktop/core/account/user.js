@@ -14,9 +14,11 @@
  * limitations under the License.
  * =============================================================================
  */
-const _a = require("../../lex/attribute");
-const _ = require("lodash");
 
+const Attr = require("../../lex/attribute");
+const { isString } = require("lodash");
+
+const { sync_mode, experimental, dev_mode } = require('../../args')
 const __service = require("../service");
 class __core_user extends __service {
   /**
@@ -27,22 +29,13 @@ class __core_user extends __service {
   respawn(data) {
     let { uid, id } = data;
     this.set(data);
-    for (var k of [_a.profile, _a.settings]) {
-      if (_.isString(data[k])) {
+    for (var k of [Attr.profile, Attr.settings]) {
+      if (isString(data[k])) {
         this.set(k, JSON.parse(data[k]));
       }
     }
-    this.set(_a.id, uid || id);
-    this.set(_a.uid, uid || id);
-    // Once a session is devel, keep the state
-    if (this.isDevel()) {
-      ARGV.dev = true;
-    }
-
-    // Once a session is devel, keep the state
-    if (this.isDemo()) {
-      ARGV.demo = true;
-    }
+    this.set(Attr.id, uid || id);
+    this.set(Attr.uid, uid || id);
   }
 
   /**
@@ -50,7 +43,7 @@ class __core_user extends __service {
    * @returns
    */
   username() {
-    return this.get(_a.username) || "nobody";
+    return this.get(Attr.username) || "nobody";
   }
 
   /**
@@ -58,8 +51,8 @@ class __core_user extends __service {
    * @returns
    */
   isDevel() {
-    let p = this.get(_a.profile) || {};
-    return p.devel || ARGV.dev;
+    let p = this.get(Attr.profile) || {};
+    return p.devel || dev_mode;
   }
 
   /**
@@ -68,8 +61,8 @@ class __core_user extends __service {
    */
   isSyncExpert() {
     // return true;
-    let p = this.get(_a.profile) || {};
-    return p.syncExpert || ARGV.syncExpert;
+    let p = this.get(Attr.profile) || {};
+    return p.syncExpert || sync_mode === 'experimental';
   }
 
   /**
@@ -77,8 +70,8 @@ class __core_user extends __service {
    * @returns
    */
   isDemo() {
-    let p = this.get(_a.profile) || {};
-    return p.demo || ARGV.demo;
+    let p = this.get(Attr.profile) || {};
+    return p.demo || experimental;
   }
 
   /**
@@ -86,18 +79,18 @@ class __core_user extends __service {
    * @returns
    */
   isOnline() {
-    if (global.CONNECTION_STATE === _a.offline) return false;
-    if (this.get(_a.connected) || this.get(_a.connection) == _a.online) {
+    if (global.CONNECTION_STATE === Attr.offline) return false;
+    if (this.get(Attr.connected) || this.get(Attr.connection) == Attr.online) {
       this.set({ signed_in: 1 });
     }
-    return this.get(_a.signed_in);
+    return this.get(Attr.signed_in);
   }
 
   /**
    *
    */
   language() {
-    const { lang } = this.get(_a.profile) || { lang: "en" };
+    const { lang } = this.get(Attr.profile) || { lang: "en" };
     return lang;
   }
 }

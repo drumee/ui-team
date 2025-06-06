@@ -26,6 +26,17 @@ const Attr = require('../../lex/attribute');
 const Crypto = require('crypto');
 const core = require("../core-utils")
 const Database = require('better-sqlite3');
+const { dbdir, dev: dev_mode, trace_db, trace_sql } = require("../../args")
+
+/**
+ * 
+ * @param  {...any} args 
+ */
+function traceDb(...args) {
+  if (!dev_mode) return
+  console.log(`Trace DB [${USER_DBDIR}]`, ...args)
+}
+
 class db_connector extends core {
 
   /**
@@ -34,7 +45,7 @@ class db_connector extends core {
   */
   initialize(opt = {}) {
     if (!USER_DBDIR) {
-      USER_DBDIR = ARGV.dbdir;
+      USER_DBDIR = dbdir;
     }
     let dbfile = resolve(USER_DBDIR, 'common.db');
 
@@ -50,8 +61,8 @@ class db_connector extends core {
       }
 
       console.log(`Loading db from ${dbfile}`)
-      if (ARGV.verbose) {
-        this.__db = new Database(dbfile, { verbose: ARGV.dbVerbose });
+      if (trace_db) {
+        this.__db = new Database(dbfile, { verbose: traceDb });
       } else {
         this.__db = new Database(dbfile);
       }
@@ -185,17 +196,6 @@ class db_connector extends core {
     });
   }
 
-  /**
-   * 
-   * @param {*} sql 
-   * @param  {...any} values 
-   * @returns 
-   */
-  trace(sql, ...values) {
-    sql = sql.replace(/ +/, ' ');
-    let dbfile = basename((this.dbfile));
-    console.log(`[${dbfile}]: *** Running ${sql} ***`, ":::", ...values, ":::");
-  }
 
   /**
    * 
@@ -682,11 +682,21 @@ class db_connector extends core {
     return this.__db.prepare(sql).all();
   }
 
-  trace(...args) {
-    if (ARGV.debugSql || this.get('trace')) {
-      this.debug(...args)
+
+  /**
+  * 
+  * @param {*} sql 
+  * @param  {...any} values 
+  * @returns 
+  */
+  trace(sql, ...values) {
+    if (dev_mode && trace_sql) {
+      sql = sql.replace(/ +/, ' ');
+      let dbfile = basename((this.dbfile));
+      console.log(`[${dbfile}]: *** Running ${sql}`, ...values, "***");
     }
   }
+
   /**
    * 
    */

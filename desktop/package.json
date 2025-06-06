@@ -91,7 +91,7 @@
     "preinstall": "npm install better-sqlite3 --build-from-source --sqlite3=\"$(pwd)/sqlite-amalgamation\"",
     "postinstall": "electron-builder install-app-deps",
     "normal": "electron .",
-    "dev": "electron . --dev --open-dev --debugWatcher --endpointPath=devel",
+    "dev": "electron . --dev=1 --open-dev=1 --trace-watcher=1 --endpoint=devel",
     "demo": "electron . --dev",
     "start:prod": "electron . --prod",
     "build": "electron-builder",
@@ -118,6 +118,7 @@
     "prebuild-install": "^7.1.1"
   },
   "dependencies": {
+    "argparse": "^2.0.1",
     "backbone": "^1.4.1",
     "better-sqlite3": "^9.6.0",
     "check-disk-space": "^3.3.1",
@@ -134,7 +135,6 @@
     "lodash": "^4.17.21",
     "node-file-encrypt": "^0.0.6",
     "sound-play": "^1.1.0",
-    "stream-to-blob": "^2.0.1",
-    "yargs": "^17.7.2"
+    "stream-to-blob": "^2.0.1"
   }
 }
