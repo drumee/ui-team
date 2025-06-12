@@ -9,7 +9,7 @@ function __skl_window_helpdesk_content  (_ui_, opt) {
   let list;
   switch(Visitor.profile().profile_type){
     case _a.hub:
-      let src = "https://portal.drumee.io/hub/helpdesk-hub.html";
+      let src = `${protocol}://portal.drumee.io/hub/helpdesk-hub.html`;
       if(opt && opt.hub){
         src = opt.hub[Visitor.language()] || opt.hub.fr || src;
       }

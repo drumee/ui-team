@@ -64,7 +64,7 @@ class __color_picker extends Marionette.View {
       signal     : _e.ui.event,
       service    : _a.preset,
       chartId    : "arrow-down",
-      image      : "https://images.drumee.name/images/drumee/editor/colorgrid_new1.png"
+      image      : `${protocol}://images.drumee.name/images/drumee/editor/colorgrid_new1.png`
     });
     this._countdown         = _.after(2, this._start);
     this._nalutral             = new window.Image();

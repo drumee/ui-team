@@ -30,7 +30,7 @@ function __skl_welcome_signin_url(_ui_) {
     kids: [
       Skeletons.Note({
         className: `${fig}__protocol`,
-        content: "https://",
+        content: `${protocol}://`,
       }),
 
       Skeletons.EntryBox({

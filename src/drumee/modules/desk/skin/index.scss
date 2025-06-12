@@ -96,7 +96,7 @@ html {
     width: 100%;
     // height:100%;
     //max-height: calc(36vh + 597px);
-    //background-image: url("https://images.drumee.name/images/drumee/editor/desk-bg.png");
+    //background-image: url(`${protocol}://images.drumee.name/images/drumee/editor/desk-bg.png`);
   }
   .desk__tooltip {
     position: absolute;

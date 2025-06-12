@@ -17,7 +17,7 @@
     transform: none;
     &:before {
       content: " ";
-      background-image: url("https://fonts.drumee.name/svg/with-classes/desktop_fullview--grey.svg");
+      background-image: url(`${protocol}://fonts.drumee.name/svg/with-classes/desktop_fullview--grey.svg`);
       width: 12px;
       height: 12px;
       display: block;

@@ -147,7 +147,7 @@ const __api_contact_form = function (_ui_) {
       ]
     });
   } else if (/default/i.test(_ui_.mget('privacyPolicy'))) {
-    link = '<a href="https://drumee.com/engegements-protection-vie-privee/">charte de confidentialité</a>'
+    link = '<a href=`${protocol}://drumee.com/engegements-protection-vie-privee/`>charte de confidentialité</a>'
     notice = Skeletons.Box.X({
       className: `${_ui_.fig.family}__notice-container`,
       kids: [

@@ -176,7 +176,7 @@ const a = {
   pagelength : 45,
     //aliases
   quandl: {
-    url              : "https://www.quandl.com/api/v1/datasets/",
+    url              : `${protocol}://www.quandl.com/api/v1/datasets/`,
     token            : "sort_order=asc&auth_token=JJjZDx1ie8ccsocbDeAz"
   },
   string             : {

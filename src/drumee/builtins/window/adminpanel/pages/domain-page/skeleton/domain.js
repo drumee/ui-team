@@ -88,7 +88,7 @@ function __skl_domain_form (_ui_){
   if(_ui_.mode == _a.new){
     linkText = LOCALE.LINK_NOT_CREATED; //'Link has not been created yet';
   }else{
-    linkText = "https://" + org.link; 
+    linkText = `${protocol}://` + org.link; 
   }
 
 

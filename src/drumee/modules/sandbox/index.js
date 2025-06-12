@@ -170,7 +170,7 @@ class __module_sandbox extends LetcBox {
   showSnippet() {
     var opt = opt || {};
     const ajax = new XMLHttpRequest();
-    ajax.open("GET", "https://letc.io/file/orig/5bda11f97ed20ec8/edb90e08edb90e0c", true);
+    ajax.open("GET", `${protocol}://letc.io/file/orig/5bda11f97ed20ec8/edb90e08edb90e0c`, true);
     ajax.send();
     const me = this;
     ajax.onload = function (e) {
