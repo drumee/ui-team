@@ -292,10 +292,10 @@ class __drumee_entry_input extends LetcBox {
       return false;
     }
   }
+
   /**
    * 
    */
-
   _onKeyup(e) {
     e.stopPropagation();
     this._currentEvent = e;
@@ -310,6 +310,11 @@ class __drumee_entry_input extends LetcBox {
         this.goodbye();
       }
       return true;
+    }
+    if (this.mget('uppercase')) {
+      this._input.val(this._input.val().toUpperCase())
+    } else if (this.mget('capitalize')) {
+      this._input.val(this._input.val().ucFirst())
     }
     switch (this.mget(_a.mode)) {
       case _a.passthroughs:
