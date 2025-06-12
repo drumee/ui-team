@@ -68,7 +68,7 @@ function __skl_welcome_signin_url(_ui_) {
     ]
   });
 
-  let base =  `https://${bootstrap().main_domain}${location.pathname}`;
+  let base =  `${protocol}://${bootstrap().main_domain}${location.pathname}`;
   let auth = `${base}${_K.module.welcome}/signin`;
 
   const altLogin = Skeletons.Note({

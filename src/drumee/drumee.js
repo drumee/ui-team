@@ -77,7 +77,7 @@ class Drumee extends Marionette.Application {
     let b = bootstrap();
     const { body } = document;
     const { main_domain } = b;
-    let bgImg = `https://${main_domain}/-/images/background/drumee-pro-background.jpg`;
+    let bgImg = `${protocol}://${main_domain}/-/images/background/drumee-pro-background.jpg`;
     body.style.height = "100vh";
     body.style.width = "100vw";
     body.style.alignContent = "center";

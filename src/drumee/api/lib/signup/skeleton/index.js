@@ -29,7 +29,7 @@ const __welcome_default = function(_ui_) {
     kids : [
       Skeletons.Button.Svg({
         ico        : 'email',
-        src        : `https://${bootstrap().main_domain}/_/static/images/icons/email.svg`, 
+        src        : `${protocol}://${bootstrap().main_domain}/_/static/images/icons/email.svg`, 
         className  : "icon ctrl-email",
         service    : _e.close,
         uiHandler  : _ui_
@@ -72,7 +72,7 @@ const __welcome_default = function(_ui_) {
     ]});
   
   const url = _K.confidentialURL + location.search;
-  const href = `https://${bootstrap().main_domain}${location.pathname}${_K.module.signin}`;
+  const href = `${protocol}://${bootstrap().main_domain}${location.pathname}${_K.module.signin}`;
   const l6 = Skeletons.Box.X({
     className : `${_ui_.fig.family}__footer-container`,
     sys_pn    : 'signin-wrapper',

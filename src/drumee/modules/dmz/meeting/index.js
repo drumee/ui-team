@@ -440,7 +440,7 @@ class __dmz_meeting extends LetcBox {
     */
   checkSpeaker() {
     let endpoint = Organization.get(_a.url) || bootstrap().main_domain;
-    let url = `https://${endpoint}${_K.ringtones.incoming}`;
+    let url = `${protocol}://${endpoint}${_K.ringtones.incoming}`;
     if (!this._audio) {
       this._audio = new Audio();
     }

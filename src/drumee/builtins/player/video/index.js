@@ -163,7 +163,7 @@ class __player_video extends __core {
     let base = '';
     if (this.cdnHost) {
       this.cdnHost = this.cdnHost.replace(/^htt.+:\/\//, '');
-      base = `https://${this.cdnHost}`
+      base = `${protocol}://${this.cdnHost}`
     }
     const { nid, hub_id } = this.actualNode();
     let { keysel, vdo } = bootstrap();

@@ -17,7 +17,7 @@ function __skl_widget_setup  (_ui_) {
     kids      : [
       Skeletons.Box.Y({
         className : `${fig}__logo-container`,
-        // href      : `https://${Host.get('main_domain')}`, // `${location.origin}${bootstrap().endpointPath}`
+        // href      : `${protocol}://${Host.get('main_domain')}`, // `${location.origin}${bootstrap().endpointPath}`
         kids      : [
           Skeletons.Element({
             className : `${fig}__logo image`,

@@ -30,7 +30,7 @@ class __welcome_signin extends __welcome_interact {
     super.initialize(opt);
     this.declareHandlers();
     this._otpResent = 0;
-    this._completeSignupLink = `https://${bootstrap().main_domain}${location.pathname}${_K.module.signup}`;
+    this._completeSignupLink = `${protocol}://${bootstrap().main_domain}${location.pathname}${_K.module.signup}`;
     this._skeleton = require("./skeleton");
   }
 
@@ -253,7 +253,7 @@ class __welcome_signin extends __welcome_interact {
             location.reload();
           } else {
             const { endpointPath } = bootstrap();
-            location.href = `https://${data.url}${endpointPath}${_K.module.signin}/auth`;
+            location.href = `${protocol}://${data.url}${endpointPath}${_K.module.signin}/auth`;
           }
         }, Visitor.timeout(500));
       } else {

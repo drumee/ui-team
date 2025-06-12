@@ -70,7 +70,7 @@ function __skl_dmz_sharebox_footer (_ui_) {
 
       Skeletons.Box.X({
         className  : `${footerFig}__website-link`,
-        href      : `https://${Host.get('main_domain')}`,
+        href      : `${protocol}://${Host.get('main_domain')}`,
         attrOpt :{
           target    : '_blank',
         },

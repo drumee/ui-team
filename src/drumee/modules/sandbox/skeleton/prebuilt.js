@@ -18,7 +18,7 @@ results box. Can you explain why/how?`
   const section = { 
     kind: 'page',
     vhost : `letc.${Visitor.get(_a.domain)}`,
-    src : `https://${Visitor.get(_a.domain)}/_/`,
+    src : `${protocol}://${Visitor.get(_a.domain)}/_/`,
     styleOpt : {
       padding: 10
     }

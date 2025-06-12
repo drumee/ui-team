@@ -17,7 +17,7 @@ function __skl_welcome_signup_terms_and_conditions (_ui_) {
   if(!/(fr|en)/.test(l)){
     l = 'fr';
   }
-  let source = `https://${_K.host.cdn}${path}termsandconditions/${l}/CGU_Drumee`;
+  let source = `${protocol}://${_K.host.cdn}${path}termsandconditions/${l}/CGU_Drumee`;
   _ui_.debug(`AAA:189 source=${source}`);
   const download = Skeletons.Box.X({
     className   : `${conditionsFig}__download`,

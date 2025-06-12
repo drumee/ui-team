@@ -50,7 +50,7 @@ function __skl_welcome_signin_content(_ui_) {
   // if(bootstrap().isElectron){
   //   auth = `${_K.module.welcome}/signin/gateway`;
   // }else{
-  //   base = `https://${bootstrap().main_domain}${location.pathname}`;
+  //   base = `${protocol}://${bootstrap().main_domain}${location.pathname}`;
   //   auth = `${base}${_K.module.welcome}/signin`;
   // }
   let href = `${_K.module.welcome}/signin/org`;
@@ -63,7 +63,7 @@ function __skl_welcome_signin_content(_ui_) {
       instance = `/-/${instance}/`;
     }
 
-    let base = `https://${main_domain}${instance}`;
+    let base = `${protocol}://${main_domain}${instance}`;
     href = `${base}${_K.module.welcome}/signin`;
     content = LOCALE.LOGIN_PERSONAL_ACCOUNT;
   }

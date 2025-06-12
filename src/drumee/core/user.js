@@ -597,7 +597,7 @@ class __core_user extends Backbone.Model {
       if (/^http/.test(base)) {
         base = `${base}${id}?type=${type}${ts}`;
       } else {
-        base = `https://${base}${id}?type=${type}${ts}`;
+        base = `${protocol}://${base}${id}?type=${type}${ts}`;
       }
     }
     return base;
@@ -638,7 +638,7 @@ class __core_user extends Backbone.Model {
       url = `${base}${url}`;
     }
     if (!/^http/.test(url)) {
-      url = `https://${domain}${url}`;
+      url = `${protocol}://${domain}${url}`;
     }
     if (l == null) { l = 1; }
     if (!this._audio) {

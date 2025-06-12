@@ -184,7 +184,7 @@ class __core_site extends Backbone.Model {
    * @returns 
    */
   makeUrl(url = '') {
-    return `https://${this.get(_a.vhost) || this.get(_a.domain) || bootstrap().main_domain}/${url}`;
+    return `${protocol}://${this.get(_a.vhost) || this.get(_a.domain) || bootstrap().main_domain}/${url}`;
   }
 
   /**

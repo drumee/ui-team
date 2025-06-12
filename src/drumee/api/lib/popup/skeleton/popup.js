@@ -14,7 +14,7 @@ const __welcome_default = function(_ui_) {
     kids      : [
       Skeletons.Button.Svg({
         ico        : _a.cross,
-        src        : `https://${bootstrap().main_domain}/-/images/icons/cross.svg`, 
+        src        : `${protocol}://${bootstrap().main_domain}/-/images/icons/cross.svg`, 
         className  : "icon ctrl-close",
         service    : _e.close,
         uiHandler  : _ui_

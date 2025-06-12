@@ -72,7 +72,7 @@ class __drumee_iframe extends Marionette.View {
     if (src.match(/^\/\//)) {
       src = src;
     } else {
-      src = `https://${uri}`;
+      src = `${protocol}://${uri}`;
     }
     this.model.set(_a.source, src);
     // if(this.mget(_a.url))

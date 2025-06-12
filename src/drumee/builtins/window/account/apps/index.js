@@ -56,7 +56,7 @@ class __account_apps extends DrumeeMFS {
     }
 
     return {
-      path, vhost, href: `https://${vhost}${path}`
+      path, vhost, href: `${protocol}://${vhost}${path}`
     }
   }
 

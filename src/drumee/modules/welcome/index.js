@@ -180,7 +180,7 @@ class __welcome_router extends LetcBox {
         break;
 
       case 'redirect-to-home':
-        return location.href = `https://${Host.get(_a.domain)}${location.pathname}${_K.module.welcome}`;
+        return location.href = `${protocol}://${Host.get(_a.domain)}${location.pathname}${_K.module.welcome}`;
 
       case 'close-current-connection':
         //let href = location.href;

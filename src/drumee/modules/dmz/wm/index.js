@@ -450,7 +450,7 @@ class __dmz_wm extends winman {
         } = data;
         var h = data.vhost;
         let { svc, keysel } = bootstrap();
-        let url = `https://${h}${svc}/media.zip_download&id=${id}&keysel=${keysel}`;
+        let url = `${protocol}://${h}${svc}/media.zip_download&id=${id}&keysel=${keysel}`;
         return this._getFile(url, id);
     }
   }
