@@ -28,7 +28,7 @@ class include_caller extends Marionette.View {
     const attr = {
       label : _LOCALE(_I.HOW_TO),
       picto   : _p.question_circle,
-      source  : 'https://home.drumee.com/#faq'
+      source  : `${protocol}://home.drumee.com/#faq`
     };
     _.extend(attr, this.model.attributes);
     return this.model.set(attr);

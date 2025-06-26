@@ -174,7 +174,7 @@ class __leaflet extends Marionette.View {
       id: 'mapbox.light',
       accessToken: 'pk.eyJ1IjoieGlhbGlhIiwiYSI6ImNpc2FmaHJhdDAwMXMyeHB2bHR3MThvczQifQ.Lo_AXcegStJonetox3pakA'
     };
-    return L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', opt).addTo(this.map);
+    return L.tileLayer(`${protocol}://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}`, opt).addTo(this.map);
   }
   // ============================================
   //

@@ -6,7 +6,7 @@
 
 const __welcome_default = function(_ui_) {
 
-  const link = `<a href='https://drumee.com/engegements-protection-vie-privee/' target='_blank'>${LOCALE.CONFIDENTIAL}</a>`;
+  const link = `<a href="${protocol}://drumee.com/engegements-protection-vie-privee/" target='_blank>${LOCALE.CONFIDENTIAL}</a>`;
 
   const l3 = Skeletons.Box.Y({
     className : `${_ui_.fig.family}__title-container`,

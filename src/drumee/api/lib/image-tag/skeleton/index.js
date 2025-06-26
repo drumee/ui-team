@@ -13,7 +13,7 @@ const __api_image_tag = function(_ui_) {
   const analytics = _ui_.mget('analytics');
 
   try {
-    const origin = window.raw_referer || location.origin || 'https://drumee.com';
+    const origin = window.raw_referer || location.origin || `${protocol}://drumee.com`;
     const url = new URL(origin);
     const xid = Visitor.parseLocation().xid;
     let src;

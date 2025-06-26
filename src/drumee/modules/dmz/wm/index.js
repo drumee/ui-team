@@ -357,81 +357,9 @@ class __dmz_wm extends winman {
     if (sender && sender.socket_id == Visitor.get(_a.socket_id)) {
       if (!options.loopback) return;
     }
-
     this.trigger(WS_EVENT, { service, data, options })
-    // this.trigger(service, options);
-    // this.warn(`AAA:295  == Unexpected event`, service, options);
   }
 
-  // /**
-  //  * 
-  //  * @param {*} service 
-  //  * @param {*} data 
-  //  * @param {*} options 
-  //  * @returns 
-  //  */
-  // onWsMessage(service, data, options = {}) {
-  //   let items = [];
-  //   let sender = options.sender;
-  //   if (sender && sender.socket_id == Visitor.get(_a.socket_id)) return;
-  //   this.verbose("AAA:410", options.service, data.socket_id, data, options);
-  //   switch (options.service) {
-  //     case 'media.new':
-  //     case SERVICE.media.upload:
-  //     case SERVICE.media.make_dir:
-  //     case SERVICE.media.restore_into:
-  //       this.onNewItem(data);
-  //       break;
-
-  //     case SERVICE.media.save:
-  //       if (data.replace) {
-  //         items = this.selectItems(data);
-  //         delete ata.replace;
-  //         this.onUpdateItem(data, items);
-  //       } else {
-  //         this.onNewItem(data);
-  //       }
-  //       break;
-
-  //     case SERVICE.media.copy:
-  //       this.onCopyItem(data);
-  //       break;
-
-  //     case SERVICE.media.move:
-  //       this.onMoveItem(data);
-  //       break;
-
-  //     case "media.remove":
-  //       this.onRemoveItem(data);
-  //       break;
-
-  //     case SERVICE.media.rename:
-  //     case SERVICE.hub.update_name:
-  //       this.onRenameItem(data);
-  //       break;
-
-  //     case SERVICE.hub.set_privilege:
-  //       items = this.selectItems(data, _a.hub_id);
-  //       this.onUpdateItem(data, items);
-  //       break;
-
-  //     case "media.update":
-  //     case "media.replace":
-  //       items = this.selectItems(data);
-  //       this.onUpdateItem(data, items);
-  //       break;
-
-  //     case "media.download":
-  //       items = this.selectItems(data, "zipid");
-  //       for (var media of items) {
-  //         media.handleDownload(data);
-  //       }
-  //       return;
-  //     default:
-  //       this.trigger(options.service, { service, data, options });
-  //       this.warn(`AAA:461 Unexpected event`, service, options);
-  //   }
-  // }
 
   /**
    * 
@@ -449,8 +377,11 @@ class __dmz_wm extends winman {
           id
         } = data;
         var h = data.vhost;
-        let { svc, keysel } = bootstrap();
+        let { svc, keysel, main_domain, localhost} = bootstrap();
         let url = `${protocol}://${h}${svc}/media.zip_download&id=${id}&keysel=${keysel}`;
+        if(localhost){
+           url = `${protocol}://${main_domain}${svc}/@{h}/media.zip_download&id=${id}&keysel=${keysel}`;
+        }
         return this._getFile(url, id);
     }
   }

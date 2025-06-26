@@ -48,16 +48,6 @@ html {
   &[data-over="yes"] {
     box-shadow:$drumee-shadow-container;//0 5px 8px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
   }
-  // &__main-content{
-  //   width:calc(100% - 10px);
-  //   margin-top: 30px;
-  //   .desk-window-wrapper{
-  //     width:100%;
-  //   }
-  //   .desk-content{
-  //     width:100%;
-  //   }
-  // }
 
   &__buttons-wrapper {
     width: 50%;
@@ -94,9 +84,6 @@ html {
     background-size: cover;
     background-position: 50% 50%;
     width: 100%;
-    // height:100%;
-    //max-height: calc(36vh + 597px);
-    //background-image: url(`${protocol}://images.drumee.name/images/drumee/editor/desk-bg.png`);
   }
   .desk__tooltip {
     position: absolute;

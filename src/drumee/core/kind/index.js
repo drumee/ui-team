@@ -84,7 +84,6 @@ class __kind extends Backbone.Model {
    * @returns 
    */
   register(k, v, verbose = 0) {
-    //if (verbose == null) { verbose = 1; }
     if (USER_CLASSES[k]) {
       if (verbose) {
         this.warn(`Kind ${k} already exists. Use method replace`);
@@ -99,9 +98,12 @@ class __kind extends Backbone.Model {
     return USER_CLASSES[k] = v;
   }
 
-  // ===========================================================
-  //
-  // ===========================================================
+  /**
+   * 
+   * @param {*} k 
+   * @param {*} v 
+   * @returns 
+   */
   replace(k, v) {
     if (SYSTEM_CLASSES[k] || Builtins.get(k)) {
       this.warn(`Kind ${k} is reserved. It cannot be resused`);
@@ -110,9 +112,12 @@ class __kind extends Backbone.Model {
     return USER_CLASSES[k] = v;
   }
 
-  // ===========================================================
-  //
-  // ===========================================================
+
+  /**
+   * 
+   * @param {*} name 
+   * @returns 
+   */
   get(name) {
     let f = SYSTEM_CLASSES[name] || USER_CLASSES[name];
     if (_.isFunction(f)) {
@@ -170,10 +175,13 @@ class __kind extends Backbone.Model {
     }
   }
 
-
-  // ===========================================================
-  //
-  // ===========================================================
+  /**
+   * 
+   * @param {*} letc 
+   * @param {*} map 
+   * @param {*} clone 
+   * @returns 
+   */
   convert(letc, map, clone) {
     let data, f;
     if (clone == null) { clone = false; }

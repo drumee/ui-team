@@ -217,7 +217,7 @@ const a = {
   defaults           : {
     lang             : 'fr',
     bg               : 'images/backgrounds/default-bg.jpg',
-    wp               : 'https://images.drumee.name/-/images/drumee/editor/desk-bg.png',
+    wp               : `${protocol}://images.drumee.name/-/images/drumee/editor/desk-bg.png`,
     slide            : 'images/backgrounds/transparent.png',
     date_format      : "DD MMM YYYY", //"DD.MM.YY"
     ease             : 'Back.easeOut',
