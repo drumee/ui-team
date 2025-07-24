@@ -88,45 +88,6 @@ class Media extends mfsUtils {
   }
 
 
-  /**
-   * 
-   * @param {*} location 
-   */
-  checkFile(data) {
-    let location = this.localFile(data, _a.location);
-    return new Promise(async (resolve, reject) => {
-      //this.debug("AAA:530 -- checkFile", data);
-      let diskFree = await this.diskFree();
-      if (!diskFree) {
-        this.scheduler.pause();
-        return reject(message)
-      }
-      if (!this.diskSpace) {
-        return reject(`
-        Target *${location}* is outside of safe location ${USER_HOME_DIR}!`
-        );
-      }
-      if (this.isSafeLocation(location)) {
-        let dirname = Path.dirname(location);
-        if (!Fs.existsSync(dirname)) {
-          Fs.mkdirSync(dirname, { recursive: true });
-        }
-        if (Fs.existsSync(location)) {
-          let stat = Fs.lstatSync(location);
-          if (stat.isDirectory()) {
-            return reject(`
-            Target *${location}* is a directory. Won't download!`
-            );
-          }
-        }
-        resolve(location);
-      } else {
-        reject(`
-        Target *${location}* is outside of safe location ${USER_HOME_DIR}!`
-        );
-      }
-    })
-  }
 
   /**
    * 

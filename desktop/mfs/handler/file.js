@@ -58,7 +58,7 @@ async function onFileCreated(evt) {
   if (skip) return skip;
   let stat = this.localFile(evt, Attr.stat);
   if (!stat.inode) {
-    this.debug("[onFileCreated] Adding empty file. Ignored", evt);
+    this.debug("[onFileCreated] Adding empty file. Ignored", evt.filepath);
     return Attr.ignored;
   }
   if (evt.eventtype == Attr.created) {

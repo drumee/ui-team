@@ -14,7 +14,7 @@
  * limitations under the License.
  * =============================================================================
  */
-const _a = require('../../lex/attribute');
+const Attr = require('../../lex/attribute');
 const { renameSync, copyFileSync, existsSync } = require('fs');
 const { dirname, join } = require('path');
 const { setPending, showPending } = require("./locker");
@@ -24,8 +24,8 @@ const { setPending, showPending } = require("./locker");
  * @param {*} evt 
  */
 const onFsAdd = function (evt) {
-  let remote = this.remote.row(evt, _a.nid);
-  // let local = this.local.row(evt, _a.nid);
+  let remote = this.remote.row(evt, Attr.nid);
+  // let local = this.local.row(evt, Attr.nid);
 }
 
 /**
@@ -33,7 +33,7 @@ const onFsAdd = function (evt) {
  * @param {*} evt 
  */
 const onFsRemove = async function (evt) {
-  let stat = this.localFile(evt, _a.stat);
+  let stat = this.localFile(evt, Attr.stat);
   //this.debug("AAA:29 - onFsRemove", evt, stat);
   //this.removePendingEntity('local_created', evt);
   //this.local.removeNode(evt);
@@ -42,14 +42,14 @@ const onFsRemove = async function (evt) {
   this.syncOpt.removeNode(evt);
   if (!stat.inode) {
     //this.debug("AAA:33 -- NO FILE TO BE REMOVED", evt);
-    return _a.terminated;
+    return Attr.terminated;
   }
   if (/^(.|.+\/.+| )$/.test(evt.filename)) {
     console.error("ERR:37 Invalid filename", evt);
-    return _a.failed;
+    return Attr.failed;
   }
-  this.localFile(evt, _a.delete);
-  return _a.terminated;
+  this.localFile(evt, Attr.delete);
+  return Attr.terminated;
 }
 
 
@@ -62,34 +62,34 @@ const onFsRename = async function (evt) {
   let { src, dest } = args;
   if (!src || !dest) {
     this.debug("AAA:145 - Source/destination corrupted.", src, dest, evt);
-    return _a.failed;
+    return Attr.failed;
   }
 
 
-  let src_node = this.localFile(src, _a.node);
+  let src_node = this.localFile(src, Attr.node);
   if (!src_node.inode) {
     this.fsnode.removeNode(src);
-    return _a.terminated;
+    return Attr.terminated;
   }
 
-  let dest_node = this.localFile(dest, _a.node);
+  let dest_node = this.localFile(dest, Attr.node);
   if (dest_node.inode) {
     // To do : if file -> error, if oflder move inside
   }
 
-  setPending(_a.renamed, evt, dest.inode);
+  setPending(Attr.renamed, evt, dest.inode);
 
   try {
     renameSync(src_node.realpath, dest_node.realpath);
   } catch (e) {
     this.debug("ERROR -- AAAA:92", e);
-    return _a.failed;
+    return Attr.failed;
   }
 
   this.remote.rename(evt);
   this.fsnode.rename(src, dest);
 
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 /**
@@ -100,26 +100,26 @@ const onFsMove = async function (evt) {
   let { src, dest } = this.event.parseArgs(evt);
   if (!src || !dest) {
     this.debug("AAA:88 - Source/destination corrupted.", src, dest, evt);
-    return _a.failed;
+    return Attr.failed;
   }
 
-  let src_node = this.localFile(src, _a.node);
+  let src_node = this.localFile(src, Attr.node);
   if (!src_node.inode) {
     this.fsnode.removeNode(src);
-    return _a.terminated;
+    return Attr.terminated;
   }
 
   if (!dest.realpath) {
-    dest.realpath = this.localFile(dest, _a.location);
+    dest.realpath = this.localFile(dest, Attr.location);
   }
   let dest_dir = dirname(dest.filepath);
-  let stat = this.localFile(dest_dir, _a.stat);
-  setPending(_a.moved, evt, dest.filepath);
-  showPending(_a.moved);
+  let stat = this.localFile(dest_dir, Attr.stat);
+  setPending(Attr.moved, evt, dest.filepath);
+  showPending(Attr.moved);
   if (!stat.inode || !stat.isDirectory()) {
-    this.localFile(dest_dir, _a.mkdir);
+    this.localFile(dest_dir, Attr.mkdir);
     await fsWatcher.waitUntil({ filepath: dest_dir }, 'created', 0);
-    stat = this.localFile(dest_dir, _a.stat);
+    stat = this.localFile(dest_dir, Attr.stat);
     this.fsnode.upsert(stat);
   }
 
@@ -130,13 +130,13 @@ const onFsMove = async function (evt) {
     this.debug("AAA:128 - onFsMove", { error: e });
     this.event.setError(evt, e);
     evt.error = e;
-    return _a.failed;
+    return Attr.failed;
   }
   // this.local.move(src, dest);
   this.remote.move(src, dest);
   this.fsnode.move(src_node, dest);
 
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 /**
@@ -150,18 +150,18 @@ const onFsCopy = async function (evt) {
 
   if (!src || !dest) {
     this.debug("AAA:134 -- source or destination empty", src, dest, evt);
-    return _a.failed;
+    return Attr.failed;
   }
 
-  let target = this.localFile(src, _a.node);
+  let target = this.localFile(src, Attr.node);
 
-  setPending(_a.moved, evt, target.filepath);
-  //this.debug("AAA:151", src, this.fsnode.row(src, _a.filepath, _a.inode));
+  setPending(Attr.moved, evt, target.filepath);
+  //this.debug("AAA:151", src, this.fsnode.row(src, Attr.filepath, Attr.inode));
   renameSync(dest.realpath, target.realpath);
 
 
   await this.requestMove(evt);
-  return _a.terminated;
+  return Attr.terminated;
 }
 
 
@@ -185,21 +185,29 @@ const onFsMkDir = async function (evt) {
   }
 
   if (this.isNodeUpToDate(evt)) {
-    return _a.skip;
+    return Attr.skip;
   }
 
-  let remote = this.remote.row(evt, _a.nid, _a.filepath);
+  let remote = this.remote.row(evt, Attr.nid, Attr.filepath);
   if (!remote) {
     this.remote.upsert(evt);
   }
-  let node = this.localFile(evt, _a.node);
+  let node = this.localFile(evt, Attr.node);
+  if (!node.inode) {
+    this.localFile(evt, Attr.mkdir);
+    try {
+      node = this.localFile(evt, Attr.node);
+    }catch(e){
+      this.debug("AAA:201 failed to create dir", e)
+      return Attr.failed;
+    }
+  }
 
-
-  const fsnode = this.fsnode.row(evt, _a.filepath);
+  const fsnode = this.fsnode.row(evt, Attr.filepath);
   if (!fsnode) {
     this.fsnode.upsert(node);
   }
-  return _a.terminated
+  return Attr.terminated
 }
 
 module.exports = {

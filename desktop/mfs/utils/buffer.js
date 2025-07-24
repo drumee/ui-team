@@ -24,7 +24,8 @@ module.exports = function (worker) {
    */
   function getJournal(filpath) {
     return db.getRows(`SELECT filepath, event name, inode, nid, hub_id, synced,
-      effective, md5Hash, ctime,  mtime, args FROM changelog_buffer ORDER by mtime asc`
+      effective, md5Hash, ctime,  mtime, args FROM changelog_buffer 
+        WHERE inode AND synced=0 AND effective ORDER by mtime asc`
     ) || []
   }
 

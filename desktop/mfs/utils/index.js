@@ -48,9 +48,9 @@ class mfsUtils extends __service {
   initialize(opt) {
     super.initialize(opt);
     let { uid, domain, username, } = Account.currentEndpoint() || {};
-    if (!uid || !domain || !username){
+    if (!uid || !domain || !username) {
       throw "Invalid endpoint";
-    } 
+    }
     let datafile = `${username}-${domain}`;
     if (MFS_DB == null || MFS_DB.isClosed()) {
       let fingerprints = Account.db.fingerprints();
@@ -674,6 +674,12 @@ class mfsUtils extends __service {
             setPending(Attr.created, event, filepath);
           } else {
             setPending(Attr.created, filepath, filepath);
+          }
+          let parent = dirname(realpath)
+          stat = statSync(parent, { throwIfNoEntry: false });
+          if (stat && !stat.isDirectory()) {
+            this.debug(`Removing ${parent} because it is not a directory`)
+            rmSync(parent)
           }
           mkdirSync(realpath, {
             recursive: true,

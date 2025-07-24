@@ -115,7 +115,8 @@ function setEndpoint(args) {
  * @returns 
  */
 function endpoints() {
-  let sql = `SELECT o.name, e.uid, e.path, e.host domain, e.host, e.keysel, e.sid FROM endpoint e INNER JOIN organization o ON o.domain=e.host ORDER by mtime DESC`;
+  let sql = `SELECT o.name, e.uid, e.path, e.host domain, e.host, e.keysel, e.sid 
+    FROM endpoint e INNER JOIN organization o ON o.domain=e.host ORDER by mtime DESC`;
   return this.db.getRows(sql);
 }
 

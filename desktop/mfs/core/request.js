@@ -18,7 +18,7 @@ const Attr = require("../../lex/attribute");
 const { isString, isArray, isNaN } = require("lodash");
 const { resolve, dirname, basename } = require("path");
 const {
-  createReadStream, mkdir, existsSync, createWriteStream
+  createReadStream, mkdirSync, existsSync, createWriteStream, statSync, rmSync
 } = require("fs");
 const { permission } = require("../../lex/constants");
 const { net, dialog } = require("electron");
@@ -28,6 +28,7 @@ let PENDING_DELETION = [];
 let DELETION_OPTION = null;
 const { setPending, unsetPending } = require("./locker");
 const { utf8ify } = require("../../utils/misc");
+const { createHash } = require('crypto');
 
 
 /**
@@ -656,7 +657,6 @@ function requestUpload(evt) {
     };
     this._sendActivity(activity);
     const localStream = createReadStream(stat.realpath);
-    const { createHash } = require('crypto');
     let hash = createHash('md5');
     let url = `${Account.bootstrap().svc}media.upload`;
     const request = net.request({
@@ -804,6 +804,127 @@ function _sendEvent(opt) {
 }
 
 /**
+ * 
+ * @param {*} response 
+ */
+async function _handleDownloadResponse(response, dest, evt, activity, resolve, reject) {
+  let localStream = null;
+  let size = parseInt(response.headers["content-length"]);
+  if (response.headers["content-range"]) {
+    let [a, b] = response.headers["content-range"].split("/");
+    size = parseInt(b) || 10000000000;
+  }
+  let loaded = 0;
+  switch (response.statusCode) {
+    case 200:
+      let hash = createHash('md5');
+      try {
+        localStream = createWriteStream(dest);
+        localStream.on("close", async (e) => {
+          this.debug("AAA:822", e)
+          let md5Hash = hash.digest('hex');
+          let remote = await this.onDownloadSuccess(evt, md5Hash);
+          await fsWatcher.onFileClose(evt, remote, md5Hash);
+          this.task.keepalive(evt, "closed");
+          resolve(Attr.terminated);
+        });
+      } catch (e) {
+        this.warn("Failed to check file", e);
+        return reject(e);
+      }
+      if (!localStream) {
+        return reject({ error: "Cannot write into local file" });
+      }
+      response.on("data", (chunk) => {
+        loaded = loaded + chunk.length;
+        this.task.keepalive(evt);
+        try {
+          localStream.write(chunk);
+          hash.update(chunk);
+        } catch (e) {
+          this.debug("EEE:595", e);
+        }
+        if (isNaN(size)) size = loaded;
+        activity.activity = activity;
+        this._sendActivity({
+          ...activity,
+          phase: "progress",
+          progress: 100 * (loaded / size),
+          loaded,
+          total: size,
+        });
+      });
+      response.on("end", () => {
+        localStream.end();
+        this.debug(`Writting into ${dest}`);
+        this.task.keepalive(evt, "idle");
+        this._sendActivity({
+          ...activity,
+          phase: Attr.downloaded,
+        });
+      });
+      break;
+    default:
+      let error = `Failed to download (${response.statusCode}) ${dest}`
+      console.error(`[ERR:506]  (${error})`);
+      localStream.abort();
+      return reject({ error });
+  }
+}
+
+/**
+ * 
+ * @param {*} location 
+ */
+async function _checkFile(evt) {
+  let location = this.localFile(evt, Attr.location);
+  return new Promise(async (resolve, reject) => {
+    //this.debug("AAA:530 -- checkFile", data);
+    let diskFree = await this.diskFree();
+    if (!diskFree) {
+      this.scheduler.pause();
+      return reject(message)
+    }
+    if (!this.diskSpace) {
+      return reject(`
+        Target *${location}* is outside of safe location ${USER_HOME_DIR}!`
+      );
+    }
+    if (this.isSafeLocation(location)) {
+      let parent = dirname(location);
+      if (!existsSync(parent)) {
+        this.debug("Creating parent dir", parent)
+        try {
+          mkdirSync(parent, { recursive: true });
+        } catch (e) {
+          this.debug("Failed to download", e);
+        }
+        await fsWatcher.waitUntil(evt, `created`, 0);
+      } else {
+        let { nodetype } = this.localFile(parent, Attr.node)
+        if (nodetype != Attr.folder) {
+          this.debug(`Removing parent path ${parent} because it is not a directory`)
+          rmSync(parent)
+          await fsWatcher.waitUntil(evt, Attr.removed, 0);
+        }
+      }
+      if (existsSync(location)) {
+        let stat = statSync(location);
+        if (stat.isDirectory()) {
+          this.debug(`Removing target ${location} because it is a directory`)
+          rmSync(location, { recursive: true })
+        }
+      }
+      resolve(location);
+    } else {
+      reject(`
+        Target *${location}* is outside of safe location ${USER_HOME_DIR}!`
+      );
+    }
+  })
+}
+
+/**
  *
  * @param {*} url
  * @param {*} target
@@ -825,82 +946,35 @@ function requestDownload(evt) {
       loaded,
       total,
     };
-    this.checkFile(evt)
+    this._checkFile(evt)
       .then(async (dest) => {
         setPending(Attr.downloaded, evt.nid, evt.filepath);
-        let dir = dirname(dest);
-        if (!existsSync(dir)) {
-          try {
-            mkdir(dir, { recursive: true });
-          } catch (e) {
-            this.debug("Failed to download", e);
-          }
-          await fsWatcher.waitUntil(evt, `created`, 0);
-        }
-        let localStream = null;
-        const { createHash } = require('crypto');
-        let hash = createHash('md5');
-        try {
-          localStream = createWriteStream(dest);
-          localStream.on("close", async () => {
-            let md5Hash = hash.digest('hex');
-            let remote = await this.onDownloadSuccess(evt, md5Hash);
-            await fsWatcher.onFileClose(evt, remote, md5Hash);
-            this.task.keepalive(evt, "closed");
-            resolve(Attr.terminated);
-          });
-        } catch (e) {
-          this.warn("Failed to check file", e);
-          return reject(e);
-        }
-        if (!localStream) {
-          return reject({ error: "Cannot write into local file" });
-        }
+        // let dir = dirname(dest);
+        // if (!existsSync(dir)) {
+        //   this.debug("Creating parent dir", dest)
+        //   try {
+        //     mkdir(dir, { recursive: true });
+        //   } catch (e) {
+        //     this.debug("Failed to download", e);
+        //   }
+        //   await fsWatcher.waitUntil(evt, `created`, 0);
+        // } else {
+        //   let { nodetype } = this.localFile(dir, Attr.node)
+        //   if (nodetype != Attr.folder) {
+        //     this.debug(`Removing ${dir} because it is not a directory`)
+        //     rmSync(parent)
+        //     await fsWatcher.waitUntil(evt, Attr.removed, 0);
+        //   }
+        // }
         let url = this.getNodeUrl(evt);
         const request = net.request({ url, useSessionCookies: true });
         request.setHeader("x-param-session-type", 'regular');
         setPending(Attr.downloaded, request, evt.filepath);
         this._sendActivity(activity);
         this.debug(`Downloading ${url}`, evt.filepath);
-        request.on("response", (response) => {
-          let size = parseInt(response.headers["content-length"]);
-          if (response.headers["content-range"]) {
-            let [a, b] = response.headers["content-range"].split("/");
-            size = parseInt(b) || 10000000000;
-          }
-          switch (response.statusCode) {
-            case 200:
-              response.on("data", (chunk) => {
-                loaded = loaded + chunk.length;
-                this.task.keepalive(evt);
-                try {
-                  localStream.write(chunk);
-                  hash.update(chunk);
-                } catch (e) {
-                  this.debug("EEE:595", e);
-                }
-                if (isNaN(size)) size = loaded;
-                this._sendActivity({
-                  ...activity,
-                  phase: "progress",
-                  progress: 100 * (loaded / size),
-                  loaded,
-                  total: size,
-                });
-              });
-              response.on("end", () => {
-                localStream.end();
-                this.debug(`writing into ${dest}`);
-                this.task.keepalive(evt, "idle");
-                this._sendActivity({
-                  ...activity,
-                  phase: Attr.downloaded,
-                });
-              });
-              break;
-            default:
-              console.error("[ERR:506]", response);
-              reject(response);
+        request.on("response", async (response) => {
+          if (response.statusCode == 200) {
+            await this._handleDownloadResponse(response, dest, evt, activity, resolve, reject)
           }
         });
         request.on("error", (response) => {
@@ -941,7 +1015,9 @@ module.exports = {
   _sendActivity,
   _sendEvent,
   _sendTrashRequest,
+  _handleDownloadResponse,
   _updateLocalItem,
+  _checkFile,
   checkTree,
   ignoreMultiple,
   onDownloadSuccess,

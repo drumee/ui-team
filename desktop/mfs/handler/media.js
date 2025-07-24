@@ -294,8 +294,9 @@ async function _fetchFile(evt) {
   try {
     await this.requestDownload(evt);
   } catch (e) {
+    console.trace();
+    console.log(e, evt)
     if (e.error == "EACCES") {
-      console.trace();
       const options = {
         type: "info",
         buttons: [LOCALE.CLOSE],
@@ -315,6 +316,14 @@ async function _fetchFile(evt) {
  * @param {*} evt
  */
 async function onMediaNew(evt) {
+  if (!evt.filetype) {
+    let remote = this.remote.row(evt, Attr.filepath);
+    evt.filetype = remote.filetype;
+    if (!evt.filetype) {
+      this.debug("Could not get filetype. Skipped", remote, evt)
+      return Attr.skip;
+    }
+  }
   if (this.isBranch(evt)) {
     let { hubEvent } = this.event.parseArgs(evt);
     if (evt.filetype == Attr.hub && hubEvent == "media.new") {
@@ -411,7 +420,6 @@ async function showNode(args) {
     hub_id = args.hub_id;
   }
   let stat = this.localFile(args, Attr.stat);
-
   if (!stat || !stat.inode) {
     await this.onFsMkDir({ ...args });
     this.syncOpt.changeNodeSettings(args, 1);
@@ -427,6 +435,12 @@ async function showNode(args) {
     items = this.remote.show_node(args);
   }
 
+  /**
+   * 
+   * @param {*} item 
+   * @param {*} index 
+   * @param {*} name 
+   */
   function pushLog(item, index, name) {
     setTimeout(() => {
       mfsScheduler.log({ ...item, name });
@@ -441,16 +455,9 @@ async function showNode(args) {
       pushLog(item, i, "media.init");
     } else {
       let rem = this.remote.row(item, Attr.nid);
-      let loc = this.local.row(item, Attr.filepath, Attr.nid);
-      if (loc && this.isBranch(item)) {
-        let stat = this.localFile(item, Attr.stat);
-        if (stat && stat.inode) {
-          continue;
-        }
-      }
-      if (rem && loc) {
-        let same = rem.md5Hash && rem.md5Hash && rem.md5Hash == loc.md5Hash;
-        if (same || rem.mtime == loc.mtime) continue;
+      if (rem && !this.isBranch(rem)) {
+        let md5Hash = await this.hash.getMd5(this.localFile(rem, Attr.node));
+        if (rem.md5Hash && rem.md5Hash == md5Hash) continue;
       }
       pushLog(item, i, "media.init");
     }

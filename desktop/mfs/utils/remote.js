@@ -193,7 +193,8 @@ module.exports = function (worker) {
    * @returns 
    */
   function unsynced() {
-    let sql = `SELECT * FROM remote WHERE synced=0 AND effective ORDER BY id ASC`;
+    let sql = `SELECT r.* FROM remote r INNER JOIN remote_changelog c USING(filepath) 
+      WHERE c.synced=0 AND r.effective ORDER bY c.id ASC`;
     return db.getRows(sql);
   }
 
@@ -460,7 +461,7 @@ module.exports = function (worker) {
   */
   function getEntitiesChanges(event) {
     let sql = `SELECT * FROM remote_changelog 
-      WHERE effective AND synced=0 AND event='media.${event}'`;
+      WHERE effective AND (synced=0 OR synced IS NULL) AND event='media.${event}'`;
     let rows = db.getRows(sql);
     return rows;
   }

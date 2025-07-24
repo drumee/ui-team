@@ -342,10 +342,10 @@ class Scheduler extends mfsUtils {
     let items = this.remote.unsynced();
     if (!items) return;
     let item = items.shift();
-    let progress = this.local.syncRatio(); // (1 - items.length / this.unsyncedItems) * 100;
-    if (!isNaN(progress)) {
-      this.sendMediaActivity({ phase: "total", progress });
-    }
+    //let progress = this.local.syncRatio(); // (1 - items.length / this.unsyncedItems) * 100;
+    // if (!isNaN(progress)) {
+    //   this.sendMediaActivity({ phase: "total", progress });
+    // }
     while (item) {
       if (!this.syncOpt.getNodeState(item)) {
         item = items.shift();
@@ -510,7 +510,8 @@ class Scheduler extends mfsUtils {
     }
     if (!this._timer) this.start();
     if (!evt.name) {
-      this.debug("AAA:537 MISSING NAME", evt);
+      this.debug(`Event has no name`, evt.args);
+      return
     }
     if (!evt.filepath) {
       if (evt.file_path) evt.filepath = evt.file_path;
@@ -590,7 +591,11 @@ class Scheduler extends mfsUtils {
     if (!evt) return;
     let ok = await this.checkSecurity(evt);
     if (ok) {
-      await this.dispatch(evt);
+      try{
+        await this.dispatch(evt);
+      }catch(e){
+        this.warn(`Failed to run`, e)
+      }
     }
   }
 

@@ -226,10 +226,19 @@ class Changelog extends mfsUtils {
     // remoteRenamed.map((e) => {
     //   mfsScheduler.takeRemoteItem(e, Attr.renamed)
     // })
-
+    this.fsnode.purgeZombies();
     let newLocal = this.fsnode.getNewEntities(log_id);
     //this.debug("AAA:164", { newLocal })
+    // for (let entity of newLocal) {
+    //   let exist = this.localFile(entity, Attr.exists)
+    //   if(!exist){
+    //     this.fsnode.re
+    //   }
+    // }
+
     buffer = buffer.concat(newLocal)
+
+
     // newLocal.map((e) => {
     //   mfsScheduler.takeLocalItem(e, Attr.created)
     // })
@@ -267,10 +276,10 @@ class Changelog extends mfsUtils {
         if (row.effective == null) {
           row.effective = this.syncOpt.getNodeState(row);
         }
-        if (!row.effective || row.synced) {
+        if (!row.effective || row.synced || !row.inode) {
           continue;
         }
-        row.inode = row.inode || 0;
+        row.inode = row.inode;
         row.nid = row.nid || '';
         row.hub_id = row.hub_id || '';
         row.synced = row.synced || 0;
@@ -736,7 +745,7 @@ class Changelog extends mfsUtils {
    * 
    */
   _onTaskEnded(evt) {
-    let { inode, name, args, nid, seq, id } = evt;
+    let { inode, name, args, nid, seq, id, filepath } = evt;
     let { syncId, src, dest, changelog } = JSON.parse(args);
     let event = SERVICES_MAP[name] || name;
     let sql;
@@ -754,9 +763,10 @@ class Changelog extends mfsUtils {
       });
     } else {
       if (inode && id) {
-        sql = `UPDATE fschangelog SET synced=1 
-        WHERE id=? OR (inode=? AND event=?) `;
+        sql = `UPDATE fschangelog SET synced=1 WHERE id=? OR (inode=? AND event=?) `;
         this.db.run(sql, id, inode, name)
+        sql = `UPDATE changelog_buffer SET synced=1 WHERE filepath=? OR inode=? `;
+        this.db.run(sql, filepath, inode)
       }
       if (nid) {
         sql = `UPDATE remote_changelog SET synced=1 

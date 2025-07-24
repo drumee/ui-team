@@ -51,14 +51,12 @@ async function _confirmOverwrite(pending) {
           if (!item || !item.filepath) {
             break;
           }
-          this.local.bindEntity(item);
           mfsScheduler.log(item);
         }
         return;
       } else {
         item = fifo.shift();
         item.name = "file.modified";
-        this.local.bindEntity(item);
         mfsScheduler.log(item);
       }
       pending.option = null;

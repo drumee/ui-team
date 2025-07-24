@@ -70,7 +70,8 @@ class __core_account extends Bridge {
    *
    */
   respawn(data) {
-    let { user, organization, sid } = data;
+    let { user, organization, sid, hub} = data;
+    this.debug("AAA:74", data)
     if (!user || !organization) {
       this.warn("Could not respawn fron invalid data", data);
       return;
@@ -82,9 +83,19 @@ class __core_account extends Bridge {
       this.user.clear();
       this.user.respawn(user);
       user.sid = sid;
-      user.domain = organization.url;
+      if (organization.url && !user.domain) {
+        user.domain = organization.url;
+      }
       user.email = user.profile.email;
       this.setUser(user);
+    }
+    if (!organization || !organization.id) {
+      organization = {
+        id: hub.org_id,
+        domain_id: hub.org_id,
+        name: hub.org_name,
+        domain: hub.domain
+      }
     }
     if (isObject(organization)) {
       this.organization.clear();

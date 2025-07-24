@@ -124,9 +124,10 @@ class Worker extends Media {
       "media.trash": "onMediaRemove",
       "media.update": "onMediaChange",
       "media.write": "onMediaWrite",
+      "media.purge": "nop",
       "remote-deleted": "remoteDeleted",
       "remote-newer": "todo",
-      synced: "nop",
+      "synced": "nop",
     };
 
     super.initialize(opt);
@@ -764,7 +765,7 @@ class Worker extends Media {
    */
   async onLocalMissing(evt) {
 
-   }
+  }
 
   todo(args) {
     this.debug("TO BE DONE AAA:156", args);
@@ -954,11 +955,11 @@ class Worker extends Media {
     this.debug("AAAA:1244", current, args, res)
     webContents.send("menu-sync-changed", { ...res, engine: res.effective });
     Account.refreshMenu();
-    if (current.mode == Attr.onTheFly) {
-      this.enableEconomyMode();
-    } else {
-      this.enableImmateMode();
-    }
+    // if (current.mode == Attr.onTheFly) {
+    //   this.enableEconomyMode();
+    // } else {
+    //   this.enableImmateMode();
+    // }
   }
 
 

@@ -207,7 +207,6 @@ module.exports = function (worker) {
         `UPDATE remote SET effective=? WHERE regexp('^' || ?, filepath)`,
         `UPDATE remote_changelog SET effective=? WHERE regexp('^' || ?, filepath)`,
         `UPDATE fsnode SET effective=? WHERE regexp('^' || ?, filepath)`,
-        `UPDATE local SET effective=? WHERE regexp('^' || ?, filepath)`,
         `UPDATE fschangelog SET effective=? WHERE regexp('^' || ?, filepath)`
       ]
       db.serialize(sql, effective, item.filepath);
@@ -217,7 +216,6 @@ module.exports = function (worker) {
       `UPDATE remote SET effective=? WHERE filepath=?`,
       `UPDATE remote_changelog SET effective=? WHERE filepath=?`,
       `UPDATE fsnode SET effective=? WHERE filepath=?`,
-      `UPDATE local SET effective=? WHERE filepath=?`,
       `UPDATE fschangelog SET effective=? WHERE filepath=?`
     ]
     db.serialize(sql, effective, item.filepath);
