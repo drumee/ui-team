@@ -288,7 +288,8 @@ class __router_websocket extends LetcBox {
       }
       let url = this.url(r);
       this._bind(new W3CWebSocket(url, _a.service));
-    }).catch(() => {
+    }).catch((e) => {
+      this.warn("ERROR:292 - failed to connect websocket", e)
       let url = this.url({});
       this._bind(new W3CWebSocket(url, _a.service));
     })
