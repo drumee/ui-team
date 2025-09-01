@@ -5,808 +5,218 @@
 ## Core rendering engine
 
 
-See https://drumee.io/_/testing/#/sandbox for examples.
+See https://drumee.com/-/#/sandbox for examples.
 
-| kind | path |
-| ---- | ---- |
-<<<<<<< HEAD
-<<<<<<< HEAD
-| audio_player | [builtins/player/audio](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/audio) |
-| devices_settings | [builtins/widget/devices](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/devices) |
-| dock | [modules/desk/wm/dock](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/dock) |
-| document_reader | [builtins/player/document](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/document) |
-| document_page | [builtins/player/document/page](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/document/page) |
-| hub_administrator | [builtins/window/hub/settings/administrator](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/administrator) |
-| hub_members | [builtins/window/hub/settings/members](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/members) |
-| hub_name | [builtins/window/hub/settings/name](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/name) |
-| hub_owner | [builtins/window/hub/settings/owner](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/owner) |
-| hub_permission | [builtins/window/hub/settings/permission](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/permission) |
-| hub_settings | [builtins/window/hub/settings](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings) |
-| hub_sharebox | [builtins/window/hub/sharebox](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/sharebox) |
-| hub_team | [builtins/window/hub/team](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/team) |
-| hub_website | [builtins/window/hub/website](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/website) |
-| image_viewer | [builtins/player/image](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/image) |
-| invitation | [builtins/widget/invitation](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation) |
-| invitation_contact | [builtins/widget/invitation/contact](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/contact) |
-| invitation_recipient | [builtins/widget/invitation/recipient](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/recipient) |
-| invitation_search | [builtins/widget/invitation/searchbox](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/searchbox) |
-| litechat_message | [window/litechat/message](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/litechat/message) |
-| media | [builtins/media/grid](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/grid) |
-| media_device | [builtins/widget/media-device](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/media-device) |
-| media_grid | [builtins/media/grid](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/grid) |
-| media_minifyer | [builtins/media/minifyer](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/minifyer) |
-| media_notifications | [builtins/media/notifications](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications) |
-| media_row | [builtins/media/row](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/row) |
-| media_simple | [builtins/media/simple](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/simple) |
-| media_paste | [builtins/media/paste](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/paste) |
-| media_uploader | [builtins/media/uploader](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/uploader) |
-| notifier_generic | [desk/notifier/generic](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/notifier/generic) |
-| notifier_network | [desk/notifier/network](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/notifier/network) |
-| public_link | [builtins/widget/invitation/public-link](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/public-link) |
-| schedule_invitation | [window/schedule/widget/invitation](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/schedule/widget/invitation) |
-| schedule_recipient | [window/schedule/widget/recipient](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/schedule/widget/recipient) |
-| selection | [window/selection](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/selection) |
-| user | [desk/user](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/user) |
-| vector_viewer | [builtins/player/vector](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/vector) |
-| video_viewer | [builtins/player/video](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/video) |
-| schedule_viewer | [builtins/player/schedule](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/schedule) |
-| webrtc_attendee | [builtins/webrtc/attendee](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/attendee) |
-| webrtc_endpoints | [builtins/webrtc/endpoint](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint) |
-| webrtc_debug | [builtins/webrtc/debug](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/debug) |
-| window_account | [window/account](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account) |
-| window_addressbook | [window/addressbook](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook) |
-| window_bigchat | [window/bigchat](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat) |
-| window_channel | [window/channel](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/channel) |
-| window_confirm | [window/confirm](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/confirm) |
-| window_connect | [window/connect](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/connect) |
-| window_contact | [window/contact](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/contact) |
-| window_downloader | [window/downloader](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/downloader) |
-| window_filter | [window/filter](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/filter) |
-| window_folder | [window/folder](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/folder) |
-| window_helpdesk | [window/helpdesk](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/helpdesk) |
-| window_info | [window/info](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/info) |
-| window_launcher | [window/launcher](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/launcher) |
-| window_litechat | [window/litechat](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/litechat) |
-| window_manager | [desk/wm](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm) |
-| window_meeting | [window/meeting](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/meeting) |
-| window_schedule | [window/schedule](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/schedule) |
-| window_screenshare | [window/screenshare](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/screenshare) |
-| window_search | [window/search](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/search) |
-| window_sharebox | [window/sharebox](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox) |
-| window_switchcall | [window/switchcall](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/switchcall) |
-| window_team | [window/team](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/team) |
-| window_trash | [window/trash](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/trash) |
-| window_webinar | [window/webinar](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/webinar) |
-| window_website | [window/website](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/website) |
-| dock_minifier | [src/drumee/modules/desk/wm/dock/widget/dock-minifier](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/dock/widget/dock-minifier) |
-| notification_panel | [modules/desk/wm/notification](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/notification) |
-| notification_window | [modules/desk/wm/notification/widget/notification-window](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/notification/widget/notification-window) |
-| notification_list_item | [modules/desk/wm/notification/widget/notification-list-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/notification/widget/notification-list-item) |
-| dmz_window_manager | [dmz/wm](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/dmz/wm) |
-| dmz_sharebox | [dmz/sharebox](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/dmz/sharebox) |
-| dmz_meeting | [dmz/meeting](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/dmz/meeting) |
-| test_result | [modules/test/widget/result](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/test/widget/result) |
-| welcome_invitation | [welcome/invitation](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/welcome/invitation) |
-| welcome_feedback | [welcome/feedback](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/welcome/feedback) |
-| welcome_reset | [welcome/reset](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/welcome/reset) |
-| welcome_signin | [welcome/signin](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/welcome/signin) |
-| welcome_signup | [welcome/signup](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/welcome/signup) |
-| debugger | [router/debugger](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/router/debugger) |
-| ws_channel | [router/websocket](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/router/websocket) |
-| drumee_api_popup | [api/lib/popup](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/api/lib/popup) |
-| drumee_api_signup | [api/lib/signup](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/api/lib/signup) |
-| drumee_api_b2b_signup | [api/lib/b2b-signup](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/api/lib/b2b-signup) |
-| media_origin | [src/drumee/builtins/media/notifications/origin](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications/origin) |
-| notification_file | [src/drumee/builtins/media/notifications/origin/file](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications/origin/file) |
-| notification_message | [src/drumee/builtins/media/notifications/origin/message](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications/origin/message) |
-| invitation_message | [invitation/message](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/message) |
-| invitation_permission | [invitation/permission](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/permission) |
-| invitation_sharee | [invitation/sharee](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/sharee) |
-| invitation_shareeroll | [invitation/sharee/roll](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/sharee/roll) |
-| contact_invitation_form | [widget/contact-invitation-form](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/contact-invitation-form) |
-| widget_chat | [widget/chat](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/chat) |
-| widget_chat_item | [widget/chat-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/chat-item) |
-| account_avatar | [window/account/profile/avatar](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/profile/avatar) |
-| account_country | [window/account/widget/country](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/widget/country) |
-| account_data | [window/account/data](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/data) |
-| account_input | [window/account/widget/input](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/widget/input) |
-| account_privacy | [window/account/privacy](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/privacy) |
-| account_preferences | [window/account/preferences](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/preferences) |
-| account_profile | [window/account/profile](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/profile) |
-| account_security | [window/account/security](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security) |
-| account_subscription | [window/account/subscription](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/subscription) |
-| privacy_switcher | [window/account/privacy/switcher](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/privacy/switcher) |
-| security_email | [window/account/security/email](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/email) |
-| security_pass | [window/account/security/pass](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/pass) |
-| security_phone | [window/account/security/phone](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/phone) |
-| security_ident | [window/account/security/ident](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/ident) |
-| security_ip | [window/account/security/ip](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/ip) |
-| security_sms | [window/account/security/sms](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/sms) |
-| security_usb | [window/account/security/usb](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/usb) |
-| security_switcher | [window/account/security/switcher](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/switcher) |
-| widget_tag | [src/drumee/builtins/window/addressbook/widget/tag](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/tag) |
-| widget_contacts | [src/drumee/builtins/window/addressbook/widget/contacts](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/contacts) |
-| widget_contact_detail | [src/drumee/builtins/window/addressbook/widget/contact-detail](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/contact-detail) |
-| widget_contact_form | [src/drumee/builtins/window/addressbook/widget/contact-form](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/contact-form) |
-| contact_item | [src/drumee/builtins/window/addressbook/widget/contact-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/contact-item) |
-| contact_form_items | [src/drumee/builtins/window/addressbook/widget/contact-form-items](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/contact-form-items) |
-| tag_item | [src/drumee/builtins/window/addressbook/widget/tag-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/tag-item) |
-| widget_search | [src/drumee/builtins/window/addressbook/widget/search](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/search) |
-| widget_invite_notification | [src/drumee/builtins/window/addressbook/widget/invite-notification](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/invite-notification) |
-| addressbook_widget_notification | [src/drumee/builtins/window/addressbook/widget/notification](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/notification) |
-| widget_tag_form_menu | [src/drumee/builtins/window/addressbook/widget/tag-form-menu](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/tag-form-menu) |
-| admin_security_page | [src/drumee/builtins/window/adminpanel/pages/admin-security](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/admin-security) |
-| broadcast_message_page | [src/drumee/builtins/window/adminpanel/pages/broadcast-message](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/broadcast-message) |
-| domain_page | [src/drumee/builtins/window/adminpanel/pages/domain-page](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/domain-page) |
-| chat_contact_list | [src/drumee/builtins/window/bigchat/widget/chatcontact-list](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chatcontact-list) |
-| chat_contact_item | [src/drumee/builtins/window/bigchat/widget/chatcontact-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chatcontact-item) |
-| support_ticket_list | [src/drumee/builtins/window/bigchat/widget/support-tickets](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/support-tickets) |
-| support_ticket_item | [src/drumee/builtins/window/bigchat/widget/support-ticket-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/support-ticket-item) |
-| create_support_ticket | [src/drumee/builtins/window/bigchat/widget/create-support-ticket](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/create-support-ticket) |
-| chat_room | [src/drumee/builtins/window/bigchat/widget/chat-room](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chat-room) |
-| widget_chat_forward_list_item | [src/drumee/builtins/window/bigchat/widget/chat-forward-list-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chat-forward-list-item) |
-| widget_chat_item_forward | [src/drumee/builtins/window/bigchat/widget/chat-item-forward](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chat-item-forward) |
-| widget_shareroom_detail | [src/drumee/builtins/window/bigchat/widget/shareroom-userdetails](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/shareroom-userdetails) |
-| widget_shareroom_user_item | [src/drumee/builtins/window/bigchat/widget/shareroom-user-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/shareroom-user-item) |
-| status_pill | [src/drumee/builtins/window/bigchat/widget/status-pill](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/status-pill) |
-| bigchat_widget_notification | [src/drumee/builtins/window/bigchat/widget/notification](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/notification) |
-| media_wrapper | [src/drumee/builtins/window/channel/media-wrapper](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/channel/media-wrapper) |
-| widget_email_notification | [src/drumee/builtins/window/sharebox/widget/email-notification](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/email-notification) |
-| widget_invitation_email | [src/drumee/builtins/window/sharebox/widget/invitation-email](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/invitation-email) |
-| widget_invitation_email_item | [src/drumee/builtins/window/sharebox/widget/invitation-email-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/invitation-email-item) |
-| widget_sharebox_setting | [src/drumee/builtins/window/sharebox/widget/sharebox-setting](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/sharebox-setting) |
-| widget_suggest_contact_item | [src/drumee/builtins/window/sharebox/widget/suggest-contact-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/suggest-contact-item) |
-| outbound_page | [src/drumee/builtins/window/transferbox/pages/outbound](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/transferbox/pages/outbound) |
-| inbound_page | [src/drumee/builtins/window/transferbox/pages/inbound](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/transferbox/pages/inbound) |
-| drumee_transfer | [store/transfer](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/store/transfer) |
-| drumee_transfer_wm | [store/transfer/wm](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/store/transfer/wm) |
-| drumee_transfer_media | [store/transfer/media](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/store/transfer/media) |
-| widget_drumee_transfer_email_item | [store/transfer/widget/email-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/store/transfer/widget/email-item) |
-| widget_drumee_transfer_sender | [store/transfer/widget/sender](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/store/transfer/widget/sender) |
-| widget_drumee_transfer_receiver | [store/transfer/widget/receiver](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/store/transfer/widget/receiver) |
-| drumee_transfer_received_file_item | [store/transfer/widget/received-file-item](https://gitlab.drumee.in/drumee/ui/-/blob/master/src/drumee/store/transfer/widget/received-file-item) |
-=======
-| dock_minifier | [src/drumee/modules/desk/wm/dock/widget/dock-minifier](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/dock/widget/dock-minifier/index.js) |
-=======
->>>>>>> afd37f4e22674990af43680ba0dddd67131e4ac4
-| notification_panel | [modules/desk/wm/notification](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/notification) |
-| notification_window | [modules/desk/wm/notification/widget/notification-window](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/notification/widget/notification-window) |
-| notification_list_item | [modules/desk/wm/notification/widget/notification-list-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/notification/widget/notification-list-item) |
-| dock_minifier | [src/drumee/modules/desk/wm/dock/widget/dock-minifier](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/dock/widget/dock-minifier/index.js) |
-| audio_player | [builtins/player/audio](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/audio) |
-| devices_settings | [builtins/widget/devices](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/devices) |
-| dock | [modules/desk/wm/dock](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm/dock) |
-| document_reader | [builtins/player/document](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/document) |
-| document_page | [builtins/player/document/page](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/document/page) |
-| hub_administrator | [builtins/window/hub/settings/administrator](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/administrator/index.coffee) |
-| hub_members | [builtins/window/hub/settings/members](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/members/index.coffee) |
-| hub_name | [builtins/window/hub/settings/name](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/name/index.coffee) |
-| hub_owner | [builtins/window/hub/settings/owner](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/owner/index.coffee) |
-| hub_permission | [builtins/window/hub/settings/permission](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/permission/index.coffee) |
-| hub_settings | [builtins/window/hub/settings](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/settings/index.coffee) |
-| hub_sharebox | [builtins/window/hub/sharebox](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/sharebox) |
-| hub_team | [builtins/window/hub/team](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/team/index.coffee) |
-| hub_website | [builtins/window/hub/website](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/hub/website/index.coffee) |
-| image_viewer | [builtins/player/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/image) |
-| invitation | [builtins/widget/invitation](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation) |
-| invitation_contact | [builtins/widget/invitation/contact](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/contact/index.coffee) |
-| invitation_recipient | [builtins/widget/invitation/recipient](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/recipient) |
-| invitation_search | [builtins/widget/invitation/searchbox](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/searchbox) |
-| litechat_message | [window/litechat/message](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/litechat/message/index.coffee) |
-| media | [builtins/media/grid](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/grid) |
-| media_device | [builtins/widget/media-device](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/media-device/index.coffee) |
-| media_grid | [builtins/media/grid](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/grid) |
-| media_minifyer | [builtins/media/minifyer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/minifyer) |
-| media_notifications | [builtins/media/notifications](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications/index.coffee) |
-| media_row | [builtins/media/row](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/row) |
-| media_simple | [builtins/media/simple](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/simple/index.coffee) |
-| media_paste | [builtins/media/paste](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/paste) |
-| media_uploader | [builtins/media/uploader](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/uploader/index.coffee) |
-| notifier_generic | [desk/notifier/generic](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/notifier/generic/index.coffee) |
-| notifier_network | [desk/notifier/network](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/notifier/network/index.coffee) |
-| public_link | [builtins/widget/invitation/public-link](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/public-link/index.coffee) |
-| schedule_invitation | [window/schedule/widget/invitation](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/schedule/widget/invitation) |
-| schedule_recipient | [window/schedule/widget/recipient](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/schedule/widget/recipient) |
-| selection | [window/selection](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/selection) |
-| thumbnail | [builtins/media/thumbnail](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/thumbnail.coffee) |
-| user | [desk/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/user/index.coffee) |
-| vector_viewer | [builtins/player/vector](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/vector) |
-| video_viewer | [builtins/player/video](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/video) |
-| schedule_viewer | [builtins/player/schedule](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/player/schedule) |
-| webrtc_attendee | [builtins/webrtc/attendee](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/attendee) |
-| webrtc_endpoints | [builtins/webrtc/endpoint](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint) |
-| webrtc_debug | [builtins/webrtc/debug](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/debug) |
-| window_account | [window/account](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/index.coffee) |
-| window_addressbook | [window/addressbook](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook) |
-| window_bigchat | [window/bigchat](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat) |
-| window_channel | [window/channel](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/channel/index.coffee) |
-| window_confirm | [window/confirm](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/confirm) |
-| window_connect | [window/connect](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/connect) |
-| window_contact | [window/contact](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/contact/index.coffee) |
-| window_downloader | [window/downloader](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/downloader) |
-| window_filter | [window/filter](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/filter/index.coffee) |
-| window_folder | [window/folder](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/folder) |
-| window_helpdesk | [window/helpdesk](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/helpdesk) |
-| window_info | [window/info](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/info/index.coffee) |
-| window_launcher | [window/launcher](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/launcher) |
-| window_litechat | [window/litechat](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/litechat) |
-| window_manager | [desk/wm](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/desk/wm) |
-| window_meeting | [window/meeting](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/meeting) |
-| window_schedule | [window/schedule](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/schedule) |
-| window_screenshare | [window/screenshare](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/screenshare) |
-| window_search | [window/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/search) |
-| window_sharebox | [window/sharebox](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox) |
-| window_switchcall | [window/switchcall](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/switchcall) |
-| window_team | [window/team](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/team) |
-| window_trash | [window/trash](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/trash) |
-| window_webinar | [window/webinar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/webinar) |
-| window_website | [window/website](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/website/index.coffee) |
-<<<<<<< HEAD
-| test_result | [modules/test/widget/result](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/test/widget/result) |
-=======
->>>>>>> afd37f4e22674990af43680ba0dddd67131e4ac4
-| dmz_window_manager | [src/drumee/modules/dmz/wm](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/dmz/wm/index.js) |
-| dmz_sharebox | [src/drumee/modules/dmz/sharebox](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/dmz/sharebox/index.js) |
-| dmz_meeting | [src/drumee/modules/dmz/meeting](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/dmz/meeting/index.js) |
-| welcome_invitation | [src/drumee/modules/welcome/invitation](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/welcome/invitation/index.js) |
-| welcome_feedback | [src/drumee/modules/welcome/feedback](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/welcome/feedback/index.js) |
-| welcome_reset | [src/drumee/modules/welcome/reset](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/welcome/reset/index.js) |
-| welcome_signin | [src/drumee/modules/welcome/signin](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/welcome/signin/index.js) |
-| welcome_signup | [src/drumee/modules/welcome/signup](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/welcome/signup/index.js) |
-| test_result | [modules/test/widget/result](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/modules/test/widget/result) |
-| avatar | [libs/reader/avatar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/avatar) |
-| button | [libs/reader/ui/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button) |
-| button_anchor | [libs/reader/ui/button/anchor](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/anchor.coffee) |
-| button_blank | [libs/reader/ui/button/blank](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/blank.coffee) |
-| button_icon | [libs/reader/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/button/index.coffee) |
-| button_nested | [libs/reader/ui/button/nested](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/nested.coffee) |
-| button_rotate | [libs/reader/ui/button/rotate](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/rotate.coffee) |
-| button_switch | [libs/reader/ui/button/switch](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switch.coffee) |
-| button_switcher | [libs/reader/ui/button/switcher](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switcher.coffee) |
-| button_toggle | [libs/reader/ui/button/toggle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/toggle.coffee) |
-| button_trigger | [libs/reader/ui/button/trigger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/trigger.coffee) |
-| chart_line | [libs/reader/chart/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/line.js) |
-| chart_pie | [libs/reader/chart/pie](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/pie.js) |
-| chart_sline | [libs/reader/chart/sline](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/sline.js) |
-| editor_json | [editor/json](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/editor/json/index.coffee) |
-| entry | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_input | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_reminder | [libs/reader/entry/reminder](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/reminder) |
-| entry_search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| entry_text | [libs/reader/entry/text](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/text/index.coffee) |
-| fileselector | [libs/reader/file-selector](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/file-selector) |
-| form | [libs/reader/form/current](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/form/current.coffee) |
-| iframe | [libs/reader/iframe](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/iframe/index.coffee) |
-| image_box | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| image_canvas | [libs/reader/image/canvas](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/canvas.coffee) |
-| image_core | [libs/reader/image/core](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/core.coffee) |
-| image_raw | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_reader | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_smart | [libs/reader/image/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/smart.coffee) |
-| image_svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| list_smart | [libs/reader/list/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/smart) |
-| list_stream | [libs/reader/list/stream](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/stream/index.coffee) |
-| media_preview | [libs/reader/media/preview](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/media/preview.coffee) |
-| menubox | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_topic | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_wrapper | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| messenger | [libs/reader/messenger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/messenger/index.coffee) |
-| page | [libs/reader/page](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/page.js) |
-| path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| photo | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| profile | [libs/reader/profile](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/profile) |
-| progress | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| progress_bar | [libs/reader/progress/bar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/bar) |
-| progress_media | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| rich_text | [libs/reader/text/editable](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/text/editable) |
-| search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| section | [libs/reader/section](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/section.coffee) |
-| slider_ribbon | [libs/reader/slider/ribbon](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slider/ribbon.coffee) |
-| slidebar | [libs/reader/slidebar/slidebar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar/slidebar.coffee) |
-| slidebar_input | [libs/reader/slidebar-input/slidebar-input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar-input/slidebar-input.coffee) |
-| slurper | [libs/reader/slurper](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slurper) |
-| sound_analyser | [builtins/widget/sound-analyser](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/sound-analyser/index.coffee) |
-| svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| svg_circle_percent | [libs/reader/svg/circle-percent](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/circle-percent.coffee) |
-| svg_gradient_circle | [libs/reader/svg/gradient-circle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/gradient-circle.coffee) |
-| svg_line | [libs/reader/svg/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/line.coffee) |
-| svg_path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| tooltip | [builtins/widget/notifier](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/notifier.coffee) |
-| video_background | [libs/reader/video/background](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/background.coffee) |
-| video_box | [libs/reader/video/box](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/box.coffee) |
-| video_jwplayer | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| video_player | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| webrtc_local_display | [builtins/webrtc/endpoint/local/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/display) |
-| webrtc_local_user | [builtins/webrtc/endpoint/local/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/user) |
-| webrtc_remote_display | [builtins/webrtc/endpoint/remote/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/display) |
-| webrtc_remote_user | [builtins/webrtc/endpoint/remote/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/user) |
-| debugger | [src/drumee/router/debugger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/router/debugger/index.coffee) |
-| ws_channel | [src/drumee/router/websocket](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/router/websocket/index.js) |
-| avatar | [libs/reader/avatar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/avatar) |
-| button | [libs/reader/ui/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button) |
-| button_anchor | [libs/reader/ui/button/anchor](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/anchor.coffee) |
-| button_blank | [libs/reader/ui/button/blank](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/blank.coffee) |
-| button_icon | [libs/reader/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/button/index.coffee) |
-| button_nested | [libs/reader/ui/button/nested](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/nested.coffee) |
-| button_rotate | [libs/reader/ui/button/rotate](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/rotate.coffee) |
-| button_switch | [libs/reader/ui/button/switch](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switch.coffee) |
-| button_switcher | [libs/reader/ui/button/switcher](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switcher.coffee) |
-| button_toggle | [libs/reader/ui/button/toggle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/toggle.coffee) |
-| button_trigger | [libs/reader/ui/button/trigger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/trigger.coffee) |
-| chart_line | [libs/reader/chart/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/line.js) |
-| chart_pie | [libs/reader/chart/pie](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/pie.js) |
-| chart_sline | [libs/reader/chart/sline](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/sline.js) |
-| editor_json | [editor/json](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/editor/json/index.coffee) |
-| entry | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_input | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_reminder | [libs/reader/entry/reminder](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/reminder) |
-| entry_search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| entry_text | [libs/reader/entry/text](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/text/index.coffee) |
-| fileselector | [libs/reader/file-selector](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/file-selector) |
-| form | [libs/reader/form/current](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/form/current.coffee) |
-| iframe | [libs/reader/iframe](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/iframe/index.coffee) |
-| image_box | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| image_canvas | [libs/reader/image/canvas](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/canvas.coffee) |
-| image_core | [libs/reader/image/core](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/core.coffee) |
-| image_raw | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_reader | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_smart | [libs/reader/image/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/smart.coffee) |
-| image_svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| list_smart | [libs/reader/list/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/smart) |
-| list_stream | [libs/reader/list/stream](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/stream/index.coffee) |
-| media_preview | [libs/reader/media/preview](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/media/preview.coffee) |
-| menubox | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_topic | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_wrapper | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| messenger | [libs/reader/messenger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/messenger/index.coffee) |
-| page | [libs/reader/page](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/page.js) |
-| path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| photo | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| profile | [libs/reader/profile](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/profile) |
-| progress | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| progress_bar | [libs/reader/progress/bar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/bar) |
-| progress_media | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| rich_text | [libs/reader/text/editable](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/text/editable) |
-| search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| section | [libs/reader/section](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/section.coffee) |
-| slider_ribbon | [libs/reader/slider/ribbon](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slider/ribbon.coffee) |
-| slidebar | [libs/reader/slidebar/slidebar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar/slidebar.coffee) |
-| slidebar_input | [libs/reader/slidebar-input/slidebar-input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar-input/slidebar-input.coffee) |
-| slurper | [libs/reader/slurper](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slurper) |
-| sound_analyser | [builtins/widget/sound-analyser](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/sound-analyser/index.coffee) |
-| svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| svg_circle_percent | [libs/reader/svg/circle-percent](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/circle-percent.coffee) |
-| svg_gradient_circle | [libs/reader/svg/gradient-circle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/gradient-circle.coffee) |
-| svg_line | [libs/reader/svg/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/line.coffee) |
-| svg_path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| tooltip | [builtins/widget/notifier](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/notifier.coffee) |
-| video_background | [libs/reader/video/background](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/background.coffee) |
-| video_box | [libs/reader/video/box](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/box.coffee) |
-| video_jwplayer | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| video_player | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| webrtc_local_display | [builtins/webrtc/endpoint/local/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/display) |
-| webrtc_local_user | [builtins/webrtc/endpoint/local/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/user) |
-| webrtc_remote_display | [builtins/webrtc/endpoint/remote/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/display) |
-| webrtc_remote_user | [builtins/webrtc/endpoint/remote/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/user) |
-| drumee_api_popup | [api/lib/popup](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/api/lib/popup) |
-| drumee_api_signup | [api/lib/signup](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/api/lib/signup/index.coffee) |
-| drumee_api_b2b_signup | [api/lib/b2b-signup](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/api/lib/b2b-signup) |
-| avatar | [libs/reader/avatar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/avatar) |
-| button | [libs/reader/ui/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button) |
-| button_anchor | [libs/reader/ui/button/anchor](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/anchor.coffee) |
-| button_blank | [libs/reader/ui/button/blank](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/blank.coffee) |
-| button_icon | [libs/reader/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/button/index.coffee) |
-| button_nested | [libs/reader/ui/button/nested](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/nested.coffee) |
-| button_rotate | [libs/reader/ui/button/rotate](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/rotate.coffee) |
-| button_switch | [libs/reader/ui/button/switch](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switch.coffee) |
-| button_switcher | [libs/reader/ui/button/switcher](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switcher.coffee) |
-| button_toggle | [libs/reader/ui/button/toggle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/toggle.coffee) |
-| button_trigger | [libs/reader/ui/button/trigger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/trigger.coffee) |
-| chart_line | [libs/reader/chart/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/line.js) |
-| chart_pie | [libs/reader/chart/pie](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/pie.js) |
-| chart_sline | [libs/reader/chart/sline](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/sline.js) |
-| editor_json | [editor/json](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/editor/json/index.coffee) |
-| entry | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_input | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_reminder | [libs/reader/entry/reminder](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/reminder) |
-| entry_search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| entry_text | [libs/reader/entry/text](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/text/index.coffee) |
-| fileselector | [libs/reader/file-selector](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/file-selector) |
-| form | [libs/reader/form/current](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/form/current.coffee) |
-| iframe | [libs/reader/iframe](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/iframe/index.coffee) |
-| image_box | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| image_canvas | [libs/reader/image/canvas](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/canvas.coffee) |
-| image_core | [libs/reader/image/core](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/core.coffee) |
-| image_raw | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_reader | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_smart | [libs/reader/image/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/smart.coffee) |
-| image_svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| list_smart | [libs/reader/list/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/smart) |
-| list_stream | [libs/reader/list/stream](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/stream/index.coffee) |
-| media_preview | [libs/reader/media/preview](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/media/preview.coffee) |
-| menubox | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_topic | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_wrapper | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| messenger | [libs/reader/messenger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/messenger/index.coffee) |
-| page | [libs/reader/page](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/page.js) |
-| path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| photo | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| profile | [libs/reader/profile](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/profile) |
-| progress | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| progress_bar | [libs/reader/progress/bar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/bar) |
-| progress_media | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| rich_text | [libs/reader/text/editable](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/text/editable) |
-| search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| section | [libs/reader/section](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/section.coffee) |
-| slider_ribbon | [libs/reader/slider/ribbon](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slider/ribbon.coffee) |
-| slidebar | [libs/reader/slidebar/slidebar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar/slidebar.coffee) |
-| slidebar_input | [libs/reader/slidebar-input/slidebar-input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar-input/slidebar-input.coffee) |
-| slurper | [libs/reader/slurper](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slurper) |
-| sound_analyser | [builtins/widget/sound-analyser](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/sound-analyser/index.coffee) |
-| svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| svg_circle_percent | [libs/reader/svg/circle-percent](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/circle-percent.coffee) |
-| svg_gradient_circle | [libs/reader/svg/gradient-circle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/gradient-circle.coffee) |
-| svg_line | [libs/reader/svg/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/line.coffee) |
-| svg_path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| tooltip | [builtins/widget/notifier](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/notifier.coffee) |
-| video_background | [libs/reader/video/background](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/background.coffee) |
-| video_box | [libs/reader/video/box](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/box.coffee) |
-| video_jwplayer | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| video_player | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| webrtc_local_display | [builtins/webrtc/endpoint/local/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/display) |
-| webrtc_local_user | [builtins/webrtc/endpoint/local/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/user) |
-| webrtc_remote_display | [builtins/webrtc/endpoint/remote/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/display) |
-| webrtc_remote_user | [builtins/webrtc/endpoint/remote/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/user) |
-| avatar | [libs/reader/avatar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/avatar) |
-| button | [libs/reader/ui/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button) |
-| button_anchor | [libs/reader/ui/button/anchor](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/anchor.coffee) |
-| button_blank | [libs/reader/ui/button/blank](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/blank.coffee) |
-| button_icon | [libs/reader/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/button/index.coffee) |
-| button_nested | [libs/reader/ui/button/nested](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/nested.coffee) |
-| button_rotate | [libs/reader/ui/button/rotate](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/rotate.coffee) |
-| button_switch | [libs/reader/ui/button/switch](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switch.coffee) |
-| button_switcher | [libs/reader/ui/button/switcher](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switcher.coffee) |
-| button_toggle | [libs/reader/ui/button/toggle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/toggle.coffee) |
-| button_trigger | [libs/reader/ui/button/trigger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/trigger.coffee) |
-| chart_line | [libs/reader/chart/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/line.js) |
-| chart_pie | [libs/reader/chart/pie](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/pie.js) |
-| chart_sline | [libs/reader/chart/sline](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/sline.js) |
-| editor_json | [editor/json](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/editor/json/index.coffee) |
-| entry | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_input | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_reminder | [libs/reader/entry/reminder](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/reminder) |
-| entry_search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| entry_text | [libs/reader/entry/text](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/text/index.coffee) |
-| fileselector | [libs/reader/file-selector](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/file-selector) |
-| form | [libs/reader/form/current](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/form/current.coffee) |
-| iframe | [libs/reader/iframe](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/iframe/index.coffee) |
-| image_box | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| image_canvas | [libs/reader/image/canvas](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/canvas.coffee) |
-| image_core | [libs/reader/image/core](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/core.coffee) |
-| image_raw | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_reader | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_smart | [libs/reader/image/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/smart.coffee) |
-| image_svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| list_smart | [libs/reader/list/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/smart) |
-| list_stream | [libs/reader/list/stream](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/stream/index.coffee) |
-| media_preview | [libs/reader/media/preview](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/media/preview.coffee) |
-| menubox | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_topic | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_wrapper | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| messenger | [libs/reader/messenger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/messenger/index.coffee) |
-| page | [libs/reader/page](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/page.js) |
-| path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| photo | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| profile | [libs/reader/profile](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/profile) |
-| progress | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| progress_bar | [libs/reader/progress/bar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/bar) |
-| progress_media | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| rich_text | [libs/reader/text/editable](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/text/editable) |
-| search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| section | [libs/reader/section](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/section.coffee) |
-| slider_ribbon | [libs/reader/slider/ribbon](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slider/ribbon.coffee) |
-| slidebar | [libs/reader/slidebar/slidebar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar/slidebar.coffee) |
-| slidebar_input | [libs/reader/slidebar-input/slidebar-input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar-input/slidebar-input.coffee) |
-| slurper | [libs/reader/slurper](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slurper) |
-| sound_analyser | [builtins/widget/sound-analyser](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/sound-analyser/index.coffee) |
-| svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| svg_circle_percent | [libs/reader/svg/circle-percent](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/circle-percent.coffee) |
-| svg_gradient_circle | [libs/reader/svg/gradient-circle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/gradient-circle.coffee) |
-| svg_line | [libs/reader/svg/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/line.coffee) |
-| svg_path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| tooltip | [builtins/widget/notifier](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/notifier.coffee) |
-| video_background | [libs/reader/video/background](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/background.coffee) |
-| video_box | [libs/reader/video/box](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/box.coffee) |
-| video_jwplayer | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| video_player | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| webrtc_local_display | [builtins/webrtc/endpoint/local/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/display) |
-| webrtc_local_user | [builtins/webrtc/endpoint/local/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/user) |
-| webrtc_remote_display | [builtins/webrtc/endpoint/remote/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/display) |
-| webrtc_remote_user | [builtins/webrtc/endpoint/remote/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/user) |
-<<<<<<< HEAD
-| media_origin | [src/drumee/builtins/media/notifications/origin](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications/origin/index.coffee) |
-| notification_file | [src/drumee/builtins/media/notifications/origin/file](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications/origin/file/index.coffee) |
-| notification_message | [src/drumee/builtins/media/notifications/origin/message](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications/origin/message/index.coffee) |
-=======
-| countdown_timer | [src/drumee/builtins/widget/countdown/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/countdown/index.js) |
->>>>>>> afd37f4e22674990af43680ba0dddd67131e4ac4
-| address_input_item | [src/drumee/builtins/widget/address-input-item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/address-input-item/index.coffee) |
-| contact_invitation_form | [src/drumee/builtins/widget/contact-invitation-form](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/contact-invitation-form/index.coffee) |
-| email_input_item | [src/drumee/builtins/widget/email-input-item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/email-input-item/index.coffee) |
-| phoneno_input_item | [src/drumee/builtins/widget/phoneno-input-item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/phoneno-input-item/index.coffee) |
-| widget_chat | [src/drumee/builtins/widget/chat](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/chat/index.js) |
-| widget_chat_item | [src/drumee/builtins/widget/chat-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/chat-item/index.coffee) |
-| invitation_message | [src/drumee/builtins/widget/invitation/message](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/message/index.coffee) |
-| invitation_permission | [src/drumee/builtins/widget/invitation/permission](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/permission/index.coffee) |
-| invitation_sharee | [src/drumee/builtins/widget/invitation/sharee](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/sharee/index.coffee) |
-| invitation_shareeroll | [src/drumee/builtins/widget/invitation/sharee/roll](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/invitation/sharee/roll/index.coffee) |
-<<<<<<< HEAD
-| countdown_timer | [src/drumee/builtins/widget/countdown/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/countdown/index.js) |
-| widget_helpdesk_category | [src/drumee/builtins/window/helpdesk/widget/help-category/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/helpdesk/widget/help-category/index.js) |
-| widget_helpdesk_item | [src/drumee/builtins/window/helpdesk/widget/help-item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/helpdesk/widget/help-item/index.js) |
-| media_wrapper | [src/drumee/builtins/window/channel/media-wrapper](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/channel/media-wrapper/index.coffee) |
-| window_adminpanel | [src/drumee/builtins/window/adminpanel/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/index.js) |
-| admin_security_page | [src/drumee/builtins/window/adminpanel/pages/admin-security](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/admin-security/index.js) |
-| broadcast_message_page | [src/drumee/builtins/window/adminpanel/pages/broadcast-message](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/broadcast-message/index.js) |
-| domain_page | [src/drumee/builtins/window/adminpanel/pages/domain-page](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/domain-page/index.js) |
-| members_page | [src/drumee/builtins/window/adminpanel/pages/members/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/members/index.js) |
-| members_room | [src/drumee/builtins/window/adminpanel/pages/members/room/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/members/room/index.js) |
-| widget_member_tags | [src/drumee/builtins/window/adminpanel/widget/member_tags/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member_tags/index.js) |
-| widget_member_roles_menu | [src/drumee/builtins/window/adminpanel/widget/member-roles-menu/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member-roles-menu/index.js) |
-| widget_member_roles_menu_items | [src/drumee/builtins/window/adminpanel/widget/member-roles-menu-items/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member-roles-menu-items/index.js) |
-| widget_member_tag_item | [src/drumee/builtins/window/adminpanel/widget/member_tag_item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member_tag_item/index.js) |
-| widget_member_who_can_see | [src/drumee/builtins/window/adminpanel/widget/member-who-can-see/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member-who-can-see/index.js) |
-| widget_member_form | [src/drumee/builtins/window/adminpanel/widget/member_form/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member_form/index.js) |
-| widget_member_choose_admins | [src/drumee/builtins/window/adminpanel/widget/member-choose-admins/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member-choose-admins/index.js) |
-| widget_members_list_item | [src/drumee/builtins/window/adminpanel/widget/members-list-item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/members-list-item/index.js) |
-| widget_members_search | [src/drumee/builtins/window/adminpanel/widget/members-search/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/members-search/index.js) |
-| widget_member_detail | [src/drumee/builtins/window/adminpanel/widget/member_detail/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member_detail/index.js) |
-| widget_members_list | [src/drumee/builtins/window/adminpanel/widget/members_list/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/members_list/index.js) |
-| widget_dropdown_menu | [src/drumee/builtins/window/adminpanel/widget/dropdown-menu/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/dropdown-menu/index.js) |
-| widget_email_notification | [src/drumee/builtins/window/sharebox/widget/email-notification](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/email-notification/index.js) |
-| widget_invitation_email | [src/drumee/builtins/window/sharebox/widget/invitation-email](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/invitation-email/index.js) |
-| widget_invitation_email_item | [src/drumee/builtins/window/sharebox/widget/invitation-email-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/invitation-email-item/index.js) |
-| widget_sharebox_setting | [src/drumee/builtins/window/sharebox/widget/sharebox-setting](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/sharebox-setting/index.js) |
-| widget_suggest_contact_item | [src/drumee/builtins/window/sharebox/widget/suggest-contact-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/suggest-contact-item/index.js) |
-| widget_sharebox_members_list_item | [src/drumee/builtins/window/sharebox/widget/invitation-email-item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/invitation-email-item/index.js) |
-| outbound_page | [src/drumee/builtins/window/transferbox/pages/outbound](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/transferbox/pages/outbound/index.js) |
-| inbound_page | [src/drumee/builtins/window/transferbox/pages/inbound](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/transferbox/pages/inbound/index.js) |
-| window_transferbox | [src/drumee/builtins/window/transferbox/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/transferbox/index.js) |
-| transferbox_nondrumeete_sendform | [src/drumee/builtins/window/transferbox/widget/sendtransferbox-nondrumee-form/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/transferbox/widget/sendtransferbox-nondrumee-form/index.js) |
-| chat_contact_list | [src/drumee/builtins/window/bigchat/widget/chatcontact-list](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chatcontact-list/index.coffee) |
-| chat_contact_item | [src/drumee/builtins/window/bigchat/widget/chatcontact-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chatcontact-item/index.coffee) |
-| support_ticket_list | [src/drumee/builtins/window/bigchat/widget/support-tickets](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/support-tickets/index.js) |
-| support_ticket_item | [src/drumee/builtins/window/bigchat/widget/support-ticket-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/support-ticket-item/index.coffee) |
-| create_support_ticket | [src/drumee/builtins/window/bigchat/widget/create-support-ticket](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/create-support-ticket/index.coffee) |
-| chat_room | [src/drumee/builtins/window/bigchat/widget/chat-room](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chat-room/index.coffee) |
-| widget_chat_forward_list_item | [src/drumee/builtins/window/bigchat/widget/chat-forward-list-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chat-forward-list-item/index.coffee) |
-| widget_chat_item_forward | [src/drumee/builtins/window/bigchat/widget/chat-item-forward](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chat-item-forward/index.coffee) |
-| widget_shareroom_detail | [src/drumee/builtins/window/bigchat/widget/shareroom-userdetails](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/shareroom-userdetails/index.coffee) |
-| widget_shareroom_user_item | [src/drumee/builtins/window/bigchat/widget/shareroom-user-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/shareroom-user-item/index.coffee) |
-| status_pill | [src/drumee/builtins/window/bigchat/widget/status-pill](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/status-pill/index.js) |
-| bigchat_widget_notification | [src/drumee/builtins/window/bigchat/widget/notification](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/notification/index.js) |
-| widget_simple_invitation | [src/drumee/builtins/window/schedule/widget/simple-invitation/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/schedule/widget/simple-invitation/index.js) |
-=======
-| widget_simple_invitation | [src/drumee/builtins/window/schedule/widget/simple-invitation/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/schedule/widget/simple-invitation/index.js) |
-| chat_contact_list | [src/drumee/builtins/window/bigchat/widget/chatcontact-list](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chatcontact-list/index.coffee) |
-| chat_contact_item | [src/drumee/builtins/window/bigchat/widget/chatcontact-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chatcontact-item/index.coffee) |
-| support_ticket_list | [src/drumee/builtins/window/bigchat/widget/support-tickets](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/support-tickets/index.js) |
-| support_ticket_item | [src/drumee/builtins/window/bigchat/widget/support-ticket-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/support-ticket-item/index.coffee) |
-| create_support_ticket | [src/drumee/builtins/window/bigchat/widget/create-support-ticket](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/create-support-ticket/index.coffee) |
-| chat_room | [src/drumee/builtins/window/bigchat/widget/chat-room](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chat-room/index.coffee) |
-| widget_chat_forward_list_item | [src/drumee/builtins/window/bigchat/widget/chat-forward-list-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chat-forward-list-item/index.coffee) |
-| widget_chat_item_forward | [src/drumee/builtins/window/bigchat/widget/chat-item-forward](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/chat-item-forward/index.coffee) |
-| widget_shareroom_detail | [src/drumee/builtins/window/bigchat/widget/shareroom-userdetails](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/shareroom-userdetails/index.coffee) |
-| widget_shareroom_user_item | [src/drumee/builtins/window/bigchat/widget/shareroom-user-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/shareroom-user-item/index.coffee) |
-| status_pill | [src/drumee/builtins/window/bigchat/widget/status-pill](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/status-pill/index.js) |
-| bigchat_widget_notification | [src/drumee/builtins/window/bigchat/widget/notification](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/bigchat/widget/notification/index.js) |
->>>>>>> afd37f4e22674990af43680ba0dddd67131e4ac4
-| widget_tag | [src/drumee/builtins/window/addressbook/widget/tag](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/tag/index.coffee) |
-| widget_contacts | [src/drumee/builtins/window/addressbook/widget/contacts](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/contacts/index.coffee) |
-| widget_contact_detail | [src/drumee/builtins/window/addressbook/widget/contact-detail](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/contact-detail/index.coffee) |
-| widget_contact_form | [src/drumee/builtins/window/addressbook/widget/contact-form](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/contact-form/index.coffee) |
-| contact_item | [src/drumee/builtins/window/addressbook/widget/contact-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/contact-item/index.coffee) |
-| contact_form_items | [src/drumee/builtins/window/addressbook/widget/contact-form-items](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/contact-form-items/index.coffee) |
-| tag_item | [src/drumee/builtins/window/addressbook/widget/tag-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/tag-item/index.coffee) |
-| widget_search | [src/drumee/builtins/window/addressbook/widget/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/search/index.coffee) |
-| widget_invite_notification | [src/drumee/builtins/window/addressbook/widget/invite-notification](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/invite-notification/index.coffee) |
-| addressbook_widget_notification | [src/drumee/builtins/window/addressbook/widget/notification](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/notification/index.coffee) |
-| widget_tag_form_menu | [src/drumee/builtins/window/addressbook/widget/tag-form-menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/addressbook/widget/tag-form-menu/index.coffee) |
-<<<<<<< HEAD
-=======
-| admin_security_page | [src/drumee/builtins/window/adminpanel/pages/admin-security](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/admin-security/index.js) |
-| broadcast_message_page | [src/drumee/builtins/window/adminpanel/pages/broadcast-message](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/broadcast-message/index.js) |
-| domain_page | [src/drumee/builtins/window/adminpanel/pages/domain-page](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/domain-page/index.js) |
-| members_page | [src/drumee/builtins/window/adminpanel/pages/members/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/members/index.js) |
-| members_room | [src/drumee/builtins/window/adminpanel/pages/members/room/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/pages/members/room/index.js) |
-| widget_members_list | [src/drumee/builtins/window/adminpanel/widget/members_list/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/members_list/index.js) |
-| widget_member_roles_menu | [src/drumee/builtins/window/adminpanel/widget/member-roles-menu/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member-roles-menu/index.js) |
-| widget_members_search | [src/drumee/builtins/window/adminpanel/widget/members-search/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/members-search/index.js) |
-| widget_member_roles_menu_items | [src/drumee/builtins/window/adminpanel/widget/member-roles-menu-items/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member-roles-menu-items/index.js) |
-| widget_member_choose_admins | [src/drumee/builtins/window/adminpanel/widget/member-choose-admins/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member-choose-admins/index.js) |
-| widget_member_who_can_see | [src/drumee/builtins/window/adminpanel/widget/member-who-can-see/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member-who-can-see/index.js) |
-| widget_dropdown_menu | [src/drumee/builtins/window/adminpanel/widget/dropdown-menu/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/dropdown-menu/index.js) |
-| widget_member_tags | [src/drumee/builtins/window/adminpanel/widget/member_tags/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member_tags/index.js) |
-| widget_member_detail | [src/drumee/builtins/window/adminpanel/widget/member_detail/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member_detail/index.js) |
-| widget_members_list_item | [src/drumee/builtins/window/adminpanel/widget/members-list-item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/members-list-item/index.js) |
-| widget_member_tag_item | [src/drumee/builtins/window/adminpanel/widget/member_tag_item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member_tag_item/index.js) |
-| widget_member_form | [src/drumee/builtins/window/adminpanel/widget/member_form/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/widget/member_form/index.js) |
-| window_adminpanel | [src/drumee/builtins/window/adminpanel/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/adminpanel/index.js) |
-| media_wrapper | [src/drumee/builtins/window/channel/media-wrapper](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/channel/media-wrapper/index.coffee) |
-| widget_helpdesk_category | [src/drumee/builtins/window/helpdesk/widget/help-category/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/helpdesk/widget/help-category/index.js) |
-| widget_helpdesk_item | [src/drumee/builtins/window/helpdesk/widget/help-item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/helpdesk/widget/help-item/index.js) |
->>>>>>> afd37f4e22674990af43680ba0dddd67131e4ac4
-| account_avatar | [window/account/profile/avatar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/profile/avatar) |
-| account_country | [window/account/widget/country](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/widget/country/index.coffee) |
-| account_data | [window/account/data](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/data) |
-| account_input | [window/account/widget/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/widget/input/index.coffee) |
-| account_privacy | [window/account/privacy](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/privacy/index.coffee) |
-| account_preferences | [window/account/preferences](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/preferences/index.coffee) |
-| account_profile | [window/account/profile](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/profile/index.coffee) |
-| account_security | [window/account/security](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/index.coffee) |
-| account_subscription | [window/account/subscription](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/subscription/index.coffee) |
-| privacy_switcher | [window/account/privacy/switcher](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/privacy/switcher/index.coffee) |
-| security_email | [window/account/security/email](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/email/index.coffee) |
-| security_pass | [window/account/security/pass](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/pass/index.coffee) |
-| security_phone | [window/account/security/phone](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/phone/index.coffee) |
-| security_ident | [window/account/security/ident](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/ident/index.coffee) |
-| security_ip | [window/account/security/ip](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/ip/index.coffee) |
-| security_sms | [window/account/security/sms](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/sms) |
-| security_usb | [window/account/security/usb](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/usb/index.coffee) |
-| security_switcher | [window/account/security/switcher](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/account/security/switcher/index.coffee) |
-<<<<<<< HEAD
-=======
-| outbound_page | [src/drumee/builtins/window/transferbox/pages/outbound](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/transferbox/pages/outbound/index.js) |
-| inbound_page | [src/drumee/builtins/window/transferbox/pages/inbound](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/transferbox/pages/inbound/index.js) |
-| window_transferbox | [src/drumee/builtins/window/transferbox/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/transferbox/index.js) |
-| transferbox_nondrumeete_sendform | [src/drumee/builtins/window/transferbox/widget/sendtransferbox-nondrumee-form/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/transferbox/widget/sendtransferbox-nondrumee-form/index.js) |
-| widget_email_notification | [src/drumee/builtins/window/sharebox/widget/email-notification](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/email-notification/index.js) |
-| widget_invitation_email | [src/drumee/builtins/window/sharebox/widget/invitation-email](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/invitation-email/index.js) |
-| widget_invitation_email_item | [src/drumee/builtins/window/sharebox/widget/invitation-email-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/invitation-email-item/index.js) |
-| widget_sharebox_setting | [src/drumee/builtins/window/sharebox/widget/sharebox-setting](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/sharebox-setting/index.js) |
-| widget_suggest_contact_item | [src/drumee/builtins/window/sharebox/widget/suggest-contact-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/suggest-contact-item/index.js) |
-| widget_sharebox_members_list_item | [src/drumee/builtins/window/sharebox/widget/invitation-email-item/index](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/window/sharebox/widget/invitation-email-item/index.js) |
-| media_origin | [src/drumee/builtins/media/notifications/origin](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications/origin/index.coffee) |
-| notification_file | [src/drumee/builtins/media/notifications/origin/file](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications/origin/file/index.coffee) |
-| notification_message | [src/drumee/builtins/media/notifications/origin/message](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/media/notifications/origin/message/index.coffee) |
->>>>>>> afd37f4e22674990af43680ba0dddd67131e4ac4
-| avatar | [libs/reader/avatar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/avatar) |
-| button | [libs/reader/ui/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button) |
-| button_anchor | [libs/reader/ui/button/anchor](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/anchor.coffee) |
-| button_blank | [libs/reader/ui/button/blank](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/blank.coffee) |
-| button_icon | [libs/reader/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/button/index.coffee) |
-| button_nested | [libs/reader/ui/button/nested](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/nested.coffee) |
-| button_rotate | [libs/reader/ui/button/rotate](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/rotate.coffee) |
-| button_switch | [libs/reader/ui/button/switch](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switch.coffee) |
-| button_switcher | [libs/reader/ui/button/switcher](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switcher.coffee) |
-| button_toggle | [libs/reader/ui/button/toggle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/toggle.coffee) |
-| button_trigger | [libs/reader/ui/button/trigger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/trigger.coffee) |
-| chart_line | [libs/reader/chart/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/line.js) |
-| chart_pie | [libs/reader/chart/pie](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/pie.js) |
-| chart_sline | [libs/reader/chart/sline](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/sline.js) |
-| editor_json | [editor/json](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/editor/json/index.coffee) |
-| entry | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_input | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_reminder | [libs/reader/entry/reminder](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/reminder) |
-| entry_search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| entry_text | [libs/reader/entry/text](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/text/index.coffee) |
-| fileselector | [libs/reader/file-selector](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/file-selector) |
-| form | [libs/reader/form/current](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/form/current.coffee) |
-| iframe | [libs/reader/iframe](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/iframe/index.coffee) |
-| image_box | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| image_canvas | [libs/reader/image/canvas](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/canvas.coffee) |
-| image_core | [libs/reader/image/core](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/core.coffee) |
-| image_raw | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_reader | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_smart | [libs/reader/image/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/smart.coffee) |
-| image_svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| list_smart | [libs/reader/list/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/smart) |
-| list_stream | [libs/reader/list/stream](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/stream/index.coffee) |
-| media_preview | [libs/reader/media/preview](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/media/preview.coffee) |
-| menubox | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_topic | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_wrapper | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| messenger | [libs/reader/messenger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/messenger/index.coffee) |
-| page | [libs/reader/page](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/page.js) |
-| path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| photo | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| profile | [libs/reader/profile](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/profile) |
-| progress | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| progress_bar | [libs/reader/progress/bar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/bar) |
-| progress_media | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| rich_text | [libs/reader/text/editable](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/text/editable) |
-| search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| section | [libs/reader/section](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/section.coffee) |
-| slider_ribbon | [libs/reader/slider/ribbon](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slider/ribbon.coffee) |
-| slidebar | [libs/reader/slidebar/slidebar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar/slidebar.coffee) |
-| slidebar_input | [libs/reader/slidebar-input/slidebar-input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar-input/slidebar-input.coffee) |
-| slurper | [libs/reader/slurper](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slurper) |
-| sound_analyser | [builtins/widget/sound-analyser](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/sound-analyser/index.coffee) |
-| svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| svg_circle_percent | [libs/reader/svg/circle-percent](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/circle-percent.coffee) |
-| svg_gradient_circle | [libs/reader/svg/gradient-circle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/gradient-circle.coffee) |
-| svg_line | [libs/reader/svg/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/line.coffee) |
-| svg_path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| tooltip | [builtins/widget/notifier](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/notifier.coffee) |
-| video_background | [libs/reader/video/background](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/background.coffee) |
-| video_box | [libs/reader/video/box](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/box.coffee) |
-| video_jwplayer | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| video_player | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| webrtc_local_display | [builtins/webrtc/endpoint/local/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/display) |
-| webrtc_local_user | [builtins/webrtc/endpoint/local/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/user) |
-| webrtc_remote_display | [builtins/webrtc/endpoint/remote/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/display) |
-| webrtc_remote_user | [builtins/webrtc/endpoint/remote/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/user) |
-| drumee_transfer | [store/transfer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/store/transfer/index.js) |
-| drumee_transfer_wm | [store/transfer/wm](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/store/transfer/wm/index.js) |
-| drumee_transfer_media | [store/transfer/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/store/transfer/media/index.js) |
-| widget_drumee_transfer_email_item | [store/transfer/widget/email-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/store/transfer/widget/email-item/index.js) |
-| widget_drumee_transfer_sender | [store/transfer/widget/sender](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/store/transfer/widget/sender/index.js) |
-| widget_drumee_transfer_receiver | [store/transfer/widget/receiver](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/store/transfer/widget/receiver/index.js) |
-| drumee_transfer_received_file_item | [store/transfer/widget/received-file-item](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/store/transfer/widget/received-file-item/index.js) |
-| avatar | [libs/reader/avatar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/avatar) |
-| button | [libs/reader/ui/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button) |
-| button_anchor | [libs/reader/ui/button/anchor](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/anchor.coffee) |
-| button_blank | [libs/reader/ui/button/blank](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/blank.coffee) |
-| button_icon | [libs/reader/button](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/button/index.coffee) |
-| button_nested | [libs/reader/ui/button/nested](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/nested.coffee) |
-| button_rotate | [libs/reader/ui/button/rotate](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/rotate.coffee) |
-| button_switch | [libs/reader/ui/button/switch](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switch.coffee) |
-| button_switcher | [libs/reader/ui/button/switcher](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/switcher.coffee) |
-| button_toggle | [libs/reader/ui/button/toggle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/toggle.coffee) |
-| button_trigger | [libs/reader/ui/button/trigger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/ui/button/trigger.coffee) |
-| chart_line | [libs/reader/chart/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/line.js) |
-| chart_pie | [libs/reader/chart/pie](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/pie.js) |
-| chart_sline | [libs/reader/chart/sline](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/chart/sline.js) |
-| editor_json | [editor/json](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/editor/json/index.coffee) |
-| entry | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_input | [libs/reader/entry/input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/input) |
-| entry_reminder | [libs/reader/entry/reminder](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/reminder) |
-| entry_search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| entry_text | [libs/reader/entry/text](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/text/index.coffee) |
-| fileselector | [libs/reader/file-selector](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/file-selector) |
-| form | [libs/reader/form/current](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/form/current.coffee) |
-| iframe | [libs/reader/iframe](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/iframe/index.coffee) |
-| image_box | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| image_canvas | [libs/reader/image/canvas](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/canvas.coffee) |
-| image_core | [libs/reader/image/core](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/core.coffee) |
-| image_raw | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_reader | [libs/reader/image](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image) |
-| image_smart | [libs/reader/image/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/smart.coffee) |
-| image_svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| list_smart | [libs/reader/list/smart](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/smart) |
-| list_stream | [libs/reader/list/stream](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/list/stream/index.coffee) |
-| media_preview | [libs/reader/media/preview](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/media/preview.coffee) |
-| menubox | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_topic | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| menu_wrapper | [libs/reader/menu](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/menu) |
-| messenger | [libs/reader/messenger](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/messenger/index.coffee) |
-| page | [libs/reader/page](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/page.js) |
-| path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| photo | [libs/reader/photo](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/photo.coffee) |
-| profile | [libs/reader/profile](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/profile) |
-| progress | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| progress_bar | [libs/reader/progress/bar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/bar) |
-| progress_media | [libs/reader/progress/media](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/progress/media/index.coffee) |
-| rich_text | [libs/reader/text/editable](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/text/editable) |
-| search | [libs/reader/entry/search](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/entry/search/index.coffee) |
-| section | [libs/reader/section](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/section.coffee) |
-| slider_ribbon | [libs/reader/slider/ribbon](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slider/ribbon.coffee) |
-| slidebar | [libs/reader/slidebar/slidebar](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar/slidebar.coffee) |
-| slidebar_input | [libs/reader/slidebar-input/slidebar-input](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slidebar-input/slidebar-input.coffee) |
-| slurper | [libs/reader/slurper](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/slurper) |
-| sound_analyser | [builtins/widget/sound-analyser](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/sound-analyser/index.coffee) |
-| svg | [libs/reader/image/svg](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/image/svg/index.coffee) |
-| svg_circle_percent | [libs/reader/svg/circle-percent](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/circle-percent.coffee) |
-| svg_gradient_circle | [libs/reader/svg/gradient-circle](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/gradient-circle.coffee) |
-| svg_line | [libs/reader/svg/line](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/line.coffee) |
-| svg_path | [libs/reader/svg/path](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/svg/path.coffee) |
-| tooltip | [builtins/widget/notifier](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/widget/notifier.coffee) |
-| video_background | [libs/reader/video/background](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/background.coffee) |
-| video_box | [libs/reader/video/box](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/box.coffee) |
-| video_jwplayer | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| video_player | [libs/reader/video/jwplayer](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/libs/reader/video/jwplayer.coffee) |
-| webrtc_local_display | [builtins/webrtc/endpoint/local/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/display) |
-| webrtc_local_user | [builtins/webrtc/endpoint/local/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/local/user) |
-| webrtc_remote_display | [builtins/webrtc/endpoint/remote/display](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/display) |
-| webrtc_remote_user | [builtins/webrtc/endpoint/remote/user](https://gitlab.drumee.eu/drumee/ui/-/blob/master/src/drumee/src/drumee/builtins/webrtc/endpoint/remote/user) |
->>>>>>> fdbdd8ff9d047e50255f896dfca493b958c3f267
+| kind | path | repo |
+| ---- | ---- | ---- |
+| drumee_api_popup | api/lib/popup | https://github.com/drumee/ui-team/tree/main/src/drumee/api/lib/popup/index.js |
+| drumee_api_form | api/lib/form | https://github.com/drumee/ui-team/tree/main/src/drumee/api/lib/form/index.js |
+| drumee_api_signup | api/lib/signup | https://github.com/drumee/ui-team/tree/main/src/drumee/api/lib/signup/index.js |
+| drumee_api_image_tag | api/lib/image-tag | https://github.com/drumee/ui-team/tree/main/src/drumee/api/lib/image-tag/index.js |
+| DrumeeInteractWindow | builtins/window/interact | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/interact/index.js |
+| editor_diagram | src/drumee/builtins/editor/diagram/index.js | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/editor/diagram/index.js |
+| diagram_state | src/drumee/builtins/editor/diagram/state.js | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/editor/diagram/state.js |
+| editor_markdown | src/drumee/builtins/editor/markdow/index.js | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/editor/markdow/index.js |
+| media_origin | src/drumee/builtins/media/notifications/origin | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/notifications/origin/index.js |
+| notification_file | src/drumee/builtins/media/notifications/origin/file | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/notifications/origin/file/index.js |
+| notification_message | src/drumee/builtins/media/notifications/origin/message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/notifications/origin/message/index.js |
+| props_viewer | src/drumee/builtins/player/properties | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/properties/index.js |
+| text_viewer | src/drumee/builtins/player/text | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/text/index.js |
+| audio_player | builtins/player/audio | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/audio/index.js |
+| devices_settings | builtins/widget/devices | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/devices/index.js |
+| document_page | builtins/player/document/page | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/document/page/index.js |
+| document_reader | builtins/player/document | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/document/index.js |
+| editor_note | builtins/editor/note | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/editor/note/index.js |
+| hub_administrator | builtins/window/hub/settings/administrator | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/administrator/index.js |
+| hub_filename | builtins/window/hub/settings/filename | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/filename/index.js |
+| hub_hubname | builtins/window/hub/settings/hubname | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/hubname/index.js |
+| hub_members | builtins/window/hub/settings/members | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/members/index.js |
+| hub_owner | builtins/window/hub/settings/owner | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/owner/index.js |
+| hub_permission | builtins/window/hub/settings/permission | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/permission/index.js |
+| hub_settings | builtins/window/hub/settings | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/index.js |
+| hub_sharebox | builtins/window/hub/sharebox | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/sharebox/index.js |
+| hub_team | builtins/window/hub/team | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/team/index.js |
+| hub_website | builtins/window/hub/website | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/website/index.js |
+| image_player | builtins/player/image | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/image/index.js |
+| image_viewer | builtins/player/image | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/image/index.js |
+| invitation_contact | builtins/widget/invitation/contact | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/contact/index.js |
+| invitation_recipient | builtins/widget/invitation/recipient | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/recipient/index.js |
+| invitation_search | builtins/widget/invitation/searchbox | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/searchbox/index.js |
+| invitation | builtins/widget/invitation | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/index.js |
+| media_device | builtins/widget/media-device | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/media-device/index.js |
+| media_grid | builtins/media/grid | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/grid/index.js |
+| media_minifyer | builtins/media/minifyer | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/minifyer/index.js |
+| media_notifications | builtins/media/notifications | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/notifications/index.js |
+| media_paste | builtins/media/paste | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/paste/index.js |
+| media_row | builtins/media/row | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/row/index.js |
+| media_simple | builtins/media/simple | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/simple/index.js |
+| media_uploader | builtins/media/uploader | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/uploader/index.js |
+| media | builtins/media/grid | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/grid/index.js |
+| public_link | builtins/widget/invitation/public-link | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/public-link/index.js |
+| schedule_viewer | builtins/player/schedule | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/schedule/index.js |
+| sound_analyzer | builtins/widget/sound-analyzer | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/sound-analyzer/index.js |
+| vector_viewer | builtins/player/vector | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/vector/index.js |
+| video_player | builtins/player/video | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/video/index.js |
+| video_viewer | builtins/player/video | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/video/index.js |
+| webrtc_attendee | builtins/webrtc/attendee | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/attendee/index.js |
+| webrtc_debug | builtins/webrtc/debug | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/debug/index.js |
+| webrtc_local_user | builtins/webrtc/endpoint/local/user | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/endpoint/local/user/index.js |
+| webrtc_participants | builtins/webrtc/participants | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/participants/index.js |
+| webrtc_remote_display | builtins/webrtc/endpoint/remote/display | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/endpoint/remote/display/index.js |
+| webrtc_remote_user | builtins/webrtc/endpoint/remote/user | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/endpoint/remote/user/index.js |
+| drumee_background | src/drumee/builtins/widget/background-image | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/background-image/index.js |
+| invitation_message | invitation/message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/message/index.js |
+| invitation_permission | invitation/permission | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/permission/index.js |
+| invitation_sharee | invitation/sharee | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/sharee/index.js |
+| invitation_shareeroll | invitation/sharee/roll | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/sharee/roll/index.js |
+| custom_logo | src/drumee/builtins/widget/logo | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/logo/index.js |
+| contact_invitation_form | widget/contact-invitation-form | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/contact-invitation-form/index.js |
+| disk_usage | widget/disk-usage | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/disk-usage/index.js |
+| widget_chat | widget/chat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat/index.js |
+| widget_chat_item | widget/chat-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat-item/index.js |
+| account_avatar | window/account/profile/avatar | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/profile/avatar/index.js |
+| account_country | window/account/widget/country | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/widget/country/index.js |
+| account_data | window/account/data | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/data/index.js |
+| account_input | window/account/widget/input | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/widget/input/index.js |
+| account_privacy | window/account/privacy | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/privacy/index.js |
+| account_preferences | window/account/preferences | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/preferences/index.js |
+| account_profile | window/account/profile | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/profile/index.js |
+| account_security | window/account/security | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/index.js |
+| account_subscription | window/account/subscription | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/subscription/index.js |
+| account_apps | window/account/apps | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/apps/index.js |
+| otp_sms | window/account/security/otp/sms | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/otp/sms/index.js |
+| otp_email | window/account/security/otp/email | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/otp/email/index.js |
+| otp_passkey | window/account/security/otp/passkey | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/otp/passkey/index.js |
+| privacy_switcher | window/account/privacy/switcher | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/privacy/switcher/index.js |
+| security_email | window/account/security/email | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/email/index.js |
+| security_pass | window/account/security/pass | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/pass/index.js |
+| security_phone | window/account/security/phone | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/phone/index.js |
+| security_ident | window/account/security/ident | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/ident/index.js |
+| security_ip | window/account/security/ip | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/ip/index.js |
+| security_otp | window/account/security/otp | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/otp/index.js |
+| security_switcher | window/account/security/switcher | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/security/switcher/index.js |
+| widget_tag | src/drumee/builtins/window/addressbook/widget/tag | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/tag/index.js |
+| widget_contacts | src/drumee/builtins/window/addressbook/widget/contacts | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/contacts/index.js |
+| widget_contact_detail | src/drumee/builtins/window/addressbook/widget/contact-detail | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/contact-detail/index.js |
+| widget_contact_form | src/drumee/builtins/window/addressbook/widget/contact-form | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/contact-form/index.js |
+| contact_item | src/drumee/builtins/window/addressbook/widget/contact-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/contact-item/index.js |
+| contact_form_items | src/drumee/builtins/window/addressbook/widget/contact-form-items | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/contact-form-items/index.js |
+| tag_item | src/drumee/builtins/window/addressbook/widget/tag-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/tag-item/index.js |
+| widget_search | src/drumee/builtins/window/addressbook/widget/search | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/search/index.js |
+| widget_invite_notification | src/drumee/builtins/window/addressbook/widget/invite-notification | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/invite-notification/index.js |
+| addressbook_widget_notification | src/drumee/builtins/window/addressbook/widget/notification | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/notification/index.js |
+| widget_tag_form_menu | src/drumee/builtins/window/addressbook/widget/tag-form-menu | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/tag-form-menu/index.js |
+| admin_security_page | src/drumee/builtins/window/adminpanel/pages/admin-security | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/admin-security/index.js |
+| broadcast_message_page | src/drumee/builtins/window/adminpanel/pages/broadcast-message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/broadcast-message/index.js |
+| domain_page | src/drumee/builtins/window/adminpanel/pages/domain-page | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/domain-page/index.js |
+| window_analytics_extractor | src/drumee/builtins/window/analytics/extractor | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/analytics/extractor/index.js |
+| window_chart_bar | src/drumee/builtins/window/analytics/bar-graph | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/analytics/bar-graph/index.js |
+| window_analytics_main_website | src/drumee/builtins/window/analytics/main-website | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/analytics/main-website/index.js |
+| window_chart_timeseries | src/drumee/builtins/window/analytics/time-series | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/analytics/time-series/index.js |
+| chat_contact_list | src/drumee/builtins/window/bigchat/widget/chatcontact-list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chatcontact-list/index.js |
+| chat_contact_item | src/drumee/builtins/window/bigchat/widget/chatcontact-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chatcontact-item/index.js |
+| chat_room | src/drumee/builtins/window/bigchat/widget/chat-room | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chat-room/index.js |
+| widget_chat_forward_list_item | src/drumee/builtins/window/bigchat/widget/chat-forward-list-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chat-forward-list-item/index.js |
+| widget_chat_item_forward | src/drumee/builtins/window/bigchat/widget/chat-item-forward | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chat-item-forward/index.js |
+| widget_shareroom_detail | src/drumee/builtins/window/bigchat/widget/shareroom-userdetails | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/shareroom-userdetails/index.js |
+| widget_shareroom_user_item | src/drumee/builtins/window/bigchat/widget/shareroom-user-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/shareroom-user-item/index.js |
+| bigchat_widget_notification | src/drumee/builtins/window/bigchat/widget/notification | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/notification/index.js |
+| media_wrapper | src/drumee/builtins/window/channel/media-wrapper | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/channel/media-wrapper/index.js |
+| media_efs | src/drumee/builtins/window/serverexplorer/widget/efs | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/serverexplorer/widget/efs/index.js |
+| widget_efs_list | src/drumee/builtins/window/serverexplorer/widget/efs_list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/serverexplorer/widget/efs_list/index.js |
+| widget_sv_new_folder | src/drumee/builtins/window/serverexplorer/widget/sv-new-folder | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/serverexplorer/widget/sv-new-folder/index.js |
+| widget_email_notification | src/drumee/builtins/window/sharebox/widget/email-notification | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/sharebox/widget/email-notification/index.js |
+| widget_invitation_email | src/drumee/builtins/window/sharebox/widget/invitation-email | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/sharebox/widget/invitation-email/index.js |
+| widget_invitation_email_item | src/drumee/builtins/window/sharebox/widget/invitation-email-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/sharebox/widget/invitation-email-item/index.js |
+| widget_sharebox_setting | src/drumee/builtins/window/sharebox/widget/sharebox-setting | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/sharebox/widget/sharebox-setting/index.js |
+| widget_suggest_contact_item | src/drumee/builtins/window/sharebox/widget/suggest-contact-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/sharebox/widget/suggest-contact-item/index.js |
+| support_ticket_list | src/drumee/builtins/window/supportticket/widget/support-tickets | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/supportticket/widget/support-tickets/index.js |
+| support_ticket_item | src/drumee/builtins/window/supportticket/widget/support-ticket-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/supportticket/widget/support-ticket-item/index.js |
+| create_support_ticket | src/drumee/builtins/window/supportticket/widget/create-support-ticket | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/supportticket/widget/create-support-ticket/index.js |
+| status_pill | src/drumee/builtins/window/supportticket/widget/status-pill | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/supportticket/widget/status-pill/index.js |
+| support_ticket_widget_notification | src/drumee/builtins/window/supportticket/widget/notification | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/supportticket/widget/notification/index.js |
+| avatar | libs/reader/avatar | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/avatar/index.js |
+| button_icon | libs/reader/button | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/button/index.js |
+| button | libs/reader/ui/button | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/ui/button |
+| chart_time_series | libs/reader/chart/time-series | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/chart/time-series/index.js |
+| editor_json | editor/json | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/editor/json/index.js |
+| entry_input | libs/reader/entry/input | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/entry/input/index.js |
+| entry_reminder | libs/reader/entry/reminder | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/entry/reminder/index.js |
+| entry_search | libs/reader/entry/search | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/entry/search/index.js |
+| entry_text | libs/reader/entry/text | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/entry/text/index.js |
+| entry | libs/reader/entry/input | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/entry/input/index.js |
+| fileselector | libs/reader/file-selector | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/file-selector/index.js |
+| form | libs/reader/form | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/form/index.js |
+| image_smart | libs/reader/image/smart | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/image/smart/index.js |
+| image_svg | libs/reader/image/svg | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/image/svg/index.js |
+| list_smart | libs/reader/list/smart | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/list/smart/index.js |
+| list_table | libs/reader/list/table | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/list/table/index.js |
+| list_table_row | libs/reader/list/table/row | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/list/table/row/index.js |
+| menubox | libs/reader/menu | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/menu/index.js |
+| menu_topic | libs/reader/menu | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/menu/index.js |
+| menu_wrapper | libs/reader/menu | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/menu/index.js |
+| messenger | libs/reader/messenger | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/messenger/index.js |
+| profile | libs/reader/profile | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/profile/index.js |
+| progress | libs/reader/progress/media | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/progress/media/index.js |
+| progress_bar | libs/reader/progress/bar | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/progress/bar/index.js |
+| rich_text | libs/reader/text/editable | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/text/editable/index.js |
+| search | libs/reader/entry/search | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/entry/search/index.js |
+| slidebar | libs/reader/slidebar | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/slidebar/index.js |
+| svg | libs/reader/image/svg | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/image/svg/index.js |
+| dock | modules/desk/wm/dock | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/dock/index.js |
+| litechat_message | window/litechat/message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/litechat/message/index.js |
+| notifier_generic | desk/notifier/generic | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notifier/generic/index.js |
+| notifier_network | desk/notifier/network | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notifier/network/index.js |
+| schedule_invitation | window/schedule/widget/invitation | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/schedule/widget/invitation/index.js |
+| schedule_recipient | window/schedule/widget/recipient | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/schedule/widget/recipient/index.js |
+| selection | window/selection | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/selection/index.js |
+| user | desk/user | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/user/index.js |
+| window_account | window/account | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/index.js |
+| window_addressbook | window/addressbook | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/index.js |
+| window_bigchat | window/bigchat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/index.js |
+| window_server_explorer | window/serverexplorer | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/serverexplorer/index.js |
+| window_channel | window/channel | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/channel/index.js |
+| window_confirm | window/confirm | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/confirm/index.js |
+| window_connect | window/connect | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/connect/index.js |
+| window_contact | window/contact | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/contact/index.js |
+| window_downloader | window/downloader | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/downloader/index.js |
+| window_filter | window/filter | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/filter/index.js |
+| window_folder | window/folder | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/folder/index.js |
+| window_helpdesk | window/helpdesk | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/helpdesk/index.js |
+| window_info | window/info | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/info/index.js |
+| window_launcher | window/launcher | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/launcher/index.js |
+| window_litechat | window/litechat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/litechat/index.js |
+| window_manager | desk/wm | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/index.js |
+| window_meeting | window/meeting | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/meeting/index.js |
+| window_schedule | window/schedule | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/schedule/index.js |
+| window_search | window/search | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/search/index.js |
+| window_sharebox | window/sharebox | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/sharebox/index.js |
+| window_supportticket | window/supportticket | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/supportticket/index.js |
+| window_switchcall | window/switchcall | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/switchcall/index.js |
+| window_team | window/team | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/team/index.js |
+| window_trash | window/trash | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/trash/index.js |
+| window_website | window/website | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/website/index.js |
+| dock_minifier | src/drumee/modules/desk/wm/dock/widget/dock-minifier | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/dock/widget/dock-minifier/index.js |
+| notification_panel | modules/desk/wm/notification | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/index.js |
+| notification_window | modules/desk/wm/notification/widget/notification-window | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/widget/notification-window/index.js |
+| notification_list_item | modules/desk/wm/notification/widget/notification-list-item | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/widget/notification-list-item/index.js |
+| devel_icons | src/drumee/modules/devel/icons | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/devel/icons/index.js |
+| locale_language | src/drumee/modules/devel/locale/language | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/devel/locale/language/index.js |
+| dmz_window_manager | dmz/wm | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/dmz/wm/index.js |
+| dmz_sharebox | dmz/sharebox | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/dmz/sharebox/index.js |
+| dmz_meeting | dmz/meeting | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/dmz/meeting/index.js |
+| setup_window | src/drumee/modules/setup | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/setup/index.js |
+| test_result | modules/test/widget/result | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/test/widget/result/index.js |
+| welcome_invitation | welcome/invitation | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/invitation/index.js |
+| welcome_feedback | welcome/feedback | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/feedback/index.js |
+| welcome_reset | welcome/reset | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/reset/index.js |
+| welcome_signin | welcome/signin | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/signin/index.js |
+| welcome_signup | welcome/signup | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/signup/index.js |
+| butler | router/butler | https://github.com/drumee/ui-team/tree/main/src/drumee/router/butler/index.js |
+| ws_channel | router/websocket | https://github.com/drumee/ui-team/tree/main/src/drumee/router/websocket/index.js |
+| module_desk | modules/desk | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/index.js |
+| module_devel | modules/devel | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/devel/index.js |
+| module_dmz | modules/dmz | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/dmz/index.js |
+| module_plugins | modules/plugins | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/plugins/index.js |
+| module_sandbox | modules/sandbox | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/sandbox/index.js |
+| module_welcome | modules/welcome | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/index.js |

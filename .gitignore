@@ -5,6 +5,7 @@ node_modules
 not-used.node_modules/
 *DEPRECATED*
 tmp/*
+docs/local
 kind/seeds/dynamic.js
 # .vscode/
 .vscode/launch.json

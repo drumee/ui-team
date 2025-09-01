@@ -1,7 +1,14 @@
+/* ================================================================== *
+#   Copyright Thidima SA  2011-2025
+#   FILE : /src/drumee/core/kind/seeds/builtins.js
+#   TYPE : Automatic generation - DO NOT EDIT 
+# ===================================================================**/
 // @ts-nocheck
+
+
 // On demand Classes cannot be overloaded
 
-const a = {
+const builtins = {
   drumee_api_popup:function(s,f){import('api/lib/popup').then(m=>{s(m.default)}).catch(f)},
   drumee_api_form:function(s,f){import('api/lib/form').then(m=>{s(m.default)}).catch(f)},
   drumee_api_signup:function(s,f){import('api/lib/signup').then(m=>{s(m.default)}).catch(f)},
@@ -64,17 +71,17 @@ const a = {
   webrtc_remote_display:function(s,f){import('builtins/webrtc/endpoint/remote/display').then(m=>{s(m.default)}).catch(f)},
   webrtc_remote_user:function(s,f){import('builtins/webrtc/endpoint/remote/user').then(m=>{s(m.default)}).catch(f)},
   drumee_background:function(s,f){import('src/drumee/builtins/widget/background-image').then(m=>{s(m.default)}).catch(f)},
-  countdown_timer:function(s,f){import('builtins/widget/countdown/index').then(m=>{s(m.default)}).catch(f)},
+  countdown_timer:function(s,f){import('src/drumee/builtins/widget/countdown/index').then(m=>{s(m.default)}).catch(f)},
   invitation_message:function(s,f){import('invitation/message').then(m=>{s(m.default)}).catch(f)},
   invitation_permission:function(s,f){import('invitation/permission').then(m=>{s(m.default)}).catch(f)},
   invitation_sharee:function(s,f){import('invitation/sharee').then(m=>{s(m.default)}).catch(f)},
   invitation_shareeroll:function(s,f){import('invitation/sharee/roll').then(m=>{s(m.default)}).catch(f)},
   custom_logo:function(s,f){import('src/drumee/builtins/widget/logo').then(m=>{s(m.default)}).catch(f)},
-  address_input_item:function(s,f){import('builtins/widget/address-input-item/index').then(m=>{s(m.default)}).catch(f)},
+  address_input_item:function(s,f){import('src/drumee/builtins/widget/address-input-item/index').then(m=>{s(m.default)}).catch(f)},
   contact_invitation_form:function(s,f){import('widget/contact-invitation-form').then(m=>{s(m.default)}).catch(f)},
   disk_usage:function(s,f){import('widget/disk-usage').then(m=>{s(m.default)}).catch(f)},
-  email_input_item:function(s,f){import('builtins/widget/email-input-item/index').then(m=>{s(m.default)}).catch(f)},
-  phoneno_input_item:function(s,f){import('builtins/widget/phoneno-input-item/index').then(m=>{s(m.default)}).catch(f)},
+  email_input_item:function(s,f){import('src/drumee/builtins/widget/email-input-item/index').then(m=>{s(m.default)}).catch(f)},
+  phoneno_input_item:function(s,f){import('src/drumee/builtins/widget/phoneno-input-item/index').then(m=>{s(m.default)}).catch(f)},
   widget_chat:function(s,f){import('widget/chat').then(m=>{s(m.default)}).catch(f)},
   widget_chat_item:function(s,f){import('widget/chat-item').then(m=>{s(m.default)}).catch(f)},
   account_avatar:function(s,f){import('window/account/profile/avatar').then(m=>{s(m.default)}).catch(f)},
@@ -109,24 +116,24 @@ const a = {
   widget_invite_notification:function(s,f){import('src/drumee/builtins/window/addressbook/widget/invite-notification').then(m=>{s(m.default)}).catch(f)},
   addressbook_widget_notification:function(s,f){import('src/drumee/builtins/window/addressbook/widget/notification').then(m=>{s(m.default)}).catch(f)},
   widget_tag_form_menu:function(s,f){import('src/drumee/builtins/window/addressbook/widget/tag-form-menu').then(m=>{s(m.default)}).catch(f)},
-  members_room:function(s,f){import('builtins/window/adminpanel/pages/members/room/index').then(m=>{s(m.default)}).catch(f)},
+  members_room:function(s,f){import('src/drumee/builtins/window/adminpanel/pages/members/room/index').then(m=>{s(m.default)}).catch(f)},
   admin_security_page:function(s,f){import('src/drumee/builtins/window/adminpanel/pages/admin-security').then(m=>{s(m.default)}).catch(f)},
   broadcast_message_page:function(s,f){import('src/drumee/builtins/window/adminpanel/pages/broadcast-message').then(m=>{s(m.default)}).catch(f)},
   domain_page:function(s,f){import('src/drumee/builtins/window/adminpanel/pages/domain-page').then(m=>{s(m.default)}).catch(f)},
-  members_page:function(s,f){import('builtins/window/adminpanel/pages/members/index').then(m=>{s(m.default)}).catch(f)},
-  window_adminpanel:function(s,f){import('builtins/window/adminpanel/index').then(m=>{s(m.default)}).catch(f)},
-  widget_dropdown_menu:function(s,f){import('builtins/window/adminpanel/widget/dropdown-menu/index').then(m=>{s(m.default)}).catch(f)},
-  widget_member_choose_admins:function(s,f){import('builtins/window/adminpanel/widget/member-choose-admins/index').then(m=>{s(m.default)}).catch(f)},
-  widget_member_roles_menu:function(s,f){import('builtins/window/adminpanel/widget/member-roles-menu/index').then(m=>{s(m.default)}).catch(f)},
-  widget_member_roles_menu_items:function(s,f){import('builtins/window/adminpanel/widget/member-roles-menu-items/index').then(m=>{s(m.default)}).catch(f)},
-  widget_member_who_can_see:function(s,f){import('builtins/window/adminpanel/widget/member-who-can-see/index').then(m=>{s(m.default)}).catch(f)},
-  widget_member_detail:function(s,f){import('builtins/window/adminpanel/widget/member_detail/index').then(m=>{s(m.default)}).catch(f)},
-  widget_member_form:function(s,f){import('builtins/window/adminpanel/widget/member_form/index').then(m=>{s(m.default)}).catch(f)},
-  widget_member_tag_item:function(s,f){import('builtins/window/adminpanel/widget/member_tag_item/index').then(m=>{s(m.default)}).catch(f)},
-  widget_member_tags:function(s,f){import('builtins/window/adminpanel/widget/member_tags/index').then(m=>{s(m.default)}).catch(f)},
-  widget_members_list_item:function(s,f){import('builtins/window/adminpanel/widget/members-list-item/index').then(m=>{s(m.default)}).catch(f)},
-  widget_members_search:function(s,f){import('builtins/window/adminpanel/widget/members-search/index').then(m=>{s(m.default)}).catch(f)},
-  widget_members_list:function(s,f){import('builtins/window/adminpanel/widget/members_list/index').then(m=>{s(m.default)}).catch(f)},
+  members_page:function(s,f){import('src/drumee/builtins/window/adminpanel/pages/members/index').then(m=>{s(m.default)}).catch(f)},
+  window_adminpanel:function(s,f){import('src/drumee/builtins/window/adminpanel/index').then(m=>{s(m.default)}).catch(f)},
+  widget_dropdown_menu:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/dropdown-menu/index').then(m=>{s(m.default)}).catch(f)},
+  widget_member_choose_admins:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/member-choose-admins/index').then(m=>{s(m.default)}).catch(f)},
+  widget_member_roles_menu:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/member-roles-menu/index').then(m=>{s(m.default)}).catch(f)},
+  widget_member_roles_menu_items:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/member-roles-menu-items/index').then(m=>{s(m.default)}).catch(f)},
+  widget_member_who_can_see:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/member-who-can-see/index').then(m=>{s(m.default)}).catch(f)},
+  widget_member_detail:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/member_detail/index').then(m=>{s(m.default)}).catch(f)},
+  widget_member_form:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/member_form/index').then(m=>{s(m.default)}).catch(f)},
+  widget_member_tag_item:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/member_tag_item/index').then(m=>{s(m.default)}).catch(f)},
+  widget_member_tags:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/member_tags/index').then(m=>{s(m.default)}).catch(f)},
+  widget_members_list_item:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/members-list-item/index').then(m=>{s(m.default)}).catch(f)},
+  widget_members_search:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/members-search/index').then(m=>{s(m.default)}).catch(f)},
+  widget_members_list:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/members_list/index').then(m=>{s(m.default)}).catch(f)},
   window_analytics_extractor:function(s,f){import('src/drumee/builtins/window/analytics/extractor').then(m=>{s(m.default)}).catch(f)},
   window_chart_bar:function(s,f){import('src/drumee/builtins/window/analytics/bar-graph').then(m=>{s(m.default)}).catch(f)},
   window_analytics_main_website:function(s,f){import('src/drumee/builtins/window/analytics/main-website').then(m=>{s(m.default)}).catch(f)},
@@ -140,13 +147,13 @@ const a = {
   widget_shareroom_user_item:function(s,f){import('src/drumee/builtins/window/bigchat/widget/shareroom-user-item').then(m=>{s(m.default)}).catch(f)},
   bigchat_widget_notification:function(s,f){import('src/drumee/builtins/window/bigchat/widget/notification').then(m=>{s(m.default)}).catch(f)},
   media_wrapper:function(s,f){import('src/drumee/builtins/window/channel/media-wrapper').then(m=>{s(m.default)}).catch(f)},
-  widget_helpdesk_category:function(s,f){import('builtins/window/helpdesk/widget/help-category/index').then(m=>{s(m.default)}).catch(f)},
-  widget_helpdesk_item:function(s,f){import('builtins/window/helpdesk/widget/help-item/index').then(m=>{s(m.default)}).catch(f)},
-  widget_simple_invitation:function(s,f){import('builtins/window/schedule/widget/simple-invitation/index').then(m=>{s(m.default)}).catch(f)},
+  widget_helpdesk_category:function(s,f){import('src/drumee/builtins/window/helpdesk/widget/help-category/index').then(m=>{s(m.default)}).catch(f)},
+  widget_helpdesk_item:function(s,f){import('src/drumee/builtins/window/helpdesk/widget/help-item/index').then(m=>{s(m.default)}).catch(f)},
+  widget_simple_invitation:function(s,f){import('src/drumee/builtins/window/schedule/widget/simple-invitation/index').then(m=>{s(m.default)}).catch(f)},
   media_efs:function(s,f){import('src/drumee/builtins/window/serverexplorer/widget/efs').then(m=>{s(m.default)}).catch(f)},
   widget_efs_list:function(s,f){import('src/drumee/builtins/window/serverexplorer/widget/efs_list').then(m=>{s(m.default)}).catch(f)},
   widget_sv_new_folder:function(s,f){import('src/drumee/builtins/window/serverexplorer/widget/sv-new-folder').then(m=>{s(m.default)}).catch(f)},
-  widget_sharebox_members_list_item:function(s,f){import('builtins/window/sharebox/widget/invitation-email-item/index').then(m=>{s(m.default)}).catch(f)},
+  widget_sharebox_members_list_item:function(s,f){import('src/drumee/builtins/window/sharebox/widget/invitation-email-item/index').then(m=>{s(m.default)}).catch(f)},
   widget_email_notification:function(s,f){import('src/drumee/builtins/window/sharebox/widget/email-notification').then(m=>{s(m.default)}).catch(f)},
   widget_invitation_email:function(s,f){import('src/drumee/builtins/window/sharebox/widget/invitation-email').then(m=>{s(m.default)}).catch(f)},
   widget_invitation_email_item:function(s,f){import('src/drumee/builtins/window/sharebox/widget/invitation-email-item').then(m=>{s(m.default)}).catch(f)},
@@ -241,7 +248,7 @@ const a = {
   notification_list_item:function(s,f){import('modules/desk/wm/notification/widget/notification-list-item').then(m=>{s(m.default)}).catch(f)},
   devel_icons:function(s,f){import('src/drumee/modules/devel/icons').then(m=>{s(m.default)}).catch(f)},
   locale_language:function(s,f){import('src/drumee/modules/devel/locale/language').then(m=>{s(m.default)}).catch(f)},
-  locale:function(s,f){import('modules/devel/locale/index').then(m=>{s(m.default)}).catch(f)},
+  locale:function(s,f){import('src/drumee/modules/devel/locale/index').then(m=>{s(m.default)}).catch(f)},
   dmz_window_manager:function(s,f){import('dmz/wm').then(m=>{s(m.default)}).catch(f)},
   dmz_sharebox:function(s,f){import('dmz/sharebox').then(m=>{s(m.default)}).catch(f)},
   dmz_meeting:function(s,f){import('dmz/meeting').then(m=>{s(m.default)}).catch(f)},
@@ -255,17 +262,11 @@ const a = {
   butler:function(s,f){import('router/butler').then(m=>{s(m.default)}).catch(f)},
   ws_channel:function(s,f){import('router/websocket').then(m=>{s(m.default)}).catch(f)},
   module_desk:function(s,f){import('modules/desk').then(m=>{s(m.default)}).catch(f)},
-  module_devel:function(s,f){import('src/drumee/modules/devel').then(m=>{s(m.default)}).catch(f)},
+  module_devel:function(s,f){import('modules/devel').then(m=>{s(m.default)}).catch(f)},
   module_dmz:function(s,f){import('modules/dmz').then(m=>{s(m.default)}).catch(f)},
-  module_plugins:function(s,f){import('src/drumee/modules/plugins').then(m=>{s(m.default)}).catch(f)},
-  module_sandbox:function(s,f){import('src/drumee/modules/sandbox').then(m=>{s(m.default)}).catch(f)},
+  module_plugins:function(s,f){import('modules/plugins').then(m=>{s(m.default)}).catch(f)},
+  module_sandbox:function(s,f){import('modules/sandbox').then(m=>{s(m.default)}).catch(f)},
   module_welcome:function(s,f){import('modules/welcome').then(m=>{s(m.default)}).catch(f)},
 }
-
-
-function get (name) {
-  if(a[name]) return new Promise(a[name]);
-  return null;
-};
   
-module.exports = {get};
+module.exports = builtins ;

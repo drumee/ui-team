@@ -183,12 +183,13 @@ class __drumee_api_signup extends LetcBox {
     return cmd = null;
   }
 
-// >>===========================================================
-// 
-//
-// >>===========================================================
+  /**
+   * 
+   * @param {*} method 
+   * @param {*} data 
+   * @returns 
+   */
   __dispatchRest(method, data) {
-    this.debug("SOOOOOOOOOOOO 96 0", method, data);
     switch (method) {
       case SERVICE.butler.signup:
         if (data.rejected) {

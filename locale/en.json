@@ -1902,5 +1902,8 @@
   "POPUP_PERMISSION": "Please grant popup permission",
   "SHOW_HIDDEN_FILES": "Show hidden files",
   "HIDE_HIDDEN_FILES": "Hide system files",
-  "GOTO_HOMEPAGE": "Go to the home page"
+  "GOTO_HOMEPAGE": "Go to the home page",
+  "SBX_NO_THANKS": "No, thanks. I just want to try.",
+  "NOT_A_BOT": "Please, close this window to confirm you're not a bot",
+  "SERVER_BUSY": "We're sorry, our server is currently experiencing heavy load. Please try again later."
 }

@@ -260,8 +260,8 @@ class __core_user extends Backbone.Model {
         document.title = `${this.fullname()}@${Organization.name()}`;
       }
     }
-    if (data.signed_in !== null) this.set({ signed_in: data.signed_in });
-    for (var k of [_a.profile, _a.settings, _a.quota]) {
+    if(/^[0,1]$/.test(data.signed_in )) this.set({ signed_in: data.signed_in });
+    for (let k of [_a.profile, _a.settings, _a.quota]) {
       if (!data[k]) continue;
       if (_.isString(data[k])) {
         this.set(k, JSON.parse(data[k]));
@@ -537,8 +537,11 @@ class __core_user extends Backbone.Model {
    * @returns 
    */
   isOnline() {
-    if (this.get(_a.connection) == _a.online) return true;
-    return false;
+    if (this.get(_a.connection) == _a.online) return 1;
+    if ((new Date().getTime() - bootstrap().startTime) <= 30) {
+      return bootstrap().signed_in
+    }
+    return 0;
   }
 
   /**

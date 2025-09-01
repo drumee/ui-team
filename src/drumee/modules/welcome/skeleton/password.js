@@ -22,6 +22,7 @@ function __skl_welcome_password(_ui_, cn, passmeter) {
         type: _a.password,
         className: `${_ui_.fig.group}__entry ${_ui_.fig.family}__entry`,
         service: _e.submit,
+        name: _a.password,
         placeholder: LOCALE.PASSWORD,
         mode: _a.commit,
         sys_pn: 'ref-password',

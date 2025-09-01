@@ -115,7 +115,7 @@ class __dmz_meeting extends LetcBox {
   guestName() {
     if (Visitor.isGuest()) {
       let name = localStorage.getItem(`guestname_${this.token}`);
-      if(/^(nobody|anonymous)/i.test(name)) name = "";
+      if (/^(nobody|anonymous)/i.test(name)) name = "";
       if (name) return name;
     }
     if (this.mget(_a.firstname)) return this.mget(_a.firstname);

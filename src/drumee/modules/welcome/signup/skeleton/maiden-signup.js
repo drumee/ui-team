@@ -1,7 +1,5 @@
-function __skl_welcome_signup_b2c(_ui_) {
-  const b2cSignupFig = _ui_.fig.family
-
-  _ui_.debug('b2csignup', _ui_)
+function maiden_signup(ui) {
+  const b2cSignupFig = ui.fig.family
 
   const firstName = Skeletons.Box.X({
     className: `${b2cSignupFig}__wrapper first-name`,
@@ -17,9 +15,10 @@ function __skl_welcome_signup_b2c(_ui_) {
           Skeletons.EntryBox({
             className: `${b2cSignupFig}__entry first-name with-icon`,
             formItem: _a.firstname,
+            name:_a.firstname,
             placeholder: LOCALE.FIRSTNAME,
-            uiHandler: _ui_,
-            errorHandler: [_ui_],
+            uiHandler: ui,
+            errorHandler: [ui],
             validators: [
               { reason: LOCALE.FIRST_NAME_REQUIRED, comply: Validator.require }
             ]
@@ -29,23 +28,23 @@ function __skl_welcome_signup_b2c(_ui_) {
     ]
   })
 
-  const lastName = Skeletons.Box.X({
-    className: `${b2cSignupFig}__wrapper last-name`,
+  const email = Skeletons.Box.X({
+    className: `${b2cSignupFig}__wrapper email`,
     kids: [
       Skeletons.Box.X({
-        className: `${b2cSignupFig}__row last-name`,
+        className: `${b2cSignupFig}__row email`,
         kids: [
           Skeletons.Button.Svg({
             ico: 'profile-signup',
-            className: `${b2cSignupFig}__icon last-name input-wrapper profile-signup`,
+            className: `${b2cSignupFig}__icon email input-wrapper profile-signup`,
           }),
-
           Skeletons.EntryBox({
-            className: `${b2cSignupFig}__entry last-name with-icon`,
-            formItem: _a.lastname,
-            placeholder: LOCALE.LASTNAME,
-            uiHandler: _ui_,
-            errorHandler: [_ui_],
+            className: `${b2cSignupFig}__entry email with-icon`,
+            formItem: _a.email,
+            name:_a.email,
+            placeholder: LOCALE.EMAIL,
+            uiHandler: ui,
+            errorHandler: [ui],
             validators: [
               { reason: LOCALE.LASTNAME_REQUIRED, comply: Validator.require }
             ]
@@ -55,7 +54,7 @@ function __skl_welcome_signup_b2c(_ui_) {
     ]
   })
 
-  const password = require('../../skeleton/password').default(_ui_, `${b2cSignupFig}__row`, 1)
+  const password = require('../../skeleton/password').default(ui, `${b2cSignupFig}__row`, 1)
 
   const conditions = Skeletons.Box.X({
     className: `${b2cSignupFig}__row conditions without-icon b2c-signup`,
@@ -71,7 +70,7 @@ function __skl_welcome_signup_b2c(_ui_) {
         state: 0,
         formItem: _a.condition,
         reference: _a.state,
-        service: "confirm-tou"
+        service: 'accept-conditions'
       }),
 
       Skeletons.Note({
@@ -83,20 +82,20 @@ function __skl_welcome_signup_b2c(_ui_) {
         className: `${b2cSignupFig}__note conditions trigger text-underline`,
         content: LOCALE.GENERAL_TERMS_USE,
         service: 'open-terms-and-conditions',
-        uiHandler: [_ui_]
+        uiHandler: [ui]
       })
     ]
   })
 
-  const nextBtn = require('../../skeleton/common/button').default(_ui_, 'create-b2c-signup-data', LOCALE.SUBMIT)
-  const msgBox = require('../../skeleton/common/message-box').default(_ui_)
+  const nextBtn = require('../../skeleton/common/button').default(ui, 'direct-signup', LOCALE.SUBMIT)
+  const msgBox = require('../../skeleton/common/message-box').default(ui)
 
   let a = Skeletons.Box.Y({
     className: `${b2cSignupFig}__items personal-data b2c-signup`,
     debug: __filename,
     kids: [
       firstName,
-      lastName,
+      email,
       password,
       conditions,
       nextBtn,
@@ -108,4 +107,4 @@ function __skl_welcome_signup_b2c(_ui_) {
 
 }
 
-export default __skl_welcome_signup_b2c
+export default maiden_signup

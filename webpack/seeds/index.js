@@ -1,38 +1,33 @@
 #!/usr/bin/env node
-// ================================  *
-//   Copyright Xialia.com  2013-2020 *
-//   FILE  : 
-//   TYPE  : Dev Builder
-// ================================  *
 
-const Fs = require('fs');
-const _ = require('lodash');
-const Minimist = require('minimist');
-const Path = require('path');
+const { readFileSync, statSync, mkdirSync, writeFileSync, existsSync } = require('fs');
+const { template, values, isString, isEmpty } = require('lodash');
+const { resolve, join, dirname } = require('path');
 const Moment = require('moment');
 const not_found = [];
-const argv = Minimist(process.argv.slice(2));
 const Json2md = require('json2md');
+const args = require('./args')
+let src_base = args.app_base;
 
-let SRC_DIR;
-if(argv.from){
-  SRC_DIR   = Path.resolve(argv.from);
-}else{
-  if(process.env.UI_SRC_PATH){
-    SRC_DIR   = Path.resolve(process.env.UI_SRC_PATH);
-  }else{
+let SRC_DIR = args.from || args.src_dir;
+if (!SRC_DIR) {
+  if (process.env.UI_SRC_PATH) {
+    SRC_DIR = resolve(process.env.UI_SRC_PATH);
+  } else {
     SRC_DIR = process.env.PWD || __dirname;
   }
 }
 
 const webpack = require('../resolve')(SRC_DIR);
 let ALIASES = {};
+let REV_ALIASES = {};
 /**
  * 
  */
 function build_aliases() {
   for (var k in webpack.alias) {
     ALIASES[webpack.alias[k]] = k;
+    REV_ALIASES[k] = webpack.alias[k];
   }
 }
 
@@ -42,10 +37,10 @@ function build_aliases() {
  * @returns 
  */
 function item(path) {
-  const tpl_file = Path.resolve(__dirname, 'promise.tpl');
-  let template = Fs.readFileSync(tpl_file, 'utf-8');
-  let content = String(template).trim().toString();
-  const renderer = _.template(content);
+  const tpl_file = resolve(__dirname, 'promise.tpl');
+  let c = readFileSync(tpl_file, 'utf-8');
+  let content = String(c).trim().toString();
+  const renderer = template(content);
   return renderer({ path });
 }
 
@@ -60,19 +55,43 @@ function fatal(a) {
 
 /**
  * 
- * @param {*} rows 
+ * @param [*] items 
  */
-function write_doc(rows) {
+function write_doc(items) {
+  let rows = []
+  let re = new RegExp(`^${SRC_DIR}`)
+  for (let r of items) {
+    let tail = r.path.split(/\/+/)
+    let head = tail.shift()
+    let item
+    if (REV_ALIASES[head]) {
+      item = REV_ALIASES[head]
+      item = item.replace(new RegExp(`/${head}$`), '')
+      item = resolve(item, r.path)
+      item = get_target(item)
+      if (!item) continue;
+    } else {
+      item = resolve(SRC_DIR, src_base, ...tail)
+      item = get_target(item)
+    }
+    r.local = `file://${item}`;
+    r.repo = item.replace(re, 'https://github.com/drumee/ui-team/tree/main');
+    rows.push(r)
+  }
   let model = [
     { h1: "Drumee builtins kins" },
     { blockquote: "Automatic generation - DO NOT EDIT" },
     { h2: "Core rendering engine" },
-    { p: "See https://drumee.io/_/testing/#/sandbox for examples." },
-    { table: { headers: ["kind", "path"], rows } },
+    { p: "See https://drumee.com/-/#/sandbox for examples." },
+    { table: { headers: ["kind", "path", "repo"], rows } },
   ]
-  const kind_file = Path.resolve(SRC_DIR, 'docs', 'api', 'kind.md');
-
-  Fs.writeFileSync(kind_file, Json2md(model));
+  const repo = resolve(SRC_DIR, 'docs', 'api', 'kind.md');
+  writeFileSync(repo, Json2md(model));
+  model[4].table.headers = ["kind", "path", "local"]
+  let local_docs = resolve(SRC_DIR, 'docs', 'local')
+  mkdirSync(local_docs, { recursive: true })
+  const loc = resolve(local_docs, 'kind.md');
+  writeFileSync(loc, Json2md(model));
 }
 
 /**
@@ -93,21 +112,21 @@ function optimize(items) {
           - Already declared in ${i.path} 
           - Shall be overloaded by ${f.path}\n`);
       } else {
-        if (argv.verbose) console.log(`${i.kind} declared multiple times`)
+        if (args.verbose) console.log(`${i.kind} declared multiple times`)
       }
     }
   }
-  return _.values(kinds);
+  return values(kinds);
 }
 
 /**
  * 
  * @param {*} items 
  */
-function render(items) {
-  const tpl_file = Path.resolve(__dirname, 'classes.tpl');
-  const dest_file = Path.resolve(SRC_DIR, 'src/drumee/core/kind/seeds/builtins.js');
-  if (!Fs.existsSync(tpl_file)) {
+function render(items, tpl, dest) {
+  const tpl_file = resolve(__dirname, tpl);
+  const dest_file = resolve(SRC_DIR, dest);
+  if (!existsSync(tpl_file)) {
     fatal(`[Template not found]: ${tpl_file}`);
   }
   let data = {
@@ -116,10 +135,10 @@ function render(items) {
     year: Moment().year()
   };
 
-  let template = Fs.readFileSync(tpl_file, 'utf-8');
-  let content = String(template).trim().toString();
-  const renderer = _.template(content);
-  Fs.writeFileSync(dest_file, renderer(data), 'utf-8');
+  let c = readFileSync(tpl_file, 'utf-8');
+  let content = String(c).trim().toString();
+  const renderer = template(content);
+  writeFileSync(dest_file, renderer(data), 'utf-8');
 }
 
 /**
@@ -128,42 +147,21 @@ function render(items) {
  * @param {*} path 
  * @returns 
  */
-function check_sanity(file, path) {
-  let files = [];
+function get_target(path) {
+  if (existsSync(path)) {
+    let item = statSync(path)
+    if (item.isDirectory()) {
+      for (let ext of webpack.extensions) {
+        let p = join(path, `index${ext}`)
+        if (existsSync(p)) return p;
+      }
+    }
+    return path;
+  };
   for (let ext of webpack.extensions) {
-    let p1 = Path.resolve(SRC_DIR, path, `index.${ext}`);
-    let p2 = Path.resolve(SRC_DIR, path, `.${ext}`);
-    p2 = p2.replace('/.', '.');
-    if (Fs.existsSync(p1)) return p1;
-    if (Fs.existsSync(p2)) return p2;
-    files.push(p1, p2);
+    let p = `${path}.${ext}`
+    if (existsSync(p)) return p;
   }
-
-  let a = path.split('/');
-  let i = a.shift();
-  let name = _.last(a);
-  for (let ext of webpack.extensions) {
-    if (!webpack.alias[i]) continue;
-    let m = a.join('/');
-    let p1 = Path.resolve(webpack.alias[i], m, `index.${ext}`);
-    let p2 = Path.resolve(webpack.alias[i], m.replace(/\/+$/, `.${ext}`));
-    let p3 = Path.resolve(webpack.alias[i], m, `${name}.${ext}`);
-    p3 = p3.replace('/.', '.');
-    let p4 = Path.resolve(webpack.alias[i], `${m}.${ext}`);
-    if (Fs.existsSync(p1)) return p1;
-    if (Fs.existsSync(p2)) return p2;
-    if (Fs.existsSync(p3)) return p3;
-    if (Fs.existsSync(p4)) return p4;
-    files.push(p1, p2, p3, p4);
-  }
-
-  console.log(
-    `***** Error occured while building from ${file}. *****`,
-    `Could not find class defined by *${path}*`, webpack.alias[i],
-    files, path
-  );
-  not_found.push(path);
-  return false;
 }
 
 
@@ -176,21 +174,21 @@ function make() {
   let data = [];
   let lex = [];
   let libs = [
-    "src/drumee",
+    src_base
   ];
-  if (argv.libs) {
-    libs = argv.libs.split(/[,;:]/);
+  if (args.libs) {
+    libs = args.libs.split(/[,;:]/);
   }
   const walk = require('walkdir');
   for (let dir of libs) {
-    let f = Path.resolve(SRC_DIR, dir);
-    console.log("SCANNING", f);
+    let f = resolve(SRC_DIR, dir);
+    console.log("Walking into", f);
     let files = walk.sync(f);
 
     let v;
-    for (file of files) {
+    for (let file of files) {
       if (!/(seeds.js)$/.test(file)) continue;
-      if (Fs.existsSync(file)) {
+      if (existsSync(file)) {
         try {
           v = require(file);
         } catch (e) {
@@ -199,22 +197,22 @@ function make() {
         }
         for (let kind in v) {
           let path = v[kind];
-          if (!_.isString(path)) continue;
+          if (!isString(path)) continue;
           let basedir = null;
           if (/^\./.test(path)) {
-            basedir = Path.resolve(Path.dirname(file), path);
+            basedir = resolve(dirname(file), path);
           } else {
             let [b, d] = path.split(/\/+/);
             basedir = webpack.alias[b];
           }
-          if (basedir && Fs.existsSync(basedir)) {
+          if (basedir && existsSync(basedir)) {
             if (ALIASES[basedir]) {
               path = v[kind];
             } else {
-              if (ALIASES[Path.dirname(file)]) {
-                path = basedir.replace(Path.dirname(file), ALIASES[Path.dirname(file)]);
+              if (ALIASES[dirname(file)]) {
+                path = basedir.replace(dirname(file), ALIASES[dirname(file)]);
               } else {
-                let r = Path.resolve(Path.dirname(file), v[kind]);
+                let r = resolve(dirname(file), v[kind]);
                 path = r.replace(SRC_DIR, '').replace(/^\//, '');
               }
             }
@@ -228,13 +226,15 @@ function make() {
             func: item(path)
           });
         }
-      } else if (!_.isEmpty(file)) {
-        console.log(`ERROR : ${file} not found`);
+      } else if (!isEmpty(file)) {
+        console.warn(`${file} not found`);
       }
     }
   }
-  render(data);
-  if (!_.isEmpty(not_found)) {
+  render(data, 'classes.tpl', `${src_base}/core/kind/seeds/builtins.js`);
+  render(data, 'helper.tpl', `${src_base}/core/kind/seeds/helper.js`);
+  write_doc(data)
+  if (!isEmpty(not_found)) {
     console.warn("Following files have not been resolved", not_found);
   }
 }

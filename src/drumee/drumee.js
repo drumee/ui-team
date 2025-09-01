@@ -129,6 +129,7 @@ class Drumee extends Marionette.Application {
       Visitor.set(user);
       Organization.set(organization)
       window.currentDevice = Visitor.device();
+      window.SERVICE = { ...Drumee.SERVICE, ...Platform.get('services') }
     } catch (e) {
       console.error("FAILED TO PARSE ENVIRONMENT DATA", e);
       this.failover(e);

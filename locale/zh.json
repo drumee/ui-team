@@ -1902,5 +1902,8 @@
   "POPUP_PERMISSION": "请授予弹出权限",
   "SHOW_HIDDEN_FILES": "显示隐藏文件",
   "HIDE_HIDDEN_FILES": "隐藏系统文件",
-  "GOTO_HOMEPAGE": "转至主页"
+  "GOTO_HOMEPAGE": "转至主页",
+  "SBX_NO_THANKS": "不用了，谢谢。我只是想试试。",
+  "NOT_A_BOT": "请关闭此窗口以确认您不是机器人",
+  "SERVER_BUSY": "抱歉，我们的服务器目前负载过重。请稍后重试。"
 }

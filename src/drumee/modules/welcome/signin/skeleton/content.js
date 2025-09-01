@@ -69,6 +69,19 @@ function __skl_welcome_signin_content(_ui_) {
   }
 
   let helper = '';
+  let create_account = '';
+
+  
+  if (Platform.get('isPublic')) {
+    create_account = Skeletons.Note({
+      className: `${contentFig}__note no-account helper text-underline`,
+      content: LOCALE.Q_NO_ACCOUNT,
+      dataset,
+      href:"#/welcome/signup"
+      // service: 'open-signup'
+    })
+  }
+
   if (Platform.get('arch') == "cloud") {
     helper = Skeletons.Box.Y({
       className: `${contentFig}__wrapper helper`,
@@ -83,13 +96,7 @@ function __skl_welcome_signin_content(_ui_) {
               dataset,
               href: '#/welcome/reset'
             }),
-
-            // Skeletons.Note({
-            //   className: `${contentFig}__note no-account helper text-underline`,
-            //   content: LOCALE.Q_NO_ACCOUNT,
-            //   dataset,
-            //   service: 'open-signup'
-            // })
+            create_account
           ]
         }),
 

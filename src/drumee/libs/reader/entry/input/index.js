@@ -129,14 +129,12 @@ class __drumee_entry_input extends LetcBox {
   static initClass() {
     this.prototype.nativeClassName = _default_class;
 
-    // ============================
-    //
-    // ============================
     this.prototype.events = {
       'keydown input': '_onKeydown',
       'keydown textarea': '_onKeydown',
       'keyup   input': '_onKeyup',
       'keyup   textarea': '_onKeyup',
+      'blur    textarea': '_onBlur',
       'blur    input': '_onBlur',
       'select  input': '_onSelect',
       'submit  form': '_nop',

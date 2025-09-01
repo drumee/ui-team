@@ -1,5 +1,5 @@
 /* ================================================================== *
-#   Copyright Xialia.com  2011-<%= year %>
+#   Copyright Thidima SA  2011-<%= year %>
 #   FILE : <%= filename %>
 #   TYPE : Automatic generation - DO NOT EDIT 
 # ===================================================================**/
@@ -8,14 +8,8 @@
 
 // On demand Classes cannot be overloaded
 
-const a = {<% _.each(items, function(item, key, val){ %>
+const builtins = {<% _.each(items, function(item, key, val){ %>
   <%= item.kind %>:<%= item.func %>,<% }) %>
 }
-
-
-function get (name) {
-  if(a[name]) return new Promise(a[name]);
-  return null;
-};
   
-module.exports = {get};
+module.exports = builtins ;

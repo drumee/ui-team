@@ -175,10 +175,6 @@ const a = {
 
   pagelength : 45,
     //aliases
-  quandl: {
-    url              : `${protocol}://www.quandl.com/api/v1/datasets/`,
-    token            : "sort_order=asc&auth_token=JJjZDx1ie8ccsocbDeAz"
-  },
   string             : {
     empty            : '',
     zero             : '0',
@@ -217,7 +213,6 @@ const a = {
   defaults           : {
     lang             : 'fr',
     bg               : 'images/backgrounds/default-bg.jpg',
-    wp               : `${protocol}://images.drumee.name/-/images/drumee/editor/desk-bg.png`,
     slide            : 'images/backgrounds/transparent.png',
     date_format      : "DD MMM YYYY", //"DD.MM.YY"
     ease             : 'Back.easeOut',
