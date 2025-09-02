@@ -109,9 +109,14 @@ class __account_data extends DrumeeMFS {
     }
   }
 
-  // ===========================================================
-  // onPartReady
-  // ===========================================================
+
+  /**
+   * 
+   * @param {*} child 
+   * @param {*} pn 
+   * @param {*} section 
+   * @returns 
+   */
   onPartReady(child, pn, section) {
     switch (pn) {
       case "data-chart":
@@ -120,15 +125,18 @@ class __account_data extends DrumeeMFS {
   }
 
 
+  /**
+   * 
+   * @param {*} e 
+   * @returns 
+   */
   onServerComplain(e) {
-    const c = this.__wrapperOverlay.children.last();
-    //c.feed(S)
     return this.warn("GOT ERROR. TO BE HANDLED", e);
   }
 
-  // ===========================================================
-  // 
-  // ===========================================================
+  /**
+   * 
+   */
   showResendOtp() {
     this.__noCode.el.dataset.mode = _a.open;
   }
@@ -170,16 +178,15 @@ class __account_data extends DrumeeMFS {
    * @param {*} title 
    * @param {*} subtitle 
    */
-  _display(data, title, subtitle) {
+  _display(data) {
     let { quota, usage } = data;
     if (quota) Visitor.set({ quota });
     if (usage) Visitor.set({ disk_usage: usage });
     let max = Visitor.quota("storage");
-    let other = {}
     let details = [];
     let du = Visitor.diskUsage();
     for (let k in du) {
-      if(/^(personal_.+|hub_.+|total)$/.test(k)) continue;
+      if (/^(personal_.+|hub_.+|total)$/.test(k)) continue;
       details.push({
         label: this._labels[k] || k,
         value: du[k],
@@ -187,63 +194,50 @@ class __account_data extends DrumeeMFS {
       })
     }
 
-    this.debug("AAA:185", usage, details, max, data)
     let used = Visitor.diskUsed();
     if (used > max) used = max;
     let available = max - used;
     if (available < 0) available = 0;
-    const details_chart = {
-      kind: KIND.chart.pie,
-      content: _.sortBy(details, _a.value),
-      labels: {
-        mainLabel: {
-          fontSize: 12,
-          color: "black",
-          font: "Roboto-Light,sans-serif"
-        }
-      },
-
-      header: {
-        title: {
-          text: LOCALE.FILE_TYPE,
-          fontSize: 17,
-          font: "Roboto-Light,sans-serif",
-          color: "black"
+    let details_chart;
+    if (details.length) {
+      details_chart = {
+        kind: KIND.chart.pie,
+        content: _.sortBy(details, _a.value),
+        labels: {
+          mainLabel: {
+            fontSize: 12,
+            color: "black",
+            font: "Roboto-Light,sans-serif"
+          }
         },
-        location: "pie-center"
-      }
-    };
 
-    // const TYPES = {
-    //   desk: { label: LOCALE.DESK, color: "#1d8aea" },
-    //   chat: { label: LOCALE.CHAT, color: "#5d8aea" },
-    //   private: { label: LOCALE.TEAM_ROOM, color: "#bd44d9" },
-    //   share: { label: LOCALE.SHARE_BOX, color: "#ef6500" }
-    // };
+        header: {
+          title: {
+            text: LOCALE.FILE_TYPE,
+            fontSize: 17,
+            font: "Roboto-Light,sans-serif",
+            color: "black"
+          },
+          location: "pie-center"
+        }
+      };
+    }else{
+      details_chart = require('./skeleton/no-data-yet')
+    }
 
-    // let types = _.keys(disk).filter(function (e) {
-    //   return (!/^quota/.test(e))
-    // });
 
     let content = [{
       label: LOCALE.SPACE_AVAILABLE,
       value: max - used,
-      color: "#89929e"
-    }, {
-      label: 'Used',
-      value: used,
-      color: "#89929e"
+      color: colorFromName(LOCALE.SPACE_AVAILABLE),
     }];
-    // for (var type of types) {
-    //   if (!TYPES[type]) continue;
-    //   TYPES[type].value = disk[type];
-    //   used = used + disk[type];
-    //   content.push({
-    //     ...TYPES[type], value: disk[type]
-    //   })
-    // }
-    //content[0].value = max - used;
-
+    if (used) {
+      content.push({
+        label: LOCALE.SPACE_USED,
+        value: used,
+        color: colorFromName(LOCALE.SPACE_USED),
+      })
+    }
     const usage_chart = {
       kind: KIND.chart.pie,
       content,
@@ -270,7 +264,9 @@ class __account_data extends DrumeeMFS {
     });
 
 
-    this.findPart("ref-chart").feed([usage_chart, details_chart]);
+    this.ensurePart("ref-chart").then((p) => {
+      p.feed([usage_chart, details_chart]);
+    })
   }
   /**
    * 

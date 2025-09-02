@@ -67,19 +67,17 @@ class __core_user extends Backbone.Model {
     });
 
     RADIO_MEDIA.on(_e.uploaded, (data) => {
+      if (!data || !data.filesize) return;
       let { filesize } = data;
       let total = this.diskUsed() + parseInt(filesize)
       let disk_usage = { ...this.get('disk_usage'), total }
       this.set({ disk_usage })
-      this.debug("AAAA:71", data)
-      //this.diskUsage(disk_usage);
     })
 
     RADIO_MEDIA.on(_a.free, (data) => {
-      if (!data) return;
-      let total = this.diskUsed() - parseInt(filesize);
-      if (total < 0) total = 0;
-      let disk_usage = { ...this.get('disk_usage'), total }
+      this.debug("AAAA:71", data)
+      if (!data || !data.disk_usage) return;
+      let { disk_usage } = data;
       this.set({ disk_usage })
     })
   }
