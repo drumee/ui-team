@@ -1,8 +1,3 @@
-// ============================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : libs/reader/notifier
-//   TYPE :
-// ============================================================== *
 const W3CWebSocket = require("websocket").w3cwebsocket;
 const WEBSOCKET_ERROR = "websocket:error";
 const WEBSOCKET_MESSAGE = "websocket:message";

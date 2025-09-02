@@ -193,7 +193,7 @@ class drumee_router extends LetcBox {
     this.feed(require("./skeleton")(this));
 
     this._makeTempEl();
-    this._initFonts();
+    //this._initFonts();
     this.content = await this.ensurePart('body');
     await this.ensurePart('butler');
     this.isReady = true;

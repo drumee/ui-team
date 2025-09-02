@@ -67,14 +67,20 @@ class __core_user extends Backbone.Model {
     });
 
     RADIO_MEDIA.on(_e.uploaded, (data) => {
-      let { disk_usage } = data;
-      this.diskUsage(disk_usage);
+      let { filesize } = data;
+      let total = this.diskUsed() + parseInt(filesize)
+      let disk_usage = { ...this.get('disk_usage'), total }
+      this.set({ disk_usage })
+      this.debug("AAAA:71", data)
+      //this.diskUsage(disk_usage);
     })
 
     RADIO_MEDIA.on(_a.free, (data) => {
       if (!data) return;
-      let { disk_usage } = data;
-      this.diskUsage(disk_usage);
+      let total = this.diskUsed() - parseInt(filesize);
+      if (total < 0) total = 0;
+      let disk_usage = { ...this.get('disk_usage'), total }
+      this.set({ disk_usage })
     })
   }
 
@@ -260,8 +266,8 @@ class __core_user extends Backbone.Model {
         document.title = `${this.fullname()}@${Organization.name()}`;
       }
     }
-    if(/^[0,1]$/.test(data.signed_in )) this.set({ signed_in: data.signed_in });
-    for (let k of [_a.profile, _a.settings, _a.quota]) {
+    if (/^[0,1]$/.test(data.signed_in)) this.set({ signed_in: data.signed_in });
+    for (let k of [_a.profile, _a.settings, _a.quota, 'disk_usage']) {
       if (!data[k]) continue;
       if (_.isString(data[k])) {
         this.set(k, JSON.parse(data[k]));
@@ -269,8 +275,15 @@ class __core_user extends Backbone.Model {
         this.set(k, { ...data[k] });
       }
     }
-    if (data.quota && !defaultQuota) {
-      defaultQuota = data.quota;
+    let quota = { ...Visitor.quota() }
+    if (quota) {
+      for (let k in quota) {
+        if (k != _a.category) {
+          quota[k] = parseInt(quota[k])
+        }
+      }
+      defaultQuota = quota;
+      this.set({ quota })
     }
     localStorage.setItem('UIlanguage', this.language());
     if (data.connection && data.connection == 'offline') {
@@ -284,35 +297,27 @@ class __core_user extends Backbone.Model {
    * Return disk free 
    */
   diskFree() {
-    let disk = this.quota("disk") || {};
+    let storage = this.quota("storage") || {};
     if (defaultQuota == null) {
       return Infinity;
     }
-    let free = disk - this.diskUsage();
+    let free = storage - this.diskUsed();
     return free;
   }
 
   /**
    * Return disk free 
    */
-  diskUsage(disk_usage) {
-    if (_.isNumber(disk_usage)) {
-      this.set({ disk_usage });
-    }
-    return parseInt(this.get(DISK_USAGE))
+  diskUsage() {
+    return this.get('disk_usage')
   }
 
   /**
  * Update current disk usage
  */
   diskUsed(size) {
-    if (!size) {
-      return 0;
-    }
-    let disk_usage = this.diskUsage() + parseInt(size);
-    if (disk_usage != null) {
-      this.set({ disk_usage })
-    }
+    let { total } = this.get('disk_usage') || {};
+    return total || 0;
   }
 
 
@@ -365,8 +370,8 @@ class __core_user extends Backbone.Model {
   quota(name) {
     let q = this.get(_a.quota);
     if (!q) {
-      let { quota_disk } = this.get('disk') || {};
-      q = { disk: quota_disk || Infinity };
+      let { storage } = this.get(_a.quota) || {};
+      q = { storage: storage || Infinity };
     }
     if (!name) return q || {};
     return q[name] || 0;
