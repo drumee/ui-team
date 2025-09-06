@@ -157,6 +157,15 @@ class __core_user extends Backbone.Model {
 
   /**
    * 
+   * @returns 
+   */
+
+  canUseVisio() {
+    return this.profile().category != 'trial';
+  }
+
+  /**
+   * 
    */
   firstname(v) {
     if (v) {
@@ -614,16 +623,17 @@ class __core_user extends Backbone.Model {
    * 
    */
   audioTip(state = 1) {
+    if(!window.Wm) return
     if (this._userHasInteracted) state = 0;
     if (!state) {
-      if (window.Wm && window.Wm.alert) {
+      if (Wm && Wm.alert) {
         Wm.alert()
       } else {
         Butler.sleep();
       }
       return;
     }
-    if (window.Wm && window.Wm.alert) {
+    if (Wm && Wm.alert) {
       Wm.alert(LOCALE.SYSTEM_SOUND_TIPS);
     } else {
       Butler.say(LOCALE.SYSTEM_SOUND_TIPS);

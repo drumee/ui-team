@@ -1,11 +1,5 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /src/drumee/builtins/window/confirm/skeleton/footer.coffee
-//   TYPE : Skeleton
-// ==================================================================== *
 
-
-const __skl_window_confirm_footer = function(_ui_, mode) {
+module.exports = function(_ui_, mode) {
   const cancelType = _ui_.mget('cancel_type') || 'secondary';
   const confirmType = _ui_.mget('confirm_type') || 'danger';
   const btnClass = _ui_.mget('buttonClass') || '';
@@ -34,5 +28,4 @@ const __skl_window_confirm_footer = function(_ui_, mode) {
   }
   
   return a;
-};
-module.exports = __skl_window_confirm_footer;
+};;

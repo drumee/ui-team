@@ -222,6 +222,7 @@ const builtins = {
   window_bigchat:function(s,f){import('window/bigchat').then(m=>{s(m.default)}).catch(f)},
   window_server_explorer:function(s,f){import('window/serverexplorer').then(m=>{s(m.default)}).catch(f)},
   window_channel:function(s,f){import('window/channel').then(m=>{s(m.default)}).catch(f)},
+  window_choice:function(s,f){import('window/choice').then(m=>{s(m.default)}).catch(f)},
   window_confirm:function(s,f){import('window/confirm').then(m=>{s(m.default)}).catch(f)},
   window_connect:function(s,f){import('window/connect').then(m=>{s(m.default)}).catch(f)},
   window_contact:function(s,f){import('window/contact').then(m=>{s(m.default)}).catch(f)},

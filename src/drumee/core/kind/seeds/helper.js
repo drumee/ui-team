@@ -222,6 +222,7 @@ const a = {
   window_bigchat:"window/bigchat",
   window_server_explorer:"window/serverexplorer",
   window_channel:"window/channel",
+  window_choice:"window/choice",
   window_confirm:"window/confirm",
   window_connect:"window/connect",
   window_contact:"window/contact",

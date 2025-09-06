@@ -1886,7 +1886,7 @@
   "USER": "用户",
   "QUOTA_PRIVATE_HUB": "内部共享文件夹 {0}",
   "QUOTA_DMZ_HUB": "外部共享文件夹 {0}",
-  "CONFIRM_FILENAME_CONFLICT": "文件 {0} 已存在。 您想更换它吗？",
+  "CONFIRM_FILENAME_CONFLICT": "已存在同名文件 ({0})。您想做什么？",
   "MAKE_HOMEPAGE": "设为主页",
   "START": "开始",
   "QUOTA_EXCEEDED": "您的配额已超出",
@@ -1905,5 +1905,6 @@
   "GOTO_HOMEPAGE": "转至主页",
   "SBX_NO_THANKS": "不用了，谢谢。我只是想试试。",
   "NOT_A_BOT": "请关闭此窗口以确认您不是机器人",
-  "SERVER_BUSY": "抱歉，我们的服务器目前负载过重。请稍后重试。"
+  "SERVER_BUSY": "抱歉，我们的服务器目前负载过重。请稍后重试。",
+  "CONFIRM_DIRNAME_CONFLICT": "已存在同名目录 ({0})。您想做什么？"
 }

@@ -1,12 +1,12 @@
-const __dock_widget_launchers = function (_ui_, ismobile) {
+const __dock_widget_launchers = function (ui, ismobile) {
   if (ismobile == null) { ismobile = false; }
   let profileType = 'pro';
   if (Visitor.isHubUser()) {
     profileType = _a.hub;
   }
 
-  const button_class = `${_ui_.fig.family}__button launcher ${profileType}`;
-  const pfx = _ui_.fig.family;
+  const button_class = `${ui.fig.family}__button launcher ${profileType}`;
+  const pfx = ui.fig.family;
 
   const addressbookNotifier = {
     kind: 'addressbook_widget_notification',
@@ -17,28 +17,38 @@ const __dock_widget_launchers = function (_ui_, ismobile) {
     route: {
       page: 'notification'
     },
-    uiHanlder: _ui_
+    uiHanlder: ui
   };
 
   let bigChatNotifier = {
     kind: 'bigchat_widget_notification',
-    className: `${_ui_.fig.family}__bigchat-notifier`,
+    className: `${ui.fig.family}__bigchat-notifier`,
     label: 'Chat Notification',
     service: 'bigchat',
     type: 'bigchat',
     route: {
       page: 'notification'
     },
-    uiHanlder: _ui_
+    uiHanlder: ui
   };
 
   const button = require('./button');
-
+  let visio = "";
+  if (Visitor.canUseVisio()) {
+    visio = button(ui, {
+      ico: 'area-code',
+      className: `${button_class} schedule launcher-icon`,
+      service: _e.launch,
+      respawn: 'window_schedule',
+      helperName: 'external-meeting',
+      wicket: 1
+    }, LOCALE.EXTERNAL_MEETING)
+  }
   const a = Skeletons.Box.X({
     debug: __filename,
     className: `${pfx}__container application launcher ${profileType}`,
     kids: [
-      button(_ui_, {
+      button(ui, {
         ico: 'desktop_contactbook',
         className: `${button_class} schedule launcher-icon`,
         innerClass: 'addressbook',
@@ -47,15 +57,8 @@ const __dock_widget_launchers = function (_ui_, ismobile) {
         helperName: 'addressbook',
         service: _e.launch
       }, LOCALE.CONTACTS, addressbookNotifier),
-      button(_ui_, {
-        ico: 'area-code',
-        className: `${button_class} schedule launcher-icon`,
-        service: _e.launch,
-        respawn: 'window_schedule',
-        helperName: 'external-meeting',
-        wicket: 1
-      }, LOCALE.EXTERNAL_MEETING),
-      button(_ui_, {
+      visio,
+      button(ui, {
         ico: 'drumee-chat-visio',
         className: `${button_class} schedule launcher-icon`,
         innerClass: 'bigchat',

@@ -1139,6 +1139,10 @@ class __window_manager extends mfsInteract {
    */
   alert(skl) {
     if (skl == null) {
+      let pending = this.__wrapperModal.children.last();
+      if (pending && !/window_info/.test(pending.mget(_a.kind))) {
+        return;
+      }
       this.__wrapperModal.clear();
       return;
     }
@@ -1194,6 +1198,23 @@ class __window_manager extends mfsInteract {
       Kind.waitFor(kind).then((a) => {
         const s = w.feed({ ...skl, kind });
         s.ask().then(resolve).catch(reject);
+      });
+    });
+  }
+
+  /**
+   *
+   * @param {*} skl
+   * @param {*} opt
+   * @returns
+   */
+  choice(message, ...questions) {
+    const kind = "window_choice";
+    let w = this.__wrapperModal;
+    return new Promise(function (resolve, reject) {
+      Kind.waitFor(kind).then((a) => {
+        const s = w.feed({ questions, kind });
+        s.ask(message, questions).then(resolve).catch(reject);
       });
     });
   }

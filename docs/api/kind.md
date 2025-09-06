@@ -176,6 +176,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | window_bigchat | window/bigchat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/index.js |
 | window_server_explorer | window/serverexplorer | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/serverexplorer/index.js |
 | window_channel | window/channel | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/channel/index.js |
+| window_choice | window/choice | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/choice/index.js |
 | window_confirm | window/confirm | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/confirm/index.js |
 | window_connect | window/connect | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/connect/index.js |
 | window_contact | window/contact | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/contact/index.js |

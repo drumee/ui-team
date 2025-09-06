@@ -1886,7 +1886,7 @@
   "USER": "Utilisateur",
   "QUOTA_PRIVATE_HUB": "Dossiers de partage internes {0}",
   "QUOTA_DMZ_HUB": "Dossiers de partage externes {0}",
-  "CONFIRM_FILENAME_CONFLICT": "Le fichier {0} existe déjà. Souhaitez-vous le remplacer ?",
+  "CONFIRM_FILENAME_CONFLICT": "Il existe déjà un fichier portant le même nom ({0}). Que souhaitez-vous faire ?",
   "MAKE_HOMEPAGE": "Définir comme page d'accueil",
   "START": "Démarrer",
   "QUOTA_EXCEEDED": "Votre quota a été dépassé",
@@ -1905,5 +1905,6 @@
   "GOTO_HOMEPAGE": "Aller à la page d'accueil",
   "SBX_NO_THANKS": "Non, merci. Je veux seulement essayer.",
   "NOT_A_BOT": "Veuillez fermer cette fenêtre pour confirmer que vous n'êtes pas un robot",
-  "SERVER_BUSY": "Nous sommes désolés, notre serveur rencontre en ce moment une charge importante. Veuillez reessayer plus tard."
+  "SERVER_BUSY": "Nous sommes désolés, notre serveur rencontre en ce moment une charge importante. Veuillez reessayer plus tard.",
+  "CONFIRM_DIRNAME_CONFLICT": "Il existe déjà un répertoire portant le même nom ({0}). Que souhaitez-vous faire ?"
 }

@@ -93,7 +93,7 @@
   "DELETE_PERMENANTLY": "Borrar permanentemente",
   "SOMETHING_WENT_WRONG": "Algo salió mal. Vuelva a cargar e inténtelo de nuevo.",
   "DRUMEE_THANKS": "Gracias por usar Drumee",
-  "CONFIRM_FILENAME_CONFLICT": "El archivo {0} ya existe. ¿Quieres reemplazarlo?",
+  "CONFIRM_FILENAME_CONFLICT": "Ya existe un archivo con el mismo nombre ({0}). ¿Qué desea hacer?",
   "MAKE_HOMEPAGE": "Establecer como página de inicio",
   "SESSION_EXPIRED": "Su sesión ha caducado.",
   "START": "Comenzar",
@@ -121,5 +121,8 @@
   "SBX_NO_THANKS": "No, gracias. Solo quiero intentarlo.",
   "TRY_AGAIN_LATER": "Algo salió mal. ¡Inténtalo de nuevo más tarde!",
   "NOT_A_BOT": "Por favor, cierra esta ventana para confirmar que no eres un bot",
-  "SERVER_BUSY": "Lo sentimos, nuestro servidor está experimentando mucha carga. Inténtalo de nuevo más tarde."
+  "SERVER_BUSY": "Lo sentimos, nuestro servidor está experimentando mucha carga. Inténtalo de nuevo más tarde.",
+  "REPLACE": "Reemplaza",
+  "INSERT": "Insertar",
+  "CONFIRM_DIRNAME_CONFLICT": "Ya existe un directorio con el mismo nombre ({0}). ¿Qué desea hacer?"
 }
