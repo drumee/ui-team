@@ -1,7 +1,6 @@
 // On demand Classes cannot be overloaded
 
-const a = {
-}
+const a = require('./builtins')
 
 /**
  * 
