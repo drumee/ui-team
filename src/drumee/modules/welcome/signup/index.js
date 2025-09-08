@@ -488,16 +488,29 @@ class __welcome_signup extends __welcome_interact {
         return this.renderMessage(LOCALE.TRY_AGAIN_LATER)
     }
   }
+
   /**
    *
   */
   async directSignup(cmd, args) {
-    this.debug("AAA:directSignup", this.getData())
+    let { email, password } = this.getData();
+
+    let we = await this.ensurePart("wrapper-email")
+    if (!email.isEmail()) {
+      we.el.dataset.status = "error"
+      return
+    }
+    we.el.dataset.status = ""
+    let rp = await this.ensurePart('wrapper-pw')
+    if (password.length < 8) {
+      rp.el.dataset.status = "error"
+      return
+    }
+    rp.el.dataset.status = ""
     this.postService(SERVICE.butler.signup, this.getData()).then((data) => {
-      this.debug("AAA:472", data)
       this._handleResponse(data)
     }).catch((e) => {
-      this.warn("EEE:474", e)
+      this.warn("directSignup: caugth error", e)
     })
   }
 

@@ -15,7 +15,7 @@ function maiden_signup(ui) {
           Skeletons.EntryBox({
             className: `${b2cSignupFig}__entry first-name with-icon`,
             formItem: _a.firstname,
-            name:_a.firstname,
+            name: _a.firstname,
             placeholder: LOCALE.FIRSTNAME,
             uiHandler: ui,
             errorHandler: [ui],
@@ -32,7 +32,8 @@ function maiden_signup(ui) {
     className: `${b2cSignupFig}__wrapper email`,
     kids: [
       Skeletons.Box.X({
-        className: `${b2cSignupFig}__row email`,
+        sys_pn: 'wrapper-email',
+        className: `${b2cSignupFig}__row email entry-status`,
         kids: [
           Skeletons.Button.Svg({
             ico: 'profile-signup',
@@ -41,12 +42,13 @@ function maiden_signup(ui) {
           Skeletons.EntryBox({
             className: `${b2cSignupFig}__entry email with-icon`,
             formItem: _a.email,
-            name:_a.email,
+            name: _a.email,
             placeholder: LOCALE.EMAIL,
             uiHandler: ui,
             errorHandler: [ui],
+            partHandler: [ui],
             validators: [
-              { reason: LOCALE.LASTNAME_REQUIRED, comply: Validator.require }
+              { reason: LOCALE.REQUIRE_EMAIL, comply: Validator.email }
             ]
           })
         ]
@@ -58,7 +60,6 @@ function maiden_signup(ui) {
 
   const conditions = Skeletons.Box.X({
     className: `${b2cSignupFig}__row conditions without-icon b2c-signup`,
-    sys_pn: 'wrapper-email',
     dataset: {
       lang: Visitor.language()
     },

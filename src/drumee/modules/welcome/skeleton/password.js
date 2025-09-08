@@ -1,26 +1,22 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : /src/drumee/modules/welcome/skeleton/password.js
-//   TYPE : Skeleton
-// ==================================================================== *
 
-function __skl_welcome_password(_ui_, cn, passmeter) {
+function __skl_welcome_password(ui, cn, passmeter) {
 
-  cn = cn || `${_ui_.fig.group}__row ${_ui_.fig.family}__row`;
+  cn = cn || `${ui.fig.group}__row ${ui.fig.family}__row`;
 
   const a = Skeletons.Box.X({
-    className: cn,
+    className: `${cn} entry-status`,
     sys_pn: 'wrapper-pw',
+    partHandler: [ui],
     kids: [
       Skeletons.Button.Svg({
         ico: "profile-lock",
-        className: `${_ui_.fig.group}__icon ${_ui_.fig.family}__icon lock`
+        className: `${ui.fig.group}__icon ${ui.fig.family}__icon lock`
       }),
 
       Skeletons.EntryBox({
-        uiHandler: [_ui_],
+        uiHandler: [ui],
         type: _a.password,
-        className: `${_ui_.fig.group}__entry ${_ui_.fig.family}__entry`,
+        className: `${ui.fig.group}__entry ${ui.fig.family}__entry`,
         service: _e.submit,
         name: _a.password,
         placeholder: LOCALE.PASSWORD,
@@ -34,18 +30,18 @@ function __skl_welcome_password(_ui_, cn, passmeter) {
 
   if (passmeter) {
     a.kids.unshift(Skeletons.Box.X({
-      className: `${_ui_.fig.group}__pw-meter widget__pw-meter wrapper`,
+      className: `${ui.fig.group}__pw-meter widget__pw-meter wrapper`,
       kids: [
         Skeletons.Box.X({
-          className: `${_ui_.fig.group}__pw-meter widget__pw-meter score-limit`,
+          className: `${ui.fig.group}__pw-meter widget__pw-meter score-limit`,
           sys_pn: 'ref-pwm-score-limit'
         }),
 
         Skeletons.Box.X({
-          className: `${_ui_.fig.group}__pw-meter widget__pw-meter bar-holder`,
+          className: `${ui.fig.group}__pw-meter widget__pw-meter bar-holder`,
           kids: [
             Skeletons.Element({
-              className: `${_ui_.fig.group}__pw-meter widget__pw-meter strength`,
+              className: `${ui.fig.group}__pw-meter widget__pw-meter strength`,
               sys_pn: 'ref-pwm'
             })
           ]
@@ -53,7 +49,7 @@ function __skl_welcome_password(_ui_, cn, passmeter) {
 
         Skeletons.Button.Svg({
           ico: 'info',
-          className: `${_ui_.fig.group}__pw-meter widget__pw-meter info`,
+          className: `${ui.fig.group}__pw-meter widget__pw-meter info`,
           tooltips: {
             content: LOCALE.DIGITS_MINIMUM_COMBINE
           }
