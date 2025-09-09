@@ -622,49 +622,41 @@ class __window_mfs extends DrumeeMFS {
    *
   */
   async openFileLocation(cmd) {
-    let nid = cmd.mget(_a.nid);
-    let hub_id = cmd.mget(_a.hub_id);
-    let name;
-    if (cmd.mget(_a.filetype) == _a.hub) hub_id = Visitor.id;
-    let attr = await this.fetchService({
-      service: SERVICE.media.attributes,
-      nid,
-      hub_id,
-    }, { async: 1 });
-    let { kind } = require('window/configs/application')(attr.area, '');
-    let data;
-    if (!attr.privilege) attr.privilege = attr.permission;
-    cmd.mset(attr);
-    if (attr.filetype == _a.hub) {
-      data = await this.fetchService({
-        service: SERVICE.media.attributes,
-        nid: attr.parent_id,
-        hub_id: Visitor.id
-      }, { async: 1 })
-      kind = 'window_folder';
-      name = data.filename;
-      nid = data.nid;
-      hub_id = data.hub_id;
-    } else {
-      data = await this.fetchService({
-        service: SERVICE.hub.get_attributes,
-        hub_id: cmd.mget(_a.hub_id)
-      }, { async: 1 })
-      name = data.name;
-      let o = cmd.actualNode();
-      nid = attr.parent_id;
-      hub_id = o.hub_id;
+    let found = Wm.getItemsByAttr(_a.nid, cmd.mget(_a.nid)).filter((e) => {
+      return e.cid != cmd.cid
+    })
+    if (found[0] && found[0].el) {
+      found[0].el.click()
+      return;
     }
 
+    found = Wm.getItemsByAttr(_a.nid, cmd.mget(_a.pid)).filter((e) => {
+      return e.cid != cmd.cid
+    })
+    if (found[0] && found[0].el) {
+      found[0].el.click()
+      return;
+    }
+
+    let parent = await this.fetchService({
+      service: SERVICE.media.attributes,
+      nid: cmd.mget(_a.pid),
+      hub_id: cmd.mget(_a.hub_id),
+    }, { async: 1 });
+    let { kind } = require('window/configs/application')(parent.area, '');
+
+    let trigger = cmd;
+    for (let c of Wm.__list.children.toArray()) {
+      let re = new RegExp(c.mget(_a.filepath))
+      if (re.test(parent.filepath)) {
+        trigger = c;
+        break;
+      }
+    }
     let opt = {
+      trigger,
+      ...parent,
       kind: kind || 'window_folder',
-      hub_id,
-      name,
-      filename: name,
-      nid,
-      privilege: attr.privilege,
-      trigger: cmd,
-      media: cmd,
       style: cmd.$el.offset()
     }
 

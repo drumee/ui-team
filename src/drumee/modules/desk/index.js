@@ -149,7 +149,7 @@ class __desk_ui extends LetcBox {
     switch (pn) {
       case "ref-avatar":
         /** wait for  $el.droppable*/
-        this.ensurePart("desk-content").then(()=>{
+        this.ensurePart("desk-content").then(() => {
           child.$el.droppable({
             tolerance: "touch",
             over: this.mediaDragOverAvatar,
@@ -207,10 +207,10 @@ class __desk_ui extends LetcBox {
             return (this.__userContainer.el.dataset.state = 1);
           } catch (error) { }
         });
-        if(!Visitor.get(_a.privilege)){
-          Visitor.once('online', ()=>{
+        if (!Visitor.get(_a.privilege)) {
+          Visitor.once('online', () => {
             child.restart();
-          });  
+          });
         }
         return child.on(_e.close, () => {
           try {
@@ -232,7 +232,7 @@ class __desk_ui extends LetcBox {
           child.el.hide();
           return Wm.showIcons();
         });
-        return; 
+        return;
 
       case "desk-tooltip":
         return (this.tooltip = child);
@@ -529,7 +529,6 @@ class __desk_ui extends LetcBox {
     if (mouseDragged || !window.Wm) {
       return;
     }
-
     switch (service) {
       case _e.lock:
         return Wm.lock();
@@ -581,7 +580,20 @@ class __desk_ui extends LetcBox {
         return Wm.paste();
 
       case _e.search:
-        return Wm.search(cmd, args);
+        if (this._timer) clearTimeout(this._timer);
+        this._timer = setTimeout(() => {
+          Wm.search(cmd, args);
+          this._timer = null;
+        }, 1000)
+        return
+
+      case _e.Enter:
+        if (this._timer) clearTimeout(this._timer);
+        this._timer = null;
+        if (cmd.mget(_a.service) == _a.search) {
+          Wm.search(cmd, args);
+        }
+        return
 
       case "copy-link":
         return Wm.copyLink();

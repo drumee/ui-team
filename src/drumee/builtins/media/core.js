@@ -213,9 +213,7 @@ class __media_core extends DrumeeMFS {
     }
 
     if (this.mget(_a.role) == _a.search) {
-      if (/^(\/.+)\/.+$/.test(this.mget(_a.filepath))) {
-        hubItems.push(_a.openFileLocation);
-      }
+      hubItems.push(_a.openFileLocation);
     }
     return hubItems;
   }
@@ -276,9 +274,7 @@ class __media_core extends DrumeeMFS {
     }
 
     if (this.mget(_a.role) == _a.search) {
-      if (/^(\/.+)\/.+$/.test(this.mget(_a.filepath))) {
-        fileItems.push(_a.openFileLocation);
-      }
+      fileItems.push(_a.openFileLocation);
     }
 
     // for media files in trash
