@@ -282,7 +282,7 @@ function list (name) {
     })
   }
   for (let i of keys ){
-    console.log(i + " -> " + a[i], STYLE)
+    console.log(`${i}  ->  %c${a[i]}`, STYLE)
   }
   return keys
 };

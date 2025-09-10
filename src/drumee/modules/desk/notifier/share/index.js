@@ -10,86 +10,89 @@ class __notifier_share extends LetcBox {
     this.__dispatchRest = this.__dispatchRest.bind(this);
   }
 
-  static initClass() {
-    this.prototype.fig = 1;
-    this.prototype.behaviorSet = {
-      bhv_socket   : 1,
-      bhv_toggle   : 1
-    };
-  }
-    
-// ===========================================================
-// 
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} opt 
+   * @returns 
+   */
   initialize(opt) {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
-    this.model.set({ 
-      flow    : _a.none});
+    this.model.set({
+      flow: _a.none
+    });
 
     return this.bindEvent(this.fig.name);
   }
 
-// ===========================================================
-//
-// ===========================================================
-  onDestroy(cmd) {}
-    //#@unbindEvent()
+  /**
+   * 
+   * @param {*} cmd 
+   */
+  onDestroy(cmd) { }
+  //#@unbindEvent()
 
-// ===========================================================
-//
-// ===========================================================
+
+  /**
+   * 
+   * @param {*} data 
+   * @returns 
+   */
   getNotification(data) {
     return this.fetchService({
-      service     : SERVICE.sharebox.notification_count,
-      hub_id : Visitor.id
+      service: SERVICE.sharebox.notification_count,
+      hub_id: Visitor.id
     });
   }
 
-// ===========================================================
-// 
-//
-// ===========================================================
-  onDomRefresh(){
+  /**
+   * 
+   * @returns 
+   */
+  onDomRefresh() {
     this.feed(require('./skeleton')(this));
-    this._icon    = this.children.first();
+    this._icon = this.children.first();
     this.counter = this.children.last();
-    Notification.requestPermission(function(status){
-      if (Notification.permission !== status) { 
+    this.getNotification();
+    if (!window.Notification) return;
+    Notification.requestPermission(function (status) {
+      if (Notification.permission !== status) {
         return Notification.permission = status;
       }
     });
-    return this.getNotification();
   }
 
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} cmd 
+   * @returns 
+   */
   onUiEvent(cmd) {
-    this.model.set({ 
-      //service : cmd.model.get(_a.service)
-      way  : cmd.mget('way'),
-      mode : cmd.mget(_a.mode)
+    this.model.set({
+      way: cmd.mget('way'),
+      mode: cmd.mget(_a.mode)
     });
     return this.triggerHandlers();
   }
 
-// ===========================================================
-//
-// ===========================================================
+
+  /**
+   * 
+   * @param {*} data 
+   * @returns 
+   */
   update(data) {
     let count;
     if ((data == null) || (data.count == null) || (~~data.count === 0)) {
       count = "";
-    } else { 
+    } else {
       count = `${data.count}`;
     }
     this.counter.model.set(_a.content, count);
     if (_.isEmpty(count)) {
       this.counter.el.hide();
-    } else { 
+    } else {
       this.counter.render();
       this.counter.el.show();
     }
@@ -97,10 +100,13 @@ class __notifier_share extends LetcBox {
     return this.trigger(_e.update);
   }
 
-// ===========================================================
-//
-// ===========================================================
-  __dispatchPush(service, data){
+  /**
+   * 
+   * @param {*} service 
+   * @param {*} data 
+   * @returns 
+   */
+  __dispatchPush(service, data) {
     this.debug("aaa 71__dispatchPush", service, data);
     switch (service) {
       case SERVICE.sharebox.assign_permission:
@@ -108,10 +114,13 @@ class __notifier_share extends LetcBox {
     }
   }
 
-// ===========================================================
-//
-// ===========================================================
-  __dispatchRest(service, data){
+  /**
+   * 
+   * @param {*} service 
+   * @param {*} data 
+   * @returns 
+   */
+  __dispatchRest(service, data) {
     this.debug("aaa 71__dispatchRest ", service, data);
     switch (service) {
       case SERVICE.sharebox.notification_count:
@@ -119,20 +128,5 @@ class __notifier_share extends LetcBox {
     }
   }
 }
-__notifier_share.initClass();
-    //   # when 'share.hub'
-    //   #   n = new Notification(title, notif)
-    //   #   @update data
-    //   #   Wm.join_hub(data)
-
-    //   # when 'leave.hub'
-    //   #   @update data
-    //   #   Wm.leave_hub(data)
-
-    //   when _WS.notifier.get_count
-    //     @update data
-
-    //   when _WS.chat.ring
-    //     n = new Notification(title, notif)
 
 module.exports = __notifier_share;

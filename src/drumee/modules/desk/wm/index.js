@@ -224,7 +224,6 @@ class __window_manager extends push {
       if (!window.Notification) return
       clearInterval(timer);
       Notification.requestPermission((p) => {
-        this.debug("requestPermission", p)
         if (p != "granted") {
           this.alert(LOCALE.NOTIFICATION_DISABLED)
         }
@@ -914,7 +913,6 @@ class __window_manager extends push {
     let kind = "window_search";
     await Kind.waitFor(kind);
 
-    //@debug "aaa 1065str", str, args, cmd
     const w = this.getItemByKind(kind);
     if (!str.length) {
       if (args.type === _e.click) {
