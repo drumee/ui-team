@@ -220,12 +220,16 @@ class __window_manager extends push {
         }
       }, 2000)
     });
-    Notification.requestPermission((p) => {
-      this.debug("requestPermission", p)
-      if (p != "granted") {
-        this.alert(LOCALE.NOTIFICATION_DISABLED)
-      }
-    })
+    let timer = setInterval(() => {
+      if (!window.Notification) return
+      clearInterval(timer);
+      Notification.requestPermission((p) => {
+        this.debug("requestPermission", p)
+        if (p != "granted") {
+          this.alert(LOCALE.NOTIFICATION_DISABLED)
+        }
+      })
+    }, 1000)
   }
 
   /**

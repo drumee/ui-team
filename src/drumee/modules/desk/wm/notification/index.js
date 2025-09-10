@@ -108,7 +108,9 @@ class __notification_panel extends LetcBox {
         if (this.notificationState == 0) {
           this.notificationState = 1;
           this.updateNotificationWindow();
-          this.parent.el.dataset.state = 1;
+          if (this.parent) {
+            this.parent.el.dataset.state = 1;
+          }
           this.setState(1);
           return '';
         }
@@ -131,8 +133,11 @@ class __notification_panel extends LetcBox {
    * 
    */
   closeNotificationPanel() {
+
     this.notificationState = 0;
-    this.parent.el.dataset.state = 0;
+    if (this.parent) {
+      this.parent.el.dataset.state = 0;
+    }
     this.setState(0);
     if (!this.__wrapperNotificationOverlay) return;
     this.__wrapperNotificationOverlay.clear();
