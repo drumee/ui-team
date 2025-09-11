@@ -1,17 +1,18 @@
 // On demand Classes cannot be overloaded
 
-const a = require('./builtins')
+const Builtins = require('./builtins')
+const Ondemand = require('./ondemand')
 
 /**
  * 
  */
 function register(kind, ref) {
-  if (a[kind]) {
+  if (Builtins[kind]) {
     console.warn(`Kind ${kind} already exists. Skipped`);
     return;
   }
   if (_.isFunction(ref.then)) {
-    a[kind] = (s, f) => {
+    Builtins[kind] = (s, f) => {
       ref.then((m) => {
         s(m.default)
       }).catch(f)
@@ -26,14 +27,8 @@ let ondemand, builtins;
  * @returns 
  */
 function get(name) {
-  if (a[name]) return new Promise(a[name]);
-
-  if (!ondemand) ondemand = require('./ondemand');
-  if (ondemand[name]) return new Promise(ondemand[name]);
-
-  if (!builtins) builtins = require('./builtins')
-  if (builtins[name]) return new Promise(builtins[name]);
-
+  if (Builtins[name]) return new Promise(Builtins[name]);
+  if (Ondemand[name]) return new Promise(Ondemand[name]);
   return null;
 };
 

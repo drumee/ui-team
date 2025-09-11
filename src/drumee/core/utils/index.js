@@ -554,7 +554,6 @@ export function appendFontFace(fonts, id) {
     return;
   }
   const { main_domain } = bootstrap();
-  const p = location.protocol + "//";
   id = id || Host.get(_a.id);
   id = `--font-face-${id}`;
   let el = document.getElementById(id);
@@ -567,6 +566,7 @@ export function appendFontFace(fonts, id) {
   el.setAttribute("rel", _a.stylesheet);
   el.setAttribute(_a.media, _a.screen);
   const list = [];
+  const { protocol } = bootstrap()
   for (let f of Array.from(fonts)) {
     var l1, url;
     if (_.isEmpty(f.local1)) {

@@ -1,9 +1,3 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2021
- * FILE : /src/drumee/modules/welcome/signin/skeleton/content.js
- * TYPE : Skeleton
- * ===================================================================**/
-
 function __skl_welcome_signin_content(_ui_) {
   const contentFig = _ui_.fig.family
   let dataset = _ui_.mget(_a.dataset) || {};
@@ -46,24 +40,11 @@ function __skl_welcome_signin_content(_ui_) {
 
   const submit = require('../../skeleton/common/button').default(_ui_, _e.submit, LOCALE.LOGIN)
   const msgBox = require('../../skeleton/common/message-box').default(_ui_)
-  //let base;
-  // if(bootstrap().isElectron){
-  //   auth = `${_K.module.welcome}/signin/gateway`;
-  // }else{
-  //   base = `${protocol}://${bootstrap().main_domain}${location.pathname}`;
-  //   auth = `${base}${_K.module.welcome}/signin`;
-  // }
   let href = `${_K.module.welcome}/signin/org`;
   let content = LOCALE.LOGIN_OTHER_POD;
   if (Organization.get('domain_id') > 1) {
-    let { instance, main_domain } = bootstrap();
-    if (instance == 'main') {
-      instance = '/-/';
-    } else {
-      instance = `/-/${instance}/`;
-    }
-
-    let base = `${protocol}://${main_domain}${instance}`;
+    let { protocol, endpointPath, main_domain } = bootstrap();
+    let base = `${protocol}://${main_domain}${endpointPath}`;
     href = `${base}${_K.module.welcome}/signin`;
     content = LOCALE.LOGIN_PERSONAL_ACCOUNT;
   }
@@ -71,13 +52,13 @@ function __skl_welcome_signin_content(_ui_) {
   let helper = '';
   let create_account = '';
 
-  
+
   if (Platform.get('isPublic')) {
     create_account = Skeletons.Note({
       className: `${contentFig}__note no-account helper text-underline`,
       content: LOCALE.Q_NO_ACCOUNT,
       dataset,
-      href:"#/welcome/signup"
+      href: "#/welcome/signup"
       // service: 'open-signup'
     })
   }

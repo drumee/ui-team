@@ -206,7 +206,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | dmz_window_manager | dmz/wm | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/dmz/wm/index.js |
 | dmz_sharebox | dmz/sharebox | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/dmz/sharebox/index.js |
 | dmz_meeting | dmz/meeting | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/dmz/meeting/index.js |
-| setup_window | src/drumee/modules/setup | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/setup/index.js |
 | test_result | modules/test/widget/result | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/test/widget/result/index.js |
 | welcome_invitation | welcome/invitation | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/invitation/index.js |
 | welcome_feedback | welcome/feedback | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/feedback/index.js |

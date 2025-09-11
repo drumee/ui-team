@@ -377,8 +377,8 @@ class __dmz_wm extends winman {
           id
         } = data;
         var h = data.vhost;
-        let { svc, keysel, main_domain, localhost} = bootstrap();
-        let url = `${protocol}://${h}${svc}/media.zip_download&id=${id}&keysel=${keysel}`;
+        let { svc, protocol, keysel, main_domain, localhost} = bootstrap();
+        let url = `${protocol}://${h}${svc}/media.zip_download?id=${id}&keysel=${keysel}`;
         if(localhost){
            url = `${protocol}://${main_domain}${svc}/@{h}/media.zip_download&id=${id}&keysel=${keysel}`;
         }

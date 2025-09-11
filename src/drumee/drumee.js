@@ -1,8 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : ../src/drumee/main
-//   TYPE :
-// ==================================================================== *
 
 require('./core');
 window.errorStack = [];
@@ -76,7 +71,7 @@ class Drumee extends Marionette.Application {
     }
     let b = bootstrap();
     const { body } = document;
-    const { main_domain } = b;
+    const { protocol, main_domain } = b;
     let bgImg = `${protocol}://${main_domain}/-/images/background/drumee-pro-background.jpg`;
     body.style.height = "100vh";
     body.style.width = "100vw";

@@ -1,10 +1,4 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : 
-//   TYPE : 
-// ==================================================================== *
 
-//########################################
 class __core_site extends Backbone.Model {
 
   /**
@@ -184,7 +178,9 @@ class __core_site extends Backbone.Model {
    * @returns 
    */
   makeUrl(url = '') {
-    return `${protocol}://${this.get(_a.vhost) || this.get(_a.domain) || bootstrap().main_domain}/${url}`;
+    const { protocol, main_domain } = bootstrap();
+    const host = this.get(_a.vhost) || this.get(_a.domain) || main_domain
+    return `${protocol}://${host}/${url}`;
   }
 
   /**
@@ -219,7 +215,7 @@ class __core_site extends Backbone.Model {
 
 let Host;
 function f(opt) {
-  if(Host) return Host;
+  if (Host) return Host;
   Host = new __core_site(opt);
   return Host;
 };

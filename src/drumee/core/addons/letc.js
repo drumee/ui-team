@@ -987,7 +987,7 @@ View.prototype.actualNode = function (format = _a.orig) {
     killCache = md5Hash || changed;
   }
 
-  const { keysel, endpoint } = bootstrap();
+  const { protocol, keysel, endpoint } = bootstrap();
   if (vhost && filepath) {
     href = `${protocol}://${vhost}${filepath}`;
   } else {

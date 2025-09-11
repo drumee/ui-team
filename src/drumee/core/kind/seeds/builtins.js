@@ -253,7 +253,6 @@ const builtins = {
   dmz_window_manager:function(s,f){import('dmz/wm').then(m=>{s(m.default)}).catch(f)},
   dmz_sharebox:function(s,f){import('dmz/sharebox').then(m=>{s(m.default)}).catch(f)},
   dmz_meeting:function(s,f){import('dmz/meeting').then(m=>{s(m.default)}).catch(f)},
-  setup_window:function(s,f){import('src/drumee/modules/setup').then(m=>{s(m.default)}).catch(f)},
   test_result:function(s,f){import('modules/test/widget/result').then(m=>{s(m.default)}).catch(f)},
   welcome_invitation:function(s,f){import('welcome/invitation').then(m=>{s(m.default)}).catch(f)},
   welcome_feedback:function(s,f){import('welcome/feedback').then(m=>{s(m.default)}).catch(f)},

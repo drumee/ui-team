@@ -1,8 +1,3 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2021
- * FILE : /src/drumee/modules/welcome/signin/skeleton/company-url.js
- * TYPE : Skeleton
- * ===================================================================**/
 
 function __skl_welcome_signin_url(_ui_) {
   const commonFig = _ui_.fig.family;
@@ -24,6 +19,7 @@ function __skl_welcome_signin_url(_ui_) {
       }),
     ]
   })
+  const { protocol, main_domain } = bootstrap();
   const url = Skeletons.Box.X({
     className: `${fig}__entry`,
     dataset,
@@ -67,8 +63,7 @@ function __skl_welcome_signin_url(_ui_) {
       })
     ]
   });
-
-  let base =  `${protocol}://${bootstrap().main_domain}${location.pathname}`;
+  let base = `${protocol}://${main_domain}${location.pathname}`;
   let auth = `${base}${_K.module.welcome}/signin`;
 
   const altLogin = Skeletons.Note({
