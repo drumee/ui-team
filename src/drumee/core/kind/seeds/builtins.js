@@ -8,7 +8,7 @@
 
 // On demand Classes cannot be overloaded
 
-const builtins = {
+module.exports = {
   drumee_api_popup:function(s,f){import('api/lib/popup').then(m=>{s(m.default)}).catch(f)},
   drumee_api_form:function(s,f){import('api/lib/form').then(m=>{s(m.default)}).catch(f)},
   drumee_api_signup:function(s,f){import('api/lib/signup').then(m=>{s(m.default)}).catch(f)},
@@ -268,5 +268,3 @@ const builtins = {
   module_sandbox:function(s,f){import('modules/sandbox').then(m=>{s(m.default)}).catch(f)},
   module_welcome:function(s,f){import('modules/welcome').then(m=>{s(m.default)}).catch(f)},
 }
-
-module.exports = builtins ;
