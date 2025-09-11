@@ -1,3 +1,8 @@
+// ==================================================================== *
+//   Copyright Xialia.com  2011-2018
+//   FILE : ../src/drumee/main
+//   TYPE :
+// ==================================================================== *
 
 require('./core');
 window.errorStack = [];
@@ -71,7 +76,7 @@ class Drumee extends Marionette.Application {
     }
     let b = bootstrap();
     const { body } = document;
-    const { protocol, main_domain } = b;
+    const { main_domain } = b;
     let bgImg = `${protocol}://${main_domain}/-/images/background/drumee-pro-background.jpg`;
     body.style.height = "100vh";
     body.style.width = "100vw";
@@ -124,7 +129,11 @@ class Drumee extends Marionette.Application {
       Visitor.set(user);
       Organization.set(organization)
       window.currentDevice = Visitor.device();
-      window.SERVICE = { ...Drumee.SERVICE, ...Platform.get('services') }
+      window.SERVICE = Platform.get('services')
+      if(_.isEmpty(SERVICE)){
+        window.SERVICE = require('lex/services');
+      }
+      console.log('AAAA:133', SERVICE)
     } catch (e) {
       console.error("FAILED TO PARSE ENVIRONMENT DATA", e);
       this.failover(e);

@@ -18,7 +18,7 @@ const __sandbox_leaflet_wrapper = function (_ui_, nid) {
       width: "100%"
     },
     kind: KIND.snippet,
-    src: `${https}://letc.io/file/orig/${nid}/edb90e08edb90e0c`,
+    src: `https://letc.io/file/orig/${nid}/edb90e08edb90e0c`,
     vendors: [{
       link: {
         rel: "stylesheet",
