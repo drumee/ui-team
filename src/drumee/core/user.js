@@ -602,20 +602,11 @@ class __core_user extends Backbone.Model {
     if (/^http/.test(a)) {
       return a;
     }
-    const { protocol, endpointPath } = bootstrap();
-    let base = `${endpointPath}avatar/`;
     id = id || this.id;
-    const ts = `&${this.get(_a.mtime)}` || ""; //timestamp()
-    if (/^\//.test(base)) {
-      base = `${base}${id}?type=${type}${ts}`;
-    } else {
-      if (/^http/.test(base)) {
-        base = `${base}${id}?type=${type}${ts}`;
-      } else {
-        base = `${protocol}://${base}${id}?type=${type}${ts}`;
-      }
-    }
-    return base;
+    const ts = `${this.get(_a.mtime)}` || ""; 
+    const { protocol, main_domain, endpointPath } = bootstrap();
+    let base = `${protocol}://${main_domain}${endpointPath}/avatar/${id}?type=${type}&ts=${ts}`;
+    return base
   }
 
 
