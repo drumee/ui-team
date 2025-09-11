@@ -1,5 +1,12 @@
+/* ================================================================== *
+#   Copyright Thidima SA  2011-2025
+#   FILE : /src/drumee/core/kind/seeds/helper.js
+#   TYPE : Automatic generation - DO NOT EDIT 
+# ===================================================================**/
+// @ts-nocheck
 
 const STYLE = "color: green; font-weight: bold;"
+// Kind Helper. Only for devel usage. List available kinds
 
 const a = {
   drumee_api_popup:"api/lib/popup",
@@ -12,6 +19,7 @@ const a = {
   editor_diagram:"src/drumee/builtins/editor/diagram/index.js",
   diagram_state:"src/drumee/builtins/editor/diagram/state.js",
   editor_markdown:"src/drumee/builtins/editor/markdow/index.js",
+  media_local:"builtins/media/local",
   media_origin:"src/drumee/builtins/media/notifications/origin",
   notification_file:"src/drumee/builtins/media/notifications/origin/file",
   notification_message:"src/drumee/builtins/media/notifications/origin/message",
@@ -20,7 +28,7 @@ const a = {
   audio_player:"builtins/player/audio",
   devices_settings:"builtins/widget/devices",
   document_page:"builtins/player/document/page",
-  document_reader:"builtins/player/document",
+  document_reader:"builtins/player/document/index.electron",
   editor_note:"builtins/editor/note",
   hub_administrator:"builtins/window/hub/settings/administrator",
   hub_filename:"builtins/window/hub/settings/filename",
@@ -46,7 +54,6 @@ const a = {
   media_preview:"builtins/media/preview",
   media_row:"builtins/media/row",
   media_simple:"builtins/media/simple",
-  media_pseudo:"builtins/media/pseudo",
   media_uploader:"builtins/media/uploader",
   media:"builtins/media/grid",
   public_link:"builtins/widget/invitation/public-link",
@@ -55,8 +62,8 @@ const a = {
   thumbnail:"builtins/media/thumbnail",
   tooltip:"builtins/widget/notifier",
   vector_viewer:"builtins/player/vector",
-  video_player:"builtins/player/video",
-  video_viewer:"builtins/player/video",
+  video_player:"builtins/player/video/index.electron",
+  video_viewer:"builtins/player/video/index.electron",
   webrtc_attendee:"builtins/webrtc/attendee",
   webrtc_debug:"builtins/webrtc/debug",
   webrtc_local_user:"builtins/webrtc/endpoint/local/user",
@@ -76,7 +83,7 @@ const a = {
   email_input_item:"src/drumee/builtins/widget/email-input-item/index",
   phoneno_input_item:"src/drumee/builtins/widget/phoneno-input-item/index",
   widget_chat:"widget/chat",
-  widget_chat_item:"widget/chat-item",
+  widget_chat_item:"src/drumee/builtins/widget/chat-item/index.electron",
   account_avatar:"window/account/profile/avatar",
   account_country:"window/account/widget/country",
   account_data:"window/account/data",
@@ -139,6 +146,8 @@ const a = {
   widget_shareroom_detail:"src/drumee/builtins/window/bigchat/widget/shareroom-userdetails",
   widget_shareroom_user_item:"src/drumee/builtins/window/bigchat/widget/shareroom-user-item",
   bigchat_widget_notification:"src/drumee/builtins/window/bigchat/widget/notification",
+  window_changelog:"src/drumee/builtins/window/changelog",
+  changelog_event:"src/drumee/builtins/window/changelog/widget/event",
   media_wrapper:"src/drumee/builtins/window/channel/media-wrapper",
   widget_helpdesk_category:"src/drumee/builtins/window/helpdesk/widget/help-category/index",
   widget_helpdesk_item:"src/drumee/builtins/window/helpdesk/widget/help-item/index",
@@ -226,7 +235,7 @@ const a = {
   window_info:"window/info",
   window_launcher:"window/launcher",
   window_litechat:"window/litechat",
-  window_manager:"desk/wm",
+  window_manager:"desk/wm/index.electron",
   window_meeting:"window/meeting",
   window_schedule:"window/schedule",
   window_search:"window/search",
@@ -237,7 +246,7 @@ const a = {
   window_trash:"window/trash",
   window_website:"window/website",
   dock_minifier:"src/drumee/modules/desk/wm/dock/widget/dock-minifier",
-  notification_panel:"modules/desk/wm/notification",
+  notification_panel:"modules/desk/wm/notification/index.electron",
   notification_window:"modules/desk/wm/notification/widget/notification-window",
   notification_list_item:"modules/desk/wm/notification/widget/notification-list-item",
   devel_icons:"src/drumee/modules/devel/icons",
@@ -249,10 +258,12 @@ const a = {
   test_result:"modules/test/widget/result",
   welcome_invitation:"welcome/invitation",
   welcome_feedback:"welcome/feedback",
+  welcome_offline:"welcome/offline",
   welcome_reset:"welcome/reset",
-  welcome_signin:"welcome/signin",
+  welcome_signin:"src/drumee/modules/welcome/signin/index.electron",
   welcome_signup:"welcome/signup",
-  butler:"router/butler",
+  welcome_signin_history:"src/drumee/modules/welcome/signin/history/index",
+  butler:"src/drumee/router/butler/index.electron",
   ws_channel:"router/websocket",
   module_desk:"modules/desk",
   module_devel:"modules/devel",
@@ -260,6 +271,12 @@ const a = {
   module_plugins:"modules/plugins",
   module_sandbox:"modules/sandbox",
   module_welcome:"modules/welcome",
+  screen_thumbnail:"src/drumee/widgets/electron/screen/thumbnail",
+  screen_selector:"src/drumee/widgets/electron/screen",
+  electron_activity:"src/drumee/widgets/electron/activity",
+  electron_update:"src/drumee/widgets/electron/updater",
+  electron_settings:"src/drumee/widgets/electron/settings",
+  electron_setup:"src/drumee/widgets/electron/setup",
 }
 
 /**
@@ -274,7 +291,7 @@ function list (name) {
     })
   }
   for (let i of keys ){
-    console.log(i + " -> " + a[i], STYLE)
+    console.log(i + " -> " + "%c" + a[i], STYLE)
   }
   return keys
 };

@@ -157,6 +157,6 @@
     "deploy": "drumee-ui-deploy",
     "add-widget": "drumee-make-widget",
     "md:style": "cd src/drumee && sass -I ./skin --no-source-map --update builtins/editor/markdow/skin/viewer.scss builtins/editor/markdow/template/style.css.txt",
-    "seeds": "npx update-browserslist-db@latest && drumee-build-seeds  --from=."
+    "seeds": "npx update-browserslist-db@latest && ./webpack/seeds/index.js"
   }
 }

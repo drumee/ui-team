@@ -8,8 +8,6 @@
 
 // On demand Classes cannot be overloaded
 
-const builtins = {<% _.each(items, function(item, key, val){ %>
+module.exports = {<% _.each(items, function(item, key, val){ %>
   <%= item.kind %>:<%= item.func %>,<% }) %>
 }
-  
-module.exports = builtins ;

@@ -17,6 +17,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | editor_diagram | src/drumee/builtins/editor/diagram/index.js | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/editor/diagram/index.js |
 | diagram_state | src/drumee/builtins/editor/diagram/state.js | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/editor/diagram/state.js |
 | editor_markdown | src/drumee/builtins/editor/markdow/index.js | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/editor/markdow/index.js |
+| media_local | builtins/media/local | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/local/index.js |
 | media_origin | src/drumee/builtins/media/notifications/origin | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/notifications/origin/index.js |
 | notification_file | src/drumee/builtins/media/notifications/origin/file | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/notifications/origin/file/index.js |
 | notification_message | src/drumee/builtins/media/notifications/origin/message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/notifications/origin/message/index.js |
@@ -25,7 +26,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | audio_player | builtins/player/audio | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/audio/index.js |
 | devices_settings | builtins/widget/devices | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/devices/index.js |
 | document_page | builtins/player/document/page | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/document/page/index.js |
-| document_reader | builtins/player/document | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/document/index.js |
 | editor_note | builtins/editor/note | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/editor/note/index.js |
 | hub_administrator | builtins/window/hub/settings/administrator | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/administrator/index.js |
 | hub_filename | builtins/window/hub/settings/filename | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/filename/index.js |
@@ -56,8 +56,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | schedule_viewer | builtins/player/schedule | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/schedule/index.js |
 | sound_analyzer | builtins/widget/sound-analyzer | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/sound-analyzer/index.js |
 | vector_viewer | builtins/player/vector | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/vector/index.js |
-| video_player | builtins/player/video | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/video/index.js |
-| video_viewer | builtins/player/video | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/video/index.js |
 | webrtc_attendee | builtins/webrtc/attendee | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/attendee/index.js |
 | webrtc_debug | builtins/webrtc/debug | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/debug/index.js |
 | webrtc_local_user | builtins/webrtc/endpoint/local/user | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/endpoint/local/user/index.js |
@@ -73,7 +71,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | contact_invitation_form | widget/contact-invitation-form | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/contact-invitation-form/index.js |
 | disk_usage | widget/disk-usage | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/disk-usage/index.js |
 | widget_chat | widget/chat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat/index.js |
-| widget_chat_item | widget/chat-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat-item/index.js |
 | account_avatar | window/account/profile/avatar | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/profile/avatar/index.js |
 | account_country | window/account/widget/country | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/widget/country/index.js |
 | account_data | window/account/data | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/data/index.js |
@@ -121,6 +118,8 @@ See https://drumee.com/-/#/sandbox for examples.
 | widget_shareroom_detail | src/drumee/builtins/window/bigchat/widget/shareroom-userdetails | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/shareroom-userdetails/index.js |
 | widget_shareroom_user_item | src/drumee/builtins/window/bigchat/widget/shareroom-user-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/shareroom-user-item/index.js |
 | bigchat_widget_notification | src/drumee/builtins/window/bigchat/widget/notification | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/notification/index.js |
+| window_changelog | src/drumee/builtins/window/changelog | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/changelog/index.js |
+| changelog_event | src/drumee/builtins/window/changelog/widget/event | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/changelog/widget/event/index.js |
 | media_wrapper | src/drumee/builtins/window/channel/media-wrapper | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/channel/media-wrapper/index.js |
 | media_efs | src/drumee/builtins/window/serverexplorer/widget/efs | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/serverexplorer/widget/efs/index.js |
 | widget_efs_list | src/drumee/builtins/window/serverexplorer/widget/efs_list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/serverexplorer/widget/efs_list/index.js |
@@ -187,7 +186,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | window_info | window/info | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/info/index.js |
 | window_launcher | window/launcher | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/launcher/index.js |
 | window_litechat | window/litechat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/litechat/index.js |
-| window_manager | desk/wm | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/index.js |
 | window_meeting | window/meeting | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/meeting/index.js |
 | window_schedule | window/schedule | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/schedule/index.js |
 | window_search | window/search | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/search/index.js |
@@ -198,7 +196,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | window_trash | window/trash | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/trash/index.js |
 | window_website | window/website | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/website/index.js |
 | dock_minifier | src/drumee/modules/desk/wm/dock/widget/dock-minifier | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/dock/widget/dock-minifier/index.js |
-| notification_panel | modules/desk/wm/notification | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/index.js |
 | notification_window | modules/desk/wm/notification/widget/notification-window | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/widget/notification-window/index.js |
 | notification_list_item | modules/desk/wm/notification/widget/notification-list-item | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/widget/notification-list-item/index.js |
 | devel_icons | src/drumee/modules/devel/icons | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/devel/icons/index.js |
@@ -209,10 +206,9 @@ See https://drumee.com/-/#/sandbox for examples.
 | test_result | modules/test/widget/result | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/test/widget/result/index.js |
 | welcome_invitation | welcome/invitation | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/invitation/index.js |
 | welcome_feedback | welcome/feedback | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/feedback/index.js |
+| welcome_offline | welcome/offline | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/offline/index.js |
 | welcome_reset | welcome/reset | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/reset/index.js |
-| welcome_signin | welcome/signin | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/signin/index.js |
 | welcome_signup | welcome/signup | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/signup/index.js |
-| butler | router/butler | https://github.com/drumee/ui-team/tree/main/src/drumee/router/butler/index.js |
 | ws_channel | router/websocket | https://github.com/drumee/ui-team/tree/main/src/drumee/router/websocket/index.js |
 | module_desk | modules/desk | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/index.js |
 | module_devel | modules/devel | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/devel/index.js |
@@ -220,3 +216,9 @@ See https://drumee.com/-/#/sandbox for examples.
 | module_plugins | modules/plugins | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/plugins/index.js |
 | module_sandbox | modules/sandbox | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/sandbox/index.js |
 | module_welcome | modules/welcome | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/index.js |
+| screen_thumbnail | src/drumee/widgets/electron/screen/thumbnail | https://github.com/drumee/ui-team/tree/main/src/drumee/widgets/electron/screen/thumbnail/index.js |
+| screen_selector | src/drumee/widgets/electron/screen | https://github.com/drumee/ui-team/tree/main/src/drumee/widgets/electron/screen/index.js |
+| electron_activity | src/drumee/widgets/electron/activity | https://github.com/drumee/ui-team/tree/main/src/drumee/widgets/electron/activity/index.js |
+| electron_update | src/drumee/widgets/electron/updater | https://github.com/drumee/ui-team/tree/main/src/drumee/widgets/electron/updater/index.js |
+| electron_settings | src/drumee/widgets/electron/settings | https://github.com/drumee/ui-team/tree/main/src/drumee/widgets/electron/settings/index.js |
+| electron_setup | src/drumee/widgets/electron/setup | https://github.com/drumee/ui-team/tree/main/src/drumee/widgets/electron/setup/index.js |
