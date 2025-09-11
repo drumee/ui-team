@@ -220,12 +220,15 @@ class __window_manager extends push {
         }
       }, 2000)
     });
-    Notification.requestPermission((p) => {
-      this.debug("requestPermission", p)
-      if (p != "granted") {
-        this.alert(LOCALE.NOTIFICATION_DISABLED)
-      }
-    })
+    let timer = setInterval(() => {
+      if (!window.Notification) return
+      clearInterval(timer);
+      Notification.requestPermission((p) => {
+        if (p != "granted") {
+          this.alert(LOCALE.NOTIFICATION_DISABLED)
+        }
+      })
+    }, 1000)
   }
 
   /**
@@ -283,7 +286,7 @@ class __window_manager extends push {
       { async: 1 }
     );
     if (!data || !data.src) return null;
-    if (!/^http/.test(data.src)) data.src = `https://${data.src}`;
+    if (!/^http/.test(data.src)) data.src = `${protocol}://${data.src}`;
     await Kind.waitFor("video_viewer");
 
     let items = this.getItemsByKind("video_viewer");
@@ -851,7 +854,7 @@ class __window_manager extends push {
       if (/^http/.test(text)) {
         href = text;
       } else {
-        href = `https://${text}`;
+        href = `${protocol}://${text}`;
       }
       let opt = Visitor.parseModuleArgs(text);
       const url = new URL(href);
@@ -910,7 +913,6 @@ class __window_manager extends push {
     let kind = "window_search";
     await Kind.waitFor(kind);
 
-    //@debug "aaa 1065str", str, args, cmd
     const w = this.getItemByKind(kind);
     if (!str.length) {
       if (args.type === _e.click) {

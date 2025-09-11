@@ -195,7 +195,7 @@ class __invitation_publiclink extends __recipient {
         if ((row == null)) {
           return;
         }
-        row.link = `https://${row.vhost}${location.pathname}#/dmz/${row.share_id}`;
+        row.link = `${protocol}://${row.vhost}${location.pathname}#/dmz/${row.share_id}`;
         this.model.set(row);
         this.reload();
         this.service = "public-link-created";

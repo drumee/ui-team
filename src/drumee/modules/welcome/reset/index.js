@@ -222,7 +222,7 @@ class __welcome_reset extends __welcome_interact {
     
     const f = () => {
       if (type == 'reset_token') {
-        return location.href = `https://${bootstrap().main_domain}${location.pathname}${ _K.module.signin}`
+        return location.href = `${protocol}://${bootstrap().main_domain}${location.pathname}${ _K.module.signin}`
       }
       this.__messageBox.el.dataset.mode = _a.closed
       this.__messageBox.clear()

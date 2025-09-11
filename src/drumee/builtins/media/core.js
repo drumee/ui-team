@@ -213,9 +213,7 @@ class __media_core extends DrumeeMFS {
     }
 
     if (this.mget(_a.role) == _a.search) {
-      if (/^(\/.+)\/.+$/.test(this.mget(_a.filepath))) {
-        hubItems.push(_a.openFileLocation);
-      }
+      hubItems.push(_a.openFileLocation);
     }
     return hubItems;
   }
@@ -276,9 +274,7 @@ class __media_core extends DrumeeMFS {
     }
 
     if (this.mget(_a.role) == _a.search) {
-      if (/^(\/.+)\/.+$/.test(this.mget(_a.filepath))) {
-        fileItems.push(_a.openFileLocation);
-      }
+      fileItems.push(_a.openFileLocation);
     }
 
     // for media files in trash
@@ -1591,14 +1587,53 @@ class __media_core extends DrumeeMFS {
    *
    * @param {*} e
    */
+  _uploadFiles(files, replace = 0) {
+    if (!_.isArray(files)) files = [files];
+    const queue = this.uploader();
+    const dest = this._getDestination();
+    this.isUploading = 1;
+    let pos = 0;
+    for (let f of Array.from(files)) {
+
+      dest.notify = 1;
+      dest.single = 1;
+      let args = {
+        destination: dest,
+        file: f,
+        listener: this,
+        position: this.getIndex() + pos,
+        replace
+      }
+      pos++;
+      let ownpath = this.mget(_a.ownpath) || '/';
+      ownpath = `${ownpath}/${f.fullPath}`;
+      ownpath = ownpath.replace(/\/+/g, '/');
+      ownpath = ownpath.replace(/\/+$/g, '');
+      args.ownpath = ownpath;
+      this.debug("AAA:1596", this, args, f.fullPath)
+
+      queue.add(args);
+      this.type = null;
+    }
+  }
+
+  /**
+   *
+   * @param {*} e
+   */
   async uploadInplace(e) {
     const { files, folders } = dataTransfer(e);
-    await Kind.waitFor(UPLOADER);
 
     this._uploadingInplace = true;
-    for (let f of Array.from(files)) {
-      this.uploadFile(f);
-    }
+    await this._uploadFiles(files)
+    // for (let f of Array.from(files)) {
+    //   this.debug("AAA:1596", this, f.fullPath)
+    //   let ownpath = this.mget(_a.ownpath) || '/';
+    //   ownpath = `${ownpath}/${f.name}`;
+    //   ownpath = ownpath.replace(/\+/g, '/');
+    //   ownpath = ownpath.replace(/\/+$/g, '');
+    //   this.uploadFile(f, ownpath);
+    // }
 
     if (_.isEmpty(folders)) {
       return;
@@ -1719,7 +1754,7 @@ class __media_core extends DrumeeMFS {
       return null;
     }
 
-    if (/^(.|.+\/.+| )$/.test(value)) {
+    if (/^(.|.+\/.+| +|\-+)$/.test(value)) {
       Wm.alert("Invalid name");
       return null;
     }
@@ -1901,26 +1936,47 @@ class __media_core extends DrumeeMFS {
     }
     let name = file.fullPath.replace(/\/+/g, "");
     let existing = this._nameExists(name)
+    this.debug("AAAA:1945", existing, file)
     if (!existing) {
-      this.uploadFile(file);
+      this._uploadFiles(file);
       return;
     }
-    let msg = LOCALE.CONFIRM_FILENAME_CONFLICT.format(name);
-    Wm.confirm(msg).then(() => {
-      existing.mset({
-        destination: this._getDestination(),
-      });
-      existing.uploadFile(file, file.fullPath);
-      existing.once(_e.reset, () => {
-        this.cut()
-      })
-    }).catch((r) => {
-      let { response } = r;
-      if (response == _e.close) {
-        this.goodbye();
-        return;
+
+    let message;
+    let b1;
+    if (existing.isFolder || existing.isHub) {
+      message = LOCALE.CONFIRM_DIRNAME_CONFLICT.format(name);
+      b1 = LOCALE.INSERT;
+    } else {
+      message = LOCALE.CONFIRM_FILENAME_CONFLICT.format(name);
+      b1 = LOCALE.REPLACE;
+    }
+    Wm.choice(message, LOCALE.CANCEL, b1, LOCALE.DUPLICATE).then((r) => {
+      switch (r.choice) {
+        case 1:
+          this.goodbye();
+          break;
+        case 2:
+          if (existing.isFolder || existing.isHub) {
+            existing.isUploading = 1;
+            existing._uploadFiles(file)
+            setTimeout(() => { this.cut() }, 300)
+          } else {
+            this._uploadFiles(file, 1);
+            existing.cut()
+          }
+          break;
+        case 3:
+          this._uploadFiles(file, 0);
+          break;
       }
-      this.uploadFile(file);
+      // }).catch((r) => {
+      //   let { response } = r;
+      //   if (response == _e.close) {
+      //     this.goodbye();
+      //     return;
+      //   }
+      //   this.uploadFile(file);
     })
   }
 

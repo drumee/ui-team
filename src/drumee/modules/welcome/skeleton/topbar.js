@@ -4,7 +4,7 @@ function __skl_welcome_topbar(_ui_) {
   let { user_domain, main_domain } = bootstrap();
   let logo = require("assets/mascot.png").default;
   let href = null;
-  if (main_domain) href = `https://${main_domain}`;
+  if (main_domain) href = `${protocol}://${main_domain}`;
   const a = Skeletons.Box.Z({
     debug: __filename,
     className: `${_ui_.fig.group}__topbar u-jc-sb`,

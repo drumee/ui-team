@@ -1,7 +1,7 @@
 // @ts-nocheck
 // On demand Classes cannot be overloaded
 
-const a = {
+module.exports = {
   drumee_api_popup:function(s,f){import('api/lib/popup').then(m=>{s(m.default)}).catch(f)},
   drumee_api_form:function(s,f){import('api/lib/form').then(m=>{s(m.default)}).catch(f)},
   drumee_api_signup:function(s,f){import('api/lib/signup').then(m=>{s(m.default)}).catch(f)},
@@ -217,6 +217,7 @@ const a = {
   window_bigchat:function(s,f){import('window/bigchat').then(m=>{s(m.default)}).catch(f)},
   window_server_explorer:function(s,f){import('window/serverexplorer').then(m=>{s(m.default)}).catch(f)},
   window_channel:function(s,f){import('window/channel').then(m=>{s(m.default)}).catch(f)},
+  window_choice:function(s,f){import('window/choice').then(m=>{s(m.default)}).catch(f)},
   window_confirm:function(s,f){import('window/confirm').then(m=>{s(m.default)}).catch(f)},
   window_connect:function(s,f){import('window/connect').then(m=>{s(m.default)}).catch(f)},
   window_contact:function(s,f){import('window/contact').then(m=>{s(m.default)}).catch(f)},
@@ -227,7 +228,7 @@ const a = {
   window_info:function(s,f){import('window/info').then(m=>{s(m.default)}).catch(f)},
   window_launcher:function(s,f){import('window/launcher').then(m=>{s(m.default)}).catch(f)},
   window_litechat:function(s,f){import('window/litechat').then(m=>{s(m.default)}).catch(f)},
-  window_manager:function(s,f){import('desk/wm/index.electron.js').then(m=>{s(m.default)}).catch(f)},
+  window_manager:function(s,f){import('desk/wm').then(m=>{s(m.default)}).catch(f)},
   window_meeting:function(s,f){import('window/meeting').then(m=>{s(m.default)}).catch(f)},
   window_schedule:function(s,f){import('window/schedule').then(m=>{s(m.default)}).catch(f)},
   window_search:function(s,f){import('window/search').then(m=>{s(m.default)}).catch(f)},
@@ -271,11 +272,3 @@ const a = {
   electron_settings:function(s,f){import('src/drumee/widgets/electron/settings').then(m=>{s(m.default)}).catch(f)},
   electron_setup:function(s,f){import('src/drumee/widgets/electron/setup').then(m=>{s(m.default)}).catch(f)},
 }
-
-
-function get (name) {
-  if(a[name]) return new Promise(a[name]);
-  return null;
-};
-  
-module.exports = {get};

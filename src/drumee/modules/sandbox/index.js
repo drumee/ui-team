@@ -1,8 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : src/drumee/builtins/sandbox/ui
-//   TYPE :
-// ==================================================================== *
 
 const JSONEditor = require('jsoneditor');
 require('jsoneditor/dist/jsoneditor.css');
@@ -160,33 +155,6 @@ class __module_sandbox extends LetcBox {
         break;
     }
 
-  }
-
-
-  /**
-   * 
-   * @returns 
-   */
-  showSnippet() {
-    var opt = opt || {};
-    const ajax = new XMLHttpRequest();
-    ajax.open("GET", "https://letc.io/file/orig/5bda11f97ed20ec8/edb90e08edb90e0c", true);
-    ajax.send();
-    const me = this;
-    ajax.onload = function (e) {
-      const el = document.createElement('code');
-      for (let k in opt) {
-        const v = opt[k];
-        el.setAttribute(k, v);
-      }
-      el.innerHTML = ajax.responseText.replace(/\n/gim, "<br>");
-      const item = document.head.appendChild(el);
-      me._zz = item;
-      me._preview.feed({
-        kind: KIND.note,
-        content: item.outerHTML
-      });
-    };
   }
 
 

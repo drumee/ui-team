@@ -1886,7 +1886,7 @@
   "USER": "User",
   "QUOTA_PRIVATE_HUB": "Internal share folders {0}",
   "QUOTA_DMZ_HUB": "External Share Folders {0}",
-  "CONFIRM_FILENAME_CONFLICT": "File {0} already exists. Would you like to replace it?",
+  "CONFIRM_FILENAME_CONFLICT": "There is already a file with the same name ({0}). What would you like to do?",
   "MAKE_HOMEPAGE": "Set as home page",
   "START": "Start",
   "QUOTA_EXCEEDED": "Your quota has been exceeded",
@@ -1902,5 +1902,9 @@
   "POPUP_PERMISSION": "Please grant popup permission",
   "SHOW_HIDDEN_FILES": "Show hidden files",
   "HIDE_HIDDEN_FILES": "Hide system files",
-  "GOTO_HOMEPAGE": "Go to the home page"
+  "GOTO_HOMEPAGE": "Go to the home page",
+  "SBX_NO_THANKS": "No, thanks. I just want to try.",
+  "NOT_A_BOT": "Please, close this window to confirm you're not a bot",
+  "SERVER_BUSY": "We're sorry, our server is currently experiencing heavy load. Please try again later.",
+  "CONFIRM_DIRNAME_CONFLICT": "There is already a directory with the same name ({0}). What would you like to do?"
 }

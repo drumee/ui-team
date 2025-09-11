@@ -1,10 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : ../src/drumee/application
-//   TYPE : 
-// ==================================================================== *
-
-window.SERVICE = require('lex/services');
 window.WARNING = require('lex/warning');
 window.ERROR = require('lex/error');
 window._a = require('lex/attribute');

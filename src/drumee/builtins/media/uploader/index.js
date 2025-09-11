@@ -181,8 +181,8 @@ class __media_uploader extends LetcBox {
     this._bytesPending = this._bytesPending - file.size;
     if (item && item.file) {
       let retry = this._retried[item.ownpath] || 0;
-      this.warn("Upload failed", item.ownpath, retry);
-      if (retry > 5) {
+      this.warn("Upload failed", this, item, item.ownpath, retry);
+      if (retry > 1) {
         if (!this._skipped.includes(item.ownpath)) {
           this._skipped.push(item.ownpath)
         }

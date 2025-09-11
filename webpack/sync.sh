@@ -27,6 +27,7 @@ if [ "$dest_host" != "" ]; then
   echo "*******************************************************"	
   export banner_shown=shown
   echo OPTION: $OPT
+  ssh $UI_RUNTIME_HOST mkdir -p $target
   rsync -avrp --delete --delete-excluded  $OPT $src_path/ $target/
 
   echo "Done!"

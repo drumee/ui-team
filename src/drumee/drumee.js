@@ -77,7 +77,7 @@ class Drumee extends Marionette.Application {
     let b = bootstrap();
     const { body } = document;
     const { main_domain } = b;
-    let bgImg = `https://${main_domain}/-/images/background/drumee-pro-background.jpg`;
+    let bgImg = `${protocol}://${main_domain}/-/images/background/drumee-pro-background.jpg`;
     body.style.height = "100vh";
     body.style.width = "100vw";
     body.style.alignContent = "center";
@@ -129,6 +129,11 @@ class Drumee extends Marionette.Application {
       Visitor.set(user);
       Organization.set(organization)
       window.currentDevice = Visitor.device();
+      window.SERVICE = Platform.get('services')
+      if(_.isEmpty(SERVICE)){
+        window.SERVICE = require('lex/services');
+      }
+      console.log('AAAA:133', SERVICE)
     } catch (e) {
       console.error("FAILED TO PARSE ENVIRONMENT DATA", e);
       this.failover(e);

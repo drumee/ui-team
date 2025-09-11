@@ -20,7 +20,7 @@ class ___disk_usage extends LetcBox {
    */
   onDomRefresh() {
     let { plan } = Visitor.get('plan_detail');
-    this.plan = plan || 'basic';
+    this.plan = plan || 'trial';
     if (this.mget(_a.update)) {
       this.postService({
         service: SERVICE.desk.limit,
@@ -31,7 +31,7 @@ class ___disk_usage extends LetcBox {
       })
       return;
     }
-    this.feed(require('./skeleton')(this, Visitor.get('disk')));
+    this.feed(require('./skeleton')(this, Visitor.get(_a.quota)));
 
   }
 

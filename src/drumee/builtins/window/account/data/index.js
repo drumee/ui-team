@@ -18,7 +18,9 @@ class __account_data extends DrumeeMFS {
       script: LOCALE.PLUGGINS,
       vector: LOCALE.SVG,
       web: LOCALE.WEBPAGE,
-      other: LOCALE.OTHER
+      text: LOCALE.TEXT,
+      other: LOCALE.OTHER,
+      _misc_: LOCALE.MISC,
     };
     this.bindEvent(_e.media, _a.channel);
     try {
@@ -107,9 +109,14 @@ class __account_data extends DrumeeMFS {
     }
   }
 
-  // ===========================================================
-  // onPartReady
-  // ===========================================================
+
+  /**
+   * 
+   * @param {*} child 
+   * @param {*} pn 
+   * @param {*} section 
+   * @returns 
+   */
   onPartReady(child, pn, section) {
     switch (pn) {
       case "data-chart":
@@ -118,15 +125,18 @@ class __account_data extends DrumeeMFS {
   }
 
 
+  /**
+   * 
+   * @param {*} e 
+   * @returns 
+   */
   onServerComplain(e) {
-    const c = this.__wrapperOverlay.children.last();
-    //c.feed(S)
     return this.warn("GOT ERROR. TO BE HANDLED", e);
   }
 
-  // ===========================================================
-  // 
-  // ===========================================================
+  /**
+   * 
+   */
   showResendOtp() {
     this.__noCode.el.dataset.mode = _a.open;
   }
@@ -168,73 +178,66 @@ class __account_data extends DrumeeMFS {
    * @param {*} title 
    * @param {*} subtitle 
    */
-  _display(data, title, subtitle) {
-    if (data.disk) Visitor.set({ disk: data.disk });
-    let disk = Visitor.get('disk');
-    let other_value = 0;
-    let i = 0;
-    let other_index = 0;
-    let details = _.map(data.details, (d) => {
-      const o = {
-        label: this._labels[d.category] || d.category,
-        value: parseInt(d.size_per_type),
-        color: colorFromName(d.category)
-      };
-      return o;
-    })
-    details[other_index].value = + other_value;
-    let used = parseInt(data.usage.used_size);
-    if (used > disk.quota_disk) used = disk.quota_disk;
-    const available = disk.quota_disk - used;
-    if (available < 0) available = 0;
-    const details_chart = {
-      kind: KIND.chart.pie,
-      content: _.sortBy(details, _a.value),
-      labels: {
-        mainLabel: {
-          fontSize: 12,
-          color: "black",
-          font: "Roboto-Light,sans-serif"
-        }
-      },
-
-      header: {
-        title: {
-          text: LOCALE.FILE_TYPE,
-          fontSize: 17,
-          font: "Roboto-Light,sans-serif",
-          color: "black"
-        },
-        location: "pie-center"
-      }
-    };
-
-    const TYPES = {
-      desk: { label: LOCALE.DESK, color: "#1d8aea" },
-      chat: { label: LOCALE.CHAT, color: "#5d8aea" },
-      private: { label: LOCALE.TEAM_ROOM, color: "#bd44d9" },
-      share: { label: LOCALE.SHARE_BOX, color: "#ef6500" }
-    };
-
-    used = 1;
-    let types = _.keys(disk).filter(function (e) {
-      return (!/^quota/.test(e))
-    });
-    let content = [{
-      label: LOCALE.SPACE_AVAILABLE,
-      value: 0,
-      color: "#89929e"
-    }];
-    for (var type of types) {
-      if (!TYPES[type]) continue;
-      TYPES[type].value = disk[type];
-      used = used + disk[type];
-      content.push({
-        ...TYPES[type], value: disk[type]
+  _display(data) {
+    let { quota, usage } = data;
+    if (quota) Visitor.set({ quota });
+    if (usage) Visitor.set({ disk_usage: usage });
+    let max = Visitor.quota("storage");
+    let details = [];
+    let du = Visitor.diskUsage();
+    for (let k in du) {
+      if (/^(personal_.+|hub_.+|total)$/.test(k)) continue;
+      details.push({
+        label: this._labels[k] || k,
+        value: du[k],
+        color: colorFromName(k)
       })
     }
-    content[0].value = disk.quota_disk - used;
 
+    let used = Visitor.diskUsed();
+    if (used > max) used = max;
+    let available = max - used;
+    if (available < 0) available = 0;
+    let details_chart;
+    if (details.length) {
+      details_chart = {
+        kind: KIND.chart.pie,
+        content: _.sortBy(details, _a.value),
+        labels: {
+          mainLabel: {
+            fontSize: 12,
+            color: "black",
+            font: "Roboto-Light,sans-serif"
+          }
+        },
+
+        header: {
+          title: {
+            text: LOCALE.FILE_TYPE,
+            fontSize: 17,
+            font: "Roboto-Light,sans-serif",
+            color: "black"
+          },
+          location: "pie-center"
+        }
+      };
+    }else{
+      details_chart = require('./skeleton/no-data-yet')
+    }
+
+
+    let content = [{
+      label: LOCALE.SPACE_AVAILABLE,
+      value: max - used,
+      color: colorFromName(LOCALE.SPACE_AVAILABLE),
+    }];
+    if (used) {
+      content.push({
+        label: LOCALE.SPACE_USED,
+        value: used,
+        color: colorFromName(LOCALE.SPACE_USED),
+      })
+    }
     const usage_chart = {
       kind: KIND.chart.pie,
       content,
@@ -257,11 +260,13 @@ class __account_data extends DrumeeMFS {
       }
     };
     this.__totalSize.set({
-      content: `${LOCALE.DATA_USAGE} ${filesize(used)}/${filesize(disk.quota_disk)}`
+      content: `${LOCALE.DATA_USAGE} ${filesize(used)}/${filesize(max)}`
     });
 
 
-    this.findPart("ref-chart").feed([usage_chart, details_chart]);
+    this.ensurePart("ref-chart").then((p) => {
+      p.feed([usage_chart, details_chart]);
+    })
   }
   /**
    * 
@@ -331,39 +336,6 @@ class __account_data extends DrumeeMFS {
     });
     this.__actionButton.el.dataset.role = _e.commit;
   }
-
-
-  // __dispatchRest(method, data, socket) {
-  //   switch (method) {
-  //     case SERVICE.desk.backup:
-  //       if (data.wait == 0) {
-  //         this.backupReady(data, data.wait);
-  //       }
-  //       break;
-
-  //     case SERVICE.drumate.confirm_delete_account:
-  //       if (data.rejected) {
-  //         Wm.alert(LOCALE.INVALID_LINK);
-  //         return;
-  //       }
-  //   }
-  // }
-
-  // __dispatchPush(service, data) {
-  //   if (_.isEmpty(data) || !this.__progress) {
-  //     return;
-  //   }
-  //   switch (data.exit) {
-  //     case 0:
-  //       this.backupReady(data);
-  //       break;
-  //     case 1:
-  //       this.warn("GOT ERROR");
-  //       break;
-  //     case null: case undefined:
-  //       this.__progress.update(data.progress);
-  //   }
-  // }
 
 }
 

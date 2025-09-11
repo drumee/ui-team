@@ -6,12 +6,12 @@
 
 function link(name) {
   let a = {
-    brave: "https://brave.com/fr/download/",
-    chrome: "https://www.google.com/intl/fr_fr/chrome/",
-    edge: "https://www.microsoft.com/fr-fr/edge/",
-    firefox: "https://www.mozilla.org/fr/firefox/new/",
-    safari: "https://support.apple.com/downloads/safari",
-    yandex: "https://browser.yandex.com/",
+    brave: `${protocol}://brave.com/fr/download/`,
+    chrome: `${protocol}://www.google.com/intl/fr_fr/chrome/`,
+    edge: `${protocol}://www.microsoft.com/fr-fr/edge/`,
+    firefox: `${protocol}://www.mozilla.org/fr/firefox/new/`,
+    safari: `${protocol}://support.apple.com/downloads/safari`,
+    yandex: `${protocol}://browser.yandex.com/`,
   }
   return a[name];
 }
@@ -86,7 +86,7 @@ function __router_supported_browsers(_ui_, signal) {
     /*  Skeletons.Note({
         className: `${pfx}__note info`,
         content: LOCALE.LEARN_MORE,
-       /// href: "https://caniuse.com/?search=Async%20functions"
+       /// href: `${protocol}://caniuse.com/?search=Async%20functions`
       }),*/
       Skeletons.Note({
         className: `${pfx}__note info skip`,

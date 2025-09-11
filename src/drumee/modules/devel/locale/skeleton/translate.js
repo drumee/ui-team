@@ -1,22 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/main/docs/suggestions.md
- */
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : builtins/admin/skeleton/local-row
-//   TYPE :
-// ==================================================================== *
-
-// ===========================================================
-// _form (local-row)
-//
-// @param [Object] _ui_
-//
-// ===========================================================
-
 
 const __locale_row = function(_ui_, data) {
 
@@ -102,7 +83,7 @@ const __locale_row = function(_ui_, data) {
   //   kids :[{
   //     kind : 'iframe'
   //     sys_pn : 'iframe'
-  //     url : 'https://translate.google.fr/?sl=en&tl=km&text=Accept&op=translate'
+  //     url : `${protocol}://translate.google.fr/?sl=en&tl=km&text=Accept&op=translate`
   //   }]
   const form = Skeletons.Box.Y({
     debug     : __filename,

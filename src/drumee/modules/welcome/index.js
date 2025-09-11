@@ -46,6 +46,7 @@ class __welcome_router extends LetcBox {
       return
     }
     let require_logout = 0;
+    this.debug("AAA:40", this.tab, Platform.get('isPublic'), Visitor.isOnline())
     switch (this.tab) {
       case 'signup':
         if (Platform.get('isPublic')) {
@@ -53,7 +54,7 @@ class __welcome_router extends LetcBox {
           if (args[2] != null) {
             opt.secret = args[2];
           } else {
-            return;
+            break;
           }
           if (Visitor.isOnline()) {
             this.postService({
@@ -99,7 +100,7 @@ class __welcome_router extends LetcBox {
         }
         return this.feed(opt);
 
-      case 'debug': 
+      case 'debug':
         this.debug('RUNNING IN DEBUG MODE');
         break;
 
@@ -121,6 +122,7 @@ class __welcome_router extends LetcBox {
         opt = { kind: 'welcome_signin' };
 
     }
+    this.debug("AAA:115", opt)
     if (Visitor.isOnline()) {
       if (require_logout) {
         this.postService(SERVICE.drumate.logout, { hub_id: Visitor.id }, { async: 1 }).then(() => {
@@ -189,7 +191,7 @@ class __welcome_router extends LetcBox {
         break;
 
       case 'redirect-to-home':
-        return location.href = `https://${Host.get(_a.domain)}${location.pathname}${_K.module.welcome}`;
+        return location.href = `${protocol}://${Host.get(_a.domain)}${location.pathname}${_K.module.welcome}`;
 
       case 'close-current-connection':
         //let href = location.href;

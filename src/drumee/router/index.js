@@ -194,7 +194,7 @@ class drumee_router extends LetcBox {
     this.feed(require("./skeleton")(this));
 
     this._makeTempEl();
-    this._initFonts();
+    //this._initFonts();
     this.content = await this.ensurePart('body');
     await this.ensurePart('butler');
     this.isReady = true;
@@ -368,15 +368,14 @@ class drumee_router extends LetcBox {
       this.loadBootstrap();
       return true;
     }
-
-    if (Visitor.isOnline() && location.host != Organization.host()) {
+    let [hostname] = location.host.split(':'); /** In case specific port */
+    if (Visitor.isOnline() && hostname != Organization.host()) {
       if (this.changeHost(Organization.host())) {
         return;
       }
     }
     let name = moduleName();
     const cm = this.currentModule;
-    cm && this.debug("AAA:379", cm.mget(_a.name), name)
     if (cm && !cm.isDestroyed() && cm.mget(_a.name) == name) {
       return cm.route()
     }

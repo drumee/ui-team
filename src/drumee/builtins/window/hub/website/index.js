@@ -196,7 +196,7 @@ class __hub_website extends LetcBox {
         var {
           vhost
         } = data;
-        location.href = `https://${vhost}${location.pathname}#/${this.postCreation}`;
+        location.href = `${protocol}://${vhost}${location.pathname}#/${this.postCreation}`;
         this.phase = null;
         return this.softDestroy();
       case SERVICE.desk.create_website:

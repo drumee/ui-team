@@ -1,8 +1,3 @@
-/* ==================================================================== *
-*   Copyright Xialia.com  2011-2020
-*   FILE : /src/drumee/modules/welcome/interact.js
-*   TYPE : Component
-* ==================================================================== */
 /// <reference path = "../../../../@types/index.d.ts" />
 
 const __password_meter = require('./password-meter');

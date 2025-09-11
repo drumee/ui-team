@@ -93,7 +93,7 @@ const __account_subscription_plan_company = function(_ui_) {
     ]
   })
 
-  const contactLink = `https://${bootstrap().main_domain}/contact/?lang=en&info=true&type=drumee&section=drumee&area=pro`;
+  const contactLink = `${protocol}://${bootstrap().main_domain}/contact/?lang=en&info=true&type=drumee&section=drumee&area=pro`;
   const btnWrapper = Skeletons.Box.X({
     className : `${plansFig}__btn-wrapper company`,
     kids      : [

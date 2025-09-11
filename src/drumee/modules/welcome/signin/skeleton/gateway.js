@@ -38,7 +38,7 @@ function button(_ui_, content, c = 1) {
   if (c == 1) {
     let base = '';
     if(!bootstrap().isElectron){
-      base = `https://${bootstrap().user_domain}${location.pathname}`;
+      base = `${protocol}://${bootstrap().user_domain}${location.pathname}`;
     }
     a.href = `${base}${_K.module.welcome}/signin/auth`
   }else{

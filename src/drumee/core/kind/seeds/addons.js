@@ -1,41 +1,35 @@
-/* ================================================================== *
-#   Copyright Xialia.com  2011-2023
-#   FILE : /src/drumee/core/kind/seeds/dynamic.js
-#   TYPE : Automatic generation - DO NOT EDIT 
-# ===================================================================**/
-// @ts-nocheck
-
-
 // On demand Classes cannot be overloaded
 
-const a = {
-}
+const Builtins = require('./builtins')
+const Ondemand = require('./ondemand')
 
 /**
  * 
  */
-function register(kind, ref){
-  if (a[kind]) {
+function register(kind, ref) {
+  if (Builtins[kind]) {
     console.warn(`Kind ${kind} already exists. Skipped`);
     return;
   }
   if (_.isFunction(ref.then)) {
-    a[kind] = (s, f)=>{
-      ref.then((m)=>{
-        //console.log("AAA:54", m, ref);
+    Builtins[kind] = (s, f) => {
+      ref.then((m) => {
         s(m.default)
-      }).catch(f)  
+      }).catch(f)
     }
   }
 }
+
+let ondemand, builtins;
 /**
  * 
  * @param {*} name 
  * @returns 
  */
-function get (name) {
-  if(a[name]) return new Promise(a[name]);
+function get(name) {
+  if (Builtins[name]) return new Promise(Builtins[name]);
+  if (Ondemand[name]) return new Promise(Ondemand[name]);
   return null;
 };
-  
-module.exports = {get, register};
+
+module.exports = { get, register };

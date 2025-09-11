@@ -79,7 +79,7 @@ class ___widget_setup extends LetcBox {
         if(data.status == 'EMAIL_NOT_AVAILABLE'){
           return email.showError("Invalid emeil");
         }
-        return location.href = `https://${Host.get(_a.domain)}${location.pathname}${_K.module.desk}`;
+        return location.href = `${protocol}://${Host.get(_a.domain)}${location.pathname}${_K.module.desk}`;
       })
     }
 

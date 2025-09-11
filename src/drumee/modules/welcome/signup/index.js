@@ -1,10 +1,3 @@
-/* ==================================================================== *
-*   Copyright Xialia.com  2011-2020
-*   FILE : /src/drumee/modules/welcome/signup/index.js
-*   TYPE : Component
-* ==================================================================== */
-// <reference path="../../../../../@types/index.d.ts" />
-
 const __welcome_interact = require('../interact');
 
 /**
@@ -18,7 +11,7 @@ class __welcome_signup extends __welcome_interact {
   /**
    ** @param {object} opt
   */
-  initialize (opt = {}) {
+  initialize(opt = {}) {
     // @ts-ignore
     require('./skin');
     super.initialize(opt);
@@ -34,11 +27,18 @@ class __welcome_signup extends __welcome_interact {
   onDomRefresh() {
     if (this.mget(_a.secret)) {
       this.postService({
-        service : SERVICE.butler.check_token,
-        secret  : this._secret,
+        service: SERVICE.butler.check_token,
+        secret: this._secret,
       })
     } else {
-      return this.triggerHandlers({service: 'redirect-to-home'})
+      if (!Platform.get('isPublic')) {
+        return this.triggerHandlers({ service: 'redirect-to-home' })
+      } else {
+        this._method = "maiden-signup";
+        this.data = {}
+        this.feed(require('./skeleton').default(this));
+        return this.route()
+      }
     }
   }
 
@@ -51,7 +51,7 @@ class __welcome_signup extends __welcome_interact {
       case _a.header:
         child.feed(require('./skeleton/header').default(this));
         break
-      
+
       default:
         return super.onPartReady(child, pn);
     }
@@ -60,105 +60,121 @@ class __welcome_signup extends __welcome_interact {
   /**
    *
   */
-  route () {
-    let _content;
+  route() {
+    let content;
+    let header = require('./skeleton/header').default(this)
     switch (this._method) {
       case 'company':
-        _content = require('./skeleton/company').default(this)
+        content = require('./skeleton/company').default(this)
         break
-    
+
+      case "maiden-signup":
+        content = require('./skeleton/maiden-signup').default(this);
+        break;
+
       case _a.password:
         if (this._type === _a.signup) {
-          _content = require('./skeleton/b2csignup').default(this)
+          content = require('./skeleton/b2csignup').default(this)
           break
         }
 
-        _content = require('./skeleton/password').default(this)
+        content = require('./skeleton/password').default(this)
         break
-      
+
       case 'personaldata':
-        _content = require('./skeleton/personal').default(this)
+        content = require('./skeleton/personal').default(this)
         break
-      
+
       case 'otpverify':
       case 'otpresend':
-        _content = require('./skeleton/otp').default(this)
+        content = require('./skeleton/otp').default(this)
         let a = () => {
           this.__noCodeOptions.el.dataset.mode = _a.open
         }
         _.delay(a, Visitor.timeout(15000))
         break
-      
+
       case 'change-mobile-number':
-        _content = require('./skeleton/change-mobile-number').default(this)
+        content = require('./skeleton/change-mobile-number').default(this)
         break
-      
+
       case 'get-mobile-number':
-        _content = require('./skeleton/get-mobile-number').default(this)
+        content = require('./skeleton/get-mobile-number').default(this)
         break
-      
+
       case 'complete':
         //return this.initLoader();
         //location.hash = _K.module.welcome_intro;
         return this.gotSignedIn(_K.module.welcome_intro)
-        //return location.reload();
-      
+      //return location.reload();
+
       default:
         return Welcome.say('invalid_step')
     }
+    this.ensurePart(_a.header).then((p) => {
+      p.feed(header)
+    })
+    this.ensurePart(_a.content).then((p) => {
+      p.feed(content);
+    })
 
-    this.__header.feed(require('./skeleton/header').default(this))
-    return this.__content.feed(_content)
+    // return this.__content.feed(content)
   }
 
   /**
    * @param {LetcBox} cmd
    * @param {any} args
   */
-  onUiEvent (cmd, args) {
+  onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     this.debug(`onUiEvent service = ${service}`, cmd, this);
 
-    switch(service) {
+    switch (service) {
       case 'create-company':
         return this.createCompany();
-      
+
       case 'create-password':
         return this.createPassword();
-      
+
       case 'create-b2c-signup-data':
         return this.createB2CSignupData(cmd)
-      
+
       case 'create-b2c-user':
         return this.createB2CUser(cmd);
-      
+
       case 'create-personal-data':
         return this.createPersonalData();
-      
+
       case 'verify-code':
         return this.verifyCode();
 
       case 'skip-mobile-otp':
         return this.skipMobileOtp()
-      
+
       case 'resend-otp':
         return this.resendOTP()
-      
+
       case 'change-mobile-number':
         return this.changeMobileNumber()
 
       case 'update-mobile-number':
         return this.updateMobileNumber()
-      
+
       case 'open-terms-and-conditions':
         return this.loadTermsAndConditions()
-      
+
       case _e.download:
         return this.downloadTermsAndConditions()
-      
+
       case 'accept-conditions':
-        return this.acceptConditions()
-      
+        return this.acceptConditions(cmd, args)
+
+      case 'decline-conditions':
+        return this.declineConditions(cmd, args)
+
+      case 'direct-signup':
+        return this.directSignup(cmd, args)
+
       default:
         this.debug("Created by kind builder");
     }
@@ -167,7 +183,7 @@ class __welcome_signup extends __welcome_interact {
   /**
    *
   */
-  createCompany () {
+  createCompany() {
     this.validateData()
     if (this.formStatus == _a.error) {
       this.debug('invalid data', this)
@@ -177,18 +193,18 @@ class __welcome_signup extends __welcome_interact {
     const data = this.getData(_a.formItem)
 
     return this.postService({
-      service : SERVICE.butler.b2b_signup_company,
-      secret  : this._secret,
-      name    : data.company_name,
-      ident   : data.url_address
+      service: SERVICE.butler.b2b_signup_company,
+      secret: this._secret,
+      name: data.company_name,
+      ident: data.url_address
     })
   }
 
   /**
    *
   */
-  createPassword () {
-    if (! this.checkSanity()) {
+  createPassword() {
+    if (!this.checkSanity()) {
       this._input.showError()
       const msg = LOCALE.CREATE_A_PASSWORD
       return this.renderMessage(msg)
@@ -197,26 +213,26 @@ class __welcome_signup extends __welcome_interact {
     const data = this._input.getData()
 
     return this.postService({
-      service  : SERVICE.butler.b2b_signup_password,
-      secret   : this._secret,
-      password : data.value
+      service: SERVICE.butler.b2b_signup_password,
+      secret: this._secret,
+      password: data.value
     })
   }
 
   /**
    * @param {LetcBox} cmd
   */
-  createB2CSignupData (cmd) {
+  createB2CSignupData(cmd) {
     this.validateData()
     if (this.formStatus == _a.error) {
       let msg = LOCALE.FILL_REQUIRED_FIELDS
       return this.renderMessage(msg)
     }
 
-    if (! this.checkSanity()) {
+    if (!this.checkSanity()) {
       this._input.showError()
       let msg = '';
-      if(!this._input.getValue()){
+      if (!this._input.getValue()) {
         msg = LOCALE.CREATE_A_PASSWORD
       } else {
         msg = LOCALE.PASSWORD_NOT_STRONG
@@ -227,7 +243,7 @@ class __welcome_signup extends __welcome_interact {
     const data = this.getData(_a.formItem)
     data.passData = this._input.getData().value
 
-    if(!data.condition) {
+    if (!data.condition) {
       const msg = LOCALE.CLICK_AND_ACCEPT_CONDITIONS
       return this.renderMessage(msg)
     }
@@ -237,11 +253,11 @@ class __welcome_signup extends __welcome_interact {
     //this._method = 'get-mobile-number';
     //return this.route()
     let api = {
-      service   : SERVICE.butler.b2c_signup_password,
-      secret    : this._secret,
-      firstname : data.firstname,
-      lastname  : data.lastname,
-      password  : data.passData
+      service: SERVICE.butler.b2c_signup_password,
+      secret: this._secret,
+      firstname: data.firstname,
+      lastname: data.lastname,
+      password: data.passData
     }
     this.postService(api);
   }
@@ -250,7 +266,7 @@ class __welcome_signup extends __welcome_interact {
   /**
    * @param {LetcBox} cmd
   */
-  createB2CUser (cmd) {
+  createB2CUser(cmd) {
     return;
     // SKIPPED ON B2C USER
     // let api = {
@@ -260,7 +276,7 @@ class __welcome_signup extends __welcome_interact {
     //   lastname  : this._b2cData.lastname,
     //   password  : this._b2cData.passData
     // }
-    
+
     //   const data = this.getData(_a.formItem);
     // if (cmd.mget(_a.type) != 'skip-mobile') {
     //   this.validateData();
@@ -283,7 +299,7 @@ class __welcome_signup extends __welcome_interact {
   /**
    *
   */
-  createPersonalData () {
+  createPersonalData() {
     this.validateData()
     if (this.formStatus == _a.error) {
       const msg = LOCALE.FILL_REQUIRED_FIELDS
@@ -292,30 +308,30 @@ class __welcome_signup extends __welcome_interact {
 
     const data = this.getData(_a.formItem)
 
-    if(!data.condition) {
+    if (!data.condition) {
       const msg = LOCALE.CLICK_AND_ACCEPT_CONDITIONS
       return this.renderMessage(msg)
     }
-    
+
     if (!data.areacode.includes('+')) {
       data.areacode = '+' + data.areacode  // to add + to the area code --  do not change/remove
     }
 
     this.postService({
-      service   : SERVICE.butler.b2b_signup_personaldata,
-      secret    : this._secret,
-      firstname : data.firstname,
-      lastname  : data.lastname,
-      city      : data.city,
-      areacode  : data.areacode,
-      mobile    : data.mobile
+      service: SERVICE.butler.b2b_signup_personaldata,
+      secret: this._secret,
+      firstname: data.firstname,
+      lastname: data.lastname,
+      city: data.city,
+      areacode: data.areacode,
+      mobile: data.mobile
     })
   }
 
   /**
    * 
   */
-  verifyCode () {
+  verifyCode() {
     this.validateData()
     if (this.formStatus == _a.error) {
       const msg = LOCALE.ENTER_CODE_RECEIVED//'Please enter the code received  on your mobile.'
@@ -323,16 +339,16 @@ class __welcome_signup extends __welcome_interact {
     }
 
     const data = this.getData(_a.formItem)
-    
+
     let _service = SERVICE.butler.b2c_signup_otpverify;
     if (this._type == 'b2bsignup') {
       _service = SERVICE.butler.b2b_signup_otpverify;
     }
-    
+
     return this.postService({
-      service : _service,
-      secret  : this._secret,
-      code    : data.code
+      service: _service,
+      secret: this._secret,
+      code: data.code
     })
   }
 
@@ -340,11 +356,11 @@ class __welcome_signup extends __welcome_interact {
    * 
    */
 
-  skipMobileOtp(){
+  skipMobileOtp() {
     this.postService({
-      service : SERVICE.butler.b2c_signup_skip_otpverify,
-      secret  : this._secret
-    }).then((data)=>{
+      service: SERVICE.butler.b2c_signup_skip_otpverify,
+      secret: this._secret
+    }).then((data) => {
       this.debug(data)
       this.initLoader()
     });
@@ -353,22 +369,22 @@ class __welcome_signup extends __welcome_interact {
   /**
    *
   */
-  resendOTP () {
+  resendOTP() {
     let _service = SERVICE.butler.b2c_signup_otpresend;
     if (this._type == 'b2bsignup') {
       _service = SERVICE.butler.b2b_signup_otpresend;
     }
-    
+
     return this.postService({
-      service : _service,
-      secret  : this._secret
+      service: _service,
+      secret: this._secret
     })
   }
 
   /**
    *
   */
-  changeMobileNumber () {
+  changeMobileNumber() {
     this.debug('changeMobileNumber', this)
     this._method = 'change-mobile-number'
     return this.route()
@@ -377,15 +393,15 @@ class __welcome_signup extends __welcome_interact {
   /**
    *
   */
-  updateMobileNumber () {
+  updateMobileNumber() {
     this.validateData()
-    if(this.formStatus == _a.error){
+    if (this.formStatus == _a.error) {
       this.debug("invalid data")
       return
     }
 
     const data = this.getData(_a.formItem)
-    
+
     let _service = SERVICE.butler.b2c_signup_otpresend;
     if (this._type == 'b2bsignup') {
       _service = SERVICE.butler.b2b_signup_otpresend;
@@ -396,25 +412,25 @@ class __welcome_signup extends __welcome_interact {
     }
 
     return this.postService({
-      service  : _service,
-      secret   : this._secret,
-      areacode : data.areacode,
-      mobile   : data.mobile,
+      service: _service,
+      secret: this._secret,
+      areacode: data.areacode,
+      mobile: data.mobile,
     })
   }
 
   /**
    *
   */
-  loadTermsAndConditions () {
-    Welcome.getPart('wrapper-modal').feed(require('./skeleton/terms-and-conditions/main').default(this))
+  loadTermsAndConditions() {
+    Welcome.getPart('wrapper-modal').feed(require('./skeleton/terms-and-conditions').default(this))
     return
   }
-  
+
   /**
    *
   */
-  downloadTermsAndConditions () {
+  downloadTermsAndConditions() {
     this.debug('downloadTermsAndConditions', this)
     return
   }
@@ -422,30 +438,93 @@ class __welcome_signup extends __welcome_interact {
   /**
    *
   */
-  acceptConditions () {
-    this.debug('acceptConditions', this)
-    const checkBox = this.getPart('conditions-checkbox')
-    const currState = checkBox.el.dataset.state
-
-    if(currState == 0) {
-      checkBox.el.click()
+  async acceptConditions(cmd, args) {
+    const checkBox = await this.ensurePart('conditions-checkbox')
+    const button = await this.ensurePart('button-confirm');
+    const wrapper = Welcome.getPart('wrapper-modal')
+    this.debug("AAA:acceptConditions", cmd, cmd.mget(_a.sys_pn), checkBox, button, args)
+    if (cmd.mget(_a.sys_pn) == 'conditions') {
+      checkBox.setState(1)
+      wrapper.softClear()
     }
-    this.service = _e.close
-    this.triggerHandlers()
-    return
+    button.setState(checkBox.mget(_a.state))
   }
 
   /**
    *
   */
-  renderMessage (msg) {
+  async declineConditions() {
+    const checkBox = await this.ensurePart('conditions-checkbox')
+    const button = await this.ensurePart('button-confirm');
+    const wrapper = Welcome.getPart('wrapper-modal')
+    button.el.dataset.confirm = checkBox.mget(_a.state)
+    checkBox.setState(0)
+    button.setState(checkBox.mget(_a.state))
+    wrapper.softClear()
+  }
+
+  /**
+   * 
+   * @param {*} data 
+   */
+  _handleResponse(data) {
+    switch (data.status) {
+      case "user_exists":
+        return this.renderMessage(`${LOCALE.EMAIL_ALREADY_EXISTS} (${data.email})`)
+      case "not_bound":
+        Butler.once("close-content", () => {
+          this.debug("AAA", "4444")
+          uiRouter.ensureWebsocket().then((e) => {
+            this.directSignup()
+          })
+        })
+        return Butler.say(LOCALE.NOT_A_BOT)
+      case "server_busy":
+        return Butler.say(LOCALE.SERVER_BUSY)
+      case _a.ok:
+        location.reload();
+        return
+      default:
+        return this.renderMessage(LOCALE.TRY_AGAIN_LATER)
+    }
+  }
+
+  /**
+   *
+  */
+  async directSignup(cmd, args) {
+    let { email, password } = this.getData();
+
+    let we = await this.ensurePart("wrapper-email")
+    if (!email.isEmail()) {
+      we.el.dataset.status = "error"
+      return
+    }
+    we.el.dataset.status = ""
+    let rp = await this.ensurePart('wrapper-pw')
+    if (password.length < 8) {
+      rp.el.dataset.status = "error"
+      return
+    }
+    rp.el.dataset.status = ""
+    this.postService(SERVICE.butler.signup, this.getData()).then((data) => {
+      this._handleResponse(data)
+    }).catch((e) => {
+      this.warn("directSignup: caugth error", e)
+    })
+  }
+
+  /**
+   *
+  */
+  renderMessage(msg) {
     this.debug('renderMessage', msg, this)
     const msgBox = Skeletons.Note({
-      className  : `${this.fig.family}__note error-msg`,
-      content    : msg
+      className: `${this.fig.family}__note error-msg`,
+      content: msg
     })
 
-    if(!this.__buttonWrapper || !this.__buttonWrapper) return;
+    if (!this.__buttonWrapper || !this.__buttonWrapper) return;
     this.__buttonWrapper.el.dataset.mode = _a.closed;
     this.__messageBox.el.dataset.mode = _a.open;
     this.__messageBox.feed(msgBox);
@@ -463,7 +542,7 @@ class __welcome_signup extends __welcome_interact {
    * @param {string} code
   */
   handleError(code) {
-    switch(code){
+    switch (code) {
       case 'IDENT_NOT_AVAILABLE':
         this.renderMessage(LOCALE.DOMAIN_ALREADY_EXISTS);
         return;
@@ -480,13 +559,13 @@ class __welcome_signup extends __welcome_interact {
    * @param {object} data
   */
   __dispatchRest(service, data) {
-   switch(service) {
+    switch (service) {
       case SERVICE.butler.check_token:
         if (data) {
           if (data.status == 'INVALID_STEP') {
             return this.handleError(data.status);
           }
-          
+
           this.data = data
           this._type = data.method
           this._method = data.metadata.step
@@ -496,7 +575,7 @@ class __welcome_signup extends __welcome_interact {
         }
         this.handleError(data.status);
         return
-      
+
       case SERVICE.butler.b2b_signup_company:
         if (data.status) {
           //const msg = LOCALE.DOMAIN_ALREADY_EXISTS//'Ooops... This domain is already used. Try another one.'
@@ -506,7 +585,7 @@ class __welcome_signup extends __welcome_interact {
         this._method = data.metadata.step
         this.debug('b2b_signup_company', data, this._method, this)
         return this.route()
-      
+
       case SERVICE.butler.b2b_signup_password:
       case SERVICE.butler.b2c_signup_password:
       case SERVICE.butler.b2b_signup_personaldata:
@@ -516,7 +595,7 @@ class __welcome_signup extends __welcome_interact {
         this.data = data;
         this._method = data.metadata.step
         return this.route();
-      
+
       case SERVICE.butler.b2b_signup_otpverify:
       case SERVICE.butler.b2c_signup_otpverify:
         if (data.status == 'INVALID_STEP') {
@@ -529,10 +608,7 @@ class __welcome_signup extends __welcome_interact {
         }
         this.debug(`service = ${service} ---`, data, this)
         return this.route();
-      
-      
-      default:
-        return this.debug(`${service} not found.!`)
+
     }
   }
 }

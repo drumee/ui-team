@@ -616,7 +616,7 @@ class __core_mfs extends LetcBox {
 
     data = new URLSearchParams(data).toString();
     let b = bootstrap();
-    this.viewerURL = `https://${b.main_domain}${b.mfs_base}${_K.module.desk}/wm/open/${data}`;
+    this.viewerURL = `${protocol}://${b.main_domain}${b.mfs_base}${_K.module.desk}/wm/open/${data}`;
     let { nid, hub_id } = mData;
     let opt = {
       nid,
@@ -650,7 +650,7 @@ class __core_mfs extends LetcBox {
    */
   srcUrl() {
     if (!this.isRegularFile()) return null;
-    return `https://${this.mget(_a.vhost)}${this.mget(_a.ownpath)}`;
+    return `${protocol}://${this.mget(_a.vhost)}${this.mget(_a.ownpath)}`;
   }
 
   /**
@@ -659,7 +659,7 @@ class __core_mfs extends LetcBox {
   pluginUrl() {
     const { endpoint } = bootstrap();
     const path = `${this.getLogicalParent().mget(_a.ownpath)}`;
-    return `https://${this.mget(_a.vhost)}${endpoint}#$/${path}`;
+    return `${protocol}://${this.mget(_a.vhost)}${endpoint}#$/${path}`;
   }
 
   /**

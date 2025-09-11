@@ -322,7 +322,7 @@
   //     padding:5px;
   //   }
   //   &--grey {
-  //     cursor: url("https://fonts.drumee.name/svg/with-classes/desktop_comingsoon.svg") 15 15, auto !important;
+  //     cursor: url(`${protocol}://fonts.drumee.name/svg/with-classes/desktop_comingsoon.svg`) 15 15, auto !important;
   //     svg {
   //       color: #c3c3c3;
   //     }

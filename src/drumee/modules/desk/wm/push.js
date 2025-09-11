@@ -201,6 +201,7 @@ class __push_manager extends winman {
           body: LOCALE.INCOMING_CALL || "",
           icon: Visitor.avatar(data.origin.uid),
         };
+        if (!window.Notification) return;
         new Notification(title, notif);
       }
       this.addWindow(o);
@@ -247,6 +248,7 @@ class __push_manager extends winman {
         body: message,
         icon: Visitor.avatar(uid)
       };
+      if (!window.Notification) return;
       new Notification(title, notif);
     } catch (e) {
       this.warn("Failed to notify", e)
@@ -289,7 +291,7 @@ class __push_manager extends winman {
         currentRoom.goodbye();
         return;
     }
-    if(currentRoom.stateMachine){
+    if (currentRoom.stateMachine) {
       currentRoom.stateMachine(state, data);
     }
     return;

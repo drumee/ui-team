@@ -19,8 +19,6 @@ class App extends Marionette.Application {
   onStart() {
     console.log(`onStart App...`);
   }
-
-
 }
 
 window.Drumee = new App();

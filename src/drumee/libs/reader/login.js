@@ -261,7 +261,7 @@
 //
 //      _dbg "LOGGED IN HREF = #{href}"
 //      if href?
-//        location.href = "https://#{href}"
+//        location.href = `${protocol}://#{href}`
 //      else
 //        Backbone.history.location.reload()
 //

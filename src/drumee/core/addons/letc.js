@@ -989,7 +989,7 @@ View.prototype.actualNode = function (format = _a.orig) {
 
   const { keysel, endpoint } = bootstrap();
   if (vhost && filepath) {
-    href = `https://${vhost}${filepath}`;
+    href = `${protocol}://${vhost}${filepath}`;
   } else {
     href = `${endpoint}file/${_a.orig}/${nid}/${hub_id}`;
   }
@@ -1014,7 +1014,7 @@ View.prototype.actualNode = function (format = _a.orig) {
   if (/^http.+\/\//i.test(url)) {
     fullUrl = url;
   } else {
-    fullUrl = `https://${vhost}${url}`;
+    fullUrl = `${protocol}://${vhost}${url}`;
   }
   href = encodeURI(href);
 

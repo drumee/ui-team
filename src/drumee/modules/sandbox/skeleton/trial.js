@@ -27,29 +27,29 @@ const __sandbox_trial = function(manager){
       width  : "100%",
       border : "1px solid green"
     },
-    creator  : "https://your.snippet.code/someshere",
+    creator  : `${protocol}://your.snippet.code/someshere`,
     snippets  :[{
       style         : {
         rel         : "stylesheet", 
-        href        : "https://some.open.source/style.css",
+        href        : `${protocol}://some.open.source/style.css`,
         crossorigin : ""
       }
     },{
       script   : {
-        src         : "https://some.open.source/code.js",
+        src         : `${protocol}://some.open.source/code.js`,
         crossorigin : ""
       }
     }],
     vendors  :[{
       link     : {
         rel         : "stylesheet", 
-        href        : "https://some.open.source/style.css",
+        href        : `${protocol}://some.open.source/style.css`,
         params      : "some parameter",
         crossorigin : ""
       }
     },{
       script   : {
-        src         : "https://some.open.source/code.js",
+        src         : `${protocol}://some.open.source/code.js`,
         params      : "some parameter",
         crossorigin : ""
       }

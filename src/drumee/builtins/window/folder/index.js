@@ -34,9 +34,11 @@ class __window_folder extends mfsInteract {
       height: this.size.height
     });
     this.skeleton = require("./skeleton")(this);
-    this.mset({
-      privilege: this.mget(_a.trigger).get(_a.privilege)
-    })
+    if (this.mget(_a.trigger) && this.mget(_a.privilege) == null) {
+      this.mset({
+        privilege: this.mget(_a.trigger).mget(_a.privilege)
+      })
+    }
   }
 
 

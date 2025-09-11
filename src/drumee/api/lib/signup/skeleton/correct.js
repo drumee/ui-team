@@ -7,7 +7,7 @@
 const __correct = function(_ui_) {
   const a = Skeletons.Button.Svg({
     ico       : "available",//"account_check"
-    src: `https://${bootstrap().main_domain}/_/static/images/icons/available.svg`, 
+    src: `${protocol}://${bootstrap().main_domain}/_/static/images/icons/available.svg`, 
     className : `${_ui_.fig.family}__correct`,
     uiHandler : [_ui_]}); 
 

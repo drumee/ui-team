@@ -574,7 +574,7 @@ export function appendFontFace(fonts, id) {
     } else {
       l1 = f.local1;
     }
-    url = `https://${main_domain}${f.url}`
+    url = `${protocol}://${main_domain}${f.url}`
     const src = `local('${l1}'), local('${f.local2}'), url(${url}) format('${f.format}')`;
     const fn = f.name || f.family;
     const str = `@font-face {\n \

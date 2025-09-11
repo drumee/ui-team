@@ -27,7 +27,7 @@ function __skl_dmz_sharebox (_ui_) {
 
   const footerLink = Skeletons.Note({
     className : `${shareboxFig}__footer-note`,
-    href      : `https://drumee.org`,
+    href      : `${protocol}://drumee.org`,
     target    : '_blank',
     content   : 'Powered by Drumee'
   })

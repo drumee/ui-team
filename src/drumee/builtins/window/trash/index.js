@@ -237,10 +237,8 @@ class __window_trash extends mfsInteract {
    * 
    */
   removeContent(args) {
-    this.debug("AAAA:230", args)
     if (_.isArray(args)) {
       for (let item of args) {
-        //this.removeContent(item)
         this.putIntoTrash(item)
       }
       return;

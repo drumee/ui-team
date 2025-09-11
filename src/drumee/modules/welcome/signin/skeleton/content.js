@@ -50,7 +50,7 @@ function __skl_welcome_signin_content(_ui_, username='') {
   // if(bootstrap().isElectron){
   //   auth = `${_K.module.welcome}/signin/gateway`;
   // }else{
-  //   base = `https://${bootstrap().main_domain}${location.pathname}`;
+  //   base = `${protocol}://${bootstrap().main_domain}${location.pathname}`;
   //   auth = `${base}${_K.module.welcome}/signin`;
   // }
   let href = `${_K.module.welcome}/signin/org`;
@@ -63,12 +63,25 @@ function __skl_welcome_signin_content(_ui_, username='') {
       instance = `/-/${instance}/`;
     }
 
-    let base = `https://${main_domain}${instance}`;
+    let base = `${protocol}://${main_domain}${instance}`;
     href = `${base}${_K.module.welcome}/signin`;
     content = LOCALE.LOGIN_PERSONAL_ACCOUNT;
   }
 
   let helper = '';
+  let create_account = '';
+
+  
+  if (Platform.get('isPublic')) {
+    create_account = Skeletons.Note({
+      className: `${contentFig}__note no-account helper text-underline`,
+      content: LOCALE.Q_NO_ACCOUNT,
+      dataset,
+      href:"#/welcome/signup"
+      // service: 'open-signup'
+    })
+  }
+
   if (Platform.get('arch') == "cloud") {
     helper = Skeletons.Box.Y({
       className: `${contentFig}__wrapper helper`,
@@ -83,13 +96,7 @@ function __skl_welcome_signin_content(_ui_, username='') {
               dataset,
               href: '#/welcome/reset'
             }),
-
-            // Skeletons.Note({
-            //   className: `${contentFig}__note no-account helper text-underline`,
-            //   content: LOCALE.Q_NO_ACCOUNT,
-            //   dataset,
-            //   service: 'open-signup'
-            // })
+            create_account
           ]
         }),
 

@@ -67,14 +67,18 @@ class __core_user extends Backbone.Model {
     });
 
     RADIO_MEDIA.on(_e.uploaded, (data) => {
-      let { disk_usage } = data;
-      this.diskUsage(disk_usage);
+      if (!data || !data.filesize) return;
+      let { filesize } = data;
+      let total = this.diskUsed() + parseInt(filesize)
+      let disk_usage = { ...this.get('disk_usage'), total }
+      this.set({ disk_usage })
     })
 
     RADIO_MEDIA.on(_a.free, (data) => {
-      if (!data) return;
+      this.debug("AAAA:71", data)
+      if (!data || !data.disk_usage) return;
       let { disk_usage } = data;
-      this.diskUsage(disk_usage);
+      this.set({ disk_usage })
     })
   }
 
@@ -149,6 +153,15 @@ class __core_user extends Backbone.Model {
       'yandexbrowser': 21,
     }
     return a[name];
+  }
+
+  /**
+   * 
+   * @returns 
+   */
+
+  canUseVisio() {
+    return this.profile().category != 'trial';
   }
 
   /**
@@ -260,8 +273,8 @@ class __core_user extends Backbone.Model {
         document.title = `${this.fullname()}@${Organization.name()}`;
       }
     }
-    if (data.signed_in !== null) this.set({ signed_in: data.signed_in });
-    for (var k of [_a.profile, _a.settings, _a.quota]) {
+    if (/^[0,1]$/.test(data.signed_in)) this.set({ signed_in: data.signed_in });
+    for (let k of [_a.profile, _a.settings, _a.quota, 'disk_usage']) {
       if (!data[k]) continue;
       if (_.isString(data[k])) {
         this.set(k, JSON.parse(data[k]));
@@ -269,8 +282,15 @@ class __core_user extends Backbone.Model {
         this.set(k, { ...data[k] });
       }
     }
-    if (data.quota && !defaultQuota) {
-      defaultQuota = data.quota;
+    let quota = { ...Visitor.quota() }
+    if (quota) {
+      for (let k in quota) {
+        if (k != _a.category) {
+          quota[k] = parseInt(quota[k])
+        }
+      }
+      defaultQuota = quota;
+      this.set({ quota })
     }
     localStorage.setItem('UIlanguage', this.language());
     if (data.connection && data.connection == 'offline') {
@@ -284,35 +304,27 @@ class __core_user extends Backbone.Model {
    * Return disk free 
    */
   diskFree() {
-    let disk = this.quota("disk") || {};
+    let storage = this.quota("storage") || {};
     if (defaultQuota == null) {
       return Infinity;
     }
-    let free = disk - this.diskUsage();
+    let free = storage - this.diskUsed();
     return free;
   }
 
   /**
    * Return disk free 
    */
-  diskUsage(disk_usage) {
-    if (_.isNumber(disk_usage)) {
-      this.set({ disk_usage });
-    }
-    return parseInt(this.get(DISK_USAGE))
+  diskUsage() {
+    return this.get('disk_usage')
   }
 
   /**
  * Update current disk usage
  */
   diskUsed(size) {
-    if (!size) {
-      return 0;
-    }
-    let disk_usage = this.diskUsage() + parseInt(size);
-    if (disk_usage != null) {
-      this.set({ disk_usage })
-    }
+    let { total } = this.get('disk_usage') || {};
+    return total || 0;
   }
 
 
@@ -365,8 +377,8 @@ class __core_user extends Backbone.Model {
   quota(name) {
     let q = this.get(_a.quota);
     if (!q) {
-      let { quota_disk } = this.get('disk') || {};
-      q = { disk: quota_disk || Infinity };
+      let { storage } = this.get(_a.quota) || {};
+      q = { storage: storage || Infinity };
     }
     if (!name) return q || {};
     return q[name] || 0;
@@ -537,8 +549,11 @@ class __core_user extends Backbone.Model {
    * @returns 
    */
   isOnline() {
-    if (this.get(_a.connection) == _a.online) return true;
-    return false;
+    if (this.get(_a.connection) == _a.online) return 1;
+    if ((new Date().getTime() - bootstrap().startTime) <= 30) {
+      return bootstrap().signed_in
+    }
+    return 0;
   }
 
   /**
@@ -597,7 +612,7 @@ class __core_user extends Backbone.Model {
       if (/^http/.test(base)) {
         base = `${base}${id}?type=${type}${ts}`;
       } else {
-        base = `https://${base}${id}?type=${type}${ts}`;
+        base = `${protocol}://${base}${id}?type=${type}${ts}`;
       }
     }
     return base;
@@ -608,16 +623,17 @@ class __core_user extends Backbone.Model {
    * 
    */
   audioTip(state = 1) {
+    if(!window.Wm) return
     if (this._userHasInteracted) state = 0;
     if (!state) {
-      if (window.Wm && window.Wm.alert) {
+      if (Wm && Wm.alert) {
         Wm.alert()
       } else {
         Butler.sleep();
       }
       return;
     }
-    if (window.Wm && window.Wm.alert) {
+    if (Wm && Wm.alert) {
       Wm.alert(LOCALE.SYSTEM_SOUND_TIPS);
     } else {
       Butler.say(LOCALE.SYSTEM_SOUND_TIPS);
@@ -638,7 +654,7 @@ class __core_user extends Backbone.Model {
       url = `${base}${url}`;
     }
     if (!/^http/.test(url)) {
-      url = `https://${domain}${url}`;
+      url = `${protocol}://${domain}${url}`;
     }
     if (l == null) { l = 1; }
     if (!this._audio) {

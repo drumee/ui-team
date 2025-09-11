@@ -8,7 +8,9 @@ let __singleton;
 const SYSTEM_CLASSES = require('./seeds/static');
 const USER_CLASSES = {};
 const Addons = require("./seeds/addons");
-const Builtins = require('./seeds/builtins');
+// const Builtins = require('./seeds/builtins');
+let Helper;
+
 // ---------------------------------
 //
 // ---------------------------------
@@ -26,6 +28,14 @@ class __kind extends Backbone.Model {
    */
   exists(t) {
     return SYSTEM_CLASSES[t] || USER_CLASSES[t];
+  }
+
+  /**
+   * 
+   */
+  list(pattern){
+    if (!Helper) Helper = require('./seeds/helper');
+    return Helper.list(pattern)
   }
 
   /**
@@ -84,7 +94,6 @@ class __kind extends Backbone.Model {
    * @returns 
    */
   register(k, v, verbose = 0) {
-    //if (verbose == null) { verbose = 1; }
     if (USER_CLASSES[k]) {
       if (verbose) {
         this.warn(`Kind ${k} already exists. Use method replace`);
@@ -99,26 +108,32 @@ class __kind extends Backbone.Model {
     return USER_CLASSES[k] = v;
   }
 
-  // ===========================================================
-  //
-  // ===========================================================
+  /**
+   * 
+   * @param {*} k 
+   * @param {*} v 
+   * @returns 
+   */
   replace(k, v) {
-    if (SYSTEM_CLASSES[k] || Builtins.get(k)) {
+    if (SYSTEM_CLASSES[k]) {
       this.warn(`Kind ${k} is reserved. It cannot be resused`);
       return;
     }
     return USER_CLASSES[k] = v;
   }
 
-  // ===========================================================
-  //
-  // ===========================================================
+
+  /**
+   * 
+   * @param {*} name 
+   * @returns 
+   */
   get(name) {
     let f = SYSTEM_CLASSES[name] || USER_CLASSES[name];
     if (_.isFunction(f)) {
       return f;
     }
-    f = Builtins.get(name) || Addons.get(name);
+    f = Addons.get(name);
     if (_.isFunction(f != null ? f.then : undefined)) {
       return this.loader(f);
     }
@@ -148,13 +163,12 @@ class __kind extends Backbone.Model {
    * @returns 
    */
   async waitFor(name) {
-    const self = this;
     let f = SYSTEM_CLASSES[name] || USER_CLASSES[name];
     if (_.isFunction(f)) {
       return f;
     }
 
-    f = Builtins.get(name) || Addons.get(name);
+    f = Addons.get(name);
     if (!f) {
       this.warn(`Could not wait for kind ${name}`);
       //console.trace();
@@ -170,10 +184,13 @@ class __kind extends Backbone.Model {
     }
   }
 
-
-  // ===========================================================
-  //
-  // ===========================================================
+  /**
+   * 
+   * @param {*} letc 
+   * @param {*} map 
+   * @param {*} clone 
+   * @returns 
+   */
   convert(letc, map, clone) {
     let data, f;
     if (clone == null) { clone = false; }
