@@ -1,12 +1,5 @@
-/* ================================================================== *
-#   Copyright Thidima SA  2011-2025
-#   FILE : /src/drumee/core/kind/seeds/helper.js
-#   TYPE : Automatic generation - DO NOT EDIT 
-# ===================================================================**/
-// @ts-nocheck
 
 const STYLE = "color: green; font-weight: bold;"
-// Kind Helper. Only for devel usage. List available kinds
 
 const a = {
   drumee_api_popup:"api/lib/popup",
