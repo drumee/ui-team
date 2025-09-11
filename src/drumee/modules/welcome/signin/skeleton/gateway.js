@@ -1,12 +1,4 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2020
- * FILE : /src/drumee/modules/welcome/signin/skeleton/index.js
- * TYPE : Skeleton
- * ===================================================================**/
 
-// ===========================================================
-//
-// ===========================================================
 function button(_ui_, content, c = 1) {
   const fig = `${_ui_.fig.family}-gateway`;
   let b = Skeletons.Box.G({
@@ -25,7 +17,7 @@ function button(_ui_, content, c = 1) {
   let type = '';
   if (c == 1) {
     type = 'personal';
-  }else{
+  } else {
     type = 'company';
   }
   var a = Skeletons.Box.Y({
@@ -35,13 +27,14 @@ function button(_ui_, content, c = 1) {
       content
     })]
   })
+  const { protocol, user_domain, isElectron, endpointPath } = bootstrap();
   if (c == 1) {
     let base = '';
-    if(!bootstrap().isElectron){
-      base = `${protocol}://${bootstrap().user_domain}${location.pathname}`;
+    if (!isElectron) {
+      base = `${protocol}://${user_domain}${endpointPath}`;
     }
     a.href = `${base}${_K.module.welcome}/signin/auth`
-  }else{
+  } else {
     a.href = `${_K.module.welcome}/signin/url`
   }
   return a;

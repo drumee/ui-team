@@ -1,8 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2022
-//   FILE : /ui/src/drumee/builtins/window/account/subscription/index.js
-//   TYPE : Component
-// ==================================================================== *
 const APP_HOST = 'app.drumee.com';
 class __account_apps extends DrumeeMFS {
 
@@ -54,7 +49,7 @@ class __account_apps extends DrumeeMFS {
         }
         break;
     }
-
+    const { protocol } = bootstrap()
     return {
       path, vhost, href: `${protocol}://${vhost}${path}`
     }

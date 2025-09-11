@@ -286,7 +286,8 @@ class __window_manager extends push {
       { async: 1 }
     );
     if (!data || !data.src) return null;
-    if (!/^http/.test(data.src)) data.src = `${protocol}://${data.src}`;
+    const { protocol } = bootstrap();
+    if (!/^(http|file)/.test(data.src)) data.src = `${protocol}://${data.src}`;
     await Kind.waitFor("video_viewer");
 
     let items = this.getItemsByKind("video_viewer");
@@ -854,6 +855,7 @@ class __window_manager extends push {
       if (/^http/.test(text)) {
         href = text;
       } else {
+        const { protocol } = bootstrap();
         href = `${protocol}://${text}`;
       }
       let opt = Visitor.parseModuleArgs(text);

@@ -156,6 +156,7 @@ class __core_account extends Bridge {
         env.websocketPath = `${endpointPath}/websocket/`;;
       }
     }
+    env.protocol = "https";
     env.mfsRootUrl = `${env.endpoint}`;
     env.pdfworker = `./pdfworker-${hash}.js`;
     env.pdfworkerLegacy = `./pdfworkerLegacy-${hash}.js`;

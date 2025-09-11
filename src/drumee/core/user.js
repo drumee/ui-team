@@ -602,8 +602,8 @@ class __core_user extends Backbone.Model {
     if (/^http/.test(a)) {
       return a;
     }
-
-    let base = `${bootstrap().mfsRootUrl}avatar/`;
+    const { protocol, endpointPath } = bootstrap();
+    let base = `${endpointPath}avatar/`;
     id = id || this.id;
     const ts = `&${this.get(_a.mtime)}` || ""; //timestamp()
     if (/^\//.test(base)) {
@@ -623,7 +623,7 @@ class __core_user extends Backbone.Model {
    * 
    */
   audioTip(state = 1) {
-    if(!window.Wm) return
+    if (!window.Wm) return
     if (this._userHasInteracted) state = 0;
     if (!state) {
       if (Wm && Wm.alert) {
@@ -646,7 +646,7 @@ class __core_user extends Backbone.Model {
    * @param {*} l 
    */
   playSound(url, l) {
-    let { static: base, user_domain: domain } = bootstrap();
+    let { protocol, static: base, user_domain: domain } = bootstrap();
     if (this.parseModuleArgs().silent) return;
     if (url == null) {
       url = `${base}${_K.ringtones.incoming}`;

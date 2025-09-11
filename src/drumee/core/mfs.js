@@ -615,8 +615,8 @@ class __core_mfs extends LetcBox {
     }
 
     data = new URLSearchParams(data).toString();
-    let b = bootstrap();
-    this.viewerURL = `${protocol}://${b.main_domain}${b.mfs_base}${_K.module.desk}/wm/open/${data}`;
+    let { protocol, endpointPath, main_domain } = bootstrap();
+    this.viewerURL = `${protocol}://${main_domain}${endpointPath}${_K.module.desk}/wm/open/${data}`;
     let { nid, hub_id } = mData;
     let opt = {
       nid,
@@ -650,6 +650,7 @@ class __core_mfs extends LetcBox {
    */
   srcUrl() {
     if (!this.isRegularFile()) return null;
+    let { protocol } = bootstrap();
     return `${protocol}://${this.mget(_a.vhost)}${this.mget(_a.ownpath)}`;
   }
 

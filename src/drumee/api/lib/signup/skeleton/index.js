@@ -1,12 +1,4 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2022
-//   FILE : /ui/src/drumee/api/lib/signup/skeleton/index.coffee
-//   TYPE : Skeleton
-// ==================================================================== *
-
 const __welcome_default = function(_ui_) {
-
-  const link = `<a href="${protocol}://drumee.com/engegements-protection-vie-privee/" target='_blank>${LOCALE.CONFIDENTIAL}</a>`;
 
   const l3 = Skeletons.Box.Y({
     className : `${_ui_.fig.family}__title-container`,
@@ -18,7 +10,7 @@ const __welcome_default = function(_ui_) {
       
       Skeletons.Note({
         className: `${_ui_.fig.family}__title`,
-        content: LOCALE.TRY_DRUMEE.format(link)
+        content: LOCALE.TRY_DRUMEE.format()
       })
     ]});
   

@@ -1,6 +1,6 @@
 
 const __recipient = require('../core');
-const { copyToClipboard , openLink} = require("core/utils")
+const { copyToClipboard, openLink } = require("core/utils")
 
 class __invitation_publiclink extends __recipient {
   constructor(...args) {
@@ -195,7 +195,8 @@ class __invitation_publiclink extends __recipient {
         if ((row == null)) {
           return;
         }
-        row.link = `${protocol}://${row.vhost}${location.pathname}#/dmz/${row.share_id}`;
+        const { protocol, endpointPath } = bootstrap()
+        row.link = `${protocol}://${row.vhost}${endpointPath}#/dmz/${row.share_id}`;
         this.model.set(row);
         this.reload();
         this.service = "public-link-created";

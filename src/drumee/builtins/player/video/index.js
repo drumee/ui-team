@@ -152,28 +152,23 @@ class __player_video extends __core {
     let Hls = require('hls.js');
     var video = document.getElementById(id);
     var hls = new Hls(this.playerConfigs);
-    hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-      console.log('XAAA:156 video and hls.js are now bound together !');
-    });
-    hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-      console.log(
-        'XAAA:1560 manifest loaded, found ' + data.levels.length + ' quality level'
-      );
-    });
-    let base = '';
+    let { keysel, protocol, vdo } = bootstrap();
     if (this.cdnHost) {
-      this.cdnHost = this.cdnHost.replace(/^htt.+:\/\//, '');
-      base = `${protocol}://${this.cdnHost}`
+      if (/^(http|file)/.test(this.cdnHost)) {
+        base = this.cdnHost;
+      } else {
+        base = `${protocol}://${this.cdnHost}`
+
+      }
     }
     const { nid, hub_id } = this.actualNode();
-    let { keysel, vdo } = bootstrap();
     let url = `${vdo}${nid}/${hub_id}/master.m3u8`;
-    if(keysel){
+    if (keysel) {
       url = `${url}?keysel=${keysel}`;
     }
     hls.loadSource(url);
     hls.attachMedia(video);
-    this.onBeforeDestroy = ()=>{
+    this.onBeforeDestroy = () => {
       hls.stopLoad();
     }
   }

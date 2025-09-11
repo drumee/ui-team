@@ -1,7 +1,7 @@
 // @ts-nocheck
 // On demand Classes cannot be overloaded
 
-module.exports = {
+const a = {
   drumee_api_popup:function(s,f){import('api/lib/popup').then(m=>{s(m.default)}).catch(f)},
   drumee_api_form:function(s,f){import('api/lib/form').then(m=>{s(m.default)}).catch(f)},
   drumee_api_signup:function(s,f){import('api/lib/signup').then(m=>{s(m.default)}).catch(f)},
@@ -228,7 +228,7 @@ module.exports = {
   window_info:function(s,f){import('window/info').then(m=>{s(m.default)}).catch(f)},
   window_launcher:function(s,f){import('window/launcher').then(m=>{s(m.default)}).catch(f)},
   window_litechat:function(s,f){import('window/litechat').then(m=>{s(m.default)}).catch(f)},
-  window_manager:function(s,f){import('desk/wm').then(m=>{s(m.default)}).catch(f)},
+  window_manager:function(s,f){import('desk/wm/index.electron').then(m=>{s(m.default)}).catch(f)},
   window_meeting:function(s,f){import('window/meeting').then(m=>{s(m.default)}).catch(f)},
   window_schedule:function(s,f){import('window/schedule').then(m=>{s(m.default)}).catch(f)},
   window_search:function(s,f){import('window/search').then(m=>{s(m.default)}).catch(f)},
@@ -248,7 +248,6 @@ module.exports = {
   dmz_window_manager:function(s,f){import('dmz/wm').then(m=>{s(m.default)}).catch(f)},
   dmz_sharebox:function(s,f){import('dmz/sharebox').then(m=>{s(m.default)}).catch(f)},
   dmz_meeting:function(s,f){import('dmz/meeting').then(m=>{s(m.default)}).catch(f)},
-  setup_window:function(s,f){import('src/drumee/modules/setup').then(m=>{s(m.default)}).catch(f)},
   test_result:function(s,f){import('modules/test/widget/result').then(m=>{s(m.default)}).catch(f)},
   welcome_invitation:function(s,f){import('welcome/invitation').then(m=>{s(m.default)}).catch(f)},
   welcome_feedback:function(s,f){import('welcome/feedback').then(m=>{s(m.default)}).catch(f)},
@@ -272,3 +271,11 @@ module.exports = {
   electron_settings:function(s,f){import('src/drumee/widgets/electron/settings').then(m=>{s(m.default)}).catch(f)},
   electron_setup:function(s,f){import('src/drumee/widgets/electron/setup').then(m=>{s(m.default)}).catch(f)},
 }
+
+
+function get (name) {
+  if(a[name]) return new Promise(a[name]);
+  return null;
+};
+  
+module.exports = {get};

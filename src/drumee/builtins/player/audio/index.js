@@ -50,8 +50,6 @@ class __player_audio extends __window_interact_player {
   onDomRefresh() {
     this.el.setAttribute(_a.id, this._id);
     let node = this.actualNode();
-    this.debug("AAA:61", node);
-    //let url = `${protocol}://${node.vhost}${node.url}`;
     this.fetchFile({ url: node.url })
       .then((blob) => {
         this.mset(_a.url, URL.createObjectURL(blob));

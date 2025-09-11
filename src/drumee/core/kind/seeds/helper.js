@@ -253,7 +253,6 @@ const a = {
   dmz_window_manager:"dmz/wm",
   dmz_sharebox:"dmz/sharebox",
   dmz_meeting:"dmz/meeting",
-  setup_window:"src/drumee/modules/setup",
   test_result:"modules/test/widget/result",
   welcome_invitation:"welcome/invitation",
   welcome_feedback:"welcome/feedback",
@@ -282,7 +281,7 @@ function list (name) {
     })
   }
   for (let i of keys ){
-    console.log(`${i}  ->  %c${a[i]}`, STYLE)
+    console.log(i + " -> " + a[i], STYLE)
   }
   return keys
 };

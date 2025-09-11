@@ -1,8 +1,3 @@
-/* ==================================================================== *
- *   Copyright Xialia.com  2011-2020
- *   FILE : /src/drumee/modules/welcome/signin/index.js
- *   TYPE : Component
- * ==================================================================== */
 /// <reference path="../../../../../@types/index.d.ts" />
 
 const RECONNECT = 'reconnect';
@@ -30,7 +25,8 @@ class __welcome_signin extends __welcome_interact {
     super.initialize(opt);
     this.declareHandlers();
     this._otpResent = 0;
-    this._completeSignupLink = `${protocol}://${bootstrap().main_domain}${location.pathname}${_K.module.signup}`;
+    const { protocol, endpointPath, main_domain } = bootstrap();
+    this._completeSignupLink = `${protocol}://${main_domain}${endpointPath}${_K.module.signup}`;
     this._skeleton = require("./skeleton");
   }
 
@@ -99,9 +95,9 @@ class __welcome_signin extends __welcome_interact {
       pw = this.getPart("ref-password").getValue();
     } catch (error) { }
     if (_.isEmpty(pw) || _.isEmpty(ident)) {
-      if(this._button){
+      if (this._button) {
         this._button.el.dataset.state = 0;
-        this._button.el.dataset.error = 0;  
+        this._button.el.dataset.error = 0;
       }
       return false;
     }

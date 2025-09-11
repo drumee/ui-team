@@ -78,13 +78,6 @@ const __locale_row = function(_ui_, data) {
   });
 
   
-  // iframe = Skeletons.Box.Y
-  //   className: "#{_ui_.fig.family}__translate-iframe"
-  //   kids :[{
-  //     kind : 'iframe'
-  //     sys_pn : 'iframe'
-  //     url : `${protocol}://translate.google.fr/?sl=en&tl=km&text=Accept&op=translate`
-  //   }]
   const form = Skeletons.Box.Y({
     debug     : __filename,
     className : `${_ui_.fig.family}__form-container`,
