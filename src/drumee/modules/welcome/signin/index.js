@@ -25,8 +25,8 @@ class __welcome_signin extends __welcome_interact {
     super.initialize(opt);
     this.declareHandlers();
     this._otpResent = 0;
-    const { protocol, endpointPath, main_domain } = bootstrap();
-    this._completeSignupLink = `${protocol}://${main_domain}${endpointPath}${_K.module.signup}`;
+    const { endpoint } = bootstrap();
+    this._completeSignupLink = `${endpoint}${_K.module.signup}`;
     this._skeleton = require("./skeleton");
   }
 
