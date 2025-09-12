@@ -27,13 +27,13 @@ function button(_ui_, content, c = 1) {
       content
     })]
   })
-  const { protocol, user_domain, isElectron, endpointPath } = bootstrap();
+  const { isElectron, endpoint } = bootstrap();
   if (c == 1) {
-    let base = '';
-    if (!isElectron) {
-      base = `${protocol}://${user_domain}${endpointPath}`;
+    if (isElectron) {
+      a.href = `${_K.module.welcome}/signin/auth`
+      return
     }
-    a.href = `${base}${_K.module.welcome}/signin/auth`
+    a.href = `${endpoint}${_K.module.welcome}/signin/auth`
   } else {
     a.href = `${_K.module.welcome}/signin/url`
   }

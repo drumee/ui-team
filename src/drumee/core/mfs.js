@@ -615,8 +615,8 @@ class __core_mfs extends LetcBox {
     }
 
     data = new URLSearchParams(data).toString();
-    let { protocol, endpointPath, main_domain } = bootstrap();
-    this.viewerURL = `${protocol}://${main_domain}${endpointPath}${_K.module.desk}/wm/open/${data}`;
+    let { endpoint } = bootstrap();
+    this.viewerURL = `${endpoint}${_K.module.desk}/wm/open/${data}`;
     let { nid, hub_id } = mData;
     let opt = {
       nid,
@@ -658,9 +658,9 @@ class __core_mfs extends LetcBox {
    * 
    */
   pluginUrl() {
-    const { endpoint } = bootstrap();
+    const { endpointPath } = bootstrap();
     const path = `${this.getLogicalParent().mget(_a.ownpath)}`;
-    return `${protocol}://${this.mget(_a.vhost)}${endpoint}#$/${path}`;
+    return `${protocol}://${this.mget(_a.vhost)}${endpointPath}#/${path}`;
   }
 
   /**

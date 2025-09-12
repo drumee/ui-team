@@ -604,8 +604,8 @@ class __core_user extends Backbone.Model {
     }
     id = id || this.id;
     const ts = `${this.get(_a.mtime)}` || ""; 
-    const { protocol, main_domain, endpointPath } = bootstrap();
-    let base = `${protocol}://${main_domain}${endpointPath}/avatar/${id}?type=${type}&ts=${ts}`;
+    const { endpoint } = bootstrap();
+    let base = `${endpoint}avatar/${id}?type=${type}&ts=${ts}`;
     return base
   }
 

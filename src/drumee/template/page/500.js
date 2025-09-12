@@ -1,10 +1,10 @@
 module.exports = function (env, error, style) {
-  const { protocol, main_domain } = bootstrap();
+  const { endpoint }= bootstrap();
   let html = `
     <div>Ooops !</div> 
     <div>Something wrong happen to the servers.</div> 
     <div>Please try again later</div> 
-    <a style="${style}" href="${protocol}://${main_domain}/#/welcome">${LOCALE.GOTO_HOMEPAGE}</a>
+    <a style="${style}" href="${endpoint}/#/welcome">${LOCALE.GOTO_HOMEPAGE}</a>
   `;
   return html;
 };

@@ -43,9 +43,8 @@ function __skl_welcome_signin_content(_ui_) {
   let href = `${_K.module.welcome}/signin/org`;
   let content = LOCALE.LOGIN_OTHER_POD;
   if (Organization.get('domain_id') > 1) {
-    let { protocol, endpointPath, main_domain } = bootstrap();
-    let base = `${protocol}://${main_domain}${endpointPath}`;
-    href = `${base}${_K.module.welcome}/signin`;
+    let { endpoint } = bootstrap();
+    href = `${endpoint}${_K.module.welcome}/signin`;
     content = LOCALE.LOGIN_PERSONAL_ACCOUNT;
   }
 
