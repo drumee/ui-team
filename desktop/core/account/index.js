@@ -70,7 +70,7 @@ class __core_account extends Bridge {
    *
    */
   respawn(data) {
-    let { user, organization, sid, hub} = data;
+    let { user, organization, sid, hub } = data;
     this.debug("AAA:74", data)
     if (!user || !organization) {
       this.warn("Could not respawn fron invalid data", data);
@@ -156,6 +156,7 @@ class __core_account extends Bridge {
         env.websocketPath = `${endpointPath}/websocket/`;;
       }
     }
+
     env.protocol = "https";
     env.mfsRootUrl = `${env.endpoint}`;
     env.pdfworker = `./pdfworker-${hash}.js`;
