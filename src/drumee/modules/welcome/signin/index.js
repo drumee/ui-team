@@ -42,7 +42,6 @@ class __welcome_signin extends __welcome_interact {
    */
   onDomRefresh() {
     let opt = {};
-    this.debug("AAA:115", opt, bootstrap())
     switch (bootstrap().connection) {
       case "otp":
         if (this.mget(RECONNECT)) {

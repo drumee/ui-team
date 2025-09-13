@@ -37,7 +37,6 @@ class __welcome_router extends LetcBox {
       this.el.dataset.tab = this.tab;
     });
     let require_logout = 0;
-    this.debug("AAA:40", this.tab, Platform.get('isPublic'), Visitor.isOnline())
     switch (this.tab) {
       case 'signup':
         if (Platform.get('isPublic')) {
@@ -113,7 +112,6 @@ class __welcome_router extends LetcBox {
         opt = { kind: 'welcome_signin' };
 
     }
-    this.debug("AAA:115", opt)
     if (Visitor.isOnline()) {
       if (require_logout) {
         this.postService(SERVICE.drumate.logout, { hub_id: Visitor.id }, { async: 1 }).then(() => {

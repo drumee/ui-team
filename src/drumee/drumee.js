@@ -150,6 +150,7 @@ class Drumee extends Marionette.Application {
     if (!lang) {
       lang = Visitor.pagelang();
     }
+    console.log(`Using locale language=${lang}`)
     require.ensure(["application"], e => {
       window.LOCALE = require("locale")(lang);
       if (_.isFunction(locale)) {
