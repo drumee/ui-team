@@ -10,6 +10,9 @@ const node_path = 'node_modules';
 const drumee_modules = drumee_path + 'modules/';
 
 module.exports = function (basedir) {
+  if(!basedir){
+    basedir = resolve(__dirname, '..')
+  }
   return {
     extensions: [".coffee", ".js", ".scss", ".css", ".web.coffee", ".web.js", ".json", ".tpl", '.tsx', '.ts',],
     alias: {
