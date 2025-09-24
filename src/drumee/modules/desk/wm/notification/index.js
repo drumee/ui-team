@@ -28,7 +28,7 @@ class __notification_panel extends LetcBox {
     window.NotificationCenter = this;
 
     this._onOutsideClick = (e, origin) => {
-      if (mouseDragged) return;
+      if (pointerDragged) return;
       if (e && !this.el.contains(e.currentTarget)) {
         this.closeNotificationPanel();
       }

@@ -1,16 +1,5 @@
-const ANIM='bhv_anim';
-//########################################
-// Wrapper
-//
-//########################################
 class __bhv_wrapper extends Marionette.Behavior {
-// ==================== *
-//
-// ==================== *
 
-// ===========================================================
-//
-// ===========================================================
   constructor(...args) {
     super(...args);
     this._handleEmptyNess = this._handleEmptyNess.bind(this);
@@ -21,6 +10,11 @@ class __bhv_wrapper extends Marionette.Behavior {
     this.onRender = this.onRender.bind(this);
   }
 
+  /**
+   * 
+   * @param {*} evt 
+   * @returns 
+   */
   _handleEmptyNess(evt){
     const c = this.view.collection;
     const l = this.view.children.last();
@@ -37,31 +31,38 @@ class __bhv_wrapper extends Marionette.Behavior {
     return this.el.setAttribute(_a.data.state, _a.open);
   }
 
-// ===========================================================
-//
-// ===========================================================
+
+  /**
+   * 
+   * @returns 
+   */
   _remove(){
     return this._handleEmptyNess(_e.remove);
   }
 
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @returns 
+   */
   _add(){
     return this._handleEmptyNess(_e.add);
   }
 
 
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} child 
+   * @returns 
+   */
   onRemoveChild(child) {
     return this._handleEmptyNess();
   }
     
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} a 
+   * @returns 
+   */
   onDestroy(a) {
     const c = this.view.collection;
     c.off(_e.remove, this._remove.bind(this));
@@ -69,9 +70,11 @@ class __bhv_wrapper extends Marionette.Behavior {
     return c.off(_e.add, this._add.bind(this));
   }
 
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} a 
+   * @returns 
+   */
   onRender(a) {
     const state = this.view.model.get(_a.initialState) || this.view.model.get(_a.state);
     const c = this.view.collection;
@@ -87,7 +90,7 @@ class __bhv_wrapper extends Marionette.Behavior {
 
     c.on(_e.remove, this._remove.bind(this));
     c.on(_e.reset, this._remove.bind(this));
-    return c.on(_e.add, this._add.bind(this));
+    c.on(_e.add, this._add.bind(this));
   }
 }
 

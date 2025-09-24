@@ -959,9 +959,9 @@ class __window_interact extends windowCore {
     //console.trace();
     this.captured = {};
     if (all > 1) {
-      mouseDragged = false;
+      pointerDragged = false;
     }
-    if (this._isMoving || mouseDragged) {
+    if (this._isMoving || pointerDragged) {
       return;
     }
     this._selection = {};

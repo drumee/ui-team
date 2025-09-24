@@ -46,7 +46,7 @@ class __addressbook_widget_search extends LetcBox {
     let status = cmd.get(_a.status);
 
     this.debug("onUiEvent", cmd, this);
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
 

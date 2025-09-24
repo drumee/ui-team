@@ -125,7 +125,7 @@ class __window_manager extends push {
       Visitor.playSound(_K.notifications.std, 0);
     }, Visitor.timeout(10000));
 
-    RADIO_MOUSE.once(_e.mousedown, () => {
+    RADIO_POINTER.once(_e.mousedown, () => {
       this._userHasInteracted = 1;
       this.alert();
     });
@@ -760,7 +760,7 @@ class __window_manager extends push {
    * @returns
    */
   xorSelect(t) {
-    if (this._isMoving || mouseDragged) {
+    if (this._isMoving || pointerDragged) {
       return;
     }
     if (t !== this) {

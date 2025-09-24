@@ -13,9 +13,9 @@ class __desk_selection extends __rectangle {
     this.enable = this.enable.bind(this);
     this.disable = this.disable.bind(this);
     this.onDomRefresh = this.onDomRefresh.bind(this);
-    this._mousedown = this._mousedown.bind(this);
-    this._mousemove = this._mousemove.bind(this);
-    this._mouseup = this._mouseup.bind(this);
+    this._pointerdown = this._pointerdown.bind(this);
+    this._pointermove = this._pointermove.bind(this);
+    this._pointerup = this._pointerup.bind(this);
   }
 
 
@@ -25,11 +25,9 @@ class __desk_selection extends __rectangle {
    */
   initialize(opt) {
     super.initialize(opt);
-    RADIO_MOUSE.on(_e.mousemove, this._mousemove.bind(this));
-
-    RADIO_MOUSE.on(_e.mousedown, this._mousedown.bind(this));
-
-    RADIO_MOUSE.on(_e.mouseup, this._mouseup.bind(this));
+    RADIO_POINTER.on(_e.pointermove, this._pointermove.bind(this));
+    RADIO_POINTER.on(_e.pointerdown, this._pointerdown.bind(this));
+    RADIO_POINTER.on(_e.pointerup, this._pointerup.bind(this));
 
     this.enable();
     window.Selector = this;
@@ -60,9 +58,9 @@ class __desk_selection extends __rectangle {
    * 
    */
   onDestroy() {
-    RADIO_MOUSE.off(_e.mousemove, this._mousemove.bind(this));
-    RADIO_MOUSE.off(_e.mousedown, this._mousedown.bind(this));
-    RADIO_MOUSE.off(_e.mouseu, this._mouseup.bind(this));
+    RADIO_POINTER.off(_e.pointermove, this._pointermove.bind(this));
+    RADIO_POINTER.off(_e.pointerdown, this._pointerdown.bind(this));
+    RADIO_POINTER.off(_e.pointerup, this._pointerup.bind(this));
   }
 
   /**
@@ -157,7 +155,7 @@ class __desk_selection extends __rectangle {
    * @param {*} e 
    * @returns 
    */
-  _mousedown(e) {
+  _pointerdown(e) {
     if (!this._accept(e) || !this.$rectangle) { 
       this._target = null;
       return;
@@ -212,12 +210,11 @@ class __desk_selection extends __rectangle {
    * @param {*} e 
    * @returns 
    */
-  _mousemove(e) {
+  _pointermove(e) {
     let draw_x, draw_y;
     if (!e.buttons || !this._target) {
       return false;
     }
-    //@debug "aaaaaaaaa 271 134", e, @_target, @_idle
     let draw_w = e.pageX - this._offsetX;
     let draw_h = e.pageY - this._offsetY;
     let selection_h = draw_h;
@@ -325,14 +322,6 @@ class __desk_selection extends __rectangle {
       width: draw_w,
       height: draw_h
     });
-    if (Visitor.parseModuleArgs().devel) {
-      this.$debug.css({
-        left: draw_x,
-        top: selection_y,
-        width: draw_w,
-        height: selection_h
-      })
-    }
     const r = new Rectangle(draw_x, selection_y, draw_w, selection_h);
     for (let m of Array.from(this.media)) {
       if ((m.bbox == null)) {
@@ -353,13 +342,13 @@ class __desk_selection extends __rectangle {
    * @param {*} e 
    * @returns 
    */
-  _mouseup(e) {
+  _pointerup(e) {
     this.media = [];
     this._target = null;
     this.setState(0);
     if (!this._idle) {
       this.status = _a.idle;
-      window.mouseDragged = true;
+      window._pointerDragged = true;
       try {
         Desk.autoMenu();
       } catch (e) { }

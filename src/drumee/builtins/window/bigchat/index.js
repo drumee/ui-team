@@ -140,7 +140,7 @@ class ___window_bigchat extends __window_bigchat_interact {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.service || cmd.get(_a.name);
-    if (mouseDragged) { return; }
+    if (pointerDragged) { return; }
 
     switch (service) {
       case 'open-contact':

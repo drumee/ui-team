@@ -539,7 +539,7 @@ class __window_core extends __utils {
    * @returns 
    */
   onChildBubble(o) {
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
     if (o != null) {
@@ -552,7 +552,7 @@ class __window_core extends __utils {
       }
     }
 
-    if (!mouseDragged) {
+    if (!pointerDragged) {
       this.triggerMethod(CHANGE_RADIO);
     }
   }

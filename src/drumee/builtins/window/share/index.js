@@ -161,7 +161,7 @@ class __window_share extends mfsInteract {
         };
         if (this._shared != null) {
           // When share by drag and drop, by pass force Wm to bypass unselect check
-          window.mouseDragged = false;
+          window.pointerDragged = false;
           return child.on("end:of:data", ()=> {
             return this._highlightSelection();
           });
@@ -309,7 +309,7 @@ class __window_share extends mfsInteract {
 
 
     this.isDialoguing = 1;
-    const mouseDragged = false; 
+    const pointerDragged = false; 
     return Wm.unselect(0);
   }
 

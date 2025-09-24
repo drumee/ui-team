@@ -19,7 +19,7 @@ class ___invitation_email extends LetcBox {
     this.mode = this.mget(_a.mode) || _a.edit
 
     this._onOutsideClick = (e, origin) => {
-      if (mouseDragged) {
+      if (pointerDragged) {
         return
       }
       if (e && this.getPart('suggestion-wrapper') &&

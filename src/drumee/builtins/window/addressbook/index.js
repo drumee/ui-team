@@ -167,7 +167,7 @@ class __window_addressbook extends __window_addressbook_interact {
   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.model.get(_a.service);
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
     switch (service) {

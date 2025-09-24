@@ -1,6 +1,7 @@
 require("jquery-ui/ui/widgets/draggable");
 require("jquery-ui/ui/widgets/droppable");
 require("jquery-ui/ui/widgets/resizable");
+require("jquery-ui-touch-punch")
 
 const Rectangle = require('rectangle-node');
 const mfsInteract = require("./interact");
@@ -898,7 +899,7 @@ class __window_manager extends mfsInteract {
       return;
     }
 
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
     const fType = media.mget(_a.filetype);

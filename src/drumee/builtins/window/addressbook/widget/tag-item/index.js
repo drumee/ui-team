@@ -63,7 +63,7 @@ class __addressbook_widget_tag_item extends LetcBox {
    * @returns 
    */
   _onOutsideClick(e) {
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
     if ((e != null) && !this.el.contains(e.currentTarget)) {

@@ -19,7 +19,7 @@ class ___widget_member_tagItem extends LetcBox {
     this.declareHandlers();
 
     this._onOutsideClick = (e, origin)=> {
-      if (mouseDragged) {
+      if (pointerDragged) {
         return;
       }
       if ((e != null) && !this.el.contains(e.currentTarget)) {
