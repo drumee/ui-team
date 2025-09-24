@@ -1,5 +1,5 @@
 @import 'mixins/drumee.scss';
-@import "pdfjs-dist/web/pdf_viewer.css";
+// @import "pdfjs-dist/web/pdf_viewer.css";
 
 .pdfViewer {
   --scale-factor: 1.1;
@@ -16,6 +16,11 @@
     margin-bottom: 10px;
     box-shadow: none;
     z-index: 10;
+  }
+
+  &__canvas-wrapper {
+    width: 100%;
+    height: auto;
   }
 
   &__text-layer {

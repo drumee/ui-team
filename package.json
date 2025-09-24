@@ -74,6 +74,7 @@
     "webpack": "^5.88.2"
   },
   "dependencies": {
+    "@embedpdf/pdfium": "^1.3.0",
     "@webcomponents/webcomponentsjs": "^2.6.0",
     "aes256": "^1.1.0",
     "ajv": "^8.11.0",

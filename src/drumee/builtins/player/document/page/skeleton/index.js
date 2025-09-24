@@ -14,9 +14,9 @@ const __player_page = function(_ui_) {
     }
   });
   const a = Skeletons.Box.Y({
-    className :'canvasWrapper',
+    className :`${_ui_.fig.family}__canvas-wrapper`,
     sys_pn  : "canvas-wrapper",
-    kids : [canvas, textLayer]});
+    kids : [canvas]});
 
   return a;
 };

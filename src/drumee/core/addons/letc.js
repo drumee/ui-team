@@ -333,7 +333,9 @@ View.prototype.__handleContextmenu = function (e) {
         if (s) break;
         p = p.parent;
       }
+      const handlers = this.getHandlers(_a.ui);
       p.debug(`Skeleton location: ${p.mget(_a.debug)}`, p, p.el, e);
+      this.debug("Widget, uiHandler", this, handlers[0])
       return;
     }
   }
