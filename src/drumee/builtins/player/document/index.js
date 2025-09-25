@@ -2,22 +2,8 @@
 const { filesize, fitBoxes } = require("core/utils")
 const { TweenMax, Expo } = require("gsap/all");
 const PlayerInteract = require('player/interact');
-const { initializePdfium, loadPdfDocument } = require('./pdfium-wrapper')
+const { loadPdfDocument } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";
-// const { getDocument, GlobalWorkerOptions } = require("pdfjs-dist");
-// if (typeof (Promise.withResolvers) === 'undefined') {
-//   window.Promise.withResolvers = function () {
-//     let resolve, reject;
-//     const promise = new Promise((res, rej) => {
-//       resolve = res;
-//       reject = rej;
-//     });
-//     return { promise, resolve, reject };
-//   }
-//   GlobalWorkerOptions.workerSrc = bootstrap().pdfworkerLegacy;
-// } else {
-//   GlobalWorkerOptions.workerSrc = bootstrap().pdfworker;
-// }
 
 class __player_document extends PlayerInteract {
 
@@ -83,13 +69,12 @@ class __player_document extends PlayerInteract {
   }
 
   // Load a PDF file
-  async loadAndRenderPdf(url) {
+  async getDocument(url) {
     try {
       // Fetch the PDF file
       const response = await this.fetchFile({ url, progress: this.onFetchProgress.bind(this) });
       const arrayBuffer = await response.arrayBuffer();
       const pdfData = new Uint8Array(arrayBuffer);
-      this.debug("AAA:90", response)
       // Load the document
       const pdfDocument = await loadPdfDocument(pdfData);
       window.addEventListener('beforeunload', () => {
@@ -107,7 +92,6 @@ class __player_document extends PlayerInteract {
  */
   onDomRefresh() {
     Wm.on(WS_EVENT, this.handleWsEvent)
-    this.debug("AAA:68", initializePdfium)
     this.initSize();
     this.reload();
   }
@@ -185,7 +169,6 @@ class __player_document extends PlayerInteract {
     let pdfDocument = this.pdfDocument;
     this.loadedPages++;
     let pageNum = this.loadedPages
-    this.debug("AAA:184", pageNum, this.loadedPages)
     if (pageNum >= this.totalPages) {
       return;
     }
@@ -334,9 +317,8 @@ class __player_document extends PlayerInteract {
    * 
    */
   async display() {
-    const { url, nid, hub_id } = this.actualNode(_a.pdf);
+    const { url } = this.actualNode(_a.pdf);
     let w = this.size.width;
-    this.debug("AAA,A:344", this.info)
     try {
       const a = this.info['page size'].split(/ +/);
       w = parseInt(a[0]);
@@ -349,20 +331,9 @@ class __player_document extends PlayerInteract {
       return
     }
 
-    // let load_doc = (url) => {
-    //   let loader = getDocument({
-    //     ...this._headers,
-    //     url,
-    //   });
-    //   _.delay(this.initProgess.bind(this), 1000);
-    //   loader.onProgress = this.onFetchProgress.bind(this);
-    //   loader.promise.then(this.loadPages.bind(this), this.handleError.bind(this));
-    //   this.loader = loader;
-    // }
-    let pdfDocument = await this.loadAndRenderPdf(url)
+    let pdfDocument = await this.getDocument(url)
     this.loadPages(pdfDocument)
     this.message(LOCALE.DOWNLOADING);
-    // load_doc(url);
   }
 
 
@@ -534,7 +505,6 @@ class __player_document extends PlayerInteract {
         this.timer = null;
         child.on(_e.scroll, ((list) => {
           let th = list.contentHeight() * this.loadedPages * .5;
-          this.debug("AAA:529", th, list.getOffsetY())
           if (this.timer || list.scrollDir != _a.down) return;
           if (list.getOffsetY() < th) return;
           this.nextPages()

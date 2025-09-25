@@ -140,7 +140,7 @@ module.exports = function () {
       // pdfworker = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'build', 'pdf.worker.min.mjs');
       // pdfworkerLegacy = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.min.mjs');
       let dom = join(UI_SRC_PATH, 'src', 'drumee', 'index.dom');
-      return makeOptions({ main, dom, pdfworker, pdfworkerLegacy }, opt);
+      return makeOptions({ main, dom }, opt);
     default:
       console.error(`The build target ${BUILD_TARGET} was unexpected`)
   }

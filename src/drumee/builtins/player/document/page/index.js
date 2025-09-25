@@ -57,7 +57,6 @@ class __player_page extends LetcBox {
     let canvas = await this.ensurePart('canvas');
     try {
       let viewport = await pdfDocument.renderPage(pageNum, scale, 0, canvas.el);
-      this.debug("AAA:72", scale, viewport)
       this.ratio = viewport.width / viewport.height;
     } catch (e) {
       this.warn("Failed to render page", e)

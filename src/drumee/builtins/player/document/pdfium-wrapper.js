@@ -4,13 +4,14 @@ let pdfiumInstance;
 export async function initializePdfium() {
   const { init, DEFAULT_PDFIUM_WASM_URL } = await import('@embedpdf/pdfium');
 
-  /** Get rid of dependency to external source. Make a copy of  DEFAULT_PDFIUM_WASM_URL*/
-  let bundle = `${bootstrap().static}vendor/embedpd/pdfium.wasm`;
+  /** Use self-hosted bundle, fallback to DEFAULT_PDFIUM_WASM_URL*/
+  let { pdfium_wasm } = bootstrap();
   if (pdfiumInstance) return pdfiumInstance;
-  console.log("AAA:9", bundle, DEFAULT_PDFIUM_WASM_URL)
 
-  const response = await fetch(bundle);
-  console.log("AAA:14", response)
+  let response = await fetch(pdfium_wasm);
+  if (!pdfium_wasm || response.status != 200) {
+    response = await fetch(DEFAULT_PDFIUM_WASM_URL);
+  }
   const wasmBinary = await response.arrayBuffer();
   pdfiumInstance = await init({ wasmBinary });
 
@@ -56,12 +57,10 @@ export async function loadPdfDocument(pdfData) {
 
   // Get page count
   const pageCount = pdfium.FPDF_GetPageCount(docPtr);
-
   // Return an object with document info and rendering capabilities
   return {
     hasPassword: false,
     pageCount,
-
     // Close the document and free resources
     close: () => {
       pdfium.FPDF_CloseDocument(docPtr);
@@ -94,7 +93,6 @@ export async function loadPdfDocument(pdfData) {
         // Get the page dimensions
         const width = pdfium.FPDF_GetPageWidthF(pagePtr);
         const height = pdfium.FPDF_GetPageHeightF(pagePtr);
-        console.log("AAA:97", { width, height })
         // Calculate the scaled dimensions with device pixel ratio
         const effectiveScale = scale * dpr;
         let scaledWidth = Math.floor(width * effectiveScale);
