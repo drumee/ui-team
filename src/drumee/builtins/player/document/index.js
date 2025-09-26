@@ -93,7 +93,7 @@ class __player_document extends PlayerInteract {
   onDomRefresh() {
     Wm.on(WS_EVENT, this.handleWsEvent)
     this.initSize();
-    this.reload();
+    this.reload(300);
   }
 
   /**
@@ -222,6 +222,7 @@ class __player_document extends PlayerInteract {
   checkBuildState() {
     if (this.pollCount > 10) {
       this.warn("Giving up loadig new version");
+      this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW);
       return;
     }
     const { nid, hub_id } = this.actualNode();
@@ -233,7 +234,9 @@ class __player_document extends PlayerInteract {
     };
     this.pollCount++;
     this.fetchService(opt).then((data) => {
+      this.debug("AAA:223 get buil state", opt, data)
       if (/^(ok|done)$/.test(data.buildState) || !data.buildState) {
+        this.message("");
         this.pollCount = 0;
         if (this.buildTime) {
           clearTimeout(this.buildTime);
