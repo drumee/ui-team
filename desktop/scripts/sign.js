@@ -1,4 +1,4 @@
-
+#! env node
 exports.default = async function sign(context) {
   const { electronPlatformName, outDir, appOutDir } = context;
   console.log(`Signing code for platform ${electronPlatformName}`);
@@ -63,7 +63,7 @@ exports.default = async function sign(context) {
       // Step 3: Compile the template to a .msi file
       await msiCreator.compile();
       */
-      return;
+          
     default:
       console.log(`No signing code planned for platform ${electronPlatformName}`)
   }

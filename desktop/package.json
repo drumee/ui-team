@@ -64,7 +64,12 @@
           ]
         }
       ],
-      "sign": "scripts/sign.js"
+      "sign": {
+        "executable": "scripts/sign-linux.js",
+        "args": [
+          "--verbose"
+        ]
+      }
     },
     "linux": {
       "publish": {
@@ -73,6 +78,7 @@
       },
       "icon": "./icons/linux/icon.png",
       "synopsis": "Drumee Desktop",
+      "executableName": "Drumee Desktop",
       "category": "Utility",
       "target": [
         "7z",
@@ -97,7 +103,9 @@
     "build": "electron-builder",
     "build:w": "npm rebuild && electron-builder -w",
     "build:l": "electron-builder --linux",
-    "rebuild:l": "electron-builder --linux",
+    "build:signed:l": "npm run build:l && npm run sign:l",
+    "sign:l": "node scripts/sign-linux.js && node scripts/generate-checksum.js",
+    "sign:checksum": "node scripts/generate-checksum.js",
     "build:m:w": "electron-builder -mw",
     "build:mwl": "electron-builder -mwl",
     "build:m": "electron-builder -c.mac.identity=null -m",
@@ -107,7 +115,6 @@
   "devDependencies": {
     "@electron/notarize": "^2.0.0",
     "@electron/osx-sign": "^1.3.1",
-    "@electron/rebuild": "^3.6.0",
     "@mapbox/node-pre-gyp": "^1.0.11",
     "electron": "^29.4.6",
     "electron-builder": "^24.13.3",
