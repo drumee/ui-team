@@ -68,6 +68,7 @@ class __desk_ui extends LetcBox {
   */
   async onDomRefresh() {
     this._pending = { available: false };
+    this.debug("AAA:71", this, Visitor.device(), Visitor.get(_a.device), navigator.userAgent, window.innerWidth, localStorage.logLevel)
     if (Visitor.device() === _a.mobile) {
       this.feed(require("./skeleton/mobile")(this));
     } else {
@@ -346,7 +347,7 @@ class __desk_ui extends LetcBox {
    */
   onChildBubble(c) {
     if (
-      (typeof mouseDragged !== "undefined" && mouseDragged !== null) ||
+      (typeof pointerDragged !== "undefined" && pointerDragged !== null) ||
       c.mget(_a.service) != null ||
       c.status === _e.data
     ) {
@@ -526,7 +527,7 @@ class __desk_ui extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
-    if (mouseDragged || !window.Wm) {
+    if (pointerDragged || !window.Wm) {
       return;
     }
     switch (service) {

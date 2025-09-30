@@ -1,7 +1,7 @@
 {
   "name": "@drumee/ui-team",
   "description": "Drumee Web Os User Interface with collaborative features",
-  "version": "3.1.3",
+  "version": "3.1.7",
   "homepage": "https://drumee.com",
   "author": "Somanos Sar <somanos@drumee.com> (http://drumee.com)",
   "repository": {
@@ -34,7 +34,7 @@
   "devDependencies": {
     "@babel/core": "^7.19.1",
     "@babel/preset-env": "^7.19.1",
-    "@drumee/ui-dev-tools": "^1.0.13",
+    "@drumee/ui-dev-tools": "^1.0.16",
     "@eslint/js": "^9.4.0",
     "argparse": "^2.0.1",
     "babel-loader": "^8.2.5",
@@ -75,6 +75,7 @@
     "webpack": "^5.88.2"
   },
   "dependencies": {
+    "@embedpdf/pdfium": "^1.3.0",
     "@webcomponents/webcomponentsjs": "^2.6.0",
     "@xmldom/xmldom": "^0.8.7",
     "aes256": "^1.1.0",
@@ -106,8 +107,9 @@
     "gsap": "^3.11.1",
     "hls.js": "^1.3.3",
     "html2canvas": "^1.4.1",
-    "jquery": "^3.6.1",
-    "jquery-ui": "^1.14.0",
+    "jquery": "^3.7.1",
+    "jquery-ui": "^1.14.1",
+    "jquery-ui-touch-punch": "^0.2.3",
     "jquery.touch": "^1.0.0",
     "js-cookie": "^3.0.1",
     "json2md": "^2.0.0",
@@ -120,7 +122,6 @@
     "marked-mangle": "^1.0.1",
     "merge": "^2.1.1",
     "nouislider": "^15.6.1",
-    "pdfjs-dist": "^4.5.136",
     "qrcode": "^1.5.3",
     "rectangle-node": "^0.1.0",
     "rectangle-overlap": "^2.0.0",
@@ -153,7 +154,7 @@
     "jitsi": "cd src/vendor/lib-jitsi-meet && npm run build",
     "jitsi:init": "cd src/vendor/lib-jitsi-meet && npm i",
     "postinstall": "npm run jitsi:init && npm run jitsi",
-    "dev": "drumee-ui-devel --endpoint=somanos",
+    "dev": "drumee-ui-devel",
     "deploy": "drumee-ui-deploy",
     "add-widget": "drumee-make-widget",
     "md:style": "cd src/drumee && sass -I ./skin --no-source-map --update builtins/editor/markdow/skin/viewer.scss builtins/editor/markdow/template/style.css.txt",

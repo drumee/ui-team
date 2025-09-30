@@ -1,8 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : src/drumee/builtins/desk/skeleton/top-bar/add-items
-//   TYPE :
-// ==================================================================== *
 
 const __desk_top_bar_add_items = function(_ui_) {
 

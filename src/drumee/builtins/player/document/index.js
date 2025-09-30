@@ -1,24 +1,11 @@
 
 const { filesize, fitBoxes } = require("core/utils")
 const { TweenMax, Expo } = require("gsap/all");
-const __core = require('player/interact');
+const PlayerInteract = require('player/interact');
+const { loadPdfDocument } = require('./pdfium-wrapper')
+const WS_EVENT = "ws:event";
 
-const { getDocument, GlobalWorkerOptions } = require("pdfjs-dist");
-if (typeof (Promise.withResolvers) === 'undefined') {
-  window.Promise.withResolvers = function () {
-    let resolve, reject;
-    const promise = new Promise((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    return { promise, resolve, reject };
-  }
-  GlobalWorkerOptions.workerSrc = bootstrap().pdfworkerLegacy;
-} else {
-  GlobalWorkerOptions.workerSrc = bootstrap().pdfworker;
-}
-
-class __player_document extends __core {
+class __player_document extends PlayerInteract {
 
   constructor(...args) {
     super(...args);
@@ -58,7 +45,70 @@ class __player_document extends __core {
       this.loader.destroy();
       this.loader = null;
     }
+    Wm.off(WS_EVENT, this.handleWsEvent)
+    if (super.onBeforeDestroy) {
+      super.onBeforeDestroy()
+    }
+
+    if (this.pdfDocument) {
+      this.pdfDocument.close()
+    }
+
   }
+  /**
+   * 
+   * @param {*} args 
+   */
+  handleWsEvent(args = {}) {
+    this.debug("AAA:83", args)
+    let { data, options } = args || {};
+    let { echoId, service } = options
+    let { src, dest } = data.args || {};
+    switch (service) {
+    }
+  }
+
+  // Load a PDF file
+  async getDocument(url) {
+    try {
+      // Fetch the PDF file
+      const response = await this.fetchFile({ url, progress: this.onFetchProgress.bind(this) });
+      const arrayBuffer = await response.arrayBuffer();
+      const pdfData = new Uint8Array(arrayBuffer);
+      // Load the document
+      const pdfDocument = await loadPdfDocument(pdfData);
+      window.addEventListener('beforeunload', () => {
+        pdfDocument.close();
+      });
+      return pdfDocument;
+    } catch (error) {
+      this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW, e);
+      this.warn('Error rendering PDF:', error);
+    }
+  }
+
+  /**
+ * 
+ */
+  onDomRefresh() {
+    Wm.on(WS_EVENT, this.handleWsEvent)
+    this.initSize();
+    this.reload(300);
+  }
+
+  /**
+ * 
+ * @param {*} args 
+ */
+  handleWsEvent(args = {}) {
+    this.debug("AAA:83", args)
+    let { data, options } = args || {};
+    let { echoId, service } = options
+    let { src, dest } = data.args || {};
+    switch (service) {
+    }
+  }
+
 
   /**
    * 
@@ -69,8 +119,10 @@ class __player_document extends __core {
       const a = this.info['page size'].split(/ +/);
       w = parseInt(a[0]);
       const h = parseInt(a[2]);
-      const unit = parseInt(a[3]);
+      // const unit = parseInt(a[3]);
       this.ratio = h / w;
+      this.pageWidth = w;
+      this.pageHeight = h;
     } catch (e) {
       this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW, e);
     }
@@ -82,19 +134,22 @@ class __player_document extends __core {
    * 
    * @param {*} pdf 
    */
-  async loadPages(pdf) {
-    this.pdf = pdf;
-    const { numPages } = pdf;
-    this.totalPages = numPages;
-    let batchSize = Math.min(numPages, 5);
+  async loadPages(pdfDocument) {
+    this.pdfDocument = pdfDocument;
+    const { pageCount } = pdfDocument;
+    this.totalPages = pageCount;
+    let batchSize = Math.min(pageCount, 4);
     this.loadedPages = 0;
-    for (let i = 1; i <= batchSize; i++) {
-      let page = await pdf.getPage(i);
+    for (let i = 0; i < batchSize; i++) {
+      // let page = await pdf.getPage(i);
       let p = {
         kind: "document_page",
-        page,
+        pdfDocument,
+        // page,
         logicalParent: this,
         ratio: this.ratio,
+        pageWidth: this.pageWidth,
+        pageHeight: this.pageHeight,
         uiHandler: [this],
         pageNum: i,
         attribute: {
@@ -111,19 +166,20 @@ class __player_document extends __core {
     * @param {*} pdf 
     */
   async nextPages() {
-    let pdf = this.pdf;
-    const { numPages } = pdf;
-    this.totalPages = numPages;
+    let pdfDocument = this.pdfDocument;
     this.loadedPages++;
     let pageNum = this.loadedPages
-    if (pageNum >= numPages) {
+    if (pageNum >= this.totalPages) {
       return;
     }
-    let page = await pdf.getPage(pageNum);
+    // let page = await pdf.getPage(pageNum);
     let p = {
       kind: "document_page",
-      page,
+      // page,
+      pageWidth: this.pageWidth,
+      pageHeight: this.pageHeight,
       logicalParent: this,
+      pdfDocument,
       ratio: this.ratio,
       uiHandler: [this],
       pageNum,
@@ -166,6 +222,7 @@ class __player_document extends __core {
   checkBuildState() {
     if (this.pollCount > 10) {
       this.warn("Giving up loadig new version");
+      this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW);
       return;
     }
     const { nid, hub_id } = this.actualNode();
@@ -177,7 +234,9 @@ class __player_document extends __core {
     };
     this.pollCount++;
     this.fetchService(opt).then((data) => {
+      this.debug("AAA:223 get buil state", opt, data)
       if (/^(ok|done)$/.test(data.buildState) || !data.buildState) {
+        this.message("");
         this.pollCount = 0;
         if (this.buildTime) {
           clearTimeout(this.buildTime);
@@ -261,29 +320,23 @@ class __player_document extends __core {
    * 
    */
   async display() {
-    const { url, nid, hub_id } = this.actualNode(_a.pdf);
+    const { url } = this.actualNode(_a.pdf);
     let w = this.size.width;
     try {
       const a = this.info['page size'].split(/ +/);
       w = parseInt(a[0]);
       const h = parseInt(a[2]);
       this.ratio = h / w;
+      this.pageWidth = w;
+      this.pageHeight = h;
     } catch (e) {
       this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW, e);
+      return
     }
-    let load_doc = (url) => {
-      this.debug("210:URL", url)
-      let loader = getDocument({
-        ...this._headers,
-        url,
-      });
-      _.delay(this.initProgess.bind(this), 1000);
-      loader.onProgress = this.onFetchProgress.bind(this);
-      loader.promise.then(this.loadPages.bind(this), this.handleError.bind(this));
-      this.loader = loader;
-    }
+
+    let pdfDocument = await this.getDocument(url)
+    this.loadPages(pdfDocument)
     this.message(LOCALE.DOWNLOADING);
-    load_doc(url);
   }
 
 
@@ -408,14 +461,6 @@ class __player_document extends __core {
     });
   }
 
-  /**
-   * 
-   */
-  onDomRefresh() {
-    this.initSize();
-    this.reload();
-  }
-
 
   /**
    * 
@@ -462,7 +507,7 @@ class __player_document extends __core {
         this.pagesList = child;
         this.timer = null;
         child.on(_e.scroll, ((list) => {
-          let th = list.contentHeight() * this.loadedPages * .8;
+          let th = list.contentHeight() * this.loadedPages * .5;
           if (this.timer || list.scrollDir != _a.down) return;
           if (list.getOffsetY() < th) return;
           this.nextPages()

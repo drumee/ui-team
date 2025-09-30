@@ -2,7 +2,7 @@
 // window._B = Backbone.Radio.channel('broadcast')
 window.RADIO_CLICK = Backbone.Radio.channel('click');
 window.RADIO_MEDIA = Backbone.Radio.channel('media');
-window.RADIO_MOUSE = Backbone.Radio.channel('mouse');
+window.RADIO_POINTER = Backbone.Radio.channel('pointer');
 window.RADIO_KBD = Backbone.Radio.channel('keyboard');
 window.RADIO_NETWORK = Backbone.Radio.channel('network');
 window.RADIO_BROADCAST = Backbone.Radio.channel('broadcast');
@@ -15,35 +15,35 @@ let _lastCoords = {};
 window.lastClick = {};
 window.lastDblClick = {};
 const initialize = function (opt) {
-  const __mousedown = function (e) {
+  const __pointerdown = function (e) {
     _lastTarget = e.target;
     _lastCoords = {
       x: e.clientX + e.offsetX,
       y: e.clientY + e.offsetY
     };
-    return RADIO_MOUSE.trigger(_e.mousedown, e);
+    return RADIO_POINTER.trigger(_e.pointerdown, e);
   };
 
-  const __mousemove = e => RADIO_MOUSE.trigger(_e.mousemove, e);
+  const __pointermove = e => RADIO_POINTER.trigger(_e.pointermove, e);
 
-  const __mouseup = function (e) {
+  const __pointerup = function (e) {
     const l = _lastTarget;
     const dx = Math.abs((e.clientX + e.offsetX) - _lastCoords.x);
     const dy = Math.abs((e.clientY + e.offsetY) - _lastCoords.y);
-    window.mouseDragged = false;
+    window.pointerDragged = false;
     window.sameTargetClicked = (e.target === l);
     if (sameTargetClicked) {
-      window.mouseDragged = ((dx > 5) || (dy > 5));
+      window.pointerDragged = ((dx > 5) || (dy > 5));
     }
-    RADIO_MOUSE.trigger(_e.mouseup, e);
+    RADIO_POINTER.trigger(_e.pointerup, e);
     return window.lastClick = e;
   };
 
-  const __mouseout = e => RADIO_MOUSE.trigger(_e.mouseout, e);
+  const __pointerout = e => RADIO_POINTER.trigger(_e.pointerout, e);
 
-  const __mouseenter = e => RADIO_MOUSE.trigger(_e.mouseenter, e);
+  const __pointerenter = e => RADIO_POINTER.trigger(_e.pointerenter, e);
 
-  const __mouseleave = e => RADIO_MOUSE.trigger(_e.mouseleave, e);
+  const __pointerleave = e => RADIO_POINTER.trigger(_e.pointerleave, e);
 
   const __keydown = function (e) {
     RADIO_BROADCAST.trigger(_e.keydown, e);
@@ -53,7 +53,7 @@ const initialize = function (opt) {
   const __keyup = function (e) {
     RADIO_BROADCAST.trigger(_e.keyup, e);
     RADIO_KBD.trigger(_e.keyup, e);
-    return window.mouseDragged = false;
+    return window.pointerDragged = false;
   };
 
 
@@ -71,7 +71,7 @@ const initialize = function (opt) {
   };
 
   const __resize = function (e) {
-    window.mouseDragged = true;
+    window.pointerDragged = true;
     if (e.srcElement != window) return
     RADIO_BROADCAST.trigger(_e.responsive, window.innerWidth);
     return true;
@@ -90,14 +90,24 @@ const initialize = function (opt) {
   document.addEventListener(_e.keyup, __keyup, false);
   document.addEventListener(_e.keydown, __keydown, false);
   document.addEventListener(_e.click, __click, false);
-  document.addEventListener(_e.mouseup, __mouseup, false);
-  document.addEventListener(_e.mousemove, __mousemove, false);
-  document.addEventListener(_e.mousedown, __mousedown, false);
-  document.addEventListener(_e.mouseenter, __mouseenter, false);
-  document.addEventListener(_e.mouseleave, __mouseleave, false);
-  document.addEventListener(_e.mouseout, __mouseout, false);
   document.addEventListener(_e.copy, __clipboard, false);
   document.addEventListener(_e.error, __error, false);
+
+  if (window.PointerEvent) {
+    document.addEventListener(_e.pointerup, __pointerup, false);
+    document.addEventListener(_e.pointermove, __pointermove, false);
+    document.addEventListener(_e.pointerdown, __pointerdown, false);
+    document.addEventListener(_e.pointerenter, __pointerenter, false);
+    document.addEventListener(_e.pointerleave, __pointerleave, false);
+    document.addEventListener(_e.pointerout, __pointerout, false);
+  } else {
+    document.addEventListener(_e.mouseup, __pointerup, false);
+    document.addEventListener(_e.mousemove, __pointermove, false);
+    document.addEventListener(_e.mousedown, __pointerdown, false);
+    document.addEventListener(_e.mouseenter, __pointerenter, false);
+    document.addEventListener(_e.mouseleave, __pointerleave, false);
+    document.addEventListener(_e.mouseout, __pointerout, false);
+  }
 
   document.body.addEventListener(_e.dragover, __nodrop);
   document.body.addEventListener(_e.drop, __nodrop);
@@ -121,6 +131,6 @@ const initialize = function (opt) {
   });
 
   window.addEventListener("deviceorientation", __orientation);
-  
+
 };
 export default initialize();

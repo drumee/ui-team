@@ -159,8 +159,6 @@ class __core_account extends Bridge {
 
     env.protocol = "https";
     env.mfsRootUrl = `${env.endpoint}`;
-    env.pdfworker = `./pdfworker-${hash}.js`;
-    env.pdfworkerLegacy = `./pdfworkerLegacy-${hash}.js`;
     env.mfsRootUrl = `${env.endpoint}`;
     env.mfs_base = `${env.endpoint}`
     env.svc = `${env.endpoint}svc/`;
@@ -170,6 +168,7 @@ class __core_account extends Bridge {
     env.main_domain = host;
     env.host = host;
     env.origin = origin;
+    env.pdfium_wasm='./static/vendor/embedpdf/pdfium.wasm'
     env.online = net.online;
     if (host) {
       env.static = `https://${host}/-/static/`

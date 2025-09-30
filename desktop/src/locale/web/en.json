@@ -348,7 +348,6 @@
   "HOMETAG": "Homepage hash tag",
   "HOME_PHONE": "Home phone",
   "HORIZONTAL": "Horizontal",
-  "HOURS": "hour(s)",
   "HOVERBOTTOMNAV": "Hover bottom navigation",
   "HOVERPREVNEXT": "Previous / Next hover",
   "HOW_TO": "How does this work?",
@@ -1906,5 +1905,8 @@
   "SBX_NO_THANKS": "No, thanks. I just want to try.",
   "NOT_A_BOT": "Please, close this window to confirm you're not a bot",
   "SERVER_BUSY": "We're sorry, our server is currently experiencing heavy load. Please try again later.",
-  "CONFIRM_DIRNAME_CONFLICT": "There is already a directory with the same name ({0}). What would you like to do?"
+  "CONFIRM_DIRNAME_CONFLICT": "There is already a directory with the same name ({0}). What would you like to do?",
+  "MONTHS": "Months",
+  "YEARS": "Years",
+  "HOURS": "Hour(s)"
 }

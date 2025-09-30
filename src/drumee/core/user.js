@@ -111,7 +111,9 @@ class __core_user extends Backbone.Model {
    * 
    */
   browserSupport() {
+    console.log("Checking browser support")
     let browser = require('detect-browser').detect();
+    console.log("RRRR", browser)
     let [major, minor, rel] = browser.version.split(/\.+/);
     major = parseInt(major);
     minor = parseInt(minor);
@@ -437,7 +439,8 @@ class __core_user extends Backbone.Model {
       return this.get(_a.device);
     }
     const width = window.innerWidth;
-    if (_.compact(navigator.userAgent.match(/mobile/i)).length || (window.innerWidth < 500)) {
+    if (width > 800) return _a.desktop;
+    if (_.compact(navigator.userAgent.match(/mobile/i)).length) {
       return _a.mobile;
     }
     return _a.desktop;
@@ -603,7 +606,7 @@ class __core_user extends Backbone.Model {
       return a;
     }
     id = id || this.id;
-    const ts = `${this.get(_a.mtime)}` || ""; 
+    const ts = `${this.get(_a.mtime)}` || "";
     const { endpoint } = bootstrap();
     let base = `${endpoint}avatar/${id}?type=${type}&ts=${ts}`;
     return base
@@ -660,7 +663,7 @@ class __core_user extends Backbone.Model {
       this.audioTip(0);
     }).catch((e) => {
       this.audioTip(1);
-      RADIO_MOUSE.once(_e.mousedown, () => {
+      RADIO_POINTER.once(_e.mousedown, () => {
         this.audioTip(0);
         setTimeout(() => {
           this._audio.play(() => {

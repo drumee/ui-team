@@ -29,8 +29,8 @@ class __media_core extends DrumeeMFS {
     super(...args);
     this.helper = this.helper.bind(this);
     this._hover = this._hover.bind(this);
-    this._mouseenter = this._mouseenter.bind(this);
-    this._mouseleave = this._mouseleave.bind(this);
+    this._pointerenter = this._pointerenter.bind(this);
+    this._pointerleave = this._pointerleave.bind(this);
     this._dragStart = this._dragStart.bind(this);
     this._dragging = this._dragging.bind(this);
     this.uploadFile = this.uploadFile.bind(this);
@@ -1021,7 +1021,7 @@ class __media_core extends DrumeeMFS {
         return child.once(_e.show, () => {
           this.setupInteract();
           this.enablePreview(true);
-          this._mouseleave();
+          this._pointerleave();
           Kind.waitFor(UPLOADER).then(() => {
             this.isUploading = 0;
             this._shouldUploadFile();
@@ -1321,7 +1321,7 @@ class __media_core extends DrumeeMFS {
     if (!this.isGranted(_K.permission.delete) && !this.isHub) {
       return;
     }
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
     const name = this.mget(_a.filename) || "";

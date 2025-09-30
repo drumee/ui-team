@@ -113,6 +113,37 @@ class __router_butler extends LetcBox {
   }
 
 
+  /**
+   *
+   */
+  login() {
+    return new Promise((resolve, reject) => {
+      if (this.isRecconnecting) return resolve();
+      let { access } = getModule() || {};
+      if (access != _a.private) return resolve();
+      this.isRecconnecting = true;
+
+      this.postService(SERVICE.yp.hello).then(async (user) => {
+        if (user && user.signed_in) {
+          this.isRecconnecting = false;
+          return resolve();
+        }
+        wsRouter.ping({ type: "publishOfflineStatus" });
+        RADIO_BROADCAST.once("user:signed:in", () => {
+          this.isRecconnecting = false;
+          resolve();
+          let r = this.getPart("raw-content");
+          if (!r) return;
+          r.goodbye();
+        });
+        this.feed(require("./skeleton/reconnect")(this));
+        this.isRecconnecting = true;
+      });
+
+    })
+  }
+
+
 
   /**
    *

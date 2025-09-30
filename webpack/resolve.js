@@ -10,9 +10,16 @@ const node_path = 'node_modules';
 const drumee_modules = drumee_path + 'modules/';
 
 module.exports = function (basedir) {
+  if (!basedir) {
+    basedir = resolve(__dirname, '..')
+  }
   return {
     extensions: [".coffee", ".js", ".scss", ".css", ".web.coffee", ".web.js", ".json", ".tpl", '.tsx', '.ts',],
     alias: {
+      // '@embedpdf/pdfium': resolve(node_path, '@embedpdf/pdfium/dist/index.browser.js'),
+      // 'env': resolve(node_path, '@embedpdf/pdfium/dist/index.browser.js.map'),
+      'env': resolve(node_path, '@embedpdf/pdfium/dist/pdfium.wasm'),
+      'wasi_snapshot_preview1': resolve(node_path, '@embedpdf/pdfium/dist/pdfium.wasm'),
       'api': resolve(basedir, drumee_path, 'api'),
       'application': resolve(basedir, drumee_path, 'core'),
       'assets': resolve(basedir, drumee_path, 'assets'),

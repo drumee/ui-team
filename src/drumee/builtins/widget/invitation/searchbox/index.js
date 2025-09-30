@@ -58,7 +58,7 @@ class __invitation_searchbox extends LetcBox {
    * @param {*} origin 
    */
   _onOutsideClick(e, origin) {
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
     if ((this.mget(_a.persistence) === _a.always) || ([_e.data, _a.idle].includes(origin != null ? origin.status : undefined))) {
@@ -110,7 +110,7 @@ class __invitation_searchbox extends LetcBox {
       case "results-container":
         this.resultsContainer = child;
         this._onOutsideClick = (e, origin) => {
-          if (mouseDragged) {
+          if (pointerDragged) {
             return
           }
           if (!_.isEmpty(e) && !this.el.contains(e.currentTarget)) {

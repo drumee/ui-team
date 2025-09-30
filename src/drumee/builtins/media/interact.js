@@ -12,8 +12,8 @@ class __media_interact extends media_core {
     this.helper = this.helper.bind(this);
     this.dispatchUiEvent = this.dispatchUiEvent.bind(this);
     this._hover = this._hover.bind(this);
-    this._mouseenter = this._mouseenter.bind(this);
-    this._mouseleave = this._mouseleave.bind(this);
+    this._pointerenter = this._pointerenter.bind(this);
+    this._pointerleave = this._pointerleave.bind(this);
     this._dragStart = this._dragStart.bind(this);
     this._dragging = this._dragging.bind(this);
     this._dragStop = this._dragStop.bind(this);
@@ -112,7 +112,7 @@ class __media_interact extends media_core {
       this.disabled = true;
       return;
     }
-    window.mouseDragged = true;
+    window.pointerDragged = true;
     this.el.dataset.drag = _a.on;
     this.initBounds();
     this.initHelper(ui);
@@ -171,7 +171,7 @@ class __media_interact extends media_core {
       this.over.moveIn(this);
     }
     this.initBounds();
-    window.mouseDragged = true;
+    window.pointerDragged = true;
 
     return true;
   }
@@ -210,8 +210,13 @@ class __media_interact extends media_core {
   onDomRefresh() {
     this.mset(_a.bubble, 0);
     this.el.dataset.role = _a.root;
-    this.el.onmouseenter = this._mouseenter;
-    this.el.onmouseleave = this._mouseleave;
+    if (window.PointerEvent) {
+      this.el.onpointerenter = this._pointerenter;
+      this.el.onpointerleave = this._pointerleave;
+    } else {
+      this.el.onmouseenter = this._pointerenter;
+      this.el.onmouseleave = this._pointerleave;
+    }
     this.service = _a.idle;
     this.el.onclick = this.dispatchUiEvent;
     try {
@@ -267,7 +272,7 @@ class __media_interact extends media_core {
    *
    */
   defaultTrigger(e) {
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
     this.service = this.mget(_a.service) || OPEN_NODE;
@@ -888,7 +893,7 @@ class __media_interact extends media_core {
    * @param {*} e 
    * @returns 
    */
-  _mouseenter(e) {
+  _pointerenter(e) {
     if (e.buttons) return;
     const n = this._notificationsBox;
     if (n != null && !n.isDestroyed()) {
@@ -905,7 +910,7 @@ class __media_interact extends media_core {
    * 
    * @param {*} e 
    */
-  _mouseleave(e) {
+  _pointerleave(e) {
     this.iconType = localStorage.iconType;
     this.content.el.dataset.icontype = this.iconType;
     clearTimeout(this._timer.hover);

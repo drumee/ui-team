@@ -33,6 +33,7 @@ function writeConfigs(file, data, bundle_path) {
     cpSync(file.src, file.dest);
   }
   let static_src = resolve(__dirname, '..', 'public', `static`);
+  console.log(`Copying static dir from ${static_src} to ${bundle_path}`)
   exec(`rsync -razv ${static_src} ${bundle_path}/`);
 
 }

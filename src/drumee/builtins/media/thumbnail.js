@@ -2,7 +2,7 @@ const MEDIA_CLASS = "media-ui-content";
 const { timestamp } = require("core/utils")
 
 
-const _defaultClass   = "media-thumbnail sharee-contact__thumbnail";
+const _defaultClass = "media-thumbnail sharee-contact__thumbnail";
 
 class __media_thumbnail extends LetcBox {
   constructor(...args) {
@@ -15,9 +15,6 @@ class __media_thumbnail extends LetcBox {
     super(...args);
   }
 
-  static initClass() {
-    this.prototype.nativeClassName  = _defaultClass;  
-  }
 
   /**
    * 
@@ -34,49 +31,60 @@ class __media_thumbnail extends LetcBox {
     this.declareHandlers();
   }
 
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @returns 
+   */
   _initData() {
     const ctime = this.mget(_a.createTime) || 0;
     const m = Dayjs.unix(ctime);
-    this.mset({ 
-      age  : m.fromNow(),
-      date : m.format(_K.defaults.date_format),
-      size : Math.floor(this.mget(_a.filesize) / 1024) + ' ' + LOCALE.KILO_BYTE
+    this.mset({
+      age: m.fromNow(),
+      date: m.format(_K.defaults.date_format),
+      size: Math.floor(this.mget(_a.filesize) / 1024) + ' ' + LOCALE.KILO_BYTE
     });
     return this.model.atLeast({
-      date : Dayjs.unix(timestamp(1))});
+      date: Dayjs.unix(timestamp(1))
+    });
   }
 
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} child 
+   * @param {*} pn 
+   * @returns 
+   */
   onPartReady(child, pn) {
     switch (pn) {
       case _a.content:
         this._content = child;
-        return child.on(_e.show, ()=> {
+        return child.on(_e.show, () => {
           return this._makePreview();
         });
     }
   }
 
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @returns 
+   */
   onDomRefresh() {
     this.feed(Skeletons.Box.Y({
-      className : MEDIA_CLASS,
-      sys_pn    : _a.content,
-      signal    : _e.ui.event,
-      service   : _a.open,
-      uiHandler : [this],
-      partHandler : this
+      className: MEDIA_CLASS,
+      sys_pn: _a.content,
+      signal: _e.ui.event,
+      service: _a.open,
+      uiHandler: [this],
+      partHandler: this
     })
     );
-    this.el.onmouseenter = this._mouseenter; 
-    return this.el.onmouseleave = this._mouseleave;
+    if (window.PointerEvent) {
+      this.el.onpointereenter = this._pointerenter;
+      this.el.onpointereleave = this._pointerleave;
+    } else {
+      this.el.onmouseenter = this._pointerenter;
+      this.el.onmouseleave = this._pointerleave;
+    }
   }
 
   /**
@@ -91,17 +99,17 @@ class __media_thumbnail extends LetcBox {
    * 
    * @returns 
    */
-  url() { 
+  url() {
     let format, url;
     if (this.mget(_a.category) === _a.vector) {
       format = _a.orig;
-    } else { 
+    } else {
       format = _a.vignette;
     }
-    let {endpoint} = bootstrap()
+    let { endpoint } = bootstrap()
     return url = `${endpoint}file/${format}/${this.mget(_a.nodeId)}/${this.mget(_a.hub_id)}`;
   }
-    
+
   /**
    * 
    * @returns 
@@ -114,9 +122,5 @@ class __media_thumbnail extends LetcBox {
     return 0;
   }
 }
-__media_thumbnail.initClass();
-
-
-
 
 module.exports = __media_thumbnail;    

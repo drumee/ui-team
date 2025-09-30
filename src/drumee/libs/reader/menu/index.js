@@ -63,7 +63,7 @@ class __menu_topic extends LetcBox {
     }
 
     this._onOutsideClick = (e, origin) => {
-      if (mouseDragged) {
+      if (pointerDragged) {
         return;
       }
       if ((e != null) && this.el.contains(e.currentTarget)) {

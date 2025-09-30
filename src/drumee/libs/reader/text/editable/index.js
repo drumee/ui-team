@@ -344,7 +344,7 @@ class __text_editable extends Marionette.View {
   //
   // ===========================================================
   keyup(e) {
-    window.mouseDragged = false;
+    window.pointerDragged = false;
     //this.debug("AAAA:307", this.content.innerText);
     e.stopPropagation();
     this.sync();

@@ -130,10 +130,9 @@ class Drumee extends Marionette.Application {
       Organization.set(organization)
       window.currentDevice = Visitor.device();
       window.SERVICE = Platform.get('services')
-      if(_.isEmpty(SERVICE)){
+      if (_.isEmpty(SERVICE)) {
         window.SERVICE = require('lex/services');
       }
-      console.log('AAAA:133', SERVICE)
     } catch (e) {
       console.error("FAILED TO PARSE ENVIRONMENT DATA", e);
       this.failover(e);
@@ -148,7 +147,7 @@ class Drumee extends Marionette.Application {
     let { user } = data;
     let { lang } = user;
     if (!lang) {
-      lang = Visitor.pagelang();
+      lang = Visitor.language();
     }
     require.ensure(["application"], e => {
       window.LOCALE = require("locale")(lang);
@@ -166,7 +165,9 @@ class Drumee extends Marionette.Application {
       this.showView(this.router);
       Visitor.listenChanges();
       Organization.listenChanges();
-      Visitor.respawn(user);
+      if (user.id) {
+        Visitor.respawn(user);
+      }
       if (!Backbone.History.started) Backbone.history.start();
     });
   }

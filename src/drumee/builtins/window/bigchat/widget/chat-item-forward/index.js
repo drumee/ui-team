@@ -63,7 +63,7 @@ class ___chat_item_forward extends LetcBox {
     const status = cmd.get(_a.status);
     this.debug(`onUiEvent service = ${service}`, cmd, this);
 
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
 

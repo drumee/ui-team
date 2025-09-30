@@ -5,7 +5,7 @@ const Resolve = require('./webpack/resolve');
 const Module = require('./webpack/module');
 const Plugins = require('./webpack/plugins');
 
-const {
+let {
   BUILD_TARGET,
   ENDPOINT,
   OUTPUT_FILENAME,
@@ -35,8 +35,13 @@ function makeOptions(entry, opt) {
 
   const res = {
     mode: opt.mode || 'development',
+    target: 'web', // Ensure you're targeting web
     entry,
     output,
+    experiments: {
+      asyncWebAssembly: true,
+      topLevelAwait: true,
+    },
     resolve: Resolve(__dirname),
     plugins: Plugins(webpack, opt),
     module: Module(__dirname, opt.mode),
@@ -115,7 +120,7 @@ function normalize() {
   if (OUTPUT_FILENAME == "[name].js") {
     opt.no_hash = 1;
   }
-  console.log({ opt, BUILD_TARGET})
+  console.log({ opt, BUILD_TARGET })
   return opt;
 }
 
@@ -123,7 +128,6 @@ function normalize() {
 module.exports = function () {
   const opt = normalize();
   let main, core, api;
-  let pdfworker;
   switch (BUILD_TARGET) {
     case 'api':
       api = join(UI_SRC_PATH, 'src', 'drumee', 'api');
@@ -131,16 +135,12 @@ module.exports = function () {
       return makeOptions({ api, core }, opt);
     case 'app':
       main = join(UI_SRC_PATH, 'src', 'drumee', 'index.web');
-      pdfworker = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'build', 'pdf.worker.min.mjs');
-      pdfworkerLegacy = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.min.mjs');
       let dom = join(UI_SRC_PATH, 'src', 'drumee', 'index.dom');
-      return makeOptions({ main, dom, pdfworker, pdfworkerLegacy }, opt);
+      return makeOptions({ main, dom }, opt);
     case "desktop/dist-web":
       main = join(UI_SRC_PATH, 'src', 'drumee', 'index.electron');
-      pdfworker = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'build', 'pdf.worker.min.mjs');
-      pdfworkerLegacy = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.min.mjs');
-      return makeOptions({ main, pdfworker, pdfworkerLegacy}, opt);
-      default:
-        console.error(`The build target ${BUILD_TARGET} was unexpected`)  
-    }
+      return makeOptions({ main }, opt);
+    default:
+      console.error(`The build target ${BUILD_TARGET} was unexpected`)
+  }
 }
