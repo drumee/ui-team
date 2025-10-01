@@ -11,7 +11,7 @@ const DATEFORMAT = {
 let defaultQuota;
 const { timestamp, randomString } = require("core/utils")
 
-//########################################
+
 class __core_user extends Backbone.Model {
 
   /**
@@ -75,7 +75,6 @@ class __core_user extends Backbone.Model {
     })
 
     RADIO_MEDIA.on(_a.free, (data) => {
-      this.debug("AAAA:71", data)
       if (!data || !data.disk_usage) return;
       let { disk_usage } = data;
       this.set({ disk_usage })
@@ -113,7 +112,6 @@ class __core_user extends Backbone.Model {
   browserSupport() {
     console.log("Checking browser support")
     let browser = require('detect-browser').detect();
-    console.log("RRRR", browser)
     let [major, minor, rel] = browser.version.split(/\.+/);
     major = parseInt(major);
     minor = parseInt(minor);
@@ -647,7 +645,7 @@ class __core_user extends Backbone.Model {
     } else if (/^musics/.test(url)) {
       url = `${base}${url}`;
     }
-    if (!/^http/.test(url)) {
+    if (!/^http/.test(url) && domain) {
       url = `${protocol}://${domain}${url}`;
     }
     if (l == null) { l = 1; }

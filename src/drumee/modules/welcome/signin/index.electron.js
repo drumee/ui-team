@@ -69,15 +69,9 @@ class __welcome_signin extends __web_signin {
       if (!sid) {
 
       }
-      if (data.organization) {
-        Organization.set(data.organization);
-      }
-      if (data.user) {
-        Visitor.set(data.user);
-      }
       data.sid = sid;
       data.endpointName = endpointName;
-      console.log("AAA:80 -- new endpoint", data)
+      Drumee.init_globals(data)
       await Account.changeEndpoint(data);
       return data;
     } catch (e) {
@@ -90,7 +84,7 @@ class __welcome_signin extends __web_signin {
    * @param {*} url
    */
   joinEndpoint(url) {
-    console.log("AAA:93 joinEndpoint", url)
+
     if (!url) {
       this.validateData();
       url = this.__refUrl.getValue();
@@ -99,10 +93,13 @@ class __welcome_signin extends __web_signin {
       this.renderMessage(LOCALE.ENTER_POD_URL);
       return
     }
-    let { appRoot } = bootstrap()
-    url = url.replace(/^htt.+\/\//, '');
-    url = url.replace(/\/+.*$/, '');
-    let [host, endpointName] = url.split(/[:,#]/);
+    let { appRoot, protocol } = bootstrap()
+    if (!/^http/.test(url)) {
+      url = `${protocol}://${url}`
+    }
+    let { host, pathname } = new URL(url)
+    let re = new RegExp(`(^.*${appRoot}/)|(/.*$)`, "g")
+    let endpointName = pathname.replace(re, "")
 
     let svc = '/svc/butler.check_domain';
     if (endpointName) {

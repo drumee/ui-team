@@ -380,6 +380,7 @@ class __router_butler extends LetcBox {
    */
   logout() {
     this.isDisconnecting = 1;
+    Visitor.set({ connection: _a.off });
     this.feed(require("./skeleton/goodbye")(this));
     const f = () => {
       return setTimeout(() => {

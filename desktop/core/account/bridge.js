@@ -206,7 +206,6 @@ class __core_account extends __service {
     let { channel, args } = opt;
     let cur = this.currentEndpoint() || {};
     let currentSid = cur.sid;
-    this.debug("AAA:209", this.bootstrap())
     let { user, organization, keysel } = args;
     if (!user || !user.id || !organization) {
       this.warn("Error@212: Could not cange endpoint from", args);

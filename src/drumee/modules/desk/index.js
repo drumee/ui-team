@@ -68,7 +68,6 @@ class __desk_ui extends LetcBox {
   */
   async onDomRefresh() {
     this._pending = { available: false };
-    this.debug("AAA:71", this, Visitor.device(), Visitor.get(_a.device), navigator.userAgent, window.innerWidth, localStorage.logLevel)
     if (Visitor.device() === _a.mobile) {
       this.feed(require("./skeleton/mobile")(this));
     } else {
