@@ -188,7 +188,7 @@ class __welcome_signin extends __welcome_interact {
           host = host.replace(/(\.[a-zA-Z0-9\-_]+){2,2}$/, "");
         }
         localStorage.setItem("user_domain", host);
-        return this.checkCompanyURL();
+        return this.checkOrganizationURL();
 
       case "open-signup":
         this.append({
@@ -218,14 +218,15 @@ class __welcome_signin extends __welcome_interact {
   /**
    *
    */
-  checkCompanyURL() {
+  checkOrganizationURL() {
     this.validateData();
     if (this.formStatus == _a.error) {
       return this.renderMessage(LOCALE.PLEASE_ENTER_URL_TO_CONTINUE);
     }
+    let { main_domain, protocol, endpointPath } = bootstrap();
     let domain = this.__refUrl.getValue();
     if (!/(\.[a-zA-Z0-9\-_]+){1,}$/.test(domain)) {
-      domain = `${domain}.${bootstrap().main_domain}`;
+      domain = `${domain}.${main_domain}`;
     }
     if (domain == location.host) {
       location.hash = _K.module.welcome;
@@ -236,20 +237,17 @@ class __welcome_signin extends __welcome_interact {
       domain,
     }).then((data) => {
       if (data.isvalid) {
-        Visitor.set({ user_domain: data.url });
-        Host.set({
-          vhost: data.url,
-          name: data.name,
-          org_name: data.name,
-        });
-
+        Drumee.init_globals(data)
+        let { organization } = data;
         setTimeout(() => {
-          if (location.host && location.host == data.url) {
+          if (location.host && location.host == organization.url) {
             location.hash = `${_K.module.welcome}/signin/auth`;
             location.reload();
+          } else if (organization.url) {
+            location.href = `${protocol}://${organization.url}${endpointPath}${_K.module.signin}/auth`;
           } else {
-            const { endpointPath } = bootstrap();
-            location.href = `${protocol}://${data.url}${endpointPath}${_K.module.signin}/auth`;
+            location.hash = `${_K.module.welcome}/signin/auth`;
+            location.reload();
           }
         }, Visitor.timeout(500));
       } else {

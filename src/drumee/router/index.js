@@ -256,23 +256,6 @@ class drumee_router extends LetcBox {
     return (/^(dmz|share)$/.test(bootstrap().area))
   }
 
-  // /**
-  //  * 
-  //  */
-  // defaultWallpaper() {
-  //   const { appRoot } = bootstrap();
-  //   let base = appRoot + "/images/background/";
-  //   if (this.isDmz()) {
-  //     return {
-  //       url: base + 'dmz-sharebox-background.jpg',
-  //       preview: base + 'dmz-sharebox-wallpaper-preview.jpg'
-  //     }
-  //   }
-  //   return {
-  //     url: base + 'welcome-wallpaper.png',
-  //     preview: base + 'welcome-wallpaper-preview.png'
-  //   }
-  // }
 
   /**
 * 
@@ -341,7 +324,7 @@ class drumee_router extends LetcBox {
     }
     this.ensurePart('body').then(async (p) => {
       await Kind.waitFor(kind);
-      p.feed({ kind, name: name });
+      p.feed({ kind, name });
       this.currentModule = p.children.last();
     })
   }
