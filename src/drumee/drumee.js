@@ -129,14 +129,13 @@ class Drumee extends Marionette.Application {
       Visitor.set(user);
       Organization.set(organization)
       window.currentDevice = Visitor.device();
-      window.SERVICE = Platform.get('services')
-      if (_.isEmpty(SERVICE)) {
-        window.SERVICE = require('lex/services');
-      }
+      window.SERVICE = require('lex/services');
+      SERVICE = { ...SERVICE, ...Platform.get('services') }
     } catch (e) {
       console.error("FAILED TO PARSE ENVIRONMENT DATA", e);
       this.failover(e);
     }
+    console.log("AAA:138", data, SERVICE)
   }
 
   /**

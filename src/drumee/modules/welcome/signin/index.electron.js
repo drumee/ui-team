@@ -77,6 +77,7 @@ class __welcome_signin extends __web_signin {
       }
       data.sid = sid;
       data.endpointName = endpointName;
+      console.log("AAA:80 -- new endpoint", data)
       await Account.changeEndpoint(data);
       return data;
     } catch (e) {
@@ -89,7 +90,7 @@ class __welcome_signin extends __web_signin {
    * @param {*} url
    */
   joinEndpoint(url) {
-    console.log("AAA:91 joinEndpoint", url)
+    console.log("AAA:93 joinEndpoint", url)
     if (!url) {
       this.validateData();
       url = this.__refUrl.getValue();

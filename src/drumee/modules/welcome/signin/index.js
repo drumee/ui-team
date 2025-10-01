@@ -223,9 +223,10 @@ class __welcome_signin extends __welcome_interact {
     if (this.formStatus == _a.error) {
       return this.renderMessage(LOCALE.PLEASE_ENTER_URL_TO_CONTINUE);
     }
+    let { main_domain, protocol, endpointPath } = bootstrap();
     let domain = this.__refUrl.getValue();
     if (!/(\.[a-zA-Z0-9\-_]+){1,}$/.test(domain)) {
-      domain = `${domain}.${bootstrap().main_domain}`;
+      domain = `${domain}.${main_domain}`;
     }
     if (domain == location.host) {
       location.hash = _K.module.welcome;
@@ -235,6 +236,8 @@ class __welcome_signin extends __welcome_interact {
       service: SERVICE.butler.check_domain,
       domain,
     }).then((data) => {
+      this.debug("AAA:223", data)
+      /** Drumee.init_global(data) */
       if (data.isvalid) {
         Visitor.set({ user_domain: data.url });
         Host.set({
@@ -248,7 +251,6 @@ class __welcome_signin extends __welcome_interact {
             location.hash = `${_K.module.welcome}/signin/auth`;
             location.reload();
           } else {
-            const { endpointPath } = bootstrap();
             location.href = `${protocol}://${data.url}${endpointPath}${_K.module.signin}/auth`;
           }
         }, Visitor.timeout(500));

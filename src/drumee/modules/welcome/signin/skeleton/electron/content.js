@@ -8,11 +8,9 @@ function __skl_welcome_signin_content (_ui_) {
   const contentFig = _ui_.fig.family
   let dataset = _ui_.mget(_a.dataset) || {};
   let username = uiRouter.selectedUsername || null;
-  console.log("AAA:1014 11 AA", username)
   let endpoint = _ui_.selectedEndpoint;
   if(endpoint && endpoint.mget){
     username =  endpoint.mget(_a.username);
-    console.log("AAA:1014 AA", username)
     if(username == _K.ident.nobody) username = uiRouter.selectedUsername;
   }
   const email = Skeletons.Box.X({
