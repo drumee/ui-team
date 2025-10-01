@@ -1,6 +1,6 @@
 {
   "name": "@drumee/ui-team-desktop",
-  "productName": "Drumee",
+  "productName": "Drumee Desktop",
   "version": "2.8.1",
   "description": "Drumee Web Os User Interface with collaborative features for desktop",
   "main": "index.js",
@@ -14,8 +14,8 @@
   ],
   "license": "ISC",
   "build": {
-    "appId": "com.drumee.desktop",
-    "productName": "Drumee",
+    "appId": "com.drumee.desk",
+    "productName": "Drumee Desktop",
     "artifactName": "drumee-${os}-${arch}.${ext}",
     "afterPack": "scripts/sign",
     "afterSign": "scripts/notarize",
@@ -28,7 +28,6 @@
         {
           "target": "default",
           "arch": [
-            "x64",
             "arm64"
           ]
         }
@@ -97,6 +96,7 @@
     "preinstall": "npm install better-sqlite3 --build-from-source --sqlite3=\"$(pwd)/sqlite-amalgamation\"",
     "postinstall": "electron-builder install-app-deps",
     "normal": "electron .",
+    "check": "node scripts/check-app-structure.js",
     "dev": "electron . --dev=1 --open-dev=1 --trace-watcher=1 --endpoint=somanos",
     "demo": "electron . --dev",
     "start:prod": "electron . --prod",
@@ -108,7 +108,7 @@
     "sign:checksum": "node scripts/generate-checksum.js",
     "build:m:w": "electron-builder -mw",
     "build:mwl": "electron-builder -mwl",
-    "build:m": "electron-builder -c.mac.identity=null -m",
+    "build:m": "electron-builder -m",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "generate:icon": "electron-icon-maker --input=./public/drumee.png --output=./"
   },
@@ -118,6 +118,7 @@
     "@mapbox/node-pre-gyp": "^1.0.11",
     "electron": "^29.4.6",
     "electron-builder": "^24.13.3",
+    "electron-rebuild": "^3.2.9",
     "electron-reload": "^1.5.0",
     "file-loader": "^6.2.0",
     "nan": "github:tec27/nan#remove_accessor_signature",

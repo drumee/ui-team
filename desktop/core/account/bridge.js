@@ -206,14 +206,16 @@ class __core_account extends __service {
     let { channel, args } = opt;
     let cur = this.currentEndpoint() || {};
     let currentSid = cur.sid;
+    this.debug("AAA:209", this.bootstrap())
     let { user, organization, keysel } = args;
-    if (!user || !organization) {
-      this.warn("Coul not cange endpoint from", args);
+    if (!user || !user.id || !organization) {
+      this.warn("Error@212: Could not cange endpoint from", args);
       webContents.send(channel, {});
       return;
     }
-    let { domain } = user;
-    args.sid = args.sid || currentSid;
+    let { domain, main_domain } = user;
+    domain = domain || main_domain;
+    args.sid = args.sid || currentSid || this.bootstrap().sid;
     const { host } = this.respawn(args);
     if (!host) {
       this.warn("New endpoint didn't provide host");

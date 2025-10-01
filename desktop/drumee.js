@@ -10,7 +10,7 @@ global.win = null;
 const { sizeOfpending } = require("./mfs/core/locker");
 const { mkdirSync, existsSync, renameSync, symlinkSync } = require('fs');
 
-const { dev:dev_mode, open_dev, offline} = require("./args")
+const { dev: dev_mode, open_dev, offline } = require("./args")
 /**
  * App main window will get created from the ready action.
  */
@@ -443,6 +443,23 @@ class Drumee {
         Account = new account({ pdfworker: this.pdfworker });
       } catch (e) {
         console.warn("EEE:432", e)
+        const options = {
+          type: 'info',
+          buttons: [LOCALE.QUIT],
+          defaultId: 0,
+          detail: "Failed to initialize the application",
+          title: "Fatal error",
+          message: "An error has occured",
+        };
+        dialog.showMessageBox(null, options).then((r) => {
+          //this.alertPending = 0;
+          switch (r.response) {
+            case 0:
+              app.quit();
+              break;
+            
+          }
+        })
         return;
       }
       global.Account = Account;

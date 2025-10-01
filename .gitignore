@@ -21,3 +21,5 @@ node_modules/
 *.code-workspace
 package-lock.json
 .dev-tools.rc/
+.env
+*.provisionprofile

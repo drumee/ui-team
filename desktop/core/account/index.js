@@ -29,7 +29,7 @@ const Scheduler = require("../../mfs/scheduler");
 const Bootstrap = require("./bootstrap");
 let { hash } = require("../../dist-web/index.json");
 const args = require("../../args")
-
+const startTime = new Date().getTime();
 const Bridge = require("./bridge");
 
 /**
@@ -72,8 +72,8 @@ class __core_account extends Bridge {
   respawn(data) {
     let { user, organization, sid, hub } = data;
     this.debug("AAA:74", data)
-    if (!user || !organization) {
-      this.warn("Could not respawn fron invalid data", data);
+    if (!user || !user.profile || !organization) {
+      this.warn("Could not respawn fron invalid data");
       return;
     }
     if (sid) {
@@ -170,6 +170,7 @@ class __core_account extends Bridge {
     env.origin = origin;
     env.pdfium_wasm='./static/vendor/embedpdf/pdfium.wasm'
     env.online = net.online;
+    env.startTime = startTime;
     if (host) {
       env.static = `https://${host}/-/static/`
     }

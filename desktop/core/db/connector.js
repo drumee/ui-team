@@ -18,7 +18,7 @@
 const _ = require('lodash');
 require('../addons')
 const { escapePath } = require("../../utils/misc");
-const Fs = require('fs');
+const { mkdirSync, readdirSync, existsSync } = require('fs');
 const { resolve, join, basename, dirname, normalize, extname } = require('path');
 const SCHEMAS = require('./schemas');
 const INDEXES = require('./indexes');
@@ -26,6 +26,7 @@ const Attr = require('../../lex/attribute');
 const Crypto = require('crypto');
 const core = require("../core-utils")
 const Database = require('better-sqlite3');
+const { app } = require('electron');
 const { dbdir, dev: dev_mode, trace_db, trace_sql } = require("../../args")
 
 /**
@@ -37,6 +38,114 @@ function traceDb(...args) {
   console.log(`Trace DB [${USER_DBDIR}]`, ...args)
 }
 
+/**
+ * 
+ */
+function checkAppStructure() {
+  console.log('=== Checking App Structure ===');
+
+  const resourcesPath = process.resourcesPath;
+  console.log('Resources path:', resourcesPath);
+
+  const entries = readdirSync(resourcesPath);
+  console.log('Resources directory contents:', entries);
+
+  // Check for app.asar
+  const asarPath = join(resourcesPath, 'app.asar');
+  console.log('app.asar exists:', existsSync(asarPath));
+
+  // Check for app.asar.unpacked
+  const unpackedPath = join(resourcesPath, 'app.asar.unpacked');
+  console.log('app.asar.unpacked exists:', existsSync(unpackedPath));
+
+  if (existsSync(unpackedPath)) {
+    const unpackedContents = readdirSync(unpackedPath);
+    console.log('app.asar.unpacked contents:', unpackedContents);
+  }
+
+  // Check for better-sqlite3 in various locations
+  const possibleBindingPaths = [
+    join(resourcesPath, 'app.asar.unpacked', 'node_modules', 'better-sqlite3'),
+    join(resourcesPath, 'app.asar', 'node_modules', 'better-sqlite3'),
+    join(process.cwd(), 'node_modules', 'better-sqlite3')
+  ];
+
+  possibleBindingPaths.forEach(bindingPath => {
+    console.log(`Better-sqlite3 at ${bindingPath}:`, existsSync(bindingPath));
+    if (existsSync(bindingPath)) {
+      try {
+        const files = readdirSync(bindingPath);
+        console.log(`  Contents:`, files);
+      } catch (error) {
+        console.log(`  Error reading:`, error.message);
+      }
+    }
+  });
+}
+
+/**
+ * 
+ * @returns 
+ */
+function getSQLiteBindingPath() {
+  if (!app.isPackaged) {
+    // Development mode - use from node_modules
+    return require.resolve('better-sqlite3');
+  }
+
+  // Production mode - try different possible locations
+  const possiblePaths = [
+    // Option 1: Direct path in resources (if asarUnpack is working)
+    join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+
+    // Option 2: Inside the ASAR archive (default location)
+    join(process.resourcesPath, 'app.asar', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+
+    // Option 3: Using require.resolve (might work)
+    require.resolve('better-sqlite3')
+  ];
+
+  for (const bindingPath of possiblePaths) {
+    console.log('Checking path:', bindingPath);
+    if (existsSync(bindingPath)) {
+      console.log('Found binding at:', bindingPath);
+      return bindingPath;
+    }
+  }
+
+  // Last resort: try to find any .node file in the app
+  const nodeFiles = [];
+  const searchPaths = [
+    join(process.resourcesPath, 'app.asar', 'node_modules', 'better-sqlite3'),
+    join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'better-sqlite3'),
+    dirname(process.execPath)
+  ];
+
+  for (const searchPath of searchPaths) {
+    if (existsSync(searchPath)) {
+      try {
+        const files = readdirSync(searchPath);
+        const nodeFile = files.find(f => f.endsWith('.node'));
+        if (nodeFile) {
+          const fullPath = join(searchPath, nodeFile);
+          nodeFiles.push(fullPath);
+        }
+      } catch (error) {
+        console.log('Error searching:', searchPath, error.message);
+      }
+    }
+  }
+
+  if (nodeFiles.length > 0) {
+    console.log('Found potential node files:', nodeFiles);
+    return nodeFiles[0];
+  }
+
+  throw new Error('Could not find better-sqlite3 native binding. Checked paths: ' + possiblePaths.join(', '));
+}
+
+
+
 class db_connector extends core {
 
   /**
@@ -47,24 +156,26 @@ class db_connector extends core {
     if (!USER_DBDIR) {
       USER_DBDIR = dbdir;
     }
+
+    const bindingPath = getSQLiteBindingPath();
+    console.log('Using SQLite binding from:', bindingPath);
+
     let dbfile = resolve(USER_DBDIR, 'common.db');
 
     if (opt.datafile) {
       dbfile = join(USER_DBDIR, `${opt.datafile}.db`);
     }
-
     try {
-      if (!Fs.existsSync(USER_DBDIR)) {
-        Fs.mkdirSync(USER_DBDIR, {
+      if (!existsSync(USER_DBDIR)) {
+        mkdirSync(USER_DBDIR, {
           recursive: true
         });
       }
-
       console.log(`Loading db from ${dbfile}`)
       if (trace_db) {
-        this.__db = new Database(dbfile, { verbose: traceDb });
+        this.__db = new Database(dbfile, { bindingPath, verbose: traceDb });
       } else {
-        this.__db = new Database(dbfile);
+        this.__db = new Database(dbfile, { bindingPath });
       }
     } catch (e) {
       throw `Failed to initialize Database ${dbfile} : ${e.toString()}`;
@@ -130,7 +241,7 @@ class db_connector extends core {
       varargs: true
     }, (filepath) => {
       const file = join(USER_HOME_DIR, normalize(filepath));
-      if (Fs.existsSync(file)) return 1;
+      if (existsSync(file)) return 1;
       return 0;
     });
 

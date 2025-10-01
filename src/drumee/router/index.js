@@ -341,7 +341,7 @@ class drumee_router extends LetcBox {
       }
     }
 
-    this.debug("AAA:300", { kind, access })
+    this.debug("AAA:300", Visitor.isOnline(), { kind, access })
     this.ensurePart('body').then(async (p) => {
       await Kind.waitFor(kind);
       p.feed({ kind, name: name });
