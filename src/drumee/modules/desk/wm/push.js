@@ -111,13 +111,16 @@ class __push_manager extends winman {
         _.delay(() => location.reload());
         break;
 
-      case "drumate.logout":
+      case SERVICE.drumate.logout:
+        if (!sender || sender.socket_id == Visitor.get(_a.socket_id)) {
+          return;
+        }
         this.fetchService(SERVICE.yp.hello).then((data) => {
           if (data.connection == 'offline') {
             location.reload()
           }
         })
-        break;
+        return;
 
       case "user.connection_status":
         this.myContactsStatus.set(data.user_id, data);
