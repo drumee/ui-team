@@ -1,8 +1,3 @@
-// ============================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : ../src/drumee/main
-//   TYPE :
-// ============================================================== *
 
 let BOOTSTRAP = {};
 
@@ -33,7 +28,6 @@ function updateBootstrap(argv) {
  */
 function updateSocketId(socket_id) {
   Account.update({ socket_id });
-  console.log("AAA:129", socket_id)
 }
 
 class DrumeeUI extends __drumee {
@@ -94,7 +88,6 @@ class DrumeeUI extends __drumee {
       if (timer) clearTimeout(timer);
       const { endpoint, main_domain } = args;
       if (!main_domain) {
-        console.log("NO HOST", args);
         this.loadFallbackRouter(args);
         return;
       }

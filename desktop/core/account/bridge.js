@@ -192,7 +192,6 @@ class __core_account extends __service {
    */
   async bridge_gotSignedOut(opt) {
     let { channel, args } = opt;
-    let c = this.currentSession();
     this.user.set({ signed_in: 0, uid: nobody, id: nobody });
     await this.prepare()
     webContents.send(channel, {});

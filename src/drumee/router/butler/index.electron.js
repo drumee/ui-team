@@ -2,12 +2,11 @@
 const __butler = require(".");
 class __router_cop extends __butler {
 
- 
+
   /**
    * 
    */
-  async restart(reload=0) {
-    this.debug("AAA:131 -- restart", reload);
+  async restart(reload = 0) {
     Visitor.clear();
     localStorage.setItem('signed_in', '0');
     localStorage.removeItem(_a.session);
@@ -21,6 +20,8 @@ class __router_cop extends __butler {
    */
   logout() {
     this.reconnect = () => { }; // Prevent reconnect to showup during logout
+    Visitor.set({ connection: _a.off });
+    this.isDisconnecting = 1;
     this.feed([Skeletons.Note({
       className: `${this.fig.family}-goodbye__disconnecting`,
       content: LOCALE.GOODBYE_LOGOUT.format(Visitor.profile().firstname)
@@ -29,13 +30,11 @@ class __router_cop extends __butler {
       service: SERVICE.drumate.logout,
       hub_id: Visitor.id
     }, { async: 1 }).then((data) => {
-      location.hash = _K.module.welcome;
-      setTimeout(()=>{
+      setTimeout(() => {
         this.restart(1);
       }, 1000);
     }).catch((e) => {
       this.warn("Normal logout has failed. Proceeding to reset session", e);
-      //debugger;
       this.postService({
         service: SERVICE.yp.reset_session,
         hub_id: Visitor.id

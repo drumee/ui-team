@@ -29,7 +29,6 @@ class __drumee_router extends __router {
    * 
    */
     onBeforeDestroy() {
-      this.debug("AAA:32", this.bridge)
       if(this.bridge) this.bridge.destroy()
       super.onBeforeDestroy()
     }
@@ -45,7 +44,6 @@ class __drumee_router extends __router {
    * 
    */
   _changeEndpoint(bootstrap) {
-    this.debug("AAA:221 -- prepared", bootstrap)
     this._uppdateEndpoint({ bootstrap });
     Drumee.start();
   }
@@ -76,7 +74,6 @@ class __drumee_router extends __router {
    * 
    */
   _newEndpoint() {
-    this.debug("AAA:70")
     this._resetSingletons();
     Drumee.resetBootstrap();
     Drumee.initEndpoint(1);
@@ -88,7 +85,6 @@ class __drumee_router extends __router {
   async changeEndpoint(data) {
     let { platform, user, organization, hub } = data;
     this._resetSingletons();
-    this.debug("AAA:93 -- changeEndpoint", this, { platform, user, organization, hub });
     Platform.set(platform);
     Host.set(hub);
     Organization.set(organization);
@@ -108,7 +104,6 @@ class __drumee_router extends __router {
    * 
    */
   _reload(args = {}) {
-    this.debug("AAA:104 -- RELOADING", args);
     if (args.auth) {
       localStorage.setItem(_a.session, args.auth);
     }
@@ -121,7 +116,6 @@ class __drumee_router extends __router {
   * 
   */
   route() {
-    this.debug("AAA:129", this)
     this.loadModule();
   }
 

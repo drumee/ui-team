@@ -112,8 +112,7 @@ class __push_manager extends winman {
         break;
 
       case "drumate.logout":
-        if (data.session_tag === Visitor.get("session_tag")) {
-          // Disconnect sibling sessions
+        if (data.session_tag && data.session_tag === Visitor.get("session_tag")) {
           return location.reload();
         }
         break;
