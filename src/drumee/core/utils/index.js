@@ -4,33 +4,6 @@ const Filesize = require("filesize");
 let VERBOSITY = parseInt(localStorage.logLevel) || 0;
 const { LOG_LEVEL, BOOLEAN, STATE, RADIO } = require("./constants")
 
-/**
- * 
- * @param {*} v 
- */
-window.setLogLevel = function (v) {
-  let name;
-  if (typeof (v) == 'number') {
-    VERBOSITY = v;
-    localStorage.logLevel = VERBOSITY;
-    for (let k in LOG_LEVEL) {
-      if (LOG_LEVEL[k] == v) {
-        name = k;
-        break;
-      }
-    }
-  } else if (typeof (v) == 'string' && LOG_LEVEL[v]) {
-    VERBOSITY = LOG_LEVEL[v];
-    localStorage.logLevel = VERBOSITY;
-    name = v;
-  }
-  console.log(`Log level is ${name} (${VERBOSITY})`)
-};
-
-/**
- * No operation
- */
-window.noOperation = function () { };
 
 
 /**

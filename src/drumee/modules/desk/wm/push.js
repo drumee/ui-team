@@ -53,7 +53,7 @@ class __push_manager extends winman {
   onWsMessage(service, data, options = {}) {
     let items = [];
     let sender = options.sender;
-    this.verbose("[60]onWsMessage:", options.service, data.socket_id, data, options);
+    this.debug("[60]onWsMessage:", options.service, data.socket_id, data, options);
     if (sender && sender.socket_id == Visitor.get(_a.socket_id)) {
       if (!options.loopback) return;
     }
@@ -112,10 +112,11 @@ class __push_manager extends winman {
         break;
 
       case "drumate.logout":
-        if (data.session_tag === Visitor.get("session_tag")) {
-          // Disconnect sibling sessions
-          return location.reload();
-        }
+        this.fetchService(SERVICE.yp.hello).then((data) => {
+          if (data.connection == 'offline') {
+            location.reload()
+          }
+        })
         break;
 
       case "user.connection_status":

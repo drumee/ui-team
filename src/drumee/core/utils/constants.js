@@ -52,8 +52,8 @@ export const LOG_LEVEL = {
 }
 
 export const LOG_NAME = {
-  info: 'info', 
-  debug: 'debug', 
-  verbose: 'verbose', 
+  info: 'info',
+  debug: 'debug',
+  verbose: 'verbose',
   gossip: 'gossip'
 }
