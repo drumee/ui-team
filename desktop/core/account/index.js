@@ -71,7 +71,6 @@ class __core_account extends Bridge {
    */
   respawn(data) {
     let { user, organization, sid, hub } = data;
-    this.debug("AAA:74", data)
     if (!user || !user.profile || !organization) {
       this.warn("Could not respawn fron invalid data");
       return;

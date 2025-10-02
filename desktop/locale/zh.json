@@ -117,8 +117,8 @@
   "SYNC_OFF": "停止",
   "SYNC_POWER": "Marche/Arrêt",
   "OPTIMIZATION": "优化",
-  "ECONOMY": "经济的",
-  "IMMEDIATE": "即时",
+  "SELECTIVE": "选择性",
+  "FULL": "完全的",
   "CONFIRM_FILES_DELETION": "{0} 个文件已从您的硬盘中删除。您是否希望此删除也反映在您的 Drumee 服务器上？",
   "SECURIRY_ALERT": "安全警报",
   "FILE_BEING_EDITED": "{0} 当前正在编辑此文件。 您的更改不会保存到 Drumee 云中",
@@ -185,9 +185,9 @@
   "CANNOT_DO_X": "无法{0} {1}",
   "RENAME_OR_MOVE": "重命名或移动",
   "CHANGE_SYNC_MODE": "更改同步模式",
-  "SYNC_GO_IMMEDIATE_MODE": "您将切换到立即同步模式。",
-  "IMMEDIATE_MODE_TIPS": "您计算机上的文件尚未同步到您的 Drumee 帐户。 您可以通过选择以下模式之一来执行此操作： Drumee 桌面上的所有项目将自动与您的计算机磁盘同步。 此选项将需要您计算机上的 {0} 磁盘空间。",
+  "SWITCH_TO_FULL_SYNC": "您将进入完全同步模式",
+  "FULL_SYNC_TIPS": "您计算机上的文件尚未同步到您的 Drumee 帐户。 您可以通过选择以下模式之一来执行此操作： Drumee 桌面上的所有项目将自动与您的计算机磁盘同步。 此选项将需要您计算机上的 {0} 磁盘空间。",
   "YOUR_DISK_CAPACITY": "您的磁盘容量为 {0}",
-  "SYNC_GO_ECONOMY_MODE": "您将进入经济同步模式。",
-  "ECONOMY_MODE_TIPS": "当您打开桌面上的文件夹时，您 Drumee 桌面上的项目将同步。 子文件夹将从同步中排除。 但是，一旦打开它们，里面的元素就会依次同步。"
+  "SWITCH_TO_SELECTIVE_SYNC": "您将激活选择性同步模式",
+  "SELECTIVE_SYNC_TIPS": "当您打开桌面上的文件夹时，您 Drumee 桌面上的项目将同步。 子文件夹将从同步中排除。 但是，一旦打开它们，里面的元素就会依次同步。"
 }

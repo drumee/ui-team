@@ -53,14 +53,14 @@ function sklSyncInfo(ui) {
 
   if (mfsActivity.mget(_a.sync)) {
     if (mfsActivity.mget(_a.mode) == "onTheFly") {
-      state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.ECONOMY_SYNC), menu);
+      state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.SELECTIVE_SYNC), menu);
     } else {
-      state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.IMMEDIATE_SYNC), menu);
+      state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.FULL_SYNC), menu);
     }
   } else {
     state.content = LOCALE.SYNC_ENGINE_OFF.format(local, remote, menu);
   }
-  //state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.ECONOMY_SYNC), menu);
+  //state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.SELECTIVE_SYNC), menu);
   syncState.kids = [state];
   return syncState;
 }

@@ -52,8 +52,8 @@
   "SYNC_OFF": "Stopped",
   "SYNC_POWER": "On Off",
   "OPTIMIZATION": "Optimization",
-  "ECONOMY": "Economic",
-  "IMMEDIATE": "Immediate",
+  "SELECTIVE": "Selective",
+  "FULL": "Full",
   "CONFIRM_FILES_DELETION": "{0} files have been deleted from your hard drive. Would you like this deletion to be reflected on your Drumee server as well?",
   "SECURIRY_ALERT": "Security alert",
   "FILE_BEING_EDITED": "This file is currently being edited by {0}. Your changes will not be saved on your Drumee Server.",
@@ -118,9 +118,9 @@
   "CANNOT_DO_X": "Unable to {0} {1}",
   "RENAME_OR_MOVE": "rename or move",
   "CHANGE_SYNC_MODE": "Change sync mode",
-  "SYNC_GO_IMMEDIATE_MODE": "You will enter immediate synchronization mode.",
-  "IMMEDIATE_MODE_TIPS": "Everything on your Drumee desktop will automatically sync to your computer's drive. This option will require {0} disk space on your computer.",
+  "SWITCH_TO_FULL_SYNC": "You will enter full sync mode.",
+  "FULL_SYNC_TIPS": "Everything on your Drumee desktop will automatically sync to your computer's drive. This option will require {0} disk space on your computer.",
   "YOUR_DISK_CAPACITY": "Your disk capacity is {0}",
-  "SYNC_GO_ECONOMY_MODE": "You will enter economy sync mode.",
-  "ECONOMY_MODE_TIPS": "Items on your Drumee desktop will sync as you open the folders on it. Subfolders will be excluded from synchronization. However, as soon as they are opened, the elements inside will in turn be synchronized."
+  "SWITCH_TO_SELECTIVE_SYNC": "You will activate the selective synchronization mode",
+  "SELECTIVE_SYNC_TIPS": "Items on your Drumee desktop will sync as you open the folders on it. Subfolders will be excluded from synchronization. However, as soon as they are opened, the elements inside will in turn be synchronized."
 }

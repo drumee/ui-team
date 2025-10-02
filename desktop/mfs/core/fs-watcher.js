@@ -471,7 +471,6 @@ class Watcher extends mfsUtils {
 
     evt.eventtype = eventtype;
     evt.args = { ...args, origin: "local" };
-    this.trace("AAA:470", evt)
     this.fslog.upsert(evt);
     this.timer[inode] = setTimeout(() => {
       this.dispatch(evt);

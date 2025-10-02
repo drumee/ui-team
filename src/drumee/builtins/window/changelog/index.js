@@ -44,11 +44,6 @@ class __window_changelog extends mfsInteract {
    */
   async removeItem(filepath) {
     this.debug("AAA:58 -- removeItem", filepath);
-
-    // let changes = await this.getChangelog();
-    // if (!this.hasChanges(changes)) {
-    //   this.suppress();
-    // }
   }
 
   /**
@@ -59,12 +54,6 @@ class __window_changelog extends mfsInteract {
     if (this.isDestroyed()) {
       return
     }
-    // let changes = await MfsWorker.getChangelog();
-    // let gotChanges = this.hasChanges(changes);
-    // if (!gotChanges) {
-    //   mfsActivity.off(`mfs-task-terminated:*`, this._onTaskTerminated);
-    //   this.goodbye();
-    // }
   }
 
   /**
@@ -125,8 +114,20 @@ class __window_changelog extends mfsInteract {
         this._content = child;
         this.setupInteract();
         const { disk_free } = await MfsWorker.getDiskUsage();
-        const disk_needed = filesize(Visitor.get('disk_usage'));
-        const { populated, settings } = await MfsWorker.getEnv();
+        let { total } = Visitor.diskUsage() || {};
+        if (total == null) {
+          try {
+            let { usage } = await Wm.fetchService(SERVICE.drumate.data_usage, { hub_id: Visitor.id }) || {};
+            if (usage) {
+              Visitor.set({ disk_usage: usage })
+              total = Visitor.diskUsage().total
+            }
+          } catch (e) {
+            total = 0;
+          }
+        }
+        const disk_needed = filesize(total);
+        const { settings } = await MfsWorker.getEnv();
         this.mset(settings);
         this.mset({ disk_free, disk_needed })
         switch (this.mget(_a.screen)) {
@@ -159,7 +160,6 @@ class __window_changelog extends mfsInteract {
         break;
 
       default:
-        //this.debug("AAAA:108", pn, child);
         super.onPartReady(child, pn);
     }
   }

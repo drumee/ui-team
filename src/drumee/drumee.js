@@ -135,7 +135,6 @@ class Drumee extends Marionette.Application {
       console.error("FAILED TO PARSE ENVIRONMENT DATA", e);
       this.failover(e);
     }
-    console.log("AAA:138", data, SERVICE)
   }
 
   /**

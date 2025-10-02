@@ -15,10 +15,11 @@
  * =============================================================================
  */
 
-const _a = require("../../lex/attribute");
+const Attr = require("../../lex/attribute");
 const { escapePath } = require("../../utils/misc");
 const { dirname } = require("path");
-let Root = null;
+let Root = {};
+
 const NodeSettings = `SELECT * FROM syncOpt WHERE filepath=?`;
 module.exports = function (worker) {
   const db = worker.db;
@@ -29,7 +30,7 @@ module.exports = function (worker) {
    * @returns 
    */
   function getNode(filepath) {
-    return db.getRow(NodeSettings, filepath)
+    return db.getRow(NodeSettings, filepath) || {}
   }
 
   /**
@@ -37,16 +38,19 @@ module.exports = function (worker) {
    * @returns 
    */
   function initialize() {
-    Root = getNode('/');
-    if (!Root) {
+    let { c } = db.getRow("SELECT count(*) c FROM syncOpt") || { c };
+    if (!c) {
       Root = {
         effective: 0,
-        mode: _a.onTheFly,
-        direction: _a.duplex,
+        mode: Attr.onTheFly,
+        direction: Attr.duplex,
         filepath: '/'
-      };
+      }
       db.putInToTable('syncOpt', Root);
+    } else {
+      Root = getNode('/');
     }
+    initDefaults()
     return Root;
   }
 
@@ -58,6 +62,11 @@ module.exports = function (worker) {
   function changeSettings(opt = {}) {
     Root = getNode('/');
     db.putInToTable('syncOpt', { ...Root, ...opt, filepath: '/' });
+    if (opt.mode && opt.mode != Root.mode) {
+      if (opt.mode == Attr.full) {
+        db.run(`UPDATE syncOpt SET effective=1, mode=?`, opt.mode);
+      }
+    }
     Root = getNode('/');
     Account.refreshMenu(Root);
     return Root;
@@ -85,22 +94,34 @@ module.exports = function (worker) {
   function initDefaults() {
     let sql = `SELECT * FROM remote WHERE filepath=?`
     let { home_id } = db.getRow(sql, '/') || {};
-    sql = `SELECT * FROM remote WHERE pid=?`;
-    let rows = db.getRows(sql, home_id) || [];
-    //console.log({ home_id, rows })
+    sql = `SELECT s.effective, s.mode, r.filepath, r.home_id 
+      FROM remote r left JOIN syncOpt s USING(filepath) WHERE s.effective IS NULL`;
+    let rows = db.getRows(sql) || [];
     let effective = 0;
+    let mode = Root.mode;
     for (let item of rows) {
-      let node = getNode(item.filepath);
-      if (node && node.mode) continue;
-      if (item.filetype == _a.hub) {
+      item.mode = item.mode || mode;
+      if (item.home_id == home_id && item.effective == null) {
+        effective = 1;
+      } else {
         /** Hubs are default to unsynced */
         effective = 0;
-      } else {
-        effective = 1;
       }
       db.putInToTable('syncOpt', { ...Root, ...item, effective });
     }
     return rows;
+  }
+
+  /**
+   * 
+   * @param {*} evt 
+   * @returns 
+   */
+  function getEffectiveItems(e = 1) {
+    let sql = `SELECT r.*, s.effective, s.mode, s.direction FROM remote r 
+      INNER JOIN syncOpt s USING(filepath) WHERE s.effective=?`;
+    const r = db.getRows(sql, e) || [];
+    return r;
   }
 
 
@@ -114,7 +135,6 @@ module.exports = function (worker) {
     if (!Root) return 0;
     return Root.effective;
   }
-
 
   /**
    * 
@@ -138,22 +158,44 @@ module.exports = function (worker) {
     }
 
     let filepath = dirname(node.filepath).unixPath();
+    if (filepath == '/') {
+      console.error("Default to root", Root);
+      return Root;
+    }
     let parent = getNode(filepath);
 
     let i = 0;
     while (!parent) {
       filepath = dirname(filepath).unixPath();
+      if (filepath == '/') {
+        console.error("Default to root", node);
+        return Root;
+      }
       parent = getNode(filepath);
       if (parent) return parent;
-      //console.log("AAA:102", { ...Root, filepath });
-      db.putInToTable('syncOpt', { ...Root, filepath });
       i++;
-      if (i > 600) {
+      if (i > 1000) {
         console.error("Tree depth exceeded", parent);
         return 0;
       }
     }
     return parent || Root;
+  }
+
+  /**
+   * 
+   */
+  function addNodeSettings(item) {
+    let node = getNode(item.filepath);
+    if (node) return;
+    if (item.filetype == Attr.hub) {
+      /** Hubs are default to unsynced */
+      db.putInToTable('syncOpt', { ...Root, ...item, effective: 0 });
+      getNode(item.filepath);
+    } else {
+      let { effective, mode, direction } = getParentSettings(item);
+      db.putInToTable('syncOpt', { ...item, mode, direction, effective });
+    }
   }
 
   /**
@@ -163,17 +205,6 @@ module.exports = function (worker) {
    */
   function getNodeSettings(item) {
     let node = getNode(item.filepath);
-    if (!node) {
-      if (item.filetype == _a.hub) {
-        /** Hubs are default to unsynced */
-        db.putInToTable('syncOpt', { ...Root, ...item, effective: 0 });
-        getNode(item.filepath);
-      } else {
-        let parent = getParentSettings(item);
-        //console.log("AAA:127", { ...parent, ...item });
-        db.putInToTable('syncOpt', { ...parent, ...item });
-      }
-    }
     if (node) return node;
     return getParentSettings(item)
   }
@@ -186,14 +217,18 @@ module.exports = function (worker) {
     let r = db.getRows(sql, escapePath(item.filepath));
     return r || Root;
   }
+
   /**
    *
    * @param {*} item
    * @returns
    */
-  function getNodeState(item) {
-    return getNodeSettings(item).effective;
+  function getNodeState(item, update = 0) {
+    let node = getNodeSettings(item, update);
+    if (!node) return Root.effective;
+    return node.effective;
   }
+
 
   /**
    * 
@@ -204,19 +239,19 @@ module.exports = function (worker) {
     if (/(^hub|folder)$/.test(item.filetype)) {
       sql = [
         `UPDATE syncOpt SET effective=? WHERE regexp('^' || ?, filepath)`,
-        `UPDATE remote SET effective=? WHERE regexp('^' || ?, filepath)`,
-        `UPDATE remote_changelog SET effective=? WHERE regexp('^' || ?, filepath)`,
-        `UPDATE fsnode SET effective=? WHERE regexp('^' || ?, filepath)`,
-        `UPDATE fschangelog SET effective=? WHERE regexp('^' || ?, filepath)`
+        // `UPDATE remote SET effective=? WHERE regexp('^' || ?, filepath)`,
+        // `UPDATE remote_changelog SET effective=? WHERE regexp('^' || ?, filepath)`,
+        // `UPDATE fsnode SET effective=? WHERE regexp('^' || ?, filepath)`,
+        // `UPDATE fschangelog SET effective=? WHERE regexp('^' || ?, filepath)`
       ]
       db.serialize(sql, effective, item.filepath);
     }
     sql = [
       `UPDATE syncOpt SET effective=? WHERE filepath=?`,
-      `UPDATE remote SET effective=? WHERE filepath=?`,
-      `UPDATE remote_changelog SET effective=? WHERE filepath=?`,
-      `UPDATE fsnode SET effective=? WHERE filepath=?`,
-      `UPDATE fschangelog SET effective=? WHERE filepath=?`
+      // `UPDATE remote SET effective=? WHERE filepath=?`,
+      // `UPDATE remote_changelog SET effective=? WHERE filepath=?`,
+      // `UPDATE fsnode SET effective=? WHERE filepath=?`,
+      // `UPDATE fschangelog SET effective=? WHERE filepath=?`
     ]
     db.serialize(sql, effective, item.filepath);
   }
@@ -227,7 +262,7 @@ module.exports = function (worker) {
    * @returns
    */
   function changeNodeSettings(item) {
-    const { effective } = item;
+    const { effective, mode } = item;
     if (typeof (effective) != 'number') {
       console.log(`effective value must be integer`);
       return;
@@ -236,26 +271,27 @@ module.exports = function (worker) {
     let parent = getNode(filepath);
     let node;
     if (effective) {
+      /** Enable upward to ensure consistency */
+      while (parent && !parent.effective) {
+        parent.effective = 1;
+        db.putInToTable('syncOpt', parent);
+        if (parent.filepath == '/') {
+          break;
+        }
+        filepath = dirname(filepath).unixPath();
+        parent = getNode(filepath);
+        // let ref = parent || Root;
+        // node = { ...ref, filepath, effective };
+      }
       let self = getNode(item.filepath);
       if (!self) {
-        node = { ...item, effective };
-        db.putInToTable('syncOpt', node);
+        db.putInToTable('syncOpt', { ...item, effective });
         changeTreeSettings(item, effective);
         return;
       }
-      /** Enable upward to ensure consistency */
-      while (!parent) {
-        filepath = dirname(filepath).unixPath();
-        parent = getNode(filepath);
-        let ref = parent || Root;
-        node = { ...ref, filepath, effective };
-        db.putInToTable('syncOpt', node);
-      }
     }
-    let ref = getNodeSettings(item);
-    db.putInToTable('syncOpt', { ...ref, ...item, effective });
+    db.putInToTable('syncOpt', { ...item, effective });
     changeTreeSettings(item, effective)
-
   }
 
   /**
@@ -285,7 +321,10 @@ module.exports = function (worker) {
     changeSettings,
     rootSettings,
     rootState,
-    isEnabled
+    isEnabled,
+    getEffectiveItems,
+    getParentSettings,
+    addNodeSettings
   }
 
 };

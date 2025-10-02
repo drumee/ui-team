@@ -64,14 +64,14 @@ function sklSyncerHelp(_ui_) {
   })
   if (mfsActivity.mget(_a.sync)) {
     if (mfsActivity.mget(_a.mode) == "onTheFly") {
-      state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.ECONOMY_SYNC), menu);
+      state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.SELECTIVE_SYNC), menu);
     } else {
-      state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.IMMEDIATE_SYNC), menu);
+      state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.FULL_SYNC), menu);
     }
   } else {
     state.content = LOCALE.SYNC_ENGINE_OFF.format(local, remote);
   }
-  state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.ECONOMY_SYNC), menu);
+  state.content = LOCALE.SYNC_ENGINE_ON.format(highlight(LOCALE.SELECTIVE_SYNC), menu);
   syncState.kids = [state];
   let disk_free = _ui_.mget('disk_free');
   let disk_needed = _ui_.mget('disk_needed');
@@ -80,19 +80,19 @@ function sklSyncerHelp(_ui_) {
     kids: [
       Skeletons.Note({
         className: `${contentFig}__help text title`,
-        content: LOCALE.ECONOMY_SYNC
+        content: LOCALE.SELECTIVE_SYNC
       }),
       Skeletons.Note({
         className: `${contentFig}__help text tips`,
-        content: LOCALE.ECONOMY_MODE_TIPS
+        content: LOCALE.SELECTIVE_SYNC_TIPS
       }),
       Skeletons.Note({
         className: `${contentFig}__help text title`,
-        content: LOCALE.IMMEDIATE_SYNC
+        content: LOCALE.FULL_SYNC
       }),
       Skeletons.Note({
         className: `${contentFig}__help text tips`,
-        content: LOCALE.IMMEDIATE_MODE_TIPS.format(disk_needed)
+        content: LOCALE.FULL_SYNC_TIPS.format(disk_needed)
       }),
       Skeletons.Note({
         className: `${contentFig}__help text info`,

@@ -296,7 +296,6 @@ module.exports = function (worker) {
   l.filetype NOT IN ('hub', 'folder')`;
     let r = db.getRow(sql);
     if (!r || r.count <= 1) return 0;
-    //console.log("AAAA:74", r);
     return (1000 * r.count) / r.delta;
   }
 
@@ -309,7 +308,6 @@ module.exports = function (worker) {
     let r = db.getRow(sql);
     sql = `select count(*) items, sum(filesize) size FROM local`;
     let l = db.getRow(sql);
-    //console.log("AAA:83", r, l);
     if (!r || !l || !r.size) return 0;
     return (100 * l.size) / r.size;
   }

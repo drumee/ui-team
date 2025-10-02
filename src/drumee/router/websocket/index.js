@@ -88,6 +88,7 @@ class __router_websocket extends LetcBox {
    *
    */
   switchOn(data) {
+    this.debug("AAA:91", data)
     if (data.user) {
       Visitor.set(data.user);
     } else {

@@ -49,8 +49,8 @@
   "SYNC_OFF": "Arrêté",
   "SYNC_POWER": "Marche/Arrêt",
   "OPTIMIZATION": "Optimisation",
-  "ECONOMY": "Economique",
-  "IMMEDIATE": "Immédiat",
+  "SELECTIVE": "Selective",
+  "FULL": "Complète",
   "CONFIRM_FILES_DELETION": "{0} fichiers ont été supprimés de votre disque dur. Voulez-vous que cette suppression soit également répercutée sur votre serveur Drumee ?",
   "SECURIRY_ALERT": "Alerte de sécurirté",
   "FILE_BEING_EDITED": "Ce fichier est actuellement en cours de modification par {0}. Vos modifications ne seront pas enregistrées sur votre serveur Drumee.",
@@ -117,9 +117,9 @@
   "CANNOT_DO_X": "Impossible de {0} {1}",
   "RENAME_OR_MOVE": "renommer ou déplacer",
   "CHANGE_SYNC_MODE": "Changer de mode de synchronisation",
-  "SYNC_GO_IMMEDIATE_MODE": "Vous allez passer en mode synchronisation immédiate. ",
-  "IMMEDIATE_MODE_TIPS": "Tous les élément de votre bureau Drumee seront synchronisés automatiquement avec le disque de votre ordinateur. Cette option nécessitera {0} d'espace disque sur votre ordinateur.",
+  "SWITCH_TO_FULL_SYNC": "Vous allez passer en mode synchronisation complète. ",
+  "FULL_SYNC_TIPS": "Tous les élément de votre bureau Drumee seront synchronisés automatiquement avec le disque de votre ordinateur. Cette option nécessitera {0} d'espace disque sur votre ordinateur.",
   "YOUR_DISK_CAPACITY": "La capacité de votre disque est de {0}",
-  "SYNC_GO_ECONOMY_MODE": "Vous entrerez en mode de synchronisation économique",
-  "ECONOMY_MODE_TIPS": "Les éléments de votre bureau Drumee seront synchronisés au fur et à mesure que vous ouvrez les dossiers qui s'y trouvent. Les sous-dossiers seront exclus de la synchronisation. Cependant, dès leur ouverture, les éléments à l'intérieur seront synchronisés à leur tour."
+  "SWITCH_TO_SELECTIVE_SYNC": "Vous allez activer le mode synchronisation sélective",
+  "SELECTIVE_SYNC_TIPS": "Les éléments de votre bureau Drumee seront synchronisés au fur et à mesure que vous ouvrez les dossiers qui s'y trouvent. Les sous-dossiers seront exclus de la synchronisation. Cependant, dès leur ouverture, les éléments à l'intérieur seront synchronisés à leur tour."
 }

@@ -131,12 +131,9 @@ class Scheduler extends mfsUtils {
   async startSyncEngine(opt = {}) {
     let { channel, args } = opt;
     if (Account.user.isOnline()) {
-      let settings = this.syncOpt.rootSettings();
-      this.debug("Starting Sync Scheduler", settings)
+      this.set({ running: 1, ready: 0 });
       this.worker.startSyncEngine().then(() => {
         this.set({ running: 1, ready: 1, frozen: 0 });
-        Account.syncParams.set(settings);
-        Account.refreshMenu();
       })
     } else {
       this.debug("SYNC ALLOWED IN ANOMYNOUS CONTEXT");
@@ -531,13 +528,13 @@ class Scheduler extends mfsUtils {
       evt.effective = syncEnabled;
       this.syncOpt.changeNodeSettings(evt);
     }
-
-    let shallSync = this.syncOpt.getNodeState(evt);
+    this.syncOpt.addNodeSettings(evt)
+    let effective = this.syncOpt.getNodeState(evt);
     if (syncId) {
       evt.args.syncId = syncId;
     }
 
-    if (!shallSync && !evt.args.force) {
+    if (!effective && !evt.args.force) {
       if (/^(file.modified|file.changed)$/.test(evt.name)) {
         this.shouldBypassIgnore(evt);
       }
@@ -546,8 +543,8 @@ class Scheduler extends mfsUtils {
       evt = this.remote.ensureOwnpath(evt);
     }
 
-    this.debug(`AAA:619 [log][syncState=${shallSync}] name=${evt.name} -> ${evt.filepath} [${evt.ownpath}]`);
-    if (!shallSync) {
+    this.debug(`AAA:619 [log][effective=${effective}] name=${evt.name} -> ${evt.filepath} [${evt.ownpath}]`);
+    if (!effective) {
       this.debug(`AAA:617 -- IGNORED =${evt.filepath}`);
       return;
     }
@@ -569,7 +566,7 @@ class Scheduler extends mfsUtils {
       this.debug("AAA:742 -- can not run since there is pending alert");
       return;
     }
-    if(!Account.get(Attr.socket_id)){
+    if (!Account.get(Attr.socket_id)) {
       this.debug("AAA:572 socket not bound yet");
       return
     }
@@ -591,9 +588,9 @@ class Scheduler extends mfsUtils {
     if (!evt) return;
     let ok = await this.checkSecurity(evt);
     if (ok) {
-      try{
+      try {
         await this.dispatch(evt);
-      }catch(e){
+      } catch (e) {
         this.warn(`Failed to run`, e)
       }
     }
@@ -604,7 +601,6 @@ class Scheduler extends mfsUtils {
    */
   async dispatch(evt) {
     if (!this.checkSanity(evt)) return;
-    //this.debug(`AAA:708 -- Running task ${evt.id} ownpath=${evt.ownpath}`);
     try {
       let state = Attr.started;
       let retry = 0;
@@ -623,159 +619,6 @@ class Scheduler extends mfsUtils {
     }
   }
 
-  /**
-  *
-  * @param {*} evt
-  */
-  applyRemoteChanges(changes) {
-    DEPRECATED
-    for (var c in changes) {
-      if (changes[c]) {
-        for (var item of changes[c]) {
-          this.takeRemoteItem(item, c);
-        }
-      }
-    }
-  }
-
-  /**
-  *
-  * @param {*} item
-  */
-  takeRemoteItem(item, type) {
-    DEPRECATED
-    // type = type || item.type;
-    // this.debug(`AAA:630 takeRemoteItem action=${type}`, item);
-    // switch (type) {
-    //   case Attr.created:
-    //     this.log({ ...item, name: "media.init" });
-    //     break;
-
-    //   case Attr.changed:
-    //     this.log({ ...item, name: "media.write" });
-    //     break;
-
-    //   case Attr.renamed:
-    //     this.log({ ...item, name: "fs.rename" });
-    //     break;
-
-    //   case Attr.deleted:
-    //     this.log({ ...item, name: "fs.remove" });
-    //     break;
-
-    //   case Attr.moved:
-    //     let src = this.localFile(item.src, Attr.node);
-    //     let dest = this.localFile(item.dest, Attr.node);
-    //     if (!src.inode || !dest.realpath) {
-    //       this.debug("Nothing to move", item, src, dest);
-    //     }
-    //     item.args = { ...item.args, src, dest };
-    //     this.log({ ...item, name: "fs.move" });
-    // }
-  }
-
-  /**
- *
- * @param {*} evt
- */
-  applyLocalChanges(changes) {
-    DEPRECATED
-    // for (var c in changes) {
-    //   if (changes[c]) {
-    //     for (var media of changes[c]) {
-    //       this.takeLocalItem(media, c);
-    //     }
-    //   }
-    // }
-  }
-
-  /**
-  *
-  * @param {*} item
-  */
-  takeLocalItem(item, type) {
-    DEPRECATED
-    // let name, src, dest;
-    // this.debug(`AAA:680 takeLocalItem action=${type}`, item);
-    // let stat = this.localFile(item, Attr.stat);
-    // if (!stat.inode) {
-    //   let fsnode = this.fsnode.row(item, Attr.inode);
-    //   if (fsnode) {
-    //     item.filepath = fsnode.filepath;
-    //   } else {
-    //     stat = null;
-    //   }
-    // }
-    // if (!type) type = item.type;
-    // switch (type) {
-    //   case Attr.created:
-    //     if (!stat || !stat.ino) {
-    //       //this.removePendingEntity("local_created", item);
-    //       return;
-    //     }
-    //     if (stat.isDirectory()) {
-    //       name = `folder.created`;
-    //     } else {
-    //       name = `file.created`;
-    //     }
-    //     this.log({ ...item, name });
-    //     break;
-    //   case Attr.changed:
-    //     if (!stat) {
-    //       //this.removePendingEntity("local_changed", item);
-    //       return;
-    //     }
-    //     if (!stat.isDirectory())
-    //       this.log({
-    //         ...item,
-    //         name: "file.modified",
-    //         filepath: item.filepath,
-    //         filename: null,
-    //       });
-    //     break;
-    //   case Attr.renamed:
-    //     if (!item.src || !item.dest) {
-    //       //this.removePendingEntity("local_renamed", item);
-    //       return;
-    //     }
-    //     this.debug(`AAA:805 type=${type}`, item);
-    //     src = { ...item, ...this.fsnode.coalesce(item, Attr.filepath, "local") };
-    //     dest = { ...src };
-    //     dest.filepath = item.dest;
-    //     item.__oldItem = src;
-    //     item.__newItem = dest;
-    //     if (this.isBranch(item)) {
-    //       this.log({ ...item, name: "folder.renamed" });
-    //     } else {
-    //       this.log({ ...item, name: "file.renamed" });
-    //     }
-    //     break;
-    //   case Attr.deleted:
-    //     if (this.isBranch(item)) {
-    //       this.log({ ...item, name: "folder.deleted" });
-    //     } else {
-    //       this.log({ ...item, name: "file.deleted" });
-    //     }
-    //     break;
-    //   case Attr.moved:
-    //     if (!item.src || !item.dest) {
-    //       //this.removePendingEntity("local_moved", item);
-    //       return;
-    //     }
-    //     this.debug(`AAA:805 type=${type}`, item);
-    //     src = { ...item, ...this.fsnode.coalesce(item, Attr.filepath, "local") };
-    //     dest = { ...src };
-    //     dest.filepath = item.dest;
-    //     item.__oldItem = src;
-    //     item.__newItem = dest;
-    //     if (this.isBranch(item)) {
-    //       this.log({ ...item, name: "folder.moved" });
-    //     } else {
-    //       this.log({ ...item, name: "file.moved" });
-    //     }
-    //     break;
-    // }
-  }
 
 
   /**

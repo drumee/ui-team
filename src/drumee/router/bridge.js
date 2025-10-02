@@ -1,14 +1,8 @@
-/*
-   Copyright Xialia.com  2011-2019
-   FILE : src/drumee/router/gateway
-   TYPE :
- */
 
 const HANDLER = {};
 class __drumee_bridge extends Backbone.Model {
   start(target) {
     let events = this.get("events");
-    console.log("AAA:11", events)
     for (let c in events) {
       let name = events[c];
       if (!name) {
@@ -22,7 +16,6 @@ class __drumee_bridge extends Backbone.Model {
       }
     }
     target.on(_e.destroy, () => {
-      this.debug("AAA:23 DESTROY");
       for (let c in events) {
         let name = events[c];
         if (!name) {
@@ -54,6 +47,5 @@ module.exports = function (target, events) {
   if (!events || !target) return;
   let o = new __drumee_bridge({ events });
   o.start(target);
-  console.log("AAA:55", o)
   return o;
 };

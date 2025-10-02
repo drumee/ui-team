@@ -4,7 +4,7 @@ function __skl_window_sync_changes(_ui_, disk_free, Cloud_volume) {
 
   let infoText = LOCALE.SWITCH_SYNC_BETWEEN_MODE;
 
-  let summaryTitle = LOCALE.SET_IMMEDIATE_SYNC;
+  let summaryTitle = LOCALE.FULL_SYNC_SELECTED;
 
   let info = Skeletons.Box.X({
     className: `${contentFig}__immediate-header`,

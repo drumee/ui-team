@@ -55,37 +55,6 @@ class __window_core extends __utils {
     }
   }
 
-
-  /**
- * 
- * @param {*} service 
- * @param {*} data 
- * @param {*} options 
- * @returns 
- */
-  // completeLiveUpdate(service, data, options) {
-  //   //super.onLiveUpdate(service, data, options);
-  //   this.debug("AAA:99 WWWW", this.el, this.mget(_a.filesize), service, data, options);
-  //   switch (service) {
-  //     case "media.move":
-  //       if (!data.__oldItem || !data.__newItem) return;
-  //       MfsScheduler.log(service, data);
-  //       break;
-  //     case "media.new": case "media.mk_dir":
-  //       MfsScheduler.log(service, data);
-  //       break;
-  //     case _SVC.media.copy:
-  //       if (!data.__oldItem || !data.__newItem) return;
-  //       this.debug("AAA:117 WWWW", this.el, data, options);
-  //       if (data.__newItem && data.__newItem.pid == this.getCurrentNid()) {
-  //         MfsScheduler.log(service, data);
-  //       }
-  //       //MfsScheduler.log(service,  { ...data, name: service });
-  //       break;
-
-  //   }
-  // }
-
   /**
    * 
    * @param {*} media 

@@ -32,7 +32,7 @@ class __router_cop extends __butler {
     }, { async: 1 }).then((data) => {
       setTimeout(() => {
         this.restart(1);
-      }, 1000);
+      }, 200);
     }).catch((e) => {
       this.warn("Normal logout has failed. Proceeding to reset session", e);
       this.postService({

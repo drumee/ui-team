@@ -96,13 +96,9 @@ module.exports = function (worker) {
    * 
    */
   function getNewEntities(max_id) {
-    let sql = `SELECT f.*, (nodetype || '.created') event, h.md5 md5Hash
-      FROM fsnode f LEFT JOIN hash h
-      WHERE effective AND 
-      f.filepath NOT IN (SELECT filepath FROM remote WHERE effective) AND 
-      f.filepath NOT IN (SELECT filepath FROM remote_changelog WHERE effective
-      AND event='media.remove' AND id>=?)`;
-    let rows = db.getRows(sql, max_id) || [];
+    let sql = `SELECT f.*, (nodetype || '.created') event, h.md5 md5Hash FROM fsnode f 
+      LEFT JOIN hash h USING(filepath) LEFT JOIN syncOpt s USING(filepath) WHERE s.filepath IS NULL`;
+    let rows = db.getRows(sql) || [];
     return rows;
   }
 
@@ -119,7 +115,7 @@ module.exports = function (worker) {
   /**
    * 
    */
-  function initChangesList(){
+  function initChangesList() {
     let sql = `UPDATE fsnode SET changed=c.changed, effective=c.effective FROM 
       (SELECT IIF(h.md5 = r.md5Hash, 0, 1) changed, effective, r.filepath 
         FROM hash h INNER JOIN remote r on h.filepath=r.filepath

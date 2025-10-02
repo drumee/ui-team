@@ -140,15 +140,15 @@ const getSyncMode = (effective, mode) => {
     return [
       { type: "separator" },
       {
-        label: LOCALE.ECONOMY,
+        label: LOCALE.SELECTIVE,
         type: "radio",
         checked: (mode == Attr.onTheFly),
         click: async () => {
           if ((mode !== Attr.onTheFly)) {
             let result = await showConfirmNewMode(
               LOCALE.CHANGE_SYNC_MODE, 
-              LOCALE.SYNC_GO_ECONOMY_MODE,
-              LOCALE.ECONOMY_MODE_TIPS
+              LOCALE.SWITCH_TO_SELECTIVE_SYNC,
+              LOCALE.SELECTIVE_SYNC_TIPS
             );
             if (result.response === 1)
               Account.refreshMenu();
@@ -159,30 +159,23 @@ const getSyncMode = (effective, mode) => {
         }
       },
       {
-        label: LOCALE.IMMEDIATE,
+        label: LOCALE.FULL,
         type: "radio",
-        checked: (mode == Attr.immediate),
+        checked: (mode == Attr.full),
         click: async () => {
-          if ((mode !== Attr.immediate)) {
+          if ((mode !== Attr.full)) {
             let result = await showConfirmNewMode(
               LOCALE.CHANGE_SYNC_MODE, 
-              LOCALE.SYNC_GO_IMMEDIATE_MODE,
-              LOCALE.IMMEDIATE_MODE_TIPS
+              LOCALE.SWITCH_TO_FULL_SYNC,
+              LOCALE.FULL_SYNC_TIPS
             );
             if (result.response === 1)
               Account.refreshMenu();
             if (result.response === 0) {
-              global.webContents.send(SYNC_CTRL_SIGNAL, { immediate: true });
-              Account.service('menu-sync-control', { mode: Attr.immediate });
+              global.webContents.send(SYNC_CTRL_SIGNAL, { full: true });
+              Account.service('menu-sync-control', { mode: Attr.full });
             }
           }
-        }
-      },
-      { type: "separator" },
-      {
-        label: LOCALE.DISPLAY_STATE,
-        click: () => {
-          Account.service('menu-show-sync-diff', {});
         }
       },
       { type: "separator" },
@@ -192,11 +185,11 @@ const getSyncMode = (effective, mode) => {
   return [
     { type: "separator" },
     {
-      label: LOCALE.ECONOMY,
+      label: LOCALE.SELECTIVE,
       enabled,
     },
     {
-      label: LOCALE.IMMEDIATE,
+      label: LOCALE.FULL,
       enabled,
     },
     { type: "separator" },
@@ -224,7 +217,7 @@ function syncMenu(opt) {
           if (effective) {
             msg = LOCALE.CONFIRM_DISABLE_SYNC;
           }
-          let result = await showConfirm(LOCALE.ECONOMY, msg);
+          let result = await showConfirm(LOCALE.SELECTIVE, msg);
           if (result.response === 0) {
             effective = effective ^ 1;
             Account.service(SYNC_CTRL_SIGNAL, { effective });
@@ -235,7 +228,7 @@ function syncMenu(opt) {
     ]
   }
   if (!/^(upstream|downstream|duplex)$/.test(direction)) direction = Attr.duplex;
-  if (!/^(immediate|onTheFly)$/.test(mode)) mode = Attr.onTheFly;
+  if (!/^(full|onTheFly)$/.test(mode)) mode = Attr.onTheFly;
 
   let syncDir = [];
 

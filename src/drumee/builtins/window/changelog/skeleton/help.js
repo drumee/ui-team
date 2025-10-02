@@ -52,19 +52,19 @@ function sklSyncerHelp(ui) {
     kids: [
       Skeletons.Note({
         className: `${contentFig}__help text title`,
-        content: LOCALE.ECONOMY_SYNC
+        content: LOCALE.SELECTIVE_SYNC
       }),
       Skeletons.Note({
         className: `${contentFig}__help text tips`,
-        content: LOCALE.ECONOMY_MODE_TIPS
+        content: LOCALE.SELECTIVE_SYNC_TIPS
       }),
       Skeletons.Note({
         className: `${contentFig}__help text title`,
-        content: LOCALE.IMMEDIATE_SYNC
+        content: LOCALE.FULL_SYNC
       }),
       Skeletons.Note({
         className: `${contentFig}__help text tips`,
-        content: LOCALE.IMMEDIATE_MODE_TIPS.format(disk_needed.bold())
+        content: LOCALE.FULL_SYNC_TIPS.format(disk_needed.bold())
       }),
       Skeletons.Note({
         className: `${contentFig}__help text info`,

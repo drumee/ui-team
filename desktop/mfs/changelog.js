@@ -202,83 +202,50 @@ class Changelog extends mfsUtils {
   *
   */
   async syncInitialChanges() {
-    let { engine, effective } = this.syncOpt.rootSettings();
+    let { effective } = this.syncOpt.rootSettings();
+    if (!effective) return;
+
     let log_id = await this.getRemoteChangelog();
     let buffer = []
     this.changelog_buffer.clear();
     let newRemote = this.remote.getNewEntities();
-    //this.debug("AAA:146", { newRemote })
     buffer = buffer.concat(newRemote)
-    // newRemote.map((e) => {
-    //   mfsScheduler.takeRemoteItem(e, Attr.created)
-    // })
 
     let remoteMoved = this.remote.getEntitiesChanges('move');
-    //this.debug("AAA:162", { remoteMoved })
     buffer = buffer.concat(remoteMoved)
-    // remoteMoved.map((e) => {
-    //   mfsScheduler.takeRemoteItem(e, Attr.renamed)
-    // })
-
     let remoteRenamed = this.remote.getEntitiesChanges('rename');
-    //this.debug("AAA:158", { remoteRenamed })
     buffer = buffer.concat(remoteRenamed)
-    // remoteRenamed.map((e) => {
-    //   mfsScheduler.takeRemoteItem(e, Attr.renamed)
-    // })
     this.fsnode.purgeZombies();
     let newLocal = this.fsnode.getNewEntities(log_id);
-    //this.debug("AAA:164", { newLocal })
-    // for (let entity of newLocal) {
-    //   let exist = this.localFile(entity, Attr.exists)
-    //   if(!exist){
-    //     this.fsnode.re
-    //   }
-    // }
-
+    this.debug("AAA:222", { newLocal })
     buffer = buffer.concat(newLocal)
-
-
-    // newLocal.map((e) => {
-    //   mfsScheduler.takeLocalItem(e, Attr.created)
-    // })
-
-
     let localDeleted = this.fsnode.getDeletedEntities();
-    //this.debug("AAA:171", { localDeleted })
     buffer = buffer.concat(localDeleted)
-    // localDeleted.map((e) => {
-    //   mfsScheduler.takeLocalItem(e, Attr.deleted)
-    // })
 
     let remoteDeleted = this.remote.getEntitiesChanges('remove');
-    //this.debug("AAA:177", { remoteDeleted })
     buffer = buffer.concat(remoteDeleted)
-    // remoteDeleted.map((e) => {
-    //   mfsScheduler.takeRemoteItem(e, Attr.deleted)
-    // })
-
 
     let changes = this.remote.getChangesList();
     buffer = buffer.concat(changes)
-    //this.debug("AAA:184", buffer)
-    // changes.map((e) => {
-    //   if (e.locMtime > e.mtime) {
-    //     mfsScheduler.takeLocalItem(e, Attr.changed)
-    //   } else {
-    //     mfsScheduler.takeRemoteItem(e, Attr.changed);
-    //   }
-    // })
     const populate = this.db.populate("changelog_buffer");
     const transaction = this.db.transaction((rows) => {
-      for (const row of rows) {
-        //if (IGNORED.test(row.filename)) continue;
+      for (let row of rows) {
+        let opt;
         if (row.effective == null) {
-          row.effective = this.syncOpt.getNodeState(row);
+          this.syncOpt.addNodeSettings(row)
+          opt = this.buffer.getSyncState(row);
+          if (opt.effective == null) {
+            row.effective = this.syncOpt.getNodeState(row, 1)
+          }
         }
-        if (!row.effective || row.synced || !row.inode) {
+        this.debug("AAA:236", opt, row)
+        if (!row.effective) {
           continue;
         }
+        if (!opt) opt = this.buffer.getSyncState(row);
+        if (opt.synced) continue;
+
+        row = { ...row, ...opt }
         row.inode = row.inode;
         row.nid = row.nid || '';
         row.hub_id = row.hub_id || '';
@@ -297,12 +264,12 @@ class Changelog extends mfsUtils {
     transaction(buffer);
 
     let log = this.buffer.getJournal();
+
     let last = {};
     let i = 0;
     let res = log.filter((row) => {
       let { name, filepath, ctime, mtime } = row;
       if (name == last.name && filepath == last.filepath) {
-        //this.debug(`SKIPPING SAME`, name, filepath, ctime, mtime)
         return false;
       }
       last.name = name;
@@ -312,8 +279,9 @@ class Changelog extends mfsUtils {
       i++;
       return true
     })
+    this.debug("AAA:281", res)
+
     mfsScheduler.log(res)
-    //this.debug("AAAA:1187 syncInitialChanges", i, res)
 
   }
 
@@ -628,7 +596,6 @@ class Changelog extends mfsUtils {
     item.filepath = normalize(item.filepath);
     item.ownpath = normalize(item.ownpath);
     let effective = this.syncOpt.getNodeState(item)
-    this.debug("AAAA:442 getRemoteChanges", effective, item.filepath)
     item.args = JSON.stringify({ src, dest });
     item.id = id;
     item.seq = seq;

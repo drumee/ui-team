@@ -772,10 +772,6 @@ function requestUpload(evt) {
 function _updateLocalItem(evt, dest, resolve) {
   let stat = this.localFile(dest, Attr.stat);
 
-  // this.local.upsert({
-  //   ...evt,
-  //   ...stat.miniData,
-  // });
   evt.effective = this.syncOpt.getNodeState(evt);
   this.remote.upsert({
     ...evt,

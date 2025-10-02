@@ -174,33 +174,9 @@ class __window_manager extends __wm {
   onUpstreamMfsEvent(evt) {
     if (!evt) return;
     const { name } = evt;
-    //const origin = "mfs";
     delete evt.name;
     evt.origin = "mfs";
     this.debug("AAA:194  onUpstreamMfsEvent", name, evt);
-    // switch (name) {
-    //   case "file.created":
-    //   case "folder.created":
-    //     this.onNewItem(evt);
-    //     break;
-    //   case "file.modified":
-    //     this.onUpdateItem(evt);
-    //     break;
-    //   case "file.moved":
-    //   case "folder.moved":
-    //     this.onMoveItem(evt);
-    //     break;
-    //   case "file.renamed":
-    //   case "folder.renamed":
-    //     this.onRenameItem(evt);
-    //     break;
-    //   case "file.cloned":
-    //   case "folder.cloned":
-    //     this.onCopyItem(evt);
-    //     break;
-    //   default:
-    //     this.warn(`Unhandled event ${name}`, evt);
-    // }
   }
 
   /**
@@ -396,11 +372,14 @@ class __window_manager extends __wm {
   onDomRefresh() {
     this.on(WS_EVENT, this.onDownstreamMfsEvent)
     super.onDomRefresh();
-    Kind.waitFor("electron_activity").then(() => {
+    Kind.waitFor("electron_activity").then(async () => {
       this.append({ kind: "electron_activity", signal: "mfs:activity" });
       window.mfsActivity = this.children.last();
       setTimeout(this.checkForUpdate.bind(this), 60 * 1000);
-      //this.preset() -- TODO keep window_changelog as daemon
+      let { settings } = await MfsWorker.getEnv();
+      if (settings && !settings.effective && localStorage.getItem("hideSyncTips") != _a.yes) {
+        this._showHelp()
+      }
     });
   }
 
@@ -438,7 +417,14 @@ class __window_manager extends __wm {
    */
   _showChangelog(files) {
     this.debug("AAA:72", files);
-    //this.__wrapperModal.feed({ kind: 'window_changelog', files });
+  }
+
+  /**
+ *
+ * @param {*} files
+ */
+  _showHelp() {
+    this.__wrapperModal.feed({ kind: 'window_changelog', screen: 'help' });
   }
 
   /**
@@ -464,11 +450,6 @@ class __window_manager extends __wm {
       mode,
       effective,
     });
-    // let changes = await MfsWorker.getChangelog();
-    // if (!this.hasChanges(changes)) {
-    //   return;
-    // }
-    // this.modal({ kind: "window_changelog", ...args, screen: 'showChanges' });
   }
 
   /**
@@ -552,9 +533,21 @@ class __window_manager extends __wm {
     }
   }
 
-  // onWsMessage(service, data, options = {}) {
-  //   this.verbose("onWsMessage[1410]: ", options.service, data, options, this);
-  // }
+  /**
+   * 
+   * @param {*} service 
+   * @param {*} data 
+   * @param {*} options 
+   */
+  onWsMessage(service, data, options = {}) {
+    switch (options.service) {
+      case SERVICE.drumate.logout:
+        /** DO NOT REMOVE */
+        return;
+      default:
+        super.onWsMessage(service, data, options)
+    }
+  }
 }
 
 module.exports = __window_manager;

@@ -48,7 +48,7 @@
   "DISPLAY_en": "Idioma inglés",
   "DISPLAY_fr": "Idioma francés",
   "DOWNLOAD_ERROR": "Se produjo un error al descargar el archivo *{0}*",
-  "ECONOMY": "Económico",
+  "SELECTIVE": "Selectivo",
   "FILES_SYNC": "Sincronización de archivos",
   "FILE_BEING_EDITED": "{0} 目前正在编辑此文件。您的更改不会保存在 Drumee 服务器上。",
   "FILE_LOCKED": "archivo bloqueado",
@@ -59,7 +59,7 @@
   "GO": "Go",
   "GO_BACK": "Regresa",
   "HELPDESK": "Ayuda",
-  "IMMEDIATE": "Inmediato",
+  "FULL": "Completo",
   "INSUFFISANT_DISK_PACE": "Espacio en disco insuficiente",
   "LATER": "Más tarde",
   "LOAD_VERSION_NOW": "¿Quieres aplicar esta versión ahora?",
@@ -114,9 +114,9 @@
   "CANNOT_DO_X": "No se puede {0} {1}",
   "RENAME_OR_MOVE": "cambiar el nombre o mover",
   "CHANGE_SYNC_MODE": "Cambiar modo de sincronización",
-  "SYNC_GO_IMMEDIATE_MODE": "Cambiará al modo de sincronización inmediata.",
-  "IMMEDIATE_MODE_TIPS": "Todo lo que haya en su escritorio Drumee se sincronizará automáticamente con la unidad de su computadora. Esta opción requerirá {0} espacio en disco en su computadora.",
+  "SWITCH_TO_FULL_SYNC": "Entrará al modo de sincronización completa.",
+  "FULL_SYNC_TIPS": "Todo lo que haya en su escritorio Drumee se sincronizará automáticamente con la unidad de su computadora. Esta opción requerirá {0} espacio en disco en su computadora.",
   "YOUR_DISK_CAPACITY": "La capacidad de su disco es {0}",
-  "SYNC_GO_ECONOMY_MODE": "Entrarás en modo de sincronización económica.",
-  "ECONOMY_MODE_TIPS": "Los elementos de su escritorio Drumee se sincronizarán a medida que abra las carpetas que contiene. Las subcarpetas quedarán excluidas de la sincronización. Sin embargo, tan pronto como se abran, los elementos del interior se sincronizarán a su vez."
+  "SWITCH_TO_SELECTIVE_SYNC": "Activarás el modo de sincronización selectiva",
+  "SELECTIVE_SYNC_TIPS": "Los elementos de su escritorio Drumee se sincronizarán a medida que abra las carpetas que contiene. Las subcarpetas quedarán excluidas de la sincronización. Sin embargo, tan pronto como se abran, los elementos del interior se sincronizarán a su vez."
 }

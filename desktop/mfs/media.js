@@ -15,9 +15,9 @@
  * =============================================================================
  */
 const Path = require('path');
-const _a = require('../lex/attribute');
-const _ = require('lodash');
-const Fs = require('fs');
+const Attr = require('../lex/attribute');
+const { isFunction, isNaN, isObject, isString, isEmpty } = require('lodash');
+const { readdir } = require('fs');
 const mfsUtils = require('./utils');
 const { dialog } = require('electron');
 
@@ -30,7 +30,7 @@ class Media extends mfsUtils {
   * 
   */
   isDirectory(item) {
-    let s = this.localFile(item, _a.stat);
+    let s = this.localFile(item, Attr.stat);
     return (s.ino && s.isDirectory());
   }
 
@@ -40,7 +40,7 @@ class Media extends mfsUtils {
   */
   cancelSync(data) {
     this.debug("AAA:17", data);
-    if (request && _.isFunction(request.getUploadProgress)) {
+    if (request && isFunction(request.getUploadProgress)) {
       this.debug("AAA:19", request.getUploadProgress());
     }
   }
@@ -48,12 +48,12 @@ class Media extends mfsUtils {
   /**
   * 
   * @param {*} d -- Node data 
-  * @returns 'https://remote.file.url/file/d.nid/d.hub_id&changed'
+  * @returns 
   */
   getNodeUrl(d) {
     let url = Account.bootstrap().mfsRootUrl + `file/orig/${d.nid}/${d.hub_id}`;
     let changed = Math.abs(d.changed) || Math.abs(d.mtime - d.ctime);
-    if (changed && !_.isNaN(changed)) {
+    if (changed && !isNaN(changed)) {
       url = `${url}?c=${changed}`;
     }
     return url;
@@ -66,14 +66,14 @@ class Media extends mfsUtils {
    */
   isEmptyDir(arg) {
     let path;
-    if (_.isObject(arg)) {
-      path = this.localFile(arg, _a.absolute);
+    if (isObject(arg)) {
+      path = this.localFile(arg, Attr.absolute);
     } else {
       path = arg;
     }
     //this.debug("AAA:177", arg, path);
     return new Promise((resolve, reject) => {
-      Fs.readdir(path, function (err, files) {
+      readdir(path, function (err, files) {
         if (err) {
           reject(err)
         } else {
@@ -107,21 +107,22 @@ class Media extends mfsUtils {
    * @returns 
    */
   shouldSkipSync(evt) {
-    if (this.syncOpt.rootSettings().direction == _a.downstream) return _a.terminated;
+    let o = this.syncOpt.rootSettings()
+    if (!o.effective) return Attr.ignored;
     let { force } = this.event.parseArgs(evt);
     if (force) return null;
-    switch (evt.sync) {
-      case 0: 
-      case -1:
-        return _a.ignored;
-      case 1:
+    const { direction, effective } = this.syncOpt.getNodeSettings(evt);
+    if (!effective) {
+      if (evt.name == "media.open") {
+        this.syncOpt.changeNodeSettings({ ...evt, effective: 1 });
         return null;
-      default:
-        if (this.syncOpt.getNodeState(evt) ) {
-          return null;
-        }
-        return _a.ignored;
       }
+      let { syncEnabled, force } = this.event.parseArgs(evt);
+      if (syncEnabled || force) return null;
+      return Attr.ignored;
+    }
+    if ([Attr.upstream, Attr.upstream].includes(direction)) return direction;
+    return null;
   }
 
   /**
@@ -139,7 +140,7 @@ class Media extends mfsUtils {
  * 
  */
   nop() {
-    return _a.synced;
+    return Attr.synced;
   }
 
 
@@ -163,7 +164,7 @@ class Media extends mfsUtils {
    */
   normalizePathFromArgs(args) {
     let filepath = null;
-    if (_.isString(args)) {
+    if (isString(args)) {
       filepath = args;
     } else if (args.dest) {
       filepath = args.dest;
@@ -208,7 +209,7 @@ class Media extends mfsUtils {
         this.debug("------------------------------------------------");
       }
     } else {
-      state = _a.skip;
+      state = Attr.skip;
     }
     return state;
 
@@ -221,7 +222,7 @@ class Media extends mfsUtils {
    */
   handleFecthError(detail) {
     this.showMessageBox({
-      type: _a.error,
+      type: Attr.error,
       title: LOCALE.NETWORK_ERROR,
       message: LOCALE.DOWNLOAD_ERROR.format(path),
       detail,
@@ -237,7 +238,7 @@ class Media extends mfsUtils {
   getNodeUrl(d) {
     let url = Account.bootstrap().mfsRootUrl + `file/orig/${d.nid}/${d.hub_id}`;
     let changed = Math.abs(d.changed) || Math.abs(d.mtime - d.ctime);
-    if (changed && !_.isNaN(changed)) {
+    if (changed && !isNaN(changed)) {
       url = `${url}?c=${changed}`;
     }
     return url;
@@ -253,19 +254,19 @@ class Media extends mfsUtils {
     let nid = d.nid;
     if (d.file_path && !d.filepath) d.filepath = d.file_path;
     if (!d.filepath) {
-      let l = await this.readData(d, _a.nid);
-      if (_.isEmpty(l)) {
-        l = await this.readData(_a.filepath, d.filepath);
+      let l = await this.readData(d, Attr.nid);
+      if (isEmpty(l)) {
+        l = await this.readData(Attr.filepath, d.filepath);
       }
       nid = nid || l.nid;
-      if (!_.isEmpty(l)) {
+      if (!isEmpty(l)) {
         d.filepath = d.filepath || l.filepath;
       }
     }
     let filepath;
     //this.debug("AAA:250", this.workingRoot, d);
     filepath = d.filepath || Path.join(this.workingRoot, d.filepath);
-    if ([_a.hub, _a.folder].includes(d.filetype)) {
+    if ([Attr.hub, Attr.folder].includes(d.filetype)) {
       let re = new RegExp(`\.(${d.nid}|${d.ext})$`)
       filepath = filepath.replace(re, '');
       d.isBranch = 1;
@@ -274,7 +275,7 @@ class Media extends mfsUtils {
     // let url = `https://${d.vhost}${d.filepath}`;
     let url = Account.bootstrap().mfsRootUrl + `file/orig/${d.nid}/${d.hub_id}`;
     let changed = d.mtime - d.ctime;
-    if (changed && !_.isNaN(changed)) {
+    if (changed && !isNaN(changed)) {
       url = `${url}?c=${changed}`;
     }
     filepath = filepath.toString("utf8");

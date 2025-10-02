@@ -232,19 +232,20 @@ class Worker extends Media {
       }
     }
     await this.populateRemote();
+    this.syncOpt.initialize();
     await this.populateLocal();
     this.remote.initChangesList();
-    //this.fsnode.purgeZombies();
     this.fsnode.initChangesList();
-    this.syncOpt.initDefaults();
     this._populated = 1;
     this.trigger('populated');
+    let settings = this.syncOpt.rootSettings();
+    Account.refreshMenu(settings);
   }
 
   _sendEnv(channel, data) {
     if (!channel) return;
     let localRoot = USER_HOME_DIR.replace(HOME_REG, '');
-    data.settings.localRoot = localRoot.replace(/^\/+/, '~');
+    data.settings.localRoot = localRoot.replace(/^\/+/, '~/');
     webContents.send(channel, data);
   }
 
@@ -254,20 +255,23 @@ class Worker extends Media {
   getEnv(opt = {}) {
     let { channel } = opt;
     const populated = this._populated;
-    const settings = this.syncOpt.rootSettings();
-    settings.engine = settings.effective;
-    const data = {
-      populated,
-      settings,
+    const getdata = () => {
+      const settings = this.syncOpt.rootSettings();
+      settings.engine = settings.effective;
+      return {
+        populated,
+        settings,
+      }
     }
-    if (!populated || settings.pending) {
+
+    if (!populated) {
       this.once('populated', () => {
-        this._sendEnv(channel, data)
+        this._sendEnv(channel, getdata())
       });
     } else {
-      this._sendEnv(channel, data)
+      this._sendEnv(channel, getdata())
     }
-    return data;
+    if (!channel) return getdata();
   }
 
   /**
@@ -581,7 +585,6 @@ class Worker extends Media {
         Fs.chmodSync(p, mode);
       }
     }
-    //this.local.syncFromRemote();
   }
 
 
@@ -591,17 +594,7 @@ class Worker extends Media {
   enableItemSync(opt) {
     let { channel, args } = opt;
     this.syncOpt.changeNodeSettings(args);
-    let name = "media.init";
-    if (this.isBranch(args)) {
-      name = "media.browse";
-    }
-    if (args.nid) {
-      mfsScheduler.log({
-        ...args,
-        args: { syncEnabled: 1, force: 1 },
-        name,
-      });
-    }
+    this.syncEffectiveItems({ syncEnabled: 1, force: 1 })
     webContents.send(channel, args);
   }
 
@@ -615,38 +608,6 @@ class Worker extends Media {
     webContents.send(channel, args);
   }
 
-  /**
-   *
-   */
-  getUnsyncedItems(opt) {
-    DEPRECATED
-    let { channel, args } = opt;
-    // let target = args.target;
-    // let type = args.type;
-    // let res = null;
-    // if (/^(local|remote)$/.test(target)) {
-    //   let f = this[target][type];
-    //   if (f) res = f();
-    // }
-    webContents.send(channel, {});
-  }
-
-  /**
-   *
-   */
-  applyUnsyncedItem(args = {}) {
-    DEPRECATED
-    // this.debug("AAA:525", args);
-    // let target = args.target;
-    // let type = args.type;
-    // if (/^(local|remote)$/.test(target)) {
-    //   if (target == Attr.local) {
-    //     this.takeRemoteItem(args.item, type);
-    //   } else if (target == Attr.remote) {
-    //     this.takeLocalItem(args.item, type);
-    //   }
-    // }
-  }
 
 
   /**
@@ -685,7 +646,6 @@ class Worker extends Media {
       filepath: `/${filename}`,
       nodetype: Attr.system,
     });
-    this.syncOpt.initialize();
   }
 
   /**
@@ -698,66 +658,6 @@ class Worker extends Media {
   }
 
 
-
-  /**
-   *
-   */
-  async syncAll(opt) {
-    let { channel, args } = opt;
-    DEPRECATED
-    // let changes = await this.statesSummary();
-    // this.debug("AAA:607", changes);
-    // for (let target of [Attr.remote, Attr.local]) {
-    //   for (let type in changes[target]) {
-    //     if (!changes[target][type]) continue;
-    //     let length = changes[target][type].length;
-    //     if (!length) continue;
-    //     let items = changes[target][type];
-    //     for (let item of items) {
-    //       item.target = target;
-    //       item.type = type;
-    //       this.onSyncItem(item);
-    //     }
-    //   }
-    // }
-
-    if (channel) webContents.send(channel, { error: "Deprecated" });
-  }
-
-  /**
-   *
-   */
-  onSyncItem(item) {
-    DEPRECATED
-    this.debug("[897] onSyncItem", DEPRECATED);
-    // item.args = { ...item.args, force: 1 };
-    // switch (item.target) {
-    //   case "local":
-    //     this.takeRemoteItem(item, item.type);
-    //     break;
-    //   case "remote":
-    //     this.takeLocalItem(item, item.type);
-    //     break;
-    // }
-  }
-
-  /**
-   *
-   */
-  syncItem(opt) {
-    DEPRECATED
-    let { channel, args } = opt;
-    this.debug("[914] onSyncItem", DEPRECATED);
-    // switch (args.target) {
-    //   case "local":
-    //     this.takeRemoteItem(args, args.type);
-    //     break;
-    //   case "remote":
-    //     this.takeLocalItem(args, args.type);
-    //     break;
-    // }
-    webContents.send(channel, DEPRECATED);
-  }
 
   /**
    *
@@ -941,25 +841,37 @@ class Worker extends Media {
     for (let file of files) {
       mfsScheduler.log({ ...file, name: "media.init" });
     }
-
   }
 
+  /**
+   * 
+   */
+  syncEffectiveItems(args, name = "media.init") {
+    let items = this.syncOpt.getEffectiveItems()
+    this.debug("AAA:852", items)
+    for (let evt of items) {
+      if (args) {
+        evt.args = args;
+      }
+      evt.name = name;
+      mfsScheduler.log(evt);
+    }
+  }
 
   /**
  *
  * @param {*} args
  */
-  menu_sync_control(args = {}) {
-    const current = this.syncOpt.rootSettings();
-    let res = this.syncOpt.changeSettings(args);
-    this.debug("AAAA:1244", current, args, res)
-    webContents.send("menu-sync-changed", { ...res, engine: res.effective });
+  async menu_sync_control(args = {}) {
+    let cur = this.syncOpt.changeSettings(args);
+    this.debug("AAA:867", cur, args)
+    if (cur.effective) {
+      this.syncEffectiveItems()
+    } else {
+      this.abortAllPending()
+    }
+    webContents.send("menu-sync-changed", { ...cur, engine: cur.effective });
     Account.refreshMenu();
-    // if (current.mode == Attr.onTheFly) {
-    //   this.enableEconomyMode();
-    // } else {
-    //   this.enableImmateMode();
-    // }
   }
 
 

@@ -23,35 +23,27 @@ const { isAbsolute, join, dirname } = require("path");
 const { showPending, isPending, setPending, unsetPending } = require("../core/locker");
 
 /**
- *
- * @param {*} evt
- * @returns
+ * 
+ * @param {*} evt 
  */
-function _skipMediaSync(evt) {
-  if (evt.filepath == "/") return Attr.ignored;
-  const { direction, effective } = this.syncOpt.getNodeSettings(evt);
-  if (!effective) {
-    if (evt.name == "media.open") {
-      return null;
-    }
-    return Attr.terminated;
-  }
-  if (direction == Attr.upstream) return Attr.terminated;
-  if ([0, -1].includes(effective)) {
-    let { syncEnabled, force } = this.event.parseArgs(evt);
-    if (syncEnabled || force) return null;
-    return Attr.ignored;
-  }
-  return null;
+function _shouldSkipSync(evt) {
+  let skip = this.shouldSkipSync(evt);
+  if (skip == Attr.downstream) return null;
+  return skip;
 }
 
 /**
  *
  */
 async function onMediaInit(evt) {
-  let skip = this._skipMediaSync(evt);
+  let skip = this._shouldSkipSync(evt);
+  if (skip == Attr.downstream) skip = null;
+  if (skip) {
+    this.debug("AAA:42 SKIPED", skip, evt.filepath)
+    return skip;
+  }
+
   let stat = this.localFile(evt, Attr.stat);
-  if (skip) return skip;
 
   if (this.isBranch(evt)) {
     return await this.onFsMkDir(evt);
@@ -84,40 +76,6 @@ async function onMediaInit(evt) {
     }
   }
   return "conflict-local";
-
-  // let local = this.local.row(evt, Attr.filepath, Attr.nid);
-  let hash = await this.hash.getMd5(evt);
-  this.debug(`70: Remote md5=${remote.md5Hash}`, hash)
-  if (!local) {
-    if (!stat.ino) {
-      res = await this.onMediaNew(evt);
-      return res;
-    } else {
-      let md5Hash = await this.hash.getMd5(stat);
-      let { filename, ext, filepath } = stat;
-      if (md5Hash && md5Hash == remote.md5Hash) {
-        if (!this.event.parseArgs(evt).force) {
-          this.local.upsert({
-            ...remote,
-            ...stat.miniData,
-            filename,
-            ext,
-            filepath,
-          });
-          return Attr.synced;
-        }
-      }
-      return "conflict-local";
-    }
-  }
-  let unchanged = remote.md5Hash && remote.md5Hash == local.md5Hash;
-  let sameTime = remote.mtime == local.mtime;
-  if (unchanged && sameTime) {
-    this.debug(`Remote md5=${remote.md5Hash}`, this.hash.getMd5(evt))
-    if (!this.event.parseArgs(evt).force) return Attr.synced;
-  }
-  res = await this.onMediaNew(evt);
-  return res;
 }
 
 /**
@@ -134,7 +92,7 @@ async function onMediaChange(evt) {
  * @param {*} evt
  */
 async function onMediaCopy(evt) {
-  let skip = this._skipMediaSync(evt);
+  let skip = this._shouldSkipSync(evt);
   if (skip) return skip;
   let { src, dest } = this.event.parseArgs(evt);
   let srcBase = dirname(src.filepath);
@@ -207,7 +165,7 @@ function _relogEvent(evt, src, dest) {
  * @param {*} evt
  */
 async function onMediaMove(evt) {
-  let skip = this._skipMediaSync(evt);
+  let skip = this._shouldSkipSync(evt);
   if (skip) return skip;
   let { src, dest } = this.event.parseArgs(evt);
   if (!src || !dest) {
@@ -237,7 +195,7 @@ async function onMediaMove(evt) {
  * @param {*} evt
  */
 function onMediaRename(evt) {
-  let skip = this._skipMediaSync(evt);
+  let skip = this._shouldSkipSync(evt);
   if (skip) return skip;
   if (isPending(Attr.media, evt.nid)) {
     this.debug(`${evt.filepath} is being renamed by local`);
@@ -259,7 +217,7 @@ function onMediaRename(evt) {
  * @param {*} evt
  */
 function onMediaRemove(evt) {
-  let skip = this._skipMediaSync(evt);
+  let skip = this._shouldSkipSync(evt);
   if (skip) return skip;
   showPending(Attr.trashed);
   showPending(Attr.removed);
@@ -349,7 +307,7 @@ async function onMediaNew(evt) {
  * @param {*} evt
  */
 async function onMediaWrite(evt) {
-  let skip = this._skipMediaSync(evt);
+  let skip = this._shouldSkipSync(evt);
   if (skip) return skip;
   if (this.isBranch(evt)) {
     this.debug("AAA:301 onMediaWrite not applicable on folder", evt);
@@ -364,7 +322,7 @@ async function onMediaWrite(evt) {
  * @param {*} evt
  */
 async function onMediaUpdate(evt) {
-  let skip = this._skipMediaSync(evt);
+  let skip = this._shouldSkipSync(evt);
   if (skip) return skip;
   let res = await this._fetchFile(evt);
   return res;
@@ -408,7 +366,7 @@ function _updateRemote(data, opt = {}) {
  *
  */
 async function showNode(args) {
-  let skip = this._skipMediaSync(args);
+  let skip = this._shouldSkipSync(args);
   if (skip) return skip;
   if (!this.isBranch(args)) return Attr.skip;
 
@@ -524,6 +482,6 @@ module.exports = {
   showNode,
   _fetchFile,
   _relogEvent,
-  _skipMediaSync,
   _updateRemote,
+  _shouldSkipSync
 };

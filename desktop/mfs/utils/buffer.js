@@ -25,12 +25,35 @@ module.exports = function (worker) {
   function getJournal(filpath) {
     return db.getRows(`SELECT filepath, event name, inode, nid, hub_id, synced,
       effective, md5Hash, ctime,  mtime, args FROM changelog_buffer 
-        WHERE inode AND synced=0 AND effective ORDER by mtime asc`
+        WHERE effective ORDER by mtime asc`
     ) || []
   }
 
+  /**
+ * 
+ * @param {*} e 
+ * @returns 
+ */
+  function getSyncState(row = {}) {
+    let { filepath } = row;
+    let sql = `SELECT r.md5Hash, h.md5, h.inode, s.effective, r.filepath, r.filesize, h.filesize hfilesize FROM remote r 
+    LEFT JOIN hash h USING(filepath) 
+    LEFT JOIN syncOpt s USING(filepath) 
+    WHERE r.filepath=?`;
+    let r = db.getRow(sql, filepath);
+    if (!r) {
+      return { synced: 0 }
+    }
+    r.synced = 0;
+    if (r.md5 && r.md5 == r.md5Hash) r.synced = 1;
+    return r;
+  }
+
+
+
   return {
     getJournal,
+    getSyncState
   }
 
 };
