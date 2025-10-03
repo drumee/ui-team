@@ -379,7 +379,7 @@
     // }
 
     &[data-error="1"] {
-      border: 1px solid var(--default-border-error);//$default-border-error;
+      border: 1px solid var(--default-border-error);//var(--default-border-error);
       border-radius: $default-border-radius;
     }
 

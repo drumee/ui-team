@@ -1,4 +1,5 @@
-@import './color.scss';
-@import './borders.scss';
-@import './box-shadow.scss';
-@import './default.scss';
+@use './color.scss';
+@use './borders.scss';
+@use './box-shadow.scss';
+@use './default.scss';
+@use './widget.scss';

@@ -22,7 +22,7 @@
 
   &__note {
     &.title {
-      @include typo($size: 18px, $line: 15px, $color: $default-text-reverse);
+      @include typo($size: 18px, $line: 15px, $color: var(--default-text-reverse));
       justify-content: flex-start;
       max-width: 150px;
       padding: 5px;
@@ -72,7 +72,7 @@
     min-height: 34px;
     
     &-name {
-      color: $default-text-reverse;
+      color: var(--default-text-reverse);
     };
 
     &-switcher {
@@ -85,7 +85,7 @@
 
     &-control {
       .icon {
-        color: $default-text-reverse;
+        color: var(--default-text-reverse);
       }
     }
   }

@@ -12,7 +12,7 @@
       @include typo($size:12px);
       .input{
         &--name{
-          border-bottom: 1px solid $entry-border-bottom;//#ECEDEE;
+          border-bottom: 1px solid var(--entry-border-bottom);//#ECEDEE;
           white-space: nowrap;
           overflow: hidden;
           // width: 130px;

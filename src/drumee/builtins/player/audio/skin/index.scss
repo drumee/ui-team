@@ -34,7 +34,7 @@
     background-color: var(--default-bg);
     border-bottom: none;
     border-radius: $default-border-radius-top;
-    color: $default-text-color;
+    color: var(--default-text-color);
     height: 44px;
     min-height: 44px;
     width: 100%;

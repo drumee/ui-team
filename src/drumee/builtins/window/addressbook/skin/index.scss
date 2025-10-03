@@ -271,7 +271,7 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background-color: $default-scrollbar-color;
+      background-color: var(--default-scrollbar-color);
       cursor: pointer;
       width: 5px;
     }

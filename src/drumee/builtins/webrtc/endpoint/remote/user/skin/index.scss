@@ -25,7 +25,7 @@
 
   &__label{
     margin-top: 40px;
-    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $default-text-reverse);
+    @include typo($size: 18px, $line: 22px, $weight: 400, $color: var(--default-text-reverse));
     .drumee-loading{
       margin-left: 50%;
       margin-top: -15px;
@@ -34,7 +34,7 @@
 
   &__presenter-name{
     position: absolute;
-    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $default-text-reverse);
+    @include typo($size: 18px, $line: 22px, $weight: 400, $color: var(--default-text-reverse));
     .drumee-loading{
       margin-left: 50%;
       margin-top: -15px;
@@ -62,7 +62,7 @@
     align-items: center;  
     z-index: 50000;
     .drumee-text{
-      @include typo($size: 14px, $line: 16px, $weight: 400, $color: $default-text-reverse);
+      @include typo($size: 14px, $line: 16px, $weight: 400, $color: var(--default-text-reverse));
     }
     &[data-error="0"]{
       display: none;
@@ -73,7 +73,7 @@
       display: flex;
     }
     .drumee-text{
-      @include typo($size: 14px, $line: 16px, $weight: 400, $color: $default-text-reverse);
+      @include typo($size: 14px, $line: 16px, $weight: 400, $color: var(--default-text-reverse));
     }
   }
 

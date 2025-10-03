@@ -14,7 +14,7 @@
   }
   &__topbar {
     background-color: $sharebox-main;
-    color: $default-text-reverse; 
+    color: var(--default-text-reverse); 
     border-radius: $default-border-radius-top; //4px 4px 0 0;
     height: 44px;
     .dialog__button--close {
@@ -171,7 +171,7 @@
     .invitation-email {
       &__entry {
         input {
-          //       border-bottom: 1px solid $entry-border-bottom; //#ECEDEE;
+          //       border-bottom: 1px solid var(--entry-border-bottom); //#ECEDEE;
           @include typo($line: 29px, $size: 16px, $weight: 400, $color: $share-default-text-color);
           @include placeholder-input {
             @include typo($line: 29px, $size: 16px, $weight: 300, $color: $share-default-text-placeholder); //#89929E

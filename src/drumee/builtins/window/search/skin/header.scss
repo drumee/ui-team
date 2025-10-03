@@ -1,13 +1,13 @@
 &-topbar{
   &__container{
     flex: 1;
-    border-bottom: 1px solid $default-border-notification;
+    border-bottom: 1px solid var(--default-border-notification);
     border-radius: $default-border-radius-top; //6px 6px 0 0;
     height: 44px;
   }
   &__title{
     margin: auto;
-    @include typo($size:14px,$line:21px,$weight:300,$color:$default-text-color);
+    @include typo($size:14px,$line:21px,$weight:300,$color: var(--default-text-color));
     // &.name{
     // }
   };

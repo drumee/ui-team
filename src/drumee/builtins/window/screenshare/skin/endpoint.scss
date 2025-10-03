@@ -18,11 +18,11 @@
   .endpoint-lense{
     &__label{
       margin-top: -60px;
-      @include typo($size:18px,$line:28px,$weight:400,$color:$default-text-color);
+      @include typo($size:18px,$line:28px,$weight:400,$color: var(--default-text-color));
       &[data-user="1"]{
         position:absolute;
         top: 73%;
-        color: $default-text-reverse;
+        color: var(--default-text-reverse);
       }
     }
   }

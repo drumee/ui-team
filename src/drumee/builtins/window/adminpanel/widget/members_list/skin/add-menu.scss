@@ -87,7 +87,7 @@
 
     &:hover {
       background-color: $admin-default-background-hover;
-      color : $default-text-reverse; 
+      color : var(--default-text-reverse); 
 
       & .widget-members-list-menu__note {
         color:$admin-default-text-hover; 

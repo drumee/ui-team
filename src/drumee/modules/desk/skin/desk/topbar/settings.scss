@@ -230,7 +230,7 @@
       }
     }
     &:hover {
-      color: var(--eviolet); //$default-text-color;   //#879BFF;
+      color: var(--eviolet); //var(--default-text-color);   //#879BFF;
       svg {
         color: var(--default-icon-hover) !important; //;#879BFF
       }

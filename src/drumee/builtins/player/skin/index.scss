@@ -92,7 +92,7 @@
 
     &[data-type="evaluation"]::after {
       @include license-trial();
-      @include typo($size: 22px, $line: 1.3, $color: $default-text-title);
+      @include typo($size: 22px, $line: 1.3, $color: var(--default-text-title));
     }
 
     .loader-progress {

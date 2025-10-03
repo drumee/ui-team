@@ -33,7 +33,7 @@
   &-topbar__container{
     width: 100%;
     justify-content: center;
-    @include typo($size:14px,$line:20px,$weight:400,$color:$default-text-reverse);
+    @include typo($size:14px,$line:20px,$weight:400,$color: var(--default-text-reverse));
   }
 
   &__body{

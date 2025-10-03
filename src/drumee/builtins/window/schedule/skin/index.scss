@@ -146,7 +146,7 @@
     min-height: 200px;
 
     .window-warning__content .drumee-text {
-      color: $default-text-color;
+      color: var(--default-text-color);
       margin: 10px 0 10px 15px;
     }
   }

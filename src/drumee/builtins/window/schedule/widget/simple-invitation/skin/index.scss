@@ -77,8 +77,8 @@
 
   &__entry{
     input, textarea {
-      border: 0px solid var(--default-entry-border-bottom);//$entry-border-bottom; 
-      border-bottom: 1px solid var(--default-entry-border-bottom);//$entry-border-bottom;
+      border: 0px solid var(--default-entry-border-bottom);//var(--entry-border-bottom); 
+      border-bottom: 1px solid var(--default-entry-border-bottom);//var(--entry-border-bottom);
       margin: 0;
       margin-left: 20px;
       min-height: 24px;

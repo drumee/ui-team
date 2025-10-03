@@ -8,11 +8,11 @@
     }
 
     &__note {
-      @include typo($size: 18px, $line: 20px, $color: $default-text-color); 
+      @include typo($size: 18px, $line: 20px, $color: var(--default-text-color)); 
       padding: 5px;
       
       &.blue-text {
-        color: $default-text-title;
+        color: var(--default-text-title);
       }
     }
   }

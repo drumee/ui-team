@@ -106,7 +106,7 @@
   }
 
   &__loading {
-    @include typo($color: $default-text-color, $size: 18px, $line: 42px, $weight: 300);
+    @include typo($color: var(--default-text-color), $size: 18px, $line: 42px, $weight: 300);
     align-content: center;
     align-items: center;
     height: 100%;

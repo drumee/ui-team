@@ -190,7 +190,7 @@
       }
 
       .desk-dock__tooltips {
-        color: var(--default-text-color); //$default-text-color;
+        color: var(--default-text-color); //var(--default-text-color);
       }
 
       & .bigchat__btn-counter {
@@ -321,7 +321,7 @@
     white-space: nowrap;
     z-index: 10;
     user-select: none;
-    @include typo($size: 11px, $line: 14px, $weight: 400, $color: var(--default-text-tooltips)); // $default-text-color);
+    @include typo($size: 11px, $line: 14px, $weight: 400, $color: var(--default-text-tooltips)); // var(--default-text-color));
 
     &::before {
       background: var(--bg-tooltips); //$default-background-tooltips;

@@ -45,7 +45,7 @@
 //     margin: auto;
 //     .name {
 //       @include overflow-text;
-//       @include typo($size:18px,$line:24px,$weight:400,$color:$default-text-reverse);
+//       @include typo($size:18px,$line:24px,$weight:400,$color: var(--default-text-reverse));
 //       width: 316px;
 //       justify-content: center;
 //       .inner{

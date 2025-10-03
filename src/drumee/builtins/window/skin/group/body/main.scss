@@ -36,7 +36,7 @@
   &[data-scroll="x"]{
     overflow-x: auto;
     scrollbar-width: thin;
-    scrollbar-color: $default-scrollbar-color $default-scrollbar-white;
+    scrollbar-color: var(--default-scrollbar-color) $default-scrollbar-white;
   }
   .ui-resizable-e {
     right: -7px;
@@ -79,7 +79,7 @@
 
     &[data-type="evaluation"]::after {
       @include license-trial();
-      @include typo($size: 22px, $line: 1.3, $color: $default-text-title);
+      @include typo($size: 22px, $line: 1.3, $color: var(--default-text-title));
     }
   }
 

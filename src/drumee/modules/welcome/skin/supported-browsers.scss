@@ -67,7 +67,7 @@
     }
     &.skip{
       background: $btn-rollback-background ;
-      color: $btn-rollback-text;//$default-text-reverse;
+      color: $btn-rollback-text;//var(--default-text-reverse);
       border-radius:$default-border-radius;
       border:1px solid $btn-rollback-border;
       cursor: pointer;

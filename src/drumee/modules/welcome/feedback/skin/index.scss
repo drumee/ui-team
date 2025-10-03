@@ -73,7 +73,7 @@
       padding: 8px 0px 0px 10px;
       @include typo($size: 16px, $line: 18px, $color: var(--default-text-color));
       &::placeholder {
-        @include typo($size: 16px, $line: 18px, $weight: 400,$color: var(--egrey-b6));//$default-text-placeholder); //var(--egrey-b6));$weight: 300,
+        @include typo($size: 16px, $line: 18px, $weight: 400,$color: var(--egrey-b6));//var(--default-text-placeholder)); //var(--egrey-b6));$weight: 300,
       }
     }
   }

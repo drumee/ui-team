@@ -53,7 +53,7 @@
 
     &.sub-title {
       padding: 10px 0;
-      @include typo($size: 15px, $line: 18px, $color:$bigchat-default-text-title);//$size: 16px$default-text-title
+      @include typo($size: 15px, $line: 18px, $color:$bigchat-default-text-title);//$size: 16pxvar(--default-text-title)
     }
 
     &.item {

@@ -56,7 +56,7 @@
   &__button{
     cursor: pointer;
     border-radius: $default-border-radius;
-    border-color: var(--eblue);//$default-text-title;
+    border-color: var(--eblue);//var(--default-text-title);
     border-width: 2px;
     border-style: solid;
     width: 45%;

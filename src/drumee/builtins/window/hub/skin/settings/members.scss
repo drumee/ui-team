@@ -26,7 +26,7 @@
       .name{
         width: 220px;
         padding: 0 10px 0 0;
-        @include typo($size:14px,$line:30px,$weight:400,$color:$default-text-color)//#494949);
+        @include typo($size:14px,$line:30px,$weight:400,$color: var(--default-text-color))//#494949);
       }
     }
   }

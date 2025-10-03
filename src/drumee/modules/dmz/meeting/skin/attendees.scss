@@ -34,7 +34,7 @@
 }
 &__attendees{
   &-title{
-    @include typo($size:14px,$line:14px,$weight:300,$color:$dmz-default-text-title);//$default-text-color);
+    @include typo($size:14px,$line:14px,$weight:300,$color:$dmz-default-text-title);//var(--default-text-color));
     justify-content: center;
     padding:10px 0 15px 3px;
     height: 20px;

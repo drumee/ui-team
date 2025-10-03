@@ -132,7 +132,7 @@
     box-shadow: 0 4px 6px 1px rgb(63 79 117 / 13%), 0 0 11px 0 rgb(86 65 113 / 8%), 0 0 10px 0 rgb(194 185 203 / 0%);
     @include typo($color: var(--default-text-reverse), $size: 16px, $line: 21px, $weight: 300);
     // @media (max-width: $tablet) {
-    //   @include typo($color: $default-text-reverse, $size: 16px, $line: 18px, $weight: 300);
+    //   @include typo($color: var(--default-text-reverse), $size: 16px, $line: 18px, $weight: 300);
     // }
     &[data-error="0"]{
       opacity: 1;

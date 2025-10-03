@@ -70,7 +70,7 @@
         align-items: flex-start;
         @include overflow-text;
         margin-left: -30px; //-54px;
-        @include typo($size: 18px, $line: 24px, $weight: 400, $color: $default-text-reverse);
+        @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
         width: 316px;
         margin-right: 18px;
         justify-content: center;

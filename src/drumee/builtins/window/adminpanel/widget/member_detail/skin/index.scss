@@ -168,7 +168,7 @@
     }
 
     &.member-status {
-      //color:$default-text-reverse;// var(--ewhite);
+      //color:var(--default-text-reverse);// var(--ewhite);
       @include typo($size: 14px, $line: 15px, $color: $admin-default-text-reverse);
     }
 

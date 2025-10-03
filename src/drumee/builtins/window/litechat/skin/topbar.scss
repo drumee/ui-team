@@ -14,7 +14,7 @@
   }
 
   &-title {
-    @include typo($size: 17px, $line: 24px, $weight: 400, $color: $default-text-reverse);
+    @include typo($size: 17px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
     align-items: center;
     height: 21px;
     justify-content: center;

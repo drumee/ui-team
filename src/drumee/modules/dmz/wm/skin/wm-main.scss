@@ -46,7 +46,7 @@
         max-height: calc(100vh - 190px);
         &[data-type="evaluation"]::after{
           @include license-trial();
-          @include typo($size:36px,$line:42px,$color:$default-text-title);
+          @include typo($size:36px,$line:42px,$color: var(--default-text-title));
           transform: none;
           bottom: 0;
           width: 100%;

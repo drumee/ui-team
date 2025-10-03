@@ -16,7 +16,7 @@
     text-align: center;
     width: 100%;
     align-items: center;
-    @include typo($size: 20px, $line: 28px, $weight: 500, $color: $default-text-title);
+    @include typo($size: 20px, $line: 28px, $weight: 500, $color: var(--default-text-title));
     u{
       text-decoration: underline;
       font-style: italic;
@@ -25,7 +25,7 @@
   &__text {
     justify-content: center;
     width: 100%;
-    @include typo($size: 15px, $line: 24px, $weight: 400, $color: $default-text-color);
+    @include typo($size: 15px, $line: 24px, $weight: 400, $color: var(--default-text-color));
     &-container{
       margin: 22px 30px;//12px auto;      
     }
@@ -42,7 +42,7 @@
     justify-content: center;
     text-align: center;
     width: 100%;
-    @include typo($size: 14px, $line: 18px, $weight: 300, $color: $default-text-color);
+    @include typo($size: 14px, $line: 18px, $weight: 300, $color: var(--default-text-color));
   }
   &__buttons{
     justify-items: center;
@@ -53,7 +53,7 @@
   &__button{
     cursor: pointer;
     border-radius: $default-border-radius;
-    border-color: $default-text-title;
+    border-color: var(--default-text-title);
     border-width: 2px;
     border-style: solid;
     width: 45%;

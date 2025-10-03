@@ -44,7 +44,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: $default-scrollbar-color; //$desk-scrollbar-color;
+    background-color: var(--default-scrollbar-color); //$desk-scrollbar-color;
     cursor: pointer;
   }
 

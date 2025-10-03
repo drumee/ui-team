@@ -371,14 +371,14 @@
       background-color: $share-default-background-tooltips;
       z-index: 100;
       @include typo($line:14px,$size:11px,$weight:400,$color:$share-default-text-tooltips);
-    //  @include typo($line: 16px, $size: 14px, $weight: 400, $color: $default-text-color); //var(--egrey-2f)
+    //  @include typo($line: 16px, $size: 14px, $weight: 400, $color: var(--default-text-color)); //var(--egrey-2f)
  /*     &:after {
         content: "";
         position: absolute;
         width: 10px;
         height: 10px;
         transform: rotate(45deg);
-        background: $default-border-notification; // white;
+        background: var(--default-border-notification); // white;
         top: -3px;
         left: calc(50% - 5px);
       }*/

@@ -132,7 +132,7 @@
       width: 100%;
 
       &[data-status='error'] {
-        border: 1px solid $share-default-border-alert;//$default-border-error;
+        border: 1px solid $share-default-border-alert;//var(--default-border-error);
         border-radius: $default-border-radius;
         & input:focus {
           border-color: $share-default-border-alert ;
@@ -167,7 +167,7 @@
   
     &__button-cancel,
     &__button-confirm {
-      @include typo($size: 16px, $line: 18px, $color: $default-text-reverse);
+      @include typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
       align-items: center;
       border-radius:$default-border-radius;
       cursor: pointer;

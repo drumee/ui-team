@@ -166,7 +166,7 @@
     }
 
     & input {
-      //  border-bottom: 1px solid $entry-border-bottom;
+      //  border-bottom: 1px solid var(--entry-border-bottom);
       width: 100%;
       height: 32px;
       margin-left: 10px;
@@ -181,10 +181,10 @@
 
 
       &:focus {
-        border-color: var(--focus-border-placeholder); // $focus-border-bottom;
+        border-color: var(--focus-border-placeholder); // var(--focus-border-bottom);
 
         @include placeholder-input {
-          color: var(--focus-text-placeholder); // $focus-text-placeholder;
+          color: var(--focus-text-placeholder); // var(--focus-text-placeholder);
         }
       }
 
@@ -211,7 +211,7 @@
         @include typo($size: 14px, $line: 22px, $color: var(--default-text-color)); //$size: 16px, $line: 21px,
 
         &::placeholder {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $default-text-placeholder);
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }

@@ -35,11 +35,11 @@
   }
   
   &__title{
-    @include typo($size: 28px, $line: 38px, $color: $default-text-color);
+    @include typo($size: 28px, $line: 38px, $color: var(--default-text-color));
   }
 
   &__service{
-    @include typo($size: 16px, $line: 24px, $color: $default-text-color);
+    @include typo($size: 16px, $line: 24px, $color: var(--default-text-color));
     height: 42px;
     align-items: center;
     align-content: center;

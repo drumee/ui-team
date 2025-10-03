@@ -14,7 +14,7 @@
   z-index: 100;
   align-items: center;
   &-title{
-    @include typo($size: 18px, $line: 20px, $color: $default-text-color);//var(--egrey-2f));
+    @include typo($size: 18px, $line: 20px, $color: var(--default-text-color));//var(--egrey-2f));
     flex:1;
     justify-content: center;
   }
@@ -22,7 +22,7 @@
     margin-right: 10px;
   }
   & .share_bar_disconnect-btn {
-    @include typo($size: 14px, $line: 14px, $color: $default-text-reverse);//$btn-primary-color); //$size: 18px
+    @include typo($size: 14px, $line: 14px, $color: var(--default-text-reverse));//$btn-primary-color); //$size: 18px
     align-items: center;
     background:var(--default-bg-alert);//$default-backround-alert ;// var(--eorange-dark);
     justify-content: center;

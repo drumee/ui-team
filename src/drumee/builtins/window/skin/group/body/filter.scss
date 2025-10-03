@@ -11,7 +11,7 @@
   &__column {
     cursor: pointer;
     height: 45px;
-    @include typo($size: 16px, $line: 45px, $color: $default-text-title); // $weight:300
+    @include typo($size: 16px, $line: 45px, $color: var(--default-text-title)); // $weight:300
     display: flex;
     flex-direction: row;
     justify-content: flex-start;

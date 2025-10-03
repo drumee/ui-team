@@ -68,7 +68,7 @@
     padding-top: 10px;
 
     &[data-type="trial"]::after {
-      @include typo($size: 36px, $line: 42px, $color: $default-text-title);
+      @include typo($size: 36px, $line: 42px, $color: var(--default-text-title));
       transform: none;
       bottom: 0;
       width: 100%;

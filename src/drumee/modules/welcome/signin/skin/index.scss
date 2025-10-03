@@ -387,7 +387,7 @@
   }
 
   &__button-confirm {
-    @include typo($size: 20px, $line: 28px, $color: $default-text-reverse);
+    @include typo($size: 20px, $line: 28px, $color: var(--default-text-reverse));
     align-items: center;
     background-color: var(--egreen-soft);
     border-radius:$default-border-radius;
