@@ -17,7 +17,7 @@
       z-index: 2;
       border-radius:$default-border-radius;
       background-color:$admin-default-background;
-      box-shadow: $drumee-shadow-block;
+      box-shadow: var(--shadow-block);
       left: -258px;
       max-height: auto;
       max-width: 237px; 

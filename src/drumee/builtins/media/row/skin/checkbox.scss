@@ -25,13 +25,13 @@
       fill: orange;
       border: 1px solid orange;
       visibility: visible;
-     // background-color: $white; 
+     // background-color: var(--white); 
      // fill:#879BFF;
     }
   }
   &--icon{
     pointer-events: none;
-    background-color: $white; 
-    fill: $ewhite;
+    background-color: var(--white); 
+    fill: var(--ewhite);
   }
 }

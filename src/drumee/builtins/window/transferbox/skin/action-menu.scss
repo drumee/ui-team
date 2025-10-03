@@ -7,14 +7,14 @@
   &__wrapper {
     &[data-state="1"] {
       & .trigger-icon {
-        color: $eviolet;
+        color: var(--eviolet);
       }
     }
 
     & .menu-items {
       background-color: var(--default-bg);
       border-radius:$default-border-radius;
-      box-shadow: $drumee-shadow-container;
+      box-shadow: var(--shadow-container);
       left: -140px;
       max-width: 160px;
       min-width: 160px;
@@ -24,7 +24,7 @@
 
       &:before {
         background-color: var(--default-bg);
-        box-shadow: $drumee-container-before;
+        box-shadow: var(--shadow-before);
         content: "";
         height: 10px;
         left: 145px;

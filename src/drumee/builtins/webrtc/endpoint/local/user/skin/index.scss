@@ -82,7 +82,7 @@
         width: 20px;
         top: 13px;
         left: 4px;
-        background-color: $eorange-sunset;
+        background-color: var(--eorange-sunset);
         transform-origin: 50% 50%;
         transform: rotate(-45deg);
       }

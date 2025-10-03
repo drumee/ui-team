@@ -49,12 +49,12 @@
 
     &.conversation {
       & .note-content {
-        @include typo($size: 12px, $line: 14px, $weight: 400, $color: $egrey-2f);
+        @include typo($size: 12px, $line: 14px, $weight: 400, $color: var(--egrey-2f));
         overflow: hidden;
         word-wrap: break-word;
   
         & a {
-          color: $eblue;
+          color: var(--eblue);
   
           &:hover{
             color: $dgc-chat-hover; 
@@ -72,7 +72,7 @@
   }
 
   &__icon {
-    color: $egrey-89;
+    color: var(--egrey-89);
     cursor: pointer;
 
     &.close-icon {

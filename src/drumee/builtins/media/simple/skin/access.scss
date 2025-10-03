@@ -22,7 +22,7 @@
   &:hover{
     svg{
       fill: #879bff;
-      background-color:$ewhite;
+      background-color:var(--ewhite);
     }
   }
   &--icon{

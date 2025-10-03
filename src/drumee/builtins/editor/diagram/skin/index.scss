@@ -20,7 +20,7 @@
     height: 80vh;
     top: 45px;
     left: calc(50vw - 220px);
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     overflow: visible;
     flex-direction: column;
     display: flex;

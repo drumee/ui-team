@@ -8,8 +8,8 @@
 .addressbook-widget-search {
   &__ui {
     background-color: $ab-default-background;
-    border-radius:$default-border-radius;
-    box-shadow: $drumee-shadow-container;
+    border-radius:var(--border-radius);
+    box-shadow: var(--shadow-container);
     font-family: $roboto,sans-serif;
     left: 32px;
     min-width: 238px;

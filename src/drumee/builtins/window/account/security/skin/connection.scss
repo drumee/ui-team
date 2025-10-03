@@ -14,7 +14,7 @@
     padding: 5px 10px;
     border-radius: $default-border-radius-bottom;
     min-width: 60%;
-    box-shadow: $drumee-shadow-block;
+    box-shadow: var(--shadow-block);
     white-space: nowrap;
     text-overflow: ellipsis;
     margin-top: 6px;
@@ -29,7 +29,7 @@
   &--name {
     width: 50%;
     padding-right: 5px;
-    @include typo ($line: 14px, $size: 12px, $color: $eblue );
+    @include typo ($line: 14px, $size: 12px, $color: var(--eblue) );
   }
 
   &--value {
@@ -77,7 +77,7 @@
 
     &[data-status="active"] {
       opacity: 1;
-      color: $egreen-soft;
+      color: var(--egreen-soft);
     }
 
     &:hover {

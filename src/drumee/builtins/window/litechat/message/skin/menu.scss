@@ -44,8 +44,8 @@
     &.menu-icon {
       background-color: var(--default-bg-hover);
       border-radius: $default-border-radius-tiny;
-      border: 1px solid $eviolet ;
-      color: $ewhite;
+      border: 1px solid var(--eviolet);
+      color: var(--ewhite);
       cursor: pointer;
       height: 10px;
       width: 10px;
@@ -53,13 +53,13 @@
   }
 
   &__item {
-    color: $egrey-89;
+    color: var(--egrey-89);
     cursor: pointer;
     height: 18px;
     width: 18px;
     margin: 2px 8px;
     &:hover{
-      color:$eviolet;
+      color:var(--eviolet);
     }
 
     &.forward-message {

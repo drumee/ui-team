@@ -56,7 +56,7 @@
     width: 100%;
     cursor: pointer;
     position: relative;
-    @include typo($line:30px,$size:14px,$weight:300,$color:$egrey-49);  
+    @include typo($line:30px,$size:14px,$weight:300,$color: var(--egrey-49));  
     //height: 32px;
     align-items: center;
     flex-direction: simple;
@@ -75,7 +75,7 @@
       height: 25px;
       flex-shrink: 0;
       margin: auto 1px;
-      fill : $egrey-49;
+      fill : var(--egrey-49);
       .icon.document{
         height: 25px;
         width: 25px;
@@ -118,14 +118,14 @@
     //   height: 100%;
     //   width: 100%;  
     //  //background-color:#cccccc;
-    //   @include typo($line:32px,$size:14px,$weight:300,$color:$egrey-2f);
+    //   @include typo($line:32px,$size:14px,$weight:300,$color: var(--egrey-2f));
     // }
     textarea{
       min-height: 22px;
       height: 22px;
       overflow: hidden;
       resize: none;
-      @include typo($line:21px,$size:14px,$weight:300,$color:var(--default-text-color));//$egrey-2f);
+      @include typo($line:21px,$size:14px,$weight:300,$color:var(--default-text-color));//var(--egrey-2f));
     }
   
   }

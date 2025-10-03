@@ -23,7 +23,7 @@
     }
     &.title {
       // margin: auto 0 auto auto;
-      @include typo($line: 29px, $size: 18px, $weight: 400, $color: $team-default-text-reverse); //$ewhite);
+      @include typo($line: 29px, $size: 18px, $weight: 400, $color: $team-default-text-reverse); //var(--ewhite));
     }
     &.icon {
       width: 18px;
@@ -42,7 +42,7 @@
       position: absolute;
       background-color: $team-default-background-tooltips; //$teamroom-background-tooltips//#FFFFFF;
       z-index: 100;
-      @include typo($line: 16px, $size: 14px, $weight: 400, $color: $team-default-text-tooltips); //$egrey-2f
+      @include typo($line: 16px, $size: 14px, $weight: 400, $color: $team-default-text-tooltips); //var(--egrey-2f)
       &:after {
         content: "";
         position: absolute;

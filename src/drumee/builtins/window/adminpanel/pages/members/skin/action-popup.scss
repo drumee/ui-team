@@ -46,7 +46,7 @@
     &__main {
       border-radius: $default-border-radius;
       background-color: $admin-default-background;
-      box-shadow: $drumee-shadow-popup;
+      box-shadow: var(--shadow-popup);
       // box-shadow: 0 0 7px 0 rgba(0,0,0,0.14);
       height: calc(100% - 20px);
       max-height: 300px;
@@ -122,7 +122,7 @@
 
       &.sub-header,
       &.sub-content {
-        color: $admin-default-text-color; // $egrey-2f;
+        color: $admin-default-text-color; // var(--egrey-2f);
         margin: auto 0; //40px 0 20px; //;28px 0;
         text-align: center;
       }

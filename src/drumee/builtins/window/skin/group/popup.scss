@@ -16,7 +16,7 @@
     }
   }
   &__title{
-    @include typo($weight:400, $size:24px, $line:32px, $color:$egrey-2f);
+    @include typo($weight:400, $size:24px, $line:32px, $color: var(--egrey-2f));
   }
 }
 

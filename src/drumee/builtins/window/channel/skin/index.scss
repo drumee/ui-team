@@ -16,7 +16,7 @@
     width: 100%;
     width: 340px;
     height: 480px;
-    box-shadow:$drumee-shadow-container;
+    box-shadow:var(--shadow-container);
   }
 
   &__main {

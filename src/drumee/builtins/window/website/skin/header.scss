@@ -30,7 +30,7 @@
         top: -30px;
         white-space: nowrap;
         width: 190px;
-        box-shadow: $drumee-shadow-main; 
+        box-shadow: var(--shadow-main); 
         @include typo($size: 12px, $line: 14px, $weight: 400, $color: $share-default-text-reverse);
       }
 
@@ -130,7 +130,7 @@
       position: absolute;
       width: 12px; 
       height: 12px; 
-      background-color: $ewhite;
+      background-color: var(--ewhite);
       border-radius: 50%;
       align-items: center;
       justify-content: center;

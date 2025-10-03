@@ -24,7 +24,7 @@
     }
     &-history{
       &.main{
-        background-color: $ewhite;
+        background-color: var(--ewhite);
         max-height: 450px;
         width: 660px;
         margin: auto;

@@ -18,10 +18,10 @@
     //  color:$default-text-hover;     
       background-color:var(--default-bg-hover);
       & svg{
-        color:var(--default-icon-reverse);//$ewhite; 
+        color:var(--default-icon-reverse);//var(--ewhite); 
       }
       & .note-reader{
-        color: var(--default-text-hover);//$ewhite
+        color: var(--default-text-hover);//var(--ewhite)
       }
     }
   }
@@ -71,7 +71,7 @@
 
   &__icon{
     &.profile-icon {
-      color: var(--default-icon-neutral); //$egrey-89;
+      color: var(--default-icon-neutral); //var(--egrey-89);
       height: 28px; //25px; //23px;
       width: 25px; //22px;
       margin-top: 3px; //2px;
@@ -83,7 +83,7 @@
       }
     }
     &.guest_icon {
-      background: var(--default-user-icon);//$default-icon-neutral;//$egrey-8d;
+      background: var(--default-user-icon);//$default-icon-neutral;//var(--egrey-8d);
       opacity: 0.6;
       width: 29px;//26px;
       height:29px;// 26px;

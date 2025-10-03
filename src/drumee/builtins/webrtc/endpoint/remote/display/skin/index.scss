@@ -38,14 +38,14 @@
 
   &__audio{
     position: absolute;
-    color: $main-grey;
+    color: var(--main-grey);
     visibility: hidden;
     width: 30px;
     height: 30px;
     padding: 5px;
     &[data-state="0"]{
       visibility: visible;
-      color: $ewhite;//white;
+      color: var(--ewhite);//white;
       &:before{
         content : " ";
         position: absolute;
@@ -62,7 +62,7 @@
   &__fullscreen{
     position: absolute;
     background: rgb(0,0,0,0.4);
-    color: $ewhite;
+    color: var(--ewhite);
     height: 30px;
     width: 30px;
     border-radius: 5px;

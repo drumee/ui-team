@@ -56,7 +56,7 @@
     & .menu-topic-items {
       border-radius:$default-border-radius;
       background-color: $admin-default-background;    
-      box-shadow: $drumee-shadow-container;
+      box-shadow: var(--shadow-container);
       max-width: 130px;
       min-width: 120px;
       &__wrapper{

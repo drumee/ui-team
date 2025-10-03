@@ -118,7 +118,7 @@
         color: $dgc-text-reverse;
 
         &:hover {
-          color: $egrey-e8;
+          color: var(--egrey-e8);
         }
       }
     }
@@ -388,7 +388,7 @@
     &-content {
       overflow: hidden;
       word-wrap: break-word;
-      @include typo($size: 12px, $line: 14px, $weight: 400, $color: $egrey-26);
+      @include typo($size: 12px, $line: 14px, $weight: 400, $color: var(--egrey-26));
 
       & a {
         color: $dgc-secondary-text-color;

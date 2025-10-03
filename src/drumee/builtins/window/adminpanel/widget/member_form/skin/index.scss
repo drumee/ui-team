@@ -157,8 +157,8 @@
   
         &[data-status="0"] {
           border-radius: 2px;
-          border: 1px solid $egrey-89;
-          color: $egrey-89;
+          border: 1px solid var(--egrey-89);
+          color: var(--egrey-89);
           padding: 2px;
         }
       }

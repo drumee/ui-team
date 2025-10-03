@@ -18,10 +18,10 @@
   &-label{
     width: 82px;
     line-height: 26px;
-    color:$emauve-lighter;// #d66fe8;
+    color:var(--emauve-lighter);// #d66fe8;
   }
   &-value{
-    color:$egrey-89;// #89929E;
+    color:var(--egrey-89);// #89929E;
     width: 120px;
     height: 26px;
     line-height: 26px;

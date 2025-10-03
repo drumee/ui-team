@@ -28,7 +28,7 @@
       &:before {
         background-color: $ab-contact-online-color;
         border-radius: 50%;
-        box-shadow: 0 0 0 1px $white;
+        box-shadow: 0 0 0 1px var(--white);
         content: " ";
         height: 8px;
         left: 24px;
@@ -75,7 +75,7 @@
     position: absolute;
     text-transform : uppercase;
     .note-content{
-      @include typo($size:13px,$line:15px,$weight:400,$color:$ewhite);
+      @include typo($size:13px,$line:15px,$weight:400,$color: var(--ewhite));
       margin:auto;
     }
   }

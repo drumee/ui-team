@@ -39,7 +39,7 @@
       }
 
       &:focus {
-        border-color: $eblue;
+        border-color: var(--eblue);
         outline: none;
 
         @include placeholder-input {

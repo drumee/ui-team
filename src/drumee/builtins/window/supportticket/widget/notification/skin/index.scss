@@ -7,10 +7,10 @@
 
 .support-ticket-widget-notification {
   &__ui {
-    background-color: $eorange;
+    background-color: var(--eorange);
     border-radius: 2px;
-    box-shadow: $drumee-shadow-main;
-    color: $white;
+    box-shadow: var(--shadow-main);
+    color: var(--white);
     cursor: pointer;
     flex-shrink: 0;
     right: 25px;
@@ -23,7 +23,7 @@
     &[data-over="yes"] {
       &:after {
         background-color: transparent;
-        border: 2px solid $eorange;
+        border: 2px solid var(--eorange);
         content: "";
         height: 80px;
         left: -20px;

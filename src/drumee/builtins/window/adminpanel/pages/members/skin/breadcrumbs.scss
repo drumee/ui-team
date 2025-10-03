@@ -20,8 +20,8 @@
   }
 
   &__icon {
-    background-color: $egrey-b6; 
-    color: $white;
+    background-color: var(--egrey-b6); 
+    color: var(--white);
     cursor: pointer;
     margin:-14px 2px; 
 
@@ -38,7 +38,7 @@
   }
 
   &__item {
-    @include typo($size: 14px, $line: 18px, $weight: 300, $color:$egrey-49);
+    @include typo($size: 14px, $line: 18px, $weight: 300, $color: var(--egrey-49));
     cursor: pointer;
     padding: 5px 15px;
     white-space: nowrap;
@@ -46,7 +46,7 @@
     @include overflow-text;
 
     &:last-child {
-      color: $eviolet;
+      color: var(--eviolet);
     }
   }
 
@@ -65,7 +65,7 @@
     
     &:before {
       background-color: $admin-default-background;    
-      box-shadow:$drumee-container-before;
+      box-shadow:var(--shadow-before);
       content: "";
       height: 10px;
       left: 2px;

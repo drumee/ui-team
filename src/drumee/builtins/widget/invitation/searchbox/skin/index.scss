@@ -79,7 +79,7 @@
         &[data-state="1"] {
           background-color: #879BFF;
           border-radius: $default-checkbox-border-radius;
-          color: $ewhite;
+          color: var(--ewhite);
         }
       }
     }
@@ -107,7 +107,7 @@
 
   &__header {
     justify-content: center;
-    @include typo($size:14px,$line:16px,$color:$emauve-dark,$weight:400);
+    @include typo($size:14px,$line:16px,$color: var(--emauve-dark),$weight:400);
   }
 
   &__list {
@@ -121,7 +121,7 @@
   }
 
   &__field {
-    color: $emauve-lighter;
+    color: var(--emauve-lighter);
     line-height: 26px;
     width: 82px;
     z-index: auto;
@@ -181,7 +181,7 @@
 
       &:hover {
         background: $state-1-typo ;
-        color: $white;
+        color: var(--white);
       }
     }
 

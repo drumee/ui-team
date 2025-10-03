@@ -105,7 +105,7 @@
 
       & .menu-topic-items {
         border-radius: $default-border-radius;
-        box-shadow: $drumee-shadow-container;
+        box-shadow: var(--shadow-container);
         background-color: $ab-default-background;
         width: 285px;
         padding: 10px 0;
@@ -304,7 +304,7 @@
     width: 120px;
     height: 120px;
     z-index: 1000;
-    background-color: $ewhite;
+    background-color: var(--ewhite);
     left: calc(50% - 60px);
     top: calc(50% - 60px);
   }

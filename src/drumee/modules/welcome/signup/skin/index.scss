@@ -175,7 +175,7 @@
       height: 21px;
 
       svg {
-        fill: $egrey-2f;
+        fill: var(--egrey-2f);
       }
     }
 
@@ -226,12 +226,12 @@
     }
 
     &.steps {
-      color: $white-f7;
+      color: var(--white-f7);
       top: 30px;
     }
 
     &.drumee-com {
-      @include typo($size: 20px, $line: 28px, $weight: 500, $color: $white-f9);
+      @include typo($size: 20px, $line: 28px, $weight: 500, $color: var(--white-f9));
       position: absolute;
       right: -130px;
       width: auto;
@@ -254,7 +254,7 @@
         right: 5px;
 
         &:hover {
-          color: $eviolet;
+          color: var(--eviolet);
         }
       }
 
@@ -266,7 +266,7 @@
     }
 
     &.password-tips {
-      @include typo($size: 12px, $line: 16px, $weight: 400, $color: $white-f9);
+      @include typo($size: 12px, $line: 16px, $weight: 400, $color: var(--white-f9));
       padding-top: 47px;
     }
 
@@ -283,7 +283,7 @@
 
     &.no-code,
     &.not-now {
-      @include typo($size: 16px, $line: 16px, $color: $white-f9);
+      @include typo($size: 16px, $line: 16px, $color: var(--white-f9));
       width: 100%;
     }
 
@@ -323,7 +323,7 @@
       }
 
       &:hover {
-        color: $eviolet;
+        color: var(--eviolet);
       }
     }
   }
@@ -360,7 +360,7 @@
       margin: 20px;
 
       svg {
-        fill: $egrey-2f;
+        fill: var(--egrey-2f);
         opacity: 0.8;
       }
     }
@@ -400,7 +400,7 @@
     &.conditions,
     &.mobile,
     &.mobile-number {
-      color: $ewhite;
+      color: var(--ewhite);
     }
 
     &.mobile,
@@ -471,7 +471,7 @@
   }
 
   .pw-shower {
-    color: $egrey-2f;
+    color: var(--egrey-2f);
     opacity: 0.7;
     position: absolute;
     right: 15px;
@@ -481,7 +481,7 @@
 
   &__button-confirm {
     align-items: center;
-    background-color: $egreen-soft;
+    background-color: var(--egreen-soft);
     border-radius: $default-border-radius;
     cursor: pointer;
     height: 100%;
@@ -496,7 +496,7 @@
 
     &.skip-button {
       background: transparent;
-      border: 1px solid $white;
+      border: 1px solid var(--white);
     }
 
     &:hover {

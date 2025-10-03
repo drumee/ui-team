@@ -85,7 +85,7 @@
 
   &__audio{
     position: absolute;
-    color: $main-grey;
+    color: var(--main-grey);
     visibility: hidden;
     width: 30px;
     height: 30px;
@@ -94,7 +94,7 @@
     top: 38px;
     &[data-state="0"]{
       visibility: visible;
-      color: $ewhite;  
+      color: var(--ewhite);  
       z-index: 100000;
       &:before{
         content : " ";

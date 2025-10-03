@@ -71,7 +71,7 @@
 			}
 
 			& .tag-sortable-placeholder {
-				background: $eviolet;
+				background: var(--eviolet);
 				height:24px;
 				opacity: 0.3;
 				width: 100%;
@@ -111,7 +111,7 @@
 
   &__icon {
     box-sizing: border-box;
-    color: $admin-default-icon-neutral;//$egrey-b6;
+    color: $admin-default-icon-neutral;//var(--egrey-b6);
     cursor: pointer;
     height: 27px; //26px;
     margin: 2px;

@@ -137,19 +137,19 @@
 
       .validity-entry-text {
         background-color: $share-default-background-hover;
-        border:1px solid $ewhite; 
+        border:1px solid var(--ewhite); 
       }
     }
   }
 
   &__validity-caption {
     padding-right: 15px;
-    @include typo($size: 14px, $weight: 300, $color: $share-default-text-color);// $egrey-78);  $weight: 400,
+    @include typo($size: 14px, $weight: 300, $color: $share-default-text-color);// var(--egrey-78));  $weight: 400,
   }
 
   &__days-caption,
   &__hours-caption {
-    @include typo($size: 14px,$weight: 300, $color:$share-secondary-text-color);//$eviolet);
+    @include typo($size: 14px,$weight: 300, $color:$share-secondary-text-color);//var(--eviolet));
     bottom: 0;
     padding-right: 15px;
   }

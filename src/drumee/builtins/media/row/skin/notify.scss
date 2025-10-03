@@ -21,12 +21,12 @@
       visibility: visible;
       //background-color: #879BFF;
       //color:white;
-      border:1.3px solid $ewhite; //white;
+      border:1.3px solid var(--ewhite); //white;
      // height:16px;
      // width:16px;
       line-height:15px;//16px;
       background-color:var(--default-bg);  //#ffffff;
-      color:$egrey-62 !important;//grey $egrey-89
+      color:var(--egrey-62) !important;//grey var(--egrey-89)
     }
     &[data-type="private"]{
       border:  1px solid $team-notifycount-border; //#d66fe8
@@ -34,7 +34,7 @@
       color:$team-text-notification !important;//#bd44d9
       line-height:16px;
       &[data-hover="on"]{
-        border:1px solid $ewhite; //white;
+        border:1px solid var(--ewhite); //white;
         line-height:16px;
       }
     }
@@ -45,7 +45,7 @@
       line-height:16px;
       &[data-hover="on"]{
         line-height:16px;
-        border:1px solid $ewhite; //white;
+        border:1px solid var(--ewhite); //white;
       //  height:16px;
        // width:16px;
         
@@ -57,7 +57,7 @@
       color:$website-text-notification !important; //#18a3ac
       line-height:16px;
       &[data-hover="on"]{
-        border:1px solid $ewhite;
+        border:1px solid var(--ewhite);
        // height:16px;
        // width:16px;
         line-height:16px;

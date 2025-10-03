@@ -60,12 +60,12 @@
     cursor: pointer;
     &:hover{
       background:var(--bg-invitation-success);// $default-text-success;
-      color:  $white;
+      color:  var(--white);
     }
   }
 
   & .invitation-email__entry[data-status='error'] textarea {
-    border-color: $eorange-sunset;
+    border-color: var(--eorange-sunset);
   }
   & .showerror{
     overflow: visible;
@@ -131,7 +131,7 @@
     width: 100%;
     top: 100%;
     z-index: 100000;
-    box-shadow: $drumee-shadow-box;//0px 3px 4px $egrey-e8;
+    box-shadow: $drumee-shadow-box;//0px 3px 4px var(--egrey-e8);
     border-radius: $default-border-radius;//3px;
     // padding: 10px;
     margin-left: -25px;
@@ -145,7 +145,7 @@
       padding-bottom: 3px;
       margin: 1px 0 0 1px;
       max-height: 137px;
-    //  box-shadow: $drumee-shadow-box;//0px 3px 4px $egrey-e8;
+    //  box-shadow: $drumee-shadow-box;//0px 3px 4px var(--egrey-e8);
     //  border-radius: $default-border-radius;
     }
 

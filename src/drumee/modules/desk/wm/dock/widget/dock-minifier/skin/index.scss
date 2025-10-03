@@ -34,7 +34,7 @@
     right: 11px;
     width: 14px;
     z-index: 2;
-    @include typo($size: 9px, $color: var(--default-text-reverse));//$ewhite);
+    @include typo($size: 9px, $color: var(--default-text-reverse));//var(--ewhite));
   }
 
   .menu-topic[data-state="1"]{
@@ -45,7 +45,7 @@
 
   &__wrapper {
     & .menu-topic-trigger {
-      color   : $ewhite;
+      color   : var(--ewhite);
       cursor  : pointer;
       height  : 40px;
       width   : 65px;

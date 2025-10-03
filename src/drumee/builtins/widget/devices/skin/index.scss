@@ -11,7 +11,7 @@
 
   &__label {
     &:hover {
-      color: $eviolet ;
+      color: var(--eviolet);
       cursor: pointer;
     }
   }
@@ -65,7 +65,7 @@
   }
 
   &__tab {
-    @include typo($color: $main-grey, $size: 14px, $line: 19px, $weight: 400);
+    @include typo($color: var(--main-grey), $size: 14px, $line: 19px, $weight: 400);
     cursor: pointer;
 
     &[data-radio="on"] {
@@ -84,20 +84,20 @@
     width: 40px;
     height: 40px;
     padding: 10px;
-    color: $ewhite;
+    color: var(--ewhite);
     cursor: pointer;
 
     &.editbox_cog {
       width: 18px;
       height: 18px;
-      color: $ewhite;
+      color: var(--ewhite);
       cursor: pointer;
       margin-left: 16px;
       padding: 0px;
     }
 
     &:hover {
-      color: $eviolet ;
+      color: var(--eviolet);
       opacity: 1;
     }
   }
@@ -105,11 +105,11 @@
   &__checkbox {
     width: 20px;
     height: 20px;
-    color: $egrey-2f;
+    color: var(--egrey-2f);
     padding: 3px;
   }
 
   &__label {
-    @include typo($color: $egrey-2f, $weight: 400, $line: 20px, $size: 12px);
+    @include typo($color: var(--egrey-2f), $weight: 400, $line: 20px, $size: 12px);
   }
 }

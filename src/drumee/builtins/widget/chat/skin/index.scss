@@ -209,7 +209,7 @@
   &__drag-drop {
     align-items: center;
     border-radius: $default-border-radius;
-    border: 1px dashed $egreen;
+    border: 1px dashed var(--egreen);
     box-sizing: border-box;
     display: flex;
     height: inherit;
@@ -219,7 +219,7 @@
     & .note-content {
       height: 38px;
       min-width: 140px;
-      @include typo($line: 19px, $size: 16px, $weight: 300, $color: $egreen);
+      @include typo($line: 19px, $size: 16px, $weight: 300, $color: var(--egreen));
     }
   }
 

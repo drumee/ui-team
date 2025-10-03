@@ -44,7 +44,7 @@
     }
     &.submit svg{
       background-color: transparent;
-      fill: $eviolet ;
+      fill: var(--eviolet);
       padding:2px;
       margin-left:-3px;
       cursor: pointer;

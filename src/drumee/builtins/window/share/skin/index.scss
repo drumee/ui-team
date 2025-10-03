@@ -78,7 +78,7 @@
   .invitation-message {
     .note-content {
       &:before {
-        @include typo($color:$egrey-89,$size:14px,$line:28px,$weight:400);
+        @include typo($color: var(--egrey-89),$size:14px,$line:28px,$weight:400);
       }
     }
   }

@@ -55,7 +55,7 @@
       text-align: left;//center;
       position: absolute;
       padding: 258px 0 10px 11px;
-      @include typo($size: 12px, $line: 14px, $color:$account-default-text-alert);//$account-security-text-color); $eorange-crusta
+      @include typo($size: 12px, $line: 14px, $color:$account-default-text-alert);//$account-security-text-color); var(--eorange-crusta)
     }
   }
 

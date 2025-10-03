@@ -28,11 +28,11 @@
   }
 
   &__wrapper {
-    background:var(--default-bg);;// $ewhite;
+    background:var(--default-bg);;// var(--ewhite);
 
     &.tags {
       border-radius:$default-border-radius-left;
-      background: var(--default-bg-block);    //$white-f9;
+      background: var(--default-bg-block);    //var(--white-f9);
       min-width: 186px;
     }
 

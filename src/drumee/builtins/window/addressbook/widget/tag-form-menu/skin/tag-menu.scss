@@ -6,7 +6,7 @@
   &__button_wrapper {
     align-items: center;
     background: $btn-commit-background;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     cursor: pointer;
     height: 28px;
     justify-content: center;
@@ -28,7 +28,7 @@
     }
 
     & .menu-topic-items {
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       background-color: $ab-default-background;
       box-shadow:$drumee-container-dropdown ;
       max-height: 250px;
@@ -43,7 +43,7 @@
 
       &:before {
         background-color: $ab-default-background;
-        box-shadow: $drumee-container-before;
+        box-shadow: var(--shadow-before);
         content: "";
         height: 10px;
         left: 8px;
@@ -55,14 +55,14 @@
 
       &:after {
         background: $ab-default-background;
-        border-radius:$default-border-radius-top;
+        border-radius:var(--border-radius-top);
         content: "";
         height: 10px;
         left: 0;
         position: absolute;
         top: 0;
         width: 100%;
-        border-radius:$default-border-radius-top;
+        border-radius:var(--border-radius-top);
       }
     }
   }

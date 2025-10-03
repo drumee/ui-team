@@ -54,10 +54,10 @@
       margin:0;
       padding: 0px 7px;
       text-decoration-line: underline;
-      @include typo($size:12px,$line:24px,$color:$eorange-dark);  
+      @include typo($size:12px,$line:24px,$color: var(--eorange-dark));  
 
       &:hover {
-        color:$eorange-sunset ;
+        color:var(--eorange-sunset);
         background-color:$account-default-background;  
       }
     }

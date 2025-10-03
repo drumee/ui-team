@@ -54,7 +54,7 @@
     max-width: 200px;
     justify-content: center;
     margin: auto;
-    // @include typo($size:14px,$line:12px,$weight:400,$color:$ewhite);
+    // @include typo($size:14px,$line:12px,$weight:400,$color: var(--ewhite));
     .name {
      /* align-items: flex-start;
       @include overflow-text;

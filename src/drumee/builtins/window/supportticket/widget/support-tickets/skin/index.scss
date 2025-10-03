@@ -51,7 +51,7 @@
 		}
 
 		&__icon {
-			background-color: $white;
+			background-color: var(--white);
 			cursor: pointer;
 			margin: 5px;
 			position: absolute;
@@ -70,7 +70,7 @@
 		
 				&.trigger-icon {
 					border-radius: 4px;
-					border: 1px solid $egrey-89;
+					border: 1px solid var(--egrey-89);
 					box-sizing: border-box;
 					height: 18px;
 					padding: 2px;
@@ -82,7 +82,7 @@
 				&.ticket_add {
 					opacity:0.85;
 					&:hover {
-						border: 1px solid $eviolet;
+						border: 1px solid var(--eviolet);
 						opacity: 1;
 					}
 				}

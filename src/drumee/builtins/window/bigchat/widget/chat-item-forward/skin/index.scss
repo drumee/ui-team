@@ -140,18 +140,18 @@
       width: 100%;
       margin-left: 3%;
       margin-right: 2%;
-      @include typo($size: 15px, $line: 14px, $weight: 300, $color: $bigchat-default-text-inactive ); //$size: 13px,$egrey-89
+      @include typo($size: 15px, $line: 14px, $weight: 300, $color: $bigchat-default-text-inactive ); //$size: 13px,var(--egrey-89)
 
       &[data-state="1"] {
         border-radius:$default-border-radius;
         @include typo($size: 14px, $line: 14px, $color: $bigchat-default-text-color);//$size: 13px,
-        background-color: $bigchat-button-background-active ;//$egrey-e8;
-        //border: 1px solid $egrey-e8;//$dgc-chatroom-scbtn;
+        background-color: $bigchat-button-background-active ;//var(--egrey-e8);
+        //border: 1px solid var(--egrey-e8);//$dgc-chatroom-scbtn;
       }
     }
 
     &.counter {
-      @include typo($size: 12px, $line: 16px,$weight:300, $color: $bigchat-default-text-color);//$size: 15px,$color: $egrey-78
+      @include typo($size: 12px, $line: 16px,$weight:300, $color: $bigchat-default-text-color);//$size: 15px,$color: var(--egrey-78)
       //padding: 20px;
       align-items: flex-start;
       justify-content: flex-end;

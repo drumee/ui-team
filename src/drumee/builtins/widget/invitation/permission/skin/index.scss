@@ -17,7 +17,7 @@
     width: 260px;
    // padding: 20px 45px 15px;
     background-color:var(--default-bg-block); // #F7F7F9;
-    box-shadow:$drumee-shadow-block ;
+    box-shadow:var(--shadow-block) ;
     border-radius: $default-border-radius;
     position: absolute;
    // margin: 0 auto;
@@ -58,8 +58,8 @@
     }
     &[data-state="1"], &[data-radio="on"]{
       svg{
-        color:  var(--default-checkbox-checked);//$checkbox-active;//$state-1-typo;//$egreen; 
-        border: 1px solid var(--default-checkbox-border);//$default-checkbox;  //$egreen;
+        color:  var(--default-checkbox-checked);//$checkbox-active;//$state-1-typo;//var(--egreen); 
+        border: 1px solid var(--default-checkbox-border);//$default-checkbox;  //var(--egreen);
       }    
     }
     &[data-modify="off"]{
@@ -80,8 +80,8 @@
       width: 15px;
       height: 15px;
       margin-right: 10px;
-      color:$ewhite; // #FFFFFF;
-      border: 1px solid var(--default-checkbox-border);//$default-checkbox;//$egrey-89; //#89929E;
+      color:var(--ewhite); // #FFFFFF;
+      border: 1px solid var(--default-checkbox-border);//$default-checkbox;//var(--egrey-89); //#89929E;
       border-radius: $default-checkbox-border-radius;
       //border-radius: 2px; 
     }  
@@ -93,8 +93,8 @@
       width: 15px;//14px
       height: 15px;
       margin-right: 10px;
-      color: $ewhite;
-      border: 1px solid var(--default-checkbox-border);//$default-checkbox;//$egrey-89;// #89929E;
+      color: var(--ewhite);
+      border: 1px solid var(--default-checkbox-border);//$default-checkbox;//var(--egrey-89);// #89929E;
       // border-radius: 2px;
       border-radius: 50%;
       &:hover{
@@ -103,13 +103,13 @@
     }
     &[data-state="1"], &[data-radio="on"]{
       svg {
-        border-color: var(--default-checkbox-border);// $default-checkbox;//$egreen ; 
+        border-color: var(--default-checkbox-border);// $default-checkbox;//var(--egreen); 
       }
       &:before {
         content: " ";
         width: 9px; //8px;
         height: 9px; //8px;
-        background: var(--default-radio-active);// $default-checkbox;//$egreen; //$egreen-soft; //#18AC72;
+        background: var(--default-radio-active);// $default-checkbox;//var(--egreen); //var(--egreen-soft); //#18AC72;
         position: absolute;
         top: 3px;
         left: 3px;
@@ -136,7 +136,7 @@
     min-width:68px; // 60px;
     width: auto;
     height: 28px;//20px;
-    background-color:$btn-commit-background; //$egreen; //$egreen; //#18A3AC;
+    background-color:$btn-commit-background; //var(--egreen); //var(--egreen); //#18A3AC;
     border-radius:$default-border-radius;
     //border-radius: 2px;
     cursor: pointer;

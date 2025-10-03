@@ -40,10 +40,10 @@
 }
 
 &__droppable-area {
-  @include typo($size: 20px, $line: 23px, $color: $egreen);
+  @include typo($size: 20px, $line: 23px, $color: var(--egreen));
   align-items: center;
   border-radius: $default-border-radius;
-  border: 1px dashed $egreen;
+  border: 1px dashed var(--egreen);
   box-sizing: border-box;
   justify-content: center;
   padding: 20px;

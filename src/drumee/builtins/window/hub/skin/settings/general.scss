@@ -22,7 +22,7 @@
           // @include typo($color:#89929E,$size:12px,$line:26px);    
           input {
             background-color: transparent;
-            @include typo($color:$egrey-2f,$size:14px,$line:26px,$weight:400);    
+            @include typo($color: var(--egrey-2f),$size:14px,$line:26px,$weight:400);    
           }
         }
       }

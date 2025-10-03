@@ -38,7 +38,7 @@
         
         &.checkbox[data-state="1"] {
           box-shadow: none;
-          color: $admin-checkbox-checked-reverse; //$ewhite;
+          color: $admin-checkbox-checked-reverse; //var(--ewhite);
           border: 1px solid $admin-checkbox-checked-border-reverse;
         }
       }

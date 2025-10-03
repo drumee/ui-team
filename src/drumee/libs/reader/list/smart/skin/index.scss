@@ -53,7 +53,7 @@
   }
 
   .no-content {
-    @include typo($line: 14px, $size: 14px, $weight: 400, $color: $egrey-2f);
+    @include typo($line: 14px, $size: 14px, $weight: 400, $color: var(--egrey-2f));
     padding: 10px;
   }
 

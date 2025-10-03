@@ -94,8 +94,8 @@
     &__remove {
       background-color: var(--default-bg);    
       border-radius: 50%;
-      border: 1.5px solid $ewhite;
-      color: $egrey-2f;
+      border: 1.5px solid var(--ewhite);
+      color: var(--egrey-2f);
       height: 11px;
       line-height: 16px;
       position: absolute;

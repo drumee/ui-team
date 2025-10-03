@@ -8,9 +8,9 @@
 &__popup {
   
   &-wrapper {
-    border-radius : $default-border-radius;
+    border-radius : var(--border-radius);
     background-color:$ab-default-background;
-    box-shadow:$drumee-shadow-popup;
+    box-shadow:var(--shadow-popup);
     height: calc(100% - 20px);
     max-height: 300px;
     max-width: 550px;
@@ -105,7 +105,7 @@
       
       & textarea {
         background:$ab-default-block-background;
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         border: none;
         outline: none;
         padding: 10px;
@@ -154,7 +154,7 @@
 
     &__button-cancel {
       @include typo( $size: 16px, $line: 16px, $color: $btn-rollback-text);
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       border: 1px solid $btn-rollback-border;
 
       &:hover {
@@ -212,7 +212,7 @@
   &__button-ok {
     @include typo($size: 16px,$color:$btn-rollback-text);
     align-items: center;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     border: 1px solid $btn-rollback-border;
     height: 35px;
     justify-content: center; 

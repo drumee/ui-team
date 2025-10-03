@@ -161,7 +161,7 @@
       }
 
       & .button-cancel{
-       // background: $egrey-b6; //$egrey-89;
+       // background: var(--egrey-b6); //var(--egrey-89);
         border:1px solid $btn-rollback-border  ;
         padding:0 12px;
         justify-content: center;
@@ -171,7 +171,7 @@
         @include typo($size: 15px, $line: 20px, $color: $btn-rollback-text );//$btn-commit-text);
 
         &:hover {
-         // background: $egrey-78;
+         // background: var(--egrey-78);
          border:2px solid $btn-rollback-border-hover ;
          color:$btn-rollback-text-hover;  
         }
@@ -188,7 +188,7 @@
 
         &:hover {
           background-color: $btn-commit-background-hover ;
-         // background: $white-f9;
+         // background: var(--white-f9);
         }
       }
     }

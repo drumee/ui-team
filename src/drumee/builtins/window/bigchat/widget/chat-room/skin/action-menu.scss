@@ -28,7 +28,7 @@
       
       &:before {
         background-color: $bigchat-default-background;     
-        box-shadow:$drumee-container-before;
+        box-shadow:var(--shadow-before);
         content: "";
         height: 10px;
         position: absolute;

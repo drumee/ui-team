@@ -76,7 +76,7 @@
     top: 12px;  
     left: 12px;
     min-height: 22px;
-    //@include typo($color: $white, $weight: 400, $line: 30px, $size: 18px);
+    //@include typo($color: var(--white), $weight: 400, $line: 30px, $size: 18px);
     @include typo($color: $default-text-color, $line: 18px, $size: 13px);
     background-color: $default-background;      
     min-width:105px;
@@ -89,7 +89,7 @@
 
   &__muted{
     position: absolute;
-    color: $default-icon-neutral;//$main-grey;
+    color: $default-icon-neutral;//var(--main-grey);
     visibility: hidden;
     width: 30px;
     height: 30px;
@@ -109,7 +109,7 @@
         width: 23px;//26px; 
         top: 14px;//15px;
         left: 3px;//2px;
-        background-color: $eorange-sunset;//#ea4d44; 
+        background-color: var(--eorange-sunset);//#ea4d44; 
         transform-origin : 50% 50%;
         transform: rotate(-45deg);
       }

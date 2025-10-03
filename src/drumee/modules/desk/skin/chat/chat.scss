@@ -24,13 +24,13 @@
     padding: 10px;
     height: auto;
     width: auto;
-    background-color: $ewhite;
+    background-color: var(--ewhite);
     box-shadow: 0 6px 10px 1px rgba(63, 79, 117, 0.13), 0 7px 20px 0 rgba(86, 65, 113, 0.08), 0 3px 17px 0 rgba(194, 185, 203, 0);
   }
   &__container{
     &-recipient{
       width: 100%;
-      @include typo($line:16px,$size:12px,$weight:400,$color:$egrey-49);
+      @include typo($line:16px,$size:12px,$weight:400,$color: var(--egrey-49));
       .label{
         width: auto;
         min-width: 70px;

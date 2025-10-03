@@ -20,7 +20,7 @@
     background: $default-background; 
     border-radius: $default-border-radius;
     display: flex;    
-    box-shadow:$drumee-shadow-container;
+    box-shadow:var(--shadow-container);
     //box-shadow: 0 0 7px 0 rgba(0,0,0,0.14);
     //transform: translateY(50%);
 //    justify-content: center;
@@ -70,11 +70,11 @@
     }
     &.link{
       border-radius: 15px;
-      border: 1px solid $egrey-8d ;
+      border: 1px solid var(--egrey-8d);
       overflow: hidden;
       left: 0;    
       &:hover{
-        border:1px solid $eviolet;
+        border:1px solid var(--eviolet);
       }  
     }
     &.acknowledge{
@@ -85,14 +85,14 @@
     }
   }
   &__title{
-    @include typo($color:$eorange ,$size:16px,$line:19px,$weight:400);//#FA8540
+    @include typo($color: var(--eorange) ,$size:16px,$line:19px,$weight:400);//#FA8540
     &.acknowledge{
       margin: auto;
       text-align: center;
     }
     .create{
       cursor: pointer;
-      @include typo($color:$egrey-89,$size:16px,$line:19px,$weight:400);
+      @include typo($color: var(--egrey-89),$size:16px,$line:19px,$weight:400);
     }
   }
   &__text{
@@ -103,7 +103,7 @@
     &.ack-delete{
       margin: auto;
     }
-    @include typo($color:$egrey-78,$size:18px,$line:32px,$weight:400);
+    @include typo($color: var(--egrey-78),$size:18px,$line:32px,$weight:400);
   }
   &__wrapper{
     position: absolute;

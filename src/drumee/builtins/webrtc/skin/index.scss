@@ -10,7 +10,7 @@
   left: 10vw;
   width: 440px;
   height: 480px;
-  box-shadow: $drumee-shadow-container;
+  box-shadow: var(--shadow-container);
   overflow: visible;
   flex-direction: column;
   display: flex;
@@ -176,7 +176,7 @@
       margin: 10px;
       @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
       &[data-blink="1"]{
-        color:$main-yellow;
+        color:var(--main-yellow);
       }
     }
   }

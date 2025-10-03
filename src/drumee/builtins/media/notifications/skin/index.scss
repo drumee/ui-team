@@ -72,7 +72,7 @@
   }
 
   &__main {
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     height: 100%;
     overflow-x: hidden;
     overflow-y: hidden;
@@ -112,7 +112,7 @@
   &__title {
     margin-left:60px;
     width:69px;
-    @include typo($size:14px,$line:20px,$weight:400,$color:$emauve-dark);
+    @include typo($size:14px,$line:20px,$weight:400,$color: var(--emauve-dark));
   }
 
   &__item {
@@ -125,7 +125,7 @@
       margin: -1px 0 0 10%;
 
       svg {
-        fill:$emauve-dark ;
+        fill:var(--emauve-dark);
         height: 18px;
         opacity:0.65;
         padding: 1px;

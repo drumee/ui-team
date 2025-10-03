@@ -26,7 +26,7 @@
 
   .media-form__input input {
     background-color: #e6ab3f;
-    color: $ewhite;
+    color: var(--ewhite);
   }
 
   &.restricted {
@@ -39,7 +39,7 @@
     border-bottom-left-radius: 3px;
     border-bottom-right-radius: 3px;
     border-radius: 3px;
-    fill: $ewhite;
+    fill: var(--ewhite);
     background-color: $sharebox-main;
     padding:2.5px;
 
@@ -71,7 +71,7 @@
     border-bottom-left-radius: 3px;
     border-bottom-right-radius: 3px;
     border-radius: 3px;
-    fill: $ewhite;
+    fill: var(--ewhite);
     background-color: $teamroom-main;
     padding: 2.5px;
 
@@ -90,7 +90,7 @@
 
     .media-form__input input {
       background-color: #c05ed0;
-      color: $ewhite;
+      color: var(--ewhite);
     }
   }
 

@@ -3,8 +3,8 @@
 .schedule-invitation {
   &__ui {
     align-items: center;
-    background-color: var(--default-bg); //$ewhite;
-    box-shadow: $drumee-shadow-container;
+    background-color: var(--default-bg); //var(--ewhite);
+    box-shadow: var(--shadow-container);
     height: auto;
     position: absolute;
     width: 100%;

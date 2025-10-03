@@ -38,10 +38,10 @@
   }
 
   &__row_label.note-reader {
-    //@include typo($size: 20px, $line: 20px, $color: $egrey-2f); 
+    //@include typo($size: 20px, $line: 20px, $color: var(--egrey-2f)); 
     justify-content: flex-end;
     text-align: right;
-    @include typo($size: 16px, $line: 24px, $color:$admin-default-text-color);// $egrey-49); 
+    @include typo($size: 16px, $line: 24px, $color:$admin-default-text-color);// var(--egrey-49)); 
   }
   &__row_form_field{
     cursor: pointer;
@@ -73,23 +73,23 @@
       border-color: $admin-default-border-error  !important; //#ff4578
     }
     & .entry-reminder__main input{
-      border-bottom: 1px solid $admin-default-entry-border-bottom;//$egrey-b6;
-      @include typo($size: 16px, $line: 24px, $color: $admin-default-text-color);//$egrey-3f);
+      border-bottom: 1px solid $admin-default-entry-border-bottom;//var(--egrey-b6);
+      @include typo($size: 16px, $line: 24px, $color: $admin-default-text-color);//var(--egrey-3f));
       
       &:focus{     
-        border-color:$admin-focus-border-placeholder;//$eblue;   
+        border-color:$admin-focus-border-placeholder;//var(--eblue);   
         &::placeholder {
-          color: $admin-text-placeholder-focus;// $eblue;
+          color: $admin-text-placeholder-focus;// var(--eblue);
         }
       }
       &::placeholder {
-        color: $admin-default-text-placeholder;//$egrey-b6;
+        color: $admin-default-text-placeholder;//var(--egrey-b6);
       }
     }
   }
   &__link_display{
     &.new{
-      @include typo($size: 16px, $line: 24px, $color: $egrey-b6);
+      @include typo($size: 16px, $line: 24px, $color: var(--egrey-b6));
     }
     &.view, &.edit{
       @include typo($size: 16px, $line: 24px, $color: $admin-secondary-text-color);

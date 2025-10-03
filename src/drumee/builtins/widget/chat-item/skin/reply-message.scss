@@ -55,7 +55,7 @@
   }
 
   &__icon {
-    color: $egrey-89;
+    color: var(--egrey-89);
     cursor: pointer;
 
     &.close-icon {

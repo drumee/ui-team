@@ -120,7 +120,7 @@
   }
 }
 .desk__filter-list.box {
-    background-color: $ewhite;
+    background-color: var(--ewhite);
     width: 174px;
     border-radius: 4px;
     box-shadow: 0 -4px 8px 3px rgba(75,72,72,0.22), 0 4px 8px 3px rgba(75,72,72,0.22), 0 5px 14px 0 rgba(43,16,80,0.42), 0 2px 12px 0 rgba(93,93,93,0.78);
@@ -159,13 +159,13 @@
     height: 24px;
     padding: 0 14px;
     cursor: pointer;
-    @include typo($line:24px,$size:12px,$weight:400,$color:$egrey-78);
+    @include typo($line:24px,$size:12px,$weight:400,$color: var(--egrey-78));
     &:hover {
-        color: $eviolet;
+        color: var(--eviolet);
     }
     &:active, &[data-state="1"], &[data-radio="on"] {
-        background-color: $eviolet;
-        color: $ewhite;
+        background-color: var(--eviolet);
+        color: var(--ewhite);
     }
 }
 .desk__filter-input {
@@ -179,19 +179,19 @@
             height: 100%;
             left: 0;
             top: 0;
-            // background: $ewhite;
+            // background: var(--ewhite);
             // opacity: 0.5;
         }
     }
 }
 // .desk__main-menu-item {
 //     cursor: pointer;
-//     @include typo($line:26px,$size:16px,$weight:400,$color:$egrey-78);
+//     @include typo($line:26px,$size:16px,$weight:400,$color: var(--egrey-78));
 //     .svg-inner {
 //         width: 40px;
 //     }
 //     &:hover {
-//         color: $eviolet;
+//         color: var(--eviolet);
 //     }
 //     &.desk__main-menu-item--contact svg {padding: 0 5px}
 //     &.desk__main-menu-item--blue svg {color: #4a90e2}
@@ -228,7 +228,7 @@
     //     height: 81px;
     //     margin: 3px 16px 29px;
     //     border-radius: 4px;
-    //     background-color: $ewhite;
+    //     background-color: var(--ewhite);
     //     box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 0px 3px 0 rgba(86,65,113,0.08), 0 2px 8px 0 rgba(194,185,203,0);
     //     cursor: pointer;
     //     // background: transparent;
@@ -257,14 +257,14 @@
     //                 display: block;
     //                 bottom: 0;
     //                 background-color: #FFFF;
-    //                 color: $egrey-2f;
+    //                 color: var(--egrey-2f);
     //                 height: 22px;
     //                 // height: 25px;
     //                 // bottom: 9px;
     //                 // background-color: #5599ea;
     //                 // border-radius: 0 0 4px 4px;
     //                 // background-color: #879BFF;
-    //                 // color: $ewhite;
+    //                 // color: var(--ewhite);
     //             }
     //             .media-form__input {
     //                 height: 20px;
@@ -288,14 +288,14 @@
     //     }
     //     &.folder {
     //         .media-checkbox-wrapper {
-    //             border-color: $ewhite;
-    //             // background: $ewhite;
+    //             border-color: var(--ewhite);
+    //             // background: var(--ewhite);
     //             // background: rgba(255, 255, 255, 0.2);
     //         }
     //     }
     //     &.folder, &.hub {
     //         .filename {
-    //             color: $ewhite;
+    //             color: var(--ewhite);
     //         }
     //         .media-ui-content {
     //             .filename {
@@ -395,7 +395,7 @@
     //             // height: 22px;
     //             input {
     //                 background-color: #6ca5e8;
-    //                 color: $ewhite;
+    //                 color: var(--ewhite);
     //             }
     //             .input-details {
     //                 background: #fff;
@@ -416,11 +416,11 @@
     //             }
     //             .media-ui-content[data-icontype] {
     //                 .filename {
-    //                     color: $ewhite;
+    //                     color: var(--ewhite);
     //                     background-color: #6ca5e8;
     //                     // background-color: transparent;
     //                     // &:hover {
-    //                     //     color: $ewhite;
+    //                     //     color: var(--ewhite);
     //                     //     background-color: #6ca5e8;
     //                     // }
     //                 }
@@ -481,14 +481,14 @@
     //             right: 0;
     //             left: 0;
     //             margin: 0 auto;
-    //             fill: $ewhite;
+    //             fill: var(--ewhite);
     //         }
     //         &.public {
     //             background-color: #18A3AC;
     //             border-radius: 4px;
     //             .media-form__input input {
     //                 background-color: #45b4bb;
-    //                 color: $ewhite;
+    //                 color: var(--ewhite);
     //             }
     //         }
     //         &.restricted {
@@ -498,17 +498,17 @@
     //             background-color: #AB47BC;
     //             .media-form__input input {
     //                 background-color: #c05ed0;
-    //                 color: $ewhite;
+    //                 color: var(--ewhite);
     //             }
     //         }
     //         &[data-hover="on"] {
     //             &.public {
     //                 .filename {
-    //                     color: $ewhite;
+    //                     color: var(--ewhite);
     //                     background-color: #45b5bc;
     //                     // background-color: transparent;
     //                     // &:hover {
-    //                     //     color: $ewhite;
+    //                     //     color: var(--ewhite);
     //                     //     background-color: #45b5bc;
     //                     // }
     //                 }
@@ -518,11 +518,11 @@
     //             }
     //             &.private {
     //                 .filename {
-    //                     color: $ewhite;
+    //                     color: var(--ewhite);
     //                     background-color: #b64dc7;
     //                     // background-color: transparent;
     //                     // &:hover {
-    //                     //     color: $ewhite;
+    //                     //     color: var(--ewhite);
     //                     //     background-color: #b64dc7;
     //                     // }
     //                 }
@@ -686,7 +686,7 @@
     //             flex-direction: column;
     //             align-items: center;
     //             &__icon {
-    //                 background: $ewhite;
+    //                 background: var(--ewhite);
     //                 border-radius: 50%;
     //                 width: 17px;
     //                 height: 17px;
@@ -695,7 +695,7 @@
     //             }
     //             &__text {
     //                 position: relative;
-    //                 background: $ewhite;
+    //                 background: var(--ewhite);
     //                 border-radius: 2px;
     //                 padding: 0 11px;
     //                 white-space: nowrap;
@@ -708,7 +708,7 @@
     //                     transform: translate(-50%,0);
     //                     border-left: 5px solid transparent;
     //                     border-right: 5px solid transparent;
-    //                     border-top: 5px solid $ewhite;
+    //                     border-top: 5px solid var(--ewhite);
     //                 }
     //             }
     //         }
@@ -736,7 +736,7 @@
     //             padding: 6px;
     //             width: 25px;
     //             height: 25px;
-    //             fill: $ewhite;
+    //             fill: var(--ewhite);
     //             border-radius: 2px;
     //             // margin: auto;
     //             &:hover {
@@ -761,7 +761,7 @@
     //         }
     //     }
     //     .loader-progress {
-    //         background-color: $ewhite;;
+    //         background-color: var(--ewhite);;
     //         .progress__wrapper {
     //             left: 50%;
     //             top: 50%;
@@ -856,7 +856,7 @@
     //             }
     //         }
     //         // .filename {
-    //         //     //@include typo($line:22px,$size:12px,$weight:400,$color:$egrey-49);
+    //         //     //@include typo($line:22px,$size:12px,$weight:400,$color: var(--egrey-49));
     //         // }
     //         &:after {
     //             content: " ";
@@ -884,7 +884,7 @@
     //     //     width: 100%;
     //     //     z-index: 1;
     //     //     padding: 7px 22.5px;
-    //     //     fill: $ewhite;
+    //     //     fill: var(--ewhite);
     //     //     &.hub{
     //     //         border-radius: 50%;
     //     //         overflow: hidden;
@@ -918,7 +918,7 @@
     //         border-radius: 0 0 4px 4px;
     //         z-index: 2; //don't know why is was 100;
     //         cursor: pointer;
-    //         @include typo($line:22px,$size:12px,$weight:300,$color:$egrey-49);
+    //         @include typo($line:22px,$size:12px,$weight:300,$color: var(--egrey-49));
     //     }
     //     .media-checkbox-wrapper {
     //         width: 18px;
@@ -934,8 +934,8 @@
     //             border-radius: 2px;
     //             padding: 1px;
     //             border: 1px solid #FA8540;
-    //             background: $ewhite;
-    //             fill: $ewhite;
+    //             background: var(--ewhite);
+    //             fill: var(--ewhite);
     //             // visibility: hidden;
     //         }
     //     }
@@ -974,9 +974,9 @@
     //         // padding: 0 10px;
     //         input {
     //             // background-color: #6ca5e8;
-    //             // color: $ewhite;
+    //             // color: var(--ewhite);
     //             padding: 0 10px;
-    //             @include typo($line:22px,$size:12px,$weight:300,$color:$egrey-2f);
+    //             @include typo($line:22px,$size:12px,$weight:300,$color: var(--egrey-2f));
     //         }
     //         .input-details {
     //             background: #fff;
@@ -1097,7 +1097,7 @@
     }
     .hub-ui-name {
         @include overflow-text;
-        @include typo($line:24px,$size:18px,$weight:500,$color:$ewhite);
+        @include typo($line:24px,$size:18px,$weight:500,$color: var(--ewhite));
     }
     .hub-ui-menu {
         display : none;
@@ -1109,7 +1109,7 @@
         .hub-ui-menu {
             display: flex;
             justify-content: space-evenly;
-            color: $ewhite;
+            color: var(--ewhite);
         }
         .hub-ui-name {
             display: none;
@@ -1136,9 +1136,9 @@
     //     width: 100%;
     // }
     &-inner {
-        // color: $egrey-89;
+        // color: var(--egrey-89);
         &-icon { 
-            color: $egrey-89;
+            color: var(--egrey-89);
             position: absolute;
             left: 0;
             z-index: 1;
@@ -1194,9 +1194,9 @@
         box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
         transition: width 0.3s ease-in;
         pointer-events: all;
-        @include typo($line:19px,$size:14px,$weight:300,$color:$egrey-2f);
+        @include typo($line:19px,$size:14px,$weight:300,$color: var(--egrey-2f));
         @include placeholder-input{
-            @include typo($line:19px,$size:14px,$weight:300,$color:$egrey-89);
+            @include typo($line:19px,$size:14px,$weight:300,$color: var(--egrey-89));
         }
         // background-color: rgba(255,255,255,0.1);
         // width: 100%;
@@ -1217,7 +1217,7 @@
 }
 
 .desk__input-icon {
-    color: $ewhite;
+    color: var(--ewhite);
     flex-shrink: 0;
     background-color: rgba(#FFFFFF, 0.2);
     border-radius: 2px;
@@ -1268,8 +1268,8 @@
 .add-website {
     .add-website__label {
         // text-transform: uppercase;
-        @include typo($color:$egrey-2f,$size:30px,$line:39px,$weight:300);
-        // @include typo($line:29px,$size:22px,$weight:300,$color:$egrey-4a);
+        @include typo($color: var(--egrey-2f),$size:30px,$line:39px,$weight:300);
+        // @include typo($line:29px,$size:22px,$weight:300,$color: var(--egrey-4a));
     }
     // .add-website__input {
     //     border: 1px solid transparent;
@@ -1327,14 +1327,14 @@
             padding: 0 2px;
             border-bottom: 1px solid #ECEDEE;
             flex-shrink: 0;
-            @include typo($color:$egrey-89,$size:18px,$line:24px,$weight:300);
+            @include typo($color: var(--egrey-89),$size:18px,$line:24px,$weight:300);
             @include placeholder-input {
                 @include typo($color:#4A90E2,$size:18px,$line:24px,$weight:300);
             }
         }
         &[data-status="ok"] {
             .add-website__error {
-                color: $egrey-89;
+                color: var(--egrey-89);
                 position: absolute;
                 top: 26px;
                 font-size: 9px;
@@ -1351,10 +1351,10 @@
         position: absolute;
         left: 100%;
         margin-left: 10px;
-        @include typo($line:24px,$size:18px,$weight:300,$color:$egrey-89);
+        @include typo($line:24px,$size:18px,$weight:300,$color: var(--egrey-89));
     }
     // .add-website__error{
-    //     @include typo($line:24px,$size:18px,$weight:300,$color:$egrey-89);
+    //     @include typo($line:24px,$size:18px,$weight:300,$color: var(--egrey-89));
     //     position: absolute;
     //     top : 100%;
     //     width: 200px;
@@ -1416,10 +1416,10 @@
         right: -18px;
         border-radius: 50%;
         box-shadow: 0 6px 8px 1px rgba(63,79,117,0.13), 0 6px 17px 0 rgba(86,65,113,0.08), 0 2px 16px 0 rgba(194,185,203,0);
-        @include typo($color:$ewhite,$size:10px,$line:13px,$weight:500);
+        @include typo($color: var(--ewhite),$size:10px,$line:13px,$weight:500);
     }
     .add-website__chip-text {
-        @include typo($line:19px,$size:14px,$weight:300,$color:$egrey-4a);
+        @include typo($line:19px,$size:14px,$weight:300,$color: var(--egrey-4a));
     }
 }
 [data-flow].drive-popup {
@@ -1440,9 +1440,9 @@
     //     right: 0;
     //     margin: 0 auto;
     //     width: 186px
-    //     // @include typo($color:$ewhite,$size:14px,$line:24px,$weight:400);
+    //     // @include typo($color: var(--ewhite),$size:14px,$line:24px,$weight:400);
     // }
-    // background-color: $ewhite;
+    // background-color: var(--ewhite);
     // box-shadow: 0 -4px 8px 3px rgba(75,72,72,0.22), 0 4px 8px 3px rgba(75,72,72,0.22), 0 5px 14px 0 rgba(43,16,80,0.42), 0 2px 12px 0 rgba(93,93,93,0.78);
     // box-shadow: 0px 0px 31px 0 rgba(0, 0, 0, 0.4);
     // border-radius: 2px;
@@ -1453,7 +1453,7 @@
     //     height: 44px;  
     //     // margin-bottom: 20px;
     //     .drive-popup__bar-icon {
-    //         color: $egrey-89;
+    //         color: var(--egrey-89);
     //         cursor: pointer;
     //         margin-right: 15px;
     //         // &--close {
@@ -1465,8 +1465,8 @@
     //         // background: #E3E8EE;
     //         background-color: #4A90E2;
     //         .drive-popup__bar-icon {
-    //             color: $ewhite;
-    //             // color: $egrey-89;        
+    //             color: var(--ewhite);
+    //             // color: var(--egrey-89);        
     //             // &--close {
     //             //     margin-right: 10px;
     //             // }
@@ -1474,10 +1474,10 @@
     //         .drive-popup__breadcrumb, .breadcrumbs {
     //             opacity: 0.6;
     //             .node {
-    //                 color: $ewhite;
-    //                 // color: $egrey-2f;
+    //                 color: var(--ewhite);
+    //                 // color: var(--egrey-2f);
     //                 // &:last-child {
-    //                 //     color: $egrey-2f;
+    //                 //     color: var(--egrey-2f);
     //                 // }
     //                 &:not(:first-child) {
     //                     &:before {
@@ -1498,9 +1498,9 @@
     //         .drive-popup__breadcrumb, .breadcrumbs {
     //             opacity: 0.6;
     //             .node {
-    //                 color: $ewhite;
+    //                 color: var(--ewhite);
     //                 &:last-child {
-    //                     color: $ewhite;
+    //                     color: var(--ewhite);
     //                 }
     //                 &:not(:first-child) {
     //                     &:before {
@@ -1538,9 +1538,9 @@
     //     right: 0;
     //     margin: auto;
     //     @include overflow-text;
-    //     @include typo($line:16px,$size:14px,$weight:400,$color:$ewhite);
+    //     @include typo($line:16px,$size:14px,$weight:400,$color: var(--ewhite));
     //     &--other {
-    //         color: $egrey-2f;
+    //         color: var(--egrey-2f);
     //     }
     // }
     // .drive-popup__name {
@@ -1568,7 +1568,7 @@
     //         white-space: nowrap;
     //         cursor: pointer;
     //         // Fine tuning
-    //         @include typo($line:24px,$size:12px,$weight:300,$color:$egrey-49);
+    //         @include typo($line:24px,$size:12px,$weight:300,$color: var(--egrey-49));
     //         &:first-child {
     //             // SO : Fine tuning
     //             padding-right: 3px;
@@ -1594,7 +1594,7 @@
     //             color: #4A90E2;
     //         }
     //         &.node-main {
-    //             color:$egrey-49;
+    //             color:var(--egrey-49);
     //         }
     //     }
     // }
@@ -1636,7 +1636,7 @@
     //         padding: 2px 6px 6px 12px;
     //         font-family: "Roboto-Regular", sans-serif;
     //         font-size: 14px;
-    //         color: $egrey-89;
+    //         color: var(--egrey-89);
     //         &:before {
     //             display: none;
     //         }
@@ -1653,7 +1653,7 @@
     .drive-top-bar {
         padding: 16px 19px 16px 22px;
         width: 100%;
-        @include typo($line:24px,$size:18px,$weight:300,$color:$egrey-49);
+        @include typo($line:24px,$size:18px,$weight:300,$color: var(--egrey-49));
         border-bottom: 1px solid #DDE2E8;
     }
     .drive-inner {
@@ -1725,7 +1725,7 @@ $wrapper-width: 1252px;
             color: #8d98cc;
         }
         .top-bar__pagename-text {
-            @include typo($color: $egrey-49,$size:24px,$line:36px,$weight:300);
+            @include typo($color: var(--egrey-49),$size:24px,$line:36px,$weight:300);
         }
         .top-bar__button {
             box-shadow: 0 1px 3px 0 rgba(0,0,0,0.14), 1px 2px 2px 0 rgba(0,0,0,0.1), 0 4px 4px 0 rgba(209,221,245,0.2);
@@ -1733,12 +1733,12 @@ $wrapper-width: 1252px;
             height: 36px;
             text-transform: uppercase;
             width: 115px;
-            @include typo($color: $ewhite,$size:12px,$line:14px,$weight:500);
+            @include typo($color: var(--ewhite),$size:12px,$line:14px,$weight:500);
             &.top-bar__button--primary {
-                background-color: $eorange;
+                background-color: var(--eorange);
             }
             &.top-bar__button--secondary {
-                background-color: $egreen;
+                background-color: var(--egreen);
             }
         }
     }
@@ -1747,13 +1747,13 @@ $wrapper-width: 1252px;
             flex-wrap: wrap;
         }
         .content__header {
-            color: $egrey-49;
+            color: var(--egrey-49);
         }
         .content__header-text {
-            @include typo($color: $egrey-49,$size:18px,$line:40px,$weight:300);
+            @include typo($color: var(--egrey-49),$size:18px,$line:40px,$weight:300);
         }
         .content__label {
-            @include typo($color: $egrey-49,$size:18px,$line:21px,$weight:300);
+            @include typo($color: var(--egrey-49),$size:18px,$line:21px,$weight:300);
             &.content__label--link {
                 color: #4A90E2;
             }
@@ -1761,20 +1761,20 @@ $wrapper-width: 1252px;
                 color: #AB47BC;
             }
             &.content__label--public {
-                color: $egreen;
+                color: var(--egreen);
             }
             &.content__label--hightlighted {
-                color: $egreen;
+                color: var(--egreen);
             }
             &.content__label--uppercase {
                 text-transform: uppercase;
             }
             &.content__label--bold {
-                @include typo($color:$egrey-49,$size:14px,$line:36px,$weight:500);
+                @include typo($color: var(--egrey-49),$size:14px,$line:36px,$weight:500);
             }
         }
         .content__text {
-            @include typo($color: $egrey-78,$size:14px,$line:16px,$weight:300);
+            @include typo($color: var(--egrey-78),$size:14px,$line:16px,$weight:300);
         }
         .content__btn {
             cursor: pointer;
@@ -1784,14 +1784,14 @@ $wrapper-width: 1252px;
             border-radius: 2px;
             justify-content: center;
             // text-transform: uppercase;
-            @include typo($color: $egrey-49,$size:16px,$line:34px,$weight:400);
+            @include typo($color: var(--egrey-49),$size:16px,$line:34px,$weight:400);
             &.content__btn--small {
-                @include typo($color: $ewhite,$size:14px,$line:34px,$weight:400);
+                @include typo($color: var(--ewhite),$size:14px,$line:34px,$weight:400);
             }
             &.content__btn--accent {
-                border-color: $egreen-soft;
-                background-color: $egreen-soft;
-                color: $ewhite;
+                border-color: var(--egreen-soft);
+                background-color: var(--egreen-soft);
+                color: var(--ewhite);
             }
             &.content__btn--big {
                 width: 182px;
@@ -1808,25 +1808,25 @@ $wrapper-width: 1252px;
             &.content__btn--grey {
                 border-color: #89929E;
                 background-color: #89929E;
-                color: $ewhite;
+                color: var(--ewhite);
             }
             &.content__btn--drumee-drive {
-                color: $egreen;
+                color: var(--egreen);
             }
             &.content__btn--delete {
                 border-color: #FF7479;
                 background-color: #FF7479;
-                color: $ewhite;
+                color: var(--ewhite);
             }
             &:hover, &[data-state="1"], &[data-radio="on"] {
-                border-color: $eviolet;
-                background-color: $eviolet;
-                color: $ewhite;
+                border-color: var(--eviolet);
+                background-color: var(--eviolet);
+                color: var(--ewhite);
             }
         }
     }
     .card {
-        // background-color: $ewhite;
+        // background-color: var(--ewhite);
         // box-shadow: 0 7px 20px 0 rgba(86,65,113,0.08), 0 3px 17px 0 rgba(194,185,203,0);
         // &.card--small {
         //     width: 604px;
@@ -1844,10 +1844,10 @@ $wrapper-width: 1252px;
         // }
         flex-shrink: 0;
         .card__name {
-            color: $egrey-49;
+            color: var(--egrey-49);
         }
         .card__name-text {
-            @include typo($color: $egrey-49,$size:18px,$line:21px,$weight:300);
+            @include typo($color: var(--egrey-49),$size:18px,$line:21px,$weight:300);
         }
         .card__footer-btn {
             align-self: center;
@@ -1856,7 +1856,7 @@ $wrapper-width: 1252px;
             height: 34px;
             border-radius: 2px;
             border: 1px solid #DDE2E8;
-            @include typo($color: $egrey-49,$size:14px,$line:34px,$weight:400);
+            @include typo($color: var(--egrey-49),$size:14px,$line:34px,$weight:400);
         }
     }
     .chips {
@@ -1869,16 +1869,16 @@ $wrapper-width: 1252px;
             cursor: pointer;
         }
         .chips-item__header {
-            @include typo($color: $egrey-49,$size:14px,$line:22px,$weight:300);
+            @include typo($color: var(--egrey-49),$size:14px,$line:22px,$weight:300);
         }
         .chips-item__number {
-            @include typo($color: $egrey-49,$size:16px,$line:19px,$weight:500);
+            @include typo($color: var(--egrey-49),$size:16px,$line:19px,$weight:500);
         }
     }
     .analytics-blocks {
         .analytics-blocks__header {
             margin-bottom: 22px;
-            @include typo($color: $egrey-49,$size:14px,$line:16px,$weight:300);
+            @include typo($color: var(--egrey-49),$size:14px,$line:16px,$weight:300);
         }
         .analytics-blocks__number {
             cursor: pointer;
@@ -1902,7 +1902,7 @@ $wrapper-width: 1252px;
             border-radius: 2px;
             cursor: pointer;
             flex-direction: row-reverse;
-            @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+            @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
             .svg-inner {
                 width: 16px;
                 height: 16px;
@@ -1924,7 +1924,7 @@ $wrapper-width: 1252px;
             border-radius: 2px;
             cursor: pointer;
             .diff__text {
-                @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+                @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
             }
             .diff__number {
                 @include typo($line:16px,$size:14px,$weight:500,$color:#4A90E2);
@@ -1934,7 +1934,7 @@ $wrapper-width: 1252px;
     .other {
         .other__label {
             width: 135px;
-            @include typo($line:26px,$size:14px,$weight:300,$color:$egrey-49);
+            @include typo($line:26px,$size:14px,$weight:300,$color: var(--egrey-49));
         }
         .other__line {
             cursor: pointer;
@@ -1951,7 +1951,7 @@ $wrapper-width: 1252px;
         width: $wrapper-width;
         bottom: 10px;
         .messages__btn {
-            background-color: $ewhite;
+            background-color: var(--ewhite);
             width: 119px;
             height: 34px;
             border-radius: 2px;
@@ -1959,14 +1959,14 @@ $wrapper-width: 1252px;
             cursor: pointer;
         }
         .messages__label {
-            @include typo($line:14px,$size:12px,$weight:300,$color: $egrey-49);
+            @include typo($line:14px,$size:12px,$weight:300,$color: var(--egrey-49));
         }
         .messages__number {
             height: 14px;
             width: 14px;
             background-color: #4A90E2;
             border-radius: 2px;
-            @include typo($line:14px,$size:10px,$weight:400,$color: $ewhite);
+            @include typo($line:14px,$size:10px,$weight:400,$color: var(--ewhite));
         }
     }
     .nav {
@@ -1976,14 +1976,14 @@ $wrapper-width: 1252px;
             white-space: nowrap;
             padding: 0 33px;
             margin: 0 2px;
-            @include typo($line:36px,$size:16px,$weight:400,$color: $egrey-49);
+            @include typo($line:36px,$size:16px,$weight:400,$color: var(--egrey-49));
             &:hover {
-                color: $eviolet;
+                color: var(--eviolet);
             }
             &[data-state="1"], &[data-radio="on"] {
-                background-color: $eviolet;
+                background-color: var(--eviolet);
                 &, &:hover {
-                    color: $ewhite;
+                    color: var(--ewhite);
                 }
             }
             &--icon {
@@ -2015,10 +2015,10 @@ $wrapper-width: 1252px;
             box-shadow: 0 2px 5px 1px rgba(0,0,0,0.09), 0 3px 5px 0 rgba(0,0,0,0.08), 0 3px 9px 0 rgba(194,185,203,0);
         }
         .domain-choose__header {
-            @include typo($line:16px,$size:14px,$weight:300,$color: $egrey-49);
+            @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
         }
         .domain-choose__details {
-            @include typo($line:16px,$size:14px,$weight:300,$color: $epink);
+            @include typo($line:16px,$size:14px,$weight:300,$color: var(--epink));
         }
     }
     .input {
@@ -2027,8 +2027,8 @@ $wrapper-width: 1252px;
             width: 266px;
             height: 46px;
             input {
-                @include typo($line:21px,$size:18px,$weight:300,$color: $egrey-89);
-                @include placeholder-input{color: $egrey-89};
+                @include typo($line:21px,$size:18px,$weight:300,$color: var(--egrey-89));
+                @include placeholder-input{color: var(--egrey-89)};
             }
         }
         .input__text {
@@ -2051,7 +2051,7 @@ $wrapper-width: 1252px;
             @include typo($line:19px,$size:16px,$weight:300,$color: #4A90E2);
             &:hover, &[data-radio="on"], &[data-state="1"] {
                 background-color: #879BFF;
-                color: $ewhite;
+                color: var(--ewhite);
             }
         }
     }
@@ -2063,7 +2063,7 @@ $wrapper-width: 1252px;
             text-align: center;
             cursor: pointer;
             border: 2px solid transparent;
-            @include typo($line:16px,$size:14px,$weight:400,$color: $egrey-49);
+            @include typo($line:16px,$size:14px,$weight:400,$color: var(--egrey-49));
             .svg-inner {
                 width: 35px;
                 height: 35px;
@@ -2071,7 +2071,7 @@ $wrapper-width: 1252px;
                 float: none;
             }
             &:hover, &[data-state="1"], &[data-radio="on"] {
-                border: 2px solid $eviolet;
+                border: 2px solid var(--eviolet);
             }
         }
     }
@@ -2079,18 +2079,18 @@ $wrapper-width: 1252px;
         .search__field {
             padding: 0 10px;
             input {
-                @include typo($line:26px,$size:14px,$weight:300,$color: $egrey-89);
-                @include placeholder-input{color: $egrey-89};
-                border-bottom: 1px solid $egrey-89;
+                @include typo($line:26px,$size:14px,$weight:300,$color: var(--egrey-89));
+                @include placeholder-input{color: var(--egrey-89)};
+                border-bottom: 1px solid var(--egrey-89);
                 &:focus {
-                    border-bottom: 1px solid $eviolet;
+                    border-bottom: 1px solid var(--eviolet);
                 }
             }
         }
     }
     .plain-text {
         width: 380px;
-        @include typo($line:16px,$size:12px,$weight:300,$color: $egrey-49);
+        @include typo($line:16px,$size:12px,$weight:300,$color: var(--egrey-49));
     }
     .redirect {
         .redirect__item {
@@ -2104,7 +2104,7 @@ $wrapper-width: 1252px;
         background-color: #FBFBFB;
         cursor: pointer;
         .dragndrop__text {
-            @include typo($line:16px,$size:14px,$weight:300,$color: $egrey-49);
+            @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
         }
     }
     .language {
@@ -2115,7 +2115,7 @@ $wrapper-width: 1252px;
             cursor: pointer;
         }
         .language__existing {
-            @include typo($line:16px,$size:14px,$weight:400,$color: $egrey-49);
+            @include typo($line:16px,$size:14px,$weight:400,$color: var(--egrey-49));
             .svg-inner {
                 height: 40px;
                 margin-bottom: 5px;
@@ -2123,13 +2123,13 @@ $wrapper-width: 1252px;
         }
         .language__add {
             background-color: #FBFBFB;
-            color: $egrey-78;
+            color: var(--egrey-78);
             border-radius: 2px;
         }
     }
     .spaceblock {
         .spaceblock__text {
-            @include typo($line:11px,$size:11px,$weight:400,$color: $egrey-89);
+            @include typo($line:11px,$size:11px,$weight:400,$color: var(--egrey-89));
         }
     }
     .bar {
@@ -2167,15 +2167,15 @@ $wrapper-width: 1252px;
             &[data-state="1"], [data-radio="on"] {
                 &.privacy-options__btn--private {
                     background-color: #AB47BC;
-                    color: $ewhite;
+                    color: var(--ewhite);
                 }
                 // &.privacy-options__btn--private {
-                //     background-color: $eorange;
-                //     color: $ewhite;
+                //     background-color: var(--eorange);
+                //     color: var(--ewhite);
                 // }
                 &.privacy-options__btn--public {
-                    background-color: $egreen;
-                    color: $ewhite;
+                    background-color: var(--egreen);
+                    color: var(--ewhite);
                 }
             }
             .svg-inner {
@@ -2190,7 +2190,7 @@ $wrapper-width: 1252px;
         position: absolute;
         right: 90px;
         top: -10px;
-        @include typo($line:21px,$size:14px,$weight:300,$color:$egrey-89);
+        @include typo($line:21px,$size:14px,$weight:300,$color: var(--egrey-89));
         .svg-inner {
             width: 37px;
             height: 29px;
@@ -2207,7 +2207,7 @@ $wrapper-width: 1252px;
         background-color: rgba(74, 74, 74, 0.4);
         border-radius: 2px;
         .modal__inner {
-            background-color: $ewhite;
+            background-color: var(--ewhite);
             box-shadow: 0 0 7px 0 rgba(0,0,0,0.14), 0 0 6px 0 #F8FAFC;
             border-radius: 2px;
         }
@@ -2219,14 +2219,14 @@ $wrapper-width: 1252px;
             cursor: pointer;
         }
         .modal__text {
-            @include typo($line:21px,$size:14px,$weight:300,$color:$egrey-78);
+            @include typo($line:21px,$size:14px,$weight:300,$color: var(--egrey-78));
             &.modal__text--bold {
-                @include typo($line:21px,$size:14px,$weight:500,$color:$egrey-78);
+                @include typo($line:21px,$size:14px,$weight:500,$color: var(--egrey-78));
             }
         }
         .modal__contact-name {
             max-width: 200px;
-            @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+            @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
         }
     }
     .auth-people {
@@ -2245,7 +2245,7 @@ $wrapper-width: 1252px;
             .auth-people__search-block {
                 border-bottom: 1px solid #DDE2E8;
                 input {
-                    @include typo($line:24px,$size:12px,$weight:300,$color:$egrey-89);
+                    @include typo($line:24px,$size:12px,$weight:300,$color: var(--egrey-89));
                 }
             }
         }
@@ -2262,7 +2262,7 @@ $wrapper-width: 1252px;
             border-bottom: 1px solid #dde2e8;
             text-transform: uppercase;
             width: 99%;
-            @include typo($line:13px,$size:11px,$weight:300,$color:$egrey-49);
+            @include typo($line:13px,$size:11px,$weight:300,$color: var(--egrey-49));
             &.auth-people__th--small {
                 text-transform: none;
             }
@@ -2271,7 +2271,7 @@ $wrapper-width: 1252px;
             border-bottom: 1px solid #dde2e8;
             width: 99%;
             height: 34px;
-            @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+            @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
             &:hover {
                 background-color: #f7f7f9;
                 .auth-people__action-icon {
@@ -2281,10 +2281,10 @@ $wrapper-width: 1252px;
             }
             &.auth-people__tr--contacts {
                 &:hover {
-                    color: $ewhite;
-                    background-color: $eviolet;
+                    color: var(--ewhite);
+                    background-color: var(--eviolet);
                     .auth-people__action-icon {
-                        color: $ewhite;
+                        color: var(--ewhite);
                     }
                 }
             }
@@ -2346,7 +2346,7 @@ $wrapper-width: 1252px;
     }
     .add-people {
         .add-people__header {
-            @include typo($line:25px,$size:22px,$weight:400,$color:$egrey-89);
+            @include typo($line:25px,$size:22px,$weight:400,$color: var(--egrey-89));
         }
         .add-people__text {
             @include typo($line:16px,$size:14px,$weight:400,$color:#EA4D44);
@@ -2363,7 +2363,7 @@ $wrapper-width: 1252px;
         }
         .add-people__menu-header {
             position: relative;
-            @include typo($line:26px,$size:14px,$weight:300,$color:$egrey-89);
+            @include typo($line:26px,$size:14px,$weight:300,$color: var(--egrey-89));
             &:after {
                 content: " ";
                 position: absolute;
@@ -2371,7 +2371,7 @@ $wrapper-width: 1252px;
                 align-self: center;
                 width: 0;
                 height: 0;
-                border-top: 5px solid $egrey-49;
+                border-top: 5px solid var(--egrey-49);
                 border-left: 5px solid transparent;
                 border-right: 5px solid transparent;
             }
@@ -2379,7 +2379,7 @@ $wrapper-width: 1252px;
         .add-people__menu-item {
             cursor: pointer;
             position: relative;
-            @include typo($line:36px,$size:15px,$weight:300,$color:$egrey-89);
+            @include typo($line:36px,$size:15px,$weight:300,$color: var(--egrey-89));
             &:before {
                 content: " ";
                 position: absolute;
@@ -2404,11 +2404,11 @@ $wrapper-width: 1252px;
             }
         }
         .add-people__menu-text {
-            @include typo($line:36px,$size:15px,$weight:300,$color:$egrey-89);
+            @include typo($line:36px,$size:15px,$weight:300,$color: var(--egrey-89));
         }
         .add-people__search-field {
             margin-right: 3px;
-            @include typo($line:36px,$size:15px,$weight:300,$color:$egrey-89);
+            @include typo($line:36px,$size:15px,$weight:300,$color: var(--egrey-89));
             input {
                 width: 20px;
                 border-bottom: 1px solid #DDE2E8;
@@ -2417,14 +2417,14 @@ $wrapper-width: 1252px;
     }
     .select-dates {
         .select-dates__label {
-            @include typo($line:14px,$size:12px,$weight:300,$color:$egrey-89);
+            @include typo($line:14px,$size:12px,$weight:300,$color: var(--egrey-89));
         }
         .select-dates__field {
             width: 57px;
             border-bottom: 1px solid #DDE2E8;
             input {
                 text-align: center;
-                @include typo($line:20px,$size:12px,$weight:300,$color:$egrey-49);
+                @include typo($line:20px,$size:12px,$weight:300,$color: var(--egrey-49));
             }
         }
     }
@@ -2432,7 +2432,7 @@ $wrapper-width: 1252px;
 .input-details {
     position: absolute;
     top: 32px;
-    @include typo($line:11px,$size:9px,$weight:400,$color:$egrey-89);
+    @include typo($line:11px,$size:9px,$weight:400,$color: var(--egrey-89));
     &.account-form__input-details--danger {
         @include typo($line:15px,$size:11px,$weight:300,$color:#FF4578);
     }
@@ -2441,7 +2441,7 @@ $wrapper-width: 1252px;
     max-width: 130px;
     cursor: pointer;
     @include overflow-text;
-    @include typo($size:18px,$line:24px,$weight:400,$color:$egrey-78);
+    @include typo($size:18px,$line:24px,$weight:400,$color: var(--egrey-78));
     &:after {
         content: " ";
         width: 22px;
@@ -2466,7 +2466,7 @@ $wrapper-width: 1252px;
         }
     }
     &[data-radio="on"] {
-        color: $egrey-2f;
+        color: var(--egrey-2f);
         &:after {
             content: " ";
             width: 12px;
@@ -2491,7 +2491,7 @@ $wrapper-width: 1252px;
             background: #FCB58C;
         }
         &[data-radio="on"] {
-            color: $ewhite;
+            color: var(--ewhite);
             &:after {
                 background: white;
             }
@@ -2512,7 +2512,7 @@ $wrapper-width: 1252px;
         border-bottom: 1px solid #DDE2E8;
         input {
             background: transparent;
-            @include typo($line:24px,$size:16px,$weight:300,$color:$egrey-89);
+            @include typo($line:24px,$size:16px,$weight:300,$color: var(--egrey-89));
         }
     }
     .account-top__profile-block {
@@ -2520,7 +2520,7 @@ $wrapper-width: 1252px;
     }
     .account-top__input-icon {
         background-color: rgba(24,163,172,0.4);
-        color: $ewhite;
+        color: var(--ewhite);
         border-radius: 2px;
     }
     .account-top__profile-icon {
@@ -2528,7 +2528,7 @@ $wrapper-width: 1252px;
     }
     .account-top__profile-name {
         @include overflow-text;
-        @include typo($line:12px,$size:12px,$weight:300,$color:$egrey-49);
+        @include typo($line:12px,$size:12px,$weight:300,$color: var(--egrey-49));
         .note-content {
             width: 100%;
         }
@@ -2557,10 +2557,10 @@ $wrapper-width: 1252px;
         .account-form__img-trigger {
             border-radius: 50%;
             background: #4A90E2;
-            color: $ewhite;
+            color: var(--ewhite);
         }
         .account-form__img-menu {
-            background: $ewhite;
+            background: var(--ewhite);
             left: -10px;
             top: 5px;
             padding: 5px 0;
@@ -2573,7 +2573,7 @@ $wrapper-width: 1252px;
                 left: 12px;
                 width: 0;
                 height: 0;
-                border-bottom: 10px solid $ewhite;
+                border-bottom: 10px solid var(--ewhite);
                 border-left: 7px solid transparent;
                 border-right: 7px solid transparent;
             }
@@ -2581,13 +2581,13 @@ $wrapper-width: 1252px;
         .account-form__img-item {
             padding: 0 15px;
             cursor: pointer;
-            @include typo($line:26px,$size:14px,$weight:300,$color:$egrey-2f);
+            @include typo($line:26px,$size:14px,$weight:300,$color: var(--egrey-2f));
             &:hover {
-                color: $eviolet;
+                color: var(--eviolet);
             }
             &:active {
-                background: $eviolet;
-                color: $ewhite;
+                background: var(--eviolet);
+                color: var(--ewhite);
             }
         }
         @media (max-width: $md) {
@@ -2632,9 +2632,9 @@ $wrapper-width: 1252px;
             width: 100%;
             background: transparent;
             @include placeholder-input {
-                @include typo($line:21px,$size:18px,$weight:300,$color:$egrey-89);
+                @include typo($line:21px,$size:18px,$weight:300,$color: var(--egrey-89));
             }
-            @include typo($line:21px,$size:18px,$weight:300,$color:$egrey-89);
+            @include typo($line:21px,$size:18px,$weight:300,$color: var(--egrey-89));
         }
     }
     .account-form__contact-input {
@@ -2650,7 +2650,7 @@ $wrapper-width: 1252px;
             @include placeholder-input {
                 @include typo($line:21px,$size:18px,$weight:300,$color:#5D78FF);
             }
-            @include typo($line:24px,$size:18px,$weight:300,$color:$egrey-89);
+            @include typo($line:24px,$size:18px,$weight:300,$color: var(--egrey-89));
         }
         &[data-status="error"] {
             color: inherit;
@@ -2708,10 +2708,10 @@ $wrapper-width: 1252px;
             }
         }
         .settings-dropdown__header {
-            @include typo($line:15px,$size:11px,$weight:400,$color:$egrey-2f);
+            @include typo($line:15px,$size:11px,$weight:400,$color: var(--egrey-2f));
         }
         .settings-dropdown__item {
-            @include typo($line:15px,$size:11px,$weight:300,$color:$egrey-78);
+            @include typo($line:15px,$size:11px,$weight:300,$color: var(--egrey-78));
             &.settings-dropdown__item--detail {
                 color: #4A90E2;
             }
@@ -2723,14 +2723,14 @@ $wrapper-width: 1252px;
             &:before {
                 content: "•";
                 margin-right: 5px;
-                @include typo($line:15px,$size:12px,$weight:300,$color:$egrey-78);
+                @include typo($line:15px,$size:12px,$weight:300,$color: var(--egrey-78));
             }
         }
     }
     .account-form__input-details {
         position: absolute;
         top: 32px;
-        @include typo($line:11px,$size:9px,$weight:400,$color:$egrey-89);
+        @include typo($line:11px,$size:9px,$weight:400,$color: var(--egrey-89));
         &.account-form__input-details--danger {
             @include typo($line:15px,$size:11px,$weight:300,$color:#FF4578);
         }
@@ -2739,7 +2739,7 @@ $wrapper-width: 1252px;
         padding: 0 2px;
         border-bottom: 1px solid #ECEDEE;
         input {
-            @include typo($line:26px,$size:18px,$weight:300,$color:$egrey-89);
+            @include typo($line:26px,$size:18px,$weight:300,$color: var(--egrey-89));
             @include placeholder-input{
                 @include typo($line:26px,$size:18px,$weight:300,$color:#5D78FF);
             }
@@ -2769,13 +2769,13 @@ $wrapper-width: 1252px;
             width: 100%;
             border-bottom: 1px solid rgba(#4A90E2,0.8);
             @include placeholder-input {
-                @include typo($line:24px,$size:18px,$weight:300,$color:$egrey-78);
+                @include typo($line:24px,$size:18px,$weight:300,$color: var(--egrey-78));
             }
-            @include typo($line:24px,$size:18px,$weight:300,$color:$egrey-49);
+            @include typo($line:24px,$size:18px,$weight:300,$color: var(--egrey-49));
             &:focus {
                 opacity: 1;
                 border-bottom: 1px solid #4A90E2;
-                @include typo($line:24px,$size:18px,$weight:300,$color:$egrey-89);
+                @include typo($line:24px,$size:18px,$weight:300,$color: var(--egrey-89));
             }
         }
         &[data-status="ok"] {
@@ -2804,7 +2804,7 @@ $wrapper-width: 1252px;
         // right: 0;
         left: 0px;
         text-decoration: underline;
-        @include typo($line:16px,$size:12px,$weight:300,$color:$egrey-49);
+        @include typo($line:16px,$size:12px,$weight:300,$color: var(--egrey-49));
     }
     .account-form__input-side {
         position: absolute;
@@ -2820,15 +2820,15 @@ $wrapper-width: 1252px;
         cursor: pointer;
     }
     .account-form__label {
-        @include typo($line:21px,$size:16px,$weight:400,$color:$egrey-2f);
+        @include typo($line:21px,$size:16px,$weight:400,$color: var(--egrey-2f));
     }
     .account-form__header {
         // text-transform: uppercase;
-        // @include typo($line:32px,$size:24px,$weight:400,$color:$egrey-49);
-        @include typo($line:29px,$size:22px,$weight:300,$color:$egrey-89);
+        // @include typo($line:32px,$size:24px,$weight:400,$color: var(--egrey-49));
+        @include typo($line:29px,$size:22px,$weight:300,$color: var(--egrey-89));
         &.account-form__header--security {
             justify-content: center;
-            @include typo($line:32px,$size:24px,$weight:400,$color:$egrey-49);
+            @include typo($line:32px,$size:24px,$weight:400,$color: var(--egrey-49));
             @media (max-width: $md) {
                 display: none;
             }
@@ -2854,7 +2854,7 @@ $wrapper-width: 1252px;
             // height: 46px;
             // border-radius: 2px;
             // border: 1px solid #DDE2E8;
-            // @include typo($line:46px,$size:18px,$weight:300,$color:$egrey-89);
+            // @include typo($line:46px,$size:18px,$weight:300,$color: var(--egrey-89));
             // .note-content {
             //     align-items: center;
             //     display: flex;
@@ -2869,7 +2869,7 @@ $wrapper-width: 1252px;
                 font-size: inherit;
                 line-height: inherit;
                 background: transparent;
-                @include typo($size:18px,$line:24px,$weight:400,$color:$egrey-89);
+                @include typo($size:18px,$line:24px,$weight:400,$color: var(--egrey-89));
                 &:focus {
                     border-bottom: 1px solid #4A90E2;
                 }
@@ -2879,7 +2879,7 @@ $wrapper-width: 1252px;
             }
             &:after {
                 content: " ";
-                border-top: 5px solid $egrey-89;
+                border-top: 5px solid var(--egrey-89);
                 border-left: 5px solid transparent;
                 border-right: 5px solid transparent;
                 width: 0;
@@ -2890,7 +2890,7 @@ $wrapper-width: 1252px;
             }
         }
         .menu-items {
-            background-color: $ewhite;
+            background-color: var(--ewhite);
             width: 100%;
             left: 0;
             border: 1px solid #DDE2E8;
@@ -2899,13 +2899,13 @@ $wrapper-width: 1252px;
     .account-form__dropdown-item {
         padding: 0 13px;
         cursor: pointer;
-        @include typo($line:36px,$size:18px,$weight:300,$color:$egrey-89);
+        @include typo($line:36px,$size:18px,$weight:300,$color: var(--egrey-89));
         &:hover {
-            color: $eviolet;
+            color: var(--eviolet);
         }
         &:active, &[data-state="1"], &[data-radio="on"] {
-            background: $eviolet;
-            color: $ewhite;
+            background: var(--eviolet);
+            color: var(--ewhite);
         }
     }
     .account-form__btn {
@@ -2918,12 +2918,12 @@ $wrapper-width: 1252px;
             // text-transform: uppercase;
             width: 170px;
             // margin: auto;
-            @include typo($line:19px,$size:14px,$weight:400,$color:$ewhite);
+            @include typo($line:19px,$size:14px,$weight:400,$color: var(--ewhite));
         }
         &.account-form__btn--regular {
             width: 170px;
             border: 1px solid #DDE2E8;
-            @include typo($line:19px,$size:14px,$weight:400,$color:$egrey-49);
+            @include typo($line:19px,$size:14px,$weight:400,$color: var(--egrey-49));
         }
     }
     .account-form__delete {
@@ -2933,30 +2933,30 @@ $wrapper-width: 1252px;
         bottom: 30px;
         width: 126px;
         cursor: pointer;
-        @include typo($line:16px,$size:12px,$weight:300,$color:$egrey-89);
+        @include typo($line:16px,$size:12px,$weight:300,$color: var(--egrey-89));
     }
     .account-form__checkbox {
         cursor: pointer;
-        @include typo($line:19px,$size:14px,$weight:300,$color:$egrey-89);
+        @include typo($line:19px,$size:14px,$weight:300,$color: var(--egrey-89));
         .svg-inner {
             width: 14px;
             height: 14px;
             margin-right: 10px;
-            border: 1px solid $egrey-78;
+            border: 1px solid var(--egrey-78);
             border-radius: 2px;
             color: transparent;
         }
         &[data-state="1"] {
             .svg-inner {
-                color: $egreen;
-                border-color: $egreen;
+                color: var(--egreen);
+                border-color: var(--egreen);
             }
         }
     }
 }
 .data {
     .data__block-icon {
-        color: $ewhite;
+        color: var(--ewhite);
     }
     .data__block {
         height: 148px;
@@ -2975,16 +2975,16 @@ $wrapper-width: 1252px;
         }
     }
     .data__block-text {
-        @include typo($line:21px,$size:16px,$weight:400,$color:$ewhite);
+        @include typo($line:21px,$size:16px,$weight:400,$color: var(--ewhite));
     }
     .data__block-number {
-        @include typo($line:26px,$size:20px,$weight:500,$color:$ewhite);
+        @include typo($line:26px,$size:20px,$weight:500,$color: var(--ewhite));
     }
     .data__label-total {
-        @include typo($line:24px,$size:18px,$weight:400,$color:$egrey-49);
+        @include typo($line:24px,$size:18px,$weight:400,$color: var(--egrey-49));
     }
     // .data__label-download {
-    //     @include typo($line:16px,$size:14px,$weight:400,$color:$egrey-49);
+    //     @include typo($line:16px,$size:14px,$weight:400,$color: var(--egrey-49));
     // }
     .data__label-total {//, .data__label-download {
         .label-number {
@@ -3004,22 +3004,22 @@ $wrapper-width: 1252px;
 }
 .account-modal {
     .account-modal__header {
-        @include typo($line:32px,$size:24px,$weight:400,$color:$egrey-49);
+        @include typo($line:32px,$size:24px,$weight:400,$color: var(--egrey-49));
         &.account-modal__header--delete {
             color: #EA4D44;
         }
     }
     .account-modal__descr {
-        @include typo($line:14px,$size:16px,$weight:300,$color:$egrey-89);
+        @include typo($line:14px,$size:16px,$weight:300,$color: var(--egrey-89));
     }
     .account-modal__name {
-        @include typo($line:14px,$size:16px,$weight:300,$color:$egrey-49);
+        @include typo($line:14px,$size:16px,$weight:300,$color: var(--egrey-49));
         &.account-modal__name--delete {
             color: #FA8540;
         }
     }
     .account-modal__label {
-        @include typo($line:24px,$size:18px,$weight:300,$color:$egrey-78);
+        @include typo($line:24px,$size:18px,$weight:300,$color: var(--egrey-78));
         &.account-modal__label--link {
             color: #4A90E2;
         }
@@ -3044,7 +3044,7 @@ $wrapper-width: 1252px;
         }
     }
     .account-modal__resend {
-        @include typo($line:15px,$size:11px,$weight:300,$color:$egrey-78);
+        @include typo($line:15px,$size:11px,$weight:300,$color: var(--egrey-78));
     }
     .account-modal__input-block {
         position: relative;
@@ -3062,7 +3062,7 @@ $wrapper-width: 1252px;
         border-bottom: 2px solid rgba(142, 138, 138, 0.33);
         @include typo($line:29px,$size:14px,$weight:400,$color:#2F2F2F);
         @include placeholder-input {
-            @include typo($line:29px,$size:14px,$weight:400,$color:$egrey-78);
+            @include typo($line:29px,$size:14px,$weight:400,$color: var(--egrey-78));
             opacity: 0.5;
         }
         &[data-status="error"] {
@@ -3085,11 +3085,11 @@ $wrapper-width: 1252px;
         cursor: pointer;
         border: 1px solid #DDE2E8;
         // box-shadow: 0 2px 4px 0 rgba(0,0,0,0.5), 0 8px 10px 1px rgba(0,0,0,0.14), 0 0 2px 0 rgba(0,0,0,0.1), 0 4px 4px 0 rgba(209,221,245,0.2);
-        @include typo($line:32px,$size:14px,$weight:400,$color:$egrey-49);
+        @include typo($line:32px,$size:14px,$weight:400,$color: var(--egrey-49));
         &[data-state="1"] {
             background-color: #879BFF;
             border-color: #879BFF;
-            color: $ewhite;
+            color: var(--ewhite);
         }
     }
     .contacts__search {
@@ -3100,16 +3100,16 @@ $wrapper-width: 1252px;
     }
     .contacts__search-input {
         input {
-            @include typo($line:14px,$size:12px,$weight:300,$color:$egrey-89);
+            @include typo($line:14px,$size:12px,$weight:300,$color: var(--egrey-89));
         }
     }
     .contacts__header {
-        @include typo($line:32px,$size:24px,$weight:300,$color:$egrey-49);
+        @include typo($line:32px,$size:24px,$weight:300,$color: var(--egrey-49));
     }
 }
 .no-data {
     .no-data__label {
-        @include typo($line:21px,$size:18px,$weight:300,$color:$egrey-49);
+        @include typo($line:21px,$size:18px,$weight:300,$color: var(--egrey-49));
     }
     .no-data__btn {
         height: 36px;
@@ -3117,7 +3117,7 @@ $wrapper-width: 1252px;
         background-color: #18AC72;
         text-transform: uppercase;
         cursor: pointer;
-        @include typo($line:16px,$size:14px,$weight:400,$color:$ewhite);
+        @include typo($line:16px,$size:14px,$weight:400,$color: var(--ewhite));
     }
 }
 .security {
@@ -3137,7 +3137,7 @@ $wrapper-width: 1252px;
                 width: 1px;
                 top: 104px;
                 right: 0;
-                background-color: $eblue;
+                background-color: var(--eblue);
             }
             @media (max-width: $md) {
                 &:after {
@@ -3174,7 +3174,7 @@ $wrapper-width: 1252px;
         }
     }
     .security__chip-name {
-        @include typo($line:24px,$size:18px,$weight:400,$color:$egrey-78);
+        @include typo($line:24px,$size:18px,$weight:400,$color: var(--egrey-78));
     }
     .security__chip-info {
         color: #DDE2E8;
@@ -3182,12 +3182,12 @@ $wrapper-width: 1252px;
     }
     .security__chip-text {
         @include overflow-text;
-        @include typo($line:24px,$size:18px,$weight:400,$color:$eblue);
+        @include typo($line:24px,$size:18px,$weight:400,$color: var(--eblue));
         .svg-inner {
             width: 20px;
             height: 20px;
             padding: 4px;
-            color: $egrey-78;
+            color: var(--egrey-78);
         }
     }
     .security__checkbox {
@@ -3198,7 +3198,7 @@ $wrapper-width: 1252px;
 }
 .preferences {
     .preferences__label {
-        @include typo($line:24px,$size:18px,$weight:400,$color:$egrey-49);
+        @include typo($line:24px,$size:18px,$weight:400,$color: var(--egrey-49));
     }
     .preferences__wallpapers {
         width: 147px;
@@ -3221,7 +3221,7 @@ $wrapper-width: 1252px;
     }
     .preferences__language {
         cursor: pointer;
-        @include typo($line:24px,$size:12px,$weight:400,$color:$egrey-78);
+        @include typo($line:24px,$size:12px,$weight:400,$color: var(--egrey-78));
         .svg-inner {
             width: 14px;
             height: 24px;
@@ -3284,7 +3284,7 @@ $wrapper-width: 1252px;
             background-color: #F7F7F9;
             border-radius: 2px 2px 0 0;
             padding: 0 10px;
-            @include typo($line:30px,$size:12px,$weight:300,$color:$egrey-89);
+            @include typo($line:30px,$size:12px,$weight:300,$color: var(--egrey-89));
         }
     }
     &__notifications {
@@ -3352,13 +3352,13 @@ $wrapper-width: 1252px;
             // padding-left: 4px;
             padding-right: 35px;
             @include overflow-text;
-            @include typo($size:14px,$line:36px,$weight:300,$color:$egrey-49);
+            @include typo($size:14px,$line:36px,$weight:300,$color: var(--egrey-49));
         }
         &__icon {
             position: absolute;
             right: 0;
             visibility: hidden;
-            color: $ewhite;
+            color: var(--ewhite);
             top: 50%;
             transform: translate(0,-50%);
             &-item {
@@ -3369,12 +3369,12 @@ $wrapper-width: 1252px;
             &-email {
                 white-space: nowrap;
                 @include overflow-text;
-                @include typo($line:13px,$size:10px,$weight:300,$color:$egrey-89);
+                @include typo($line:13px,$size:10px,$weight:300,$color: var(--egrey-89));
             }
             &-fullname {
                 white-space: nowrap;
                 @include overflow-text;
-                @include typo($line:16px,$size:12px,$weight:300,$color:$egrey-2f);
+                @include typo($line:16px,$size:12px,$weight:300,$color: var(--egrey-2f));
             }
             &-avatar {
                 border-radius: 50%;
@@ -3394,19 +3394,19 @@ $wrapper-width: 1252px;
                 // padding: 0 80px 0 50px;
                 // width: 55%;
                 // padding: 0;
-                color: $ewhite;
+                color: var(--ewhite);
             }
             .sharee-contact__icon {
                 visibility: visible;
             }
             .sharee-contact__user {
                 &-email, &-fullname {
-                    color: $ewhite;
+                    color: var(--ewhite);
                 }
             }
 
             .sharee-contact__hourglass-item {
-                color: $ewhite;
+                color: var(--ewhite);
             }
         }
         &__userblock {
@@ -3457,7 +3457,7 @@ $wrapper-width: 1252px;
         //     height: 1px;
         //     right: 9px;
         //     top: 11px;
-        //     background: $ewhite;
+        //     background: var(--ewhite);
         // }
         // &:after {
         //     transform: rotate(45deg);
@@ -3480,7 +3480,7 @@ $wrapper-width: 1252px;
             position: absolute;
             right: -4px;
             visibility: hidden;
-            color: $ewhite;
+            color: var(--ewhite);
             top: 50%;
             transform: translate(0, -50%);
             font-weight: bold;
@@ -3489,7 +3489,7 @@ $wrapper-width: 1252px;
             position: absolute;
             right: 40px;
             visibility: hidden;
-            color: $ewhite;
+            color: var(--ewhite);
             top: 50%;
             transform: translate(0, -50%);
             font-weight: bold;
@@ -3505,7 +3505,7 @@ $wrapper-width: 1252px;
                 visibility: visible;
             }
             .sharee-new-contact__item {
-                color: $ewhite;
+                color: var(--ewhite);
             }
         }
         .share-info__avatar {
@@ -3540,10 +3540,10 @@ $wrapper-width: 1252px;
             align-items: center;
             justify-content: space-between;
             cursor: pointer;
-            @include typo($size:14px,$line:24px,$weight:300,$color:$egrey-49);
+            @include typo($size:14px,$line:24px,$weight:300,$color: var(--egrey-49));
             &:hover {
                 background-color: #879BFF;
-                color: $ewhite;
+                color: var(--ewhite);
                 .sharee-new-contact__item-icon {
                     visibility: visible;
                 }
@@ -3605,12 +3605,12 @@ $wrapper-width: 1252px;
                 width: 220px;
                 padding: 0 10px 0 0;
                 // line-height: 30px;
-                @include typo($size:14px,$line:30px,$weight:300,$color:$egrey-49);
+                @include typo($size:14px,$line:30px,$weight:300,$color: var(--egrey-49));
             }
             &__icon {
                 visibility: hidden;
                 display: none;
-                color: $ewhite;
+                color: var(--ewhite);
             }
             &__inner {
                 padding: 3px 0 3px 60px;
@@ -3620,7 +3620,7 @@ $wrapper-width: 1252px;
                     background: #879BFF;
                 }
                 #{$sharebox}__item {
-                    color: $ewhite;
+                    color: var(--ewhite);
                     width: 165px;
                     @include overflow-text;
                 }
@@ -3638,7 +3638,7 @@ $wrapper-width: 1252px;
     //&__bar {
     //    background-color: #FA8540;
     //    border-radius: 4px 4px 0 0;
-    //    @include typo($line:21px,$size:16px,$weight:400,$color:$ewhite);
+    //    @include typo($line:21px,$size:16px,$weight:400,$color: var(--ewhite));
     //}
     &__header {
         flex-shrink: 0;
@@ -3694,7 +3694,7 @@ $wrapper-width: 1252px;
             margin-top: 20px;
             margin-bottom: 15px;
             &--initial {
-                background: $ewhite;
+                background: var(--ewhite);
                 box-shadow: none;
                 width: 100%;
                 margin: 0;
@@ -3718,7 +3718,7 @@ $wrapper-width: 1252px;
             }
         }
         .sharee-contact__messageblock {
-            background-color: $ewhite;
+            background-color: var(--ewhite);
             top: 0;
             width: 254px;
             height: 65px;
@@ -3728,7 +3728,7 @@ $wrapper-width: 1252px;
             border-radius: 4px;
             display: none;
             box-shadow: 0 5px 8px 1px rgba(192, 197, 209, 0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
-            @include typo($line:14px,$size:12px,$color:$egrey-2f,$weight:300);
+            @include typo($line:14px,$size:12px,$color: var(--egrey-2f),$weight:300);
             &[data-state="open"] {
                 display: block;
             }
@@ -3750,11 +3750,11 @@ $wrapper-width: 1252px;
         &-plus {
             background: #FA8540;
             border-radius: 2px;
-            color: $ewhite;
+            color: var(--ewhite);
             cursor: pointer;
             flex-shrink: 0;
             &:hover {
-                background: $eviolet;
+                background: var(--eviolet);
             }
             &[data-state="0"]{
                 opacity: 0.6;
@@ -3762,7 +3762,7 @@ $wrapper-width: 1252px;
             }
         }
         &-plus-btn {
-            background: $ewhite;
+            background: var(--ewhite);
             border-radius: 2px;
             color: #FA8540;
             border: 1px solid #F1F1F6;
@@ -3792,7 +3792,7 @@ $wrapper-width: 1252px;
             // background: #18AC72;
             // height: 26px;
             // width: 100px;
-            // @include typo($line:26px,$size:14px,$weight:400,$color:$ewhite);
+            // @include typo($line:26px,$size:14px,$weight:400,$color: var(--ewhite));
             min-width: 60px;
             width: auto;
             height: 20px;
@@ -3802,7 +3802,7 @@ $wrapper-width: 1252px;
             cursor: pointer;
             display: flex;
             justify-content: center;
-            @include typo($line:20px,$size:12px,$weight:400,$color:$ewhite);
+            @include typo($line:20px,$size:12px,$weight:400,$color: var(--ewhite));
             &[data-state="0"]{
                 opacity: 0.6;
                 pointer-events: none;
@@ -3817,17 +3817,17 @@ $wrapper-width: 1252px;
             cursor: pointer;
             display: flex;
             justify-content: center;
-            @include typo($line:26px,$size:14px,$weight:400,$color:$ewhite);
+            @include typo($line:26px,$size:14px,$weight:400,$color: var(--ewhite));
             &--inversed {
-                background: $ewhite;
-                color: $egrey-49;
+                background: var(--ewhite);
+                color: var(--egrey-49);
                 border: 1px solid #DDE2E8;
             }
         }
         &-email {
             padding: 2px 29px 2px 10px;
             border-radius: 11.5px;
-            @include typo($line:19px,$size:14px,$weight:300,$color:$egrey-2f);
+            @include typo($line:19px,$size:14px,$weight:300,$color: var(--egrey-2f));
             &:after {
                 content: '+';
                 position: absolute;
@@ -3837,7 +3837,7 @@ $wrapper-width: 1252px;
             }
             &:hover {
                 background: #879BFF;
-                color: $ewhite;
+                color: var(--ewhite);
                 &:after {
                     visibility: visible;
                     cursor: pointer;
@@ -3848,7 +3848,7 @@ $wrapper-width: 1252px;
             &[data-state="1"], &[data-radio="on"] {
                 .menu-trigger {
                     background: #879BFF;
-                    color: $ewhite;
+                    color: var(--ewhite);
                 }
             }
             .menu-trigger {
@@ -3865,7 +3865,7 @@ $wrapper-width: 1252px;
                 margin-top: 6px;
                 border-radius: 2px;
                 padding: 5px 15px;
-                background: $ewhite;
+                background: var(--ewhite);
                 top: 95px !important;
                 box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
                 position: relative;
@@ -3884,7 +3884,7 @@ $wrapper-width: 1252px;
                     width: 10px;
                     height: 10px;
                     transform: rotate(45deg);
-                    background: $ewhite;
+                    background: var(--ewhite);
                     box-shadow: 0 5px 8px 10px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
                 }
                 &:after {
@@ -3893,7 +3893,7 @@ $wrapper-width: 1252px;
                     top: 0;
                     width: 100%;
                     height: 100%;
-                    background: $ewhite;
+                    background: var(--ewhite);
                     left: 0px;
                 }
             }
@@ -3921,7 +3921,7 @@ $wrapper-width: 1252px;
             padding: 0 10px;
             background-color: #F7F7F9;
             border-radius: 2px 2px 0 0;
-            @include typo($line:30px,$size:12px,$weight:300,$color:$egrey-89);
+            @include typo($line:30px,$size:12px,$weight:300,$color: var(--egrey-89));
         }
     }
     &__type {
@@ -3942,11 +3942,11 @@ $wrapper-width: 1252px;
         $prefix: &;
         &[data-radiotoggle="on"] {
             background: #879BFF;
-            color: $ewhite;
+            color: var(--ewhite);
             border-radius: 2px;
         }
         &__text {
-            @include typo($line:14px,$size:12px,$weight:300,$color:$egrey-78);
+            @include typo($line:14px,$size:12px,$weight:300,$color: var(--egrey-78));
         }
         &__input {
             height: 20px;
@@ -4038,9 +4038,9 @@ $wrapper-width: 1252px;
                     width: auto;
                     margin: 10px -13px 0;
                     .option__block {
-                        background-color: $ewhite;
+                        background-color: var(--ewhite);
                         &:after {
-                            background-color: $ewhite;
+                            background-color: var(--ewhite);
                         }
                     }
                 }
@@ -4056,7 +4056,7 @@ $wrapper-width: 1252px;
                 width: 14px;
                 height: 14px;
                 margin-right: 10px;
-                color: $ewhite;
+                color: var(--ewhite);
                 border: 1px solid #89929E;
                 // border-radius: 2px;
                 border-radius: 50%;
@@ -4075,7 +4075,7 @@ $wrapper-width: 1252px;
                 width: 14px;
                 height: 14px;
                 margin-right: 10px;
-                color: $ewhite;
+                color: var(--ewhite);
                 border: 1px solid #89929E;
                 border-radius: 2px;
             }
@@ -4242,7 +4242,7 @@ $wrapper-width: 1252px;
             margin-top: 6px;
             border-radius: 2px;
             padding: 5px 15px;
-            background: $ewhite;
+            background: var(--ewhite);
             top: 15px !important;
             box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
             position: relative;
@@ -4261,7 +4261,7 @@ $wrapper-width: 1252px;
                 width: 10px;
                 height: 10px;
                 transform: rotate(45deg);
-                background: $ewhite;
+                background: var(--ewhite);
                 box-shadow: 0 5px 8px 10px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
             }
             &:after {
@@ -4270,7 +4270,7 @@ $wrapper-width: 1252px;
                 top: 0;
                 width: 100%;
                 height: 100%;
-                background: $ewhite;
+                background: var(--ewhite);
                 left: 0px;
             }
         }
@@ -4335,7 +4335,7 @@ $wrapper-width: 1252px;
     min-width: 438px;
     min-height: 320px;
     z-index: 1000;
-    background: $ewhite;
+    background: var(--ewhite);
     border-radius: 4px;
     box-shadow: 0px 0px 31px 0 rgba(0, 0, 0, 0.4);
     overflow: hidden;
@@ -4369,13 +4369,13 @@ $wrapper-width: 1252px;
     .rights__checkbox {
         white-space: nowrap;
         cursor: pointer;
-        @include typo($line:30px,$size:18px,$weight:300,$color:$egrey-89);
+        @include typo($line:30px,$size:18px,$weight:300,$color: var(--egrey-89));
         svg {
             width: 16px;
             height: 16px;
             margin-right: 15px;
-            color: $ewhite;
-            border: 1px solid $egrey-89;
+            color: var(--ewhite);
+            border: 1px solid var(--egrey-89);
             border-radius: 2px;
         }
         &[data-state="1"], &[data-radio="on"], &:hover {
@@ -4400,7 +4400,7 @@ $wrapper-width: 1252px;
                 content: " ";
                 border-left: 5px solid transparent;
                 border-right: 5px solid transparent;
-                border-bottom: 5px solid $ewhite;
+                border-bottom: 5px solid var(--ewhite);
                 position: absolute;
                 top: -5px;
                 left: 25px;
@@ -4420,7 +4420,7 @@ $wrapper-width: 1252px;
         &-text {
             width: 100%;
             @include overflow-text;
-            @include typo($line:32px,$size:12px,$weight:300,$color:$egrey-2f);
+            @include typo($line:32px,$size:12px,$weight:300,$color: var(--egrey-2f));
             .root-node {
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -4428,7 +4428,7 @@ $wrapper-width: 1252px;
             }
         }
         &-label {
-            @include typo($line:13px,$size:10px,$weight:300,$color:$egrey-78);
+            @include typo($line:13px,$size:10px,$weight:300,$color: var(--egrey-78));
         }
         &-num {
             @include typo($line:13px,$size:10px,$weight:400,$color:#FF805C);
@@ -4465,7 +4465,7 @@ $wrapper-width: 1252px;
     //     left: 0;
     //     right: 0;
     //     margin: auto;
-    //     @include typo($line:21px,$size:16px,$weight:400,$color:$ewhite);
+    //     @include typo($line:21px,$size:16px,$weight:400,$color: var(--ewhite));
     // }
     // &__header-icon {
     //     // position: absolute;
@@ -4493,7 +4493,7 @@ $wrapper-width: 1252px;
             cursor: pointer;
         }
         &-header {
-            @include typo($line:24px,$size:18px,$weight:300,$color:$egrey-49);
+            @include typo($line:24px,$size:18px,$weight:300,$color: var(--egrey-49));
         }
         &-block {
             background: #F8F8F8;
@@ -4508,11 +4508,11 @@ $wrapper-width: 1252px;
         }
         &-input {
             width: 120px;
-            // border-bottom: 2px solid $egrey-89;
+            // border-bottom: 2px solid var(--egrey-89);
             height: 26px;
             border-bottom: 1px solid #ECEDEE;
             @include overflow-text;
-            @include typo($line:26px,$size:12px,$weight:400,$color:$egrey-89);
+            @include typo($line:26px,$size:12px,$weight:400,$color: var(--egrey-89));
             .input-details {
                 top: 26px;
                 font-size: 8px;
@@ -4531,13 +4531,13 @@ $wrapper-width: 1252px;
         &-menu {
             .menu-items {
                 width: 145px;
-                background: $ewhite;
+                background: var(--ewhite);
                 padding: 11px 16px;
                 margin-left: -30px;
                 margin-top: 5px;
                 z-index: 2;
                 box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
-                @include typo($line:14px,$size:12px,$weight:300,$color:$egrey-2f);
+                @include typo($line:14px,$size:12px,$weight:300,$color: var(--egrey-2f));
                 &:before {
                     content: " ";
                     width: 10px;
@@ -4545,22 +4545,22 @@ $wrapper-width: 1252px;
                     transform: rotate(45deg);
                     left: 35px;
                     top: -4px;
-                    background: $ewhite;
+                    background: var(--ewhite);
                     position: absolute;
                 }
             }
         }
         &-edit {
-            color: $egrey-89;
+            color: var(--egrey-89);
             &--btn {
                 cursor: pointer;
                 &:hover {
-                    color: $eviolet;
+                    color: var(--eviolet);
                 }
                 &[data-state="opened"] {
                     border-radius: 2px;
-                    background: $eviolet;
-                    color: $ewhite;
+                    background: var(--eviolet);
+                    color: var(--ewhite);
                 }
             }
         }
@@ -4573,7 +4573,7 @@ $wrapper-width: 1252px;
             display: flex;
             justify-content: center;
             cursor: pointer;
-            @include typo($line:20px,$size:8px,$weight:400,$color:$ewhite);
+            @include typo($line:20px,$size:8px,$weight:400,$color: var(--ewhite));
         }
     }
     &__list {
@@ -4594,7 +4594,7 @@ $wrapper-width: 1252px;
             cursor: pointer;
             height: 33px;
             width: calc(100% - 5px);
-            @include typo($line:16px,$size:12px,$weight:400,$color:$egrey-89);
+            @include typo($line:16px,$size:12px,$weight:400,$color: var(--egrey-89));
             &-actions {
                 visibility: hidden;
             }
@@ -4605,14 +4605,14 @@ $wrapper-width: 1252px;
                 fill: currentColor;
             }
             &:hover {
-                color: $eviolet;
+                color: var(--eviolet);
                 .project-room__list-item-actions {
                     visibility: visible;
                 }
             }
             &[data-state="opened"] {
-                background: $eviolet;
-                color: $ewhite;
+                background: var(--eviolet);
+                color: var(--ewhite);
                 .project-room__list-item-actions {
                     visibility: visible;
                 }
@@ -4645,10 +4645,10 @@ $wrapper-width: 1252px;
             margin: 0 -4px -10px -18px;
             height: 24px;
             width: 190px;
-            @include typo($line:24px,$size:12px,$weight:300,$color:$egrey-2f);
+            @include typo($line:24px,$size:12px,$weight:300,$color: var(--egrey-2f));
             &:hover {
                 background: #879BFF;
-                color: $ewhite;
+                color: var(--ewhite);
                 #{$access_prefix}-delete {
                     visibility: visible;
                 }
@@ -4664,19 +4664,19 @@ $wrapper-width: 1252px;
         &-new {
             white-space: nowrap;
             @include overflow-text;
-            // @include typo($line:11px,$size:9px,$weight:300,$color:$egrey-89);
+            // @include typo($line:11px,$size:9px,$weight:300,$color: var(--egrey-89));
         }
         &-preheader {
             border-bottom: 1px solid #ECEDEE;
             margin: 8px 6px 8px -8px;
             width: 170px;
-            @include typo($line:11px,$size:9px,$weight:300,$color:$egrey-89);
+            @include typo($line:11px,$size:9px,$weight:300,$color: var(--egrey-89));
         }
         &-item {
             cursor: pointer;
             white-space: nowrap;
             @include overflow-text;
-            @include typo($line:24px,$size:12px,$weight:300,$color:$egrey-2f);
+            @include typo($line:24px,$size:12px,$weight:300,$color: var(--egrey-2f));
             &-action {
                 visibility: hidden;
             }
@@ -4684,14 +4684,14 @@ $wrapper-width: 1252px;
                 @include overflow-text;
             }
             &:hover {
-                color: $eviolet;
+                color: var(--eviolet);
                 .project-room__access-item-action {
                     visibility: visible;
                 }
             }
             &[data-state="1"] {
-                background: $eviolet;
-                color: $ewhite;
+                background: var(--eviolet);
+                color: var(--ewhite);
                 .project-room__access-item-action {
                     visibility: visible;
                 }
@@ -4702,11 +4702,11 @@ $wrapper-width: 1252px;
         $prefix: &;
         &[data-radiotoggle="on"] {
             background: #879BFF;
-            color: $ewhite;
+            color: var(--ewhite);
             border-radius: 2px;
         }
         &__text {
-            @include typo($line:14px,$size:12px,$weight:300,$color:$egrey-78);
+            @include typo($line:14px,$size:12px,$weight:300,$color: var(--egrey-78));
         }
         &__input {
             height: 20px;
@@ -4742,7 +4742,7 @@ $wrapper-width: 1252px;
                 width: 14px;
                 height: 14px;
                 margin-right: 10px;
-                color: $ewhite;
+                color: var(--ewhite);
                 border: 1px solid #89929E;
                 // border-radius: 2px;
                 border-radius: 50%;
@@ -4761,7 +4761,7 @@ $wrapper-width: 1252px;
                 width: 14px;
                 height: 14px;
                 margin-right: 10px;
-                color: $ewhite;
+                color: var(--ewhite);
                 border: 1px solid #89929E;
                 border-radius: 2px;
             }
@@ -4844,7 +4844,7 @@ $wrapper-width: 1252px;
 
  
 .recycle-bin {
-    background-color: $ewhite;
+    background-color: var(--ewhite);
     border-radius: 4px;
 }
 /*
@@ -5044,7 +5044,7 @@ SHARE-BOX REFACTORING
             align-items: center;
             // box-shadow: 0 1px 5px 0 rgba(0, 0, 0, 0.1);
             @include overflow-text;
-            @include typo($size:14px,$line:25px,$color:$egrey-49,$weight:400);
+            @include typo($size:14px,$line:25px,$color: var(--egrey-49),$weight:400);
         }
     }
     //
@@ -5135,11 +5135,11 @@ SHARE-BOX REFACTORING
             tr th {
                 border-bottom: 1px solid #a4c6f3;
                 &.available {
-                    @include typo($line:14px,$size:8px,$color:$egrey-49,$weight:400);
+                    @include typo($line:14px,$size:8px,$color: var(--egrey-49),$weight:400);
                     span {
                         padding: 1.5px;
                         border-width: 0 1px 1px 0;
-                        border-color: $egrey-49;
+                        border-color: var(--egrey-49);
                     }
                     &:hover {
                         background: transparent;
@@ -5159,7 +5159,7 @@ SHARE-BOX REFACTORING
                 -moz-appearance: none;
                 text-indent: 1px;
                 text-overflow: '';
-                @include typo($line:14px,$size:12px,$color:$egrey-49,$weight:400);
+                @include typo($line:14px,$size:12px,$color: var(--egrey-49),$weight:400);
                 &::-ms-expand {
                     display: none;
                 }
@@ -5176,16 +5176,16 @@ SHARE-BOX REFACTORING
                 height: 21px;
                 line-height: 18px;
                 border-radius: 4%;
-                @include typo($line:1,$size:10px,$color:$egrey-49,$weight:400);
+                @include typo($line:1,$size:10px,$color: var(--egrey-49),$weight:400);
             }
             td {
                 &.active {
-                    color: $ewhite;
+                    color: var(--ewhite);
                     border-radius: 4%;
                     background-color: #4A90E2;
                 }
                 &.available:hover {
-                    color: $ewhite;
+                    color: var(--ewhite);
                     border-radius: 4%;
                     background-color: #4A90E2;
                 }
@@ -5215,7 +5215,7 @@ MOVED TO window/group/header/breadscrumbs
 //         align-items: center;
 //     }
 //     &__icon {
-//         color: $ewhite;
+//         color: var(--ewhite);
 //         cursor: pointer;
 //     }
 //     &__arrow {
@@ -5228,7 +5228,7 @@ MOVED TO window/group/header/breadscrumbs
 //         width: 100%;
 //         cursor: pointer;
 //         @include overflow-text;
-//         @include typo($size:14px,$line:18px,$weight:300,$color:$egrey-49);
+//         @include typo($size:14px,$line:18px,$weight:300,$color: var(--egrey-49));
 //         &:last-child {
 //             color: #879BFF;
 //         }
@@ -5245,7 +5245,7 @@ MOVED TO window/group/header/breadscrumbs
 //         visibility: hidden;
 //         width: 109px;
 //         height: 157px;
-//         background: $ewhite;
+//         background: var(--ewhite);
 //         border-radius: 4px;
 //         box-shadow: 0 6px 10px 1px rgba(63,79,117,0.13), 0 7px 20px 0 rgba(86,65,113,0.08), 0 3px 17px 0 rgba(194,185,203,0);
 //         padding: 10px 0;
@@ -5270,7 +5270,7 @@ MOVED TO window/group/header/breadscrumbs
 //             height: 10px;
 //             top: 0;
 //             left: 0;
-//             background: $ewhite;
+//             background: var(--ewhite);
 //             border-radius: 4px 4px 0 0;
 //         }
 //     }

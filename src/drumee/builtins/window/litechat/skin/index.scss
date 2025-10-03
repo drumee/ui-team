@@ -149,7 +149,7 @@
   &__drag-drop {
     align-items: center;
     border-radius: $default-border-radius;
-    border: 1px dashed $egreen;
+    border: 1px dashed var(--egreen);
     box-sizing: border-box;
     display: flex;
     height: inherit;
@@ -159,7 +159,7 @@
     & .note-content {
       height: 38px;
       min-width: 140px;
-      @include typo($line:19px, $size:16px, $weight:300, $color:$egreen);
+      @include typo($line:19px, $size:16px, $weight:300, $color: var(--egreen));
     }
   }
 
@@ -229,7 +229,7 @@
           padding-left: 25px;
           margin-top: auto;
           margin-bottom: auto;
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $egrey-89);
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--egrey-89));
         }
       }
     }
@@ -268,7 +268,7 @@
   &__button-delete {
     border: 0.5px solid $btn-caution-border;
     justify-content: center;
-    @include typo($size: 13px, $line: 12px, $color: $btn-caution-backgroundless-text);//$eorange-dark);
+    @include typo($size: 13px, $line: 12px, $color: $btn-caution-backgroundless-text);//var(--eorange-dark));
 
     &:hover {
       border:2px solid $btn-caution-border-hover;
@@ -301,7 +301,7 @@
     background: hsla(0,0%,78.4%,.5);//rgba(137, 146, 158, 0.2);
     height: 40px;
     justify-content: center;
-    @include typo($size: 12px,  $color: $eblue);//$weight:300,
+    @include typo($size: 12px,  $color: var(--eblue));//$weight:300,
   }
 }
 

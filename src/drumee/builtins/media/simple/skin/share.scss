@@ -18,12 +18,12 @@
     // border-radius: 2px;
     svg{
       border-radius: 2px;
-      background-color: $ewhite;
+      background-color: var(--ewhite);
     }
   }
   &[data-hover="on"]{
     visibility: visible;
-    fill: $ewhite;;
+    fill: var(--ewhite);;
   }
   &:hover{
     svg{

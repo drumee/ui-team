@@ -25,12 +25,12 @@
     &:hover,
     &[data-active="active"],
     &[data-radio="on"] {
-      background: $eviolet;
+      background: var(--eviolet);
 
       & .profile-icon,
       & .status,
       & .note-reader {
-        color: $white;
+        color: var(--white);
       }
     }
 
@@ -41,7 +41,7 @@
         }
 
         &[data-online="1"] {
-          color: $white;
+          color: var(--white);
         }
       }
     }
@@ -125,7 +125,7 @@
     width: 27px;
     padding: 2px;
     margin-right: 10px;
-    color: $white;
+    color: var(--white);
 
     &[data-invite="1"] {
       color: var(--default-bg-alert);

@@ -12,7 +12,7 @@
 
     .menu-topic-items {
       &__wrapper {
-        box-shadow: $drumee-shadow-main;
+        box-shadow: var(--shadow-main);
         border-radius: $default-border-radius;
         right: 45px;
         top: -8px;
@@ -145,7 +145,7 @@
       margin-right: 9px;
       svg {
         padding: 4px;
-        color: $egrey-78; //$egrey-62; //$egrey-49 ; //$default-icon-neutral;
+        color: var(--egrey-78); //var(--egrey-62); //var(--egrey-49); //$default-icon-neutral;
       }
       .label {
         margin-left: 2px;
@@ -181,7 +181,7 @@
       svg {
         padding: 2px; //5px;
         color: #e74c3d; //#e8223b;
-        stroke: $ewhite;
+        stroke: var(--ewhite);
         //stroke-width:3% ;
       }
     }
@@ -230,7 +230,7 @@
       }
     }
     &:hover {
-      color: $eviolet; //$default-text-color;   //#879BFF;
+      color: var(--eviolet); //$default-text-color;   //#879BFF;
       svg {
         color: var(--default-icon-hover) !important; //;#879BFF
       }
@@ -238,9 +238,9 @@
     &:focus,
     &:active {
       background-color: #879bff;
-      color: $ewhite;
+      color: var(--ewhite);
       svg {
-        color: $ewhite;
+        color: var(--ewhite);
       }
     }
   }

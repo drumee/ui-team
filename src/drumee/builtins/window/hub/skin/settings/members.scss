@@ -41,6 +41,6 @@
     // -webkit-font-smoothing: antialiased;
     // font-family: "Roboto-Regular", sans-serif;    
     // @include typo($size:12px,$line:16px,$weight:400,$color:#4A90E2)
-    @include typo($size:14px,$line:16px,$weight:400,$color:$eblue);
+    @include typo($size:14px,$line:16px,$weight:400,$color: var(--eblue));
   }
 }

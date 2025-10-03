@@ -184,7 +184,7 @@
     }
     
     &.choose-all {
-      color: $eviolet;
+      color: var(--eviolet);
       height: 14px;
       margin-left: 10px;
       width: 14px;
@@ -235,7 +235,7 @@
   }
 
   &__search-result-wrapper {
-    background: $white;
+    background: var(--white);
     height: 90%;
     position: absolute;
     top: 30px;

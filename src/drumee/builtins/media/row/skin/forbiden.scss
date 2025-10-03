@@ -8,9 +8,9 @@
     left: -20px;
     top: 0;
     justify-content: center;
-    border: 1px solid $eorange-sunset;
+    border: 1px solid var(--eorange-sunset);
     border-radius: $default-border-radius-small;
-    background-color: $ewhite;
+    background-color: var(--ewhite);
     box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
     Z-index: 200;
 
@@ -20,7 +20,7 @@
   }
 
   &__text {
-    @include typo($line: 13px, $size: 12px, $weight: 400, $color: $eorange-sunset);
+    @include typo($line: 13px, $size: 12px, $weight: 400, $color: var(--eorange-sunset));
     text-align: center;
     width: auto;
     margin: auto auto;
@@ -30,8 +30,8 @@
     width: 17px;
     height: 17px;
     padding: 2px;
-    border: 1px solid $eorange-sunset;
-    background-color: $eorange-sunset;
+    border: 1px solid var(--eorange-sunset);
+    background-color: var(--eorange-sunset);
     color: white;
     fill: white;
     border-radius: 50px;
@@ -51,6 +51,6 @@
   left: calc(50% - 15px);
   top: calc(50% - 15px);
   text-align: center;
-  @include typo($line: 30px, $size: 15px, $weight: 400, $color: $ewhite);
+  @include typo($line: 30px, $size: 15px, $weight: 400, $color: var(--ewhite));
   z-index: 20;
 }

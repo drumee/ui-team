@@ -37,13 +37,13 @@
     }
     padding: 20px;
     border-radius: 4px;
-    background-color: $main-grey;
-    @include typo($size:34px,$line:40px,$weight:400,$color:$ewhite);
+    background-color: var(--main-grey);
+    @include typo($size:34px,$line:40px,$weight:400,$color: var(--ewhite));
   }
 
   &__micro{
     position: absolute;
-    color: $main-grey;
+    color: var(--main-grey);
     visibility: hidden;
     width: 30px;
     height: 30px;

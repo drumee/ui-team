@@ -13,7 +13,7 @@
     overflow: hidden;   
     &:hover{
       background-color:var(--default-bg);
-      // color:$default-text-reverse; //$ewhite; 
+      // color:$default-text-reverse; //var(--ewhite); 
       // .media-checkbox{
       //   display: block;
       // }
@@ -85,7 +85,7 @@
   //     min-width: 60px;
   //     margin: 0;
   //     width: 100%;   
-  //     color: $egrey-2f; //#494949;
+  //     color: var(--egrey-2f); //#494949;
   //   }
   // }
   &.deleting {

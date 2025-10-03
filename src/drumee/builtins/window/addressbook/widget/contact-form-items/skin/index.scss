@@ -10,14 +10,14 @@
         color: $ab-default-text-hover ;
 
         svg {
-          border-radius: $default-border-radius-tiny;
+          border-radius: var(--border-radius-tiny);
         }
 
         &.checkbox[data-state="1"] {
           box-shadow: none;
           color: $ab-checkbox-checked-reverse;
           border: 1px solid $ab-checkbox-checked-border-reverse;
-          border-radius: $default-checkbox-border-radius;
+          border-radius: var(--border-radius-checkbox);
         }
       }
     }
@@ -50,7 +50,7 @@
   &__icon {
     margin-bottom: 0px;
     box-shadow: none;
-    border-radius: $default-checkbox-border-radius;
+    border-radius: var(--border-radius-checkbox);
     cursor: pointer;
     border: 1px solid $ab-default-checkbox-border;
     color: $ab-default-checkbox-background;

@@ -58,7 +58,7 @@
       @include typo($size: 18px, $weight: 300, $line: 26px, $color: $bigchat-default-text-color);
   
       &.input-content {
-        color: $eblue;
+        color: var(--eblue);
       }
     }
   
@@ -92,7 +92,7 @@
       background-color: $btn-commit-background;      
       border: 1px solid  $btn-commit-border ;
       border-radius: $default-border-radius;
-      color: $ewhite;
+      color: var(--ewhite);
       &:hover{
         background-color:$btn-commit-border-hover;
         border-color: $btn-commit-background-hover;

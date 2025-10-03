@@ -4,14 +4,14 @@
 
 .player {
   &-media {
-    box-shadow: $drumee-shadow-main;
+    box-shadow: var(--shadow-main);
   }
 
 
   &__ui {
     background-color: var(--default-bg);
     border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-main;
+    box-shadow: var(--shadow-main);
     min-height: 250px;
     min-width: 340px;
     z-index: 1000;
@@ -61,7 +61,7 @@
 
   &__main {
     border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-main;
+    box-shadow: var(--shadow-main);
     height: 100%;
     width: 100%;
 

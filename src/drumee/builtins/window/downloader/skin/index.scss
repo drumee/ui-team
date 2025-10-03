@@ -2,8 +2,8 @@
 
 .window-downloader {
   &__ui {
-    background-color: var(--default-bg);//$ewhite;
-    box-shadow: $drumee-shadow-main;
+    background-color: var(--default-bg);//var(--ewhite);
+    box-shadow: var(--shadow-main);
     &[data-state="0"]{
       display: none;
     }
@@ -38,7 +38,7 @@
       height: 44px;
       width: 100%;
       svg {
-        color: $egrey-2f;
+        color: var(--egrey-2f);
         opacity:0.5
       }
     }
@@ -49,7 +49,7 @@
     margin-right: auto;
     margin-top: 80px;
     max-width: 381px;
-    @include typo($size: 16px, $line: 16px, $color: var(--default-text-color));//$egrey-2f);
+    @include typo($size: 16px, $line: 16px, $color: var(--default-text-color));//var(--egrey-2f));
     
     .line {
       justify-items: center;
@@ -81,7 +81,7 @@
     .button {
       border-radius:$default-border-radius;
       @include typo($size: 16px, $line: 19px, $color: $btn-commit-text);//$size: 15px,
-      background-color:$btn-commit-background;// $egreen-soft;
+      background-color:$btn-commit-background;// var(--egreen-soft);
       cursor: pointer;
       justify-content: center;
       padding : 10px;

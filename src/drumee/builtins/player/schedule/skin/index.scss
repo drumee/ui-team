@@ -12,7 +12,7 @@
   &__ui {
     background-color:var(--default-bg);  
     border-radius: $default-border-radius;
-    box-shadow:$drumee-shadow-container;
+    box-shadow:var(--shadow-container);
     display: flex;  
     flex-direction: column;
     height: 384px;
@@ -172,10 +172,10 @@
         background-color: var(--default-bg-hover);//#879bff;
         color: var(--default-text-hover); //#fff;
         & .player-schedule__text, .player-schedule__icon{
-          color: $ewhite;  
+          color: var(--ewhite);  
         }
         & .player-schedule__edit-icon{
-          color: $ewhite;  
+          color: var(--ewhite);  
           cursor:pointer;
           display:flex;
         }
@@ -368,7 +368,7 @@
     height: 26px;//24px;
     justify-content: center;
     align-items: center;
-    @include typo($size: 12px, $color: $white);
+    @include typo($size: 12px, $color: var(--white));
     &:hover{
       background-color:$btn-commit-background-hover;
     }

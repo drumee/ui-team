@@ -2,7 +2,7 @@
 .suggestion-contact-item {
   &__ui {
     background-color: inherit;
-    @include typo( $color : $share-default-text-color);//$egrey-2f);
+    @include typo( $color : $share-default-text-color);//var(--egrey-2f));
     cursor: pointer;
     overflow: hidden;
 
@@ -13,7 +13,7 @@
       
       & .profile-icon,
       & .note-reader{
-        color: $share-default-text-hover ;//$white;
+        color: $share-default-text-hover ;//var(--white);
       }
     }
   }
@@ -27,7 +27,7 @@
   }
 
   &__icon {
-    color: $share-default-icon-neutral; //$egrey-89;
+    color: $share-default-icon-neutral; //var(--egrey-89);
     height: 28px; //25px; //23px;
     width: 25px; //22px;
     margin-top: -1px; //2px;
@@ -73,7 +73,7 @@
     }
 
     &__name {
-      @include typo( $size :14px, $line: 16px, $color: $share-default-text-color);//$egrey-2f );
+      @include typo( $size :14px, $line: 16px, $color: $share-default-text-color);//var(--egrey-2f) );
       padding: 3px 3px 3px 15px;
       margin-top: 3px;
       overflow:hidden;
@@ -90,7 +90,7 @@
     height: 33px;
 
     &__icon{
-      color: $share-default-icon-neutral; //$egrey-89;
+      color: $share-default-icon-neutral; //var(--egrey-89);
       height: 28px;
       width: 25px;
       &:hover{

@@ -30,7 +30,7 @@
 
   &__note {
     &.header {
-      @include typo($size: 18px, $line: 45px, $color: $ewhite);
+      @include typo($size: 18px, $line: 45px, $color: var(--ewhite));
     }
   }
 
@@ -40,7 +40,7 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    @include typo($size: 18px, $line: 45px, $color: $ewhite);
+    @include typo($size: 18px, $line: 45px, $color: var(--ewhite));
 
     .drumee-text.inner {
       background-color: rgb(0, 0, 0, 0.1);

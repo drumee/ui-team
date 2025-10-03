@@ -7,7 +7,7 @@
 .window-screenshare {
   &__ui {
     background-color: var(--default-bg);
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     min-width: 300px;
     min-height: 200px;
     flex-direction: column;

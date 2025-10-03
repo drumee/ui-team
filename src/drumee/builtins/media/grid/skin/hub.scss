@@ -8,7 +8,7 @@
     left: 0;
     //margin: -3px auto;
     margin: 0 auto;
-    fill:var(--default-icon-reverse);//$ewhite;
+    fill:var(--default-icon-reverse);//var(--ewhite);
     &.private{
       padding: 3px;
       top: 24px;
@@ -30,7 +30,7 @@
     border-radius: $default-border-radius;//6px;
     .media-form__input input {
       background-color: #45b4bb;
-      color: $ewhite;
+      color: var(--ewhite);
     }
     &:before {
       content: " ";
@@ -115,7 +115,7 @@
     }
     &.public {
       /*.filename {
-      //  color: $egrey-2f;
+      //  color: var(--egrey-2f);
         background-color: #90d1d6;
       }*/
       // .filename-tooltips{
@@ -127,7 +127,7 @@
     }
     &.private {
     /*  .filename {
-      // color: $egrey-2f;
+      // color: var(--egrey-2f);
         background-color: #d5a3dd;
       }*/
       // .filename-tooltips{

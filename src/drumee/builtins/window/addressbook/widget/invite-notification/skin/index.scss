@@ -7,7 +7,7 @@
 
 .addressbook-widget-invite-notification {
   &__ui {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     align-items: center;
     background-color: inherit;
     background: $ab-default-background;
@@ -19,7 +19,7 @@
 
   &__main,
   &__container {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     background-color: inherit;
     height : 100%;
     width: 100%;
@@ -49,7 +49,7 @@
     cursor: pointer;
     
     &.navigate {
-      color : $egrey-89;
+      color : var(--egrey-89);
       height: 10px;
       width: 10px;
     }
@@ -73,7 +73,7 @@
       top: -5px;
 
       & .note-content {
-        background: #556E7F;//$egreen;
+        background: #556E7F;//var(--egreen);
         border-radius: 50%;
         height: 20px;
         text-align: center;
@@ -83,7 +83,7 @@
     }
 
     &.fullname {
-      @include typo($size: 24px, $weight:300, $line: 28px, $color: $eorange);
+      @include typo($size: 24px, $weight:300, $line: 28px, $color: var(--eorange));
       margin: auto;
       overflow: hidden;
       padding: 0 25px;
@@ -128,7 +128,7 @@
 
   &__message {
     background-color: $ab-default-block-background;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     margin: auto;
     max-height: 105px;
     max-width: 320px;
@@ -146,7 +146,7 @@
   }
   
   &__button-cancel {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     border: 1px solid $btn-rollback-border ;
     @include typo($size: 16px, $weight: 300, $line: 19px, $color: $btn-rollback-text);
 
@@ -158,7 +158,7 @@
   
   &__button-confirm {
     background-color: $btn-commit-background;  
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     border: 1px solid $btn-commit-border ;
     margin-left: 70px;
     @include typo($size: 16px, $line: 19px, $color: $btn-commit-text);
@@ -171,7 +171,7 @@
     &.informed {
       align-items: center;
       background-color: $btn-rollback-background;
-      border-radius: $default-border-radius; 
+      border-radius: var(--border-radius); 
       border: 1px solid $btn-rollback-border;
       height: 28px;
       margin-left: 0px;

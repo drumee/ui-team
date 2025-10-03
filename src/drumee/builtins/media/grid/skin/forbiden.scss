@@ -6,10 +6,10 @@
     flex-direction: column;
     position: absolute;
     justify-content: center;
-    border: 1px solid $eorange-sunset;
+    border: 1px solid var(--eorange-sunset);
     border-radius: $default-border-radius-small;
     background-color: var(--default-bg);
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     Z-index: 200;
 
     &[data-drag="ok"] {
@@ -20,7 +20,7 @@
   &__text {
     width: 100%;
     padding: 5px;
-    @include typo($line: 13px, $size: 12px, $weight: 400, $color: $eorange-sunset);
+    @include typo($line: 13px, $size: 12px, $weight: 400, $color: var(--eorange-sunset));
     text-align: center;
   }
 
@@ -28,8 +28,8 @@
     width: 17px;
     height: 17px;
     padding: 2px;
-    border: 1px solid $eorange-sunset;
-    background-color: $eorange-sunset;
+    border: 1px solid var(--eorange-sunset);
+    background-color: var(--eorange-sunset);
     color: var(--default-icon-reverse);
     fill: var(--default-icon-reverse);
     border-radius: 50px;

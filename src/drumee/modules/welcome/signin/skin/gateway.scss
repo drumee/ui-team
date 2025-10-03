@@ -23,7 +23,7 @@
     display: grid;
     grid-template-rows: 50px;
     grid-gap: .7rem;
-    color: $white-f7;
+    color: var(--white-f7);
     &.c-3{
       grid-template-columns: 50px 50px 50px;
     }

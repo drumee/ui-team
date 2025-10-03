@@ -96,7 +96,7 @@
     &.outer {
       background-color: var(--default-bg);    
       border-radius:$default-border-radius;//6px;
-      box-shadow:$drumee-shadow-topbar;
+      box-shadow:var(--shadow-topbar);
       overflow: hidden;
       transition: width 0.3s ease-in;
       height: 40px;
@@ -119,7 +119,7 @@
       width: 40px;
       height: 100%;
       padding: 12px;
-      color: $main-grey ;
+      color: var(--main-grey);
       margin: 0 5px;
     }
 
@@ -198,7 +198,7 @@
   &__icon {
     background-color:hsla(0,0%,100%,0);
     border-radius: 6px;
-    box-shadow: $drumee-shadow-topbar;//0 2px 2px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgb(86 65 113 / 8%), 0 2px 14px 0 rgb(194 185 203 / 0%);
+    box-shadow: var(--shadow-topbar);//0 2px 2px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgb(86 65 113 / 8%), 0 2px 14px 0 rgb(194 185 203 / 0%);
     color: var(--default-icon-reverse);
     cursor: pointer;
     flex-shrink: 0;
@@ -257,11 +257,11 @@
     @include typo($color: var(--default-text-reverse),$size:12px,$line:14px,$weight:500);
 
     &.primary {
-      background-color: $eorange;
+      background-color: var(--eorange);
     }
 
     &.secondary {
-      background-color: $egreen;
+      background-color: var(--egreen);
     }
   }
 }

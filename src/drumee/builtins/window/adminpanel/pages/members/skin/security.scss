@@ -115,7 +115,7 @@
       @include typo($size: 12px, $line: 16px, $color: $admin-tertiary-text-color);
       
       &.success {
-        color: var(--default-text-success); //$egreen-soft;
+        color: var(--default-text-success); //var(--egreen-soft);
         max-width: 185px; //180px;
         margin: 10px 0 0 27px;
       }

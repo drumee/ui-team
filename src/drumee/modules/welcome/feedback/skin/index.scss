@@ -16,7 +16,7 @@
     padding: 20px;
     background-color: var(--default-bg-block); 
     border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-popup;
+    box-shadow: var(--shadow-popup);
   }
 
 
@@ -65,7 +65,7 @@
       border-radius: $default-border-radius;
     }
     & textarea {
-      border: 1px solid $egrey-89;//grey;
+      border: 1px solid var(--egrey-89);//grey;
       border-radius: $default-border-radius; 
       resize: none;   
       width: 100%;
@@ -73,7 +73,7 @@
       padding: 8px 0px 0px 10px;
       @include typo($size: 16px, $line: 18px, $color: var(--default-text-color));
       &::placeholder {
-        @include typo($size: 16px, $line: 18px, $weight: 400,$color: $egrey-b6);//$default-text-placeholder); //$egrey-b6);$weight: 300,
+        @include typo($size: 16px, $line: 18px, $weight: 400,$color: var(--egrey-b6));//$default-text-placeholder); //var(--egrey-b6));$weight: 300,
       }
     }
   }

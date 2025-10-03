@@ -12,7 +12,7 @@
     }
   }
   &__transferee{
-    @include typo($color:$emauve-dark ,$size:14px,$line:26px,$weight:400);//#AB47BC
+    @include typo($color: var(--emauve-dark) ,$size:14px,$line:26px,$weight:400);//#AB47BC
   }
   &__dialog.dialog__wrapper{
     position: absolute;
@@ -54,7 +54,7 @@
   }
   // .invitation__item{
   //   width: 100%;
-  //   background-color: $ewhite;
+  //   background-color: var(--ewhite);
   // }
   /*&__button{
     color:red;

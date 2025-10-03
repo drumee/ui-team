@@ -14,7 +14,7 @@
     background-color: var(--default-bg);
     width: 626px;
     height: 525px;
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     overflow: visible;
     min-width: 340px; 
     min-height: 200px;
@@ -80,7 +80,7 @@
 
       &[data-state="1"] {
         box-shadow: none;
-        color: $egreen-soft;
+        color: var(--egreen-soft);
       }
     }
   }

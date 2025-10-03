@@ -68,11 +68,11 @@
     padding: 5px 15px;
     white-space: nowrap;
     width: 100%;
-    @include typo($size: 14px, $line: 18px, $weight: 300, $color:$bigchat-default-text-color); //$egrey-49);
+    @include typo($size: 14px, $line: 18px, $weight: 300, $color:$bigchat-default-text-color); //var(--egrey-49));
     @include overflow-text;
 
     &:last-child {
-      color: $eviolet;
+      color: var(--eviolet);
     }
   }
 
@@ -91,7 +91,7 @@
     
     &:before {
       background-color: $bigchat-default-background;
-      box-shadow:$drumee-container-before;// 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
+      box-shadow:var(--shadow-before);// 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
       content: "";
       height: 10px;
       left: 2px;

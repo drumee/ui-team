@@ -16,7 +16,7 @@
     border-radius: $default-border-radius-bottom;
     align-items: center;
     min-height: 345px;
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
   }
   &__container {
     padding: 20px 10px 10px 10px;
@@ -130,7 +130,7 @@
       .widget-sharebox-setting{
         &-permission__icon{
           .checkbox[data-state="1"]{
-            color: $share-checkbox-checked-reverse; //$ewhite;
+            color: $share-checkbox-checked-reverse; //var(--ewhite);
             border: 1px solid $share-checkbox-checked-border-reverse;
             border-radius:$default-checkbox-border-radius;
           }
@@ -183,8 +183,8 @@
     cursor: pointer;
     @include typo($size: 14px, $color: $share-default-text-color, $weight:300,);//$size: 13px
     &:hover {
-      background:$share-default-background-hover;//$eviolet;
-      color:$share-default-text-hover;// $ewhite;
+      background:$share-default-background-hover;//var(--eviolet);
+      color:$share-default-text-hover;// var(--ewhite);
     }
   }
 
@@ -216,7 +216,7 @@
   &-permission__note {
     margin-right: 20px;//15px;
     margin-left: 3px;//5px;
-    @include typo($color:$share-default-text-color,$size:14px,$weight:300);//($size: 13px, $color: $egrey-78);
+    @include typo($color:$share-default-text-color,$size:14px,$weight:300);//($size: 13px, $color: var(--egrey-78));
     &:hover{
       color:$share-default-text-hover; 
     }
@@ -259,7 +259,7 @@
   }*/
   &__validity-caption {
     padding-right: 15px;
-    @include typo($size: 14px, $weight: 300, $color: $share-default-text-color);// $egrey-78);  $weight: 400,
+    @include typo($size: 14px, $weight: 300, $color: $share-default-text-color);// var(--egrey-78));  $weight: 400,
   }
 
   /* Notification Block */
@@ -371,7 +371,7 @@
       background-color: $share-default-background-tooltips;
       z-index: 100;
       @include typo($line:14px,$size:11px,$weight:400,$color:$share-default-text-tooltips);
-    //  @include typo($line: 16px, $size: 14px, $weight: 400, $color: $default-text-color); //$egrey-2f
+    //  @include typo($line: 16px, $size: 14px, $weight: 400, $color: $default-text-color); //var(--egrey-2f)
  /*     &:after {
         content: "";
         position: absolute;

@@ -14,13 +14,13 @@
       }
 
       & .dropdown-toggle-icon {
-        color: $bigchat-background-header ;//$egreen;
+        color: $bigchat-background-header ;//var(--egreen);
       }
     }
 
     & .menu-topic-items {
       border-radius:$default-border-radius;
-      box-shadow: $drumee-shadow-container;
+      box-shadow: var(--shadow-container);
       background-color: $bigchat-default-background;
       width: 285px;
       padding-bottom: 10px;
@@ -31,7 +31,7 @@
       }
       &:before {
         background-color: $bigchat-default-background;
-        //box-shadow:$drumee-container-before;
+        //box-shadow:var(--shadow-before);
         content: "";
         height: 10px;
         left: 120px;
@@ -73,7 +73,7 @@
       margin-top: 10px;
 
       & svg {
-        fill: $bigchat-default-icon-menu-dropdown;//$eviolet;
+        fill: $bigchat-default-icon-menu-dropdown;//var(--eviolet);
       }
 
       &.contactbook{

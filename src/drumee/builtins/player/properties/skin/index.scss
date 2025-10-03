@@ -13,7 +13,7 @@
     height: 480px;
     top: 45px;
     left: calc(50vw - 220px);
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     overflow: visible;
     flex-direction: column;
     display: flex;
@@ -29,7 +29,7 @@
 
   &__properties {
     &-container {
-      background-color: var(--default-bg); // $ewhite;
+      background-color: var(--default-bg); // var(--ewhite);
       display: flex;
       flex-direction: column;
       height: 100%;
@@ -133,7 +133,7 @@
     &__title {
       width: 100%;
       justify-content: center;
-      @include typo($size: 16px, $line: 15px, $color: $ewhite);
+      @include typo($size: 16px, $line: 15px, $color: var(--ewhite));
     }
   }
 

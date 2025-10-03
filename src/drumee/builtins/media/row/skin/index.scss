@@ -86,7 +86,7 @@
     }
 
     textarea {
-      border: 1px solid $egrey-e8; //$egrey-b6; //#B6BFCA;
+      border: 1px solid var(--egrey-e8); //var(--egrey-b6); //#B6BFCA;
       background-color: var(--default-bg);
       min-height: 22px;
       height: auto;
@@ -106,7 +106,7 @@
     grid-template-columns: 60px 60px minmax(310px, auto) 180px 120px 80px;
     align-items: center;
     width: 100%;
-    @include typo($line: 33px, $size: 14px, $weight: 300, $color: var(--default-text-color)); //$egrey-49
+    @include typo($line: 33px, $size: 14px, $weight: 300, $color: var(--default-text-color)); //var(--egrey-49)
 
     .preview {
       position: relative;
@@ -114,14 +114,14 @@
       height: 25px;
       flex-shrink: 0;
       margin: auto 2px;
-      fill: $egrey-89; //$egrey-49;
+      fill: var(--egrey-89); //var(--egrey-49);
 
       .icon.document,
       .icon.extension,
       .icon.other {
         height: 25px;
         width: 25px;
-        fill: $ewhite;
+        fill: var(--ewhite);
       }
 
       .icon.video {
@@ -140,7 +140,7 @@
       }
 
       .icon.schedule {
-        fill: $orange-carrot;
+        fill: var(--orange-carrot);
         stroke-width: 4px;
       }
 
@@ -160,7 +160,7 @@
     height: 32px;
 
     &-filename {
-      color: var(--default-text-color); //$egrey-2f;
+      color: var(--default-text-color); //var(--egrey-2f);
       min-width: 310px;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -260,7 +260,7 @@
         }
 
         &.extension {
-          fill: $ewhite;
+          fill: var(--ewhite);
         }
       }
 

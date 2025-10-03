@@ -10,7 +10,7 @@
 
 .widget-tag {
 	&__ui {
-		border-radius:$default-border-radius-left;
+		border-radius:var(--border-radius-left);
 		height: 100%;
 		width: 100%;
 	}
@@ -211,15 +211,15 @@
   // }
 
 	&__chat_note {
-    //color: $eblue;
+    //color: var(--eblue);
     height: 9px;//15px
 		margin-left:-19px;//-22px;//-28px;
     margin-right: 10px;
 		margin-top:0px;// 3px;
 		width: 9px;//15px;
-		background-color: $ab-special-tag-note-chat;//#1187f6;//$eblue;
+		background-color: $ab-special-tag-note-chat;//#1187f6;//var(--eblue);
     border-radius: 50%;
-    border: 1px solid $ewhite;
+    border: 1px solid var(--ewhite);
 	}
 	
 }

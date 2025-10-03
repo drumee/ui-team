@@ -46,7 +46,7 @@
     cursor: pointer;
 
     &.ab_address {
-      color:var(--tertiary-text-color);// $egrey-89;
+      color:var(--tertiary-text-color);// var(--egrey-89);
       cursor: unset;
       height: 24px;
       margin: 0 5%;
@@ -55,7 +55,7 @@
 
     &.category {
       align-items: baseline;
-      color: $eblue;
+      color: var(--eblue);
       display: flex;
       flex-direction: row;
       justify-content: center;

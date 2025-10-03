@@ -87,7 +87,7 @@
 }
 
 .page-menu.box {
-    background-color: $white;
+    background-color: var(--white);
     margin-left: -40px;
     width: 110px;
     height: 116px;    
@@ -111,13 +111,13 @@
         cursor: pointer;
         border-radius: 2px;
         padding: 0 0 0 5px;
-        @include typo($size:12px,$line:24px,$color:$egrey-78,$weight:400);
+        @include typo($size:12px,$line:24px,$color: var(--egrey-78),$weight:400);
         &:hover {
-            color: $eviolet;
+            color: var(--eviolet);
         }
         &:active {
-            background-color: $eviolet;
-            color: $white;
+            background-color: var(--eviolet);
+            color: var(--white);
         }
         svg {
             margin-right: 5px;
@@ -135,7 +135,7 @@
             margin-right: 10px;
         }
         &:hover {
-            color: $drumee-pink;
+            color: var(--drumee-pink);
         }
     }*/
 }
@@ -468,7 +468,7 @@
         width: 300px;
         box-shadow: 0 0 7px 0 rgba(0,0,0,0.14), 0 3px 5px 0 rgba(0,0,0,0.2);
         &:before {
-            background-color: $eviolet-dark;    
+            background-color: var(--eviolet-dark);    
             content: " ";
             position: absolute;
             right: 23px;
@@ -478,7 +478,7 @@
             transform: rotate(45deg);
         }
         &.change-page__wrapper--pages {
-            background-color: $eviolet-dark;    
+            background-color: var(--eviolet-dark);    
         }
         &.change-page__wrapper--history {
             background-color: #FFFFFF;
@@ -500,11 +500,11 @@
             @include typo($size:12px,$color:white,$line:16px,$weight:500);
         }
         &.change-page__label--drafts {
-            @include typo($size:12px,$color:$egrey-89,$line:16px,$weight:500);
+            @include typo($size:12px,$color: var(--egrey-89),$line:16px,$weight:500);
         }
     }
     .change-page__header {
-        @include typo($size:16px,$weight:300,$color:$egrey-89,$line:19px);
+        @include typo($size:16px,$weight:300,$color: var(--egrey-89),$line:19px);
     }
     .change-page__block {
         margin-right: -14px;
@@ -514,24 +514,24 @@
     }
     .change-page__list.change-page__list--drafts, .change-page__search-results.change-page__search-results--drafts {
         .change-page__item {
-            color: $egrey-89;
+            color: var(--egrey-89);
             font-family: 'HappyMonkey-Regular', cursive;
             // &.change-page__item--drafts {
-            //     color: $egrey-89;  
+            //     color: var(--egrey-89);  
             // }
             &:hover {
-                color: $eviolet;
+                color: var(--eviolet);
             }
             &[data-state="1"], &[data-radion="on"] {
-                background-color: $eviolet;
+                background-color: var(--eviolet);
                 &:hover {
-                    color: $white;
+                    color: var(--white);
                 }
             }
             .change-page__entry .entry-area {
                 background-color: #FBFBFB;
                 box-shadow: inset 0 1px 1px 0 rgba(0,0,0,0.1);
-                color: $egrey-89;
+                color: var(--egrey-89);
                 font-family: cursive;
             }
         }
@@ -548,22 +548,22 @@
         display: flex;
         justify-content: space-between;
         @include vendor(border-radius, 2px);
-        @include typo($size:14px, $color:$white,$line:30px,$weight:300);  
+        @include typo($size:14px, $color: var(--white),$line:30px,$weight:300);  
         &:hover {
-            color: $eviolet;
+            color: var(--eviolet);
             .change-page__settings {
-                color: $eviolet;
+                color: var(--eviolet);
                 visibility: visible;
             }
         }
         &[data-state="1"], &[data-radion="on"] {
-            background-color: $eviolet;
+            background-color: var(--eviolet);
             &:hover {
-                color: $white;
+                color: var(--white);
             }
         }
         &.change-page__item--drafts {
-            color: $egrey-89;  
+            color: var(--egrey-89);  
         }
     }
     .change-page__name {
@@ -603,7 +603,7 @@
         z-index: 50001;
         left: 7px;
         .svg-inner {
-            color: $ewhite;
+            color: var(--ewhite);
         }
         .entry-area {
             padding: 0 9px 0 9px;
@@ -613,7 +613,7 @@
             box-shadow: inset 0 1px 1px 0 rgba(0,0,0,0.1);
             input {
                 background-color: transparent;
-                @include typo($size:14px, $color:$ewhite,$line:28px,$weight:300);  
+                @include typo($size:14px, $color: var(--ewhite),$line:28px,$weight:300);  
             }
             .input-details.note-reader {
                 position: absolute;
@@ -653,7 +653,7 @@
             height: 30px;
             width: 35px;
             justify-content: center;
-            @include typo($size:10px,$line:30px,$color:$ewhite,$weight:300);
+            @include typo($size:10px,$line:30px,$color: var(--ewhite),$weight:300);
         }
     }
     .change-page__list--drafts {
@@ -664,19 +664,19 @@
             .entry-area {
                 background-color: #FBFBFB;
                 input {
-                    color: $egrey-78;
+                    color: var(--egrey-78);
                     font-family: cursive;
                 }
             }
             .entry-btn {
                 background-color: #FBFBFB;
-                color: $egrey-78;
+                color: var(--egrey-78);
             }
         }
     }
     .change-page__btn-add {
         border: 1px solid white;
-        color: $eorange;
+        color: var(--eorange);
         cursor: pointer;
         margin: 20px auto;
         @include vendor(border-radius, 2px);
@@ -708,10 +708,10 @@
         cursor: pointer;
         &.change-page__switch--todraft {
             background-color: #F7F7F9;
-            @include typo($size:10px,$line:11px,$weight:300,$color:$eviolet-dark);
+            @include typo($size:10px,$line:11px,$weight:300,$color: var(--eviolet-dark));
         }
         &.change-page__switch--topublish {
-            background-color: $eviolet-dark;
+            background-color: var(--eviolet-dark);
             @include typo($size:10px,$line:11px,$weight:300,$color:#F7F7F9);
         }
         .svg-inner {
@@ -726,7 +726,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: $white;
+    color: var(--white);
     .search__input  {
         background-color: transparent;
         &.search__input--change-page {
@@ -735,23 +735,23 @@
                 @include typo($size:11px, $color:white, $line:15px, $weight:300);   
             }
             &.search__input--drafts .entry-area {
-                color: $egrey-4a;
-                @include placeholder-input{color: $egrey-4a};
+                color: var(--egrey-4a);
+                @include placeholder-input{color: var(--egrey-4a)};
             }
         }
         .entry-area {
-            color: $white;
+            color: var(--white);
             background: transparent;
             padding: 0 4px;            
-            @include placeholder-input{color: $white};
+            @include placeholder-input{color: var(--white)};
         }
     }
     .search__icon {
         &.search__icon--pages {
-            color: $white;
+            color: var(--white);
         }
         &.search__icon--draft {
-            color: $egrey-89;
+            color: var(--egrey-89);
         }
     }
 }
@@ -770,13 +770,13 @@
 }
 .change-page__footer {
     .search__header {
-        @include typo($size:13px,$line:30px,$weight:300,$color:$egrey-4a)
+        @include typo($size:13px,$line:30px,$weight:300,$color: var(--egrey-4a))
     }
     .search__filter {
         width: 68px;
         height: 30px;
         border-radius: 2px;
-        color: $white;
+        color: var(--white);
         box-shadow: inset 0 1px 1px 0 rgba(0,0,0,0.1);
         &.search__filter--month {
             width: 101px;
@@ -794,12 +794,12 @@
                 }     
                 &:after {
                     bottom: 7px;
-                    border-top: 5px solid $egrey-4a;
+                    border-top: 5px solid var(--egrey-4a);
                     top: auto;
                 }           
                 &:before {
                     top: 7px;
-                    border-bottom: 5px solid $egrey-4a;
+                    border-bottom: 5px solid var(--egrey-4a);
                     z-index: 1;
                 }
             }
@@ -810,16 +810,16 @@
         &.search__filter--drafts {
             background-color: #FBFBFB;
             .menu-trigger {
-                color: $egrey-4a;
+                color: var(--egrey-4a);
                 &:after {
-                    border-top: 4px solid $egrey-4a;
+                    border-top: 4px solid var(--egrey-4a);
                 }
             }
         }
         .menu-trigger {
             height: 30px;
             box-shadow: inset 0 1px 1px 0 rgba(0, 0, 0, 0.1);
-            @include typo($size:11px, $color:$white, $line:30px, $weight:300);   
+            @include typo($size:11px, $color: var(--white), $line:30px, $weight:300);   
             &:after {
                 content: " ";
                 position: absolute;
@@ -829,7 +829,7 @@
                 height: 0;
                 border-left: 4px solid transparent;
                 border-right: 4px solid transparent;
-                border-top: 4px solid $white;
+                border-top: 4px solid var(--white);
                 pointer-events: none;  // seems pseudo class bubble events differently
             }
             .note-reader {
@@ -839,7 +839,7 @@
             }
         }
         .menu-items[data-state="open"] {
-            background: $white;
+            background: var(--white);
             box-shadow: 0 0 7px 0 rgba(0,0,0,0.14), 0 3px 5px 0 rgba(0,0,0,0.2);
             height: 68px;
             padding: 10px 0;
@@ -852,11 +852,11 @@
                 padding-left: 41px;
                 @include typo($size:12px, $color:#787B7F, $line:24px, $weight:400);   
                 &:hover {
-                    color: $eviolet;
+                    color: var(--eviolet);
                 }
                 &:active, &[data-state="1"], &[data-radio="on"] {
-                    color: $white;
-                    background-color: $eviolet;
+                    color: var(--white);
+                    background-color: var(--eviolet);
                     &:before {
                         content: " ";
                         position: absolute;

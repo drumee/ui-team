@@ -104,7 +104,7 @@
   &__container.application {
 
     &::after {
-      background-color: var(--default-bg); //$ewhite;
+      background-color: var(--default-bg); //var(--ewhite);
       content: " ";
       height: 90%;
       width: 1px;
@@ -179,14 +179,14 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       width: 100%;
-      @include typo($line: 15px, $size: 12px, $color: var(--default-text-reverse)); //$ewhite
+      @include typo($line: 15px, $size: 12px, $color: var(--default-text-reverse)); //var(--ewhite)
     }
 
     &:hover {
       opacity: 1;
 
       * {
-        color: var(--default-icon-hover); //$eviolet;
+        color: var(--default-icon-hover); //var(--eviolet);
       }
 
       .desk-dock__tooltips {
@@ -194,7 +194,7 @@
       }
 
       & .bigchat__btn-counter {
-        color: $ewhite;
+        color: var(--ewhite);
       }
     }
 
@@ -276,18 +276,18 @@
     & .launcher-icon {
       &[data-is-active="on"] {
         svg {
-          color: $eviolet !important;
+          color: var(--eviolet) !important;
         }
       }
     }
 
     &.trash {
       &[data-over="yes"] {
-        border: 2px solid $eviolet;
+        border: 2px solid var(--eviolet);
         border-radius: $default-border-radius;
 
         svg {
-          color: $eviolet;
+          color: var(--eviolet);
         }
 
         &:after {

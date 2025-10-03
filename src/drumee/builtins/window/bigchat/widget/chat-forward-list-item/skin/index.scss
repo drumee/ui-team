@@ -47,7 +47,7 @@
   }
 
   &__icon {
-    color: $egrey-b6; 
+    color: var(--egrey-b6); 
     cursor: pointer;
 
     &.raw-drumee_projectroom {

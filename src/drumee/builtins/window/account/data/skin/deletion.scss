@@ -170,7 +170,7 @@
     align-items: center;
     padding: 50px;
     
-    //@include typo($size:14px,$line:24px,$color:$ewhite,$weight:400);
+    //@include typo($size:14px,$line:24px,$color: var(--ewhite),$weight:400);
   }
   &__btn{
     min-width: 170px;

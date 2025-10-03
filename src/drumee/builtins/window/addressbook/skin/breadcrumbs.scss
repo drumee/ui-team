@@ -64,14 +64,14 @@
     @include overflow-text;
 
     &:last-child {
-      color: $eviolet;
+      color: var(--eviolet);
     }
   }
 
   &__roll {
     background: $ab-default-background;
     border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     height: auto;
     left: -12px;
     overflow: visible;
@@ -82,8 +82,8 @@
     z-index: 1000;
 
     &:before {
-      background-color: $white;
-      box-shadow: $drumee-container-before;
+      background-color: var(--white);
+      box-shadow: var(--shadow-before);
       content: "";
       height: 10px;
       left: 2px;

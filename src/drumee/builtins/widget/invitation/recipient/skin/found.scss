@@ -16,7 +16,7 @@
     border: 1px solid #879BFF;
     border-radius: $default-checkbox-border-radius;//2px;
     svg {
-      color: $ewhite;
+      color: var(--ewhite);
     }
   }
   &__avatar{
@@ -34,7 +34,7 @@
     width: 14px;
     height: 14px;
     visibility: hidden;
-    color: $ewhite; 
+    color: var(--ewhite); 
     cursor: pointer;
   }
   &__label{

@@ -29,7 +29,7 @@
 //      }
 //      border-radius:$default-border-radius;
 //      background-color: $default-background;
-//      box-shadow: $drumee-shadow-container;
+//      box-shadow: var(--shadow-container);
 //      max-width: 202px;
 //      min-width: 202px;
 //      width: 100%;
@@ -37,7 +37,7 @@
 
       &:before {
         background-color: $bigchat-default-background;
-        box-shadow: $drumee-container-before;
+        box-shadow: var(--shadow-before);
         content: "";
         height: 10px;
         left: 12px;

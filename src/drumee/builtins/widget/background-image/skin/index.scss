@@ -20,7 +20,7 @@
   }
   &__main {
     &[data-noimage="1"]{
-      background-color: $main-blue;
+      background-color: var(--main-blue);
     }
   }
   &__wrapper {

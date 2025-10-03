@@ -18,7 +18,7 @@
     height: 480px;
     top: 85px;
     left: calc(50vw - 220px);
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     overflow: visible;
     flex-direction: column;
     display: flex;
@@ -86,7 +86,7 @@
   //   height: calc(100% - 44px);
   //   z-index: 100;
   //   background-color: $connect-video-background;
-  //   box-shadow: $drumee-shadow-container;
+  //   box-shadow: var(--shadow-container);
   //   border-radius: $default-border-radius-bottom; // $default-border-radius;
   //   // grid-auto-flow: row;
   //   // grid-auto-columns: auto;
@@ -293,13 +293,13 @@
   &__text {
     &.local {
       min-height: 30px;
-      //@include typo($color: $white, $line: 30px, $size: 18px);
+      //@include typo($color: var(--white), $line: 30px, $size: 18px);
       @include typo($color: $connect-default-text-reverse, $weight: 400, $line: 30px, $size: 16px);
       justify-content: center;
     }
 
     &.status {
-      //@include typo($color: $egrey-2f, $weight: 400, $line: 30px, $size: 18px);
+      //@include typo($color: var(--egrey-2f), $weight: 400, $line: 30px, $size: 18px);
       @include typo($color: $connect-default-text-color, $line: 30px, $size: 16px);
     }
   }

@@ -33,7 +33,7 @@
       border-radius: $border-radius-small;//2px;
       justify-content: center;
       background-color:var(--default-bg-block); // #f7f7fa;
-      border: 1px solid $white-f9;// #f7f7fa;
+      border: 1px solid var(--white-f9);// #f7f7fa;
       margin : auto 0 auto 15px;
       padding: 0 7px;
       @include typo($size:12px,$line:24px,$weight:400,$color:var(--default-text-alert));//#E9223B);

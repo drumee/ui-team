@@ -95,7 +95,7 @@
       padding: 0;
       top: 5px;
       svg {
-        fill: $egrey-2f;
+        fill: var(--egrey-2f);
       }
     }
 
@@ -125,7 +125,7 @@
 
       &[data-status="error"] {
         border-radius:$default-border-radius;
-        border: 2px solid var(--default-border-error);//$eorange-sunset;
+        border: 2px solid var(--default-border-error);//var(--eorange-sunset);
       }
     }
   }
@@ -146,15 +146,15 @@
     }
 
     &.steps {
-      color: $white-f7;
+      color: var(--white-f7);
       top: 30px;
     }
 
     &.drumee-com {
-     // color: $white-f9;
+     // color: var(--white-f9);
       position: absolute;
       right: -130px;
-      @include typo($size: 20px, $line: 28px,$weight:500,$color:$white-f9);
+      @include typo($size: 20px, $line: 28px,$weight:500,$color: var(--white-f9));
     }
 
     &.input-label {
@@ -165,7 +165,7 @@
 
     &.password-tips {
       padding-top: 47px;
-      @include typo($size: 12px, $line: 16px, $weight:400,$color: $white-f9);
+      @include typo($size: 12px, $line: 16px, $weight:400,$color: var(--white-f9));
     }
 
     &.mobile-number {
@@ -182,7 +182,7 @@
     &.no-code,
     &.not-now {
       width: 100%;
-      @include typo($size: 16px, $line: 16px, $color: $white-f9);
+      @include typo($size: 16px, $line: 16px, $color: var(--white-f9));
     }
 
     &.no-code-text,
@@ -203,13 +203,13 @@
       cursor: pointer;
       text-decoration-line: underline;
       &:hover {
-        color:$eviolet;//#6a85ff; 
+        color:var(--eviolet);//#6a85ff; 
       }
     }
   }
 
   &__icon {
-    color: var(--default-icon-neutral);//$egrey-89;
+    color: var(--default-icon-neutral);//var(--egrey-89);
     cursor: pointer;
     height: 18px;
     width: 18px;
@@ -222,7 +222,7 @@
     &.mobile,
     &.mobile-number,
     &.acknowledgment {
-      color: var(--default-text-reverse);;//$ewhite;
+      color: var(--default-text-reverse);;//var(--ewhite);
     }
 
     &.mobile,
@@ -259,13 +259,13 @@
       @include typo($size: 18px, $line: 28px, $color: var(--default-text-color));
 
       &::placeholder {
-        @include typo($size: 18px, $line: 28px, $weight: 300, $color: var(--default-text-placeholder)); //$egrey-b6);
+        @include typo($size: 18px, $line: 28px, $weight: 300, $color: var(--default-text-placeholder)); //var(--egrey-b6));
       }
     }
 
     &[data-status="error"] {
       border-radius:$default-border-radius;
-      border: 2px solid var(--default-border-error); //$eorange-sunset;
+      border: 2px solid var(--default-border-error); //var(--eorange-sunset);
     }
 
     & .entry-reminder_error {
@@ -281,7 +281,7 @@
     &.input-box {
       border-radius:$default-border-radius;
       align-items: center;
-      background-color: var(--default-bg); //$ewhite;
+      background-color: var(--default-bg); //var(--ewhite);
       height: 56px;
       width: 100%;
 
@@ -301,13 +301,13 @@
     position: absolute;
     right: 15px;
     top: 15px;
-    color: $egrey-2f;
+    color: var(--egrey-2f);
     opacity: 0.7;
   }
 
   &__button-confirm {
     align-items: center;
-    background-color: $egreen-soft;
+    background-color: var(--egreen-soft);
     border-radius:$default-border-radius;
     cursor: pointer;
     height: 100%;

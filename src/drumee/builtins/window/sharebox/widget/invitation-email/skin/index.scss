@@ -47,13 +47,13 @@
     border-radius:$default-border-radius-small;// 3px;
     cursor: pointer;
     &:hover{
-      background: $egreen;
+      background: var(--egreen);
       color:  $share-default-text-reverse ;
     }
   }
 
   & .invitation-email__entry[data-status='error'] textarea {
-    border-color: $share-default-border-error;//$eorange-sunset;
+    border-color: $share-default-border-error;//var(--eorange-sunset);
   }
   & .showerror{
     overflow: visible;
@@ -120,7 +120,7 @@
     width: 100%;
     top: 100%;
     z-index: 100000;
-    box-shadow: $drumee-shadow-box;//0px 3px 4px $egrey-e8;
+    box-shadow: $drumee-shadow-box;//0px 3px 4px var(--egrey-e8);
     border-radius: $default-border-radius;//3px;
     // padding: 10px;
     margin-left: -25px;
@@ -134,7 +134,7 @@
       padding-bottom: 3px;
       margin: 1px 0 0 1px;
       max-height: 137px;
-    //  box-shadow: $drumee-shadow-box;//0px 3px 4px $egrey-e8;
+    //  box-shadow: $drumee-shadow-box;//0px 3px 4px var(--egrey-e8);
     //  border-radius: $default-border-radius;
     }
 

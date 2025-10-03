@@ -60,7 +60,7 @@
   }
 
   &__option-label {
-   // @include typo($size: 14px, $color: $egrey-89);
+   // @include typo($size: 14px, $color: var(--egrey-89));
     @include typo($size: 16px, $color:$admin-default-text-color, $weight: 300);
   }
 
@@ -71,7 +71,7 @@
     &[data-state="0"] {
       .checkbox {
         border: 1px solid $checkbox-unselected-color;
-        color: $white;
+        color: var(--white);
       }
     }
 

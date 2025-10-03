@@ -40,7 +40,7 @@
     }
   }
   &__icon{
-    color:  var(--default-icon-neutral);// #787B7F; //$egrey-89;//
+    color:  var(--default-icon-neutral);// #787B7F; //var(--egrey-89);//
     justify-content: center;
     cursor: pointer;
     margin: auto;
@@ -55,11 +55,11 @@
       opacity:  0.75;
     }
       &[data-state="1"]{
-      background-color: $eviolet ;//#879BFF;
+      background-color: var(--eviolet);//#879BFF;
       color: var(--default-icon-reverse);
     }
     &:hover {
-      border: solid 1px $eviolet ;// #879BFF;
+      border: solid 1px var(--eviolet);// #879BFF;
       opacity:1;
       color: var(--default-icon-hover);
     }
@@ -93,7 +93,7 @@
     margin-top: 20px;
     padding: 0 20px;
     cursor: pointer;
-    @include typo($color:$eblue,$size:12px,$line:16px,$weight:300);//$line:14px
+    @include typo($color: var(--eblue),$size:12px,$line:16px,$weight:300);//$line:14px
     &:hover{
       text-decoration-line: underline;
     }
@@ -103,9 +103,9 @@
     padding-top: 16px;
     background-color:  var(--default-bg-block);    
     .invitation-permission__ui{
-      background-color: var(--default-bg-block); //$white;
+      background-color: var(--default-bg-block); //var(--white);
       margin:-33px 20px; //-45px 20px;//-48px 20px;
-      box-shadow: $drumee-shadow-block;
+      box-shadow: var(--shadow-block);
     }
   } 
   .dialog__wrapper{

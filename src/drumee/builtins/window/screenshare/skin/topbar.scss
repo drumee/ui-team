@@ -21,7 +21,7 @@
     }
 
     .menu-items {
-      background: $ewhite;
+      background: var(--ewhite);
       // margin-top: 43px;
     }
   }
@@ -32,7 +32,7 @@
       height: 20px; //40px;
       //padding: 10px;
       margin: auto 0 auto 15px;
-      color: $ewhite;
+      color: var(--ewhite);
       &.desktopgroup {
         margin-top: 11px;
       }
@@ -65,7 +65,7 @@
       max-width: 200px;
       justify-content: center;
       margin: auto;
-      // @include typo($size:14px,$line:12px,$weight:400,$color:$ewhite);
+      // @include typo($size:14px,$line:12px,$weight:400,$color: var(--ewhite));
       .name {
         align-items: flex-start;
         @include overflow-text;

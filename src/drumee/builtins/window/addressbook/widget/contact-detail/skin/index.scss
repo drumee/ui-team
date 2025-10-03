@@ -141,7 +141,7 @@
     }
 
     &.profile-icon {
-      color: $eblue;
+      color: var(--eblue);
       height: 25px;
       margin-right: 0px;
       margin-top: 3px;
@@ -177,7 +177,7 @@
       width: 18px;
 
       .tooltips {
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         @include typo($size: 11px, $line: 15px, $color: $ab-default-text-tooltips);
         background-color: $ab-background-tooltips;
         margin-left: -180px;
@@ -260,7 +260,7 @@
       @include typo($size: 12px, $line: 14px, $color: $ab-default-text-reverse);
       align-items: center;
       background: $ab-default-background-alert;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 24px;
       justify-content: center;
       top: 2px;
@@ -336,7 +336,7 @@
         & .tooltips {
           @include typo($size: 12px, $line: 12px, $color: $ab-default-text-tooltips);
           background-color: $ab-background-tooltips;
-          border-radius: $default-border-radius;
+          border-radius: var(--border-radius);
           height: 100%;
           text-align: center;
           top: -22px;
@@ -354,7 +354,7 @@
     }
 
     &.comment {
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       @include typo($size: 16px, $line: 20px, $color: $ab-default-text-color);
       background-color: $ab-default-background;
       border: 1px solid $ab-default-frame;
@@ -386,7 +386,7 @@
     &.invite-button {
       align-items: center;
       background-color: $btn-commit-background;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       border: 1px solid $btn-commit-border;
       cursor: pointer;
       height: 40px;
@@ -431,7 +431,7 @@
       width: 100%;
 
       & textarea {
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         @include typo($size: 12px, $line: 14px, $color: $ab-default-text-color);
         background: $ab-default-block-background;
         border: none;
@@ -452,7 +452,7 @@
 
     & .button {
       align-items: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 35px;
       justify-content: center;
 

@@ -12,7 +12,7 @@
   min-width: 90px;
   overflow: hidden;
   position: absolute;
-  box-shadow:$drumee-shadow-container;
+  box-shadow:var(--shadow-container);
 
   .contextmenu-item {
     align-items: center;

@@ -32,7 +32,7 @@
     margin-left: -9px; //13px;
     &[data-state="1"] {
       box-shadow: none;
-      color: $egreen-soft;
+      color: var(--egreen-soft);
     }
   }
 }

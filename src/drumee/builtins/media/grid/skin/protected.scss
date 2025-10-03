@@ -17,11 +17,11 @@
     margin: 0;
     top: 0;
     &.folder{
-      fill: $ewhite;
+      fill: var(--ewhite);
     }
     
     &.image{
-      fill:$egrey-2f;// #476390;
+      fill:var(--egrey-2f);// #476390;
       opacity: 0.6;
     }
   }

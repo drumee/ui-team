@@ -140,7 +140,7 @@
       height: 8px;
       background-color: var(--default-bg);
       transform: rotate(45deg);
-      box-shadow: $drumee-container-before; 
+      box-shadow: var(--shadow-before); 
     }
 
     &:after {

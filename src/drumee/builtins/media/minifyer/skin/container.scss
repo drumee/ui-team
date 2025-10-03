@@ -39,7 +39,7 @@
     }
 
     &.document {
-      fill:$ewhite;
+      fill:var(--ewhite);
     }
 
     &.schedule {
@@ -71,7 +71,7 @@
 
   &[data-hover="on"] {
     border-radius: $default-border-radius;
-    box-shadow:$drumee-shadow-container;
+    box-shadow:var(--shadow-container);
     z-index : 100; // Needed to make inner element receive event first
 
     .filename {

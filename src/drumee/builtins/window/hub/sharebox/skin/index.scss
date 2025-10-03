@@ -25,7 +25,7 @@
       }
     }
     &.title {
-      @include typo($line: 29px, $size: 18px, $weight: 400, $color: $share-default-text-reverse); //$ewhite);
+      @include typo($line: 29px, $size: 18px, $weight: 400, $color: $share-default-text-reverse); //var(--ewhite));
     }
     &.icon {
       width: 18px;
@@ -44,7 +44,7 @@
       position: absolute;
       background-color: $share-default-background-tooltips; //$sharebox-background-tooltips//#FFFFFF;
       z-index: 100;
-      @include typo($line: 16px, $size: 14px, $weight: 400, $color: $share-default-text-tooltips); //$egrey-2f
+      @include typo($line: 16px, $size: 14px, $weight: 400, $color: $share-default-text-tooltips); //var(--egrey-2f)
       &:after {
         content: "";
         position: absolute;
@@ -60,7 +60,7 @@
   &__main {
     width: 100%;
     z-index: 60000; // higher than data-state=open
-    background-color: $share-default-background;//$default-background; // $ewhite;
+    background-color: $share-default-background;//$default-background; // var(--ewhite);
     justify-content: center;
     align-items: center;
   }
@@ -401,7 +401,7 @@
   }
   &__days-caption,
   &__hours-caption {
-    @include typo($size: 14px, $color: $share-secondary-text-color); //old: $eviolet //#879bff);
+    @include typo($size: 14px, $color: $share-secondary-text-color); //old: var(--eviolet) //#879bff);
     //padding-right: 10px;
   }
   &__validity-wrapper {
@@ -413,7 +413,7 @@
     align-items: center;
     justify-content: center;
     padding: 0px 2px 13px 2px;
-    @include typo($size: 16px, $color: $share-secondary-text-color); //old: $eviolet //#879bff);
+    @include typo($size: 16px, $color: $share-secondary-text-color); //old: var(--eviolet) //#879bff);
   }
 
   &__password-info-icon {

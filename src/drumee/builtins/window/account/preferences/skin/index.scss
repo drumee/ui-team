@@ -72,7 +72,7 @@
 
     &-items {
       border-radius: $default-border-radius-small;//4px;
-      box-shadow:$drumee-shadow-container;
+      box-shadow:var(--shadow-container);
       cursor: pointer;
       width:100%;
       height : 110px;
@@ -86,7 +86,7 @@
     margin: 0 auto;
 
     &-list {
-      box-shadow: $drumee-shadow-accountlist;
+      box-shadow: var(--shadow-accountlist);
       background-color: $account-default-background;     
       border-radius: $default-border-radius;
       height: 100%;

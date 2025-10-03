@@ -55,7 +55,7 @@
     &-name {    
       align-items: flex-start;
       padding-left: 10px;//11%;
-      @include typo($size:18px,$line:24px,$weight:400,$color:$folder-default-text-reverse);//$ewhite);
+      @include typo($size:18px,$line:24px,$weight:400,$color:$folder-default-text-reverse);//var(--ewhite));
       @include overflow-text;
       .inner{
         overflow: hidden;
@@ -115,12 +115,12 @@
         }
 
         & .dropdown-toggle-icon {
-          color:$ab-icon-header;//#556E7F;// $egreen;
+          color:$ab-icon-header;//#556E7F;// var(--egreen);
         }
       }            
       & .menu-topic-items {
         border-radius:$default-border-radius;
-        box-shadow: $drumee-shadow-container; 
+        box-shadow: var(--shadow-container); 
         background-color: $ab-default-background; 
         width: 285px;
         padding: 10px 0;
@@ -177,7 +177,7 @@
         margin-right: 10px;
 
         & svg {
-          fill: $ab-default-icon-menu-dropdown ;//$eviolet;
+          fill: $ab-default-icon-menu-dropdown ;//var(--eviolet);
         }
 
         &.contactbook {

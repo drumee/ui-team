@@ -29,7 +29,7 @@
       height: 40px;
       width: 40px;
       z-index: 7000;
-      box-shadow: $drumee-shadow-main;
+      box-shadow: var(--shadow-main);
       &[data-device="mobile"] {
         height: 35px;
         width: 35px;
@@ -46,7 +46,7 @@
       .menu-topic-trigger {
         height: 40px;
         width: 40px; 
-        box-shadow: $drumee-shadow-topbar;
+        box-shadow: var(--shadow-topbar);
         border-radius:$default-border-radius;
         &[data-device="mobile"] {
           height: 35px;
@@ -64,7 +64,7 @@
         }
         &::before {
           background: var(--default-bg);
-          box-shadow: 0px 0px 4px 0px rgb(63 79 117 / 13%), 0 5px 0px 0 rgb(86 65 113 / 8%), 0 2px 0px 0 rgb(194 185 203 / 0%);//$drumee-shadow-main;
+          box-shadow: 0px 0px 4px 0px rgb(63 79 117 / 13%), 0 5px 0px 0 rgb(86 65 113 / 8%), 0 2px 0px 0 rgb(194 185 203 / 0%);//var(--shadow-main);
           content: " ";
           height: 20px;
           position: absolute;
@@ -83,7 +83,7 @@
       top: 10px !important;
 
       & .addressbook-widget-notification__digit {
-        border: 1px solid $eblue;
+        border: 1px solid var(--eblue);
       }
     }
 
@@ -95,11 +95,11 @@
       justify-content: space-between;
       padding: 14px 18px 14px 35px;//14px 5px 14px 35px; //14px 8px 14px 32px;//14px 20px 14px 35px;
       width: 100%;
-      @include typo($line:32px,$size:16px,$weight:400,$color:$egrey-78);
+      @include typo($line:32px,$size:16px,$weight:400,$color: var(--egrey-78));
 
       &.account {
         svg {
-          color: $eblue;
+          color: var(--eblue);
           padding: 4px; //1px;
         }
       }
@@ -139,7 +139,7 @@
           opacity: 1;
         }
         svg{
-          color: $eviolet-dark;// #476390; 
+          color: var(--eviolet-dark);// #476390; 
           padding: 4px;
         }
       }
@@ -167,7 +167,7 @@
       &:hover {
         background-color: var(--default-bg-hover);
         color: var(--default-text-reverse); 
-        @include typo($line:32px,$size:16px,$weight:400,$color:$egrey-78);
+        @include typo($line:32px,$size:16px,$weight:400,$color: var(--egrey-78));
 
         svg {
             color: var(--default-icon-reverse);    

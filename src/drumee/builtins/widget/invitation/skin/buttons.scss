@@ -64,7 +64,7 @@
       &[data-state="1"] {
         background-color: var(--default-bg-hover);
         border-radius: $default-border-radius;
-        color: $ewhite;
+        color: var(--ewhite);
       }
     }
   }

@@ -21,11 +21,11 @@
       tr th {
         border-bottom: 1px solid #a4c6f3;
         &.available {
-          @include typo($line:14px,$size:8px,$color:$egrey-49,$weight:400);
+          @include typo($line:14px,$size:8px,$color: var(--egrey-49),$weight:400);
           span {
             padding: 1.5px;
             border-width: 0 1px 1px 0;
-            border-color: $egrey-49;
+            border-color: var(--egrey-49);
           }
           &:hover {
             background: transparent;
@@ -45,7 +45,7 @@
         -moz-appearance: none;
         text-indent: 1px;
         text-overflow: '';
-        @include typo($line:14px,$size:12px,$color:$egrey-49,$weight:400);
+        @include typo($line:14px,$size:12px,$color: var(--egrey-49),$weight:400);
         &::-ms-expand {
           display: none;
         }
@@ -62,16 +62,16 @@
         height: 21px;
         line-height: 18px;
         border-radius: 4%;
-        @include typo($line:1,$size:10px,$color:$egrey-49,$weight:400);
+        @include typo($line:1,$size:10px,$color: var(--egrey-49),$weight:400);
       }
       td {
         &.active {
-          color: $ewhite;
+          color: var(--ewhite);
           border-radius: 4%;
           background-color: #4A90E2;
         }
         &.available:hover {
-          color: $ewhite;
+          color: var(--ewhite);
           border-radius: 4%;
           background-color: #4A90E2;
         }

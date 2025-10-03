@@ -18,14 +18,14 @@
     margin-right:28px;
     &:hover {
       background-color: var(--default-bg-hover);//#879BFF;
-      color: var(--default-text-hover);//$ewhite;
+      color: var(--default-text-hover);//var(--ewhite);
      // border-radius:4px;
       .settings, .delete, .view {
         visibility: visible;
-        color: $ewhite;
+        color: var(--ewhite);
       }
       & .note-reader {
-        color:var(--default-text-hover);//$ewhite;
+        color:var(--default-text-hover);//var(--ewhite);
       }
     }
   }
@@ -51,7 +51,7 @@
       //overflow: hidden;
       &.public{
         padding: 6px;
-        color: $egrey-2f;
+        color: var(--egrey-2f);
         background-color: white;
         border: 1px solid #D8D8D8;
       }

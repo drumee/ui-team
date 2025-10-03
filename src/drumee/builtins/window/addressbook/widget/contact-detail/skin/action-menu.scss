@@ -8,8 +8,8 @@
     }
 
     & .menu-topic-items {
-      border-radius: $default-border-radius;
-      box-shadow: $drumee-shadow-container;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-container);
       background-color: $ab-default-background;
       max-width: 1600px;
       min-width: 155px;

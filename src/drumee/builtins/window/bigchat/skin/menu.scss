@@ -20,7 +20,7 @@
 
     & .menu-topic-items {
       border-radius:$default-border-radius;
-      box-shadow: $drumee-shadow-container;
+      box-shadow: var(--shadow-container);
       background-color: $bigchat-default-background;
       width: 285px;
       padding-bottom: 10px;

@@ -34,7 +34,7 @@
       padding-bottom: 15px;
     }
     u{
-      @include typo($size: 15px, $line: 24px, $weight: 400, $color: $eblue);
+      @include typo($size: 15px, $line: 24px, $weight: 400, $color: var(--eblue));
       font-style: italic;
     }
   }

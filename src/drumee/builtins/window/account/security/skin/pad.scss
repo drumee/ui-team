@@ -109,7 +109,7 @@
     &.tbd {
       background-color: transparent;
       font-style: italic;
-      @include typo($size: 16px, $line: 35px, $weight: 400, $color: $eviolet);
+      @include typo($size: 16px, $line: 35px, $weight: 400, $color: var(--eviolet));
 
       &:after {
         content: "...";
@@ -236,7 +236,7 @@
       border-bottom: 1px solid $account-security-entry-border-bottom;
       @include typo($size: 15px,
         $line: 20px,
-        $color: $account-default-text-color ); // $egrey-89); $weight:300,
+        $color: $account-default-text-color ); // var(--egrey-89)); $weight:300,
 
       &::placeholder {
         @include typo($size: 15px,
@@ -271,7 +271,7 @@
   }
 
   &__main {
-    background-color: $account-default-block-background; //$white-fb;
+    background-color: $account-default-block-background; //var(--white-fb);
     border-radius: $default-border-radius;
     height: 100%;
     left: 0;
@@ -303,7 +303,7 @@
       padding: 13px !important; //13.5
       top: -5px;
       right: -4px;
-      color: $account-security-thinline-icon; //$egrey-78 ;
+      color: $account-security-thinline-icon; //var(--egrey-78);
 
       &:hover {
         color: $account-default-thinline-icon-hover;
@@ -340,7 +340,7 @@
     }
 
     .entry-reminder__icon {
-      color: $account-default-icon-neutral; // $egrey-89; //$egrey-49;
+      color: $account-default-icon-neutral; // var(--egrey-89); //var(--egrey-49);
       height: 22px;
       top: 7px;
       width: 22px;

@@ -18,7 +18,7 @@
   }
 
   &__header, &__command{
-    background-color: $eorange-dark;//rgb(240, 79, 4);
+    background-color: var(--eorange-dark);//rgb(240, 79, 4);
   }
   
   .chart-line{

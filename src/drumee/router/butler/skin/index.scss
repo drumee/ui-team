@@ -37,7 +37,7 @@
   }
 
   &__label {
-    @include typo($color: var(--default-text-color), $size: 14px, $weight: 300, $line: 36px); // $egrey-2f
+    @include typo($color: var(--default-text-color), $size: 14px, $weight: 300, $line: 36px); // var(--egrey-2f)
 
     &.ph-reminder {
       display: none;
@@ -158,7 +158,7 @@
 
     &.no-go {
       background-color: $btn-commit-background;
-      @include typo($color: var(--secondary-text-color), $size: 13px, $line: 16px, $weight: 300); //$egrey-78
+      @include typo($color: var(--secondary-text-color), $size: 13px, $line: 16px, $weight: 300); //var(--egrey-78)
     }
 
     &.go {
@@ -181,7 +181,7 @@
     }
 
     &.link {
-      @include typo($color: var(--secondary-text-color), $size: 13px, $line: 16px, $weight: 300); //$egrey-78
+      @include typo($color: var(--secondary-text-color), $size: 13px, $line: 16px, $weight: 300); //var(--egrey-78)
     }
   }
 
@@ -199,7 +199,7 @@
 
     .message {
       width: auto;
-      background: var(--default-bg); //$ewhite;
+      background: var(--default-bg); //var(--ewhite);
       position: absolute;
       top: -12px;
       height: auto;

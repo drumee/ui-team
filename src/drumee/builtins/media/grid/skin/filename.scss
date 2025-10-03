@@ -106,7 +106,7 @@
     }
 
     &.image, &.video {
-      background-color: $ewhite;
+      background-color: var(--ewhite);
     }
 
     &.audio, &.document, &.vector, &.other {

@@ -22,14 +22,14 @@
       border: 1.2px transparent solid;//$vdo-border-grey
       background-color: var(--default-bg);        
       margin:0 7px; // 0 6px;
-      color: $egrey-b6; //grey;
+      color: var(--egrey-b6); //grey;
       cursor: pointer;
       &.line{
-        background-color: $eorange-sunset ;//#ea4d44;
-        color:$ewhite;// #fff;
+        background-color: var(--eorange-sunset);//#ea4d44;
+        color:var(--ewhite);// #fff;
         fill: none;
         stroke-width: 0;
-        stroke: $ewhite;//#fff;
+        stroke: var(--ewhite);//#fff;
         padding: 8px; //5px;
         border: none;
         margin-right:14px;
@@ -50,7 +50,7 @@
 
 
         &[data-state="0"]{
-          color:$egrey-b6;//$default-icon-reverse;
+          color:var(--egrey-b6);//$default-icon-reverse;
 
         }
         &[data-state="0"]{
@@ -71,7 +71,7 @@
         color:$multimedia-vdo-button-accept; // green;
       }
       &[data-state="0"]{
-        color:$egrey-b6; //$egrey-89; #d3d3d3
+        color:var(--egrey-b6); //var(--egrey-89); #d3d3d3
       }
       &[data-state="0"]{
         &:before{
@@ -88,7 +88,7 @@
       }
       &[data-online="1"]{
         background-color: $multimedia-vdo-ctrl-button;//$vdo-ctrl-button; //red;
-        color: $ewhite;
+        color: var(--ewhite);
       }
       &[data-enabled="0"]{
         opacity: 0.3;

@@ -94,7 +94,7 @@
     max-width: 230px;
     cursor: pointer;
     @include overflow-text;
-    @include typo($size:18px,$line:24px,$weight:400,$color:$egrey-78);
+    @include typo($size:18px,$line:24px,$weight:400,$color: var(--egrey-78));
     &:after {
       content: " ";
       width: 22px;
@@ -119,7 +119,7 @@
       }
     }
     &[data-radio="on"] {
-      color: $egrey-2f;
+      color: var(--egrey-2f);
       max-width: 220px;
       &:after {
         content: " ";
@@ -146,7 +146,7 @@
         background: #FCB58C;
       }
       &[data-radio="on"] {
-        color: $ewhite;
+        color: var(--ewhite);
         &:after {
             background: white;
         }

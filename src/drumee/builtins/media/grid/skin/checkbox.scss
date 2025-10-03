@@ -24,12 +24,12 @@
       border-radius: var(--checkbox-border-radius);
       fill: orange;
       border: 1.5px solid orange;
-      background-color: var(--default-bg);//$white; 
+      background-color: var(--default-bg);//var(--white); 
     }
   }
   &--icon{
     pointer-events: none;
-    background-color: $white; 
-    fill: $ewhite;
+    background-color: var(--white); 
+    fill: var(--ewhite);
   }
 }

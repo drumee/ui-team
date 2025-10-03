@@ -60,7 +60,7 @@
       @include typo($size: 18px, $weight: 300, $line: 26px, $color: $ab-default-text-color);
   
       &.input-content {
-        color: $eblue;
+        color: var(--eblue);
       }
     }
   

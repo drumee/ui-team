@@ -34,7 +34,7 @@
       &:before {
         background-color: transparent;
         border-radius: 100%;
-        border: 1.5px solid $eviolet;
+        border: 1.5px solid var(--eviolet);
         box-sizing: border-box;
         content: '';
         display: block;
@@ -46,7 +46,7 @@
       }
       
       &:after {
-        background-color: $eviolet !important;
+        background-color: var(--eviolet) !important;
         border-radius: 100%;
         border: 1.5px solid transparent;
         box-sizing: border-box;
@@ -71,7 +71,7 @@
 
     &.category {
       align-items: baseline;
-      color: $eblue;
+      color: var(--eblue);
       display: flex;
       flex-direction: row;
       justify-content: center;

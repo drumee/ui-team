@@ -4,7 +4,7 @@
   &__header {
     background: var(--default-bg);
     border-radius: $default-border-radius-top;
-    color: $egrey-b6;
+    color: var(--egrey-b6);
     cursor: pointer;
     flex-shrink: 0;
     height: 44px;

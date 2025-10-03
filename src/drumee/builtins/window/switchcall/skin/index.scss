@@ -9,7 +9,7 @@
     min-height: 260px;
     background-color: inherit;
     background-color:$connect-default-background;
-    box-shadow:$drumee-shadow-container;
+    box-shadow:var(--shadow-container);
     left: calc(50vw - 200px);
     top: calc(50vh - 200px);
     z-index: 10000;

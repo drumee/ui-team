@@ -8,7 +8,7 @@
   margin-right: auto;
   margin-left: auto;
   margin-top:226px;
-  @include typo($color: $default-text-reverse, $weight: 300, $line: 19px, $size: 16px); //$egrey-89 $weight: 400, $default-text-color
+  @include typo($color: $default-text-reverse, $weight: 300, $line: 19px, $size: 16px); //var(--egrey-89) $weight: 400, $default-text-color
   &[data-state="connect"]{
     color: $default-text-reverse;
   }

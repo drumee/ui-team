@@ -24,7 +24,7 @@
     border-radius:$default-border-radius;//4px;
     margin: auto;
     background-color: var(--default-bg);
-    box-shadow: $drumee-shadow-popup;//0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    box-shadow: var(--shadow-popup);//0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
   }
 
   &__footer {
@@ -51,9 +51,9 @@
 
     &.go {
       @include typo($color: $btn-rollback-text, $size: 16px, $line: 21px);
-      border: 1px solid $btn-rollback-border;//$white-f6;
+      border: 1px solid $btn-rollback-border;//var(--white-f6);
     //  box-shadow: 0 4px 6px 1px rgba(63,79,117,0.13), 0 0 11px 0 rgba(86,65,113,0.08), 0 0 10px 0 rgba(194,185,203,0);
-      color: $btn-rollback-text;//$egrey-89;
+      color: $btn-rollback-text;//var(--egrey-89);
       cursor:pointer;
       height: 32px;//36px;
       width: 90px;//160px;

@@ -6,6 +6,6 @@
   cursor: pointer;
   z-index: 2;
   &:hover{
-    color: var(--default-thinline-icon-hover);//$eviolet;
+    color: var(--default-thinline-icon-hover);//var(--eviolet);
   }
 }

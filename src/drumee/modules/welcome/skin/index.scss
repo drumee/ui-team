@@ -48,7 +48,7 @@
       width: 600px;
       border-radius:$default-border-radius;//6px;
       margin: auto;
-      background-color: var(--default-bg); //$ewhite;
+      background-color: var(--default-bg); //var(--ewhite);
       box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
       .welcome__message{
         max-width: 273px;
@@ -73,7 +73,7 @@
     border-radius: 2px;
     padding: 5px;
     justify-content: space-between;
-    @include typo($color: $egrey-78, $size: 11px, $line: 13px, $weight: 300);
+    @include typo($color: var(--egrey-78), $size: 11px, $line: 13px, $weight: 300);
     box-shadow: 0 0 7px 0 rgba(0, 0, 0, 0.14), 0 0 6px 0 #F8FAFC, 0 3px 5px 0 rgba(0, 0, 0, 0.2);
   }
 
@@ -108,7 +108,7 @@
       border-radius:0 6px 6px 0px; //4px;
       padding:4px 4px 4px 8px; //4px;
       &::placeholder {
-        @include typo($size: 16px, $line: 18px, $weight: 300, $color:var(--default-text-placeholder)); //$color: $egrey-b6);
+        @include typo($size: 16px, $line: 18px, $weight: 300, $color:var(--default-text-placeholder)); //$color: var(--egrey-b6));
       }
       @media (max-width: $small) {
         @include typo ($color: var(--default-text-color), $size: 14px, $line: 13px, $weight: 300);
@@ -222,14 +222,14 @@
     }
 
     &.bg {
-      stroke: $ewhite;
+      stroke: var(--ewhite);
       stroke-width: 8px;
       box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
     }
 
     &.fg {
       stroke-width: 8px;
-      stroke: $egreen-soft;
+      stroke: var(--egreen-soft);
     }
   }
 
@@ -274,7 +274,7 @@
     }
 
     &.button {
-      background-color: $egreen-soft;
+      background-color: var(--egreen-soft);
       border-radius: 4px;
       box-shadow: 0 4px 6px 1px rgba(63,79,117,0.13), 0 0 11px 0 rgba(86,65,113,0.08), 0 0 10px 0 rgba(194,185,203,0);
       cursor: pointer;
@@ -385,7 +385,7 @@
 
     &.go {
       align-items: center;
-      background-color: $egreen-soft;
+      background-color: var(--egreen-soft);
       border-bottom-right-radius:  4px;
       border-top-right-radius: 4px;
       cursor: pointer;
@@ -410,7 +410,7 @@
       &[data-state="1"] {
         left:-51px;
         top:33px;
-        @include typo($color: $eorange-sunset, $size: 18px, $line: 9px, $weight: 300);
+        @include typo($color: var(--eorange-sunset), $size: 18px, $line: 9px, $weight: 300);
       }
     }
   }
@@ -427,9 +427,9 @@
     @include typo($color: var(--default-text-reverse), $size: 18px, $line: 21px, $weight: 300);
 
     &.go {
-  /*    border: 1px solid $white-f6;
+  /*    border: 1px solid var(--white-f6);
       box-shadow: 0 4px 6px 1px rgba(63,79,117,0.13), 0 0 11px 0 rgba(86,65,113,0.08), 0 0 10px 0 rgba(194,185,203,0);
-      color: $egrey-89;
+      color: var(--egrey-89);
       cursor:pointer;
       height: 36px;
       width: 160px;*/
@@ -465,7 +465,7 @@
     &.lock {
       padding:2.5px;
       svg {
-        fill:$egrey-2f;//#2f2f2f ;
+        fill:var(--egrey-2f);//#2f2f2f ;
       }
     }
   }
@@ -508,48 +508,48 @@
   &__privacy {
     cursor: pointer;
     text-decoration: underline;
-    @include typo($color: $blue-midnight, $size: 13px, $line: 0px, $weight: 300);
+    @include typo($color: var(--blue-midnight), $size: 13px, $line: 0px, $weight: 300);
 
     @media (max-width: $tablet) {
       top:-15px;
-      @include typo($color: $blue-midnight, $size: 11px, $line: 21px, $weight: 300);
+      @include typo($color: var(--blue-midnight), $size: 11px, $line: 21px, $weight: 300);
     }
 
     &[data-device="mobile"]{
-      @include typo($color: $blue-midnight, $size: 10px, $line: 22px, $weight: 300);
+      @include typo($color: var(--blue-midnight), $size: 10px, $line: 22px, $weight: 300);
     }
 
     &[data-tab="hello"] {
-      color:$blue-midnight;
+      color:var(--blue-midnight);
     }
 
     &[data-error="1"] {
       text-decoration: none;
       top:5px;
-      @include typo($color: var(--default-border-error) , $size: 20px, $line: 0px, $weight: 300); //$red-brick
+      @include typo($color: var(--default-border-error) , $size: 20px, $line: 0px, $weight: 300); //var(--red-brick)
 
       &[data-device="mobile"] {
         margin-left:auto;
         margin-right:auto;
         top:4px;
-        @include typo($color: var(--default-border-error) , $size: 11px, $line: 22px, $weight: 500);//$red-brick
+        @include typo($color: var(--default-border-error) , $size: 11px, $line: 22px, $weight: 500);//var(--red-brick)
       }
     }    
   }
 
   &__helper {
-    @include typo($color: $ewhite, $size: 16px, $line: 19px, $weight: 300);
+    @include typo($color: var(--ewhite), $size: 16px, $line: 19px, $weight: 300);
 
     &[data-device="mobile"] {
       padding-left: 20px;
       padding-right: 20px;
-      @include typo($color: $ewhite, $size: 14px, $line: 13px, $weight: 300);
+      @include typo($color: var(--ewhite), $size: 14px, $line: 13px, $weight: 300);
     }
   }
 
   &__requirements {
     &.trigger {
-      color: $egrey-2f;
+      color: var(--egrey-2f);
       height: 14px;
       width: 14px;
     }
@@ -562,7 +562,7 @@
       }
 
       .menu-items {
-        background-color:var(--default-bg);  // $white;
+        background-color:var(--default-bg);  // var(--white);
         border-radius: $default-border-radius-small;//4px;
         box-shadow: 0 2px 5px 1px rgba(0,0,0,0.09), 0 3px 5px 0 rgba(0,0,0,0.08), 0 3px 9px 0 rgba(194,185,203,0);
         cursor: pointer; 
@@ -570,7 +570,7 @@
         padding: 5px;
 
         &::before {
-          background-color: var(--default-bg);  //$ewhite;
+          background-color: var(--default-bg);  //var(--ewhite);
           content: "";
           height: 8px;
           left: -4px;
@@ -584,11 +584,11 @@
 
     &.item {
       &--red {
-        @include typo($color: $eorange-sunset, $size: 10px, $line: 13px, $weight: 300);
+        @include typo($color: var(--eorange-sunset), $size: 10px, $line: 13px, $weight: 300);
       }
 
       &--green {
-        @include typo($color: $egreen, $size: 10px, $line: 13px, $weight: 300);
+        @include typo($color: var(--egreen), $size: 10px, $line: 13px, $weight: 300);
       }
     }
   }

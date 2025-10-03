@@ -34,7 +34,7 @@
     position: absolute;
     right: -9px;
     top: -9px;
-    background: $ewhite;
+    background: var(--ewhite);
     border-radius: 50%;
     box-shadow: 0 3px 4px 1px rgba(63, 79, 117, 0.13), 0 3px 9px 0 rgba(86, 65, 113, 0.08), 0 1px 8px 0 rgba(194, 185, 203, 0);
   }
@@ -44,7 +44,7 @@
     &:hover {
       border-radius: 2px;
       background-color: #8698ff;
-      color: $ewhite;
+      color: var(--ewhite);
     }
   }
   &__name {
@@ -54,11 +54,11 @@
   }
   &__trek {
     @include overflow-text;
-    @include typo($color: $egrey-2f, $weight: 400, $line: 16px, $size: 14px);
+    @include typo($color: var(--egrey-2f), $weight: 400, $line: 16px, $size: 14px);
   }
   &__artist {
     @include overflow-text;
-    @include typo($color: $egrey-89, $weight: 300, $line: 11px, $size: 10px);
+    @include typo($color: var(--egrey-89), $weight: 300, $line: 11px, $size: 10px);
   }
   &__wrapper {
     border-radius: 6px;

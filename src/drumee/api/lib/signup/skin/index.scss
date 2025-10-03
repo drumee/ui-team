@@ -70,8 +70,8 @@
   }
 
   & .api__error-message[data-success='1']{
-    @include typo($color: $egreen, $size: 14px, $line: 21px, $weight: 400);
-    color: $egreen !important;
+    @include typo($color: var(--egreen), $size: 14px, $line: 21px, $weight: 400);
+    color: var(--egreen) !important;
     bottom: 30px;
     max-width: 413px;
     text-align: center;
@@ -125,7 +125,7 @@
   &__go{
     height: 100%;
     border-radius : 6px;  
-    background-color: $egreen;
+    background-color: var(--egreen);
     justify-content: center;
     align-items: center;
     cursor: pointer;
@@ -161,7 +161,7 @@
       @include typo($color:var(--default-text-color), $size: 16px, $line: 21px, $weight: 400);//$size: 20px,  
       width: 100%;
       border: 0px solid white !important;   
-      background: $white-f9  !important; //#d2cdcd
+      background: var(--white-f9)  !important; //#d2cdcd
       border-radius: $default-border-radius;//6px;
       margin: 0px 7px 0px 0px;   
       &::placeholder {
@@ -290,7 +290,7 @@
   }
 
   &__footer {
-    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $egrey-2f);
+    @include typo($size: 18px, $line: 22px, $weight: 400, $color: var(--egrey-2f));
     padding: 10px 20px 10px 10px;
   }
 
@@ -306,13 +306,13 @@
   
   // &__checkbox {
   //   cursor: pointer;
-  //   @include typo($color: $egrey-78, $size: 10px, $line: 12px, $weight: 300);
+  //   @include typo($color: var(--egrey-78), $size: 10px, $line: 12px, $weight: 300);
   //   svg {
   //     width: 10px;
   //     height: 10px;
   //     border: 1px solid #dde2e8;
   //     border-radius: 2px;
-  //     color: $ewhite;
+  //     color: var(--ewhite);
   //     margin-right: 10px;
   //   }
   //   &[data-state="1"],

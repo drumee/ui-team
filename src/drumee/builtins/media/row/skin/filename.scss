@@ -1,5 +1,5 @@
 .folder {
-  color: var(--default-text-reverse); //$ewhite;
+  color: var(--default-text-reverse); //var(--ewhite);
   &.preview{
     background-color: $folder-main;//#468ee5;
     height: 20px;
@@ -20,7 +20,7 @@
     }
   }
   .media-checkbox-wrapper {
-    border-color: $ewhite;
+    border-color: var(--ewhite);
   }
 }
 
@@ -45,7 +45,7 @@
       position: absolute;
       background: white;
       justify-content: center;
-      border: 1px solid $eorange-sunset;//#EA4D44;
+      border: 1px solid var(--eorange-sunset);//#EA4D44;
       border-radius: $default-border-radius-tiny;//3px;
       background-color: var(--default-bg); ;//#FFFFFF;
       box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
@@ -54,7 +54,7 @@
     }
     &__text{
       //margin: 2px auto; 
-      @include typo($line:12px,$size:11px,$weight:400,$color:$eorange-sunset ); //#EA4D44
+      @include typo($line:12px,$size:11px,$weight:400,$color: var(--eorange-sunset) ); //#EA4D44
       text-align: center;
       //width:80px;
       padding:2px 8px 1px;
@@ -63,11 +63,11 @@
       width: 14px;
       height: 14px;
       padding: 2px;
-      border: 0.5px solid $eorange-sunset;//#EA4D44;
-      background-color: $eorange-sunset;//#EA4D44;
+      border: 0.5px solid var(--eorange-sunset);//#EA4D44;
+      background-color: var(--eorange-sunset);//#EA4D44;
       box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
-      color:$ewhite; 
-      fill:$ewhite; 
+      color:var(--ewhite); 
+      fill:var(--ewhite); 
       //margin: 2px auto;
       border-radius:50px;
       position:absolute;

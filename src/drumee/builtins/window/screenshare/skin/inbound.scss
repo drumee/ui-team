@@ -8,7 +8,7 @@
   }
   &__message{
     &.drumee-text{
-      @include typo($size:14px,$line:20px,$weight:400,$color:$ewhite);
+      @include typo($size:14px,$line:20px,$weight:400,$color: var(--ewhite));
     }
   }
 }

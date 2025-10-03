@@ -44,7 +44,7 @@
         }
         &__name{
           justify-content: center;
-          @include typo($size:14px,$line:20px,$weight:400,$color:$main-grey);
+          @include typo($size:14px,$line:20px,$weight:400,$color: var(--main-grey));
         }
       }
       .placeholder-waiting{
@@ -52,7 +52,7 @@
         width: 20%;
         align-items: center;
         justify-items: center;
-        @include typo($size:18px,$line:28px,$weight:400,$color:$main-grey);
+        @include typo($size:18px,$line:28px,$weight:400,$color: var(--main-grey));
       }
     }
     &[data-flow="y"]{
@@ -70,7 +70,7 @@
         height: 20%;
         align-items: center;
         justify-items: center;
-        @include typo($size:18px,$line:28px,$weight:400,$color:$main-grey);
+        @include typo($size:18px,$line:28px,$weight:400,$color: var(--main-grey));
       }
     }
   }

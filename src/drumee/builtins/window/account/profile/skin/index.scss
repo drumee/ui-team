@@ -81,7 +81,7 @@
     //     background-color:$default-background-hover;
 
     //     input {
-    //       @include placeholder-input{color: $ewhite};    
+    //       @include placeholder-input{color: var(--ewhite)};    
     //     }
     //   }
     // }
@@ -93,7 +93,7 @@
     //   visibility: visible;
 
     //   input {
-    //     @include placeholder-input{color: $ewhite}; 
+    //     @include placeholder-input{color: var(--ewhite)}; 
     //   }
     // }
     // }

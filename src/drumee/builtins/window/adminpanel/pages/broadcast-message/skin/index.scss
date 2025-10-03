@@ -96,7 +96,7 @@
       border-radius:$default-border-radius;
       @include typo ($size: 16px, $line: 18px, $color:$btn-commit-text);
       align-items: center;
-      background: $btn-commit-background; //$egreen;
+      background: $btn-commit-background; //var(--egreen);
       cursor: pointer;
       height: 35px; //40px;
       justify-content: center;

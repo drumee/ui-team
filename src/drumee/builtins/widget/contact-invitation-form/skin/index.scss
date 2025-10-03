@@ -27,7 +27,7 @@
   }
 
   &__wrapper {
-    @include typo($size: 16px, $line: 21px, $color: $egrey-78); 
+    @include typo($size: 16px, $line: 21px, $color: var(--egrey-78)); 
 
     &.header {
       align-content: center;
@@ -65,12 +65,12 @@
 
   &__note {
     &.header {
-      @include typo($size: 18px, $line: 21px, $color: var(--secondary-text-color));//$eblue);
+      @include typo($size: 18px, $line: 21px, $color: var(--secondary-text-color));//var(--eblue));
     }
   }
 
   &__entry {
-    @include typo($size: 16px, $line: 21px, $color: var(--default-text-color));//$egrey-2f);
+    @include typo($size: 16px, $line: 21px, $color: var(--default-text-color));//var(--egrey-2f));
     width: 100%;
 
     &[data-status='error'] {
@@ -110,7 +110,7 @@
       margin-top: 15px;
 
       & textarea {
-        @include typo($size: 16px, $line: 21px, $color:var(--default-text-color));// $egrey-2f);
+        @include typo($size: 16px, $line: 21px, $color:var(--default-text-color));// var(--egrey-2f));
         background: var(--default-bg-block);
         border-radius: $default-border-radius;
         border: none;
@@ -190,7 +190,7 @@
     &[data-error=on] {
       opacity: 0.2;
       pointer-events: none;
-      @include typo($weight: 300, $color: $white);
+      @include typo($weight: 300, $color: var(--white));
     }
 
     &[data-wait="1"] {

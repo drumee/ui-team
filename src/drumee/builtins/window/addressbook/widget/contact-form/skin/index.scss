@@ -117,7 +117,7 @@
 
     .tooltips {
       background-color: $ab-background-tooltips;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       margin-left:-215px;
       margin-top: 16px;
       padding:3px 10px 3px 10px;
@@ -164,7 +164,7 @@
       }
 
       &:focus {
-        border-color: $eblue;
+        border-color: var(--eblue);
         outline: none;
 
         @include placeholder-input {
@@ -176,8 +176,8 @@
     & textarea {
       @include typo($size: 14px, $line: 20px);
       background-color: $ab-default-background;
-      border-radius:$default-border-radius;
-      border: 1px solid $eblue;
+      border-radius:var(--border-radius);
+      border: 1px solid var(--eblue);
       box-sizing: border-box;
       margin-bottom: 20px;
       margin-left: 1px;
@@ -236,7 +236,7 @@
   }
 
   &__message-wrapper {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     justify-content: center;
     padding: 0% 13% 0% 5%;
     width: 100%;
@@ -299,9 +299,9 @@
     }
 
     &.plus-icon {
-      background-color: $eorange-light;
-      border-radius: $border-radius-small;
-      color: $white;
+      background-color: var(--eorange-light);
+      border-radius: var(--border-radius-small);
+      color: var(--white);
       cursor: pointer;
       height: 16px;
       margin: 4px;
@@ -319,7 +319,7 @@
       width: 16px;
 
       &:hover {
-        color:$eviolet;
+        color:var(--eviolet);
         opacity: 1;
       }
     }
@@ -340,7 +340,7 @@
       width: 16px;
 
       &[data-state="1"] {
-        color: $egreen;
+        color: var(--egreen);
       }
     }
 
@@ -376,8 +376,8 @@
   
   &__items-wrapper {
     background: $ab-default-background;
-    border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-container;// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-container);// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
     max-height: 250px;
     max-width: 150px;
     overflow-y: auto;
@@ -401,7 +401,7 @@
     
     & .button {   
       align-items:center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 35px;
       justify-content: center;
       margin: 0 7% 0 4%;//0% 15% 0 10%;

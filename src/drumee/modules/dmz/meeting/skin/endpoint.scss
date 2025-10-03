@@ -33,7 +33,7 @@
       width: 20%;
       align-items: center;
       justify-items: center;
-      @include typo($size:18px,$line:28px,$weight:400,$color:$dmz-default-text-placeholder);//$color: $main-grey$main-grey);
+      @include typo($size:18px,$line:28px,$weight:400,$color:$dmz-default-text-placeholder);//$color: var(--main-grey)var(--main-grey));
     }
   }
   &[data-flow="y"]{
@@ -51,7 +51,7 @@
       height: 20%;
       align-items: center;
       justify-items: center;
-      @include typo($size:18px,$line:28px,$weight:400,$color:$dmz-default-text-placeholder);//$color: $main-grey
+      @include typo($size:18px,$line:28px,$weight:400,$color:$dmz-default-text-placeholder);//$color: var(--main-grey)
     }
   }
 }

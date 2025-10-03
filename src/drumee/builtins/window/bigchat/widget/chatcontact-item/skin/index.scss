@@ -109,6 +109,6 @@
     position: absolute;
     width:16px;
     z-index: 2!important;
-    @include typo($color: $white, $weight:100, $line:1, $size: 10px);
+    @include typo($color: var(--white), $weight:100, $line:1, $size: 10px);
   }
 }

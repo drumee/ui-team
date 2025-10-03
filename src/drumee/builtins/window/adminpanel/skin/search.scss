@@ -17,7 +17,7 @@
   }
 
   &__icon {
-    color  : $admin-default-icon-reverse;//$white;
+    color  : $admin-default-icon-reverse;//var(--white);
     cursor: pointer;
     height : 24px;
     margin: auto 10px auto 5px;// auto 10px auto 5px;
@@ -81,7 +81,7 @@
     }
 
     &[data-mode="open"] {
-      background: $egreen;
+      background: var(--egreen);
       border-radius:6px 0 0 0;
       height:40px;
       position: absolute;

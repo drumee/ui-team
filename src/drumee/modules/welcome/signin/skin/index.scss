@@ -156,7 +156,7 @@
       //top: 60px;
       & .drumee-text{
         margin: 0px -20px;
-        @include typo($size: 16px, $line: 16px, $color: $white-f9);
+        @include typo($size: 16px, $line: 16px, $color: var(--white-f9));
       }
     }
     &.buttons-wrapper,
@@ -216,12 +216,12 @@
     }
 
     &.steps {
-      color: $white-f7;
+      color: var(--white-f7);
       top: 30px;
     }
 
     &.drumee-com {
-      @include typo($size: 20px, $line: 28px,$weight:500,$color:$white-f9);
+      @include typo($size: 20px, $line: 28px,$weight:500,$color: var(--white-f9));
       position: absolute;
       right: -130px;
     }
@@ -233,7 +233,7 @@
     }
 
     &.password-tips {
-      @include typo($size: 12px, $line: 16px, $weight:400, $color: $white-f9);
+      @include typo($size: 12px, $line: 16px, $weight:400, $color: var(--white-f9));
       padding-top: 47px;
     }
 
@@ -250,7 +250,7 @@
 
     &.helper,
     &.not-now {
-      @include typo($size: 16px, $line: 16px, $color: $white-f9);
+      @include typo($size: 16px, $line: 16px, $color: var(--white-f9));
       width: 100%;
     }
 
@@ -272,13 +272,13 @@
       cursor: pointer;
       text-decoration-line: underline;
       &:hover {
-        color:$eviolet;//#6a85ff; 
+        color:var(--eviolet);//#6a85ff; 
       }
     }
   }
 
   &__icon {
-    color: var(--default-icon-neutral);//$egrey-89;
+    color: var(--default-icon-neutral);//var(--egrey-89);
     cursor: pointer;
     height: 18px;
     width: 18px; //20px;
@@ -382,14 +382,14 @@
     position: absolute;
     right: 15px;
     top: 15px;
-    color: $egrey-2f;
+    color: var(--egrey-2f);
     opacity: 0.7;
   }
 
   &__button-confirm {
     @include typo($size: 20px, $line: 28px, $color: $default-text-reverse);
     align-items: center;
-    background-color: $egreen-soft;
+    background-color: var(--egreen-soft);
     border-radius:$default-border-radius;
     cursor: pointer;
     height: 100%;
@@ -404,7 +404,7 @@
   &-go {
     @include typo($color: var(--default-text-reverse), $size: 18px, $line: 21px, $weight: 300);
     align-items: center;
-    background-color: $egreen-soft;
+    background-color: var(--egreen-soft);
     cursor: pointer;
     justify-content: center;
     opacity: 0.2;

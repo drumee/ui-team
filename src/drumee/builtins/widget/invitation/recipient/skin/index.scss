@@ -21,28 +21,28 @@
       color: var(--default-text-reverse);
 
       .invitation-recipient__checkbox {
-        border: 1px solid $ewhite;
-        background-color: $eviolet;
+        border: 1px solid var(--ewhite);
+        background-color: var(--eviolet);
 
         svg {
-          color: $eviolet
+          color: var(--eviolet)
         }
       }
 
       & svg {
-        color: $ewhite
+        color: var(--ewhite)
       }
 
       & .note-reader {
-        color: $ewhite
+        color: var(--ewhite)
       }
 
       &[data-state="1"] {
         .invitation-recipient__checkbox {
-          background-color: $eviolet;
+          background-color: var(--eviolet);
 
           svg {
-            color: $ewhite;
+            color: var(--ewhite);
           }
         }
       }
@@ -50,7 +50,7 @@
 
     &[data-state="1"] {
       .invitation-recipient__checkbox {
-        background-color: $ewhite;
+        background-color: var(--ewhite);
 
         svg {
 
@@ -94,13 +94,13 @@
       width: 148px;
       height: 22px;
       color: #FFFFFF;
-      background-color: $eviolet;
+      background-color: var(--eviolet);
       border-radius: $default-border-radius;
 
       padding: 0;
 
       &.idle {
-        background-color: $egrey-d6;
+        background-color: var(--egrey-d6);
       }
     }
   }
@@ -114,13 +114,13 @@
     svg {
 
       position: absolute;
-      color: $ewhite;
+      color: var(--ewhite);
     }
   }
 
   &__avatar {
     &.user-profile {
-      background-color: $egrey-b6;
+      background-color: var(--egrey-b6);
       background-position: 50% 50%;
       background-repeat: no-repeat;
       background-size: cover;
@@ -135,7 +135,7 @@
   &__icon {
     width: 28px;
     height: 28px;
-    color: $egrey-b6;
+    color: var(--egrey-b6);
 
     &.existing {
       color: var(--default-icon-neutral);
@@ -154,7 +154,7 @@
       color: var(--default-icon-reverse);
 
       svg {
-        stroke: $ewhite;
+        stroke: var(--ewhite);
         stroke-width: 2;
       }
     }
@@ -193,15 +193,15 @@
     padding: 10px;
     position: absolute;
     opacity: 1;
-    @include typo($color: $egrey-2f, $size: 12px, $line: 14px, $weight: 400);
-    background-color: $egrey-b6;
+    @include typo($color: var(--egrey-2f), $size: 12px, $line: 14px, $weight: 400);
+    background-color: var(--egrey-b6);
     box-shadow: 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
     border-radius: $default-border-radius-small;
 
     &::before {
       position: absolute;
       content: "";
-      background-color: $egrey-b6;
+      background-color: var(--egrey-b6);
       left: calc(50% - 4px);
       top: -4px;
       width: 8px;
@@ -210,7 +210,7 @@
     }
 
     &.drumate {
-      background-color: $ewhite;
+      background-color: var(--ewhite);
     }
   }
 }

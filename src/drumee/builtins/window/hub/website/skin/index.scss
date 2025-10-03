@@ -53,9 +53,9 @@
         input {
           padding: 0 2px;
           border-bottom: 1px solid #ECEDEE;
-          @include typo($line:29px,$size:18px,$weight:400,$color:$egrey-2f);
+          @include typo($line:29px,$size:18px,$weight:400,$color: var(--egrey-2f));
           @include placeholder-input {
-            @include typo($line:29px,$size:18px,$weight:400,$color:$egrey-89);
+            @include typo($line:29px,$size:18px,$weight:400,$color: var(--egrey-89));
           }
         }
         .input-details{
@@ -86,7 +86,7 @@
     }
   }
   &__title{
-    @include typo($line:48px,$size:36px,$weight:300,$color:$egrey-2f);
+    @include typo($line:48px,$size:36px,$weight:300,$color: var(--egrey-2f));
   }
   &__text{
     @include typo($line:19px,$size:14px,$weight:300,$color:#4A4A4A);
