@@ -238,11 +238,11 @@ class Changelog extends mfsUtils {
             row.effective = this.syncOpt.getNodeState(row, 1)
           }
         }
-        this.debug("AAA:236", opt, row)
         if (!row.effective) {
           continue;
         }
         if (!opt) opt = this.buffer.getSyncState(row);
+        this.debug("AAA:236", opt, row)
         if (opt.synced) continue;
 
         row = { ...row, ...opt }

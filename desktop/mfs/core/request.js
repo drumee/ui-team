@@ -817,7 +817,6 @@ async function _handleDownloadResponse(response, dest, evt, activity, resolve, r
       try {
         localStream = createWriteStream(dest);
         localStream.on("close", async (e) => {
-          this.debug("AAA:822", e)
           let md5Hash = hash.digest('hex');
           let remote = await this.onDownloadSuccess(evt, md5Hash);
           await fsWatcher.onFileClose(evt, remote, md5Hash);

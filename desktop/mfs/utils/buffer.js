@@ -36,7 +36,9 @@ module.exports = function (worker) {
  */
   function getSyncState(row = {}) {
     let { filepath } = row;
-    let sql = `SELECT r.md5Hash, h.md5, h.inode, s.effective, r.filepath, r.filesize, h.filesize hfilesize FROM remote r 
+    let sql = `SELECT r.md5Hash, h.md5, h.inode, s.effective, r.filepath, r.filesize, h.filesize hfilesize, r.mtime, 
+    FLOOR(h.mtimeMs/1000) hmtime 
+    FROM remote r 
     LEFT JOIN hash h USING(filepath) 
     LEFT JOIN syncOpt s USING(filepath) 
     WHERE r.filepath=?`;
@@ -45,6 +47,10 @@ module.exports = function (worker) {
       return { synced: 0 }
     }
     r.synced = 0;
+    if (r.md5Hash == null) {
+      if (r.hmtime >= r.mtime) r.synced = 1;
+      return r;
+    }
     if (r.md5 && r.md5 == r.md5Hash) r.synced = 1;
     return r;
   }

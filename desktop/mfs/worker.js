@@ -242,6 +242,12 @@ class Worker extends Media {
     Account.refreshMenu(settings);
   }
 
+    /**
+     * 
+     * @param {*} channel 
+     * @param {*} data 
+     * @returns 
+     */
   _sendEnv(channel, data) {
     if (!channel) return;
     let localRoot = USER_HOME_DIR.replace(HOME_REG, '');
@@ -400,7 +406,6 @@ class Worker extends Media {
       this.warn("[403] -- Failed to read manifest from server");
       return;
     }
-
     const populate = this.db.populate("remote");
     this.set(data[1]);
     this.set(data[4]);

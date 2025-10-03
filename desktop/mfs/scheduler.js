@@ -563,11 +563,11 @@ class Scheduler extends mfsUtils {
    */
   async run() {
     if (this.alertPending) {
-      this.debug("AAA:742 -- can not run since there is pending alert");
+      this.debug("[RUN:566] can not run since there is pending alert");
       return;
     }
     if (!Account.get(Attr.socket_id)) {
-      this.debug("AAA:572 socket not bound yet");
+      this.debug("[RUN:670] socket not bound yet");
       return
     }
     let events = this.event.log(new Date().getTime());
