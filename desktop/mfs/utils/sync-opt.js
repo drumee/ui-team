@@ -187,7 +187,7 @@ module.exports = function (worker) {
    */
   function addNodeSettings(item) {
     let node = getNode(item.filepath);
-    if (node) return;
+    if (node && node.filepath) return;
     if (item.filetype == Attr.hub) {
       /** Hubs are default to unsynced */
       db.putInToTable('syncOpt', { ...Root, ...item, effective: 0 });

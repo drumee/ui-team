@@ -682,6 +682,7 @@ function requestUpload(evt) {
         nid: home_id,
         hub_id,
         ownpath,
+        position: -1
       };
     } else {
       let { nid, hub_id, ownpath } = evt;

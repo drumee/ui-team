@@ -82,8 +82,7 @@
       "target": [
         "7z",
         "snap",
-        "deb",
-        "rpm"
+        "deb"
       ]
     }
   },
