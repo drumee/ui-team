@@ -15,13 +15,13 @@
     visibility: visible;
     svg{
       border: 1.5px solid orange;
-      border-radius: $default-checkbox-border-radius;
+      border-radius: var(--checkbox-border-radius);
     }
   }
   &[data-selected="1"]{
     visibility: visible;
     svg{
-      border-radius: $default-checkbox-border-radius;
+      border-radius: var(--checkbox-border-radius);
       fill: orange;
       border: 1.5px solid orange;
       background-color: $core-default-background;//$white; 
