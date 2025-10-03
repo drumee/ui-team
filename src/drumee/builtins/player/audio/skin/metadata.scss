@@ -26,7 +26,7 @@
 
   &__icon {
     &.music-icon {
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
       height: 80px;
       width: 80px;
       padding: 10px;
@@ -40,18 +40,18 @@
   }
   
   &__note {
-    @include typo($size: 16px, $color: $core-default-text-reverse);
+    @include typo($size: 16px, $color: var(--default-text-reverse));
     bottom: 5px;
     padding: 5px 5px 5px 20px;
 
     &.name {
-      @include typo($size: 13px, $line: 15px, $color: $core-default-text-reverse);
+      @include typo($size: 13px, $line: 15px, $color: var(--default-text-reverse));
       height: 25px;
       min-height: 25px;
     }
 
     &.artist-name {
-      @include typo($size: 11px, $line: 13px, $color: $core-default-text-reverse);
+      @include typo($size: 11px, $line: 13px, $color: var(--default-text-reverse));
       height: 20px;
       min-width: 20px;
     }

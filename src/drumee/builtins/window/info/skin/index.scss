@@ -13,11 +13,11 @@
       height: 44px;
 
       svg {
-        color: $core-default-thinline-icon; //$egrey-2f;
+        color: var(--default-thinline-icon); //$egrey-2f;
 
         //opacity:0.5;
         &:hover {
-          color: $core-default-thinline-icon-hover;
+          color: var(--default-thinline-icon-hover);
         }
       }
     }
@@ -44,7 +44,7 @@
       //  white-space: break-spaces;
       //  line-break: anywhere;
       word-wrap: break-word;
-      @include typo($weight: 300, $size: 18px, $line: 33px, $color: $core-default-text-color); //24px
+      @include typo($weight: 300, $size: 18px, $line: 33px, $color: var(--default-text-color)); //24px
 
       p {
         text-align: center;
@@ -52,7 +52,7 @@
 
       &.primary-color {
         padding: 5px;
-        @include typo($weight: 300, $size: 24px, $line: 33px, $color: $core-secondary-text-color); //$eblue);
+        @include typo($weight: 300, $size: 24px, $line: 33px, $color: var(--secondary-text-color)); //$eblue);
       }
 
     }
@@ -67,7 +67,7 @@
     margin-right: auto;
     margin-left: auto;
     margin-bottom: 6px;
-    @include typo($weight: 300, $size: 24px, $line: 33px, $color: $core-default-text-color);
+    @include typo($weight: 300, $size: 24px, $line: 33px, $color: var(--default-text-color));
 
     p {
       text-align: center;

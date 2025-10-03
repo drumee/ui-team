@@ -105,7 +105,7 @@
   }
   & .api__success-message {
     margin: auto;
-    @include typo($color:$core-default-text-color, $size: 18px);// $line:);
+    @include typo($color:var(--default-text-color), $size: 18px);// $line:);
    // font-size: 18px;
   }
 }

@@ -85,7 +85,7 @@
     }
     
     &.destroy-tag {
-      color   : $core-default-icon-neutral;
+      color   : var(--default-icon-neutral);
       height  : 16px;
       width   : 24px; //25px;
       z-index : 50!important;
@@ -96,7 +96,7 @@
         margin-left: 5px;
       }
       &:hover{
-        color:$core-default-icon-hover;
+        color:var(--default-icon-hover);
         opacity: 1;
       }
     }

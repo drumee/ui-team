@@ -31,8 +31,8 @@
 
     &:hover,
     &[data-radio="on"] {
-      background-color: $core-default-background-hover;
-      color: $core-default-text-reverse;
+      background-color: var(--default-bg-hover);
+      color: var(--default-text-reverse);
     }
 
     &:hover {
@@ -41,18 +41,18 @@
       }
 
       & .ok-button {
-        color: $core-default-text-hover;
+        color: var(--default-text-hover);
       }
 
       & .icon--protected {
-        color: $core-default-icon-reverse;
-        fill: $core-default-icon-reverse;
+        color: var(--default-icon-reverse);
+        fill: var(--default-icon-reverse);
       }
     }
 
     &[data-radio="on"] {
       & .filename {
-        color: $core-default-text-reverse;
+        color: var(--default-text-reverse);
       }
     }
 
@@ -87,15 +87,15 @@
 
     textarea {
       border: 1px solid $egrey-e8; //$egrey-b6; //#B6BFCA;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       min-height: 22px;
       height: auto;
       overflow: hidden;
       resize: none;
-      @include typo($line: 21px, $size: 14px, $weight: 300, $color: $core-default-text-color);
+      @include typo($line: 21px, $size: 14px, $weight: 300, $color: var(--default-text-color));
 
       &::placeholder {
-        @include typo($size: 14px, $line: 21px, $color: $core-default-text-placeholder); //$weight: 300,
+        @include typo($size: 14px, $line: 21px, $color: var(--default-text-placeholder)); //$weight: 300,
       }
     }
 
@@ -106,7 +106,7 @@
     grid-template-columns: 60px 60px minmax(310px, auto) 180px 120px 80px;
     align-items: center;
     width: 100%;
-    @include typo($line: 33px, $size: 14px, $weight: 300, $color: $core-default-text-color); //$egrey-49
+    @include typo($line: 33px, $size: 14px, $weight: 300, $color: var(--default-text-color)); //$egrey-49
 
     .preview {
       position: relative;
@@ -160,7 +160,7 @@
     height: 32px;
 
     &-filename {
-      color: $core-default-text-color; //$egrey-2f;
+      color: var(--default-text-color); //$egrey-2f;
       min-width: 310px;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -175,7 +175,7 @@
       }
 
       &:hover {
-        color: $core-default-text-hover; //white;
+        color: var(--default-text-hover); //white;
       }
 
       .edit {
@@ -212,7 +212,7 @@
         overflow: hidden;
         text-align: center;
         width: 30px;
-        @include typo($size: 12px, $line: 20px, $color: $core-default-text-reverse);
+        @include typo($size: 12px, $line: 20px, $color: var(--default-text-reverse));
 
         &:hover {
           background: $btn-commit-background-hover;
@@ -233,7 +233,7 @@
       }
 
       .icon--protected {
-        fill: $core-default-icon-neutral; //#89929e;
+        fill: var(--default-icon-neutral); //#89929e;
         width: 100%;
         height: 100%;
         margin: 0;

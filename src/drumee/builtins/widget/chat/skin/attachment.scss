@@ -1,5 +1,5 @@
 &__attachment-wrapper {
-  background-color:$core-default-background;  
+  background-color:var(--default-bg);  
   height: 100%;
   max-height: 100px;
   width: 100%;
@@ -44,7 +44,7 @@
     }
 
     &__container {
-      background-color:$core-default-background;    
+      background-color:var(--default-bg);    
       overflow: hidden;
 
       &[data-hover="on"] {
@@ -95,14 +95,14 @@
       text-overflow: ellipsis;
       top: 30px;
       width: 100%;
-      @include typo($size: 9px, $line: 12px, $weight: 300, $color: $core-default-text-color);
+      @include typo($size: 9px, $line: 12px, $weight: 300, $color: var(--default-text-color));
     }
     
     &__remove {
       background-color: $dgc-messenger-bg;    
       border-radius: 50%;
       border: 1.5px solid $dgc-attachment-close-border;
-      color: $core-default-text-color;
+      color: var(--default-text-color);
       height: 13px;
       line-height: 16px;
       position: absolute;
@@ -114,12 +114,12 @@
       align-content: center;
       flex-wrap: wrap;
       &--icon {
-        color:$core-default-thinline-icon;
+        color:var(--default-thinline-icon);
         padding: 0.5px;
 
         &:hover,
         :focus {
-          color:$core-default-thinline-icon-hover;
+          color:var(--default-thinline-icon-hover);
         }
       }
       

@@ -14,7 +14,7 @@
   }
 
   &__main.application::after {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     content: " ";
     height: 90%;
     margin-left: 7px;
@@ -24,7 +24,7 @@
 
   &__notification_wrapper {   
     align-items: center;
-    background: $core-dock-notification;
+    background: var(--dock-notification);
     border-radius: 14px;
     font-size: 9px;
     height: 14px;
@@ -34,12 +34,12 @@
     right: 11px;
     width: 14px;
     z-index: 2;
-    @include typo($size: 9px, $color: $core-default-text-reverse);//$ewhite);
+    @include typo($size: 9px, $color: var(--default-text-reverse));//$ewhite);
   }
 
   .menu-topic[data-state="1"]{
     .menu-topic-trigger {
-      color: $core-default-icon-hover !important;
+      color: var(--default-icon-hover) !important;
     }
   }
 
@@ -51,7 +51,7 @@
       width   : 65px;
 
       &:hover {
-        color:$core-default-icon-hover;
+        color:var(--default-icon-hover);
       }
     }
 

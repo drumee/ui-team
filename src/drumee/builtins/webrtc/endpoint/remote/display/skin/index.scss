@@ -95,13 +95,13 @@
     align-content: center;
     align-items: center;  
     z-index: 1000;
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
   }
   &__message{
     text-align: center;
     width: auto;
     margin-top: 34px;
-    @include typo($size:16px,$line:20px,$weight:400,$color:$core-default-text-color);
+    @include typo($size:16px,$line:20px,$weight:400,$color:var(--default-text-color));
   }
 
 }

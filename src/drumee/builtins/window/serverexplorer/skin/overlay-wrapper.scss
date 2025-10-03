@@ -6,7 +6,7 @@
     z-index: 100;
     
     & .content {
-      background: $core-transparency-container-overlay;
+      background: var(--transparency-container-overlay);
       border-radius: $default-border-radius-bottom;
       height: 100%;
       position: absolute;

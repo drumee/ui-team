@@ -54,7 +54,7 @@
   }
 
   &__container {
-    background: $core-default-background;
+    background: var(--default-bg);
     height: 100%;
     justify-content: center;
     width: 100%;

@@ -29,7 +29,7 @@
     }
 
     & .menu-topic-items {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       border-radius: $default-border-radius;
       box-shadow: $drumee-container-dropdown;
       min-width: 115px;
@@ -45,7 +45,7 @@
 
   &__icon {
     &.menu-icon {
-      background-color: $core-default-background-hover;
+      background-color: var(--default-bg-hover);
       border-radius: $default-border-radius-tiny;
       border: 1px solid $eviolet;
       color: $ewhite;

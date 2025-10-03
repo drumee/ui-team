@@ -97,7 +97,7 @@
   &[data-hover="on"] {
     &.public {
       .filename {
-        color: $core-default-text-color;
+        color: var(--default-text-color);
         background-color: #e0c89c;
       }
 
@@ -108,7 +108,7 @@
 
     &.private {
       .filename {
-        color: $core-default-text-color;
+        color: var(--default-text-color);
         background-color: #d5a3dd;
       }
 

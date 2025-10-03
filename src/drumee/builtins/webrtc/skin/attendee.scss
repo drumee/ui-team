@@ -5,7 +5,7 @@
   left: 0px;
   top: -3px; //-1px; // 45px;
   padding: 10px;
-  background-color: $core-default-background; 
+  background-color: var(--default-bg); 
   border-radius: $default-border-radius;
   cursor: pointer;
   &-list {
@@ -18,12 +18,12 @@
     padding: 10px 0 15px 3px;
     justify-content: center;
     height: 20px;
-    @include typo($size: 14px, $line: 14px, $weight: 300, $color: $core-default-text-title); //$weight:400,
+    @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title)); //$weight:400,
   }
   .conference-label {
     align-items: center;
     left: 20px;
-    @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+    @include typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
   }
   .conference-checkbox {
     width: 30px;

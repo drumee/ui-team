@@ -10,7 +10,7 @@
   &__title{
     align-items: center;
     justify-content: center;
-    @include typo($size: 28px, $line: 28px,$weight:400, $color: $core-default-text-reverse);     
+    @include typo($size: 28px, $line: 28px,$weight:400, $color: var(--default-text-reverse));     
     &[data-device="mobile"]{
       .drumee-text{
         text-align: center;

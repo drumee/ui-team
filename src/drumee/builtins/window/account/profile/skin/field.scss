@@ -65,7 +65,7 @@
 
     &-text {
       text-align:left;
-      @include typo($size: 16px, $line: 21px, $color: $core-secondary-text-color);
+      @include typo($size: 16px, $line: 21px, $color: var(--secondary-text-color));
 
       &.error {
         color: $account-default-text-error ;//#fe6790;

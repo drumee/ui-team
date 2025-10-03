@@ -4,9 +4,9 @@
       position: absolute;
       right: 14px;
       top: calc(50% - 7px);
-      border: 1px solid $core-default-checkbox-border;
+      border: 1px solid var(--default-checkbox-border);
       svg{
-        fill: $core-default-checkbox-checked;
+        fill: var(--default-checkbox-checked);
         visibility: hidden;
       };
     }

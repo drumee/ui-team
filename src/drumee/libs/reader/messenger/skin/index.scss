@@ -32,14 +32,14 @@
     padding: 7px;
     width: 40px;
     height: 40px;
-    color:$core-default-icon-neutral;// #89929E;
+    color:var(--default-icon-neutral);// #89929E;
 
     &.emoji svg{
-      color: $core-special-icon-emoji;//#FA8540;
+      color: var(--special-icon-emoji);//#FA8540;
       padding:2px;
       cursor: pointer;
       &:hover{
-        color: $core-default-icon-hover;
+        color: var(--default-icon-hover);
       }
     }
     &.submit svg{
@@ -60,7 +60,7 @@
     position: absolute;
     bottom: calc(100% + 5px);
     right: 6px;
-    background: $core-default-background;  //#f8f8f8;
+    background: var(--default-bg);  //#f8f8f8;
     box-shadow:$drumee-shadow-box;//0 0 7px 0 rgba(0,0,0,0.14);
     border-radius:$default-border-radius;// 5px 5px 0px 0px;
     padding: 5px 5px 0px 5px;
@@ -88,7 +88,7 @@
 
   &__container-emojis {
     width: 100%;
-    background:$core-default-background; // #ffffff;
+    background:var(--default-bg); // #ffffff;
   }
 
   &__emojis-item {
@@ -116,7 +116,7 @@
     width: calc(100% - 25px);
     margin: 0 auto 0 11px;
     border-radius:$default-border-radius;
-    background: $core-default-background;
+    background: var(--default-bg);
     overflow: hidden;
     padding: 5px;
     border-radius: $default-border-radius;

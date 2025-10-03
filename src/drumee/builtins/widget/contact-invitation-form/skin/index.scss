@@ -59,49 +59,49 @@
       align-content: center;
       justify-content: center;
       justify-items: center;      
-      @include typo($size: 16px, $weight:300, $line: 18px, $color:$core-default-text-alert); 
+      @include typo($size: 16px, $weight:300, $line: 18px, $color:var(--default-text-alert)); 
     }
   }
 
   &__note {
     &.header {
-      @include typo($size: 18px, $line: 21px, $color: $core-secondary-text-color);//$eblue);
+      @include typo($size: 18px, $line: 21px, $color: var(--secondary-text-color));//$eblue);
     }
   }
 
   &__entry {
-    @include typo($size: 16px, $line: 21px, $color: $core-default-text-color);//$egrey-2f);
+    @include typo($size: 16px, $line: 21px, $color: var(--default-text-color));//$egrey-2f);
     width: 100%;
 
     &[data-status='error'] {
       & input {
-        border-bottom: 1px solid  $core-default-border-error;//$default-border-error;
+        border-bottom: 1px solid  var(--default-border-error);//$default-border-error;
         
         &:focus {
-          border-color: $core-default-border-error;// $default-border-error;
+          border-color: var(--default-border-error);// $default-border-error;
         }
       }
     }
 
     & input {
-      border-bottom: 1px solid $core-default-entry-border-bottom ;//$entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);//$entry-border-bottom;
       width: 100%;
-      @include typo($size: 16px, $line: 21px, $color: $core-default-text-color);
+      @include typo($size: 16px, $line: 21px, $color: var(--default-text-color));
 
       &[data-status='error'] {
-        border-bottom:$core-default-border-error;
+        border-bottom:var(--default-border-error);
       }
 
       &:focus {
-        border-color:  $core-focus-border-placeholder;//$focus-border-bottom;
+        border-color:  var(--focus-border-placeholder);//$focus-border-bottom;
 
         @include placeholder-input {
-          color:  $core-focus-text-placeholder;// $focus-text-placeholder;
+          color:  var(--focus-text-placeholder);// $focus-text-placeholder;
         }
       }
 
       &::placeholder {
-        @include typo($size: 16px, $line: 21px, $weight: 300, $color: $core-default-text-placeholder);
+        @include typo($size: 16px, $line: 21px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
 
@@ -110,8 +110,8 @@
       margin-top: 15px;
 
       & textarea {
-        @include typo($size: 16px, $line: 21px, $color:$core-default-text-color);// $egrey-2f);
-        background: $core-default-block-background;
+        @include typo($size: 16px, $line: 21px, $color:var(--default-text-color));// $egrey-2f);
+        background: var(--default-bg-block);
         border-radius: $default-border-radius;
         border: none;
         outline: none;
@@ -119,7 +119,7 @@
         resize: none;
 
         &::placeholder {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color:$core-default-text-placeholder);// $default-text-placeholder);
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color:var(--default-text-placeholder));// $default-text-placeholder);
         }
       }
     }
@@ -139,13 +139,13 @@
       opacity:0.55;
       width: 35px;
       &:hover{
-        color:$core-default-icon-hover;
+        color:var(--default-icon-hover);
       }
      }
   }
 
   &__error {
-    color:  $core-default-text-error ;//$default-text-error;
+    color:  var(--default-text-error);//$default-text-error;
     margin: auto;
   }
 

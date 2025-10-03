@@ -6,7 +6,7 @@
   @import './reply-message';
 
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     width: calc(100% - 70px);
     @include typo($size: 12px, $line: 14px);
     display: flex;
@@ -210,8 +210,8 @@
 
     &.checkbox {
       border-radius: $default-checkbox-border-radius;
-      border: 1.5px solid $core-default-checkbox-border;
-      color: $core-default-checkbox-background;
+      border: 1.5px solid var(--default-checkbox-border);
+      color: var(--default-checkbox-bg);
       cursor: pointer;
       height: 15px;
       width: 15px;
@@ -219,8 +219,8 @@
       margin-left: auto;
 
       &[data-selected="1"] {
-        border: 1px solid $core-default-checkbox-border;
-        color: $core-default-checkbox-checked ;
+        border: 1px solid var(--default-checkbox-border);
+        color: var(--default-checkbox-checked);
 
 
 
@@ -346,7 +346,7 @@
     text-transform: capitalize;
     white-space: nowrap;
     width: 121px;
-    @include typo($size: 11px, $line: 10px, $weight: 400, $color: $core-default-text-color);
+    @include typo($size: 11px, $line: 10px, $weight: 400, $color: var(--default-text-color));
 
     & .inner.note-content {
       overflow: hidden;
@@ -415,7 +415,7 @@
 
   &__call-duration {
     margin-left: 10px;
-    @include typo($size: 13px, $line: 14px, $weight: 400, $color: $core-default-text-title);
+    @include typo($size: 13px, $line: 14px, $weight: 400, $color: var(--default-text-title));
   }
 
   &__media-attachment {

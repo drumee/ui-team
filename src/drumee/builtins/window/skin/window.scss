@@ -52,14 +52,14 @@
     &[data-state="open"] {
       width: 100%;
       height: 100%;
-      background: $core-transparency-container-overlay; //rgba(0,0,0, .3);
+      background: var(--transparency-container-overlay); //rgba(0,0,0, .3);
       right: 0;
       bottom: 0;
     }
     .drumee-spinner {
       width: 150px;
       height: 150px;
-      background: $core-default-background; // white;
+      background: var(--default-bg); // white;
       top: calc(50% - 75px);
       left: calc(50% - 75px);
       border-radius: $default-border-radius; //4px;
@@ -81,10 +81,10 @@
   &__upload-tooltips {
     min-width: 98px;
     min-height: 32px;
-    background: $core-default-background; //$ewhite;
+    background: var(--default-bg); //$ewhite;
     box-shadow: 0px 0px 31px 0 rgba(0, 0, 0, 0.4);
     padding: 10px;
-    @include typo($size: 12px, $line: 30px, $color: $core-tertiary-text-color, $weight: 300);//$egrey-89
+    @include typo($size: 12px, $line: 30px, $color: var(--tertiary-text-color), $weight: 300);//$egrey-89
     border-radius: $default-border-radius; //4px;
     left: calc(24px - 50%);
     top: -18px;
@@ -93,7 +93,7 @@
       content: " ";
       width: 10px;
       height: 10px;
-      background-color: $core-default-block-background; //#F7F7F9;
+      background-color: var(--default-bg-block); //#F7F7F9;
       position: absolute;
       top: -3px;
       left: calc(50% - 5px);
@@ -115,7 +115,7 @@
       justify-items: center;
       align-items: center;
       border-radius: $default-border-radius-bottom;
-      background-color: $core-transparency-container-overlay;
+      background-color: var(--transparency-container-overlay);
     }
   }
   

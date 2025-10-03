@@ -27,7 +27,7 @@
     padding: 2px 12px;
     text-align: center;
     text-overflow: ellipsis;
-    @include typo($line: 24px, $size: 18px, $color: $core-default-text-color);
+    @include typo($line: 24px, $size: 18px, $color: var(--default-text-color));
   }
 
   &-item {
@@ -41,11 +41,11 @@
     padding: 2px 12px;
     text-align: center;
     text-overflow: ellipsis;
-    @include typo($line: 14px, $size: 11px, $color: $core-default-text-color);
+    @include typo($line: 14px, $size: 11px, $color: var(--default-text-color));
 
     &:hover {
       background-color: $folder-main;
-      color: $core-default-text-reverse;
+      color: var(--default-text-reverse);
     }
   }
 }

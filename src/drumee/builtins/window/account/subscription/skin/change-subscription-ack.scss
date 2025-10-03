@@ -1,7 +1,7 @@
 &-change-subscription-ack {
   &__main {
     align-items: center;
-    background:$core-default-background;
+    background:var(--default-bg);
     border-radius: $default-border-radius;
     height: calc(100% - 400px);
     justify-content: center;
@@ -13,13 +13,13 @@
 
   &__note {
     &.content {
-      @include typo($size: 16px, $line: 20px, $weight:300, $color: $core-default-text-color);
+      @include typo($size: 16px, $line: 20px, $weight:300, $color: var(--default-text-color));
       padding: 15px;
     }
   }
 
   &__close {
-    color:$core-default-thinline-icon;
+    color:var(--default-thinline-icon);
     cursor: pointer;
     margin: 10px;
     position: absolute;
@@ -30,28 +30,28 @@
 
   &__icon {
     &.close {
-      color: $core-default-thinline-icon;
+      color: var(--default-thinline-icon);
       cursor: pointer;
       height: 12px;
       width: 12px;
       
       &:hover {
-        color: $core-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
       }
     }
 
     &.success {
-      color: $core-default-icon-success;
+      color: var(--default-icon-success);
       height: 26px;
       width: 36px;
     }
   }
 
   &__btn-ok {
-    @include typo($size: 16px, $color: $core-backgroundless-text-hover);
+    @include typo($size: 16px, $color: var(--bgless-text-hover));
     align-items: center;
     border-radius: $default-border-radius;
-    border: 1px solid $core-backgroundless-text-hover;
+    border: 1px solid var(--bgless-text-hover);
     cursor: pointer;
     height: 32px;
     justify-content: center; 

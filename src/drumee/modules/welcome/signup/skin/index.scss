@@ -64,7 +64,7 @@
     .entry-status {
       &[data-status="error"] {
         border-radius: $default-border-radius;
-        border: 2px solid $core-default-border-error;
+        border: 2px solid var(--default-border-error);
       }
 
     }
@@ -117,7 +117,7 @@
 
   &__row {
     align-items: center;
-    background-color: $core-default-block-background;
+    background-color: var(--default-bg-block);
     border-radius: $default-border-radius;
     height: 100%;
     max-height: 56px;
@@ -205,7 +205,7 @@
     & .welcome__entry {
       &[data-status="error"] {
         border-radius: $default-border-radius;
-        border: 2px solid $core-default-border-error;
+        border: 2px solid var(--default-border-error);
       }
     }
   }
@@ -216,13 +216,13 @@
   }
 
   &__note {
-    @include typo($size: 20px, $line: 28px, $weight: 400, $color: $core-default-text-reverse);
+    @include typo($size: 20px, $line: 28px, $weight: 400, $color: var(--default-text-reverse));
     justify-content: center;
     text-align: center;
     width: 100%;
 
     &.header {
-      @include typo($size: 38px, $line: 45px, $weight: 500, $color: $core-default-text-reverse);
+      @include typo($size: 38px, $line: 45px, $weight: 500, $color: var(--default-text-reverse));
     }
 
     &.steps {
@@ -245,7 +245,7 @@
 
     &.conditions {
       &.static {
-        @include typo($size: 13px, $line: 15px, $weight: 400, $color: $core-default-text-reverse);
+        @include typo($size: 13px, $line: 15px, $weight: 400, $color: var(--default-text-reverse));
         width: 110px;
       }
 
@@ -259,7 +259,7 @@
       }
 
       &.text-underline {
-        @include typo($size: 13px, $line: 15px, $weight: 700, $color: $core-default-text-reverse);
+        @include typo($size: 13px, $line: 15px, $weight: 700, $color: var(--default-text-reverse));
         cursor: pointer;
         text-decoration-line: underline;
       }
@@ -302,7 +302,7 @@
     }
 
     &.text-underline {
-      @include typo($size: 14px, $line: 16px, $weight: 700, $color: $core-default-text-reverse);
+      @include typo($size: 14px, $line: 16px, $weight: 700, $color: var(--default-text-reverse));
       cursor: pointer;
       text-decoration-line: underline;
 
@@ -329,7 +329,7 @@
   }
 
   &__icon {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     height: 18px;
     width: 18px;
@@ -423,17 +423,17 @@
 
   &__entry {
     & input {
-      @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
+      @include typo($size: 18px, $line: 28px, $color: var(--default-text-color));
       border-bottom: none;
 
       &::placeholder {
-        @include typo($size: 18px, $line: 28px, $weight: 300, $color: $core-default-text-placeholder);
+        @include typo($size: 18px, $line: 28px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
 
     &[data-status="error"] {
       border-radius: $default-border-radius;
-      border: 2px solid $core-default-border-error;
+      border: 2px solid var(--default-border-error);
     }
 
     & .entry-reminder_error {
@@ -454,7 +454,7 @@
     &.input-box {
       border-radius: $default-border-radius;
       align-items: center;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       height: 56px;
       width: 100%;
 
@@ -487,7 +487,7 @@
     height: 100%;
     justify-content: center;
     width: 100%;
-    @include typo($size: 20px, $line: 28px, $color: $core-default-text-reverse);
+    @include typo($size: 20px, $line: 28px, $color: var(--default-text-reverse));
 
     &[data-state="0"] {
       opacity: 0.5;

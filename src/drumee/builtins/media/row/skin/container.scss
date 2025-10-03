@@ -5,7 +5,7 @@
   //max-width: calc(100% - 60px);
 
   .file-info {
-    @include typo($size:12px,$line:14px,$weight:300,$color:$core-default-text-color); //#000000
+    @include typo($size:12px,$line:14px,$weight:300,$color:var(--default-text-color)); //#000000
   }
   &[data-status="locked"] {
     opacity: 0.6;

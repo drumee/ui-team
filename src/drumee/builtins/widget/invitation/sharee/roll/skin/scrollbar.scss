@@ -16,7 +16,7 @@
     }
     &:before {
       content: " ";
-      background:$core-default-background;    
+      background:var(--default-bg);    
       position: absolute;
       height: 100%;
       width: 8px;

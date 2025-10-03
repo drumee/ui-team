@@ -1,6 +1,6 @@
 &-topbar {
   &__main {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     border-bottom: none;
     border-radius: $default-border-radius-top;
     cursor: pointer;
@@ -17,14 +17,14 @@
 
   &__control {
     .icon {
-      color: $core-default-icon-neutral; 
+      color: var(--default-icon-neutral); 
       height: 12px;
       margin: auto 15px auto 0;
       padding: 0 ;
       width: 12px;
 
       &:hover {
-        color: $core-default-icon-hover;
+        color: var(--default-icon-hover);
       }
     }
   }

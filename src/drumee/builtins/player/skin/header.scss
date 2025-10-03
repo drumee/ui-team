@@ -2,7 +2,7 @@
 
 .player {
   &__header {
-    background: $core-default-background;
+    background: var(--default-bg);
     border-radius: $default-border-radius-top;
     color: $egrey-b6;
     cursor: pointer;
@@ -116,18 +116,18 @@
           width: 14px;
 
           svg {
-            color: $core-default-icon-neutral;
+            color: var(--default-icon-neutral);
 
             &:hover {
-              color: $core-default-icon-hover;
+              color: var(--default-icon-hover);
             }
           }
         }
 
         &:hover {
-          color: $core-default-icon-hover;
+          color: var(--default-icon-hover);
           svg {
-            color: $core-default-icon-hover;
+            color: var(--default-icon-hover);
           }
         }
       }
@@ -140,7 +140,7 @@
       z-index: 3;
 
       .icon {
-        color: $core-default-icon-neutral;
+        color: var(--default-icon-neutral);
         cursor: pointer;
         height: 14px;
         margin: auto 13px auto 0;
@@ -153,10 +153,10 @@
         }
 
         &:hover {
-          color: $core-default-icon-hover;
+          color: var(--default-icon-hover);
 
           svg {
-            color: $core-default-icon-hover;
+            color: var(--default-icon-hover);
           }
         }
       }
@@ -169,7 +169,7 @@
       z-index: 1000;
 
       .icon {
-        color: $core-default-icon-neutral;
+        color: var(--default-icon-neutral);
         cursor: pointer;
         height: 12px;
         margin: auto 15px auto 0;
@@ -178,7 +178,7 @@
 
         &:hover {
           svg {
-            color: $core-default-icon-hover;
+            color: var(--default-icon-hover);
           }
         }
 
@@ -206,7 +206,7 @@
     }
 
     &__container {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       width: 320px;
     }
   }

@@ -16,7 +16,7 @@
   }
 
   &__main {
-    background-color:$core-default-background ;// $white ;
+    background-color:var(--default-bg);// $white ;
   }
 
   &__container {
@@ -64,7 +64,7 @@
 
       & .title {
         text-align: center;
-        @include typo($size: 18px, $line: 19px, $color: $core-default-text-reverse);//$size: 17px,
+        @include typo($size: 18px, $line: 19px, $color: var(--default-text-reverse));//$size: 17px,
 
         & .note-content {
           width: 100%;
@@ -110,7 +110,7 @@
           height: 100%;
           overflow: hidden;
           width: 100%;
-          @include typo($size: 15px, $line: 15px, $color: $core-default-text-reverse);
+          @include typo($size: 15px, $line: 15px, $color: var(--default-text-reverse));
   
           & .note-content {
             width: 100%;

@@ -4,7 +4,7 @@
   @import 'validity';
   
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     border-radius: $default-border-radius;
     height: auto;
     margin: auto;

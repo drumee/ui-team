@@ -6,7 +6,7 @@
 
 &__ui {
 
-  background-color: $core-default-background;
+  background-color: var(--default-bg);
   left: 10vw;
   width: 440px;
   height: 480px;
@@ -50,7 +50,7 @@
 }
 
 &__confirm-container {
-  background-color: $core-default-background;
+  background-color: var(--default-bg);
   padding: 0 20px;
   width: 260px;
   height: 150px;
@@ -66,11 +66,11 @@
   .confirm-message {
     text-align: center;
     padding: 0 10px;
-    @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+    @include typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
   }
 
   .action-btn {
-    @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+    @include typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
     margin-top: 10px;
 
     .buttons {
@@ -126,14 +126,14 @@
   }
 
   .menu-items {
-    background: $core-default-background;
+    background: var(--default-bg);
     border-radius: $default-border-radius;
   }
 }
 
 &__mute {
   padding: 10px 9px 10px 10px;
-  @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+  @include typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
 }
 
 &__message-container {
@@ -147,11 +147,11 @@
 
   .message-text {
     padding: 10px;
-    background-color: $core-default-transparent-black;
+    background-color: var(--default-transparent-black);
     margin: 10px;
     text-align: center;
     border-radius: $default-border-radius; //3px;
-    @include typo($color: $core-default-text-reverse, $weight: 400, $line: 20px, $size: 16px);
+    @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
   }
 }
 
@@ -174,7 +174,7 @@
 
     .countdown-timer__counter {
       margin: 10px;
-      @include typo($color: $core-default-text-reverse, $weight: 400, $line: 20px, $size: 16px);
+      @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
       &[data-blink="1"]{
         color:$main-yellow;
       }
@@ -196,7 +196,7 @@
 &__body {
   align-items: center;
   justify-content: center;
-  background-color: #313132; //$core-multimedia-background;//$vdo-background-color;
+  background-color: #313132; //var(--multimedia-bg);//$vdo-background-color;
 
   .core-webrtc__ui {
     width: 100%;
@@ -279,10 +279,10 @@
 
   .waiting {
     padding: 10px;
-    background-color: $core-default-transparent-black; // grey;
+    background-color: var(--default-transparent-black); // grey;
     margin: 10px;
     border-radius: $default-border-radius; //3px;
-    @include typo($color: $core-default-text-reverse, $weight: 400, $line: 20px, $size: 16px);
+    @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
   }
 }
 
@@ -299,7 +299,7 @@
 
 
 .window-warning__body {
-  background-color: $core-default-background;
+  background-color: var(--default-bg);
   box-shadow: $drumee-shadow-box;
   border: none;
   min-width: 300px;
@@ -307,7 +307,7 @@
   min-height: 200px;
 
   .window-warning__content .drumee-text {
-    color: $core-default-text-color;
+    color: var(--default-text-color);
     margin: 10px 0 10px 15px;
   }
 }
@@ -348,20 +348,20 @@
     &.pre-check-cancel {
       background-color: transparent;
       border: 1px solid $btn-rollback-border-hover;
-      color: $core-secondary-text-color;
+      color: var(--secondary-text-color);
       width: 115px;
       height: 35px;
 
       &:hover {
         border: 2px solid $btn-rollback-border-hover;
-        color: $core-secondary-text-color;
+        color: var(--secondary-text-color);
       }
     }
 
     &.cancel-subs {
-      color: $core-default-text-caution;
+      color: var(--default-text-caution);
       background-color: transparent;
-      border: 1px solid $core-default-border-caution;
+      border: 1px solid var(--default-border-caution);
       width: 115px;
       height: 35px;
 

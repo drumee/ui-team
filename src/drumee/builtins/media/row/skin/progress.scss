@@ -1,7 +1,7 @@
 .media-uploader, .svg-progress{
   &__ui{
     position: absolute;
-    background-color: $core-default-background; //$ewhite;
+    background-color: var(--default-bg); //$ewhite;
     z-index: 1000;
     width: 100%;
     height: 100%;
@@ -38,7 +38,7 @@
     &-filesize{
       letter-spacing: 0.1px;
       padding-left: 8px;
-      @include typo($line:33px,$size:14px,$weight:300,$color:$core-default-text-color);//#2F2F2F);
+      @include typo($line:33px,$size:14px,$weight:300,$color:var(--default-text-color));//#2F2F2F);
     }
     &-filename{
       margin-left: 11px;

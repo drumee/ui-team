@@ -20,7 +20,7 @@
     height: 36px; //30px;
     padding:8px; // 5px;
     border: 1.2px transparent solid;//$vdo-border-grey
-    background-color:$core-default-background; //  $ewhite;
+    background-color:var(--default-bg); //  $ewhite;
     margin:0 7px; // 0 6px;
     color: $egrey-b6; //grey;
     cursor: pointer;

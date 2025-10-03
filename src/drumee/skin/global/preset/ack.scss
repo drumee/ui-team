@@ -1,7 +1,7 @@
 .preset{
   &-acknowledge{
     &__main{
-      background-color:$core-default-background;   
+      background-color:var(--default-bg);   
       width: 100%;
       height: 100%;
       margin: 0;
@@ -18,10 +18,10 @@
       align-content: center;
       .text {
         text-align: center;
-        @include typo($color:$core-default-text-color,$size:16px,$line:19px,$weight:300);//; #787B7F
+        @include typo($color:var(--default-text-color),$size:16px,$line:19px,$weight:300);//; #787B7F
       }  
       .icon{
-        color:$core-default-icon-success;//#18AC72;
+        color:var(--default-icon-success);//#18AC72;
         width: 30px;//32px
         height: 30px; //32px;
       }

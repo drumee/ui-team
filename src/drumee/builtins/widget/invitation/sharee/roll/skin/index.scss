@@ -47,7 +47,7 @@
     .placeholder--no-contact {
       margin: 2px auto;
       padding-left: 15px;
-      @include typo($color: $core-default-text-color, $size: 14px, $line: 26px, $weight: 400);
+      @include typo($color: var(--default-text-color), $size: 14px, $line: 26px, $weight: 400);
     }
   }
 }

@@ -36,7 +36,7 @@
       width: 100%;
       align-items: center;
       justify-content: start;  
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       border-radius: $default-border-radius-small;//4px;
       .welcome__entry{
         border: 1px solid rgb(47 47 47 / 4%);// 0.4);
@@ -45,7 +45,7 @@
       .dialog__button--close{
         left:278px;
         top: 0px;
-        color:$core-default-thinline-icon;//#89929e;
+        color:var(--default-thinline-icon);//#89929e;
         cursor:pointer;
       }
       &[data-device="mobile"]{
@@ -111,7 +111,7 @@
     width: 100%;
     display: flex;   
     color: rgb(234 77 68 / 8%);// 0.8);
-    background-color: $core-default-background;       
+    background-color: var(--default-bg);       
     justify-content: center;
     align-items: center;
     cursor: pointer;
@@ -130,7 +130,7 @@
     align-items: center;
     cursor: pointer;
     box-shadow: 0 4px 6px 1px rgb(63 79 117 / 13%), 0 0 11px 0 rgb(86 65 113 / 8%), 0 0 10px 0 rgb(194 185 203 / 0%);
-    @include typo($color: $core-default-text-reverse, $size: 16px, $line: 21px, $weight: 300);
+    @include typo($color: var(--default-text-reverse), $size: 16px, $line: 21px, $weight: 300);
     // @media (max-width: $tablet) {
     //   @include typo($color: $default-text-reverse, $size: 16px, $line: 18px, $weight: 300);
     // }
@@ -158,14 +158,14 @@
     input{
       padding-left:0.7em;// 1em;
       margin:0;
-      @include typo($color:$core-default-text-color, $size: 16px, $line: 21px, $weight: 400);//$size: 20px,  
+      @include typo($color:var(--default-text-color), $size: 16px, $line: 21px, $weight: 400);//$size: 20px,  
       width: 100%;
       border: 0px solid white !important;   
       background: $white-f9  !important; //#d2cdcd
       border-radius: $default-border-radius;//6px;
       margin: 0px 7px 0px 0px;   
       &::placeholder {
-        @include typo($size: 16px, $line: 21px, $weight: 300, $color: $core-default-text-placeholder);
+        @include typo($size: 16px, $line: 21px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
   }
@@ -188,7 +188,7 @@
       flex: 1;
     }
     &[data-error="1"]{
-      border: 1px solid $core-default-text-error  ;// #D23244 
+      border: 1px solid var(--default-text-error);// #D23244 
       padding-bottom:0.5px;
       border-radius:$default-border-radius-small;//4px;
     }
@@ -197,11 +197,11 @@
   &__acknowledge{
     &.title {
       text-align: center;
-      @include typo($color: $core-default-text-title, $size: 28px, $line: 42px, $weight: 300);
+      @include typo($color: var(--default-text-title), $size: 28px, $line: 42px, $weight: 300);
 
       &[data-device="mobile"]{
         width:295px;
-        @include typo($color: $core-default-text-title, $size: 19px, $line: 32px, $weight: 300);
+        @include typo($color: var(--default-text-title), $size: 19px, $line: 32px, $weight: 300);
         left:4.5px;
         margin : 10px 4px 30px 5px; 
       }
@@ -295,9 +295,9 @@
   }
 
   &__login-btn {
-    @include typo($size: 16px, $line: 20px, $weight: 400, $color: $core-secondary-text-color);
+    @include typo($size: 16px, $line: 20px, $weight: 400, $color: var(--secondary-text-color));
     align-items: center;
-    border: 1px solid $core-secondary-text-color;
+    border: 1px solid var(--secondary-text-color);
     border-radius: 6px;
     height: 30px;
     justify-content: center;

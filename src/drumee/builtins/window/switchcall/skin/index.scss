@@ -70,28 +70,28 @@
     padding: 20px;
     &__title{
       margin: 10px auto 20px;
-      @include typo($size:18px,$line:20px,$weight:500,$color:$core-default-text-color);
+      @include typo($size:18px,$line:20px,$weight:500,$color:var(--default-text-color));
     }
     &__name{
       margin:0px auto 45px;
-      @include typo($size:16px,$line:20px,$weight:500,$color:$core-secondary-text-color);
+      @include typo($size:16px,$line:20px,$weight:500,$color:var(--secondary-text-color));
     }
     &__static{
       //margin: 0 auto 50px;
-      @include typo($size:16px,$line:20px,$weight:400,$color:$core-default-text-color);
+      @include typo($size:16px,$line:20px,$weight:400,$color:var(--default-text-color));
     }
     &.drumee-text{
       width: auto;
       min-width: 200px;
       border-radius: 4px;
-      @include typo($size:14px,$line:20px,$weight:400,$color:$core-default-text-color);
+      @include typo($size:14px,$line:20px,$weight:400,$color:var(--default-text-color));
     }
   }
 
   &__commands{
     height: 56px;
     justify-content: center;
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     margin: 25px 0;
     .ctrl-button.accept{
       width: 115px;

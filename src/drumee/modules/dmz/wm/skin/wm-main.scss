@@ -80,7 +80,7 @@
 
     & .media-grid__ui {
       & .filename {
-        @include typo($line: 14px, $size: 11px, $color: $core-default-text-color);
+        @include typo($line: 14px, $size: 11px, $color: var(--default-text-color));
         border-radius:$default-border-radius-bottom;
         cursor: pointer;
         left: 0px;
@@ -93,7 +93,7 @@
         width: 100%;
 
         &.hub, &.folder {
-          color: $core-default-text-reverse;
+          color: var(--default-text-reverse);
         }
 
         &.image,
@@ -113,14 +113,14 @@
     &[data-state="open"] {
       width: 100%;
       height: 100%;
-      background: $core-transparency-container-overlay;//$transparency-container-overlay; //rgba(0,0,0, .3);
+      background: var(--transparency-container-overlay);//$transparency-container-overlay; //rgba(0,0,0, .3);
       right: 0;
       bottom: 0;
     }
     .drumee-spinner {
       width: 150px;
       height: 150px;
-      background: $core-default-background; // white;
+      background: var(--default-bg); // white;
       top: calc(50% - 75px);
       left: calc(50% - 75px);
       border-radius: $default-border-radius; //4px;

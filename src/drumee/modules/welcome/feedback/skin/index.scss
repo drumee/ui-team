@@ -14,7 +14,7 @@
     width: 700px;
     margin: 50px auto; 
     padding: 20px;
-    background-color: $core-default-block-background; 
+    background-color: var(--default-bg-block); 
     border-radius: $default-border-radius;
     box-shadow: $drumee-shadow-popup;
   }
@@ -30,11 +30,11 @@
     &.header {
       justify-content: center;
       text-align: center;
-      @include typo($size: 38px, $line: 45px, $color: $core-default-text-color);
+      @include typo($size: 38px, $line: 45px, $color: var(--default-text-color));
     }
 
     &.message {
-      @include typo($size: 16px, $line: 22px, $color: $core-default-text-color);
+      @include typo($size: 16px, $line: 22px, $color: var(--default-text-color));
       padding: 30px;
       text-align: left;
       p{
@@ -61,7 +61,7 @@
     min-height: 120px;
     margin: 10px 55px;
     &[data-error="1"]{
-      border: 1px solid $core-default-border-error;// red;
+      border: 1px solid var(--default-border-error);// red;
       border-radius: $default-border-radius;
     }
     & textarea {
@@ -71,7 +71,7 @@
       width: 100%;
       height: 100%;
       padding: 8px 0px 0px 10px;
-      @include typo($size: 16px, $line: 18px, $color: $core-default-text-color);
+      @include typo($size: 16px, $line: 18px, $color: var(--default-text-color));
       &::placeholder {
         @include typo($size: 16px, $line: 18px, $weight: 400,$color: $egrey-b6);//$default-text-placeholder); //$egrey-b6);$weight: 300,
       }

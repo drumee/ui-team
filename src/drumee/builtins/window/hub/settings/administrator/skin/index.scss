@@ -25,7 +25,7 @@
   }
   .invitation__container-sharee, .invitation-settings__ui{
     box-shadow:$drumee-shadow-box ;
-    background-color: $core-default-background ; 
+    background-color: var(--default-bg); 
     width: 360px;
     min-height: 240px;
     border-radius: $default-border-radius;

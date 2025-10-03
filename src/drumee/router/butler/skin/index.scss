@@ -37,7 +37,7 @@
   }
 
   &__label {
-    @include typo($color: $core-default-text-color, $size: 14px, $weight: 300, $line: 36px); // $egrey-2f
+    @include typo($color: var(--default-text-color), $size: 14px, $weight: 300, $line: 36px); // $egrey-2f
 
     &.ph-reminder {
       display: none;
@@ -48,7 +48,7 @@
       &[data-state="1"] {
         display: block;
         transition: all .5s;
-        @include typo($color: $core-secondary-text-color , $size: 13px, $weight: 300, $line: 16px); //#4A90E2
+        @include typo($color: var(--secondary-text-color) , $size: 13px, $weight: 300, $line: 16px); //#4A90E2
         text-align: left;
         margin: 0 auto 0 0;
       }
@@ -57,7 +57,7 @@
 
   &__message {
     bottom: 16px;
-    @include typo($color: $core-default-text-color, $size: 16px, $line: 18px, $weight: 400); //$egrey-78
+    @include typo($color: var(--default-text-color), $size: 16px, $line: 18px, $weight: 400); //$egrey-78
     text-align: left;
 
     &.subtitle {
@@ -67,7 +67,7 @@
     }
 
     &.error {
-      @include typo($color: $core-default-text-error, $size: 14px, $line: 18px, $weight: 300);
+      @include typo($color: var(--default-text-error), $size: 14px, $line: 18px, $weight: 300);
     }
   }
 
@@ -80,10 +80,10 @@
     height: auto;
     padding: 50px;
     border-radius: $default-border-radius; //6px;
-    background-color: $core-default-background !important; //#FFFFFF
+    background-color: var(--default-bg) !important; //#FFFFFF
     justify-content: space-between;
     align-items: center;
-    background: $core-default-background ; //white;
+    background: var(--default-bg); //white;
     box-shadow: 0 0 7px 0 rgb(0 0 0 / 14%), 0 0 6px 0 #f8fafc, 0 3px 5px 0 rgb(0 0 0 / 20%);
     overflow: hidden;
 
@@ -100,7 +100,7 @@
       top: 0;
 
       &:hover {
-        color: $core-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
       }
     }
   }
@@ -142,7 +142,7 @@
     }
 
     &.title {
-      @include typo($color: $core-default-text-error, $size: 20px, $line: 28px, $weight: 300);
+      @include typo($color: var(--default-text-error), $size: 20px, $line: 28px, $weight: 300);
     }
   }
 
@@ -158,7 +158,7 @@
 
     &.no-go {
       background-color: $btn-commit-background;
-      @include typo($color: $core-secondary-text-color, $size: 13px, $line: 16px, $weight: 300); //$egrey-78
+      @include typo($color: var(--secondary-text-color), $size: 13px, $line: 16px, $weight: 300); //$egrey-78
     }
 
     &.go {
@@ -181,7 +181,7 @@
     }
 
     &.link {
-      @include typo($color: $core-secondary-text-color, $size: 13px, $line: 16px, $weight: 300); //$egrey-78
+      @include typo($color: var(--secondary-text-color), $size: 13px, $line: 16px, $weight: 300); //$egrey-78
     }
   }
 
@@ -199,7 +199,7 @@
 
     .message {
       width: auto;
-      background: $core-default-background; //$ewhite;
+      background: var(--default-bg); //$ewhite;
       position: absolute;
       top: -12px;
       height: auto;

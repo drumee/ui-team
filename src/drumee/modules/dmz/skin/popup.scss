@@ -23,7 +23,7 @@
     width: 600px;
     border-radius:$default-border-radius;//4px;
     margin: auto;
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     box-shadow: $drumee-shadow-popup;//0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
   }
 
@@ -35,7 +35,7 @@
   }
 
   &__message {
-    @include typo($color: $core-default-text-color, $size: 18px, $line: 28px);//$line: 24px$size: 20px,
+    @include typo($color: var(--default-text-color), $size: 18px, $line: 28px);//$line: 24px$size: 20px,
     align-items: center;
     height: 100%;
     justify-content: center;
@@ -47,7 +47,7 @@
   }
 
   &__button {
-    @include typo($color: $core-default-text-reverse, $size: 18px, $line: 21px, $weight: 300);
+    @include typo($color: var(--default-text-reverse), $size: 18px, $line: 21px, $weight: 300);
 
     &.go {
       @include typo($color: $btn-rollback-text, $size: 16px, $line: 21px);

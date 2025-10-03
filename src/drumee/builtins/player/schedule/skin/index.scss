@@ -10,7 +10,7 @@
 
 .player-schedule {
   &__ui {
-    background-color:$core-default-background;  
+    background-color:var(--default-bg);  
     border-radius: $default-border-radius;
     box-shadow:$drumee-shadow-container;
     display: flex;  
@@ -68,7 +68,7 @@
   &__icon {
     border-radius:$default-border-radius; 
     // border: 1px $default-icon-reverse solid;
-    color: $core-special-schedule-icon;
+    color: var(--special-schedule-icon);
     height: 30px;
     margin-right: 5px;
     min-width:30px;
@@ -83,7 +83,7 @@
 
     &.attendees {
       border:0;
-      color:$core-default-icon-reverse; 
+      color:var(--default-icon-reverse); 
       height: 23px;
       left: 15px;
       margin-top: -1px;
@@ -105,7 +105,7 @@
   }
 
   &__tooltips.schedule-tooltips{
-    background-color: $core-background-tooltips;
+    background-color: var(--bg-tooltips);
     border-radius:$default-border-radius-small;// $default-border-radius-tiny;
     opacity:1;
     padding: 8px;
@@ -115,10 +115,10 @@
     z-index: 10;
     user-select: none;
     left:-14px;// -100%;
-    @include typo($size: 11px, $line: 10px, $weight: 400, $color: $core-default-text-color); //$line: 14px,
+    @include typo($size: 11px, $line: 10px, $weight: 400, $color: var(--default-text-color)); //$line: 14px,
 
     &::before {
-      background: $core-background-tooltips;
+      background: var(--bg-tooltips);
       top: -5px;//-4px;
       content: " ";
       height: 10px;
@@ -169,8 +169,8 @@
     width: 371px;
     &.view-mode{
       &:hover{
-        background-color: $core-default-background-hover;//#879bff;
-        color: $core-default-text-hover; //#fff;
+        background-color: var(--default-bg-hover);//#879bff;
+        color: var(--default-text-hover); //#fff;
         & .player-schedule__text, .player-schedule__icon{
           color: $ewhite;  
         }
@@ -192,7 +192,7 @@
     flex: 1;
     max-height: 89px;
     overflow: auto;
-    @include typo($color:$core-default-text-color, $weight: 400, $line: 30px, $size: 14px);
+    @include typo($color:var(--default-text-color), $weight: 400, $line: 30px, $size: 14px);
     &.date{
       & .note-content{
         white-space: nowrap;
@@ -219,7 +219,7 @@
     height: 20px;
     width: 20px;
     margin: 20px;
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     z-index: 10;
   }
@@ -273,7 +273,7 @@
     &.icon {
       align-items:center;
       border-radius:$default-border-radius;
-      color: $core-default-icon-neutral;   
+      color: var(--default-icon-neutral);   
       height: 25px;
       margin:0 3%;
       opacity: 0.75;
@@ -282,7 +282,7 @@
       width: 25px;
 
       &:hover {
-        color:$core-default-icon-hover;
+        color:var(--default-icon-hover);
       }
     }
   }
@@ -294,9 +294,9 @@
     border-radius: 3px;
     justify-items: center;
     justify-content: center;
-    @include typo($color: $core-default-text-color, $weight: 400, $line: 30px, $size: 12px);
+    @include typo($color: var(--default-text-color), $weight: 400, $line: 30px, $size: 12px);
     .drumee-svg {
-      color: $core-default-icon-success;
+      color: var(--default-icon-success);
       height: 20px;
       padding: 2px;
       width: 25px;
@@ -309,7 +309,7 @@
   &__bdy_footer{
     // overflow-y: auto;
     width: 100%;
-    background: $core-default-background; //white;
+    background: var(--default-bg); //white;
     border-radius: 0px 0px 5px 5px;
     padding-bottom: 10px;
   }
@@ -325,8 +325,8 @@
     width:100%;
     & input {
       width: calc( 100% - 10px );
-      background: $core-default-block-background;//#f2f2f2;
-      color: $core-default-text-color; //#2f2f2f;
+      background: var(--default-bg-block);//#f2f2f2;
+      color: var(--default-text-color); //#2f2f2f;
       width: 98%;
       height: 25px;
       padding-left: 5px;
@@ -340,7 +340,7 @@
     &.message {
       width: 100%;
       & textarea {
-        background: $core-default-block-background;
+        background: var(--default-bg-block);
         border-radius: $default-border-radius;
         border: none;
         outline: none;
@@ -349,10 +349,10 @@
         width: 99%;
         margin: 3px 0px 1px 0px;
         min-height: 77px;
-        @include typo($size: 14px, $line: 22px, $color: $core-default-text-color);//$size: 16px, $line: 21px,
+        @include typo($size: 14px, $line: 22px, $color: var(--default-text-color));//$size: 16px, $line: 21px,
 
         &::placeholder {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $core-default-text-placeholder);
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }
@@ -388,7 +388,7 @@
       justify-items: center;
       align-items: center;
       border-radius: $default-border-radius-bottom;
-      background-color: $core-transparency-container-overlay;//$transparency-container-overlay;
+      background-color: var(--transparency-container-overlay);//$transparency-container-overlay;
     }
   }
 

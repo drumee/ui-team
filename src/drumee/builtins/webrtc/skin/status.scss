@@ -25,9 +25,9 @@
   .message-text {
     position: absolute;
     padding: 10px;
-    background-color: $core-default-transparent-black;
+    background-color: var(--default-transparent-black);
     margin: 10px;
     border-radius: $default-border-radius; //3px;
-    @include typo($color: $core-default-text-reverse, $weight: 400, $line: 20px, $size: 16px);
+    @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
   }
 }

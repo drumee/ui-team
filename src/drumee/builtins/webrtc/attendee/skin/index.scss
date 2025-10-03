@@ -52,11 +52,11 @@
       min-width: 29px;
       margin-right: 16px;
       border-radius: 15px;
-      background-color: $core-default-user-icon;
+      background-color: var(--default-user-icon);
 
       svg {
         padding: 6px;
-        background-color: $core-default-user-icon;
+        background-color: var(--default-user-icon);
       }
 
       &[data-default="1"] {
@@ -72,7 +72,7 @@
 
   &__name {
     background-color: inherit;
-    @include typo($size: 14px, $line: 16px, $weight: 300, $color: $core-default-text-color);
+    @include typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-color));
     margin: 1px 0 0;
     width: calc(100% - 110px);
     height: 100%;
@@ -97,10 +97,10 @@
     flex-direction: row;
     text-align: right;
     justify-content: right;
-    @include typo($size: 12px, $line: 14px, $weight: 300, $color: $core-default-text-color);
+    @include typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-color));
 
     &[data-online="2"] {
-      color: $core-default-text-alert;
+      color: var(--default-text-alert);
     }
 
     &[data-online="0"] {
@@ -108,7 +108,7 @@
     }
 
     .drumee-text {
-      border: 1px solid $core-default-frame;
+      border: 1px solid var(--default-frame);
       border-radius: 4px;
       padding: 2px 4px;
       min-width: 75px;
@@ -128,12 +128,12 @@
     color: $white;
 
     &[data-invite="1"] {
-      color: $core-default-background-alert;
+      color: var(--default-bg-alert);
       animation-duration: 1s;
       animation-name: changeScale;
       animation-iteration-count: infinite;
       animation-direction: alternate;
-      color: $core-button-accept ;
+      color: var(--button-accept);
 
       &[data-state="0"] {
         display: flex;

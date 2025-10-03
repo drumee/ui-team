@@ -1,5 +1,5 @@
 &__attachment-wrapper {
-  background-color:$core-default-background;  
+  background-color:var(--default-bg);  
   height: 100%;
   max-height: 100px;
   width: 100%;
@@ -39,7 +39,7 @@
     }
 
     &__container {
-      background-color:$core-default-background;    
+      background-color:var(--default-bg);    
       overflow: hidden;
 
       &[data-hover="on"] {
@@ -88,11 +88,11 @@
       text-overflow: ellipsis;
       top: 26px;
       width: 100%;
-      @include typo($size: 8px, $line: 10px, $weight: 300, $color: $core-default-text-color);
+      @include typo($size: 8px, $line: 10px, $weight: 300, $color: var(--default-text-color));
     }
     
     &__remove {
-      background-color: $core-default-background;    
+      background-color: var(--default-bg);    
       border-radius: 50%;
       border: 1.5px solid $ewhite;
       color: $egrey-2f;
@@ -105,12 +105,12 @@
       width: 11px;
 
       &--icon {
-        color:$core-default-thinline-icon;
+        color:var(--default-thinline-icon);
         padding: 0.5px;
 
         &:hover,
         :focus {
-          color:$core-default-thinline-icon-hover;
+          color:var(--default-thinline-icon-hover);
         }
       }
       

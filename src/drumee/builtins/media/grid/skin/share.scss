@@ -17,7 +17,7 @@
     // border-radius: 2px;
     svg{
       border-radius: 2px;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
     }
   }
   &[data-hover="on"]{

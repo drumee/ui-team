@@ -1,7 +1,7 @@
 &__commands {
   height: 100%;
   width:auto; // right: 40px; //10px;
-  background-color: $core-default-transparent-black; //rgba(0, 0, 0, 0.33);//($vdo-background-color;
+  background-color: var(--default-transparent-black); //rgba(0, 0, 0, 0.33);//($vdo-background-color;
   border-radius: $default-border-radius;
   align-items: center;
   padding: 0 3px;
@@ -42,7 +42,7 @@
     height: 36px; //30px;
     padding: 8px; // 5px;
     border: 1.2px transparent solid;
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     margin: 0 7px; // 0 6px;
     color: $multimedia-vdo-icon;
     cursor: pointer;
@@ -61,7 +61,7 @@
 
     &.line {
       background-color: $multimedia-vdo-ctrl-button;
-      color: $core-default-icon-reverse; // #fff;
+      color: var(--default-icon-reverse); // #fff;
       fill: none;
       svg {
         height: 100%;
@@ -129,7 +129,7 @@
 
     &[data-online="1"] {
       background-color: $multimedia-vdo-ctrl-button;
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
     }
 
     &[data-enabled="0"] {
@@ -145,7 +145,7 @@
   width: auto;
   height: auto;
   position: absolute;
-  background-color: $core-default-background;
+  background-color: var(--default-bg);
   bottom: calc(100% + 15px);
   right: -134px;
   overflow: visible;
@@ -153,7 +153,7 @@
   max-width: 300px;
 
   &::before {
-    background: $core-default-background;
+    background: var(--default-bg);
     //box-shadow: 0px 0px 4px 0px rgb(63 79 117 / 13%), 0 5px 0px 0 rgb(86 65 113 / 8%), 0 2px 0px 0 rgb(194 185 203 / 0%);
     content: " ";
     height: 12px;
@@ -167,7 +167,7 @@
 
   .device-label {
     padding: 5px 10px;
-    @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+    @include typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
     text-align: left;
     cursor: pointer;
     margin-bottom: 5px;
@@ -180,12 +180,12 @@
 
     &:hover {
       background-color: #879bff;
-      color: $core-default-background;
+      color: var(--default-bg);
     }
 
     &[data-state="1"] {
       background-color: #6178d8;
-      color: $core-default-background;
+      color: var(--default-bg);
     }
 
     div {
@@ -219,7 +219,7 @@
 
 
   .device-heading {
-    @include typo($size: 16px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+    @include typo($size: 16px, $line: 20px, $weight: 400, $color: var(--default-text-color));
     padding: 0 10px;
     font-size: 14px;
     justify-content: flex-start;

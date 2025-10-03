@@ -18,14 +18,14 @@
     height: 14px;//20px;
   //  color : $egrey-2f;
     border-radius: $default-checkbox-border-radius;
-    border: 1px solid $core-default-checkbox-border;//$default-checkbox;
-    color:$core-default-background;  
+    border: 1px solid var(--default-checkbox-border);//$default-checkbox;
+    color:var(--default-bg);  
 
     //left:-1px;
     &[data-state="1"] {
       box-shadow: none;
-      color:$core-default-checkbox-checked;// $checkbox-active; //$egreen-soft;
-      border: 1px solid $core-default-checkbox-border;//$default-checkbox;
+      color:var(--default-checkbox-checked);// $checkbox-active; //$egreen-soft;
+      border: 1px solid var(--default-checkbox-border);//$default-checkbox;
      // color: #6a85ff;
     }
   }

@@ -46,7 +46,7 @@
   }
 
   &__icon {
-    color: $core-default-icon-reverse;
+    color: var(--default-icon-reverse);
     cursor: pointer;
 
     &[data-state="0"] {
@@ -95,7 +95,7 @@
     }
 
     &--filename {
-      @include typo($size: 14px, $line: 22px, $weight: 300, $color: $core-default-text-color);
+      @include typo($size: 14px, $line: 22px, $weight: 300, $color: var(--default-text-color));
       align-content: center;
       align-items: center;
       margin-left: 8px;
@@ -113,7 +113,7 @@
     &:hover,
     &:last-child {
       & .filename {
-        color: $core-default-text-title;
+        color: var(--default-text-title);
       }
     }
   }
@@ -126,7 +126,7 @@
     width: auto;
     height: auto;
     max-height: 250px;
-    background: $core-default-background;
+    background: var(--default-bg);
     border-radius: $default-border-radius;
     box-shadow: $drumee-shadow-box; 
     padding: 10px 0;
@@ -138,7 +138,7 @@
       left: 16px;
       width: 8px;
       height: 8px;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       transform: rotate(45deg);
       box-shadow: $drumee-container-before; 
     }
@@ -150,7 +150,7 @@
       height: 10px;
       top: 0;
       left: 0;
-      background: $core-default-background;
+      background: var(--default-bg);
       border-radius: $default-border-radius-top;
     }
   }

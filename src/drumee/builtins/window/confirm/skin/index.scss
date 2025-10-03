@@ -7,7 +7,7 @@
 
 .window-confirm {
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     border-radius: $default-border-radius;
     padding: 20px;
     width: auto;
@@ -22,7 +22,7 @@
     align-items: center;
 
     &[data-type="confirm"] {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       border-radius: $default-border-radius;
       padding: 20px;
       width: auto;
@@ -38,14 +38,14 @@
     &[data-maxsize="1"] {
       max-height: 400px;
       max-width: 600px;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
 
     }
 
     &[data-maxsize="0"] {
       max-height: 400px;
       max-width: 560px;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
 
     }
   }
@@ -95,11 +95,11 @@
     justify-content: center;
     text-align: center;
     width: 100%;
-    @include typo($size: 16px, $line: 25px, $color: $core-default-text-color);
+    @include typo($size: 16px, $line: 25px, $color: var(--default-text-color));
 
     & .name {
       top: 24px;
-      @include typo($size: 22px, $line: 26px, $color: $core-default-text-alert); // $window-confirm-default-title-color);
+      @include typo($size: 22px, $line: 26px, $color: var(--default-text-alert)); // $window-confirm-default-title-color);
     }
   }
 
@@ -108,7 +108,7 @@
     justify-content: center;
     padding: 31px 10px 5px; //5px 10px 5px 10px;
     margin: 0 auto;
-    @include typo($weight: 300, $size: 16px, $line: 26px, $color: $core-default-text-color);
+    @include typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
 
     &.trash {
       width: 50px;

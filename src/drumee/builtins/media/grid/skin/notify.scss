@@ -16,11 +16,11 @@
     text-align: center;
     width:18px;
     height:18px;
-    background-color: $core-default-background;//#ffffff;
+    background-color: var(--default-bg);//#ffffff;
     overflow: hidden;
     margin:-5px; //-6px;
     border-radius: 50%;
-    border: 1.3px solid $core-default-border-notification;//#B6BFCA;
+    border: 1.3px solid var(--default-border-notification);//#B6BFCA;
     transition-property: opacity;
     transition-duration: 0.9s;
     align-items: center;
@@ -29,7 +29,7 @@
     justify-content: center;
     justify-items: center;
     flex-direction: column;    
-    @include typo($line:16px,$size:10px,$weight:300,$color:$core-neutral-text-notification);//#626262);//$core-tertiary-text-color);
+    @include typo($line:16px,$size:10px,$weight:300,$color:var(--neutral-text-notification));//#626262);//var(--tertiary-text-color));
     &[data-refresh="1"]{
       opacity: 0;
     }

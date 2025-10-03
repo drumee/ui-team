@@ -34,7 +34,7 @@
   }
 
   &__container {
-    background: $core-default-background;
+    background: var(--default-bg);
     height: 100%;
     justify-content: center;
     width: 100%;
@@ -65,7 +65,7 @@
   }
 
   &__plan-item {
-    border: 1px solid $core-default-frame;
+    border: 1px solid var(--default-frame);
     border-radius: 12px;
     
     
@@ -128,20 +128,20 @@
     &.pre-check-cancel {
       background-color: transparent;
       border: 1px solid $btn-rollback-border-hover;
-      color: $core-secondary-text-color;
+      color: var(--secondary-text-color);
       width: 115px;
       height: 35px;
 
       &:hover {
         border: 2px solid $btn-rollback-border-hover;
-        color: $core-secondary-text-color;
+        color: var(--secondary-text-color);
       }
     }
 
     &.cancel-subs {
-      color: $core-default-text-caution;
+      color: var(--default-text-caution);
       background-color: transparent;
-      border: 1px solid $core-default-border-caution;
+      border: 1px solid var(--default-border-caution);
       width: 115px;
       height: 35px;
 

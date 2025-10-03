@@ -10,7 +10,7 @@
 
 .invitation-publiclink {
   &__ui {
-    background-color:$core-default-background; //$default-block-background;  
+    background-color:var(--default-bg); //$default-block-background;  
     border-radius: $default-border-radius;
     margin: 0px 25px;
     box-shadow: $drumee-shadow-box;
@@ -40,7 +40,7 @@
     }
   }
   &__icon{
-    color:  $core-default-icon-neutral;// #787B7F; //$egrey-89;//
+    color:  var(--default-icon-neutral);// #787B7F; //$egrey-89;//
     justify-content: center;
     cursor: pointer;
     margin: auto;
@@ -56,12 +56,12 @@
     }
       &[data-state="1"]{
       background-color: $eviolet ;//#879BFF;
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
     }
     &:hover {
       border: solid 1px $eviolet ;// #879BFF;
       opacity:1;
-      color: $core-default-icon-hover;
+      color: var(--default-icon-hover);
     }
   }
   
@@ -101,9 +101,9 @@
   &__wrapper{
     top:-40px;
     padding-top: 16px;
-    background-color:  $core-default-block-background;    
+    background-color:  var(--default-bg-block);    
     .invitation-permission__ui{
-      background-color: $core-default-block-background; //$white;
+      background-color: var(--default-bg-block); //$white;
       margin:-33px 20px; //-45px 20px;//-48px 20px;
       box-shadow: $drumee-shadow-block;
     }

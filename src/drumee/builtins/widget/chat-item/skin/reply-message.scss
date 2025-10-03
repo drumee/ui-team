@@ -39,7 +39,7 @@
       overflow: hidden;
 
       & .note-content {
-        @include typo($size: 12px, $line: 14px, $weight: 400, $color: $core-default-text-color);
+        @include typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-color));
         overflow: hidden;
         word-wrap: break-word;
   

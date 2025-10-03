@@ -8,7 +8,7 @@
     left: 0;
     //margin: -3px auto;
     margin: 0 auto;
-    fill:$core-default-icon-reverse;//$ewhite;
+    fill:var(--default-icon-reverse);//$ewhite;
     &.private{
       padding: 3px;
       top: 24px;

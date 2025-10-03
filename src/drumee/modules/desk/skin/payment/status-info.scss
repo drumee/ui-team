@@ -48,14 +48,14 @@
 
   &__note {
     &.header {
-      @include typo($size:24px, $line: 30px, $weight:300, $color:$core-default-text-color);
+      @include typo($size:24px, $line: 30px, $weight:300, $color:var(--default-text-color));
       align-items: center;
       justify-content: center;
       width: 100%;
     }
 
     &.content {
-      @include typo($size: 18px, $line: 24px, $weight:300, $color:$core-default-text-color);
+      @include typo($size: 18px, $line: 24px, $weight:300, $color:var(--default-text-color));
       justify-content: center;
       text-align: center;
       padding: 15px;

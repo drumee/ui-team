@@ -12,7 +12,7 @@
     width: 600px;
     align-items: center;
     min-width: 100px;    
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     left: calc(50vw - 300px);
     top: 80px;
     overflow: hidden;
@@ -91,7 +91,7 @@
   .entry-reminder_error{
     position: absolute;
     right: 0;
-    @include typo($color:$core-default-text-error, $size: 12px);
+    @include typo($color:var(--default-text-error), $size: 12px);
   }
 
   &__entry-container{
@@ -117,11 +117,11 @@
   }
 
   &-button, &__error-message{
-    @include typo($color:$core-default-text-error, $size: 14px);
+    @include typo($color:var(--default-text-error), $size: 14px);
   }
 
   &__header, &__command{
-    background-color:$core-default-background-alert;//rgb(253, 74, 119);
+    background-color:var(--default-bg-alert);//rgb(253, 74, 119);
   }
 
 }

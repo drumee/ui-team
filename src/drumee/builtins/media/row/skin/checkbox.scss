@@ -6,7 +6,7 @@
   visibility: hidden;
   cursor: pointer;
   text-align: center;
-  background-color: $core-default-checkbox-background;//white; 
+  background-color: var(--default-checkbox-bg);//white; 
   padding: 0;
   border-radius: 5px;
   border: 1px solid orange;

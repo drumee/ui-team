@@ -44,7 +44,7 @@
   }
 
   &__info-wrapper {
-    background: $core-default-block-background;
+    background: var(--default-bg-block);
     border-radius: 6px;
     max-width: 600px;
     padding: 15px;
@@ -120,7 +120,7 @@
           padding: 0 10px;
 
           & .inner.note-content {
-            background-color: $core-toggle-background ;
+            background-color: var(--toggle-bg);
             border-radius: $default-border-radius-small;
             height: 4px;
             width: 24px;
@@ -141,7 +141,7 @@
 
   &__icon {
     &.info {
-      color: $core-default-icon-neutral;
+      color: var(--default-icon-neutral);
       cursor: pointer;
       height: 18px;
       left: 25px;
@@ -149,7 +149,7 @@
 
       & .tooltips {
         @include typo($size: 12px, $line: 18px, $color: $account-default-text-tooltips);
-        background-color: $core-background-chatmessenger;
+        background-color: var(--bg-chatmessenger);
         border-radius: $default-border-radius;
         max-height: 80px;
         min-height: 50px;
@@ -165,7 +165,7 @@
   }
 
   &__button-payment {
-    @include typo($size: 16px, $line: 28px, $weight: 300, $color: $core-default-text-reverse);
+    @include typo($size: 16px, $line: 28px, $weight: 300, $color: var(--default-text-reverse));
     align-items: center;
     background-color: $color-company-plan;
     border-radius: 6px;
@@ -183,13 +183,13 @@
 
   &__note {
     &.header {
-      @include typo($size: 22px, $line: 26px, $color: $core-default-text-title);
+      @include typo($size: 22px, $line: 26px, $color: var(--default-text-title));
       align-items: center;
       justify-content: center;
     }
 
     &.return {
-      @include typo($size: 18px, $line: 24px, $color: $core-default-text-title);
+      @include typo($size: 18px, $line: 24px, $color: var(--default-text-title));
       align-items: center;
       cursor: pointer;
       height: 30px;
@@ -208,7 +208,7 @@
     }
 
     &.item {
-      @include typo($size: 16px, $line: 20px, $color: $core-default-text-color);
+      @include typo($size: 16px, $line: 20px, $color: var(--default-text-color));
 
       &.offer-price {
         color: #18AC72;
@@ -225,7 +225,7 @@
     }
 
     &.proration-info {
-      @include typo($size: 14px, $line: 24px, $weight: 4001, $color: $core-default-text-title);
+      @include typo($size: 14px, $line: 24px, $weight: 4001, $color: var(--default-text-title));
       text-align: center;
     }
 

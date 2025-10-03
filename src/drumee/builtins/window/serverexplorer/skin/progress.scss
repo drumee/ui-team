@@ -54,7 +54,7 @@
 
   &__note {
     &.title {
-      @include typo($size: 20px, $line: 22px, $color: $core-default-text-color);
+      @include typo($size: 20px, $line: 22px, $color: var(--default-text-color));
     }
   }
 

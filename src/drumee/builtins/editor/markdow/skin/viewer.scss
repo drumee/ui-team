@@ -1,7 +1,4 @@
 @import "mixins/typo.scss";
-$default-text-title: #4a90e2;
-$core-tertiary-text-color: #89929e;
-$core-neutral-text-notification: #626262;
 
 .drumee-md-container {
   max-width: 800px;
@@ -20,34 +17,34 @@ $core-neutral-text-notification: #626262;
   &.heading {
     &-1 {
       margin: 15px 0;
-      @include typo($size: 30px, $line: 1.3, $color: $default-text-title);
+      @include typo($size: 30px, $line: 1.3, $color: var(--default-text-title));
     }
 
     &-2 {
       margin: 13px 0 13px 26px;
-      @include typo($size: 26px, $line: 1.3, $color: $default-text-title);
+      @include typo($size: 26px, $line: 1.3, $color: var(--default-text-title));
     }
 
     &-3 {
       margin: 11px 0 11px 48px;
-      @include typo($size: 22px, $line: 1.3, $color: $default-text-title);
+      @include typo($size: 22px, $line: 1.3, $color: var(--default-text-title));
     }
 
     &-4 {
       margin: 9px 0 9px 56px;
-      @include typo($size: 18px, $line: 1.3, $color: $default-text-title);
+      @include typo($size: 18px, $line: 1.3, $color: var(--default-text-title));
     }
 
     &-5 {
       margin: 8px 0 8px 72px;
-      @include typo($size: 16px, $line: 1.3, $color: $default-text-title);
+      @include typo($size: 16px, $line: 1.3, $color: var(--default-text-title));
     }
   }
 
   &.list {
     @include typo($size: 15px,
       $line: 1.5,
-      $color: $core-neutral-text-notification );
+      $color: var(--neutral-text-notification) );
     margin-top: 15px;
     margin-bottom: 10px;
     margin-left: 15px;
@@ -57,7 +54,7 @@ $core-neutral-text-notification: #626262;
     &--item {
       @include typo($size: 14px,
         $line: 1.3,
-        $color: $core-neutral-text-notification );
+        $color: var(--neutral-text-notification) );
       margin-left: 15px;
       margin-bottom: 10px;
       white-space: break-spaces;
@@ -72,7 +69,7 @@ $core-neutral-text-notification: #626262;
   &.paragraph {
     @include typo($size: 14px,
       $line: 1.3,
-      $color: $core-neutral-text-notification );
+      $color: var(--neutral-text-notification) );
     margin-bottom: 10px;
     padding: 0 15px 0 15px;
   }
@@ -133,12 +130,12 @@ $core-neutral-text-notification: #626262;
         padding: 2px 0;
         @include typo($size: 14px,
           $line: 1.2,
-          $color: $core-neutral-text-notification );
+          $color: var(--neutral-text-notification) );
 
         &[data-header="true"] {
           @include typo($size: 16px,
             $line: 1.5,
-            $color: $core-neutral-text-notification );
+            $color: var(--neutral-text-notification) );
           border-bottom: 1px solid rgb(10, 140, 232);
         }
       }

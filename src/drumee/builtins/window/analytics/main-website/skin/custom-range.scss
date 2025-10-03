@@ -77,7 +77,7 @@
   .entry-reminder_error {
     position: absolute;
     right: 0;
-    @include typo($color:$core-default-text-error, $size: 12px);
+    @include typo($color:var(--default-text-error), $size: 12px);
   }
 
   &__entry-container {

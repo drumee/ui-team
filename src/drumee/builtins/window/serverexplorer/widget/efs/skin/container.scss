@@ -82,7 +82,7 @@
     }
     .filename{
       &.document{
-        background :$core-default-block-background;
+        background :var(--default-bg-block);
       }
     }
   }

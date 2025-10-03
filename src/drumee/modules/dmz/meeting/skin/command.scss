@@ -10,7 +10,7 @@
   justify-items: center;
   justify-content: center;
   z-index: 200;
-  background-color:$core-default-transparent-black;//rgba(0,0,0,0.33);
+  background-color:var(--default-transparent-black);//rgba(0,0,0,0.33);
   border-radius: $default-border-radius;
  // margin-left:21%;
   margin: 5px auto; 
@@ -20,16 +20,16 @@
     height: 36px; //30px;
     padding:8px; // 5px;
     border: 1.2px transparent solid;//$vdo-border-grey
-    background-color:$core-default-background; 
+    background-color:var(--default-bg); 
     margin:0 7px; // 0 6px;
     color: $multimedia-vdo-icon;//$egrey-b6; 
     cursor: pointer;
     &.line{
      background-color: $multimedia-vdo-ctrl-button;//$vdo-ctrl-button;
-     color:$core-default-icon-reverse; 
+     color:var(--default-icon-reverse); 
      fill: none;
      stroke-width: 0;//1.5px;
-     stroke:$core-default-icon-reverse; 
+     stroke:var(--default-icon-reverse); 
      padding: 8px;//5px; 
      border: none;
      margin-right: 14px;

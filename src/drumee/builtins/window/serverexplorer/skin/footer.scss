@@ -18,7 +18,7 @@
   }
 
   &__note {
-    @include typo($size: 16px, $line: 18px, $color: $core-default-text-color);
+    @include typo($size: 16px, $line: 18px, $color: var(--default-text-color));
     &.count {
       padding-left: 20px;
     }

@@ -48,7 +48,7 @@
       margin: auto 15px;
       cursor: pointer;
       &:hover {
-        color: $core-default-icon-hover;
+        color: var(--default-icon-hover);
       }
     }
   }
@@ -67,7 +67,7 @@
       white-space: nowrap;
       align-items: center;
       width: auto;
-      @include typo($size: 18px, $line: 24px, $weight: 400, $color: $core-default-text-reverse);
+      @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
       @include overflow-text;
       .inner {
         overflow: hidden;
@@ -80,11 +80,11 @@
       width: 21px;
       height: 21px;
       padding: 4px;
-      color: $core-special-icon-setting;
+      color: var(--special-icon-setting);
       min-width: 21px;
       margin: auto 15px auto 5px; 
       &:hover {
-        color: $core-default-icon-hover;
+        color: var(--default-icon-hover);
       }
     }
   }
@@ -98,11 +98,11 @@
       height: 12px;
       padding: 0px;
       display: flex;
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
       cursor: pointer;
       margin: auto 15px auto 0;
       &:hover {
-        color: $core-default-icon-hover;
+        color: var(--default-icon-hover);
       }
     }
   }

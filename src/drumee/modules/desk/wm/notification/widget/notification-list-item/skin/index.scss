@@ -12,14 +12,14 @@
     margin: 3px 0;
     padding: 5px 2px 5px 10px;
     &:hover {
-      background-color: $core-default-background-hover;
+      background-color: var(--default-bg-hover);
 
       & .inner.note-content {
-        color: $core-default-text-hover;
+        color: var(--default-text-hover);
       }
 
       & .notification {
-        color: $core-default-icon-reverse;
+        color: var(--default-icon-reverse);
         opacity:1;
       }
 
@@ -107,7 +107,7 @@
       width: 25px;//30px;
 
       &.notification {
-        color: $core-default-icon-neutral;//$default-user-icon;
+        color: var(--default-icon-neutral);//$default-user-icon;
         opacity: 0.65;
         height: 28px;
         left: 0;
@@ -129,11 +129,11 @@
       }
 
       &.green {
-        color: $core-default-icon-success;
+        color: var(--default-icon-success);
       }
 
       &.delete-notification-icon {
-        color: $core-default-icon-reverse;
+        color: var(--default-icon-reverse);
         height: 20px;
         width: 20px;
       }
@@ -145,7 +145,7 @@
         max-width: 125px;
         padding: 1px 15px;;//1px 10px;
         text-transform: capitalize;
-        @include typo($size: 14px, $line: 16px, $color: $core-default-text-color);
+        @include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
 
         & .inner.note-content {
           overflow: hidden;
@@ -156,13 +156,13 @@
 
       &.time {
         padding:1px 15px;;// 1px 10px;
-        @include typo($size: 11px, $line: 12px, $weight:300, $color: $core-tertiary-text-color);// $default-text-inactivated);$size: 10px,
+        @include typo($size: 11px, $line: 12px, $weight:300, $color: var(--tertiary-text-color));// $default-text-inactivated);$size: 10px,
       }
     }
 
     &__digit {
       align-items: center;
-      background-color: $core-default-background-alert;//$default-notification-bg;
+      background-color: var(--default-bg-alert);//$default-notification-bg;
       border-radius: 50%;
       height: 16px;
       justify-content: center;
@@ -172,7 +172,7 @@
       width: 16px;
   
       & .inner.note-content {
-        @include typo($size: 9px, $line: 11px, $color: $core-default-text-reverse);
+        @include typo($size: 9px, $line: 11px, $color: var(--default-text-reverse));
       }
     }
   }

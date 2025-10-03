@@ -53,13 +53,13 @@
 
 
   & .add-email-plus {
-    border: 1px solid $core-default-border-success;
+    border: 1px solid var(--default-border-success);
     padding: 3px;
-    color: $core-default-text-success;
+    color: var(--default-text-success);
     border-radius:$border-radius-small;// 3px;
     cursor: pointer;
     &:hover{
-      background:$core-background-invitation-success;// $default-text-success;
+      background:var(--bg-invitation-success);// $default-text-success;
       color:  $white;
     }
   }
@@ -77,8 +77,8 @@
 
   &__entry{
     input, textarea {
-      border: 0px solid $core-default-entry-border-bottom;//$entry-border-bottom; 
-      border-bottom: 1px solid $core-default-entry-border-bottom;//$entry-border-bottom;
+      border: 0px solid var(--default-entry-border-bottom);//$entry-border-bottom; 
+      border-bottom: 1px solid var(--default-entry-border-bottom);//$entry-border-bottom;
       margin: 0;
       margin-left: 20px;
       min-height: 24px;
@@ -87,9 +87,9 @@
       resize: none;
       white-space: nowrap;
       width: calc(100% - 5px); //100%;
-      @include typo($line: 29px, $size: 14px, $weight: 400, $color: $core-default-text-color);// $size: 16px,
+      @include typo($line: 29px, $size: 14px, $weight: 400, $color: var(--default-text-color));// $size: 16px,
       @include placeholder-input {
-        @include typo($line: 29px, $size: 14px, $weight: 300, $color: $core-default-text-placeholder); //#89929e$size: 16px,
+        @include typo($line: 29px, $size: 14px, $weight: 300, $color: var(--default-text-placeholder)); //#89929e$size: 16px,
       }
     }
   }
@@ -110,7 +110,7 @@
     width: 25px;//17px;
     height: 21px;
     margin-left: 10px;
-    color:$core-default-icon-neutral;
+    color:var(--default-icon-neutral);
     opacity:0.85;//0.65;
   }
   .entry-reminder__ui{
@@ -123,10 +123,10 @@
   }
 
   &__icon.added-contact {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
   }
   &__suggestion_wrapper {
-    background: $core-default-background;
+    background: var(--default-bg);
     position: absolute;
     width: 100%;
     top: 100%;
@@ -188,7 +188,7 @@
   }
 
   &__icon {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     height: 20px;
     left: 5px;
@@ -197,21 +197,21 @@
     opacity: .85;
     width: 20px;
     &.default-avatar{
-      color: $core-default-user-icon;
+      color: var(--default-user-icon);
       opacity: 1;
       height: 26px;
       min-height: 26px;
       min-width: 26px;
       width: 26px;
       :hover{
-        color:$core-default-user-icon;
+        color:var(--default-user-icon);
       }
     }
   }
 
   &__note {
     &.name {
-      @include typo($size: 14px, $line: 16px, $color: $core-default-text-color);
+      @include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
       left: 15px;
       top: 2px;
     }

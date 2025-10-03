@@ -3,7 +3,7 @@
 .hub-name {
   &__error {
     @include typo($color: $eorange-sunset, $size: 12px, $line: 16px, $weight: 400);
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     color: #EA4D44;
     position: absolute;
     border: 1px solid $eorange-sunset;
@@ -19,7 +19,7 @@
     width: 410px;
     position: absolute;
     height: auto !important;
-    background-color: $core-default-background ;
+    background-color: var(--default-bg);
     border-radius: $default-border-radius-bottom;
     align-items: center;
     min-height: 345px;
@@ -46,7 +46,7 @@
 
     &.wrapper-general {
       width: 100%;
-      background-color: $core-default-block-background;
+      background-color: var(--default-bg-block);
       border-radius: $default-border-radius;
       white-space: nowrap;
       overflow: visible;
@@ -105,7 +105,7 @@
   }
 
   &__icon.destroy {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     opacity: 0.65;
     width: 19px;
     height: 19px;
@@ -118,7 +118,7 @@
     &:hover {
       svg {
         opacity: 1;
-        color: $core-default-icon-hover ;
+        color: var(--default-icon-hover);
       }
     }
   }
@@ -128,7 +128,7 @@
     flex-shrink: 0;
 
     input {
-      @include typo($size: 14px, $line: 26px, $weight: 400, $color: $core-default-text-color);
+      @include typo($size: 14px, $line: 26px, $weight: 400, $color: var(--default-text-color));
     }
   }
 
@@ -138,14 +138,14 @@
     color: $ewhite;
 
     &[data-edit="0"]:hover {
-      background-color: $core-default-background-hover;
+      background-color: var(--default-bg-hover);
 
       /*      *{
         color: $default-text-hover;
       }*/
       input {
         @include placeholder-input {
-          color: $core-default-text-hover
+          color: var(--default-text-hover)
         }
 
         ;
@@ -160,7 +160,7 @@
     &[data-edit="1"] {
       .hub-settings__icon {
         visibility: visible;
-        background-color: $core-default-icon-active ;
+        background-color: var(--default-icon-active);
         border-radius: $default-border-radius;
       }
     }
@@ -174,7 +174,7 @@
     width: 160px;
     max-width: 160px;
     flex-shrink: 0;
-    @include typo($color: $core-default-text-color , $size: 14px, $line: 26px, $weight: 300); //$weight:400
+    @include typo($color: var(--default-text-color) , $size: 14px, $line: 26px, $weight: 300); //$weight:400
     @include overflow-text;
 
     .inner {
@@ -219,7 +219,7 @@
 
   &__member-name {
     max-width: 160px; //140px
-    @include typo($size: 14px, $line: 26px, $color: $core-default-text-color , $weight: 300); //#494949 $weight:400,
+    @include typo($size: 14px, $line: 26px, $color: var(--default-text-color) , $weight: 300); //#494949 $weight:400,
     @include overflow-text;
 
     .inner {
@@ -231,7 +231,7 @@
     &:hover {
       input {
         @include placeholder-input {
-          color: $core-default-text-reverse
+          color: var(--default-text-reverse)
         }
 
         ;

@@ -24,7 +24,7 @@
   & .share_bar_disconnect-btn {
     @include typo($size: 14px, $line: 14px, $color: $default-text-reverse);//$btn-primary-color); //$size: 18px
     align-items: center;
-    background:$core-default-background-alert;//$default-backround-alert ;// $eorange-dark ;
+    background:var(--default-bg-alert);//$default-backround-alert ;// $eorange-dark ;
     justify-content: center;
     padding: 10px 18px;
     margin-right: 10px;

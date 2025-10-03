@@ -3,7 +3,7 @@
 .schedule-invitation {
   &__ui {
     align-items: center;
-    background-color: $core-default-background; //$ewhite;
+    background-color: var(--default-bg); //$ewhite;
     box-shadow: $drumee-shadow-container;
     height: auto;
     position: absolute;
@@ -48,8 +48,8 @@
 
     &[data-state="1"] {
       border-radius: $border-radius-small;
-      border: 1px solid $core-default-border-success; //$default-text-success;
-      color: $core-default-text-success;
+      border: 1px solid var(--default-border-success); //$default-text-success;
+      color: var(--default-text-success);
       height: 20px;
       padding: 3px;
       width: 20px;
@@ -92,7 +92,7 @@
   }
 
   &__error {
-    @include typo($size: 14px, $weight: 300, $line: 21px, $color: $core-default-text-error);
+    @include typo($size: 14px, $weight: 300, $line: 21px, $color: var(--default-text-error));
   }
 
   &__recipients {
@@ -127,14 +127,14 @@
       padding: 15px 0;
       text-align: center;
       min-width: 200px;
-      @include typo($size: 16px, $weight: 300, $line: 21px, $color: $core-default-text-alert);
+      @include typo($size: 16px, $weight: 300, $line: 21px, $color: var(--default-text-alert));
     }
   }
 
   &__icon {
     width: 27px; //24px;
     height: 27px; //24px;
-    color: $core-special-schedule-icon; //$default-icon-neutral;
+    color: var(--special-schedule-icon); //$default-icon-neutral;
 
     &.attendees {
       opacity: 0.8;
@@ -155,13 +155,13 @@
   &__entry {
     min-width: 200px;
     width: 100%;
-    @include typo($size: 14px, $line: 22px, $color: $core-default-text-color); //$size: 16px,$line: 21px,
+    @include typo($size: 14px, $line: 22px, $color: var(--default-text-color)); //$size: 16px,$line: 21px,
 
     &[data-status='error'] {
-      border-bottom: 1px solid $core-default-border-error;
+      border-bottom: 1px solid var(--default-border-error);
 
       & input:focus {
-        border-color: $core-default-border-error;
+        border-color: var(--default-border-error);
       }
     }
 
@@ -172,24 +172,24 @@
       margin-left: 10px;
       padding-left: 5px;
       //  margin-bottom: -10px;
-      background: $core-default-block-background;
+      background: var(--default-bg-block);
       border-radius: $default-border-radius;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      @include typo($size: 14px, $line: 22px, $color: $core-default-text-color); //$size: 16px,$line: 21px,
+      @include typo($size: 14px, $line: 22px, $color: var(--default-text-color)); //$size: 16px,$line: 21px,
 
 
       &:focus {
-        border-color: $core-focus-border-placeholder; // $focus-border-bottom;
+        border-color: var(--focus-border-placeholder); // $focus-border-bottom;
 
         @include placeholder-input {
-          color: $core-focus-text-placeholder; // $focus-text-placeholder;
+          color: var(--focus-text-placeholder); // $focus-text-placeholder;
         }
       }
 
       &::placeholder {
-        @include typo($size: 14px, $line: 21px, $weight: 300, $color: $core-default-text-placeholder); //$size: 16px,
+        @include typo($size: 14px, $line: 21px, $weight: 300, $color: var(--default-text-placeholder)); //$size: 16px,
       }
     }
 
@@ -200,7 +200,7 @@
 
 
       & textarea {
-        background: $core-default-block-background;
+        background: var(--default-bg-block);
         border-radius: $default-border-radius;
         border: none;
         outline: none;
@@ -208,7 +208,7 @@
         resize: none;
         margin-left: 10px;
         width: 100%;
-        @include typo($size: 14px, $line: 22px, $color: $core-default-text-color); //$size: 16px, $line: 21px,
+        @include typo($size: 14px, $line: 22px, $color: var(--default-text-color)); //$size: 16px, $line: 21px,
 
         &::placeholder {
           @include typo($size: 14px, $line: 14px, $weight: 300, $color: $default-text-placeholder);

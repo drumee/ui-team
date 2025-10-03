@@ -9,9 +9,9 @@
     cursor: pointer;
     &:hover{
       background-color: $folder-main;
-      color: $core-default-text-reverse;
+      color: var(--default-text-reverse);
       svg{
-        color: $core-default-text-reverse;
+        color: var(--default-text-reverse);
       }
     } 
     svg{

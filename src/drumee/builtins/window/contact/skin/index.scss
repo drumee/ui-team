@@ -22,7 +22,7 @@
 
     &-title {
       align-items: center;
-      @include typo($size:18px, $line:24px, $weight:400, $color:$core-default-text-reverse);
+      @include typo($size:18px, $line:24px, $weight:400, $color:var(--default-text-reverse));
 
       .icon {
         position: relative;
@@ -32,7 +32,7 @@
 
     &-control {
       .icon {
-        color: $core-default-icon-reverse;//$ewhite;
+        color: var(--default-icon-reverse);//$ewhite;
       }
     }
   }
@@ -59,7 +59,7 @@
 
   &__icon {
     &.icon_success {
-      color: $core-default-icon-success;//#18ac72;
+      color: var(--default-icon-success);//#18ac72;
       height: 26px;
       margin: auto;
       width: 36px;
@@ -67,10 +67,10 @@
   }
 
   &__note {
-    @include typo($size: 18px, $weight: 300, $line: 26px, $color: $core-default-text-color);
+    @include typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
 
     &.input-content {
-      color: $core-secondary-text-color;//#4A90E2;
+      color: var(--secondary-text-color);//#4A90E2;
     }
   }
 

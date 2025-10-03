@@ -9,7 +9,7 @@
     justify-items: center;
     justify-content: center;
     z-index: 200;
-    background-color: $core-default-transparent-black;//$transparent-black;//rgba(0, 0, 0, 0.33);//($vdo-background-color;
+    background-color: var(--default-transparent-black);//$transparent-black;//rgba(0, 0, 0, 0.33);//($vdo-background-color;
     border-radius:$default-border-radius;
     margin-left:20%;
     min-width: 209px;
@@ -20,7 +20,7 @@
       height: 36px; //30px;
       padding:8px; // 5px;
       border: 1.2px transparent solid;//$vdo-border-grey
-      background-color: $core-default-background;        
+      background-color: var(--default-bg);        
       margin:0 7px; // 0 6px;
       color: $egrey-b6; //grey;
       cursor: pointer;

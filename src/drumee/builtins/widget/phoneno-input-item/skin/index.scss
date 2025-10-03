@@ -47,7 +47,7 @@
 
   &__note {
     &.area-code  {
-      @include typo($size: 16px, $color: $core-tertiary-text-color);//$egrey-89);
+      @include typo($size: 16px, $color: var(--tertiary-text-color));//$egrey-89);
       right: 2px;
      // top: 2px;
     }
@@ -73,7 +73,7 @@
     }
 
     &.destroy-tag {
-      color: $core-default-icon-neutral;
+      color: var(--default-icon-neutral);
       height: 16px;
       opacity: 0.65;
       width: 24px;
@@ -81,7 +81,7 @@
       padding: 1px;
 
       &:hover {
-        color: $core-default-icon-hover;
+        color: var(--default-icon-hover);
         opacity: 1;//0.85;
       }
 

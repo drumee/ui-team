@@ -48,7 +48,7 @@
       width: 600px;
       border-radius:$default-border-radius;//6px;
       margin: auto;
-      background-color: $core-default-background; //$ewhite;
+      background-color: var(--default-bg); //$ewhite;
       box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
       .welcome__message{
         max-width: 273px;
@@ -69,7 +69,7 @@
     position: absolute;
     text-align: left;
     left : -190px;
-    background-color: $core-default-background ; //#FFFFFF;
+    background-color: var(--default-bg); //#FFFFFF;
     border-radius: 2px;
     padding: 5px;
     justify-content: space-between;
@@ -100,7 +100,7 @@
       padding: 0 0 0 65px; //50px;
 
     @media (max-width: $small) {
-      @include typo ($color: $core-default-text-color, $size: 14px, $line: 13px, $weight: 300);
+      @include typo ($color: var(--default-text-color), $size: 14px, $line: 13px, $weight: 300);
     }
 
     input {
@@ -108,10 +108,10 @@
       border-radius:0 6px 6px 0px; //4px;
       padding:4px 4px 4px 8px; //4px;
       &::placeholder {
-        @include typo($size: 16px, $line: 18px, $weight: 300, $color:$core-default-text-placeholder); //$color: $egrey-b6);
+        @include typo($size: 16px, $line: 18px, $weight: 300, $color:var(--default-text-placeholder)); //$color: $egrey-b6);
       }
       @media (max-width: $small) {
-        @include typo ($color: $core-default-text-color, $size: 14px, $line: 13px, $weight: 300);
+        @include typo ($color: var(--default-text-color), $size: 14px, $line: 13px, $weight: 300);
       }
     }
   }
@@ -166,16 +166,16 @@
     }
     
     &.text {
-      @include typo($color: $core-default-text-reverse, $size: 14px, $line: 20px, $weight: 300);
+      @include typo($color: var(--default-text-reverse), $size: 14px, $line: 20px, $weight: 300);
 
       @media (max-width: $tablet) {
-        @include typo($color: $core-default-text-reverse, $size: 11.5px, $line: 20px, $weight: 300);
+        @include typo($color: var(--default-text-reverse), $size: 11.5px, $line: 20px, $weight: 300);
       }
 
       &[data-device="mobile"] {
         margin-left:auto;
         margin-right:auto;
-        @include typo($color:$core-default-text-reverse, $size: 10.5px, $line: 20px, $weight: 300);
+        @include typo($color:var(--default-text-reverse), $size: 10.5px, $line: 20px, $weight: 300);
       }
     }
   }
@@ -186,7 +186,7 @@
       justify-content: center;
       left: 2px;
       top: 5px;
-      @include typo($size: 13px, $line: 13px, $color: $core-default-text-reverse);
+      @include typo($size: 13px, $line: 13px, $color: var(--default-text-reverse));
     }
   }
 
@@ -194,7 +194,7 @@
     height: 111px;
     margin-bottom: 322px;
     width: 100%;
-    @include typo($color: $core-default-text-reverse, $size: 42px, $line: 52px, $weight: 300);
+    @include typo($color: var(--default-text-reverse), $size: 42px, $line: 52px, $weight: 300);
 
     .inner {
       text-align: center;
@@ -204,7 +204,7 @@
 
     &[data-device="mobile"] {
       margin-bottom:290px;
-      @include typo($color: $core-default-text-reverse, $size: 26px, $line: 50px, $weight: 400);
+      @include typo($color: var(--default-text-reverse), $size: 26px, $line: 50px, $weight: 400);
     }
   }
 
@@ -239,7 +239,7 @@
     width: 100%;
 
     &.container{
-      background-color: $core-default-text-reverse;
+      background-color: var(--default-text-reverse);
       border-radius:$default-border-radius-small;//4px;
       box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
       height:364px;
@@ -254,11 +254,11 @@
     &.title {
       text-align: center;
       width:486px;
-      @include typo($color: $core-default-text-title, $size: 26px, $weight: 300, $line: 33px);
+      @include typo($color: var(--default-text-title), $size: 26px, $weight: 300, $line: 33px);
 
       &[data-device=mobile] {
         width:316px;
-        @include typo($color: $core-default-text-title, $size: 16px, $weight: 300, $line: 33px);
+        @include typo($color: var(--default-text-title), $size: 16px, $weight: 300, $line: 33px);
       }
     }
 
@@ -266,10 +266,10 @@
       margin-top: 26px;
       text-shadow: 0 2px 4px 0 rgba(0,0,0,0.5);
       width:208px;
-      @include typo($color:$core-default-text-title, $size:22px, $weight:300, $line:25px);
+      @include typo($color:var(--default-text-title), $size:22px, $weight:300, $line:25px);
 
       &[data-device=mobile] {
-        @include typo($color: $core-default-text-title, $size: 16px, $weight: 300, $line: 33px);
+        @include typo($color: var(--default-text-title), $size: 16px, $weight: 300, $line: 33px);
       }
     }
 
@@ -281,12 +281,12 @@
       height:36px;
       text-align: center;
       width:160px;
-      @include typo($color: $core-default-text-reverse, $size: 18px, $weight: 300, $line: 21px);
+      @include typo($color: var(--default-text-reverse), $size: 18px, $weight: 300, $line: 21px);
 
       &[data-device=mobile] {
         height:35px;
         width: 130px;
-        @include typo($color: $core-default-text-reverse, $size: 14px, $weight: 300, $line: 21px);
+        @include typo($color: var(--default-text-reverse), $size: 14px, $weight: 300, $line: 21px);
       }
     }
 
@@ -295,10 +295,10 @@
       margin: 45px;
       text-align: center;
       width: 340px;
-      @include typo($color: $core-default-text-color, $size: 21px, $weight: 300, $line:26px);
+      @include typo($color: var(--default-text-color), $size: 21px, $weight: 300, $line:26px);
 
       &[data-device=mobile] {
-        @include typo($color:  $core-default-text-color, $size: 16px, $weight: 300, $line: 33px);
+        @include typo($color:  var(--default-text-color), $size: 16px, $weight: 300, $line: 33px);
       }
     }
   }
@@ -334,14 +334,14 @@
       }
 
       &.strength {
-        background-color: $core-default-background;
+        background-color: var(--default-bg);
         height: 100%;
         position: absolute;
         width: 100%;
       }
 
       &.info {
-        color: $core-default-icon-reverse;
+        color: var(--default-icon-reverse);
         cursor: pointer;
         height: 18px;
         position: absolute;
@@ -352,8 +352,8 @@
 
         .tooltips {
           border-radius:$default-border-radius;
-          @include typo($size: 16px, $line: 22px, $color: $core-security-text-color);
-          background-color: $core-background-tooltips;//$default-background-tooltips;
+          @include typo($size: 16px, $line: 22px, $color: var(--security-text-color));
+          background-color: var(--bg-tooltips);//$default-background-tooltips;
           height: 100px;
           margin-left: -305px;
           margin-top: 30px;
@@ -366,7 +366,7 @@
 
   &__row {
     border-radius:$default-border-radius;
-    background-color:$core-default-background;
+    background-color:var(--default-bg);
     height: 55px;
     margin: 10px 0;   
     width: 100%;
@@ -379,7 +379,7 @@
     // }
 
     &[data-error="1"] {
-      border: 1px solid $core-default-border-error;//$default-border-error;
+      border: 1px solid var(--default-border-error);//$default-border-error;
       border-radius: $default-border-radius;
     }
 
@@ -392,7 +392,7 @@
       justify-content: center;
       opacity: 0.2;
       pointer-events: none;
-      @include typo($color: $core-default-text-reverse, $size: 18px, $line: 21px, $weight: 300);
+      @include typo($color: var(--default-text-reverse), $size: 18px, $line: 21px, $weight: 300);
 
       &[data-state="1"] {
         opacity: 1;
@@ -401,7 +401,7 @@
 
       &[data-error="1"] {
         background-color: transparent;
-        border: 1px solid $core-default-border-error;
+        border: 1px solid var(--default-border-error);
         opacity: 1;
       }
     }
@@ -420,11 +420,11 @@
     height: 100%;
     justify-content: center;
     width: 100%;
-    @include typo($color: $core-default-text-color, $size: 22px, $line: 24px);
+    @include typo($color: var(--default-text-color), $size: 22px, $line: 24px);
   }
   
   &__button {
-    @include typo($color: $core-default-text-reverse, $size: 18px, $line: 21px, $weight: 300);
+    @include typo($color: var(--default-text-reverse), $size: 18px, $line: 21px, $weight: 300);
 
     &.go {
   /*    border: 1px solid $white-f6;
@@ -447,7 +447,7 @@
   }
 
   &__icon {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     height: 24px;
     margin:12px 20px;
     position: absolute;
@@ -484,12 +484,12 @@
     top:15px;
     white-space: nowrap;
     width: 500px;
-    @include typo($color: $core-default-text-error , $size: 18px, $line: 20px, $weight: 400);
+    @include typo($color: var(--default-text-error) , $size: 18px, $line: 20px, $weight: 400);
 
     &[data-device="mobile"] {
       padding-left:66px;
       top:-12px;
-      @include typo($color: $core-default-text-error , $size: 15px, $line: 20px, $weight: 400);
+      @include typo($color: var(--default-text-error) , $size: 15px, $line: 20px, $weight: 400);
     }
 
     &[data-error="0"] {
@@ -526,13 +526,13 @@
     &[data-error="1"] {
       text-decoration: none;
       top:5px;
-      @include typo($color: $core-default-border-error , $size: 20px, $line: 0px, $weight: 300); //$red-brick
+      @include typo($color: var(--default-border-error) , $size: 20px, $line: 0px, $weight: 300); //$red-brick
 
       &[data-device="mobile"] {
         margin-left:auto;
         margin-right:auto;
         top:4px;
-        @include typo($color: $core-default-border-error , $size: 11px, $line: 22px, $weight: 500);//$red-brick
+        @include typo($color: var(--default-border-error) , $size: 11px, $line: 22px, $weight: 500);//$red-brick
       }
     }    
   }
@@ -562,7 +562,7 @@
       }
 
       .menu-items {
-        background-color:$core-default-background;  // $white;
+        background-color:var(--default-bg);  // $white;
         border-radius: $default-border-radius-small;//4px;
         box-shadow: 0 2px 5px 1px rgba(0,0,0,0.09), 0 3px 5px 0 rgba(0,0,0,0.08), 0 3px 9px 0 rgba(194,185,203,0);
         cursor: pointer; 
@@ -570,7 +570,7 @@
         padding: 5px;
 
         &::before {
-          background-color: $core-default-background;  //$ewhite;
+          background-color: var(--default-bg);  //$ewhite;
           content: "";
           height: 8px;
           left: -4px;

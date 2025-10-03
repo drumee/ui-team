@@ -53,9 +53,9 @@
     padding: 5px;
     width: auto;
     max-width: calc(100% - 20px);
-    background-color: $core-default-transparent-black ;
+    background-color: var(--default-transparent-black);
     border-radius: $border-radius-small;
-    @include typo($size: 14px, $line: 16px, $weight: 300, $color: $core-default-text-reverse);
+    @include typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-reverse));
 
     &[data-video="1"] {
       visibility: hidden;
@@ -64,7 +64,7 @@
 
   &__audio {
     position: absolute;
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     visibility: hidden;
     width: 30px;
     height: 30px;
@@ -72,7 +72,7 @@
 
     &[data-state="0"] {
       visibility: visible;
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
       margin: 0px 0 0 4px;
 
       &:before {

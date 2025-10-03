@@ -2,7 +2,7 @@
   &__container {
     border-radius: $default-border-radius;
     align-items: center;
-    background-color: $core-default-background;//$default-block-background;
+    background-color: var(--default-bg);//$default-block-background;
     max-height: 345px;//290px;
     height: 100%;
     width: 100%;

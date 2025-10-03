@@ -5,7 +5,7 @@
     width: 100%;
     max-width: 100%;
     height: 100%;
-    background-color: $core-default-background ;
+    background-color: var(--default-bg);
     border-radius: $default-border-radius;
     align-items: center;
     min-height: 345px;
@@ -28,7 +28,7 @@
     }
 
     &.desk {
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
       background-color: $folder-main;
     }
 
@@ -37,12 +37,12 @@
     }
 
     &.share {
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
       background-color: $sharebox-main;
     }
 
     &.private {
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
       background-color: $teamroom-main;
     }
 
@@ -67,7 +67,7 @@
       &::before {
         content: " ";
         position: absolute;
-        background-color: $core-default-transparent-black;
+        background-color: var(--default-transparent-black);
         height: 10px;
         top: -3px;
         transform: rotate(45deg);
@@ -96,7 +96,7 @@
     height: 1px;
     width: calc(100% - 172px);
     position: absolute;
-    background-color: $core-default-transparent-black;
+    background-color: var(--default-transparent-black);
     align-items: flex-start;
     top: 10px;
   }

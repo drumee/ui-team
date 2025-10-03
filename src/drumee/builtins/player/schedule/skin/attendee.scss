@@ -12,10 +12,10 @@
   width: 100%; //40px;
   height: 26px; //40px;
   padding: 2px 5px 0px;
-  @include typo($color:$core-default-text-color, $weight: 400, $line: 20px, $size: 14px);//$size: 16px
+  @include typo($color:var(--default-text-color), $weight: 400, $line: 20px, $size: 14px);//$size: 16px
   &:hover{
-    background-color: $core-default-background-hover;
-    color:$core-default-text-reverse; 
+    background-color: var(--default-bg-hover);
+    color:var(--default-text-reverse); 
   }
   .name{
     width: 35%;

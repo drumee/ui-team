@@ -43,7 +43,7 @@
       fill:$ewhite;
     }
     &.schedule{
-      fill: $core-special-schedule-icon;
+      fill: var(--special-schedule-icon);
       stroke-width: 4px;
       width: 33px;
       height: 30px;
@@ -89,7 +89,7 @@
     }
     .filename{
       &.document{
-        background :$core-default-block-background;
+        background :var(--default-bg-block);
       }
     }
   }
@@ -136,12 +136,12 @@
     input {
       //   background-color: #6ca5e8;
       // color: $ewhite;
-      background-color: $core-default-background;  //$ewhite;
-      color: $core-default-text-color;// $egrey-2f;
+      background-color: var(--default-bg);  //$ewhite;
+      color: var(--default-text-color);// $egrey-2f;
       border-radius: $default-border-radius-bottom-small;//0 0 4px 4px;
     }
     .input-details {
-      background: $core-default-background;//#fff;
+      background: var(--default-bg);//#fff;
       color: #FF4578;
       position: absolute;
       bottom: auto;

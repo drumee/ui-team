@@ -11,7 +11,7 @@
   position: absolute;
   z-index: 100;
   .icon--shortcut{
-    fill: $core-default-icon-neutral;//#ff805c;//$default-icon-hover;// #ff805c;$egrey-62;
+    fill: var(--default-icon-neutral);//#ff805c;//$default-icon-hover;// #ff805c;$egrey-62;
     width: 100%;
     height: 100%;
     margin: 0;

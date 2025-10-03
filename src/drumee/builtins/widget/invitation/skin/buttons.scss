@@ -28,7 +28,7 @@
   }
 
   &-buttons {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     margin: 15px auto 2px;
 
     &[data-state="0"] {
@@ -36,7 +36,7 @@
       opacity: 0.5;
 
       &:hover {
-        color: $core-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
         opacity: 1;
       }
     }
@@ -57,12 +57,12 @@
       }
 
       &:hover {
-        color: $core-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
         opacity: 1;
       }
 
       &[data-state="1"] {
-        background-color: $core-default-background-hover ;
+        background-color: var(--default-bg-hover);
         border-radius: $default-border-radius;
         color: $ewhite;
       }

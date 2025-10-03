@@ -6,7 +6,7 @@
     width: 260px;
     padding: 25px 25px 15px;
     margin: 0 auto;
-    background-color: $core-default-block-background;
+    background-color: var(--default-bg-block);
     box-shadow: $drumee-shadow-box;
     border-radius: $default-border-radius;
     position: absolute;
@@ -15,7 +15,7 @@
       content: " ";
       width: 10px;
       height: 10px;
-      background-color: $core-default-block-background;
+      background-color: var(--default-bg-block);
       position: absolute;
       top: -5px;
       left: 150px;
@@ -48,7 +48,7 @@
     overflow-x: hidden;
     margin: 0 auto;
     padding: 0 2px;
-    @include typo($color: $core-default-text-color, $size: 14px, $line: 28px, $weight: 400);
+    @include typo($color: var(--default-text-color), $size: 14px, $line: 28px, $weight: 400);
 
     textarea {
       height: 35px;
@@ -59,15 +59,15 @@
       width: 100%;
       margin: 0 auto;
       padding: 6px 2px;
-      border-bottom: 1px solid $core-default-entry-border-bottom ;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       flex-shrink: 0;
       background: transparent;
       letter-spacing: 0;
       overflow-wrap: break-word;
-      @include typo($line: 18px, $size: 14px, $color: $core-default-text-color);
+      @include typo($line: 18px, $size: 14px, $color: var(--default-text-color));
 
       @include placeholder-input {
-        @include typo($color: $core-default-text-placeholder, $size: 14px, $line: 28px, $weight: 300);
+        @include typo($color: var(--default-text-placeholder), $size: 14px, $line: 28px, $weight: 300);
       }
     }
 
@@ -77,7 +77,7 @@
       min-height: 0em;
       overflow-y: visible;
       padding: 0 2px;
-      @include typo($color: $core-default-text-color, $size: 14px, $line: 28px, $weight: 400);
+      @include typo($color: var(--default-text-color), $size: 14px, $line: 28px, $weight: 400);
     }
 
     .entry-text {

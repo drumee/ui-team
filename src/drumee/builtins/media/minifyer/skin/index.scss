@@ -15,7 +15,7 @@
 
 .media-minifyer {
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     border-radius:$default-border-radius;
     box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 0px 3px 0 rgba(86,65,113,0.08), 0 2px 8px 0 rgba(194,185,203,0);
     cursor: pointer;
@@ -59,10 +59,10 @@
   }
 
   &__remove {
-    background-color: $core-default-background;    
+    background-color: var(--default-bg);    
     border-radius: 50%;
-    border: 2px solid $core-default-border-notification;//$main-default-border;
-    color: $core-default-text-color;
+    border: 2px solid var(--default-border-notification);//$main-default-border;
+    color: var(--default-text-color);
     height: 19px;
     position: absolute;
     right: -5px;
@@ -71,16 +71,16 @@
     width: 19px;
 
     &--icon {
-      fill: $core-default-thinline-icon;//$default-icon-neutral;
-      color: $core-default-thinline-icon;//$default-icon-neutral;
+      fill: var(--default-thinline-icon);//$default-icon-neutral;
+      color: var(--default-thinline-icon);//$default-icon-neutral;
       height: 7px;
       margin: 4px;
       width: 7px;
 
       &:hover,
       :focus {
-        fill:$core-default-thinline-icon-hover;
-        color:$core-default-thinline-icon-hover;
+        fill:var(--default-thinline-icon-hover);
+        color:var(--default-thinline-icon-hover);
       }
     }
     

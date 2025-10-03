@@ -30,14 +30,14 @@
     align-content: center;    
     min-height: 60%;
     border-radius: $default-border-radius; 
-    background: $core-default-background;
+    background: var(--default-bg);
     min-width: 350px;
     .drumee-text{
       justify-content: center;
       align-items: center;
       padding: 10px;
       text-align: center;
-      @include typo($weight:300, $size:16px, $line:26px, $color:$core-default-text-color); //$ewhite); //$size:14px, $weight:400,
+      @include typo($weight:300, $size:16px, $line:26px, $color:var(--default-text-color)); //$ewhite); //$size:14px, $weight:400,
     }
   }
   &__commands{

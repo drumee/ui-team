@@ -43,7 +43,7 @@
     }
 
     &.schedule {
-      fill: $core-special-schedule-icon;
+      fill: var(--special-schedule-icon);
       height: 30px;
       margin:-8px auto;
       padding: 1px;
@@ -76,7 +76,7 @@
 
     .filename {
       &.document {
-        background :$core-default-block-background;
+        background :var(--default-bg-block);
       }
     }
   }

@@ -1,5 +1,5 @@
 .folder {
-  color: $core-default-text-reverse; //$ewhite;
+  color: var(--default-text-reverse); //$ewhite;
   &.preview{
     background-color: $folder-main;//#468ee5;
     height: 20px;
@@ -47,7 +47,7 @@
       justify-content: center;
       border: 1px solid $eorange-sunset;//#EA4D44;
       border-radius: $default-border-radius-tiny;//3px;
-      background-color: $core-default-background; ;//#FFFFFF;
+      background-color: var(--default-bg); ;//#FFFFFF;
       box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
       Z-index:200;
       margin: auto auto auto 144px;      

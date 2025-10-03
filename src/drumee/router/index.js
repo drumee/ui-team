@@ -9,6 +9,7 @@ require("builtins/contextmenu/skin/index.scss");
 // require("jquery-ui/ui/core");
 // require("jquery-ui/ui/widget");
 require("skin/global/common");
+require("skin/vars/index.scss");
 const { appendFontFace, appendLink } = require("core/utils");
 const { getModule, moduleName } = require('./modules');
 

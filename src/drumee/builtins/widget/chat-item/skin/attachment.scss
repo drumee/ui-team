@@ -39,7 +39,7 @@
       }
 
       &__container {
-        background-color: $core-default-background;    
+        background-color: var(--default-bg);    
         border-radius: $default-border-radius;
         overflow: hidden;
 
@@ -78,7 +78,7 @@
       }
 
       & .filename {
-        @include typo($size: 10px, $line: 12px, $weight: 300, $color: $core-default-text-color);
+        @include typo($size: 10px, $line: 12px, $weight: 300, $color: var(--default-text-color));
         border-radius:$default-border-radius-bottom;
         bottom: 1px;
         cursor: pointer;

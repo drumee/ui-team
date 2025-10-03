@@ -12,7 +12,7 @@
 
 .invitation-settings {
   &__ui {
-    background-color:$core-default-background;
+    background-color:var(--default-bg);
     border-radius: $default-border-radius;
     height: auto;
     margin: 20px auto 0;
@@ -36,7 +36,7 @@
 
   &__label {
     padding-bottom: 15px;
-    @include typo($size: 12px, $line: 14px, $color: $core-default-text-color, $weight: 400);
+    @include typo($size: 12px, $line: 14px, $color: var(--default-text-color), $weight: 400);
   }
 
   &__button {
@@ -74,7 +74,7 @@
     z-index: 100000 !important;
 
     .preset-acknowledge__container {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       @include drumee-box-shadow-1();
 
       b {
@@ -86,16 +86,16 @@
 
 .invitation {
   &__tooltips {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     border-radius: $default-border-radius;//6px;
     box-shadow: $drumee-container-before;// 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
     opacity: 1;
     padding: 10px;
     position: absolute;
-    @include typo($color:$core-default-text-tooltips,$size:12px,$line:14px,$weight:400);  
+    @include typo($color:var(--default-text-tooltips),$size:12px,$line:14px,$weight:400);  
 
     &::before {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       content: "";
       height: 8px;
       left: calc(50% - 4px);
@@ -106,7 +106,7 @@
     }
 
     &.drumate {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
     }
   }
 

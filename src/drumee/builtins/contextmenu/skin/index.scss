@@ -7,7 +7,7 @@
 @import 'mixins/drumee.scss';
 
 .drumee-contextmenu.drumee-box {
-  background-color: $core-default-block-background;//$core-background-tooltips;
+  background-color: var(--default-bg-block);//var(--bg-tooltips);
   border-radius: $default-border-radius;
   min-width: 90px;
   overflow: hidden;
@@ -23,31 +23,31 @@
     justify-items: center;
     padding: 10px;
     white-space: nowrap;
-    @include typo($color:$core-default-text-color, $size: 12px, $line: 16px);
+    @include typo($color:var(--default-text-color), $size: 12px, $line: 16px);
     &[data-state='disable'] {
       opacity: 0.35;
       cursor: not-allowed;
       &:hover {
         background-color: transparent;
-        color: $core-default-text-color;
+        color: var(--default-text-color);
         & svg {
-          color: $core-default-icon-neutral;
+          color: var(--default-icon-neutral);
         }
       }
     }
 
     &:hover {
-      background-color: $core-default-background-hover;
-      color: $core-default-text-reverse;
+      background-color: var(--default-bg-hover);
+      color: var(--default-text-reverse);
 
        svg {
-         color: $core-default-text-reverse;
+         color: var(--default-text-reverse);
          opacity: 1;
        }
     }
 
     &.separator {
-      background-color: $core-default-transparent-black;
+      background-color: var(--default-transparent-black);
       height: 1px;
       padding: 0px;
     }
@@ -156,7 +156,7 @@
     }
 
     svg {
-      color:$core-default-icon-neutral ;
+      color:var(--default-icon-neutral);
       height: 20px;
       margin-right: 5px;
       opacity: 0.75;

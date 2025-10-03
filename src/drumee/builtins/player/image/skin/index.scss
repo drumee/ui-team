@@ -62,7 +62,7 @@
     }
 
     .button {
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
       cursor: pointer;
       height: 90px;
       width: 100px;
@@ -140,14 +140,14 @@
     }
 
     & .icon {
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
       cursor: pointer;
       height: 20px; //16px;
       margin: 15px; //10px;
       width: 20px; // 16px;
 
       &:hover {
-        color: $core-default-icon-hover;
+        color: var(--default-icon-hover);
       }
 
       &.play {
@@ -165,7 +165,7 @@
 
   &__progress {
     & .svg-progress__main {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       border-radius: 5px;
       bottom: 0px;
       height: 100px;

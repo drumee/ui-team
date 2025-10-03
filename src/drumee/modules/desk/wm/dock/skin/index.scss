@@ -49,7 +49,7 @@
       position: absolute;
       cursor: pointer;
       top: -40px;
-      background-color: $core-background-tooltips; //$default-background-tooltips;
+      background-color: var(--bg-tooltips); //$default-background-tooltips;
       border-radius: $default-border-radius-tiny;
       height: 30px;
       align-items: center;
@@ -60,7 +60,7 @@
       }
 
       &::before {
-        background: $core-background-tooltips; //$default-background-tooltips;
+        background: var(--bg-tooltips); //$default-background-tooltips;
         bottom: -4px;
         content: " ";
         height: 10px;
@@ -97,14 +97,14 @@
 
     &-text {
       white-space: nowrap;
-      @include typo($line: 15px, $size: 12px, $color: $core-default-text-color);
+      @include typo($line: 15px, $size: 12px, $color: var(--default-text-color));
     }
   }
 
   &__container.application {
 
     &::after {
-      background-color: $core-default-background; //$ewhite;
+      background-color: var(--default-bg); //$ewhite;
       content: " ";
       height: 90%;
       width: 1px;
@@ -149,7 +149,7 @@
 
     svg {
       background-clip: padding-box;
-      color: $core-default-icon-reverse; //$default-icon-reverse;
+      color: var(--default-icon-reverse); //$default-icon-reverse;
       height: 43px;
       width: 43px;
 
@@ -179,18 +179,18 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       width: 100%;
-      @include typo($line: 15px, $size: 12px, $color: $core-default-text-reverse); //$ewhite
+      @include typo($line: 15px, $size: 12px, $color: var(--default-text-reverse)); //$ewhite
     }
 
     &:hover {
       opacity: 1;
 
       * {
-        color: $core-default-icon-hover; //$eviolet;
+        color: var(--default-icon-hover); //$eviolet;
       }
 
       .desk-dock__tooltips {
-        color: $core-default-text-color; //$default-text-color;
+        color: var(--default-text-color); //$default-text-color;
       }
 
       & .bigchat__btn-counter {
@@ -312,7 +312,7 @@
   }
 
   &__tooltips {
-    background-color: $core-background-tooltips; //$default-background-tooltips;
+    background-color: var(--bg-tooltips); //$default-background-tooltips;
     border-radius: $default-border-radius-tiny;
     opacity: 1;
     padding: 8px;
@@ -321,10 +321,10 @@
     white-space: nowrap;
     z-index: 10;
     user-select: none;
-    @include typo($size: 11px, $line: 14px, $weight: 400, $color: $core-default-text-tooltips); // $default-text-color);
+    @include typo($size: 11px, $line: 14px, $weight: 400, $color: var(--default-text-tooltips)); // $default-text-color);
 
     &::before {
-      background: $core-background-tooltips; //$default-background-tooltips;
+      background: var(--bg-tooltips); //$default-background-tooltips;
       bottom: -4px;
       content: " ";
       height: 10px;

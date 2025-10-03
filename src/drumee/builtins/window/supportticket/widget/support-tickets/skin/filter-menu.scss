@@ -82,7 +82,7 @@
       &[data-state="1"] {
         border: 1px solid $bigchat-default-checkbox-border;//$default-checkbox;
         box-shadow: none;
-        color: $core-default-checkbox-checked ;// $checkbox-active;
+        color: var(--default-checkbox-checked);// $checkbox-active;
       }
     }
   }

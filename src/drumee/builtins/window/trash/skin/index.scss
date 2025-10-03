@@ -6,7 +6,7 @@
   .window-confirm {
     &__main {
       align-items: center;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       border-radius: $default-border-radius;
       height: 250px;
       justify-content: space-around;
@@ -47,7 +47,7 @@
     &-content {
       height: 200px;
       width: 100%;
-      background: $core-default-background;
+      background: var(--default-bg);
       height: 200px;
       justify-content: center;
       border-radius: $default-border-radius;
@@ -55,7 +55,7 @@
     }
 
     &-progress {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
     }
 
     &-title {

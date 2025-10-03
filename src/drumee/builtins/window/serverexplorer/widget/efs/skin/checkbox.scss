@@ -12,7 +12,7 @@
   width: 18px;
 
   &.folder {
-    border: 1px solid $core-checkbox-checked-border-reverse;
+    border: 1px solid var(--checkbox-checked-border-reverse);
   }
 
   &[data-state="1"] {
@@ -21,8 +21,8 @@
     border: 1px solid $admin-default-checkbox-border;
 
     &.folder {
-      color: $core-checkbox-checked-reverse;
-      border: 1px solid $core-checkbox-checked-reverse;
+      color: var(--checkbox-checked-reverse);
+      border: 1px solid var(--checkbox-checked-reverse);
     }
   }
 }

@@ -1,7 +1,7 @@
 &-pre-check-cancel-subscription,
 &-cancel-subscription {
   &__main {
-    background: $core-default-background;
+    background: var(--default-bg);
     border-radius: $default-border-radius;
     height: calc(100% - 160px);
     max-height: 390px;
@@ -33,33 +33,33 @@
   }
 
   &__icon {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     height: 12px;
     width: 12px;
 
     &.close {
-      color: $core-default-thinline-icon;
+      color: var(--default-thinline-icon);
       
       &:hover {
-        color: $core-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
       }
     }
   }
 
   &__note {
     &.header {
-      @include typo($size: 18px, $line: 22px, $color: $core-default-text-title);
+      @include typo($size: 18px, $line: 22px, $color: var(--default-text-title));
       justify-content: center;
       width: 100%;
     }
 
     &.content {
-      @include typo($size: 16px, $line: 20px, $color: $core-default-text-color);
+      @include typo($size: 16px, $line: 20px, $color: var(--default-text-color));
       padding: 20px 0;
 
       &.sub-content {
-        color: $core-tertiary-text-color;
+        color: var(--tertiary-text-color);
       }
 
       &.confirm-cancel {
@@ -75,11 +75,11 @@
       }
 
       & .text-blue {
-        color: $core-secondary-text-color;
+        color: var(--secondary-text-color);
       }
 
       & .text-alert {
-        color: $core-default-text-caution;
+        color: var(--default-text-caution);
       }
     }
   }

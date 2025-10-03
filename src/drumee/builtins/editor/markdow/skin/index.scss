@@ -3,7 +3,7 @@
 
 .editor-markdown {
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     width: 80vw;
     height: 480px;
     top: 45px;
@@ -67,7 +67,7 @@
     }
 
     .menu-items {
-      background: $core-default-background;
+      background: var(--default-bg);
       border-radius: $default-border-radius;
     }
   }
@@ -105,14 +105,14 @@
     &__icon {
       width: 16px;
       height: 16px;
-      color: $core-default-text-reverse;
+      color: var(--default-text-reverse);
       margin-left: 10px;
       cursor: pointer;
       z-index: 1000;
 
       .tooltips {
         white-space: nowrap;
-        background-color: $core-background-tooltips;
+        background-color: var(--bg-tooltips);
         border-radius: $default-border-radius-tiny;
         width: fit-content;
         position: absolute;
@@ -120,7 +120,7 @@
         top: 18px;
         @include typo($line: 15px,
           $size: 12px,
-          $color: $core-default-text-color );
+          $color: var(--default-text-color) );
 
       }
     }
@@ -135,7 +135,7 @@
     @include typo($size: 13px,
       $line: 18px,
       $weight: 300,
-      $color: $core-default-text-color );
+      $color: var(--default-text-color) );
 
     &--outer {
       display: flex;
@@ -160,23 +160,23 @@
     }
 
     h1 {
-      @include typo($size: 30px, $line: 1.2, $color: $core-default-text-color);
+      @include typo($size: 30px, $line: 1.2, $color: var(--default-text-color));
     }
 
     h2 {
-      @include typo($size: 26px, $line: 1.2, $color: $core-default-text-color);
+      @include typo($size: 26px, $line: 1.2, $color: var(--default-text-color));
     }
 
     h3 {
-      @include typo($size: 22px, $line: 1.2, $color: $core-default-text-color);
+      @include typo($size: 22px, $line: 1.2, $color: var(--default-text-color));
     }
 
     h4 {
-      @include typo($size: 18px, $line: 1.2, $color: $core-default-text-color);
+      @include typo($size: 18px, $line: 1.2, $color: var(--default-text-color));
     }
 
     h5 {
-      @include typo($size: 16px, $line: 1.2, $color: $core-default-text-color);
+      @include typo($size: 16px, $line: 1.2, $color: var(--default-text-color));
     }
   }
 
@@ -189,7 +189,7 @@
     @include typo($size: 13px,
       $line: 18px,
       $weight: 300,
-      $color: $core-default-text-color );
+      $color: var(--default-text-color) );
 
     &--outer {
       display: flex;

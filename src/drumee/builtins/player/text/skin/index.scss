@@ -2,7 +2,7 @@
 
 .player-text {
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     width: 400px;
     height: 480px;
     top: 45px;
@@ -49,7 +49,7 @@
     }
 
     .menu-items {
-      background: $core-default-background;
+      background: var(--default-bg);
       border-radius: $default-border-radius;
     }
   }
@@ -73,7 +73,7 @@
     &__icon {
       width: 16px;
       height: 16px;
-      color: $core-default-text-reverse;
+      color: var(--default-text-reverse);
       margin-left: 10px;
       cursor: pointer;
       z-index: 1000;
@@ -99,13 +99,13 @@
 
       .tooltips {
         white-space: nowrap;
-        background-color: $core-background-tooltips;
+        background-color: var(--bg-tooltips);
         border-radius: $default-border-radius-tiny;
         width: fit-content;
         position: absolute;
         padding: 7px;
         top: 18px;
-        @include typo($line: 15px, $size: 12px, $color: $core-default-text-color);
+        @include typo($line: 15px, $size: 12px, $color: var(--default-text-color));
 
       }
     }
@@ -115,7 +115,7 @@
     width: 100%;
     height: 100%;
 
-    @include typo($size: 13px, $line: 18px, $weight: 300, $color: $core-default-text-color);
+    @include typo($size: 13px, $line: 18px, $weight: 300, $color: var(--default-text-color));
     padding: 15px 10px 10px 15px;
     user-select: text;
   }
@@ -129,7 +129,7 @@
         width: 12px;
         height: 12px;
         padding: 0;
-        color: $core-default-text-reverse;
+        color: var(--default-text-reverse);
         cursor: pointer;
         margin: auto 15px auto 0;
       }
@@ -142,7 +142,7 @@
       flex: 1;
       flex-direction: row;
       height: 100%;
-      @include typo($size: 18px, $line: 24px, $weight: 400, $color: $core-default-text-reverse);
+      @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
       @include overflow-text;
 
       .icon {

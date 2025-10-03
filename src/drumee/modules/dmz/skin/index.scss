@@ -41,7 +41,7 @@
   &-supported-browsers {
     &__container {
       position: absolute;
-      background-color: $core-default-block-background;
+      background-color: var(--default-bg-block);
       z-index: 2000;
     }
 

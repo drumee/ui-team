@@ -118,7 +118,7 @@
     box-shadow: 0 2px 2px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgb(86 65 113 / 8%), 0 2px 14px 0 rgb(194 185 203 / 0%);
 
     &:hover {
-      background-color: $core-default-background-hover;
+      background-color: var(--default-bg-hover);
       z-index: 200000;
     }
 
@@ -134,7 +134,7 @@
     align-items: center;
     cursor: pointer;
     text-align: center;
-    @include typo($size: 14px, $line: 15px, $color: $core-default-text-reverse); //$size: 13px,
+    @include typo($size: 14px, $line: 15px, $color: var(--default-text-reverse)); //$size: 13px,
   }
 
 
@@ -148,7 +148,7 @@
       max-width: 100%;
       position: absolute;
       height: 380px;
-      background-color: $core-default-background ;
+      background-color: var(--default-bg);
       border-radius: $default-border-radius;
       align-items: center;
       min-height: 345px;

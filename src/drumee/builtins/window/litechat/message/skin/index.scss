@@ -62,15 +62,15 @@
 
     &.checkbox {
       border-radius:$default-checkbox-border-radius;
-      border:1.5px solid $core-default-checkbox-border;//$default-checkbox;
-      color:$core-default-checkbox-background;//$core-default-background;   
+      border:1.5px solid var(--default-checkbox-border);//$default-checkbox;
+      color:var(--default-checkbox-bg);//var(--default-bg);   
       cursor: pointer;
       height: 15px;
       width: 15px;
 
       &[data-state="1"] {
-        border:1px solid $core-default-checkbox-border;//$default-checkbox; 
-        color:$core-default-checkbox-checked;// $checkbox-active;
+        border:1px solid var(--default-checkbox-border);//$default-checkbox; 
+        color:var(--default-checkbox-checked);// $checkbox-active;
         height: 15px;
         width: 15px;
       }
@@ -290,7 +290,7 @@
 
   &__call-duration {
     & .note-content {
-      @include typo($size: 13px, $line: 14px, $weight: 400, $color: $core-default-text-title);
+      @include typo($size: 13px, $line: 14px, $weight: 400, $color: var(--default-text-title));
     }
   }
 

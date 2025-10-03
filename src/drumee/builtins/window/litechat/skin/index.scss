@@ -15,7 +15,7 @@
     height: inherit;
     height: 100%;
     width: 100%;
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
   }
 
   &__container {
@@ -57,7 +57,7 @@
   &__messages {
     height: inherit;
     width: 100%;
-    @include typo($line: 16px, $size: 14px,$color: $core-default-text-color);
+    @include typo($line: 16px, $size: 14px,$color: var(--default-text-color));
 
     & .smart-container {
       height: 100%;
@@ -72,7 +72,7 @@
   }
   
   &__messenger-wrapper {
-    border-top: 1px solid $core-default-separator;//$default-separator;
+    border-top: 1px solid var(--default-separator);//$default-separator;
   }
 
   &__messenger {
@@ -91,7 +91,7 @@
           overflow-y: auto;
           padding: 10px 10px;
           white-space: pre-wrap;
-          @include typo($line: 14px, $size: 13px,  $color: $core-default-text-color);//$weight: 300,
+          @include typo($line: 14px, $size: 13px,  $color: var(--default-text-color));//$weight: 300,
 
           &::-webkit-scrollbar {
             height: 100%;
@@ -105,7 +105,7 @@
 
           &::before {
             text-transform: capitalize;
-            @include typo($line: 14px, $size: 12px, $weight: 300, $color:$core-default-text-placeholder);
+            @include typo($line: 14px, $size: 12px, $weight: 300, $color:var(--default-text-placeholder));
           }
         }
       }
@@ -129,7 +129,7 @@
         &.attach {
           margin: 5px 2px;
           &:hover {
-            color: $core-default-icon-hover;
+            color: var(--default-icon-hover);
           }
         }
       }
@@ -137,7 +137,7 @@
   }
   
   &__drag-drop-wrapper {
-    background:$core-default-background;
+    background:var(--default-bg);
     display: none !important;
     height: 100%;
     padding: 10px;
@@ -191,7 +191,7 @@
   &__note {
     &.counter {
       padding: 3px 0 4px 0;
-      @include typo($size: 12px, $line: 20px, $weight:300, $color: $core-default-text-color);
+      @include typo($size: 12px, $line: 20px, $weight:300, $color: var(--default-text-color));
     }
   }
 
@@ -254,7 +254,7 @@
   }
 
   &__button-confirm {
-    background-color: $core-default-background; 
+    background-color: var(--default-bg); 
     border: 0.5px solid $btn-commit-border;
     justify-content: center;
     @include typo($size: 13px, $line: 12px, $color: $btn-commit-backgroundless-text);

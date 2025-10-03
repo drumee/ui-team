@@ -31,7 +31,7 @@
         //top:3px;
       }
       svg{
-        fill: $core-default-icon-reverse;  
+        fill: var(--default-icon-reverse);  
       }
     }
   }

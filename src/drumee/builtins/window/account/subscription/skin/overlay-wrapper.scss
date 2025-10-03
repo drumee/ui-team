@@ -1,13 +1,13 @@
 &-overlay {
   &__wrapper[data-mode="open"] {
-    background: $core-transparency-container-overlay;
+    background: var(--transparency-container-overlay);
     height: 100%;
     position: absolute;
     width: 100%;
     z-index: 10;
 
     & .overlay-content {
-      background: $core-transparency-container-overlay;
+      background: var(--transparency-container-overlay);
       height: 100%;
       position: absolute;
       width: 100%;

@@ -7,7 +7,7 @@
 
 .notification-panel {
   &__overlay {
-    background: $core-default-background;
+    background: var(--default-bg);
     border-radius: 5px;
     height: 100%;
     max-height: 500px;
@@ -24,7 +24,7 @@
 
 
   &___ico_button.notification-bell {
-    color: $core-default-icon-reverse ;
+    color: var(--default-icon-reverse);
     cursor:pointer;
     height: 40px;
     padding:6px;// 3px;
@@ -32,18 +32,18 @@
     flex-shrink: 0;
     //z-index: 10;
     border-radius: $default-border-radius;
-    background-color: $core-transparent-background-desktop-icon;//hsla(0,0%,78.4%,.5);//rgba(47,47,47,.2);
+    background-color: var(--transparent-bg-desktop-icon);//hsla(0,0%,78.4%,.5);//rgba(47,47,47,.2);
     box-shadow: 0 2px 2px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgb(86 65 113 / 8%), 0 2px 14px 0 rgb(194 185 203 / 0%);
 
     &:hover {
-      background: $core-default-icon-hover;
+      background: var(--default-icon-hover);
       border-radius: $default-border-radius;
     }
   }
 
   &__digit {
     align-items: center;
-    background-color:$core-default-background-alert;// $default-notification-bg;
+    background-color:var(--default-bg-alert);// $default-notification-bg;
     border-radius: 50%;
     height: 18px;
     justify-content: center;
@@ -53,7 +53,7 @@
     width: 18px;
     user-select: none;
     & .inner.note-content {
-      @include typo($size: 10px, $line: 12px, $color: $core-default-text-reverse);
+      @include typo($size: 10px, $line: 12px, $color: var(--default-text-reverse));
     }
   }
 }

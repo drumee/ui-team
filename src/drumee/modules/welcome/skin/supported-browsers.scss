@@ -1,5 +1,5 @@
 /*&__browsers-title {
-  @include typo($size: 22px, $line: 26px, $color:$core-default-text-alert);// $window-confirm-default-title-color);
+  @include typo($size: 22px, $line: 26px, $color:var(--default-text-alert));// $window-confirm-default-title-color);
   height:90px;
   align-items: center;
   width: 100%;
@@ -28,7 +28,7 @@
   }
 
   &__browsers-container{
-    background-color:$core-default-block-background;
+    background-color:var(--default-bg-block);
     border-radius:$default-border-radius;
     padding: 10px 0 20px;
     margin-top: 20px;
@@ -41,7 +41,7 @@
     margin-left: auto;
     margin-right: auto;
     margin-top: 5px;
-    background-color:$core-default-background;
+    background-color:var(--default-bg);
     border-radius:$default-border-radius-small;
   }
    
@@ -60,7 +60,7 @@
   }
   &__note {
     text-align: center;
-    @include typo($size: 16px, $line: 26px, $color: $core-default-text-color);
+    @include typo($size: 16px, $line: 26px, $color: var(--default-text-color));
     padding: 10px;
     &.message{
       padding: 0px 58px;//0 46px
@@ -93,7 +93,7 @@
     width: 600px;
     max-width: 100%;
     height: 400px;
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     border-radius:$default-border-radius-small;// 4px;    
   }
 }
@@ -106,11 +106,11 @@
   justify-content: center;
   text-align: center;
   width: 100%;
-  @include typo($size: 16px, $line: 25px, $color: $core-default-text-color);
+  @include typo($size: 16px, $line: 25px, $color: var(--default-text-color));
 
   .name{
     top: 0px;
-    @include typo($size: 22px, $line: 26px, $color:$core-default-text-alert);// $window-confirm-default-title-color);
+    @include typo($size: 22px, $line: 26px, $color:var(--default-text-alert));// $window-confirm-default-title-color);
     height:90px;
     align-items: center;
   }

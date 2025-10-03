@@ -17,7 +17,7 @@
   }
 
   &__title {
-    @include typo($size: 28px, $line: 45px, $weight: 400, $color: $core-default-text-reverse);
+    @include typo($size: 28px, $line: 45px, $weight: 400, $color: var(--default-text-reverse));
   }
 
   &__entry {
@@ -25,13 +25,13 @@
     align-items: center;
     justify-content: center;
     height: 60px;
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     max-width: 280px;
     width: 100%;
     border-radius: $default-border-radius;
     &[data-status="error"] {
       border-radius: $default-border-radius;
-      border: 2px solid $core-default-border-error;
+      border: 2px solid var(--default-border-error);
     }
   }
 
@@ -42,7 +42,7 @@
     height: 100%;
     max-width: 280px;
     & input {
-      @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
+      @include typo($size: 18px, $line: 28px, $color: var(--default-text-color));
       border-bottom: none;
       border-radius: 0 6px 6px 0px;
       padding: 5px;

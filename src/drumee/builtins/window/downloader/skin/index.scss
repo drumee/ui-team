@@ -2,7 +2,7 @@
 
 .window-downloader {
   &__ui {
-    background-color: $core-default-background;//$ewhite;
+    background-color: var(--default-bg);//$ewhite;
     box-shadow: $drumee-shadow-main;
     &[data-state="0"]{
       display: none;
@@ -49,7 +49,7 @@
     margin-right: auto;
     margin-top: 80px;
     max-width: 381px;
-    @include typo($size: 16px, $line: 16px, $color: $core-default-text-color);//$egrey-2f);
+    @include typo($size: 16px, $line: 16px, $color: var(--default-text-color));//$egrey-2f);
     
     .line {
       justify-items: center;
@@ -107,9 +107,9 @@
     cursor: pointer;
     position: absolute;
     right: 0;
-    color:$core-default-thinline-icon;
+    color:var(--default-thinline-icon);
     :hover{
-      color:$core-default-thinline-icon-hover;
+      color:var(--default-thinline-icon-hover);
     }
   }
 }

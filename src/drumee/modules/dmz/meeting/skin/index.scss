@@ -139,10 +139,10 @@
       min-width: 180px;
 
       &.close {
-        background-color: $core-default-background-caution;
+        background-color: var(--default-bg-caution);
 
         &:hover {
-          background-color: $core-default-background-alert ;
+          background-color: var(--default-bg-alert);
         }
       }
 

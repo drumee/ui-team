@@ -9,7 +9,7 @@
 
   &__current-plan {
     align-items: center;
-    background: $core-default-background;
+    background: var(--default-bg);
     border-radius: 20px;
     height: 35px;
     justify-content: center;
@@ -108,7 +108,7 @@
     }
 
     &.info {
-      color: $core-special-icon-emoji;
+      color: var(--special-icon-emoji);
       height: 24px;
       width: 24px;
     }
@@ -116,23 +116,23 @@
 
   &__note {
     &.current-plan {
-      @include typo($size: 14px, $line: 16px, $color: $core-default-text-color);
+      @include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
     }
 
     &.beta-offer {
-      @include typo($size: 15px, $line: 18px, $weight: 500, $color: $core-default-text-color);
+      @include typo($size: 15px, $line: 18px, $weight: 500, $color: var(--default-text-color));
       text-align: center;
     }
 
     &.title {
-      @include typo($size: 22px, $line: 26px, $color: $core-default-text-color);
+      @include typo($size: 22px, $line: 26px, $color: var(--default-text-color));
       align-items: center;
       justify-content: center;
       text-transform: capitalize;
     }
 
     &.sub-title {
-      @include typo($size: 13px, $line: 16px, $color: $core-default-text-color);
+      @include typo($size: 13px, $line: 16px, $color: var(--default-text-color));
       align-items: center;
       justify-content: center;
       text-align: center;
@@ -156,11 +156,11 @@
     }
 
     &.features-desc {
-      @include typo($size: 13px, $line: 16px, $color: $core-tertiary-text-color);
+      @include typo($size: 13px, $line: 16px, $color: var(--tertiary-text-color));
     }
 
     &.plan-item {
-      @include typo($size: 13px, $line: 16px, $color: $core-default-text-color);
+      @include typo($size: 13px, $line: 16px, $color: var(--default-text-color));
       padding-left: 10px;
 
       &.highlight {
@@ -179,7 +179,7 @@
     }
 
     &.info {
-      @include typo($size: 14px, $line: 26px, $color: $core-default-text-color);
+      @include typo($size: 14px, $line: 26px, $color: var(--default-text-color));
     }
 
     &.text-strike {
@@ -292,7 +292,7 @@
 
     &-wrapper {
       align-items: center;
-      background: $core-default-block-background;
+      background: var(--default-bg-block);
       border-radius: 6px;
       height: 100%;
       justify-content: center;
@@ -317,7 +317,7 @@
       }
 
       & .account-subscription-plan__note.plan-item {
-        @include typo($size: 12px, $line: 14px, $color: $core-default-text-color);
+        @include typo($size: 12px, $line: 14px, $color: var(--default-text-color));
       }
     }
   }

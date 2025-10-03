@@ -9,7 +9,7 @@
 .drumee-contextmenu.drumee-box{
  // padding: 5px 10px;//5px;
   min-width: 90px;
-  background-color: $core-background-tooltips;
+  background-color: var(--bg-tooltips);
   position: absolute;
   border-radius: $default-border-radius;//4px;
   overflow: hidden;
@@ -22,12 +22,12 @@
     cursor: pointer;
     padding: 10px;
     white-space: nowrap;
-    @include typo($color:$core-default-text-color, $size: 12px, $line: 16px);
+    @include typo($color:var(--default-text-color), $size: 12px, $line: 16px);
     &:hover{
-      background-color: $core-default-background-hover;//$folder-main;
-      color: $core-default-text-reverse;
+      background-color: var(--default-bg-hover);//$folder-main;
+      color: var(--default-text-reverse);
       svg{
-        color: $core-default-text-reverse;
+        color: var(--default-text-reverse);
         opacity: 1;
       }
     } 
@@ -91,7 +91,7 @@
       width: 20px;        
       margin-right: 5px;
       padding: 1.5px;
-      color:$core-default-icon-neutral ;
+      color:var(--default-icon-neutral);
       opacity: 0.75;
     }
     .label{

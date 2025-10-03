@@ -16,7 +16,7 @@
     width: 600px;
     align-items: center;
     min-width: 195px;    
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     left: calc(50vw - 300px);
     top: 80px;
     overflow: hidden;
@@ -47,7 +47,7 @@
   }
 
   &__header, &__command {
-    background-color: $core-default-background-alert;
+    background-color: var(--default-bg-alert);
   }
 
   // css for empty data message
@@ -61,7 +61,7 @@
 
     &__note {
       &.message {
-        @include typo($size: 18px, $line: 36px, $color: $core-default-text-alert);
+        @include typo($size: 18px, $line: 36px, $color: var(--default-text-alert));
         justify-content: center;
         width: 100%;
       }

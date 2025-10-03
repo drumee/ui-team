@@ -12,7 +12,7 @@
     }
 
     & .menu-items {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       border-radius:$default-border-radius;
       box-shadow: $drumee-shadow-container;
       left: -140px;
@@ -23,7 +23,7 @@
       width: 100% !important;
 
       &:before {
-        background-color: $core-default-background;
+        background-color: var(--default-bg);
         box-shadow: $drumee-container-before;
         content: "";
         height: 10px;
@@ -35,7 +35,7 @@
       }
 
       &:after {
-        background: $core-default-background;
+        background: var(--default-bg);
         border-radius:$default-border-radius-top;
         content: "";
         height: 10px;
@@ -49,7 +49,7 @@
 
   &__icon {
     align-items: center;
-    color: $core-default-icon-reverse;
+    color: var(--default-icon-reverse);
     cursor: pointer;
 
     &.trigger-icon {
@@ -63,7 +63,7 @@
     
     svg {
       &:hover {
-        color:$core-default-icon-hover;
+        color:var(--default-icon-hover);
         opacity: 1;
       }
     }
@@ -80,15 +80,15 @@
     margin-bottom:  1px;
 
     &:hover {
-      background-color: $core-default-background-hover;
-      color : $core-default-text-reverse; 
+      background-color: var(--default-bg-hover);
+      color : var(--default-text-reverse); 
 
       & .name {
-        color:$core-default-text-reverse; 
+        color:var(--default-text-reverse); 
       }
       
       & svg {
-        fill: $core-default-icon-reverse;
+        fill: var(--default-icon-reverse);
       }
     }
   }
@@ -96,6 +96,6 @@
   &__note {
     padding-top: 0px;
     bottom: 2px;
-    @include typo($size: 13px, $weight: 300, $line: 14px, $color:$core-default-text-color);
+    @include typo($size: 13px, $weight: 300, $line: 14px, $color:var(--default-text-color));
   }
 }

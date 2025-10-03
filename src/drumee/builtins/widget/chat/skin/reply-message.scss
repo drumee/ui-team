@@ -52,7 +52,7 @@
       overflow: hidden;
 
       & .note-content {
-        @include typo($size: 12px, $line: 14px, $weight: 400, $color: $core-default-text-color);
+        @include typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-color));
         overflow: hidden;
         word-wrap: break-word;
   
@@ -75,7 +75,7 @@
   }
 
   &__icon {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
 
     &.close-icon {

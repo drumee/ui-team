@@ -12,7 +12,7 @@
     border-radius: $default-border-radius;//6px;
     overflow: hidden;   
     &:hover{
-      background-color:$core-default-background;
+      background-color:var(--default-bg);
       // color:$default-text-reverse; //$ewhite; 
       // .media-checkbox{
       //   display: block;
@@ -59,7 +59,7 @@
       height: 100%;
     }
     &-filename{
-      color: $core-default-text-color;
+      color: var(--default-text-color);
       position: absolute;
       bottom: 0;
       width: 100%;
@@ -89,7 +89,7 @@
   //   }
   // }
   &.deleting {
-    background-color: $core-default-background; //white;
+    background-color: var(--default-bg); //white;
     transform: scale(1);
     &:after, &:before {
       display: none;

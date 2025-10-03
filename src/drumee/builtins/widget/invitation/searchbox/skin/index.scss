@@ -17,7 +17,7 @@
     height: 30px;
     justify-content: center;
     padding: 0 30px;
-    @include typo($size:14px,$line:30px,$color:$core-default-text-title,$weight:300);
+    @include typo($size:14px,$line:30px,$color:var(--default-text-title),$weight:300);
   }
 
   &__container {
@@ -27,7 +27,7 @@
 
     &-results {
       align-self: center;
-      background: $core-default-background;
+      background: var(--default-bg);
       border-radius:$default-border-radius;
       box-shadow: $drumee-shadow-box;
       margin: auto;
@@ -148,22 +148,22 @@
 
       input {
         background: transparent; 
-        border-bottom: 1px solid $core-default-entry-border-bottom;
+        border-bottom: 1px solid var(--default-entry-border-bottom);
         flex-shrink: 0;
         margin: 0 auto;
         min-height: 0;
         padding: 0 2px;
         width: 100%;
-        @include typo($color:  $core-default-text-color, $size:14px, $line:28px, $weight:400);
+        @include typo($color:  var(--default-text-color), $size:14px, $line:28px, $weight:400);
         @include placeholder-input {
-          @include typo($color: $core-default-text-placeholder, $size:14px, $line:28px, $weight:300);
+          @include typo($color: var(--default-text-placeholder), $size:14px, $line:28px, $weight:300);
         }
       }
     }
   }
 
   &__icon {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     height:22px;
     margin: auto 2px auto 0;
@@ -173,8 +173,8 @@
     
     &[data-state="1"] {
       border-radius: $border-radius-small;
-      border: 1px solid $core-default-border-success;
-      color: $core-default-text-success;
+      border: 1px solid var(--default-border-success);
+      color: var(--default-text-success);
       padding: 3px;
       height: 20px;
       width: 20px;
@@ -186,7 +186,7 @@
     }
 
     &:hover {
-      color: $core-default-icon-hover;
+      color: var(--default-icon-hover);
     }
   }
 }

@@ -1,6 +1,6 @@
 &-overlay {
   &__wrapper[data-state="open"] {
-    background: $core-transparency-container-overlay;
+    background: var(--transparency-container-overlay);
     height: 100%;
     position: absolute;
     width: 100%;
@@ -10,7 +10,7 @@
     justify-content: center;
 
     & .overlay-content {
-      background: $core-transparency-container-overlay;
+      background: var(--transparency-container-overlay);
       height: 100%;
       position: absolute;
       width: 100%;

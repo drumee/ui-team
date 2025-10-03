@@ -17,15 +17,15 @@
     padding-left:13px;
     margin-right:28px;
     &:hover {
-      background-color: $core-default-background-hover;//#879BFF;
-      color: $core-default-text-hover;//$ewhite;
+      background-color: var(--default-bg-hover);//#879BFF;
+      color: var(--default-text-hover);//$ewhite;
      // border-radius:4px;
       .settings, .delete, .view {
         visibility: visible;
         color: $ewhite;
       }
       & .note-reader {
-        color:$core-default-text-hover;//$ewhite;
+        color:var(--default-text-hover);//$ewhite;
       }
     }
   }
@@ -33,7 +33,7 @@
     align-items: center;
     // padding-left: 10px;
     height: 35px; //36px;
-    @include typo($color:$core-default-text-color,$size:14px,$line:36px,$weight:400);
+    @include typo($color:var(--default-text-color),$size:14px,$line:36px,$weight:400);
     cursor: pointer;
   }
 
@@ -46,7 +46,7 @@
       background-size: cover;
       background-repeat: no-repeat;
       background-position: 50% 50%;
-      background-color:$core-default-user-icon;// #D8D8D8;
+      background-color:var(--default-user-icon);// #D8D8D8;
       border-radius: 15px;
       //overflow: hidden;
       &.public{
@@ -71,7 +71,7 @@
   &__icon{
     width: 14px;
     height: 14px;
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     // visibility: hidden;
     cursor: pointer;
     margin-right: 16px;

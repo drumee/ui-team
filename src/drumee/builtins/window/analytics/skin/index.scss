@@ -19,10 +19,10 @@
   }
 
   &__title{
-    @include typo($size: 18px, $line: 24px, $color: $core-default-text-reverse);
+    @include typo($size: 18px, $line: 24px, $color: var(--default-text-reverse));
   }
   &__forbiden{
-    @include typo($size: 20px, $line: 28px, $color: $core-default-text-caution);
+    @include typo($size: 20px, $line: 28px, $color: var(--default-text-caution));
   }
   &__header, &__command{
     width: 100%;

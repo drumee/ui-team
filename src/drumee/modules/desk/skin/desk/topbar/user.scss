@@ -2,7 +2,7 @@
 
 .desk-module__topbar{
   &-user {
-    background-color:$core-default-background;   
+    background-color:var(--default-bg);   
     z-index: 2;
     border-radius: $default-border-radius;
     overflow: hidden;
@@ -55,7 +55,7 @@
       }
 
       .menu-topic-items {
-        background-color: $core-default-background;
+        background-color: var(--default-bg);
         margin-top: 20px;
         width:195px!important; // 182px!important; //174px!important;
         border-radius: $default-border-radius;
@@ -63,7 +63,7 @@
           right: 10px;
         }
         &::before {
-          background: $core-default-background;
+          background: var(--default-bg);
           box-shadow: 0px 0px 4px 0px rgb(63 79 117 / 13%), 0 5px 0px 0 rgb(86 65 113 / 8%), 0 2px 0px 0 rgb(194 185 203 / 0%);//$drumee-shadow-main;
           content: " ";
           height: 20px;
@@ -165,12 +165,12 @@
       }
 
       &:hover {
-        background-color: $core-default-background-hover;
-        color: $core-default-text-reverse; 
+        background-color: var(--default-bg-hover);
+        color: var(--default-text-reverse); 
         @include typo($line:32px,$size:16px,$weight:400,$color:$egrey-78);
 
         svg {
-            color: $core-default-icon-reverse;    
+            color: var(--default-icon-reverse);    
         }
       }
     }

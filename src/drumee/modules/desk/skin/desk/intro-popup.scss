@@ -1,7 +1,7 @@
 .desk-module {
   &-intro-popup {
     &__main {
-      background: $core-default-background;
+      background: var(--default-bg);
       border-radius: $default-border-radius;
       height: calc(100vh - 20px);
       margin: auto;
@@ -82,19 +82,19 @@
 
     &__icon {
       &.video {
-        color: $core-default-icon-reverse;
+        color: var(--default-icon-reverse);
         height: 26px;
         width: 26px;
       }
 
       &.close {
-        color: $core-default-thinline-icon;
+        color: var(--default-thinline-icon);
         cursor: pointer;
         height: 12px;
         width: 12px;
 
         &:hover {
-          color: $core-default-thinline-icon-hover;
+          color: var(--default-thinline-icon-hover);
         }
       }
     }
@@ -112,12 +112,12 @@
     &__note {
       &.title {
         text-align: center;
-        @include typo($size: 26px, $line: 36px, $color: $core-default-text-title);
+        @include typo($size: 26px, $line: 36px, $color: var(--default-text-title));
       }
 
       &.sub-title,
       &.description {
-        @include typo($size: 16px, $line: 26px, $color: $core-default-text-color);
+        @include typo($size: 16px, $line: 26px, $color: var(--default-text-color));
       }
 
       &.sub-title {
@@ -134,11 +134,11 @@
         min-width: 115px;
         margin-left: 10px;
         width: 100%;
-        @include typo($size: 16px, $line: 20px, $color: $core-default-text-reverse);
+        @include typo($size: 16px, $line: 20px, $color: var(--default-text-reverse));
       }
 
       &.footer {
-        @include typo($size: 14px, $line: 18px, $color: $core-tertiary-text-color);
+        @include typo($size: 14px, $line: 18px, $color: var(--tertiary-text-color));
       }
 
       &.text-underline {

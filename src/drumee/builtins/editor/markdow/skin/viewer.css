@@ -294,15 +294,15 @@ $ab-delete-icon          : #89929e; //=$default-icon-neutral + opacity 0.6 /old 
 $ab-separator            : $default-separator;// #ECEDEE;  $ab-widget-border : $default-separator;//#ECEDEE;
 $ab-all-contact          : $admin-member-tag-name-text-color;//#BD44D9;//=$emauve/old : #AB47BC;
 
-$entry-border-bottom      : $core-default-entry-border-bottom;
-$ab-input-border-grey	  : $core-default-entry-border-bottom;
-$ab-input-border-orange	  : $core-default-border-error;
-$ab-input-placeholder     : $core-default-text-placeholder;
-$ab-input-border-red      : $core-default-border-error ;
-$ab-delete-icon           : $core-default-icon-neutral;//$default-icon-neutral;// + opacity 0.6
+$entry-border-bottom      : var(--default-entry-border-bottom);
+$ab-input-border-grey	  : var(--default-entry-border-bottom);
+$ab-input-border-orange	  : var(--default-border-error);
+$ab-input-placeholder     : var(--default-text-placeholder);
+$ab-input-border-red      : var(--default-border-error);
+$ab-delete-icon           : var(--default-icon-neutral);//$default-icon-neutral;// + opacity 0.6
 $ab-contact-online-color  : #32d89a;
-$ab-widget-border         : $core-default-separator ;
-$ab-separator             : $core-default-separator ;
+$ab-widget-border         : var(--default-separator);
+$ab-separator             : var(--default-separator);
 /**************************addressbook**************************/
 /**************************Bigchat**************************
 $dgc-messenger-bg         : #F9F9F9;
@@ -317,11 +317,11 @@ $dgc-chat-reply-bg        : rgb(74,144,226,0.1);
 /**************************Bigchat**************************/
 /**************************AdminPanel **************************
 $ap-btn-orange              : #FF7479;   //$default-border-error
-$ap-btn-orange              : $core-default-border-error;
+$ap-btn-orange              : var(--default-border-error);
 $ap-grey-border             : #DDE2E8;
 $ap-status-bg               : #EA4D44;
 /*$ap-import-error-color      : #EA4D44; //$default-text-error   
-$ap-import-error-color      : $core-default-text-error;*
+$ap-import-error-color      : var(--default-text-error);*
 $ap-toggle-switch-on        : #879BFF;
 $ap-toggle-switch-off       : #D2d9DB;
 $ap-toggle-switch-radio     : #4040FF;
@@ -349,7 +349,7 @@ $dgc-overlay-background  : rgb(137, 146, 158, 0.4); //rgb(0,0,0,.55);
 /**************************Video**************************
 $vdo-ctrl-button         : $dgc-delete-bg;
 $vdo-button-accept       : $egreen-soft;
-$vdo-border-grey         : $core-default-entry-border-bottom;//$ab-input-border-grey;
+$vdo-border-grey         : var(--default-entry-border-bottom);//$ab-input-border-grey;
 $vdo-background-color    : $egrey-26;//also in connect
 
 /**************************Video**************************/
@@ -409,7 +409,7 @@ $tooltips-default-background     : #E8E8E8;
 /******************************search-bar*old*******************************/
 /*************************search-bar*****************************************/
 /****************************general items********************************
-$default-user-icon          : $core-default-user-icon ;//#B6BFCA;//$egrey-b6
+$default-user-icon          : var(--default-user-icon);//#B6BFCA;//$egrey-b6
 /*****************************general items********************************/
 /**************************General**************************
 //$default-special-tag-color  : #18a3ac;// #159099;

@@ -19,7 +19,7 @@
   
   &__waiting-screen{
     justify-content: center;
-    @include typo($size: 16px, $line: 1, $color: $core-default-text-reverse);
+    @include typo($size: 16px, $line: 1, $color: var(--default-text-reverse));
     display: flex;
     flex-direction: row;
     width: 100%;

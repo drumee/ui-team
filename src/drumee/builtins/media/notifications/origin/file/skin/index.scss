@@ -15,7 +15,7 @@
     width: 120px;
     cursor: pointer;
     margin-left: 36px;
-    @include typo($size: 11px, $line: 12px, $weight: 400, $color: $core-secondary-text-color );
+    @include typo($size: 11px, $line: 12px, $weight: 400, $color: var(--secondary-text-color) );
     @include overflow-text();
 
     & .note-content {

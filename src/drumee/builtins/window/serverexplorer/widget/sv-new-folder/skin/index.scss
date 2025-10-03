@@ -156,7 +156,7 @@
   &__note{
     &.header {
       margin: 10px 0px 25px 0px;
-      @include typo($size: 18px, $line: 16px, $color: $core-default-text-title);
+      @include typo($size: 18px, $line: 16px, $color: var(--default-text-title));
     }
     &.lable {
       margin: 0px 16px 0px 0px;
@@ -170,7 +170,7 @@
     border: 1px solid transparent;
     .input-details {
       position: absolute;
-      @include typo($line: 29px, $size: 13px, $weight: 300, $color: $core-default-text-error);
+      @include typo($line: 29px, $size: 13px, $weight: 300, $color: var(--default-text-error));
       right: 0px;
       padding: 3px;
     }
@@ -178,15 +178,15 @@
     //  width: 90%; //100%;
       width: calc(100% - 5px);
       margin: 0;
-      border-bottom: 1px solid $core-default-entry-border-bottom;
-      @include typo($line: 29px, $size: 16px, $weight: 400, $color: $core-default-text-color); 
+      border-bottom: 1px solid var(--default-entry-border-bottom);
+      @include typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color)); 
       @include placeholder-input {
-        @include typo($line: 29px, $size: 16px, $weight: 300, $color: $core-default-text-placeholder);
+        @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
       }
       &:focus {
-        border-bottom: 1px solid $core-focus-border-placeholder ;
+        border-bottom: 1px solid var(--focus-border-placeholder);
         @include placeholder-input {
-          @include typo($line: 29px, $size: 16px, $weight: 300, $color: $core-focus-text-placeholder); 
+          @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--focus-text-placeholder)); 
         }
       }
     }

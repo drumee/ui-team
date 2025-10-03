@@ -6,7 +6,7 @@
     width: 300px;
     margin-top: 10px;
     padding: 5px 10px 5px 5px;
-    border-bottom: 1px solid $core-default-separator;
+    border-bottom: 1px solid var(--default-separator);
   }
 
   &__label {
@@ -20,7 +20,7 @@
     height: 100%;
     align-items: start;
     justify-content: space-between;
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     border-radius: $default-border-radius;
 
     .menu-topic-items {
@@ -36,7 +36,7 @@
         content: " ";
         width: 18px;
         height: 18px;
-        background-color: $core-default-background;
+        background-color: var(--default-bg);
         position: absolute;
         left: 21px;
         top: -7px;
@@ -69,8 +69,8 @@
     cursor: pointer;
 
     &[data-radio="on"] {
-      color: $core-default-text-reverse;
-      background-color: $core-default-background-hover;
+      color: var(--default-text-reverse);
+      background-color: var(--default-bg-hover);
       padding: 0 10px;
     }
 

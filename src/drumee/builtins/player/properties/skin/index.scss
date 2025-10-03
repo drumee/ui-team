@@ -8,7 +8,7 @@
 
 .player-props {
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     width: 400px;
     height: 480px;
     top: 45px;
@@ -29,7 +29,7 @@
 
   &__properties {
     &-container {
-      background-color: $core-default-background; // $ewhite;
+      background-color: var(--default-bg); // $ewhite;
       display: flex;
       flex-direction: column;
       height: 100%;
@@ -57,7 +57,7 @@
     &-icon,
     &-attr {
       white-space: nowrap;
-      @include typo($size: 12px, $line: 15px, $color: $core-default-text-color);
+      @include typo($size: 12px, $line: 15px, $color: var(--default-text-color));
       height: 100%;
       align-content: center;
       flex-wrap: wrap;
@@ -104,7 +104,7 @@
     }
 
     .menu-items {
-      background: $core-default-background;
+      background: var(--default-bg);
       border-radius: $default-border-radius;
     }
   }

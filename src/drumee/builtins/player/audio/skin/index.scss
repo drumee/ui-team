@@ -31,7 +31,7 @@
   }
 
   &__header {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     border-bottom: none;
     border-radius: $default-border-radius-top;
     color: $default-text-color;
@@ -89,12 +89,12 @@
     width: 16px;
 
     &:hover {
-      color: $core-default-icon-hover;
+      color: var(--default-icon-hover);
     }
 
     &.loop {
       &[data-active="on"] {
-        color: $core-default-icon-hover;
+        color: var(--default-icon-hover);
       }
     }
   }
