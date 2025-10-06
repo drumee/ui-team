@@ -5,7 +5,7 @@
   }
 
   &.public {
-    background-color: $website-main;
+    background-color: var(--website-main);
     border-radius: 3px;
     padding: 1.5px;
     fill: none;
@@ -15,9 +15,9 @@
       position: absolute;
       top: 0;
       right: 0;
-      border-top: 5px solid $website-main-light;
+      border-top: 5px solid var(--website-main-light);
       border-left: 5px solid transparent;
-      border-right: 5px solid $website-main-light;
+      border-right: 5px solid var(--website-main-light);
       border-radius: 0 3px 0 0;
       height: 0;
       width: 18px;
@@ -40,12 +40,12 @@
     border-bottom-right-radius: 3px;
     border-radius: 3px;
     fill: var(--ewhite);
-    background-color: $sharebox-main;
+    background-color: var(--sharebox-main);
     padding:2.5px;
 
     .media-form__input input {
       background-color: #dd820b;
-      color: $share-default-text-reverse;
+      color: var(--default-text-reverse);
     }
 
     svg.icon {
@@ -57,9 +57,9 @@
       position: absolute;
       top: 0;
       right: 0;
-      border-top: 5px solid $sharebox-main-light;
+      border-top: 5px solid var(--sharebox-main-light);
       border-left: 5px solid transparent;
-      border-right: 5px solid $sharebox-main-light;
+      border-right: 5px solid var(--sharebox-main-light);
       border-radius: 0 3px 0 0;
       height: 0;
       width: 18px;

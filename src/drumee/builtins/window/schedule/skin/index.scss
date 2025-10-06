@@ -88,7 +88,7 @@
   &__title {
     padding: 10px 9px 10px 10px;
     justify-content: center;
-    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $sharebox-main);
+    @include typo($size: 18px, $line: 22px, $weight: 400, $color: var(--sharebox-main));
   }
 
   &__body {

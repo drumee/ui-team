@@ -26,7 +26,7 @@
     }
   }
   &.public {
-    background-color: $website-main;
+    background-color: var(--website-main);
     border-radius: $default-border-radius;//6px;
     .media-form__input input {
       background-color: #45b4bb;
@@ -37,9 +37,9 @@
       position: absolute;
       top: 0;
       right: 0;
-      border-top: 13px solid $website-main-light; 
+      border-top: 13px solid var(--website-main-light); 
       border-left: 13px solid transparent;
-      border-right: 13px solid $website-main-light; 
+      border-right: 13px solid var(--website-main-light); 
       border-radius: 0 6px 0 0;
       height: 0;
       width: 62px;
@@ -58,20 +58,20 @@
   }*/
 
   &.dmz,&.share {
-    background-color: $sharebox-main; 
+    background-color: var(--sharebox-main); 
     border-radius: $default-border-radius;
     .media-form__input input {
       background-color: #dd820b;
-      color: $share-default-text-reverse;
+      color: var(--default-text-reverse);
     }
     &:before {
       content: " ";
       position: absolute;
       top: 0;
       right: 0;
-      border-top: 13px solid $sharebox-main-light;
+      border-top: 13px solid var(--sharebox-main-light);
       border-left: 13px solid transparent;
-      border-right: 13px solid $sharebox-main-light;
+      border-right: 13px solid var(--sharebox-main-light);
       border-radius: 0 6px 0 0;
       height: 0;
       width: 62px;

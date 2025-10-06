@@ -1,18 +1,32 @@
 @import 'mixins/drumee.scss';
 @import 'topbar.scss';
+
+.window-sharebox {
+  --sharebox-main: #EF6500;
+  --sharebox-border: #fa8540;
+  --share-box-default-color: #FCB58C;
+  --share-box-topbar-container: #FA8540;
+  --sharebox-main-background-filename: #ffccaf;
+  --sharebox-notification-cancel-btn-border: #DDE2E8;
+  --sharebox-main-light: #f78d4f;
+  --sharebox-default-icon-error: #ea4d44;
+}
+
 .window-sharebox {
   &__ui {
     &[data-content="folder"] {
-      & .window-sharebox-topbar__icon{
+      & .window-sharebox-topbar__icon {
         display: none;
       }
-      & .window-topbar__title .svg-wrapper{
+
+      & .window-topbar__title .svg-wrapper {
         visibility: hidden;
       }
+
       &::after {
         align-content: center;
-        background-color: $share-background-header;
-        border-radius: $default-border-radius-top;//6px 6px 0 0;
+        background-color: var(--sharebox-main);
+        border-radius: $default-border-radius-top; //6px 6px 0 0;
         content: attr(data-name);
         display: flex;
         flex-direction: column;
@@ -29,12 +43,12 @@
         top: -30px;
         white-space: nowrap;
         width: 190px;
-        box-shadow:var(--shadow-main);//0 0px 8px 0 rgba(63, 79, 117, .06), 0 -1px 16px 0 rgba(86, 65, 113, .10), 0 2px 14px 0 rgba(194, 185, 203, .04);
-        @include typo($size: 12px, $line: 14px, $weight: 400, $color: $share-default-text-reverse);
+        box-shadow: var(--shadow-main); //0 0px 8px 0 rgba(63, 79, 117, .06), 0 -1px 16px 0 rgba(86, 65, 113, .10), 0 2px 14px 0 rgba(194, 185, 203, .04);
+        @include typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-reverse));
       }
-      
+
       &:before {
-        border: 7px solid $share-border-frame;//$sharebox-main;
+        border: 7px solid var(--sharebox-main); //var(--sharebox-main);
         content: " ";
         height: calc(100% + 6px);
         left: -3px;
@@ -44,7 +58,7 @@
         border-top-left-radius: 0px;
         border-bottom-left-radius: 6px;
         border-bottom-right-radius: 6px;
-        border-top-right-radius :6px;
+        border-top-right-radius: 6px;
       }
 
     }
@@ -58,26 +72,30 @@
 
   &__header {
     border-bottom: none;
-    background-color: $share-background-header;//$sharebox-main;
+    background-color: var(--sharebox-main); //var(--sharebox-main);
+
     &[data-content="folder"] {
-      background-color:  $folder-background-header; //$folder-main;
+      background-color: $folder-background-header; //$folder-main;
     }
 
     &-title {
-      @include typo($size:18px,$line:24px,$weight:400,$color:$share-default-text-reverse);
+      @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
       align-items: center;
       max-width: 163px;
 
       .name {
         align-items: flex-start;
+
         @media (min-width: 626px) {
           justify-content: center;
-          max-width:300px;
+          max-width: 300px;
         }
       }
-      .name{
+
+      .name {
         @include overflow-text;
       }
+
       .icon {
         flex-shrink: 0;
         height: 21px;
@@ -90,15 +108,16 @@
 
     &-control {
       .icon {
-        color: $share-default-icon-reverse;     
+        color: var(--default-icon-reverse);
       }
-      
+
       &:hover {
-        color:$share-default-icon-hover;
+        color: var(--default-icon-hover);
       }
     }
   }
-  .window-confirm__ui{
+
+  .window-confirm__ui {
     min-height: 287px;
     background-color: var(--ewhite);
   }

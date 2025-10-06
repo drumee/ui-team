@@ -95,7 +95,7 @@
         }
         &.transfer-box{
           svg{
-            fill:$sharebox-main;//#ef6500;
+            fill:var(--sharebox-main);//#ef6500;
             width: 20px;
           }
         }

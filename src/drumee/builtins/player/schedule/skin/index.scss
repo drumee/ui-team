@@ -51,7 +51,7 @@
   }
 
   &__header {
-    background-color: $sharebox-main;
+    background-color: var(--sharebox-main);
     border-bottom: none;
     border-radius:$default-border-radius-top;
     height: 44px;
@@ -60,7 +60,7 @@
   }
 
   &__title {
-    @include typo($size:16px,$line:30px,$weight:400,$color:$sharebox-main);
+    @include typo($size:16px,$line:30px,$weight:400,$color: var(--sharebox-main));
     justify-content: center;
     padding:20px 9px 0px 10px;
   }

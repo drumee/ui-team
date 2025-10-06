@@ -3,7 +3,7 @@
   height: 44px;
   min-height: 44px;
   border-bottom: none;
-  background-color:$share-background-header;//$sharebox-main;
+  background-color:var(--sharebox-main);//var(--sharebox-main);
     .menu-items{
     background: var(--default-background); 
     // margin-top: 43px;

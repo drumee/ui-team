@@ -67,7 +67,7 @@
   
   &__header {
     justify-content: center;
-    @include typo($line:20px,$size:16px,$weight:400,$color:$sharebox-text-color);
+    @include typo($line:20px,$size:16px,$weight:400,$color: var(--sharebox-main));
   }
 
   &__btn {

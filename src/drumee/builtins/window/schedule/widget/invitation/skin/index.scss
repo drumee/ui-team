@@ -12,7 +12,7 @@
 
   &__title{
     justify-content: center;
-    @include typo($size:16px,$line:22px,$weight:400,$color:$sharebox-text-color);//$size:18px
+    @include typo($size:16px,$line:22px,$weight:400,$color: var(--sharebox-main));//$size:18px
   }
   
   &__main {

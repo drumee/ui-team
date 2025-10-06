@@ -1,19 +1,26 @@
-
 @import 'mixins/drumee.scss';
 @import 'peers.scss';
 @import 'header.scss';
 
-.window-website{
+.window-website {
+  --website-main: #18a3ac;
+  --website-main-light: #45b4bb;
+  --website-main-background-filename: #6dcad1;
+  --website-header-bg: --website-main;
+}
+
+.window-website {
   @import 'main.scss';
 
-  .dialog__wrapper--modal{
+  .dialog__wrapper--modal {
     align-items: center;
     justify-items: center;
-    &[data-state="open"]{
+
+    &[data-state="open"] {
       max-height: calc(100% - 43px);
-      width:100%;
+      width: 100%;
       height: 100%;
-      background-color:$dgc-overlay-background; //rgba(22,22,22, 0.2);
+      background-color: $dgc-overlay-background; //rgba(22,22,22, 0.2);
       left: 0;
       top: 44px;
     }

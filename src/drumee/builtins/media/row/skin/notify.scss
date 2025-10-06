@@ -52,9 +52,9 @@
       }
     }
     &[data-type="public"]{
-      border: $website-notifycount-border 1px solid; //#18a3ac
+      border: var(--website-main) 1px solid; //#18a3ac
       background-color: var(--default-bg);
-      color:$website-text-notification !important; //#18a3ac
+      color:var(--website-main) !important; //#18a3ac
       line-height:16px;
       &[data-hover="on"]{
         border:1px solid var(--ewhite);

@@ -35,12 +35,12 @@
 
     &.share.hub {
       color: var(--default-text-color);
-      background-color: $sharebox-main-background-filename;
+      background-color: var(--sharebox-main-background-filename);
     }
 
     &.public.hub {
       color: var(--default-text-color);
-      background-color: $website-main-background-filename;//#5ea3a8;
+      background-color: var(--website-main-filename-bg);//#5ea3a8;
     }
           
     &.folder {
@@ -105,11 +105,11 @@
     }
 
     &.share.hub {
-      background-color: $sharebox-main-background-filename;
+      background-color: var(--sharebox-main-background-filename);
     }
 
     &.public.hub {
-      background-color: $website-main-background-filename;//#8bc5ca; //#5ea3a8;
+      background-color: var(--website-main-filename-bg);//#8bc5ca; //#5ea3a8;
     }
           
     &.folder {

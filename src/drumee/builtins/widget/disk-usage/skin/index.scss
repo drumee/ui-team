@@ -38,7 +38,7 @@
 
     &.share {
       color: var(--default-icon-reverse);
-      background-color: $sharebox-main;
+      background-color: var(--sharebox-main);
     }
 
     &.private {

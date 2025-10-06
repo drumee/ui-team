@@ -61,7 +61,7 @@
     cursor: pointer;
     &[data-area="dmz"]{
       .inner{
-        @include typo($size: 10px, $weight:500, $line: 14px, $color:$sharebox-main);
+        @include typo($size: 10px, $weight:500, $line: 14px, $color: var(--sharebox-main));
       }
       &.guest{
         .inner{

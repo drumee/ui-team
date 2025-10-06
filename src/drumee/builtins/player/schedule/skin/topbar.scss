@@ -1,6 +1,6 @@
 
 &__main {
-  background-color: $sharebox-main;
+  background-color: var(--sharebox-main);
   border-bottom: none;
   border-radius: $default-border-radius-top;
   cursor: pointer;

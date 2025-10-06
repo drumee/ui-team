@@ -85,12 +85,12 @@
       &.orange,
       &.share,
       &.dmz {
-        color: $share-background-header;
+        color: var(--sharebox-main);
       }
 
       &.website,
       &.public {
-        color: $website-background-header;
+        color: var(--website-header-bg);
       }
     }
 

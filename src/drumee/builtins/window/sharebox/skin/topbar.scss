@@ -19,7 +19,7 @@
     }
 
     &__icon {
-      color: $share-default-icon-reverse;
+      color: var(--default-icon-reverse);
       cursor: pointer;
       height: 16px;
       margin: auto 0px auto 15px;
@@ -27,7 +27,7 @@
       width: 16px;
 
       &:hover {
-        color: $share-default-icon-hover;
+        color: var(--default-icon-hover);
       }
 
       &.link {
@@ -44,8 +44,8 @@
       }
 
       .tooltips {
-        @include typo($size: 12px, $line: 20px, $color: $share-default-text-tooltips);
-        background-color: $share-default-background-tooltips;
+        @include typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
+        background-color: var(--background-tooltips);
         border-radius: $default-border-radius;
         max-height: 90px;
         min-height: 40px;
@@ -73,19 +73,19 @@
       }
 
       &.expiry-time {
-        color: $share-default-icon-reverse;
+        color: var(--default-icon-reverse);
         cursor: help;
         height: 18px;
         width: 18px;
 
         & svg {
-          border: 0.8px solid $share-default-icon-reverse;
+          border: 0.8px solid var(--default-icon-reverse);
           border-radius: 50%;
         }
 
         & .tooltips {
-          @include typo($size: 12px, $line: 20px, $color: $share-default-text-tooltips);
-          background-color: $share-default-background-tooltips;
+          @include typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
+          background-color: var(--background-tooltips);
           border-radius: $default-border-radius;
           max-height: 90px;
           min-height: 40px;
@@ -102,7 +102,7 @@
 
     &__menu-trigger {
       padding: 1px;
-      color: $share-default-icon-reverse; //var(--ewhite);
+      color: var(--default-icon-reverse); //var(--ewhite);
       cursor: pointer;
       width: 16px;
       height: 16px;
@@ -117,7 +117,7 @@
       }
 
       .menu-items {
-        background-color: $share-default-background;
+        background-color: var(--default-background);
         background-color: rgba(241, 227, 244, 0.25);
         border-radius: 4px;
         flex-direction: row;
@@ -130,14 +130,14 @@
       }
 
       &:hover {
-        color: $share-default-background-hover;
+        color: var(--default-background-hover);
       }
     }
 
     &__count {
-      @include typo($size: 8px, $line: 12px, $weight: 400, $color: $sharebox-text-color);
+      @include typo($size: 8px, $line: 12px, $weight: 400, $color: var(--sharebox-main));
       align-items: center;
-      background-color: $share-default-background;
+      background-color: var(--default-background);
       border-radius: 50%;
       height: 12px;
       justify-content: center;

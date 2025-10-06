@@ -213,13 +213,13 @@
 
       &.sharebox {
         svg {
-          color: $sharebox-main;
+          color: var(--sharebox-main);
         }
       }
 
       &.note {
         svg {
-          // color: $sharebox-main;
+          // color: var(--sharebox-main);
           padding: 4px;
         }
       }
@@ -232,7 +232,7 @@
         }
 
         svg {
-          color: $website-main;
+          color: var(--website-main);
         }
       }
     }

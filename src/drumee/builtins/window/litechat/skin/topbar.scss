@@ -43,7 +43,7 @@
   background-color: $teamroom-background; //$dgc-share-room;
   border-radius: 6px 6px 0 0;
   &.dmz {
-    background-color: $sharebox-main;
+    background-color: var(--sharebox-main);
   }
   &-control {
     .icon {

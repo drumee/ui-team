@@ -119,7 +119,7 @@
 
     &.title {
       margin-top: 5px;
-      @include typo($size: 14px, $weight: 300, $line: 16px, $color: $sharebox-text-color);//$sharebox-text
+      @include typo($size: 14px, $weight: 300, $line: 16px, $color: var(--sharebox-main));//$sharebox-text
     }
 
     &.owner-name,

@@ -7,7 +7,7 @@
 
 .widget-invitation-email-item {
 
-  @include typo($size: 14px, $line: 16px, $color: $share-default-text-color);
+  @include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
   height: 35px;
   margin: 1px 0px 0px 0px;
   padding-bottom: 5px;
@@ -17,7 +17,7 @@
   }
 
   &__ui {
-    @include typo($color: $share-default-text-color);
+    @include typo($color: var(--default-text-color));
     background-color: inherit;
     cursor: pointer;
     transition: all 0.1s linear;
@@ -26,10 +26,10 @@
     &:hover,
     &[data-active="active"],
     &[data-radio="on"] {
-      background: $share-default-background-hover ;//var(--eviolet);
+      background: var(--default-background-hover);//var(--eviolet);
       & .profile-icon,
       & .name.note-reader {
-        @include typo($size: 14px, $line: 16px, $color: $share-default-text-hover); // var(--white);
+        @include typo($size: 14px, $line: 16px, $color: var(--default-text-hover)); // var(--white);
       }
     }
     & .options-wrapper {
@@ -41,12 +41,12 @@
         visibility: visible;
       }
       & .option-icons {
-        color: $share-default-icon-reverse; //var(--ewhite);
+        color: var(--default-icon-reverse); //var(--ewhite);
         border: none;
         &.checkbox[data-state="1"] {
           box-shadow: none;
-          color: $share-checkbox-checked-reverse; //var(--ewhite);
-          border: 1px solid $share-checkbox-checked-border-reverse;
+          color: var(--checkbox-checked-reverse); //var(--ewhite);
+          border: 1px solid var(--checkbox-checked-border-reverse);
         }
       }
     }
@@ -76,7 +76,7 @@
   }
 
   &__icon {
-    color: $share-default-icon-neutral; //var(--egrey-89);
+    color: var(--default-icon-neutral); //var(--egrey-89);
     cursor: pointer;
     &.option-icons {
       height: 15px;
@@ -112,7 +112,7 @@
   }
 
   &__profileicon {
-    background: $share-default-user-icon;//$default-icon-neutral;//var(--egrey-8d);
+    background: var(--default-user-icon);//$default-icon-neutral;//var(--egrey-8d);
     opacity: 0.6;
     width: 29px;//26px;
     height:29px;// 26px;
@@ -124,12 +124,12 @@
     margin-right: 5px;
     margin-left: 3px;
     .drumee-text{
-      @include typo($size: 15px,$weight:400, $color: $share-default-text-color);//$default-icon-neutral);
+      @include typo($size: 15px,$weight:400, $color: var(--default-text-color));//$default-icon-neutral);
       opacity:1
     }
   }
   &__mid-wrapper {
-    @include typo($size: 14px, $color: $share-default-text-color);
+    @include typo($size: 14px, $color: var(--default-text-color));
     overflow: hidden;
     flex: 1;
     max-width: calc(100% - 54px);

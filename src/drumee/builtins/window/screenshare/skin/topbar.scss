@@ -12,7 +12,7 @@
         background-color: $bigchat-background-header;
       }
       &[data-area="dmz"] {
-        background-color: $share-background-header;
+        background-color: var(--sharebox-main);
       }
       &[data-area="private"] {
         background-color: $team-background-header;

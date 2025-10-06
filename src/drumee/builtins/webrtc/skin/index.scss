@@ -114,7 +114,7 @@
   }
 
   &[data-area="dmz"] {
-    background-color: $sharebox-main;
+    background-color: var(--sharebox-main);
 
     &[data-role="attendee"] {
       background-color: #3E5093;

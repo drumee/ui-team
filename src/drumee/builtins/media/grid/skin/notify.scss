@@ -52,9 +52,9 @@
       line-height:15px;
     }
     &[data-type="share"]{
-      border: $share-notifycount-border 2px solid; //1.5px
-      background-color: $share-default-background;//white;
-      color:$share-text-notification;//$sharebox-text-color;
+      border: var(--sharebox-main-light) 2px solid; //1.5px
+      background-color: var(--default-background);//white;
+      color:var(--sharebox-main);//var(--sharebox-main);
       line-height:15px;
     }
   }

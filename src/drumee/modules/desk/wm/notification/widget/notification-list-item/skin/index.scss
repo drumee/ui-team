@@ -125,7 +125,7 @@
       }
 
       &.share {// #orange
-        color: $share-background-header;
+        color: var(--sharebox-main);
       }
 
       &.green {

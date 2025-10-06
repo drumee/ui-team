@@ -29,14 +29,14 @@
   }
 
   &.public {
-    background-color: $website-main;
+    background-color: var(--website-main);
     border-radius: $default-border-radius;// 6px;
     
     &:before {
       border-left: 13px solid transparent;
       border-radius: 0 6px 0 0;
-      border-right: 13px solid $website-main-light; 
-      border-top: 13px solid $website-main-light; 
+      border-right: 13px solid var(--website-main-light); 
+      border-top: 13px solid var(--website-main-light); 
       content: " ";
       height: 0;
       position: absolute;
@@ -47,7 +47,7 @@
   }
 
   &.dmz, &.share {
-    background-color: $sharebox-main;
+    background-color: var(--sharebox-main);
     border-radius: $default-border-radius;
 
     &:before {

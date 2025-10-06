@@ -14,7 +14,7 @@
   height: 44px;
   min-height: 44px;
   border-bottom: none;
-  background-color: $sharebox-main;
+  background-color: var(--sharebox-main);
   .menu-items{
     background: var(--default-bg);  
     border-radius:$default-border-radius;
