@@ -87,9 +87,9 @@
 
   &__button {
     align-items: center;
-    background-color: $btn-rollback-background;
+    background-color: var(--btn-rollback-background);
     border-radius: $default-border-radius;
-    border: 1px solid $btn-rollback-border;
+    border: 1px solid var(--btn-rollback-border);
     cursor: pointer;
     height: 28px;
     justify-content: center;
@@ -97,11 +97,11 @@
     min-width: 68px;
     width: auto;
     padding: 14px;
-    @include typo($size: 15px, $line:20px, $color: $btn-rollback-text);
+    @include typo($size: 15px, $line:20px, $color: var(--btn-rollback-text));
 
     &:hover {
-      border: 1px solid $btn-rollback-border-hover;
-      color:$btn-rollback-text-hover;
+      border: 1px solid var(--btn-rollback-border-hover);
+      color:var(--btn-rollback-text-hover);
     }
   }
 
@@ -180,7 +180,7 @@
       width: 20px;
 
       &:hover {
-        background: $state-1-typo ;
+        background: var(--state-1-typo);
         color: var(--white);
       }
     }

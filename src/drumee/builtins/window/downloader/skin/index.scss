@@ -80,24 +80,24 @@
 
     .button {
       border-radius:$default-border-radius;
-      @include typo($size: 16px, $line: 19px, $color: $btn-commit-text);//$size: 15px,
-      background-color:$btn-commit-background;// var(--egreen-soft);
+      @include typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));//$size: 15px,
+      background-color:var(--btn-commit-background);// var(--egreen-soft);
       cursor: pointer;
       justify-content: center;
       padding : 10px;
       width:160px;// 150px;
       height:40px;
       &:hover{
-        background-color:$btn-commit-background-hover;
+        background-color:var(--btn-commit-background-hover);
       }
 
       &.cancel {
-        @include typo($size: 15px, $color: $btn-rollback-text);
-        background-color: $btn-rollback-background;
-        border: 1px solid $btn-rollback-border;
+        @include typo($size: 15px, $color: var(--btn-rollback-text));
+        background-color: var(--btn-rollback-background);
+        border: 1px solid var(--btn-rollback-border);
         &:hover {
-          border: 2px solid $btn-rollback-border-hover;
-          color: $btn-rollback-text-hover;     
+          border: 2px solid var(--btn-rollback-border-hover);
+          color: var(--btn-rollback-text-hover);     
         }
       }
     }

@@ -162,32 +162,32 @@
 
       & .button-cancel{
        // background: var(--egrey-b6); //var(--egrey-89);
-        border:1px solid $btn-rollback-border  ;
+        border:1px solid var(--btn-rollback-border);
         padding:0 12px;
         justify-content: center;
         cursor:pointer;
         margin-right: 4%;
         margin-left: 0;
-        @include typo($size: 15px, $line: 20px, $color: $btn-rollback-text );//$btn-commit-text);
+        @include typo($size: 15px, $line: 20px, $color: var(--btn-rollback-text) );//var(--btn-commit-text));
 
         &:hover {
          // background: var(--egrey-78);
-         border:2px solid $btn-rollback-border-hover ;
-         color:$btn-rollback-text-hover;  
+         border:2px solid var(--btn-rollback-border-hover);
+         color:var(--btn-rollback-text-hover);  
         }
       }
 
       & .button-confirm {     
-        background:$btn-commit-background;       
-       // border:1px solid $btn-rollback-border;//$ab-input-border-grey; //$dgc-chatroom-scbtn; 
+        background:var(--btn-commit-background);       
+       // border:1px solid var(--btn-rollback-border);//$ab-input-border-grey; //$dgc-chatroom-scbtn; 
         padding:0 12px;
         justify-content: center;
         cursor:pointer;
         margin-left: 4%;
-        @include typo($size: 15px, $line: 19px, $color: $btn-commit-text); 
+        @include typo($size: 15px, $line: 19px, $color: var(--btn-commit-text)); 
 
         &:hover {
-          background-color: $btn-commit-background-hover ;
+          background-color: var(--btn-commit-background-hover);
          // background: var(--white-f9);
         }
       }

@@ -70,15 +70,15 @@
 
     &[data-state="0"] {
       .checkbox {
-        border: 1px solid $checkbox-unselected-color;
+        border: 1px solid var(--checkbox-unselected-color);
         color: var(--white);
       }
     }
 
     &[data-state="1"] {
       .checkbox {
-        color: $checkbox-selected-color;
-        border: 1px solid $checkbox-selected-color;
+        color: var(--checkbox-selected-color);
+        border: 1px solid var(--checkbox-selected-color);
       }
     }
 

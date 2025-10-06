@@ -31,7 +31,7 @@
       height: 15px;
       top: -7px;
       padding : 1px;
-      border: 1px solid $btn-rollback-border;
+      border: 1px solid var(--btn-rollback-border);
     }
   }
 
@@ -207,13 +207,13 @@
     margin: 0 10px;
 
     &.button-cancel {
-      @include typo($line: 22px, $size: 16px, $weight: 300, $color: $btn-rollback-text);
-      border: 1px solid $btn-rollback-border;
+      @include typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-rollback-text));
+      border: 1px solid var(--btn-rollback-border);
     }
 
     &.button-confirm {
-      background-color: $btn-commit-background;
-      @include typo($line: 22px, $size: 16px, $weight: 300, $color: $btn-commit-text);
+      background-color: var(--btn-commit-background);
+      @include typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-commit-text));
     }
   }
 

@@ -79,23 +79,23 @@
   
     &__button-cancel {
       border-radius: $default-border-radius;
-      border: 1px solid $btn-rollback-border; 
-      color: $btn-rollback-text; 
+      border: 1px solid var(--btn-rollback-border); 
+      color: var(--btn-rollback-text); 
       margin-right: 50px;
       &:hover{
-        border:2px solid $btn-rollback-border-hover; 
-        color: $btn-rollback-text-hover;    
+        border:2px solid var(--btn-rollback-border-hover); 
+        color: var(--btn-rollback-text-hover);    
       }
     }
   
     &__button-confirm {
-      background-color: $btn-commit-background;      
-      border: 1px solid  $btn-commit-border ;
+      background-color: var(--btn-commit-background);      
+      border: 1px solid  var(--btn-commit-border);
       border-radius: $default-border-radius;
       color: var(--ewhite);
       &:hover{
-        background-color:$btn-commit-border-hover;
-        border-color: $btn-commit-background-hover;
+        background-color:var(--btn-commit-border-hover);
+        border-color: var(--btn-commit-background-hover);
       }
     }
   }

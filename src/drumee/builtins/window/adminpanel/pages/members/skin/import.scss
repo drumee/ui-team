@@ -106,11 +106,11 @@
   width: 115px;
 
   &.cancel-btn {
-    @include typo($size: 16px, $color: $btn-rollback-text);
-    border: 1px solid $btn-rollback-border;
+    @include typo($size: 16px, $color: var(--btn-rollback-text));
+    border: 1px solid var(--btn-rollback-border);
     &:hover{
-      border: 2px solid $btn-rollback-border-hover;
-      color:$btn-rollback-text-hover;   
+      border: 2px solid var(--btn-rollback-border-hover);
+      color:var(--btn-rollback-text-hover);   
     }
   }
 }
@@ -164,25 +164,25 @@
     //@extend: 45px;
   & .button-confirm {
     border-radius:$default-border-radius;
-    @include typo($size: 16px, $line: 24px, $color:$btn-commit-text);
+    @include typo($size: 16px, $line: 24px, $color: var(--btn-commit-text));
     align-items: center;
-    background: $btn-commit-background;   
+    background: var(--btn-commit-background);   
     height:35px; 
     justify-content: center;
     margin-top: 0px !important;
     min-width:115px;
     padding: 0px 15px;//5px;
     &:hover{
-      background-color:$btn-commit-background-hover ;
+      background-color:var(--btn-commit-background-hover);
     }
   }
 
   & .button-cancel {
     border-radius:$default-border-radius;
-    @include typo($size: 16px, $line: 24px, $color: $btn-rollback-text );
+    @include typo($size: 16px, $line: 24px, $color: var(--btn-rollback-text) );
     align-items: center;
-    background: $btn-rollback-background   ;
-    border: 1px solid $btn-rollback-border ;
+    background: var(--btn-rollback-background);
+    border: 1px solid var(--btn-rollback-border);
     height: 35px;
     justify-content: center;
     margin-right: 5%;
@@ -190,8 +190,8 @@
     min-width: 115px;
     padding: 0px 5px;
     &:hover{
-      border:2px solid $btn-rollback-border-hover ;
-      color:$btn-rollback-text-hover;    
+      border:2px solid var(--btn-rollback-border-hover);
+      color:var(--btn-rollback-text-hover);    
     }
   }
 }

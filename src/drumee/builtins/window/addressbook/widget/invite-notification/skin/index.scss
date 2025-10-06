@@ -147,40 +147,40 @@
   
   &__button-cancel {
     border-radius: var(--border-radius);
-    border: 1px solid $btn-rollback-border ;
-    @include typo($size: 16px, $weight: 300, $line: 19px, $color: $btn-rollback-text);
+    border: 1px solid var(--btn-rollback-border);
+    @include typo($size: 16px, $weight: 300, $line: 19px, $color: var(--btn-rollback-text));
 
     &:hover {
-      border:2px solid $btn-rollback-border-hover ;
-      color: $btn-rollback-text-hover;     
+      border:2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);     
     }
   }
   
   &__button-confirm {
-    background-color: $btn-commit-background;  
+    background-color: var(--btn-commit-background);  
     border-radius: var(--border-radius);
-    border: 1px solid $btn-commit-border ;
+    border: 1px solid var(--btn-commit-border);
     margin-left: 70px;
-    @include typo($size: 16px, $line: 19px, $color: $btn-commit-text);
+    @include typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));
 
     &:hover {
-      background-color:$btn-commit-background-hover ;
-      border-color: $btn-commit-border-hover  ;
+      background-color:var(--btn-commit-background-hover);
+      border-color: var(--btn-commit-border-hover);
     }
   
     &.informed {
       align-items: center;
-      background-color: $btn-rollback-background;
+      background-color: var(--btn-rollback-background);
       border-radius: var(--border-radius); 
-      border: 1px solid $btn-rollback-border;
+      border: 1px solid var(--btn-rollback-border);
       height: 28px;
       margin-left: 0px;
       width: 68px;
-      @include typo($size: 14px, $line: 19px, $color: $btn-rollback-text); //$weight: 300,
+      @include typo($size: 14px, $line: 19px, $color: var(--btn-rollback-text)); //$weight: 300,
 
       &:hover {
-        border:2px solid $btn-rollback-border-hover;
-        color: $btn-rollback-text-hover; 
+        border:2px solid var(--btn-rollback-border-hover);
+        color: var(--btn-rollback-text-hover); 
       }
     }
   }

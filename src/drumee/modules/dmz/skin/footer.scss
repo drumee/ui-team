@@ -154,8 +154,8 @@
   }
 
   &__button-video {
-    background-color: $btn-rollback-background;
-    color: $btn-rollback-text-hover;
+    background-color: var(--btn-rollback-background);
+    color: var(--btn-rollback-text-hover);
   }
 
   &__banner-desk {

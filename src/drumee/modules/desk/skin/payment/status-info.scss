@@ -68,11 +68,11 @@
   }
 
   &__btn-ok {
-    @include typo($size:16px, $line:28px, $color:$btn-rollback-text);
+    @include typo($size:16px, $line:28px, $color: var(--btn-rollback-text));
     align-items: center;
     cursor: pointer;
-    background-color: $btn-rollback-background;
-    border: 1px solid $btn-rollback-border ;   
+    background-color: var(--btn-rollback-background);
+    border: 1px solid var(--btn-rollback-border);   
     border-radius: $default-border-radius;
     height: 32px;
     justify-content: center;
@@ -80,8 +80,8 @@
     width: 90px;
 
     &:hover{
-      border: 2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
 }

@@ -148,12 +148,12 @@
   }
 
   &__button.first {
-    border: 1px solid $btn-rollback-border;
-    @include typo($size: 16px, $line: 18px, $color: $btn-rollback-text );
+    border: 1px solid var(--btn-rollback-border);
+    @include typo($size: 16px, $line: 18px, $color: var(--btn-rollback-text) );
 
     &:hover {
-      border: 2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
 
     &.forbiden {
@@ -165,12 +165,12 @@
   }
 
   &__button.normal {
-    background-color: $btn-commit-background;
+    background-color: var(--btn-commit-background);
     border: 0px;
-    @include typo($size: 16px, $line: 18px, $color: $btn-commit-text);
+    @include typo($size: 16px, $line: 18px, $color: var(--btn-commit-text));
 
     &:hover {
-      background-color: $btn-commit-background-hover;
+      background-color: var(--btn-commit-background-hover);
     }
 
     &.large {
@@ -181,12 +181,12 @@
   }
 
   &__button.danger {
-    background-color: $btn-caution-background;
+    background-color: var(--btn-caution-background);
     border: 0px;
-    @include typo($size: 16px, $line: 18px, $color: $btn-caution-text);
+    @include typo($size: 16px, $line: 18px, $color: var(--btn-caution-text));
 
     &:hover {
-      background-color: $btn-caution-background-hover ;
+      background-color: var(--btn-caution-background-hover);
     }
   }
 }

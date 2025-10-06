@@ -144,7 +144,7 @@
     bottom: 0;
     position : fixed !important;
     .sidebox {
-        // background-color : $sidebox-bg;
+        // background-color : var(--sidebox-bg);
         height: 100% !important;
         //padding: 11px 10px 20px;
         // width: 202px;
@@ -165,16 +165,16 @@
         height: 500px !important;
         position: absolute;
         top : 100%;
-        background-color: $sidebox-bg !important;
+        background-color: var(--sidebox-bg) !important;
     }
     // .slimScrollBar {
-    //     // background-color: $sidebox-page-active !important;
+    //     // background-color: var(--sidebox-page-active) !important;
     //     // height: 74px !important;
     //     // opacity: 1 !important;
     //     // width: 5px !important;
     //     // @include vendor(border-radius,1.33px !important);
     //     // &:hover {
-    //     //     background-color: $sidebox-page-hover !important;
+    //     //     background-color: var(--sidebox-page-hover) !important;
     //     // }
     // }
     .overview {
@@ -188,7 +188,7 @@
     position : absolute;
 }
 .page-new {
-    background-color: $sidebox-newpage-add;
+    background-color: var(--sidebox-newpage-add);
     color: white;
     cursor: pointer;
     height: 30px!important;
@@ -197,7 +197,7 @@
     width: 30px!important;
     @include vendor(border-radius,50%);
     &:hover, &:active {
-        background-color: $sidebox-newpage-add-hover;
+        background-color: var(--sidebox-newpage-add-hover);
     }
 }
 .page-entry {
@@ -206,7 +206,7 @@
     position: absolute;
     top: 0;
     .entry {
-        background-color: $sidebox-page-active;
+        background-color: var(--sidebox-page-active);
         height: 100%;
         padding: 7px 10px;
         width: 100%;
@@ -220,7 +220,7 @@
             margin-bottom: -1px;
         }
         input {
-            background-color: $sidebox-page-rename-bg;
+            background-color: var(--sidebox-page-rename-bg);
             border: none;
             //border-bottom: 1px dashed white;
             color: white;
@@ -242,7 +242,7 @@
     }
 }
 .page-icon {
-    //background-color: $sidebox-page;
+    //background-color: var(--sidebox-page);
     cursor: pointer;
     display: block;
     //height: 23px;
@@ -270,12 +270,12 @@
       position: absolute;
       top: 0;
       right: 0;
-      border-top: 10px solid $sidebox-bg;
-      border-left: 10px solid $sidebox-page;
+      border-top: 10px solid var(--sidebox-bg);
+      border-left: 10px solid var(--sidebox-page);
             width: 0;
             }*/
     &:hover {
-        //background-color: $sidebox-page-hover;
+        //background-color: var(--sidebox-page-hover);
         .page-name {
             padding: 4px 43px 4px 14px;
         }
@@ -284,7 +284,7 @@
         margin: 11px 0 0 20px;
     }
     /*&:active, */ &[data-selected="on"] {
-        background-color: $sidebox-page-active;
+        background-color: var(--sidebox-page-active);
     }
     .page-name {
         background-color: transparent;
@@ -309,7 +309,7 @@
     }
 }
 .page-settings {
-    //background-color: $sidebox-page-hover;
+    //background-color: var(--sidebox-page-hover);
     position: absolute;
     right: 7px;
     top: 0;
@@ -333,7 +333,7 @@
         }
     }
     // &:active {
-    //     //background-color: $sidebox-page-active;
+    //     //background-color: var(--sidebox-page-active);
     // }
 }
 
@@ -346,11 +346,11 @@
         cursor: pointer;
         text-transform: initial;
         height: 20px;
-        @include title3($color:$sidebox-block-header,$line:20px);
+        @include title3($color: var(--sidebox-block-header),$line:20px);
     }
     .topic-new {
-        background-color: $sidebox-block-header;
-        color: $sidebox-bg;
+        background-color: var(--sidebox-block-header);
+        color: var(--sidebox-bg);
         @include vendor(border-radius,50%);
     }
     .lines-svg.svg-wrapper {

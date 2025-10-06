@@ -73,19 +73,19 @@
   &__btn {
     border-radius: $default-border-radius;//6px; 
     cursor: pointer;
-    @include typo($line:25px,$size:16px,$weight:400,$color:$btn-rollback-text);//$size:14px
+    @include typo($line:25px,$size:16px,$weight:400,$color: var(--btn-rollback-text));//$size:14px
     padding: 0 12px;
     margin: auto;
     //min-width: 101px;
     width: 110px;
     height: 32px;//28px; //27px;
-    border: 1px solid $btn-rollback-border;
+    border: 1px solid var(--btn-rollback-border);
     border-radius: 6px;
     justify-content: center;
     align-items: center;
     &:hover{
-      border: 2px solid $btn-rollback-border-hover;
-      color:$btn-rollback-text-hover;    
+      border: 2px solid var(--btn-rollback-border-hover);
+      color:var(--btn-rollback-text-hover);    
     }
   }
   &__link {

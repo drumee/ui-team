@@ -12,7 +12,7 @@
     width: 100%;
     min-height: 300px;
     max-width: 700px;
-    background-color: $account-default-background;   //$popup-background;
+    background-color: $account-default-background;   //var(--popup-background);
     .drumee-text.inner{
       justify-content: center;
       align-items: center;
@@ -70,9 +70,9 @@
       margin: auto;
       &[data-state="0"]{
         .step-number{
-          color:$state-0-text;
-          border: 1px solid $state-0-border;
-          background-color:$state-0-background;
+          color:var(--state-0-text);
+          border: 1px solid var(--state-0-border);
+          background-color:var(--state-0-background);
          // padding-top:8px;
           //opacity: 0.7;
         }
@@ -83,9 +83,9 @@
       height:30px;
       border-radius:50%;
       margin: auto;
-      //border: 1px solid $state-1-border;
-      background-color:$state-1-background;
-      @include typo($size:14px,$line:14px,$color:$state-1-text, $weight:300);
+      //border: 1px solid var(--state-1-border);
+      background-color:var(--state-1-background);
+      @include typo($size:14px,$line:14px,$color: var(--state-1-text), $weight:300);
       justify-content: center;
       align-items: center;
       align-content: center;
@@ -94,8 +94,8 @@
     }
     .step-label{
      // font-style: italic;
-     color:$state-1-text;
-      @include typo($size:14px,$line:14px,$color:$account-default-text-color, $weight:300); //$color:$btn-rollback-text
+     color:var(--state-1-text);
+      @include typo($size:14px,$line:14px,$color:$account-default-text-color, $weight:300); //$color: var(--btn-rollback-text)
     }
   }
   &__guidelines{
@@ -103,7 +103,7 @@
     min-height: 174px;
     justify-content: center;
     text-align: left;
-    @include typo($size:16px,$line:24px,$color:$account-default-text-color, $weight:300); //$color:$btn-rollback-text,$weight:400$size:14px
+    @include typo($size:16px,$line:24px,$color:$account-default-text-color, $weight:300); //$color: var(--btn-rollback-text),$weight:400$size:14px
     p{
       margin-bottom: 10px;
     }
@@ -145,15 +145,15 @@
     &[data-state="0"]{
       display: none;
       svg{
-        color:$state-0-typo;
+        color:var(--state-0-typo);
         font-weight: 300;
-        border-color:$state-0-border;     
+        border-color:var(--state-0-border);     
       }
     }
     &[data-state="1"]{
       svg{
         color:$account-checkbox-svg-hover;//$checkbox-svg-hover;
-        border-color:$state-1-border;     
+        border-color:var(--state-1-border);     
       }
     }
     svg{
@@ -179,54 +179,54 @@
     cursor: pointer;
     justify-content: center;
     border-radius:$default-border-radius;
-    @include typo($size:16px,$line:18px,$color:$btn-rollback-text);//$weight:300
+    @include typo($size:16px,$line:18px,$color: var(--btn-rollback-text));//$weight:300
     //width: 170px;
-    color:$btn-rollback-text;
-    background-color: $btn-rollback-background;
-    border: 1px solid $btn-rollback-border;
+    color:var(--btn-rollback-text);
+    background-color: var(--btn-rollback-background);
+    border: 1px solid var(--btn-rollback-border);
     margin-right: 2%;
     margin-left: 2%;
   /*  &.cancel{
       margin-right: 4%;
-  //     color:$btn-rollback-text;
-  //     background-color: $btn-rollback-background;
-  //     border: 1px solid $btn-rollback-border;
+  //     color:var(--btn-rollback-text);
+  //     background-color: var(--btn-rollback-background);
+  //     border: 1px solid var(--btn-rollback-border);
      }*/
   &:hover{
-    color: $btn-rollback-text-hover;  ;
-    border: 2px solid $btn-rollback-border-hover ;
+    color: var(--btn-rollback-text-hover);  ;
+    border: 2px solid var(--btn-rollback-border-hover);
   }
     &.go{
       width: 68px;
       height: 28px;
-      color: $btn-commit-text;
-      background-color: $btn-commit-background;
-      border:1px solid $btn-commit-border;
+      color: var(--btn-commit-text);
+      background-color: var(--btn-commit-background);
+      border:1px solid var(--btn-commit-border);
     }
     &.download, &.continue{
-      color: $btn-commit-text;
-      background-color: $btn-commit-background;
+      color: var(--btn-commit-text);
+      background-color: var(--btn-commit-background);
       &:hover{
-        background-color:$btn-commit-background-hover ;
-        border:1px solid $btn-commit-border-hover ;
+        background-color:var(--btn-commit-background-hover);
+        border:1px solid var(--btn-commit-border-hover);
       }
     }
     &.delete{
-      color: $btn-caution-text;
-      background-color: $btn-caution-background;
-      border:1px solid $btn-caution-border ;
+      color: var(--btn-caution-text);
+      background-color: var(--btn-caution-background);
+      border:1px solid var(--btn-caution-border);
       &:hover{
-        background-color:$btn-caution-background-hover ;  
-        border:1px solid $btn-caution-border-hover ;
+        background-color:var(--btn-caution-background-hover);  
+        border:1px solid var(--btn-caution-border-hover);
       }
     }
     &[data-role="commit"]{
-      color: $btn-commit-text;
-      background-color: $btn-commit-background;
-      border-color: $btn-commit-border;
+      color: var(--btn-commit-text);
+      background-color: var(--btn-commit-background);
+      border-color: var(--btn-commit-border);
       &:hover{
-        border-color:$btn-commit-border-hover;
-        background-color:$btn-commit-background-hover ;  
+        border-color:var(--btn-commit-border-hover);
+        background-color:var(--btn-commit-background-hover);  
       }
     }
     &[data-state="0"]{

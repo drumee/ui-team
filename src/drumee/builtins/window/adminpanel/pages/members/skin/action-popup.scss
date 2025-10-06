@@ -184,17 +184,17 @@
 
     &__button-ok {
       border-radius: $default-border-radius;
-      @include typo($size: 16px, $color: $btn-rollback-text);
+      @include typo($size: 16px, $color: var(--btn-rollback-text));
       align-items: center;
-      border: 1px solid $btn-rollback-border ;
+      border: 1px solid var(--btn-rollback-border);
       height: 32px; //32px;
       justify-content: center;
       margin-top: 36px;
       width: 90px; // 110px;
 
       &:hover {
-        border: 2px solid $btn-rollback-border-hover;
-        @include typo($size: 16px, $color: $btn-rollback-text-hover);
+        border: 2px solid var(--btn-rollback-border-hover);
+        @include typo($size: 16px, $color: var(--btn-rollback-text)-hover);
 
       }
     }

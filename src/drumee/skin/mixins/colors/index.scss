@@ -17,7 +17,7 @@
 @import 'team';
 @import 'dmz';
 @import 'helpdesk';
-@import 'drumee-transfer';
+// @import 'drumee-transfer';
 
 
 /************************************************************
@@ -52,9 +52,9 @@
 // $default-separator            : $core-default-separator;
 
 /**scrollbar**/
-$default-scrollbar-color :rgb(250 133 64 / 60%); //rgb(250, 133, 64, 0.6);
-$desk-scrollbar-color: $default-scrollbar-color;
-$default-scrollbar-white : rgb(255 255 255);
+// $default-scrollbar-color :rgb(250 133 64 / 60%); //rgb(250, 133, 64, 0.6);
+// $desk-scrollbar-color: $default-scrollbar-color;
+// $default-scrollbar-white : rgb(255 255 255);
 
 /************************ button : colors used**********************/
 $btn-rollback-text               : #89929e; //$egrey-89

@@ -83,24 +83,24 @@
     }
   
     &__button-cancel {
-      border: 1px solid $btn-rollback-border;
-      color: $btn-rollback-text;
+      border: 1px solid var(--btn-rollback-border);
+      color: var(--btn-rollback-text);
       margin-right: 50px;
 
       &:hover {
-        border:2px solid $btn-rollback-border-hover;
-        color: $btn-rollback-text-hover; 
+        border:2px solid var(--btn-rollback-border-hover);
+        color: var(--btn-rollback-text-hover); 
       }  
     }
   
     &__button-confirm {
-      background-color: $btn-commit-background  !important;
-      border: 1px solid $btn-commit-border ;
-      color: $btn-commit-text;
+      background-color: var(--btn-commit-background)  !important;
+      border: 1px solid var(--btn-commit-border);
+      color: var(--btn-commit-text);
 
       &:hover {
-        background-color:$btn-commit-background-hover;
-        border-color: $btn-commit-border-hover;
+        background-color:var(--btn-commit-background-hover);
+        border-color: var(--btn-commit-border-hover);
       }
     }
   }

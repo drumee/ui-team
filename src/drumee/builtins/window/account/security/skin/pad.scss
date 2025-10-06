@@ -79,7 +79,7 @@
     width: max-content; //115px;
     padding: 0 24px; //0 7px;
     z-index: 1;
-    @include typo($size: 16px, $line: 35px, $color: $btn-commit-text);
+    @include typo($size: 16px, $line: 35px, $color: var(--btn-commit-text));
 
     &.pass {
       border: 1px solid $account-pass-color;
@@ -363,9 +363,9 @@
     width: 40px;
 
     &.btn--go {
-      background-color: $btn-commit-background;
+      background-color: var(--btn-commit-background);
       border-radius: 6px;
-      border: 1px solid $btn-commit-border;
+      border: 1px solid var(--btn-commit-border);
       height: 24px;
       margin-bottom: auto;
       margin-left: 0;

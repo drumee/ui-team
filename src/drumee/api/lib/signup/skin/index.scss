@@ -138,7 +138,7 @@
       opacity: 1;
       pointer-events:auto;
       &:hover {
-        background-color: $btn-commit-background-hover;
+        background-color: var(--btn-commit-background-hover);
       }
     }
     &[data-error="1"]{

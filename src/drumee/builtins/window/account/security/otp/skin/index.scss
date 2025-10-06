@@ -83,7 +83,7 @@
     flex-wrap: wrap;
     justify-content: center;
     align-content: center;
-    @include typo($size: 16px, $line: 35px, $color: $btn-commit-text);
+    @include typo($size: 16px, $line: 35px, $color: var(--btn-commit-text));
   }
 
   &__selector {

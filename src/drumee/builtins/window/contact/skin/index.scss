@@ -92,23 +92,23 @@
   }
 
   &__button-cancel {
-    border: 1px solid $btn-rollback-border; //#f1f1f6;
+    border: 1px solid var(--btn-rollback-border); //#f1f1f6;
     border-radius: 6px;//$default-border-radius;
-    color: $btn-rollback-text;// #89929e;
+    color: var(--btn-rollback-text);// #89929e;
     margin-right: 50px;
     &:hover{
-      border:2px solid $btn-rollback-border-hover ;
-      color: $btn-rollback-text-hover;  
+      border:2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);  
     }
   }
 
   &__button-confirm {
-    background-color:$btn-commit-background; 
+    background-color:var(--btn-commit-background); 
     border-radius: 6px;//$default-border-radius;
-    color: $btn-commit-text ;
+    color: var(--btn-commit-text);
     width: auto;
     &:hover{
-      background-color:$btn-commit-background-hover; 
+      background-color:var(--btn-commit-background-hover); 
     }
   }
 }

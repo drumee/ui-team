@@ -188,15 +188,15 @@
 
   &--confirm,
   &--go {
-    background-color: $btn-commit-background; //#18a3ac;// #18AC72;
-    border: 1px solid $btn-commit-border; //#18a3ac;//#18AC72;
-    @include typo($size: 16px, $line: 25px, $color: $btn-commit-text); //$weight:400
+    background-color: var(--btn-commit-background); //#18a3ac;// #18AC72;
+    border: 1px solid var(--btn-commit-border); //#18a3ac;//#18AC72;
+    @include typo($size: 16px, $line: 25px, $color: var(--btn-commit-text)); //$weight:400
     cursor: pointer;
     pointer-events: all;
 
     &:hover {
-      background-color: $btn-commit-background-hover; // #3fbd8d;
-      border-color: $btn-commit-border-hover; //#3fbd8d;
+      background-color: var(--btn-commit-background-hover); // #3fbd8d;
+      border-color: var(--btn-commit-border-hover); //#3fbd8d;
     }
   }
 

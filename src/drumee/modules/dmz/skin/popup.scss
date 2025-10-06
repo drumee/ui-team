@@ -50,17 +50,17 @@
     @include typo($color: var(--default-text-reverse), $size: 18px, $line: 21px, $weight: 300);
 
     &.go {
-      @include typo($color: $btn-rollback-text, $size: 16px, $line: 21px);
-      border: 1px solid $btn-rollback-border;//var(--white-f6);
+      @include typo($color: var(--btn-rollback-text), $size: 16px, $line: 21px);
+      border: 1px solid var(--btn-rollback-border);//var(--white-f6);
     //  box-shadow: 0 4px 6px 1px rgba(63,79,117,0.13), 0 0 11px 0 rgba(86,65,113,0.08), 0 0 10px 0 rgba(194,185,203,0);
-      color: $btn-rollback-text;//var(--egrey-89);
+      color: var(--btn-rollback-text);//var(--egrey-89);
       cursor:pointer;
       height: 32px;//36px;
       width: 90px;//160px;
       border-radius:$default-border-radius;
       &:hover{
-        border: 2px solid $btn-rollback-border-hover ;
-        color:$btn-rollback-text-hover; 
+        border: 2px solid var(--btn-rollback-border-hover);
+        color:var(--btn-rollback-text-hover); 
       }
     }
   }

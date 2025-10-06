@@ -239,7 +239,7 @@
 
       .buttons {
         margin: 5px 10px;
-        border: 1px solid $btn-rollback-border; // #bdbdbd;
+        border: 1px solid var(--btn-rollback-border); // #bdbdbd;
         flex: 1;
         align-items: center;
         width: 100%;
@@ -248,11 +248,11 @@
         justify-content: center;
         border-radius: $default-border-radius;
         height: 32px;
-        @include typo($size: 14px, $line: 20px, $color: $btn-rollback-text);
+        @include typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text));
 
         &:hover {
-          border: 2px solid $btn-rollback-border-hover;
-          @include typo($size: 14px, $line: 20px, $color: $btn-rollback-text-hover);
+          border: 2px solid var(--btn-rollback-border-hover);
+          @include typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text)-hover);
         }
       }
     }

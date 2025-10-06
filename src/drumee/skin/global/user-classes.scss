@@ -10,51 +10,51 @@
 .helpers__title-styling,
 .helpers__title-template {
   &.heading-1 {
-    color: $editbox-text;
+    color: var(--editbox-text);
     font: bold 36px "Railway";
   }
   &.heading-2 {
-    color: $editbox-text;
+    color: var(--editbox-text);
     font: bold 30px "Bodoni MT";
   }
   &.heading-3 {
-    color: $editbox-text;
+    color: var(--editbox-text);
     font: bold 36px "Century Gothic";
     font-style: italic;
   }
   &.heading-4 {
     font: 28px "Franklin Gothic Heav  y";
     text-decoration: underline;
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.heading-5 {
     font: bold 36px "Shadows Into Light";
     font-style: italic;
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.subheading-1 {
     font: bold 28px "Avenir LT Std 55 Roman";
     text-decoration: underline;
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.subheading-2 {
     font: bold 28px "Avenir LT Std 55 Roman";
     font-style: italic;
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.subheading-3 {
     font: bold 28px "Avenir LT Std 55 Roman";
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.subheading-4 {
     font: bold 28px "Avenir LT Std 55 Roman";
     text-decoration: underline;
     font-style: italic;
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.subheading-5 {
     font: bold 28px "Avenir LT Std 55 Roman";
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
 }
 .helpers__text-template,
@@ -101,48 +101,48 @@
 .helpers__text-styling,
 .helpers__text-template {
   &.heading-1 {
-    color: $editbox-text;
+    color: var(--editbox-text);
     font: bold 18px "Railway";
   } /*not used naymore*/
   &.heading-2 {
-    color: $editbox-text;
+    color: var(--editbox-text);
     font: bold 15px "Bodoni MT";
   }
   &.heading-3 {
-    color: $editbox-text;
+    color: var(--editbox-text);
     font: bold 18px "Century Gothic";
     font-style: italic;
   }
   &.heading-4 {
     font: 14px "Franklin Gothic Heavy";
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.heading-5 {
     font: bold 18px "Shadows Into Light";
     font-style: italic;
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.subheading-1 {
     font: bold 14px "Avenir LT Std 55 Roman";
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.subheading-2 {
     font: bold 14px "Avenir LT Std 55 Roman";
     font-style: italic;
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.subheading-3 {
     font: bold 14px "Avenir LT Std 55 Roman";
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.subheading-4 {
     font: bold 14px "Avenir LT Std 55 Roman";
     font-style: italic;
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
   &.subheading-5 {
     font: bold 14px "Avenir LT Std 55 Roman";
-    color: $editbox-text;
+    color: var(--editbox-text);
   }
 }
 .helpers__button-header {
@@ -485,7 +485,7 @@
 .drumee-style,
 .title.drumee-style {
   &.heading-1 {
-    color: $editbox-text !important;
+    color: var(--editbox-text) !important;
     font: bold 36px "Railway" !important;
   }
   &.heading-2 {
@@ -493,7 +493,7 @@
     font: bold 30px "Bodoni MT" !important;
   }
   &.heading-3 {
-    color: $editbox-text !important;
+    color: var(--editbox-text) !important;
     font: bold 36px "Century Gothic" !important;
     font-style: italic !important;
   }
@@ -564,9 +564,9 @@
     .style-label {
       color: white;
       z-index: 1;
-      //border-left: 2px solid $texteditor-font-hover-border;
-      //border-right: 2px solid $texteditor-font-hover-border;
-      //border: 1px solid $drumee-pink !important;
+      //border-left: 2px solid var(--texteditor-font-hover-border);
+      //border-right: 2px solid var(--texteditor-font-hover-border);
+      //border: 1px solid var(--drumee-pink) !important;
     }
     .button {
       visibility: visible;

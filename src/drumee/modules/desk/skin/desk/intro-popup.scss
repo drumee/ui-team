@@ -101,7 +101,7 @@
 
     &__buttons-wrapper {
       align-items: center;
-      background-color: $btn-commit-background;
+      background-color: var(--btn-commit-background);
       border-radius: 6px;
       cursor: pointer;
       justify-content: center;

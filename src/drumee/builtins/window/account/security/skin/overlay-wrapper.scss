@@ -48,6 +48,6 @@
     width: max-content; //115px;
     padding: 0 24px; //0 7px;
     z-index: 1;
-    @include typo($size: 16px, $line: 35px, $color: $btn-commit-text);
+    @include typo($size: 16px, $line: 35px, $color: var(--btn-commit-text));
   }
 }

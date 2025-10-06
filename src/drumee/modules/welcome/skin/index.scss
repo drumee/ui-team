@@ -437,11 +437,11 @@
       cursor:pointer;
       border-radius: $default-border-radius;
       width: 110px;
-      border:1px solid $btn-rollback-border;
-      @include typo($size:16px, $color:$btn-rollback-text, $line:21px);
+      border:1px solid var(--btn-rollback-border);
+      @include typo($size:16px, $color: var(--btn-rollback-text), $line:21px);
       &:hover{
-        border:2px solid $btn-rollback-border-hover;
-        color: $btn-rollback-text-hover;   
+        border:2px solid var(--btn-rollback-border-hover);
+        color: var(--btn-rollback-text-hover);   
       }
     }
   }

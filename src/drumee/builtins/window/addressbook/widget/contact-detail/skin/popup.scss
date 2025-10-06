@@ -153,43 +153,43 @@
     }
 
     &__button-cancel {
-      @include typo( $size: 16px, $line: 16px, $color: $btn-rollback-text);
+      @include typo( $size: 16px, $line: 16px, $color: var(--btn-rollback-text));
       border-radius:var(--border-radius);
-      border: 1px solid $btn-rollback-border;
+      border: 1px solid var(--btn-rollback-border);
 
       &:hover {
-        border:2px solid $btn-rollback-border-hover;
-        color:$btn-rollback-text-hover; 
+        border:2px solid var(--btn-rollback-border-hover);
+        color:var(--btn-rollback-text-hover); 
       }
     }
 
     &__button-confirm {
-      @include typo( $size: 16px, $line: 16px, $color: $btn-caution-text);
-      background-color:$btn-caution-background;
+      @include typo( $size: 16px, $line: 16px, $color: var(--btn-caution-text));
+      background-color:var(--btn-caution-background);
       border:0px;
       width: 115px;
 
       &:hover {
-        background-color:$btn-caution-background-hover;
+        background-color:var(--btn-caution-background-hover);
       }
 
       &.resend {
-        background-color: $btn-commit-background;
-        color: $btn-commit-text;
+        background-color: var(--btn-commit-background);
+        color: var(--btn-commit-text);
         max-width: 165px;
         width: auto;
         padding: 5px 10px;//5px
         &:hover {
-          background-color: $btn-commit-background-hover; 
+          background-color: var(--btn-commit-background-hover); 
         }
       }
       &.unarchive {
-        background-color: $btn-commit-background;
-        color: $btn-commit-text;
+        background-color: var(--btn-commit-background);
+        color: var(--btn-commit-text);
         width: 115px;
         
         &:hover {
-          background-color: $btn-commit-background-hover; 
+          background-color: var(--btn-commit-background-hover); 
         }
       }
     }
@@ -210,18 +210,18 @@
   }
 
   &__button-ok {
-    @include typo($size: 16px,$color:$btn-rollback-text);
+    @include typo($size: 16px,$color: var(--btn-rollback-text));
     align-items: center;
     border-radius:var(--border-radius);
-    border: 1px solid $btn-rollback-border;
+    border: 1px solid var(--btn-rollback-border);
     height: 35px;
     justify-content: center; 
     margin-top: 36px;
     width: 115px;
     
     &:hover {
-      border:2px solid $btn-rollback-border-hover; 
-      color:$btn-rollback-text-hover;
+      border:2px solid var(--btn-rollback-border-hover); 
+      color:var(--btn-rollback-text-hover);
     }
   }
 

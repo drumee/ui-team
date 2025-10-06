@@ -1,7 +1,7 @@
 @import 'mixins/drumee';
 
 &--submit{
-  background: $btn-commit-background;//var(--egreen);
+  background: var(--btn-commit-background);//var(--egreen);
   width: 110px;
   height: 32px;
   margin: auto;
@@ -11,8 +11,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  @include typo($color:$btn-commit-text,$size:16px,$line:26px); //$weight:300
+  @include typo($color: var(--btn-commit-text),$size:16px,$line:26px); //$weight:300
   &:hover{
-    background-color:$btn-commit-background-hover;
+    background-color:var(--btn-commit-background-hover);
   }
 }

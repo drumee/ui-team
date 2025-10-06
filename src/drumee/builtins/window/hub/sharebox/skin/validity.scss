@@ -39,18 +39,18 @@
         }
 
         &.on {
-          color: $dt-toggle-switch-on;
+          color: var(--switch-toggle-on);
 
           &[data-state="0"] {
-            color: $dt-toggle-switch-off;
+            color: var(--switch-toggle-off);
           }
         }
 
         &.off {
-          color:$dt-toggle-switch-off;
+          color:var(--switch-toggle-off);
 
           &[data-state="0"] {
-            color:$dt-toggle-switch-on;
+            color:var(--switch-toggle-on);
           }
         }
 
@@ -58,7 +58,7 @@
           padding: 0 10px;
 
           & .inner.note-content {
-            background-color: $dt-toggle-background;
+            background-color: var(--switch-toggle-background);
             border-radius: $default-border-radius-small;
             height: 4px;
             width: 24px;
@@ -66,7 +66,7 @@
 
           &::before,
           &::after {
-            background-color: $dt-toggle-switch-radio;
+            background-color: var(--switch-radion-toggle);
             height: 12px;     
             opacity:0.7;
             padding: 4px 0 3px;
@@ -128,10 +128,10 @@
       }
 
       .widget-sharebox-setting-validity__note.btn-ok {
-        background-color: $btn-commit-background-hover;
+        background-color: var(--btn-commit-background-hover);
 
         .drumee-text {
-          background-color:$btn-commit-background-hover;
+          background-color:var(--btn-commit-background-hover);
         }
       }
 
@@ -284,9 +284,9 @@
     }
 
     &.btn-ok {
-      @include typo($size: 12px, $color:$btn-commit-text);
+      @include typo($size: 12px, $color: var(--btn-commit-text));
       align-items: center;
-      background: $btn-commit-background;
+      background: var(--btn-commit-background);
       border-radius: $default-border-radius;
       cursor: pointer;
       justify-content: center;
@@ -296,7 +296,7 @@
       width: 26px;
       
       &:hover {
-        background-color:$btn-commit-background-hover;
+        background-color:var(--btn-commit-background-hover);
       }
 
       &.first {

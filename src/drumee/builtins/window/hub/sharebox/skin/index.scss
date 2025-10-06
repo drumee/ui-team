@@ -182,7 +182,7 @@
         border-radius: $default-border-radius;
         top: 5px;
         &:hover {
-          background-color: $btn-commit-background-hover;
+          background-color: var(--btn-commit-background-hover);
         }
       }
       &__icon {

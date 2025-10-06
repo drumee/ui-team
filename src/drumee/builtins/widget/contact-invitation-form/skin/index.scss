@@ -166,25 +166,25 @@
   }
 
   &__button-cancel {
-    @include typo($weight: 300, $color: $btn-rollback-text);
-    border: 1px solid $btn-rollback-border;
+    @include typo($weight: 300, $color: var(--btn-rollback-text));
+    border: 1px solid var(--btn-rollback-border);
     margin-right: 17px;
 
     &:hover {
-      border:2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover; 
+      border:2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover); 
     }
   }
 
   &__button-confirm {
-    @include typo($color: $btn-commit-text);
-    background-color: $btn-commit-background ;
-    border: 1px solid $btn-commit-border;
+    @include typo($color: var(--btn-commit-text));
+    background-color: var(--btn-commit-background);
+    border: 1px solid var(--btn-commit-border);
     margin-left: 17px;
 
     &:hover {
-      background-color:$btn-commit-background-hover;
-      border-color: $btn-commit-border-hover;
+      background-color:var(--btn-commit-background-hover);
+      border-color: var(--btn-commit-border-hover);
     }
 
     &[data-error=on] {

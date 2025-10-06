@@ -8,7 +8,7 @@
     width: 100%;
 
     // for firefox scrollbar
-    scrollbar-color: var(--default-scrollbar-color) $default-scrollbar-white;
+    scrollbar-color: var(--default-scrollbar-color) var(--default-scrollbar-white);
     scrollbar-width: thin;
 
     &::-webkit-scrollbar {

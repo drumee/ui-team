@@ -122,9 +122,9 @@
         color:$share-checkbox-checked-reverse; 
       }
       .widget-sharebox-setting__inline-action-btn{
-        background-color: $btn-commit-background-hover;
+        background-color: var(--btn-commit-background-hover);
         .drumee-text{
-          background-color:$btn-commit-background-hover;
+          background-color:var(--btn-commit-background-hover);
         }
       }
       .widget-sharebox-setting{
@@ -274,8 +274,8 @@
     @include typo($size: 16px, $color: $sharebox-text-color);
   }
   &__action-button {
-    background: $btn-rollback-background;
-    border:1px solid $btn-rollback-border;
+    background: var(--btn-rollback-background);
+    border:1px solid var(--btn-rollback-border);
     border-radius: $default-border-radius;
     padding:0 12px;//5px 9px;
     margin:15px auto 0px;//15px auto 10px;
@@ -284,24 +284,24 @@
     min-width: 115px;
     align-items: center;
     justify-content: center;
-    @include typo($size: 15px,$line: 25px, $color: $btn-rollback-text);
+    @include typo($size: 15px,$line: 25px, $color: var(--btn-rollback-text));
     &:hover{
-      border:2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;
+      border:2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
     &.save{
-      background:$btn-commit-background;       
-      border:1px solid $btn-commit-border;//$btn-rollback-border;
+      background:var(--btn-commit-background);       
+      border:1px solid var(--btn-commit-border);//var(--btn-rollback-border);
       margin-left: 10px;
-      @include typo($size: 15px,$line: 25px, $color:$btn-commit-text);
+      @include typo($size: 15px,$line: 25px, $color: var(--btn-commit-text));
       &:hover{
         border:1px;
-        background-color: $btn-commit-text-hover;//$btn-rollback-text-hover;
+        background-color: var(--btn-commit-text-hover);//var(--btn-rollback-text-hover);
       }
     }
   }
   &__inline-action-btn {
-    background: $btn-commit-background;
+    background: var(--btn-commit-background);
     border-radius: $default-border-radius;
     padding: 5px;//3px 5px;
    // margin: auto;
@@ -311,9 +311,9 @@
     height: 26px;//24px;
     justify-content: center;
     align-items: center;
-    @include typo($size: 12px, $color:$btn-commit-text);
+    @include typo($size: 12px, $color: var(--btn-commit-text));
     &:hover{
-      background-color:$btn-commit-background-hover;
+      background-color:var(--btn-commit-background-hover);
     }
     &.first{
       margin-left:20px;//28px;//15px;

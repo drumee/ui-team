@@ -94,16 +94,16 @@
   &__buttons-wrapper {
     &.button {
       border-radius:$default-border-radius;
-      @include typo ($size: 16px, $line: 18px, $color:$btn-commit-text);
+      @include typo ($size: 16px, $line: 18px, $color: var(--btn-commit-text));
       align-items: center;
-      background: $btn-commit-background; //var(--egreen);
+      background: var(--btn-commit-background); //var(--egreen);
       cursor: pointer;
       height: 35px; //40px;
       justify-content: center;
       margin: auto;
       width: 115px; // 80px;
       &:hover{
-        background-color:$btn-commit-background-hover;
+        background-color:var(--btn-commit-background-hover);
         //border-color: $btn-primary-border-hover;
       }
     }

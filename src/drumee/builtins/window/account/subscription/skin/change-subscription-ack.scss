@@ -59,7 +59,7 @@
     width:90px;
 
     &:hover {
-      border:2px solid $btn-rollback-border-hover;
+      border:2px solid var(--btn-rollback-border-hover);
     }
   }
 }

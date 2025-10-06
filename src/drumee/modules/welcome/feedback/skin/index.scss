@@ -87,14 +87,14 @@
     margin: 20px auto;
     height: 35px;
     align-items: center;
-    background-color: $btn-commit-background; 
+    background-color: var(--btn-commit-background); 
     border-radius: $default-border-radius;
     cursor: pointer;
     justify-content: center;
     width: 115px;
-    @include typo($size: 16px, $line: 28px, $color: $btn-commit-text);//$size: 20px,
+    @include typo($size: 16px, $line: 28px, $color: var(--btn-commit-text));//$size: 20px,
     &:hover{
-      background-color: $btn-commit-background-hover;  //0 0 31px 0 rgba(169,186,255,.5);
+      background-color: var(--btn-commit-background-hover);  //0 0 31px 0 rgba(169,186,255,.5);
     }
   }
 }

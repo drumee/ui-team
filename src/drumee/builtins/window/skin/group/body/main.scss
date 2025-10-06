@@ -36,7 +36,7 @@
   &[data-scroll="x"]{
     overflow-x: auto;
     scrollbar-width: thin;
-    scrollbar-color: var(--default-scrollbar-color) $default-scrollbar-white;
+    scrollbar-color: var(--default-scrollbar-color) var(--default-scrollbar-white);
   }
   .ui-resizable-e {
     right: -7px;

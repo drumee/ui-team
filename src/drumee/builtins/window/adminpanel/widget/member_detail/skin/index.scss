@@ -249,24 +249,24 @@
     margin-top: 30px ;//auto 0; //22px auto 0;
     
     &.button-delete{
-      border: 1px solid $btn-caution-border  ;
+      border: 1px solid var(--btn-caution-border);
       margin-left: -1%;
       height: 40px;
       min-width: 165px;
-      @include typo($size: 16px, $weight:400, $color:$btn-caution-backgroundless-text);
+      @include typo($size: 16px, $weight:400, $color: var(--btn-caution-backgroundless-text));
       &:hover{
-        @include typo($size: 16px, $weight:400, $color:$btn-caution-text-hover);
-        border: 2px solid $btn-caution-border-hover;      
+        @include typo($size: 16px, $weight:400, $color: var(--btn-caution-text)-hover);
+        border: 2px solid var(--btn-caution-border-hover);      
       }
     }
     &.button-resend{
-      background-color: $btn-commit-background;     
+      background-color: var(--btn-commit-background);     
       margin-left: 2%;
       height: 40px;
       min-width: 165px;
-      @include typo($size: 16px, $weight:400, $color:$btn-commit-text);
+      @include typo($size: 16px, $weight:400, $color: var(--btn-commit-text));
       &:hover {
-        background-color: $btn-commit-background-hover;
+        background-color: var(--btn-commit-background-hover);
       }
     }
   }

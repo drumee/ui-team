@@ -201,9 +201,9 @@
 
       .ok-button {
         align-items: center;
-        background: $btn-commit-background;
+        background: var(--btn-commit-background);
         border-radius: $default-border-radius-small; //4px;
-        border: 1px solid $btn-commit-background;
+        border: 1px solid var(--btn-commit-background);
         cursor: pointer;
         height: 20px;
         justify-content: center;
@@ -215,7 +215,7 @@
         @include typo($size: 12px, $line: 20px, $color: var(--default-text-reverse));
 
         &:hover {
-          background: $btn-commit-background-hover;
+          background: var(--btn-commit-background-hover);
         }
       }
     }

@@ -60,9 +60,9 @@
     .button-cancel {
       min-width: 115px;
       height:35px;
-      @include typo($size: 16px, $line: 16px,$color: $btn-rollback-text); 
+      @include typo($size: 16px, $line: 16px,$color: var(--btn-rollback-text)); 
       border-radius:  $default-border-radius;
-      border: 1px solid $btn-rollback-border; 
+      border: 1px solid var(--btn-rollback-border); 
       margin-right: 30px;
     }
 
@@ -88,29 +88,29 @@
     min-width: 150px; 
     height:40px; 
     padding:2px 5px;
-    @include typo($size: 16px, $line: 16px, $color: $btn-rollback-text); 
+    @include typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text)); 
     border-radius:  $default-border-radius;
-    border: 1px solid $btn-rollback-border; 
+    border: 1px solid var(--btn-rollback-border); 
     &:hover{
-      border:2px solid $btn-rollback-border-hover;
-      color:$btn-rollback-text-hover;   
+      border:2px solid var(--btn-rollback-border-hover);
+      color:var(--btn-rollback-text-hover);   
     }
   }
   
   &__button-confirm {
-    background-color:$btn-commit-background; 
+    background-color:var(--btn-commit-background); 
     min-width: 180px; 
     height:40px; 
-    @include typo( $size: 16px, $line: 16px, $color:$btn-commit-text);
+    @include typo( $size: 16px, $line: 16px, $color: var(--btn-commit-text));
     border: 0px;
     &:hover{
-      border:2px solid $btn-commit-border-hover;
-      background-color:$btn-commit-background-hover ;
+      border:2px solid var(--btn-commit-border-hover);
+      background-color:var(--btn-commit-background-hover);
     }
     
     &.unblock,
     &.unarchive {
-      background-color: $btn-commit-background;  
+      background-color: var(--btn-commit-background);  
       width: 115px;
       height:35px;
     }
@@ -120,13 +120,13 @@
 //    &.reset,
     &.block,
     &.archive {
-      background-color: $btn-caution-background;
+      background-color: var(--btn-caution-background);
       width: 115px;
       height:35px;
 
       &:hover {
-        background-color: $btn-caution-background;
-        border: 1px solid $btn-caution-border-hover;
+        background-color: var(--btn-caution-background);
+        border: 1px solid var(--btn-caution-border-hover);
       }
     }
   }

@@ -5,17 +5,17 @@
  
   &__button_wrapper {
     align-items: center;
-    background: $btn-commit-background;
+    background: var(--btn-commit-background);
     border-radius: var(--border-radius);
     cursor: pointer;
     height: 28px;
     justify-content: center;
     margin: 5% auto 0;
     width: 68px;
-    @include typo ($color:$btn-commit-text,$line:1, $size:14px);
+    @include typo ($color: var(--btn-commit-text),$line:1, $size:14px);
 
     &:hover {
-      background-color: $btn-commit-background-hover;
+      background-color: var(--btn-commit-background-hover);
     }
   }
 

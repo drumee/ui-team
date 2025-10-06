@@ -177,19 +177,19 @@
     }
   
     &__button-confirm {
-      background-color: $btn-commit-background;
+      background-color: var(--btn-commit-background);
       &:hover{
-        background-color:$btn-commit-background-hover;
+        background-color:var(--btn-commit-background-hover);
       }
     }
   
     &__button-cancel {
-      background-color: $btn-rollback-background;
-      color: $btn-rollback-text;
-      border: 1px solid $btn-rollback-border;
+      background-color: var(--btn-rollback-background);
+      color: var(--btn-rollback-text);
+      border: 1px solid var(--btn-rollback-border);
       &:hover{
-        border:2px solid $btn-rollback-border-hover;
-        color:$btn-rollback-text-hover;  
+        border:2px solid var(--btn-rollback-border-hover);
+        color:var(--btn-rollback-text-hover);  
       }
     }
   }

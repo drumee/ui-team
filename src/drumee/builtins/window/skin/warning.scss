@@ -47,7 +47,7 @@
   &__button{
     height: 32px;//30px; //26px;
     width: 90px;//80px;//
-    background-color: $btn-commit-background; //var(--egreen);
+    background-color: var(--btn-commit-background); //var(--egreen);
     padding: 0 12px;
     margin: 0px auto;//auto;
     border-radius: $default-border-radius;// 6px; //2px;
@@ -58,7 +58,7 @@
       @include typo($size:15px, $line:26px, $color: var(--ewhite));
     }
     &:hover{
-      background-color:$btn-commit-background-hover;  
+      background-color:var(--btn-commit-background-hover);  
     }
 
     &.settings {

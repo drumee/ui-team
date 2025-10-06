@@ -385,9 +385,9 @@
 
     &.invite-button {
       align-items: center;
-      background-color: $btn-commit-background;
+      background-color: var(--btn-commit-background);
       border-radius: var(--border-radius);
-      border: 1px solid $btn-commit-border;
+      border: 1px solid var(--btn-commit-border);
       cursor: pointer;
       height: 40px;
       justify-content: center;
@@ -395,7 +395,7 @@
       padding: 5px;
       text-align: center;
       width: 170px;
-      @include typo($size: 16px, $line: 20px, $color: $btn-commit-text);
+      @include typo($size: 16px, $line: 20px, $color: var(--btn-commit-text));
 
       &.memory {
         height: 60px;
@@ -405,8 +405,8 @@
       }
 
       &:hover {
-        background-color: $btn-commit-background-hover;
-        border-color: $btn-commit-border-hover;
+        background-color: var(--btn-commit-background-hover);
+        border-color: var(--btn-commit-border-hover);
       }
     }
   }
@@ -462,35 +462,35 @@
   }
 
   &__button-cancel {
-    border: 1px solid $btn-rollback-border;
+    border: 1px solid var(--btn-rollback-border);
     margin-right: 35px;
-    @include typo($weight: 300, $color: $btn-rollback-text);
+    @include typo($weight: 300, $color: var(--btn-rollback-text));
 
     &:hover {
-      border: 2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
 
   &__button-confirm {
-    background-color: $btn-commit-background;
+    background-color: var(--btn-commit-background);
     margin-left: 35px;
-    @include typo($color: $btn-commit-text);
+    @include typo($color: var(--btn-commit-text));
 
     &:hover {
-      background-color: $btn-commit-background-hover;
+      background-color: var(--btn-commit-background-hover);
     }
 
     &.destroy,
     &.block {
-      background-color: $btn-caution-background;
-      border: 1px solid $btn-caution-border;
+      background-color: var(--btn-caution-background);
+      border: 1px solid var(--btn-caution-border);
       height: 35px;
       width: 115px;
 
       &:hover {
-        background-color: $btn-caution-background-hover;
-        border: 1px solid $btn-caution-border-hover;
+        background-color: var(--btn-caution-background-hover);
+        border: 1px solid var(--btn-caution-border-hover);
       }
     }
   }

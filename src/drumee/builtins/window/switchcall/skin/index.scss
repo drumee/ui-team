@@ -99,11 +99,11 @@
       height: 35px;
       align-items: center;
       justify-content: center;
-      background-color: $btn-commit-background;
+      background-color: var(--btn-commit-background);
       margin-right: 30px;
-      @include typo($size:16px,$line:20px,$color:$btn-commit-text);
+      @include typo($size:16px,$line:20px,$color: var(--btn-commit-text));
       &:hover{
-        background-color:$btn-commit-background-hover;
+        background-color:var(--btn-commit-background-hover);
       }
     }
     .ctrl-button.cancel{
@@ -112,12 +112,12 @@
       min-width: 115px;
       align-items: center;
       justify-content: center;
-      border: 1px solid $btn-rollback-border;
-      background-color: $btn-rollback-background;
-      @include typo($size:16px,$line:20px,$color:$btn-rollback-text);
+      border: 1px solid var(--btn-rollback-border);
+      background-color: var(--btn-rollback-background);
+      @include typo($size:16px,$line:20px,$color: var(--btn-rollback-text));
       &:hover{
-        color: $btn-rollback-text-hover;
-        border: 2px solid $btn-rollback-border-hover;
+        color: var(--btn-rollback-text-hover);
+        border: 2px solid var(--btn-rollback-border-hover);
       }
     }
   }  

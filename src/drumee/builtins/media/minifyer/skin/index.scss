@@ -61,7 +61,7 @@
   &__remove {
     background-color: var(--default-bg);    
     border-radius: 50%;
-    border: 2px solid var(--default-border-notification);//$main-default-border;
+    border: 2px solid var(--default-border-notification);//var(--main-default-border);
     color: var(--default-text-color);
     height: 19px;
     position: absolute;

@@ -75,7 +75,7 @@
 
     .buttons {
       margin: 5px 10px;
-      border: 1px solid $btn-rollback-border; // #bdbdbd;
+      border: 1px solid var(--btn-rollback-border); // #bdbdbd;
       flex: 1;
       align-items: center;
       width: 100%;
@@ -84,11 +84,11 @@
       justify-content: center;
       border-radius: $default-border-radius;
       height: 32px;
-      @include typo($size: 14px, $line: 20px, $color: $btn-rollback-text);
+      @include typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text));
 
       &:hover {
-        border: 2px solid $btn-rollback-border-hover;
-        @include typo($size: 14px, $line: 20px, $color: $btn-rollback-text-hover);
+        border: 2px solid var(--btn-rollback-border-hover);
+        @include typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text)-hover);
       }
     }
   }
@@ -331,29 +331,29 @@
   }
 
   &__button-cancel {
-    @include typo($size: 16px, $line: 16px, $color: $btn-rollback-text);
-    border: 1px solid $btn-rollback-border-hover;
+    @include typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
+    border: 1px solid var(--btn-rollback-border-hover);
     border-radius: $default-border-radius;
     min-width: 150px;
     height: 40px;
     padding: 2px 5px;
 
     &:hover {
-      border: 2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
 
   &__button-confirm {
     &.pre-check-cancel {
       background-color: transparent;
-      border: 1px solid $btn-rollback-border-hover;
+      border: 1px solid var(--btn-rollback-border-hover);
       color: var(--secondary-text-color);
       width: 115px;
       height: 35px;
 
       &:hover {
-        border: 2px solid $btn-rollback-border-hover;
+        border: 2px solid var(--btn-rollback-border-hover);
         color: var(--secondary-text-color);
       }
     }
@@ -366,7 +366,7 @@
       height: 35px;
 
       &:hover {
-        border: 2px solid $btn-caution-border-hover;
+        border: 2px solid var(--btn-caution-border-hover);
       }
 
       &[data-wait="yes"] {

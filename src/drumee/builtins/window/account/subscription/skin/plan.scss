@@ -200,7 +200,7 @@
   }
 
   &__btn-confirm {
-    @include typo( $size: 15px, $line: 16px, $color:$btn-commit-text);
+    @include typo( $size: 15px, $line: 16px, $color: var(--btn-commit-text));
     align-items: center;
     border-radius: $default-border-radius;
     cursor: pointer;

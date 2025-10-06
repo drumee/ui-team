@@ -66,16 +66,16 @@
       padding: 0px 58px;//0 46px
     }
     &.skip{
-      background: $btn-rollback-background ;
-      color: $btn-rollback-text;//var(--default-text-reverse);
+      background: var(--btn-rollback-background);
+      color: var(--btn-rollback-text);//var(--default-text-reverse);
       border-radius:$default-border-radius;
-      border:1px solid $btn-rollback-border;
+      border:1px solid var(--btn-rollback-border);
       cursor: pointer;
       padding: 10px 20px;
       margin: 25px auto 0px;
       &:hover{
-        border:1px solid $btn-rollback-border-hover;
-        color: $btn-rollback-text-hover; 
+        border:1px solid var(--btn-rollback-border-hover);
+        color: var(--btn-rollback-text-hover); 
       }
     }
   }

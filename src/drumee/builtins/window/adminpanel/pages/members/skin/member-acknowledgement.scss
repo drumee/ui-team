@@ -47,18 +47,18 @@
   }
 
   &__button-ok {
-    @include typo($size: 16px,$color: $btn-rollback-text);
+    @include typo($size: 16px,$color: var(--btn-rollback-text));
     align-items: center;
     border-radius: $default-border-radius;
-    border: 1px solid $btn-rollback-border ;
+    border: 1px solid var(--btn-rollback-border);
     height: 32px;
     justify-content: center; 
     margin-top: 30px;
     width:90px;
 
     &:hover {
-      @include typo($size: 16px,$color:$btn-rollback-text-hover);   
-      border:2px solid $btn-rollback-border-hover;
+      @include typo($size: 16px,$color: var(--btn-rollback-text)-hover);   
+      border:2px solid var(--btn-rollback-border-hover);
     }
   }
 }

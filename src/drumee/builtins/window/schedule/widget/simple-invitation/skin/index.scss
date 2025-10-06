@@ -161,18 +161,18 @@
     }
   } 
   &__ok_button {
-    background: $btn-commit-background;
+    background: var(--btn-commit-background);
     border-radius: $default-border-radius;
     padding: 5px;//3px 5px;
     margin: auto;
     cursor: pointer;
     width: 115px;
     height: 27px;
-    @include typo($size: 13px, $color: $btn-commit-text);//size: 12px,
+    @include typo($size: 13px, $color: var(--btn-commit-text));//size: 12px,
     justify-content: center;
     align-items: center;
     &:hover{
-      background-color:$btn-commit-background-hover;
+      background-color:var(--btn-commit-background-hover);
     }
 
   }

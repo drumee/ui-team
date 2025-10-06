@@ -77,9 +77,9 @@
   }
 
   &__button-confirm {
-    @include typo($color: $btn-commit-text, $size: 16px, $line: 21px, $weight: 400);
+    @include typo($color: var(--btn-commit-text), $size: 16px, $line: 21px, $weight: 400);
     align-items: center;
-    background-color: $btn-commit-background;
+    background-color: var(--btn-commit-background);
     cursor: pointer;
     justify-content: center;
     margin-top: 10px;
@@ -89,7 +89,7 @@
     user-select: none;
 
     &:hover {
-      background-color: $btn-commit-background-hover ;
+      background-color: var(--btn-commit-background-hover);
     }
   }
 }

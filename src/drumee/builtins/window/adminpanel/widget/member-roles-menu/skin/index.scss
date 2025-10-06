@@ -127,7 +127,7 @@
 
       &.button {
         align-items: center;
-        background:$btn-commit-background;
+        background:var(--btn-commit-background);
         border-radius:$default-border-radius;
         cursor: pointer;
         display: flex;
@@ -135,13 +135,13 @@
         justify-content: center;
         margin: 5% auto 0;
         width:68px;
-        @include typo ($color:$btn-commit-text,$line:20px, $size:14px);
+        @include typo ($color: var(--btn-commit-text),$line:20px, $size:14px);
 
         &:hover {
           margin: 5% auto 0;
           min-width: 68px;
           width: auto;
-          background-color:$btn-commit-background-hover;
+          background-color:var(--btn-commit-background-hover);
         }
       }
     }

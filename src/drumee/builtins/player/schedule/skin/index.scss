@@ -248,24 +248,24 @@
       min-width: 120px;
       padding: 0 10px;
       margin: 0 3%;
-      @include typo($size: 16px, $line: 19px, $color:$btn-commit-text);   
+      @include typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));   
     }
 
     &.primary {
-      background-color:$btn-commit-background; 
+      background-color:var(--btn-commit-background); 
       
       &:hover {
-        background-color:$btn-commit-background-hover   
+        background-color:var(--btn-commit-background-hover)   
       } 
     }
 
     &.secondery {
-      background-color: $btn-rollback-background;
-      border: 2px solid $btn-rollback-border;
-      color:$btn-rollback-text;
+      background-color: var(--btn-rollback-background);
+      border: 2px solid var(--btn-rollback-border);
+      color:var(--btn-rollback-text);
 
       &:hover {
-        color:  $btn-rollback-text-hover;
+        color:  var(--btn-rollback-text-hover);
         border:$btn-rollback-border-hover 2px solid;
       }
     }
@@ -358,7 +358,7 @@
     }
   }
   &__ok-btn {
-    background: $btn-commit-background;
+    background: var(--btn-commit-background);
     border-radius: $default-border-radius;
     padding: 5px;
     margin-left:5px; 
@@ -370,7 +370,7 @@
     align-items: center;
     @include typo($size: 12px, $color: var(--white));
     &:hover{
-      background-color:$btn-commit-background-hover;
+      background-color:var(--btn-commit-background-hover);
     }
   }
 

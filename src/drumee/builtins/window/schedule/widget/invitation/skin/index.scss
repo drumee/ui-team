@@ -55,7 +55,7 @@
       width: 20px;
 
       &:hover {
-        background: $state-1-typo;
+        background: var(--state-1-typo);
         color: #fff;
       }
     }
@@ -232,8 +232,8 @@
     padding-left: 36px;
 
     .button {
-      @include typo($size: 16px, $line: 19px, $color: $btn-commit-text);
-      background-color: $btn-commit-background;
+      @include typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));
+      background-color: var(--btn-commit-background);
       align-items: center;
       border-radius: $default-border-radius;
       height: 44px;
@@ -244,7 +244,7 @@
     }
 
     :hover {
-      background-color: $btn-commit-background-hover;
+      background-color: var(--btn-commit-background-hover);
     }
   }
 }

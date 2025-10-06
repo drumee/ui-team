@@ -132,22 +132,22 @@
   &__button-confirm {
     border-radius: $default-border-radius;
     align-items: center;
-    background-color: $btn-commit-background; 
-    border: 1px solid $btn-commit-border ;
+    background-color: var(--btn-commit-background); 
+    border: 1px solid var(--btn-commit-border);
     cursor: pointer;
     height: 24px;//25px;
     justify-content: center;
     left: 30px;
     top: 5px;
     width: 24px;// 30px;
-    @include typo($size: 11px, $line: 14px, $color: $btn-commit-text);
+    @include typo($size: 11px, $line: 14px, $color: var(--btn-commit-text));
 
     &.address {
       top: 0px; //25px;
     }
 
     &:hover {
-      background-color:$btn-commit-background-hover;
+      background-color:var(--btn-commit-background-hover);
     }
   }
 

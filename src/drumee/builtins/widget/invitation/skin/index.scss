@@ -42,22 +42,22 @@
   &__button {
     align-items: center;
     border-radius:$default-border-radius;
-    border: 1px solid $btn-rollback-border;
+    border: 1px solid var(--btn-rollback-border);
     cursor: pointer;
     height: 35px;
     justify-content: center;
     margin: 25px auto 10px auto;//15px auto 10px auto;
     min-width: 115px;
     padding: 0 12px;
-    @include typo($size:15px,$line:25px,$color:$btn-rollback-text);
+    @include typo($size:15px,$line:25px,$color: var(--btn-rollback-text));
 
     &[data-editable="0"] {
       display: none;
     }
 
     &:hover {
-      border:2px solid $btn-rollback-text-hover;
-      color: $btn-rollback-text-hover;
+      border:2px solid var(--btn-rollback-text-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
 

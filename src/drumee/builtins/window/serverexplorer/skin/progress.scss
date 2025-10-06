@@ -88,22 +88,22 @@
   }
   
   &__button-cancel {
-    @include typo($color: $btn-caution-backgroundless-text);
-    border: 1px solid $btn-caution-border;
+    @include typo($color: var(--btn-caution-backgroundless-text));
+    border: 1px solid var(--btn-caution-border);
   
     &:hover {
-      border:2px solid $btn-caution-border-hover;
-      color: $btn-caution-text-hover;
+      border:2px solid var(--btn-caution-border-hover);
+      color: var(--btn-caution-text-hover);
     }
   }
 
   &__button-close {
-    @include typo($color: $btn-rollback-text);
-    border: 1px solid $btn-rollback-border;
+    @include typo($color: var(--btn-rollback-text));
+    border: 1px solid var(--btn-rollback-border);
     
     &:hover {
-      border-color: $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;
+      border-color: var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
 
