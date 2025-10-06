@@ -29,7 +29,7 @@
 
     &.desk {
       color: var(--default-icon-reverse);
-      background-color: $folder-main;
+      background-color: var(--folder-main);
     }
 
     &.chat {

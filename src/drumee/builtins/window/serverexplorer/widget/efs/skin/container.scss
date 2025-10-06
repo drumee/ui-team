@@ -58,7 +58,7 @@
     &::before {
       border-left: 8px solid transparent;
       border-radius: 0 3px 0 0;
-      border-top: 8px solid $folder-main-before-color;
+      border-top: 8px solid var(--folder-main-before-color);
       content: " ";
       position: absolute;
       right:10px;
@@ -125,7 +125,7 @@
       }
       .media-efs__container {
         .filename-tooltips {
-          background-color: $folder-main-background-filename;
+          background-color: var(--folder-main-filename-bg);
         }
       }
     }

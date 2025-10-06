@@ -73,7 +73,7 @@
       width: 24px;
 
       &.blue {
-        color: $folder-background-header;
+        color: var(--folder-main);
       }
 
       &.purple,

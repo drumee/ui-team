@@ -201,7 +201,7 @@
     &.maker {
       &.folder {
         svg {
-          color: $folder-main;
+          color: var(--folder-main);
         }
       }
 

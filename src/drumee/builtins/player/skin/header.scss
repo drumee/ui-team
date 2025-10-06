@@ -57,7 +57,7 @@
     display: grid;
     grid-auto-rows: 1rem;
     grid-gap: 3px;
-    background-color: $folder-default-background;
+    background-color: var(--default-background);
     border-radius: $default-border-radius;
     box-shadow: $drumee-shadow-box;
     padding: 8px;
@@ -70,13 +70,13 @@
       width: 100%;
       padding-left: 10px;
       padding-top: 4px;
-      @include typo($color: $folder-default-text-color, $size: 12px, $line: 16px, $weight: 300);
+      @include typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
       @include overflow-text;
 
       .icon {
         width: 14px;
         height: 14px;
-        color: $folder-default-icon-neutral;
+        color: var(--core-default-icon-neutral);
         padding: 0.5px;
       }
 
@@ -89,7 +89,7 @@
     }
 
     .info-item {
-      @include typo($color: $folder-default-text-color, $size: 12px, $line: 16px, $weight: 300);
+      @include typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
       text-align: left;
       width: 50%;
       padding-left: 10px;

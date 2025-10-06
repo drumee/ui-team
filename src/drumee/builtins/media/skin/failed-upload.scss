@@ -44,7 +44,7 @@
     @include typo($line: 14px, $size: 11px, $color: var(--default-text-color));
 
     &:hover {
-      background-color: $folder-main;
+      background-color: var(--folder-main);
       color: var(--default-text-reverse);
     }
   }

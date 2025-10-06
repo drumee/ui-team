@@ -8,7 +8,7 @@
     display: flex;   
     cursor: pointer;
     &:hover{
-      background-color: $folder-main;
+      background-color: var(--folder-main);
       color: var(--default-text-reverse);
       svg{
         color: var(--default-text-reverse);

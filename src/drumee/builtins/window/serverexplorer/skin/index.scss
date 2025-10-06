@@ -7,23 +7,23 @@
 
   &__header {
     border-bottom: none;
-    background-color: #00386a; //$folder-background-header ;
+    background-color: #00386a; //var(--folder-main);
     
     &-title {
       align-items: center;
-      @include typo($size:18px,$line:24px,$weight:400,$color:$folder-default-text-reverse);
+      @include typo($size:18px,$line:24px,$weight:400,$color: var(--core-default-text-reverse));
     }
 
     &-control {
       .icon {
-        color: $folder-default-icon-reverse;
+        color: var(--core-default-icon-reverse);
       }
     }
   }
 
   &__icon {
     cursor: pointer;
-    color: $folder-default-icon-reverse;
+    color: var(--core-default-icon-reverse);
 
     &-info {
       cursor: pointer;
@@ -47,7 +47,7 @@
     }
 
     &:hover {
-      color: $folder-default-icon-hover;
+      color: var(--core-default-icon-hover);
     }
   }
 
@@ -55,7 +55,7 @@
     &-name {    
       align-items: flex-start;
       padding-left: 10px;//11%;
-      @include typo($size:18px,$line:24px,$weight:400,$color:$folder-default-text-reverse);//var(--ewhite));
+      @include typo($size:18px,$line:24px,$weight:400,$color: var(--core-default-text-reverse));//var(--ewhite));
       @include overflow-text;
       .inner{
         overflow: hidden;

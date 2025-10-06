@@ -46,7 +46,7 @@
   height: 30px;
   border-radius: 50%;
   overflow: hidden;
-  background-color: $folder-main-light;
+  background-color: var(--folder-main-light);
   position: absolute;
   left: calc(50% - 15px);
   top: calc(50% - 15px);

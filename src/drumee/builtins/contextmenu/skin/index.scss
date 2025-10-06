@@ -92,7 +92,7 @@
     
     &.new-folder.blue {
       svg {
-        color: $folder-main;
+        color: var(--folder-main);
       }
     }
 

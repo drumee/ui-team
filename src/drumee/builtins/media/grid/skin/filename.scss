@@ -35,7 +35,7 @@
           
     &.folder {
       color: var(--default-text-color);
-      background-color: $folder-main-background-filename;
+      background-color: var(--folder-main-filename-bg);
     }
   }
 
@@ -102,7 +102,7 @@
     }
           
     &.folder {
-      background-color: $folder-main-background-filename;
+      background-color: var(--folder-main-filename-bg);
     }
 
     &.image, &.video {

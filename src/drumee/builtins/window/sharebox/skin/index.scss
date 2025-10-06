@@ -75,7 +75,7 @@
     background-color: var(--sharebox-main); //var(--sharebox-main);
 
     &[data-content="folder"] {
-      background-color: $folder-background-header; //$folder-main;
+      background-color: var(--folder-main); //var(--folder-main);
     }
 
     &-title {

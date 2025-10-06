@@ -40,9 +40,9 @@
       line-height:16px;
     }
     &[data-type="folder"]{
-      border: 2px solid $folder-notifycount-border; //#75b1fc
-      background-color: $folder-default-background;//white;
-      color:$folder-text-notification;//#468ee5;
+      border: 2px solid var(--folder-main-light); //#75b1fc
+      background-color: var(--default-background);//white;
+      color:var(--folder-main);//#468ee5;
       line-height:15px;
     }
     &[data-type="public"]{

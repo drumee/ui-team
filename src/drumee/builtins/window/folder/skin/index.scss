@@ -1,25 +1,52 @@
 @import 'mixins/drumee';
 
 .window-folder {
+
+  /**background**/
+  --folder-main: #1D8AEA;
+  --folder-main-light: #61AAF2;
+  --folder-main-before-color: #E386B5;
+  --folder-main-background-filename: #a3c6f2;
+
+  --folder-header-bg: --folder-main;
+  --folder-default-bg: --default-background;
+
+
+  /**text**/
+  --folder-text-color: --folder-main;
+  --folder-default-text-color: --default-text-color;
+  --folder-default-text-reverse: --default-text-reverse;
+  --folder-text-notification: --folder-main;
+
+
+  /**icon**/
+  --folder-default-icon-reverse: --default-icon-reverse;
+  --folder-default-icon-hover: --default-icon-hover;
+  --folder-default-icon-neutral: --default-icon-neutral;
+
+  /**border**/
+}
+
+.window-folder {
   &__header {
     border-bottom: none;
-    background-color: $folder-background-header ;
-    
+    background-color: var(--folder-header-bg);
+
     &-title {
       align-items: center;
-      @include typo($size:18px,$line:24px,$weight:400,$color:$folder-default-text-reverse);
+      @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
     }
 
     &-control {
       .icon {
-        color: $folder-default-icon-reverse;
+        color: var(--core-default-icon-reverse);
       }
     }
   }
 
   &__icon {
     cursor: pointer;
-    color: $folder-default-icon-reverse;
+    color: var(--core-default-icon-reverse);
 
     &-info {
       cursor: pointer;
@@ -37,73 +64,82 @@
     }
 
     &:hover {
-      color: $folder-default-icon-hover;
+      color: var(--core-default-icon-hover);
     }
   }
 
   &__title {
-    &-name {    
+    &-name {
       align-items: flex-start;
       padding-left: 10px;
-      @include typo($size:18px,$line:24px,$weight:400,$color:$folder-default-text-reverse);
+      @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
       @include overflow-text;
-      .inner{
+
+      .inner {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
     }
   }
-  &__wrapper-info{
+
+  &__wrapper-info {
     position: absolute;
     width: 0;
     height: 0;
     left: 50%;
-    .info.drumee-spinner{
+
+    .info.drumee-spinner {
       width: 20px;
       height: 20px;
     }
   }
-  &__info-container{
+
+  &__info-container {
     display: grid;
     grid-auto-rows: 1rem;
     grid-gap: 3px;
-    background-color: $folder-default-background;     
+    background-color: var(--default-background);
     border-radius: $default-border-radius;
     box-shadow: $drumee-shadow-box;
-    padding:8px; 
+    padding: 8px;
     right: 126px;
     top: 44px;
     min-width: 265px;
     width: 100%;
-    .info-status{
+
+    .info-status {
       text-align: left;
       width: 100%;
       padding-left: 10px;
-      padding-top: 4px; 
-      @include typo($color: $folder-default-text-color,$size:12px,$line:16px,$weight:300);
+      padding-top: 4px;
+      @include typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
       @include overflow-text;
-      .icon{
-        width:14px;
-        height:14px;
+
+      .icon {
+        width: 14px;
+        height: 14px;
         padding: 0.5px;
-        color:$folder-default-icon-neutral;
+        color: var(--core-default-icon-neutral);
       }
-      .text{
+
+      .text {
         margin-left: 6px;
         display: flex;
         flex-direction: row;
         flex: 1;
       }
     }
+
     .info-item {
       text-align: left;
       width: 50%;
       padding-left: 10px;
-      padding-top: 4px; 
-      @include typo($color: $folder-default-text-color,$size:12px,$line:16px,$weight:300);
+      padding-top: 4px;
+      @include typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
       @include overflow-text;
-      &.value{
+
+      &.value {
         margin-left: 28px;
         width: 37%;
       }

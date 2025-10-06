@@ -17,7 +17,7 @@
       height: 35px;
     }
     &.personnal {
-      background-color: $folder-background-header;
+      background-color: var(--folder-main);
     }
   }
   &__copy-link-ack {

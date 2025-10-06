@@ -39,9 +39,9 @@
       }
     }
     &[data-type="folder"]{
-      border: 1px solid  $folder-notifycount-border; //#75b1fc
+      border: 1px solid  var(--folder-main-light); //#75b1fc
       background-color:var(--default-bg);   //white;
-      color:$folder-text-notification!important; //#468ee5
+      color:var(--folder-main)!important; //#468ee5
       line-height:16px;
       &[data-hover="on"]{
         line-height:16px;

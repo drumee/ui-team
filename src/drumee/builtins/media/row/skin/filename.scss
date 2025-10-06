@@ -1,7 +1,7 @@
 .folder {
   color: var(--default-text-reverse); //var(--ewhite);
   &.preview{
-    background-color: $folder-main;//#468ee5;
+    background-color: var(--folder-main);//#468ee5;
     height: 20px;
     border-radius:3px;
     border-bottom-left-radius: 3px;
@@ -11,9 +11,9 @@
       position: absolute;
       top: 0;
       right: 0;
-      border-top: 5px solid $folder-main-light;//#75b1fc;
+      border-top: 5px solid var(--folder-main-light);//#75b1fc;
       border-left: 5px solid transparent;
-      border-right: 5px solid $folder-main-light;//#75b1fc;
+      border-right: 5px solid var(--folder-main-light);//#75b1fc;
       border-radius: 0 3px 0 0;
       height: 0;
       width: 18px;

@@ -24,7 +24,7 @@
     white-space: nowrap;
     @include typo($color:var(--default-text-color), $size: 12px, $line: 16px);
     &:hover{
-      background-color: var(--default-bg-hover);//$folder-main;
+      background-color: var(--default-bg-hover);//var(--folder-main);
       color: var(--default-text-reverse);
       svg{
         color: var(--default-text-reverse);

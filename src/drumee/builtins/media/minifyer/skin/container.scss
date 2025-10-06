@@ -60,7 +60,7 @@
     &::before {
       border-left: 8px solid transparent;
       border-radius: 0 3px 0 0;
-      border-top: 8px solid $folder-main-before-color;
+      border-top: 8px solid var(--folder-main-before-color);
       content: " ";
       position: absolute;
       right:10px;
@@ -100,13 +100,13 @@
 }
 
 &.folder {
-  background-color: $folder-main;
+  background-color: var(--folder-main);
 
   &:before {
     border-left: 13px solid transparent;
     border-radius: 0 6px 0 0;
-    border-right: 13px solid $folder-main-light;
-    border-top: 13px solid $folder-main-light;
+    border-right: 13px solid var(--folder-main-light);
+    border-top: 13px solid var(--folder-main-light);
     content: " ";
     position: absolute;
     right: 0;

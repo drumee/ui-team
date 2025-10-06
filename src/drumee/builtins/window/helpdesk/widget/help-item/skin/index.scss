@@ -83,7 +83,7 @@
         }
         &.folder{
           svg{
-            fill:$folder-main;//#1d8aea;
+            fill:var(--folder-main);//#1d8aea;
             width: 20px;
           }
         }

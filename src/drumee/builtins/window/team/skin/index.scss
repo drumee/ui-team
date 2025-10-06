@@ -55,7 +55,7 @@
     border-bottom: none;
     background-color: $team-background-header;
     &[data-content="folder"]{
-      background-color: $folder-background-header; 
+      background-color: var(--folder-main); 
     }
     &-title{
       max-width: 163px;
