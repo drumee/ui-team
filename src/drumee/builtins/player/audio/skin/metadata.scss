@@ -7,7 +7,7 @@
   }
 
   &__main {
-    background-color: $multimedia-audio-player-background;// $audio-player-black-bg;
+    background-color: var(--multimedia-audio-player-bg);// $audio-player-black-bg;
   }
 
   &__cover {

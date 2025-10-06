@@ -92,7 +92,7 @@
   &__video {
     width: 100%;
     position: absolute;
-    background-color: $multimedia-vdo-background-color;
+    background-color: var(--multimedia-background);
 
     &[data-status="idle"] {
       background-color: transparent;

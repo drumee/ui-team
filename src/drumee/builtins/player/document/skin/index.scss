@@ -7,7 +7,7 @@
 
 .player-document {
   &__ui {
-    background-color: $multimedia-player-doc-background;
+    background-color: var(--multimedia-player-doc-bg);
     width: 100%;
   }
 

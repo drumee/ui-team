@@ -26,7 +26,7 @@
   &:hover,
   &[data-hover="on"] {
     color: var(--default-text-color);
-    background-color: $multimedia-main-background-filename;
+    background-color: var(--multimedia-main-filename-bg);
 
     &.private.hub {
       color: var(--default-text-color);
@@ -52,7 +52,7 @@
   &.audio, &.document, &.vector, &.other {
     &[data-hover="on"] {
       color: var(--default-text-color);
-      background-color: $multimedia-main-background-filename;
+      background-color: var(--multimedia-main-filename-bg);
     }
   }
 
@@ -91,7 +91,7 @@
 
   &:hover,
   &[data-hover="on"] {
-    background-color: $multimedia-main-background-filename;
+    background-color: var(--multimedia-main-filename-bg);
     color: var(--default-text-color);
     display: block;
     opacity: 1;
@@ -122,7 +122,7 @@
 
     &.audio, &.document, &.vector, &.other {
       color: var(--default-text-color);
-      background-color: $multimedia-main-background-filename;
+      background-color: var(--multimedia-main-filename-bg);
     }
     &.document{
       max-height: calc(100% - -4px);

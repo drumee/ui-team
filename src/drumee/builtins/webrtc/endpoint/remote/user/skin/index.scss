@@ -19,7 +19,7 @@
     width: 100%;
     justify-content: center;
     align-items: center;  
-    background-color: $multimedia-vdo-background-color;// rgb(112, 145, 194);
+    background-color: var(--multimedia-background);// rgb(112, 145, 194);
     overflow: hidden;
   }
 

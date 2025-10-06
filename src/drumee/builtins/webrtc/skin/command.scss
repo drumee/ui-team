@@ -44,7 +44,7 @@
     border: 1.2px transparent solid;
     background-color: var(--default-bg);
     margin: 0 7px; // 0 6px;
-    color: $multimedia-vdo-icon;
+    color: var(--multimedia-vdo-icon);
     cursor: pointer;
     display: flex;
     flex-direction: row;
@@ -60,7 +60,7 @@
     }
 
     &.line {
-      background-color: $multimedia-vdo-ctrl-button;
+      background-color: var(--multimedia-vdo-ctrl-button);
       color: var(--default-icon-reverse); // #fff;
       fill: none;
       svg {
@@ -71,18 +71,18 @@
     }
 
     &.reject {
-      background-color: $multimedia-vdo-ctrl-button;
+      background-color: var(--multimedia-vdo-ctrl-button);
     }
 
     &.screen {
-      color: $multimedia-vdo-button-accept;
+      color: var(--multimedia-vdo-button-accept);
       padding: 3.5px; //8.5px;
       //margin-left: 14px;
       /*  stroke-width: 1px;
         stroke:$default-icon-reverse;*/
 
       &[data-state="0"] {
-        color: $multimedia-vdo-icon;
+        color: var(--multimedia-vdo-icon);
       }
 
       &[data-state="0"] {
@@ -93,7 +93,7 @@
           width: 29px;
           top: 15px; //12px;
           left: 1px; //10px;
-          background-color: $multimedia-vdo-ctrl-button;
+          background-color: var(--multimedia-vdo-ctrl-button);
           transform-origin: 50% 50%;
           transform: rotate(-45deg);
         }
@@ -101,7 +101,7 @@
     }
 
     &.accept {
-      color: $multimedia-vdo-button-accept;
+      color: var(--multimedia-vdo-button-accept);
 
       svg {
         height: 100%;
@@ -110,7 +110,7 @@
     }
 
     &[data-state="0"] {
-      color: $multimedia-vdo-icon;
+      color: var(--multimedia-vdo-icon);
     }
 
     &[data-state="0"] {
@@ -121,14 +121,14 @@
         width: 25px;
         top: 16px; //12px;
         left: 3px; //10px;
-        background-color: $multimedia-vdo-ctrl-button;
+        background-color: var(--multimedia-vdo-ctrl-button);
         transform-origin: 50% 50%;
         transform: rotate(-45deg);
       }
     }
 
     &[data-online="1"] {
-      background-color: $multimedia-vdo-ctrl-button;
+      background-color: var(--multimedia-vdo-ctrl-button);
       color: var(--default-icon-reverse);
     }
 

@@ -66,12 +66,12 @@
     width: 100%;
 
     &.player.document {
-      background-color: $multimedia-player-doc-background;
+      background-color: var(--multimedia-player-doc-bg);
     }
   }
 
   &__container {
-    background-color: $multimedia-player-doc-background;
+    background-color: var(--multimedia-player-doc-bg);
     border-radius: $default-border-radius-bottom;
     height: calc(100% - 44px);
     min-height: 200px;

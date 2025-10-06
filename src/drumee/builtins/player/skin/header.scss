@@ -34,7 +34,7 @@
 
   &__title {
     max-width: 170px;
-    @include typo($color: $multimedia-default-text-title , $size: 18px, $line: 42px, $weight: 300);
+    @include typo($color: var(--multimedia-default-text-title) , $size: 18px, $line: 42px, $weight: 300);
     @include overflow-text;
 
     .inner {

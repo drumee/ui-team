@@ -19,7 +19,7 @@
   }
 
   &__video {
-    background-color: $multimedia-player-vdo-background-color; //black;
+    background-color: var(--multimedia-player-vdo-bg); //black;
     height: 100%;
     width: 100%;
   }

@@ -7,11 +7,11 @@
   // width: 100%;
   height: 100%;
   grid-template-columns: 1fr;    
-  background-color: $multimedia-vdo-background-color;//$vdo-background-color; 
+  background-color: var(--multimedia-background);//$vdo-background-color; 
   z-index: 1;
 }
 &__endpoint-local{
-  background-color: $multimedia-vdo-background-color;//$vdo-background-color; 
+  background-color: var(--multimedia-background);//$vdo-background-color; 
   position: absolute;
   top: 20px;
   right: 40px;
