@@ -49,7 +49,7 @@
       padding-left: 15px;
 
       &::placeholder {
-        @include typo($size: 18px, $line: 28px, $weight: 300, $color: $connect-text-placeholder);
+        @include typo($size: 18px, $line: 28px, $weight: 300, $color: var(--connect-text-placeholder));
       }
     }
   }

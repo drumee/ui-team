@@ -13,7 +13,7 @@
 
 .window-connect {
   &__ui {
-    background-color: $connect-default-background;
+    background-color: var(--default-background);
     width: 440px;
     height: 480px;
     top: 85px;
@@ -65,7 +65,7 @@
   // }
 
   &__header {
-    background-color: $connect-background-header;
+    background-color: var(--connect-header-bg);
     border-bottom: none;
     height: 44px;
     min-height: 44px;
@@ -75,7 +75,7 @@
     .media-devices__list {
       .menu-items {
         left: 0;
-        background: $connect-default-background;
+        background: var(--default-background);
       }
     }
   }
@@ -85,7 +85,7 @@
   //   justify-content: center;
   //   height: calc(100% - 44px);
   //   z-index: 100;
-  //   background-color: $connect-video-background;
+  //   background-color: var(--connect-video-background);
   //   box-shadow: var(--shadow-container);
   //   border-radius: $default-border-radius-bottom; // $default-border-radius;
   //   // grid-auto-flow: row;
@@ -95,7 +95,7 @@
   &__body {
     align-items: center;
     justify-content: center;
-    background-color: $connect-video-background;
+    background-color: var(--connect-video-background);
     height: calc(100% - 44px);
     z-index: 100;
 
@@ -194,21 +194,21 @@
     }
 
     &.user-profile__ui[data-default="1"] svg {
-      fill: $connect-default-icon-neutral;
+      fill: var(---default-icon-neutral);
     }
   }
 
   &__uname,
   &__commands {
-    background-color: $connect-transparent-background  !important;
+    background-color: var(--connect-transparent-background)  !important;
   }
 
   &__status {
 
-    //color: $connect-header-text-color !important;
+    //color: var(--connect-header-text-color) !important;
     .text {
       padding: 5px 10px;
-      background-color: $connect-transparent-background; //rgba(0,0,0,0.33);
+      background-color: var(--connect-transparent-background); //rgba(0,0,0,0.33);
       border-radius: $default-border-radius;
     }
   }
@@ -294,13 +294,13 @@
     &.local {
       min-height: 30px;
       //@include typo($color: var(--white), $line: 30px, $size: 18px);
-      @include typo($color: $connect-default-text-reverse, $weight: 400, $line: 30px, $size: 16px);
+      @include typo($color: var(--default-text-reverse), $weight: 400, $line: 30px, $size: 16px);
       justify-content: center;
     }
 
     &.status {
       //@include typo($color: var(--egrey-2f), $weight: 400, $line: 30px, $size: 18px);
-      @include typo($color: $connect-default-text-color, $line: 30px, $size: 16px);
+      @include typo($color: var(--default-text-color), $line: 30px, $size: 16px);
     }
   }
 
@@ -308,7 +308,7 @@
     padding: 10px 0 15px 3px;
     justify-content: center;
     height: 20px;
-    @include typo($color: $connect-default-text-title, $line: 14px, $size: 15px);
+    @include typo($color: var(--default-text-title), $line: 14px, $size: 15px);
   }
 
   &__message-container {

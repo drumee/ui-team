@@ -8,7 +8,7 @@
     height:260px;//400px;
     min-height: 260px;
     background-color: inherit;
-    background-color:$connect-default-background;
+    background-color:var(--default-background);
     box-shadow:var(--shadow-container);
     left: calc(50vw - 200px);
     top: calc(50vh - 200px);
@@ -22,7 +22,7 @@
   }
 
   &__header {
-    background-color: $connect-background-header;
+    background-color: var(--connect-header-bg);
     border-bottom: none;
     height: 44px;
     min-height: 44px;

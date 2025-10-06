@@ -339,7 +339,7 @@
       @include typo($size: 18px, $line: 28px, $color: var(--default-text-color));
 
       &::placeholder {
-        @include typo($size: 19px, $line: 28px, $weight: 300, $color:$connect-text-placeholder);
+        @include typo($size: 19px, $line: 28px, $weight: 300, $color: var(--connect-text-placeholder));
       }
     }
 
