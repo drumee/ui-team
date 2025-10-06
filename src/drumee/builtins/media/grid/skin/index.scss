@@ -230,7 +230,7 @@
     position: absolute;
     width: 18px;
     height: 18px;
-    border-radius: $default-border-radius-tiny; // 3px;
+    border-radius: var(--border-radius-tiny); // 3px;
     z-index: 100;
     fill: #FA8540;
   }

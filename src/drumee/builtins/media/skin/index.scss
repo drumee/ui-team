@@ -19,7 +19,7 @@
           border: solid #ffffff 1px;
           top: 0;
           left: 0;
-          border-radius: $default-border-radius-tiny;//3px;
+          border-radius: var(--border-radius-tiny);//3px;
         }
       }
       .notify__count {

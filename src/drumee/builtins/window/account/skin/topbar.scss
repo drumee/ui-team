@@ -52,7 +52,7 @@
       &[data-radio="on"] {
         background-color: $account-default-background-hover;
         color: $account-default-text-reverse;
-        border-radius: $default-border-radius-tiny;
+        border-radius: var(--border-radius-tiny);
 
         &:hover {
           color: $account-default-text-hover ;

@@ -26,7 +26,7 @@
       &.main{
         height: 370px;
         width: 680px;
-        border-radius: $default-border-radius-tiny;
+        border-radius: var(--border-radius-tiny);
         background-color: $account-default-background;  
         box-shadow: 0 0 7px 0 rgba(0,0,0,0.14), 0 10px 14px 0 rgba(0,0,0,0.2);
         margin: auto;

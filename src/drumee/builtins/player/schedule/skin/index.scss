@@ -106,7 +106,7 @@
 
   &__tooltips.schedule-tooltips{
     background-color: var(--bg-tooltips);
-    border-radius:$default-border-radius-small;// $default-border-radius-tiny;
+    border-radius:$default-border-radius-small;// var(--border-radius-tiny);
     opacity:1;
     padding: 8px;
     position: absolute;

@@ -8,7 +8,7 @@
       background-color:$admin-default-background-hover;
       color:$admin-default-text-hover;
       svg{
-         border-radius: $default-border-radius-tiny; 
+         border-radius: var(--border-radius-tiny); 
       }
       &.checkbox[data-state="1"] {
         box-shadow: none;

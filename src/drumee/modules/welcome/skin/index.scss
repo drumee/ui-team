@@ -305,7 +305,7 @@
 
   .widget__pw-meter {
       &.wrapper {
-        border-radius: $default-border-radius-tiny;
+        border-radius: var(--border-radius-tiny);
         height: 8px;
         position: absolute;
         top: 50px;
@@ -314,7 +314,7 @@
 
       &.bar-holder {
         background: linear-gradient(90deg,red,#ff0 50%,green);
-        border-radius: $default-border-radius-tiny;
+        border-radius: var(--border-radius-tiny);
         height:8px;
         overflow: hidden;
         position: absolute;

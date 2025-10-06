@@ -115,7 +115,7 @@
         color:$share-default-text-hover ;
 
         svg {
-          border-radius: $default-border-radius-tiny;
+          border-radius: var(--border-radius-tiny);
        }
       }
 

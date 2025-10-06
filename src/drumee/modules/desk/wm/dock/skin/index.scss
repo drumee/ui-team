@@ -50,7 +50,7 @@
       cursor: pointer;
       top: -40px;
       background-color: var(--bg-tooltips); //$default-background-tooltips;
-      border-radius: $default-border-radius-tiny;
+      border-radius: var(--border-radius-tiny);
       height: 30px;
       align-items: center;
       padding: 0 10px;
@@ -313,7 +313,7 @@
 
   &__tooltips {
     background-color: var(--bg-tooltips); //$default-background-tooltips;
-    border-radius: $default-border-radius-tiny;
+    border-radius: var(--border-radius-tiny);
     opacity: 1;
     padding: 8px;
     position: absolute;

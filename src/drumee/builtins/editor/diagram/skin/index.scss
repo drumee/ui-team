@@ -111,7 +111,7 @@
       .tooltips {
         white-space: nowrap;
         background-color: var(--bg-tooltips); 
-        border-radius: $default-border-radius-tiny;
+        border-radius: var(--border-radius-tiny);
         width: fit-content;
         position: absolute;
         padding: 7px;

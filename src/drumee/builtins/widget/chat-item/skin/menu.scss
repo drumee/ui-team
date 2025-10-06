@@ -46,7 +46,7 @@
   &__icon {
     &.menu-icon {
       background-color: var(--default-bg-hover);
-      border-radius: $default-border-radius-tiny;
+      border-radius: var(--border-radius-tiny);
       border: 1px solid var(--eviolet);
       color: var(--ewhite);
       cursor: pointer;

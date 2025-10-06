@@ -54,7 +54,7 @@
       align-content: center;
       align-items: center;
       box-shadow: var(--shadow-block);
-      border-radius: $default-border-radius-tiny;
+      border-radius: var(--border-radius-tiny);
 
       .drumee-text {
         text-align: center;
