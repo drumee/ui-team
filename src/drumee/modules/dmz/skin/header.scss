@@ -26,7 +26,7 @@
     justify-content: center;
     white-space: break-spaces;
     word-break: break-word;
-    @include typo($size: 28px, $line: 28px, $color: $dmz-default-text-reverse);
+    @include typo($size: 28px, $line: 28px, $color: var(--default-text-reverse));
   }
 
   &__title {
@@ -35,12 +35,12 @@
     overflow: hidden;
     width: 100%;
 
-    @include typo($size: 28px, $line: 28px, $color: $dmz-default-text-reverse);
+    @include typo($size: 28px, $line: 28px, $color: var(--default-text-reverse));
 
     &[data-device="mobile"] {
       margin-top: 5px;
       width: 100%;
-      @include typo($size: 20px, $line: 22px, $color: $dmz-default-text-reverse);
+      @include typo($size: 20px, $line: 22px, $color: var(--default-text-reverse));
     }
 
 
@@ -84,7 +84,7 @@
   }
 
   &__icon {
-    color: $dmz-default-icon-reverse;
+    color: var(--default-icon-reverse);
     cursor: pointer;
     width: 24px;
     height: 24px;
@@ -103,14 +103,14 @@
 
   &__button {
     align-items: center;
-    border: 1px solid $dmz-default-action-btn-border-color;
+    border: 1px solid var(--dmz-default-action-btn-border-color);
     border-radius: $default-border-radius;
     background: transparent;
     cursor: pointer;
     height: 100%;
     justify-content: center;
     width: 100%;
-    @include typo($size: 14px, $line: 16px, $color: $dmz-default-text-reverse);
+    @include typo($size: 14px, $line: 16px, $color: var(--default-text-reverse));
 
     &:hover {
       box-shadow: 0 0px 13px 0px rgba(169, 186, 255, 0.5);

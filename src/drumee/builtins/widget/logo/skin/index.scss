@@ -28,7 +28,7 @@
   }
 
   &__text {
-    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+    @include typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
     text-align: center;
 
     &[data-state="0"] {

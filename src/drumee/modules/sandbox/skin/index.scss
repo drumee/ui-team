@@ -218,7 +218,7 @@
 
 .module-sandbox {
   &__menu-box {
-    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+    @include typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
 
     .menu-topic-trigger {
       background: radial-gradient(109.24% 109.24% at 21.67% 0%, rgba(91, 115, 210, 0.4) 0%, #5B73D2 100%), #879BFF;
@@ -252,7 +252,7 @@
 
   &__menu-box-horizontal {
     margin-top: 120px;
-    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+    @include typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
 
     .menu-topic-trigger {
       background: radial-gradient(109.24% 109.24% at 21.67% 0%, rgba(91, 115, 210, 0.4) 0%, #5B73D2 100%), #879BFF;

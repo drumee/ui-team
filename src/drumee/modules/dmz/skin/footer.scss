@@ -1,6 +1,6 @@
 &-footer {
   &__main {
-    background: $dmz-footer-background;
+    background: var(--dmz-footer-background);
     height: 100%;
     width: 100%;
     justify-content: space-evenly;
@@ -54,11 +54,11 @@
 
   &__note {
     &.title {
-      @include typo($size: 24px, $line: 30px, $weight: 300, $color: $dmz-footer-title-color);
+      @include typo($size: 24px, $line: 30px, $weight: 300, $color: var(--dmz-footer-title-color));
     }
 
     &.description {
-      @include typo($size: 14px, $line: 24px, $weight: 300, $color: $dmz-default-text-reverse);
+      @include typo($size: 14px, $line: 24px, $weight: 300, $color: var(--default-text-reverse));
       align-items: flex-start;
       height: 100%;
       width: calc(100% - 80px);
@@ -69,14 +69,14 @@
     }
 
     &.website {
-      @include typo($size: 14px, $line: 18px, $weight: 300, $color: $dmz-default-text-reverse);
+      @include typo($size: 14px, $line: 18px, $weight: 300, $color: var(--default-text-reverse));
 
       &.link {
         font-weight: 600;
         padding-left: 10px;
 
         &:hover {
-          color: $dmz-backgroundless-text-hover;
+          color: var(--backgroundless-text-hover);
         }
       }
     }
@@ -106,13 +106,13 @@
   }
 
   &__icon {
-    color: $dmz-default-icon-reverse;
+    color: var(--default-icon-reverse);
     height: 100%;
     width: 100%;
     padding: 4px;
     &:hover{
       svg{
-        color:$dmz-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
   }
@@ -134,7 +134,7 @@
   }
 
   &__button-desk {
-    @include typo($size: 16px, $line: 18px, $color:$dmz-default-text-reverse);
+    @include typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
     align-items: center;
     border-radius:$default-border-radius;
     cursor: pointer;
@@ -150,7 +150,7 @@
   }
 
   &__button-desk {
-    background-color: $dmz-btn-open-desk-color;
+    background-color: var(--dmz-btn-open-desk-color);
   }
 
   &__button-video {

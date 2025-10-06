@@ -6,7 +6,7 @@
     color: var(--ewhite);
   }
   .menu-topic-items{
-    background: $dmz-default-background; 
+    background: var(--default-background); 
     min-width: 200px;
     &__wrapper{
       &[data-state="open"]{

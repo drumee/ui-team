@@ -10,7 +10,7 @@
       color: var(--ewhite);
     }
     .menu-topic-items{
-      background: $dmz-default-background; 
+      background: var(--default-background); 
       border-radius:$default-border-radius;
       min-width: 253px;   
       margin-top:12px;  
@@ -22,7 +22,7 @@
         content:" ";
         width: 18px;
         height: 18px;
-        background-color: $dmz-default-background;   
+        background-color: var(--default-background);   
         position:absolute;
         right: 64px;
         top:-9px;
@@ -34,7 +34,7 @@
 }
 &__attendees{
   &-title{
-    @include typo($size:14px,$line:14px,$weight:300,$color:$dmz-default-text-title);//var(--default-text-color));
+    @include typo($size:14px,$line:14px,$weight:300,$color: var(--default-text-title));//var(--default-text-color));
     justify-content: center;
     padding:10px 0 15px 3px;
     height: 20px;

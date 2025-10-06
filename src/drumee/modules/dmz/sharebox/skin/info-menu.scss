@@ -6,7 +6,7 @@
       }
     }
     & .menu-topic-items {
-      background-color: $dmz-default-background;
+      background-color: var(--default-background);
       border-radius: $default-border-radius;
       height: 100%;
       justify-content: center;
@@ -30,7 +30,7 @@
         }
       }
       &:before {
-        background-color: $dmz-default-background;
+        background-color: var(--default-background);
         content: "";
         height: 10px;
         left: 205px;
@@ -41,7 +41,7 @@
       }
 
       &:after {
-        background:$dmz-default-background;
+        background:var(--default-background);
         border-radius: $default-border-radius-top;
         content: "";
         height: 10px;
@@ -59,17 +59,17 @@
 
   &__icon {
     align-items: center;
-    color: $dmz-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     height: 14px;
     width: 14px;
 
     &.trigger-icon {
-      color: $dmz-default-icon-reverse;
+      color: var(--default-icon-reverse);
       height: 20px;
       width: 20px;
       :hover {
-        color:$dmz-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
 
@@ -79,11 +79,11 @@
     }
 
     &.available {
-      color: $dmz-icon-valid;
+      color: var(--dmz-icon-valid);
     }
 
     &.account_check {
-      color: $dmz-icon-valid;
+      color: var(--dmz-icon-valid);
     }
 
     &.owner-name {
@@ -92,7 +92,7 @@
     }
     
     &.cross {
-      color: $dmz-icon-invalid ;
+      color: var(--dmz-icon-invalid);
       height: 12px;
       width: 12px;
     }
@@ -114,7 +114,7 @@
   }
 
   &__note {
-    @include typo($size: 13px, $weight: 300, $line: 15px, $color: $dmz-default-text-color);
+    @include typo($size: 13px, $weight: 300, $line: 15px, $color: var(--default-text-color));
     padding-top: 0px;
 
     &.title {
@@ -129,14 +129,14 @@
     }
 
     &.expires-in-value {
-      @include typo($size: 13px, $weight: 300, $line: 14px, $color: $dmz-default-text-color);
-      background-color:$dmz-default-background;
+      @include typo($size: 13px, $weight: 300, $line: 14px, $color: var(--default-text-color));
+      background-color:var(--default-background);
       justify-content: center;
       padding: 0 5px;
     }
 
     &.expires-in-label {
-      @include typo($size: 13px, $weight: 300, $line: 14px, $color: $dmz-secondary-text-color);
+      @include typo($size: 13px, $weight: 300, $line: 14px, $color: var(--secondary-text-color));
       margin: 0px 2px;
       padding-right: 2px;
     }

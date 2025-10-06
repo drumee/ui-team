@@ -100,7 +100,7 @@
     height: 100%;
 
     &-title {
-      @include typo($size: 20px, $line: 28px, $weight: 400, $color: $dmz-default-text-color);
+      @include typo($size: 20px, $line: 28px, $weight: 400, $color: var(--default-text-color));
       width: 100%;
       padding: 20px;
       margin: 20px 0;
@@ -115,7 +115,7 @@
     }
 
     &-text {
-      @include typo($size: 18px, $line: 28px, $weight: 300, $color: $dmz-default-text-color);
+      @include typo($size: 18px, $line: 28px, $weight: 300, $color: var(--default-text-color));
       width: 100%;
       padding: 20px;
       margin: 20px 0;

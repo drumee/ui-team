@@ -106,14 +106,14 @@
   }
 
   &__note {
-    @include typo($size: 20px, $line: 28px, $weight: 400, $color: $dmz-default-text-reverse);
+    @include typo($size: 20px, $line: 28px, $weight: 400, $color: var(--default-text-reverse));
     justify-content: center;
     text-align: center;
     width: 100%;
   }
 
   &__footer-note {
-    @include typo($size: 16px, $line: 20px, $weight: 400, $color: $dmz-default-text-reverse);
+    @include typo($size: 16px, $line: 20px, $weight: 400, $color: var(--default-text-reverse));
     bottom: 6px;
     justify-content: flex-end;
     height: 25px;
@@ -127,6 +127,6 @@
     left: calc(50% - 150px);
     width: 300px;
     justify-content: center;
-    @include typo($line: 60px, $size: 40px, $weight: 400, $color: $dmz-default-text-reverse);
+    @include typo($line: 60px, $size: 40px, $weight: 400, $color: var(--default-text-reverse));
   }
 }
