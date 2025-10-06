@@ -281,7 +281,7 @@
     &.switch-container {
       padding-left: 5px;
       text-align: center;
-      @include typo($size: 13px, $line: 16px, $color: $dt-secondary-text-color);
+      @include typo($size: 13px, $line: 16px, $color: var(--secondary-text-color));
     }
 
     &.btn-ok {
