@@ -207,7 +207,7 @@
 
       &.team {
         svg {
-          color: $teamroom-main;
+          color: var(--teamroom-main);
         }
       }
 

@@ -72,7 +72,7 @@
     border-bottom-right-radius: 3px;
     border-radius: 3px;
     fill: var(--ewhite);
-    background-color: $teamroom-main;
+    background-color: var(--teamroom-main);
     padding: 2.5px;
 
     &:before {

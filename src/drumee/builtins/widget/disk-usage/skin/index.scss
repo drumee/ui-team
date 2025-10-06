@@ -43,7 +43,7 @@
 
     &.private {
       color: var(--default-icon-reverse);
-      background-color: $teamroom-main;
+      background-color: var(--teamroom-main);
     }
 
     &.detail {

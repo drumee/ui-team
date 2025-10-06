@@ -78,7 +78,7 @@
     }
   }
   &.private {
-    background-color:$teamroom-main ;
+    background-color:var(--teamroom-main);
     .media-form__input input {
       background-color: #c05ed0;
       color: $team-default-text-reverse;

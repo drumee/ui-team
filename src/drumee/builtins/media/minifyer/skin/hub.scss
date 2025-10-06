@@ -65,7 +65,7 @@
   }
 
   &.private {
-    background-color:$teamroom-main;//$teamroom-background;
+    background-color:var(--teamroom-main);//$teamroom-background;
 
     &:before {
       border-left: 13px solid transparent;

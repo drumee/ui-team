@@ -89,7 +89,7 @@
         }
         &.shared-folder{
           svg{
-            fill:$teamroom-main;//#bd44d9;
+            fill:var(--teamroom-main);//#bd44d9;
             width: 20px;
           }
         }

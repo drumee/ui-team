@@ -10,7 +10,7 @@
 
 .media-wrapper{
   &__ui {
-    background-color:$channel-default-background;
+    background-color:var(--default-background);
   }
   &__body {
     height: 100%;
