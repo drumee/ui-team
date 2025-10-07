@@ -20,7 +20,7 @@
     position: absolute;
     height: auto !important;
     background-color: var(--default-bg);
-    border-radius: $default-border-radius-bottom;
+    border-radius: var(--border-radius-bottom);
     align-items: center;
     min-height: 345px;
     box-shadow: var(--shadow-container);

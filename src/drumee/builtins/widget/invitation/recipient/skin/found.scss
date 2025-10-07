@@ -14,7 +14,7 @@
     height: 14px;
     padding: 2px;
     border: 1px solid #879BFF;
-    border-radius: $default-checkbox-border-radius;//2px;
+    border-radius: var(--checkbox-border-radius);//2px;
     svg {
       color: var(--ewhite);
     }

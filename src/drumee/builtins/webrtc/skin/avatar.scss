@@ -44,7 +44,7 @@
   width: auto;
   max-width: calc(100% - 20px);
   background-color: rgba(0,0,0,.33);
-  border-radius: $border-radius-small;
+  border-radius: var(--border-radius-small);
   padding: 5px;
   @include typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-reverse));//$color: var(--main-grey) $weight: 400,);
 }

@@ -209,7 +209,7 @@
     }
 
     &.checkbox {
-      border-radius: $default-checkbox-border-radius;
+      border-radius: var(--checkbox-border-radius);
       border: 1.5px solid var(--default-checkbox-border);
       color: var(--default-checkbox-bg);
       cursor: pointer;

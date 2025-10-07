@@ -105,7 +105,7 @@
   
   &__icon {
     &.add-member {
-      border-radius:$border-radius-small;
+      border-radius:var(--border-radius-small);
       border: 1px solid var(--default-entry-border-bottom);
       box-sizing: border-box;
       color: var(--egrey-89);

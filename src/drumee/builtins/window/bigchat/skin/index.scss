@@ -96,7 +96,7 @@
 
     & .tags-list {
       background: var(--default-block-background);
-      border-radius: $default-border-radius-left;
+      border-radius: var(--border-radius-left);
     }
 
     .widget-tag__note.title {
@@ -199,7 +199,7 @@
 
     &__icon {
       &.no-discussion-icon {
-        border-radius: $border-radius-small;
+        border-radius: var(--border-radius-small);
         border: 1px solid var(--border-no-discussion);
         box-sizing: border-box;
         color: var(--default-icon-neutral);

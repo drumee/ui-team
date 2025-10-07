@@ -35,7 +35,7 @@
     //border-radius: 0 0 6px 0;
 
     &.tags {
-      border-radius:$default-border-radius-left;
+      border-radius:var(--border-radius-left);
       background: var(--default-background);//var(--default-block-background);    
       min-width: 186px;
     }

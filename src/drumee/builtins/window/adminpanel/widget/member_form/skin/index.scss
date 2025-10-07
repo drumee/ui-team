@@ -126,7 +126,7 @@
     }
 
     &.security-check {
-      border-radius: $default-checkbox-border-radius;
+      border-radius: var(--checkbox-border-radius);
       border: 1px solid var(--default-checkbox-border);
       box-shadow: none;
       color:var(--default-checkbox-background);

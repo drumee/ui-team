@@ -63,7 +63,7 @@
     }
 
     &-items {
-      border-radius: $default-border-radius-small;//4px;
+      border-radius: var(--border-radius-small);//4px;
       box-shadow:var(--shadow-container);
       cursor: pointer;
       width:100%;

@@ -204,7 +204,7 @@
       width:100%;
       height: auto;
       padding: 2px 6px;//3px 6px;
-      border-radius: $default-border-radius-bottom; 
+      border-radius: var(--border-radius-bottom); 
       border:1px solid var(--default-entry-border-bottom);
       overflow: hidden;
       resize: none;

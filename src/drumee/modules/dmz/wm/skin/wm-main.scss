@@ -81,7 +81,7 @@
     & .media-grid__ui {
       & .filename {
         @include typo($line: 14px, $size: 11px, $color: var(--default-text-color));
-        border-radius:$default-border-radius-bottom;
+        border-radius:var(--border-radius-bottom);
         cursor: pointer;
         left: 0px;
         max-height: 31px;

@@ -9,7 +9,7 @@
     top: 0;
     justify-content: center;
     border: 1px solid var(--eorange-sunset);
-    border-radius: $default-border-radius-small;
+    border-radius: var(--border-radius-small);
     background-color: var(--ewhite);
     box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
     Z-index: 200;

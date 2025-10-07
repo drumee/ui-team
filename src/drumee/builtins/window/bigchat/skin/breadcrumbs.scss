@@ -49,7 +49,7 @@
       opacity:  1;
     }
     &.breadcrumb-icon {
-      border-radius: $border-radius-small; 
+      border-radius: var(--border-radius-small); 
       height: 18px; 
       padding: 5px;
       width:18px; 
@@ -79,7 +79,7 @@
 
   &__roll {
     background: var(--default-background);
-    border-radius: $border-radius-small; 
+    border-radius: var(--border-radius-small); 
     box-shadow:$drumee-container-dropdown;
     height: auto;
     left: -12px;    

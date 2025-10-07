@@ -118,7 +118,7 @@
       width: 20px;
       height: 15px;
       margin-top: 9px;
-      border-radius: $default-checkbox-border-radius;
+      border-radius: var(--checkbox-border-radius);
     }
   }
 

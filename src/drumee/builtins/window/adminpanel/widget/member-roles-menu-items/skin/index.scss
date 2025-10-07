@@ -14,7 +14,7 @@
         box-shadow: none;
         color: var(--checkbox-checked-reverse);
         border: 1px solid var(--checkbox-checked-border-reverse);
-        border-radius:$default-checkbox-border-radius;
+        border-radius:var(--checkbox-border-radius);
       }
       }
     }
@@ -49,7 +49,7 @@
     margin-left: 0px; 
     border:1px solid var(--default-checkbox-border);
     color:var(--default-checkbox-background);
-    border-radius:$default-checkbox-border-radius;
+    border-radius:var(--checkbox-border-radius);
     svg{
       width: 14px;
       height: 14px; 

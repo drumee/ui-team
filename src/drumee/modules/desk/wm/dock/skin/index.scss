@@ -22,7 +22,7 @@
 
   &__main {
     background-color: rgba(47, 47, 47, 0.2);
-    border-radius: $default-border-radius-top;
+    border-radius: var(--border-radius-top);
     justify-content: center;
     max-width: 100vw;
     padding: 10px 5px;

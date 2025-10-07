@@ -114,7 +114,7 @@
       bottom: 0;
       justify-items: center;
       align-items: center;
-      border-radius: $default-border-radius-bottom;
+      border-radius: var(--border-radius-bottom);
       background-color: var(--transparency-container-overlay);
     }
   }

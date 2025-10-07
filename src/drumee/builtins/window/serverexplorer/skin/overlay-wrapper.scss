@@ -7,7 +7,7 @@
     
     & .content {
       background: var(--transparency-container-overlay);
-      border-radius: $default-border-radius-bottom;
+      border-radius: var(--border-radius-bottom);
       height: 100%;
       position: absolute;
       width: 100%;

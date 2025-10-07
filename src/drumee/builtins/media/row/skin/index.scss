@@ -202,7 +202,7 @@
       .ok-button {
         align-items: center;
         background: var(--btn-commit-background);
-        border-radius: $default-border-radius-small; //4px;
+        border-radius: var(--border-radius-small); //4px;
         border: 1px solid var(--btn-commit-background);
         cursor: pointer;
         height: 20px;

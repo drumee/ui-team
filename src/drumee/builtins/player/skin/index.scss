@@ -72,7 +72,7 @@
 
   &__container {
     background-color: var(--multimedia-player-doc-bg);
-    border-radius: $default-border-radius-bottom;
+    border-radius: var(--border-radius-bottom);
     height: calc(100% - 44px);
     min-height: 200px;
     overflow: hidden;

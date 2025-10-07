@@ -17,7 +17,7 @@
     width: 14px;//20px;
     height: 14px;//20px;
   //  color : var(--egrey-2f);
-    border-radius: $default-checkbox-border-radius;
+    border-radius: var(--checkbox-border-radius);
     border: 1px solid var(--default-checkbox-border);//$default-checkbox;
     color:var(--default-bg);  
 

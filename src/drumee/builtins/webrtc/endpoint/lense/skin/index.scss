@@ -40,7 +40,7 @@
         align-content: center;
         justify-items: center;
         display: flex;
-      //  border-radius:$default-border-radius-bottom;
+      //  border-radius:var(--border-radius-bottom);
         svg{
           width: 100px;
           height: 100px;
@@ -120,7 +120,7 @@
     height: 100%;
     width: 100%;
     z-index: 10;
-    border-radius:$default-border-radius-bottom;// 0 0 4px 4px;
+    border-radius:var(--border-radius-bottom);// 0 0 4px 4px;
     // &[data-size="cover"]{
       // left: 50%;
       // position: absolute;

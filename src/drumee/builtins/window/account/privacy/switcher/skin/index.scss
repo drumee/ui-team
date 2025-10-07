@@ -110,7 +110,7 @@
       .inner{
         width: 24px;
         height: 4px;
-        border-radius: $default-border-radius-small;
+        border-radius: var(--border-radius-small);
         background-color:var(--toggle-background);//#DDE2E8;
       }
     }

@@ -30,7 +30,7 @@
   margin: 0 auto;
   width: 100%;
   height: calc(100% - 44px);
-  border-radius: $default-border-radius-bottom ; //0 0 6px 6px;
+  border-radius: var(--border-radius-bottom) ; //0 0 6px 6px;
   overflow: hidden;
   z-index: 100;
   &[data-scroll="x"]{

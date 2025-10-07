@@ -102,7 +102,7 @@
       height: 15px;
       right: 20px;
       box-shadow: none;
-      border-radius: $default-checkbox-border-radius;
+      border-radius: var(--checkbox-border-radius);
       border: 1px solid var(--default-checkbox-border);
       color:var(--default-checkbox-background);  
 

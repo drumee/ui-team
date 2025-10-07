@@ -9,7 +9,7 @@
   &__container {
     align-items: center;
     background: var(--transparency-container-overlay); //var(--transparency-container-overlay);
-    border-radius: $default-border-radius-bottom; //0 0 6px 6px;
+    border-radius: var(--border-radius-bottom); //0 0 6px 6px;
     height: 100%;
     justify-content: center;
     position: absolute;
@@ -20,7 +20,7 @@
   &__content {
     border-radius: var(--border-radius);
     background-color: var(--default-bg);
-    box-shadow: $drumee-shadow-box;
+    box-shadow: var(--drumee-shadow-box);
     ; //0 0 7px 0 rgba(0,0,0,0.14);
     height: calc(100% - 110px);
     width: calc(100% - 380px);

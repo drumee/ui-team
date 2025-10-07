@@ -7,7 +7,7 @@
     position: absolute;
     justify-content: center;
     border: 1px solid var(--eorange-sunset);
-    border-radius: $default-border-radius-small;
+    border-radius: var(--border-radius-small);
     background-color: var(--default-bg);
     box-shadow: var(--shadow-container);
     Z-index: 200;

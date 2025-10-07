@@ -71,7 +71,7 @@
     }
     
     &.checkbox {
-      border-radius: $default-checkbox-border-radius;
+      border-radius: var(--checkbox-border-radius);
       border:1px solid var(--default-checkbox-border);//$default-checkbox;
       box-shadow: none;
       color: var(--default-checkbox-background);//$default-background;
@@ -108,7 +108,7 @@
       .checkbox[data-state="1"] {
         box-shadow: none;
         border: 1px solid var(--checkbox-checked-border-reverse);
-        border-radius:$default-checkbox-border-radius;
+        border-radius:var(--checkbox-border-radius);
       }
     }
   }

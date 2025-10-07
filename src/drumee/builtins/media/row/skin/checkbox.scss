@@ -21,7 +21,7 @@
   &[data-selected="1"]{
     visibility: visible;
     svg{
-      border-radius:$default-checkbox-border-radius;
+      border-radius:var(--checkbox-border-radius);
       fill: orange;
       border: 1px solid orange;
       visibility: visible;

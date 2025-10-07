@@ -162,7 +162,7 @@
 
           & .inner.note-content {
             background-color:var(--toggle-background);
-            border-radius: $default-border-radius-small;
+            border-radius: var(--border-radius-small);
             height: 4px;
             width: 24px;
           }

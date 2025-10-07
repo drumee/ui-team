@@ -13,7 +13,7 @@
     position: absolute;
     height: auto !important;
     background-color: var(--default-background);
-    border-radius: $default-border-radius-bottom;
+    border-radius: var(--border-radius-bottom);
     align-items: center;
     min-height: 345px;
     box-shadow: var(--shadow-container);
@@ -132,7 +132,7 @@
           .checkbox[data-state="1"]{
             color: var(--checkbox-checked-reverse); //var(--ewhite);
             border: 1px solid var(--checkbox-checked-border-reverse);
-            border-radius:$default-checkbox-border-radius;
+            border-radius:var(--checkbox-border-radius);
           }
         }
       }
@@ -198,7 +198,7 @@
     width: 15px;
     height: 15px;
     border: 1px solid var(--default-checkbox-border);
-    border-radius: $default-checkbox-border-radius;
+    border-radius: var(--checkbox-border-radius);
     cursor: pointer;
     color:var(--default-checkbox-background);
 

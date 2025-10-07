@@ -53,7 +53,7 @@
   &__header {
     background-color: var(--sharebox-main);
     border-bottom: none;
-    border-radius:var(--default-border-radius-top);
+    border-radius:var(--border-radius-top);
     height: 44px;
     min-height: 44px;
     width: 100%;
@@ -106,7 +106,7 @@
 
   &__tooltips.schedule-tooltips{
     background-color: var(--bg-tooltips);
-    border-radius:$default-border-radius-small;// var(--border-radius-tiny);
+    border-radius:var(--border-radius-small);// var(--border-radius-tiny);
     opacity:1;
     padding: 8px;
     position: absolute;
@@ -387,7 +387,7 @@
       bottom: 0;
       justify-items: center;
       align-items: center;
-      border-radius: $default-border-radius-bottom;
+      border-radius: var(--border-radius-bottom);
       background-color: var(--transparency-container-overlay);//$transparency-container-overlay;
     }
   }

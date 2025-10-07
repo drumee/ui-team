@@ -17,8 +17,7 @@
   right: 40px;
   width: 120px;
   height: 80px;
-  @include video-border-radius();
-  //border-radius:6px;
+  border-radius:var(--border-radius);
   border: 1px white solid;
   z-index: 100;
 }

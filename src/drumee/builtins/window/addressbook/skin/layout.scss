@@ -3,7 +3,7 @@
 .window-addressbook {
   & .widget_tag {
     background: var(--default-background);
-    border-radius: $default-border-radius-left;
+    border-radius: var(--border-radius-left);
     min-width: 186px;
     padding: 0;
   }

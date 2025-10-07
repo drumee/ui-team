@@ -59,7 +59,7 @@
 
           & .inner.note-content {
             background-color: var(--switch-toggle-background);
-            border-radius: $default-border-radius-small;
+            border-radius: var(--border-radius-small);
             height: 4px;
             width: 24px;
           }
@@ -270,7 +270,7 @@
       @include typo($line: 18px, $size: 14px, $weight: 300, $color: var(--default-text-color));//$size: 13px, $weight: 400,
       align-items: center;
       background-color: var(--default-background);  
-      border-radius: $default-border-radius-small;
+      border-radius: var(--border-radius-small);
       height: 20px;
       justify-content: center;
       padding: 0px 4px;

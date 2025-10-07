@@ -224,7 +224,7 @@
       padding: 0px;
       background-color: var(--default-background);
       z-index: 10000;
-      border-radius: $default-border-radius-bottom;
+      border-radius: var(--border-radius-bottom);
 
       &[data-active="0"] {
         .btn {
@@ -295,7 +295,7 @@
     height: 30px;
     padding: 4px;
     width: 30px;
-    border-radius: $default-border-radius-small;// 4px;
+    border-radius: var(--border-radius-small);// 4px;
     &[data-state="1"] {
       //  background: #879bff;
       color: var(--default-icon-hover);
@@ -310,7 +310,7 @@
   }
 
   &-permission__icon.checkbox {
-    border-radius: $default-checkbox-border-radius;
+    border-radius: var(--checkbox-border-radius);
     border: 1px solid var(--default-checkbox-border);
     color: var(--default-checkbox-background);
     cursor: pointer;

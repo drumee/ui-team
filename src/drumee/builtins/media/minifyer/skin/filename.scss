@@ -1,5 +1,5 @@
 .filename {
-  border-radius:$default-border-radius-bottom;
+  border-radius:var(--border-radius-bottom);
   cursor: pointer;
   max-height: 31px;
   overflow: hidden;
@@ -28,7 +28,7 @@
 
 .filename-tooltips {
   background: var(--default-bg-block);
-  border-radius: $default-border-radius-bottom-small;
+  border-radius: var(--border-radius-bottom-smal);
   display: none;
   max-height: calc(100% - 5px);
   max-width: 100%;

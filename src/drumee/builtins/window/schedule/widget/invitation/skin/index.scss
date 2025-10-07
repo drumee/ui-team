@@ -47,7 +47,7 @@
     margin-right: 5px;
 
     &[data-state="1"] {
-      border-radius: $border-radius-small;
+      border-radius: var(--border-radius-small);
       border: 1px solid var(--default-border-success); //$default-text-success;
       color: var(--default-text-success);
       height: 20px;

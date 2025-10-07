@@ -92,7 +92,7 @@
   &__menu-dropdown{
     background-color: var(--default-background);
     box-shadow: var(--shadow-container);// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
-    border-radius: $default-border-radius-bottom;// 0 0px 6px 6px;//2px;
+    border-radius: var(--border-radius-bottom);// 0 0px 6px 6px;//2px;
     padding: 6px 11px; //6px 16px
     position: relative;
     /*&:before {

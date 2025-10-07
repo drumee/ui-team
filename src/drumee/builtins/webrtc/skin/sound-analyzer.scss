@@ -4,7 +4,7 @@
 //   position: absolute;
 //   border: 0;
 //   bottom: 0;
-//   z-index: $always-visible;
+//   z-index: var(--always-visible);
 // }
 
 .sound-analyzer__ui{
@@ -15,5 +15,5 @@
   border: 0;
   bottom: 0;
   left: 0;
-  z-index: $always-visible;
+  z-index: var(--always-visible);
 }

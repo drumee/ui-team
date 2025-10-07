@@ -2,7 +2,7 @@
 .window-team{
   .window-confirm__main{
     max-height:355px;// 350px; //320px;
-    border-radius:$default-border-radius-bottom;
+    border-radius:var(--border-radius-bottom);
     background-color: var(--default-background);
     width: 100%;//450px;
   }

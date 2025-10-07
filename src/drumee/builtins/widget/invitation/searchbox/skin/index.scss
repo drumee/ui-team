@@ -78,7 +78,7 @@
 
         &[data-state="1"] {
           background-color: #879BFF;
-          border-radius: $default-checkbox-border-radius;
+          border-radius: var(--checkbox-border-radius);
           color: var(--ewhite);
         }
       }
@@ -172,7 +172,7 @@
    
     
     &[data-state="1"] {
-      border-radius: $border-radius-small;
+      border-radius: var(--border-radius-small);
       border: 1px solid var(--default-border-success);
       color: var(--default-text-success);
       padding: 3px;

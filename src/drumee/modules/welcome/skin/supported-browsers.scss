@@ -42,7 +42,7 @@
     margin-right: auto;
     margin-top: 5px;
     background-color:var(--default-bg);
-    border-radius:$default-border-radius-small;
+    border-radius:var(--border-radius-small);
   }
    
   &__image-browser {
@@ -94,7 +94,7 @@
     max-width: 100%;
     height: 400px;
     background-color: var(--default-bg);
-    border-radius:$default-border-radius-small;// 4px;    
+    border-radius:var(--border-radius-small);// 4px;    
   }
 }
 

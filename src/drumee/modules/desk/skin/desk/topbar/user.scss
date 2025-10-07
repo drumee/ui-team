@@ -126,7 +126,7 @@
         border-top: 9px solid transparent; //13px
         &:hover {
           opacity: 1;
-          border-radius: $default-border-radius-top;//6px 6px 0 0;
+          border-radius: var(--border-radius-top);//6px 6px 0 0;
         }
         svg{
           color: #879bff;// #ff487a;      
@@ -148,7 +148,7 @@
         height: 65px;
         &:hover {
           opacity: 1;
-          border-radius: $default-border-radius-bottom;//0px 0px 6px 6px;
+          border-radius: var(--border-radius-bottom);//0px 0px 6px 6px;
         }
 
         svg{

@@ -13,7 +13,7 @@
 
   &__container {
     align-items: center;
-    border-radius: $default-border-radius-small;
+    border-radius: var(--border-radius-small);
     height: 18px;
     justify-content: center;
     left: 3px;
@@ -35,7 +35,7 @@
     }
 
     &.breadcrumb-icon {
-      border-radius: $border-radius-small;
+      border-radius: var(--border-radius-small);
       height: 18px;
       padding: 5px;
       width: 18px;

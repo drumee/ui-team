@@ -217,7 +217,7 @@
 
     &.window__body {
       padding: 0;
-      border-radius: $default-border-radius-bottom;
+      border-radius: var(--border-radius-bottom);
     }
 
 
@@ -246,7 +246,7 @@
 
   &__icon {
     &.contact_add {
-      border-radius: $border-radius-small;
+      border-radius: var(--border-radius-small);
       border: 1px solid var(--default-entry-border-bottom);
       box-sizing: border-box;
       color: var(--default-icon-neutral);

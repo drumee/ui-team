@@ -24,7 +24,7 @@
   & .media-grid {
     &__ui {
       background-color: inherit;
-      border-radius: $border-radius-small;
+      border-radius: var(--border-radius-small);
       box-shadow: none;
       height: 48px;
       margin: 10px;

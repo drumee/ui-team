@@ -50,7 +50,7 @@
     }
     
     &.breadcrumb-icon {
-      border-radius: $border-radius-small; //2px;
+      border-radius: var(--border-radius-small); //2px;
       height: 18px; //20px;
       padding: 5px;
       width:18px; //20px;
@@ -78,7 +78,7 @@
 
   &__roll {
     background: var(--default-background);
-    border-radius: $border-radius-small; //4px;
+    border-radius: var(--border-radius-small); //4px;
     box-shadow:$drumee-container-dropdown;// 0 6px 10px 1px rgba(63,79,117,0.13), 0 7px 20px 0 rgba(86,65,113,0.08), 0 3px 17px 0 rgba(194,185,203,0);
     height: auto;
     left: -12px;    

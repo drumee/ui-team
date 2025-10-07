@@ -4,7 +4,7 @@
   max-height: 100%;
   overflow-y: auto;
   background-color:var(--multimedia-background);// $vdo-background-color;//#494949;
-  border-radius: $default-border-radius-bottom;
+  border-radius: var(--border-radius-bottom);
   .smart-container {
     align-items: center;
     justify-content: center;

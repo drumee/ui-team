@@ -1,6 +1,6 @@
 &__checkbox {
   border: 1px solid var(--default-checkbox-border);
-  border-radius: $default-checkbox-border-radius;
+  border-radius: var(--checkbox-border-radius);
   box-shadow: none;
   color: transparent;  
   height: 18px;

@@ -31,7 +31,7 @@
     background:var(--default-bg);;// var(--ewhite);
 
     &.tags {
-      border-radius:$default-border-radius-left;
+      border-radius:var(--border-radius-left);
       background: var(--default-bg-block);    //var(--white-f9);
       min-width: 186px;
     }

@@ -39,7 +39,7 @@
     padding: 2px;
     margin: 5px 0;
     border: 1px solid var(--eviolet);
-    border-radius: $default-checkbox-border-radius;
+    border-radius: var(--checkbox-border-radius);
     svg{
       visibility: hidden;
     }

@@ -56,7 +56,7 @@
     border: 1px solid var(--default-border-success);
     padding: 3px;
     color: var(--default-text-success);
-    border-radius:$border-radius-small;// 3px;
+    border-radius:var(--border-radius-small);// 3px;
     cursor: pointer;
     &:hover{
       background:var(--bg-invitation-success);// $default-text-success;

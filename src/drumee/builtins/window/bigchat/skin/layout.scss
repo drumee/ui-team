@@ -31,7 +31,7 @@
       .max-content{
         display: flex;
         flex : 1;
-        border-radius:$default-border-radius-bottom;
+        border-radius:var(--border-radius-bottom);
       }
     }
 

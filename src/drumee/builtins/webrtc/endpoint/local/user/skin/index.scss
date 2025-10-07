@@ -54,7 +54,7 @@
     width: auto;
     max-width: calc(100% - 20px);
     background-color: var(--default-transparent-black);
-    border-radius: $border-radius-small;
+    border-radius: var(--border-radius-small);
     @include typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-reverse));
 
     &[data-video="1"] {

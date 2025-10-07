@@ -30,7 +30,7 @@
       height: 26px;
       width: max-content;// 80px;
       cursor: pointer;
-      border-radius: $border-radius-small;//2px;
+      border-radius: var(--border-radius-small);//2px;
       justify-content: center;
       background-color:var(--default-bg-block); // #f7f7fa;
       border: 1px solid var(--white-f9);// #f7f7fa;

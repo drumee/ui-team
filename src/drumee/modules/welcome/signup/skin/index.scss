@@ -384,13 +384,13 @@
     }
 
     &.checkbox {
-      border-radius: $default-checkbox-border-radius;
+      border-radius: var(--checkbox-border-radius);
       height: 20px;
       left: 5px;
       width: 20px;
 
       &.conditions {
-        border-radius: $default-checkbox-border-radius;
+        border-radius: var(--checkbox-border-radius);
         height: 18px;
         min-width: 18px;
         padding: 1px;

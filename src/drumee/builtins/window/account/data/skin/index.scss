@@ -143,7 +143,7 @@
       height: auto;
       padding: 10px;
       top:0;
-      border-radius:$default-border-radius-bottom;
+      border-radius:var(--border-radius-bottom);
     }
     &[data-state="open"]{
       right:0;

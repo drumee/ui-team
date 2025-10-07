@@ -24,7 +24,7 @@
   & .media-grid {
     &__ui {
       background-color: inherit;
-      border-radius: $default-border-radius-small;
+      border-radius: var(--border-radius-small);
       box-shadow: none;
       height: 48px;
       min-height: unset;
@@ -82,7 +82,7 @@
     }
 
     & .filename {
-      border-radius: $default-border-radius-bottom;//0 0 6px 6px;
+      border-radius: var(--border-radius-bottom);//0 0 6px 6px;
      // bottom: 1px;
       cursor: pointer;
       display: flex;
