@@ -100,11 +100,9 @@
   --checkbox-checked-reverse: #ffffff;
   --checkbox-checked-border-reverse: #ffffff;
 
-  --default-radio-active: rgb(64 64 255 / 70%)
-
-  --desk-scrollbar-color: rgba(250, 133, 64, 0.6);
+  --default-radio-active: rgb(64 64 255 / 70%) --desk-scrollbar-color: rgba(250, 133, 64, 0.6);
   --default-scrollbar-color: rgba(250, 133, 64, 0.6);
   --desk-scrollbar-color: --default-scrollbar-color;
 
-  
+  --small-width: 649px;
 }

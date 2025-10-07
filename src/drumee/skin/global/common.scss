@@ -4,12 +4,12 @@
    #   TYPE : Global styles, for the whole platform
    # ==================================================================== */
 
-@import "../mixins/colors/index.scss";
-@import "../mixins/typo.scss";
-@import "../mixins/vendor.scss";
-@import "../mixins/z-index.scss";
-@import "../mixins/utils.scss";
-@import "./toolkit.scss";
+// @import "../mixins/colors/index.scss";
+// @import "../mixins/typo.scss";
+// @import "../mixins/vendor.scss";
+// @import "../mixins/z-index.scss";
+// @import "../mixins/utils.scss";
+// @import "./toolkit.scss";
 
 body {
   min-height: 100vh;
@@ -105,17 +105,17 @@ u {
   left: -7px !important;//-8px !important;
 }
 
-@import "button";
-@import "container";
-@import "dialog";
-@import "error";
-@import "image";
-@import "input";
-@import "menu";
-@import "modal";
-@import "preset/ack";
-@import "reset";
-@import "spinner";
-@import "svg";
-@import "text";
-@import "utils";
+// @import "button";
+// @import "container";
+// @import "dialog";
+// @import "error";
+// @import "image";
+// @import "input";
+// @import "menu";
+// @import "modal";
+// @import "preset/ack";
+// @import "reset";
+// @import "spinner";
+// @import "svg";
+// @import "text";
+// @import "utils";
