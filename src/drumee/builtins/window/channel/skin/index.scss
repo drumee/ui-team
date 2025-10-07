@@ -32,7 +32,7 @@
     background-color: inherit;
     height: inherit;
     overflow: hidden;
-    border-radius: $default-border-radius-top;
+    border-radius: var(--default-border-radius-top);
   }
 
   &__content {
@@ -46,7 +46,7 @@
       height: auto;
       justify-content: center;
       width: 100%;
-      border-radius: $default-border-radius-top;
+      border-radius: var(--default-border-radius-top);
     }
 
     &--icon {
@@ -85,7 +85,7 @@
     min-height: 44px;
     border-bottom: none;
     background-color: var(--team-background-header); //$teamroom-background;
-    border-radius: $default-border-radius-top;
+    border-radius: var(--default-border-radius-top);
 
     &.dmz {
       background-color: var(--sharebox-main);

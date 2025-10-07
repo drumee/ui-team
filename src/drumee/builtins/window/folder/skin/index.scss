@@ -1,31 +1,5 @@
 @import 'mixins/drumee';
 
-.window-folder {
-
-  /**background**/
-  --folder-main: #1D8AEA;
-  --folder-main-light: #61AAF2;
-  --folder-main-before-color: #E386B5;
-  --folder-main-background-filename: #a3c6f2;
-
-  --folder-header-bg: --folder-main;
-  --folder-default-bg: --default-background;
-
-
-  /**text**/
-  --folder-text-color: --folder-main;
-  --folder-default-text-color: --default-text-color;
-  --folder-default-text-reverse: --default-text-reverse;
-  --folder-text-notification: --folder-main;
-
-
-  /**icon**/
-  --folder-default-icon-reverse: --default-icon-reverse;
-  --folder-default-icon-hover: --default-icon-hover;
-  --folder-default-icon-neutral: --default-icon-neutral;
-
-  /**border**/
-}
 
 .window-folder {
   &__header {

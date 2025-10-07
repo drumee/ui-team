@@ -2,7 +2,7 @@
   &__container{
     flex: 1;
     border-bottom: 1px solid var(--default-border-notification);
-    border-radius: $default-border-radius-top; //6px 6px 0 0;
+    border-radius: var(--default-border-radius-top); //6px 6px 0 0;
     height: 44px;
   }
   &__title{

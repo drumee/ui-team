@@ -3,7 +3,7 @@
 .player {
   &__header {
     background: var(--default-bg);
-    border-radius: $default-border-radius-top;
+    border-radius: var(--default-border-radius-top);
     color: var(--egrey-b6);
     cursor: pointer;
     flex-shrink: 0;

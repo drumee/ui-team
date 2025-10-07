@@ -140,7 +140,7 @@
     justify-content: center;
     overflow: hidden;
     width: 100%;
-    border-radius:$default-border-radius-right;
+    border-radius:var(--border-radius-righ);
   }
 
   &__sharechat_notify[data-state="0"] {

@@ -53,7 +53,7 @@
   &__header {
     background-color: var(--sharebox-main);
     border-bottom: none;
-    border-radius:$default-border-radius-top;
+    border-radius:var(--default-border-radius-top);
     height: 44px;
     min-height: 44px;
     width: 100%;

@@ -157,7 +157,7 @@
     width: 100%;
 
     &.search-result-header {
-      border-radius: $default-border-radius-top;
+      border-radius: var(--default-border-radius-top);
       max-width: 380px;
       min-width: 310px;
     }

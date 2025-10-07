@@ -151,7 +151,7 @@
       top: 0;
       left: 0;
       background: var(--default-bg);
-      border-radius: $default-border-radius-top;
+      border-radius: var(--default-border-radius-top);
     }
   }
 }

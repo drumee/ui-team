@@ -13,7 +13,7 @@
       &::after {
         align-content: center;
         background-color: var(--website-header-bg);
-        border-radius: $default-border-radius-top;
+        border-radius: var(--default-border-radius-top);
         content: attr(data-name);
         display: flex;
         flex-direction: column;

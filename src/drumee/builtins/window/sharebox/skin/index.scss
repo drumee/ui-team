@@ -1,16 +1,6 @@
 @import 'mixins/drumee.scss';
 @import 'topbar.scss';
 
-.window-sharebox {
-  --sharebox-main: #EF6500;
-  --sharebox-border: #fa8540;
-  --share-box-default-color: #FCB58C;
-  --share-box-topbar-container: #FA8540;
-  --sharebox-main-background-filename: #ffccaf;
-  --sharebox-notification-cancel-btn-border: #DDE2E8;
-  --sharebox-main-light: #f78d4f;
-  --sharebox-default-icon-error: #ea4d44;
-}
 
 .window-sharebox {
   &__ui {
@@ -26,7 +16,7 @@
       &::after {
         align-content: center;
         background-color: var(--sharebox-main);
-        border-radius: $default-border-radius-top; //6px 6px 0 0;
+        border-radius: var(--default-border-radius-top); //6px 6px 0 0;
         content: attr(data-name);
         display: flex;
         flex-direction: column;

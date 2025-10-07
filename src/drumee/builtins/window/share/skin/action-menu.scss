@@ -36,7 +36,7 @@
 
       &:after {
         background: $default-background;
-        border-radius:$default-border-radius-top;
+        border-radius:var(--default-border-radius-top);
         content: "";
         height: 10px;
         left: 0;

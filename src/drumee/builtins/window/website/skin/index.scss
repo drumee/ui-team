@@ -2,12 +2,6 @@
 @import 'peers.scss';
 @import 'header.scss';
 
-.window-website {
-  --website-main: #18a3ac;
-  --website-main-light: #45b4bb;
-  --website-main-background-filename: #6dcad1;
-  --website-header-bg: --website-main;
-}
 
 .window-website {
   @import 'main.scss';

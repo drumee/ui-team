@@ -12,7 +12,7 @@
   &__topbar {
     background-color: var(--teamroom-main);
     color: var(--default-text-reverse); 
-    border-radius: $default-border-radius-top; 
+    border-radius: var(--default-border-radius-top); 
     height: 44px;
     .dialog__button--close {
       color: var(--default-icon-reverse);

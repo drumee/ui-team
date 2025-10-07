@@ -1,5 +1,5 @@
 @import 'mixins/drumee';
-@import './vars.scss';
+// @import './vars.scss';
 
 .window-admin-panel {
   @import './search';
@@ -26,7 +26,7 @@
     &.window__body {
       align-items: start !important;
       padding: 0;
-      border-radius:$default-border-radius-right;
+      border-radius:var(--border-radius-righ);
     }
   }
 

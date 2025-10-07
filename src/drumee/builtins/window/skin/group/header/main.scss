@@ -1,5 +1,5 @@
 &__header {
-  border-radius: $default-border-radius-top; 
+  border-radius: var(--default-border-radius-top); 
   width: 100%;
   z-index: 200;
 }
@@ -9,7 +9,7 @@
     height: 44px;
     width: 100%;
     flex: 1;
-    border-radius: $default-border-radius-top;
+    border-radius: var(--default-border-radius-top);
     height: 44px;
     width: 100%;
     &[data-device="mobile"] {

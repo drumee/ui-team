@@ -22,7 +22,7 @@
   --default-background-caution: #ea4d44;
   --default-background-inactive: #89929e;
   --default-scrollbar-color: rgba(250, 133, 64, 0.6);
-
+  --default-transparent-bg: hsla(0, 0%, 78.4%, 0.5);
   --background-tooltips: #e8e8e8;
   --default-background-alert: #fd635b;
   --button-background-active: rgb(137 146 158 / 35%);
@@ -107,5 +107,6 @@
   --x-small-width: 361px;
   --small-width: 650px;
   --medium-width: 990px;
-  --tablet-width: --medium-width
+  --tablet-width: --medium-width;
+
 }

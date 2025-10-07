@@ -3,7 +3,7 @@
 @import 'peers.scss';
 @import 'topbar.scss';
 @import 'change-owner.scss';
-@import "./vars.scss";
+// @import "./vars.scss";
 
 .window-team{
   &__ui{
@@ -19,7 +19,7 @@
         position: absolute;
         top: -30px; 
         left: -3px;
-        border-radius: $default-border-radius-top;
+        border-radius: var(--default-border-radius-top);
         height: 27px; 
         width: 156px;
         background-color: var(--teamroom-main);

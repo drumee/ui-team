@@ -6,7 +6,7 @@
   &__container{
     flex: 1;
     border-bottom: 1px solid var(--default-separator);
-    border-radius: $default-border-radius-top;//4px 4px 0 0;
+    border-radius: var(--default-border-radius-top);//4px 4px 0 0;
     height: 44px;
   /*  &:after {
     background: linear-gradient(180deg,rgba(0,0,0,.06) 0,transparent);

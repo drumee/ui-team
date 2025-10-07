@@ -2,7 +2,7 @@
   &__main {
     background-color: var(--default-bg);
     border-bottom: none;
-    border-radius: $default-border-radius-top;
+    border-radius: var(--default-border-radius-top);
     cursor: pointer;
     height: 44px;
     min-height: 44px;

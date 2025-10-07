@@ -1,6 +1,6 @@
 @import 'mixins/drumee.scss';
 @import './layout.scss';
-@import "./vars.scss";
+// @import "./vars.scss";
 
 .window-bigchat {
   @import './search';
@@ -160,7 +160,7 @@
     justify-content: center;
     overflow: hidden;
     width: 100%;
-    border-radius: $default-border-radius-right;
+    border-radius: var(--border-radius-righ);
   }
 
   &__sharechat_notify[data-state="0"] {

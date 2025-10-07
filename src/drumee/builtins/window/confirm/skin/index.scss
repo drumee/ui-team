@@ -68,7 +68,7 @@
   &-topbar {
     &__container {
       border-bottom: 1px solid transparent;
-      border-radius: $default-border-radius-top;
+      border-radius: var(--default-border-radius-top);
       flex: 1;
     }
 
