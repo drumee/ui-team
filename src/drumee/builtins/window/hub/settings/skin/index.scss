@@ -83,13 +83,13 @@
   }
 
   &__header {
-    @include typo($color: $teamroom-text-color, $size: 18px, $line: 19px, $weight: 400); //#AB47BC
+    @include typo($color: var(--teamroom-main), $size: 18px, $line: 19px, $weight: 400); //#AB47BC
   }
 
   &__title {
     //margin-top: 7px;
     margin-top: -3px;
-    @include typo($color: $teamroom-text-color, $size: 16px, $line: 22px, $weight: 400); //#AB47BC
+    @include typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400); //#AB47BC
     // &--access{
     //   margin-top: 22px;
     //   @include typo($color:#AB47BC,$size:16px,$line:22px,$weight:400);
@@ -101,7 +101,7 @@
     margin-left: 20px;
     // margin-right: 15px;
     flex-shrink: 0;
-    @include typo($color: $teamroom-text-color, $size: 14px, $line: 26px, $weight: 400); //#AB47BC
+    @include typo($color: var(--teamroom-main), $size: 14px, $line: 26px, $weight: 400); //#AB47BC
   }
 
   &__icon.destroy {

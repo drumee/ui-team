@@ -29,9 +29,9 @@
       color:var(--egrey-62) !important;//grey var(--egrey-89)
     }
     &[data-type="private"]{
-      border:  1px solid $team-notifycount-border; //#d66fe8
+      border:  1px solid var(--teamroom-main-light); //#d66fe8
       background-color:var(--default-bg);   // white;
-      color:$team-text-notification !important;//#bd44d9
+      color:var(--teamroom-main) !important;//#bd44d9
       line-height:16px;
       &[data-hover="on"]{
         border:1px solid var(--ewhite); //white;

@@ -110,7 +110,7 @@
   z-index: 200;
 
   &[data-area="private"] {
-    background-color: $team-background-header;
+    background-color: var(--teamroom-main);
   }
 
   &[data-area="dmz"] {

@@ -79,7 +79,7 @@
       &.purple,
       &.team,
       &.private {
-        color: $team-background-header; 
+        color: var(--teamroom-main); 
       }
 
       &.orange,

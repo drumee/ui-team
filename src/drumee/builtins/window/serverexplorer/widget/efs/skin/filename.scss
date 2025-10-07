@@ -30,7 +30,7 @@
 
     &.private.hub {
       color: var(--default-text-color);
-      background-color: $teamroom-main-background-filename;
+      background-color: var(--teamroom-filename-bg);
     }
 
     &.share.hub {
@@ -101,7 +101,7 @@
     z-index: 20;
 
     &.private.hub {
-      background-color: $teamroom-main-background-filename;
+      background-color: var(--teamroom-filename-bg);
     }
 
     &.share.hub {

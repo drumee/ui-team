@@ -125,7 +125,7 @@
   }
 
   &-settings__label {
-    @include typo($color: $teamroom-text-color, $size: 16px, $line: 22px, $weight: 400);
+    @include typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400);
     justify-content: center;
     padding-bottom: 0;
   }

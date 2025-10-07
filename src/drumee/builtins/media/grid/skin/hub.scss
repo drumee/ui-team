@@ -81,16 +81,16 @@
     background-color:var(--teamroom-main);
     .media-form__input input {
       background-color: #c05ed0;
-      color: $team-default-text-reverse;
+      color: var(--default-text-reverse);
     }
     &:before {
       content: " ";
       position: absolute;
       top: 0;
       right: 0;
-      border-top: 13px solid $teamroom-main-light ;
+      border-top: 13px solid var(--teamroom-main-light);
       border-left: 13px solid transparent;
-      border-right: 13px solid $teamroom-main-light ;
+      border-right: 13px solid var(--teamroom-main-light);
       border-radius: 0 6px 0 0;
       height: 0;
       width: 62px;

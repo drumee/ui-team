@@ -43,7 +43,7 @@
     }
     &--icon {
       width: 12px;
-      color: $team-default-text-reverse;
+      color: var(--default-text-reverse);
       height: 12px;
       margin: auto 15px;
       cursor: pointer;

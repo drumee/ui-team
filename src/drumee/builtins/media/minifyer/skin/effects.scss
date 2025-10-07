@@ -22,7 +22,7 @@
   width: 100%;
 
   svg.icon.hub {
-    fill : $teamroom-special-icon ;
+    fill : var(--teamroom-main-light);
   }
 
   &:after {

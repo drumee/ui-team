@@ -97,7 +97,7 @@
     min-height: 44px;
     border-bottom: none;
     z-index: 200;
-    background-color: rebeccapurple; //$team-background-header;
+    background-color: rebeccapurple; //var(--teamroom-main);
 
     &[data-header="0"] {
       display: none;

@@ -121,7 +121,7 @@
       }
 
       &.team { //purple
-        color: $team-background-header;//$teamroom-background;
+        color: var(--teamroom-main);//$teamroom-background;
       }
 
       &.share {// #orange

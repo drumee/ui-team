@@ -10,7 +10,7 @@
   @import 'builtins/webrtc/skin/remote';
 
   &__header {
-    background-color: $team-background-header;
+    background-color: var(--teamroom-main);
   }
 
 }

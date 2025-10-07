@@ -34,9 +34,9 @@
       opacity: 0;
     }
     &[data-type="private"]{
-      border: $team-notifycount-border 2px solid; //1.5px
-      background-color: $team-default-background;//white;
-      color:$team-text-notification;//#ab47bc;
+      border: var(--team-notifycount-border) 2px solid; //1.5px
+      background-color: var(--default-background);//white;
+      color:var(--teamroom-main);//#ab47bc;
       line-height:16px;
     }
     &[data-type="folder"]{

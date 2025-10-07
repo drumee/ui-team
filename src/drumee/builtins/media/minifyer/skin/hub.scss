@@ -70,8 +70,8 @@
     &:before {
       border-left: 13px solid transparent;
       border-radius: 0 6px 0 0;
-      border-right: 13px solid $teamroom-main-light;
-      border-top: 13px solid $teamroom-main-light;
+      border-right: 13px solid var(--teamroom-main-light);
+      border-top: 13px solid var(--teamroom-main-light);
       content: " ";
       height: 0;
       position: absolute;
