@@ -24,7 +24,7 @@
 
   & .window-addressbook {
     &__main {
-      border-radius:$default-border-radius;//$default-border-radius-bottom;
+      border-radius:var(--border-radius);//$default-border-radius-bottom;
       background: var(--default-background);  
       height: 100%;
       max-height: 330px;
@@ -77,7 +77,7 @@
       min-width: 125px;
       @include typo($size: 15px, $line: 16px);
       padding:7px;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       -moz-osx-font-smoothing: grayscale;
       -webkit-font-smoothing: antialiased;
     }

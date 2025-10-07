@@ -2,7 +2,7 @@
   cursor: pointer;
   height:35px;// 36px;
   width: 115px; //170px;
-  border-radius:$default-border-radius;// 4px; //2px;
+  border-radius:var(--border-radius);// 4px; //2px;
   justify-content: center;
   background-color: #f7f7fa;
   border: 1px solid #f7f7fa;

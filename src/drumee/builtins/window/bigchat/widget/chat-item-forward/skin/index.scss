@@ -18,7 +18,7 @@
   }
 
   &__ui {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     background-color: var(--default-background); 
     max-height: calc(100% - 48px);//calc(100% - 80px);
     max-width: 410px;//360px;
@@ -27,12 +27,12 @@
 
   &__main {
     background-color: inherit;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
   }
 
   &__container {
     background-color: inherit;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
   }
 
   &__header {
@@ -111,7 +111,7 @@
     padding-top:20px;//10px;
     
     & .smart-container {
-      border-radius:$default-border-radius;  
+      border-radius:var(--border-radius);  
       height: 100%;
       padding:0 10px; //10px;//15px 0 10px 0; //20px 0 ;// 10px 0px;
       width: 100%;
@@ -143,7 +143,7 @@
       @include typo($size: 15px, $line: 14px, $weight: 300, $color: var(--default-text-inactive) ); //$size: 13px,var(--egrey-89)
 
       &[data-state="1"] {
-        border-radius:$default-border-radius;
+        border-radius:var(--border-radius);
         @include typo($size: 14px, $line: 14px, $color: var(--default-text-color));//$size: 13px,
         background-color: var(--button-background-active);//var(--egrey-e8);
         //border: 1px solid var(--egrey-e8);//$dgc-chatroom-scbtn;
@@ -220,7 +220,7 @@
   }
 
   &__button-confirm {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     @include typo($size: 16px, $line: 19px, $color: var(--btn-commit-text)); //$size: 14px,
     align-items: center;
     background-color: var(--btn-commit-background);

@@ -27,7 +27,7 @@
   }
   &.public {
     background-color: var(--website-main);
-    border-radius: $default-border-radius;//6px;
+    border-radius: var(--border-radius);//6px;
     .media-form__input input {
       background-color: #45b4bb;
       color: var(--ewhite);
@@ -59,7 +59,7 @@
 
   &.dmz,&.share {
     background-color: var(--sharebox-main); 
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     .media-form__input input {
       background-color: #dd820b;
       color: var(--default-text-reverse);

@@ -27,7 +27,7 @@
     //top: -71px;
     margin: auto;
     //margin-left: 45px;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     justify-content: center;
     background-color:var(--btn-commit-background); 
     border: 1px solid var(--btn-commit-border);

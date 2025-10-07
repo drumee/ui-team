@@ -7,7 +7,7 @@
 
 .widget-member-chooseAdmins {
   &__ui {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     background-color: var(--default-background);  
     height: calc(100% - 20px);
     max-height: 538px;
@@ -99,7 +99,7 @@
 
       & .tooltips {
         background-color: var(--background-tooltips);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         max-height: 90px;
         min-height: 60px;
         padding: 10px;
@@ -220,7 +220,7 @@
   &__button-cancel {
     @include typo($size: 16px, $color: var(--btn-rollback-text));
     align-items: center;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     border: 1px solid var(--btn-rollback-border);
     height: 35px;
     justify-content: center; 
@@ -239,7 +239,7 @@
     @include typo( $size: 15px, $line: 16px, $color: var(--btn-commit-text));
     align-items: center;
     background-color: var(--btn-commit-background);
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     border: 1px solid var(--btn-commit-border);
     height: 35px;
     justify-content: center; 

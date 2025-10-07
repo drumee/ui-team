@@ -26,7 +26,7 @@
 
   &-popup {
     &__main {
-      border-radius : $default-border-radius;
+      border-radius : var(--border-radius);
       background-color: var(--default-background);  
       box-shadow: var(--shadow-popup);     
       height: calc(100% - 20px);
@@ -111,7 +111,7 @@
       margin: 40px 0 0;
       text-align: center;
       min-width: 115px;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
     }
 
     & .button:first-child {

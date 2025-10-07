@@ -73,7 +73,7 @@
     cursor: pointer;
     background-color: var(--btn-rollback-background);
     border: 1px solid var(--btn-rollback-border);   
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: 32px;
     justify-content: center;
     padding: 5px;

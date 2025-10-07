@@ -57,7 +57,7 @@
 
     &[data-preattachment="1"] {
       max-width: 85%;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       min-width: 110px;
       padding: 6px 15px 2px 5px;
       width: fit-content;

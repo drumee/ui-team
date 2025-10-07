@@ -79,7 +79,7 @@
     }
 
     .button {
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       @include typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));//$size: 15px,
       background-color:var(--btn-commit-background);// var(--egreen-soft);
       cursor: pointer;

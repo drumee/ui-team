@@ -57,7 +57,7 @@
 
   &__popup-wrapper {
     background: var(--default-bg);
-    border-radius: $default-border-radius;//6px;
+    border-radius: var(--border-radius);//6px;
     width: 610px;//630px;
     height: 375px;//410px;
     padding: 20px 30px;
@@ -109,7 +109,7 @@
     @include typo($color: var(--default-text-reverse), $size: 15px, $line: 1, $weight: 500);
     cursor: pointer;
     background-color: #16a3ac;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     justify-content: center;
     margin: 0 auto;
     // max-width: 230px;

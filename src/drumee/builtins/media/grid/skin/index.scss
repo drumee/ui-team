@@ -29,7 +29,7 @@
     height: 100%; //75px;
     min-width: 90px; //92px;
     min-height: 75px; //81px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     background-color: var(--default-bg);
     box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 0px 3px 0 rgba(86, 65, 113, 0.08), 0 2px 8px 0 rgba(194, 185, 203, 0);
     cursor: pointer;
@@ -114,7 +114,7 @@
   }
 
   .preview {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
 
     &.image-capable {
       background-size: cover;
@@ -171,7 +171,7 @@
       width: calc(100% + 2px);
       height: calc(100% + 2px);
       border: 1.5px solid #FA8540; //3px
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       pointer-events: none;
     }
   }

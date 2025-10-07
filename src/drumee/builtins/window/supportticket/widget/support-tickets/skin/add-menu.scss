@@ -14,7 +14,7 @@
           top: 24px;
         }
       }
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       background-color:var(--default-background);
       box-shadow: $drumee-container-dropdown;
       max-width: 202px;
@@ -27,7 +27,7 @@
 //          top: 24px;
 //        }
 //      }
-//      border-radius:$default-border-radius;
+//      border-radius:var(--border-radius);
 //      background-color: $default-background;
 //      box-shadow: var(--shadow-container);
 //      max-width: 202px;

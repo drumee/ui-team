@@ -104,7 +104,7 @@
   &__button {
     align-items: center;
     border: 1px solid var(--dmz-default-action-btn-border-color);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     background: transparent;
     cursor: pointer;
     height: 100%;

@@ -182,7 +182,7 @@
 
     &.comment {
       background-color: var(--default-background);  
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       border: 1px solid var(--default-frame);
       box-sizing: border-box;
       height: 100%;
@@ -223,7 +223,7 @@
       & .tooltips {
         @include typo($size: 12px, $line: 12px, $color: var(--default-text-tooltips));
         background-color: var(--background-tooltips);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         height: 100%;
         text-align: center;
         top: -22px;
@@ -239,7 +239,7 @@
   }*/
 
   &__button-action {  
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     height: 35px; //36px;
     align-items: center;
     justify-content: center; 
@@ -276,7 +276,7 @@
     letter-spacing: 0;
     width: 102px;//108px;//266px;
     text-align: justify;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     background-color: var(--background-tooltips);
     margin-left: -45px; //-215px;
     margin-top: 22px; //16px;

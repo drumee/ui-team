@@ -18,7 +18,7 @@
   }
 
   &__content {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     background-color: var(--default-bg);
     box-shadow: $drumee-shadow-box;
     ; //0 0 7px 0 rgba(0,0,0,0.14);
@@ -53,7 +53,7 @@
   }
 
   &__body-content {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: 100%;
     width: 100%;
   }
@@ -130,7 +130,7 @@
   margin: 15px auto;
 
   & .button {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     @include typo($size: 16px, $line: 19px);
     align-items: center;
     height: 35px;

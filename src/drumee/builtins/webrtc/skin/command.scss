@@ -2,7 +2,7 @@
   height: 100%;
   width:auto; // right: 40px; //10px;
   background-color: var(--default-transparent-black); //rgba(0, 0, 0, 0.33);//($vdo-background-color;
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
   align-items: center;
   padding: 0 3px;
   display: flex;
@@ -38,7 +38,7 @@
 
   .ctrl-button {
     width: 36px; //48px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: 36px; //30px;
     padding: 8px; // 5px;
     border: 1.2px transparent solid;
@@ -149,7 +149,7 @@
   bottom: calc(100% + 15px);
   right: -134px;
   overflow: visible;
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
   max-width: 300px;
 
   &::before {
@@ -172,7 +172,7 @@
     cursor: pointer;
     margin-bottom: 5px;
     background-color: #fbfbfb;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     width: 100%;
     text-align: center;
     justify-content: center;
@@ -201,7 +201,7 @@
     height: auto;
     border-radius: 6px;
     justify-content: center;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     align-items: center;
     padding: 6px;
     margin: 0 10px;

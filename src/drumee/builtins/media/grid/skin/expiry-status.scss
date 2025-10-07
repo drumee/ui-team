@@ -25,7 +25,7 @@
       // & .tooltips {
       //   @include typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
       //   background-color: var(--background-tooltips);
-      //   border-radius: $default-border-radius;
+      //   border-radius: var(--border-radius);
       //   max-height: 90px;
       //   min-height: 40px;
       //   justify-content: center;

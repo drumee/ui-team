@@ -2,7 +2,7 @@
   &__main {
     align-items: center;
     background:var(--default-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: calc(100% - 350px);
     justify-content: center;
     min-height: 275px;//250px;
@@ -49,7 +49,7 @@
   &__button-ok {
     @include typo($size: 16px,$color: var(--btn-rollback-text));
     align-items: center;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     border: 1px solid var(--btn-rollback-border);
     height: 32px;
     justify-content: center; 

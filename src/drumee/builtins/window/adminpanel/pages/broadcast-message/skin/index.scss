@@ -66,7 +66,7 @@
       width: 100%;
 
       & textarea {
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         @include typo($size: 14px, $line: 20px, $color: var(--default-text-color));
         background: #f7f7f9 ; //$ap-textarea-background;
         border: none;
@@ -93,7 +93,7 @@
 
   &__buttons-wrapper {
     &.button {
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       @include typo ($size: 16px, $line: 18px, $color: var(--btn-commit-text));
       align-items: center;
       background: var(--btn-commit-background); //var(--egreen);

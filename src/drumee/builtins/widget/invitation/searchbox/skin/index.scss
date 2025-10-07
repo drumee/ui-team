@@ -28,7 +28,7 @@
     &-results {
       align-self: center;
       background: var(--default-bg);
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       box-shadow: $drumee-shadow-box;
       margin: auto;
       max-height:216px;
@@ -88,7 +88,7 @@
   &__button {
     align-items: center;
     background-color: var(--btn-rollback-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     border: 1px solid var(--btn-rollback-border);
     cursor: pointer;
     height: 28px;

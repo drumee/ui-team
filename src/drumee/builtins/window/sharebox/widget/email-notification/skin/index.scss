@@ -10,7 +10,7 @@
   &__ui {
     align-items: center;
     background-color: var(--default-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: var(--shadow-container);
     height: calc(100% - 10px);
     max-width: 410px;
@@ -133,7 +133,7 @@
 
       &[data-status='error'] {
         border: 1px solid var(--default-border-alert);//var(--default-border-error);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         & input:focus {
           border-color: var(--default-border-alert);
         }
@@ -145,7 +145,7 @@
         & textarea {
           @include typo($size: 14px, $line: 21px, $color: var(--default-text-color));//$size: 16px,
           background: var(--default-block-background);
-          border-radius: $default-border-radius;
+          border-radius: var(--border-radius);
           border: none;
           outline: none;
           padding: 10px;
@@ -169,7 +169,7 @@
     &__button-confirm {
       @include typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
       align-items: center;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       cursor: pointer;
       height: 100%;
       justify-content: center;

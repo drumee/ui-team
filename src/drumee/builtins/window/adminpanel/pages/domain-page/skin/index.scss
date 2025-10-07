@@ -99,7 +99,7 @@
   &__button_val{
     align-items: center;
     background:var(--btn-commit-background);    
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     @include typo($size: 16px, $line: 24px, $color: var(--btn-commit-text)); //$size: 18px
     height: 35px;//36px
     justify-content: center;
@@ -114,7 +114,7 @@
     @include typo($size: 16px, $line: 24px, $color: var(--btn-rollback-text));
     align-items: center;
     background: var(--btn-rollback-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     border:1px solid var(--btn-rollback-border);
     height: 35px; //36px;
     justify-content: center;

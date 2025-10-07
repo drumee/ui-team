@@ -31,13 +31,13 @@
     width: 40px;
     flex-shrink: 0;
     //z-index: 10;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     background-color: var(--transparent-bg-desktop-icon);//hsla(0,0%,78.4%,.5);//rgba(47,47,47,.2);
     box-shadow: 0 2px 2px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgb(86 65 113 / 8%), 0 2px 14px 0 rgb(194 185 203 / 0%);
 
     &:hover {
       background: var(--default-icon-hover);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
     }
   }
 

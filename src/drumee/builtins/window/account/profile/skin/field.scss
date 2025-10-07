@@ -45,7 +45,7 @@
           color:var(--default-text-reverse); // $default-background-hover;
           border: 1px solid var(--ewhite);
           padding:  5px;
-          border-radius:$default-border-radius;
+          border-radius:var(--border-radius);
           cursor:pointer;
         }
       }
@@ -130,7 +130,7 @@
   }
 
   &__button-confirm {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     align-items: center;
     background-color: var(--btn-commit-background); 
     border: 1px solid var(--btn-commit-border);

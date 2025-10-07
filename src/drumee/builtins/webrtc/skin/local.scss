@@ -6,7 +6,7 @@
   right: 10px;//40px;
   width: 120px;
   height: 80px;
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
   // @include video-border-radius();
   //border-radius:6px;
   border: 1px white solid;

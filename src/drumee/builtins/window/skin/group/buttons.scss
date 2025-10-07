@@ -2,7 +2,7 @@
   border: 1px solid var(--btn-rollback-border);
   width: 120px;
   height: 46px;
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
   text-align: center;
   @include typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-rollback-text));
   justify-content: center;
@@ -16,7 +16,7 @@
   width: 120px;
   background-color:var(--btn-commit-background); // $btn-primary-background; 
   height: 46px;
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
   text-align: center;
   @include typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-commit-text));
   justify-content: center;

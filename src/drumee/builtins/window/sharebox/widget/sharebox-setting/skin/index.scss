@@ -151,7 +151,7 @@
   &__settings_wrapper {
     justify-content: center;
     background: var(--default-block-background);  
-    border-radius:$default-border-radius;// 2px;
+    border-radius:var(--border-radius);// 2px;
     padding: 9px 0;//0px 10px 10px 10px;
     margin: 10px 8px 0 10px;//10px;
   }
@@ -178,7 +178,7 @@
   &__button {
     margin-left: -1px;
     border: 1px solid var(--default-entry-border-bottom);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     padding: 3px 10px;//1px 6px;
     cursor: pointer;
     @include typo($size: 14px, $color: var(--default-text-color), $weight:300,);//$size: 13px
@@ -229,7 +229,7 @@
     width: 23px;//28px;
     height: 23px;
     background-color: var(--default-background);
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     & input::-webkit-outer-spin-button,
     & input::-webkit-inner-spin-button {
       -webkit-appearance: none;
@@ -237,7 +237,7 @@
       &:hover{
         background-color: var(--default-background-hover);
         color: var(--default-text-hover);//#fff;
-        border: $ewhite 1px solid;
+        border: var(--ewhite) 1px solid;
       }
     }
 
@@ -276,7 +276,7 @@
   &__action-button {
     background: var(--btn-rollback-background);
     border:1px solid var(--btn-rollback-border);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     padding:0 12px;//5px 9px;
     margin:15px auto 0px;//15px auto 10px;
     cursor: pointer;
@@ -302,7 +302,7 @@
   }
   &__inline-action-btn {
     background: var(--btn-commit-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     padding: 5px;//3px 5px;
    // margin: auto;
     margin-left:5px;//13px;//20px;
@@ -362,7 +362,7 @@
       top: calc(100% + 5px);
       left:-42px;// 50%;
       transform: translate(-50%, 0);
-      border-radius: $default-border-radius; //4px;
+      border-radius: var(--border-radius); //4px;
       width: 210px;// 264px;
       height: auto;
       padding: 6px;//12px 18px;

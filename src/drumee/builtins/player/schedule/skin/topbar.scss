@@ -10,8 +10,8 @@
 }
 
 &__icon {
-  border-radius: $default-border-radius;    
-  border: 1px $core-default-icon-reverse solid;
+  border-radius: var(--border-radius);    
+  border: 1px var(--default-icon-reverse) solid;
   color: var(--default-icon-reverse);  
   cursor: pointer;
   height: 25px;

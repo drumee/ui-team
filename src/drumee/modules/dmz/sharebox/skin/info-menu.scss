@@ -7,7 +7,7 @@
     }
     & .menu-topic-items {
       background-color: var(--default-background);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 100%;
       justify-content: center;
       max-width: 220px;

@@ -71,7 +71,7 @@
     outline: none;
     cursor: pointer;
     justify-content: center;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     @include typo($size: 13px, $line: 18px, $color: var(--btn-rollback-text), $weight: 300);
     color: var(--btn-rollback-text);
     background-color: var(--btn-rollback-background);

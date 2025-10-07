@@ -3,7 +3,7 @@
   width: 100%;
 
   &:after {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     border: 1px dashed white;
     content: " ";
     display: none;
@@ -70,7 +70,7 @@
   }
 
   &[data-hover="on"] {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow:var(--shadow-container);
     z-index : 100; // Needed to make inner element receive event first
 

@@ -1,7 +1,7 @@
 &__popup {
   
   &-wrapper {
-    border-radius : $default-border-radius;
+    border-radius : var(--border-radius);
     background-color: var(--default-background);  
     box-shadow: var(--shadow-popup);     
     height: calc(100% - 20px);
@@ -78,7 +78,7 @@
       & textarea {
         @include typo($size: 16px, $line: 21px, $color: var(--default-text-color));
         background: var(--default-block-background);//$default-block-background;
-        border-radius: $default-border-radius; //6px
+        border-radius: var(--border-radius); //6px
         border: none;
         outline: none;
         padding: 10px;
@@ -119,7 +119,7 @@
     }
 
     &__button-cancel {    
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       border: 1px solid var(--btn-rollback-border);
       @include typo( $size: 16px, $line: 16px, $color: var(--btn-rollback-text));
 
@@ -167,7 +167,7 @@
 
   &__button-ok {    
     align-items: center;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     border: 1px solid var(--btn-rollback-border);
     height: 35px;
     justify-content: center; 
@@ -208,7 +208,7 @@
   
   & .button {    
     align-items:center;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     height: 35px;
     justify-content: center;
     width: 115px;

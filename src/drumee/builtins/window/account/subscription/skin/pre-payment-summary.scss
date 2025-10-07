@@ -150,7 +150,7 @@
       & .tooltips {
         @include typo($size: 12px, $line: 18px, $color: var(--default-text-tooltips));
         background-color: var(--bg-chatmessenger);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         max-height: 80px;
         min-height: 50px;
         left: 20px;

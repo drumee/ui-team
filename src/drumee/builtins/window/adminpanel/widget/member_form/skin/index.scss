@@ -251,7 +251,7 @@
     & textarea {
       @include typo($size: 14px, $line: 20px);
       background-color: var(--default-background);
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       border: 1px solid var(--focus-border-placeholder);
       box-sizing: border-box;
       margin-bottom: 20px;
@@ -281,7 +281,7 @@
     & .button {
       @include typo($size: 16px, $line: 19px);
       align-items:center;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       height: 35px;
       justify-content: center;
       margin: 0 0% 0 8%;

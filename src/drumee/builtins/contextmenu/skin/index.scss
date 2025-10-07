@@ -8,7 +8,7 @@
 
 .drumee-contextmenu.drumee-box {
   background-color: var(--default-bg-block);//var(--bg-tooltips);
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
   min-width: 90px;
   overflow: hidden;
   position: absolute;

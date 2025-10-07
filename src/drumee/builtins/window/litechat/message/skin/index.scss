@@ -131,7 +131,7 @@
   }
 
   &__message-wrapper {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     min-width: 80px;
     padding: 3px 5px;
     width: fit-content;

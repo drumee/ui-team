@@ -136,7 +136,7 @@
   &__button-desk {
     @include typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
     align-items: center;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     cursor: pointer;
     font-weight: 600;
     height: 42px;

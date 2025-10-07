@@ -17,8 +17,8 @@
   right: 40px;
   width: 120px;
   height: 80px;
-  border-radius: $default-border-radius;
-  border: 1px $ewhite solid;
+  border-radius: var(--border-radius);
+  border: 1px var(--ewhite) solid;
   z-index: 100;
 }
 &__endpoints-container{

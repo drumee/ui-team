@@ -173,7 +173,7 @@
       width: 23px;
       height: 23px;
       background-color: var(--default-background);
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
 
       &.days {
         width: 40px;
@@ -187,7 +187,7 @@
         &:hover {
           background-color: var(--default-background-hover);
           color: var(--default-text-hover);
-          border: $ewhite 1px solid;
+          border: var(--ewhite) 1px solid;
         }
       }
   
@@ -252,7 +252,7 @@
       & .tooltips {
         @include typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
         background-color: var(--background-tooltips);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         max-height: 90px;
         min-height: 40px;
         padding: 10px;
@@ -288,7 +288,7 @@
       @include typo($size: 12px, $color: var(--btn-commit-text));
       align-items: center;
       background: var(--btn-commit-background);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       cursor: pointer;
       justify-content: center;
       margin-left: 2px;

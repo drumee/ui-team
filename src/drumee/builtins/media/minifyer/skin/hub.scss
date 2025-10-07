@@ -30,7 +30,7 @@
 
   &.public {
     background-color: var(--website-main);
-    border-radius: $default-border-radius;// 6px;
+    border-radius: var(--border-radius);// 6px;
     
     &:before {
       border-left: 13px solid transparent;
@@ -48,7 +48,7 @@
 
   &.dmz, &.share {
     background-color: var(--sharebox-main);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
 
     &:before {
       border-left: 13px solid transparent;

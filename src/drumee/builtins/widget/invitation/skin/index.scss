@@ -1,19 +1,11 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
-@import 'mixins/drumee';
 
+@import 'mixins/drumee';
 @import "buttons.scss";
 
 .invitation-settings {
   &__ui {
     background-color:var(--default-bg);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: auto;
     margin: 20px auto 0;
     min-width: 320px;
@@ -41,7 +33,7 @@
 
   &__button {
     align-items: center;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     border: 1px solid var(--btn-rollback-border);
     cursor: pointer;
     height: 35px;
@@ -87,7 +79,7 @@
 .invitation {
   &__tooltips {
     background-color: var(--default-bg);
-    border-radius: $default-border-radius;//6px;
+    border-radius: var(--border-radius);//6px;
     box-shadow: var(--shadow-before);// 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
     opacity: 1;
     padding: 10px;

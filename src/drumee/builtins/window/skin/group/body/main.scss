@@ -3,7 +3,7 @@
   height: 100%;
   position: relative;
   background-color: var(--default-bg);
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
   margin: 0 auto;
 
   &[data-device="mobile"] {

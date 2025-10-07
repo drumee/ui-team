@@ -9,7 +9,7 @@
     position: absolute;
     top: 19px;
     left: 6px;
-    border-radius:$default-border-radius;// 2px;
+    border-radius:var(--border-radius);// 2px;
     display: none;
   }
   &[data-over="over"] {
@@ -75,7 +75,7 @@
   }
 
   &[data-hover="on"] {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: var(--shadow-container);
     z-index : 100;
 

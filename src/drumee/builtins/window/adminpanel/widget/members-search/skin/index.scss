@@ -8,7 +8,7 @@
 .widget-members-search {
   &__ui {
     background-color: var(--default-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow:var(--shadow-container);
     font-family: Roboto-Regular,sans-serif;
     left: 32px;

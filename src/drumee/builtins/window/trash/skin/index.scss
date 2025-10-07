@@ -7,7 +7,7 @@
     &__main {
       align-items: center;
       background-color: var(--default-bg);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 250px;
       justify-content: space-around;
       margin: auto;
@@ -50,7 +50,7 @@
       background: var(--default-bg);
       height: 200px;
       justify-content: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       padding: 10px;
     }
 

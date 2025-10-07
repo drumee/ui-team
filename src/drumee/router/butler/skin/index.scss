@@ -79,7 +79,7 @@
     width: 570px;
     height: auto;
     padding: 50px;
-    border-radius: $default-border-radius; //6px;
+    border-radius: var(--border-radius); //6px;
     background-color: var(--default-bg) !important; //#FFFFFF
     justify-content: space-between;
     align-items: center;
@@ -128,7 +128,7 @@
       max-width: 600px;
       min-width: 450px;
       background-color: white;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       overflow: hidden;
     }
 
@@ -172,7 +172,7 @@
       margin: 0 10px;
       min-width: 115px;
       border: 1px solid var(--btn-commit-border);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
 
       &:hover {
         background-color: var(--btn-commit-background-hover);

@@ -18,7 +18,7 @@
     min-height: 227px;
     position: absolute;
     background: $default-background; 
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     display: flex;    
     box-shadow:var(--shadow-container);
     //box-shadow: 0 0 7px 0 rgba(0,0,0,0.14);

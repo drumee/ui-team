@@ -1,14 +1,9 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2021
-#   FILE : /src/drumee/builtins/window/confirm/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
 @import 'mixins/drumee';
 
 .window-confirm {
   &__ui {
     background-color: var(--default-bg);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     padding: 20px;
     width: auto;
     height: auto;
@@ -23,7 +18,7 @@
 
     &[data-type="confirm"] {
       background-color: var(--default-bg);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       padding: 20px;
       width: auto;
       height: auto;
@@ -121,7 +116,7 @@
     }
   }
 
-  @media (max-width: $tablet) {
+  @media (max-width:  var(--medium-width)) {
     &__message {
       margin: 0 26px;
     }
@@ -137,7 +132,7 @@
     .button {
       align-content: center;
       align-items: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       cursor: pointer;
       height: 35px;
       justify-content: center;

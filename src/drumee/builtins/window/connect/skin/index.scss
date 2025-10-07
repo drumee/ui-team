@@ -87,7 +87,7 @@
   //   z-index: 100;
   //   background-color: var(--connect-video-background);
   //   box-shadow: var(--shadow-container);
-  //   border-radius: $default-border-radius-bottom; // $default-border-radius;
+  //   border-radius: $default-border-radius-bottom; // var(--border-radius);
   //   // grid-auto-flow: row;
   //   // grid-auto-columns: auto;
   //   // grid-template-columns: auto;
@@ -209,7 +209,7 @@
     .text {
       padding: 5px 10px;
       background-color: var(--connect-transparent-background); //rgba(0,0,0,0.33);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
     }
   }
 
@@ -246,7 +246,7 @@
         padding: 5px;
         display: flex;
         justify-content: center;
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         height: 32px;
         @include typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text));
 
@@ -324,7 +324,7 @@
       padding: 10px;
       background-color: var(--default-transparent-black);
       margin: auto 10px 90px 10px;
-      border-radius: $default-border-radius; //3px;
+      border-radius: var(--border-radius); //3px;
       @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
     }
   }
@@ -342,7 +342,7 @@
       padding: 10px;
       background-color: var(--default-transparent-black);
       margin: 10px;
-      border-radius: $default-border-radius; //3px;
+      border-radius: var(--border-radius); //3px;
       @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
     }
 

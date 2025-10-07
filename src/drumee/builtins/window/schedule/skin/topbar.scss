@@ -17,15 +17,15 @@
   background-color: var(--sharebox-main);
   .menu-items{
     background: var(--default-bg);  
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
   }
 }
 
 
 &-topbar{
   &__icon{
-    border-radius:$default-border-radius;    
-    border: 1px $ewhite solid;
+    border-radius:var(--border-radius);    
+    border: 1px var(--ewhite) solid;
     color:var(--default-icon-reverse);  
     cursor: pointer;
     height: 25px; //40px;
@@ -39,7 +39,7 @@
     &:hover{
       color:var(--default-icon-hover);
       opacity:1;
-      border: 1px $eviolet solid;
+      border: 1px var(--eviolet) solid;
     }
   }
   &__control{

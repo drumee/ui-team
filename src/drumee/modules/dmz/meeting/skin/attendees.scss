@@ -11,7 +11,7 @@
     }
     .menu-topic-items{
       background: var(--default-background); 
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       min-width: 253px;   
       margin-top:12px;  
       padding: 5px 10px 10px 10px; 

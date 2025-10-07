@@ -166,7 +166,7 @@
       margin-right: 5%;
       margin-top: 5px;
       text-align: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       cursor: pointer;
       min-width: 75px;
 

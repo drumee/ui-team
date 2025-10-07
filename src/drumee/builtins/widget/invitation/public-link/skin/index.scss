@@ -1,17 +1,10 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
+
 @import 'mixins/drumee';
 
 .invitation-publiclink {
   &__ui {
     background-color:var(--default-bg); //$default-block-background;  
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     margin: 0px 25px;
     box-shadow: $drumee-shadow-box;
   //  box-shadow: 0 5px 3px 0 rgba(218,227,239,.14), 0 1px 1px 0 rgba(0,0,0,.12), 0 2px 5px 0 rgba(218,227,239,.46);
@@ -26,7 +19,7 @@
     width: 300px;
     min-height: 217px;
     flex: 1;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
   }
   &__command {
     &.icons{
@@ -47,7 +40,7 @@
     padding: 6px;
     width: 30px;
     height: 30px;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     &.copy{
       opacity:0.85;
     }
@@ -71,7 +64,7 @@
   }
 
   &__btn {
-    border-radius: $default-border-radius;//6px; 
+    border-radius: var(--border-radius);//6px; 
     cursor: pointer;
     @include typo($line:25px,$size:16px,$weight:400,$color: var(--btn-rollback-text));//$size:14px
     padding: 0 12px;

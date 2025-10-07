@@ -44,7 +44,7 @@
   // css for /skeleton/action-popup/confirmation
   &-confirmation {
     &__main {
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       background-color: var(--default-background);
       box-shadow: var(--shadow-popup);
       // box-shadow: 0 0 7px 0 rgba(0,0,0,0.14);
@@ -183,7 +183,7 @@
     }
 
     &__button-ok {
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       @include typo($size: 16px, $color: var(--btn-rollback-text));
       align-items: center;
       border: 1px solid var(--btn-rollback-border);

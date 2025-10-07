@@ -173,7 +173,7 @@
       padding-left: 5px;
       //  margin-bottom: -10px;
       background: var(--default-bg-block);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -201,7 +201,7 @@
 
       & textarea {
         background: var(--default-bg-block);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         border: none;
         outline: none;
         padding: 10px 5px 10px;
@@ -235,7 +235,7 @@
       @include typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));
       background-color: var(--btn-commit-background);
       align-items: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 44px;
       justify-content: center;
       padding: 5px;

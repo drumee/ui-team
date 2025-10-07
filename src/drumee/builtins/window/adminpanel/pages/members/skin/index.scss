@@ -61,7 +61,7 @@
       min-width: 115px;
       height:35px;
       @include typo($size: 16px, $line: 16px,$color: var(--btn-rollback-text)); 
-      border-radius:  $default-border-radius;
+      border-radius:  var(--border-radius);
       border: 1px solid var(--btn-rollback-border); 
       margin-right: 30px;
     }
@@ -89,7 +89,7 @@
     height:40px; 
     padding:2px 5px;
     @include typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text)); 
-    border-radius:  $default-border-radius;
+    border-radius:  var(--border-radius);
     border: 1px solid var(--btn-rollback-border); 
     &:hover{
       border:2px solid var(--btn-rollback-border-hover);

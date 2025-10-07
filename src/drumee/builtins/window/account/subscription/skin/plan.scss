@@ -202,7 +202,7 @@
   &__btn-confirm {
     @include typo( $size: 15px, $line: 16px, $color: var(--btn-commit-text));
     align-items: center;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     cursor: pointer;
     height: 35px;
     justify-content: center;
@@ -233,7 +233,7 @@
   &__invoices-link {
     @include typo( $size: 14px, $line: 16px, $weight: 500, $color: $color-pro-plan);
     align-items: flex-end;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     cursor: pointer;
     height: 35px;
     justify-content: center;

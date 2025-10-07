@@ -148,7 +148,7 @@
       }
 
       & .button {
-        border-radius:$default-border-radius;
+        border-radius:var(--border-radius);
        //border-radius: 2px;
        //margin: 0 10% 0 2%; // 0px 13px;
         min-height: 35px;

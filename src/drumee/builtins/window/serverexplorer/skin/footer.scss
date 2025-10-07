@@ -43,7 +43,7 @@
   & .button {
     @include typo($size: 16px, $line: 19px);
     align-items:center;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     height: 35px;
     justify-content: center;
     width: 115px;

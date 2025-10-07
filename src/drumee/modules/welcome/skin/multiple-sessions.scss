@@ -1,6 +1,6 @@
 &-multiple-sessions {
   &__container {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     align-items: center;
     background-color: var(--default-bg);//$default-block-background;
     max-height: 345px;//290px;
@@ -52,7 +52,7 @@
   }
   &__button{
     cursor: pointer;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     border-color: var(--default-text-title);
     border-width: 2px;
     border-style: solid;

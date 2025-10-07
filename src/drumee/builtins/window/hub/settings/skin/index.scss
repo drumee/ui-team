@@ -47,7 +47,7 @@
     &.wrapper-general {
       width: 100%;
       background-color: var(--default-bg-block);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       white-space: nowrap;
       overflow: visible;
       padding: 9px 0; // 9px 0 0 0px;
@@ -153,7 +153,7 @@
 
       .hub-settings__icon {
         visibility: visible;
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
       }
     }
 
@@ -161,7 +161,7 @@
       .hub-settings__icon {
         visibility: visible;
         background-color: var(--default-icon-active);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
       }
     }
 

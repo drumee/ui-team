@@ -127,7 +127,7 @@
     height: auto;
     max-height: 250px;
     background: var(--default-bg);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: $drumee-shadow-box; 
     padding: 10px 0;
 

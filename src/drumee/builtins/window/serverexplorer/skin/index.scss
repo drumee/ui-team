@@ -111,7 +111,7 @@
       &[data-state="1"] {
         & .menu-trigger {
           background-color: var(--default-background); 
-          border-radius: $default-border-radius;
+          border-radius: var(--border-radius);
         }
 
         & .dropdown-toggle-icon {
@@ -119,7 +119,7 @@
         }
       }            
       & .menu-topic-items {
-        border-radius:$default-border-radius;
+        border-radius:var(--border-radius);
         box-shadow: var(--shadow-container); 
         background-color: var(--default-background); 
         width: 285px;

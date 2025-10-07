@@ -9,7 +9,7 @@
   background-color: transparent;
   overflow: visible;
   .media-row__ui{
-    border-radius: $default-border-radius;//6px;
+    border-radius: var(--border-radius);//6px;
     overflow: hidden;   
     &:hover{
       background-color:var(--default-bg);

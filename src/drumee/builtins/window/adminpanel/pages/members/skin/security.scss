@@ -1,7 +1,7 @@
 &-security {
   &__main {
     background: var(--default-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: calc(100% - 350px);
     min-height: 250px;
     min-width: 300px;

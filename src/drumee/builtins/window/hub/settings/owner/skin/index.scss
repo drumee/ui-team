@@ -35,7 +35,7 @@
     background-color: var(--default-bg);  
     width: 360px;
     //min-width: 385px;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
   }
   .invitation-recipient__ui{
     width: 100%;

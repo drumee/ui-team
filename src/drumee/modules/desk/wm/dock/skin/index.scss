@@ -284,14 +284,14 @@
     &.trash {
       &[data-over="yes"] {
         border: 2px solid var(--eviolet);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
 
         svg {
           color: var(--eviolet);
         }
 
         &:after {
-          border-radius: $default-border-radius;
+          border-radius: var(--border-radius);
           content: " ";
           height: 100%;
           left: 0;

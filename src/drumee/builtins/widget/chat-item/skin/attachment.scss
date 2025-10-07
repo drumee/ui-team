@@ -40,7 +40,7 @@
 
       &__container {
         background-color: var(--default-bg);    
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         overflow: hidden;
 
         &[data-hover="on"] {

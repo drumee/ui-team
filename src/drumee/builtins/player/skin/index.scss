@@ -10,7 +10,7 @@
 
   &__ui {
     background-color: var(--default-bg);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: var(--shadow-main);
     min-height: 250px;
     min-width: 340px;
@@ -60,7 +60,7 @@
   }
 
   &__main {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: var(--shadow-main);
     height: 100%;
     width: 100%;

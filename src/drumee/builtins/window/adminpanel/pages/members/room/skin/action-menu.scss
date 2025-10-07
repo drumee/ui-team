@@ -13,7 +13,7 @@
       min-width: 184px;
       width: 100% !important;
       box-shadow:$drumee-container-dropdown;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       &__wrapper{
         left: -168px;
         padding:10px;

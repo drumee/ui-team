@@ -46,7 +46,7 @@
     &.container{
       min-height: 380px;
       width: 600px;
-      border-radius:$default-border-radius;//6px;
+      border-radius:var(--border-radius);//6px;
       margin: auto;
       background-color: var(--default-bg); //var(--ewhite);
       box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
@@ -351,7 +351,7 @@
         z-index: 10;
 
         .tooltips {
-          border-radius:$default-border-radius;
+          border-radius:var(--border-radius);
           @include typo($size: 16px, $line: 22px, $color: var(--security-text-color));
           background-color: var(--bg-tooltips);//$default-background-tooltips;
           height: 100px;
@@ -365,7 +365,7 @@
   }
 
   &__row {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     background-color:var(--default-bg);
     height: 55px;
     margin: 10px 0;   
@@ -380,7 +380,7 @@
 
     &[data-error="1"] {
       border: 1px solid var(--default-border-error);//var(--default-border-error);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
     }
 
     &.go {
@@ -435,7 +435,7 @@
       width: 160px;*/
       height: 35px;
       cursor:pointer;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       width: 110px;
       border:1px solid var(--btn-rollback-border);
       @include typo($size:16px, $color: var(--btn-rollback-text), $line:21px);

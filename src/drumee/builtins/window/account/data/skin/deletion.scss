@@ -8,7 +8,7 @@
 
 .account-data-deletion {
   &__main {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     width: 100%;
     min-height: 300px;
     max-width: 700px;
@@ -178,7 +178,7 @@
     padding: 0 10px; //0 15px;
     cursor: pointer;
     justify-content: center;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     @include typo($size:16px,$line:18px,$color: var(--btn-rollback-text));//$weight:300
     //width: 170px;
     color:var(--btn-rollback-text);

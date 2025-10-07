@@ -87,7 +87,7 @@
     height: 32px;
     // padding: 5px;
     justify-content: center;
-    border-radius: $default-border-radius; // 2px;
+    border-radius: var(--border-radius); // 2px;
     cursor: pointer;
     @include typo($size: 16px, $line: 28px, $color: var(--btn-rollback-text)); //$weight:300
     align-items: center;

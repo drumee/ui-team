@@ -1,11 +1,4 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
+
 @import 'mixins/drumee';
 
 .invitation-permission{
@@ -18,7 +11,7 @@
    // padding: 20px 45px 15px;
     background-color:var(--default-bg-block); // #F7F7F9;
     box-shadow:var(--shadow-block) ;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     position: absolute;
    // margin: 0 auto;
     padding: 15px 45px ;//25px 45px 15px;
@@ -137,7 +130,7 @@
     width: auto;
     height: 28px;//20px;
     background-color:var(--btn-commit-background); //var(--egreen); //var(--egreen); //#18A3AC;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     //border-radius: 2px;
     cursor: pointer;
     display: flex;

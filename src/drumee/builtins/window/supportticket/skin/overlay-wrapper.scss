@@ -78,7 +78,7 @@
     }
   
     &__button-cancel {
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       border: 1px solid var(--btn-rollback-border); 
       color: var(--btn-rollback-text); 
       margin-right: 50px;
@@ -91,7 +91,7 @@
     &__button-confirm {
       background-color: var(--btn-commit-background);      
       border: 1px solid  var(--btn-commit-border);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       color: var(--ewhite);
       &:hover{
         background-color:var(--btn-commit-border-hover);

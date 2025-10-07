@@ -12,7 +12,7 @@
     background-color: $transfert-main;  
     color: var(--default-text-reverse); 
     flex-shrink: 0;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     box-shadow:var(--shadow-topbar);
    // box-shadow: 0 5px 8px 1px rgba(63,79,117,.13), 0 6px 16px 0 rgba(86,65,113,.08), 0 2px 14px 0 rgba(194,185,203,0);
     cursor: pointer;

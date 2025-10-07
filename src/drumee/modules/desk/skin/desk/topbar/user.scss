@@ -4,7 +4,7 @@
   &-user {
     background-color:var(--default-bg);   
     z-index: 2;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     overflow: hidden;
     padding-top:10px;
     &-container {
@@ -47,7 +47,7 @@
         height: 40px;
         width: 40px; 
         box-shadow: var(--shadow-topbar);
-        border-radius:$default-border-radius;
+        border-radius:var(--border-radius);
         &[data-device="mobile"] {
           height: 35px;
           width: 35px;
@@ -58,7 +58,7 @@
         background-color: var(--default-bg);
         margin-top: 20px;
         width:195px!important; // 182px!important; //174px!important;
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         &[data-device="mobile"] {
           right: 10px;
         }
@@ -180,7 +180,7 @@
     height: 40px;
     position: absolute;
     width: 40px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: 0 5px 8px 1px rgb(63 79 117 /10%), 0 6px 16px 0 rgb(86 85 113 / 8%), 0 2px 14px 0 rgb(194 195 203 / 0%);//0 5px 8px 1px rgba(63,79,117,.13), 0 6px 16px 0 rgba(86,65,113,.08), 0 2px 14px 0 rgba(194,185,203,0);
     &:hover{
       box-shadow:  0 2px 4px 3px rgb(63 79 117 / 20%), 0 2px 2px 2px hsla(0,0%,98%,.2), 0 6px 3px 5px rgb(194 185 203 / 0%);// 0 2px 4px 3px rgba(63, 79, 117, 0.15), 0 2px 2px 2px hsla(0,0%,98%,.2), 0 6px 3px 5px rgba(194,185,203,0);//0 2px 2px 1px rgba(63,79,117,.13), 0 6px 16px 0 rgba(86,65,113,.08), 0 2px 14px 0 rgba(194,185,203,0);        
@@ -198,7 +198,7 @@
       height: 35px;
       width: 35px;
       position: absolute;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
     }
     &[data-state="1"] {
       z-index:8000; // higher than Wm

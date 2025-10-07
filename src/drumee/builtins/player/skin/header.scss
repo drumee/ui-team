@@ -58,7 +58,7 @@
     grid-auto-rows: 1rem;
     grid-gap: 3px;
     background-color: var(--default-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: $drumee-shadow-box;
     padding: 8px;
     top: -1px;

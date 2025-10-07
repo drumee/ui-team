@@ -8,7 +8,7 @@
 
     & .menu-topic-items {
       background-color: var(--default-background);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       box-shadow: $drumee-container-dropdown;
       justify-content: center;
       max-width: 202px;

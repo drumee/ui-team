@@ -7,7 +7,7 @@
 
 .security {
   &__ui {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     background-color: var(--default-block-background);
     height: 150px;
     min-height: 125px;
@@ -168,7 +168,7 @@
 
     &.tooltips {
       background-color: var(--default-background);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 53px;
       left: 106px;
       overflow-wrap: break-word;
@@ -272,7 +272,7 @@
 
   &__main {
     background-color: var(--default-block-background); //var(--white-fb);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: 100%;
     left: 0;
     min-height: 115px;

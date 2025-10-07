@@ -1,11 +1,5 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
+
+@import 'mixins/drumee.scss';
 
 .window-contact {
   &__ui{
@@ -93,7 +87,7 @@
 
   &__button-cancel {
     border: 1px solid var(--btn-rollback-border); //#f1f1f6;
-    border-radius: 6px;//$default-border-radius;
+    border-radius: 6px;//var(--border-radius);
     color: var(--btn-rollback-text);// #89929e;
     margin-right: 50px;
     &:hover{
@@ -104,7 +98,7 @@
 
   &__button-confirm {
     background-color:var(--btn-commit-background); 
-    border-radius: 6px;//$default-border-radius;
+    border-radius: 6px;//var(--border-radius);
     color: var(--btn-commit-text);
     width: auto;
     &:hover{

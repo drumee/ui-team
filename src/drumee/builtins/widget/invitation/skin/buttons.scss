@@ -63,7 +63,7 @@
 
       &[data-state="1"] {
         background-color: var(--default-bg-hover);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         color: var(--ewhite);
       }
     }
@@ -71,7 +71,7 @@
 
   &--secondary-btn {
     align-items: center;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     border: 1px solid var(--btn-rollback-border);
     cursor: pointer;
     height: 35px;

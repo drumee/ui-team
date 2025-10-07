@@ -106,7 +106,7 @@
 
   &__wrapper.bug-report {
     background-color: rgba(47, 47, 47, 0.5);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     cursor: pointer;
     height: 35px;
     justify-content: center;
@@ -149,7 +149,7 @@
       position: absolute;
       height: 380px;
       background-color: var(--default-bg);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       align-items: center;
       min-height: 345px;
       //box-shadow: var(--shadow-container);

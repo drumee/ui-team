@@ -70,7 +70,7 @@
 
   &__roll {
     background: var(--default-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: var(--shadow-container);
     height: auto;
     left: -12px;

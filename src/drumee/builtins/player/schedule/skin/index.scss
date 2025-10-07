@@ -11,7 +11,7 @@
 .player-schedule {
   &__ui {
     background-color:var(--default-bg);  
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow:var(--shadow-container);
     display: flex;  
     flex-direction: column;
@@ -66,7 +66,7 @@
   }
 
   &__icon {
-    border-radius:$default-border-radius; 
+    border-radius:var(--border-radius); 
     // border: 1px $default-icon-reverse solid;
     color: var(--special-schedule-icon);
     height: 30px;
@@ -241,7 +241,7 @@
     }
     &.text {
       align-items:center;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       height: 35px;
       justify-content: center;
       max-width: 200px;
@@ -266,13 +266,13 @@
 
       &:hover {
         color:  var(--btn-rollback-text-hover);
-        border:$btn-rollback-border-hover 2px solid;
+        border: var(--btn-rollback-border-hover) 2px solid;
       }
     }
 
     &.icon {
       align-items:center;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       color: var(--default-icon-neutral);   
       height: 25px;
       margin:0 3%;
@@ -341,7 +341,7 @@
       width: 100%;
       & textarea {
         background: var(--default-bg-block);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         border: none;
         outline: none;
         padding:10px 5px 10px;
@@ -359,7 +359,7 @@
   }
   &__ok-btn {
     background: var(--btn-commit-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     padding: 5px;
     margin-left:5px; 
     margin:3px;

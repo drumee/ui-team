@@ -29,7 +29,7 @@
     justify-items: center;
     align-content: center;    
     min-height: 60%;
-    border-radius: $default-border-radius; 
+    border-radius: var(--border-radius); 
     background: var(--default-bg);
     min-width: 350px;
     .drumee-text{
@@ -50,7 +50,7 @@
     background-color: var(--btn-commit-background); //var(--egreen);
     padding: 0 12px;
     margin: 0px auto;//auto;
-    border-radius: $default-border-radius;// 6px; //2px;
+    border-radius: var(--border-radius);// 6px; //2px;
     justify-content: center;
     cursor: pointer;
     @include typo($size:15px, $line:26px, $color: var(--ewhite));

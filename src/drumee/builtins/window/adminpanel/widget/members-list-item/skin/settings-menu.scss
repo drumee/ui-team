@@ -15,7 +15,7 @@
       display: flex;
       flex-direction: column;
       z-index: 2;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       background-color:var(--default-background);
       box-shadow: var(--shadow-block);
       left: -258px;
@@ -115,7 +115,7 @@
 
   &__buttons-wrapper {
     &.button {
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       @include typo ($size: 14px, $line: 15px, $color: var(--btn-commit-text));
       align-items: center;
       background:var(--btn-commit-background); 

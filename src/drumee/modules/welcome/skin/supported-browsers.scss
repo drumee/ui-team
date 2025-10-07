@@ -29,7 +29,7 @@
 
   &__browsers-container{
     background-color:var(--default-bg-block);
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     padding: 10px 0 20px;
     margin-top: 20px;
   }
@@ -68,7 +68,7 @@
     &.skip{
       background: var(--btn-rollback-background);
       color: var(--btn-rollback-text);//var(--default-text-reverse);
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       border:1px solid var(--btn-rollback-border);
       cursor: pointer;
       padding: 10px 20px;

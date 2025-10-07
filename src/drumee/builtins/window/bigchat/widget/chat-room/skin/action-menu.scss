@@ -15,12 +15,12 @@
 
     & .menu-topic-items {
       background-color: var(--default-background); 
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       box-shadow: $drumee-container-dropdown;
       margin-top: 0px;
       min-width: 162px;
       &__wrapper {
-        border-radius:$default-border-radius;
+        border-radius:var(--border-radius);
         left: -179px;
         padding: 10px;
         top: 31px  !important;

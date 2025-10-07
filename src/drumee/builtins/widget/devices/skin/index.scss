@@ -21,7 +21,7 @@
     align-items: start;
     justify-content: space-between;
     background-color: var(--default-bg);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
 
     .menu-topic-items {
       &__wrapper {

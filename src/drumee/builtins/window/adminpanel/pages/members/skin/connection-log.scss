@@ -1,7 +1,7 @@
 &-connection-log {
   &__main {
     background:var(--default-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: calc(100% - 100px);
     min-width: 300px;
     width: calc(100% - 200px);

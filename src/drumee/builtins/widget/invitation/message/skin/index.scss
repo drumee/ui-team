@@ -8,7 +8,7 @@
     margin: 0 auto;
     background-color: var(--default-bg-block);
     box-shadow: $drumee-shadow-box;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     position: absolute;
 
     &:before {
@@ -30,7 +30,7 @@
     justify-content: center;
     height: 28px;
     background-color: var(--btn-commit-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     @include typo($line: 20px, $size: 14px, $color: var(--btn-commit-text));
 
     &:hover {

@@ -28,9 +28,9 @@
     background-color: var(--default-bg);
     max-width: 280px;
     width: 100%;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     &[data-status="error"] {
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       border: 2px solid var(--default-border-error);
     }
   }

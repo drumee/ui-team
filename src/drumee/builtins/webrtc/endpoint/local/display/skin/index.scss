@@ -11,7 +11,7 @@
     height: 100%;
     padding: 10px;    
     overflow: hidden;
-    border-radius : $default-border-radius;
+    border-radius : var(--border-radius);
   }
   &__main{
     height: 100%;

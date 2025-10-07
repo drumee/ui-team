@@ -1,7 +1,7 @@
 &-invoices {
   &__main {
     background: var(--default-bg);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: calc(100% - 60px);
     min-width: 300px;
     width: calc(100% - 160px);

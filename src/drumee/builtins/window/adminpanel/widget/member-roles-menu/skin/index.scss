@@ -23,7 +23,7 @@
 
     & .menu-topic-items {
       background-color: var(--default-background);
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       box-shadow:$drumee-container-dropdown;
       max-height: 250px;
       max-width: 160px;
@@ -128,7 +128,7 @@
       &.button {
         align-items: center;
         background:var(--btn-commit-background);
-        border-radius:$default-border-radius;
+        border-radius:var(--border-radius);
         cursor: pointer;
         display: flex;
         height: 28px;

@@ -1,6 +1,6 @@
 &__members_upload_wrapper {
   background: var(--default-background);
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
   height: calc(100% - 30px);
   width: calc(100% - 30px);
   overflow: hidden;
@@ -42,7 +42,7 @@
 &__droppable-area {
   @include typo($size: 20px, $line: 23px, $color: var(--egreen));
   align-items: center;
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
   border: 1px dashed var(--egreen);
   box-sizing: border-box;
   justify-content: center;
@@ -98,7 +98,7 @@
 
 &__upload-member-button {
   align-items: center;
-  border-radius:$default-border-radius;
+  border-radius:var(--border-radius);
   cursor: pointer;
   display: flex;
   height: 35px;
@@ -163,7 +163,7 @@
     margin: 2px 0px 30px ;//5px 5px 20px 5px;
     //@extend: 45px;
   & .button-confirm {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     @include typo($size: 16px, $line: 24px, $color: var(--btn-commit-text));
     align-items: center;
     background: var(--btn-commit-background);   
@@ -178,7 +178,7 @@
   }
 
   & .button-cancel {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     @include typo($size: 16px, $line: 24px, $color: var(--btn-rollback-text) );
     align-items: center;
     background: var(--btn-rollback-background);

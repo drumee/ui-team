@@ -57,7 +57,7 @@
 
     & .tooltips {
       background-color: var(--background-tooltips);
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       max-height: 120px;
       min-height: 90px;
       padding: 10px;

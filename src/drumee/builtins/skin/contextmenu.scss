@@ -11,7 +11,7 @@
   min-width: 90px;
   background-color: var(--bg-tooltips);
   position: absolute;
-  border-radius: $default-border-radius;//4px;
+  border-radius: var(--border-radius);//4px;
   overflow: hidden;
   .contextmenu-item {
     height: 36px;

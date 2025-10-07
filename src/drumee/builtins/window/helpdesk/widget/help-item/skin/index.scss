@@ -39,7 +39,7 @@
     &.button-text {
       align-items: center;
       background-color: var(--helpdesk-btn-bg);// $hd-default-button-color;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 70px;
       justify-content: center;
       padding: 5px;

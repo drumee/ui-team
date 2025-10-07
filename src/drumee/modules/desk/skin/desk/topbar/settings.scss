@@ -13,7 +13,7 @@
     .menu-topic-items {
       &__wrapper {
         box-shadow: var(--shadow-main);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         right: 45px;
         top: -8px;
         background-color: var(--default-bg);

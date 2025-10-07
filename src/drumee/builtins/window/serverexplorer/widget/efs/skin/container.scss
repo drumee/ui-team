@@ -1,7 +1,7 @@
 &__container {
   width: 100%;
   height: 100%;
-  border-radius:$default-border-radius;
+  border-radius:var(--border-radius);
 
   &:after {
     content: " ";
@@ -11,7 +11,7 @@
     position: absolute;
     top: 19px;
     left: 6px;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     display: none;
   }
 
@@ -68,7 +68,7 @@
   }
 
   &[data-hover="on"] {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: var(--shadow-container);
     z-index : 100;
 

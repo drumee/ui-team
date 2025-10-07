@@ -1,6 +1,4 @@
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/vendor.scss';
+
 @import 'mixins/drumee';
 
 .security-otp {
@@ -13,7 +11,7 @@
     padding: 14px;
     width: 320px;
     background-color: var(--default-block-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
   }
 
   &__main {
@@ -93,7 +91,7 @@
     justify-content: space-between;
     border: 1px solid lightgrey;
     margin: 5px 0;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     cursor: pointer;
   }
 }

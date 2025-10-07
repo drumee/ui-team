@@ -73,7 +73,7 @@
       position: absolute;
       right: 8px;
       background-color: var(--background-tooltips);
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       font-size: 11px;
       margin: -10px 27px 0 0;
       width: 260px;

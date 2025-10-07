@@ -11,12 +11,12 @@
   justify-content: center;
   z-index: 200;
   background-color:var(--default-transparent-black);//rgba(0,0,0,0.33);
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
  // margin-left:21%;
   margin: 5px auto; 
   .ctrl-button{
     width: 36px; //48px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: 36px; //30px;
     padding:8px; // 5px;
     border: 1.2px transparent solid;//$vdo-border-grey

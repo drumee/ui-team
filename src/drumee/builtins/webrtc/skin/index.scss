@@ -82,7 +82,7 @@
       padding: 5px;
       display: flex;
       justify-content: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 32px;
       @include typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text));
 
@@ -127,7 +127,7 @@
 
   .menu-items {
     background: var(--default-bg);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
   }
 }
 
@@ -150,7 +150,7 @@
     background-color: var(--default-transparent-black);
     margin: 10px;
     text-align: center;
-    border-radius: $default-border-radius; //3px;
+    border-radius: var(--border-radius); //3px;
     @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
   }
 }
@@ -169,7 +169,7 @@
     &__ui {
       background-color: rgb(0, 0, 0, 0.2);
       border-radius: 3px;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
     }
 
     .countdown-timer__counter {
@@ -281,7 +281,7 @@
     padding: 10px;
     background-color: var(--default-transparent-black); // grey;
     margin: 10px;
-    border-radius: $default-border-radius; //3px;
+    border-radius: var(--border-radius); //3px;
     @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
   }
 }
@@ -333,7 +333,7 @@
   &__button-cancel {
     @include typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
     border: 1px solid var(--btn-rollback-border-hover);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     min-width: 150px;
     height: 40px;
     padding: 2px 5px;

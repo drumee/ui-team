@@ -64,7 +64,7 @@
     align-content: center;
     justify-items: center;
     align-items: center;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     top: calc(100% - 32px);
     left: calc(50% - 60px);
     min-width: 180px;
@@ -141,7 +141,7 @@
     & .lib-messenger {
       &__content {
         background-color: var(--background-chatmessenger);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
 
         .note-content {
           cursor: text;
@@ -208,7 +208,7 @@
 
   &__drag-drop {
     align-items: center;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     border: 1px dashed var(--egreen);
     box-sizing: border-box;
     display: flex;
@@ -269,7 +269,7 @@
     & .preset-acknowledge {
       &__main {
         background-color: var(--dgc-chat-ack-bg);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         padding: 10px 40px;
       }
 
@@ -300,7 +300,7 @@
     & .preset-acknowledge-error {
       &__main {
         background-color: var(--dgc-chat-ack-bg);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         padding: 18px 40px;
       }
 
@@ -337,7 +337,7 @@
 
     & .button {
       align-items: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 26px;
       justify-content: center;
       margin: 0 2%;

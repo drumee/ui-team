@@ -112,7 +112,7 @@
       & textarea {
         @include typo($size: 16px, $line: 21px, $color:var(--default-text-color));// var(--egrey-2f));
         background: var(--default-bg-block);
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         border: none;
         outline: none;
         padding: 10px;
@@ -157,7 +157,7 @@
     & .button {
       @include typo($size: 16px, $line: 19px);
       align-items:center;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       height: 35px;
       justify-content: center;
       max-width: 115px;

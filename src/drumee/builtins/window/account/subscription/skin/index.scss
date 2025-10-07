@@ -102,7 +102,7 @@
   &__button-cancel {
     @include typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text)); 
     border: 1px solid var(--btn-rollback-border-hover);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     min-width: 150px; 
     height: 40px;
     padding: 2px 5px;
@@ -116,7 +116,7 @@
   &__button-confirm {
     @include typo( $size: 16px, $line: 16px, $color: var(--btn-commit-text));
     background-color: var(--btn-commit-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     height: 40px; 
     min-width: 180px;
 

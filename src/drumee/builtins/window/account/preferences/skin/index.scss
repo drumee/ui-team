@@ -1,11 +1,3 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2020
-#   FILE : /src/drumee/builtins/window/account/preferences/skin/index.scss
-#   TYPE : Account Main Style
-# ===================================================================**/
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/vendor.scss';
 @import 'mixins/drumee';
 
 
@@ -88,7 +80,7 @@
     &-list {
       box-shadow: var(--shadow-accountlist);
       background-color: var(--default-background);     
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 100%;
       margin-bottom: 3px;
       margin-top: 3px;

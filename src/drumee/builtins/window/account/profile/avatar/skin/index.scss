@@ -1,11 +1,4 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2016
-#   FILE : module/account/skin/profile/avatar.scss
-#   TYPE : Account Main Style
-# ===================================================================**/
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/vendor.scss';
+
 @import 'mixins/drumee';
 
 .account-avatar{
@@ -15,7 +8,7 @@
     justify-content: center;
     position: relative;
    // border: 1px solid #979797;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     background-color:var(--background-user-icon);//hsla(0,0%,78.4%,.5);// #D8D8D8;
     box-shadow: none;
     margin: 0 auto;

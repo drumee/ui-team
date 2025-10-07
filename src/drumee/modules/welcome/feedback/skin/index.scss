@@ -15,7 +15,7 @@
     margin: 50px auto; 
     padding: 20px;
     background-color: var(--default-bg-block); 
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: var(--shadow-popup);
   }
 
@@ -62,11 +62,11 @@
     margin: 10px 55px;
     &[data-error="1"]{
       border: 1px solid var(--default-border-error);// red;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
     }
     & textarea {
       border: 1px solid var(--egrey-89);//grey;
-      border-radius: $default-border-radius; 
+      border-radius: var(--border-radius); 
       resize: none;   
       width: 100%;
       height: 100%;
@@ -88,7 +88,7 @@
     height: 35px;
     align-items: center;
     background-color: var(--btn-commit-background); 
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     cursor: pointer;
     justify-content: center;
     width: 115px;

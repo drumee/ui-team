@@ -30,7 +30,7 @@
 }
 
 &-check-password {
-  border-radius: $default-border-radius;
+  border-radius: var(--border-radius);
   background-color: var(--default-block-background);
   height: 150px;
   min-height: 125px;

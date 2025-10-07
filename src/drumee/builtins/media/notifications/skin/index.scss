@@ -1,16 +1,4 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2021
-#   FILE : /src/drumee/builtins/media/notifications/skin/index.scss
-#   TYPE : Skeleton
-# ===================================================================**/
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
+
 @import 'mixins/drumee';
 
 .media-notifications {
@@ -21,7 +9,7 @@
     top: 21px;
     left: 64px;
     z-index: 10000;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
 
     &[data-align="left"] {
       left: -100px;

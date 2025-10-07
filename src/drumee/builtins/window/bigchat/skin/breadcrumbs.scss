@@ -12,7 +12,7 @@
 
   &__container {
     align-items: center; 
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     height: 18px;
     justify-content: center;
     left: -6px; 

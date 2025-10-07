@@ -10,13 +10,13 @@
     justify-content: center;
     z-index: 200;
     background-color: var(--default-transparent-black);//$transparent-black;//rgba(0, 0, 0, 0.33);//($vdo-background-color;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     margin-left:20%;
     min-width: 209px;
     margin-right: auto;
     .ctrl-button{
       width: 36px; //48px;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       height: 36px; //30px;
       padding:8px; // 5px;
       border: 1.2px transparent solid;//$vdo-border-grey

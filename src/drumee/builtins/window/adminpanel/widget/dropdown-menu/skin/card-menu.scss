@@ -20,7 +20,7 @@
   &__input_wrapper {
     align-items: center;
     background: var(--default-background);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     cursor: pointer;
     height: 28px;
     justify-content: space-evenly;
@@ -54,7 +54,7 @@
     }
 
     & .menu-topic-items {
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       background-color: var(--default-background);    
       box-shadow: var(--shadow-container);
       max-width: 130px;
