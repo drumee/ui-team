@@ -31,7 +31,7 @@
 
 &-check-password {
   border-radius: $default-border-radius;
-  background-color: $account-default-block-background;
+  background-color: var(--default-block-background);
   height: 150px;
   min-height: 125px;
   padding: 20px 20px 0px 14px;

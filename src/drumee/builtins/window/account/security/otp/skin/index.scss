@@ -12,7 +12,7 @@
     min-height: 150px;
     padding: 14px;
     width: 320px;
-    background-color: $account-default-block-background;
+    background-color: var(--default-block-background);
     border-radius: $default-border-radius;
   }
 
@@ -34,7 +34,7 @@
     text-align: center;
     @include typo($size: 16px,
       $line: 21px,
-      $color: $account-default-text-color,
+      $color: var(--default-text-color),
       $weight: 400);
     align-content: center;
     flex-wrap: wrap;
@@ -60,7 +60,7 @@
     height: 33px;
     width: 33px;
     padding: 7px;
-    color: $account-checkbox-svg-hover;
+    color: var(--account-checkbox-svg-hover);
   }
 
   &__checkbox {

@@ -8,10 +8,10 @@
   &__tips {
     justify-content: center;
     height: 40px;
-    @include typo($size: 16px, $line: 26px, $color: $account-default-text-color, $weight: 300);
+    @include typo($size: 16px, $line: 26px, $color: var(--default-text-color), $weight: 300);
 
     &[data-error="1"] {
-      color: $account-default-text-error;
+      color: var(--default-text-error);
     }
   }
 
@@ -27,15 +27,15 @@
 
     & input {
       background-color: transparent;
-      border-bottom: 1px solid $account-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       border-radius: 0px;
       width: 100%;
       margin-left: 0px;
-      @include typo($size: 16px, $line: 19px, $color: $account-default-text-color);
+      @include typo($size: 16px, $line: 19px, $color: var(--default-text-color));
 
       &::placeholder {
 
-        @include typo($size: 16px, $weight: 300, $line: 19px, $color: $account-default-text-placeholder);
+        @include typo($size: 16px, $weight: 300, $line: 19px, $color: var(--default-text-placeholder));
       }
 
       &:focus {
@@ -43,7 +43,7 @@
         outline: none;
 
         @include placeholder-input {
-          @include typo($size: 16px, $weight: 400, $line: 19px, $color: $account-text-placeholder-focus);
+          @include typo($size: 16px, $weight: 400, $line: 19px, $color: var(--focus-text-placeholder));
         }
       }
     }
@@ -51,7 +51,7 @@
 
   &__no-code {
 
-    @include typo($size: 16px, $line: 18px, $color: $account-default-text-color, $weight: 300);
+    @include typo($size: 16px, $line: 18px, $color: var(--default-text-color), $weight: 300);
     justify-content: center;
     justify-items: center;
     transition: height 1s;
@@ -133,7 +133,7 @@
     }
 
     .l-2 {
-      @include typo($size: 12px, $line: 18px, $color: $account-default-text-caution, $weight: 400);
+      @include typo($size: 12px, $line: 18px, $color: var(--default-text-caution), $weight: 400);
     }
   }
 }

@@ -10,7 +10,7 @@
     height: 216px;
     .account__item{
       cursor: pointer;
-      @include typo($color: $account-default-text-color,$size:14px,$line:42px,$weight:300);
+      @include typo($color: var(--default-text-color),$size:14px,$line:42px,$weight:300);
     }
   }
 }

@@ -33,8 +33,8 @@
     }
   }
   &__text{
-    background-color: $account-default-background;
-    border: 1px solid $account-default-entry-border-bottom;//#ECEDEE;
+    background-color: var(--default-background);
+    border: 1px solid var(--default-entry-border-bottom);//#ECEDEE;
     border-radius: 4px 0 0 4px;
     padding-top:25px;
     padding-left: 30px;

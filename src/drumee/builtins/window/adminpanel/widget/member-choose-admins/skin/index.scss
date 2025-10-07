@@ -98,7 +98,7 @@
       width: 15px;
 
       & .tooltips {
-        background-color: $account-background-tooltips ;
+        background-color: var(--background-tooltips);
         border-radius: $default-border-radius;
         max-height: 90px;
         min-height: 60px;
@@ -109,7 +109,7 @@
         top: 20px;
         width: 250px;
         z-index: 1;
-        @include typo($size: 12px, $line: 20px, $color: $account-default-text-tooltips);
+        @include typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
       }
     }
 

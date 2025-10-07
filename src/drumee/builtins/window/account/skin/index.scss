@@ -12,7 +12,7 @@
 
 .window-account {
   &__ui {
-    background-color:$account-default-background;
+    background-color:var(--default-background);
     left: 10px;
     top: 10px;
     width: calc(100vw - 20px);
@@ -28,7 +28,7 @@
   }
 
   &__body {
-    background-color:$account-default-background;
+    background-color:var(--default-background);
     border-radius:$default-border-radius;
     height: 100%;
     overflow: auto;

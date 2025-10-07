@@ -9,7 +9,7 @@
 
   &--details {
     position: absolute;
-    background: $account-default-background;
+    background: var(--default-background);
     z-index: 10;
     padding: 5px 10px;
     border-radius: $default-border-radius-bottom;
@@ -35,7 +35,7 @@
   &--value {
     width: 50%;
     padding-left: 5px;
-    @include typo ($line: 14px, $size: 12px, $color: $account-default-text-inactive);
+    @include typo ($line: 14px, $size: 12px, $color: var(--default-text-inactive));
   }
 }
 
@@ -44,7 +44,7 @@
     width: 35%;
     min-width: 35%;
     justify-content: space-around;
-    @include typo ($line: 14px, $color: $account-default-text-inactive, $size: 14px);
+    @include typo ($line: 14px, $color: var(--default-text-inactive), $size: 14px);
 
     .inner {
       overflow: hidden;
@@ -73,7 +73,7 @@
     padding: 9px 8px 0px 8px;
     opacity: 0.5;
     cursor: pointer;
-    @include typo ($line: 14px, $color: $account-default-text-inactive, $size: 14px);
+    @include typo ($line: 14px, $color: var(--default-text-inactive), $size: 14px);
 
     &[data-status="active"] {
       opacity: 1;
@@ -81,10 +81,10 @@
     }
 
     &:hover {
-      background-color: $account-default-background-hover;
+      background-color: var(--default-background-hover);
 
       * {
-        color: $account-default-text-reverse;
+        color: var(--default-text-reverse);
       }
 
     }

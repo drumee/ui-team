@@ -22,7 +22,7 @@
     justify-content: space-between;
     padding: 0 35px;
     height: calc(100% - 70px);
-    @include typo($size: 16px, $line: 24px,$weight: 300, $color:$account-default-text-color);//$weight: 400
+    @include typo($size: 16px, $line: 24px,$weight: 300, $color: var(--default-text-color));//$weight: 400
   }
 
   &__container {
@@ -33,7 +33,7 @@
     cursor: default !important;
     margin-bottom: 25px;
     margin-left: 70px;
-    @include typo($size: 16px, $line: 24px, $color: $account-default-text-title);//$weight: 300,size: 15px,
+    @include typo($size: 16px, $line: 24px, $color: var(--default-text-title));//$weight: 300,size: 15px,
     &.language{
       margin-left: 0px;
     }
@@ -87,7 +87,7 @@
 
     &-list {
       box-shadow: var(--shadow-accountlist);
-      background-color: $account-default-background;     
+      background-color: var(--default-background);     
       border-radius: $default-border-radius;
       height: 100%;
       margin-bottom: 3px;
@@ -108,7 +108,7 @@
       justify-content: flex-start;
       padding: 0 20px;
       top: 10px;
-      @include typo($size: 14px, $line: 34px, $weight:300, $color: $account-default-text-color);
+      @include typo($size: 14px, $line: 34px, $weight:300, $color: var(--default-text-color));
       svg {
         height: 24px!important;
         margin-right: 12px;
@@ -116,7 +116,7 @@
       }
 
       &:hover {
-        color: $account-backgroundless-text-hover;
+        color: var(--backgroundless-text-hover);
       }
     }
   }

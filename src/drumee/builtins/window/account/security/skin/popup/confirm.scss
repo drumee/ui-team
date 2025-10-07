@@ -27,7 +27,7 @@
         height: 370px;
         width: 680px;
         border-radius: var(--border-radius-tiny);
-        background-color: $account-default-background;  
+        background-color: var(--default-background);  
         box-shadow: 0 0 7px 0 rgba(0,0,0,0.14), 0 10px 14px 0 rgba(0,0,0,0.2);
         margin: auto;
       }
@@ -41,7 +41,7 @@
         height: 28px;
         width: 255px;
        // padding-right:101px;
-        @include typo($size:24px,$line:28px,$color:$account-default-text-color,$weight:300);
+        @include typo($size:24px,$line:28px,$color: var(--default-text-color),$weight:300);
         top:50px;
         left:234px;
       }  

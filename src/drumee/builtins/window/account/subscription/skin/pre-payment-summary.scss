@@ -148,7 +148,7 @@
       width: 18px;
 
       & .tooltips {
-        @include typo($size: 12px, $line: 18px, $color: $account-default-text-tooltips);
+        @include typo($size: 12px, $line: 18px, $color: var(--default-text-tooltips));
         background-color: var(--bg-chatmessenger);
         border-radius: $default-border-radius;
         max-height: 80px;

@@ -46,7 +46,7 @@
   }
 
   &__label {
-    @include typo($size: 12px, $line: 16px, $color: $account-default-text-title);
+    @include typo($size: 12px, $line: 16px, $color: var(--default-text-title));
     padding: 0 0 6px 10px;
   }
 
