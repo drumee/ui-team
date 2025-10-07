@@ -109,4 +109,122 @@
   --medium-width: 990px;
   --tablet-width: --medium-width;
 
+  --btn-rollback-text: #89929e;
+  --btn-rollback-background: #ffffff;
+  --btn-rollback-border: #DDE2E8;
+  --btn-rollback-border-hover: #879BFF;
+  --btn-rollback-text-hover: #879BFF;
+
+  // var(--btn-commit-background:
+  --btn-caution-text: #FFFFFF;
+  --btn-caution-backgroundless-text: #FF7479;
+  --btn-caution-background: #FF7479;
+  --btn-caution-border: #FF7479;
+  --btn-caution-border-hover: #ea4d44;
+  --btn-caution-text-hover: #ea4d44;
+  --btn-caution-background-hover: #ea4d44;
+
+  --btn-commit-text: #FFFFFF;
+  --btn-commit-backgroundless-text: #18A3AC;
+  --btn-commit-background: #18A3AC;
+  --btn-commit-border: #18A3AC;
+  --btn-commit-border-hover: #16959e;
+  --btn-commit-text-hover: #16959e;
+  --btn-commit-background-hover: #16959e;
+
+  /************************ progress **********************/
+  --progress-line-text: #879bff;
+  --progress-line-background: #879bff;
+  --progress-line-border: #879bff;
+  --progress-line-border-hover: #879bff;
+
+  --progress-circle-text: #879bff;
+  --progress-circle-background: #879bff;
+  --progress-circle-border: #879bff;
+  --progress-circle-border-hover: #879bff;
+
+  /************************ default **********************/
+  --main-default-text: var(--default-text-color);
+  --main-default-typo: var(--default-text-color);
+  --main-default-border: #89929e;
+  --main-caution-text: var(--default-text-caution);
+  --main-caution-typo: var(--default-text-caution);
+
+  --main-caution-border: #FF7479;
+  --main-caution-background: #FFFFFF;
+
+  /************************ toggle state **********************/
+  --state-0-text: #2F2F2F;
+  --state-0-typo: #2F2F2F;
+  --state-0-border: #89929e;
+  --state-0-background: #FFFFFF;
+  --state-1-typo: #18A3AC;
+  --state-1-text: #FFFFFF;
+  --state-1-border: #18A3AC;
+  --state-1-background: #18A3AC;
+
+
+  /************************ popup **********************/
+  --popup-text: #89929e;
+  --popup-typo: var(--popup-text);
+  --popup-background: #FFFFFF;
+
+  /* *********** checkbox************** */
+  --checkbox-unselected-color: var(--state-0-typo);
+  --checkbox-selected-color: var(--state-1-typo);
+
+    --btn-primary-color: var(--btn-commit-text);
+  --btn-primary-background: var(--btn-commit-background);
+  --btn-primary-border: var(--btn-commit-border);
+  --btn-primary-border-hover: var(--btn-commit-border-hover);
+  --btn-primary-color-hover: var(--btn-commit-text-hover);
+  --btn-primary-background-hover: var(--btn-commit-background-hover);
+
+  --btn-secondary-color: var(--btn-rollback-text);
+  --btn-secondary-border: var(--btn-rollback-border);
+  --btn-secondary-background: var(--btn-rollback-background);
+  --btn-secondary-border-hover: var(--btn-rollback-border-hover);
+  --btn-secondary-color-hover: var(--btn-rollback-text-hover);
+
+  --btn-tertiary-color: var(--btn-caution-text);
+  --btn-tertiary-background: var(--btn-caution-background);
+  --btn-tertiary-border: var(--btn-caution-border);
+  --btn-tertiary-border-hover: var(--btn-caution-border-hover);
+  --btn-tertiary-color-hover: #ea4d44;
+  --btn-tertiary-background-hover: var(--btn-caution-background-hover);
+
+  --text-btn-accept: var(--default-text-reverse);
+  --btn-rollback-text: #89929e;
+  --btn-rollback-text-hover: #879BFF;
+  --btn-signup: #18AC73;
+
+  /*background*/
+  --btn-accept: #18AC72;
+  --btn-commit: #18a3ac;
+
+  --btn-commit-background-hover: #16959e;
+  --btn-signup-background-hover: #18AC72;
+
+  --btn-delete-background: #ff7479;
+  --btn-delete-background-hover: #f3595f;
+  --btn-delete-border-hover: #16959e;
+
+  /*border*/
+
+  --action-btn-border-color: #FFFFFF;
+  --btn-commit-border-hover: #16959e;
+  --btn-rollback-border: #DDE2E8;
+  --btn-rollback-border-hover: #879BFF;
+  --btn-signup-border-hover: #18AC72;
+
+  /*shadow*/
+  --btn-box-shadow: rgb(169 186 255 / 50%);
+  --btn-cancel-box-shadow: rgb(168 255 255 / 50%);
+
+  /* ******* switch ******/
+  --switch-toggle-on: #18AC72;
+  --switch-toggle-off: #4A4A4A;
+  --switch-toggle-background: var(--toggle-background);
+  --switch-radion-toggle: #18AC72;
+
 }
