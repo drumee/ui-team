@@ -72,7 +72,7 @@
   }
 }
 [data-flow].helpers__text-header {
-  background: $ewhite;
+  background: var(--ewhite);
   @include typo($color: $egrey-4a, $size: 12px, $line: 36px, $weight: 300);
 }
 .helpers__text-bullet {

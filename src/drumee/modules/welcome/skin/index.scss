@@ -99,7 +99,7 @@
       width: 100%;
       padding: 0 0 0 65px; //50px;
 
-    @media (max-width: $small) {
+    @media (max-width: var(--small-width)) {
       @include typo ($color: var(--default-text-color), $size: 14px, $line: 13px, $weight: 300);
     }
 
@@ -110,7 +110,7 @@
       &::placeholder {
         @include typo($size: 16px, $line: 18px, $weight: 300, $color:var(--default-text-placeholder)); //$color: var(--egrey-b6));
       }
-      @media (max-width: $small) {
+      @media (max-width: var(--small-width)) {
         @include typo ($color: var(--default-text-color), $size: 14px, $line: 13px, $weight: 300);
       }
     }
@@ -130,7 +130,7 @@
       flex-direction: column;
     }
 
-    @media (max-width: $md)  {
+    @media (max-width: var(--medium-width))  {
       flex-direction: column;
     }
 
@@ -168,7 +168,7 @@
     &.text {
       @include typo($color: var(--default-text-reverse), $size: 14px, $line: 20px, $weight: 300);
 
-      @media (max-width: $tablet) {
+      @media (max-width: var(--tablet-width)) {
         @include typo($color: var(--default-text-reverse), $size: 11.5px, $line: 20px, $weight: 300);
       }
 
@@ -510,7 +510,7 @@
     text-decoration: underline;
     @include typo($color: var(--blue-midnight), $size: 13px, $line: 0px, $weight: 300);
 
-    @media (max-width: $tablet) {
+    @media (max-width: var(--tablet-width)) {
       top:-15px;
       @include typo($color: var(--blue-midnight), $size: 11px, $line: 21px, $weight: 300);
     }

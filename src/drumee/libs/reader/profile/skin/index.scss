@@ -4,11 +4,8 @@
 #   TYPE : Backoffice Main Style
 # ===================================================================**/
 
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/border.scss';
-@import 'mixins/exports.scss';
 
+@import "mixins/drumee";
 
 .user-profile{
   &__ui{

@@ -15,7 +15,7 @@
     cursor: pointer;
     overflow: hidden;
     &[data-default="1"]{
-      color: $ewhite;
+      color: var(--ewhite);
       padding: 8px;
       border: 1px solid white;
       svg{

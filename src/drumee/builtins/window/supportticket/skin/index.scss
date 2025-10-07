@@ -1,17 +1,5 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2021
-#   FILE : /src/drumee/builtins/window/supportticket/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
-@import 'mixins/drumee';
-@import "mixins/typo.scss";
-@import "mixins/colors/index.scss";
-@import "mixins/exports.scss";
-@import "mixins/handles.scss";
-@import "mixins/utils.scss";
-@import "mixins/vendor.scss";
-@import "mixins/z-index.scss";
 
+@import "mixins/drumee";
 @import './layout.scss';
 
 .window-support-ticket {

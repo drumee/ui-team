@@ -160,14 +160,14 @@
   &--inactive {
     background-color: #a6a8a4;
     border: 1px solid #a6a8a4;
-    @include typo($size: 16px, $line: 34px, $weight: 400, $color: $ewhite);
+    @include typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
     pointer-events: none;
   }
 
   &--warning {
     background-color: #FF7479;
     border: 1px solid #FF7479;
-    @include typo($size: 16px, $line: 34px, $weight: 400, $color: $ewhite);
+    @include typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
 
     &:hover {
       background-color: #ff8e91;
@@ -178,7 +178,7 @@
   &--cancel {
     background-color: #FF7479;
     border: 1px solid #FF7479;
-    @include typo($size: 16px, $line: 34px, $weight: 400, $color: $ewhite);
+    @include typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
 
     &:hover {
       background-color: #ff8e91;
@@ -203,7 +203,7 @@
   &--other {
     background-color: $eblue;
     border: 1px solid $eblue;
-    @include typo($size: 16px, $line: 34px, $weight: 400, $color: $ewhite);
+    @include typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
 
     &:hover {
       background-color: #6da6e9;
@@ -247,7 +247,7 @@
   background-color: #18AC72;
   border: 1px solid #18AC72;
   text-align: center;
-  @include typo($size: 16px, $line: 34px, $weight: 400, $color: $ewhite);
+  @include typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
 
   &:hover {
     background-color: #3fbd8d;

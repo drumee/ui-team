@@ -32,7 +32,7 @@
           &.fr-lang {
             font-size: 13px;
 
-            @media (max-width: $x-small) {
+            @media (max-width: var(--x-small-width)) {
               font-size: 12px !important;
             }
           }

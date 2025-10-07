@@ -104,5 +104,8 @@
   --default-scrollbar-color: rgba(250, 133, 64, 0.6);
   --desk-scrollbar-color: --default-scrollbar-color;
 
-  --small-width: 649px;
+  --x-small-width: 361px;
+  --small-width: 650px;
+  --medium-width: 990px;
+  --tablet-width: --medium-width
 }

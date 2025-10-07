@@ -336,7 +336,7 @@
     }
   }
 
-  @media (max-width: $small) {
+  @media (max-width: var(--small-width)) {
     .desk-dock__container.application.maker {
       display: none;
     }
@@ -358,7 +358,7 @@
 
   &__mobile-launch-wrapper {
 
-    @media (max-width: $small) {
+    @media (max-width: var(--small-width)) {
       .desk-dock__container.application.maker {
         display: flex !important;
         padding-bottom: 8px;
