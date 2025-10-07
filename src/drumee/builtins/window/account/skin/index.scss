@@ -9,9 +9,10 @@
 @import "container";
 @import "footer";
 
+
 .window-account {
   &__ui {
-    background-color:$account-default-background;//$default-background;   
+    background-color:$account-default-background;
     left: 10px;
     top: 10px;
     width: calc(100vw - 20px);
@@ -27,7 +28,7 @@
   }
 
   &__body {
-    background-color:$account-default-background;// $default-background;   
+    background-color:$account-default-background;
     border-radius:$default-border-radius;
     height: 100%;
     overflow: auto;
