@@ -8,7 +8,7 @@ require("./skin/resizable.css");
 require("builtins/contextmenu/skin/index.scss");
 // require("jquery-ui/ui/core");
 // require("jquery-ui/ui/widget");
-// require("skin/vars/index.scss");
+require("skin");
 const { appendFontFace, appendLink } = require("core/utils");
 const { getModule, moduleName } = require('./modules');
 

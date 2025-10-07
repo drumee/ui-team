@@ -23,7 +23,7 @@ body {
 
 @import "./vars";
 @import "./lib/reset";
-@import "./lib/vendor";
+@import "./mixins/vendor";
 @import "./lib/typo";
 @import "./lib/input";
 @import "./lib/container";
