@@ -81,7 +81,7 @@
     }
 
     &:hover {
-      background-color: $dgc-chat-hover;
+      background-color: var(--dgc-chat-hover);
     }
 
     &-icon {
@@ -132,7 +132,7 @@
   }
 
   &__messenger-wrapper {
-    border-top: 1px solid $dgc-chat-border; //$default-separator;
+    border-top: 1px solid var(--default-separator); //$default-separator;
   }
 
   &__messenger {
@@ -140,7 +140,7 @@
 
     & .lib-messenger {
       &__content {
-        background-color: $dgc-messenger-bg;
+        background-color: var(--background-chatmessenger);
         border-radius: $default-border-radius;
 
         .note-content {
@@ -268,7 +268,7 @@
 
     & .preset-acknowledge {
       &__main {
-        background-color: $dgc-chat-ack-bg;
+        background-color: var(--dgc-chat-ack-bg);
         border-radius: $default-border-radius;
         padding: 10px 40px;
       }
@@ -292,14 +292,14 @@
           padding-left: 25px;
           margin-top: auto;
           margin-bottom: auto;
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $dgc-tertiary-text-color);
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--tertiary-text-color));
         }
       }
     }
 
     & .preset-acknowledge-error {
       &__main {
-        background-color: $dgc-chat-ack-bg;
+        background-color: var(--dgc-chat-ack-bg);
         border-radius: $default-border-radius;
         padding: 18px 40px;
       }
@@ -316,11 +316,11 @@
           margin-left: -5px;
           position: absolute;
           width: 18px;
-          color: $dgc-chat-error-ack-icon-color;
+          color: var(--dgc-chat-error-ack-icon-color);
         }
 
         & .note-reader {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $dgc-chat-error-ack-text-color);
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--dgc-chat-error-ack-text-color));
           margin-bottom: auto;
           margin-top: auto;
           padding-left: 25px;
@@ -395,7 +395,7 @@
     background: hsla(0, 0%, 78.4%, .5); //rgba(137, 146, 158, 0.2);
     height: 40px;
     justify-content: center;
-    @include typo($size: 12px, $color: $dgc-secondary-text-color); //$weight:300,
+    @include typo($size: 12px, $color: var(--secondary-text-color)); //$weight:300,
   }
 }
 

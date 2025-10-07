@@ -142,8 +142,8 @@
     }
 
     &.other {
-      background-color: $dgc-chat-other-bg;
-      border: 1px solid $dgc-chat-other-bg;
+      background-color: var(--dgc-chat-other-bg);
+      border: 1px solid var(--dgc-chat-other-bg);
       box-sizing: border-box;
       margin-left: 4px;
       max-width: 90%;
@@ -155,7 +155,7 @@
     }
 
     &.forward {
-      background-color: $dgc-chat-reply-bg;
+      background-color: var(--dgc-chat-reply-bg);
     }
     
     &:hover {
@@ -209,7 +209,7 @@
   }
 
   &__content {
-    border-bottom: 1px solid $dgc-chat-border;
+    border-bottom: 1px solid var(--default-separator);
     width: 100%;
   }
 
@@ -282,7 +282,7 @@
         color: var(--eblue);
 
         &:hover{
-          color: $dgc-chat-hover; 
+          color: var(--dgc-chat-hover); 
         }
       }
     }

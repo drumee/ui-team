@@ -10,7 +10,7 @@
     border-radius:var(--border-radius);
     align-items: center;
     background-color: inherit;
-    background: $ab-default-background;
+    background: var(--default-background);
     justify-content: center;
     margin: auto;
     min-height:350px;
@@ -55,7 +55,7 @@
     }
     
     &.close {
-      color:$ab-default-thinline-icon;
+      color:var(--default-thinline-icon);
       height: 12px;
       position: absolute;
       right: 16px;
@@ -63,7 +63,7 @@
     }
 
     &:hover {
-      color: $ab-default-thinline-icon-hover;
+      color: var(--default-thinline-icon-hover);
     }
   }
 
@@ -78,7 +78,7 @@
         height: 20px;
         text-align: center;
         width: 20px;
-        @include typo($size: 12px, $weight: 300, $line: 20px, $color: $ab-default-text-reverse);
+        @include typo($size: 12px, $weight: 300, $line: 20px, $color: var(--default-text-reverse));
       }
     }
 
@@ -99,22 +99,22 @@
 
     &.static-text {
       margin: auto;
-      @include typo($size: 18px, $weight: 300, $line: 26px, $color: $ab-default-text-color);
+      @include typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
       .inner{
-        @include typo($size: 18px, $weight: 300, $line: 26px, $color: $ab-default-text-color);
+        @include typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
       }
     }
 
     &.title {
       text-transform: capitalize;
       padding-bottom: 15px;
-      @include typo($size: 14px, $line: 14px, $color: $ab-default-text-title);
+      @include typo($size: 14px, $line: 14px, $color: var(--default-text-title));
     }
 
     &.content {
       overflow-y: auto;
       padding-bottom:5px;
-      @include typo($size: 14px, $line: 20px, $color: $ab-default-text-color);
+      @include typo($size: 14px, $line: 20px, $color: var(--default-text-color));
     }
   }
 
@@ -127,7 +127,7 @@
   }
 
   &__message {
-    background-color: $ab-default-block-background;
+    background-color: var(--default-block-background);
     border-radius: var(--border-radius);
     margin: auto;
     max-height: 105px;

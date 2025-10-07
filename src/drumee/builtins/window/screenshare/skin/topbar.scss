@@ -9,7 +9,7 @@
     &[data-connection="ok"] {
       
       &[data-area="personal"] {
-        background-color: $bigchat-background-header;
+        background-color: var(--bigchat-header-bg);
       }
       &[data-area="dmz"] {
         background-color: var(--sharebox-main);

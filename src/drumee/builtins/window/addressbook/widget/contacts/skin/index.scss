@@ -2,7 +2,7 @@
 
 .widget-contacts {
 	&__ui {
-		background-color: $ab-default-block-background;
+		background-color: var(--default-block-background);
 		width: calc(100% - 2px);
 	}
 	
@@ -12,7 +12,7 @@
 		height: 34px; 
 		
 		&__title {
-			@include typo($size: 15px, $line: 16px, $color: $ab-text-title); 
+			@include typo($size: 15px, $line: 16px, $color: var(--ab-default-text-title)); 
 			padding-bottom: 8px;			
 			padding-top: 7px; 
 			margin-left: auto;
@@ -20,19 +20,19 @@
 		}
 
 		&__icon {
-			background-color: $ab-default-background;
+			background-color: var(--default-background);
 			cursor: pointer;
 			margin: 5px;
 			position: absolute;
 			right: 0;
 			& svg {
-				fill : $ab-default-icon-neutral;
+				fill : var(--default-icon-neutral);
 			}
 		}
 	}
 
 	&__separator {
-		background-color: $ab-default-separator;
+		background-color: var(--default-separator);
 		border-radius: 1px;
 		height: 1px;
 		margin: 3px 0 0 0;
@@ -52,12 +52,12 @@
 		
 		&__icon {
 			& svg {
-				fill :$ab-default-user-icon;
+				fill :var(--default-user-icon);
 			}
 		}
 		
 		&__name {
-			@include typo($size: 14px, $line: 16px, $color:$ab-default-text-color);			
+			@include typo($size: 14px, $line: 16px, $color: var(--default-text-color));			
 			margin-top: 3px; 
 			padding: 3px 3px 3px 15px;
 			max-width: 190px;

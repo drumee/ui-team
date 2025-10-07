@@ -23,13 +23,13 @@
     position: absolute;
     &[data-state="1"] {
       & .trigger-icon {
-        color: $ab-default-icon-active;
+        color: var(--default-icon-active);
       }
     }
 
     & .menu-topic-items {
       border-radius:var(--border-radius);
-      background-color: $ab-default-background;
+      background-color: var(--default-background);
       box-shadow:$drumee-container-dropdown ;
       max-height: 250px;
       max-width: 160px;
@@ -42,7 +42,7 @@
       }
 
       &:before {
-        background-color: $ab-default-background;
+        background-color: var(--default-background);
         box-shadow: var(--shadow-before);
         content: "";
         height: 10px;
@@ -54,7 +54,7 @@
       }
 
       &:after {
-        background: $ab-default-background;
+        background: var(--default-background);
         border-radius:var(--border-radius-top);
         content: "";
         height: 10px;
@@ -68,12 +68,12 @@
   }
 
   &__icon {
-    color: $ab-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     margin-top: 0px;
     
     &:hover {
-      color: $ab-default-icon-hover;
+      color: var(--default-icon-hover);
     }
 
     &.trigger-icon {
@@ -97,15 +97,15 @@
     margin-bottom:  1px;
 
     &:hover {
-      background-color: $ab-default-background-hover;
-      color : $ab-default-text-hover;
+      background-color: var(--default-background-hover);
+      color : var(--default-text-hover);
 
       & .chat-room-menu__note {
-        color:$ab-default-text-hover;
+        color:var(--default-text-hover);
       }
       
       & svg {
-        fill: $ab-default-icon-reverse;
+        fill: var(--default-icon-reverse);
       }
     }
   }
@@ -132,7 +132,7 @@
     &.title {
       justify-content: center;
       margin-top: -10px;
-      @include typo($size: 14px, $line: 28px,$weight: 300, $color: $ab-secondary-text-color);
+      @include typo($size: 14px, $line: 28px,$weight: 300, $color: var(--secondary-text-color));
     }
 
     &.name {
@@ -140,7 +140,7 @@
       padding-bottom:15px;
      
       width: 100%;
-      @include typo($size: 12px, $line: 14px, $weight: 300, $color: $ab-default-text-color);
+      @include typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-color));
     }
   }
   &__dropdown{

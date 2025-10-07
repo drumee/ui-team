@@ -17,7 +17,7 @@
   &__header {
     &.window__header {
       border-bottom: none;
-      background-color: $ab-background-header;//$bigchat-background-header; // #18a3ac
+      background-color: var(--ab-header-bg);//var(--bigchat-header-bg); // #18a3ac
     }
 
     &-title {

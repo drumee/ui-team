@@ -9,12 +9,12 @@
   &__wrapper {
     &[data-state="1"] {
       & .trigger-icon {
-        color: $bigchat-default-icon-active;
+        color: var(--default-icon-active);
       }
     }
 
     & .menu-topic-items {
-      background-color: $bigchat-default-background; 
+      background-color: var(--default-background); 
       border-radius:$default-border-radius;
       box-shadow: $drumee-container-dropdown;
       margin-top: 0px;
@@ -27,7 +27,7 @@
       }
       
       &:before {
-        background-color: $bigchat-default-background;     
+        background-color: var(--default-background);     
         box-shadow:var(--shadow-before);
         content: "";
         height: 10px;
@@ -39,7 +39,7 @@
       }
 
       &:after {
-        background: $bigchat-default-background;     
+        background: var(--default-background);     
         border-radius: $default-border-radius-top;
         content: "";
         height: 10px;
@@ -53,7 +53,7 @@
 
   &__icon {
     align-items: center;
-    color: $bigchat-default-icon-neutral ;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     
     &.trigger-icon {
@@ -67,7 +67,7 @@
     }
 
     &:hover {
-      color: $bigchat-default-icon-hover ;
+      color: var(--default-icon-hover);
     }
   }
   
@@ -83,25 +83,25 @@
     padding: 10px 10px 5px 15px;
 
     &:hover {
-      background-color: $bigchat-default-background-hover;
-      color: $bigchat-default-text-hover ; 
+      background-color: var(--default-background-hover);
+      color: var(--default-text-hover); 
 
       & .chat-room-menu__note {
-        color:$bigchat-default-text-hover ; 
+        color:var(--default-text-hover); 
       }
       
       & svg {
-        fill: $bigchat-default-icon-reverse;      
+        fill: var(--default-icon-reverse);      
       }
     }
   }
 
   &__note {
     padding-top: 0px;
-    @include typo($size: 12px, $weight: 300, $line: 14px, $color: $bigchat-default-text-color);
+    @include typo($size: 12px, $weight: 300, $line: 14px, $color: var(--default-text-color));
 
     &.coming-soon {
-      @include typo($size: 12px, $weight: 300, $line: 14px, $color: $bigchat-default-text-inactive);
+      @include typo($size: 12px, $weight: 300, $line: 14px, $color: var(--default-text-inactive));
       opacity: 0.5;
     }
 

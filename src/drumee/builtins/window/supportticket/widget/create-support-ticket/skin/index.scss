@@ -48,17 +48,17 @@
       justify-content: center;
       padding: 15px;
       text-align: center;
-      @include typo($size: 15px, $line: 18px, $color: $bigchat-default-text-color);//$size: 16px
+      @include typo($size: 15px, $line: 18px, $color: var(--default-text-color));//$size: 16px
     }
 
     &.sub-title {
       padding: 10px 0;
-      @include typo($size: 15px, $line: 18px, $color:$bigchat-default-text-title);//$size: 16pxvar(--default-text-title)
+      @include typo($size: 15px, $line: 18px, $color: var(--default-text-title));//$size: 16pxvar(--default-text-title)
     }
 
     &.item {
       left: 10px;
-      @include typo($size: 14px, $line: 16px,$weight:300, $color: $bigchat-default-text-color);//$size: 16px
+      @include typo($size: 14px, $line: 16px,$weight:300, $color: var(--default-text-color));//$size: 16px
       //text-transform: capitalize;
     }
   }
@@ -72,7 +72,7 @@
       &:before {
         background-color: transparent;
         border-radius: 100%;
-        border: 1.5px solid $bigchat-default-checkbox-border;
+        border: 1.5px solid var(--default-checkbox-border);
         box-sizing: border-box;
         content: '';
         display: block;
@@ -84,7 +84,7 @@
       }
       
       &:after {
-        background-color: $bigchat-default-radio-active  !important;//$default-icon-hover !important;
+        background-color: var(--default-radio-active)  !important;//$default-icon-hover !important;
         border-radius: 100%;
         border: 1.5px solid transparent;
         box-sizing: border-box;

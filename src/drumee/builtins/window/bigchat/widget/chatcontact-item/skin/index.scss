@@ -9,14 +9,14 @@
     padding-bottom: 5px;
     padding-left: 14px;
     padding-top: 3px;
-    @include typo( $size:14px, $line:16px, $color : $bigchat-default-text-color);
+    @include typo( $size:14px, $line:16px, $color: var(--default-text-color));
     &:hover,
     &[data-active=active],
     &[data-radio=on] {
-      background:$bigchat-default-background-hover;
+      background:var(--default-background-hover);
       & .profile-icon,
       & .note-reader {
-        color:$bigchat-default-text-hover;
+        color:var(--default-text-hover);
       }
     }
   }
@@ -30,7 +30,7 @@
   }
 
   &__icon {
-    color: $bigchat-default-icon-neutral;
+    color: var(--default-icon-neutral);
     height: 22px; 
     width: 25px; 
     margin-top: auto;
@@ -59,7 +59,7 @@
       padding: 3px 35px 2px 15px; 
       max-width: 187px;
       user-select: text;
-      @include typo( $size :14px, $line: 16px, $color: $bigchat-default-text-color);
+      @include typo( $size :14px, $line: 16px, $color: var(--default-text-color));
       .inner{
         overflow: hidden;
         text-overflow: ellipsis;
@@ -73,7 +73,7 @@
     
       max-width: 160px;
       user-select: text;
-      @include typo( $size: 11px, $line: 12px, $weight: 300, $color: $bigchat-tertiary-text-color); 
+      @include typo( $size: 11px, $line: 12px, $weight: 300, $color: var(--tertiary-text-color)); 
       .inner{
         overflow: hidden;
         text-overflow: ellipsis;
@@ -94,13 +94,13 @@
       padding-top: 8px; 
       position: absolute;
       right: 0;
-      @include typo( $size: 10px, $line: 11px, $color: $bigchat-tertiary-text-color);
+      @include typo( $size: 10px, $line: 11px, $color: var(--tertiary-text-color));
     }
   }
 
   &__digit{ 
     align-items: center;
-    background-color:$bigchat-special-tag-note-chat;
+    background-color:var(--special-tag-note-chat);
     border-radius: 50%;
     height: 16px;
     justify-content: center;

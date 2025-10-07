@@ -11,7 +11,7 @@
   }
 
   &__main {
-    background-color: $dgc-chat-reply-bg;
+    background-color: var(--dgc-chat-reply-bg);
     border-radius: 2px 4px 4px 2px;
     height: 100%;
     min-height: 55px;
@@ -57,10 +57,10 @@
         word-wrap: break-word;
   
         & a {
-          color: $dgc-secondary-text-color;
+          color: var(--secondary-text-color);
   
           &:hover{
-            color: $dgc-chat-hover; 
+            color: var(--dgc-chat-hover); 
           }
         }
       }

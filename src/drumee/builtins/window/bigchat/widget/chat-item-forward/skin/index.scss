@@ -19,7 +19,7 @@
 
   &__ui {
     border-radius:$default-border-radius;
-    background-color: $bigchat-default-background; 
+    background-color: var(--default-background); 
     max-height: calc(100% - 48px);//calc(100% - 80px);
     max-width: 410px;//360px;
     min-width: 300px;
@@ -65,7 +65,7 @@
 
   &__footer {
     align-items: center;
-    //border-top: 1px solid $dgc-chat-border;
+    //border-top: 1px solid var(--default-separator);
     max-height: 80px; //50px;
     padding-bottom:10px;//8px
   }
@@ -94,13 +94,13 @@
 
 
     & input {
-      border-bottom: 1px solid $bigchat-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       max-width: 210px;
       width: 100%;
-      @include typo($size: 14px, $line: 14px, $color: $bigchat-default-text-color);//$size: 13px, 
+      @include typo($size: 14px, $line: 14px, $color: var(--default-text-color));//$size: 13px, 
       
       &::placeholder {
-        @include typo($size: 14px, $line: 14px, $weight: 300, $color: $bigchat-default-text-placeholder);//$size: 13px,
+        @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));//$size: 13px,
       }
     }
   }
@@ -125,7 +125,7 @@
   &__note {
     &.title {
       padding-top: 40px;
-      @include typo($size: 16px, $line: 21px, $color: $bigchat-default-text-title); //$size: 18px,
+      @include typo($size: 16px, $line: 21px, $color: var(--default-text-title)); //$size: 18px,
     }
     
     &.switch-title {
@@ -140,18 +140,18 @@
       width: 100%;
       margin-left: 3%;
       margin-right: 2%;
-      @include typo($size: 15px, $line: 14px, $weight: 300, $color: $bigchat-default-text-inactive ); //$size: 13px,var(--egrey-89)
+      @include typo($size: 15px, $line: 14px, $weight: 300, $color: var(--default-text-inactive) ); //$size: 13px,var(--egrey-89)
 
       &[data-state="1"] {
         border-radius:$default-border-radius;
-        @include typo($size: 14px, $line: 14px, $color: $bigchat-default-text-color);//$size: 13px,
-        background-color: $bigchat-button-background-active ;//var(--egrey-e8);
+        @include typo($size: 14px, $line: 14px, $color: var(--default-text-color));//$size: 13px,
+        background-color: var(--button-background-active);//var(--egrey-e8);
         //border: 1px solid var(--egrey-e8);//$dgc-chatroom-scbtn;
       }
     }
 
     &.counter {
-      @include typo($size: 12px, $line: 16px,$weight:300, $color: $bigchat-default-text-color);//$size: 15px,$color: var(--egrey-78)
+      @include typo($size: 12px, $line: 16px,$weight:300, $color: var(--default-text-color));//$size: 15px,$color: var(--egrey-78)
       //padding: 20px;
       align-items: flex-start;
       justify-content: flex-end;
@@ -161,7 +161,7 @@
     }
 
     &.search-title {
-      @include typo($size: 14px, $line: 28px, $weight: 300, $color: $bigchat-default-text-title);//$size: 12px $line: 14px,
+      @include typo($size: 14px, $line: 28px, $weight: 300, $color: var(--default-text-title));//$size: 12px $line: 14px,
       justify-content: center;
       width: 100%;
       top: 20px;
@@ -176,20 +176,20 @@
   }
 
   &__icon {
-    color: $bigchat-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     height: 16px;
     width: 16px;
 
     &.close {
-      color:$bigchat-default-thinline-icon;
+      color:var(--default-thinline-icon);
       height: 12px;
       position: absolute;
       right: 10px;
       top: 10px;
       width: 12px;
       &:hover{
-        color:$bigchat-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
 
@@ -201,14 +201,14 @@
     }
 
     &.search-close-icon {
-      color:$bigchat-default-thinline-icon;
+      color:var(--default-thinline-icon);
       height: 10px; //8px;
       position: absolute;
       right: 98px;//50px; //16px;// 62px; 
       top: -21px;//29px; //16px;
       width:10px;//8px;
       &:hover{
-        color:$bigchat-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
   }
@@ -248,7 +248,7 @@
   }
 
   &__search-result-wrapper {
-    background: $bigchat-default-background; 
+    background: var(--default-background); 
     height: 90%;
     position: absolute;
     top: 18%;//16%;//10%;

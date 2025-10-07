@@ -16,7 +16,7 @@
 
   &__container {
     border-radius: 10px;
-    color: $bigchat-default-text-reverse;
+    color: var(--default-text-reverse);
     overflow: hidden;
     padding: 2px 6px;
     //text-align: initial;
@@ -27,15 +27,15 @@
     justify-content: center;
     
     &.new {
-      background: $bigchat-status-pill-new;
+      background: var(--bigchat-status-pill-new);
     }
 
     &.doing {
-      background: $bigchat-status-pill-doing;
+      background: var(--bigchat-status-pill-doing);
     }
 
     &.closed {
-      background: $bigchat-status-pill-closed;
+      background: var(--bigchat-status-pill-closed);
     }
 
   }

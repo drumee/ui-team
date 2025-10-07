@@ -2,7 +2,7 @@
   &__wrapper {
     &[data-state="1"] {
       & .trigger-icon {
-        color: $bigchat-default-icon-active;
+        color: var(--default-icon-active);
       }
     }
 
@@ -15,7 +15,7 @@
         }
       }
       border-radius:$default-border-radius;
-      background-color:$bigchat-default-background;
+      background-color:var(--default-background);
       box-shadow: $drumee-container-dropdown;
       max-width: 202px;
       min-width:142px;// 202px;
@@ -36,7 +36,7 @@
 
 
       &:before {
-        background-color: $bigchat-default-background;
+        background-color: var(--default-background);
         box-shadow: var(--shadow-before);
         content: "";
         height: 10px;
@@ -48,7 +48,7 @@
       }
 
       &:after {
-        background: $bigchat-default-background;
+        background: var(--default-background);
         border-radius:$default-border-radius-top;
         content: "";
         height: 10px;
@@ -62,7 +62,7 @@
 
   &__icon {
     align-items: center;
-    color: $bigchat-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     //opacity:0.85;
 
@@ -83,7 +83,7 @@
     
     svg {
       &:hover {
-        color:$bigchat-default-icon-hover ;
+        color:var(--default-icon-hover);
         opacity: 1;
       }
     }
@@ -100,22 +100,22 @@
     margin-top: 4px;
 
     &:hover {
-      background-color: $bigchat-default-background-hover ;
-      color : $bigchat-default-text-hover ; 
+      background-color: var(--default-background-hover);
+      color : var(--default-text-hover); 
 
       & .menu-item {
-        color: $bigchat-default-text-hover ;
+        color: var(--default-text-hover);
       }
       
       & svg {
-        fill:$bigchat-default-text-reverse;
+        fill:var(--default-text-reverse);
       }
     }
   }
 
   &__note {    
     padding-top: 0px;
-    @include typo($size: 13px, $weight: 300, $line: 14px,$bigchat-default-text-color);
+    @include typo($size: 13px, $weight: 300, $line: 14px,var(--default-text-color));
   //  bottom: 2px;
   }
 }

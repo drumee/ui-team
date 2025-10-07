@@ -37,7 +37,7 @@
   &__digit {
     @include typo($size: 9px, $color: var(--default-text-reverse));
     align-items: center;
-    background-color: $bigchat-default-background-alert ;
+    background-color: var(--default-background-alert);
     border-radius: 50%;
     font-weight: bold;
     height: 19px;

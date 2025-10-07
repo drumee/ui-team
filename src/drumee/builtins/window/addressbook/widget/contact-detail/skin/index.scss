@@ -6,7 +6,7 @@
   @import './popup.scss';
 
   &.box {
-    background-color: $ab-default-background;
+    background-color: var(--default-background);
   }
 
   &__ui {
@@ -27,7 +27,7 @@
   }
 
   &__separator {
-    background-color: $ab-default-separator;
+    background-color: var(--default-separator);
     border-radius: 1px;
     height: 1px;
     margin: 2px 0 0 0px;
@@ -60,7 +60,7 @@
 
     &.notifier {
       align-items: center;
-      @include typo($size: 16px, $line: 19px, $color: $ab-default-text-success);
+      @include typo($size: 16px, $line: 19px, $color: var(--default-text-success));
     }
 
     &.message {
@@ -178,8 +178,8 @@
 
       .tooltips {
         border-radius: var(--border-radius);
-        @include typo($size: 11px, $line: 15px, $color: $ab-default-text-tooltips);
-        background-color: $ab-background-tooltips;
+        @include typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
+        background-color: var(--background-tooltips);
         margin-left: -180px;
         margin-top: 25px;
         padding: 3px 10px 3px 10px;
@@ -254,12 +254,12 @@
   &__note {
     padding-bottom: 2px;
     padding-left: 5px;
-    @include typo($size: 16px, $line: 19px, $color: $ab-default-text-color);
+    @include typo($size: 16px, $line: 19px, $color: var(--default-text-color));
 
     &.blocked {
-      @include typo($size: 12px, $line: 14px, $color: $ab-default-text-reverse);
+      @include typo($size: 12px, $line: 14px, $color: var(--default-text-reverse));
       align-items: center;
-      background: $ab-default-background-alert;
+      background: var(--default-background-alert);
       border-radius: var(--border-radius);
       height: 24px;
       justify-content: center;
@@ -270,7 +270,7 @@
     }
 
     &.fullname {
-      @include typo($size: 15px, $line: 16px, $color: $ab-secondary-text-color);
+      @include typo($size: 15px, $line: 16px, $color: var(--secondary-text-color));
       align-items: center;
       max-width: 250px;
       overflow: hidden;
@@ -288,7 +288,7 @@
     }
 
     &.label {
-      color: $ab-text-title;
+      color: var(--ab-default-text-title);
     }
 
     &.tags {
@@ -334,8 +334,8 @@
         width: 200px;
 
         & .tooltips {
-          @include typo($size: 12px, $line: 12px, $color: $ab-default-text-tooltips);
-          background-color: $ab-background-tooltips;
+          @include typo($size: 12px, $line: 12px, $color: var(--default-text-tooltips));
+          background-color: var(--background-tooltips);
           border-radius: var(--border-radius);
           height: 100%;
           text-align: center;
@@ -350,14 +350,14 @@
 
     &.category {
       width: 32px;
-      color: $ab-secondary-text-color;
+      color: var(--secondary-text-color);
     }
 
     &.comment {
       border-radius: var(--border-radius);
-      @include typo($size: 16px, $line: 20px, $color: $ab-default-text-color);
-      background-color: $ab-default-background;
-      border: 1px solid $ab-default-frame;
+      @include typo($size: 16px, $line: 20px, $color: var(--default-text-color));
+      background-color: var(--default-background);
+      border: 1px solid var(--default-frame);
       box-sizing: border-box;
       height: 97%;
       max-height: 150px;
@@ -416,13 +416,13 @@
       width: 80%;
 
       & input {
-        border-bottom: 1px solid $ab-default-entry-border-bottom;
+        border-bottom: 1px solid var(--default-entry-border-bottom);
         width: 100%;
-        @include typo($size: 16px, $line: 19px, $color: $ab-default-text-color);
+        @include typo($size: 16px, $line: 19px, $color: var(--default-text-color));
 
         &::placeholder {
           text-transform: capitalize;
-          @include typo($size: 16px, $line: 19px, $weight: 300, $color: $ab-default-text-placeholder);
+          @include typo($size: 16px, $line: 19px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }
@@ -432,15 +432,15 @@
 
       & textarea {
         border-radius: var(--border-radius);
-        @include typo($size: 12px, $line: 14px, $color: $ab-default-text-color);
-        background: $ab-default-block-background;
+        @include typo($size: 12px, $line: 14px, $color: var(--default-text-color));
+        background: var(--default-block-background);
         border: none;
         outline: none;
         padding: 10px;
         resize: none;
 
         &::placeholder {
-          @include typo($size: 12px, $line: 14px, $weight: 300, $color: $ab-default-text-placeholder);
+          @include typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }

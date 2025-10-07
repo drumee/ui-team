@@ -9,22 +9,22 @@
     padding-bottom: 5px;
     padding-left: 14px;
     padding-top: 5px;
-    @include typo($size:14px, $line:16px, $color : $bigchat-default-text-color);
+    @include typo($size:14px, $line:16px, $color: var(--default-text-color));
 
     &:hover,
     &[data-active=active],
     &[data-radio=on] {
-      background: $bigchat-default-background-hover;
+      background: var(--default-background-hover);
 
       & .profile-icon,
       & .note-reader {
-        color: $bigchat-default-text-hover ;
+        color: var(--default-text-hover);
       }
     }
 
     &[data-online="1"]{
       &::before {
-        background-color:$bigchat-contact-online-color;
+        background-color:var(--contact-online-color);
         border-radius: 15px;
         content: " ";
         height: 8px;
@@ -45,7 +45,7 @@
   }
 
   &__icon {
-    color: $bigchat-default-icon-neutral ;
+    color: var(--default-icon-neutral);
     height: 22px;
     margin-bottom: auto;
     margin-left: 2px;
@@ -68,7 +68,7 @@
 
     &.customer {
       & .user-profile__icon {
-        background-color: $bigchat-default-user-icon  !important;
+        background-color: var(--default-user-icon)  !important;
       }
     }
   }
@@ -79,7 +79,7 @@
       margin-top: 1px;
       max-width: 150px;
       padding: 6px 3px 3px 9px;
-      @include typo( $size :14px, $line: 16px, $color: $bigchat-default-text-color);
+      @include typo( $size :14px, $line: 16px, $color: var(--default-text-color));
       .inner {
         text-overflow: ellipsis;
         @include overflow-text;
@@ -93,7 +93,7 @@
     &.message {      
       padding-bottom: 2px;
       padding-left: 10px;
-      @include typo($size: 10px, $line: 12px, $weight: 300, $color: $bigchat-tertiary-text-color);
+      @include typo($size: 10px, $line: 12px, $weight: 300, $color: var(--tertiary-text-color));
 
       & section {
         max-width: 140px;
@@ -111,7 +111,7 @@
       position: absolute;
       right: 1px;
       text-align: center;
-      @include typo($size: 9px, $line: 11px, $color: $bigchat-tertiary-text-color);
+      @include typo($size: 9px, $line: 11px, $color: var(--tertiary-text-color));
 
       &.customer {
         padding-top: 2px;
@@ -121,7 +121,7 @@
 
   &__digit {
     align-items: center;
-    background-color:$bigchat-special-tag-note-chat;
+    background-color:var(--special-tag-note-chat);
     border-radius: 50%;
     height: 16px;
     justify-content: center;
@@ -129,6 +129,6 @@
     position: absolute;
     width:16px;
     z-index: 2!important;
-    @include typo($color: $bigchat-default-text-reverse, $weight:100, $line:1, $size: 10px);
+    @include typo($color: var(--default-text-reverse), $weight:100, $line:1, $size: 10px);
   }
 }

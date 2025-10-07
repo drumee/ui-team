@@ -8,7 +8,7 @@
 
   &__container {
     align-items: center;
-    background: var(--transparency-container-overlay); //$dgc-overlay-background;
+    background: var(--transparency-container-overlay); //var(--transparency-container-overlay);
     border-radius: $default-border-radius-bottom; //0 0 6px 6px;
     height: 100%;
     justify-content: center;

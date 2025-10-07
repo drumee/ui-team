@@ -4,18 +4,18 @@
   &__ui {
     background-color: inherit;
     &:hover {
-      background-color: $bigchat-default-background-hover;
+      background-color: var(--default-background-hover);
       & .checkbox,
       & .room-name {
-        color: $bigchat-default-text-hover ;
+        color: var(--default-text-hover);
         display: block;
       }
       
       & .checkbox {
         &[data-state="1"] {
           box-shadow: none;
-          color: $bigchat-checkbox-checked-reverse;
-          border: 1px solid $bigchat-checkbox-checked-border-reverse;
+          color: var(--checkbox-checked-reverse);
+          border: 1px solid var(--checkbox-checked-border-reverse);
         }
       }
     }
@@ -73,8 +73,8 @@
 
       &[data-state="1"] {
         box-shadow: none;
-        color:$bigchat-default-checkbox-checked;
-        border:1px solid $bigchat-default-checkbox-border;
+        color:var(--default-checkbox-checked);
+        border:1px solid var(--default-checkbox-border);
         display: flex;
         border-radius:$default-checkbox-border-radius;
       }
@@ -85,7 +85,7 @@
     margin-top: 3px;
     padding: 5px 3px 3px 12px;
     max-width: 165px;
-    @include typo( $size :14px, $line: 14px, $color: $bigchat-default-text-color);
+    @include typo( $size :14px, $line: 14px, $color: var(--default-text-color));
     @include overflow-text;    
   }
 }

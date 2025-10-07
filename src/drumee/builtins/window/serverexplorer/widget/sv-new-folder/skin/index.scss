@@ -27,7 +27,7 @@
   &-popup {
     &__main {
       border-radius : $default-border-radius;
-      background-color: $bigchat-default-background;  
+      background-color: var(--default-background);  
       box-shadow: var(--shadow-popup);     
       height: calc(100% - 20px);
       max-height: 300px;
@@ -38,7 +38,7 @@
     }
  
     &__close {
-      color: $bigchat-default-thinline-icon;
+      color: var(--default-thinline-icon);
       cursor: pointer;
       height: 12px;
       margin:10px;
@@ -48,7 +48,7 @@
       width: 12px;
   
       &:hover {
-        color:$bigchat-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
 

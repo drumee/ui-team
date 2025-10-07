@@ -57,7 +57,7 @@
   }
 
   &__item {
-    color: $dgc-tertiary-text-color;
+    color: var(--tertiary-text-color);
     cursor: pointer;
     height: 18px;
     width: 18px;

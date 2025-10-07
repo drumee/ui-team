@@ -25,7 +25,7 @@
     flex:1;
    
     & .note-content {
-      @include typo($size: 14px, $line: 14px, $color: $bigchat-default-text-color,$weight:400);
+      @include typo($size: 14px, $line: 14px, $color: var(--default-text-color),$weight:400);
       max-width: 140px;
       @include overflow-text;
     }
@@ -35,7 +35,7 @@
     width: 81px; 
    
     & .note-content {
-      @include typo($size: 12px, $line: 14px, $color: $bigchat-secondary-text-color ,$weight:400);
+      @include typo($size: 12px, $line: 14px, $color: var(--secondary-text-color) ,$weight:400);
       padding-left: 3px;
     }
   }

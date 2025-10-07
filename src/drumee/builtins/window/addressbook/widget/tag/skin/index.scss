@@ -32,7 +32,7 @@
 	}
 	
 	&__separator {
-		background-color: $ab-default-separator;
+		background-color: var(--default-separator);
 		border-radius: 1px;
 		height: 1px;
 		margin: 3px 0 0 0px;
@@ -53,8 +53,8 @@
 		&__digit {
 			z-index: 2!important;
 			align-items: center;
-			@include typo($color: $bigchat-default-text-reverse, $weight:100, $line:1, $size: 10px);
-			background-color:$bigchat-special-tag-note-chat ;
+			@include typo($color: var(--default-text-reverse), $weight:100, $line:1, $size: 10px);
+			background-color:var(--special-tag-note-chat);
 			border-radius: 50%;
 			height: 16px;
 			justify-content: center;
@@ -94,7 +94,7 @@
 			}
 
 			& .tag-sortable-placeholder {
-				background: $ab-default-background-hover;
+				background: var(--default-background-hover);
 				height:24px;
 				opacity: 0.3;
 				width: 100%;
@@ -108,10 +108,10 @@
 			padding-left: 32px;
 			padding-top: 5px;
 			width: 100%;
-			@include typo($size: 14px, $line: 16px, $color: $ab-special-tag-color);
+			@include typo($size: 14px, $line: 16px, $color: var(--ab-special-tag-fg));
 
 			&.chat {
-				color: $bigchat-special-tag-color !important;
+				color: var(--bigchat-special-tag-color) !important;
 			}
 
 			&.addressbook-widget-tag-item__ui {
@@ -125,8 +125,8 @@
 			&[data-active="active"],
       &[data-radio="on"],
       &:hover {
-				background: $ab-default-background-hover ;
-				color	: $ab-default-text-hover !important;
+				background: var(--default-background-hover);
+				color	: var(--default-text-hover) !important;
 				width: 100%;
      		}
 		}
@@ -138,13 +138,13 @@
 			padding-bottom: 8px;
 			padding-top: 6px;
 			width: 100%;
-			@include typo($size: 15px, $line: 16px, $color: $ab-text-title);
+			@include typo($size: 15px, $line: 16px, $color: var(--ab-default-text-title));
 		}
 	}
 
 	&__icon {
 		box-sizing: border-box;
-		color: $ab-default-icon-neutral;
+		color: var(--default-icon-neutral);
 		cursor: pointer;
 		height: 27px;
 		opacity:0.85;
@@ -155,11 +155,11 @@
 		width: 27px;
 		
 		& svg {
-			fill : $ab-default-icon-neutral;
+			fill : var(--default-icon-neutral);
 			opacity: 0.85;
 
 			&:hover {
-				fill : $ab-default-icon-hover;
+				fill : var(--default-icon-hover);
 				opacity:1;
 			}
 		}
@@ -177,20 +177,20 @@
     padding-left:30px;
 		padding-top: 7px;
 		width: 100%;
-		@include typo($size: 14px, $line: 16px, $color: $ab-special-tag-color);
+		@include typo($size: 14px, $line: 16px, $color: var(--ab-special-tag-fg));
 
 		&.chat {
-			color: $bigchat-special-tag-color !important;
+			color: var(--bigchat-special-tag-color) !important;
 		}
 		
     &[data-active="active"],
     &[data-radio="on"],
     &:hover {
-      background: $ab-default-background-hover;
-      color	: $ab-default-text-hover !important;
+      background: var(--default-background-hover);
+      color	: var(--default-text-hover) !important;
 
       & .addressbook-widget-tag-item__container {
-        color	: $ab-default-text-hover !important;
+        color	: var(--default-text-hover) !important;
 			}
 			
       & .addressbook-widget-tag-item__name{
@@ -217,7 +217,7 @@
     margin-right: 10px;
 		margin-top:0px;// 3px;
 		width: 9px;//15px;
-		background-color: $ab-special-tag-note-chat;//#1187f6;//var(--eblue);
+		background-color: var(--special-tag-note-chat);//#1187f6;//var(--eblue);
     border-radius: 50%;
     border: 1px solid var(--ewhite);
 	}

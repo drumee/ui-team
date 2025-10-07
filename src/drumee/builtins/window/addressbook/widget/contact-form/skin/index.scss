@@ -21,7 +21,7 @@
   }
 
   &__separator {
-		background-color: $ab-default-separator;
+		background-color: var(--default-separator);
 		border-radius: 1px;
 		height: 1px;
 		margin: 2px 0px 0px;
@@ -43,7 +43,7 @@
   }
 
   &__label {
-    color: $ab-secondary-text-color;
+    color: var(--secondary-text-color);
     margin-top: -3px;
 
     &.title {
@@ -103,7 +103,7 @@
     width: 100%;
   }
   &__icon-info{
-    color:$ab-default-icon-neutral;
+    color:var(--default-icon-neutral);
     height: 25px;
     margin-left: 65%;
     margin-right: 10%;
@@ -116,14 +116,14 @@
     }
 
     .tooltips {
-      background-color: $ab-background-tooltips;
+      background-color: var(--background-tooltips);
       border-radius:var(--border-radius);
       margin-left:-215px;
       margin-top: 16px;
       padding:3px 10px 3px 10px;
       text-align: justify;
       width: 266px;
-      @include typo($size: 11px, $line: 15px, $color:$ab-default-text-tooltips);
+      @include typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
     }
   }
 
@@ -149,18 +149,18 @@
 
     & input {
       background-color: transparent;
-      border-bottom: 1px solid $ab-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       border-radius: 0px;
       margin-left: 0px;
       overflow:hidden;
       white-space: nowrap;
       width: 100%;
-      @include typo($size: 16px, $line: 19px, $color:$ab-default-text-color);
+      @include typo($size: 16px, $line: 19px, $color: var(--default-text-color));
       @include overflow-text;
 
       &::placeholder {
         width:300px;
-        @include typo($size: 16px, $weight:300, $line: 19px, $color: $ab-default-text-placeholder);
+        @include typo($size: 16px, $weight:300, $line: 19px, $color: var(--default-text-placeholder));
       }
 
       &:focus {
@@ -168,14 +168,14 @@
         outline: none;
 
         @include placeholder-input {
-          @include typo($size: 16px, $weight:400, $line: 19px,$color:$ab-text-placeholder-focus);
+          @include typo($size: 16px, $weight:400, $line: 19px,$color: var(--focus-text-placeholder));
         }
       }
     }
 
     & textarea {
       @include typo($size: 14px, $line: 20px);
-      background-color: $ab-default-background;
+      background-color: var(--default-background);
       border-radius:var(--border-radius);
       border: 1px solid var(--eblue);
       box-sizing: border-box;
@@ -188,7 +188,7 @@
       width: 100%;
       
       &::placeholder {
-        @include typo($size: 14px, $weight: 300, $color: $ab-default-text-placeholder);
+        @include typo($size: 14px, $weight: 300, $color: var(--default-text-placeholder));
       }
 
       &:focus {
@@ -200,10 +200,10 @@
   &__entry {
     &.email {
       &[data-status='error'] {
-        border-bottom: 1px solid $ab-default-border-error;
+        border-bottom: 1px solid var(--default-border-error);
 
         & input:focus {
-          border-color: $ab-default-border-error;
+          border-color: var(--default-border-error);
         }
       }
     }
@@ -213,14 +213,14 @@
       width: 100%;
       
       & textarea {
-        background: $ab-default-block-background;
+        background: var(--default-block-background);
         border: none;
         resize: none;
         width: 100%;
-        @include typo($size: 14px, $line: 18px, $color: $ab-default-text-color);
+        @include typo($size: 14px, $line: 18px, $color: var(--default-text-color));
   
         &::placeholder {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $ab-default-text-placeholder);
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
 
         &:focus {
@@ -348,10 +348,10 @@
 
   &__note {
     &.tags {
-      border-bottom: 1px solid $ab-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
 
       & .note-content {
-        @include typo($size: 16px, $weight:300, $line: 19px, $color: $ab-default-text-placeholder);
+        @include typo($size: 16px, $weight:300, $line: 19px, $color: var(--default-text-placeholder));
       }
 
       &[data-selected="1"] {
@@ -375,7 +375,7 @@
   }
   
   &__items-wrapper {
-    background: $ab-default-background;
+    background: var(--default-background);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-container);// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
     max-height: 250px;
@@ -434,11 +434,11 @@
     &[data-error=on] {
       pointer-events: none;
       opacity: 0.2;
-      @include typo($weight: 300, $color: $ab-default-text-reverse);
+      @include typo($weight: 300, $color: var(--default-text-reverse));
     }
   }
 
-  & .entry[data-status=error] input {border-bottom: 1px solid $ab-default-border-error;}
+  & .entry[data-status=error] input {border-bottom: 1px solid var(--default-border-error);}
   & .address__ui.address-input-item__ui:only-child,
   & .phoneno__ui.phoneno-input-item__ui:only-child {
     & .destroy-tag {

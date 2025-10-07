@@ -42,7 +42,7 @@
 			flex:1;
 			margin-left: 31px;
 			justify-content: center;
-			@include typo($size: 15px, $line: 16px, $color: $bigchat-text-title);//$bigchat-default-text-title);
+			@include typo($size: 15px, $line: 16px, $color: var(--bigchat-default-text-title));//var(--default-text-title));
 
 			.inner {
 				margin-top: 5px;
@@ -58,14 +58,14 @@
 			right: 0;
 				
 			& svg {
-				fill :$bigchat-default-icon-neutral;
+				fill :var(--default-icon-neutral);
 			}
 		}
 
 		&-add-menu {
 			&__icon {
 				align-items: center;
-				color:$bigchat-default-icon-neutral ;
+				color:var(--default-icon-neutral);
 				cursor: pointer;
 		
 				&.trigger-icon {
@@ -89,7 +89,7 @@
 				
 				svg {
 					&:hover {
-						color:$bigchat-default-icon-hover;
+						color:var(--default-icon-hover);
 						opacity: 1;
 					}
 				}
@@ -98,7 +98,7 @@
 	}
 
 	&__separator {
-		background-color: $bigchat-default-separator ;
+		background-color: var(--default-separator);
 		border-radius: 1px;
 		height: 1px;
 		margin: 3px 0 0px 0;
@@ -118,7 +118,7 @@
 		
 		&__icon {
 			& svg {
-				fill : $bigchat-default-user-icon ;
+				fill : var(--default-user-icon);
 				height: 29px;
 				width: 29px;
 			}
@@ -127,7 +127,7 @@
 		&__name {			
 			margin-top: 4px;
 			padding: 3px 3px 3px 15px;
-			@include typo($size: 14px, $line: 16px, $color: $bigchat-default-text-color);
+			@include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
 			@include overflow-text;
 		}
 	}

@@ -6,8 +6,9 @@
 @import "mixins/utils.scss";
 @import "mixins/vendor.scss";
 @import "mixins/z-index.scss";
-
 @import './layout.scss';
+
+@import "./vars.scss";
 
 .window-bigchat {
   @import './search';
@@ -19,33 +20,35 @@
   }
 
   &__main {
-    background-color: $bigchat-default-background;
+    background-color: var(--default-background);
   }
-  
+
   &__container {
     background-color: inherit;
   }
 
   &__body {
-    height    : 100% !important;
-    margin    : 0 auto;
+    height: 100% !important;
+    margin: 0 auto;
     min-height: auto !important;
-    min-width : auto !important;
-    overflow  : hidden;
-    
-    width     : 100% !important;
-    &.window__body{
-      padding:0;
+    min-width: auto !important;
+    overflow: hidden;
+
+    width: 100% !important;
+
+    &.window__body {
+      padding: 0;
     }
   }
 
   &__header {
-    background-color: $bigchat-background-header ;
+    background-color: var(--bigchat-header-bg);
     border-bottom: none;
   }
 
   &-topbar {
     @import './breadcrumbs.scss';
+
     &__content {
       align-items: center;
       display: flex;
@@ -57,11 +60,11 @@
     }
 
     &__content {
-      margin : auto;
+      margin: auto;
 
       & .title {
         align-items: center;
-        @include typo($size: 18px, $line: 16px, $color: $bigchat-default-text-reverse);
+        @include typo($size: 18px, $line: 16px, $color: var(--default-text-reverse));
       }
     }
 
@@ -73,19 +76,19 @@
 
     &__icon {
       &.contact_add {
-        color: $bigchat-default-icon-reverse;
+        color: var(--default-icon-reverse);
         cursor: pointer;
         height: 24px;
-        padding: 2.5px; 
+        padding: 2.5px;
         width: 24px;
 
         &:hover {
-          color: $bigchat-default-icon-hover ;
+          color: var(--default-icon-hover);
         }
       }
 
       &.breadcrumb-icon {
-        color: $bigchat-default-icon-reverse;
+        color: var(--default-icon-reverse);
         height: 22px;
         margin-top: 10px;
         padding: 3px;
@@ -98,70 +101,74 @@
   &__max-view {
     height: 100%;
     width: 100%;
+
     & .tags-list {
-      background: $bigchat-default-block-background;
+      background: var(--default-block-background);
       border-radius: $default-border-radius-left;
     }
-    .widget-tag__note.title{
-    color: $bigchat-text-title;
+
+    .widget-tag__note.title {
+      color: var(--bigchat-default-text-title);
     }
   }
 
   &__chat_note {
-    height:17px; 
-    width: 17px; 
-    margin-right: 10px; 
+    height: 17px;
+    width: 17px;
+    margin-right: 10px;
     color: var(--egrey-89);
   }
 
-  &__shareroom-wrapper  {
+  &__shareroom-wrapper {
     align-items: center;
     cursor: pointer;
     font-size: 14px;
     justify-content: start;
     padding-bottom: 5px;
-    padding-left: 4px; 
+    padding-left: 4px;
     padding-top: 5px;
     margin: 1px .5px 0 0;
     height: 35px;
-    @include typo($size: 14px, $line: 16px, $color: $bigchat-special-share-room-color);
+    @include typo($size: 14px, $line: 16px, $color: var(--bigchat-special-share-room-color));
 
     &[data-active="active"],
     &[data-radio="on"],
     &:hover {
-      background: $bigchat-default-background-hover;
-      
-      color	: $bigchat-default-text-hover  !important;
+      background: var(--default-background-hover);
+
+      color: var(--default-text-hover) !important;
 
       & .addressbook-widget-tag-item__container {
-        color	: $bigchat-default-text-hover !important;
+        color: var(--default-text-hover) !important;
       }
-      & .addressbook-widget-tag-item__name{
+
+      & .addressbook-widget-tag-item__name {
         @include overflow-text;
-        
+
         /*white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;*/
       }
     }
   }
+
   &.adressbook-widget-tag__note.title {
-    @include typo($size: 15px, $line: 16px, $color: $bigchat-text-title);
+    @include typo($size: 15px, $line: 16px, $color: var(--bigchat-default-text-title));
   }
 
   &__separator {
-    background: $bigchat-default-separator;
-    height: 1px; 
+    background: var(--default-separator);
+    height: 1px;
     margin: 3px 0 0;
   }
 
   &__max-content {
-    background:$bigchat-default-background;
+    background: var(--default-background);
     height: 100%;
     justify-content: center;
     overflow: hidden;
     width: 100%;
-    border-radius:$default-border-radius-right;
+    border-radius: $default-border-radius-right;
   }
 
   &__sharechat_notify[data-state="0"] {
@@ -182,29 +189,30 @@
     }
 
     &__note {
-      @include typo($size: 16px, $line: 30px, $color:$bigchat-tertiary-text-color); 
+      @include typo($size: 16px, $line: 30px, $color: var(--tertiary-text-color));
       height: 100%;
       justify-content: center;
-      min-width: 35px; 
+      min-width: 35px;
       max-width: 280px;
       text-align: center;
-      &.click-text{
+
+      &.click-text {
         text-transform: lowercase;
       }
 
       &.no-discussion {
-        padding-bottom:5px;
+        padding-bottom: 5px;
       }
     }
 
     &__icon {
       &.no-discussion-icon {
-        border-radius:$border-radius-small;
-        border: 1px solid $bigchat-border-no-discussion;
+        border-radius: $border-radius-small;
+        border: 1px solid var(--border-no-discussion);
         box-sizing: border-box;
-        color: $bigchat-default-icon-neutral ;
-        height:25px;
-        margin:2px 5px 0 5px;
+        color: var(--default-icon-neutral);
+        height: 25px;
+        margin: 2px 5px 0 5px;
         padding: 5px;
         width: 25px;
       }

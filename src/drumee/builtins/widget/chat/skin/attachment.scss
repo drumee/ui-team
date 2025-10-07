@@ -99,9 +99,9 @@
     }
     
     &__remove {
-      background-color: $dgc-messenger-bg;    
+      background-color: var(--background-chatmessenger);    
       border-radius: 50%;
-      border: 1.5px solid $dgc-attachment-close-border;
+      border: 1.5px solid var(--dgc-attachment-close-border);
       color: var(--default-text-color);
       height: 13px;
       line-height: 16px;

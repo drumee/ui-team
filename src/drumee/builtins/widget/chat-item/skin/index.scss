@@ -17,7 +17,7 @@
 
     &[data-radio="on"] {
       .widget-chatItem__main {
-        background-color: $dgc-chat-forward-bg;
+        background-color: var(--default-background-hover);
       }
     }
 
@@ -83,14 +83,14 @@
     }
 
     &.me {
-      background-color: $dgc-chat-item-me-bg;
+      background-color: var(--dgc-chat-item-me-bg);
       max-width: 85%;
       margin: 0 14px 0 auto;
     }
 
     &.other {
-      background-color: $dgc-chat-other-bg;
-      border: 1px solid $dgc-chat-other-bg;
+      background-color: var(--dgc-chat-other-bg);
+      border: 1px solid var(--dgc-chat-other-bg);
       box-sizing: border-box;
       margin-left: 4px;
       max-width: 90%;
@@ -106,16 +106,16 @@
     }
 
     &.forward {
-      background-color: $dgc-chat-reply-bg;
+      background-color: var(--dgc-chat-reply-bg);
     }
 
     &[data-selected="1"] {
-      background-color: $dgc-chat-forward-bg;
+      background-color: var(--default-background-hover);
 
-      color: $dgc-text-reverse;
+      color: var(--default-text-reverse);
 
       & a {
-        color: $dgc-text-reverse;
+        color: var(--default-text-reverse);
 
         &:hover {
           color: var(--egrey-e8);
@@ -181,11 +181,11 @@
 
     &-date {
       margin-top: -2px;
-      @include typo($size: 10px, $line: 9px, $weight: 300, $color : $dgc-tertiary-text-color);
+      @include typo($size: 10px, $line: 9px, $weight: 300, $color: var(--tertiary-text-color));
 
       &.me {
         margin-top: 0px;
-        @include typo($size: 10px, $line: 9px, $weight: 500, $color : $dgc-tertiary-text-color);
+        @include typo($size: 10px, $line: 9px, $weight: 500, $color: var(--tertiary-text-color));
       }
 
       &.other {
@@ -202,7 +202,7 @@
 
   &__icon {
     &-read {
-      color: $dgc-icon-color;
+      color: var(--dgc-icon-color);
       height: 14px;
       left: 3px;
       width: 14px;
@@ -231,7 +231,7 @@
     }
 
     &.forward-icon {
-      color: $dgc-icon-color;
+      color: var(--dgc-icon-color);
       height: 20px;
       width: 17px;
     }
@@ -242,7 +242,7 @@
       padding-left: 4px;
       padding-top: 4px;
       text-transform: capitalize;
-      @include typo($size: 12px, $line: 12px, $color: $dgc-secondary-text-color);
+      @include typo($size: 12px, $line: 12px, $color: var(--secondary-text-color));
     }
   }
 
@@ -267,7 +267,7 @@
       margin: auto;
       max-width: 200px;
       width: 82px;
-      @include typo($size: 11px, $line: 20px, $color: $dgc-tertiary-text-color);
+      @include typo($size: 11px, $line: 20px, $color: var(--tertiary-text-color));
       display: flex;
       flex-direction: row;
       justify-content: center;
@@ -288,7 +288,7 @@
     margin: auto;
     max-width: 200px;
     width: 82px;
-    @include typo($size: 11px, $line: 12px, $color: $dgc-tertiary-text-color);
+    @include typo($size: 11px, $line: 12px, $color: var(--tertiary-text-color));
   }
 
   &__profile {
@@ -335,7 +335,7 @@
   }
 
   &__content {
-    border-bottom: 1px solid $dgc-chat-border;
+    border-bottom: 1px solid var(--default-separator);
     width: 100%;
   }
 
@@ -391,10 +391,10 @@
       @include typo($size: 12px, $line: 14px, $weight: 400, $color: var(--egrey-26));
 
       & a {
-        color: $dgc-secondary-text-color;
+        color: var(--secondary-text-color);
 
         &:hover {
-          color: $dgc-chat-hover;
+          color: var(--dgc-chat-hover);
         }
       }
     }

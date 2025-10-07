@@ -1,7 +1,7 @@
 .window-support-ticket {
   & .support-ticket-list {
     min-width: 260px;
-    background-color: $bigchat-default-block-background;
+    background-color: var(--default-block-background);
   }
 
   &[data-size="medium"],

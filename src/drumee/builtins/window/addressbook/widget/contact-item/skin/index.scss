@@ -5,16 +5,16 @@
     background-color: inherit;
     cursor: pointer;
     overflow: hidden;
-    @include typo( $color : $ab-default-text-color);
+    @include typo( $color: var(--default-text-color));
 
     &:hover,
     &[data-active=active],
     &[data-radio=on] {
-      background: $ab-default-background-hover;
+      background: var(--default-background-hover);
       
       & .profile-icon,
       & .note-reader{
-        color: $ab-default-text-hover;
+        color: var(--default-text-hover);
       }
     }
   }
@@ -28,7 +28,7 @@
   }
 
   &__icon {
-    color:$ab-default-icon-neutral;
+    color:var(--default-icon-neutral);
     height: 28px; 
     width: 25px; 
     min-width: 25px;
@@ -37,7 +37,7 @@
 
     & .note-reader {
       &:hover {
-      color:$ab-default-icon-hover;
+      color:var(--default-icon-hover);
       }
     }
     &.memory{
@@ -92,7 +92,7 @@
     }
 
     &__name {
-      @include typo( $size :14px, $line: 16px, $color: $ab-default-text-color);
+      @include typo( $size :14px, $line: 16px, $color: var(--default-text-color));
       margin-top: 3px;
       overflow:hidden;
       padding: 2px 3px 3px 15px;
@@ -115,16 +115,16 @@
     @include typo($size:12px, $line: 14px);
 
     &__icon{
-      color: $ab-default-icon-neutral;
+      color: var(--default-icon-neutral);
       height: 28px;
       
       width: 25px;
       &:hover{
-        color:$ab-default-icon-reverse;
+        color:var(--default-icon-reverse);
       }
     }
     &__profile {
-      color: $ab-default-user-icon ;
+      color: var(--default-user-icon);
       height: 29px;
      
       width: 29px;

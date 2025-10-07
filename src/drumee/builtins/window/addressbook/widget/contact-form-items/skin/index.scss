@@ -6,8 +6,8 @@
 
     &:hover {
       * {
-        background-color: $ab-default-background-hover ;
-        color: $ab-default-text-hover ;
+        background-color: var(--default-background-hover);
+        color: var(--default-text-hover);
 
         svg {
           border-radius: var(--border-radius-tiny);
@@ -15,8 +15,8 @@
 
         &.checkbox[data-state="1"] {
           box-shadow: none;
-          color: $ab-checkbox-checked-reverse;
-          border: 1px solid $ab-checkbox-checked-border-reverse;
+          color: var(--checkbox-checked-reverse);
+          border: 1px solid var(--checkbox-checked-border-reverse);
           border-radius: var(--border-radius-checkbox);
         }
       }
@@ -35,7 +35,7 @@
   }
 
   &__note {
-    @include typo($size: 12px, $line: 24px, $weight: 300, $color: $ab-default-text-color);
+    @include typo($size: 12px, $line: 24px, $weight: 300, $color: var(--default-text-color));
     max-width: 105px;
     width: 100%;
     @include overflow-text;
@@ -52,8 +52,8 @@
     box-shadow: none;
     border-radius: var(--border-radius-checkbox);
     cursor: pointer;
-    border: 1px solid $ab-default-checkbox-border;
-    color: $ab-default-checkbox-background;
+    border: 1px solid var(--default-checkbox-border);
+    color: var(--default-checkbox-background);
 
     svg {
       width: 14px;
@@ -62,8 +62,8 @@
 
     &[data-state="1"] {
       box-shadow: none;
-      border: 1px solid $ab-default-checkbox-border;
-      color: $ab-default-checkbox-checked;
+      border: 1px solid var(--default-checkbox-border);
+      color: var(--default-checkbox-checked);
     }
   }
 }

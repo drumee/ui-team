@@ -16,7 +16,7 @@
   }
 
   &__icon {
-    color:$bigchat-default-icon-reverse;
+    color:var(--default-icon-reverse);
     cursor: pointer;
     height: 24px;
     margin: auto 10px auto 5px;
@@ -24,22 +24,22 @@
     width: 24px;
 
     &:hover {
-      color:$bigchat-default-icon-hover ;
+      color:var(--default-icon-hover);
     }
   }
 
   &__bar {
-    border-bottom: 1px solid $bigchat-default-window-header-search;
+    border-bottom: 1px solid var(--default-window-header-search);
     width: 100%;
 
     & input {
-      @include typo($size: 15px,$line: 16px, $color:$bigchat-default-text-reverse);
+      @include typo($size: 15px,$line: 16px, $color: var(--default-text-reverse));
       background-color: transparent;
       margin-top: 2px;
       width: 100%;
 
       &::placeholder {
-        @include typo($size: 15px,$weight: 300,$line: 16px, $color: $bigchat-default-text-reverse);
+        @include typo($size: 15px,$weight: 300,$line: 16px, $color: var(--default-text-reverse));
       }
     }
   }
@@ -80,7 +80,7 @@
     }
 
     &[data-mode="open"] {
-      background: $bigchat-background-header;
+      background: var(--bigchat-header-bg);
       border-radius:6px 0 0 0;
       height: 44px;
       left: 40px;

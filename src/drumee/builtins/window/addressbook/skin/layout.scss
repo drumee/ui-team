@@ -2,7 +2,7 @@
 
 .window-addressbook {
   & .widget_tag {
-    background: $ab-default-background;
+    background: var(--default-background);
     border-radius: $default-border-radius-left;
     min-width: 186px;
     padding: 0;

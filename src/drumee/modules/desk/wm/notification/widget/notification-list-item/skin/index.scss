@@ -72,7 +72,7 @@
       width: 25px;
       position: absolute;
       right: 8px;
-      background-color: $ab-background-tooltips;
+      background-color: var(--background-tooltips);
       border-radius:$default-border-radius;
       font-size: 11px;
       margin: -10px 27px 0 0;
@@ -84,10 +84,10 @@
       text-align: justify;
       text-overflow: ellipsis;
       z-index: 200000;
-      @include typo($size: 11px, $line: 15px, $color:$ab-default-text-tooltips);
+      @include typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
      .tooltips {
         &:before {
-          background: $ab-background-tooltips;
+          background: var(--background-tooltips);
           border-radius: 1px;
           content: '';
           height: 10px;

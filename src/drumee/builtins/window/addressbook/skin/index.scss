@@ -1,5 +1,6 @@
 @import "mixins/drumee";
 @import './layout.scss';
+@import './vars.scss';
 
 .window-addressbook {
 
@@ -7,7 +8,7 @@
   @import './overlay-wrapper';
 
   &__header {
-    background-color: $ab-background-header;
+    background-color: var(--ab-header-bg);
     border-bottom: none;
   }
 
@@ -43,10 +44,10 @@
             padding-right: 1px;
             padding-top: 0px;
             width: 19px;
-            @include typo($size: 11px, $line: 14px, $color: $ab-default-text-notification);
+            @include typo($size: 11px, $line: 14px, $color: var(--default-text-notification));
 
             .inner {
-              @include typo($size: 11px, $line: 14px, $color: $ab-default-text-notification);
+              @include typo($size: 11px, $line: 14px, $color: var(--default-text-notification));
             }
           }
         }
@@ -54,13 +55,13 @@
 
       & .title {
         align-items: center;
-        @include typo($size: 18px, $line: 16px, $color: $ab-default-text-reverse);
+        @include typo($size: 18px, $line: 16px, $color: var(--default-text-reverse));
       }
     }
 
     &__icon {
       &.breadcrumb-icon {
-        color: $ab-default-icon-reverse;
+        color: var(--default-icon-reverse);
         height: 22px;
         margin-top: 10px;
         padding: 3px;
@@ -75,7 +76,7 @@
     }
 
     &__separator {
-      background-color: $ab-default-separator;
+      background-color: var(--default-separator);
       border-radius: 1px;
       height: 1.5px;
       margin: 5px 20px;
@@ -94,19 +95,19 @@
 
       &[data-state="1"] {
         & .menu-trigger {
-          background-color: $ab-default-background;
+          background-color: var(--default-background);
           border-radius: $default-border-radius;
         }
 
         & .dropdown-toggle-icon {
-          color: $ab-icon-header;
+          color: var(--ab-icon-header);
         }
       }
 
       & .menu-topic-items {
         border-radius: $default-border-radius;
         box-shadow: var(--shadow-container);
-        background-color: $ab-default-background;
+        background-color: var(--default-background);
         width: 285px;
         padding: 10px 0;
 
@@ -116,12 +117,12 @@
         }
 
         &:before {
-          background-color: $ab-default-background;
+          background-color: var(--default-background);
           content: "";
           height: 10px;
           left: 10px;
           position: absolute;
-          color: $ab-default-icon-reverse;
+          color: var(--default-icon-reverse);
           cursor: pointer;
           height: 28px;
           padding: 2.5px 2px 2.5px 3px;
@@ -132,7 +133,7 @@
         }
 
         &:after {
-          background: $ab-default-background;
+          background: var(--default-background);
           border-radius: $default-border-radius-top;
           content: "";
           height: 10px;
@@ -149,13 +150,13 @@
       width: 16px;
 
       &.dropdown-toggle-icon {
-        color: $ab-default-icon-reverse;
+        color: var(--default-icon-reverse);
         cursor: pointer;
         height: 28px;
         padding: 2.5px 2px 2.5px 3px;
         width: 28px;
         &:hover {
-          color: $ab-default-icon-hover;
+          color: var(--default-icon-hover);
         }
       }
 
@@ -163,7 +164,7 @@
         margin-right: 10px;
 
         & svg {
-          fill: $ab-default-icon-menu-dropdown ;
+          fill: var(--default-icon-menu-dropdown);
         }
 
         &.contactbook {
@@ -182,15 +183,15 @@
       padding: 6px 20px;
 
       &:hover {
-        background-color: $ab-default-background-hover ;
-        color: $ab-default-text-hover;
+        background-color: var(--default-background-hover);
+        color: var(--default-text-hover);
 
         & .window-addressbook-menu__name {
-          color: $ab-default-text-hover;
+          color: var(--default-text-hover);
         }
 
         & svg {
-          fill: $ab-default-icon-reverse;
+          fill: var(--default-icon-reverse);
         }
       }
     }
@@ -198,7 +199,7 @@
     &__name {
       padding-top: 2px;
       padding-left: 8px;
-      @include typo($size: 14px, $weight: 300, $line: 16px, $color: $ab-default-text-color);
+      @include typo($size: 14px, $weight: 300, $line: 16px, $color: var(--default-text-color));
 
       &.contactbook {
         margin-left: -6px;
@@ -246,9 +247,9 @@
   &__icon {
     &.contact_add {
       border-radius: $border-radius-small;
-      border: 1px solid $ab-default-entry-border-bottom;
+      border: 1px solid var(--default-entry-border-bottom);
       box-sizing: border-box;
-      color: $ab-default-icon-neutral;
+      color: var(--default-icon-neutral);
       height: 34px;
       margin: 10px 10px;
       padding: 7px;
@@ -258,7 +259,7 @@
 
   &__max-content {
     align-items: flex-start;
-    background: $ab-default-background;
+    background: var(--default-background);
     border-radius: $default-border-radius-right;
     flex-grow: 1;
     height: 100%;
@@ -282,7 +283,7 @@
     justify-content: center;
     min-width: 280px;
     text-align: center;
-    @include typo($size: 16px, $line: 30px, $color: $ab-tertiary-text-color );
+    @include typo($size: 16px, $line: 30px, $color: var(--tertiary-text-color) );
 
     & .nocontact-text {
       justify-content: center;

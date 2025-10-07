@@ -2,7 +2,7 @@
   
   &-wrapper {
     border-radius : $default-border-radius;
-    background-color: $bigchat-default-background;  
+    background-color: var(--default-background);  
     box-shadow: var(--shadow-popup);     
     height: calc(100% - 20px);
     max-height: 300px;
@@ -13,7 +13,7 @@
   }
 
   &-close {
-    color: $bigchat-default-thinline-icon;
+    color: var(--default-thinline-icon);
     cursor: pointer;
     height: 12px;
     margin:10px;
@@ -23,16 +23,16 @@
     width: 12px;
 
     &:hover {
-      color:$bigchat-default-thinline-icon-hover;
+      color:var(--default-thinline-icon-hover);
     }
   }
 
   &_header-title {
-    @include typo($size: 18px, $line: 16px, $color: $bigchat-default-text-title);
+    @include typo($size: 18px, $line: 16px, $color: var(--default-text-title));
 
     &.resend-invite {
       align-items: baseline;
-      color:$bigchat-secondary-text-color ;
+      color:var(--secondary-text-color);
       height: 30px;
       justify-content: center;
       width: 100%;
@@ -62,12 +62,12 @@
     margin-top: 30px;
     text-align: center;
     width: 323px;
-    @include typo($weight: 300, $size: 16px, $line: 26px, $color: $bigchat-default-text-color);
+    @include typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
   }
 
   &__note.fullname {   
     padding-top: 7px;//5px;
-    @include typo( $size: 18px, $line: 16px, $color: $bigchat-secondary-text-color);
+    @include typo( $size: 18px, $line: 16px, $color: var(--secondary-text-color));
   }
   
   &__entry {
@@ -76,8 +76,8 @@
       width: 100%;
       
       & textarea {
-        @include typo($size: 16px, $line: 21px, $color: $bigchat-default-text-color);
-        background: $bigchat-default-block-background ;//$default-block-background;
+        @include typo($size: 16px, $line: 21px, $color: var(--default-text-color));
+        background: var(--default-block-background);//$default-block-background;
         border-radius: $default-border-radius; //6px
         border: none;
         outline: none;
@@ -85,7 +85,7 @@
         resize: none;
 
         &::placeholder {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $bigchat-default-text-placeholder);
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }
@@ -158,7 +158,7 @@
   &_message-info {   
     text-align: center;
     width: 323px;
-    @include typo($weight: 300, $size: 18px, $line: 26px, $color: $bigchat-default-text-color);
+    @include typo($weight: 300, $size: 18px, $line: 26px, $color: var(--default-text-color));
 
     &.first-node {
       margin: 22px 30px 22px 30px;

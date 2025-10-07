@@ -23,14 +23,14 @@
   }
 
   &__icon {
-    background-color: $ab-default-icon-neutral;
+    background-color: var(--default-icon-neutral);
     opacity: 0.75;
-    color: $ab-default-icon-reverse;
+    color: var(--default-icon-reverse);
     cursor: pointer;
     margin: 0px 2px;
 
     &:hover {
-      background-color: $ab-default-icon-hover;
+      background-color: var(--default-icon-hover);
       opacity: 1;
     }
 
@@ -60,7 +60,7 @@
     padding: 5px 15px;
     white-space: nowrap;
     width: 100%;
-    @include typo($size: 14px, $line: 18px, $weight: 300, $color: $ab-default-text-color);
+    @include typo($size: 14px, $line: 18px, $weight: 300, $color: var(--default-text-color));
     @include overflow-text;
 
     &:last-child {
@@ -69,7 +69,7 @@
   }
 
   &__roll {
-    background: $ab-default-background;
+    background: var(--default-background);
     border-radius: $default-border-radius;
     box-shadow: var(--shadow-container);
     height: auto;
@@ -94,7 +94,7 @@
     }
 
     &:after {
-      background: $ab-default-background;
+      background: var(--default-background);
       border-radius: $default-border-radius-top;
       content: "";
       height: 10px;

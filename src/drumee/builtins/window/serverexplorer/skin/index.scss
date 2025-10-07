@@ -91,7 +91,7 @@
     }
 
     &__separator {
-      background-color: $ab-default-separator;
+      background-color: var(--default-separator);
       border-radius: 1px;
       height: 1.5px;
       margin: 5px 20px;
@@ -110,18 +110,18 @@
 
       &[data-state="1"] {
         & .menu-trigger {
-          background-color: $ab-default-background; 
+          background-color: var(--default-background); 
           border-radius: $default-border-radius;
         }
 
         & .dropdown-toggle-icon {
-          color:$ab-icon-header;//#556E7F;// var(--egreen);
+          color:var(--ab-icon-header);//#556E7F;// var(--egreen);
         }
       }            
       & .menu-topic-items {
         border-radius:$default-border-radius;
         box-shadow: var(--shadow-container); 
-        background-color: $ab-default-background; 
+        background-color: var(--default-background); 
         width: 285px;
         padding: 10px 0;
         &__wrapper{
@@ -130,11 +130,11 @@
         }
 
         &:before {
-          background-color:$ab-default-background; 
+          background-color:var(--default-background); 
           content: "";
           height: 10px;
           left: 138px;
-          position: absolute; color: $ab-default-icon-reverse;
+          position: absolute; color: var(--default-icon-reverse);
           cursor: pointer;
           height: 28px;//24px;
           padding: 2.5px 2px 2.5px 3px;//2.5px;
@@ -145,7 +145,7 @@
         }
 
         &:after {
-          background: $ab-default-background; 
+          background: var(--default-background); 
           border-radius: $default-border-radius-top;
           content: "";
           height: 10px;
@@ -162,14 +162,14 @@
       width : 16px;
       
       &.dropdown-toggle-icon {
-        color: $ab-default-icon-reverse;
+        color: var(--default-icon-reverse);
         cursor: pointer;
         height: 28px;//24px;
         padding: 5px 5px 5px 5px;
         width: 28px;//24px;
 
         &:hover {
-          color : $ab-default-icon-hover;
+          color : var(--default-icon-hover);
         }
       }
 
@@ -177,7 +177,7 @@
         margin-right: 10px;
 
         & svg {
-          fill: $ab-default-icon-menu-dropdown ;//var(--eviolet);
+          fill: var(--default-icon-menu-dropdown);//var(--eviolet);
         }
 
         &.contactbook {
@@ -196,14 +196,14 @@
       padding: 6px 20px;
 
       &:hover {
-        background-color: $ab-default-background-hover ;
-        color :$ab-default-text-hover; 
+        background-color: var(--default-background-hover);
+        color :var(--default-text-hover); 
 
         & .window-addressbook-menu__name {
-          color:$ab-default-text-hover;  
+          color:var(--default-text-hover);  
         }
         & svg {
-          fill: $ab-default-icon-reverse;  
+          fill: var(--default-icon-reverse);  
         }
       }
     }
@@ -211,7 +211,7 @@
     &__name {
       padding-top: 2px;
       padding-left: 8px;
-      @include typo($size:14px, $weight: 300, $line:16px, $color: $ab-default-text-color);
+      @include typo($size:14px, $weight: 300, $line:16px, $color: var(--default-text-color));
       &.contactbook {
         margin-left: -6px;//-5px;
       }

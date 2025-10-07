@@ -5,7 +5,7 @@
   z-index: 60000;//10;
   
   & .overlay {
-    background: $bigchat-transparency-container-overlay;//$default-background-wrapper;
+    background: var(--transparency-container-overlay);//$default-background-wrapper;
     height: 100%;
     position: absolute;
     width: 100%;
@@ -23,7 +23,7 @@
 
   & .window-addressbook {
     &__main {
-      background: $bigchat-default-background;
+      background: var(--default-background);
       max-height: 330px;
       max-width: 550px;
       min-height: 300px;
@@ -47,7 +47,7 @@
   
     &__icon {
       &.icon_success {
-        color: $bigchat-default-icon-success;
+        color: var(--default-icon-success);
         height: 26px;
         margin: auto;
         width: 36px;
@@ -55,7 +55,7 @@
     }
   
     &__note {
-      @include typo($size: 18px, $weight: 300, $line: 26px, $color: $bigchat-default-text-color);
+      @include typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
   
       &.input-content {
         color: var(--eblue);

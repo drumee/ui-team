@@ -16,7 +16,7 @@
   }
 
   &__icon {
-    color: $ab-default-icon-reverse;
+    color: var(--default-icon-reverse);
     cursor: pointer;
     height: 24px;
     margin: auto 10px auto 5px;
@@ -24,22 +24,22 @@
     width: 24px;
 
     &:hover {
-      color:$ab-default-thinline-icon-hover;
+      color:var(--default-thinline-icon-hover);
     }
   }
 
   &__bar {
-    border-bottom: 1px solid $ab-default-window-header-search;
+    border-bottom: 1px solid var(--default-window-header-search);
    // width: 100%;
 
     & input {
       background-color: transparent;
       margin-top: 2px;
       width: 100%;
-      @include typo($size: 15px, $line: 16px, $color:$ab-default-text-reverse);
+      @include typo($size: 15px, $line: 16px, $color: var(--default-text-reverse));
 
       &::placeholder {
-        @include typo($size: 15px, $line: 16px, $weight: 300, $color:$ab-default-text-reverse);
+        @include typo($size: 15px, $line: 16px, $weight: 300, $color: var(--default-text-reverse));
       }
     }
   }

@@ -80,7 +80,7 @@
 
     & .lib-messenger {
       &__content {
-        background-color:  $dgc-messenger-bg;
+        background-color:  var(--background-chatmessenger);
         border-radius: $default-border-radius;
         margin-left:10px;
 
@@ -206,7 +206,7 @@
 
     & .preset-acknowledge { 
       &__main {
-        background-color: $dgc-chat-reply-bg;
+        background-color: var(--dgc-chat-reply-bg);
         border-radius: $default-border-radius;
         padding: 10px 40px;
       }

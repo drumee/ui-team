@@ -2,7 +2,7 @@
   &__wrapper {
     &[data-state="1"] {
       & .trigger-icon {
-        color: $ab-default-icon-active;
+        color: var(--default-icon-active);
         opacity: 1;
       }
     }
@@ -10,7 +10,7 @@
     & .menu-topic-items {
       border-radius: var(--border-radius);
       box-shadow: var(--shadow-container);
-      background-color: $ab-default-background;
+      background-color: var(--default-background);
       max-width: 1600px;
       min-width: 155px;
       width: 100% !important;
@@ -24,7 +24,7 @@
       }
 
       &:before {
-        background-color: $ab-default-background;
+        background-color: var(--default-background);
         box-shadow: -4px -6px 10px 1px rgba(63, 79, 117, 0.13);
         content: "";
         height: 10px;
@@ -36,7 +36,7 @@
       }
 
       &:after {
-        background: $ab-default-background;
+        background: var(--default-background);
         content: "";
 
         left: 0;
@@ -49,7 +49,7 @@
 
   &__icon {
     align-items: center;
-    color: $ab-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
 
     &.trigger-icon {
@@ -61,7 +61,7 @@
       width: 22.5px;
 
       &:hover {
-        color: $ab-default-icon-hover;
+        color: var(--default-icon-hover);
         opacity: 1;
       }
     }
@@ -81,15 +81,15 @@
     padding: 5px 5px 5px 15px;
 
     &:hover {
-      background-color: $ab-default-background-hover ;
-      color: $ab-default-text-hover;
+      background-color: var(--default-background-hover);
+      color: var(--default-text-hover);
 
       & .widget-contact-detail-menu__note {
-        color: $ab-default-text-hover;
+        color: var(--default-text-hover);
       }
 
       & svg {
-        fill: $ab-default-icon-reverse;
+        fill: var(--default-icon-reverse);
       }
     }
 
@@ -101,7 +101,7 @@
 
   &__note {
     padding-top: 0px;
-    @include typo($size: 12px, $weight: 300, $line: 14px, $color: $ab-default-text-color);
+    @include typo($size: 12px, $weight: 300, $line: 14px, $color: var(--default-text-color));
 
     &.same-domain-info {
       height: 86px;

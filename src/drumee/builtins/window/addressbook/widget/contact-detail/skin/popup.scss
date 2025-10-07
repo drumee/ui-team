@@ -9,7 +9,7 @@
   
   &-wrapper {
     border-radius : var(--border-radius);
-    background-color:$ab-default-background;
+    background-color:var(--default-background);
     box-shadow:var(--shadow-popup);
     height: calc(100% - 20px);
     max-height: 300px;
@@ -20,7 +20,7 @@
   }
 
   &-close {
-    color: $ab-default-thinline-icon;
+    color: var(--default-thinline-icon);
     cursor: pointer;
     height: 12px;
     position: absolute;
@@ -30,12 +30,12 @@
     z-index: 1;
 
     &:hover {
-      color:$ab-default-thinline-icon-hover;
+      color:var(--default-thinline-icon-hover);
     }
   }
 
   &_header-title {
-    @include typo($size: 18px, $line: 16px, $color: $ab-default-text-color);
+    @include typo($size: 18px, $line: 16px, $color: var(--default-text-color));
 
     &.resend-invite {
       align-items: baseline;
@@ -80,14 +80,14 @@
     text-align: center;
     width: 356px;
     justify-content: center;
-    @include typo($weight: 300, $size: 16px, $line: 24px, $color: $ab-default-text-color); //$line: 26px,
+    @include typo($weight: 300, $size: 16px, $line: 24px, $color: var(--default-text-color)); //$line: 26px,
   }
 
   &__note.fullname {
     overflow: hidden;
     padding-left: 5px;
     width: auto;
-    @include typo( $size: 18px, $weight:400,$line: 20px, $color: $ab-secondary-text-color);//$line: 16px
+    @include typo( $size: 18px, $weight:400,$line: 20px, $color: var(--secondary-text-color));//$line: 16px
 
     & .inner.note-content {
       overflow: hidden;
@@ -104,16 +104,16 @@
       margin-bottom: -10px;
       
       & textarea {
-        background:$ab-default-block-background;
+        background:var(--default-block-background);
         border-radius: var(--border-radius);
         border: none;
         outline: none;
         padding: 10px;
         resize: none;
-        @include typo($size: 16px, $line: 21px, $color: $ab-default-text-color);
+        @include typo($size: 16px, $line: 21px, $color: var(--default-text-color));
 
         &::placeholder {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $ab-default-text-placeholder);
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }
@@ -201,7 +201,7 @@
   }
 
   &_message-info {
-    @include typo($weight: 300, $size: 16px, $line: 26px, $color: $ab-default-text-color);
+    @include typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
     text-align: center;
 
     &.first-node {
@@ -227,7 +227,7 @@
 
   &__icon {
     &.profile-icon {
-      color:$ab-default-icon-neutral;
+      color:var(--default-icon-neutral);
       height: 26px;
       margin-right: 10px;
       min-width: 30px;

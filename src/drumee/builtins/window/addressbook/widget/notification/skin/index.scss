@@ -36,19 +36,19 @@
 
   &__digit {
     align-items: center;
-    background-color: $ab-default-background-alert;
+    background-color: var(--default-background-alert);
     border-radius: 50%;
     height: 19px;
     justify-content: center;
     margin:10px 6px 8px;
     position: absolute;
     width: 19px;
-    @include typo($size: 10px, $weight:400, $color:$ab-default-text-reverse);
+    @include typo($size: 10px, $weight:400, $color: var(--default-text-reverse));
     &[data-count="0"]{
       display: none;
     }
     .inner{
-      @include typo($size: 10px, $weight:400, $color:$ab-default-text-reverse);
+      @include typo($size: 10px, $weight:400, $color: var(--default-text-reverse));
     }
   }
 }

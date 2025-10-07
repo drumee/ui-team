@@ -33,7 +33,7 @@
     }
 
     &.chat {
-      background-color: $dgc-chat-reply-bg;
+      background-color: var(--dgc-chat-reply-bg);
     }
 
     &.share {

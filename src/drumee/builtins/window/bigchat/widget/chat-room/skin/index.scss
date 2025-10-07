@@ -52,7 +52,7 @@
         overflow:hidden;
         padding: 4px 6px;
         white-space: nowrap;
-        @include typo($size: 15px, $line: 16px, $color: $bigchat-text-title); 
+        @include typo($size: 15px, $line: 16px, $color: var(--bigchat-default-text-title)); 
     
         @include overflow-text;
         .inner {
@@ -67,7 +67,7 @@
 
       &.share-room {
         &:hover {
-          color: $bigchat-backgroundless-text-hover;
+          color: var(--backgroundless-text-hover);
         }
       }
     }
@@ -84,7 +84,7 @@
     }
 
     &__icon {
-      color:$bigchat-default-icon-neutral;
+      color:var(--default-icon-neutral);
       cursor: pointer;
 
       &.connector {
@@ -95,10 +95,10 @@
         width: 20px;
   
         & svg {
-          fill: $bigchat-default-icon-neutral;
+          fill: var(--default-icon-neutral);
           opacity: 0.85;
           &:hover {
-            fill: $bigchat-default-icon-hover;
+            fill: var(--default-icon-hover);
             opacity: 1;
           }
         }
@@ -109,13 +109,13 @@
   &__profile {
     &.customer {
       & .user-profile__icon {
-        background-color: $bigchat-default-user-icon !important;
+        background-color: var(--default-user-icon) !important;
       }
     }
   }
 
   &__separator {
-		background-color: $bigchat-default-separator;
+		background-color: var(--default-separator);
 		border-radius: 1px;
 		height: 1px;
 		margin: 3px 0px 0px;
