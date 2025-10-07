@@ -17,7 +17,7 @@
   }
 
   &__icon {
-    color  : $admin-default-icon-reverse;//var(--white);
+    color  : var(--default-icon-reverse);//var(--white);
     cursor: pointer;
     height : 24px;
     margin: auto 10px auto 5px;// auto 10px auto 5px;
@@ -25,22 +25,22 @@
     width: 24px;
 
     &:hover {
-      color:$admin-default-thinline-icon-hover;
+      color:var(--default-thinline-icon-hover);
     }
   }
 
   &__bar {
-    border-bottom: 1px solid $admin-default-window-header-search;//hsla(0,0%,100%,.3);
+    border-bottom: 1px solid var(--default-window-header-search);//hsla(0,0%,100%,.3);
     width: 100%;
 
     & input {
       background-color: transparent;
       margin-top: 2px;
       width: 100%;
-      @include typo($size: 15px, $line: 16px, $color: $admin-default-text-reverse);
+      @include typo($size: 15px, $line: 16px, $color: var(--default-text-reverse));
 
       &::placeholder {
-        @include typo($size: 15px, $line: 16px, $weight: 300, $color: $admin-default-text-reverse);
+        @include typo($size: 15px, $line: 16px, $weight: 300, $color: var(--default-text-reverse));
       }
     }
   }

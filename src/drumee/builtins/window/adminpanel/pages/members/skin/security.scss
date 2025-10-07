@@ -1,6 +1,6 @@
 &-security {
   &__main {
-    background: $admin-default-background;
+    background: var(--default-background);
     border-radius: $default-border-radius;
     height: calc(100% - 350px);
     min-height: 250px;
@@ -65,17 +65,17 @@
   }
 
   &__icon {
-    color: $admin-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     height: 12px; //16px;
     width: 12px; //16px;
 
     &.close {
-      color: $admin-default-thinline-icon;
+      color: var(--default-thinline-icon);
       bottom: 30px;
       
       &:hover {
-        color:$admin-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
 
@@ -92,13 +92,13 @@
     &.header {    
       justify-content: center;
       width: 100%;
-      @include typo($size: 18px, $line: 25px, $color: $admin-default-text-title);
+      @include typo($size: 18px, $line: 25px, $color: var(--default-text-title));
     }
 
     &.header-info {    
       justify-content: center;
       width: 100%;
-      @include typo($size: 14px, $line: 20px, $color: $admin-default-text-color);
+      @include typo($size: 14px, $line: 20px, $color: var(--default-text-color));
       & .important{
         @include typo($size: 14px, $line: 20px, $color: var(--default-text-caution));
       }
@@ -107,12 +107,12 @@
     &.sub-header {
       //padding-left: 30px;
       padding-bottom: 10px;
-      @include typo($size: 16px, $line: 21px, $color: $admin-default-text-color);
+      @include typo($size: 16px, $line: 21px, $color: var(--default-text-color));
     }
 
     &.response-msg {    
       text-align: center;
-      @include typo($size: 12px, $line: 16px, $color: $admin-tertiary-text-color);
+      @include typo($size: 12px, $line: 16px, $color: var(--tertiary-text-color));
       
       &.success {
         color: var(--default-text-success); //var(--egreen-soft);
@@ -121,7 +121,7 @@
       }
 
       &.failure {
-        color: $admin-default-text-alert; 
+        color: var(--default-text-alert); 
         max-width: 220px;
         padding-top: 10px;
       }
@@ -142,18 +142,18 @@
         }
 
         &.on {
-          color: $admin-toggle-switch-on ;//$ap-toggle-switch-on;
+          color: var(--toggle-switch-on);//$ap-toggle-switch-on;
 
           &[data-state="0"]{
-            color: $admin-toggle-switch-off ; //$ap-toggle-switch-off ;
+            color: var(--toggle-switch-off); //$ap-toggle-switch-off ;
           }
         }
 
         &.off {
-          color:$admin-toggle-switch-off;// $ap-toggle-switch-off;
+          color:var(--toggle-switch-off);// $ap-toggle-switch-off;
 
           &[data-state="0"]{
-            color:$admin-toggle-switch-on ;// $ap-toggle-switch-on;
+            color:var(--toggle-switch-on);// $ap-toggle-switch-on;
           }
         }
 
@@ -161,7 +161,7 @@
           padding: 0 5px;
 
           & .inner.note-content {
-            background-color:$admin-toggle-background;
+            background-color:var(--toggle-background);
             border-radius: $default-border-radius-small;
             height: 4px;
             width: 24px;
@@ -169,7 +169,7 @@
 
           &::before,
           &::after {
-            background-color:$admin-toggle-switch-radio;
+            background-color:var(--toggle-switch-radio);
             height: 12px;     
             opacity:0.7;
             padding: 4px 0 3px;
@@ -185,14 +185,14 @@
       &.on,
       &.off,
       &.change {
-        color: $admin-default-text-inactive !important;
+        color: var(--default-text-inactive) !important;
         cursor: not-allowed !important;
         opacity: 0.6;
       }
 
       &.change:before,
       &.change:after {
-        background-color: $admin-toggle-background  !important;
+        background-color: var(--toggle-background)  !important;
       }
       
     }

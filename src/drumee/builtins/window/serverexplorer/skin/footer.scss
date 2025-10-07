@@ -71,7 +71,7 @@
   }
 
   &[data-error=on] {
-    @include typo($weight:300, $color: $admin-default-text-reverse);
+    @include typo($weight:300, $color: var(--default-text-reverse));
     pointer-events: none;
     opacity: 0.2;
   }

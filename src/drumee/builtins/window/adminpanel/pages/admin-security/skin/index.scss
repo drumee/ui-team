@@ -36,17 +36,17 @@
     width: 450px; //403px;
     justify-content: center;
     margin-bottom: 40px;
-    @include typo($size: 18px, $color:$admin-default-text-title); //$size: 24px
+    @include typo($size: 18px, $color: var(--default-text-title)); //$size: 24px
   }
 
   &__box-header {
     height: 21px;
-    @include typo($size: 16px, $color: $admin-default-text-color); //$size: 18px,
+    @include typo($size: 16px, $color: var(--default-text-color)); //$size: 18px,
   }
 
   &__box-set {
     height: 116px;
-    background-color: $admin-default-block-background;//#F7F7F9;
+    background-color: var(--default-block-background);//#F7F7F9;
     border-radius: 6px;
     margin-top: 20px;
     width: 366px;
@@ -61,7 +61,7 @@
 
   &__option-label {
    // @include typo($size: 14px, $color: var(--egrey-89));
-    @include typo($size: 16px, $color:$admin-default-text-color, $weight: 300);
+    @include typo($size: 16px, $color: var(--default-text-color), $weight: 300);
   }
 
   &__option-item {

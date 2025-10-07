@@ -8,7 +8,7 @@
 .widget-member-chooseAdmins {
   &__ui {
     border-radius:$default-border-radius;
-    background-color: $admin-default-background;  
+    background-color: var(--default-background);  
     height: calc(100% - 20px);
     max-height: 538px;
     max-width: 410px;
@@ -59,16 +59,16 @@
     width: 100%;
 
     &.title {
-      @include typo($size: 16px, $line: 21px, $color:$admin-default-text-title);
+      @include typo($size: 16px, $line: 21px, $color: var(--default-text-title));
     }
 
     &.info {
       max-width: 237px;
-      @include typo($size: 14px, $line: 16px, $color:$admin-default-text-title);
+      @include typo($size: 14px, $line: 16px, $color: var(--default-text-title));
     }
 
     &.search-title {
-      @include typo($size: 14px, $line: 14px, $weight: 300, $color: $admin-default-text-title);
+      @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title));
       margin-top: 10px;
     }
   }
@@ -77,7 +77,7 @@
     cursor: pointer;
 
     &.close {
-      color:$admin-default-thinline-icon;
+      color:var(--default-thinline-icon);
       height: 12px;
       margin: 10px;
       position: absolute;
@@ -86,12 +86,12 @@
       width: 12px;
       
       &:hover {
-        color:$admin-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
 
     &.info {
-      color: $admin-default-icon-neutral;
+      color: var(--default-icon-neutral);
       height: 15px;
       position: absolute;
       right: 20%;
@@ -114,7 +114,7 @@
     }
 
     &.search-icon {
-      color:$admin-default-icon-neutral;
+      color:var(--default-icon-neutral);
       height: 17px;
       left: 12px;
       min-width: 17px;
@@ -131,7 +131,7 @@
       width: 10px;
 
       &:hover {
-        color: $admin-default-thinline-icon-hover;//$default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);//$default-thinline-icon-hover;
       }
     }
   }
@@ -174,19 +174,19 @@
     }
 
     & input {
-      border-bottom: 1px solid $admin-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       margin-left: 24px;
       width: 100%;
-      @include typo($size: 15px, $line: 16px, $color: $admin-default-text-color);
+      @include typo($size: 15px, $line: 16px, $color: var(--default-text-color));
       
       &::placeholder {
-        @include typo($size: 15px, $line: 16px, $weight: 300, $color:$admin-default-text-placeholder);
+        @include typo($size: 15px, $line: 16px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
   }
 
   &__list {
-    background: $admin-default-background;
+    background: var(--default-background);
     border-radius:6px;
     height: 100%;
     margin-bottom: 10px;
@@ -256,7 +256,7 @@
   }
   
   &__search-result-wrapper {
-    background: $admin-default-background;
+    background: var(--default-background);
     height: 90%;
     position: absolute;
     top: 10%;

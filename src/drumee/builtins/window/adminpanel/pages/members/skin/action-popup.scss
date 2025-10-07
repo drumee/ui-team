@@ -28,14 +28,14 @@
       width: 29px; //27px; //24px;
 
       & .note-content {
-        @include typo($size: 12px, $line: 16px, $color: $admin-default-text-reverse);
+        @include typo($size: 12px, $line: 16px, $color: var(--default-text-reverse));
       }
     }
   }
 
   &__note {
     &.fullname {
-      @include typo($size: 18px, $line: 16px, $color: $admin-secondary-text-color);
+      @include typo($size: 18px, $line: 16px, $color: var(--secondary-text-color));
       align-items: center;
       padding-left: 7px;
     }
@@ -45,7 +45,7 @@
   &-confirmation {
     &__main {
       border-radius: $default-border-radius;
-      background-color: $admin-default-background;
+      background-color: var(--default-background);
       box-shadow: var(--shadow-popup);
       // box-shadow: 0 0 7px 0 rgba(0,0,0,0.14);
       height: calc(100% - 20px);
@@ -83,7 +83,7 @@
       &.header {
         //margin-top: 30px;
         margin: auto 0 0;
-        @include typo($size: 18px, $line: 18px, $color: $admin-default-text-color);
+        @include typo($size: 18px, $line: 18px, $color: var(--default-text-color));
       }
 
       &.sub-header {
@@ -122,19 +122,19 @@
 
       &.sub-header,
       &.sub-content {
-        color: $admin-default-text-color; // var(--egrey-2f);
+        color: var(--default-text-color); // var(--egrey-2f);
         margin: auto 0; //40px 0 20px; //;28px 0;
         text-align: center;
       }
 
       &.fullname {
-        @include typo($size: 18px, $line: 16px, $color: $admin-secondary-text-color);
+        @include typo($size: 18px, $line: 16px, $color: var(--secondary-text-color));
         padding-top: 4px;
       }
     }
 
     &__close {
-      color: $admin-default-thinline-icon;
+      color: var(--default-thinline-icon);
       cursor: pointer;
       margin: 10px;
       position: absolute;
@@ -142,19 +142,19 @@
       top: 5px;
       z-index: 1;
       /*  &:hover{
-        color:$admin-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }*/
     }
 
     &__icon {
       &.close {
-        color: $admin-default-thinline-icon;
+        color: var(--default-thinline-icon);
         cursor: pointer;
         height: 12px;
         width: 12px;
 
         &:hover {
-          color: $admin-default-thinline-icon-hover;
+          color: var(--default-thinline-icon-hover);
         }
       }
     }
@@ -172,7 +172,7 @@
     &__note {
       &.message-info {
         text-align: center;
-        @include typo($weight: 300, $size: 16px, $line: 26px, $color: $admin-default-text-color); //$size: 18px,
+        @include typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color)); //$size: 18px,
 
         &.first-node {
           margin: 22px 30px;

@@ -39,7 +39,7 @@
         align-items: center;
         cursor: pointer;
         padding: 4px 4px 4px 10px;
-        @include typo($size: 15px, $line: 16px, $color: $admin-text-title);
+        @include typo($size: 15px, $line: 16px, $color: var(--admin-default-text-title));
       }
     }
 
@@ -67,7 +67,7 @@
     }
 
     &__icon {
-      color: $admin-default-icon-neutral;
+      color: var(--default-icon-neutral);
       cursor: pointer;
       height: 18px;
       width: 18px;
@@ -75,7 +75,7 @@
   }
 
   &__separator {
-		background-color: $admin-default-separator;
+		background-color: var(--default-separator);
 		border-radius: 1px;
 		height: 1px;
 		margin: 2px 0px 0px;
@@ -93,7 +93,7 @@
     justify-content: center;
     min-width: 280px;
     text-align: center;
-    @include typo($size: 16px, $line: 30px, $color: $admin-default-text-inactive);
+    @include typo($size: 16px, $line: 30px, $color: var(--default-text-inactive));
   }
 
   &__wrapper {
@@ -106,7 +106,7 @@
   &__icon {
     &.add-member {
       border-radius:$border-radius-small;
-      border: 1px solid $admin-default-entry-border-bottom;
+      border: 1px solid var(--default-entry-border-bottom);
       box-sizing: border-box;
       color: var(--egrey-89);
       height: 30px;
@@ -119,7 +119,7 @@
   
   &__note {
     &.default-content {
-      @include typo($size: 16px, $line: 36px,$color: $admin-default-text-inactive);
+      @include typo($size: 16px, $line: 36px,$color: var(--default-text-inactive));
     }
   }
 }

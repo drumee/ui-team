@@ -6,7 +6,7 @@
     z-index: 10;
     
     & .content {
-      background: $admin-transparency-container-overlay;
+      background: var(--transparency-container-overlay);
       height: 100%;
       position: absolute;
       width: 100%;

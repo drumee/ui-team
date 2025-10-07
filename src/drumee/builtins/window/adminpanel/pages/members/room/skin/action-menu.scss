@@ -2,13 +2,13 @@
   &__wrapper {
     &[data-state="1"] {
       & .trigger-icon {
-        color: $admin-default-icon-active;
+        color: var(--default-icon-active);
         opacity: 1;
       }
     }
 
     & .menu-topic-items {
-      background-color: $admin-default-background;    
+      background-color: var(--default-background);    
       max-width: 184px; 
       min-width: 184px;
       width: 100% !important;
@@ -22,7 +22,7 @@
       }
 
       &:before {
-        background-color: $admin-default-background;    
+        background-color: var(--default-background);    
         box-shadow:-4px -6px 10px 1px rgba(63, 79, 117, 0.13);
         content: "";
         height: 10px;
@@ -34,7 +34,7 @@
       }
 
       &:after {
-        background: $admin-default-background;    
+        background: var(--default-background);    
         border-radius: $default-border-radius-top;
         content: "";
       
@@ -47,7 +47,7 @@
   }
 
   &__icon {
-    color: $admin-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     align-items: center;
     
@@ -61,7 +61,7 @@
       width: 22.5px; 
     }
     &:hover{
-      color: $admin-default-icon-hover;
+      color: var(--default-icon-hover);
       opacity: 1;
     }
   }
@@ -77,22 +77,22 @@
     margin-bottom:  1px;
 
     &:hover {
-      background-color: $admin-default-background-hover;
-      color : $admin-default-text-reverse ; 
+      background-color: var(--default-background-hover);
+      color : var(--default-text-reverse); 
 
       & .members-room-menu__note {
-        color:$admin-default-text-reverse ; 
+        color:var(--default-text-reverse); 
       }
       
       & svg {
-        fill: $admin-default-icon-reverse ;
+        fill: var(--default-icon-reverse);
       }
     }
   }
 
   &__note {
     padding-top: 0px;
-    @include typo($size: 13px, $weight: 300, $line: 14px, $color:$admin-default-text-color); 
+    @include typo($size: 13px, $weight: 300, $line: 14px, $color: var(--default-text-color)); 
     ::first-letter{
       text-transform: capitalize;
     }

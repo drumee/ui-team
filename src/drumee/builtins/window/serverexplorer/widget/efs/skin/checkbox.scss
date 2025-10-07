@@ -1,5 +1,5 @@
 &__checkbox {
-  border: 1px solid $admin-default-checkbox-border;
+  border: 1px solid var(--default-checkbox-border);
   border-radius: $default-checkbox-border-radius;
   box-shadow: none;
   color: transparent;  
@@ -17,8 +17,8 @@
 
   &[data-state="1"] {
     box-shadow: none;
-    color: $admin-default-checkbox-checked;
-    border: 1px solid $admin-default-checkbox-border;
+    color: var(--default-checkbox-checked);
+    border: 1px solid var(--default-checkbox-border);
 
     &.folder {
       color: var(--checkbox-checked-reverse);

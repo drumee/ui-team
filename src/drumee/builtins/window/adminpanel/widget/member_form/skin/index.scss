@@ -55,14 +55,14 @@
   
   &__note {
     &.area-code {
-      @include typo($size: 18px, $line: 16px, $weight:300, $color:$admin-default-text-color);
+      @include typo($size: 18px, $line: 16px, $weight:300, $color: var(--default-text-color));
       right: 2px;
       top: 0px;
     }
 
     &.see-members,
     &.security {
-      @include typo($size: 15px, $line: 16px, $color:$admin-secondary-text-color);
+      @include typo($size: 15px, $line: 16px, $color: var(--secondary-text-color));
       cursor: pointer;
       max-width: 265px;
       text-align: center;
@@ -75,7 +75,7 @@
     }
 
     &.error-msg {
-      @include typo($size: 13px, $line: 13px, $weight: 400, $color: $admin-default-text-error);
+      @include typo($size: 13px, $line: 13px, $weight: 400, $color: var(--default-text-error));
       justify-content: center;
       text-align: center;
       width: 100%;
@@ -127,9 +127,9 @@
 
     &.security-check {
       border-radius: $default-checkbox-border-radius;
-      border: 1px solid $admin-default-checkbox-border;
+      border: 1px solid var(--default-checkbox-border);
       box-shadow: none;
-      color:$admin-default-checkbox-background;
+      color:var(--default-checkbox-background);
       cursor: pointer;
       height: 15px;
       left: 1%;
@@ -140,18 +140,18 @@
       width: 15px;
 
       &:hover {
-        border: 2px solid $admin-default-checkbox-border;
+        border: 2px solid var(--default-checkbox-border);
       }
 
       &[data-state="1"] {
         box-shadow: none;
-        border: 1px solid $admin-default-checkbox-border;
-        color: $admin-default-checkbox-checked;
+        border: 1px solid var(--default-checkbox-border);
+        color: var(--default-checkbox-checked);
         opacity: 1;
       }
 
       &.disable {
-        color: $admin-default-text-success;
+        color: var(--default-text-success);
         opacity: 0.4;
         border: none;
   
@@ -175,7 +175,7 @@
     &.email {
       &[data-status='error'] {
         & input:focus {
-          border-color: $admin-default-border-error;
+          border-color: var(--default-border-error);
         }
       }
     }
@@ -224,23 +224,23 @@
     }
 
     & input {
-      @include typo($size: 16px, $line: 19px, $color:$admin-default-text-color);
+      @include typo($size: 16px, $line: 19px, $color: var(--default-text-color));
       background-color: transparent;
-      border-bottom: 1px solid $admin-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       border-radius: 0px;
       margin-left: 0px;
       width: 100%;
 
       &::placeholder {
-        @include typo($size: 16px, $weight:300, $line: 19px, $color:$admin-default-text-placeholder);
+        @include typo($size: 16px, $weight:300, $line: 19px, $color: var(--default-text-placeholder));
       }
       
       &:focus {
-        border-color: $admin-focus-border-placeholder;
+        border-color: var(--focus-border-placeholder);
         outline: none;
 
         @include placeholder-input {
-          color:$admin-text-placeholder-focus;
+          color:var(--focus-text-placeholder);
         }
       }
       &.entry [data-status="error"] {
@@ -250,9 +250,9 @@
 
     & textarea {
       @include typo($size: 14px, $line: 20px);
-      background-color: $admin-default-background;
+      background-color: var(--default-background);
       border-radius:$default-border-radius;
-      border: 1px solid $admin-focus-border-placeholder;
+      border: 1px solid var(--focus-border-placeholder);
       box-sizing: border-box;
       margin-bottom: 20px;
       margin-left: 1px;
@@ -263,7 +263,7 @@
       width: 100%;
       
       &::placeholder {
-        @include typo($size: 14px, $weight: 300, $color: $admin-default-text-placeholder);
+        @include typo($size: 14px, $weight: 300, $color: var(--default-text-placeholder));
       }
 
       &:focus {
@@ -310,13 +310,13 @@
     }
   
     &[data-error=on] {
-      @include typo($weight:300, $color: $admin-default-text-reverse);
+      @include typo($weight:300, $color: var(--default-text-reverse));
       pointer-events: none;
       opacity: 0.2;
     }
   }
 
-  & .entry[data-status=error] input {border-bottom: 1px solid $admin-default-border-error;}
+  & .entry[data-status=error] input {border-bottom: 1px solid var(--default-border-error);}
   & .address__ui.address-input-item__ui:only-child,
   & .phoneno__ui.phoneno-input-item__ui:only-child {
     & .destroy-tag {

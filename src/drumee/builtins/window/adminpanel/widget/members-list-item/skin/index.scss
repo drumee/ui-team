@@ -11,35 +11,35 @@
   padding-bottom: 5px;
   padding-left: 14px;
   padding-top: 5px;
-  @include typo($size :14px, $line: 16px, $color : $admin-default-text-color);
+  @include typo($size :14px, $line: 16px, $color: var(--default-text-color));
 
   @import './settings-menu';
 
   &__ui {
     background-color: inherit;
-    @include typo($color : $admin-default-text-color);
+    @include typo($color: var(--default-text-color));
     cursor: pointer;
 
     &:hover,
     &[data-active=active],
     &[data-radio=on] {
-      background:$admin-default-background-hover;
+      background:var(--default-background-hover);
       
       & .profile-icon,
       & .name.note-reader {
-        @include typo($size :14px, $line: 16px,$color :$admin-default-text-hover)
+        @include typo($size :14px, $line: 16px,$color: var(--default-text-hover))
       }
     }
 
     &:hover {
       & .option-icons {
-        color: $admin-default-icon-reverse;
+        color: var(--default-icon-reverse);
         border:none;
         
         &.checkbox[data-state="1"] {
           box-shadow: none;
-          color: $admin-checkbox-checked-reverse; //var(--ewhite);
-          border: 1px solid $admin-checkbox-checked-border-reverse;
+          color: var(--checkbox-checked-reverse); //var(--ewhite);
+          border: 1px solid var(--checkbox-checked-border-reverse);
         }
       }
     }
@@ -69,7 +69,7 @@
   }
 
   &__icon {
-    color: $admin-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     
 
@@ -103,18 +103,18 @@
       right: 20px;
       box-shadow: none;
       border-radius: $default-checkbox-border-radius;
-      border: 1px solid $admin-default-checkbox-border;
-      color:$admin-default-checkbox-background;  
+      border: 1px solid var(--default-checkbox-border);
+      color:var(--default-checkbox-background);  
 
       &[data-state="1"] {
         box-shadow: none;
-        color: $admin-default-checkbox-checked;
-        border: 1px solid $admin-default-checkbox-border;//$default-checkbox;
+        color: var(--default-checkbox-checked);
+        border: 1px solid var(--default-checkbox-border);//$default-checkbox;
       }
     }
 
     &.display-icon {
-      color:$admin-default-user-icon;
+      color:var(--default-user-icon);
       height: 29px;
       top:0;
       width: 29px;
@@ -145,7 +145,7 @@
       max-width: 190px;
       padding: 3px 3px 3px 15px;
       width: 100%;
-      @include typo( $size :14px, $line: 16px, $color: $admin-default-text-color);
+      @include typo( $size :14px, $line: 16px, $color: var(--default-text-color));
       @include overflow-text;
       .inner{
         overflow: hidden;

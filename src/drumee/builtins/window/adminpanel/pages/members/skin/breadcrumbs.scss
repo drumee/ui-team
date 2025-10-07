@@ -51,7 +51,7 @@
   }
 
   &__roll {
-    background: $admin-default-background;    
+    background: var(--default-background);    
     border-radius: $default-border-radius-small;
     box-shadow: 0 6px 10px 1px rgba(63,79,117,0.13), 0 7px 20px 0 rgba(86,65,113,0.08), 0 3px 17px 0 rgba(194,185,203,0);
     height: auto;
@@ -64,7 +64,7 @@
     z-index: 1000;
     
     &:before {
-      background-color: $admin-default-background;    
+      background-color: var(--default-background);    
       box-shadow:var(--shadow-before);
       content: "";
       height: 10px;
@@ -76,7 +76,7 @@
     }
 
     &:after {
-      background: $admin-default-background;    
+      background: var(--default-background);    
       border-radius: $default-border-radius-top;
       content: "";
       height: 10px;

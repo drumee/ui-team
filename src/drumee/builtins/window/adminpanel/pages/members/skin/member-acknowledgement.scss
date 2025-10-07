@@ -1,7 +1,7 @@
 &-member-acknowledgement {
   &__main {
     align-items: center;
-    background:$admin-default-background;
+    background:var(--default-background);
     border-radius: $default-border-radius;
     height: calc(100% - 350px);
     justify-content: center;
@@ -12,13 +12,13 @@
 
   &__note {
     &.message-info {
-      @include typo($size: 16px, $line: 20px, $weight:300, $color:$admin-default-text-color);
+      @include typo($size: 16px, $line: 20px, $weight:300, $color: var(--default-text-color));
       padding: 15px;
     }
   }
 
   &__close {
-    color:$admin-default-thinline-icon;
+    color:var(--default-thinline-icon);
     cursor: pointer;
     margin: 10px;
     position: absolute;
@@ -29,18 +29,18 @@
 
   &__icon {
     &.close {
-      color: $admin-default-thinline-icon;
+      color: var(--default-thinline-icon);
       cursor: pointer;
       height: 12px;
       width: 12px;
       
       &:hover {
-        color: $admin-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
       }
     }
 
     &.success {
-      color: $admin-default-icon-success;
+      color: var(--default-icon-success);
       height: 26px;
       width: 36px;
     }

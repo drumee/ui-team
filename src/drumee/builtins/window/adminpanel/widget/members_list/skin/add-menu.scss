@@ -2,12 +2,12 @@
   &__wrapper {
     &[data-state="1"] {
       & .trigger-icon {
-        color: $admin-default-icon-active;
+        color: var(--default-icon-active);
       }
     }
 
     & .menu-topic-items {
-      background-color: $admin-default-background;
+      background-color: var(--default-background);
       border-radius: $default-border-radius;
       box-shadow: $drumee-container-dropdown;
       justify-content: center;
@@ -24,7 +24,7 @@
       }
 
       &:before {
-        background-color: $admin-default-background;
+        background-color: var(--default-background);
         box-shadow: -4px -6px 10px 1px rgba(63, 79, 117, 0.13);
         content: "";
         height: 10px;
@@ -36,7 +36,7 @@
       }
 
       &:after {
-        background: $admin-default-background;
+        background: var(--default-background);
         border-radius:$default-border-radius-top;
         content: "";
         left: 0;
@@ -49,7 +49,7 @@
 
   &__icon {
     align-items: center;
-    color: $admin-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     opacity:0.85;
 
@@ -70,7 +70,7 @@
     
     svg {
       &:hover {
-        color:$admin-default-icon-hover;
+        color:var(--default-icon-hover);
         opacity: 1;
       }
     }
@@ -86,15 +86,15 @@
     padding: 8px 8px 5px 17px;
 
     &:hover {
-      background-color: $admin-default-background-hover;
+      background-color: var(--default-background-hover);
       color : var(--default-text-reverse); 
 
       & .widget-members-list-menu__note {
-        color:$admin-default-text-hover; 
+        color:var(--default-text-hover); 
       }
       
       & svg {
-        fill: $admin-default-icon-reverse;
+        fill: var(--default-icon-reverse);
       }
     }
   }
@@ -102,6 +102,6 @@
   &__note {
     bottom: 2px;
     padding-top: 0px;
-    @include typo($size: 13px, $weight: 300, $line: 14px, $color:$admin-default-text-color);
+    @include typo($size: 13px, $weight: 300, $line: 14px, $color: var(--default-text-color));
   }
 }

@@ -8,7 +8,7 @@
   }
 
   &__main {
-    background-color:$admin-default-background ;
+    background-color:var(--default-background);
   }
 
   &__container {
@@ -43,7 +43,7 @@
   }
 
   &__header {
-    background-color: $admin-background-header ;
+    background-color: var(--admin-header-bg);
     border-bottom: none;
   }
 
@@ -56,7 +56,7 @@
 
       & .title {
         text-align: center;
-        @include typo($size: 18px, $line: 19px, $color: $admin-default-text-reverse);
+        @include typo($size: 18px, $line: 19px, $color: var(--default-text-reverse));
 
         & .note-content {
           width: 100%;
@@ -102,7 +102,7 @@
           height: 100%;
           overflow: hidden;
           width: 100%;
-          @include typo($size: 15px, $line: 15px, $color: $admin-default-text-reverse);
+          @include typo($size: 15px, $line: 15px, $color: var(--default-text-reverse));
   
           & .note-content {
             width: 100%;

@@ -5,7 +5,7 @@
   
   &__ui {
     width: 100%;
-    background-color: $admin-default-block-background;
+    background-color: var(--default-block-background);
   }
 
   &__main {
@@ -25,7 +25,7 @@
   }
 
   &__separator {
-		background-color: $admin-default-separator;
+		background-color: var(--default-separator);
 		border-radius: 1px;
 		height: 1px;
 		margin: 3px 0 0 0;
@@ -53,7 +53,7 @@
     }
 
 		&__icon {
-      color : $admin-default-user-icon;
+      color : var(--default-user-icon);
       height :29px;
       width : 29px;
 		}
@@ -61,7 +61,7 @@
 		&__note.name {      
       margin-top: 4px; 
       padding: 3px 3px 3px 15px;
-      @include typo($size: 14px, $line: 16px, $color: $admin-default-text-color);
+      @include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
     }
   }
 
@@ -73,7 +73,7 @@
       max-width: 170px;
       width: 100%;
       justify-content:center;
-      @include typo($size: 15px, $line: 16px, $color: $admin-text-title);
+      @include typo($size: 15px, $line: 16px, $color: var(--admin-default-text-title));
       @include overflow-text;
 		}
   }

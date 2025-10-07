@@ -24,7 +24,7 @@
     }
 
     &__input_wrapper {
-      background: $admin-default-background;
+      background: var(--default-background);
       border-radius: $default-border-radius;
       cursor: pointer;
       height: 28px;
@@ -39,13 +39,13 @@
         max-width: 200px;
         overflow-x: hidden;
         width: 200px;
-        @include typo($size: 14px, $line: 16px, $weight: 300, $color: $admin-authorized-filter-text);
+        @include typo($size: 14px, $line: 16px, $weight: 300, $color: var(--admin-authorized-filter-text));
         padding-left: 0.3em;
       }
     }
 
     &__icon-dropdown {
-      color: $admin-default-icon-neutral;
+      color: var(--default-icon-neutral);
       height: 14px; 
       right: 36px; 
       width: 12px;
@@ -58,13 +58,13 @@
     &__wrapper {
       &[data-state="1"] {
         & .trigger-icon {
-          color:$admin-default-icon-active;
+          color:var(--default-icon-active);
         }
       }
 
       & .menu-topic-items {
         border-radius:$default-border-radius;
-        background-color: $admin-default-background;    
+        background-color: var(--default-background);    
         box-shadow: var(--shadow-container);
         max-width: 190px;
         min-width: 180px;
@@ -76,7 +76,7 @@
         }
 
         &:before {
-          background-color: $admin-default-background;
+          background-color: var(--default-background);
           box-shadow: var(--shadow-before);
           content: "";
           height: 10px;
@@ -88,7 +88,7 @@
         }
 
         &:after {
-          background: $admin-default-background;
+          background: var(--default-background);
           border-radius: $default-border-radius-top;
           content: "";
           height: 10px;
@@ -102,7 +102,7 @@
 
     &__icon {
       align-items: center;
-      color: $admin-default-icon-neutral;
+      color: var(--default-icon-neutral);
       cursor: pointer;
 
       &.trigger-icon {
@@ -113,7 +113,7 @@
 
     &__item {
       cursor: pointer;
-      @include typo($size: 12px, $line: 14px, $color:$admin-default-text-color);
+      @include typo($size: 12px, $line: 14px, $color: var(--default-text-color));
       margin-bottom:  1px;
       margin-top:  1px;
       padding: 8px 8px 8px 10px;
@@ -124,8 +124,8 @@
       }
 
       &:hover {
-        background-color: $admin-default-background-hover;
-        color :$admin-default-text-hover;
+        background-color: var(--default-background-hover);
+        color :var(--default-text-hover);
 
         & .widget-dropdown-menu-menu__note {
           color:var(--white);
@@ -139,7 +139,7 @@
 
     &__note {
       padding-top: 0px;
-      @include typo( $size:14px, $weight: 300, $line: 14px, $color: $admin-default-text-color);
+      @include typo( $size:14px, $weight: 300, $line: 14px, $color: var(--default-text-color));
     }
   }
 }

@@ -18,7 +18,7 @@
 
   &__ui {
     border-radius:$default-border-radius;
-    background-color: $admin-default-background;
+    background-color: var(--default-background);
     max-height:calc(100% - 53px);
     max-width: 360px;
     min-width: 300px;
@@ -86,28 +86,28 @@
 
   &__note {
     justify-content: center;
-    @include typo($size: 14px, $line: 16px, $color: $admin-default-text-color);
+    @include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
     
     &.title {
-      @include typo($size: 18px, $line: 19px, $color: $admin-default-text-title);
+      @include typo($size: 18px, $line: 19px, $color: var(--default-text-title));
     }
 
     &.search-title {
       margin-top: 10px;
-      @include typo($size: 14px, $line: 14px, $weight: 300, $color: $admin-default-text-color);
+      @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-color));
     }
 
     &.action-item {
       font-style: italic;
       right: 25px;
-      @include typo($size: 11px, $line: 13px, $color: $admin-secondary-text-color);
+      @include typo($size: 11px, $line: 13px, $color: var(--secondary-text-color));
     }
     
     &.filter-label {
       justify-content:  flex-start;
       width: 33%;
     
-      @include typo($size: 16px, $line: 16px, $color: $admin-authorized-filter-text);
+      @include typo($size: 16px, $line: 16px, $color: var(--admin-authorized-filter-text));
       top: -2px;
     }
 
@@ -115,7 +115,7 @@
       cursor: pointer;
       text-decoration: underline;
       &:hover {
-        color:$admin-backgroundless-text-hover;
+        color:var(--backgroundless-text-hover);
       }
     }
   }
@@ -124,7 +124,7 @@
     cursor: pointer;
 
     &.close {
-      color: $admin-default-thinline-icon;
+      color: var(--default-thinline-icon);
       height: 12px;
       margin: 10px;
       position: absolute;
@@ -133,7 +133,7 @@
       width: 12px;
       
       &:hover {
-        color: $admin-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
       }
     }
 
@@ -144,7 +144,7 @@
       top: 3px;
       width: 18px;
       &:hover{
-        color:$admin-default-icon-hover;
+        color:var(--default-icon-hover);
       }
     }
 
@@ -164,7 +164,7 @@
         min-height: 17px;
         z-index: 10;
         &:hover{
-          color:$admin-default-icon-hover;
+          color:var(--default-icon-hover);
         }
       }
     }
@@ -179,7 +179,7 @@
       opacity: 0.6;
 
       &:hover {
-        color: $admin-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
       }
     }
     
@@ -213,13 +213,13 @@
     }
 
     & input {
-      border-bottom: 1px solid $admin-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       width: 100%;
       margin-left:20px;
-      @include typo($size: 15px, $line: 16px, $color: $admin-default-text-color);
+      @include typo($size: 15px, $line: 16px, $color: var(--default-text-color));
       
       &::placeholder {
-        @include typo($size: 15px, $line: 16px, $weight: 300, $color: $admin-default-text-placeholder);
+        @include typo($size: 15px, $line: 16px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
   }

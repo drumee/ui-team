@@ -20,8 +20,8 @@
 
   &__status {
     align-items: center;
-    background:$admin-default-background-alert;
-    color: $admin-default-text-reverse;
+    background:var(--default-background-alert);
+    color: var(--default-text-reverse);
     height: 100%;
     justify-content: space-between;
     max-height:35px;// 40px;
@@ -89,7 +89,7 @@
 
     &.archive,
     &.delete-member {
-      color:$admin-default-text-reverse;
+      color:var(--default-text-reverse);
       height: 18px;
       margin: 0;
       opacity: 1;
@@ -98,7 +98,7 @@
     }
 
     &.status-info {
-      color: $admin-default-text-reverse;
+      color: var(--default-text-reverse);
       height: 14px;
       margin: 0;
       opacity: 1;
@@ -113,8 +113,8 @@
     }
 
     &.verified-status {
-      color: $admin-default-icon-success;
-      border: 1px solid $admin-default-border-success;
+      color: var(--default-icon-success);
+      border: 1px solid var(--default-border-success);
       width: 20px;
       height: 15px;
       margin-top: 9px;
@@ -130,7 +130,7 @@
     justify-content: space-between;
     padding-top: 5px;
     width: 100%;
-    @include typo($size: 16px, $line: 19px, $color: $admin-default-text-color);
+    @include typo($size: 16px, $line: 19px, $color: var(--default-text-color));
 
     &.email,
     &.mobile,
@@ -151,7 +151,7 @@
   &__note {
     padding-bottom: 2px;
     padding-left: 5px;
-    @include typo($size: 16px, $line: 19px, $color: $admin-default-text-color);
+    @include typo($size: 16px, $line: 19px, $color: var(--default-text-color));
 
     &.firstname,
     &.familyname {
@@ -169,7 +169,7 @@
 
     &.member-status {
       //color:var(--default-text-reverse);// var(--ewhite);
-      @include typo($size: 14px, $line: 15px, $color: $admin-default-text-reverse);
+      @include typo($size: 14px, $line: 15px, $color: var(--default-text-reverse));
     }
 
     &.timestamp {
@@ -177,13 +177,13 @@
       max-width: 70px;
       text-align: center;
       top: 1px;
-      @include typo($size: 10px, $line: 15px, $color: $admin-default-text-reverse);
+      @include typo($size: 10px, $line: 15px, $color: var(--default-text-reverse));
     }
 
     &.comment {
-      background-color: $admin-default-background;  
+      background-color: var(--default-background);  
       border-radius: $default-border-radius;
-      border: 1px solid $admin-default-frame;
+      border: 1px solid var(--default-frame);
       box-sizing: border-box;
       height: 100%;
       margin-bottom: 5px;
@@ -195,7 +195,7 @@
       overflow-y: auto;
       padding: 6px;
       width: 100%;
-      @include typo( $size: 16px, $line: 20px, $color: $admin-default-text-color);
+      @include typo( $size: 16px, $line: 20px, $color: var(--default-text-color));
     }
 
     &.delete-action,
@@ -206,7 +206,7 @@
       justify-content: center;
       padding: 0;
       margin-left: 16px;//0;
-      @include typo($size: 16px, $line: 20px, $color:$admin-default-text-alert);
+      @include typo($size: 16px, $line: 20px, $color: var(--default-text-alert));
     }
 
     &.email {
@@ -221,8 +221,8 @@
       }
 
       & .tooltips {
-        @include typo($size: 12px, $line: 12px, $color: $admin-default-text-tooltips);
-        background-color: $admin-background-tooltips;
+        @include typo($size: 12px, $line: 12px, $color: var(--default-text-tooltips));
+        background-color: var(--background-tooltips);
         border-radius: $default-border-radius;
         height: 100%;
         text-align: center;
@@ -277,9 +277,9 @@
     width: 102px;//108px;//266px;
     text-align: justify;
     border-radius: $default-border-radius;
-    background-color: $admin-background-tooltips;
+    background-color: var(--background-tooltips);
     margin-left: -45px; //-215px;
     margin-top: 22px; //16px;
-    @include typo($size: 11px, $line: 15px, $color:$admin-default-text-tooltips);
+    @include typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
   }
 }

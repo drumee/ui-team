@@ -30,18 +30,18 @@
   }
 
   &__wrapper {
-    background: $admin-default-background;
+    background: var(--default-background);
     //padding: 5px 0px;
     //border-radius: 0 0 6px 0;
 
     &.tags {
       border-radius:$default-border-radius-left;
-      background: $admin-default-background;//$admin-default-block-background;    
+      background: var(--default-background);//var(--default-block-background);    
       min-width: 186px;
     }
 
     &.list {
-     // border-right: 1px solid $admin-default-separator; 
+     // border-right: 1px solid var(--default-separator); 
       margin-left: 1px;
       min-width: 260px;
       margin-right: 1px;

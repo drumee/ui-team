@@ -7,7 +7,7 @@
 
 .widget-members-search {
   &__ui {
-    background-color: $admin-default-background;
+    background-color: var(--default-background);
     border-radius: $default-border-radius;
     box-shadow:var(--shadow-container);
     font-family: Roboto-Regular,sans-serif;
@@ -35,11 +35,11 @@
   &__title {
     margin:  5px auto;// 20px auto 0px auto;
     padding-top: 10px; //15px;
-    @include typo($size: 14px, $line: 14px,$weight: 300, $color: $admin-default-text-title); //$size: 14px
+    @include typo($size: 14px, $line: 14px,$weight: 300, $color: var(--default-text-title)); //$size: 14px
   }
 
   &__icon {
-    color: $admin-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     height  : 11px;
     margin: 10px 10px 0px 0px;
@@ -47,10 +47,10 @@
     right: 0;
     width: 11px;
     &.close-icon{
-      color: $admin-default-thinline-icon;
+      color: var(--default-thinline-icon);
       margin: 0px -2px 0 0;//-9px -9px 0 0;
       &:hover{
-        color:$admin-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
   }

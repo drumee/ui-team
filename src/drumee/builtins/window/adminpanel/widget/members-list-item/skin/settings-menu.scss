@@ -2,7 +2,7 @@
   &__wrapper {
     &[data-state="1"] {
       & .option-icons.admin-settings {
-        color:$admin-default-icon-reverse;  
+        color:var(--default-icon-reverse);  
         display: flex;
       }
     }
@@ -16,7 +16,7 @@
       flex-direction: column;
       z-index: 2;
       border-radius:$default-border-radius;
-      background-color:$admin-default-background;
+      background-color:var(--default-background);
       box-shadow: var(--shadow-block);
       left: -258px;
       max-height: auto;
@@ -28,7 +28,7 @@
       margin: 1px 10px;
 
       &:before {
-        background-color: $admin-default-background;
+        background-color: var(--default-background);
         content: "";
         height: 10px;
         left: 200px;
@@ -39,7 +39,7 @@
       }
 
       &:after {
-        background: $admin-default-background;
+        background: var(--default-background);
         border-radius:$default-border-radius-top;
         content: "";
         height: 10px;
@@ -59,21 +59,21 @@
     right: 10px;
     top: 3px;
     border-radius:$default-checkbox-border-radius;
-    background-color:$admin-default-checkbox-background; 
-    border: 1px solid $admin-default-checkbox-border; 
-    color: $admin-default-checkbox-background;       
+    background-color:var(--default-checkbox-background); 
+    border: 1px solid var(--default-checkbox-border); 
+    color: var(--default-checkbox-background);       
 
     &:hover{
-      border: 2px solid $admin-default-checkbox-border; 
+      border: 2px solid var(--default-checkbox-border); 
     }
     &.checkbox,
     &.radio {
       &[data-state="1"]{
         box-shadow: none;
-        color: $admin-default-checkbox-checked;
-        border: 1px solid $admin-default-checkbox-border;
+        color: var(--default-checkbox-checked);
+        border: 1px solid var(--default-checkbox-border);
         &:hover{
-          border: 2px solid $admin-default-checkbox-border; 
+          border: 2px solid var(--default-checkbox-border); 
         }
       }
     }
@@ -106,10 +106,10 @@
 
   &__note {
     padding-top: 0px;
-    @include typo($size: 13px, $weight: 300, $line: 22px, $color: $admin-default-text-color);
+    @include typo($size: 13px, $weight: 300, $line: 22px, $color: var(--default-text-color));
 
     &.title {
-      @include typo($size: 14px, $line: 16px, $weight: 300, $color: $admin-default-text-title);
+      @include typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-title));
     }
   }
 
