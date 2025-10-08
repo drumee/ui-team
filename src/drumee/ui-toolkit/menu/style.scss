@@ -1,0 +1,74 @@
+//.drumee-ui-toolkit {
+//  --box-shadow-before: 0px 0px 4px 0px rgb(63 79 117 / 13%), 0 5px 0px 0 rgb(86 65 113 / 8%), 0 2px 0px 0 rgb(194 185 203 / 0%);
+//  --box-shadow-topbar: 0 2px 2px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0.0);
+//  --box-shadow-main: 0 0px 8px 0 rgba(63, 79, 117, 0.24), 0 -1px 16px 0 rgba(86, 65, 113, 0.10), 0 2px 14px 0 rgba(194, 185, 203, 0.16);
+//  --default-background: #ffffff;
+//  --default-border-radius: 6px;
+//
+//}
+
+.drumee-ui-toolkit {
+
+  &.slide-menu {
+    &__menu-items {
+      cursor: pointer;
+      height: 40px;
+      width: 40px;
+      z-index: 7000;
+      box-shadow: var(--box-shadow-main);
+
+      &[data-device="mobile"] {
+        height: 35px;
+        width: 35px;
+      }
+
+      .menu-topic-items {
+        &__wrapper {
+          left: -146px;
+          padding: 11px;
+
+          &[data-direction="down"] {
+            top: 24px;
+          }
+        }
+      }
+
+      .menu-topic-trigger {
+        height: 40px;
+        width: 40px;
+        box-shadow: var(--box-shadow-topbar);
+        border-radius: var(--border-radius)s;
+
+        &[data-device="mobile"] {
+          height: 35px;
+          width: 35px;
+        }
+      }
+
+      .menu-topic-items {
+        background-color: var(--default-background);
+        margin-top: 20px;
+        border-radius: var(--border-radius);
+
+        &[data-device="mobile"] {
+          right: 10px;
+        }
+
+        &::before {
+          background: var(--default-background);
+          box-shadow: var(--box-shadow-before);
+          content: " ";
+          height: 20px;
+          position: absolute;
+          right: 30px;
+          top: -10px; //-4px;
+          transform: rotate(45deg);
+          width: 20px;
+          z-index: 1;
+          -webkit-transform: rotate(45deg);
+        }
+      }
+
+    }
+  }
+}
