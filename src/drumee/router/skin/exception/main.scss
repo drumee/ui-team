@@ -4,7 +4,7 @@
 #   TYPE : Global styles, for the whole platform
 # ==================================================================== */
 
-@import 'skin/mixins/drumee';
+@use 'mixins/drumee';
 
 .exception-ui {
   $prefix: &;
@@ -67,10 +67,10 @@
 
     &-preheader {
       white-space: nowrap;
-      @include typo($size: 24px, $line: 28px, $color: #4A90E2, $weight: 400);
+      @include drumee.typo($size: 24px, $line: 28px, $color: #4A90E2, $weight: 400);
 
       @media (min-width: 1200px) {
-        @include typo($size: 22px, $line: 36px, $weight: 400, $color: var(--egrey-49));
+        @include drumee.typo($size: 22px, $line: 36px, $weight: 400, $color: var(--egrey-49));
       }
     }
 
@@ -79,7 +79,7 @@
       width: 100%;
       align-items: center;
       cursor: pointer;
-      @include typo($size: 18px, $line: 30px, $weight: 300, $color: var(--egrey-49));
+      @include drumee.typo($size: 18px, $line: 30px, $weight: 300, $color: var(--egrey-49));
 
       svg {
         width: 16px;
@@ -110,7 +110,7 @@
         justify-content: center;
         border-radius: 2px;
         cursor: pointer;
-        @include typo($size: 16px, $line: 36px, $weight: 400, $color: var(--egrey-49));
+        @include drumee.typo($size: 16px, $line: 36px, $weight: 400, $color: var(--egrey-49));
 
         svg {
           display: none;
@@ -127,7 +127,7 @@
       display: flex;
       align-items: center;
       cursor: pointer;
-      @include typo($size: 18px, $line: 30px, $weight: 300, $color: var(--egrey-49));
+      @include drumee.typo($size: 18px, $line: 30px, $weight: 300, $color: var(--egrey-49));
 
       svg {
         width: 16px;
@@ -152,7 +152,7 @@
   }
 
   &__label {
-    @include typo($size: 24px, $line: 28px, $color: #4A90E2, $weight: 400);
+    @include drumee.typo($size: 24px, $line: 28px, $color: #4A90E2, $weight: 400);
   }
 
   &__field {
@@ -167,14 +167,14 @@
       background: transparent;
       border: none;
       padding: 0;
-      @include typo($size: 16px, $line: 19px, $color: var(--egrey-2f), $weight: 400);
+      @include drumee.typo($size: 16px, $line: 19px, $color: var(--egrey-2f), $weight: 400);
 
       &::placeholder {
-        @include typo($size: 16px, $line: 19px, $color: var(--egrey-89), $weight: 400);
+        @include drumee.typo($size: 16px, $line: 19px, $color: var(--egrey-89), $weight: 400);
       }
 
       // @include placeholder-input{
-      //   @include typo($size:16px,$line:19px,$color: var(--egrey-89),$weight:400);
+      //   @include drumee.typo($size:16px,$line:19px,$color: var(--egrey-89),$weight:400);
       // }
     }
   }
@@ -241,62 +241,4 @@
       }
     }
   }
-
-  // &__btn {
-  //   height: 36px;
-  //   width: 121px;
-  //   border-radius: 2px;
-  //   justify-content: center;
-  //   align-items: center;
-  //   position: relative;
-  //   cursor: pointer;
-  //   // box-shadow: 0 2px 4px 0 rgba(0,0,0,0.5), 0 8px 10px 1px rgba(0,0,0,0.14), 0 0 2px 0 rgba(0,0,0,0.1), 0 4px 4px 0 rgba(209,221,245,0.2);
-  //   &--normal {
-  //     border: 1px solid #DDE2E8;
-  //     background-color: #FFFFFF;
-  //     @include typo($size:16px,$line:19px,$color: var(--egrey-89),$weight:400);
-  //   }
-  //   &--accent {
-  //     border: 1px solid #18AC72;
-  //     background-color: #18AC72;
-  //     @include typo($size:16px,$line:19px,$color: var(--ewhite),$weight:400);
-  //   }
-  //   .tooltips {
-  //     position: absolute;
-  //     top: -180%;
-  //     right: 0;
-  //     opacity: 0;
-  //     background: var(--ewhite);
-  //     width: 300px;
-  //     text-align: center;
-  //     border-radius: 2px;
-  //     padding: 5px 10px;
-  //     box-shadow: 0px 1px 7px 0px rgba(0,0,0,0.1);
-  //     transition: opacity 0.4s ease-in-out;
-  //     @include typo($size:14px,$line:16px,$color: var(--egrey-89),$weight:400);
-  //     &[data-over="on"] {
-  //       opacity: 1;
-  //     }
-  //     &:before {
-  //       content: " ";
-  //       position: absolute;
-  //       bottom: -5px;
-  //       right: 55px;
-  //       transform: rotate(45deg);
-  //       background: var(--ewhite);
-  //       width: 8px;
-  //       height: 8px;
-  //       box-shadow: 0px 1px 7px 0px rgba(0, 0, 0, 0.1);
-  //     }
-  //     &:after {
-  //       content: " ";
-  //       position: absolute;
-  //       bottom: 0;
-  //       width: 100%;
-  //       height: 5px;
-  //       left: 0;
-  //       background: var(--ewhite);
-  //     }
-  //   }
-  // }
 }

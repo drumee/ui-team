@@ -4,13 +4,13 @@
 #   TYPE : Global styles, for the whole platform
 # ==================================================================== */
 
-@import 'skin/mixins/drumee.scss';
+@use 'skin';
+@use 'mixins/drumee';
+@use "exception/main";
 
 .body.box {
   visibility: visible;
 }
-
-@import "exception/main";
 
 .router {
   &__warning {
@@ -20,7 +20,7 @@
       width: 300px;
       position: fixed;
       cursor: pointer;
-      @include typo($color: #fa8540, $size: 28px, $line: 33px, $weight: 300);
+      @include drumee.typo($color: #fa8540, $size: 28px, $line: 33px, $weight: 300);
       top: 5px;
       left: calc(50% - 150px);
       padding: 20px;
@@ -34,7 +34,7 @@
         border-radius: 2px;
         background-color: #FFFFFF;
         box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
-        @include typo($color: #EA4D44, $size: 16px, $line: 19px);
+        @include drumee.typo($color: #EA4D44, $size: 16px, $line: 19px);
       }
     }
   }

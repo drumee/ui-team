@@ -1,4 +1,4 @@
-@import '../../../skin/mixins/drumee.scss';
+@use '../../../skin/mixins/drumee.scss';
 
 .router-buler-goodbye {
   &__main {
@@ -30,7 +30,7 @@
 
   &__note {
     &.header {
-      @include typo($size: 18px, $line: 45px, $color: var(--ewhite));
+      @include drumee.typo($size: 18px, $line: 45px, $color: var(--ewhite));
     }
   }
 
@@ -40,7 +40,7 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    @include typo($size: 18px, $line: 45px, $color: var(--ewhite));
+    @include drumee.typo($size: 18px, $line: 45px, $color: var(--ewhite));
 
     .drumee-text.inner {
       background-color: rgb(0, 0, 0, 0.1);

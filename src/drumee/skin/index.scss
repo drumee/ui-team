@@ -1,5 +1,16 @@
 
 
+
+@forward "./vars/index";
+@use "./lib/reset";
+// @import "./mixins/vendor";
+@use "./lib/input";
+@use "./lib/typo";
+@use "./lib/container";
+@use "./lib/svg.scss";
+@use "./lib/menu";
+@use "./lib/utils";
+
 body {
   min-height: 100vh;
   background-color: rgb(248, 250, 252);
@@ -20,13 +31,3 @@ body {
 }
 
 
-
-@import "./vars";
-@import "./lib/reset";
-@import "./mixins/vendor";
-@import "./lib/typo";
-@import "./lib/input";
-@import "./lib/container";
-@import "./lib/svg.scss";
-@import "./lib/menu";
-@import "./lib/utils";

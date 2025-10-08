@@ -1,5 +1,5 @@
-@use './borders';
-@use './box-shadow';
-@use './color';
-@use './default';
-@use './z-index';
+@forward './borders';
+@forward './box-shadow';
+@forward './color';
+@forward './default';
+@forward './z-index';

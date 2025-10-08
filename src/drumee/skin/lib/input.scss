@@ -1,9 +1,11 @@
+@use "./typo";
+
 .entry-reminder {
   &__ui {
     border: 1px solid transparent;
 
-    @include placeholder-input {
-      color: var(--default-text-placeholder); 
+    &::placeholder {
+      color: var(--default-text-placeholder);
       font-weight: 300;
     }
   }
@@ -13,16 +15,12 @@
 
     &[data-status="error"] {
       color: var(--default-text-error);
-      ; // #FF4578;
       border-color: transparent;
 
-      // .input-details {
-      //   color: #FF4578;
-      // }
       input {
         border-color: var(--default-border-error); //#FF4578;    
 
-        @include placeholder-input {
+        &::placeholder {
           color: var(--default-text-placeholder);
           font-weight: 300;
         }
@@ -50,11 +48,10 @@
       background: transparent;
 
       &:focus {
-        border-color: var(--focus-border-bottom); //#4A90E2;
+        border-color: var(--focus-border-bottom); //var(--eblue);
 
-        @include placeholder-input {
-          color: var(--focus-text-placeholder); //#4A90E2; 
-          // font-weight: 300;
+        &::placeholder {
+          color: var(--focus-text-placeholder);
         }
       }
     }
@@ -69,7 +66,7 @@
     &[data-state="1"] {
       display: block;
       transition: all .5s;
-      @include typo($color: #4A90E2, $size: 13px, $weight: 300, $line: 16px);
+      @include typo.typo($color: var(--eblue), $size: 13px, $weight: 300, $line: 16px);
       text-align: left;
       margin: 0 auto 0 0;
     }
@@ -85,9 +82,7 @@
   }
 
   &_error {
-    @include typo($color: var(--default-text-error), $size: 12px); //$weight:300,
-    //  color: var(--default-text-error);//red;
-    //  font-size: 12px;
+    @include typo.typo($color: var(--default-text-error), $size: 12px); //$weight:300,
     height: 40px;
     padding-left: 3px;
     position: absolute;
@@ -105,10 +100,8 @@
     top: 9px;
 
     &.error {
-      @include typo($color: var(--default-text-error), $size: 12px);
+      @include typo.typo($color: var(--default-text-error), $size: 12px);
       padding: 4.5px;
-      // right: -46px;
-      // top: 9px;      
     }
 
     &[data-shift="1"] {
@@ -143,7 +136,7 @@ textarea {
   }
 
   &:focus {
-    border-color: #4A90E2;
+    border-color: var(--eblue);
     border-width: 1px;
   }
 }
@@ -152,8 +145,8 @@ textarea {
   &.input--inline {
     border: 1px solid transparent;
 
-    @include placeholder-input {
-      color: var(--egrey-89); //var(--egrey-78);
+    &::placeholder {
+      color: var(--egrey-89);
     }
 
     input {
@@ -166,28 +159,29 @@ textarea {
       background: transparent;
 
       &:focus {
-        border-color: #4A90E2;
+        border-color: var(--eblue);
 
-        @include placeholder-input {
-          color: #4A90E2;
+        &::placeholder {
+          color: var(--default-text-placeholder);
+          font-weight: 300;
         }
       }
     }
 
     &[data-status="error"] {
-      @include typo($color: var(--default-text-error), $size: 12px);
+      @include typo.typo($color: var(--default-text-error), $size: 12px);
       //  color: #FF4578;
       border-color: transparent;
 
       .input-details {
         //    color: #FF4578;
-        @include typo($color: var(--default-text-error), $size: 12px);
+        @include typo.typo($color: var(--default-text-error), $size: 12px);
       }
 
       input {
         border-color: var(--default-border-error);
 
-        @include placeholder-input {
+        &::placeholder {
           color: var(--egrey-78);
         }
       }
@@ -197,10 +191,10 @@ textarea {
   &--active {
     &[data-radio="off"] {
       input {
-        border-bottom: 1px solid #4A90E2;
+        border-bottom: 1px solid var(--eblue);
 
-        @include placeholder-input {
-          color: #4A90E2;
+        &::placeholder {
+          color: var(--eblue);
         }
       }
     }
@@ -217,7 +211,7 @@ textarea {
     padding-bottom: 10px;
 
     input {
-      @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--egrey-2f));
+      @include typo.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--egrey-2f));
 
       &:disabled {
         color: inherit;
@@ -227,7 +221,7 @@ textarea {
     .input-details {
       position: absolute;
       top: 25px;
-      @include typo($size: 11px, $line: 12px, $weight: 300, $color: var(--egrey-78));
+      @include typo.typo($size: 11px, $line: 12px, $weight: 300, $color: var(--egrey-78));
     }
   }
 
@@ -241,13 +235,13 @@ textarea {
   }
 
   &--thiner {
-    @include placeholder-input {
-      font-family: 'Roboto-Light', sans-serif;
+    &::placeholder {
+      font-family: var(--main-typo-light)
     }
 
     input {
       border-bottom: 2px solid #F1F1F6;
-      font-family: 'Roboto-Light', sans-serif;
+      font-family: var(--main-typo-light)
     }
   }
 }
