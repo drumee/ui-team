@@ -3,12 +3,13 @@
 #   FILE : /ui/src/drumee/builtins/window/analytics/main-website/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee.scss';
-@import '../../skin/index.scss';
+@use "sass:meta";
+@use 'mixins/drumee.scss';
+@use '../../skin/index.scss';
 
 .window-analytics-main-website {
-  @import './custom-range';
-  @import './form';
+  @include meta.load-css('custom-range');
+  @include meta.load-css('form');
 
   &__ui {
     height: 600px;
@@ -61,7 +62,7 @@
 
     &__note {
       &.message {
-        @include typo($size: 18px, $line: 36px, $color: var(--default-text-alert));
+        @include drumee.typo($size: 18px, $line: 36px, $color: var(--default-text-alert));
         justify-content: center;
         width: 100%;
       }

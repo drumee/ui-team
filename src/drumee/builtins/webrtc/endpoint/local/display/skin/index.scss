@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/player/endpoint/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .webrtc-local-display{
   &__ui{

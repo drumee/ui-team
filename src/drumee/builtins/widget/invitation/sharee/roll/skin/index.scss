@@ -1,4 +1,5 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
 
 .invitation-shareeroll {
   &__ui {
@@ -11,7 +12,7 @@
 
   &__label {
     justify-content: center;
-    @include typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400);
+    @include drumee.typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400);
 
     .content {
       &[data-state="0"] {
@@ -36,7 +37,7 @@
   &__list {
     margin-top: 13px;
     max-height: 140px;
-    @import "scrollbar.scss";
+    // @include meta.load-css("scrollbar.scss");
 
     .drumee-spinner {
       height: 35px;
@@ -47,7 +48,7 @@
     .placeholder--no-contact {
       margin: 2px auto;
       padding-left: 15px;
-      @include typo($color: var(--default-text-color), $size: 14px, $line: 26px, $weight: 400);
+      @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 26px, $weight: 400);
     }
   }
 }

@@ -1,11 +1,11 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .contact-item {
   &__ui {
     background-color: inherit;
     cursor: pointer;
     overflow: hidden;
-    @include typo( $color: var(--default-text-color));
+    @include drumee.typo( $color: var(--default-text-color));
 
     &:hover,
     &[data-active=active],
@@ -83,7 +83,7 @@
     margin: 1px 0px 0px 1px;
     
     height: 35px;
-    @include typo( $size :14px, $line: 16px);
+    @include drumee.typo( $size :14px, $line: 16px);
     
     &__profile {
       & section {
@@ -92,12 +92,12 @@
     }
 
     &__name {
-      @include typo( $size :14px, $line: 16px, $color: var(--default-text-color));
+      @include drumee.typo( $size :14px, $line: 16px, $color: var(--default-text-color));
       margin-top: 3px;
       overflow:hidden;
       padding: 2px 3px 3px 15px;
       width: 200px;
-      @include overflow-text;
+      @include drumee.overflow-text;
 
       & .inner.note-content {
         overflow: hidden;
@@ -112,7 +112,7 @@
   & .contact-item {
     padding: 4px 5px 3px 12px; 
     height: 33px;
-    @include typo($size:12px, $line: 14px);
+    @include drumee.typo($size:12px, $line: 14px);
 
     &__icon{
       color: var(--default-icon-neutral);

@@ -1,16 +1,17 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('action-menu.scss');
+@include meta.load-css('popup.scss');
 
 .addressbook-widget-contact-detail {
 
-  @import './action-menu.scss';
-  @import './popup.scss';
 
   &.box {
     background-color: var(--default-background);
   }
 
   &__ui {
-    font-family: $roboto, sans-serif;
+    font-family: drumee.$roboto, sans-serif;
     height: 100%;
     width: 100%;
   }
@@ -60,7 +61,7 @@
 
     &.notifier {
       align-items: center;
-      @include typo($size: 16px, $line: 19px, $color: var(--default-text-success));
+      @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-success));
     }
 
     &.message {
@@ -178,7 +179,7 @@
 
       .tooltips {
         border-radius: var(--border-radius);
-        @include typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
+        @include drumee.typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
         background-color: var(--background-tooltips);
         margin-left: -180px;
         margin-top: 25px;
@@ -199,7 +200,7 @@
 
     & .user-profile__initiales {
       & .note-content {
-        @include typo($size: 11px, $line: 11px);
+        @include drumee.typo($size: 11px, $line: 11px);
       }
     }
   }
@@ -254,10 +255,10 @@
   &__note {
     padding-bottom: 2px;
     padding-left: 5px;
-    @include typo($size: 16px, $line: 19px, $color: var(--default-text-color));
+    @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-color));
 
     &.blocked {
-      @include typo($size: 12px, $line: 14px, $color: var(--default-text-reverse));
+      @include drumee.typo($size: 12px, $line: 14px, $color: var(--default-text-reverse));
       align-items: center;
       background: var(--default-background-alert);
       border-radius: var(--border-radius);
@@ -270,7 +271,7 @@
     }
 
     &.fullname {
-      @include typo($size: 15px, $line: 16px, $color: var(--secondary-text-color));
+      @include drumee.typo($size: 15px, $line: 16px, $color: var(--secondary-text-color));
       align-items: center;
       max-width: 250px;
       overflow: hidden;
@@ -278,7 +279,7 @@
       top: 2px;
       white-space: nowrap;
       width: auto;
-      @include overflow-text;
+      @include drumee.overflow-text;
 
       & .inner.note-content {
         overflow: hidden;
@@ -301,7 +302,7 @@
       padding-left: 5px;
       overflow: hidden;
       width: 220px;
-      @include overflow-text;
+      @include drumee.overflow-text;
 
       & .inner.note-content {
         text-overflow: ellipsis;
@@ -334,7 +335,7 @@
         width: 200px;
 
         & .tooltips {
-          @include typo($size: 12px, $line: 12px, $color: var(--default-text-tooltips));
+          @include drumee.typo($size: 12px, $line: 12px, $color: var(--default-text-tooltips));
           background-color: var(--background-tooltips);
           border-radius: var(--border-radius);
           height: 100%;
@@ -355,7 +356,7 @@
 
     &.comment {
       border-radius: var(--border-radius);
-      @include typo($size: 16px, $line: 20px, $color: var(--default-text-color));
+      @include drumee.typo($size: 16px, $line: 20px, $color: var(--default-text-color));
       background-color: var(--default-background);
       border: 1px solid var(--default-frame);
       box-sizing: border-box;
@@ -395,13 +396,13 @@
       padding: 5px;
       text-align: center;
       width: 170px;
-      @include typo($size: 16px, $line: 20px, $color: var(--btn-commit-text));
+      @include drumee.typo($size: 16px, $line: 20px, $color: var(--btn-commit-text));
 
       &.memory {
         height: 60px;
         min-width: 120px;
         width: 190px;
-        @include typo($size: 16px, $line: 26px);
+        @include drumee.typo($size: 16px, $line: 26px);
       }
 
       &:hover {
@@ -418,11 +419,11 @@
       & input {
         border-bottom: 1px solid var(--default-entry-border-bottom);
         width: 100%;
-        @include typo($size: 16px, $line: 19px, $color: var(--default-text-color));
+        @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-color));
 
         &::placeholder {
           text-transform: capitalize;
-          @include typo($size: 16px, $line: 19px, $weight: 300, $color: var(--default-text-placeholder));
+          @include drumee.typo($size: 16px, $line: 19px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }
@@ -432,7 +433,7 @@
 
       & textarea {
         border-radius: var(--border-radius);
-        @include typo($size: 12px, $line: 14px, $color: var(--default-text-color));
+        @include drumee.typo($size: 12px, $line: 14px, $color: var(--default-text-color));
         background: var(--default-block-background);
         border: none;
         outline: none;
@@ -440,7 +441,7 @@
         resize: none;
 
         &::placeholder {
-          @include typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
+          @include drumee.typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }
@@ -457,14 +458,14 @@
       justify-content: center;
 
       width: 115px;
-      @include typo($size: 16px, $line: 19px);
+      @include drumee.typo($size: 16px, $line: 19px);
     }
   }
 
   &__button-cancel {
     border: 1px solid var(--btn-rollback-border);
     margin-right: 35px;
-    @include typo($weight: 300, $color: var(--btn-rollback-text));
+    @include drumee.typo($weight: 300, $color: var(--btn-rollback-text));
 
     &:hover {
       border: 2px solid var(--btn-rollback-border-hover);
@@ -475,7 +476,7 @@
   &__button-confirm {
     background-color: var(--btn-commit-background);
     margin-left: 35px;
-    @include typo($color: var(--btn-commit-text));
+    @include drumee.typo($color: var(--btn-commit-text));
 
     &:hover {
       background-color: var(--btn-commit-background-hover);

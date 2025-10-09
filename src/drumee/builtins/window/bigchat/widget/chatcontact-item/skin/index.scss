@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-chatcontactItem {
   &__ui {
@@ -9,7 +9,7 @@
     padding-bottom: 5px;
     padding-left: 14px;
     padding-top: 3px;
-    @include typo( $size:14px, $line:16px, $color: var(--default-text-color));
+    @include drumee.typo( $size:14px, $line:16px, $color: var(--default-text-color));
     &:hover,
     &[data-active=active],
     &[data-radio=on] {
@@ -59,12 +59,12 @@
       padding: 3px 35px 2px 15px; 
       max-width: 187px;
       user-select: text;
-      @include typo( $size :14px, $line: 16px, $color: var(--default-text-color));
+      @include drumee.typo( $size :14px, $line: 16px, $color: var(--default-text-color));
       .inner{
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        @include overflow-text;
+        @include drumee.overflow-text;
       }
     }
 
@@ -73,7 +73,7 @@
     
       max-width: 160px;
       user-select: text;
-      @include typo( $size: 11px, $line: 12px, $weight: 300, $color: var(--tertiary-text-color)); 
+      @include drumee.typo( $size: 11px, $line: 12px, $weight: 300, $color: var(--tertiary-text-color)); 
       .inner{
         overflow: hidden;
         text-overflow: ellipsis;
@@ -94,7 +94,7 @@
       padding-top: 8px; 
       position: absolute;
       right: 0;
-      @include typo( $size: 10px, $line: 11px, $color: var(--tertiary-text-color));
+      @include drumee.typo( $size: 10px, $line: 11px, $color: var(--tertiary-text-color));
     }
   }
 
@@ -109,6 +109,6 @@
     position: absolute;
     width:16px;
     z-index: 2!important;
-    @include typo($color: var(--white), $weight:100, $line:1, $size: 10px);
+    @include drumee.typo($color: var(--white), $weight:100, $line:1, $size: 10px);
   }
 }

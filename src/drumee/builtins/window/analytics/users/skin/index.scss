@@ -3,8 +3,8 @@
 #   FILE : builtins/sandbox/skin/sandbox
 #   TYPE : Module
 # ===================================================================**/
-@import 'mixins/drumee.scss';
-@import '../../skin/index.scss';
+@use 'mixins/drumee.scss';
+@use '../../skin/index.scss';
 .window-analytics-users {
   &__ui{
     height: 550px;

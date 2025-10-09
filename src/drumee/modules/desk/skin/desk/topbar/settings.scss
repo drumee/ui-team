@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .desk-topbar {
   &__menu-settings {
     background-color: var(--default-transparent-bg);//rgba(200, 200, 200, 0.5);
@@ -85,11 +87,11 @@
     width: 60px; //62px;
     height: 48px;
     padding: 0;
-    @include typo($line: 15px, $size: 11px, $weight: 300, $color: var(--default-text-color));
+    @include drumee.typo($line: 15px, $size: 11px, $weight: 300, $color: var(--default-text-color));
     &[data-device="mobile"] {
       width: 40px;
       height: 37px;
-      @include typo($line: 13px, $size: 11px, $weight: 300, $color: var(--default-text-color));
+      @include drumee.typo($line: 13px, $size: 11px, $weight: 300, $color: var(--default-text-color));
     }
     svg {
       width: 30px;

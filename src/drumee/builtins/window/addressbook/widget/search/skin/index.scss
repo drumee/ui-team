@@ -3,14 +3,14 @@
 #   FILE : /src/drumee/builtins/window/addressbook/widget/search/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .addressbook-widget-search {
   &__ui {
     background-color: var(--default-background);
     border-radius:var(--border-radius);
     box-shadow: var(--shadow-container);
-    font-family: $roboto,sans-serif;
+    font-family: drumee.$roboto,sans-serif;
     left: 32px;
     min-width: 238px;
     padding: 10px;
@@ -33,7 +33,7 @@
   }
 
   &__title {
-    @include typo($size: 14px, $line: 14px, $weight:300,$color: var(--default-text-title));
+    @include drumee.typo($size: 14px, $line: 14px, $weight:300,$color: var(--default-text-title));
     margin: 5px auto;
     padding-top: 10px;
   }
@@ -63,7 +63,7 @@
   
   & .contact-item {
     &__name {
-      @include typo( $size :13px, $line: 16px, $color: var(--default-text-color));
+      @include drumee.typo( $size :13px, $line: 16px, $color: var(--default-text-color));
       letter-spacing: 0;
       margin-left: 8px;
       margin-top: 5px;

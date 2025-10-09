@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .chat-forward-list-item {
   &__ui {
@@ -85,7 +85,7 @@
     margin-top: 3px;
     padding: 5px 3px 3px 12px;
     max-width: 165px;
-    @include typo( $size :14px, $line: 14px, $color: var(--default-text-color));
-    @include overflow-text;    
+    @include drumee.typo( $size :14px, $line: 14px, $color: var(--default-text-color));
+    @include drumee.overflow-text;    
   }
 }

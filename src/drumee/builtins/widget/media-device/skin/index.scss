@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/conference/device/item/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .media-device{
   &__ui{
@@ -35,6 +35,6 @@
   //  left:8px;
     width: 265px;//260px;
     padding-left:5px;
-    @include typo($color: var(--egrey-2f), $weight: 400, $line: 26px, $size: 13px);
+    @include drumee.typo($color: var(--egrey-2f), $weight: 400, $line: 26px, $size: 13px);
   }
 }

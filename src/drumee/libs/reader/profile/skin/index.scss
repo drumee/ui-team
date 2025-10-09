@@ -5,7 +5,7 @@
 # ===================================================================**/
 
 
-@import "mixins/drumee";
+@use "mixins/drumee";
 
 .user-profile{
   &__ui{
@@ -72,7 +72,7 @@
     position: absolute;
     text-transform : uppercase;
     .note-content{
-      @include typo($size:13px,$line:15px,$weight:400,$color: var(--ewhite));
+      @include drumee.typo($size:13px,$line:15px,$weight:400,$color: var(--ewhite));
       margin:auto;
     }
   }

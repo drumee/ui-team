@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .window-sharebox {
   &-topbar {
@@ -44,7 +44,7 @@
       }
 
       .tooltips {
-        @include typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
+        @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
         background-color: var(--background-tooltips);
         border-radius: var(--border-radius);
         max-height: 90px;
@@ -84,7 +84,7 @@
         }
 
         & .tooltips {
-          @include typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
+          @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
           background-color: var(--background-tooltips);
           border-radius: var(--border-radius);
           max-height: 90px;
@@ -135,7 +135,7 @@
     }
 
     &__count {
-      @include typo($size: 8px, $line: 12px, $weight: 400, $color: var(--sharebox-main));
+      @include drumee.typo($size: 8px, $line: 12px, $weight: 400, $color: var(--sharebox-main));
       align-items: center;
       background-color: var(--default-background);
       border-radius: 50%;

@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/player/stream/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .player-stream{
   &__ui{
@@ -38,7 +38,7 @@
     padding: 20px;
     border-radius: 4px;
     background-color: var(--main-grey);
-    @include typo($size:34px,$line:40px,$weight:400,$color: var(--ewhite));
+    @include drumee.typo($size:34px,$line:40px,$weight:400,$color: var(--ewhite));
   }
 
   &__micro{

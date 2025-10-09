@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/welcome/skin/welcome-main.scss
 #   TYPE : Backoffice User Settings Styles
 # ===================================================================**/
-@import 'mixins/drumee.scss';
+@use 'mixins/drumee.scss';
 
 .devel-router {
 

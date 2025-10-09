@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 &-form {
   &__main {
     align-items: center;
@@ -57,7 +59,7 @@
   }
 
   &__datepicker {
-    @include typo($size: 14px, $line: 18px, $color: var(--default-text-color));
+    @include drumee.typo($size: 14px, $line: 18px, $color: var(--default-text-color));
     background: var(--default-bg-block);
     cursor: pointer;
     height: 100%;
@@ -98,7 +100,7 @@
   }
 
   &__filter-label {
-    @include typo($size: 14px, $line: 18px, $color: var(--default-text-title));
+    @include drumee.typo($size: 14px, $line: 18px, $color: var(--default-text-title));
     align-items: center;
     justify-content: center;
     padding: 10px 0;
@@ -133,7 +135,7 @@
   }
 
   &__button, &__error-message {
-    @include typo($size: 14px, $line: 18px, $color: var(--default-text-error));
+    @include drumee.typo($size: 14px, $line: 18px, $color: var(--default-text-error));
     align-items: center;
     height: 100%;
     justify-content: center;
@@ -142,7 +144,7 @@
   }
 
   &__button.action-btn {
-    @include typo($size: 18px, $line: 26px, $color: var(--default-text-reverse));
+    @include drumee.typo($size: 18px, $line: 26px, $color: var(--default-text-reverse));
     align-items: center;
     background: var(--button-accept);
     border-radius: 6px;

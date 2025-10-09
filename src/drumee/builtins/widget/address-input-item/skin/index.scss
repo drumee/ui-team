@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/widget/address-input-item/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .address-input-item {
   &__ui {

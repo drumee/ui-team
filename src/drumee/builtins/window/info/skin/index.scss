@@ -1,4 +1,4 @@
-@import 'mixins/drumee.scss';
+@use 'mixins/drumee.scss';
 
 .window-info {
   .dialog__wrapper {
@@ -44,7 +44,7 @@
       //  white-space: break-spaces;
       //  line-break: anywhere;
       word-wrap: break-word;
-      @include typo($weight: 300, $size: 18px, $line: 33px, $color: var(--default-text-color)); //24px
+      @include drumee.typo($weight: 300, $size: 18px, $line: 33px, $color: var(--default-text-color)); //24px
 
       p {
         text-align: center;
@@ -52,7 +52,7 @@
 
       &.primary-color {
         padding: 5px;
-        @include typo($weight: 300, $size: 24px, $line: 33px, $color: var(--secondary-text-color)); //var(--eblue));
+        @include drumee.typo($weight: 300, $size: 24px, $line: 33px, $color: var(--secondary-text-color)); //var(--eblue));
       }
 
     }
@@ -67,7 +67,7 @@
     margin-right: auto;
     margin-left: auto;
     margin-bottom: 6px;
-    @include typo($weight: 300, $size: 24px, $line: 33px, $color: var(--default-text-color));
+    @include drumee.typo($weight: 300, $size: 24px, $line: 33px, $color: var(--default-text-color));
 
     p {
       text-align: center;
@@ -89,7 +89,7 @@
     justify-content: center;
     border-radius: var(--border-radius); // 2px;
     cursor: pointer;
-    @include typo($size: 16px, $line: 28px, $color: var(--btn-rollback-text)); //$weight:300
+    @include drumee.typo($size: 16px, $line: 28px, $color: var(--btn-rollback-text)); //$weight:300
     align-items: center;
     border: 1px solid var(--btn-rollback-border);
     justify-content: center;

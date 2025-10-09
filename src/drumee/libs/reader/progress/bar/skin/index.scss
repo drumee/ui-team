@@ -1,11 +1,11 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .progress-bar{
   &__ui{
     width : 100%;
     align-items: center;
     background-color: inherit;
-    @include typo($size:14px,$line:24px,$color: var(--btn-rollback-text),$weight:300);
+    @include drumee.typo($size:14px,$line:24px,$color: var(--btn-rollback-text),$weight:300);
   }
   &__main{
     width : 100%;

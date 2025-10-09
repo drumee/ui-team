@@ -1,6 +1,6 @@
 
-@import 'mixins/drumee';
-@import "buttons.scss";
+@use 'mixins/drumee';
+@use "buttons.scss";
 
 .invitation-settings {
   &__ui {
@@ -19,16 +19,16 @@
   }
 
   &__title {
-    @include typo($size: 12px, $line: 14px, $color:#FA8540, $weight: 400);
+    @include drumee.typo($size: 12px, $line: 14px, $color:#FA8540, $weight: 400);
 
     &-big {
-      @include typo($size: 16px, $line: 19px, $color:#FA8540, $weight: 400);
+      @include drumee.typo($size: 16px, $line: 19px, $color:#FA8540, $weight: 400);
     }
   }
 
   &__label {
     padding-bottom: 15px;
-    @include typo($size: 12px, $line: 14px, $color: var(--default-text-color), $weight: 400);
+    @include drumee.typo($size: 12px, $line: 14px, $color: var(--default-text-color), $weight: 400);
   }
 
   &__button {
@@ -41,7 +41,7 @@
     margin: 25px auto 10px auto;//15px auto 10px auto;
     min-width: 115px;
     padding: 0 12px;
-    @include typo($size:15px,$line:25px,$color: var(--btn-rollback-text));
+    @include drumee.typo($size:15px,$line:25px,$color: var(--btn-rollback-text));
 
     &[data-editable="0"] {
       display: none;
@@ -54,7 +54,7 @@
   }
 
   &__admin-header {
-    @include typo($size: 12px, $line: 14px, $color:#FA8540, $weight: 400);
+    @include drumee.typo($size: 12px, $line: 14px, $color:#FA8540, $weight: 400);
   }
 
   .dialog__wrapper {
@@ -67,7 +67,7 @@
 
     .preset-acknowledge__container {
       background-color: var(--default-bg);
-      @include drumee-box-shadow-1();
+      @include drumee.drumee-box-shadow-1();
 
       b {
         font-weight: bold;
@@ -84,7 +84,7 @@
     opacity: 1;
     padding: 10px;
     position: absolute;
-    @include typo($color:var(--default-text-tooltips),$size:12px,$line:14px,$weight:400);  
+    @include drumee.typo($color:var(--default-text-tooltips),$size:12px,$line:14px,$weight:400);  
 
     &::before {
       background-color: var(--default-bg);
@@ -117,7 +117,7 @@
   }
 
   &-settings__label {
-    @include typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400);
+    @include drumee.typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400);
     justify-content: center;
     padding-bottom: 0;
   }

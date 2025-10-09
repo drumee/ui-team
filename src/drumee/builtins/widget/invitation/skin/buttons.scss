@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .invitation__container {
   &-commands {
     width: 100%;
@@ -16,7 +18,7 @@
       margin: revert;
       min-width: 115px;
       height: 35px;
-      @include typo($size: 15px, $line: 25px);
+      @include drumee.typo($size: 15px, $line: 25px);
     }
   }
 
@@ -79,7 +81,7 @@
     margin: 0px 10px 0px 0px;
     min-width: 115px;
     padding: 0 12px;
-    @include typo($size: 15px, $line: 25px, $color: var(--btn-rollback-text));
+    @include drumee.typo($size: 15px, $line: 25px, $color: var(--btn-rollback-text));
 
     &[data-editable="0"] {
       display: none;

@@ -1,5 +1,5 @@
-@import "mixins/drumee";
-@import "../../skin/topbar.scss";
+@use "mixins/drumee";
+@use "../../skin/topbar.scss";
 
 .editor-markdown {
   &__ui {
@@ -118,7 +118,7 @@
         position: absolute;
         padding: 7px;
         top: 18px;
-        @include typo($line: 15px,
+        @include drumee.typo($line: 15px,
           $size: 12px,
           $color: var(--default-text-color) );
 
@@ -132,7 +132,7 @@
     height: 100%;
     overflow: auto;
     padding: 10px;
-    @include typo($size: 13px,
+    @include drumee.typo($size: 13px,
       $line: 18px,
       $weight: 300,
       $color: var(--default-text-color) );
@@ -160,23 +160,23 @@
     }
 
     h1 {
-      @include typo($size: 30px, $line: 1.2, $color: var(--default-text-color));
+      @include drumee.typo($size: 30px, $line: 1.2, $color: var(--default-text-color));
     }
 
     h2 {
-      @include typo($size: 26px, $line: 1.2, $color: var(--default-text-color));
+      @include drumee.typo($size: 26px, $line: 1.2, $color: var(--default-text-color));
     }
 
     h3 {
-      @include typo($size: 22px, $line: 1.2, $color: var(--default-text-color));
+      @include drumee.typo($size: 22px, $line: 1.2, $color: var(--default-text-color));
     }
 
     h4 {
-      @include typo($size: 18px, $line: 1.2, $color: var(--default-text-color));
+      @include drumee.typo($size: 18px, $line: 1.2, $color: var(--default-text-color));
     }
 
     h5 {
-      @include typo($size: 16px, $line: 1.2, $color: var(--default-text-color));
+      @include drumee.typo($size: 16px, $line: 1.2, $color: var(--default-text-color));
     }
   }
 
@@ -186,7 +186,7 @@
     height: 100%;
     padding: 10px;
     overflow: auto;
-    @include typo($size: 13px,
+    @include drumee.typo($size: 13px,
       $line: 18px,
       $weight: 300,
       $color: var(--default-text-color) );

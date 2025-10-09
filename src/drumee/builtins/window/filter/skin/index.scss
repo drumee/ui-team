@@ -1,4 +1,4 @@
-@import 'mixins/drumee.scss';
+@use 'mixins/drumee.scss';
 
 .window-filter{
   &__header{
@@ -16,7 +16,7 @@
     color: var(--default-text-reverse);
     &.text{
       align-items: center;
-      @include typo($size:18px,$line:24px,$weight:400,$color: var(--default-text-reverse));
+      @include drumee.typo($size:18px,$line:24px,$weight:400,$color: var(--default-text-reverse));
       .icon{
         position: relative;
         right: 0px;

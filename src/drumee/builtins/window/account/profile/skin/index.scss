@@ -1,5 +1,6 @@
 
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
 
 .account-profile {
   &__ui {
@@ -39,7 +40,7 @@
   }
 
   &__label {
-    @include typo($size: 12px, $line: 16px, $color: var(--default-text-title));
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--default-text-title));
     padding: 0 0 6px 10px;
   }
 
@@ -93,5 +94,5 @@
   }
 }
 
-@import 'searchbox';
-@import 'field';
+@include meta.load-css('searchbox');
+@include meta.load-css('field');

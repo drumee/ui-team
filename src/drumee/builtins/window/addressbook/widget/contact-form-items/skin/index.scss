@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .addressbook-widget-contact-formItems {
   &__ui {
@@ -35,10 +35,10 @@
   }
 
   &__note {
-    @include typo($size: 12px, $line: 24px, $weight: 300, $color: var(--default-text-color));
+    @include drumee.typo($size: 12px, $line: 24px, $weight: 300, $color: var(--default-text-color));
     max-width: 105px;
     width: 100%;
-    @include overflow-text;
+    @include drumee.overflow-text;
 
     .inner {
       overflow: hidden;

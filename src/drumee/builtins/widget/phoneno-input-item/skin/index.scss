@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/widget/phoneno-input-item/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .phoneno-input-item {
   &__ui {
@@ -47,7 +47,7 @@
 
   &__note {
     &.area-code  {
-      @include typo($size: 16px, $color: var(--tertiary-text-color));//var(--egrey-89));
+      @include drumee.typo($size: 16px, $color: var(--tertiary-text-color));//var(--egrey-89));
       right: 2px;
      // top: 2px;
     }

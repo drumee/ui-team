@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .account-privacy{
   &__ui {
@@ -35,10 +35,10 @@
     padding-bottom:24px;
     width: 353px;
     &.tbd{
-      @include typo($size:18px,$line:21px,$color:#787B7F);
+      @include drumee.typo($size:18px,$line:21px,$color:#787B7F);
     }
     &.multi-line{
-      @include typo($size:18px,$line:21px,$color:#787B7F);
+      @include drumee.typo($size:18px,$line:21px,$color:#787B7F);
     }
   }
   &__info{
@@ -94,7 +94,7 @@
         //color: #879BFF;
         line-height: 19px;
         text-align: left;
-        @include typo($size:18px,$line:19px,$color:#879bff);
+        @include drumee.typo($size:18px,$line:19px,$color:#879bff);
         &[data-state="0"]{
           color: #d2d9db;
         }
@@ -108,7 +108,7 @@
         line-height: 19px;
         text-align: right;
         margin-left:19px;
-        @include typo($size:18px,$line:19px,$color:#d2d9db);
+        @include drumee.typo($size:18px,$line:19px,$color:#d2d9db);
         &[data-state="0"]{
           color:#879bff;
         }

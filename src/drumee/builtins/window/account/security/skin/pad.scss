@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/account/security/skin/pad.scss
 #   TYPE : Component Style
 # ===================================================================**/
-@import "mixins/drumee";
+@use "mixins/drumee";
 
 .security {
   &__ui {
@@ -13,7 +13,7 @@
     min-height: 125px;
     padding: 20px 20px 0px 14px;
     width: 320px;
-    @include typo($size: 12px,
+    @include drumee.typo($size: 12px,
       $line: 14px,
       $weight: 400,
       $color: var(--default-text-color) );
@@ -49,13 +49,13 @@
     justify-content: center;
     margin-bottom: 15px;
     text-align: center;
-    @include typo($size: 16px,
+    @include drumee.typo($size: 16px,
       $line: 21px,
       $color: var(--default-text-color),
       $weight: 400);
 
     &.info-msg {
-      @include typo($size: 12px,
+      @include drumee.typo($size: 12px,
         $line: 14px,
         $weight: 400,
         $color: var(--default-text-alert) );
@@ -79,7 +79,7 @@
     width: max-content; //115px;
     padding: 0 24px; //0 7px;
     z-index: 1;
-    @include typo($size: 16px, $line: 35px, $color: var(--btn-commit-text));
+    @include drumee.typo($size: 16px, $line: 35px, $color: var(--btn-commit-text));
 
     &.pass {
       border: 1px solid var(--account-pass-color);
@@ -109,7 +109,7 @@
     &.tbd {
       background-color: transparent;
       font-style: italic;
-      @include typo($size: 16px, $line: 35px, $weight: 400, $color: var(--eviolet));
+      @include drumee.typo($size: 16px, $line: 35px, $weight: 400, $color: var(--eviolet));
 
       &:after {
         content: "...";
@@ -117,7 +117,7 @@
     }
 
     &.disable {
-      @include typo($size: 12px, $line: 14px, $color: #ff805c);
+      @include drumee.typo($size: 12px, $line: 14px, $color: #ff805c);
       justify-content: center;
       padding: 0 10px;
       text-align: center;
@@ -187,7 +187,7 @@
   }
 
   .editbox-toggle {
-    @include typo($size: 14px,
+    @include drumee.typo($size: 14px,
       $line: 35px,
       $weight: 400,
       $color: var(--account-bg-grey-color) );
@@ -234,12 +234,12 @@
     input {
       width: 90%;
       border-bottom: 1px solid var(--default-entry-border-bottom);
-      @include typo($size: 15px,
+      @include drumee.typo($size: 15px,
         $line: 20px,
         $color: var(--default-text-color) ); // var(--egrey-89)); $weight:300,
 
       &::placeholder {
-        @include typo($size: 15px,
+        @include drumee.typo($size: 15px,
           $weight: 400,
           $line: 19px,
           $color: var(--default-text-placeholder) );
@@ -258,7 +258,7 @@
   }
 
   &__resend {
-    @include typo($size: 14px,
+    @include drumee.typo($size: 14px,
       $line: 20px,
       $weight: 300,
       $color: var(--default-text-color) );
@@ -285,7 +285,7 @@
     align-items: center;
 
     .malformed {
-      @include typo($size: 14px,
+      @include drumee.typo($size: 14px,
         $line: 20px,
         $weight: 300,
         $color: var(--default-text-error) );
@@ -311,7 +311,7 @@
     }
 
     .preset-acknowledge__container .text {
-      @include typo($size: 12px,
+      @include drumee.typo($size: 12px,
         $line: 19px,
         $color: var(--default-text-color) );
     }
@@ -319,7 +319,7 @@
 
   &__title {
     margin-top: 20px;
-    @include typo($line: 36px,
+    @include drumee.typo($line: 36px,
       $size: 16px,
       $weight: 400,
       $color: var(--default-text-color) );
@@ -372,7 +372,7 @@
       margin-top: auto;
       text-align: center;
       width: 24px;
-      @include typo($size: 11px, $line: 20px);
+      @include drumee.typo($size: 11px, $line: 20px);
 
       .inner {
         margin-top: auto;

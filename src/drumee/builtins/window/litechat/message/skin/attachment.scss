@@ -1,108 +1,117 @@
-&__attachment-wrapper {
-  height: 86px;
-  margin-bottom:8px;
-  z-index: 1 !important;
-  &-list {
-    height: 100%;
-    margin-top: 5px;
-    max-height: 100px;
-    min-height: 30px;
-    width: 100%;
-    & .smart-container {
-      height: calc(100% + 3px);
-    }
-    & .dialog__wrapper.box {
-      z-index: 10!important;
-    }
-    
-    & .media-wrapper__ui {
-      background-color: inherit;
-      height: inherit;
-      width: inherit;
-    }
+@use "mixins/drumee";
 
-    & .list-smart {
-      height: inherit !important;
-      width: inherit;
-    }
+.litechat-message {
 
-    & .media-grid {
-      &__ui {
-        background-color: inherit;
-        border-radius: 4px;
-        box-shadow: none;
-        height: 85px;
-        margin: 0px 4px;
-        min-width: 95px;
-        width: 95px;
+  &__attachment-wrapper {
+    height: 86px;
+    margin-bottom: 8px;
+    z-index: 1 !important;
+
+    &-list {
+      height: 100%;
+      margin-top: 5px;
+      max-height: 100px;
+      min-height: 30px;
+      width: 100%;
+
+      & .smart-container {
+        height: calc(100% + 3px);
       }
 
-      &__container {
-        background-color: var(--ewhite);
-        border-radius: 6px;
-        overflow: hidden;
+      & .dialog__wrapper.box {
+        z-index: 10 !important;
+      }
 
-        &[data-hover="on"] {
+      & .media-wrapper__ui {
+        background-color: inherit;
+        height: inherit;
+        width: inherit;
+      }
+
+      & .list-smart {
+        height: inherit !important;
+        width: inherit;
+      }
+
+      & .media-grid {
+        &__ui {
+          background-color: inherit;
+          border-radius: 4px;
           box-shadow: none;
+          height: 85px;
+          margin: 0px 4px;
+          min-width: 95px;
+          width: 95px;
         }
 
-        &[data-icontype="vignette"] {
-          background: transparent;
-          
-          & .filename {
-            display: none;
+        &__container {
+          background-color: var(--ewhite);
+          border-radius: 6px;
+          overflow: hidden;
+
+          &[data-hover="on"] {
+            box-shadow: none;
+          }
+
+          &[data-icontype="vignette"] {
+            background: transparent;
+
+            & .filename {
+              display: none;
+            }
+          }
+
+          & .icon {
+            height: 30px;
+            margin: auto;
+            top: 21px;
+            width: 37px;
           }
         }
 
-        & .icon {
-          height: 30px;
-          margin: auto;
-          top: 21px;
-          width: 37px;
+        &__content {
+          align-items: center;
+          justify-content: center;
+        }
+
+        &-notify__container {
+          display: none;
+        }
+
+        & .preview.image-capable {
+          height: 80px;
+          width: 95px;
+        }
+
+        & .filename {
+          @include drumee.typo($size: 10px, $line: 12px, $weight: 300, $color: var(--default-text-color));
+          border-radius: 0 0 6px 6px;
+          bottom: 1px;
+          cursor: pointer;
+          display: flex;
+          justify-content: center;
+          max-height: 26px;
+          overflow: hidden;
+          padding: 2px 11px;
+          position: absolute;
+          text-align: center;
+          text-overflow: ellipsis;
+          width: 100%;
+        }
+
+        &__remove {
+          display: none;
         }
       }
-
-      &__content {
-        align-items: center;
-        justify-content: center;
-      }
-      
-      &-notify__container {
-        display: none;
-      }
-
-      & .preview.image-capable {
-        height: 80px;
-        width: 95px;
-      }
-
-      & .filename {
-        @include typo($size: 10px, $line: 12px, $weight: 300, $color: var(--default-text-color));
-        border-radius: 0 0 6px 6px;
-        bottom: 1px;
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-        max-height: 26px;
-        overflow: hidden;
-        padding: 2px 11px;
-        position: absolute;
-        text-align: center;
-        text-overflow: ellipsis;
-        width: 100%;
-      }
-      
-      &__remove {
-        display : none;
-      }
     }
-  }
-  .drumee-spinner{
-    top : 15px;
-    left: 15px;
-    width: 38px;
-    height: 38px;
-    position: absolute;
-  }
 
+    .drumee-spinner {
+      top: 15px;
+      left: 15px;
+      width: 38px;
+      height: 38px;
+      position: absolute;
+    }
+
+  }
 }

@@ -1,10 +1,11 @@
-@import 'mixins/drumee.scss';
-@import 'peers.scss';
-@import 'header.scss';
+@use "sass:meta";
+@use 'mixins/drumee.scss';
+@use 'peers.scss';
+@use 'header.scss';
+@include meta.load-css('main.scss');
 
 
 .window-website {
-  @import 'main.scss';
 
   .dialog__wrapper--modal {
     align-items: center;

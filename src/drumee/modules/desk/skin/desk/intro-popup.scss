@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .desk-module {
   &-intro-popup {
     &__main {
@@ -112,12 +114,12 @@
     &__note {
       &.title {
         text-align: center;
-        @include typo($size: 26px, $line: 36px, $color: var(--default-text-title));
+        @include drumee.typo($size: 26px, $line: 36px, $color: var(--default-text-title));
       }
 
       &.sub-title,
       &.description {
-        @include typo($size: 16px, $line: 26px, $color: var(--default-text-color));
+        @include drumee.typo($size: 16px, $line: 26px, $color: var(--default-text-color));
       }
 
       &.sub-title {
@@ -134,11 +136,11 @@
         min-width: 115px;
         margin-left: 10px;
         width: 100%;
-        @include typo($size: 16px, $line: 20px, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 16px, $line: 20px, $color: var(--default-text-reverse));
       }
 
       &.footer {
-        @include typo($size: 14px, $line: 18px, $color: var(--tertiary-text-color));
+        @include drumee.typo($size: 14px, $line: 18px, $color: var(--tertiary-text-color));
       }
 
       &.text-underline {

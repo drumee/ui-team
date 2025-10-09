@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .invitation-recipient {
   &__ui {
@@ -6,7 +6,7 @@
     height: 36px;
     position: relative;
     cursor: pointer;
-    @include typo($color: var(--default-text-color), $size: 14px, $line: 36px, $weight: 400);
+    @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 36px, $weight: 400);
 
     &.destination {
       height: 100%;
@@ -168,8 +168,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     width: 166px;
-    @include typo($color: var(--default-text-color), $size: 14px, $weight: 400);
-    @include overflow-text;
+    @include drumee.typo($color: var(--default-text-color), $size: 14px, $weight: 400);
+    @include drumee.overflow-text;
 
     & .note-content {
       overflow: hidden;
@@ -193,7 +193,7 @@
     padding: 10px;
     position: absolute;
     opacity: 1;
-    @include typo($color: var(--egrey-2f), $size: 12px, $line: 14px, $weight: 400);
+    @include drumee.typo($color: var(--egrey-2f), $size: 12px, $line: 14px, $weight: 400);
     background-color: var(--egrey-b6);
     box-shadow: 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
     border-radius: var(--border-radius-small);

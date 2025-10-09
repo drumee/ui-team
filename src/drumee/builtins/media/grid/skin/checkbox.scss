@@ -1,35 +1,42 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
-&__checkbox{
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  left: 0;
-  top: 0;
-  visibility: hidden;
-  cursor: pointer;
-  text-align: center;
-  background-color: transparent; 
-  padding: 4px 6px 6px 4px;
-  &[data-hover="on"]{
-    visibility: visible;
-    svg{
-      border: 1.5px solid orange;
-      border-radius: var(--checkbox-border-radius);
+.media-grid {
+  &__checkbox {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    left: 0;
+    top: 0;
+    visibility: hidden;
+    cursor: pointer;
+    text-align: center;
+    background-color: transparent;
+    padding: 4px 6px 6px 4px;
+
+    &[data-hover="on"] {
+      visibility: visible;
+
+      svg {
+        border: 1.5px solid orange;
+        border-radius: var(--checkbox-border-radius);
+      }
     }
-  }
-  &[data-selected="1"]{
-    visibility: visible;
-    svg{
-      border-radius: var(--checkbox-border-radius);
-      fill: orange;
-      border: 1.5px solid orange;
-      background-color: var(--default-bg);//var(--white); 
+
+    &[data-selected="1"] {
+      visibility: visible;
+
+      svg {
+        border-radius: var(--checkbox-border-radius);
+        fill: orange;
+        border: 1.5px solid orange;
+        background-color: var(--default-bg); //var(--white); 
+      }
     }
-  }
-  &--icon{
-    pointer-events: none;
-    background-color: var(--white); 
-    fill: var(--ewhite);
+
+    &--icon {
+      pointer-events: none;
+      background-color: var(--white);
+      fill: var(--ewhite);
+    }
   }
 }

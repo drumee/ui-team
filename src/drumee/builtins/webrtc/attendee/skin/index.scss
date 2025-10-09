@@ -1,4 +1,4 @@
-@import "mixins/drumee";
+@use "mixins/drumee";
 
 @keyframes changeScale {
   from {
@@ -72,12 +72,12 @@
 
   &__name {
     background-color: inherit;
-    @include typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-color));
+    @include drumee.typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-color));
     margin: 1px 0 0;
     width: calc(100% - 110px);
     height: 100%;
     align-items: center;
-    @include overflow-text;
+    @include drumee.overflow-text;
 
     .inner {
       overflow: hidden;
@@ -97,7 +97,7 @@
     flex-direction: row;
     text-align: right;
     justify-content: right;
-    @include typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-color));
+    @include drumee.typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-color));
 
     &[data-online="2"] {
       color: var(--default-text-alert);

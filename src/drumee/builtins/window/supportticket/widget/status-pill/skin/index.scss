@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/bigchat/widget/status-pill/js/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .status-pill {
   &__ui {

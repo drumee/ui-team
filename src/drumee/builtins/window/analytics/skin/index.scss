@@ -3,7 +3,7 @@
 #   FILE : builtins/sandbox/skin/sandbox
 #   TYPE : Module
 # ===================================================================**/
-@import 'mixins/drumee.scss';
+@use 'mixins/drumee.scss';
 
 .window-analytics {
   &__main{
@@ -19,10 +19,10 @@
   }
 
   &__title{
-    @include typo($size: 18px, $line: 24px, $color: var(--default-text-reverse));
+    @include drumee.typo($size: 18px, $line: 24px, $color: var(--default-text-reverse));
   }
   &__forbiden{
-    @include typo($size: 20px, $line: 28px, $color: var(--default-text-caution));
+    @include drumee.typo($size: 20px, $line: 28px, $color: var(--default-text-caution));
   }
   &__header, &__command{
     width: 100%;

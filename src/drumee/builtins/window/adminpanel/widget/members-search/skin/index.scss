@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/addressbook/widget/search/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-members-search {
   &__ui {
@@ -35,7 +35,7 @@
   &__title {
     margin:  5px auto;// 20px auto 0px auto;
     padding-top: 10px; //15px;
-    @include typo($size: 14px, $line: 14px,$weight: 300, $color: var(--default-text-title)); //$size: 14px
+    @include drumee.typo($size: 14px, $line: 14px,$weight: 300, $color: var(--default-text-title)); //$size: 14px
   }
 
   &__icon {

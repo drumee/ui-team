@@ -1,4 +1,4 @@
-@import "mixins/drumee.scss";
+@use "mixins/drumee.scss";
 .window-hub-team {
 
   &__ui {
@@ -23,7 +23,7 @@
     }
     &.title {
       // margin: auto 0 auto auto;
-      @include typo($line: 29px, $size: 18px, $weight: 400, $color: var(--default-text-reverse)); //var(--ewhite));
+      @include drumee.typo($line: 29px, $size: 18px, $weight: 400, $color: var(--default-text-reverse)); //var(--ewhite));
     }
     &.icon {
       width: 18px;
@@ -42,7 +42,7 @@
       position: absolute;
       background-color: var(--background-tooltips); //$teamroom-background-tooltips//#FFFFFF;
       z-index: 100;
-      @include typo($line: 16px, $size: 14px, $weight: 400, $color: var(--default-text-tooltips)); //var(--egrey-2f)
+      @include drumee.typo($line: 16px, $size: 14px, $weight: 400, $color: var(--default-text-tooltips)); //var(--egrey-2f)
       &:after {
         content: "";
         position: absolute;
@@ -69,7 +69,7 @@
     border: 1px solid transparent;
     .input-details {
       position: absolute;
-      @include typo($line: 29px, $size: 13px, $weight: 300, $color: var(--default-text-error));
+      @include drumee.typo($line: 29px, $size: 13px, $weight: 300, $color: var(--default-text-error));
       right: 0px;
       padding: 3px;
     }
@@ -78,14 +78,14 @@
       width: calc(100% - 5px);
       margin: 0;
       border-bottom: 1px solid var(--default-entry-border-bottom);
-      @include typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color)); 
-      @include placeholder-input {
-        @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
+      @include drumee.typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color)); 
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
       }
       &:focus {
         border-bottom: 1px solid var(--focus-border-placeholder);
-        @include placeholder-input {
-          @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--focus-text-placeholder)); 
+        @include drumee.placeholder-input {
+          @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--focus-text-placeholder)); 
         }
       }
     }
@@ -94,14 +94,14 @@
     margin: 0 0 20px 0;//20px 0;
     input {
       border-bottom: 1px solid var(--default-entry-border-bottom);
-      @include typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color)); 
-      @include placeholder-input {
-        @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
+      @include drumee.typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color)); 
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
       }
       &:focus {
         border-bottom: 1px solid var(--focus-border-placeholder);
-        @include placeholder-input {
-          @include typo($line: 29px,$size: 16px, $weight: 300, $color: var(--focus-text-placeholder)); 
+        @include drumee.placeholder-input {
+          @include drumee.typo($line: 29px,$size: 16px, $weight: 300, $color: var(--focus-text-placeholder)); 
         }
       }
     }
@@ -153,7 +153,7 @@
     }
   }
   &__title {
-    @include typo($line: 28px, $size: 24px, $weight: 400, $color: var(--default-text-title));
+    @include drumee.typo($line: 28px, $size: 24px, $weight: 400, $color: var(--default-text-title));
   }
   &__invitation {
     width: 320px;

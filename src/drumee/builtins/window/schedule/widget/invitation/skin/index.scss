@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .schedule-invitation {
   &__ui {
@@ -12,7 +12,7 @@
 
   &__title{
     justify-content: center;
-    @include typo($size:16px,$line:22px,$weight:400,$color: var(--sharebox-main));//$size:18px
+    @include drumee.typo($size:16px,$line:22px,$weight:400,$color: var(--sharebox-main));//$size:18px
   }
   
   &__main {
@@ -92,7 +92,7 @@
   }
 
   &__error {
-    @include typo($size: 14px, $weight: 300, $line: 21px, $color: var(--default-text-error));
+    @include drumee.typo($size: 14px, $weight: 300, $line: 21px, $color: var(--default-text-error));
   }
 
   &__recipients {
@@ -127,7 +127,7 @@
       padding: 15px 0;
       text-align: center;
       min-width: 200px;
-      @include typo($size: 16px, $weight: 300, $line: 21px, $color: var(--default-text-alert));
+      @include drumee.typo($size: 16px, $weight: 300, $line: 21px, $color: var(--default-text-alert));
     }
   }
 
@@ -155,7 +155,7 @@
   &__entry {
     min-width: 200px;
     width: 100%;
-    @include typo($size: 14px, $line: 22px, $color: var(--default-text-color)); //$size: 16px,$line: 21px,
+    @include drumee.typo($size: 14px, $line: 22px, $color: var(--default-text-color)); //$size: 16px,$line: 21px,
 
     &[data-status='error'] {
       border-bottom: 1px solid var(--default-border-error);
@@ -177,19 +177,19 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      @include typo($size: 14px, $line: 22px, $color: var(--default-text-color)); //$size: 16px,$line: 21px,
+      @include drumee.typo($size: 14px, $line: 22px, $color: var(--default-text-color)); //$size: 16px,$line: 21px,
 
 
       &:focus {
         border-color: var(--focus-border-placeholder); // var(--focus-border-bottom);
 
-        @include placeholder-input {
+        @include drumee.placeholder-input {
           color: var(--focus-text-placeholder); // var(--focus-text-placeholder);
         }
       }
 
       &::placeholder {
-        @include typo($size: 14px, $line: 21px, $weight: 300, $color: var(--default-text-placeholder)); //$size: 16px,
+        @include drumee.typo($size: 14px, $line: 21px, $weight: 300, $color: var(--default-text-placeholder)); //$size: 16px,
       }
     }
 
@@ -208,10 +208,10 @@
         resize: none;
         margin-left: 10px;
         width: 100%;
-        @include typo($size: 14px, $line: 22px, $color: var(--default-text-color)); //$size: 16px, $line: 21px,
+        @include drumee.typo($size: 14px, $line: 22px, $color: var(--default-text-color)); //$size: 16px, $line: 21px,
 
         &::placeholder {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
+          @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }
@@ -232,7 +232,7 @@
     padding-left: 36px;
 
     .button {
-      @include typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));
+      @include drumee.typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));
       background-color: var(--btn-commit-background);
       align-items: center;
       border-radius: var(--border-radius);

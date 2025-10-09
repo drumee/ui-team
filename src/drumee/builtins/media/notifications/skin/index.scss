@@ -1,5 +1,5 @@
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .media-notifications {
   &__ui {
@@ -100,7 +100,7 @@
   &__title {
     margin-left:60px;
     width:69px;
-    @include typo($size:14px,$line:20px,$weight:400,$color: var(--emauve-dark));
+    @include drumee.typo($size:14px,$line:20px,$weight:400,$color: var(--emauve-dark));
   }
 
   &__item {

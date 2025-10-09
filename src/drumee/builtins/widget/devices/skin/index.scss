@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .media-devices {
   &__topbar {
@@ -65,7 +65,7 @@
   }
 
   &__tab {
-    @include typo($color: var(--main-grey), $size: 14px, $line: 19px, $weight: 400);
+    @include drumee.typo($color: var(--main-grey), $size: 14px, $line: 19px, $weight: 400);
     cursor: pointer;
 
     &[data-radio="on"] {
@@ -110,6 +110,6 @@
   }
 
   &__label {
-    @include typo($color: var(--egrey-2f), $weight: 400, $line: 20px, $size: 12px);
+    @include drumee.typo($color: var(--egrey-2f), $weight: 400, $line: 20px, $size: 12px);
   }
 }

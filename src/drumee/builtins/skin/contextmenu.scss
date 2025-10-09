@@ -4,7 +4,7 @@
 #   TYPE : Global styles, for the whole platform
 # ==================================================================== */
 
-@import 'mixins/drumee.scss';
+@use 'mixins/drumee.scss';
 
 .drumee-contextmenu.drumee-box{
  // padding: 5px 10px;//5px;
@@ -22,7 +22,7 @@
     cursor: pointer;
     padding: 10px;
     white-space: nowrap;
-    @include typo($color:var(--default-text-color), $size: 12px, $line: 16px);
+    @include drumee.typo($color:var(--default-text-color), $size: 12px, $line: 16px);
     &:hover{
       background-color: var(--default-bg-hover);//var(--folder-main);
       color: var(--default-text-reverse);

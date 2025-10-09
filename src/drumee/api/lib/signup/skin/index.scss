@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .api-signup {
 
@@ -59,7 +59,7 @@
   }
 
   & .api__error-message {
-    @include typo($color: #ff805c, $size: 14px, $line: 21px, $weight: 400);
+    @include drumee.typo($color: #ff805c, $size: 14px, $line: 21px, $weight: 400);
     font-weight: 400;
     font-family: Roboto;
     max-width: 350px;
@@ -68,7 +68,7 @@
   }
 
   & .api__error-message[data-success='1'] {
-    @include typo($color: var(--egreen), $size: 14px, $line: 21px, $weight: 400);
+    @include drumee.typo($color: var(--egreen), $size: 14px, $line: 21px, $weight: 400);
     color: var(--egreen) !important;
     bottom: 30px;
     max-width: 413px;
@@ -132,7 +132,7 @@
     align-items: center;
     cursor: pointer;
     box-shadow: 0 4px 6px 1px rgb(63 79 117 / 13%), 0 0 11px 0 rgb(86 65 113 / 8%), 0 0 10px 0 rgb(194 185 203 / 0%);
-    @include typo($color: var(--default-text-reverse), $size: 16px, $line: 21px, $weight: 300);
+    @include drumee.typo($color: var(--default-text-reverse), $size: 16px, $line: 21px, $weight: 300);
 
     // @media (max-width: $tablet) {
     //   @include typo($color: var(--default-text-reverse), $size: 16px, $line: 18px, $weight: 300);
@@ -165,7 +165,7 @@
     input {
       padding-left: 0.7em; // 1em;
       margin: 0;
-      @include typo($color: var(--default-text-color), $size: 16px, $line: 21px, $weight: 400); //$size: 20px,  
+      @include drumee.typo($color: var(--default-text-color), $size: 16px, $line: 21px, $weight: 400); //$size: 20px,  
       width: 100%;
       border: 0px solid white !important;
       background: var(--white-f9) !important; //#d2cdcd
@@ -173,7 +173,7 @@
       margin: 0px 7px 0px 0px;
 
       &::placeholder {
-        @include typo($size: 16px, $line: 21px, $weight: 300, $color: var(--default-text-placeholder));
+        @include drumee.typo($size: 16px, $line: 21px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
   }
@@ -209,11 +209,11 @@
   &__acknowledge {
     &.title {
       text-align: center;
-      @include typo($color: var(--default-text-title), $size: 28px, $line: 42px, $weight: 300);
+      @include drumee.typo($color: var(--default-text-title), $size: 28px, $line: 42px, $weight: 300);
 
       &[data-device="mobile"] {
         width: 295px;
-        @include typo($color: var(--default-text-title), $size: 19px, $line: 32px, $weight: 300);
+        @include drumee.typo($color: var(--default-text-title), $size: 19px, $line: 32px, $weight: 300);
         left: 4.5px;
         margin: 10px 4px 30px 5px;
       }
@@ -246,13 +246,13 @@
   }
 
   &__title {
-    @include typo($color: #000099, $size: 20px, $line: 30px, $weight: 500);
+    @include drumee.typo($color: #000099, $size: 20px, $line: 30px, $weight: 500);
     margin: 0 35px;
     padding: 15px 10px 30px;
     text-align: left;
 
     & a {
-      @include typo($size: 20px, $line: 30px, $weight: 700, $color: #000099);
+      @include drumee.typo($size: 20px, $line: 30px, $weight: 700, $color: #000099);
       text-decoration: underline;
       text-transform: lowercase;
 
@@ -285,7 +285,7 @@
 
   &__title {
     &-header {
-      @include typo($size: 26px, $line: 28px, $color: #FFC000);
+      @include drumee.typo($size: 26px, $line: 28px, $color: #FFC000);
       align-items: center;
       justify-content: center;
       text-align: center;
@@ -306,12 +306,12 @@
   }
 
   &__footer {
-    @include typo($size: 18px, $line: 22px, $weight: 400, $color: var(--egrey-2f));
+    @include drumee.typo($size: 18px, $line: 22px, $weight: 400, $color: var(--egrey-2f));
     padding: 10px 20px 10px 10px;
   }
 
   &__login-btn {
-    @include typo($size: 16px, $line: 20px, $weight: 400, $color: var(--secondary-text-color));
+    @include drumee.typo($size: 16px, $line: 20px, $weight: 400, $color: var(--secondary-text-color));
     align-items: center;
     border: 1px solid var(--secondary-text-color);
     border-radius: 6px;

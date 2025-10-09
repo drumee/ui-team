@@ -3,7 +3,7 @@
 #   FILE : /ui/src/drumee/builtins/window/bigchat/widget/shareroom-userdetails/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-shareroomUserdetails{
   &__ui,

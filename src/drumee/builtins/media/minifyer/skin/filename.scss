@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .filename {
   border-radius:var(--border-radius-bottom);
   cursor: pointer;
@@ -8,7 +10,7 @@
   text-align: center;
   text-overflow: ellipsis;
   width: 100%;
-  @include typo($line:14px,$size:11px,$color:var(--default-text-color));
+  @include drumee.typo($line:14px,$size:11px,$color:var(--default-text-color));
 
   &.hub, &.folder {
     color: var(--default-text-reverse);
@@ -39,7 +41,7 @@
   position: absolute;
   transition: opacity 1ms;
   white-space: pre-wrap;
-  @include typo($line:14px,$size:10px,$weight:400,$color:var(--default-text-color));
+  @include drumee.typo($line:14px,$size:10px,$weight:400,$color:var(--default-text-color));
 
   &[data-hover="on"] {
     color: var(--default-text-color);

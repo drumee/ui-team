@@ -1,4 +1,4 @@
-@import "mixins/drumee";
+@use "mixins/drumee";
 
 .disk-usage {
   &__main {
@@ -13,7 +13,7 @@
 
   &-title {
     justify-content: center;
-    @include typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400);
+    @include drumee.typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400);
   }
 
   &__bar {
@@ -62,7 +62,7 @@
     }
 
     &.cursor {
-      @include typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400);
+      @include drumee.typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400);
 
       &::before {
         content: " ";
@@ -89,7 +89,7 @@
   &__quota {
     margin-left: auto;
     margin-right: -40px;
-    @include typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400);
+    @include drumee.typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400);
   }
 
   &__rules {
@@ -105,7 +105,7 @@
     width: 100%;
     padding: 10px 86px;
     justify-content: flex-start;
-    @include typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400);
+    @include drumee.typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400);
 
     &.bar {
       height: 5px;

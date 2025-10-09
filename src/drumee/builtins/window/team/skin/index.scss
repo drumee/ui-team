@@ -1,8 +1,8 @@
 
-@import 'mixins/drumee.scss';
-@import 'peers.scss';
-@import 'topbar.scss';
-@import 'change-owner.scss';
+@use 'mixins/drumee.scss';
+@use 'peers.scss';
+@use 'topbar.scss';
+@use 'change-owner.scss';
 // @import "./vars.scss";
 
 .window-team{
@@ -29,7 +29,7 @@
         align-content: center;
         justify-items: center;
         align-items: center;
-        @include typo($size:12px,$line:14px,$weight:400,$color: var(--default-text-reverse));
+        @include drumee.typo($size:12px,$line:14px,$weight:400,$color: var(--default-text-reverse));
         padding-top:5px;
         padding-left:6px;
         padding-bottom:3px;
@@ -61,10 +61,10 @@
     &-title{
       max-width: 163px;
       align-items: center;
-      @include typo($size:18px,$line:24px,$weight:400,$color: var(--default-text-reverse));
+      @include drumee.typo($size:18px,$line:24px,$weight:400,$color: var(--default-text-reverse));
       .name {
         align-items: flex-start;
-        @include overflow-text;
+        @include drumee.overflow-text;
         @media (min-width: 626px) {
           justify-content: center;
           max-width:300px;

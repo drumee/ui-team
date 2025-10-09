@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .window-website {
   &__ui {
 
@@ -31,7 +33,7 @@
         white-space: nowrap;
         width: 190px;
         box-shadow: var(--shadow-main); 
-        @include typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-reverse));
       }
 
       &:before {
@@ -134,7 +136,7 @@
       border-radius: 50%;
       align-items: center;
       justify-content: center;
-      @include typo($size: 8px, $line: 12px, $weight: 400, $color: #2f2f2f);
+      @include drumee.typo($size: 8px, $line: 12px, $weight: 400, $color: #2f2f2f);
       right: -6px; 
       top: 8px; 
 

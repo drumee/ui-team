@@ -1,5 +1,5 @@
-@import 'mixins/drumee.scss';
-@import 'topbar.scss';
+@use 'mixins/drumee.scss';
+@use 'topbar.scss';
 
 
 .window-sharebox {
@@ -34,7 +34,7 @@
         white-space: nowrap;
         width: 190px;
         box-shadow: var(--shadow-main); //0 0px 8px 0 rgba(63, 79, 117, .06), 0 -1px 16px 0 rgba(86, 65, 113, .10), 0 2px 14px 0 rgba(194, 185, 203, .04);
-        @include typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-reverse));
       }
 
       &:before {
@@ -69,7 +69,7 @@
     }
 
     &-title {
-      @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
       align-items: center;
       max-width: 163px;
 
@@ -83,7 +83,7 @@
       }
 
       .name {
-        @include overflow-text;
+        @include drumee.overflow-text;
       }
 
       .icon {

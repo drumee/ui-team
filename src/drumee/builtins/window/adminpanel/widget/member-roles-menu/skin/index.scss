@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-member-rolesMenu {
   &__ui {
@@ -24,7 +24,7 @@
     & .menu-topic-items {
       background-color: var(--default-background);
       border-radius:var(--border-radius);
-      box-shadow:$drumee-container-dropdown;
+      box-shadow:drumee.$drumee-container-dropdown;
       max-height: 250px;
       max-width: 160px;
       min-width: 160px;
@@ -135,7 +135,7 @@
         justify-content: center;
         margin: 5% auto 0;
         width:68px;
-        @include typo ($color: var(--btn-commit-text),$line:20px, $size:14px);
+        @include drumee.typo ($color: var(--btn-commit-text),$line:20px, $size:14px);
 
         &:hover {
           margin: 5% auto 0;
@@ -161,10 +161,10 @@
       &.title {
         justify-content: center;
         margin-top: -5px;
-        @include typo($size: 14px, $line: 28px, $weight:300, $color: var(--default-text-title));
+        @include drumee.typo($size: 14px, $line: 28px, $weight:300, $color: var(--default-text-title));
       }
       &.name {
-        @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-color));
+        @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-color));
         justify-content: center;
         padding-bottom:15px;
         padding-left: 4px;

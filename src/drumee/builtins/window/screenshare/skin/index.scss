@@ -1,8 +1,8 @@
-@import "mixins/drumee";
-@import "topbar";
-@import "endpoint";
-@import "command";
-@import "inbound";
+@use "mixins/drumee";
+@use "topbar";
+@use "endpoint";
+@use "command";
+@use "inbound";
 
 .window-screenshare {
   &__ui {
@@ -45,7 +45,7 @@
       padding: 10px 0 15px 3px;
       justify-content: center;
       height: 20px;
-      @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title)); //$weight:400
+      @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title)); //$weight:400
     }
   }
 
@@ -94,7 +94,7 @@
       margin: 10px;
       color: var(--default-text-reverse); //white;
       border-radius: 3px;
-      @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
+      @include drumee.typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
     }
   }
   &__wrapper--modal {
@@ -109,7 +109,7 @@
   }
   .window-warning__body {
     background-color: var(--default-bg);
-    box-shadow: $drumee-shadow-box;
+    box-shadow: drumee.$drumee-shadow-box;
     border: none;
     margin-top: -70px;
     min-width: 300px;

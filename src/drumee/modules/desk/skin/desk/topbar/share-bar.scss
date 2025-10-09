@@ -4,7 +4,7 @@
 #   TYPE : Backoffice Main Style
 # ===================================================================**/
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .desk-module__share-bar {
   background: var(--egrey-e8); //rgba(137, 146, 158, 0.4);
@@ -15,7 +15,7 @@
   align-items: center;
 
   &-title {
-    @include typo($size: 18px, $line: 20px, $color: var(--default-text-color)); //var(--egrey-2f));
+    @include drumee.typo($size: 18px, $line: 20px, $color: var(--default-text-color)); //var(--egrey-2f));
     flex: 1;
     justify-content: center;
   }
@@ -25,7 +25,7 @@
   }
 
   & .share_bar_disconnect-btn {
-    @include typo($size: 14px, $line: 14px, $color: var(--default-text-reverse)); //$btn-primary-color); //$size: 18px
+    @include drumee.typo($size: 14px, $line: 14px, $color: var(--default-text-reverse)); //$btn-primary-color); //$size: 18px
     align-items: center;
     background: var(--default-bg-alert); //$default-backround-alert ;// var(--eorange-dark);
     justify-content: center;

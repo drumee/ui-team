@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/widget/background-image/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .drumee-background {
 

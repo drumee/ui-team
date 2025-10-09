@@ -1,4 +1,4 @@
-@import "mixins/drumee";
+@use "mixins/drumee";
 
 .widget-contacts {
 	&__ui {
@@ -12,7 +12,7 @@
 		height: 34px; 
 		
 		&__title {
-			@include typo($size: 15px, $line: 16px, $color: var(--ab-default-text-title)); 
+			@include drumee.typo($size: 15px, $line: 16px, $color: var(--ab-default-text-title)); 
 			padding-bottom: 8px;			
 			padding-top: 7px; 
 			margin-left: auto;
@@ -57,12 +57,12 @@
 		}
 		
 		&__name {
-			@include typo($size: 14px, $line: 16px, $color: var(--default-text-color));			
+			@include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-color));			
 			margin-top: 3px; 
 			padding: 3px 3px 3px 15px;
 			max-width: 190px;
 			width: 100%;
-			@include overflow-text;
+			@include drumee.overflow-text;
 		}
 	}
 

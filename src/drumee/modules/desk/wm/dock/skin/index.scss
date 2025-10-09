@@ -1,12 +1,8 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2021
-#   FILE : /src/drumee/modules/desk/dock/js/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
-@import '../../../../../skin/mixins/drumee.scss';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('forbiden');
 
 .desk-dock {
-  @import 'forbiden';
 
   &__ui {
     bottom: 0px;
@@ -97,7 +93,7 @@
 
     &-text {
       white-space: nowrap;
-      @include typo($line: 15px, $size: 12px, $color: var(--default-text-color));
+      @include drumee.typo($line: 15px, $size: 12px, $color: var(--default-text-color));
     }
   }
 
@@ -179,7 +175,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       width: 100%;
-      @include typo($line: 15px, $size: 12px, $color: var(--default-text-reverse)); //var(--ewhite)
+      @include drumee.typo($line: 15px, $size: 12px, $color: var(--default-text-reverse)); //var(--ewhite)
     }
 
     &:hover {
@@ -321,7 +317,7 @@
     white-space: nowrap;
     z-index: 10;
     user-select: none;
-    @include typo($size: 11px, $line: 14px, $weight: 400, $color: var(--default-text-tooltips)); // var(--default-text-color));
+    @include drumee.typo($size: 11px, $line: 14px, $weight: 400, $color: var(--default-text-tooltips)); // var(--default-text-color));
 
     &::before {
       background: var(--bg-tooltips); //$default-background-tooltips;
@@ -404,6 +400,7 @@
       left: -28px;
       transform: translateX(-19%);
       margin-bottom: 13px;
+
       &[data-device="mobile"] {
         left: -28px;
       }

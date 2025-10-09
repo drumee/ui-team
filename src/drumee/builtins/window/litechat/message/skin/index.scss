@@ -1,19 +1,19 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('attachment');
+@include meta.load-css('menu');
+@include meta.load-css('reply-message');
 
 .litechat-message {
-  
-  @import './attachment';
-  @import './menu';
-  @import './reply-message';
 
   &__ui {
     background-color: var(--ewhite);
     width: calc(100% - 70px);
-    @include typo($size: 12px, $line: 14px);
+    @include drumee.typo($size: 12px, $line: 14px);
 
     &.me {
       flex-direction: row-reverse;
-      margin:9px 0 -3px 0px;
+      margin: 9px 0 -3px 0px;
       width: calc(100% - 1px);
     }
 
@@ -49,28 +49,28 @@
   }
 
   &__forward-tag-wrapper {
-    padding-top:5px;
+    padding-top: 5px;
   }
 
   &__icon {
     &-read {
       color: var(--eblue);
       height: 14px;
-      left:3px;
+      left: 3px;
       width: 14px;
     }
 
     &.checkbox {
-      border-radius:var(--checkbox-border-radius);
-      border:1.5px solid var(--default-checkbox-border);//$default-checkbox;
-      color:var(--default-checkbox-bg);//var(--default-bg);   
+      border-radius: var(--checkbox-border-radius);
+      border: 1.5px solid var(--default-checkbox-border); //$default-checkbox;
+      color: var(--default-checkbox-bg); //var(--default-bg);   
       cursor: pointer;
       height: 15px;
       width: 15px;
 
       &[data-state="1"] {
-        border:1px solid var(--default-checkbox-border);//$default-checkbox; 
-        color:var(--default-checkbox-checked);// $checkbox-active;
+        border: 1px solid var(--default-checkbox-border); //$default-checkbox; 
+        color: var(--default-checkbox-checked); // $checkbox-active;
         height: 15px;
         width: 15px;
       }
@@ -88,7 +88,7 @@
       padding-left: 4px;
       padding-top: 4px;
       text-transform: capitalize;
-      @include typo($size: 12px, $line: 12px, $color: var(--eblue));
+      @include drumee.typo($size: 12px, $line: 12px, $color: var(--eblue));
     }
   }
 
@@ -117,7 +117,7 @@
       margin: auto;
       max-width: 200px;
       width: 82px;
-      @include typo($size: 11px, $line: 12px, $color: var(--egrey-89));
+      @include drumee.typo($size: 11px, $line: 12px, $color: var(--egrey-89));
 
       & section {
         height: 22px;
@@ -131,13 +131,13 @@
   }
 
   &__message-wrapper {
-    border-radius:var(--border-radius);
+    border-radius: var(--border-radius);
     min-width: 80px;
     padding: 3px 5px;
     width: fit-content;
 
     &.me {
-      background-color:rgba(24, 163, 172, 0.15);
+      background-color: rgba(24, 163, 172, 0.15);
       max-width: 85%;
     }
 
@@ -157,13 +157,13 @@
     &.forward {
       background-color: var(--dgc-chat-reply-bg);
     }
-    
+
     &:hover {
       & .chat-item__dropdown-wrapper {
         display: flex;
-      } 
+      }
     }
-    
+
     &[data-active="yes"] {
       background-color: var(--eviolet);
 
@@ -185,21 +185,21 @@
     &.user-profile {
       &__ui {
         border-radius: 50%;
-        height:29px;
+        height: 29px;
         width: 29px;
       }
     }
-    
+
     & .user-profile {
-      
+
       &__icon {
         height: 100%;
-        @include typo($size: 9px, $line: 10px);
+        @include drumee.typo($size: 9px, $line: 10px);
       }
     }
 
     &.other {
-      left:-40px;
+      left: -40px;
       margin-top: 2px;
     }
 
@@ -216,11 +216,11 @@
   &__name {
     height: 23px;
     margin-left: 6px;
-    padding-top:5px;
+    padding-top: 5px;
     text-transform: capitalize;
     width: 121px;
-    @include typo($size: 11px, $line: 10px, $weight:400, $color: var(--egrey-2f));
-    @include overflow-text;
+    @include drumee.typo($size: 11px, $line: 10px, $weight: 400, $color: var(--egrey-2f));
+    @include drumee.overflow-text;
   }
 
   &__message-footer {
@@ -230,23 +230,23 @@
 
     & .readed-icon {
       margin: 0px 1px;
-      visibility:hidden;
+      visibility: hidden;
 
       &[data-is_seen='1'] {
-        visibility:visible;
+        visibility: visible;
       }
 
       &.other {
-        display:none;
+        display: none;
       }
     }
   }
 
   &__date {
-    @include typo($size:10px, $line: 9px, $weight: 300, $color: var(--egrey-89));//var(--egrey-78));$size:11px,
+    @include drumee.typo($size: 10px, $line: 9px, $weight: 300, $color: var(--egrey-89)); //var(--egrey-78));$size:11px,
 
     &.me {
-      @include typo($size:10px, $line: 9px, $weight: 500, $color: var(--egrey-89));//var(--egrey-78));$size:11px,
+      @include drumee.typo($size: 10px, $line: 9px, $weight: 500, $color: var(--egrey-89)); //var(--egrey-78));$size:11px,
     }
   }
 
@@ -267,8 +267,8 @@
     height: 100%;
     max-width: 100%;
     overflow: hidden;
-    padding: 6px 15px 2px 5px;// 1px 15px 2px 3px;//5px 15px 2px 3px;
-    
+    padding: 6px 15px 2px 5px; // 1px 15px 2px 3px;//5px 15px 2px 3px;
+
     &.me {
       justify-content: flex-end;
     }
@@ -276,13 +276,13 @@
     & .note-content {
       overflow: hidden;
       word-wrap: break-word;
-      @include typo($size: 12px, $line: 14px, $weight: 400, $color: var(--egrey-26));//$size: 13px,
+      @include drumee.typo($size: 12px, $line: 14px, $weight: 400, $color: var(--egrey-26)); //$size: 13px,
 
       & a {
         color: var(--eblue);
 
-        &:hover{
-          color: var(--dgc-chat-hover); 
+        &:hover {
+          color: var(--dgc-chat-hover);
         }
       }
     }
@@ -290,7 +290,7 @@
 
   &__call-duration {
     & .note-content {
-      @include typo($size: 13px, $line: 14px, $weight: 400, $color: var(--default-text-title));
+      @include drumee.typo($size: 13px, $line: 14px, $weight: 400, $color: var(--default-text-title));
     }
   }
 
@@ -307,17 +307,19 @@
     }
   }
 
-  &__icon_phone{
+  &__icon_phone {
     background: transparent;
     color: transparent;
     height: 20px;
     margin-right: 4px;
     width: 20px;
   }
-  &__call_text{
-    padding:0px 5px;
+
+  &__call_text {
+    padding: 0px 5px;
   }
-  &__conversation.call-type{
+
+  &__conversation.call-type {
     flex-direction: row;
   }
 }

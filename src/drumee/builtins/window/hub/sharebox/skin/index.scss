@@ -1,38 +1,45 @@
-@import "mixins/drumee.scss";
+@use "sass:meta";
+@use "mixins/drumee.scss";
+@include meta.load-css('validity');
 
 .window-hub-sharebox {
-  @import 'validity';
-  
+
   &__ui {
     background-color: var(--default-bg);
     border-radius: var(--border-radius);
     height: auto;
     margin: auto;
     min-height: 386px;
-    top:85px;
+    top: 85px;
     width: 570px;
   }
+
   &__topbar {
     background-color: var(--sharebox-main);
-    color: var(--default-text-reverse); 
+    color: var(--default-text-reverse);
     border-radius: var(--default-border-radius-top); //4px 4px 0 0;
     height: 44px;
+
     .dialog__button--close {
       color: var(--default-icon-reverse);
       margin: 2px 0px auto 0;
+
       :hover {
         color: var(--default-icon-hover);
       }
     }
+
     &.title {
-      @include typo($line: 29px, $size: 18px, $weight: 400, $color: var(--default-text-reverse)); //var(--ewhite));
+      @include drumee.typo($line: 29px, $size: 18px, $weight: 400, $color: var(--default-text-reverse)); //var(--ewhite));
     }
+
     &.icon {
       width: 18px;
       height: 18px;
       padding: 0;
       margin: auto auto auto 14px;
     }
+
     .tooltips {
       top: calc(100% + 5px);
       left: 50%;
@@ -44,7 +51,8 @@
       position: absolute;
       background-color: var(--background-tooltips); //$sharebox-background-tooltips//#FFFFFF;
       z-index: 100;
-      @include typo($line: 16px, $size: 14px, $weight: 400, $color: var(--default-text-tooltips)); //var(--egrey-2f)
+      @include drumee.typo($line: 16px, $size: 14px, $weight: 400, $color: var(--default-text-tooltips)); //var(--egrey-2f)
+
       &:after {
         content: "";
         position: absolute;
@@ -57,10 +65,11 @@
       }
     }
   }
+
   &__main {
     width: 100%;
     z-index: 60000; // higher than data-state=open
-    background-color: var(--default-background);//$default-background; // var(--ewhite);
+    background-color: var(--default-background); //$default-background; // var(--ewhite);
     justify-content: center;
     align-items: center;
   }
@@ -68,14 +77,14 @@
   &__access-list {
     align-items: center;
     justify-content: center;
-  //  padding-top: 15px;
+    //  padding-top: 15px;
     width: 100%;
   }
 
   &__note {
     &.access-list-title {
       padding: 15px 0 0;
-      @include typo($size:16px, $line:22px, $weight:400, $color: var(--sharebox-main));
+      @include drumee.typo($size: 16px, $line: 22px, $weight: 400, $color: var(--sharebox-main));
     }
   }
 
@@ -83,31 +92,36 @@
     min-height: 35px;
     width: 100%;
     border: 1px solid transparent;
+
     .input-details {
       position: absolute;
-      @include typo($line: 29px, $size: 13px, $color: var(--default-text-error));//$weight: 300,
+      @include drumee.typo($line: 29px, $size: 13px, $color: var(--default-text-error)); //$weight: 300,
       right: 0px;
       padding: 3px;
     }
+
     textarea {
       width: calc(100% - 5px); //100%;
       margin: 0;
       min-height: 29px;
       border: 0px;
-      border-bottom: 1px var(--default-entry-border-bottom); 
+      border-bottom: 1px var(--default-entry-border-bottom);
       padding-left: 3px;
       // border-style: none;
       outline: none;
       overflow: hidden;
       resize: none;
-      @include typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color));
-      @include placeholder-input {
-        @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder)); 
+      @include drumee.typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color));
+
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
       }
+
       &:focus {
-        border-bottom: 1px solid var(--focus-border-placeholder); 
-        @include placeholder-input {
-          @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
+        border-bottom: 1px solid var(--focus-border-placeholder);
+
+        @include drumee.placeholder-input {
+          @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }
@@ -115,76 +129,97 @@
     input {
       width: calc(100% - 5px); //100%;
       margin: 0;
-      border-bottom: 1px solid var(--default-entry-border-bottom); 
-      @include typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color));
-      @include placeholder-input {
-        @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder)); //#89929e
+      border-bottom: 1px solid var(--default-entry-border-bottom);
+      @include drumee.typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color));
+
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder)); //#89929e
       }
+
       &:focus {
         border-bottom: 1px solid var(--focus-border-placeholder);
-        @include placeholder-input {
-          @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--focus-text-placeholder));
+
+        @include drumee.placeholder-input {
+          @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--focus-text-placeholder));
         }
       }
     }
+
     &[data-partname="password-input"] {
       width: 175px;
     }
+
     .entry-reminder__main.showerror {
       overflow: visible;
     }
+
     .entry-reminder_error {
       position: absolute;
       width: 100%;
     }
   }
+
   .entry-reminder__icon {
     color: var(--default-icon-neutral);
+
     &:hover {
       color: var(--default-icon-hover);
     }
   }
+
   .entry-search__ui {
     margin: 0;
+
     input {
       border-bottom: 1px solid var(--default-entry-border-bottom);
-      @include typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color));//$size: 18px
-      @include placeholder-input {
-        @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder)); //#89929E $size: 18px,
+      @include drumee.typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color)); //$size: 18px
+
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder)); //#89929E $size: 18px,
       }
+
       &:focus {
         border-bottom: 1px solid var(--focus-border-placeholder);
-        @include placeholder-input {
-          @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--focus-text-placeholder)); //#4A90E2 $size: 18px,
+
+        @include drumee.placeholder-input {
+          @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--focus-text-placeholder)); //#4A90E2 $size: 18px,
         }
       }
     }
   }
+
   &__wrapper {
     position: absolute;
+
     &.dialog__wrapper {
       position: absolute;
     }
   }
+
   &__container-invitation {
     z-index: 200000;
+
     .invitation-email {
       &__entry {
         input {
           //       border-bottom: 1px solid var(--entry-border-bottom); //#ECEDEE;
-          @include typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color));
-          @include placeholder-input {
-            @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder)); //#89929E
+          @include drumee.typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color));
+
+          @include drumee.placeholder-input {
+            @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder)); //#89929E
           }
         }
       }
+
       &__ok_button {
         border-radius: var(--border-radius);
         top: 5px;
+
         &:hover {
           background-color: var(--btn-commit-background-hover);
         }
       }
+
       &__icon {
         color: var(--default-icon-neutral);
         min-width: 20px;
@@ -192,25 +227,30 @@
         width: 20px;
         height: 20px;
         opacity: 0.85;
+
         &:hover {
           color: var(--default-icon-hover);
           opacity: 1;
         }
       }
     }
-    .simple-invitation__body{
-      .schedule-recipient__main{
+
+    .simple-invitation__body {
+      .schedule-recipient__main {
         height: 33px;
         margin-top: 0px;
       }
     }
-    .simple-invitation__main{
+
+    .simple-invitation__main {
       width: 257px;
       margin-left: -10px;
     }
   }
+
   &__container {
-    background-color:var(--default-background);
+    background-color: var(--default-background);
+
     .invitation-settings__wrapper-options {
       position: absolute;
     }
@@ -234,21 +274,25 @@
       }
     }
   }
-  .invitation-searchbox{
-    &__icon{
+
+  .invitation-searchbox {
+    &__icon {
       height: 24px;
       width: 24px;
-      &[data-state="1"]{
-        height: 18px;//20px;
-        width: 18px;//20px;
+
+      &[data-state="1"] {
+        height: 18px; //20px;
+        width: 18px; //20px;
       }
     }
-    &__button{
+
+    &__button {
       height: 32px;
       min-width: 90px;
     }
-    &__input--inline{
-      .entry-search__widget{
+
+    &__input--inline {
+      .entry-search__widget {
         width: 96%;
       }
     }
@@ -258,18 +302,22 @@
     position: absolute;
     top: calc(100% - 15px);
   }
+
   &__title {
-    @include typo($line: 28px, $size: 24px, $weight: 400, $color: var(--default-text-color));
+    @include drumee.typo($line: 28px, $size: 24px, $weight: 400, $color: var(--default-text-color));
   }
+
   &__invitation {
     width: 320px;
     min-height: 100px;
-    margin: 20px auto auto; 
+    margin: 20px auto auto;
     z-index: 10;
+
     .invitation-searchbox__ui {
       width: 320px;
       margin: 0 auto;
     }
+
     &[data-recipient="1"] {
       margin: 22px auto auto auto;
     }
@@ -295,7 +343,8 @@
     height: 30px;
     padding: 4px;
     width: 30px;
-    border-radius: var(--border-radius-small);// 4px;
+    border-radius: var(--border-radius-small); // 4px;
+
     &[data-state="1"] {
       //  background: #879bff;
       color: var(--default-icon-hover);
@@ -339,6 +388,7 @@
     height: 25px;
     background-color: var(--default-background);
     border-radius: var(--border-radius);
+
     & input::-webkit-outer-spin-button,
     & input::-webkit-inner-spin-button {
       -webkit-appearance: none;
@@ -351,15 +401,18 @@
       border-bottom: none;
       text-align: center;
       padding-right: 0px;
-      @include typo($line: 29px, $size: 14px, $weight: 400, $color: var(--default-text-color));
-      @include placeholder-input {
-        @include typo($line: 29px, $size: 14px, $weight: 300, $color: var(--default-text-placeholder)); //#89929e
+      @include drumee.typo($line: 29px, $size: 14px, $weight: 400, $color: var(--default-text-color));
+
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 29px, $size: 14px, $weight: 300, $color: var(--default-text-placeholder)); //#89929e
       }
     }
   }
+
   &__days-caption {
     margin: 0px 13px 0px 5px; // 0px 13px 0px 2px;
   }
+
   &__hours-caption {
     margin: 0px 6px 0px 5px;
   }
@@ -385,25 +438,29 @@
 
   &-permission__note {
     margin-left: 15px;
-    @include typo($size: 14px, $weight:300, $color: var(--default-text-color));// old:#787b7f);
+    @include drumee.typo($size: 14px, $weight: 300, $color: var(--default-text-color)); // old:#787b7f);
   }
 
   &__share-box-name-holder,
   &__container-invitation {
     padding-left: 24px;
   }
+
   &__share-box-name-holder {
     margin-bottom: 10px;
   }
+
   &__validity-caption {
     padding-right: 20px; //15px;
-    @include typo($size: 14px, $weight:300,$color: var(--default-text-color)); //old:#787b7f);
+    @include drumee.typo($size: 14px, $weight: 300, $color: var(--default-text-color)); //old:#787b7f);
   }
+
   &__days-caption,
   &__hours-caption {
-    @include typo($size: 14px, $color: var(--secondary-text-color)); //old: var(--eviolet) //#879bff);
+    @include drumee.typo($size: 14px, $color: var(--secondary-text-color)); //old: var(--eviolet) //#879bff);
     //padding-right: 10px;
   }
+
   &__validity-wrapper {
     align-items: center;
   }
@@ -413,7 +470,7 @@
     align-items: center;
     justify-content: center;
     padding: 0px 2px 13px 2px;
-    @include typo($size: 16px, $color: var(--secondary-text-color)); //old: var(--eviolet) //#879bff);
+    @include drumee.typo($size: 16px, $color: var(--secondary-text-color)); //old: var(--eviolet) //#879bff);
   }
 
   &__password-info-icon {
@@ -423,10 +480,12 @@
     margin-top: 13px;
     padding: 1px;
     color: var(--default-icon-neutral);
+
     &:hover {
       color: var(--default-icon-hover);
     }
   }
+
   &__tooltips {
     position: absolute;
     padding: 6px; //3px 10px;
@@ -437,6 +496,6 @@
     background-color: var(--background-tooltips);
     margin-left: -89px; //-45px; //-215px;
     margin-top: 22px; //16px;
-    @include typo($size: 11px, $line: 14px, $color: var(--default-text-tooltips)); //, $line: 15px,
+    @include drumee.typo($size: 11px, $line: 14px, $color: var(--default-text-tooltips)); //, $line: 15px,
   }
 }

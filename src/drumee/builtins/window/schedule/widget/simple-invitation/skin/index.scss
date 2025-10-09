@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/window/sharebox/widget/invitation-email/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import "mixins/drumee";
+@use "mixins/drumee";
 
 .simple-invitation {
   &__ui {
@@ -87,9 +87,9 @@
       resize: none;
       white-space: nowrap;
       width: calc(100% - 5px); //100%;
-      @include typo($line: 29px, $size: 14px, $weight: 400, $color: var(--default-text-color));// $size: 16px,
-      @include placeholder-input {
-        @include typo($line: 29px, $size: 14px, $weight: 300, $color: var(--default-text-placeholder)); //#89929e$size: 16px,
+      @include drumee.typo($line: 29px, $size: 14px, $weight: 400, $color: var(--default-text-color));// $size: 16px,
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 29px, $size: 14px, $weight: 300, $color: var(--default-text-placeholder)); //#89929e$size: 16px,
       }
     }
   }
@@ -131,7 +131,7 @@
     width: 100%;
     top: 100%;
     z-index: 100000;
-    box-shadow: $drumee-shadow-box;//0px 3px 4px var(--egrey-e8);
+    box-shadow: drumee.$drumee-shadow-box;//0px 3px 4px var(--egrey-e8);
     border-radius: var(--border-radius);//3px;
     // padding: 10px;
     margin-left: -25px;
@@ -139,7 +139,7 @@
     height: 140px;
     overflow: auto;
     & .contact-item, .invitation-email__item {
-      @include typo($size: 14px);//
+      @include drumee.typo($size: 14px);//
       padding-left: 2px;
       padding-top: 3px;
       padding-bottom: 3px;
@@ -168,7 +168,7 @@
     cursor: pointer;
     width: 115px;
     height: 27px;
-    @include typo($size: 13px, $color: var(--btn-commit-text));//size: 12px,
+    @include drumee.typo($size: 13px, $color: var(--btn-commit-text));//size: 12px,
     justify-content: center;
     align-items: center;
     &:hover{
@@ -211,7 +211,7 @@
 
   &__note {
     &.name {
-      @include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
+      @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-color));
       left: 15px;
       top: 2px;
     }

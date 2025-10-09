@@ -3,24 +3,23 @@
 #   FILE : desk/skin/media/grid
 #   TYPE : Backoffice Main Style
 # ===================================================================**/
-@import 'mixins/drumee';
-@import "color.scss";
+@use "sass:meta";
+@use 'mixins/drumee';
+@use "color.scss";
+@include meta.load-css("access.scss");
+@include meta.load-css("checkbox.scss");
+@include meta.load-css("container.scss");
+@include meta.load-css("expiry-status.scss");
+@include meta.load-css("filename.scss");
+@include meta.load-css("hub.scss");
+@include meta.load-css("helper.scss");
+@include meta.load-css("progress.scss");
+@include meta.load-css("notify.scss");
+@include meta.load-css("protected.scss");
+@include meta.load-css("shorcut.scss");
+@include meta.load-css("effects.scss");
+@include meta.load-css("forbiden.scss");
 
-.media-grid {
-  @import "access.scss";
-  @import "checkbox.scss";
-  @import "container.scss";
-  @import "expiry-status.scss";
-  @import "filename.scss";
-  @import "hub.scss";
-  @import "helper.scss";
-  @import "progress.scss";
-  @import "notify.scss";
-  @import "protected.scss";
-  @import "shorcut.scss";
-  @import "effects.scss";
-  @import "forbiden.scss";
-}
 
 .media-grid {
   &__ui {
@@ -99,7 +98,7 @@
       }
 
       &__text {
-        @include typo($line: 21px, $size: 10px, $weight: 300, $color: var(--secondary-text-color));
+        @include drumee.typo($line: 21px, $size: 10px, $weight: 300, $color: var(--secondary-text-color));
       }
     }
   }
@@ -192,7 +191,7 @@
   }
 
   &__input {
-    @include typo($line: 14px, $size: 11px, $color: var(--default-text-color));
+    @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));
     width: 100%;
     position: absolute;
     z-index: 102; //UU was 200, let's try lower
@@ -209,10 +208,10 @@
       overflow: hidden;
       resize: none;
       background-color: var(--default-bg);
-      @include typo($line: 12px, $size: 11px, $color: var(--default-text-color)); //$line:14px,
+      @include drumee.typo($line: 12px, $size: 11px, $color: var(--default-text-color)); //$line:14px,
 
       &::placeholder {
-        @include typo($size: 11px, $line: 12px, $weight: 300, $color: var(--default-text-placeholder));
+        @include drumee.typo($size: 11px, $line: 12px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
 

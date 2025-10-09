@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/welcome/skin/welcome-main.scss
 #   TYPE : Backoffice User Settings Styles
 # ===================================================================**/
-@import "mixins/drumee.scss";
+@use "mixins/drumee.scss";
 // .drumee-api{
 //   //min-width: 180px;
 // }
@@ -106,7 +106,7 @@
   }
 
   &__popbutton {
-    @include typo($color: var(--default-text-reverse), $size: 15px, $line: 1, $weight: 500);
+    @include drumee.typo($color: var(--default-text-reverse), $size: 15px, $line: 1, $weight: 500);
     cursor: pointer;
     background-color: #16a3ac;
     border-radius: var(--border-radius);

@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/adminpanel/pages/domain-page/js/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .domain-page{
   &__ui{
@@ -41,13 +41,13 @@
     //@include typo($size: 20px, $line: 20px, $color: var(--egrey-2f)); 
     justify-content: flex-end;
     text-align: right;
-    @include typo($size: 16px, $line: 24px, $color: var(--default-text-color));// var(--egrey-49)); 
+    @include drumee.typo($size: 16px, $line: 24px, $color: var(--default-text-color));// var(--egrey-49)); 
   }
   &__row_form_field{
     cursor: pointer;
-    @include typo($size: 16px, $line: 20px, $color: var(--default-text-color)); 
+    @include drumee.typo($size: 16px, $line: 20px, $color: var(--default-text-color)); 
     .copied-to-clipboard{
-      @include typo($size: 14px, $line: 20px, $color: var(--default-text-color));//$weight:300
+      @include drumee.typo($size: 14px, $line: 20px, $color: var(--default-text-color));//$weight:300
       position: absolute;
       left: -30px;
       top:100%;
@@ -74,7 +74,7 @@
     }
     & .entry-reminder__main input{
       border-bottom: 1px solid var(--default-entry-border-bottom);//var(--egrey-b6);
-      @include typo($size: 16px, $line: 24px, $color: var(--default-text-color));//var(--egrey-3f));
+      @include drumee.typo($size: 16px, $line: 24px, $color: var(--default-text-color));//var(--egrey-3f));
       
       &:focus{     
         border-color:var(--focus-border-placeholder);//var(--eblue);   
@@ -89,10 +89,10 @@
   }
   &__link_display{
     &.new{
-      @include typo($size: 16px, $line: 24px, $color: var(--egrey-b6));
+      @include drumee.typo($size: 16px, $line: 24px, $color: var(--egrey-b6));
     }
     &.view, &.edit{
-      @include typo($size: 16px, $line: 24px, $color: var(--secondary-text-color));
+      @include drumee.typo($size: 16px, $line: 24px, $color: var(--secondary-text-color));
     }
   }
   &__button-confirm,
@@ -100,7 +100,7 @@
     align-items: center;
     background:var(--btn-commit-background);    
     border-radius: var(--border-radius);
-    @include typo($size: 16px, $line: 24px, $color: var(--btn-commit-text)); //$size: 18px
+    @include drumee.typo($size: 16px, $line: 24px, $color: var(--btn-commit-text)); //$size: 18px
     height: 35px;//36px
     justify-content: center;
     width: 115px;//150px
@@ -111,7 +111,7 @@
     }
   }
   &__button-cancel{
-    @include typo($size: 16px, $line: 24px, $color: var(--btn-rollback-text));
+    @include drumee.typo($size: 16px, $line: 24px, $color: var(--btn-rollback-text));
     align-items: center;
     background: var(--btn-rollback-background);
     border-radius: var(--border-radius);

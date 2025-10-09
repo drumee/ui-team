@@ -4,7 +4,7 @@
 #   TYPE : Style Component
 # ==================================================================== */
 
-@import 'mixins/drumee.scss';
+@use 'mixins/drumee.scss';
 
 .drumee-contextmenu.drumee-box {
   background-color: var(--default-bg-block);//var(--bg-tooltips);
@@ -23,7 +23,7 @@
     justify-items: center;
     padding: 10px;
     white-space: nowrap;
-    @include typo($color:var(--default-text-color), $size: 12px, $line: 16px);
+    @include drumee.typo($color:var(--default-text-color), $size: 12px, $line: 16px);
     &[data-state='disable'] {
       opacity: 0.35;
       cursor: not-allowed;

@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/account/privacy/switcher/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .privacy-switcher {
   &__ui {
@@ -26,11 +26,11 @@
     width: 353px;
 
     &.tbd {
-      @include typo($size:18px,$line:21px,$weight:300,$color: var(--default-text-color));//#787B7F);
+      @include drumee.typo($size:18px,$line:21px,$weight:300,$color: var(--default-text-color));//#787B7F);
     }
 
     &.multi-line {
-      @include typo($size:18px,$line:21px,$weight:300,$color: var(--default-text-color));//#787B7F);
+      @include drumee.typo($size:18px,$line:21px,$weight:300,$color: var(--default-text-color));//#787B7F);
     }
   }
 
@@ -67,7 +67,7 @@
       top: 20px;
       width: 280px;
       z-index: 1;
-      @include typo($size: 12px, $line: 18px, $color: var(--default-text-tooltips));
+      @include drumee.typo($size: 12px, $line: 18px, $color: var(--default-text-tooltips));
     }
   }
   
@@ -121,7 +121,7 @@
         //color: #879BFF;
         line-height: 19px;
         text-align: left;
-        @include typo($size:18px,$line:19px,$color: var(--toggle-switch-on));//#879bff);
+        @include drumee.typo($size:18px,$line:19px,$color: var(--toggle-switch-on));//#879bff);
         &[data-state="0"]{
           color: var(--toggle-switch-off);//$ap-toggle-switch-off; //#d2d9db;
         }
@@ -135,7 +135,7 @@
         line-height: 19px;
         text-align: right;
         margin-left:19px;
-        @include typo($size:18px,$line:19px,$color: var(--toggle-switch-off));//#d2d9db);
+        @include drumee.typo($size:18px,$line:19px,$color: var(--toggle-switch-off));//#d2d9db);
         &[data-state="0"]{
           color:var(--toggle-switch-on);//#879bff;
         }

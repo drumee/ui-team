@@ -1,18 +1,17 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css("access.scss");
+@include meta.load-css("checkbox.scss");
+@include meta.load-css("container.scss");
+@include meta.load-css("filename.scss");
+@include meta.load-css("hub.scss");
+@include meta.load-css("helper.scss");
+@include meta.load-css("progress.scss");
+@include meta.load-css("share.scss");
+@include meta.load-css("notify.scss");
+@include meta.load-css("forbiden.scss");
+@include meta.load-css("shortcut.scss");
 
-.media-row {
-  @import "access.scss";
-  @import "checkbox.scss";
-  @import "container.scss";
-  @import "filename.scss";
-  @import "hub.scss";
-  @import "helper.scss";
-  @import "progress.scss";
-  @import "share.scss";
-  @import "notify.scss";
-  @import "forbiden.scss";
-  @import "shortcut.scss";
-}
 
 .media-row {
   &__ui {
@@ -92,10 +91,10 @@
       height: auto;
       overflow: hidden;
       resize: none;
-      @include typo($line: 21px, $size: 14px, $weight: 300, $color: var(--default-text-color));
+      @include drumee.typo($line: 21px, $size: 14px, $weight: 300, $color: var(--default-text-color));
 
       &::placeholder {
-        @include typo($size: 14px, $line: 21px, $color: var(--default-text-placeholder)); //$weight: 300,
+        @include drumee.typo($size: 14px, $line: 21px, $color: var(--default-text-placeholder)); //$weight: 300,
       }
     }
 
@@ -106,7 +105,7 @@
     grid-template-columns: 60px 60px minmax(310px, auto) 180px 120px 80px;
     align-items: center;
     width: 100%;
-    @include typo($line: 33px, $size: 14px, $weight: 300, $color: var(--default-text-color)); //var(--egrey-49)
+    @include drumee.typo($line: 33px, $size: 14px, $weight: 300, $color: var(--default-text-color)); //var(--egrey-49)
 
     .preview {
       position: relative;
@@ -212,7 +211,7 @@
         overflow: hidden;
         text-align: center;
         width: 30px;
-        @include typo($size: 12px, $line: 20px, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-reverse));
 
         &:hover {
           background: var(--btn-commit-background-hover);

@@ -3,7 +3,7 @@
 #   FILE : /ui/src/drumee/builtins/window/account/profile/skin/field.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .account-field {
 
@@ -53,7 +53,7 @@
   }
 
   &__title {
-    @include typo($size: 24px, $line: 32px, $weight: 300, $color: var(--default-text-color));
+    @include drumee.typo($size: 24px, $line: 32px, $weight: 300, $color: var(--default-text-color));
   }
 
   &__label {
@@ -65,7 +65,7 @@
 
     &-text {
       text-align:left;
-      @include typo($size: 16px, $line: 21px, $color: var(--secondary-text-color));
+      @include drumee.typo($size: 16px, $line: 21px, $color: var(--secondary-text-color));
 
       &.error {
         color: var(--default-text-error);//#fe6790;
@@ -96,13 +96,13 @@
 
   &__note {
     align-items: center;
-    @include typo($size: 16px, $line: 27px, $color: var(--default-text-color));
+    @include drumee.typo($size: 16px, $line: 27px, $color: var(--default-text-color));
     
     &.navigation {
       left: -8px;
       min-width: 80px; //100px;
       text-align: center;
-      @include typo($size: 11px, $line: 13px, $color: var(--eviolet));
+      @include drumee.typo($size: 11px, $line: 13px, $color: var(--eviolet));
     }
   }
 
@@ -140,7 +140,7 @@
     left: 30px;
     top: 5px;
     width: 24px;// 30px;
-    @include typo($size: 11px, $line: 14px, $color: var(--btn-commit-text));
+    @include drumee.typo($size: 11px, $line: 14px, $color: var(--btn-commit-text));
 
     &.address {
       top: 0px; //25px;
@@ -152,14 +152,14 @@
   }
 
   input {
-    @include typo($size: 16px, $line: 27px, $color: var(--default-text-color));
+    @include drumee.typo($size: 16px, $line: 27px, $color: var(--default-text-color));
     background: transparent;;
     border-bottom:1px solid var(--default-entry-border-bottom);//var(--eviolet);
     cursor: text;
     text-overflow: ellipsis;
     width: 200px;
     &::placeholder{
-      @include typo($size: 16px, $line: 27px,$weight: 300, $color: var(--default-text-placeholder));
+      @include drumee.typo($size: 16px, $line: 27px,$weight: 300, $color: var(--default-text-placeholder));
     }
   }
 }

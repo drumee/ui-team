@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .folder {
   color: var(--default-text-reverse); //var(--ewhite);
   &.preview{
@@ -54,7 +56,7 @@
     }
     &__text{
       //margin: 2px auto; 
-      @include typo($line:12px,$size:11px,$weight:400,$color: var(--eorange-sunset) ); //#EA4D44
+      @include drumee.typo($line:12px,$size:11px,$weight:400,$color: var(--eorange-sunset) ); //#EA4D44
       text-align: center;
       //width:80px;
       padding:2px 8px 1px;

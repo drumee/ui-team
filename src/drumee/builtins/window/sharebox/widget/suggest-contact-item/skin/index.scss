@@ -1,8 +1,8 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 .suggestion-contact-item {
   &__ui {
     background-color: inherit;
-    @include typo( $color: var(--default-text-color));//var(--egrey-2f));
+    @include drumee.typo( $color: var(--default-text-color));//var(--egrey-2f));
     cursor: pointer;
     overflow: hidden;
 
@@ -58,7 +58,7 @@
 
 .widget-contacts__item {
   & .contact-item {
-    @include typo( $size :14px, $line: 16px);
+    @include drumee.typo( $size :14px, $line: 16px);
     padding-left: 14px;
     padding-top: 5px;
     padding-bottom: 5px;
@@ -73,19 +73,19 @@
     }
 
     &__name {
-      @include typo( $size :14px, $line: 16px, $color: var(--default-text-color));//var(--egrey-2f) );
+      @include drumee.typo( $size :14px, $line: 16px, $color: var(--default-text-color));//var(--egrey-2f) );
       padding: 3px 3px 3px 15px;
       margin-top: 3px;
       overflow:hidden;
       width: 200px;
-      @include overflow-text;
+      @include drumee.overflow-text;
     }
   }
 }
 
 .addressbook-widget-search__item {
   & .contact-item {
-    @include typo($size:12px, $line: 14px);
+    @include drumee.typo($size:12px, $line: 14px);
     padding: 4px 5px 3px 12px; //7px 5px 7px 15px;
     height: 33px;
 

@@ -1,5 +1,5 @@
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .account-avatar{
   &__ui{
@@ -109,7 +109,7 @@
   &__menu-item{
     padding: 6px 5px; //6px 0;
     cursor: pointer;
-    @include typo($size:14px,$line:16px,$weight:300,$color: var(--default-text-color));
+    @include drumee.typo($size:14px,$line:16px,$weight:300,$color: var(--default-text-color));
     &:hover {
       color: var(--backgroundless-text-hover);//#879BFF;
     }

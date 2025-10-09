@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 
 .hub-owner{
@@ -12,7 +12,7 @@
     }
   }
   &__transferee{
-    @include typo($color: var(--emauve-dark) ,$size:14px,$line:26px,$weight:400);//#AB47BC
+    @include drumee.typo($color: var(--emauve-dark) ,$size:14px,$line:26px,$weight:400);//#AB47BC
   }
   &__dialog.dialog__wrapper{
     position: absolute;
@@ -29,7 +29,7 @@
     } 
   }
   .invitation__container-sharee, .invitation-settings__ui{
-   box-shadow: $drumee-shadow-box;
+   box-shadow: drumee.$drumee-shadow-box;
    // box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
     min-height: 219px;
     background-color: var(--default-bg);  

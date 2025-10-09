@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 &-custom-range {
   &__main {
     height: 100%;
@@ -77,7 +79,7 @@
   .entry-reminder_error {
     position: absolute;
     right: 0;
-    @include typo($color:var(--default-text-error), $size: 12px);
+    @include drumee.typo($color:var(--default-text-error), $size: 12px);
   }
 
   &__entry-container {

@@ -1,115 +1,120 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
-&-breadcrumbs {
-  &__main {
-    height: 100%;
-    width: auto;
-    .menu-items {
+.window-support-ticket-topbar {
+
+  &-breadcrumbs {
+    &__main {
+      height: 100%;
+      width: auto;
+
+      .menu-items {
+        left: 18px;
+        margin-top: -15px;
+      }
+    }
+
+    &__container {
+      align-items: center;
+      border-radius: var(--border-radius);
+      height: 18px;
+      justify-content: center;
+      left: -6px; //3px;
+      position: absolute;
+      top: 14px; // 17px;
+      z-index: 11;
+    }
+
+    &__digit {
+      align-items: center;
+      background-color: #1187f6;
+      border-radius: 50%;
+      height: 16px;
+      justify-content: center;
+      margin: -9px 0 0 0;
+      width: 16px;
+      z-index: 2 !important;
+      line-height: 1;
+      color: #fff;
       left: 18px;
-      margin-top: -15px;
-    }
-  }
-
-  &__container {
-    align-items: center; 
-    border-radius:var(--border-radius);
-    height: 18px;
-    justify-content: center;
-    left: -6px; //3px;
-    position: absolute;
-    top:14px; // 17px;
-    z-index: 11;
-  }
-
-  &__digit {
-    align-items: center;
-    background-color: #1187f6;
-    border-radius: 50%;
-    height: 16px;
-    justify-content: center;
-    margin: -9px 0 0 0;
-    width: 16px;
-    z-index: 2!important;
-    line-height: 1;
-    color: #fff;
-    left: 18px;
-    font-size: 9px;
-    top: -2px;
-    cursor: pointer;
-  }
-
-  &__icon {
-    background-color:var(--default-icon-neutral);
-    opacity:0.75;
-    color: var(--default-icon-reverse);
-    cursor: pointer;
-    margin:0px 2px;
-    &:hover{
-      background-color: var(--default-background-hover);
-      opacity:  1;
-    }
-    
-    &.breadcrumb-icon {
-      border-radius: var(--border-radius-small); //2px;
-      height: 18px; //20px;
-      padding: 5px;
-      width:18px; //20px;
-      top: -4px; //-2px;
-      left: 11px; //22px; //15px; //13px;
+      font-size: 9px;
+      top: -2px;
+      cursor: pointer;
     }
 
-    &.next {
-      transform: rotate(180deg);
-    }
-  }
+    &__icon {
+      background-color: var(--default-icon-neutral);
+      opacity: 0.75;
+      color: var(--default-icon-reverse);
+      cursor: pointer;
+      margin: 0px 2px;
 
-  &__item {
-    cursor: pointer;
-    padding: 5px 15px;
-    white-space: nowrap;
-    width: 100%;
-    @include typo($size: 14px, $line: 18px, $weight: 300, $color: var(--default-text-color)); //var(--egrey-49));
-    @include overflow-text;
+      &:hover {
+        background-color: var(--default-background-hover);
+        opacity: 1;
+      }
 
-    &:last-child {
-      color: var(--eviolet);
-    }
-  }
+      &.breadcrumb-icon {
+        border-radius: var(--border-radius-small); //2px;
+        height: 18px; //20px;
+        padding: 5px;
+        width: 18px; //20px;
+        top: -4px; //-2px;
+        left: 11px; //22px; //15px; //13px;
+      }
 
-  &__roll {
-    background: var(--default-background);
-    border-radius: var(--border-radius-small); //4px;
-    box-shadow:$drumee-container-dropdown;// 0 6px 10px 1px rgba(63,79,117,0.13), 0 7px 20px 0 rgba(86,65,113,0.08), 0 3px 17px 0 rgba(194,185,203,0);
-    height: auto;
-    left: -12px;    
-    overflow: visible;
-    padding: 10px 0;
-    position: absolute;
-    top: 10px;
-    width: 109px;
-    z-index: 1000;
-    
-    &:before {
-      background-color: var(--default-background);
-      box-shadow:var(--shadow-before);// 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
-      content: "";
-      height: 10px;
-      left: 2px;
-      position: absolute;
-      top: -4px;
-      transform: rotate(45deg);
-      width: 10px;
+      &.next {
+        transform: rotate(180deg);
+      }
     }
 
-    &:after {
-      background: var(--default-background);
-      border-radius: var(--default-border-radius-top);
-      content: "";
-      height: 10px;
-      left: 0;
-      position: absolute;
-      top: 0;
+    &__item {
+      cursor: pointer;
+      padding: 5px 15px;
+      white-space: nowrap;
       width: 100%;
+      @include drumee.typo($size: 14px, $line: 18px, $weight: 300, $color: var(--default-text-color)); //var(--egrey-49));
+      @include drumee.overflow-text;
+
+      &:last-child {
+        color: var(--eviolet);
+      }
+    }
+
+    &__roll {
+      background: var(--default-background);
+      border-radius: var(--border-radius-small); //4px;
+      box-shadow: drumee.$drumee-container-dropdown; // 0 6px 10px 1px rgba(63,79,117,0.13), 0 7px 20px 0 rgba(86,65,113,0.08), 0 3px 17px 0 rgba(194,185,203,0);
+      height: auto;
+      left: -12px;
+      overflow: visible;
+      padding: 10px 0;
+      position: absolute;
+      top: 10px;
+      width: 109px;
+      z-index: 1000;
+
+      &:before {
+        background-color: var(--default-background);
+        box-shadow: var(--shadow-before); // 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
+        content: "";
+        height: 10px;
+        left: 2px;
+        position: absolute;
+        top: -4px;
+        transform: rotate(45deg);
+        width: 10px;
+      }
+
+      &:after {
+        background: var(--default-background);
+        border-radius: var(--default-border-radius-top);
+        content: "";
+        height: 10px;
+        left: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
     }
   }
 }

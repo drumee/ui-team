@@ -1,11 +1,10 @@
-@import "mixins/drumee";
-@import './layout.scss';
-// @import './vars.scss';
+@use "sass:meta";
+@use "mixins/drumee";
+@use 'layout.scss';
+@include meta.load-css('search');
+@include meta.load-css('overlay-wrapper');
 
-.window-addressbook {
-
-  @import './search';
-  @import './overlay-wrapper';
+  .window-addressbook {
 
   &__header {
     background-color: var(--ab-header-bg);
@@ -14,7 +13,7 @@
 
   &-topbar {
 
-    @import './breadcrumbs.scss';
+    @include meta.load-css('breadcrumbs.scss');
 
     &__content {
       align-items: center;
@@ -44,10 +43,10 @@
             padding-right: 1px;
             padding-top: 0px;
             width: 19px;
-            @include typo($size: 11px, $line: 14px, $color: var(--default-text-notification));
+            @include drumee.typo($size: 11px, $line: 14px, $color: var(--default-text-notification));
 
             .inner {
-              @include typo($size: 11px, $line: 14px, $color: var(--default-text-notification));
+              @include drumee.typo($size: 11px, $line: 14px, $color: var(--default-text-notification));
             }
           }
         }
@@ -55,7 +54,7 @@
 
       & .title {
         align-items: center;
-        @include typo($size: 18px, $line: 16px, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 18px, $line: 16px, $color: var(--default-text-reverse));
       }
     }
 
@@ -155,6 +154,7 @@
         height: 28px;
         padding: 2.5px 2px 2.5px 3px;
         width: 28px;
+
         &:hover {
           color: var(--default-icon-hover);
         }
@@ -199,7 +199,7 @@
     &__name {
       padding-top: 2px;
       padding-left: 8px;
-      @include typo($size: 14px, $weight: 300, $line: 16px, $color: var(--default-text-color));
+      @include drumee.typo($size: 14px, $weight: 300, $line: 16px, $color: var(--default-text-color));
 
       &.contactbook {
         margin-left: -6px;
@@ -283,7 +283,7 @@
     justify-content: center;
     min-width: 280px;
     text-align: center;
-    @include typo($size: 16px, $line: 30px, $color: var(--tertiary-text-color) );
+    @include drumee.typo($size: 16px, $line: 30px, $color: var(--tertiary-text-color));
 
     & .nocontact-text {
       justify-content: center;

@@ -3,8 +3,8 @@
 #   FILE : builtins/sandbox/skin/sandbox
 #   TYPE : Module
 # ===================================================================**/
-@import 'mixins/drumee.scss';
-@import '../../skin/index.scss';
+@use 'mixins/drumee.scss';
+@use '../../skin/index.scss';
 .window-analytics-extractor {
   &__ui{
     height: 150px;
@@ -91,7 +91,7 @@
   .entry-reminder_error{
     position: absolute;
     right: 0;
-    @include typo($color:var(--default-text-error), $size: 12px);
+    @include drumee.typo($color:var(--default-text-error), $size: 12px);
   }
 
   &__entry-container{
@@ -117,7 +117,7 @@
   }
 
   &-button, &__error-message{
-    @include typo($color:var(--default-text-error), $size: 14px);
+    @include drumee.typo($color:var(--default-text-error), $size: 14px);
   }
 
   &__header, &__command{

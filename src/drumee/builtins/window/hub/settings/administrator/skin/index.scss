@@ -1,4 +1,4 @@
-@import "mixins/drumee";
+@use "mixins/drumee";
 .hub-administrator{
   &__dialog.dialog__wrapper{
     position: absolute;
@@ -8,7 +8,7 @@
     z-index:1000;  
   }
   .invitation__container-sharee, .invitation-settings__ui{
-    box-shadow:$drumee-shadow-box ;
+    box-shadow:drumee.$drumee-shadow-box ;
     background-color: var(--default-bg); 
     width: 360px;
     min-height: 240px;

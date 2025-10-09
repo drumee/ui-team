@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/conference/widget/recipient/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .schedule-recipient{
   &__ui{
@@ -35,7 +35,7 @@
     padding: 0 5px 0px 3px;
     justify-content: center;
     align-items: center;
-    @include overflow-text();
+    @include drumee.overflow-text();
   }
   &-email,&-name{
     height: 100%;
@@ -44,7 +44,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include typo($size: 14px, $weight:400, $line: 20px, $color:var(--default-text-color));//$default-text-alert,$size: 16px,$weight:300, 
+    @include drumee.typo($size: 14px, $weight:400, $line: 20px, $color:var(--default-text-color));//$default-text-alert,$size: 16px,$weight:300, 
   }
   &-name{
     margin-right: auto;
@@ -93,7 +93,7 @@
       align-items: center;
       justify-content: center;
       .drumee-text {
-        @include typo($size: 15px,$weight:400, $color: var(--default-text-color));//$default-icon-neutral);
+        @include drumee.typo($size: 15px,$weight:400, $color: var(--default-text-color));//$default-icon-neutral);
         opacity:1
       }
     }

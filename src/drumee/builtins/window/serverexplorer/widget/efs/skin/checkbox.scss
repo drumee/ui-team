@@ -1,28 +1,31 @@
-&__checkbox {
-  border: 1px solid var(--default-checkbox-border);
-  border-radius: var(--checkbox-border-radius);
-  box-shadow: none;
-  color: transparent;  
-  height: 18px;
-  left: 4px;
-  cursor: pointer;
-  text-align: center;
-  position: absolute;
-  top: 4px;
-  width: 18px;
+.media-efs {
 
-  &.folder {
-    border: 1px solid var(--checkbox-checked-border-reverse);
-  }
-
-  &[data-state="1"] {
-    box-shadow: none;
-    color: var(--default-checkbox-checked);
+  &__checkbox {
     border: 1px solid var(--default-checkbox-border);
+    border-radius: var(--checkbox-border-radius);
+    box-shadow: none;
+    color: transparent;
+    height: 18px;
+    left: 4px;
+    cursor: pointer;
+    text-align: center;
+    position: absolute;
+    top: 4px;
+    width: 18px;
 
     &.folder {
-      color: var(--checkbox-checked-reverse);
-      border: 1px solid var(--checkbox-checked-reverse);
+      border: 1px solid var(--checkbox-checked-border-reverse);
+    }
+
+    &[data-state="1"] {
+      box-shadow: none;
+      color: var(--default-checkbox-checked);
+      border: 1px solid var(--default-checkbox-border);
+
+      &.folder {
+        color: var(--checkbox-checked-reverse);
+        border: 1px solid var(--checkbox-checked-reverse);
+      }
     }
   }
 }

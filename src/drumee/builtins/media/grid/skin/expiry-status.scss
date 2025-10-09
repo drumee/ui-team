@@ -1,49 +1,23 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
-&-expiry-status {
-  &__icon {
-    &.expiry-status {
-      color: var(--default-icon-reverse);
-      // cursor: help;
-      height: 18px;
-      width: 18px;
-      position: absolute;
-      right: 26px;
-      top: 20px;
+.media-grid {
+  &-expiry-status {
+    &__icon {
+      &.expiry-status {
+        color: var(--default-icon-reverse);
+        // cursor: help;
+        height: 18px;
+        width: 18px;
+        position: absolute;
+        right: 26px;
+        top: 20px;
 
-      & svg {
-        border: 0.8px solid var(--default-icon-reverse);
-        border-radius: 50%;
+        & svg {
+          border: 0.8px solid var(--default-icon-reverse);
+          border-radius: 50%;
+        }
+
       }
-
-      // &:hover {
-      //   & .tooltips {
-      //     display: flex !important;
-      //   }
-      // }
-
-      // & .tooltips {
-      //   @include typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
-      //   background-color: var(--background-tooltips);
-      //   border-radius: var(--border-radius);
-      //   max-height: 90px;
-      //   min-height: 40px;
-      //   justify-content: center;
-      //   padding: 10px;
-      //   position: absolute;
-      //   right: 0px;
-      //   text-align: center;
-      //   top: 20px;
-      //   width: 270px;
-      //   z-index: 1;
-      // }
     }
   }
 }
-
-
-
-
-
-
-

@@ -3,11 +3,11 @@
 #   FILE : desk/skin/desk-header.scss
 #   TYPE : Backoffice Main Style
 # ===================================================================**/
-@import 'logo.scss';
-@import 'user.scss';
-@import 'settings.scss';
-@import 'share-bar.scss';
-@import 'mixins/drumee';
+@use 'logo.scss';
+@use 'user.scss';
+@use 'settings.scss';
+@use 'share-bar.scss';
+@use 'mixins/drumee';
 
 
 .desk-module {
@@ -86,7 +86,7 @@
     width: 100%;
     max-width: calc(100% - 185px);
     justify-content: center;
-    @include typo($color: var(--default-text-reverse),$size:18px,$line:24px,$weight:300);
+    @include drumee.typo($color: var(--default-text-reverse),$size:18px,$line:24px,$weight:300);
     &[data-device="mobile"] {
       max-width: calc(100% - 85px);
     }
@@ -126,15 +126,15 @@
     &.entry{
       //width: 100%;
       flex: 1;
-      @include typo($line:19px,$size:14px,$weight:300,$color:var(--default-text-color));
+      @include drumee.typo($line:19px,$size:14px,$weight:300,$color:var(--default-text-color));
 
-      @include placeholder-input {
-        @include typo($line: 19px, $size: 17px, $weight: 300, $color: var(--default-text-placeholder));
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 19px, $size: 17px, $weight: 300, $color: var(--default-text-placeholder));
       }
 
       @media(min-width:320px) {
         cursor: auto;
-        @include typo($line: 19px, $size: 12px, $weight: 300, $color: var(--default-text-color));
+        @include drumee.typo($line: 19px, $size: 12px, $weight: 300, $color: var(--default-text-color));
       }
 
       &:focus {
@@ -180,17 +180,17 @@
       resize: none;
       width: 100%;
       height: 100%;
-      @include typo($line:19px,$size:16px,$weight:300,$color:var(--default-text-color));
+      @include drumee.typo($line:19px,$size:16px,$weight:300,$color:var(--default-text-color));
 
       &::placeholder {
-        @include typo($size: 16px, $line: 19px, $weight: 300, $color:var(--default-text-placeholder));
+        @include drumee.typo($size: 16px, $line: 19px, $weight: 300, $color:var(--default-text-placeholder));
       }
 
       @media(max-width:400px) {
         cursor: text;
         margin-top:5px;
         padding-left:3px;
-        @include typo($line:19px,$size:12px,$weight:300,$color:var(--default-text-color));
+        @include drumee.typo($line:19px,$size:12px,$weight:300,$color:var(--default-text-color));
       }
     }
   }
@@ -245,7 +245,7 @@
   }
 
   &__pagename-text {
-    @include typo($color: var(--default-text-reverse),$size:24px,$line:36px,$weight:300);
+    @include drumee.typo($color: var(--default-text-reverse),$size:24px,$line:36px,$weight:300);
   }
 
   &__button {
@@ -254,7 +254,7 @@
     height: 36px;
     text-transform: uppercase;
     width: 115px;
-    @include typo($color: var(--default-text-reverse),$size:12px,$line:14px,$weight:500);
+    @include drumee.typo($color: var(--default-text-reverse),$size:12px,$line:14px,$weight:500);
 
     &.primary {
       background-color: var(--eorange);

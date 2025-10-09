@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/addressbook/widget/tag-item/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 
 .addressbook-widget-tag-item {
@@ -37,7 +37,7 @@
       & .addressbook-widget-tag-item__note.name {
         color : var(--default-text-reverse) !important;
         width: 120px;
-        @include overflow-text;
+        @include drumee.overflow-text;
         .inner{
           overflow: hidden;
           text-overflow: ellipsis;
@@ -54,7 +54,7 @@
       &[data-radio='on'],
       &:hover {
         background: transparent;
-        @include overflow-text;
+        @include drumee.overflow-text;
       }
     }    
   }
@@ -64,7 +64,7 @@
   }
 
   &__container {
-    @include typo($size: 14px, $line: 14px, $color: var(--default-text-color));
+    @include drumee.typo($size: 14px, $line: 14px, $color: var(--default-text-color));
     cursor: pointer;
     margin: 1px 0.5px 0px 0px;
     padding-bottom:4px;
@@ -80,7 +80,7 @@
     &.name { 
       align-items: center;
       width: 148px;
-      @include overflow-text;
+      @include drumee.overflow-text;
     }
   }
 
@@ -108,7 +108,7 @@
     overflow: hidden;
     
     & input {
-      @include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
+      @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-color));
       background: var(--default-block-background); //var(--white-f9);
       border-bottom: 1px solid var(--default-entry-border-bottom);
       cursor: text;
@@ -121,7 +121,7 @@
       }
 
       &::placeholder {
-        @include typo($size: 14px, $line: 16px,$weight:300, $color: var(--default-text-placeholder));
+        @include drumee.typo($size: 14px, $line: 16px,$weight:300, $color: var(--default-text-placeholder));
       }
     }
   }

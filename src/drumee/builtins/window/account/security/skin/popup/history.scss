@@ -6,7 +6,7 @@
 // @import 'mixins/typo.scss';
 // @import 'mixins/colors/index.scss';
 // @import 'mixins/vendor.scss';
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .account-security{
   &__popup{
@@ -36,12 +36,12 @@
     &.blue{
       width: 276px;
       margin-top:40px;
-      @include typo($size:16px,$line:19px,$color:#4A90E2,$weight:500);
+      @include drumee.typo($size:16px,$line:19px,$color:#4A90E2,$weight:500);
     } 
     &.black{
       width: 196px;
       margin-top:31px;
-      @include typo($size:16px,$line:20px,$color:#2F2F2F,$weight:500);
+      @include drumee.typo($size:16px,$line:20px,$color:#2F2F2F,$weight:500);
     }
   }
   &__text-history{
@@ -50,7 +50,7 @@
     margin-top:7px;
     margin-left:48px;
     padding-right:101px;
-    @include typo($size:14px,$line:20px,$color:#2F2F2F,$weight:300);
+    @include drumee.typo($size:14px,$line:20px,$color:#2F2F2F,$weight:300);
   }
   &__icon{
     cursor: pointer;

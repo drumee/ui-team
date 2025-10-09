@@ -1,4 +1,5 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
 
 .invitation-searchbox {
   &__ui {
@@ -17,7 +18,7 @@
     height: 30px;
     justify-content: center;
     padding: 0 30px;
-    @include typo($size:14px,$line:30px,$color:var(--default-text-title),$weight:300);
+    @include drumee.typo($size:14px,$line:30px,$color:var(--default-text-title),$weight:300);
   }
 
   &__container {
@@ -29,7 +30,7 @@
       align-self: center;
       background: var(--default-bg);
       border-radius:var(--border-radius);
-      box-shadow: $drumee-shadow-box;
+      box-shadow: drumee.$drumee-shadow-box;
       margin: auto;
       max-height:216px;
       min-height:0;
@@ -97,7 +98,7 @@
     min-width: 68px;
     width: auto;
     padding: 14px;
-    @include typo($size: 15px, $line:20px, $color: var(--btn-rollback-text));
+    @include drumee.typo($size: 15px, $line:20px, $color: var(--btn-rollback-text));
 
     &:hover {
       border: 1px solid var(--btn-rollback-border-hover);
@@ -107,7 +108,7 @@
 
   &__header {
     justify-content: center;
-    @include typo($size:14px,$line:16px,$color: var(--emauve-dark),$weight:400);
+    @include drumee.typo($size:14px,$line:16px,$color: var(--emauve-dark),$weight:400);
   }
 
   &__list {
@@ -116,7 +117,7 @@
       margin-top:10px;
       max-height: 200px;
       overflow: hidden;
-      @import "scrollbar.scss";
+      // @include meta.load-css("scrollbar.scss");
     }
   }
 
@@ -154,9 +155,9 @@
         min-height: 0;
         padding: 0 2px;
         width: 100%;
-        @include typo($color:  var(--default-text-color), $size:14px, $line:28px, $weight:400);
-        @include placeholder-input {
-          @include typo($color: var(--default-text-placeholder), $size:14px, $line:28px, $weight:300);
+        @include drumee.typo($color:  var(--default-text-color), $size:14px, $line:28px, $weight:400);
+        @include drumee.placeholder-input {
+          @include drumee.typo($color: var(--default-text-placeholder), $size:14px, $line:28px, $weight:300);
         }
       }
     }

@@ -4,7 +4,7 @@
 #   TYPE : Style Component
 # ===================================================================**/
 
-@import '../../../../skin/mixins/drumee.scss';
+@use '../../../../skin/mixins/drumee.scss';
 
 .window-manager {
   &__ui {
@@ -68,14 +68,14 @@
     padding-top: 10px;
 
     &[data-type="trial"]::after {
-      @include typo($size: 36px, $line: 42px, $color: var(--default-text-title));
+      @include drumee.typo($size: 36px, $line: 42px, $color: var(--default-text-title));
       transform: none;
       bottom: 0;
       width: 100%;
     }
 
     &[data-type="error"]::after {
-      @include typo($size: 76px, $line: 2, $color: red);
+      @include drumee.typo($size: 76px, $line: 2, $color: red);
       transform: none;
       width: 100%;
       background-color: white;
@@ -134,7 +134,7 @@
     align-items: center;
     cursor: pointer;
     text-align: center;
-    @include typo($size: 14px, $line: 15px, $color: var(--default-text-reverse)); //$size: 13px,
+    @include drumee.typo($size: 14px, $line: 15px, $color: var(--default-text-reverse)); //$size: 13px,
   }
 
 

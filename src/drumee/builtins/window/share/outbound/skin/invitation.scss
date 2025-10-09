@@ -1,7 +1,9 @@
+@use "mixins/drumee";
+
 .invitation{
   &-shareeroll__label, &-settings__label{
     
-      @include typo($color:#FA8540,$size:16px,$line:19px,$weight:400);
+      @include drumee.typo($color:#FA8540,$size:16px,$line:19px,$weight:400);
     
   }
   // &-settings__label{

@@ -1,78 +1,88 @@
-&-topbar {
-  &__icon {
-    width: 20px; //40px;
-    height: 20px; //40px;
-    margin: auto 0 auto 15px;
-    color: var(--ewhite);
-    cursor: pointer;
-    &.desktopgroup {
-      margin-top: 11px;
-    }
-    &:hover {
-      color: #879bff;
-      opacity: 1;
-    }
-  }
-  &__control {
-    .icon {
-      width: 12px;
-      height: 12px;
-      margin: auto 15px auto 0;
-      padding: 0;
-      color: var(--default-icon-reverse);
-    }
-  }
-}
+@mixin webrtc-command {
+  &-topbar {
+    &__icon {
+      width: 20px; //40px;
+      height: 20px; //40px;
+      margin: auto 0 auto 15px;
+      color: var(--ewhite);
+      cursor: pointer;
 
-&__topbar {
-  &-container {
-    width: 100%;
-    height: auto;
-    justify-content: center;
-  }
-  &-title {
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-    .name {
-      align-items: flex-start;
-      margin-left: -30px; //-54px;
-      max-width: 100%; //316px;
-      margin-right: 18px;
-      justify-content: center;
-      @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
-      @include overflow-text;
-      .note-content {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+      &.desktopgroup {
+        margin-top: 11px;
+      }
+
+      &:hover {
+        color: #879bff;
+        opacity: 1;
+      }
+    }
+
+    &__control {
+      .icon {
+        width: 12px;
+        height: 12px;
+        margin: auto 15px auto 0;
+        padding: 0;
+        color: var(--default-icon-reverse);
       }
     }
   }
-  &-notification{
-    font-size: 10px;
-    width: 13px;//15px;
-    height: 13px;//15px;
-    background-color: var(--default-bg);
-    top:6px;//2px;
-    right:6px;
-    border-radius: 50%;
-    justify-content: center;
-    cursor: pointer;
-    &[data-area="dmz"]{
-      .inner{
-        @include typo($size: 10px, $weight:500, $line: 14px, $color: var(--sharebox-main));
-      }
-      &.guest{
-        .inner{
-        color:#00B7C4;
+
+  &__topbar {
+    &-container {
+      width: 100%;
+      height: auto;
+      justify-content: center;
+    }
+
+    &-title {
+      flex: 1;
+      align-items: center;
+      justify-content: center;
+
+      .name {
+        align-items: flex-start;
+        margin-left: -30px; //-54px;
+        max-width: 100%; //316px;
+        margin-right: 18px;
+        justify-content: center;
+        @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
+        @include overflow-text;
+
+        .note-content {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
       }
     }
 
-    &[data-state="0"]{
-      display: none;
+    &-notification {
+      font-size: 10px;
+      width: 13px; //15px;
+      height: 13px; //15px;
+      background-color: var(--default-bg);
+      top: 6px; //2px;
+      right: 6px;
+      border-radius: 50%;
+      justify-content: center;
+      cursor: pointer;
+
+      &[data-area="dmz"] {
+        .inner {
+          @include typo($size: 10px, $weight: 500, $line: 14px, $color: var(--sharebox-main));
+        }
+
+        &.guest {
+          .inner {
+            color: #00B7C4;
+          }
+        }
+      }
+
+      &[data-state="0"] {
+        display: none;
+      }
     }
   }
 }
-

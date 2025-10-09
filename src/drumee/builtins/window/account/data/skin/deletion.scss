@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/desk/skin/account
 #   TYPE : Account Main Style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 
 .account-data-deletion {
@@ -34,7 +34,7 @@
     justify-content: center;
     padding: 10px;
     &.text{
-      @include typo($size:18px,$line:26px,$color: var(--default-text-caution));//$weight:400
+      @include drumee.typo($size:18px,$line:26px,$color: var(--default-text-caution));//$weight:400
     }
   }
 
@@ -85,7 +85,7 @@
       margin: auto;
       //border: 1px solid var(--state-1-border);
       background-color:var(--state-1-background);
-      @include typo($size:14px,$line:14px,$color: var(--state-1-text), $weight:300);
+      @include drumee.typo($size:14px,$line:14px,$color: var(--state-1-text), $weight:300);
       justify-content: center;
       align-items: center;
       align-content: center;
@@ -95,7 +95,7 @@
     .step-label{
      // font-style: italic;
      color:var(--state-1-text);
-      @include typo($size:14px,$line:14px,$color: var(--default-text-color), $weight:300); //$color: var(--btn-rollback-text)
+      @include drumee.typo($size:14px,$line:14px,$color: var(--default-text-color), $weight:300); //$color: var(--btn-rollback-text)
     }
   }
   &__guidelines{
@@ -103,7 +103,7 @@
     min-height: 174px;
     justify-content: center;
     text-align: left;
-    @include typo($size:16px,$line:24px,$color: var(--default-text-color), $weight:300); //$color: var(--btn-rollback-text),$weight:400$size:14px
+    @include drumee.typo($size:16px,$line:24px,$color: var(--default-text-color), $weight:300); //$color: var(--btn-rollback-text),$weight:400$size:14px
     p{
       margin-bottom: 10px;
     }
@@ -122,10 +122,10 @@
 //      @include typo($size:16px,$line:26px,$weight:300,$color: var(--default-text-color));
     }
     .total{
-      @include typo($size:14px,$line:26px,$weight:300,$color: var(--default-text-color));
+      @include drumee.typo($size:14px,$line:26px,$weight:300,$color: var(--default-text-color));
     }
     .label{
-      @include typo($size:16px,$line:26px,$weight:300,$color: var(--default-text-color));
+      @include drumee.typo($size:16px,$line:26px,$weight:300,$color: var(--default-text-color));
     }
     .bar-value{
       height: 4px;
@@ -141,7 +141,7 @@
     flex-direction: row;
     justify-content: center;
     justify-items: center;
-    @include typo($size:14px,$line:18px,$color: var(--default-text-color),$weight:300);//$size:12px
+    @include drumee.typo($size:14px,$line:18px,$color: var(--default-text-color),$weight:300);//$size:12px
     &[data-state="0"]{
       display: none;
       svg{
@@ -179,7 +179,7 @@
     cursor: pointer;
     justify-content: center;
     border-radius:var(--border-radius);
-    @include typo($size:16px,$line:18px,$color: var(--btn-rollback-text));//$weight:300
+    @include drumee.typo($size:16px,$line:18px,$color: var(--btn-rollback-text));//$weight:300
     //width: 170px;
     color:var(--btn-rollback-text);
     background-color: var(--btn-rollback-background);
@@ -237,7 +237,7 @@
   &__message{
     .l-1{
       text-align: center;
-      @include typo($size: 16px, $line: 26px, $color: var(--default-text-alert));
+      @include drumee.typo($size: 16px, $line: 26px, $color: var(--default-text-alert));
     }
   }
   &__footer{
@@ -249,7 +249,7 @@
     width: 315px;
     margin:80px auto auto auto; //auto;
     &-text{
-      @include typo($size: 16px, $line: 26px, $color: var(--default-text-color));
+      @include drumee.typo($size: 16px, $line: 26px, $color: var(--default-text-color));
     }
   }
 }

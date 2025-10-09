@@ -1,66 +1,80 @@
-&-multiple-sessions {
-  &__container {
-    border-radius: var(--border-radius);
-    align-items: center;
-    background-color: var(--default-bg);//$default-block-background;
-    max-height: 345px;//290px;
-    height: 100%;
-    width: 100%;
-    max-width: 530px;//510px;
-    margin: 0 auto;
-    padding:35px 37px 30px; //22px;
-    justify-content: center;
-  }
-  &__title {
-    justify-content: center;
-    text-align: center;
-    width: 100%;
-    align-items: center;
-    @include typo($size: 20px, $line: 28px, $weight: 500, $color: var(--default-text-title));
-    u{
-      text-decoration: underline;
-      font-style: italic;
+@use "mixins/drumee";
+
+.welcome-router {
+  &-multiple-sessions {
+    &__container {
+      border-radius: var(--border-radius);
+      align-items: center;
+      background-color: var(--default-bg); //$default-block-background;
+      max-height: 345px; //290px;
+      height: 100%;
+      width: 100%;
+      max-width: 530px; //510px;
+      margin: 0 auto;
+      padding: 35px 37px 30px; //22px;
+      justify-content: center;
     }
-  }
-  &__text {
-    justify-content: center;
-    width: 100%;
-    @include typo($size: 15px, $line: 24px, $weight: 400, $color: var(--default-text-color));
-    &-container{
-      margin: 22px 30px;//12px auto;      
+
+    &__title {
+      justify-content: center;
+      text-align: center;
+      width: 100%;
+      align-items: center;
+      @include drumee.typo($size: 20px, $line: 28px, $weight: 500, $color: var(--default-text-title));
+
+      u {
+        text-decoration: underline;
+        font-style: italic;
+      }
     }
-    p:first-child {
-      text-align: left;
-      padding-bottom: 15px;
+
+    &__text {
+      justify-content: center;
+      width: 100%;
+      @include drumee.typo($size: 15px, $line: 24px, $weight: 400, $color: var(--default-text-color));
+
+      &-container {
+        margin: 22px 30px; //12px auto;      
+      }
+
+      p:first-child {
+        text-align: left;
+        padding-bottom: 15px;
+      }
+
+      u {
+        @include drumee.typo($size: 15px, $line: 24px, $weight: 400, $color: var(--eblue));
+        font-style: italic;
+      }
     }
-    u{
-      @include typo($size: 15px, $line: 24px, $weight: 400, $color: var(--eblue));
-      font-style: italic;
+
+    &__choice {
+      justify-content: center;
+      text-align: center;
+      width: 100%;
+      @include drumee.typo($size: 14px, $line: 18px, $weight: 300, $color: var(--default-text-color));
     }
-  }
-  &__choice {
-    justify-content: center;
-    text-align: center;
-    width: 100%;
-    @include typo($size: 14px, $line: 18px, $weight: 300, $color: var(--default-text-color));
-  }
-  &__buttons{
-    justify-items: center;
-    justify-content: space-around;
-    margin-top: 10px;
-    min-width: 330px;
-  }
-  &__button{
-    cursor: pointer;
-    border-radius: var(--border-radius);
-    border-color: var(--default-text-title);
-    border-width: 2px;
-    border-style: solid;
-    width: 45%;
-    padding: 10px;
-    u{
-      text-decoration: underline;
-      font-style: italic;
+
+    &__buttons {
+      justify-items: center;
+      justify-content: space-around;
+      margin-top: 10px;
+      min-width: 330px;
+    }
+
+    &__button {
+      cursor: pointer;
+      border-radius: var(--border-radius);
+      border-color: var(--default-text-title);
+      border-width: 2px;
+      border-style: solid;
+      width: 45%;
+      padding: 10px;
+
+      u {
+        text-decoration: underline;
+        font-style: italic;
+      }
     }
   }
 }

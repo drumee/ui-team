@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/modules/desk/wm/notification/widget/notification-window/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .notification-window {
   &__ui,
@@ -27,7 +27,7 @@
 
   &__note {
     &.title {
-      @include typo($size: 15px, $line: 16px, $color: var(--default-text-title));
+      @include drumee.typo($size: 15px, $line: 16px, $color: var(--default-text-title));
       align-items: center;
       padding-right: 18px;
       padding-top: 2px;
@@ -40,7 +40,7 @@
       justify-content: center;
       width: 100%;
       margin-top: -10px;
-      @include typo($size: 16px, $line: 16px, $color: var(--tertiary-text-color));//var(--default-text-color) ); $weight:300,
+      @include drumee.typo($size: 16px, $line: 16px, $color: var(--tertiary-text-color));//var(--default-text-color) ); $weight:300,
     }
   }
  

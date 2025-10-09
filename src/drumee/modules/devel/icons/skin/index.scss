@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 
 
@@ -29,7 +29,7 @@
     margin: auto 20px auto auto;
     justify-content: center;
     align-items: center;
-    @include typo($color: var(--egrey-78), $size: 18px, $line: 24px, $weight: 400);
+    @include drumee.typo($color: var(--egrey-78), $size: 18px, $line: 24px, $weight: 400);
 
     &.search {
       input {
@@ -45,7 +45,7 @@
 
   &__text {
     margin: auto 20px auto auto;
-    @include typo($color: var(--egrey-78), $size: 14px, $line: 24px, $weight: 400);
+    @include drumee.typo($color: var(--egrey-78), $size: 14px, $line: 24px, $weight: 400);
   }
 
   &__icon {
@@ -132,7 +132,7 @@
     margin: auto 20px auto auto;
     cursor: pointer;
     pointer-events: all;
-    @include typo($color: var(--egrey-89), $size: 16px, $line: 34px, $weight: 300);
+    @include drumee.typo($color: var(--egrey-89), $size: 16px, $line: 34px, $weight: 300);
 
     .note-content {
       margin: auto;

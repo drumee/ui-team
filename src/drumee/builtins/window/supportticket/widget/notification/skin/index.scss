@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/supportticket/widget/notification/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .support-ticket-widget-notification {
   &__ui {
@@ -35,7 +35,7 @@
   }
 
   &__digit {
-    @include typo($size: 9px, $color: var(--default-text-reverse));
+    @include drumee.typo($size: 9px, $color: var(--default-text-reverse));
     align-items: center;
     background-color: var(--default-background-alert);
     border-radius: 50%;

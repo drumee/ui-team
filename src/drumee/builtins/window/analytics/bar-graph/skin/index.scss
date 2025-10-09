@@ -3,8 +3,8 @@
 #   FILE : /ui/src/drumee/builtins/window/analytics/bar-graph/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee.scss';
-@import '../../skin/index.scss';
+@use 'mixins/drumee.scss';
+@use '../../skin/index.scss';
 
 .window-bar-graph {
   &__ui{

@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .window-confirm {
   &__ui {
@@ -90,11 +90,11 @@
     justify-content: center;
     text-align: center;
     width: 100%;
-    @include typo($size: 16px, $line: 25px, $color: var(--default-text-color));
+    @include drumee.typo($size: 16px, $line: 25px, $color: var(--default-text-color));
 
     & .name {
       top: 24px;
-      @include typo($size: 22px, $line: 26px, $color: var(--default-text-alert)); // $window-confirm-default-title-color);
+      @include drumee.typo($size: 22px, $line: 26px, $color: var(--default-text-alert)); // $window-confirm-default-title-color);
     }
   }
 
@@ -103,12 +103,12 @@
     justify-content: center;
     padding: 31px 10px 5px; //5px 10px 5px 10px;
     margin: 0 auto;
-    @include typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
+    @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
 
     &.trash {
       width: 50px;
       margin: 10px 0;
-      @include typo($weight: 300, $size: 16px, $line: 26px, $color: violet);
+      @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: violet);
     }
 
     &.delete-team {
@@ -149,7 +149,7 @@
 
   &__button-secondary {
     border: 1px solid var(--btn-rollback-border);
-    @include typo($size: 16px, $line: 18px, $color: var(--btn-rollback-text) );
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-rollback-text) );
 
     &:hover {
       border: 2px solid var(--btn-rollback-border-hover);
@@ -167,7 +167,7 @@
   &__button-primary {
     background-color: var(--btn-commit-background);
     border: 0px;
-    @include typo($size: 16px, $line: 18px, $color: var(--btn-commit-text));
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-commit-text));
 
     &:hover {
       background-color: var(--btn-commit-background-hover);
@@ -183,7 +183,7 @@
   &__button-danger {
     background-color: var(--btn-caution-background);
     border: 0px;
-    @include typo($size: 16px, $line: 18px, $color: var(--btn-caution-text));
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-caution-text));
 
     &:hover {
       background-color: var(--btn-caution-background-hover);

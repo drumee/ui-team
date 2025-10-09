@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/player/stream/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 @import 'openplayer.css';
 
 .player-video {

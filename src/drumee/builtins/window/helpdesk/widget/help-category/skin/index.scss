@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/helpdesk/widget/help-category/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-help-category {
   &__ui,
@@ -57,18 +57,18 @@
     &.header {
       align-items: center;
       margin: 4px 0;
-      @include typo($size: 12px, $line: 14px, $weight: 300italic, $color: var(--default-text-color));
+      @include drumee.typo($size: 12px, $line: 14px, $weight: 300italic, $color: var(--default-text-color));
     }
 
     &.title {
       padding: 15px;
-      @include typo($size: 16px, $line: 18px, $weight: 700, $color: var(--default-text-color));
+      @include drumee.typo($size: 16px, $line: 18px, $weight: 700, $color: var(--default-text-color));
     }
 
     &.description {
       align-items: center;
       text-align: justify;
-      @include typo($size: 14px, $line: 1.4, $weight: 300italic, $color: var(--default-text-color));
+      @include drumee.typo($size: 14px, $line: 1.4, $weight: 300italic, $color: var(--default-text-color));
     }
 
     span {

@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .window-team {
  &-topbar {
@@ -80,7 +80,7 @@
     }
 
     &__count {
-      @include typo($size:8px, $line:12px, $weight:400, $color: var(--teamroom-main));
+      @include drumee.typo($size:8px, $line:12px, $weight:400, $color: var(--teamroom-main));
       align-items: center;
       background-color: var(--default-background);       
       border-radius:50%;

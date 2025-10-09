@@ -1,16 +1,14 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2022
-#   FILE : /src/drumee/modules/dmz/sharebox/skin/index.scss
-#   TYPE : Style Component
-# ===================================================================**/
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@use'../../skin/header' as *;
+@use'../../skin/footer' as *;
+@include meta.load-css('info-menu');
+@include meta.load-css('password');
 
 .dmz-sharebox,
 .dmz-meeting {
-  @import '../../skin/header';
-  @import '../../skin/footer';  
-  @import './info-menu';
-  @import './password';
+  @include dmz-header;
+  @include dmz-footer;
 
   &__ui,
   &__main,
@@ -81,6 +79,7 @@
   &-desk__container {
     width: 100%;
   }
+
   &-desk__wrapper {
     width: 100%;
     height: 100%;
@@ -91,6 +90,7 @@
 
     &.desk-content {
       width: calc(100% - 10px);
+
       &.dmz-wm__ui {
         background: transparent;
         border-radius: 6px;
@@ -106,14 +106,14 @@
   }
 
   &__note {
-    @include typo($size: 20px, $line: 28px, $weight: 400, $color: var(--default-text-reverse));
+    @include drumee.typo($size: 20px, $line: 28px, $weight: 400, $color: var(--default-text-reverse));
     justify-content: center;
     text-align: center;
     width: 100%;
   }
 
   &__footer-note {
-    @include typo($size: 16px, $line: 20px, $weight: 400, $color: var(--default-text-reverse));
+    @include drumee.typo($size: 16px, $line: 20px, $weight: 400, $color: var(--default-text-reverse));
     bottom: 6px;
     justify-content: flex-end;
     height: 25px;
@@ -127,6 +127,6 @@
     left: calc(50% - 150px);
     width: 300px;
     justify-content: center;
-    @include typo($line: 60px, $size: 40px, $weight: 400, $color: var(--default-text-reverse));
+    @include drumee.typo($line: 60px, $size: 40px, $weight: 400, $color: var(--default-text-reverse));
   }
 }

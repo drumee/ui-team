@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/adminpanel/widget/member_choose_admins/js/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-member-chooseAdmins {
   &__ui {
@@ -59,16 +59,16 @@
     width: 100%;
 
     &.title {
-      @include typo($size: 16px, $line: 21px, $color: var(--default-text-title));
+      @include drumee.typo($size: 16px, $line: 21px, $color: var(--default-text-title));
     }
 
     &.info {
       max-width: 237px;
-      @include typo($size: 14px, $line: 16px, $color: var(--default-text-title));
+      @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-title));
     }
 
     &.search-title {
-      @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title));
+      @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title));
       margin-top: 10px;
     }
   }
@@ -109,7 +109,7 @@
         top: 20px;
         width: 250px;
         z-index: 1;
-        @include typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
+        @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
       }
     }
 
@@ -177,10 +177,10 @@
       border-bottom: 1px solid var(--default-entry-border-bottom);
       margin-left: 24px;
       width: 100%;
-      @include typo($size: 15px, $line: 16px, $color: var(--default-text-color));
+      @include drumee.typo($size: 15px, $line: 16px, $color: var(--default-text-color));
       
       &::placeholder {
-        @include typo($size: 15px, $line: 16px, $weight: 300, $color: var(--default-text-placeholder));
+        @include drumee.typo($size: 15px, $line: 16px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
   }
@@ -218,7 +218,7 @@
   }
 
   &__button-cancel {
-    @include typo($size: 16px, $color: var(--btn-rollback-text));
+    @include drumee.typo($size: 16px, $color: var(--btn-rollback-text));
     align-items: center;
     border-radius:var(--border-radius);
     border: 1px solid var(--btn-rollback-border);
@@ -236,7 +236,7 @@
   }
 
   &__button-confirm {
-    @include typo( $size: 15px, $line: 16px, $color: var(--btn-commit-text));
+    @include drumee.typo( $size: 15px, $line: 16px, $color: var(--btn-commit-text));
     align-items: center;
     background-color: var(--btn-commit-background);
     border-radius:var(--border-radius);

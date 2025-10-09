@@ -1,11 +1,14 @@
-&--close{
-  position: absolute;
-  top: 0;
-  right: 0;
-  color: var(--default-thinline-icon);//#B6BFCA;
-  cursor: pointer;
-  z-index: 2;
-  &:hover{
-    color: var(--default-thinline-icon-hover);//var(--eviolet);
+@mixin desk-close-btn {
+  &--close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: var(--default-thinline-icon); //#B6BFCA;
+    cursor: pointer;
+    z-index: 2;
+
+    &:hover {
+      color: var(--default-thinline-icon-hover); //var(--eviolet);
+    }
   }
 }

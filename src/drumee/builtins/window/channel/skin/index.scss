@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .window-channel {
   --teamroom-main: #BD44D9;
@@ -63,11 +63,11 @@
       margin: auto;
       max-width: 163px;
       max-width: 200px;
-      @include typo($size: 17px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
+      @include drumee.typo($size: 17px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
 
       .name {
         align-items: flex-start;
-        @include overflow-text;
+        @include drumee.overflow-text;
 
         .note-content {
           padding: 0px 7px;

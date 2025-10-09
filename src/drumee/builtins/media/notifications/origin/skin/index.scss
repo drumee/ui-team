@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .media-origin{
   &__ui{
@@ -49,7 +49,7 @@
     margin: 0 auto;
   }
   &__count{
-    @include typo($size:10px,$line:14px,$weight:400,$color:var(--default-text-reverse));
+    @include drumee.typo($size:10px,$line:14px,$weight:400,$color:var(--default-text-reverse));
     width: 17px;
     height:17px;
     border-radius:50%;
@@ -96,7 +96,7 @@
     }
    }
   &__name{
-    @include typo($size:12px,$line:14px,$weight:400,$color:var(--default-text-color));
+    @include drumee.typo($size:12px,$line:14px,$weight:400,$color:var(--default-text-color));
     width: 97px;
     margin-top: auto;
     margin-bottom: auto;

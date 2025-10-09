@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .notification-list-item {
   &__ui,
@@ -84,7 +84,7 @@
       text-align: justify;
       text-overflow: ellipsis;
       z-index: 200000;
-      @include typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
+      @include drumee.typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
      .tooltips {
         &:before {
           background: var(--background-tooltips);
@@ -145,7 +145,7 @@
         max-width: 125px;
         padding: 1px 15px;;//1px 10px;
         text-transform: capitalize;
-        @include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
+        @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-color));
 
         & .inner.note-content {
           overflow: hidden;
@@ -156,7 +156,7 @@
 
       &.time {
         padding:1px 15px;;// 1px 10px;
-        @include typo($size: 11px, $line: 12px, $weight:300, $color: var(--tertiary-text-color));// $default-text-inactivated);$size: 10px,
+        @include drumee.typo($size: 11px, $line: 12px, $weight:300, $color: var(--tertiary-text-color));// $default-text-inactivated);$size: 10px,
       }
     }
 
@@ -172,7 +172,7 @@
       width: 16px;
   
       & .inner.note-content {
-        @include typo($size: 9px, $line: 11px, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 9px, $line: 11px, $color: var(--default-text-reverse));
       }
     }
   }

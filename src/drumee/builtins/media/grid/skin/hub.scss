@@ -1,4 +1,4 @@
-&.hub {
+.media-grid.hub {
   .icon {
     width: 25px;
     height: 25px;
@@ -8,62 +8,60 @@
     left: 0;
     //margin: -3px auto;
     margin: 0 auto;
-    fill:var(--default-icon-reverse);//var(--ewhite);
-    &.private{
+    fill: var(--default-icon-reverse); //var(--ewhite);
+
+    &.private {
       padding: 3px;
       top: 24px;
     }
-    &.share{
-   //   padding: 1px;
+
+    &.share {
+      //   padding: 1px;
       width: 37px;
       height: 37px;
-      top: 18px;//14px;
+      top: 18px; //14px;
     }
   }
+
   &:hover {
     &:before {
       height: 0;
     }
   }
+
   &.public {
     background-color: var(--website-main);
-    border-radius: var(--border-radius);//6px;
+    border-radius: var(--border-radius); //6px;
+
     .media-form__input input {
       background-color: #45b4bb;
       color: var(--ewhite);
     }
+
     &:before {
       content: " ";
       position: absolute;
       top: 0;
       right: 0;
-      border-top: 13px solid var(--website-main-light); 
+      border-top: 13px solid var(--website-main-light);
       border-left: 13px solid transparent;
-      border-right: 13px solid var(--website-main-light); 
+      border-right: 13px solid var(--website-main-light);
       border-radius: 0 6px 0 0;
       height: 0;
       width: 62px;
     }
   }
-/*  &.share {
-    .media-notifications__title{
-      color: #ef6500;
-    }
-    .media-notifications__item.ack{
-      svg{
-        fill: #ef6500;
-        color: #ef6500;
-      }
-    }
-  }*/
 
-  &.dmz,&.share {
-    background-color: var(--sharebox-main); 
+  &.dmz,
+  &.share {
+    background-color: var(--sharebox-main);
     border-radius: var(--border-radius);
+
     .media-form__input input {
       background-color: #dd820b;
       color: var(--default-text-reverse);
     }
+
     &:before {
       content: " ";
       position: absolute;
@@ -77,12 +75,15 @@
       width: 62px;
     }
   }
+
   &.private {
-    background-color:var(--teamroom-main);
+    background-color: var(--teamroom-main);
+
     .media-form__input input {
       background-color: #c05ed0;
       color: var(--default-text-reverse);
     }
+
     &:before {
       content: " ";
       position: absolute;
@@ -100,7 +101,7 @@
 
 
 // MOUSE HOVER
-&.hub {
+.media-grid.hub {
   &[data-hover="on"] {
     .media__container:after {
       content: " ";
@@ -113,30 +114,18 @@
       border-radius: 2px;
       display: block;
     }
+
     &.public {
-      /*.filename {
-      //  color: var(--egrey-2f);
-        background-color: #90d1d6;
-      }*/
-      // .filename-tooltips{
-      //   background-color:  #90d1d6;
-      // }
+
       .media-form__input input {
         background-color: #45b4bb;
       }
     }
+
     &.private {
-    /*  .filename {
-      // color: var(--egrey-2f);
-        background-color: #d5a3dd;
-      }*/
-      // .filename-tooltips{
-      //   background-color: #d5a3dd;
-      // }
       .media-form__input input {
         background-color: #c05ed0;
       }
     }
   }
 }
-

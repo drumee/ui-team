@@ -3,11 +3,11 @@
 #   FILE : /src/drumee/builtins/window/account/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
-@import "topbar";
-@import "container";
-@import "footer";
+@use "topbar";
+@use "container";
+@use "footer";
 // @import "./vars.scss";
 
 .window-account {

@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/window/serverexplorer/widget/sv-new-folder/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-sv-new-folder{
   &__ui {
@@ -120,7 +120,7 @@
   }
 
   &__button-cancel {
-    @include typo( $size: 16px, $line: 16px, $color: var(--btn-rollback-text));
+    @include drumee.typo( $size: 16px, $line: 16px, $color: var(--btn-rollback-text));
     border: 1px solid var(--btn-rollback-border);
 
     &:hover {
@@ -130,7 +130,7 @@
   }
 
   &__button-confirm {
-    @include typo( $size: 16px, $line: 16px, $color: var(--btn-caution-text));
+    @include drumee.typo( $size: 16px, $line: 16px, $color: var(--btn-caution-text));
     background-color: var(--btn-commit-background);
     color: var(--btn-commit-text);
     max-width: 165px;
@@ -156,7 +156,7 @@
   &__note{
     &.header {
       margin: 10px 0px 25px 0px;
-      @include typo($size: 18px, $line: 16px, $color: var(--default-text-title));
+      @include drumee.typo($size: 18px, $line: 16px, $color: var(--default-text-title));
     }
     &.lable {
       margin: 0px 16px 0px 0px;
@@ -170,7 +170,7 @@
     border: 1px solid transparent;
     .input-details {
       position: absolute;
-      @include typo($line: 29px, $size: 13px, $weight: 300, $color: var(--default-text-error));
+      @include drumee.typo($line: 29px, $size: 13px, $weight: 300, $color: var(--default-text-error));
       right: 0px;
       padding: 3px;
     }
@@ -179,14 +179,14 @@
       width: calc(100% - 5px);
       margin: 0;
       border-bottom: 1px solid var(--default-entry-border-bottom);
-      @include typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color)); 
-      @include placeholder-input {
-        @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
+      @include drumee.typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color)); 
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
       }
       &:focus {
         border-bottom: 1px solid var(--focus-border-placeholder);
-        @include placeholder-input {
-          @include typo($line: 29px, $size: 16px, $weight: 300, $color: var(--focus-text-placeholder)); 
+        @include drumee.placeholder-input {
+          @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--focus-text-placeholder)); 
         }
       }
     }

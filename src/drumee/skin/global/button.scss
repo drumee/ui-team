@@ -4,7 +4,7 @@
    #   TYPE : Global styles, for the whole platform
    # ==================================================================== */
 
-@import '../mixins/drumee';
+@use '../mixins/drumee';
 
 .button-nested {
   &[data-selected="on"] {
@@ -150,7 +150,7 @@
   &--regular {
     background-color: #FFFFFF;
     border: 1px solid #F1F1F6;
-    @include typo($size: 16px, $line: 25px, $weight: 400, $color: $egrey-2f);
+    @include drumee.typo($size: 16px, $line: 25px, $weight: 400, $color: $egrey-2f);
 
     &:hover {
       color: #5a5a5a;
@@ -160,14 +160,14 @@
   &--inactive {
     background-color: #a6a8a4;
     border: 1px solid #a6a8a4;
-    @include typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
+    @include drumee.typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
     pointer-events: none;
   }
 
   &--warning {
     background-color: #FF7479;
     border: 1px solid #FF7479;
-    @include typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
+    @include drumee.typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
 
     &:hover {
       background-color: #ff8e91;
@@ -178,7 +178,7 @@
   &--cancel {
     background-color: #FF7479;
     border: 1px solid #FF7479;
-    @include typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
+    @include drumee.typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
 
     &:hover {
       background-color: #ff8e91;
@@ -190,7 +190,7 @@
   &--go {
     background-color: var(--btn-commit-background); //#18a3ac;// #18AC72;
     border: 1px solid var(--btn-commit-border); //#18a3ac;//#18AC72;
-    @include typo($size: 16px, $line: 25px, $color: var(--btn-commit-text)); //$weight:400
+    @include drumee.typo($size: 16px, $line: 25px, $color: var(--btn-commit-text)); //$weight:400
     cursor: pointer;
     pointer-events: all;
 
@@ -203,7 +203,7 @@
   &--other {
     background-color: $eblue;
     border: 1px solid $eblue;
-    @include typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
+    @include drumee.typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
 
     &:hover {
       background-color: #6da6e9;
@@ -214,7 +214,7 @@
   &--neutral {
     background-color: #f7f7fa;
     border: 1px solid #f7f7fa;
-    @include typo($size: 16px, $line: 34px, $weight: 400, $color: #2F2F2F);
+    @include drumee.typo($size: 16px, $line: 34px, $weight: 400, $color: #2F2F2F);
 
     &:hover {
       opacity: 0.6;
@@ -247,7 +247,7 @@
   background-color: #18AC72;
   border: 1px solid #18AC72;
   text-align: center;
-  @include typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
+  @include drumee.typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
 
   &:hover {
     background-color: #3fbd8d;

@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-chatcontactList {
 	&__ui{
@@ -28,7 +28,7 @@
 		justify-content: center;
 		
 		&__title {			
-			@include typo($size: 15px, $line: 16px, $color: var(--bigchat-default-text-title));
+			@include drumee.typo($size: 15px, $line: 16px, $color: var(--bigchat-default-text-title));
 			padding-bottom: 8px;
 			padding-top: 6px;
 
@@ -82,8 +82,8 @@
 		&__name {			
 			margin-top: 4px;
 			padding: 3px 3px 3px 15px;
-			@include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
-			@include overflow-text;
+			@include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-color));
+			@include drumee.overflow-text;
 			.inner{
 				overflow: hidden;
 				text-overflow: ellipsis;

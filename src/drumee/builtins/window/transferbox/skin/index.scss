@@ -4,12 +4,13 @@
 #   TYPE : Component style
 # ===================================================================**/
 
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
 
 .window-transfer-box {
-  @import './action-menu';
-  @import './topbar';
-  @import './model';
+  @include meta.load-css('action-menu');
+  @include meta.load-css('topbar');
+  @include meta.load-css('model');
   
   &__ui {
     background-color: inherit;
@@ -64,13 +65,13 @@
 
       & .title {
         text-align: center;
-        @include typo($size: 18px, $line: 19px, $color: var(--default-text-reverse));//$size: 17px,
+        @include drumee.typo($size: 18px, $line: 19px, $color: var(--default-text-reverse));//$size: 17px,
 
         & .note-content {
           width: 100%;
 
           & .root-node {
-            @include overflow-text;
+            @include drumee.overflow-text;
             text-overflow: ellipsis;
           }
         }
@@ -110,13 +111,13 @@
           height: 100%;
           overflow: hidden;
           width: 100%;
-          @include typo($size: 15px, $line: 15px, $color: var(--default-text-reverse));
+          @include drumee.typo($size: 15px, $line: 15px, $color: var(--default-text-reverse));
   
           & .note-content {
             width: 100%;
   
             & .root-node {
-              @include overflow-text;
+              @include drumee.overflow-text;
               text-overflow: ellipsis;
             }
           }

@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/adminpanel/pages/broadcast-message/js/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .broadcast-message-page {
   &__ui {
@@ -44,7 +44,7 @@
 
   &__note {
     &.header {
-      @include typo($size: 18px, $line: 16px, $color: var(--secondary-text-color));
+      @include drumee.typo($size: 18px, $line: 16px, $color: var(--secondary-text-color));
     }
   }
 
@@ -67,7 +67,7 @@
 
       & textarea {
         border-radius: var(--border-radius);
-        @include typo($size: 14px, $line: 20px, $color: var(--default-text-color));
+        @include drumee.typo($size: 14px, $line: 20px, $color: var(--default-text-color));
         background: #f7f7f9 ; //$ap-textarea-background;
         border: none;
         height: 100%;
@@ -81,7 +81,7 @@
         padding: 15px 20px;
 
         &::placeholder {
-          @include typo($size: 14px, $weight: 300, $color: var(--default-text-placeholder));
+          @include drumee.typo($size: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
   
         &:focus {
@@ -94,7 +94,7 @@
   &__buttons-wrapper {
     &.button {
       border-radius:var(--border-radius);
-      @include typo ($size: 16px, $line: 18px, $color: var(--btn-commit-text));
+      @include drumee.typo ($size: 16px, $line: 18px, $color: var(--btn-commit-text));
       align-items: center;
       background: var(--btn-commit-background); //var(--egreen);
       cursor: pointer;

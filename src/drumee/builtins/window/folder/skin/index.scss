@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 
 .window-folder {
@@ -8,7 +8,7 @@
 
     &-title {
       align-items: center;
-      @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
     }
 
     &-control {
@@ -46,8 +46,8 @@
     &-name {
       align-items: flex-start;
       padding-left: 10px;
-      @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
-      @include overflow-text;
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
+      @include drumee.overflow-text;
 
       .inner {
         overflow: hidden;
@@ -75,7 +75,7 @@
     grid-gap: 3px;
     background-color: var(--default-background);
     border-radius: var(--border-radius);
-    box-shadow: $drumee-shadow-box;
+    box-shadow: drumee.$drumee-shadow-box;
     padding: 8px;
     right: 126px;
     top: 44px;
@@ -87,8 +87,8 @@
       width: 100%;
       padding-left: 10px;
       padding-top: 4px;
-      @include typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
-      @include overflow-text;
+      @include drumee.typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.overflow-text;
 
       .icon {
         width: 14px;
@@ -110,8 +110,8 @@
       width: 50%;
       padding-left: 10px;
       padding-top: 4px;
-      @include typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
-      @include overflow-text;
+      @include drumee.typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.overflow-text;
 
       &.value {
         margin-left: 28px;

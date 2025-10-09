@@ -3,21 +3,19 @@
 #   FILE : /src/drumee/builtins/media/minifyer/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('container.scss');
+@include meta.load-css('filename.scss');
+@include meta.load-css('hub.scss');
+@include meta.load-css('effects.scss');
 
-.media-minifyer {
-  @import 'container.scss';
-  @import 'filename.scss';
-  @import 'hub.scss';
-  @import 'effects.scss';
-  //@import '../../skin/forbiden.scss';
-}
 
 .media-minifyer {
   &__ui {
     background-color: var(--default-bg);
-    border-radius:var(--border-radius);
-    box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 0px 3px 0 rgba(86,65,113,0.08), 0 2px 8px 0 rgba(194,185,203,0);
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 0px 3px 0 rgba(86, 65, 113, 0.08), 0 2px 8px 0 rgba(194, 185, 203, 0);
     cursor: pointer;
     height: 75px;
     position: relative;
@@ -44,24 +42,24 @@
   }
 
   &__content {
-    background-color:inherit;
+    background-color: inherit;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
   }
-  
+
   &[data-hover="on"] {
-    box-shadow:var(--shadow-container);// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    box-shadow: var(--shadow-container); // 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
 
     .media__container[data-icontype] {
-      z-index : 100; // Needed to make inner element receive event first
+      z-index: 100; // Needed to make inner element receive event first
     }
   }
 
   &__remove {
-    background-color: var(--default-bg);    
+    background-color: var(--default-bg);
     border-radius: 50%;
-    border: 2px solid var(--default-border-notification);//var(--main-default-border);
+    border: 2px solid var(--default-border-notification); //var(--main-default-border);
     color: var(--default-text-color);
     height: 19px;
     position: absolute;
@@ -71,31 +69,32 @@
     width: 19px;
 
     &--icon {
-      fill: var(--default-thinline-icon);//$default-icon-neutral;
-      color: var(--default-thinline-icon);//$default-icon-neutral;
+      fill: var(--default-thinline-icon); //$default-icon-neutral;
+      color: var(--default-thinline-icon); //$default-icon-neutral;
       height: 7px;
       margin: 4px;
       width: 7px;
 
       &:hover,
       :focus {
-        fill:var(--default-thinline-icon-hover);
-        color:var(--default-thinline-icon-hover);
+        fill: var(--default-thinline-icon-hover);
+        color: var(--default-thinline-icon-hover);
       }
     }
-    
+
 
     &[data-hover="on"] {
       visibility: visible;
     }
-  }  
+  }
 
   .preview {
     border-radius: var(--border-radius);
+
     &.image-capable {
-      background-position : center;
-      background-repeat   : no-repeat;
-      background-size     : cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
       opacity: 0.8;
     }
   }
@@ -108,10 +107,10 @@
   }
 
   .drumee-spinner {
-    background: rgba(5,5,5, 0.5);
-    border-radius: 50%;  
+    background: rgba(5, 5, 5, 0.5);
+    border-radius: 50%;
     height: 30px;
-    left: calc(50% - 15px);  
+    left: calc(50% - 15px);
     position: absolute;
     top: calc(50% - 15px);
     width: 30px;

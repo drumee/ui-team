@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/modules/desk/wm/notification/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .notification-panel {
   &__overlay {
@@ -53,7 +53,7 @@
     width: 18px;
     user-select: none;
     & .inner.note-content {
-      @include typo($size: 10px, $line: 12px, $color: var(--default-text-reverse));
+      @include drumee.typo($size: 10px, $line: 12px, $color: var(--default-text-reverse));
     }
   }
 }

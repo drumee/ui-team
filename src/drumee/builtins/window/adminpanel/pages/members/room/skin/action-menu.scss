@@ -1,100 +1,107 @@
-&-menu {
-  &__wrapper {
-    &[data-state="1"] {
-      & .trigger-icon {
-        color: var(--default-icon-active);
+@use "mixins/drumee";
+
+.members-room {
+  &-menu {
+    &__wrapper {
+      &[data-state="1"] {
+        & .trigger-icon {
+          color: var(--default-icon-active);
+          opacity: 1;
+        }
+      }
+
+      & .menu-topic-items {
+        background-color: var(--default-background);
+        max-width: 184px;
+        min-width: 184px;
+        width: 100% !important;
+        box-shadow: drumee.$drumee-container-dropdown;
+        border-radius: var(--border-radius);
+
+        &__wrapper {
+          left: -168px;
+          padding: 10px;
+          top: 19px !important;
+
+        }
+
+        &:before {
+          background-color: var(--default-background);
+          box-shadow: -4px -6px 10px 1px rgba(63, 79, 117, 0.13);
+          content: "";
+          height: 10px;
+          left: 159px;
+          position: absolute;
+          top: -5px;
+          transform: rotate(45deg);
+          width: 10px;
+        }
+
+        &:after {
+          background: var(--default-background);
+          border-radius: var(--default-border-radius-top);
+          content: "";
+
+          left: 0;
+          position: absolute;
+          top: 0;
+          width: 100%;
+        }
+      }
+    }
+
+    &__icon {
+      color: var(--default-icon-neutral);
+      cursor: pointer;
+      align-items: center;
+
+
+      &.trigger-icon {
+        box-sizing: border-box;
+        color: inherit;
+        height: 24px;
+        opacity: 0.45;
+        top: 3px;
+        width: 22.5px;
+      }
+
+      &:hover {
+        color: var(--default-icon-hover);
         opacity: 1;
       }
     }
 
-    & .menu-topic-items {
-      background-color: var(--default-background);    
-      max-width: 184px; 
-      min-width: 184px;
-      width: 100% !important;
-      box-shadow:$drumee-container-dropdown;
-      border-radius:var(--border-radius);
-      &__wrapper{
-        left: -168px;
-        padding:10px;
-        top: 19px  !important;
+    &__item-wrapper {
+      width: 100%;
+      margin-top: 5px;
+    }
 
-      }
+    &__item {
+      cursor: pointer;
+      padding: 8px 0px 8px 20px;
+      margin-bottom: 1px;
 
-      &:before {
-        background-color: var(--default-background);    
-        box-shadow:-4px -6px 10px 1px rgba(63, 79, 117, 0.13);
-        content: "";
-        height: 10px;
-        left: 159px; 
-        position: absolute;
-        top:-5px;
-        transform: rotate(45deg);
-        width: 10px;
-      }
+      &:hover {
+        background-color: var(--default-background-hover);
+        color: var(--default-text-reverse);
 
-      &:after {
-        background: var(--default-background);    
-        border-radius: var(--default-border-radius-top);
-        content: "";
-      
-        left: 0;
-        position: absolute;
-        top: 0;
-        width: 100%;
+        & .members-room-menu__note {
+          color: var(--default-text-reverse);
+        }
+
+        & svg {
+          fill: var(--default-icon-reverse);
+        }
       }
     }
-  }
 
-  &__icon {
-    color: var(--default-icon-neutral);
-    cursor: pointer;
-    align-items: center;
-    
+    &__note {
+      padding-top: 0px;
+      @include drumee.typo($size: 13px, $weight: 300, $line: 14px, $color: var(--default-text-color));
 
-    &.trigger-icon {
-      box-sizing: border-box;
-      color: inherit;
-      height: 24px; 
-      opacity: 0.45; 
-      top: 3px; 
-      width: 22.5px; 
-    }
-    &:hover{
-      color: var(--default-icon-hover);
-      opacity: 1;
-    }
-  }
-
-  &__item-wrapper {
-    width: 100%;
-    margin-top: 5px;
-  }
-
-  &__item {
-    cursor: pointer;
-    padding: 8px 0px 8px 20px;
-    margin-bottom:  1px;
-
-    &:hover {
-      background-color: var(--default-background-hover);
-      color : var(--default-text-reverse); 
-
-      & .members-room-menu__note {
-        color:var(--default-text-reverse); 
+      ::first-letter {
+        text-transform: capitalize;
       }
-      
-      & svg {
-        fill: var(--default-icon-reverse);
-      }
-    }
-  }
-
-  &__note {
-    padding-top: 0px;
-    @include typo($size: 13px, $weight: 300, $line: 14px, $color: var(--default-text-color)); 
-    ::first-letter{
-      text-transform: capitalize;
     }
   }
 }

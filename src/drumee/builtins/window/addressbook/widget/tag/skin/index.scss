@@ -1,5 +1,5 @@
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 
 .widget-tag {
@@ -47,7 +47,7 @@
 		&__digit {
 			z-index: 2!important;
 			align-items: center;
-			@include typo($color: var(--default-text-reverse), $weight:100, $line:1, $size: 10px);
+			@include drumee.typo($color: var(--default-text-reverse), $weight:100, $line:1, $size: 10px);
 			background-color:var(--special-tag-note-chat);
 			border-radius: 50%;
 			height: 16px;
@@ -102,7 +102,7 @@
 			padding-left: 32px;
 			padding-top: 5px;
 			width: 100%;
-			@include typo($size: 14px, $line: 16px, $color: var(--ab-special-tag-fg));
+			@include drumee.typo($size: 14px, $line: 16px, $color: var(--ab-special-tag-fg));
 
 			&.chat {
 				color: var(--bigchat-special-tag-color) !important;
@@ -132,7 +132,7 @@
 			padding-bottom: 8px;
 			padding-top: 6px;
 			width: 100%;
-			@include typo($size: 15px, $line: 16px, $color: var(--ab-default-text-title));
+			@include drumee.typo($size: 15px, $line: 16px, $color: var(--ab-default-text-title));
 		}
 	}
 
@@ -171,7 +171,7 @@
     padding-left:30px;
 		padding-top: 7px;
 		width: 100%;
-		@include typo($size: 14px, $line: 16px, $color: var(--ab-special-tag-fg));
+		@include drumee.typo($size: 14px, $line: 16px, $color: var(--ab-special-tag-fg));
 
 		&.chat {
 			color: var(--bigchat-special-tag-color) !important;
@@ -188,7 +188,7 @@
 			}
 			
       & .addressbook-widget-tag-item__name{
-        @include overflow-text;
+        @include drumee.overflow-text;
       }
 	}
 	}

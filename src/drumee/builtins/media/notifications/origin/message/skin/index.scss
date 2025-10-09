@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/media/notifications/origin/message/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .notification-message{
   &__ui{
@@ -22,13 +22,13 @@
     max-width:100px;
     margin-left:36px;
     margin-right:3px;
-    @include typo($size:11px,$line:12px,$weight:400,$color:var(--secondary-text-color));//#4A90E2);
-    @include overflow-text();
+    @include drumee.typo($size:11px,$line:12px,$weight:400,$color:var(--secondary-text-color));//#4A90E2);
+    @include drumee.overflow-text();
   }
   &__count{
     border-radius:2px;
     //border: 1px solid gray;
-    @include typo($size:11px,$line:12px,$weight:400,$color:var(--secondary-text-color));//#4A90E2);
+    @include drumee.typo($size:11px,$line:12px,$weight:400,$color:var(--secondary-text-color));//#4A90E2);
     padding: 1px 1px;
   }
   &__main{

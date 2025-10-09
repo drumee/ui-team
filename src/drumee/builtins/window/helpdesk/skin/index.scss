@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .window-help-desk {
   --helpdesk-default-text-reverse: #4a90e2;
@@ -56,7 +56,7 @@
 
       & .title {
         text-align: center;
-        @include typo($size: 22px, $line: 32px, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 22px, $line: 32px, $color: var(--default-text-reverse));
         padding: 0;
 
         & .note-content {
@@ -64,7 +64,7 @@
 
           & .root-node {
             text-overflow: ellipsis;
-            @include overflow-text;
+            @include drumee.overflow-text;
           }
         }
       }
@@ -104,7 +104,7 @@
 
     &__note {
       &.footer {
-        @include typo($size: 14px, $line: 16px, $color: var(--default-text-alert));
+        @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-alert));
         align-items: center;
         justify-content: center;
         text-align: center;

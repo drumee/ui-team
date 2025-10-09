@@ -1,12 +1,9 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2020
-#   FILE : /src/drumee/modules/welcome/signup/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
-@import '../../../../skin/mixins/drumee.scss';
+@use "sass:meta";
+@use '../../../../skin/mixins/drumee.scss';
+
+@include meta.load-css('terms-and-conditions');
 
 .welcome-signup {
-  @import './terms-and-conditions';
 
   &__ui,
   &__main,
@@ -216,13 +213,13 @@
   }
 
   &__note {
-    @include typo($size: 20px, $line: 28px, $weight: 400, $color: var(--default-text-reverse));
+    @include drumee.typo($size: 20px, $line: 28px, $weight: 400, $color: var(--default-text-reverse));
     justify-content: center;
     text-align: center;
     width: 100%;
 
     &.header {
-      @include typo($size: 38px, $line: 45px, $weight: 500, $color: var(--default-text-reverse));
+      @include drumee.typo($size: 38px, $line: 45px, $weight: 500, $color: var(--default-text-reverse));
     }
 
     &.steps {
@@ -231,7 +228,7 @@
     }
 
     &.drumee-com {
-      @include typo($size: 20px, $line: 28px, $weight: 500, $color: var(--white-f9));
+      @include drumee.typo($size: 20px, $line: 28px, $weight: 500, $color: var(--white-f9));
       position: absolute;
       right: -130px;
       width: auto;
@@ -245,7 +242,7 @@
 
     &.conditions {
       &.static {
-        @include typo($size: 13px, $line: 15px, $weight: 400, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 13px, $line: 15px, $weight: 400, $color: var(--default-text-reverse));
         width: 110px;
       }
 
@@ -259,14 +256,14 @@
       }
 
       &.text-underline {
-        @include typo($size: 13px, $line: 15px, $weight: 700, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 13px, $line: 15px, $weight: 700, $color: var(--default-text-reverse));
         cursor: pointer;
         text-decoration-line: underline;
       }
     }
 
     &.password-tips {
-      @include typo($size: 12px, $line: 16px, $weight: 400, $color: var(--white-f9));
+      @include drumee.typo($size: 12px, $line: 16px, $weight: 400, $color: var(--white-f9));
       padding-top: 47px;
     }
 
@@ -283,7 +280,7 @@
 
     &.no-code,
     &.not-now {
-      @include typo($size: 16px, $line: 16px, $color: var(--white-f9));
+      @include drumee.typo($size: 16px, $line: 16px, $color: var(--white-f9));
       width: 100%;
     }
 
@@ -302,7 +299,7 @@
     }
 
     &.text-underline {
-      @include typo($size: 14px, $line: 16px, $weight: 700, $color: var(--default-text-reverse));
+      @include drumee.typo($size: 14px, $line: 16px, $weight: 700, $color: var(--default-text-reverse));
       cursor: pointer;
       text-decoration-line: underline;
 
@@ -423,11 +420,11 @@
 
   &__entry {
     & input {
-      @include typo($size: 18px, $line: 28px, $color: var(--default-text-color));
+      @include drumee.typo($size: 18px, $line: 28px, $color: var(--default-text-color));
       border-bottom: none;
 
       &::placeholder {
-        @include typo($size: 18px, $line: 28px, $weight: 300, $color: var(--default-text-placeholder));
+        @include drumee.typo($size: 18px, $line: 28px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
 
@@ -487,7 +484,7 @@
     height: 100%;
     justify-content: center;
     width: 100%;
-    @include typo($size: 20px, $line: 28px, $color: var(--default-text-reverse));
+    @include drumee.typo($size: 20px, $line: 28px, $color: var(--default-text-reverse));
 
     &[data-state="0"] {
       opacity: 0.5;

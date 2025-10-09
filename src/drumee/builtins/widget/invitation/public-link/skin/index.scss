@@ -1,12 +1,12 @@
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .invitation-publiclink {
   &__ui {
     background-color:var(--default-bg); //$default-block-background;  
     border-radius: var(--border-radius);
     margin: 0px 25px;
-    box-shadow: $drumee-shadow-box;
+    box-shadow: drumee.$drumee-shadow-box;
   //  box-shadow: 0 5px 3px 0 rgba(218,227,239,.14), 0 1px 1px 0 rgba(0,0,0,.12), 0 2px 5px 0 rgba(218,227,239,.46);
   }
   &__content {
@@ -60,13 +60,13 @@
   
   &__header {
     justify-content: center;
-    @include typo($line:20px,$size:16px,$weight:400,$color: var(--sharebox-main));
+    @include drumee.typo($line:20px,$size:16px,$weight:400,$color: var(--sharebox-main));
   }
 
   &__btn {
     border-radius: var(--border-radius);//6px; 
     cursor: pointer;
-    @include typo($line:25px,$size:16px,$weight:400,$color: var(--btn-rollback-text));//$size:14px
+    @include drumee.typo($line:25px,$size:16px,$weight:400,$color: var(--btn-rollback-text));//$size:14px
     padding: 0 12px;
     margin: auto;
     //min-width: 101px;
@@ -86,7 +86,7 @@
     margin-top: 20px;
     padding: 0 20px;
     cursor: pointer;
-    @include typo($color: var(--eblue),$size:12px,$line:16px,$weight:300);//$line:14px
+    @include drumee.typo($color: var(--eblue),$size:12px,$line:16px,$weight:300);//$line:14px
     &:hover{
       text-decoration-line: underline;
     }

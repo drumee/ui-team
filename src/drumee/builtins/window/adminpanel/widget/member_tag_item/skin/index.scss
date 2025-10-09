@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-member-tagItem {
   &__ui {
@@ -31,7 +31,7 @@
       & .widget-member-tagItem__note.name {
         color :var(--default-text-reverse)  !important;
         width: 120px;
-        @include overflow-text;
+        @include drumee.overflow-text;
       }
       
       & .edit-icon {
@@ -43,7 +43,7 @@
       &[data-radio='on'],
       &:hover {
         background: transparent;
-        @include overflow-text;
+        @include drumee.overflow-text;
       }
     }
   }
@@ -58,7 +58,7 @@
     padding-bottom: 5px;
     padding-left: 27px; 
     padding-top: 5px;
-    @include typo($size: 14px, $line: 14px, $color: var(--default-text-color));
+    @include drumee.typo($size: 14px, $line: 14px, $color: var(--default-text-color));
   }
 
   &__icon {
@@ -88,7 +88,7 @@
     &.name {
       align-items: center;
       width: 148px;
-      @include overflow-text;
+      @include drumee.overflow-text;
       .inner{
         overflow: hidden;
         white-space: nowrap;
@@ -112,7 +112,7 @@
       }
 
       &::placeholder {
-        @include typo($size: 14px, $line: 16px,$weight:300, $color: var(--default-text-placeholder));
+        @include drumee.typo($size: 14px, $line: 16px,$weight:300, $color: var(--default-text-placeholder));
       }
     }
   }

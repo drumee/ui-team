@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-member-rolesMenu-items {
   &__ui {
@@ -34,8 +34,8 @@
   &__note {
     max-width: 105px;
     width: 100%;
-    @include typo($size: 12px,$weight:300,  $line: 24px, $color: var(--default-text-color));
-    @include overflow-text;
+    @include drumee.typo($size: 12px,$weight:300,  $line: 24px, $color: var(--default-text-color));
+    @include drumee.overflow-text;
    .inner{
       overflow: hidden;
       white-space: nowrap;

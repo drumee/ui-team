@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/adminpanel/pages/admin-settings/js/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .admin-security-page {
   &__ui {
@@ -36,12 +36,12 @@
     width: 450px; //403px;
     justify-content: center;
     margin-bottom: 40px;
-    @include typo($size: 18px, $color: var(--default-text-title)); //$size: 24px
+    @include drumee.typo($size: 18px, $color: var(--default-text-title)); //$size: 24px
   }
 
   &__box-header {
     height: 21px;
-    @include typo($size: 16px, $color: var(--default-text-color)); //$size: 18px,
+    @include drumee.typo($size: 16px, $color: var(--default-text-color)); //$size: 18px,
   }
 
   &__box-set {
@@ -61,7 +61,7 @@
 
   &__option-label {
    // @include typo($size: 14px, $color: var(--egrey-89));
-    @include typo($size: 16px, $color: var(--default-text-color), $weight: 300);
+    @include drumee.typo($size: 16px, $color: var(--default-text-color), $weight: 300);
   }
 
   &__option-item {

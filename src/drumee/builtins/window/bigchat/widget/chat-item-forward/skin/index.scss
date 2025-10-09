@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/bigchat/widget/chat-item-forward/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .chat-item-forward {
   &__ui,
@@ -97,10 +97,10 @@
       border-bottom: 1px solid var(--default-entry-border-bottom);
       max-width: 210px;
       width: 100%;
-      @include typo($size: 14px, $line: 14px, $color: var(--default-text-color));//$size: 13px, 
+      @include drumee.typo($size: 14px, $line: 14px, $color: var(--default-text-color));//$size: 13px, 
       
       &::placeholder {
-        @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));//$size: 13px,
+        @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));//$size: 13px,
       }
     }
   }
@@ -125,7 +125,7 @@
   &__note {
     &.title {
       padding-top: 40px;
-      @include typo($size: 16px, $line: 21px, $color: var(--default-text-title)); //$size: 18px,
+      @include drumee.typo($size: 16px, $line: 21px, $color: var(--default-text-title)); //$size: 18px,
     }
     
     &.switch-title {
@@ -140,18 +140,18 @@
       width: 100%;
       margin-left: 3%;
       margin-right: 2%;
-      @include typo($size: 15px, $line: 14px, $weight: 300, $color: var(--default-text-inactive) ); //$size: 13px,var(--egrey-89)
+      @include drumee.typo($size: 15px, $line: 14px, $weight: 300, $color: var(--default-text-inactive) ); //$size: 13px,var(--egrey-89)
 
       &[data-state="1"] {
         border-radius:var(--border-radius);
-        @include typo($size: 14px, $line: 14px, $color: var(--default-text-color));//$size: 13px,
+        @include drumee.typo($size: 14px, $line: 14px, $color: var(--default-text-color));//$size: 13px,
         background-color: var(--button-background-active);//var(--egrey-e8);
         //border: 1px solid var(--egrey-e8);//$dgc-chatroom-scbtn;
       }
     }
 
     &.counter {
-      @include typo($size: 12px, $line: 16px,$weight:300, $color: var(--default-text-color));//$size: 15px,$color: var(--egrey-78)
+      @include drumee.typo($size: 12px, $line: 16px,$weight:300, $color: var(--default-text-color));//$size: 15px,$color: var(--egrey-78)
       //padding: 20px;
       align-items: flex-start;
       justify-content: flex-end;
@@ -161,7 +161,7 @@
     }
 
     &.search-title {
-      @include typo($size: 14px, $line: 28px, $weight: 300, $color: var(--default-text-title));//$size: 12px $line: 14px,
+      @include drumee.typo($size: 14px, $line: 28px, $weight: 300, $color: var(--default-text-title));//$size: 12px $line: 14px,
       justify-content: center;
       width: 100%;
       top: 20px;
@@ -221,7 +221,7 @@
 
   &__button-confirm {
     border-radius:var(--border-radius);
-    @include typo($size: 16px, $line: 19px, $color: var(--btn-commit-text)); //$size: 14px,
+    @include drumee.typo($size: 16px, $line: 19px, $color: var(--btn-commit-text)); //$size: 14px,
     align-items: center;
     background-color: var(--btn-commit-background);
     border: 1px solid var(--btn-commit-border);

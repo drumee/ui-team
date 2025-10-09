@@ -1,8 +1,9 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('metadata');
+@include meta.load-css('topbar');
 
 .player-audio {
-  @import './metadata';
-  @import './topbar';
 
   &__ui {
     height: 100%;

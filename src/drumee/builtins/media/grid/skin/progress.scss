@@ -1,8 +1,6 @@
+@use "mixins/drumee";
+
 .drumee-spinner{
-  // width: 50px;
-  // height: 50px;
-  // top: calc(50% - 25px);
-  // left: calc(50% - 25px);
   width: 30px;
   height: 30px;
   top: calc(50% - 15px);
@@ -47,11 +45,11 @@
   &__value{
     &-filesize{
       letter-spacing: 0.09px;
-      @include typo($line:13px,$size:11px,$weight:300,$color:var(--default-text-color));
+      @include drumee.typo($line:13px,$size:11px,$weight:300,$color:var(--default-text-color));
     }
     &-percent{
       letter-spacing: 0.09px;
-      @include typo($line:13px,$size:11px,$weight:300,$color: var(--egreen) );      
+      @include drumee.typo($line:13px,$size:11px,$weight:300,$color: var(--egreen) );      
     }
     &-filename{
       white-space: nowrap;
@@ -62,7 +60,7 @@
         padding: 0 10px;
         overflow: hidden;
         text-overflow: ellipsis;
-        @include typo($line:14px,$size:12px,$weight:300,$color: var(--egreen)); 
+        @include drumee.typo($line:14px,$size:12px,$weight:300,$color: var(--egreen)); 
         letter-spacing: 0.1px;
         text-align: center;
       }

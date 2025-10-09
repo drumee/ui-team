@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 &-topbar {
   &__container {
     background-color: var(--share-box-topbar-container);
@@ -23,7 +25,7 @@
 
   &__note {
     &.title {
-      @include typo($size: 18px, $line: 15px, $color: var(--default-text-reverse));
+      @include drumee.typo($size: 18px, $line: 15px, $color: var(--default-text-reverse));
       justify-content: flex-start;
       max-width: 150px;
       padding: 5px;

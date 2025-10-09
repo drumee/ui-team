@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .desk-module__topbar{
   &-user {
@@ -95,7 +95,7 @@
       justify-content: space-between;
       padding: 14px 18px 14px 35px;//14px 5px 14px 35px; //14px 8px 14px 32px;//14px 20px 14px 35px;
       width: 100%;
-      @include typo($line:32px,$size:16px,$weight:400,$color: var(--egrey-78));
+      @include drumee.typo($line:32px,$size:16px,$weight:400,$color: var(--egrey-78));
 
       &.account {
         svg {
@@ -167,7 +167,7 @@
       &:hover {
         background-color: var(--default-bg-hover);
         color: var(--default-text-reverse); 
-        @include typo($line:32px,$size:16px,$weight:400,$color: var(--egrey-78));
+        @include drumee.typo($line:32px,$size:16px,$weight:400,$color: var(--egrey-78));
 
         svg {
             color: var(--default-icon-reverse);    

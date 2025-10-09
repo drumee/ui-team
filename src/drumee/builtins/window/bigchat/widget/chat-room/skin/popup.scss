@@ -1,253 +1,259 @@
-&__popup {
-  
-  &-wrapper {
-    border-radius : var(--border-radius);
-    background-color: var(--default-background);  
-    box-shadow: var(--shadow-popup);     
-    height: calc(100% - 20px);
-    max-height: 300px;
-    max-width: 550px;
-    min-height: 300px;
-    min-width: 320px;
-    width: calc( 100% - 20px);
-  }
+@use "mixins/drumee";
 
-  &-close {
-    color: var(--default-thinline-icon);
-    cursor: pointer;
-    height: 12px;
-    margin:10px;
-    position: absolute;
-    right: 5px;
-    top: 5px;
-    width: 12px;
+.chat-room {
+  &__popup {
 
-    &:hover {
-      color:var(--default-thinline-icon-hover);
+    &-wrapper {
+      border-radius: var(--border-radius);
+      background-color: var(--default-background);
+      box-shadow: var(--shadow-popup);
+      height: calc(100% - 20px);
+      max-height: 300px;
+      max-width: 550px;
+      min-height: 300px;
+      min-width: 320px;
+      width: calc(100% - 20px);
     }
-  }
 
-  &_header-title {
-    @include typo($size: 18px, $line: 16px, $color: var(--default-text-title));
+    &-close {
+      color: var(--default-thinline-icon);
+      cursor: pointer;
+      height: 12px;
+      margin: 10px;
+      position: absolute;
+      right: 5px;
+      top: 5px;
+      width: 12px;
 
-    &.resend-invite {
-      align-items: baseline;
-      color:var(--secondary-text-color);
-      height: 30px;
+      &:hover {
+        color: var(--default-thinline-icon-hover);
+      }
+    }
+
+    &_header-title {
+      @include drumee.typo($size: 18px, $line: 16px, $color: var(--default-text-title));
+
+      &.resend-invite {
+        align-items: baseline;
+        color: var(--secondary-text-color);
+        height: 30px;
+        justify-content: center;
+        width: 100%;
+      }
+    }
+
+    &__wrapper {
+      &.header {
+        align-items: flex-start;
+        height: 35px;
+        justify-content: center;
+        width: 100%;
+      }
+    }
+
+    &-model-holder {
+      align-items: center;
       justify-content: center;
+      margin: auto;
+      text-align: center;
       width: 100%;
     }
-  }
 
-  &__wrapper {
-    &.header {
-      align-items: flex-start;
+    &_header-sub-title {
+      letter-spacing: 0;
+      margin-bottom: 30px;
+      margin-top: 30px;
+      text-align: center;
+      width: 323px;
+      @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
+    }
+
+    &__note.fullname {
+      padding-top: 7px; //5px;
+      @include drumee.typo($size: 18px, $line: 16px, $color: var(--secondary-text-color));
+    }
+
+    &__entry {
+      &.message {
+        padding-top: 10px;
+        width: 100%;
+
+        & textarea {
+          @include drumee.typo($size: 16px, $line: 21px, $color: var(--default-text-color));
+          background: var(--default-block-background); //$default-block-background;
+          border-radius: var(--border-radius); //6px
+          border: none;
+          outline: none;
+          padding: 10px;
+          resize: none;
+
+          &::placeholder {
+            @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
+          }
+        }
+      }
+    }
+
+    & .user-profile__main {
+      border-radius: 50px;
+      height: 29px;
+      overflow: hidden;
+      width: 29px;
+    }
+
+    & .widget-contact-detail {
+      &__buttons-wrapper {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+
+        & .button {
+          align-items: center;
+          height: 40px; //35px;
+          justify-content: center;
+          margin-top: 40px;
+          text-align: center;
+          width: 160px; //115px;
+        }
+
+        & .button:first-child {
+          margin-right: 50px;
+        }
+      }
+
+      &__button-cancel {
+        border-radius: var(--border-radius);
+        border: 1px solid var(--btn-rollback-border);
+        @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
+
+        &:hover {
+          border: 2px solid var(--btn-rollback-border-hover);
+          color: var(--btn-rollback-text-hover);
+        }
+      }
+
+      &__button-confirm {
+        background-color: var(--btn-caution-background);
+        border: 0px;
+        @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-caution-text));
+
+        &:hover {
+          background-color: var(--btn-caution-background-hover);
+        }
+
+        &.resend {
+          background-color: var(--btn-commit-background);
+          color: var(--btn-commit-text);
+          width: 170px;
+
+          &:hover {
+            background-color: var(--btn-commit-background-hover);
+          }
+        }
+      }
+    }
+
+    &__delete-acknowledgement,
+    &__resend-invite {
+      align-items: center;
+    }
+
+    &_message-info {
+      text-align: center;
+      width: 323px;
+      @include drumee.typo($weight: 300, $size: 18px, $line: 26px, $color: var(--default-text-color));
+
+      &.first-node {
+        margin: 22px 30px 22px 30px;
+      }
+    }
+
+    &__button-ok {
+      align-items: center;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--btn-rollback-border);
       height: 35px;
       justify-content: center;
-      width: 100%;
+      margin-top: 36px;
+      width: 115px;
+      @include drumee.typo($size: 16px, $color: var(--btn-rollback-text));
+
+      &:hover {
+        border: 2px solid var(--btn-rollback-border-hover);
+        color: var(--btn-rollback-text-hover);
+      }
+    }
+
+    &__icon {
+      &.desktop_contactbook {
+        height: 26px;
+        margin-right: 10px;
+        opacity: .55;
+        width: 26px;
+      }
+
+      &.share-room {
+        height: 22px;
+        right: 10px;
+        top: 3px;
+        width: 22px;
+      }
     }
   }
 
-  &-model-holder {
-    align-items: center;
+  // for buttons
+  &__buttons-wrapper {
     justify-content: center;
-    margin: auto;
-    text-align: center;
+    justify-items: center;
+    //margin-top: 20px;
     width: 100%;
-  }
+    margin: 30px 0 3px 0;
 
-  &_header-sub-title {
-    letter-spacing: 0;
-    margin-bottom: 30px;
-    margin-top: 30px;
-    text-align: center;
-    width: 323px;
-    @include typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
-  }
-
-  &__note.fullname {   
-    padding-top: 7px;//5px;
-    @include typo( $size: 18px, $line: 16px, $color: var(--secondary-text-color));
-  }
-  
-  &__entry {
-    &.message {
-      padding-top: 10px;
-      width: 100%;
-      
-      & textarea {
-        @include typo($size: 16px, $line: 21px, $color: var(--default-text-color));
-        background: var(--default-block-background);//$default-block-background;
-        border-radius: var(--border-radius); //6px
-        border: none;
-        outline: none;
-        padding: 10px;
-        resize: none;
-
-        &::placeholder {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
-        }
-      }
-    }
-  }
-
-  & .user-profile__main {
-    border-radius: 50px;
-    height: 29px;
-    overflow: hidden;
-    width: 29px;
-  }
-
-  & .widget-contact-detail {
-    &__buttons-wrapper {
-      display: flex;
+    & .button {
+      align-items: center;
+      border-radius: var(--border-radius);
+      height: 35px;
       justify-content: center;
-      width: 100%;
-
-      & .button {
-        align-items: center;
-        height: 40px; //35px;
-        justify-content: center; 
-        margin-top:40px;
-        text-align: center;
-        width: 160px; //115px;
-      }
-
-      & .button:first-child {
-        margin-right: 50px;
-      }
-    }
-
-    &__button-cancel {    
-      border-radius:var(--border-radius);
-      border: 1px solid var(--btn-rollback-border);
-      @include typo( $size: 16px, $line: 16px, $color: var(--btn-rollback-text));
-
-      &:hover {
-        border:2px solid var(--btn-rollback-border-hover);
-        color:var(--btn-rollback-text-hover); 
-      }
-    }
-
-    &__button-confirm {     
-      background-color:var(--btn-caution-background);
-      border:0px;
-      @include typo( $size: 16px, $line: 16px, $color: var(--btn-caution-text));
-
-      &:hover {
-        background-color:var(--btn-caution-background-hover);
-      }
-
-      &.resend {
-        background-color: var(--btn-commit-background);
-        color: var(--btn-commit-text);
-        width: 170px;
-        
-        &:hover {
-          background-color: var(--btn-commit-background-hover); 
-        }
-      }
+      width: 115px;
+      margin-left: 6%;
+      margin-right: 0%;
+      @include drumee.typo($size: 16px, $line: 19px);
     }
   }
 
-  &__delete-acknowledgement,
-  &__resend-invite {
-    align-items: center;
-  }
-
-  &_message-info {   
-    text-align: center;
-    width: 323px;
-    @include typo($weight: 300, $size: 18px, $line: 26px, $color: var(--default-text-color));
-
-    &.first-node {
-      margin: 22px 30px 22px 30px;
-    }
-  }
-
-  &__button-ok {    
-    align-items: center;
-    border-radius:var(--border-radius);
+  &__button-cancel {
     border: 1px solid var(--btn-rollback-border);
-    height: 35px;
-    justify-content: center; 
-    margin-top: 36px;
-    width: 115px;
-    @include typo($size: 16px,$color: var(--btn-rollback-text));
-
-    &:hover {
-      border:2px solid var(--btn-rollback-border-hover); 
-      color:var(--btn-rollback-text-hover);
-    }
-  }
-
-  &__icon {
-    &.desktop_contactbook {
-      height: 26px;
-      margin-right: 10px;
-      opacity: .55;
-      width: 26px;
-    }
-
-    &.share-room {
-      height: 22px;
-      right: 10px;
-      top: 3px;
-      width: 22px;
-    }
-  }
-}
-
-// for buttons
-&__buttons-wrapper {
-  justify-content: center;
-  justify-items: center;
-  //margin-top: 20px;
-  width: 100%;
-  margin: 30px 0 3px 0;
-  
-  & .button {    
-    align-items:center;
-    border-radius:var(--border-radius);
-    height: 35px;
-    justify-content: center;
-    width: 115px;
-    margin-left: 6%;
-    margin-right: 0%;
-    @include typo($size: 16px, $line: 19px);
-  }
-}
-
-&__button-cancel {  
-  border: 1px solid var(--btn-rollback-border);
-  margin-right: 35px;
-  margin-right: 5%;
-  @include typo($weight: 300, $color: var(--btn-rollback-text));
-  &:hover{
-    border: 2px solid var(--btn-rollback-border-hover);
-    color: var(--btn-rollback-text-hover); 
-  }
-}
-
-&__button-confirm {  
-  background-color: var(--btn-commit-background);
-  margin-left: 35px;
-  @include typo($color: var(--btn-commit-text));
-  
-  &:hover {
-    background-color: var(--btn-commit-background-hover); 
-  }
-
-  &.destroy,
-  &.archived {
-    background-color: var(--btn-caution-background);
-    border: 1px solid var(--btn-caution-border);
-    height: 35px;
-    width: 115px;
+    margin-right: 35px;
     margin-right: 5%;
+    @include drumee.typo($weight: 300, $color: var(--btn-rollback-text));
+
     &:hover {
-      background-color: var(--btn-caution-background-hover);
-      border: 1px solid var(--btn-caution-border-hover);
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
+    }
+  }
+
+  &__button-confirm {
+    background-color: var(--btn-commit-background);
+    margin-left: 35px;
+    @include drumee.typo($color: var(--btn-commit-text));
+
+    &:hover {
+      background-color: var(--btn-commit-background-hover);
+    }
+
+    &.destroy,
+    &.archived {
+      background-color: var(--btn-caution-background);
+      border: 1px solid var(--btn-caution-border);
+      height: 35px;
+      width: 115px;
+      margin-right: 5%;
+
+      &:hover {
+        background-color: var(--btn-caution-background-hover);
+        border: 1px solid var(--btn-caution-border-hover);
+      }
     }
   }
 }

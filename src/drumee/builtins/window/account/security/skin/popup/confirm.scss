@@ -6,7 +6,7 @@
 // @import 'mixins/typo.scss';
 // @import 'mixins/colors/index.scss';
 // @import 'mixins/vendor.scss';
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .account-security{
   &__popup{
@@ -41,14 +41,14 @@
         height: 28px;
         width: 255px;
        // padding-right:101px;
-        @include typo($size:24px,$line:28px,$color: var(--default-text-color),$weight:300);
+        @include drumee.typo($size:24px,$line:28px,$color: var(--default-text-color),$weight:300);
         top:50px;
         left:234px;
       }  
       &.text{
         height: 100%;
         width: 100%;
-        @include typo($size:18px,$line:26px,$color: var(--egrey-89),$weight:300);
+        @include drumee.typo($size:18px,$line:26px,$color: var(--egrey-89),$weight:300);
         //top:108px;
         padding-left:85px;
         padding-right:85px;

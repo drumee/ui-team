@@ -4,7 +4,7 @@
 #   TYPE : Component style
 # ===================================================================**/
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .welcome-feedback {
   &__ui{
@@ -30,11 +30,11 @@
     &.header {
       justify-content: center;
       text-align: center;
-      @include typo($size: 38px, $line: 45px, $color: var(--default-text-color));
+      @include drumee.typo($size: 38px, $line: 45px, $color: var(--default-text-color));
     }
 
     &.message {
-      @include typo($size: 16px, $line: 22px, $color: var(--default-text-color));
+      @include drumee.typo($size: 16px, $line: 22px, $color: var(--default-text-color));
       padding: 30px;
       text-align: left;
       p{
@@ -71,9 +71,9 @@
       width: 100%;
       height: 100%;
       padding: 8px 0px 0px 10px;
-      @include typo($size: 16px, $line: 18px, $color: var(--default-text-color));
+      @include drumee.typo($size: 16px, $line: 18px, $color: var(--default-text-color));
       &::placeholder {
-        @include typo($size: 16px, $line: 18px, $weight: 400,$color: var(--egrey-b6));//var(--default-text-placeholder)); //var(--egrey-b6));$weight: 300,
+        @include drumee.typo($size: 16px, $line: 18px, $weight: 400,$color: var(--egrey-b6));//var(--default-text-placeholder)); //var(--egrey-b6));$weight: 300,
       }
     }
   }
@@ -92,7 +92,7 @@
     cursor: pointer;
     justify-content: center;
     width: 115px;
-    @include typo($size: 16px, $line: 28px, $color: var(--btn-commit-text));//$size: 20px,
+    @include drumee.typo($size: 16px, $line: 28px, $color: var(--btn-commit-text));//$size: 20px,
     &:hover{
       background-color: var(--btn-commit-background-hover);  //0 0 31px 0 rgba(169,186,255,.5);
     }

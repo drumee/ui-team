@@ -1,14 +1,15 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('attachment');
+@include meta.load-css('menu');
+@include meta.load-css('reply-message');
 
 .widget-chatItem {
-  @import './attachment';
-  @import './menu';
-  @import './reply-message';
 
   &__ui {
     background-color: var(--default-bg);
     width: calc(100% - 70px);
-    @include typo($size: 12px, $line: 14px);
+    @include drumee.typo($size: 12px, $line: 14px);
     display: flex;
     flex-direction: column;
     margin-top: 10px;
@@ -50,6 +51,7 @@
     width: fit-content;
     display: flex;
     flex-direction: column-reverse;
+
     &[data-active="yes"] {
       width: calc(100% - 70px);
       margin-right: 35px;
@@ -181,11 +183,11 @@
 
     &-date {
       margin-top: -2px;
-      @include typo($size: 10px, $line: 9px, $weight: 300, $color: var(--tertiary-text-color));
+      @include drumee.typo($size: 10px, $line: 9px, $weight: 300, $color: var(--tertiary-text-color));
 
       &.me {
         margin-top: 0px;
-        @include typo($size: 10px, $line: 9px, $weight: 500, $color: var(--tertiary-text-color));
+        @include drumee.typo($size: 10px, $line: 9px, $weight: 500, $color: var(--tertiary-text-color));
       }
 
       &.other {
@@ -242,7 +244,7 @@
       padding-left: 4px;
       padding-top: 4px;
       text-transform: capitalize;
-      @include typo($size: 12px, $line: 12px, $color: var(--secondary-text-color));
+      @include drumee.typo($size: 12px, $line: 12px, $color: var(--secondary-text-color));
     }
   }
 
@@ -267,7 +269,7 @@
       margin: auto;
       max-width: 200px;
       width: 82px;
-      @include typo($size: 11px, $line: 20px, $color: var(--tertiary-text-color));
+      @include drumee.typo($size: 11px, $line: 20px, $color: var(--tertiary-text-color));
       display: flex;
       flex-direction: row;
       justify-content: center;
@@ -288,7 +290,7 @@
     margin: auto;
     max-width: 200px;
     width: 82px;
-    @include typo($size: 11px, $line: 12px, $color: var(--tertiary-text-color));
+    @include drumee.typo($size: 11px, $line: 12px, $color: var(--tertiary-text-color));
   }
 
   &__profile {
@@ -317,7 +319,7 @@
 
       &__icon {
         height: 100%;
-        @include typo($size: 9px, $line: 10px);
+        @include drumee.typo($size: 9px, $line: 10px);
       }
     }
 
@@ -346,7 +348,7 @@
     text-transform: capitalize;
     white-space: nowrap;
     width: 121px;
-    @include typo($size: 11px, $line: 10px, $weight: 400, $color: var(--default-text-color));
+    @include drumee.typo($size: 11px, $line: 10px, $weight: 400, $color: var(--default-text-color));
 
     & .inner.note-content {
       overflow: hidden;
@@ -388,7 +390,7 @@
     &-content {
       overflow: hidden;
       word-wrap: break-word;
-      @include typo($size: 12px, $line: 14px, $weight: 400, $color: var(--egrey-26));
+      @include drumee.typo($size: 12px, $line: 14px, $weight: 400, $color: var(--egrey-26));
 
       & a {
         color: var(--secondary-text-color);
@@ -415,7 +417,7 @@
 
   &__call-duration {
     margin-left: 10px;
-    @include typo($size: 13px, $line: 14px, $weight: 400, $color: var(--default-text-title));
+    @include drumee.typo($size: 13px, $line: 14px, $weight: 400, $color: var(--default-text-title));
   }
 
   &__media-attachment {

@@ -1,5 +1,5 @@
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .security-otp {
 
@@ -30,7 +30,7 @@
   &__status {
     justify-content: center;
     text-align: center;
-    @include typo($size: 16px,
+    @include drumee.typo($size: 16px,
       $line: 21px,
       $color: var(--default-text-color),
       $weight: 400);
@@ -81,7 +81,7 @@
     flex-wrap: wrap;
     justify-content: center;
     align-content: center;
-    @include typo($size: 16px, $line: 35px, $color: var(--btn-commit-text));
+    @include drumee.typo($size: 16px, $line: 35px, $color: var(--btn-commit-text));
   }
 
   &__selector {

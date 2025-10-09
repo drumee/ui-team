@@ -1,5 +1,5 @@
 
-@import "mixins/drumee";
+@use "mixins/drumee";
 .notifier-network{
   &__ui{
     position: absolute;
@@ -69,11 +69,11 @@
     width: 100%;
     text-align: left;
     height: 100%;
-    @include typo($color:#ea4d44, $size: 16px, $line: 19px); 
+    @include drumee.typo($color:#ea4d44, $size: 16px, $line: 19px); 
     margin-left:40px;
     align-items:center;
     @media(max-width:400px){
-      @include typo($color:#ea4d44, $size: 13px, $line: 19px); 
+      @include drumee.typo($color:#ea4d44, $size: 13px, $line: 19px); 
       margin-left:11px;
     }
     &.unstable{

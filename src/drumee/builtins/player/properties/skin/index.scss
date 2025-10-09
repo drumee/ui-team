@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/memo/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 
 .player-props {
@@ -57,7 +57,7 @@
     &-icon,
     &-attr {
       white-space: nowrap;
-      @include typo($size: 12px, $line: 15px, $color: var(--default-text-color));
+      @include drumee.typo($size: 12px, $line: 15px, $color: var(--default-text-color));
       height: 100%;
       align-content: center;
       flex-wrap: wrap;
@@ -133,7 +133,7 @@
     &__title {
       width: 100%;
       justify-content: center;
-      @include typo($size: 16px, $line: 15px, $color: var(--ewhite));
+      @include drumee.typo($size: 16px, $line: 15px, $color: var(--ewhite));
     }
   }
 

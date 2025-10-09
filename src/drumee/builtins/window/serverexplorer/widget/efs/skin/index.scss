@@ -3,14 +3,13 @@
 #   FILE : /ui/src/drumee/builtins/media/efs/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+  @include meta.load-css("checkbox.scss");
+  @include meta.load-css("container.scss");
+  @include meta.load-css("filename.scss");
+  @include meta.load-css("progress.scss");
 
-.media-efs {
-  @import "checkbox.scss";
-  @import "container.scss";
-  @import "filename.scss";
-  @import "progress.scss";
-}
 
 .media-efs {
   &__ui {
@@ -81,7 +80,7 @@
         border: 1px solid #18AC72;
       }
       &__text {
-        @include typo($line:21px,$size:10px,$weight:300,$color:var(--secondary-text-color)); 
+        @include drumee.typo($line:21px,$size:10px,$weight:300,$color:var(--secondary-text-color)); 
       }
     }
   }
@@ -193,7 +192,7 @@
   //   background-size: cover;
   // }
   &__input {
-    @include typo($line:14px,$size:11px,$color:var(--default-text-color));
+    @include drumee.typo($line:14px,$size:11px,$color:var(--default-text-color));
     width: 100%;
     position: absolute;
     z-index: 102; //UU was 200, let's try lower
@@ -209,14 +208,14 @@
       overflow: hidden;
       resize: none;
       background-color: var(--default-bg);  
-      @include typo($line:12px,$size:11px,$color:var(--default-text-color)); //$line:14px,
+      @include drumee.typo($line:12px,$size:11px,$color:var(--default-text-color)); //$line:14px,
       // &[data-row="2"]{
       //   min-height: 31px;
       //   height: 31px;
       //   padding: 1px 6px;
       // }
       &::placeholder{
-        @include typo($size: 11px, $line: 12px, $weight:300, $color:var(--default-text-placeholder));
+        @include drumee.typo($size: 11px, $line: 12px, $weight:300, $color:var(--default-text-placeholder));
       }
     }
     .input-details {

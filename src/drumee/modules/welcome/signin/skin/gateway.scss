@@ -4,13 +4,13 @@
 #   TYPE : Component style
 # ===================================================================**/
 
-@import '../../../../skin/mixins/drumee.scss';
+@use '../../../../skin/mixins/drumee.scss';
 
 .welcome-signin-gateway {
   &__title{
     align-items: center;
     justify-content: center;
-    @include typo($size: 28px, $line: 28px,$weight:400, $color: var(--default-text-reverse));     
+    @include drumee.typo($size: 28px, $line: 28px,$weight:400, $color: var(--default-text-reverse));     
     &[data-device="mobile"]{
       .drumee-text{
         text-align: center;
@@ -54,10 +54,10 @@
   &__text{
     margin-top: 35px;
     &.company{
-      @include typo($size: 24px, $line: 28px,$weight:400, $color: #FCC101);      
+      @include drumee.typo($size: 24px, $line: 28px,$weight:400, $color: #FCC101);      
     }
     &.personal{
-      @include typo($size: 24px, $line: 28px,$weight:400, $color: #48DEB7);      
+      @include drumee.typo($size: 24px, $line: 28px,$weight:400, $color: #48DEB7);      
     }
   }
   &__icon {

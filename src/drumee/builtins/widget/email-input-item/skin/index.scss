@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/widget/email-input-item/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .email-input-item {
   &__ui {

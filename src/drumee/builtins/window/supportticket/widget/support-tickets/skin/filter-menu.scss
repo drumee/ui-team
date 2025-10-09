@@ -1,133 +1,139 @@
-&-filter-menu {
-  &__wrapper {
-    &[data-state="1"] {
-      & .trigger-icon {
-        color: var(--default-icon-active);
+@use "mixins/drumee";
+
+.widget-support-tickets {
+  &-filter-menu {
+    &__wrapper {
+      &[data-state="1"] {
+        & .trigger-icon {
+          color: var(--default-icon-active);
+        }
       }
-    }
 
-    & .menu-topic-items {
-      background-color: var(--default-background);
-      box-shadow:$drumee-container-dropdown;
-      border-radius:var(--border-radius);
-      max-width: 202px;
-      min-width: 170px;
-      width: 100% !important;
-      padding-bottom: 5px;
-      &__wrapper{
-        left: -40px;
-        padding:10px;
-        top: 26px;
-      } 
-
-      &:before {
+      & .menu-topic-items {
         background-color: var(--default-background);
-        box-shadow:var(--shadow-container);
-        content: "";
-        height: 10px;
-        left: 12px;
-        position: absolute;
-        top: -5px;
-        transform: rotate(45deg);
-        width: 10px;
-      }
+        box-shadow: drumee.$drumee-container-dropdown;
+        border-radius: var(--border-radius);
+        max-width: 202px;
+        min-width: 170px;
+        width: 100% !important;
+        padding-bottom: 5px;
 
-      &:after {
-        background: var(--default-background);
-        border-radius:var(--default-border-radius-top);
-        content: "";
-        height: 10px;
-        left: 0;
-        position: absolute;
-        top: 0;
-        width: 100%;
-      }
-    }
-  }
+        &__wrapper {
+          left: -40px;
+          padding: 10px;
+          top: 26px;
+        }
 
-  &__icon {
-    cursor: pointer;
+        &:before {
+          background-color: var(--default-background);
+          box-shadow: var(--shadow-container);
+          content: "";
+          height: 10px;
+          left: 12px;
+          position: absolute;
+          top: -5px;
+          transform: rotate(45deg);
+          width: 10px;
+        }
 
-    &.trigger-icon {
-      align-items: center;
-      box-sizing: border-box;
-      color: var(--default-icon-neutral);
-      height: 12px;
-      right: 25px;
-      top: 12px;
-      width: 12px;
-
-      &.ticket-filter{
-        width:15px;
-        height: 15px;
-      }
-      
-      svg {
-        &:hover {
-          color:var(--default-icon-hover);
-          opacity: 1;
+        &:after {
+          background: var(--default-background);
+          border-radius: var(--default-border-radius-top);
+          content: "";
+          height: 10px;
+          left: 0;
+          position: absolute;
+          top: 0;
+          width: 100%;
         }
       }
     }
-    
-    &.checkbox {
-      border-radius: var(--checkbox-border-radius);
-      border:1px solid var(--default-checkbox-border);//$default-checkbox;
-      box-shadow: none;
-      color: var(--default-checkbox-background);//$default-background;
-      height: 14px;
-      width: 14px;
-      background:white;
 
-      &[data-state="1"] {
-        border: 1px solid var(--default-checkbox-border);//$default-checkbox;
+    &__icon {
+      cursor: pointer;
+
+      &.trigger-icon {
+        align-items: center;
+        box-sizing: border-box;
+        color: var(--default-icon-neutral);
+        height: 12px;
+        right: 25px;
+        top: 12px;
+        width: 12px;
+
+        &.ticket-filter {
+          width: 15px;
+          height: 15px;
+        }
+
+        svg {
+          &:hover {
+            color: var(--default-icon-hover);
+            opacity: 1;
+          }
+        }
+      }
+
+      &.checkbox {
+        border-radius: var(--checkbox-border-radius);
+        border: 1px solid var(--default-checkbox-border); //$default-checkbox;
         box-shadow: none;
-        color: var(--default-checkbox-checked);// $checkbox-active;
+        color: var(--default-checkbox-background); //$default-background;
+        height: 14px;
+        width: 14px;
+        background: white;
+
+        &[data-state="1"] {
+          border: 1px solid var(--default-checkbox-border); //$default-checkbox;
+          box-shadow: none;
+          color: var(--default-checkbox-checked); // $checkbox-active;
+        }
       }
     }
-  }
 
-  &__item-wrapper {
-    width: 100%;
-  }
-  
-  &__item {
-    align-items: baseline;
-    cursor: pointer;
-    padding: 5px 10px 5px 25px;
-    margin-bottom:  1px;
-    height: 24px;
+    &__item-wrapper {
+      width: 100%;
+    }
 
-    &:hover {
-      background-color: var(--default-background-hover);  
-      color : var(--default-text-hover);
-      & .menu-item {
+    &__item {
+      align-items: baseline;
+      cursor: pointer;
+      padding: 5px 10px 5px 25px;
+      margin-bottom: 1px;
+      height: 24px;
+
+      &:hover {
+        background-color: var(--default-background-hover);
         color: var(--default-text-hover);
-      }
 
-      .checkbox[data-state="1"] {
-        box-shadow: none;
-        border: 1px solid var(--checkbox-checked-border-reverse);
-        border-radius:var(--checkbox-border-radius);
+        & .menu-item {
+          color: var(--default-text-hover);
+        }
+
+        .checkbox[data-state="1"] {
+          box-shadow: none;
+          border: 1px solid var(--checkbox-checked-border-reverse);
+          border-radius: var(--checkbox-border-radius);
+        }
       }
     }
-  }
 
-  &__note {    
-    padding-top: 0px;
-    bottom: 2px;
-    @include typo($size: 12px, $weight: 300, $line: 14px, $color: var(--default-text-color));
+    &__note {
+      padding-top: 0px;
+      bottom: 2px;
+      @include drumee.typo($size: 12px, $weight: 300, $line: 14px, $color: var(--default-text-color));
 
-    &.title {     
-      align-items: center;
-      height: 20px;
-      justify-content: center;
-      margin-top: 10px;
-      @include typo($size: 14px, $weight: 300, $line: 14px, $color: var(--default-text-title));
-    }
+      &.title {
+        align-items: center;
+        height: 20px;
+        justify-content: center;
+        margin-top: 10px;
+        @include drumee.typo($size: 14px, $weight: 300, $line: 14px, $color: var(--default-text-title));
+      }
 
-    &.menu-item {
-      left: 10px;
+      &.menu-item {
+        left: 10px;
+      }
     }
   }
 }

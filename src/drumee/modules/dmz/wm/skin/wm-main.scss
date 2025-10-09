@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/dmz/skin/dmz-main.scss
 #   TYPE : Backoffice User Settings Styles
 # ===================================================================**/
-@import "mixins/drumee.scss";
+@use "mixins/drumee.scss";
 .dmz-wm {
   &__windows-layer {
     overflow: visible;
@@ -45,8 +45,8 @@
         width: 100%;
         max-height: calc(100vh - 190px);
         &[data-type="evaluation"]::after{
-          @include license-trial();
-          @include typo($size:36px,$line:42px,$color: var(--default-text-title));
+          @include drumee.license-trial();
+          @include drumee.typo($size:36px,$line:42px,$color: var(--default-text-title));
           transform: none;
           bottom: 0;
           width: 100%;
@@ -80,7 +80,7 @@
 
     & .media-grid__ui {
       & .filename {
-        @include typo($line: 14px, $size: 11px, $color: var(--default-text-color));
+        @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));
         border-radius:var(--border-radius-bottom);
         cursor: pointer;
         left: 0px;

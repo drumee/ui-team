@@ -1,5 +1,5 @@
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .invitation-permission{
   &__ui{
@@ -31,7 +31,7 @@
 
 .invitation-permission{
   &__text {
-    @include typo($line:14px,$size:13px,$weight:300,$color:var(--default-text-color)); //$egrey-78
+    @include drumee.typo($line:14px,$size:13px,$weight:300,$color:var(--default-text-color)); //$egrey-78
     display: flex;
     flex-direction: row;
   }
@@ -57,7 +57,7 @@
     }
     &[data-modify="off"]{
       .text, .label{
-        @include typo($line:14px,$size:13px,$weight:300,$color: var(--default-text-inactive)); 
+        @include drumee.typo($line:14px,$size:13px,$weight:300,$color: var(--default-text-inactive)); 
       }
       svg{
       opacity: 0.5;
@@ -123,7 +123,7 @@
 
   }
   &__input-text {
-      @include typo($line:16px,$size:12px,$weight:300,$color:#ff805c);
+      @include drumee.typo($line:16px,$size:12px,$weight:300,$color:#ff805c);
   }
   &__btn {
     min-width:68px; // 60px;
@@ -137,7 +137,7 @@
     align-items: center;
     justify-content: center;
     margin: 4% auto 0; //0 auto;
-    @include typo($line:20px,$size:14px,$color: var(--btn-commit-text)); //$size:12px, $weight:400,
+    @include drumee.typo($line:20px,$size:14px,$color: var(--btn-commit-text)); //$size:12px, $weight:400,
     &:hover{
       background-color:var(--btn-commit-background-hover);
     }

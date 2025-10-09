@@ -1,33 +1,39 @@
-&--small{
-  border-radius: 4px;
-  width: 290px;
-  z-index: 100;
-  background-color: #FFFFFF;
-  box-shadow: 0 5px 8px 1px rgba(192, 197, 209, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);  
-  &-close{
-    position: absolute;
-    top: 0;
-    right: 0;
-    color: #B6BFCA;
-    cursor: pointer;
-    z-index: 2;    
-  }
-  &-clipboard{
-    position: absolute;
-    margin: 6px;
-    border-radius: 2px;
-    z-index: 999999;
-    cursor: pointer;
-  }
-  &-content{
-    &-header{
-      @include typo($weight:300, $size:16px, $line:20px, $color:#FA8540);
+@use "mixins/drumee";
+
+@mixin desk-container-small {
+  &--small {
+    border-radius: 4px;
+    width: 290px;
+    z-index: 100;
+    background-color: #FFFFFF;
+    box-shadow: 0 5px 8px 1px rgba(192, 197, 209, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
+
+    &-close {
+      position: absolute;
+      top: 0;
+      right: 0;
+      color: #B6BFCA;
+      cursor: pointer;
+      z-index: 2;
     }
-  }
-  &__header{
-    @include typo($weight:300, $size:16px, $line:26px, $color:#FA8540);
-  }
-  &__body{
-    
+
+    &-clipboard {
+      position: absolute;
+      margin: 6px;
+      border-radius: 2px;
+      z-index: 999999;
+      cursor: pointer;
+    }
+
+    &-content {
+      &-header {
+        @include drumee.typo($weight: 300, $size: 16px, $line: 20px, $color: #FA8540);
+      }
+    }
+
+    &__header {
+      @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: #FA8540);
+    }
+
   }
 }

@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .notification-file {
   &__ui {
@@ -15,8 +15,8 @@
     width: 120px;
     cursor: pointer;
     margin-left: 36px;
-    @include typo($size: 11px, $line: 12px, $weight: 400, $color: var(--secondary-text-color) );
-    @include overflow-text();
+    @include drumee.typo($size: 11px, $line: 12px, $weight: 400, $color: var(--secondary-text-color) );
+    @include drumee.overflow-text();
 
     & .note-content {
       text-overflow: ellipsis;

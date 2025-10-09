@@ -1,9 +1,6 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2020
-#   FILE : /src/drumee/builtins/window/adminpanel/widget/members-list-item/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('settings-menu');
 
 .widget-members-listItem {
   height: 35px;
@@ -11,31 +8,30 @@
   padding-bottom: 5px;
   padding-left: 14px;
   padding-top: 5px;
-  @include typo($size :14px, $line: 16px, $color: var(--default-text-color));
+  @include drumee.typo($size :14px, $line: 16px, $color: var(--default-text-color));
 
-  @import './settings-menu';
 
   &__ui {
     background-color: inherit;
-    @include typo($color: var(--default-text-color));
+    @include drumee.typo($color: var(--default-text-color));
     cursor: pointer;
 
     &:hover,
     &[data-active=active],
     &[data-radio=on] {
-      background:var(--default-background-hover);
-      
+      background: var(--default-background-hover);
+
       & .profile-icon,
       & .name.note-reader {
-        @include typo($size :14px, $line: 16px,$color: var(--default-text-hover))
+        @include drumee.typo($size :14px, $line: 16px, $color: var(--default-text-hover))
       }
     }
 
     &:hover {
       & .option-icons {
         color: var(--default-icon-reverse);
-        border:none;
-        
+        border: none;
+
         &.checkbox[data-state="1"] {
           box-shadow: none;
           color: var(--checkbox-checked-reverse); //var(--ewhite);
@@ -43,17 +39,17 @@
         }
       }
     }
-    
+
     &[data-mode="closed"] {
       display: none;
     }
   }
 
-  &__list{
+  &__list {
     height: 35px;
-   // margin: 1px 0 0;
+    // margin: 1px 0 0;
     padding-bottom: 5px;
-    padding-left: 12px;//14px;
+    padding-left: 12px; //14px;
     padding-top: 5px;
   }
 
@@ -62,7 +58,7 @@
     height: 100%;
     width: 100%;
   }
-  
+
   &__options {
     position: absolute;
     right: 0;
@@ -71,12 +67,12 @@
   &__icon {
     color: var(--default-icon-neutral);
     cursor: pointer;
-    
+
 
     &.option-icons {
       height: 15px;
       position: absolute;
-     // right: 36px; //10px;
+      // right: 36px; //10px;
       top: 5px;
       width: 15px;
     }
@@ -84,7 +80,7 @@
     &.admin-settings {
       height: 14px;
       right: 36px; //10px;
-     // top: 5px;
+      // top: 5px;
       width: 14px;
       opacity: 0.85;
     }
@@ -92,7 +88,7 @@
     &.remove-admin {
       height: 13px;
       right: 10px; //36px;
-     // top: 6px;
+      // top: 6px;
       width: 13px;
       opacity: 0.85;
     }
@@ -104,19 +100,19 @@
       box-shadow: none;
       border-radius: var(--checkbox-border-radius);
       border: 1px solid var(--default-checkbox-border);
-      color:var(--default-checkbox-background);  
+      color: var(--default-checkbox-background);
 
       &[data-state="1"] {
         box-shadow: none;
         color: var(--default-checkbox-checked);
-        border: 1px solid var(--default-checkbox-border);//$default-checkbox;
+        border: 1px solid var(--default-checkbox-border); //$default-checkbox;
       }
     }
 
     &.display-icon {
-      color:var(--default-user-icon);
+      color: var(--default-user-icon);
       height: 29px;
-      top:0;
+      top: 0;
       width: 29px;
       min-width: 29px;
     }
@@ -125,11 +121,12 @@
   &__profile {
     &.user-profile__ui {
       border-radius: 50%;
-      height:29px; //27px;
-      width:29px; //27px;
-      bottom:2px;// 1px;
+      height: 29px; //27px;
+      width: 29px; //27px;
+      bottom: 2px; // 1px;
       min-width: 29px;
-      &[data-default="1"]{
+
+      &[data-default="1"] {
         border: none;
       }
     }
@@ -145,16 +142,17 @@
       max-width: 190px;
       padding: 3px 3px 3px 15px;
       width: 100%;
-      @include typo( $size :14px, $line: 16px, $color: var(--default-text-color));
-      @include overflow-text;
-      .inner{
+      @include drumee.typo($size :14px, $line: 16px, $color: var(--default-text-color));
+      @include drumee.overflow-text;
+
+      .inner {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-    
+
       &.allAdmins {
-        max-width: 155px;//150px;
+        max-width: 155px; //150px;
       }
     }
   }

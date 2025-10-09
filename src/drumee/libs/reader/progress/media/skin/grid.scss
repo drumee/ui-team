@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 .svg-progress{
   &__main{
     width: 100%;
@@ -21,11 +21,11 @@
   &__value{
     &-filesize{
       letter-spacing: 0.09px;
-      @include typo($line:13px,$size:11px,$weight:300,$color:#2F2F2F);
+      @include drumee.typo($line:13px,$size:11px,$weight:300,$color:#2F2F2F);
     }
     &-percent{
       letter-spacing: 0.09px;
-      @include typo($line:13px,$size:11px,$weight:300,$color:#18A3AC);      
+      @include drumee.typo($line:13px,$size:11px,$weight:300,$color:#18A3AC);      
     }
     &-filename{
       white-space: nowrap;
@@ -36,7 +36,7 @@
         padding: 0 10px;
         overflow: hidden;
         text-overflow: ellipsis;
-        @include typo($line:14px,$size:12px,$weight:300,$color:#18A3AC); 
+        @include drumee.typo($line:14px,$size:12px,$weight:300,$color:#18A3AC); 
         letter-spacing: 0.1px;
         text-align: center;
       }

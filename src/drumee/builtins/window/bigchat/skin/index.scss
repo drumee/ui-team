@@ -1,11 +1,11 @@
-@import 'mixins/drumee.scss';
-@import './layout.scss';
-// @import "./vars.scss";
+@use "sass:meta";
+@use 'mixins/drumee.scss';
+@use 'layout.scss';
+@include meta.load-css('search');
+@include meta.load-css('menu');
+@include meta.load-css('overlay-wrapper');
 
 .window-bigchat {
-  @import './search';
-  @import './menu';
-  @import './overlay-wrapper';
 
   &__ui {
     background-color: inherit;
@@ -39,7 +39,7 @@
   }
 
   &-topbar {
-    @import './breadcrumbs.scss';
+    @include meta.load-css('breadcrumbs.scss');
 
     &__content {
       align-items: center;
@@ -56,7 +56,7 @@
 
       & .title {
         align-items: center;
-        @include typo($size: 18px, $line: 16px, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 18px, $line: 16px, $color: var(--default-text-reverse));
       }
     }
 
@@ -121,7 +121,7 @@
     padding-top: 5px;
     margin: 1px .5px 0 0;
     height: 35px;
-    @include typo($size: 14px, $line: 16px, $color: var(--bigchat-special-share-room-color));
+    @include drumee.typo($size: 14px, $line: 16px, $color: var(--bigchat-special-share-room-color));
 
     &[data-active="active"],
     &[data-radio="on"],
@@ -135,7 +135,7 @@
       }
 
       & .addressbook-widget-tag-item__name {
-        @include overflow-text;
+        @include drumee.overflow-text;
 
         /*white-space: nowrap;
         overflow: hidden;
@@ -145,7 +145,7 @@
   }
 
   &.adressbook-widget-tag__note.title {
-    @include typo($size: 15px, $line: 16px, $color: var(--bigchat-default-text-title));
+    @include drumee.typo($size: 15px, $line: 16px, $color: var(--bigchat-default-text-title));
   }
 
   &__separator {
@@ -181,7 +181,7 @@
     }
 
     &__note {
-      @include typo($size: 16px, $line: 30px, $color: var(--tertiary-text-color));
+      @include drumee.typo($size: 16px, $line: 30px, $color: var(--tertiary-text-color));
       height: 100%;
       justify-content: center;
       min-width: 35px;

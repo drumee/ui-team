@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 &-menu {
   &__dropdown {
     align-items: center;
@@ -96,6 +98,6 @@
   &__note {
     padding-top: 0px;
     bottom: 2px;
-    @include typo($size: 13px, $weight: 300, $line: 14px, $color:var(--default-text-color));
+    @include drumee.typo($size: 13px, $weight: 300, $line: 14px, $color:var(--default-text-color));
   }
 }

@@ -3,7 +3,7 @@
 #   FILE : builtins/sandbox/skin/sandbox
 #   TYPE : Module
 # ===================================================================**/
-@import 'mixins/drumee.scss';
+@use 'mixins/drumee.scss';
 
 .module-test {
   &__ui{
@@ -35,11 +35,11 @@
   }
   
   &__title{
-    @include typo($size: 28px, $line: 38px, $color: var(--default-text-color));
+    @include drumee.typo($size: 28px, $line: 38px, $color: var(--default-text-color));
   }
 
   &__service{
-    @include typo($size: 16px, $line: 24px, $color: var(--default-text-color));
+    @include drumee.typo($size: 16px, $line: 24px, $color: var(--default-text-color));
     height: 42px;
     align-items: center;
     align-content: center;
@@ -72,7 +72,7 @@
     height: 46px;
     border-radius: var(--border-radius);
     text-align: center;
-    @include typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-commit-text));
+    @include drumee.typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-commit-text));
     justify-content: center;
     margin: auto;
     align-content: center;

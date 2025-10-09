@@ -1,8 +1,8 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .hub-name {
   &__error {
-    @include typo($color: var(--eorange-sunset), $size: 12px, $line: 16px, $weight: 400);
+    @include drumee.typo($color: var(--eorange-sunset), $size: 12px, $line: 16px, $weight: 400);
     background-color: var(--default-bg);
     color: #EA4D44;
     position: absolute;
@@ -32,13 +32,13 @@
   }
 
   &__header {
-    @include typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400); //#18A3AC
+    @include drumee.typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400); //#18A3AC
   }
 
   &__label {
     width: 120px;
     flex-shrink: 0;
-    @include typo($color: var(--egreen), $size: 14px, $line: 26px, $weight: 400); //#18A3AC
+    @include drumee.typo($color: var(--egreen), $size: 14px, $line: 26px, $weight: 400); //#18A3AC
   }
 
   &__container {
@@ -83,13 +83,13 @@
   }
 
   &__header {
-    @include typo($color: var(--teamroom-main), $size: 18px, $line: 19px, $weight: 400); //#AB47BC
+    @include drumee.typo($color: var(--teamroom-main), $size: 18px, $line: 19px, $weight: 400); //#AB47BC
   }
 
   &__title {
     //margin-top: 7px;
     margin-top: -3px;
-    @include typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400); //#AB47BC
+    @include drumee.typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400); //#AB47BC
     // &--access{
     //   margin-top: 22px;
     //   @include typo($color:#AB47BC,$size:16px,$line:22px,$weight:400);
@@ -101,7 +101,7 @@
     margin-left: 20px;
     // margin-right: 15px;
     flex-shrink: 0;
-    @include typo($color: var(--teamroom-main), $size: 14px, $line: 26px, $weight: 400); //#AB47BC
+    @include drumee.typo($color: var(--teamroom-main), $size: 14px, $line: 26px, $weight: 400); //#AB47BC
   }
 
   &__icon.destroy {
@@ -128,7 +128,7 @@
     flex-shrink: 0;
 
     input {
-      @include typo($size: 14px, $line: 26px, $weight: 400, $color: var(--default-text-color));
+      @include drumee.typo($size: 14px, $line: 26px, $weight: 400, $color: var(--default-text-color));
     }
   }
 
@@ -144,7 +144,7 @@
         color: $default-text-hover;
       }*/
       input {
-        @include placeholder-input {
+        @include drumee.placeholder-input {
           color: var(--default-text-hover)
         }
 
@@ -174,8 +174,8 @@
     width: 160px;
     max-width: 160px;
     flex-shrink: 0;
-    @include typo($color: var(--default-text-color) , $size: 14px, $line: 26px, $weight: 300); //$weight:400
-    @include overflow-text;
+    @include drumee.typo($color: var(--default-text-color) , $size: 14px, $line: 26px, $weight: 300); //$weight:400
+    @include drumee.overflow-text;
 
     .inner {
       white-space: nowrap;
@@ -219,8 +219,8 @@
 
   &__member-name {
     max-width: 160px; //140px
-    @include typo($size: 14px, $line: 26px, $color: var(--default-text-color) , $weight: 300); //#494949 $weight:400,
-    @include overflow-text;
+    @include drumee.typo($size: 14px, $line: 26px, $color: var(--default-text-color) , $weight: 300); //#494949 $weight:400,
+    @include drumee.overflow-text;
 
     .inner {
       white-space: nowrap;
@@ -230,7 +230,7 @@
 
     &:hover {
       input {
-        @include placeholder-input {
+        @include drumee.placeholder-input {
           color: var(--default-text-reverse)
         }
 

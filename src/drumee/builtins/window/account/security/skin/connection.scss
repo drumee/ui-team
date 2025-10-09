@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .account-security__log {
   &--container {
@@ -29,13 +29,13 @@
   &--name {
     width: 50%;
     padding-right: 5px;
-    @include typo ($line: 14px, $size: 12px, $color: var(--eblue) );
+    @include drumee.typo ($line: 14px, $size: 12px, $color: var(--eblue) );
   }
 
   &--value {
     width: 50%;
     padding-left: 5px;
-    @include typo ($line: 14px, $size: 12px, $color: var(--default-text-inactive));
+    @include drumee.typo ($line: 14px, $size: 12px, $color: var(--default-text-inactive));
   }
 }
 
@@ -44,7 +44,7 @@
     width: 35%;
     min-width: 35%;
     justify-content: space-around;
-    @include typo ($line: 14px, $color: var(--default-text-inactive), $size: 14px);
+    @include drumee.typo ($line: 14px, $color: var(--default-text-inactive), $size: 14px);
 
     .inner {
       overflow: hidden;
@@ -73,7 +73,7 @@
     padding: 9px 8px 0px 8px;
     opacity: 0.5;
     cursor: pointer;
-    @include typo ($line: 14px, $color: var(--default-text-inactive), $size: 14px);
+    @include drumee.typo ($line: 14px, $color: var(--default-text-inactive), $size: 14px);
 
     &[data-status="active"] {
       opacity: 1;

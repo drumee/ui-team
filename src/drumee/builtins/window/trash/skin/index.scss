@@ -1,7 +1,8 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('header');
 
 .window-trash {
-  @import 'header';
 
   .window-confirm {
     &__main {
@@ -59,7 +60,7 @@
     }
 
     &-title {
-      @include typo($size: 16px, $line: 22px, $weight: 400); //#E9223B);
+      @include drumee.typo($size: 16px, $line: 22px, $weight: 400); //#E9223B);
       padding: 0 7px;
       justify-content: center;
       justify-items: center;

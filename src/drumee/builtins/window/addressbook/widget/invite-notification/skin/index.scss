@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/addressbook/widget/invite-notification/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .addressbook-widget-invite-notification {
   &__ui {
@@ -78,12 +78,12 @@
         height: 20px;
         text-align: center;
         width: 20px;
-        @include typo($size: 12px, $weight: 300, $line: 20px, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 12px, $weight: 300, $line: 20px, $color: var(--default-text-reverse));
       }
     }
 
     &.fullname {
-      @include typo($size: 24px, $weight:300, $line: 28px, $color: var(--eorange));
+      @include drumee.typo($size: 24px, $weight:300, $line: 28px, $color: var(--eorange));
       margin: auto;
       overflow: hidden;
       padding: 0 25px;
@@ -99,22 +99,22 @@
 
     &.static-text {
       margin: auto;
-      @include typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
+      @include drumee.typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
       .inner{
-        @include typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
+        @include drumee.typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
       }
     }
 
     &.title {
       text-transform: capitalize;
       padding-bottom: 15px;
-      @include typo($size: 14px, $line: 14px, $color: var(--default-text-title));
+      @include drumee.typo($size: 14px, $line: 14px, $color: var(--default-text-title));
     }
 
     &.content {
       overflow-y: auto;
       padding-bottom:5px;
-      @include typo($size: 14px, $line: 20px, $color: var(--default-text-color));
+      @include drumee.typo($size: 14px, $line: 20px, $color: var(--default-text-color));
     }
   }
 
@@ -148,7 +148,7 @@
   &__button-cancel {
     border-radius: var(--border-radius);
     border: 1px solid var(--btn-rollback-border);
-    @include typo($size: 16px, $weight: 300, $line: 19px, $color: var(--btn-rollback-text));
+    @include drumee.typo($size: 16px, $weight: 300, $line: 19px, $color: var(--btn-rollback-text));
 
     &:hover {
       border:2px solid var(--btn-rollback-border-hover);
@@ -161,7 +161,7 @@
     border-radius: var(--border-radius);
     border: 1px solid var(--btn-commit-border);
     margin-left: 70px;
-    @include typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));
+    @include drumee.typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));
 
     &:hover {
       background-color:var(--btn-commit-background-hover);
@@ -176,7 +176,7 @@
       height: 28px;
       margin-left: 0px;
       width: 68px;
-      @include typo($size: 14px, $line: 19px, $color: var(--btn-rollback-text)); //$weight: 300,
+      @include drumee.typo($size: 14px, $line: 19px, $color: var(--btn-rollback-text)); //$weight: 300,
 
       &:hover {
         border:2px solid var(--btn-rollback-border-hover);

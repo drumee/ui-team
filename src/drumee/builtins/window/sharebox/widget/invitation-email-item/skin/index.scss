@@ -3,11 +3,11 @@
 #   FILE : src/drumee/builtins/window/sharebox/widget/invitation-email-item/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import "mixins/drumee";
+@use "mixins/drumee";
 
 .widget-invitation-email-item {
 
-  @include typo($size: 14px, $line: 16px, $color: var(--default-text-color));
+  @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-color));
   height: 35px;
   margin: 1px 0px 0px 0px;
   padding-bottom: 5px;
@@ -17,7 +17,7 @@
   }
 
   &__ui {
-    @include typo($color: var(--default-text-color));
+    @include drumee.typo($color: var(--default-text-color));
     background-color: inherit;
     cursor: pointer;
     transition: all 0.1s linear;
@@ -29,7 +29,7 @@
       background: var(--default-background-hover);//var(--eviolet);
       & .profile-icon,
       & .name.note-reader {
-        @include typo($size: 14px, $line: 16px, $color: var(--default-text-hover)); // var(--white);
+        @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-hover)); // var(--white);
       }
     }
     & .options-wrapper {
@@ -124,12 +124,12 @@
     margin-right: 5px;
     margin-left: 3px;
     .drumee-text{
-      @include typo($size: 15px,$weight:400, $color: var(--default-text-color));//$default-icon-neutral);
+      @include drumee.typo($size: 15px,$weight:400, $color: var(--default-text-color));//$default-icon-neutral);
       opacity:1
     }
   }
   &__mid-wrapper {
-    @include typo($size: 14px, $color: var(--default-text-color));
+    @include drumee.typo($size: 14px, $color: var(--default-text-color));
     overflow: hidden;
     flex: 1;
     max-width: calc(100% - 54px);

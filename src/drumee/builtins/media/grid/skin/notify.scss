@@ -1,68 +1,70 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
-&-notify{
-  &__container{
-    position: absolute;
-    top: 0px;
-    right: 0px;
-    z-index: 500;
-    &[data-count="0"]{
-      visibility: hidden;
+.media-grid {
+  &-notify {
+    &__container {
+      position: absolute;
+      top: 0px;
+      right: 0px;
+      z-index: 500;
+
+      &[data-count="0"] {
+        visibility: hidden;
+      }
     }
-  }
-  &__count{
-    //margin: 2px auto;
-    //$line:15px    
-    text-align: center;
-    width:18px;
-    height:18px;
-    background-color: var(--default-bg);//#ffffff;
-    overflow: hidden;
-    margin:-5px; //-6px;
-    border-radius: 50%;
-    border: 1.3px solid var(--default-border-notification);//#B6BFCA;
-    transition-property: opacity;
-    transition-duration: 0.9s;
-    align-items: center;
-    align-content: center;
-    display: flex;
-    justify-content: center;
-    justify-items: center;
-    flex-direction: column;    
-    @include typo($line:16px,$size:10px,$weight:300,$color:var(--neutral-text-notification));//#626262);//var(--tertiary-text-color));
-    &[data-refresh="1"]{
-      opacity: 0;
-    }
-    &[data-type="private"]{
-      border: var(--team-notifycount-border) 2px solid; //1.5px
-      background-color: var(--default-background);//white;
-      color:var(--teamroom-main);//#ab47bc;
-      line-height:16px;
-    }
-    &[data-type="folder"]{
-      border: 2px solid var(--folder-main-light); //#75b1fc
-      background-color: var(--default-background);//white;
-      color:var(--folder-main);//#468ee5;
-      line-height:15px;
-    }
-    &[data-type="public"]{
-      border: #18a3ac 2px solid; //1.5px
-      background-color: white;
-      color:#18a3ac;
-      line-height:15px;
-    }
-    &[data-type="share"]{
-      border: var(--sharebox-main-light) 2px solid; //1.5px
-      background-color: var(--default-background);//white;
-      color:var(--sharebox-main);//var(--sharebox-main);
-      line-height:15px;
+
+    &__count {
+      //margin: 2px auto;
+      //$line:15px    
+      text-align: center;
+      width: 18px;
+      height: 18px;
+      background-color: var(--default-bg); //#ffffff;
+      overflow: hidden;
+      margin: -5px; //-6px;
+      border-radius: 50%;
+      border: 1.3px solid var(--default-border-notification); //#B6BFCA;
+      transition-property: opacity;
+      transition-duration: 0.9s;
+      align-items: center;
+      align-content: center;
+      display: flex;
+      justify-content: center;
+      justify-items: center;
+      flex-direction: column;
+      @include drumee.typo($line: 16px, $size: 10px, $weight: 300, $color: var(--neutral-text-notification)); //#626262);//var(--tertiary-text-color));
+
+      &[data-refresh="1"] {
+        opacity: 0;
+      }
+
+      &[data-type="private"] {
+        border: var(--team-notifycount-border) 2px solid; //1.5px
+        background-color: var(--default-background); //white;
+        color: var(--teamroom-main); //#ab47bc;
+        line-height: 16px;
+      }
+
+      &[data-type="folder"] {
+        border: 2px solid var(--folder-main-light); //#75b1fc
+        background-color: var(--default-background); //white;
+        color: var(--folder-main); //#468ee5;
+        line-height: 15px;
+      }
+
+      &[data-type="public"] {
+        border: #18a3ac 2px solid; //1.5px
+        background-color: white;
+        color: #18a3ac;
+        line-height: 15px;
+      }
+
+      &[data-type="share"] {
+        border: var(--sharebox-main-light) 2px solid; //1.5px
+        background-color: var(--default-background); //white;
+        color: var(--sharebox-main); //var(--sharebox-main);
+        line-height: 15px;
+      }
     }
   }
 }
-
-
-
-
-
-
-

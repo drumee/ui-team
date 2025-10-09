@@ -1,5 +1,5 @@
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .invitation-sharee{
   &__ui {
@@ -26,7 +26,7 @@
     align-items: center;
     // padding-left: 10px;
     height: 35px; //36px;
-    @include typo($color:var(--default-text-color),$size:14px,$line:36px,$weight:400);
+    @include drumee.typo($color:var(--default-text-color),$size:14px,$line:36px,$weight:400);
     cursor: pointer;
   }
 
@@ -54,7 +54,7 @@
   &__label {
     width: 166px;
     padding: 0 0 0 14px;
-    @include overflow-text;
+    @include drumee.overflow-text;
     .inner{
       white-space: nowrap;
       overflow: hidden;
@@ -86,26 +86,3 @@
     }
   }
 }
-
-//   &__container-sharee{
-//     width: calc(100% - 82px);
-//   }
-//   &-settings{
-//     &__container{
-//       width: 82px;
-//       line-height: 26px;
-//       justify-content: center;
-//     }
-//     &__header {
-//       @include typo($color:#AB47BC,$size:16px,$line:16px,$weight:400);
-//     }
-//     &__button{
-//       &.dialog__button--submit{
-//         width: auto;
-//         &[data-editable="0"]{
-//           display: none;
-//         }
-//       }
-//     }    
-//   }
-// }

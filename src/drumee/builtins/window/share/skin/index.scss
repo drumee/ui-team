@@ -1,17 +1,18 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/colors/index.scss';
+@use 'mixins/typo.scss';
+
+@use 'mixins/exports.scss';
+@use 'mixins/handles.scss';
+@use 'mixins/utils.scss';
+@use 'mixins/vendor.scss';
+@use 'mixins/z-index.scss';
+@use 'mixins/drumee';
 
 .window-share {
 
-  @import './action-menu';
-  @import './header';
+  @include meta.load-css('action-menu');
+  @include meta.load-css('header');
 
   &.maiden-share {
     .media-grid, .media-row {
@@ -78,7 +79,7 @@
   .invitation-message {
     .note-content {
       &:before {
-        @include typo($color: var(--egrey-89),$size:14px,$line:28px,$weight:400);
+        @include drumee.typo($color: var(--egrey-89),$size:14px,$line:28px,$weight:400);
       }
     }
   }

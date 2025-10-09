@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .window-screenshare {
   &__header {
     width: 100%;
@@ -68,9 +70,9 @@
       // @include typo($size:14px,$line:12px,$weight:400,$color: var(--ewhite));
       .name {
         align-items: flex-start;
-        @include overflow-text;
+        @include drumee.overflow-text;
         margin-left: -30px; //-54px;
-        @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
         width: 316px;
         margin-right: 18px;
         justify-content: center;

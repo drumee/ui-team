@@ -1,66 +1,70 @@
+@use "mixins/drumee";
 
-&__main {
-  background-color: var(--sharebox-main);
-  border-bottom: none;
-  border-radius: var(--default-border-radius-top);
-  cursor: pointer;
-  height: 44px;
-  min-height: 44px;
-  width: 100%;
-}
-
-&__icon {
-  border-radius: var(--border-radius);    
-  border: 1px var(--default-icon-reverse) solid;
-  color: var(--default-icon-reverse);  
-  cursor: pointer;
-  height: 25px;
-  margin: auto 0 auto 15px;
-  padding: 5px;
-  width: 25px;
-
-  &.desktopgroup {
-    margin-top: 9px;
+.player-schedule-topbar {
+  &__main {
+    background-color: var(--sharebox-main);
+    border-bottom: none;
+    border-radius: var(--default-border-radius-top);
+    cursor: pointer;
+    height: 44px;
+    min-height: 44px;
+    width: 100%;
   }
 
-  &:hover {
-    color: var(--default-icon-hover);
-    opacity: 1;
-  }
-}
+  &__icon {
+    border-radius: var(--border-radius);
+    border: 1px var(--default-icon-reverse) solid;
+    color: var(--default-icon-reverse);
+    cursor: pointer;
+    height: 25px;
+    margin: auto 0 auto 15px;
+    padding: 5px;
+    width: 25px;
 
-&__control {
-  .icon {
-    color: var(--default-icon-reverse); 
-    height: 12px;
-    margin: auto 15px auto 0;
-    padding: 0 ;
-    width: 12px;
+    &.desktopgroup {
+      margin-top: 9px;
+    }
 
     &:hover {
       color: var(--default-icon-hover);
+      opacity: 1;
     }
   }
-}
 
-&__title {
-  align-items: center;
-  height: auto;
-  justify-content: center;
-  width: 100%;
+  &__control {
+    .icon {
+      color: var(--default-icon-reverse);
+      height: 12px;
+      margin: auto 15px auto 0;
+      padding: 0;
+      width: 12px;
 
-  .name {
-    align-items: flex-start;
+      &:hover {
+        color: var(--default-icon-hover);
+      }
+    }
+  }
+
+  &__title {
+    align-items: center;
+    height: auto;
     justify-content: center;
-    padding: 0;
-    width: 316px;
-    @include typo($size:18px,$line:24px,$weight:400,$color:var(--default-text-reverse));
-    @include overflow-text;
+    width: 100%;
 
-    .inner {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+    .name {
+      align-items: flex-start;
+      justify-content: center;
+      padding: 0;
+      width: 316px;
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
+      @include drumee.overflow-text;
+
+      .inner {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
   }
+
 }

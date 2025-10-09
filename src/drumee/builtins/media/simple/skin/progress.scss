@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .media-uploader{
   &__ui{
     position: absolute;
@@ -37,7 +39,7 @@
   }
   &__value{
     &-filesize{
-      @include typo($line:14px,$size:12px,$weight:300,$color:var(--default-text-color));
+      @include drumee.typo($line:14px,$size:12px,$weight:300,$color:var(--default-text-color));
       letter-spacing: 0.1px;
     }
     &-filename{
@@ -49,7 +51,7 @@
       .root-node {
         overflow: hidden;
         text-overflow: ellipsis;
-        @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49)); 
+        @include drumee.typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49)); 
         letter-spacing: 0.1px;
         text-align: left;
       }
@@ -63,7 +65,7 @@
     background-color: rgba(182,191,202,0.36);
     &-percent{
       margin-left: -1em;
-      @include typo($line:9px,$size:9px,$weight:300,$color: var(--egreen));      
+      @include drumee.typo($line:9px,$size:9px,$weight:300,$color: var(--egreen));      
       letter-spacing: 0.07px;
     }
     &--fg{
