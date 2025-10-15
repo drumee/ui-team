@@ -1,21 +1,40 @@
-
-&__avatar, &__avatar.user-profile {
-  width: 100%;
-  height: 100%;
-  justify-content: center;
-  align-content: center;
-  align-items: center;
-  .user-profile {
+@use 'mixins/drumee';
+@mixin webrtc-avatar {
+  &__avatar,
+  &__avatar.user-profile {
     width: 100%;
     height: 100%;
-    &__main {
-      border-radius: 0;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+
+    .user-profile {
+      width: 100%;
+      height: 100%;
+
+      &__main {
+        border-radius: 0;
+      }
+
+      &__ui[data-default="1"] {
+        svg {
+          float: none;
+          max-height: 90px; //50px;
+          max-width: 90px; //50px;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+        }
+      }
     }
-    &__ui[data-default="1"]{
-      svg{
+
+    &__ui[data-default="1"] {
+      svg {
         float: none;
-        max-height: 90px;//50px;
-        max-width: 90px;//50px;
+        padding: 60px;
+        max-height: 200px;
+        max-width: 200px;
         position: absolute;
         top: 50%;
         left: 50%;
@@ -23,28 +42,17 @@
       }
     }
   }
-  &__ui[data-default="1"]{
-    svg{
-      float: none;
-      padding: 60px;
-      max-height: 200px;
-      max-width: 200px;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
+
+  &__uname {
+    position: absolute;
+    top: 10px; //20px;
+    left: 10px; //20px;
+    z-index: 200000;
+    width: auto;
+    max-width: calc(100% - 20px);
+    background-color: rgba(0, 0, 0, .33);
+    border-radius: var(--border-radius-small);
+    padding: 5px;
+    @include drumee.typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-reverse)); //$color: var(--main-grey) $weight: 400,);
   }
-}
-&__uname {
-  position: absolute;
-  top: 10px;//20px;
-  left: 10px;//20px;
-  z-index: 200000;
-  width: auto;
-  max-width: calc(100% - 20px);
-  background-color: rgba(0,0,0,.33);
-  border-radius: var(--border-radius-small);
-  padding: 5px;
-  @include typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-reverse));//$color: var(--main-grey) $weight: 400,);
 }

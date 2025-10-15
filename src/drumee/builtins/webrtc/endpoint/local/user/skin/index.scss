@@ -1,9 +1,10 @@
-@import 'mixins/drumee';
+@use 'builtins/webrtc/skin/avatar' as *;
+@use 'builtins/webrtc/skin/video' as *;
+@use 'mixins/drumee';
 
 .endpoint-local {
-  @import 'builtins/webrtc/skin/avatar';
-  @import 'builtins/webrtc/skin/video';
-
+  @include webrtc-avatar;
+  @include webrtc-video;
   &__ui {
     height: 100%;
     width: 100%;
@@ -55,7 +56,7 @@
     max-width: calc(100% - 20px);
     background-color: var(--default-transparent-black);
     border-radius: var(--border-radius-small);
-    @include typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-reverse));
+    @include drumee.typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-reverse));
 
     &[data-video="1"] {
       visibility: hidden;
