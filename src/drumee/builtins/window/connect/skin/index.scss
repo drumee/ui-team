@@ -1,14 +1,18 @@
-@import "mixins/drumee";
+@use "mixins/drumee";
+@use 'builtins/webrtc/skin/index' as *;
+@use 'builtins/webrtc/skin/topbar' as *;
+@use 'builtins/webrtc/skin/command' as *;
+@use 'builtins/webrtc/skin/attendee' as *;
+@use 'builtins/webrtc/skin/sound-analyzer' as *;
+@use 'builtins/webrtc/skin/remote' as *;
 
 .window-connect {
-  @import "builtins/webrtc/skin/attendee";
-  @import "builtins/webrtc/skin/avatar";
-  @import 'builtins/webrtc/skin/topbar';
-  @import 'builtins/webrtc/skin/command';
-  @import 'builtins/webrtc/skin/local';
-  @import 'builtins/webrtc/skin/remote';
-  @import 'builtins/webrtc/skin/status';
-  @import 'builtins/webrtc/skin/sound-analyzer';
+  @include webrtc-ui;
+  @include webrtc-topbar;
+  @include webrtc-command;
+  @include webrtc-attendee;
+  @include webrtc-sound-analyzer;
+  @include webrtc-remote;
 }
 
 .window-connect {
@@ -43,26 +47,6 @@
     }
   }
 
-  // &__presenter-list {
-  //   video {
-  //     transform: matrix(1, 0, 0, 1, 0, 0);
-  //   }
-  // }
-
-  // &__user_holder {
-  //   width: 100%;
-  //   height: 100%;
-
-  //   .window-connect__presenter-list {
-  //     &[data-open|="0"] {
-  //       flex: 0;
-  //     }
-
-  //     &[data-open|="1"] {
-  //       flex: 4;
-  //     }
-  //   }
-  // }
 
   &__header {
     background-color: var(--connect-header-bg);
@@ -80,18 +64,6 @@
     }
   }
 
-  // &__body {
-  //   width: 100%;
-  //   justify-content: center;
-  //   height: calc(100% - 44px);
-  //   z-index: 100;
-  //   background-color: var(--connect-video-background);
-  //   box-shadow: var(--shadow-container);
-  //   border-radius: var(--border-radius-bottom); // var(--border-radius);
-  //   // grid-auto-flow: row;
-  //   // grid-auto-columns: auto;
-  //   // grid-template-columns: auto;
-  // }
   &__body {
     align-items: center;
     justify-content: center;
@@ -204,8 +176,6 @@
   }
 
   &__status {
-
-    //color: var(--connect-header-text-color) !important;
     .text {
       padding: 5px 10px;
       background-color: var(--connect-transparent-background); //rgba(0,0,0,0.33);
@@ -230,11 +200,11 @@
     .confirm-message {
       text-align: center;
       padding: 0 10px;
-      @include typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
+      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
     }
 
     .action-btn {
-      @include typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
+      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
       margin-top: 10px;
 
       .buttons {
@@ -248,11 +218,11 @@
         justify-content: center;
         border-radius: var(--border-radius);
         height: 32px;
-        @include typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text));
+        @include drumee.typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text));
 
         &:hover {
           border: 2px solid var(--btn-rollback-border-hover);
-          @include typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text)-hover);
+          @include drumee.typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text)-hover);
         }
       }
     }
@@ -269,15 +239,6 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
-
-    // &[data-freeside|="x"],
-    // &[data-freeside="x"] {
-    //   flex-direction: row-reverse;
-
-    //   .window-connect__avatar {
-    //     display: none;
-    //   }
-    // }
   }
 
   &__main-view {
@@ -293,14 +254,12 @@
   &__text {
     &.local {
       min-height: 30px;
-      //@include typo($color: var(--white), $line: 30px, $size: 18px);
-      @include typo($color: var(--default-text-reverse), $weight: 400, $line: 30px, $size: 16px);
+      @include drumee.typo($color: var(--default-text-reverse), $weight: 400, $line: 30px, $size: 16px);
       justify-content: center;
     }
 
     &.status {
-      //@include typo($color: var(--egrey-2f), $weight: 400, $line: 30px, $size: 18px);
-      @include typo($color: var(--default-text-color), $line: 30px, $size: 16px);
+      @include drumee.typo($color: var(--default-text-color), $line: 30px, $size: 16px);
     }
   }
 
@@ -308,7 +267,7 @@
     padding: 10px 0 15px 3px;
     justify-content: center;
     height: 20px;
-    @include typo($color: var(--default-text-title), $line: 14px, $size: 15px);
+    @include drumee.typo($color: var(--default-text-title), $line: 14px, $size: 15px);
   }
 
   &__message-container {
@@ -325,7 +284,7 @@
       background-color: var(--default-transparent-black);
       margin: auto 10px 90px 10px;
       border-radius: var(--border-radius); //3px;
-      @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
+      @include drumee.typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
     }
   }
 
@@ -343,7 +302,7 @@
       background-color: var(--default-transparent-black);
       margin: 10px;
       border-radius: var(--border-radius); //3px;
-      @include typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
+      @include drumee.typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
     }
 
     .countdown-timer {

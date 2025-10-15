@@ -1,20 +1,14 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
+@use 'cancel-subscription';
+@use 'change-subscription-ack';
+@use 'invoices';
+@use 'overlay-wrapper';
+@use 'view-subscription';
+@use 'pre-payment-summary';
+@use 'plan';
 
 .account-subscription {
 
-  
-  $color-basic-plan: #007ED9;
-  $color-pro-plan: #E96102;
-  $color-company-plan: #44A4AC;
-  $color-offer-banner: #E5E2E2;
-
-  @import './cancel-subscription';
-  @import './change-subscription-ack';
-  @import './invoices';
-  @import './overlay-wrapper';
-  @import './view-subscription';
-  @import './pre-payment-summary';
-  @import './plan';
 
   &__ui {
     height: 100%;
@@ -100,7 +94,7 @@
   }
 
   &__button-cancel {
-    @include typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text)); 
+    @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text)); 
     border: 1px solid var(--btn-rollback-border-hover);
     border-radius: var(--border-radius);
     min-width: 150px; 
@@ -114,7 +108,7 @@
   }
 
   &__button-confirm {
-    @include typo( $size: 16px, $line: 16px, $color: var(--btn-commit-text));
+    @include drumee.typo( $size: 16px, $line: 16px, $color: var(--btn-commit-text));
     background-color: var(--btn-commit-background);
     border-radius: var(--border-radius);
     height: 40px; 

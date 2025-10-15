@@ -1,9 +1,5 @@
-
-
-
-@forward "./vars/index";
+@use "./vars/index";
 @use "./lib/reset";
-// @import "./mixins/vendor";
 @use "./lib/input";
 @use "./lib/typo";
 @use "./lib/container";

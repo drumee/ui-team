@@ -1,65 +1,69 @@
-&-change-subscription-ack {
-  &__main {
-    align-items: center;
-    background:var(--default-bg);
-    border-radius: var(--border-radius);
-    height: calc(100% - 400px);
-    justify-content: center;
-    max-width: 500px;
-    min-height: 275px;
-    min-width: 280px;
-    width: 100%;
-  }
+@use "mixins/drumee";
 
-  &__note {
-    &.content {
-      @include typo($size: 16px, $line: 20px, $weight:300, $color: var(--default-text-color));
-      padding: 15px;
+.account-subscription {
+  &-change-subscription-ack {
+    &__main {
+      align-items: center;
+      background: var(--default-bg);
+      border-radius: var(--border-radius);
+      height: calc(100% - 400px);
+      justify-content: center;
+      max-width: 500px;
+      min-height: 275px;
+      min-width: 280px;
+      width: 100%;
     }
-  }
 
-  &__close {
-    color:var(--default-thinline-icon);
-    cursor: pointer;
-    margin: 10px;
-    position: absolute;
-    right: 5px;
-    top: 5px;
-    z-index: 1;
-  }
-
-  &__icon {
-    &.close {
-      color: var(--default-thinline-icon);
-      cursor: pointer;
-      height: 12px;
-      width: 12px;
-      
-      &:hover {
-        color: var(--default-thinline-icon-hover);
+    &__note {
+      &.content {
+        @include drumee.typo($size: 16px, $line: 20px, $weight: 300, $color: var(--default-text-color));
+        padding: 15px;
       }
     }
 
-    &.success {
-      color: var(--default-icon-success);
-      height: 26px;
-      width: 36px;
+    &__close {
+      color: var(--default-thinline-icon);
+      cursor: pointer;
+      margin: 10px;
+      position: absolute;
+      right: 5px;
+      top: 5px;
+      z-index: 1;
     }
-  }
 
-  &__btn-ok {
-    @include typo($size: 16px, $color: var(--bgless-text-hover));
-    align-items: center;
-    border-radius: var(--border-radius);
-    border: 1px solid var(--bgless-text-hover);
-    cursor: pointer;
-    height: 32px;
-    justify-content: center; 
-    margin-top: 30px;
-    width:90px;
+    &__icon {
+      &.close {
+        color: var(--default-thinline-icon);
+        cursor: pointer;
+        height: 12px;
+        width: 12px;
 
-    &:hover {
-      border:2px solid var(--btn-rollback-border-hover);
+        &:hover {
+          color: var(--default-thinline-icon-hover);
+        }
+      }
+
+      &.success {
+        color: var(--default-icon-success);
+        height: 26px;
+        width: 36px;
+      }
+    }
+
+    &__btn-ok {
+      @include drumee.typo($size: 16px, $color: var(--bgless-text-hover));
+      align-items: center;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--bgless-text-hover);
+      cursor: pointer;
+      height: 32px;
+      justify-content: center;
+      margin-top: 30px;
+      width: 90px;
+
+      &:hover {
+        border: 2px solid var(--btn-rollback-border-hover);
+      }
     }
   }
 }

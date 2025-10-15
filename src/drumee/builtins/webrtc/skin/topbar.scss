@@ -1,4 +1,5 @@
-@mixin webrtc-command {
+@use 'mixins/drumee';
+@mixin webrtc-topbar {
   &-topbar {
     &__icon {
       width: 20px; //40px;
@@ -46,8 +47,8 @@
         max-width: 100%; //316px;
         margin-right: 18px;
         justify-content: center;
-        @include typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
-        @include overflow-text;
+        @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
+        @include drumee.overflow-text;
 
         .note-content {
           overflow: hidden;
@@ -70,7 +71,7 @@
 
       &[data-area="dmz"] {
         .inner {
-          @include typo($size: 10px, $weight: 500, $line: 14px, $color: var(--sharebox-main));
+          @include drumee.typo($size: 10px, $weight: 500, $line: 14px, $color: var(--sharebox-main));
         }
 
         &.guest {

@@ -1,19 +1,12 @@
-// .sound-analyzer__ui {
-//   width: 100%;
-//   height: 20px;
-//   position: absolute;
-//   border: 0;
-//   bottom: 0;
-//   z-index: var(--always-visible);
-// }
-
-.sound-analyzer__ui{
-  width:100%;
-  max-height: 30px;
-  height: auto;
-  position: absolute;
-  border: 0;
-  bottom: 0;
-  left: 0;
-  z-index: var(--always-visible);
+@mixin webrtc-sound-analyzer {
+  .sound-analyzer__ui {
+    width: 100%;
+    max-height: 30px;
+    height: auto;
+    position: absolute;
+    border: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--always-visible);
+  }
 }

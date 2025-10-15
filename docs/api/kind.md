@@ -182,7 +182,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | window_helpdesk | window/helpdesk | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/helpdesk/index.js |
 | window_info | window/info | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/info/index.js |
 | window_launcher | window/launcher | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/launcher/index.js |
-| window_litechat | window/litechat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/litechat/index.js |
 | window_manager | desk/wm | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/index.js |
 | window_meeting | window/meeting | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/meeting/index.js |
 | window_schedule | window/schedule | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/schedule/index.js |

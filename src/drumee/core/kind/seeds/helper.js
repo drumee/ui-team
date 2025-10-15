@@ -228,7 +228,6 @@ const a = {
   window_helpdesk:"window/helpdesk",
   window_info:"window/info",
   window_launcher:"window/launcher",
-  window_litechat:"window/litechat",
   window_manager:"desk/wm",
   window_meeting:"window/meeting",
   window_schedule:"window/schedule",

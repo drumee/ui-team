@@ -1,17 +1,6 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2022
-#   FILE : /ui/src/drumee/builtins/window/account/subscription/skin/index.scss
-#   TYPE : Style Component
-# ===================================================================**/
 @use 'mixins/drumee';
 
 .account-apps {
-
-  // colors for plans
-  $color-basic-plan: #3c93d3;
-  $color-pro-plan: #E96102;
-  $color-company-plan: #44A4AC;
-  $color-offer-banner: #E5E2E2;
 
   &__ui {
     height: 100%;
@@ -93,11 +82,11 @@
       }
       &.download, &.others{
         @include drumee.typo( $size: 16px, $line: 16px, $color: var(--btn-commit-text));
-        background:$color-basic-plan;
+        background:var(--account-color-basic-plan);
       }
       &.show{
         @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text)); 
-        background:$color-offer-banner;
+        background:var(--account-color-offer-banner);
       }
     }
 
@@ -120,7 +109,7 @@
   &__icon {
     height: 140px; 
     width: 140px; 
-    color: $color-offer-banner;   
+    color: var(--account-color-offer-banner);   
     margin: 10px auto;
   }
 

@@ -1,3 +1,4 @@
+@use 'mixins/drumee';
 @mixin webrtc-command {
   &__commands {
     height: 100%;
@@ -171,7 +172,7 @@
 
     .device-label {
       padding: 5px 10px;
-      @include typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
+      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
       text-align: left;
       cursor: pointer;
       margin-bottom: 5px;
@@ -211,19 +212,19 @@
       margin: 0 10px;
 
       &.button-cancel {
-        @include typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-rollback-text));
+        @include drumee.typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-rollback-text));
         border: 1px solid var(--btn-rollback-border);
       }
 
       &.button-confirm {
         background-color: var(--btn-commit-background);
-        @include typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-commit-text));
+        @include drumee.typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-commit-text));
       }
     }
 
 
     .device-heading {
-      @include typo($size: 16px, $line: 20px, $weight: 400, $color: var(--default-text-color));
+      @include drumee.typo($size: 16px, $line: 20px, $weight: 400, $color: var(--default-text-color));
       padding: 0 10px;
       font-size: 14px;
       justify-content: flex-start;

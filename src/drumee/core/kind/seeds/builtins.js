@@ -228,7 +228,6 @@ module.exports = {
   window_helpdesk:function(s,f){import('window/helpdesk').then(m=>{s(m.default)}).catch(f)},
   window_info:function(s,f){import('window/info').then(m=>{s(m.default)}).catch(f)},
   window_launcher:function(s,f){import('window/launcher').then(m=>{s(m.default)}).catch(f)},
-  window_litechat:function(s,f){import('window/litechat').then(m=>{s(m.default)}).catch(f)},
   window_manager:function(s,f){import('desk/wm').then(m=>{s(m.default)}).catch(f)},
   window_meeting:function(s,f){import('window/meeting').then(m=>{s(m.default)}).catch(f)},
   window_schedule:function(s,f){import('window/schedule').then(m=>{s(m.default)}).catch(f)},
