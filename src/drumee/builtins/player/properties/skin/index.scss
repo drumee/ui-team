@@ -3,21 +3,21 @@
 #   FILE : /src/drumee/builtins/window/memo/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 
 .player-props {
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     width: 400px;
     height: 480px;
     top: 45px;
     left: calc(50vw - 220px);
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     overflow: visible;
     flex-direction: column;
     display: flex;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
 
     &[data-device="mobile"] {
       width: 100vw;
@@ -29,7 +29,7 @@
 
   &__properties {
     &-container {
-      background-color: $core-default-background; // $ewhite;
+      background-color: var(--default-bg); // var(--ewhite);
       display: flex;
       flex-direction: column;
       height: 100%;
@@ -38,7 +38,7 @@
       width: 600px;
       max-width: calc(100vw - 20px);
       padding: 35px;
-      border-radius: $default-border-radius-small; //4px;
+      border-radius: var(--border-radius-small); //4px;
     }
 
     &-content {
@@ -57,7 +57,7 @@
     &-icon,
     &-attr {
       white-space: nowrap;
-      @include typo($size: 12px, $line: 15px, $color: $core-default-text-color);
+      @include drumee.typo($size: 12px, $line: 15px, $color: var(--default-text-color));
       height: 100%;
       align-content: center;
       flex-wrap: wrap;
@@ -97,15 +97,15 @@
     min-height: 44px;
     border-bottom: none;
     z-index: 200;
-    background-color: rebeccapurple; //$team-background-header;
+    background-color: rebeccapurple; //var(--teamroom-main);
 
     &[data-header="0"] {
       display: none;
     }
 
     .menu-items {
-      background: $core-default-background;
-      border-radius: $default-border-radius;
+      background: var(--default-bg);
+      border-radius: var(--border-radius);
     }
   }
 
@@ -114,7 +114,7 @@
     width: 100%;
     height: 100%;
     align-items: center;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     overflow: hidden;
   }
 
@@ -133,7 +133,7 @@
     &__title {
       width: 100%;
       justify-content: center;
-      @include typo($size: 16px, $line: 15px, $color: $ewhite);
+      @include drumee.typo($size: 16px, $line: 15px, $color: var(--ewhite));
     }
   }
 

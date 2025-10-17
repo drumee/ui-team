@@ -1,21 +1,26 @@
+.media-row {
 
-&__details{
-  width: 140px;
-  height: 100%;
-  .access-date {
-    min-width: 160px;
-    width: 25%;
-    flex-shrink: 0;
-  }
-  .size {
-    // width: 80px;
-    min-width: 140px;
-    width: 20%;
-    flex-shrink: 0;
-  }
-  .type {
-    min-width: 62px;
-    width: 10%;
-    flex-shrink: 0;
+  &__details {
+    width: 140px;
+    height: 100%;
+
+    .access-date {
+      min-width: 160px;
+      width: 25%;
+      flex-shrink: 0;
+    }
+
+    .size {
+      // width: 80px;
+      min-width: 140px;
+      width: 20%;
+      flex-shrink: 0;
+    }
+
+    .type {
+      min-width: 62px;
+      width: 10%;
+      flex-shrink: 0;
+    }
   }
 }

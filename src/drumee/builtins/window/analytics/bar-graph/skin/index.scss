@@ -3,8 +3,8 @@
 #   FILE : /ui/src/drumee/builtins/window/analytics/bar-graph/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee.scss';
-@import '../../skin/index.scss';
+@use 'mixins/drumee.scss';
+@use '../../skin/index.scss';
 
 .window-bar-graph {
   &__ui{
@@ -13,7 +13,7 @@
     width: 600px;
     align-items: center;
     min-width: 195px;    
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     left: calc(50vw - 300px);
     top: 80px;
     overflow: hidden;
@@ -31,7 +31,7 @@
   // }
 
   &__header, &__command{
-    background-color:$core-default-background-alert;//rgb(253, 74, 119);
+    background-color:var(--default-bg-alert);//rgb(253, 74, 119);
   }
 
   .chart-bar {

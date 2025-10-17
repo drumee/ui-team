@@ -1,13 +1,17 @@
+@use "mixins/drumee";
 
-&__container{
-  width:100%;
-  align-items: center;
-  //max-width: calc(100% - 60px);
+.media-row {
 
-  .file-info {
-    @include typo($size:12px,$line:14px,$weight:300,$color:$core-default-text-color); //#000000
-  }
-  &[data-status="locked"] {
-    opacity: 0.6;
+  &__container {
+    width: 100%;
+    align-items: center;
+ 
+    .file-info {
+      @include drumee.typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-color)); //#000000
+    }
+
+    &[data-status="locked"] {
+      opacity: 0.6;
+    }
   }
 }

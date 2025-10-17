@@ -3,12 +3,12 @@
 #   FILE : /src/drumee/builtins/window/adminpanel/widget/member_choose_admins/js/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-member-chooseAdmins {
   &__ui {
-    border-radius:$default-border-radius;
-    background-color: $admin-default-background;  
+    border-radius:var(--border-radius);
+    background-color: var(--default-background);  
     height: calc(100% - 20px);
     max-height: 538px;
     max-width: 410px;
@@ -49,7 +49,7 @@
     }
     
     & *::-webkit-scrollbar-thumb {
-      background-color: $default-scrollbar-color;
+      background-color: var(--default-scrollbar-color);
       cursor: pointer;
     }
   }
@@ -59,16 +59,16 @@
     width: 100%;
 
     &.title {
-      @include typo($size: 16px, $line: 21px, $color:$admin-default-text-title);
+      @include drumee.typo($size: 16px, $line: 21px, $color: var(--default-text-title));
     }
 
     &.info {
       max-width: 237px;
-      @include typo($size: 14px, $line: 16px, $color:$admin-default-text-title);
+      @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-title));
     }
 
     &.search-title {
-      @include typo($size: 14px, $line: 14px, $weight: 300, $color: $admin-default-text-title);
+      @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title));
       margin-top: 10px;
     }
   }
@@ -77,7 +77,7 @@
     cursor: pointer;
 
     &.close {
-      color:$admin-default-thinline-icon;
+      color:var(--default-thinline-icon);
       height: 12px;
       margin: 10px;
       position: absolute;
@@ -86,20 +86,20 @@
       width: 12px;
       
       &:hover {
-        color:$admin-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
 
     &.info {
-      color: $admin-default-icon-neutral;
+      color: var(--default-icon-neutral);
       height: 15px;
       position: absolute;
       right: 20%;
       width: 15px;
 
       & .tooltips {
-        background-color: $account-background-tooltips ;
-        border-radius: $default-border-radius;
+        background-color: var(--background-tooltips);
+        border-radius: var(--border-radius);
         max-height: 90px;
         min-height: 60px;
         padding: 10px;
@@ -109,12 +109,12 @@
         top: 20px;
         width: 250px;
         z-index: 1;
-        @include typo($size: 12px, $line: 20px, $color: $account-default-text-tooltips);
+        @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
       }
     }
 
     &.search-icon {
-      color:$admin-default-icon-neutral;
+      color:var(--default-icon-neutral);
       height: 17px;
       left: 12px;
       min-width: 17px;
@@ -131,7 +131,7 @@
       width: 10px;
 
       &:hover {
-        color: $admin-default-thinline-icon-hover;//$default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);//$default-thinline-icon-hover;
       }
     }
   }
@@ -157,7 +157,7 @@
     width: 100%;
 
     &.search-result-header {
-      border-radius: $default-border-radius-top;
+      border-radius: var(--default-border-radius-top);
       max-width: 380px;
       min-width: 310px;
     }
@@ -174,19 +174,19 @@
     }
 
     & input {
-      border-bottom: 1px solid $admin-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       margin-left: 24px;
       width: 100%;
-      @include typo($size: 15px, $line: 16px, $color: $admin-default-text-color);
+      @include drumee.typo($size: 15px, $line: 16px, $color: var(--default-text-color));
       
       &::placeholder {
-        @include typo($size: 15px, $line: 16px, $weight: 300, $color:$admin-default-text-placeholder);
+        @include drumee.typo($size: 15px, $line: 16px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
   }
 
   &__list {
-    background: $admin-default-background;
+    background: var(--default-background);
     border-radius:6px;
     height: 100%;
     margin-bottom: 10px;
@@ -218,10 +218,10 @@
   }
 
   &__button-cancel {
-    @include typo($size: 16px, $color: $btn-rollback-text);
+    @include drumee.typo($size: 16px, $color: var(--btn-rollback-text));
     align-items: center;
-    border-radius:$default-border-radius;
-    border: 1px solid $btn-rollback-border;
+    border-radius:var(--border-radius);
+    border: 1px solid var(--btn-rollback-border);
     height: 35px;
     justify-content: center; 
     margin-right: 5%;
@@ -230,17 +230,17 @@
     width: 115px;
 
     &:hover {
-      border: 2px solid $btn-rollback-border-hover;
-      color:$btn-rollback-text-hover; 
+      border: 2px solid var(--btn-rollback-border-hover);
+      color:var(--btn-rollback-text-hover); 
     }
   }
 
   &__button-confirm {
-    @include typo( $size: 15px, $line: 16px, $color: $btn-commit-text);
+    @include drumee.typo( $size: 15px, $line: 16px, $color: var(--btn-commit-text));
     align-items: center;
-    background-color: $btn-commit-background;
-    border-radius:$default-border-radius;
-    border: 1px solid $btn-commit-border;
+    background-color: var(--btn-commit-background);
+    border-radius:var(--border-radius);
+    border: 1px solid var(--btn-commit-border);
     height: 35px;
     justify-content: center; 
     margin-left: 5%;
@@ -250,13 +250,13 @@
     width: 115px;
 
     &:hover{
-      background-color:$btn-commit-background-hover;
-      border-color: $btn-commit-border-hover; 
+      background-color:var(--btn-commit-background-hover);
+      border-color: var(--btn-commit-border-hover); 
     }
   }
   
   &__search-result-wrapper {
-    background: $admin-default-background;
+    background: var(--default-background);
     height: 90%;
     position: absolute;
     top: 10%;

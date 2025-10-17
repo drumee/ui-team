@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-member-tagItem {
   &__ui {
@@ -11,8 +11,8 @@
     &[data-active="active"],
     &[data-radio="on"],
     &:hover {
-      background:$admin-default-background-hover;
-      color	:$admin-default-text-hover !important;
+      background:var(--default-background-hover);
+      color	:var(--default-text-hover) !important;
       
       & .form-tag {
         background: transparent;
@@ -23,15 +23,15 @@
         &.editTag,
         &.addTag {
           & .destroy-tag {
-            color:$admin-default-icon-neutral  !important;
+            color:var(--default-icon-neutral)  !important;
           }
         }
       }
       
       & .widget-member-tagItem__note.name {
-        color :$admin-default-text-reverse  !important;
+        color :var(--default-text-reverse)  !important;
         width: 120px;
-        @include overflow-text;
+        @include drumee.overflow-text;
       }
       
       & .edit-icon {
@@ -43,7 +43,7 @@
       &[data-radio='on'],
       &:hover {
         background: transparent;
-        @include overflow-text;
+        @include drumee.overflow-text;
       }
     }
   }
@@ -58,11 +58,11 @@
     padding-bottom: 5px;
     padding-left: 27px; 
     padding-top: 5px;
-    @include typo($size: 14px, $line: 14px, $color: $admin-default-text-color);
+    @include drumee.typo($size: 14px, $line: 14px, $color: var(--default-text-color));
   }
 
   &__icon {
-    color : $admin-default-icon-reverse; 
+    color : var(--default-icon-reverse); 
     height: 14px;
     margin: 4px;
     position: absolute;
@@ -79,7 +79,7 @@
     }
 
     &.destroy-tag {
-      color: $admin-default-icon-neutral;
+      color: var(--default-icon-neutral);
       opacity: 0.75;
     }
   }
@@ -88,7 +88,7 @@
     &.name {
       align-items: center;
       width: 148px;
-      @include overflow-text;
+      @include drumee.overflow-text;
       .inner{
         overflow: hidden;
         white-space: nowrap;
@@ -100,19 +100,19 @@
   &__entry {
     max-width: 117px;
     & input {
-      background: $admin-default-background;
-      border-bottom: 1px solid $admin-default-entry-border-bottom;
+      background: var(--default-background);
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       cursor: text;
       height: 25px;
       &:hover {
-        border-color: $admin-focus-border-placeholder;
+        border-color: var(--focus-border-placeholder);
       }
       &:focus {
-        border-color: $admin-focus-border-placeholder;
+        border-color: var(--focus-border-placeholder);
       }
 
       &::placeholder {
-        @include typo($size: 14px, $line: 16px,$weight:300, $color: $admin-default-text-placeholder);
+        @include drumee.typo($size: 14px, $line: 16px,$weight:300, $color: var(--default-text-placeholder));
       }
     }
   }

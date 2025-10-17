@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/modules/admin/locale/language/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .locale-language{
   &__ui{

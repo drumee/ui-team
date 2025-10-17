@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/window/sharebox/widget/invitation-email/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import "mixins/drumee";
+@use "mixins/drumee";
 
 .invitation-email {
   &__ui {
@@ -41,19 +41,19 @@
   }
 
   & .add-email-plus {
-    border: 1px solid $share-default-text-success;
+    border: 1px solid var(--default-text-success);
     padding: 3px;
-    color: $share-default-text-success;
-    border-radius:$default-border-radius-small;// 3px;
+    color: var(--default-text-success);
+    border-radius:var(--border-radius-small);// 3px;
     cursor: pointer;
     &:hover{
-      background: $egreen;
-      color:  $share-default-text-reverse ;
+      background: var(--egreen);
+      color:  var(--default-text-reverse);
     }
   }
 
   & .invitation-email__entry[data-status='error'] textarea {
-    border-color: $share-default-border-error;//$eorange-sunset;
+    border-color: var(--default-border-error);//var(--eorange-sunset);
   }
   & .showerror{
     overflow: visible;
@@ -61,13 +61,13 @@
   & .entry-reminder_error {
     padding-left: 20px;
     padding-top: 6px;//4px;
-    @include typo($size: 12px, $weight: 400, $color:$share-default-text-error);
+    @include drumee.typo($size: 12px, $weight: 400, $color: var(--default-text-error));
   }
 
   &__entry{
     input, textarea {
-      border: 0px solid $share-default-entry-border-bottom; 
-      border-bottom: 1px solid $share-default-entry-border-bottom;
+      border: 0px solid var(--default-entry-border-bottom); 
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       margin: 0;
       margin-left: 20px;
       min-height: 24px;
@@ -76,9 +76,9 @@
       resize: none;
       white-space: nowrap;
       width: calc(100% - 5px); //100%;
-      @include typo($line: 29px, $size: 14px, $weight: 400, $color: $share-default-text-color);// $size: 16px,
-      @include placeholder-input {
-        @include typo($line: 29px, $size: 14px, $weight: 300, $color: $share-default-text-placeholder); //#89929e$size: 16px,
+      @include drumee.typo($line: 29px, $size: 14px, $weight: 400, $color: var(--default-text-color));// $size: 16px,
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 29px, $size: 14px, $weight: 300, $color: var(--default-text-placeholder)); //#89929e$size: 16px,
       }
     }
   }
@@ -99,7 +99,7 @@
     width: 25px;//17px;
     height: 21px;
     margin-left: 10px;
-    color:$share-default-icon-neutral;
+    color:var(--default-icon-neutral);
     opacity:0.85;//0.65;
   }
   .entry-reminder__ui{
@@ -112,30 +112,30 @@
   }
 
   &__icon.added-contact {
-    color: $share-default-icon-neutral;
+    color: var(--default-icon-neutral);
   }
   &__suggestion_wrapper {
-    background: $share-default-background;
+    background: var(--default-background);
     position: absolute;
     width: 100%;
     top: 100%;
     z-index: 100000;
-    box-shadow: $drumee-shadow-box;//0px 3px 4px $egrey-e8;
-    border-radius: $default-border-radius;//3px;
+    box-shadow: drumee.$drumee-shadow-box;//0px 3px 4px var(--egrey-e8);
+    border-radius: var(--border-radius);//3px;
     // padding: 10px;
     margin-left: -25px;
     width: 260px;
     height: 140px;
     overflow: auto;
     & .contact-item, .invitation-email__item {
-      @include typo($size: 14px);
+      @include drumee.typo($size: 14px);
       padding-left: 2px;
       padding-top: 3px;
       padding-bottom: 3px;
       margin: 1px 0 0 1px;
       max-height: 137px;
-    //  box-shadow: $drumee-shadow-box;//0px 3px 4px $egrey-e8;
-    //  border-radius: $default-border-radius;
+    //  box-shadow: $drumee-shadow-box;//0px 3px 4px var(--egrey-e8);
+    //  border-radius: var(--border-radius);
     }
 
     & .contact-item__name {
@@ -150,9 +150,9 @@
     }
   } 
   &__ok_button {
-    @include typo($size: 13px, $color: $btn-commit-text);//size: 12px,
-    background: $btn-commit-background;
-    border-radius: $default-border-radius;
+    @include drumee.typo($size: 13px, $color: var(--btn-commit-text));//size: 12px,
+    background: var(--btn-commit-background);
+    border-radius: var(--border-radius);
     padding: 5px;//3px 5px;
     margin: auto;
     cursor: pointer;
@@ -161,7 +161,7 @@
     justify-content: center;
     align-items: center;
     &:hover{
-      background-color:$btn-commit-background-hover;
+      background-color:var(--btn-commit-background-hover);
     }
 
   }
@@ -177,7 +177,7 @@
   }
 
   &__icon {
-    color: $share-default-icon-neutral;
+    color: var(--default-icon-neutral);
     cursor: pointer;
     height: 20px;
     left: 5px;
@@ -186,21 +186,21 @@
     opacity: .85;
     width: 20px;
     &.default-avatar{
-      color: $share-default-user-icon;
+      color: var(--default-user-icon);
       opacity: 1;
       height: 26px;
       min-height: 26px;
       min-width: 26px;
       width: 26px;
       :hover{
-        color:$share-default-user-icon;
+        color:var(--default-user-icon);
       }
     }
   }
 
   &__note {
     &.name {
-      @include typo($size: 14px,  $line: 16px, $color: $share-default-text-color);
+      @include drumee.typo($size: 14px,  $line: 16px, $color: var(--default-text-color));
       left: 15px;
       top: 2px;
     }

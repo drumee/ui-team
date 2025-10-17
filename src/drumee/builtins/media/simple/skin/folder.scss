@@ -1,5 +1,5 @@
 .folder {
-  color: $ewhite;
+  color: var(--ewhite);
   background-color: #468ee5;
   &.preview{
     border-radius: 2px;
@@ -20,7 +20,7 @@
     width: 18px;
   }
   .media-checkbox-wrapper {
-    border-color: $ewhite;
+    border-color: var(--ewhite);
   }
 }
 

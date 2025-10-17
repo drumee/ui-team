@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/window/serverexplorer/widget/sv-new-folder/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-sv-new-folder{
   &__ui {
@@ -26,9 +26,9 @@
 
   &-popup {
     &__main {
-      border-radius : $default-border-radius;
-      background-color: $bigchat-default-background;  
-      box-shadow: $drumee-shadow-popup;     
+      border-radius : var(--border-radius);
+      background-color: var(--default-background);  
+      box-shadow: var(--shadow-popup);     
       height: calc(100% - 20px);
       max-height: 300px;
       max-width: 550px;
@@ -38,7 +38,7 @@
     }
  
     &__close {
-      color: $bigchat-default-thinline-icon;
+      color: var(--default-thinline-icon);
       cursor: pointer;
       height: 12px;
       margin:10px;
@@ -48,7 +48,7 @@
       width: 12px;
   
       &:hover {
-        color:$bigchat-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
 
@@ -111,7 +111,7 @@
       margin: 40px 0 0;
       text-align: center;
       min-width: 115px;
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
     }
 
     & .button:first-child {
@@ -120,26 +120,26 @@
   }
 
   &__button-cancel {
-    @include typo( $size: 16px, $line: 16px, $color: $btn-rollback-text);
-    border: 1px solid $btn-rollback-border;
+    @include drumee.typo( $size: 16px, $line: 16px, $color: var(--btn-rollback-text));
+    border: 1px solid var(--btn-rollback-border);
 
     &:hover {
-      border:2px solid $btn-rollback-border-hover;
-      color:$btn-rollback-text-hover; 
+      border:2px solid var(--btn-rollback-border-hover);
+      color:var(--btn-rollback-text-hover); 
     }
   }
 
   &__button-confirm {
-    @include typo( $size: 16px, $line: 16px, $color: $btn-caution-text);
-    background-color: $btn-commit-background;
-    color: $btn-commit-text;
+    @include drumee.typo( $size: 16px, $line: 16px, $color: var(--btn-caution-text));
+    background-color: var(--btn-commit-background);
+    color: var(--btn-commit-text);
     max-width: 165px;
     width: auto;
     padding: 5px 10px;//5px
-    border: 1px solid $btn-rollback-border;
+    border: 1px solid var(--btn-rollback-border);
 
     &:hover {
-      background-color: $btn-commit-background-hover; 
+      background-color: var(--btn-commit-background-hover); 
     }
 
 
@@ -156,7 +156,7 @@
   &__note{
     &.header {
       margin: 10px 0px 25px 0px;
-      @include typo($size: 18px, $line: 16px, $color: $core-default-text-title);
+      @include drumee.typo($size: 18px, $line: 16px, $color: var(--default-text-title));
     }
     &.lable {
       margin: 0px 16px 0px 0px;
@@ -170,7 +170,7 @@
     border: 1px solid transparent;
     .input-details {
       position: absolute;
-      @include typo($line: 29px, $size: 13px, $weight: 300, $color: $core-default-text-error);
+      @include drumee.typo($line: 29px, $size: 13px, $weight: 300, $color: var(--default-text-error));
       right: 0px;
       padding: 3px;
     }
@@ -178,15 +178,15 @@
     //  width: 90%; //100%;
       width: calc(100% - 5px);
       margin: 0;
-      border-bottom: 1px solid $core-default-entry-border-bottom;
-      @include typo($line: 29px, $size: 16px, $weight: 400, $color: $core-default-text-color); 
-      @include placeholder-input {
-        @include typo($line: 29px, $size: 16px, $weight: 300, $color: $core-default-text-placeholder);
+      border-bottom: 1px solid var(--default-entry-border-bottom);
+      @include drumee.typo($line: 29px, $size: 16px, $weight: 400, $color: var(--default-text-color)); 
+      @include drumee.placeholder-input {
+        @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--default-text-placeholder));
       }
       &:focus {
-        border-bottom: 1px solid $core-focus-border-placeholder ;
-        @include placeholder-input {
-          @include typo($line: 29px, $size: 16px, $weight: 300, $color: $core-focus-text-placeholder); 
+        border-bottom: 1px solid var(--focus-border-placeholder);
+        @include drumee.placeholder-input {
+          @include drumee.typo($line: 29px, $size: 16px, $weight: 300, $color: var(--focus-text-placeholder)); 
         }
       }
     }

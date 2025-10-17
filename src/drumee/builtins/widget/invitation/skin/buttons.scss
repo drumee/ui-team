@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .invitation__container {
   &-commands {
     width: 100%;
@@ -16,7 +18,7 @@
       margin: revert;
       min-width: 115px;
       height: 35px;
-      @include typo($size: 15px, $line: 25px);
+      @include drumee.typo($size: 15px, $line: 25px);
     }
   }
 
@@ -28,7 +30,7 @@
   }
 
   &-buttons {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     margin: 15px auto 2px;
 
     &[data-state="0"] {
@@ -36,7 +38,7 @@
       opacity: 0.5;
 
       &:hover {
-        color: $core-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
         opacity: 1;
       }
     }
@@ -57,37 +59,37 @@
       }
 
       &:hover {
-        color: $core-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
         opacity: 1;
       }
 
       &[data-state="1"] {
-        background-color: $core-default-background-hover ;
-        border-radius: $default-border-radius;
-        color: $ewhite;
+        background-color: var(--default-bg-hover);
+        border-radius: var(--border-radius);
+        color: var(--ewhite);
       }
     }
   }
 
   &--secondary-btn {
     align-items: center;
-    border-radius: $default-border-radius;
-    border: 1px solid $btn-rollback-border;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--btn-rollback-border);
     cursor: pointer;
     height: 35px;
     justify-content: center;
     margin: 0px 10px 0px 0px;
     min-width: 115px;
     padding: 0 12px;
-    @include typo($size: 15px, $line: 25px, $color: $btn-rollback-text);
+    @include drumee.typo($size: 15px, $line: 25px, $color: var(--btn-rollback-text));
 
     &[data-editable="0"] {
       display: none;
     }
 
     &:hover {
-      border: 2px solid $btn-rollback-text-hover;
-      color: $btn-rollback-text-hover;
+      border: 2px solid var(--btn-rollback-text-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
 }

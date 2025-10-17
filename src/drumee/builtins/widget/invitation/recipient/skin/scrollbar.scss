@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 & {
   .slimScrollBarY {
@@ -9,7 +9,7 @@
     background-color: transparent!important;
     &:after {
       content: " ";
-      background:$default-scrollbar-color;//#fa8540;
+      background:var(--default-scrollbar-color);//#fa8540;
       position: absolute;
       width: 2px;
       border-radius: 7px;
@@ -18,7 +18,7 @@
     }
     &:before {
       content: " ";
-      background: $ewhite; 
+      background: var(--ewhite); 
       position: absolute;
       height: 100%;
       width: 8px;

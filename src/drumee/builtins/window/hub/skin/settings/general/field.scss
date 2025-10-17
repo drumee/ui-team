@@ -9,7 +9,7 @@
   &:hover{
     &[data-edit="0"]{
       background-color:$default-background-hover;// #879BFF;
-      color:$default-text-reverse; // #FFFFFF;    
+      color:var(--default-text-reverse); // #FFFFFF;    
       .hub-icon{
         visibility: visible;
       }
@@ -18,10 +18,10 @@
   &-label{
     width: 82px;
     line-height: 26px;
-    color:$emauve-lighter;// #d66fe8;
+    color:var(--emauve-lighter);// #d66fe8;
   }
   &-value{
-    color:$egrey-89;// #89929E;
+    color:var(--egrey-89);// #89929E;
     width: 120px;
     height: 26px;
     line-height: 26px;

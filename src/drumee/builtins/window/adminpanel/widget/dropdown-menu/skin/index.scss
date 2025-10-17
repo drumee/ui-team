@@ -1,6 +1,8 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('card-menu');
+
 .widget-dropdown-menu {
-  @import './card-menu';
 
   &__ui,
   &__main,

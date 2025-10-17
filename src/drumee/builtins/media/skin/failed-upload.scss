@@ -1,51 +1,56 @@
-&__failed-upload {
-  &-main {
-    width: 100%;
-    height: calc(100% - 146px);
-    align-items: center;
-    justify-items: center;
-    flex-direction: row;
-    display: flex;
-    max-height: 100%;
-    overflow-y: scroll;
-  }
+@use "mixins/drumee";
 
-  &-container {
-    max-height: 100%;
-    align-items: center;
-    justify-items: center;
-    flex-direction: row;
-    margin-top: 10px;
-  }
+.media {
 
-  &-title {
-    width: 100%;
-    align-items: center;
-    justify-items: center;
-    flex-direction: row;
-    display: flex;
-    padding: 2px 12px;
-    text-align: center;
-    text-overflow: ellipsis;
-    @include typo($line: 24px, $size: 18px, $color: $core-default-text-color);
-  }
+  &__failed-upload {
+    &-main {
+      width: 100%;
+      height: calc(100% - 146px);
+      align-items: center;
+      justify-items: center;
+      flex-direction: row;
+      display: flex;
+      max-height: 100%;
+      overflow-y: scroll;
+    }
 
-  &-item {
-    width: 100%;
-    align-items: center;
-    justify-items: center;
-    flex-direction: row;
-    display: flex;
-    max-height: 31px;
-    overflow: hidden;
-    padding: 2px 12px;
-    text-align: center;
-    text-overflow: ellipsis;
-    @include typo($line: 14px, $size: 11px, $color: $core-default-text-color);
+    &-container {
+      max-height: 100%;
+      align-items: center;
+      justify-items: center;
+      flex-direction: row;
+      margin-top: 10px;
+    }
 
-    &:hover {
-      background-color: $folder-main;
-      color: $core-default-text-reverse;
+    &-title {
+      width: 100%;
+      align-items: center;
+      justify-items: center;
+      flex-direction: row;
+      display: flex;
+      padding: 2px 12px;
+      text-align: center;
+      text-overflow: ellipsis;
+      @include drumee.typo($line: 24px, $size: 18px, $color: var(--default-text-color));
+    }
+
+    &-item {
+      width: 100%;
+      align-items: center;
+      justify-items: center;
+      flex-direction: row;
+      display: flex;
+      max-height: 31px;
+      overflow: hidden;
+      padding: 2px 12px;
+      text-align: center;
+      text-overflow: ellipsis;
+      @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));
+
+      &:hover {
+        background-color: var(--folder-main);
+        color: var(--default-text-reverse);
+      }
     }
   }
 }

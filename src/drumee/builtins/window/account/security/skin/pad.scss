@@ -3,25 +3,25 @@
 #   FILE : /src/drumee/builtins/window/account/security/skin/pad.scss
 #   TYPE : Component Style
 # ===================================================================**/
-@import "mixins/drumee";
+@use "mixins/drumee";
 
 .security {
   &__ui {
-    border-radius: $default-border-radius;
-    background-color: $account-default-block-background;
+    border-radius: var(--border-radius);
+    background-color: var(--default-block-background);
     height: 150px;
     min-height: 125px;
     padding: 20px 20px 0px 14px;
     width: 320px;
-    @include typo($size: 12px,
+    @include drumee.typo($size: 12px,
       $line: 14px,
       $weight: 400,
-      $color: $account-default-text-color );
+      $color: var(--default-text-color) );
   }
 
   .entry-reminder__component {
     &[data-state="error"] {
-      border-bottom-color: $account-default-border-error;
+      border-bottom-color: var(--default-border-error);
       border-bottom-style: solid;
       border-bottom-width: 1px;
     }
@@ -49,16 +49,16 @@
     justify-content: center;
     margin-bottom: 15px;
     text-align: center;
-    @include typo($size: 16px,
+    @include drumee.typo($size: 16px,
       $line: 21px,
-      $color: $account-default-text-color,
+      $color: var(--default-text-color),
       $weight: 400);
 
     &.info-msg {
-      @include typo($size: 12px,
+      @include drumee.typo($size: 12px,
         $line: 14px,
         $weight: 400,
-        $color: $account-default-text-alert );
+        $color: var(--default-text-alert) );
       top: 22px;
     }
   }
@@ -79,37 +79,37 @@
     width: max-content; //115px;
     padding: 0 24px; //0 7px;
     z-index: 1;
-    @include typo($size: 16px, $line: 35px, $color: $btn-commit-text);
+    @include drumee.typo($size: 16px, $line: 35px, $color: var(--btn-commit-text));
 
     &.pass {
-      border: 1px solid $account-pass-color;
-      color: $account-pass-color;
+      border: 1px solid var(--account-pass-color);
+      color: var(--account-pass-color);
     }
 
     &.email {
-      border: 1px solid $account-email-color;
-      color: $account-email-color;
+      border: 1px solid var(--account-email-color);
+      color: var(--account-email-color);
     }
 
     &.ident {
-      border: 1px solid $account-ident-color;
-      color: $account-ident-color;
+      border: 1px solid var(--account-ident-color);
+      color: var(--account-ident-color);
     }
 
     &.phone {
-      border: 1px solid $account-phone-color;
-      color: $account-phone-color;
+      border: 1px solid var(--account-phone-color);
+      color: var(--account-phone-color);
     }
 
     &.sms {
-      border: 1px solid $account-sms-color;
-      color: $account-sms-color;
+      border: 1px solid var(--account-sms-color);
+      color: var(--account-sms-color);
     }
 
     &.tbd {
       background-color: transparent;
       font-style: italic;
-      @include typo($size: 16px, $line: 35px, $weight: 400, $color: $eviolet);
+      @include drumee.typo($size: 16px, $line: 35px, $weight: 400, $color: var(--eviolet));
 
       &:after {
         content: "...";
@@ -117,7 +117,7 @@
     }
 
     &.disable {
-      @include typo($size: 12px, $line: 14px, $color: #ff805c);
+      @include drumee.typo($size: 12px, $line: 14px, $color: #ff805c);
       justify-content: center;
       padding: 0 10px;
       text-align: center;
@@ -136,25 +136,25 @@
     width: 33px;
 
     &.pass {
-      color: $account-pass-color;
+      color: var(--account-pass-color);
       height: 36px;
       width: 36px;
     }
 
     &.email {
-      color: $account-email-color;
+      color: var(--account-email-color);
     }
 
     &.ident {
-      color: $account-ident-color;
+      color: var(--account-ident-color);
     }
 
     &.phone {
-      color: $account-phone-color;
+      color: var(--account-phone-color);
     }
 
     &.sms {
-      color: $account-sms-color;
+      color: var(--account-sms-color);
       height: 37px;
       width: 34px;
     }
@@ -167,8 +167,8 @@
     }
 
     &.tooltips {
-      background-color: $account-default-background;
-      border-radius: $default-border-radius;
+      background-color: var(--default-background);
+      border-radius: var(--border-radius);
       height: 53px;
       left: 106px;
       overflow-wrap: break-word;
@@ -178,22 +178,22 @@
     }
 
     &.ip {
-      color: $account-ip-color;
+      color: var(--account-ip-color);
     }
 
     &.usb {
-      color: $account-usb-color;
+      color: var(--account-usb-color);
     }
   }
 
   .editbox-toggle {
-    @include typo($size: 14px,
+    @include drumee.typo($size: 14px,
       $line: 35px,
       $weight: 400,
-      $color: $account-bg-grey-color );
+      $color: var(--account-bg-grey-color) );
 
     &:after {
-      background-color: $account-bg-grey-color;
+      background-color: var(--account-bg-grey-color);
       top: 15px;
       width: 12px;
     }
@@ -207,10 +207,10 @@
     }
 
     &[data-radio="on"] {
-      color: $account-hover-color;
+      color: var(--account-hover-color);
 
       &:after {
-        background-color: $account-hover-color;
+        background-color: var(--account-hover-color);
         top: 11px;
       }
 
@@ -233,16 +233,16 @@
 
     input {
       width: 90%;
-      border-bottom: 1px solid $account-security-entry-border-bottom;
-      @include typo($size: 15px,
+      border-bottom: 1px solid var(--default-entry-border-bottom);
+      @include drumee.typo($size: 15px,
         $line: 20px,
-        $color: $account-default-text-color ); // $egrey-89); $weight:300,
+        $color: var(--default-text-color) ); // var(--egrey-89)); $weight:300,
 
       &::placeholder {
-        @include typo($size: 15px,
+        @include drumee.typo($size: 15px,
           $weight: 400,
           $line: 19px,
-          $color: $account-default-text-placeholder );
+          $color: var(--default-text-placeholder) );
       }
     }
 
@@ -252,16 +252,16 @@
 
     &[data-error="1"] {
       input {
-        border-bottom: 1px solid $account-default-border-error;
+        border-bottom: 1px solid var(--default-border-error);
       }
     }
   }
 
   &__resend {
-    @include typo($size: 14px,
+    @include drumee.typo($size: 14px,
       $line: 20px,
       $weight: 300,
-      $color: $account-default-text-color );
+      $color: var(--default-text-color) );
   }
 
   &__note {
@@ -271,8 +271,8 @@
   }
 
   &__main {
-    background-color: $account-default-block-background; //$white-fb;
-    border-radius: $default-border-radius;
+    background-color: var(--default-block-background); //var(--white-fb);
+    border-radius: var(--border-radius);
     height: 100%;
     left: 0;
     min-height: 115px;
@@ -285,15 +285,15 @@
     align-items: center;
 
     .malformed {
-      @include typo($size: 14px,
+      @include drumee.typo($size: 14px,
         $line: 20px,
         $weight: 300,
-        $color: $account-default-text-error );
+        $color: var(--default-text-error) );
       margin: auto;
     }
 
     .preset-acknowledge__container .icon {
-      color: $account-default-icon-success;
+      color: var(--default-icon-success);
       width: 30px;
       height: 30px;
       margin: 0px auto 20px;
@@ -303,26 +303,26 @@
       padding: 13px !important; //13.5
       top: -5px;
       right: -4px;
-      color: $account-security-thinline-icon; //$egrey-78 ;
+      color: var(--account-security-thinline-icon); //var(--egrey-78);
 
       &:hover {
-        color: $account-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
       }
     }
 
     .preset-acknowledge__container .text {
-      @include typo($size: 12px,
+      @include drumee.typo($size: 12px,
         $line: 19px,
-        $color: $account-default-text-color );
+        $color: var(--default-text-color) );
     }
   }
 
   &__title {
     margin-top: 20px;
-    @include typo($line: 36px,
+    @include drumee.typo($line: 36px,
       $size: 16px,
       $weight: 400,
-      $color: $account-default-text-color );
+      $color: var(--default-text-color) );
     //margin: 20px auto 50px auto;
   }
 
@@ -340,7 +340,7 @@
     }
 
     .entry-reminder__icon {
-      color: $account-default-icon-neutral; // $egrey-89; //$egrey-49;
+      color: var(--default-icon-neutral); // var(--egrey-89); //var(--egrey-49);
       height: 22px;
       top: 7px;
       width: 22px;
@@ -363,16 +363,16 @@
     width: 40px;
 
     &.btn--go {
-      background-color: $btn-commit-background;
+      background-color: var(--btn-commit-background);
       border-radius: 6px;
-      border: 1px solid $btn-commit-border;
+      border: 1px solid var(--btn-commit-border);
       height: 24px;
       margin-bottom: auto;
       margin-left: 0;
       margin-top: auto;
       text-align: center;
       width: 24px;
-      @include typo($size: 11px, $line: 20px);
+      @include drumee.typo($size: 11px, $line: 20px);
 
       .inner {
         margin-top: auto;
@@ -395,11 +395,11 @@
   }
 
   &.--small {
-    background-color: $account-default-background;
+    background-color: var(--default-background);
   }
 
   &.--large {
-    background-color: $account-default-background;
+    background-color: var(--default-background);
     min-width: 500px;
   }
 }

@@ -1,66 +1,71 @@
-&__modal {
-  &.wrapper {
-    position: absolute;
-    width: 0;
-    height: 0;
-    left : calc(50% - 300px);
-    top : calc(50% - 190px);
-    overflow: visible;
+@use "mixins/drumee";
 
-    &[data-state="open"] {
-      left: 0;
-      top:0;
-      width: 100vw;
-      height: 100vh;
-      background-color: rgba(0, 0, 0, 0.14)
+.dmz-router {
+  &__modal {
+    &.wrapper {
+      position: absolute;
+      width: 0;
+      height: 0;
+      left: calc(50% - 300px);
+      top: calc(50% - 190px);
+      overflow: visible;
+
+      &[data-state="open"] {
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.14)
+      }
     }
   }
-}
 
-&-popup {
-  &__container {
-    min-height: 380px;
-    width: 600px;
-    border-radius:$default-border-radius;//4px;
-    margin: auto;
-    background-color: $core-default-background;
-    box-shadow: $drumee-shadow-popup;//0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
-  }
+  &-popup {
+    &__container {
+      min-height: 380px;
+      width: 600px;
+      border-radius: var(--border-radius); //4px;
+      margin: auto;
+      background-color: var(--default-bg);
+      box-shadow: var(--shadow-popup); //0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    }
 
-  &__footer {
-    height: 100%;
-    max-height: 120px;
-    padding: 5px;
-    width: 100%;
-  }
+    &__footer {
+      height: 100%;
+      max-height: 120px;
+      padding: 5px;
+      width: 100%;
+    }
 
-  &__message {
-    @include typo($color: $core-default-text-color, $size: 18px, $line: 28px);//$line: 24px$size: 20px,
-    align-items: center;
-    height: 100%;
-    justify-content: center;
-    width: 100%;
-    max-width: 343px;
-    margin-left: auto;
-    margin-right: auto;
-    max-height: 160px;//120px;
-  }
+    &__message {
+      @include drumee.typo($color: var(--default-text-color), $size: 18px, $line: 28px); //$line: 24px$size: 20px,
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      width: 100%;
+      max-width: 343px;
+      margin-left: auto;
+      margin-right: auto;
+      max-height: 160px; //120px;
+    }
 
-  &__button {
-    @include typo($color: $core-default-text-reverse, $size: 18px, $line: 21px, $weight: 300);
+    &__button {
+      @include drumee.typo($color: var(--default-text-reverse), $size: 18px, $line: 21px, $weight: 300);
 
-    &.go {
-      @include typo($color: $btn-rollback-text, $size: 16px, $line: 21px);
-      border: 1px solid $btn-rollback-border;//$white-f6;
-    //  box-shadow: 0 4px 6px 1px rgba(63,79,117,0.13), 0 0 11px 0 rgba(86,65,113,0.08), 0 0 10px 0 rgba(194,185,203,0);
-      color: $btn-rollback-text;//$egrey-89;
-      cursor:pointer;
-      height: 32px;//36px;
-      width: 90px;//160px;
-      border-radius:$default-border-radius;
-      &:hover{
-        border: 2px solid $btn-rollback-border-hover ;
-        color:$btn-rollback-text-hover; 
+      &.go {
+        @include drumee.typo($color: var(--btn-rollback-text), $size: 16px, $line: 21px);
+        border: 1px solid var(--btn-rollback-border); //var(--white-f6);
+        //  box-shadow: 0 4px 6px 1px rgba(63,79,117,0.13), 0 0 11px 0 rgba(86,65,113,0.08), 0 0 10px 0 rgba(194,185,203,0);
+        color: var(--btn-rollback-text); //var(--egrey-89);
+        cursor: pointer;
+        height: 32px; //36px;
+        width: 90px; //160px;
+        border-radius: var(--border-radius);
+
+        &:hover {
+          border: 2px solid var(--btn-rollback-border-hover);
+          color: var(--btn-rollback-text-hover);
+        }
       }
     }
   }

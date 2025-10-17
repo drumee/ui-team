@@ -1,12 +1,6 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2016
-#   FILE : /src/drumee/builtins/window/account/profile/skin/index.scss
-#   TYPE : Component Style
-# ===================================================================**/
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/drumee';
+
+@use "sass:meta";
+@use 'mixins/drumee';
 
 .account-profile {
   &__ui {
@@ -46,7 +40,7 @@
   }
 
   &__label {
-    @include typo($size: 12px, $line: 16px, $color: $account-default-text-title);
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--default-text-title));
     padding: 0 0 6px 10px;
   }
 
@@ -81,7 +75,7 @@
     //     background-color:$default-background-hover;
 
     //     input {
-    //       @include placeholder-input{color: $ewhite};    
+    //       @include placeholder-input{color: var(--ewhite)};    
     //     }
     //   }
     // }
@@ -93,12 +87,12 @@
     //   visibility: visible;
 
     //   input {
-    //     @include placeholder-input{color: $ewhite}; 
+    //     @include placeholder-input{color: var(--ewhite)}; 
     //   }
     // }
     // }
   }
 }
 
-@import 'searchbox';
-@import 'field';
+@include meta.load-css('searchbox');
+@include meta.load-css('field');

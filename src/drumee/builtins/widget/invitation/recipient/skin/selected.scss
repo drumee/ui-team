@@ -4,7 +4,7 @@
     background-color: #879BFF;
     color: #FFFFFF;   
     .invitation-recipient__checkbox {
-      border: 1px solid $ewhite;
+      border: 1px solid var(--ewhite);
       background-color: #879BFF;
       svg {
         color: #879BFF;
@@ -12,9 +12,9 @@
     }
     &[data-state="1"] {
       .invitation-recipient__checkbox {
-        // background-color: $ewhite;
+        // background-color: var(--ewhite);
         svg {
-          color: $ewhite;
+          color: var(--ewhite);
         }
       }
     }
@@ -39,7 +39,7 @@
     width: 14px;
     height: 14px;
     visibility: visible;
-    color: $ewhite; 
+    color: var(--ewhite); 
     cursor: pointer;
   }
   &__label{

@@ -3,8 +3,8 @@
 #   FILE : builtins/sandbox/skin/sandbox
 #   TYPE : Module
 # ===================================================================**/
-@import "jsoneditor";
-@import 'mixins/drumee';
+@use "jsoneditor";
+@use 'mixins/drumee';
 
 .sandbox {
   &-wrapper {
@@ -27,7 +27,7 @@
   &-title {
     font-size: 30px;
     display: flex;
-    @include typo($color: #fa8540, $size: 28px, $line: 33px, $weight: 300);
+    @include drumee.typo($color: #fa8540, $size: 28px, $line: 33px, $weight: 300);
   }
 
   &-tooltips {
@@ -40,12 +40,12 @@
     flex-wrap: wrap;
     margin: auto 0 auto 10px;
     cursor: pointer;
-    @include typo($color: #adaba9, $size: 18px, $line: 33px, $weight: 300);
+    @include drumee.typo($color: #adaba9, $size: 18px, $line: 33px, $weight: 300);
   }
 
   &-tips {
     margin: 0 auto;
-    @include typo($color: #6f6e6d, $size: 16px, $line: 23px, $weight: 300);
+    @include drumee.typo($color: #6f6e6d, $size: 16px, $line: 23px, $weight: 300);
 
     li {
       margin-left: 1em;
@@ -57,14 +57,14 @@
   }
 
   &-intro {
-    @include typo($color: #6f6e6d, $size: 16px, $line: 23px, $weight: 300);
+    @include drumee.typo($color: #6f6e6d, $size: 16px, $line: 23px, $weight: 300);
     background-color: rgb(237, 234, 232);
     width: 100%;
     padding: 10px;
   }
 
   &-console {
-    @include typo($color: #f40540, $size: 22px, $line: 32px, $weight: 300);
+    @include drumee.typo($color: #f40540, $size: 22px, $line: 32px, $weight: 300);
     transition: background-color 2s cubic-bezier(0.71, -0.62, 0.7, 2);
     width: 100%;
     padding-left: 20px;
@@ -90,7 +90,7 @@
     height: 100%;
     font-size: 14px;
     grid-template-columns: 1fr 2fr 4fr;
-    @include typo($color: #1c1b1b, $size: 16px, $line: 23px, $weight: 300);
+    @include drumee.typo($color: #1c1b1b, $size: 16px, $line: 23px, $weight: 300);
     padding: 10px;
     grid-gap: 0.5rem;
 
@@ -218,7 +218,7 @@
 
 .module-sandbox {
   &__menu-box {
-    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
 
     .menu-topic-trigger {
       background: radial-gradient(109.24% 109.24% at 21.67% 0%, rgba(91, 115, 210, 0.4) 0%, #5B73D2 100%), #879BFF;
@@ -252,7 +252,7 @@
 
   &__menu-box-horizontal {
     margin-top: 120px;
-    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
 
     .menu-topic-trigger {
       background: radial-gradient(109.24% 109.24% at 21.67% 0%, rgba(91, 115, 210, 0.4) 0%, #5B73D2 100%), #879BFF;

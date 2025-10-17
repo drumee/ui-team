@@ -1,107 +1,110 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
-&-breadcrumbs {
-  &__main {
-    height: 100%;
-    width: auto;
+.window-addressbook {
 
-    .menu-items {
-      left: 18px;
-      margin-top: -15px;
-    }
-  }
+  &-breadcrumbs {
+    &__main {
+      height: 100%;
+      width: auto;
 
-  &__container {
-    align-items: center;
-    border-radius: $default-border-radius-small;
-    height: 18px;
-    justify-content: center;
-    left: 3px;
-    position: absolute;
-    top: 16px;
-    z-index: 10;
-  }
-
-  &__icon {
-    background-color: $ab-default-icon-neutral;
-    opacity: 0.75;
-    color: $ab-default-icon-reverse;
-    cursor: pointer;
-    margin: 0px 2px;
-
-    &:hover {
-      background-color: $ab-default-icon-hover;
-      opacity: 1;
-    }
-
-    &.breadcrumb-icon {
-      border-radius: $border-radius-small;
-      height: 18px;
-      padding: 5px;
-      width: 18px;
-      top: -5px;
-      left: 5px;
-
-      &[data-size=min] {
-        &[data-view-instance="3"] {
-          top: 16px;
-          left: -8px;
-        }
+      .menu-items {
+        left: 18px;
+        margin-top: -15px;
       }
     }
 
-    &.next {
-      transform: rotate(180deg);
-    }
-  }
-
-  &__item {
-    cursor: pointer;
-    padding: 5px 15px;
-    white-space: nowrap;
-    width: 100%;
-    @include typo($size: 14px, $line: 18px, $weight: 300, $color: $ab-default-text-color);
-    @include overflow-text;
-
-    &:last-child {
-      color: $eviolet;
-    }
-  }
-
-  &__roll {
-    background: $ab-default-background;
-    border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-container;
-    height: auto;
-    left: -12px;
-    overflow: visible;
-    padding: 10px 0;
-    position: absolute;
-    top: 10px;
-    width: 109px;
-    z-index: 1000;
-
-    &:before {
-      background-color: $white;
-      box-shadow: $drumee-container-before;
-      content: "";
-      height: 10px;
-      left: 2px;
+    &__container {
+      align-items: center;
+      border-radius: var(--border-radius-small);
+      height: 18px;
+      justify-content: center;
+      left: 3px;
       position: absolute;
-      top: -4px;
-      transform: rotate(45deg);
-      width: 10px;
+      top: 16px;
+      z-index: 10;
     }
 
-    &:after {
-      background: $ab-default-background;
-      border-radius: $default-border-radius-top;
-      content: "";
-      height: 10px;
-      left: 0;
-      position: absolute;
-      top: 0;
+    &__icon {
+      background-color: var(--default-icon-neutral);
+      opacity: 0.75;
+      color: var(--default-icon-reverse);
+      cursor: pointer;
+      margin: 0px 2px;
+
+      &:hover {
+        background-color: var(--default-icon-hover);
+        opacity: 1;
+      }
+
+      &.breadcrumb-icon {
+        border-radius: var(--border-radius-small);
+        height: 18px;
+        padding: 5px;
+        width: 18px;
+        top: -5px;
+        left: 5px;
+
+        &[data-size=min] {
+          &[data-view-instance="3"] {
+            top: 16px;
+            left: -8px;
+          }
+        }
+      }
+
+      &.next {
+        transform: rotate(180deg);
+      }
+    }
+
+    &__item {
+      cursor: pointer;
+      padding: 5px 15px;
+      white-space: nowrap;
       width: 100%;
+      @include drumee.typo($size: 14px, $line: 18px, $weight: 300, $color: var(--default-text-color));
+      @include drumee.overflow-text;
+
+      &:last-child {
+        color: var(--eviolet);
+      }
+    }
+
+    &__roll {
+      background: var(--default-background);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-container);
+      height: auto;
+      left: -12px;
+      overflow: visible;
+      padding: 10px 0;
+      position: absolute;
+      top: 10px;
+      width: 109px;
+      z-index: 1000;
+
+      &:before {
+        background-color: var(--white);
+        box-shadow: var(--shadow-before);
+        content: "";
+        height: 10px;
+        left: 2px;
+        position: absolute;
+        top: -4px;
+        transform: rotate(45deg);
+        width: 10px;
+      }
+
+      &:after {
+        background: var(--default-background);
+        border-radius: var(--default-border-radius-top);
+        content: "";
+        height: 10px;
+        left: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
     }
   }
 }

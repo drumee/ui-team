@@ -1,13 +1,14 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('header');
 
 .window-trash {
-  @import 'header';
 
   .window-confirm {
     &__main {
       align-items: center;
-      background-color: $core-default-background;
-      border-radius: $default-border-radius;
+      background-color: var(--default-bg);
+      border-radius: var(--border-radius);
       height: 250px;
       justify-content: space-around;
       margin: auto;
@@ -47,19 +48,19 @@
     &-content {
       height: 200px;
       width: 100%;
-      background: $core-default-background;
+      background: var(--default-bg);
       height: 200px;
       justify-content: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       padding: 10px;
     }
 
     &-progress {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
     }
 
     &-title {
-      @include typo($size: 16px, $line: 22px, $weight: 400); //#E9223B);
+      @include drumee.typo($size: 16px, $line: 22px, $weight: 400); //#E9223B);
       padding: 0 7px;
       justify-content: center;
       justify-items: center;

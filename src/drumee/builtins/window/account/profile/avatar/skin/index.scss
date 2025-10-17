@@ -1,12 +1,5 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2016
-#   FILE : module/account/skin/profile/avatar.scss
-#   TYPE : Account Main Style
-# ===================================================================**/
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/drumee';
+
+@use 'mixins/drumee';
 
 .account-avatar{
   &__ui{
@@ -15,8 +8,8 @@
     justify-content: center;
     position: relative;
    // border: 1px solid #979797;
-    border-radius:$default-border-radius;
-    background-color:$account-background-user-icon;//hsla(0,0%,78.4%,.5);// #D8D8D8;
+    border-radius:var(--border-radius);
+    background-color:var(--background-user-icon);//hsla(0,0%,78.4%,.5);// #D8D8D8;
     box-shadow: none;
     margin: 0 auto;
         //border-radius: 50%;
@@ -38,7 +31,7 @@
   &__main{
     width: 100%;
     height: 100%;
-    background-color: $account-default-background; 
+    background-color: var(--default-background); 
   }
   .user-profile{
     &__chart--fg{
@@ -51,7 +44,7 @@
   .user-avatar__ui{
     &[data-default="1"]{
       svg{
-        fill:$account-default-icon-reverse;//$default-icon-reverse;    
+        fill:var(--default-icon-reverse);//$default-icon-reverse;    
       }
     }
   }
@@ -75,9 +68,9 @@
     bottom: 0;
   }
   &.btn {
-    background: $eblue;// #4A90E2;
+    background: var(--eblue);// #4A90E2;
     border-radius: 50%;
-    color:$account-default-icon-reverse;
+    color:var(--default-icon-reverse);
     //margin: 1px 7px;
     margin:-8px -11px;
   }
@@ -97,9 +90,9 @@
   }
 
   &__menu-dropdown{
-    background-color: $account-default-background;
-    box-shadow: $drumee-shadow-container;// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
-    border-radius: $default-border-radius-bottom;// 0 0px 6px 6px;//2px;
+    background-color: var(--default-background);
+    box-shadow: var(--shadow-container);// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    border-radius: var(--border-radius-bottom);// 0 0px 6px 6px;//2px;
     padding: 6px 11px; //6px 16px
     position: relative;
     /*&:before {
@@ -116,13 +109,13 @@
   &__menu-item{
     padding: 6px 5px; //6px 0;
     cursor: pointer;
-    @include typo($size:14px,$line:16px,$weight:300,$color:$account-default-text-color);
+    @include drumee.typo($size:14px,$line:16px,$weight:300,$color: var(--default-text-color));
     &:hover {
-      color: $account-backgroundless-text-hover ;//#879BFF;
+      color: var(--backgroundless-text-hover);//#879BFF;
     }
     &:active {
       background-color: #879BFF;
-      color: $account-default-text-reverse;
+      color: var(--default-text-reverse);
     }  
   }
 }

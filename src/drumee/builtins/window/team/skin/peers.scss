@@ -12,8 +12,8 @@
     margin: 30px auto 0 auto;
   }
   &__peers-container{
-    background-color: $team-default-background;    
-    box-shadow: $drumee-shadow-container;//0 5px 8px 1px rgba(63,79,117,.13), 0 0 3px 0 rgba(86,65,113,.08), 0 2px 8px 0 rgba(194,185,203,0);
+    background-color: var(--default-background);    
+    box-shadow: var(--shadow-container);//0 5px 8px 1px rgba(63,79,117,.13), 0 0 3px 0 rgba(86,65,113,.08), 0 2px 8px 0 rgba(194,185,203,0);
   }
   &__button{
     margin: 20px auto;

@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .window-website {
   &__ui {
 
@@ -12,8 +14,8 @@
 
       &::after {
         align-content: center;
-        background-color: $website-background-header;
-        border-radius: $default-border-radius-top;
+        background-color: var(--website-header-bg);
+        border-radius: var(--default-border-radius-top);
         content: attr(data-name);
         display: flex;
         flex-direction: column;
@@ -30,12 +32,12 @@
         top: -30px;
         white-space: nowrap;
         width: 190px;
-        box-shadow: $drumee-shadow-main; 
-        @include typo($size: 12px, $line: 14px, $weight: 400, $color: $share-default-text-reverse);
+        box-shadow: var(--shadow-main); 
+        @include drumee.typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-reverse));
       }
 
       &:before {
-        border: 7px solid $website-border-frame; 
+        border: 7px solid var(--website-main); 
         content: " ";
         height: calc(100% + 6px);
         left: -3px;
@@ -52,11 +54,11 @@
 
   &__header {
     border-bottom: none;
-    background-color: $website-background-header;
+    background-color: var(--website-header-bg);
     border-radius: 6px 6px 0 0;
 
     &[data-content="folder"] {
-      background-color: $folder-background-header;
+      background-color: var(--folder-main);
     }
   }
 
@@ -130,11 +132,11 @@
       position: absolute;
       width: 12px; 
       height: 12px; 
-      background-color: $ewhite;
+      background-color: var(--ewhite);
       border-radius: 50%;
       align-items: center;
       justify-content: center;
-      @include typo($size: 8px, $line: 12px, $weight: 400, $color: #2f2f2f);
+      @include drumee.typo($size: 8px, $line: 12px, $weight: 400, $color: #2f2f2f);
       right: -6px; 
       top: 8px; 
 

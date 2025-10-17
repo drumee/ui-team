@@ -18,7 +18,7 @@
     padding: 0 10px;
     &:hover{
       background-color:$default-background-hover;
-      color: $default-text-reverse;    
+      color: var(--default-text-reverse);    
     }      
     &[data-state="1"]{
       svg{
@@ -38,8 +38,8 @@
     height: 16px;
     padding: 2px;
     margin: 5px 0;
-    border: 1px solid $eviolet;
-    border-radius: $default-checkbox-border-radius;
+    border: 1px solid var(--eviolet);
+    border-radius: var(--checkbox-border-radius);
     svg{
       visibility: hidden;
     }
@@ -57,7 +57,7 @@
     margin-right: 10px;
   }
   &__label{
-    @include typo($color:$default-text-color,$size:12px,$line:16px,$weight:300);    
+    @include typo($color: var(--default-text-color),$size:12px,$line:16px,$weight:300);    
     width: 100%;
     &:hover{
       .tooltips{

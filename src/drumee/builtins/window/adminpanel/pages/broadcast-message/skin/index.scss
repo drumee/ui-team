@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/adminpanel/pages/broadcast-message/js/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .broadcast-message-page {
   &__ui {
@@ -44,7 +44,7 @@
 
   &__note {
     &.header {
-      @include typo($size: 18px, $line: 16px, $color: $admin-secondary-text-color);
+      @include drumee.typo($size: 18px, $line: 16px, $color: var(--secondary-text-color));
     }
   }
 
@@ -52,7 +52,7 @@
     cursor: pointer;
     
     &.select-member {
-      color: $admin-secondary-text-color;
+      color: var(--secondary-text-color);
       height: 18px;
       left: 20px;
       top: 1px;
@@ -66,8 +66,8 @@
       width: 100%;
 
       & textarea {
-        border-radius: $default-border-radius;
-        @include typo($size: 14px, $line: 20px, $color: $admin-default-text-color);
+        border-radius: var(--border-radius);
+        @include drumee.typo($size: 14px, $line: 20px, $color: var(--default-text-color));
         background: #f7f7f9 ; //$ap-textarea-background;
         border: none;
         height: 100%;
@@ -81,7 +81,7 @@
         padding: 15px 20px;
 
         &::placeholder {
-          @include typo($size: 14px, $weight: 300, $color:$admin-default-text-placeholder);
+          @include drumee.typo($size: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
   
         &:focus {
@@ -93,17 +93,17 @@
 
   &__buttons-wrapper {
     &.button {
-      border-radius:$default-border-radius;
-      @include typo ($size: 16px, $line: 18px, $color:$btn-commit-text);
+      border-radius:var(--border-radius);
+      @include drumee.typo ($size: 16px, $line: 18px, $color: var(--btn-commit-text));
       align-items: center;
-      background: $btn-commit-background; //$egreen;
+      background: var(--btn-commit-background); //var(--egreen);
       cursor: pointer;
       height: 35px; //40px;
       justify-content: center;
       margin: auto;
       width: 115px; // 80px;
       &:hover{
-        background-color:$btn-commit-background-hover;
+        background-color:var(--btn-commit-background-hover);
         //border-color: $btn-primary-border-hover;
       }
     }

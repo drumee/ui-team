@@ -15,7 +15,7 @@
       .member_room {
         display:flex;
         flex : 1;
-        border-radius: $default-border-radius-bottom;
+        border-radius: var(--border-radius-bottom);
       }
     }
     &[data-view-instance="2"] {
@@ -25,11 +25,11 @@
       .members_list {
         display:flex;
         flex : 1;
-        border-radius: $default-border-radius-bottom;
+        border-radius: var(--border-radius-bottom);
       }
       .member_room {
         display:none;
-        border-radius: $default-border-radius-bottom;
+        border-radius: var(--border-radius-bottom);
       }
     }
     &[data-view-instance="1"] {
@@ -63,7 +63,7 @@
       .members_list {
         display:flex;
         flex : 2;
-        border-radius: $default-border-radius-left;
+        border-radius: var(--border-radius-left);
       }
       .member_room {
         display:flex;

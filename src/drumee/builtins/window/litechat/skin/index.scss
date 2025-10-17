@@ -15,7 +15,7 @@
     height: inherit;
     height: 100%;
     width: 100%;
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
   }
 
   &__container {
@@ -57,7 +57,7 @@
   &__messages {
     height: inherit;
     width: 100%;
-    @include typo($line: 16px, $size: 14px,$color: $core-default-text-color);
+    @include typo($line: 16px, $size: 14px,$color: var(--default-text-color));
 
     & .smart-container {
       height: 100%;
@@ -72,7 +72,7 @@
   }
   
   &__messenger-wrapper {
-    border-top: 1px solid $core-default-separator;//$default-separator;
+    border-top: 1px solid var(--default-separator);//$default-separator;
   }
 
   &__messenger {
@@ -80,8 +80,8 @@
 
     & .lib-messenger {
       &__content {
-        background-color:  $dgc-messenger-bg;
-        border-radius: $default-border-radius;
+        background-color:  var(--background-chatmessenger);
+        border-radius: var(--border-radius);
         margin-left:10px;
 
         .note-content {
@@ -91,7 +91,7 @@
           overflow-y: auto;
           padding: 10px 10px;
           white-space: pre-wrap;
-          @include typo($line: 14px, $size: 13px,  $color: $core-default-text-color);//$weight: 300,
+          @include typo($line: 14px, $size: 13px,  $color: var(--default-text-color));//$weight: 300,
 
           &::-webkit-scrollbar {
             height: 100%;
@@ -99,13 +99,13 @@
           }
       
           &::-webkit-scrollbar-thumb {
-            background-color: $default-scrollbar-color;
+            background-color: var(--default-scrollbar-color);
             cursor: pointer;
           }
 
           &::before {
             text-transform: capitalize;
-            @include typo($line: 14px, $size: 12px, $weight: 300, $color:$core-default-text-placeholder);
+            @include typo($line: 14px, $size: 12px, $weight: 300, $color:var(--default-text-placeholder));
           }
         }
       }
@@ -129,7 +129,7 @@
         &.attach {
           margin: 5px 2px;
           &:hover {
-            color: $core-default-icon-hover;
+            color: var(--default-icon-hover);
           }
         }
       }
@@ -137,7 +137,7 @@
   }
   
   &__drag-drop-wrapper {
-    background:$core-default-background;
+    background:var(--default-bg);
     display: none !important;
     height: 100%;
     padding: 10px;
@@ -148,8 +148,8 @@
 
   &__drag-drop {
     align-items: center;
-    border-radius: $default-border-radius;
-    border: 1px dashed $egreen;
+    border-radius: var(--border-radius);
+    border: 1px dashed var(--egreen);
     box-sizing: border-box;
     display: flex;
     height: inherit;
@@ -159,7 +159,7 @@
     & .note-content {
       height: 38px;
       min-width: 140px;
-      @include typo($line:19px, $size:16px, $weight:300, $color:$egreen);
+      @include typo($line:19px, $size:16px, $weight:300, $color: var(--egreen));
     }
   }
 
@@ -177,21 +177,21 @@
 
   &__icon {
     &.delete-icon {
-      color: $btn-caution-border;
+      color: var(--btn-caution-border);
       height: 11px;
       margin-right: 10px;
       width: 13px;
     }
 
     &:hover{
-      color: $btn-caution-border-hover;
+      color: var(--btn-caution-border-hover);
     }
   }
 
   &__note {
     &.counter {
       padding: 3px 0 4px 0;
-      @include typo($size: 12px, $line: 20px, $weight:300, $color: $core-default-text-color);
+      @include typo($size: 12px, $line: 20px, $weight:300, $color: var(--default-text-color));
     }
   }
 
@@ -206,8 +206,8 @@
 
     & .preset-acknowledge { 
       &__main {
-        background-color: $dgc-chat-reply-bg;
-        border-radius: $default-border-radius;
+        background-color: var(--dgc-chat-reply-bg);
+        border-radius: var(--border-radius);
         padding: 10px 40px;
       }
 
@@ -229,7 +229,7 @@
           padding-left: 25px;
           margin-top: auto;
           margin-bottom: auto;
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $egrey-89);
+          @include typo($size: 14px, $line: 14px, $weight: 300, $color: var(--egrey-89));
         }
       }
     }
@@ -243,7 +243,7 @@
 
     & .button {
       align-items: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height:26px;
       justify-content: center;
       margin: 0 2%;
@@ -254,28 +254,28 @@
   }
 
   &__button-confirm {
-    background-color: $core-default-background; 
-    border: 0.5px solid $btn-commit-border;
+    background-color: var(--default-bg); 
+    border: 0.5px solid var(--btn-commit-border);
     justify-content: center;
-    @include typo($size: 13px, $line: 12px, $color: $btn-commit-backgroundless-text);
+    @include typo($size: 13px, $line: 12px, $color: var(--btn-commit-backgroundless-text));
 
     &:hover {
-      border:2px solid $btn-commit-border-hover;
-      color: $btn-commit-text-hover;
+      border:2px solid var(--btn-commit-border-hover);
+      color: var(--btn-commit-text-hover);
     }
   }
 
   &__button-delete {
-    border: 0.5px solid $btn-caution-border;
+    border: 0.5px solid var(--btn-caution-border);
     justify-content: center;
-    @include typo($size: 13px, $line: 12px, $color: $btn-caution-backgroundless-text);//$eorange-dark);
+    @include typo($size: 13px, $line: 12px, $color: var(--btn-caution-backgroundless-text));//var(--eorange-dark));
 
     &:hover {
-      border:2px solid $btn-caution-border-hover;
-      color: $btn-caution-text-hover;
+      border:2px solid var(--btn-caution-border-hover);
+      color: var(--btn-caution-text-hover);
 
       svg {
-        color: $btn-caution-text-hover;
+        color: var(--btn-caution-text-hover);
       }
     }
 
@@ -286,13 +286,13 @@
   }
 
   &__button-cancel {
-    border:  1px solid $btn-rollback-border;
+    border:  1px solid var(--btn-rollback-border);
     justify-content: center;
-    @include typo($size: 13px, $line: 12px, $color: $btn-rollback-text);
+    @include typo($size: 13px, $line: 12px, $color: var(--btn-rollback-text));
 
     &:hover {
-      border:2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;
+      border:2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
 
@@ -301,7 +301,7 @@
     background: hsla(0,0%,78.4%,.5);//rgba(137, 146, 158, 0.2);
     height: 40px;
     justify-content: center;
-    @include typo($size: 12px,  $color: $eblue);//$weight:300,
+    @include typo($size: 12px,  $color: var(--eblue));//$weight:300,
   }
 }
 

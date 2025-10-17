@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .window-webinar {
   // &__endpoint-lense{
   //   align-items: center;
@@ -18,22 +20,22 @@
   .endpoint-lense{
     &__label{
       margin-top: -60px;
-      @include typo($size:18px,$line:28px,$weight:400,$color:$default-text-color);
+      @include drumee.typo($size:18px,$line:28px,$weight:400,$color: var(--default-text-color));
       &[data-user="1"]{
         position:absolute;
         top: 73%;
-        color: $default-text-reverse;
+        color: var(--default-text-reverse);
       }
     }
   }
   &__endpoint-local{
-    background-color: $multimedia-vdo-background-color;//$vdo-background-color; 
+    background-color: var(--multimedia-background);//$vdo-background-color; 
     position: absolute;
     top: 20px;
     right: 40px;
     width: 120px;
     height: 80px;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
    // @include video-border-radius();
     //border-radius:6px;
     border: 1px white solid;
@@ -57,7 +59,7 @@
         width: 20%;
         align-items: center;
         justify-items: center;
-        @include typo($size:18px,$line:28px,$weight:400,$color:$main-grey);
+        @include drumee.typo($size:18px,$line:28px,$weight:400,$color: var(--main-grey));
       }
     }
     &[data-flow="y"]{
@@ -75,7 +77,7 @@
         height: 20%;
         align-items: center;
         justify-items: center;
-        @include typo($size:18px,$line:28px,$weight:400,$color:$main-grey);
+        @include drumee.typo($size:18px,$line:28px,$weight:400,$color: var(--main-grey));
       }
     }
   }

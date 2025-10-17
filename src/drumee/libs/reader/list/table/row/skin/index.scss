@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/libs/reader/list/table/row/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .list-table-row {
   &__ui {

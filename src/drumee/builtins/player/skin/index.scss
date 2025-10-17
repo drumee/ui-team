@@ -1,17 +1,17 @@
-@import "header.scss";
-@import "topbar.scss";
-@import 'mixins/drumee';
+@use "header.scss";
+@use "topbar.scss";
+@use 'mixins/drumee';
 
 .player {
   &-media {
-    box-shadow: $drumee-shadow-main;
+    box-shadow: var(--shadow-main);
   }
 
 
   &__ui {
-    background-color: $core-default-background;
-    border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-main;
+    background-color: var(--default-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-main);
     min-height: 250px;
     min-width: 340px;
     z-index: 1000;
@@ -47,7 +47,7 @@
     }
 
     & .svg-progress__main {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       border-radius: 5px;
       bottom: 0;
       height: 100px;
@@ -60,19 +60,19 @@
   }
 
   &__main {
-    border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-main;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-main);
     height: 100%;
     width: 100%;
 
     &.player.document {
-      background-color: $multimedia-player-doc-background;
+      background-color: var(--multimedia-player-doc-bg);
     }
   }
 
   &__container {
-    background-color: $multimedia-player-doc-background;
-    border-radius: $default-border-radius-bottom;
+    background-color: var(--multimedia-player-doc-bg);
+    border-radius: var(--border-radius-bottom);
     height: calc(100% - 44px);
     min-height: 200px;
     overflow: hidden;
@@ -91,8 +91,8 @@
     }
 
     &[data-type="evaluation"]::after {
-      @include license-trial();
-      @include typo($size: 22px, $line: 1.3, $color: $default-text-title);
+      @include drumee.license-trial();
+      @include drumee.typo($size: 22px, $line: 1.3, $color: var(--default-text-title));
     }
 
     .loader-progress {
@@ -143,7 +143,7 @@
 
   &__progress {
     & .svg-progress__main {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       border-radius: 5px;
       height: 100px;
       left: calc(50% - 50px);

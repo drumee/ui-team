@@ -1,13 +1,10 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2020
-#   FILE : /src/drumee/builtins/player/stream/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
+@use 'builtins/webrtc/skin/avatar' as *;
+@use 'builtins/webrtc/skin/video' as *;
 
 .remote-user{
-  @import 'builtins/webrtc/skin/avatar';
-  @import 'builtins/webrtc/skin/video';
+  @include webrtc-avatar;
+  @include webrtc-video;
   &__ui{
     height: 100%;
     width: 100%;
@@ -19,13 +16,13 @@
     width: 100%;
     justify-content: center;
     align-items: center;  
-    background-color: $multimedia-vdo-background-color;// rgb(112, 145, 194);
+    background-color: var(--multimedia-background);// rgb(112, 145, 194);
     overflow: hidden;
   }
 
   &__label{
     margin-top: 40px;
-    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $default-text-reverse);
+    @include drumee.typo($size: 18px, $line: 22px, $weight: 400, $color: var(--default-text-reverse));
     .drumee-loading{
       margin-left: 50%;
       margin-top: -15px;
@@ -34,7 +31,7 @@
 
   &__presenter-name{
     position: absolute;
-    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $default-text-reverse);
+    @include drumee.typo($size: 18px, $line: 22px, $weight: 400, $color: var(--default-text-reverse));
     .drumee-loading{
       margin-left: 50%;
       margin-top: -15px;
@@ -62,7 +59,7 @@
     align-items: center;  
     z-index: 50000;
     .drumee-text{
-      @include typo($size: 14px, $line: 16px, $weight: 400, $color: $default-text-reverse);
+      @include drumee.typo($size: 14px, $line: 16px, $weight: 400, $color: var(--default-text-reverse));
     }
     &[data-error="0"]{
       display: none;
@@ -73,7 +70,7 @@
       display: flex;
     }
     .drumee-text{
-      @include typo($size: 14px, $line: 16px, $weight: 400, $color: $default-text-reverse);
+      @include drumee.typo($size: 14px, $line: 16px, $weight: 400, $color: var(--default-text-reverse));
     }
   }
 
@@ -85,7 +82,7 @@
 
   &__audio{
     position: absolute;
-    color: $main-grey;
+    color: var(--main-grey);
     visibility: hidden;
     width: 30px;
     height: 30px;
@@ -94,7 +91,7 @@
     top: 38px;
     &[data-state="0"]{
       visibility: visible;
-      color: $ewhite;  
+      color: var(--ewhite);  
       z-index: 100000;
       &:before{
         content : " ";

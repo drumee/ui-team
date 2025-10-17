@@ -1,14 +1,15 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('attachment');
+@include meta.load-css('menu');
+@include meta.load-css('reply-message');
 
 .widget-chatItem {
-  @import './attachment';
-  @import './menu';
-  @import './reply-message';
 
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     width: calc(100% - 70px);
-    @include typo($size: 12px, $line: 14px);
+    @include drumee.typo($size: 12px, $line: 14px);
     display: flex;
     flex-direction: column;
     margin-top: 10px;
@@ -17,7 +18,7 @@
 
     &[data-radio="on"] {
       .widget-chatItem__main {
-        background-color: $dgc-chat-forward-bg;
+        background-color: var(--default-background-hover);
       }
     }
 
@@ -50,6 +51,7 @@
     width: fit-content;
     display: flex;
     flex-direction: column-reverse;
+
     &[data-active="yes"] {
       width: calc(100% - 70px);
       margin-right: 35px;
@@ -57,7 +59,7 @@
 
     &[data-preattachment="1"] {
       max-width: 85%;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       min-width: 110px;
       padding: 6px 15px 2px 5px;
       width: fit-content;
@@ -83,14 +85,14 @@
     }
 
     &.me {
-      background-color: $dgc-chat-item-me-bg;
+      background-color: var(--dgc-chat-item-me-bg);
       max-width: 85%;
       margin: 0 14px 0 auto;
     }
 
     &.other {
-      background-color: $dgc-chat-other-bg;
-      border: 1px solid $dgc-chat-other-bg;
+      background-color: var(--dgc-chat-other-bg);
+      border: 1px solid var(--dgc-chat-other-bg);
       box-sizing: border-box;
       margin-left: 4px;
       max-width: 90%;
@@ -106,19 +108,19 @@
     }
 
     &.forward {
-      background-color: $dgc-chat-reply-bg;
+      background-color: var(--dgc-chat-reply-bg);
     }
 
     &[data-selected="1"] {
-      background-color: $dgc-chat-forward-bg;
+      background-color: var(--default-background-hover);
 
-      color: $dgc-text-reverse;
+      color: var(--default-text-reverse);
 
       & a {
-        color: $dgc-text-reverse;
+        color: var(--default-text-reverse);
 
         &:hover {
-          color: $egrey-e8;
+          color: var(--egrey-e8);
         }
       }
     }
@@ -181,11 +183,11 @@
 
     &-date {
       margin-top: -2px;
-      @include typo($size: 10px, $line: 9px, $weight: 300, $color : $dgc-tertiary-text-color);
+      @include drumee.typo($size: 10px, $line: 9px, $weight: 300, $color: var(--tertiary-text-color));
 
       &.me {
         margin-top: 0px;
-        @include typo($size: 10px, $line: 9px, $weight: 500, $color : $dgc-tertiary-text-color);
+        @include drumee.typo($size: 10px, $line: 9px, $weight: 500, $color: var(--tertiary-text-color));
       }
 
       &.other {
@@ -202,16 +204,16 @@
 
   &__icon {
     &-read {
-      color: $dgc-icon-color;
+      color: var(--dgc-icon-color);
       height: 14px;
       left: 3px;
       width: 14px;
     }
 
     &.checkbox {
-      border-radius: $default-checkbox-border-radius;
-      border: 1.5px solid $core-default-checkbox-border;
-      color: $core-default-checkbox-background;
+      border-radius: var(--checkbox-border-radius);
+      border: 1.5px solid var(--default-checkbox-border);
+      color: var(--default-checkbox-bg);
       cursor: pointer;
       height: 15px;
       width: 15px;
@@ -219,8 +221,8 @@
       margin-left: auto;
 
       &[data-selected="1"] {
-        border: 1px solid $core-default-checkbox-border;
-        color: $core-default-checkbox-checked ;
+        border: 1px solid var(--default-checkbox-border);
+        color: var(--default-checkbox-checked);
 
 
 
@@ -231,7 +233,7 @@
     }
 
     &.forward-icon {
-      color: $dgc-icon-color;
+      color: var(--dgc-icon-color);
       height: 20px;
       width: 17px;
     }
@@ -242,7 +244,7 @@
       padding-left: 4px;
       padding-top: 4px;
       text-transform: capitalize;
-      @include typo($size: 12px, $line: 12px, $color: $dgc-secondary-text-color);
+      @include drumee.typo($size: 12px, $line: 12px, $color: var(--secondary-text-color));
     }
   }
 
@@ -267,7 +269,7 @@
       margin: auto;
       max-width: 200px;
       width: 82px;
-      @include typo($size: 11px, $line: 20px, $color: $dgc-tertiary-text-color);
+      @include drumee.typo($size: 11px, $line: 20px, $color: var(--tertiary-text-color));
       display: flex;
       flex-direction: row;
       justify-content: center;
@@ -288,7 +290,7 @@
     margin: auto;
     max-width: 200px;
     width: 82px;
-    @include typo($size: 11px, $line: 12px, $color: $dgc-tertiary-text-color);
+    @include drumee.typo($size: 11px, $line: 12px, $color: var(--tertiary-text-color));
   }
 
   &__profile {
@@ -317,7 +319,7 @@
 
       &__icon {
         height: 100%;
-        @include typo($size: 9px, $line: 10px);
+        @include drumee.typo($size: 9px, $line: 10px);
       }
     }
 
@@ -335,7 +337,7 @@
   }
 
   &__content {
-    border-bottom: 1px solid $dgc-chat-border;
+    border-bottom: 1px solid var(--default-separator);
     width: 100%;
   }
 
@@ -346,7 +348,7 @@
     text-transform: capitalize;
     white-space: nowrap;
     width: 121px;
-    @include typo($size: 11px, $line: 10px, $weight: 400, $color: $core-default-text-color);
+    @include drumee.typo($size: 11px, $line: 10px, $weight: 400, $color: var(--default-text-color));
 
     & .inner.note-content {
       overflow: hidden;
@@ -388,13 +390,13 @@
     &-content {
       overflow: hidden;
       word-wrap: break-word;
-      @include typo($size: 12px, $line: 14px, $weight: 400, $color: $egrey-26);
+      @include drumee.typo($size: 12px, $line: 14px, $weight: 400, $color: var(--egrey-26));
 
       & a {
-        color: $dgc-secondary-text-color;
+        color: var(--secondary-text-color);
 
         &:hover {
-          color: $dgc-chat-hover;
+          color: var(--dgc-chat-hover);
         }
       }
     }
@@ -415,7 +417,7 @@
 
   &__call-duration {
     margin-left: 10px;
-    @include typo($size: 13px, $line: 14px, $weight: 400, $color: $core-default-text-title);
+    @include drumee.typo($size: 13px, $line: 14px, $weight: 400, $color: var(--default-text-title));
   }
 
   &__media-attachment {

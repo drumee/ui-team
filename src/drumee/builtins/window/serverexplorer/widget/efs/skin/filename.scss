@@ -1,132 +1,146 @@
-.filename {
-  bottom: 0;
-  cursor: pointer;
-  left: 0px;
-  max-height: 31px;
-  overflow: hidden;
-  justify-content: center;
-  padding: 2px 12px;
-  position: absolute;
-  text-align: center;
-  text-overflow: ellipsis;
-  width: calc(100% - 0px);
-  border-radius:$default-border-radius-bottom;
-  @include typo($line: 14px, $size: 11px, $color: $core-default-text-color);
+@use "mixins/drumee";
 
-  &.hub, &.folder {
-    color: $core-default-text-reverse;
-  }
+.media-efs {
 
-  & .inner.note-content {
-    width: inherit;
-    height: inherit;
-    overflow: hidden;
-  }
-
-  &:hover,
-  &[data-hover="on"] {
-    color: $core-default-text-color;
-    background-color: $multimedia-main-background-filename;
-
-    &.private.hub {
-      color: $core-default-text-color;
-      background-color: $teamroom-main-background-filename;
-    }
-
-    &.share.hub {
-      color: $core-default-text-color;
-      background-color: $sharebox-main-background-filename;
-    }
-
-    &.public.hub {
-      color: $core-default-text-color;
-      background-color: $website-main-background-filename;//#5ea3a8;
-    }
-          
-    &.folder {
-      color: $core-default-text-color;
-      background-color: $folder-main-background-filename;
-    }
-  }
-
-  &.audio, &.document, &.vector, &.other {
-    &[data-hover="on"] {
-      color: $core-default-text-color;
-      background-color: $multimedia-main-background-filename;
-    }
-  }
-
-  &.document{
-    width: calc(100% - 0px);
+  .filename {
+    bottom: 0;
+    cursor: pointer;
     left: 0px;
-  }
-
-  &.image,
-  &.video {
-    color: $core-default-text-color;
-    background :linear-gradient(180deg,hsla(0,0%,100%,.2),hsla(0,0%,100%,0.9));
-    width: calc(100% - 0px);
-    left: 0px;
-
-    &[data-hover="on"]{
-      background-color:  $core-default-text-reverse;
-    }
-  }
-}
-
-.filename-tooltips {
-  background: $core-default-block-background;
-  border-radius: $default-border-radius-bottom-small;// 0 0 4px 4px;
-  display: none;
-  max-height: calc(100% - 5px);
-  max-width: 100%;
-  opacity: 0;
-  overflow-wrap: anywhere;
-  padding: 6px 4px;
-  pointer-events: none;
-  position: absolute;
-  transition: opacity 1ms;
-  white-space: pre-wrap;
-  @include typo($line:14px,$size:10px,$weight:400,$color:$core-default-text-color);
-
-  &:hover,
-  &[data-hover="on"] {
-    background-color: $multimedia-main-background-filename;
-    color: $core-default-text-color;
-    display: block;
-    opacity: 1;
-    overflow-wrap: break-word;
+    max-height: 31px;
     overflow: hidden;
+    justify-content: center;
+    padding: 2px 12px;
+    position: absolute;
+    text-align: center;
     text-overflow: ellipsis;
-    z-index: 20;
+    width: calc(100% - 0px);
+    border-radius: var(--border-radius-bottom);
+    @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));
 
-    &.private.hub {
-      background-color: $teamroom-main-background-filename;
-    }
-
-    &.share.hub {
-      background-color: $sharebox-main-background-filename;
-    }
-
-    &.public.hub {
-      background-color: $website-main-background-filename;//#8bc5ca; //#5ea3a8;
-    }
-          
+    &.hub,
     &.folder {
-      background-color: $folder-main-background-filename;
+      color: var(--default-text-reverse);
     }
 
-    &.image, &.video {
-      background-color: $ewhite;
+    & .inner.note-content {
+      width: inherit;
+      height: inherit;
+      overflow: hidden;
     }
 
-    &.audio, &.document, &.vector, &.other {
-      color: $core-default-text-color;
-      background-color: $multimedia-main-background-filename;
+    &:hover,
+    &[data-hover="on"] {
+      color: var(--default-text-color);
+      background-color: var(--multimedia-main-filename-bg);
+
+      &.private.hub {
+        color: var(--default-text-color);
+        background-color: var(--teamroom-filename-bg);
+      }
+
+      &.share.hub {
+        color: var(--default-text-color);
+        background-color: var(--sharebox-main-background-filename);
+      }
+
+      &.public.hub {
+        color: var(--default-text-color);
+        background-color: var(--website-main-filename-bg); //#5ea3a8;
+      }
+
+      &.folder {
+        color: var(--default-text-color);
+        background-color: var(--folder-main-filename-bg);
+      }
     }
-    &.document{
-      max-height: calc(100% - -4px);
-      padding: 4px 2px;
+
+    &.audio,
+    &.document,
+    &.vector,
+    &.other {
+      &[data-hover="on"] {
+        color: var(--default-text-color);
+        background-color: var(--multimedia-main-filename-bg);
+      }
+    }
+
+    &.document {
+      width: calc(100% - 0px);
+      left: 0px;
+    }
+
+    &.image,
+    &.video {
+      color: var(--default-text-color);
+      background: linear-gradient(180deg, hsla(0, 0%, 100%, .2), hsla(0, 0%, 100%, 0.9));
+      width: calc(100% - 0px);
+      left: 0px;
+
+      &[data-hover="on"] {
+        background-color: var(--default-text-reverse);
+      }
+    }
+  }
+
+  .filename-tooltips {
+    background: var(--default-bg-block);
+    border-radius: var(--border-radius-bottom-smal); // 0 0 4px 4px;
+    display: none;
+    max-height: calc(100% - 5px);
+    max-width: 100%;
+    opacity: 0;
+    overflow-wrap: anywhere;
+    padding: 6px 4px;
+    pointer-events: none;
+    position: absolute;
+    transition: opacity 1ms;
+    white-space: pre-wrap;
+    @include drumee.typo($line: 14px, $size: 10px, $weight: 400, $color: var(--default-text-color));
+
+    &:hover,
+    &[data-hover="on"] {
+      background-color: var(--multimedia-main-filename-bg);
+      color: var(--default-text-color);
+      display: block;
+      opacity: 1;
+      overflow-wrap: break-word;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 20;
+
+      &.private.hub {
+        background-color: var(--teamroom-filename-bg);
+      }
+
+      &.share.hub {
+        background-color: var(--sharebox-main-background-filename);
+      }
+
+      &.public.hub {
+        background-color: var(--website-main-filename-bg); //#8bc5ca; //#5ea3a8;
+      }
+
+      &.folder {
+        background-color: var(--folder-main-filename-bg);
+      }
+
+      &.image,
+      &.video {
+        background-color: var(--ewhite);
+      }
+
+      &.audio,
+      &.document,
+      &.vector,
+      &.other {
+        color: var(--default-text-color);
+        background-color: var(--multimedia-main-filename-bg);
+      }
+
+      &.document {
+        max-height: calc(100% - -4px);
+        padding: 4px 2px;
+      }
     }
   }
 }

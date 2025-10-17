@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .lib-messenger {
   &__container {
@@ -32,19 +32,19 @@
     padding: 7px;
     width: 40px;
     height: 40px;
-    color:$core-default-icon-neutral;// #89929E;
+    color:var(--default-icon-neutral);// #89929E;
 
     &.emoji svg{
-      color: $core-special-icon-emoji;//#FA8540;
+      color: var(--special-icon-emoji);//#FA8540;
       padding:2px;
       cursor: pointer;
       &:hover{
-        color: $core-default-icon-hover;
+        color: var(--default-icon-hover);
       }
     }
     &.submit svg{
       background-color: transparent;
-      fill: $eviolet ;
+      fill: var(--eviolet);
       padding:2px;
       margin-left:-3px;
       cursor: pointer;
@@ -60,9 +60,9 @@
     position: absolute;
     bottom: calc(100% + 5px);
     right: 6px;
-    background: $core-default-background;  //#f8f8f8;
-    box-shadow:$drumee-shadow-box;//0 0 7px 0 rgba(0,0,0,0.14);
-    border-radius:$default-border-radius;// 5px 5px 0px 0px;
+    background: var(--default-bg);  //#f8f8f8;
+    box-shadow:drumee.$drumee-shadow-box;//0 0 7px 0 rgba(0,0,0,0.14);
+    border-radius:var(--border-radius);// 5px 5px 0px 0px;
     padding: 5px 5px 0px 5px;
     &[data-state="open"]{
       width: 100%;
@@ -88,7 +88,7 @@
 
   &__container-emojis {
     width: 100%;
-    background:$core-default-background; // #ffffff;
+    background:var(--default-bg); // #ffffff;
   }
 
   &__emojis-item {
@@ -102,7 +102,7 @@
     border: 1px lightgrey solid;
     margin-top: 7px;
     padding: 5px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     span{
       width: 100%;
       cursor: pointer;
@@ -115,11 +115,11 @@
     padding: 5px;
     width: calc(100% - 25px);
     margin: 0 auto 0 11px;
-    border-radius:$default-border-radius;
-    background: $core-default-background;
+    border-radius:var(--border-radius);
+    background: var(--default-bg);
     overflow: hidden;
     padding: 5px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     border: 1px lightgrey solid;
     span{
       cursor: pointer;

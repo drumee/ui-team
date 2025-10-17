@@ -3,7 +3,7 @@
 #   FILE : src/drumee/libs/reader/avatar/skin/avatar-widget.scss
 #   TYPE : Backoffice Main Style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .user-avatar{
   &__ui{
@@ -11,14 +11,14 @@
     border: none;
     width: 40px;
     height: 40px;
-    border-radius: $default-border-radius;//3px;
+    border-radius: var(--border-radius);//3px;
     user-select: none;
-   // box-shadow:$drumee-shadow-topbar;
+   // box-shadow:var(--shadow-topbar);
     //box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
     cursor: pointer;
     overflow: hidden;
     &[data-default="1"]{
-      color: $ewhite;     
+      color: var(--ewhite);     
       padding: 8px;
       //opacity:1;
       opacity:0.6;
@@ -31,7 +31,7 @@
         //top:3px;
       }
       svg{
-        fill: $core-default-icon-reverse;  
+        fill: var(--default-icon-reverse);  
       }
     }
   }

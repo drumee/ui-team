@@ -3,9 +3,9 @@
   height: 44px;
   min-height: 44px;
   border-bottom: none;
-  background-color:$share-background-header;//$sharebox-main;
+  background-color:var(--sharebox-main);//var(--sharebox-main);
     .menu-items{
-    background: $dmz-default-background; 
+    background: var(--default-background); 
     // margin-top: 43px;
   }
 }
@@ -16,10 +16,10 @@
     height: 20px; //40px;
     //padding: 10px;
     margin: auto 0 auto 15px;
-    color:$dmz-default-icon-reverse;  
+    color:var(--default-icon-reverse);  
     :hover{
       svg{
-        color:$dmz-default-icon-hover;//#879bff;
+        color:var(--default-icon-hover);//#879bff;
       }
     }
     &.desktopgroup{
@@ -36,7 +36,7 @@
       height: 12px;
       margin: auto 15px auto 0;
       padding: 0 ;
-      color:$dmz-default-icon-reverse; 
+      color:var(--default-icon-reverse); 
       /*color:#89929e;
       opacity:0.7;*/
     }
@@ -54,7 +54,7 @@
     max-width: 200px;
     justify-content: center;
     margin: auto;
-    // @include typo($size:14px,$line:12px,$weight:400,$color:$ewhite);
+    // @include typo($size:14px,$line:12px,$weight:400,$color: var(--ewhite));
     .name {
      /* align-items: flex-start;
       @include overflow-text;
@@ -62,7 +62,7 @@
       align-items: flex-start;
       @include overflow-text;
       margin-left: -30px;//-54px;
-      @include typo($size:18px,$line:24px,$weight:400,$color:$dmz-default-text-reverse);
+      @include typo($size:18px,$line:24px,$weight:400,$color: var(--default-text-reverse));
       width: 316px;
       margin-right: 18px;
       justify-content: center;

@@ -1,20 +1,4 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
-@import 'mixins/drumee';
-
-
+@use "mixins/drumee";
 .hub-administrator{
   &__dialog.dialog__wrapper{
     position: absolute;
@@ -24,11 +8,11 @@
     z-index:1000;  
   }
   .invitation__container-sharee, .invitation-settings__ui{
-    box-shadow:$drumee-shadow-box ;
-    background-color: $core-default-background ; 
+    box-shadow:drumee.$drumee-shadow-box ;
+    background-color: var(--default-bg); 
     width: 360px;
     min-height: 240px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     //min-width: 385px;
   }
   // .invitation-recipient__ui{
@@ -45,10 +29,4 @@
   .invitation-shareeroll__list{
     margin-top: 12px;
   }
-  // .invitation__item{
-  //   .invitation__item{
-  //     width: 100%;
-  //     //background-color: $ewhite;
-  //   }
-  // }
 }

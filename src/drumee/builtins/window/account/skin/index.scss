@@ -3,15 +3,16 @@
 #   FILE : /src/drumee/builtins/window/account/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
-@import "topbar";
-@import "container";
-@import "footer";
+@use "topbar";
+@use "container";
+@use "footer";
+// @import "./vars.scss";
 
 .window-account {
   &__ui {
-    background-color:$account-default-background;//$default-background;   
+    background-color:var(--default-background);
     left: 10px;
     top: 10px;
     width: calc(100vw - 20px);
@@ -27,8 +28,8 @@
   }
 
   &__body {
-    background-color:$account-default-background;// $default-background;   
-    border-radius:$default-border-radius;
+    background-color:var(--default-background);
+    border-radius:var(--border-radius);
     height: 100%;
     overflow: auto;
     width: 100%;

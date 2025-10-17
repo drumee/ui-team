@@ -1,0 +1,19 @@
+:root {
+  --font-light: "font-Light", sans-serif;
+  --font-lightitalic: "font-LightItalic", sans-serif;
+  --font-main: "font-Regular", sans-serif;
+  --font-italic: "font-Italic", sans-serif;
+  --font-medium: "font-Medium", sans-serif;
+  --font-mediumitalic: "font-MediumItalic", sans-serif;
+  --font-bold: "font-Bold", sans-serif;
+  --font-bolditalic: "font-BoldItalic", sans-serif;
+
+  --main-typo-light: --font-light;
+  --main-typo: --font-main;
+  --main-typo-medium: --font-medium;
+  --main-typo-bold: --font-bold;
+  --main-typo-lightitalic: --font-lightitalic;
+  --main-typoitalic: --font-italic;
+  --main-typo-mediumitalic: --font-mediumitalic;
+  --main-typo-bolditalic: --font-bolditalic;
+}

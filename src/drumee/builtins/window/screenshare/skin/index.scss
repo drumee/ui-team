@@ -1,13 +1,13 @@
-@import "mixins/drumee";
-@import "topbar";
-@import "endpoint";
-@import "command";
-@import "inbound";
+@use "mixins/drumee";
+@use "topbar";
+@use "endpoint";
+@use "command";
+@use "inbound";
 
 .window-screenshare {
   &__ui {
-    background-color: $core-default-background;
-    box-shadow: $drumee-shadow-container;
+    background-color: var(--default-bg);
+    box-shadow: var(--shadow-container);
     min-width: 300px;
     min-height: 200px;
     flex-direction: column;
@@ -45,7 +45,7 @@
       padding: 10px 0 15px 3px;
       justify-content: center;
       height: 20px;
-      @include typo($size: 14px, $line: 14px, $weight: 300, $color: $core-default-text-title); //$weight:400
+      @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title)); //$weight:400
     }
   }
 
@@ -55,7 +55,7 @@
     max-height: calc(100% - 44px);
     // align-items: center;
     justify-content: center;
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     &[data-presenter="1"] {
       justify-content: center;
       align-items: center;
@@ -92,9 +92,9 @@
       padding: 10px;
       background-color: grey;
       margin: 10px;
-      color: $default-text-reverse; //white;
+      color: var(--default-text-reverse); //white;
       border-radius: 3px;
-      @include typo($color: $core-default-text-reverse, $weight: 400, $line: 20px, $size: 16px);
+      @include drumee.typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
     }
   }
   &__wrapper--modal {
@@ -108,14 +108,14 @@
     }
   }
   .window-warning__body {
-    background-color: $core-default-background;
-    box-shadow: $drumee-shadow-box;
+    background-color: var(--default-bg);
+    box-shadow: drumee.$drumee-shadow-box;
     border: none;
     margin-top: -70px;
     min-width: 300px;
     padding: 20px;
     .window-warning__content .drumee-text {
-      color: $core-default-text-color;
+      color: var(--default-text-color);
       margin: 0 0 0 15px;
     }
   }

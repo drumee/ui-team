@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .window-confirm{
   &__main{
     width: 100%;
@@ -14,13 +16,13 @@
     .drumee-svg__ui{
       width: 30px;
       height: 30px;    
-      color: $core-default-icon-success;
+      color: var(--default-icon-success);
     }
     .drumee-text__ui{
       margin-top: 10px;
       padding: 0 30px;
     //  margin-bottom: 40px;
-      @include typo( $size: 16px, $line: 34px,$weight:400, $color: $core-default-text-color );
+      @include drumee.typo( $size: 16px, $line: 34px,$weight:400, $color: var(--default-text-color) );
     }
   }
   &__buttons{
@@ -31,11 +33,11 @@
     margin-top: 30px;
     width: auto;
     min-width: 175px;
-    @include typo( $size: 16px, $line: 34px, $color:$btn-rollback-text);//$core-default-text-color );
-    border: 1px solid $btn-rollback-border ; //$ab-input-border-grey;
+    @include drumee.typo( $size: 16px, $line: 34px, $color: var(--btn-rollback-text));//var(--default-text-color) );
+    border: 1px solid var(--btn-rollback-border); //$ab-input-border-grey;
     &:hover{
-      border:2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;    
+      border:2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);    
     }
     &.btn-later{
       margin-left: 15%;

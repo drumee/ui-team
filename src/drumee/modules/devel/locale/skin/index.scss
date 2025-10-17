@@ -1,4 +1,4 @@
-@import "mixins/drumee";
+@use "mixins/drumee";
 
 .admin-ui.admin {
   align-items: center;
@@ -26,7 +26,7 @@
     align-items: center;
     height: 100%;
     padding: 5px;
-    @include typo($color: $egrey-78, $size: 18px, $line: 24px, $weight: 400);
+    @include drumee.typo($color: var(--egrey-78), $size: 18px, $line: 24px, $weight: 400);
   }
 
   &__header {
@@ -50,7 +50,7 @@
     padding: 5px;
     margin: 0 5px;
     justify-content: center;
-    @include typo($color: rebeccapurple, $size: 14px, $line: 24px, $weight: 400);
+    @include drumee.typo($color: rebeccapurple, $size: 14px, $line: 24px, $weight: 400);
     &-container {
       align-items: center;
       height: 100%;
@@ -58,7 +58,7 @@
     }
     &[data-radio="off"] {
       opacity: 0.4;
-      color: $egrey-78;
+      color: var(--egrey-78);
       background-color: transparent;
     }
   }
@@ -131,7 +131,7 @@
       flex: 1;
       justify-content: center;
       padding: 10px;
-      @include typo($color: $egrey-78, $size: 18px, $line: 24px, $weight: 400);
+      @include drumee.typo($color: var(--egrey-78), $size: 18px, $line: 24px, $weight: 400);
     }
 
     &-languages{
@@ -147,7 +147,7 @@
       cursor: pointer;
       width: 50px;
       border-radius: 3px;
-      @include typo($color: $egrey-78, $size: 16px, $line: 24px, $weight: 400);
+      @include drumee.typo($color: var(--egrey-78), $size: 16px, $line: 24px, $weight: 400);
       &[data-state="1"],&[data-radio="on"]{
         background-color: #4a90e2;
         color: white;
@@ -173,10 +173,10 @@
 
   &__ack {
     &-item{
-      @include typo($color: $egrey-78, $size: 14px, $line: 24px, $weight: 300);
+      @include drumee.typo($color: var(--egrey-78), $size: 14px, $line: 24px, $weight: 300);
     }
     &-clipboard{
-      @include typo($color: red, $size: 14px, $line: 24px, $weight: 300);
+      @include drumee.typo($color: red, $size: 14px, $line: 24px, $weight: 300);
       &[data-state="0"]{
         display: none;
       }
@@ -238,7 +238,7 @@
       margin-top: 2px;
       padding: 2px;
       cursor: pointer;
-      @include typo($color: $egrey-78, $size: 14px, $line: 18px, $weight: 300);
+      @include drumee.typo($color: var(--egrey-78), $size: 14px, $line: 18px, $weight: 300);
       &:hover {
         color: white;
         background-color: grey;
@@ -290,7 +290,7 @@
     flex: 1;
     justify-content: center;
     padding: 10px;
-    @include typo($color: $egrey-78, $size: 18px, $line: 24px, $weight: 400);
+    @include drumee.typo($color: var(--egrey-78), $size: 18px, $line: 24px, $weight: 400);
   }
 
   &__confirm {
@@ -301,7 +301,7 @@
     }
 
     &-message {
-      @include typo($color: white, $size: 18px, $line: 24px, $weight: 400);
+      @include drumee.typo($color: white, $size: 18px, $line: 24px, $weight: 400);
     }
   }
 
@@ -342,14 +342,14 @@
 
     &__checkbox {
       cursor: pointer;
-      @include typo($color: $egrey-78, $size: 10px, $line: 12px, $weight: 300);
+      @include drumee.typo($color: var(--egrey-78), $size: 10px, $line: 12px, $weight: 300);
 
       svg {
         width: 10px;
         height: 10px;
         border: 1px solid #dde2e8;
         border-radius: 2px;
-        color: $ewhite;
+        color: var(--ewhite);
         margin-right: 10px;
       }
 
@@ -364,11 +364,11 @@
   }
 
   .enter-form__key-text {
-    @include typo($color: #fa8540, $size: 28px, $line: 33px, $weight: 300);
+    @include drumee.typo($color: #fa8540, $size: 28px, $line: 33px, $weight: 300);
   }
 
   .enter-form__key-sign {
-    @include typo($color: $egrey-78, $size: 12px, $line: 14px, $weight: 300);
+    @include drumee.typo($color: var(--egrey-78), $size: 12px, $line: 14px, $weight: 300);
 
     &--link {
       cursor: pointer;
@@ -382,19 +382,19 @@
 
     &-msg {
       width: 100%;
-      background: $ewhite;
+      background: var(--ewhite);
       top: -12px;
       height: 12px;
-      @include typo($color: #ff4578, $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.typo($color: #ff4578, $size: 12px, $line: 16px, $weight: 300);
     }
   }
 
   .enter-form__label {
-    @include typo($color: $egrey-2f, $size: 36px, $line: 48px, $weight: 300);
+    @include drumee.typo($color: var(--egrey-2f), $size: 36px, $line: 48px, $weight: 300);
   }
 
   .enter-form__text {
-    @include typo($color: $egrey-78, $size: 18px, $line: 24px, $weight: 400);
+    @include drumee.typo($color: var(--egrey-78), $size: 18px, $line: 24px, $weight: 400);
   }
 
   .forgotpassword-log.enter-form__logo {
@@ -407,7 +407,7 @@
     background-color: #18ac72;
     border-radius: 2px;
     cursor: pointer;
-    @include typo($color: $ewhite, $size: 12px, $line: 36px, $weight: 400);
+    @include drumee.typo($color: var(--ewhite), $size: 12px, $line: 36px, $weight: 400);
   }
 
   .enter-form__input {
@@ -419,13 +419,13 @@
       input {
         padding: 0;
         width: 100%;
-        @include typo($color: $egrey-2f,
+        @include drumee.typo($color: var(--egrey-2f),
           $size: 18px,
           $line: 24px,
           $weight: 400);
 
-        @include placeholder-input {
-          color: $egrey-89;
+        @include drumee.placeholder-input {
+          color: var(--egrey-89);
         }
       }
 
@@ -452,7 +452,7 @@
   }
 
   .enter-form__input-descr {
-    @include typo($color: $egrey-78, $size: 11px, $line: 17px, $weight: 300);
+    @include drumee.typo($color: var(--egrey-78), $size: 11px, $line: 17px, $weight: 300);
   }
 
   .entry-form__input-field {
@@ -476,7 +476,7 @@
   }
 
   .entry-form__input-forgot {
-    @include typo($color: $egrey-78, $size: 10px, $line: 11px, $weight: 300);
+    @include drumee.typo($color: var(--egrey-78), $size: 10px, $line: 11px, $weight: 300);
 
     &--link {
       .note-content {
@@ -502,10 +502,10 @@
       width: 100%;
       min-height: 0;
       margin: 0;
-      @include typo($color: $egrey-4a, $size: 12px, $line: 14px, $weight: 300);
+      @include drumee.typo($color: var(--egrey-4a), $size: 12px, $line: 14px, $weight: 300);
 
-      @include placeholder-input {
-        @include typo($color: $egrey-89,
+      @include drumee.placeholder-input {
+        @include drumee.typo($color: var(--egrey-89),
           $size: 12px,
           $line: 14px,
           $weight: 300);
@@ -529,12 +529,12 @@
 
     &-text {
       position: relative;
-      background: $ewhite;
+      background: var(--ewhite);
       margin-left: 15px;
       border-radius: 4px;
       box-shadow: 0 2px 5px 1px rgba(0, 0, 0, 0.09),
         0 3px 5px 0 rgba(0, 0, 0, 0.08), 0 3px 9px 0 rgba(194, 185, 203, 0);
-      @include typo($color: $egrey-2f, $size: 10px, $line: 13px, $weight: 300);
+      @include drumee.typo($color: var(--egrey-2f), $size: 10px, $line: 13px, $weight: 300);
 
       .root-node {
         white-space: pre-wrap;
@@ -564,7 +564,7 @@
         height: 100%;
         left: 0;
         top: 0;
-        background: $ewhite;
+        background: var(--ewhite);
         border-radius: 4px 0 0 4px;
       }
     }
@@ -584,7 +584,7 @@
     user-select: none;
 
     &--info {
-      color: $egrey-89;
+      color: var(--egrey-89);
       // right: 1px;
     }
 
@@ -613,7 +613,7 @@
   .entry-form__link {
     font-style: italic;
     cursor: pointer;
-    @include typo($color: #b6c1cf, $size: 9px, $line: 14px, $weight: 400);
+    @include drumee.typo($color: #b6c1cf, $size: 9px, $line: 14px, $weight: 400);
 
     svg {
       width: 14px;
@@ -628,8 +628,8 @@
       &[data-radio="on"],
       &[data-state="0"] {
         svg {
-          border: 1px solid $eviolet;
-          color: $eviolet;
+          border: 1px solid var(--eviolet);
+          color: var(--eviolet);
         }
       }
     }
@@ -638,11 +638,11 @@
   .entry-form__btn {
     width: 171px;
     height: 36px;
-    background-color: $egreen;
+    background-color: var(--egreen);
     border-radius: 18px;
     text-transform: uppercase;
     cursor: pointer;
-    @include typo($color: $ewhite, $size: 12px, $line: 14px, $weight: 400);
+    @include drumee.typo($color: var(--ewhite), $size: 12px, $line: 14px, $weight: 400);
   }
 
   .entry-form__social {
@@ -654,7 +654,7 @@
   }
 
   .entry-form__social-label {
-    @include typo($color: $egrey-78, $size: 16px, $line: 36px, $weight: 300);
+    @include drumee.typo($color: var(--egrey-78), $size: 16px, $line: 36px, $weight: 300);
   }
 
   .entry-form__social-icon {
@@ -662,15 +662,15 @@
   }
 
   .entry-form__confirmation-text {
-    @include typo($color: $egrey-89, $size: 16px, $line: 19px, $weight: 300);
+    @include drumee.typo($color: var(--egrey-89), $size: 16px, $line: 19px, $weight: 300);
   }
 
   .entry-form__forgot-text {
-    @include typo($color: $egrey-78, $size: 14px, $line: 19px, $weight: 300);
+    @include drumee.typo($color: var(--egrey-78), $size: 14px, $line: 19px, $weight: 300);
   }
 
   .entry-form__confirmation-email {
-    @include typo($color: #4a90e2, $size: 16px, $line: 21px, $weight: 400);
+    @include drumee.typo($color: #4a90e2, $size: 16px, $line: 21px, $weight: 400);
   }
 
   .translation-form {
@@ -703,7 +703,7 @@
   .content__label {
     font-size: 16px;
     min-width: 150px;
-    @include typo($color: #4a90e2, $size: 16px, $line: 34px, $weight: 400);
+    @include drumee.typo($color: #4a90e2, $size: 16px, $line: 34px, $weight: 400);
     //margin: auto;
     cursor: pointer;
     pointer-events: all;

@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .window-webinar-inbound{
   &__main{
     width:100%;
@@ -8,7 +10,7 @@
   }
   &__message{
     &.drumee-text{
-      @include typo($size:14px,$line:20px,$weight:400,$color:$ewhite);
+      @include drumee.typo($size:14px,$line:20px,$weight:400,$color: var(--ewhite));
     }
   }
 }

@@ -1,0 +1,14 @@
+:root {
+  --border-radius-tiny: 3px;
+  --border-radius-small: 4px;
+  --border-radius: 6px;
+  --border-radius-right: 0 0 6px 0;
+  --border-radius-left: 0 0 0 6px;
+  --border-radius-bottom: 0 0 6px 6px;
+  --border-radius-top: 6px 6px 0px 0px;
+  --border-radius-bottom-small: 0 0 4px 4px;
+  --border-radius-top-small: 4px 4px 0px 0px;
+  --border-radius-checkbox: --border-radius-small;
+  --checkbox-border-radius: 4px;
+  --border-radius-bottom-tiny: 0 0 3px 3px;
+}

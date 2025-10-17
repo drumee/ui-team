@@ -1,25 +1,31 @@
-&__devices{
-  margin-right: 30px;    
-  .menu-topic-trigger{
-    width: 44px;
-    height: 44px;
-    color: $ewhite;
-  }
-  .menu-topic-items{
-    background: $dmz-default-background; 
-    min-width: 200px;
-    &__wrapper{
-      &[data-state="open"]{
-        left:-255px;// -245px;
-        top: 100%;
-        width: 325px;//320px;
+.dmz-meeting {
+  &__devices {
+    margin-right: 30px;
+
+    .menu-topic-trigger {
+      width: 44px;
+      height: 44px;
+      color: var(--ewhite);
+    }
+
+    .menu-topic-items {
+      background: var(--default-background);
+      min-width: 200px;
+
+      &__wrapper {
+        &[data-state="open"] {
+          left: -255px; // -245px;
+          top: 100%;
+          width: 325px; //320px;
+        }
       }
     }
-  }
-  &.menu-topic{
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
-    border-bottom: none;
+
+    &.menu-topic {
+      width: 44px;
+      height: 44px;
+      min-height: 44px;
+      border-bottom: none;
+    }
   }
 }

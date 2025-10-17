@@ -1,8 +1,9 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('metadata');
+@include meta.load-css('topbar');
 
 .player-audio {
-  @import './metadata';
-  @import './topbar';
 
   &__ui {
     height: 100%;
@@ -27,14 +28,14 @@
   }
 
   &__content {
-    background-color: $audio-player-background;
+    background-color: var(--audio-player-bg);
   }
 
   &__header {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     border-bottom: none;
-    border-radius: $default-border-radius-top;
-    color: $default-text-color;
+    border-radius: var(--default-border-radius-top);
+    color: var(--default-text-color);
     height: 44px;
     min-height: 44px;
     width: 100%;
@@ -50,7 +51,7 @@
     }
 
     &.player {
-      background-color: $audio-player-background;
+      background-color: var(--audio-player-bg);
       height: 46px;
       min-height: 46px;
     }
@@ -61,7 +62,7 @@
   }
 
   &__footer {
-    background-color: $multimedia-audio-player-background-footer;
+    background-color: var(--multimedia-audio-player-footer-bg);
     height: 20px;
     min-height: 20px;
     width: 100%;
@@ -82,19 +83,19 @@
   }
 
   &__icon {
-    color: $multimedia-audio-player-icon;
+    color: var(--multimedia-audio-player-icon);
     cursor: pointer;
     height: 16px;
     margin: 0px 10px;
     width: 16px;
 
     &:hover {
-      color: $core-default-icon-hover;
+      color: var(--default-icon-hover);
     }
 
     &.loop {
       &[data-active="on"] {
-        color: $core-default-icon-hover;
+        color: var(--default-icon-hover);
       }
     }
   }
@@ -106,7 +107,7 @@
 
   &__ui {
     & .loader-progress {
-      background-color: $audio-player-background;
+      background-color: var(--audio-player-bg);
       height: 100%;
       justify-content: center;
       left: 35%;

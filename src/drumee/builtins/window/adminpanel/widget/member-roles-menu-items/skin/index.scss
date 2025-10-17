@@ -1,20 +1,20 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-member-rolesMenu-items {
   &__ui {
     background-color: inherit;
     &:hover{
       *{
-      background-color:$admin-default-background-hover;
-      color:$admin-default-text-hover;
+      background-color:var(--default-background-hover);
+      color:var(--default-text-hover);
       svg{
-         border-radius: $default-border-radius-tiny; 
+         border-radius: var(--border-radius-tiny); 
       }
       &.checkbox[data-state="1"] {
         box-shadow: none;
-        color: $admin-checkbox-checked-reverse;
-        border: 1px solid $admin-checkbox-checked-border-reverse;
-        border-radius:$default-checkbox-border-radius;
+        color: var(--checkbox-checked-reverse);
+        border: 1px solid var(--checkbox-checked-border-reverse);
+        border-radius:var(--checkbox-border-radius);
       }
       }
     }
@@ -34,8 +34,8 @@
   &__note {
     max-width: 105px;
     width: 100%;
-    @include typo($size: 12px,$weight:300,  $line: 24px, $color: $admin-default-text-color);
-    @include overflow-text;
+    @include drumee.typo($size: 12px,$weight:300,  $line: 24px, $color: var(--default-text-color));
+    @include drumee.overflow-text;
    .inner{
       overflow: hidden;
       white-space: nowrap;
@@ -47,9 +47,9 @@
     box-shadow: none;
     cursor: pointer;
     margin-left: 0px; 
-    border:1px solid $admin-default-checkbox-border;
-    color:$admin-default-checkbox-background;
-    border-radius:$default-checkbox-border-radius;
+    border:1px solid var(--default-checkbox-border);
+    color:var(--default-checkbox-background);
+    border-radius:var(--checkbox-border-radius);
     svg{
       width: 14px;
       height: 14px; 
@@ -57,8 +57,8 @@
     &[data-state="1"] {
       box-shadow: none;
      
-      border: 1px solid $admin-default-checkbox-border;
-      color:$admin-default-checkbox-checked ;
+      border: 1px solid var(--default-checkbox-border);
+      color:var(--default-checkbox-checked);
     }
   }
 }

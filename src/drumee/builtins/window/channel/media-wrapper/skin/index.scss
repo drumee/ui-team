@@ -1,16 +1,9 @@
 
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
+@use 'mixins/drumee.scss';
 
 .media-wrapper{
   &__ui {
-    background-color:$channel-default-background;
+    background-color:var(--default-background);
   }
   &__body {
     height: 100%;

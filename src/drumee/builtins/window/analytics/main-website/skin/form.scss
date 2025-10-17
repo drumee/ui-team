@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 &-form {
   &__main {
     align-items: center;
@@ -19,7 +21,7 @@
     }
 
     & .input-icon-prefix {
-      color: $core-default-icon-neutral;
+      color: var(--default-icon-neutral);
       margin: 0px 10px;
       min-height: 24px;
       width: 24px;
@@ -34,7 +36,7 @@
   }
 
   &__datepicker-wrapper {
-    background: $core-default-block-background;
+    background: var(--default-bg-block);
     border-radius: 6px;
     height: 100%;
     margin: 0 20px;
@@ -57,8 +59,8 @@
   }
 
   &__datepicker {
-    @include typo($size: 14px, $line: 18px, $color: $core-default-text-color);
-    background: $core-default-block-background;
+    @include drumee.typo($size: 14px, $line: 18px, $color: var(--default-text-color));
+    background: var(--default-bg-block);
     cursor: pointer;
     height: 100%;
     width: 100%;
@@ -85,7 +87,7 @@
         }
       }
       &__input_wrapper {
-        background: $core-default-block-background;
+        background: var(--default-bg-block);
         height: 35px;
         width: 170px;
 
@@ -98,7 +100,7 @@
   }
 
   &__filter-label {
-    @include typo($size: 14px, $line: 18px, $color: $core-default-text-title);
+    @include drumee.typo($size: 14px, $line: 18px, $color: var(--default-text-title));
     align-items: center;
     justify-content: center;
     padding: 10px 0;
@@ -133,7 +135,7 @@
   }
 
   &__button, &__error-message {
-    @include typo($size: 14px, $line: 18px, $color: $core-default-text-error);
+    @include drumee.typo($size: 14px, $line: 18px, $color: var(--default-text-error));
     align-items: center;
     height: 100%;
     justify-content: center;
@@ -142,9 +144,9 @@
   }
 
   &__button.action-btn {
-    @include typo($size: 18px, $line: 26px, $color: $core-default-text-reverse);
+    @include drumee.typo($size: 18px, $line: 26px, $color: var(--default-text-reverse));
     align-items: center;
-    background: $core-button-accept;
+    background: var(--button-accept);
     border-radius: 6px;
     cursor: pointer;
     height: 36px;

@@ -78,6 +78,7 @@ module.exports = function (basedir) {
       'toolbox': resolve(basedir, drumee_modules, 'designer', 'skeleton', 'toolbox'),
       'toolkit': resolve(basedir, drumee_path, 'toolkit'),
       'type': resolve(basedir, libs, 'type'),
+      'ui-toolkit': resolve(basedir, drumee_path, 'ui-toolkit'),
       'utils': resolve(basedir, drumee_path, 'utils'),
       'vendor': resolve(basedir, src_dir, 'vendor'),
       'welcome': resolve(basedir, drumee_modules, 'welcome'),

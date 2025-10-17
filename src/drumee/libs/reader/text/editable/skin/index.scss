@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/libs/reader/text/editable/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .libs-note{
   &__ui{

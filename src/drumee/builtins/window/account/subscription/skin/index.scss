@@ -1,20 +1,14 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
+@use 'cancel-subscription';
+@use 'change-subscription-ack';
+@use 'invoices';
+@use 'overlay-wrapper';
+@use 'view-subscription';
+@use 'pre-payment-summary';
+@use 'plan';
 
 .account-subscription {
 
-  
-  $color-basic-plan: #007ED9;
-  $color-pro-plan: #E96102;
-  $color-company-plan: #44A4AC;
-  $color-offer-banner: #E5E2E2;
-
-  @import './cancel-subscription';
-  @import './change-subscription-ack';
-  @import './invoices';
-  @import './overlay-wrapper';
-  @import './view-subscription';
-  @import './pre-payment-summary';
-  @import './plan';
 
   &__ui {
     height: 100%;
@@ -34,7 +28,7 @@
   }
 
   &__container {
-    background: $core-default-background;
+    background: var(--default-bg);
     height: 100%;
     justify-content: center;
     width: 100%;
@@ -65,7 +59,7 @@
   }
 
   &__plan-item {
-    border: 1px solid $core-default-frame;
+    border: 1px solid var(--default-frame);
     border-radius: 12px;
     
     
@@ -100,53 +94,53 @@
   }
 
   &__button-cancel {
-    @include typo($size: 16px, $line: 16px, $color: $btn-rollback-text); 
-    border: 1px solid $btn-rollback-border-hover;
-    border-radius: $default-border-radius;
+    @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text)); 
+    border: 1px solid var(--btn-rollback-border-hover);
+    border-radius: var(--border-radius);
     min-width: 150px; 
     height: 40px;
     padding: 2px 5px;
 
     &:hover {
-      border:2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;   
+      border:2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);   
     }
   }
 
   &__button-confirm {
-    @include typo( $size: 16px, $line: 16px, $color: $btn-commit-text);
-    background-color: $btn-commit-background;
-    border-radius: $default-border-radius;
+    @include drumee.typo( $size: 16px, $line: 16px, $color: var(--btn-commit-text));
+    background-color: var(--btn-commit-background);
+    border-radius: var(--border-radius);
     height: 40px; 
     min-width: 180px;
 
     &:hover {
-      border: 2px solid $btn-commit-border-hover;
-      background-color: $btn-commit-background-hover;
+      border: 2px solid var(--btn-commit-border-hover);
+      background-color: var(--btn-commit-background-hover);
     }
 
     &.pre-check-cancel {
       background-color: transparent;
-      border: 1px solid $btn-rollback-border-hover;
-      color: $core-secondary-text-color;
+      border: 1px solid var(--btn-rollback-border-hover);
+      color: var(--secondary-text-color);
       width: 115px;
       height: 35px;
 
       &:hover {
-        border: 2px solid $btn-rollback-border-hover;
-        color: $core-secondary-text-color;
+        border: 2px solid var(--btn-rollback-border-hover);
+        color: var(--secondary-text-color);
       }
     }
 
     &.cancel-subs {
-      color: $core-default-text-caution;
+      color: var(--default-text-caution);
       background-color: transparent;
-      border: 1px solid $core-default-border-caution;
+      border: 1px solid var(--default-border-caution);
       width: 115px;
       height: 35px;
 
       &:hover {
-        border: 2px solid $btn-caution-border-hover;
+        border: 2px solid var(--btn-caution-border-hover);
       }
 
       &[data-wait="yes"] {

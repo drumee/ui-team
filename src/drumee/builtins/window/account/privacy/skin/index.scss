@@ -1,11 +1,4 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2020
-#   FILE : 
-#   TYPE : 
-# ===================================================================**/
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/vendor.scss';
+@use 'mixins/drumee';
 
 .account-privacy{
   &__ui {
@@ -33,8 +26,8 @@
     }
   }
   &__text{
-    background-color: $account-default-background;
-    border: 1px solid $account-default-entry-border-bottom;//#ECEDEE;
+    background-color: var(--default-background);
+    border: 1px solid var(--default-entry-border-bottom);//#ECEDEE;
     border-radius: 4px 0 0 4px;
     padding-top:25px;
     padding-left: 30px;
@@ -42,10 +35,10 @@
     padding-bottom:24px;
     width: 353px;
     &.tbd{
-      @include typo($size:18px,$line:21px,$color:#787B7F);
+      @include drumee.typo($size:18px,$line:21px,$color:#787B7F);
     }
     &.multi-line{
-      @include typo($size:18px,$line:21px,$color:#787B7F);
+      @include drumee.typo($size:18px,$line:21px,$color:#787B7F);
     }
   }
   &__info{
@@ -101,7 +94,7 @@
         //color: #879BFF;
         line-height: 19px;
         text-align: left;
-        @include typo($size:18px,$line:19px,$color:#879bff);
+        @include drumee.typo($size:18px,$line:19px,$color:#879bff);
         &[data-state="0"]{
           color: #d2d9db;
         }
@@ -115,7 +108,7 @@
         line-height: 19px;
         text-align: right;
         margin-left:19px;
-        @include typo($size:18px,$line:19px,$color:#d2d9db);
+        @include drumee.typo($size:18px,$line:19px,$color:#d2d9db);
         &[data-state="0"]{
           color:#879bff;
         }

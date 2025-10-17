@@ -1,6 +1,18 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .window-help-desk {
+  --helpdesk-default-text-reverse: #4a90e2;
+  --helpdesk-header-bg: #B6BFCA;
+  --helpdesk-separator-color: #4a90e2;
+  --helpdesk-default-text-alert: var(--default-text-alert);
+  --helpdesk-default-text-reverse: var(--default-text-reverse);
+  --helpdesk-default-text-color: var(--default-text-color);
+  --helpdesk-default-icon-reverse: var(--default-icon-reverse);
+  --helpdesk-icon: var(--default-text-color);
+}
+
+.window-help-desk {
+
   &__ui,
   &__main,
   &__body {
@@ -13,7 +25,7 @@
   }
 
   &__main {
-    background-color: $white;
+    background-color: var(--white);
   }
 
   &__container {
@@ -21,12 +33,12 @@
   }
 
   &__header {
-    background-color: $helpdesk-background-header;
+    background-color: var(--helpdesk-header-bg);
     border-bottom: none;
     height: 90px;
   }
 
-  &-content__list{
+  &-content__list {
     max-height: 100%;
     overflow-y: auto;
   }
@@ -44,14 +56,15 @@
 
       & .title {
         text-align: center;
-        @include typo($size: 22px, $line: 32px, $color: $helpdesk-default-text-reverse);
+        @include drumee.typo($size: 22px, $line: 32px, $color: var(--default-text-reverse));
         padding: 0;
+
         & .note-content {
           width: 100%;
 
           & .root-node {
             text-overflow: ellipsis;
-            @include overflow-text;
+            @include drumee.overflow-text;
           }
         }
       }
@@ -59,13 +72,14 @@
 
     &__control {
       & .icon {
-        color: $helpdesk-default-icon-reverse;
+        color: var(--default-icon-reverse);
         margin: 10px 8px;
       }
     }
   }
 
   &-content {
+
     &__main,
     &__container,
     &__body,
@@ -81,7 +95,7 @@
     }
 
     &__footer {
-      background-color: $helpdesk-default-block-background;
+      background-color: var(--default-bg-block);
       height: 60px;
       justify-content: center;
       padding: 10px 0px;
@@ -90,12 +104,12 @@
 
     &__note {
       &.footer {
-        @include typo($size: 14px, $line: 16px, $color: $helpdesk-default-text-alert);
+        @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-alert));
         align-items: center;
         justify-content: center;
         text-align: center;
         width: 100%;
       }
     }
-  }  
+  }
 }

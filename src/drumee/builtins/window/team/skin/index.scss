@@ -1,8 +1,9 @@
 
-@import 'mixins/drumee.scss';
-@import 'peers.scss';
-@import 'topbar.scss';
-@import 'change-owner.scss';
+@use 'mixins/drumee.scss';
+@use 'peers.scss';
+@use 'topbar.scss';
+@use 'change-owner.scss';
+// @import "./vars.scss";
 
 .window-team{
   &__ui{
@@ -18,21 +19,21 @@
         position: absolute;
         top: -30px; 
         left: -3px;
-        border-radius: $default-border-radius-top;
+        border-radius: var(--default-border-radius-top);
         height: 27px; 
         width: 156px;
-        background-color: $team-background-header;
+        background-color: var(--teamroom-main);
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-content: center;
         justify-items: center;
         align-items: center;
-        @include typo($size:12px,$line:14px,$weight:400,$color:$team-default-text-reverse);
+        @include drumee.typo($size:12px,$line:14px,$weight:400,$color: var(--default-text-reverse));
         padding-top:5px;
         padding-left:6px;
         padding-bottom:3px;
-        box-shadow: $drumee-shadow-main;
+        box-shadow: var(--shadow-main);
       }
       
       &:before {
@@ -42,7 +43,7 @@
       height: calc(100% + 6px);
       top: -3px; 
       left: -3px; 
-      border: 7px solid $team-border-frame; 
+      border: 7px solid var(--teamroom-main); 
       border-top-left-radius: 0px;
       border-bottom-left-radius: 6px;
       border-bottom-right-radius: 6px;
@@ -53,17 +54,17 @@
 
   &__header{
     border-bottom: none;
-    background-color: $team-background-header;
+    background-color: var(--teamroom-main);
     &[data-content="folder"]{
-      background-color: $folder-background-header; 
+      background-color: var(--folder-main); 
     }
     &-title{
       max-width: 163px;
       align-items: center;
-      @include typo($size:18px,$line:24px,$weight:400,$color:$team-default-text-reverse);
+      @include drumee.typo($size:18px,$line:24px,$weight:400,$color: var(--default-text-reverse));
       .name {
         align-items: flex-start;
-        @include overflow-text;
+        @include drumee.overflow-text;
         @media (min-width: 626px) {
           justify-content: center;
           max-width:300px;
@@ -80,10 +81,10 @@
     }
     &-control{
       .icon{
-        color: $team-default-icon-reverse;     
+        color: var(--default-icon-reverse);     
       }
       &:hover{
-        color:$team-default-icon-hover;
+        color:var(--default-icon-hover);
       }
     }
   }

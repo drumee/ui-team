@@ -1,10 +1,10 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .desk-module__topbar{
   &-user {
-    background-color:$core-default-background;   
+    background-color:var(--default-bg);   
     z-index: 2;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     overflow: hidden;
     padding-top:10px;
     &-container {
@@ -29,7 +29,7 @@
       height: 40px;
       width: 40px;
       z-index: 7000;
-      box-shadow: $drumee-shadow-main;
+      box-shadow: var(--shadow-main);
       &[data-device="mobile"] {
         height: 35px;
         width: 35px;
@@ -46,8 +46,8 @@
       .menu-topic-trigger {
         height: 40px;
         width: 40px; 
-        box-shadow: $drumee-shadow-topbar;
-        border-radius:$default-border-radius;
+        box-shadow: var(--shadow-topbar);
+        border-radius:var(--border-radius);
         &[data-device="mobile"] {
           height: 35px;
           width: 35px;
@@ -55,16 +55,16 @@
       }
 
       .menu-topic-items {
-        background-color: $core-default-background;
+        background-color: var(--default-bg);
         margin-top: 20px;
         width:195px!important; // 182px!important; //174px!important;
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
         &[data-device="mobile"] {
           right: 10px;
         }
         &::before {
-          background: $core-default-background;
-          box-shadow: 0px 0px 4px 0px rgb(63 79 117 / 13%), 0 5px 0px 0 rgb(86 65 113 / 8%), 0 2px 0px 0 rgb(194 185 203 / 0%);//$drumee-shadow-main;
+          background: var(--default-bg);
+          box-shadow: 0px 0px 4px 0px rgb(63 79 117 / 13%), 0 5px 0px 0 rgb(86 65 113 / 8%), 0 2px 0px 0 rgb(194 185 203 / 0%);//var(--shadow-main);
           content: " ";
           height: 20px;
           position: absolute;
@@ -83,7 +83,7 @@
       top: 10px !important;
 
       & .addressbook-widget-notification__digit {
-        border: 1px solid $eblue;
+        border: 1px solid var(--eblue);
       }
     }
 
@@ -95,11 +95,11 @@
       justify-content: space-between;
       padding: 14px 18px 14px 35px;//14px 5px 14px 35px; //14px 8px 14px 32px;//14px 20px 14px 35px;
       width: 100%;
-      @include typo($line:32px,$size:16px,$weight:400,$color:$egrey-78);
+      @include drumee.typo($line:32px,$size:16px,$weight:400,$color: var(--egrey-78));
 
       &.account {
         svg {
-          color: $eblue;
+          color: var(--eblue);
           padding: 4px; //1px;
         }
       }
@@ -126,7 +126,7 @@
         border-top: 9px solid transparent; //13px
         &:hover {
           opacity: 1;
-          border-radius: $default-border-radius-top;//6px 6px 0 0;
+          border-radius: var(--border-radius-top);//6px 6px 0 0;
         }
         svg{
           color: #879bff;// #ff487a;      
@@ -139,7 +139,7 @@
           opacity: 1;
         }
         svg{
-          color: $eviolet-dark;// #476390; 
+          color: var(--eviolet-dark);// #476390; 
           padding: 4px;
         }
       }
@@ -148,7 +148,7 @@
         height: 65px;
         &:hover {
           opacity: 1;
-          border-radius: $default-border-radius-bottom;//0px 0px 6px 6px;
+          border-radius: var(--border-radius-bottom);//0px 0px 6px 6px;
         }
 
         svg{
@@ -165,12 +165,12 @@
       }
 
       &:hover {
-        background-color: $core-default-background-hover;
-        color: $core-default-text-reverse; 
-        @include typo($line:32px,$size:16px,$weight:400,$color:$egrey-78);
+        background-color: var(--default-bg-hover);
+        color: var(--default-text-reverse); 
+        @include drumee.typo($line:32px,$size:16px,$weight:400,$color: var(--egrey-78));
 
         svg {
-            color: $core-default-icon-reverse;    
+            color: var(--default-icon-reverse);    
         }
       }
     }
@@ -180,7 +180,7 @@
     height: 40px;
     position: absolute;
     width: 40px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     box-shadow: 0 5px 8px 1px rgb(63 79 117 /10%), 0 6px 16px 0 rgb(86 85 113 / 8%), 0 2px 14px 0 rgb(194 195 203 / 0%);//0 5px 8px 1px rgba(63,79,117,.13), 0 6px 16px 0 rgba(86,65,113,.08), 0 2px 14px 0 rgba(194,185,203,0);
     &:hover{
       box-shadow:  0 2px 4px 3px rgb(63 79 117 / 20%), 0 2px 2px 2px hsla(0,0%,98%,.2), 0 6px 3px 5px rgb(194 185 203 / 0%);// 0 2px 4px 3px rgba(63, 79, 117, 0.15), 0 2px 2px 2px hsla(0,0%,98%,.2), 0 6px 3px 5px rgba(194,185,203,0);//0 2px 2px 1px rgba(63,79,117,.13), 0 6px 16px 0 rgba(86,65,113,.08), 0 2px 14px 0 rgba(194,185,203,0);        
@@ -198,7 +198,7 @@
       height: 35px;
       width: 35px;
       position: absolute;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
     }
     &[data-state="1"] {
       z-index:8000; // higher than Wm
