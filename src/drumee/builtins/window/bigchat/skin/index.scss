@@ -1,9 +1,10 @@
-@use "sass:meta";
-@use 'mixins/drumee.scss';
-@use 'layout.scss';
-@include meta.load-css('search');
-@include meta.load-css('menu');
-@include meta.load-css('overlay-wrapper');
+// @use "sass:meta";
+@use 'mixins/drumee';
+@use 'layout';
+@use 'breadcrumbs';
+@use 'search';
+@use 'menu';
+@use 'overlay-wrapper';
 
 .window-bigchat {
 
@@ -39,7 +40,7 @@
   }
 
   &-topbar {
-    @include meta.load-css('breadcrumbs.scss');
+    // @include meta.load-css('breadcrumbs.scss');
 
     &__content {
       align-items: center;

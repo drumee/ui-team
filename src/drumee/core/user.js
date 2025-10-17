@@ -161,6 +161,7 @@ class __core_user extends Backbone.Model {
    */
 
   canUseVisio() {
+    if (bootstrap().localhost) return false;
     return this.profile().category != 'trial';
   }
 
