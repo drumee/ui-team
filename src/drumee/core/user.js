@@ -645,9 +645,11 @@ class __core_user extends Backbone.Model {
     } else if (/^musics/.test(url)) {
       url = `${base}${url}`;
     }
+    this.debug("AAA:643", `${protocol}, ${base}, ${url}`)
     if (!/^http/.test(url) && domain) {
       url = `${protocol}://${domain}${url}`;
     }
+    this.debug("AAA:652", `${protocol}, ${base}, ${url}`)
     if (l == null) { l = 1; }
     if (!this._audio) {
       this._audio = new Audio();
