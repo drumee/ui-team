@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/widget/sound-analyzer/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .sound-analyzer{
   &__ui{

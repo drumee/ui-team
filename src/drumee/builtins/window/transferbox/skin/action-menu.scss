@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 &-menu {
   &__dropdown {
     align-items: center;
@@ -7,14 +9,14 @@
   &__wrapper {
     &[data-state="1"] {
       & .trigger-icon {
-        color: $eviolet;
+        color: var(--eviolet);
       }
     }
 
     & .menu-items {
-      background-color: $core-default-background;
-      border-radius:$default-border-radius;
-      box-shadow: $drumee-shadow-container;
+      background-color: var(--default-bg);
+      border-radius:var(--border-radius);
+      box-shadow: var(--shadow-container);
       left: -140px;
       max-width: 160px;
       min-width: 160px;
@@ -23,8 +25,8 @@
       width: 100% !important;
 
       &:before {
-        background-color: $core-default-background;
-        box-shadow: $drumee-container-before;
+        background-color: var(--default-bg);
+        box-shadow: var(--shadow-before);
         content: "";
         height: 10px;
         left: 145px;
@@ -35,8 +37,8 @@
       }
 
       &:after {
-        background: $core-default-background;
-        border-radius:$default-border-radius-top;
+        background: var(--default-bg);
+        border-radius:var(--default-border-radius-top);
         content: "";
         height: 10px;
         left: 0;
@@ -49,7 +51,7 @@
 
   &__icon {
     align-items: center;
-    color: $core-default-icon-reverse;
+    color: var(--default-icon-reverse);
     cursor: pointer;
 
     &.trigger-icon {
@@ -63,7 +65,7 @@
     
     svg {
       &:hover {
-        color:$core-default-icon-hover;
+        color:var(--default-icon-hover);
         opacity: 1;
       }
     }
@@ -80,15 +82,15 @@
     margin-bottom:  1px;
 
     &:hover {
-      background-color: $core-default-background-hover;
-      color : $core-default-text-reverse; 
+      background-color: var(--default-bg-hover);
+      color : var(--default-text-reverse); 
 
       & .name {
-        color:$core-default-text-reverse; 
+        color:var(--default-text-reverse); 
       }
       
       & svg {
-        fill: $core-default-icon-reverse;
+        fill: var(--default-icon-reverse);
       }
     }
   }
@@ -96,6 +98,6 @@
   &__note {
     padding-top: 0px;
     bottom: 2px;
-    @include typo($size: 13px, $weight: 300, $line: 14px, $color:$core-default-text-color);
+    @include drumee.typo($size: 13px, $weight: 300, $line: 14px, $color:var(--default-text-color));
   }
 }

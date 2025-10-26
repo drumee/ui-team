@@ -1,27 +1,6 @@
-/*
- * decaffeinate suggestions:
- * DS001: Remove Babel/TypeScript constructor workaround
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : desk/window/hub/project/project
-// ==================================================================== *
-//require('./skin')
 class __hub_website extends LetcBox {
-  // ===========================================================
-  // initialize
-  // ===========================================================
 
   constructor(...args) {
-    {
-      // Hack: trick Babel/TypeScript into allowing this before super.
-      if (false) { super(); }
-      let thisFn = (() => { return this; }).toString();
-      let thisName = thisFn.match(/return (?:_assertThisInitialized\()*(\w+)\)*;/)[1];
-      eval(`${thisName} = this;`);
-    }
     this.onPartReady = this.onPartReady.bind(this);
     this._checkSanity = this._checkSanity.bind(this);
     this._create = this._create.bind(this);
@@ -30,24 +9,33 @@ class __hub_website extends LetcBox {
     super(...args);
   }
 
+  /**
+   * 
+   * @returns 
+   */
   initialize() {
     super.initialize();
     require('./skin');
     return this.contextmenuSkeleton = 'a';
   }
 
-  // ===========================================================
-  // onDomRefresh
-  // ===========================================================
+  /**
+   * 
+   * @returns 
+   */
   onDomRefresh() {
     this.declareHandlers(); //s { part: @ }
     this.feed(require("./skeleton/main")(this));
     return this._data = {};
   }
 
-  // ===========================================================
-  // onPartReady
-  // ===========================================================
+  /**
+   * 
+   * @param {*} child 
+   * @param {*} pn 
+   * @param {*} section 
+   * @returns 
+   */
   onPartReady(child, pn, section) {
     this.declareHandlers(); //s {part:@, ui:@}, {fork:yes, recycle:yes}
     switch (pn) {
@@ -62,9 +50,10 @@ class __hub_website extends LetcBox {
     }
   }
 
-  // ===========================================================
-  // 
-  // ===========================================================
+  /**
+   * 
+   * @returns 
+   */
   _checkSanity() {
     if (_.isEmpty(this._data.name)) {
       this._nameEntry.showError(LOCALE.REQUIRE_THIS_FIELD);
@@ -93,9 +82,11 @@ class __hub_website extends LetcBox {
     return true;
   }
 
-  // ===========================================================
-  // 
-  // ===========================================================
+  /**
+   * 
+   * @param {*} cmd 
+   * @returns 
+   */
   _create(cmd) {
     if (this.phase === _a.creating) {
       this.warn("Waiting for hub to be instanciated");
@@ -118,16 +109,19 @@ class __hub_website extends LetcBox {
     });
   }
 
-  // ===========================================================
-  // 
-  // ===========================================================
+  /**
+   * 
+   * @returns 
+   */
   _wait() {
     return this.getPart(_a.body).feed(require('./skeleton/wait')(this));
   }
 
-  // ===========================================================
-  // onUiEvent
-  // ===========================================================
+  /**
+   * 
+   * @param {*} cmd 
+   * @returns 
+   */
   onUiEvent(cmd) {
     const service = cmd.model.get(_a.service);
     //@debug "aaaa 112 svc=#{service}", cmd, @, cmd.status, cmd.results
@@ -179,24 +173,23 @@ class __hub_website extends LetcBox {
     }
   }
 
-  // ===========================================================
-  //
-  // @param [Object] method
-  // @param [Object] data
-  // @param [Object] socket
-  //
-  // @return [Object] 
-  //
-  // ===========================================================
+
+  /**
+   * 
+   * @param {*} method 
+   * @param {*} data 
+   * @param {*} socket 
+   * @returns 
+   */
   __dispatchRest(method, data, socket) {
-    //@debug "AAAAAAAAAAAAAA 731", method, data, socket
+    const { protocol, endpointPath } = bootstrap()
     switch (method) {
       case SERVICE.desk.create_hub:
         this.model.set(data);
-        var {
+        let {
           vhost
         } = data;
-        location.href = `${protocol}://${vhost}${location.pathname}#/${this.postCreation}`;
+        location.href = `${protocol}://${vhost}${endpointPath}#/${this.postCreation}`;
         this.phase = null;
         return this.softDestroy();
       case SERVICE.desk.create_website:

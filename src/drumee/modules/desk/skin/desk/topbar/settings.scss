@@ -1,6 +1,8 @@
+@use "mixins/drumee";
+
 .desk-topbar {
   &__menu-settings {
-    background-color: $core-transparent-background-desktop-icon;//rgba(200, 200, 200, 0.5);
+    background-color: var(--default-transparent-bg);//rgba(200, 200, 200, 0.5);
     border-radius: 6px;
     left: 10px;
     z-index: 31;
@@ -12,11 +14,11 @@
 
     .menu-topic-items {
       &__wrapper {
-        box-shadow: $drumee-shadow-main;
-        border-radius: $default-border-radius;
+        box-shadow: var(--shadow-main);
+        border-radius: var(--border-radius);
         right: 45px;
         top: -8px;
-        background-color: $core-default-background;
+        background-color: var(--default-bg);
         height: 58px;
         justify-content: center;
         padding-top: 0px;
@@ -43,7 +45,7 @@
         content: " ";
         width: 6px;
         height: 6px;
-        background-color: $core-default-background;
+        background-color: var(--default-bg);
         transform: rotate(45deg);
         position: absolute;
         top: 25px;
@@ -51,7 +53,7 @@
           //content: " ";
           width: 6px;
           height: 6px;
-          background-color: $core-default-background;
+          background-color: var(--default-bg);
           transform: rotate(45deg);
           position: absolute;
           top: 25px;
@@ -63,14 +65,14 @@
         top: 0;
         height: 100%;
         width: 5px;
-        background-color: $core-default-background;
+        background-color: var(--default-bg);
         &[data-device="mobile"] {
           //content: " ";
           position: absolute;
           top: 0;
           height: 100%;
           width: 5px;
-          background-color: $core-default-background;
+          background-color: var(--default-bg);
         }
       }
     }
@@ -85,11 +87,11 @@
     width: 60px; //62px;
     height: 48px;
     padding: 0;
-    @include typo($line: 15px, $size: 11px, $weight: 300, $color: $core-default-text-color);
+    @include drumee.typo($line: 15px, $size: 11px, $weight: 300, $color: var(--default-text-color));
     &[data-device="mobile"] {
       width: 40px;
       height: 37px;
-      @include typo($line: 13px, $size: 11px, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($line: 13px, $size: 11px, $weight: 300, $color: var(--default-text-color));
     }
     svg {
       width: 30px;
@@ -145,7 +147,7 @@
       margin-right: 9px;
       svg {
         padding: 4px;
-        color: $egrey-78; //$egrey-62; //$egrey-49 ; //$default-icon-neutral;
+        color: var(--egrey-78); //var(--egrey-62); //var(--egrey-49); //$default-icon-neutral;
       }
       .label {
         margin-left: 2px;
@@ -181,7 +183,7 @@
       svg {
         padding: 2px; //5px;
         color: #e74c3d; //#e8223b;
-        stroke: $ewhite;
+        stroke: var(--ewhite);
         //stroke-width:3% ;
       }
     }
@@ -230,17 +232,17 @@
       }
     }
     &:hover {
-      color: $eviolet; //$default-text-color;   //#879BFF;
+      color: var(--eviolet); //var(--default-text-color);   //#879BFF;
       svg {
-        color: $core-default-icon-hover !important; //;#879BFF
+        color: var(--default-icon-hover) !important; //;#879BFF
       }
     }
     &:focus,
     &:active {
       background-color: #879bff;
-      color: $ewhite;
+      color: var(--ewhite);
       svg {
-        color: $ewhite;
+        color: var(--ewhite);
       }
     }
   }

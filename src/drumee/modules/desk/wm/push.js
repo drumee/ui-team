@@ -111,12 +111,16 @@ class __push_manager extends winman {
         _.delay(() => location.reload());
         break;
 
-      case "drumate.logout":
-        if (data.session_tag === Visitor.get("session_tag")) {
-          // Disconnect sibling sessions
-          return location.reload();
+      case SERVICE.drumate.logout:
+        if (!sender || sender.socket_id == Visitor.get(_a.socket_id)) {
+          return;
         }
-        break;
+        this.fetchService(SERVICE.yp.hello).then((data) => {
+          if (data.connection == 'offline') {
+            location.reload()
+          }
+        })
+        return;
 
       case "user.connection_status":
         this.myContactsStatus.set(data.user_id, data);
@@ -201,6 +205,7 @@ class __push_manager extends winman {
           body: LOCALE.INCOMING_CALL || "",
           icon: Visitor.avatar(data.origin.uid),
         };
+        if (!window.Notification) return;
         new Notification(title, notif);
       }
       this.addWindow(o);
@@ -247,6 +252,7 @@ class __push_manager extends winman {
         body: message,
         icon: Visitor.avatar(uid)
       };
+      if (!window.Notification) return;
       new Notification(title, notif);
     } catch (e) {
       this.warn("Failed to notify", e)
@@ -289,7 +295,7 @@ class __push_manager extends winman {
         currentRoom.goodbye();
         return;
     }
-    if(currentRoom.stateMachine){
+    if (currentRoom.stateMachine) {
       currentRoom.stateMachine(state, data);
     }
     return;

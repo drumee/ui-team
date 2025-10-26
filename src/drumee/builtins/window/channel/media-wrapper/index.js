@@ -195,7 +195,7 @@ class __media_wrapper extends LetcBox {
     const {
       status
     } = cmd;
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
 

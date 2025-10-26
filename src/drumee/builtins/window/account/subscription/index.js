@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2022
-//   FILE : /ui/src/drumee/builtins/window/account/subscription/index.js
-//   TYPE : Component
-// ==================================================================== *
-
 class __account_subscription extends LetcBox {
   constructor(...args) {
     super(...args);

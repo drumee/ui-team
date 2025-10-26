@@ -1,27 +1,29 @@
+@use "mixins/drumee";
+
 .window-screenshare {
   &__header {
     width: 100%;
     height: 44px;
     min-height: 44px;
     border-bottom: none;
-    background-color: $screenshare-main;
+    background-color: var(--screenshare-main);
 
     &[data-connection="ok"] {
       
       &[data-area="personal"] {
-        background-color: $bigchat-background-header;
+        background-color: var(--bigchat-header-bg);
       }
       &[data-area="dmz"] {
-        background-color: $share-background-header;
+        background-color: var(--sharebox-main);
       }
       &[data-area="private"] {
-        background-color: $team-background-header;
+        background-color: var(--teamroom-main);
       }
 
     }
 
     .menu-items {
-      background: $ewhite;
+      background: var(--ewhite);
       // margin-top: 43px;
     }
   }
@@ -32,7 +34,7 @@
       height: 20px; //40px;
       //padding: 10px;
       margin: auto 0 auto 15px;
-      color: $ewhite;
+      color: var(--ewhite);
       &.desktopgroup {
         margin-top: 11px;
       }
@@ -65,12 +67,12 @@
       max-width: 200px;
       justify-content: center;
       margin: auto;
-      // @include typo($size:14px,$line:12px,$weight:400,$color:$ewhite);
+      // @include typo($size:14px,$line:12px,$weight:400,$color: var(--ewhite));
       .name {
         align-items: flex-start;
-        @include overflow-text;
+        @include drumee.overflow-text;
         margin-left: -30px; //-54px;
-        @include typo($size: 18px, $line: 24px, $weight: 400, $color: $default-text-reverse);
+        @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
         width: 316px;
         margin-right: 18px;
         justify-content: center;

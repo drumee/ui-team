@@ -4,10 +4,10 @@
 #   TYPE : Component style
 # ===================================================================**/
 
-@import '../../../../skin/mixins/drumee.scss';
-@import 'cross-signin';
-@import 'gateway';
-@import 'url';
+@use 'mixins/drumee.scss';
+@use 'cross-signin';
+@use 'gateway';
+@use 'url';
 
 .welcome-signin {
   &__ui,
@@ -74,8 +74,8 @@
     
     &.welcome__row {
       &[data-status="error"] {
-        border-radius:$default-border-radius;
-        border: 2px solid $core-default-border-error;
+        border-radius:var(--border-radius);
+        border: 2px solid var(--default-border-error);
       }
     }
   }
@@ -112,8 +112,8 @@
 
   &__row {
     align-items: center;
-    background-color: $core-default-block-background;
-    border-radius:$default-border-radius;
+    background-color: var(--default-bg-block);
+    border-radius:var(--border-radius);
     height: 100%;
     max-height: 56px;
     width: 100%;
@@ -156,7 +156,7 @@
       //top: 60px;
       & .drumee-text{
         margin: 0px -20px;
-        @include typo($size: 16px, $line: 16px, $color: $white-f9);
+        @include drumee.typo($size: 16px, $line: 16px, $color: var(--white-f9));
       }
     }
     &.buttons-wrapper,
@@ -185,8 +185,8 @@
       height: 100%;
       padding: 0;
       &[data-status="error"] {
-        border-radius:$default-border-radius;
-        border: 2px solid $core-default-border-error;
+        border-radius:var(--border-radius);
+        border: 2px solid var(--default-border-error);
       }
     }
   }
@@ -197,18 +197,18 @@
   }
 
   &__note {
-    @include typo($size: 20px, $line: 28px,$weight:400, $color: $core-default-text-reverse);
+    @include drumee.typo($size: 20px, $line: 28px,$weight:400, $color: var(--default-text-reverse));
     justify-content: center;
     text-align: center;
     width: 100%;
     &[data-state="reconnect"]{
-      @include typo($size: 14px, $line: 20px,$weight:300, $color:$core-default-text-reverse);
+      @include drumee.typo($size: 14px, $line: 20px,$weight:300, $color:var(--default-text-reverse));
     }
 
     &.header {
-      @include typo($size: 38px, $line: 45px,$weight:500, $color:$core-default-text-reverse);
+      @include drumee.typo($size: 38px, $line: 45px,$weight:500, $color:var(--default-text-reverse));
       &[data-mode="reconnect"]{
-        @include typo($size: 12px, $line: 12px,$weight:300, $color:$core-default-text-reverse);
+        @include drumee.typo($size: 12px, $line: 12px,$weight:300, $color:var(--default-text-reverse));
       }  
     }
     &.sub-header{
@@ -216,12 +216,12 @@
     }
 
     &.steps {
-      color: $white-f7;
+      color: var(--white-f7);
       top: 30px;
     }
 
     &.drumee-com {
-      @include typo($size: 20px, $line: 28px,$weight:500,$color:$white-f9);
+      @include drumee.typo($size: 20px, $line: 28px,$weight:500,$color: var(--white-f9));
       position: absolute;
       right: -130px;
     }
@@ -233,7 +233,7 @@
     }
 
     &.password-tips {
-      @include typo($size: 12px, $line: 16px, $weight:400, $color: $white-f9);
+      @include drumee.typo($size: 12px, $line: 16px, $weight:400, $color: var(--white-f9));
       padding-top: 47px;
     }
 
@@ -250,7 +250,7 @@
 
     &.helper,
     &.not-now {
-      @include typo($size: 16px, $line: 16px, $color: $white-f9);
+      @include drumee.typo($size: 16px, $line: 16px, $color: var(--white-f9));
       width: 100%;
     }
 
@@ -272,13 +272,13 @@
       cursor: pointer;
       text-decoration-line: underline;
       &:hover {
-        color:$eviolet;//#6a85ff; 
+        color:var(--eviolet);//#6a85ff; 
       }
     }
   }
 
   &__icon {
-    color: $core-default-icon-neutral;//$egrey-89;
+    color: var(--default-icon-neutral);//var(--egrey-89);
     cursor: pointer;
     height: 18px;
     width: 18px; //20px;
@@ -291,7 +291,7 @@
     &.mobile,
     &.mobile-number,
     &.acknowledgment {
-      color: $core-default-text-reverse;
+      color: var(--default-text-reverse);
     }
 
     &.mobile,
@@ -336,16 +336,16 @@
       border-bottom: none;
       border-radius:0 6px 6px 0px;
       padding: 4px;
-      @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
+      @include drumee.typo($size: 18px, $line: 28px, $color: var(--default-text-color));
 
       &::placeholder {
-        @include typo($size: 19px, $line: 28px, $weight: 300, $color:$connect-text-placeholder);
+        @include drumee.typo($size: 19px, $line: 28px, $weight: 300, $color: var(--connect-text-placeholder));
       }
     }
 
     &[data-status="error"] {
-      border-radius:$default-border-radius;
-      border: 2px solid $core-default-border-error;
+      border-radius:var(--border-radius);
+      border: 2px solid var(--default-border-error);
     }
 
     & .entry-reminder_error {
@@ -359,9 +359,9 @@
     }
     
     &.input-box {
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       align-items: center;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       height: 56px;
       width: 100%;
 
@@ -382,15 +382,15 @@
     position: absolute;
     right: 15px;
     top: 15px;
-    color: $egrey-2f;
+    color: var(--egrey-2f);
     opacity: 0.7;
   }
 
   &__button-confirm {
-    @include typo($size: 20px, $line: 28px, $color: $default-text-reverse);
+    @include drumee.typo($size: 20px, $line: 28px, $color: var(--default-text-reverse));
     align-items: center;
-    background-color: $egreen-soft;
-    border-radius:$default-border-radius;
+    background-color: var(--egreen-soft);
+    border-radius:var(--border-radius);
     cursor: pointer;
     height: 100%;
     justify-content: center;
@@ -402,9 +402,9 @@
   }
 
   &-go {
-    @include typo($color: $core-default-text-reverse, $size: 18px, $line: 21px, $weight: 300);
+    @include drumee.typo($color: var(--default-text-reverse), $size: 18px, $line: 21px, $weight: 300);
     align-items: center;
-    background-color: $egreen-soft;
+    background-color: var(--egreen-soft);
     cursor: pointer;
     justify-content: center;
     opacity: 0.2;
@@ -412,7 +412,7 @@
     width: 100%;
 
     &[data-device="mobile"] {
-      @include typo($color: $core-default-text-reverse, $size: 16px, $line: 13px, $weight: 300);
+      @include drumee.typo($color: var(--default-text-reverse), $size: 16px, $line: 13px, $weight: 300);
     }
 
     &[data-mode="1"]{

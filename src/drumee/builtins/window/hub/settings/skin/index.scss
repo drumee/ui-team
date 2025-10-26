@@ -1,12 +1,12 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .hub-name {
   &__error {
-    @include typo($color: $eorange-sunset, $size: 12px, $line: 16px, $weight: 400);
-    background-color: $core-default-background;
+    @include drumee.typo($color: var(--eorange-sunset), $size: 12px, $line: 16px, $weight: 400);
+    background-color: var(--default-bg);
     color: #EA4D44;
     position: absolute;
-    border: 1px solid $eorange-sunset;
+    border: 1px solid var(--eorange-sunset);
     padding: 5px;
     border-radius: 3px;
     top: 0px;
@@ -19,26 +19,26 @@
     width: 410px;
     position: absolute;
     height: auto !important;
-    background-color: $core-default-background ;
-    border-radius: $default-border-radius-bottom;
+    background-color: var(--default-bg);
+    border-radius: var(--border-radius-bottom);
     align-items: center;
     min-height: 345px;
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
   }
 
 
   &__field {
-    color: $egreen; //#18A3AC;
+    color: var(--egreen); //#18A3AC;
   }
 
   &__header {
-    @include typo($color: $egreen, $size: 14px, $line: 16px, $weight: 400); //#18A3AC
+    @include drumee.typo($color: var(--egreen), $size: 14px, $line: 16px, $weight: 400); //#18A3AC
   }
 
   &__label {
     width: 120px;
     flex-shrink: 0;
-    @include typo($color: $egreen, $size: 14px, $line: 26px, $weight: 400); //#18A3AC
+    @include drumee.typo($color: var(--egreen), $size: 14px, $line: 26px, $weight: 400); //#18A3AC
   }
 
   &__container {
@@ -46,8 +46,8 @@
 
     &.wrapper-general {
       width: 100%;
-      background-color: $core-default-block-background;
-      border-radius: $default-border-radius;
+      background-color: var(--default-bg-block);
+      border-radius: var(--border-radius);
       white-space: nowrap;
       overflow: visible;
       padding: 9px 0; // 9px 0 0 0px;
@@ -79,17 +79,17 @@
   }
 
   &__field {
-    color: $emauve-lighter; // #d66fe8;
+    color: var(--emauve-lighter); // #d66fe8;
   }
 
   &__header {
-    @include typo($color: $teamroom-text-color, $size: 18px, $line: 19px, $weight: 400); //#AB47BC
+    @include drumee.typo($color: var(--teamroom-main), $size: 18px, $line: 19px, $weight: 400); //#AB47BC
   }
 
   &__title {
     //margin-top: 7px;
     margin-top: -3px;
-    @include typo($color: $teamroom-text-color, $size: 16px, $line: 22px, $weight: 400); //#AB47BC
+    @include drumee.typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400); //#AB47BC
     // &--access{
     //   margin-top: 22px;
     //   @include typo($color:#AB47BC,$size:16px,$line:22px,$weight:400);
@@ -101,11 +101,11 @@
     margin-left: 20px;
     // margin-right: 15px;
     flex-shrink: 0;
-    @include typo($color: $teamroom-text-color, $size: 14px, $line: 26px, $weight: 400); //#AB47BC
+    @include drumee.typo($color: var(--teamroom-main), $size: 14px, $line: 26px, $weight: 400); //#AB47BC
   }
 
   &__icon.destroy {
-    color: $core-default-icon-neutral;
+    color: var(--default-icon-neutral);
     opacity: 0.65;
     width: 19px;
     height: 19px;
@@ -118,7 +118,7 @@
     &:hover {
       svg {
         opacity: 1;
-        color: $core-default-icon-hover ;
+        color: var(--default-icon-hover);
       }
     }
   }
@@ -128,24 +128,24 @@
     flex-shrink: 0;
 
     input {
-      @include typo($size: 14px, $line: 26px, $weight: 400, $color: $core-default-text-color);
+      @include drumee.typo($size: 14px, $line: 26px, $weight: 400, $color: var(--default-text-color));
     }
   }
 
   &__item {
     height: 28px;
     align-items: center;
-    color: $ewhite;
+    color: var(--ewhite);
 
     &[data-edit="0"]:hover {
-      background-color: $core-default-background-hover;
+      background-color: var(--default-bg-hover);
 
       /*      *{
         color: $default-text-hover;
       }*/
       input {
-        @include placeholder-input {
-          color: $core-default-text-hover
+        @include drumee.placeholder-input {
+          color: var(--default-text-hover)
         }
 
         ;
@@ -153,15 +153,15 @@
 
       .hub-settings__icon {
         visibility: visible;
-        border-radius: $default-border-radius;
+        border-radius: var(--border-radius);
       }
     }
 
     &[data-edit="1"] {
       .hub-settings__icon {
         visibility: visible;
-        background-color: $core-default-icon-active ;
-        border-radius: $default-border-radius;
+        background-color: var(--default-icon-active);
+        border-radius: var(--border-radius);
       }
     }
 
@@ -174,8 +174,8 @@
     width: 160px;
     max-width: 160px;
     flex-shrink: 0;
-    @include typo($color: $core-default-text-color , $size: 14px, $line: 26px, $weight: 300); //$weight:400
-    @include overflow-text;
+    @include drumee.typo($color: var(--default-text-color) , $size: 14px, $line: 26px, $weight: 300); //$weight:400
+    @include drumee.overflow-text;
 
     .inner {
       white-space: nowrap;
@@ -219,8 +219,8 @@
 
   &__member-name {
     max-width: 160px; //140px
-    @include typo($size: 14px, $line: 26px, $color: $core-default-text-color , $weight: 300); //#494949 $weight:400,
-    @include overflow-text;
+    @include drumee.typo($size: 14px, $line: 26px, $color: var(--default-text-color) , $weight: 300); //#494949 $weight:400,
+    @include drumee.overflow-text;
 
     .inner {
       white-space: nowrap;
@@ -230,8 +230,8 @@
 
     &:hover {
       input {
-        @include placeholder-input {
-          color: $core-default-text-reverse
+        @include drumee.placeholder-input {
+          color: var(--default-text-reverse)
         }
 
         ;

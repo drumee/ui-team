@@ -1,14 +1,23 @@
-/*
-   Copyright Xialia.com  2011-2021
-   FILE : src/drumee/router/gateway
-   TYPE :
+/**
+ * @license
+ * Copyright 2024 Thidima SA. All Rights Reserved.
+ * Licensed under the GNU AFFERO GENERAL PUBLIC LICENSE, Version 3 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.gnu.org/licenses/agpl-3.0.html
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =============================================================================
  */
-
 require("./skin/resizable.css");
 require("builtins/contextmenu/skin/index.scss");
-// require("jquery-ui/ui/core");
-// require("jquery-ui/ui/widget");
-require("skin/global/common");
+
+require("skin");
 const { appendFontFace, appendLink } = require("core/utils");
 const { getModule, moduleName } = require('./modules');
 
@@ -256,23 +265,6 @@ class drumee_router extends LetcBox {
     return (/^(dmz|share)$/.test(bootstrap().area))
   }
 
-  // /**
-  //  * 
-  //  */
-  // defaultWallpaper() {
-  //   const { appRoot } = bootstrap();
-  //   let base = appRoot + "/images/background/";
-  //   if (this.isDmz()) {
-  //     return {
-  //       url: base + 'dmz-sharebox-background.jpg',
-  //       preview: base + 'dmz-sharebox-wallpaper-preview.jpg'
-  //     }
-  //   }
-  //   return {
-  //     url: base + 'welcome-wallpaper.png',
-  //     preview: base + 'welcome-wallpaper-preview.png'
-  //   }
-  // }
 
   /**
 * 
@@ -341,7 +333,7 @@ class drumee_router extends LetcBox {
     }
     this.ensurePart('body').then(async (p) => {
       await Kind.waitFor(kind);
-      p.feed({ kind, name: name });
+      p.feed({ kind, name });
       this.currentModule = p.children.last();
     })
   }

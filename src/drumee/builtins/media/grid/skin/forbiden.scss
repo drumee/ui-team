@@ -1,54 +1,58 @@
-&-forbiden {
-  &__container {
-    width: 180px;
-    height: auto;
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    justify-content: center;
-    border: 1px solid $eorange-sunset;
-    border-radius: $default-border-radius-small;
-    background-color: $core-default-background;
-    box-shadow: $drumee-shadow-container;
-    Z-index: 200;
+@use "mixins/drumee";
 
-    &[data-drag="ok"] {
-      display: none;
+.media-grid {
+  &-forbiden {
+    &__container {
+      width: 180px;
+      height: auto;
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      justify-content: center;
+      border: 1px solid var(--eorange-sunset);
+      border-radius: var(--border-radius-small);
+      background-color: var(--default-bg);
+      box-shadow: var(--shadow-container);
+      Z-index: 200;
+
+      &[data-drag="ok"] {
+        display: none;
+      }
+    }
+
+    &__text {
+      width: 100%;
+      padding: 5px;
+      @include drumee.typo($line: 13px, $size: 12px, $weight: 400, $color: var(--eorange-sunset));
+      text-align: center;
+    }
+
+    &__icon {
+      width: 17px;
+      height: 17px;
+      padding: 2px;
+      border: 1px solid var(--eorange-sunset);
+      background-color: var(--eorange-sunset);
+      color: var(--default-icon-reverse);
+      fill: var(--default-icon-reverse);
+      border-radius: 50px;
+      position: absolute;
+      top: -6px;
+      left: -6px;
     }
   }
 
-  &__text {
-    width: 100%;
-    padding: 5px;
-    @include typo($line: 13px, $size: 12px, $weight: 400, $color: $eorange-sunset);
-    text-align: center;
-  }
-
-  &__icon {
-    width: 17px;
-    height: 17px;
-    padding: 2px;
-    border: 1px solid $eorange-sunset;
-    background-color: $eorange-sunset;
-    color: $core-default-icon-reverse;
-    fill: $core-default-icon-reverse;
-    border-radius: 50px;
+  &__files-count {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: var(--folder-main-light);
     position: absolute;
-    top: -6px;
-    left: -6px;
+    left: calc(50% - 15px);
+    top: calc(50% - 15px);
+    text-align: center;
+    @include drumee.typo($line: 30px, $size: 15px, $weight: 400, $color: var(--default-text-reverse));
+    z-index: 20;
   }
-}
-
-&__files-count {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  overflow: hidden;
-  background-color: $folder-main-light;
-  position: absolute;
-  left: calc(50% - 15px);
-  top: calc(50% - 15px);
-  text-align: center;
-  @include typo($line: 30px, $size: 15px, $weight: 400, $color: $core-default-text-reverse);
-  z-index: 20;
 }

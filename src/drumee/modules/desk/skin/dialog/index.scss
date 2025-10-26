@@ -1,17 +1,20 @@
-//[data-flow].dialog, .dialog {
+@use "sass:meta";
+@use'button/close.scss' as *;
+@use'button/submit.scss' as *;
+@use'container/small.scss' as *;
+
 .dialog {
-  &__button{
-    @import 'button/close.scss';
-    @import 'button/submit.scss';
+  &__button {
+    @include desk-close-btn;
+    @include desk-submit-btn;
   }
-  &__container{
-    @import 'container/small.scss';
+
+  &__container {
+    @include desk-container-small;
   }
-  &__wrapper{
-    // position: absolute;
-    // width: 0;
-    // height: 0;
-    &--modal{
+
+  &__wrapper {
+    &--modal {
       left: 50%;
     }
   }

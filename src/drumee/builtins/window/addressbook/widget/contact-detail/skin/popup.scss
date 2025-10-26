@@ -1,245 +1,245 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2021
-#   FILE : /src/drumee/builtins/window/addressbook/widget/contact-form/skin/index.scss
-#   TYPE : Style Component
-# ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
-&__popup {
-  
-  &-wrapper {
-    border-radius : $default-border-radius;
-    background-color:$ab-default-background;
-    box-shadow:$drumee-shadow-popup;
-    height: calc(100% - 20px);
-    max-height: 300px;
-    max-width: 550px;
-    min-height: 300px;
-    min-width: 320px;
-    width: calc( 100% - 20px);
-  }
+.addressbook-widget-contact-detail {
+  &__popup {
 
-  &-close {
-    color: $ab-default-thinline-icon;
-    cursor: pointer;
-    height: 12px;
-    position: absolute;
-    right: 10px;
-    top: 10px;
-    width: 12px;
-    z-index: 1;
-
-    &:hover {
-      color:$ab-default-thinline-icon-hover;
+    &-wrapper {
+      border-radius: var(--border-radius);
+      background-color: var(--default-background);
+      box-shadow: var(--shadow-popup);
+      height: calc(100% - 20px);
+      max-height: 300px;
+      max-width: 550px;
+      min-height: 300px;
+      min-width: 320px;
+      width: calc(100% - 20px);
     }
-  }
 
-  &_header-title {
-    @include typo($size: 18px, $line: 16px, $color: $ab-default-text-color);
+    &-close {
+      color: var(--default-thinline-icon);
+      cursor: pointer;
+      height: 12px;
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 12px;
+      z-index: 1;
 
-    &.resend-invite {
-      align-items: baseline;
-      height: 30px;
-      justify-content: center;
-      width: 100%;
-      //margin-top: 10px;
-    }
-  }
-
-  &__wrapper {
-    &.header {
-      align-items: center;
-      height: 35px;
-      justify-content: center;
-      width: calc(100% - 30px); 
-    }
-  }
-
-  &-model-holder {
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;//40px auto auto; 
-    text-align: center;
-    width: 100%;
-
-    padding:0 10px;
-    height: 100%;
-  }
-
-  &-resend-content {
-    &.invite-again{
-      width: 320px;
-    }
-  }
-
-  &_header-sub-title,
-  &-resend-content {
-    letter-spacing: 0;
-    margin-bottom: 20px;//40px;
-    margin-top:40px;
-    text-align: center;
-    width: 356px;
-    justify-content: center;
-    @include typo($weight: 300, $size: 16px, $line: 24px, $color: $ab-default-text-color); //$line: 26px,
-  }
-
-  &__note.fullname {
-    overflow: hidden;
-    padding-left: 5px;
-    width: auto;
-    @include typo( $size: 18px, $weight:400,$line: 20px, $color: $ab-secondary-text-color);//$line: 16px
-
-    & .inner.note-content {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
-  
-  &__entry {
-    &.message {
-      padding-top: 10px;
-      width: 100%;
-      margin-top: 10px;
-      margin-bottom: -10px;
-      
-      & textarea {
-        background:$ab-default-block-background;
-        border-radius: $default-border-radius;
-        border: none;
-        outline: none;
-        padding: 10px;
-        resize: none;
-        @include typo($size: 16px, $line: 21px, $color: $ab-default-text-color);
-
-        &::placeholder {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $ab-default-text-placeholder);
-        }
+      &:hover {
+        color: var(--default-thinline-icon-hover);
       }
     }
-  }
 
-  & .user-profile__main {
-    border-radius: 50px;
-    height: 29px;
-    overflow: hidden;
-    width: 29px;
-    margin-top: 6px;
+    &_header-title {
+      @include drumee.typo($size: 18px, $line: 16px, $color: var(--default-text-color));
 
-    justify-content: center;
-    justify-items: center;
-    align-items: center;
-    align-content: center;
-  }
+      &.resend-invite {
+        align-items: baseline;
+        height: 30px;
+        justify-content: center;
+        width: 100%;
+        //margin-top: 10px;
+      }
+    }
 
-  & .widget-contact-detail {
-    &__buttons-wrapper {
-      display: flex;
-      justify-content: center;
-      width: 100%;
-
-      & .button {
+    &__wrapper {
+      &.header {
         align-items: center;
         height: 35px;
         justify-content: center;
-        margin: 40px 0 0;
-        text-align: center;
-        min-width: 115px;
-      }
-
-      & .button:first-child {
-        margin-right:30px;// 50px;
+        width: calc(100% - 30px);
       }
     }
 
-    &__button-cancel {
-      @include typo( $size: 16px, $line: 16px, $color: $btn-rollback-text);
-      border-radius:$default-border-radius;
-      border: 1px solid $btn-rollback-border;
+    &-model-holder {
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto; //40px auto auto; 
+      text-align: center;
+      width: 100%;
 
-      &:hover {
-        border:2px solid $btn-rollback-border-hover;
-        color:$btn-rollback-text-hover; 
+      padding: 0 10px;
+      height: 100%;
+    }
+
+    &-resend-content {
+      &.invite-again {
+        width: 320px;
       }
     }
 
-    &__button-confirm {
-      @include typo( $size: 16px, $line: 16px, $color: $btn-caution-text);
-      background-color:$btn-caution-background;
-      border:0px;
+    &_header-sub-title,
+    &-resend-content {
+      letter-spacing: 0;
+      margin-bottom: 20px; //40px;
+      margin-top: 40px;
+      text-align: center;
+      width: 356px;
+      justify-content: center;
+      @include drumee.typo($weight: 300, $size: 16px, $line: 24px, $color: var(--default-text-color)); //$line: 26px,
+    }
+
+    &__note.fullname {
+      overflow: hidden;
+      padding-left: 5px;
+      width: auto;
+      @include drumee.typo($size: 18px, $weight: 400, $line: 20px, $color: var(--secondary-text-color)); //$line: 16px
+
+      & .inner.note-content {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    &__entry {
+      &.message {
+        padding-top: 10px;
+        width: 100%;
+        margin-top: 10px;
+        margin-bottom: -10px;
+
+        & textarea {
+          background: var(--default-block-background);
+          border-radius: var(--border-radius);
+          border: none;
+          outline: none;
+          padding: 10px;
+          resize: none;
+          @include drumee.typo($size: 16px, $line: 21px, $color: var(--default-text-color));
+
+          &::placeholder {
+            @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
+          }
+        }
+      }
+    }
+
+    & .user-profile__main {
+      border-radius: 50px;
+      height: 29px;
+      overflow: hidden;
+      width: 29px;
+      margin-top: 6px;
+
+      justify-content: center;
+      justify-items: center;
+      align-items: center;
+      align-content: center;
+    }
+
+    & .widget-contact-detail {
+      &__buttons-wrapper {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+
+        & .button {
+          align-items: center;
+          height: 35px;
+          justify-content: center;
+          margin: 40px 0 0;
+          text-align: center;
+          min-width: 115px;
+        }
+
+        & .button:first-child {
+          margin-right: 30px; // 50px;
+        }
+      }
+
+      &__button-cancel {
+        @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
+        border-radius: var(--border-radius);
+        border: 1px solid var(--btn-rollback-border);
+
+        &:hover {
+          border: 2px solid var(--btn-rollback-border-hover);
+          color: var(--btn-rollback-text-hover);
+        }
+      }
+
+      &__button-confirm {
+        @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-caution-text));
+        background-color: var(--btn-caution-background);
+        border: 0px;
+        width: 115px;
+
+        &:hover {
+          background-color: var(--btn-caution-background-hover);
+        }
+
+        &.resend {
+          background-color: var(--btn-commit-background);
+          color: var(--btn-commit-text);
+          max-width: 165px;
+          width: auto;
+          padding: 5px 10px; //5px
+
+          &:hover {
+            background-color: var(--btn-commit-background-hover);
+          }
+        }
+
+        &.unarchive {
+          background-color: var(--btn-commit-background);
+          color: var(--btn-commit-text);
+          width: 115px;
+
+          &:hover {
+            background-color: var(--btn-commit-background-hover);
+          }
+        }
+      }
+    }
+
+    &__delete-acknowledgement,
+    &__resend-invite {
+      align-items: center;
+    }
+
+    &_message-info {
+      @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
+      text-align: center;
+
+      &.first-node {
+        margin: 22px 30px 22px 30px;
+      }
+    }
+
+    &__button-ok {
+      @include drumee.typo($size: 16px, $color: var(--btn-rollback-text));
+      align-items: center;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--btn-rollback-border);
+      height: 35px;
+      justify-content: center;
+      margin-top: 36px;
       width: 115px;
 
       &:hover {
-        background-color:$btn-caution-background-hover;
-      }
-
-      &.resend {
-        background-color: $btn-commit-background;
-        color: $btn-commit-text;
-        max-width: 165px;
-        width: auto;
-        padding: 5px 10px;//5px
-        &:hover {
-          background-color: $btn-commit-background-hover; 
-        }
-      }
-      &.unarchive {
-        background-color: $btn-commit-background;
-        color: $btn-commit-text;
-        width: 115px;
-        
-        &:hover {
-          background-color: $btn-commit-background-hover; 
-        }
+        border: 2px solid var(--btn-rollback-border-hover);
+        color: var(--btn-rollback-text-hover);
       }
     }
-  }
 
-  &__delete-acknowledgement,
-  &__resend-invite {
-    align-items: center;
-  }
+    &__icon {
+      &.profile-icon {
+        color: var(--default-icon-neutral);
+        height: 26px;
+        margin-right: 10px;
+        min-width: 30px;
+        opacity: .75;
+        width: 30px;
+      }
 
-  &_message-info {
-    @include typo($weight: 300, $size: 16px, $line: 26px, $color: $ab-default-text-color);
-    text-align: center;
-
-    &.first-node {
-      margin: 22px 30px 22px 30px;
-    }
-  }
-
-  &__button-ok {
-    @include typo($size: 16px,$color:$btn-rollback-text);
-    align-items: center;
-    border-radius:$default-border-radius;
-    border: 1px solid $btn-rollback-border;
-    height: 35px;
-    justify-content: center; 
-    margin-top: 36px;
-    width: 115px;
-    
-    &:hover {
-      border:2px solid $btn-rollback-border-hover; 
-      color:$btn-rollback-text-hover;
-    }
-  }
-
-  &__icon {
-    &.profile-icon {
-      color:$ab-default-icon-neutral;
-      height: 26px;
-      margin-right: 10px;
-      min-width: 30px;
-      opacity: .75;
-      width: 30px;
-    }
-    &.user-help{
-      min-width: 30px;
-      opacity: .8;
-      width: 34px;
-      height: 35px;
-      margin-bottom: 5px;
+      &.user-help {
+        min-width: 30px;
+        opacity: .8;
+        width: 34px;
+        height: 35px;
+        margin-bottom: 5px;
+      }
     }
   }
 }

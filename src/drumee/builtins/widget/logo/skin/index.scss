@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/widget/logo/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .custom-logo {
   &__ui {
@@ -28,7 +28,7 @@
   }
 
   &__text {
-    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
     text-align: center;
 
     &[data-state="0"] {

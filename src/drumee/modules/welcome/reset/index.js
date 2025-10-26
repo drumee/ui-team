@@ -26,16 +26,16 @@ class __welcome_reset extends __welcome_interact {
   /**
    *
   */
- onDomRefresh() {
+  onDomRefresh() {
     let sid = bootstrap().maiden_session;
     if (this._secret) {
       this.postService({
-        service : SERVICE.butler.check_token,
-        secret  : this._secret,
+        service: SERVICE.butler.check_token,
+        secret: this._secret,
         sid
-      }, {async:1}).then((data)=>{
+      }, { async: 1 }).then((data) => {
         this.checkTokenResponse(data);
-      }).catch(()=>{
+      }).catch(() => {
         return this.feed(require('./skeleton').default(this));
       });
       return;
@@ -53,11 +53,11 @@ class __welcome_reset extends __welcome_interact {
       case _a.header:
         child.feed(require('./skeleton/header').default(this));
         break
-      
+
       case _a.content:
         child.feed(require('./skeleton/main').default(this));
         break
-      
+
       default:
         return super.onPartReady(child, pn);
     }
@@ -66,13 +66,13 @@ class __welcome_reset extends __welcome_interact {
   /**
    *
   */
-  route () {
+  route() {
     let _content;
     switch (this._method) {
       case _a.password:
         _content = require('./skeleton/password').default(this)
         break
-      
+
       case 'otpverify':
         _content = require('./skeleton/otp').default(this)
         let a = () => {
@@ -80,12 +80,12 @@ class __welcome_reset extends __welcome_interact {
         }
         _.delay(a, 15000)
         break
-      
+
       case 'complete':
-        this.feed({kind: 'spinner', mode: 'welcome'});
-        _.delay(()=>{location.hash = ''; location.reload()}, 2000);
+        this.feed({ kind: 'spinner', mode: 'welcome' });
+        _.delay(() => { location.hash = ''; location.reload() }, 2000);
         return;
-      
+
       default:
         _content = require('./skeleton/password').default(this)
     }
@@ -93,7 +93,7 @@ class __welcome_reset extends __welcome_interact {
     this.__header.feed(require('./skeleton/header').default(this))
     return this.__content.feed(_content)
   }
-  
+
   /**
    * @param {LetcBox} cmd
    * @param {any} args
@@ -102,19 +102,19 @@ class __welcome_reset extends __welcome_interact {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
 
     switch (service) {
-      case _e.submit: 
+      case _e.submit:
         return this.submit();
-      
+
       case 'create-password':
         return this.createPassword();
-      
+
       case 'verify-code':
         return this.verifyCode();
-      
+
       case 'resend-otp':
         return this.resendOTP()
-      
-      default: 
+
+      default:
         return this.debug(`${service} not found.`)
     }
   }
@@ -122,26 +122,26 @@ class __welcome_reset extends __welcome_interact {
   /**
    *
   */
-  submit () {
+  submit() {
     if (!this.checkSanity()) {
       this._input.showError()
       const msg = LOCALE.PLEASE_ENTER_EMAIL_TO_CONTINUE
       return this.renderMessage(msg)
     }
-    
+
     this.postService({
-      service : SERVICE.butler.get_reset_token,
-      email   : this._input.getValue()
-    }).then((data)=>{
+      service: SERVICE.butler.get_reset_token,
+      email: this._input.getValue()
+    }).then((data) => {
       this.resetTokenResponse(data)
     })
   }
-  
+
   /**
    *
   */
-  createPassword () {
-    if (! this.checkSanity()) {
+  createPassword() {
+    if (!this.checkSanity()) {
       this._input.showError()
       return this.renderMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
     }
@@ -149,22 +149,22 @@ class __welcome_reset extends __welcome_interact {
     const data = this._input.getData()
 
     this.postService({
-      service  : SERVICE.butler.set_password,
-      secret   : this._secret,
-      password : data.value,
-      id       : this.mget(_a.uid)
-    }).then(async (resp)=>{
+      service: SERVICE.butler.set_password,
+      secret: this._secret,
+      password: data.value,
+      id: this.mget(_a.uid)
+    }).then(async (resp) => {
       let params = await this.fetchService(SERVICE.yp.get_env);
-      if(params.user && params.user.signed_in){
+      if (params.user && params.user.signed_in) {
         Visitor.set(params.user);
         location.hash = '#/desk';
-        setTimeout(()=>{
+        setTimeout(() => {
           location.reload()
         }, 1000);
-      }else{
+      } else {
         this.responseRouter(resp);
       }
-    }).catch((e)=>{
+    }).catch((e) => {
       this.renderMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
     })
   }
@@ -172,40 +172,40 @@ class __welcome_reset extends __welcome_interact {
   /**
    * 
   */
-  verifyCode () {
+  verifyCode() {
     this.validateData()
     if (this.formStatus == _a.error) {
       const msg = LOCALE.ENTER_CODE_RECEIVED//'Please enter the code received on your mobile.'
       return this.renderMessage(msg)
     }
-    
+
     const data = this.getData(_a.formItem)
 
     this.postService({
-      service : SERVICE.butler.password_otpverify,
-      secret  : this._secret,
-      code    : data.code
-    }, {async:1}).then(async (resp)=>{
+      service: SERVICE.butler.password_otpverify,
+      secret: this._secret,
+      code: data.code
+    }, { async: 1 }).then(async (resp) => {
       let params = await this.fetchService(SERVICE.yp.get_env);
-      if(params.user && params.user.signed_in){
+      if (params.user && params.user.signed_in) {
         Visitor.set(params.user);
         location.hash = '#/desk';
-      }else{
+      } else {
         this.otpVerifyResponse(resp);
       }
-    }).catch(()=>{
+    }).catch(() => {
       this.otpVerifyResponse(resp);
     })
   }
-  
+
   /**
    *
   */
-  resendOTP () {
+  resendOTP() {
     return this.postService({
-      service : SERVICE.butler.password_otpresend,
-      secret  : this._secret
-    }).then((data)=>{
+      service: SERVICE.butler.password_otpresend,
+      secret: this._secret
+    }).then((data) => {
       this.renderMessage(LOCALE.CODE_RESENT_SUCCESSFULLY)
     })
   }
@@ -213,16 +213,17 @@ class __welcome_reset extends __welcome_interact {
   /**
    *
   */
-  renderMessage (msg = '', type = '') {
+  renderMessage(msg = '', type = '') {
     const msgBox = require('./skeleton/acknowledgment').default(this, msg, type)
 
     this.__buttonWrapper.el.dataset.mode = _a.closed
     this.__messageBox.el.dataset.mode = _a.open
     this.__messageBox.feed(msgBox)
-    
+
     const f = () => {
       if (type == 'reset_token') {
-        return location.href = `${protocol}://${bootstrap().main_domain}${location.pathname}${ _K.module.signin}`
+        const { protocol, main_domain } = bootstrap();
+        return location.href = `${protocol}://${main_domain}${location.pathname}${_K.module.signin}`
       }
       this.__messageBox.el.dataset.mode = _a.closed
       this.__messageBox.clear()

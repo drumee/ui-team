@@ -7,8 +7,8 @@
   height: 14px;
   padding: 1px;
   border: 1px solid #FA8540;
-  fill: $ewhite;
-  background: $ewhite;
+  fill: var(--ewhite);
+  background: var(--ewhite);
   border-radius: 2px;
   display: none;
   position: absolute;
@@ -17,10 +17,10 @@
   z-index: 1000;
   &[data-hover="on"] { 
     background-color: #879BFF;
-    color: $ewhite;
+    color: var(--ewhite);
     .media__container {
       .filename {
-        color: $ewhite;
+        color: var(--ewhite);
       }
       .icon {
         fill: #FA8540;
@@ -29,17 +29,17 @@
         display: block;
       }
       .file-info {
-        color: $ewhite;
+        color: var(--ewhite);
       }
     }
     .media-sharing-wrapper {
       visibility: visible;
-      fill: $ewhite;
+      fill: var(--ewhite);
     }
   }
 }
 &[data-selected="1"] {
-  color: $ewhite;
+  color: var(--ewhite);
   .media-checkbox {
     display: block;
     fill: #FA8540;

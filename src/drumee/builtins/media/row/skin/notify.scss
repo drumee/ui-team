@@ -1,66 +1,74 @@
+@use "mixins/drumee";
 
-&-notify{
-  &__count{
-    // margin: 4px 24px 4px 0;
-    text-align: center;
-    width:16px;//18px
-    height:16px;
-    border-radius: 50%;
-   // margin-top:7px;
-    margin-left:-8px;//17px;
-    border: 1.3px solid #B6BFCA;
-    background-color: transparent;
-    transition-property: opacity;
-    transition-duration: 0.9s;
-    overflow: hidden;
-    background-color:$core-default-background;
-    //margin:auto auto;
-    @include typo($line:15px,$size:10px,$weight:300, $color:$core-neutral-text-notification);//#b8b8b8$weight:400,
+.media-row {
 
-    &[data-hover="on"]{
-      visibility: visible;
-      //background-color: #879BFF;
-      //color:white;
-      border:1.3px solid $ewhite; //white;
-     // height:16px;
-     // width:16px;
-      line-height:15px;//16px;
-      background-color:$core-default-background;  //#ffffff;
-      color:$egrey-62 !important;//grey $egrey-89
-    }
-    &[data-type="private"]{
-      border:  1px solid $team-notifycount-border; //#d66fe8
-      background-color:$core-default-background;   // white;
-      color:$team-text-notification !important;//#bd44d9
-      line-height:16px;
-      &[data-hover="on"]{
-        border:1px solid $ewhite; //white;
-        line-height:16px;
+
+  &-notify {
+    &__count {
+      // margin: 4px 24px 4px 0;
+      text-align: center;
+      width: 16px; //18px
+      height: 16px;
+      border-radius: 50%;
+      // margin-top:7px;
+      margin-left: -8px; //17px;
+      border: 1.3px solid #B6BFCA;
+      background-color: transparent;
+      transition-property: opacity;
+      transition-duration: 0.9s;
+      overflow: hidden;
+      background-color: var(--default-bg);
+      //margin:auto auto;
+      @include drumee.typo($line: 15px, $size: 10px, $weight: 300, $color: var(--neutral-text-notification)); //#b8b8b8$weight:400,
+
+      &[data-hover="on"] {
+        visibility: visible;
+        //background-color: #879BFF;
+        //color:white;
+        border: 1.3px solid var(--ewhite); //white;
+        // height:16px;
+        // width:16px;
+        line-height: 15px; //16px;
+        background-color: var(--default-bg); //#ffffff;
+        color: var(--egrey-62) !important; //grey var(--egrey-89)
       }
-    }
-    &[data-type="folder"]{
-      border: 1px solid  $folder-notifycount-border; //#75b1fc
-      background-color:$core-default-background;   //white;
-      color:$folder-text-notification!important; //#468ee5
-      line-height:16px;
-      &[data-hover="on"]{
-        line-height:16px;
-        border:1px solid $ewhite; //white;
-      //  height:16px;
-       // width:16px;
-        
+
+      &[data-type="private"] {
+        border: 1px solid var(--teamroom-main-light); //#d66fe8
+        background-color: var(--default-bg); // white;
+        color: var(--teamroom-main) !important; //#bd44d9
+        line-height: 16px;
+
+        &[data-hover="on"] {
+          border: 1px solid var(--ewhite); //white;
+          line-height: 16px;
+        }
       }
-    }
-    &[data-type="public"]{
-      border: $website-notifycount-border 1px solid; //#18a3ac
-      background-color: $core-default-background;
-      color:$website-text-notification !important; //#18a3ac
-      line-height:16px;
-      &[data-hover="on"]{
-        border:1px solid $ewhite;
-       // height:16px;
-       // width:16px;
-        line-height:16px;
+
+      &[data-type="folder"] {
+        border: 1px solid var(--folder-main-light); //#75b1fc
+        background-color: var(--default-bg); //white;
+        color: var(--folder-main) !important; //#468ee5
+        line-height: 16px;
+
+        &[data-hover="on"] {
+          line-height: 16px;
+          border: 1px solid var(--ewhite); //white;
+        }
+      }
+
+      &[data-type="public"] {
+        border: var(--website-main) 1px solid; //#18a3ac
+        background-color: var(--default-bg);
+        color: var(--website-main) !important; //#18a3ac
+        line-height: 16px;
+
+        &[data-hover="on"] {
+          border: 1px solid var(--ewhite);
+          // height:16px;
+          // width:16px;
+          line-height: 16px;
+        }
       }
     }
   }

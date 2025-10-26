@@ -1,157 +1,159 @@
-@import "mixins/drumee";
+@use "mixins/drumee";
 
-&-breadcrumbs {
-  &__main {
-    width: 80px;
-    height: 100%;
-    position: absolute;
-
-    .menu-topic-trigger {
-      margin: 12px 0;
-    }
-
-    .menu-topic-items {
-      &__wrapper {
-        
-        margin-top: -6px;
-        padding: 6px;
-      }
-    }
-  }
-
-  &__container {
-    height: 44px;
-    left: 0;
-    position: absolute;
-    top: 0;
-    width: 30px;
-
-    &[data-state="1"] {
-      pointer-events: auto;
-      opacity: 1;
-    }
-
-    &[data-state="open"] {
-      position: relative;
-    }
-
-    &[data-state="closed"] {
-      display: none;
-    }
-  }
-
-  &__wrapper {
-    padding: 0 14px;
-    align-items: center;
-  }
-
-  &__icon {
-    color: $core-default-icon-reverse;
-    cursor: pointer;
-
-    &[data-state="0"] {
-      display: none;
-    }
-  }
-
-  &__arrow {
-    transform: rotate(180deg);
-    padding: 4px !important;
-  }
-
-  &__item {
-    cursor: pointer;
-    height: 30px;
-    margin: 4px 0;
-    max-width: 150px;
-    padding: 0 14px;
-    white-space: nowrap;
-    width: 100%;
-
-    &--icon {
-      height: 24px;
-      width: 24px;
-
-      &.blue {
-        color: $folder-background-header;
-      }
-
-      &.purple,
-      &.team,
-      &.private {
-        color: $team-background-header; 
-      }
-
-      &.orange,
-      &.share,
-      &.dmz {
-        color: $share-background-header;
-      }
-
-      &.website,
-      &.public {
-        color: $website-background-header;
-      }
-    }
-
-    &--filename {
-      @include typo($size: 14px, $line: 22px, $weight: 300, $color: $core-default-text-color);
-      align-content: center;
-      align-items: center;
-      margin-left: 8px;
-      top: -2px;
-      width: calc(100% - 30px);
-      @include overflow-text;
-    }
-
-    .inner {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    &:hover,
-    &:last-child {
-      & .filename {
-        color: $core-default-text-title;
-      }
-    }
-  }
-
-  &__roll {
-    overflow: visible;
-    z-index: 1000;
-    min-width: 110px;
-    max-width: 200px;
-    width: auto;
-    height: auto;
-    max-height: 250px;
-    background: $core-default-background;
-    border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-box; 
-    padding: 10px 0;
-
-    &:before {
-      content: "";
+.window {
+  &-breadcrumbs {
+    &__main {
+      width: 80px;
+      height: 100%;
       position: absolute;
-      top: -4px;
-      left: 16px;
-      width: 8px;
-      height: 8px;
-      background-color: $core-default-background;
-      transform: rotate(45deg);
-      box-shadow: $drumee-container-before; 
+
+      .menu-topic-trigger {
+        margin: 12px 0;
+      }
+
+      .menu-topic-items {
+        &__wrapper {
+
+          margin-top: -6px;
+          padding: 6px;
+        }
+      }
     }
 
-    &:after {
-      content: "";
-      position: absolute;
-      width: 100%;
-      height: 10px;
-      top: 0;
+    &__container {
+      height: 44px;
       left: 0;
-      background: $core-default-background;
-      border-radius: $default-border-radius-top;
+      position: absolute;
+      top: 0;
+      width: 30px;
+
+      &[data-state="1"] {
+        pointer-events: auto;
+        opacity: 1;
+      }
+
+      &[data-state="open"] {
+        position: relative;
+      }
+
+      &[data-state="closed"] {
+        display: none;
+      }
+    }
+
+    &__wrapper {
+      padding: 0 14px;
+      align-items: center;
+    }
+
+    &__icon {
+      color: var(--default-icon-reverse);
+      cursor: pointer;
+
+      &[data-state="0"] {
+        display: none;
+      }
+    }
+
+    &__arrow {
+      transform: rotate(180deg);
+      padding: 4px !important;
+    }
+
+    &__item {
+      cursor: pointer;
+      height: 30px;
+      margin: 4px 0;
+      max-width: 150px;
+      padding: 0 14px;
+      white-space: nowrap;
+      width: 100%;
+
+      &--icon {
+        height: 24px;
+        width: 24px;
+
+        &.blue {
+          color: var(--folder-main);
+        }
+
+        &.purple,
+        &.team,
+        &.private {
+          color: var(--teamroom-main);
+        }
+
+        &.orange,
+        &.share,
+        &.dmz {
+          color: var(--sharebox-main);
+        }
+
+        &.website,
+        &.public {
+          color: var(--website-header-bg);
+        }
+      }
+
+      &--filename {
+        @include drumee.typo($size: 14px, $line: 22px, $weight: 300, $color: var(--default-text-color));
+        align-content: center;
+        align-items: center;
+        margin-left: 8px;
+        top: -2px;
+        width: calc(100% - 30px);
+        @include drumee.overflow-text;
+      }
+
+      .inner {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      &:hover,
+      &:last-child {
+        & .filename {
+          color: var(--default-text-title);
+        }
+      }
+    }
+
+    &__roll {
+      overflow: visible;
+      z-index: 1000;
+      min-width: 110px;
+      max-width: 200px;
+      width: auto;
+      height: auto;
+      max-height: 250px;
+      background: var(--default-bg);
+      border-radius: var(--border-radius);
+      box-shadow: drumee.$drumee-shadow-box;
+      padding: 10px 0;
+
+      &:before {
+        content: "";
+        position: absolute;
+        top: -4px;
+        left: 16px;
+        width: 8px;
+        height: 8px;
+        background-color: var(--default-bg);
+        transform: rotate(45deg);
+        box-shadow: var(--shadow-before);
+      }
+
+      &:after {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 10px;
+        top: 0;
+        left: 0;
+        background: var(--default-bg);
+        border-radius: var(--default-border-radius-top);
+      }
     }
   }
 }

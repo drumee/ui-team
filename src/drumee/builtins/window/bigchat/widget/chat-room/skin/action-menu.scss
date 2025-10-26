@@ -1,113 +1,116 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
-&-menu {
-  &__dropdown{
-    left: 20px;
-    top: 1px;
-  }
+.chat-room {
+  &-menu {
+    &__dropdown {
+      left: 20px;
+      top: 1px;
+    }
 
-  &__wrapper {
-    &[data-state="1"] {
-      & .trigger-icon {
-        color: $bigchat-default-icon-active;
+    &__wrapper {
+      &[data-state="1"] {
+        & .trigger-icon {
+          color: var(--default-icon-active);
+        }
+      }
+
+      & .menu-topic-items {
+        background-color: var(--default-background);
+        border-radius: var(--border-radius);
+        box-shadow: drumee.$drumee-container-dropdown;
+        margin-top: 0px;
+        min-width: 162px;
+
+        &__wrapper {
+          border-radius: var(--border-radius);
+          left: -179px;
+          padding: 10px;
+          top: 31px !important;
+        }
+
+        &:before {
+          background-color: var(--default-background);
+          box-shadow: var(--shadow-before);
+          content: "";
+          height: 10px;
+          position: absolute;
+          right: 8px;
+          top: -6px;
+          transform: rotate(45deg);
+          width: 10px;
+        }
+
+        &:after {
+          background: var(--default-background);
+          border-radius: var(--default-border-radius-top);
+          content: "";
+          height: 10px;
+          left: 0;
+          position: absolute;
+          top: 0;
+          width: 100%;
+        }
       }
     }
 
-    & .menu-topic-items {
-      background-color: $bigchat-default-background; 
-      border-radius:$default-border-radius;
-      box-shadow: $drumee-container-dropdown;
-      margin-top: 0px;
-      min-width: 162px;
-      &__wrapper {
-        border-radius:$default-border-radius;
-        left: -179px;
-        padding: 10px;
-        top: 31px  !important;
-      }
-      
-      &:before {
-        background-color: $bigchat-default-background;     
-        box-shadow:$drumee-container-before;
-        content: "";
-        height: 10px;
-        position: absolute;
-        right: 8px;
-        top: -6px;
-        transform: rotate(45deg);
-        width: 10px;
+    &__icon {
+      align-items: center;
+      color: var(--default-icon-neutral);
+      cursor: pointer;
+
+      &.trigger-icon {
+        color: inherit;
+        height: 24px;
+        opacity: .45;
+        padding: 3.5px;
+        right: 25px;
+        top: 3px;
+        width: 22.5px;
       }
 
-      &:after {
-        background: $bigchat-default-background;     
-        border-radius: $default-border-radius-top;
-        content: "";
-        height: 10px;
-        left: 0;
-        position: absolute;
-        top: 0;
-        width: 100%;
+      &:hover {
+        color: var(--default-icon-hover);
       }
     }
-  }
 
-  &__icon {
-    align-items: center;
-    color: $bigchat-default-icon-neutral ;
-    cursor: pointer;
-    
-    &.trigger-icon {
-      color: inherit;
-      height: 24px;
-      opacity: .45;
-      padding:3.5px;
-      right: 25px;
-      top: 3px;
-      width: 22.5px;
+    &__items {
+      width: 100%;
+      margin-top: 2px;
+      padding-bottom: 5px;
     }
 
-    &:hover {
-      color: $bigchat-default-icon-hover ;
-    }
-  }
-  
-  &__items {
-    width: 100%;
-    margin-top: 2px;
-    padding-bottom: 5px;
-  }
+    &__item {
+      cursor: pointer;
+      margin-bottom: 1px;
+      padding: 10px 10px 5px 15px;
 
-  &__item {
-    cursor: pointer;
-    margin-bottom:  1px;
-    padding: 10px 10px 5px 15px;
+      &:hover {
+        background-color: var(--default-background-hover);
+        color: var(--default-text-hover);
 
-    &:hover {
-      background-color: $bigchat-default-background-hover;
-      color: $bigchat-default-text-hover ; 
+        & .chat-room-menu__note {
+          color: var(--default-text-hover);
+        }
 
-      & .chat-room-menu__note {
-        color:$bigchat-default-text-hover ; 
-      }
-      
-      & svg {
-        fill: $bigchat-default-icon-reverse;      
+        & svg {
+          fill: var(--default-icon-reverse);
+        }
       }
     }
-  }
 
-  &__note {
-    padding-top: 0px;
-    @include typo($size: 12px, $weight: 300, $line: 14px, $color: $bigchat-default-text-color);
+    &__note {
+      padding-top: 0px;
+      @include drumee.typo($size: 12px, $weight: 300, $line: 14px, $color: var(--default-text-color));
 
-    &.coming-soon {
-      @include typo($size: 12px, $weight: 300, $line: 14px, $color: $bigchat-default-text-inactive);
-      opacity: 0.5;
-    }
+      &.coming-soon {
+        @include drumee.typo($size: 12px, $weight: 300, $line: 14px, $color: var(--default-text-inactive));
+        opacity: 0.5;
+      }
 
-    &.copy-card {
-      margin-top: -12px;
-      padding-top: 20px;
+      &.copy-card {
+        margin-top: -12px;
+        padding-top: 20px;
+      }
     }
   }
 }

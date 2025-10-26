@@ -3,7 +3,7 @@
 #   FILE : src/drumee/libs/reader/avatar/skin/avatar-widget.scss
 #   TYPE : Backoffice Main Style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .chart-mutiline{
   &__ui{

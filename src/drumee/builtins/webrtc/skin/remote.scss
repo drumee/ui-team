@@ -1,27 +1,31 @@
-&__endpoints-container {
-  width: 100%;
-  flex: 1;
-  max-height: 100%;
-  overflow-y: auto;
-  background-color:$multimedia-vdo-background-color;// $vdo-background-color;//#494949;
-  border-radius: $default-border-radius-bottom;
-  .smart-container {
-    align-items: center;
-    justify-content: center;
-    display: flex;
-    flex-wrap: wrap;
-  }
-}
+@use 'mixins/drumee';
+@mixin webrtc-remote {
+  &__endpoints-container {
+    width: 100%;
+    flex: 1;
+    max-height: 100%;
+    overflow-y: auto;
+    background-color: var(--multimedia-background); // $vdo-background-color;//#494949;
+    border-radius: var(--border-radius-bottom);
 
-  &__presenter{
+    .smart-container {
+      align-items: center;
+      justify-content: center;
+      display: flex;
+      flex-wrap: wrap;
+    }
+  }
+
+  &__presenter {
     justify-content: center;
   }
-  
-  &__waiting-screen{
+
+  &__waiting-screen {
     justify-content: center;
-    @include typo($size: 16px, $line: 1, $color: $core-default-text-reverse);
+    @include drumee.typo($size: 16px, $line: 1, $color: var(--default-text-reverse));
     display: flex;
     flex-direction: row;
     width: 100%;
     height: 100px;
+  }
 }

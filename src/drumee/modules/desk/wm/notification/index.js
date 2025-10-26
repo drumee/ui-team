@@ -28,7 +28,7 @@ class __notification_panel extends LetcBox {
     window.NotificationCenter = this;
 
     this._onOutsideClick = (e, origin) => {
-      if (mouseDragged) return;
+      if (pointerDragged) return;
       if (e && !this.el.contains(e.currentTarget)) {
         this.closeNotificationPanel();
       }
@@ -51,6 +51,7 @@ class __notification_panel extends LetcBox {
     if (events) {
       return;
     }
+    if (!window.Notification) return;
     Notification.requestPermission(() => {
       uiRouter.ensureWebsocket().then(() => {
         let timer = setInterval(() => {
@@ -133,7 +134,6 @@ class __notification_panel extends LetcBox {
    * 
    */
   closeNotificationPanel() {
-
     this.notificationState = 0;
     if (this.parent) {
       this.parent.el.dataset.state = 0;
@@ -215,6 +215,7 @@ class __notification_panel extends LetcBox {
       notif.title = title;
       return notif;
     }
+    if (!window.Notification) return;
     new Notification(title, notif);
   }
 

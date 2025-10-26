@@ -41,13 +41,13 @@
   }
   &__text{
     margin: auto 20px auto auto;
-    @include typo($color: $egrey-78, $size: 14px, $line: 24px, $weight: 400);
+    @include typo($color: var(--egrey-78), $size: 14px, $line: 24px, $weight: 400);
   }
   &__icon{
     width: 25px;
     height: 25px;
     padding: 1.5px;
-    color: $egrey-78;
+    color: var(--egrey-78);
   }
   // &__container{
   //   &-form{
@@ -133,7 +133,7 @@
     margin: auto 20px auto auto;
     cursor: pointer;
     pointer-events: all;
-    @include typo($color: $egrey-89, $size: 16px, $line: 34px, $weight: 300);
+    @include typo($color: var(--egrey-89), $size: 16px, $line: 34px, $weight: 300);
     .note-content{
       margin: auto;
     }

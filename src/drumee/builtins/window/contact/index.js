@@ -61,7 +61,7 @@ class __window_contact extends __window_interact {
 
     this.debug(`__window_contact onUiEvent Service = ${service}`, status, cmd, this);
     
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
 

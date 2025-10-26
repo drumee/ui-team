@@ -3,14 +3,13 @@
 #   FILE : /ui/src/drumee/builtins/media/efs/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+  @include meta.load-css("checkbox.scss");
+  @include meta.load-css("container.scss");
+  @include meta.load-css("filename.scss");
+  @include meta.load-css("progress.scss");
 
-.media-efs {
-  @import "checkbox.scss";
-  @import "container.scss";
-  @import "filename.scss";
-  @import "progress.scss";
-}
 
 .media-efs {
   &__ui {
@@ -19,8 +18,8 @@
     height: 100%; //75px;
     min-width: 90px; //92px;
     min-height: 75px;//81px;
-    border-radius:$default-border-radius;
-    background-color: $core-default-background;
+    border-radius:var(--border-radius);
+    background-color: var(--default-bg);
     box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 0px 3px 0 rgba(86,65,113,0.08), 0 2px 8px 0 rgba(194,185,203,0);
     cursor: pointer;
     user-select: none;
@@ -41,7 +40,7 @@
       width: 100%;
       height: 20px;
       bottom: 0;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       z-index: 200;
     }
 
@@ -81,7 +80,7 @@
         border: 1px solid #18AC72;
       }
       &__text {
-        @include typo($line:21px,$size:10px,$weight:300,$color:$core-secondary-text-color); 
+        @include drumee.typo($line:21px,$size:10px,$weight:300,$color:var(--secondary-text-color)); 
       }
     }
   }
@@ -93,7 +92,7 @@
     }
   }
   .preview {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     &.image-capable{
       background-size     : cover;
       background-repeat   : no-repeat;
@@ -145,7 +144,7 @@
       width: calc(100% + 2px);
       height: calc(100% + 2px);
       border: 1.5px solid #FA8540; //3px
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       //z-index: 103; 
       pointer-events: none;
     }
@@ -177,8 +176,8 @@
   //     border-radius: 2px;
   //     padding: 1px;
   //     border: 1px solid #FA8540;
-  //     background: $ewhite;
-  //     fill: $ewhite;
+  //     background: var(--ewhite);
+  //     fill: var(--ewhite);
   //     // visibility: hidden;
   //   }
   // }
@@ -193,7 +192,7 @@
   //   background-size: cover;
   // }
   &__input {
-    @include typo($line:14px,$size:11px,$color:$core-default-text-color);
+    @include drumee.typo($line:14px,$size:11px,$color:var(--default-text-color));
     width: 100%;
     position: absolute;
     z-index: 102; //UU was 200, let's try lower
@@ -204,23 +203,23 @@
       width:100%;
       height: auto;
       padding: 2px 6px;//3px 6px;
-      border-radius: $default-border-radius-bottom; 
-      border:1px solid $core-default-entry-border-bottom;
+      border-radius: var(--border-radius-bottom); 
+      border:1px solid var(--default-entry-border-bottom);
       overflow: hidden;
       resize: none;
-      background-color: $core-default-background;  
-      @include typo($line:12px,$size:11px,$color:$core-default-text-color); //$line:14px,
+      background-color: var(--default-bg);  
+      @include drumee.typo($line:12px,$size:11px,$color:var(--default-text-color)); //$line:14px,
       // &[data-row="2"]{
       //   min-height: 31px;
       //   height: 31px;
       //   padding: 1px 6px;
       // }
       &::placeholder{
-        @include typo($size: 11px, $line: 12px, $weight:300, $color:$core-default-text-placeholder);
+        @include drumee.typo($size: 11px, $line: 12px, $weight:300, $color:var(--default-text-placeholder));
       }
     }
     .input-details {
-      background:  $core-default-background;  
+      background:  var(--default-bg);  
       color: #FF4578;
       position: absolute;
       bottom: auto;
@@ -232,7 +231,7 @@
     position: absolute;
     width: 18px;
     height: 18px;
-    border-radius:$default-border-radius-tiny;// 3px;
+    border-radius:var(--border-radius-tiny);// 3px;
     z-index: 100;
     fill: #FA8540;
   }

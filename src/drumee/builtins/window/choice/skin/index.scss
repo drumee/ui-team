@@ -1,9 +1,9 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .window-choice {
   &__ui {
-    background-color: $core-default-background;
-    border-radius: $default-border-radius;
+    background-color: var(--default-bg);
+    border-radius: var(--border-radius);
     padding: 20px;
     width: auto;
     height: auto;
@@ -17,8 +17,8 @@
     align-items: center;
 
     &[data-type="confirm"] {
-      background-color: $core-default-background;
-      border-radius: $default-border-radius;
+      background-color: var(--default-bg);
+      border-radius: var(--border-radius);
       padding: 20px;
       width: auto;
       height: auto;
@@ -33,14 +33,14 @@
     &[data-maxsize="1"] {
       max-height: 400px;
       max-width: 600px;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
 
     }
 
     &[data-maxsize="0"] {
       max-height: 400px;
       max-width: 560px;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
 
     }
   }
@@ -68,7 +68,7 @@
   &-topbar {
     &__container {
       border-bottom: 1px solid transparent;
-      border-radius: $default-border-radius-top;
+      border-radius: var(--default-border-radius-top);
       flex: 1;
     }
 
@@ -78,7 +78,7 @@
       right: 0;
 
       .icon {
-        color: $egrey-b6;
+        color: var(--egrey-b6);
         margin: 10px;
         opacity: 0.5;
       }
@@ -90,11 +90,11 @@
     justify-content: center;
     text-align: center;
     width: 100%;
-    @include typo($size: 16px, $line: 25px, $color: $core-default-text-color);
+    @include drumee.typo($size: 16px, $line: 25px, $color: var(--default-text-color));
 
     & .name {
       top: 24px;
-      @include typo($size: 22px, $line: 26px, $color: $core-default-text-alert); // $window-choice-default-title-color);
+      @include drumee.typo($size: 22px, $line: 26px, $color: var(--default-text-alert)); // $window-choice-default-title-color);
     }
   }
 
@@ -103,12 +103,12 @@
     justify-content: center;
     padding: 31px 10px 5px; //5px 10px 5px 10px;
     margin: 0 auto;
-    @include typo($weight: 300, $size: 16px, $line: 26px, $color: $core-default-text-color);
+    @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
 
     &.trash {
       width: 50px;
       margin: 10px 0;
-      @include typo($weight: 300, $size: 16px, $line: 26px, $color: violet);
+      @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: violet);
     }
 
     &.delete-team {
@@ -116,7 +116,7 @@
     }
   }
 
-  @media (max-width: $tablet) {
+  @media (max-width: var(--medium-width)) {
     &__message {
       margin: 0 26px;
     }
@@ -132,7 +132,7 @@
     .button {
       align-content: center;
       align-items: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       cursor: pointer;
       height: 35px;
       justify-content: center;
@@ -148,12 +148,12 @@
   }
 
   &__button.first {
-    border: 1px solid $btn-rollback-border;
-    @include typo($size: 16px, $line: 18px, $color: $btn-rollback-text );
+    border: 1px solid var(--btn-rollback-border);
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-rollback-text) );
 
     &:hover {
-      border: 2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
 
     &.forbiden {
@@ -165,12 +165,12 @@
   }
 
   &__button.normal {
-    background-color: $btn-commit-background;
+    background-color: var(--btn-commit-background);
     border: 0px;
-    @include typo($size: 16px, $line: 18px, $color: $btn-commit-text);
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-commit-text));
 
     &:hover {
-      background-color: $btn-commit-background-hover;
+      background-color: var(--btn-commit-background-hover);
     }
 
     &.large {
@@ -181,12 +181,12 @@
   }
 
   &__button.danger {
-    background-color: $btn-caution-background;
+    background-color: var(--btn-caution-background);
     border: 0px;
-    @include typo($size: 16px, $line: 18px, $color: $btn-caution-text);
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-caution-text));
 
     &:hover {
-      background-color: $btn-caution-background-hover ;
+      background-color: var(--btn-caution-background-hover);
     }
   }
 }

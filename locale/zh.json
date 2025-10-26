@@ -348,7 +348,6 @@
   "HOMETAG": "主页哈希标记",
   "HOME_PHONE": "家庭电话",
   "HORIZONTAL": "水平的",
-  "HOURS": "小时",
   "HOVERBOTTOMNAV": "悬停底部导航",
   "HOVERPREVNEXT": "上一个/下一个悬停",
   "HOW_TO": "这是如何运作的？",
@@ -1906,5 +1905,8 @@
   "SBX_NO_THANKS": "不用了，谢谢。我只是想试试。",
   "NOT_A_BOT": "请关闭此窗口以确认您不是机器人",
   "SERVER_BUSY": "抱歉，我们的服务器目前负载过重。请稍后重试。",
-  "CONFIRM_DIRNAME_CONFLICT": "已存在同名目录 ({0})。您想做什么？"
+  "CONFIRM_DIRNAME_CONFLICT": "已存在同名目录 ({0})。您想做什么？",
+  "MONTHS": "个月",
+  "YEARS": "年",
+  "HOURS": "小时"
 }

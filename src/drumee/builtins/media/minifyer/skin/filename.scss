@@ -1,5 +1,7 @@
+@use "mixins/drumee";
+
 .filename {
-  border-radius:$default-border-radius-bottom;
+  border-radius:var(--border-radius-bottom);
   cursor: pointer;
   max-height: 31px;
   overflow: hidden;
@@ -8,27 +10,27 @@
   text-align: center;
   text-overflow: ellipsis;
   width: 100%;
-  @include typo($line:14px,$size:11px,$color:$core-default-text-color);
+  @include drumee.typo($line:14px,$size:11px,$color:var(--default-text-color));
 
   &.hub, &.folder {
-    color: $core-default-text-reverse;
+    color: var(--default-text-reverse);
   }
 
   &.audio, &.document, &.vector, &.other {
-    background-color:  $core-default-background; 
-    color: $core-default-text-color;
+    background-color:  var(--default-bg); 
+    color: var(--default-text-color);
   }
 
   &.image,
   &.video {
     background :linear-gradient(180deg,hsla(0,0%,100%,.2),hsla(0,0%,100%,0.9));
-    color: $core-default-text-color;
+    color: var(--default-text-color);
   }
 }
 
 .filename-tooltips {
-  background: $core-default-block-background;
-  border-radius: $default-border-radius-bottom-small;
+  background: var(--default-bg-block);
+  border-radius: var(--border-radius-bottom-smal);
   display: none;
   max-height: calc(100% - 5px);
   max-width: 100%;
@@ -39,10 +41,10 @@
   position: absolute;
   transition: opacity 1ms;
   white-space: pre-wrap;
-  @include typo($line:14px,$size:10px,$weight:400,$color:$core-default-text-color);
+  @include drumee.typo($line:14px,$size:10px,$weight:400,$color:var(--default-text-color));
 
   &[data-hover="on"] {
-    color: $core-default-text-color;
+    color: var(--default-text-color);
     display: block;
     opacity: 1;
     overflow-wrap: break-word;
@@ -65,8 +67,8 @@
     }
 
     &.audio, &.document, &.vector, &.other {
-      background-color :$core-default-background-inactive;//$default-background-reverse;
-      color: $core-default-text-reverse;
+      background-color :var(--default-bg-inactive);//$default-background-reverse;
+      color: var(--default-text-reverse);
     }
   }
 }

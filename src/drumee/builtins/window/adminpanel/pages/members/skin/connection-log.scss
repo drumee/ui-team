@@ -1,140 +1,147 @@
-&-connection-log {
-  &__main {
-    background:$admin-default-background;
-    border-radius: $default-border-radius;
-    height: calc(100% - 100px);
-    min-width: 300px;
-    width: calc(100% - 200px);
-  }
+@use "mixins/drumee";
 
-  &__header {
-    align-items: flex-end;
-    height: 100%;
-    justify-content: center;
-    max-height: 50px;
-    min-height: 40px;
-    width: 100%;
-  }
+.members-page {
 
-  &__close {
-    position: absolute;
-    right: 15px;
-    top: 15px;
-  }
-
-  &__content {
-    height: 100%;
-    width: 100%;
-  }
-
-  &__icon {
-    color: $admin-default-icon-neutral;
-    cursor: pointer;
-    height: 12px;
-    width: 12px;
-
-    &.close {
-      color: $admin-default-thinline-icon;
-      
-      &:hover {
-        color: $admin-default-thinline-icon-hover;
-      }
+  &-connection-log {
+    &__main {
+      background: var(--default-background);
+      border-radius: var(--border-radius);
+      height: calc(100% - 100px);
+      min-width: 300px;
+      width: calc(100% - 200px);
     }
-  }
 
-  &__note {
-    @include typo($size: 18px, $line: 19px, $color: $admin-default-text-color);
-
-    &.header {
-      color: $admin-default-text-title;
+    &__header {
+      align-items: flex-end;
+      height: 100%;
       justify-content: center;
+      max-height: 50px;
+      min-height: 40px;
       width: 100%;
     }
-  }
 
-  &-table {
-    height: 100%;
-    width: 100%;
-    margin-top: 10px;
-    
-    &__item-wrapper,
-    &__item-list,
-    & .list-smart__container {
+    &__close {
+      position: absolute;
+      right: 15px;
+      top: 15px;
+    }
+
+    &__content {
       height: 100%;
       width: 100%;
     }
 
-    &__header,
-    &__item-list {
-      padding: 5px;
+    &__icon {
+      color: var(--default-icon-neutral);
+      cursor: pointer;
+      height: 12px;
+      width: 12px;
+
+      &.close {
+        color: var(--default-thinline-icon);
+
+        &:hover {
+          color: var(--default-thinline-icon-hover);
+        }
+      }
     }
 
-    &__item-list {
-      height: calc(100% - 115px);
-    }
-
-    &__item-wrapper {
-      justify-content: space-evenly;
-      margin: 2px;
-      max-height: 30px;
-      min-height: 30px;
+    &__note {
+      @include drumee.typo($size: 18px, $line: 19px, $color: var(--default-text-color));
 
       &.header {
-        max-height: 50px;
-        left: -2px;
+        color: var(--default-text-title);
+        justify-content: center;
+        width: 100%;
+      }
+    }
+
+    &-table {
+      height: 100%;
+      width: 100%;
+      margin-top: 10px;
+
+      &__item-wrapper,
+      &__item-list,
+      & .list-smart__container {
+        height: 100%;
+        width: 100%;
       }
 
-      &.default-content {
-        margin-top: 83px;
+      &__header,
+      &__item-list {
+        padding: 5px;
       }
 
-      &:hover {
-        background:$admin-default-background-hover;
+      &__item-list {
+        height: calc(100% - 115px);
+      }
 
-        & .data-cell {
-          color: $admin-default-text-reverse;
+      &__item-wrapper {
+        justify-content: space-evenly;
+        margin: 2px;
+        max-height: 30px;
+        min-height: 30px;
+
+        &.header {
+          max-height: 50px;
+          left: -2px;
         }
 
         &.default-content {
-          background: transparent;
+          margin-top: 83px;
         }
-      }
-    }
 
-    &__item {
-      align-items: center;
-      height: 100%;
-      justify-content: space-evenly;
-      @include typo($size: 14px, $line: 14px,$weight: 300,$color: $admin-default-text-color);
-      width: 120px;
+        &:hover {
+          background: var(--default-background-hover);
 
-      &.header {        
-        @include typo($size: 15px, $line: 14px, $color: $admin-default-text-title);
-        margin-top: auto;
-        margin-bottom: auto;
-      }
+          & .data-cell {
+            color: var(--default-text-reverse);
+          }
 
-      &.default-content {
-        @include typo($size: 16px, $line: 16px, $color: $admin-default-text-color);
-        width: 100%;
-        justify-content: center;
-      }
-
-      &.ip-address {
-        & .note-content {
-          width: 100%;
-          & section {
-            text-overflow: ellipsis;
-            @include overflow-text();
+          &.default-content {
+            background: transparent;
           }
         }
       }
-    }
 
-    .drumee-spinner{
-      height: 35px;
-      margin: auto;
-      width : 35px;
+      &__item {
+        align-items: center;
+        height: 100%;
+        justify-content: space-evenly;
+        @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-color));
+        width: 120px;
+
+        &.header {
+          @include drumee.typo($size: 15px, $line: 14px, $color: var(--default-text-title));
+          margin-top: auto;
+          margin-bottom: auto;
+        }
+
+        &.default-content {
+          @include drumee.typo($size: 16px, $line: 16px, $color: var(--default-text-color));
+          width: 100%;
+          justify-content: center;
+        }
+
+        &.ip-address {
+          & .note-content {
+            width: 100%;
+
+            & section {
+              text-overflow: ellipsis;
+              @include drumee.overflow-text();
+            }
+          }
+        }
+      }
+
+      .drumee-spinner {
+        height: 35px;
+        margin: auto;
+        width: 35px;
+      }
     }
   }
+
 }

@@ -134,10 +134,6 @@ const a = {
   widget_members_list_item:"src/drumee/builtins/window/adminpanel/widget/members-list-item/index",
   widget_members_search:"src/drumee/builtins/window/adminpanel/widget/members-search/index",
   widget_members_list:"src/drumee/builtins/window/adminpanel/widget/members_list/index",
-  window_analytics_extractor:"src/drumee/builtins/window/analytics/extractor",
-  window_chart_bar:"src/drumee/builtins/window/analytics/bar-graph",
-  window_analytics_main_website:"src/drumee/builtins/window/analytics/main-website",
-  window_chart_timeseries:"src/drumee/builtins/window/analytics/time-series",
   chat_contact_list:"src/drumee/builtins/window/bigchat/widget/chatcontact-list",
   chat_contact_item:"src/drumee/builtins/window/bigchat/widget/chatcontact-item",
   chat_room:"src/drumee/builtins/window/bigchat/widget/chat-room",
@@ -232,7 +228,6 @@ const a = {
   window_helpdesk:"window/helpdesk",
   window_info:"window/info",
   window_launcher:"window/launcher",
-  window_litechat:"window/litechat",
   window_manager:"desk/wm",
   window_meeting:"window/meeting",
   window_schedule:"window/schedule",
@@ -253,7 +248,6 @@ const a = {
   dmz_window_manager:"dmz/wm",
   dmz_sharebox:"dmz/sharebox",
   dmz_meeting:"dmz/meeting",
-  setup_window:"src/drumee/modules/setup",
   test_result:"modules/test/widget/result",
   welcome_invitation:"welcome/invitation",
   welcome_feedback:"welcome/feedback",
@@ -282,7 +276,7 @@ function list (name) {
     })
   }
   for (let i of keys ){
-    console.log(i + " -> " + a[i], STYLE)
+    console.log(i + " -> " + "%c" + a[i], STYLE)
   }
   return keys
 };

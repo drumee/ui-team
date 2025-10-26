@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 /** ================================================================== *
 #   Copyright Xialia.com  2011-2016
 #   FILE : src/drumee/builtins/desk/account/current/skin/avatar.scss
@@ -10,7 +12,7 @@
     height: 216px;
     .account__item{
       cursor: pointer;
-      @include typo($color: $account-default-text-color,$size:14px,$line:42px,$weight:300);
+      @include drumee.typo($color: var(--default-text-color),$size:14px,$line:42px,$weight:300);
     }
   }
 }

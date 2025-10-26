@@ -1,12 +1,5 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
 
+@use "mixins/drumee";
 .notifier-network{
   &__ui{
     position: absolute;
@@ -76,11 +69,11 @@
     width: 100%;
     text-align: left;
     height: 100%;
-    @include typo($color:#ea4d44, $size: 16px, $line: 19px); 
+    @include drumee.typo($color:#ea4d44, $size: 16px, $line: 19px); 
     margin-left:40px;
     align-items:center;
     @media(max-width:400px){
-      @include typo($color:#ea4d44, $size: 13px, $line: 19px); 
+      @include drumee.typo($color:#ea4d44, $size: 13px, $line: 19px); 
       margin-left:11px;
     }
     &.unstable{

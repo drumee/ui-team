@@ -11,7 +11,7 @@ const DATEFORMAT = {
 let defaultQuota;
 const { timestamp, randomString } = require("core/utils")
 
-//########################################
+
 class __core_user extends Backbone.Model {
 
   /**
@@ -75,7 +75,6 @@ class __core_user extends Backbone.Model {
     })
 
     RADIO_MEDIA.on(_a.free, (data) => {
-      this.debug("AAAA:71", data)
       if (!data || !data.disk_usage) return;
       let { disk_usage } = data;
       this.set({ disk_usage })
@@ -111,6 +110,7 @@ class __core_user extends Backbone.Model {
    * 
    */
   browserSupport() {
+    console.log("Checking browser support")
     let browser = require('detect-browser').detect();
     let [major, minor, rel] = browser.version.split(/\.+/);
     major = parseInt(major);
@@ -161,6 +161,7 @@ class __core_user extends Backbone.Model {
    */
 
   canUseVisio() {
+    if (bootstrap().localhost) return false;
     return this.profile().category != 'trial';
   }
 
@@ -437,7 +438,8 @@ class __core_user extends Backbone.Model {
       return this.get(_a.device);
     }
     const width = window.innerWidth;
-    if (_.compact(navigator.userAgent.match(/mobile/i)).length || (window.innerWidth < 500)) {
+    if (width > 800) return _a.desktop;
+    if (_.compact(navigator.userAgent.match(/mobile/i)).length) {
       return _a.mobile;
     }
     return _a.desktop;
@@ -602,20 +604,11 @@ class __core_user extends Backbone.Model {
     if (/^http/.test(a)) {
       return a;
     }
-
-    let base = `${bootstrap().mfsRootUrl}avatar/`;
     id = id || this.id;
-    const ts = `&${this.get(_a.mtime)}` || ""; //timestamp()
-    if (/^\//.test(base)) {
-      base = `${base}${id}?type=${type}${ts}`;
-    } else {
-      if (/^http/.test(base)) {
-        base = `${base}${id}?type=${type}${ts}`;
-      } else {
-        base = `${protocol}://${base}${id}?type=${type}${ts}`;
-      }
-    }
-    return base;
+    const ts = `${this.get(_a.mtime)}` || "";
+    const { endpoint } = bootstrap();
+    let base = `${endpoint}avatar/${id}?type=${type}&ts=${ts}`;
+    return base
   }
 
 
@@ -623,7 +616,7 @@ class __core_user extends Backbone.Model {
    * 
    */
   audioTip(state = 1) {
-    if(!window.Wm) return
+    if (!window.Wm) return
     if (this._userHasInteracted) state = 0;
     if (!state) {
       if (Wm && Wm.alert) {
@@ -646,16 +639,18 @@ class __core_user extends Backbone.Model {
    * @param {*} l 
    */
   playSound(url, l) {
-    let { static: base, user_domain: domain } = bootstrap();
+    let { protocol, static: base, user_domain: domain } = bootstrap();
     if (this.parseModuleArgs().silent) return;
     if (url == null) {
       url = `${base}${_K.ringtones.incoming}`;
     } else if (/^musics/.test(url)) {
       url = `${base}${url}`;
     }
-    if (!/^http/.test(url)) {
+    this.debug("AAA:643", `${protocol}, ${base}, ${url}`)
+    if (!/^http/.test(url) && domain) {
       url = `${protocol}://${domain}${url}`;
     }
+    this.debug("AAA:652", `${protocol}, ${base}, ${url}`)
     if (l == null) { l = 1; }
     if (!this._audio) {
       this._audio = new Audio();
@@ -669,7 +664,7 @@ class __core_user extends Backbone.Model {
       this.audioTip(0);
     }).catch((e) => {
       this.audioTip(1);
-      RADIO_MOUSE.once(_e.mousedown, () => {
+      RADIO_POINTER.once(_e.mousedown, () => {
         this.audioTip(0);
         setTimeout(() => {
           this._audio.play(() => {

@@ -1,13 +1,3 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2020
- * FILE : /src/drumee/modules/welcome/signin/skeleton/index.js
- * TYPE : Skeleton
- * ===================================================================**/
-
-// ===========================================================
-//
-// ===========================================================
-
 function __skl_welcome_signin (_ui_, opt, type="") {
   const fig = _ui_.fig.family
   let dataset = _ui_.mget(_a.dataset) || {};

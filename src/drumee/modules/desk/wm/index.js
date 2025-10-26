@@ -125,7 +125,7 @@ class __window_manager extends push {
       Visitor.playSound(_K.notifications.std, 0);
     }, Visitor.timeout(10000));
 
-    RADIO_MOUSE.once(_e.mousedown, () => {
+    RADIO_POINTER.once(_e.mousedown, () => {
       this._userHasInteracted = 1;
       this.alert();
     });
@@ -224,7 +224,6 @@ class __window_manager extends push {
       if (!window.Notification) return
       clearInterval(timer);
       Notification.requestPermission((p) => {
-        this.debug("requestPermission", p)
         if (p != "granted") {
           this.alert(LOCALE.NOTIFICATION_DISABLED)
         }
@@ -287,7 +286,8 @@ class __window_manager extends push {
       { async: 1 }
     );
     if (!data || !data.src) return null;
-    if (!/^http/.test(data.src)) data.src = `${protocol}://${data.src}`;
+    const { protocol } = bootstrap();
+    if (!/^(http|file)/.test(data.src)) data.src = `${protocol}://${data.src}`;
     await Kind.waitFor("video_viewer");
 
     let items = this.getItemsByKind("video_viewer");
@@ -760,7 +760,7 @@ class __window_manager extends push {
    * @returns
    */
   xorSelect(t) {
-    if (this._isMoving || mouseDragged) {
+    if (this._isMoving || pointerDragged) {
       return;
     }
     if (t !== this) {
@@ -855,6 +855,7 @@ class __window_manager extends push {
       if (/^http/.test(text)) {
         href = text;
       } else {
+        const { protocol } = bootstrap();
         href = `${protocol}://${text}`;
       }
       let opt = Visitor.parseModuleArgs(text);
@@ -914,7 +915,6 @@ class __window_manager extends push {
     let kind = "window_search";
     await Kind.waitFor(kind);
 
-    //@debug "aaa 1065str", str, args, cmd
     const w = this.getItemByKind(kind);
     if (!str.length) {
       if (args.type === _e.click) {

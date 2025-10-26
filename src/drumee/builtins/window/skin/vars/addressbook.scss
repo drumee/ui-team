@@ -1,0 +1,56 @@
+.window {
+
+  /**background**/
+  --ab-header-bg: #556E7F;
+  --ab-default-background: --default-background;
+  --ab-default-background-hover: --default-background-hover;
+  --ab-default-block-background: --default-block-background;
+  --ab-transparency-container-overlay: --transparency-container-overlay;
+  --ab-background-tooltips: --background-tooltips;
+  --ab-default-background-alert: --default-background-alert;
+
+  /**text**/
+  --ab-special-tag-fg: #6994b1;
+  --ab-special-tag-color: #6994b1;
+  --ab-default-text-color: --default-text-color;
+  --ab-secondary-text-color: --secondary-text-color;
+  --ab-default-text-reverse: --default-text-reverse;
+  --ab-default-text-title: --default-text-title;
+  --ab-default-text-placeholder: --default-text-placeholder;
+  --ab-text-placeholder-focus: --focus-text-placeholder;
+  --ab-default-text-hover: --default-text-hover;
+  --ab-tertiary-text-color: --tertiary-text-color;
+  --ab-default-text-success: --default-text-success;
+  --ab-default-text-tooltips: --default-text-tooltips;
+  --ab-default-text-notification: --default-text-notification;
+  --ab-text-title: --ab-default-text-title;
+
+  /**icon**/
+  --ab-icon-header: #556E7F;
+  --ab-contact-online-color: --contact-online-color;
+  --ab-default-icon-neutral: --default-icon-neutral;
+  --ab-default-icon-reverse: --default-icon-reverse;
+  --ab-default-icon-active: --default-icon-active;
+  --ab-default-icon-hover: --default-icon-hover;
+  --ab-default-thinline-icon: --default-thinline-icon;
+  --ab-default-thinline-icon-hover: --default-thinline-icon-hover;
+  --ab-default-icon-success: --default-icon-success;
+  --ab-default-user-icon: --default-user-icon;
+  --ab-special-tag-note-chat: --special-tag-note-chat;
+  --ab-default-icon-menu-dropdown: --default-icon-menu-dropdown;
+
+
+  --ab-default-checkbox-border: --default-checkbox-border;
+  --ab-default-checkbox-checked: --default-checkbox-checked;
+  --ab-default-checkbox-background: --default-checkbox-background;
+  --ab-checkbox-checked-reverse: --checkbox-checked-reverse;
+  --ab-checkbox-checked-border-reverse: --checkbox-checked-border-reverse;
+
+  /**border**/
+  --ab-default-entry-border-bottom: --default-entry-border-bottom;
+  --ab-default-border-error: --default-border-error;
+  --ab-focus-border-placeholder: --focus-border-placeholder;
+  --ab-default-separator: --default-separator;
+  --ab-default-frame: --default-frame;
+  --ab-default-window-header-search: --default-window-header-search;
+}

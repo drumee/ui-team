@@ -1,10 +1,3 @@
-// ============================================================= *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /src/drumee/libs/reader/profile/index.js
-//   TYPE : Component
-// ============================================================= *
-
-
 const { colorFromName } = require("core/utils")
 
 const __cache = {};

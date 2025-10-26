@@ -1,5 +1,5 @@
 
-@import 'mixins/drumee.scss';
+@use 'mixins/drumee.scss';
 .sp-horizontal {
   .sp-arrows {
     width: 100%;
@@ -39,7 +39,7 @@
     &:before, &:after {
       width: 24px;
       height: 4px;
-      border-radius: $default-border-radius-small;//4px;
+      border-radius: var(--border-radius-small);//4px;
     }
     &:before {
       left: 20%;

@@ -1,5 +1,5 @@
-@import 'mixins/drumee.scss';
-@import "pdfjs-dist/web/pdf_viewer.css";
+@use 'mixins/drumee.scss';
+// @import "pdfjs-dist/web/pdf_viewer.css";
 
 .pdfViewer {
   --scale-factor: 1.1;
@@ -7,7 +7,7 @@
 
 .player-page {
   &__ui {
-    background-color: $multimedia-player-doc-background; //$player-image-background;
+    background-color: var(--multimedia-player-doc-bg); //$player-image-background;
     overflow: hidden;
     height: auto;
     min-height: 100px;
@@ -16,6 +16,11 @@
     margin-bottom: 10px;
     box-shadow: none;
     z-index: 10;
+  }
+
+  &__canvas-wrapper {
+    width: 100%;
+    height: auto;
   }
 
   &__text-layer {

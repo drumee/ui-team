@@ -95,7 +95,7 @@
     padding: 0 0 0 20px;
     position: relative;
     cursor: pointer;
-    @include typo($size:14px,$line:36px,$color:$egrey-49,$weight:400);
+    @include typo($size:14px,$line:36px,$color: var(--egrey-49),$weight:400);
   }
   &__main {
     align-items: center;
@@ -125,12 +125,12 @@
   }
   &:hover{
     background-color: #879BFF;      
-    color: $ewhite;
+    color: var(--ewhite);
     .check, .reject {
       visibility: visible;
     }
     .reject, .chat {
-      color: $ewhite;
+      color: var(--ewhite);
     }
     .check, .reject, .chat {
       margin-right: 20px;
@@ -141,7 +141,7 @@
   }
   &__ok-btn {
     flex-shrink: 0;
-    background: $ewhite;
+    background: var(--ewhite);
     border-radius: 50%;
     width: 18px;
     align-items: center;
@@ -157,11 +157,11 @@
     }
   }
   &__message{
-    background-color: $ewhite;
+    background-color: var(--ewhite);
     padding: 12px 14px;
     border-radius: 2px;
     box-shadow: 0 5px 8px 0 rgba(0, 0, 0, 0.14);  
-    @include typo($size:12px,$line:14px,$color:$egrey-2f,$weight:300);
+    @include typo($size:12px,$line:14px,$color: var(--egrey-2f),$weight:300);
     &:before {
       content: " ";
       position: absolute;
@@ -169,7 +169,7 @@
       left: 18px;
       width: 10px;
       height: 10px;
-      background-color: $ewhite;
+      background-color: var(--ewhite);
       transform: rotate(45deg);
     }
   }

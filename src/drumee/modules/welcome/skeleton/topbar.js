@@ -1,8 +1,6 @@
 
-const { toggleState } = require("core/utils");
 function __skl_welcome_topbar(_ui_) {
-  let { user_domain, main_domain } = bootstrap();
-  let logo = require("assets/mascot.png").default;
+  let { protocol, main_domain } = bootstrap();
   let href = null;
   if (main_domain) href = `${protocol}://${main_domain}`;
   const a = Skeletons.Box.Z({

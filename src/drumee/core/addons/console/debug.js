@@ -11,7 +11,10 @@ const MODEL_STYLE = "color: green; font-weight: bold;"
 const COLLECTION_STYLE = "color: orange; font-weight: bold;"
 const { log } = require("../../utils");
 
-const { info, debug, verbose, gossip} = require("../../utils/constants").LOG_NAME
+
+const { LOG_NAME, LOG_LEVEL } = require("../../utils/constants");
+const { info, debug, verbose, gossip } = LOG_NAME;
+
 /**
  * 
  * @param  {...any} args 
@@ -188,3 +191,33 @@ Window.prototype.debug = function (...args) {
     console.log(`%c${name}:`, VIEW_STYLE, ...args)
   }
 };
+
+/**
+ * No operation
+ */
+window.noOperation = function () { };
+
+
+/**
+ * 
+ * @param {*} v 
+ */
+window.setLogLevel = function (v) {
+  let name;
+  if (typeof (v) == 'number') {
+    VERBOSITY = v;
+    localStorage.logLevel = VERBOSITY;
+    for (let k in LOG_LEVEL) {
+      if (LOG_LEVEL[k] == v) {
+        name = k;
+        break;
+      }
+    }
+  } else if (typeof (v) == 'string' && LOG_LEVEL[v]) {
+    VERBOSITY = LOG_LEVEL[v];
+    localStorage.logLevel = VERBOSITY;
+    name = v;
+  }
+  console.log(`Log level is ${name} (${VERBOSITY})`)
+};
+

@@ -4,7 +4,7 @@
 #   TYPE : Style Component
 # ===================================================================**/
 
-@import '../../../../skin/mixins/drumee.scss';
+@use '../../../../skin/mixins/drumee.scss';
 
 .window-manager {
   &__ui {
@@ -68,14 +68,14 @@
     padding-top: 10px;
 
     &[data-type="trial"]::after {
-      @include typo($size: 36px, $line: 42px, $color: $default-text-title);
+      @include drumee.typo($size: 36px, $line: 42px, $color: var(--default-text-title));
       transform: none;
       bottom: 0;
       width: 100%;
     }
 
     &[data-type="error"]::after {
-      @include typo($size: 76px, $line: 2, $color: red);
+      @include drumee.typo($size: 76px, $line: 2, $color: red);
       transform: none;
       width: 100%;
       background-color: white;
@@ -106,7 +106,7 @@
 
   &__wrapper.bug-report {
     background-color: rgba(47, 47, 47, 0.5);
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     cursor: pointer;
     height: 35px;
     justify-content: center;
@@ -118,7 +118,7 @@
     box-shadow: 0 2px 2px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgb(86 65 113 / 8%), 0 2px 14px 0 rgb(194 185 203 / 0%);
 
     &:hover {
-      background-color: $core-default-background-hover;
+      background-color: var(--default-bg-hover);
       z-index: 200000;
     }
 
@@ -134,7 +134,7 @@
     align-items: center;
     cursor: pointer;
     text-align: center;
-    @include typo($size: 14px, $line: 15px, $color: $core-default-text-reverse); //$size: 13px,
+    @include drumee.typo($size: 14px, $line: 15px, $color: var(--default-text-reverse)); //$size: 13px,
   }
 
 
@@ -148,11 +148,11 @@
       max-width: 100%;
       position: absolute;
       height: 380px;
-      background-color: $core-default-background ;
-      border-radius: $default-border-radius;
+      background-color: var(--default-bg);
+      border-radius: var(--border-radius);
       align-items: center;
       min-height: 345px;
-      //box-shadow: $drumee-shadow-container;
+      //box-shadow: var(--shadow-container);
       padding-top: 60px;
     }
 

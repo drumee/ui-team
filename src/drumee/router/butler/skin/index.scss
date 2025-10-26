@@ -1,11 +1,22 @@
-/* =================================================================== *
-#   Copyright Xialia.com  2011-2016                                    *
-#   FILE : src/drumee/router/skin/cop/main.scss
-#   TYPE : Global styles, for the whole platform
-# ==================================================================== */
-@import '../../../skin/mixins/drumee.scss';
+/**
+ * @license
+ * Copyright 2024 Thidima SA. All Rights Reserved.
+ * Licensed under the GNU AFFERO GENERAL PUBLIC LICENSE, Version 3 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.gnu.org/licenses/agpl-3.0.html
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =============================================================================
+ */
+@use '../../../skin/mixins/drumee.scss';
 
-@import 'goodbye';
+@use 'goodbye';
 
 .router-butler {
   &__ui {
@@ -33,11 +44,11 @@
   }
 
   &__title {
-    @include typo($color: #fa8540, $size: 26px, $line: 33px, $weight: 300);
+    @include drumee.typo($color: #fa8540, $size: 26px, $line: 33px, $weight: 300);
   }
 
   &__label {
-    @include typo($color: $core-default-text-color, $size: 14px, $weight: 300, $line: 36px); // $egrey-2f
+    @include drumee.typo($color: var(--default-text-color), $size: 14px, $weight: 300, $line: 36px); // var(--egrey-2f)
 
     &.ph-reminder {
       display: none;
@@ -48,7 +59,7 @@
       &[data-state="1"] {
         display: block;
         transition: all .5s;
-        @include typo($color: $core-secondary-text-color , $size: 13px, $weight: 300, $line: 16px); //#4A90E2
+        @include drumee.typo($color: var(--secondary-text-color) , $size: 13px, $weight: 300, $line: 16px); //#4A90E2
         text-align: left;
         margin: 0 auto 0 0;
       }
@@ -57,7 +68,7 @@
 
   &__message {
     bottom: 16px;
-    @include typo($color: $core-default-text-color, $size: 16px, $line: 18px, $weight: 400); //$egrey-78
+    @include drumee.typo($color: var(--default-text-color), $size: 16px, $line: 18px, $weight: 400); //$egrey-78
     text-align: left;
 
     &.subtitle {
@@ -67,7 +78,7 @@
     }
 
     &.error {
-      @include typo($color: $core-default-text-error, $size: 14px, $line: 18px, $weight: 300);
+      @include drumee.typo($color: var(--default-text-error), $size: 14px, $line: 18px, $weight: 300);
     }
   }
 
@@ -79,11 +90,11 @@
     width: 570px;
     height: auto;
     padding: 50px;
-    border-radius: $default-border-radius; //6px;
-    background-color: $core-default-background !important; //#FFFFFF
+    border-radius: var(--border-radius); //6px;
+    background-color: var(--default-bg) !important; //#FFFFFF
     justify-content: space-between;
     align-items: center;
-    background: $core-default-background ; //white;
+    background: var(--default-bg); //white;
     box-shadow: 0 0 7px 0 rgb(0 0 0 / 14%), 0 0 6px 0 #f8fafc, 0 3px 5px 0 rgb(0 0 0 / 20%);
     overflow: hidden;
 
@@ -100,7 +111,7 @@
       top: 0;
 
       &:hover {
-        color: $core-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
       }
     }
   }
@@ -128,7 +139,7 @@
       max-width: 600px;
       min-width: 450px;
       background-color: white;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       overflow: hidden;
     }
 
@@ -142,7 +153,7 @@
     }
 
     &.title {
-      @include typo($color: $core-default-text-error, $size: 20px, $line: 28px, $weight: 300);
+      @include drumee.typo($color: var(--default-text-error), $size: 20px, $line: 28px, $weight: 300);
     }
   }
 
@@ -157,31 +168,31 @@
     }
 
     &.no-go {
-      background-color: $btn-commit-background;
-      @include typo($color: $core-secondary-text-color, $size: 13px, $line: 16px, $weight: 300); //$egrey-78
+      background-color: var(--btn-commit-background);
+      @include drumee.typo($color: var(--secondary-text-color), $size: 13px, $line: 16px, $weight: 300); //var(--egrey-78)
     }
 
     &.go {
       min-width: 115px;
-      background-color: $btn-commit-background;
-      @include typo($size: 16px, $line: 35px, $weight: 400, $color: $btn-commit-text);
+      background-color: var(--btn-commit-background);
+      @include drumee.typo($size: 16px, $line: 35px, $weight: 400, $color: var(--btn-commit-text));
     }
 
     &.action,
     &.btn {
       margin: 0 10px;
       min-width: 115px;
-      border: 1px solid $btn-commit-border;
-      border-radius: $default-border-radius;
+      border: 1px solid var(--btn-commit-border);
+      border-radius: var(--border-radius);
 
       &:hover {
-        background-color: $btn-commit-background-hover;
-        border: 1px solid $btn-commit-border-hover;
+        background-color: var(--btn-commit-background-hover);
+        border: 1px solid var(--btn-commit-border-hover);
       }
     }
 
     &.link {
-      @include typo($color: $core-secondary-text-color, $size: 13px, $line: 16px, $weight: 300); //$egrey-78
+      @include drumee.typo($color: var(--secondary-text-color), $size: 13px, $line: 16px, $weight: 300); //var(--egrey-78)
     }
   }
 
@@ -199,13 +210,13 @@
 
     .message {
       width: auto;
-      background: $core-default-background; //$ewhite;
+      background: var(--default-bg); //var(--ewhite);
       position: absolute;
       top: -12px;
       height: auto;
       min-width: 200px;
       white-space: nowrap;
-      @include typo($color: #ff4578, $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.typo($color: #ff4578, $size: 12px, $line: 16px, $weight: 300);
     }
   }
 }

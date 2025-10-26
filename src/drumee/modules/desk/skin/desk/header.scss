@@ -6,7 +6,7 @@
 
 
 .desk__header{
-  @include typo($line:24px,$size:18px,$weight:400,$color:$ewhite);
+  @include typo($line:24px,$size:18px,$weight:400,$color: var(--ewhite));
   .share-btn-count {
     display: block;
     position: absolute;
@@ -25,7 +25,7 @@
 
   .menu-items {
     top: -9px!important;
-    background-color: $ewhite;
+    background-color: var(--ewhite);
     border-radius: 4px;
     height:57px !important;
     padding-top:0px;
@@ -34,7 +34,7 @@
       content: " ";
       width: 6px;
       height: 6px;
-      background-color: $ewhite;
+      background-color: var(--ewhite);
       transform: rotate(45deg);
       position: absolute;
       top: 25px;
@@ -45,7 +45,7 @@
       top: 0;
       height: 100%;
       width: 5px;
-      background-color: $ewhite;
+      background-color: var(--ewhite);
     }
   }
 }
@@ -57,7 +57,7 @@
     cursor: pointer;
     transition: all 0.5s ease-in;
     overflow: hidden;
-    @include typo($line:12px,$size:12px,$weight:300,$color:$egrey-78);
+    @include typo($line:12px,$size:12px,$weight:300,$color: var(--egrey-78));
     .note-content {
       transition: all 0.5s ease-in;
       width: 0;
@@ -82,7 +82,7 @@
   position: relative;
   &-inner {
     &-icon {
-      color: $egrey-89;
+      color: var(--egrey-89);
       position: absolute;
       left: 0;
       z-index: 1;
@@ -90,7 +90,7 @@
     }
   }
   &-icon {
-    color: $ewhite;
+    color: var(--ewhite);
     flex-shrink: 0;
     background-color: rgba(#FFFFFF, 0.2);
     border-radius: 2px;
@@ -185,9 +185,9 @@
   //   box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
   //   transition: width 0.3s ease-in;
   //   pointer-events: all;
-  //   @include typo($line:19px,$size:14px,$weight:300,$color:$egrey-2f);
+  //   @include typo($line:19px,$size:14px,$weight:300,$color: var(--egrey-2f));
   //   @include placeholder-input{
-  //     @include typo($line:19px,$size:14px,$weight:300,$color:$egrey-89);
+  //     @include typo($line:19px,$size:14px,$weight:300,$color: var(--egrey-89));
   //   }
   //   &:focus {
   //     width: 320px;
@@ -271,7 +271,7 @@
   //   width   : 60px;
   //   height  : 48px;
   //   padding : 0;
-  //   @include typo($line:15px,$size:11px,$weight:300,$color:$egrey-2f);
+  //   @include typo($line:15px,$size:11px,$weight:300,$color: var(--egrey-2f));
   //   svg {
   //     width: 34px;
   //     height: 34px;
@@ -335,9 +335,9 @@
   //   }
   //   &[class^="desk__menu-item"]:focus, &[class^="desk__menu-item"]:active {
   //     background-color: #879BFF;
-  //     color: $ewhite;
+  //     color: var(--ewhite);
   //     svg {
-  //       color: $ewhite;
+  //       color: var(--ewhite);
   //     }
   //   }
   // }
@@ -345,7 +345,7 @@
 
 // .desk__filter{
 //   &-list.box {
-//     background-color: $ewhite;
+//     background-color: var(--ewhite);
 //     width: 174px;
 //     border-radius: 4px;
 //     box-shadow: 0 -4px 8px 3px rgba(75,72,72,0.22), 0 4px 8px 3px rgba(75,72,72,0.22), 0 5px 14px 0 rgba(43,16,80,0.42), 0 2px 12px 0 rgba(93,93,93,0.78);
@@ -374,13 +374,13 @@
 //     height: 24px;
 //     padding: 0 14px;
 //     cursor: pointer;
-//     @include typo($line:24px,$size:12px,$weight:400,$color:$egrey-78);
+//     @include typo($line:24px,$size:12px,$weight:400,$color: var(--egrey-78));
 //     &:hover {
-//       color: $eviolet;
+//       color: var(--eviolet);
 //     }
 //     &:active, &[data-state="1"], &[data-radio="on"] {
-//       background-color: $eviolet;
-//       color: $ewhite;
+//       background-color: var(--eviolet);
+//       color: var(--ewhite);
 //     }
 //   }
 //   &-input {
@@ -394,7 +394,7 @@
 //         height: 100%;
 //         left: 0;
 //         top: 0;
-//         // background: $ewhite;
+//         // background: var(--ewhite);
 //         // opacity: 0.5;
 //       }
 //     }

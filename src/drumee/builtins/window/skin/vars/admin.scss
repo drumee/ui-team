@@ -1,0 +1,71 @@
+@use 'mixins/drumee';
+
+.window {
+  --ap-textarea-placeholder : #89929E;
+
+  /**background**/
+  --admin-default-background : --default-background;
+  --admin-default-background-hover : --default-background-hover;
+  --admin-header-bg : #18A3AC;
+  --admin-default-block-background : --default-block-background;
+  --admin-default-background-error : --default-background-error;
+  --admin-transparency-container-overlay : --transparency-container-overlay;
+  --admin-default-background-inactive : --default-background-inactive;
+  --admin-background-tooltips : --background-tooltips;
+  --admin-default-background-alert : --default-background-alert;
+
+  /**text**/
+  --admin-default-text-color : --default-text-color;
+  --admin-secondary-text-color : --secondary-text-color;
+  --admin-default-text-reverse : --default-text-reverse;
+  --admin-default-text-title : --default-text-title;
+  --admin-default-text-placeholder : --default-text-placeholder;
+  --admin-text-placeholder-focus : --focus-text-placeholder;
+  --admin-default-text-hover : --default-text-hover;
+  --admin-default-text-error : --default-text-error ;
+  --admin-default-text-caution : --default-text-caution;
+  --admin-default-text-alert : --default-text-alert;
+  --admin-default-text-inactive : --default-text-inactive;
+  --admin-backgroundless-text-hover : --backgroundless-text-hover;
+  --admin-tertiary-text-color : --tertiary-text-color;
+  --admin-default-text-success : --default-text-success;
+  --admin-default-text-tooltips : --default-text-tooltips;
+  --admin-authorized-filter-text : #494949;
+  --admin-special-tag-color : #18A3AC; 
+  --admin-text-title : --admin-default-text-title; 
+
+  /**icon**/
+  --admin-default-icon-neutral : --default-icon-neutral;
+  --admin-default-icon-reverse : --default-icon-reverse ;
+  --admin-default-icon-active : --default-icon-active;
+  --admin-default-icon-hover : --default-icon-hover;
+  --admin-default-thinline-icon : --default-thinline-icon; 
+  --admin-default-thinline-icon-hover : --default-thinline-icon-hover; 
+  --admin-default-icon-success : --default-icon-success;
+  --admin-default-user-icon : --default-user-icon;
+  --admin-secondary-icon-color : #4a90e2;
+  
+
+  --admin-default-checkbox-border : --default-checkbox-border;
+  --admin-default-checkbox-checked : --default-checkbox-checked;
+  --admin-default-checkbox-background : --default-checkbox-background;
+  --admin-checkbox-checked-reverse : --checkbox-checked-reverse;
+  --admin-checkbox-checked-border-reverse : --checkbox-checked-border-reverse;
+
+  /**border**/
+  --admin-default-entry-border-bottom : --default-entry-border-bottom;
+  --admin-default-border-error : --default-border-error;
+  --admin-focus-border-placeholder : --focus-border-placeholder;
+  --admin-default-separator : --default-separator;
+  --admin-default-border-success : --default-border-success;
+  --admin-default-window-header-search	: --default-window-header-search;
+  --admin-default-frame : --default-frame;
+  
+
+  /**toggle**/
+  --admin-toggle-switch-on : --toggle-switch-on ;
+  --admin-toggle-switch-off : --toggle-switch-off;
+  --admin-toggle-switch-radio : --toggle-switch-radio ;
+  --admin-toggle-background : --toggle-background ;
+
+}

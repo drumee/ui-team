@@ -4,7 +4,7 @@
 #   TYPE : Component style
 # ===================================================================**/
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .welcome-reset {
   &__ui,
@@ -66,9 +66,9 @@
   }
 
   &__row {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     align-items: center;
-    background-color: $core-default-block-background;
+    background-color: var(--default-bg-block);
     max-height: 56px;
     height: 100%;
     width: 100%;
@@ -95,7 +95,7 @@
       padding: 0;
       top: 5px;
       svg {
-        fill: $egrey-2f;
+        fill: var(--egrey-2f);
       }
     }
 
@@ -124,8 +124,8 @@
       height: 100%;
 
       &[data-status="error"] {
-        border-radius:$default-border-radius;
-        border: 2px solid $core-default-border-error;//$eorange-sunset;
+        border-radius:var(--border-radius);
+        border: 2px solid var(--default-border-error);//var(--eorange-sunset);
       }
     }
   }
@@ -139,22 +139,22 @@
     justify-content: center;
     text-align: center;
     width: 100%;
-    @include typo($size: 20px, $line: 28px,$weight:400, $color: $core-default-text-reverse);
+    @include drumee.typo($size: 20px, $line: 28px,$weight:400, $color: var(--default-text-reverse));
 
     &.header {
-      @include typo($size: 38px, $line: 45px, $weight:500, $color: $core-default-text-reverse);
+      @include drumee.typo($size: 38px, $line: 45px, $weight:500, $color: var(--default-text-reverse));
     }
 
     &.steps {
-      color: $white-f7;
+      color: var(--white-f7);
       top: 30px;
     }
 
     &.drumee-com {
-     // color: $white-f9;
+     // color: var(--white-f9);
       position: absolute;
       right: -130px;
-      @include typo($size: 20px, $line: 28px,$weight:500,$color:$white-f9);
+      @include drumee.typo($size: 20px, $line: 28px,$weight:500,$color: var(--white-f9));
     }
 
     &.input-label {
@@ -165,7 +165,7 @@
 
     &.password-tips {
       padding-top: 47px;
-      @include typo($size: 12px, $line: 16px, $weight:400,$color: $white-f9);
+      @include drumee.typo($size: 12px, $line: 16px, $weight:400,$color: var(--white-f9));
     }
 
     &.mobile-number {
@@ -182,7 +182,7 @@
     &.no-code,
     &.not-now {
       width: 100%;
-      @include typo($size: 16px, $line: 16px, $color: $white-f9);
+      @include drumee.typo($size: 16px, $line: 16px, $color: var(--white-f9));
     }
 
     &.no-code-text,
@@ -203,13 +203,13 @@
       cursor: pointer;
       text-decoration-line: underline;
       &:hover {
-        color:$eviolet;//#6a85ff; 
+        color:var(--eviolet);//#6a85ff; 
       }
     }
   }
 
   &__icon {
-    color: $core-default-icon-neutral;//$egrey-89;
+    color: var(--default-icon-neutral);//var(--egrey-89);
     cursor: pointer;
     height: 18px;
     width: 18px;
@@ -222,7 +222,7 @@
     &.mobile,
     &.mobile-number,
     &.acknowledgment {
-      color: $core-default-text-reverse;;//$ewhite;
+      color: var(--default-text-reverse);;//var(--ewhite);
     }
 
     &.mobile,
@@ -256,16 +256,16 @@
   &__entry {
     & input {
       border-bottom: none;
-      @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
+      @include drumee.typo($size: 18px, $line: 28px, $color: var(--default-text-color));
 
       &::placeholder {
-        @include typo($size: 18px, $line: 28px, $weight: 300, $color: $core-default-text-placeholder); //$egrey-b6);
+        @include drumee.typo($size: 18px, $line: 28px, $weight: 300, $color: var(--default-text-placeholder)); //var(--egrey-b6));
       }
     }
 
     &[data-status="error"] {
-      border-radius:$default-border-radius;
-      border: 2px solid $core-default-border-error; //$eorange-sunset;
+      border-radius:var(--border-radius);
+      border: 2px solid var(--default-border-error); //var(--eorange-sunset);
     }
 
     & .entry-reminder_error {
@@ -279,9 +279,9 @@
     }
     
     &.input-box {
-      border-radius:$default-border-radius;
+      border-radius:var(--border-radius);
       align-items: center;
-      background-color: $core-default-background; //$ewhite;
+      background-color: var(--default-bg); //var(--ewhite);
       height: 56px;
       width: 100%;
 
@@ -301,19 +301,19 @@
     position: absolute;
     right: 15px;
     top: 15px;
-    color: $egrey-2f;
+    color: var(--egrey-2f);
     opacity: 0.7;
   }
 
   &__button-confirm {
     align-items: center;
-    background-color: $egreen-soft;
-    border-radius:$default-border-radius;
+    background-color: var(--egreen-soft);
+    border-radius:var(--border-radius);
     cursor: pointer;
     height: 100%;
     justify-content: center;
     width: 100%;
-    @include typo($size: 20px, $line: 28px, $color: $core-default-text-reverse);
+    @include drumee.typo($size: 20px, $line: 28px, $color: var(--default-text-reverse));
     &:hover{
       box-shadow: 0 0 13px 0 rgb(169 186 255 / 50%);
     }

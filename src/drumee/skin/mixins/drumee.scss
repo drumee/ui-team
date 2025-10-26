@@ -1,12 +1,7 @@
-/* ==================================================================== *
-*   FILE : 
-*   TYPE : Export bases
-* ==================================================================== */
-@import './border.scss';
-@import './box-shadow.scss';
-@import './colors/index.scss';
-@import './typo.scss';
-@import './utils.scss';
-@import './vendor.scss';
-@import './z-index.scss';
+@forward './box-shadow';
+@forward './button';
+@forward './typo';
+@forward './utils';
+@forward './vendor';
+
 

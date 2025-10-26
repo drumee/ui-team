@@ -124,5 +124,8 @@
   "SERVER_BUSY": "Lo sentimos, nuestro servidor está experimentando mucha carga. Inténtalo de nuevo más tarde.",
   "REPLACE": "Reemplaza",
   "INSERT": "Insertar",
-  "CONFIRM_DIRNAME_CONFLICT": "Ya existe un directorio con el mismo nombre ({0}). ¿Qué desea hacer?"
+  "CONFIRM_DIRNAME_CONFLICT": "Ya existe un directorio con el mismo nombre ({0}). ¿Qué desea hacer?",
+  "MONTHS": "Meses",
+  "YEARS": "Años",
+  "HOURS": "Horas"
 }

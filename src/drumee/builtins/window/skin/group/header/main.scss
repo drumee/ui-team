@@ -1,108 +1,128 @@
-&__header {
-  border-radius: $default-border-radius-top; 
-  width: 100%;
-  z-index: 200;
-}
+@use "mixins/drumee";
 
-&-topbar {
-  &__container {
-    height: 44px;
+.window {
+  &__header {
+    border-radius: var(--default-border-radius-top);
     width: 100%;
-    flex: 1;
-    border-radius: $default-border-radius-top;
-    height: 44px;
-    width: 100%;
-    &[data-device="mobile"] {
-      min-width: 305px;
-      height: 35px;
-    }
-    &.personnal {
-      background-color: $folder-background-header;
-    }
+    z-index: 200;
   }
-  &__copy-link-ack {
-    position: absolute;
-    width: 320px;
-    height: 200px;
-    padding: 10px;
-    z-index: 1000000;
-    top: 42px;
-    left: calc(50% - 160px);
-    box-shadow: 0px 0px 31px 0 rgba(0, 0, 0, 0.4);
-    border-radius: $default-border-radius-small;
-  }
-  &__action {
-    z-index: 1000;
-    &--container {
-      position: absolute;
-      width: 42px;
+
+  &-topbar {
+    &__container {
       height: 44px;
-      &[data-state="1"] {
-        margin-left: 35px;
+      width: 100%;
+      flex: 1;
+      border-radius: var(--default-border-radius-top);
+      height: 44px;
+      width: 100%;
+
+      &[data-device="mobile"] {
+        min-width: 305px;
+        height: 35px;
+      }
+
+      &.personnal {
+        background-color: var(--folder-main);
       }
     }
-    &--icon {
-      width: 12px;
-      color: $team-default-text-reverse;
-      height: 12px;
-      margin: auto 15px;
-      cursor: pointer;
-      &:hover {
-        color: $core-default-icon-hover;
+
+    &__copy-link-ack {
+      position: absolute;
+      width: 320px;
+      height: 200px;
+      padding: 10px;
+      z-index: 1000000;
+      top: 42px;
+      left: calc(50% - 160px);
+      box-shadow: 0px 0px 31px 0 rgba(0, 0, 0, 0.4);
+      border-radius: var(--border-radius-small);
+    }
+
+    &__action {
+      z-index: 1000;
+
+      &--container {
+        position: absolute;
+        width: 42px;
+        height: 44px;
+
+        &[data-state="1"] {
+          margin-left: 35px;
+        }
+      }
+
+      &--icon {
+        width: 12px;
+        color: var(--default-text-reverse);
+        height: 12px;
+        margin: auto 15px;
+        cursor: pointer;
+
+        &:hover {
+          color: var(--default-icon-hover);
+        }
       }
     }
-  }
-  &__title {
-    
-    color: $ewhite;
-    height: 100%;
-    justify-content: center;
-    margin: auto 0;
-    flex: 1;
-    position: absolute;
-    width: 100%;
-    .name {
-      max-width: calc(100% - 285px);
-      align-items: flex-start;
-      white-space: nowrap;
-      align-items: center;
-      width: auto;
-      @include typo($size: 18px, $line: 24px, $weight: 400, $color: $core-default-text-reverse);
-      @include overflow-text;
-      .inner {
-        overflow: hidden;
-        text-overflow: ellipsis;
+
+    &__title {
+
+      color: var(--ewhite);
+      height: 100%;
+      justify-content: center;
+      margin: auto 0;
+      flex: 1;
+      position: absolute;
+      width: 100%;
+
+      .name {
+        max-width: calc(100% - 285px);
+        align-items: flex-start;
         white-space: nowrap;
+        align-items: center;
+        width: auto;
+        @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
+        @include drumee.overflow-text;
+
+        .inner {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      .icon {
+        cursor: pointer;
+        width: 21px;
+        height: 21px;
+        padding: 4px;
+        color: var(--special-icon-setting);
+        min-width: 21px;
+        margin: auto 15px auto 5px;
+
+        &:hover {
+          color: var(--default-icon-hover);
+        }
       }
     }
-    .icon {
-      cursor: pointer;
-      width: 21px;
-      height: 21px;
-      padding: 4px;
-      color: $core-special-icon-setting;
-      min-width: 21px;
-      margin: auto 15px auto 5px; 
-      &:hover {
-        color: $core-default-icon-hover;
-      }
-    }
-  }
-  &__control {
-    position: absolute;
-    height: 100%;
-    right: 0;
-    display: flex;
-    .icon {
-      width: 12px;
-      height: 12px;
-      padding: 0px;
+
+    &__control {
+      position: absolute;
+      height: 100%;
+      right: 0;
       display: flex;
-      color: $core-default-icon-reverse;
-      cursor: pointer;
-      margin: auto 15px auto 0;
-      &:hover {
-        color: $core-default-icon-hover;
+
+      .icon {
+        width: 12px;
+        height: 12px;
+        padding: 0px;
+        display: flex;
+        color: var(--default-icon-reverse);
+        cursor: pointer;
+        margin: auto 15px auto 0;
+
+        &:hover {
+          color: var(--default-icon-hover);
+        }
       }
     }
   }

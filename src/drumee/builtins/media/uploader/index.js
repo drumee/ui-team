@@ -446,7 +446,7 @@ class __media_uploader extends LetcBox {
    */
   onUiEvent(cmd) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
 

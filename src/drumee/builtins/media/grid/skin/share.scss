@@ -1,36 +1,43 @@
-
-&__share{
-  width: 14px;
-  height: 14px;
-  position: absolute;
-  right: 2px;
-  top: 4px;
-  visibility: hidden;
-  fill: orange;
-  background-color: transparent;
-  cursor: pointer;
-  text-align: center;
-  border-radius: 2px;
-  &.inbound{
-    width: 22px;
-    height: 16px;
-    // border-radius: 2px;
-    svg{
-      border-radius: 2px;
-      background-color: $core-default-background;
-    }
-  }
-  &[data-hover="on"]{
-    visibility: visible;
-  }
-  &:hover{
-    svg{
-      fill: #879bff;;
-    }
-  }
-  &--icon{
-    pointer-events: none;
-    background-color: transparent;
+.media-grid {
+  &__share {
+    width: 14px;
+    height: 14px;
+    position: absolute;
+    right: 2px;
+    top: 4px;
+    visibility: hidden;
     fill: orange;
+    background-color: transparent;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 2px;
+
+    &.inbound {
+      width: 22px;
+      height: 16px;
+
+      // border-radius: 2px;
+      svg {
+        border-radius: 2px;
+        background-color: var(--default-bg);
+      }
+    }
+
+    &[data-hover="on"] {
+      visibility: visible;
+    }
+
+    &:hover {
+      svg {
+        fill: #879bff;
+        ;
+      }
+    }
+
+    &--icon {
+      pointer-events: none;
+      background-color: transparent;
+      fill: orange;
+    }
   }
 }

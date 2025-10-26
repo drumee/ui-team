@@ -55,7 +55,7 @@ class __core_failover extends Marionette.View {
   }
     
   dispatchUiEvent(e) {
-    if (mouseDragged) {
+    if (pointerDragged) {
       return;
     }
     return this.softDestroy();

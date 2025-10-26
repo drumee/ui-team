@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .account-data-deletion-otp {
   &__main {
@@ -8,10 +8,10 @@
   &__tips {
     justify-content: center;
     height: 40px;
-    @include typo($size: 16px, $line: 26px, $color: $account-default-text-color, $weight: 300);
+    @include drumee.typo($size: 16px, $line: 26px, $color: var(--default-text-color), $weight: 300);
 
     &[data-error="1"] {
-      color: $account-default-text-error;
+      color: var(--default-text-error);
     }
   }
 
@@ -27,23 +27,23 @@
 
     & input {
       background-color: transparent;
-      border-bottom: 1px solid $account-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       border-radius: 0px;
       width: 100%;
       margin-left: 0px;
-      @include typo($size: 16px, $line: 19px, $color: $account-default-text-color);
+      @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-color));
 
       &::placeholder {
 
-        @include typo($size: 16px, $weight: 300, $line: 19px, $color: $account-default-text-placeholder);
+        @include drumee.typo($size: 16px, $weight: 300, $line: 19px, $color: var(--default-text-placeholder));
       }
 
       &:focus {
-        border-color: $eblue;
+        border-color: var(--eblue);
         outline: none;
 
-        @include placeholder-input {
-          @include typo($size: 16px, $weight: 400, $line: 19px, $color: $account-text-placeholder-focus);
+        @include drumee.placeholder-input {
+          @include drumee.typo($size: 16px, $weight: 400, $line: 19px, $color: var(--focus-text-placeholder));
         }
       }
     }
@@ -51,7 +51,7 @@
 
   &__no-code {
 
-    @include typo($size: 16px, $line: 18px, $color: $account-default-text-color, $weight: 300);
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--default-text-color), $weight: 300);
     justify-content: center;
     justify-items: center;
     transition: height 1s;
@@ -71,30 +71,30 @@
     outline: none;
     cursor: pointer;
     justify-content: center;
-    border-radius: $default-border-radius;
-    @include typo($size: 13px, $line: 18px, $color: $btn-rollback-text, $weight: 300);
-    color: $btn-rollback-text;
-    background-color: $btn-rollback-background;
-    border: 1px solid $btn-rollback-border;
+    border-radius: var(--border-radius);
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--btn-rollback-text), $weight: 300);
+    color: var(--btn-rollback-text);
+    background-color: var(--btn-rollback-background);
+    border: 1px solid var(--btn-rollback-border);
 
     &:hover {
-      border: 2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
 
     &.go {
       width: 70px;
-      color: $btn-commit-text;
-      background-color: $btn-commit-background;
+      color: var(--btn-commit-text);
+      background-color: var(--btn-commit-background);
     }
 
     &[data-role="commit"] {
-      color: $btn-commit-text;
-      background-color: $btn-commit-background;
-      border-color: $btn-commit-border;
+      color: var(--btn-commit-text);
+      background-color: var(--btn-commit-background);
+      border-color: var(--btn-commit-border);
 
       &:hover {
-        border-color: 1px solid $btn-commit-border-hover;
+        border-color: 1px solid var(--btn-commit-border-hover);
       }
     }
 
@@ -129,11 +129,11 @@
 
   &__message {
     .l-1 {
-      @include typo($size: 12px, $line: 18px, $color: $btn-rollback-text, $weight: 300);
+      @include drumee.typo($size: 12px, $line: 18px, $color: var(--btn-rollback-text), $weight: 300);
     }
 
     .l-2 {
-      @include typo($size: 12px, $line: 18px, $color: $account-default-text-caution, $weight: 400);
+      @include drumee.typo($size: 12px, $line: 18px, $color: var(--default-text-caution), $weight: 400);
     }
   }
 }

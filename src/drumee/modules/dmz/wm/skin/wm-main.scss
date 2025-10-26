@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/dmz/skin/dmz-main.scss
 #   TYPE : Backoffice User Settings Styles
 # ===================================================================**/
-@import "mixins/drumee.scss";
+@use "mixins/drumee.scss";
 .dmz-wm {
   &__windows-layer {
     overflow: visible;
@@ -45,8 +45,8 @@
         width: 100%;
         max-height: calc(100vh - 190px);
         &[data-type="evaluation"]::after{
-          @include license-trial();
-          @include typo($size:36px,$line:42px,$color:$default-text-title);
+          @include drumee.license-trial();
+          @include drumee.typo($size:36px,$line:42px,$color: var(--default-text-title));
           transform: none;
           bottom: 0;
           width: 100%;
@@ -80,8 +80,8 @@
 
     & .media-grid__ui {
       & .filename {
-        @include typo($line: 14px, $size: 11px, $color: $core-default-text-color);
-        border-radius:$default-border-radius-bottom;
+        @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));
+        border-radius:var(--border-radius-bottom);
         cursor: pointer;
         left: 0px;
         max-height: 31px;
@@ -93,7 +93,7 @@
         width: 100%;
 
         &.hub, &.folder {
-          color: $core-default-text-reverse;
+          color: var(--default-text-reverse);
         }
 
         &.image,
@@ -113,17 +113,17 @@
     &[data-state="open"] {
       width: 100%;
       height: 100%;
-      background: $core-transparency-container-overlay;//$transparency-container-overlay; //rgba(0,0,0, .3);
+      background: var(--transparency-container-overlay);//$transparency-container-overlay; //rgba(0,0,0, .3);
       right: 0;
       bottom: 0;
     }
     .drumee-spinner {
       width: 150px;
       height: 150px;
-      background: $core-default-background; // white;
+      background: var(--default-bg); // white;
       top: calc(50% - 75px);
       left: calc(50% - 75px);
-      border-radius: $default-border-radius; //4px;
+      border-radius: var(--border-radius); //4px;
       padding: 20px;
       .root-node {
         position: absolute;

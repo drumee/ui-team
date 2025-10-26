@@ -1,8 +1,3 @@
-/* ==================================================================== *
- *   Copyright Xialia.com  2011-2020
- *   FILE : /src/drumee/modules/welcome/signin/index.js
- *   TYPE : Component
- * ==================================================================== */
 /// <reference path="../../../../../@types/index.d.ts" />
 
 const RECONNECT = 'reconnect';
@@ -30,7 +25,8 @@ class __welcome_signin extends __welcome_interact {
     super.initialize(opt);
     this.declareHandlers();
     this._otpResent = 0;
-    this._completeSignupLink = `${protocol}://${bootstrap().main_domain}${location.pathname}${_K.module.signup}`;
+    const { endpoint } = bootstrap();
+    this._completeSignupLink = `${endpoint}${_K.module.signup}`;
     this._skeleton = require("./skeleton");
   }
 
@@ -46,7 +42,6 @@ class __welcome_signin extends __welcome_interact {
    */
   onDomRefresh() {
     let opt = {};
-    this.debug("AAA:115", opt, bootstrap())
     switch (bootstrap().connection) {
       case "otp":
         if (this.mget(RECONNECT)) {
@@ -99,9 +94,9 @@ class __welcome_signin extends __welcome_interact {
       pw = this.getPart("ref-password").getValue();
     } catch (error) { }
     if (_.isEmpty(pw) || _.isEmpty(ident)) {
-      if(this._button){
+      if (this._button) {
         this._button.el.dataset.state = 0;
-        this._button.el.dataset.error = 0;  
+        this._button.el.dataset.error = 0;
       }
       return false;
     }
@@ -193,7 +188,7 @@ class __welcome_signin extends __welcome_interact {
           host = host.replace(/(\.[a-zA-Z0-9\-_]+){2,2}$/, "");
         }
         localStorage.setItem("user_domain", host);
-        return this.checkCompanyURL();
+        return this.checkOrganizationURL();
 
       case "open-signup":
         this.append({
@@ -223,14 +218,15 @@ class __welcome_signin extends __welcome_interact {
   /**
    *
    */
-  checkCompanyURL() {
+  checkOrganizationURL() {
     this.validateData();
     if (this.formStatus == _a.error) {
       return this.renderMessage(LOCALE.PLEASE_ENTER_URL_TO_CONTINUE);
     }
+    let { main_domain, protocol, endpointPath } = bootstrap();
     let domain = this.__refUrl.getValue();
     if (!/(\.[a-zA-Z0-9\-_]+){1,}$/.test(domain)) {
-      domain = `${domain}.${bootstrap().main_domain}`;
+      domain = `${domain}.${main_domain}`;
     }
     if (domain == location.host) {
       location.hash = _K.module.welcome;
@@ -241,20 +237,17 @@ class __welcome_signin extends __welcome_interact {
       domain,
     }).then((data) => {
       if (data.isvalid) {
-        Visitor.set({ user_domain: data.url });
-        Host.set({
-          vhost: data.url,
-          name: data.name,
-          org_name: data.name,
-        });
-
+        Drumee.init_globals(data)
+        let { organization } = data;
         setTimeout(() => {
-          if (location.host && location.host == data.url) {
+          if (location.host && location.host == organization.url) {
             location.hash = `${_K.module.welcome}/signin/auth`;
             location.reload();
+          } else if (organization.url) {
+            location.href = `${protocol}://${organization.url}${endpointPath}${_K.module.signin}/auth`;
           } else {
-            const { endpointPath } = bootstrap();
-            location.href = `${protocol}://${data.url}${endpointPath}${_K.module.signin}/auth`;
+            location.hash = `${_K.module.welcome}/signin/auth`;
+            location.reload();
           }
         }, Visitor.timeout(500));
       } else {

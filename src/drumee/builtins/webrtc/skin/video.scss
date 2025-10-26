@@ -1,11 +1,13 @@
-&__video {
-  height: 100%;
-  width: 100%;
-  background-color: $multimedia-vdo-background-color;//#262626;
-  object-fit: cover;
-  transform: matrix(-1, 0, 0, 1, 0, 0);
-  &[data-state="0"] {
-    display: none;
-    // visibility: hidden;
+@mixin webrtc-video {
+  &__video {
+    height: 100%;
+    width: 100%;
+    background-color: var(--multimedia-background); //#262626;
+    object-fit: cover;
+    transform: matrix(-1, 0, 0, 1, 0, 0);
+
+    &[data-state="0"] {
+      display: none;
+    }
   }
 }

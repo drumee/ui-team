@@ -1,8 +1,19 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : ../src/drumee/main
-//   TYPE :
-// ==================================================================== *
+/**
+ * @license
+ * Copyright 2025 Thidima SA. All Rights Reserved.
+ * Licensed under the GNU AFFERO GENERAL PUBLIC LICENSE, Version 3 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.gnu.org/licenses/agpl-3.0.html
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =============================================================================
+ */
 
 require('./core');
 window.errorStack = [];
@@ -76,7 +87,7 @@ class Drumee extends Marionette.Application {
     }
     let b = bootstrap();
     const { body } = document;
-    const { main_domain } = b;
+    const { protocol, main_domain } = b;
     let bgImg = `${protocol}://${main_domain}/-/images/background/drumee-pro-background.jpg`;
     body.style.height = "100vh";
     body.style.width = "100vw";
@@ -129,7 +140,10 @@ class Drumee extends Marionette.Application {
       Visitor.set(user);
       Organization.set(organization)
       window.currentDevice = Visitor.device();
-      window.SERVICE = { ...Drumee.SERVICE, ...Platform.get('services') }
+      window.SERVICE = Platform.get('services')
+      if (_.isEmpty(SERVICE)) {
+        window.SERVICE = require('lex/services');
+      }
     } catch (e) {
       console.error("FAILED TO PARSE ENVIRONMENT DATA", e);
       this.failover(e);
@@ -144,7 +158,7 @@ class Drumee extends Marionette.Application {
     let { user } = data;
     let { lang } = user;
     if (!lang) {
-      lang = Visitor.pagelang();
+      lang = Visitor.language();
     }
     require.ensure(["application"], e => {
       window.LOCALE = require("locale")(lang);
@@ -162,7 +176,9 @@ class Drumee extends Marionette.Application {
       this.showView(this.router);
       Visitor.listenChanges();
       Organization.listenChanges();
-      Visitor.respawn(user);
+      if (user.id) {
+        Visitor.respawn(user);
+      }
       if (!Backbone.History.started) Backbone.history.start();
     });
   }

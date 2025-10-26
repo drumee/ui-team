@@ -3,8 +3,8 @@
 #   FILE : /src/drumee/builtins/window/memo/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
-@import '../../skin/topbar.scss';
+@use 'mixins/drumee';
+@use '../../skin/topbar.scss';
 
 .diagram {
   &__ui {
@@ -15,16 +15,16 @@
 
 .editor-diagram {
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     width: 80vw;
     height: 80vh;
     top: 45px;
     left: calc(50vw - 220px);
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     overflow: visible;
     flex-direction: column;
     display: flex;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     &[data-device="mobile"] {
       width: 100vw;
       height: 100vh;
@@ -54,15 +54,15 @@
     min-height: 44px;
     border-bottom: none;
     z-index: 200;
-    background-color: rebeccapurple; //$team-background-header;
+    background-color: rebeccapurple; //var(--teamroom-main);
 
     &[data-header="0"] {
       display: none;
     }
 
     .menu-items {
-      background: $core-default-background;
-      border-radius: $default-border-radius;
+      background: var(--default-bg);
+      border-radius: var(--border-radius);
     }
   }
 
@@ -70,7 +70,7 @@
     width: 100%;
     height: 100%;
     align-items: center;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     overflow: hidden;
   }
 
@@ -85,7 +85,7 @@
     &__icon {
       width: 16px;
       height: 16px;
-      color: $core-default-text-reverse;
+      color: var(--default-text-reverse);
       margin-left: 10px;
       cursor: pointer;
       z-index: 1000;
@@ -110,14 +110,14 @@
 
       .tooltips {
         white-space: nowrap;
-        background-color: $core-background-tooltips; 
-        border-radius: $default-border-radius-tiny;
+        background-color: var(--bg-tooltips); 
+        border-radius: var(--border-radius-tiny);
         width: fit-content;
         position: absolute;
         padding: 7px;
         top: 18px;
-        @include typo($line: 15px, $size: 12px, $color: $core-default-text-color);
-        //@include typo($size: 12px, $line: 14px, $weight: 300, $color: $core-default-text-reverse);
+        @include drumee.typo($line: 15px, $size: 12px, $color: var(--default-text-color));
+        //@include typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-reverse));
       }
     }
   }
@@ -126,7 +126,7 @@
     width: 100%;
     height: 100%;
     //padding: 5px;
-    @include typo($size: 13px, $line: 18px, $weight: 300, $color: $core-default-text-color);
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 300, $color: var(--default-text-color));
 
     .text-editable {
       width: 100%;

@@ -82,9 +82,6 @@ View.prototype.initialize = function (opt) {
   const attr = opt.attribute || opt.attrOpt;
   if (attr) {
     this.attribute = new Backbone.Model(attr);
-    if (opt.debug && log()) {
-      opt.dataset = { ...opt.dataset, debug: opt.debug }
-    }
     if (opt.dataset != null) {
       for (let k in opt.dataset) {
         const v = opt.dataset[k];
@@ -252,7 +249,7 @@ View.prototype.onBeforeRender = function () {
     };
     const g = () => {
       if (v == 4) {
-        return RADIO_MOUSE.once(_e.mousedown, f);
+        return RADIO_POINTER.once(_e.pointerdown, f);
       }
       return RADIO_CLICK.once(_e.click, f);
     };
@@ -277,7 +274,7 @@ View.prototype.onBeforeRender = function () {
 View.prototype.__handleClick = function (e) {
   this._doubleClicked = 0;
   this._target = e;
-  if (mouseDragged) {
+  if (pointerDragged) {
     return true;
   }
   if (this.mget(_a.haptic)) {
@@ -328,9 +325,21 @@ View.prototype.__handleContextmenu = function (e) {
   e.stopPropagation();
   e.stopImmediatePropagation();
   if (e.shiftKey || e.ctrlKey) {
-    this.debug(`SKELETON=${this.el.dataset.debug}`, this, this.el, e);
-    return;
+    if (localStorage.logLevel >= 3) {
+      let p = this;
+      let s = p.mget(_a.debug);
+      while (!s && p.parent) {
+        s = p.mget(_a.debug);
+        if (s) break;
+        p = p.parent;
+      }
+      const handlers = this.getHandlers(_a.ui);
+      p.debug(`Skeleton location: ${p.mget(_a.debug)}`, p, p.el, e);
+      this.debug("Widget, uiHandler", this, handlers[0])
+      return;
+    }
   }
+
   if (this.escapeContextmenu || this.mget('escapeContextmenu')) {
     return
   }
@@ -371,7 +380,7 @@ View.prototype.__handleContextmenu = function (e) {
  * 
  * @param {*} e 
  */
-View.prototype.__handleMouseenter = function (e) {
+View.prototype.__handlePointerenter = function (e) {
   if (this.__tooltips) {
     let tt = this.__tooltips;
     this.__tooltips.state = 1;
@@ -405,7 +414,7 @@ View.prototype.__handleMouseenter = function (e) {
  * 
  * @param {*} e 
  */
-View.prototype.__handleMouseleave = function (e) {
+View.prototype.__handlePointerleave = function (e) {
   if (this.__tooltips) {
     let tt = this.__tooltips;
     this.__tooltips.state = 1;
@@ -486,7 +495,7 @@ View.prototype.__handleHelper = function (e) {
   if (e.ctrlKey) {
     this.debug("ELEMENT ->", this.el);
   }
-  this.debug(`SKELETON=${this.el.dataset.debug}`, this);
+  this.debug(`SKELETON=${this.mget(_a.debug)}`, this);
   return true;
 }
 
@@ -570,10 +579,20 @@ View.prototype.onRender = function () {
   this.el.onclick = this.__handleClick.bind(this);
   this.el.ondblclick = this.__handleDblclick.bind(this);
   this.el.oncontextmenu = this.__handleContextmenu.bind(this);
-  this.el.onmouseenter = this.__handleMouseenter.bind(this);
-  this.el.onmouseleave = this.__handleMouseleave.bind(this);
+  if (window.PointerEvent) {
+    this.el.onpointerenter = this.__handlePointerenter.bind(this);
+    this.el.onpointerleave = this.__handlePointerleave.bind(this);
+  } else {
+    this.el.onmouseenter = this.__handlePointerenter.bind(this);
+    this.el.onmouseleave = this.__handlePointerleave.bind(this);
+  }
 };
 
+/**
+ * 
+ * @param {*} refresh 
+ * @returns 
+ */
 View.prototype._responsive = function (refresh = 1) {
   if (!deviceChanged()) return;
   setDeviceSpecs(this)
@@ -798,7 +817,7 @@ View.prototype.triggerHandlers = function (e) {
     RADIO_CLICK.trigger(_e.click, e, source);
   }
   const handlers = this.getHandlers(_a.ui);
-  if (mouseDragged || _.isEmpty(handlers)) {
+  if (pointerDragged || _.isEmpty(handlers)) {
     return;
   }
   const cb = this.mget(_a.on_click);
@@ -987,7 +1006,7 @@ View.prototype.actualNode = function (format = _a.orig) {
     killCache = md5Hash || changed;
   }
 
-  const { keysel, endpoint } = bootstrap();
+  const { protocol, keysel, endpoint } = bootstrap();
   if (vhost && filepath) {
     href = `${protocol}://${vhost}${filepath}`;
   } else {

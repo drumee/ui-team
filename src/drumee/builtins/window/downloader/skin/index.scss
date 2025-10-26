@@ -1,9 +1,9 @@
-@import 'mixins/drumee.scss';
+@use 'mixins/drumee.scss';
 
 .window-downloader {
   &__ui {
-    background-color: $core-default-background;//$ewhite;
-    box-shadow: $drumee-shadow-main;
+    background-color: var(--default-bg);//var(--ewhite);
+    box-shadow: var(--shadow-main);
     &[data-state="0"]{
       display: none;
     }
@@ -38,7 +38,7 @@
       height: 44px;
       width: 100%;
       svg {
-        color: $egrey-2f;
+        color: var(--egrey-2f);
         opacity:0.5
       }
     }
@@ -49,7 +49,7 @@
     margin-right: auto;
     margin-top: 80px;
     max-width: 381px;
-    @include typo($size: 16px, $line: 16px, $color: $core-default-text-color);//$egrey-2f);
+    @include drumee.typo($size: 16px, $line: 16px, $color: var(--default-text-color));//var(--egrey-2f));
     
     .line {
       justify-items: center;
@@ -79,25 +79,25 @@
     }
 
     .button {
-      border-radius:$default-border-radius;
-      @include typo($size: 16px, $line: 19px, $color: $btn-commit-text);//$size: 15px,
-      background-color:$btn-commit-background;// $egreen-soft;
+      border-radius:var(--border-radius);
+      @include drumee.typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));//$size: 15px,
+      background-color:var(--btn-commit-background);// var(--egreen-soft);
       cursor: pointer;
       justify-content: center;
       padding : 10px;
       width:160px;// 150px;
       height:40px;
       &:hover{
-        background-color:$btn-commit-background-hover;
+        background-color:var(--btn-commit-background-hover);
       }
 
       &.cancel {
-        @include typo($size: 15px, $color: $btn-rollback-text);
-        background-color: $btn-rollback-background;
-        border: 1px solid $btn-rollback-border;
+        @include drumee.typo($size: 15px, $color: var(--btn-rollback-text));
+        background-color: var(--btn-rollback-background);
+        border: 1px solid var(--btn-rollback-border);
         &:hover {
-          border: 2px solid $btn-rollback-border-hover;
-          color: $btn-rollback-text-hover;     
+          border: 2px solid var(--btn-rollback-border-hover);
+          color: var(--btn-rollback-text-hover);     
         }
       }
     }
@@ -107,9 +107,9 @@
     cursor: pointer;
     position: absolute;
     right: 0;
-    color:$core-default-thinline-icon;
+    color:var(--default-thinline-icon);
     :hover{
-      color:$core-default-thinline-icon-hover;
+      color:var(--default-thinline-icon-hover);
     }
   }
 }

@@ -1,13 +1,13 @@
 /* 
   player/document/skin/document.scss
 */
-@import 'slider-pro.css';
-@import 'slider-pro.scss';
-@import 'mixins/drumee.scss';
+// @import 'slider-pro.css';
+// @import 'slider-pro.scss';
+@use 'mixins/drumee.scss';
 
 .player-document {
   &__ui {
-    background-color: $multimedia-player-doc-background;
+    background-color: var(--multimedia-player-doc-bg);
     width: 100%;
   }
 
@@ -50,7 +50,7 @@
 
     &-text {
       position: absolute;
-      @include typo($color: $core-default-text-color, $size: 14px, $line: 15px, $weight: 300);
+      @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 15px, $weight: 300);
       top: 10px;
       left: 0;
       width: 100%;
@@ -65,7 +65,7 @@
   &__error {
     padding: 20px;
     text-align: center;
-    @include typo($color: $core-default-text-error, $size: 16px, $line: 24px, $weight: 300);
+    @include drumee.typo($color: var(--default-text-error), $size: 16px, $line: 24px, $weight: 300);
   }
 
   &__list {
@@ -106,7 +106,7 @@
   }
 
   &__loading {
-    @include typo($color: $default-text-color, $size: 18px, $line: 42px, $weight: 300);
+    @include drumee.typo($color: var(--default-text-color), $size: 18px, $line: 42px, $weight: 300);
     align-content: center;
     align-items: center;
     height: 100%;
@@ -116,7 +116,7 @@
   }
 
   &__overlay {
-    background-color: $core-transparency-container-overlay ;
+    background-color: var(--transparency-container-overlay);
     height: 100%;
     width: 100%;
     position: absolute;
@@ -143,7 +143,7 @@
     }
 
     &__note {
-      @include typo($size: 14px, $line: 1.3, $color: $core-default-text-color);
+      @include drumee.typo($size: 14px, $line: 1.3, $color: var(--default-text-color));
       align-items: center;
       justify-content: center;
       text-align: center;
@@ -166,28 +166,28 @@
       margin-right: 5%;
       margin-top: 5px;
       text-align: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       cursor: pointer;
       min-width: 75px;
 
       &.cancel {
-        @include typo($size: 12px, $color: $btn-rollback-text);
-        border: 1px solid $btn-rollback-border;
+        @include drumee.typo($size: 12px, $color: var(--btn-rollback-text));
+        border: 1px solid var(--btn-rollback-border);
 
         &:hover {
-          border: 2px solid $btn-rollback-border-hover;
-          color: $btn-rollback-text-hover;
+          border: 2px solid var(--btn-rollback-border-hover);
+          color: var(--btn-rollback-text-hover);
         }
       }
 
       &.confirm {
-        @include typo($size: 12px, $line: 14px, $color: $btn-commit-text);
-        background-color: $btn-commit-background;
-        border: 1px solid $btn-commit-border;
+        @include drumee.typo($size: 12px, $line: 14px, $color: var(--btn-commit-text));
+        background-color: var(--btn-commit-background);
+        border: 1px solid var(--btn-commit-border);
 
         &:hover {
-          background-color: $btn-commit-background-hover;
-          border-color: $btn-commit-border-hover;
+          background-color: var(--btn-commit-background-hover);
+          border-color: var(--btn-commit-border-hover);
         }
       }
     }

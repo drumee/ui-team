@@ -1,0 +1,28 @@
+.media {
+  --folder-bg: #1D8AEA;
+  --box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 0px 3px 0 rgba(86, 65, 113, 0.08), 0 2px 8px 0 rgba(194, 185, 203, 0);
+  --folder-main: #1D8AEA;
+  --folder-main-light: #61AAF2;
+  --folder-main-before-color: #E386B5;
+  --folder-main-background-filename: #a3c6f2;
+
+  --folder-background-header: --folder-main;
+  --folder-default-background: --default-bg;
+
+
+  /**text**/
+  --folder-text-color: --folder-main;
+  --folder-default-text-color: --core-default-text-color;
+  --folder-default-text-reverse: --core-default-text-reverse;
+  --folder-text-notification: --folder-main;
+
+
+  /**icon**/
+  --folder-default-icon-reverse: --core-default-icon-reverse;
+  --folder-default-icon-hover: --core-default-icon-hover;
+  --folder-default-icon-neutral: --core-default-icon-neutral;
+
+  /**border**/
+  --folder-notifycount-border: --folder-main-light;
+
+}

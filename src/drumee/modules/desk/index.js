@@ -346,7 +346,7 @@ class __desk_ui extends LetcBox {
    */
   onChildBubble(c) {
     if (
-      (typeof mouseDragged !== "undefined" && mouseDragged !== null) ||
+      (typeof pointerDragged !== "undefined" && pointerDragged !== null) ||
       c.mget(_a.service) != null ||
       c.status === _e.data
     ) {
@@ -526,7 +526,7 @@ class __desk_ui extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
-    if (mouseDragged || !window.Wm) {
+    if (pointerDragged || !window.Wm) {
       return;
     }
     switch (service) {

@@ -1,7 +1,7 @@
 
 &.special-folder{
   &--personal,&--p2p{
-    background-color: $core-default-background;   
+    background-color: var(--default-bg);   
     border-radius:4px;
     border: 1px solid #AB47BC;
     position:inside;
@@ -23,13 +23,13 @@
     // &:hover{
       border:0.5px solid #4A90E2;
       position:outside;
-      border-radius:$default-border-radius-small;
+      border-radius:var(--border-radius-small);
       .filename{
         background-color: transparent!important;
       }
     }
     .filename{
-      @include typo($line:12px,$size:11px,$weight:300,$color:$core-default-text-color);
+      @include typo($line:12px,$size:11px,$weight:300,$color:var(--default-text-color));
       margin:2px auto;
     }
     .avatar{

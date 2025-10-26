@@ -1,29 +1,30 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('footer');
+@include meta.load-css('overlay-wrapper');
+@include meta.load-css('progress');
 
 .window-serverexplorer {
-  @import './footer';
-  @import './overlay-wrapper';
-  @import './progress';
 
   &__header {
     border-bottom: none;
-    background-color: #00386a; //$folder-background-header ;
-    
+    background-color: #00386a; //var(--folder-main);
+
     &-title {
       align-items: center;
-      @include typo($size:18px,$line:24px,$weight:400,$color:$folder-default-text-reverse);
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
     }
 
     &-control {
       .icon {
-        color: $folder-default-icon-reverse;
+        color: var(--core-default-icon-reverse);
       }
     }
   }
 
   &__icon {
     cursor: pointer;
-    color: $folder-default-icon-reverse;
+    color: var(--core-default-icon-reverse);
 
     &-info {
       cursor: pointer;
@@ -47,17 +48,18 @@
     }
 
     &:hover {
-      color: $folder-default-icon-hover;
+      color: var(--core-default-icon-hover);
     }
   }
 
   &__title {
-    &-name {    
+    &-name {
       align-items: flex-start;
-      padding-left: 10px;//11%;
-      @include typo($size:18px,$line:24px,$weight:400,$color:$folder-default-text-reverse);//$ewhite);
-      @include overflow-text;
-      .inner{
+      padding-left: 10px; //11%;
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse)); //var(--ewhite));
+      @include drumee.overflow-text;
+
+      .inner {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -85,18 +87,19 @@
     align-content: center;
     justify-content: center;
   }
+
   &-menu {
     &__dropdown {
       z-index: 9999;
     }
 
     &__separator {
-      background-color: $ab-default-separator;
+      background-color: var(--default-separator);
       border-radius: 1px;
       height: 1.5px;
       margin: 5px 20px;
       width: calc(100% - 40px);
-    }  
+    }
 
     &__items-wrapper,
     &__items {
@@ -110,43 +113,46 @@
 
       &[data-state="1"] {
         & .menu-trigger {
-          background-color: $ab-default-background; 
-          border-radius: $default-border-radius;
+          background-color: var(--default-background);
+          border-radius: var(--border-radius);
         }
 
         & .dropdown-toggle-icon {
-          color:$ab-icon-header;//#556E7F;// $egreen;
+          color: var(--ab-icon-header); //#556E7F;// var(--egreen);
         }
-      }            
+      }
+
       & .menu-topic-items {
-        border-radius:$default-border-radius;
-        box-shadow: $drumee-shadow-container; 
-        background-color: $ab-default-background; 
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-container);
+        background-color: var(--default-background);
         width: 285px;
         padding: 10px 0;
-        &__wrapper{
+
+        &__wrapper {
           left: -130px;
           padding: 10px;
         }
 
         &:before {
-          background-color:$ab-default-background; 
+          background-color: var(--default-background);
           content: "";
           height: 10px;
           left: 138px;
-          position: absolute; color: $ab-default-icon-reverse;
+          position: absolute;
+          color: var(--default-icon-reverse);
           cursor: pointer;
-          height: 28px;//24px;
-          padding: 2.5px 2px 2.5px 3px;//2.5px;
-          width: 28px;//24px;
-          top:-7px;//-15px;
+          height: 28px; //24px;
+          padding: 2.5px 2px 2.5px 3px; //2.5px;
+          width: 28px; //24px;
+          top: -7px; //-15px;
           transform: rotate(45deg);
           width: 10px;
         }
 
         &:after {
-          background: $ab-default-background; 
-          border-radius: $default-border-radius-top;
+          background: var(--default-background);
+          border-radius: var(--default-border-radius-top);
           content: "";
           height: 10px;
           left: 0;
@@ -158,18 +164,18 @@
     }
 
     &__icon {
-      height :16px;
-      width : 16px;
-      
+      height: 16px;
+      width: 16px;
+
       &.dropdown-toggle-icon {
-        color: $ab-default-icon-reverse;
+        color: var(--default-icon-reverse);
         cursor: pointer;
-        height: 28px;//24px;
+        height: 28px; //24px;
         padding: 5px 5px 5px 5px;
-        width: 28px;//24px;
+        width: 28px; //24px;
 
         &:hover {
-          color : $ab-default-icon-hover;
+          color: var(--default-icon-hover);
         }
       }
 
@@ -177,16 +183,16 @@
         margin-right: 10px;
 
         & svg {
-          fill: $ab-default-icon-menu-dropdown ;//$eviolet;
+          fill: var(--default-icon-menu-dropdown); //var(--eviolet);
         }
 
         &.contactbook {
           height: 22px;
-          margin-left:  0;
+          margin-left: 0;
           margin-right: 8px;
           margin-top: -1px;
           width: 24px;
-          padding: 1px;//2px;
+          padding: 1px; //2px;
         }
       }
     }
@@ -196,14 +202,15 @@
       padding: 6px 20px;
 
       &:hover {
-        background-color: $ab-default-background-hover ;
-        color :$ab-default-text-hover; 
+        background-color: var(--default-background-hover);
+        color: var(--default-text-hover);
 
         & .window-addressbook-menu__name {
-          color:$ab-default-text-hover;  
+          color: var(--default-text-hover);
         }
+
         & svg {
-          fill: $ab-default-icon-reverse;  
+          fill: var(--default-icon-reverse);
         }
       }
     }
@@ -211,9 +218,10 @@
     &__name {
       padding-top: 2px;
       padding-left: 8px;
-      @include typo($size:14px, $weight: 300, $line:16px, $color: $ab-default-text-color);
+      @include drumee.typo($size: 14px, $weight: 300, $line: 16px, $color: var(--default-text-color));
+
       &.contactbook {
-        margin-left: -6px;//-5px;
+        margin-left: -6px; //-5px;
       }
     }
   }

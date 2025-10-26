@@ -59,7 +59,7 @@ class __hub_core extends LetcBox {
    * @param {*} args 
    */
   onUiEvent(cmd, args) {
-    if (!mouseDragged) {
+    if (!pointerDragged) {
       this.triggerMethod(CHANGE_RADIO, this);
     }
   }

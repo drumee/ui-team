@@ -1,33 +1,40 @@
+.media-simple {
 
-&__access, &__info{
-  width: 14px;
-  height: 14px;
-  position: absolute;
-  right: 18px;
-  top: 9px;
-  visibility: hidden;
-  fill: white;
-  background-color: transparent;
-  cursor: pointer;
-  text-align: center;
-  border-radius: 2px;
-  svg{
-    border-radius: 2px;
-    background-color: #879bff;
+  &__access,
+  &__info {
+    width: 14px;
+    height: 14px;
+    position: absolute;
+    right: 18px;
+    top: 9px;
+    visibility: hidden;
     fill: white;
-  }
-  &[data-hover="on"]{
-    visibility: visible;
-  }
-  &:hover{
-    svg{
-      fill: #879bff;
-      background-color:$ewhite;
-    }
-  }
-  &--icon{
-    pointer-events: none;
     background-color: transparent;
-    fill: orange;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 2px;
+
+    svg {
+      border-radius: 2px;
+      background-color: #879bff;
+      fill: white;
+    }
+
+    &[data-hover="on"] {
+      visibility: visible;
+    }
+
+    &:hover {
+      svg {
+        fill: #879bff;
+        background-color: var(--ewhite);
+      }
+    }
+
+    &--icon {
+      pointer-events: none;
+      background-color: transparent;
+      fill: orange;
+    }
   }
 }

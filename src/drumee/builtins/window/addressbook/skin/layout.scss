@@ -1,9 +1,9 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .window-addressbook {
   & .widget_tag {
-    background: $ab-default-background;
-    border-radius: $default-border-radius-left;
+    background: var(--default-background);
+    border-radius: var(--border-radius-left);
     min-width: 186px;
     padding: 0;
   }

@@ -73,7 +73,7 @@ class __share_outbound extends LetcBox {
     this.feed(require('./skeleton/main')(this));
     try { 
       return this.media.once(_e.unselect, ()=> {
-        if (mouseDragged) {
+        if (pointerDragged) {
           return;
         }
         return this.goodbye();

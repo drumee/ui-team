@@ -1,21 +1,21 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .chat-forward-list-item {
   &__ui {
     background-color: inherit;
     &:hover {
-      background-color: $bigchat-default-background-hover;
+      background-color: var(--default-background-hover);
       & .checkbox,
       & .room-name {
-        color: $bigchat-default-text-hover ;
+        color: var(--default-text-hover);
         display: block;
       }
       
       & .checkbox {
         &[data-state="1"] {
           box-shadow: none;
-          color: $bigchat-checkbox-checked-reverse;
-          border: 1px solid $bigchat-checkbox-checked-border-reverse;
+          color: var(--checkbox-checked-reverse);
+          border: 1px solid var(--checkbox-checked-border-reverse);
         }
       }
     }
@@ -47,7 +47,7 @@
   }
 
   &__icon {
-    color: $egrey-b6; 
+    color: var(--egrey-b6); 
     cursor: pointer;
 
     &.raw-drumee_projectroom {
@@ -73,10 +73,10 @@
 
       &[data-state="1"] {
         box-shadow: none;
-        color:$bigchat-default-checkbox-checked;
-        border:1px solid $bigchat-default-checkbox-border;
+        color:var(--default-checkbox-checked);
+        border:1px solid var(--default-checkbox-border);
         display: flex;
-        border-radius:$default-checkbox-border-radius;
+        border-radius:var(--checkbox-border-radius);
       }
     }
   }
@@ -85,7 +85,7 @@
     margin-top: 3px;
     padding: 5px 3px 3px 12px;
     max-width: 165px;
-    @include typo( $size :14px, $line: 14px, $color: $bigchat-default-text-color);
-    @include overflow-text;    
+    @include drumee.typo( $size :14px, $line: 14px, $color: var(--default-text-color));
+    @include drumee.overflow-text;    
   }
 }

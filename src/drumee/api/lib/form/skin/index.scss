@@ -1,16 +1,11 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2022
-# ===================================================================**/
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/vendor.scss';
+@use 'mixins/drumee';
 
 .drumee-api-form {
 
   &__ui{
     width: 100%;
     align-items: center;
-    @include typo($color:$core-default-text-color, $size: 14px);
+    @include drumee.typo($color:var(--default-text-color), $size: 14px);
   }
 
   &__main {
@@ -88,13 +83,13 @@
       }
     }
     &-button{
-      @include typo($color:$core-default-text-error, $size: 14px);
+      @include drumee.typo($color:var(--default-text-error), $size: 14px);
     }
   }
 
   &__row{
     .drumee__error-message{
-      @include typo($color:$core-default-text-error, $size: 12px);
+      @include drumee.typo($color:var(--default-text-error), $size: 12px);
     }
   }
 
@@ -106,7 +101,7 @@
       min-height: 100px;
       align-content: center;
       align-items: center;
-      @include typo($color:$core-default-text-color, $size: 18px);
+      @include drumee.typo($color:var(--default-text-color), $size: 18px);
     }
     &-text{
       max-width: 555px;
@@ -184,7 +179,7 @@
   .entry-reminder_error{
     position: absolute;
     right: 0;
-    @include typo($color:$core-default-text-error, $size: 12px);
+    @include drumee.typo($color:var(--default-text-error), $size: 12px);
   }
 
   &__entry-container{
@@ -217,13 +212,13 @@
   }
   & .drumee__success-message {
     margin: auto;
-    @include typo($color:$core-default-text-color, $size: 18px);// $line:);
+    @include drumee.typo($color:var(--default-text-color), $size: 18px);// $line:);
    // font-size: 18px;
   }
 
   @media(max-width:630px){
     .row-wrapper{
-      @include typo($color:$core-default-text-error, $size: 16px);
+      @include drumee.typo($color:var(--default-text-error), $size: 16px);
       position: relative;
       display: grid;
       &.r1{

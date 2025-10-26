@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/conference/device/item/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .media-device{
   &__ui{
@@ -16,25 +16,25 @@
   &__checkbox{
     width: 14px;//20px;
     height: 14px;//20px;
-  //  color : $egrey-2f;
-    border-radius: $default-checkbox-border-radius;
-    border: 1px solid $core-default-checkbox-border;//$default-checkbox;
-    color:$core-default-background;  
+  //  color : var(--egrey-2f);
+    border-radius: var(--checkbox-border-radius);
+    border: 1px solid var(--default-checkbox-border);//$default-checkbox;
+    color:var(--default-bg);  
 
     //left:-1px;
     &[data-state="1"] {
       box-shadow: none;
-      color:$core-default-checkbox-checked;// $checkbox-active; //$egreen-soft;
-      border: 1px solid $core-default-checkbox-border;//$default-checkbox;
+      color:var(--default-checkbox-checked);// $checkbox-active; //var(--egreen-soft);
+      border: 1px solid var(--default-checkbox-border);//$default-checkbox;
      // color: #6a85ff;
     }
   }
 
   &__label{
-    //@include typo($color: $egrey-2f, $weight: 400, $line: 20px, $size: 12px);
+    //@include typo($color: var(--egrey-2f), $weight: 400, $line: 20px, $size: 12px);
   //  left:8px;
     width: 265px;//260px;
     padding-left:5px;
-    @include typo($color: $egrey-2f, $weight: 400, $line: 26px, $size: 13px);
+    @include drumee.typo($color: var(--egrey-2f), $weight: 400, $line: 26px, $size: 13px);
   }
 }

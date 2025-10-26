@@ -1,27 +1,29 @@
-&-overlay {
-  &__wrapper[data-mode="open"] {
-    height: 100%;
-    position: absolute;
-    width: 100%;
-    z-index: 100;
-    
-    & .content {
-      background: $core-transparency-container-overlay;
-      border-radius: $default-border-radius-bottom;
+.window-serverexplorer {
+  &-overlay {
+    &__wrapper[data-mode="open"] {
       height: 100%;
       position: absolute;
       width: 100%;
-      z-index: 110;
-    }
+      z-index: 100;
 
-    & .overlay-notifier {
-      align-items: center;
-      height: calc( 100% - 40px);
-      justify-content: center;
-      margin: auto;
-      position: absolute;
-      top: 40px;
-      width: 100%;
+      & .content {
+        background: var(--transparency-container-overlay);
+        border-radius: var(--border-radius-bottom);
+        height: 100%;
+        position: absolute;
+        width: 100%;
+        z-index: 110;
+      }
+
+      & .overlay-notifier {
+        align-items: center;
+        height: calc(100% - 40px);
+        justify-content: center;
+        margin: auto;
+        position: absolute;
+        top: 40px;
+        width: 100%;
+      }
     }
   }
 }

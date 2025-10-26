@@ -1,27 +1,15 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2021
-#   FILE : /src/drumee/builtins/media/notifications/skin/index.scss
-#   TYPE : Skeleton
-# ===================================================================**/
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
-@import 'mixins/drumee';
+
+@use 'mixins/drumee';
 
 .media-notifications {
   &__ui {
     position: absolute;
     width: 200px;
-    background-color: $core-default-background;   
+    background-color: var(--default-bg);   
     top: 21px;
     left: 64px;
     z-index: 10000;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
 
     &[data-align="left"] {
       left: -100px;
@@ -36,15 +24,15 @@
       height: 20px;
       top: -4px;
       left: 12px;
-      background: $core-default-background;
+      background: var(--default-bg);
       position: absolute;
       -webkit-transform: rotate(45deg);
       transform: rotate(45deg);
     }
 
     &.row {
-      background-color: $core-default-background;
-      background: $core-default-background;
+      background-color: var(--default-bg);
+      background: var(--default-bg);
       left: 6px;
       top:35px;
       Z-index:10000;
@@ -72,7 +60,7 @@
   }
 
   &__main {
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     height: 100%;
     overflow-x: hidden;
     overflow-y: hidden;
@@ -89,7 +77,7 @@
 
   &__button {
     &--close {
-      color: $core-default-thinline-icon;
+      color: var(--default-thinline-icon);
       height:12px;
       padding:1.5px;
       position: absolute;
@@ -98,7 +86,7 @@
       width:12px;
 
       &:hover {
-        color:$core-default-thinline-icon-hover;
+        color:var(--default-thinline-icon-hover);
       }
     }
   }
@@ -112,7 +100,7 @@
   &__title {
     margin-left:60px;
     width:69px;
-    @include typo($size:14px,$line:20px,$weight:400,$color:$emauve-dark);
+    @include drumee.typo($size:14px,$line:20px,$weight:400,$color: var(--emauve-dark));
   }
 
   &__item {
@@ -125,7 +113,7 @@
       margin: -1px 0 0 10%;
 
       svg {
-        fill:$emauve-dark ;
+        fill:var(--emauve-dark);
         height: 18px;
         opacity:0.65;
         padding: 1px;

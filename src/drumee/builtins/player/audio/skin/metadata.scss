@@ -1,59 +1,64 @@
-&-metadata {
-  &__main,
-  &__info-wrapper,
-  &__cover {
-    height: 100%;
-    width: 100%;
-  }
+@use "mixins/drumee";
 
-  &__main {
-    background-color: $multimedia-audio-player-background;// $audio-player-black-bg;
-  }
+.player-audio {
+  &-metadata {
 
-  &__cover {
-    align-items: center;
-    height: 130px;
-    justify-content: center;
-    min-height: 130px;
-    padding: 5px;
-  }
-
-  &__music-info {
-    height: 50px;
-    min-height: 50px;
-    width: 100%;
-  }
-
-  &__icon {
-    &.music-icon {
-      color: $core-default-icon-reverse;
-      height: 80px;
-      width: 80px;
-      padding: 10px;
+    &__main,
+    &__info-wrapper,
+    &__cover {
+      height: 100%;
+      width: 100%;
     }
 
-    &.image-smart.music-cover {
-      height: 120px;
-      width: 120px;
+    &__main {
+      background-color: var(--multimedia-audio-player-bg); // $audio-player-black-bg;
+    }
+
+    &__cover {
+      align-items: center;
+      height: 130px;
+      justify-content: center;
+      min-height: 130px;
       padding: 5px;
     }
-  }
-  
-  &__note {
-    @include typo($size: 16px, $color: $core-default-text-reverse);
-    bottom: 5px;
-    padding: 5px 5px 5px 20px;
 
-    &.name {
-      @include typo($size: 13px, $line: 15px, $color: $core-default-text-reverse);
-      height: 25px;
-      min-height: 25px;
+    &__music-info {
+      height: 50px;
+      min-height: 50px;
+      width: 100%;
     }
 
-    &.artist-name {
-      @include typo($size: 11px, $line: 13px, $color: $core-default-text-reverse);
-      height: 20px;
-      min-width: 20px;
+    &__icon {
+      &.music-icon {
+        color: var(--default-icon-reverse);
+        height: 80px;
+        width: 80px;
+        padding: 10px;
+      }
+
+      &.image-smart.music-cover {
+        height: 120px;
+        width: 120px;
+        padding: 5px;
+      }
+    }
+
+    &__note {
+      @include drumee.typo($size: 16px, $color: var(--default-text-reverse));
+      bottom: 5px;
+      padding: 5px 5px 5px 20px;
+
+      &.name {
+        @include drumee.typo($size: 13px, $line: 15px, $color: var(--default-text-reverse));
+        height: 25px;
+        min-height: 25px;
+      }
+
+      &.artist-name {
+        @include drumee.typo($size: 11px, $line: 13px, $color: var(--default-text-reverse));
+        height: 20px;
+        min-width: 20px;
+      }
     }
   }
 }

@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/adminpanel/widget/members/js/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .inbound-page {
  
@@ -28,16 +28,16 @@
   }
 
   &__wrapper {
-    background:$core-default-background;;// $ewhite;
+    background:var(--default-bg);;// var(--ewhite);
 
     &.tags {
-      border-radius:$default-border-radius-left;
-      background: $core-default-block-background;    //$white-f9;
+      border-radius:var(--border-radius-left);
+      background: var(--default-bg-block);    //var(--white-f9);
       min-width: 186px;
     }
 
     &.list {
-      border-right: 1px solid $core-default-separator; //$ab-widget-border;
+      border-right: 1px solid var(--default-separator); //$ab-widget-border;
       margin-left: 1px;
       min-width: 260px;
     }

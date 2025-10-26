@@ -1,39 +1,46 @@
-&__attendees {
-  // position : absolute;
-  min-width: 253px; //260px; //340px;
-  height: 100%;
-  left: 0px;
-  top: -3px; //-1px; // 45px;
-  padding: 10px;
-  background-color: $core-default-background; 
-  border-radius: $default-border-radius;
-  cursor: pointer;
-  &-list {
-    width: 300px;
-    max-height: 350px;
+@use 'mixins/drumee';
+@mixin webrtc-attendee {
+  &__attendees {
+    min-width: 253px;
     height: 100%;
-    overflow-x: hidden;
-  }
-  &-title {
-    padding: 10px 0 15px 3px;
-    justify-content: center;
-    height: 20px;
-    @include typo($size: 14px, $line: 14px, $weight: 300, $color: $core-default-text-title); //$weight:400,
-  }
-  .conference-label {
-    align-items: center;
-    left: 20px;
-    @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
-  }
-  .conference-checkbox {
-    width: 30px;
-    height: 30px;
-    padding: 7px;
-    margin-left: -9px; //13px;
-    &[data-state="1"] {
-      box-shadow: none;
-      color: $egreen-soft;
+    left: 0px;
+    top: -3px;
+    padding: 10px;
+    background-color: var(--default-bg);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+
+    &-list {
+      width: 300px;
+      max-height: 350px;
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    &-title {
+      padding: 10px 0 15px 3px;
+      justify-content: center;
+      height: 20px;
+      @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title)); //$weight:400,
+    }
+
+    .conference-label {
+      align-items: center;
+      left: 20px;
+      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
+    }
+
+    .conference-checkbox {
+      width: 30px;
+      height: 30px;
+      padding: 7px;
+      margin-left: -9px; //13px;
+
+      &[data-state="1"] {
+        box-shadow: none;
+        color: var(--egreen-soft);
+      }
     }
   }
-}
 
+}

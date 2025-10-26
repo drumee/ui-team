@@ -318,9 +318,16 @@ class __desk_dock extends LetcBox {
       case 'add-folder':
         return Wm.addFolder(cmd);
 
+      // case 'add-note':
+      //   let c = Wm.windowsLayer.append({
+      //     kind: 'editor_note',
+      //     maiden: 1
+      //   });
+      //   return c;
+
       case 'add-note':
-        let c = Wm.windowsLayer.append({
-          kind: 'editor_note',
+        let e = Wm.windowsLayer.append({
+          kind: 'editor_markdown',
           maiden: 1
         });
         return c;

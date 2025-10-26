@@ -3,7 +3,7 @@
 #   FILE : /home/somanos/devel/ui/src/drumee/modules/test/widget/result/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .test-result{
   &__ui{
@@ -18,7 +18,7 @@
     align-content: center;
     justify-items: left;
     justify-content: left;
-    @include typo($size: 16px, $line: 24px, $color: green);
+    @include drumee.typo($size: 16px, $line: 24px, $color: green);
     &[data-status="error"]{
       color: indianred;
     }
@@ -26,7 +26,7 @@
   &__status{
     height: 45px;
     align-items: center;
-    @include typo($size: 16px, $line: 24px, $color: green);
+    @include drumee.typo($size: 16px, $line: 24px, $color: green);
     &[data-status="error"]{
       color: indianred;
     }

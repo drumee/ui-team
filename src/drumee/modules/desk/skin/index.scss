@@ -4,22 +4,23 @@
 #   TYPE : Style Component
 # ===================================================================**/
 
-@import "mixins/drumee";
+@use "sass:meta";
+@use "mixins/drumee";
 html {
   overflow: hidden;
 }
 
-@import './payment/status-info';
+@include meta.load-css('payment/status-info');
 
-@import "buttons.scss";
+@include meta.load-css("buttons.scss");
 //@import "resize-handles";
-@import "desk/topbar";
-@import "desk/dmz-copy-media";
-@import './desk/intro-popup';
+@include meta.load-css("desk/topbar");
+@include meta.load-css("desk/dmz-copy-media");
+@include meta.load-css('desk/intro-popup');
 // @import "desk/intro-popup-content"; -- MOVED TO router
 
-@import "desk/body.scss";
-@import "dialog";
+@include meta.load-css("desk/body.scss");
+@include meta.load-css("dialog");
 
 
 .desk-module {
@@ -46,7 +47,7 @@ html {
   }
 
   &[data-over="yes"] {
-    box-shadow:$drumee-shadow-container;//0 5px 8px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
+    box-shadow:var(--shadow-container);//0 5px 8px 1px rgb(63 79 117 / 13%), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
   }
 
   &__buttons-wrapper {
@@ -55,26 +56,26 @@ html {
     margin-top: 80px;
   }
   &__button-cancel {
-    border: 1px solid $btn-rollback-border;
+    border: 1px solid var(--btn-rollback-border);
     width: 120px;
     height: 46px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     text-align: center;
-    @include typo($line: 22px, $size: 16px, $weight: 300, $color: $btn-rollback-text);
+    @include drumee.typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-rollback-text));
     justify-content: center;
     padding-top: 12px;
     &:hover {
-      border: 2px solid $btn-rollback-border-hover ;
-      color: $btn-rollback-text-hover;  
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);  
     }
   }
   &__button-confirm {
     width: 120px;
-    background-color:$btn-commit-background; // $btn-primary-background; 
+    background-color:var(--btn-commit-background); // $btn-primary-background; 
     height: 46px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     text-align: center;
-    @include typo($line: 22px, $size: 16px, $weight: 300, $color: $btn-commit-text);
+    @include drumee.typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-commit-text));
     justify-content: center;
     padding-top: 12px;
   }
@@ -87,13 +88,13 @@ html {
   }
   .desk__tooltip {
     position: absolute;
-    background: $core-default-background; 
+    background: var(--default-bg); 
     width: 254px;
     height: 60px;
-    box-shadow: $drumee-shadow-container;// 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08),0 2px 14px 0 rgba(194, 185, 203, 0);
-    border-radius: $default-border-radius-small;//4px; 
+    box-shadow: var(--shadow-container);// 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08),0 2px 14px 0 rgba(194, 185, 203, 0);
+    border-radius: var(--border-radius-small);//4px; 
     padding: 11px 13px;
-    @include typo($line: 14px, $size: 12px, $weight: 300, $color: $core-default-text-color);
+    @include drumee.typo($line: 14px, $size: 12px, $weight: 300, $color: var(--default-text-color));
     &:before {
       content: " ";
       position: absolute;
@@ -102,7 +103,7 @@ html {
       width: 10px;
       height: 10px;
       transform: rotate(45deg);
-      background: $core-default-background;
+      background: var(--default-bg);
     }
     &[data-state="open"] {
       z-index: 50000 !important;
@@ -118,16 +119,16 @@ html {
 
 .desk-module {
   &__popup {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     &.confirm {
       width: 670px;
       height: 370px;
       //padding: 0px 85px 0 85px;
-      border-radius: $default-border-radius; //6px;
+      border-radius: var(--border-radius); //6px;
       margin: auto;
       text-align: center;
       .text {
-        @include typo($line: 26px, $size: 18px, $weight: 300, $color: $core-tertiary-text-color);
+        @include drumee.typo($line: 26px, $size: 18px, $weight: 300, $color: var(--tertiary-text-color));
         text-align: center;
       }
     }
@@ -152,11 +153,11 @@ html {
     position: absolute;
     top: -50%;
     left: 50%;
-    background-color: $core-default-background;//rgb(255 255 255);
+    background-color: var(--default-bg);//rgb(255 255 255);
     width: 19px;
     height: 19px;
     border-radius: 50%;
-    color: $core-secondary-text-color;//#4a90e2;
+    color: var(--secondary-text-color);//#4a90e2;
     justify-content: center;
     align-items: center;
     font-size: 12px;

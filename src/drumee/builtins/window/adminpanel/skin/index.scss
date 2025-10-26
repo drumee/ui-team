@@ -1,12 +1,14 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('search');
+
 .window-admin-panel {
-  @import './search';
   &__ui {
     background-color: inherit;
   }
 
   &__main {
-    background-color:$admin-default-background ;
+    background-color: var(--default-background);
   }
 
   &__container {
@@ -14,24 +16,24 @@
   }
 
   &__body {
-    height    : 100% !important;
-    margin    : 0 auto;
+    height: 100% !important;
+    margin: 0 auto;
     min-height: auto !important;
-    min-width : auto !important;
-    overflow  : hidden;
-    width     : 100% !important;
+    min-width: auto !important;
+    overflow: hidden;
+    width: 100% !important;
 
     &.window__body {
       align-items: start !important;
       padding: 0;
-      border-radius:$default-border-radius-right;
+      border-radius: var(--border-radius-righ);
     }
   }
 
   &__progress {
     position: absolute;
-    width : 200px;
-    height : 200px;
+    width: 200px;
+    height: 200px;
     left: calc(50% - 100px);
     top: calc(50% - 100px);
   }
@@ -41,7 +43,7 @@
   }
 
   &__header {
-    background-color: $admin-background-header ;
+    background-color: var(--admin-header-bg);
     border-bottom: none;
   }
 
@@ -54,14 +56,14 @@
 
       & .title {
         text-align: center;
-        @include typo($size: 18px, $line: 19px, $color: $admin-default-text-reverse);
+        @include drumee.typo($size: 18px, $line: 19px, $color: var(--default-text-reverse));
 
         & .note-content {
           width: 100%;
 
           & .root-node {
             text-overflow: ellipsis;
-            @include overflow-text;
+            @include drumee.overflow-text;
           }
         }
       }
@@ -83,7 +85,7 @@
     width: 100%;
   }
 
-  
+
   &[data-size="min"] {
     & .window-admin-panel {
       &__page-dropdown {
@@ -94,20 +96,20 @@
     & .window-admin-panel-topbar {
       &__content {
         width: 69%;
-  
+
         & .title {
           align-items: center;
           height: 100%;
           overflow: hidden;
           width: 100%;
-          @include typo($size: 15px, $line: 15px, $color: $admin-default-text-reverse);
-  
+          @include drumee.typo($size: 15px, $line: 15px, $color: var(--default-text-reverse));
+
           & .note-content {
             width: 100%;
-  
+
             & .root-node {
               text-overflow: ellipsis;
-              @include overflow-text;
+              @include drumee.overflow-text;
             }
           }
         }
@@ -118,7 +120,7 @@
       &__wrapper {
         & .menu-items {
           left: 12px;
-          
+
           &:before {
             left: 8px;
           }

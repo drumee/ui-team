@@ -3,7 +3,7 @@
 #   FILE : /ui/src/drumee/builtins/window/account/profile/skin/field.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .account-field {
 
@@ -24,11 +24,11 @@
     width: 100%;
 
     &.static-mode:hover {
-      background-color:$account-default-background-hover;
+      background-color:var(--default-background-hover);
       
       *{
-        background-color:$account-default-background-hover;
-        color: $account-default-text-hover;
+        background-color:var(--default-background-hover);
+        color: var(--default-text-hover);
       }
 
       & .action-item {
@@ -42,10 +42,10 @@
         
         & section {
          // background: $default-background;
-          color:$account-default-text-reverse; // $default-background-hover;
-          border: 1px solid $ewhite;
+          color:var(--default-text-reverse); // $default-background-hover;
+          border: 1px solid var(--ewhite);
           padding:  5px;
-          border-radius:$default-border-radius;
+          border-radius:var(--border-radius);
           cursor:pointer;
         }
       }
@@ -53,7 +53,7 @@
   }
 
   &__title {
-    @include typo($size: 24px, $line: 32px, $weight: 300, $color:$account-default-text-color);
+    @include drumee.typo($size: 24px, $line: 32px, $weight: 300, $color: var(--default-text-color));
   }
 
   &__label {
@@ -65,10 +65,10 @@
 
     &-text {
       text-align:left;
-      @include typo($size: 16px, $line: 21px, $color: $core-secondary-text-color);
+      @include drumee.typo($size: 16px, $line: 21px, $color: var(--secondary-text-color));
 
       &.error {
-        color: $account-default-text-error ;//#fe6790;
+        color: var(--default-text-error);//#fe6790;
         //font-weight: 400;
       }
     }
@@ -76,7 +76,7 @@
 
   &__options-wrapper {
     align-items: center;
-    background-color: $account-default-background;//$ewhite;
+    background-color: var(--default-background);//var(--ewhite);
     
     &.action-item {
       align-items: center;
@@ -96,13 +96,13 @@
 
   &__note {
     align-items: center;
-    @include typo($size: 16px, $line: 27px, $color: $account-default-text-color);
+    @include drumee.typo($size: 16px, $line: 27px, $color: var(--default-text-color));
     
     &.navigation {
       left: -8px;
       min-width: 80px; //100px;
       text-align: center;
-      @include typo($size: 11px, $line: 13px, $color: $eviolet);
+      @include drumee.typo($size: 11px, $line: 13px, $color: var(--eviolet));
     }
   }
 
@@ -112,7 +112,7 @@
     }
 
     &-picto {
-      color: $account-field-icon;//$eblue;
+      color: var(--account-field-icon);//var(--eblue);
       height: 29px;
       margin-bottom:auto;
       margin-left:50px;
@@ -130,36 +130,36 @@
   }
 
   &__button-confirm {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     align-items: center;
-    background-color: $btn-commit-background; 
-    border: 1px solid $btn-commit-border ;
+    background-color: var(--btn-commit-background); 
+    border: 1px solid var(--btn-commit-border);
     cursor: pointer;
     height: 24px;//25px;
     justify-content: center;
     left: 30px;
     top: 5px;
     width: 24px;// 30px;
-    @include typo($size: 11px, $line: 14px, $color: $btn-commit-text);
+    @include drumee.typo($size: 11px, $line: 14px, $color: var(--btn-commit-text));
 
     &.address {
       top: 0px; //25px;
     }
 
     &:hover {
-      background-color:$btn-commit-background-hover;
+      background-color:var(--btn-commit-background-hover);
     }
   }
 
   input {
-    @include typo($size: 16px, $line: 27px, $color: $account-default-text-color);
+    @include drumee.typo($size: 16px, $line: 27px, $color: var(--default-text-color));
     background: transparent;;
-    border-bottom:1px solid $account-default-entry-border-bottom;//$eviolet;
+    border-bottom:1px solid var(--default-entry-border-bottom);//var(--eviolet);
     cursor: text;
     text-overflow: ellipsis;
     width: 200px;
     &::placeholder{
-      @include typo($size: 16px, $line: 27px,$weight: 300, $color: $account-default-text-placeholder);
+      @include drumee.typo($size: 16px, $line: 27px,$weight: 300, $color: var(--default-text-placeholder));
     }
   }
 }

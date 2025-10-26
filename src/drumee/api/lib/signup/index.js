@@ -1,4 +1,4 @@
-const specials = new RegExp(/[\[\]\{\}\'\"\ \-\_\+\=\|\!\:\;\,\?\.\/\*\%\$\&\#\(\)]/);
+
 
 class __drumee_api_signup extends LetcBox {
   constructor(...args) {

@@ -4,33 +4,6 @@ const Filesize = require("filesize");
 let VERBOSITY = parseInt(localStorage.logLevel) || 0;
 const { LOG_LEVEL, BOOLEAN, STATE, RADIO } = require("./constants")
 
-/**
- * 
- * @param {*} v 
- */
-window.setLogLevel = function (v) {
-  let name;
-  if (typeof (v) == 'number') {
-    VERBOSITY = v;
-    localStorage.logLevel = VERBOSITY;
-    for (let k in LOG_LEVEL) {
-      if (LOG_LEVEL[k] == v) {
-        name = k;
-        break;
-      }
-    }
-  } else if (typeof (v) == 'string' && LOG_LEVEL[v]) {
-    VERBOSITY = LOG_LEVEL[v];
-    localStorage.logLevel = VERBOSITY;
-    name = v;
-  }
-  console.log(`Log level is ${name} (${VERBOSITY})`)
-};
-
-/**
- * No operation
- */
-window.noOperation = function () { };
 
 
 /**
@@ -554,7 +527,6 @@ export function appendFontFace(fonts, id) {
     return;
   }
   const { main_domain } = bootstrap();
-  const p = location.protocol + "//";
   id = id || Host.get(_a.id);
   id = `--font-face-${id}`;
   let el = document.getElementById(id);
@@ -567,6 +539,7 @@ export function appendFontFace(fonts, id) {
   el.setAttribute("rel", _a.stylesheet);
   el.setAttribute(_a.media, _a.screen);
   const list = [];
+  const { protocol } = bootstrap()
   for (let f of Array.from(fonts)) {
     var l1, url;
     if (_.isEmpty(f.local1)) {

@@ -1,29 +1,22 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
+@use 'mixins/drumee.scss';
 
 .window-filter{
   &__header{
     border-bottom: none;
-    background-color: $filter-background-header ;
+    background-color: var(--filter-background-header);
     &-control{
       .icon{
-        color: $filter-default-icon-reverse;
+        color: var(--default-icon-reverse);
       }
     }
   }
   &__title{
     margin: auto;
     justify-content: center;
-    color: $filter-default-text-reverse;
+    color: var(--default-text-reverse);
     &.text{
       align-items: center;
-      @include typo($size:18px,$line:24px,$weight:400,$color:$filter-default-text-reverse);
+      @include drumee.typo($size:18px,$line:24px,$weight:400,$color: var(--default-text-reverse));
       .icon{
         position: relative;
         right: 0px;
