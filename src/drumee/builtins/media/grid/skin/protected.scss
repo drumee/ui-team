@@ -1,8 +1,3 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2019
-#   FILE : desk/skin/media/grid
-#   TYPE : Backoffice Main Style
-# ===================================================================**/
 .protected-container{
   right: 2.5px;//1px
   bottom: 6px; //1px;
@@ -11,17 +6,17 @@
   position: absolute;
   z-index: 100;
   .icon--protected{
-    fill: $core-default-icon-neutral;
+    fill: var(--default-icon-neutral);
     width: 100%;
     height: 100%;
     margin: 0;
     top: 0;
     &.folder{
-      fill: $ewhite;
+      fill: var(--ewhite);
     }
     
     &.image{
-      fill:$egrey-2f;// #476390;
+      fill:var(--egrey-2f);// #476390;
       opacity: 0.6;
     }
   }

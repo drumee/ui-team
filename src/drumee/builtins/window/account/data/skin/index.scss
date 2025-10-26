@@ -1,6 +1,6 @@
-@import 'mixins/drumee';
-@import 'deletion';
-@import 'otp';
+@use 'mixins/drumee';
+@use 'deletion';
+@use 'otp';
 
 .window-confirm__ui{
   max-width: 400px;
@@ -47,18 +47,18 @@
 
   &__btn {
     &.delete {  
-      background-color:$account-default-background;
+      background-color:var(--default-background);
       border:none;
       left: 641px;
       margin-top: 6px;
       margin:0;
       padding: 0px 7px;
       text-decoration-line: underline;
-      @include typo($size:12px,$line:24px,$color:$eorange-dark);  
+      @include drumee.typo($size:12px,$line:24px,$color: var(--eorange-dark));  
 
       &:hover {
-        color:$eorange-sunset ;
-        background-color:$account-default-background;  
+        color:var(--eorange-sunset);
+        background-color:var(--default-background);  
       }
     }
 
@@ -99,7 +99,7 @@
       height: 100%;
       overflow: visible;
       text {
-        @include typo($size:14px,$line:24px,$color:$account-default-text-reverse,$weight:400);
+        @include drumee.typo($size:14px,$line:24px,$color: var(--default-text-reverse),$weight:400);
       }
     }
   }
@@ -119,7 +119,7 @@
       margin-right: 15px;
     }
     .log-name, .log-date{
-      @include typo($size:16px,$line:30px,$weight:300,$color:$account-default-text-color);
+      @include drumee.typo($size:16px,$line:30px,$weight:300,$color: var(--default-text-color));
     }
     .log-date{
       margin: 0 auto;
@@ -127,7 +127,7 @@
     }
     
     &-placeholder {
-      @include typo($size:18px,$line:45px,$color:$account-default-text-color,$weight:400);
+      @include drumee.typo($size:18px,$line:45px,$color: var(--default-text-color),$weight:400);
       svg {
         width: 45px;
         margin-right: 20px;
@@ -143,12 +143,12 @@
       height: auto;
       padding: 10px;
       top:0;
-      border-radius:$default-border-radius-bottom;
+      border-radius:var(--border-radius-bottom);
     }
     &[data-state="open"]{
       right:0;
       bottom:0;
-      background-color: $account-default-transparent-black;
+      background-color: var(--default-transparent-black);
       justify-items:center;
       align-items:center;
       justify-content:center;
@@ -159,7 +159,7 @@
     width: 315px;
     margin:80px auto auto auto; 
     &-text{
-      @include typo($size: 16px, $line: 26px, $color: $account-default-text-color);
+      @include drumee.typo($size: 16px, $line: 26px, $color: var(--default-text-color));
     }
   }
   &__footer{

@@ -1,144 +1,155 @@
-&-menu {
-  &__wrapper {
-    &[data-state="1"] {
-      & .trigger-icon {
-        opacity: 1;
+@use "mixins/drumee";
+
+.dmz-sharebox,
+.dmz-meeting {
+  &-menu {
+    &__wrapper {
+      &[data-state="1"] {
+        & .trigger-icon {
+          opacity: 1;
+        }
       }
-    }
-    & .menu-topic-items {
-      background-color: $dmz-default-background;
-      border-radius: $default-border-radius;
-      height: 100%;
-      justify-content: center;
-      max-width: 220px;
-      min-height: 300px;
-      min-width: 250px;
-      width: 100% !important;
-      &__wrapper {
-        left: -200px;
-        padding:10px 0;
-        top: 20px;
+
+      & .menu-topic-items {
+        background-color: var(--default-background);
+        border-radius: var(--border-radius);
+        height: 100%;
+        justify-content: center;
+        max-width: 220px;
+        min-height: 300px;
+        min-width: 250px;
+        width: 100% !important;
+
+        &__wrapper {
+          left: -200px;
+          padding: 10px 0;
+          top: 20px;
+
+          &[data-device="mobile"] {
+            left: unset;
+            right: -10px;
+          }
+        }
+
         &[data-device="mobile"] {
-          left: unset;
-          right: -10px;
+          &:before {
+            right: 15px;
+            left: unset;
+          }
         }
-      }
-      &[data-device="mobile"] {
+
         &:before {
-          right: 15px;
-          left: unset;
+          background-color: var(--default-background);
+          content: "";
+          height: 10px;
+          left: 205px;
+          position: absolute;
+          top: -5px;
+          transform: rotate(45deg);
+          width: 10px;
+        }
+
+        &:after {
+          background: var(--default-background);
+          border-radius: var(--border-radius-top);
+          content: "";
+          height: 10px;
+          left: 0;
+          position: absolute;
+          top: 0;
+          width: 100%;
+        }
+
+        &[data-state="open"] {
+          z-index: 9999 !important;
         }
       }
-      &:before {
-        background-color: $dmz-default-background;
-        content: "";
-        height: 10px;
-        left: 205px;
-        position: absolute;
-        top: -5px;
-        transform: rotate(45deg);
-        width: 10px;
-      }
-
-      &:after {
-        background:$dmz-default-background;
-        border-radius: $default-border-radius-top;
-        content: "";
-        height: 10px;
-        left: 0;
-        position: absolute;
-        top: 0;
-        width: 100%;
-      }
-
-      &[data-state="open"] {
-        z-index: 9999 !important;
-      }
-    }
-  }
-
-  &__icon {
-    align-items: center;
-    color: $dmz-default-icon-neutral;
-    cursor: pointer;
-    height: 14px;
-    width: 14px;
-
-    &.trigger-icon {
-      color: $dmz-default-icon-reverse;
-      height: 20px;
-      width: 20px;
-      :hover {
-        color:$dmz-default-thinline-icon-hover;
-      }
     }
 
-    &.owner-name,
-    &.rights {
-      top: 0px;
-    }
-
-    &.available {
-      color: $dmz-icon-valid;
-    }
-
-    &.account_check {
-      color: $dmz-icon-valid;
-    }
-
-    &.owner-name {
-      height: 18px;//16px;
-      width: 18px;//16px;
-    }
-    
-    &.cross {
-      color: $dmz-icon-invalid ;
-      height: 12px;
-      width: 12px;
-    }
-  }
-
-  &__item-wrapper {
-    width: 100%;
-  }
-
-  &__item {
-    cursor: pointer;
-    padding:6px 0px 8px 20px;//6px 0px 8px 25px;
-    margin-bottom:  1px;
-
-    &.expires-in {
-      margin-bottom: 5px;
-      padding: 10px 0 10px 20px;
-    }
-  }
-
-  &__note {
-    @include typo($size: 13px, $weight: 300, $line: 15px, $color: $dmz-default-text-color);
-    padding-top: 0px;
-
-    &.title {
-      margin-top: 5px;
-      @include typo($size: 14px, $weight: 300, $line: 16px, $color: $sharebox-text-color);//$sharebox-text
-    }
-
-    &.owner-name,
-    &.rights {
-      left: 10px;
+    &__icon {
       align-items: center;
+      color: var(--default-icon-neutral);
+      cursor: pointer;
+      height: 14px;
+      width: 14px;
+
+      &.trigger-icon {
+        color: var(--default-icon-reverse);
+        height: 20px;
+        width: 20px;
+
+        :hover {
+          color: var(--default-thinline-icon-hover);
+        }
+      }
+
+      &.owner-name,
+      &.rights {
+        top: 0px;
+      }
+
+      &.available {
+        color: var(--dmz-icon-valid);
+      }
+
+      &.account_check {
+        color: var(--dmz-icon-valid);
+      }
+
+      &.owner-name {
+        height: 18px; //16px;
+        width: 18px; //16px;
+      }
+
+      &.cross {
+        color: var(--dmz-icon-invalid);
+        height: 12px;
+        width: 12px;
+      }
     }
 
-    &.expires-in-value {
-      @include typo($size: 13px, $weight: 300, $line: 14px, $color: $dmz-default-text-color);
-      background-color:$dmz-default-background;
-      justify-content: center;
-      padding: 0 5px;
+    &__item-wrapper {
+      width: 100%;
     }
 
-    &.expires-in-label {
-      @include typo($size: 13px, $weight: 300, $line: 14px, $color: $dmz-secondary-text-color);
-      margin: 0px 2px;
-      padding-right: 2px;
+    &__item {
+      cursor: pointer;
+      padding: 6px 0px 8px 20px; //6px 0px 8px 25px;
+      margin-bottom: 1px;
+
+      &.expires-in {
+        margin-bottom: 5px;
+        padding: 10px 0 10px 20px;
+      }
+    }
+
+    &__note {
+      @include drumee.typo($size: 13px, $weight: 300, $line: 15px, $color: var(--default-text-color));
+      padding-top: 0px;
+
+      &.title {
+        margin-top: 5px;
+        @include drumee.typo($size: 14px, $weight: 300, $line: 16px, $color: var(--sharebox-main)); //$sharebox-text
+      }
+
+      &.owner-name,
+      &.rights {
+        left: 10px;
+        align-items: center;
+      }
+
+      &.expires-in-value {
+        @include drumee.typo($size: 13px, $weight: 300, $line: 14px, $color: var(--default-text-color));
+        background-color: var(--default-background);
+        justify-content: center;
+        padding: 0 5px;
+      }
+
+      &.expires-in-label {
+        @include drumee.typo($size: 13px, $weight: 300, $line: 14px, $color: var(--secondary-text-color));
+        margin: 0px 2px;
+        padding-right: 2px;
+      }
     }
   }
 }

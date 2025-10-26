@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .media-devices {
   &__topbar {
@@ -6,12 +6,12 @@
     width: 300px;
     margin-top: 10px;
     padding: 5px 10px 5px 5px;
-    border-bottom: 1px solid $core-default-separator;
+    border-bottom: 1px solid var(--default-separator);
   }
 
   &__label {
     &:hover {
-      color: $eviolet ;
+      color: var(--eviolet);
       cursor: pointer;
     }
   }
@@ -20,8 +20,8 @@
     height: 100%;
     align-items: start;
     justify-content: space-between;
-    background-color: $core-default-background;
-    border-radius: $default-border-radius;
+    background-color: var(--default-bg);
+    border-radius: var(--border-radius);
 
     .menu-topic-items {
       &__wrapper {
@@ -36,7 +36,7 @@
         content: " ";
         width: 18px;
         height: 18px;
-        background-color: $core-default-background;
+        background-color: var(--default-bg);
         position: absolute;
         left: 21px;
         top: -7px;
@@ -65,12 +65,12 @@
   }
 
   &__tab {
-    @include typo($color: $main-grey, $size: 14px, $line: 19px, $weight: 400);
+    @include drumee.typo($color: var(--main-grey), $size: 14px, $line: 19px, $weight: 400);
     cursor: pointer;
 
     &[data-radio="on"] {
-      color: $core-default-text-reverse;
-      background-color: $core-default-background-hover;
+      color: var(--default-text-reverse);
+      background-color: var(--default-bg-hover);
       padding: 0 10px;
     }
 
@@ -84,20 +84,20 @@
     width: 40px;
     height: 40px;
     padding: 10px;
-    color: $ewhite;
+    color: var(--ewhite);
     cursor: pointer;
 
     &.editbox_cog {
       width: 18px;
       height: 18px;
-      color: $ewhite;
+      color: var(--ewhite);
       cursor: pointer;
       margin-left: 16px;
       padding: 0px;
     }
 
     &:hover {
-      color: $eviolet ;
+      color: var(--eviolet);
       opacity: 1;
     }
   }
@@ -105,11 +105,11 @@
   &__checkbox {
     width: 20px;
     height: 20px;
-    color: $egrey-2f;
+    color: var(--egrey-2f);
     padding: 3px;
   }
 
   &__label {
-    @include typo($color: $egrey-2f, $weight: 400, $line: 20px, $size: 12px);
+    @include drumee.typo($color: var(--egrey-2f), $weight: 400, $line: 20px, $size: 12px);
   }
 }

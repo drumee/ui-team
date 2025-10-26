@@ -1,42 +1,44 @@
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('overlay-wrapper');
 
-.account-security  {
-  @import './overlay-wrapper';
+.account-security {
 
-  &__ui{
+  &__ui {
     height: 100%;
     display: flex;
-    flex-direction: column;    
+    flex-direction: column;
   }
+
   &__main {
-    width:100%; //98%
+    width: 100%; //98%
     height: calc(100% - 20px);
     min-height: 150px;
     margin-right: auto;
     margin-left: auto;
     margin-bottom: 10px;
   }
-  &__inner{
+
+  &__inner {
     height: 100%;
   }
-  &__wrapper{
+
+  &__wrapper {
     @media (max-width: 1100px) {
       flex-direction: column !important;
       align-items: center;
     }
   }
-  &__connection-log.container{
-    border-radius: $default-border-radius;
+
+  &__connection-log.container {
+    border-radius: var(--border-radius);
     padding: 0px 10px;
     margin-left: 10px;
     margin-right: 10px;
   }
-  
-  &__modal{
-    &.dialog__wrapper{
+
+  &__modal {
+    &.dialog__wrapper {
       position: absolute;
       top: 0;
       width: 0;
@@ -44,37 +46,39 @@
       overflow: visible;
     }
   }
-  &__tooltips{
+
+  &__tooltips {
     width: 500px;
-    background: $account-default-background; 
+    background: var(--default-background);
   }
 
   &__note {
     &.info-message {
       justify-content: center;
-      text-align: left;//center;
+      text-align: left; //center;
       position: absolute;
       padding: 258px 0 10px 11px;
-      @include typo($size: 12px, $line: 14px, $color:$account-default-text-alert);//$account-security-text-color); $eorange-crusta
+      @include drumee.typo($size: 12px, $line: 14px, $color: var(--default-text-alert)); //$account-security-text-color); var(--eorange-crusta)
     }
   }
 
   &__icon {
     &.close {
-      color:$account-default-thinline-icon;
+      color: var(--default-thinline-icon);
       cursor: pointer;
       height: 10px;
       padding: 0;
       right: 10px;
       top: 5px;
       width: 10px;
-      
+
       &:hover {
-        color: $account-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
       }
     }
   }
-  &__column{
+
+  &__column {
     display: grid;
     grid-row-gap: 1rem;
     grid-template-rows: repeat(3, 1fr);
@@ -82,8 +86,8 @@
 
 }
 
-@import "password-meter";
-@import "pad";
-@import 'popup/history';
-@import 'popup/confirm';
-@import 'connection';
+@include meta.load-css("password-meter");
+@include meta.load-css("pad");
+@include meta.load-css('popup/history');
+@include meta.load-css('popup/confirm');
+@include meta.load-css('connection');

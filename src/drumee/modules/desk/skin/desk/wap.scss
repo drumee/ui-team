@@ -29,7 +29,7 @@
       color: #8d98cc;
     }
     .top-bar__pagename-text {
-      @include typo($color: $egrey-49,$size:24px,$line:36px,$weight:300);
+      @include typo($color: var(--egrey-49),$size:24px,$line:36px,$weight:300);
     }
     .top-bar__button {
       box-shadow: 0 1px 3px 0 rgba(0,0,0,0.14), 1px 2px 2px 0 rgba(0,0,0,0.1), 0 4px 4px 0 rgba(209,221,245,0.2);
@@ -37,12 +37,12 @@
       height: 36px;
       text-transform: uppercase;
       width: 115px;
-      @include typo($color: $ewhite,$size:12px,$line:14px,$weight:500);
+      @include typo($color: var(--ewhite),$size:12px,$line:14px,$weight:500);
       &.top-bar__button--primary {
-        background-color: $eorange;
+        background-color: var(--eorange);
       }
       &.top-bar__button--secondary {
-        background-color: $egreen;
+        background-color: var(--egreen);
       }
     }
   }
@@ -51,13 +51,13 @@
       flex-wrap: wrap;
     }
     .content__header {
-      color: $egrey-49;
+      color: var(--egrey-49);
     }
     .content__header-text {
-      @include typo($color: $egrey-49,$size:18px,$line:40px,$weight:300);
+      @include typo($color: var(--egrey-49),$size:18px,$line:40px,$weight:300);
     }
     .content__label {
-      @include typo($color: $egrey-49,$size:18px,$line:21px,$weight:300);
+      @include typo($color: var(--egrey-49),$size:18px,$line:21px,$weight:300);
       &.content__label--link {
         color: #4A90E2;
       }
@@ -65,20 +65,20 @@
         color: #AB47BC;
       }
       &.content__label--public {
-        color: $egreen;
+        color: var(--egreen);
       }
       &.content__label--hightlighted {
-        color: $egreen;
+        color: var(--egreen);
       }
       &.content__label--uppercase {
         text-transform: uppercase;
       }
       &.content__label--bold {
-        @include typo($color:$egrey-49,$size:14px,$line:36px,$weight:500);
+        @include typo($color: var(--egrey-49),$size:14px,$line:36px,$weight:500);
       }
     }
     .content__text {
-      @include typo($color: $egrey-78,$size:14px,$line:16px,$weight:300);
+      @include typo($color: var(--egrey-78),$size:14px,$line:16px,$weight:300);
     }
     .content__btn {
       cursor: pointer;
@@ -88,14 +88,14 @@
       border-radius: 2px;
       justify-content: center;
       // text-transform: uppercase;
-      @include typo($color: $egrey-49,$size:16px,$line:34px,$weight:400);
+      @include typo($color: var(--egrey-49),$size:16px,$line:34px,$weight:400);
       &.content__btn--small {
-        @include typo($color: $ewhite,$size:14px,$line:34px,$weight:400);
+        @include typo($color: var(--ewhite),$size:14px,$line:34px,$weight:400);
       }
       &.content__btn--accent {
-        border-color: $egreen-soft;
-        background-color: $egreen-soft;
-        color: $ewhite;
+        border-color: var(--egreen-soft);
+        background-color: var(--egreen-soft);
+        color: var(--ewhite);
       }
       &.content__btn--big {
         width: 182px;
@@ -112,30 +112,30 @@
       &.content__btn--grey {
         border-color: #89929E;
         background-color: #89929E;
-        color: $ewhite;
+        color: var(--ewhite);
       }
       &.content__btn--drumee-drive {
-        color: $egreen;
+        color: var(--egreen);
       }
       &.content__btn--delete {
         border-color: #FF7479;
         background-color: #FF7479;
-        color: $ewhite;
+        color: var(--ewhite);
       }
       &:hover, &[data-state="1"], &[data-radio="on"] {
-        border-color: $eviolet;
-        background-color: $eviolet;
-        color: $ewhite;
+        border-color: var(--eviolet);
+        background-color: var(--eviolet);
+        color: var(--ewhite);
       }
     }
   }
   .card {
     flex-shrink: 0;
     .card__name {
-      color: $egrey-49;
+      color: var(--egrey-49);
     }
     .card__name-text {
-      @include typo($color: $egrey-49,$size:18px,$line:21px,$weight:300);
+      @include typo($color: var(--egrey-49),$size:18px,$line:21px,$weight:300);
     }
     .card__footer-btn {
       align-self: center;
@@ -144,7 +144,7 @@
       height: 34px;
       border-radius: 2px;
       border: 1px solid #DDE2E8;
-      @include typo($color: $egrey-49,$size:14px,$line:34px,$weight:400);
+      @include typo($color: var(--egrey-49),$size:14px,$line:34px,$weight:400);
     }
   }
   .chips {
@@ -157,16 +157,16 @@
       cursor: pointer;
     }
     .chips-item__header {
-      @include typo($color: $egrey-49,$size:14px,$line:22px,$weight:300);
+      @include typo($color: var(--egrey-49),$size:14px,$line:22px,$weight:300);
     }
     .chips-item__number {
-      @include typo($color: $egrey-49,$size:16px,$line:19px,$weight:500);
+      @include typo($color: var(--egrey-49),$size:16px,$line:19px,$weight:500);
     }
   }
   .analytics-blocks {
     .analytics-blocks__header {
       margin-bottom: 22px;
-      @include typo($color: $egrey-49,$size:14px,$line:16px,$weight:300);
+      @include typo($color: var(--egrey-49),$size:14px,$line:16px,$weight:300);
     }
     .analytics-blocks__number {
       cursor: pointer;
@@ -190,7 +190,7 @@
       border-radius: 2px;
       cursor: pointer;
       flex-direction: row-reverse;
-      @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+      @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
       .svg-inner {
         width: 16px;
         height: 16px;
@@ -212,7 +212,7 @@
       border-radius: 2px;
       cursor: pointer;
       .diff__text {
-        @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+        @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
       }
       .diff__number {
         @include typo($line:16px,$size:14px,$weight:500,$color:#4A90E2);
@@ -222,7 +222,7 @@
   .other {
     .other__label {
       width: 135px;
-      @include typo($line:26px,$size:14px,$weight:300,$color:$egrey-49);
+      @include typo($line:26px,$size:14px,$weight:300,$color: var(--egrey-49));
     }
     .other__line {
       cursor: pointer;
@@ -239,7 +239,7 @@
     width: $wrapper-width;
     bottom: 10px;
     .messages__btn {
-      background-color: $ewhite;
+      background-color: var(--ewhite);
       width: 119px;
       height: 34px;
       border-radius: 2px;
@@ -247,14 +247,14 @@
       cursor: pointer;
     }
     .messages__label {
-      @include typo($line:14px,$size:12px,$weight:300,$color: $egrey-49);
+      @include typo($line:14px,$size:12px,$weight:300,$color: var(--egrey-49));
     }
     .messages__number {
       height: 14px;
       width: 14px;
       background-color: #4A90E2;
       border-radius: 2px;
-      @include typo($line:14px,$size:10px,$weight:400,$color: $ewhite);
+      @include typo($line:14px,$size:10px,$weight:400,$color: var(--ewhite));
     }
   }
   .nav {
@@ -264,14 +264,14 @@
       white-space: nowrap;
       padding: 0 33px;
       margin: 0 2px;
-      @include typo($line:36px,$size:16px,$weight:400,$color: $egrey-49);
+      @include typo($line:36px,$size:16px,$weight:400,$color: var(--egrey-49));
       &:hover {
-        color: $eviolet;
+        color: var(--eviolet);
       }
       &[data-state="1"], &[data-radio="on"] {
-        background-color: $eviolet;
+        background-color: var(--eviolet);
         &, &:hover {
-          color: $ewhite;
+          color: var(--ewhite);
         }
       }
       &--icon {
@@ -303,10 +303,10 @@
       box-shadow: 0 2px 5px 1px rgba(0,0,0,0.09), 0 3px 5px 0 rgba(0,0,0,0.08), 0 3px 9px 0 rgba(194,185,203,0);
     }
     .domain-choose__header {
-      @include typo($line:16px,$size:14px,$weight:300,$color: $egrey-49);
+      @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
     }
     .domain-choose__details {
-      @include typo($line:16px,$size:14px,$weight:300,$color: $epink);
+      @include typo($line:16px,$size:14px,$weight:300,$color: var(--epink));
     }
   }
   .input {
@@ -315,8 +315,8 @@
       width: 266px;
       height: 46px;
       input {
-        @include typo($line:21px,$size:18px,$weight:300,$color: $egrey-89);
-        @include placeholder-input{color: $egrey-89};
+        @include typo($line:21px,$size:18px,$weight:300,$color: var(--egrey-89));
+        @include placeholder-input{color: var(--egrey-89)};
       }
     }
     .input__text {
@@ -339,7 +339,7 @@
       @include typo($line:19px,$size:16px,$weight:300,$color: #4A90E2);
       &:hover, &[data-radio="on"], &[data-state="1"] {
         background-color: #879BFF;
-        color: $ewhite;
+        color: var(--ewhite);
       }
     }
   }
@@ -351,7 +351,7 @@
       text-align: center;
       cursor: pointer;
       border: 2px solid transparent;
-      @include typo($line:16px,$size:14px,$weight:400,$color: $egrey-49);
+      @include typo($line:16px,$size:14px,$weight:400,$color: var(--egrey-49));
       .svg-inner {
         width: 35px;
         height: 35px;
@@ -359,7 +359,7 @@
         float: none;
       }
       &:hover, &[data-state="1"], &[data-radio="on"] {
-        border: 2px solid $eviolet;
+        border: 2px solid var(--eviolet);
       }
     }
   }
@@ -367,18 +367,18 @@
     .search__field {
       padding: 0 10px;
       input {
-        @include typo($line:26px,$size:14px,$weight:300,$color: $egrey-89);
-        @include placeholder-input{color: $egrey-89};
-        border-bottom: 1px solid $egrey-89;
+        @include typo($line:26px,$size:14px,$weight:300,$color: var(--egrey-89));
+        @include placeholder-input{color: var(--egrey-89)};
+        border-bottom: 1px solid var(--egrey-89);
         &:focus {
-          border-bottom: 1px solid $eviolet;
+          border-bottom: 1px solid var(--eviolet);
         }
       }
     }
   }
   .plain-text {
     width: 380px;
-    @include typo($line:16px,$size:12px,$weight:300,$color: $egrey-49);
+    @include typo($line:16px,$size:12px,$weight:300,$color: var(--egrey-49));
   }
   .redirect {
     .redirect__item {
@@ -392,7 +392,7 @@
     background-color: #FBFBFB;
     cursor: pointer;
     .dragndrop__text {
-      @include typo($line:16px,$size:14px,$weight:300,$color: $egrey-49);
+      @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
     }
   }
   .language {
@@ -403,7 +403,7 @@
       cursor: pointer;
     }
     .language__existing {
-      @include typo($line:16px,$size:14px,$weight:400,$color: $egrey-49);
+      @include typo($line:16px,$size:14px,$weight:400,$color: var(--egrey-49));
       .svg-inner {
         height: 40px;
         margin-bottom: 5px;
@@ -411,13 +411,13 @@
     }
     .language__add {
       background-color: #FBFBFB;
-      color: $egrey-78;
+      color: var(--egrey-78);
       border-radius: 2px;
     }
   }
   .spaceblock {
     .spaceblock__text {
-      @include typo($line:11px,$size:11px,$weight:400,$color: $egrey-89);
+      @include typo($line:11px,$size:11px,$weight:400,$color: var(--egrey-89));
     }
   }
   .bar {
@@ -455,15 +455,15 @@
         &[data-state="1"], [data-radio="on"] {
           &.privacy-options__btn--private {
             background-color: #AB47BC;
-            color: $ewhite;
+            color: var(--ewhite);
           }
           // &.privacy-options__btn--private {
-            //     background-color: $eorange;
-            //     color: $ewhite;
+            //     background-color: var(--eorange);
+            //     color: var(--ewhite);
             // }
             &.privacy-options__btn--public {
-              background-color: $egreen;
-              color: $ewhite;
+              background-color: var(--egreen);
+              color: var(--ewhite);
             }
           }
           .svg-inner {
@@ -478,7 +478,7 @@
         position: absolute;
         right: 90px;
         top: -10px;
-        @include typo($line:21px,$size:14px,$weight:300,$color:$egrey-89);
+        @include typo($line:21px,$size:14px,$weight:300,$color: var(--egrey-89));
         .svg-inner {
           width: 37px;
           height: 29px;
@@ -495,7 +495,7 @@
         background-color: rgba(74, 74, 74, 0.4);
         border-radius: 2px;
         .modal__inner {
-          background-color: $ewhite;
+          background-color: var(--ewhite);
           box-shadow: 0 0 7px 0 rgba(0,0,0,0.14), 0 0 6px 0 #F8FAFC;
           border-radius: 2px;
         }
@@ -507,14 +507,14 @@
           cursor: pointer;
         }
         .modal__text {
-          @include typo($line:21px,$size:14px,$weight:300,$color:$egrey-78);
+          @include typo($line:21px,$size:14px,$weight:300,$color: var(--egrey-78));
           &.modal__text--bold {
-            @include typo($line:21px,$size:14px,$weight:500,$color:$egrey-78);
+            @include typo($line:21px,$size:14px,$weight:500,$color: var(--egrey-78));
           }
         }
         .modal__contact-name {
           max-width: 200px;
-          @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+          @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
         }
       }
       .auth-people {
@@ -533,7 +533,7 @@
           .auth-people__search-block {
             border-bottom: 1px solid #DDE2E8;
             input {
-              @include typo($line:24px,$size:12px,$weight:300,$color:$egrey-89);
+              @include typo($line:24px,$size:12px,$weight:300,$color: var(--egrey-89));
             }
           }
         }
@@ -550,7 +550,7 @@
           border-bottom: 1px solid #dde2e8;
           text-transform: uppercase;
           width: 99%;
-          @include typo($line:13px,$size:11px,$weight:300,$color:$egrey-49);
+          @include typo($line:13px,$size:11px,$weight:300,$color: var(--egrey-49));
           &.auth-people__th--small {
             text-transform: none;
           }
@@ -559,7 +559,7 @@
           border-bottom: 1px solid #dde2e8;
           width: 99%;
           height: 34px;
-          @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);
+          @include typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));
           &:hover {
             background-color: #f7f7f9;
             .auth-people__action-icon {
@@ -569,10 +569,10 @@
           }
           &.auth-people__tr--contacts {
             &:hover {
-              color: $ewhite;
-              background-color: $eviolet;
+              color: var(--ewhite);
+              background-color: var(--eviolet);
               .auth-people__action-icon {
-                color: $ewhite;
+                color: var(--ewhite);
               }
             }
           }
@@ -634,7 +634,7 @@
       }
       .add-people {
         .add-people__header {
-          @include typo($line:25px,$size:22px,$weight:400,$color:$egrey-89);
+          @include typo($line:25px,$size:22px,$weight:400,$color: var(--egrey-89));
         }
         .add-people__text {
           @include typo($line:16px,$size:14px,$weight:400,$color:#EA4D44);
@@ -651,7 +651,7 @@
         }
         .add-people__menu-header {
           position: relative;
-          @include typo($line:26px,$size:14px,$weight:300,$color:$egrey-89);
+          @include typo($line:26px,$size:14px,$weight:300,$color: var(--egrey-89));
           &:after {
             content: " ";
             position: absolute;
@@ -659,7 +659,7 @@
             align-self: center;
             width: 0;
             height: 0;
-            border-top: 5px solid $egrey-49;
+            border-top: 5px solid var(--egrey-49);
             border-left: 5px solid transparent;
             border-right: 5px solid transparent;
           }
@@ -667,7 +667,7 @@
         .add-people__menu-item {
           cursor: pointer;
           position: relative;
-          @include typo($line:36px,$size:15px,$weight:300,$color:$egrey-89);
+          @include typo($line:36px,$size:15px,$weight:300,$color: var(--egrey-89));
           &:before {
             content: " ";
             position: absolute;
@@ -692,11 +692,11 @@
           }
         }
         .add-people__menu-text {
-          @include typo($line:36px,$size:15px,$weight:300,$color:$egrey-89);
+          @include typo($line:36px,$size:15px,$weight:300,$color: var(--egrey-89));
         }
         .add-people__search-field {
           margin-right: 3px;
-          @include typo($line:36px,$size:15px,$weight:300,$color:$egrey-89);
+          @include typo($line:36px,$size:15px,$weight:300,$color: var(--egrey-89));
           input {
             width: 20px;
             border-bottom: 1px solid #DDE2E8;
@@ -705,14 +705,14 @@
       }
       .select-dates {
         .select-dates__label {
-          @include typo($line:14px,$size:12px,$weight:300,$color:$egrey-89);
+          @include typo($line:14px,$size:12px,$weight:300,$color: var(--egrey-89));
         }
         .select-dates__field {
           width: 57px;
           border-bottom: 1px solid #DDE2E8;
           input {
             text-align: center;
-            @include typo($line:20px,$size:12px,$weight:300,$color:$egrey-49);
+            @include typo($line:20px,$size:12px,$weight:300,$color: var(--egrey-49));
           }
         }
       }

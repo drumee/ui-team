@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/player/stream/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .endpoint-lense{
   &__ui{
@@ -40,7 +40,7 @@
         align-content: center;
         justify-items: center;
         display: flex;
-      //  border-radius:$default-border-radius-bottom;
+      //  border-radius:var(--border-radius-bottom);
         svg{
           width: 100px;
           height: 100px;
@@ -66,7 +66,7 @@
     padding: 20px;
    // border-radius: 4px;
     position: absolute;
-    @include typo($size:18px,$line:30px,$color:$default-text-color); //$size:20px,$weight:300,
+    @include drumee.typo($size:18px,$line:30px,$color: var(--default-text-color)); //$size:20px,$weight:300,
     &[data-user="1"]{
       display: none;
     }
@@ -76,12 +76,12 @@
     top: 12px;  
     left: 12px;
     min-height: 22px;
-    //@include typo($color: $white, $weight: 400, $line: 30px, $size: 18px);
-    @include typo($color: $default-text-color, $line: 18px, $size: 13px);
+    //@include typo($color: var(--white), $weight: 400, $line: 30px, $size: 18px);
+    @include drumee.typo($color: var(--default-text-color), $line: 18px, $size: 13px);
     background-color: $default-background;      
     min-width:105px;
     padding: 1px 10px;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     //margin-left:12px;
     z-index: 100;
     border: 1px solid $vdo-border-grey;
@@ -89,7 +89,7 @@
 
   &__muted{
     position: absolute;
-    color: $default-icon-neutral;//$main-grey;
+    color: $default-icon-neutral;//var(--main-grey);
     visibility: hidden;
     width: 30px;
     height: 30px;
@@ -100,7 +100,7 @@
       visibility: visible;
       //top: 52px;
       background: $default-background;         
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       z-index: 100;
     &:before{
         content : " ";
@@ -109,7 +109,7 @@
         width: 23px;//26px; 
         top: 14px;//15px;
         left: 3px;//2px;
-        background-color: $eorange-sunset;//#ea4d44; 
+        background-color: var(--eorange-sunset);//#ea4d44; 
         transform-origin : 50% 50%;
         transform: rotate(-45deg);
       }
@@ -120,7 +120,7 @@
     height: 100%;
     width: 100%;
     z-index: 10;
-    border-radius:$default-border-radius-bottom;// 0 0 4px 4px;
+    border-radius:var(--border-radius-bottom);// 0 0 4px 4px;
     // &[data-size="cover"]{
       // left: 50%;
       // position: absolute;

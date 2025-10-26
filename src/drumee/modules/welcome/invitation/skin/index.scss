@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/modules/welcome/invitation/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .invitation-{
   &__ui{

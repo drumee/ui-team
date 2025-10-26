@@ -14,7 +14,7 @@
   }
 
   &-title {
-    @include typo($size: 17px, $line: 24px, $weight: 400, $color: $default-text-reverse);
+    @include typo($size: 17px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
     align-items: center;
     height: 21px;
     justify-content: center;
@@ -43,7 +43,7 @@
   background-color: $teamroom-background; //$dgc-share-room;
   border-radius: 6px 6px 0 0;
   &.dmz {
-    background-color: $sharebox-main;
+    background-color: var(--sharebox-main);
   }
   &-control {
     .icon {

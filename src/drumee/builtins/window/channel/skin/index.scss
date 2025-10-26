@@ -1,36 +1,38 @@
+@use 'mixins/drumee';
 
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
-@import 'mixins/drumee';
+.window-channel {
+  --teamroom-main: #BD44D9;
+  --sharebox-main: #EF6500;
 
-.window-channel{
+  --channel-default-bg: --default-background;
+  --channel-teamroom-bg: --team-background-header;
+  --channel-sharebox-bg: --sharebox-main;
+  --channel-default-text-reverse : --default-text-reverse;
+  --channel-default-icon-reverse : --default-icon-reverse;
+}
+
+.window-channel {
   &__ui {
-    background-color: $channel-default-background; 
+    background-color: var(--default-background);
     height: 100%;
     width: 100%;
     width: 340px;
     height: 480px;
-    box-shadow:$drumee-shadow-container;
+    box-shadow: var(--shadow-container);
   }
 
   &__main {
     background-color: inherit;
     height: inherit;
     overflow: hidden;
-    border-radius:$default-border-radius;
+    border-radius: var(--border-radius);
   }
 
   &__container {
     background-color: inherit;
     height: inherit;
     overflow: hidden;
-    border-radius:$default-border-radius-top;
+    border-radius: var(--default-border-radius-top);
   }
 
   &__content {
@@ -44,28 +46,29 @@
       height: auto;
       justify-content: center;
       width: 100%;
-      border-radius: $default-border-radius-top;
+      border-radius: var(--default-border-radius-top);
     }
 
     &--icon {
-      color: $channel-default-icon-reverse;  
+      color: var(--default-icon-reverse);
       height: 20px;
-      min-width:25px;
+      min-width: 25px;
       width: 25px;
     }
 
-    &-title {      
+    &-title {
       align-items: center;
       height: 21px;
       justify-content: center;
       margin: auto;
       max-width: 163px;
       max-width: 200px;
-      @include typo($size: 17px, $line: 24px, $weight: 400, $color: $channel-default-text-reverse);
+      @include drumee.typo($size: 17px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
 
       .name {
         align-items: flex-start;
-        @include overflow-text;
+        @include drumee.overflow-text;
+
         .note-content {
           padding: 0px 7px;
           overflow: hidden;
@@ -81,14 +84,16 @@
     height: 44px;
     min-height: 44px;
     border-bottom: none;
-    background-color: $channel-teamroom-background ;//$teamroom-background;
-    border-radius: $default-border-radius-top;
-    &.dmz{
-      background-color:$channel-sharebox-background;
+    background-color: var(--team-background-header); //$teamroom-background;
+    border-radius: var(--default-border-radius-top);
+
+    &.dmz {
+      background-color: var(--sharebox-main);
     }
-    &-control{
-      .icon{
-        color: $channel-default-text-reverse;
+
+    &-control {
+      .icon {
+        color: var(--default-text-reverse);
       }
     }
   }

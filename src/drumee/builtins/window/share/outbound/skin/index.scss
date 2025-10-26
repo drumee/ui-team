@@ -1,12 +1,13 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/colors/index.scss';
+@use 'mixins/typo.scss';
+
+@use 'mixins/exports.scss';
+@use 'mixins/handles.scss';
+@use 'mixins/utils.scss';
+@use 'mixins/vendor.scss';
+@use 'mixins/z-index.scss';
+@use 'mixins/drumee';
 
 .share-outbound{
   &__ui{
@@ -18,9 +19,9 @@
     min-height: 227px;
     position: absolute;
     background: $default-background; 
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     display: flex;    
-    box-shadow:$drumee-shadow-container;
+    box-shadow:var(--shadow-container);
     //box-shadow: 0 0 7px 0 rgba(0,0,0,0.14);
     //transform: translateY(50%);
 //    justify-content: center;
@@ -70,11 +71,11 @@
     }
     &.link{
       border-radius: 15px;
-      border: 1px solid $egrey-8d ;
+      border: 1px solid var(--egrey-8d);
       overflow: hidden;
       left: 0;    
       &:hover{
-        border:1px solid $eviolet;
+        border:1px solid var(--eviolet);
       }  
     }
     &.acknowledge{
@@ -85,14 +86,14 @@
     }
   }
   &__title{
-    @include typo($color:$eorange ,$size:16px,$line:19px,$weight:400);//#FA8540
+    @include drumee.typo($color: var(--eorange) ,$size:16px,$line:19px,$weight:400);//#FA8540
     &.acknowledge{
       margin: auto;
       text-align: center;
     }
     .create{
       cursor: pointer;
-      @include typo($color:$egrey-89,$size:16px,$line:19px,$weight:400);
+      @include drumee.typo($color: var(--egrey-89),$size:16px,$line:19px,$weight:400);
     }
   }
   &__text{
@@ -103,11 +104,11 @@
     &.ack-delete{
       margin: auto;
     }
-    @include typo($color:$egrey-78,$size:18px,$line:32px,$weight:400);
+    @include drumee.typo($color: var(--egrey-78),$size:18px,$line:32px,$weight:400);
   }
   &__wrapper{
     position: absolute;
     width: 100%;
   }
-  @import 'invitation';
+  @include meta.load-css('invitation');
 }

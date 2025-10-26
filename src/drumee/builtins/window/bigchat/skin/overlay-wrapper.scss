@@ -1,101 +1,107 @@
-&__overlay-wrapper[data-mode="open"] {
-  height: 100%;
-  position: absolute;
-  width: 100%;
-  z-index: 60000;//10;
-  
-  & .overlay {
-    background: $bigchat-transparency-container-overlay;//$default-background-wrapper;
+@use "mixins/drumee";
+
+.window-bigchat {
+  &__overlay-wrapper[data-mode="open"] {
     height: 100%;
     position: absolute;
     width: 100%;
-    z-index: 110;
-  }
+    z-index: 60000; //10;
 
-  & .chat-overlay {
-    align-items: center;
-    height: 100%;
-    justify-content: center;
-    margin: auto;
-    position: absolute;
-    width: 100%;
-  }
-
-  & .window-addressbook {
-    &__main {
-      background: $bigchat-default-background;
-      max-height: 330px;
-      max-width: 550px;
-      min-height: 300px;
-      min-width: 300px;
+    & .overlay {
+      background: var(--transparency-container-overlay); //$default-background-wrapper;
       height: 100%;
-      width: calc(100% - 20px);
+      position: absolute;
+      width: 100%;
+      z-index: 110;
     }
-  
-    &__container {
-      padding-top: 25px;
 
-      & .acknowledge-box {
-        padding-bottom: 27px;
-        margin: auto;
-  
-        &.icon {
-          padding-bottom: 35px;
+    & .chat-overlay {
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      margin: auto;
+      position: absolute;
+      width: 100%;
+    }
+
+    & .window-addressbook {
+      &__main {
+        background: var(--default-background);
+        max-height: 330px;
+        max-width: 550px;
+        min-height: 300px;
+        min-width: 300px;
+        height: 100%;
+        width: calc(100% - 20px);
+      }
+
+      &__container {
+        padding-top: 25px;
+
+        & .acknowledge-box {
+          padding-bottom: 27px;
+          margin: auto;
+
+          &.icon {
+            padding-bottom: 35px;
+          }
         }
       }
-    }
-  
-    &__icon {
-      &.icon_success {
-        color: $bigchat-default-icon-success;
-        height: 26px;
+
+      &__icon {
+        &.icon_success {
+          color: var(--default-icon-success);
+          height: 26px;
+          margin: auto;
+          width: 36px;
+        }
+      }
+
+      &__note {
+        @include drumee.typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
+
+        &.input-content {
+          color: var(--eblue);
+        }
+      }
+
+      &__buttons-wrapper {
         margin: auto;
-        width: 36px;
+        padding-top: 15px;
       }
-    }
-  
-    &__note {
-      @include typo($size: 18px, $weight: 300, $line: 26px, $color: $bigchat-default-text-color);
-  
-      &.input-content {
-        color: $eblue;
+
+      &__button-cancel,
+      &__button-confirm {
+        @include drumee.typo($size: 14px, $line: 16px);
+        justify-content: center;
+        padding: 8px;
+        width: 150px;
+        -moz-osx-font-smoothing: grayscale;
+        -webkit-font-smoothing: antialiased;
       }
-    }
-  
-    &__buttons-wrapper {
-      margin: auto;
-      padding-top: 15px;
-    }
-  
-    &__button-cancel,
-    &__button-confirm {
-      @include typo($size: 14px, $line: 16px);
-      justify-content: center;
-      padding: 8px;
-      width: 150px;
-      -moz-osx-font-smoothing: grayscale;
-      -webkit-font-smoothing: antialiased;
-    }
-  
-    &__button-cancel {
-      border-radius: $default-border-radius;
-      border: 1px solid $btn-rollback-border; 
-      color: $btn-rollback-text; 
-      margin-right: 50px;
-      &:hover{
-        border:2px solid $btn-rollback-border-hover; 
-        color: $btn-rollback-text-hover;    
+
+      &__button-cancel {
+        border-radius: var(--border-radius);
+        border: 1px solid var(--btn-rollback-border);
+        color: var(--btn-rollback-text);
+        margin-right: 50px;
+
+        &:hover {
+          border: 2px solid var(--btn-rollback-border-hover);
+          color: var(--btn-rollback-text-hover);
+        }
       }
-    }
-  
-    &__button-confirm {
-      background-color: $btn-commit-background;      
-      border: 1px solid  $btn-commit-border ;
-      border-radius: $default-border-radius;
-      color: $ewhite;
-      &:hover{
-        background-color:$btn-commit-border-hover;
-        border-color: $btn-commit-background-hover;
+
+      &__button-confirm {
+        background-color: var(--btn-commit-background);
+        border: 1px solid var(--btn-commit-border);
+        border-radius: var(--border-radius);
+        color: var(--ewhite);
+
+        &:hover {
+          background-color: var(--btn-commit-border-hover);
+          border-color: var(--btn-commit-background-hover);
+        }
       }
     }
   }

@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/adminpanel/widget/member_tags/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-member-tags {
   &__ui {
@@ -28,7 +28,7 @@
   }
 
   &__separator {
-	  background-color: $admin-default-separator;
+	  background-color: var(--default-separator);
 	  border-radius: 1px;
 	  height: 1px;
 	  margin: 3px 0 0 0px;
@@ -71,7 +71,7 @@
 			}
 
 			& .tag-sortable-placeholder {
-				background: $eviolet;
+				background: var(--eviolet);
 				height:24px;
 				opacity: 0.3;
 				width: 100%;
@@ -86,15 +86,15 @@
 			padding-left: 32px;
 			padding-top: 5px;
 			width: 100%;
-			@include typo($size: 14px, $line: 16px);
-			color: $admin-special-tag-color  !important; 
+			@include drumee.typo($size: 14px, $line: 16px);
+			color: var(--admin-special-tag-color)  !important; 
 
 
       &[data-active="active"],
       &[data-radio="on"],
       &:hover {
-        background: $admin-default-background-hover;
-        color	: $admin-default-text-hover  !important;
+        background: var(--default-background-hover);
+        color	: var(--default-text-hover)  !important;
       }
     }
   }
@@ -105,13 +105,13 @@
 			margin-right: auto; //50px;
 			padding-bottom: 8px;
 			padding-top: 8px;
-			@include typo($size: 15px, $line: 16px, $color: $admin-text-title);//14px
+			@include drumee.typo($size: 15px, $line: 16px, $color: var(--admin-default-text-title));//14px
     }
   }
 
   &__icon {
     box-sizing: border-box;
-    color: $admin-default-icon-neutral;//$egrey-b6;
+    color: var(--default-icon-neutral);//var(--egrey-b6);
     cursor: pointer;
     height: 27px; //26px;
     margin: 2px;
@@ -123,7 +123,7 @@
   }
   svg {
   &:hover{
-	color:$admin-default-icon-hover;
+	color:var(--default-icon-hover);
 	opacity: 1;
   	}
   }

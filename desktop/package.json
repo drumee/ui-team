@@ -92,7 +92,7 @@
   "scripts": {
     "pack": "electron-builder --dir build",
     "dist": "electron-builder",
-    "preinstall": "npm install better-sqlite3 --build-from-source --sqlite3=\"$(pwd)/sqlite-amalgamation\"",
+    "preinstall": "npm install better-sqlite3",
     "postinstall": "electron-builder install-app-deps",
     "normal": "electron .",
     "check": "node scripts/check-app-structure.js",
@@ -114,10 +114,10 @@
   "devDependencies": {
     "@electron/notarize": "^2.0.0",
     "@electron/osx-sign": "^1.3.1",
+    "@electron/rebuild": "^3.2.9",
     "@mapbox/node-pre-gyp": "^1.0.11",
     "electron": "^29.4.6",
     "electron-builder": "^24.13.3",
-    "electron-rebuild": "^3.2.9",
     "electron-reload": "^1.5.0",
     "file-loader": "^6.2.0",
     "nan": "github:tec27/nan#remove_accessor_signature",

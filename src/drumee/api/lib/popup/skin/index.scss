@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/welcome/skin/welcome-main.scss
 #   TYPE : Backoffice User Settings Styles
 # ===================================================================**/
-@import "mixins/drumee.scss";
+@use "mixins/drumee.scss";
 // .drumee-api{
 //   //min-width: 180px;
 // }
@@ -56,8 +56,8 @@
   }
 
   &__popup-wrapper {
-    background: $core-default-background;
-    border-radius: $default-border-radius;//6px;
+    background: var(--default-bg);
+    border-radius: var(--border-radius);//6px;
     width: 610px;//630px;
     height: 375px;//410px;
     padding: 20px 30px;
@@ -73,12 +73,12 @@
     right: 15px; //10px;
     top: 9px; //15px;
     cursor: pointer;
-    color: $core-default-thinline-icon;
+    color: var(--default-thinline-icon);
     height: 14px;//12px;
     width: 14px;//12px;
     opacity: 0.5;
     :hover {
-      color: $core-default-thinline-icon-hover;
+      color: var(--default-thinline-icon-hover);
       opacity: 1;
     }
  /*   & img {
@@ -93,7 +93,7 @@
       height: 100%;
       padding: 1px;
       :hover {
-        color: $core-default-thinline-icon-hover;
+        color: var(--default-thinline-icon-hover);
         opacity: 1;
       }
     }
@@ -106,10 +106,10 @@
   }
 
   &__popbutton {
-    @include typo($color: $core-default-text-reverse, $size: 15px, $line: 1, $weight: 500);
+    @include drumee.typo($color: var(--default-text-reverse), $size: 15px, $line: 1, $weight: 500);
     cursor: pointer;
     background-color: #16a3ac;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     justify-content: center;
     margin: 0 auto;
     // max-width: 230px;

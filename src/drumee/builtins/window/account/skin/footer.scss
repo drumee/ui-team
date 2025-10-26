@@ -3,7 +3,7 @@
 #   FILE : src/drumee/builtins/desk/skin/account
 #   TYPE : Account Main Style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .account{
   &__footer{
@@ -27,23 +27,23 @@
     //top: -71px;
     margin: auto;
     //margin-left: 45px;
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     justify-content: center;
-    background-color:$btn-commit-background; 
-    border: 1px solid $btn-commit-border ;
-    @include typo($size:16px,$line:34px,$color:$btn-commit-text,$weight:400);//$color:#879bff
+    background-color:var(--btn-commit-background); 
+    border: 1px solid var(--btn-commit-border);
+    @include drumee.typo($size:16px,$line:34px,$color: var(--btn-commit-text),$weight:400);//$color:#879bff
     cursor: pointer;
     align-items: center;
     &:hover{
-      background-color:$btn-commit-background-hover ;
-      border-color: $btn-commit-border-hover  ;
+      background-color:var(--btn-commit-background-hover);
+      border-color: var(--btn-commit-border-hover);
     }
     &.delete{
-      background-color:$btn-caution-background ;//$btn-tertiary-background; 
-      border: 1px solid $btn-caution-border; //#ff7479;
+      background-color:var(--btn-caution-background);//$btn-tertiary-background; 
+      border: 1px solid var(--btn-caution-border); //#ff7479;
       &:hover{
-        background-color:$btn-caution-background-hover ;
-        border-color: $btn-caution-border-hover ;
+        background-color:var(--btn-caution-background-hover);
+        border-color: var(--btn-caution-border-hover);
       }
     }
   }

@@ -1,121 +1,125 @@
-&-header {
-  &__container {
-    justify-content: space-between;
-    text-decoration: none;
-    width: 100%;
-    grid-template-columns: 70px auto auto;
+@use "mixins/drumee";
 
-    &[data-device="mobile"] {
-      padding: 18px 0 0 0;
-      position: absolute;
-      flex-direction: column;
-      display: flex;
-    }
-
-    .custom-logo[data-device="mobile"] {
-      position: absolute;
-      left: 10px;
-      width: 55px;
-      height: 55px;
-      top:0;
-    }
-
-  }
-
-  &__note.sender-name {
-    justify-content: center;
-    white-space: break-spaces;
-    word-break: break-word;
-    @include typo($size: 28px, $line: 28px, $color: $dmz-default-text-reverse);
-  }
-
-  &__title {
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    width: 100%;
-
-    @include typo($size: 28px, $line: 28px, $color: $dmz-default-text-reverse);
-
-    &[data-device="mobile"] {
-      margin-top: 5px;
+@mixin dmz-header {
+  &-header {
+    &__container {
+      justify-content: space-between;
+      text-decoration: none;
       width: 100%;
-      @include typo($size: 20px, $line: 22px, $color: $dmz-default-text-reverse);
+      grid-template-columns: 70px auto auto;
+
+      &[data-device="mobile"] {
+        padding: 18px 0 0 0;
+        position: absolute;
+        flex-direction: column;
+        display: flex;
+      }
+
+      .custom-logo[data-device="mobile"] {
+        position: absolute;
+        left: 10px;
+        width: 55px;
+        height: 55px;
+        top: 0;
+      }
+
     }
 
+    &__note.sender-name {
+      justify-content: center;
+      white-space: break-spaces;
+      word-break: break-word;
+      @include drumee.typo($size: 28px, $line: 28px, $color: var(--default-text-reverse));
+    }
 
-  }
-
-  &__action-box {
-    align-items: center;
-    justify-content: flex-end;
-    max-width: 300px;
-
-    &[data-device="mobile"] {
-      max-width: none;
+    &__title {
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
       width: 100%;
-      flex-direction: row-reverse;
-      justify-content: flex-start;
-      justify-items: flex-end;
-    }
-  }
+
+      @include drumee.typo($size: 28px, $line: 28px, $color: var(--default-text-reverse));
+
+      &[data-device="mobile"] {
+        margin-top: 5px;
+        width: 100%;
+        @include drumee.typo($size: 20px, $line: 22px, $color: var(--default-text-reverse));
+      }
 
 
-  &__item {
-
-    height: 100%;
-    justify-content: center;
-    align-items: center;
-    align-content: center;
-    justify-items: center;
-    margin: 0 5px;
-
-    &.info {
-      right: 40px;
     }
 
-    &.action-buttons {
-      &[data-mode="closed"] {
-        & .action-btn {
-          display: none;
+    &__action-box {
+      align-items: center;
+      justify-content: flex-end;
+      max-width: 300px;
+
+      &[data-device="mobile"] {
+        max-width: none;
+        width: 100%;
+        flex-direction: row-reverse;
+        justify-content: flex-start;
+        justify-items: flex-end;
+      }
+    }
+
+
+    &__item {
+
+      height: 100%;
+      justify-content: center;
+      align-items: center;
+      align-content: center;
+      justify-items: center;
+      margin: 0 5px;
+
+      &.info {
+        right: 40px;
+      }
+
+      &.action-buttons {
+        &[data-mode="closed"] {
+          & .action-btn {
+            display: none;
+          }
         }
       }
     }
-  }
 
-  &__icon {
-    color: $dmz-default-icon-reverse;
-    cursor: pointer;
-    width: 24px;
-    height: 24px;
-  }
-
-  &__buttons-wrapper {
-    height: 40px;
-    margin: 0 10px;
-    right: 30px;
-    width: 100px;
-
-    &[data-mode="closed"] {
-      display: none;
+    &__icon {
+      color: var(--default-icon-reverse);
+      cursor: pointer;
+      width: 24px;
+      height: 24px;
     }
-  }
 
-  &__button {
-    align-items: center;
-    border: 1px solid $dmz-default-action-btn-border-color;
-    border-radius: $default-border-radius;
-    background: transparent;
-    cursor: pointer;
-    height: 100%;
-    justify-content: center;
-    width: 100%;
-    @include typo($size: 14px, $line: 16px, $color: $dmz-default-text-reverse);
+    &__buttons-wrapper {
+      height: 40px;
+      margin: 0 10px;
+      right: 30px;
+      width: 100px;
 
-    &:hover {
-      box-shadow: 0 0px 13px 0px rgba(169, 186, 255, 0.5);
-      border: 1px solid #7891ff;
+      &[data-mode="closed"] {
+        display: none;
+      }
     }
-  }
 
+    &__button {
+      align-items: center;
+      border: 1px solid var(--dmz-default-action-btn-border-color);
+      border-radius: var(--border-radius);
+      background: transparent;
+      cursor: pointer;
+      height: 100%;
+      justify-content: center;
+      width: 100%;
+      @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-reverse));
+
+      &:hover {
+        box-shadow: 0 0px 13px 0px rgba(169, 186, 255, 0.5);
+        border: 1px solid #7891ff;
+      }
+    }
+
+  }
 }

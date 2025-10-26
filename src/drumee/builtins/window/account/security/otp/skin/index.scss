@@ -1,7 +1,5 @@
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/drumee';
+
+@use 'mixins/drumee';
 
 .security-otp {
 
@@ -12,8 +10,8 @@
     min-height: 150px;
     padding: 14px;
     width: 320px;
-    background-color: $account-default-block-background;
-    border-radius: $default-border-radius;
+    background-color: var(--default-block-background);
+    border-radius: var(--border-radius);
   }
 
   &__main {
@@ -32,9 +30,9 @@
   &__status {
     justify-content: center;
     text-align: center;
-    @include typo($size: 16px,
+    @include drumee.typo($size: 16px,
       $line: 21px,
-      $color: $account-default-text-color,
+      $color: var(--default-text-color),
       $weight: 400);
     align-content: center;
     flex-wrap: wrap;
@@ -60,7 +58,7 @@
     height: 33px;
     width: 33px;
     padding: 7px;
-    color: $account-checkbox-svg-hover;
+    color: var(--account-checkbox-svg-hover);
   }
 
   &__checkbox {
@@ -83,7 +81,7 @@
     flex-wrap: wrap;
     justify-content: center;
     align-content: center;
-    @include typo($size: 16px, $line: 35px, $color: $btn-commit-text);
+    @include drumee.typo($size: 16px, $line: 35px, $color: var(--btn-commit-text));
   }
 
   &__selector {
@@ -93,7 +91,7 @@
     justify-content: space-between;
     border: 1px solid lightgrey;
     margin: 5px 0;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     cursor: pointer;
   }
 }

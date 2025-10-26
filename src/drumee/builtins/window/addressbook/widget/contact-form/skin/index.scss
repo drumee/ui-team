@@ -1,7 +1,7 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 .addressbook-widget-contactForm {
   &__ui {
-    font-family : $roboto,sans-serif;
+    font-family : drumee.$roboto,sans-serif;
     height: 100%;
     width: 100%;
   }
@@ -21,7 +21,7 @@
   }
 
   &__separator {
-		background-color: $ab-default-separator;
+		background-color: var(--default-separator);
 		border-radius: 1px;
 		height: 1px;
 		margin: 2px 0px 0px;
@@ -37,21 +37,21 @@
 
     & .user-profile__initiales {
       & .note-content {
-        @include typo($size: 11px, $line: 11px);
+        @include drumee.typo($size: 11px, $line: 11px);
       }
     }
   }
 
   &__label {
-    color: $ab-secondary-text-color;
+    color: var(--secondary-text-color);
     margin-top: -3px;
 
     &.title {
       overflow:hidden;
       padding: 6px;
       white-space: nowrap;
-      @include typo($size: 16px, $line: 16px);
-      @include overflow-text;
+      @include drumee.typo($size: 16px, $line: 16px);
+      @include drumee.overflow-text;
     }
 
     &.fullname {
@@ -103,7 +103,7 @@
     width: 100%;
   }
   &__icon-info{
-    color:$ab-default-icon-neutral;
+    color:var(--default-icon-neutral);
     height: 25px;
     margin-left: 65%;
     margin-right: 10%;
@@ -116,14 +116,14 @@
     }
 
     .tooltips {
-      background-color: $ab-background-tooltips;
-      border-radius:$default-border-radius;
+      background-color: var(--background-tooltips);
+      border-radius:var(--border-radius);
       margin-left:-215px;
       margin-top: 16px;
       padding:3px 10px 3px 10px;
       text-align: justify;
       width: 266px;
-      @include typo($size: 11px, $line: 15px, $color:$ab-default-text-tooltips);
+      @include drumee.typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
     }
   }
 
@@ -149,35 +149,35 @@
 
     & input {
       background-color: transparent;
-      border-bottom: 1px solid $ab-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
       border-radius: 0px;
       margin-left: 0px;
       overflow:hidden;
       white-space: nowrap;
       width: 100%;
-      @include typo($size: 16px, $line: 19px, $color:$ab-default-text-color);
-      @include overflow-text;
+      @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-color));
+      @include drumee.overflow-text;
 
       &::placeholder {
         width:300px;
-        @include typo($size: 16px, $weight:300, $line: 19px, $color: $ab-default-text-placeholder);
+        @include drumee.typo($size: 16px, $weight:300, $line: 19px, $color: var(--default-text-placeholder));
       }
 
       &:focus {
-        border-color: $eblue;
+        border-color: var(--eblue);
         outline: none;
 
-        @include placeholder-input {
-          @include typo($size: 16px, $weight:400, $line: 19px,$color:$ab-text-placeholder-focus);
+        @include drumee.placeholder-input {
+          @include drumee.typo($size: 16px, $weight:400, $line: 19px,$color: var(--focus-text-placeholder));
         }
       }
     }
 
     & textarea {
-      @include typo($size: 14px, $line: 20px);
-      background-color: $ab-default-background;
-      border-radius:$default-border-radius;
-      border: 1px solid $eblue;
+      @include drumee.typo($size: 14px, $line: 20px);
+      background-color: var(--default-background);
+      border-radius:var(--border-radius);
+      border: 1px solid var(--eblue);
       box-sizing: border-box;
       margin-bottom: 20px;
       margin-left: 1px;
@@ -188,7 +188,7 @@
       width: 100%;
       
       &::placeholder {
-        @include typo($size: 14px, $weight: 300, $color: $ab-default-text-placeholder);
+        @include drumee.typo($size: 14px, $weight: 300, $color: var(--default-text-placeholder));
       }
 
       &:focus {
@@ -200,10 +200,10 @@
   &__entry {
     &.email {
       &[data-status='error'] {
-        border-bottom: 1px solid $ab-default-border-error;
+        border-bottom: 1px solid var(--default-border-error);
 
         & input:focus {
-          border-color: $ab-default-border-error;
+          border-color: var(--default-border-error);
         }
       }
     }
@@ -213,14 +213,14 @@
       width: 100%;
       
       & textarea {
-        background: $ab-default-block-background;
+        background: var(--default-block-background);
         border: none;
         resize: none;
         width: 100%;
-        @include typo($size: 14px, $line: 18px, $color: $ab-default-text-color);
+        @include drumee.typo($size: 14px, $line: 18px, $color: var(--default-text-color));
   
         &::placeholder {
-          @include typo($size: 14px, $line: 14px, $weight: 300, $color: $ab-default-text-placeholder);
+          @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
 
         &:focus {
@@ -236,7 +236,7 @@
   }
 
   &__message-wrapper {
-    border-radius:$default-border-radius;
+    border-radius:var(--border-radius);
     justify-content: center;
     padding: 0% 13% 0% 5%;
     width: 100%;
@@ -299,9 +299,9 @@
     }
 
     &.plus-icon {
-      background-color: $eorange-light;
-      border-radius: $border-radius-small;
-      color: $white;
+      background-color: var(--eorange-light);
+      border-radius: var(--border-radius-small);
+      color: var(--white);
       cursor: pointer;
       height: 16px;
       margin: 4px;
@@ -319,7 +319,7 @@
       width: 16px;
 
       &:hover {
-        color:$eviolet;
+        color:var(--eviolet);
         opacity: 1;
       }
     }
@@ -340,7 +340,7 @@
       width: 16px;
 
       &[data-state="1"] {
-        color: $egreen;
+        color: var(--egreen);
       }
     }
 
@@ -348,10 +348,10 @@
 
   &__note {
     &.tags {
-      border-bottom: 1px solid $ab-default-entry-border-bottom;
+      border-bottom: 1px solid var(--default-entry-border-bottom);
 
       & .note-content {
-        @include typo($size: 16px, $weight:300, $line: 19px, $color: $ab-default-text-placeholder);
+        @include drumee.typo($size: 16px, $weight:300, $line: 19px, $color: var(--default-text-placeholder));
       }
 
       &[data-selected="1"] {
@@ -375,9 +375,9 @@
   }
   
   &__items-wrapper {
-    background: $ab-default-background;
-    border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-container;// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    background: var(--default-background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-container);// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
     max-height: 250px;
     max-width: 150px;
     overflow-y: auto;
@@ -401,44 +401,44 @@
     
     & .button {   
       align-items:center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 35px;
       justify-content: center;
       margin: 0 7% 0 4%;//0% 15% 0 10%;
       max-width: 115px;
       width: 100%;
-      @include typo($size: 16px, $line: 19px);
+      @include drumee.typo($size: 16px, $line: 19px);
     }
   }
   
   &__button-cancel {
-    @include typo($weight: 300, $color: $btn-rollback-text);
-    border: 1px solid $btn-rollback-border;
+    @include drumee.typo($weight: 300, $color: var(--btn-rollback-text));
+    border: 1px solid var(--btn-rollback-border);
 
     &:hover {
-      border:2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;     
+      border:2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);     
     }
   }
   
   &__button-confirm {  
-    background-color: $btn-commit-background;
-    border: 1px solid $btn-commit-border;
-    @include typo($color: $btn-commit-text);
+    background-color: var(--btn-commit-background);
+    border: 1px solid var(--btn-commit-border);
+    @include drumee.typo($color: var(--btn-commit-text));
 
     &:hover {
-      background-color:$btn-commit-background-hover;
-      border:$btn-commit-border-hover ;
+      background-color:var(--btn-commit-background-hover);
+      border:var(--btn-commit-border-hover);
     }
   
     &[data-error=on] {
       pointer-events: none;
       opacity: 0.2;
-      @include typo($weight: 300, $color: $ab-default-text-reverse);
+      @include drumee.typo($weight: 300, $color: var(--default-text-reverse));
     }
   }
 
-  & .entry[data-status=error] input {border-bottom: 1px solid $ab-default-border-error;}
+  & .entry[data-status=error] input {border-bottom: 1px solid var(--default-border-error);}
   & .address__ui.address-input-item__ui:only-child,
   & .phoneno__ui.phoneno-input-item__ui:only-child {
     & .destroy-tag {

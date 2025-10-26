@@ -1,12 +1,4 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .window-changelog__content {
   &__main {
@@ -21,7 +13,7 @@
     align-items: center;
 
     &.presentation {
-      @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
       text-align: justify;
       max-width: 600px;
       align-content: center;
@@ -35,8 +27,8 @@
     }
 
     &.tab {
-      background-color: $btn-caution-background ;
-      @include typo($size: 14px, $line: 16px, $color: $btn-caution-text);
+      background-color: var(--btn-caution-background) ;
+      @include drumee.typo($size: 14px, $line: 16px, $color: var(--btn-caution-text));
       text-align: center;
       padding: 5px 10px;
       width: calc(50% - 2px);
@@ -55,8 +47,8 @@
     border-radius: 3px;
 
     .text {
-      background-color: $btn-caution-background ;
-      @include typo($size: 16px, $line: 18px, $color: $btn-caution-text);
+      background-color: var(--btn-caution-background) ;
+      @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-caution-text));
       text-align: justify;
       padding: 5px 10px;
     }
@@ -65,59 +57,10 @@
   &__list {
     height: 100%;
     width: 100%;
-    border: 1px solid $add-light-grey;
-    background-color: $core-default-block-background;
+    border: 1px solid var(--add-light-grey);
+    background-color: var(--default-block-background);
     overflow: auto;
     padding: 5px 0;
   }
 
-  // &__item {
-  //   width: 100%;
-  //   padding-left: 10px;
-  //   @include typo($size: 12px, $line: 16px);
-  //   align-content: start;
-  //   flex-wrap: wrap;
-  //   align-items: start;
-
-  //   &-filename.dest {
-  //     margin: 0 5px;
-
-  //     &::before {
-  //       color: $btn-caution-background;
-  //       content: "🠪";
-  //     }
-  //   }
-
-  //   &-content {
-  //     width: 100%;
-  //   }
-
-  //   &-icon {
-  //     width: 14px;
-  //     height: 14px;
-  //     cursor: pointer;
-  //     background-color: $btn-commit-background ;
-  //     color: white;
-  //     border-radius: 3px;
-  //     margin-right: 5px;
-
-  //     svg {
-  //       padding: 3px;
-  //     }
-
-  //     &:hover {
-  //       color: yellow;
-  //     }
-  //   }
-
-  //   &-action {
-  //     margin-right: 3px;
-  //     min-width: 60px;
-
-  //     &::after {
-  //       content: ":";
-  //       margin-right: 5px;
-  //     }
-  //   }
-  // }
 }

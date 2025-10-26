@@ -1,42 +1,51 @@
-&__list{
-  &.menu-topic{
-    width: 35px;//44px;
-    height:35px;// 44px;
-    min-height:35px;// 44px;
-    border-bottom: none;
-    .menu-topic-trigger{
-      width: 100%;
-      height: 100%;
-      color: $ewhite;
-    }
-    .menu-topic-items{
-      background: $dmz-default-background; 
-      border-radius:$default-border-radius;
-      min-width: 253px;   
-      margin-top:12px;  
-      padding: 5px 10px 10px 10px; 
-      &__wrapper{
-        left:-161px;
-      }   
-      &:before{
-        content:" ";
-        width: 18px;
-        height: 18px;
-        background-color: $dmz-default-background;   
-        position:absolute;
-        right: 64px;
-        top:-9px;
-        z-index: 1;
-        transform:rotate(45deg);
-      } 
+@use "mixins/drumee";
+
+.dmz-meeting {
+  &__list {
+    &.menu-topic {
+      width: 35px; //44px;
+      height: 35px; // 44px;
+      min-height: 35px; // 44px;
+      border-bottom: none;
+
+      .menu-topic-trigger {
+        width: 100%;
+        height: 100%;
+        color: var(--ewhite);
+      }
+
+      .menu-topic-items {
+        background: var(--default-background);
+        border-radius: var(--border-radius);
+        min-width: 253px;
+        margin-top: 12px;
+        padding: 5px 10px 10px 10px;
+
+        &__wrapper {
+          left: -161px;
+        }
+
+        &:before {
+          content: " ";
+          width: 18px;
+          height: 18px;
+          background-color: var(--default-background);
+          position: absolute;
+          right: 64px;
+          top: -9px;
+          z-index: 1;
+          transform: rotate(45deg);
+        }
+      }
     }
   }
-}
-&__attendees{
-  &-title{
-    @include typo($size:14px,$line:14px,$weight:300,$color:$dmz-default-text-title);//$default-text-color);
-    justify-content: center;
-    padding:10px 0 15px 3px;
-    height: 20px;
+
+  &__attendees {
+    &-title {
+      @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title)); //var(--default-text-color));
+      justify-content: center;
+      padding: 10px 0 15px 3px;
+      height: 20px;
+    }
   }
 }

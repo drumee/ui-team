@@ -11,7 +11,7 @@
     background-color:$default-background;  
     width:200px;
     height:400px;
-    box-shadow:$drumee-shadow-container;
+    box-shadow:var(--drumee-shadow-container);
     overflow: visible;   
     flex-direction: column;
     display: flex;  
@@ -165,7 +165,7 @@
 //     background-color:$default-background;  
 //     width:300px;
 //     height:350px;
-//     box-shadow:$drumee-shadow-container;
+//     box-shadow:var(--drumee-shadow-container);
 //     overflow: visible;
 //     min-width : 300px;
 //     min-height: 200px;

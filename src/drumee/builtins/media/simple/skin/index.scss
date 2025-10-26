@@ -1,134 +1,127 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2019
-#   FILE : src/drumee/builtins/bo/skin/media/simple
-#   TYPE : Desk media style -- mode simple
-# ===================================================================**/
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
+@use "sass:meta";
+@use 'mixins/drumee';
 
-.media-simple{
-  @import "access.scss";
-  @import "checkbox.scss";
-  @import "container.scss";
-  //@import "details.scss";
-  @import "folder.scss";
-  @import "hub.scss";
-  @import "moving.scss";
-  @import "progress.scss";
-  @import "share.scss";
+@include meta.load-css("access.scss");
+@include meta.load-css("checkbox.scss");
+@include meta.load-css("container.scss");
+@include meta.load-css("folder.scss");
+@include meta.load-css("hub.scss");
+@include meta.load-css("moving.scss");
+@include meta.load-css("progress.scss");
+@include meta.load-css("share.scss");
 
-  // @import "checkbox.scss";
-  // @import "container.scss";
-  // @import "progress.scss";
-  // @import "folder.scss";
-  // @import "hub.scss";
-}
- 
-.media-simple{
+.media-simple {
   &__ui {
     width: 100%;
     height: 35px;
+
     //padding-left: 60px;
     &[data-opened="1"] {
       background: #e8e8e8;
       border: none;
+
       &:after {
         display: none;
       }
     }
-    &:hover{
+
+    &:hover {
       box-shadow: inset 0px 0px 11px 1px #18a3ac38;
-      .media-checkbox{
+
+      .media-checkbox {
         display: block;
       }
     }
   }
-  &__main{
+
+  &__main {
     // flex-direction: simple-reverse;
     display: flex;
     // justify-content: flex-end;
     width: 100%;
     cursor: pointer;
     position: relative;
-    @include typo($line:30px,$size:14px,$weight:300,$color:$egrey-49);  
+    @include drumee.typo($line: 30px, $size: 14px, $weight: 300, $color: var(--egrey-49));
     //height: 32px;
     align-items: center;
     flex-direction: simple;
     // pointer-events: painted;
     //padding: 0 8px 0 60px;
     // justify-content: space-between;
-/*    &:hover{
+    /*    &:hover{
       *{
         // color:white;
       }
     }*/
-  
-    .preview{
+
+    .preview {
       position: relative;
       width: 25px;
       height: 25px;
       flex-shrink: 0;
       margin: auto 1px;
-      fill : $egrey-49;
-      .icon.document{
+      fill: var(--egrey-49);
+
+      .icon.document {
         height: 25px;
         width: 25px;
       }
-      .icon.video{
+
+      .icon.video {
         /*fill: tansparent;
         stroke: rgba(135, 155, 255, 1);*/
-        fill:rgba(250, 250, 250, 0.7);
-        stroke:transparent;
+        fill: rgba(250, 250, 250, 0.7);
+        stroke: transparent;
         width: 16px;
         height: 16px;
         padding: 0.5px;
       }
-      .icon.audio{
-        fill:#468ee5;
-        padding:1.5px;
-        }
+
+      .icon.audio {
+        fill: #468ee5;
+        padding: 1.5px;
       }
-      
     }
-  &__ghost{
-      border: #879BFF solid 1px;
-      height: 36px;
-      width: 50px;
-      overflow: visible;
-      z-index: 1000;
+
   }
-  &__input{
+
+  &__ghost {
+    border: #879BFF solid 1px;
+    height: 36px;
+    width: 50px;
+    overflow: visible;
+    z-index: 1000;
+  }
+
+  &__input {
     position: absolute;
     left: 120px;
     height: 80%;
-    top:20%;
+    top: 20%;
     //top: 10%;
     width: calc(40% - 70px);
-    .inner{
-      padding-top:0px;
+
+    .inner {
+      padding-top: 0px;
     }
+
     // input{
     //   border-radius: 2px;
     //   height: 100%;
     //   width: 100%;  
     //  //background-color:#cccccc;
-    //   @include typo($line:32px,$size:14px,$weight:300,$color:$egrey-2f);
+    //   @include typo($line:32px,$size:14px,$weight:300,$color: var(--egrey-2f));
     // }
-    textarea{
+    textarea {
       min-height: 22px;
       height: 22px;
       overflow: hidden;
       resize: none;
-      @include typo($line:21px,$size:14px,$weight:300,$color:$core-default-text-color);//$egrey-2f);
+      @include drumee.typo($line: 21px, $size: 14px, $weight: 300, $color: var(--default-text-color)); //var(--egrey-2f));
     }
-  
+
   }
+
   &__column {
     //flex-direction: simple-reverse;
     //display: flex;
@@ -138,26 +131,31 @@
     height: 32px;
     //padding: 0px;
     font-size: 12px;
-    &.name{
+
+    &.name {
       width: 140px;
       margin-left: 60px;
       overflow: hidden;
       padding-right: 15px;
     }
-    &.date{
+
+    &.date {
       min-width: 160px;
       width: 25%;
     }
-    &.size{
+
+    &.size {
       min-width: 60px;
     }
-    &.type{
+
+    &.type {
       min-width: 62px;
       width: 10%;
     }
   }
-  &__main[data-mode=view]{
-    .name{
+
+  &__main[data-mode=view] {
+    .name {
       margin-left: 0px;
     }
   }

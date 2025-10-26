@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/modules/account/securiry/selector/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .securiry-switcher{
   &__ui {
@@ -68,7 +68,7 @@
         //color: #879BFF;
         line-height: 19px;
         text-align: left;
-        @include typo($size:18px,$line:19px,$color:#879bff);
+        @include drumee.typo($size:18px,$line:19px,$color:#879bff);
         &[data-state="0"]{
           color: #d2d9db;
         }
@@ -82,7 +82,7 @@
         line-height: 19px;
         text-align: right;
         margin-left:19px;
-        @include typo($size:18px,$line:19px,$color:#d2d9db);
+        @include drumee.typo($size:18px,$line:19px,$color:#d2d9db);
         &[data-state="0"]{
           color:#879bff;
         }

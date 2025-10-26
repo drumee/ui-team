@@ -1,9 +1,5 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2021
-#   FILE : /src/drumee/widgets/electron/screen/item/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
-@import 'mixins/drumee';
+
+@use 'mixins/drumee';
 
 .screen-thumbnail {
   &__ui {
@@ -17,7 +13,7 @@
     overflow: hidden;
     overflow: hidden;
     border-radius: 3px;
-    border: 1px solid $core-default-text-color;
+    border: 1px solid var(--default-text-color);
   }
 
   &__main {
@@ -30,7 +26,7 @@
 
   &__icon {
     padding: 10px;
-    color: $core-default-text-color;
+    color: var(--default-text-color);
   }
 
   &__image {
@@ -43,6 +39,6 @@
   &__name {
     margin-top: 6px;
     justify-content: center;
-    @include typo($color: $core-default-text-color, $size: 14px, $line: 16px, $weight: 300);
+    @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 16px, $weight: 300);
   }
 }

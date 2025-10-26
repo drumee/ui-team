@@ -1,16 +1,12 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2020
-#   FILE : /src/drumee/modules/welcome/signin/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
 
-@import '../../../../skin/mixins/drumee.scss';
+
+@use 'mixins/drumee';
 
 .welcome-signin-cross-signin {
   &__container {
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     align-items: center;
-    background-color: $core-default-background;//$default-block-background;
+    background-color: var(--default-bg);//$default-block-background;
     max-height: 310px;//290px;
     height: 100%;
     width: 100%;
@@ -23,7 +19,7 @@
     text-align: center;
     width: 100%;
     align-items: center;
-    @include typo($size: 20px, $line: 28px, $weight: 500, $color: $core-default-text-title);
+    @include drumee.typo($size: 20px, $line: 28px, $weight: 500, $color: var(--default-text-title));
     u{
       text-decoration: underline;
       font-style: italic;
@@ -33,12 +29,12 @@
     justify-content: center;
     text-align: center;
     width: 100%;
-    @include typo($size: 15px, $line: 24px, $weight: 400, $color: $core-default-text-color);
+    @include drumee.typo($size: 15px, $line: 24px, $weight: 400, $color: var(--default-text-color));
     &-container{
       margin: 22px 30px;//12px auto;      
     }
     u{
-      @include typo($size: 15px, $line: 24px, $weight: 400, $color: $core-secondary-text-color);//$eblue);
+      @include drumee.typo($size: 15px, $line: 24px, $weight: 400, $color: var(--secondary-text-color));//var(--eblue));
       font-style: italic;
     }
   }
@@ -46,7 +42,7 @@
     justify-content: center;
     text-align: center;
     width: 100%;
-    @include typo($size: 14px, $line: 18px, $weight: 300, $color: $core-default-text-color);
+    @include drumee.typo($size: 14px, $line: 18px, $weight: 300, $color: var(--default-text-color));
   }
   &__buttons{
     justify-items: center;
@@ -55,8 +51,8 @@
   }
   &__button{
     cursor: pointer;
-    border-radius: $default-border-radius;
-    border-color: $eblue;//$default-text-title;
+    border-radius: var(--border-radius);
+    border-color: var(--eblue);//var(--default-text-title);
     border-width: 2px;
     border-style: solid;
     width: 45%;

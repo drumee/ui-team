@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .invitation-recipient {
   &__ui {
@@ -6,7 +6,7 @@
     height: 36px;
     position: relative;
     cursor: pointer;
-    @include typo($color: $core-default-text-color, $size: 14px, $line: 36px, $weight: 400);
+    @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 36px, $weight: 400);
 
     &.destination {
       height: 100%;
@@ -17,32 +17,32 @@
     }
 
     &:hover {
-      background-color: $core-default-background-hover;
-      color: $core-default-text-reverse;
+      background-color: var(--default-bg-hover);
+      color: var(--default-text-reverse);
 
       .invitation-recipient__checkbox {
-        border: 1px solid $ewhite;
-        background-color: $eviolet;
+        border: 1px solid var(--ewhite);
+        background-color: var(--eviolet);
 
         svg {
-          color: $eviolet
+          color: var(--eviolet)
         }
       }
 
       & svg {
-        color: $ewhite
+        color: var(--ewhite)
       }
 
       & .note-reader {
-        color: $ewhite
+        color: var(--ewhite)
       }
 
       &[data-state="1"] {
         .invitation-recipient__checkbox {
-          background-color: $eviolet;
+          background-color: var(--eviolet);
 
           svg {
-            color: $ewhite;
+            color: var(--ewhite);
           }
         }
       }
@@ -50,11 +50,11 @@
 
     &[data-state="1"] {
       .invitation-recipient__checkbox {
-        background-color: $ewhite;
+        background-color: var(--ewhite);
 
         svg {
 
-          color: $core-default-checkbox-checked;
+          color: var(--default-checkbox-checked);
         }
       }
     }
@@ -94,13 +94,13 @@
       width: 148px;
       height: 22px;
       color: #FFFFFF;
-      background-color: $eviolet;
-      border-radius: $default-border-radius;
+      background-color: var(--eviolet);
+      border-radius: var(--border-radius);
 
       padding: 0;
 
       &.idle {
-        background-color: $egrey-d6;
+        background-color: var(--egrey-d6);
       }
     }
   }
@@ -108,19 +108,19 @@
   &__checkbox {
     width: 15px;
     height: 15px;
-    border: 1px solid $core-default-checkbox-border;
-    border-radius: $default-checkbox-border-radius;
+    border: 1px solid var(--default-checkbox-border);
+    border-radius: var(--checkbox-border-radius);
 
     svg {
 
       position: absolute;
-      color: $ewhite;
+      color: var(--ewhite);
     }
   }
 
   &__avatar {
     &.user-profile {
-      background-color: $egrey-b6;
+      background-color: var(--egrey-b6);
       background-position: 50% 50%;
       background-repeat: no-repeat;
       background-size: cover;
@@ -135,10 +135,10 @@
   &__icon {
     width: 28px;
     height: 28px;
-    color: $egrey-b6;
+    color: var(--egrey-b6);
 
     &.existing {
-      color: $core-default-icon-neutral;
+      color: var(--default-icon-neutral);
       opacity: 0.70;
       width: 15px;
       height: 16px;
@@ -151,10 +151,10 @@
       left: calc(50% - 14px);
       top: calc(50% - 14px);
       padding: 10px;
-      color: $core-default-icon-reverse;
+      color: var(--default-icon-reverse);
 
       svg {
-        stroke: $ewhite;
+        stroke: var(--ewhite);
         stroke-width: 2;
       }
     }
@@ -168,8 +168,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     width: 166px;
-    @include typo($color: $core-default-text-color, $size: 14px, $weight: 400);
-    @include overflow-text;
+    @include drumee.typo($color: var(--default-text-color), $size: 14px, $weight: 400);
+    @include drumee.overflow-text;
 
     & .note-content {
       overflow: hidden;
@@ -193,15 +193,15 @@
     padding: 10px;
     position: absolute;
     opacity: 1;
-    @include typo($color: $egrey-2f, $size: 12px, $line: 14px, $weight: 400);
-    background-color: $egrey-b6;
+    @include drumee.typo($color: var(--egrey-2f), $size: 12px, $line: 14px, $weight: 400);
+    background-color: var(--egrey-b6);
     box-shadow: 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
-    border-radius: $default-border-radius-small;
+    border-radius: var(--border-radius-small);
 
     &::before {
       position: absolute;
       content: "";
-      background-color: $egrey-b6;
+      background-color: var(--egrey-b6);
       left: calc(50% - 4px);
       top: -4px;
       width: 8px;
@@ -210,7 +210,7 @@
     }
 
     &.drumate {
-      background-color: $ewhite;
+      background-color: var(--ewhite);
     }
   }
 }

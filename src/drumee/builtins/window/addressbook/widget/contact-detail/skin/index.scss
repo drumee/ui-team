@@ -1,16 +1,17 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('action-menu.scss');
+@include meta.load-css('popup.scss');
 
 .addressbook-widget-contact-detail {
 
-  @import './action-menu.scss';
-  @import './popup.scss';
 
   &.box {
-    background-color: $ab-default-background;
+    background-color: var(--default-background);
   }
 
   &__ui {
-    font-family: $roboto, sans-serif;
+    font-family: drumee.$roboto, sans-serif;
     height: 100%;
     width: 100%;
   }
@@ -27,7 +28,7 @@
   }
 
   &__separator {
-    background-color: $ab-default-separator;
+    background-color: var(--default-separator);
     border-radius: 1px;
     height: 1px;
     margin: 2px 0 0 0px;
@@ -60,7 +61,7 @@
 
     &.notifier {
       align-items: center;
-      @include typo($size: 16px, $line: 19px, $color: $ab-default-text-success);
+      @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-success));
     }
 
     &.message {
@@ -141,7 +142,7 @@
     }
 
     &.profile-icon {
-      color: $eblue;
+      color: var(--eblue);
       height: 25px;
       margin-right: 0px;
       margin-top: 3px;
@@ -177,9 +178,9 @@
       width: 18px;
 
       .tooltips {
-        border-radius: $default-border-radius;
-        @include typo($size: 11px, $line: 15px, $color: $ab-default-text-tooltips);
-        background-color: $ab-background-tooltips;
+        border-radius: var(--border-radius);
+        @include drumee.typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
+        background-color: var(--background-tooltips);
         margin-left: -180px;
         margin-top: 25px;
         padding: 3px 10px 3px 10px;
@@ -199,7 +200,7 @@
 
     & .user-profile__initiales {
       & .note-content {
-        @include typo($size: 11px, $line: 11px);
+        @include drumee.typo($size: 11px, $line: 11px);
       }
     }
   }
@@ -254,13 +255,13 @@
   &__note {
     padding-bottom: 2px;
     padding-left: 5px;
-    @include typo($size: 16px, $line: 19px, $color: $ab-default-text-color);
+    @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-color));
 
     &.blocked {
-      @include typo($size: 12px, $line: 14px, $color: $ab-default-text-reverse);
+      @include drumee.typo($size: 12px, $line: 14px, $color: var(--default-text-reverse));
       align-items: center;
-      background: $ab-default-background-alert;
-      border-radius: $default-border-radius;
+      background: var(--default-background-alert);
+      border-radius: var(--border-radius);
       height: 24px;
       justify-content: center;
       top: 2px;
@@ -270,7 +271,7 @@
     }
 
     &.fullname {
-      @include typo($size: 15px, $line: 16px, $color: $ab-secondary-text-color);
+      @include drumee.typo($size: 15px, $line: 16px, $color: var(--secondary-text-color));
       align-items: center;
       max-width: 250px;
       overflow: hidden;
@@ -278,7 +279,7 @@
       top: 2px;
       white-space: nowrap;
       width: auto;
-      @include overflow-text;
+      @include drumee.overflow-text;
 
       & .inner.note-content {
         overflow: hidden;
@@ -288,7 +289,7 @@
     }
 
     &.label {
-      color: $ab-text-title;
+      color: var(--ab-default-text-title);
     }
 
     &.tags {
@@ -301,7 +302,7 @@
       padding-left: 5px;
       overflow: hidden;
       width: 220px;
-      @include overflow-text;
+      @include drumee.overflow-text;
 
       & .inner.note-content {
         text-overflow: ellipsis;
@@ -334,9 +335,9 @@
         width: 200px;
 
         & .tooltips {
-          @include typo($size: 12px, $line: 12px, $color: $ab-default-text-tooltips);
-          background-color: $ab-background-tooltips;
-          border-radius: $default-border-radius;
+          @include drumee.typo($size: 12px, $line: 12px, $color: var(--default-text-tooltips));
+          background-color: var(--background-tooltips);
+          border-radius: var(--border-radius);
           height: 100%;
           text-align: center;
           top: -22px;
@@ -350,14 +351,14 @@
 
     &.category {
       width: 32px;
-      color: $ab-secondary-text-color;
+      color: var(--secondary-text-color);
     }
 
     &.comment {
-      border-radius: $default-border-radius;
-      @include typo($size: 16px, $line: 20px, $color: $ab-default-text-color);
-      background-color: $ab-default-background;
-      border: 1px solid $ab-default-frame;
+      border-radius: var(--border-radius);
+      @include drumee.typo($size: 16px, $line: 20px, $color: var(--default-text-color));
+      background-color: var(--default-background);
+      border: 1px solid var(--default-frame);
       box-sizing: border-box;
       height: 97%;
       max-height: 150px;
@@ -385,9 +386,9 @@
 
     &.invite-button {
       align-items: center;
-      background-color: $btn-commit-background;
-      border-radius: $default-border-radius;
-      border: 1px solid $btn-commit-border;
+      background-color: var(--btn-commit-background);
+      border-radius: var(--border-radius);
+      border: 1px solid var(--btn-commit-border);
       cursor: pointer;
       height: 40px;
       justify-content: center;
@@ -395,18 +396,18 @@
       padding: 5px;
       text-align: center;
       width: 170px;
-      @include typo($size: 16px, $line: 20px, $color: $btn-commit-text);
+      @include drumee.typo($size: 16px, $line: 20px, $color: var(--btn-commit-text));
 
       &.memory {
         height: 60px;
         min-width: 120px;
         width: 190px;
-        @include typo($size: 16px, $line: 26px);
+        @include drumee.typo($size: 16px, $line: 26px);
       }
 
       &:hover {
-        background-color: $btn-commit-background-hover;
-        border-color: $btn-commit-border-hover;
+        background-color: var(--btn-commit-background-hover);
+        border-color: var(--btn-commit-border-hover);
       }
     }
   }
@@ -416,13 +417,13 @@
       width: 80%;
 
       & input {
-        border-bottom: 1px solid $ab-default-entry-border-bottom;
+        border-bottom: 1px solid var(--default-entry-border-bottom);
         width: 100%;
-        @include typo($size: 16px, $line: 19px, $color: $ab-default-text-color);
+        @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-color));
 
         &::placeholder {
           text-transform: capitalize;
-          @include typo($size: 16px, $line: 19px, $weight: 300, $color: $ab-default-text-placeholder);
+          @include drumee.typo($size: 16px, $line: 19px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }
@@ -431,16 +432,16 @@
       width: 100%;
 
       & textarea {
-        border-radius: $default-border-radius;
-        @include typo($size: 12px, $line: 14px, $color: $ab-default-text-color);
-        background: $ab-default-block-background;
+        border-radius: var(--border-radius);
+        @include drumee.typo($size: 12px, $line: 14px, $color: var(--default-text-color));
+        background: var(--default-block-background);
         border: none;
         outline: none;
         padding: 10px;
         resize: none;
 
         &::placeholder {
-          @include typo($size: 12px, $line: 14px, $weight: 300, $color: $ab-default-text-placeholder);
+          @include drumee.typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
         }
       }
     }
@@ -452,45 +453,45 @@
 
     & .button {
       align-items: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       height: 35px;
       justify-content: center;
 
       width: 115px;
-      @include typo($size: 16px, $line: 19px);
+      @include drumee.typo($size: 16px, $line: 19px);
     }
   }
 
   &__button-cancel {
-    border: 1px solid $btn-rollback-border;
+    border: 1px solid var(--btn-rollback-border);
     margin-right: 35px;
-    @include typo($weight: 300, $color: $btn-rollback-text);
+    @include drumee.typo($weight: 300, $color: var(--btn-rollback-text));
 
     &:hover {
-      border: 2px solid $btn-rollback-border-hover;
-      color: $btn-rollback-text-hover;
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
 
   &__button-confirm {
-    background-color: $btn-commit-background;
+    background-color: var(--btn-commit-background);
     margin-left: 35px;
-    @include typo($color: $btn-commit-text);
+    @include drumee.typo($color: var(--btn-commit-text));
 
     &:hover {
-      background-color: $btn-commit-background-hover;
+      background-color: var(--btn-commit-background-hover);
     }
 
     &.destroy,
     &.block {
-      background-color: $btn-caution-background;
-      border: 1px solid $btn-caution-border;
+      background-color: var(--btn-caution-background);
+      border: 1px solid var(--btn-caution-border);
       height: 35px;
       width: 115px;
 
       &:hover {
-        background-color: $btn-caution-background-hover;
-        border: 1px solid $btn-caution-border-hover;
+        background-color: var(--btn-caution-background-hover);
+        border: 1px solid var(--btn-caution-border-hover);
       }
     }
   }

@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/adminpanel/pages/domain-page/js/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .domain-page{
   &__ui{
@@ -38,16 +38,16 @@
   }
 
   &__row_label.note-reader {
-    //@include typo($size: 20px, $line: 20px, $color: $egrey-2f); 
+    //@include typo($size: 20px, $line: 20px, $color: var(--egrey-2f)); 
     justify-content: flex-end;
     text-align: right;
-    @include typo($size: 16px, $line: 24px, $color:$admin-default-text-color);// $egrey-49); 
+    @include drumee.typo($size: 16px, $line: 24px, $color: var(--default-text-color));// var(--egrey-49)); 
   }
   &__row_form_field{
     cursor: pointer;
-    @include typo($size: 16px, $line: 20px, $color: $admin-default-text-color); 
+    @include drumee.typo($size: 16px, $line: 20px, $color: var(--default-text-color)); 
     .copied-to-clipboard{
-      @include typo($size: 14px, $line: 20px, $color: $admin-default-text-color);//$weight:300
+      @include drumee.typo($size: 14px, $line: 20px, $color: var(--default-text-color));//$weight:300
       position: absolute;
       left: -30px;
       top:100%;
@@ -70,59 +70,59 @@
     grid-template-columns: 50% 50%;
     min-height: 32px;
     & .domain-page__entry[data-status=error] input {
-      border-color: $admin-default-border-error  !important; //#ff4578
+      border-color: var(--default-border-error)  !important; //#ff4578
     }
     & .entry-reminder__main input{
-      border-bottom: 1px solid $admin-default-entry-border-bottom;//$egrey-b6;
-      @include typo($size: 16px, $line: 24px, $color: $admin-default-text-color);//$egrey-3f);
+      border-bottom: 1px solid var(--default-entry-border-bottom);//var(--egrey-b6);
+      @include drumee.typo($size: 16px, $line: 24px, $color: var(--default-text-color));//var(--egrey-3f));
       
       &:focus{     
-        border-color:$admin-focus-border-placeholder;//$eblue;   
+        border-color:var(--focus-border-placeholder);//var(--eblue);   
         &::placeholder {
-          color: $admin-text-placeholder-focus;// $eblue;
+          color: var(--focus-text-placeholder);// var(--eblue);
         }
       }
       &::placeholder {
-        color: $admin-default-text-placeholder;//$egrey-b6;
+        color: var(--default-text-placeholder);//var(--egrey-b6);
       }
     }
   }
   &__link_display{
     &.new{
-      @include typo($size: 16px, $line: 24px, $color: $egrey-b6);
+      @include drumee.typo($size: 16px, $line: 24px, $color: var(--egrey-b6));
     }
     &.view, &.edit{
-      @include typo($size: 16px, $line: 24px, $color: $admin-secondary-text-color);
+      @include drumee.typo($size: 16px, $line: 24px, $color: var(--secondary-text-color));
     }
   }
   &__button-confirm,
   &__button_val{
     align-items: center;
-    background:$btn-commit-background;    
-    border-radius: $default-border-radius;
-    @include typo($size: 16px, $line: 24px, $color: $btn-commit-text); //$size: 18px
+    background:var(--btn-commit-background);    
+    border-radius: var(--border-radius);
+    @include drumee.typo($size: 16px, $line: 24px, $color: var(--btn-commit-text)); //$size: 18px
     height: 35px;//36px
     justify-content: center;
     width: 115px;//150px
    // top:-20px;
     &:hover{
-      background-color:$btn-commit-background-hover ;
+      background-color:var(--btn-commit-background-hover);
       //border-color: $btn-primary-border-hover;
     }
   }
   &__button-cancel{
-    @include typo($size: 16px, $line: 24px, $color: $btn-rollback-text);
+    @include drumee.typo($size: 16px, $line: 24px, $color: var(--btn-rollback-text));
     align-items: center;
-    background: $btn-rollback-background;
-    border-radius: $default-border-radius;
-    border:1px solid $btn-rollback-border   ;
+    background: var(--btn-rollback-background);
+    border-radius: var(--border-radius);
+    border:1px solid var(--btn-rollback-border);
     height: 35px; //36px;
     justify-content: center;
     margin-right: 50px;
     width: 115px; //150px;
     &:hover{
-      border:2px solid $btn-rollback-border-hover;
-      color:$btn-rollback-text-hover;    
+      border:2px solid var(--btn-rollback-border-hover);
+      color:var(--btn-rollback-text-hover);    
     }
   }
 }

@@ -256,7 +256,6 @@ class __window_manager extends push {
         this.verbose("AAA:214 -- VISIBILITY", this.visible);
         NotificationCenter && NotificationCenter.resync();
         await uiRouter.ensureWebsocket();
-        //wsRouter.ping({ type: 'checkConnection' })
         this.updatePeersState();
       }
       this.visible = !document.hidden;

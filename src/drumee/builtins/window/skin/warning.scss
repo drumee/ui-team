@@ -1,4 +1,4 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .window-warning, .player-warning{
   &__main{
@@ -29,15 +29,15 @@
     justify-items: center;
     align-content: center;    
     min-height: 60%;
-    border-radius: $default-border-radius; 
-    background: $core-default-background;
+    border-radius: var(--border-radius); 
+    background: var(--default-bg);
     min-width: 350px;
     .drumee-text{
       justify-content: center;
       align-items: center;
       padding: 10px;
       text-align: center;
-      @include typo($weight:300, $size:16px, $line:26px, $color:$core-default-text-color); //$ewhite); //$size:14px, $weight:400,
+      @include drumee.typo($weight:300, $size:16px, $line:26px, $color:var(--default-text-color)); //var(--ewhite)); //$size:14px, $weight:400,
     }
   }
   &__commands{
@@ -47,18 +47,18 @@
   &__button{
     height: 32px;//30px; //26px;
     width: 90px;//80px;//
-    background-color: $btn-commit-background; //$egreen;
+    background-color: var(--btn-commit-background); //var(--egreen);
     padding: 0 12px;
     margin: 0px auto;//auto;
-    border-radius: $default-border-radius;// 6px; //2px;
+    border-radius: var(--border-radius);// 6px; //2px;
     justify-content: center;
     cursor: pointer;
-    @include typo($size:15px, $line:26px, $color:$ewhite);
+    @include drumee.typo($size:15px, $line:26px, $color: var(--ewhite));
     .inner{
-      @include typo($size:15px, $line:26px, $color:$ewhite);
+      @include drumee.typo($size:15px, $line:26px, $color: var(--ewhite));
     }
     &:hover{
-      background-color:$btn-commit-background-hover;  
+      background-color:var(--btn-commit-background-hover);  
     }
 
     &.settings {
@@ -73,6 +73,6 @@
     width : 100%;
     height: calc(100% - 52px);
     justify-content: space-around;
-    @include typo($weight:300, $size:14px, $line:26px, $color:#89929E);
+    @include drumee.typo($weight:300, $size:14px, $line:26px, $color:#89929E);
   }
 }

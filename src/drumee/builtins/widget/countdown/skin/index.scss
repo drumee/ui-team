@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/widget/countdown/js/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .countdown-timer {
   &__ui {
@@ -25,6 +25,6 @@
   }
 
   &__counter {
-    @include typo($size: inherit, $line: inherit, $color: inherit);
+    @include drumee.typo($size: inherit, $line: inherit, $color: inherit);
   }
 }

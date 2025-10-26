@@ -12,6 +12,8 @@ const _msg = function(_ui_, msg){
     </div>`;
 };
 
+require("./skin/")
+
 /**
  * 
  */
@@ -32,6 +34,7 @@ class __core_failover extends Marionette.View {
     this.model.atLeast({
       innerClass : _a.error});
     console.trace();
+    console.log("QQQQ 37")
     const msg = this.getOption(_a.content) || "Snippet not found";
     this.fig = 
       {family : 'core-failover'};

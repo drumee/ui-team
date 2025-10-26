@@ -1,7 +1,9 @@
+@use "mixins/drumee";
+
 .media-uploader, .svg-progress{
   &__ui{
     position: absolute;
-    background-color: $core-default-background; //$ewhite;
+    background-color: var(--default-bg); //var(--ewhite);
     z-index: 1000;
     width: 100%;
     height: 100%;
@@ -38,7 +40,7 @@
     &-filesize{
       letter-spacing: 0.1px;
       padding-left: 8px;
-      @include typo($line:33px,$size:14px,$weight:300,$color:$core-default-text-color);//#2F2F2F);
+      @include drumee.typo($line:33px,$size:14px,$weight:300,$color:var(--default-text-color));//#2F2F2F);
     }
     &-filename{
       margin-left: 11px;
@@ -49,7 +51,7 @@
       .root-node,& .drumee-text {
         overflow: hidden;
         text-overflow: ellipsis;
-        @include typo($line:16px,$size:14px,$weight:300,$color:$egrey-49);//#494949); 
+        @include drumee.typo($line:16px,$size:14px,$weight:300,$color: var(--egrey-49));//#494949); 
         letter-spacing: 0.1px;
         text-align: left;
       }
@@ -63,7 +65,7 @@
     background-color: rgba(182,191,202,0.36);
     &-percent{
       margin-left: -1em;
-      @include typo($line:9px,$size:9px,$weight:300,$color:$egreen);//#18A3AC);      
+      @include drumee.typo($line:9px,$size:9px,$weight:300,$color: var(--egreen));//#18A3AC);      
       letter-spacing: 0.07px;
     }
     &--fg{
@@ -71,7 +73,7 @@
       transition: width 1s linear;   
       width: 0%;
       border-radius: 1.5px;
-      background-color: $egreen;//#18A3AC;
+      background-color: var(--egreen);//#18A3AC;
     }
   }
   &__close{
@@ -83,7 +85,7 @@
     svg{
       width: 100%;
       height: 100%;
-      fill: $eorange-sunset;//#FA8540;
+      fill: var(--eorange-sunset);//#FA8540;
     }    
   }
 }

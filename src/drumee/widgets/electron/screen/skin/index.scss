@@ -1,9 +1,5 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2021
-#   FILE : /src/drumee/widgets/electron/screen/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
-@import 'mixins/drumee';
+
+@use 'mixins/drumee';
 
 .screen-selector{
   &__ui{
@@ -20,7 +16,7 @@
     width: 100%;
     justify-content: center;
     align-items: center;
-    @include typo($weight:400, $size:18px, $line:28px, $color:$core-default-text-color); 
+    @include drumee.typo($weight:400, $size:18px, $line:28px, $color: var(--default-text-color)); 
     margin: 20px 0;
   }
   &__list{
@@ -48,8 +44,8 @@
     margin-bottom: 20px;
   }
   &__button{
-    background-color: $btn-commit-background ;
-    @include typo($color:$default-text-reverse,$size:16px,$line:16px,$weight:400);
+    background-color: var(--btn-commit-background) ;
+    @include drumee.typo($color: var(--default-text-reverse),$size:16px,$line:16px,$weight:400);
     height: 35px;
     min-width: 115px;
     justify-content: center;
@@ -59,16 +55,16 @@
     margin: 0 20px;
     cursor: pointer;
     &:hover{
-      background-color: $btn-commit-background-hover;
+      background-color: var(--btn-commit-background-hover);
     }
     &.cancel{
       &:hover{
-        color: $btn-rollback-text-hover;
-        border: 2px solid $btn-rollback-border-hover;
+        color: var(--btn-rollback-text-hover);
+        border: 2px solid var(--btn-rollback-border-hover);
       }
-      color: $btn-rollback-text;
-      background-color: $btn-rollback-background;
-      border: 1px solid $btn-rollback-border;
+      color: var(--btn-rollback-text);
+      background-color: var(--btn-rollback-background);
+      border: 1px solid var(--btn-rollback-border);
     }
   }
 }

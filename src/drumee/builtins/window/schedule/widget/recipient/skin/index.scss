@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/window/conference/widget/recipient/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .schedule-recipient{
   &__ui{
@@ -16,12 +16,12 @@
     // margin-top: 10px;
     &.activehover:hover{
     //  color:$default-text-hover;     
-      background-color:$core-default-background-hover;
+      background-color:var(--default-bg-hover);
       & svg{
-        color:$core-default-icon-reverse;//$ewhite; 
+        color:var(--default-icon-reverse);//var(--ewhite); 
       }
       & .note-reader{
-        color: $core-default-text-hover;//$ewhite
+        color: var(--default-text-hover);//var(--ewhite)
       }
     }
   }
@@ -35,7 +35,7 @@
     padding: 0 5px 0px 3px;
     justify-content: center;
     align-items: center;
-    @include overflow-text();
+    @include drumee.overflow-text();
   }
   &-email,&-name{
     height: 100%;
@@ -44,7 +44,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include typo($size: 14px, $weight:400, $line: 20px, $color:$core-default-text-color);//$default-text-alert,$size: 16px,$weight:300, 
+    @include drumee.typo($size: 14px, $weight:400, $line: 20px, $color:var(--default-text-color));//$default-text-alert,$size: 16px,$weight:300, 
   }
   &-name{
     margin-right: auto;
@@ -58,7 +58,7 @@
     }
   }
   &-icon{
-    color: $core-default-icon-neutral;  
+    color: var(--default-icon-neutral);  
     width: 15px;//17px
     height: 16px;//19px
     opacity:0.70;
@@ -71,19 +71,19 @@
 
   &__icon{
     &.profile-icon {
-      color: $core-default-icon-neutral; //$egrey-89;
+      color: var(--default-icon-neutral); //var(--egrey-89);
       height: 28px; //25px; //23px;
       width: 25px; //22px;
       margin-top: 3px; //2px;
       margin-left: 2px;
       & .note-reader {
         &:hover {
-        color:$core-default-icon-hover;
+        color:var(--default-icon-hover);
         }
       }
     }
     &.guest_icon {
-      background: $core-default-user-icon;//$default-icon-neutral;//$egrey-8d;
+      background: var(--default-user-icon);//$default-icon-neutral;//var(--egrey-8d);
       opacity: 0.6;
       width: 29px;//26px;
       height:29px;// 26px;
@@ -93,7 +93,7 @@
       align-items: center;
       justify-content: center;
       .drumee-text {
-        @include typo($size: 15px,$weight:400, $color: $core-default-text-color);//$default-icon-neutral);
+        @include drumee.typo($size: 15px,$weight:400, $color: var(--default-text-color));//$default-icon-neutral);
         opacity:1
       }
     }

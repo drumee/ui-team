@@ -1,8 +1,5 @@
-/* ==================================================================== *
-* Widget style automatically generated on 2024-11-15T14:23:21.137Z
-* npm run add-widget -- --fig=<grpup.family> --dest=/path/to/the/widget
-* ==================================================================== */
-@import 'mixins/drumee';
+
+@use 'mixins/drumee';
 
 .changelog-event {
   &__ui {
@@ -12,14 +9,14 @@
     
     &:hover {
       color: white;
-      background-color: $account-default-background-hover;
+      background-color: var(--account-default-background-hover);
     }
   }
 
   &__content {
     width: 100%;
     padding-left: 10px;
-    @include typo($size: 12px, $line: 16px);
+    @include drumee.typo($size: 12px, $line: 16px);
     align-content: start;
     flex-wrap: wrap;
     align-items: center;
@@ -28,7 +25,7 @@
       margin: 0 5px;
 
       &::before {
-        color: $btn-caution-background;
+        color: var(--btn-caution-background);
         content: "🠪";
       }
     }
@@ -41,7 +38,7 @@
       width: 14px;
       height: 14px;
       cursor: pointer;
-      background-color: $btn-commit-background ;
+      background-color: var(--btn-commit-background) ;
       color: white;
       border-radius: 3px;
       margin-right: 5px;

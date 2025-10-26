@@ -4,11 +4,8 @@
 #   TYPE : Backoffice Main Style
 # ===================================================================**/
 
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/border.scss';
-@import 'mixins/exports.scss';
 
+@use "mixins/drumee";
 
 .user-profile{
   &__ui{
@@ -16,19 +13,19 @@
     border: none;
     width: 40px;
     height: 40px;
-    border-radius: $default-border-radius-tiny;//3px;
+    border-radius: var(--border-radius-tiny);//3px;
     &[data-default="1"]{
-      color: $core-default-icon-reverse;//white;
+      color: var(--default-icon-reverse);//white;
       svg{
-        fill: $core-default-icon-reverse;  
+        fill: var(--default-icon-reverse);  
       }
     }
 
     &[data-online="1"],&[data-online="2"] {
       &:before {
-        background-color: $ab-contact-online-color;
+        background-color: var(--contact-online-color);
         border-radius: 50%;
-        box-shadow: 0 0 0 1px $white;
+        box-shadow: 0 0 0 1px var(--white);
         content: " ";
         height: 8px;
         left: 24px;
@@ -40,7 +37,7 @@
     }
     &[data-online="2"]{
       &:before{
-        background-color: $core-default-background-alert;//$default-backround-alert;// #18ac72;
+        background-color: var(--default-bg-alert);//$default-backround-alert;// #18ac72;
       }
     }
     &.no-online-status{
@@ -75,7 +72,7 @@
     position: absolute;
     text-transform : uppercase;
     .note-content{
-      @include typo($size:13px,$line:15px,$weight:400,$color:$ewhite);
+      @include drumee.typo($size:13px,$line:15px,$weight:400,$color: var(--ewhite));
       margin:auto;
     }
   }

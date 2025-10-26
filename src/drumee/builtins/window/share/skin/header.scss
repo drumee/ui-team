@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 &-header {
   border-bottom: none;
   min-height: 45px;
@@ -5,7 +7,7 @@
 
   &__container {
     &.share {
-      background-color: $share-box-topbar-container;
+      background-color: var(--share-box-topbar-container);
       width: 100%;
     }
   }
@@ -22,7 +24,7 @@
 
   &__note {
     &.title {
-      @include typo($size: 18px, $line: 15px, $color: $default-text-reverse);
+      @include drumee.typo($size: 18px, $line: 15px, $color: var(--default-text-reverse));
       justify-content: flex-start;
       max-width: 150px;
       padding: 5px;
@@ -62,7 +64,7 @@
 
     &__container  {
       &.share {
-        background-color: $share-box-topbar-container;
+        background-color: var(--share-box-topbar-container);
       }
     }
   }
@@ -72,7 +74,7 @@
     min-height: 34px;
     
     &-name {
-      color: $default-text-reverse;
+      color: var(--default-text-reverse);
     };
 
     &-switcher {
@@ -85,7 +87,7 @@
 
     &-control {
       .icon {
-        color: $default-text-reverse;
+        color: var(--default-text-reverse);
       }
     }
   }
@@ -93,8 +95,8 @@
   .editbox-toggle {
     max-width: 230px;
     cursor: pointer;
-    @include overflow-text;
-    @include typo($size:18px,$line:24px,$weight:400,$color:$egrey-78);
+    @include drumee.overflow-text;
+    @include drumee.typo($size:18px,$line:24px,$weight:400,$color: var(--egrey-78));
     &:after {
       content: " ";
       width: 22px;
@@ -119,7 +121,7 @@
       }
     }
     &[data-radio="on"] {
-      color: $egrey-2f;
+      color: var(--egrey-2f);
       max-width: 220px;
       &:after {
         content: " ";
@@ -128,7 +130,7 @@
         background-color: #7D8EE2;
         top: 6px;
         position: absolute;
-        @include vendor(border-radius, 50%);
+        @include drumee.vendor(border-radius, 50%);
       }
       &.editbox-toggle--left {
         padding-right: 30px;
@@ -146,7 +148,7 @@
         background: #FCB58C;
       }
       &[data-radio="on"] {
-        color: $ewhite;
+        color: var(--ewhite);
         &:after {
             background: white;
         }

@@ -1,9 +1,5 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2020
-#   FILE : /src/drumee/modules/welcome/invitation/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
-@import 'mixins/drumee';
+
+@use 'mixins/drumee';
 
 .welcome-offline{
   &__ui, &__main, &__container{
@@ -23,7 +19,7 @@
     align-items: center;
     justify-content: center;
     max-width:500px;
-    @include typo($size: 16px, $line: 28px,$weight:300, $color: $core-default-text-reverse);      
+    @include drumee.typo($size: 16px, $line: 28px,$weight:300, $color: var(--default-text-reverse));      
   }
 
   &__icon{
@@ -32,7 +28,7 @@
     margin-right:15px;
     width:30px;
     height:30px;
-    color:$core-default-text-reverse;
+    color:var(--default-text-reverse);
     transform: rotate(-45deg);
     transform-origin: center;
     &:after{
@@ -54,7 +50,7 @@
     border-radius: 13px;
     justify-content: center;
     cursor: pointer;
-    @include typo($size: 18px, $line: 18px,$weight:400, $color: $core-default-text-reverse);   
+    @include drumee.typo($size: 18px, $line: 18px,$weight:400, $color: var(--default-text-reverse));   
     margin-top: 30px;   
   }
 }

@@ -1,15 +1,17 @@
+@use "mixins/drumee";
+
 .window-account {
   &__header {
     height: 44px;
     width: 100%;
     border-bottom: none;
-    background-color: $account-background-header;
-    @include typo ($size: 18px, $line: 36px, $color: $account-default-text-reverse, $weight: 400);
+    background-color: var(--account-header-bg);
+    @include drumee.typo ($size: 18px, $line: 36px, $color: var(--default-text-reverse), $weight: 400);
     justify-content: center;
 
     &-icon {
       cursor: pointer;
-      color: $egrey-49;
+      color: var(--egrey-49);
       margin: 0 5px;
 
       &:hover {
@@ -28,7 +30,7 @@
 
   &__navbar {
     align-items: center;
-    background-color: $account-default-background ;
+    background-color: var(--default-background);
     justify-content: center;
     margin: 20px 0 30px 0;
     width: 100%;
@@ -39,8 +41,8 @@
       margin: 0;
       max-width: calc(100% / 6);
       cursor: pointer;
-      @include typo($line: 36px, $size: 16px, $color: $account-default-text-color, $weight: 400);
-      @include overflow-text;
+      @include drumee.typo($line: 36px, $size: 16px, $color: var(--default-text-color), $weight: 400);
+      @include drumee.overflow-text;
 
       .inner {
         white-space: nowrap;
@@ -50,17 +52,17 @@
 
       &[data-state="1"],
       &[data-radio="on"] {
-        background-color: $account-default-background-hover;
-        color: $account-default-text-reverse;
-        border-radius: $default-border-radius-tiny;
+        background-color: var(--default-background-hover);
+        color: var(--default-text-reverse);
+        border-radius: var(--border-radius-tiny);
 
         &:hover {
-          color: $account-default-text-hover ;
+          color: var(--default-text-hover);
         }
       }
 
       &:hover {
-        color: $account-backgroundless-text-hover;
+        color: var(--backgroundless-text-hover);
       }
 
       @media (min-width: 900px) {

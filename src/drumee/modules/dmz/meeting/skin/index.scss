@@ -1,4 +1,13 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+@use'../../skin/header' as *;
+@use'../../skin/footer' as *;
+
+@include meta.load-css('attendees.scss');
+@include meta.load-css('devices.scss');
+@include meta.load-css('username.scss');
+@include meta.load-css('lobby.scss');
+
 
 .dmz-meeting {
   &-header__wrapper.buttons {
@@ -15,11 +24,8 @@
     align-items: center;
   }
 
-  @import '../../skin/header';
-  @import '../../skin/footer';
-  @import './attendees.scss';
-  @import './devices.scss';
-  @import './username.scss';
+  @include dmz-header;
+  @include dmz-footer;
 }
 
 
@@ -49,7 +55,7 @@
     height: 100%;
   }
 
-  @import './lobby.scss';
+
 
   &__action-buttons {
     position: absolute;
@@ -100,7 +106,7 @@
     height: 100%;
 
     &-title {
-      @include typo($size: 20px, $line: 28px, $weight: 400, $color: $dmz-default-text-color);
+      @include drumee.typo($size: 20px, $line: 28px, $weight: 400, $color: var(--default-text-color));
       width: 100%;
       padding: 20px;
       margin: 20px 0;
@@ -109,13 +115,13 @@
     }
 
     &-icon {
-      color: $eblue;
+      color: var(--eblue);
       width: 50px;
       height: 50px;
     }
 
     &-text {
-      @include typo($size: 18px, $line: 28px, $weight: 300, $color: $dmz-default-text-color);
+      @include drumee.typo($size: 18px, $line: 28px, $weight: 300, $color: var(--default-text-color));
       width: 100%;
       padding: 20px;
       margin: 20px 0;
@@ -129,25 +135,25 @@
     }
 
     &-button {
-      @include typo($color: $btn-commit-text, $size: 16px, $line: 21px, $weight: 400);
+      @include drumee.typo($color: var(--btn-commit-text), $size: 16px, $line: 21px, $weight: 400);
       align-items: center;
-      background-color: $btn-commit-background;
+      background-color: var(--btn-commit-background);
       cursor: pointer;
       justify-content: center;
-      border-radius: $default-border-radius;
+      border-radius: var(--border-radius);
       padding: 10px;
       min-width: 180px;
 
       &.close {
-        background-color: $core-default-background-caution;
+        background-color: var(--default-bg-caution);
 
         &:hover {
-          background-color: $core-default-background-alert ;
+          background-color: var(--default-bg-alert);
         }
       }
 
       &:hover {
-        background-color: $btn-commit-background-hover ;
+        background-color: var(--btn-commit-background-hover);
       }
     }
 

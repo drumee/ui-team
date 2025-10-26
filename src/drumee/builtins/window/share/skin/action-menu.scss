@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 &-menu {
   &__dropdown {
     align-items: center;
@@ -7,14 +9,14 @@
   &__wrapper {
     &[data-state="1"] {
       & .trigger-icon {
-        color: $eviolet;
+        color: var(--eviolet);
       }
     }
 
     & .menu-items {
       background-color: $default-background;
-      border-radius:$default-border-radius;
-      box-shadow: $drumee-shadow-container;
+      border-radius:var(--border-radius);
+      box-shadow: var(--shadow-container);
       left: -140px;
       max-width: 160px;
       min-width: 160px;
@@ -24,7 +26,7 @@
 
       &:before {
         background-color: $default-background;
-        box-shadow: $drumee-container-before;
+        box-shadow: var(--shadow-before);
         content: "";
         height: 10px;
         left: 145px;
@@ -36,7 +38,7 @@
 
       &:after {
         background: $default-background;
-        border-radius:$default-border-radius-top;
+        border-radius:var(--default-border-radius-top);
         content: "";
         height: 10px;
         left: 0;
@@ -81,10 +83,10 @@
 
     &:hover {
       background-color: $default-background-hover;
-      color : $default-text-reverse; 
+      color : var(--default-text-reverse); 
 
       & .name {
-        color:$default-text-reverse; 
+        color:var(--default-text-reverse); 
       }
       
       & svg {
@@ -94,7 +96,7 @@
   }
 
   &__note {
-    @include typo($size: 13px, $weight: 300, $line: 14px, $color:$default-text-color);
+    @include drumee.typo($size: 13px, $weight: 300, $line: 14px, $color: var(--default-text-color));
     padding-top: 0px;
     bottom: 2px;
   }

@@ -1,5 +1,28 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
+
 .window-search {
-  @import 'header';
-  
+  &-topbar {
+    &__container {
+      flex: 1;
+      border-bottom: 1px solid var(--default-border-notification);
+      border-radius: var(--default-border-radius-top); //6px 6px 0 0;
+      height: 44px;
+    }
+
+    &__title {
+      margin: auto;
+      @include drumee.typo($size: 14px, $line: 21px, $weight: 300, $color: var(--default-text-color));
+    }
+    
+    &__control {
+      position: absolute;
+      height: 100%;
+      right: 0;
+
+      .icon {
+        color: #2F2F2F;
+      }
+    }
+  }
 }

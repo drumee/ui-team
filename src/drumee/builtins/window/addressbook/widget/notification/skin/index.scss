@@ -1,11 +1,11 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .addressbook-widget-notification {
   &__ui {
-    background-color: $eorange;
+    background-color: var(--eorange);
     border-radius: 2px;
-    box-shadow: $drumee-shadow-main;
-    color: $white;
+    box-shadow: var(--shadow-main);
+    color: var(--white);
     cursor: pointer;
     flex-shrink: 0;
     left: 0;
@@ -23,7 +23,7 @@
     &[data-over="yes"] {
       &:after {
         background-color: transparent;
-        border: 2px solid $eorange;
+        border: 2px solid var(--eorange);
         content: "";
         height: 80px;
         left: -20px;
@@ -36,19 +36,19 @@
 
   &__digit {
     align-items: center;
-    background-color: $ab-default-background-alert;
+    background-color: var(--default-background-alert);
     border-radius: 50%;
     height: 19px;
     justify-content: center;
     margin:10px 6px 8px;
     position: absolute;
     width: 19px;
-    @include typo($size: 10px, $weight:400, $color:$ab-default-text-reverse);
+    @include drumee.typo($size: 10px, $weight:400, $color: var(--default-text-reverse));
     &[data-count="0"]{
       display: none;
     }
     .inner{
-      @include typo($size: 10px, $weight:400, $color:$ab-default-text-reverse);
+      @include drumee.typo($size: 10px, $weight:400, $color: var(--default-text-reverse));
     }
   }
 }

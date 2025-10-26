@@ -1,11 +1,5 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
+
+@use 'mixins/drumee.scss';
 
 .window-contact {
   &__ui{
@@ -17,12 +11,12 @@
   &__header {
     &.window__header {
       border-bottom: none;
-      background-color: $ab-background-header;//$bigchat-background-header; // #18a3ac
+      background-color: var(--ab-header-bg);//var(--bigchat-header-bg); // #18a3ac
     }
 
     &-title {
       align-items: center;
-      @include typo($size:18px, $line:24px, $weight:400, $color:$core-default-text-reverse);
+      @include drumee.typo($size:18px, $line:24px, $weight:400, $color:var(--default-text-reverse));
 
       .icon {
         position: relative;
@@ -32,7 +26,7 @@
 
     &-control {
       .icon {
-        color: $core-default-icon-reverse;//$ewhite;
+        color: var(--default-icon-reverse);//var(--ewhite);
       }
     }
   }
@@ -59,7 +53,7 @@
 
   &__icon {
     &.icon_success {
-      color: $core-default-icon-success;//#18ac72;
+      color: var(--default-icon-success);//#18ac72;
       height: 26px;
       margin: auto;
       width: 36px;
@@ -67,10 +61,10 @@
   }
 
   &__note {
-    @include typo($size: 18px, $weight: 300, $line: 26px, $color: $core-default-text-color);
+    @include drumee.typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
 
     &.input-content {
-      color: $core-secondary-text-color;//#4A90E2;
+      color: var(--secondary-text-color);//#4A90E2;
     }
   }
 
@@ -81,7 +75,7 @@
 
   &__button-cancel,
   &__button-confirm {
-    @include typo($size: 16px, $line: 20px);
+    @include drumee.typo($size: 16px, $line: 20px);
     justify-content: center;
     align-items: center;
     padding: 8px;
@@ -92,23 +86,23 @@
   }
 
   &__button-cancel {
-    border: 1px solid $btn-rollback-border; //#f1f1f6;
-    border-radius: 6px;//$default-border-radius;
-    color: $btn-rollback-text;// #89929e;
+    border: 1px solid var(--btn-rollback-border); //#f1f1f6;
+    border-radius: 6px;//var(--border-radius);
+    color: var(--btn-rollback-text);// #89929e;
     margin-right: 50px;
     &:hover{
-      border:2px solid $btn-rollback-border-hover ;
-      color: $btn-rollback-text-hover;  
+      border:2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);  
     }
   }
 
   &__button-confirm {
-    background-color:$btn-commit-background; 
-    border-radius: 6px;//$default-border-radius;
-    color: $btn-commit-text ;
+    background-color:var(--btn-commit-background); 
+    border-radius: 6px;//var(--border-radius);
+    color: var(--btn-commit-text);
     width: auto;
     &:hover{
-      background-color:$btn-commit-background-hover; 
+      background-color:var(--btn-commit-background-hover); 
     }
   }
 }

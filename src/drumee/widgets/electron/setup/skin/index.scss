@@ -3,13 +3,13 @@
 #   FILE : desk/skin/media/grid
 #   TYPE : Backoffice Main Style
 # ===================================================================**/
-@import "mixins/drumee.scss";
+@use "mixins/drumee.scss";
 .electron-setup {
   &__ui {
     background-color: transparent;
     max-width: 460px;
-    border-radius: $default-border-radius;
-    background-color: $core-background-tooltips;
+    border-radius: var(--border-radius);
+    background-color: var(--bg-tooltips);
     padding: 20px;
   }
   
@@ -19,15 +19,15 @@
 
   &__container {
     background-color: inherit;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     padding: 20px 30px;
-    background-color: $core-background-tooltips;
+    background-color: var(--bg-tooltips);
     min-width: 190px;
     overflow: hidden;
   }
   &__heading {
     padding: 10px;
-    @include typo($line: 23px, $size: 16px, $weight: 300, $color: $core-default-text-color);
+    @include drumee.typo($line: 23px, $size: 16px, $weight: 300, $color: var(--default-text-color));
   }
   &__row {
     overflow: hidden;
@@ -36,7 +36,7 @@
     .label-wrapper {
       cursor: pointer;
       padding: 0 10px;
-      @include typo($line: 23px, $size: 16px, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($line: 23px, $size: 16px, $weight: 300, $color: var(--default-text-color));
     }
     &[data-radio="on"] {
       height: 57px;
@@ -52,7 +52,7 @@
       cursor: pointer;
       padding: 0 10px;
       white-space: nowrap;
-      @include typo($line: 16px, $size: 12px, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($line: 16px, $size: 12px, $weight: 300, $color: var(--default-text-color));
     }
     .checkbox {
       width: 10px;
@@ -100,14 +100,14 @@
     .radio-button {
       margin-top: 5px;
       white-space: nowrap;
-      @include typo($line: 14px, $size: 11px, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($line: 14px, $size: 11px, $weight: 300, $color: var(--default-text-color));
     }
   }
   &__tooltips-wrapper {
-    @include typo($line: 14px, $size: 12px, $weight: 300, $color: $core-default-text-color);
+    @include drumee.typo($line: 14px, $size: 12px, $weight: 300, $color: var(--default-text-color));
     width: 100%;
     max-width: 100vw;
-    background: $core-background-tooltips;
+    background: var(--bg-tooltips);
     padding: 10px;
     border-radius: 6px;
     margin-top: 20px;
@@ -132,7 +132,7 @@
       width: 115px;
       margin: 0 3%;
       border: 1px solid #DDE2E8;
-      @include typo($line: 18px, $size: 16px, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($line: 18px, $size: 16px, $weight: 300, $color: var(--default-text-color));
     }
     justify-content: center;
     align-items: center;

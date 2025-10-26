@@ -1,16 +1,20 @@
-@import 'mixins/drumee';
-
+@use 'builtins/webrtc/skin/index' as *;
+@use 'builtins/webrtc/skin/topbar' as *;
+@use 'builtins/webrtc/skin/command' as *;
+@use 'builtins/webrtc/skin/attendee' as *;
+@use 'builtins/webrtc/skin/sound-analyzer' as *;
+@use 'builtins/webrtc/skin/remote' as *;
 
 .window-meeting {
-  @import 'builtins/webrtc/skin/index';
-  @import 'builtins/webrtc/skin/topbar';
-  @import 'builtins/webrtc/skin/command';
-  @import 'builtins/webrtc/skin/attendee';
-  @import 'builtins/webrtc/skin/sound-analyzer';
-  @import 'builtins/webrtc/skin/remote';
+  @include webrtc-ui;
+  @include webrtc-topbar;
+  @include webrtc-command;
+  @include webrtc-attendee;
+  @include webrtc-sound-analyzer;
+  @include webrtc-remote;
 
   &__header {
-    background-color: $team-background-header;
+    background-color: var(--teamroom-main);
   }
 
 }

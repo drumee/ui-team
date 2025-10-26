@@ -4,7 +4,7 @@
 		"scope": "scss",
 		"prefix": ["typo"],
 		"body": [
-			"@include typo(\\$size: ${1:16px}, \\$color: ${2:\\$eblue});$0"
+			"@include typo(\\$size: ${1:16px}, \\$color: ${2:\\var(--eblue)});$0"
 		],
 		"description": "to add the text size and color"
 	}

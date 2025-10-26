@@ -1,310 +1,316 @@
-&-validity {
-  &__validity-wrapper {
-    width: 100%;
-  }
+@use "mixins/drumee";
 
-  &__switch-container {
-    align-items: center;
-    min-height: 30px;
-    width: 100%;
-  }
+.window-hub-sharebox {
+  &-validity {
+    &__validity-wrapper {
+      width: 100%;
+    }
 
-  &__switch-wrapper {
-    align-items: center;
-    height: 100%;
-    justify-content: flex-start;
-    width: 100%;
-  }
+    &__switch-container {
+      align-items: center;
+      min-height: 30px;
+      width: 100%;
+    }
 
-  &__switch-container {
-    height: 100%;
-    justify-content: center;
+    &__switch-wrapper {
+      align-items: center;
+      height: 100%;
+      justify-content: flex-start;
+      width: 100%;
+    }
 
-    & .button-switch {
-      &__toggle {
-        &.on,
-        &.off {
-          @include typo($size: 14px, $line: 14px);
-          height: 100%;
-          text-align: left;
-          width: auto;
+    &__switch-container {
+      height: 100%;
+      justify-content: center;
 
-          &.fr-lang {
-            font-size: 13px;
+      & .button-switch {
+        &__toggle {
 
-            @media (max-width: $x-small) {
-              font-size: 12px !important;
+          &.on,
+          &.off {
+            @include drumee.typo($size: 14px, $line: 14px);
+            height: 100%;
+            text-align: left;
+            width: auto;
+
+            &.fr-lang {
+              font-size: 13px;
+
+              @media (max-width: var(--x-small-width)) {
+                font-size: 12px !important;
+              }
+            }
+          }
+
+          &.on {
+            color: var(--switch-toggle-on);
+
+            &[data-state="0"] {
+              color: var(--switch-toggle-off);
+            }
+          }
+
+          &.off {
+            color: var(--switch-toggle-off);
+
+            &[data-state="0"] {
+              color: var(--switch-toggle-on);
+            }
+          }
+
+          &.change {
+            padding: 0 10px;
+
+            & .inner.note-content {
+              background-color: var(--switch-toggle-background);
+              border-radius: var(--border-radius-small);
+              height: 4px;
+              width: 24px;
+            }
+
+            &::before,
+            &::after {
+              background-color: var(--switch-radion-toggle);
+              height: 12px;
+              opacity: 0.7;
+              padding: 4px 0 3px;
+              width: 12px;
             }
           }
         }
-
-        &.on {
-          color: $dt-toggle-switch-on;
-
-          &[data-state="0"] {
-            color: $dt-toggle-switch-off;
-          }
-        }
-
-        &.off {
-          color:$dt-toggle-switch-off;
-
-          &[data-state="0"] {
-            color:$dt-toggle-switch-on;
-          }
-        }
-
-        &.change {
-          padding: 0 10px;
-
-          & .inner.note-content {
-            background-color: $dt-toggle-background;
-            border-radius: $default-border-radius-small;
-            height: 4px;
-            width: 24px;
-          }
-
-          &::before,
-          &::after {
-            background-color: $dt-toggle-switch-radio;
-            height: 12px;     
-            opacity:0.7;
-            padding: 4px 0 3px;
-            width: 12px;
-          }
-        }
-      }
-    }
-  }
-
-  &__set-validity {
-    padding-top: 5px;
-
-    &[data-mode="closed"] {
-      display: none;
-    }
-
-    &[data-mode="open"] {
-      display: flex;
-    }
-  }
-
-  &__validity-action-wrapper {
-    align-items: center;
-    height: 26px;
-    margin-bottom: 0px;
-    margin-left:-5px;
-    padding-left:5px;
-
-    &.edit {
-      & + .expiry-status-icon {
-        display: none;
       }
     }
 
-    &:hover {
-      background-color: $share-default-background-hover;
-      color:$share-default-text-hover ;
-      
-      & input[type="number"] {
-        background-color: $share-default-background;
-      }
-      
-      *{
-        background-color: $share-default-background-hover;
-        color:$share-default-text-hover ;
+    &__set-validity {
+      padding-top: 5px;
 
-        svg {
-          border-radius: $default-border-radius-tiny;
-       }
-      }
-
-      & + .expiry-status-icon {
+      &[data-mode="closed"] {
         display: none;
       }
 
-      & .edit-icon {
+      &[data-mode="open"] {
         display: flex;
       }
+    }
 
-      .widget-sharebox-setting-validity__note.btn-ok {
-        background-color: $btn-commit-background-hover;
+    &__validity-action-wrapper {
+      align-items: center;
+      height: 26px;
+      margin-bottom: 0px;
+      margin-left: -5px;
+      padding-left: 5px;
 
-        .drumee-text {
-          background-color:$btn-commit-background-hover;
+      &.edit {
+        &+.expiry-status-icon {
+          display: none;
         }
       }
 
-      .validity-entry-text {
-        background-color: $share-default-background-hover;
-        border:1px solid $ewhite; 
+      &:hover {
+        background-color: var(--default-background-hover);
+        color: var(--default-text-hover);
+
+        & input[type="number"] {
+          background-color: var(--default-background);
+        }
+
+        * {
+          background-color: var(--default-background-hover);
+          color: var(--default-text-hover);
+
+          svg {
+            border-radius: var(--border-radius-tiny);
+          }
+        }
+
+        &+.expiry-status-icon {
+          display: none;
+        }
+
+        & .edit-icon {
+          display: flex;
+        }
+
+        .widget-sharebox-setting-validity__note.btn-ok {
+          background-color: var(--btn-commit-background-hover);
+
+          .drumee-text {
+            background-color: var(--btn-commit-background-hover);
+          }
+        }
+
+        .validity-entry-text {
+          background-color: var(--default-background-hover);
+          border: 1px solid var(--ewhite);
+        }
       }
     }
-  }
 
-  &__validity-caption {
-    padding-right: 15px;
-    @include typo($size: 14px, $weight: 300, $color: $share-default-text-color);// $egrey-78);  $weight: 400,
-  }
+    &__validity-caption {
+      padding-right: 15px;
+      @include drumee.typo($size: 14px, $weight: 300, $color: var(--default-text-color)); // var(--egrey-78));  $weight: 400,
+    }
 
-  &__days-caption,
-  &__hours-caption {
-    @include typo($size: 14px,$weight: 300, $color:$share-secondary-text-color);//$eviolet);
-    bottom: 0;
-    padding-right: 15px;
-  }
+    &__days-caption,
+    &__hours-caption {
+      @include drumee.typo($size: 14px, $weight: 300, $color: var(--secondary-text-color)); //var(--eviolet));
+      bottom: 0;
+      padding-right: 15px;
+    }
 
-  &__days-caption {
-    margin:0 15px 0 5px;
-  }
+    &__days-caption {
+      margin: 0 15px 0 5px;
+    }
 
-  &__hours-caption {
-    margin: 0px 0px 0px 5px;
-  }
+    &__hours-caption {
+      margin: 0px 0px 0px 5px;
+    }
 
-  &__expiry-time-wrapper {
-    align-items: center;
-    justify-content: center;
-    padding-left: 2px;
-  }
+    &__expiry-time-wrapper {
+      align-items: center;
+      justify-content: center;
+      padding-left: 2px;
+    }
 
-  &__entry{
-    &.validity-entry {
-      width: 23px;
-      height: 23px;
-      background-color: $share-default-background;
-      border-radius:$default-border-radius;
+    &__entry {
+      &.validity-entry {
+        width: 23px;
+        height: 23px;
+        background-color: var(--default-background);
+        border-radius: var(--border-radius);
 
-      & input::-webkit-outer-spin-button,
-      & input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
+        & input::-webkit-outer-spin-button,
+        & input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+
+          &:hover {
+            background-color: var(--default-background-hover);
+            color: var(--default-text-hover);
+            border: var(--ewhite) 1px solid;
+          }
+        }
+
+        /* Firefox */
+        & input[type="number"] {
+          -moz-appearance: textfield;
+          border-bottom: none;
+          text-align: center;
+          padding-right: 2px; // 0px;
+          @include drumee.typo($line: 29px, $size: 14px, $weight: 400, $color: var(--default-text-color));
+
+          @include drumee.placeholder-input {
+            @include drumee.typo($line: 29px, $size: 14px, $weight: 300, $color: var(--default-text-placeholder)); //#89929e
+          }
+        }
+      }
+    }
+
+    &__icon {
+      &.edit-icon {
+        color: var(--default-block-background); //must follow the background color
+        cursor: pointer;
+        height: 18px;
+        margin: 3px 5px 3px 15px;
+        opacity: 0.85;
+        padding-right: 2px;
+        width: 18px;
+        display: none;
+
+        svg {
+          margin-left: 2px;
+        }
 
         &:hover {
-          background-color: $share-default-background-hover;
-          color: $share-default-text-hover;
-          border: $ewhite 1px solid;
+          background-color: var(--default-background-hover);
+          color: var(--default-icon-reverse);
+          opacity: 1;
+        }
+
+        &.btn-first {
+          margin-left: 66px;
+          margin-right: 8px;
+        }
+
+        &.btn-middle {
+          margin-left: 5px;
+          margin-right: 7px;
         }
       }
-  
-      /* Firefox */
-      & input[type="number"] {
-        -moz-appearance: textfield;
-        border-bottom: none;
-        text-align: center;
-        padding-right:2px;// 0px;
-        @include typo($line: 29px, $size: 14px, $weight: 400, $color: $share-default-text-color);
-        @include placeholder-input {
-          @include typo($line: 29px, $size: 14px, $weight: 300, $color: $share-default-text-placeholder); //#89929e
+
+      &.expiry-time {
+        color: var(--share-default-icon-error);
+        cursor: help;
+        height: 16px;
+        margin: 4px 5px 3px 15px;
+        width: 16px;
+
+        & .tooltips {
+          @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
+          background-color: var(--background-tooltips);
+          border-radius: var(--border-radius);
+          max-height: 90px;
+          min-height: 40px;
+          padding: 10px;
+          position: absolute;
+          right: 0px;
+          text-align: center;
+          top: 20px;
+          width: 270px;
+          z-index: 1;
         }
       }
     }
-  }
-  
-  &__icon {
-    &.edit-icon {
-      color: $share-default-block-background; //must follow the background color
-      cursor: pointer;
-      height: 18px;
-      margin: 3px 5px 3px 15px;
-      opacity: 0.85;
-      padding-right: 2px;
-      width: 18px;
-      display: none;
 
-      svg {
-        margin-left: 2px;
+    &__note {
+      &.title {
+        @include drumee.typo($size: 16px, $color: var(--secondary-text-color));
+        align-items: center;
+        display: flex;
+        justify-content: center;
+        padding: 0px 2px 13px 2px;
       }
 
-      &:hover {
-        background-color: $share-default-background-hover;
-        color:$share-default-icon-reverse;
-        opacity: 1;
+      &.validity-entry-text {
+        @include drumee.typo($line: 18px, $size: 14px, $weight: 300, $color: var(--default-text-color)); //$size: 13px, $weight: 400,
+        align-items: center;
+        background-color: var(--default-background);
+        border-radius: var(--border-radius-small);
+        height: 20px;
+        justify-content: center;
+        padding: 0px 4px;
+        width: 20px;
       }
 
-      &.btn-first {
-        margin-left: 66px;
-        margin-right: 8px;
-      }
-
-      &.btn-middle {
-        margin-left:5px;
-        margin-right: 7px;
-      }
-    }
-
-    &.expiry-time {
-      color: $share-default-icon-error;
-      cursor: help;
-      height: 16px;
-      margin: 4px 5px 3px 15px;
-      width: 16px;
-
-      & .tooltips {
-        @include typo($size: 12px, $line: 20px, $color: $share-default-text-tooltips);
-        background-color: $share-default-background-tooltips;
-        border-radius: $default-border-radius;
-        max-height: 90px;
-        min-height: 40px;
-        padding: 10px;
-        position: absolute;
-        right: 0px;
+      &.switch-container {
+        padding-left: 5px;
         text-align: center;
-        top: 20px;
-        width: 270px;
-        z-index: 1;
-      }
-    }
-  }
-
-  &__note {
-    &.title {
-      @include typo($size: 16px, $color: $share-secondary-text-color);
-      align-items: center;
-      display: flex;
-      justify-content: center;
-      padding: 0px 2px 13px 2px;
-    }
-
-    &.validity-entry-text {
-      @include typo($line: 18px, $size: 14px, $weight: 300, $color: $share-default-text-color);//$size: 13px, $weight: 400,
-      align-items: center;
-      background-color: $share-default-background;  
-      border-radius: $default-border-radius-small;
-      height: 20px;
-      justify-content: center;
-      padding: 0px 4px;
-      width: 20px;
-    }
-
-    &.switch-container {
-      padding-left: 5px;
-      text-align: center;
-      @include typo($size: 13px, $line: 16px, $color: $dt-secondary-text-color);
-    }
-
-    &.btn-ok {
-      @include typo($size: 12px, $color:$btn-commit-text);
-      align-items: center;
-      background: $btn-commit-background;
-      border-radius: $default-border-radius;
-      cursor: pointer;
-      justify-content: center;
-      margin-left:5px;
-      padding: 5px;
-      height: 26px;
-      width: 26px;
-      
-      &:hover {
-        background-color:$btn-commit-background-hover;
+        @include drumee.typo($size: 13px, $line: 16px, $color: var(--secondary-text-color));
       }
 
-      &.first {
-        margin-left:20px;
-      }
+      &.btn-ok {
+        @include drumee.typo($size: 12px, $color: var(--btn-commit-text));
+        align-items: center;
+        background: var(--btn-commit-background);
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        justify-content: center;
+        margin-left: 5px;
+        padding: 5px;
+        height: 26px;
+        width: 26px;
 
-      &.middle {
-        margin-left: -2px;
+        &:hover {
+          background-color: var(--btn-commit-background-hover);
+        }
+
+        &.first {
+          margin-left: 20px;
+        }
+
+        &.middle {
+          margin-left: -2px;
+        }
       }
     }
   }

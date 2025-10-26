@@ -1,10 +1,10 @@
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .player {
   &__header {
-    background: $core-default-background;
-    border-radius: $default-border-radius-top;
-    color: $egrey-b6;
+    background: var(--default-bg);
+    border-radius: var(--default-border-radius-top);
+    color: var(--egrey-b6);
     cursor: pointer;
     flex-shrink: 0;
     height: 44px;
@@ -34,8 +34,8 @@
 
   &__title {
     max-width: 170px;
-    @include typo($color: $multimedia-default-text-title , $size: 18px, $line: 42px, $weight: 300);
-    @include overflow-text;
+    @include drumee.typo($color: var(--multimedia-default-text-title) , $size: 18px, $line: 42px, $weight: 300);
+    @include drumee.overflow-text;
 
     .inner {
       overflow: hidden;
@@ -57,9 +57,9 @@
     display: grid;
     grid-auto-rows: 1rem;
     grid-gap: 3px;
-    background-color: $folder-default-background;
-    border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-box;
+    background-color: var(--default-background);
+    border-radius: var(--border-radius);
+    box-shadow: drumee.$drumee-shadow-box;
     padding: 8px;
     top: -1px;
     min-width: 265px;
@@ -70,13 +70,13 @@
       width: 100%;
       padding-left: 10px;
       padding-top: 4px;
-      @include typo($color: $folder-default-text-color, $size: 12px, $line: 16px, $weight: 300);
-      @include overflow-text;
+      @include drumee.typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.overflow-text;
 
       .icon {
         width: 14px;
         height: 14px;
-        color: $folder-default-icon-neutral;
+        color: var(--core-default-icon-neutral);
         padding: 0.5px;
       }
 
@@ -89,12 +89,12 @@
     }
 
     .info-item {
-      @include typo($color: $folder-default-text-color, $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
       text-align: left;
       width: 50%;
       padding-left: 10px;
       padding-top: 4px;
-      @include overflow-text;
+      @include drumee.overflow-text;
 
       &.value {
         margin-left: 28px;
@@ -126,18 +126,18 @@
           width: 14px;
 
           svg {
-            color: $core-default-icon-neutral;
+            color: var(--default-icon-neutral);
 
             &:hover {
-              color: $core-default-icon-hover;
+              color: var(--default-icon-hover);
             }
           }
         }
 
         &:hover {
-          color: $core-default-icon-hover;
+          color: var(--default-icon-hover);
           svg {
-            color: $core-default-icon-hover;
+            color: var(--default-icon-hover);
           }
         }
       }
@@ -150,7 +150,7 @@
       z-index: 3;
 
       .icon {
-        color: $core-default-icon-neutral;
+        color: var(--default-icon-neutral);
         cursor: pointer;
         height: 14px;
         margin: auto 13px auto 0;
@@ -163,10 +163,10 @@
         }
 
         &:hover {
-          color: $core-default-icon-hover;
+          color: var(--default-icon-hover);
 
           svg {
-            color: $core-default-icon-hover;
+            color: var(--default-icon-hover);
           }
         }
       }
@@ -179,7 +179,7 @@
       z-index: 1000;
 
       .icon {
-        color: $core-default-icon-neutral;
+        color: var(--default-icon-neutral);
         cursor: pointer;
         height: 12px;
         margin: auto 15px auto 0;
@@ -188,7 +188,7 @@
 
         &:hover {
           svg {
-            color: $core-default-icon-hover;
+            color: var(--default-icon-hover);
           }
         }
 
@@ -216,7 +216,7 @@
     }
 
     &__container {
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       width: 320px;
     }
   }

@@ -1,0 +1,37 @@
+.window {
+  --teamroom-main-light: #DA78E8;
+  --teamroom-main: #BD44D9;
+  --teamroom-filename-bg: #d5a3dd;
+
+  --team-background-header: --teamroom-main;
+  --team-default-background: --default-background;
+  --team-default-block-background: --default-block-background;
+  --team-default-background-hover: --default-background-hover;
+  --team-background-chatmessenger: --background-chatmessenger;
+  --team-default-background-tooltips: --background-tooltips;
+
+
+  /**text**/
+  --teamroom-text-color: --teamroom-main;
+  --team-default-text-color: --default-text-color;
+  --team-default-text-reverse: --default-text-reverse;
+  --team-default-text-tooltips: --default-text-tooltips;
+  --team-default-text-error: --default-text-error;
+  --team-default-text-placeholder: --default-text-placeholder;
+  --team-text-placeholder-focus: --focus-text-placeholder;
+  --team-default-text-title: --default-text-title;
+  --team-secondary-text-color: --secondary-text-color;
+  --team-text-notification: --teamroom-main;
+
+  /**icon**/
+  --teamroom-special-icon: --teamroom-main-light;
+  --team-default-icon-reverse: --default-icon-reverse;
+  --team-default-thinline-icon-hover: --default-thinline-icon-hover;
+  --team-default-icon-hover: --default-icon-hover;
+
+  /**border**/
+  --team-notifycount-border: --teamroom-main-light;
+  --team-border-frame: --teamroom-main;
+  --team-default-entry-border-bottom: --default-entry-border-bottom;
+  --team-focus-border-placeholder: --focus-border-placeholder;
+}

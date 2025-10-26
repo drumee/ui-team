@@ -22,7 +22,7 @@ module.exports = {
   window_helpdesk: 'window/helpdesk',
   window_info: 'window/info',
   window_launcher: 'window/launcher',
-  window_litechat: 'window/litechat',
+  // window_litechat: 'window/litechat', TO DO
   window_manager: 'desk/wm/index.electron',
   window_meeting: 'window/meeting',
   window_schedule: 'window/schedule',

@@ -1,22 +1,20 @@
-@import 'mixins/drumee';
+@use "sass:meta";
+@use 'mixins/drumee';
 
-.window-schedule {
-  @import 'topbar';
-  @import 'endpoint';
-  @import 'command';
-  @import 'inbound';
-  @import 'acknowledge';
-}
-
+@include meta.load-css('topbar');
+@include meta.load-css('endpoint');
+@include meta.load-css('command');
+@include meta.load-css('inbound');
+@include meta.load-css('acknowledge');
 
 .window-schedule {
   &__ui {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     width: 626px;
     height: 525px;
-    box-shadow: $drumee-shadow-container;
+    box-shadow: var(--shadow-container);
     overflow: visible;
-    min-width: 340px; 
+    min-width: 340px;
     min-height: 200px;
     flex-direction: column;
     display: flex;
@@ -47,9 +45,9 @@
     left: 0px;
     top: -3px;
     padding: 10px;
-    background-color: $core-default-background;
-    border-radius: $default-border-radius;
-    box-shadow: $drumee-shadow-box;
+    background-color: var(--default-bg);
+    border-radius: var(--border-radius);
+    box-shadow: drumee.$drumee-shadow-box;
     cursor: pointer;
 
     &-list {
@@ -63,13 +61,13 @@
       padding: 10px 0 15px 3px;
       justify-content: center;
       height: 20px;
-      @include typo($size: 14px, $line: 14px, $weight: 300, $color: $core-default-text-title); //$weight:400,
+      @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-title)); //$weight:400,
     }
 
     .conference-label {
       align-items: center;
       left: 20px;
-      @include typo($size: 14px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
     }
 
     .conference-checkbox {
@@ -80,7 +78,7 @@
 
       &[data-state="1"] {
         box-shadow: none;
-        color: $egreen-soft;
+        color: var(--egreen-soft);
       }
     }
   }
@@ -88,7 +86,7 @@
   &__title {
     padding: 10px 9px 10px 10px;
     justify-content: center;
-    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $sharebox-main);
+    @include drumee.typo($size: 18px, $line: 22px, $weight: 400, $color: var(--sharebox-main));
   }
 
   &__body {
@@ -120,8 +118,8 @@
       padding: 10px;
       background-color: grey;
       margin: 10px;
-      border-radius: $default-border-radius-tiny; //3px;
-      @include typo($color: $core-default-text-reverse, $weight: 400, $line: 20px, $size: 16px);
+      border-radius: var(--border-radius-tiny); //3px;
+      @include drumee.typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
     }
   }
 
@@ -138,15 +136,15 @@
   }
 
   .window-warning__body {
-    background-color: $core-default-background;
-    box-shadow: $drumee-shadow-box;
+    background-color: var(--default-bg);
+    box-shadow: drumee.$drumee-shadow-box;
     border: none;
     min-width: 300px;
     padding: 20px;
     min-height: 200px;
 
     .window-warning__content .drumee-text {
-      color: $default-text-color;
+      color: var(--default-text-color);
       margin: 10px 0 10px 15px;
     }
   }

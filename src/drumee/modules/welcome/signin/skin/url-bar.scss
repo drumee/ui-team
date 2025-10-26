@@ -4,7 +4,7 @@
 #   TYPE : Component style
 # ===================================================================**/
 
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .welcome-signin-url-bar {
   width: 100%;
@@ -45,7 +45,7 @@
   }
 
   &__title {
-    @include typo($size: 28px, $line: 45px, $weight: 400, $color: $core-default-text-reverse);
+    @include drumee.typo($size: 28px, $line: 45px, $weight: 400, $color: var(--default-text-reverse));
   }
 
   &__input {
@@ -56,24 +56,24 @@
     max-width: 800px;
     width: calc(100% - 300px);
 
-    background-color: $core-default-background;
-    border-radius: $default-border-radius;
+    background-color: var(--default-bg);
+    border-radius: var(--border-radius);
 
     & input {
-      @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
+      @include drumee.typo($size: 18px, $line: 28px, $color: var(--default-text-color));
       border-bottom: none;
       border-radius: 0 6px 6px 0px;
       padding: 5px;
       padding-left: 15px;
 
       &::placeholder {
-        @include typo($size: 18px, $line: 28px, $weight: 300, $color: $connect-text-placeholder);
+        @include drumee.typo($size: 18px, $line: 28px, $weight: 300, $color: var(--connect-text-placeholder));
       }
     }
   }
 
   &__protocol {
-    @include typo($size: 18px, $line: 28px, $color: $white-f9);
+    @include drumee.typo($size: 18px, $line: 28px, $color: var(--white-f9));
     margin-right: 10px;
     height: 100%;
     align-items: center;

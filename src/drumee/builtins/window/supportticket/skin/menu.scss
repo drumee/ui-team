@@ -1,119 +1,128 @@
-&-menu {
-  &__dropdown{
-    z-index: 9999;
-  }
+@use "mixins/drumee";
 
-  &__wrapper {
-    padding-left: 15px;
-    z-index: 999 !important;
+.window-support-ticket {
+  &-menu {
+    &__dropdown {
+      z-index: 9999;
+    }
 
-    &[data-state="1"] {
-      & .menu-trigger {
-        background-color: $bigchat-default-background;
-        border-radius:$default-border-radius;
+    &__wrapper {
+      padding-left: 15px;
+      z-index: 999 !important;
+
+      &[data-state="1"] {
+        & .menu-trigger {
+          background-color: var(--default-background);
+          border-radius: var(--border-radius);
+        }
+
+        & .dropdown-toggle-icon {
+          color: var(--bigchat-header-bg); //var(--egreen);
+        }
       }
 
-      & .dropdown-toggle-icon {
-        color: $bigchat-background-header ;//$egreen;
+      & .menu-topic-items {
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-container);
+        background-color: var(--default-background);
+        width: 285px;
+        padding-bottom: 10px;
+
+        &__wrapper {
+          left: -279%; //-253%;
+          top: 24px; //32px ;
+          padding: 10px;
+        }
+
+        &:before {
+          background-color: var(--default-background);
+          //box-shadow:var(--shadow-before);
+          content: "";
+          height: 10px;
+          left: 120px;
+          position: absolute;
+          top: -4px;
+          transform: rotate(45deg);
+          width: 10px;
+        }
+
+        &:after {
+          background: var(--default-background);
+          content: "";
+          height: 10px;
+          left: 0;
+          position: absolute;
+          top: 0;
+          width: 100%;
+        }
       }
     }
 
-    & .menu-topic-items {
-      border-radius:$default-border-radius;
-      box-shadow: $drumee-shadow-container;
-      background-color: $bigchat-default-background;
-      width: 285px;
-      padding-bottom: 10px;
-      &__wrapper{
-        left: -279%;//-253%;
-        top : 24px;//32px ;
-        padding:10px;
-      }
-      &:before {
-        background-color: $bigchat-default-background;
-        //box-shadow:$drumee-container-before;
-        content: "";
-        height: 10px;
-        left: 120px;
-        position: absolute;
-        top: -4px;
-        transform: rotate(45deg);
-        width: 10px;
-      }
+    &__icon {
+      height: 16px;
+      width: 16px;
 
-      &:after {
-        background: $bigchat-default-background;
-        content: "";
-        height: 10px;
-        left: 0;
-        position: absolute;
-        top: 0;
-        width: 100%;
-      }
-    }
-  }
-
-  &__icon {
-    height :16px;
-    width : 16px;
-    
-    &.dropdown-toggle-icon {
-      color: $bigchat-default-icon-reverse;
-      cursor: pointer;
-      height: 24px;
-      padding: 2.5px; //5px;
-      width: 24px;
-      &:hover{
-        color: $bigchat-default-icon-hover ;
-      }
-    }
-
-    &.dropdown-icon {
-      margin-right: 10px;
-      margin-top: 10px;
-
-      & svg {
-        fill: $bigchat-default-icon-menu-dropdown;//$eviolet;
-      }
-
-      &.contactbook{
-        margin-left: -1px; //-1px;//
-        margin-right: 8px;
-        margin-top: -1px;
+      &.dropdown-toggle-icon {
+        color: var(--default-icon-reverse);
+        cursor: pointer;
+        height: 24px;
+        padding: 2.5px; //5px;
         width: 24px;
-        height: 22px;
-        padding: 1px;//2px
+
+        &:hover {
+          color: var(--default-icon-hover);
+        }
+      }
+
+      &.dropdown-icon {
+        margin-right: 10px;
+        margin-top: 10px;
+
+        & svg {
+          fill: var(--default-icon-menu-dropdown); //var(--eviolet);
+        }
+
+        &.contactbook {
+          margin-left: -1px; //-1px;//
+          margin-right: 8px;
+          margin-top: -1px;
+          width: 24px;
+          height: 22px;
+          padding: 1px; //2px
+        }
       }
     }
-  }
 
-  &__item {
-    cursor: pointer;
-    padding:6px 20px;//10px 20px;
+    &__item {
+      cursor: pointer;
+      padding: 6px 20px; //10px 20px;
 
-    &:hover {
-      background-color: $bigchat-default-background-hover ;
-      color : $bigchat-default-text-hover ;
+      &:hover {
+        background-color: var(--default-background-hover);
+        color: var(--default-text-hover);
 
-      & .window-support-ticket-menu__name{
-        color:$bigchat-default-text-hover; 
-      }
-      
-      & svg {
-        fill: $bigchat-default-icon-reverse;   
+        & .window-support-ticket-menu__name {
+          color: var(--default-text-hover);
+        }
+
+        & svg {
+          fill: var(--default-icon-reverse);
+        }
       }
     }
-  }
 
-  &__name {    
-    padding-top: 2px;
-    padding-left: 8px;
-    @include typo($size:14px, $weight: 300, $line:16px, $color: $bigchat-default-text-color);
-    &.invitation{
-      margin-top: 10px;
-    }
-    &.contactbook{
-      margin-left: -5px;
+    &__name {
+      padding-top: 2px;
+      padding-left: 8px;
+      @include drumee.typo($size: 14px, $weight: 300, $line: 16px, $color: var(--default-text-color));
+
+      &.invitation {
+        margin-top: 10px;
+      }
+
+      &.contactbook {
+        margin-left: -5px;
+      }
     }
   }
 }

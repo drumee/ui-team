@@ -1,13 +1,5 @@
-@import 'mixins/colors/index.scss';
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/exports.scss';
-@import 'mixins/handles.scss';
-@import 'mixins/utils.scss';
-@import 'mixins/vendor.scss';
-@import 'mixins/z-index.scss';
-@import 'mixins/drumee';
-@import 'content.scss';
+@use 'mixins/drumee';
+@use 'content.scss';
 
 .window-changelog {
   &__ui {
@@ -23,16 +15,16 @@
 
   &__header {
     border-bottom: none;
-    background-color: $folder-background-header ;
+    background-color: var(--folder-header-bg);
 
     &-title {
-      @include typo($size: 16px, $line: 20px, $weight: 400, $color: $folder-default-text-reverse);
+      @include drumee.typo($size: 16px, $line: 20px, $weight: 400, $color: var(--folder-default-text-reverse));
       align-items: center;
     }
 
     &-control {
       .icon {
-        color: $folder-default-icon-reverse;
+        color: var(--folder-default-icon-reverse);
       }
     }
   }
@@ -71,20 +63,20 @@
     &[data-state="0"] {
       svg {
         color: transparent;
-        border: 1px solid $state-0-border;
+        border: 1px solid var(--state-0-border);
       }
     }
 
     svg {
-      color: $core-default-text-color;
-      border: 1px solid $state-1-border;
+      color: var(--default-text-color);
+      border: 1px solid var(--state-1-border);
       width: 12px;
       height: 12px;
       margin: 0 10px;
     }
 
     .label {
-      @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($size: 14px, $line: 1.5, $weight: 300, $color: var(--default-text-color));
       white-space: nowrap;
     }
   }
@@ -92,18 +84,18 @@
   &__ack {
     justify-content: center;
     margin: auto;
-    @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+    @include drumee.typo($size: 14px, $line: 1.5, $weight: 300, $color: var(--default-text-color));
   }
 
   &__link {
     text-decoration: underline;
-    color: $add-blue;
+    color: var(--add-blue);
     cursor: pointer;
   }
 
   &__highlight {
     // background-color:rgb(229, 235, 225);
-    // color: $add-blue;
+    // color: var(--add-blue);
     text-decoration: underline;
   }
 
@@ -124,13 +116,13 @@
     .text {
       max-width: 500px;
       text-align: justify;
-      @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($size: 14px, $line: 1.5, $weight: 300, $color: var(--default-text-color));
     }
 
     .desc-test {
       max-width: 500px;
       text-align: justify;
-      @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-security-text-color);
+      @include drumee.typo($size: 14px, $line: 1.5, $weight: 300, $color: var(--security-text-color));
     }
   }
 
@@ -139,18 +131,18 @@
 
     .heading {
       margin: 30px 0 20px;
-      @include typo($size: 18px, $line: 1.5, $weight: 300, $color: #EF6500);
+      @include drumee.typo($size: 18px, $line: 1.5, $weight: 300, $color: #EF6500);
     }
 
     .text {
       margin: 20px 0;
       width: 80%;
-      @include typo($size: 16px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($size: 16px, $line: 1.5, $weight: 300, $color: var(--default-text-color));
     }
   }
 
   &__help {
-    @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+    @include drumee.typo($size: 14px, $line: 1.5, $weight: 300, $color: var(--default-text-color));
 
     &.container {
       width: 100%;
@@ -168,27 +160,27 @@
     &.summary {
       text-align: justify;
       width: 100%;
-      @include typo($size: 15px, $line: 1.5, $weight: 400, $color: $core-default-text-color);
+      @include drumee.typo($size: 15px, $line: 1.5, $weight: 400, $color: var(--default-text-color));
     }
 
     &.title {
       text-align: left;
       width: 100%;
       margin-bottom: 10px;
-      @include typo($size: 16px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($size: 16px, $line: 1.5, $weight: 300, $color: var(--default-text-color));
     }
 
     &.tips {
       text-align: justify;
       margin-bottom: 15px;
-      @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($size: 14px, $line: 1.5, $weight: 300, $color: var(--default-text-color));
     }
 
     &.info {
       text-align: left;
       width: 100%;
       margin-bottom: 20px;
-      @include typo($size: 14px, $line: 1.5, $weight: 300, $color: $core-default-text-color);
+      @include drumee.typo($size: 14px, $line: 1.5, $weight: 300, $color: var(--default-text-color));
     }
   }
 
@@ -199,18 +191,18 @@
     padding: 10px 15px;
 
     .text {
-      @include typo($size: 16px, $line: 20px, $weight: 400, $color: $core-default-text-color);
+      @include drumee.typo($size: 16px, $line: 20px, $weight: 400, $color: var(--default-text-color));
       text-align: justify;
       max-width: 600px;
     }
 
     .desc {
-      @include typo($size: 16px, $line: 18px, $weight: 400, $color: $core-default-text-color);
+      @include drumee.typo($size: 16px, $line: 18px, $weight: 400, $color: var(--default-text-color));
       text-align: left;
     }
 
     .info {
-      @include typo($size: 16px, $line: 18px, $weight: 400, $color: #EF6500);
+      @include drumee.typo($size: 16px, $line: 18px, $weight: 400, $color: #EF6500);
       text-align: left;
     }
   }
@@ -223,7 +215,7 @@
     align-items: center;
 
     .text {
-      @include typo($size: 20px, $line: 18px, $weight: 400, $color: $core-focus-text-placeholder);
+      @include drumee.typo($size: 20px, $line: 18px, $weight: 400, $color: var(--focus-text-placeholder));
       text-align: center;
     }
 
@@ -232,12 +224,12 @@
     }
 
     .desc {
-      @include typo($size: 16px, $line: 18px, $weight: 400, $color: $core-default-text-color);
+      @include drumee.typo($size: 16px, $line: 18px, $weight: 400, $color: var(--default-text-color));
       text-align: left;
     }
 
     .info {
-      @include typo($size: 16px, $line: 18px, $weight: 400, $color: #EF6500);
+      @include drumee.typo($size: 16px, $line: 18px, $weight: 400, $color: #EF6500);
       text-align: left;
       width: 70%;
     }
@@ -259,7 +251,7 @@
     align-content: center;
     flex-wrap: wrap;
     height: 60px;
-    @include typo($size: 16px, $line: 18px, $weight: 400, $color: $core-default-text-color);
+    @include drumee.typo($size: 16px, $line: 18px, $weight: 400, $color: var(--default-text-color));
 
     .button {
       cursor: pointer;
@@ -273,10 +265,10 @@
       border-radius: 3px;
       padding: 10px 10px;
       text-align: center;
-      border: 1px $core-default-checkbox-border solid;
+      border: 1px var(--default-checkbox-border) solid;
 
       &:hover {
-        color: $folder-default-icon-hover;
+        color: var(--folder-default-icon-hover);
       }
     }
   }
@@ -286,7 +278,7 @@
     justify-items: center;
     justify-content: center;
     margin: 16px 0;
-    @include typo($size: 16px, $line: 18px, $weight: 400, $color: $core-default-text-color);
+    @include drumee.typo($size: 16px, $line: 18px, $weight: 400, $color: var(--default-text-color));
 
     .drumee-text {
       align-content: center;
@@ -296,7 +288,7 @@
       color: #EF6500;
 
       u {
-        color: $core-default-text-tooltips;
+        color: var(--default-text-tooltips);
         text-decoration: underline;
       }
     }
@@ -316,7 +308,7 @@
     }
 
     .text {
-      @include typo($size: 14px, $line: 18px, $weight: 400, $color: $core-default-text-color);
+      @include drumee.typo($size: 14px, $line: 18px, $weight: 400, $color: var(--default-text-color));
     }
   }
 
@@ -335,7 +327,7 @@
     height: auto;
     width: 50%;
     padding: 20px;
-    background-color: $core-default-block-background;
+    background-color: var(--default-block-background);
     margin: 0 10px;
     border-radius: 10px;
 
@@ -345,13 +337,13 @@
       justify-content: center;
       align-items: center;
       white-space: nowrap;
-      @include typo($size: 18px, $line: 24px, $weight: 400, $color: $core-secondary-text-color);
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--secondary-text-color));
     }
   }
 
   &__icon {
     cursor: pointer;
-    color: $folder-default-icon-reverse;
+    color: var(--folder-default-icon-reverse);
 
     &-info {
       cursor: pointer;
@@ -364,7 +356,7 @@
 
 
     &:hover {
-      color: $folder-default-icon-hover;
+      color: var(--folder-default-icon-hover);
     }
   }
 
@@ -380,7 +372,7 @@
       margin: 10px;
 
       svg {
-        fill: $core-default-text-error;
+        fill: var(--default-text-error);
       }
     }
 
@@ -390,7 +382,7 @@
       margin: 10px;
 
       svg {
-        fill: $core-tertiary-text-color;
+        fill: var(--tertiary-text-color);
       }
     }
 
@@ -401,7 +393,7 @@
       width: 25px;
 
       svg {
-        fill: $core-tertiary-text-color;
+        fill: var(--tertiary-text-color);
         transform: rotate(90deg);
       }
     }
@@ -412,7 +404,7 @@
       margin: 0px;
 
       svg {
-        fill: $core-tertiary-text-color;
+        fill: var(--tertiary-text-color);
       }
     }
 
@@ -423,7 +415,7 @@
       width: 25px;
 
       svg {
-        fill: $core-tertiary-text-color;
+        fill: var(--tertiary-text-color);
       }
     }
 
@@ -433,7 +425,7 @@
       margin-bottom: 25px;
 
       svg {
-        fill: $core-tertiary-text-color;
+        fill: var(--tertiary-text-color);
       }
     }
 
@@ -443,7 +435,7 @@
       width: 25px;
 
       svg {
-        fill: $core-tertiary-text-color;
+        fill: var(--tertiary-text-color);
       }
     }
   }
@@ -452,8 +444,8 @@
     &-name {
       align-items: flex-start;
       padding-left: 10px; //11%;
-      @include overflow-text;
-      @include typo($size: 18px, $line: 24px, $weight: 400, $color: $folder-default-text-reverse); //$ewhite);
+      @include drumee.overflow-text;
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--folder-default-text-reverse)); //var(--ewhite));
 
       .inner {
         overflow: hidden;

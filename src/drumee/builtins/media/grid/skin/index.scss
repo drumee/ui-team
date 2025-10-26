@@ -3,74 +3,82 @@
 #   FILE : desk/skin/media/grid
 #   TYPE : Backoffice Main Style
 # ===================================================================**/
-@import 'mixins/drumee';
-@import "../../skin/sync-menu.scss";
+@use "sass:meta";
+@use 'mixins/drumee';
+@use "color.scss";
+@include meta.load-css("access.scss");
+@include meta.load-css("checkbox.scss");
+@include meta.load-css("container.scss");
+@include meta.load-css("expiry-status.scss");
+@include meta.load-css("filename.scss");
+@include meta.load-css("hub.scss");
+@include meta.load-css("helper.scss");
+@include meta.load-css("progress.scss");
+@include meta.load-css("notify.scss");
+@include meta.load-css("protected.scss");
+@include meta.load-css("shorcut.scss");
+@include meta.load-css("effects.scss");
+@include meta.load-css("forbiden.scss");
 
-.media-grid{
-  @import "access.scss";
-  @import "checkbox.scss";
-  @import "container.scss";
-  @import "expiry-status.scss";
-  @import "filename.scss";
-  @import "hub.scss";
-  @import "helper.scss";
-  @import "progress.scss";
-  @import "notify.scss";
-  @import "protected.scss";
-  @import "shorcut.scss";
-  @import "effects.scss";
-  @import "forbiden.scss";
-}
 
-.media-grid{
-  &__ui{
+.media-grid {
+  &__ui {
     position: relative;
     width: 100%; //90px; 
     height: 100%; //75px;
     min-width: 90px; //92px;
-    min-height: 75px;//81px;
-    border-radius:$default-border-radius;
-    background-color: $core-default-background;
-    box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 0px 3px 0 rgba(86,65,113,0.08), 0 2px 8px 0 rgba(194,185,203,0);
+    min-height: 75px; //81px;
+    border-radius: var(--border-radius);
+    background-color: var(--default-bg);
+    box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 0px 3px 0 rgba(86, 65, 113, 0.08), 0 2px 8px 0 rgba(194, 185, 203, 0);
     cursor: pointer;
     user-select: none;
     z-index: 100;
     margin: 1px;
-    &.drumee-spinner{
+
+    &.drumee-spinner {
       //position: absolute;
       box-shadow: none;
       width: 75px; //92px;
-      height: 75px;//81px;  
+      height: 75px; //81px;  
       padding: 10px;
-      .inner-spinner{
+
+      .inner-spinner {
         position: absolute;
       }
     }
-    .media-form__input{
+
+    .media-form__input {
       position: absolute;
       width: 100%;
       height: 20px;
       bottom: 0;
-      background-color: $core-default-background;
+      background-color: var(--default-bg);
       z-index: 200;
     }
-    &[data-device="mobile"]{
+
+    &[data-device="mobile"] {
       width: 100%;
     }
   }
-  &__content{
+
+  &__content {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    background-color:inherit;
+    background-color: inherit;
   }
+
   &[data-hover="on"] {
-    box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
+
     .media__container[data-icontype] {
-      z-index : 100; // Needed to make inner element receive event first
+      z-index: 100; // Needed to make inner element receive event first
+
       .media-form__input {
         height: 20px;
         bottom: 0;
+
         input {
           line-height: 20px;
           min-height: 20px;
@@ -83,30 +91,36 @@
     .copy-block {
       display: flex;
       right: -43px;
+
       &__icon {
         fill: #18AC72;
         border: 1px solid #18AC72;
       }
+
       &__text {
-        @include typo($line:21px,$size:10px,$weight:300,$color:$core-secondary-text-color); 
+        @include drumee.typo($line: 21px, $size: 10px, $weight: 300, $color: var(--secondary-text-color));
       }
     }
   }
+
   &[data-state="opened"] {
     opacity: 0.6;
+
     .media-information-wrapper {
       visibility: visible;
       fill: #879BFF;
     }
   }
+
   .preview {
-    border-radius: $default-border-radius;
-    &.image-capable{
-      background-size     : cover;
-      background-repeat   : no-repeat;
-      background-position : center;
+    border-radius: var(--border-radius);
+
+    &.image-capable {
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
       opacity: 0.8;
-      flex-wrap: wrap; 
+      flex-wrap: wrap;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -114,49 +128,60 @@
       justify-content: center;
     }
   }
-  
-  &[data-phase="copy"]{
+
+  &[data-phase="copy"] {
     opacity: 0.9;
   }
-  &[data-phase="cut"]{
+
+  &[data-phase="cut"] {
     opacity: 0.7;
   }
-  &[data-phase="share"]{
+
+  &[data-phase="share"] {
     opacity: 0.5;
   }
-  &[data-sharing="on"], &[data-hover="on"] {
+
+  &[data-sharing="on"],
+  &[data-hover="on"] {
     .media__share-container {
       visibility: visible;
       z-index: 100;
     }
   }
-  &[data-hover="on"], &[data-selected="1"]{
-    .__checkbox, .__deletion {
+
+  &[data-hover="on"],
+  &[data-selected="1"] {
+
+    .__checkbox,
+    .__deletion {
       visibility: visible;
       z-index: 100;
     }
   }
-  
+
   &[data-selected="1"] {
-    box-shadow: 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
+
     &:after {
       content: " ";
       position: absolute;
-      top: -1px;//0;
-      left: -1px;// 0;
+      top: -1px; //0;
+      left: -1px; // 0;
       width: calc(100% + 2px);
       height: calc(100% + 2px);
       border: 1.5px solid #FA8540; //3px
-      border-radius:$default-border-radius;
+      border-radius: var(--border-radius);
       pointer-events: none;
     }
   }
-  .content-preview{
+
+  .content-preview {
     height: 100%;
     width: 100%;
     overflow: hidden;
     word-break: break-word;
   }
+
   &[status="rename"]:hover {
     .media__container {
       .filename {
@@ -164,30 +189,34 @@
       }
     }
   }
+
   &__input {
-    @include typo($line:14px,$size:11px,$color:$core-default-text-color);
+    @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));
     width: 100%;
     position: absolute;
     z-index: 102; //UU was 200, let's try lower
     bottom: 0;
-    textarea{
-      cursor:pointer;
-      min-height: 27px;//21px;
-      width:100%;
+
+    textarea {
+      cursor: pointer;
+      min-height: 27px; //21px;
+      width: 100%;
       height: auto;
-      padding: 2px 6px;//3px 6px;
-      border-radius: $default-border-radius-bottom; 
-      border:1px solid $core-default-entry-border-bottom;
+      padding: 2px 6px; //3px 6px;
+      border-radius: var(--border-radius-bottom);
+      border: 1px solid var(--default-entry-border-bottom);
       overflow: hidden;
       resize: none;
-      background-color: $core-default-background;  
-      @include typo($line:12px,$size:11px,$color:$core-default-text-color); //$line:14px,
-      &::placeholder{
-        @include typo($size: 11px, $line: 12px, $weight:300, $color:$core-default-text-placeholder);
+      background-color: var(--default-bg);
+      @include drumee.typo($line: 12px, $size: 11px, $color: var(--default-text-color)); //$line:14px,
+
+      &::placeholder {
+        @include drumee.typo($size: 11px, $line: 12px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
+
     .input-details {
-      background:  $core-default-background;  
+      background: var(--default-bg);
       color: #FF4578;
       position: absolute;
       bottom: auto;
@@ -195,11 +224,12 @@
       padding: 3px;
     }
   }
+
   .check-box {
     position: absolute;
     width: 18px;
     height: 18px;
-    border-radius:$default-border-radius-tiny;// 3px;
+    border-radius: var(--border-radius-tiny); // 3px;
     z-index: 100;
     fill: #FA8540;
   }

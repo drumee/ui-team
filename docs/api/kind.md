@@ -106,10 +106,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | admin_security_page | src/drumee/builtins/window/adminpanel/pages/admin-security | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/admin-security/index.js |
 | broadcast_message_page | src/drumee/builtins/window/adminpanel/pages/broadcast-message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/broadcast-message/index.js |
 | domain_page | src/drumee/builtins/window/adminpanel/pages/domain-page | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/domain-page/index.js |
-| window_analytics_extractor | src/drumee/builtins/window/analytics/extractor | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/analytics/extractor/index.js |
-| window_chart_bar | src/drumee/builtins/window/analytics/bar-graph | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/analytics/bar-graph/index.js |
-| window_analytics_main_website | src/drumee/builtins/window/analytics/main-website | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/analytics/main-website/index.js |
-| window_chart_timeseries | src/drumee/builtins/window/analytics/time-series | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/analytics/time-series/index.js |
 | chat_contact_list | src/drumee/builtins/window/bigchat/widget/chatcontact-list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chatcontact-list/index.js |
 | chat_contact_item | src/drumee/builtins/window/bigchat/widget/chatcontact-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chatcontact-item/index.js |
 | chat_room | src/drumee/builtins/window/bigchat/widget/chat-room | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chat-room/index.js |
@@ -185,7 +181,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | window_helpdesk | window/helpdesk | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/helpdesk/index.js |
 | window_info | window/info | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/info/index.js |
 | window_launcher | window/launcher | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/launcher/index.js |
-| window_litechat | window/litechat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/litechat/index.js |
 | window_meeting | window/meeting | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/meeting/index.js |
 | window_schedule | window/schedule | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/schedule/index.js |
 | window_search | window/search | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/search/index.js |

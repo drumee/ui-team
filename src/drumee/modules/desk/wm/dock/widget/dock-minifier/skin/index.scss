@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/modules/desk/wm/dock/widget/dock-minifier/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .widget-dock-minifier {
   &__ui,
@@ -14,7 +14,7 @@
   }
 
   &__main.application::after {
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     content: " ";
     height: 90%;
     margin-left: 7px;
@@ -24,7 +24,7 @@
 
   &__notification_wrapper {   
     align-items: center;
-    background: $core-dock-notification;
+    background: var(--dock-notification);
     border-radius: 14px;
     font-size: 9px;
     height: 14px;
@@ -34,31 +34,31 @@
     right: 11px;
     width: 14px;
     z-index: 2;
-    @include typo($size: 9px, $color: $core-default-text-reverse);//$ewhite);
+    @include drumee.typo($size: 9px, $color: var(--default-text-reverse));//var(--ewhite));
   }
 
   .menu-topic[data-state="1"]{
     .menu-topic-trigger {
-      color: $core-default-icon-hover !important;
+      color: var(--default-icon-hover) !important;
     }
   }
 
   &__wrapper {
     & .menu-topic-trigger {
-      color   : $ewhite;
+      color   : var(--ewhite);
       cursor  : pointer;
       height  : 40px;
       width   : 65px;
 
       &:hover {
-        color:$core-default-icon-hover;
+        color:var(--default-icon-hover);
       }
     }
 
     & .menu-topic-items {
       background-color: rgb(47 47 47 / 20%);
-      border-radius: $default-border-radius;
-      box-shadow: $drumee-container-dropdown;
+      border-radius: var(--border-radius);
+      box-shadow: drumee.$drumee-container-dropdown;
       min-height: 200px;
       transform: matrix(1, 0, 0, 1, 0, 0) !important;
       width: 100% !important;

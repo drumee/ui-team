@@ -1,134 +1,142 @@
-&-menu {
-  &__wrapper {
-    &[data-state="1"] {
-      & .option-icons.admin-settings {
-        color:$admin-default-icon-reverse;  
+@use "mixins/drumee";
+
+.widget-members-listItem {
+  &-menu {
+    &__wrapper {
+      &[data-state="1"] {
+        & .option-icons.admin-settings {
+          color: var(--default-icon-reverse);
+          display: flex;
+        }
+      }
+
+      & .menu-topic-items__wrapper {
+        overflow: visible !important;
+      }
+
+      & .menu-items {
         display: flex;
+        flex-direction: column;
+        z-index: 2;
+        border-radius: var(--border-radius);
+        background-color: var(--default-background);
+        box-shadow: var(--shadow-block);
+        left: -258px;
+        max-height: auto;
+        max-width: 237px;
+        min-width: 237px;
+        padding: 15px 26px 15px 26px;
+        top: 29px !important;
+        width: 100% !important;
+        margin: 1px 10px;
+
+        &:before {
+          background-color: var(--default-background);
+          content: "";
+          height: 10px;
+          left: 200px;
+          position: absolute;
+          top: -5px;
+          transform: rotate(45deg);
+          width: 10px;
+        }
+
+        &:after {
+          background: var(--default-background);
+          border-radius: var(--default-border-radius-top);
+          content: "";
+          height: 10px;
+          left: 0;
+          position: absolute;
+          top: 0;
+          width: 100%;
+        }
       }
     }
 
-    & .menu-topic-items__wrapper {
-      overflow: visible !important;
-    }
+    &__icon {
+      box-shadow: none;
+      cursor: pointer;
+      height: 15px;
+      width: 15px;
+      right: 10px;
+      top: 3px;
+      border-radius: var(--checkbox-border-radius);
+      background-color: var(--default-checkbox-background);
+      border: 1px solid var(--default-checkbox-border);
+      color: var(--default-checkbox-background);
 
-    & .menu-items {
-      display: flex;
-      flex-direction: column;
-      z-index: 2;
-      border-radius:$default-border-radius;
-      background-color:$admin-default-background;
-      box-shadow: $drumee-shadow-block;
-      left: -258px;
-      max-height: auto;
-      max-width: 237px; 
-      min-width: 237px;
-      padding: 15px 26px 15px 26px;
-      top:  29px!important;
-      width: 100% !important;
-      margin: 1px 10px;
-
-      &:before {
-        background-color: $admin-default-background;
-        content: "";
-        height: 10px;
-        left: 200px;
-        position: absolute;
-        top: -5px;
-        transform: rotate(45deg);
-        width: 10px;
+      &:hover {
+        border: 2px solid var(--default-checkbox-border);
       }
 
-      &:after {
-        background: $admin-default-background;
-        border-radius:$default-border-radius-top;
-        content: "";
-        height: 10px;
-        left: 0;
-        position: absolute;
-        top: 0;
-        width: 100%;
+      &.checkbox,
+      &.radio {
+        &[data-state="1"] {
+          box-shadow: none;
+          color: var(--default-checkbox-checked);
+          border: 1px solid var(--default-checkbox-border);
+
+          &:hover {
+            border: 2px solid var(--default-checkbox-border);
+          }
+        }
       }
     }
-  }
 
-  &__icon {
-    box-shadow: none;
-    cursor: pointer;
-    height: 15px; 
-    width: 15px; 
-    right: 10px;
-    top: 3px;
-    border-radius:$default-checkbox-border-radius;
-    background-color:$admin-default-checkbox-background; 
-    border: 1px solid $admin-default-checkbox-border; 
-    color: $admin-default-checkbox-background;       
-
-    &:hover{
-      border: 2px solid $admin-default-checkbox-border; 
+    &__header {
+      justify-content: center;
+      padding-bottom: 10px;
     }
-    &.checkbox,
-    &.radio {
-      &[data-state="1"]{
-        box-shadow: none;
-        color: $admin-default-checkbox-checked;
-        border: 1px solid $admin-default-checkbox-border;
-        &:hover{
-          border: 2px solid $admin-default-checkbox-border; 
+
+    &__content {
+      padding-bottom: 10px;
+    }
+
+    &__items-wrapper {
+      height: 100%;
+
+      width: 100%;
+    }
+
+    &__item-wrapper {
+
+      width: 100%;
+    }
+
+    &__item {
+      cursor: pointer;
+      margin-bottom: 1px;
+    }
+
+    &__note {
+      padding-top: 0px;
+      @include drumee.typo($size: 13px, $weight: 300, $line: 22px, $color: var(--default-text-color));
+
+      &.title {
+        @include drumee.typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-title));
+      }
+    }
+
+    &__buttons-wrapper {
+      &.button {
+        border-radius: var(--border-radius);
+        @include drumee.typo ($size: 14px, $line: 15px, $color: var(--btn-commit-text));
+        align-items: center;
+        background: var(--btn-commit-background);
+        cursor: pointer;
+        height: 28px;
+        justify-content: center;
+        margin: auto;
+        width: 68px;
+        border: 1px solid var(--btn-commit-border);
+
+        &:hover {
+          background-color: var(--btn-commit-background-hover);
+          border-color: var(--btn-commit-border-hover);
         }
       }
     }
   }
 
-  &__header {
-    justify-content: center;
-    padding-bottom: 10px;
-  }
-
-  &__content {
-    padding-bottom: 10px;
-  }
-
-  &__items-wrapper {
-    height: 100%;
-    
-    width: 100%;
-  }
-  
-  &__item-wrapper {
-   
-    width: 100%;
-  }
-
-  &__item {
-    cursor: pointer;
-    margin-bottom:  1px;
-  }
-
-  &__note {
-    padding-top: 0px;
-    @include typo($size: 13px, $weight: 300, $line: 22px, $color: $admin-default-text-color);
-
-    &.title {
-      @include typo($size: 14px, $line: 16px, $weight: 300, $color: $admin-default-text-title);
-    }
-  }
-
-  &__buttons-wrapper {
-    &.button {
-      border-radius:$default-border-radius;
-      @include typo ($size: 14px, $line: 15px, $color: $btn-commit-text);
-      align-items: center;
-      background:$btn-commit-background; 
-      cursor: pointer;
-      height: 28px;
-      justify-content: center;
-      margin: auto;
-      width:  68px;
-      border:1px solid $btn-commit-border;
-      &:hover{
-        background-color:$btn-commit-background-hover;
-        border-color: $btn-commit-border-hover;
-      }
-    }
-  }
 }

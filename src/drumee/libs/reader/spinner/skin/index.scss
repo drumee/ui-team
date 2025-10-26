@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/libs/reader/spinner/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@import 'mixins/drumee';
+@use 'mixins/drumee';
 
 .spinner-{
   &__ui{

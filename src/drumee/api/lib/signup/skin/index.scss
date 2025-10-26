@@ -1,32 +1,27 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2016
-#   FILE : src/drumee/builtins/welcome/skin/welcome-main.scss
-#   TYPE : Backoffice User Settings Styles
-# ===================================================================**/
-@import 'mixins/typo.scss';
-@import 'mixins/colors/index.scss';
-@import 'mixins/vendor.scss';
-@import 'validate';
-@import 'mixins/drumee';
+@use 'mixins/drumee';
+
 .api-signup {
 
-  &__ui{
+  &__ui {
     width: 100%;
     align-items: center;
   }
-  &__wrapper-popup{
+
+  &__wrapper-popup {
     position: absolute;
     top: calc(-182px);
-    left: calc(50% - 254px);  
-    &[data-device="mobile"]{
-      top:-194px;
+    left: calc(50% - 254px);
+
+    &[data-device="mobile"] {
+      top: -194px;
       left: calc(50% - 158px);
     }
   }
-  &__main{
+
+  &__main {
     height: 100%;
     left: 0;
-    width: 100%;      
+    width: 100%;
     margin-top: 10px;
     display: flex;
     align-items: center;
@@ -35,33 +30,36 @@
     &--container {
       width: 100%;
       align-items: center;
-      justify-content: start;  
-      background-color: $core-default-background;
-      border-radius: $default-border-radius-small;//4px;
-      .welcome__entry{
-        border: 1px solid rgb(47 47 47 / 4%);// 0.4);
+      justify-content: start;
+      background-color: var(--default-bg);
+      border-radius: var(--border-radius-small); //4px;
+
+      .welcome__entry {
+        border: 1px solid rgb(47 47 47 / 4%); // 0.4);
         border-radius: 4px;
       }
-      .dialog__button--close{
-        left:278px;
+
+      .dialog__button--close {
+        left: 278px;
         top: 0px;
-        color:$core-default-thinline-icon;//#89929e;
-        cursor:pointer;
+        color: var(--default-thinline-icon); //#89929e;
+        cursor: pointer;
       }
-      &[data-device="mobile"]{
-        left:137px;
+
+      &[data-device="mobile"] {
+        left: 137px;
       }
     }
   }
 
-  & .api__error-wrapper{
+  & .api__error-wrapper {
     justify-content: center;
     margin-top: 30px;
     padding-left: 8px;
   }
 
-  & .api__error-message{
-    @include typo($color:#ff805c, $size: 14px, $line: 21px, $weight: 400);
+  & .api__error-message {
+    @include drumee.typo($color: #ff805c, $size: 14px, $line: 21px, $weight: 400);
     font-weight: 400;
     font-family: Roboto;
     max-width: 350px;
@@ -69,160 +67,175 @@
     width: 100%;
   }
 
-  & .api__error-message[data-success='1']{
-    @include typo($color: $egreen, $size: 14px, $line: 21px, $weight: 400);
-    color: $egreen !important;
+  & .api__error-message[data-success='1'] {
+    @include drumee.typo($color: var(--egreen), $size: 14px, $line: 21px, $weight: 400);
+    color: var(--egreen) !important;
     bottom: 30px;
     max-width: 413px;
     text-align: center;
   }
 
-  &__correct{
+  &__correct {
     color: white;
   }
 
-  &__row{
+  &__row {
     justify-content: center;
-    height: 38px;//46px;
+    height: 38px; //46px;
     width: 100%;
     margin-top: auto;
     // margin-top: 20px;
-    
-  }
-  &__entry{
-    height : 46px;
 
-    &[data-device="mobile"]{
-      height:100%;
-      flex:1;
+  }
+
+  &__entry {
+    height: 46px;
+
+    &[data-device="mobile"] {
+      height: 100%;
+      flex: 1;
     }
   }
-  &__container-button{
+
+  &__container-button {
     // background-color:#ffffff;
-    border-radius: $default-border-radius ;//6px;
-  //  border-bottom-right-radius:4px ;
-    height:44px;
-    width:70px;//53px;
+    border-radius: var(--border-radius); //6px;
+    //  border-bottom-right-radius:4px ;
+    height: 44px;
+    width: 70px; //53px;
     margin-left: 6px;
 
   }
-  &__cross{
+
+  &__cross {
     height: 100%;
     width: 100%;
-    display: flex;   
-    color: rgb(234 77 68 / 8%);// 0.8);
-    background-color: $core-default-background;       
+    display: flex;
+    color: rgb(234 77 68 / 8%); // 0.8);
+    background-color: var(--default-bg);
     justify-content: center;
     align-items: center;
     cursor: pointer;
     margin: auto !important;
-    & svg{
-      height:16px;
-      width:16px;
-    } 
+
+    & svg {
+      height: 16px;
+      width: 16px;
+    }
   }
 
-  &__go{
+  &__go {
     height: 100%;
-    border-radius : 6px;  
-    background-color: $egreen;
+    border-radius: 6px;
+    background-color: var(--egreen);
     justify-content: center;
     align-items: center;
     cursor: pointer;
     box-shadow: 0 4px 6px 1px rgb(63 79 117 / 13%), 0 0 11px 0 rgb(86 65 113 / 8%), 0 0 10px 0 rgb(194 185 203 / 0%);
-    @include typo($color: $core-default-text-reverse, $size: 16px, $line: 21px, $weight: 300);
+    @include drumee.typo($color: var(--default-text-reverse), $size: 16px, $line: 21px, $weight: 300);
+
     // @media (max-width: $tablet) {
-    //   @include typo($color: $default-text-reverse, $size: 16px, $line: 18px, $weight: 300);
+    //   @include typo($color: var(--default-text-reverse), $size: 16px, $line: 18px, $weight: 300);
     // }
-    &[data-error="0"]{
+    &[data-error="0"] {
       opacity: 1;
-      pointer-events:auto;
+      pointer-events: auto;
+
       &:hover {
-        background-color: $btn-commit-background-hover;
+        background-color: var(--btn-commit-background-hover);
       }
     }
-    &[data-error="1"]{
+
+    &[data-error="1"] {
       opacity: 0.5;
       pointer-events: none;
     }
   }
 
-  &__entry{
+  &__entry {
     width: 100%;
     max-width: 350px;
     height: 44px;
-    @media (max-width: $small){
+
+    @media (max-width: var(--small-width)) {
       height: 100%;
       flex: 1;
     }
-    input{
-      padding-left:0.7em;// 1em;
-      margin:0;
-      @include typo($color:$core-default-text-color, $size: 16px, $line: 21px, $weight: 400);//$size: 20px,  
+
+    input {
+      padding-left: 0.7em; // 1em;
+      margin: 0;
+      @include drumee.typo($color: var(--default-text-color), $size: 16px, $line: 21px, $weight: 400); //$size: 20px,  
       width: 100%;
-      border: 0px solid white !important;   
-      background: $white-f9  !important; //#d2cdcd
-      border-radius: $default-border-radius;//6px;
-      margin: 0px 7px 0px 0px;   
+      border: 0px solid white !important;
+      background: var(--white-f9) !important; //#d2cdcd
+      border-radius: var(--border-radius); //6px;
+      margin: 0px 7px 0px 0px;
+
       &::placeholder {
-        @include typo($size: 16px, $line: 21px, $weight: 300, $color: $core-default-text-placeholder);
+        @include drumee.typo($size: 16px, $line: 21px, $weight: 300, $color: var(--default-text-placeholder));
       }
     }
   }
 
-  &__entry-container{
-    height:46px;
+  &__entry-container {
+    height: 46px;
     //min-width: 350px;
-    width:100%;
-    max-width: 360px;//350px;
+    width: 100%;
+    max-width: 360px; //350px;
     margin-top: 10px;
-    @media (max-width: $tablet) {
+
+    @media (max-width: var(--medium-width)) {
       max-width: 320px;
-      height:43px;
+      height: 43px;
     }
-    @media (max-width: $medium) {
+
+    @media (max-width: var(--medium-width)) {
       max-width: 320px;
     }
-    &[data-device="mobile"]{
+
+    &[data-device="mobile"] {
       height: 100%;
       flex: 1;
     }
-    &[data-error="1"]{
-      border: 1px solid $core-default-text-error  ;// #D23244 
-      padding-bottom:0.5px;
-      border-radius:$default-border-radius-small;//4px;
+
+    &[data-error="1"] {
+      border: 1px solid var(--default-text-error); // #D23244 
+      padding-bottom: 0.5px;
+      border-radius: var(--border-radius-small); //4px;
     }
   }
 
-  &__acknowledge{
+  &__acknowledge {
     &.title {
       text-align: center;
-      @include typo($color: $core-default-text-title, $size: 28px, $line: 42px, $weight: 300);
+      @include drumee.typo($color: var(--default-text-title), $size: 28px, $line: 42px, $weight: 300);
 
-      &[data-device="mobile"]{
-        width:295px;
-        @include typo($color: $core-default-text-title, $size: 19px, $line: 32px, $weight: 300);
-        left:4.5px;
-        margin : 10px 4px 30px 5px; 
+      &[data-device="mobile"] {
+        width: 295px;
+        @include drumee.typo($color: var(--default-text-title), $size: 19px, $line: 32px, $weight: 300);
+        left: 4.5px;
+        margin: 10px 4px 30px 5px;
       }
 
       &.singup {
-        width:423px;
-        margin : 29px auto 37px auto;
+        width: 423px;
+        margin: 29px auto 37px auto;
       }
 
       &.invitation {
         width: 100%;
-        margin : 15px auto 25px auto;
+        margin: 15px auto 25px auto;
 
         & .inviter-text {
           font-size: 22px;
         }
       }
     }
-  } 
+  }
+
   & .icon {
-    &.ctrl-email{
+    &.ctrl-email {
       height: 100%;
       width: 30px;
       margin-right: 10px;
@@ -233,43 +246,46 @@
   }
 
   &__title {
-    @include typo($color: #000099, $size: 20px, $line: 30px, $weight: 500);
+    @include drumee.typo($color: #000099, $size: 20px, $line: 30px, $weight: 500);
     margin: 0 35px;
     padding: 15px 10px 30px;
     text-align: left;
-    
+
     & a {
-      @include typo($size: 20px, $line: 30px, $weight: 700, $color:#000099);
+      @include drumee.typo($size: 20px, $line: 30px, $weight: 700, $color: #000099);
       text-decoration: underline;
       text-transform: lowercase;
 
-      &:hover, &:focus {
-        color:#879BFF !important;
+      &:hover,
+      &:focus {
+        color: #879BFF !important;
       }
     }
   }
 
   .api-signup__correct {
-    color: #18a3ac;//#32c7d1;
-    height: 22px;//30px;
+    color: #18a3ac; //#32c7d1;
+    height: 22px; //30px;
     bottom: 0px;
-    margin-top: 0px;//19px; 
+    margin-top: 0px; //19px; 
   }
-  
-  
+
+
   .widget {
     margin-bottom: 0px;
   }
-  .box{
+
+  .box {
     margin-bottom: 0px;
   }
-  & *:focus{
+
+  & *:focus {
     outline: 0px;
   }
 
   &__title {
     &-header {
-      @include typo($size: 26px, $line: 28px, $color: #FFC000);
+      @include drumee.typo($size: 26px, $line: 28px, $color: #FFC000);
       align-items: center;
       justify-content: center;
       text-align: center;
@@ -290,29 +306,29 @@
   }
 
   &__footer {
-    @include typo($size: 18px, $line: 22px, $weight: 400, $color: $egrey-2f);
+    @include drumee.typo($size: 18px, $line: 22px, $weight: 400, $color: var(--egrey-2f));
     padding: 10px 20px 10px 10px;
   }
 
   &__login-btn {
-    @include typo($size: 16px, $line: 20px, $weight: 400, $color: $core-secondary-text-color);
+    @include drumee.typo($size: 16px, $line: 20px, $weight: 400, $color: var(--secondary-text-color));
     align-items: center;
-    border: 1px solid $core-secondary-text-color;
+    border: 1px solid var(--secondary-text-color);
     border-radius: 6px;
     height: 30px;
     justify-content: center;
     min-width: 120px;
   }
-  
+
   // &__checkbox {
   //   cursor: pointer;
-  //   @include typo($color: $egrey-78, $size: 10px, $line: 12px, $weight: 300);
+  //   @include typo($color: var(--egrey-78), $size: 10px, $line: 12px, $weight: 300);
   //   svg {
   //     width: 10px;
   //     height: 10px;
   //     border: 1px solid #dde2e8;
   //     border-radius: 2px;
-  //     color: $ewhite;
+  //     color: var(--ewhite);
   //     margin-right: 10px;
   //   }
   //   &[data-state="1"],

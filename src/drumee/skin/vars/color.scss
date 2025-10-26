@@ -1,0 +1,133 @@
+:root {
+
+  /*green color variants   */
+  --egreen: #18a3ac;
+  --egreen-dark: #16959e;
+  --egreen-light: #5DBEC4;
+  --egreen-soft: #18AC72;
+  --egreen-watergreen: #32d89a;
+  --egreen-soft-light: #45CC97;
+
+  /*green color variants */
+
+  /*gray color variants */
+  --egrey-3d: #d3d3d3;
+  --egrey-d8: #152235;
+  --egrey-26: #262626;
+  --egrey-2f: #2F2F2F;
+  --egrey-3f: #3F3F3F;
+  --egrey-4a: #4A4A4A;
+  --egrey-49: #494949;
+  --egrey-6d: #6D8096;
+  --egrey-62: #626262;
+  --egrey-78: #787B7F;
+  --egrey-89: #89929E;
+  --egrey-b6: #B6BFCA;
+  --egrey-3c: #cecece;
+  --egrey-b7: #b7cedd;
+  --egrey-f1: #EFF0F1;
+  --egrey-e8: #DDE2E8;
+  --egrey-d6: #D6D6D6;
+  --egrey-b8: #b8b8b8;
+  --egrey-8d: #d8d8d8;
+  --white-f2: #f2f2f2;
+
+  /*gray color variants */
+
+  /*orange color variants */
+  --eorange: #FA8540;
+  --eorange-crusta: #FA8A48;
+  --eorange-light: #F99B64;
+  --eorange-dark: #FF7479;
+  --eorange-sunset: #EA4D44;
+  --orange-lighter: #f87c59;
+  --orange-carrot: #EF6500;
+  --orange-sunsetorange: #fd635b;
+
+  /*orange color variants */
+
+  /*white color variants */
+  --white: #FFFFFF;
+  --ewhite: #FFFFFF;
+  --white-fb: #FBFBFB;
+  --white-f2: #F2F2F2;
+  --white-f6: #F1F1F6;
+  --white-f7: #F7F7F7;
+  --white-f8: #F8FAFC;
+  --white-f9: #F7F7F9;
+  /*white color variants */
+
+  /*violet color variants */
+  --eviolet: #879BFF;
+  --eviolet-dark: #476390;
+  --eviolet-light: #6a85ff;
+  /*violet color variants */
+
+  /*mauve color variants*/
+  --emauve: #C647D5;
+  --emauve-light: #E86CFF;
+  --emauve-lighter: #d66fe8;
+  --emauve-dark: #ab47bc;
+  /*mauve color variants*/
+
+  /*pink color variants */
+  --drumee-pink: #FF3466;
+  --epink: #FF4578;
+  /*pink color variants */
+
+  /*blue color variants */
+  --eblue: #4A90E2;
+  --blue-midnight: #000099;
+  --ultramarine: #1F0E93;
+  --blue: #1D8AEA; //#1E81F9;
+  --blue-light: #68B4FF; //#57A7FF;
+  /*blue color variants */
+
+  /*red color variants */
+  --red-brick: #D23244;
+  /*red color variants */
+
+
+  /************************************************************
+                        NEW COLORS
+************************************************************/
+
+  --drumee-pink: #ff3466;
+  --darker-pink: #f32855;
+  --navy-color: #00495c;
+  /* main background*/
+
+  /** main-colors **/
+  --main-pink: #d02c54;
+  --gradient-left: #004f64;
+  --gradient-right: #0a6277;
+  --main-blue: #0089db;
+  --main-green: #00c0a8;
+  --main-yellow: #fdd835;
+  /** main-colors **/
+
+  /*additional-colors**/
+  --add-pink: --drumee-pink;
+  --add-blue: #329cf8;
+  --add-green: #04dec2;
+  --add-grey: #7d97a2;
+  --add-light-grey: #b7cedd;
+  --dark-blue: #003e4f;
+  --add-yellow: #beba48;
+  --add-soft-green: #008c14;
+  --add-orange: #e0984e;
+  --add-soft-blue: #00b1d0;
+  /*additional-colors**/
+
+  /**grey add colors**/
+  --main-grey: #787878;
+  /**grey add colors**/
+
+  /**insert block**/
+  --main-bg: --navy-color;
+  /* main bbackground*/
+
+  --btn-secondary: --btn-rollback-text;
+  --btn-rollback-text-hover: #879BFF;
+
+}

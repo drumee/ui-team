@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .editor {
   &__ui {
     &[data-state="1"] {
@@ -15,7 +17,7 @@
       width: 12px;
       height: 12px;
       padding: 0;
-      color: $core-default-text-reverse;
+      color: var(--default-text-reverse);
       cursor: pointer;
       margin: auto 15px auto 0;
     }
@@ -28,11 +30,11 @@
     flex: 1;
     flex-direction: row;
     height: 100%;
-    @include typo($size: 18px,
+    @include drumee.typo($size: 18px,
       $line: 24px,
       $weight: 400,
-      $color: $core-default-text-reverse );
-    @include overflow-text;
+      $color: var(--default-text-reverse) );
+    @include drumee.overflow-text;
 
     .icon {
       width: 14px;

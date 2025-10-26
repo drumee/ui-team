@@ -1,64 +1,69 @@
-&-member-acknowledgement {
-  &__main {
-    align-items: center;
-    background:$admin-default-background;
-    border-radius: $default-border-radius;
-    height: calc(100% - 350px);
-    justify-content: center;
-    min-height: 275px;//250px;
-    min-width: 300px;
-    width: calc(100% - 350px);
-  }
+@use "mixins/drumee";
 
-  &__note {
-    &.message-info {
-      @include typo($size: 16px, $line: 20px, $weight:300, $color:$admin-default-text-color);
-      padding: 15px;
+.members-page {
+
+  &-member-acknowledgement {
+    &__main {
+      align-items: center;
+      background: var(--default-background);
+      border-radius: var(--border-radius);
+      height: calc(100% - 350px);
+      justify-content: center;
+      min-height: 275px; //250px;
+      min-width: 300px;
+      width: calc(100% - 350px);
     }
-  }
 
-  &__close {
-    color:$admin-default-thinline-icon;
-    cursor: pointer;
-    margin: 10px;
-    position: absolute;
-    right: 5px;
-    top: 5px;
-    z-index: 1;
-  }
-
-  &__icon {
-    &.close {
-      color: $admin-default-thinline-icon;
-      cursor: pointer;
-      height: 12px;
-      width: 12px;
-      
-      &:hover {
-        color: $admin-default-thinline-icon-hover;
+    &__note {
+      &.message-info {
+        @include drumee.typo($size: 16px, $line: 20px, $weight: 300, $color: var(--default-text-color));
+        padding: 15px;
       }
     }
 
-    &.success {
-      color: $admin-default-icon-success;
-      height: 26px;
-      width: 36px;
+    &__close {
+      color: var(--default-thinline-icon);
+      cursor: pointer;
+      margin: 10px;
+      position: absolute;
+      right: 5px;
+      top: 5px;
+      z-index: 1;
     }
-  }
 
-  &__button-ok {
-    @include typo($size: 16px,$color: $btn-rollback-text);
-    align-items: center;
-    border-radius: $default-border-radius;
-    border: 1px solid $btn-rollback-border ;
-    height: 32px;
-    justify-content: center; 
-    margin-top: 30px;
-    width:90px;
+    &__icon {
+      &.close {
+        color: var(--default-thinline-icon);
+        cursor: pointer;
+        height: 12px;
+        width: 12px;
 
-    &:hover {
-      @include typo($size: 16px,$color:$btn-rollback-text-hover);   
-      border:2px solid $btn-rollback-border-hover;
+        &:hover {
+          color: var(--default-thinline-icon-hover);
+        }
+      }
+
+      &.success {
+        color: var(--default-icon-success);
+        height: 26px;
+        width: 36px;
+      }
+    }
+
+    &__button-ok {
+      @include drumee.typo($size: 16px, $color: var(--btn-rollback-text));
+      align-items: center;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--btn-rollback-border);
+      height: 32px;
+      justify-content: center;
+      margin-top: 30px;
+      width: 90px;
+
+      &:hover {
+        @include drumee.typo($size: 16px, $color: var(--btn-rollback-text)-hover);
+        border: 2px solid var(--btn-rollback-border-hover);
+      }
     }
   }
 }

@@ -1,13 +1,37 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2021
-#   FILE : /src/drumee/modules/dmz/skin/index.scss
-#   TYPE : Style Component
-# ===================================================================**/
-@import 'mixins/drumee';
-@import '../wm/skin/wm-main.scss';
+@use "sass:meta";
+@use 'mixins/drumee';
+@use '../wm/skin/wm-main.scss';
 
 .dmz-router {
-  @import './popup';
+  --dmz-footer-background: #5a70d5;
+  --dmz-btn-open-desk-color: #18AC73;
+  --dmz-default-background: var(--default-background);
+  --dmz-default-block-background: var(--default-block-background);
+
+  /**text**/
+  --dmz-default-text-color: var(--default-text-color);
+  --dmz-secondary-text-color: var(--secondary-text-color);
+  --dmz-default-text-reverse: var(--default-text-reverse);
+  --dmz-default-text-placeholder: var(--default-text-placeholder);
+  --dmz-default-text-title: var(--default-text-title);
+  --dmz-footer-title-color: #FDD835;
+  --dmz-backgroundless-text-hover: var(--backgroundless-text-hover);
+
+  /**icon**/
+  --dmz-icon-valid: #18A3AC-- --dmz-icon-invalid: #fd635b-- --dmz-default-icon-neutral: var(--default-icon-neu--ral);
+  --dmz-default-icon-reverse: var(--default-icon-rev--rse);
+  --dmz-default-thinline-icon-hover: var(--default-t--inline-icon-hover); //close icon
+  --dmz-default-icon-success: var(--default-icon-suc--ess);
+  --dmz-default-icon-hover: $core-default-icon-hover--
+    /**border**/
+    --dmz-default-action-btn-border-color: #FFFFFF;
+  --dmz-default-border-error: var(--default-border-error);
+
+}
+
+@include meta.load-css('popup');
+
+.dmz-router {
 
   &__ui {
     height: 100vh;
@@ -30,18 +54,18 @@
 
 
   &__note {
-    @include typo($size: 16px, $line: 18px, $color: $dmz-default-text-reverse);
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--default-text-reverse));
     text-align: center;
   }
 }
 
 .dmz {
-  @import '../../welcome/skin/supported-browsers.scss';
+  @include meta.load-css('../../welcome/skin/supported-browsers.scss');
 
   &-supported-browsers {
     &__container {
       position: absolute;
-      background-color: $core-default-block-background;
+      background-color: var(--default-bg-block);
       z-index: 2000;
     }
 

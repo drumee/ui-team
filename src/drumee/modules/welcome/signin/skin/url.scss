@@ -4,7 +4,7 @@
 #   TYPE : Component style
 # ===================================================================**/
 
-@import '../../../../skin/mixins/drumee.scss';
+@use 'mixins/drumee';
 
 .welcome-signin-url {
   width: 100%;
@@ -18,7 +18,7 @@
   }
 
   &__title {
-    @include typo($size: 28px, $line: 45px, $weight: 400, $color: $core-default-text-reverse);
+    @include drumee.typo($size: 28px, $line: 45px, $weight: 400, $color: var(--default-text-reverse));
   }
 
   &__entry {
@@ -26,25 +26,13 @@
     align-items: center;
     justify-content: center;
     height: 60px;
-
-    &[data-status="error"] {
-      border-radius: $default-border-radius;
-      border: 2px solid $core-default-border-error;
-    }
-
-    &.url-bar {
-      height: 40px;
-      max-width: 800px;
-      width: calc(100% - 300px);
-    }
-
-    background-color: $core-default-background;
+    background-color: var(--default-bg);
     max-width: 280px;
     width: 100%;
-    border-radius: $default-border-radius;
+    border-radius: var(--border-radius);
     &[data-status="error"] {
-      border-radius: $default-border-radius;
-      border: 2px solid $core-default-border-error;
+      border-radius: var(--border-radius);
+      border: 2px solid var(--default-border-error);
     }
   }
 
@@ -61,26 +49,26 @@
     }
 
     & input {
-      @include typo($size: 18px, $line: 28px, $color: $core-default-text-color);
+      @include drumee.typo($size: 18px, $line: 28px, $color: var(--default-text-color));
       border-bottom: none;
       border-radius: 0 6px 6px 0px;
       padding: 5px;
       padding-left: 15px;
 
       &::placeholder {
-        @include typo($size: 18px, $line: 28px, $weight: 300, $color: $connect-text-placeholder);
+        @include drumee.typo($size: 18px, $line: 28px, $weight: 300, $color: var(--connect-text-placeholder));
       }
     }
   }
 
   &__protocol {
-    @include typo($size: 18px, $line: 28px, $color: $white-f9);
+    @include drumee.typo($size: 18px, $line: 28px, $color: var(--white-f9));
     position: absolute;
     right: 104%;
   }
 
   &__domain {
-    @include typo($size: 18px, $line: 28px, $color: $white-f9);
+    @include drumee.typo($size: 18px, $line: 28px, $color: var(--white-f9));
     left: 102%;
     position: absolute;
   }
@@ -102,7 +90,7 @@
 
   &__alt {
     margin-top: 35px;
-    @include typo($size: 18px, $line: 28px, $color: $white-f9);
+    @include drumee.typo($size: 18px, $line: 28px, $color: var(--white-f9));
     text-decoration: underline;
   }
 
