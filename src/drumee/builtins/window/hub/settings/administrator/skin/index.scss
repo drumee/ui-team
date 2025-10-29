@@ -8,7 +8,7 @@
     z-index:1000;  
   }
   .invitation__container-sharee, .invitation-settings__ui{
-    box-shadow:drumee.$drumee-shadow-box ;
+    box-shadow:var(--drumee-shadow-box) ;
     background-color: var(--default-bg); 
     width: 360px;
     min-height: 240px;

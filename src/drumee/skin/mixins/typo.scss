@@ -306,7 +306,6 @@ $main-typo-bolditalic: $roboto-bolditalic;
   }
 }
 
-/**all others should be deprecated except this one**/
 @mixin typo($color: inherit,
   $weight: 400,
   $line: 1,
@@ -352,8 +351,6 @@ $main-typo-bolditalic: $roboto-bolditalic;
     font-family: $main-typo-bolditalic;
   }
 }
-
-/**all others should be deprecated except this one**/
 
 @mixin license-trial() {
   content: attr(data-version);

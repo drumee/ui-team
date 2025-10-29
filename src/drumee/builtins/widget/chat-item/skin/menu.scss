@@ -18,7 +18,7 @@
       & .menu-topic-items {
         background-color: var(--default-bg);
         border-radius: var(--border-radius);
-        box-shadow: drumee.$drumee-container-dropdown;
+        box-shadow: var(--drumee-container-dropdown);
         min-width: 115px;
         padding: 10px;
 

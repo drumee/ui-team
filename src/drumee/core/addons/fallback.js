@@ -1,16 +1,15 @@
 
-const _msg = function(_ui_, msg){
+const _msg = function (_ui_, msg) {
   let a;
-  return a = `\
-<div class=\"${_ui_.fig.family}__header\"> \
-<svg data-service=\"close\"  class=\"${_ui_.fig.family}__close error__close\"> \
-<use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-cross\"></use> \
-</svg> \
-</div> \
-<div class=\"${_ui_.fig.family}__text\"><p>${msg}</p></div>\
-`;
+  return a = `
+<div class="${_ui_.fig.family}__header"> 
+<svg data-service="close"  class="${_ui_.fig.family}__close error__close"> 
+<use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#--icon-cross"></use> 
+</svg> 
+</div> 
+<div class="${_ui_.fig.family}__text"><p>${msg}</p></div>`;
 };
-
+require("./skin/fallback")
 
 // -----------------------------------------------------------
 //
@@ -24,9 +23,9 @@ class __core_failover extends Marionette.View {
 
   static initClass() {
     this.prototype.events =
-      {click       : 'dispatchUiEvent'};
-  
-    this.prototype.figName        = "core_failover";
+      { click: 'dispatchUiEvent' };
+
+    this.prototype.figName = "core_failover";
   }
 
   /**
@@ -38,10 +37,12 @@ class __core_failover extends Marionette.View {
     this.model = this.model || new Backbone.Model();
     this.style = this.style || new Backbone.Model();
     this.model.atLeast({
-      innerClass : _a.error});
+      innerClass: _a.error
+    });
     console.trace();
-    return this.fig = 
-      {family : 'core-failover'};
+    console.log("QQQQ 37")
+    return this.fig =
+      { family: 'core-failover' };
   }
 
   /**
@@ -53,7 +54,7 @@ class __core_failover extends Marionette.View {
     this.el.innerHTML = _msg(this, msg);
     return this.el.onclick = this.dispatchUiEvent;
   }
-    
+
   dispatchUiEvent(e) {
     if (pointerDragged) {
       return;

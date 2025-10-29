@@ -83,7 +83,7 @@
     &__roll {
       background: var(--default-background);
       border-radius: var(--border-radius-small);
-      box-shadow: drumee.$drumee-container-dropdown;
+      box-shadow: var(--drumee-container-dropdown);
       height: auto;
       left: -12px;
       overflow: visible;

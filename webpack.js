@@ -128,19 +128,16 @@ function normalize() {
 
 module.exports = function () {
   const opt = normalize();
-  let main, core, api;
-  let pdfworker;
+  let main, api;
+  let core = join(UI_SRC_PATH, 'src', 'drumee', 'core');
   switch (BUILD_TARGET) {
     case 'api':
       api = join(UI_SRC_PATH, 'src', 'drumee', 'api');
-      core = join(UI_SRC_PATH, 'src', 'drumee', 'core');
       return makeOptions({ api, core }, opt);
     case 'app':
       main = join(UI_SRC_PATH, 'src', 'drumee', 'index.web');
-      // pdfworker = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'build', 'pdf.worker.min.mjs');
-      // pdfworkerLegacy = join(UI_SRC_PATH, 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.min.mjs');
       let dom = join(UI_SRC_PATH, 'src', 'drumee', 'index.dom');
-      return makeOptions({ main, dom }, opt);
+      return makeOptions({ main, dom, core }, opt);
     default:
       console.error(`The build target ${BUILD_TARGET} was unexpected`)
   }

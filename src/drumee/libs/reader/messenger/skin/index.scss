@@ -61,7 +61,7 @@
     bottom: calc(100% + 5px);
     right: 6px;
     background: var(--default-bg);  //#f8f8f8;
-    box-shadow:drumee.$drumee-shadow-box;//0 0 7px 0 rgba(0,0,0,0.14);
+    box-shadow:var(--drumee-shadow-box);//0 0 7px 0 rgba(0,0,0,0.14);
     border-radius:var(--border-radius);// 5px 5px 0px 0px;
     padding: 5px 5px 0px 5px;
     &[data-state="open"]{

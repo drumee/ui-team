@@ -18,7 +18,7 @@ require("./skin/resizable.css");
 require("builtins/contextmenu/skin/index.scss");
 
 require("skin");
-const { appendFontFace, appendLink } = require("core/utils");
+// const { appendFontFace, appendLink } = require("core/utils");
 const { getModule, moduleName } = require('./modules');
 
 class drumee_router extends LetcBox {
@@ -157,21 +157,21 @@ class drumee_router extends LetcBox {
   /**
    * 
    */
-  _initFonts() {
-    let font;
-    if (!_.isEmpty(Host.get('fonts_links'))) {
-      for (font of Array.from(Host.get('fonts_links'))) {
-        if (font != null) {
-          appendLink(font.url);
-        }
-      }
-    }
-    for (font of Array.from(Host.get('fonts_faces'))) {
-      if (font != null) {
-        appendFontFace(Host.get('fonts_faces'));
-      }
-    }
-  }
+  // _initFonts() {
+  //   let font;
+  //   if (!_.isEmpty(Host.get('fonts_links'))) {
+  //     for (font of Array.from(Host.get('fonts_links'))) {
+  //       if (font != null) {
+  //         appendLink(font.url);
+  //       }
+  //     }
+  //   }
+  //   for (font of Array.from(Host.get('fonts_faces'))) {
+  //     if (font != null) {
+  //       appendFontFace(Host.get('fonts_faces'));
+  //     }
+  //   }
+  // }
 
   /**
    * 
