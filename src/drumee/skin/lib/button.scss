@@ -1,0 +1,268 @@
+/* =================================================================== *
+   #   Copyright Xialia.com  2011-2016                                    *
+   #   FILE : src/drumee/skin/global/button
+   #   TYPE : Global styles, for the whole platform
+   # ==================================================================== */
+
+@use './typo';
+
+.button-nested {
+  &[data-selected="on"] {
+    z-index: 100;
+  }
+}
+
+.button-icon {
+  align-items: center;
+  overflow: visible;
+  white-space: nowrap;
+  display: flex;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  &[data-icon--position="left"],
+  &[data-icon--position="none"] {
+    align-items: center;
+    flex-direction: row;
+    justify-content: flex-start;
+
+    svg {
+      margin-bottom: 0; 
+      margin-left: 0;
+      margin-top: 0;
+    }
+  }
+
+  &[data-icon--position="top"] {
+    flex-direction: column;
+    align-items: center;
+
+    svg {
+      margin-right: 0; 
+      margin-left: 0; 
+      margin-top: 0;
+    }
+  }
+
+  &[data-icon--position="right"] {
+    flex-direction: row-reverse;
+    align-items: center;
+    height: auto !important;
+
+    svg {
+      margin-right: 0;
+      margin-left: 0;
+      margin-top: 0;
+    }
+
+    /*margin: 0 auto;*/
+  }
+
+  &[data-icon--position="no-text"] {
+    .note-content {
+      display: none;
+    }
+
+    svg.icon_button {
+      margin: 0 !important;
+    }
+  }
+
+  &[data-icon--position="no-icon"] {
+    svg.icon_button {
+      display: none;
+    }
+  }
+}
+
+.button-reader {
+  align-items: center;
+  justify-content: center;
+}
+
+.button-switch {
+  &__toggle {
+    cursor: pointer;
+    user-select: none;
+    align-items: center;
+
+    &.change {
+      height: 100%;
+
+      &::before {
+        content: " ";
+        width: 12px;
+        height: 12px;
+        top: 6px;
+        border-radius: 50%;
+        visibility: hidden;
+      }
+
+      &::after {
+        content: " ";
+        width: 12px;
+        height: 12px;
+        top: 6px;
+        border-radius: 50%;
+        visibility: hidden;
+      }
+
+      &[data-radio="on"] {
+        &::before {
+          visibility: hidden;
+        }
+
+        &::after {
+          visibility: visible;
+        }
+      }
+
+      &[data-radio="off"] {
+        &::before {
+          visibility: visible;
+        }
+
+        &::after {
+          visibility: hidden;
+        }
+      }
+    }
+  }
+}
+
+
+.drumee-widget.btn {
+  cursor: pointer;
+  height: 35px;
+  width: 115px;
+  border-radius: var(--border-radius); //6px;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+
+  &--regular {
+    background-color: #FFFFFF;
+    border: 1px solid #F1F1F6;
+    @include typo.typo($size: 16px, $line: 25px, $weight: 400, $color: var(--egrey-2f));
+
+    &:hover {
+      color: #5a5a5a;
+    }
+  }
+
+  &--inactive {
+    background-color: #a6a8a4;
+    border: 1px solid #a6a8a4;
+    @include typo.typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
+    pointer-events: none;
+  }
+
+  &--warning {
+    background-color: #FF7479;
+    border: 1px solid #FF7479;
+    @include typo.typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
+
+    &:hover {
+      background-color: #ff8e91;
+      border-color: #ff8e91;
+    }
+  }
+
+  &--cancel {
+    background-color: #FF7479;
+    border: 1px solid #FF7479;
+    @include typo.typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
+
+    &:hover {
+      background-color: #ff8e91;
+      border-color: #ff8e91;
+    }
+  }
+
+  &--confirm,
+  &--go {
+    background-color: var(--btn-commit-background); //#18a3ac;// #18AC72;
+    border: 1px solid var(--btn-commit-border); //#18a3ac;//#18AC72;
+    @include typo.typo($size: 16px, $line: 25px, $color: var(--btn-commit-text)); //$weight:400
+    cursor: pointer;
+    pointer-events: all;
+
+    &:hover {
+      background-color: var(--btn-commit-background-hover); // #3fbd8d;
+      border-color: var(--btn-commit-border-hover); //#3fbd8d;
+    }
+  }
+
+  &--other {
+    background-color: var(--eblue);
+    border: 1px solid var(--eblue);
+    @include typo.typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
+
+    &:hover {
+      background-color: #6da6e9;
+      border-color: #6da6e9;
+    }
+  }
+
+  &--neutral {
+    background-color: #f7f7fa;
+    border: 1px solid #f7f7fa;
+    @include typo.typo($size: 16px, $line: 34px, $weight: 400, $color: #2F2F2F);
+
+    &:hover {
+      opacity: 0.6;
+    }
+  }
+
+  &--cancel-text {
+    color: #E9223B;
+  }
+
+  &--small {
+    font-size: 12px;
+    line-height: 24px;
+    height: 26px;
+    width: 80px;
+  }
+
+  &--big {
+    width: 200px;
+    font-size: 14px;
+  }
+}
+
+.save-style__btn.login {
+  cursor: pointer;
+  height: 36px;
+  width: 170px;
+  border-radius: 2px;
+  justify-content: center;
+  background-color: #18AC72;
+  border: 1px solid #18AC72;
+  text-align: center;
+  @include typo.typo($size: 16px, $line: 34px, $weight: 400, $color: var(--ewhite));
+
+  &:hover {
+    background-color: #3fbd8d;
+    border-color: #3fbd8d;
+  }
+}
+
+//******* others common
+.popup__btn-group--save-icon {
+  padding-bottom: 50px;
+
+  &.public {
+    padding-bottom: 47px;
+  }
+}
+
+.popup__btn-group--save-icon {
+  padding-bottom: 50px;
+
+  &.public {
+    padding-bottom: 47px;
+  }
+}

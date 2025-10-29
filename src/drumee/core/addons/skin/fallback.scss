@@ -1,0 +1,25 @@
+@use "sass:meta";
+@use 'mixins/drumee';
+
+.core-failover {
+  width: 100%;
+  height: 100%;
+  background: var(--default-bg);
+  border-radius: var(--border-radius);
+
+  &__header {
+    justify-content: center;
+    align-items: center;
+    display: flex;
+  }
+
+  &__text {
+    @include drumee.typo($size: 12px, $line: 15px, $color: var(--default-text-alert));
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+    padding: 3px;
+  }
+}
