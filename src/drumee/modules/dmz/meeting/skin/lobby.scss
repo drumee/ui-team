@@ -88,7 +88,7 @@
     &-options {
       &.main {
         width: 100%;
-        @include drumee.box-shadow($size: 13);
+        // @include drumee.box-shadow($size: 13);
         border: 1px solid lightgray;
         border-radius: 3px;
         justify-content: flex-start;

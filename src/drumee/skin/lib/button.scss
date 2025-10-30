@@ -29,9 +29,9 @@
     justify-content: flex-start;
 
     svg {
-      margin-bottom: 0; // SOM Remove !important, 
-      margin-left: 0; // need to change it dynamicall
-      margin-top: 0; //
+      margin-bottom: 0; 
+      margin-left: 0;
+      margin-top: 0;
     }
   }
 
@@ -40,8 +40,8 @@
     align-items: center;
 
     svg {
-      margin-right: 0; // SOM Remove !important, 
-      margin-left: 0; // need to change it dynamicall
+      margin-right: 0; 
+      margin-left: 0; 
       margin-top: 0;
     }
   }
@@ -77,14 +77,9 @@
   }
 }
 
-// https://taiga.drumee.eu/project/standlsg-private-beta-1/issue/1528
 .button-reader {
   align-items: center;
   justify-content: center;
-  //https://taiga.drumee.eu/project/standlsg-private-beta-1/issue/2177
-  // .note-content{ 
-  //     padding: 5px;
-  // }
 }
 
 .button-switch {

@@ -1,8 +1,3 @@
-/* ==================================================================== *
-*   FILE : src/drumee/skin/mixins/vendor
-*   TYPE : vendor prefixes for sass filess
-* ==================================================================== */
-
 @mixin placeholder($color) {
   &::-webkit-input-placeholder {
     color: $color;
@@ -52,31 +47,11 @@
 
 @mixin drumee-gradient {
   background: #004f64; 
-  /*background: -moz-linear-gradient(left, $top-bar-left 0%, $top-bar-left 15%, $top-bar-left 31%, $top-bar-right 100%);
-  background: -webkit-linear-gradient(left, $top-bar-left 0%, $top-bar-left 15%, $top-bar-left 31%, $top-bar-right 100%);
-  background: linear-gradient(to right, $top-bar-left 0%, $top-bar-left 15%, $top-bar-left 31%, $top-bar-right 100%);*/
 }
 
 @mixin drumee-box-shadow-1 {
   box-shadow: 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
 }
-// @mixin placeholder-prop($property, $val) {
-//   &::-webkit-input-placeholder {
-//     $property: $val;
-//   }
-//   &::-moz-placeholder {
-//     $property: $val;
-//   }
-//   &:-ms-input-placeholder {
-//     $property: $val;
-//   }
-//   &:-moz-placeholder {
-//     $property: $val;
-//   }
-//   &:placeholder {
-//     $property: $val;
-//   }
-// }
 
 @mixin justify($prop, $state:"!important") {
   @if $state=="!important" {
@@ -168,22 +143,16 @@
   $const: 1.5px + (($blockwidth - $buttonblockwidth)/2);
   @if $spacing == between { 
     &:before {
-      //#{$adir}: $const + (($blockwidth - ($btnsize * $btnnum))/($btnnum - 1)) + ($btnsize * $apos) + (($btnsize - $asize) / 2);  
       $btnBetweenSpace: ($buttonblockwidth - ($btnsize * $btnnum))/($btnnum - 1);
       $btnIsnideSpace: ($btnsize - $asize) / 2; 
-      //$btnMarginWidth = ($btnsize * ($apos - 1)
       $marginLeft: ($btnsize * ($apos - 1)) + ($btnBetweenSpace * ($apos - 1)) + $btnIsnideSpace;
       #{$adir}: $const + $marginLeft;
-      // padding: $const;
-      // margin: $marginLeft;
     }
   } 
   @else if $spacing == evenly {
     &:before {
-      //#{$adir}: $const + (($blockwidth - ($btnsize * $btnnum))/($btnnum - 1)) + ($btnsize * $apos) + (($btnsize - $asize) / 2);  
       $btnBetweenSpace: ($blockwidth - ($btnsize * $btnnum))/($btnnum + 1);
       $btnIsnideSpace: ($btnsize - $asize) / 2; 
-      //$btnMarginWidth = ($btnsize * ($apos - 1)
       $marginLeft: ($btnsize * ($apos - 1)) + ($btnBetweenSpace * ($apos - 1)) + $btnIsnideSpace;
       #{$adir}: $const + $marginLeft;
     }

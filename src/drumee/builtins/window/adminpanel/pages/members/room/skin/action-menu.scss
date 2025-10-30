@@ -15,7 +15,7 @@
         max-width: 184px;
         min-width: 184px;
         width: 100% !important;
-        box-shadow: drumee.$drumee-container-dropdown;
+        box-shadow: var(--drumee-container-dropdown);
         border-radius: var(--border-radius);
 
         &__wrapper {

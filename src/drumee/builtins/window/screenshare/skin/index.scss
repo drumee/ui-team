@@ -109,7 +109,7 @@
   }
   .window-warning__body {
     background-color: var(--default-bg);
-    box-shadow: drumee.$drumee-shadow-box;
+    box-shadow: var(--drumee-shadow-box);
     border: none;
     margin-top: -70px;
     min-width: 300px;

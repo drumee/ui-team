@@ -58,7 +58,7 @@
     & .menu-topic-items {
       background-color: rgb(47 47 47 / 20%);
       border-radius: var(--border-radius);
-      box-shadow: drumee.$drumee-container-dropdown;
+      box-shadow: var(--drumee-container-dropdown);
       min-height: 200px;
       transform: matrix(1, 0, 0, 1, 0, 0) !important;
       width: 100% !important;

@@ -47,7 +47,7 @@
     padding: 10px;
     background-color: var(--default-bg);
     border-radius: var(--border-radius);
-    box-shadow: drumee.$drumee-shadow-box;
+    box-shadow: var(--drumee-shadow-box);
     cursor: pointer;
 
     &-list {
@@ -137,7 +137,7 @@
 
   .window-warning__body {
     background-color: var(--default-bg);
-    box-shadow: drumee.$drumee-shadow-box;
+    box-shadow: var(--drumee-shadow-box);
     border: none;
     min-width: 300px;
     padding: 20px;

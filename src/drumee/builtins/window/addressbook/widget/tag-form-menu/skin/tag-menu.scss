@@ -31,7 +31,7 @@
       & .menu-topic-items {
         border-radius: var(--border-radius);
         background-color: var(--default-background);
-        box-shadow: drumee.$drumee-container-dropdown ;
+        box-shadow: var(--drumee-container-dropdown) ;
         max-height: 250px;
         max-width: 160px;
         min-width: 160px;

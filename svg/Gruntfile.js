@@ -87,14 +87,14 @@ const buildConfig = function(from, to){
   conf.svgstore.normalized.files = {};
   conf.svgstore.raw.files = {};
   
-  let source_dir = from || process.env.UI_SRC_PATH;
+  let source_dir = from || Path.join(__dirname, '..');
   // let dest_dir   = to   || process.env.UI_BUILD_PATH;
   
   var norm_src = Path.join(source_dir, 'icons/normalized/*.svg');
-  var norm_dest = Path.join(source_dir, 'bb-templates/svg/normalized.sprite.svg');
+  var norm_dest = Path.join(source_dir, 'bb-templates/svg/normalized.sprite.txt');
   
   var raw_src = Path.join(source_dir, 'icons/raw/*.svg');
-  var raw_dest = Path.join(source_dir, 'bb-templates/svg/raw.sprite.svg');
+  var raw_dest = Path.join(source_dir, 'bb-templates/svg/raw.sprite.txt');
   
   conf.svgstore.normalized.files[norm_dest] = [norm_src];
   conf.svgstore.raw.files[raw_dest] = [raw_src];

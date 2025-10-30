@@ -1,8 +1,3 @@
-// ============================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : ../src/drumee/libs/reader/image/svg
-//   TYPE :
-// ============================================================== *
 const { toggleState } = require("core/utils")
 
 const { xhRequest } = require("core/socket/request");
@@ -59,6 +54,10 @@ class __drumee_svg extends Marionette.View {
     const id = `icon-${this._id}`;
     this.waitElement(id, () => {
       this.__icon = document.getElementById(id);
+      if (this.mget('chartName')) {
+        this.loadBuiltin();
+        return;
+      }
       if (this.mget('svgSource')) {
         this.loadVector(this.mget('svgSource'));
         return;
@@ -133,6 +132,40 @@ class __drumee_svg extends Marionette.View {
    */
   loadSrc() {
     return (this.el.innerHTML = require("./template/img")(this));
+  }
+
+  /**
+   * 
+   * @param {*} url 
+   * @returns 
+   */
+  loadBuiltin() {
+    let name = this.mget('chartName')
+    let type = this.mget(_a.type) || 'normalized';
+    let { icons } = bootstrap()
+    let url = `${icons}/${type}/${name}.svg`
+    const t = this.__icon;
+    if (!this._vector) {
+      xhRequest(url, { responseType: _a.text })
+        .then((data) => {
+          this._vector = data;
+          t.innerHTML = data;
+        })
+        .catch((e) => {
+          this.warn("Failed to load", url, e);
+        });
+    } else {
+      if (_.isString(this._vector)) {
+        t.__icon.innerHTML = this._vector;
+        return;
+      }
+      this.waitElement(`icon-${this._id}`, () => {
+        this.renderVector(this._vector, false, t);
+        if (this.mget(_a.styleIcon)) {
+          return this.$icon.css(this.mget(_a.styleIcon));
+        }
+      });
+    }
   }
 
   /**

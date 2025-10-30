@@ -30,7 +30,7 @@
       align-self: center;
       background: var(--default-bg);
       border-radius:var(--border-radius);
-      box-shadow: drumee.$drumee-shadow-box;
+      box-shadow: var(--drumee-shadow-box);
       margin: auto;
       max-height:216px;
       min-height:0;
