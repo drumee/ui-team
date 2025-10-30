@@ -54,7 +54,7 @@ class __drumee_svg extends Marionette.View {
     const id = `icon-${this._id}`;
     this.waitElement(id, () => {
       this.__icon = document.getElementById(id);
-      if (this.mget(_a.name)) {
+      if (this.mget('chartName')) {
         this.loadBuiltin();
         return;
       }
@@ -140,7 +140,7 @@ class __drumee_svg extends Marionette.View {
    * @returns 
    */
   loadBuiltin() {
-    let name = this.mget(_a.name)
+    let name = this.mget('chartName')
     let type = this.mget(_a.type) || 'normalized';
     let { icons } = bootstrap()
     let url = `${icons}/${type}/${name}.svg`
