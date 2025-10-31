@@ -96,7 +96,7 @@
     "postinstall": "electron-builder install-app-deps",
     "normal": "electron .",
     "check": "node scripts/check-app-structure.js",
-    "dev": "electron . --dev=1 --open-dev=1 --trace-watcher=1 --endpoint=somanos",
+    "dev": "electron . --dev=1 --open-dev=1 --trace-watcher=1 --endpoint=devel",
     "demo": "electron . --dev",
     "start:prod": "electron . --prod",
     "build": "electron-builder",
