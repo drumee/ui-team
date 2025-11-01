@@ -132,11 +132,11 @@ class __router_butler extends LetcBox {
   /**
    *
    */
-  login() {
+  login(vhost) {
     return new Promise((resolve, reject) => {
       if (this.isRecconnecting) return resolve();
       let { access } = getModule() || {};
-      if (access != _a.private) return resolve();
+      if (access != _a.private && !vhost) return resolve();
       this.isRecconnecting = true;
 
       this.postService(SERVICE.yp.hello).then(async (user) => {
@@ -144,18 +144,19 @@ class __router_butler extends LetcBox {
           this.isRecconnecting = false;
           return resolve();
         }
-        wsRouter.ping({ type: "publishOfflineStatus" });
-        RADIO_BROADCAST.once("user:signed:in", () => {
+        uiRouter.ensureWebsocket().then(() => {
+          wsRouter.ping({ type: "publishOfflineStatus" });
+        })
+        RADIO_BROADCAST.once("user:signed:in", (s) => {
           this.isRecconnecting = false;
           resolve();
           let r = this.getPart("raw-content");
           if (!r) return;
           r.goodbye();
         });
-        this.feed(require("./skeleton/reconnect")(this));
+        this.feed(require("./skeleton/reconnect")(this, vhost));
         this.isRecconnecting = true;
       });
-
     })
   }
 

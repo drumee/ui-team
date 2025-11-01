@@ -211,6 +211,7 @@ class __welcome_signin extends __welcome_interact {
     if (token) vars.secret = token;
     this.postService(SERVICE.yp.login, {
       vars,
+      vhost: this.mget(_a.vhost),
       resent: this._otpResent,
     }).then(this.checkLoginStatus).catch(this.checkLoginStatus);
   }
@@ -426,6 +427,10 @@ class __welcome_signin extends __welcome_interact {
       case "ALREADY_SIGNED_IN":
         Visitor.set(data);
         if (this.mget(RECONNECT)) {
+          if (this.mget(_a.vhost)) {
+            RADIO_BROADCAST.trigger("user:signed:in", RECONNECT);
+            return
+          }
           wsRouter.restart(1);
           this.suppress();
           Butler.sleep()

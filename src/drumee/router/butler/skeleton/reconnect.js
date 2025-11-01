@@ -14,7 +14,7 @@
  * limitations under the License.
  * =============================================================================
  */
-const _reconnect = function (_ui_) {
+const _reconnect = function (_ui_, vhost) {
   let { email } = Visitor.profile();
   let body = {
     kind: "welcome_signin",
@@ -22,6 +22,7 @@ const _reconnect = function (_ui_) {
     uiHandler: [_ui_],
     partHandler: [_ui_],
     reconnect: 1,
+    vhost,
     uid: Visitor.id,
     email,
     dataset: {
