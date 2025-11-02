@@ -427,10 +427,7 @@ class __welcome_signin extends __welcome_interact {
       case "ALREADY_SIGNED_IN":
         Visitor.set(data);
         if (this.mget(RECONNECT)) {
-          if (this.mget(_a.vhost)) {
-            RADIO_BROADCAST.trigger("user:signed:in", RECONNECT);
-            return
-          }
+          RADIO_BROADCAST.trigger("user:signed:in", RECONNECT);
           wsRouter.restart(1);
           this.suppress();
           Butler.sleep()
