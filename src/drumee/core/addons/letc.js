@@ -285,7 +285,7 @@ View.prototype.__handleClick = function (e) {
     }
   }
 
-  if ((timestamp() - _clickTimestap) < 100) {
+  if ((timestamp() - _clickTimestap) < 300) {
     return;
   }
   _clickTimestap = timestamp();
