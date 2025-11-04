@@ -442,7 +442,6 @@ class __welcome_signup extends __welcome_interact {
     const checkBox = await this.ensurePart('conditions-checkbox')
     const button = await this.ensurePart('button-confirm');
     const wrapper = Welcome.getPart('wrapper-modal')
-    this.debug("AAA:acceptConditions", cmd, cmd.mget(_a.sys_pn), checkBox, button, args)
     if (cmd.mget(_a.sys_pn) == 'conditions') {
       checkBox.setState(1)
       wrapper.softClear()
@@ -468,12 +467,12 @@ class __welcome_signup extends __welcome_interact {
    * @param {*} data 
    */
   _handleResponse(data) {
+    this.debug("AAA:_handleResponse", data)
     switch (data.status) {
       case "user_exists":
         return this.renderMessage(`${LOCALE.EMAIL_ALREADY_EXISTS} (${data.email})`)
       case "not_bound":
         Butler.once("close-content", () => {
-          this.debug("AAA", "4444")
           uiRouter.ensureWebsocket().then((e) => {
             this.directSignup()
           })

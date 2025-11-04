@@ -109,7 +109,6 @@ View.prototype.initialize = function (opt) {
     this.mergeKidsOptions([kids]);
     this.collection = new Backbone.Collection([kids]);
   }
-
   this._className = this.nativeClassName || this.className;
   this.figName = this.figName || this.constructor.name;
 
@@ -286,7 +285,7 @@ View.prototype.__handleClick = function (e) {
     }
   }
 
-  if ((timestamp() - _clickTimestap) < 1000) {
+  if ((timestamp() - _clickTimestap) < 100) {
     return;
   }
   _clickTimestap = timestamp();

@@ -29,7 +29,7 @@ window.DrumeeMediaInteract = require('builtins/media/interact');
  * 
  */
 $(document).ready(function () {
-  console.log(`Staring Drumee Web...`);
+  console.log(`Staring Drumee Web... 1`);
   console.log(`Build commit=%c${__COMMIT__}, mode=${__BUILD__}`, STYLE);
   console.log(`UI version=%c${Drumee.version} (000)`, STYLE);
   Drumee.loadSprites();
