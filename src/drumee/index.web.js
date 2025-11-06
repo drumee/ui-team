@@ -29,9 +29,9 @@ window.DrumeeMediaInteract = require('builtins/media/interact');
  * 
  */
 $(document).ready(function () {
-  console.log(`Staring Drumee Web... 1`);
+  console.log(`Staring Drumee Web...`);
   console.log(`Build commit=%c${__COMMIT__}, mode=${__BUILD__}`, STYLE);
-  console.log(`UI version=%c${Drumee.version} (000)`, STYLE);
+  console.log(`UI version=%c${Drumee.version}`, STYLE);
   Drumee.loadSprites();
   Drumee.start();
   const event = new Event('drumee:app:started');

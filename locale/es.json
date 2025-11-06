@@ -127,5 +127,12 @@
   "CONFIRM_DIRNAME_CONFLICT": "Ya existe un directorio con el mismo nombre ({0}). ¿Qué desea hacer?",
   "MONTHS": "Meses",
   "YEARS": "Años",
-  "HOURS": "Horas"
+  "HOURS": "Horas",
+  "EXPORT_AS_HTML": "Exportar a HTML",
+  "JOIN_DRUMEE_FOR_FREE": "Únete a Drumee gratis",
+  "GENERAL_TERMS_USE": "Al unirte a Drumee, aceptas todos nuestros <span {0}>Términos de servicio</span>\n\n<span {1}>Política de privacidad</span> y <span {2}>Política de cookies</span>",
+  "CONTINUE_WITH_GOOGLE": "Continúa con Google",
+  "CONTINUE_WITH_APPLEID": "Continúa con tu AppleID",
+  "CONTINUE_WITH_EMAIL": "Continúa con el correo electrónico",
+  "OR": "o"
 }

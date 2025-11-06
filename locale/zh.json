@@ -1341,7 +1341,6 @@
   "LASTNAME_REQUIRED": "名称为必填项",
   "MOBILE_NUMBER_REQUIRED": "手机号码为必填项",
   "CITY_REQUIRED": "必须填写城市",
-  "GENERAL_TERMS_USE": "一般使用条款",
   "GENERAL_CONDITIONS_OF_USE": "一般使用条件",
   "DOMAIN_ALREADY_EXISTS": "糟糕...此域已被使用。 尝试另一个。",
   "OMETHING_WENT_WRONG": "出问题了。 请尝试在下面重新发送代码。",
@@ -1908,5 +1907,12 @@
   "CONFIRM_DIRNAME_CONFLICT": "已存在同名目录 ({0})。您想做什么？",
   "MONTHS": "个月",
   "YEARS": "年",
-  "HOURS": "小时"
+  "HOURS": "小时",
+  "EXPORT_AS_HTML": "导出为 HTML",
+  "JOIN_DRUMEE_FOR_FREE": "免费加入 Drumee",
+  "GENERAL_TERMS_USE": "加入 Drumee 即表示您已接受我们的所有<span {0}>服务条款</span>\n\n<span {1}>隐私政策</span>和<span {2}>Cookie 政策</span>。</span>",
+  "CONTINUE_WITH_GOOGLE": "继续使用 Google",
+  "CONTINUE_WITH_APPLEID": "使用 Apple ID 继续",
+  "CONTINUE_WITH_EMAIL": "继续通过电子邮件",
+  "OR": "或者"
 }

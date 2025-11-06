@@ -1,503 +1,215 @@
 @use "sass:meta";
-@use '../../../../skin/mixins/drumee.scss';
+@use 'mixins/drumee';
 
 @include meta.load-css('terms-and-conditions');
 
 .welcome-signup {
 
-  &__ui,
-  &__main,
-  &__container,
-  &__header,
-  &__content,
-  &__items {
-    height: 100%;
-    width: 100%;
-  }
-
   &__ui {
-    padding-top: 70px;
-  }
-
-
-  &__header {
-    max-height: 120px;
-  }
-
-  &__header-content {
-    align-items: center;
-  }
-
-  &__items {
+    min-height: 100vh;
+    width: 100vw;
+    height: 100%;
+    align-content: center;
     align-items: center;
     justify-content: start;
-    margin: 0 auto 0;
-    max-width: 320px;
-    min-height: 480px;
-    min-width: 320px;
-    padding-top: 20px;
-    width: 100%;
+    background-color: var(--neutral-100);
+    overflow: auto;
+    font-family: var(--font-main);
+    flex-wrap: wrap;
+    padding: var(--spacer-7);
+    gap: var(--spacer-8);
+    flex-shrink: 0;
 
-
-    &.b2c-signup,
-    &.get-mobile-number {
-
-      & .buttons-wrapper,
-      & .message-wrapper {
-        margin: 5px 0;
-      }
+    &[data-device="mobile"] {
+      padding: 10px;
+      height: auto;
     }
-
-    & .welcome__pw-meter {
-      &.wrapper {
-        margin-top: 28px;
-      }
-
-      & .strength {
-        background-color: #ABAFC7;
-      }
-    }
-
-    .entry-status {
-      &[data-status="error"] {
-        border-radius: var(--border-radius);
-        border: 2px solid var(--default-border-error);
-      }
-
-    }
-
   }
 
-  &__wrapper {
+  &__main {
+    top: 180px;
+    justify-content: start;
     align-items: center;
     height: 100%;
-    justify-content: center;
-    margin: 5px 0;
-    max-height: 70px;
     width: 100%;
+    max-width: 480px;
+    min-height: 600px;
+    border-width: 1px;
+    gap: var(--spacer-8);
+    background-color: var(--white);
+    border: 1px solid var(--neutral-200);
+    padding: var(--spacer-7);
+    border-radius: var(--corner-radius-6);
+  }
 
-    &.last-name {
-      margin-bottom: 15px;
+
+
+
+
+  &__logo {
+    &-container {
+      align-content: center;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
-    &.no-code {
-      &[data-mode="closed"] {
-        display: none;
+    &-content {
+      width: 80px;
+      height: 64px;
+      align-content: center;
+      justify-content: start;
+      align-items: start;
+      flex-wrap: wrap;
+
+      svg {
+        width: 100%;
+        height: 100%;
       }
     }
   }
 
-  &__info_wrapper {
-    margin-bottom: 30px;
+  &__title {
+    font-weight: bold;
+    font-size: 32px;
+    line-height: 40px;
+    text-align: center;
+  }
+
+  &__tips {
+    font-weight: 400;
+    font-style: Regular;
+    font-size: 16px;
+    line-height: 26px;
+    letter-spacing: 0%;
+    vertical-align: middle;
+  }
+
+  &__buttons,
+  &__form {
+    gap: var(--spacer-6);
     width: 100%;
   }
 
-  &__info_wrapper-icon {
-    align-items: center;
-    display: flex;
+  &__entry-main {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    padding-right: 16px;
+    padding-left: 16px;
+    border-width: 1px;
     justify-content: center;
-    margin: 0px 10px 0px 0px;
+    align-content: center;
+    flex-wrap: wrap;
+
+    input {
+      width: 100%;
+      gap: var(--spacer-4);
+      width: 100%;
+      border-radius: var(--spacer-4);
+      padding-top: 12px;
+      padding-right: 16px;
+      padding-bottom: 12px;
+      padding-left: 16px;
+      border: 1px var(--neutral-200) solid;
+    }
+  }
+
+  &__entry-input {
+    width: 100%;
+    height: 100%;
+
+  }
+
+  &__button-main {
+    width: 100%;
+    height: 48px;
+    opacity: 1;
+    gap: var(--spacer-4);
+    border-radius: var(--corner-radius-max);
+    padding-top: 8px;
+    padding-right: 16px;
+    padding-bottom: 8px;
+    padding-left: 16px;
+
+    &.email {
+      padding-right: 3px;
+      justify-content: center;
+      grid-template-columns: 1fr 40px;
+      background: var(--primary-500);
+      color: var(--white);
+      align-content: center;
+      flex-wrap: wrap;
+
+      .icon.svg-wrapper {
+        height: 38px;
+        width: 38px;
+        color: var(--primary-500);
+        background-color: white;
+        border-radius: 50%;
+        padding: 9px;
+      }
+    }
+
+    &.api {
+      justify-content: center;
+      background-color: var(--neutral-200);
+
+      .icon.svg-wrapper {
+        height: 32px;
+        width: 32px;
+        color: var(--neutral-900);
+        border-radius: 50%;
+        padding: 6px;
+      }
+    }
+
+
 
     svg {
-      width: 30px;
-      height: 30px;
-      color: #F7F7F7;
-    }
-  }
-
-  &__info-text {
-    font-family: Roboto;
-    font-size: 17px;
-    color: #F7F7F7;
-  }
-
-
-  &__row {
-    align-items: center;
-    background-color: var(--default-bg-block);
-    border-radius: var(--border-radius);
-    height: 100%;
-    max-height: 56px;
-    width: 100%;
-
-    &.conditions {
-      justify-content: center;
-      width: 320px;
-
-      &.b2c-signup {
-        margin-top: 40px;
-      }
-    }
-
-    &.mobile-title,
-    &.email-title {
-      margin-bottom: 60px;
-      min-width: 500px;
-    }
-
-    &.area-code {
-      width: 130px;
-
-      .entry-reminder__component {
-        &::before {
-          width: 20px;
-          height: 20px;
-          content: "+";
-          padding-left: 0px;
-          padding-top: 19px;
-        }
-      }
-    }
-
-    &.mobile,
-    &.change-mobile,
-    &.get-mobile {
-      margin-left: 10px;
-      width: auto;
-    }
-
-    &.without-icon,
-    &.no-background {
-      background-color: transparent;
-    }
-
-    &.no-code {
-      justify-content: center;
-      margin-top: 5px;
-    }
-
-    & .welcome__icon.lock {
-      padding: 0px;
-      width: 21px;
-      height: 21px;
-
-      svg {
-        fill: var(--egrey-2f);
-      }
-    }
-
-    &.mobile-number {
-      max-height: 70px;
-    }
-
-    &.buttons-wrapper,
-    &.message-wrapper {
-      margin: 75px 0 15px 0;
+      width: 100%;
       height: 100%;
-
-      &.message.no-background {
-        width: 400px;
-      }
-
-      &[data-mode="closed"] {
-        display: none;
-      }
-
-      &[data-error="yes"] {
-        opacity: .5;
-        pointer-events: none;
-      }
-    }
-
-    & .welcome__entry {
-      &[data-status="error"] {
-        border-radius: var(--border-radius);
-        border: 2px solid var(--default-border-error);
-      }
     }
   }
 
-  &__mobile-wrapper {
-    justify-content: center;
-    padding-top: 10px;
-  }
-
-  &__note {
-    @include drumee.typo($size: 20px, $line: 28px, $weight: 400, $color: var(--default-text-reverse));
-    justify-content: center;
-    text-align: center;
-    width: 100%;
-
-    &.header {
-      @include drumee.typo($size: 38px, $line: 45px, $weight: 500, $color: var(--default-text-reverse));
-    }
-
-    &.steps {
-      color: var(--white-f7);
-      top: 30px;
-    }
-
-    &.drumee-com {
-      @include drumee.typo($size: 20px, $line: 28px, $weight: 500, $color: var(--white-f9));
-      position: absolute;
-      right: -130px;
-      width: auto;
-    }
-
-    &.input-label {
-      max-width: 110px;
-      text-align: right;
-      width: 100%;
-    }
-
-    &.conditions {
-      &.static {
-        @include drumee.typo($size: 13px, $line: 15px, $weight: 400, $color: var(--default-text-reverse));
-        width: 110px;
-      }
-
-      &.trigger {
-        justify-content: flex-start;
-        right: 5px;
-
-        &:hover {
-          color: var(--eviolet);
-        }
-      }
-
-      &.text-underline {
-        @include drumee.typo($size: 13px, $line: 15px, $weight: 700, $color: var(--default-text-reverse));
-        cursor: pointer;
-        text-decoration-line: underline;
-      }
-    }
-
-    &.password-tips {
-      @include drumee.typo($size: 12px, $line: 16px, $weight: 400, $color: var(--white-f9));
-      padding-top: 47px;
-    }
-
-    &.mobile-number {
-      align-items: center;
-      width: 376px;
-      margin-top: -5px;
-    }
-
-    &.mobile {
-      justify-content: center;
-      width: 100%;
-    }
-
-    &.no-code,
-    &.not-now {
-      @include drumee.typo($size: 16px, $line: 16px, $color: var(--white-f9));
-      width: 100%;
-    }
-
-    &.no-code-text,
-    &.title {
-      justify-content: center;
-    }
-
-    &.resent-code {
-      justify-content: flex-start;
-    }
-
-    &.correct-number,
-    &.not-now {
-      justify-content: flex-end;
-    }
-
-    &.text-underline {
-      @include drumee.typo($size: 14px, $line: 16px, $weight: 700, $color: var(--default-text-reverse));
-      cursor: pointer;
-      text-decoration-line: underline;
-
-      &.correct-number {
-        margin-left: 6px;
-        min-width: 120px;
-        right: 13px;
-      }
-
-      &.skip-otp {
-        min-width: 120px;
-        right: 24px;
-      }
-
-      &.resent-code {
-        min-width: 125px;
-        right: 10px;
-      }
-
-      &:hover {
-        color: var(--eviolet);
-      }
-    }
-  }
-
-  &__icon {
-    color: var(--default-icon-neutral);
-    cursor: pointer;
-    height: 18px;
-    width: 18px;
-
-
-    &.input-wrapper {
-      margin: 12px;
-      position: absolute;
-    }
-
-    &.company {
-      height: 20px;
-      left: 10px;
-      width: 20px;
-    }
-
-    &.desktop_public {
-      height: 22px;
-      left: 9px;
-      opacity: 0.9;
-      width: 22px;
-    }
-
-    &.first-name,
-    &.last-name {
-      height: 22px;
-      width: 22px;
-      margin: 20px;
-
-      svg {
-        fill: var(--egrey-2f);
-        opacity: 0.8;
-      }
-    }
-
-    &.area-code {
-      height: 22px;
-      width: 22px;
-      margin: 12px;
-    }
-
-    &.personal-mobile {
-      height: 20px;
-      width: 20px;
-      margin: 12px;
-    }
-
-    &.city {
-      height: 22px;
-      opacity: 0.7;
-      width: 22px;
-    }
-
-    &.checkbox {
-      border-radius: var(--checkbox-border-radius);
-      height: 20px;
-      left: 5px;
-      width: 20px;
-
-      &.conditions {
-        border-radius: var(--checkbox-border-radius);
-        height: 18px;
-        min-width: 18px;
-        padding: 1px;
-      }
-    }
-
-    &.conditions,
-    &.mobile,
-    &.mobile-number {
-      color: var(--ewhite);
-    }
-
-    &.mobile,
-    &.mobile-number {
-      height: 20px;
-      width: 20px;
-    }
-
-    &.mobile-number {
-      left: 28%;
-      right: 10px;
-    }
-
-    &.code {
-      height: 25px;
-      width: 25px;
-    }
-  }
-
-
-  &__entry {
-    & input {
-      @include drumee.typo($size: 18px, $line: 28px, $color: var(--default-text-color));
-      border-bottom: none;
-
-      &::placeholder {
-        @include drumee.typo($size: 18px, $line: 28px, $weight: 300, $color: var(--default-text-placeholder));
-      }
-    }
-
-    &[data-status="error"] {
-      border-radius: var(--border-radius);
-      border: 2px solid var(--default-border-error);
-    }
-
-    & .entry-reminder_error {
-      display: none;
-    }
-
-    &.with-icon {
-      height: 100%;
-      padding: 0 0 0 65px;
-      width: 100%;
-    }
-
-    &.mobile,
-    &.area-code {
-      padding: 0 0 0 50px;
-    }
-
-    &.input-box {
-      border-radius: var(--border-radius);
-      align-items: center;
-      background-color: var(--default-bg);
-      height: 56px;
-      width: 100%;
-
-      & input {
-        padding-left: 10px;
-      }
-    }
-
-    .pw-shower {
-      cursor: pointer;
-      left: auto;
-      right: 10px;
-    }
-  }
-
-  .pw-shower {
-    color: var(--egrey-2f);
-    opacity: 0.7;
-    position: absolute;
-    right: 15px;
-    top: 0px;
-  }
-
-
-  &__button-confirm {
-    align-items: center;
-    background-color: var(--egreen-soft);
-    border-radius: var(--border-radius);
-    cursor: pointer;
+  &__button.btn {
+    width: auto;
     height: 100%;
+    align-content: center;
+    display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+  }
+
+  &__separator {
     width: 100%;
-    @include drumee.typo($size: 20px, $line: 28px, $color: var(--default-text-reverse));
+    height: auto;
+    font-weight: bold;
+    font-style: normal;
+    font-size: 12px;
+    line-height: 16px;
+    vertical-align: middle;
+    text-transform: uppercase;
+    color: var(--neutral-400);
+    gap: var(--spacer-6);
 
-    &[data-state="0"] {
-      opacity: 0.5;
-      pointer-events: none;
-    }
-
-    &.skip-button {
-      background: transparent;
-      border: 1px solid var(--white);
-    }
-
-    &:hover {
-      box-shadow: 0 0px 13px 0px rgba(169, 186, 255, 0.5);
+    &::before,
+    &::after {
+      content: " ";
+      flex: 1;
+      height: 0;
+      border: 1px solid var(--neutral-300);
+      margin: auto 0;
     }
   }
+
+  // &__button.icon {
+  //   height: 32px;
+  //   width: 32px;
+  //   color: var(--primary-500);
+  //   background-color: white;
+  //   border-radius: 50%;
+  //   padding: 9px;
+  // }
+
 }

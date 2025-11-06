@@ -37,7 +37,7 @@ class drumee_router extends LetcBox {
    * @returns 
    */
   initialize(opt) {
-    require("./skin");
+    // require("./skin");
     super.initialize(opt);
     this._contextmenu = true;
     this._origin = {};
@@ -331,6 +331,7 @@ class drumee_router extends LetcBox {
         kind = 'module_welcome';
       }
     }
+    this.debug("AAA:324", { kind }, this)
     this.ensurePart('body').then(async (p) => {
       await Kind.waitFor(kind);
       p.feed({ kind, name });

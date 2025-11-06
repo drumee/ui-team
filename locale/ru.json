@@ -1340,7 +1340,6 @@
   "LASTNAME_REQUIRED": "Имя обязательно",
   "MOBILE_NUMBER_REQUIRED": "Требуется номер мобильного телефона",
   "CITY_REQUIRED": "Требуется город",
-  "GENERAL_TERMS_USE": "общие условия использования",
   "GENERAL_CONDITIONS_OF_USE": "Общие условия использования",
   "DOMAIN_ALREADY_EXISTS": "Упс ... Этот домен уже используется. Попробуйте другой.",
   "OMETHING_WENT_WRONG": "Что-то пошло не так. Попробуйте повторно отправить код ниже.",
@@ -1908,5 +1907,12 @@
   "CONFIRM_DIRNAME_CONFLICT": "Каталог с таким именем ({0}) уже существует. Что вы хотите сделать?",
   "MONTHS": "Месяцы",
   "YEARS": "Годы",
-  "HOURS": "Часы"
+  "HOURS": "Часы",
+  "EXPORT_AS_HTML": "Экспорт в HTML",
+  "JOIN_DRUMEE_FOR_FREE": "Присоединяйтесь к Drumee бесплатно",
+  "GENERAL_TERMS_USE": "Присоединяясь к Drumee, вы принимаете все наши <span {0}>Условия обслуживания</span>, <span {1}>Политику конфиденциальности</span> и <span {2}>Политику использования файлов cookie</span>.",
+  "CONTINUE_WITH_GOOGLE": "Продолжить с Google",
+  "CONTINUE_WITH_APPLEID": "Продолжить с AppleID",
+  "CONTINUE_WITH_EMAIL": "Продолжить с электронной почтой",
+  "OR": "или"
 }

@@ -6,7 +6,7 @@ function __skl_welcome(_ui_, opt) {
     className: `${_ui_.fig.family}__main`,
     kids: [
 
-      require('./topbar').default(_ui_),
+      // require('./topbar').default(_ui_),
 
       Skeletons.Wrapper.Y({
         className: `${_ui_.fig.family}__modal wrapper`,

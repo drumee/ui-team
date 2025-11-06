@@ -36,6 +36,7 @@ class __welcome_router extends LetcBox {
     this.waitElement(this.el, () => {
       this.el.dataset.tab = this.tab;
     });
+    this.debug("AAA:324", this, this.tab)
     let require_logout = 0;
     switch (this.tab) {
       case 'signup':
@@ -62,7 +63,7 @@ class __welcome_router extends LetcBox {
           }
           break;
         }
-
+        break;
       case 'signin':
         opt = { kind: 'welcome_signin' };
         if (Visitor.parseModuleArgs().cross == 'cross') {

@@ -1341,7 +1341,6 @@
   "LASTNAME_REQUIRED": "Last name is required",
   "MOBILE_NUMBER_REQUIRED": "Mobile number is required",
   "CITY_REQUIRED": "City is required",
-  "GENERAL_TERMS_USE": "the general terms of use",
   "GENERAL_CONDITIONS_OF_USE": "General conditions of use",
   "DOMAIN_ALREADY_EXISTS": "Ooops... This domain is already used. Try another one.",
   "OMETHING_WENT_WRONG": "Something went wrong. Try resend code below.",
@@ -1908,5 +1907,12 @@
   "CONFIRM_DIRNAME_CONFLICT": "There is already a directory with the same name ({0}). What would you like to do?",
   "MONTHS": "Months",
   "YEARS": "Years",
-  "HOURS": "Hour(s)"
+  "HOURS": "Hour(s)",
+  "EXPORT_AS_HTML": "Export to HTML",
+  "JOIN_DRUMEE_FOR_FREE": "Join Drumee for Free",
+  "GENERAL_TERMS_USE": "By joining Drumee, you accepted all to our <span {0}>Terms of Service</span> \n<span {1}>Privacy Policy</span> and <span {2}>Cookie Policy.</span>\n",
+  "CONTINUE_WITH_GOOGLE": "Continue with Google",
+  "CONTINUE_WITH_APPLEID": "Continue with AppleID",
+  "CONTINUE_WITH_EMAIL": "Continue with email",
+  "OR": "or"
 }

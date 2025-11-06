@@ -6,10 +6,17 @@
 
 .welcome-router {
   &__ui {
-    // background: radial-gradient(109.24% 109.24% at 21.67% 0,rgba(91,115,210,.4) 0,#5b73d2 100%),#879bff;
-    height: calc(40vh + 556px);
-    position: absolute;
-    width: 100%;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    width: 100vw;
+    background-color: var(--Neutral-100);
+    overflow: auto;
+    font-family: var(--font-main);
+    height: 100%;
+    flex-wrap: wrap;
+    display: flex;
   }
 
   &__main {

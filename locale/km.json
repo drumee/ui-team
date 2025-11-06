@@ -1336,7 +1336,6 @@
   "LASTNAME_REQUIRED": "នាមត្រកូលត្រូវបានទាមទារ",
   "MOBILE_NUMBER_REQUIRED": "លេខទូរសព្ទចល័តត្រូវបានទាមទារ",
   "CITY_REQUIRED": "ទីក្រុងត្រូវបានទាមទារ",
-  "GENERAL_TERMS_USE": "លក្ខខណ្ឌទូទៅនៃការប្រើប្រាស់",
   "GENERAL_CONDITIONS_OF_USE": "លក្ខខណ្ឌទូទៅនៃការប្រើប្រាស់",
   "DOMAIN_ALREADY_EXISTS": "អូ៎... ដែននេះត្រូវបានប្រើប្រាស់រួចហើយ។ សាកល្បងមួយផ្សេងទៀត។",
   "OMETHING_WENT_WRONG": "មាន​អ្វីមួយ​មិន​ប្រក្រតី។ ព្យាយាមផ្ញើលេខកូដខាងក្រោមឡើងវិញ។",
@@ -1908,5 +1907,12 @@
   "CONFIRM_DIRNAME_CONFLICT": "មានថតដែលមានឈ្មោះដូចគ្នា ({0}) រួចហើយ។ តើអ្នកចង់ធ្វើអ្វី?",
   "MONTHS": "ខែ",
   "YEARS": "ឆ្នាំ",
-  "HOURS": "ម៉ោង"
+  "HOURS": "ម៉ោង",
+  "EXPORT_AS_HTML": "នាំចេញទៅ HTML",
+  "JOIN_DRUMEE_FOR_FREE": "ចូលរួមជាមួយ Drumee ដោយឥតគិតថ្លៃ",
+  "GENERAL_TERMS_USE": "ដោយចូលរួមជាមួយ Drumee អ្នកបានទទួលយកទាំងអស់ចំពោះ <span {0}>លក្ខខណ្ឌនៃសេវាកម្ម</span>\n<span {1}>គោលការណ៍ឯកជនភាព</span> និង <span {2}>គោលការណ៍ខូឃី</span>។",
+  "CONTINUE_WITH_GOOGLE": "បន្តជាមួយ Google",
+  "CONTINUE_WITH_APPLEID": "បន្តជាមួយ AppleID",
+  "CONTINUE_WITH_EMAIL": "បន្តជាមួយអ៊ីមែល",
+  "OR": "ឬ"
 }
