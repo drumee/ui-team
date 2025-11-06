@@ -1,4 +1,4 @@
-const { entry, header, button } = require("./toolkit")
+const { entry, header, button, termsAndConditions } = require("./toolkit")
 
 function __skl_welcome_signup(ui) {
   const signupFig = ui.fig.family
@@ -42,10 +42,11 @@ function __skl_welcome_signup(ui) {
     className: `${signupFig}__main`,
     debug: __filename,
     kids: [
-      header(ui),
+      header(ui, LOCALE.JOIN_DRUMEE_FOR_FREE),
       form,
       Skeletons.Element({ content: LOCALE.OR, className: `${signupFig}__separator` }),
-      buttons
+      buttons,
+      termsAndConditions(ui)
     ]
   })
 

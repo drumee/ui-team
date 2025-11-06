@@ -958,8 +958,6 @@
   "ACK_DELETE_PUBLIC_LINK": "Public link has been deleted",
   "Q_FORGOT_PASS_PHRASE": "Forgot pass phrase",
   "GET_YOUT_CLOUD_COMPUTER": "Get your cloud computer",
-  "VALIDATION_SENT_TO": "A link has been sent to {0}. <br> Click on it to open your desktop.",
-  "IF_YOU_DIDNT_RECEIVED_EMAIL": "If you haven't received it, check your spam and make sure your email address is correct.",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "Your cloud desktop is ready!",
   "ADD_CONTACT": "Add contact",
   "DOCUMENT_ACCESS": "Document access",
@@ -1422,7 +1420,6 @@
   "INFO_MANAGED_BY_ADMINISTRATORS": "The organization's contacts are managed by administrators. You can only archive or unarchive them.",
   "RESEND_INVITE_TO": "Resend invite to",
   "POPUP_RESEND_INVITE_TO": "Resend invite to",
-  "B2B_REGISTRATION_SUCCESS_MESSAGE": "You have received a validation email. <br> If you don't see it, check your spam emails.",
   "URL_ADDRESS_CANNOT_CHANGEBLE": "The URL address will be definitive <br> and cannot be modified",
   "WELCOME_TO_ORG_SYSTEM": "Welcome to {0} organization ",
   "STEP_CHOOSE_URL_ADDRESS": "Step 1/4 - Choose URL address",
@@ -1914,5 +1911,9 @@
   "CONTINUE_WITH_GOOGLE": "Continue with Google",
   "CONTINUE_WITH_APPLEID": "Continue with AppleID",
   "CONTINUE_WITH_EMAIL": "Continue with email",
-  "OR": "or"
+  "OR": "or",
+  "ENTER_VERIFICATION_CODE": "Please enter the verification code sent to your email address {0}.",
+  "VALIDATION_SENT_TO": "We’ve sent you a code",
+  "RESEND_CODE": "Resend Code",
+  "DIDNT_GET_EMAIL": "Didn't get the email? Check spam"
 }

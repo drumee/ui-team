@@ -958,8 +958,6 @@
   "ACK_DELETE_PUBLIC_LINK": "Le lien public a été supprimé",
   "Q_FORGOT_PASS_PHRASE": "Mot de passe oublié ",
   "GET_YOUT_CLOUD_COMPUTER": "Obtenez votre ordinateur dans le cloud",
-  "VALIDATION_SENT_TO": "Un lien a été envoyé à l'adresse {0}.<br>Cliquez dessus pour ouvrir votre bureau.",
-  "IF_YOU_DIDNT_RECEIVED_EMAIL": "Si vous ne l'avez pas reçu, vérifiez vos spams et assurez vous de l'exactitude de votre adresse E-mail.",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "Votre bureau cloud est prêt !",
   "ADD_CONTACT": "Ajouter un contact",
   "DOCUMENT_ACCESS": "Accès au document",
@@ -1422,7 +1420,6 @@
   "INFO_MANAGED_BY_ADMINISTRATORS": "Les fiches contacts de l'organisation sont gérés par les administrateurs. Vous ne pouvez que les archiver ou désarchiver.",
   "RESEND_INVITE_TO": "Renvoyer l'invitation à",
   "POPUP_RESEND_INVITE_TO": "Renvoyer l'invitation à",
-  "B2B_REGISTRATION_SUCCESS_MESSAGE": "Vous avez reçu un mail de validation. <br> Si vous ne le voyez pas, vérifiez dans vos spams.",
   "URL_ADDRESS_CANNOT_CHANGEBLE": "L'adresse URL sera définitive <br> et ne pourra plus être modifiée",
   "WELCOME_TO_ORG_SYSTEM": "Bienvenue dans l'organisation {0}",
   "STEP_CHOOSE_URL_ADDRESS": "Étape 1/4 - Choisissez l'adresse URL",
@@ -1914,5 +1911,9 @@
   "CONTINUE_WITH_GOOGLE": "Continuer avec Google",
   "CONTINUE_WITH_APPLEID": "Continuer avec AppleID",
   "CONTINUE_WITH_EMAIL": "Continuer avec courriel",
-  "OR": "ou"
+  "OR": "ou",
+  "ENTER_VERIFICATION_CODE": "Veuillez saisir le code de vérification envoyé à votre adresse e-mail {0}.",
+  "VALIDATION_SENT_TO": "Nous vous avons envoyé un code",
+  "RESEND_CODE": "Renvoyer le code",
+  "DIDNT_GET_EMAIL": "Vous n'avez pas reçu l'e-mail ? Vérifiez vos courriers indésirables."
 }

@@ -37,7 +37,8 @@ class __welcome_signup extends __welcome_interact {
       } else {
         this._method = "maiden-signup";
         this.data = {}
-        this.feed(require('./skeleton').default(this));
+        // this.feed(require('./skeleton').default(this));
+        this.feed(require('./skeleton/otp').default(this));
         // return this.route()
       }
     }

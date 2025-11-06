@@ -48,7 +48,7 @@ export function button(ui, opt) {
  * @param {*} ui 
  * @returns 
  */
-export function header(ui) {
+export function header(ui, content, tips) {
   const fig = ui.fig.family;
   let kids = [
     Skeletons.Box.X({
@@ -61,17 +61,29 @@ export function header(ui) {
       ]
     }),
 
-
     Skeletons.Box.Y({
       className: `${fig}__text-container`,
       kids: [
         Skeletons.Note({
           className: `${fig}__title`,
-          content: LOCALE.JOIN_DRUMEE_FOR_FREE,
+          content
         }),
       ]
     })
+
   ]
+
+  if (tips) {
+    kids.push(Skeletons.Box.Y({
+      className: `${fig}__text-container`,
+      kids: [
+        Skeletons.Note({
+          className: `${fig}__tips`,
+          tips
+        }),
+      ]
+    }))
+  }
 
   let a = Skeletons.Box.Y({
     className: `${ui.fig.family}__header`,
@@ -102,7 +114,6 @@ export function entry(ui, opt) {
     placeholder,
     uiHandler: [ui],
     autocomplete,
-    state: 0,
     radio: ui._id
   }
   if (sys_pn) {
@@ -119,4 +130,31 @@ export function entry(ui, opt) {
       Skeletons.Entry(args)
     ]
   })
+}
+
+
+/**
+ * 
+ * @param {*} ui 
+ * @param {*} opt 
+ * @returns 
+ */
+export function termsAndConditions(ui, opt) {
+  let content = LOCALE.GENERAL_TERMS_USE.format(
+    `class="service" data-service="see-services-terms"`,
+    `class="privacy" data-service="see-privacy-terms"`,
+    `class="cookies" data-service="see-cookies-terms"`,
+  )
+  const pfx = ui.fig.family
+  return Skeletons.Note({
+    className: `${pfx}__terms`,
+    content,
+
+  });
+
+  // return Skeletons.Box.X({
+  //   className: `${pfx}-terms`,
+  //   kids: [
+  //   ]
+  // })
 }

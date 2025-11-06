@@ -958,8 +958,6 @@
   "ACK_DELETE_PUBLIC_LINK": "公共链接已被删除",
   "Q_FORGOT_PASS_PHRASE": "忘了密码",
   "GET_YOUT_CLOUD_COMPUTER": "获取您的云计算机",
-  "VALIDATION_SENT_TO": "链接已发送到{0}。<br>单击它打开您的桌面。",
-  "IF_YOU_DIDNT_RECEIVED_EMAIL": "如果尚未收到，请检查您的垃圾邮件并确保您的电子邮件地址正确无误。",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "您的云桌面已准备就绪！",
   "ADD_CONTACT": "增加联系人",
   "DOCUMENT_ACCESS": "访问该文档",
@@ -1422,7 +1420,6 @@
   "INFO_MANAGED_BY_ADMINISTRATORS": "组织的联系人由管理员管理。 您只能归档或取消归档它们。",
   "RESEND_INVITE_TO": "重新邀请",
   "POPUP_RESEND_INVITE_TO": "重新邀请",
-  "B2B_REGISTRATION_SUCCESS_MESSAGE": "您已收到验证电子邮件。 <br>如果没有看到，请检查您的垃圾邮件。",
   "URL_ADDRESS_CANNOT_CHANGEBLE": "该URL地址将是确定的<br>，并且无法修改",
   "WELCOME_TO_ORG_SYSTEM": "欢迎使用{0}系统",
   "STEP_CHOOSE_URL_ADDRESS": "步骤1/4-选择网址",
@@ -1914,5 +1911,9 @@
   "CONTINUE_WITH_GOOGLE": "继续使用 Google",
   "CONTINUE_WITH_APPLEID": "使用 Apple ID 继续",
   "CONTINUE_WITH_EMAIL": "继续通过电子邮件",
-  "OR": "或者"
+  "OR": "或者",
+  "ENTER_VERIFICATION_CODE": "请输入发送到您邮箱地址的验证码 {0}。",
+  "VALIDATION_SENT_TO": "我们已向您发送验证码",
+  "RESEND_CODE": "重新发送代码",
+  "DIDNT_GET_EMAIL": "没收到邮件？检查垃圾邮件。"
 }

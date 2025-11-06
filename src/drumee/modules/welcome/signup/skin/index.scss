@@ -1,5 +1,6 @@
 @use "sass:meta";
 @use 'mixins/drumee';
+@use 'otp';
 
 @include meta.load-css('terms-and-conditions');
 
@@ -43,9 +44,6 @@
   }
 
 
-
-
-
   &__logo {
     &-container {
       align-content: center;
@@ -78,11 +76,11 @@
 
   &__tips {
     font-weight: 400;
-    font-style: Regular;
+    font-style: normal;
     font-size: 16px;
     line-height: 26px;
-    letter-spacing: 0%;
-    vertical-align: middle;
+    letter-spacing: 1px;
+    text-align: center;    
   }
 
   &__buttons,
@@ -131,6 +129,7 @@
     padding-right: 16px;
     padding-bottom: 8px;
     padding-left: 16px;
+    cursor: pointer;
 
     &.email {
       padding-right: 3px;
@@ -203,13 +202,19 @@
     }
   }
 
-  // &__button.icon {
-  //   height: 32px;
-  //   width: 32px;
-  //   color: var(--primary-500);
-  //   background-color: white;
-  //   border-radius: 50%;
-  //   padding: 9px;
-  // }
+  &__terms {
+    font-weight: 400;
+    font-style: normal;
+    font-size: 14px;
+    line-height: 22px;
+    text-align: center;
+    letter-spacing: 1px;
+
+    span {
+      font-weight: bold;
+      cursor: pointer;
+    }
+  }
+
 
 }

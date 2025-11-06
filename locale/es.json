@@ -134,5 +134,9 @@
   "CONTINUE_WITH_GOOGLE": "Continúa con Google",
   "CONTINUE_WITH_APPLEID": "Continúa con tu AppleID",
   "CONTINUE_WITH_EMAIL": "Continúa con el correo electrónico",
-  "OR": "o"
+  "OR": "o",
+  "ENTER_VERIFICATION_CODE": "Por favor, introduzca el código de verificación enviado a su dirección de correo electrónico {0}.",
+  "VALIDATION_SENT_TO": "Te hemos enviado un código",
+  "RESEND_CODE": "Código de reenvío",
+  "DIDNT_GET_EMAIL": "¿No recibiste el correo? Revisa tu carpeta de spam."
 }
