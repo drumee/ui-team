@@ -246,6 +246,7 @@ class drumee_router extends LetcBox {
   repaint() {
     this.feed(require("./skeleton")(this));
   }
+
   /**
    * 
   */
@@ -256,7 +257,6 @@ class drumee_router extends LetcBox {
     this.route();
     this.setWallpaper();
   }
-
 
   /**
    * 

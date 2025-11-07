@@ -1,9 +1,3 @@
-// ============================================================ *
-//   Copyright Xialia.com  2011-2019
-//   FILE : src/drumee/core/backbone/view
-//   TYPE :
-// ============================================================ *
-
 const { makeOptions, doRequest, preparePayload } = require("./utils")
 
 

@@ -1,25 +1,22 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : ../src/drumee/libs/type
-//   TYPE :
-// ==================================================================== *
 
 let __singleton;
 const SYSTEM_CLASSES = require('./seeds/static');
 const USER_CLASSES = {};
 const Addons = require("./seeds/addons");
-// const Builtins = require('./seeds/builtins');
 let Helper;
+const { fetchService } = require("../socket/service")
+const { loadJS } = require("../../core/utils");
 
-// ---------------------------------
-//
-// ---------------------------------
+/**
+ * 
+ */
 class __kind extends Backbone.Model {
 
   initialize() {
     this.loader = require('./loader.js').default;
     this.trigger(_e.ready);
     this._isReady = 1;
+    this.fetchService = fetchService.bind(this)
   }
 
   /**
@@ -33,7 +30,7 @@ class __kind extends Backbone.Model {
   /**
    * 
    */
-  list(pattern){
+  list(pattern) {
     if (!Helper) Helper = require('./seeds/helper');
     return Helper.list(pattern)
   }
@@ -42,8 +39,8 @@ class __kind extends Backbone.Model {
    * 
    * @returns 
    */
-  isReady(){
-    if(this.loader) return true;
+  isReady() {
+    if (this.loader) return true;
     return false;
   }
 
@@ -67,23 +64,24 @@ class __kind extends Backbone.Model {
    * @returns 
    */
   registerAddons(args, ref) {
-    if(_.isString(args)){
+    if (_.isString(args)) {
       Addons.register(args, ref);
-    }else if(_.isObject(args)){
-      for(let kind in args){
+    } else if (_.isObject(args)) {
+      for (let kind in args) {
         Addons.register(kind, args[kind])
       }
-    }else if(_.isArray(arg)){
-      for(let item of args){
-        if(_.isObject(item)){
-          for(let kind in item){
+    } else if (_.isArray(arg)) {
+      for (let item of args) {
+        if (_.isObject(item)) {
+          for (let kind in item) {
             Addons.register(kind, item[kind])
           }
-        }else if(_.iaArray(item)){
-          Addons.register(item[0],item[1])
+        } else if (_.iaArray(item)) {
+          Addons.register(item[0], item[1])
         }
       }
     }
+    this.trigger("addons:registered")
   }
 
   /**
@@ -157,6 +155,43 @@ class __kind extends Backbone.Model {
     }
   }
 
+
+  /**
+   * 
+   * @param {*} name 
+   */
+  loadPlugin({ name, kind }) {
+    return new Promise((resolve, reject) => {
+      if (this.exists(kind)) {
+        this.warn(`${kind} already exists. Overloading not permitted as plugin`);
+        return reject();
+      }
+      if (!SERVICE.bootstrap.plugin) {
+        this.warn("Plugin service not found");
+        return reject();
+      }
+      this.fetchService(SERVICE.bootstrap.plugin, {
+        name,
+      }).then((data) => {
+        if (!data || !data.path) {
+          this.warn("Plugin service not found");
+          return reject();
+        }
+        this.once("addons:registered", () => { resolve(this.get(kind)) })
+        loadJS(data.path).then(() => {
+          this.debug(`Plugin ${name} successfuly load as ${kind}`)
+        }).catch((e) => {
+          this.warn(`Failed to load js from ${data.path}`)
+          reject(e)
+        })
+      }).catch((e) => {
+        this.warn(`Failed to load plugin ${name} as kind ${kind}`)
+        this.warn(e)
+        reject(e)
+      })
+    })
+  }
+
   /**
    * 
    * @param {*} name 
@@ -171,7 +206,6 @@ class __kind extends Backbone.Model {
     f = Addons.get(name);
     if (!f) {
       this.warn(`Could not wait for kind ${name}`);
-      //console.trace();
       return null;
     }
     if (_.isFunction(f.then)) {
@@ -212,7 +246,6 @@ class __kind extends Backbone.Model {
       f = this.toReader;
     }
     var walk = function (item) {
-      //_dbg "AAAAA ---------> ", item.kind
       let i;
       item.kind = f(item.kind, map);
       if (item.kids != null) {
@@ -272,7 +305,6 @@ class __kind extends Backbone.Model {
         item.kind = KIND.wrapper;
         item.className = "fixed-fixed";
       }
-      //_dbg "AAAAA ---------> ", item.kind
       if (item.kids != null) {
         return Array.from(item.kids).map((i) =>
           walk(i));

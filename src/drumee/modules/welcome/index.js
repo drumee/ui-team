@@ -40,29 +40,7 @@ class __welcome_router extends LetcBox {
     let require_logout = 0;
     switch (this.tab) {
       case 'signup':
-        if (Platform.get('isPublic')) {
-          opt = { kind: 'welcome_signup' };
-          if (args[2] != null) {
-            opt.secret = args[2];
-          } else {
-            break;
-          }
-          if (Visitor.isOnline()) {
-            this.postService({
-              service: SERVICE.butler.check_token,
-              secret: opt.secret
-            }, { sync: 1 }).then(() => {
-              opt = require('./skeleton/multiple-sessions').default(this);
-              this.feed(require('./skeleton').default(this, opt));
-            }
-            ).catch(() => {
-              opt = require('./skeleton/invalid-link').default(this);
-              this.feed(require('./skeleton').default(this, opt));
-            });
-            return;
-          }
-          break;
-        }
+        opt = { kind: 'welcome_signup', uiHandler: [this], service: "load-signup" };
         break;
       case 'signin':
         opt = { kind: 'welcome_signin' };
@@ -110,9 +88,10 @@ class __welcome_router extends LetcBox {
         return;
 
       default:
-        opt = { kind: 'welcome_signin' };
+        opt = { kind: 'welcome_signin' }
 
     }
+    this.debug("AAA:94", opt)
     if (Visitor.isOnline()) {
       if (require_logout) {
         this.postService(SERVICE.drumate.logout, { hub_id: Visitor.id }, { async: 1 }).then(() => {
@@ -185,10 +164,14 @@ class __welcome_router extends LetcBox {
         return location.href = `${endpoint}${_K.module.welcome}`;
 
       case 'close-current-connection':
-        //let href = location.href;
         this.postService(SERVICE.yp.reset_session, {}, { async: 1 }).then(() => {
           location.reload();
         });
+        break;
+
+      case "load-signup":
+        let { kind } = args;
+        this.feed(require('./skeleton').default(this, { kind }));
         break;
 
       case 'keep-current-connection':
