@@ -22,6 +22,8 @@ class __welcome_router extends LetcBox {
    * 
    */
   onDomRefresh() {
+    const args = Visitor.parseModule();
+    this.debug("AAA:26",args,  this.tab)
     this.route();
   }
 
@@ -37,6 +39,7 @@ class __welcome_router extends LetcBox {
       this.el.dataset.tab = this.tab;
     });
     let require_logout = 0;
+    this.debug("AAA:40", this.tab)
     switch (this.tab) {
       case 'signup':
         opt = { kind: 'welcome_signup', uiHandler: [this], service: "load-signup" };

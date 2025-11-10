@@ -1904,16 +1904,5 @@
   "MONTHS": "Месяцы",
   "YEARS": "Годы",
   "HOURS": "Часы",
-  "EXPORT_AS_HTML": "Экспорт в HTML",
-  "JOIN_DRUMEE_FOR_FREE": "Присоединяйтесь к Drumee бесплатно",
-  "GENERAL_TERMS_USE": "Присоединяясь к Drumee, вы принимаете все наши <span {0}>Условия обслуживания</span>, <span {1}>Политику конфиденциальности</span> и <span {2}>Политику использования файлов cookie</span>.",
-  "CONTINUE_WITH_GOOGLE": "Продолжить с Google",
-  "CONTINUE_WITH_APPLEID": "Продолжить с AppleID",
-  "CONTINUE_WITH_EMAIL": "Продолжить с электронной почтой",
-  "OR": "или",
-  "ENTER_VERIFICATION_CODE": "Введите проверочный код, отправленный на ваш адрес электронной почты {0}.",
-  "VALIDATION_SENT_TO": "Ссылка отправлена ​​на {0}. <br> Нажмите на нее, чтобы открыть рабочий стол.",
-  "RESEND_CODE": "Отправить код повторно",
-  "DIDNT_GET_EMAIL": "Не получили письмо? Проверьте спам.",
-  "LOGIN_PERSONAL_ACCOUNT": "Войти в мою учетную запись"
+  "EXPORT_AS_HTML": "Экспорт в HTML"
 }

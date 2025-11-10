@@ -1904,16 +1904,5 @@
   "MONTHS": "个月",
   "YEARS": "年",
   "HOURS": "小时",
-  "EXPORT_AS_HTML": "导出为 HTML",
-  "JOIN_DRUMEE_FOR_FREE": "免费加入 Drumee",
-  "GENERAL_TERMS_USE": "加入 Drumee 即表示您已接受我们的所有<span {0}>服务条款</span>\n\n<span {1}>隐私政策</span>和<span {2}>Cookie 政策</span>。</span>",
-  "CONTINUE_WITH_GOOGLE": "继续使用 Google",
-  "CONTINUE_WITH_APPLEID": "使用 Apple ID 继续",
-  "CONTINUE_WITH_EMAIL": "继续通过电子邮件",
-  "OR": "或者",
-  "ENTER_VERIFICATION_CODE": "请输入发送到您邮箱地址的验证码 {0}。",
-  "VALIDATION_SENT_TO": "我们已向您发送验证码",
-  "RESEND_CODE": "重新发送代码",
-  "DIDNT_GET_EMAIL": "没收到邮件？检查垃圾邮件。",
-  "LOGIN_PERSONAL_ACCOUNT": "登录我的账户"
+  "EXPORT_AS_HTML": "导出为 HTML"
 }

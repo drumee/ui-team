@@ -36,6 +36,7 @@ class __welcome_signup extends __welcome_interact {
     if (!plugins || !plugins.signup) {
       return nop("No plugin", plugins)
     }
+    this.debug("AAA:GOT signup plugin", plugins.signup)
     let { name, kind } = plugins.signup;
     Kind.loadPlugin({ name, kind }).then(() => {
       Kind.waitFor(kind).then((k) => {

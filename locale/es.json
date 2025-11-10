@@ -128,16 +128,5 @@
   "MONTHS": "Meses",
   "YEARS": "Años",
   "HOURS": "Horas",
-  "EXPORT_AS_HTML": "Exportar a HTML",
-  "JOIN_DRUMEE_FOR_FREE": "Únete a Drumee gratis",
-  "GENERAL_TERMS_USE": "Al unirte a Drumee, aceptas todos nuestros <span {0}>Términos de servicio</span>\n\n<span {1}>Política de privacidad</span> y <span {2}>Política de cookies</span>",
-  "CONTINUE_WITH_GOOGLE": "Continúa con Google",
-  "CONTINUE_WITH_APPLEID": "Continúa con tu AppleID",
-  "CONTINUE_WITH_EMAIL": "Continúa con el correo electrónico",
-  "OR": "o",
-  "ENTER_VERIFICATION_CODE": "Por favor, introduzca el código de verificación enviado a su dirección de correo electrónico {0}.",
-  "VALIDATION_SENT_TO": "Te hemos enviado un código",
-  "RESEND_CODE": "Código de reenvío",
-  "DIDNT_GET_EMAIL": "¿No recibiste el correo? Revisa tu carpeta de spam.",
-  "LOGIN_PERSONAL_ACCOUNT": "Inicia sesión en mi cuenta"
+  "EXPORT_AS_HTML": "Exportar a HTML"
 }
