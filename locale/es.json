@@ -138,5 +138,6 @@
   "ENTER_VERIFICATION_CODE": "Por favor, introduzca el código de verificación enviado a su dirección de correo electrónico {0}.",
   "VALIDATION_SENT_TO": "Te hemos enviado un código",
   "RESEND_CODE": "Código de reenvío",
-  "DIDNT_GET_EMAIL": "¿No recibiste el correo? Revisa tu carpeta de spam."
+  "DIDNT_GET_EMAIL": "¿No recibiste el correo? Revisa tu carpeta de spam.",
+  "LOGIN_PERSONAL_ACCOUNT": "Inicia sesión en mi cuenta"
 }

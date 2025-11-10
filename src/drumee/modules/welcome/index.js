@@ -36,7 +36,6 @@ class __welcome_router extends LetcBox {
     this.waitElement(this.el, () => {
       this.el.dataset.tab = this.tab;
     });
-    this.debug("AAA:324", this, this.tab)
     let require_logout = 0;
     switch (this.tab) {
       case 'signup':
@@ -91,7 +90,6 @@ class __welcome_router extends LetcBox {
         opt = { kind: 'welcome_signin' }
 
     }
-    this.debug("AAA:94", opt)
     if (Visitor.isOnline()) {
       if (require_logout) {
         this.postService(SERVICE.drumate.logout, { hub_id: Visitor.id }, { async: 1 }).then(() => {

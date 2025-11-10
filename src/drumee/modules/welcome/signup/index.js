@@ -39,7 +39,6 @@ class __welcome_signup extends __welcome_interact {
     let { name, kind } = plugins.signup;
     Kind.loadPlugin({ name, kind }).then(() => {
       Kind.waitFor(kind).then((k) => {
-        this.debug("GOT plugin", k)
         this.triggerHandlers({ service: 'load-signup', kind })
       })
     }).catch((e) => {

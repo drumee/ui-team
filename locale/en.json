@@ -1705,7 +1705,6 @@
   "DRUMEE_COMPANY": "Drumee Company",
   "PREPARING_PRESENTATION": "Your presentation is being prepared",
   "COMPANY_LOGIN": "Private access",
-  "LOGIN_PERSONAL_ACCOUNT": "Demo account access",
   "LOGIN_DRUMEE_ACCOUNT": "Login to your Drumee account",
   "DRUMEE_THANKS": "Thanks for using Drumee",
   "SYSTEM_SOUND_TIPS": "To make the notification or call sound audible, click once on any part of your Drumme desktop.",
@@ -1915,5 +1914,6 @@
   "ENTER_VERIFICATION_CODE": "Please enter the verification code sent to your email address {0}.",
   "VALIDATION_SENT_TO": "We’ve sent you a code",
   "RESEND_CODE": "Resend Code",
-  "DIDNT_GET_EMAIL": "Didn't get the email? Check spam"
+  "DIDNT_GET_EMAIL": "Didn't get the email? Check spam",
+  "LOGIN_PERSONAL_ACCOUNT": "Log in to my account"
 }

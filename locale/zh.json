@@ -1705,7 +1705,6 @@
   "DRUMEE_COMPANY": "Drumee Company",
   "PREPARING_PRESENTATION": "正在准备您的演示文稿",
   "COMPANY_LOGIN": "私人访问",
-  "LOGIN_PERSONAL_ACCOUNT": "Доступ к демо-счету",
   "LOGIN_DRUMEE_ACCOUNT": "登录您的 Drumee 帐户",
   "DRUMEE_THANKS": "感谢您使用 Drumee",
   "SYSTEM_SOUND_TIPS": "要使通知或通话声音听得见，请在 Drumee 桌面的任何部分单击一次。",
@@ -1915,5 +1914,6 @@
   "ENTER_VERIFICATION_CODE": "请输入发送到您邮箱地址的验证码 {0}。",
   "VALIDATION_SENT_TO": "我们已向您发送验证码",
   "RESEND_CODE": "重新发送代码",
-  "DIDNT_GET_EMAIL": "没收到邮件？检查垃圾邮件。"
+  "DIDNT_GET_EMAIL": "没收到邮件？检查垃圾邮件。",
+  "LOGIN_PERSONAL_ACCOUNT": "登录我的账户"
 }

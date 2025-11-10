@@ -16,9 +16,8 @@
  */
 require("./skin/resizable.css");
 require("builtins/contextmenu/skin/index.scss");
+require("./skin");
 
-require("skin");
-// const { appendFontFace, appendLink } = require("core/utils");
 const { getModule, moduleName } = require('./modules');
 
 class drumee_router extends LetcBox {
@@ -37,7 +36,6 @@ class drumee_router extends LetcBox {
    * @returns 
    */
   initialize(opt) {
-    // require("./skin");
     super.initialize(opt);
     this._contextmenu = true;
     this._origin = {};
@@ -298,7 +296,6 @@ class drumee_router extends LetcBox {
   */
   changeHost(host) {
     const { loose_host } = getModule();
-    this.debug("AAAA:310", { loose_host })
     if (loose_host) {
       return false;
     }
@@ -331,7 +328,6 @@ class drumee_router extends LetcBox {
         kind = 'module_welcome';
       }
     }
-    this.debug("AAA:324", { kind }, this)
     this.ensurePart('body').then(async (p) => {
       await Kind.waitFor(kind);
       p.feed({ kind, name });

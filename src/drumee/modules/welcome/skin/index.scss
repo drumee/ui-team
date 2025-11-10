@@ -17,16 +17,20 @@
     height: 100%;
     flex-wrap: wrap;
     display: flex;
+    align-content: flex-start;
+    flex: 1;
   }
 
   &__main {
     height: 100%;
     width: 100%;
+    flex: 1;
   }
 
   &__container {
     height: 100%;
     width: 100%;
+    flex: 1;
   }
 
 
