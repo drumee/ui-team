@@ -7,6 +7,8 @@ let Helper;
 const { fetchService } = require("../socket/service")
 const { loadJS } = require("../../core/utils");
 
+const Plugins = new Map();
+
 /**
  * 
  */
@@ -177,8 +179,12 @@ class __kind extends Backbone.Model {
           this.warn("Plugin service not found");
           return reject();
         }
+        if (Plugins.get(data.path)) {
+          return resolve(this.get(kind))
+        }
         this.once("addons:registered", () => { resolve(this.get(kind)) })
         loadJS(data.path).then(() => {
+          Plugins.set(data.path, data)
           this.debug(`Plugin ${name} successfuly load as ${kind}`)
         }).catch((e) => {
           this.warn(`Failed to load js from ${data.path}`)

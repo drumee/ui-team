@@ -660,7 +660,6 @@ class __drumee_box extends Marionette.CollectionView {
   * @returns 
   */
   onChildBubble(origin) {
-    //@debug "HHHHHHHHH", @, origin
     const b = this.mget(_a.bubble);
     if (_.isArray(b)) {
       return Array.from(b).map((sig) =>

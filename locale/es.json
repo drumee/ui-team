@@ -128,5 +128,18 @@
   "MONTHS": "Meses",
   "YEARS": "Años",
   "HOURS": "Horas",
-  "EXPORT_AS_HTML": "Exportar a HTML"
+  "EXPORT_AS_HTML": "Exportar a HTML",
+  "PASSWORD_STRENGTH": "Fuerza de la contraseña",
+  "WEAK": "Débil",
+  "STRONG": "Fuerte",
+  "VERY_STRONG": "Acérrimo",
+  "PASSWORD_AT_LEAST": "La contraseña debe tener al menos {0} caracteres.",
+  "WE_HAVE_SENT_CODE": "Nos enviaremos un código a su dirección {0} para que pueda definir una nueva contraseña.",
+  "Q_FORGOT_PASSWORD": "¿Has olvidado tu contraseña?",
+  "NEW_PASSWORD": "Nueva contraseña",
+  "SET_NEW_PASSWORD": "Establecer nueva contraseña",
+  "RESET_PASSWORD": "Restablecer contraseña",
+  "NEW_CODE_RESENT": "Se ha reenviado un nuevo código.",
+  "UNKNOWN_ERROR": "Error desconocido",
+  "PASSWORD_MATCH": "Coincidencia de contraseña"
 }

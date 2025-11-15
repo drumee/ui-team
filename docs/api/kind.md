@@ -206,7 +206,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | welcome_feedback | welcome/feedback | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/feedback/index.js |
 | welcome_reset | welcome/reset | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/reset/index.js |
 | welcome_signin | welcome/signin | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/signin/index.js |
-| welcome_signup | welcome/signup | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/signup/index.js |
 | butler | router/butler | https://github.com/drumee/ui-team/tree/main/src/drumee/router/butler/index.js |
 | ws_channel | router/websocket | https://github.com/drumee/ui-team/tree/main/src/drumee/router/websocket/index.js |
 | module_desk | modules/desk | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/index.js |

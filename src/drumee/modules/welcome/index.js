@@ -23,8 +23,134 @@ class __welcome_router extends LetcBox {
    */
   onDomRefresh() {
     const args = Visitor.parseModule();
-    this.debug("AAA:26",args,  this.tab)
+    this.debug("AAA:26", args, this.tab)
     this.route();
+  }
+
+  /**
+   * 
+   */
+  loadSignup() {
+    const loadDefault = (opt) => {
+      this.feed(require('./skeleton').default(this, { ...opt, kind: 'welcome_signin' }));
+    }
+
+    if (Visitor.isOnline()) {
+      const f = () => {
+        location.hash = _K.module.desk;
+      }
+      setTimeout(f, Visitor.timeout(700));
+      return
+    }
+    let plugins;
+    try {
+      plugins = JSON.parse(Platform.get('plugins'))
+    } catch (e) {
+      return loadDefault();
+    }
+    if (!plugins || !plugins.signup) {
+      return loadDefault();
+    }
+    this.debug("AAA:54 GOT signup plugin", plugins.signup)
+    let { name, kind } = plugins.signup;
+    if (Kind.get(kind)) {
+      return this.feed({ kind });
+    }
+    Kind.loadPlugin({ name, kind }).then(() => {
+      Kind.waitFor(kind).then((k) => {
+        this.feed({ kind });
+      })
+    }).catch((e) => {
+      return loadDefault();
+    })
+  }
+
+  /**
+   * 
+   */
+  loadSignin() {
+    const loadDefault = (opt = {}) => {
+      console.trace()
+      this.feed(require('./skeleton').default(this, { ...opt, kind: 'welcome_signin' }));
+    }
+
+    if (Visitor.parseModuleArgs().cross == 'cross') {
+      opt.hack = 1;
+      loadDefault({ hack: 1 })
+      return;
+    }
+
+    if (Visitor.isOnline()) {
+      const f = () => {
+        location.hash = _K.module.desk;
+      }
+      setTimeout(f, Visitor.timeout(700));
+      return
+    }
+    let plugins;
+    try {
+      plugins = JSON.parse(Platform.get('plugins'))
+    } catch (e) {
+      this.warn("Failed to pase", e, JSON.parse(Platform.get('plugins')))
+      return loadDefault();
+    }
+    if (!plugins || !plugins.signin) {
+      return loadDefault();
+    }
+    this.debug("AAA:95 GOT signin plugin", plugins.signin)
+    let { name, kind } = plugins.signin;
+    if (Kind.get(kind)) {
+      return this.feed({ kind });
+    }
+    Kind.loadPlugin({ name, kind }).then(() => {
+      Kind.waitFor(kind).then((k) => {
+        this.feed({ kind });
+      })
+    }).catch((e) => {
+      return loadDefault();
+    })
+  }
+
+  /**
+   * 
+   */
+  loadReset() {
+    const loadDefault = (opt = {}) => {
+      const args = Visitor.parseModule();
+      if (args[2] != null) {
+        opt.uid = args[2];
+        opt.secret = args[3];
+      }
+      require_logout = 1;
+      this.feed(require('./skeleton').default(this, { ...opt, kind: 'welcome_reset' }));
+    }
+
+    if (Visitor.isOnline()) {
+      this.postService(SERVICE.drumate.logout, { hub_id: Visitor.id }, { async: 1 }).then(() => {
+        location.reload();
+      }).catch((e) => {
+        this.warn("Failed to disconnect", e)
+      });
+      return
+    }
+
+    try {
+      plugins = JSON.parse(Platform.get('plugins'))
+    } catch (e) {
+      return loadDefault();
+    }
+    if (!plugins || !plugins.signin) {
+      return loadDefault();
+    }
+    this.debug("AAA:GOT signin plugin", plugins.signin)
+    let { name, kind } = plugins.signin;
+    Kind.loadPlugin({ name, kind }).then(() => {
+      Kind.waitFor(kind).then((k) => {
+        this.triggerHandlers({ kind })
+      })
+    }).catch((e) => {
+      return loadDefault();
+    })
   }
 
   /**
@@ -42,57 +168,18 @@ class __welcome_router extends LetcBox {
     this.debug("AAA:40", this.tab)
     switch (this.tab) {
       case 'signup':
-        opt = { kind: 'welcome_signup', uiHandler: [this], service: "load-signup" };
-        break;
+        return this.loadSignup();
+
       case 'signin':
-        opt = { kind: 'welcome_signin' };
-        if (Visitor.parseModuleArgs().cross == 'cross') {
-          opt.hack = 1;
-          this.feed(require('./skeleton').default(this, opt));
-          return;
-        }
-        break;
+        return this.loadSignin()
 
       case 'reset':
-        opt =
-          { kind: 'welcome_reset' };
-        if (args[2] != null) {
-          opt.uid = args[2];
-          opt.secret = args[3];
-        }
-        require_logout = 1;
-        break;
-
-      case 'invitation':
-        opt =
-          { kind: 'welcome_invitation' };
-        if (args[2] != null) {
-          opt.secret = args[2];
-        }
-        return this.feed(opt);
-
-      case 'debug':
-        this.debug('RUNNING IN DEBUG MODE');
-        break;
-
-      case 'feedback':
-        opt =
-          { kind: 'welcome_feedback' };
-        return this.feed(require('./skeleton').default(this, opt));
-
-      case 'intro':
-        opt = require('./skeleton/signup-completed').default(this);
-        this.feed(require('./skeleton').default(this, opt));
-        setTimeout(() => {
-          location.hash = _K.module.desk
-          location.reload()
-        }, 2000);
-        return;
+        return this.loadReset()
 
       default:
-        opt = { kind: 'welcome_signin' }
-
+        return this.loadSignin()
     }
+
     if (Visitor.isOnline()) {
       if (require_logout) {
         this.postService(SERVICE.drumate.logout, { hub_id: Visitor.id }, { async: 1 }).then(() => {
@@ -124,7 +211,6 @@ class __welcome_router extends LetcBox {
           child.feed(require('./skeleton/unsupported-browser').default(this));
         }
         break;
-
     }
   }
 

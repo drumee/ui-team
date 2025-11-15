@@ -54,8 +54,11 @@ function makeOptions(entry, opt) {
       orphanModules: true,
     },
     context: __dirname,
-    optimization: {
-    }
+    // optimization: {
+    //   splitChunks: {
+    //     chunks: 'all',
+    //   },
+    // },
   };
 
   if (['production'].includes(opt.mode)) {

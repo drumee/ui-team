@@ -253,7 +253,6 @@ module.exports = {
   welcome_feedback:function(s,f){import('welcome/feedback').then(m=>{s(m.default)}).catch(f)},
   welcome_reset:function(s,f){import('welcome/reset').then(m=>{s(m.default)}).catch(f)},
   welcome_signin:function(s,f){import('welcome/signin').then(m=>{s(m.default)}).catch(f)},
-  welcome_signup:function(s,f){import('welcome/signup').then(m=>{s(m.default)}).catch(f)},
   butler:function(s,f){import('router/butler').then(m=>{s(m.default)}).catch(f)},
   ws_channel:function(s,f){import('router/websocket').then(m=>{s(m.default)}).catch(f)},
   module_desk:function(s,f){import('modules/desk').then(m=>{s(m.default)}).catch(f)},
