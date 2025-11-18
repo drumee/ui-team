@@ -139,7 +139,7 @@ class drumee_router extends LetcBox {
     } else {
       wallpaper = Visitor.wallpaper() || Organization.deskWallpaper();
     }
-
+    if (!wallpaper) return;
     if (JSON.stringify(this._wallpaper) == JSON.stringify(wallpaper)) {
       return
     }

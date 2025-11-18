@@ -106,7 +106,7 @@ class __router_butler extends LetcBox {
    *
    */
   reconnect() {
-    if (this.isRecconnecting) return;
+    if (this.isRecconnecting || this.isDisconnecting) return; 
     let { access } = getModule() || {};
     if (access != _a.private) return;
     this.isRecconnecting = true;
@@ -395,11 +395,13 @@ class __router_butler extends LetcBox {
    *
    * @param {*} redirect
    */
-  logout() {
+  async logout() {
     this.isDisconnecting = 1;
-    Visitor.set({ connection: _a.off });
     this.feed(require("./skeleton/goodbye")(this));
+    await this.ensurePart('disconnected') /** Ensure the skeloton is loaded, it will be detected as disconnecting */
     const f = () => {
+      this.triggerHandlers({ service: _e.logout });
+      Visitor.set({ connection: _a.off });
       return setTimeout(() => {
         Visitor.clear();
         Host.clear();
@@ -407,7 +409,6 @@ class __router_butler extends LetcBox {
       }, Visitor.timeout(1000));
     };
 
-    this.triggerHandlers({ service: _e.logout });
     this.postService(SERVICE.drumate.logout, {
       hub_id: Visitor.id,
     }).then(f).catch((e) => {
