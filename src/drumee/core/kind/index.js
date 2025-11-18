@@ -180,12 +180,13 @@ class __kind extends Backbone.Model {
           return reject();
         }
         if (Plugins.get(data.path)) {
+           this.warn(`${kind} already loaded, skipped`, data.path);
           return resolve(this.get(kind))
         }
         this.once("addons:registered", () => { resolve(this.get(kind)) })
         loadJS(data.path).then(() => {
           Plugins.set(data.path, data)
-          this.debug(`Plugin ${name} successfuly load as ${kind}`)
+          this.debug(`Plugin ${name} successfuly load as ${kind}`, data.path)
         }).catch((e) => {
           this.warn(`Failed to load js from ${data.path}`)
           reject(e)
