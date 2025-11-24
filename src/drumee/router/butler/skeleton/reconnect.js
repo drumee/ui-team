@@ -16,8 +16,9 @@
  */
 const _reconnect = function (_ui_, vhost) {
   let { email } = Visitor.profile();
+  let kind = "welcome_signin";
   let body = {
-    kind: "welcome_signin",
+    kind,
     sys_pn: "reconnect-popup",
     uiHandler: [_ui_],
     partHandler: [_ui_],

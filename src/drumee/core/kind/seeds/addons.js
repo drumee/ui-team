@@ -8,7 +8,7 @@ const Ondemand = require('./ondemand')
  */
 function register(kind, ref) {
   if (Builtins[kind]) {
-    console.warn(`Kind ${kind} already exists. Skipped`);
+    console.warn(`Kind ${kind} already registered, skipped.`);
     return;
   }
   if (_.isFunction(ref.then)) {

@@ -163,7 +163,7 @@ class __drumee_entry_input extends LetcBox {
       type: _a.text,
       service: _e.interactive,
       minlength: this.mget(_a.minlength) || 0,
-      maxlength: this.mget(_a.maxlength) || 524288, // The maximum number of characters allowed in the <input> element. Default value is 524288
+      maxlength: this.mget(_a.maxlength) || 524288, 
       rows: 1,
       cols: 40,
       volatility: 0

@@ -207,7 +207,7 @@ export function dayOfTime(time, format) {
 export function loadJS(url) {
   const a = new Promise(function (resolve, reject) {
     const xhr = new XMLHttpRequest();
-    xhr.allowCORS(xhr, url);
+    // xhr.allowCORS(xhr, url);
     xhr.open("GET", url, true);
     xhr.onload = function (e) {
       const el = document.createElement(_a.script);

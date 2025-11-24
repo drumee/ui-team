@@ -42,16 +42,17 @@
       min-height: 0;
       width: 100%;
       height: 100%;
-      border-bottom: 1px solid var(--entry-border-bottom); //#F1F1F6;
       font-size: inherit;
       line-height: inherit;
       background: transparent;
+      @include typo.typo($color: var(--neutral-800), $size: 16px, $weight: 400, $line: 26px);
 
       &:focus {
-        border-color: var(--focus-border-bottom); //var(--eblue);
+        border: solid var(--neutral-200) 1px;
 
         &::placeholder {
-          color: var(--focus-text-placeholder);
+          @include typo.typo($color: var(--neutral-500), $size: 16px, $weight: 400, $line: 26px);
+          color: var(--neutral-500);
         }
       }
     }
@@ -72,9 +73,6 @@
     }
   }
 
-  // &__ui[data-status=error] .entry-reminder__main.showerror{
-  //   padding-bottom: 12px;
-  // }
   &__main.showerror {
     overflow: hidden;
     padding-bottom: 14px;

@@ -253,7 +253,6 @@ const a = {
   welcome_feedback:"welcome/feedback",
   welcome_reset:"welcome/reset",
   welcome_signin:"welcome/signin",
-  welcome_signup:"welcome/signup",
   butler:"router/butler",
   ws_channel:"router/websocket",
   module_desk:"modules/desk",

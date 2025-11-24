@@ -54,8 +54,12 @@ function makeOptions(entry, opt) {
       orphanModules: true,
     },
     context: __dirname,
+
     optimization: {
-    }
+      splitChunks: {
+        minSize: 20000, // Minimum size for a chunk to be generated
+      },
+    },
   };
 
   if (['production'].includes(opt.mode)) {

@@ -85,4 +85,63 @@
 		],
 		"description": "Add New svg multiple buttons"
 	},
+  "Skeletons Function": {
+    "prefix": "sk",
+    "body": [
+      "export function ${1:name}(ui, opt) {",
+      "  const pfx = `${ui.fig.family}__${1/(.*)/${1:/downcase}/}`;",
+      "  return Skeletons.${2:Box.Y}({",
+      "    className: `${pfx}-container`,",
+      "    kids: [",
+      "      $0",
+      "    ]",
+      "  });",
+      "}"
+    ]
+  },
+  "Box.Y": {
+    "prefix": "sky",
+    "body": [
+      "Skeletons.Box.Y({",
+      "  className: `${pfx}-container`,",
+      "  kids: [$0]",
+      "})"
+    ]
+  },
+  "Box.X": {
+    "prefix": "skx", 
+    "body": [
+      "Skeletons.Box.X({",
+      "  className: `${pfx}-container`,",
+      "  kids: [$0]",
+      "})"
+    ]
+  },
+  "EntryBox": {
+    "prefix": "ske",
+    "body": [
+      "Skeletons.EntryBox({",
+      "  className: `${pfx}-input`,",
+      "  name: \"${1:name}\"$0",
+      "})"
+    ]
+  },
+  "Button.Icon": {
+    "prefix": "skbi",
+    "body": [
+      "Skeletons.Button.Icon({",
+      "  className: `${pfx}-button`,",
+      "  ico: \"${1:icon}\"$0",
+      "})"
+    ]
+  },
+  "Element": {
+    "prefix": "skel",
+    "body": [
+      "Skeletons.Element({",
+      "  className: `${pfx}-element`,",
+      "  content: ${1:LOCALE.TEXT}$0", 
+      "})"
+    ]
+  }
 }

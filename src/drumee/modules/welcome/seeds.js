@@ -3,5 +3,5 @@ module.exports = {
   welcome_feedback      : './feedback',
   welcome_reset         : './reset',
   welcome_signin        : './signin',
-  welcome_signup        : './signup',
+  // welcome_signup        : './signup',
 };
