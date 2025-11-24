@@ -14,3 +14,6 @@ kind/seeds/dynamic.js
 t
 package-lock.json
 .dev-tools.rc/
+build/
+.cursor/
+.cursorrules
