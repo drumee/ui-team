@@ -71,10 +71,8 @@ class desk_module extends LetcBox {
     } else {
       this.feed(require("./skeleton")(this));
     }
-    this.debug("AAA:74", this)
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
-    this.debug("AAA:76", this)
     this.route();
   }
 
@@ -437,9 +435,10 @@ class desk_module extends LetcBox {
    * @param {Object} c
    */
   checkUserOnBoarding(c) {
-    // if (Visitor.data("intro") === _a.no) {
-    //   return;
-    // }
+    const { debug } = Visitor.parseModuleArgs() || {}
+    if (Visitor.data("intro") === _a.no && !debug) {
+      return;
+    }
 
     this.__wrapperPopup.feed(
       require("./skeleton/common/intro-popup").default(this)
