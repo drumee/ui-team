@@ -13,9 +13,9 @@ function menuBar(ui) {
     kids: [
       Skeletons.Box.X({
         kids: [
-          Skeletons.Button.Svg({ className: icoClass, ico: "bell" }),
-          Skeletons.Button.Svg({ className: icoClass, ico: "message" }),
-          Skeletons.Button.Svg({ className: icoClass, ico: "settings" }),
+          Skeletons.Button.Svg({ className: icoClass, service:'open-notification',ico: "bell" }),
+          Skeletons.Button.Svg({ className: icoClass, service:'open-chat',ico: "message" }),
+          Skeletons.Button.Svg({ className: icoClass, service:'open-settings', ico: "settings" }),
           userMenu(ui)
         ]
       }),

@@ -87,6 +87,12 @@
       padding-top: var(--spacer-4);
       padding-bottom: var(--spacer-4);
 
+      &__wrapper {
+        &[data-direction=down] {
+          top: 45px;
+          left: -13px;
+        }
+      }
     }
 
     &-item {

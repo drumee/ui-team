@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : src/drumee/modules/desk/skeleton/topbar/share-bar
-//   TYPE : 
-// ==================================================================== *
-
 const __desk_top_share_bar = function(_ui_) {
   let note;
   const mimicInfo = Visitor.get('mimic_entity');
