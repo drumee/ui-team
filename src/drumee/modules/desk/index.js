@@ -1,7 +1,7 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
 
-class __desk_ui extends LetcBox {
+class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
     this.changeContextMenu = this.changeContextMenu.bind(this);
@@ -29,8 +29,6 @@ class __desk_ui extends LetcBox {
 
   static initClass() {
     require("./skin");
-    this.prototype.className = "desk-ui";
-    this.prototype.figName = "desk_module";
     this.prototype.behaviorSet = { bhv_socket: 1 };
     this.prototype.events = { drop: "_upload" };
   }
@@ -73,8 +71,10 @@ class __desk_ui extends LetcBox {
     } else {
       this.feed(require("./skeleton")(this));
     }
+    this.debug("AAA:74", this)
     await this.ensurePart("desk-content");
-    await this.ensurePart("wrapper-module");
+    await this.ensurePart("wrapper-popup");
+    this.debug("AAA:76", this)
     this.route();
   }
 
@@ -318,24 +318,24 @@ class __desk_ui extends LetcBox {
    *
    */
   route(opt) {
-    if (opt == null) {
-      opt = [];
-    }
-    opt = Visitor.parseModule();
-    const sub_module = opt[1];
-    if (sub_module != null) {
-      Kind.waitFor("window_launcher").then(() => {
-        this._openTab(sub_module, opt);
-      });
-    } else {
-      if (!this.moduleWrapper) {
-        Backbone.history.location.reload();
-        return;
-      }
-      if (!this.moduleWrapper.isEmpty()) {
-        this.moduleWrapper.children.last().softDestroy();
-      }
-    }
+    // if (opt == null) {
+    //   opt = [];
+    // }
+    // opt = Visitor.parseModule();
+    // const sub_module = opt[1];
+    // if (sub_module != null) {
+    //   Kind.waitFor("window_launcher").then(() => {
+    //     this._openTab(sub_module, opt);
+    //   });
+    // } else {
+    //   if (!this.moduleWrapper) {
+    //     Backbone.history.location.reload();
+    //     return;
+    //   }
+    //   if (!this.moduleWrapper.isEmpty()) {
+    //     this.moduleWrapper.children.last().softDestroy();
+    //   }
+    // }
 
     this.trigger(_e.ready);
     this.checkIntro();
@@ -359,9 +359,9 @@ class __desk_ui extends LetcBox {
    * @param {Object} c
    */
   checkIntro(c) {
-    if (Visitor.get("is_dmz_hub_copy") == _a.yes) {
-      return this.dmzCopyMedia(c);
-    }
+    // if (Visitor.get("is_dmz_hub_copy") == _a.yes) {
+    //   return this.dmzCopyMedia(c);
+    // }
     this.checkUserOnBoarding(c);
   }
 
@@ -437,9 +437,9 @@ class __desk_ui extends LetcBox {
    * @param {Object} c
    */
   checkUserOnBoarding(c) {
-    if (Visitor.data("intro") === _a.no) {
-      return;
-    }
+    // if (Visitor.data("intro") === _a.no) {
+    //   return;
+    // }
 
     this.__wrapperPopup.feed(
       require("./skeleton/common/intro-popup").default(this)
@@ -737,7 +737,7 @@ class __desk_ui extends LetcBox {
   }
 }
 
-__desk_ui.initClass();
+desk_module.initClass();
 
-module.exports = __desk_ui;
+module.exports = desk_module;
 

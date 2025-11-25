@@ -1,25 +1,48 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : src/drumee/builtins/desk/skeleton/top-bar/main
-//   TYPE : 
-// ==================================================================== *
-
-const __desk_top_bar = function(_ui_) {
-  const pfx = `${_ui_.fig.group}-topbar`;
-
-  const a = Skeletons.Box.X({
-    debug     : __filename,
-    className : `${pfx}__main`,
-    active    : 0,
-    kids      : [
+const { userMenu } = require("../toolkit")
+/**
+ * 
+ */
+function menuBar(ui) {
+  const pfx = `${ui.fig.family}-topbar`;
+  const icoClass = `${pfx}__icon`;
+  return Skeletons.Box.X({
+    className: `${pfx}__user-menu`,
+    sys_pn: "user-menu",
+    debug: __filename,
+    active: 0,
+    kids: [
       Skeletons.Box.X({
-        active      : 0,
-        className: `${pfx}__center`,
-        kids: require('./main-menu')(_ui_)
-      })
+        kids: [
+          Skeletons.Button.Svg({ className: icoClass, ico: "bell" }),
+          Skeletons.Button.Svg({ className: icoClass, ico: "message" }),
+          Skeletons.Button.Svg({ className: icoClass, ico: "settings" }),
+          userMenu(ui)
+        ]
+      }),
+    ]
+  })
+}
+
+
+module.exports = function (ui) {
+  const pfx = `${ui.fig.family}-topbar`;
+
+  return Skeletons.Box.X({
+    debug: __filename,
+    className: `${pfx}__main`,
+    active: 0,
+    kids: [
+      Skeletons.Box.X({
+        active: 0,
+        className: `${pfx}__logo-content`,
+        kids: [
+          Skeletons.Button.Svg({
+            ico: "raw-logo-drumee-full",
+            lassName: `${ui.fig.family}__logo-icon`,
+          })
+        ]
+      }),
+      menuBar(ui)
     ]
   });
-  return a;
 };
-
-module.exports = __desk_top_bar;

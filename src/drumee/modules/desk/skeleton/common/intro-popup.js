@@ -94,8 +94,9 @@ function __skl_desk_common_intro_popup(_ui_, data) {
   const checkboxWrapper = Skeletons.Box.X({
     className: `${introPopupFig}__wrapper checkbox`,
     kidsOpt: { active: 0 },
-    service: "skip-intro-popup",
+    // service: "skip-intro-popup",
     uiHandler: _ui_,
+    state: 0,
     kids: [
       Skeletons.Button.Svg({
         className: `${introPopupFig}__icon checkbox`,

@@ -14,7 +14,7 @@
       overflow: hidden;
       padding: 24px;
       width: calc(100vw - 40px);
-      border: 1px solid var(--Neutral-200, #ebecf0);
+      border: 1px solid var(--neutral-200, #ebecf0);
       box-shadow: 0 4px 16px 0 rgba(34, 39, 50, 0.04);
 
       &[data-device="mobile"] {
@@ -60,6 +60,19 @@
 
       &.checkbox {
         align-items: flex-start;
+
+        &[data-state="0"] {
+          svg {
+            color: var(--neutral-100);
+          }
+        };
+
+        &[data-state="1"] {
+          svg {
+            color: var(--neutral-600);
+          }
+        };
+
       }
     }
 
@@ -73,7 +86,7 @@
       gap: 8px;
       aspect-ratio: 1/1;
       border-radius: 100%;
-      background: var(--Neutral-200, #ebecf0);
+      background: var(--neutral-200, #ebecf0);
     }
 
     &__logo {
@@ -174,7 +187,7 @@
 
     &__note {
       &.title {
-        color: var(--Neutral-900, #222732);
+        color: var(--neutral-900, #222732);
         font-family: "Armin Grotesk";
         font-size: 24px;
         font-style: normal;
@@ -183,41 +196,33 @@
       }
 
       &.sub-title {
-        @include drumee.typo(
-          $size: 16px,
+        @include drumee.typo($size: 16px,
           $line: 24px,
-          $color: var(--Neutral-600, #8c929c)
-        );
+          $color: var(--neutral-600, #8c929c));
         width: 100%;
       }
 
       &.description {
         width: 100%;
         text-align: center;
-        @include drumee.typo(
-          $size: 14px,
+        @include drumee.typo($size: 14px,
           $line: 20px,
-          $color: var(--default-text-color)
-        );
+          $color: var(--default-text-color));
       }
 
       &.btn {
         width: 100%;
         text-align: center;
-        @include drumee.typo(
-          $size: 16px,
+        @include drumee.typo($size: 16px,
           $line: 20px,
-          $color: var(--default-text-reverse)
-        );
+          $color: var(--default-text-reverse));
         font-weight: 500;
       }
 
       &.footer {
-        @include drumee.typo(
-          $size: 14px,
+        @include drumee.typo($size: 14px,
           $line: 18px,
-          $color: var(--tertiary-text-color)
-        );
+          $color: var(--tertiary-text-color));
         cursor: pointer;
       }
     }

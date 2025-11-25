@@ -1,12 +1,6 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2022
-//   FILE : src/drumee/builtins/desk/skeleton/top-bar/main-menu
-//   TYPE : Skeleton
-// ==================================================================== *
 
 const __skl_top_bar = function(_ui_){
 
-//  notificationVisibility = if _ui_.model.get("notifications") is 0 then "__hidden"
   let addContact;
   const pfx = `${_ui_.fig.group}-topbar`;
   if (Visitor.canShow('invite-user')) {
@@ -40,33 +34,33 @@ const __skl_top_bar = function(_ui_){
     settings_menu.direction = _a.down;
   }
 
-  const network = {kind : 'notifier_network'};
+  // const network = {kind : 'notifier_network'};
 
-  const search_icon = Skeletons.Button.Svg({
-    className :`${pfx}__searchbox icon`, 
-    ico : "lens"
-  });
+  // const search_icon = Skeletons.Button.Svg({
+  //   className :`${pfx}__searchbox icon`, 
+  //   ico : "lens"
+  // });
 
-  const search = {
-    kind        : KIND.search,
-    flow        : _a.x,
-    className   :  `${pfx}__searchbox entry` + "titi", 
-    placeholder : LOCALE.SEARCH,
-    listClass   : "found-box",
-    sys_pn      : 'search-box',
-    mode        : _a.interactive,
-    interactive : _a.service,
-    service     : _e.search,
-    uiHandler    : [_ui_]
-  };
+  // const search = {
+  //   kind        : KIND.search,
+  //   flow        : _a.x,
+  //   className   :  `${pfx}__searchbox entry` + "titi", 
+  //   placeholder : LOCALE.SEARCH,
+  //   listClass   : "found-box",
+  //   sys_pn      : 'search-box',
+  //   mode        : _a.interactive,
+  //   interactive : _a.service,
+  //   service     : _e.search,
+  //   uiHandler    : [_ui_]
+  // };
 
-  const search_box = Skeletons.Box.X({
-    className   : `${pfx}__searchbox inner`, 
-    kids : [
-      search_icon,
-      search,
-      network
-    ]});
+  // const search_box = Skeletons.Box.X({
+  //   className   : `${pfx}__searchbox inner`, 
+  //   kids : [
+  //     search_icon,
+  //     search,
+  //     network
+  //   ]});
 
 
 
