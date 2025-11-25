@@ -1,0 +1,130 @@
+{
+  "project_context": "Custom JSON-based UI rendering framework using Skeletons components - DO NOT generate HTML",
+  "rules": [
+    "ALWAYS wrap generated code in an exported function: export function componentName(ui, opt) { ... }",
+    "Function pattern: export function name(ui, opt) { const { params } = opt; const pfx = `${ui.fig.family}__component-name`; return Skeletons.*(...); }",
+    "Extract options from opt parameter: const { prop1, prop2, defaultVal = defaultValue } = opt;",
+    "Create CSS prefix: const pfx = `${ui.fig.family}__component-name`;",
+    
+    "For EVERY Skeletons component, automatically generate className: `${pfx}-[role]`",
+    "ClassName patterns:",
+    "Skeletons.Box.Y → `${pfx}-container`",
+    "Skeletons.Box.X → `${pfx}-container`", 
+    "Skeletons.Box.G → `${pfx}-container`", 
+    "Skeletons.Button.Icon → `${pfx}-button`",
+    "Skeletons.EntryBox → `${pfx}-input`",
+    "Skeletons.Element → `${pfx}-element`",
+    "Skeletons.Note → `${pfx}-text or ${pfx}-button`",
+    "Use descriptive roles based on component purpose",
+    
+    "For the most inner Box in a hierarchy, use specific className patterns:",
+    "Most inner Skeletons.Box.Y → `${pfx}-content` or `${pfx}-inner`",
+    "Most inner Skeletons.Box.X → `${pfx}-row` or `${pfx}-line`",
+    "Most inner Skeletons.Box.G → `${pfx}-row` or `${pfx}-line`",
+    "Identify most inner Box as: no Skeletons.Box children in its kids array",
+    "Most inner Box typically contains only: Skeletons.Element, Skeletons.EntryBox, Skeletons.Button.Icon",
+    "Use 'content', 'inner', 'row', 'line' suffixes for most inner containers",
+    "Middle level Box (has Box children) → `${pfx}-section` or `${pfx}-group`",
+    "Outer level Box → `${pfx}-container` or `${pfx}-wrapper`",
+    
+    "Skeletons.Box.G/Y/X: kids array can contain both Skeletons.*() calls AND function calls",
+    "Skeletons.Box.G/Y/X: Function calls in kids should be other component functions like header(), form(), button()",
+    "Skeletons.Box.G/Y/X: Function calls should pass (ui, options) or (ui, locale) parameters",
+    "Skeletons.Box.G/Y/X: Mix direct Skeletons and function calls in kids arrays",
+    "Skeletons.Box.G/Y/X: Include sys_pn for system identifiers",
+    "Skeletons.Box.G/Y/X: Include partHandler with [ui] for containers",
+    
+    "Skeletons.Button.Icon: MUST include ico property with descriptive SVG name",
+    "Skeletons.Button.Icon: Use kebab-case for ico values like 'arrow-right', 'user-plus', 'search'",
+    "Skeletons.Button.Icon: ico values should describe the icon function, not the file name",
+    "Skeletons.Button.Label: MUST have the same rules than Skeletons.Button.Icon plus label property",
+    "Skeletons.EntryBox: Include type, name, placeholder, interactive, service properties",
+    "Skeletons.EntryBox: Include uiHandler with [ui] for inputs",
+    "Skeletons.Element: Include content, className",
+    "Skeletons.Note: Include content, className, service",
+    "Skeletons.List.Smart: Include content, className, service",
+    
+    "When generating SASS files, use the pattern: .{fig}-{family} { &__component-name { ... } }",
+    "fig and family come from ui.fig and ui.family (e.g., kind='user_profile' → fig=user, family=profile)",
+    "SASS structure should mirror the component hierarchy",
+    "Generate SASS for all className patterns used in the component",
+    
+    "Generate ONLY Skeletons framework code - never HTML",
+    "Use: Skeletons.Box.Y for vertical containers, Skeletons.Box.X for horizontal containers, Skeletons.Box.G for flexgrid containers",
+    "Use: Skeletons.Element for basic elements, Skeletons.EntryBox for input fields",
+    "Use: Skeletons.List.Smart for scrolling list",
+    "Use: LOCALE.* for internationalized text content",
+    "Structure: kids arrays for child components"
+  ],
+  "component_classname_patterns": {
+    "Skeletons.Box.Y": "${pfx}-container",
+    "Skeletons.Box.X": "${pfx}-container",
+    "Skeletons.Button.Icon": "${pfx}-button", 
+    "Skeletons.EntryBox": "${pfx}-input",
+    "Skeletons.Element": "${pfx}-element",
+    "contextual_variants": {
+      "layout": ["${pfx}-layout", "${pfx}-section"],
+      "form": ["${pfx}-field", "${pfx}-group"],
+      "navigation": ["${pfx}-nav", "${pfx}-menu"]
+    }
+  },
+  "box_nesting_rules": {
+    "outer_level": {
+      "classnames": ["container", "wrapper", "layout", "main"],
+      "characteristics": "contains other Box components or complex layouts",
+      "identification": "root level or contains Box children"
+    },
+    "middle_level": {
+      "classnames": ["section", "group", "panel", "block"],
+      "characteristics": "has both Box and non-Box children",
+      "identification": "contains Box children but is not root"
+    },
+    "inner_level": {
+      "classnames": ["content", "inner", "row", "line", "items", "cell"],
+      "characteristics": "contains only non-Box components (Element, EntryBox, Button.Icon)",
+      "identification": "no Skeletons.Box in kids array"
+    }
+  },
+  "component_specific_rules": {
+    "Skeletons.Button.Icon": {
+      "required_props": ["ico"],
+      "ico_pattern": "Use descriptive kebab-case names that match the icon purpose",
+      "examples": [
+        "Skeletons.Button.Icon({ ico: 'arrow-right' })",
+        "Skeletons.Button.Icon({ ico: 'user' })", 
+        "Skeletons.Button.Icon({ ico: 'search' })",
+        "Skeletons.Button.Icon({ ico: 'close' })"
+      ]
+    },
+    "Skeletons.EntryBox": {
+      "common_props": ["type", "name", "placeholder", "interactive", "service", "className", "uiHandler"],
+      "uiHandler": "uiHandler: [ui]"
+    },
+    "Skeletons.Box.Y/X": {
+      "common_props": ["className", "kids", "sys_pn", "partHandler", "debug"],
+      "partHandler": "partHandler: [ui]",
+      "kids_pattern": "Array of: Skeletons.*() calls AND component function calls like header(ui, locale)"
+    }
+  },
+  "sass_generation": {
+    "pattern": ".{fig}-{family} { &__component-name { ... } }",
+    "example": "kind='user_profile' → .user-profile { &__component-name { ... } }",
+    "structure": "Mirror the component hierarchy in SASS nesting",
+    "classname_mapping": {
+      "Skeletons.Box.Y/X": "container",
+      "Skeletons.Button.Icon": "button", 
+      "Skeletons.EntryBox": "input",
+      "Skeletons.Element": "element"
+    }
+  },
+  "function_template": {
+    "signature": "export function componentName(ui, opt)",
+    "parameters_extraction": "const { prop1, prop2, defaultVal = value } = opt;",
+    "css_prefix": "const pfx = `${ui.fig.family}__component-name`;",
+    "return": "return Skeletons.Component({ className: `${pfx}-role`, ... });"
+  },
+  "examples": {
+    "component": "export function search(ui, opt) { const { placeholder } = opt; const pfx = `${ui.fig.family}__search`; return Skeletons.Box.X({ className: `${pfx}-container`, kids: [ ... ] }); }",
+    "sass": ".user-profile { &__search-container { ... } }"
+  }
+}

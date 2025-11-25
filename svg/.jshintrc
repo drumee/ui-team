@@ -1,0 +1,9 @@
+{
+  "node": true,
+  "browser": false,
+  "jquery": false,
+  "esversion": 6,
+  "strict": "global",
+  "undef": true,
+  "unused": true
+}
