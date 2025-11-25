@@ -83,7 +83,7 @@ var conf = {
     tests: ['test/*_test.js']
   }
 };
-const buildConfig = function(from, to){
+const buildConfig = function(from){
   conf.svgstore.normalized.files = {};
   conf.svgstore.raw.files = {};
   
@@ -105,7 +105,7 @@ const buildConfig = function(from, to){
   // console.log("Raw destination (with classes)               : " + raw_dest + "\n");
   // console.log("---------------------------------------------------------------------------\n");
     
-}
+};
 
 module.exports = function (grunt) {
   let from, to;

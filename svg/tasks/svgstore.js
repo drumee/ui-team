@@ -8,7 +8,6 @@
 'use strict';
 
 module.exports = function (grunt) {
-  var crypto = require('crypto');
   var multiline = require('multiline');
   var path = require('path');
 
