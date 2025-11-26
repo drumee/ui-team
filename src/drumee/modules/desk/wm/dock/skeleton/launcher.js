@@ -1,3 +1,9 @@
+const icons = {
+  search: require('assets/icon/search.svg').default,
+  play: require('assets/icon/play.svg').default,
+  music: require('assets/icon/music.svg').default,
+};
+
 const __dock_widget_launchers = function (ui, ismobile) {
   if (ismobile == null) { ismobile = false; }
   let profileType = 'pro';
@@ -37,6 +43,7 @@ const __dock_widget_launchers = function (ui, ismobile) {
   if (Visitor.canUseVisio()) {
     visio = button(ui, {
       ico: 'area-code',
+      svgSource: icons.play,
       className: `${button_class} schedule launcher-icon`,
       service: _e.launch,
       respawn: 'window_schedule',
@@ -50,6 +57,7 @@ const __dock_widget_launchers = function (ui, ismobile) {
     kids: [
       button(ui, {
         ico: 'desktop_contactbook',
+        svgSource: icons.search,
         className: `${button_class} schedule launcher-icon`,
         innerClass: 'addressbook',
         sys_pn: 'addressbook-launcher',
@@ -60,6 +68,7 @@ const __dock_widget_launchers = function (ui, ismobile) {
       visio,
       button(ui, {
         ico: 'drumee-chat-visio',
+        svgSource: icons.music,
         className: `${button_class} schedule launcher-icon`,
         innerClass: 'bigchat',
         sys_pn: 'bigchat-launcher',

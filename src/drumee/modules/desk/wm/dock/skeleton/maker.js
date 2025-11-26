@@ -1,4 +1,11 @@
 
+const icons = {
+  folder: require('assets/icon/folder.svg').default,
+  gallery: require('assets/icon/gallery.svg').default,
+  location: require('assets/icon/location.svg').default,
+  note: require('assets/icon/note.svg').default,
+};
+
 const __desk_dock_items_makers = function (_ui_) {
   let profileType = 'pro';
   if (Visitor.isHubUser()) {
@@ -13,6 +20,7 @@ const __desk_dock_items_makers = function (_ui_) {
     kids: [
       button(_ui_, {
         ico: "raw-drumee-folder-blue",
+        svgSource: icons.folder,
         className: `${pfx} folder big`,
         service: "add-folder",
         helperName: 'folder'
@@ -20,6 +28,7 @@ const __desk_dock_items_makers = function (_ui_) {
 
       button(_ui_, {
         ico: "raw-drumee-folder-orange",
+        svgSource: icons.gallery,
         className: `${pfx} sharebox`,
         service: 'add-sharebox',
         respawn: 'hub_sharebox',
@@ -28,6 +37,7 @@ const __desk_dock_items_makers = function (_ui_) {
 
       button(_ui_, {
         ico: "raw-drumee-folder-purple",
+        svgSource: icons.location,
         className: `${pfx} team`,
         service: 'add-team',
         respawn: 'hub_team',
@@ -36,6 +46,7 @@ const __desk_dock_items_makers = function (_ui_) {
 
       button(_ui_, {
         ico: "ab-notes",
+        svgSource: icons.note,
         className: `${pfx} note big`,
         service: "add-note",
         helperName: 'note'

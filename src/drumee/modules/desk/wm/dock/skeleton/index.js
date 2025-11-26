@@ -1,3 +1,5 @@
+const recycleIcon = require('assets/icon/recycle.svg').default;
+
 const __desk_dock = function(_ui_) {
   const pfx = _ui_.fig.family;
   const trash = Skeletons.Box.X({
@@ -6,6 +8,7 @@ const __desk_dock = function(_ui_) {
     kids : [
       Skeletons.Button.Svg({
         ico       : 'drumee-trash',
+        svgSource : recycleIcon,
         className : `${pfx}__button trash`, 
         service   : _e.trash,
         sys_pn    : "trash-bin",

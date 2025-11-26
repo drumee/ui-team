@@ -4,16 +4,18 @@
   &-intro-popup {
     &__main {
       background: var(--default-bg);
-      border-radius: var(--border-radius);
+      border-radius: 24px;
       height: calc(100vh - 20px);
-      margin: auto;
-      max-height: 400px;
-      max-width: 600px;
+      margin: auto 40px 80px auto;
+      max-width: 452px;
+      max-height: 500px;
       min-height: 300px;
       min-width: 360px;
       overflow: hidden;
-      padding: 5px;
-      width: calc(100vw - 20px);
+      padding: 24px;
+      width: calc(100vw - 40px);
+      border: 1px solid var(--neutral-200, #ebecf0);
+      box-shadow: 0 4px 16px 0 rgba(34, 39, 50, 0.04);
 
       &[data-device="mobile"] {
         max-height: unset;
@@ -25,24 +27,25 @@
 
     &__wrapper {
       align-items: center;
-      justify-content: center;
       padding: 5px;
       width: 100%;
 
       &.header {
-        align-items: flex-end;
-        height: 80px;
-        padding-top: 30px;
+        align-items: flex-start;
+        flex-direction: column;
+        padding-top: 10px;
       }
 
       &.sub-title {
         align-items: flex-start;
-        height: 80px;
+        height: 60px;
+        margin-bottom: 10px;
       }
 
       &.content {
-        grid-gap: 10px;
         justify-content: center;
+        height: 208px;
+        margin: 10px 0;
 
         &[data-device="mobile"] {
           flex-direction: column;
@@ -50,10 +53,26 @@
       }
 
       &.footer {
+        margin-top: 4px;
         height: 30px;
-        justify-content: flex-end;
         padding-bottom: 10px;
-        padding-right: 20px;
+      }
+
+      &.checkbox {
+        align-items: flex-start;
+
+        &[data-state="0"] {
+          svg {
+            color: var(--neutral-100);
+          }
+        };
+
+        &[data-state="1"] {
+          svg {
+            color: var(--neutral-600);
+          }
+        };
+
       }
     }
 
@@ -61,6 +80,22 @@
       position: absolute;
       right: 15px;
       top: 15px;
+      padding: 8px;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      aspect-ratio: 1/1;
+      border-radius: 100%;
+      background: var(--neutral-200, #ebecf0);
+    }
+
+    &__logo {
+      padding: 8px;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      aspect-ratio: 1/1;
+      border-radius: 100%;
     }
 
     &__item-wrapper {
@@ -69,83 +104,126 @@
       justify-content: center;
       width: 100%;
 
-      // &.image {
-      //   justify-content: flex-end;
-      // }
+      &.image {
+        border: 1px solid #ebecf0;
+        border-radius: 16px;
+        justify-content: center;
+      }
 
       &.description {
-        grid-gap: 30px;
+        grid-gap: 20px;
+        justify-content: center;
+        border: none;
       }
     }
 
     &__image {
-      width: calc(100% - 80px);
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      border-radius: 16px;
     }
 
     &__icon {
       &.video {
-        color: var(--default-icon-reverse);
-        height: 26px;
-        width: 26px;
+        color: black;
+        background: white;
+        border-radius: 1000px;
+        background: var(--Gray-White, #fff);
+        display: flex;
+        width: 36px;
+        height: 36px;
+        padding: 12px;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
       }
 
       &.close {
-        color: var(--default-thinline-icon);
+        display: flex;
+        color: black;
         cursor: pointer;
-        height: 12px;
         width: 12px;
+        height: 12px;
 
         &:hover {
           color: var(--default-thinline-icon-hover);
         }
       }
+
+      &.logo {
+        display: flex;
+        width: 55px;
+        height: 48px;
+        aspect-ratio: 55/48;
+      }
+
+      &.checkbox {
+        cursor: pointer;
+        margin-right: 8px;
+        color: var(--tertiary-text-color);
+        width: 16px;
+        height: 16px;
+
+        &[data-state="0"] {
+          color: #ccc;
+        }
+
+        &[data-state="1"] {
+          color: #4caf50;
+        }
+      }
     }
 
     &__buttons-wrapper {
+      position: absolute;
       align-items: center;
-      background-color: var(--btn-commit-background);
-      border-radius: 6px;
+      border-radius: 100%;
+      backdrop-filter: blur(4px);
       cursor: pointer;
       justify-content: center;
-      width: calc(100% - 80px);
-      padding: 0 15px;
+      padding: 8px;
     }
 
     &__note {
       &.title {
-        text-align: center;
-        @include drumee.typo($size: 26px, $line: 36px, $color: var(--default-text-title));
-      }
-
-      &.sub-title,
-      &.description {
-        @include drumee.typo($size: 16px, $line: 26px, $color: var(--default-text-color));
+        color: var(--neutral-900, #222732);
+        font-family: "Armin Grotesk";
+        font-size: 24px;
+        font-style: normal;
+        font-weight: 600;
+        line-height: 32px;
       }
 
       &.sub-title {
-        & span {
-          font-weight: 600;
-        }
+        @include drumee.typo($size: 16px,
+          $line: 24px,
+          $color: var(--neutral-600, #8c929c));
+        width: 100%;
       }
 
       &.description {
-        width: calc(100% - 80px);
+        width: 100%;
+        text-align: center;
+        @include drumee.typo($size: 14px,
+          $line: 20px,
+          $color: var(--default-text-color));
       }
 
       &.btn {
-        min-width: 115px;
-        margin-left: 10px;
         width: 100%;
-        @include drumee.typo($size: 16px, $line: 20px, $color: var(--default-text-reverse));
+        text-align: center;
+        @include drumee.typo($size: 16px,
+          $line: 20px,
+          $color: var(--default-text-reverse));
+        font-weight: 500;
       }
 
       &.footer {
-        @include drumee.typo($size: 14px, $line: 18px, $color: var(--tertiary-text-color));
-      }
-
-      &.text-underline {
+        @include drumee.typo($size: 14px,
+          $line: 18px,
+          $color: var(--tertiary-text-color));
         cursor: pointer;
-        text-decoration: underline;
       }
     }
   }
