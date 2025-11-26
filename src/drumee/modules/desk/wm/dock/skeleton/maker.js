@@ -16,14 +16,14 @@ const __desk_dock_items_makers = function (_ui_) {
         className: `${pfx} folder`,
         service: "add-folder",
         helperName: 'folder'
-      }, 'Click to "Create Folder"'),
+      }, LOCALE.CREATE_FOLDER),
 
       button(_ui_, {
         ico: "dock-gallery",
         className: `${pfx} gallery`,
         service: 'add-media',
         helperName: 'gallery'
-      }, 'Upload "Image"'),
+      }, LOCALE.UPLOAD_IMAGE),
 
       button(_ui_, {
         ico: "dock-music",
@@ -31,7 +31,7 @@ const __desk_dock_items_makers = function (_ui_) {
         service: 'add-sharebox',
         respawn: 'hub_sharebox',
         helperName: 'sharebox'
-      }, 'Upload "Music"'),
+      }, LOCALE.UPLOAD_MUSIC),
 
       button(_ui_, {
         ico: "dock-media",
@@ -39,7 +39,7 @@ const __desk_dock_items_makers = function (_ui_) {
         service: 'add-team',
         respawn: 'hub_team',
         helperName: 'teamroom'
-      }, 'Upload "Video"')
+      }, LOCALE.UPLOAD_VIDEO)
 
     ]
   });

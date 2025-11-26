@@ -13,7 +13,7 @@ const __desk_dock = function(_ui_) {
         uiHandler: _ui_,
         tooltips: {
           className: `${_ui_.fig.family}__tooltips ${_ui_.fig.name}-tooltips`,
-          content: LOCALE.NAV || 'Navigation'
+          content: LOCALE.NAV
         }
       })
     ]

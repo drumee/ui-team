@@ -1911,5 +1911,10 @@
   "NEW_PASSWORD": "New password",
   "SET_NEW_PASSWORD": "Set new password",
   "NEW_CODE_RESENT": "A new code has been resent",
-  "PASSWORD_MATCH": "Password match"
+  "PASSWORD_MATCH": "Password match",
+  "CREATE_FOLDER": "Create Folder",
+  "UPLOAD_IMAGE": "Upload Image",
+  "UPLOAD_MUSIC": "Upload Music",
+  "UPLOAD_VIDEO": "Upload Video",
+  "NAV": "Navigation"
 }
