@@ -1,9 +1,3 @@
-const icons = {
-  search: require('assets/icon/search.svg').default,
-  play: require('assets/icon/play.svg').default,
-  music: require('assets/icon/music.svg').default,
-};
-
 const __dock_widget_launchers = function (ui, ismobile) {
   if (ismobile == null) { ismobile = false; }
   let profileType = 'pro';
@@ -11,12 +5,12 @@ const __dock_widget_launchers = function (ui, ismobile) {
     profileType = _a.hub;
   }
 
-  const button_class = `${ui.fig.family}__button launcher ${profileType}`;
-  const pfx = ui.fig.family;
+  const button = require('./button');
+  const pfx = `${ui.fig.family}__button launcher ${profileType}`;
 
   const addressbookNotifier = {
     kind: 'addressbook_widget_notification',
-    className: `${pfx}__addressbook-notifier desk-dock`,
+    className: `${ui.fig.family}__addressbook-notifier desk-dock`,
     label: LOCALE.CONTACT_INVITATION || 'Contact Invitation',
     service: 'address-book',
     type: 'address-book',
@@ -26,7 +20,7 @@ const __dock_widget_launchers = function (ui, ismobile) {
     uiHanlder: ui
   };
 
-  let bigChatNotifier = {
+  const bigChatNotifier = {
     kind: 'bigchat_widget_notification',
     className: `${ui.fig.family}__bigchat-notifier`,
     label: 'Chat Notification',
@@ -38,46 +32,47 @@ const __dock_widget_launchers = function (ui, ismobile) {
     uiHanlder: ui
   };
 
-  const button = require('./button');
-  let visio = "";
+  const kids = [
+    button(ui, {
+      ico: 'dock-search',
+      className: `${pfx} schedule launcher-icon ${ui.fig.family}__icon addressbook`,
+      innerClass: 'addressbook',
+      sys_pn: 'addressbook-launcher',
+      respawn: 'window_addressbook',
+      helperName: 'addressbook',
+      service: _e.launch
+    }, LOCALE.CONTACTS, addressbookNotifier)
+  ];
+
   if (Visitor.canUseVisio()) {
-    visio = button(ui, {
-      ico: 'area-code',
-      svgSource: icons.play,
-      className: `${button_class} schedule launcher-icon`,
-      service: _e.launch,
-      respawn: 'window_schedule',
-      helperName: 'external-meeting',
-      wicket: 1
-    }, LOCALE.EXTERNAL_MEETING)
+    kids.push(
+      button(ui, {
+        ico: 'dock-media',
+        className: `${pfx} schedule launcher-icon ${ui.fig.family}__icon`,
+        service: _e.launch,
+        respawn: 'window_schedule',
+        helperName: 'external-meeting',
+        wicket: 1
+      }, LOCALE.EXTERNAL_MEETING)
+    );
   }
+
+  kids.push(
+    button(ui, {
+      ico: 'dock-music',
+      className: `${pfx} schedule launcher-icon ${ui.fig.family}__icon bigchat`,
+      innerClass: 'bigchat',
+      sys_pn: 'bigchat-launcher',
+      respawn: 'window_bigchat',
+      service: _e.launch,
+      helperName: 'bigchat'
+    }, LOCALE.CHAT_VIDEO, bigChatNotifier)
+  );
+
   const a = Skeletons.Box.X({
     debug: __filename,
-    className: `${pfx}__container application launcher ${profileType}`,
-    kids: [
-      button(ui, {
-        ico: 'desktop_contactbook',
-        svgSource: icons.search,
-        className: `${button_class} schedule launcher-icon`,
-        innerClass: 'addressbook',
-        sys_pn: 'addressbook-launcher',
-        respawn: 'window_addressbook',
-        helperName: 'addressbook',
-        service: _e.launch
-      }, LOCALE.CONTACTS, addressbookNotifier),
-      visio,
-      button(ui, {
-        ico: 'drumee-chat-visio',
-        svgSource: icons.music,
-        className: `${button_class} schedule launcher-icon`,
-        innerClass: 'bigchat',
-        sys_pn: 'bigchat-launcher',
-        respawn: 'window_bigchat',
-        service: _e.launch,
-        helperName: 'bigchat'
-      }, LOCALE.CHAT_VIDEO,
-        bigChatNotifier),
-    ]
+    className: `${ui.fig.family}__container application launcher ${profileType} ${ui.fig.family}--divider-left`,
+    kids: kids
   });
 
   return a;
