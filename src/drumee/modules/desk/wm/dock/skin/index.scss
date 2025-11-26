@@ -18,11 +18,11 @@
     }
 
     &-left::before {
-      left: -10px;
+      left: 0px;
     }
 
     &-right::after {
-      right: -10px;
+      right: 0px;
     }
   }
 
@@ -64,7 +64,7 @@
     align-items: center;
     justify-content: center;
     max-width: 100vw;
-    padding: 10px 5px;
+    padding: 5px 5px;
 
 
 
@@ -178,15 +178,6 @@
       }
     }
 
-    &.maker {
-      &[data-device="desktop"] {
-        &::after {
-          margin-left: 15px; // 5px;
-          margin-right: 7px;
-        }
-      }
-    }
-
     &.launcher {
       z-index: 100;
     }
@@ -206,13 +197,13 @@
     cursor: pointer;
     display: flex;
     flex-direction: row;
-    height: 50px;
+    height: 70px;
     justify-content: center;
-    width: 78px;  
+    width: 70px;  
     position: relative;
 
     &[data-device="mobile"] {
-      width: 60px;
+      width: 40px;
       height: 40px;
     }
 
@@ -305,23 +296,23 @@
     }
 
     &.maker {
-      &.folder {
-        svg {
-          color: var(--folder-main);
-        }
-      }
+      // &.folder {
+      //   svg {
+      //     color: var(--folder-main);
+      //   }
+      // }
 
-      &.team {
-        svg {
-          color: var(--teamroom-main);
-        }
-      }
+      // &.team {
+      //   svg {
+      //     color: var(--teamroom-main);
+      //   }
+      // }
 
-      &.sharebox {
-        svg {
-          color: var(--sharebox-main);
-        }
-      }
+      // &.sharebox {
+      //   svg {
+      //     color: var(--sharebox-main);
+      //   }
+      // }
 
       &.note {
         svg {

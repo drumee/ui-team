@@ -13,33 +13,34 @@ const __desk_dock_items_makers = function (_ui_) {
     kids: [
       button(_ui_, {
         ico: "dock-folder",
-        className: `${pfx} folder big`,
+        className: `${pfx} folder`,
         service: "add-folder",
         helperName: 'folder'
-      }, LOCALE.FOLDER),
+      }, 'Click to "Create Folder"'),
 
       button(_ui_, {
-        ico: "raw-drumee-folder-orange",
+        ico: "dock-gallery",
+        className: `${pfx} gallery`,
+        service: 'add-media',
+        helperName: 'gallery'
+      }, 'Upload "Image"'),
+
+      button(_ui_, {
+        ico: "dock-music",
         className: `${pfx} sharebox`,
         service: 'add-sharebox',
         respawn: 'hub_sharebox',
         helperName: 'sharebox'
-      }, LOCALE.SHAREBOX),
+      }, 'Upload "Music"'),
 
       button(_ui_, {
-        ico: "raw-drumee-folder-purple",
+        ico: "dock-media",
         className: `${pfx} team`,
         service: 'add-team',
         respawn: 'hub_team',
         helperName: 'teamroom'
-      }, LOCALE.DOCK_TEAM_ROOM),
+      }, 'Upload "Video"')
 
-      button(_ui_, {
-        ico: "dock-note",
-        className: `${pfx} note big`,
-        service: "add-note",
-        helperName: 'note'
-      }, LOCALE.NOTE)
     ]
   });
 

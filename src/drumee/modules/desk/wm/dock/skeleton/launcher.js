@@ -34,6 +34,12 @@ const __dock_widget_launchers = function (ui, ismobile) {
 
   const kids = [
     button(ui, {
+      ico: "dock-note",
+      className: `${pfx} note big`,
+      service: "add-note",
+      helperName: 'note'
+    }, LOCALE.NOTE),
+    button(ui, {
       ico: 'dock-search',
       className: `${pfx} schedule launcher-icon ${ui.fig.family}__icon addressbook`,
       innerClass: 'addressbook',
@@ -44,30 +50,7 @@ const __dock_widget_launchers = function (ui, ismobile) {
     }, LOCALE.CONTACTS, addressbookNotifier)
   ];
 
-  if (Visitor.canUseVisio()) {
-    kids.push(
-      button(ui, {
-        ico: 'dock-media',
-        className: `${pfx} schedule launcher-icon ${ui.fig.family}__icon`,
-        service: _e.launch,
-        respawn: 'window_schedule',
-        helperName: 'external-meeting',
-        wicket: 1
-      }, LOCALE.EXTERNAL_MEETING)
-    );
-  }
 
-  kids.push(
-    button(ui, {
-      ico: 'dock-music',
-      className: `${pfx} schedule launcher-icon ${ui.fig.family}__icon bigchat`,
-      innerClass: 'bigchat',
-      sys_pn: 'bigchat-launcher',
-      respawn: 'window_bigchat',
-      service: _e.launch,
-      helperName: 'bigchat'
-    }, LOCALE.CHAT_VIDEO, bigChatNotifier)
-  );
 
   const a = Skeletons.Box.X({
     debug: __filename,
