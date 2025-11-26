@@ -1911,5 +1911,10 @@
   "NEW_PASSWORD": "新密码",
   "SET_NEW_PASSWORD": "设置新密码",
   "NEW_CODE_RESENT": "已重新发布新代码",
-  "PASSWORD_MATCH": "密码匹配"
+  "PASSWORD_MATCH": "密码匹配",
+  "CREATE_FOLDER": "创建文件夹",
+  "UPLOAD_IMAGE": "上传 \"图片\"",
+  "UPLOAD_MUSIC": "上传 \"音乐\"",
+  "UPLOAD_VIDEO": "上传 \"视频\"",
+  "NAV": "导航"
 }
