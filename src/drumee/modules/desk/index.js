@@ -623,9 +623,9 @@ class desk_module extends LetcBox {
 
       case "open-settings":
         return this.ensurePart("desk-content").then((p) => {
-          p.__windowsLayer.feed({ kind: "window_wallpaper" });
+          p.__windowsLayer.feed({ kind: "window_wallpaper_settings" });
         })
-        return this.__wrapperPopup.feed({kind:'window_wallpaper'});
+        return this.__wrapperPopup.feed({kind:'window_wallpaper_settings'});
         // return this.__wrapperPopup.feed();
 
 

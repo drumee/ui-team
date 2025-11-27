@@ -1911,5 +1911,10 @@
   "NEW_PASSWORD": "Nouveau mot de passe",
   "SET_NEW_PASSWORD": "Définir un nouveau mot de passe",
   "NEW_CODE_RESENT": "Un nouveau code a été renvoyé.",
-  "PASSWORD_MATCH": "Correspondance du mot de passe"
+  "PASSWORD_MATCH": "Correspondance du mot de passe",
+  "CREATE_FOLDER": "Créer un dossier",
+  "UPLOAD_IMAGE": "Télécharger \"Image\"",
+  "UPLOAD_MUSIC": "Télécharger \"Musique\"",
+  "UPLOAD_VIDEO": "Télécharger \"Vidéo\"",
+  "NAV": "Navigation"
 }

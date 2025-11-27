@@ -1911,5 +1911,10 @@
   "NEW_PASSWORD": "Новый пароль",
   "SET_NEW_PASSWORD": "Установить новый пароль",
   "NEW_CODE_RESENT": "Se ha reenviado un nuevo código.",
-  "PASSWORD_MATCH": "Пароль совпал"
+  "PASSWORD_MATCH": "Пароль совпал",
+  "CREATE_FOLDER": "Создать папку",
+  "UPLOAD_IMAGE": "Загрузить \"Изображение\"",
+  "UPLOAD_MUSIC": "Загрузить \"Музыку\"",
+  "UPLOAD_VIDEO": "Загрузить \"Видео\"",
+  "NAV": "Навигация"
 }

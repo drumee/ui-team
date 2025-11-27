@@ -239,6 +239,7 @@ module.exports = {
   window_trash:function(s,f){import('window/trash').then(m=>{s(m.default)}).catch(f)},
   window_website:function(s,f){import('window/website').then(m=>{s(m.default)}).catch(f)},
   window_wallpaper:function(s,f){import('window/wallpaper').then(m=>{s(m.default)}).catch(f)},
+  window_wallpaper_settings:function(s,f){import('window/wallpaper-settings').then(m=>{s(m.default)}).catch(f)},
   dock_minifier:function(s,f){import('src/drumee/modules/desk/wm/dock/widget/dock-minifier').then(m=>{s(m.default)}).catch(f)},
   notification_panel:function(s,f){import('modules/desk/wm/notification').then(m=>{s(m.default)}).catch(f)},
   notification_window:function(s,f){import('modules/desk/wm/notification/widget/notification-window').then(m=>{s(m.default)}).catch(f)},
