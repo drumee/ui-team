@@ -67,7 +67,6 @@ export default function (ui, data) {
     debug: __filename,
     kids: [header, ulpoader, imagesList, footer],
   });
-  console.log("SKELETON WALLPAPER:", a);
   return a;
 }
 

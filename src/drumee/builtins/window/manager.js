@@ -151,8 +151,6 @@ class __window_manager extends mfsInteract {
     if (e && e.target.dataset.partname == "ref-bin") {
       return; // Drop over trash bin
     }
-    this.debug("upload capture", e, this.captured);
-    return;
     if (this._target && this._target.isWallpaperSettings) {
       return;
     }
@@ -179,7 +177,7 @@ class __window_manager extends mfsInteract {
       target.on(_e.reset, () => {
         return (this.captured.over = null);
       });
-      _.delay(this.resetShift.bind(this), 300);
+      setTimeout(this.resetShift.bind(this), 300);
       return;
     }
 
@@ -188,7 +186,7 @@ class __window_manager extends mfsInteract {
         target = this.getActiveWindow();
         break;
       case _e.drop:
-        target = target || this._target || this;
+        target = target || this._target || this.getActiveWindow() || this;
         if (!target.el) {
           return
         }
@@ -215,7 +213,7 @@ class __window_manager extends mfsInteract {
       p = 0;
     }
     this.sendTo(target, e, p, token);
-    _.delay(this.resetShift.bind(this), 300);
+    setTimeout(this.resetShift.bind(this), 300);
   }
 
   /**
@@ -537,7 +535,7 @@ class __window_manager extends mfsInteract {
           const f = () => {
             this.responsive();
           };
-          _.delay(f, 500);
+          setTimeout(f, 500);
         };
         RADIO_BROADCAST.on(_e.responsive, this._responsive);
         child.onAddKid = (c) => {
@@ -995,7 +993,7 @@ class __window_manager extends mfsInteract {
     );
     if (w && !w.isDestroyed()) {
       if (media.mget(_a.kind) == _a.media) {
-        _.delay(() => {
+        setTimeout(() => {
           media.wait(0);
         }, 1500);
       }
@@ -1013,7 +1011,7 @@ class __window_manager extends mfsInteract {
         }
         w.raise();
       };
-      _.delay(f, 100);
+      setTimeout(f, 100);
 
       return true;
     }
@@ -1093,7 +1091,7 @@ class __window_manager extends mfsInteract {
           }
           w.raise();
         };
-        _.delay(f, 100);
+        setTimeout(f, 100);
         return false;
       }
     }
@@ -1137,7 +1135,7 @@ class __window_manager extends mfsInteract {
     const media = this.__modal.children.last();
     this.openContent(media);
     const f = () => media.cut();
-    return _.delay(f, 300);
+    return setTimeout(f, 300);
   }
 
   /**

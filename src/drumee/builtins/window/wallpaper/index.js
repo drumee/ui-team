@@ -38,6 +38,7 @@ class __window_wallpaper extends mfsInteract {
     });
     this.acceptMedia = 1;
     this.isWallpaperSettings = 1;
+    this.captured = {};
     // this.contextmenuSkeleton = 'a';
     // this.style.set({
     //   width: this.size.width,
@@ -74,23 +75,61 @@ class __window_wallpaper extends mfsInteract {
 
   seek_insertion(moving) {
     this.debug("seek_insertion wallpaper", moving);
-
+    this.captured.self = moving;
+    this.captured.self.pos = _e.end;
+    this.raise()
+    this.el.dataset.over = _a.on;
     return this;
   }
 
   insertMedia(items, options = {}) {
     this.debug("insertMedia wallpaper", items, options);
-    return this;
+    this.raise();
   }
+
+  sendTo(target, e, p, token) {
+    this.debug("sendTo wallpaper", target, e, p, token);
+  }
+
   /**
   *
   */
   onDomRefresh() {
-    this.debug("AAA:50", this, this.el)
-    this.feed(require("./skeleton").default(this));
 
+    this.feed(require("./skeleton").default(this));
+    this.raise();
+    this.ensurePart("uploader").then((p) => {
+      this.raise();
+      p.$el.droppable({
+        tolerance: "touch",
+        over: this.mediaDragOver,
+        out: this.mediaDragLeave,
+        drop: this.mediaDrop,
+        greedy: true
+      });
+    });
   }
 
+  mediaDragOver(e) {
+    this.debug("mediaDragOver", e);
+    e.stopPropagation();
+    e.preventDefault();
+    return false;
+  }
+
+  mediaDragLeave(e) {
+    this.debug("mediaDragLeave", e);
+    e.stopPropagation();
+    e.preventDefault();
+    return false;
+  }
+
+  mediaDrop(e) {
+    this.debug("mediaDrop", e);
+    e.stopPropagation();
+    e.preventDefault();
+    return false;
+  }
   /**
    * @param {*} cmd
    * @param {*} args
