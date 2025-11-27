@@ -50,6 +50,7 @@ class desk_module extends LetcBox {
 
     this._updateContextMenu = this._updateContextMenu.bind(this);
 
+
     RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
     setTimeout(this.lazyClasses, 5000);
   }
@@ -528,6 +529,7 @@ class desk_module extends LetcBox {
     if (pointerDragged || !window.Wm) {
       return;
     }
+    this.debug("AAA:543", service, cmd, {});
     switch (service) {
       case _e.lock:
         return Wm.lock();
@@ -618,6 +620,14 @@ class desk_module extends LetcBox {
 
       case "close-popup":
         return this.__wrapperPopup.clear();
+
+      case "open-settings":
+        return this.ensurePart("desk-content").then((p) => {
+          p.__windowsLayer.feed({ kind: "window_wallpaper" });
+        })
+        return this.__wrapperPopup.feed({kind:'window_wallpaper'});
+        // return this.__wrapperPopup.feed();
+
 
       default:
         Wm.unselect();

@@ -151,7 +151,11 @@ class __window_manager extends mfsInteract {
     if (e && e.target.dataset.partname == "ref-bin") {
       return; // Drop over trash bin
     }
-
+    this.debug("upload capture", e, this.captured);
+    return;
+    if (this._target && this._target.isWallpaperSettings) {
+      return;
+    }
     if (this._target && !_.isEmpty(this._target.captured)) {
       if (this.captured && this.captured != this._target.captured) {
         for (let k in this.captured) {
@@ -226,14 +230,17 @@ class __window_manager extends mfsInteract {
       c.el.dataset.selected = 0;
       c.el.dataset.over = _a.off;
       if (c.mget(_a.minimize)) continue;
+      if (c.isWallpaperSettings) return c;
       if (c.acceptMedia) {
         if (moving.intersect(c) > 0.7) {
+
           if (c.isChatWindow) {
             if (moving.mget("isAttachment")) {
               return null;
             }
           }
           const z = parseInt(c.getActualStyle(_a.zIndex));
+          this.debug("AAA:248", z, max, c)
           if (z > max) {
             target = c;
             max = z;

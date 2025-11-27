@@ -1,0 +1,78 @@
+@use "sass:meta";
+@use 'mixins/drumee';
+@use 'buttons' as *;
+
+.window-wallpaper {
+  &__ui {
+    background-color: var(--neutral-100);
+    width: 400px;
+    height: 400px;
+    left: 67px;
+    top: 72px;
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--neutral-0);
+    overflow: hidden;
+  }
+
+  &-topbar {
+    &__container {
+      border-bottom: 1px solid var(--default-border-notification);
+      border-radius: var(--default-border-radius-top); //6px 6px 0 0;
+      height: 44px;
+      background-color: var(--neutral-100);
+    }
+
+    &__title {
+      margin: auto;
+      @include drumee.typo($size: 14px, $line: 21px, $weight: 300, $color: var(--default-text-color));
+    }
+
+    &__control {
+      position: absolute;
+      height: 100%;
+      right: 0;
+
+      .icon {
+        color: #2F2F2F;
+      }
+    }
+  }
+
+  @include wallpaper-button;
+
+  &__uploader {
+    width: 100%;
+    height: 184px;
+    padding: 16px 24px;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    align-self: stretch;
+  }
+
+  &__images-list {
+    width: 100%;
+    height: 384px;
+    padding: 16px 24px;
+
+    .smart-container {
+      gap: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(82px, 82px));
+    }
+  }
+
+  &__image {
+    height: 64px;
+    width: 82px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+
+}
