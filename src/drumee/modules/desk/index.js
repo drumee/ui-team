@@ -57,15 +57,15 @@ class __desk_ui extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   onDestroy() {
     RADIO_BROADCAST.off(_e.select, this._updateContextMenu);
   }
 
   /**
-  *
-  */
+   *
+   */
   async onDomRefresh() {
     this._pending = { available: false };
     if (Visitor.device() === _a.mobile) {
@@ -79,7 +79,7 @@ class __desk_ui extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   restart() {
     wsRouter.resetSocket();
@@ -87,8 +87,8 @@ class __desk_ui extends LetcBox {
   }
 
   /**
-  *
-  */
+   *
+   */
   _updateContextMenu(media) {
     const m = this.getPart("menu-settings");
     if (_.isEmpty(Wm.getGlobalSelection())) {
@@ -100,15 +100,15 @@ class __desk_ui extends LetcBox {
   }
 
   /**
-  *
-  */
+   *
+   */
   changeContextMenu(state) {
     this.findPart("menu-settings").changeState(state);
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   refreshContextMenu() {
     const selected = Wm.getGlobalSelection();
@@ -156,8 +156,8 @@ class __desk_ui extends LetcBox {
             out: this.mediaDragLeaveAvatar,
             drop: this.mediaDropOnAvatar,
             greedy: true,
-          })
-        })
+          });
+        });
 
         this.avatar = child;
         return Visitor.on(_e.change, (m) => {
@@ -205,17 +205,17 @@ class __desk_ui extends LetcBox {
         child.on(_e.open, () => {
           try {
             return (this.__userContainer.el.dataset.state = 1);
-          } catch (error) { }
+          } catch (error) {}
         });
         if (!Visitor.get(_a.privilege)) {
-          Visitor.once('online', () => {
+          Visitor.once("online", () => {
             child.restart();
           });
         }
         return child.on(_e.close, () => {
           try {
             return (this.__userContainer.el.dataset.state = 0);
-          } catch (error) { }
+          } catch (error) {}
         });
 
       case "wrapper-module":
@@ -276,12 +276,11 @@ class __desk_ui extends LetcBox {
     this.avatar.el.dataset.over = _a.yes;
   }
 
-
   /**
-   * 
-   * @param {*} e 
-   * @param {*} ui 
-   * @returns 
+   *
+   * @param {*} e
+   * @param {*} ui
+   * @returns
    */
   mediaDragDropOnAvatar(e, ui) {
     e.stopPropagation();
@@ -306,9 +305,9 @@ class __desk_ui extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} e 
-   * @param {*} ui 
+   *
+   * @param {*} e
+   * @param {*} ui
    */
   _dragLeave(e, ui) {
     Wm.el.dataset.selected = _a.off;
@@ -430,16 +429,16 @@ class __desk_ui extends LetcBox {
       hub_id: Visitor.id,
     }).then((data) => {
       this.dmzDetailResponse(data);
-    })
+    });
   }
 
   /**
    * @param {Object} c
    */
   checkUserOnBoarding(c) {
-    if (Visitor.data("intro") === _a.no) {
-      return;
-    }
+    // if (Visitor.data("intro") === _a.no) {
+    //   return;
+    // }
 
     this.__wrapperPopup.feed(
       require("./skeleton/common/intro-popup").default(this)
@@ -464,6 +463,7 @@ class __desk_ui extends LetcBox {
    *
    */
   skipIntroPopup() {
+    return;
     return this.postService({
       service: SERVICE.drumate.intro_acknowledged,
       hub_id: Visitor.id,
@@ -526,6 +526,7 @@ class __desk_ui extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
+    this.debug(`SERVICE=${service}))`);
     if (pointerDragged || !window.Wm) {
       return;
     }
@@ -584,8 +585,8 @@ class __desk_ui extends LetcBox {
         this._timer = setTimeout(() => {
           Wm.search(cmd, args);
           this._timer = null;
-        }, 1000)
-        return
+        }, 1000);
+        return;
 
       case _e.Enter:
         if (this._timer) clearTimeout(this._timer);
@@ -593,7 +594,7 @@ class __desk_ui extends LetcBox {
         if (cmd.mget(_a.service) == _a.search) {
           Wm.search(cmd, args);
         }
-        return
+        return;
 
       case "copy-link":
         return Wm.copyLink();
@@ -626,8 +627,8 @@ class __desk_ui extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} message 
+   *
+   * @param {*} message
    */
   acknowledge(message) {
     let c = require("libs/preset/ack")(this, message, null, {
@@ -740,4 +741,3 @@ class __desk_ui extends LetcBox {
 __desk_ui.initClass();
 
 module.exports = __desk_ui;
-
