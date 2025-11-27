@@ -1,7 +1,4 @@
-@use './typo';
-
-
-@mixin common-button {
+@mixin wallpaper-settings-button {
 
   &__buttons {
     gap: var(--spacer-6);
@@ -80,3 +77,4 @@
   }
 
 }
+

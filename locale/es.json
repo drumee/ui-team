@@ -141,5 +141,10 @@
   "RESET_PASSWORD": "Restablecer contraseña",
   "NEW_CODE_RESENT": "Se ha reenviado un nuevo código.",
   "UNKNOWN_ERROR": "Error desconocido",
-  "PASSWORD_MATCH": "Coincidencia de contraseña"
+  "PASSWORD_MATCH": "Coincidencia de contraseña",
+  "CREATE_FOLDER": "Crear carpeta",
+  "UPLOAD_IMAGE": "Cargar \"Imagen\"",
+  "UPLOAD_MUSIC": "Cargar \"Música\"",
+  "UPLOAD_VIDEO": "Cargar \"Video\"",
+  "NAV": "Navegación"
 }

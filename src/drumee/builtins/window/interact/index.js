@@ -895,6 +895,7 @@ class __window_interact extends windowCore {
    * @param {*} position
    */
   insertMedia(files, position = 0) {
+    console.trace()
     if (!_.isArray(files)) {
       files = [files];
     }

@@ -238,6 +238,8 @@ const a = {
   window_team:"window/team",
   window_trash:"window/trash",
   window_website:"window/website",
+  window_wallpaper:"window/wallpaper",
+  window_wallpaper_settings:"window/wallpaper-settings",
   dock_minifier:"src/drumee/modules/desk/wm/dock/widget/dock-minifier",
   notification_panel:"modules/desk/wm/notification",
   notification_window:"modules/desk/wm/notification/widget/notification-window",
