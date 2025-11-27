@@ -541,7 +541,7 @@ class __media_core extends DrumeeMFS {
    */
   overlaps(r) {
     const i = this.bbox.intersection(r);
-    if (i == null) {
+    if (i == null) { 
       return 0;
     }
     return i.area() / this.bbox.area();
