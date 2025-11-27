@@ -1,7 +1,8 @@
 @use "sass:meta";
-@use'button/close.scss' as *;
-@use'button/submit.scss' as *;
-@use'container/small.scss' as *;
+@use 'button/close.scss' as *;
+@use 'button/submit.scss' as *;
+@use 'container/small.scss' as *;
+@use './bg-settings';
 
 .dialog {
   &__button {

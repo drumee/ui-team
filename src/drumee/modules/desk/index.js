@@ -49,6 +49,18 @@ class desk_module extends LetcBox {
     this.declareHandlers();
 
     this._updateContextMenu = this._updateContextMenu.bind(this);
+    const wp = Platform.get('wallpaper');
+
+    this._bgListApi = {
+      service: SERVICE.media.get_by_type,
+      page: 1,
+      type: _a.image,
+      nid: wp.path,
+      sort: _a.rank,
+      order: 'desc',
+      vhost: wp.vhost,
+      timer: 2000
+    };
 
     RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
     setTimeout(this.lazyClasses, 5000);
@@ -528,6 +540,7 @@ class desk_module extends LetcBox {
     if (pointerDragged || !window.Wm) {
       return;
     }
+    this.debug("AAA:543", service, cmd, {});
     switch (service) {
       case _e.lock:
         return Wm.lock();
@@ -618,6 +631,28 @@ class desk_module extends LetcBox {
 
       case "close-popup":
         return this.__wrapperPopup.clear();
+
+      case "open-settings":
+        return this.__wrapperPopup.feed(require("./skeleton/common/bg-settings").default(this));
+
+      case "set-wallpaper":
+                var opt = {
+          wallpaper: {
+            nid: cmd.model.get(_a.nodeId),
+            hub_id: cmd.model.get(_a.hub_id) || cmd.model.get(_a.ownerId),
+            vhost: cmd.model.get(_a.vhost)
+          }
+        };
+        return this.postService({
+          service: SERVICE.drumate.update_settings,
+          settings: opt,
+          hub_id: Visitor.id
+        }, { async: 1 }).then((data) => {
+          Visitor.set({ settings: JSON.parse(data.settings) });
+          uiRouter.setWallpaper(Visitor.wallpaper());
+        });
+
+        return ;
 
       default:
         Wm.unselect();

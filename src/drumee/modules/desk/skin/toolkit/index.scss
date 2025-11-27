@@ -1,0 +1,8 @@
+@use "sass:meta";
+
+.desk {
+  &__close-button {
+    width: 20px;
+    height: 20px;
+  }
+}

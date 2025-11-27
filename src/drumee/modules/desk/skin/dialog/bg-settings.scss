@@ -1,0 +1,39 @@
+@use "sass:meta";
+@use'button/close.scss' as *;
+@use'button/submit.scss' as *;
+@use'container/small.scss' as *;
+
+.desk-module-bg-settings {
+
+  @include settings-button;
+
+  &__uploader {
+    width: 100%;
+    height: 184px;
+    padding: 16px 24px;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    align-self: stretch;
+  }
+
+  &__images-list{
+    width: 100%;
+    height: 384px;
+    padding: 16px 24px;
+    .smart-container{
+      gap:12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(82px, 82px));
+    }
+  }
+  &__image{
+    height: 64px;
+    width:82px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  &__container {
+    @include desk-container-small;
+  }
+}
