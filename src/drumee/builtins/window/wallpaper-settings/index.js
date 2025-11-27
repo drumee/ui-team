@@ -1,3 +1,5 @@
+const { filesize, timestamp, dataTransfer } = require("core/utils")
+
 const __window_interact = require('../interact');
 
 /**
@@ -50,17 +52,17 @@ class __window_wallpaper_settings extends __window_interact {
     this.debug("fileDragEnter", e);
     e.stopPropagation();
     e.preventDefault();
-    
+
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'copy';
     }
-    
+
     // Show visual feedback on uploader area
     const uploader = this.findPart('uploader');
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.on;
     }
-    
+
     return false;
   }
 
@@ -71,17 +73,17 @@ class __window_wallpaper_settings extends __window_interact {
     this.debug("fileDragOver", e);
     e.stopPropagation();
     e.preventDefault();
-    
+
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'copy';
     }
-    
+
     // Keep visual feedback on uploader area
     const uploader = this.findPart('uploader');
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.on;
     }
-    
+
     return false;
   }
 
@@ -90,13 +92,13 @@ class __window_wallpaper_settings extends __window_interact {
    */
   fileDragLeave(e) {
     this.debug("fileDragLeave", e);
-    
+
     // Remove visual feedback when leaving uploader area
     const uploader = this.findPart('uploader');
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.off;
     }
-    
+
     return false;
   }
 
@@ -107,33 +109,80 @@ class __window_wallpaper_settings extends __window_interact {
     this.debug("fileDrop", e);
     e.stopPropagation();
     e.preventDefault();
-    
+
     // Remove visual feedback
     const uploader = this.findPart('uploader');
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.off;
     }
-    
-    if (!e.dataTransfer) {
+    const { files } = dataTransfer(e);
+    this.debug("fileDrop extracted", files);
+
+    if (!files || files.length === 0) {
       this.debug("fileDrop: no dataTransfer", e);
       return false;
     }
-    
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      this.handleUpload(files);
+
+    if (files && files.length > 1) {
+      this.warning("Uploading files to wallpaper is limited to one single file at a time.");
+      /** consider checking file type */
+      return;
     }
+    this.handleUpload(files[0]);
     return false;
   }
 
   /**
    * Handle upload files
    */
-  handleUpload(files) {
-    this.debug("handleUpload wallpaper settings", files);
-    if (files && files.length > 0) {
-      this.insertMedia(Array.from(files), 0);
-    }
+  handleUpload(file) {
+    this.debug("handleUpload wallpaper settings", file);
+    /** Create a folder where to store the wallpaper */
+    this.postService(SERVICE.media.make_dir, {
+      hub_id: Visitor.id,
+      nid: Visitor.get(_a.home_id),
+      ownpath: `${LOCALE.PHOTO}/${LOCALE.DESKTOP_WALLPAPER}`,
+    }).then((data) => {
+      this.debug("mediaDrop make_dir response", data);
+      let {
+        nid,
+        home_id,
+        hub_id
+      } = data;
+      /** Append media uploader queue */
+      this.append({
+        kind: "media_uploader",
+        mode: 'row',
+        uiHandler: [this],
+      });
+      let queue = this.children.last();
+
+      queue.once("quota:exceeded", () => {
+        this.warning("Quota exceeded");
+      });
+
+      queue.once(_e.eod, (data) => {
+        this.debug("Upload completed", data);
+      });
+
+      queue.once("upload:response", (data) => {
+        this.debug("Got authorization to upload", data);
+      });
+
+      let args = {
+        destination: {
+          nid,
+          home_id,
+          hub_id
+        },
+        file,
+        echoId: this.mget('echoId'),
+        listener: this,
+        position: 0,
+      }
+      /* send the file to backend using the uploader */
+      queue.add(args);
+    });
   }
 
   /**
@@ -141,83 +190,7 @@ class __window_wallpaper_settings extends __window_interact {
    */
   insertMedia(items, options = {}) {
     this.debug("insertMedia wallpaper settings", items, options);
-    if (!_.isArray(items)) {
-      items = [items];
-    }
-    
-    // Get wallpaper folder path
-    const wp = Platform.get('wallpaper');
-    if (!wp || !wp.path) {
-      this.warning("Wallpaper folder not found");
-      return this;
-    }
-    
-    // Upload files to wallpaper folder using media core
-    const listPart = this.findPart('roll-wallpaper');
-    if (!listPart) {
-      this.warning("Wallpaper list not found");
-      return this;
-    }
-    
-    // Filter only image files
-    const imageFiles = Array.from(items).filter(file => {
-      if (file instanceof File) {
-        return file.type.startsWith('image/');
-      }
-      return false;
-    });
-    
-    if (imageFiles.length === 0) {
-      this.warning("No image files to upload");
-      return this;
-    }
-    
-    // Use uploadInplace for batch upload
-    if (listPart.uploadInplace) {
-      // Create a fake event object with files
-      const fakeEvent = {
-        dataTransfer: {
-          files: imageFiles
-        },
-        preventDefault: () => {},
-        stopPropagation: () => {}
-      };
-      
-      listPart.uploadInplace(fakeEvent).then(() => {
-        // Refresh gallery after upload completes
-        if (listPart.restart) {
-          listPart.restart();
-        }
-      }).catch((err) => {
-        this.debug("Upload error", err);
-      });
-    } else {
-      // Fallback: upload files one by one
-      for (let file of imageFiles) {
-        if (listPart.uploadFile) {
-          listPart.uploadFile(file, wp.path);
-        } else {
-          // Last resort: use _insertMedia
-          const uploadItem = {
-            file: file,
-            phase: _a.upload,
-            nid: wp.path,
-            hub_id: wp.hub_id || Visitor.id,
-            vhost: wp.vhost
-          };
-          this._insertMedia(uploadItem, 0);
-        }
-      }
-      
-      // Refresh gallery after a delay
-      _.delay(() => {
-        if (listPart.restart) {
-          listPart.restart();
-        }
-      }, 2000);
-    }
-    
-    return this;
+    return;
   }
 
   /**
@@ -226,7 +199,19 @@ class __window_wallpaper_settings extends __window_interact {
   onDomRefresh() {
     this.debug("__window_wallpaper_settings onDomRefresh", this);
     this.feed(require("./skeleton").default(this));
+    this.raise();
+    /** Handle events over only the uploader container */
+    this.ensurePart("uploader").then((p) => {
+      p.$el.droppable({
+        tolerance: "touch",
+        over: this.mediaDragOver,
+        out: this.mediaDragLeave,
+        drop: this.mediaDrop,
+        greedy: true
+      });
+    });
   }
+
 
   /**
    * @param {*} child
@@ -234,7 +219,7 @@ class __window_wallpaper_settings extends __window_interact {
    */
   onPartReady(child, pn) {
     this.raise();
-    switch(pn) {
+    switch (pn) {
       case _a.content:
         this._content = child;
         this.setupInteract();
@@ -259,13 +244,13 @@ class __window_wallpaper_settings extends __window_interact {
       case _e.close:
       case "close-popup":
         return this.goodbye();
-        
+
       case "cancel-set-bg":
         return this.goodbye();
-        
+
       case "apply-new-bg":
         return this._applyWallpaper(cmd);
-        
+
       case "set-wallpaper":
         // Set wallpaper immediately when clicking on image in gallery
         var opt = {

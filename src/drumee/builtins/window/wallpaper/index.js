@@ -73,15 +73,21 @@ class __window_wallpaper extends mfsInteract {
     //e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
   }
 
-  seek_insertion(moving) {
-    this.debug("seek_insertion wallpaper", moving);
-    this.captured.self = moving;
-    this.captured.self.pos = _e.end;
+  /**
+   * Override parent method
+   * @returns 
+   */
+  seek_insertion() {
     this.raise()
     this.el.dataset.over = _a.on;
-    return this;
+    return null;
   }
 
+  /**
+   * 
+   * @param {*} items 
+   * @param {*} options 
+   */
   insertMedia(items, options = {}) {
     this.debug("insertMedia wallpaper", items, options);
     this.raise();
@@ -95,11 +101,10 @@ class __window_wallpaper extends mfsInteract {
   *
   */
   onDomRefresh() {
-
     this.feed(require("./skeleton").default(this));
     this.raise();
+    /** Handle events over only the uploader container */
     this.ensurePart("uploader").then((p) => {
-      this.raise();
       p.$el.droppable({
         tolerance: "touch",
         over: this.mediaDragOver,
@@ -110,26 +115,47 @@ class __window_wallpaper extends mfsInteract {
     });
   }
 
+  /**
+   * Prevent Desk to capture the event
+   * @param {*} e 
+   * @returns 
+   */
   mediaDragOver(e) {
-    this.debug("mediaDragOver", e);
     e.stopPropagation();
     e.preventDefault();
     return false;
   }
 
+  /**
+   * Prevent Desk to capture the event
+   * @param {*} e 
+   * @returns 
+   */
   mediaDragLeave(e) {
-    this.debug("mediaDragLeave", e);
     e.stopPropagation();
     e.preventDefault();
     return false;
   }
 
+  /**
+   * 
+   * @param {*} e 
+   * @returns 
+   */
   mediaDrop(e) {
     this.debug("mediaDrop", e);
     e.stopPropagation();
     e.preventDefault();
+    this.postService(SERVICE.media.make_dir, {
+      hub_id: Visitor.id,
+      nid: Visitor.get(_a.home_id),
+      ownpath: `${LOCALE.PHOTO}/${LOCALE.DESKTOP_WALLPAPER}`,
+    }).then((data) => {
+      this.debug("mediaDrop make_dir response", data);
+    });
     return false;
   }
+
   /**
    * @param {*} cmd
    * @param {*} args
@@ -158,8 +184,6 @@ class __window_wallpaper extends mfsInteract {
           Visitor.set({ settings: JSON.parse(data.settings) });
           uiRouter.setWallpaper(Visitor.wallpaper());
         });
-
-
     }
   }
 
