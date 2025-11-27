@@ -1,4 +1,4 @@
-const { button, colors } = require('../toolkit');
+const { button, colors } = require('../../toolkit');
 
 export default function (ui, data) {
   const fig = `${ui.fig.family}-bg-settings`;

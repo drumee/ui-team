@@ -338,6 +338,10 @@ class __window_manager extends push {
     if (!t) {
       return;
     }
+    if (t.isWallpaperSettings) {
+      t.seek_insertion(moving);
+      return;
+    }
     this._target = t.seek_insertion(moving);
     if (!this._target) {
       if (this._prevOver) {

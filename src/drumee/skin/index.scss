@@ -6,7 +6,7 @@
 @use "./lib/svg.scss";
 @use "./lib/menu";
 @use "./lib/utils";
-
+@use "./lib/button";
 body {
   min-height: 100vh;
   background-color: rgb(248, 250, 252);

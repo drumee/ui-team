@@ -83,7 +83,7 @@
     height: 100vh;
     top: 0;
     overflow: hidden;
-    z-index: 100;
+    z-index: -1;
     pointer-events: none;
   }
 

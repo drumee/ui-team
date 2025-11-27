@@ -30,18 +30,18 @@ const _desk_main = function (ui) {
       //   partHandler: [ui]
       // }),
 
-      // Skeletons.Box.Y({
-      //   sys_pn: "notification-container",
-      //   className: `${ui.fig.family}__topbar-notification-container`,
-      //   kids: [
-      //     {
-      //       kind: 'notification_panel',
-      //       uiHandler: [ui]
-      //     }
-      //   ],
-      //   uiHandler: ui,
-      //   partHandler: [ui]
-      // }),
+      Skeletons.Box.Y({
+        sys_pn: "notification-container",
+        className: `${ui.fig.family}__topbar-notification-container`,
+        kids: [
+          {
+            kind: 'notification_panel',
+            uiHandler: [ui]
+          }
+        ],
+        uiHandler: ui,
+        partHandler: [ui]
+      }),
 
       // Skeletons.Wrapper.Y({
       //   name: "module",
