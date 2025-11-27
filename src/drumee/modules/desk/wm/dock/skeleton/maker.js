@@ -12,34 +12,35 @@ const __desk_dock_items_makers = function (_ui_) {
     className: `${_ui_.fig.family}__container application maker ${profileType}`,
     kids: [
       button(_ui_, {
-        ico: "raw-drumee-folder-blue",
-        className: `${pfx} folder big`,
+        ico: "dock-folder",
+        className: `${pfx} folder`,
         service: "add-folder",
         helperName: 'folder'
-      }, LOCALE.FOLDER),
+      }, LOCALE.CREATE_FOLDER),
 
       button(_ui_, {
-        ico: "raw-drumee-folder-orange",
+        ico: "dock-gallery",
+        className: `${pfx} gallery`,
+        service: 'add-media',
+        helperName: 'gallery'
+      }, LOCALE.UPLOAD_IMAGE),
+
+      button(_ui_, {
+        ico: "dock-music",
         className: `${pfx} sharebox`,
         service: 'add-sharebox',
         respawn: 'hub_sharebox',
         helperName: 'sharebox'
-      }, LOCALE.SHAREBOX),
+      }, LOCALE.UPLOAD_MUSIC),
 
       button(_ui_, {
-        ico: "raw-drumee-folder-purple",
+        ico: "dock-media",
         className: `${pfx} team`,
         service: 'add-team',
         respawn: 'hub_team',
         helperName: 'teamroom'
-      }, LOCALE.DOCK_TEAM_ROOM),
+      }, LOCALE.UPLOAD_VIDEO)
 
-      button(_ui_, {
-        ico: "ab-notes",
-        className: `${pfx} note big`,
-        service: "add-note",
-        helperName: 'note'
-      }, LOCALE.NOTE)
     ]
   });
 
