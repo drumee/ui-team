@@ -39,6 +39,12 @@ html {
     height: calc(100vh - 72px);
   }
 
+  &__notification-container {
+    width: 700px;
+    height: auto;
+    max-height: 600px;
+  }
+
   //   &__avatar {
   //     position: absolute;
   //   }

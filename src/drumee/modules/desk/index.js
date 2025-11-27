@@ -103,7 +103,7 @@ class desk_module extends LetcBox {
   changeContextMenu(state) {
     this.findPart("menu-settings").changeState(state);
   }
-
+  notificationState
   /**
    * 
    * @returns 
@@ -543,6 +543,12 @@ class desk_module extends LetcBox {
           { kind: cmd.mget(_a.respawn) },
           { explicit: 1, singleton: 1 }
         );
+
+        case "toggle-notification":
+          return NotificationCenter.togglePanel()
+        // return this.ensurePart("notification-panel").then((p) => {
+        //   this.debug("AAA549", p)
+        // })
 
       case "open-contact-manager":
         return Wm.launch(

@@ -133,6 +133,25 @@ class __notification_panel extends LetcBox {
   /**
    * 
    */
+  togglePanel() {
+    this.debug("AAAA:137", this.mget(_a.state), this.notificationState)
+    if (this.notificationState == 0) {
+      this.notificationState = 1;
+      this.updateNotificationWindow();
+      if (this.parent) {
+        this.parent.el.dataset.state = 1;
+      }
+      this.setState(1);
+      return '';
+    }
+    this.setState(0)
+    return this.closeNotificationPanel();
+
+  }
+
+  /**
+   * 
+   */
   closeNotificationPanel() {
     this.notificationState = 0;
     if (this.parent) {
