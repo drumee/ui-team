@@ -87,7 +87,7 @@ class __user_profile extends LetcBox {
       }));
     }
     this.__imageBox.feed(Skeletons.Button.Svg({
-      ico: "desktop_account--white",
+      ico: "logo",
       className: `${this.fig.family}__icon ${this.fig.family}__initiales`,
       sys_pn: 'initiales',
       active: this.mget(_a.active),

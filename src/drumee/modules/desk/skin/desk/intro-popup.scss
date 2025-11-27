@@ -14,7 +14,7 @@
       overflow: hidden;
       padding: 24px;
       width: calc(100vw - 40px);
-      border: 1px solid var(--neutral-200);
+      border: 1px solid var(--neutral-200, #ebecf0);
       box-shadow: 0 4px 16px 0 rgba(34, 39, 50, 0.04);
 
       &[data-device="mobile"] {
@@ -22,6 +22,18 @@
         height: auto;
         width: 100vw;
         flex-direction: column;
+      }
+    }
+
+    &[data-state="0"] {
+      svg {
+        color: var(--neutral-100);
+      }
+    }
+
+    &[data-state="1"] {
+      svg {
+        color: var(--neutral-600);
       }
     }
 
@@ -60,6 +72,18 @@
 
       &.checkbox {
         align-items: flex-start;
+
+        &[data-state="0"] {
+          svg {
+            color: var(--neutral-100);
+          }
+        }
+
+        &[data-state="1"] {
+          svg {
+            color: var(--neutral-600);
+          }
+        }
       }
     }
 
@@ -73,7 +97,7 @@
       gap: 8px;
       aspect-ratio: 1/1;
       border-radius: 100%;
-      background: vvar(--neutral-200);
+      background: var(--neutral-200, #ebecf0);
     }
 
     &__logo {
@@ -151,18 +175,6 @@
         color: var(--tertiary-text-color);
         width: 16px;
         height: 16px;
-
-        &[data-state="0"] {
-          svg {
-            color: var(--neutral-100);
-          }
-        }
-
-        &[data-state="1"] {
-          svg {
-            color: var(--neutral-600);
-          }
-        }
       }
     }
 
@@ -178,7 +190,7 @@
 
     &__note {
       &.title {
-        color: var(--neutral-900);
+        color: var(--neutral-900, #222732);
         font-family: "Armin Grotesk";
         font-size: 24px;
         font-style: normal;
@@ -190,7 +202,7 @@
         @include drumee.typo(
           $size: 16px,
           $line: 24px,
-          $color: var(--neutral-600)
+          $color: var(--neutral-600, #8c929c)
         );
         width: 100%;
       }
