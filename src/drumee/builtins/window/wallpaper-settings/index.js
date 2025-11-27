@@ -14,6 +14,8 @@ class __window_wallpaper_settings extends __window_interact {
     this.onUiEvent = this.onUiEvent.bind(this);
     this.getCurrentApi = this.getCurrentApi.bind(this);
     this.fileDragLeave = this.fileDragLeave.bind(this);
+    this.fileDragOver = this.fileDragOver.bind(this);
+    this.fileDrop = this.fileDrop.bind(this);
   }
 
   /**
@@ -43,6 +45,19 @@ class __window_wallpaper_settings extends __window_interact {
     });
     this.acceptMedia = 1;
     this.isWallpaperSettings = 1;
+  }
+
+  /**
+   * Override parent method
+   * @returns 
+   */
+  seek_insertion() {
+    this.raise()
+    const uploader = this.findPart('uploader');
+    if (uploader && uploader.el) {
+      uploader.el.dataset.over = _a.on;
+    }
+    return null;
   }
 
   /**
@@ -200,16 +215,6 @@ class __window_wallpaper_settings extends __window_interact {
     this.debug("__window_wallpaper_settings onDomRefresh", this);
     this.feed(require("./skeleton").default(this));
     this.raise();
-    /** Handle events over only the uploader container */
-    this.ensurePart("uploader").then((p) => {
-      p.$el.droppable({
-        tolerance: "touch",
-        over: this.mediaDragOver,
-        out: this.mediaDragLeave,
-        drop: this.mediaDrop,
-        greedy: true
-      });
-    });
   }
 
 
