@@ -554,10 +554,11 @@ class desk_module extends LetcBox {
         );
 
       case "toggle-notification":
-        return NotificationCenter.togglePanel()
-      // return this.ensurePart("notification-panel").then((p) => {
-      //   this.debug("AAA549", p)
-      // })
+        // return NotificationCenter.togglePanel()
+        return this.ensurePart("notification-panel").then((p) => {
+          this.debug("AAA549", p)
+          p.togglePannel()
+        })
 
       case "open-contact-manager":
         return Wm.launch(

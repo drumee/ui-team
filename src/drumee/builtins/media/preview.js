@@ -5,7 +5,11 @@
  * @returns 
  */
 const _image = function (view) {
-  const { fullUrl, filetype } = view.actualNode(_a.vignette);
+  let { fullUrl, nid, hub_id, filetype } = view.actualNode(_a.vignette);
+  const { main_domain, protocol, svc } = bootstrap();
+  if (nid && hub_id) {
+    fullUrl = `${protocol}://${main_domain}${svc}${SERVICE.media.vignette}?nid=${nid}&&hub_id=${hub_id}`
+  }
   return html = `
     <div class="content-preview full ${filetype}" fullUrl style="background: url(${fullUrl}) no-repeat 50% 50%; background-size: cover;"></div>`;
 };
