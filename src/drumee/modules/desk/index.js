@@ -53,6 +53,12 @@ class desk_module extends LetcBox {
 
     RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
     setTimeout(this.lazyClasses, 5000);
+    let { nid, hub_id } = Visitor.wallpaper();
+    this._wallpaper = 0;
+    if (nid && hub_id) {
+      this._wallpaper = 1;
+    }
+
   }
 
   /**
@@ -74,6 +80,7 @@ class desk_module extends LetcBox {
     }
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
+    this.el.dataset.wallpaper = this._wallpaper;
     this.route();
   }
 
@@ -104,7 +111,7 @@ class desk_module extends LetcBox {
   changeContextMenu(state) {
     this.findPart("menu-settings").changeState(state);
   }
-
+  notificationState
   /**
    *
    * @returns
@@ -546,6 +553,13 @@ class desk_module extends LetcBox {
           { explicit: 1, singleton: 1 }
         );
 
+      case "toggle-notification":
+        // return NotificationCenter.togglePanel()
+        return this.ensurePart("notification-panel").then((p) => {
+          this.debug("AAA549", p)
+          p.togglePannel()
+        })
+
       case "open-contact-manager":
         return Wm.launch(
           { kind: cmd.mget(_a.respawn), args: cmd.mget(_a.router) },
@@ -623,11 +637,8 @@ class desk_module extends LetcBox {
 
       case "open-settings":
         return this.ensurePart("desk-content").then((p) => {
-          p.__windowsLayer.feed({ kind: "window_wallpaper" });
+          p.__windowsLayer.feed({ kind: "window_wallpaper_settings" });
         })
-        return this.__wrapperPopup.feed({kind:'window_wallpaper'});
-        // return this.__wrapperPopup.feed();
-
 
       default:
         Wm.unselect();

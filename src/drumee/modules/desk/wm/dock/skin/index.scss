@@ -4,8 +4,49 @@
 
 .desk-dock {
 
+  // Vertical divider - reusable class
+  &--divider {
+    &-left::before,
+    &-right::after {
+      background-color: var(--dock-divider-color);
+      content: " ";
+      height: 70%;
+      width: 1px;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    &-left::before {
+      left: 0px;
+    }
+
+    &-right::after {
+      right: 0px;
+    }
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    svg {
+      display: block;
+      margin: 0 auto;
+      align-self: center;
+    }
+
+    &.addressbook,
+    &.bigchat {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
   &__ui {
-    bottom: 0px;
+    bottom: 60px;
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -17,17 +58,18 @@
   }
 
   &__main {
-    background-color: rgba(47, 47, 47, 0.2);
-    border-radius: var(--border-radius-top);
+    background-color: var(--dock-main-background);
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
     justify-content: center;
     max-width: 100vw;
-    padding: 10px 5px;
+    padding: 5px 5px;
 
 
 
     &::before {
-      backdrop-filter: blur(27px);
-      border-radius: 6px 6px 0 0;
+      border-radius: 9999px;
       content: "";
       height: 100%;
       position: absolute;
@@ -37,6 +79,8 @@
   }
 
   &__action {
+    display: flex;
+    align-items: center;
     justify-content: center;
   }
 
@@ -44,19 +88,29 @@
     &-container {
       position: absolute;
       cursor: pointer;
-      top: -40px;
-      background-color: var(--bg-tooltips); //$default-background-tooltips;
-      border-radius: var(--border-radius-tiny);
+      top: -55px;
+      background-color: var(--dock-main-background);
+      border-radius: 8px;
       height: 30px;
       align-items: center;
       padding: 0 10px;
+      transition: background-color 0.2s ease;
 
       &[data-state="open"] {
         z-index: 50 !important;
+        background-color: var(--dock-main-background) !important;
+
+        &::before {
+          background: var(--dock-main-background) !important;
+        }
+
+        .desk-dock__helper-text {
+          color: var(--dock-text-color) !important;
+        }
       }
 
       &::before {
-        background: var(--bg-tooltips); //$default-background-tooltips;
+        background: var(--dock-main-background);
         bottom: -4px;
         content: " ";
         height: 10px;
@@ -65,6 +119,8 @@
         transform: rotate(45deg);
         width: 12px;
         z-index: 1;
+        transition: background 0.2s ease;
+        border-radius: 0 0 3px 0;
       }
 
       &::after {
@@ -88,16 +144,23 @@
       svg.helper {
         width: 100%;
         height: 100%;
+        color: var(--dock-helper-icon-color);
+        fill: var(--dock-helper-icon-color);
+        stroke: var(--dock-helper-icon-color);
       }
     }
 
     &-text {
       white-space: nowrap;
-      @include drumee.typo($line: 15px, $size: 12px, $color: var(--default-text-color));
+      @include drumee.typo($line: 15px, $size: 12px, $color: var(--dock-text-color));
+      transition: color 0.2s ease;
     }
   }
 
   &__container.application {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     &::after {
       background-color: var(--default-bg); //var(--ewhite);
@@ -107,19 +170,10 @@
     }
 
     &.launcher {
+      position: relative;
       &[data-device="desktop"] {
         &::after {
-          margin-left: 10px;
-          margin-right: 7px;
-        }
-      }
-    }
-
-    &.maker {
-      &[data-device="desktop"] {
-        &::after {
-          margin-left: 15px; // 5px;
-          margin-right: 7px;
+          display: none;
         }
       }
     }
@@ -129,35 +183,46 @@
     }
   }
 
+  &__container.nav-container,
+  &__container.trash-container,
+  &__container.application.launcher {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
   &__button {
     align-items: center;
     cursor: pointer;
     display: flex;
     flex-direction: row;
-    height: 50px; // 38px;
+    height: 70px;
     justify-content: center;
-    width: 78px; //60px;  
+    width: 70px;  
+    position: relative;
 
     &[data-device="mobile"] {
-      width: 60px;
+      width: 40px;
       height: 40px;
     }
 
     svg {
-      background-clip: padding-box;
-      color: var(--default-icon-reverse); //$default-icon-reverse;
-      height: 43px;
-      width: 43px;
-
-      // &[data-device="mobile"] {
-      //   height: 25px;
-      //   width: 25px;
-      // }
+      color: var(--default-icon-reverse);
+      height: 20px;
+      width: 20px;
+      display: block;
+      margin: 0 auto;
+      transition: transform 0.2s ease, color 0.2s ease;
+      border-radius: 0;
+      position: relative;
     }
 
     &.launcher {
       svg.addressbook {
-        padding: 2px;
+        padding: 0;
+        margin-left: 0;
+        margin-right: 0;
       }
 
       svg.bigchat {
@@ -165,68 +230,97 @@
       }
     }
 
-
     .label {
-      // &[data-device="mobile"] {
-      //   line-height: 14px;
-      // }
       overflow: hidden;
       text-align: center;
       text-overflow: ellipsis;
       white-space: nowrap;
       width: 100%;
-      @include drumee.typo($line: 15px, $size: 12px, $color: var(--default-text-reverse)); //var(--ewhite)
+      @include drumee.typo($line: 15px, $size: 12px, $color: var(--default-text-reverse));
     }
 
     &:hover {
-      opacity: 1;
+      &::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 50px;
+        height: 50px;
+        background-color: var(--default-bg);
+        border-radius: 50%;
+        z-index: 0;
+      }
 
-      * {
-        color: var(--default-icon-hover); //var(--eviolet);
+      svg {
+        transform: scale(1.2);
+        color: var(--dock-icon-hover-color);
+        z-index: 1;
+        position: relative;
+      }
+      
+      svg.bigchat {
+        transform: scale(1.2) rotateY(180deg) !important;
+      }
+      
+      &.bigchat svg.bigchat {
+        transform: scale(1.2) rotateY(180deg) !important;
       }
 
       .desk-dock__tooltips {
-        color: var(--default-text-color); //var(--default-text-color);
+        color: var(--dock-text-color) !important;
+        background-color: var(--dock-main-background) !important;
+        border-radius: 8px !important;
+
+        &::before {
+          background: var(--dock-main-background) !important;
+        }
+      }
+      .desk-dock__tooltips::before {
+        border-radius: 0 0 3px 0;
       }
 
-      & .bigchat__btn-counter {
-        color: var(--ewhite);
+      .desk-dock__helper-container {
+        background-color: var(--dock-main-background) !important;
+        border-radius: 8px !important;
+
+        &::before {
+          background: var(--dock-main-background) !important;
+        }
+
+        .desk-dock__helper-text {
+          color: var(--dock-text-color) !important;
+        }
       }
     }
 
     &.maker {
-      &.folder {
-        svg {
-          color: var(--folder-main);
-        }
-      }
+      // &.folder {
+      //   svg {
+      //     color: var(--folder-main);
+      //   }
+      // }
 
-      &.team {
-        svg {
-          color: var(--teamroom-main);
-        }
-      }
+      // &.team {
+      //   svg {
+      //     color: var(--teamroom-main);
+      //   }
+      // }
 
-      &.sharebox {
-        svg {
-          color: var(--sharebox-main);
-        }
-      }
+      // &.sharebox {
+      //   svg {
+      //     color: var(--sharebox-main);
+      //   }
+      // }
 
       &.note {
         svg {
-          // color: var(--sharebox-main);
-          padding: 4px;
+          padding: 0;
         }
       }
 
       &.website {
-        opacity: 0.5;
-
-        &:hover {
-          opacity: 1;
-        }
-
         svg {
           color: var(--website-main);
         }
@@ -236,35 +330,27 @@
     &.launcher {
       &.contact {
         svg {
-          margin-left: 6px;
-          padding: 2px;
-        }
-      }
-
-      &.calendar {
-        opacity: 0.5;
-
-        &:hover {
-          opacity: 1;
+          margin-left: 0;
+          padding: 0;
         }
       }
 
       &.bigchat {
         svg.bigchat {
-          margin-right: 0px;
+          margin-right: 0;
           transform: rotateY(180deg);
         }
       }
 
       &.schedule {
         svg {
-          margin-left: 3px;
+          margin-left: 0;
         }
       }
 
       &.conference {
         svg {
-          margin-right: 0px;
+          margin-right: 0;
         }
       }
     }
@@ -298,7 +384,29 @@
       }
 
       svg {
-        padding: 3px;
+        padding: 0;
+      }
+
+      &:hover {
+        &::before {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 50px;
+          height: 50px;
+          background-color: var(--default-bg);
+          border-radius: 50%;
+          z-index: 0;
+        }
+
+        svg {
+          transform: scale(1.2);
+          color: var(--dock-icon-hover-color);
+          z-index: 1;
+          position: relative;
+        }
       }
     }
 
@@ -308,19 +416,20 @@
   }
 
   &__tooltips {
-    background-color: var(--bg-tooltips); //$default-background-tooltips;
-    border-radius: var(--border-radius-tiny);
+    background-color: var(--dock-main-background);
+    border-radius: 8px;
     opacity: 1;
     padding: 8px;
     position: absolute;
-    top: -40px; //-45px;
+    top: -55px;
     white-space: nowrap;
     z-index: 10;
     user-select: none;
-    @include drumee.typo($size: 11px, $line: 14px, $weight: 400, $color: var(--default-text-tooltips)); // var(--default-text-color));
+    transition: background-color 0.2s ease, color 0.2s ease;
+    @include drumee.typo($size: 11px, $line: 14px, $weight: 400, $color: var(--dock-text-color));
 
     &::before {
-      background: var(--bg-tooltips); //$default-background-tooltips;
+      background: var(--dock-main-background);
       bottom: -4px;
       content: " ";
       height: 10px;
@@ -329,6 +438,8 @@
       transform: rotate(45deg);
       width: 12px;
       z-index: 1;
+      transition: background 0.2s ease;
+      border-radius: 0 0 3px 0;
     }
   }
 

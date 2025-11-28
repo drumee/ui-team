@@ -106,16 +106,7 @@ class __notification_panel extends LetcBox {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     switch (service) {
       case 'open-notification-panel':
-        if (this.notificationState == 0) {
-          this.notificationState = 1;
-          this.updateNotificationWindow();
-          if (this.parent) {
-            this.parent.el.dataset.state = 1;
-          }
-          this.setState(1);
-          return '';
-        }
-        return this.closeNotificationPanel();
+        return this.togglePannel();
 
       case 'close-notification-panel':
         if (this.notificationState == 0) {
@@ -128,6 +119,36 @@ class __notification_panel extends LetcBox {
         cmd.goodbye();
         return this.deleteEntityResponse(cmd);
     }
+  }
+
+  /**
+   * 
+   */
+  togglePannel() {
+    this.debug("AAAA:137", this.mget(_a.state), this.notificationState)
+    if (this.notificationState == 0) {
+      this.notificationState = 1;
+      this.updateNotificationWindow();
+      if (this.parent) {
+        this.parent.el.dataset.state = 1;
+      }
+      this.setState(1);
+      return '';
+    }
+    return this.closeNotificationPanel();
+
+    // if (this.notificationState == 0) {
+    //   this.notificationState = 1;
+    //   this.updateNotificationWindow();
+    //   if (this.parent) {
+    //     this.parent.el.dataset.state = 1;
+    //   }
+    //   this.setState(1);
+    //   return '';
+    // }
+    // this.setState(0)
+    // return this.closeNotificationPanel();
+
   }
 
   /**

@@ -1,10 +1,10 @@
 const _desk_main = function (ui) {
-
-
   const a = Skeletons.Box.Y({
     className: `${ui.fig.family}__main`,
     debug: __filename,
-
+    dataset: {
+      wallpaper:ui._wallpaper
+    },
     kids: [
       Skeletons.Wrapper.Y({
         // name: "popup",
@@ -14,7 +14,6 @@ const _desk_main = function (ui) {
         wrapper: 1,
         uiHandler: ui
       }),
-
 
       Skeletons.Box.Y({
         sys_pn: "top-bar",
@@ -32,11 +31,13 @@ const _desk_main = function (ui) {
 
       Skeletons.Box.Y({
         sys_pn: "notification-container",
-        className: `${ui.fig.family}__topbar-notification-container`,
+        className: `${ui.fig.family}__notification-container`,
         kids: [
           {
+            sys_pn: "notification-panel",
             kind: 'notification_panel',
-            uiHandler: [ui]
+            uiHandler: [ui],
+            partHandler: [ui]
           }
         ],
         uiHandler: ui,

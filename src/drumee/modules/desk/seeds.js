@@ -34,4 +34,5 @@ module.exports = {
   window_trash: 'window/trash',
   window_website: 'window/website',
   window_wallpaper: 'window/wallpaper',
+  window_wallpaper_settings: 'window/wallpaper-settings',
 };

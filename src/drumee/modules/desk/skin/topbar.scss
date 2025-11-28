@@ -143,42 +143,42 @@
 
 }
 
-.top-bar {
-  &-avatar {
-    cursor: pointer;
-    position: relative !important;
-  }
+// .top-bar {
+//   &-avatar {
+//     cursor: pointer;
+//     position: relative !important;
+//   }
 
-  &-avatar-overlay {
-    height: 30px;
-    left: 0;
-    position: absolute;
-    top: 0;
-    width: 30px;
+//   &-avatar-overlay {
+//     height: 30px;
+//     left: 0;
+//     position: absolute;
+//     top: 0;
+//     width: 30px;
 
-    &:hover {
-      box-shadow: 0 5px 4px 3px hsla(0, 0%, 100%, .3), 0 2px 2px 2px hsla(0, 0%, 98%, .2), 0 6px 3px 5px rgb(194 185 203 / 0%);
-    }
-  }
+//     &:hover {
+//       box-shadow: 0 5px 4px 3px hsla(0, 0%, 100%, .3), 0 2px 2px 2px hsla(0, 0%, 98%, .2), 0 6px 3px 5px rgb(194 185 203 / 0%);
+//     }
+//   }
 
-  &__pagename-text {
-    @include drumee.typo($color: var(--default-text-reverse), $size: 24px, $line: 36px, $weight: 300);
-  }
+//   &__pagename-text {
+//     @include drumee.typo($color: var(--default-text-reverse), $size: 24px, $line: 36px, $weight: 300);
+//   }
 
-  &__button {
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 14%), 1px 2px 2px 0 rgb(0 0 0 / 10%), 0 4px 4px 0 rgb(209 221 245 / 20%);
-    cursor: pointer;
-    height: 36px;
-    text-transform: uppercase;
-    width: 115px;
-    @include drumee.typo($color: var(--default-text-reverse), $size: 12px, $line: 14px, $weight: 500);
+//   &__button {
+//     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 14%), 1px 2px 2px 0 rgb(0 0 0 / 10%), 0 4px 4px 0 rgb(209 221 245 / 20%);
+//     cursor: pointer;
+//     height: 36px;
+//     text-transform: uppercase;
+//     width: 115px;
+//     @include drumee.typo($color: var(--default-text-reverse), $size: 12px, $line: 14px, $weight: 500);
 
-    &.primary {
-      background-color: var(--eorange);
-    }
+//     &.primary {
+//       background-color: var(--eorange);
+//     }
 
-    &.secondary {
-      background-color: var(--egreen);
-    }
-  }
-}
+//     &.secondary {
+//       background-color: var(--egreen);
+//     }
+//   }
+// }

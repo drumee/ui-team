@@ -301,6 +301,18 @@ class __desk_dock extends LetcBox {
     })
   }
 
+  /**
+   * Open file picker and upload files to media window
+   * Handles similarly to drag-drop file onto windows
+   * Creates new media window if it doesn't exist
+   */
+  handleMediaUpload() {
+    return Wm.launch({
+      kind: 'window_media',
+      maiden: 1
+    });
+  }
+
 
   /**
    * 
@@ -318,6 +330,8 @@ class __desk_dock extends LetcBox {
       case 'add-folder':
         return Wm.addFolder(cmd);
 
+      case 'add-media':
+        return this.handleMediaUpload();
       // case 'add-note':
       //   let c = Wm.windowsLayer.append({
       //     kind: 'editor_note',
