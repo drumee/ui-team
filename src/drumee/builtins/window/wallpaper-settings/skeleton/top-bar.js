@@ -6,13 +6,13 @@ export default function (ui) {
     className: `${figFamily}__content ${figGroup}__content topbar-content`,
     kids: [
       Skeletons.Note({
-        className: 'title',
-        sys_pn: 'window-name',
+        className: "title",
+        sys_pn: "window-name",
         content: LOCALE.CUSTOMIZE_BACKGROUND || "Customize Background",
         partHandler: ui,
         uiHandler: ui,
-      })
-    ]
+      }),
+    ],
   });
 
   const a = Skeletons.Box.X({
@@ -20,12 +20,8 @@ export default function (ui) {
     className: `${figFamily}__container ${figGroup}__container`,
     sys_pn: _a.topBar,
     service: _e.raise,
-    kids: [
-      windowTitle,
-      require('window/skeleton/topbar/control')(ui, 'c')
-    ]
+    kids: [windowTitle, require("window/skeleton/topbar/control")(ui, "c")],
   });
 
   return a;
 }
-

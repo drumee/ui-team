@@ -1,8 +1,7 @@
-const { button, colors } = require('../../toolkit');
+const { button, colors } = require("../../toolkit");
 
 export default function (ui, data) {
   const fig = `${ui.fig.family}-bg-settings`;
-
 
   const closeIcon = Skeletons.Box.X({
     className: `${fig}__close ${ui.fig.group}__close-button`,
@@ -68,18 +67,18 @@ export default function (ui, data) {
   const imagesList = Skeletons.List.Smart({
     className: `${fig}__images-list`,
     debug: __filename,
-    spinner: Skeletons.Note('', _a.spinner),
+    spinner: Skeletons.Note("", _a.spinner),
     minPage: 3,
-    sys_pn: 'roll-wallpaper',
+    sys_pn: "roll-wallpaper",
     api: ui._bgListApi,
     vendorOpt: Preset.List.Orange_e,
     itemsOpt: {
       kind: KIND.media.preview,
       className: `${fig}__image`,
-      service: 'set-wallpaper',
+      service: "set-wallpaper",
       uiHandler: [ui],
-      format: _a.card
-    }
+      format: _a.card,
+    },
   });
 
   const buttons = Skeletons.Box.X({
@@ -89,20 +88,22 @@ export default function (ui, data) {
     kids: [
       button(ui, {
         label: LOCALE.CANCEL,
-        type: _a.toggle, className: `${fig}__button`, service: "cancel-set-bg"
+        type: _a.toggle,
+        className: `${fig}__button`,
+        service: "cancel-set-bg",
       }),
       button(ui, {
         label: LOCALE.APPLY,
-        type: _a.toggle, className: `${fig}__button`, service: "apply-new-bg"
-      })
+        type: _a.toggle,
+        className: `${fig}__button`,
+        service: "apply-new-bg",
+      }),
     ],
   });
 
   const footer = Skeletons.Box.X({
     className: `${fig}__wrapper footer`,
-    kids: [
-      buttons,
-    ],
+    kids: [buttons],
   });
 
   const a = Skeletons.Box.Y({
@@ -113,4 +114,3 @@ export default function (ui, data) {
 
   return a;
 }
-

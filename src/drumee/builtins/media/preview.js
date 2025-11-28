@@ -1,25 +1,23 @@
-
 /**
- * 
- * @param {*} view 
- * @returns 
+ *
+ * @param {*} view
+ * @returns
  */
 const _image = function (view) {
   let { fullUrl, nid, hub_id, filetype } = view.actualNode(_a.vignette);
   const { main_domain, protocol, svc } = bootstrap();
   if (nid && hub_id) {
-    fullUrl = `${protocol}://${main_domain}${svc}${SERVICE.media.vignette}?nid=${nid}&&hub_id=${hub_id}`
+    fullUrl = `${protocol}://${main_domain}${svc}${SERVICE.media.vignette}?nid=${nid}&&hub_id=${hub_id}`;
   }
-  return html = `
-    <div class="content-preview full ${filetype}" fullUrl style="background: url(${fullUrl}) no-repeat 50% 50%; background-size: cover;"></div>`;
+  return (html = `
+    <div class="content-preview full ${filetype}" fullUrl style="background: url(${fullUrl}) no-repeat 50% 50%; background-size: cover; border-radius:6px;"></div>`);
 };
 
-
 /**
- * 
- * @param {*} view 
- * @param {*} chartId 
- * @returns 
+ *
+ * @param {*} view
+ * @param {*} chartId
+ * @returns
  */
 const _icon = function (view, chartId) {
   const m = view.model;
@@ -44,28 +42,28 @@ const _icon = function (view, chartId) {
     <svg class="full icon ${m.get(_a.filetype)} ${m.get(_a.area)}"> 
       <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#--icon-${chartId}"></use>
     </svg> 
-    <div id="${view._id}-filename" class="filename">${m.get(_a.filename)}</div>`;
+    <div id="${view._id}-filename" class="filename">${m.get(
+    _a.filename
+  )}</div>`;
   return html;
 };
 
-
 class __image_preview extends LetcBlank {
-
   /**
-   * 
-   * @param {*} opt 
-   * @returns 
+   *
+   * @param {*} opt
+   * @returns
    */
   initialize(opt) {
     super.initialize();
     return this.model.atLeast({
-      format: _a.vignette
+      format: _a.vignette,
     });
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   onDomRefresh() {
     this.declareHandlers(); //s()
@@ -76,16 +74,17 @@ class __image_preview extends LetcBlank {
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   _icon() {
     let chartId;
     switch (this.model.get(_a.filetype)) {
-      case _a.document: case _a.image:
-        chartId = 'file-doc';
+      case _a.document:
+      case _a.image:
+        chartId = "file-doc";
         var c = this.model.get(_a.capability);
-        if ((c != null) && c.match(/^r.+/)) {
+        if (c != null && c.match(/^r.+/)) {
           return _image(this);
         }
         break;
@@ -93,13 +92,13 @@ class __image_preview extends LetcBlank {
         return _image(this);
         break;
       case _a.audio:
-        chartId = 'new_musical-not';
+        chartId = "new_musical-not";
         break;
       default:
-        chartId = 'file-doc';
+        chartId = "file-doc";
     }
     return _icon(this, chartId);
   }
 }
 
-module.exports = __image_preview;    
+module.exports = __image_preview;

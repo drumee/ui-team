@@ -1,13 +1,12 @@
-const { filesize, timestamp, dataTransfer } = require("core/utils")
+const { filesize, timestamp, dataTransfer } = require("core/utils");
 
-const __window_interact = require('../interact');
+const __window_interact = require("../interact");
 
 /**
  * @class __window_wallpaper_settings
  * @extends __window_interact
-*/
+ */
 class __window_wallpaper_settings extends __window_interact {
-
   constructor(...args) {
     super(...args);
     this.onDomRefresh = this.onDomRefresh.bind(this);
@@ -29,7 +28,7 @@ class __window_wallpaper_settings extends __window_interact {
       dragenter: "fileDragEnter",
       dragover: "fileDragOver",
       dragleave: "fileDragLeave",
-      drop: "fileDrop"
+      drop: "fileDrop",
     };
   }
 
@@ -37,11 +36,11 @@ class __window_wallpaper_settings extends __window_interact {
    * @param {*} opt
    */
   initialize(opt) {
-    require('./skin');
+    require("./skin");
     super.initialize(opt);
     this.model.set({
       hub_id: Visitor.id,
-      role: _a.search
+      role: _a.search,
     });
     this.acceptMedia = 1;
     this.isWallpaperSettings = 1;
@@ -49,11 +48,11 @@ class __window_wallpaper_settings extends __window_interact {
 
   /**
    * Override parent method
-   * @returns 
+   * @returns
    */
   seek_insertion() {
-    this.raise()
-    const uploader = this.findPart('uploader');
+    this.raise();
+    const uploader = this.findPart("uploader");
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.on;
     }
@@ -69,11 +68,11 @@ class __window_wallpaper_settings extends __window_interact {
     e.preventDefault();
 
     if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'copy';
+      e.dataTransfer.dropEffect = "copy";
     }
 
     // Show visual feedback on uploader area
-    const uploader = this.findPart('uploader');
+    const uploader = this.findPart("uploader");
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.on;
     }
@@ -90,11 +89,11 @@ class __window_wallpaper_settings extends __window_interact {
     e.preventDefault();
 
     if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'copy';
+      e.dataTransfer.dropEffect = "copy";
     }
 
     // Keep visual feedback on uploader area
-    const uploader = this.findPart('uploader');
+    const uploader = this.findPart("uploader");
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.on;
     }
@@ -109,7 +108,7 @@ class __window_wallpaper_settings extends __window_interact {
     this.debug("fileDragLeave", e);
 
     // Remove visual feedback when leaving uploader area
-    const uploader = this.findPart('uploader');
+    const uploader = this.findPart("uploader");
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.off;
     }
@@ -126,7 +125,7 @@ class __window_wallpaper_settings extends __window_interact {
     e.preventDefault();
 
     // Remove visual feedback
-    const uploader = this.findPart('uploader');
+    const uploader = this.findPart("uploader");
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.off;
     }
@@ -139,7 +138,9 @@ class __window_wallpaper_settings extends __window_interact {
     }
 
     if (files && files.length > 1) {
-      this.warning("Uploading files to wallpaper is limited to one single file at a time.");
+      this.warning(
+        "Uploading files to wallpaper is limited to one single file at a time."
+      );
       /** consider checking file type */
       return;
     }
@@ -159,15 +160,11 @@ class __window_wallpaper_settings extends __window_interact {
       ownpath: `${LOCALE.PHOTO}/${LOCALE.DESKTOP_WALLPAPER}`,
     }).then((data) => {
       this.debug("mediaDrop make_dir response", data);
-      let {
-        nid,
-        home_id,
-        hub_id
-      } = data;
+      let { nid, home_id, hub_id } = data;
       /** Append media uploader queue */
       this.append({
         kind: "media_uploader",
-        mode: 'row',
+        mode: "row",
         uiHandler: [this],
       });
       let queue = this.children.last();
@@ -188,13 +185,13 @@ class __window_wallpaper_settings extends __window_interact {
         destination: {
           nid,
           home_id,
-          hub_id
+          hub_id,
         },
         file,
-        echoId: this.mget('echoId'),
+        echoId: this.mget("echoId"),
         listener: this,
         position: 0,
-      }
+      };
       /* send the file to backend using the uploader */
       queue.add(args);
     });
@@ -217,7 +214,6 @@ class __window_wallpaper_settings extends __window_interact {
     this.raise();
   }
 
-
   /**
    * @param {*} child
    * @param {*} pn
@@ -229,7 +225,7 @@ class __window_wallpaper_settings extends __window_interact {
         this._content = child;
         this.setupInteract();
         this.waitElement(child.el, () => {
-          child.feed(require('./skeleton/content').default(this));
+          child.feed(require("./skeleton/content").default(this));
         });
         break;
       default:
@@ -242,8 +238,13 @@ class __window_wallpaper_settings extends __window_interact {
    * @param {*} args
    */
   onUiEvent(cmd, args = {}) {
-    const service = args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug(`__window_wallpaper_settings onUiEvent service=${service}`, cmd, this);
+    const service =
+      args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
+    this.debug(
+      `__window_wallpaper_settings onUiEvent service=${service}`,
+      cmd,
+      this
+    );
 
     switch (service) {
       case _e.close:
@@ -256,20 +257,44 @@ class __window_wallpaper_settings extends __window_interact {
       case "apply-new-bg":
         return this._applyWallpaper(cmd);
 
+      case "apply-bg-by-color":
+        var opt = {
+          wallpaper: {
+            nid: "",
+            hub_id: "",
+            vhost: "",
+            color: the_color_selected_by_the_user,
+          },
+        };
+
+        return this.postService(
+          {
+            service: SERVICE.drumate.update_settings,
+            settings: opt,
+            hub_id: Visitor.id,
+          },
+          { async: 1 }
+        ).then((data) => {
+          Desk.restart();
+        });
+
       case "set-wallpaper":
         // Set wallpaper immediately when clicking on image in gallery
         var opt = {
           wallpaper: {
             nid: cmd.model.get(_a.nodeId),
             hub_id: cmd.model.get(_a.hub_id) || cmd.model.get(_a.ownerId),
-            vhost: cmd.model.get(_a.vhost)
-          }
+            vhost: cmd.model.get(_a.vhost),
+          },
         };
-        return this.postService({
-          service: SERVICE.drumate.update_settings,
-          settings: opt,
-          hub_id: Visitor.id
-        }, { async: 1 }).then((data) => {
+        return this.postService(
+          {
+            service: SERVICE.drumate.update_settings,
+            settings: opt,
+            hub_id: Visitor.id,
+          },
+          { async: 1 }
+        ).then((data) => {
           Visitor.set({ settings: JSON.parse(data.settings) });
           uiRouter.setWallpaper(Visitor.wallpaper());
           // Optionally close window after setting wallpaper
@@ -294,7 +319,7 @@ class __window_wallpaper_settings extends __window_interact {
    * @param {*} type
    */
   getCurrentApi(type) {
-    const wp = Platform.get('wallpaper');
+    const wp = Platform.get("wallpaper");
 
     let api = {
       service: SERVICE.media.get_by_type,
@@ -302,15 +327,13 @@ class __window_wallpaper_settings extends __window_interact {
       type: _a.image,
       nid: wp.path,
       sort: _a.rank,
-      order: 'desc',
+      order: "desc",
       vhost: wp.vhost,
-      timer: 2000
+      timer: 2000,
     };
     return api;
   }
-
 }
 
 __window_wallpaper_settings.initClass();
 module.exports = __window_wallpaper_settings;
-
