@@ -23,11 +23,19 @@ html {
     overflow: hidden;
     background-color: var(--neutral-500);
     font-family: var(--font-main);
+
+    &[data-wallpaper="1"] {
+      background-color: transparent;
+    }
   }
 
   &__main {
     background-color: var(--neutral-100);
     border-radius: 32px;
+
+    &[data-wallpaper="1"] {
+      background-color: transparent;
+    }
   }
 
   &__modal-container {
@@ -38,6 +46,12 @@ html {
   &__wm-container {
     width: 100vw;
     height: calc(100vh - 72px);
+  }
+
+  &__notification-container {
+    width: 700px;
+    height: auto;
+    max-height: 600px;
   }
 
   //   &__avatar {

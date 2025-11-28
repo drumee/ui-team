@@ -38,6 +38,7 @@ class __window_wallpaper extends mfsInteract {
     });
     this.acceptMedia = 1;
     this.isWallpaperSettings = 1;
+    this.captured = {};
     // this.contextmenuSkeleton = 'a';
     // this.style.set({
     //   width: this.size.width,
@@ -72,23 +73,87 @@ class __window_wallpaper extends mfsInteract {
     //e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
   }
 
-  seek_insertion(moving) {
-    this.debug("seek_insertion wallpaper", moving);
-
-    return this;
+  /**
+   * Override parent method
+   * @returns 
+   */
+  seek_insertion() {
+    this.raise()
+    this.el.dataset.over = _a.on;
+    return null;
   }
 
+  /**
+   * 
+   * @param {*} items 
+   * @param {*} options 
+   */
   insertMedia(items, options = {}) {
     this.debug("insertMedia wallpaper", items, options);
-    return this;
+    this.raise();
   }
+
+  sendTo(target, e, p, token) {
+    this.debug("sendTo wallpaper", target, e, p, token);
+  }
+
   /**
   *
   */
   onDomRefresh() {
-    this.debug("AAA:50", this, this.el)
     this.feed(require("./skeleton").default(this));
+    this.raise();
+    /** Handle events over only the uploader container */
+    this.ensurePart("uploader").then((p) => {
+      p.$el.droppable({
+        tolerance: "touch",
+        over: this.mediaDragOver,
+        out: this.mediaDragLeave,
+        drop: this.mediaDrop,
+        greedy: true
+      });
+    });
+  }
 
+  /**
+   * Prevent Desk to capture the event
+   * @param {*} e 
+   * @returns 
+   */
+  mediaDragOver(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    return false;
+  }
+
+  /**
+   * Prevent Desk to capture the event
+   * @param {*} e 
+   * @returns 
+   */
+  mediaDragLeave(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    return false;
+  }
+
+  /**
+   * 
+   * @param {*} e 
+   * @returns 
+   */
+  mediaDrop(e) {
+    this.debug("mediaDrop", e);
+    e.stopPropagation();
+    e.preventDefault();
+    this.postService(SERVICE.media.make_dir, {
+      hub_id: Visitor.id,
+      nid: Visitor.get(_a.home_id),
+      ownpath: `${LOCALE.PHOTO}/${LOCALE.DESKTOP_WALLPAPER}`,
+    }).then((data) => {
+      this.debug("mediaDrop make_dir response", data);
+    });
+    return false;
   }
 
   /**
@@ -119,8 +184,6 @@ class __window_wallpaper extends mfsInteract {
           Visitor.set({ settings: JSON.parse(data.settings) });
           uiRouter.setWallpaper(Visitor.wallpaper());
         });
-
-
     }
   }
 

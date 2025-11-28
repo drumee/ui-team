@@ -6,7 +6,7 @@
   &__ui {
     background-color: var(--neutral-100);
     width: 400px;
-    height: 400px;
+    // height: 400px;
     left: 67px;
     top: 72px;
   }
@@ -58,19 +58,24 @@
 
   &__images-list {
     width: 100%;
-    height: 384px;
-    padding: 16px 24px;
+    height: 300px;
+    padding: 16px 4px;
+    width: 100%;
+    justify-content: center;
+    overflow-y: auto;
 
     .smart-container {
-      gap: 12px;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(82px, 82px));
+      gap: var(--spacer-2);
+      justify-content: center;
+      grid-template-columns: repeat(auto-fill, 94px) minmax(94px, 94px);
+      grid-auto-rows: 80px;
     }
   }
 
   &__image {
-    height: 64px;
-    width: 82px;
+    height: 100%;
+    width: 100%;
     border-radius: 12px;
     cursor: pointer;
   }
