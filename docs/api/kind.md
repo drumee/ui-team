@@ -193,6 +193,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | window_trash | window/trash | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/trash/index.js |
 | window_website | window/website | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/website/index.js |
 | window_wallpaper | window/wallpaper | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/wallpaper/index.js |
+| window_wallpaper_settings | window/wallpaper-settings | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/wallpaper-settings/index.js |
 | dock_minifier | src/drumee/modules/desk/wm/dock/widget/dock-minifier | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/dock/widget/dock-minifier/index.js |
 | notification_panel | modules/desk/wm/notification | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/index.js |
 | notification_window | modules/desk/wm/notification/widget/notification-window | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/widget/notification-window/index.js |
