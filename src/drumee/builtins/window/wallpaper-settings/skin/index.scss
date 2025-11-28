@@ -178,41 +178,54 @@
     justify-content: space-between;
     align-items: center;
   }
-  &__colors-wrapper {
-    gap: 20px;
-    &.item {
-      width: 20px;
-      height: 20px;
-      border-radius: 100%;
-      cursor: pointer;
-      transition: all 0.2s ease; // mượt hơn
+  .window-wallpaper-settings {
+    &__colors-wrapper {
+      gap: 20px;
 
-      &:hover {
-        transform: scale(1.2);
-        opacity: 0.8;
+      &.item {
+        width: 20px;
+        height: 20px;
+        border-radius: 100%;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+
+        &:hover {
+          transform: scale(1.2);
+          opacity: 0.8;
+        }
+
+        // Style for selected color
+        &[data-selected="on"],
+        &.selected {
+          border-color: var(--primary-600);
+          box-shadow: 0 0 0 2px var(--primary-200);
+          transform: scale(1.1);
+        }
       }
-    }
 
-    &.color-gray {
-      background-color: #ebecf0;
-    }
-    &.color-red {
-      background-color: #ff5779;
-    }
-    &.color-pink {
-      background-color: #ff65d5;
-    }
-    &.color-blue {
-      background-color: #2aaaff;
-    }
-    &.color-green {
-      background-color: #34d382;
-    }
-    &.color-yellow {
-      background-color: #ffe50d;
-    }
-    &.color-orange {
-      background-color: #ffa332;
+      // Individual color definitions
+      &.color-gray {
+        background-color: #ebecf0;
+      }
+      &.color-red {
+        background-color: #ff5779;
+      }
+      &.color-pink {
+        background-color: #ff65d5;
+      }
+      &.color-blue {
+        background-color: #2aaaff;
+      }
+      &.color-green {
+        background-color: #34d382;
+      }
+      &.color-yellow {
+        background-color: #ffe50d;
+      }
+      &.color-orange {
+        background-color: #ffa332;
+      }
     }
   }
 

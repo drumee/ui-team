@@ -15,6 +15,21 @@ class __window_wallpaper_settings extends __window_interact {
     this.fileDragLeave = this.fileDragLeave.bind(this);
     this.fileDragOver = this.fileDragOver.bind(this);
     this.fileDrop = this.fileDrop.bind(this);
+
+    // Add state for selected color and color definitions
+    this.selectedColor = null;
+    this.colors = [
+      { name: "gray", value: "#ebecf0" },
+      { name: "red", value: "#ff5779" },
+      { name: "pink", value: "#ff65d5" },
+      { name: "blue", value: "#2aaaff" },
+      { name: "green", value: "#34d382" },
+      { name: "yellow", value: "#ffe50d" },
+      { name: "orange", value: "#ffa332" },
+    ];
+
+    // Bind the color selection handler
+    this.handleColorSelect = this.handleColorSelect.bind(this);
   }
 
   /**
@@ -212,6 +227,20 @@ class __window_wallpaper_settings extends __window_interact {
     this.debug("__window_wallpaper_settings onDomRefresh", this);
     this.feed(require("./skeleton").default(this));
     this.raise();
+
+    // Set default color (first color in array)
+    if (this.colors.length > 0 && !this.selectedColor) {
+      const defaultColor = this.colors[0];
+      this.selectedColor = {
+        value: defaultColor.value,
+        name: defaultColor.name,
+      };
+
+      // Update UI after DOM has rendered
+      setTimeout(() => {
+        this.updateColorSelectionUI();
+      }, 100);
+    }
   }
 
   /**
@@ -258,25 +287,20 @@ class __window_wallpaper_settings extends __window_interact {
         return this._applyWallpaper(cmd);
 
       case "apply-bg-by-color":
-        var opt = {
-          wallpaper: {
-            nid: "",
-            hub_id: "",
-            vhost: "",
-            color: the_color_selected_by_the_user,
-          },
-        };
+        // Extract color information from the clicked element
+        const colorElement = cmd.el || cmd.target;
+        const colorClass = Array.from(colorElement.classList).find((cls) =>
+          cls.startsWith("color-")
+        );
 
-        return this.postService(
-          {
-            service: SERVICE.drumate.update_settings,
-            settings: opt,
-            hub_id: Visitor.id,
-          },
-          { async: 1 }
-        ).then((data) => {
-          Desk.restart();
-        });
+        if (colorClass) {
+          const colorName = colorClass.replace("color-", "");
+          const colorObj = this.colors.find((c) => c.name === colorName);
+          if (colorObj) {
+            this.handleColorSelect(colorObj.value, colorObj.name);
+          }
+        }
+        return;
 
       case "set-wallpaper":
         // Set wallpaper immediately when clicking on image in gallery
@@ -332,6 +356,82 @@ class __window_wallpaper_settings extends __window_interact {
       timer: 2000,
     };
     return api;
+  }
+
+  /**
+   * Handle color selection
+   */
+  handleColorSelect(colorValue, colorName) {
+    this.debug("handleColorSelect", colorValue, colorName);
+
+    // Update the selected color
+    this.selectedColor = {
+      value: colorValue,
+      name: colorName,
+    };
+
+    // Update UI to highlight selected color
+    this.updateColorSelectionUI();
+
+    // Automatically apply the selected color
+    this.applySelectedColor();
+  }
+
+  /**
+   * Update UI to show selected color
+   */
+  updateColorSelectionUI() {
+    const colorsWrapper = this.findPart("colors-wrapper");
+    if (!colorsWrapper || !colorsWrapper.el) return;
+
+    // Remove selected class from all colors
+    const colorElements = colorsWrapper.el.querySelectorAll(".item");
+    colorElements.forEach((element) => {
+      element.classList.remove("selected");
+      element.dataset.selected = _a.off;
+    });
+
+    // Add selected class to the chosen color
+    const selectedElement = colorsWrapper.el.querySelector(
+      `.color-${this.selectedColor.name}`
+    );
+    if (selectedElement) {
+      selectedElement.classList.add("selected");
+      selectedElement.dataset.selected = _a.on;
+    }
+  }
+
+  /**
+   * Apply selected color as wallpaper
+   */
+  applySelectedColor() {
+    if (!this.selectedColor) return;
+
+    const opt = {
+      wallpaper: {
+        nid: "",
+        hub_id: "",
+        vhost: "",
+        color: this.selectedColor.value,
+      },
+    };
+
+    this.postService(
+      {
+        service: SERVICE.drumate.update_settings,
+        settings: opt,
+        hub_id: Visitor.id,
+      },
+      { async: 1 }
+    )
+      .then((data) => {
+        this.debug("Wallpaper color updated successfully", data);
+        Visitor.set({ settings: JSON.parse(data.settings) });
+        uiRouter.setWallpaper(Visitor.wallpaper());
+      })
+      .catch((error) => {
+        this.error("Failed to update wallpaper color", error);
+      });
   }
 }
 

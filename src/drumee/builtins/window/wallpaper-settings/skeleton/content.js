@@ -33,34 +33,32 @@ function __skl_window_wallpaper_settings_content(_ui_, opt) {
     },
   });
 
+  // Create color items with service binding
+  const colorItems = [
+    { name: "gray", className: `${fig}__colors-wrapper item color-gray` },
+    { name: "red", className: `${fig}__colors-wrapper item color-red` },
+    { name: "pink", className: `${fig}__colors-wrapper item color-pink` },
+    { name: "blue", className: `${fig}__colors-wrapper item color-blue` },
+    { name: "green", className: `${fig}__colors-wrapper item color-green` },
+    { name: "yellow", className: `${fig}__colors-wrapper item color-yellow` },
+    { name: "orange", className: `${fig}__colors-wrapper item color-orange` },
+  ].map((color) =>
+    Skeletons.Box.X({
+      className: color.className,
+      service: "apply-bg-by-color", // This triggers the onUiEvent handler
+      uiHandler: [_ui_],
+      attributes: {
+        "data-color-name": color.name, // Store color name for easy access
+      },
+    })
+  );
+
   const colorsWrapper = Skeletons.Box.X({
     className: `${fig}__colors-wrapper`,
+    sys_pn: "colors-wrapper", // Add system part name for element lookup
     kidsOpt: { active: 0 },
     uiHandler: _ui_,
-    kids: [
-      Skeletons.Box.X({
-        className: `${fig}__colors-wrapper item color-gray`,
-        service: "apply-bg-by-color",
-      }),
-      Skeletons.Box.X({
-        className: `${fig}__colors-wrapper item color-red`,
-      }),
-      Skeletons.Box.X({
-        className: `${fig}__colors-wrapper item color-pink`,
-      }),
-      Skeletons.Box.X({
-        className: `${fig}__colors-wrapper item color-blue`,
-      }),
-      Skeletons.Box.X({
-        className: `${fig}__colors-wrapper item color-green`,
-      }),
-      Skeletons.Box.X({
-        className: `${fig}__colors-wrapper item color-yellow`,
-      }),
-      Skeletons.Box.X({
-        className: `${fig}__colors-wrapper item color-orange`,
-      }),
-    ],
+    kids: colorItems,
   });
 
   const colors = Skeletons.Box.X({
