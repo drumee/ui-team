@@ -86,6 +86,8 @@
   --default-border-notification: rgb(137 146 158 / 70%);
   --default-border-caution: #EA4D44;
   --default-border-popup: #dde2e8;
+  --default-border-radius: 6px;
+  --default-border-radius-top: 6px 6px 0px 0px;
 
   /** toggle**/
   --toggle-switch-on: #879BFF;
@@ -242,5 +244,8 @@
   --dock-icon-hover-color: #000000;
   --dock-text-color: #ffffff;
   --dock-helper-icon-color: #ffffff;
+
+  /* ******* wallpaper settings ******/
+  --corner-radius-max: 24px;
 
 }

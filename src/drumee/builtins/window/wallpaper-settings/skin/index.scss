@@ -6,9 +6,9 @@
   &__ui {
     background-color: var(--white);
     border: 1px solid var(--default-border-notification);
-    border-radius: var(--default-border-radius);
+    border-radius: var( --corner-radius-6);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    width: 600px;
+    width: 500px;
     height: 700px;
     left: 67px;
     top: 72px;
@@ -21,14 +21,11 @@
     flex-direction: column;
     background-color: var(--white);
     overflow: hidden;
-    border-radius: var(--default-border-radius);
+    border-radius: var( --corner-radius-6);
   }
 
   &__header {
-    background-color: var(--neutral-100);
-    border-bottom: 1px solid var(--default-border-notification);
-    border-radius: var(--default-border-radius-top);
-    height: 44px;
+    height: 72px;
   }
 
   &-topbar {
@@ -42,25 +39,34 @@
     &__content {
       align-items: center;
       height: 100%;
-      justify-content: center;
+      justify-content: left;
+      padding: 0 24px;
       width: 100%;
 
       & .title {
-        text-align: center;
-        @include drumee.typo($size: 14px, $line: 21px, $weight: 300, $color: var(--default-text-color));
+        text-align: left;
+        color: var(--neutral-900, #222732);
+        font-size: 18px;
+        font-style: normal;
+        font-weight: 500;
+        line-height: 30px;
         padding: 0;
       }
     }
 
     &__control {
       position: absolute;
-      right: 0;
+      right: 22px;
       top: 0;
-      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
       & .icon {
-        color: #2F2F2F;
-        margin: 10px 8px;
+        color: var(--neutral-400);
+        width: 20px;
+        height: 20px;
+        margin:auto;
       }
     }
   }
@@ -69,32 +75,54 @@
 
   &__uploader {
     max-width: 500px;
-    width: 100%;
-    height: 184px;
+    width: 90%;
+    min-height: 184px;
     padding: 16px 24px;
     justify-content: center;
     align-items: center;
     gap: 12px;
     align-self: center;
-    border: 2px dashed var(--neutral-300);
-    border-radius: 8px;
+    border-radius: var(--corner-radius-4);
     margin: 16px auto;
-    background-color: var(--neutral-50);
+    background-color: var(--neutral-200);
     transition: all 0.3s ease;
     
     &:hover {
-      border-color: var(--primary-500);
-      background-color: var(--primary-50);
+      background-color: var(--neutral-300);
     }
     
     &[data-over="on"] {
-      border-color: var(--primary-600);
-      background-color: var(--primary-100);
+      background-color: var(--neutral-300);
     }
     
     &-text {
-      @include drumee.typo($size: 14px, $line: 20px, $color: var(--neutral-600));
+      @include drumee.typo($size: 14px, $line: 20px, $color: var(--white));
       text-align: center;
+      text-shadow: 0 1px 1px rgba(34, 39, 50, 0.24);
+    }
+
+    &-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+
+  &__upload-button {
+    display: flex;
+    height: 40px;
+    padding: 8px var(--spacer-6, 24px);
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    border-radius: var(--corner-radius-max);
+    background: var(--gray-white, #FFF);
+    box-shadow: 0 4px 12px 0 rgba(34, 39, 50, 0.12);
+    color: var(--neutral-900);
+    
+    &:hover {
+      background-color: var(--neutral-50);
     }
   }
 
@@ -107,27 +135,79 @@
     .smart-container {
       gap: 12px;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+      // Let aspect-ratio on items determine row height automatically
+      grid-auto-rows: min-content;
+      align-items: start;
     }
   }
 
   &__image {
-    height: 100px;
+    // Ratio 92/64 - maintain aspect ratio
+    aspect-ratio: 92 / 64;
     width: 100%;
-    border-radius: 8px;
+    border-radius: 9px;
     cursor: pointer;
     object-fit: cover;
     border: 2px solid transparent;
-    transition: all 0.2s ease;
+    
+    // Style for preview container inside media.preview
+    .content-preview {
+      border-radius: var(--corner-radius-2);
+      overflow: hidden;
+    }
     
     &:hover {
       border-color: var(--primary-500);
-      transform: scale(1.05);
     }
     
     &[data-selected="on"] {
       border-color: var(--primary-600);
       box-shadow: 0 0 0 2px var(--primary-200);
+    }
+  }
+
+  &__colors {
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-top: 1px solid var(--neutral-200);
+  }
+
+  &__colors-title {
+    @include drumee.typo($size: 14px, $line: 21px, $weight: 400, $color: var(--default-text-color));
+    flex-shrink: 0;
+  }
+
+  &__colors-swatches {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    flex: 1;
+  }
+
+  &__color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.1);
+      border-color: var(--neutral-400);
+    }
+    
+    &[data-selected="1"] {
+      border-color: var(--primary-600);
+      box-shadow: 0 0 0 2px var(--primary-200);
+      transform: scale(1.15);
     }
   }
 
@@ -148,11 +228,10 @@
     }
 
     &__footer {
-      border-top: 1px solid var(--default-border-notification);
       padding: 16px 24px;
       display: flex;
       justify-content: flex-end;
-      background-color: var(--neutral-50);
+      background-color: var(--white);
       flex-shrink: 0;
     }
   }

@@ -53,10 +53,13 @@ class desk_module extends LetcBox {
 
     RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
     setTimeout(this.lazyClasses, 5000);
-    let { nid, hub_id } = Visitor.wallpaper();
+    let { nid, hub_id, color } = Visitor.settings().wallpaper || {};
     this._wallpaper = 0;
+    this._color = null;
     if (nid && hub_id) {
       this._wallpaper = 1;
+    } else if (color) {
+      this._color = color;
     }
 
   }
@@ -81,6 +84,19 @@ class desk_module extends LetcBox {
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
     this.el.dataset.wallpaper = this._wallpaper;
+    if (this._color) {
+      this.el.dataset.color = this._color;
+      // Apply color as inline style
+      this.el.style.backgroundColor = this._color;
+    }
+    const mainEl = this.el.querySelector('.desk-module__main');
+    if (mainEl) {
+      mainEl.dataset.wallpaper = this._wallpaper;
+      if (this._color) {
+        mainEl.dataset.color = this._color;
+        mainEl.style.backgroundColor = this._color;
+      }
+    }
     this.route();
   }
 
