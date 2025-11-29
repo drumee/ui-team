@@ -28,7 +28,8 @@ class __notification_panel extends LetcBox {
     window.NotificationCenter = this;
 
     this._onOutsideClick = (e, origin) => {
-      if (pointerDragged) return;
+      this.debug("AAA:31", e)
+      if (pointerDragged || e.getService() == 'toggle-notification') return;
       if (e && !this.el.contains(e.currentTarget)) {
         this.closeNotificationPanel();
       }

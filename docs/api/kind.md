@@ -161,6 +161,9 @@ See https://drumee.com/-/#/sandbox for examples.
 | svg | libs/reader/image/svg | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/image/svg/index.js |
 | dock | modules/desk/wm/dock | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/dock/index.js |
 | litechat_message | window/litechat/message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/litechat/message/index.js |
+| notification_list_item | desk/notification/widget/notification-list-item | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notification/widget/notification-list-item/index.js |
+| notification_panel | desk/notification | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notification/index.js |
+| notification_window | desk/notification/widget/notification-window | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notification/widget/notification-window/index.js |
 | notifier_generic | desk/notifier/generic | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notifier/generic/index.js |
 | notifier_network | desk/notifier/network | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notifier/network/index.js |
 | schedule_invitation | window/schedule/widget/invitation | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/schedule/widget/invitation/index.js |
@@ -170,7 +173,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | window_account | window/account | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/index.js |
 | window_addressbook | window/addressbook | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/index.js |
 | window_bigchat | window/bigchat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/index.js |
-| window_server_explorer | window/serverexplorer | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/serverexplorer/index.js |
 | window_channel | window/channel | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/channel/index.js |
 | window_choice | window/choice | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/choice/index.js |
 | window_confirm | window/confirm | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/confirm/index.js |
@@ -186,17 +188,15 @@ See https://drumee.com/-/#/sandbox for examples.
 | window_meeting | window/meeting | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/meeting/index.js |
 | window_schedule | window/schedule | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/schedule/index.js |
 | window_search | window/search | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/search/index.js |
+| window_server_explorer | window/serverexplorer | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/serverexplorer/index.js |
 | window_sharebox | window/sharebox | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/sharebox/index.js |
 | window_supportticket | window/supportticket | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/supportticket/index.js |
 | window_switchcall | window/switchcall | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/switchcall/index.js |
 | window_team | window/team | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/team/index.js |
 | window_trash | window/trash | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/trash/index.js |
+| window_wallpaper_settings | window/wallpaper-settings | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/wallpaper-settings/index.js |
 | window_website | window/website | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/website/index.js |
-| window_wallpaper | window/wallpaper | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/wallpaper/index.js |
 | dock_minifier | src/drumee/modules/desk/wm/dock/widget/dock-minifier | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/dock/widget/dock-minifier/index.js |
-| notification_panel | modules/desk/wm/notification | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/index.js |
-| notification_window | modules/desk/wm/notification/widget/notification-window | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/widget/notification-window/index.js |
-| notification_list_item | modules/desk/wm/notification/widget/notification-list-item | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/notification/widget/notification-list-item/index.js |
 | devel_icons | src/drumee/modules/devel/icons | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/devel/icons/index.js |
 | locale_language | src/drumee/modules/devel/locale/language | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/devel/locale/language/index.js |
 | dmz_window_manager | dmz/wm | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/dmz/wm/index.js |

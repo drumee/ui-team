@@ -53,7 +53,7 @@ class desk_module extends LetcBox {
 
     RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
     setTimeout(this.lazyClasses, 5000);
-    let { nid, hub_id } = Visitor.wallpaper();
+    let { nid, hub_id } = Visitor.wallpaper() || {};
     this._wallpaper = 0;
     if (nid && hub_id) {
       this._wallpaper = 1;
