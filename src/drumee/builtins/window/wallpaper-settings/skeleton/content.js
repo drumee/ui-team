@@ -1,82 +1,122 @@
-const { button } = require('../../../skeleton/toolkit/index');
+const { button } = require("../../../skeleton/toolkit/buttons");
+const COLORS = ["gray", "red", "pink", "blue", "green", "yellow", "orange"];
 
-function __skl_window_wallpaper_settings_content(_ui_, opt) {
-  const contentFig = `${_ui_.fig.family}-content`;
-  const fig = `${_ui_.fig.family}`;
+function __skl_window_wallpaper_settings_content(ui, opt) {
+  const contentFig = `${ui.fig.family}-content`;
+  const fig = `${ui.fig.family}`;
 
   const uploader = Skeletons.Box.X({
     className: `${fig}__uploader`,
     sys_pn: "uploader",
-    partHandler: [_ui_],
+    partHandler: [ui],
     kids: [
       Skeletons.Note({
         content: LOCALE.DROP_FILES_HERE || "Drop files here to upload",
         className: `${fig}__uploader-text`,
-      })
-    ]
+      }),
+    ],
   });
 
   const imagesList = Skeletons.List.Smart({
     className: `${fig}__images-list`,
     debug: __filename,
-    spinner: Skeletons.Note('', _a.spinner),
+    spinner: Skeletons.Note("", _a.spinner),
     minPage: 3,
-    sys_pn: 'roll-wallpaper',
-    api: _ui_.getCurrentApi,
+    sys_pn: "roll-wallpaper",
+    api: ui.getCurrentApi,
     vendorOpt: Preset.List.Orange_e,
     itemsOpt: {
       kind: KIND.media.preview,
       className: `${fig}__image`,
-      service: 'set-wallpaper',
-      uiHandler: [_ui_],
-      format: _a.card
+      service: "set-wallpaper",
+      uiHandler: [ui],
+      format: _a.card,
+    },
+  });
+
+  // Create color items with service binding
+  const colorItems = COLORS.map((name) =>
+    Skeletons.Box.X({
+      className: `${fig}__colors-wrapper item color-${name}`,
+      service: "apply-bg-by-color", // This triggers the onUiEvent handler
+      uiHandler: [ui],
+      name,
+      radio: `color-radio-${ui._id}`,
+      // attributes: {
+      //   "data-color-name": name, // Store color name for easy access
+      // },
+    })
+  );
+
+  let i = 0; /** Defqult selection index */
+  const { color } = Visitor.wallpaper();
+  if (color) {
+    for (let name of COLORS) {
+      if (name == color.name) {
+        break
+      }
+      i++;
     }
+
+  }
+  colorItems[i].state = "1";
+
+  const colorsWrapper = Skeletons.Box.X({
+    className: `${fig}__colors-wrapper`,
+    sys_pn: "colors-wrapper", // Add system part name for element lookup
+    uiHandler: ui,
+    kids: colorItems,
+  });
+
+  const colors = Skeletons.Box.X({
+    className: `${fig}__colors`,
+    kidsOpt: { active: 0 },
+    uiHandler: ui,
+    kids: [
+      Skeletons.Note({
+        content: LOCALE.COLORS || "Colors",
+        className: `${fig}__color colors-text`,
+      }),
+      colorsWrapper,
+    ],
   });
 
   const buttons = Skeletons.Box.X({
     className: `${fig}__buttons`,
-    kidsOpt: { active: 0 },
-    uiHandler: _ui_,
+    // kidsOpt: { active: 0 },
+    uiHandler: ui,
     kids: [
-      button(_ui_, {
+      button(ui, {
         label: LOCALE.CANCEL,
         type: _a.toggle,
         className: `${fig}__button`,
-        service: "cancel-set-bg"
+        service: "cancel-set-bg",
       }),
-      button(_ui_, {
+      button(ui, {
         label: LOCALE.APPLY,
         type: _a.toggle,
         className: `${fig}__button`,
-        service: "apply-new-bg"
-      })
+        service: "apply-new-bg",
+      }),
     ],
   });
 
-  const footer = Skeletons.Box.X({
+  const footer = Skeletons.Box.Y({
     className: `${contentFig}__footer`,
-    kids: [
-      buttons,
-    ],
+    kids: [colors, buttons],
   });
 
-  let a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     className: `${contentFig}__container`,
     debug: __filename,
     kids: [
       Skeletons.Box.Y({
         className: `${contentFig}__body-content`,
-        kids: [
-          uploader,
-          imagesList
-        ]
+        kids: [uploader, imagesList],
       }),
-      footer
-    ]
+      footer,
+    ],
   });
-
-  return a;
 }
 
 export default __skl_window_wallpaper_settings_content;
-

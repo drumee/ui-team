@@ -2,8 +2,9 @@ const _desk_main = function (ui) {
   const a = Skeletons.Box.Y({
     className: `${ui.fig.family}__main`,
     debug: __filename,
+    sys_pn: "main",
     dataset: {
-      wallpaper:ui._wallpaper
+      wallpaper: ui._wallpaper,
     },
     kids: [
       Skeletons.Wrapper.Y({

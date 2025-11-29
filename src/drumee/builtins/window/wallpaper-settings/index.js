@@ -1,13 +1,12 @@
-const { filesize, timestamp, dataTransfer } = require("core/utils")
+const { filesize, timestamp, dataTransfer } = require("core/utils");
 
-const __window_interact = require('../interact');
+const __window_interact = require("../interact");
 
 /**
  * @class __window_wallpaper_settings
  * @extends __window_interact
-*/
+ */
 class __window_wallpaper_settings extends __window_interact {
-
   constructor(...args) {
     super(...args);
     this.onDomRefresh = this.onDomRefresh.bind(this);
@@ -16,6 +15,21 @@ class __window_wallpaper_settings extends __window_interact {
     this.fileDragLeave = this.fileDragLeave.bind(this);
     this.fileDragOver = this.fileDragOver.bind(this);
     this.fileDrop = this.fileDrop.bind(this);
+
+    // Add state for selected color and color definitions
+    // this.selectedColor = null;
+    // this.colors = [
+    //   { name: "gray", value: "#ebecf0" },
+    //   { name: "red", value: "#ff5779" },
+    //   { name: "pink", value: "#ff65d5" },
+    //   { name: "blue", value: "#2aaaff" },
+    //   { name: "green", value: "#34d382" },
+    //   { name: "yellow", value: "#ffe50d" },
+    //   { name: "orange", value: "#ffa332" },
+    // ];
+
+    // Bind the color selection handler
+    // this.handleColorSelect = this.handleColorSelect.bind(this);
   }
 
   /**
@@ -29,7 +43,7 @@ class __window_wallpaper_settings extends __window_interact {
       dragenter: "fileDragEnter",
       dragover: "fileDragOver",
       dragleave: "fileDragLeave",
-      drop: "fileDrop"
+      drop: "fileDrop",
     };
   }
 
@@ -37,11 +51,11 @@ class __window_wallpaper_settings extends __window_interact {
    * @param {*} opt
    */
   initialize(opt) {
-    require('./skin');
+    require("./skin");
     super.initialize(opt);
     this.model.set({
       hub_id: Visitor.id,
-      role: _a.search
+      role: _a.search,
     });
     this.acceptMedia = 1;
     this.isWallpaperSettings = 1;
@@ -49,11 +63,11 @@ class __window_wallpaper_settings extends __window_interact {
 
   /**
    * Override parent method
-   * @returns 
+   * @returns
    */
   seek_insertion() {
-    this.raise()
-    const uploader = this.findPart('uploader');
+    this.raise();
+    const uploader = this.findPart("uploader");
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.on;
     }
@@ -69,11 +83,11 @@ class __window_wallpaper_settings extends __window_interact {
     e.preventDefault();
 
     if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'copy';
+      e.dataTransfer.dropEffect = "copy";
     }
 
     // Show visual feedback on uploader area
-    const uploader = this.findPart('uploader');
+    const uploader = this.findPart("uploader");
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.on;
     }
@@ -90,11 +104,11 @@ class __window_wallpaper_settings extends __window_interact {
     e.preventDefault();
 
     if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'copy';
+      e.dataTransfer.dropEffect = "copy";
     }
 
     // Keep visual feedback on uploader area
-    const uploader = this.findPart('uploader');
+    const uploader = this.findPart("uploader");
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.on;
     }
@@ -109,7 +123,7 @@ class __window_wallpaper_settings extends __window_interact {
     this.debug("fileDragLeave", e);
 
     // Remove visual feedback when leaving uploader area
-    const uploader = this.findPart('uploader');
+    const uploader = this.findPart("uploader");
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.off;
     }
@@ -126,7 +140,7 @@ class __window_wallpaper_settings extends __window_interact {
     e.preventDefault();
 
     // Remove visual feedback
-    const uploader = this.findPart('uploader');
+    const uploader = this.findPart("uploader");
     if (uploader && uploader.el) {
       uploader.el.dataset.over = _a.off;
     }
@@ -139,7 +153,9 @@ class __window_wallpaper_settings extends __window_interact {
     }
 
     if (files && files.length > 1) {
-      this.warning("Uploading files to wallpaper is limited to one single file at a time.");
+      this.warning(
+        "Uploading files to wallpaper is limited to one single file at a time."
+      );
       /** consider checking file type */
       return;
     }
@@ -159,15 +175,11 @@ class __window_wallpaper_settings extends __window_interact {
       ownpath: `${LOCALE.PHOTO}/${LOCALE.DESKTOP_WALLPAPER}`,
     }).then((data) => {
       this.debug("mediaDrop make_dir response", data);
-      let {
-        nid,
-        home_id,
-        hub_id
-      } = data;
+      let { nid, home_id, hub_id } = data;
       /** Append media uploader queue */
       this.append({
         kind: "media_uploader",
-        mode: 'row',
+        mode: "row",
         uiHandler: [this],
       });
       let queue = this.children.last();
@@ -188,13 +200,13 @@ class __window_wallpaper_settings extends __window_interact {
         destination: {
           nid,
           home_id,
-          hub_id
+          hub_id,
         },
         file,
-        echoId: this.mget('echoId'),
+        echoId: this.mget("echoId"),
         listener: this,
         position: 0,
-      }
+      };
       /* send the file to backend using the uploader */
       queue.add(args);
     });
@@ -215,8 +227,23 @@ class __window_wallpaper_settings extends __window_interact {
     this.debug("__window_wallpaper_settings onDomRefresh", this);
     this.feed(require("./skeleton").default(this));
     this.raise();
-  }
 
+    // Set default color (first color in array)
+
+    /** Set state = 1 to the first skeleton  */
+    // if (this.colors.length > 0 && !this.selectedColor) {
+    //   const defaultColor = this.colors[0];
+    //   this.selectedColor = {
+    //     value: defaultColor.value,
+    //     name: defaultColor.name,
+    //   };
+
+    //   // Update UI after DOM has rendered
+    //   setTimeout(() => {
+    //     this.updateColorSelectionUI();
+    //   }, 100);
+    // }
+  }
 
   /**
    * @param {*} child
@@ -229,7 +256,7 @@ class __window_wallpaper_settings extends __window_interact {
         this._content = child;
         this.setupInteract();
         this.waitElement(child.el, () => {
-          child.feed(require('./skeleton/content').default(this));
+          child.feed(require("./skeleton/content").default(this));
         });
         break;
       default:
@@ -242,8 +269,13 @@ class __window_wallpaper_settings extends __window_interact {
    * @param {*} args
    */
   onUiEvent(cmd, args = {}) {
-    const service = args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug(`__window_wallpaper_settings onUiEvent service=${service}`, cmd, this);
+    const service =
+      args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
+    this.debug(
+      `__window_wallpaper_settings onUiEvent service=${service}`,
+      cmd,
+      this
+    );
 
     switch (service) {
       case _e.close:
@@ -256,26 +288,26 @@ class __window_wallpaper_settings extends __window_interact {
       case "apply-new-bg":
         return this._applyWallpaper(cmd);
 
-      case "set-wallpaper":
-        // Set wallpaper immediately when clicking on image in gallery
-        var opt = {
-          wallpaper: {
-            nid: cmd.model.get(_a.nodeId),
-            hub_id: cmd.model.get(_a.hub_id) || cmd.model.get(_a.ownerId),
-            vhost: cmd.model.get(_a.vhost)
-          }
-        };
-        return this.postService({
-          service: SERVICE.drumate.update_settings,
-          settings: opt,
-          hub_id: Visitor.id
-        }, { async: 1 }).then((data) => {
-          Visitor.set({ settings: JSON.parse(data.settings) });
-          uiRouter.setWallpaper(Visitor.wallpaper());
-          // Optionally close window after setting wallpaper
-          // return this.goodbye();
-        });
+      case "apply-bg-by-color":
+        this.applySelectedColor(cmd);
+        // this.handleColorSelect(cmd);
+        // Extract color information from the clicked element
+        // const colorElement = cmd.el || cmd.target;
+        // const colorClass = Array.from(colorElement.classList).find((cls) =>
+        //   cls.startsWith("color-")
+        // );
 
+        // if (colorClass) {
+        //   const colorName = colorClass.replace("color-", "");
+        //   const colorObj = this.colors.find((c) => c.name === colorName);
+        //   if (colorObj) {
+        //     this.handleColorSelect(colorObj.value, colorObj.name);
+        //   }
+        // }
+        return;
+
+      case "set-wallpaper":
+        return this.applySelectedImage(cmd);
       default:
         return super.onUiEvent(cmd, args);
     }
@@ -294,7 +326,7 @@ class __window_wallpaper_settings extends __window_interact {
    * @param {*} type
    */
   getCurrentApi(type) {
-    const wp = Platform.get('wallpaper');
+    const wp = Platform.get("wallpaper");
 
     let api = {
       service: SERVICE.media.get_by_type,
@@ -302,15 +334,105 @@ class __window_wallpaper_settings extends __window_interact {
       type: _a.image,
       nid: wp.path,
       sort: _a.rank,
-      order: 'desc',
+      order: "desc",
       vhost: wp.vhost,
-      timer: 2000
+      timer: 2000,
     };
     return api;
   }
 
+  /**
+   * Handle color selection
+   */
+  // handleColorSelect(colorValue, colorName) {
+  //   this.debug("handleColorSelect", colorValue, colorName);
+
+  //   // Update the selected color
+  //   this.selectedColor = {
+  //     value: colorValue,
+  //     name: colorName,
+  //   };
+
+  //   // Update UI to highlight selected color
+  //   // this.updateColorSelectionUI(); ==> No need when using radio
+
+  //   // Automatically apply the selected color
+  //   this.applySelectedColor();
+  // }
+
+  /**
+   * Update UI to show selected color
+   */
+  // updateColorSelectionUI() {
+  //   const colorsWrapper = this.findPart("colors-wrapper");
+  //   if (!colorsWrapper || !colorsWrapper.el) return;
+
+  //   // Remove selected class from all colors
+  //   const colorElements = colorsWrapper.el.querySelectorAll(".item");
+  //   colorElements.forEach((element) => {
+  //     element.classList.remove("selected");
+  //     element.dataset.selected = _a.off;
+  //   });
+
+  //   // Add selected class to the chosen color
+  //   const selectedElement = colorsWrapper.el.querySelector(
+  //     `.color-${this.selectedColor.name}`
+  //   );
+  //   if (selectedElement) {
+  //     selectedElement.classList.add("selected");
+  //     selectedElement.dataset.selected = _a.on;
+  //   }
+  // }
+
+  /**
+   * 
+   * @param {*} cmd 
+   */
+  applySelectedImage(cmd) {
+    // Set wallpaper immediately when clicking on image in gallery
+    const { nid, hub_id } = cmd.model.toJSON()
+    const opt = {
+      wallpaper: { nid, hub_id }
+    };
+    return this.postService({
+      service: SERVICE.drumate.update_settings,
+      settings: opt,
+      hub_id: Visitor.id,
+    }).then((data) => {
+      this.debug("Wallpaper image updated successfully", data);
+      this.triggerHandlers({ data, service: "set-wallpaper-image" })
+    });
+
+  }
+
+  /**
+   * Apply selected color as wallpaper
+   */
+  applySelectedColor(cmd) {
+    // if (!this.selectedColor) return;
+    const name = cmd.mget(_a.name);
+    const { borderColor, backgroundColor } = window.getComputedStyle(cmd.el);
+    const opt = {
+      wallpaper: {
+        nid: "",
+        hub_id: "",
+        vhost: "",
+        color: { name, primary: backgroundColor, secondary: borderColor },
+      },
+    };
+    this.postService({
+      service: SERVICE.drumate.update_settings,
+      settings: opt,
+      hub_id: Visitor.id,
+    }).then((data) => {
+      this.debug("Wallpaper color updated successfully", data);
+      this.triggerHandlers({ data, service: "set-wallpaper-color" })
+    })
+      .catch((error) => {
+        this.error("Failed to update wallpaper color", error);
+      });
+  }
 }
 
 __window_wallpaper_settings.initClass();
 module.exports = __window_wallpaper_settings;
-

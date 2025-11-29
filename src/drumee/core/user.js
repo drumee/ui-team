@@ -390,9 +390,10 @@ class __core_user extends Backbone.Model {
    */
   wallpaper() {
     if (!this.isOnline()) return null;
-    let { nid, hub_id } = this.settings().wallpaper || {};
+    let { nid, hub_id, color } = this.settings().wallpaper || {};
+    if (color) return { color };
     if (nid && hub_id) return { nid, hub_id };
-    return Organization.deskWallpaper();
+    return Organization.deskWallpaper() || {};
   }
 
 

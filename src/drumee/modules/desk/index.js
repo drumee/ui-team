@@ -1,6 +1,33 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
 
+
+/**
+ * 
+ * @param {*} hex 
+ * @param {*} lum 
+ * @returns 
+ */
+function ColorLuminance(hex, lum) {
+
+  // validate hex string
+  hex = String(hex).replace(/[^0-9a-f]/gi, '');
+  if (hex.length < 6) {
+    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+  }
+  lum = lum || 0;
+
+  // convert to decimal and change luminosity
+  var rgb = "#", c, i;
+  for (i = 0; i < 3; i++) {
+    c = parseInt(hex.substr(i * 2, 2), 16);
+    c = Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16);
+    rgb += ("00" + c).substr(c.length);
+  }
+
+  return rgb;
+}
+
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -50,51 +77,82 @@ class desk_module extends LetcBox {
 
     this._updateContextMenu = this._updateContextMenu.bind(this);
 
-
     RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
     setTimeout(this.lazyClasses, 5000);
-    let { nid, hub_id } = Visitor.wallpaper() || {};
-    this._wallpaper = 0;
-    if (nid && hub_id) {
-      this._wallpaper = 1;
-    }
-
   }
 
   /**
-   * 
+   *
    */
   onDestroy() {
     RADIO_BROADCAST.off(_e.select, this._updateContextMenu);
   }
 
   /**
-  *
-  */
+   *
+   */
   async onDomRefresh() {
     this._pending = { available: false };
-    if (Visitor.device() === _a.mobile) {
-      this.feed(require("./skeleton/mobile")(this));
-    } else {
-      this.feed(require("./skeleton")(this));
-    }
+    this.updateWallpaper()
+    // if (Visitor.device() === _a.mobile) {
+    //   this.feed(require("./skeleton/mobile")(this));
+    // } else {
+    //   this.feed(require("./skeleton")(this));
+    // }
+    this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
-    this.el.dataset.wallpaper = this._wallpaper;
     this.route();
   }
 
   /**
-   * 
+   *
    */
   restart() {
     wsRouter.resetSocket();
     this.onDomRefresh();
   }
 
+
   /**
-  *
-  */
+   * 
+   */
+  updateWallpaper(data) {
+    if (data) {
+      Visitor.respawn(data);
+    }
+    let { nid, hub_id, color } = Visitor.wallpaper() || {};
+    this._wallpaper = '';
+    if (color && color.primary) {
+      this.el.style.backgroundColor = ColorLuminance(color.primary, .9);
+      this._wallpaper = _a.color;
+    } else if (nid && hub_id) {
+      this._wallpaper = _a.image;
+      this.el.style.backgroundColor = 'transparent';
+      uiRouter.setWallpaper(Visitor.wallpaper());
+    }
+
+    this.ensurePart('main').then((p) => {
+      if (this._wallpaper == _a.color) {
+        p.el.style.backgroundColor = color.primary;
+      } else {
+        p.el.dataset.wallpaper = this._wallpaper;
+        p.el.style.backgroundColor = 'transparent';
+      }
+    })
+    this.el.dataset.wallpaper = this._wallpaper;
+    // if (this._wallpaper == _a.color) {
+    //   this.el.dataset.primary = this._primary;
+    //   this.el.dataset.secondary = this._secondary;
+    // } else {
+    //   this.el.dataset.primary = '';
+    //   this.el.dataset.secondary = '';
+    // }
+  }
+
+  /**
+   *
+   */
   _updateContextMenu(media) {
     const m = this.getPart("menu-settings");
     if (_.isEmpty(Wm.getGlobalSelection())) {
@@ -106,15 +164,15 @@ class desk_module extends LetcBox {
   }
 
   /**
-  *
-  */
+   *
+   */
   changeContextMenu(state) {
     this.findPart("menu-settings").changeState(state);
   }
-  notificationState
+  notificationState;
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   refreshContextMenu() {
     const selected = Wm.getGlobalSelection();
@@ -162,8 +220,8 @@ class desk_module extends LetcBox {
             out: this.mediaDragLeaveAvatar,
             drop: this.mediaDropOnAvatar,
             greedy: true,
-          })
-        })
+          });
+        });
 
         this.avatar = child;
         return Visitor.on(_e.change, (m) => {
@@ -214,7 +272,7 @@ class desk_module extends LetcBox {
           } catch (error) { }
         });
         if (!Visitor.get(_a.privilege)) {
-          Visitor.once('online', () => {
+          Visitor.once("online", () => {
             child.restart();
           });
         }
@@ -282,12 +340,11 @@ class desk_module extends LetcBox {
     this.avatar.el.dataset.over = _a.yes;
   }
 
-
   /**
-   * 
-   * @param {*} e 
-   * @param {*} ui 
-   * @returns 
+   *
+   * @param {*} e
+   * @param {*} ui
+   * @returns
    */
   mediaDragDropOnAvatar(e, ui) {
     e.stopPropagation();
@@ -312,9 +369,9 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} e 
-   * @param {*} ui 
+   *
+   * @param {*} e
+   * @param {*} ui
    */
   _dragLeave(e, ui) {
     Wm.el.dataset.selected = _a.off;
@@ -436,14 +493,14 @@ class desk_module extends LetcBox {
       hub_id: Visitor.id,
     }).then((data) => {
       this.dmzDetailResponse(data);
-    })
+    });
   }
 
   /**
    * @param {Object} c
    */
   checkUserOnBoarding(c) {
-    const { debug } = Visitor.parseModuleArgs() || {}
+    const { debug } = Visitor.parseModuleArgs() || {};
     if (Visitor.data("intro") === _a.no && !debug) {
       return;
     }
@@ -533,6 +590,7 @@ class desk_module extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
+    this.debug(`SERVICE=${service}))`, args);
     if (pointerDragged || !window.Wm) {
       return;
     }
@@ -556,9 +614,9 @@ class desk_module extends LetcBox {
       case "toggle-notification":
         // return NotificationCenter.togglePanel()
         return this.ensurePart("notification-panel").then((p) => {
-          this.debug("AAA549", p)
-          p.togglePannel()
-        })
+          this.debug("AAA549", p);
+          p.togglePannel();
+        });
 
       case "open-contact-manager":
         return Wm.launch(
@@ -599,8 +657,8 @@ class desk_module extends LetcBox {
         this._timer = setTimeout(() => {
           Wm.search(cmd, args);
           this._timer = null;
-        }, 1000)
-        return
+        }, 1000);
+        return;
 
       case _e.Enter:
         if (this._timer) clearTimeout(this._timer);
@@ -608,7 +666,7 @@ class desk_module extends LetcBox {
         if (cmd.mget(_a.service) == _a.search) {
           Wm.search(cmd, args);
         }
-        return
+        return;
 
       case "copy-link":
         return Wm.copyLink();
@@ -637,8 +695,17 @@ class desk_module extends LetcBox {
 
       case "open-settings":
         return this.ensurePart("desk-content").then((p) => {
-          p.__windowsLayer.feed({ kind: "window_wallpaper_settings" });
-        })
+          p.__windowsLayer.feed({
+            kind: "window_wallpaper_settings",
+            uiHandler: [this]
+          });
+        });
+
+      case "set-wallpaper-color":
+        return this.updateWallpaper(args.data);
+
+      case "set-wallpaper-image":
+        return this.updateWallpaper(args.data);
 
       default:
         Wm.unselect();
@@ -646,8 +713,8 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} message 
+   *
+   * @param {*} message
    */
   acknowledge(message) {
     let c = require("libs/preset/ack")(this, message, null, {
@@ -760,4 +827,3 @@ class desk_module extends LetcBox {
 desk_module.initClass();
 
 module.exports = desk_module;
-

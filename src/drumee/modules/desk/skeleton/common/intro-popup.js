@@ -113,23 +113,7 @@ function __skl_desk_common_intro_popup(_ui_, data) {
 
   const footer = Skeletons.Box.X({
     className: `${introPopupFig}__wrapper footer`,
-    kids: [
-      // Skeletons.Button.Svg({
-      //   className: `${introPopupFig}__icon checkbox`,
-      //   icons: ["editbox_shapes-square", "backoffice_checkboxfill"],
-      //   ico: "editbox_shapes-square",
-      //   state: 0,
-      //   service: "skip-intro-popup",
-      //   uiHandler: _ui_,
-      // }),
-      // Skeletons.Note({
-      //   className: `${introPopupFig}__note footer`,
-      //   content: LOCALE.INTRO_POPUP_SKIP_VIDEO, //`Skip & don't show again`,
-      //   service: "skip-intro-popup",
-      //   uiHandler: _ui_,
-      // }),
-      checkboxWrapper,
-    ],
+    kids: [checkboxWrapper],
   });
 
   const a = Skeletons.Box.Y({

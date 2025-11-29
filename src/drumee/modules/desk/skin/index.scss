@@ -5,16 +5,15 @@ html {
   overflow: hidden;
 }
 
-@include meta.load-css('payment/status-info');
+@include meta.load-css("payment/status-info");
 
 @include meta.load-css('toolkit');
 @include meta.load-css("buttons.scss");
 @include meta.load-css("topbar");
 @include meta.load-css("body");
 @include meta.load-css("desk/dmz-copy-media");
-@include meta.load-css('desk/intro-popup');
+@include meta.load-css("desk/intro-popup");
 @include meta.load-css("dialog");
-
 
 .desk-module {
   &__ui {
@@ -24,7 +23,7 @@ html {
     background-color: var(--neutral-500);
     font-family: var(--font-main);
 
-    &[data-wallpaper="1"] {
+    &[data-wallpaper="image"] {
       background-color: transparent;
     }
   }
@@ -33,14 +32,17 @@ html {
     background-color: var(--neutral-100);
     border-radius: 32px;
 
-    &[data-wallpaper="1"] {
+    &[data-wallpaper="image"] {
       background-color: transparent;
     }
+
   }
 
   &__modal-container {
     z-index: 7000;
     position: absolute;
+    right: 0;
+    bottom: 0;
   }
 
   &__wm-container {
@@ -86,7 +88,7 @@ html {
 
   //   &__button-confirm {
   //     width: 120px;
-  //     background-color: var(--btn-commit-background); // $btn-primary-background; 
+  //     background-color: var(--btn-commit-background); // $btn-primary-background;
   //     height: 46px;
   //     border-radius: var(--border-radius);
   //     text-align: center;
@@ -115,7 +117,7 @@ html {
   //     width: 254px;
   //     height: 60px;
   //     box-shadow: var(--shadow-container); // 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08),0 2px 14px 0 rgba(194, 185, 203, 0);
-  //     border-radius: var(--border-radius-small); //4px; 
+  //     border-radius: var(--border-radius-small); //4px;
   //     padding: 11px 13px;
   //     @include drumee.typo($line: 14px, $size: 12px, $weight: 300, $color: var(--default-text-color));
 

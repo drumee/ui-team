@@ -47,11 +47,13 @@ class __window_core extends __utils {
       name: _a.rank,
       order: _K.order.ascending,
     };
-    this.mset(_a.flow, _a.y);
     this.model.set({
+      flow: _a.y,
       radio: Env.get("wm-radio"),
-      service: _e.raise,
     });
+    this.model.atLeast({
+      service: _e.raise,
+    })
     this.acceptMedia = 1;
     const t = this.mget(_a.trigger);
     if (t) {
