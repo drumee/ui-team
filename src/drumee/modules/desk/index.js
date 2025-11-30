@@ -141,13 +141,6 @@ class desk_module extends LetcBox {
       }
     })
     this.el.dataset.wallpaper = this._wallpaper;
-    // if (this._wallpaper == _a.color) {
-    //   this.el.dataset.primary = this._primary;
-    //   this.el.dataset.secondary = this._secondary;
-    // } else {
-    //   this.el.dataset.primary = '';
-    //   this.el.dataset.secondary = '';
-    // }
   }
 
   /**

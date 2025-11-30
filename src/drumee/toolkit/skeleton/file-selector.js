@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : classes/skeleton/note
-//   TYPE : Skeleton
-// ==================================================================== *
-
 const __builder = require("../builder");
 
 const __skl_fs = function(props, style) {

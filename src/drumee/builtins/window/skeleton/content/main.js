@@ -1,4 +1,4 @@
-const __skl_window_content_main = function(_ui_, header, size) {
+module.exports = function(_ui_, header, size) {
   size = size || _ui_.size;
   if (size.height < 291) {
     size.height = 291;
@@ -13,7 +13,7 @@ const __skl_window_content_main = function(_ui_, header, size) {
     type: _a.type
   });
 
-  const fsel = require('skeleton/file-selector')();
+  // const fsel = require('skeleton/file-selector')();
 
   header.service = _e.raise; 
 
@@ -26,12 +26,9 @@ const __skl_window_content_main = function(_ui_, header, size) {
     name      :  "tooltips"
   });
 
-  const a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     className  : `${_ui_.fig.family}__main ${_ui_.fig.group}__main drive-popup`,
     radio      : _a.parent,
     debug      : __filename,
-    kids       : [header, tooltips, body, fsel, dialog]});
-  
-  return a;
+    kids       : [header, tooltips, body, dialog]});
 };
-module.exports = __skl_window_content_main;

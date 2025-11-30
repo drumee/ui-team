@@ -192,7 +192,6 @@
   "DESIGN_BUTTONS": "设计按钮",
   "DESIGN_PAGE_TIP": "在此处拖放要设置的页面组件",
   "DESKTOP": "桌面",
-  "DESKTOP_WALLPAPER": "桌面壁纸",
   "DEVICE_TYPE": "设备类型",
   "DEVMODE": "开发者模式",
   "DIR_NOT_ALLOWED": "它（还）不允许附加整个目录",
@@ -528,7 +527,6 @@
   "OLD_PASSWORD": "旧密码",
   "ONLINE": "线上",
   "ONLY_ACCEPT": "只接受 {0} 类型的文件",
-  "OOPS_EMAIL_NOT_FOUND": "哎呀，我们没有找到这封邮件。 请检查",
   "OPACITY": "不透明度",
   "OPEN": "打开",
   "OPEN_LINK": "打开链接 ",
@@ -1912,9 +1910,10 @@
   "SET_NEW_PASSWORD": "设置新密码",
   "NEW_CODE_RESENT": "已重新发布新代码",
   "PASSWORD_MATCH": "密码匹配",
-  "CREATE_FOLDER": "创建文件夹",
-  "UPLOAD_IMAGE": "上传 \"图片\"",
-  "UPLOAD_MUSIC": "上传 \"音乐\"",
-  "UPLOAD_VIDEO": "上传 \"视频\"",
-  "NAV": "导航"
+  "OOPS_EMAIL_NOT_FOUND": "哎呀，我们没有找到这封邮件。 请检查",
+  "APPLY_AND_SAVE": "申请并保存",
+  "CHANGE_UPLOAD_IMAGE": "更改/上传图片",
+  "DROP_FILES_HERE": "文件拖放到这里即可上传",
+  "MAX_FILE_SIZE_X": "最大文件大小不超过 {0}。",
+  "DESKTOP_WALLPAPER": "我的壁纸"
 }

@@ -192,7 +192,6 @@
   "DESIGN_BUTTONS": "Design buttons",
   "DESIGN_PAGE_TIP": "Drag and drop here components the page you want to set up",
   "DESKTOP": "Desktop",
-  "DESKTOP_WALLPAPER": "Desktop wallpaper",
   "DEVICE_TYPE": "Device type",
   "DEVMODE": "Developper mode",
   "DIR_NOT_ALLOWED": "It is not (yet) allowed to attach a whole directory",
@@ -528,7 +527,6 @@
   "OLD_PASSWORD": "Old password",
   "ONLINE": "Online",
   "ONLY_ACCEPT": "Only accept files of type {0}",
-  "OOPS_EMAIL_NOT_FOUND": "Ooops... we didn’t find this mail. Please, check.",
   "OPACITY": "Opacity",
   "OPEN": "Open",
   "OPEN_LINK": "Open link",
@@ -1912,9 +1910,10 @@
   "SET_NEW_PASSWORD": "Set new password",
   "NEW_CODE_RESENT": "A new code has been resent",
   "PASSWORD_MATCH": "Password match",
-  "CREATE_FOLDER": "Create Folder",
-  "UPLOAD_IMAGE": "Upload \"Image\"",
-  "UPLOAD_MUSIC": "Upload \"Music\"",
-  "UPLOAD_VIDEO": "Upload \"Video\"",
-  "NAV": "Navigation"
+  "OOPS_EMAIL_NOT_FOUND": "Ooops... we didn’t find this mail. Please, check.",
+  "APPLY_AND_SAVE": "Apply & Save",
+  "CHANGE_UPLOAD_IMAGE": "Change / Upload Image",
+  "DROP_FILES_HERE": "Drop files here to upload",
+  "MAX_FILE_SIZE_X": "Max file size up to {0}.",
+  "DESKTOP_WALLPAPER": "My wallpapers"
 }

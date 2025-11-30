@@ -1,20 +1,42 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const COLORS = ["gray", "red", "pink", "blue", "green", "yellow", "orange"];
+const { filesize, dataTransfer } = require("core/utils");
 
 function __skl_window_wallpaper_settings_content(ui, opt) {
   const contentFig = `${ui.fig.family}-content`;
   const fig = `${ui.fig.family}`;
 
-  const uploader = Skeletons.Box.X({
+  const uploader = Skeletons.Box.Y({
     className: `${fig}__uploader`,
     sys_pn: "uploader",
     partHandler: [ui],
     kids: [
-      Skeletons.Note({
-        content: LOCALE.DROP_FILES_HERE || "Drop files here to upload",
-        className: `${fig}__uploader-text`,
+      Skeletons.FileSelector({
+        accept: "image/*"
       }),
-    ],
+      Skeletons.Box.Y({
+        className: `${fig}__uploader-content`,
+        kids: [
+          button(ui, {
+            label: LOCALE.CHANGE_UPLOAD_IMAGE || "Change / Upload Image",
+            type: _a.toggle,
+            className: `${fig}__upload-button`,
+            service: "upload-image",
+            priority: "primary"
+          }),
+          Skeletons.Note({
+            className: `${fig}__uploader-progress`,
+            sys_pn: "uploader-progress",
+            state: 0
+          }),
+          Skeletons.Note({
+            content: LOCALE.MAX_FILE_SIZE_X.format(filesize(ui.mget('maxSize'))),
+            className: `${fig}__uploader-text`,
+            sys_pn: "file-size-text",
+          }),
+        ]
+      })
+    ]
   });
 
   const imagesList = Skeletons.List.Smart({
@@ -38,7 +60,7 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
   const colorItems = COLORS.map((name) =>
     Skeletons.Box.X({
       className: `${fig}__colors-wrapper item color-${name}`,
-      service: "apply-bg-by-color", // This triggers the onUiEvent handler
+      service: "set-bg-color", // This triggers the onUiEvent handler
       uiHandler: [ui],
       name,
       radio: `color-radio-${ui._id}`,
@@ -68,7 +90,7 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
     kids: colorItems,
   });
 
-  const colors = Skeletons.Box.X({
+  const colorsList = Skeletons.Box.X({
     className: `${fig}__colors`,
     kidsOpt: { active: 0 },
     uiHandler: ui,
@@ -81,6 +103,47 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
     ],
   });
 
+  // Color swatches - predefined colors
+  // const colorSwatches = [
+  //   { color: '#FFFFFF', value: '#FFFFFF' }, // white
+  //   { color: '#EA4D44', value: '#EA4D44' }, // red
+  //   { color: '#FF4578', value: '#FF4578' }, // pink
+  //   { color: '#C647D5', value: '#C647D5' }, // purple
+  //   { color: '#4A90E2', value: '#4A90E2' }, // blue
+  //   { color: '#18A3AC', value: '#18A3AC' }, // teal
+  //   { color: '#36E692', value: '#36E692' }, // green
+  //   { color: '#FFD700', value: '#FFD700' }, // yellow
+  //   { color: '#FA8540', value: '#FA8540' }  // orange
+  // ];
+
+  // const colorsList = Skeletons.Box.X({
+  //   className: `${fig}__colors`,
+  //   kids: [
+  //     Skeletons.Note({
+  //       content: LOCALE.COLORS || "Colors",
+  //       className: `${fig}__colors-title`,
+  //     }),
+  //     Skeletons.Box.X({
+  //       className: `${fig}__colors-swatches`,
+  //       kids: colorSwatches.map((swatch) =>
+  //         Skeletons.Element({
+  //           className: `${fig}__color-swatch`,
+  //           tagName: _K.tag.div,
+  //           dataset: {
+  //             color: swatch.value,
+  //             selected: 0
+  //           },
+  //           style: {
+  //             backgroundColor: swatch.value,
+  //           },
+  //           service: 'select-color',
+  //           uiHandler: [ui],
+  //         })
+  //       )
+  //     })
+  //   ]
+  // });
+
   const buttons = Skeletons.Box.X({
     className: `${fig}__buttons`,
     // kidsOpt: { active: 0 },
@@ -91,19 +154,21 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
         type: _a.toggle,
         className: `${fig}__button`,
         service: "cancel-set-bg",
+        priority: "secondary"
       }),
       button(ui, {
-        label: LOCALE.APPLY,
+        label: LOCALE.APPLY_AND_SAVE,
         type: _a.toggle,
         className: `${fig}__button`,
         service: "apply-new-bg",
-      }),
+        priority: "primary"
+      })
     ],
   });
 
   const footer = Skeletons.Box.Y({
     className: `${contentFig}__footer`,
-    kids: [colors, buttons],
+    kids: [buttons],
   });
 
   return Skeletons.Box.Y({
@@ -112,7 +177,11 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
     kids: [
       Skeletons.Box.Y({
         className: `${contentFig}__body-content`,
-        kids: [uploader, imagesList],
+        kids: [
+          uploader,
+          imagesList,
+          colorsList
+        ]
       }),
       footer,
     ],

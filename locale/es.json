@@ -142,9 +142,10 @@
   "NEW_CODE_RESENT": "Se ha reenviado un nuevo código.",
   "UNKNOWN_ERROR": "Error desconocido",
   "PASSWORD_MATCH": "Coincidencia de contraseña",
-  "CREATE_FOLDER": "Crear carpeta",
-  "UPLOAD_IMAGE": "Cargar \"Imagen\"",
-  "UPLOAD_MUSIC": "Cargar \"Música\"",
-  "UPLOAD_VIDEO": "Cargar \"Video\"",
-  "NAV": "Navegación"
+  "OOPS_EMAIL_NOT_FOUND": "¡Ups! No encontramos este correo. Por favor, revise.",
+  "APPLY_AND_SAVE": "Aplicar y ahorrar",
+  "CHANGE_UPLOAD_IMAGE": "Cambiar/Subir imagen",
+  "DROP_FILES_HERE": "Suelte los archivos aquí para cargarlos",
+  "MAX_FILE_SIZE_X": "Tamaño máximo de archivo hasta {0}.",
+  "DESKTOP_WALLPAPER": "Mis fondos de pantalla"
 }

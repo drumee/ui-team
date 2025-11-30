@@ -1,10 +1,15 @@
+
 class __file_selector extends Marionette.View {
 
   /**
    * 
    */
   onDomRefresh() {
-    this.el.innerHTML = require('./template')(this);
+    let accept = this.mget('accept') || "";
+    if (accept) {
+      accept = `accept="${accept}"`
+    }
+    this.el.innerHTML = `<input id="${this._id}-fsel" ${accept} class="inner full" type="file" multiple="true" name="files[]" >`;
   }
 
   /**
@@ -23,11 +28,11 @@ class __file_selector extends Marionette.View {
    */
   open(handler) {
     let el = document.getElementById(`${this._id}-fsel`);
-    el.onchange = (e)=>{
+    el.onchange = (e) => {
       handler(e);
       el.onchange = null;
     };
-    if(!el){
+    if (!el) {
       reject("No element to handle file selection");
       return;
     }
@@ -35,5 +40,5 @@ class __file_selector extends Marionette.View {
     el.click();
   }
 }
-    
+
 module.exports = __file_selector;

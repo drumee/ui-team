@@ -1,6 +1,5 @@
-const { button } = require('../../../skeleton/toolkit/index');
 
-function __skl_window_wallpaper_settings(_ui_) {
+export default function (_ui_) {
   const fig = `${_ui_.fig.family}`;
 
   const menu = Skeletons.Box.X({ 
@@ -16,10 +15,7 @@ function __skl_window_wallpaper_settings(_ui_) {
     ]
   });
   
-  const a = require('window/skeleton/content/main')(_ui_, menu);
-  
-  return a;
+  return require('window/skeleton/content/main')(_ui_, menu);
 }
 
-export default __skl_window_wallpaper_settings;
 

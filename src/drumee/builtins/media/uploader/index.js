@@ -126,6 +126,8 @@ class __media_uploader extends LetcBox {
           width: val + "%"
         });
       }
+    } else if (this.mget(_a.mode) === _a.blank) {
+      this.trigger(_e.progress, val)
     } else {
       if (this.$progress != null) {
         this.$progress.css({

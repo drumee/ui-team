@@ -1068,6 +1068,10 @@ View.prototype.actualNode = function (format = _a.orig) {
  */
 View.prototype.ensureElement = function (el) {
   return new Promise((resolve, reject) => {
+    if (!el) el = this.el;
+    if (el.isAttached && el.isAttached()) {
+      return resolve(el);
+    }
     const timerId = _.uniqueId();
     const max = 5;
     let i = 0;

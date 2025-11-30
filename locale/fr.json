@@ -192,7 +192,6 @@
   "DESIGN_BUTTONS": "Boutons de conception",
   "DESIGN_PAGE_TIP": "Faîtes glisser et déposer ici les éléments de votre page",
   "DESKTOP": "Ordinateur",
-  "DESKTOP_WALLPAPER": "Fond d'écran du bureau",
   "DEVICE_TYPE": "Type de terminal",
   "DEVMODE": "Mode développeur",
   "DIR_NOT_ALLOWED": "Il n'est pas (encore) permis de joindre un répertoire.",
@@ -528,7 +527,6 @@
   "OLD_PASSWORD": "Ancien mot de passe",
   "ONLINE": "En ligne",
   "ONLY_ACCEPT": "Accepte seulement les fichiers de type {0}",
-  "OOPS_EMAIL_NOT_FOUND": "Oups... Nous n'avons pas trouvé l'E-mail saisi. Veuillez vérifier.",
   "OPACITY": "Transparence",
   "OPEN": "Ouvrir",
   "OPEN_LINK": "Lien public ",
@@ -1912,9 +1910,10 @@
   "SET_NEW_PASSWORD": "Définir un nouveau mot de passe",
   "NEW_CODE_RESENT": "Un nouveau code a été renvoyé.",
   "PASSWORD_MATCH": "Correspondance du mot de passe",
-  "CREATE_FOLDER": "Créer un dossier",
-  "UPLOAD_IMAGE": "Télécharger \"Image\"",
-  "UPLOAD_MUSIC": "Télécharger \"Musique\"",
-  "UPLOAD_VIDEO": "Télécharger \"Vidéo\"",
-  "NAV": "Navigation"
+  "OOPS_EMAIL_NOT_FOUND": "Oups... Nous n'avons pas trouvé l'E-mail saisi. Veuillez vérifier.",
+  "APPLY_AND_SAVE": "Appliquer et enregistrer",
+  "CHANGE_UPLOAD_IMAGE": "Modifier / Envoyer une image",
+  "DROP_FILES_HERE": "Déposez les fichiers ici pour les télécharger.",
+  "MAX_FILE_SIZE_X": "Taille maximale du fichier : {0}.",
+  "DESKTOP_WALLPAPER": "Mes fonds d'écran"
 }
