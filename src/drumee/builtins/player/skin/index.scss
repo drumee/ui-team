@@ -1,16 +1,15 @@
 @use "header.scss";
 @use "topbar.scss";
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .player {
   &-media {
     box-shadow: var(--shadow-main);
   }
 
-
   &__ui {
     background-color: var(--default-bg);
-    border-radius: var(--border-radius);
+    border-radius: 24px;
     box-shadow: var(--shadow-main);
     min-height: 250px;
     min-width: 340px;
@@ -73,7 +72,7 @@
   &__container {
     background-color: var(--multimedia-player-doc-bg);
     border-radius: var(--border-radius-bottom);
-    height: calc(100% - 44px);
+    height: 100%;
     min-height: 200px;
     overflow: hidden;
     width: 100%;
@@ -92,7 +91,11 @@
 
     &[data-type="evaluation"]::after {
       @include drumee.license-trial();
-      @include drumee.typo($size: 22px, $line: 1.3, $color: var(--default-text-title));
+      @include drumee.typo(
+        $size: 22px,
+        $line: 1.3,
+        $color: var(--default-text-title)
+      );
     }
 
     .loader-progress {
@@ -114,7 +117,7 @@
 
   &-document {
     .image-viewer {
-      border-top: solid rgba(20, 20, 20, .2) 10px;
+      border-top: solid rgba(20, 20, 20, 0.2) 10px;
 
       &:first-child {
         border-top: none;
@@ -134,7 +137,7 @@
 
 .player {
   &__dialog-overlay {
-    background-color: rgba(0, 0, 0, .3);
+    background-color: rgba(0, 0, 0, 0.3);
     height: calc(100% - 44px);
     position: absolute;
     top: 44px;

@@ -7,21 +7,23 @@
 // ===========================================================
 //
 // ===========================================================
-const __skl_player_video = _ui_ => {
-  const topbar = require("../../skeleton/topbar")(_ui_);
+const __skl_player_video = (_ui_) => {
+  // const topbar = require("../../skeleton/topbar")(_ui_);
+  const topbar = require("../../skeleton/control")(_ui_);
 
   const main = Skeletons.Box.Y({
-    className : `${_ui_.fig.group}__container u-ai-center`,
-    sys_pn    : _a.content
+    className: `${_ui_.fig.group}__container u-ai-center`,
+    sys_pn: _a.content,
   });
 
   const a = Skeletons.Box.Y({
-    debug      : __filename,
-    className  : `${_ui_.fig.group}__main`,
-    handler    : {
-      part     : _ui_
+    debug: __filename,
+    className: `${_ui_.fig.group}__main`,
+    handler: {
+      part: _ui_,
     },
-    kids:[topbar, main]});
+    kids: [topbar, main],
+  });
 
   return a;
 };
