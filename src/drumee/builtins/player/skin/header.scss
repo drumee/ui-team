@@ -1,4 +1,4 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .player {
   &__header {
@@ -13,7 +13,11 @@
 
     &.container {
       &:after {
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0) 100%);
+        background: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.12) 0%,
+          rgba(0, 0, 0, 0) 100%
+        );
         content: " ";
         height: 7px;
         position: absolute;
@@ -34,7 +38,12 @@
 
   &__title {
     max-width: 170px;
-    @include drumee.typo($color: var(--multimedia-default-text-title) , $size: 18px, $line: 42px, $weight: 300);
+    @include drumee.typo(
+      $color: var(--multimedia-default-text-title),
+      $size: 18px,
+      $line: 42px,
+      $weight: 300
+    );
     @include drumee.overflow-text;
 
     .inner {
@@ -70,7 +79,12 @@
       width: 100%;
       padding-left: 10px;
       padding-top: 4px;
-      @include drumee.typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.typo(
+        $color: var(--core-default-text-color),
+        $size: 12px,
+        $line: 16px,
+        $weight: 300
+      );
       @include drumee.overflow-text;
 
       .icon {
@@ -89,7 +103,12 @@
     }
 
     .info-item {
-      @include drumee.typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.typo(
+        $color: var(--core-default-text-color),
+        $size: 12px,
+        $line: 16px,
+        $weight: 300
+      );
       text-align: left;
       width: 50%;
       padding-left: 10px;
@@ -163,22 +182,35 @@
     }
 
     &__control {
-      height: 100%;
+      height: 6%;
       position: absolute;
-      right: 0;
+      right: 20px;
+      top: 20px;
       z-index: 1000;
+      gap: 12px;
 
       .icon {
-        color: var(--default-icon-neutral);
+        display: flex;
+        color: white;
         cursor: pointer;
-        height: 12px;
-        margin: auto 15px auto 0;
-        padding: 0px;
-        width: 12px;
+        padding: 10px;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        background: rgba(255, 255, 255, 0.24);
+        backdrop-filter: blur(48px);
+
+        border-radius: 100%;
+
+        svg {
+          width: 12px;
+          height: 12px;
+        }
 
         &:hover {
           svg {
-            color: var(--default-icon-hover);
+            color: var(--primary-500);
           }
         }
 

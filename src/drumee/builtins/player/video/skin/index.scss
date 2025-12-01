@@ -3,10 +3,11 @@
 #   FILE : /src/drumee/builtins/player/stream/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
-@use 'mixins/drumee';
-@import 'openplayer.css';
+@use "mixins/drumee";
+@import "openplayer.css";
 
 .player-video {
+  height: 595px !important;
   &__ui {
     overflow: hidden;
     height: 100%;
@@ -31,11 +32,11 @@
     height: 100%;
   }
 
-  input[type='range'].op-controls__volume--input {
+  input[type="range"].op-controls__volume--input {
     top: -8px;
   }
 
-  input[type='range'].op-controls__progress--seek {
+  input[type="range"].op-controls__progress--seek {
     top: -8px;
   }
 
@@ -53,7 +54,16 @@
   }
 
   .op-controls .op-controls__progress--seek.error {
-    background: linear-gradient(-45deg, lightgray 25%, transparent 25%, transparent 50%, lightgray 50%, lightgray 75%, transparent 75%, transparent);
+    background: linear-gradient(
+      -45deg,
+      lightgray 25%,
+      transparent 25%,
+      transparent 50%,
+      lightgray 50%,
+      lightgray 75%,
+      transparent 75%,
+      transparent
+    );
   }
 
   .op-controls .op-controls__progress--played,
@@ -65,7 +75,7 @@
     color: lightgray;
   }
 
-  .op-controls input[type='range'],
+  .op-controls input[type="range"],
   .op-controls progress {
     height: 3px;
   }
