@@ -10,11 +10,13 @@
     "html-minifier": "^0.6.9"
   },
   "dependencies": {
+    "argparse": "^2.0.1",
     "chalk": "^1.0.0",
     "cheerio": "^1.1.2",
     "handlebars": "^4.7.8",
     "js-beautify": "~1.5.10",
-    "multiline": "^0.3.4"
+    "multiline": "^0.3.4",
+    "svg-sprite": "^2.0.4"
   },
   "peerDependencies": {
     "grunt": ">=0.4.0"

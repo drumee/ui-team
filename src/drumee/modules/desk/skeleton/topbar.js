@@ -1,4 +1,4 @@
-const { userMenu } = require('builtins/skeleton/toolkit');
+const { userMenu } = require('builtins/skeleton/toolkit/user');
 
 /**
  * 

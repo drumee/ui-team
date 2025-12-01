@@ -2,10 +2,28 @@
 @use 'mixins/drumee';
 @include meta.load-css('forbiden');
 
+/* Theme 1 */
+.grad-start {
+  stop-color: #B251FB;
+}
+
+.grad-end {
+  stop-color: #DCB2FF;
+}
+
+/* Theme 2 */
+// .theme-blue .grad-start { stop-color: #36D1DC; }
+// .theme-blue .grad-end { stop-color: #5B86E5; }
+
+// /* Theme 3 */
+// .theme-red .grad-start { stop-color: #FF512F; }
+// .theme-red .grad-end { stop-color: #DD2476; }
+
 .desk-dock {
 
   // Vertical divider - reusable class
   &--divider {
+
     &-left::before,
     &-right::after {
       background-color: var(--dock-divider-color);
@@ -30,7 +48,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    
+
     svg {
       display: block;
       margin: 0 auto;
@@ -171,6 +189,7 @@
 
     &.launcher {
       position: relative;
+
       &[data-device="desktop"] {
         &::after {
           display: none;
@@ -181,6 +200,16 @@
     &.launcher {
       z-index: 100;
     }
+
+    .menu-topic-items__wrapper {
+      border-radius: var(--corner-radius-4);
+      border-width: 1px;
+      padding: var(--spacer-5);
+      gap: var(--spacer-1);
+      background-color: var(--white);
+      bottom: -20px;
+    }
+
   }
 
   &__container.nav-container,
@@ -199,7 +228,7 @@
     flex-direction: row;
     height: 70px;
     justify-content: center;
-    width: 70px;  
+    width: 70px;
     position: relative;
 
     &[data-device="mobile"] {
@@ -259,11 +288,11 @@
         z-index: 1;
         position: relative;
       }
-      
+
       svg.bigchat {
         transform: scale(1.2) rotateY(180deg) !important;
       }
-      
+
       &.bigchat svg.bigchat {
         transform: scale(1.2) rotateY(180deg) !important;
       }
@@ -277,6 +306,7 @@
           background: var(--dock-main-background) !important;
         }
       }
+
       .desk-dock__tooltips::before {
         border-radius: 0 0 3px 0;
       }
@@ -440,6 +470,24 @@
       z-index: 1;
       transition: background 0.2s ease;
       border-radius: 0 0 3px 0;
+    }
+  }
+
+  &__folder {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: var(--spacer-2);
+    cursor: pointer;
+
+    span.label {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    svg.drumee-picto {
+      height: 24px;
+      width: 24px;
     }
   }
 

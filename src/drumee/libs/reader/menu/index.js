@@ -263,6 +263,7 @@ class __menu_topic extends LetcBox {
     const {
       items
     } = this._branches;
+    this.debug("_onOpen", this.el, this.mget(_a.direction));
     items.el.dataset.state = _a.open;
     this._animIsActive = false;
     this.el.dataset.state = 1;
@@ -283,19 +284,29 @@ class __menu_topic extends LetcBox {
    * @param {*} e 
    */
   _onClosed(e) {
+    if (!this.isOpen) return;
     const {
       items
     } = this._branches;
+    this.debug("_onClosed", this.el, this.isOpen, this.mget(_a.direction));
     TweenLite.set(items.$el, { y: 0 });
     items.el.dataset.state = _a.closed;
     this.el.dataset.state = 0;
     this.isOpen = false;
     this._animIsActive = false;
     switch (this.mget(_a.direction)) {
-      case _a.down: case _a.up:
-        TweenLite.set(items.$el, { y: 0 });
+      case _a.down:
+        TweenLite.set(items.$el, { y: -this._size.height });
         break;
-      case _a.left: case _a.right:
+      case _a.up:
+        TweenLite.set(this.__items.$el, { y: this._size.height });
+        TweenLite.set(this.__itemsWrapper.$el, {
+          y: 0,
+          opacity: 0,
+        });
+        break;
+      case _a.left:
+      case _a.right:
         TweenLite.set(items.$el, { x: 0 });
         break;
     }
@@ -308,10 +319,79 @@ class __menu_topic extends LetcBox {
    * @param {*} e 
    */
   _onStartOpening(e) {
+    this.debug("_onStartOpening", this.mget(_a.duration), this._size.height, this.$el.position(), this.$el.offset(), this.mget(_a.direction));
     this.__itemsWrapper.$el.css({ opacity: 0 });
     this.__items.el.dataset.state = _a.open;
     this.__itemsWrapper.el.dataset.state = _a.open;
     this._animIsActive = true;
+    switch (this.mget(_a.direction)) {
+      case _a.down:
+        TweenLite.set(this.__items.$el, { y: -this._size.height });
+        break;
+      case _a.up:
+        TweenLite.set(this.__items.$el, { y: this._size.height });
+        TweenLite.set(this.__itemsWrapper.$el, {
+          y: 0,
+          opacity: 0,
+        });
+        break;
+    }
+  }
+
+  /**
+   * 
+   * @returns 
+   */
+  _openItems() {
+    if (this.isOpen) {
+      return;
+    }
+    this.isOpen = true;
+    const items = this.__items;
+    items.el.dataset.state = _a.open;
+    this.trigger("change:state", this)
+    this.trigger(_e.open);
+    const d = this.mget(_a.duration) || Visitor.timeout(this.mget(_a.duration));
+    let opt = {
+      onStart: this._onStartOpening,
+      onComplete: this._onOpen,
+      ease: Expo.easeOut,
+    };
+    let wrapper = this.__itemsWrapper.$el;
+    switch (this.mget(_a.direction)) {
+      case _a.down:
+        TweenLite.to(items.$el, d, {
+          y: 0,
+          ...opt
+        });
+        break;
+      case _a.up:
+        TweenLite.to(items.$el, d, {
+          y: 0,
+          ...opt
+        });
+        TweenLite.to(this.__itemsWrapper.$el, {
+          y: -this._size.height,
+        });
+        break;
+      case _a.left:
+        TweenLite.from(items.$el, d, {
+          x: this._size.width,
+          ...opt
+        });
+        break;
+      case _a.right:
+        TweenLite.from(items.$el, d, {
+          x: -this._size.width,
+          ...opt
+        });
+        break;
+      default:
+        this.warn("Unsupported valued", this.mget(_a.direction));
+    }
+    TweenLite.to(wrapper, d, {
+      opacity: 1,
+    });
   }
 
   /**
@@ -319,6 +399,8 @@ class __menu_topic extends LetcBox {
    * @param {*} e 
    */
   _onStartClosing(e) {
+    if (!this.isOpen) return;
+    this.debug("_onStartClosing", this.el, this.mget(_a.direction));
     this._animIsActive = true;
   }
 
@@ -382,56 +464,6 @@ class __menu_topic extends LetcBox {
   }
 
 
-  /**
-   * 
-   * @returns 
-   */
-  _openItems() {
-    if (this.isOpen) {
-      return;
-    }
-    const items = this.__items;
-    items.el.dataset.state = _a.open;
-    this.trigger("change:state", this)
-    this.trigger(_e.open);
-    const d = this.mget(_a.duration) || Visitor.timeout(this.mget(_a.duration));
-    let opt = {
-      onStart: this._onStartOpening,
-      onComplete: this._onOpen,
-      ease: Expo.easeOut
-    };
-    switch (this.mget(_a.direction)) {
-      case _a.down:
-        TweenLite.from(items.$el, d, {
-          y: -this._size.height,
-          ...opt
-        });
-        break;
-      case _a.up:
-        TweenLite.to(items.$el, d, {
-          y: -this._size.height,
-          ...opt
-        });
-        break;
-      case _a.left:
-        TweenLite.from(items.$el, d, {
-          x: this._size.width,
-          ...opt
-        });
-        break;
-      case _a.right:
-        TweenLite.from(items.$el, d, {
-          x: -this._size.width,
-          ...opt
-        });
-        break;
-      default:
-        this.warn("Unsupported valued", this.mget(_a.direction));
-    }
-    TweenLite.to(this.__itemsWrapper.$el, d, {
-      opacity: 1,
-    });
-  }
 
 
   /**

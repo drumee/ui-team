@@ -42,8 +42,8 @@ const __desk_dock = function(_ui_) {
     debug     : __filename,
     kids: [
       navButton,
-      require('./minifier').default(_ui_),
-      require('./mobile')(_ui_),
+      // require('./minifier').default(_ui_),
+      // require('./mobile')(_ui_),
       require('./maker')(_ui_),
       require('./launcher')(_ui_),
       trash

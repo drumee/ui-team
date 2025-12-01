@@ -46,9 +46,9 @@ module.exports = function (grunt) {
   */});
 
   // Default function used to extract an id from a name
-  var defaultConvertNameToId = function(name) {
+  var defaultConvertNameToId = function (name) {
     var dotPos = name.indexOf('.');
-    if ( dotPos > -1){
+    if (dotPos > -1) {
       name = name.substring(0, dotPos);
     }
     return name;
@@ -62,7 +62,7 @@ module.exports = function (grunt) {
     var options = this.options({
       prefix: '',
       svg: {
-          'xmlns': "http://www.w3.org/2000/svg"
+        'xmlns': "http://www.w3.org/2000/svg"
       },
       symbol: {},
       formatting: false,
@@ -75,21 +75,20 @@ module.exports = function (grunt) {
       includeTitleElement: true,
       preserveDescElement: true
     });
-
     var cleanupAttributes = [];
     if (options.cleanup && typeof options.cleanup === 'boolean') {
       // For backwards compatibility (introduced in 0.2.6).
       cleanupAttributes = ['style'];
-    } else if (Array.isArray(options.cleanup)){
+    } else if (Array.isArray(options.cleanup)) {
       cleanupAttributes = options.cleanup;
     }
 
     this.files.forEach(function (file) {
       var $resultDocument = cheerio.load('<svg><defs></defs></svg>', { xmlMode: true }),
-          $resultSvg = $resultDocument('svg'),
-          $resultDefs = $resultDocument('defs').first(),
-          iconNameViewBoxArray = [];  // Used to store information of all icons that are added
-                                      // { name : '' }
+        $resultSvg = $resultDocument('svg'),
+        $resultDefs = $resultDocument('defs').first(),
+        iconNameViewBoxArray = [];  // Used to store information of all icons that are added
+      // { name : '' }
 
       // Merge in SVG attributes from option
       for (var attr in options.svg) {
@@ -108,12 +107,12 @@ module.exports = function (grunt) {
         var id = options.convertNameToId(filename);
         var contentStr = grunt.file.read(filepath);
         var $ = cheerio.load(contentStr, {
-              normalizeWhitespace: true,
-              xmlMode: true
-            });
+          normalizeWhitespace: true,
+          xmlMode: true
+        });
 
         // Remove empty g elements
-        $('g').each(function(){
+        $('g').each(function () {
           var $elem = $(this);
           if (!$elem.children().length) {
             $elem.remove();
@@ -132,9 +131,9 @@ module.exports = function (grunt) {
           var id = $elem.attr('id');
           var uid = getUniqueId(id);
           mappedIds[id] = {
-            id : uid,
-            referenced : false,
-            $elem : $elem
+            id: uid,
+            referenced: false,
+            $elem: $elem
           };
           $elem.attr('id', uid);
         });
@@ -147,7 +146,7 @@ module.exports = function (grunt) {
             var value = attrs[key];
             var id, match, isFillCurrentColor, isStrokeCurrentColor, preservedKey = '';
 
-            while ( (match = urlPattern.exec(value)) !== null){
+            while ((match = urlPattern.exec(value)) !== null) {
               id = match[1];
               if (!!mappedIds[id]) {
                 mappedIds[id].referenced = true;
@@ -155,10 +154,10 @@ module.exports = function (grunt) {
               }
             }
 
-            if ( key === 'xlink:href' ) {
+            if (key === 'xlink:href') {
               id = value.substring(1);
               var idObj = mappedIds[id];
-              if (!!idObj){
+              if (!!idObj) {
                 idObj.referenced = false;
                 $elem.attr(key, '#' + idObj.id);
               }
@@ -174,7 +173,7 @@ module.exports = function (grunt) {
                   preservedKey = key.substring(10);
                 }
 
-                if (cleanupAttributes.indexOf(key) > -1 || cleanupAttributes.indexOf(preservedKey) > -1){
+                if (cleanupAttributes.indexOf(key) > -1 || cleanupAttributes.indexOf(preservedKey) > -1) {
 
                   isFillCurrentColor = key === 'fill' && $elem.attr('fill') === 'currentColor';
                   isStrokeCurrentColor = key === 'stroke' && $elem.attr('stroke') === 'currentColor';
@@ -205,13 +204,13 @@ module.exports = function (grunt) {
           });
         });
 
-        if ( cleanupAttributes.indexOf('id') > -1 ) {
-          Object.keys(mappedIds).forEach(function(id){
+        if (cleanupAttributes.indexOf('id') > -1) {
+          Object.keys(mappedIds).forEach(function (id) {
             var idObj = mappedIds[id];
-            if (!idObj.referenced){
-               idObj.$elem.removeAttr('id');
+            if (!idObj.referenced) {
+              idObj.$elem.removeAttr('id');
             }
-         });
+          });
         }
 
         var $svg = $('svg');
@@ -227,9 +226,10 @@ module.exports = function (grunt) {
 
         var title = $title.first().html();
         var desc = $desc.first().html();
-
         // Remove def, title, desc from this svg
-        $def.remove();
+        if (/normalized/.test(filepath)) {
+          $def.remove();
+        }
         $title.remove();
         $desc.remove();
 
@@ -275,7 +275,7 @@ module.exports = function (grunt) {
         $symbol.attr('id', graphicId);
 
         // Extract gradients and pattern
-        var addToDefs = function(){
+        var addToDefs = function () {
           var $elem = $res(this);
           $resultDefs.append($elem.toString());
           $elem.remove();
@@ -345,7 +345,7 @@ module.exports = function (grunt) {
         }
       });
 
-      if(options.externalDefs) {
+      if (options.externalDefs) {
         var filepath = options.externalDefs;
 
         if (!grunt.file.exists(filepath)) {
@@ -354,10 +354,10 @@ module.exports = function (grunt) {
         }
 
         var $file = cheerio.load(grunt.file.read(filepath), {
-              xmlMode: true,
-              normalizeWhitespace: true
-            }),
-            defs = $file('defs').html();
+          xmlMode: true,
+          normalizeWhitespace: true
+        }),
+          defs = $file('defs').html();
 
         if (defs === null) {
           grunt.log.warn('File "' + chalk.yellow(filepath) + '" contains no defs.');
@@ -367,7 +367,7 @@ module.exports = function (grunt) {
       }
 
       // Remove defs block if empty
-      if ( $resultDefs.html().trim() === '' ) {
+      if ($resultDefs.html().trim() === '') {
         $resultDefs.remove();
       }
 
@@ -383,15 +383,15 @@ module.exports = function (grunt) {
 
         var demoHTML;
         var viewData = {
-          svg : $resultDocument.html(),
-          icons : iconNameViewBoxArray
+          svg: $resultDocument.html(),
+          icons: iconNameViewBoxArray
         };
 
-        if (typeof options.includedemo === 'function'){
+        if (typeof options.includedemo === 'function') {
           demoHTML = options.includedemo(viewData);
-        } else{
+        } else {
           var template = defaultTemplate;
-          if (typeof options.includedemo === 'string'){
+          if (typeof options.includedemo === 'string') {
             template = options.includedemo;
           }
           demoHTML = handlebars.compile(template)(viewData);

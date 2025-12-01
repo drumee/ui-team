@@ -147,5 +147,9 @@
   "CHANGE_UPLOAD_IMAGE": "Cambiar/Subir imagen",
   "DROP_FILES_HERE": "Suelte los archivos aquí para cargarlos",
   "MAX_FILE_SIZE_X": "Tamaño máximo de archivo hasta {0}.",
-  "DESKTOP_WALLPAPER": "Mis fondos de pantalla"
+  "DESKTOP_WALLPAPER": "Mis fondos de pantalla",
+  "CREATE_SHARED_FOLDER": "Crear una carpeta compartida",
+  "CREATE_PUBLIC_FOLDER": "Crear una carpeta pública",
+  "CREATE_PRIVATE_FOLDER": "Crear una carpeta privada",
+  "CREATE_PERSONAL_FOLDER": "Crear una carpeta personal"
 }
