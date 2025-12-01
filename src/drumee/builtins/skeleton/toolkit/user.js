@@ -47,6 +47,7 @@ export function userMenu(ui) {
   const pfx = `${ui.fig.family}-topbar__user-menu`;
   const trigger = Skeletons.Box.X({
     className: `${pfx}-trigger`,
+    kidsOpt: { active: 0 },
     kids: [
       Skeletons.UserProfile({ auto_color: 0 }),
       Skeletons.Element({
