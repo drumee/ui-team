@@ -132,24 +132,23 @@ class drumee_router extends LetcBox {
   * 
   * @param {*}  
   */
-  setWallpaper(opt) {
-    let wallpaper;
-    if (this.isDmz()) {
-      wallpaper = Organization.deskWallpaper();
-    } else {
-      wallpaper = Visitor.wallpaper() || Organization.deskWallpaper();
+  setWallpaper(data) {
+    if (data) {
+      Visitor.respawn(data);
     }
-    if (!wallpaper) return;
-    if (JSON.stringify(this._wallpaper) == JSON.stringify(wallpaper)) {
-      return
+    let { nid, hub_id, color } = Visitor.wallpaper() || {};
+    this._wallpaper = '';
+    if (color && color.primary) {
+      this.el.style.background = '';
+      this.el.style.backgroundColor = color.primary;
+    } else if (nid && hub_id) {
+      this._wallpaper = _a.image;
+      this.el.style.backgroundColor = 'transparent';
+      this.ensurePart('wallpaper').then((p) => {
+        p.feed({ nid, hub_id, kind: 'drumee_background' });
+      })
     }
-    this._wallpaper = wallpaper;
-    this.ensurePart('wallpaper').then((p) => {
-      let kind = 'drumee_background';
-      if (wallpaper) {
-        p.feed({ ...wallpaper, kind });
-      }
-    })
+
   }
 
   /**

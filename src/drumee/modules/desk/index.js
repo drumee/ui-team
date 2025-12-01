@@ -2,31 +2,7 @@ require("welcome/skin");
 require("builtins/window/confirm/skin");
 
 
-/**
- * 
- * @param {*} hex 
- * @param {*} lum 
- * @returns 
- */
-function ColorLuminance(hex, lum) {
 
-  // validate hex string
-  hex = String(hex).replace(/[^0-9a-f]/gi, '');
-  if (hex.length < 6) {
-    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-  }
-  lum = lum || 0;
-
-  // convert to decimal and change luminosity
-  var rgb = "#", c, i;
-  for (i = 0; i < 3; i++) {
-    c = parseInt(hex.substr(i * 2, 2), 16);
-    c = Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16);
-    rgb += ("00" + c).substr(c.length);
-  }
-
-  return rgb;
-}
 
 class desk_module extends LetcBox {
   constructor(...args) {
@@ -93,12 +69,7 @@ class desk_module extends LetcBox {
    */
   async onDomRefresh() {
     this._pending = { available: false };
-    this.updateWallpaper()
-    // if (Visitor.device() === _a.mobile) {
-    //   this.feed(require("./skeleton/mobile")(this));
-    // } else {
-    //   this.feed(require("./skeleton")(this));
-    // }
+    // this.updateWallpaper()
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
@@ -111,36 +82,6 @@ class desk_module extends LetcBox {
   restart() {
     wsRouter.resetSocket();
     this.onDomRefresh();
-  }
-
-
-  /**
-   * 
-   */
-  updateWallpaper(data) {
-    if (data) {
-      Visitor.respawn(data);
-    }
-    let { nid, hub_id, color } = Visitor.wallpaper() || {};
-    this._wallpaper = '';
-    if (color && color.primary) {
-      this.el.style.backgroundColor = ColorLuminance(color.primary, .9);
-      this._wallpaper = _a.color;
-    } else if (nid && hub_id) {
-      this._wallpaper = _a.image;
-      this.el.style.backgroundColor = 'transparent';
-      uiRouter.setWallpaper(Visitor.wallpaper());
-    }
-
-    this.ensurePart('main').then((p) => {
-      if (this._wallpaper == _a.color) {
-        p.el.style.backgroundColor = color.primary;
-      } else {
-        p.el.dataset.wallpaper = this._wallpaper;
-        p.el.style.backgroundColor = 'transparent';
-      }
-    })
-    this.el.dataset.wallpaper = this._wallpaper;
   }
 
   /**
@@ -695,10 +636,8 @@ class desk_module extends LetcBox {
         });
 
       case "set-wallpaper-color":
-        return this.updateWallpaper(args.data);
-
       case "set-wallpaper-image":
-        return this.updateWallpaper(args.data);
+        return uiRouter.setWallpaper(args.data);
 
       default:
         Wm.unselect();

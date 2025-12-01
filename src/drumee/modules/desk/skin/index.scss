@@ -20,21 +20,21 @@ html {
     width: 100%;
     height: 100vh;
     overflow: hidden;
-    background-color: var(--neutral-500);
+    // background-color: var(--neutral-500);
     font-family: var(--font-main);
-
-    &[data-wallpaper="image"] {
-      background-color: transparent;
-    }
+    background-color: transparent;
+    // &[data-wallpaper="image"] {
+    //   background-color: transparent;
+    // }
   }
 
   &__main {
-    background-color: var(--neutral-100);
-    border-radius: 32px;
-
-    &[data-wallpaper="image"] {
-      background-color: transparent;
-    }
+    // background-color: var(--neutral-100);
+    // border-radius: 32px;
+    background-color: transparent;
+    // &[data-wallpaper="image"] {
+    //   background-color: transparent;
+    // }
 
   }
 
