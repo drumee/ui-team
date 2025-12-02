@@ -1915,5 +1915,12 @@
   "CHANGE_UPLOAD_IMAGE": "Change / Upload Image",
   "DROP_FILES_HERE": "Drop files here to upload",
   "MAX_FILE_SIZE_X": "Max file size up to {0}.",
-  "DESKTOP_WALLPAPER": "My wallpapers"
+  "DESKTOP_WALLPAPER": "My wallpapers",
+  "ACTIVITY": "Activity",
+  "MARK_ALL_READ": "Mark as all read",
+  "X_UPLOADED_FILE_Y": "{0} uploaded file {1}",
+  "UPLOADED_FILE": "uploaded the file",
+  "CREATED_FOLDER": "created the folder",
+  "REMOVED_X": "removed the {0}",
+  "FILE": "File"
 }

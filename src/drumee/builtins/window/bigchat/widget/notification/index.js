@@ -24,7 +24,7 @@ class __bigchat_widget_notification extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
-    this.bindNotificationCenterEvent();
+    this.bindActivityHandlerEvent();
     this.model.set({
       flow: _a.none,
       notificationCount: 0
@@ -57,7 +57,7 @@ class __bigchat_widget_notification extends LetcBox {
   /**
    * 
    */
-  bindNotificationCenterEvent() {
+  bindActivityHandlerEvent() {
     RADIO_BROADCAST.on('notification:counts', this.updateCount.bind(this));
   }
 

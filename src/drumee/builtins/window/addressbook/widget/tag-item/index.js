@@ -22,7 +22,7 @@ class __addressbook_widget_tag_item extends LetcBox {
     this._tagManagerResponse = this._tagManagerResponse.bind(this);
     this._deleteTagResponse = this._deleteTagResponse.bind(this);
     this._emitServiceToParent = this._emitServiceToParent.bind(this);
-    this.bindNotificationCenterEvent = this.bindNotificationCenterEvent.bind(this);
+    this.bindActivityHandlerEvent = this.bindActivityHandlerEvent.bind(this);
     this.updateNotificationCount = this.updateNotificationCount.bind(this);
   }
   /**
@@ -52,7 +52,7 @@ class __addressbook_widget_tag_item extends LetcBox {
   /**
     * 
     */
-  bindNotificationCenterEvent() {
+  bindActivityHandlerEvent() {
     RADIO_BROADCAST.on('notification:counts', this.updateNotificationCount.bind(this));
   }
 
@@ -218,7 +218,7 @@ class __addressbook_widget_tag_item extends LetcBox {
   //
   // ===========================================================
   updateNotificationCount(data) {
-    if (!(window.NotificationCenter && window.NotificationCenter.data)) {
+    if (!(window.ActivityHandler && window.ActivityHandler.data)) {
       return;
     }
 

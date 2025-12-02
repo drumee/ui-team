@@ -83,7 +83,6 @@
       }
 
       &[data-type="evaluation"]::after {
-        @include drumee.license-trial();
         @include drumee.typo($size: 22px, $line: 1.3, $color: var(--default-text-title));
       }
     }

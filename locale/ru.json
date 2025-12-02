@@ -1915,5 +1915,12 @@
   "CHANGE_UPLOAD_IMAGE": "Изменить/загрузить изображение",
   "DROP_FILES_HERE": "Перетащите файлы сюда для загрузки",
   "MAX_FILE_SIZE_X": "Максимальный размер файла до {0}.",
-  "DESKTOP_WALLPAPER": "Мои обои"
+  "DESKTOP_WALLPAPER": "Мои обои",
+  "ACTIVITY": "Активность",
+  "MARK_ALL_READ": "Отметить как все прочитанное",
+  "X_UPLOADED_FILE_Y": "{0} загрузила файл {1}",
+  "UPLOADED_FILE": "загрузил файл",
+  "CREATED_FOLDER": "создал папку",
+  "REMOVED_X": "удалил {0}",
+  "FILE": "Файл"
 }

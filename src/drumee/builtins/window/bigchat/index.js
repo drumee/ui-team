@@ -129,7 +129,7 @@ class ___window_bigchat extends __window_bigchat_interact {
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
     super.onDomRefresh();
-    this.bindNotificationCenterEvent();
+    this.bindActivityHandlerEvent();
   }
 
   /**

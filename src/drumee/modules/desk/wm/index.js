@@ -254,7 +254,7 @@ class __window_manager extends push {
     document.onvisibilitychange = async (e) => {
       if (!this.visible) {
         this.verbose("AAA:214 -- VISIBILITY", this.visible);
-        NotificationCenter && NotificationCenter.resync();
+        ActivityHandler && ActivityHandler.resync();
         await uiRouter.ensureWebsocket();
         //wsRouter.ping({ type: 'checkConnection' })
         this.updatePeersState();
@@ -265,7 +265,7 @@ class __window_manager extends push {
     this.loadReminders();
 
     window.addEventListener("online", () => {
-      NotificationCenter && NotificationCenter.resync();
+      ActivityHandler && ActivityHandler.resync();
     });
   }
 

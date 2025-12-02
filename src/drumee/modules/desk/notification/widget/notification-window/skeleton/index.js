@@ -1,8 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /src/drumee/modules/desk/wm/notification/widget/notification-window/skeleton/index.coffee
-//   TYPE : Skeleton
-// ==================================================================== *
 
 const __skl_notification_window_index = function (_ui_) {
   const pfx = _ui_.fig.family;

@@ -102,7 +102,7 @@ class __media_core extends DrumeeMFS {
       case _a.folder:
         if (_.isEmpty(this.mget(_a.hubs))) break;
       case _a.hub:
-        this.bindNotificationCenterEvent();
+        this.bindActivityHandlerEvent();
         break;
     }
     this.metadata();
@@ -306,7 +306,7 @@ class __media_core extends DrumeeMFS {
   /**
    *
    */
-  bindNotificationCenterEvent() {
+  bindActivityHandlerEvent() {
     RADIO_BROADCAST.on(
       "notification:details",
       this.updateNotificationCount.bind(this)
@@ -1088,7 +1088,7 @@ class __media_core extends DrumeeMFS {
    */
   restart(origin) {
     this.unbindEvent(_a.live);
-    if (window.NotificationCenter) this.stopListening(window.NotificationCenter, 'notificationUpdated');
+    if (window.ActivityHandler) this.stopListening(window.ActivityHandler, 'notificationUpdated');
     this.initData();
     this.initURL();
     const { md5Hash } = this.metadata();

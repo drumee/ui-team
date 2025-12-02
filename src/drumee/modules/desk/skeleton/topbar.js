@@ -6,7 +6,7 @@ const { userMenu } = require('builtins/skeleton/toolkit/user');
 function menuBar(ui) {
   const pfx = `${ui.fig.family}-topbar`;
   const icoClass = `${pfx}__icon`;
-  const service = 'toggle-notification';
+  const service = 'toggle-activity-panel';
   return Skeletons.Box.X({
     className: `${pfx}__user-menu`,
     sys_pn: "user-menu",
@@ -21,6 +21,7 @@ function menuBar(ui) {
             ico: "bell",
             dataset: { service }
           }),
+          Skeletons.Note({ className: `${pfx}__activity-count`, sys_pn: "activity-count", activie: 0 }),
           Skeletons.Button.Svg({ className: icoClass, service: 'open-chat', ico: "message" }),
           Skeletons.Button.Svg({ className: icoClass, service: 'open-settings', ico: "settings" }),
           userMenu(ui)

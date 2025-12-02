@@ -151,5 +151,12 @@
   "CREATE_SHARED_FOLDER": "Crear una carpeta compartida",
   "CREATE_PUBLIC_FOLDER": "Crear una carpeta pública",
   "CREATE_PRIVATE_FOLDER": "Crear una carpeta privada",
-  "CREATE_PERSONAL_FOLDER": "Crear una carpeta personal"
+  "CREATE_PERSONAL_FOLDER": "Crear una carpeta personal",
+  "ACTIVITY": "Actividad",
+  "MARK_ALL_READ": "Marcar como leído",
+  "X_UPLOADED_FILE_Y": "{0} subió el archivo {1}",
+  "UPLOADED_FILE": "subió el archivo",
+  "CREATED_FOLDER": "created the folder",
+  "REMOVED_X": "eliminó el {0}",
+  "FILE": "Archivo"
 }

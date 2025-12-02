@@ -1,10 +1,3 @@
-/* ==================================================================== *
-*   Copyright Xialia.com  2011-2020
-*   FILE : src/drumee/modules/desk/wm/notification/widget/notification-window/index.js
-*   TYPE : Component
-* ==================================================================== */
-
-//#########################################
 let EOD = "end:of:data"
 class __notification_window extends LetcBox {
 

@@ -1915,5 +1915,12 @@
   "CHANGE_UPLOAD_IMAGE": "ផ្លាស់ប្ដូរ / ផ្ទុកឡើងរូបភាព",
   "DROP_FILES_HERE": "ទម្លាក់ឯកសារនៅទីនេះដើម្បីផ្ទុកឡើង",
   "MAX_FILE_SIZE_X": "ទំហំឯកសារអតិបរមារហូតដល់ {0}។",
-  "DESKTOP_WALLPAPER": "ផ្ទាំងរូបភាពរបស់ខ្ញុំ"
+  "DESKTOP_WALLPAPER": "ផ្ទាំងរូបភាពរបស់ខ្ញុំ",
+  "ACTIVITY": "សកម្មភាព",
+  "MARK_ALL_READ": "សម្គាល់ថាអានរួចទាំងអស់",
+  "X_UPLOADED_FILE_Y": "{0} បានផ្ទុកឡើងឯកសារ {1}",
+  "UPLOADED_FILE": "បានផ្ទុកឡើងឯកសារ",
+  "CREATED_FOLDER": "created the folder",
+  "REMOVED_X": "បាន​ដក​ចេញ {0}",
+  "FILE": "ឯកសារ"
 }

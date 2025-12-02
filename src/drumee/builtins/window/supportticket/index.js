@@ -60,7 +60,7 @@ class ___window_support_ticket extends __window_support_ticket_interact {
     this.refreshNotify();
     this.bindEvent(_a.live);
 
-    this.bindNotificationCenterEvent();
+    this.bindActivityHandlerEvent();
     this.contextmenuSkeleton = 'a';
 
     this.initialLoad = true;
@@ -374,13 +374,13 @@ class ___window_support_ticket extends __window_support_ticket_interact {
   /**
    *
   */
-  // bindNotificationCenterEvent() {
-  //   if (!window.NotificationCenter) {
+  // bindActivityHandlerEvent() {
+  //   if (!window.ActivityHandler) {
   //     RADIO_NETWORK.once(_e.notificationCenterReady, (ws) =>
-  //       this.listenTo(window.NotificationCenter, 'notificationUpdated', this.updateNotificationCount))
+  //       this.listenTo(window.ActivityHandler, 'notificationUpdated', this.updateNotificationCount))
   //     this.updateNotificationCount()
   //   } else {
-  //     this.listenTo(window.NotificationCenter, 'notificationUpdated', this.updateNotificationCount)
+  //     this.listenTo(window.ActivityHandler, 'notificationUpdated', this.updateNotificationCount)
   //     this.updateNotificationCount()
   //   }
   // }

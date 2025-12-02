@@ -27,7 +27,7 @@ class __window_team extends __hub {
         left: 0
       })
     }
-    this.bindNotificationCenterEvent();
+    this.bindActivityHandlerEvent();
     this.defaultSkeleton = require("./skeleton/main");
     this.settingsLabel = LOCALE.PROJECT_ROOM_MANAGER;
   }
@@ -125,7 +125,7 @@ class __window_team extends __hub {
   /**
    * 
    */
-  bindNotificationCenterEvent() {
+  bindActivityHandlerEvent() {
     RADIO_BROADCAST.on('notification:details', this.updateNotificationCount.bind(this));
   }
 

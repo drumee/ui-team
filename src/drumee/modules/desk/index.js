@@ -103,7 +103,7 @@ class desk_module extends LetcBox {
   changeContextMenu(state) {
     this.findPart("menu-settings").changeState(state);
   }
-  notificationState;
+
   /**
    *
    * @returns
@@ -545,9 +545,8 @@ class desk_module extends LetcBox {
           { explicit: 1, singleton: 1 }
         );
 
-      case "toggle-notification":
-        // return NotificationCenter.togglePanel()
-        return this.ensurePart("notification-panel").then((p) => {
+      case "toggle-activity-panel":
+        return this.ensurePart("activity-panel").then((p) => {
           this.debug("AAA549", p);
           p.togglePannel();
         });
@@ -639,6 +638,14 @@ class desk_module extends LetcBox {
       case "set-wallpaper-image":
         return uiRouter.setWallpaper(args.data);
 
+      case "activity-update":
+        this.ensurePart("activity-count").then((p) => {
+          let content = args.unread_count || 0;
+          if (parseInt(content) > 99) content = '99+';
+          p.set({ content })
+          p.el.dataset.count = content;
+        })
+        return;
       default:
         Wm.unselect();
     }

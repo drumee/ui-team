@@ -1915,5 +1915,12 @@
   "CHANGE_UPLOAD_IMAGE": "更改/上传图片",
   "DROP_FILES_HERE": "文件拖放到这里即可上传",
   "MAX_FILE_SIZE_X": "最大文件大小不超过 {0}。",
-  "DESKTOP_WALLPAPER": "我的壁纸"
+  "DESKTOP_WALLPAPER": "我的壁纸",
+  "ACTIVITY": "活动",
+  "MARK_ALL_READ": "标记为已阅读",
+  "X_UPLOADED_FILE_Y": "{0} 上传了文件 {1}",
+  "UPLOADED_FILE": "已上传文件",
+  "CREATED_FOLDER": "创建了文件夹",
+  "REMOVED_X": "移除了 {0}",
+  "FILE": "文件"
 }

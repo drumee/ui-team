@@ -31,16 +31,15 @@ const _desk_main = function (ui) {
       // }),
 
       Skeletons.Box.Y({
-        sys_pn: "notification-container",
-        className: `${ui.fig.family}__notification-container`,
-        kids: [
-          {
-            sys_pn: "notification-panel",
-            kind: 'notification_panel',
-            uiHandler: [ui],
-            partHandler: [ui]
-          }
-        ],
+        sys_pn: "activity-container",
+        className: `${ui.fig.family}__activity-container`,
+        kids: [{
+          sys_pn: "activity-panel",
+          kind: 'activity_panel',
+          service:'activity-update',
+          uiHandler: [ui],
+          partHandler: [ui]
+        }],
         uiHandler: ui,
         partHandler: [ui]
       }),
