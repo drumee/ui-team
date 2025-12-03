@@ -2,31 +2,16 @@ const button = require('./button');
 
 function menu_items(ui) {
   const pfx = `${ui.fig.family}__folder`;
-  console.log("AAA:5", Skeletons.Button.Label({
-    chartName: "raw-folder-green",
-    type: "raw",
-    className: `${pfx} folder big`,
-    service: "add-folder",
-    helperName: 'folder',
-    label: LOCALE.CREATE_PERSONAL_FOLDER,
-  }))
+
   return Skeletons.Box.Y({
     debug: __filename,
-    className: `${pfx}__items`,
+    className: `${pfx}-items`,
     flow: _a.vertical,
     kids: [
       Skeletons.Button.Label({
         chartName: "folder",
         type: "raw",
-        className: `${pfx} folder big`,
-        service: "add-folder",
-        helperName: 'folder',
-        label: LOCALE.CREATE_PERSONAL_FOLDER,
-      }),
-      Skeletons.Button.Label({
-        chartName: "folder",
-        type: "raw",
-        className: `${pfx} team`,
+        className: `${pfx}-item private`,
         service: 'add-team',
         respawn: 'hub_team',
         helperName: 'teamroom',
@@ -35,7 +20,15 @@ function menu_items(ui) {
       Skeletons.Button.Label({
         chartName: "folder",
         type: "raw",
-        className: `${pfx} sharebox`,
+        className: `${pfx}-item personal`,
+        service: "add-folder",
+        helperName: 'folder',
+        label: LOCALE.CREATE_PERSONAL_FOLDER,
+      }),
+      Skeletons.Button.Label({
+        chartName: "folder",
+        type: "raw",
+        className: `${pfx}-item share`,
         service: 'add-sharebox',
         respawn: 'hub_sharebox',
         helperName: 'sharebox',
@@ -44,7 +37,7 @@ function menu_items(ui) {
       Skeletons.Button.Label({
         chartName: "folder",
         type: "raw",
-        className: `${pfx} folder big`,
+        className: `${pfx}-item public`,
         service: "add-folder",
         helperName: 'folder',
         label: LOCALE.CREATE_PUBLIC_FOLDER,

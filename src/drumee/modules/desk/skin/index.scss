@@ -15,6 +15,14 @@ html {
 @include meta.load-css("desk/intro-popup");
 @include meta.load-css("dialog");
 
+.folder-gradient-start {
+  stop-color: #98D6FF;
+}
+
+.folder-gradient-stop {
+  stop-color: #2AAAFF;
+}
+
 .desk-module {
   &__ui {
     width: 100%;

@@ -35,6 +35,12 @@ class __media_row extends DrumeeMediaInteract {
       width: 500,
       height: 32
     }
+    // this.container = Skeletons.Box.X({
+    //   className: `${this.fig.family}__container ${this.mget(_a.filetype)}`,
+    //   sys_pn: _a.content,
+    //   active: 0,
+    //   dataset: {}
+    // })
   }
 
   /**

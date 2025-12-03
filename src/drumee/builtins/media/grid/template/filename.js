@@ -10,7 +10,6 @@ const __media_filename = function(m) {
     v = 'image-capable';
   }
 
-  //this.debug("AAA:17", m)
   if ((m.isAttachment) || (Visitor.inDmz) || (m.isalink && (m.filetype !== _a.hub)) || (m.status === _a.deleted)) { 
     html = `
     <div id="${m._id}-filename" class="filename ${m.area} ${m.filetype} ${v}"> 

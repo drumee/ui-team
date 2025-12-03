@@ -12,14 +12,17 @@ const __media_preview = function (m) {
     switch (type) {
       case _a.video:
         html = `
-          <div id="${m._id}-preview" class="full preview image-capable" style="background-image:url(${m.url});"> 
+          <div id="${m._id}-preview" class="full preview-content ${type}" style="background-image:url(${m.url});"> 
             <svg id="${m._id}-icon" class="full icon ${type} ${dmz} ${area}"> 
             ${Template.Xmlns('raw-video')} 
             </svg> 
           </div>`;
         break;
       default:
-        html = `<div id="${m._id}-preview" class="full preview image-capable" style="background-image:url(${m.url});"></div>`;
+        html = `
+          <div class="preview-container ${type}">
+            <div id="${m._id}-preview" class="full preview-content ${type}" style="background-image:url(${m.url});"></div>
+          </div> `;
     }
   } else {
     if (ext) {

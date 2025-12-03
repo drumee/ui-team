@@ -26,6 +26,7 @@ class __media_grid extends DrumeeMediaInteract {
     this.isGrid = 1;
     this.model.atLeast({
       aspect: _a.grid,
+      area: _a.personal
     });
     if (opt.mode == _a.preview) {
       this.innerContent = () => {
@@ -34,6 +35,12 @@ class __media_grid extends DrumeeMediaInteract {
     } else {
       this.innerContent = require('./template');
     }
+    // this.container = Skeletons.Box.Y({
+    //   className: `${this.fig.family}__container ${this.mget(_a.filetype)}`,
+    //   sys_pn: _a.content,
+    //   active: 0,
+    //   dataset: {}
+    // })
     this.cursorPosition = { left: 30, top: 30 };
     this.size = {
       width: 90.5,

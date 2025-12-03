@@ -1,9 +1,9 @@
-const _svg_template = function(_ui_){
-  const m = _ui_.model.toJSON();
+const _svg_template = function(ui){
+  const m = ui.model.toJSON();
   const a = `
-  <svg id="icon-${m.widgetId}" class="full inner drumee-picto ${m.innerClass}"> 
-    <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#--icon-${m.chartId}"></use> 
-  </svg>
+   <div class="${ui.fig.family}__container">
+    <div id="icon-${m.widgetId}" class="full inner drumee-picto ${m.innerClass}"></div>
+  </div>
   `;
   if (!_.isEmpty(m.label)) {
     const l = `

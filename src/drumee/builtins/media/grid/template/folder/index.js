@@ -1,0 +1,42 @@
+const { badgePersonal } = require("./badge-personal")
+const { badgePrivate } = require("./badge-private")
+const { badgeShare } = require("./badge-share")
+const { badgePublic } = require("./badge-public")
+
+
+module.exports = function (model) {
+  const { area, widgetId } = model;
+  const main =  `
+    <svg class="folder-shape ${area}" width="140" height="140" viewBox="0 0 140 114" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g filter="url(#filter-${widgetId})">
+        <path d="M44.7658 2H20C11.1634 2 4 9.16344 4 18V92C4 100.837 11.1635 108 20 108H120C128.837 108 136 100.837 136 92L136 37.6C136 28.7634 128.837 21.6 120 21.6H78.4465C74.4095 21.6 70.5218 20.074 67.5627 17.3279L55.6496 6.27214C52.6905 3.52603 48.8028 2 44.7658 2Z" fill="url(#fill-${widgetId})"/>
+      </g>
+      <defs>
+        <filter id="filter-${widgetId}" x="0" y="0" width="140" height="114" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+          <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+          <feOffset dy="2"/>
+          <feGaussianBlur stdDeviation="2"/>
+          <feComposite in2="hardAlpha" operator="out"/>
+          <feColorMatrix type="matrix" values="0 0 0 0 0.133333 0 0 0 0 0.152941 0 0 0 0 0.196078 0 0 0 0.32 0"/>
+          <feBlend mode="normal" in2="BackgroundImageFix" result="shadow-${widgetId}"/>
+          <feBlend mode="normal" in="SourceGraphic" in2="shadow-${widgetId}" result="shape"/>
+        </filter>
+        <linearGradient id="fill-${widgetId}" x1="70" y1="2" x2="70" y2="106" gradientUnits="userSpaceOnUse">
+          <stop class="gradient-start-${area}" offset="0%"/>
+          <stop class="gradient-end-${area}" offset="100%"/>
+        </linearGradient>
+      </defs>
+    </svg>`;
+  switch (model.area) {
+    case _a.personal:
+      return main + badgePersonal(model);
+    case _a.private:
+      return main + badgePrivate(model);
+    case _a.share:
+      return main + badgeShare(model);
+    case _a.public:
+      return main + badgePublic(model);
+  }
+};
+
