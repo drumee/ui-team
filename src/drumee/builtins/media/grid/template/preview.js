@@ -12,8 +12,8 @@ const __media_preview = function (m) {
     switch (type) {
       case _a.video:
         html = `
-          <div id="${m._id}-preview" class="full preview-content ${type}" style="background-image:url(${m.url});"> 
-            <svg id="${m._id}-icon" class="full icon ${type} ${dmz} ${area}"> 
+          <div id="${m._id}-preview" class="preview-content ${type}" style="background-image:url(${m.url});"> 
+            <svg id="${m._id}-icon" class="preview-icon ${type} ${dmz} ${area}"> 
             ${Template.Xmlns('raw-video')} 
             </svg> 
           </div>`;
@@ -21,14 +21,17 @@ const __media_preview = function (m) {
       default:
         html = `
           <div class="preview-container ${type}">
-            <div id="${m._id}-preview" class="full preview-content ${type}" style="background-image:url(${m.url});"></div>
-          </div> `;
+            <div id="${m._id}-preview" class="preview-content ${type}" style="background-image:url(${m.url});"></div>
+          </div>`;
     }
   } else {
     if (ext) {
-      html = Template.SvgText(ext, `full icon extension ${type} ${dmz} ${area}`);
+      html = Template.SvgText(ext, `preview-icon extension ${type} ${dmz} ${area}`);
     } else {
-      html = `<svg id="${m._id}-preview" class="full icon ${dmz} ${type} ${area}">${Template.Xmlns(chartId)}</svg>`;
+      html = `
+        <div class="preview-container ${type}">
+          <svg id="${m._id}-preview" class="preview-icon ${dmz} ${type} ${area}">${Template.Xmlns(chartId)}</svg>
+        </div>`;
     }
   }
 

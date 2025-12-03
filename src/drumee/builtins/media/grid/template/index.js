@@ -1,3 +1,4 @@
+
 /**
  * 
  * @param {*} ui 
@@ -10,13 +11,21 @@ const __media_tpl_grid = function (ui) {
   m.imgCapable = ui.imgCapable();
   m._id = ui._id;
   m.fig = ui.fig;
-
-  if ([_a.folder, _a.hub].includes(m.filetype)) {
-    html = require('./folder')(m) + require('./filename')(m);
-  } else {
-    html = require('./preview')(m) + require('./filename')(m);
+  let filename = require('./filename')(m);
+  switch (m.filetype) {
+    case _a.folder:
+    case _a.hub:
+      html = require('./folder')(m) + filename;
+      break;
+    case _a.audio:
+      html = require('./filetype/audio.txt').default + filename;
+      break;
+    case _a.note:
+      html = require('./filetype/note.txt').default + filename;
+      break;
+    default:
+      html = require('./preview')(m) + filename;
   }
-
   if (!Visitor.inDmz) {
     html = html + require('../../template/command')(m);
     html = html + require('../../template/notify')(m);

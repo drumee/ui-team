@@ -78,6 +78,7 @@
   transition: opacity 1ms;
   white-space: pre-wrap;
   @include drumee.typo($line: 14px, $size: 10px, $weight: 400, $color: var(--default-text-color));
+  bottom: 10px;
 
   &[data-hover="on"] {
     background-color: var(--multimedia-main-filename-bg);
