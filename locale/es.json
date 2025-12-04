@@ -60,7 +60,6 @@
   "DRUMEE_USERS_LIST": "Lista de usuarios de Drumee",
   "DT_TOTAL_SIZE": "Total size:",
   "DUCUMENTS": "Documentos",
-  "DUPLICATE": "Duplicar",
   "DURATION": "Duración",
   "DURATIONIN": "Duración entrante",
   "DURATIONOUT": "Duración saliente",
@@ -158,5 +157,9 @@
   "UPLOADED_FILE": "subió el archivo",
   "CREATED_FOLDER": "created the folder",
   "REMOVED_X": "eliminó el {0}",
-  "FILE": "Archivo"
+  "FILE": "Archivo",
+  "DUPLICATE": "Duplicada",
+  "MOVE_TO_TRASH": "Mover a la papelera",
+  "GET_INFO": "Obtener información",
+  "PROHIBIT_CHANGE": "Prohibir cualquier cambio"
 }

@@ -51,18 +51,17 @@ class desk_module extends LetcBox {
     };
     this.declareHandlers();
 
-    this._updateContextMenu = this._updateContextMenu.bind(this);
-
-    RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
+    // this._updateContextMenu = this._updateContextMenu.bind(this);
+    // RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
     setTimeout(this.lazyClasses, 5000);
   }
 
   /**
    *
    */
-  onDestroy() {
-    RADIO_BROADCAST.off(_e.select, this._updateContextMenu);
-  }
+  // onDestroy() {
+  //   RADIO_BROADCAST.off(_e.select, this._updateContextMenu);
+  // }
 
   /**
    *
@@ -87,15 +86,15 @@ class desk_module extends LetcBox {
   /**
    *
    */
-  _updateContextMenu(media) {
-    const m = this.getPart("menu-settings");
-    if (_.isEmpty(Wm.getGlobalSelection())) {
-      m.__items.el.dataset.action = 0;
-    } else {
-      m.__items.el.dataset.action = 1;
-    }
-    this.autoMenu(media);
-  }
+  // _updateContextMenu(media) {
+  //   const m = this.getPart("menu-settings");
+  //   if (_.isEmpty(Wm.getGlobalSelection())) {
+  //     m.__items.el.dataset.action = 0;
+  //   } else {
+  //     m.__items.el.dataset.action = 1;
+  //   }
+  //   this.autoMenu(media);
+  // }
 
   /**
    *
@@ -131,14 +130,14 @@ class desk_module extends LetcBox {
   /**
    *
    */
-  autoMenu() {
-    if (_.isEmpty(Wm.getGlobalSelection())) {
-      this.changeContextMenu(0);
-    } else {
-      this.changeContextMenu(1);
-      this.refreshContextMenu();
-    }
-  }
+  // autoMenu() {
+  //   if (_.isEmpty(Wm.getGlobalSelection())) {
+  //     this.changeContextMenu(0);
+  //   } else {
+  //     this.changeContextMenu(1);
+  //     this.refreshContextMenu();
+  //   }
+  // }
 
   /**
    *
@@ -572,11 +571,11 @@ class desk_module extends LetcBox {
         Wm.closeAlert();
         return;
 
-      case "menu-settings":
-        if (cmd.mget(_a.state)) {
-          return this._updateContextMenu();
-        }
-        break;
+      // case "menu-settings":
+      //   if (cmd.mget(_a.state)) {
+      //     return this._updateContextMenu();
+      //   }
+      //   break;
 
       case _e.copy:
       case _e.cut:

@@ -161,10 +161,8 @@ See https://drumee.com/-/#/sandbox for examples.
 | svg | libs/reader/image/svg | https://github.com/drumee/ui-team/tree/main/src/drumee/libs/reader/image/svg/index.js |
 | dock | modules/desk/wm/dock | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/dock/index.js |
 | litechat_message | window/litechat/message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/litechat/message/index.js |
-| notification_list_item | desk/notification/widget/notification-list-item | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notification/widget/notification-list-item/index.js |
 | activity_panel | desk/activity-panel | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/activity-panel/index.js |
 | activity_item | desk/activity-panel/widget/item | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/activity-panel/widget/item/index.js |
-| notification_window | desk/notification/widget/notification-window | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notification/widget/notification-window/index.js |
 | notifier_generic | desk/notifier/generic | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notifier/generic/index.js |
 | notifier_network | desk/notifier/network | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/notifier/network/index.js |
 | schedule_invitation | window/schedule/widget/invitation | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/schedule/widget/invitation/index.js |

@@ -30,7 +30,6 @@ class __activity_panel extends LetcBox {
     window.ActivityHandler = this;
 
     this._onOutsideClick = (e, origin) => {
-      this.debug("AAA:31", e)
       if (pointerDragged || e?.getService() == 'toggle-activity-panel') return;
       if (e && !this.el.contains(e.currentTarget)) {
         this.closeactivityPanel();
@@ -124,6 +123,11 @@ class __activity_panel extends LetcBox {
         }
         this.closeactivityPanel();
         return '';
+
+      case 'clear-all':
+        return this.postService(SERVICE.activity.mark_all_read, { hub_id: Visitor.id }).then((data) => {
+          this.__list.clear()
+        })
 
       case 'delete-entity':
         cmd.goodbye();

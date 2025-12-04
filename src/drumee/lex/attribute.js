@@ -98,7 +98,6 @@ const a = {
   base              : 'base',
   basic             : 'basic',
   behavior          : 'behavior',
-//  belongTo          : 'belongTo'
   before            : 'before',
   below             : 'below',
   fig               : 'fig',
@@ -114,16 +113,6 @@ const a = {
   book              : 'book',
   boolean           : 'boolean',
   border            : 'border',
-  //   _               : 'border'
-  //   bottom          : 'border-bottom'
-  //   color           : 'border-color'
-  //   left            : 'border-left'
-  //   radio           : 'border-radio'
-  //   radius          : 'border-radius'
-  //   right           : 'border-right'
-  //   style           : 'border-style'
-  //   top             : 'border-top'
-  //   width           : 'border-width'
   bound             : 'bound',
   browser           : 'browser',
   breadcrumbs       : "breadcrumbs",
@@ -152,13 +141,11 @@ const a = {
   caller            : 'caller',
   cancel            : 'cancel',
   cancel_action     : 'cancel_action',
-// cancelLabel       : 'cancelLabel'
   capability        : 'capability',
   caption           : 'caption',
   card              : 'card',
   cascade           : 'cascade',
   category          : 'category',
-//  ccArgs            : 'ccArgs'           #  => Marionette's childCollectionArguments
   center            : 'center',
   centerX           : 'centerX',
   centerY           : 'centerY',
@@ -184,10 +171,8 @@ const a = {
   cloneAttributes   : 'cloneAttributes',
   close             : 'close',
   closed            : 'closed',
-  // cmArgs            : 'cmArgs'           #  => Marionette's childModelArguments
   code              : 'code',
   collection        : 'collection',
-  // collectionDef     : 'collectionDef'
   color             : 'color',
   colorMatrix       : 'colorMatrix',
   colorName         : 'colorName',
@@ -264,11 +249,9 @@ const a = {
     justify         : 'data-justify',
     layer           : 'data-ls',    // layer-slider
     level           : 'data-level',    // layer-slider
-    //listen_to       : 'data-listen-to'
     markup          : 'data-markup',
     mode            : 'data-mode',
     msgCount        : 'data-msg-count',
-//    on_click        : 'data-on-click'
     node            : 'data-node',
     over            : 'data-over',
     overlap         : 'data-overlap',
@@ -351,6 +334,7 @@ const a = {
   dropped           : 'dropped',
   drumate           : 'drumate',
   drumates          : 'drumates',
+  duplicate         : 'duplicate',
   duration          : 'duration',
   dynamic           : {
     _               : 'dynamic',
@@ -1067,6 +1051,7 @@ const a = {
   translate         : 'translate',
   transparent       : 'transparent',
   transverse        : 'transverse',
+  trash             : 'trash',
   trigger           : 'trigger',
   triggers          : 'triggers',
   ttl               : 'ttl',
@@ -1103,7 +1088,6 @@ const a = {
   validator         : 'validator',
   value             : 'value',
   secondaryValue    : 'secondaryValue',
-//  valueClass        : 'valueClass'
   values            : 'values',
   variant           : 'variant',
   vars              : 'vars',
@@ -1129,9 +1113,7 @@ const a = {
   west              : 'w',
   white             : 'white',
   widget            : 'widget',
-//  widgetArgs        : 'widgetArgs'
   widgetId          : 'widgetId',
-//  widgetType        : 'widgetType'
   widgets           : 'widgets',
   width             : 'width',
   window            : 'window',

@@ -212,7 +212,6 @@
   "DRIVE_OF": "Drive сайта {0}",
   "DROP_SECTIONS_HERE": "Перетащите разделы сюда",
   "DUCUMENTS": "Документы",
-  "DUPLICATE": "Создать дубликат",
   "DURATION": "Трафик",
   "DURATIONIN": "Входящий трафик",
   "DURATIONOUT": "Исходящий трафик",
@@ -1922,5 +1921,9 @@
   "UPLOADED_FILE": "загрузил файл",
   "CREATED_FOLDER": "создал папку",
   "REMOVED_X": "удалил {0}",
-  "FILE": "Файл"
+  "FILE": "Файл",
+  "DUPLICATE": "Дубликат",
+  "MOVE_TO_TRASH": "Переместить в корзину",
+  "GET_INFO": "Получить информацию",
+  "PROHIBIT_CHANGE": "ហាមឃាត់ការផ្លាស់ប្តូរណាមួយ"
 }

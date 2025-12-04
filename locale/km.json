@@ -208,7 +208,6 @@
   "DRIVE_OF": "ដ្រាយរបស់គេហទំព័រ {0}",
   "DROP_SECTIONS_HERE": "អូស និងទម្លាក់ផ្នែកនៅទីនេះ",
   "DUCUMENTS": "ឯកសារ",
-  "DUPLICATE": "ស្ទួន",
   "DURATION": "រយៈពេល",
   "DURATIONIN": "រយៈពេលចូល",
   "DURATIONOUT": "រយៈពេលចេញ",
@@ -1922,5 +1921,9 @@
   "UPLOADED_FILE": "បានផ្ទុកឡើងឯកសារ",
   "CREATED_FOLDER": "created the folder",
   "REMOVED_X": "បាន​ដក​ចេញ {0}",
-  "FILE": "ឯកសារ"
+  "FILE": "ឯកសារ",
+  "DUPLICATE": "ស្ទួន",
+  "MOVE_TO_TRASH": "ផ្លាស់ទីទៅធុងសំរាម",
+  "GET_INFO": "មើលព័ត៌មាន",
+  "PROHIBIT_CHANGE": "ហាមឃាត់ការផ្លាស់ប្តូរណាមួយ"
 }

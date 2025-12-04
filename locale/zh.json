@@ -212,7 +212,6 @@
   "DRIVE_OF": "文件站点{0}",
   "DROP_SECTIONS_HERE": "在此处拖动部分",
   "DUCUMENTS": "文件",
-  "DUPLICATE": "复制",
   "DURATION": "持续时间",
   "DURATIONIN": "进入时长",
   "DURATIONOUT": "离开时长",
@@ -1922,5 +1921,9 @@
   "UPLOADED_FILE": "已上传文件",
   "CREATED_FOLDER": "创建了文件夹",
   "REMOVED_X": "移除了 {0}",
-  "FILE": "文件"
+  "FILE": "文件",
+  "DUPLICATE": "复制",
+  "MOVE_TO_TRASH": "移至垃圾桶",
+  "GET_INFO": "获取信息",
+  "PROHIBIT_CHANGE": "禁止任何更改"
 }

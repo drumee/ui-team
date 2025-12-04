@@ -9,7 +9,8 @@ module.exports = function (ui) {
       }),
       Skeletons.Note({
         className: `${fig}__action`,
-        content: LOCALE.MARK_ALL_READ
+        content: LOCALE.MARK_ALL_READ,
+        service: "clear-all"
       }),
     ],
   });

@@ -212,7 +212,6 @@
   "DRIVE_OF": "Site {0}'s drive",
   "DROP_SECTIONS_HERE": "Drag and drop sections here",
   "DUCUMENTS": "Documents",
-  "DUPLICATE": "Duplicate",
   "DURATION": "Duration",
   "DURATIONIN": "Incoming duration",
   "DURATIONOUT": "Outgoing duration",
@@ -1922,5 +1921,9 @@
   "UPLOADED_FILE": "uploaded the file",
   "CREATED_FOLDER": "created the folder",
   "REMOVED_X": "removed the {0}",
-  "FILE": "File"
+  "FILE": "File",
+  "DUPLICATE": "Duplicate",
+  "MOVE_TO_TRASH": "Move to trash",
+  "GET_INFO": "Get info",
+  "PROHIBIT_CHANGE": "Prohibit any change"
 }

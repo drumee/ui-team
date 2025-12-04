@@ -212,7 +212,6 @@
   "DRIVE_OF": "Document(s) du site {0}",
   "DROP_SECTIONS_HERE": "Faites glisser les sections ici",
   "DUCUMENTS": "Documents",
-  "DUPLICATE": "Dupliquer",
   "DURATION": "Durée",
   "DURATIONIN": "Durée d'entrée",
   "DURATIONOUT": "Durée de sortie",
@@ -1922,5 +1921,9 @@
   "UPLOADED_FILE": "a téléchargé le fichier",
   "CREATED_FOLDER": "a créé le dossier",
   "REMOVED_X": "a supprimé le {0}",
-  "FILE": "Fichier"
+  "FILE": "Fichier",
+  "DUPLICATE": "Dupliquer",
+  "MOVE_TO_TRASH": "Déplacer vers la poubelle",
+  "GET_INFO": "Voir les informations",
+  "PROHIBIT_CHANGE": "Interdire toute modification"
 }

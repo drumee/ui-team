@@ -53,7 +53,7 @@ module.exports = function (ui) {
     preview = data.dest;
   }
   preview.kind = 'media_grid';
-  preview.mode = _a.preview;
+  preview.mode = _a.vignette;
 
   const ctime = preview.ctime || 0;
   const m = Dayjs.unix(ctime);

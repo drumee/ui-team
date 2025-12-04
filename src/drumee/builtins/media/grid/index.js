@@ -28,24 +28,21 @@ class __media_grid extends DrumeeMediaInteract {
       aspect: _a.grid,
       area: _a.personal
     });
-    if (opt.mode == _a.preview) {
-      this.innerContent = () => {
-        return require('./template/preview')(opt);
-      }
-    } else {
-      this.innerContent = require('./template');
-    }
-    // this.container = Skeletons.Box.Y({
-    //   className: `${this.fig.family}__container ${this.mget(_a.filetype)}`,
-    //   sys_pn: _a.content,
-    //   active: 0,
-    //   dataset: {}
-    // })
+
     this.cursorPosition = { left: 30, top: 30 };
+
     this.size = {
       width: 90.5,
       height: 75.5
     }
+
+    switch (opt.mode) {
+      case _a.vignette:
+        return this.innerContent = require('./template/vignette')
+      default:
+        this.innerContent = require('./template');
+    }
+
   }
 
   /**

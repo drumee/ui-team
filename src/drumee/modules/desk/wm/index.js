@@ -36,6 +36,8 @@ class __window_manager extends push {
       _a.separator,
       _a.preferences,
     ];
+    this._handelKbdEvents = this._handelKbdEvents.bind(this);
+    RADIO_KBD.on(_e.keyup, this._handelKbdEvents)
   }
 
   /**
@@ -229,6 +231,13 @@ class __window_manager extends push {
         }
       })
     }, 1000)
+  }
+
+  /**
+   * To do : allow copy/paste/supp through keyboard short cut
+   */
+  _handelKbdEvents(e) {
+    // this.debug("AAA:240", e)
   }
 
   /**
