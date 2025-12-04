@@ -72,6 +72,7 @@ class __window_wallpaper_settings extends __window_interact {
       hub_id: Visitor.id,
       nid: Visitor.get(_a.home_id),
       ownpath: `/${LOCALE.DESKTOP_WALLPAPER}`,
+      metadata: { folder_type: "wallpapers" }
     }).then((data) => {
       this.debug("make_dir response", data);
       if (!data || !data.nid) {
@@ -112,7 +113,7 @@ class __window_wallpaper_settings extends __window_interact {
             wallpaper: { nid, hub_id }
           }
         }
-        this.mset({nid,hub_id});
+        this.mset({ nid, hub_id });
         this.applySelectedImage(this, 1)
       });
 
@@ -306,13 +307,9 @@ class __window_wallpaper_settings extends __window_interact {
     }
 
     let api = {
-      service: SERVICE.media.get_by_type,
+      service: SERVICE.desk.my_wallpapers,
       page: 1,
-      type: _a.image,
-      nid: nid,
-      sort: _a.rank,
-      order: "desc",
-      vhost: wp.vhost,
+      hub_id: Visitor.id,
       timer: 2000,
     };
     return api;
@@ -323,7 +320,7 @@ class __window_wallpaper_settings extends __window_interact {
    * 
    * @param {*} cmd 
    */
-  applySelectedImage(cmd, quit=0) {
+  applySelectedImage(cmd, quit = 0) {
     // Set wallpaper immediately when clicking on image in gallery
     const { nid, hub_id } = cmd.model.toJSON()
     const opt = {
@@ -339,7 +336,7 @@ class __window_wallpaper_settings extends __window_interact {
     }).then((data) => {
       this.debug("Wallpaper image updated successfully", data);
       this.triggerHandlers({ data, service: "set-wallpaper-image" });
-      if(quit){
+      if (quit) {
         this.goodbye()
       }
     });

@@ -27,7 +27,7 @@ class __support_ticket_widget_notification extends LetcBox {
     this.model.set({ flow: _a.none });
     this.mset('notificationCount', 0);
     this.updateNotificationCount.bind(this);
-    this.bindNotificationCenterEvent();
+    this.bindActivityHandlerEvent();
   }
 
   onPartReady(child, pn, section) {
@@ -52,7 +52,7 @@ class __support_ticket_widget_notification extends LetcBox {
   /**
    * 
    */
-  bindNotificationCenterEvent() {
+  bindActivityHandlerEvent() {
     RADIO_BROADCAST.on('notification:counts', this.updateNotificationCount.bind(this));
   }
 

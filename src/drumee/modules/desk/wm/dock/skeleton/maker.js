@@ -2,57 +2,65 @@ const button = require('./button');
 
 function menu_items(ui) {
   const pfx = `${ui.fig.family}__folder`;
-  console.log("AAA:5", Skeletons.Button.Label({
-    chartName: "raw-folder-green",
-    type: "raw",
-    className: `${pfx} folder big`,
-    service: "add-folder",
-    helperName: 'folder',
-    label: LOCALE.CREATE_PERSONAL_FOLDER,
-  }))
+
   return Skeletons.Box.Y({
     debug: __filename,
-    className: `${pfx}__items`,
+    className: `${pfx}-items`,
     flow: _a.vertical,
     kids: [
-      Skeletons.Button.Label({
-        chartName: "folder",
-        type: "raw",
-        className: `${pfx} folder big`,
-        service: "add-folder",
+      Skeletons.Box.G({
+        className: `${pfx}-item public`,
         helperName: 'folder',
-        label: LOCALE.CREATE_PERSONAL_FOLDER,
+        service: "add-folder",
+        kidsOpt: {
+          active: 0
+        },
+        kids: [
+          { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: "private", mode: _a.vignette },
+          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PUBLIC_FOLDER })
+        ]
       }),
-      Skeletons.Button.Label({
-        chartName: "folder",
-        type: "raw",
-        className: `${pfx} team`,
-        service: 'add-team',
-        respawn: 'hub_team',
-        helperName: 'teamroom',
-        label: LOCALE.CREATE_PRIVATE_FOLDER,
-      }),
-      Skeletons.Button.Label({
-        chartName: "folder",
-        type: "raw",
-        className: `${pfx} sharebox`,
+      Skeletons.Box.G({
+        className: `${pfx}-item share`,
         service: 'add-sharebox',
         respawn: 'hub_sharebox',
-        helperName: 'sharebox',
-        label: LOCALE.CREATE_SHARED_FOLDER,
+        kidsOpt: {
+          active: 0
+        },
+        kids: [
+          { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.share, mode: _a.vignette },
+          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_SHARED_FOLDER })
+        ]
       }),
-      Skeletons.Button.Label({
-        chartName: "folder",
-        type: "raw",
-        className: `${pfx} folder big`,
-        service: "add-folder",
+      Skeletons.Box.G({
+        className: `${pfx}-item private`,
+        helperName: 'teamroom',
+        service: 'add-team',
+        respawn: 'hub_team',
+        kidsOpt: {
+          active: 0
+        },
+        kids: [
+          { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.private, mode: _a.vignette },
+          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PRIVATE_FOLDER })
+        ]
+      }),
+      Skeletons.Box.G({
+        className: `${pfx}-item personal`,
         helperName: 'folder',
-        label: LOCALE.CREATE_PUBLIC_FOLDER,
+        service: "add-folder",
+        kidsOpt: {
+          active: 0
+        },
+        kids: [
+          {  kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.personal, mode: _a.vignette },
+          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PERSONAL_FOLDER })
+        ]
       }),
     ]
   });
 };
-function foldersMebu(ui) {
+function folderMenu(ui) {
   const pfx = `${ui.fig.family}__button`;
   const trigger = Skeletons.Box.X({
     className: `${pfx}-trigger`,
@@ -61,7 +69,7 @@ function foldersMebu(ui) {
         ico: "dock-folder",
         className: `${pfx} menu`,
         helperName: 'folder'
-      }, LOCALE.CREATE_FOLDER),
+      }, LOCALE.FOLDERS),
     ]
   });
 
@@ -94,29 +102,29 @@ const __desk_dock_items_makers = function (ui) {
     debug: __filename,
     className: `${ui.fig.family}__container application maker`,
     kids: [
-      foldersMebu(ui),
+      folderMenu(ui),
       button(ui, {
         ico: "dock-gallery",
         className: `${pfx} gallery`,
-        service: 'add-media',
+        // service: 'add-media',
         helperName: 'gallery'
-      }, LOCALE.UPLOAD_IMAGE),
+      }, LOCALE.PHOTO_PLAYER),
 
       button(ui, {
         ico: "dock-music",
         className: `${pfx} sharebox`,
-        service: 'add-sharebox',
-        respawn: 'hub_sharebox',
+        // service: 'add-sharebox',
+        // respawn: 'hub_sharebox',
         helperName: 'sharebox'
-      }, LOCALE.UPLOAD_MUSIC),
+      }, LOCALE.MUSIC_PLAYER),
 
       button(ui, {
         ico: "dock-media",
         className: `${pfx} team`,
-        service: 'add-team',
-        respawn: 'hub_team',
+        // service: 'add-team',
+        // respawn: 'hub_team',
         helperName: 'teamroom'
-      }, LOCALE.UPLOAD_VIDEO)
+      }, LOCALE.VIDEO_PLAYER)
 
     ]
   });

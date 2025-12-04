@@ -1,0 +1,42 @@
+let EOD = "end:of:data"
+require('./skin');
+class __activity_item extends LetcBox {
+
+  /**
+   * 
+   * @param {*} opt 
+   */
+  initialize(opt = {}) {
+    super.initialize(opt);
+    this.declareHandlers();
+    this.bindEvent("live");
+  }
+
+  /**
+   * 
+   */
+  onDomRefresh() {
+    this.feed(require('./skeleton')(this));
+  }
+
+  /**
+   * 
+   * @param {*} data 
+   */
+  update(data) {
+    this.mset({ notificationData: data });
+    this.__notificationList.feed(data);
+  }
+  /**
+   * 
+   * @param {*} cmd 
+   * @param {*} args 
+   */
+  onUiEvent(cmd, args = {}) {
+    const service = args.service || cmd.mget(_a.service);
+    this.triggerHandlers({ service });
+
+  }
+}
+
+module.exports = __activity_item

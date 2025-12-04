@@ -729,6 +729,22 @@ class __core_mfs extends LetcBox {
   /**
    *
    */
+  canShare() {
+    if (this.mget(_a.area) == _a.personal) return false;
+    return this.mget(_a.privilege) & _K.permission.download;
+  }
+
+  /**
+   *
+   */
+  canRemove() {
+    if (this.mget(_a.status) == _a.locked) return false;
+    return this.mget(_a.privilege) & _K.permission.modify;
+  }
+
+  /**
+   *
+   */
   canDownload() {
     return this.mget(_a.privilege) & _K.permission.download;
   }

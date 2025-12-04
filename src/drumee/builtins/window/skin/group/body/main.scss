@@ -38,7 +38,7 @@
     margin: 0 auto;
     width: 100%;
     height: calc(100% - 44px);
-    border-radius: var(--border-radius-bottom); //0 0 6px 6px;
+    border-radius: var(--border-radius-bottom);
     overflow: hidden;
     z-index: 100;
 
@@ -85,11 +85,10 @@
       width: 100%;
 
       & .smart-container {
-        padding: 5px 10px 0 10px; //5px 0 0 0;
+        padding: 5px 10px 0 10px;
       }
 
       &[data-type="evaluation"]::after {
-        @include drumee.license-trial();
         @include drumee.typo(
           $size: 22px,
           $line: 1.3,
@@ -102,8 +101,8 @@
       justify-items: center;
       justify-content: center;
       display: grid;
-      grid-template-columns: repeat(auto-fill, 94px) minmax(94px, 94px);
-      grid-auto-rows: 80px;
+      grid-template-columns: repeat(auto-fill, 132px) minmax(132px, 132px);
+      grid-auto-rows: 132px;
       grid-gap: 1rem;
       min-height: 100px;
       align-items: center;

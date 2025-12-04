@@ -50,11 +50,16 @@ class __drumee_svg extends Marionette.View {
   onDomRefresh() {
     this.$el.attr(_a.data.state, this.model.get(_a.state));
     this.el.innerHTML = "";
-    this.$el.append(require("./template")(this));
+    let chartName = this.mget('chartName');
+    if (!chartName) {
+      this.$el.append(require("./template")(this));
+    } else {
+      this.$el.append(require("./template/builtin")(this));
+    }
     const id = `icon-${this._id}`;
     this.waitElement(id, () => {
       this.__icon = document.getElementById(id);
-      if (this.mget('chartName')) {
+      if (chartName) {
         this.loadBuiltin();
         return;
       }

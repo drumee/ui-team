@@ -1,15 +1,12 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : src/drumee/core/backbone/view/utils
-//   TYPE :
-// ==================================================================== *
 
 const { TweenMax, TimelineMax } = require("gsap/all");
 
 
-// ========================
-//
-// ========================
+/**
+ * 
+ * @param {*} p 
+ * @returns 
+ */
 Backbone.View.prototype.mget = function(p) {
   return this.model.get(p);
 };
@@ -25,17 +22,23 @@ Backbone.View.prototype.getAttr = function() {
 }
 
 
-// ========================
-//
-// ========================
+/**
+ * 
+ * @param {*} k 
+ * @param {*} v 
+ * @param {*} o 
+ * @returns 
+ */
 Backbone.View.prototype.mset = function(k, v, o) {
   return this.model.set(k, v, o);
 };
 
 
-// ========================
-//
-// ========================
+/**
+ * 
+ * @param {*} p 
+ * @returns 
+ */
 Backbone.View.prototype.get = function(p) {
   if (_.isString(p)) {
     if ((this.model != null ? this.model.get(p) : undefined) != null) {
@@ -47,9 +50,13 @@ Backbone.View.prototype.get = function(p) {
 };
 
 
-// =============================================================
-//
-// =============================================================
+/**
+ * 
+ * @param {*} duration 
+ * @param {*} anim 
+ * @param {*} cb 
+ * @returns 
+ */
 Backbone.View.prototype.softDestroy = function(duration, anim, cb) {
   if (duration == null) { duration = 0.5; }
   anim = anim || {autoAlpha:0, scale:0.3};
@@ -57,16 +64,21 @@ Backbone.View.prototype.softDestroy = function(duration, anim, cb) {
 };
 
 
-// =============================================================
-//
-// =============================================================
+/**
+ * 
+ * @param {*} args 
+ * @param {*} anim 
+ */
 Backbone.View.prototype.goodbye = function(args={duration:0.5, timeout:2}, anim) {
   this.selfDestroy(args, anim);
 };
 
-// =============================================================
-//
-// =============================================================
+/**
+ * 
+ * @param {*} o 
+ * @param {*} a 
+ * @returns 
+ */
 Backbone.View.prototype.selfDestroy = function(o={}, a={}) {
   o = {duration:0.5, timeout:2000, ...o}; 
   this.stopping = 1;
@@ -116,14 +128,20 @@ Backbone.View.prototype.selfDestroy = function(o={}, a={}) {
 };
 
 
-// ======================================================
-//
-// ======================================================
+/**
+ * 
+ * @param {*} map 
+ * @returns 
+ */
 Backbone.View.prototype.highlight = map => console.warn("highlight DEPRCATED use extraClassName instead");
 
-// ======================================================
-//
-// ======================================================
+/**
+ * 
+ * @param {*} data 
+ * @param {*} use_bg 
+ * @param {*} target 
+ * @returns 
+ */
 Backbone.View.prototype.renderVector=function(data, use_bg, target) {
   if (!data.responseText) {
     throw("No data to render");
@@ -160,9 +178,6 @@ Backbone.View.prototype.renderVector=function(data, use_bg, target) {
             h_done = 1;
           }
         } catch (error) {}
-        // if Utils.isNumber(w) and Utils.isNumber(w)
-        //   el.style.width  =  _K.size.full #"100%" #width.px()
-        //   el.style.height =  _K.size.full #"100%" #height.px()
         if (!w_done || !h_done) { //else 
           w = this.$el.width();
           h = this.$el.height();
@@ -181,9 +196,9 @@ Backbone.View.prototype.renderVector=function(data, use_bg, target) {
   return false; 
 };
 
-// ======================================================
-//
-// ======================================================
+/**
+ * 
+ */
 Backbone.View.prototype.anim=function() {
     const args = Array.prototype.slice.call(arguments);
     const tl = new TimelineMax();
@@ -194,9 +209,11 @@ Backbone.View.prototype.anim=function() {
     }
   };
 
-// ======================================================
-//
-// ======================================================
+/**
+ * 
+ * @param {*} callback 
+ * @returns 
+ */
 Backbone.View.prototype.exec=function(callback) {
   if (_.isEmpty(callback)) {
     return false;
@@ -222,9 +239,9 @@ Backbone.View.prototype.exec=function(callback) {
   return true;
 };
 
-// ======================================================
-//
-// ======================================================
+/**
+ * 
+ */
 Backbone.View.prototype.spinner=function(state, timeout, cb) {
   const d = document.getElementById(this._id + '-loading-wrapper');
   if (state) {
@@ -249,46 +266,11 @@ Backbone.View.prototype.spinner=function(state, timeout, cb) {
   }
 }
 
+/**
+ * 
+ * @param {*} xhr 
+ */
 Backbone.View.prototype.onServerComplain = function (xhr) {
   this.warn("[ERROR:253] SERVER COMPLAINED", xhr);
   this.trigger('server:error', xhr);
 }
-
-
-// // ======================================================
-// //
-// // ======================================================
-// Backbone.View.prototype.getBlob=function(blob, filename) {
-//   const url = URL.createObjectURL(blob);
-//   const a = document.createElement(_K.tag.a);
-//   a.download = filename || 'download';
-//   a.hidden = '';
-//   a.setAttribute(_a.id, this._id + '-dl');
-//   a.setAttribute(_a.href, url);
-//   a.setAttribute(_a.target, '_blank');
-//   a.setAttribute("data-service", _e.download);
-//   a.style.position = _a.absolute;
-//   a.style.display = _a.none;
-//   var clickHandler = ()=> {
-//     const f = ()=> {
-//       URL.revokeObjectURL(url);
-//       a.removeEventListener(_e.click, clickHandler);
-//       this.trigger(_e.eod, blob);
-//     };
-//     _.delay(f, 300);
-//   };
-//   a.addEventListener(_e.click, clickHandler, false);
-//   a.click();
-// };
-
-// // ======================================================
-// //
-// // ======================================================
-// Backbone.View.prototype.saveHtml=function(blob, filename) {
-//   let html = `<html xmlns="http://www.w3.org/1999/xhtml">
-//     ${document.body.outerHTML}
-//   </html>`
-//   var blob = new Blob([html], {type : 'text/html'});
-//   this.getBlob(blob, location.hash.replace('#!', '') + 'html')
-//   return html;
-// };

@@ -1,9 +1,10 @@
 module.exports = {
   dock: 'modules/desk/wm/dock',
   litechat_message: 'window/litechat/message',
-  notification_list_item: './notification/widget/notification-list-item',
-  notification_panel: './notification',
-  notification_window: './notification/widget/notification-window',
+  // notification_list_item: './notification/widget/notification-list-item',
+  activity_panel: './activity-panel',
+  activity_item: './activity-panel/widget/item',
+  // notification_window: './notification/widget/notification-window',
   notifier_generic: 'desk/notifier/generic',
   notifier_network: 'desk/notifier/network',
   schedule_invitation: 'window/schedule/widget/invitation',

@@ -47,7 +47,7 @@ class __media_core extends DrumeeMFS {
       opt.id = id;
     }
     super.initialize(opt);
-    this.viewOnly = false;
+    this.canRemoveiewOnly = false;
     this.model.atLeast({
       state: 0,
       aspect: _a.grid,
@@ -102,7 +102,7 @@ class __media_core extends DrumeeMFS {
       case _a.folder:
         if (_.isEmpty(this.mget(_a.hubs))) break;
       case _a.hub:
-        this.bindNotificationCenterEvent();
+        this.bindActivityHandlerEvent();
         break;
     }
     this.metadata();
@@ -146,45 +146,38 @@ class __media_core extends DrumeeMFS {
    * @param {*} event
    */
   contextmenuItems() {
-    let items = [
-      _a.copy,
-      _a.rename,
-      _a.upload,
-      _a.download,
-      _a.separator,
-      _a.export,
-      _a.import,
-      _a.separator,
-      _a.link,
-    ];
-
-    if (this.isLocked()) {
-      items = [
-        _a.copy,
-        _a.upload,
-        _a.download,
-        _a.separator,
-        _a.export,
-        _a.import,
-        _a.separator,
-        _a.link,
-      ];
+    let items = []
+    if (Visitor.inDmz && this.canDownload()) {
+      return [_a.download];
     }
 
     const fileType = this.mget(_a.filetype);
     switch (fileType) {
       case _a.hub:
         items = this.contextmenuItemsForHub();
-        items.push('share_qrcode');
+        break;
+      case _a.folder:
+        items = this.contextmenuItemsForFolder();
         break;
 
       case _a.schedule:
-        items = [_a.startMeeting, _a.meetingLink, _a.deleteMeeting, 'qrcode'];
+        items = [_a.startMeeting, _a.meetingLink, _a.deleteMeeting];
         break;
 
       default:
         items = this.contextmenuItemsForFiles();
-        items.push('share_qrcode');
+    }
+
+    items.push('share_qrcode');
+
+    /** Children of window_search */
+    if (this.mget(_a.role) == _a.search) {
+      hubItems.push(_a.separator, _a.openFileLocation);
+    }
+
+    /** Children of window_trash */
+    if (this.mget(_a.status) == _a.deleted) {
+      fileItems = [_a.separator, _a.restoreToDesk, _a.deletePermanently];
     }
 
     return items;
@@ -194,7 +187,7 @@ class __media_core extends DrumeeMFS {
    *
    */
   contextmenuItemsForHub() {
-    let hubItems = [_a.link, _a.settings];
+    let hubItems = this.contextmenuItemsForFolder();
     if (this.canUpload() || this.canOrganize() || this.isMediaOwner()) {
       if (Visitor.canServerImpExp()) {
         hubItems.unshift(_a.separator);
@@ -211,11 +204,28 @@ class __media_core extends DrumeeMFS {
         hubItems.unshift(_a.separator);
       }
     }
-
-    if (this.mget(_a.role) == _a.search) {
-      hubItems.push(_a.openFileLocation);
-    }
     return hubItems;
+  }
+
+  /**
+   * 
+   */
+  contextmenuItemsForFolder() {
+    let fileItems = [];
+    if (this.canOrganize() || this.isMediaOwner()) {
+      fileItems = [_a.rename, _a.upload, _a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share)
+      fileItems.push(_a.separator, _a.trash)
+    } else if (this.canDownload()) {
+      fileItems = [_a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share);
+      if (this.canRemove()) fileItems.push(_a.trash);
+    }
+    // for media files in trash
+    if (this.mget(_a.status) == _a.deleted) {
+      fileItems = [, _a.separator, _a.restoreToDesk, _a.deletePermanently];
+    }
+    return fileItems;
   }
 
   /**
@@ -224,89 +234,61 @@ class __media_core extends DrumeeMFS {
   contextmenuItemsForFiles() {
     let fileItems = [];
     const fileType = this.mget(_a.filetype);
-    let importExportMenu = [];
-    let exportMenu = [];
-    if (Visitor.canServerImpExp()) {
-      importExportMenu = [_a.separator, _a.export, _a.import];
-      if (fileType != _a.folder) {
-        exportMenu = [_a.separator, _a.export];
-      }
-    }
-    if (this.canDownload()) {
-      if (Visitor.inDmz) {
-        fileItems = [_a.download];
-      } else {
-        fileItems = [
-          _a.copy,
-          _a.download,
-          _a.link,
-          ...exportMenu,
-          _a.separator,
-        ];
-      }
-    }
 
     if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems.splice(1, 0, _a.rename);
+      fileItems = [_a.rename, _a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share)
       if (fileType == _a.image) {
-        fileItems.splice(2, 0, _a.background._, _a.rotateLeft, _a.rotateRight);
+        fileItems.push(_a.separator, 'background', _a.rotateLeft, _a.rotateRight);
       }
-    }
-
-    if (fileType == _a.folder) {
-      if (this.canUpload()) {
-        fileItems.splice(2, 0, _a.upload);
+      fileItems.push(_a.separator, _a.trash)
+    } else if (this.canDownload()) {
+      fileItems = [_a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share);
+      if (fileType == _a.image) {
+        fileItems.push(_a.separator, 'background');
       }
-      fileItems.splice(4, 0, ...importExportMenu, _a.separator);
+      if (this.canRemove()) fileItems.push(_a.trash);
     }
 
-    if (this.mget(_a.area) == _a.personal) {
-      fileItems.pop();
-    }
-
-    if (this.canOrganize() || this.isMediaOwner()) {
-      if (this.mget(_a.status) !== _a.locked) {
-        fileItems.push(_e.lock);
-        fileItems.push(_e.remove);
-      } else {
-        fileItems.push(_e.unlock);
-      }
-    }
-
-    if (this.mget(_a.role) == _a.search) {
-      fileItems.push(_a.openFileLocation);
-    }
-
-    // for media files in trash
-    if (this.mget(_a.status) == _a.deleted) {
-      fileItems = [_a.restoreToDesk, _a.deletePermanently];
-    }
-
+    let extra = []
     // 3WC href
     if (this.isRegularFile()) {
-      fileItems.push("directUrl");
+      extra.push("directUrl");
     }
 
     switch (this.mget(_a.filetype)) {
       case _a.note:
-        fileItems.push("pinOn");
+        extra.push("pinOn");
         break;
       case _a.web:
-        fileItems.push("setAsHomepage");
+        extra.push("setAsHomepage");
         break;
       case _a.script:
         if (Visitor.profile().devel) {
-          fileItems.push("execute");
+          fextra.push("execute");
         }
         break;
     }
+
+    if (this.canOrganize() || this.isMediaOwner()) {
+      if (this.mget(_a.status) === _a.locked) {
+        extra.push(_e.unlock);
+      } else {
+        extra.push(_e.lock);
+      }
+    }
+    if (extra.length) {
+      fileItems.push(_a.separator, ...extra)
+    }
     return fileItems;
+
   }
 
   /**
    *
    */
-  bindNotificationCenterEvent() {
+  bindActivityHandlerEvent() {
     RADIO_BROADCAST.on(
       "notification:details",
       this.updateNotificationCount.bind(this)
@@ -541,7 +523,7 @@ class __media_core extends DrumeeMFS {
    */
   overlaps(r) {
     const i = this.bbox.intersection(r);
-    if (i == null) { 
+    if (i == null) {
       return 0;
     }
     return i.area() / this.bbox.area();
@@ -1088,7 +1070,7 @@ class __media_core extends DrumeeMFS {
    */
   restart(origin) {
     this.unbindEvent(_a.live);
-    if (window.NotificationCenter) this.stopListening(window.NotificationCenter, 'notificationUpdated');
+    if (window.ActivityHandler) this.stopListening(window.ActivityHandler, 'notificationUpdated');
     this.initData();
     this.initURL();
     const { md5Hash } = this.metadata();

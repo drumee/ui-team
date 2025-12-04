@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2022
-//   FILE : /ui/src/drumee/builtins/window/addressbook/widget/notification/index.coffee
-//   TYPE : Component
-// ==================================================================== *
-
 class __addressbook_widget_notification extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -56,11 +50,11 @@ class __addressbook_widget_notification extends LetcBox {
    */
   async onDomRefresh() {
     this.feed(require('./skeleton')(this));
-    RADIO_BROADCAST.on('notification:summary', this.updateNotificationCount);
-    await Kind.waitFor("notification_panel");
-    await Kind.waitFor("notification_window");
-    await Kind.waitFor("notification_list_item");
-    RADIO_BROADCAST.trigger('notification:request');
+    // RADIO_BROADCAST.on('notification:summary', this.updateNotificationCount);
+    // await Kind.waitFor("notification_panel");
+    // await Kind.waitFor("notification_window");
+    // await Kind.waitFor("notification_list_item");
+    // RADIO_BROADCAST.trigger('notification:request');
   }
 
   /**

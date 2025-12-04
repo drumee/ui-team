@@ -27,6 +27,7 @@ const __classname = function(_ui_, trigger, k){
     rotateRight: 'desktop_rotate',
     separator: 'separator',
     settings:'editbox_cog',
+    trash:'trash',
     unlock:'unlock',
     upload:'upload',
     directUrl:'backoffice_public'

@@ -34,7 +34,7 @@ module.exports = {
   public_link: 'builtins/widget/invitation/public-link',
   schedule_viewer: 'builtins/player/schedule',
   sound_analyzer: 'builtins/widget/sound-analyzer',
-  thumbnail: 'builtins/media/thumbnail',
+  // thumbnail: 'builtins/media/thumbnail',
   tooltip: 'builtins/widget/notifier',
   vector_viewer: 'builtins/player/vector',
   video_player: 'builtins/player/video',

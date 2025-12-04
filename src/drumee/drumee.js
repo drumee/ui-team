@@ -199,17 +199,18 @@ class Drumee extends Marionette.Application {
    * 
    */
   loadSprites() {
-    function create_el(content) {
+    function create_el(content, type) {
       const el = document.createElement(_K.tag.div);
       el.style = "display:none !important";
+      el.className = `svg-sprite-${type}`;
       el.style.cssText = "display:none !important";
       el.innerHTML = content;
       document.body.insertBefore(el, document.body.childNodes[0]);
     }
     let raw = require('../../bb-templates/svg/raw.sprite.txt').default;
     let normalized = require('../../bb-templates/svg/normalized.sprite.txt').default;
-    create_el(raw);
-    create_el(normalized);
+    create_el(raw, 'raw');
+    create_el(normalized, 'normalized');
   }
 
 

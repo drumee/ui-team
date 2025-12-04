@@ -103,7 +103,7 @@ class __window_interact_singleton extends __window_chatInteract {
   /**
    * 
    */
-  bindNotificationCenterEvent() {
+  bindActivityHandlerEvent() {
     if(this.updateNotificationCount){
       RADIO_BROADCAST.on('notification:counts', this.updateNotificationCount.bind(this));
     }

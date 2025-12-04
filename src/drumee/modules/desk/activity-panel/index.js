@@ -5,14 +5,16 @@ const CATEGORIES = {
   media: "mediaCount",
 }
 
+require('./skin');
+
 //#########################################
 
-class __notification_panel extends LetcBox {
+class __activity_panel extends LetcBox {
   constructor(...args) {
     super(...args);
-    this.updateSubNotificationCount = this.updateSubNotificationCount.bind(this);
-    this.updateNotificationCount = this.updateNotificationCount.bind(this);
-    this.getNotificationData = this.getNotificationData.bind(this);
+    this.updateSubactivityCount = this.updateSubactivityCount.bind(this);
+    this.updateactivityCount = this.updateactivityCount.bind(this);
+    this.refreshActivity = this.refreshActivity.bind(this);
   }
 
   /**
@@ -21,17 +23,16 @@ class __notification_panel extends LetcBox {
    */
   initialize(opt = {}) {
     super.initialize(opt);
-    require('./skin');
     this.declareHandlers();
-    this.notificationState = 0;
+    this.activityState = 0;
+    this.model.set({ state: this.activityState });
 
-    window.NotificationCenter = this;
+    window.ActivityHandler = this;
 
     this._onOutsideClick = (e, origin) => {
-      this.debug("AAA:31", e)
-      if (pointerDragged || e?.getService() == 'toggle-notification') return;
+      if (pointerDragged || e?.getService() == 'toggle-activity-panel') return;
       if (e && !this.el.contains(e.currentTarget)) {
-        this.closeNotificationPanel();
+        this.closeactivityPanel();
       }
     }
 
@@ -52,15 +53,15 @@ class __notification_panel extends LetcBox {
     if (events) {
       return;
     }
-    if (!window.Notification) return;
-    Notification.requestPermission(() => {
+    if (!window.activity) return;
+    activity.requestPermission(() => {
       uiRouter.ensureWebsocket().then(() => {
         let timer = setInterval(() => {
           events = wsRouter.hasListener(this);
           if (events) {
             clearInterval(timer);
           } else {
-            this.bindEvent("live", "notificationcenter");
+            this.bindEvent("live", "activitycenter");
           }
         }, 2000)
       });
@@ -73,7 +74,7 @@ class __notification_panel extends LetcBox {
    */
   onDestroy() {
     RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
-    RADIO_BROADCAST.off('notification:request', this.updateSubNotificationCount);
+    RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
   }
 
@@ -83,19 +84,26 @@ class __notification_panel extends LetcBox {
    */
   onVisibilityChange(e) {
     if (!this.visible) {
-      this.getNotificationData(100);
+      this.refreshActivity(100);
     }
     this.visible = !document.hidden;
   }
+
 
   /**
    * 
    */
   onDomRefresh() {
-    RADIO_BROADCAST.on('notification:request', this.updateSubNotificationCount);
-    RADIO_NETWORK.on(_e.online, this.getNotificationData);
+    this.setState(0);
+    this.bindWsEvents();
+    RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
+    RADIO_NETWORK.on(_e.online, this.refreshActivity);
     this.visible = !document.hidden;
-    this.getNotificationData();
+    this.feed(require('./skeleton')(this));
+    this.ensurePart(_a.list).then((p) => {
+      this.refreshActivity()
+    })
+
   }
 
 
@@ -106,15 +114,20 @@ class __notification_panel extends LetcBox {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     switch (service) {
-      case 'open-notification-panel':
+      case 'open-activity-panel':
         return this.togglePannel();
 
-      case 'close-notification-panel':
-        if (this.notificationState == 0) {
+      case 'close-activity-panel':
+        if (this.activityState == 0) {
           return;
         }
-        this.closeNotificationPanel();
+        this.closeactivityPanel();
         return '';
+
+      case 'clear-all':
+        return this.postService(SERVICE.activity.mark_all_read, { hub_id: Visitor.id }).then((data) => {
+          this.__list.clear()
+        })
 
       case 'delete-entity':
         cmd.goodbye();
@@ -126,21 +139,19 @@ class __notification_panel extends LetcBox {
    * 
    */
   togglePannel() {
-    this.debug("AAAA:137", this.mget(_a.state), this.notificationState)
-    if (this.notificationState == 0) {
-      this.notificationState = 1;
-      this.updateNotificationWindow();
-      if (this.parent) {
-        this.parent.el.dataset.state = 1;
-      }
+    this.debug("AAAA:137", this.mget(_a.state), this.activityState)
+    if (this.activityState == 0) {
+      this.activityState = 1;
+      this.refreshActivity()
+      this.el.dataset.state = 1;
       this.setState(1);
       return '';
     }
-    return this.closeNotificationPanel();
+    return this.closeactivityPanel();
 
-    // if (this.notificationState == 0) {
-    //   this.notificationState = 1;
-    //   this.updateNotificationWindow();
+    // if (this.activityState == 0) {
+    //   this.activityState = 1;
+    //   this.updateactivityWindow();
     //   if (this.parent) {
     //     this.parent.el.dataset.state = 1;
     //   }
@@ -148,38 +159,36 @@ class __notification_panel extends LetcBox {
     //   return '';
     // }
     // this.setState(0)
-    // return this.closeNotificationPanel();
+    // return this.closeactivityPanel();
 
   }
 
   /**
    * 
    */
-  closeNotificationPanel() {
-    this.notificationState = 0;
-    if (this.parent) {
-      this.parent.el.dataset.state = 0;
-    }
+  closeactivityPanel() {
+    this.activityState = 0;
+    this.el.dataset.state = 0;
     this.setState(0);
-    if (!this.__wrapperNotificationOverlay) return;
-    this.__wrapperNotificationOverlay.clear();
+    // if (!this.__content) return;
+    // this.__content.clear();
   }
 
   /**
    * 
    */
-  updateNotificationWindow() {
-    if (!this.__wrapperNotificationOverlay) return;
-    Kind.waitFor('notification_window').then(() => {
-      let notifier = this.__wrapperNotificationOverlay.children.last();
+  updateactivityWindow() {
+    if (!this.__content) return;
+    Kind.waitFor('activity_window').then(() => {
+      let notifier = this.__content.children.last();
       if (notifier && !notifier.isDestroyed()) {
         notifier.update(this.data());
         return;
       }
-      this.__wrapperNotificationOverlay.feed({
-        kind: 'notification_window',
+      this.__content.feed({
+        kind: 'activity_window',
         media: this,
-        notificationData: this.data(), //this.data(),
+        activityData: this.data(), //this.data(),
         uiHandler: this,
       });
     })
@@ -189,13 +198,13 @@ class __notification_panel extends LetcBox {
    * @param {Letc} cmd
    */
   deleteEntityResponse(cmd) {
-    // this.updateNotificationCount();
+    // this.updateactivityCount();
   }
 
   /**
    * @param  {number} count
    */
-  updateNotificationTitle() {
+  updateactivityTitle() {
     let count = this.data().length;
     const pattern = /^\(\d+\)/;
     if (count === 0 || pattern.test(document.title)) {
@@ -219,7 +228,7 @@ class __notification_panel extends LetcBox {
     let author_id = content.author_id || sender.uid || sender.id;
     if (!author_id) return;
     if (author_id == this._lastSender || author_id == Visitor.id) return;
-    Visitor.playSound(_K.notifications.drip, 0);
+    Visitor.playSound(_K.activitys.drip, 0);
     this._lastSender = author_id;
     let preview = content.message || options.service || content.action || options.action;
     if (preview) {
@@ -237,14 +246,14 @@ class __notification_panel extends LetcBox {
       notif.title = title;
       return notif;
     }
-    if (!window.Notification) return;
-    new Notification(title, notif);
+    if (!window.activity) return;
+    new activity(title, notif);
   }
 
   /**
    * 
    */
-  updateSubNotificationCount() {
+  updateSubactivityCount() {
     let res = {
       totalChatCount: 0,
       contactChatCount: 0,
@@ -269,11 +278,11 @@ class __notification_panel extends LetcBox {
       res[CATEGORIES[k]] = res[k];
       res.totalChatCount += _.keys(this.summary[k]).length;
     }
-    this.updateNotificationTitle();
+    this.updateactivityTitle();
     res.allConversationsCount = res.contactChatCount + res.teamChatCount;
-    RADIO_BROADCAST.trigger('notification:counts', res);
-    RADIO_BROADCAST.trigger('notification:details', this.details);
-    RADIO_BROADCAST.trigger('notification:summary', this.summary);
+    RADIO_BROADCAST.trigger('activity:counts', res);
+    RADIO_BROADCAST.trigger('activity:details', this.details);
+    RADIO_BROADCAST.trigger('activity:summary', this.summary);
     this.shouldNofity();
     return res;
   }
@@ -291,9 +300,9 @@ class __notification_panel extends LetcBox {
    * 
    * @returns 
    */
-  updateNotificationCount() {
-    this.updateSubNotificationCount();
-    this.ensurePart("notification-counter").then((p) => {
+  updateactivityCount() {
+    this.updateSubactivityCount();
+    this.ensurePart("activity-counter").then((p) => {
       let count = this.data().length;
       p.set({ content: count });
       if (!count) {
@@ -309,23 +318,23 @@ class __notification_panel extends LetcBox {
   /**
    * 
   */
-  getNotificationData(timeout = 2000) {
+  refreshActivity(timeout = 2000) {
+    let opt = { hub_id: Visitor.id }
+    this.postService(SERVICE.activity.get_unread_count, opt)
+      .then((data = {}) => {
+        this.debug("AAA:321", data)
+        this.triggerHandlers(data)
+      })
     if (!Visitor.id || !Visitor.isOnline()) {
       Visitor.once('online', () => {
-        this.getNotificationData();
+        this.refreshActivity();
       })
       return
     }
-    this.bindWsEvents();
-    let opt = { hub_id: Visitor.id }
-    this.postService(SERVICE.drumate.notification_center, opt)
-      .then((data) => {
-        this._buildNotifications(data);
-        this.feed(require('./skeleton')(this));
-        setTimeout(() => {
-          this.updateNotificationCount();
-        }, timeout);
-      })
+    if (this.__list && !this.__list.isDestroyed()) {
+      return this.__list.restart()
+    }
+    this.feed(require('./skeleton')(this));
   }
 
   /**
@@ -333,15 +342,7 @@ class __notification_panel extends LetcBox {
   */
   resync(timeout = 2000) {
     if (document.hidden) return;
-    return this.postService(SERVICE.drumate.notification_center, {
-      hub_id: Visitor.id
-    }).then((data) => {
-      this._buildNotifications(data);
-      this.updateNotificationCount();
-      if (this.notificationState) {
-        this.updateNotificationWindow(data)
-      }
-    })
+    this.refreshActivity()
   }
 
 
@@ -359,18 +360,18 @@ class __notification_panel extends LetcBox {
     }
     switch (options.service) {
       case "messages.read":
-        this._buildNotifications(data);
-        this.updateNotificationCount();
-        if (this.notificationState) {
-          this.updateNotificationWindow(data)
+        this._buildactivities(data);
+        this.updateactivityCount();
+        if (this.activityState) {
+          this.updateactivityWindow(data)
         }
         break;
       case "chat.post":
       case "channel.post":
       case "contact.invite":
         this._currentPayload = { data, options };
-      case "notification.resync":
-      case "drumate.notification_remove":
+      case "activity.resync":
+      case "drumate.activity_remove":
       case "channel.acknowledge":
       case "chat.acknowledge":
       case "contact.delete_contact":
@@ -404,76 +405,16 @@ class __notification_panel extends LetcBox {
   /**
    * 
    */
-  _buildNotifications(data) {
-    if (!_.isArray(data)) data = [data];
-    this.summary = {
-      chat: {},
-      contact: {},
-      media: {},
-      teamchat: {},
-      ticket: {},
-    };
-    this.details = {};
-
-
-
-    for (let item of data) {
-      let key = this._getKey(item);
-      if (!key) {
-        continue;
-      }
-      let category = item.category;
-      if (!this.summary[category]) continue;
-      if (!item.display_name) item.display_name = item.surname || item.fullname || item.firstname;
-      if (!item.content) item.content = {};
-      if (!this.details[key]) {
-        item.content[category] = {
-          cnt: parseInt(item.cnt) || 0,
-          ctime: item.ctime
-        }
-        this.details[key] = item;
-      } else {
-        let c = this.details[key].content[category];
-        if (!item.content[category]) item.content[category] = {};
-        if (c) {
-          let cnt = c.cnt;
-          let ctime = item.ctime;
-          if (c.ctime > ctime) ctime = c.ctime;
-          item.content[category] = {
-            cnt: parseInt(item.cnt) + cnt,
-            ctime
-          }
-        } else {
-          item.content = this.details[key].content;
-          item.content[category] = {
-            cnt: parseInt(item.cnt) || 0,
-            ctime: item.ctime
-          }
-          this.details[key] = item;
-        }
-      }
-    }
-
-    for (let key in this.details) {
-      let item = this.details[key];
-      for (let c in item.content) {
-        if (!this.summary[c]) continue;
-        let cur = this.summary[c][key];
-        if (!cur) {
-          this.summary[c][key] = item;
-          this.summary[c][key].cnt = item.content[c].cnt;
-        } else {
-          item.content[c].cnt += cur.cnt;
-        }
-      }
-    }
+  _buildactivities(data) {
+    this.debug("AAA:_buildactivities", data)
+    return data;
   }
 
 
   /**
    * 
    */
-  _addNotifications(data, k) {
+  _addactivitys(data, k) {
     if (!this.summary[k]) {
       this.warn(`AAA:333 -- unknown category "${k}"`);
       return;
@@ -519,7 +460,7 @@ class __notification_panel extends LetcBox {
   /**
    * 
    */
-  _removeNotifications(data, k) {
+  _removeactivitys(data, k) {
     if (!this.summary[k]) {
       this.warn(`AAA:339 -- unknown category "${k}"`);
       return;
@@ -527,12 +468,12 @@ class __notification_panel extends LetcBox {
     for (let r of data) {
       let key = this._getKey(r);
       if (!key) {
-        this.warn("_removeNotifications: no key");
+        this.warn("_removeactivitys: no key");
         continue;
       }
       let item = this.details[key];
       if (!item) {
-        this.warn("_removeNotifications: pending notification");
+        this.warn("_removeactivitys: pending activity");
         continue;
       } else {
         let { content } = item;
@@ -551,4 +492,4 @@ class __notification_panel extends LetcBox {
 
 }
 
-module.exports = __notification_panel
+module.exports = __activity_panel

@@ -1,12 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /src/drumee/builtins/media/grid/template/filename.coffee
-//   TYPE : Skeleton
-// ==================================================================== *
-
-//-------------------------------------
-// 
-//-------------------------------------
 const __media_filename = function(m) {
   let html;
   const filename = m.filename || LOCALE.PROCESSING;
@@ -19,7 +10,6 @@ const __media_filename = function(m) {
     v = 'image-capable';
   }
 
-  //this.debug("AAA:17", m)
   if ((m.isAttachment) || (Visitor.inDmz) || (m.isalink && (m.filetype !== _a.hub)) || (m.status === _a.deleted)) { 
     html = `
     <div id="${m._id}-filename" class="filename ${m.area} ${m.filetype} ${v}"> 

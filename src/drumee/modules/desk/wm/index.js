@@ -36,6 +36,8 @@ class __window_manager extends push {
       _a.separator,
       _a.preferences,
     ];
+    this._handelKbdEvents = this._handelKbdEvents.bind(this);
+    RADIO_KBD.on(_e.keyup, this._handelKbdEvents)
   }
 
   /**
@@ -232,6 +234,13 @@ class __window_manager extends push {
   }
 
   /**
+   * To do : allow copy/paste/supp through keyboard short cut
+   */
+  _handelKbdEvents(e) {
+    // this.debug("AAA:240", e)
+  }
+
+  /**
    *
    */
   onDomRefresh() {
@@ -254,7 +263,7 @@ class __window_manager extends push {
     document.onvisibilitychange = async (e) => {
       if (!this.visible) {
         this.verbose("AAA:214 -- VISIBILITY", this.visible);
-        NotificationCenter && NotificationCenter.resync();
+        ActivityHandler && ActivityHandler.resync();
         await uiRouter.ensureWebsocket();
         //wsRouter.ping({ type: 'checkConnection' })
         this.updatePeersState();
@@ -265,7 +274,7 @@ class __window_manager extends push {
     this.loadReminders();
 
     window.addEventListener("online", () => {
-      NotificationCenter && NotificationCenter.resync();
+      ActivityHandler && ActivityHandler.resync();
     });
   }
 

@@ -51,18 +51,17 @@ class desk_module extends LetcBox {
     };
     this.declareHandlers();
 
-    this._updateContextMenu = this._updateContextMenu.bind(this);
-
-    RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
+    // this._updateContextMenu = this._updateContextMenu.bind(this);
+    // RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
     setTimeout(this.lazyClasses, 5000);
   }
 
   /**
    *
    */
-  onDestroy() {
-    RADIO_BROADCAST.off(_e.select, this._updateContextMenu);
-  }
+  // onDestroy() {
+  //   RADIO_BROADCAST.off(_e.select, this._updateContextMenu);
+  // }
 
   /**
    *
@@ -87,15 +86,15 @@ class desk_module extends LetcBox {
   /**
    *
    */
-  _updateContextMenu(media) {
-    const m = this.getPart("menu-settings");
-    if (_.isEmpty(Wm.getGlobalSelection())) {
-      m.__items.el.dataset.action = 0;
-    } else {
-      m.__items.el.dataset.action = 1;
-    }
-    this.autoMenu(media);
-  }
+  // _updateContextMenu(media) {
+  //   const m = this.getPart("menu-settings");
+  //   if (_.isEmpty(Wm.getGlobalSelection())) {
+  //     m.__items.el.dataset.action = 0;
+  //   } else {
+  //     m.__items.el.dataset.action = 1;
+  //   }
+  //   this.autoMenu(media);
+  // }
 
   /**
    *
@@ -103,7 +102,7 @@ class desk_module extends LetcBox {
   changeContextMenu(state) {
     this.findPart("menu-settings").changeState(state);
   }
-  notificationState;
+
   /**
    *
    * @returns
@@ -131,14 +130,14 @@ class desk_module extends LetcBox {
   /**
    *
    */
-  autoMenu() {
-    if (_.isEmpty(Wm.getGlobalSelection())) {
-      this.changeContextMenu(0);
-    } else {
-      this.changeContextMenu(1);
-      this.refreshContextMenu();
-    }
-  }
+  // autoMenu() {
+  //   if (_.isEmpty(Wm.getGlobalSelection())) {
+  //     this.changeContextMenu(0);
+  //   } else {
+  //     this.changeContextMenu(1);
+  //     this.refreshContextMenu();
+  //   }
+  // }
 
   /**
    *
@@ -545,9 +544,8 @@ class desk_module extends LetcBox {
           { explicit: 1, singleton: 1 }
         );
 
-      case "toggle-notification":
-        // return NotificationCenter.togglePanel()
-        return this.ensurePart("notification-panel").then((p) => {
+      case "toggle-activity-panel":
+        return this.ensurePart("activity-panel").then((p) => {
           this.debug("AAA549", p);
           p.togglePannel();
         });
@@ -573,11 +571,11 @@ class desk_module extends LetcBox {
         Wm.closeAlert();
         return;
 
-      case "menu-settings":
-        if (cmd.mget(_a.state)) {
-          return this._updateContextMenu();
-        }
-        break;
+      // case "menu-settings":
+      //   if (cmd.mget(_a.state)) {
+      //     return this._updateContextMenu();
+      //   }
+      //   break;
 
       case _e.copy:
       case _e.cut:
@@ -639,6 +637,14 @@ class desk_module extends LetcBox {
       case "set-wallpaper-image":
         return uiRouter.setWallpaper(args.data);
 
+      case "activity-update":
+        this.ensurePart("activity-count").then((p) => {
+          let content = args.unread_count || 0;
+          if (parseInt(content) > 99) content = '99+';
+          p.set({ content })
+          p.el.dataset.count = content;
+        })
+        return;
       default:
         Wm.unselect();
     }
