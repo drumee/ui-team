@@ -17,7 +17,6 @@
   "ADDRESS": "Adresse",
   "ADD_HUB": "Créer un projet de site ",
   "ADD_HUBER": "Ajouter un collaborateur",
-  "CREATE_PUBLIC_FOLDER": "Créer un projet de site ",
   "ADD_LAYER": "Ajouter un nouveau calque",
   "ADD_SITE": "Créer un site",
   "ADD_SLIDE": "Ajouter une nouvelle planche",
@@ -1100,7 +1099,7 @@
   "INVITE": "Inviter",
   "ADD_FROM_LIST": "Ajouter un contact à partir de la liste",
   "FROM_LIST": "De la liste",
-  "CREATE_SHARED_FOLDER": "Créer un dossier partagé",
+  "CREATE_SHARED_FOLDER": "Créer un dossier externe",
   "NOTES": "Notes :",
   "NO_CONTACT_FOUND": "Aucun contact trouvé",
   "CONTACT_BOOK": "Carnet d'adresses",
@@ -1926,5 +1925,6 @@
   "PROHIBIT_CHANGE": "Interdire toute modification",
   "MUSIC_PLAYER": "Lecteur de musique",
   "VIDEO_PLAYER": "Lecteur vidéo",
-  "PHOTO_PLAYER": "Lecteur de photos"
+  "PHOTO_PLAYER": "Lecteur de photos",
+  "CREATE_PUBLIC_FOLDER": "Créer un dossier public"
 }

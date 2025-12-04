@@ -8,40 +8,6 @@ function menu_items(ui) {
     className: `${pfx}-items`,
     flow: _a.vertical,
     kids: [
-      // Skeletons.Button.Label({
-      //   chartName: "folder",
-      //   type: "raw",
-      //   className: `${pfx}-item private`,
-      //   service: 'add-team',
-      //   respawn: 'hub_team',
-      //   helperName: 'teamroom',
-      //   label: LOCALE.CREATE_PRIVATE_FOLDER,
-      // }),
-      // Skeletons.Button.Label({
-      //   chartName: "folder",
-      //   type: "raw",
-      //   className: `${pfx}-item personal`,
-      //   service: "add-folder",
-      //   helperName: 'folder',
-      //   label: LOCALE.CREATE_PERSONAL_FOLDER,
-      // }),
-      // Skeletons.Button.Label({
-      //   chartName: "folder",
-      //   type: "raw",
-      //   className: `${pfx}-item share`,
-      //   service: 'add-sharebox',
-      //   respawn: 'hub_sharebox',
-      //   helperName: 'sharebox',
-      //   label: LOCALE.CREATE_SHARED_FOLDER,
-      // }),
-      // Skeletons.Button.Label({
-      //   chartName: "folder",
-      //   type: "raw",
-      //   className: `${pfx}-item public`,
-      //   service: "add-folder",
-      //   helperName: 'folder',
-      //   label: LOCALE.CREATE_PUBLIC_FOLDER,
-      // }),
       Skeletons.Box.G({
         className: `${pfx}-item public`,
         helperName: 'folder',
@@ -80,7 +46,7 @@ function menu_items(ui) {
         ]
       }),
       Skeletons.Box.G({
-        className: `${pfx}-item public`,
+        className: `${pfx}-item personal`,
         helperName: 'folder',
         service: "add-folder",
         kidsOpt: {
@@ -88,7 +54,7 @@ function menu_items(ui) {
         },
         kids: [
           {  kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.personal, mode: _a.vignette },
-          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PUBLIC_FOLDER })
+          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PERSONAL_FOLDER })
         ]
       }),
     ]

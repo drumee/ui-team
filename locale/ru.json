@@ -17,7 +17,6 @@
   "ADDRESS": "Адрес",
   "ADD_HUB": "Создать сайт",
   "ADD_HUBER": "Добавить друга",
-  "CREATE_PUBLIC_FOLDER": "Создать публичную папку",
   "ADD_LAYER": "Добавить новый слой",
   "ADD_SITE": "Создать сайт",
   "ADD_SLIDE": "Добавить новый слайд",
@@ -1100,7 +1099,7 @@
   "INVITE": "приглашение",
   "ADD_FROM_LIST": "Добавить контакт из списка",
   "FROM_LIST": "Из списка",
-  "CREATE_SHARED_FOLDER": "Создать общую папку",
+  "CREATE_SHARED_FOLDER": "Создать внешнюю папку",
   "NOTES": "Ноты:",
   "NO_CONTACT_FOUND": "Контакт не найден",
   "CONTACT_BOOK": "Книга контактов",
@@ -1926,5 +1925,6 @@
   "PROHIBIT_CHANGE": "ហាមឃាត់ការផ្លាស់ប្តូរណាមួយ",
   "MUSIC_PLAYER": "Lecteur de musique",
   "VIDEO_PLAYER": "Видеоплеер",
-  "PHOTO_PLAYER": "Фотоплеер"
+  "PHOTO_PLAYER": "Фотоплеер",
+  "CREATE_PUBLIC_FOLDER": "Создать публичную папку"
 }

@@ -147,8 +147,7 @@
   "DROP_FILES_HERE": "Suelte los archivos aquí para cargarlos",
   "MAX_FILE_SIZE_X": "Tamaño máximo de archivo hasta {0}.",
   "DESKTOP_WALLPAPER": "Mis fondos de pantalla",
-  "CREATE_SHARED_FOLDER": "Crear una carpeta compartida",
-  "CREATE_PUBLIC_FOLDER": "Crear una carpeta pública",
+  "CREATE_SHARED_FOLDER": "Crear una carpeta externa",
   "CREATE_PRIVATE_FOLDER": "Crear una carpeta privada",
   "CREATE_PERSONAL_FOLDER": "Crear una carpeta personal",
   "ACTIVITY": "Actividad",
@@ -165,5 +164,6 @@
   "MUSIC_PLAYER": "Lector de música",
   "VIDEO_PLAYER": "Reproductor de video",
   "PHOTO_PLAYER": "Reproductor de fotos",
-  "FOLDERS": "Carpeta"
+  "FOLDERS": "Carpeta",
+  "CREATE_PUBLIC_FOLDER": "Crear una carpeta pública"
 }

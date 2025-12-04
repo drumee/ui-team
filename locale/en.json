@@ -17,7 +17,6 @@
   "ADDRESS": "Address",
   "ADD_HUB": "Create a project site",
   "ADD_HUBER": "Add a mate",
-  "CREATE_PUBLIC_FOLDER": "Create a public folder",
   "ADD_LAYER": "Add a new layer",
   "ADD_SITE": "Create a site",
   "ADD_SLIDE": "Add a new slide",
@@ -1100,7 +1099,7 @@
   "INVITE": "Invite",
   "ADD_FROM_LIST": "Add contact from list",
   "FROM_LIST": "From list",
-  "CREATE_SHARED_FOLDER": "Create a share folder",
+  "CREATE_SHARED_FOLDER": "Create an external folder",
   "NOTES": "Notes:",
   "NO_CONTACT_FOUND": "No contact found",
   "CONTACT_BOOK": "Contact book",
@@ -1926,5 +1925,6 @@
   "PROHIBIT_CHANGE": "Prohibit any change",
   "MUSIC_PLAYER": "Music player",
   "VIDEO_PLAYER": "Video player",
-  "PHOTO_PLAYER": "Photo player"
+  "PHOTO_PLAYER": "Photo player",
+  "CREATE_PUBLIC_FOLDER": "Create a public folder"
 }

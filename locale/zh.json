@@ -17,7 +17,6 @@
   "ADDRESS": "地址",
   "ADD_HUB": "创建一个项目hub",
   "ADD_HUBER": "添加一个项目成员",
-  "CREATE_PUBLIC_FOLDER": "创建公共文件夹",
   "ADD_LAYER": "添加一个新层",
   "ADD_SITE": "创建一个网站",
   "ADD_SLIDE": "添加新幻灯片",
@@ -1100,7 +1099,7 @@
   "INVITE": "邀请",
   "ADD_FROM_LIST": "从列表添加联系人",
   "FROM_LIST": "来自清单",
-  "CREATE_SHARED_FOLDER": "创建共享文件夹",
+  "CREATE_SHARED_FOLDER": "创建外部文件夹",
   "NOTES": "笔记：",
   "NO_CONTACT_FOUND": "找不到联络人",
   "CONTACT_BOOK": "联络书",
@@ -1926,5 +1925,6 @@
   "PROHIBIT_CHANGE": "禁止任何更改",
   "MUSIC_PLAYER": "音乐朗读者",
   "VIDEO_PLAYER": "视频播放器",
-  "PHOTO_PLAYER": "照片播放器"
+  "PHOTO_PLAYER": "照片播放器",
+  "CREATE_PUBLIC_FOLDER": "创建公共文件夹"
 }
