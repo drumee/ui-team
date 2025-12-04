@@ -887,7 +887,6 @@
   "VIDEOS": "视频",
   "VIDEO_COMMENT": "评论线程",
   "VIDEO_NATIVE": "HTML5原生视频",
-  "VIDEO_PLAYER": "视频播放器",
   "VIDEO_THREAD": "视频线程",
   "VIEW": "视图",
   "VIEWBOX": "视框",
@@ -1518,7 +1517,6 @@
   "ATTACHMENT": "封闭式",
   "INVITATION_AGAIN_SUCCESSFULLY": "邀请已成功再次发送。",
   "CODE_RESENT_SUCCESSFULLY": "代码重新发送成功。",
-  "MUSIC_PLAYER": "音乐播放器",
   "ASK_ADMIN": "询问管理员",
   "YOUR_EMAIL_REMAIN_CONDENTIAL": "您的电子邮件地址将被保留\n<a href=\"{0}\" target='_blank'>机密</a>",
   "CROSS_SIGNED_IN": "您已经使用<u> {0} </ u>帐户在此浏览器上登录。<br>你想让我做什么 ？",
@@ -1925,5 +1923,8 @@
   "DUPLICATE": "复制",
   "MOVE_TO_TRASH": "移至垃圾桶",
   "GET_INFO": "获取信息",
-  "PROHIBIT_CHANGE": "禁止任何更改"
+  "PROHIBIT_CHANGE": "禁止任何更改",
+  "MUSIC_PLAYER": "音乐朗读者",
+  "VIDEO_PLAYER": "视频播放器",
+  "PHOTO_PLAYER": "照片播放器"
 }

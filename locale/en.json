@@ -887,7 +887,6 @@
   "VIDEOS": "Videos",
   "VIDEO_COMMENT": "Comments thread",
   "VIDEO_NATIVE": "HTML5 native video",
-  "VIDEO_PLAYER": "Video player",
   "VIDEO_THREAD": "Video thread",
   "VIEW": "View",
   "VIEWBOX": "Viewbox",
@@ -1518,7 +1517,6 @@
   "ATTACHMENT": "Attachment",
   "INVITATION_AGAIN_SUCCESSFULLY": "Invitation has been sent again successfully.",
   "CODE_RESENT_SUCCESSFULLY": "Code resent successfully",
-  "MUSIC_PLAYER": "Music player",
   "ASK_ADMIN": "Ask admin",
   "YOUR_EMAIL_REMAIN_CONDENTIAL": "Your email address will be kept\n<a href=\"{0}\" target='_blank'> confidential </a>",
   "CROSS_SIGNED_IN": "You are already logged in with the <u> {0} </u> account on this browser. <br>What do you want to do?",
@@ -1925,5 +1923,8 @@
   "DUPLICATE": "Duplicate",
   "MOVE_TO_TRASH": "Move to trash",
   "GET_INFO": "Get info",
-  "PROHIBIT_CHANGE": "Prohibit any change"
+  "PROHIBIT_CHANGE": "Prohibit any change",
+  "MUSIC_PLAYER": "Music player",
+  "VIDEO_PLAYER": "Video player",
+  "PHOTO_PLAYER": "Photo player"
 }

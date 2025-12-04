@@ -887,7 +887,6 @@
   "VIDEOS": "Видео",
   "VIDEO_COMMENT": "Поток комментариев",
   "VIDEO_NATIVE": "Встроенное видео HTML5",
-  "VIDEO_PLAYER": "Видеоплеер",
   "VIDEO_THREAD": "Видеопоток",
   "VIEW": "Посмотреть",
   "VIEWBOX": "Окно просмотра",
@@ -1517,7 +1516,6 @@
   "ATTACHMENT": "Закрытый",
   "INVITATION_AGAIN_SUCCESSFULLY": "Приглашение было успешно отправлено еще раз.",
   "CODE_RESENT_SUCCESSFULLY": "Код успешно отправлен повторно.",
-  "MUSIC_PLAYER": "Музыкальный проигрыватель",
   "ASK_ADMIN": "Спросите у админа",
   "YOUR_EMAIL_REMAIN_CONDENTIAL": "Ваш электронный адрес будет сохранен\n<a href=\"{0}\" target='_blank'> конфиденциально </a>",
   "CROSS_SIGNED_IN": "Вы уже вошли в систему с учетной записью <u> {0} </u> в этом браузере.<br>Что ты хочешь делать ?",
@@ -1925,5 +1923,8 @@
   "DUPLICATE": "Дубликат",
   "MOVE_TO_TRASH": "Переместить в корзину",
   "GET_INFO": "Получить информацию",
-  "PROHIBIT_CHANGE": "ហាមឃាត់ការផ្លាស់ប្តូរណាមួយ"
+  "PROHIBIT_CHANGE": "ហាមឃាត់ការផ្លាស់ប្តូរណាមួយ",
+  "MUSIC_PLAYER": "Lecteur de musique",
+  "VIDEO_PLAYER": "Видеоплеер",
+  "PHOTO_PLAYER": "Фотоплеер"
 }

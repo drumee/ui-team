@@ -887,7 +887,6 @@
   "VIDEOS": "Vidéos",
   "VIDEO_COMMENT": "Fil de commentaires",
   "VIDEO_NATIVE": "Vidéo native HTML5",
-  "VIDEO_PLAYER": "Lecteur vidéo",
   "VIDEO_THREAD": "Fil vidéo",
   "VIEW": "Voir",
   "VIEWBOX": "Fenêtre de vue",
@@ -1518,7 +1517,6 @@
   "ATTACHMENT": "Pièce(s) jointe(s)",
   "INVITATION_AGAIN_SUCCESSFULLY": "L'invitation a été envoyée à nouveau avec succès.",
   "CODE_RESENT_SUCCESSFULLY": "Code renvoyé avec succès.",
-  "MUSIC_PLAYER": "Lecteur de musique",
   "ASK_ADMIN": "Demander à l'administrateur",
   "YOUR_EMAIL_REMAIN_CONDENTIAL": "Votre adresse mail sera gardée \n<a href=\"{0}\" target='_blank'> confidentielle </a>",
   "CROSS_SIGNED_IN": "Vous êtes déjà connecté(e) avec le compte <u>{0}</u> sur ce navigateur.<br>Que souhaitez-vous faire ?",
@@ -1925,5 +1923,8 @@
   "DUPLICATE": "Dupliquer",
   "MOVE_TO_TRASH": "Déplacer vers la poubelle",
   "GET_INFO": "Voir les informations",
-  "PROHIBIT_CHANGE": "Interdire toute modification"
+  "PROHIBIT_CHANGE": "Interdire toute modification",
+  "MUSIC_PLAYER": "Lecteur de musique",
+  "VIDEO_PLAYER": "Lecteur vidéo",
+  "PHOTO_PLAYER": "Lecteur de photos"
 }

@@ -200,7 +200,7 @@
       padding: var(--spacer-5);
       gap: var(--spacer-1);
       background-color: var(--white);
-      bottom: -75px;
+      bottom: -116px;
     }
 
   }
@@ -319,23 +319,6 @@
     }
 
     &.maker {
-      // &.folder {
-      //   svg {
-      //     color: var(--folder-main);
-      //   }
-      // }
-
-      // &.team {
-      //   svg {
-      //     color: var(--teamroom-main);
-      //   }
-      // }
-
-      // &.sharebox {
-      //   svg {
-      //     color: var(--sharebox-main);
-      //   }
-      // }
 
       &.note {
         svg {
@@ -472,61 +455,23 @@
     gap: var(--spacer-2);
     cursor: pointer;
 
-    span.label {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .drumee-svg__container {
-      height: 38px;
-      width: 46px;
-
-      svg {
-        height: 100%;
-        width: 100%;
+    &-icon {
+      .media-grid__container {
+        .badge {
+          width: 28px;
+          height: 21px;
+          bottom: 10px;
+          left: 10px;
+        }
       }
     }
 
-    &.public {
-      .grad-start {
-        stop-color: #B251FB;
-      }
-
-      .grad-end {
-        stop-color: #DCB2FF;
-      }
+    &-text {
+      white-space: nowrap;
+      align-content: center;
+      flex-wrap: wrap;
     }
 
-    &.private {
-      .grad-start {
-        stop-color: #FF90A7;
-      }
-
-      .grad-end {
-        stop-color: #FF5779;
-      }
-    }
-
-    &.share {
-      .grad-start {
-        stop-color: #FFA5E6;
-      }
-
-      .grad-end {
-        stop-color: #FF65D5;
-      }
-    }
-
-    &.personal {
-      .grad-start {
-        stop-color: #98D6FF;
-      }
-
-      .grad-end {
-        stop-color: #2AAAFF;
-      }
-    }
   }
 
   @media (max-width: var(--small-width)) {

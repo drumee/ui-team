@@ -3,7 +3,6 @@ const { badgePrivate } = require("./badge-private")
 const { badgeShare } = require("./badge-share")
 const { badgePublic } = require("./badge-public")
 
-
 module.exports = function (model) {
   const { area, widgetId } = model;
   const main = `

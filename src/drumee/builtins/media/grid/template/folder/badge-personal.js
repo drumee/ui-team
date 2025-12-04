@@ -1,3 +1,4 @@
+
 export function badgePersonal(model) {
   const { area, widgetId } = model;
   let r = `

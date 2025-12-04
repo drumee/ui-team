@@ -161,5 +161,9 @@
   "DUPLICATE": "Duplicada",
   "MOVE_TO_TRASH": "Mover a la papelera",
   "GET_INFO": "Obtener información",
-  "PROHIBIT_CHANGE": "Prohibir cualquier cambio"
+  "PROHIBIT_CHANGE": "Prohibir cualquier cambio",
+  "MUSIC_PLAYER": "Lector de música",
+  "VIDEO_PLAYER": "Reproductor de video",
+  "PHOTO_PLAYER": "Reproductor de fotos",
+  "FOLDERS": "Carpeta"
 }
