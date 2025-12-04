@@ -1,5 +1,4 @@
-@use 'mixins/drumee';
-
+@use "mixins/drumee";
 
 .window-folder {
   &__header {
@@ -8,7 +7,12 @@
 
     &-title {
       align-items: center;
-      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 24px,
+        $weight: 400,
+        $color: var(--core-default-text-reverse)
+      );
     }
 
     &-control {
@@ -21,6 +25,14 @@
   &__icon {
     cursor: pointer;
     color: var(--core-default-icon-reverse);
+
+    &.logo {
+      display: flex;
+      width: 55px;
+      height: 48px;
+      aspect-ratio: 55/48;
+      margin-bottom: 10px;
+    }
 
     &-info {
       cursor: pointer;
@@ -42,11 +54,40 @@
     }
   }
 
+  &__title-wrapper {
+    gap: 10px;
+  }
+
+  &__subtitle-wrapper {
+    gap: 10px;
+    color: var(--neutral-300);
+    &.files {
+      padding-right: 10px;
+      border-right: 1px solid var(--neutral-300);
+    }
+  }
+
+  &__upload-button {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 40px;
+    background: var(--primary-500);
+    color: var(--white);
+    border-radius: 20px;
+  }
+
   &__title {
     &-name {
       align-items: flex-start;
       padding-left: 10px;
-      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 24px,
+        $weight: 400,
+        $color: var(--core-default-text-reverse)
+      );
       @include drumee.overflow-text;
 
       .inner {
@@ -87,7 +128,12 @@
       width: 100%;
       padding-left: 10px;
       padding-top: 4px;
-      @include drumee.typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.typo(
+        $color: var(--core-default-text-color),
+        $size: 12px,
+        $line: 16px,
+        $weight: 300
+      );
       @include drumee.overflow-text;
 
       .icon {
@@ -110,7 +156,12 @@
       width: 50%;
       padding-left: 10px;
       padding-top: 4px;
-      @include drumee.typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.typo(
+        $color: var(--core-default-text-color),
+        $size: 12px,
+        $line: 16px,
+        $weight: 300
+      );
       @include drumee.overflow-text;
 
       &.value {
