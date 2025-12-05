@@ -2,7 +2,7 @@
 
 .window {
   &__header {
-    border-radius: var(--default-border-radius-top);
+    border-radius: 24px 24px 0 0;
     width: 100%;
     z-index: 200;
   }
