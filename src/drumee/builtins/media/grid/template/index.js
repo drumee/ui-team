@@ -11,21 +11,21 @@ const __media_tpl_grid = function (ui) {
   m.imgCapable = ui.imgCapable();
   m._id = ui._id;
   m.fig = ui.fig;
-  let filename = require('./filename')(m);
   switch (m.filetype) {
     case _a.folder:
     case _a.hub:
-      html = require('./folder')(m) + filename;
+      html = require('./folder')(m);
       break;
     case _a.audio:
-      html = require('./filetype/audio.txt').default + filename;
+      html = require('./filetype/audio.txt').default;
       break;
     case _a.note:
-      html = require('./filetype/note.txt').default + filename;
+      html = require('./filetype/note.txt').default;
       break;
     default:
-      html = require('./preview')(m) + filename;
+      html = require('./preview')(m);
   }
+  html = html + require('./filename')(m)
   if (!Visitor.inDmz) {
     html = html + require('../../template/command')(m);
     html = html + require('../../template/notify')(m);
@@ -39,7 +39,6 @@ const __media_tpl_grid = function (ui) {
       html = html + require('../../template/checkbox')(m);
     }
   }
-
   // if (m.isalink && (m.filetype !== _a.hub)) {
   //   html = html + require('../../template/shortcut')(m);
   // }

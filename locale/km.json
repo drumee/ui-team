@@ -1926,5 +1926,9 @@
   "MUSIC_PLAYER": "ឧបករណ៍ចាក់តន្ត្រី",
   "VIDEO_PLAYER": "កម្មវិធីចាក់វីដេអូ",
   "PHOTO_PLAYER": "កម្មវិធីចាក់រូបថត",
-  "CREATE_PUBLIC_FOLDER": "បង្កើតថតឯកសារសាធារណៈ"
+  "CREATE_PUBLIC_FOLDER": "បង្កើតថតឯកសារសាធារណៈ",
+  "MY_PERSONAL_FOLDER": "ថតឯកសារផ្ទាល់ខ្លួនរបស់ខ្ញុំ",
+  "MY_PRIVATE_FOLDER": "ថតឯកសារឯកជនរបស់ខ្ញុំ",
+  "MY_EXTERNAL_FOLDER": "ថតឯកសារខាងក្រៅរបស់ខ្ញុំ",
+  "MY_PUBLIC_FOLDER": "ថតឯកសារសាធារណៈរបស់ខ្ញុំ"
 }

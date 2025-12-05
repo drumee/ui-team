@@ -1193,11 +1193,12 @@ class __media_core extends DrumeeMFS {
    * 
    */
   seedFolder() {
-    const filename = LOCALE.FOLDER;
+    const filename = this.mget(_a.filename) || LOCALE.FOLDER;
+    const area = this.mget(_a.area) || _a.personal;
     const service = "add-folder";
-    this.model.set({ filename, service });
+    this.model.set({ area, filename, service });
     this.model.unset(_a.phase);
-    this._createInput(LOCALE.FOLDER, { service, preselect: 1 });
+    this._createInput(filename, { service, preselect: 1 });
   }
 
   /**
@@ -1757,6 +1758,7 @@ class __media_core extends DrumeeMFS {
    */
   mkdir(fname) {
     const value = fname || LOCALE.FOLDER;
+    this.debug("AAA:1761", fname, this.model.toJSON())
     if (/^(.|.+\/.+| )$/.test(value)) {
       Wm.alert("Invalid name");
       return null;
@@ -1776,21 +1778,42 @@ class __media_core extends DrumeeMFS {
       seeding: 1,
       echoId: this.mget(ECHO_ID)
     }
-    this.postService(SERVICE.media.make_dir, args).then((data) => {
+
+    const good = (data) => {
       this.wait(0);
+      if (data.error) {
+        Wm.alert(LOCALE[data.error] || data.error)
+        return this.goodbye()
+      }
       let reopen = this.mget('reopen');
+      let widgetId = this.mget(_a.widgetId)
       this.model.clear();
       data.echoId = this.mget(ECHO_ID);
-      this.model.set({ ...data, ...opt, actual_home_id: data.home_id, service: OPEN_NODE });
+      this.model.set({ widgetId, ...data, ...opt, actual_home_id: data.home_id, service: OPEN_NODE });
       this.restart("media:created");
       if (reopen) {
         this.triggerHandlers({ service: OPEN_NODE })
       }
-    }).catch((e) => {
+    }
+
+    const bad = (e) => {
       this.warn("Failed to create dir", e);
-      // this.model.set({ ...data, ...opt, home_id, filename: "error" });
       this.restart();
-    });
+    }
+
+
+    args.filename = value;
+    args.area = this.mget(_a.area);
+    switch (this.mget(_a.area)) {
+      case _a.public:
+      case _a.share:
+      case _a.private:
+        this.postService(SERVICE.desk.create_hub, args).then(good).catch(bad);
+        break;
+      default:
+        this.postService(SERVICE.media.make_dir, args).then(good).catch(bad);
+    }
+
   }
 
   /**

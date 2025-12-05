@@ -456,6 +456,7 @@
     cursor: pointer;
 
     &-icon {
+      pointer-events: none;
       .media-grid__container {
         .badge {
           width: 28px;
@@ -467,6 +468,7 @@
     }
 
     &-text {
+    
       white-space: nowrap;
       align-content: center;
       flex-wrap: wrap;

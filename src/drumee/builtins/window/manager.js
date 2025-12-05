@@ -407,16 +407,18 @@ class __window_manager extends mfsInteract {
   /**
    * 
    */
-  addFolder() {
+  addFolder(opt) {
     const target = this.getActiveWindow(1);
+    console.trace()
     const folder = {
+      ...opt,
       kind: target._getKind(),
       filetype: _a.folder,
       phase: _a.creating,
       logicalParent: target,
       pid: target.getCurrentNid(),
       hub_id: target.mget(_a.hub_id),
-      service: "add-folder"
+      service: "add-folder",
     };
     target.insertMedia(folder);
     target.scrollToBottom();

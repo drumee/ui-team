@@ -165,5 +165,9 @@
   "VIDEO_PLAYER": "Reproductor de video",
   "PHOTO_PLAYER": "Reproductor de fotos",
   "FOLDERS": "Carpeta",
-  "CREATE_PUBLIC_FOLDER": "Crear una carpeta pública"
+  "CREATE_PUBLIC_FOLDER": "Crear una carpeta pública",
+  "MY_PERSONAL_FOLDER": "Mi carpeta personal",
+  "MY_PRIVATE_FOLDER": "Mi carpeta privada",
+  "MY_EXTERNAL_FOLDER": "Mi carpeta externa",
+  "MY_PUBLIC_FOLDER": "Mi carpeta pública"
 }
