@@ -242,11 +242,6 @@ class __window_wallpaper_settings extends __window_interact {
   onUiEvent(cmd, args = {}) {
     const service =
       args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug(
-      `__window_wallpaper_settings onUiEvent service=${service}`,
-      cmd,
-      this
-    );
 
     switch (service) {
       case _e.close:
@@ -288,24 +283,9 @@ class __window_wallpaper_settings extends __window_interact {
 
 
   /**
-   * @param {*} type
+   * 
    */
-  getCurrentApi(type) {
-    const wp = Platform.get('wallpaper');
-
-    if (!wp) {
-      this.warning("Wallpaper platform config not found");
-      return null;
-    }
-
-    // Use nid if available, otherwise fallback to path
-    const nid = wp.nid || wp.path;
-
-    if (!nid) {
-      this.warning("Wallpaper path/nid not found in platform config", wp);
-      return null;
-    }
-
+  getCurrentApi() {
     let api = {
       service: SERVICE.desk.my_wallpapers,
       page: 1,
