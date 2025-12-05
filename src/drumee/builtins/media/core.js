@@ -1036,7 +1036,7 @@ class __media_core extends DrumeeMFS {
               this.el.dataset.status = "";
               this.phase = null;
               this.mset({ pahse: null })
-              if ([_a.commit, _e.Enter].includes(child.status)) {
+              if ([_a.commit, _e.Enter].includes(child.status) || this._pendingSeed) {
                 return;
               }
               this.mkdir(child.getValue())
@@ -1763,6 +1763,8 @@ class __media_core extends DrumeeMFS {
       Wm.alert("Invalid name");
       return null;
     }
+    if (this._pendingSeed) return;
+    this._pendingSeed = 1;
     this.model.set(_a.filename, value);
     let opt = {
       kind: this._getKind(),

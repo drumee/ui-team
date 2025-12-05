@@ -111,28 +111,23 @@ const __desk_dock_items_makers = function (ui) {
     className: `${ui.fig.family}__container application maker`,
     kids: [
       folderMenu(ui),
-      button(ui, {
-        ico: "dock-gallery",
-        className: `${pfx} gallery`,
-        // service: 'add-media',
-        helperName: 'gallery'
-      }, LOCALE.PHOTO_PLAYER),
+      // button(ui, {
+      //   ico: "dock-gallery",
+      //   className: `${pfx} gallery`,
+      //   helperName: 'gallery'
+      // }, LOCALE.PHOTO_PLAYER),
 
-      button(ui, {
-        ico: "dock-music",
-        className: `${pfx} sharebox`,
-        // service: 'add-sharebox',
-        // respawn: 'hub_sharebox',
-        helperName: 'sharebox'
-      }, LOCALE.MUSIC_PLAYER),
+      // button(ui, {
+      //   ico: "dock-music",
+      //   className: `${pfx} sharebox`,
+      //   helperName: 'sharebox'
+      // }, LOCALE.MUSIC_PLAYER),
 
-      button(ui, {
-        ico: "dock-media",
-        className: `${pfx} team`,
-        // service: 'add-team',
-        // respawn: 'hub_team',
-        helperName: 'teamroom'
-      }, LOCALE.VIDEO_PLAYER)
+      // button(ui, {
+      //   ico: "dock-media",
+      //   className: `${pfx} team`,
+      //   helperName: 'teamroom'
+      // }, LOCALE.VIDEO_PLAYER)
 
     ]
   });
