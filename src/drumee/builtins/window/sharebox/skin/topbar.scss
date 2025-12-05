@@ -13,7 +13,7 @@
     }
   }
 
-  &__title-wrapper {
+  &__name-wrapper {
     gap: 10px;
   }
 
@@ -26,15 +26,37 @@
     }
   }
 
+  &__buttons-wrapper {
+    gap: 10px;
+  }
+
   &__upload-button {
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 10px 40px;
-    background: var(--primary-500);
+    background: var(--neutral-900);
     color: var(--white);
     border-radius: 20px;
+  }
+
+  &__settings {
+    padding: 8px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 100%;
+    background: var(--neutral-200);
+    cursor: pointer;
+    &.icon {
+      margin: 0;
+      width: 30px;
+      height: 30px;
+      color: var(--neutral-900);
+      &:hover {
+        color: var(--primary-500);
+      }
+    }
   }
 
   &-topbar {

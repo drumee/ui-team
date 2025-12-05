@@ -21,8 +21,8 @@ const { button } = require("../../../skeleton/toolkit/buttons");
 
 const __skl_folder_topbar = function (_ui_) {
   let name = _ui_.mget(_a.filename) || _ui_.mget(_a.name);
-  const logo = require("./logo")(_ui_);
-  const subtitle = require("./subtitle")(_ui_);
+  const logo = require("../../skeleton/logo")(_ui_);
+  const subtitle = require("../../skeleton/subtitle")(_ui_);
 
   const info = Skeletons.Button.Svg({
     ico: "info",
@@ -57,9 +57,38 @@ const __skl_folder_topbar = function (_ui_) {
     }
   }
 
-  const titleWrapper = Skeletons.Box.Y({
-    className: `${_ui_.fig.family}__title-wrapper`,
+  const nameWrapper = Skeletons.Box.Y({
+    className: `${_ui_.fig.family}__name-wrapper`,
     kids: [name, subtitle],
+  });
+
+  const titleWrapper = Skeletons.Box.X({
+    kids: [logo, nameWrapper],
+  });
+
+  const settings = Skeletons.Box.X({
+    className: `${_ui_.fig.family}__settings`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "setting",
+        className: `${_ui_.fig.family}__settings icon`,
+        service: "",
+        uiHandler: _ui_,
+      }),
+    ],
+  });
+
+  const buttons = Skeletons.Box.X({
+    className: `${_ui_.fig.family}__buttons-wrapper`,
+    kids: [
+      button(_ui_, {
+        label: "Upload new File",
+        className: `${_ui_.fig.family}__upload-button`,
+        service: "",
+        priority: "primary",
+      }),
+      settings,
+    ],
   });
 
   const figname = "topbar";
@@ -85,15 +114,9 @@ const __skl_folder_topbar = function (_ui_) {
             className: `${_ui_.fig.group}-${figname}__title`,
             sys_pn: "ref-window-title",
             kids: [
-              logo,
+              // info,
               titleWrapper,
-              info,
-              button(_ui_, {
-                label: "Upload new File",
-                className: `${_ui_.fig.family}__upload-button`,
-                service: "",
-                priority: "primary",
-              }),
+              buttons,
             ],
           }),
         ],
@@ -107,7 +130,7 @@ const __skl_folder_topbar = function (_ui_) {
         },
       }),
 
-      require("window/skeleton/topbar/control")(_ui_),
+      require("window/skeleton/topbar/control")(_ui_, "c"),
     ],
   });
 
