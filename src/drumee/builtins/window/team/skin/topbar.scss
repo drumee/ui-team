@@ -20,6 +20,7 @@
   &__subtitle-wrapper {
     gap: 10px;
     color: var(--neutral-300);
+
     &.files {
       padding-right: 10px;
       border-right: 1px solid var(--neutral-300);
@@ -48,16 +49,21 @@
     border-radius: 100%;
     background: var(--neutral-200);
     cursor: pointer;
+    width: 46px;
+    height: 46px;
+
     &.icon {
       margin: 0;
       width: 30px;
       height: 30px;
       color: var(--neutral-900);
+
       &:hover {
         color: var(--primary-500);
       }
     }
   }
+
   &-topbar {
     &__container {
       position: absolute;
@@ -97,6 +103,7 @@
         stroke-width: 0;
         stroke: var(--ewhite);
       }
+
       &:hover {
         stroke: transparent;
       }
@@ -137,12 +144,10 @@
     }
 
     &__count {
-      @include drumee.typo(
-        $size: 8px,
+      @include drumee.typo($size: 8px,
         $line: 12px,
         $weight: 400,
-        $color: var(--teamroom-main)
-      );
+        $color: var(--teamroom-main));
       align-items: center;
       background-color: var(--default-background);
       border-radius: 50%;

@@ -20,6 +20,7 @@
   &__subtitle-wrapper {
     gap: 10px;
     color: var(--neutral-300);
+
     &.files {
       padding-right: 10px;
       border-right: 1px solid var(--neutral-300);
@@ -48,11 +49,15 @@
     border-radius: 100%;
     background: var(--neutral-200);
     cursor: pointer;
+    width: 46px;
+    height: 46px;
+
     &.icon {
       margin: 0;
       width: 30px;
       height: 30px;
       color: var(--neutral-900);
+
       &:hover {
         color: var(--primary-500);
       }
@@ -104,11 +109,9 @@
       }
 
       .tooltips {
-        @include drumee.typo(
-          $size: 12px,
+        @include drumee.typo($size: 12px,
           $line: 20px,
-          $color: var(--default-text-tooltips)
-        );
+          $color: var(--default-text-tooltips));
         background-color: var(--background-tooltips);
         border-radius: var(--border-radius);
         max-height: 90px;
@@ -148,11 +151,9 @@
         }
 
         & .tooltips {
-          @include drumee.typo(
-            $size: 12px,
+          @include drumee.typo($size: 12px,
             $line: 20px,
-            $color: var(--default-text-tooltips)
-          );
+            $color: var(--default-text-tooltips));
           background-color: var(--background-tooltips);
           border-radius: var(--border-radius);
           max-height: 90px;
@@ -203,12 +204,10 @@
     }
 
     &__count {
-      @include drumee.typo(
-        $size: 8px,
+      @include drumee.typo($size: 8px,
         $line: 12px,
         $weight: 400,
-        $color: var(--sharebox-main)
-      );
+        $color: var(--sharebox-main));
       align-items: center;
       background-color: var(--default-background);
       border-radius: 50%;

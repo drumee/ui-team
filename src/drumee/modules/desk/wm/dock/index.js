@@ -325,10 +325,10 @@ class __desk_dock extends LetcBox {
       case 'add-website':
       case 'add-team':
       case 'add-sharebox':
-        // return this._createHub(cmd.mget(_a.respawn));
+      // return this._createHub(cmd.mget(_a.respawn));
 
       case 'add-folder':
-        return Wm.addFolder({ area: cmd.mget(_a.area), filename: cmd.mget(_a.filename) });
+        return Wm.addFolder({ position: 0, area: cmd.mget(_a.area), filename: cmd.mget(_a.filename) });
 
       case 'add-media':
         return this.handleMediaUpload();
