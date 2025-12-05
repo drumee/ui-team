@@ -1926,5 +1926,9 @@
   "MUSIC_PLAYER": "音乐朗读者",
   "VIDEO_PLAYER": "视频播放器",
   "PHOTO_PLAYER": "照片播放器",
-  "CREATE_PUBLIC_FOLDER": "创建公共文件夹"
+  "CREATE_PUBLIC_FOLDER": "创建公共文件夹",
+  "MY_PERSONAL_FOLDER": "我的个人文件夹",
+  "MY_PRIVATE_FOLDER": "我的私人文件夹",
+  "MY_EXTERNAL_FOLDER": "我的外部文件夹",
+  "MY_PUBLIC_FOLDER": "我的公共文件夹"
 }

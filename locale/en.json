@@ -980,7 +980,7 @@
   "CREATED_PUBLIC_LINK": "Created public link",
   "MSG_SHARE_ACK": "An access email has been sent to yours contacts",
   "EXPIRY": "Expiry",
-  "CREATE_PERSONAL_FOLDER": "Create a personl folder",
+  "CREATE_PERSONAL_FOLDER": "Create a personal folder",
   "CREATE_LINK": "Create a link",
   "ACTIVE_PUBLIC_LINK": "public link",
   "ACCESS_LIST": "Access list",
@@ -1926,5 +1926,9 @@
   "MUSIC_PLAYER": "Music player",
   "VIDEO_PLAYER": "Video player",
   "PHOTO_PLAYER": "Photo player",
-  "CREATE_PUBLIC_FOLDER": "Create a public folder"
+  "CREATE_PUBLIC_FOLDER": "Create a public folder",
+  "MY_PERSONAL_FOLDER": "My personal folder",
+  "MY_PRIVATE_FOLDER": "My private folder",
+  "MY_EXTERNAL_FOLDER": "My external folder",
+  "MY_PUBLIC_FOLDER": "My public folder"
 }

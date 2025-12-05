@@ -1926,5 +1926,9 @@
   "MUSIC_PLAYER": "Lecteur de musique",
   "VIDEO_PLAYER": "Lecteur vidéo",
   "PHOTO_PLAYER": "Lecteur de photos",
-  "CREATE_PUBLIC_FOLDER": "Créer un dossier public"
+  "CREATE_PUBLIC_FOLDER": "Créer un dossier public",
+  "MY_PERSONAL_FOLDER": "Mon dossier personnel",
+  "MY_PRIVATE_FOLDER": "Mon dossier privé",
+  "MY_EXTERNAL_FOLDER": "Mon dossier externe",
+  "MY_PUBLIC_FOLDER": "Mon dossier public"
 }

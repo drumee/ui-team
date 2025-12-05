@@ -12,18 +12,22 @@ function menu_items(ui) {
         className: `${pfx}-item public`,
         helperName: 'folder',
         service: "add-folder",
+        area: _a.public,
+        filename: LOCALE.MY_PUBLIC_FOLDER,
         kidsOpt: {
           active: 0
         },
         kids: [
-          { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: "private", mode: _a.vignette },
+          { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.public, mode: _a.vignette },
           Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PUBLIC_FOLDER })
         ]
       }),
       Skeletons.Box.G({
         className: `${pfx}-item share`,
         service: 'add-sharebox',
-        respawn: 'hub_sharebox',
+        // respawn: 'hub_sharebox',
+        filename: LOCALE.MY_EXTERNAL_FOLDER,
+        area: _a.share,
         kidsOpt: {
           active: 0
         },
@@ -36,7 +40,9 @@ function menu_items(ui) {
         className: `${pfx}-item private`,
         helperName: 'teamroom',
         service: 'add-team',
-        respawn: 'hub_team',
+        // respawn: 'hub_team',
+        area: _a.private,
+        filename: LOCALE.MY_PRIVATE_FOLDER,
         kidsOpt: {
           active: 0
         },
@@ -49,11 +55,13 @@ function menu_items(ui) {
         className: `${pfx}-item personal`,
         helperName: 'folder',
         service: "add-folder",
+        filename: LOCALE.MY_PERSONAL_FOLDER,
+        area: _a.personal,
         kidsOpt: {
           active: 0
         },
         kids: [
-          {  kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.personal, mode: _a.vignette },
+          { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.personal, mode: _a.vignette },
           Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PERSONAL_FOLDER })
         ]
       }),

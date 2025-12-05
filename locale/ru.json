@@ -1926,5 +1926,9 @@
   "MUSIC_PLAYER": "Lecteur de musique",
   "VIDEO_PLAYER": "Видеоплеер",
   "PHOTO_PLAYER": "Фотоплеер",
-  "CREATE_PUBLIC_FOLDER": "Создать публичную папку"
+  "CREATE_PUBLIC_FOLDER": "Создать публичную папку",
+  "MY_PERSONAL_FOLDER": "Моя личная папка",
+  "MY_PRIVATE_FOLDER": "Моя личная папка",
+  "MY_EXTERNAL_FOLDER": "Моя внешняя папка",
+  "MY_PUBLIC_FOLDER": "Моя публичная папка"
 }
