@@ -409,7 +409,6 @@ class __window_manager extends mfsInteract {
    */
   addFolder(opt) {
     const target = this.getActiveWindow(1);
-    console.trace()
     const folder = {
       ...opt,
       kind: target._getKind(),

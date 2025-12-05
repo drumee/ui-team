@@ -896,7 +896,6 @@ class __window_interact extends windowCore {
    * @param {*} position
    */
   insertMedia(files, position = 0) {
-    console.trace()
     if (!_.isArray(files)) {
       files = [files];
     }
@@ -958,7 +957,6 @@ class __window_interact extends windowCore {
    * @param {*} all
    */
   unselect(all = 1) {
-    //console.trace();
     this.captured = {};
     if (all > 1) {
       pointerDragged = false;
