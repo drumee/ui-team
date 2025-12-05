@@ -1,11 +1,71 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .window-sharebox {
+  &__icon {
+    cursor: pointer;
+
+    &.logo {
+      display: flex;
+      width: 55px;
+      height: 48px;
+      aspect-ratio: 55/48;
+      margin-bottom: 10px;
+    }
+  }
+
+  &__name-wrapper {
+    gap: 10px;
+  }
+
+  &__subtitle-wrapper {
+    gap: 10px;
+    color: var(--neutral-300);
+    &.files {
+      padding-right: 10px;
+      border-right: 1px solid var(--neutral-300);
+    }
+  }
+
+  &__buttons-wrapper {
+    gap: 10px;
+  }
+
+  &__upload-button {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 40px;
+    background: var(--neutral-900);
+    color: var(--white);
+    border-radius: 20px;
+  }
+
+  &__settings {
+    padding: 8px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 100%;
+    background: var(--neutral-200);
+    cursor: pointer;
+    &.icon {
+      margin: 0;
+      width: 30px;
+      height: 30px;
+      color: var(--neutral-900);
+      &:hover {
+        color: var(--primary-500);
+      }
+    }
+  }
+
   &-topbar {
     &__container {
-      height: 44px;
-      position: absolute;
-      z-index: 1;
+      // height: 44px;
+      // position: absolute;
+      // z-index: 1;
+      margin-top: 20px;
+      margin-right: 20px;
     }
 
     &__expiry-time-wrapper {
@@ -21,13 +81,13 @@
     &__icon {
       color: var(--default-icon-reverse);
       cursor: pointer;
-      height: 16px;
+      width: 25px;
+      height: 25px;
       margin: auto 0px auto 15px;
       padding: 0px;
-      width: 16px;
 
       &:hover {
-        color: var(--default-icon-hover);
+        color: var(--primary-500);
       }
 
       &.link {
@@ -44,7 +104,11 @@
       }
 
       .tooltips {
-        @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
+        @include drumee.typo(
+          $size: 12px,
+          $line: 20px,
+          $color: var(--default-text-tooltips)
+        );
         background-color: var(--background-tooltips);
         border-radius: var(--border-radius);
         max-height: 90px;
@@ -68,8 +132,8 @@
       }
 
       &.email-notification {
-        height: 20px;
-        width: 20px;
+        height: 25px;
+        width: 25px;
       }
 
       &.expiry-time {
@@ -84,7 +148,11 @@
         }
 
         & .tooltips {
-          @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-tooltips));
+          @include drumee.typo(
+            $size: 12px,
+            $line: 20px,
+            $color: var(--default-text-tooltips)
+          );
           background-color: var(--background-tooltips);
           border-radius: var(--border-radius);
           max-height: 90px;
@@ -135,7 +203,12 @@
     }
 
     &__count {
-      @include drumee.typo($size: 8px, $line: 12px, $weight: 400, $color: var(--sharebox-main));
+      @include drumee.typo(
+        $size: 8px,
+        $line: 12px,
+        $weight: 400,
+        $color: var(--sharebox-main)
+      );
       align-items: center;
       background-color: var(--default-background);
       border-radius: 50%;

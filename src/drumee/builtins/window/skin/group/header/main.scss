@@ -2,18 +2,17 @@
 
 .window {
   &__header {
-    border-radius: var(--default-border-radius-top);
+    border-radius: 24px 24px 0 0;
     width: 100%;
     z-index: 200;
   }
 
   &-topbar {
     &__container {
-      height: 44px;
+      height: 150px;
       width: 100%;
       flex: 1;
       border-radius: var(--default-border-radius-top);
-      height: 44px;
       width: 100%;
 
       &[data-device="mobile"] {
@@ -67,20 +66,21 @@
     &__title {
       color: var(--ewhite);
       height: 100%;
-      justify-content: center;
-      margin: auto 0;
+      justify-content: space-between;
+      margin-top: 10px;
       flex: 1;
-      position: absolute;
       width: 100%;
+      padding: 0 40px;
+      align-items: center;
+      gap: 10px;
 
       .name {
-        max-width: calc(100% - 285px);
         align-items: flex-start;
         white-space: nowrap;
         align-items: center;
         width: auto;
         @include drumee.typo(
-          $size: 18px,
+          $size: 30px,
           $line: 24px,
           $weight: 400,
           $color: var(--default-text-reverse)
@@ -96,33 +96,34 @@
 
       .icon {
         cursor: pointer;
-        width: 21px;
-        height: 21px;
+        width: 35px;
+        height: 35px;
         padding: 4px;
-        color: var(--special-icon-setting);
-        min-width: 21px;
+        color: var(--neutral-300);
         margin: auto 15px auto 5px;
 
         &:hover {
-          color: var(--default-icon-hover);
+          color: var(--primary-500);
         }
       }
     }
 
     &__control {
       position: absolute;
-      height: 100%;
+      height: 50%;
       right: 0;
       display: flex;
 
       .icon {
-        width: 12px;
-        height: 12px;
-        padding: 0px;
+        width: 30px;
+        height: 30px;
+        padding: 10px;
         display: flex;
-        color: var(--default-icon-reverse);
+        color: var(--neutral-600);
         cursor: pointer;
         margin: auto 15px auto 0;
+        background-color: var(--neutral-300);
+        border-radius: 100%;
 
         &:hover {
           color: var(--primary-500);

@@ -1,14 +1,19 @@
-@use 'mixins/drumee';
-
+@use "mixins/drumee";
 
 .window-folder {
   &__header {
     border-bottom: none;
-    background-color: var(--folder-header-bg);
+    // background-color: var(--folder-header-bg);
+    background: linear-gradient(135deg, #dcb2ff, #b251fb);
 
     &-title {
       align-items: center;
-      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 24px,
+        $weight: 400,
+        $color: var(--core-default-text-reverse)
+      );
     }
 
     &-control {
@@ -21,6 +26,14 @@
   &__icon {
     cursor: pointer;
     color: var(--core-default-icon-reverse);
+
+    &.logo {
+      display: flex;
+      width: 55px;
+      height: 48px;
+      aspect-ratio: 55/48;
+      margin-bottom: 10px;
+    }
 
     &-info {
       cursor: pointer;
@@ -42,11 +55,63 @@
     }
   }
 
+  &__name-wrapper {
+    gap: 10px;
+  }
+
+  &__subtitle-wrapper {
+    gap: 10px;
+    color: var(--neutral-300);
+    &.files {
+      padding-right: 10px;
+      border-right: 1px solid var(--neutral-300);
+    }
+  }
+
+  &__buttons-wrapper {
+    gap: 10px;
+  }
+
+  &__upload-button {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 40px;
+    background: var(--neutral-900);
+    color: var(--white);
+    border-radius: 20px;
+  }
+
+  &__settings {
+    padding: 8px;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 100%;
+    background: var(--neutral-200);
+    cursor: pointer;
+    &.icon {
+      margin: 0;
+      width: 30px;
+      height: 30px;
+      color: var(--neutral-900);
+      &:hover {
+        color: var(--primary-500);
+      }
+    }
+  }
+
   &__title {
     &-name {
       align-items: flex-start;
       padding-left: 10px;
-      @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--core-default-text-reverse));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 24px,
+        $weight: 400,
+        $color: var(--core-default-text-reverse)
+      );
       @include drumee.overflow-text;
 
       .inner {
@@ -87,7 +152,12 @@
       width: 100%;
       padding-left: 10px;
       padding-top: 4px;
-      @include drumee.typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.typo(
+        $color: var(--core-default-text-color),
+        $size: 12px,
+        $line: 16px,
+        $weight: 300
+      );
       @include drumee.overflow-text;
 
       .icon {
@@ -110,7 +180,12 @@
       width: 50%;
       padding-left: 10px;
       padding-top: 4px;
-      @include drumee.typo($color: var(--core-default-text-color), $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.typo(
+        $color: var(--core-default-text-color),
+        $size: 12px,
+        $line: 16px,
+        $weight: 300
+      );
       @include drumee.overflow-text;
 
       &.value {
