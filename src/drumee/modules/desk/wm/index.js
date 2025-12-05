@@ -1,6 +1,7 @@
 
 require("./skin");
 const { copyToClipboard } = require("core/utils")
+const { TweenLite, TimelineMax } = require("gsap/all")
 
 const push = require("./push");
 
@@ -549,6 +550,111 @@ class __window_manager extends push {
   /**
    *
    * @param {*} cmd
+   */
+  confirmRemoveHub(media, args) {
+    this.debug("AAA:554", this, media, args)
+    this.ensurePart('wrapper-modal').then(async (p) => {
+      await Kind.waitFor('window_confirm')
+      p.feed({
+        kind: 'window_confirm',
+        maxsize: 2,
+        title: LOCALE.DELETE,
+        message: LOCALE.MSG_DELETE_HUB.format(media.mget(_a.filename)),
+        confirm: LOCALE.DELETE,
+      }).ask().then(() => {
+        this.animateMediaToTrash(media).then(() => {
+          this.postService({
+            service: SERVICE.hub.delete_hub,
+            hub_id: media.mget(_a.hub_id)
+          });
+        })
+        p.clear()
+      }).catch(() => { });
+    })
+  }
+
+  /**
+   *
+   * @param {*} cmd
+   */
+  confirmLeaveHub(media, args) {
+    this.debug("AAA:554", this, media, args)
+    this.ensurePart('wrapper-modal').then(async (p) => {
+      await Kind.waitFor('window_confirm')
+      p.feed({
+        kind: 'window_confirm',
+        maxsize: 2,
+        title: LOCALE.LEAVE,
+        message: LOCALE.MSG_LEAVE_HUB.format(media.mget(_a.filename)),
+        confirm: LOCALE.LEAVE
+      }).ask().then(() => {
+        this.animateMediaToTrash(media).then(() => {
+          this.postService({
+            service: SERVICE.desk.leave_hub,
+            nid: media.mget(_a.hub_id),
+            hub_id: Visitor.id
+          });
+        })
+        p.clear()
+      }).catch(() => { });
+    })
+  }
+
+  /**
+   * 
+   */
+  animateMediaToTrash(media) {
+    return new Promise((resolve, reject) => {
+      const helper = media.$el.clone();
+      helper.removeAttr("class");
+      helper.addClass(`deleting ${media.fig.family}__helper-wrapper`);
+      const pos = media.$el.offset();
+      helper.css({
+        position: _a.absolute,
+        left: pos.left,
+        top: pos.top - media.$el.height(),
+        zIndex: 200002, // Must be hight than modal popup
+      });
+      let trash = this.getTrashBin()
+      if (!trash) {
+        return reject()
+      }
+      let trashbin = trash.$el;
+      this.$el.append(helper);
+      const f = () => {
+        const tl = new TimelineMax();
+        tl.to(trashbin, 0.3, { scale: 1.2 }).to(trashbin, 0.3, { scale: 1 });
+        trashbin.parent().children(".temp-anim").remove();
+        helper.remove();
+        resolve()
+      };
+
+      const dest_x = trashbin.offset().left;
+      const dest_y = trashbin.offset().top;
+      TweenLite.to(helper, 1.4, {
+        left: dest_x,
+        top: dest_y,
+        scale: 0,
+        alpha: 0,
+        onComplete: f,
+      });
+    })
+  }
+
+  /**
+   * 
+   */
+  getTrashBin() {
+    let dock = Wm.getPart('dock');
+    if (dock) {
+      return dock.getPart('trash-bin')
+    }
+    return null;
+  }
+
+  /**
+   *
+   * @param {*} cmd
    * @param {*} args
    * @returns
    */
@@ -560,6 +666,14 @@ class __window_manager extends push {
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
+
+      case "confirm-removal":
+        if (cmd.isGranted(_K.permission.owner)) {
+          this.confirmRemoveHub(cmd, args);
+        } else {
+          this.confirmLeaveHub(cmd, args);
+        }
+        return;
 
       case "open-node":
         this.openContent(cmd);

@@ -657,7 +657,13 @@ class __media_interact extends media_core {
         return this.download();
 
       case _e.remove:
-        return this.putIntoTrash();
+        let trash = Wm.getTrashBin();
+        if (trash) {
+          this.delete(1, trash.$el)
+        } else {
+          this.putIntoTrash();
+        }
+        return;
 
       case "load-script":
         let o = this.actualNode(_a.orig);

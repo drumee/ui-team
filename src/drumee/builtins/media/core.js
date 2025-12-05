@@ -11,7 +11,6 @@ const SEEDING = "seeding";
 const IGNORED_FILES = /Thumbs.db|.DS_Store|__MACOSX|.thumbnails|\~+/;
 const MAX_BLOB_SIZE = 100000000;
 
-const { TweenLite, TimelineMax } = require("gsap/all")
 /**
  * 
  * @param {*} name 
@@ -1368,30 +1367,23 @@ class __media_core extends DrumeeMFS {
     return this.mget(_a.status) === _a.locked;
   }
 
+
   /**
    * 
    * @param {*} single_node 
    * @param {*} trashbin 
    * @returns 
    */
-  delete(single_node = 1, trashbin) {
+  delete(single_node = 1, trashbin, force = 0) {
     let f, msg;
     let granted = this.isGranted(_K.permission.delete);
-    let name = "";
-    if (this.mget(_a.filetype) === _a.hub) {
-      if (this.mget(_a.area) == _a.private) {
-        name = LOCALE.TEAM_ROOM;
-      } else {
-        name = LOCALE.SHAREBOX;
-      }
+    if (!force && this.mget(_a.filetype) === _a.hub) {
       this.triggerHandlers({
-        service: "open-manager",
-        message: name.printf(LOCALE.USE_MANAGER_TO_DELETE),
+        service: "confirm-removal",
       });
-      this.moveForbiden(LOCALE.ACTION_NOT_PERMITTED);
       return null;
     }
-    if (this.containsHub) {
+    if (this.containsHub && !force) {
       this.triggerHandlers({
         service: "no-trash-hubs",
         message: LOCALE.CONTAINS_NON_DELETABLE,
@@ -1422,24 +1414,7 @@ class __media_core extends DrumeeMFS {
       return null;
     }
 
-    const helper = this.$el.clone();
-    helper.removeAttr("class");
-    helper.addClass(`deleting ${this.fig.family}__helper-wrapper`);
-    const pos = this.$el.offset();
-    helper.css({
-      position: _a.absolute,
-      left: pos.left,
-      top: pos.top - this.$el.height(),
-      zIndex: 200002, // Must be hight than modal popup
-    });
-
-    Wm.$el.append(helper);
-
-    f = () => {
-      const tl = new TimelineMax();
-      tl.to(trashbin, 0.3, { scale: 1.2 }).to(trashbin, 0.3, { scale: 1 });
-      trashbin.parent().children(".temp-anim").remove();
-      helper.remove();
+    Wm.animateMediaToTrash(this).then(() => {
       this.logicalParent.syncGeometry()
       if (this.mget(_a.status) === SEEDING) {
         this.suppress();
@@ -1450,17 +1425,48 @@ class __media_core extends DrumeeMFS {
       } else {
         this.goodbye()
       }
-    };
+    }).catch(()=>{
+      this.putIntoTrash();
+    })
+    // const helper = this.$el.clone();
+    // helper.removeAttr("class");
+    // helper.addClass(`deleting ${this.fig.family}__helper-wrapper`);
+    // const pos = this.$el.offset();
+    // helper.css({
+    //   position: _a.absolute,
+    //   left: pos.left,
+    //   top: pos.top - this.$el.height(),
+    //   zIndex: 200002, // Must be hight than modal popup
+    // });
 
-    const dest_x = trashbin.offset().left;
-    const dest_y = trashbin.offset().top;
-    TweenLite.to(helper, 1.4, {
-      left: dest_x,
-      top: dest_y,
-      scale: 0,
-      alpha: 0,
-      onComplete: f,
-    });
+    // Wm.$el.append(helper);
+
+    // f = () => {
+    //   const tl = new TimelineMax();
+    //   tl.to(trashbin, 0.3, { scale: 1.2 }).to(trashbin, 0.3, { scale: 1 });
+    //   trashbin.parent().children(".temp-anim").remove();
+    //   helper.remove();
+    //   this.logicalParent.syncGeometry()
+    //   if (this.mget(_a.status) === SEEDING) {
+    //     this.suppress();
+    //     return;
+    //   }
+    //   if (single_node) {
+    //     this.postService(this.makeTrashOptions());
+    //   } else {
+    //     this.goodbye()
+    //   }
+    // };
+
+    // const dest_x = trashbin.offset().left;
+    // const dest_y = trashbin.offset().top;
+    // TweenLite.to(helper, 1.4, {
+    //   left: dest_x,
+    //   top: dest_y,
+    //   scale: 0,
+    //   alpha: 0,
+    //   onComplete: f,
+    // });
   }
 
   /**
