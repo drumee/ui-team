@@ -14,7 +14,7 @@ const __skl_window_team_topbar = function (_ui_, icon) {
     }
 
     settings = Skeletons.Button.Svg({
-      ico: "editbox_cog",
+      ico: "setting",
       uiHandler: _ui_,
       part: _ui_,
       sys_pn: "ref-window-icon",

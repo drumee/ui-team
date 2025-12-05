@@ -3,7 +3,8 @@
 .window-folder {
   &__header {
     border-bottom: none;
-    background-color: var(--folder-header-bg);
+    // background-color: var(--folder-header-bg);
+    background: linear-gradient(135deg, #dcb2ff, #b251fb);
 
     &-title {
       align-items: center;

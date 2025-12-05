@@ -101,7 +101,7 @@ const __skl_folder_topbar = function (_ui_) {
       group: _ui_.fig.group,
     },
     kids: [
-      require("window/skeleton/topbar/breadcrumbs")(_ui_),
+      // require("window/skeleton/topbar/breadcrumbs")(_ui_),
 
       downloadIcon,
 
