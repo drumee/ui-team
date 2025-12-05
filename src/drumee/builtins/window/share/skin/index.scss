@@ -1,12 +1,4 @@
 @use "sass:meta";
-@use 'mixins/colors/index.scss';
-@use 'mixins/typo.scss';
-
-@use 'mixins/exports.scss';
-@use 'mixins/handles.scss';
-@use 'mixins/utils.scss';
-@use 'mixins/vendor.scss';
-@use 'mixins/z-index.scss';
 @use 'mixins/drumee';
 
 .window-share {

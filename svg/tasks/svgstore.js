@@ -218,7 +218,7 @@ module.exports = function (grunt) {
         var $desc = $('desc');
         var $def = $('defs').first();
         var defContent = $def.length && $def.html();
-        console.log("AAA:221", defContent, $def.html());
+        // console.log("AAA:221", defContent, $def.html());
         // Merge in the defs from this svg in the result defs block
         if (defContent) {
           $resultDefs.append(defContent);

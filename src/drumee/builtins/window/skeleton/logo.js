@@ -1,15 +1,15 @@
-const __skl_folder_topbar_logo = function (_ui_) {
-  const a = Skeletons.Box.X({
-    className: `${_ui_.fig.family}__logo`,
+
+module.exports = function (ui) {
+  ui.debug("AAA:QQQQ", ui.mget(_a.area))
+  const ico = `raw-badge-${ui.mget(_a.area)}`
+  return Skeletons.Box.X({
+    className: `${ui.fig.family}__logo`,
     kids: [
       Skeletons.Button.Svg({
-        ico: "logo",
-        className: `${_ui_.fig.family}__icon logo`,
-        uiHandler: _ui_,
+        ico,
+        className: `${ui.fig.family}__icon logo`,
+        uiHandler: ui,
       }),
     ],
   });
-  return a;
 };
-
-module.exports = __skl_folder_topbar_logo;

@@ -32,12 +32,10 @@
         white-space: nowrap;
         width: 190px;
         box-shadow: var(--shadow-main);
-        @include drumee.typo(
-          $size: 12px,
+        @include drumee.typo($size: 12px,
           $line: 14px,
           $weight: 400,
-          $color: var(--default-text-reverse)
-        );
+          $color: var(--default-text-reverse));
       }
 
       &:before {
@@ -76,7 +74,7 @@
       width: 55px;
       height: 48px;
       aspect-ratio: 55/48;
-      margin-bottom: 10px;
+      margin-top: 8px;
     }
   }
 
@@ -87,6 +85,7 @@
   &__subtitle-wrapper {
     gap: 10px;
     color: var(--neutral-300);
+
     &.files {
       padding-right: 10px;
       border-right: 1px solid var(--neutral-300);
@@ -115,11 +114,13 @@
     border-radius: 100%;
     background: var(--neutral-200);
     cursor: pointer;
+
     &.icon {
       margin: 0;
       width: 30px;
       height: 30px;
       color: var(--neutral-900);
+
       &:hover {
         color: var(--primary-500);
       }
@@ -200,12 +201,10 @@
       border-radius: 50%;
       align-items: center;
       justify-content: center;
-      @include drumee.typo(
-        $size: 8px,
+      @include drumee.typo($size: 8px,
         $line: 12px,
         $weight: 400,
-        $color: #2f2f2f
-      );
+        $color: #2f2f2f);
       right: -6px;
       top: 8px;
 

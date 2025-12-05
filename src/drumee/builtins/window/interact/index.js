@@ -30,6 +30,7 @@ class __window_interact extends windowCore {
    * @param {*} opt 
    */
   initialize(opt = {}) {
+    this.debug("AAA:::INTERACT", this.size)
     super.initialize(opt);
 
     this._filenames = [];
@@ -40,8 +41,8 @@ class __window_interact extends windowCore {
     this.raise = this.onChildBubble;
     let width = _K.docViewer.width;
     let height = _K.docViewer.height;
-    let minWidth = 200;
-    let minHeight = 200;
+    let minWidth = 700;
+    let minHeight = 400;
     if (this.size) {
       if (this.size.width) width = this.size.width;
       if (this.size.height) height = this.size.height;

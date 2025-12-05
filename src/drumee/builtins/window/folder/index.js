@@ -1,4 +1,5 @@
 const mfsInteract = require('../interact');
+require('./skin');
 
 class __window_folder extends mfsInteract {
   constructor(...args) {
@@ -12,8 +13,8 @@ class __window_folder extends mfsInteract {
    * @param {*} opt 
    */
   initialize(opt) {
-    require('./skin');
     this.isFolder = 1;
+    this.debug("AAA:::FOLDER", this.size)
     super.initialize(opt);
     this._path = [];
 
@@ -28,7 +29,7 @@ class __window_folder extends mfsInteract {
         filetype: _a.hub
       });
     }
-
+    this.debug("AAA:::FOLDER 2", this.size)
     this.style.set({
       width: this.size.width,
       height: this.size.height

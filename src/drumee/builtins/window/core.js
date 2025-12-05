@@ -41,6 +41,7 @@ class __window_core extends __utils {
    * @param {*} opt 
    */
   initialize(opt) {
+    this.debug("AAA:::CORE", this.size)
     super.initialize(opt);
     this._uid = Visitor.id;
     this._currentApi = {

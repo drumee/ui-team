@@ -1596,7 +1596,6 @@ class __media_core extends DrumeeMFS {
       ownpath = ownpath.replace(/\/+/g, '/');
       ownpath = ownpath.replace(/\/+$/g, '');
       args.ownpath = ownpath;
-      this.debug("AAA:1596", this, args, f.fullPath)
 
       queue.add(args);
       this.type = null;
@@ -1612,14 +1611,6 @@ class __media_core extends DrumeeMFS {
 
     this._uploadingInplace = true;
     await this._uploadFiles(files)
-    // for (let f of Array.from(files)) {
-    //   this.debug("AAA:1596", this, f.fullPath)
-    //   let ownpath = this.mget(_a.ownpath) || '/';
-    //   ownpath = `${ownpath}/${f.name}`;
-    //   ownpath = ownpath.replace(/\+/g, '/');
-    //   ownpath = ownpath.replace(/\/+$/g, '');
-    //   this.uploadFile(f, ownpath);
-    // }
 
     if (_.isEmpty(folders)) {
       return;
@@ -1764,7 +1755,6 @@ class __media_core extends DrumeeMFS {
    */
   mkdir(fname) {
     const value = fname || LOCALE.FOLDER;
-    this.debug("AAA:1761", fname, this.model.toJSON())
     if (/^(.|.+\/.+| )$/.test(value)) {
       Wm.alert("Invalid name");
       return null;
@@ -1946,7 +1936,6 @@ class __media_core extends DrumeeMFS {
     }
     let name = file.fullPath.replace(/\/+/g, "");
     let existing = this._nameExists(name)
-    this.debug("AAAA:1945", existing, file)
     if (!existing) {
       this._uploadFiles(file);
       return;
@@ -1980,13 +1969,6 @@ class __media_core extends DrumeeMFS {
           this._uploadFiles(file, 0);
           break;
       }
-      // }).catch((r) => {
-      //   let { response } = r;
-      //   if (response == _e.close) {
-      //     this.goodbye();
-      //     return;
-      //   }
-      //   this.uploadFile(file);
     })
   }
 
