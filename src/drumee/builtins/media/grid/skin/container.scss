@@ -12,43 +12,43 @@
       transition: transform 0.3s ease-in-out;
     }
 
-    .gradient-start {
-      &-personal {
-        stop-color: #DCB2FF;
-      }
+    // .gradient-start {
+    //   &-personal {
+    //     stop-color: #DCB2FF;
+    //   }
 
-      &-private {
-        stop-color: #FF90A7;
-      }
+    //   &-private {
+    //     stop-color: #FF90A7;
+    //   }
 
-      &-share,
-      &-dmz {
-        stop-color: #FFA5E6;
-      }
+    //   &-share,
+    //   &-dmz {
+    //     stop-color: #FFA5E6;
+    //   }
 
-      &-public {
-        stop-color: #89DCFF;
-      }
-    }
+    //   &-public {
+    //     stop-color: #89DCFF;
+    //   }
+    // }
 
-    .gradient-end {
-      &-personal {
-        stop-color: #B251FB;
-      }
+    // .gradient-end {
+    //   &-personal {
+    //     stop-color: #B251FB;
+    //   }
 
-      &-private {
-        stop-color: #FF5779;
-      }
+    //   &-private {
+    //     stop-color: #FF5779;
+    //   }
 
-      &-share,
-      &-dmz {
-        stop-color: #FF65D5;
-      }
+    //   &-share,
+    //   &-dmz {
+    //     stop-color: #FF65D5;
+    //   }
 
-      &-public {
-        stop-color: #2AAAFF;
-      }
-    }
+    //   &-public {
+    //     stop-color: #2AAAFF;
+    //   }
+    // }
 
     .badge {
       position: absolute;

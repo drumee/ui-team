@@ -288,7 +288,7 @@ class __menu_topic extends LetcBox {
     const {
       items
     } = this._branches;
-    this.debug("_onClosed", this.el, this.isOpen, this.mget(_a.direction));
+    this.debug("_onClosed", this.__items.$el.height(), this._size.height, this.$el, this.isOpen, this.mget(_a.direction));
     TweenLite.set(items.$el, { y: 0 });
     items.el.dataset.state = _a.closed;
     this.el.dataset.state = 0;
@@ -371,7 +371,7 @@ class __menu_topic extends LetcBox {
           ...opt
         });
         TweenLite.to(this.__itemsWrapper.$el, {
-          y: -this._size.height,
+          y: -(this._size.height - this.__trigger.$el.height()),
         });
         break;
       case _a.left:

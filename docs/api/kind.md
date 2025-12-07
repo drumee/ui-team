@@ -52,7 +52,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | media_simple | builtins/media/simple | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/simple/index.js |
 | media_uploader | builtins/media/uploader | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/uploader/index.js |
 | media | builtins/media/grid | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/grid/index.js |
-| public_link | builtins/widget/invitation/public-link | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/public-link/index.js |
 | schedule_viewer | builtins/player/schedule | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/schedule/index.js |
 | sound_analyzer | builtins/widget/sound-analyzer | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/sound-analyzer/index.js |
 | vector_viewer | builtins/player/vector | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/vector/index.js |
@@ -73,6 +72,8 @@ See https://drumee.com/-/#/sandbox for examples.
 | contact_invitation_form | widget/contact-invitation-form | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/contact-invitation-form/index.js |
 | disk_usage | widget/disk-usage | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/disk-usage/index.js |
 | widget_chat | widget/chat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat/index.js |
+| settings_folder | widget/settings/folder | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/folder/index.js |
+| settings_pricing | widget/settings/pricing | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/pricing/index.js |
 | widget_chat_item | widget/chat-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat-item/index.js |
 | account_avatar | window/account/profile/avatar | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/profile/avatar/index.js |
 | account_country | window/account/widget/country | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/widget/country/index.js |

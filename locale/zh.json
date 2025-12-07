@@ -944,7 +944,7 @@
   "ALWAYS": "总是",
   "UPLOAD_TIME": "上传时间",
   "WEIGHT": "重量",
-  "LAST_CHANGE": "最后一次变更",
+  "LAST_CHANGE": "最后更改于 {0}",
   "LAST_ACCESS": "上次访问",
   "ADD_CONTACTS": "添加联系人",
   "ACK_DELETE_PUBLIC_LINK": "公共链接已被删除",
@@ -1930,5 +1930,6 @@
   "MY_PERSONAL_FOLDER": "我的个人文件夹",
   "MY_PRIVATE_FOLDER": "我的私人文件夹",
   "MY_EXTERNAL_FOLDER": "我的外部文件夹",
-  "MY_PUBLIC_FOLDER": "我的公共文件夹"
+  "MY_PUBLIC_FOLDER": "我的公共文件夹",
+  "FILES_NOT_FOUND": "文件未找到"
 }

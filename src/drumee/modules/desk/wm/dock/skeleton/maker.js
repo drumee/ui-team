@@ -2,26 +2,29 @@ const button = require('./button');
 
 function menu_items(ui) {
   const pfx = `${ui.fig.family}__folder`;
-
+  let website = '';
+  if (Visitor.profile().isDevel) {
+    website = Skeletons.Box.G({
+      className: `${pfx}-item public`,
+      helperName: 'folder',
+      service: "add-folder",
+      area: _a.public,
+      filename: LOCALE.MY_PUBLIC_FOLDER,
+      kidsOpt: {
+        active: 0
+      },
+      kids: [
+        { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.public, mode: _a.vignette },
+        Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PUBLIC_FOLDER })
+      ]
+    })
+  }
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${pfx}-items`,
     flow: _a.vertical,
     kids: [
-      Skeletons.Box.G({
-        className: `${pfx}-item public`,
-        helperName: 'folder',
-        service: "add-folder",
-        area: _a.public,
-        filename: LOCALE.MY_PUBLIC_FOLDER,
-        kidsOpt: {
-          active: 0
-        },
-        kids: [
-          { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.public, mode: _a.vignette },
-          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PUBLIC_FOLDER })
-        ]
-      }),
+      website,
       Skeletons.Box.G({
         className: `${pfx}-item share`,
         service: 'add-sharebox',

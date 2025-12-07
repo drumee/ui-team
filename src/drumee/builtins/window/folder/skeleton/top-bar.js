@@ -50,7 +50,7 @@ const __skl_folder_topbar = function (ui) {
     className: `${ui.fig.family}__buttons-wrapper`,
     kids: [
       button(ui, {
-        label: "Upload new File",
+        label: LOCALE.UPLOAD,
         className: `${ui.fig.family}__upload-button`,
         service: "",
         priority: "primary",

@@ -1,6 +1,6 @@
 
-module.exports = function (ui) {
-  const ico = `raw-badge-${ui.mget(_a.area)}`
+export function folder_logo (ui, opt={}) {
+  const ico = `raw-badge-${opt.area || ui.mget(_a.area)}`
   return Skeletons.Box.X({
     className: `${ui.fig.family}__logo`,
     kids: [

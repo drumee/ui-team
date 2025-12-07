@@ -30,7 +30,6 @@ class __window_interact extends windowCore {
    * @param {*} opt 
    */
   initialize(opt = {}) {
-    this.debug("AAA:::INTERACT", this.size)
     super.initialize(opt);
 
     this._filenames = [];
@@ -83,8 +82,7 @@ class __window_interact extends windowCore {
    */
   onDomRefresh() {
     this.initBounds();
-    let name = this.mget(_a.filename) || this.mget(_a.name);
-    this.el.dataset.name = name;
+    this.el.dataset.name = this.mget(_a.filename) || this.mget(_a.name);
   }
 
   /**

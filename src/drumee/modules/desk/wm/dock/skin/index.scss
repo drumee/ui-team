@@ -200,7 +200,8 @@
       padding: var(--spacer-5);
       gap: var(--spacer-1);
       background-color: var(--white);
-      bottom: -116px;
+      z-index:-1 !important;
+      bottom: 0;
     }
 
   }

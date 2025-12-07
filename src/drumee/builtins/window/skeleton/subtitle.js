@@ -1,17 +1,16 @@
-const __skl_folder_topbar_subtitle = function (_ui_) {
-  const a = Skeletons.Box.X({
-    className: `${_ui_.fig.family}__subtitle-wrapper`,
+module.exports = function (ui) {
+  return Skeletons.Box.X({
+    className: `${ui.fig.family}__subtitle-wrapper`,
+    sys_pn: "folder-summary",
+    partHandler: [ui],
     kids: [
       Skeletons.Note({
-        className: `${_ui_.fig.family}__subtitle-wrapper files`,
-        content: "8 files ",
+        className: `${ui.fig.family}__subtitle-wrapper files`,
+        sys_pn: "file-count",
       }),
       Skeletons.Note({
-        content: "Last updated: 4:59 pm. Jun 30, 2025",
+        sys_pn: "last-update",
       }),
     ],
   });
-  return a;
 };
-
-module.exports = __skl_folder_topbar_subtitle;

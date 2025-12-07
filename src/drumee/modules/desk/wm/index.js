@@ -32,10 +32,11 @@ class __window_manager extends push {
       _a.newFolder,
       _a.paste,
       _a.upload,
-      _a.fullscreen,
-      ...exportMenu,
+      // _a.fullscreen,
+      // ...exportMenu,
       _a.separator,
       _a.preferences,
+      "pricing"
     ];
     this._handelKbdEvents = this._handelKbdEvents.bind(this);
     RADIO_KBD.on(_e.keyup, this._handelKbdEvents)
@@ -45,12 +46,12 @@ class __window_manager extends push {
    *
    */
   updateContextMenuItems() {
-    if (document.fullscreenElement != null) {
-      this.contextmenuItems.splice(3, 1, _a.fullscreen);
-    } else {
-      this.contextmenuItems.splice(3, 1, _a.exitFullScreen);
-    }
-    return;
+    // if (document.fullscreenElement != null) {
+    //   this.contextmenuItems.splice(3, 1, _a.fullscreen);
+    // } else {
+    //   this.contextmenuItems.splice(3, 1, _a.exitFullScreen);
+    // }
+    // return;
   }
 
   /**
@@ -552,7 +553,6 @@ class __window_manager extends push {
    * @param {*} cmd
    */
   confirmRemoveHub(media, args) {
-    this.debug("AAA:554", this, media, args)
     this.ensurePart('wrapper-modal').then(async (p) => {
       await Kind.waitFor('window_confirm')
       p.feed({
@@ -700,6 +700,9 @@ class __window_manager extends push {
           { explicit: 1, singleton: 1 }
         );
 
+      case "pricing":
+        return this.__wrapperModal.append({ kind: "settings_pricing" })
+          ;
       case _a.preferences:
         return this.launch(
           { kind: "window_account", start: service },
@@ -771,7 +774,7 @@ class __window_manager extends push {
         break;
 
       case "hub-settings":
-        this.openHubManager(cmd);
+        this.openSettings(cmd);
         break;
 
       case "copy-media":
@@ -1030,6 +1033,43 @@ class __window_manager extends push {
     this.windowsLayer.append(item);
   }
 
+  /**
+ *
+ * @param {*} media
+ * @param {*} start
+ */
+  openSettings(media) {
+    let item = media.model.toJSON();
+    this.debug("AAA:13000", item)
+    switch (media.mget(_a.area)) {
+      case _a.personal:
+        item.kind = "settings_folder";
+        break;
+      case _a.public:
+        item.kind = "hub_settings";
+        break;
+      case _a.private:
+        item.kind = "hub_settings";
+        break;
+      case _a.share:
+      case "dmz":
+        item.kind = "widget_sharebox_setting";
+        break;
+      case "electron":
+        item.kind = "electron_update";
+        break;
+      case "pricing":
+        item.kind = "settings_pricing";
+        break;
+      default:
+        this.alert(LOCALE.FILE_TYPE_NOT_SUPPORTED);
+      // this._openShareBox(item, c, moving);
+    }
+    item.uiHandler = [media];
+    item.source = media;
+    item.media = media;
+    this.__wrapperModal.append(item);
+  }
   /**
    *
    * @param {*} cmd

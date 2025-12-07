@@ -2,8 +2,6 @@ require("welcome/skin");
 require("builtins/window/confirm/skin");
 
 
-
-
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -523,11 +521,10 @@ class desk_module extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
-    this.debug(`SERVICE=${service}))`, args);
+    this.debug(`SERVICE=${service})`, args);
     if (pointerDragged || !window.Wm) {
       return;
     }
-    this.debug("AAA:543", service, cmd, {});
     switch (service) {
       case _e.lock:
         return Wm.lock();
@@ -546,7 +543,6 @@ class desk_module extends LetcBox {
 
       case "toggle-activity-panel":
         return this.ensurePart("activity-panel").then((p) => {
-          this.debug("AAA549", p);
           p.togglePannel();
         });
 

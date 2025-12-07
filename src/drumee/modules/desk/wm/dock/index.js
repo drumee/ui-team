@@ -325,19 +325,17 @@ class __desk_dock extends LetcBox {
       case 'add-website':
       case 'add-team':
       case 'add-sharebox':
-      // return this._createHub(cmd.mget(_a.respawn));
-
+        const aw = Wm.getActiveWindow();
+        if (aw.isHub) {
+          aw.warning(LOCALE.NOT_POSSIBLE_NESTING_HUBS);
+          return;
+        }
       case 'add-folder':
         return Wm.addFolder({ position: 0, area: cmd.mget(_a.area), filename: cmd.mget(_a.filename) });
 
       case 'add-media':
         return this.handleMediaUpload();
-      // case 'add-note':
-      //   let c = Wm.windowsLayer.append({
-      //     kind: 'editor_note',
-      //     maiden: 1
-      //   });
-      //   return c;
+
 
       case 'add-note':
         let e = Wm.windowsLayer.append({

@@ -1,0 +1,74 @@
+@use "sass:meta";
+@use "mixins/drumee";
+
+
+.settings-topbar {
+
+  &__container {
+    width: 100%;
+    height: 78px;
+    border-radius: var(--default-border-radius-top);
+    justify-content: space-between;
+    align-content: center;
+    flex-wrap: wrap;
+  }
+
+  &__content {
+    width: 100%;
+    padding-right: var(--spacer-7);
+    padding-left: var(--spacer-7);
+    gap: var(--spacer-6);
+    justify-content: space-between;
+    align-content: center;
+    flex-wrap: wrap;
+  }
+
+  &__action {
+    z-index: 1000;
+
+    &--container {
+      position: absolute;
+      width: 42px;
+      height: 44px;
+
+      &[data-state="1"] {
+        margin-left: 35px;
+      }
+    }
+
+  }
+
+  &__title {
+    line-height: 30px;
+  }
+
+  &__icon-close {
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    padding: 8px;
+    color: var(--neutral-600);
+    background-color: var(--neutral-300);
+    border-radius: 50%;
+
+    &:hover {
+      color: var(--primary-500);
+    }
+  }
+
+
+  &__buttons {
+    justify-content: flex-end;
+    margin: 10px 0 10px -10px;
+  }
+
+  &__button-main {
+    &.primary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 40px;
+    }
+  }
+
+}

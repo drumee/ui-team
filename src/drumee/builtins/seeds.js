@@ -31,7 +31,7 @@ module.exports = {
   media_pseudo: 'builtins/media/pseudo',
   media_uploader: 'builtins/media/uploader',
   media: 'builtins/media/grid',
-  public_link: 'builtins/widget/invitation/public-link',
+  // public_link: 'builtins/widget/invitation/public-link',
   schedule_viewer: 'builtins/player/schedule',
   sound_analyzer: 'builtins/widget/sound-analyzer',
   // thumbnail: 'builtins/media/thumbnail',

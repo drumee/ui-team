@@ -308,11 +308,9 @@ class __activity_panel extends LetcBox {
   */
   refreshActivity(timeout = 2000) {
     let opt = { hub_id: Visitor.id }
-    this.postService(SERVICE.activity.get_unread_count, opt)
-      .then((data = {}) => {
-        this.debug("AAA:321", data)
-        this.triggerHandlers(data)
-      })
+    this.postService(SERVICE.activity.get_unread_count, opt).then((data = {}) => {
+      this.triggerHandlers(data)
+    })
     if (!Visitor.id || !Visitor.isOnline()) {
       Visitor.once('online', () => {
         this.refreshActivity();

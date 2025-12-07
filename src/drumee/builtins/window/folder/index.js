@@ -14,7 +14,6 @@ class __window_folder extends mfsInteract {
    */
   initialize(opt) {
     this.isFolder = 1;
-    this.debug("AAA:::FOLDER", this.size)
     super.initialize(opt);
     this._path = [];
 
@@ -23,13 +22,11 @@ class __window_folder extends mfsInteract {
       value: _a.normal
     });
 
-
     if (this.model.get(_a.hub_id) !== Visitor.id) {
       this.model.set({
         filetype: _a.hub
       });
     }
-    this.debug("AAA:::FOLDER 2", this.size)
     this.style.set({
       width: this.size.width,
       height: this.size.height

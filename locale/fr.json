@@ -944,7 +944,7 @@
   "ALWAYS": "Toujours",
   "UPLOAD_TIME": "Date de dépôt",
   "WEIGHT": "Poids",
-  "LAST_CHANGE": "Dernière modification",
+  "LAST_CHANGE": "Dernière modificationDernière modification",
   "LAST_ACCESS": "Dernier accès",
   "ADD_CONTACTS": "Ajouter des contacts",
   "ACK_DELETE_PUBLIC_LINK": "Le lien public a été supprimé",
@@ -1930,5 +1930,6 @@
   "MY_PERSONAL_FOLDER": "Mon dossier personnel",
   "MY_PRIVATE_FOLDER": "Mon dossier privé",
   "MY_EXTERNAL_FOLDER": "Mon dossier externe",
-  "MY_PUBLIC_FOLDER": "Mon dossier public"
+  "MY_PUBLIC_FOLDER": "Mon dossier public",
+  "FILES_NOT_FOUND": "Fichiers introuvables"
 }

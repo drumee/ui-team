@@ -39,6 +39,12 @@ const __dock_widget_launchers = function (ui, ismobile) {
       service: "add-note",
       helperName: 'note'
     }, LOCALE.NOTE),
+    // button(ui, {
+    //   ico: "logo",
+    //   className: `${pfx} note big`,
+    //   service: "my-plan",
+    //   helperName: 'note'
+    // }, LOCALE.SUBSCRIPTION),
     button(ui, {
       ico: 'dock-search',
       className: `${pfx} schedule launcher-icon ${ui.fig.family}__icon addressbook`,

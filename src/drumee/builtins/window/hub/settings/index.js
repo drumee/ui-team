@@ -27,10 +27,10 @@ class __hub_settings extends LetcBox {
       hours: 0
     };
     const handler = this.getHandlers(_a.ui)[0];
-    this.owner = handler.owner;
-    this.visitor = handler.visitor;
+    this.owner = new Backbone.Model()
+    this.visitor = new Backbone.Model();
     this.prefix = this.mget(_a.figPrefix) || "";
-    this.hub = handler;
+    // this.hub = handler;
     for (let n of [_a.name, _a.home_id, _a.hub_id, _a.privilege]) {
       this[n] = handler.mget(n);
     }
@@ -59,14 +59,16 @@ class __hub_settings extends LetcBox {
    * 
    */
   onDomRefresh() {
+    this.debug("AAA:62", this)
     const { hub_id } = this.actualNode();
     this.hub_id = hub_id;
     this.fetchService({
       service: SERVICE.hub.get_settings,
       hub_id
     }).then((data) => {
+      this.debug("AAA:69", data)
       this.mset(data);
-      this.owner.set(data.owner);
+      // this.owner.set(data.owner);
       this.visitor.set(data.visitor);
       this.reload();
     })

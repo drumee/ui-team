@@ -41,7 +41,6 @@ class __window_core extends __utils {
    * @param {*} opt 
    */
   initialize(opt) {
-    this.debug("AAA:::CORE", this.size)
     super.initialize(opt);
     this._uid = Visitor.id;
     this._currentApi = {
@@ -439,6 +438,22 @@ class __window_core extends __utils {
 
   /**
    * 
+   */
+  updateSummary(box) {
+    this.debug("AAA:518", this)
+    this.fetchService(SERVICE.media.manifest, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((data) => {
+      this.debug("AAA:520", data[0][0].mtime, data)
+      let mtime = Dayjs.unix(data[0][0].mtime).format(Visitor.timeformat())
+      this.getPart("file-count").set({content:LOCALE.X_FILES.format(data[3].amount)})
+      this.getPart("last-update").set({content:LOCALE.LAST_CHANGE.format(mtime)})
+    }).catch(()=>{
+      this.getPart("last-update").set({content:LOCALE.FILES_NOT_FOUND})
+    })
+
+  }
+
+  /**
+   * 
    * @param {*} child 
    * @param {*} pn 
    * @param {*} section 
@@ -497,24 +512,27 @@ class __window_core extends __utils {
         this.actionContainer = child;
         break;
 
-      case "breadcrumbs":
-        this.breadcrumbs = child;
-        break;
+      // case "breadcrumbs":
+      //   this.breadcrumbs = child;
+      //   break;
 
-      case "breadcrumbs-roll":
-        this.breadcrumbsRoll = child;
-        child.collection.on(_e.remove, () => {
-          if (child.collection.length === 0) {
-            this.__breadcrumbsContainer.setState(0);
-          }
+      // case "breadcrumbs-roll":
+      //   this.breadcrumbsRoll = child;
+      //   child.collection.on(_e.remove, () => {
+      //     if (child.collection.length === 0) {
+      //       this.__breadcrumbsContainer.setState(0);
+      //     }
 
-          if (child.collection.length) {
-            return this.__breadcrumbsContainer.setState(1);
-          }
-        });
-        this.trigger("breadcrumbs-roll-ready");
-        break;
+      //     if (child.collection.length) {
+      //       return this.__breadcrumbsContainer.setState(1);
+      //     }
+      //   });
+      //   this.trigger("breadcrumbs-roll-ready");
+      // break;
 
+      case "folder-summary":
+        this.updateSummary(child)
+        break
       case "info-wrapper":
         this._infoWrapper = child;
         break;

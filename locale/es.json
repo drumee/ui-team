@@ -105,7 +105,7 @@
   "EMAIL": "Dirección de correo electrónico",
   "PASSKEY": "Llave maestra",
   "UPLOAD_FAILED": "Los siguientes archivos no se pudieron enviar debido a errores encontrados.",
-  "LAST_CHANGE": "Última modificación",
+  "LAST_CHANGE": "Último cambio a las {0}",
   "FILESIZE": "Tamaño del archivo",
   "FILENAME": "Nombre del archivo",
   "CREATED": "Creado",
@@ -169,5 +169,7 @@
   "MY_PERSONAL_FOLDER": "Mi carpeta personal",
   "MY_PRIVATE_FOLDER": "Mi carpeta privada",
   "MY_EXTERNAL_FOLDER": "Mi carpeta externa",
-  "MY_PUBLIC_FOLDER": "Mi carpeta pública"
+  "MY_PUBLIC_FOLDER": "Mi carpeta pública",
+  "X_FILES": "{0} archivo(s)",
+  "FILES_NOT_FOUND": "Archivos no encontrados"
 }
