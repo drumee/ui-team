@@ -6,13 +6,13 @@ const { folder_logo } = require("../../../../skeleton/toolkit/logo");
  * @param {*} opt 
  */
 function item(ui, label, widget) {
-  return Skeletons.Box.X({
+  return Skeletons.Box.G({
     className: `${ui.fig.family}__item ${ui.fig.group}__item`,
     uiHandler: ui,
     kids: [
       Skeletons.Note({
+        className: `${ui.fig.family}__item-label ${ui.fig.group}__item-label`,
         content: label,
-        type: _a.toggle,
       }),
       widget,
     ],
@@ -23,34 +23,50 @@ function item(ui, label, widget) {
  * 
  * @param {*} ui 
  * @param {*} opt 
+ */
+function text(ui, label) {
+  return Skeletons.Note({
+    className: `${ui.fig.family}__item-text ${ui.fig.group}__item-text`,
+    content: label,
+  })
+}
+
+/**
+ * 
+ * @param {*} ui 
+ * @param {*} opt 
  * @returns 
  */
 function settings_body(ui, opt) {
-  const fig = `${ui.fig.family}-content`;
-
+  const fig = `${ui.fig.family}`;
   return Skeletons.Box.Y({
     className: `${fig}__container`,
     debug: __filename,
     kids: [
       Skeletons.Box.Y({
-        className: `${fig}__body-content`,
+        className: `${fig}__content`,
         kids: [
           Skeletons.Box.X({
-            className: `${ui.fig.group}__vignette`,
+            className: `${ui.fig.group}__vignette ${fig}__vignette`,
             kids: [{
               kind: 'media_grid',
-              className: `${ui.fig.group}__vignette-media`,
+              className: `${ui.fig.group}__vignette-media ${fig}__vignette-media`,
               filetype: ui.mget(_a.filetype),
               area: ui.mget(_a.area),
               mode: _a.vignette
             }]
           }),
-          item(ui, LOCALE.OWNER),
-          item(ui, LOCALE.TYPE),
-          item(ui, LOCALE.SIZE),
-          item(ui, LOCALE.MERMBERS),
-          item(ui, LOCALE.CREATED),
-          item(ui, LOCALE.LAST_CHANGE),
+          Skeletons.Box.Y({
+            className: `${ui.fig.group}__items ${fig}__items`,
+            kids: [
+              item(ui, LOCALE.OWNER, text(ui,"0")),
+              item(ui, LOCALE.TYPE, text(ui, LOCALE[`AREA_${ui.mget(_a.area).toUpperCase()}_LABEL`])),
+              item(ui, LOCALE.SIZE, text(ui,"0")),
+              item(ui, LOCALE.MEMBERS, text(ui,"0")),
+              item(ui, LOCALE.CREATED, text(ui,"0")),
+              item(ui, LOCALE.LAST_CHANGE, text(ui,"0")),
+            ]
+          })
         ]
       }),
     ],

@@ -171,5 +171,11 @@
   "MY_EXTERNAL_FOLDER": "Mi carpeta externa",
   "MY_PUBLIC_FOLDER": "Mi carpeta pública",
   "X_FILES": "{0} archivo(s)",
-  "FILES_NOT_FOUND": "Archivos no encontrados"
+  "FILES_NOT_FOUND": "Archivos no encontrados",
+  "FOLDER_INFO": "Información de la carpeta",
+  "MEMBERS": "Miembros",
+  "AREA_SHARE_LABEL": "Público Cualquiera",
+  "AREA_PERSONAL_LABEL": "Personal",
+  "AREA_TEAM_LABEL": "Equipo",
+  "AREA_PUBLIC_LABEL": "Sitio web"
 }

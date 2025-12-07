@@ -29,31 +29,4 @@
     overflow: hidden;
   }
 
-  &__vignette {
-    width: 100%;
-    height: 106px;
-    justify-content: center;
-    align-content: center;
-    flex-wrap: wrap;
-
-    &-media {
-      width: 132px;
-    }
-
-    .media-grid__container {
-      &[data-hover="on"] {
-        .folder-shape {
-          transform: none;
-        }
-      }
-    }
-  }
-
-  &__item {
-    height: 48px;
-    &-label{
-      
-    }
-  }
-
 }

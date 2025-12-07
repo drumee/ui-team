@@ -434,7 +434,6 @@
   "MEDIA_LIB": "Médiathèque",
   "MEDIA_LIBRARY": "Médiathèque",
   "MEGA_BYTE": "Mo",
-  "MEMBERS": "Membres",
   "MENU": "Menu",
   "MESSAGE": "Message",
   "MIDDLE": "Milieu",
@@ -1931,5 +1930,11 @@
   "MY_PRIVATE_FOLDER": "Mon dossier privé",
   "MY_EXTERNAL_FOLDER": "Mon dossier externe",
   "MY_PUBLIC_FOLDER": "Mon dossier public",
-  "FILES_NOT_FOUND": "Fichiers introuvables"
+  "FILES_NOT_FOUND": "Fichiers introuvables",
+  "FOLDER_INFO": "Informations sur le dossier",
+  "MEMBERS": "Membres",
+  "AREA_SHARE_LABEL": "Public Tout le monde",
+  "AREA_PERSONAL_LABEL": "Personnel",
+  "AREA_TEAM_LABEL": "Équipe",
+  "AREA_PUBLIC_LABEL": "Site web"
 }

@@ -434,7 +434,6 @@
   "MEDIA_LIB": "Media library",
   "MEDIA_LIBRARY": "Media library",
   "MEGA_BYTE": "Mb",
-  "MEMBERS": "Members",
   "MENU": "Menu",
   "MESSAGE": "Message",
   "MIDDLE": "Middle",
@@ -1931,5 +1930,11 @@
   "MY_PRIVATE_FOLDER": "My private folder",
   "MY_EXTERNAL_FOLDER": "My external folder",
   "MY_PUBLIC_FOLDER": "My public folder",
-  "FILES_NOT_FOUND": "Files not found"
+  "FILES_NOT_FOUND": "Files not found",
+  "FOLDER_INFO": "Folder info",
+  "MEMBERS": "Members",
+  "AREA_SHARE_LABEL": "Public Anyone",
+  "AREA_PERSONAL_LABEL": "Personal",
+  "AREA_TEAM_LABEL": "Team",
+  "AREA_PUBLIC_LABEL": "Website"
 }

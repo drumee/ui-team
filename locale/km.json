@@ -429,7 +429,6 @@
   "MEDIA_LIB": "បណ្ណាល័យប្រព័ន្ធផ្សព្វផ្សាយ",
   "MEDIA_LIBRARY": "បណ្ណាល័យប្រព័ន្ធផ្សព្វផ្សាយ",
   "MEGA_BYTE": "មេកាបៃ",
-  "MEMBERS": "សមាជិក",
   "MENU": "ម៉ឺនុយ",
   "MESSAGE": "សារ",
   "MIDDLE": "កណ្តាល",
@@ -1931,5 +1930,11 @@
   "MY_PRIVATE_FOLDER": "ថតឯកសារឯកជនរបស់ខ្ញុំ",
   "MY_EXTERNAL_FOLDER": "ថតឯកសារខាងក្រៅរបស់ខ្ញុំ",
   "MY_PUBLIC_FOLDER": "ថតឯកសារសាធារណៈរបស់ខ្ញុំ",
-  "FILES_NOT_FOUND": "រកមិនឃើញឯកសារទេ"
+  "FILES_NOT_FOUND": "រកមិនឃើញឯកសារទេ",
+  "FOLDER_INFO": "ព័ត៌មានថតឯកសារ",
+  "MEMBERS": "សមាជិក",
+  "AREA_SHARE_LABEL": "សាធារណៈ អ្នកណាក៏បាន",
+  "AREA_PERSONAL_LABEL": "ផ្ទាល់ខ្លួន",
+  "AREA_TEAM_LABEL": "ក្រុម",
+  "AREA_PUBLIC_LABEL": "គេហទំព័រ"
 }

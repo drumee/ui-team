@@ -17,8 +17,8 @@
 
     &[data-device="mobile"] {
       left: 0;
-      width: 100%;
-      height: calc(100vh - 72px);
+      width: 100vw;
+      height: 100vh;
     }
   }
 
@@ -38,4 +38,6 @@
     background-color: var(--white);
     overflow: hidden;
   }
+
+
 }

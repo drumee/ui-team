@@ -1,4 +1,4 @@
-export default function (ui) {
+export default function (ui, label) {
   const figFamily = `${ui.fig.family}-topbar`;
   const figGroup = `${ui.fig.group}-topbar`;
 
@@ -15,7 +15,7 @@ export default function (ui) {
       Skeletons.Note({
         className: `${figFamily}__title ${figGroup}__title`,
         sys_pn: "window-name",
-        content: LOCALE.CUSTOMIZE_BACKGROUND || "Customize Background",
+        content: label || "",
         partHandler: ui,
         uiHandler: ui,
       }),

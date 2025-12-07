@@ -434,7 +434,6 @@
   "MEDIA_LIB": "Медиа библиотека",
   "MEDIA_LIBRARY": "Медиа библиотека",
   "MEGA_BYTE": "Мб",
-  "MEMBERS": "Участники",
   "MENU": "Меню",
   "MESSAGE": "Сообщение",
   "MIDDLE": "Середина",
@@ -1931,5 +1930,11 @@
   "MY_PRIVATE_FOLDER": "Моя личная папка",
   "MY_EXTERNAL_FOLDER": "Моя внешняя папка",
   "MY_PUBLIC_FOLDER": "Моя публичная папка",
-  "FILES_NOT_FOUND": "Файлы не найдены"
+  "FILES_NOT_FOUND": "Файлы не найдены",
+  "FOLDER_INFO": "Информация о папке",
+  "MEMBERS": "Участники",
+  "AREA_SHARE_LABEL": "Публичный Любой",
+  "AREA_PERSONAL_LABEL": "Личный",
+  "AREA_TEAM_LABEL": "Команда",
+  "AREA_PUBLIC_LABEL": "网站"
 }

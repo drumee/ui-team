@@ -434,7 +434,6 @@
   "MEDIA_LIB": "提问",
   "MEDIA_LIBRARY": "提问",
   "MEGA_BYTE": "提问",
-  "MEMBERS": "提问",
   "MENU": "提问",
   "MESSAGE": "信息",
   "MIDDLE": "提问",
@@ -1931,5 +1930,11 @@
   "MY_PRIVATE_FOLDER": "我的私人文件夹",
   "MY_EXTERNAL_FOLDER": "我的外部文件夹",
   "MY_PUBLIC_FOLDER": "我的公共文件夹",
-  "FILES_NOT_FOUND": "文件未找到"
+  "FILES_NOT_FOUND": "文件未找到",
+  "FOLDER_INFO": "文件夹信息",
+  "MEMBERS": "成员",
+  "AREA_SHARE_LABEL": "公众",
+  "AREA_PERSONAL_LABEL": "个人的",
+  "AREA_TEAM_LABEL": "Команда",
+  "AREA_PUBLIC_LABEL": "网站"
 }

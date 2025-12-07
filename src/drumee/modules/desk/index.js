@@ -629,6 +629,9 @@ class desk_module extends LetcBox {
           });
         });
 
+      case "open-chat":
+        return Wm.launch({ kind: 'window_bigchat', source: cmd }, { explicit: 1, singleton: 1 });
+
       case "set-wallpaper-color":
       case "set-wallpaper-image":
         return uiRouter.setWallpaper(args.data);

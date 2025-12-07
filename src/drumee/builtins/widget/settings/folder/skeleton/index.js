@@ -4,7 +4,7 @@ export default function (ui) {
     debug: __filename,
     className: `${ui.fig.family}__main`,
     kids: [
-      require('../../skeleton/header').default(ui),
+      require('../../skeleton/header').default(ui, LOCALE.FOLDER_INFO),
       require('./content').default(ui)
     ]
   });
