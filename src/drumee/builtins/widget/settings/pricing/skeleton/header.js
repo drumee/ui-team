@@ -1,5 +1,24 @@
 const { folder_logo } = require("../../../../skeleton/toolkit/logo");
 
+function feature(ui, text) {
+  const fig = `${ui.fig.family}`;
+
+  return Skeletons.Box.X({
+    className: `${fig}__feature`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "logo",
+        className: `${fig}__feature icon`,
+        uiHandler: ui,
+      }),
+      Skeletons.Note({
+        className: `${fig}__feature title`,
+        content: text,
+      }),
+    ],
+  });
+}
+
 function settings_header(ui) {
   const fig = `${ui.fig.family}`;
 
@@ -14,24 +33,13 @@ function settings_header(ui) {
     ],
   });
 
-  const feature = Skeletons.Box.X({
-    className: `${fig}__feature`,
-    kids: [
-      Skeletons.Button.Svg({
-        ico: "logo",
-        className: `${fig}__feature icon`,
-        uiHandler: ui,
-      }),
-      Skeletons.Note({
-        className: `${fig}__feature title`,
-        content: "Unlock Full Potential",
-      }),
-    ],
-  });
-
   const featureWrapper = Skeletons.Box.Y({
     className: `${fig}__header feature-wrapper`,
-    kids: [feature, feature, feature],
+    kids: [
+      feature(ui, "Just enough to test the ecosystem."),
+      feature(ui, "Core identity, chat, and minimal file share."),
+      feature(ui, "Encourages upgrade quickly."),
+    ],
   });
 
   return Skeletons.Box.Y({

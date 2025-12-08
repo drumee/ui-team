@@ -151,6 +151,10 @@
     gap: 12px;
   }
 
+  &__item-wrapper {
+    gap: 12px;
+  }
+
   &__item {
     justify-content: space-between;
     align-items: center;
@@ -161,6 +165,9 @@
     align-self: stretch;
     cursor: pointer;
     &.active {
+      border: 1px solid var(--primary-500);
+    }
+    &[data-state="1"] {
       border: 1px solid var(--primary-500);
     }
   }

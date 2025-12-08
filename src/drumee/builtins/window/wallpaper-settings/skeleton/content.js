@@ -12,7 +12,7 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
     partHandler: [ui],
     kids: [
       Skeletons.FileSelector({
-        accept: "image/*"
+        accept: "image/*",
       }),
       Skeletons.Box.Y({
         className: `${fig}__uploader-content`,
@@ -22,21 +22,23 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
             type: _a.toggle,
             className: `${fig}__upload-button`,
             service: "upload-image",
-            priority: "primary"
+            priority: "primary",
           }),
           Skeletons.Note({
             className: `${fig}__uploader-progress`,
             sys_pn: "uploader-progress",
-            state: 0
+            state: 0,
           }),
           Skeletons.Note({
-            content: LOCALE.MAX_FILE_SIZE_X.format(filesize(ui.mget('maxSize'))),
+            content: LOCALE.MAX_FILE_SIZE_X.format(
+              filesize(ui.mget("maxSize"))
+            ),
             className: `${fig}__uploader-text`,
             sys_pn: "file-size-text",
           }),
-        ]
-      })
-    ]
+        ],
+      }),
+    ],
   });
 
   const imagesList = Skeletons.List.Smart({
@@ -75,11 +77,10 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
   if (color) {
     for (let name of COLORS) {
       if (name == color.name) {
-        break
+        break;
       }
       i++;
     }
-
   }
   colorItems[i].state = "1";
 
@@ -103,47 +104,6 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
     ],
   });
 
-  // Color swatches - predefined colors
-  // const colorSwatches = [
-  //   { color: '#FFFFFF', value: '#FFFFFF' }, // white
-  //   { color: '#EA4D44', value: '#EA4D44' }, // red
-  //   { color: '#FF4578', value: '#FF4578' }, // pink
-  //   { color: '#C647D5', value: '#C647D5' }, // purple
-  //   { color: '#4A90E2', value: '#4A90E2' }, // blue
-  //   { color: '#18A3AC', value: '#18A3AC' }, // teal
-  //   { color: '#36E692', value: '#36E692' }, // green
-  //   { color: '#FFD700', value: '#FFD700' }, // yellow
-  //   { color: '#FA8540', value: '#FA8540' }  // orange
-  // ];
-
-  // const colorsList = Skeletons.Box.X({
-  //   className: `${fig}__colors`,
-  //   kids: [
-  //     Skeletons.Note({
-  //       content: LOCALE.COLORS || "Colors",
-  //       className: `${fig}__colors-title`,
-  //     }),
-  //     Skeletons.Box.X({
-  //       className: `${fig}__colors-swatches`,
-  //       kids: colorSwatches.map((swatch) =>
-  //         Skeletons.Element({
-  //           className: `${fig}__color-swatch`,
-  //           tagName: _K.tag.div,
-  //           dataset: {
-  //             color: swatch.value,
-  //             selected: 0
-  //           },
-  //           style: {
-  //             backgroundColor: swatch.value,
-  //           },
-  //           service: 'select-color',
-  //           uiHandler: [ui],
-  //         })
-  //       )
-  //     })
-  //   ]
-  // });
-
   const buttons = Skeletons.Box.X({
     className: `${fig}__buttons`,
     // kidsOpt: { active: 0 },
@@ -154,15 +114,15 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
         type: _a.toggle,
         className: `${fig}__button`,
         service: "cancel-set-bg",
-        priority: "secondary"
+        priority: "secondary",
       }),
       button(ui, {
         label: LOCALE.APPLY_AND_SAVE,
         type: _a.toggle,
         className: `${fig}__button`,
         service: "apply-new-bg",
-        priority: "primary"
-      })
+        priority: "primary",
+      }),
     ],
   });
 
@@ -177,11 +137,7 @@ function __skl_window_wallpaper_settings_content(ui, opt) {
     kids: [
       Skeletons.Box.Y({
         className: `${contentFig}__body-content`,
-        kids: [
-          uploader,
-          imagesList,
-          colorsList
-        ]
+        kids: [uploader, imagesList, colorsList],
       }),
       footer,
     ],
