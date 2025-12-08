@@ -777,6 +777,7 @@ class __window_core extends __utils {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.model.get(_a.service);
     if (!args.no_raise) this.raise(cmd);
+    this.debug("AAA:780", service)
     switch (service) {
       case _e.close:
         if (this.mget(_a.source)) {

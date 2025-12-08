@@ -54,7 +54,8 @@ module.exports = function (ui) {
   }
   preview.kind = 'media_grid';
   preview.mode = _a.vignette;
-
+  preview.uiHandler = Wm
+  preview.service = 'open-node'
   const ctime = preview.ctime || 0;
   const m = Dayjs.unix(ctime);
   const pfx = ui.fig.family;

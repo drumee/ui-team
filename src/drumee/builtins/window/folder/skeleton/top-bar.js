@@ -40,7 +40,7 @@ const __skl_folder_topbar = function (ui) {
       Skeletons.Button.Svg({
         ico: "setting",
         className: `${ui.fig.family}__settings icon`,
-        service: "",
+        service: _e.settings,
         uiHandler: ui,
       }),
     ],
