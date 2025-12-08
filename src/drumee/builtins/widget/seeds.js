@@ -6,6 +6,9 @@ module.exports = {
   phoneno_input_item: './phoneno-input-item/index',
   widget_chat: './chat',
   settings_folder: './settings/folder',
+  settings_hub: './settings/hub',
+  settings_members_list: './settings/members-list',
+  settings_member: './settings/member',
   settings_pricing: './settings/pricing',
   widget_chat_item: './chat-item',
 };

@@ -1072,6 +1072,8 @@ TkSuQmCC
 <path d="M4 6L8 10L12 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 
+</symbol><symbol viewBox="0 0 20 20" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet" id="--icon-carret-right">
+<path d="M8.5 15L13.5 10L8.5 5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </symbol><symbol viewBox="0 0 19 16" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet" id="--icon-chat_connect">
     
     <g stroke-width="1" fill-rule="evenodd">

@@ -151,6 +151,7 @@ class __media_core extends DrumeeMFS {
     }
 
     const fileType = this.mget(_a.filetype);
+    this.debug("AAA:154", fileType)
     switch (fileType) {
       case _a.hub:
         items = this.contextmenuItemsForHub();
@@ -186,24 +187,39 @@ class __media_core extends DrumeeMFS {
    *
    */
   contextmenuItemsForHub() {
-    let hubItems = this.contextmenuItemsForFolder();
-    if (this.canUpload() || this.canOrganize() || this.isMediaOwner()) {
-      if (Visitor.canServerImpExp()) {
-        hubItems.unshift(_a.separator);
-        hubItems.unshift(_a.import);
-        hubItems.unshift(_a.export);
-      }
-      hubItems.unshift(_a.separator);
-      hubItems.unshift(_a.upload);
-    } else {
-      if (Visitor.canServerImpExp()) {
-        hubItems.unshift(_a.separator);
-        hubItems.unshift(_a.importHidden);
-        hubItems.unshift(_a.exportHidden);
-        hubItems.unshift(_a.separator);
-      }
+    let fileItems = [];
+    if (this.canOrganize() || this.isMediaOwner()) {
+      fileItems = [_a.rename, _a.upload, _a.download, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share)
+      fileItems.push(_a.separator, _a.trash)
+    } else if (this.canDownload()) {
+      fileItems = [_a.download, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share);
+      if (this.canRemove()) fileItems.push(_a.trash);
     }
-    return hubItems;
+    // for media files in trash
+    if (this.mget(_a.status) == _a.deleted) {
+      fileItems = [, _a.separator, _a.restoreToDesk, _a.deletePermanently];
+    }
+    return fileItems;
+    // let hubItems = this.contextmenuItemsForFolder();
+    // if (this.canUpload() || this.canOrganize() || this.isMediaOwner()) {
+    //   if (Visitor.canServerImpExp()) {
+    //     hubItems.unshift(_a.separator);
+    //     hubItems.unshift(_a.import);
+    //     hubItems.unshift(_a.export);
+    //   }
+    //   hubItems.unshift(_a.separator);
+    //   hubItems.unshift(_a.upload);
+    // } else {
+    //   if (Visitor.canServerImpExp()) {
+    //     hubItems.unshift(_a.separator);
+    //     hubItems.unshift(_a.importHidden);
+    //     hubItems.unshift(_a.exportHidden);
+    //     hubItems.unshift(_a.separator);
+    //   }
+    // }
+    // return hubItems;
   }
 
   /**

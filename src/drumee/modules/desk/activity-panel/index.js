@@ -128,6 +128,7 @@ class __activity_panel extends LetcBox {
         return this.postService(SERVICE.activity.mark_all_read, { hub_id: Visitor.id }).then((data) => {
           this.__list.clear();
           this.togglePannel();
+          this.triggerHandlers({ service: "activity-update" })
         })
 
       case 'delete-entity':

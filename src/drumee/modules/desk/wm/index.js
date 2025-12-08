@@ -659,10 +659,8 @@ class __window_manager extends push {
    * @returns
    */
   onUiEvent(cmd, args = {}) {
-    let w;
-    const service =
-      args.service || cmd.service || cmd.status || cmd.mget(_a.service);
-
+    const service = args.service || cmd.service || cmd.status || cmd.mget(_a.service);
+    this.debug("AAA:633", service)
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
@@ -1046,10 +1044,8 @@ class __window_manager extends push {
         item.kind = "settings_folder";
         break;
       case _a.public:
-        item.kind = "hub_settings";
-        break;
       case _a.private:
-        item.kind = "hub_settings";
+        item.kind = "settings_hub";
         break;
       case _a.share:
       case "dmz":

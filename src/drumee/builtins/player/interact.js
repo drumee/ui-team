@@ -16,6 +16,12 @@ class __window_interact_player extends __utils {
     this._resizing = this._resizing.bind(this);
     this.constrainResize = this.constrainResize.bind(this);
   }
+  /**
+   *
+   */
+  static initClass() {
+    this.prototype.radioChannel = _.uniqueId('wm-radio-');
+  }
 
   /**
    * 
@@ -36,7 +42,9 @@ class __window_interact_player extends __utils {
       top: 0,
     };
     this._lastX = 0;
-
+    this.model.set({
+      radio: Env.get("wm-radio"),
+    });
     const width = window.innerWidth * 0.5;
     const height = window.innerHeight * 0.95;
 
@@ -634,5 +642,5 @@ class __window_interact_player extends __utils {
 
 
 }
-
+__window_interact_player.initClass() 
 module.exports = __window_interact_player;

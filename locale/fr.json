@@ -734,7 +734,6 @@
   "SET_AS_PROFILE": "Photo de profil",
   "SHAPE": "Forme",
   "SHAPES": "Formes",
-  "SHARE": "Partager",
   "SHARED_CONTACTS_LIST": "Membres de la salle virtuelle",
   "SHARE_LIST": "Liste de partage",
   "SHARE_ROOM": "Projet",
@@ -955,7 +954,6 @@
   "CHANGE_ADMIN": "Modifier les administrateurs",
   "ME": "Moi",
   "ADD_ADMINISTRATORS": "Ajouter des administrateurs",
-  "I_SHARE": "Je partage",
   "SHARED_TO_ME": "Partagé avec moi",
   "PERMISSION": "Autorisation",
   "SEND_PUBLIC_LINK": "Envoyer un lien public",
@@ -1936,5 +1934,7 @@
   "AREA_SHARE_LABEL": "Public Tout le monde",
   "AREA_PERSONAL_LABEL": "Personnel",
   "AREA_TEAM_LABEL": "Équipe",
-  "AREA_PUBLIC_LABEL": "Site web"
+  "AREA_PUBLIC_LABEL": "Site web",
+  "MEMBER_ACCESS": "Accès membres",
+  "SHARE": "Partager"
 }

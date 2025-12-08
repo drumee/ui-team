@@ -5,7 +5,7 @@ const { folder_logo } = require("../../../../skeleton/toolkit/logo");
  * @param {*} ui 
  * @param {*} opt 
  */
-function item(ui, label, widget) {
+function item(ui, label, ...widget) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__item ${ui.fig.group}__item`,
     uiHandler: ui,
@@ -14,7 +14,7 @@ function item(ui, label, widget) {
         className: `${ui.fig.family}__item-label ${ui.fig.group}__item-label`,
         content: label,
       }),
-      widget,
+      ...widget,
     ],
   });
 }
@@ -61,8 +61,16 @@ function settings_body(ui, opt) {
           Skeletons.Box.Y({
             className: `${ui.fig.group}__items ${fig}__items`,
             kids: [
-              item(ui, LOCALE.TYPE, text(ui, LOCALE.AREA_PERSONAL_LABEL)),
+              item(ui, LOCALE.OWNER, text(ui, "0")),
+              item(ui, LOCALE.TYPE, text(ui, LOCALE[`AREA_${ui.mget(_a.area).toUpperCase()}_LABEL`])),
               item(ui, LOCALE.SIZE, text(ui, "0")),
+              item(ui, LOCALE.MEMBERS, text(ui, "0"), Skeletons.Button.Svg({
+                ico: "carret-right",
+                service: _a.members,
+                uiHandler: [ui],
+                className: `${fig}__icon ${ui.fig.group}__icon`,
+              }
+              )),
               item(ui, LOCALE.CREATED, text(ui, "0")),
               item(ui, LOCALE.LAST_CHANGE, text(ui, "0")),
             ]

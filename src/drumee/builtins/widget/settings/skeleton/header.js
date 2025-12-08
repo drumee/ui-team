@@ -6,7 +6,7 @@ export default function (ui, label) {
     ico: _a.cross,
     className: `${figFamily}__icon-close ${figGroup}__icon-close`,
     service: _e.close,
-    uiHandler: ui
+    uiHandler: [ui]
   });
 
   const windowTitle = Skeletons.Box.X({
@@ -17,7 +17,7 @@ export default function (ui, label) {
         sys_pn: "window-name",
         content: label || "",
         partHandler: ui,
-        uiHandler: ui,
+        uiHandler: [ui],
       }),
       close
     ],

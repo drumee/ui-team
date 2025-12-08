@@ -734,7 +734,6 @@
   "SET_AS_PROFILE": "设为个人资料照片",
   "SHAPE": "形状",
   "SHAPES": "形状",
-  "SHARE": "分享",
   "SHARED_CONTACTS_LIST": "房间成员",
   "SHARE_LIST": "分享清单",
   "SHARE_ROOM": "方案",
@@ -955,7 +954,6 @@
   "CHANGE_ADMIN": "改变管理员",
   "ME": "我",
   "ADD_ADMINISTRATORS": "添加管理员",
-  "I_SHARE": "我共享",
   "SHARED_TO_ME": "与我分享",
   "PERMISSION": "允许",
   "SEND_PUBLIC_LINK": "发送公共链接",
@@ -1936,5 +1934,7 @@
   "AREA_SHARE_LABEL": "公众",
   "AREA_PERSONAL_LABEL": "个人的",
   "AREA_TEAM_LABEL": "Команда",
-  "AREA_PUBLIC_LABEL": "网站"
+  "AREA_PUBLIC_LABEL": "网站",
+  "MEMBER_ACCESS": "会员访问",
+  "SHARE": "分享"
 }
