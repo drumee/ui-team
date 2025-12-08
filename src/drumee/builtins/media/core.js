@@ -848,12 +848,18 @@ class __media_core extends DrumeeMFS {
 
     c.on(_e.cancel, () => {
       const { nid, hub_id } = this._getDestination();
-      if (nid && hub_id) {
+      if (nid && hub_id && SERVICE?.media?.cancel_upload) {
         this.mset(_a.phase, _a.deleted);
         this.trigger(_e.reset);
         this.postService(SERVICE.media.cancel_upload, {
           nid,
           hub_id,
+        });
+      } else {
+        this.warn("cancel_upload: missing nid/hub_id or SERVICE.media.cancel_upload undefined", {
+          nid,
+          hub_id,
+          hasService: !!(SERVICE && SERVICE.media && SERVICE.media.cancel_upload)
         });
       }
       this.triggerHandlers({ service: "cancel_media" });
@@ -911,12 +917,16 @@ class __media_core extends DrumeeMFS {
       
       if (progressWindow) {
         // Window already exists - add item immediately
-        console.log("🟠 [UPLOAD_FILE] Using existing window, adding file:", fileName);
         progressWindow.addUploadItem(file, queue);
         
         // Track progress - need to get current file from queue
-        queue.on(_e.progress, (progressPercent) => {
-          console.log("🟢 [PROGRESS] Progress event received:", progressPercent, "for queue");
+        const onProgress = (progressPercent) => {
+          if (queue._canceled || (queue.isCanceled && queue.isCanceled())) {
+            if (queue.off && typeof queue.off === 'function') {
+              queue.off(_e.progress, onProgress);
+            }
+            return;
+          }
           
           // Find current uploading file from queue
           let currentFile = null;
@@ -936,30 +946,30 @@ class __media_core extends DrumeeMFS {
             }
           }
           
-          console.log("🟢 [PROGRESS] Updating progress for file:", fileName, "percent:", progressPercent);
-          
           // Calculate speed (simplified)
           const fileSize = currentFile ? currentFile.size : file.size;
           const speed = fileSize ? (fileSize * progressPercent / 100) / 1000 : 0;
           
           progressWindow.updateProgress(fileName, progressPercent, speed);
-        });
+        };
+        queue.on(_e.progress, onProgress);
         
-        // Start upload immediately
-        console.log("🟠 [UPLOAD_FILE] Calling queue.add for file:", fileName);
         queue.add(args);
         this.type = null;
       } else {
         // Window doesn't exist - create it first, THEN start upload
-        console.log("🟠 [UPLOAD_FILE] Creating window for file:", fileName);
         UploadProgressWindowClass.getOrCreate().then((progressWindow) => {
           if (progressWindow) {
-            console.log("🟠 [UPLOAD_FILE] Window ready, adding file:", fileName);
             progressWindow.addUploadItem(file, queue);
             
             // Track progress - need to get current file from queue
-            queue.on(_e.progress, (progressPercent) => {
-              console.log("🟢 [PROGRESS] Progress event received:", progressPercent, "for queue");
+            const onProgress = (progressPercent) => {
+              if (queue._canceled || (queue.isCanceled && queue.isCanceled())) {
+                if (queue.off && typeof queue.off === 'function') {
+                  queue.off(_e.progress, onProgress);
+                }
+                return;
+              }
               
               // Find current uploading file from queue
               let currentFile = null;
@@ -979,27 +989,23 @@ class __media_core extends DrumeeMFS {
                 }
               }
               
-              console.log("🟢 [PROGRESS] Updating progress for file:", fileName, "percent:", progressPercent);
-              
               // Calculate speed (simplified)
               const fileSize = currentFile ? currentFile.size : file.size;
               const speed = fileSize ? (fileSize * progressPercent / 100) / 1000 : 0;
               
               progressWindow.updateProgress(fileName, progressPercent, speed);
-            });
+            };
+            queue.on(_e.progress, onProgress);
             
             // NOW start upload after window is ready
-            console.log("🟠 [UPLOAD_FILE] Window ready, calling queue.add for file:", fileName);
             queue.add(args);
             this.type = null;
           } else {
             // If window creation failed, still start upload
-            console.log("🟠 [UPLOAD_FILE] Window creation failed, starting upload anyway:", fileName);
     queue.add(args);
     this.type = null;
           }
         }).catch((error) => {
-          console.error("🟠 [UPLOAD_FILE] Error creating window:", error);
           // If window creation failed, still start upload
           queue.add(args);
           this.type = null;
@@ -1007,7 +1013,6 @@ class __media_core extends DrumeeMFS {
       }
     } else {
       // No UploadProgressWindowClass available - start upload anyway
-      console.log("🟠 [UPLOAD_FILE] No UploadProgressWindowClass, starting upload:", fileName);
       queue.add(args);
       this.type = null;
     }
@@ -1796,7 +1801,7 @@ class __media_core extends DrumeeMFS {
    *
    * @param {*} e
    */
-  _uploadFiles(files, replace = 0) {
+  async _uploadFiles(files, replace = 0) {
     if (!_.isArray(files)) files = [files];
     const dest = this._getDestination();
     this.isUploading = 1;
@@ -1871,9 +1876,18 @@ class __media_core extends DrumeeMFS {
     };
     
     const fileInfos = files.map(prepareFileInfo);
+
+    // Chunking helper to avoid huge bursts when thousands of files
+    const chunkFiles = (arr, size = 50) => {
+      const chunks = [];
+      for (let i = 0; i < arr.length; i += size) {
+        chunks.push(arr.slice(i, i + size));
+      }
+      return chunks;
+    };
     
-    // Helper to add files to progress window
-    const addFilesToProgressWindow = (progressWindow) => {
+    // Helper to add files to progress window (chunked)
+    const addFilesToProgressWindow = async (progressWindow) => {
       if (!progressWindow) {
         this.warning("addFilesToProgressWindow: progressWindow is null");
         return;
@@ -1884,34 +1898,47 @@ class __media_core extends DrumeeMFS {
       }
       
       this.debug("addFilesToProgressWindow: Adding", fileInfos.length, "files to window");
-      
-      fileInfos.forEach(({ file, isPlaceholder, originalEntry }) => {
-        this.debug("addFilesToProgressWindow: Adding file", file.name, "isPlaceholder:", isPlaceholder);
-        progressWindow.addUploadItem(file, queue);
-        
-        // If it was a placeholder, extract actual file and update
-        if (isPlaceholder && originalEntry) {
-          extractFile(originalEntry).then((fileObj) => {
-            if (fileObj && fileObj !== file) {
-              const item = progressWindow._uploadItems.find(
-                item => item.fileName === file.name && item.status === 'uploading'
-              );
-              if (item && fileObj.size && (!item.fileSize || item.fileSize === 0)) {
-                item.fileSize = fileObj.size;
-                item.file = fileObj;
-                progressWindow._refreshUI();
+
+      // Process in chunks to avoid UI stall when thousands of files
+      const chunks = chunkFiles(fileInfos, 50);
+      for (const chunk of chunks) {
+        chunk.forEach(({ file, isPlaceholder, originalEntry }) => {
+          this.debug("addFilesToProgressWindow: Adding file", file.name, "isPlaceholder:", isPlaceholder);
+          progressWindow.addUploadItem(file, queue);
+          
+          // If it was a placeholder, extract actual file and update
+          if (isPlaceholder && originalEntry) {
+            extractFile(originalEntry).then((fileObj) => {
+              if (fileObj && fileObj !== file) {
+                const item = progressWindow._uploadItems.find(
+                  item => item.fileName === file.name && item.status === 'uploading'
+                );
+                if (item && fileObj.size && (!item.fileSize || item.fileSize === 0)) {
+                  item.fileSize = fileObj.size;
+                  item.file = fileObj;
+                  progressWindow._refreshUI();
+                }
               }
-            }
-          }).catch(() => {});
-        }
-      });
+            }).catch(() => {});
+          }
+        });
+
+        // Yield to event loop between chunks
+        setTimeout(() => {}, 0);
+      }
       
       this.debug("addFilesToProgressWindow: All files added, total items:", progressWindow._uploadItems.length);
       
       // Track progress for each file individually based on queue.xhr
       const fileProgressMap = {};
       
-      queue.on(_e.progress, (progressPercent) => {
+      const onProgress = (progressPercent) => {
+        if (queue._canceled || (queue.isCanceled && queue.isCanceled())) {
+          if (queue.off && typeof queue.off === 'function') {
+            queue.off(_e.progress, onProgress);
+          }
+          return;
+        }
         // Get the currently uploading file from pendingItem or xhr
         let currentFile = null;
         let fileName = null;
@@ -1958,7 +1985,9 @@ class __media_core extends DrumeeMFS {
           
           progressWindow.updateProgress(fileName, progressPercent, speed);
         }
-      });
+      };
+      
+      queue.on(_e.progress, onProgress);
     };
     
     // CRITICAL: Create window and add items BEFORE starting upload
@@ -2022,43 +2051,48 @@ class __media_core extends DrumeeMFS {
     
     // Start upload - items should be added before this point, or will be added very quickly
     this.debug("_uploadFiles: Starting upload queue.add for", files.length, "files");
+    const chunks = chunkFiles(Array.from(files), 20);
     let pos = 0;
-    for (let f of Array.from(files)) {
-      dest.notify = 1;
-      dest.single = 1;
-      let args = {
-        destination: dest,
-        file: f,
-        listener: this,
-        position: this.getIndex() + pos,
-        replace
-      }
-      pos++;
-      let ownpath = this.mget(_a.ownpath) || '/';
-      ownpath = `${ownpath}/${f.fullPath}`;
-      ownpath = ownpath.replace(/\/+/g, '/');
-      ownpath = ownpath.replace(/\/+$/g, '');
-      args.ownpath = ownpath;
-      this.debug("AAA:1596", this, args, f.fullPath)
-
-      // DEBUG: Log when queue.add is called - this is where upload is initiated
-      const fileName = f.name || f.filename || "Unknown";
-      this.debug("🔵 [UPLOAD_START] queue.add called for file:", fileName, "at", new Date().toISOString());
-
-      queue.add(args);
-      this.type = null;
-      
-      // DEBUG: Check if window exists immediately after queue.add
-      setTimeout(() => {
-        const progressWindows = window.Wm?.getItemsByKind?.('window_upload_progress') || [];
-        if (progressWindows.length > 0) {
-          const pw = progressWindows[0];
-          const hasFile = pw._uploadItems?.some(item => item.fileName === fileName);
-          this.debug("🔵 [UPLOAD_START] After queue.add - Window exists:", !!pw, "File in window:", hasFile, "Total items:", pw._uploadItems?.length || 0);
-        } else {
-          this.debug("🔵 [UPLOAD_START] After queue.add - Window NOT found yet");
+    for (const chunk of chunks) {
+      for (let f of chunk) {
+        dest.notify = 1;
+        dest.single = 1;
+        let args = {
+          destination: dest,
+          file: f,
+          listener: this,
+          position: this.getIndex() + pos,
+          replace
         }
-      }, 100);
+        pos++;
+        let ownpath = this.mget(_a.ownpath) || '/';
+        ownpath = `${ownpath}/${f.fullPath}`;
+        ownpath = ownpath.replace(/\/+/g, '/');
+        ownpath = ownpath.replace(/\/+$/g, '');
+        args.ownpath = ownpath;
+        this.debug("AAA:1596", this, args, f.fullPath)
+
+        // DEBUG: Log when queue.add is called - this is where upload is initiated
+        const fileName = f.name || f.filename || "Unknown";
+        this.debug("🔵 [UPLOAD_START] queue.add called for file:", fileName, "at", new Date().toISOString());
+
+        queue.add(args);
+        this.type = null;
+        
+        // DEBUG: Check if window exists immediately after queue.add
+        setTimeout(() => {
+          const progressWindows = window.Wm?.getItemsByKind?.('window_upload_progress') || [];
+          if (progressWindows.length > 0) {
+            const pw = progressWindows[0];
+            const hasFile = pw._uploadItems?.some(item => item.fileName === fileName);
+            this.debug("🔵 [UPLOAD_START] After queue.add - Window exists:", !!pw, "File in window:", hasFile, "Total items:", pw._uploadItems?.length || 0);
+          } else {
+            this.debug("🔵 [UPLOAD_START] After queue.add - Window NOT found yet");
+          }
+        }, 100);
+      }
+      // Yield between chunks
+      setTimeout(() => {}, 0);
     }
   }
 

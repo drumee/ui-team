@@ -40,6 +40,18 @@ class __window_upload_progress extends __window_core {
     this._pendingProgressUpdates = new Map(); // Queue progress updates when DOM not ready
     this._updateRetryCount = new Map(); // Track retry count to avoid infinite loops
     this._progressListeners = new Map(); // Store progress listeners for cleanup
+    this._lastRenderedCount = 0; // Track last rendered item count to avoid unnecessary re-render
+    this._lastRenderedStatuses = ""; // Track statuses signature
+
+    this._detachQueueListener = (queue) => {
+      if (queue && this._progressListeners && this._progressListeners.has(queue)) {
+        const listener = this._progressListeners.get(queue);
+        if (queue.off && typeof queue.off === 'function') {
+          queue.off(_e.progress, listener);
+        }
+        this._progressListeners.delete(queue);
+      }
+    };
     
     // Set window position to bottom right corner
     const width = 360;
@@ -88,7 +100,6 @@ class __window_upload_progress extends __window_core {
   _onUploadQueueCreated(data) {
     if (!data || !data.queue) return;
     
-    this.debug("_onUploadQueueCreated: Queue created", data);
     
     // Store queue reference and setup progress tracking
     const queue = data.queue;
@@ -97,7 +108,6 @@ class __window_upload_progress extends __window_core {
     if (queue.on) {
       // Create progress handler that checks status before updating
       const progressHandler = (progressPercent) => {
-        this.debug(`_onUploadQueueCreated: Progress event received: ${progressPercent}%`);
         
         // Find current uploading file from queue
         let currentFile = null;
@@ -129,20 +139,16 @@ class __window_upload_progress extends __window_core {
           const item = this._findUploadItem(fileName);
           // Skip if item is already completed, cancelled, or error
           if (item && (item.status === 'completed' || item.status === 'cancelled' || item.status === 'error')) {
-            console.log(`⏭️ [UPLOAD_PROGRESS] Skipping progress update for ${fileName} - status is ${item.status}`);
             return;
           }
           
           // Skip if progress is already 100% - wait for completion
           if (item && item.progress >= 100) {
-            console.log(`⏭️ [UPLOAD_PROGRESS] Skipping progress update for ${fileName} - progress already 100%, waiting for completion`);
             return;
           }
           
           // Skip if progressPercent is 100% - wait for completion event
-          // This check MUST be before any progress calculation or updateProgress call
           if (progressPercent >= 100) {
-            console.log(`⏭️ [UPLOAD_PROGRESS] Progress listener: Skipping progress update for ${fileName} - progress is 100%, waiting for completion event`);
             return;
           }
           
@@ -166,15 +172,11 @@ class __window_upload_progress extends __window_core {
             this._fileProgressMap[fileName].lastProgress = progressPercent;
             this._fileProgressMap[fileName].lastTime = now;
             
-            this.debug(`_onUploadQueueCreated: Updating progress for ${fileName}: ${progressPercent}%`);
             this.updateProgress(fileName, progressPercent, speed);
           }
         } else {
           // No file found - update all uploading items in this queue (only if still uploading and not at 100%)
-          this.debug("_onUploadQueueCreated: No file found, updating all uploading items");
-          // Skip if progress is 100% - wait for completion
           if (progressPercent >= 100) {
-            console.log(`⏭️ [UPLOAD_PROGRESS] Skipping bulk progress update - progress is 100%, waiting for completion`);
             return;
           }
           
@@ -192,7 +194,6 @@ class __window_upload_progress extends __window_core {
       
       // Listen to upload completion to clean up progress listener and mark as completed
       queue.once(_e.uploaded, (data) => {
-        console.log(`✅ [UPLOAD_PROGRESS] _e.uploaded event received`, data);
         
         // Find the file that was uploaded
         let fileName = null;
@@ -221,16 +222,13 @@ class __window_upload_progress extends __window_core {
         
         // If we found a fileName, mark upload as completed
         if (fileName) {
-          console.log(`✅ [UPLOAD_PROGRESS] Calling completeUpload for: ${fileName}`);
           this.completeUpload(fileName, result);
         } else {
-          console.warn(`⚠️ [UPLOAD_PROGRESS] Could not determine fileName from uploaded event`, { data, queue });
           // Try to find any uploading item in this queue and mark as completed
           const uploadingItem = this._uploadItems.find(item => 
             item.status === 'uploading' && item.queue === queue
           );
           if (uploadingItem) {
-            console.log(`✅ [UPLOAD_PROGRESS] Found uploading item by queue: ${uploadingItem.fileName}`);
             this.completeUpload(uploadingItem.fileName, result);
           }
         }
@@ -240,7 +238,6 @@ class __window_upload_progress extends __window_core {
           const listener = this._progressListeners.get(queue);
           queue.off(_e.progress, listener);
           this._progressListeners.delete(queue);
-          console.log(`🧹 [UPLOAD_PROGRESS] Progress listener removed for completed upload`);
         }
       });
       
@@ -330,12 +327,10 @@ class __window_upload_progress extends __window_core {
     const fileName = file.name || file.filename || "Unknown file";
     const fileId = `${fileName}-${Date.now()}`;
     
-    this.debug("addUploadItem: Adding file", fileName, "Total items before:", this._uploadItems.length);
     
     // Check if file already exists
     const existingIndex = this._uploadItems.findIndex(item => item.fileName === fileName && item.status === 'uploading');
     if (existingIndex >= 0) {
-      this.debug("addUploadItem: File already exists, skipping", fileName);
       return; // Already tracking this file
     }
     
@@ -349,12 +344,21 @@ class __window_upload_progress extends __window_core {
       queue: queue,
       startTime: Date.now(),
       fileSize: file.size || 0,
+      
+      // Visibility options - will be set by _prepareFileItemOptions
+      showIcon: true,
+      showName: true,
+      showSpeed: false,
+      showProgress: true,
+      showCheck: false,
+      showCancel: true,
+      showCancelled: false,
+      showError: false,
     };
     
     this._uploadItems.push(uploadItem);
     this._totalFiles = this._uploadItems.length;
     
-    this.debug("addUploadItem: File added, total items:", this._totalFiles, "DOM ready:", !!this.el);
     
     // Show window if hidden - do this even if DOM not ready yet
     if (this.el) {
@@ -366,18 +370,14 @@ class __window_upload_progress extends __window_core {
         this.triggerMethod && this.triggerMethod("raise");
       }
       this.el.style.display = '';
-      this.debug("addUploadItem: Window shown and raised");
     } else {
-      this.debug("addUploadItem: Window element not ready yet");
     }
     
     // Refresh UI - if DOM not ready, it will be refreshed in onDomRefresh
     if (this.el) {
       this._refreshUI();
-      this.debug("addUploadItem: UI refreshed");
     } else {
       // DOM not ready yet - items will be rendered when onDomRefresh is called
-      this.debug("addUploadItem: DOM not ready, will render when ready", fileName);
     }
   }
 
@@ -463,37 +463,46 @@ class __window_upload_progress extends __window_core {
   updateProgress(fileName, progress, speed) {
     const item = this._findUploadItem(fileName);
     if (!item) {
-      console.warn(`⚠️ [UPLOAD_PROGRESS] File not found: ${fileName}`);
-      console.log(`📋 [UPLOAD_PROGRESS] Available files:`, this._uploadItems.map(i => i.fileName));
-      this.debug(`updateProgress: File not found: ${fileName}`, this._uploadItems.map(i => i.fileName));
       return;
     }
     
     // Don't update progress for completed, cancelled, or error items
     if (item.status === 'completed' || item.status === 'cancelled' || item.status === 'error') {
-      console.log(`⏭️ [UPLOAD_PROGRESS] Skipping progress update for ${fileName} - status is ${item.status}`);
       return;
     }
     
     // Get current progress
     const currentProgress = item.progress || 0;
     
-    // Debug log when progress update is called
-    console.log(`📊 [UPLOAD_PROGRESS] updateProgress called for: ${fileName}, progress: ${progress}%, speed: ${speed}, current: ${currentProgress}%`);
     
     // If progress reaches 100%, mark as completed immediately and update UI
     if (progress >= 100) {
-      console.log(`✅ [UPLOAD_PROGRESS] Progress reached 100% for ${fileName}, marking as completed immediately`);
       item.progress = 100;
       item.speed = speed || 0;
       
       // Update status to completed immediately so UI shows checked icon
-      if (item.status !== 'completed') {
+      const wasCompleted = item.status === 'completed';
+      if (!wasCompleted) {
         item.status = 'completed';
-        console.log(`✅ [UPLOAD_PROGRESS] Status updated to 'completed' for ${fileName} (progress: 100%)`);
       }
       
-      // Refresh UI immediately to show checked icon instead of cancel button
+      // Set visibility options for completed status
+      item.showIcon = true;
+      item.showName = true;
+      item.showSpeed = false;
+      item.showProgress = false;
+      item.showCheck = true;
+      item.showCancel = false;
+      item.showCancelled = false;
+      item.showError = false;
+      
+      // Force re-render file list immediately to show checkmark icon
+      const fileListPart = this.findPart("file-list");
+      if (fileListPart) {
+        this._renderFileList(fileListPart);
+      }
+      
+      // Refresh UI (this will also update other parts like footer)
       this._refreshUI();
       
       // Also update estimated time
@@ -509,11 +518,15 @@ class __window_upload_progress extends __window_core {
     item.progress = newProgress;
     item.speed = speed || 0;
     
-    // Debug log
-    if (Math.round(currentProgress) !== Math.round(item.progress)) {
-      console.log(`🟢 [UPLOAD_PROGRESS] Progress changed for ${fileName}: ${Math.round(currentProgress)}% → ${Math.round(item.progress)}%`);
-      this.debug(`🟢 [UPDATE_PROGRESS] ${fileName}: ${Math.round(currentProgress)}% → ${Math.round(item.progress)}%`);
-    }
+    // Update visibility options for uploading state
+    item.showIcon = true;
+    item.showName = true;
+    item.showSpeed = (speed || 0) > 0;
+    item.showProgress = true;
+    item.showCheck = false;
+    item.showCancel = true;
+    item.showCancelled = false;
+    item.showError = false;
     
     // Update DOM directly for better performance
     this._updateItemInDOM(fileName);
@@ -541,12 +554,10 @@ class __window_upload_progress extends __window_core {
     // Skip DOM updates for completed, cancelled, or error items
     // These should be handled by re-rendering the file list
     if (item.status === 'completed' || item.status === 'cancelled' || item.status === 'error') {
-      // If item is completed and not in DOM, just re-render file list
-      if (item.status === 'completed') {
+      // Always re-render file list for completed/cancelled/error items to show correct UI
         const fileListPart = this.findPart("file-list");
         if (fileListPart) {
           this._renderFileList(fileListPart);
-        }
       }
       // Clear retry count for completed/cancelled/error items
       if (this._updateRetryCount && this._updateRetryCount.has(fileName)) {
@@ -630,6 +641,30 @@ class __window_upload_progress extends __window_core {
     
     // Update status attribute
     itemEl.dataset.status = item.status;
+
+    // Ensure file name text is visible
+    const nameEl = itemEl.querySelector(`.${this.fig.family}__file-item-name`);
+    if (nameEl) {
+      nameEl.textContent = item.fileName || item.file?.name || item.file?.filename || nameEl.textContent;
+      nameEl.style.display = '';
+    }
+    // Ensure progress wrapper is visible when uploading
+    const progressWrapper = itemEl.querySelector(`.${this.fig.family}__file-item-progress-wrapper`);
+    if (progressWrapper && item.status === 'uploading') {
+      progressWrapper.style.display = '';
+    }
+    // Update percent text
+    const percentEl = itemEl.querySelector(`.${this.fig.family}__file-item-percent`);
+    if (percentEl) {
+      percentEl.textContent = `${Math.round(item.progress || 0)}%`;
+      percentEl.style.display = '';
+    }
+    // Update size text (static)
+    const sizeEl = itemEl.querySelector(`.${this.fig.family}__file-item-size`);
+    if (sizeEl && item.fileSize) {
+      sizeEl.textContent = filesize(item.fileSize);
+      sizeEl.style.display = '';
+    }
     
     // Update progress bar if uploading
     if (item.status === 'uploading') {
@@ -744,7 +779,13 @@ class __window_upload_progress extends __window_core {
       const speedEl = itemEl.querySelector(`.${this.fig.family}__file-item-speed`);
       if (speedEl) {
         const { formatSpeed } = require('./skeleton/helpers');
-        speedEl.textContent = formatSpeed(item.speed);
+        speedEl.textContent = formatSpeed(item.speed || 0);
+        speedEl.style.display = (item.speed || 0) > 0 ? '' : 'none';
+      }
+      // Ensure cancel button visible when uploading
+      const cancelEl = itemEl.querySelector(`.${this.fig.family}__file-item-cancel`);
+      if (cancelEl) {
+        cancelEl.style.display = '';
       }
       
       // Update file size text
@@ -779,10 +820,8 @@ class __window_upload_progress extends __window_core {
       const fileListPart = this.findPart("file-list");
       if (fileListPart) {
         this._renderFileList(fileListPart);
-        console.log(`✅ [UPLOAD_PROGRESS] Re-rendered file list for completed item: ${fileName}`);
       }
       
-      console.log(`✅ [UPLOAD_PROGRESS] Completed status set for ${fileName} in DOM`);
     } else if (item.status === 'cancelled' || item.status === 'error') {
       // Re-render to update UI for cancelled/error state
       const fileListPart = this.findPart("file-list");
@@ -798,10 +837,6 @@ class __window_upload_progress extends __window_core {
    * @param {*} result - Upload result data
    */
   completeUpload(fileName, result) {
-    console.log(`✅ [UPLOAD_PROGRESS] completeUpload called for: ${fileName}`, {
-      availableFiles: this._uploadItems.map(i => ({ name: i.fileName, status: i.status })),
-      result
-    });
     
     // Try to find item - allow any status except cancelled to handle edge cases
     let item = this._findUploadItem(fileName, true);
@@ -828,36 +863,30 @@ class __window_upload_progress extends __window_core {
     }
     
     if (!item) {
-      console.warn(`⚠️ [UPLOAD_PROGRESS] completeUpload: File not found: ${fileName}`, {
-        availableFiles: this._uploadItems.map(i => ({ 
-          name: i.fileName, 
-          status: i.status,
-          fileSize: i.file?.size 
-        })),
-        result
-      });
-      this.debug(`completeUpload: File not found: ${fileName}`, this._uploadItems.map(i => ({
-        fileName: i.fileName,
-        status: i.status,
-        fileSize: i.file?.size
-      })));
       return;
     }
     
-    console.log(`✅ [UPLOAD_PROGRESS] Found item for completion: ${item.fileName}, current status: ${item.status}`);
     
-    // Update item status
+    // Update item status and options
     const oldStatus = item.status;
     item.status = 'completed';
     item.progress = 100;
     item.result = result;
     
-    console.log(`✅ [UPLOAD_PROGRESS] Status updated: ${oldStatus} -> completed for ${item.fileName}`);
+    // Set visibility options for completed status
+    item.showIcon = true;
+    item.showName = true;
+    item.showSpeed = false;
+    item.showProgress = false;
+    item.showCheck = true;
+    item.showCancel = false;
+    item.showCancelled = false;
+    item.showError = false;
+    
     
     // Force expand window to show completed status if collapsed
     if (!this._isExpanded) {
       this._isExpanded = true;
-      console.log(`✅ [UPLOAD_PROGRESS] Window expanded to show completed item`);
     }
     
     // Clear any pending updates for this file since it's now completed
@@ -876,34 +905,35 @@ class __window_upload_progress extends __window_core {
       if (item.queue.off && typeof item.queue.off === 'function') {
         item.queue.off(_e.progress, listener);
         this._progressListeners.delete(item.queue);
-        console.log(`🧹 [UPLOAD_PROGRESS] Progress listener removed for completed upload: ${item.fileName}`);
       }
     }
     
-    // Update UI first (this will re-render file list)
-    this._refreshUI();
-    
     // Force re-render file list immediately to show checkmark and hide cancel
     // This ensures the UI is updated with the new status
+    const fileListPart = this.findPart("file-list");
+    if (fileListPart) {
+      this._renderFileList(fileListPart);
+    }
+    
+    // Update UI (this will also refresh other parts)
+    this._refreshUI();
+    
+    // Also force re-render after a short delay to ensure DOM is fully ready
     setTimeout(() => {
       const fileListPart = this.findPart("file-list");
       if (fileListPart) {
-        // Re-render the entire file list to update all items with new status
         this._renderFileList(fileListPart);
-        console.log(`✅ [UPLOAD_PROGRESS] File list re-rendered for completed item: ${item.fileName} (status: ${item.status})`);
       }
     }, 50);
     
-    // Also force re-render after a longer delay to ensure DOM is fully ready
+    // One more re-render after longer delay to ensure it sticks
     setTimeout(() => {
       const fileListPart = this.findPart("file-list");
       if (fileListPart) {
         this._renderFileList(fileListPart);
-        console.log(`✅ [UPLOAD_PROGRESS] File list re-rendered again for: ${item.fileName}`);
       }
     }, 200);
     
-    console.log(`✅ [UPLOAD_PROGRESS] UI refreshed for completed upload: ${item.fileName}`);
     
     // Auto-close after a delay if all uploads are complete
     _.delay(() => {
@@ -925,10 +955,27 @@ class __window_upload_progress extends __window_core {
    * @param {String} status
    */
   updateUploadStatus(fileName, status) {
-    const item = this._uploadItems.find(item => item.fileName === fileName);
+    // Use fuzzy finder to handle encoded/decoded names
+    const item = this._findUploadItem(fileName, true);
     if (!item) return;
     
     item.status = status;
+    
+    // Set visibility options based on status
+    const isCompleted = status === 'completed';
+    const isCancelled = status === 'cancelled';
+    const isError = status === 'error';
+    const isUploading = status === 'uploading' && (item.progress || 0) < 100;
+    
+    item.showIcon = true;
+    item.showName = true;
+    item.showSpeed = isUploading && (item.speed || 0) > 0;
+    item.showProgress = isUploading;
+    item.showCheck = isCompleted;
+    item.showCancel = isUploading;
+    item.showCancelled = isCancelled;
+    item.showError = isError;
+    
     this._refreshUI();
   }
 
@@ -938,15 +985,39 @@ class __window_upload_progress extends __window_core {
   cancelAll() {
     // Cancel all active uploads
     this._uploadItems.forEach(item => {
-      if (item.status === 'uploading' && item.queue) {
-        if (item.queue.isCanceled && typeof item.queue.isCanceled === 'function') {
-          item.queue.isCanceled() || (item.queue._canceled = true);
+      if (item.status === 'uploading') {
+        if (item.queue) {
+          if (item.queue.isCanceled && typeof item.queue.isCanceled === 'function') {
+            item.queue.isCanceled() || (item.queue._canceled = true);
+          }
+          if (item.queue.trigger) {
+            item.queue.trigger(_e.cancel);
+          }
+          this._detachQueueListener(item.queue);
         }
-        if (item.queue.trigger) {
-          item.queue.trigger(_e.cancel);
-        }
+        item.status = 'cancelled';
+        // Visibility for cancelled uploading items
+        item.showIcon = true;
+        item.showName = true;
+        item.showSpeed = false;
+        item.showProgress = false;
+        item.showCheck = false;
+        item.showCancel = false;
+        item.showCancelled = true;
+        item.showError = false;
+      } else if (item.status === 'completed') {
+        // Keep completed items intact
+        item.status = 'completed';
+        item.progress = Math.max(item.progress || 0, 100);
+        item.showIcon = true;
+        item.showName = true;
+        item.showSpeed = false;
+        item.showProgress = false;
+        item.showCheck = true;
+        item.showCancel = false;
+        item.showCancelled = false;
+        item.showError = false;
       }
-      item.status = 'cancelled';
     });
     
     this._refreshUI();
@@ -962,7 +1033,8 @@ class __window_upload_progress extends __window_core {
    * @param {String} fileName
    */
   cancelUpload(fileName) {
-    const item = this._uploadItems.find(item => item.fileName === fileName);
+    // Use fuzzy finder to handle encoded/decoded names
+    const item = this._findUploadItem(fileName, true);
     if (!item) return;
     
     if (item.status === 'uploading' && item.queue) {
@@ -972,9 +1044,21 @@ class __window_upload_progress extends __window_core {
       if (item.queue.trigger) {
         item.queue.trigger(_e.cancel);
       }
+      this._detachQueueListener(item.queue);
     }
     
     item.status = 'cancelled';
+    
+    // Set visibility options for cancelled status
+    item.showIcon = true;
+    item.showName = true;
+    item.showSpeed = false;
+    item.showProgress = false;
+    item.showCheck = false;
+    item.showCancel = false;
+    item.showCancelled = true;
+    item.showError = false;
+    
     this._refreshUI();
   }
 
@@ -982,10 +1066,8 @@ class __window_upload_progress extends __window_core {
    * Toggle expand/collapse
    */
   toggleExpand() {
-    this.debug(`toggleExpand: ${this._isExpanded} -> ${!this._isExpanded}`);
     this._isExpanded = !this._isExpanded;
     this._refreshUI();
-    this.debug(`After toggleExpand, _isExpanded: ${this._isExpanded}, container:`, this.el?.querySelector(`.${this.fig.family}__container`));
     
     // When expanding, process any pending updates immediately
     if (this._isExpanded && this._pendingProgressUpdates && this._pendingProgressUpdates.size > 0) {
@@ -1014,7 +1096,6 @@ class __window_upload_progress extends __window_core {
     // Handle click - could open file viewer or navigate to file location
     if (item.result && item.result.nid) {
       // Navigate to file or open viewer
-      this.debug("Click on completed upload item", item);
       // You can emit event or trigger navigation here
       if (this.triggerHandlers) {
         this.triggerHandlers({ 
@@ -1048,21 +1129,30 @@ class __window_upload_progress extends __window_core {
     const container = this.el.querySelector(`.${this.fig.family}__container`);
     if (container) {
       container.dataset.expanded = this._isExpanded ? "1" : "0";
-      this.debug(`Updated container data-expanded to: ${container.dataset.expanded}`);
     } else {
-      this.debug(`Container not found: .${this.fig.family}__container`);
     }
     // Also update on root element for CSS
     if (this.el) {
       this.el.dataset.expanded = this._isExpanded ? "1" : "0";
-      this.debug(`Updated root element data-expanded to: ${this.el.dataset.expanded}`);
       
       // CSS will handle height changes via data-expanded attribute
-      // No need to manually set height here
     }
     
-    // Update file list (only when expanded)
-    if (this._isExpanded) {
+    // Update file list.
+    // Avoid full re-render for plain progress ticks: only re-render when:
+    // - expanded, AND (item count changed OR has completed/cancelled/error)
+    // - or window was not rendered yet
+    const hasCompletedItems = this._uploadItems.some(item => item.status === 'completed');
+    const hasUploadingItems = this._uploadItems.some(item => item.status === 'uploading');
+    const hasCancelledOrError = this._uploadItems.some(item => item.status === 'cancelled' || item.status === 'error');
+    const countChanged = this._uploadItems.length !== this._lastRenderedCount;
+    const statusesSignature = this._uploadItems.map(i => i.status).join('|');
+    const statusesChanged = statusesSignature !== this._lastRenderedStatuses;
+    const needRender =
+      (this._isExpanded && (countChanged || hasCompletedItems || hasCancelledOrError || hasUploadingItems || !this._lastRenderedCount || statusesChanged))
+      || (!this._isExpanded && (hasCompletedItems || hasUploadingItems));
+
+    if (needRender) {
       const fileListPart = this.findPart("file-list");
       if (fileListPart) {
         this._renderFileList(fileListPart);
@@ -1073,6 +1163,10 @@ class __window_upload_progress extends __window_core {
     if (this._isExpanded) {
       this._updateEstimatedTime();
     }
+    
+    // Update footer action button (only update footer, do NOT trigger file list re-render)
+    // This is safe to call even when items are completed - it only updates footer button
+    this._refreshFooter();
     
     // Process any pending progress updates after UI refresh
     if (this._pendingProgressUpdates && this._pendingProgressUpdates.size > 0) {
@@ -1095,6 +1189,43 @@ class __window_upload_progress extends __window_core {
   }
 
   /**
+   * Prepare file item options based on status and state
+   * @param {Object} item - Upload item
+   * @returns {Object} Item with visibility options set
+   */
+  _prepareFileItemOptions(item) {
+    // Ensure status is set correctly
+    const rawStatus = item.status;
+    if (rawStatus === 'completed') {
+      item.status = 'completed';
+      item.progress = Math.max(item.progress || 0, 100);
+    } else if (!rawStatus && item.progress >= 100) {
+      item.status = 'completed';
+      item.progress = 100;
+    } else if (!rawStatus || rawStatus === 'pending') {
+      item.status = 'uploading';
+    }
+    
+    // Set visibility options based on status
+    const isCompleted = item.status === 'completed';
+    const isCancelled = item.status === 'cancelled';
+    const isError = item.status === 'error';
+    const isUploading = item.status === 'uploading' && (item.progress || 0) < 100;
+    
+    // Set visibility flags freshly each time to avoid stale state
+    item.showIcon = true; // Always show icon
+    item.showName = true; // Always show name
+    item.showSpeed = isUploading && (item.speed || 0) > 0; // Show speed only when uploading with speed > 0
+    item.showProgress = isUploading; // Show progress bar only when uploading
+    item.showCheck = isCompleted; // Show check icon only when completed
+    item.showCancel = isUploading; // Show cancel button only when uploading
+    item.showCancelled = isCancelled; // Show cancelled text only when cancelled
+    item.showError = isError; // Show error text only when error
+    
+    return item;
+  }
+
+  /**
    * Render file list
    * @param {*} listPart
    */
@@ -1105,12 +1236,20 @@ class __window_upload_progress extends __window_core {
     listPart.softClear();
     
     // Create and add file items
+    // IMPORTANT: Prepare item options before creating skeleton
     const fileItems = this._uploadItems.map(item => {
-      return this._createFileItemSkeleton(item);
+      // Prepare item with correct options
+      const preparedItem = this._prepareFileItemOptions({ ...item });
+      return this._createFileItemSkeleton(preparedItem);
     }).filter(Boolean);
     
     if (fileItems.length > 0) {
       listPart.feed(fileItems);
+      this._lastRenderedCount = this._uploadItems.length;
+      this._lastRenderedStatuses = this._uploadItems.map(i => i.status).join('|');
+    } else {
+      this._lastRenderedCount = 0;
+      this._lastRenderedStatuses = "";
     }
   }
 
@@ -1121,6 +1260,57 @@ class __window_upload_progress extends __window_core {
   _createFileItemSkeleton(item) {
     const createFileItem = require('./skeleton/file-item');
     return createFileItem(this, item);
+  }
+
+  /**
+   * Refresh footer action button (Cancel All / Close)
+   * This method only updates footer, does NOT trigger file list re-render
+   */
+  _refreshFooter() {
+    const actionPart = this.findPart("footer-action");
+    if (!actionPart) return;
+    
+    const uploadItems = this._uploadItems || [];
+    const hasUploading = uploadItems.some(item => item.status === 'uploading');
+    const allCompleted = uploadItems.length > 0 && uploadItems.every(item => 
+      item.status === 'completed' || item.status === 'cancelled' || item.status === 'error'
+    );
+    
+    // Update button text and service
+    const newContent = allCompleted ? (LOCALE.CLOSE || "Close") : (LOCALE.CANCEL_ALL || "Cancel all");
+    const newService = allCompleted ? "close" : "cancel-all";
+    const newClassName = allCompleted ? `${this.fig.family}__close` : `${this.fig.family}__cancel-all`;
+    
+    // Only update if content or service has changed to avoid unnecessary DOM updates
+    if (actionPart.el) {
+      const currentContent = actionPart.el.textContent?.trim();
+      const currentService = actionPart.el.dataset?.service || actionPart.el.getAttribute?.('service');
+      
+      // Update content only if changed
+      if (currentContent !== newContent) {
+        actionPart.set({ content: newContent });
+      }
+      
+      // Update element attributes only if changed
+      if (actionPart.el.className !== newClassName) {
+        actionPart.el.className = newClassName;
+      }
+      
+      if (currentService !== newService) {
+        // Set service attribute using both methods
+        if (typeof _a !== 'undefined' && _a.service) {
+          actionPart.el.setAttribute(_a.service, newService);
+        } else {
+          actionPart.el.setAttribute('service', newService);
+        }
+        if (actionPart.el.dataset) {
+          actionPart.el.dataset.service = newService;
+        }
+      }
+    } else {
+      // If element not ready, just update the part
+      actionPart.set({ content: newContent });
+    }
   }
 
   /**
@@ -1219,73 +1409,29 @@ class __window_upload_progress extends __window_core {
   onUiEvent(cmd, args = {}) {
     // Try multiple ways to get service
     let service = args.service;
-    
-    // If args is a PointerEvent/MouseEvent, get service from event target
-    if (args instanceof PointerEvent || args instanceof MouseEvent) {
-      // Walk up the DOM tree from event target to find service attribute
-      if (args.target) {
-        let target = args.target;
-        // Walk up the DOM tree to find service attribute
-        while (target && target !== document.body && target !== document.documentElement) {
-          if (target.dataset && target.dataset.service) {
-            service = target.dataset.service;
-            break;
-          }
-          target = target.parentElement;
-        }
-      }
-      
-      // Try getService method on the event (if available)
-      if (!service && typeof args.getService === 'function') {
-        service = args.getService(this.el);
-      }
-      
-      // Also try cmd.el.getService if available
-      if (!service && cmd && cmd.el && typeof cmd.el.getService === 'function') {
-        service = cmd.el.getService(args);
-      }
-      
-      // Fallback to cmd.el.dataset.service
-      if (!service && cmd && cmd.el && cmd.el.dataset) {
-        service = cmd.el.dataset.service;
-      }
-    }
-    
-    // Try to get service from cmd object
     if (!service && cmd) {
-      if (typeof cmd.mget === 'function') {
-        service = cmd.mget(_a.service) || cmd.mget(_a.name);
+      service = cmd.service || 
+                (typeof cmd.mget === 'function' ? cmd.mget(_a.service) : null) ||
+                (typeof cmd.mget === 'function' ? cmd.mget(_a.name) : null) ||
+                (typeof cmd.get === 'function' ? cmd.get(_a.service) : null) ||
+                (typeof cmd.get === 'function' ? cmd.get(_a.name) : null);
       }
-      if (!service) {
-        service = cmd.service || cmd.model?.get?.(_a.service) || cmd.model?.get?.(_a.name);
-      }
-      if (!service && cmd.el) {
-        // Try dataset
-        if (cmd.el.dataset) {
-          service = cmd.el.dataset.service;
-        }
-        // Try getAttribute
-        if (!service) {
-          service = cmd.el.getAttribute?.(_a.service) || cmd.el.getAttribute?.(_a.name);
-        }
-      }
+    if (!service && cmd?.el) {
+      service = cmd.el.dataset?.service || 
+                cmd.el.getAttribute?.(_a.service) ||
+                cmd.el.getAttribute?.('service') ||
+                cmd.el.getAttribute?.('data-service');
     }
-    
-    this.debug(`onUiEvent service=${service}`, { 
-      cmd, 
-      args, 
-      target: args?.target, 
-      targetDataset: args?.target?.dataset,
-      cmdEl: cmd?.el,
-      cmdElDataset: cmd?.el?.dataset
-    });
 
     switch (service) {
       case _e.close:
+      case "close":
+        // Close window immediately without triggering any UI refresh
+        // This prevents any re-render that might cause completed items to show cancel button
+        // Do NOT call _refreshUI() or _refreshFooter() before closing
         return this.goodbye();
 
       case "toggle-expand":
-        this.debug("Toggle expand called", this._isExpanded);
         return this.toggleExpand();
 
       case "cancel-all":
@@ -1293,24 +1439,79 @@ class __window_upload_progress extends __window_core {
 
       case "cancel-upload":
         // Try to get fileName from various sources
-        let fileName = cmd.mget?.(_a.fileName) || cmd.el?.dataset?.fileName;
+        let fileName = null;
         
-        // If not found, try to get from parent element (file-item)
+        // Method 1: From args (if passed directly)
+        if (args?.fileName) {
+          fileName = args.fileName;
+        }
+        
+        // Method 2: From cmd model/attributes
+        if (!fileName && cmd) {
+          if (typeof cmd.mget === 'function') {
+            fileName = cmd.mget(_a.fileName) || cmd.mget(_a.name) || cmd.mget(_a.value);
+          }
+          if (!fileName && typeof cmd.get === 'function') {
+            fileName = cmd.get(_a.fileName) || cmd.get(_a.name) || cmd.get(_a.value);
+          }
+          if (!fileName && cmd.value) {
+            fileName = cmd.value;
+          }
+          if (!fileName && cmd.model && typeof cmd.model.get === 'function') {
+            fileName = cmd.model.get(_a.fileName) || cmd.model.get(_a.name) || cmd.model.get(_a.value);
+          }
+        }
+        
+        // Method 3: From cmd.el dataset (most direct method for Note elements)
+        if (!fileName && cmd?.el?.dataset) {
+          fileName = cmd.el.dataset.fileName || cmd.el.dataset.name || cmd.el.dataset.value;
+        }
+        
+        // Method 4: From cmd.el attribute
+        if (!fileName && cmd?.el) {
+          fileName = cmd.el.getAttribute?.(_a.fileName) || 
+                     cmd.el.getAttribute?.('name') || 
+                     cmd.el.getAttribute?.('value') ||
+                     cmd.el.getAttribute?.('data-file-name');
+        }
+        
+        // Method 4.5: From cmd.value (if set directly on Note)
+        if (!fileName && cmd?.value) {
+          fileName = cmd.value;
+        }
+        
+        // Method 5: From event target and walk up DOM tree
         if (!fileName && args?.target) {
           let target = args.target;
-          while (target && target !== document.body) {
+          let depth = 0;
+          const maxDepth = 10; // Prevent infinite loop
+          while (target && target !== document.body && target !== document.documentElement && depth < maxDepth) {
+            depth++;
             if (target.dataset && target.dataset.fileName) {
               fileName = target.dataset.fileName;
               break;
+            }
+            // Also check for file-item container
+            if (target.classList && target.classList.contains(`${this.fig.family}__file-item`)) {
+              fileName = target.dataset?.fileName;
+              if (fileName) break;
             }
             target = target.parentElement;
           }
         }
         
-        // Also try from cmd.el parent
+        // Method 6: From cmd.el parent elements (file-item container)
         if (!fileName && cmd?.el) {
           let parent = cmd.el.parentElement;
-          while (parent && parent !== document.body) {
+          let depth = 0;
+          const maxDepth = 10; // Prevent infinite loop
+          while (parent && parent !== document.body && parent !== document.documentElement && depth < maxDepth) {
+            depth++;
+            // Check if this is the file-item container
+            if (parent.classList && parent.classList.contains(`${this.fig.family}__file-item`)) {
+              fileName = parent.dataset?.fileName;
+              if (fileName) break;
+            }
             if (parent.dataset && parent.dataset.fileName) {
               fileName = parent.dataset.fileName;
               break;
@@ -1319,11 +1520,29 @@ class __window_upload_progress extends __window_core {
           }
         }
         
+        // Method 7: Try to find from closest file-item ancestor
+        if (!fileName && cmd?.el) {
+          const fileItemEl = cmd.el.closest?.(`.${this.fig.family}__file-item`);
+          if (fileItemEl && fileItemEl.dataset?.fileName) {
+            fileName = fileItemEl.dataset.fileName;
+          }
+        }
+        
         if (fileName) {
-          this.debug(`Cancelling upload for file: ${fileName}`);
+          console.log("[UPLOAD_PROGRESS] cancel-upload resolved fileName:", fileName);
           return this.cancelUpload(fileName);
         } else {
-          this.debug(`Cancel upload: Could not find fileName`, { cmd, args, target: args?.target });
+          // Log for debugging
+          console.warn('[UPLOAD_PROGRESS] Cancel upload: Could not find fileName', {
+            cmd: cmd ? { 
+              hasMget: typeof cmd.mget === 'function',
+              hasGet: typeof cmd.get === 'function',
+              hasEl: !!cmd.el,
+              elDataset: cmd.el?.dataset,
+              value: cmd.value
+            } : null,
+            args: args ? { target: args.target?.tagName, hasTarget: !!args.target } : null
+          });
         }
         break;
 
@@ -1335,8 +1554,6 @@ class __window_upload_progress extends __window_core {
         break;
 
       default:
-        // Call parent but pass no_raise to avoid raise() error
-        this.debug(`Service not found: ${service}, passing to parent with no_raise`);
         return super.onUiEvent(cmd, { ...args, no_raise: true });
     }
   }

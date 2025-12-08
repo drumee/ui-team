@@ -2,6 +2,263 @@ const { getFileIcon, formatSpeed } = require('./helpers');
 const { filesize } = require("core/utils");
 
 /**
+ * Extract and normalize file item options
+ * @param {Object} item - Upload item with fileName, progress, speed, status, file
+ * @returns {Object} Normalized options object
+ */
+function extractFileOptions(item) {
+  // Extract basic properties with defaults
+  const options = {
+    // File identification
+    fileName: item.fileName || item.file?.name || item.file?.filename || "Unknown file",
+    file: item.file || null,
+    fileSize: item.fileSize || item.file?.size || 0,
+    
+    // Upload progress
+    progress: item.progress || 0,
+    speed: item.speed || 0,
+    
+    // Status - CRITICAL: Use status directly from item
+    // Status should always be set correctly by index.js:
+    // - 'uploading' when item is added (addUploadItem)
+    // - 'completed' when upload completes (completeUpload or updateProgress when progress >= 100)
+    // - 'cancelled' when cancelled (cancelUpload)
+    // - 'error' when error occurs
+    // If status is missing, it's a bug - but we'll default to 'uploading' for safety
+    status: item.status || 'uploading',
+    
+    // Additional metadata
+    id: item.id || null,
+    queue: item.queue || null,
+    result: item.result || null,
+    startTime: item.startTime || null,
+  };
+  
+  // Normalize status: treat unknown/pending as uploading for UI
+  const normalizedStatus = ['completed', 'cancelled', 'error', 'uploading'].includes(options.status)
+    ? options.status
+    : 'uploading';
+  options.status = normalizedStatus;
+
+  // Derive computed states from status
+  options.isCompleted = options.status === 'completed';
+  options.isCancelled = options.status === 'cancelled';
+  options.isError = options.status === 'error';
+  options.isUploading = options.status === 'uploading' && options.progress < 100;
+  options.isClickable = options.isCompleted;
+  options.progressPercent = Math.round(options.progress);
+  
+  // Display status for dataset
+  options.displayStatus = options.isCompleted ? 'completed' : 
+                         (options.isCancelled ? 'cancelled' : 
+                         (options.isError ? 'error' : options.status));
+  
+  // File icon
+  options.fileIcon = getFileIcon(options.file || { name: options.fileName, type: options.file?.type });
+  
+  // Visibility flags - control what to show/hide
+  // These can be overridden by index.js if needed
+  options.showIcon = item.showIcon !== undefined ? item.showIcon : true;
+  options.showName = item.showName !== undefined ? item.showName : true;
+  options.showSpeed = item.showSpeed !== undefined ? item.showSpeed : (options.isUploading && options.speed > 0);
+  options.showProgress = item.showProgress !== undefined ? item.showProgress : options.isUploading;
+  options.showCheck = item.showCheck !== undefined ? item.showCheck : options.isCompleted;
+  options.showCancel = item.showCancel !== undefined ? item.showCancel : options.isUploading;
+  options.showCancelled = item.showCancelled !== undefined ? item.showCancelled : options.isCancelled;
+  options.showError = item.showError !== undefined ? item.showError : options.isError;
+  
+  return options;
+}
+
+/**
+ * Create file icon component
+ * @param {String} pfx - CSS prefix
+ * @param {Object} opt - Options object
+ * @returns {Object|null} Skeleton component or null
+ */
+function createFileIcon(pfx, opt) {
+  if (!opt.showIcon) return null;
+  
+  return Skeletons.Button.Svg({
+    className: `${pfx}-icon`,
+    ico: opt.fileIcon,
+    active: 0,
+  });
+}
+
+/**
+ * Create file name component
+ * @param {String} pfx - CSS prefix
+ * @param {Object} opt - Options object
+ * @returns {Object|null} Skeleton component or null
+ */
+function createFileName(pfx, opt) {
+  if (!opt.showName) return null;
+  const normalizedFileName = opt.fileName.replace(/[^a-zA-Z0-9]/g, '_');
+  
+  return Skeletons.Note({
+    className: `${pfx}-name`,
+    sys_pn: `name-${normalizedFileName}`,
+    content: opt.fileName,
+  });
+}
+
+/**
+ * Create speed indicator component
+ * @param {String} pfx - CSS prefix
+ * @param {Object} opt - Options object
+ * @returns {Array} Array of skeleton components
+ */
+function createSpeedIndicator(pfx, opt) {
+  if (!opt.showSpeed || !opt.speed || opt.speed <= 0) {
+    return [];
+  }
+  
+  const normalizedFileName = opt.fileName.replace(/[^a-zA-Z0-9]/g, '_');
+  
+  return [
+    Skeletons.Note({
+      className: `${pfx}-separator`,
+      content: " • ",
+    }),
+    Skeletons.Note({
+      className: `${pfx}-speed`,
+      sys_pn: `speed-${normalizedFileName}`,
+      content: formatSpeed(opt.speed),
+    }),
+  ];
+}
+
+/**
+ * Create percent indicator component
+ */
+function createPercentIndicator(pfx, opt) {
+  const normalizedFileName = opt.fileName.replace(/[^a-zA-Z0-9]/g, '_');
+  return Skeletons.Note({
+    className: `${pfx}-percent`,
+    sys_pn: `percent-${normalizedFileName}`,
+    content: `${opt.progressPercent}%`,
+  });
+}
+
+/**
+ * Create file size indicator component
+ */
+function createSizeIndicator(pfx, opt) {
+  if (!opt.fileSize) return null;
+  const normalizedFileName = opt.fileName.replace(/[^a-zA-Z0-9]/g, '_');
+  return Skeletons.Note({
+    className: `${pfx}-size`,
+    sys_pn: `size-${normalizedFileName}`,
+    content: filesize(opt.fileSize),
+  });
+}
+
+/**
+ * Create progress bar component
+ * @param {String} pfx - CSS prefix
+ * @param {Object} opt - Options object
+ * @returns {Object|null} Skeleton component or null
+ */
+function createProgressBar(pfx, opt) {
+  if (!opt.showProgress) return null;
+  
+  const normalizedFileName = opt.fileName.replace(/[^a-zA-Z0-9]/g, '_');
+  
+  return Skeletons.Box.Y({
+    className: `${pfx}-progress-wrapper`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${pfx}-progress-bar`,
+        kids: [
+          Skeletons.Element({
+            tagName: 'div',
+            className: `${pfx}-progress-fill`,
+            sys_pn: `progress-fill-${normalizedFileName}`,
+            style: {
+              width: `${Math.round(opt.progress)}%`
+            }
+          })
+        ]
+      })
+    ]
+  });
+}
+
+/**
+ * Create status indicator component (check icon, cancel button, cancelled text, or error text)
+ * @param {String} pfx - CSS prefix
+ * @param {Object} ui - Window instance
+ * @param {Object} opt - Options object
+ * @returns {Object|null} Skeleton component or null
+ */
+function createStatusIndicator(pfx, ui, opt) {
+  // Priority: completed > cancelled > error > uploading
+  if (opt.showCheck && opt.isCompleted) {
+    return Skeletons.Box.X({
+      className: `${pfx}-check`,
+      kids: [
+        Skeletons.Button.Svg({
+          className: `${pfx}__icon-svg`,
+          ico: "upload-checked",
+          active: 0,
+        }),
+      ]
+    });
+  }
+  
+  if (opt.showCancelled && opt.isCancelled) {
+    return Skeletons.Note({
+      className: `${pfx}-cancelled`,
+      content: LOCALE.CANCELLED || "Cancelled",
+    });
+  }
+  
+  if (opt.showError && opt.isError) {
+    return Skeletons.Note({
+      className: `${pfx}-error`,
+      content: LOCALE.ERROR || "Error",
+    });
+  }
+  
+  if (opt.showCancel && opt.isUploading) {
+    const normalizedFileName = opt.fileName.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    // Use Note to avoid unintended icon rendering
+    return Skeletons.Note({
+      className: `${pfx}-cancel`,
+      content: LOCALE.CANCEL || "Cancel",
+      service: "cancel-upload",
+      uiHandler: [ui],
+      partHandler: [ui],
+      trigger: 'click',
+      interactive: 1,
+      name: opt.fileName,
+      role: 'button',
+      value: opt.fileName,
+      dataset: {
+        fileName: opt.fileName,
+        name: opt.fileName,
+        value: opt.fileName,
+        status: 'uploading',
+        service: "cancel-upload"
+      },
+      // Debug: ensure click surfaces
+      on: {
+        click: () => {
+          try {
+            console.log("[UPLOAD_PROGRESS] cancel click item:", opt.fileName);
+          } catch (e) {}
+        }
+      },
+      sys_pn: `cancel-${normalizedFileName}`,
+    });
+  }
+  
+  return null;
+}
+
+/**
  * Create file item skeleton for upload progress window
  * @param {Object} ui - Window instance
  * @param {Object} item - Upload item with fileName, progress, speed, status
@@ -9,44 +266,40 @@ const { filesize } = require("core/utils");
  */
 module.exports = function fileItem(ui, item) {
   const pfx = `${ui.fig.family}__file-item`;
-  const fileName = item.fileName || "Unknown file";
-  const progress = item.progress || 0;
-  const speed = item.speed || 0;
-  const status = item.status || 'uploading';
-  const fileSize = item.fileSize || (item.file && item.file.size) || 0;
-  const fileIcon = getFileIcon(item.file || { name: fileName, type: item.file?.type });
   
-  // Check if upload is completed (either status is 'completed' or progress is 100%)
-  const isCompleted = status === 'completed' || progress >= 100;
-  const isUploading = status === 'uploading' && progress < 100;
+  // Extract and normalize all options from item
+  const opt = extractFileOptions(item);
   
-  // Determine if clickable (completed status)
-  const isClickable = isCompleted;
-  
-  // Use 'completed' status if progress is 100% but status hasn't updated yet
-  const displayStatus = isCompleted ? 'completed' : status;
+  // Create individual components
+  const fileIcon = createFileIcon(pfx, opt);
+  const fileName = createFileName(pfx, opt);
+  const speedIndicator = createSpeedIndicator(pfx, opt);
+  const percentIndicator = createPercentIndicator(pfx, opt);
+  const sizeIndicator = createSizeIndicator(pfx, opt);
+  const progressBar = createProgressBar(pfx, opt);
+  const statusIndicator = createStatusIndicator(pfx, ui, opt);
+  const actions = statusIndicator ? Skeletons.Box.X({
+    className: `${pfx}-actions`,
+    kids: [statusIndicator]
+  }) : null;
   
   return Skeletons.Box.Y({
     className: `${pfx}`,
     dataset: {
-      fileName: fileName,
-      status: displayStatus,
-      clickable: isClickable ? "1" : "0"
+      fileName: opt.fileName,
+      status: opt.displayStatus,
+      clickable: opt.isClickable ? "1" : "0"
     },
-    service: isClickable ? "click-upload-item" : null,
-    uiHandler: isClickable ? [ui] : null,
+    service: opt.isClickable ? "click-upload-item" : null,
+    uiHandler: opt.isClickable ? [ui] : null,
     kids: [
       // File icon and name row
       Skeletons.Box.X({
         className: `${pfx}-header`,
         kids: [
-          // File icon (keep original size)
-          Skeletons.Button.Svg({
-            className: `${pfx}-icon`,
-            ico: fileIcon,
-            active: 0,
-          }),
-          // File name, speed, and progress bar container (210px width)
+          // File icon
+          fileIcon,
+          // File name, speed, and progress bar container
           Skeletons.Box.Y({
             className: `${pfx}-info`,
             kids: [
@@ -54,61 +307,16 @@ module.exports = function fileItem(ui, item) {
               Skeletons.Box.X({
                 className: `${pfx}-name-speed`,
                 kids: [
-                  Skeletons.Note({
-                    className: `${pfx}-name`,
-                    content: fileName,
-                  }),
-                  isUploading && speed > 0 ? [
-                    Skeletons.Note({
-                      className: `${pfx}-separator`,
-                      content: " • ",
-                    }),
-                    Skeletons.Note({
-                      className: `${pfx}-speed`,
-                      sys_pn: `speed-${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`,
-                      content: formatSpeed(speed),
-                    }),
-                  ] : [],
-                ].flat().filter(Boolean),
+                  fileName,
+                  ...speedIndicator,
+                ].filter(Boolean),
               }),
-              // Progress bar (only for uploading status and progress < 100%, 210px width)
-              isUploading ? Skeletons.Box.Y({
-                className: `${pfx}-progress-wrapper`,
-                kids: [
-                  Skeletons.Box.Y({
-                    className: `${pfx}-progress-bar`,
-                    kids: [
-                      Skeletons.Element({
-                        tagName: 'div',
-                        className: `${pfx}-progress-fill`,
-                        sys_pn: `progress-fill-${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`,
-                        style: {
-                          width: `${Math.round(progress)}%`
-                        }
-                      })
-                    ]
-                  })
-                ]
-              }) : null,
+              // Progress bar
+              progressBar,
             ].filter(Boolean),
           }),
-          // Cancel button when uploading or checkmark when completed (flex-shrink: 0)
-          isUploading ? Skeletons.Note({
-            className: `${pfx}-cancel`,
-            content: LOCALE.CANCEL || "Cancel",
-            service: "cancel-upload",
-            uiHandler: [ui],
-            dataset: { fileName: fileName },
-          }) : isCompleted ? Skeletons.Box.X({
-            className: `${pfx}-check`,
-            kids: [
-              Skeletons.Button.Svg({
-                className: `${pfx}-check-svg`,
-                ico: "upload-checked",
-                active: 0,
-              }),
-            ]
-          }) : null,
+          // Status indicator (check icon, cancel button, cancelled text, or error text)
+          actions,
         ].filter(Boolean),
       }),
     ].filter(Boolean),

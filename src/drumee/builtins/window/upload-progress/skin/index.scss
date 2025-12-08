@@ -156,7 +156,7 @@
       height: 10px;
       padding: 0;
       margin: 0;
-      rotate: 90deg;
+      rotate: -90deg;
       flex-shrink: 0;
     }
   }
@@ -178,12 +178,15 @@
 
   // File item
   &__file-item {
-    padding: 12px 20px;
+    padding: 8px 16px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
     border-bottom: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.3));
     width: 100%;
+    min-height: 64px;
+    max-height: 64px;
+    overflow: hidden;
     
     &:last-child {
       border-bottom: none;
@@ -222,9 +225,18 @@
   &__file-item-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
     min-width: 0;
     width: 100%;
+    height: 40px;
+    
+    // Ensure file info can shrink and truncate
+    > :nth-child(2) {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+    }
     
     // Ensure cancel button and checkmark align to the right
     > :last-child {
@@ -234,8 +246,11 @@
   }
 
   &__file-item-icon {
-    width: 24px;
-    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
     flex-shrink: 0;
     color: var(--neutral-400, #9ca3af);
   }
@@ -244,17 +259,16 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    width: 210px;
-    min-width: 210px;
-    max-width: 210px;
-    flex-shrink: 0;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
   }
 
   &__file-item-name-speed {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     width: 100%;
     min-width: 0;
     overflow: hidden;
@@ -264,6 +278,7 @@
     @include drumee.typo("body", "small");
     color: var(--neutral-900, #222732);
     font-weight: 600; // Bold as per design
+    display: block;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -294,44 +309,85 @@
   &__file-item-actions {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
     flex-shrink: 0;
+    min-width: 24px;
   }
 
   &__file-item-cancel {
     @include drumee.typo("body", "small");
     color: var(--error-500, #ef4444);
     cursor: pointer;
-    background-color: rgba(255, 182, 193, 0.3); // Light pink background as per design
-    border: none;
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-weight: 600; // Bold text as per design
+    background: rgba(239, 68, 68, 0.12) !important; // 20% tint
+    border: none !important;
+    padding: 6px 10px !important;
+    min-width: 0;
+    height: auto;
+    line-height: 1.2;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+    appearance: none;
+    font-weight: 500;
     flex-shrink: 0;
+    white-space: nowrap;
+    display: inline-block;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+    text-align: right;
+
+    // Ensure text stays centered inside pill
+    span,
+    section,
+    .label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
     
     &:hover {
       color: var(--error-600, #dc2626);
-      background-color: rgba(255, 182, 193, 0.5);
+      text-decoration: underline;
+    }
+    
+    &:active {
+      color: var(--error-700, #b91c1c);
     }
   }
 
   &__file-item-check {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    color: var(--success-500, #10b981);
     
     &-svg {
-      width: 20px;
-      height: 20px;
-      color: var(--success-500, #10b981);
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      color: inherit;
+      
+      svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        fill: currentColor;
+        stroke: currentColor;
+      }
     }
   }
 
   // Progress bar
   &__file-item-progress-wrapper {
     width: 100%;
-    margin-top: 4px;
+    margin-top: 8px;
+    display: block;
   }
 
   &__file-item-progress-bar {
@@ -377,11 +433,43 @@
     border: none;
     padding: 0;
     font-weight: 500;
+    transition: color 0.2s ease, text-decoration 0.2s ease;
     
     &:hover {
       color: var(--error-600, #dc2626);
       text-decoration: underline;
     }
+    
+    &:active {
+      color: var(--error-700, #b91c1c);
+      transform: scale(0.98);
+    }
+  }
+
+  &__close {
+    @include drumee.typo("body", "small");
+    color: var(--primary-500, #6366f1);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font-weight: 500;
+    transition: color 0.2s ease, text-decoration 0.2s ease, transform 0.1s ease;
+    
+    &:hover {
+      color: var(--primary-600, #4f46e5);
+      text-decoration: underline;
+      transform: translateY(-1px);
+    }
+    
+    &:active {
+      color: var(--primary-700, #4338ca);
+      transform: translateY(0) scale(0.98);
+    }
+  }
+
+  &__footer-spacer {
+    flex: 1;
   }
 }
 
