@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /src/drumee/builtins/window/interact/singleton.coffee
-//   TYPE : Component
-// ==================================================================== *
-
 const __window_chatInteract = require('./chat');
 const { TweenMax } = require("gsap/all");
 
@@ -24,13 +18,11 @@ class __window_interact_singleton extends __window_chatInteract {
     this.prototype.isSingleton = 1;
   }
 
-  // ===========================================================
-  // initialize
-  //
 
-  // ===========================================================
-  // _setSize
-  // ===========================================================
+  /**
+   * 
+   * @param {*} opt 
+   */
   _setSize(opt = {}) {
     const ww = Wm.$el.width();
     let w = ww;
@@ -111,11 +103,7 @@ class __window_interact_singleton extends __window_chatInteract {
   }
 
 
-  // ===========================================================
-  // change_size
-  // ===========================================================
   change_size(cmd, mode) {
-    //@debug "change_size view = #{@_view}", cmd ,@_state
     const ww = Wm.$el.width();
 
     const actualSize = {
@@ -239,9 +227,13 @@ class __window_interact_singleton extends __window_chatInteract {
     return this.sizeUpdated(newSize, oldSize);
   }
 
-  // ===========================================================
-  // _resize
-  // ===========================================================
+  /**
+   * 
+   * @param {*} e 
+   * @param {*} ui 
+   * @param {*} anim 
+   * @returns 
+   */
   _resize(e, ui, anim) {
     const size = {
       width: ui.size.width,
@@ -253,11 +245,13 @@ class __window_interact_singleton extends __window_chatInteract {
     return this.responsive(ui.size, _a.none);
   }
 
-  // ===========================================================
-  // _resizeAnimation
-  // ===========================================================
+  /**
+   * 
+   * @param {*} anim 
+   * @param {*} change 
+   * @returns 
+   */
   _resizeAnimation(anim, change) {
-    //@debug "_resizeAnimation" , @_state , @ , anim, change
     change = change || 0;
     const h = anim.to.height - change;
     if (anim.to.left < 0) {
@@ -281,6 +275,7 @@ class __window_interact_singleton extends __window_chatInteract {
       onComplete: f
     });
   }
+
   // ===========================================================
   // instanceUpdated - callback to the instence update
   // ===========================================================

@@ -180,7 +180,7 @@ function settings_body(ui) {
     ],
   });
 
-  const header2 = require("./header");
+  const header2 = require("./header").default(ui);
 
   return Skeletons.Box.G({
     className: `${fig}__main`,

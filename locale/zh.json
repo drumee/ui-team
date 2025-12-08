@@ -949,7 +949,6 @@
   "Q_FORGOT_PASS_PHRASE": "忘了密码",
   "GET_YOUT_CLOUD_COMPUTER": "获取您的云计算机",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "您的云桌面已准备就绪！",
-  "ADD_CONTACT": "增加联系人",
   "DOCUMENT_ACCESS": "访问该文档",
   "CHANGE_ADMIN": "改变管理员",
   "ME": "我",
@@ -1936,5 +1935,6 @@
   "AREA_TEAM_LABEL": "Команда",
   "AREA_PUBLIC_LABEL": "网站",
   "MEMBER_ACCESS": "会员访问",
-  "SHARE": "分享"
+  "SHARE": "分享",
+  "ADD_CONTACT": "添加新联系人"
 }

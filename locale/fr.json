@@ -949,7 +949,6 @@
   "Q_FORGOT_PASS_PHRASE": "Mot de passe oublié ",
   "GET_YOUT_CLOUD_COMPUTER": "Obtenez votre ordinateur dans le cloud",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "Votre bureau cloud est prêt !",
-  "ADD_CONTACT": "Ajouter un contact",
   "DOCUMENT_ACCESS": "Accès au document",
   "CHANGE_ADMIN": "Modifier les administrateurs",
   "ME": "Moi",
@@ -1936,5 +1935,6 @@
   "AREA_TEAM_LABEL": "Équipe",
   "AREA_PUBLIC_LABEL": "Site web",
   "MEMBER_ACCESS": "Accès membres",
-  "SHARE": "Partager"
+  "SHARE": "Partager",
+  "ADD_CONTACT": "Ajouter un nouveau contact"
 }

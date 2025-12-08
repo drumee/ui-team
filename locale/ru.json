@@ -949,7 +949,6 @@
   "Q_FORGOT_PASS_PHRASE": "Забыли кодовую фразу",
   "GET_YOUT_CLOUD_COMPUTER": "Получите ваш облачный компьютер",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "Ваш облачный рабочий стол готов!",
-  "ADD_CONTACT": "Добавить контакт",
   "DOCUMENT_ACCESS": "Доступ к документу",
   "CHANGE_ADMIN": "Сменить администраторов",
   "ME": "мне",
@@ -1936,5 +1935,6 @@
   "AREA_TEAM_LABEL": "Команда",
   "AREA_PUBLIC_LABEL": "网站",
   "MEMBER_ACCESS": "Доступ для участников",
-  "SHARE": "Поделиться"
+  "SHARE": "Поделиться",
+  "ADD_CONTACT": "Добавить новый контакт"
 }

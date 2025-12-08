@@ -945,7 +945,6 @@
   "Q_FORGOT_PASS_PHRASE": "ភ្លេចឃ្លាឆ្លង",
   "GET_YOUT_CLOUD_COMPUTER": "ទទួលបានកុំព្យូទ័រពពករបស់អ្នក។",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "ផ្ទៃតុលើពពករបស់អ្នករួចរាល់ហើយ!",
-  "ADD_CONTACT": "ព័ត៌មានបន្ថែម",
   "DOCUMENT_ACCESS": "ការចូលប្រើឯកសារ",
   "CHANGE_ADMIN": "ផ្លាស់ប្តូរអ្នកគ្រប់គ្រង",
   "ME": "ខ្ញុំ",
@@ -1936,5 +1935,6 @@
   "AREA_TEAM_LABEL": "ក្រុម",
   "AREA_PUBLIC_LABEL": "គេហទំព័រ",
   "MEMBER_ACCESS": "ការចូលប្រើប្រាស់របស់សមាជិក",
-  "SHARE": "ចែករំលែក"
+  "SHARE": "ចែករំលែក",
+  "ADD_CONTACT": "បន្ថែមទំនាក់ទំនងថ្មី"
 }

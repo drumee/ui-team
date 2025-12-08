@@ -949,7 +949,6 @@
   "Q_FORGOT_PASS_PHRASE": "Forgot pass phrase",
   "GET_YOUT_CLOUD_COMPUTER": "Get your cloud computer",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "Your cloud desktop is ready!",
-  "ADD_CONTACT": "Add contact",
   "DOCUMENT_ACCESS": "Document access",
   "CHANGE_ADMIN": "Change administrators",
   "ME": "Me",
@@ -1936,5 +1935,6 @@
   "AREA_TEAM_LABEL": "Team",
   "AREA_PUBLIC_LABEL": "Website",
   "MEMBER_ACCESS": "Member access",
-  "SHARE": "Share"
+  "SHARE": "Share",
+  "ADD_CONTACT": "Add new contact"
 }
