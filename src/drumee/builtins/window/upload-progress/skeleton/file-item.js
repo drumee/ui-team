@@ -13,21 +13,10 @@ function extractFileOptions(item) {
     fileName: item.fileName || item.file?.name || item.file?.filename || "Unknown file",
     file: item.file || null,
     fileSize: item.fileSize || item.file?.size || 0,
-    
     // Upload progress
     progress: item.progress || 0,
     speed: item.speed || 0,
-    
-    // Status - CRITICAL: Use status directly from item
-    // Status should always be set correctly by index.js:
-    // - 'uploading' when item is added (addUploadItem)
-    // - 'completed' when upload completes (completeUpload or updateProgress when progress >= 100)
-    // - 'cancelled' when cancelled (cancelUpload)
-    // - 'error' when error occurs
-    // If status is missing, it's a bug - but we'll default to 'uploading' for safety
     status: item.status || 'uploading',
-    
-    // Additional metadata
     id: item.id || null,
     queue: item.queue || null,
     result: item.result || null,
@@ -130,31 +119,6 @@ function createSpeedIndicator(pfx, opt) {
 }
 
 /**
- * Create percent indicator component
- */
-function createPercentIndicator(pfx, opt) {
-  const normalizedFileName = opt.fileName.replace(/[^a-zA-Z0-9]/g, '_');
-  return Skeletons.Note({
-    className: `${pfx}-percent`,
-    sys_pn: `percent-${normalizedFileName}`,
-    content: `${opt.progressPercent}%`,
-  });
-}
-
-/**
- * Create file size indicator component
- */
-function createSizeIndicator(pfx, opt) {
-  if (!opt.fileSize) return null;
-  const normalizedFileName = opt.fileName.replace(/[^a-zA-Z0-9]/g, '_');
-  return Skeletons.Note({
-    className: `${pfx}-size`,
-    sys_pn: `size-${normalizedFileName}`,
-    content: filesize(opt.fileSize),
-  });
-}
-
-/**
  * Create progress bar component
  * @param {String} pfx - CSS prefix
  * @param {Object} opt - Options object
@@ -199,7 +163,7 @@ function createStatusIndicator(pfx, ui, opt) {
       className: `${pfx}-check`,
       kids: [
         Skeletons.Button.Svg({
-          className: `${pfx}__icon-svg`,
+          className: `${pfx}-check-svg ${ui.fig.family}__icon-svg`,
           ico: "upload-checked",
           active: 0,
         }),
@@ -243,14 +207,6 @@ function createStatusIndicator(pfx, ui, opt) {
         status: 'uploading',
         service: "cancel-upload"
       },
-      // Debug: ensure click surfaces
-      on: {
-        click: () => {
-          try {
-            console.log("[UPLOAD_PROGRESS] cancel click item:", opt.fileName);
-          } catch (e) {}
-        }
-      },
       sys_pn: `cancel-${normalizedFileName}`,
     });
   }
@@ -274,14 +230,8 @@ module.exports = function fileItem(ui, item) {
   const fileIcon = createFileIcon(pfx, opt);
   const fileName = createFileName(pfx, opt);
   const speedIndicator = createSpeedIndicator(pfx, opt);
-  const percentIndicator = createPercentIndicator(pfx, opt);
-  const sizeIndicator = createSizeIndicator(pfx, opt);
   const progressBar = createProgressBar(pfx, opt);
   const statusIndicator = createStatusIndicator(pfx, ui, opt);
-  const actions = statusIndicator ? Skeletons.Box.X({
-    className: `${pfx}-actions`,
-    kids: [statusIndicator]
-  }) : null;
   
   return Skeletons.Box.Y({
     className: `${pfx}`,
@@ -316,7 +266,7 @@ module.exports = function fileItem(ui, item) {
             ].filter(Boolean),
           }),
           // Status indicator (check icon, cancel button, cancelled text, or error text)
-          actions,
+          statusIndicator,
         ].filter(Boolean),
       }),
     ].filter(Boolean),
