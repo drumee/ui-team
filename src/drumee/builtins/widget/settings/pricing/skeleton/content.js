@@ -75,7 +75,7 @@ function item(ui, icon, label, price, capacity, recommend) {
   });
 
   const checkbox = Skeletons.Box.X({
-    className: `${ui.fig.family}__checkbox`,
+    className: `${ui.fig.family}__checkbox checkbox`,
     uiHandler: ui,
   });
 

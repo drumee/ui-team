@@ -1,21 +1,3 @@
-const {
-  badgePersonal,
-} = require("builtins/media/grid/template/folder/badge-personal");
-
-function folder_logo(ui, c) {
-  return Skeletons.Box.X({
-    className: `${ui.fig.family}__logo`,
-    kids: [
-      Skeletons.Element({
-        content: badgePersonal({
-          area: _a.personal,
-          widgetId: `${ui.mget(_a.widgetId)}-${c}`,
-        }),
-        className: `${ui.fig.family}__icon logo ${c}`,
-      }),
-    ],
-  });
-}
 
 function feature(ui, text) {
   const fig = `${ui.fig.family}`;
@@ -24,7 +6,7 @@ function feature(ui, text) {
     className: `${fig}__feature`,
     kids: [
       Skeletons.Button.Svg({
-        ico: "logo",
+        ico: "raw-checked-star",
         className: `${fig}__feature icon`,
         uiHandler: ui,
       }),

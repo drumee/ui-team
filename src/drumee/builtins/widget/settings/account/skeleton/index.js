@@ -5,9 +5,10 @@ const { button } = require("../../../../skeleton/toolkit/buttons");
  * @param {*} ui
  * @param {*} opt
  */
-function nav_item(ui, ico, label, price, capacity, recommend) {
+function nav_item(ui, ico, label) {
+  let fig = ui.fig.family;
   return Skeletons.Box.X({
-    className: `${ui.fig.family}__badge-wrapper badge secondary`,
+    className: `${fig}__badge-wrapper badge secondary`,
     uiHandler: ui,
     kids: [
       Skeletons.Button.Svg({
@@ -16,7 +17,7 @@ function nav_item(ui, ico, label, price, capacity, recommend) {
         uiHandler: ui,
       }),
       Skeletons.Note({
-        className: `${ui.fig.family}__badge-wrapper text`,
+        className: `${fig}__badge-wrapper text`,
         content: label,
       }),
     ],
@@ -28,7 +29,7 @@ function nav_item(ui, ico, label, price, capacity, recommend) {
  * @param {*} ui 
  */
 function nav(ui) {
-
+  let fig = ui.fig.family;
   const topics = Skeletons.Box.Y({
     className: `${fig}__topics`,
     kids: [
@@ -117,7 +118,7 @@ function settings_body(ui) {
     kids: [
       Skeletons.Box.Y({
         className: `${fig}__nav`,
-        kids: [nav(ui)],
+        kids: nav(ui),
       }),
       Skeletons.Box.Y({
         className: `${fig}__container`,
