@@ -12,10 +12,12 @@ const __media_preview = function (m) {
     switch (type) {
       case _a.video:
         html = `
-          <div id="${m._id}-preview" class="preview-content ${type}" style="background-image:url(${m.url});"> 
-            <svg id="${m._id}-icon" class="preview-icon ${type} ${dmz} ${area}"> 
-            ${Template.Xmlns('raw-video')} 
-            </svg> 
+          <div class="preview-container ${type}">
+            <div id="${m._id}-preview" class="preview-content ${type}" style="background-image:url(${m.url});"> 
+              <svg id="${m._id}-icon" class="preview-icon ${type} ${dmz} ${area}"> 
+              ${Template.Xmlns('raw-video')} 
+              </svg> 
+            </div>
           </div>`;
         break;
       default:
