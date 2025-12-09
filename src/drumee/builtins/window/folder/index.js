@@ -1,4 +1,5 @@
 const mfsInteract = require('../interact');
+require('./skin');
 
 class __window_folder extends mfsInteract {
   constructor(...args) {
@@ -12,7 +13,6 @@ class __window_folder extends mfsInteract {
    * @param {*} opt 
    */
   initialize(opt) {
-    require('./skin');
     this.isFolder = 1;
     super.initialize(opt);
     this._path = [];
@@ -22,13 +22,11 @@ class __window_folder extends mfsInteract {
       value: _a.normal
     });
 
-
     if (this.model.get(_a.hub_id) !== Visitor.id) {
       this.model.set({
         filetype: _a.hub
       });
     }
-
     this.style.set({
       width: this.size.width,
       height: this.size.height
@@ -70,6 +68,13 @@ class __window_folder extends mfsInteract {
 
       case _e.download:
         return this.mget(_a.trigger).download()
+
+      case _e.settings:
+        let item = this.model.toJSON();
+        delete item.style;
+        item.dataset = { modal: 1 }
+        item.kind = "settings_folder";
+        return this.__wrapperDialog.feed(item);
 
       default:
         super.onUiEvent(cmd, args);

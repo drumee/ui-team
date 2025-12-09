@@ -1,0 +1,37 @@
+.gradient-start {
+  &-personal {
+    stop-color: #DCB2FF;
+  }
+
+  &-private {
+    stop-color: #FF90A7;
+  }
+
+  &-share,
+  &-dmz {
+    stop-color: #FFA5E6;
+  }
+
+  &-public {
+    stop-color: #89DCFF;
+  }
+}
+
+.gradient-end {
+  &-personal {
+    stop-color: #B251FB;
+  }
+
+  &-private {
+    stop-color: #FF5779;
+  }
+
+  &-share,
+  &-dmz {
+    stop-color: #FF65D5;
+  }
+
+  &-public {
+    stop-color: #2AAAFF;
+  }
+}

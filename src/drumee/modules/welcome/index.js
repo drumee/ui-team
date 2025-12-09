@@ -74,7 +74,6 @@ class __welcome_router extends LetcBox {
    */
   loadSignin() {
     const loadDefault = (opt = {}) => {
-      console.trace()
       this.feed(require('./skeleton').default(this, { ...opt, kind: 'welcome_signin' }));
     }
 

@@ -1,7 +1,7 @@
 require("jquery-ui/ui/widgets/draggable");
 require("jquery-ui/ui/widgets/droppable");
 require("jquery-ui/ui/widgets/resizable");
-require("jquery-ui-touch-punch")
+// require("jquery-ui-touch-punch")
 
 const Rectangle = require('rectangle-node');
 const mfsInteract = require("./interact");
@@ -407,16 +407,17 @@ class __window_manager extends mfsInteract {
   /**
    * 
    */
-  addFolder() {
+  addFolder(opt) {
     const target = this.getActiveWindow(1);
     const folder = {
+      ...opt,
       kind: target._getKind(),
       filetype: _a.folder,
       phase: _a.creating,
       logicalParent: target,
       pid: target.getCurrentNid(),
       hub_id: target.mget(_a.hub_id),
-      service: "add-folder"
+      service: "add-folder",
     };
     target.insertMedia(folder);
     target.scrollToBottom();

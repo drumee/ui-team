@@ -1,7 +1,70 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .window-team {
- &-topbar {
+  &__icon {
+    cursor: pointer;
+
+    &.logo {
+      display: flex;
+      width: 55px;
+      height: 48px;
+      aspect-ratio: 55/48;
+      margin-bottom: 10px;
+    }
+  }
+
+  &__name-wrapper {
+    gap: 10px;
+  }
+
+  &__subtitle-wrapper {
+    gap: 10px;
+    color: var(--neutral-300);
+
+    &.files {
+      padding-right: 10px;
+      border-right: 1px solid var(--neutral-300);
+    }
+  }
+
+  &__buttons-wrapper {
+    gap: 10px;
+  }
+
+  &__upload-button {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 40px;
+    background: var(--neutral-900);
+    color: var(--white);
+    border-radius: 20px;
+  }
+
+  &__settings {
+    padding: 8px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 100%;
+    background: var(--neutral-200);
+    cursor: pointer;
+    width: 46px;
+    height: 46px;
+
+    &.icon {
+      margin: 0;
+      width: 30px;
+      height: 30px;
+      color: var(--neutral-900);
+
+      &:hover {
+        color: var(--primary-500);
+      }
+    }
+  }
+
+  &-topbar {
     &__container {
       position: absolute;
       height: 44px;
@@ -10,44 +73,45 @@
     &__icon {
       color: var(--default-icon-reverse);
       cursor: pointer;
-      height:16px;
-      margin:auto 0px auto 15px;
-      padding:0px;
-      width:16px;
+      height: 16px;
+      margin: auto 0px auto 15px;
+      padding: 0px;
+      width: 16px;
 
-      &:hover { 
-        color:var(--default-icon-hover);
+      &:hover {
+        color: var(--default-icon-hover);
       }
 
       &.link {
-        padding:1px;
+        padding: 1px;
       }
 
       &.contact {
-        margin-right:15px;
+        margin-right: 15px;
       }
 
       &.settings {
-        margin-left:2px;
-        padding:1px;
+        margin-left: 2px;
+        padding: 1px;
       }
 
       &.meeting {
         border: none;
         fill: none;
         margin-left: 13px;
-        padding: 0; 
+        padding: 0;
         stroke-width: 0;
-        stroke:var(--ewhite); 
+        stroke: var(--ewhite);
       }
-      &:hover{
+
+      &:hover {
         stroke: transparent;
       }
     }
 
     &__menu-trigger {
-      padding:1px;
-      color:var(--default-icon-reverse);
+      padding: 1px;
+      color: var(--default-icon-reverse);
       cursor: pointer;
       width: 16px;
       height: 16px;
@@ -57,21 +121,21 @@
     &__menu {
       &[data-state="1"] {
         .menu-trigger {
-          opacity:0.4;
+          opacity: 0.4;
         }
       }
-      
+
       .menu-items {
-        background-color:var(--default-background);
+        background-color: var(--default-background);
         background-color: rgba(241, 227, 244, 0.25);
         border-radius: 4px;
         flex-direction: row;
         height: 60% !important;
-        left:42px;
-        margin-top:9px;
-        min-width:112px;
+        left: 42px;
+        margin-top: 9px;
+        min-width: 112px;
         padding-top: 0;
-        top: 0!important;
+        top: 0 !important;
       }
 
       &:hover {
@@ -80,11 +144,14 @@
     }
 
     &__count {
-      @include drumee.typo($size:8px, $line:12px, $weight:400, $color: var(--teamroom-main));
+      @include drumee.typo($size: 8px,
+        $line: 12px,
+        $weight: 400,
+        $color: var(--teamroom-main));
       align-items: center;
-      background-color: var(--default-background);       
-      border-radius:50%;
-      height:12px;
+      background-color: var(--default-background);
+      border-radius: 50%;
+      height: 12px;
       justify-content: center;
       right: 5px;
       top: 8px;

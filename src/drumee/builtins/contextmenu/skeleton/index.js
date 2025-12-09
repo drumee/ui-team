@@ -1,31 +1,22 @@
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : src/drumee/builtins/desk/skeleton/common/topbar/settings
-//   TYPE : Skeleton
-// ==================================================================== *
 
 const __item = require('./items');
 
-const __window_contextmenu = function(_ui_, trigger, e) {
+
+module.exports = function(ui, trigger, e) {
 
   let mode;
   const a = Skeletons.Box.Y({
     debug     : __filename,
     kidsOpt   : {
-      uiHandler : _ui_
+      uiHandler : ui
     },
     kids      : []});
-  if (_.isFunction(_ui_.contextmenuItems)) {
-    mode = _ui_.contextmenuItems(trigger, e);
-  } else if (_.isString(_ui_.contextmenuItems)) {
-    mode = _ui_.contextmenuItems.split(/[, ;:]+/);
-  } else if (_.isArray(_ui_.contextmenuItems)) {
-    mode = _ui_.contextmenuItems;
+  if (_.isFunction(ui.contextmenuItems)) {
+    mode = ui.contextmenuItems(trigger, e);
+  } else if (_.isString(ui.contextmenuItems)) {
+    mode = ui.contextmenuItems.split(/[, ;:]+/);
+  } else if (_.isArray(ui.contextmenuItems)) {
+    mode = ui.contextmenuItems;
   }
 
   if(_.isEmpty(mode)) {
@@ -35,7 +26,7 @@ const __window_contextmenu = function(_ui_, trigger, e) {
     mode = mode.split(/[, ;:]+/);
   }
   for (let n of Array.from(mode)) {
-    const b = __item(_ui_, trigger, n);
+    const b = __item(ui, trigger, n);
     if (b) {
       a.kids.push(b);
     }
@@ -44,10 +35,8 @@ const __window_contextmenu = function(_ui_, trigger, e) {
   if(localStorage.getItem('debugContextmenu')) {
     const list = localStorage.getItem('debugContextmenu').split(/[ ,;:]+/);
     for (let item of Array.from(list)) { 
-      a.kids.push(__item(_ui_, trigger, item));
+      a.kids.push(__item(ui, trigger, item));
     }
   }
   return a;
 };
-
-module.exports = __window_contextmenu;

@@ -558,12 +558,14 @@ class __media_interact extends media_core {
    * @param {*} value
    * @param {*} service
    */
-  _createInput(value, opt) {
+  async _createInput(value, opt) {
+    this.debug("AAA:653", opt)
     if (value == null) {
-      value = "";
+      value = "no name";
     }
     const multiline = /\<br\>/.test(value);
     value = value.replace(/\<br\>/g, "\n");
+    await Kind.waitFor('entry')
     this.append(
       Skeletons.Textarea({
         className: `${this.fig.family}__input`,
@@ -617,6 +619,7 @@ class __media_interact extends media_core {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     let { nid, hub_id } = this.actualNode();
+    this.debug("AAA:622", service, cmd, args)
     switch (service) {
       case _e.rename:
         this.service = service;
@@ -654,7 +657,13 @@ class __media_interact extends media_core {
         return this.download();
 
       case _e.remove:
-        return this.putIntoTrash();
+        let trash = Wm.getTrashBin();
+        if (trash) {
+          this.delete(1, trash.$el)
+        } else {
+          this.putIntoTrash();
+        }
+        return;
 
       case "load-script":
         let o = this.actualNode(_a.orig);
@@ -798,6 +807,9 @@ class __media_interact extends media_core {
         );
         break;
 
+      case "nop":
+        /** No operation */
+        break;
       default:
         super.onUiEvent(cmd, args);
     }

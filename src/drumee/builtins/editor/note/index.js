@@ -1,6 +1,3 @@
-/* ============================================================= *
-*   Copyright xialia.com  2011-2021
-* ============================================================== */
 
 const __player = require('player/interact');
 const { xhRequest } = require("core/socket/request");
@@ -51,7 +48,9 @@ class ___editor_note extends __player {
     if (this.media) {
       this.copyPropertiesFrom(this.media);
     }
-
+    this.model.set({
+      radio: Env.get("wm-radio"),
+    });
     window.onbeforeunload = this.checkUnsavedWork.bind(this);
     this.lastActiveWindow = Wm.getActiveWindow();
 

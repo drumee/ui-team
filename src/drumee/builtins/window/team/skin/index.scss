@@ -1,26 +1,25 @@
-
-@use 'mixins/drumee.scss';
-@use 'peers.scss';
-@use 'topbar.scss';
-@use 'change-owner.scss';
+@use "mixins/drumee.scss";
+@use "peers.scss";
+@use "topbar.scss";
+@use "change-owner.scss";
 // @import "./vars.scss";
 
-.window-team{
-  &__ui{
-    &[data-content="folder"]{
-      & .window-team-topbar__menu{
+.window-team {
+  &__ui {
+    &[data-content="folder"] {
+      & .window-team-topbar__menu {
         display: none;
       }
-      & .window-topbar__title .svg-wrapper{
+      & .window-topbar__title .svg-wrapper {
         visibility: hidden;
       }
-      &::after{
+      &::after {
         content: attr(data-name);
         position: absolute;
-        top: -30px; 
+        top: -30px;
         left: -3px;
         border-radius: var(--default-border-radius-top);
-        height: 27px; 
+        height: 27px;
         width: 156px;
         background-color: var(--teamroom-main);
         display: flex;
@@ -29,48 +28,60 @@
         align-content: center;
         justify-items: center;
         align-items: center;
-        @include drumee.typo($size:12px,$line:14px,$weight:400,$color: var(--default-text-reverse));
-        padding-top:5px;
-        padding-left:6px;
-        padding-bottom:3px;
+        @include drumee.typo(
+          $size: 12px,
+          $line: 14px,
+          $weight: 400,
+          $color: var(--default-text-reverse)
+        );
+        padding-top: 5px;
+        padding-left: 6px;
+        padding-bottom: 3px;
         box-shadow: var(--shadow-main);
       }
-      
+
       &:before {
-      content: " ";
-      position: absolute;
-      width: calc(100% + 6px);
-      height: calc(100% + 6px);
-      top: -3px; 
-      left: -3px; 
-      border: 7px solid var(--teamroom-main); 
-      border-top-left-radius: 0px;
-      border-bottom-left-radius: 6px;
-      border-bottom-right-radius: 6px;
-      border-top-right-radius :6px;
+        content: " ";
+        position: absolute;
+        width: calc(100% + 6px);
+        height: calc(100% + 6px);
+        top: -3px;
+        left: -3px;
+        border: 7px solid var(--teamroom-main);
+        border-top-left-radius: 0px;
+        border-bottom-left-radius: 6px;
+        border-bottom-right-radius: 6px;
+        border-top-right-radius: 6px;
       }
     }
   }
 
-  &__header{
+  &__header {
     border-bottom: none;
-    background-color: var(--teamroom-main);
-    &[data-content="folder"]{
-      background-color: var(--folder-main); 
+    // background-color: var(--teamroom-main);
+    background: linear-gradient(135deg, #ff90a7, #ff5779);
+    &[data-content="folder"] {
+      // background-color: var(--folder-main);
+      background: linear-gradient(135deg, #dcb2ff, #b251fb);
     }
-    &-title{
+    &-title {
       max-width: 163px;
       align-items: center;
-      @include drumee.typo($size:18px,$line:24px,$weight:400,$color: var(--default-text-reverse));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 24px,
+        $weight: 400,
+        $color: var(--default-text-reverse)
+      );
       .name {
         align-items: flex-start;
         @include drumee.overflow-text;
         @media (min-width: 626px) {
           justify-content: center;
-          max-width:300px;
-          }
+          max-width: 300px;
+        }
       }
-      .icon{
+      .icon {
         width: 21px;
         height: 21px;
         padding: 4px;
@@ -79,12 +90,12 @@
         flex-shrink: 0;
       }
     }
-    &-control{
-      .icon{
-        color: var(--default-icon-reverse);     
+    &-control {
+      .icon {
+        color: var(--default-icon-reverse);
       }
-      &:hover{
-        color:var(--default-icon-hover);
+      &:hover {
+        color: var(--default-icon-hover);
       }
     }
   }

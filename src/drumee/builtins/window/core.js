@@ -438,6 +438,20 @@ class __window_core extends __utils {
 
   /**
    * 
+   */
+  updateSummary(box) {
+    this.fetchService(SERVICE.media.summary, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((data) => {
+      let mtime = Dayjs.unix(data.mtime).format(Visitor.timeformat());
+      this.getPart("items-count").set({content:LOCALE.X_FILES.format(data.file_count)})
+      this.getPart("last-update").set({content:LOCALE.LAST_CHANGE.format(mtime)})
+    }).catch(()=>{
+      this.getPart("last-update").set({content:LOCALE.FILES_NOT_FOUND})
+    })
+
+  }
+
+  /**
+   * 
    * @param {*} child 
    * @param {*} pn 
    * @param {*} section 
@@ -496,24 +510,27 @@ class __window_core extends __utils {
         this.actionContainer = child;
         break;
 
-      case "breadcrumbs":
-        this.breadcrumbs = child;
-        break;
+      // case "breadcrumbs":
+      //   this.breadcrumbs = child;
+      //   break;
 
-      case "breadcrumbs-roll":
-        this.breadcrumbsRoll = child;
-        child.collection.on(_e.remove, () => {
-          if (child.collection.length === 0) {
-            this.__breadcrumbsContainer.setState(0);
-          }
+      // case "breadcrumbs-roll":
+      //   this.breadcrumbsRoll = child;
+      //   child.collection.on(_e.remove, () => {
+      //     if (child.collection.length === 0) {
+      //       this.__breadcrumbsContainer.setState(0);
+      //     }
 
-          if (child.collection.length) {
-            return this.__breadcrumbsContainer.setState(1);
-          }
-        });
-        this.trigger("breadcrumbs-roll-ready");
-        break;
+      //     if (child.collection.length) {
+      //       return this.__breadcrumbsContainer.setState(1);
+      //     }
+      //   });
+      //   this.trigger("breadcrumbs-roll-ready");
+      // break;
 
+      case "folder-summary":
+        this.updateSummary(child)
+        break
       case "info-wrapper":
         this._infoWrapper = child;
         break;
@@ -758,6 +775,7 @@ class __window_core extends __utils {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.model.get(_a.service);
     if (!args.no_raise) this.raise(cmd);
+    this.debug("AAA:780", service)
     switch (service) {
       case _e.close:
         if (this.mget(_a.source)) {

@@ -61,7 +61,7 @@ class __media_core extends DrumeeMFS {
       opt.id = id;
     }
     super.initialize(opt);
-    this.viewOnly = false;
+    this.canRemoveiewOnly = false;
     this.model.atLeast({
       state: 0,
       aspect: _a.grid,
@@ -160,45 +160,39 @@ class __media_core extends DrumeeMFS {
    * @param {*} event
    */
   contextmenuItems() {
-    let items = [
-      _a.copy,
-      _a.rename,
-      _a.upload,
-      _a.download,
-      _a.separator,
-      _a.export,
-      _a.import,
-      _a.separator,
-      _a.link,
-    ];
-
-    if (this.isLocked()) {
-      items = [
-        _a.copy,
-        _a.upload,
-        _a.download,
-        _a.separator,
-        _a.export,
-        _a.import,
-        _a.separator,
-        _a.link,
-      ];
+    let items = []
+    if (Visitor.inDmz && this.canDownload()) {
+      return [_a.download];
     }
 
     const fileType = this.mget(_a.filetype);
+    this.debug("AAA:154", fileType)
     switch (fileType) {
       case _a.hub:
         items = this.contextmenuItemsForHub();
-        items.push('share_qrcode');
+        break;
+      case _a.folder:
+        items = this.contextmenuItemsForFolder();
         break;
 
       case _a.schedule:
-        items = [_a.startMeeting, _a.meetingLink, _a.deleteMeeting, 'qrcode'];
+        items = [_a.startMeeting, _a.meetingLink, _a.deleteMeeting];
         break;
 
       default:
         items = this.contextmenuItemsForFiles();
-        items.push('share_qrcode');
+    }
+
+    items.push('share_qrcode');
+
+    /** Children of window_search */
+    if (this.mget(_a.role) == _a.search) {
+      hubItems.push(_a.separator, _a.openFileLocation);
+    }
+
+    /** Children of window_trash */
+    if (this.mget(_a.status) == _a.deleted) {
+      fileItems = [_a.separator, _a.restoreToDesk, _a.deletePermanently];
     }
 
     return items;
@@ -208,28 +202,60 @@ class __media_core extends DrumeeMFS {
    *
    */
   contextmenuItemsForHub() {
-    let hubItems = [_a.link, _a.settings];
-    if (this.canUpload() || this.canOrganize() || this.isMediaOwner()) {
-      if (Visitor.canServerImpExp()) {
-        hubItems.unshift(_a.separator);
-        hubItems.unshift(_a.import);
-        hubItems.unshift(_a.export);
-      }
-      hubItems.unshift(_a.separator);
-      hubItems.unshift(_a.upload);
-    } else {
-      if (Visitor.canServerImpExp()) {
-        hubItems.unshift(_a.separator);
-        hubItems.unshift(_a.importHidden);
-        hubItems.unshift(_a.exportHidden);
-        hubItems.unshift(_a.separator);
-      }
+    let fileItems = [];
+    if (this.canOrganize() || this.isMediaOwner()) {
+      fileItems = [_a.rename, _a.upload, _a.download, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share)
+      fileItems.push(_a.separator, _a.trash)
+    } else if (this.canDownload()) {
+      fileItems = [_a.download, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share);
+      if (this.canRemove()) fileItems.push(_a.trash);
     }
+    // for media files in trash
+    if (this.mget(_a.status) == _a.deleted) {
+      fileItems = [, _a.separator, _a.restoreToDesk, _a.deletePermanently];
+    }
+    return fileItems;
+    // let hubItems = this.contextmenuItemsForFolder();
+    // if (this.canUpload() || this.canOrganize() || this.isMediaOwner()) {
+    //   if (Visitor.canServerImpExp()) {
+    //     hubItems.unshift(_a.separator);
+    //     hubItems.unshift(_a.import);
+    //     hubItems.unshift(_a.export);
+    //   }
+    //   hubItems.unshift(_a.separator);
+    //   hubItems.unshift(_a.upload);
+    // } else {
+    //   if (Visitor.canServerImpExp()) {
+    //     hubItems.unshift(_a.separator);
+    //     hubItems.unshift(_a.importHidden);
+    //     hubItems.unshift(_a.exportHidden);
+    //     hubItems.unshift(_a.separator);
+    //   }
+    // }
+    // return hubItems;
+  }
 
-    if (this.mget(_a.role) == _a.search) {
-      hubItems.push(_a.openFileLocation);
+  /**
+   * 
+   */
+  contextmenuItemsForFolder() {
+    let fileItems = [];
+    if (this.canOrganize() || this.isMediaOwner()) {
+      fileItems = [_a.rename, _a.upload, _a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share)
+      fileItems.push(_a.separator, _a.trash)
+    } else if (this.canDownload()) {
+      fileItems = [_a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share);
+      if (this.canRemove()) fileItems.push(_a.trash);
     }
-    return hubItems;
+    // for media files in trash
+    if (this.mget(_a.status) == _a.deleted) {
+      fileItems = [, _a.separator, _a.restoreToDesk, _a.deletePermanently];
+    }
+    return fileItems;
   }
 
   /**
@@ -238,83 +264,55 @@ class __media_core extends DrumeeMFS {
   contextmenuItemsForFiles() {
     let fileItems = [];
     const fileType = this.mget(_a.filetype);
-    let importExportMenu = [];
-    let exportMenu = [];
-    if (Visitor.canServerImpExp()) {
-      importExportMenu = [_a.separator, _a.export, _a.import];
-      if (fileType != _a.folder) {
-        exportMenu = [_a.separator, _a.export];
-      }
-    }
-    if (this.canDownload()) {
-      if (Visitor.inDmz) {
-        fileItems = [_a.download];
-      } else {
-        fileItems = [
-          _a.copy,
-          _a.download,
-          _a.link,
-          ...exportMenu,
-          _a.separator,
-        ];
-      }
-    }
 
     if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems.splice(1, 0, _a.rename);
+      fileItems = [_a.rename, _a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share)
       if (fileType == _a.image) {
-        fileItems.splice(2, 0, _a.background._, _a.rotateLeft, _a.rotateRight);
+        fileItems.push(_a.separator, 'background', _a.rotateLeft, _a.rotateRight);
       }
-    }
-
-    if (fileType == _a.folder) {
-      if (this.canUpload()) {
-        fileItems.splice(2, 0, _a.upload);
+      fileItems.push(_a.separator, _a.trash)
+    } else if (this.canDownload()) {
+      fileItems = [_a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
+      if (this.canShare()) fileItems.push(_a.share);
+      if (fileType == _a.image) {
+        fileItems.push(_a.separator, 'background');
       }
-      fileItems.splice(4, 0, ...importExportMenu, _a.separator);
+      if (this.canRemove()) fileItems.push(_a.trash);
     }
 
-    if (this.mget(_a.area) == _a.personal) {
-      fileItems.pop();
-    }
-
-    if (this.canOrganize() || this.isMediaOwner()) {
-      if (this.mget(_a.status) !== _a.locked) {
-        fileItems.push(_e.lock);
-        fileItems.push(_e.remove);
-      } else {
-        fileItems.push(_e.unlock);
-      }
-    }
-
-    if (this.mget(_a.role) == _a.search) {
-      fileItems.push(_a.openFileLocation);
-    }
-
-    // for media files in trash
-    if (this.mget(_a.status) == _a.deleted) {
-      fileItems = [_a.restoreToDesk, _a.deletePermanently];
-    }
-
+    let extra = []
     // 3WC href
     if (this.isRegularFile()) {
-      fileItems.push("directUrl");
+      extra.push("directUrl");
     }
 
     switch (this.mget(_a.filetype)) {
       case _a.note:
-        fileItems.push("pinOn");
+        extra.push("pinOn");
         break;
       case _a.web:
-        fileItems.push("setAsHomepage");
+        extra.push("setAsHomepage");
         break;
       case _a.script:
         if (Visitor.profile().devel) {
-          fileItems.push("execute");
+          fextra.push("execute");
         }
         break;
     }
+
+    if (this.canOrganize() || this.isMediaOwner()) {
+      if (this.mget(_a.status) === _a.locked) {
+        extra.push(_e.unlock);
+      } else {
+        extra.push(_e.lock);
+      }
+    }
+    if (extra.length) {
+      fileItems.push(_a.separator, ...extra)
+    }
     return fileItems;
+
   }
 
   /**
@@ -555,7 +553,7 @@ class __media_core extends DrumeeMFS {
    */
   overlaps(r) {
     const i = this.bbox.intersection(r);
-    if (i == null) { 
+    if (i == null) {
       return 0;
     }
     return i.area() / this.bbox.area();
@@ -1271,7 +1269,7 @@ class __media_core extends DrumeeMFS {
               this.el.dataset.status = "";
               this.phase = null;
               this.mset({ pahse: null })
-              if ([_a.commit, _e.Enter].includes(child.status)) {
+              if ([_a.commit, _e.Enter].includes(child.status) || this._pendingSeed) {
                 return;
               }
               this.mkdir(child.getValue())
@@ -1428,11 +1426,12 @@ class __media_core extends DrumeeMFS {
    * 
    */
   seedFolder() {
-    const filename = LOCALE.FOLDER;
+    const filename = this.mget(_a.filename) || LOCALE.FOLDER;
+    const area = this.mget(_a.area) || _a.personal;
     const service = "add-folder";
-    this.model.set({ filename, service });
+    this.model.set({ area, filename, service });
     this.model.unset(_a.phase);
-    this._createInput(LOCALE.FOLDER, { service, preselect: 1 });
+    this._createInput(filename, { service, preselect: 1 });
   }
 
   /**
@@ -1602,30 +1601,23 @@ class __media_core extends DrumeeMFS {
     return this.mget(_a.status) === _a.locked;
   }
 
+
   /**
    * 
    * @param {*} single_node 
    * @param {*} trashbin 
    * @returns 
    */
-  delete(single_node = 1, trashbin) {
+  delete(single_node = 1, trashbin, force = 0) {
     let f, msg;
     let granted = this.isGranted(_K.permission.delete);
-    let name = "";
-    if (this.mget(_a.filetype) === _a.hub) {
-      if (this.mget(_a.area) == _a.private) {
-        name = LOCALE.TEAM_ROOM;
-      } else {
-        name = LOCALE.SHAREBOX;
-      }
+    if (!force && this.mget(_a.filetype) === _a.hub) {
       this.triggerHandlers({
-        service: "open-manager",
-        message: name.printf(LOCALE.USE_MANAGER_TO_DELETE),
+        service: "confirm-removal",
       });
-      this.moveForbiden(LOCALE.ACTION_NOT_PERMITTED);
       return null;
     }
-    if (this.containsHub) {
+    if (this.containsHub && !force) {
       this.triggerHandlers({
         service: "no-trash-hubs",
         message: LOCALE.CONTAINS_NON_DELETABLE,
@@ -1656,24 +1648,7 @@ class __media_core extends DrumeeMFS {
       return null;
     }
 
-    const helper = this.$el.clone();
-    helper.removeAttr("class");
-    helper.addClass(`deleting ${this.fig.family}__helper-wrapper`);
-    const pos = this.$el.offset();
-    helper.css({
-      position: _a.absolute,
-      left: pos.left,
-      top: pos.top - this.$el.height(),
-      zIndex: 200002, // Must be hight than modal popup
-    });
-
-    Wm.$el.append(helper);
-
-    f = () => {
-      const tl = new TimelineMax();
-      tl.to(trashbin, 0.3, { scale: 1.2 }).to(trashbin, 0.3, { scale: 1 });
-      trashbin.parent().children(".temp-anim").remove();
-      helper.remove();
+    Wm.animateMediaToTrash(this).then(() => {
       this.logicalParent.syncGeometry()
       if (this.mget(_a.status) === SEEDING) {
         this.suppress();
@@ -1684,17 +1659,48 @@ class __media_core extends DrumeeMFS {
       } else {
         this.goodbye()
       }
-    };
+    }).catch(()=>{
+      this.putIntoTrash();
+    })
+    // const helper = this.$el.clone();
+    // helper.removeAttr("class");
+    // helper.addClass(`deleting ${this.fig.family}__helper-wrapper`);
+    // const pos = this.$el.offset();
+    // helper.css({
+    //   position: _a.absolute,
+    //   left: pos.left,
+    //   top: pos.top - this.$el.height(),
+    //   zIndex: 200002, // Must be hight than modal popup
+    // });
 
-    const dest_x = trashbin.offset().left;
-    const dest_y = trashbin.offset().top;
-    TweenLite.to(helper, 1.4, {
-      left: dest_x,
-      top: dest_y,
-      scale: 0,
-      alpha: 0,
-      onComplete: f,
-    });
+    // Wm.$el.append(helper);
+
+    // f = () => {
+    //   const tl = new TimelineMax();
+    //   tl.to(trashbin, 0.3, { scale: 1.2 }).to(trashbin, 0.3, { scale: 1 });
+    //   trashbin.parent().children(".temp-anim").remove();
+    //   helper.remove();
+    //   this.logicalParent.syncGeometry()
+    //   if (this.mget(_a.status) === SEEDING) {
+    //     this.suppress();
+    //     return;
+    //   }
+    //   if (single_node) {
+    //     this.postService(this.makeTrashOptions());
+    //   } else {
+    //     this.goodbye()
+    //   }
+    // };
+
+    // const dest_x = trashbin.offset().left;
+    // const dest_y = trashbin.offset().top;
+    // TweenLite.to(helper, 1.4, {
+    //   left: dest_x,
+    //   top: dest_y,
+    //   scale: 0,
+    //   alpha: 0,
+    //   onComplete: f,
+    // });
   }
 
   /**
@@ -2105,14 +2111,6 @@ class __media_core extends DrumeeMFS {
 
     this._uploadingInplace = true;
     await this._uploadFiles(files)
-    // for (let f of Array.from(files)) {
-    //   this.debug("AAA:1596", this, f.fullPath)
-    //   let ownpath = this.mget(_a.ownpath) || '/';
-    //   ownpath = `${ownpath}/${f.name}`;
-    //   ownpath = ownpath.replace(/\+/g, '/');
-    //   ownpath = ownpath.replace(/\/+$/g, '');
-    //   this.uploadFile(f, ownpath);
-    // }
 
     if (_.isEmpty(folders)) {
       return;
@@ -2261,6 +2259,8 @@ class __media_core extends DrumeeMFS {
       Wm.alert("Invalid name");
       return null;
     }
+    if (this._pendingSeed) return;
+    this._pendingSeed = 1;
     this.model.set(_a.filename, value);
     let opt = {
       kind: this._getKind(),
@@ -2276,21 +2276,42 @@ class __media_core extends DrumeeMFS {
       seeding: 1,
       echoId: this.mget(ECHO_ID)
     }
-    this.postService(SERVICE.media.make_dir, args).then((data) => {
+
+    const good = (data) => {
       this.wait(0);
+      if (data.error) {
+        Wm.alert(LOCALE[data.error] || data.error)
+        return this.goodbye()
+      }
       let reopen = this.mget('reopen');
+      let widgetId = this.mget(_a.widgetId)
       this.model.clear();
       data.echoId = this.mget(ECHO_ID);
-      this.model.set({ ...data, ...opt, actual_home_id: data.home_id, service: OPEN_NODE });
+      this.model.set({ widgetId, ...data, ...opt, actual_home_id: data.home_id, service: OPEN_NODE });
       this.restart("media:created");
       if (reopen) {
         this.triggerHandlers({ service: OPEN_NODE })
       }
-    }).catch((e) => {
+    }
+
+    const bad = (e) => {
       this.warn("Failed to create dir", e);
-      // this.model.set({ ...data, ...opt, home_id, filename: "error" });
       this.restart();
-    });
+    }
+
+
+    args.filename = value;
+    args.area = this.mget(_a.area);
+    switch (this.mget(_a.area)) {
+      case _a.public:
+      case _a.share:
+      case _a.private:
+        this.postService(SERVICE.desk.create_hub, args).then(good).catch(bad);
+        break;
+      default:
+        this.postService(SERVICE.media.make_dir, args).then(good).catch(bad);
+    }
+
   }
 
   /**
@@ -2419,7 +2440,6 @@ class __media_core extends DrumeeMFS {
     }
     let name = file.fullPath.replace(/\/+/g, "");
     let existing = this._nameExists(name)
-    this.debug("AAAA:1945", existing, file)
     if (!existing) {
       console.log("🟣 [SHOULD_UPLOAD] No existing file, calling _uploadFiles()");
       this._uploadFiles(file);
@@ -2454,13 +2474,6 @@ class __media_core extends DrumeeMFS {
           this._uploadFiles(file, 0);
           break;
       }
-      // }).catch((r) => {
-      //   let { response } = r;
-      //   if (response == _e.close) {
-      //     this.goodbye();
-      //     return;
-      //   }
-      //   this.uploadFile(file);
     })
   }
 

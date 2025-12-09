@@ -1,14 +1,10 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : __dbg_path
-//   TYPE : Skelton
-// ==================================================================== *
-const __skl_window_info = function(_ui_) {
+
+module.exports = function(_ui_) {
   let content;
   const mode = _ui_.mget(_a.mode) || "hbf";
   const header = Skeletons.Box.X({
     className : `${_ui_.fig.family}__header ${_ui_.fig.group}__header`, 
-    kids : [require('./top-bar')(_ui_)]});
+    kids : [require('./topbar')(_ui_)]});
 
   const body = _ui_.mget(_a.body);
   if(body) {
@@ -48,7 +44,5 @@ const __skl_window_info = function(_ui_) {
   if (m.test('f')) {
     a.kids.push(footer);
   }
-  //@debug "HHHHHHHHH", a 
   return a;
 };
-module.exports = __skl_window_info;

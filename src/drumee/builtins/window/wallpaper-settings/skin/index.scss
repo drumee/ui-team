@@ -64,15 +64,11 @@
     &__control {
       position: absolute;
       right: 22px;
-      top: 0;
       display: flex;
       align-items: center;
       justify-content: center;
 
       & .icon {
-        color: var(--neutral-400);
-        width: 20px;
-        height: 20px;
         margin: auto;
       }
     }
@@ -144,7 +140,7 @@
     cursor: pointer;
     flex-shrink: 0;
     border-radius: var(--corner-radius-max);
-    background: var(--gray-white, #FFF);
+    background: var(--gray-white, #fff);
     box-shadow: 0 4px 12px 0 rgba(34, 39, 50, 0.12);
     color: var(--neutral-900);
 
@@ -173,7 +169,6 @@
   .media-uploader {
     display: none;
   }
-
 
   &__image {
     // Ratio 92/64 - maintain aspect ratio
@@ -211,7 +206,12 @@
   }
 
   &__colors-title {
-    @include drumee.typo($size: 14px, $line: 21px, $weight: 400, $color: var(--default-text-color));
+    @include drumee.typo(
+      $size: 14px,
+      $line: 21px,
+      $weight: 400,
+      $color: var(--default-text-color)
+    );
     flex-shrink: 0;
   }
 

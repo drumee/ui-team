@@ -1,0 +1,77 @@
+@use "sass:meta";
+@use "mixins/drumee";
+@use "../../skin" as *;
+
+.settings-folder {
+  &__ui {
+    background-color: var(--white);
+    border: 1px solid var(--default-border-notification);
+    border-radius: var(--corner-radius-6);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+    &[data-modal="1"] {
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+    }
+
+    &[data-device="mobile"] {
+      left: 0;
+      width: 100%;
+      height: calc(100vh - 72px);
+    }
+  }
+
+  &__main {
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--white);
+    overflow: hidden;
+    border-radius: var(--corner-radius-6);
+  }
+
+  &__vignette {
+    width: 100%;
+    height: 106px;
+    justify-content: center;
+    align-content: center;
+    flex-wrap: wrap;
+    pointer-events: none;
+
+    &-media {
+      width: 132px;
+    }
+
+    .media-grid__container {
+      &[data-hover="on"] {
+        .folder-shape {
+          transform: none;
+        }
+      }
+    }
+  }
+
+  &__items {
+    padding: 0 var(--spacer-7);
+  }
+
+  &__item {
+    height: 48px;
+    grid-template-columns: 1fr 1fr 70px;
+
+    &-label {
+      font-size: 14px;
+      line-height: 22px;
+    }
+
+    &-text {
+      font-size: 14px;
+      line-height: 22px;
+    }
+  }
+
+}

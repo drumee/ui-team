@@ -30,7 +30,6 @@ class __activity_panel extends LetcBox {
     window.ActivityHandler = this;
 
     this._onOutsideClick = (e, origin) => {
-      this.debug("AAA:31", e)
       if (pointerDragged || e?.getService() == 'toggle-activity-panel') return;
       if (e && !this.el.contains(e.currentTarget)) {
         this.closeactivityPanel();
@@ -125,6 +124,13 @@ class __activity_panel extends LetcBox {
         this.closeactivityPanel();
         return '';
 
+      case 'clear-all':
+        return this.postService(SERVICE.activity.mark_all_read, { hub_id: Visitor.id }).then((data) => {
+          this.__list.clear();
+          this.togglePannel();
+          this.triggerHandlers({ service: "activity-update" })
+        })
+
       case 'delete-entity':
         cmd.goodbye();
         return this.deleteEntityResponse(cmd);
@@ -135,7 +141,6 @@ class __activity_panel extends LetcBox {
    * 
    */
   togglePannel() {
-    this.debug("AAAA:137", this.mget(_a.state), this.activityState)
     if (this.activityState == 0) {
       this.activityState = 1;
       this.refreshActivity()
@@ -144,18 +149,6 @@ class __activity_panel extends LetcBox {
       return '';
     }
     return this.closeactivityPanel();
-
-    // if (this.activityState == 0) {
-    //   this.activityState = 1;
-    //   this.updateactivityWindow();
-    //   if (this.parent) {
-    //     this.parent.el.dataset.state = 1;
-    //   }
-    //   this.setState(1);
-    //   return '';
-    // }
-    // this.setState(0)
-    // return this.closeactivityPanel();
 
   }
 
@@ -316,11 +309,9 @@ class __activity_panel extends LetcBox {
   */
   refreshActivity(timeout = 2000) {
     let opt = { hub_id: Visitor.id }
-    this.postService(SERVICE.activity.get_unread_count, opt)
-      .then((data = {}) => {
-        this.debug("AAA:321", data)
-        this.triggerHandlers(data)
-      })
+    this.postService(SERVICE.activity.get_unread_count, opt).then((data = {}) => {
+      this.triggerHandlers(data)
+    })
     if (!Visitor.id || !Visitor.isOnline()) {
       Visitor.once('online', () => {
         this.refreshActivity();

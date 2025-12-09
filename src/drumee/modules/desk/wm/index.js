@@ -1,6 +1,7 @@
 
 require("./skin");
 const { copyToClipboard } = require("core/utils")
+const { TweenLite, TimelineMax } = require("gsap/all")
 
 const push = require("./push");
 
@@ -31,23 +32,26 @@ class __window_manager extends push {
       _a.newFolder,
       _a.paste,
       _a.upload,
-      _a.fullscreen,
-      ...exportMenu,
+      // _a.fullscreen,
+      // ...exportMenu,
       _a.separator,
       _a.preferences,
+      "pricing"
     ];
+    this._handelKbdEvents = this._handelKbdEvents.bind(this);
+    RADIO_KBD.on(_e.keyup, this._handelKbdEvents)
   }
 
   /**
    *
    */
   updateContextMenuItems() {
-    if (document.fullscreenElement != null) {
-      this.contextmenuItems.splice(3, 1, _a.fullscreen);
-    } else {
-      this.contextmenuItems.splice(3, 1, _a.exitFullScreen);
-    }
-    return;
+    // if (document.fullscreenElement != null) {
+    //   this.contextmenuItems.splice(3, 1, _a.fullscreen);
+    // } else {
+    //   this.contextmenuItems.splice(3, 1, _a.exitFullScreen);
+    // }
+    // return;
   }
 
   /**
@@ -229,6 +233,13 @@ class __window_manager extends push {
         }
       })
     }, 1000)
+  }
+
+  /**
+   * To do : allow copy/paste/supp through keyboard short cut
+   */
+  _handelKbdEvents(e) {
+    // this.debug("AAA:240", e)
   }
 
   /**
@@ -540,17 +551,127 @@ class __window_manager extends push {
   /**
    *
    * @param {*} cmd
+   */
+  confirmRemoveHub(media, args) {
+    this.ensurePart('wrapper-modal').then(async (p) => {
+      await Kind.waitFor('window_confirm')
+      p.feed({
+        kind: 'window_confirm',
+        maxsize: 2,
+        title: LOCALE.DELETE,
+        message: LOCALE.MSG_DELETE_HUB.format(media.mget(_a.filename)),
+        confirm: LOCALE.DELETE,
+      }).ask().then(() => {
+        this.animateMediaToTrash(media).then(() => {
+          this.postService({
+            service: SERVICE.hub.delete_hub,
+            hub_id: media.mget(_a.hub_id)
+          });
+        })
+        p.clear()
+      }).catch(() => { });
+    })
+  }
+
+  /**
+   *
+   * @param {*} cmd
+   */
+  confirmLeaveHub(media, args) {
+    this.debug("AAA:554", this, media, args)
+    this.ensurePart('wrapper-modal').then(async (p) => {
+      await Kind.waitFor('window_confirm')
+      p.feed({
+        kind: 'window_confirm',
+        maxsize: 2,
+        title: LOCALE.LEAVE,
+        message: LOCALE.MSG_LEAVE_HUB.format(media.mget(_a.filename)),
+        confirm: LOCALE.LEAVE
+      }).ask().then(() => {
+        this.animateMediaToTrash(media).then(() => {
+          this.postService({
+            service: SERVICE.desk.leave_hub,
+            nid: media.mget(_a.hub_id),
+            hub_id: Visitor.id
+          });
+        })
+        p.clear()
+      }).catch(() => { });
+    })
+  }
+
+  /**
+   * 
+   */
+  animateMediaToTrash(media) {
+    return new Promise((resolve, reject) => {
+      const helper = media.$el.clone();
+      helper.removeAttr("class");
+      helper.addClass(`deleting ${media.fig.family}__helper-wrapper`);
+      const pos = media.$el.offset();
+      helper.css({
+        position: _a.absolute,
+        left: pos.left,
+        top: pos.top - media.$el.height(),
+        zIndex: 200002, // Must be hight than modal popup
+      });
+      let trash = this.getTrashBin()
+      if (!trash) {
+        return reject()
+      }
+      let trashbin = trash.$el;
+      this.$el.append(helper);
+      const f = () => {
+        const tl = new TimelineMax();
+        tl.to(trashbin, 0.3, { scale: 1.2 }).to(trashbin, 0.3, { scale: 1 });
+        trashbin.parent().children(".temp-anim").remove();
+        helper.remove();
+        resolve()
+      };
+
+      const dest_x = trashbin.offset().left;
+      const dest_y = trashbin.offset().top;
+      TweenLite.to(helper, 1.4, {
+        left: dest_x,
+        top: dest_y,
+        scale: 0,
+        alpha: 0,
+        onComplete: f,
+      });
+    })
+  }
+
+  /**
+   * 
+   */
+  getTrashBin() {
+    let dock = Wm.getPart('dock');
+    if (dock) {
+      return dock.getPart('trash-bin')
+    }
+    return null;
+  }
+
+  /**
+   *
+   * @param {*} cmd
    * @param {*} args
    * @returns
    */
   onUiEvent(cmd, args = {}) {
-    let w;
-    const service =
-      args.service || cmd.service || cmd.status || cmd.mget(_a.service);
-
+    const service = args.service || cmd.service || cmd.status || cmd.mget(_a.service);
+    this.debug("AAA:633", service)
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
+
+      case "confirm-removal":
+        if (cmd.isGranted(_K.permission.owner)) {
+          this.confirmRemoveHub(cmd, args);
+        } else {
+          this.confirmLeaveHub(cmd, args);
+        }
+        return;
 
       case "open-node":
         this.openContent(cmd);
@@ -577,6 +698,9 @@ class __window_manager extends push {
           { explicit: 1, singleton: 1 }
         );
 
+      case "pricing":
+        return this.__wrapperModal.append({ kind: "settings_pricing" })
+          ;
       case _a.preferences:
         return this.launch(
           { kind: "window_account", start: service },
@@ -648,7 +772,7 @@ class __window_manager extends push {
         break;
 
       case "hub-settings":
-        this.openHubManager(cmd);
+        this.openSettings(cmd);
         break;
 
       case "copy-media":
@@ -907,6 +1031,41 @@ class __window_manager extends push {
     this.windowsLayer.append(item);
   }
 
+  /**
+ *
+ * @param {*} media
+ * @param {*} start
+ */
+  openSettings(media) {
+    let item = media.model.toJSON();
+    this.debug("AAA:13000", item)
+    switch (media.mget(_a.area)) {
+      case _a.personal:
+        item.kind = "settings_folder";
+        break;
+      case _a.public:
+      case _a.private:
+        item.kind = "settings_hub";
+        break;
+      case _a.share:
+      case "dmz":
+        item.kind = "widget_sharebox_setting";
+        break;
+      case "electron":
+        item.kind = "electron_update";
+        break;
+      case "pricing":
+        item.kind = "settings_pricing";
+        break;
+      default:
+        this.alert(LOCALE.FILE_TYPE_NOT_SUPPORTED);
+      // this._openShareBox(item, c, moving);
+    }
+    item.uiHandler = [media];
+    item.source = media;
+    item.media = media;
+    this.__wrapperModal.append(item);
+  }
   /**
    *
    * @param {*} cmd

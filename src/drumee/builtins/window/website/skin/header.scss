@@ -2,7 +2,6 @@
 
 .window-website {
   &__ui {
-
     &[data-content="folder"] {
       & .window-website-topbar__icon {
         display: none;
@@ -32,12 +31,15 @@
         top: -30px;
         white-space: nowrap;
         width: 190px;
-        box-shadow: var(--shadow-main); 
-        @include drumee.typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-reverse));
+        box-shadow: var(--shadow-main);
+        @include drumee.typo($size: 12px,
+          $line: 14px,
+          $weight: 400,
+          $color: var(--default-text-reverse));
       }
 
       &:before {
-        border: 7px solid var(--website-main); 
+        border: 7px solid var(--website-main);
         content: " ";
         height: calc(100% + 6px);
         left: -3px;
@@ -54,11 +56,75 @@
 
   &__header {
     border-bottom: none;
-    background-color: var(--website-header-bg);
-    border-radius: 6px 6px 0 0;
+    // background-color: var(--website-header-bg);
+    background: linear-gradient(135deg, #89dcff, #2aaaff);
+    border-radius: 24px 24px 0 0;
 
     &[data-content="folder"] {
       background-color: var(--folder-main);
+      background: linear-gradient(135deg, #dcb2ff, #b251fb);
+    }
+  }
+
+  &__icon {
+    cursor: pointer;
+
+    &.logo {
+      display: flex;
+      width: 55px;
+      height: 48px;
+      aspect-ratio: 55/48;
+      margin-top: 8px;
+    }
+  }
+
+  &__name-wrapper {
+    gap: 10px;
+  }
+
+  &__subtitle-wrapper {
+    gap: 10px;
+    color: var(--neutral-300);
+
+    &.files {
+      padding-right: 10px;
+      border-right: 1px solid var(--neutral-300);
+    }
+  }
+
+  &__buttons-wrapper {
+    gap: 10px;
+  }
+
+  &__upload-button {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 40px;
+    background: var(--neutral-900);
+    color: var(--white);
+    border-radius: 20px;
+  }
+
+  &__settings {
+    padding: 8px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 100%;
+    background: var(--neutral-200);
+    cursor: pointer;
+    width: 46px;
+    height: 46px;
+    &.icon {
+      margin: 0;
+      width: 30px;
+      height: 30px;
+      color: var(--neutral-900);
+
+      &:hover {
+        color: var(--primary-500);
+      }
     }
   }
 
@@ -74,7 +140,7 @@
       width: 16px;
       height: 16px;
       padding: 0px;
-      margin: auto; 
+      margin: auto;
 
       &:hover {
         color: #879bff;
@@ -130,15 +196,18 @@
 
     &__count {
       position: absolute;
-      width: 12px; 
-      height: 12px; 
+      width: 12px;
+      height: 12px;
       background-color: var(--ewhite);
       border-radius: 50%;
       align-items: center;
       justify-content: center;
-      @include drumee.typo($size: 8px, $line: 12px, $weight: 400, $color: #2f2f2f);
-      right: -6px; 
-      top: 8px; 
+      @include drumee.typo($size: 8px,
+        $line: 12px,
+        $weight: 400,
+        $color: #2f2f2f);
+      right: -6px;
+      top: 8px;
 
       &[data-count="0"] {
         display: none;

@@ -28,8 +28,8 @@ const a = {
     minHeight        : 320
   },
   docViewer          : {
-    width            : 572,
-    height           : 360
+    width            : 800,
+    height           : 650
   }, //window.innerHeight - 120
   char               : {
     arrow            : {

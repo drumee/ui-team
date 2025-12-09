@@ -13,30 +13,34 @@ class __window_contact extends __window_interact {
     this.prototype.figName        = "window_contact";
   }
   
-// ===========================================================
-// initialize
-//
-// @param [Object] opt
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} opt 
+   * @returns 
+   */
   initialize(opt) {
     require('./skin');
     super.initialize();
     this.contextmenuSkeleton = _a.none;
     return this.debug("__window_contact initialize", opt, this);
   }
-    //@_setSize()
-// ===========================================================
-// 
-// ===========================================================
+
+  /**
+   * 
+   * @returns 
+   */
   onDomRefresh() {
     this.feed(require("./skeleton")(this));
     return super.onDomRefresh();
   }
 
-// ===========================================================
-// 
-// ===========================================================
+  /**
+   * 
+   * @param {*} child 
+   * @param {*} pn 
+   * @param {*} section 
+   * @returns 
+   */
   onPartReady(child, pn, section) {
     this.debug(`__window_contact onPartReady pn = ${pn}`, child);
     this.raise();
@@ -50,9 +54,12 @@ class __window_contact extends __window_interact {
     }
   }
 
-// ===========================================================
-// onUiEvent
-// ===========================================================
+
+  /**
+   * 
+   * @param {*} cmd 
+   * @returns 
+   */
   onUiEvent(cmd) {
     const service = cmd.service || cmd.model.get(_a.service);
     const {
@@ -82,9 +89,12 @@ class __window_contact extends __window_interact {
     }
   }
 
-// ===========================================================
-// 
-// ===========================================================
+
+
+  /**
+   * 
+   * @returns 
+   */
   _loadContactInviteForm() {
     const inviteForm = { 
       kind      : 'contact_invitation_form',
@@ -95,16 +105,21 @@ class __window_contact extends __window_interact {
     return inviteForm;
   }
 
-// ===========================================================
-// 
-// ===========================================================
+
+  /**
+   * 
+   * @param {*} c 
+   * @returns 
+   */
   check_sanity(c) {
     return this.debug("__window_contact check_sanity, ", this, c);
   }
 
-// ===========================================================
-// 
-// ===========================================================
+
+  /**
+   * 
+   * @returns 
+   */
   getCurrentLabel() {
     this.debug("__window_contact getCurrentLabel", this);
     if (this.mget(_a.trigger)) {
@@ -113,18 +128,25 @@ class __window_contact extends __window_interact {
     return this._currentLabel || "Not set ";
   }
 
-// ===========================================================
-// _inviteResponse
-// ===========================================================
+
+  /**
+   * 
+   * @param {*} data 
+   * @returns 
+   */
   _inviteResponse(data) {
     this.debug("__window_contact _inviteResponse", data , this);
     this.source = data;
     return this.__content.feed(require('./skeleton/acknowledge')(this));
   }
 
-// ===========================================================
-// __dispatchRest
-// ===========================================================
+
+  /**
+   * 
+   * @param {*} method 
+   * @param {*} data 
+   * @returns 
+   */
   __dispatchRest(method, data) {
     this.debug(`__window_contact _dispatchRest method = ${method}`, method, data,this);
     switch (method) {

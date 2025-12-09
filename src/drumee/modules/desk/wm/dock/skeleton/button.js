@@ -10,11 +10,11 @@ const _helpers = function (_ui_, content, name) {
       active:0
     },
     kids: [
-      Skeletons.Button.Svg({
-        ico: 'desktop_videofile',
-        className: `${pfx}-icon`,
-        innerClass:'helper',
-      }),
+      // Skeletons.Button.Svg({
+      //   ico: 'desktop_videofile',
+      //   className: `${pfx}-icon`,
+      //   innerClass:'helper',
+      // }),
       Skeletons.Note({
         className: `${pfx}-text`,
         content

@@ -2,14 +2,6 @@
 @use 'mixins/drumee';
 @include meta.load-css('forbiden');
 
-/* Theme 1 */
-.grad-start {
-  stop-color: #B251FB;
-}
-
-.grad-end {
-  stop-color: #DCB2FF;
-}
 
 /* Theme 2 */
 // .theme-blue .grad-start { stop-color: #36D1DC; }
@@ -175,6 +167,7 @@
     }
   }
 
+
   &__container.application {
     display: flex;
     align-items: center;
@@ -207,7 +200,8 @@
       padding: var(--spacer-5);
       gap: var(--spacer-1);
       background-color: var(--white);
-      bottom: -20px;
+      z-index:-1 !important;
+      bottom: 0;
     }
 
   }
@@ -326,23 +320,6 @@
     }
 
     &.maker {
-      // &.folder {
-      //   svg {
-      //     color: var(--folder-main);
-      //   }
-      // }
-
-      // &.team {
-      //   svg {
-      //     color: var(--teamroom-main);
-      //   }
-      // }
-
-      // &.sharebox {
-      //   svg {
-      //     color: var(--sharebox-main);
-      //   }
-      // }
 
       &.note {
         svg {
@@ -473,22 +450,31 @@
     }
   }
 
-  &__folder {
+  &__folder-item {
     display: grid;
-    grid-template-columns: 32px 1fr;
+    grid-template-columns: 48px 1fr;
     gap: var(--spacer-2);
     cursor: pointer;
 
-    span.label {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+    &-icon {
+      pointer-events: none;
+      .media-grid__container {
+        .badge {
+          width: 28px;
+          height: 21px;
+          bottom: 10px;
+          left: 10px;
+        }
+      }
     }
 
-    svg.drumee-picto {
-      height: 24px;
-      width: 24px;
+    &-text {
+    
+      white-space: nowrap;
+      align-content: center;
+      flex-wrap: wrap;
     }
+
   }
 
   @media (max-width: var(--small-width)) {

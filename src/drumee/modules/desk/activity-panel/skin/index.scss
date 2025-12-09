@@ -79,6 +79,8 @@
     font-style: normal;
     font-size: 14px;
     line-height: 22px;
-    vertical-align: middle;
+    align-content: center;
+    flex-wrap: wrap;
+    cursor: pointer;
   }
 }

@@ -40,8 +40,8 @@ class __window_interact extends windowCore {
     this.raise = this.onChildBubble;
     let width = _K.docViewer.width;
     let height = _K.docViewer.height;
-    let minWidth = 200;
-    let minHeight = 200;
+    let minWidth = 700;
+    let minHeight = 400;
     if (this.size) {
       if (this.size.width) width = this.size.width;
       if (this.size.height) height = this.size.height;
@@ -82,8 +82,7 @@ class __window_interact extends windowCore {
    */
   onDomRefresh() {
     this.initBounds();
-    let name = this.mget(_a.filename) || this.mget(_a.name);
-    this.el.dataset.name = name;
+    this.el.dataset.name = this.mget(_a.filename) || this.mget(_a.name);
   }
 
   /**
@@ -896,6 +895,7 @@ class __window_interact extends windowCore {
         return;
       }
     }
+    this.debug("AAA:8880", opt)
     switch (position) {
       case -1:
         this.__list.prepend(opt);
@@ -914,7 +914,6 @@ class __window_interact extends windowCore {
    * @param {*} position
    */
   insertMedia(files, position = 0) {
-    console.trace()
     if (!_.isArray(files)) {
       files = [files];
     }
@@ -976,7 +975,6 @@ class __window_interact extends windowCore {
    * @param {*} all
    */
   unselect(all = 1) {
-    //console.trace();
     this.captured = {};
     if (all > 1) {
       pointerDragged = false;

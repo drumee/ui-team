@@ -26,19 +26,23 @@ class __media_grid extends DrumeeMediaInteract {
     this.isGrid = 1;
     this.model.atLeast({
       aspect: _a.grid,
+      area: _a.personal
     });
-    if (opt.mode == _a.preview) {
-      this.innerContent = () => {
-        return require('./template/preview')(opt);
-      }
-    } else {
-      this.innerContent = require('./template');
-    }
+
     this.cursorPosition = { left: 30, top: 30 };
+
     this.size = {
       width: 90.5,
       height: 75.5
     }
+
+    switch (opt.mode) {
+      case _a.vignette:
+        return this.innerContent = require('./template/vignette')
+      default:
+        this.innerContent = require('./template');
+    }
+
   }
 
   /**

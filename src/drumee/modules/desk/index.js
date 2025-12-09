@@ -2,8 +2,6 @@ require("welcome/skin");
 require("builtins/window/confirm/skin");
 
 
-
-
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -51,18 +49,17 @@ class desk_module extends LetcBox {
     };
     this.declareHandlers();
 
-    this._updateContextMenu = this._updateContextMenu.bind(this);
-
-    RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
+    // this._updateContextMenu = this._updateContextMenu.bind(this);
+    // RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
     setTimeout(this.lazyClasses, 5000);
   }
 
   /**
    *
    */
-  onDestroy() {
-    RADIO_BROADCAST.off(_e.select, this._updateContextMenu);
-  }
+  // onDestroy() {
+  //   RADIO_BROADCAST.off(_e.select, this._updateContextMenu);
+  // }
 
   /**
    *
@@ -87,15 +84,15 @@ class desk_module extends LetcBox {
   /**
    *
    */
-  _updateContextMenu(media) {
-    const m = this.getPart("menu-settings");
-    if (_.isEmpty(Wm.getGlobalSelection())) {
-      m.__items.el.dataset.action = 0;
-    } else {
-      m.__items.el.dataset.action = 1;
-    }
-    this.autoMenu(media);
-  }
+  // _updateContextMenu(media) {
+  //   const m = this.getPart("menu-settings");
+  //   if (_.isEmpty(Wm.getGlobalSelection())) {
+  //     m.__items.el.dataset.action = 0;
+  //   } else {
+  //     m.__items.el.dataset.action = 1;
+  //   }
+  //   this.autoMenu(media);
+  // }
 
   /**
    *
@@ -131,14 +128,14 @@ class desk_module extends LetcBox {
   /**
    *
    */
-  autoMenu() {
-    if (_.isEmpty(Wm.getGlobalSelection())) {
-      this.changeContextMenu(0);
-    } else {
-      this.changeContextMenu(1);
-      this.refreshContextMenu();
-    }
-  }
+  // autoMenu() {
+  //   if (_.isEmpty(Wm.getGlobalSelection())) {
+  //     this.changeContextMenu(0);
+  //   } else {
+  //     this.changeContextMenu(1);
+  //     this.refreshContextMenu();
+  //   }
+  // }
 
   /**
    *
@@ -524,11 +521,10 @@ class desk_module extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
-    this.debug(`SERVICE=${service}))`, args);
+    this.debug(`SERVICE=${service})`, args);
     if (pointerDragged || !window.Wm) {
       return;
     }
-    this.debug("AAA:543", service, cmd, {});
     switch (service) {
       case _e.lock:
         return Wm.lock();
@@ -547,7 +543,6 @@ class desk_module extends LetcBox {
 
       case "toggle-activity-panel":
         return this.ensurePart("activity-panel").then((p) => {
-          this.debug("AAA549", p);
           p.togglePannel();
         });
 
@@ -572,11 +567,11 @@ class desk_module extends LetcBox {
         Wm.closeAlert();
         return;
 
-      case "menu-settings":
-        if (cmd.mget(_a.state)) {
-          return this._updateContextMenu();
-        }
-        break;
+      // case "menu-settings":
+      //   if (cmd.mget(_a.state)) {
+      //     return this._updateContextMenu();
+      //   }
+      //   break;
 
       case _e.copy:
       case _e.cut:
@@ -633,6 +628,9 @@ class desk_module extends LetcBox {
             uiHandler: [this]
           });
         });
+
+      case "open-chat":
+        return Wm.launch({ kind: 'window_bigchat', source: cmd }, { explicit: 1, singleton: 1 });
 
       case "set-wallpaper-color":
       case "set-wallpaper-image":
