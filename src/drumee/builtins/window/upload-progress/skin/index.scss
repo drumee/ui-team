@@ -1,0 +1,479 @@
+@use "sass:meta";
+@use "mixins/drumee";
+
+.window-upload-progress {
+  &__ui {
+    position: fixed !important;
+    bottom: 130px; // Aligned with dock launcher
+    right: 24px;
+    width: 330px;
+    min-width: 250px;
+    max-width: calc(100vw - 48px);
+    height: 280px;
+    min-height: 64px;
+    background: var(--white, #fff);
+    border-radius: var(--corner-radius-6, 16px);
+    box-shadow: 0 4px 12px rgba(34, 39, 50, 0.12);
+    z-index: 10000;
+    overflow: hidden;
+    border: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.5));
+    transition: height 0.2s ease;
+    
+    // Handle expand state on root element
+    &[data-expanded="0"] {
+      height: auto !important;
+      min-height: 64px !important;
+      max-height: 64px !important;
+      
+      .window-upload-progress__body {
+        display: none !important;
+      }
+      
+      .window-upload-progress__footer {
+        display: none !important;
+      }
+      
+      .window-upload-progress__header {
+        border-bottom: none;
+      }
+    }
+    
+    &[data-expanded="1"] {
+      height: 280px !important;
+      min-height: 280px;
+      max-height: none;
+    }
+  }
+  
+  // Expand/collapse state on container
+  &__container {
+    &[data-expanded="0"] {
+      .window-upload-progress__body {
+        display: none !important;
+      }
+      
+      .window-upload-progress__footer {
+        display: none !important;
+      }
+      
+      .window-upload-progress__collapse {
+        transform: rotate(0deg);
+      }
+      
+      .window-upload-progress__header {
+        border-bottom: none;
+      }
+    }
+    
+    &[data-expanded="1"] {
+      .window-upload-progress__collapse {
+        transform: rotate(180deg);
+      }
+    }
+  }
+
+  &__container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background: var(--white, #fff);
+  }
+
+  // Header
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.5));
+    min-height: 64px;
+  }
+
+  &__header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    
+    &-svg {
+      width: 32px;
+      height: 32px;
+      color: var(--primary-500, #6366f1);
+    }
+  }
+
+  &__title {
+    @include drumee.typo("body", "medium");
+    color: var(--neutral-900, #222732);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__collapse-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  &__collapse {
+    display: flex;
+    width: auto;
+    height: auto;
+    padding: 8px;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    border-radius: 1000px;
+    background: var(--neutral-200, #EBECF0);
+    flex-shrink: 0;
+    color: var(--neutral-400, #9ca3af);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    
+    &:hover {
+      color: var(--neutral-600, #4b5563);
+      background: var(--neutral-300, #d1d5db);
+    }
+    
+    // Icon inside button - smaller size
+    svg,
+    .icon {
+      width: 10px;
+      height: 10px;
+      padding: 0;
+      margin: 0;
+      rotate: -90deg;
+      flex-shrink: 0;
+    }
+  }
+
+  // Body
+  &__body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 400px;
+  }
+
+  &__file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 8px 0;
+  }
+
+  // File item
+  &__file-item {
+    padding: 8px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-bottom: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.3));
+    width: 100%;
+    min-height: 64px;
+    max-height: 64px;
+    overflow: hidden;
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    &[data-status="completed"] {
+      cursor: pointer;
+      
+      &:hover {
+        background-color: var(--neutral-50, #f9fafb);
+      }
+      
+      // Hide progress bar when completed
+      .window-upload-progress__file-item-progress-wrapper {
+        display: none !important;
+      }
+      
+      // Hide cancel button when completed (should already be hidden by skeleton, but ensure it)
+      .window-upload-progress__file-item-cancel {
+        display: none !important;
+      }
+    }
+    
+    &[data-status="error"] {
+      opacity: 0.6;
+    }
+    
+    &[data-status="uploading"] {
+      // Hide check icon when uploading
+      .window-upload-progress__file-item-check {
+        display: none !important;
+      }
+    }
+  }
+
+  &__file-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    width: 100%;
+    height: 40px;
+    
+    // Ensure file info can shrink and truncate
+    > :nth-child(2) {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    // Ensure cancel button and checkmark align to the right
+    > :last-child {
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+  }
+
+  &__file-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    color: var(--neutral-400, #9ca3af);
+  }
+
+  &__file-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  &__file-item-name-speed {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  &__file-item-name {
+    @include drumee.typo("body", "small");
+    color: var(--neutral-900, #222732);
+    font-weight: 600; // Bold as per design
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__file-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__file-item-separator {
+    @include drumee.typo("caption", "small");
+    color: var(--neutral-500, #6b7280);
+    margin: 0 2px;
+  }
+
+  &__file-item-speed {
+    @include drumee.typo("caption", "small");
+    color: var(--neutral-500, #6b7280);
+  }
+
+  &__file-item-size {
+    @include drumee.typo("caption", "small");
+    color: var(--neutral-500, #6b7280);
+  }
+
+  &__file-item-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 24px;
+  }
+
+  &__file-item-cancel {
+    @include drumee.typo("body", "small");
+    color: var(--error-500, #ef4444);
+    cursor: pointer;
+    background: rgba(239, 68, 68, 0.12) !important; // 20% tint
+    border: none !important;
+    padding: 6px 10px !important;
+    min-width: 0;
+    height: auto;
+    line-height: 1.2;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+    appearance: none;
+    font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
+    display: inline-block;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+    text-align: right;
+
+    // Ensure text stays centered inside pill
+    span,
+    section,
+    .label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+    
+    &:hover {
+      color: var(--error-600, #dc2626);
+      text-decoration: underline;
+    }
+    
+    &:active {
+      color: var(--error-700, #b91c1c);
+    }
+  }
+
+  &__file-item-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--success-500, #10b981);
+    
+    &-svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      color: inherit;
+      
+      svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        fill: currentColor;
+        stroke: currentColor;
+        use {
+          stroke: currentColor;
+          fill: none;
+        }
+      }
+    }
+  }
+
+  // Progress bar
+  &__file-item-progress-wrapper {
+    width: 100%;
+    margin-top: 8px;
+    display: block;
+  }
+
+  &__file-item-progress-bar {
+    width: 100%;
+    height: 4px;
+    background-color: var(--neutral-200, #e5e7eb);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  &__file-item-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: var(--primary-500, #6366f1);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    min-width: 0;
+    // Ensure it displays as a block element for width to work
+    display: block !important;
+    flex: none !important;
+  }
+
+  // Footer
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-top: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.5));
+    min-height: 48px;
+  }
+
+  &__estimated-time {
+    @include drumee.typo("caption", "small");
+    color: var(--neutral-500, #6b7280);
+  }
+
+  &__cancel-all {
+    @include drumee.typo("body", "small");
+    color: var(--error-500, #ef4444);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font-weight: 500;
+    transition: color 0.2s ease, text-decoration 0.2s ease;
+    
+    &:hover {
+      color: var(--error-600, #dc2626);
+      text-decoration: underline;
+    }
+    
+    &:active {
+      color: var(--error-700, #b91c1c);
+      transform: scale(0.98);
+    }
+  }
+
+  &__close {
+    @include drumee.typo("body", "small");
+    color: var(--primary-500, #6366f1);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font-weight: 500;
+    transition: color 0.2s ease, text-decoration 0.2s ease, transform 0.1s ease;
+    
+    &:hover {
+      color: var(--primary-600, #4f46e5);
+      text-decoration: underline;
+      transform: translateY(-1px);
+    }
+    
+    &:active {
+      color: var(--primary-700, #4338ca);
+      transform: translateY(0) scale(0.98);
+    }
+  }
+
+  &__footer-spacer {
+    flex: 1;
+  }
+}
+

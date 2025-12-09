@@ -870,6 +870,25 @@ class __window_interact extends windowCore {
       return;
     }
 
+    // Trigger upload event when file is inserted with upload phase
+    // This allows upload progress window to listen and add items immediately
+    if (opt.phase === _a.upload && opt.file && typeof RADIO_MEDIA !== 'undefined') {
+      // Get destination from opt or try to get from media if available
+      let destination = opt.destination;
+      if (!destination && typeof this._getDestination === 'function') {
+        destination = this._getDestination();
+      }
+      
+      RADIO_MEDIA.trigger("upload:start", {
+        file: opt.file,
+        fileName: opt.file.name || opt.filename,
+        fileSize: opt.file.size || opt.size || 0,
+        destination: destination,
+        position: position,
+        opt: opt
+      });
+    }
+
     if (!this.__list || this.__list.isDestroyed()) {
       this.__list = this.getPart(_a.list);
       if (!this.__list) {

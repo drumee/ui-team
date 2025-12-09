@@ -242,6 +242,7 @@ const a = {
   window_switchcall:"window/switchcall",
   window_team:"window/team",
   window_trash:"window/trash",
+  window_upload_progress:"window/upload-progress",
   window_wallpaper_settings:"window/wallpaper-settings",
   window_website:"window/website",
   dock_minifier:"src/drumee/modules/desk/wm/dock/widget/dock-minifier",
