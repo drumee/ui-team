@@ -339,10 +339,10 @@ class __desk_dock extends LetcBox {
 
       case 'add-note':
         let e = Wm.windowsLayer.append({
-          kind: 'editor_markdown',
-          maiden: 1
+          kind: 'editor_note',
+          uiHandler:[this]
         });
-        return c;
+        return e;
 
       case 'address-book':
         const route = cmd.mget(_a.route);

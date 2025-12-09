@@ -1,0 +1,50 @@
+/**
+ * Header skeleton for upload progress window
+ * Contains: upload icon, title, collapse button
+ */
+
+module.exports = function header(ui) {
+  const pfx = `${ui.fig.family}`;
+  
+  return Skeletons.Box.X({
+    className: `${pfx}__header`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__header-left`,
+        kids: [
+          // Upload icon
+          Skeletons.Box.X({
+            className: `${pfx}__icon`,
+            kids: [
+              Skeletons.Button.Svg({
+                className: `${pfx}__icon-svg`,
+                ico: "logo-upload",
+                active: 0,
+              }),
+            ]
+          }),
+          // Title
+          Skeletons.Note({
+            className: `${pfx}__title`,
+            sys_pn: "upload-title",
+            content: `${LOCALE.UPLOADING || "Uploading"} 0 ${LOCALE.FILES || "files"}`,
+          }),
+        ]
+      }),
+      // Collapse/Expand button - wrap in Box to ensure service attribute is rendered
+      Skeletons.Box.X({
+        className: `${pfx}__collapse-wrapper`,
+        service: "toggle-expand",
+        uiHandler: [ui],
+        kids: [
+          Skeletons.Button.Svg({
+            className: `${pfx}__collapse`,
+            ico: "arrow--pages",
+            active: 0,
+          }),
+        ]
+      }),
+    ]
+  });
+};
+

@@ -734,7 +734,6 @@
   "SET_AS_PROFILE": "Photo de profil",
   "SHAPE": "Forme",
   "SHAPES": "Formes",
-  "SHARE": "Partager",
   "SHARED_CONTACTS_LIST": "Membres de la salle virtuelle",
   "SHARE_LIST": "Liste de partage",
   "SHARE_ROOM": "Projet",
@@ -950,12 +949,10 @@
   "Q_FORGOT_PASS_PHRASE": "Mot de passe oublié ",
   "GET_YOUT_CLOUD_COMPUTER": "Obtenez votre ordinateur dans le cloud",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "Votre bureau cloud est prêt !",
-  "ADD_CONTACT": "Ajouter un contact",
   "DOCUMENT_ACCESS": "Accès au document",
   "CHANGE_ADMIN": "Modifier les administrateurs",
   "ME": "Moi",
   "ADD_ADMINISTRATORS": "Ajouter des administrateurs",
-  "I_SHARE": "Je partage",
   "SHARED_TO_ME": "Partagé avec moi",
   "PERMISSION": "Autorisation",
   "SEND_PUBLIC_LINK": "Envoyer un lien public",
@@ -1936,5 +1933,8 @@
   "AREA_SHARE_LABEL": "Public Tout le monde",
   "AREA_PERSONAL_LABEL": "Personnel",
   "AREA_TEAM_LABEL": "Équipe",
-  "AREA_PUBLIC_LABEL": "Site web"
+  "AREA_PUBLIC_LABEL": "Site web",
+  "MEMBER_ACCESS": "Accès membres",
+  "SHARE": "Partager",
+  "ADD_CONTACT": "Ajouter un nouveau contact"
 }

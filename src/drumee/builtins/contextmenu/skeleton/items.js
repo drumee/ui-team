@@ -54,6 +54,7 @@ const __button = function (ui, trigger, k) {
     separator: Skeletons.Element({ className: 'separator' }),
     setAsHomepage: button({ content: LOCALE.SET_AS_HOMEPAGE, service: 'set-as-homepage' }),
     settings: button({ content: LOCALE.SETTINGS, service: _e.settings }),
+    share: button({ content: LOCALE.SHARE, service: _a.share }),
     share_qrcode: button({ content: LOCALE.SHOW_QRCODE, service: "share-qrcode" }),
     shortcut: button({ content: LOCALE.CREATE_SHORTCUT, service: _a.shortcut }),
     startMeeting: button({ content: LOCALE.START_MEETING, service: 'start-meeting' }),

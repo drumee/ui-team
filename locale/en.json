@@ -734,7 +734,6 @@
   "SET_AS_PROFILE": "Set as profile photo",
   "SHAPE": "Shape",
   "SHAPES": "Shapes",
-  "SHARE": "Share",
   "SHARED_CONTACTS_LIST": "Room members",
   "SHARE_LIST": "Share list",
   "SHARE_ROOM": "Share room",
@@ -950,12 +949,10 @@
   "Q_FORGOT_PASS_PHRASE": "Forgot pass phrase",
   "GET_YOUT_CLOUD_COMPUTER": "Get your cloud computer",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "Your cloud desktop is ready!",
-  "ADD_CONTACT": "Add contact",
   "DOCUMENT_ACCESS": "Document access",
   "CHANGE_ADMIN": "Change administrators",
   "ME": "Me",
   "ADD_ADMINISTRATORS": "Add administrators",
-  "I_SHARE": "I share",
   "SHARED_TO_ME": "Shared to me",
   "PERMISSION": "Permission",
   "SEND_PUBLIC_LINK": "Send public link",
@@ -1936,5 +1933,8 @@
   "AREA_SHARE_LABEL": "Public Anyone",
   "AREA_PERSONAL_LABEL": "Personal",
   "AREA_TEAM_LABEL": "Team",
-  "AREA_PUBLIC_LABEL": "Website"
+  "AREA_PUBLIC_LABEL": "Website",
+  "MEMBER_ACCESS": "Member access",
+  "SHARE": "Share",
+  "ADD_CONTACT": "Add new contact"
 }

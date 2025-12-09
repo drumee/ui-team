@@ -730,7 +730,7 @@ class __core_mfs extends LetcBox {
    *
    */
   canShare() {
-    if (this.mget(_a.area) == _a.personal) return false;
+    if (!["dmz", _a.share].includes(this.mget(_a.area))) return false;
     return this.mget(_a.privilege) & _K.permission.download;
   }
 

@@ -1,7 +1,7 @@
 require("jquery-ui/ui/widgets/draggable");
 require("jquery-ui/ui/widgets/droppable");
 require("jquery-ui/ui/widgets/resizable");
-require("jquery-ui-touch-punch")
+// require("jquery-ui-touch-punch")
 
 const Rectangle = require('rectangle-node');
 const mfsInteract = require("./interact");

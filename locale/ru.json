@@ -734,7 +734,6 @@
   "SET_AS_PROFILE": "Установить как фото профиля",
   "SHAPE": "Форма ",
   "SHAPES": "Формы",
-  "SHARE": "Поделиться",
   "SHARED_CONTACTS_LIST": "Участники комнаты",
   "SHARE_LIST": "Список ",
   "SHARE_ROOM": "Проекты",
@@ -950,12 +949,10 @@
   "Q_FORGOT_PASS_PHRASE": "Забыли кодовую фразу",
   "GET_YOUT_CLOUD_COMPUTER": "Получите ваш облачный компьютер",
   "D_YOUR_CLOUD_DESKTOP_IS_READY": "Ваш облачный рабочий стол готов!",
-  "ADD_CONTACT": "Добавить контакт",
   "DOCUMENT_ACCESS": "Доступ к документу",
   "CHANGE_ADMIN": "Сменить администраторов",
   "ME": "мне",
   "ADD_ADMINISTRATORS": "Добавить администраторов",
-  "I_SHARE": "я делюсь",
   "SHARED_TO_ME": "Поделился со мной",
   "PERMISSION": "разрешение",
   "SEND_PUBLIC_LINK": "Отправить общедоступную ссылку",
@@ -1936,5 +1933,8 @@
   "AREA_SHARE_LABEL": "Публичный Любой",
   "AREA_PERSONAL_LABEL": "Личный",
   "AREA_TEAM_LABEL": "Команда",
-  "AREA_PUBLIC_LABEL": "网站"
+  "AREA_PUBLIC_LABEL": "网站",
+  "MEMBER_ACCESS": "Доступ для участников",
+  "SHARE": "Поделиться",
+  "ADD_CONTACT": "Добавить новый контакт"
 }

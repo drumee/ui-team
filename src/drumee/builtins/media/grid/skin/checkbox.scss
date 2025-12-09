@@ -17,7 +17,7 @@
       visibility: visible;
 
       svg {
-        border: 1.5px solid orange;
+        border: 1.5px solidvar(--primary-500);
         border-radius: var(--checkbox-border-radius);
       }
     }
@@ -27,8 +27,8 @@
 
       svg {
         border-radius: var(--checkbox-border-radius);
-        fill: orange;
-        border: 1.5px solid orange;
+        fill: var(--primary-500);
+        border: 1.5px solid var(--primary-500);
         background-color: var(--default-bg); //var(--white); 
       }
     }

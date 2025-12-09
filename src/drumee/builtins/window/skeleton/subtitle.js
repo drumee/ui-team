@@ -5,8 +5,8 @@ module.exports = function (ui) {
     partHandler: [ui],
     kids: [
       Skeletons.Note({
-        className: `${ui.fig.family}__subtitle-wrapper files`,
-        sys_pn: "file-count",
+        className: `${ui.fig.family}__subtitle-wrapper items`,
+        sys_pn: "items-count",
       }),
       Skeletons.Note({
         sys_pn: "last-update",

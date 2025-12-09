@@ -69,6 +69,13 @@ class __window_folder extends mfsInteract {
       case _e.download:
         return this.mget(_a.trigger).download()
 
+      case _e.settings:
+        let item = this.model.toJSON();
+        delete item.style;
+        item.dataset = { modal: 1 }
+        item.kind = "settings_folder";
+        return this.__wrapperDialog.feed(item);
+
       default:
         super.onUiEvent(cmd, args);
     }

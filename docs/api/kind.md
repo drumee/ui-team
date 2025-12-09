@@ -73,6 +73,9 @@ See https://drumee.com/-/#/sandbox for examples.
 | disk_usage | widget/disk-usage | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/disk-usage/index.js |
 | widget_chat | widget/chat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat/index.js |
 | settings_folder | widget/settings/folder | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/folder/index.js |
+| settings_hub | widget/settings/hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/hub/index.js |
+| settings_members_list | widget/settings/members-list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/members-list/index.js |
+| settings_member | widget/settings/member | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/member/index.js |
 | settings_pricing | widget/settings/pricing | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/pricing/index.js |
 | widget_chat_item | widget/chat-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat-item/index.js |
 | account_avatar | window/account/profile/avatar | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/profile/avatar/index.js |
@@ -194,6 +197,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | window_switchcall | window/switchcall | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/switchcall/index.js |
 | window_team | window/team | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/team/index.js |
 | window_trash | window/trash | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/trash/index.js |
+| window_upload_progress | window/upload-progress | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/upload-progress/index.js |
 | window_wallpaper_settings | window/wallpaper-settings | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/wallpaper-settings/index.js |
 | window_website | window/website | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/website/index.js |
 | dock_minifier | src/drumee/modules/desk/wm/dock/widget/dock-minifier | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/dock/widget/dock-minifier/index.js |

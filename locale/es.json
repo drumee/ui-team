@@ -177,5 +177,8 @@
   "AREA_SHARE_LABEL": "Público Cualquiera",
   "AREA_PERSONAL_LABEL": "Personal",
   "AREA_TEAM_LABEL": "Equipo",
-  "AREA_PUBLIC_LABEL": "Sitio web"
+  "AREA_PUBLIC_LABEL": "Sitio web",
+  "MEMBER_ACCESS": "Acceso para miembros",
+  "SHARE": "Compartir",
+  "ADD_CONTACT": "Agregar nuevo contacto"
 }

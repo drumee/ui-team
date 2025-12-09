@@ -440,11 +440,9 @@ class __window_core extends __utils {
    * 
    */
   updateSummary(box) {
-    this.debug("AAA:518", this)
-    this.fetchService(SERVICE.media.manifest, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((data) => {
-      this.debug("AAA:520", data[0][0].mtime, data)
-      let mtime = Dayjs.unix(data[0][0].mtime).format(Visitor.timeformat())
-      this.getPart("file-count").set({content:LOCALE.X_FILES.format(data[3].amount)})
+    this.fetchService(SERVICE.media.summary, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((data) => {
+      let mtime = Dayjs.unix(data.mtime).format(Visitor.timeformat());
+      this.getPart("items-count").set({content:LOCALE.X_FILES.format(data.file_count)})
       this.getPart("last-update").set({content:LOCALE.LAST_CHANGE.format(mtime)})
     }).catch(()=>{
       this.getPart("last-update").set({content:LOCALE.FILES_NOT_FOUND})
@@ -777,6 +775,7 @@ class __window_core extends __utils {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.model.get(_a.service);
     if (!args.no_raise) this.raise(cmd);
+    this.debug("AAA:780", service)
     switch (service) {
       case _e.close:
         if (this.mget(_a.source)) {

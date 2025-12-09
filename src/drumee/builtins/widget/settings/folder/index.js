@@ -54,7 +54,9 @@ class settings_folder extends LetcBox {
       case "close-popup":
         return this.goodbye();
 
-
+      case _a.members:
+        this.feed({ kind: "settings_members_list", })
+        return this.goodbye();
       // default:
       //   return super.onUiEvent(cmd, args);
     }

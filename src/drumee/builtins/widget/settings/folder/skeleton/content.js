@@ -39,6 +39,7 @@ function text(ui, label) {
  */
 function settings_body(ui, opt) {
   const fig = `${ui.fig.family}`;
+
   return Skeletons.Box.Y({
     className: `${fig}__container`,
     debug: __filename,
@@ -53,18 +54,17 @@ function settings_body(ui, opt) {
               className: `${ui.fig.group}__vignette-media ${fig}__vignette-media`,
               filetype: ui.mget(_a.filetype),
               area: ui.mget(_a.area),
-              mode: _a.vignette
+              mode: _a.vignette,
+              service: "nop"
             }]
           }),
           Skeletons.Box.Y({
             className: `${ui.fig.group}__items ${fig}__items`,
             kids: [
-              item(ui, LOCALE.OWNER, text(ui,"0")),
-              item(ui, LOCALE.TYPE, text(ui, LOCALE[`AREA_${ui.mget(_a.area).toUpperCase()}_LABEL`])),
-              item(ui, LOCALE.SIZE, text(ui,"0")),
-              item(ui, LOCALE.MEMBERS, text(ui,"0")),
-              item(ui, LOCALE.CREATED, text(ui,"0")),
-              item(ui, LOCALE.LAST_CHANGE, text(ui,"0")),
+              item(ui, LOCALE.TYPE, text(ui, LOCALE.AREA_PERSONAL_LABEL)),
+              item(ui, LOCALE.SIZE, text(ui, "0")),
+              item(ui, LOCALE.CREATED, text(ui, "0")),
+              item(ui, LOCALE.LAST_CHANGE, text(ui, "0")),
             ]
           })
         ]
