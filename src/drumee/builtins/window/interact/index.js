@@ -71,7 +71,7 @@ class __window_interact extends windowCore {
     if (top < 0) {
       this.style.set({ top: 0 });
     }
-    let offset = window.innerHeight - (top + h + 52);
+    let offset = window.innerHeight - (top + h + 132);
     if (offset < 0) {
       this.style.set({ top: top + offset });
     }
