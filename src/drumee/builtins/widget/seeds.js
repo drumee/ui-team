@@ -9,6 +9,7 @@ module.exports = {
   settings_hub: './settings/hub',
   settings_members_list: './settings/members-list',
   settings_member: './settings/member',
+  settings_account: './settings/account',
   settings_pricing: './settings/pricing',
   widget_chat_item: './chat-item',
 };

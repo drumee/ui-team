@@ -180,5 +180,7 @@
   "AREA_PUBLIC_LABEL": "Sitio web",
   "MEMBER_ACCESS": "Acceso para miembros",
   "SHARE": "Compartir",
-  "ADD_CONTACT": "Agregar nuevo contacto"
+  "ADD_CONTACT": "Agregar nuevo contacto",
+  "PRIVACY_POLICY": "Política de privacidad",
+  "TERMS_OF_SERVICE": "Condiciones de servicio"
 }

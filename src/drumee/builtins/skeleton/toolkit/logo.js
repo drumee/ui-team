@@ -12,3 +12,15 @@ export function folder_logo (ui, opt={}) {
     ],
   });
 };
+
+export function badge_logo(ui, c) {
+  return Skeletons.Box.X({
+    className: `${ui.fig.family}__logo`,
+    kids: [
+      Skeletons.Element({
+        content: require("./templates/badge")({ area: 'badge', widgetId: _.uniqueId('badge-') }),
+        className: `${ui.fig.family}__icon badge ${c}`,
+      }),
+    ],
+  });
+};

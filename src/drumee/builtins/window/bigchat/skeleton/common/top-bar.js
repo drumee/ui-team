@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : builins/window/addressbook/skeleton/common/top-bar
-//   TYPE : Skeleton
-// ==================================================================== *
-
 const __skl_bigchat_common_topBar = function(_ui_) {
   const mode = _ui_._view;
   const figFamily = `${_ui_.fig.family}-topbar`;
@@ -46,7 +40,7 @@ const __skl_bigchat_common_topBar = function(_ui_) {
           }) //'Chat'
         ]}),
 
-      require('window/skeleton/topbar/control')(_ui_, 'msc')
+      require('window/skeleton/topbar/control')(_ui_, 'c')
     ]});
 
   return a;

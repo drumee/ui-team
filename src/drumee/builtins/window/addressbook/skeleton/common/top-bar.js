@@ -58,7 +58,7 @@ const __skl_addressbook_common_topBar = function(_ui_) {
           }) //'Contact manager'
         ]}),
       
-      require('window/skeleton/topbar/control')(_ui_, 'msc')
+      require('window/skeleton/topbar/control')(_ui_, 'c')
     ]});
 
   return a;

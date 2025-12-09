@@ -1,14 +1,23 @@
+// ==================================================================== *
+//   Copyright Xialia.com  2011-2020
+//   FILE : builins/window/addressbook/skeleton/index
+//   TYPE : Skelton
+// ==================================================================== *
 
-module.exports = function(ui) {
+const __skl_window_addressbook = function(_ui_) {
   const menu = Skeletons.Box.X({ 
     debug     : __filename,
-    className : `${ui.fig.family}__header ${ui.fig.group}__header`, 
+    className : `${_ui_.fig.family}__header ${_ui_.fig.group}__header`, 
     sys_pn    : "window-header",
     kidsOpt   : {
       radio     : _a.on,
-      uiHandler : ui
+      uiHandler : _ui_
     },
-    kids      : [ require('./topbar')(ui) ]});
+    kids      : [ require('./common/top-bar')(_ui_) ]});
   
-  return require('window/skeleton/content/main')(ui, menu);
+  const a = require('window/skeleton/content/main')(_ui_, menu);
+  
+  return a;
 };
+
+module.exports = __skl_window_addressbook;
