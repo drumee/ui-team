@@ -166,7 +166,6 @@ class __media_core extends DrumeeMFS {
     }
 
     const fileType = this.mget(_a.filetype);
-    this.debug("AAA:154", fileType)
     switch (fileType) {
       case _a.hub:
         items = this.contextmenuItemsForHub();
@@ -742,28 +741,28 @@ class __media_core extends DrumeeMFS {
     });
 
     c = this.children.last();
-    this.triggerHandlers({ service: "media-uploaded" });
 
     // Trigger upload queue created event to notify upload progress window
     // This distributes upload information: queue, destination, token, etc.
-    if (typeof RADIO_MEDIA !== 'undefined') {
-      RADIO_MEDIA.trigger("upload:queue:created", {
-        queue: c,
-        destination: dest,
-        token: lp.mget(_a.token),
-        echoId: this.mget(ECHO_ID),
-        isFolder: isFolder,
-        uploadingInplace: this._uploadingInplace,
-        mode: lp.getViewMode(),
-        media: this
-      });
-    }
+    // if (typeof RADIO_MEDIA !== 'undefined') {
+    //   RADIO_MEDIA.trigger("upload:queue:created", {
+    //     queue: c,
+    //     destination: dest,
+    //     token: lp.mget(_a.token),
+    //     echoId: this.mget(ECHO_ID),
+    //     isFolder: isFolder,
+    //     uploadingInplace: this._uploadingInplace,
+    //     mode: lp.getViewMode(),
+    //     media: this
+    //   });
+    // }
 
     c.once("quota:exceeded", () => {
       this.goodbye();
     });
 
     c.once(_e.eod, (s) => {
+      this.triggerHandlers({ service: "media-uploaded" });
       this.triggerHandlers({ service: "media:eod" });
     });
 
@@ -894,7 +893,7 @@ class __media_core extends DrumeeMFS {
       if (this.mget(_a.ownpath)) args.ownpath = this.mget(_a.ownpath);
     }
     queue.add(args);
-    this.type = null;
+    // this.type = null;
 
     // CRITICAL: Create window and add item BEFORE queue.add
     // This ensures window appears immediately when upload starts
@@ -1822,14 +1821,14 @@ class __media_core extends DrumeeMFS {
       }
       pos++;
       let ownpath = this.mget(_a.ownpath) || '/';
-      ownpath = `${ownpath}/${f.fullPath}`;
+      if (f.fullPath) ownpath = `${ownpath}/${f.fullPath}`;
       ownpath = ownpath.replace(/\/+/g, '/');
       ownpath = ownpath.replace(/\/+$/g, '');
       args.ownpath = ownpath;
       this.debug("AAA:1596", this, args, f.fullPath)
 
       queue.add(args);
-      this.type = null;
+      // this.type = null;
     }
   }
 

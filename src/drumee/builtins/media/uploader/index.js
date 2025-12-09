@@ -302,11 +302,16 @@ class __media_uploader extends LetcBox {
     };
 
     if (_.isArray(items)) {
-      return Array.from(items).map((item) =>
-        enqueue(item));
-    } else {
-      enqueue(items);
+      return Array.from(items).map((item) => { enqueue(item) });
     }
+
+    if (items.file && items.file.length) {
+      let { file: files } = {...items};
+      delete items.file;
+      return Array.from(files).map((file) => { enqueue({ ...items, file }) });
+    }
+
+    enqueue(items);
   }
 
   /** 
