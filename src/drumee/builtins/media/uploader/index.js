@@ -117,51 +117,8 @@ class __media_uploader extends LetcBox {
       this._index++;
       return;
     }
-    
-    // Calculate total progress (for backward compatibility)
     const rate = (e.loaded + this._bytesSent) / this._bytesToBeSent;
     const val = parseInt(100 * rate);
-    
-    // Find current uploading file to calculate individual progress
-    let currentFile = null;
-    let fileProgress = val; // Default to total progress
-    
-    // Try to get file from pendingItem
-    if (this.pendingItem && this.pendingItem.file) {
-      currentFile = this.pendingItem.file;
-      // Calculate progress for this specific file
-      if (currentFile.size && e.total) {
-        fileProgress = parseInt(100 * (e.loaded / e.total));
-      } else if (currentFile.size) {
-        // Fallback: estimate based on loaded bytes
-        const fileRate = e.loaded / currentFile.size;
-        fileProgress = parseInt(100 * Math.min(1, fileRate));
-      }
-    }
-    // Try to get from active XHR
-    else if (this.xhr && this.xhr.length > 0) {
-      const activeXhrs = this.xhr.filter(xhr => xhr.file && xhr.readyState < 4);
-      if (activeXhrs.length > 0) {
-        const activeXhr = activeXhrs[activeXhrs.length - 1];
-        if (activeXhr && activeXhr.file) {
-          currentFile = activeXhr.file;
-          if (currentFile.size && e.total) {
-            fileProgress = parseInt(100 * (e.loaded / e.total));
-          } else if (currentFile.size) {
-            const fileRate = e.loaded / currentFile.size;
-            fileProgress = parseInt(100 * Math.min(1, fileRate));
-          }
-        }
-      }
-    }
-    
-    // Always trigger progress event for upload progress window
-    // Pass file info if available
-    if (currentFile) {
-      this.trigger(_e.progress, fileProgress);
-    } else {
-      this.trigger(_e.progress, val);
-    }
 
     if (this.mget(_a.mode) === _a.row) {
       if (this.$progress != null) {
@@ -169,8 +126,6 @@ class __media_uploader extends LetcBox {
           width: val + "%"
         });
       }
-    } else if (this.mget(_a.mode) === _a.blank) {
-      // Already triggered above
     } else {
       if (this.$progress != null) {
         this.$progress.css({
@@ -330,20 +285,15 @@ class __media_uploader extends LetcBox {
   */
   add(items) {
     const enqueue = (item) => {
-      const fileName = item.file?.name || item.file?.filename || "Unknown";
-      this.debug("🟢 [QUEUE.ADD] Adding file to queue:", fileName, "at", new Date().toISOString());
-      
       this.checkQuota(item).then((file) => {
         if (!this._started) {
           this._started = 1;
           if (this._queue.length < 5) {
             this._queue.push({ ...item, file });
-            this.debug("🟢 [QUEUE.ADD] File added to _queue, length:", this._queue.length);
             return
           }
         }
         this._buffer.push({ ...item, file });
-        this.debug("🟢 [QUEUE.ADD] File added to _buffer, length:", this._buffer.length);
       }).catch((e) => {
         this._pendingCount--;
         this._bytesPending = this._bytesPending - item.file.size;
@@ -370,10 +320,6 @@ class __media_uploader extends LetcBox {
       ownpath,
       file
     } = item;
-    
-    const fileName = file?.name || file?.filename || "Unknown";
-    this.debug("🟡 [UPLOAD_SEND] _send called - upload starting NOW for file:", fileName, "at", new Date().toISOString());
-    
     if (!dest) {
       dest = {
         nid: item.nid,
@@ -409,27 +355,10 @@ class __media_uploader extends LetcBox {
     this._bytesPending = this._bytesPending + file.size;
     let xhr;
     try {
-      // DEBUG: Check window before actually sending
-      const progressWindows = window.Wm?.getItemsByKind?.('window_upload_progress') || [];
-      if (progressWindows.length > 0) {
-        const pw = progressWindows[0];
-        const hasFile = pw._uploadItems?.some(item => item.fileName === fileName);
-        this.debug("🟡 [UPLOAD_SEND] Before xhr.send - Window exists:", !!pw, "File in window:", hasFile);
-      } else {
-        this.debug("🟡 [UPLOAD_SEND] Before xhr.send - Window NOT found - THIS IS THE PROBLEM!");
-      }
-      
       xhr = this.uploadFile(file, opt);
       xhr.file = file;
-      
-      // Set pendingItem so progress can track current file
-      if (!this.pendingItem || this.pendingItem.file !== file) {
-        this.pendingItem = { ...opt, file };
-      }
-      
       this.xhr.push(xhr)
       this._pendingCount++;
-      this.debug("🟡 [UPLOAD_SEND] XHR created and added, pendingCount:", this._pendingCount, "pendingItem:", this.pendingItem?.file?.name);
     } catch (e) {
       this._bytesPending = this._bytesPending - file.size;
       this._pendingCount--;

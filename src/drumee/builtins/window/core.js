@@ -442,10 +442,10 @@ class __window_core extends __utils {
   updateSummary(box) {
     this.fetchService(SERVICE.media.summary, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((data) => {
       let mtime = Dayjs.unix(data.mtime).format(Visitor.timeformat());
-      this.getPart("items-count").set({content:LOCALE.X_FILES.format(data.file_count)})
-      this.getPart("last-update").set({content:LOCALE.LAST_CHANGE.format(mtime)})
-    }).catch(()=>{
-      this.getPart("last-update").set({content:LOCALE.FILES_NOT_FOUND})
+      this.getPart("items-count").set({ content: LOCALE.X_FILES.format(data.file_count) })
+      this.getPart("last-update").set({ content: LOCALE.LAST_CHANGE.format(mtime) })
+    }).catch(() => {
+      this.getPart("last-update").set({ content: LOCALE.FILES_NOT_FOUND })
     })
 
   }
@@ -581,6 +581,7 @@ class __window_core extends __utils {
    * @param {*} list 
    */
   buildBreadcrumbs(data = []) {
+    if (!this.breadcrumbsRoll) return;
     let items = [];
     for (let item of data) {
       items.push(require("./skeleton/topbar/breadcrumbs-item")(this, item));

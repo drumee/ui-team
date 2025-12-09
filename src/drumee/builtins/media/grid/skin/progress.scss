@@ -16,12 +16,12 @@
 .svg-progress {
   &__ui {
     position: absolute;
-    background-color: var(--default-bg); //var(--ewhite);
+    background-color: var(--default-bg);
     z-index: 1000;
     width: 100%;
     height: 100%;
     border-radius: var(--border-radius-small);
-    box-shadow: var(--shadow-container); //0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    box-shadow: var(--shadow-container);
     left: 0;
     top: 0;
   }
@@ -41,6 +41,8 @@
       width: 100%;
       height: 100%;
       position: absolute;
+      border-radius: var(--border-radius-small);
+      border:1px solid var(--primary-300);
     }
 
     &-footer {
@@ -51,12 +53,12 @@
   &__value {
     &-filesize {
       letter-spacing: 0.09px;
-      @include drumee.typo($line: 13px, $size: 11px, $weight: 300, $color: var(--default-text-color));
+      @include drumee.typo($line: 13px, $size: 11px, $weight: 300, $color: var(--primary-500));
     }
 
     &-percent {
       letter-spacing: 0.09px;
-      @include drumee.typo($line: 13px, $size: 11px, $weight: 300, $color: var(--egreen));
+      @include drumee.typo($line: 13px, $size: 11px, $weight: 300, $color: var(--primary-500));
     }
 
     &-filename {
@@ -69,7 +71,7 @@
         padding: 0 10px;
         overflow: hidden;
         text-overflow: ellipsis;
-        @include drumee.typo($line: 14px, $size: 12px, $weight: 300, $color: var(--egreen));
+        @include drumee.typo($line: 14px, $size: 12px, $weight: 300, $color: var(--primary-500));
         letter-spacing: 0.1px;
         text-align: center;
       }
@@ -118,7 +120,7 @@
     svg {
       width: 100%;
       height: 100%;
-      fill: var(--eorange-sunset);
+      fill: var(--primary-400);
     }
   }
 }

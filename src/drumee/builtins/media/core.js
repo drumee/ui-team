@@ -12,18 +12,20 @@ const IGNORED_FILES = /Thumbs.db|.DS_Store|__MACOSX|.thumbnails|\~+/;
 const MAX_BLOB_SIZE = 100000000;
 
 // Lazy load upload progress window
-let UploadProgressWindow = null;
-function getUploadProgressWindow() {
-  if (!UploadProgressWindow) {
-    try {
-      UploadProgressWindow = require("window/upload-progress");
-    } catch (e) {
-      // Window not available
-      return null;
-    }
-  }
-  return UploadProgressWindow;
-}
+/** Temporary disabling due to UX Issues  */
+// let UploadProgressWindow = null;
+// function getUploadProgressWindow() {
+//   if (!UploadProgressWindow) {
+//     try {
+//       UploadProgressWindow = require("window/upload-progress");
+//     } catch (e) {
+//       // Window not available
+//       return null;
+//     }
+//   }
+//   return UploadProgressWindow;
+// }
+
 /**
  * 
  * @param {*} name 
@@ -766,68 +768,68 @@ class __media_core extends DrumeeMFS {
     });
 
     // Track completion for each file via RADIO_MEDIA (triggered per file)
-    if (typeof RADIO_MEDIA !== 'undefined') {
-      const uploadedHandler = (data) => {
-        const UploadProgressWindowClass = getUploadProgressWindow();
-        if (UploadProgressWindowClass) {
-          UploadProgressWindowClass.getOrCreate().then((progressWindow) => {
-            if (progressWindow && data) {
-              // Get filename from data first, then try pendingItem or xhr
-              let fileName = data.filename;
-              
-              // Decode filename if it's encoded
-              if (fileName) {
-                try {
-                  if (fileName.includes('%')) {
-                    fileName = decodeURIComponent(fileName);
-                  }
-                } catch (e) {
-                  // If decode fails, use original
-                }
-              }
-              
-              // If no filename in data, try to get from pendingItem
-              if (!fileName && c.pendingItem && c.pendingItem.file) {
-                fileName = c.pendingItem.file.name;
-              }
-              
-              // If still no filename, try to get from xhr array
-              if (!fileName && c.xhr && c.xhr.length > 0) {
-                // Find the most recent xhr that hasn't completed yet
-                const activeXhr = c.xhr.filter(xhr => xhr.file && xhr.readyState < 4).pop();
-                if (!activeXhr || activeXhr.readyState >= 4) {
-                  // If no active xhr, find the last completed one
-                  const completedXhrs = c.xhr.filter(xhr => xhr.file && xhr.readyState >= 4);
-                  if (completedXhrs.length > 0) {
-                    const lastCompleted = completedXhrs[completedXhrs.length - 1];
-                    if (lastCompleted && lastCompleted.file) {
-                      fileName = lastCompleted.file.name;
-                    }
-                  }
-                } else if (activeXhr && activeXhr.file) {
-                  fileName = activeXhr.file.name;
-                }
-              }
-              
-              if (fileName) {
-                progressWindow.completeUpload(fileName, data);
-              } else {
-                c.debug('completeUpload: Could not determine file name', data, c.pendingItem, c.xhr);
-              }
-            }
-          });
-        }
-      };
-      
-      RADIO_MEDIA.on(_e.uploaded, uploadedHandler);
-      
-      // Cleanup listener when queue is destroyed
-      c.once(_e.destroy, () => {
-        if (typeof RADIO_MEDIA !== 'undefined') {
-          RADIO_MEDIA.off(_e.uploaded, uploadedHandler);
-        }
-      });
-    }
+    // if (typeof RADIO_MEDIA !== 'undefined') {
+    //   const uploadedHandler = (data) => {
+    //     const UploadProgressWindowClass = getUploadProgressWindow();
+    //     if (UploadProgressWindowClass) {
+    //       UploadProgressWindowClass.getOrCreate().then((progressWindow) => {
+    //         if (progressWindow && data) {
+    //           // Get filename from data first, then try pendingItem or xhr
+    //           let fileName = data.filename;
+
+    //           // Decode filename if it's encoded
+    //           if (fileName) {
+    //             try {
+    //               if (fileName.includes('%')) {
+    //                 fileName = decodeURIComponent(fileName);
+    //               }
+    //             } catch (e) {
+    //               // If decode fails, use original
+    //             }
+    //           }
+
+    //           // If no filename in data, try to get from pendingItem
+    //           if (!fileName && c.pendingItem && c.pendingItem.file) {
+    //             fileName = c.pendingItem.file.name;
+    //           }
+
+    //           // If still no filename, try to get from xhr array
+    //           if (!fileName && c.xhr && c.xhr.length > 0) {
+    //             // Find the most recent xhr that hasn't completed yet
+    //             const activeXhr = c.xhr.filter(xhr => xhr.file && xhr.readyState < 4).pop();
+    //             if (!activeXhr || activeXhr.readyState >= 4) {
+    //               // If no active xhr, find the last completed one
+    //               const completedXhrs = c.xhr.filter(xhr => xhr.file && xhr.readyState >= 4);
+    //               if (completedXhrs.length > 0) {
+    //                 const lastCompleted = completedXhrs[completedXhrs.length - 1];
+    //                 if (lastCompleted && lastCompleted.file) {
+    //                   fileName = lastCompleted.file.name;
+    //                 }
+    //               }
+    //             } else if (activeXhr && activeXhr.file) {
+    //               fileName = activeXhr.file.name;
+    //             }
+    //           }
+
+    //           if (fileName) {
+    //             progressWindow.completeUpload(fileName, data);
+    //           } else {
+    //             c.debug('completeUpload: Could not determine file name', data, c.pendingItem, c.xhr);
+    //           }
+    //         }
+    //       });
+    //     }
+    //   };
+
+    //   RADIO_MEDIA.on(_e.uploaded, uploadedHandler);
+
+    //   // Cleanup listener when queue is destroyed
+    //   c.once(_e.destroy, () => {
+    //     if (typeof RADIO_MEDIA !== 'undefined') {
+    //       RADIO_MEDIA.off(_e.uploaded, uploadedHandler);
+    //     }
+    //   });
+    // }
 
     c.once("upload:response", (data) => {
       if (this._uploadBase || this._uploadingInplace || isFolder) {
@@ -876,11 +878,11 @@ class __media_core extends DrumeeMFS {
    */
   uploadFile(file, ownpath) {
     this.isUploading = 1;
-    
+
     // DEBUG: Log when uploadFile is called - this is ANOTHER upload path
     const fileName = file?.name || file?.filename || "Unknown";
     console.log("🟠 [UPLOAD_FILE] uploadFile() called for file:", fileName, "at", new Date().toISOString());
-    
+
     const queue = this.uploader();
     const dest = this._getDestination();
     dest.notify = 1;
@@ -897,121 +899,123 @@ class __media_core extends DrumeeMFS {
     } else {
       if (this.mget(_a.ownpath)) args.ownpath = this.mget(_a.ownpath);
     }
-    
-    // CRITICAL: Create window and add item BEFORE queue.add
-    // This ensures window appears immediately when upload starts
-    const UploadProgressWindowClass = getUploadProgressWindow();
-    if (UploadProgressWindowClass) {
-      // Try to get existing window synchronously first
-      let progressWindow = null;
-      if (window.Wm) {
-        const existingWindows = window.Wm.getItemsByKind('window_upload_progress');
-        if (existingWindows && existingWindows.length > 0 && !existingWindows[0].isDestroyed()) {
-          progressWindow = existingWindows[0];
-        }
-      }
-      
-      if (progressWindow) {
-        // Window already exists - add item immediately
-        progressWindow.addUploadItem(file, queue);
-        
-        // Track progress - need to get current file from queue
-        const onProgress = (progressPercent) => {
-          if (queue._canceled || (queue.isCanceled && queue.isCanceled())) {
-            if (queue.off && typeof queue.off === 'function') {
-              queue.off(_e.progress, onProgress);
-            }
-            return;
-          }
-          
-          // Find current uploading file from queue
-          let currentFile = null;
-          let fileName = file.name; // Default to the file we know about
-          
-          // Try to get from pendingItem
-          if (queue.pendingItem && queue.pendingItem.file) {
-            currentFile = queue.pendingItem.file;
-            fileName = currentFile.name;
-          }
-          // Try to get from xhr array
-          else if (queue.xhr && queue.xhr.length > 0) {
-            const activeXhrs = queue.xhr.filter(xhr => xhr.file && xhr.readyState < 4);
-            if (activeXhrs.length > 0) {
-              currentFile = activeXhrs[activeXhrs.length - 1].file;
-              fileName = currentFile ? currentFile.name : file.name;
-            }
-          }
-          
-          // Calculate speed (simplified)
-          const fileSize = currentFile ? currentFile.size : file.size;
-          const speed = fileSize ? (fileSize * progressPercent / 100) / 1000 : 0;
-          
-          progressWindow.updateProgress(fileName, progressPercent, speed);
-        };
-        queue.on(_e.progress, onProgress);
-        
-        queue.add(args);
-        this.type = null;
-      } else {
-        // Window doesn't exist - create it first, THEN start upload
-        UploadProgressWindowClass.getOrCreate().then((progressWindow) => {
-          if (progressWindow) {
-            progressWindow.addUploadItem(file, queue);
-            
-            // Track progress - need to get current file from queue
-            const onProgress = (progressPercent) => {
-              if (queue._canceled || (queue.isCanceled && queue.isCanceled())) {
-                if (queue.off && typeof queue.off === 'function') {
-                  queue.off(_e.progress, onProgress);
-                }
-                return;
-              }
-              
-              // Find current uploading file from queue
-              let currentFile = null;
-              let fileName = file.name; // Default to the file we know about
-              
-              // Try to get from pendingItem
-              if (queue.pendingItem && queue.pendingItem.file) {
-                currentFile = queue.pendingItem.file;
-                fileName = currentFile.name;
-              }
-              // Try to get from xhr array
-              else if (queue.xhr && queue.xhr.length > 0) {
-                const activeXhrs = queue.xhr.filter(xhr => xhr.file && xhr.readyState < 4);
-                if (activeXhrs.length > 0) {
-                  currentFile = activeXhrs[activeXhrs.length - 1].file;
-                  fileName = currentFile ? currentFile.name : file.name;
-                }
-              }
-              
-              // Calculate speed (simplified)
-              const fileSize = currentFile ? currentFile.size : file.size;
-              const speed = fileSize ? (fileSize * progressPercent / 100) / 1000 : 0;
-              
-              progressWindow.updateProgress(fileName, progressPercent, speed);
-            };
-            queue.on(_e.progress, onProgress);
-            
-            // NOW start upload after window is ready
-            queue.add(args);
-            this.type = null;
-          } else {
-            // If window creation failed, still start upload
     queue.add(args);
     this.type = null;
-          }
-        }).catch((error) => {
-          // If window creation failed, still start upload
-          queue.add(args);
-          this.type = null;
-        });
-      }
-    } else {
-      // No UploadProgressWindowClass available - start upload anyway
-      queue.add(args);
-      this.type = null;
-    }
+
+    // CRITICAL: Create window and add item BEFORE queue.add
+    // This ensures window appears immediately when upload starts
+    // const UploadProgressWindowClass = getUploadProgressWindow();
+    // if (UploadProgressWindowClass) {
+    //   // Try to get existing window synchronously first
+    //   let progressWindow = null;
+    //   if (window.Wm) {
+    //     const existingWindows = window.Wm.getItemsByKind('window_upload_progress');
+    //     if (existingWindows && existingWindows.length > 0 && !existingWindows[0].isDestroyed()) {
+    //       progressWindow = existingWindows[0];
+    //     }
+    //   }
+
+    //   if (progressWindow) {
+    //     // Window already exists - add item immediately
+    //     progressWindow.addUploadItem(file, queue);
+
+    //     // Track progress - need to get current file from queue
+    //     const onProgress = (progressPercent) => {
+    //       if (queue._canceled || (queue.isCanceled && queue.isCanceled())) {
+    //         if (queue.off && typeof queue.off === 'function') {
+    //           queue.off(_e.progress, onProgress);
+    //         }
+    //         return;
+    //       }
+
+    //       // Find current uploading file from queue
+    //       let currentFile = null;
+    //       let fileName = file.name; // Default to the file we know about
+
+    //       // Try to get from pendingItem
+    //       if (queue.pendingItem && queue.pendingItem.file) {
+    //         currentFile = queue.pendingItem.file;
+    //         fileName = currentFile.name;
+    //       }
+    //       // Try to get from xhr array
+    //       else if (queue.xhr && queue.xhr.length > 0) {
+    //         const activeXhrs = queue.xhr.filter(xhr => xhr.file && xhr.readyState < 4);
+    //         if (activeXhrs.length > 0) {
+    //           currentFile = activeXhrs[activeXhrs.length - 1].file;
+    //           fileName = currentFile ? currentFile.name : file.name;
+    //         }
+    //       }
+
+    //       // Calculate speed (simplified)
+    //       const fileSize = currentFile ? currentFile.size : file.size;
+    //       const speed = fileSize ? (fileSize * progressPercent / 100) / 1000 : 0;
+
+    //       progressWindow.updateProgress(fileName, progressPercent, speed);
+    //     };
+    //     queue.on(_e.progress, onProgress);
+
+    //     queue.add(args);
+    //     this.type = null;
+    //   } else {
+    //     // Window doesn't exist - create it first, THEN start upload
+    //     UploadProgressWindowClass.getOrCreate().then((progressWindow) => {
+    //       if (progressWindow) {
+    //         progressWindow.addUploadItem(file, queue);
+
+    //         // Track progress - need to get current file from queue
+    //         const onProgress = (progressPercent) => {
+    //           if (queue._canceled || (queue.isCanceled && queue.isCanceled())) {
+    //             if (queue.off && typeof queue.off === 'function') {
+    //               queue.off(_e.progress, onProgress);
+    //             }
+    //             return;
+    //           }
+
+    //           // Find current uploading file from queue
+    //           let currentFile = null;
+    //           let fileName = file.name; // Default to the file we know about
+
+    //           // Try to get from pendingItem
+    //           if (queue.pendingItem && queue.pendingItem.file) {
+    //             currentFile = queue.pendingItem.file;
+    //             fileName = currentFile.name;
+    //           }
+    //           // Try to get from xhr array
+    //           else if (queue.xhr && queue.xhr.length > 0) {
+    //             const activeXhrs = queue.xhr.filter(xhr => xhr.file && xhr.readyState < 4);
+    //             if (activeXhrs.length > 0) {
+    //               currentFile = activeXhrs[activeXhrs.length - 1].file;
+    //               fileName = currentFile ? currentFile.name : file.name;
+    //             }
+    //           }
+
+    //           // Calculate speed (simplified)
+    //           const fileSize = currentFile ? currentFile.size : file.size;
+    //           const speed = fileSize ? (fileSize * progressPercent / 100) / 1000 : 0;
+
+    //           progressWindow.updateProgress(fileName, progressPercent, speed);
+    //         };
+    //         queue.on(_e.progress, onProgress);
+
+    //         // NOW start upload after window is ready
+    //         queue.add(args);
+    //         this.type = null;
+    //       } else {
+    //         // If window creation failed, still start upload
+    //         queue.add(args);
+    //         this.type = null;
+    //       }
+    //     }).catch((error) => {
+    //       // If window creation failed, still start upload
+    //       queue.add(args);
+    //       this.type = null;
+    //     });
+    //   }
+    // } else {
+    //   // No UploadProgressWindowClass available - start upload anyway
+    //   queue.add(args);
+    //   this.type = null;
+    // }
   }
 
   /**
@@ -1425,7 +1429,7 @@ class __media_core extends DrumeeMFS {
    */
   seedFolder() {
     const filename = this.mget(_a.filename) || LOCALE.FOLDER;
-    const area = this.mget(_a.area) || _a.personal;
+    const area = this.mget(_a.area) || this.logicalParent.mget(_a.area) || _a.personal;
     const service = "add-folder";
     this.model.set({ area, filename, service });
     this.model.unset(_a.phase);
@@ -1657,7 +1661,7 @@ class __media_core extends DrumeeMFS {
       } else {
         this.goodbye()
       }
-    }).catch(()=>{
+    }).catch(() => {
       this.putIntoTrash();
     })
     // const helper = this.$el.clone();
@@ -1809,13 +1813,13 @@ class __media_core extends DrumeeMFS {
     if (!_.isArray(files)) files = [files];
     const dest = this._getDestination();
     this.isUploading = 1;
-    
+
     // Create upload progress window FIRST before starting upload
     // This ensures window is ready to display items immediately
     const UploadProgressWindowClass = getUploadProgressWindow();
     let progressWindowPromise = null;
     let progressWindow = null;
-    
+
     if (UploadProgressWindowClass) {
       // Try to get existing window synchronously first
       if (window.Wm) {
@@ -1831,10 +1835,10 @@ class __media_core extends DrumeeMFS {
         progressWindowPromise = UploadProgressWindowClass.getOrCreate();
       }
     }
-    
+
     // Create queue AFTER ensuring we have progress window promise
     const queue = this.uploader();
-    
+
     // Helper function to extract file from FileEntry or File
     const extractFile = (entry) => {
       return new Promise((resolve) => {
@@ -1864,7 +1868,7 @@ class __media_core extends DrumeeMFS {
         }
       });
     };
-    
+
     // Prepare file info for adding to progress window
     const prepareFileInfo = (entry) => {
       if (entry instanceof File) {
@@ -1878,7 +1882,7 @@ class __media_core extends DrumeeMFS {
         return { file: placeholderFile, isPlaceholder: true, originalEntry: entry };
       }
     };
-    
+
     const fileInfos = files.map(prepareFileInfo);
 
     // Chunking helper to avoid huge bursts when thousands of files
@@ -1889,7 +1893,7 @@ class __media_core extends DrumeeMFS {
       }
       return chunks;
     };
-    
+
     // Helper to add files to progress window (chunked)
     const addFilesToProgressWindow = async (progressWindow) => {
       if (!progressWindow) {
@@ -1900,7 +1904,7 @@ class __media_core extends DrumeeMFS {
         this.warning("addFilesToProgressWindow: queue is null");
         return;
       }
-      
+
       this.debug("addFilesToProgressWindow: Adding", fileInfos.length, "files to window");
 
       // Process in chunks to avoid UI stall when thousands of files
@@ -1909,7 +1913,7 @@ class __media_core extends DrumeeMFS {
         chunk.forEach(({ file, isPlaceholder, originalEntry }) => {
           this.debug("addFilesToProgressWindow: Adding file", file.name, "isPlaceholder:", isPlaceholder);
           progressWindow.addUploadItem(file, queue);
-          
+
           // If it was a placeholder, extract actual file and update
           if (isPlaceholder && originalEntry) {
             extractFile(originalEntry).then((fileObj) => {
@@ -1923,19 +1927,19 @@ class __media_core extends DrumeeMFS {
                   progressWindow._refreshUI();
                 }
               }
-            }).catch(() => {});
+            }).catch(() => { });
           }
         });
 
         // Yield to event loop between chunks
-        setTimeout(() => {}, 0);
+        setTimeout(() => { }, 0);
       }
-      
+
       this.debug("addFilesToProgressWindow: All files added, total items:", progressWindow._uploadItems.length);
-      
+
       // Track progress for each file individually based on queue.xhr
       const fileProgressMap = {};
-      
+
       const onProgress = (progressPercent) => {
         if (queue._canceled || (queue.isCanceled && queue.isCanceled())) {
           if (queue.off && typeof queue.off === 'function') {
@@ -1946,12 +1950,12 @@ class __media_core extends DrumeeMFS {
         // Get the currently uploading file from pendingItem or xhr
         let currentFile = null;
         let fileName = null;
-        
+
         // Try to get from pendingItem first (most reliable)
         if (queue.pendingItem && queue.pendingItem.file) {
           currentFile = queue.pendingItem.file;
           fileName = currentFile.name;
-        } 
+        }
         // Fallback to xhr array
         else if (queue.xhr && queue.xhr.length > 0) {
           // Find the most recent active xhr (readyState < 4 means not completed)
@@ -1968,36 +1972,36 @@ class __media_core extends DrumeeMFS {
             }
           }
         }
-        
+
         if (fileName && currentFile) {
           if (!fileProgressMap[fileName]) {
             fileProgressMap[fileName] = { lastProgress: 0, lastTime: Date.now() };
           }
-          
+
           const now = Date.now();
           const deltaTime = Math.max(0.1, (now - fileProgressMap[fileName].lastTime) / 1000); // seconds, min 0.1s
           const deltaProgress = progressPercent - fileProgressMap[fileName].lastProgress;
-          
+
           let speed = 0;
           if (deltaTime > 0 && currentFile.size) {
             const bytesProgressed = (currentFile.size * deltaProgress) / 100;
             speed = bytesProgressed / deltaTime;
           }
-          
+
           fileProgressMap[fileName].lastProgress = progressPercent;
           fileProgressMap[fileName].lastTime = now;
-          
+
           progressWindow.updateProgress(fileName, progressPercent, speed);
         }
       };
-      
+
       queue.on(_e.progress, onProgress);
     };
-    
+
     // CRITICAL: Create window and add items BEFORE starting upload
     // This ensures window appears immediately when upload starts
     this.debug("_uploadFiles: Starting upload for", files.length, "files");
-    
+
     if (progressWindowPromise) {
       // If we already have the window synchronously, add items immediately
       if (progressWindow) {
@@ -2006,11 +2010,11 @@ class __media_core extends DrumeeMFS {
       } else {
         // Window doesn't exist yet - wait for it and add items BEFORE upload starts
         this.debug("_uploadFiles: Window doesn't exist, waiting for it...");
-        
+
         // IMPORTANT: Wait for window to be created and add items BEFORE starting upload
         // This ensures items are visible immediately when upload begins
         let windowReady = false;
-        
+
         // Try immediate synchronous check first
         if (window.Wm) {
           const immediateCheck = window.Wm.getItemsByKind('window_upload_progress');
@@ -2021,21 +2025,21 @@ class __media_core extends DrumeeMFS {
             windowReady = true;
           }
         }
-        
+
         // If window still not found, wait for promise and add items immediately when ready
         if (!windowReady) {
           // Set up callback to add items as soon as window is ready
           progressWindowPromise.then((pw) => {
             if (pw) {
               this.debug("_uploadFiles: Window ready from promise, adding items", pw._uploadItems.length);
-              
+
               // Add items immediately when window is ready
               // Check if items haven't been added yet
-              if (pw._uploadItems.length === 0 || 
-                  !pw._uploadItems.some(item => files.some(f => {
-                    const fileName = (f instanceof File) ? f.name : (f.name || f.filename);
-                    return item.fileName === fileName && item.status === 'uploading';
-                  }))) {
+              if (pw._uploadItems.length === 0 ||
+                !pw._uploadItems.some(item => files.some(f => {
+                  const fileName = (f instanceof File) ? f.name : (f.name || f.filename);
+                  return item.fileName === fileName && item.status === 'uploading';
+                }))) {
                 this.debug("_uploadFiles: Adding files to window now");
                 addFilesToProgressWindow(pw);
               } else {
@@ -2052,7 +2056,7 @@ class __media_core extends DrumeeMFS {
     } else {
       this.warning("_uploadFiles: No progress window promise available");
     }
-    
+
     // Start upload - items should be added before this point, or will be added very quickly
     this.debug("_uploadFiles: Starting upload queue.add for", files.length, "files");
     const chunks = chunkFiles(Array.from(files), 20);
@@ -2082,7 +2086,7 @@ class __media_core extends DrumeeMFS {
 
         queue.add(args);
         this.type = null;
-        
+
         // DEBUG: Check if window exists immediately after queue.add
         setTimeout(() => {
           const progressWindows = window.Wm?.getItemsByKind?.('window_upload_progress') || [];
@@ -2096,7 +2100,7 @@ class __media_core extends DrumeeMFS {
         }, 100);
       }
       // Yield between chunks
-      setTimeout(() => {}, 0);
+      setTimeout(() => { }, 0);
     }
   }
 

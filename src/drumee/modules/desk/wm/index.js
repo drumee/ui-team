@@ -87,6 +87,11 @@ class __window_manager extends push {
         this.openSharedLink(opt);
       }
     }
+    if (localStorage.debug) {
+      this.ensurePart("wrapper-modal").then((p) => {
+        p.feed({ kind: "settings_account" })
+      })
+    }
   }
 
   /**
@@ -702,11 +707,11 @@ class __window_manager extends push {
         return this.__wrapperModal.append({ kind: "settings_pricing" })
           ;
       case _a.preferences:
-        return this.__wrapperModal.feed({kind:"settings_account"});
-        // return this.launch(
-        //   { kind: "window_account", start: service },
-        //   { explicit: 1, singleton: 1 }
-        // );
+        return this.__wrapperModal.feed({ kind: "settings_account" });
+      // return this.launch(
+      //   { kind: "window_account", start: service },
+      //   { explicit: 1, singleton: 1 }
+      // );
 
       // case _a.settings:
       //   return this.launch(
