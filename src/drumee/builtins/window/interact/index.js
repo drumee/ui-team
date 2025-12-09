@@ -71,9 +71,13 @@ class __window_interact extends windowCore {
     if (top < 0) {
       this.style.set({ top: 0 });
     }
-    let offset = window.innerHeight - (top + h + 132);
+    let offset = window.innerHeight - (top + h);
     if (offset < 0) {
-      this.style.set({ top: top + offset });
+      if ((top + offset) < 0) {
+        this.style.set({ top: 0 });
+      } else {
+        this.style.set({ top: top + offset });
+      }
     }
   }
 
@@ -878,7 +882,7 @@ class __window_interact extends windowCore {
       if (!destination && typeof this._getDestination === 'function') {
         destination = this._getDestination();
       }
-      
+
       RADIO_MEDIA.trigger("upload:start", {
         file: opt.file,
         fileName: opt.file.name || opt.filename,
