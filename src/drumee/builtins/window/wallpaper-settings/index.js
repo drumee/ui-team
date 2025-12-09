@@ -1,6 +1,7 @@
 const { filesize } = require("core/utils");
 
 const __window_interact = require("../interact");
+const UploadProgressWindow = require("../upload-progress");
 
 /**
  * @class __window_wallpaper_settings
@@ -98,6 +99,22 @@ class __window_wallpaper_settings extends __window_interact {
         this.warning("Failed to create uploader queue");
         return;
       }
+      // Show upload progress window
+      UploadProgressWindow.getOrCreate().then((progressWindow) => {
+        if (progressWindow) {
+          // Add file to upload progress window
+          progressWindow.addUploadItem(file, queue);
+          
+          // Track progress
+          queue.on(_e.progress, (progressPercent) => {
+            // Calculate speed (simplified - could be improved with time tracking)
+            const speed = file.size ? (file.size * progressPercent / 100) / 1000 : 0; // bytes per second (rough estimate)
+            
+            progressWindow.updateProgress(file.name, progressPercent, speed);
+          });
+        }
+      });
+
       queue.on(_e.progress, (e) => {
         this.ensurePart("uploader-progress").then((p) => {
           p.el.style.width = `${e}%`;
@@ -108,6 +125,14 @@ class __window_wallpaper_settings extends __window_interact {
       queue.once("upload:response", (data) => {
         this.debug("Upload response - got authorization", data);
         const { nid, hub_id } = data;
+        
+        // Mark upload as completed in progress window
+        UploadProgressWindow.getOrCreate().then((progressWindow) => {
+          if (progressWindow) {
+            progressWindow.completeUpload(file.name, { nid, hub_id });
+          }
+        });
+        
         data = {
           settings: {
             wallpaper: { nid, hub_id }

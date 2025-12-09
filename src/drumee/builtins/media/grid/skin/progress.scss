@@ -1,108 +1,124 @@
 @use "mixins/drumee";
 
-.drumee-spinner{
-  width: 30px;
-  height: 30px;
-  top: calc(50% - 15px);
-  left: calc(50% - 15px);  
+.drumee-spinner {
+  width: 60px;
+  height: 60px;
+  top: calc(50% - 30px);
+  left: calc(50% - 30px);
   position: absolute;
   z-index: 500;
   /* opacity: .5; */
-  background: rgba(5,5,5, 0.5);
-  border-radius: 50%;  
+  background: rgba(5, 5, 5, 0.5);
+  border-radius: 50%;
 }
 
-.media-uploader, .svg-progress{
-  &__ui{
+.media-uploader,
+.svg-progress {
+  &__ui {
     position: absolute;
-    background-color: var(--default-bg);    //var(--ewhite);
+    background-color: var(--default-bg); //var(--ewhite);
     z-index: 1000;
     width: 100%;
     height: 100%;
     border-radius: var(--border-radius-small);
-    box-shadow: var(--shadow-container);//0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    box-shadow: var(--shadow-container); //0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
     left: 0;
-    top: 0;      
+    top: 0;
   }
-  &__main{
+
+  &__main {
     width: 100%;
     height: 100%;
     justify-content: space-between;
   }
-  &__container{
-    &-header{
+
+  &__container {
+    &-header {
       justify-content: space-between;
     }
-    &-body{
+
+    &-body {
       width: 100%;
       height: 100%;
       position: absolute;
     }
-    &-footer{
+
+    &-footer {
       justify-content: space-around;
     }
   }
-  &__value{
-    &-filesize{
+
+  &__value {
+    &-filesize {
       letter-spacing: 0.09px;
-      @include drumee.typo($line:13px,$size:11px,$weight:300,$color:var(--default-text-color));
+      @include drumee.typo($line: 13px, $size: 11px, $weight: 300, $color: var(--default-text-color));
     }
-    &-percent{
+
+    &-percent {
       letter-spacing: 0.09px;
-      @include drumee.typo($line:13px,$size:11px,$weight:300,$color: var(--egreen) );      
+      @include drumee.typo($line: 13px, $size: 11px, $weight: 300, $color: var(--egreen));
     }
-    &-filename{
+
+    &-filename {
       white-space: nowrap;
       width: 100%;
       overflow: hidden;
+
       .drumee-text.inner {
         width: 93px;
         padding: 0 10px;
         overflow: hidden;
         text-overflow: ellipsis;
-        @include drumee.typo($line:14px,$size:12px,$weight:300,$color: var(--egreen)); 
+        @include drumee.typo($line: 14px, $size: 12px, $weight: 300, $color: var(--egreen));
         letter-spacing: 0.1px;
         text-align: center;
       }
     }
   }
-  &__chart{
-    width: 30px;
-    height: 30px;
-    left: calc(50% - 15px);
-    top: calc(50% - 15px);
+
+  &__chart {
+    width: 60px;
+    height: 60px;
+    left: calc(50% - 30px);
+    top: calc(50% - 30px);
     position: absolute;
-    svg{
+
+    svg {
       width: 100%;
       height: 100%;
       fill: transparent;
-      stroke-linecap: round;    
-    }    
-    &--bg{
-      stroke: #d0d2d6;
-      stroke-width: 20;      
+      stroke-linecap: round;
     }
-    &--fg{
-      stroke: var(--egreen);
+
+    &--bg {
+      stroke: var(--neutral-300);
       stroke-width: 20;
-      stroke-linecap: round; 
-      transition: stroke-dashoffset 1s linear;      
     }
-    &--inner{
+
+    &--fg {
+      stroke: var(--primary-500);
+      stroke-width: 20;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear;
+    }
+
+    &--inner {
       fill: transparent;
     }
   }
-  &__close{
-    width: 11px;
-    height: 11px;
+
+  &__close {
+    width: 20px;
+    height: 20px;
     position: absolute;
     padding: 0px;
-    left: calc(50% - 5.5px);
-    top: calc(50% - 8.5px);
-    svg{
+    left: calc(50% - 10px);
+    top: calc(50% - 11px);
+
+    svg {
       width: 100%;
       height: 100%;
       fill: var(--eorange-sunset);
-    }    
+    }
   }
 }

@@ -15,8 +15,9 @@
     bottom: -10px;
 
     &.geek {
-      background-color: rgba(225, 255, 255, .25);
+      background-color: rgba(225, 255, 255, 0.35);
       border-radius: var(--corner-radius-2);
+      color: var(--white);
     }
   }
 

@@ -243,6 +243,7 @@ module.exports = {
   window_switchcall:function(s,f){import('window/switchcall').then(m=>{s(m.default)}).catch(f)},
   window_team:function(s,f){import('window/team').then(m=>{s(m.default)}).catch(f)},
   window_trash:function(s,f){import('window/trash').then(m=>{s(m.default)}).catch(f)},
+  window_upload_progress:function(s,f){import('window/upload-progress').then(m=>{s(m.default)}).catch(f)},
   window_wallpaper_settings:function(s,f){import('window/wallpaper-settings').then(m=>{s(m.default)}).catch(f)},
   window_website:function(s,f){import('window/website').then(m=>{s(m.default)}).catch(f)},
   dock_minifier:function(s,f){import('src/drumee/modules/desk/wm/dock/widget/dock-minifier').then(m=>{s(m.default)}).catch(f)},

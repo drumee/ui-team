@@ -219,6 +219,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | window_switchcall | window/switchcall | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/switchcall/index.js |
 | window_team | window/team | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/team/index.js |
 | window_trash | window/trash | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/trash/index.js |
+| window_upload_progress | window/upload-progress | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/upload-progress/index.js |
 | window_wallpaper_settings | window/wallpaper-settings | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/wallpaper-settings/index.js |
 | window_website | window/website | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/website/index.js |
 | dock_minifier | src/drumee/modules/desk/wm/dock/widget/dock-minifier | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/wm/dock/widget/dock-minifier/index.js |
