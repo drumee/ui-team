@@ -9,24 +9,24 @@ const __topbar_control = function (ui) {
 
   if (filetype === _a.image) {
     fullscreen_ctrl = Skeletons.Button.Svg({
-      ico: 'player-fullscreen',
-      className: 'icon fullscreen',
-      sys_pn: 'ctrl-fullscreen',
+      ico: "player-fullscreen",
+      className: "icon fullscreen",
+      sys_pn: "ctrl-fullscreen",
       service: _a.fullscreen,
-      uiHandler: ui
+      uiHandler: ui,
     });
 
     rotate_ctrl = Skeletons.Button.Svg({
       ico: "desktop_rotate",
       className: "icon rotate",
-      service: 'rotate',
+      service: "rotate",
       sys_pn: "ctrl-rotate",
-      uiHandler: ui
+      uiHandler: ui,
     });
   }
 
   if ([_a.image, _a.video, _a.audio, "tutorial"].includes(filetype)) {
-    size_ctrl = '';
+    size_ctrl = "";
   } else {
     size_ctrl = Skeletons.Button.Svg({
       ico: "desktop_reduce",
@@ -35,10 +35,7 @@ const __topbar_control = function (ui) {
       sys_pn: "ctrl-size",
       uiHandler: ui,
       state: 0,
-      icons: [
-        "desktop_fullview",
-        "desktop_reduce"
-      ]
+      icons: ["desktop_fullview", "desktop_reduce"],
     });
   }
 
@@ -48,7 +45,7 @@ const __topbar_control = function (ui) {
     ico: "cross",
     className: "icon",
     service: _e.close,
-    uiHandler: ui
+    uiHandler: ui,
   });
 
   const a = Skeletons.Box.X({
@@ -57,17 +54,17 @@ const __topbar_control = function (ui) {
     kids: [
       // minimize,
       size_ctrl,
-      close
-    ]
+      close,
+    ],
   });
 
-  if (fullscreen_ctrl) {
-    a.kids.unshift(fullscreen_ctrl);
-  }
+  // if (fullscreen_ctrl) {
+  //   a.kids.unshift(fullscreen_ctrl);
+  // }
 
-  if (!Visitor.inDmz && rotate_ctrl) {
-    a.kids.unshift(rotate_ctrl);
-  }
+  // if (!Visitor.inDmz && rotate_ctrl) {
+  //   a.kids.unshift(rotate_ctrl);
+  // }
 
   return a;
 };
