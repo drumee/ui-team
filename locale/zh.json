@@ -1936,5 +1936,7 @@
   "AREA_PUBLIC_LABEL": "网站",
   "MEMBER_ACCESS": "会员访问",
   "SHARE": "分享",
-  "ADD_CONTACT": "添加新联系人"
+  "ADD_CONTACT": "添加新联系人",
+  "PRIVACY_POLICY": "隐私政策",
+  "TERMS_OF_SERVICE": "服务条款"
 }

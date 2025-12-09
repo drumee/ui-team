@@ -85,6 +85,7 @@ const a = {
   settings_hub:"widget/settings/hub",
   settings_members_list:"widget/settings/members-list",
   settings_member:"widget/settings/member",
+  settings_account:"widget/settings/account",
   settings_pricing:"widget/settings/pricing",
   widget_chat_item:"widget/chat-item",
   account_avatar:"window/account/profile/avatar",

@@ -11,8 +11,6 @@ const SEEDING = "seeding";
 const IGNORED_FILES = /Thumbs.db|.DS_Store|__MACOSX|.thumbnails|\~+/;
 const MAX_BLOB_SIZE = 100000000;
 
-const { TweenLite, TimelineMax } = require("gsap/all")
-
 // Lazy load upload progress window
 let UploadProgressWindow = null;
 function getUploadProgressWindow() {

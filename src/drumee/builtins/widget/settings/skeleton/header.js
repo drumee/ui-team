@@ -23,13 +23,11 @@ export default function (ui, label) {
     ],
   });
 
-  const a = Skeletons.Box.X({
+  return Skeletons.Box.X({
     debug: __filename,
     className: `${figFamily}__container ${figGroup}__container`,
     sys_pn: _a.topBar,
     service: _e.raise,
-    kids: [windowTitle], //require("window/skeleton/topbar/control")(ui, "c")],
+    kids: [windowTitle],
   });
-
-  return a;
 }

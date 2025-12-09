@@ -4,6 +4,7 @@
   &-search {
     &__wrapper {
       z-index: 10;
+      justify-content: center;
     }
 
     &[data-status="open"] {

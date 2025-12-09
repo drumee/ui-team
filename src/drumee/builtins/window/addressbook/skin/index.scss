@@ -3,8 +3,8 @@
 @use 'layout.scss';
 @include meta.load-css('search');
 @include meta.load-css('overlay-wrapper');
-
-  .window-addressbook {
+@include meta.load-css('breadcrumbs');
+.window-addressbook {
 
   &__header {
     background-color: var(--ab-header-bg);
@@ -58,7 +58,7 @@
       }
     }
 
-    &__icon {
+    &-breadcrumbs__icon {
       &.breadcrumb-icon {
         color: var(--default-icon-reverse);
         height: 22px;

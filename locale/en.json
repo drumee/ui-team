@@ -1936,5 +1936,7 @@
   "AREA_PUBLIC_LABEL": "Website",
   "MEMBER_ACCESS": "Member access",
   "SHARE": "Share",
-  "ADD_CONTACT": "Add new contact"
+  "ADD_CONTACT": "Add new contact",
+  "PRIVACY_POLICY": "Privacy policy",
+  "TERMS_OF_SERVICE": "Terms of Services"
 }
