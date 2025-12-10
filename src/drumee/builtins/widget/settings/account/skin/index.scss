@@ -9,8 +9,9 @@
     background-color: var(--white);
     border-radius: var(--corner-radius-4);
     display: flex;
-    padding: var(--spacer-5);
     gap: var(--spacer-5);
+    padding: 0;
+    overflow: hidden;
 
     &[data-device="mobile"] {
       left: 0;
@@ -25,7 +26,7 @@
     display: flex;
     background-color: var(--white);
     overflow: hidden;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 208px 1fr;
   }
 
   &__container {
@@ -39,6 +40,7 @@
   &__nav {
     justify-content: space-between;
     height: 100%;
+    border-right: 1px solid var(--neutral-200);
   }
 
   &__title {
@@ -52,16 +54,27 @@
     width: 100%;
     height: 54px;
     justify-content: space-between;
+    padding: var(--spacer-4) var(--spacer-5);
+    border-bottom: 1px solid var(--neutral-200);
   }
 
   &__content {
     width: 100%;
+    padding: var(--spacer-5);
+    gap: var(--spacer-5);
+  }
+
+  &__spacer {
+    width: 100%;
+    height: 1px;
+    border-bottom: 1px solid var(--neutral-200);
   }
 
   &__legals {
     width: 100%;
     border-radius: 8px;
     padding: var(--spacer-3) var(--spacer-4);
+    border-top: 1px solid var(--neutral-200);
     gap: 8px;
 
     &-text {
@@ -75,19 +88,27 @@
   }
 
   &__topics {
-    width: 240px;
-    height: 100%;
+    width: 100%;
+    padding: var(--spacer-5) var(--spacer-4);
+    border-bottom: 1px solid var(--neutral-200);
   }
 
   &__item {
     align-items: center;
     width: 100%;
     height: 34px;
-    padding-top: var(--spacer-3) var(--spacer-4);
+    padding: var(--spacer-3) var(--spacer-4);
     gap: 8px;
     font-size: 12px;
     font-weight: 400;
     line-height: 18px;
+    border-radius: var(--corner-radius-3);
+    cursor: pointer;
+
+    &[data-radio="on"] {
+      border: 1px var(--primary-500) solid;
+      background-color: var(--primary-100);
+    }
 
     &-icon {
       width: 16px;
@@ -165,9 +186,8 @@
 
   &__form {
     &-main {
-      grid-template-columns: 1fr 1fr;
       width: 100%;
-      gap: 12px;
+      gap: 16px;
 
     }
 
@@ -180,7 +200,33 @@
         line-height: 22px;
       }
     }
+
+    &-row {
+      grid-template-columns: 1fr;
+      height: 78px;
+
+      &.name {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
   }
+
+  &__entry {
+    &-label {
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 22px;
+    }
+
+    &-input {
+      width: 100%;
+      height: 48;
+      border-radius: var(--corner-radius-4);
+      padding: 0 var(--spacer-5);
+      border-width: 1px;
+    }
+  }
+
   // &__subtitle {
   //   &.text {
   //     color: var(--neutral-600);

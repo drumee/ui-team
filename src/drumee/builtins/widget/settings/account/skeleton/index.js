@@ -1,4 +1,4 @@
-const { button } = require("../../../../skeleton/toolkit/buttons");
+const { button, menuInput, entry } = require("../../../../skeleton/toolkit");
 
 /**
  *
@@ -9,7 +9,9 @@ function nav_item(ui, ico, label) {
   let fig = ui.fig.family;
   return Skeletons.Box.X({
     className: `${fig}__item`,
-    uiHandler: ui,
+    uiHandler: [ui],
+    radio: `nav-${ui._id}`,
+    kidsOpt: { active: 0 },
     kids: [
       Skeletons.Button.Svg({
         ico,
@@ -88,37 +90,95 @@ function user(ui) {
 
 function form(ui) {
   const fig = `${ui.fig.family}__form`;
-  return Skeletons.Box.G({
+  return Skeletons.Box.Y({
     className: `${fig}-main`,
     kids: [
-      Skeletons.Box.X({
-        className: `${fig}-field`,
+      Skeletons.Box.G({
+        className: `${fig}-row name`,
         kids: [
-          Skeletons.Element({
-            className: `${fig}-email item`,
-            content: LOCALE.FIRSTNAME,
+          entry(ui, {
+            label: LOCALE.FIRSTNAME,
+            name: _a.firstname,
+            placeholder: "",
+            value: Visitor.profile().firstname
           }),
-          Skeletons.Element({
-            className: `${fig}-change item`,
-            content: LOCALE.CHANGE_AVATAR
-          }),
+          entry(ui, {
+            label: LOCALE.LASTNAME,
+            name: _a.lastname,
+            placeholder: "",
+            value: Visitor.profile().lastname,
+          })
         ]
       }),
-      Skeletons.Box.X({
-        className: `${fig}-field`,
+      Skeletons.Box.G({
+        className: `${fig}-row`,
         kids: [
-          Skeletons.Element({
-            className: `${fig}-username item`,
-            content: LOCALE.lastname,
+          entry(ui, {
+            label: LOCALE.EMAIL,
+            name: _a.email,
+            value: Visitor.profile().email,
+            placeholder: "i@example.org"
           }),
-          Skeletons.Element({
-            className: `${fig}-change item`,
-            content: LOCALE.CHANGE_AVATAR
-          }),
+          Skeletons.Box.G({
+            className: `${ui.fig.family}__entry-main`,
+            kids: [
+              Skeletons.Note({
+                className: `${ui.fig.family}__entry-label country`,
+                content: LOCALE.COUNTRY,
+              }),
+              menuInput(ui, {
+                name: 'country_code',
+                service: "select-country",
+                refAttribute: 'locale_name',
+                placeholder: 'Select a country',
+                value: "",
+              }),
+            ]
+          })
         ]
-      })
+      }),
     ]
-  });
+  })
+
+  // return Skeletons.Box.G({
+  //   className: `${fig}-main`,
+  //   kids: [
+  //     entry(ui, {
+  //       name: _a.firstname,
+  //       value: Visitor.profile().firstname
+  //     }),
+  //     entry(ui, {
+  //       name: _a.lasstname,
+  //       value: Visitor.profile().lastname
+  //     }),
+  //     Skeletons.Box.X({
+  //       className: `${fig}-field`,
+  //       kids: [
+  //         Skeletons.Element({
+  //           className: `${fig}-email item`,
+  //           content: LOCALE.FIRSTNAME,
+  //         }),
+  //         entry(ui,{
+  //           name:_a.firstname,
+  //           value:Visitor.profile().firstname
+  //         }),
+  //       ]
+  //     }),
+  //     Skeletons.Box.X({
+  //       className: `${fig}-field`,
+  //       kids: [
+  //         Skeletons.Element({
+  //           className: `${fig}-username item`,
+  //           content: LOCALE.LASTNAME,
+  //         }),
+  //         entry(ui, {
+  //           name: _a.lasstname,
+  //           value: Visitor.profile().lasstname
+  //         }),
+  //       ]
+  //     })
+  //   ]
+  // });
 }
 
 /**
@@ -153,6 +213,7 @@ function settings_body(ui) {
     sys_pn: _a.content,
     kids: [
       user(ui),
+      Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
       form(ui)
     ],
   });

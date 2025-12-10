@@ -8,7 +8,8 @@ const { button } = require("../../../../skeleton/toolkit/buttons");
 function nav_item(ui, ico, label, price, capacity, recommend) {
   return Skeletons.Box.X({
     className: `${ui.fig.family}__badge-wrapper badge secondary`,
-    uiHandler: ui,
+    uiHandler: { ui },
+    kidsOpt: { active: 0 },
     kids: [
       Skeletons.Button.Svg({
         ico,
@@ -31,6 +32,7 @@ function nav(ui) {
 
   const topics = Skeletons.Box.Y({
     className: `${fig}__topics`,
+    radio: `nav-${ui._id}`,
     kids: [
       nav_item(ui, 'profile', LOCALE.PROFILE),
       nav_item(ui, 'settings', LOCALE.PREFERENCES),
@@ -81,7 +83,7 @@ function settings_body(ui) {
   const widget = Skeletons.Box.X({
     className: `${fig}__buttons`,
     uiHandler: ui,
-    sys_pn:_a.content,
+    sys_pn: _a.content,
     kids: [
       button(ui, {
         label: "Not Now",

@@ -43,6 +43,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | invitation_recipient | builtins/widget/invitation/recipient | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/recipient/index.js |
 | invitation_search | builtins/widget/invitation/searchbox | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/searchbox/index.js |
 | invitation | builtins/widget/invitation | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/index.js |
+| menu_input | builtins/widget/menu-input | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/menu-input/index.js |
 | media_device | builtins/widget/media-device | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/media-device/index.js |
 | media_grid | builtins/media/grid | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/grid/index.js |
 | media_minifyer | builtins/media/minifyer | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/media/minifyer/index.js |
@@ -57,12 +58,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | vector_viewer | builtins/player/vector | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/vector/index.js |
 | video_player | builtins/player/video | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/video/index.js |
 | video_viewer | builtins/player/video | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/video/index.js |
-| webrtc_attendee | builtins/webrtc/attendee | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/attendee/index.js |
-| webrtc_debug | builtins/webrtc/debug | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/debug/index.js |
-| webrtc_local_user | builtins/webrtc/endpoint/local/user | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/endpoint/local/user/index.js |
-| webrtc_participants | builtins/webrtc/participants | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/participants/index.js |
-| webrtc_remote_display | builtins/webrtc/endpoint/remote/display | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/endpoint/remote/display/index.js |
-| webrtc_remote_user | builtins/webrtc/endpoint/remote/user | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/webrtc/endpoint/remote/user/index.js |
 | drumee_background | src/drumee/builtins/widget/background-image | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/background-image/index.js |
 | invitation_message | invitation/message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/message/index.js |
 | invitation_permission | invitation/permission | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/permission/index.js |
