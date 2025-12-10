@@ -53,7 +53,7 @@ const __topbar_control = function (ui) {
     className: `${ui.fig.group}-topbar__control ${ui.fig.family}-topbar__control`,
     kids: [
       // minimize,
-      size_ctrl,
+      // size_ctrl,
       close,
     ],
   });

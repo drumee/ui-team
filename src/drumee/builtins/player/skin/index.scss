@@ -71,8 +71,8 @@
   }
 
   &__container {
-    background-color: var(--multimedia-player-doc-bg);
-    border-radius: var(--border-radius-bottom);
+    // background-color: var(--multimedia-player-doc-bg);
+    background-color: var(--neutral-200);
     height: 100%;
     min-height: 200px;
     overflow: hidden;

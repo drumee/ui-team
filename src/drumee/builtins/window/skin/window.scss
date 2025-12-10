@@ -10,7 +10,7 @@
   &__ui {
     position: absolute;
     background: transparent;
-    min-width: 340px;
+    min-width: 800px;
     min-height: 300px;
     z-index: 1000;
     border-radius: var(--border-radius);
@@ -99,10 +99,12 @@
     background: var(--default-bg); //var(--ewhite);
     box-shadow: 0px 0px 31px 0 rgba(0, 0, 0, 0.4);
     padding: 10px;
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 30px,
       $color: var(--tertiary-text-color),
-      $weight: 300); //$egrey-89
+      $weight: 300
+    ); //$egrey-89
     border-radius: var(--border-radius); //4px;
     left: calc(24px - 50%);
     top: -18px;
