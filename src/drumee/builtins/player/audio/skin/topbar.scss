@@ -3,13 +3,17 @@
 .player-audio {
   &-topbar {
     &__main {
-      background-color: var(--default-bg);
+      // background-color: var(--default-bg);
+      background: linear-gradient(135deg, #dcb2ff, #b251fb);
+
       border-bottom: none;
-      border-radius: var(--default-border-radius-top);
+      border-radius: 24px 24px 0 0;
       cursor: pointer;
-      height: 44px;
+      height: 100px;
       min-height: 44px;
       width: 100%;
+      color: var(--default-bg);
+      padding: 0 60px;
     }
 
     &__action {
@@ -20,20 +24,17 @@
 
     &__control {
       .icon {
-        color: var(--default-icon-neutral);
-        height: 12px;
-        margin: auto 15px auto 0;
-        padding: 0;
-        width: 12px;
+        color: var(--default-bg);
+        height: 32px;
+        width: 32px;
 
         &:hover {
-          color: var(--default-icon-hover);
+          color: var(--primary-500);
         }
       }
     }
 
     &__title {
-      align-items: center;
       height: auto;
       justify-content: center;
       width: 100%;
@@ -41,11 +42,14 @@
 
     &__note {
       &.title {
-        align-items: flex-start;
-        justify-content: center;
+        align-items: center;
         padding: 0;
-        width: 316px;
-        @include drumee.typo($size: 16px, $line: 24px, $weight: 300, $color: var(--multimedia-default-text-title)); // var(--default-text-color));// $size:18px,
+        @include drumee.typo(
+          $size: 20px,
+          $line: 24px,
+          $weight: 300,
+          $color: var(--multimedia-default-text-title)
+        ); // var(--default-text-color));// $size:18px,
         @include drumee.overflow-text;
 
         &.inner.note-content {

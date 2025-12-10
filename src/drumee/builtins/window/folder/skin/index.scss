@@ -3,15 +3,16 @@
 .window-folder {
   &__header {
     border-bottom: none;
-    // background-color: var(--folder-header-bg);
     background: linear-gradient(135deg, #dcb2ff, #b251fb);
 
     &-title {
       align-items: center;
-      @include drumee.typo($size: 18px,
+      @include drumee.typo(
+        $size: 18px,
         $line: 24px,
         $weight: 400,
-        $color: var(--core-default-text-reverse));
+        $color: var(--core-default-text-reverse)
+      );
     }
 
     &-control {
@@ -109,10 +110,12 @@
     &-name {
       align-items: flex-start;
       padding-left: 10px;
-      @include drumee.typo($size: 18px,
+      @include drumee.typo(
+        $size: 18px,
         $line: 24px,
         $weight: 400,
-        $color: var(--core-default-text-reverse));
+        $color: var(--core-default-text-reverse)
+      );
       @include drumee.overflow-text;
 
       .inner {
@@ -153,10 +156,12 @@
       width: 100%;
       padding-left: 10px;
       padding-top: 4px;
-      @include drumee.typo($color: var(--core-default-text-color),
+      @include drumee.typo(
+        $color: var(--core-default-text-color),
         $size: 12px,
         $line: 16px,
-        $weight: 300);
+        $weight: 300
+      );
       @include drumee.overflow-text;
 
       .icon {
@@ -179,10 +184,12 @@
       width: 50%;
       padding-left: 10px;
       padding-top: 4px;
-      @include drumee.typo($color: var(--core-default-text-color),
+      @include drumee.typo(
+        $color: var(--core-default-text-color),
         $size: 12px,
         $line: 16px,
-        $weight: 300);
+        $weight: 300
+      );
       @include drumee.overflow-text;
 
       &.value {

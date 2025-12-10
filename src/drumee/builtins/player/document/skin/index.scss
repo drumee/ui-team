@@ -3,7 +3,7 @@
 */
 // @import 'slider-pro.css';
 // @import 'slider-pro.scss';
-@use 'mixins/drumee.scss';
+@use "mixins/drumee.scss";
 
 .player-document {
   &__ui {
@@ -50,7 +50,12 @@
 
     &-text {
       position: absolute;
-      @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 15px, $weight: 300);
+      @include drumee.typo(
+        $color: var(--default-text-color),
+        $size: 14px,
+        $line: 15px,
+        $weight: 300
+      );
       top: 10px;
       left: 0;
       width: 100%;
@@ -61,11 +66,15 @@
     }
   }
 
-
   &__error {
     padding: 20px;
     text-align: center;
-    @include drumee.typo($color: var(--default-text-error), $size: 16px, $line: 24px, $weight: 300);
+    @include drumee.typo(
+      $color: var(--default-text-error),
+      $size: 16px,
+      $line: 24px,
+      $weight: 300
+    );
   }
 
   &__list {
@@ -73,13 +82,13 @@
     max-height: 100%;
     overflow-y: visible;
     width: 100%;
+    padding-bottom: 24px;
 
     .list-smart__container {
       height: 100%;
       margin-top: 15px;
       padding: 0 10px;
     }
-
 
     & .list-smart__container::-webkit-scrollbar {
       width: 7px !important;
@@ -96,7 +105,7 @@
     .play-btn {
       background-color: rgba(255, 255, 255, 0.8);
       border-radius: 50%;
-      color: #18A3AC;
+      color: #18a3ac;
       cursor: pointer;
 
       &[data-state="1"] {
@@ -106,7 +115,12 @@
   }
 
   &__loading {
-    @include drumee.typo($color: var(--default-text-color), $size: 18px, $line: 42px, $weight: 300);
+    @include drumee.typo(
+      $color: var(--default-text-color),
+      $size: 18px,
+      $line: 42px,
+      $weight: 300
+    );
     align-content: center;
     align-items: center;
     height: 100%;
@@ -129,7 +143,6 @@
     justify-content: center;
   }
 
-
   &-new-content-popup {
     &__container {
       justify-content: space-evenly;
@@ -143,13 +156,16 @@
     }
 
     &__note {
-      @include drumee.typo($size: 14px, $line: 1.3, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 14px,
+        $line: 1.3,
+        $color: var(--default-text-color)
+      );
       align-items: center;
       justify-content: center;
       text-align: center;
       margin-bottom: 10px;
     }
-
 
     &__buttons-wrapper {
       justify-content: center;
@@ -181,7 +197,11 @@
       }
 
       &.confirm {
-        @include drumee.typo($size: 12px, $line: 14px, $color: var(--btn-commit-text));
+        @include drumee.typo(
+          $size: 12px,
+          $line: 14px,
+          $color: var(--btn-commit-text)
+        );
         background-color: var(--btn-commit-background);
         border: 1px solid var(--btn-commit-border);
 
