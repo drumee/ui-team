@@ -54,20 +54,17 @@ class __user_avatar extends DrumeeMFS {
    * 
    * @param {*} e 
    */
-  reload(refresh) {
+  async reload(refresh) {
     if (this.mget(_a.id) && this.mget(_a.id) !== Visitor.id) return
     if (refresh) {
-      this.fetchService(SERVICE.drumate.get_profile, {
-        hub_id: Visitor.id
-      }).then((d) => {
-        Visitor.set(d);
-      });
-      return
+      let data = await this.fetchService(SERVICE.yp.hello);
+      Visitor.set(data);
     }
 
     if (this.$progress != null) {
       this.$progress.remove();
     }
+    this.triggerHandlers({ service: "avatar-reloaded" })
     return this.feed(require('./skeleton')(this));
   }
 

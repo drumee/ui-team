@@ -61,19 +61,6 @@ class settings_account extends LetcBox {
     this.ensurePart(_a.footer).then((p) => { p.el.dataset.page = this._page })
   }
 
-  /**
-   * 
-   */
-  load_avatar(args) {
-    this.ensurePart("avatar-progress").then((p) => { p.el.style.width = `${args.progress}%` })
-    if (args.progress >= 100) {
-      setTimeout(async () => {
-        this.ensurePart("user-profile").then((p) => { p.respawn() });
-        RADIO_BROADCAST.trigger("avatar-changed")
-        this.ensurePart("avatar-progress").then((p) => { p.el.style.opacity = `0`; p.el.style.width = `0` });
-      }, 1000)
-    }
-  }
 
   /**
    * @param {*} cmd
@@ -90,7 +77,14 @@ class settings_account extends LetcBox {
         this.ensurePart("avatar-widget").then((p) => { p.selectFile() })
         break;
       case "avatar-progress":
-        this.load_avatar(args)
+        this.ensurePart("avatar-progress").then((p) => { p.el.style.width = `${args.progress}%` })
+        break
+      case "avatar-reloaded":
+        setTimeout(async () => {
+          this.ensurePart("user-profile").then((p) => { p.restart(1) });
+          RADIO_BROADCAST.trigger("avatar-changed")
+          this.ensurePart("avatar-progress").then((p) => { p.el.style.opacity = `0`; p.el.style.width = `0` });
+        }, 1000)
         break
       case _e.save:
         this.postService(SERVICE.drumate.update_profile, { hub_id: Visitor.id, profile: this.getData() })
