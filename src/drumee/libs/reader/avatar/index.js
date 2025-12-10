@@ -199,12 +199,12 @@ class __user_avatar extends DrumeeMFS {
    * @param {*} e 
    */
   onUploadProgress(e) {
-    this.debug("AAA:206", e)
     if (!e.lengthComputable) {
       return;
     }
     const rate = e.loaded / e.total;
     const val = parseInt(100 * rate);
+    this.triggerHandlers({ service: "avatar-progress", progress: val })
     return (this.$progress != null ? this.$progress.css({
       strokeDashoffset: arcLength(val)
     }) : undefined);

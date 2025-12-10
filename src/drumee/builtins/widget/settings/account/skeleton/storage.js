@@ -1,91 +1,71 @@
-const { menuInput, entry } = require("../../../../skeleton/toolkit");
-
+const { filesize } = require("core/utils");
 
 /**
  * 
  * @param {*} ui 
  * @returns 
  */
-function user(ui) {
-  const fig = `${ui.fig.family}__avatar`;
-  return Skeletons.Box.G({
-    className: `${fig}-main`,
+function filter(ui) {
+  const fig = `${ui.fig.family}-storage__filter`;
+  return Skeletons.Box.X({
+    className: `${fig}-type`,
+    kidOpts: { radio: `filter-${ui._id}` },
     kids: [
-      Skeletons.UserProfile({ auto_color: 0 }),
-      Skeletons.Box.Y({
-        className: `${fig}-details`,
-        kids: [
-          Skeletons.Element({
-            className: `${fig}-username item`,
-            content: Visitor.fullname(),
-          }),
-          Skeletons.Element({
-            className: `${fig}-email item`,
-            content: Visitor.profile().email,
-          }),
-          Skeletons.Element({
-            className: `${fig}-change item`,
-            content: LOCALE.CHANGE_AVATAR
-          }),
-        ]
-      })
-    ]
-  });
-}
-
-function form(ui) {
-  const fig = `${ui.fig.family}__form`;
-  return Skeletons.Box.Y({
-    className: `${fig}-main`,
-    kids: [
-      Skeletons.Box.G({
-        className: `${fig}-row name`,
-        kids: [
-          entry(ui, {
-            label: LOCALE.FIRSTNAME,
-            name: _a.firstname,
-            placeholder: "",
-            value: Visitor.profile().firstname
-          }),
-          entry(ui, {
-            label: LOCALE.LASTNAME,
-            name: _a.lastname,
-            placeholder: "",
-            value: Visitor.profile().lastname,
-          })
-        ]
+      Skeletons.Element({
+        className: `video text`,
+        content: LOCALE.VIDEO,
       }),
-      Skeletons.Box.G({
-        className: `${fig}-row`,
-        kids: [
-          entry(ui, {
-            label: LOCALE.EMAIL,
-            name: _a.email,
-            value: Visitor.profile().email,
-            placeholder: "i@example.org"
-          }),
-          Skeletons.Box.G({
-            className: `${ui.fig.family}__entry-main`,
-            kids: [
-              Skeletons.Note({
-                className: `${ui.fig.family}__entry-label country`,
-                content: LOCALE.COUNTRY,
-              }),
-              menuInput(ui, {
-                className: `${ui.fig.family}__country-input`,
-                name: 'country_code',
-                service: "select-country",
-                refAttribute: 'locale_name',
-                placeholder: 'Select a country',
-                value: "",
-              }),
-            ]
-          })
-        ]
+      Skeletons.Element({
+        className: `image text `,
+        content: LOCALE.IMAGE,
+      }),
+      Skeletons.Element({
+        className: `document text `,
+        content: LOCALE.DOCUMENT,
       }),
     ]
   })
 }
+
+/**
+ * 
+ * @param {*} ui 
+ * @returns 
+ */
+function header(ui) {
+  const fig = `${ui.fig.family}-storage__header`;
+  const { storage } = Visitor.quota();
+  return Skeletons.Box.Y({
+    className: `${fig}-content`,
+    kids: [
+      Skeletons.Element({
+        className: `${fig}-subtitle`,
+        content: LOCALE.YOU_USED,
+      }),
+      Skeletons.Box.X({
+        className: `${fig}-usage`,
+        kids: [
+          Skeletons.Element({
+            className: `used text`,
+            content: filesize(Visitor.diskUsed()),
+          }),
+          Skeletons.Element({
+            className: `available text `,
+            content: `/${filesize(storage)}`,
+          }),
+          Skeletons.Element({
+            className: `upgrade text `,
+            service: "upgrade-plan",
+            content: LOCALE.UPGRADE_PLAN,
+          }),
+        ]
+      }),
+      Skeletons.Element({ className: `${ui.fig.family}__progress` }),
+      filter(ui),
+    ]
+  })
+}
+
 
 /**
  *
@@ -93,12 +73,33 @@ function form(ui) {
  * @param {*} opt
  * @returns
  */
-function settings_body(ui) {
-  return [
-    user(ui),
-    Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
-    form(ui)
-  ];
+function storage(ui) {
+  const fig = `${ui.fig.family}-storage`;
+  const list = Skeletons.List.Smart({
+    className: `${fig}__list`,
+    spinner: Skeletons.Note("", _a.spinner),
+    sys_pn: _a.list,
+    api: {
+      service: SERVICE.desk.disk_usage,
+      hub_id: Visitor.id,
+      category: '*',
+      list: 1,
+    },
+    itemsOpt: {
+      kind: 'settings_filename',
+      uiHandler: [ui],
+    },
+  });
+  return Skeletons.Wrapper.Y({
+    debug: __filename,
+    className: `${ui.fig.family}__main`,
+    kids: [
+      header(ui),
+      Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
+      list
+    ]
+  });
+
 }
 
-export default settings_body;
+export default storage;

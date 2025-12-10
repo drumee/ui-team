@@ -65,88 +65,6 @@ function nav(ui) {
   });
   return [topics, legals]
 }
-
-// function user(ui) {
-//   const fig = `${ui.fig.family}__avatar`;
-//   return Skeletons.Box.G({
-//     className: `${fig}-main`,
-//     kids: [
-//       Skeletons.UserProfile({ auto_color: 0 }),
-//       Skeletons.Box.Y({
-//         className: `${fig}-details`,
-//         kids: [
-//           Skeletons.Element({
-//             className: `${fig}-username item`,
-//             content: Visitor.fullname(),
-//           }),
-//           Skeletons.Element({
-//             className: `${fig}-email item`,
-//             content: Visitor.profile().email,
-//           }),
-//           Skeletons.Element({
-//             className: `${fig}-change item`,
-//             content: LOCALE.CHANGE_AVATAR
-//           }),
-//         ]
-//       })
-//     ]
-//   });
-// }
-
-// function form(ui) {
-//   const fig = `${ui.fig.family}__form`;
-//   return Skeletons.Box.Y({
-//     className: `${fig}-main`,
-//     kids: [
-//       Skeletons.Box.G({
-//         className: `${fig}-row name`,
-//         kids: [
-//           entry(ui, {
-//             label: LOCALE.FIRSTNAME,
-//             name: _a.firstname,
-//             placeholder: "",
-//             value: Visitor.profile().firstname
-//           }),
-//           entry(ui, {
-//             label: LOCALE.LASTNAME,
-//             name: _a.lastname,
-//             placeholder: "",
-//             value: Visitor.profile().lastname,
-//           })
-//         ]
-//       }),
-//       Skeletons.Box.G({
-//         className: `${fig}-row`,
-//         kids: [
-//           entry(ui, {
-//             label: LOCALE.EMAIL,
-//             name: _a.email,
-//             value: Visitor.profile().email,
-//             placeholder: "i@example.org"
-//           }),
-//           Skeletons.Box.G({
-//             className: `${ui.fig.family}__entry-main`,
-//             kids: [
-//               Skeletons.Note({
-//                 className: `${ui.fig.family}__entry-label country`,
-//                 content: LOCALE.COUNTRY,
-//               }),
-//               menuInput(ui, {
-//                 className: `${ui.fig.family}__country-input`,
-//                 name: 'country_code',
-//                 service: "select-country",
-//                 refAttribute: 'locale_name',
-//                 placeholder: 'Select a country',
-//                 value: "",
-//               }),
-//             ]
-//           })
-//         ]
-//       }),
-//     ]
-//   })
-// }
-
 /**
  *
  * @param {*} ui
@@ -162,7 +80,7 @@ function settings_body(ui) {
       Skeletons.Note({
         className: `${fig}__title`,
         sys_pn: "tab-name",
-        content: LOCALE.PROFILE,
+        content: ui.tab_name[ui._page],
       }),
       Skeletons.Button.Svg({
         ico: _a.cross,
@@ -177,11 +95,6 @@ function settings_body(ui) {
     className: `${fig}__content`,
     uiHandler: [ui],
     sys_pn: _a.content,
-    // kids: [
-    //   user(ui),
-    //   Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
-    //   form(ui)
-    // ],
   });
 
 
@@ -189,6 +102,8 @@ function settings_body(ui) {
   const buttons = Skeletons.Box.X({
     className: `${group}__buttons ${fig}__buttons`,
     uiHandler: ui,
+    sys_pn: _a.footer,
+    dataset: { page: ui._page },
     kids: [
       button(ui, {
         label: LOCALE.APPLY_ALL_AND_SAVE,
@@ -199,7 +114,7 @@ function settings_body(ui) {
       }),
     ],
   });
-  
+
   return Skeletons.Box.G({
     className: `${fig}__main`,
     debug: __filename,

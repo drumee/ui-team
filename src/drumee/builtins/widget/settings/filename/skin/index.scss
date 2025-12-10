@@ -1,0 +1,30 @@
+@use "sass:meta";
+@use "mixins/drumee";
+
+.settings-filename {
+  &__ui {
+    grid-template-columns: 20px 1fr 80px;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 22px;
+    padding: 0;
+    gap: var(--spacer-3);
+  }
+
+  &__filetype {
+    height: 20px;
+    width: 20px;
+    color: var(--neutral-300);
+  }
+
+  &__filepath {
+    color: var(--neutral-900);
+    text-overflow: ellipsis;
+  }
+
+  &__filesize {
+    font-weight: 400;
+    color: var(--neutral-600);
+    margin-left: auto;
+  }
+}

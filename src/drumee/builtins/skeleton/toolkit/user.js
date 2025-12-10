@@ -10,8 +10,7 @@ function menu_items(ui) {
         ico: 'desktop_account--white',
         className: `${pfx}-item account`,
         label: LOCALE.MY_ACCOUNT,
-        service: _e.launch,
-        respawn: 'window_account'
+        service: "settings-account"
       }),
       Visitor.domainCan(_K.permission.admin_view) ?
         Skeletons.Button.Label({
@@ -43,13 +42,13 @@ function menu_items(ui) {
  * @param {*} ui 
  * @returns 
  */
-export function userMenu(ui) {
+export function userMenu(ui, sys_pn) {
   const pfx = `${ui.fig.family}-topbar__user-menu`;
   const trigger = Skeletons.Box.X({
     className: `${pfx}-trigger`,
     kidsOpt: { active: 0 },
     kids: [
-      Skeletons.UserProfile({ auto_color: 0 }),
+      Skeletons.UserProfile({ auto_color: 0, sys_pn }),
       Skeletons.Element({
         className: `${pfx}-username`,
         content: Visitor.firstname()

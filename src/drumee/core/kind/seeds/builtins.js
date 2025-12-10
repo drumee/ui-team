@@ -82,6 +82,7 @@ module.exports = {
   settings_member:function(s,f){import('widget/settings/member').then(m=>{s(m.default)}).catch(f)},
   settings_account:function(s,f){import('widget/settings/account').then(m=>{s(m.default)}).catch(f)},
   settings_pricing:function(s,f){import('widget/settings/pricing').then(m=>{s(m.default)}).catch(f)},
+  settings_filename:function(s,f){import('widget/settings/filename').then(m=>{s(m.default)}).catch(f)},
   widget_chat_item:function(s,f){import('widget/chat-item').then(m=>{s(m.default)}).catch(f)},
   account_avatar:function(s,f){import('window/account/profile/avatar').then(m=>{s(m.default)}).catch(f)},
   account_country:function(s,f){import('window/account/widget/country').then(m=>{s(m.default)}).catch(f)},

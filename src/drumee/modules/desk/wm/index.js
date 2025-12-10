@@ -87,11 +87,24 @@ class __window_manager extends push {
         this.openSharedLink(opt);
       }
     }
-    if (localStorage.debug) {
-      this.ensurePart("wrapper-modal").then((p) => {
-        p.feed({ kind: "settings_account" })
-      })
-    }
+  }
+
+  /**
+   * 
+   */
+  openAccountSettings() {
+    this.ensurePart("wrapper-modal").then((p) => {
+      p.feed({ kind: "settings_account" })
+    })
+  }
+
+  /**
+   * 
+   */
+  upgradePlage() {
+    this.ensurePart("wrapper-modal").then((p) => {
+      p.feed({ kind: "settings_pricing" })
+    })
   }
 
   /**
@@ -682,6 +695,9 @@ class __window_manager extends push {
         this.openContent(cmd);
         return this.unselect();
 
+      case "upgrade-plan":
+        return this.upgradePlage(cmd);
+
       case _e.launch:
         return this.launch(args, { explicit: 1, singleton: 1 });
 
@@ -708,19 +724,6 @@ class __window_manager extends push {
           ;
       case _a.preferences:
         return this.__wrapperModal.feed({ kind: "settings_account" });
-      // return this.launch(
-      //   { kind: "window_account", start: service },
-      //   { explicit: 1, singleton: 1 }
-      // );
-
-      // case _a.settings:
-      //   return this.launch(
-      //     { kind: "window_account" },
-      //     { explicit: 1, singleton: 1 }
-      //   );
-
-      // case "open-creator":
-      //   return this.openCreator(cmd);
 
       case "open-player":
         return this.openPlayer(cmd);

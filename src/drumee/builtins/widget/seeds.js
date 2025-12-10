@@ -11,5 +11,6 @@ module.exports = {
   settings_member: './settings/member',
   settings_account: './settings/account',
   settings_pricing: './settings/pricing',
+  settings_filename: './settings/filename',
   widget_chat_item: './chat-item',
 };

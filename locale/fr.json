@@ -1940,5 +1940,7 @@
   "PRIVACY_POLICY": "Politique de confidentialité",
   "TERMS_OF_SERVICE": "Conditions générales d'utilisation",
   "APPLY_ALL_AND_SAVE": "Appliquer tout et enregistrer",
-  "CHANGE_AVATAR": "Changer d'avatar"
+  "CHANGE_AVATAR": "Changer d'avatar",
+  "YOU_USED": "Vous avez utilisé",
+  "UPGRADE_PLAN": "Mettre à niveau"
 }

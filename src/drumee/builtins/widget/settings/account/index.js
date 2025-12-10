@@ -17,7 +17,11 @@ class settings_account extends LetcBox {
       role: _a.search,
     });
     this.declareHandlers();
-    this.skeletons = [require("./skeleton/profile").default]
+    this.skeletons = [
+      require("./skeleton/profile").default,
+      require("./skeleton/storage").default
+    ]
+    this.tab_name = [LOCALE.PROFILE, LOCALE.STORAGE, LOCALE.SECURITY]
   }
 
   /**
@@ -47,6 +51,29 @@ class settings_account extends LetcBox {
     this.feed(require("./skeleton").default(this));
   }
 
+  /**
+   * 
+   */
+  load_page(cmd) {
+    this._page = cmd.mget(_a.page);
+    this.__content.feed(this.skeletons[this._page](this));
+    this.ensurePart("tab-name").then((p) => { p.set({ content: this.tab_name[this._page] }) })
+    this.ensurePart(_a.footer).then((p) => { p.el.dataset.page = this._page })
+  }
+
+  /**
+   * 
+   */
+  load_avatar(args) {
+    this.ensurePart("avatar-progress").then((p) => { p.el.style.width = `${args.progress}%` })
+    if (args.progress >= 100) {
+      setTimeout(async () => {
+        this.ensurePart("user-profile").then((p) => { p.respawn() });
+        RADIO_BROADCAST.trigger("avatar-changed")
+        this.ensurePart("avatar-progress").then((p) => { p.el.style.opacity = `0`; p.el.style.width = `0` });
+      }, 1000)
+    }
+  }
 
   /**
    * @param {*} cmd
@@ -54,17 +81,30 @@ class settings_account extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug("AAAA:65", service)
+    this.debug("onUiEvent:65", service)
     switch (service) {
       case _e.close:
       case "close-popup":
         return this.goodbye();
+      case "upload-avatar":
+        this.ensurePart("avatar-widget").then((p) => { p.selectFile() })
+        break;
+      case "avatar-progress":
+        this.load_avatar(args)
+        break
+      case _e.save:
+        this.postService(SERVICE.drumate.update_profile, { hub_id: Visitor.id, profile: this.getData() })
+          .then((profile) => {
+            if (!profile || !profile.email) return
+            Visitor.set({ profile })
+            this.__content.feed(this.skeletons[this._page](this));
+          })
+        break
 
       case 'load-page':
-        this._page = cmd.mget(_a.page);
-        this.__content.feed(this.skeletons[this._page](this));
-      // default:
-      //   return super.onUiEvent(cmd, args);
+        this.load_page(cmd);
+      default:
+        this.triggerHandlers({ service })
     }
   }
 

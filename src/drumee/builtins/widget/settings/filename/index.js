@@ -4,7 +4,7 @@
  * 
  * 
  */
-class account_profile extends LetcBox {
+class settings_filename extends LetcBox {
 
   /**
    * @param {*} opt
@@ -14,7 +14,7 @@ class account_profile extends LetcBox {
     super.initialize(opt);
     this.model.set({
       hub_id: Visitor.id,
-      role: _a.search,
+      flow: "g"
     });
   }
 
@@ -46,13 +46,12 @@ class account_profile extends LetcBox {
    * @param {*} args
    */
   onUiEvent(cmd, args = {}) {
-    const service =
-      args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
+    const service = args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
 
     switch (service) {
-      case _e.close:
-      case "close-popup":
-        return this.goodbye();
+      // case _e.close:
+      // case "close-popup":
+      //   return this.goodbye();
 
 
       // default:
@@ -64,4 +63,4 @@ class account_profile extends LetcBox {
 }
 
 
-module.exports = account_profile
+module.exports = settings_filename

@@ -82,6 +82,7 @@ const a = {
   settings_member:"widget/settings/member",
   settings_account:"widget/settings/account",
   settings_pricing:"widget/settings/pricing",
+  settings_filename:"widget/settings/filename",
   widget_chat_item:"widget/chat-item",
   account_avatar:"window/account/profile/avatar",
   account_country:"window/account/widget/country",

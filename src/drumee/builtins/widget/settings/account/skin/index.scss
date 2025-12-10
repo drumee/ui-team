@@ -1,15 +1,16 @@
 @use "sass:meta";
 @use "mixins/drumee";
 @use "../../skin" as *;
+@use "storage";
 
 .settings-account {
   &__ui {
     min-height: 640px;
-    width: 805px;
+    // width: 805px;
     background-color: var(--white);
     border-radius: var(--corner-radius-4);
     display: flex;
-    gap: var(--spacer-5);
+    // gap: var(--spacer-5);
     padding: 0;
     overflow: hidden;
 
@@ -27,6 +28,7 @@
     background-color: var(--white);
     overflow: hidden;
     grid-template-columns: 208px 1fr;
+    gap: var(--spacer-5);
   }
 
   &__container {
@@ -151,6 +153,23 @@
   }
 
   &__avatar {
+    &-progress {
+      position: absolute;
+      width: 0;
+      height: 5px;
+      background: linear-gradient(270deg, #DCB2FF 0%, #5756FF 100%);
+      bottom: -16px;
+      border-radius: 10px;
+      transition: all 1s;
+    }
+
+    &-avatar {
+      position: absolute;
+      z-index: -10;
+      width: 0;
+      height: 0;
+    }
+
     &-main {
       height: 70px;
       grid-template-columns: 70px 1fr;
@@ -241,6 +260,11 @@
 
   &__buttons {
     padding: 0 var(--spacer-5) var(--spacer-5) 0;
+    visibility: hidden;
+
+    &[data-page="0"] {
+      visibility: visible;
+    }
   }
 
   &__button-main {

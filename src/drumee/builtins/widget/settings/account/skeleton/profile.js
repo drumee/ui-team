@@ -11,7 +11,8 @@ function user(ui) {
   return Skeletons.Box.G({
     className: `${fig}-main`,
     kids: [
-      Skeletons.UserProfile({ auto_color: 0 }),
+      { kind: "avatar", sys_pn: "avatar-widget", className: `${fig}-avatar` },
+      Skeletons.UserProfile({ auto_color: 0, sys_pn: "user-profile"}),
       Skeletons.Box.Y({
         className: `${fig}-details`,
         kids: [
@@ -25,10 +26,12 @@ function user(ui) {
           }),
           Skeletons.Element({
             className: `${fig}-change item`,
+            service: "upload-avatar",
             content: LOCALE.CHANGE_AVATAR
           }),
         ]
-      })
+      }),
+      Skeletons.Element({ className: `${ui.fig.family}__avatar-progress`, sys_pn: "avatar-progress" }),
     ]
   });
 }
@@ -77,7 +80,7 @@ function form(ui) {
                 service: "select-country",
                 refAttribute: 'locale_name',
                 placeholder: 'Select a country',
-                value: "",
+                value: Visitor.profile().country_code,
               }),
             ]
           })
