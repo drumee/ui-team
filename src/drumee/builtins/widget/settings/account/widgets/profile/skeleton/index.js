@@ -5,11 +5,15 @@ const { button } = require("../../../../skeleton/toolkit/buttons");
  * @param {*} ui
  * @param {*} opt
  */
-function nav_item(ui, ico, label, price, capacity, recommend) {
+function nav_item(ui, ico, label) {
+  let state = 0;
+  if (ui._page == index) state = 1;
   return Skeletons.Box.X({
     className: `${ui.fig.family}__badge-wrapper badge secondary`,
     uiHandler: { ui },
     kidsOpt: { active: 0 },
+    radio: `nav-${ui._id}`,
+    state,
     kids: [
       Skeletons.Button.Svg({
         ico,
@@ -32,12 +36,11 @@ function nav(ui) {
 
   const topics = Skeletons.Box.Y({
     className: `${fig}__topics`,
-    radio: `nav-${ui._id}`,
     kids: [
-      nav_item(ui, 'profile', LOCALE.PROFILE),
-      nav_item(ui, 'settings', LOCALE.PREFERENCES),
-      nav_item(ui, 'storage', LOCALE.STORAGE),
-      nav_item(ui, 'shield', LOCALE.SECURITY),
+      nav_item(ui, 'profile', LOCALE.PROFILE, 0),
+      nav_item(ui, 'settings', LOCALE.PREFERENCES, 1),
+      nav_item(ui, 'storage', LOCALE.STORAGE, 2),
+      nav_item(ui, 'shield', LOCALE.SECURITY, 3),
     ],
   });
   const legals = Skeletons.Box.Y({
@@ -64,9 +67,6 @@ function nav(ui) {
  */
 function settings_body(ui) {
   const fig = `${ui.fig.family}`;
-
-
-
 
   const header = Skeletons.Box.Y({
     className: `${fig}__header`,

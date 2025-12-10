@@ -1,0 +1,215 @@
+/* ==================================================================== *
+* Widget style automatically generated on 2025-03-05T03:29:33.857Z
+* npm run add-widget -- --fig=<grpup.family> --dest=/path/to/the/widget
+* ==================================================================== */
+
+.menu-input {
+  &__ui {
+    &[data-state="1"] {
+      svg {
+        color: var(--Primary-500);
+      }
+    }
+  }
+
+  &__main {
+    background-color: inherit;
+    width: 100%;
+  }
+
+  &__container {
+    width: 100%;
+    background-color: inherit;
+    justify-content: start;
+    align-items: start;
+    height: auto;
+    max-height: 500px;
+  }
+
+  &__items {
+    &-wrapper {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: visible;
+      left: -15px;
+      top: 37px;
+      background-color: var(--white);
+      box-shadow: var(--drumee-shadow-main);
+      border-radius: 3px;
+      max-height: 265px;
+
+      &[data-axis="y"] {
+        bottom: 0;
+      }
+
+      &[data-axis="x"] {
+        right: 0;
+      }
+    }
+
+    &-content {
+      width: auto;
+      height: auto;
+      position: absolute;
+      padding: 10px;
+      background-color: var(--white);
+      box-shadow: var(--drumee-shadow-main);
+      border-radius: 3px;
+      max-height: 265px;
+
+      &[data-axis="x"] {
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+
+      &[data-axis="y"] {
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
+    }
+  }
+
+
+  &__entry {
+    width: 100%;
+    height: 100%;
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 12px;
+
+    &.main-entry {
+      margin: 5px;
+    }
+
+    & input {
+      width: calc(100% - 10px);
+      background: var(--white);
+      color: var(--default-fg);
+      width: 100%;
+      height: 100%;
+      border-radius: 2px;
+    }
+
+    &-container {
+      width: 100%;
+      padding: 0 5px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    &-shower {
+      width: 100%;
+      position: absolute;
+      flex-wrap: wrap;
+      align-content: center;
+      justify-content: start;
+      cursor: pointer;
+      white-space: nowrap;
+      min-width: 312px;
+      height: 100%;
+      border-radius: 12px;
+      padding-top: 8px;
+      padding-right: 16px;
+      padding-bottom: 8px;
+      padding-left: 16px;
+      gap: 16px;
+      background: var(--white);
+      pointer-events: none;
+      font-size: 16px;
+      line-height: 24px;
+
+      .inner.note-content {
+        width: 280px;
+        opacity: 1;
+        gap: 12px;
+        display: flex;
+        flex-direction: row;
+      }
+
+      .name {
+        font-weight: 400;
+        font-style: normal;
+        font-size: 16px;
+        line-height: 24px;
+        vertical-align: middle;
+      }
+
+      .flag {
+        font-weight: 400;
+        font-style: normal;
+        font-size: 20px;
+        line-height: 24px;
+        vertical-align: middle;
+      }
+
+      &[data-state="0"] {
+        z-index: -1;
+      }
+    }
+
+    &-icon {
+      width: 16px;
+      height: 16px;
+      padding: 2px;
+
+      svg {
+        color: var(--Neutral-500);
+      }
+    }
+  }
+
+
+  &__item {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: start;
+    cursor: pointer;
+    white-space: nowrap;
+    min-width: 312px;
+    height: 48px;
+    border-radius: 12px;
+    padding-top: 8px;
+    padding-right: 16px;
+    padding-bottom: 8px;
+    padding-left: 16px;
+    gap: 16px;
+    background: var(--white);
+    display: flex;
+
+    .inner.note-content {
+      width: 280px;
+      opacity: 1;
+      gap: 12px;
+      display: flex;
+      flex-direction: row;
+    }
+
+    .name {
+      font-weight: 400;
+      font-style: normal;
+      font-size: 16px;
+      line-height: 24px;
+      vertical-align: middle;
+    }
+
+    .flag {
+      font-weight: 400;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 24px;
+      vertical-align: middle;
+    }
+
+    &:hover {
+      background: var(--menu-item-hover);
+    }
+
+    &[data-state="1"] {
+      background: var(--menu-item-hover);
+    }
+  }
+}
