@@ -75,7 +75,7 @@ function item(ui, icon, label, price, capacity, recommend) {
   });
 
   const checkbox = Skeletons.Box.X({
-    className: `${ui.fig.family}__checkbox`,
+    className: `${ui.fig.family}__checkbox checkbox`,
     uiHandler: ui,
   });
 
@@ -90,6 +90,7 @@ function item(ui, icon, label, price, capacity, recommend) {
 
 function settings_content(ui) {
   const fig = `${ui.fig.family}`;
+  const group = `${ui.fig.group}`;
 
   const itemWrapper = Skeletons.Box.Y({
     className: `${fig}__item-wrapper`,
@@ -103,20 +104,20 @@ function settings_content(ui) {
   });
 
   const buttons = Skeletons.Box.X({
-    className: `${fig}__buttons`,
+    className: `${group}__buttons`,
     uiHandler: ui,
     kids: [
       button(ui, {
         label: "Not Now",
         type: _a.toggle,
-        className: `${fig}__button`,
+        className: `${group}__button`,
         service: _e.close,
         priority: "secondary",
       }),
       button(ui, {
         label: "Subscribe Now",
         type: _a.toggle,
-        className: `${fig}__button`,
+        className: `${group}__button`,
         service: _e.close,
         priority: "primary",
       }),
@@ -124,7 +125,7 @@ function settings_content(ui) {
   });
 
   return Skeletons.Box.Y({
-    className: `${fig}__content`,
+    className: `${group}__content`,
     kidsOpt: { active: 0 },
     uiHandler: ui,
     kids: [itemWrapper, buttons],

@@ -5,18 +5,19 @@ const { button } = require("../../../../skeleton/toolkit/buttons");
  * @param {*} ui
  * @param {*} opt
  */
-function nav_item(ui, ico, label, price, capacity, recommend) {
+function nav_item(ui, ico, label) {
+  let fig = ui.fig.family;
   return Skeletons.Box.X({
-    className: `${ui.fig.family}__badge-wrapper badge secondary`,
+    className: `${fig}__item`,
     uiHandler: ui,
     kids: [
       Skeletons.Button.Svg({
         ico,
-        className: `${fig}__feature icon`,
+        className: `${fig}__item-icon`,
         uiHandler: ui,
       }),
       Skeletons.Note({
-        className: `${ui.fig.family}__badge-wrapper text`,
+        className: `${fig}__item-text`,
         content: label,
       }),
     ],
@@ -28,10 +29,14 @@ function nav_item(ui, ico, label, price, capacity, recommend) {
  * @param {*} ui 
  */
 function nav(ui) {
-
+  let fig = ui.fig.family;
   const topics = Skeletons.Box.Y({
     className: `${fig}__topics`,
     kids: [
+      Skeletons.Note({
+        className: `${ui.fig.family}__title`,
+        content: LOCALE.SETTINGS,
+      }),
       nav_item(ui, 'profile', LOCALE.PROFILE),
       nav_item(ui, 'settings', LOCALE.PREFERENCES),
       nav_item(ui, 'storage', LOCALE.STORAGE),
@@ -42,16 +47,78 @@ function nav(ui) {
     className: `${fig}__legals`,
     kids: [
       Skeletons.Note({
-        className: `${ui.fig.family}__legals text`,
+        className: `${ui.fig.family}__legals-text`,
         content: LOCALE.PRIVACY_POLICY,
       }),
       Skeletons.Note({
-        className: `${ui.fig.family}__legals text`,
-        content: LOCALE.TERMS_OF_SERVICE,
+        className: `${ui.fig.family}__legals-text`,
+        content: LOCALE.TERMS_OF_SERVICE
       }),
     ],
   });
   return [topics, legals]
+}
+
+function user(ui) {
+  const fig = `${ui.fig.family}__avatar`;
+  return Skeletons.Box.G({
+    className: `${fig}-main`,
+    kids: [
+      Skeletons.UserProfile({ auto_color: 0 }),
+      Skeletons.Box.Y({
+        className: `${fig}-details`,
+        kids: [
+          Skeletons.Element({
+            className: `${fig}-username item`,
+            content: Visitor.fullname(),
+          }),
+          Skeletons.Element({
+            className: `${fig}-email item`,
+            content: Visitor.profile().email,
+          }),
+          Skeletons.Element({
+            className: `${fig}-change item`,
+            content: LOCALE.CHANGE_AVATAR
+          }),
+        ]
+      })
+    ]
+  });
+}
+
+function form(ui) {
+  const fig = `${ui.fig.family}__form`;
+  return Skeletons.Box.G({
+    className: `${fig}-main`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${fig}-field`,
+        kids: [
+          Skeletons.Element({
+            className: `${fig}-email item`,
+            content: LOCALE.FIRSTNAME,
+          }),
+          Skeletons.Element({
+            className: `${fig}-change item`,
+            content: LOCALE.CHANGE_AVATAR
+          }),
+        ]
+      }),
+      Skeletons.Box.X({
+        className: `${fig}-field`,
+        kids: [
+          Skeletons.Element({
+            className: `${fig}-username item`,
+            content: LOCALE.lastname,
+          }),
+          Skeletons.Element({
+            className: `${fig}-change item`,
+            content: LOCALE.CHANGE_AVATAR
+          }),
+        ]
+      })
+    ]
+  });
 }
 
 /**
@@ -61,13 +128,13 @@ function nav(ui) {
  * @returns
  */
 function settings_body(ui) {
-  const fig = `${ui.fig.family}`;
+  const fig = ui.fig.family;
 
   const header = Skeletons.Box.X({
     className: `${fig}__header`,
     kids: [
       Skeletons.Note({
-        className: `${fig}__header title`,
+        className: `${fig}__title`,
         sys_pn: "tab-name",
         content: LOCALE.PROFILE,
       }),
@@ -80,48 +147,42 @@ function settings_body(ui) {
     ],
   });
 
-  const widget = Skeletons.Box.X({
-    className: `${fig}__buttons`,
+  const widget = Skeletons.Box.Y({
+    className: `${fig}__content`,
     uiHandler: ui,
     sys_pn: _a.content,
     kids: [
+      user(ui),
+      form(ui)
+    ],
+  });
+
+
+  const group = ui.fig.group;
+  const buttons = Skeletons.Box.X({
+    className: `${group}__buttons`,
+    uiHandler: ui,
+    kids: [
       button(ui, {
-        label: "Not Now",
+        label: LOCALE.APPLY_ALL_AND_SAVE,
         type: _a.toggle,
-        className: `${fig}__button`,
-        service: _e.close,
-        priority: "secondary",
-      }),
-      button(ui, {
-        label: "Subscribe Now",
-        type: _a.toggle,
-        className: `${fig}__button`,
+        className: `${group}__button`,
         service: _e.close,
         priority: "primary",
       }),
     ],
   });
-
-  const content = Skeletons.Box.Y({
-    className: `${fig}__content`,
-    kids: [
-      header,
-      widget
-    ],
-  });
-
-
   return Skeletons.Box.G({
     className: `${fig}__main`,
     debug: __filename,
     kids: [
       Skeletons.Box.Y({
         className: `${fig}__nav`,
-        kids: [nav(ui)],
+        kids: nav(ui),
       }),
       Skeletons.Box.Y({
         className: `${fig}__container`,
-        kids: [content],
+        kids: [header, widget, buttons],
       }),
     ],
   });

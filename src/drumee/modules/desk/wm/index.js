@@ -87,6 +87,11 @@ class __window_manager extends push {
         this.openSharedLink(opt);
       }
     }
+    if (localStorage.debug) {
+      this.ensurePart("wrapper-modal").then((p) => {
+        p.feed({ kind: "settings_account" })
+      })
+    }
   }
 
   /**
@@ -702,19 +707,20 @@ class __window_manager extends push {
         return this.__wrapperModal.append({ kind: "settings_pricing" })
           ;
       case _a.preferences:
-        return this.launch(
-          { kind: "window_account", start: service },
-          { explicit: 1, singleton: 1 }
-        );
+        return this.__wrapperModal.feed({ kind: "settings_account" });
+      // return this.launch(
+      //   { kind: "window_account", start: service },
+      //   { explicit: 1, singleton: 1 }
+      // );
 
-      case _a.settings:
-        return this.launch(
-          { kind: "window_account" },
-          { explicit: 1, singleton: 1 }
-        );
+      // case _a.settings:
+      //   return this.launch(
+      //     { kind: "window_account" },
+      //     { explicit: 1, singleton: 1 }
+      //   );
 
-      case "open-creator":
-        return this.openCreator(cmd);
+      // case "open-creator":
+      //   return this.openCreator(cmd);
 
       case "open-player":
         return this.openPlayer(cmd);
@@ -744,11 +750,12 @@ class __window_manager extends push {
       case _a.idle:
         return noOperation();
 
-      case "launch-support-ticket":
-        Kind.waitFor("support_ticket_item").then(() => {
-          this.launchSupportTicket(cmd);
-        });
-        return;
+      // case "launch-support-ticket":
+      //   Kind.waitFor("support_ticket_item").then(() => {
+      //     this.launchSupportTicket(cmd);
+      //   });
+      //   return;
+
       case SERVICE.desk.create_hub:
         args.data.kind = this._getKind();
         args.data.isalink = 1;
@@ -1064,7 +1071,7 @@ class __window_manager extends push {
     item.uiHandler = [media];
     item.source = media;
     item.media = media;
-    this.__wrapperModal.append(item);
+    this.__wrapperModal.feed(item);
   }
   /**
    *

@@ -238,7 +238,6 @@ class __window_manager extends mfsInteract {
             }
           }
           const z = parseInt(c.getActualStyle(_a.zIndex));
-          this.debug("AAA:248", z, max, c)
           if (z > max) {
             target = c;
             max = z;

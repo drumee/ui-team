@@ -84,22 +84,19 @@ export function uploadFile(file, params) {
     "x-param-xia-data": _data
   }, xhr)
   this.verbose(`Sending ${file.name} (${file.size})`);
-  // addListeners(this, xhr, file, params);
-  
-  // DEBUG: Log when xhr.send is called - this is when upload ACTUALLY starts
-  console.log(`🔴 [XHR.SEND] Upload ACTUALLY starting NOW for file: ${file.name} at ${new Date().toISOString()}`);
+  // console.log(`🔴 [XHR.SEND] Upload ACTUALLY starting NOW for file: ${file.name} at ${new Date().toISOString()}`);
   
   if (_.isFunction(file.file)) {
     file.file((f) => {
-      console.log(`🔴 [XHR.SEND] Sending FileEntry file: ${f?.name || 'unknown'} at ${new Date().toISOString()}`);
+      // console.log(`🔴 [XHR.SEND] Sending FileEntry file: ${f?.name || 'unknown'} at ${new Date().toISOString()}`);
       xhr.send(f);
     })
   } else {
     try {
-      console.log(`🔴 [XHR.SEND] Sending File object: ${file.name} at ${new Date().toISOString()}`);
+      // console.log(`🔴 [XHR.SEND] Sending File object: ${file.name} at ${new Date().toISOString()}`);
       xhr.send(file);
     } catch (error) {
-      console.error(`🔴 [XHR.SEND] Error sending file: ${file.name}`, error);
+      // console.error(`🔴 [XHR.SEND] Error sending file: ${file.name}`, error);
       if (this.onUploadError) {
         this.onUploadError({ error, file, params })
       }

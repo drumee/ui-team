@@ -52,7 +52,7 @@ const __skl_folder_topbar = function (ui) {
       button(ui, {
         label: LOCALE.UPLOAD,
         className: `${ui.fig.family}__upload-button`,
-        service: "",
+        service: _e.upload,
         priority: "primary",
       }),
       settings,
