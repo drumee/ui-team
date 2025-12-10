@@ -23,10 +23,12 @@ class settings_hub extends LetcBox {
   getViewMode() {
     return _a.grid;
   }
+
   /**
    *
    */
   onDomRefresh() {
+    this._tab = 0;
     this.feed(require("./skeleton").default(this));
     // Fetch members if hub_id is available and members not already loaded
     if (this.mget(_a.hub_id) && !this.mget(_a.members) && typeof this.fetchService === 'function') {
@@ -46,6 +48,15 @@ class settings_hub extends LetcBox {
     this.feed(require("./skeleton").default(this));
   }
 
+  /**
+   * 
+   */
+  route() {
+    switch (this._tab) {
+      default:
+        this.reload()
+    }
+  }
   /**
    * @param {*} child
    * @param {*} pn
@@ -68,8 +79,13 @@ class settings_hub extends LetcBox {
         return this.goodbye();
 
       case _a.members:
-        return this.feed({ kind: "settings_members_list", media: this.mget(_a.media) });
-        
+        this._tab++;
+        return this.feed({ kind: "settings_members_list", uiHandler: [this], media: this.mget(_a.media) });
+
+      case _a.back:
+        this._tab--;
+        return this.route()
+
       default:
         this.debug("AAA:55", service, cmd)
     }

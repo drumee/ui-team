@@ -46,9 +46,13 @@ class settings_members_list extends DrumeeMFS {
       case _a.back:
         // Feed settings_hub back to replace current members_list
         if (this.mget(_a.media)) {
-          const media = this.mget(_a.media);
+          // const media = this.mget(_a.media);
           // Feed settings_hub to replace current content
-          this.feed({ kind: "settings_hub", media: media });
+
+          // this.feed({ kind: "settings_hub", media: media });
+          /** This widget is a child of settings_hub. This is nesting parent in side the child */
+          this.triggerHandlers({ service }); /** Tell the parent we are done and wnt ot go back */
+          
           return;
         }
         return this.goodbye();
@@ -56,7 +60,7 @@ class settings_members_list extends DrumeeMFS {
       case "update-member-permission":
         const memberId = cmd.memberId || args.memberId;
         const privilege = cmd.privilege || args.privilege;
-        
+
         if (memberId && privilege !== undefined) {
           this.fetchService({
             service: SERVICE.hub.set_privilege,
