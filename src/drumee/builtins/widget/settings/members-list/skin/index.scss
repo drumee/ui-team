@@ -1,51 +1,104 @@
 @use "sass:meta";
 @use 'mixins/drumee';
 
-.settings-members-list {
+.settings {
   &__ui {
+    width: 430px;
+    box-sizing: border-box; 
+    padding: 0 var(--spacer-2);
+    gap: var(--spacer-2);
+    display: flex;
+    flex-direction: column;
+    background-color: var(--white);
+    overflow: hidden;
+    border-radius: var(--corner-radius-6);
+  }
+  }
+
+.settings-members-list {
+  &__wrapper {
+    background: var(--ewhite);
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(34, 34, 34, 0.1);
+    margin: 0 auto;
+    max-width: 600px;
+    padding: 24px;
+    width: 100%;
+  }
+
+  &-topbar__container {
     align-items: center;
-    margin: 20px auto 0px;
-    max-height: 178px;
-    min-height: 36px;
-    width: 345px;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    margin-bottom: 20px;
   }
 
-  &__label {
+  &-topbar__back,
+  &-topbar__close {
+    align-items: center;
+    border-radius: 50%;
+    color: var(--default-text-neutral);
+    display: flex;
+    height: 36px;
     justify-content: center;
-    @include drumee.typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400);
+    width: 36px;
+    cursor: pointer;
+    transition: all 0.2s ease;
 
-    .content {
-      &[data-state="0"] {
-        visibility: hidden;
-      }
+    &:hover {
+      background-color: var(--default-bg-hover);
+      color: var(--default-text-color);
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
     }
   }
 
-  &__dialog-wrapper {
-    height: 0;
-    padding: 0;
-    position: absolute;
-    width: 100% !important;
-    
-    .invitation-permission__ui {
-      &:before {
-        left: 201px;
-      }
-    }
+  &-topbar__title {
+    @include drumee.typo($color: var(--default-text-color), $size: 20px, $weight: 600);
+    flex: 1;
+    text-align: center;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
   }
 
   &__list {
-    margin-top: 13px;
-    max-height: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 4px;
+    width: 100%;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--default-border-notification);
+      border-radius: 3px;
+    }
 
     .drumee-spinner {
       height: 35px;
       margin: auto;
-      width : 35px;
+      width: 35px;
     }
 
     .placeholder--no-contact {
-      margin: 2px auto;
+      margin: 20px auto;
       padding-left: 15px;
       @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 26px, $weight: 400);
     }

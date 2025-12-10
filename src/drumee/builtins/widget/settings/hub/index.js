@@ -12,6 +12,9 @@ class settings_hub extends LetcBox {
   initialize(opt) {
     require("./skin");
     super.initialize(opt);
+    if (opt.media) {
+      this.mset(opt.media.toJSON ? opt.media.toJSON() : opt.media);
+    }
   }
 
   /**
@@ -25,7 +28,22 @@ class settings_hub extends LetcBox {
    */
   onDomRefresh() {
     this.feed(require("./skeleton").default(this));
+    // Fetch members if hub_id is available and members not already loaded
+    if (this.mget(_a.hub_id) && !this.mget(_a.members) && typeof this.fetchService === 'function') {
+      this.fetchService({
+        service: SERVICE.hub.get_members_by_type,
+        hub_id: this.mget(_a.hub_id),
+        nid: this.mget(_a.actual_home_id),
+        type: 'all'
+      });
+    }
+  }
 
+  /**
+   * Reload the skeleton
+   */
+  reload() {
+    this.feed(require("./skeleton").default(this));
   }
 
   /**
@@ -57,6 +75,19 @@ class settings_hub extends LetcBox {
     }
   }
 
+  /**
+   * @param {*} method 
+   * @param {*} data 
+   * @param {*} socket 
+   */
+  __dispatchRest(method, data, socket) {
+    switch (method) {
+      case SERVICE.hub.get_members_by_type:
+        this.mset({ members: data });
+        this.reload();
+        break;
+    }
+  }
 
 }
 

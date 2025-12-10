@@ -51,6 +51,34 @@ class settings_member extends LetcBox {
     this.feed(require("./skeleton")(this));
   }
 
+  /**
+   * 
+   * @param {*} cmd 
+   * @param {*} args 
+   */
+  onUiEvent(cmd, args = {}) {
+    const service = args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
+    
+    switch (service) {
+      case "change-permission":
+        const newPrivilege = cmd.mget('privilege') || cmd.privilege;
+        const memberId = cmd.mget('memberId') || cmd.memberId || this.id;
+        
+        if (newPrivilege && memberId) {
+          this.triggerHandlers({
+            service: "update-member-permission",
+            memberId: memberId,
+            privilege: newPrivilege,
+            member: this
+          });
+        }
+        break;
+    }
+
+    if (super.onUiEvent) {
+      return super.onUiEvent(cmd, args);
+    }
+  }
 
 }
 

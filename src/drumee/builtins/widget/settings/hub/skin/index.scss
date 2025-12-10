@@ -67,11 +67,90 @@
     &-label {
       font-size: 14px;
       line-height: 22px;
+      color: var(--default-text-neutral);
     }
 
     &-text {
       font-size: 14px;
       line-height: 22px;
+      color: var(--default-text-color);
+    }
+
+    &-meta {
+      font-size: 14px;
+      line-height: 22px;
+      color: var(--default-text-neutral);
+    }
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  &__owner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  &__owner-avatar {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+  }
+
+  &__owner-name {
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--default-text-color);
+  }
+
+  &__member-icons {
+    display: flex;
+    align-items: center;
+    gap: -4px;
+    margin-left: 4px;
+  }
+
+  &__member-avatar {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    margin-left: -4px;
+    border: 2px solid var(--ewhite);
+    border-radius: 50%;
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
+  &__edit {
+    color: var(--primary-500);
+    font-size: 14px;
+    line-height: 22px;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--primary-600);
+    }
+  }
+
+  &__chevron {
+    width: 16px;
+    height: 16px;
+    color: var(--default-text-neutral);
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &[active="0"] {
+      pointer-events: none;
     }
   }
 
