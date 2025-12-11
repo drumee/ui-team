@@ -115,20 +115,26 @@ function settings_body(ui) {
     ],
   });
 
-  return Skeletons.Box.G({
-    className: `${fig}__main`,
-    debug: __filename,
-    kids: [
-      Skeletons.Box.Y({
-        className: `${fig}__nav`,
-        kids: nav(ui),
-      }),
-      Skeletons.Box.Y({
-        className: `${fig}__container`,
-        kids: [header, content, buttons],
-      }),
-    ],
-  });
+  return [
+    Skeletons.Box.G({
+      className: `${fig}__main`,
+      debug: __filename,
+      kids: [
+        Skeletons.Box.Y({
+          className: `${fig}__nav`,
+          kids: nav(ui),
+        }),
+        Skeletons.Box.Y({
+          className: `${fig}__container`,
+          kids: [header, content, buttons],
+        }),
+      ],
+    }),
+    Skeletons.Wrapper.Y({
+      className: `${fig}__overlay`,
+      sys_pn: "overlay"
+    })
+  ]
 }
 
 export default settings_body;

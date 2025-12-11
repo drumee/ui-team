@@ -3,6 +3,7 @@
 @use "../../skin" as *;
 @use "storage";
 @use "security";
+@use "modal";
 
 .settings-account {
   &__ui {
@@ -22,12 +23,17 @@
     }
   }
 
-  &__layer {
+  &__overlay {
     width: 100%;
     height: 100%;
+    position: absolute;
     display: flex;
     background-color: var(--transparency-container-overlay);
     overflow: hidden;
+    padding: var(--spacer-5);
+    justify-content: center;
+    align-items: center;
+
   }
 
   &__main {
@@ -242,6 +248,17 @@
         grid-template-columns: 1fr 1fr;
       }
     }
+
+    &-error {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 22px;
+      color: var(--red-400);
+
+      &[data-state="0"] {
+        display: none;
+      }
+    }
   }
 
   &__entry {
@@ -261,6 +278,10 @@
       border-radius: var(--corner-radius-4);
       padding: 0 var(--spacer-5);
       border: 1px solid var(--neutral-200);
+
+      input {
+        width: 100%;
+      }
     }
   }
 

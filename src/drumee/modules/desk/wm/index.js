@@ -290,7 +290,7 @@ class __window_manager extends push {
       }
       this.visible = !document.hidden;
     };
-    this.checkUserInteraction();
+    // this.checkUserInteraction();
     this.loadReminders();
 
     window.addEventListener("online", () => {

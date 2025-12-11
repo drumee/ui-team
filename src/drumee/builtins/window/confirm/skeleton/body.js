@@ -1,16 +1,10 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : __dbg_path
-//   TYPE : Skelton
-// ==================================================================== *
 
-const __skl_window_confirm_body = function (_ui_) {
+
+const __skl_window_confirm_body = function (ui) {
   let message;
-  const pfx = `${_ui_.fig.group}-confirm`;
-  const messageInput = _ui_.mget(_a.message) || "";
-  const submessageInput =
-    _ui_.mget(_a.submessage) ||
-    "Deleting your account will permanently remove your data and access to all features. If you’re sure you want to continue, please confirm below.";
+  const pfx = `${ui.fig.group}-confirm`;
+  const messageInput = ui.mget(_a.message) || "";
+  const submessageInput = ui.mget(_a.submessage) || "No message";
 
   if (_.isString(messageInput)) {
     message = [
@@ -26,7 +20,7 @@ const __skl_window_confirm_body = function (_ui_) {
       }),
     ];
   } else if (_.isFunction(messageInput)) {
-    message = messageInput(_ui_);
+    message = messageInput(ui);
   } else if (_.isArray(messageInput)) {
     message = messageInput;
   } else {

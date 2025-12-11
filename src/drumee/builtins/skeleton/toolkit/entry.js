@@ -5,7 +5,7 @@
  * @returns 
  */
 export function entry(ui, opt) {
-  let { value, name, placeholder="", label, sys_pn, service = _a.input } = opt;
+  let { value, name, placeholder = "", label, shower, sys_pn, type, service = _a.input } = opt;
   const pfx = `${ui.fig.family}__entry`;
   let args = {
     className: `${pfx}-input`,
@@ -18,6 +18,8 @@ export function entry(ui, opt) {
     placeholder,
     uiHandler: [ui],
     state: 0,
+    type,
+    shower,
     radio: ui._id
   }
   if (sys_pn) {

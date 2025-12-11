@@ -29,7 +29,7 @@ function filter(ui) {
       Skeletons.Element({
         className: `all text `,
         type: '*',
-        initialState:1,
+        initialState: 1,
         content: LOCALE.ALL_FILES,
       }),
     ]
@@ -44,6 +44,7 @@ function filter(ui) {
 function header(ui) {
   const fig = `${ui.fig.family}-storage__header`;
   const { storage } = Visitor.quota();
+  const use_rate = 100 * Visitor.diskUsed() / storage;
   return Skeletons.Box.Y({
     className: `${fig}-content`,
     kids: [
@@ -69,7 +70,17 @@ function header(ui) {
           }),
         ]
       }),
-      Skeletons.Element({ className: `${ui.fig.family}__progress` }),
+      Skeletons.Box.X({
+        className: `${fig}-progress-container`,
+        kids: [
+          Skeletons.Element({
+            className: `${fig}-progress-content`,
+            style: {
+              width: `${use_rate}%`
+            }
+          }),
+        ]
+      }),
       filter(ui),
     ]
   })

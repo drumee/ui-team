@@ -12,7 +12,7 @@ function user(ui) {
     className: `${fig}-main`,
     kids: [
       { kind: "avatar", sys_pn: "avatar-widget", className: `${fig}-avatar` },
-      Skeletons.UserProfile({ auto_color: 0, sys_pn: "user-profile"}),
+      Skeletons.UserProfile({ auto_color: 0, sys_pn: "user-profile" }),
       Skeletons.Box.Y({
         className: `${fig}-details`,
         kids: [
@@ -66,6 +66,12 @@ function form(ui) {
             name: _a.email,
             value: Visitor.profile().email,
             placeholder: "i@example.org"
+          }),
+          Skeletons.Note({
+            sys_pn: "error",
+            className: `${fig}-error`,
+            state: 0,
+            content: ""
           }),
           Skeletons.Box.G({
             className: `${ui.fig.family}__entry-main`,

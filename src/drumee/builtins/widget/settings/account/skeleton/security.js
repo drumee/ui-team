@@ -34,7 +34,7 @@ function header(ui) {
       }),
       Skeletons.Element({
         className: `action text `,
-        service: "change-password",
+        service: "prompt-password",
         content: LOCALE.CHANGE_PASSWORD,
       }),
     ]
@@ -121,7 +121,7 @@ function content(ui) {
         className: `${fig}-control`,
         kids: [
           control(ui, LOCALE.LOGOUT, LOCALE.LOGOUT_TIPS),
-          Skeletons.Element({ content: LOCALE.LOGOUT, className: `button` })
+          Skeletons.Element({ content: LOCALE.LOGOUT, className: `button text`, on_click: Butler.logout })
         ]
       })
     ]
