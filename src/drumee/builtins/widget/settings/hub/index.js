@@ -76,7 +76,12 @@ class settings_hub extends LetcBox {
     switch (service) {
       case _e.close:
       case "close-popup":
-        return this.goodbye();
+        this.goodbye();
+        // bảo đảm popup đóng nếu được mở từ dialogWrapper của source
+        if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
+          this.source.dialogWrapper.clear();
+        }
+        return;
 
       case _a.members:
         this._tab++;

@@ -52,7 +52,12 @@ class settings_folder extends LetcBox {
     switch (service) {
       case _e.close:
       case "close-popup":
-        return this.goodbye();
+        this.goodbye();
+        // bảo đảm dialog wrapper (nếu có) được đóng
+        if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
+          this.source.dialogWrapper.clear();
+        }
+        return;
 
       case _a.members:
         this.feed({ kind: "settings_members_list", })

@@ -91,7 +91,7 @@ function settings_body(ui, opt) {
   const filesCount = ui.mget(_a.files_count) || ui.mget(_a.nodes) || "";
   
   // Date formatting
-  const formatDate = (timestamp, dateStr) => {
+  const formatDate = (timestamp, dateStr, ageStr) => {
     if (dateStr && dateStr !== "0") {
       return dateStr;
     }
@@ -99,11 +99,14 @@ function settings_body(ui, opt) {
       const date = new Date(timestamp * 1000);
       return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
+    if (ageStr && ageStr !== "0") {
+      return ageStr;
+    }
     return "0";
   };
   
-  const createdAt = formatDate(ui.mget(_a.ctime), ui.mget(_a.date) || ui.mget(_a.created_at) || ui.mget(_a.created));
-  const updatedAt = formatDate(ui.mget(_a.mtime), ui.mget(_a.updated_at) || ui.mget(_a.last_change));
+  const createdAt = formatDate(ui.mget(_a.ctime), ui.mget(_a.date) || ui.mget(_a.created_at) || ui.mget(_a.created), ui.mget(_a.age));
+  const updatedAt = formatDate(ui.mget(_a.mtime), ui.mget(_a.updated_at) || ui.mget(_a.last_change), ui.mget(_a.age));
 
   const memberIcons = Skeletons.Box.X({
     className: `${fig}__member-icons`,
@@ -207,11 +210,6 @@ function settings_body(ui, opt) {
                     className: `${fig}__item-text`,
                     content: createdAt,
                   }),
-                  Skeletons.Button.Svg({
-                    ico: "carret-right",
-                    className: `${fig}__chevron`,
-                    active: 0,
-                  }),
                 ],
               })),
               item(ui, LOCALE.LAST_CHANGE, Skeletons.Box.X({
@@ -220,11 +218,6 @@ function settings_body(ui, opt) {
                   Skeletons.Note({
                     className: `${fig}__item-text`,
                     content: updatedAt,
-                  }),
-                  Skeletons.Button.Svg({
-                    ico: "carret-right",
-                    className: `${fig}__chevron`,
-                    active: 0,
                   }),
                 ],
               })),

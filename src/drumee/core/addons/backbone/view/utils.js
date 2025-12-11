@@ -111,7 +111,7 @@ Backbone.View.prototype.selfDestroy = function(o={}, a={}) {
     } = o;
     const trigger  = o.trigger  || this.mget(_a.trigger);
     let anim     = null; 
-    if (trigger && !trigger.isDestroyed()) {
+    if (trigger && typeof trigger.isDestroyed === "function" && !trigger.isDestroyed()) {
       anim = { 
         left  : trigger.$el.offset().left - this.parent.$el.offset().left,
         top   : trigger.$el.offset().top - this.parent.$el.offset().top
