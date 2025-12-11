@@ -20,7 +20,6 @@ const __skl_window_note_topbar = function (_ui_, icon) {
     service: _e.raise,
     debug: __filename,
     kids: [
-      require("./left")(_ui_),
       Skeletons.Box.X({
         className: `${_ui_.fig.group}-${figname}__title ${_ui_.fig.family}-${figname}__title`,
         service: _e.raise,
@@ -31,19 +30,22 @@ const __skl_window_note_topbar = function (_ui_, icon) {
             partHandler: _ui_,
             className: _a.name,
             content: filename,
-            active: 0
-          })
-        ]
-      }),
-      Skeletons.Wrapper.Y({
-        className: `${_ui_.fig.group}__wrapper--context dialog__wrapper--context`,
-        name: "context",
-        uiHandler: _ui_,
-        partHandler: _ui_
+            active: 0,
+          }),
+        ],
       }),
 
-      require('window/skeleton/topbar/control')(_ui_, 'sc')
-    ]
+      require("./left")(_ui_),
+
+      // Skeletons.Wrapper.Y({
+      //   className: `${_ui_.fig.group}__wrapper--context dialog__wrapper--context`,
+      //   name: "context",
+      //   uiHandler: _ui_,
+      //   partHandler: _ui_
+      // }),
+
+      require("window/skeleton/topbar/control")(_ui_, "c"),
+    ],
   });
   return a;
 };
