@@ -617,21 +617,21 @@ class __core_user extends Backbone.Model {
    * 
    */
   audioTip(state = 1) {
-    if (!window.Wm) return
-    if (this._userHasInteracted) state = 0;
-    if (!state) {
-      if (Wm && Wm.alert) {
-        Wm.alert()
-      } else {
-        Butler.sleep();
-      }
-      return;
-    }
-    if (Wm && Wm.alert) {
-      Wm.alert(LOCALE.SYSTEM_SOUND_TIPS);
-    } else {
-      Butler.say(LOCALE.SYSTEM_SOUND_TIPS);
-    }
+    // if (!window.Wm) return
+    // if (this._userHasInteracted) state = 0;
+    // if (!state) {
+    //   if (Wm && Wm.alert) {
+    //     Wm.alert()
+    //   } else {
+    //     Butler.sleep();
+    //   }
+    //   return;
+    // }
+    // if (Wm && Wm.alert) {
+    //   Wm.alert(LOCALE.SYSTEM_SOUND_TIPS);
+    // } else {
+    //   Butler.say(LOCALE.SYSTEM_SOUND_TIPS);
+    // }
   }
 
   /**
