@@ -186,5 +186,11 @@
   "APPLY_ALL_AND_SAVE": "Aplicar todo y guardar",
   "CHANGE_AVATAR": "Cambiar avatar",
   "YOU_USED": "Tú usaste",
-  "UPGRADE_PLAN": "Plan de actualización"
+  "UPGRADE_PLAN": "Plan de actualización",
+  "MULTI_FACTOR_AUTH": "Autenticación multifactor",
+  "MFA_TIPS": "MFA requiere un paso de verificación adicional más allá de su contraseña para garantizar que solo usted pueda acceder a su cuenta.",
+  "LOGOUT": "Cerrar sesión",
+  "LOGOUT_TIPS": "Cierre sesión en este dispositivo para evitar accesos no autorizados. Esto cerrará automáticamente su sesión solo en este dispositivo.",
+  "OFF": "Desactivado",
+  "ON": "Activada"
 }

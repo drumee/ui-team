@@ -42,6 +42,10 @@
       margin: auto 15px auto 0;
       background-color: var(--neutral-300);
       border-radius: 100%;
+
+      &:hover {
+        color: var(--primary-500);
+      }
     }
   }
 

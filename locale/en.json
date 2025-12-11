@@ -967,7 +967,7 @@
   "RECIPIENT": "Recipient\n",
   "EMAIL_THAT_ITS": "Enter your email, that's it !",
   "NEW_PASS_PHRASE": "New password",
-  "MULTI_FACTOR_AUTH": "Multi factor authentication",
+  "MULTI_FACTOR_AUTH": "Multi-factor authentication",
   "SECURITY_SETTINGS": "Security settings",
   "CANT_PLAY_DOWNLOAD_INSTEAD": "The file can not be displayed. Do you want to download ?",
   "IMPOSSIBLE_ACTION": "Impossible action \n",
@@ -1942,5 +1942,9 @@
   "APPLY_ALL_AND_SAVE": "Apply all and save",
   "CHANGE_AVATAR": "Change avatar",
   "YOU_USED": "You used",
-  "UPGRADE_PLAN": "Upgrade plan"
+  "UPGRADE_PLAN": "Upgrade plan",
+  "MFA_TIPS": "MFA requires an additional verification step beyond your password to ensure only you can access your account.",
+  "LOGOUT_TIPS": "Log out from this device to prevent unauthorized access. This will immediately end your session on this device only.",
+  "OFF": "Off",
+  "ON": "On"
 }

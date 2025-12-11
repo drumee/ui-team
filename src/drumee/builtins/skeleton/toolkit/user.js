@@ -20,13 +20,13 @@ function menu_items(ui) {
           service: _e.launch,
           respawn: 'window_adminpanel'
         }) : undefined,
-      Skeletons.Button.Label({
-        ico: 'desktop_questionmark',
-        className: `${pfx}-item helpdesk`,
-        label: LOCALE.HELPDESK,
-        service: _e.launch,
-        respawn: 'window_helpdesk'
-      }),
+      // Skeletons.Button.Label({
+      //   ico: 'desktop_questionmark',
+      //   className: `${pfx}-item helpdesk`,
+      //   label: LOCALE.HELPDESK,
+      //   service: _e.launch,
+      //   respawn: 'window_helpdesk'
+      // }),
       Skeletons.Button.Label({
         ico: 'desktop_disconnect',
         className: `${pfx}-item disconnect`,

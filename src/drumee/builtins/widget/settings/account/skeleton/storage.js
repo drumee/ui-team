@@ -9,19 +9,28 @@ function filter(ui) {
   const fig = `${ui.fig.family}-storage__filter`;
   return Skeletons.Box.X({
     className: `${fig}-type`,
-    kidOpts: { radio: `filter-${ui._id}` },
+    kidsOpt: { radio: `filter-${ui._id}`, service: _e.sort, uiHandler: [ui] },
     kids: [
       Skeletons.Element({
         className: `video text`,
+        type: _a.video,
         content: LOCALE.VIDEO,
       }),
       Skeletons.Element({
         className: `image text `,
+        type: _a.image,
         content: LOCALE.IMAGE,
       }),
       Skeletons.Element({
         className: `document text `,
-        content: LOCALE.DOCUMENT,
+        type: _a.note,
+        content: LOCALE.NOTE,
+      }),
+      Skeletons.Element({
+        className: `all text `,
+        type: '*',
+        initialState:1,
+        content: LOCALE.ALL_FILES,
       }),
     ]
   })
@@ -79,12 +88,13 @@ function storage(ui) {
     className: `${fig}__list`,
     spinner: Skeletons.Note("", _a.spinner),
     sys_pn: _a.list,
-    api: {
-      service: SERVICE.desk.disk_usage,
-      hub_id: Visitor.id,
-      category: '*',
-      list: 1,
-    },
+    api: ui.getApi,
+    // api: {
+    //   service: SERVICE.desk.disk_usage,
+    //   hub_id: Visitor.id,
+    //   category: '*',
+    //   list: 1,
+    // },
     itemsOpt: {
       kind: 'settings_filename',
       uiHandler: [ui],

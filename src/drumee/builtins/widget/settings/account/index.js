@@ -14,12 +14,13 @@ class settings_account extends LetcBox {
     super.initialize(opt);
     this.model.set({
       hub_id: Visitor.id,
-      role: _a.search,
     });
     this.declareHandlers();
+    this.getApi = this.getApi.bind(this);
     this.skeletons = [
       require("./skeleton/profile").default,
-      require("./skeleton/storage").default
+      require("./skeleton/storage").default,
+      require("./skeleton/security").default
     ]
     this.tab_name = [LOCALE.PROFILE, LOCALE.STORAGE, LOCALE.SECURITY]
   }
@@ -48,6 +49,7 @@ class settings_account extends LetcBox {
    */
   onDomRefresh() {
     this._page = 0;
+    this._category = '*';
     this.feed(require("./skeleton").default(this));
   }
 
@@ -61,6 +63,17 @@ class settings_account extends LetcBox {
     this.ensurePart(_a.footer).then((p) => { p.el.dataset.page = this._page })
   }
 
+  /**
+   * 
+   */
+  getApi() {
+    return {
+      service: SERVICE.desk.disk_usage,
+      hub_id: Visitor.id,
+      category: this._category || '*',
+      list: 1,
+    }
+  }
 
   /**
    * @param {*} cmd
@@ -94,9 +107,12 @@ class settings_account extends LetcBox {
             this.__content.feed(this.skeletons[this._page](this));
           })
         break
-
       case 'load-page':
         this.load_page(cmd);
+      case _e.sort:
+        this._category = cmd.mget(_a.type)
+        this.ensurePart(_a.list).then((p) => { p.restart() })
+        break
       default:
         this.triggerHandlers({ service })
     }

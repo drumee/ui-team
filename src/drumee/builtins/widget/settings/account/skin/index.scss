@@ -2,6 +2,7 @@
 @use "mixins/drumee";
 @use "../../skin" as *;
 @use "storage";
+@use "security";
 
 .settings-account {
   &__ui {
@@ -19,6 +20,14 @@
       width: 100vw;
       height: 100vh;
     }
+  }
+
+  &__layer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    background-color: var(--transparency-container-overlay);
+    overflow: hidden;
   }
 
   &__main {

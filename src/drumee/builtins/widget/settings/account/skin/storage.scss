@@ -61,6 +61,15 @@
       flex-direction: row;
       align-content: center;
       flex-wrap: wrap;
+      cursor: pointer;
+
+      &[data-radio="on"] {
+        &::before {
+          border: 2px solid var(--pink-700);
+          width: 14px;
+          height: 14px;
+        }
+      }
 
       &::before {
         content: " ";
@@ -68,10 +77,6 @@
         height: 12px;
         border-radius: 50%;
         margin: auto;
-
-        &[data-radio="on"] {
-          border: 2px solid var(--neutral-200);
-        }
       }
     }
 
@@ -92,6 +97,12 @@
         background-color: var(--green-300);
       }
     }
+
+    .all {
+      &::before {
+        background-color: var(--red-300);
+      }
+    }
   }
 
   &__progress {
@@ -103,6 +114,6 @@
   }
 
   &__list {
-    max-height: 600px;
+    max-height: 350px;
   }
 }

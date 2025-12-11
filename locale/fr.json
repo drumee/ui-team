@@ -1942,5 +1942,9 @@
   "APPLY_ALL_AND_SAVE": "Appliquer tout et enregistrer",
   "CHANGE_AVATAR": "Changer d'avatar",
   "YOU_USED": "Vous avez utilisé",
-  "UPGRADE_PLAN": "Mettre à niveau"
+  "UPGRADE_PLAN": "Mettre à niveau",
+  "MFA_TIPS": "L'authentification multifacteur (MFA) exige une étape de vérification supplémentaire en plus de votre mot de passe afin de garantir que vous seul puissiez accéder à votre compte.",
+  "LOGOUT_TIPS": "Déconnectez-vous de cet appareil pour empêcher tout accès non autorisé. Votre session sera immédiatement interrompue sur cet appareil uniquement.",
+  "OFF": "Désactivé",
+  "ON": "Activé"
 }
