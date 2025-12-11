@@ -70,6 +70,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | settings_folder | widget/settings/folder | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/folder/index.js |
 | settings_hub | widget/settings/hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/hub/index.js |
 | settings_members_list | widget/settings/members-list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/members-list/index.js |
+| settings_helpcenter | widget/settings/helpcenter | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/helpcenter/index.js |
 | settings_member | widget/settings/member | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/member/index.js |
 | settings_account | widget/settings/account | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/account/index.js |
 | settings_pricing | widget/settings/pricing | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/pricing/index.js |

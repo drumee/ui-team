@@ -79,6 +79,7 @@ const a = {
   settings_folder:"widget/settings/folder",
   settings_hub:"widget/settings/hub",
   settings_members_list:"widget/settings/members-list",
+  settings_helpcenter:"widget/settings/helpcenter",
   settings_member:"widget/settings/member",
   settings_account:"widget/settings/account",
   settings_pricing:"widget/settings/pricing",

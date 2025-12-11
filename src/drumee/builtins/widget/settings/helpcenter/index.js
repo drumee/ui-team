@@ -4,7 +4,7 @@
  * 
  * 
  */
-class settings_account extends LetcBox {
+class settings_helpcenter extends LetcBox {
 
   /**
    * @param {*} opt
@@ -124,4 +124,4 @@ class settings_account extends LetcBox {
 }
 
 
-module.exports = settings_account
+module.exports = settings_helpcenter

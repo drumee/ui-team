@@ -1,0 +1,131 @@
+@use "sass:meta";
+@use "mixins/drumee";
+@use "../../skin" as *;
+
+.settings-account-security {
+  &__header {
+    &-password {
+      width: 100%;
+      gap: 5px;
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 22px;
+
+      .text {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+
+      }
+
+      .action {
+        margin-left: auto;
+        color: var(--primary-600);
+        cursor: pointer;
+      }
+    }
+
+  }
+
+  &__content {
+    width: 100%;
+
+    &-controls {
+      width: 100%;
+      gap: var(--spacer-5);
+    }
+
+    &-control {
+      width: 100%;
+      grid-template-columns: 320px 1fr;
+      gap: var(--space-2);
+
+      .text {
+        font-size: 14px;
+        line-height: 22px;
+      }
+
+      .title {
+        font-weight: 600;
+        color: var(--neutral-900);
+      }
+
+      .content {
+        font-weight: 400;
+        color: var(--neutral-600);
+      }
+
+      .button {
+        display: flex;
+        flex-direction: column-reverse;
+        justify-content: center;
+        margin-left: auto;
+      }
+    }
+
+  }
+
+
+  &__menu {
+    &-container {
+      margin: auto 0 auto auto;
+      height: 22px;
+      cursor: pointer;
+    }
+
+    &-trigger {
+      gap: 8px;
+
+      &-icon {
+        width: 20px;
+        height: 20px;
+        padding: 2px;
+        align-self: center;
+      }
+    }
+
+    &-content {
+      .menu-topic-trigger {
+        gap: 8px;
+
+        &-icon {
+          width: 20px;
+          height: 20px;
+          padding: 2px;
+          align-self: center;
+        }
+      }
+
+      .menu-topic-items {
+        background-color: var(--white);
+        border-radius: var(--spacer-4);
+        border-width: 1px;
+
+        &__wrapper {
+          &[data-direction=down] {
+            width: 100%;
+            padding: var(--spacer-1) 0;
+            border: 1px solid var(--neutral-200);
+            border-radius: var(--corner-radius-1);
+          }
+        }
+      }
+
+    }
+
+    &-item {
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      padding: var(--spacer-4) var(--spacer-5) var(--spacer-4) var(--spacer-5);
+      width: 100%;
+      color: var(--neutral-600);
+      gap: var(--spacer-2);
+      @include drumee.typo($line: 22px, $size: 16px, $weight: 400, $color: var(--neutral-600));
+
+      &:hover {
+        background-color: var(--default-bg-hover);
+      }
+    }
+  }
+}
