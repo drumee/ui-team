@@ -11,29 +11,38 @@
 .editor-topbar {
   &__control {
     position: absolute;
-    right: 0;
+    right: 0px;
+    top: 15px;
 
     .icon {
-      width: 12px;
-      height: 12px;
-      padding: 0;
-      color: var(--default-text-reverse);
+      width: 30px;
+      height: 30px;
+      padding: 9px;
       cursor: pointer;
       margin: auto 15px auto 0;
+      background: rgba(255, 255, 255, 0.24);
+      color: white;
+      border-radius: 100%;
+
+      &:hover {
+        color: var(--primary-500);
+      }
     }
   }
 
   &__title {
     align-items: center;
-    justify-content: center;
     padding: 0;
     flex: 1;
     flex-direction: row;
     height: 100%;
-    @include drumee.typo($size: 18px,
+    max-width: 400px;
+    @include drumee.typo(
+      $size: 32px,
       $line: 24px,
       $weight: 400,
-      $color: var(--default-text-reverse) );
+      $color: var(--default-text-reverse)
+    );
     @include drumee.overflow-text;
 
     .icon {

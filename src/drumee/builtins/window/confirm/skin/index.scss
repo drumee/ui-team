@@ -118,7 +118,7 @@
     font-weight: 600;
     @include drumee.typo(
       $weight: 300,
-      $size: 32px,
+      $size: 24px,
       $line: 26px,
       $color: var(--neutral-900)
     );
