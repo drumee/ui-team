@@ -1,11 +1,11 @@
-const { folder_logo } = require("../../../../skeleton/toolkit/logo");
+const { filesize } = require("core/utils")
 
 /**
  * 
  * @param {*} ui 
  * @param {*} opt 
  */
-function item(ui, label, ...widget) {
+function item(ui, label, content, action) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__item ${ui.fig.group}__item`,
     uiHandler: ui,
@@ -14,21 +14,23 @@ function item(ui, label, ...widget) {
         className: `${ui.fig.family}__item-label ${ui.fig.group}__item-label`,
         content: label,
       }),
-      ...widget,
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__item-body`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${ui.fig.family}__item-content`,
+            kids: [content],
+          }),
+          action
+            ? Skeletons.Box.X({
+              className: `${ui.fig.family}__item-action`,
+              kids: [action],
+            })
+            : undefined,
+        ],
+      }),
     ],
   });
-}
-
-/**
- * 
- * @param {*} ui 
- * @param {*} opt 
- */
-function text(ui, label) {
-  return Skeletons.Note({
-    className: `${ui.fig.family}__item-text ${ui.fig.group}__item-text`,
-    content: label,
-  })
 }
 
 /**
@@ -41,21 +43,47 @@ function settings_body(ui, opt) {
   const fig = `${ui.fig.family}`;
   const members = ui.mget(_a.members) || ui.mget(_a.users) || [];
   const membersCount = members.length || 0;
+  
+  // Owner info
+  const ownerFromList =
+    members.find(
+      (m) =>
+        (m[_a.privilege] && (m[_a.privilege] & _K.permission.owner)) ||
+        (m.privilege && (m.privilege & _K.permission.owner))
+    ) || {};
+
+  const ownerId =
+    ownerFromList[_a.entity] ||
+    ownerFromList[_a.id] ||
+    ui.mget(_a.owner_id) ||
+    ui.mget(_a.entity) ||
+    ui.mget(_a.id);
+
   const ownerName =
+    ownerFromList[_a.fullname] ||
+    ownerFromList[_a.surname] ||
     ui.mget(_a.owner_name) ||
     ui.mget(_a.owner) ||
-    ui.mget(_a.surname) ||
     ui.mget(_a.fullname) ||
+    ui.mget(_a.surname) ||
+    ui.mget(_a.firstname) ||
+    ui.mget(_a.email) ||
     LOCALE.UNKNOWN;
+  
+  // Type info
+  const area = ui.mget(_a.area) || "personal";
   const typeLabel =
-    ui.mget(_a.area) && LOCALE[`AREA_${ui.mget(_a.area).toUpperCase()}_LABEL`]
-      ? LOCALE[`AREA_${ui.mget(_a.area).toUpperCase()}_LABEL`]
-      : LOCALE.AREA_PERSONAL_LABEL;
-  const sizeLabel = ui.mget(_a.size) || "0";
-  const quotaLabel = ui.mget(_a.quota) || ui.mget(_a.capacity) || "";
+    LOCALE[`AREA_${area.toUpperCase()}_LABEL`] || 
+    (area === "private" ? "Private" : area === "public" ? "Public" : LOCALE.AREA_PERSONAL_LABEL);
+  
+  const sizeLabel = filesize(ui.mget(_a.filesize));
+  const quotaValue = ui.mget(_a.quota) || ui.mget(_a.capacity);
+  const quotaLabel = quotaValue ? filesize(quotaValue) : "";
   const filesCount = ui.mget(_a.files_count) || ui.mget(_a.nodes) || "";
-  const createdAt = ui.mget(_a.created_at) || ui.mget(_a.created) || "0";
-  const updatedAt = ui.mget(_a.updated_at) || ui.mget(_a.last_change) || "0";
+
+  
+  const createdAt = Dayjs.unix(Number(ui.mget(_a.ctime) || 0)).format(Visitor.timeformat());
+  const updatedAt = Dayjs.unix(Number(ui.mget(_a.mtime) || 0)).format(Visitor.timeformat());
 
   const memberIcons = Skeletons.Box.X({
     className: `${fig}__member-icons`,
@@ -93,94 +121,107 @@ function settings_body(ui, opt) {
           Skeletons.Box.Y({
             className: `${ui.fig.group}__items ${fig}__items`,
             kids: [
-              item(ui, LOCALE.OWNER, Skeletons.Box.X({
-                className: `${fig}__owner`,
-                kids: [
-                  Skeletons.UserProfile({
-                    className: `${fig}__owner-avatar`,
-                    id: ui.mget(_a.owner_id) || ui.mget(_a.entity),
-                    firstname: ownerName,
-                    auto_color: 1
-                  }),
-                  Skeletons.Note({
-                    className: `${fig}__owner-name`,
-                    content: ownerName,
-                  }),
-                ],
-              })),
-              item(ui, LOCALE.TYPE, Skeletons.Box.X({
-                className: `${fig}__row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__item-text`,
-                    content: typeLabel,
-                  }),
-                  Skeletons.Button.Label({
-                    ico: "desktop_pen",
-                    className: `${fig}__edit`,
-                    label: LOCALE.EDIT || "Edit",
-                    uiHandler: [ui],
-                    service: "edit-type",
-                  }),
-                ],
-              })),
-              item(ui, LOCALE.SIZE, Skeletons.Box.X({
-                className: `${fig}__row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__item-text`,
-                    content: `${sizeLabel}${quotaLabel ? ` / ${quotaLabel}` : ""}`,
-                  }),
-                  filesCount ? Skeletons.Note({
-                    className: `${fig}__item-meta`,
-                    content: filesCount,
-                  }) : undefined,
-                ],
-              })),
-              item(ui, LOCALE.MEMBERS, Skeletons.Box.X({
-                className: `${fig}__row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__item-meta`,
-                    content: membersCount.toString(),
-                  }),
-                  memberIcons,
-                  Skeletons.Button.Svg({
-                    ico: "carret-right",
-                    className: `${fig}__chevron`,
-                    service: _a.members,
-                    uiHandler: [ui],
-                  }),
-                ],
-              })),
-              item(ui, LOCALE.CREATED, Skeletons.Box.X({
-                className: `${fig}__row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__item-text`,
-                    content: createdAt,
-                  }),
-                  Skeletons.Button.Svg({
-                    ico: "carret-right",
-                    className: `${fig}__chevron`,
-                    active: 0,
-                  }),
-                ],
-              })),
-              item(ui, LOCALE.LAST_CHANGE, Skeletons.Box.X({
-                className: `${fig}__row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__item-text`,
-                    content: updatedAt,
-                  }),
-                  Skeletons.Button.Svg({
-                    ico: "carret-right",
-                    className: `${fig}__chevron`,
-                    active: 0,
-                  }),
-                ],
-              })),
+              item(
+                ui,
+                LOCALE.OWNER,
+                Skeletons.Box.X({
+                  className: `${fig}__row ${fig}__owner`,
+                  kids: [
+                    Skeletons.UserProfile({
+                      className: `${fig}__owner-avatar`,
+                      id: ownerId,
+                      auto_color: 1,
+                    }),
+                    Skeletons.Note({
+                      className: `${fig}__item-text`,
+                      content: ownerName,
+                    }),
+                  ],
+                }),
+                Skeletons.Note({
+                })
+              ),
+              item(
+                ui,
+                LOCALE.TYPE,
+                Skeletons.Box.X({
+                  className: `${fig}__row`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${fig}__item-text`,
+                      content: typeLabel,
+                    }),
+                  ],
+                }),
+                Skeletons.Note ({
+                  className: `${fig}__edit`,
+                  label: LOCALE.EDIT,
+                  uiHandler: [ui],
+                  service: "edit-type",
+                })
+              ),
+
+              item(
+                ui,
+                LOCALE.SIZE,
+                Skeletons.Box.X({
+                  className: `${fig}__row`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${fig}__item-text`,
+                      content: `${sizeLabel}${quotaLabel ? ` / ${quotaLabel}` : ""}`,
+                    }),
+                    filesCount
+                      ? Skeletons.Note({
+                        className: `${fig}__item-meta`,
+                        content: filesCount,
+                      })
+                      : undefined,
+                  ],
+                }),
+                Skeletons.Note({
+                })
+              ),
+              item(
+                ui,
+                LOCALE.MEMBERS,
+                Skeletons.Box.X({
+                  className: `${fig}__row`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${fig}__item-meta`,
+                      content: membersCount.toString(),
+                    }),
+                    memberIcons,
+                  ],
+                }),
+                Skeletons.Button.Svg({
+                  ico: "carret-right",
+                  className: `${fig}__chevron`,
+                  service: _a.members,
+                  uiHandler: [ui],
+                })
+              ),
+              item(
+                ui,
+                LOCALE.CREATED,
+                Skeletons.Note({
+                  className: `${fig}__item-date`,
+                  content: createdAt,
+                }),
+                Skeletons.Note({
+                })
+              ),
+              item(
+                ui,
+                LOCALE.LAST_CHANGE,
+                Skeletons.Note({
+                  className: `${fig}__item-date`,
+                  content: updatedAt,
+                }),
+                Skeletons.Note({
+                })
+              ),
             ]
           })
         ]
