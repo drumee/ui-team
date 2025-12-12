@@ -60,9 +60,9 @@ class settings_member extends LetcBox {
     const service =
       args.service ||
       cmd.service ||
+      cmd.name ||
       (cmd.mget && (cmd.mget(_a.service) || cmd.mget(_a.name))) ||
-      (cmd.get && (cmd.get(_a.service) || cmd.get(_a.name))) ||
-      cmd.name;
+      (cmd.get && (cmd.get(_a.service) || cmd.get(_a.name)));
     
     console.log("AAA:62", service)
     switch (service) {
