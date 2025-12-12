@@ -1,5 +1,5 @@
 @use "sass:meta";
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .settings {
   &__ui {
@@ -14,7 +14,7 @@
     overflow: visible; // allow dropdown overlay
     border-radius: var(--corner-radius-6);
   }
-  }
+}
 
 .settings-members-list {
   &__wrapper {
@@ -62,7 +62,11 @@
   }
 
   &-topbar__title {
-    @include drumee.typo($color: var(--default-text-color), $size: 20px, $weight: 600);
+    @include drumee.typo(
+      $color: var(--default-text-color),
+      $size: 20px,
+      $weight: 600
+    );
     flex: 1;
     text-align: center;
   }
@@ -109,7 +113,12 @@
     .placeholder--no-contact {
       margin: 20px auto;
       padding-left: 15px;
-      @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 26px, $weight: 400);
+      @include drumee.typo(
+        $color: var(--default-text-color),
+        $size: 14px,
+        $line: 26px,
+        $weight: 400
+      );
     }
   }
 }

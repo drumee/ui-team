@@ -1,10 +1,10 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .window-confirm {
   &__ui {
     background-color: var(--default-bg);
-    border-radius: var(--border-radius);
-    padding: 20px;
+    border-radius: 24px;
+    padding: 32px;
     width: auto;
     height: auto;
     max-height: 100%;
@@ -18,8 +18,8 @@
 
     &[data-type="confirm"] {
       background-color: var(--default-bg);
-      border-radius: var(--border-radius);
-      padding: 20px;
+      border-radius: 24px;
+      padding: 32px;
       width: auto;
       height: auto;
       max-height: 100%;
@@ -34,20 +34,28 @@
       max-height: 400px;
       max-width: 600px;
       background-color: var(--default-bg);
-
     }
 
     &[data-maxsize="0"] {
       max-height: 400px;
       max-width: 560px;
       background-color: var(--default-bg);
+    }
+  }
 
+  &__icon {
+    &.logo {
+      svg {
+        width: 64px;
+        height: 64px;
+      }
     }
   }
 
   &__main {
     height: 100%;
     width: 100%;
+    gap: 32px;
   }
 
   &__topbar {
@@ -60,9 +68,9 @@
     align-content: center;
     flex: 1;
     height: 100%;
-    justify-content: center;
     padding: 0 10px;
     width: 100%;
+    gap: 20px;
   }
 
   &-topbar {
@@ -90,25 +98,40 @@
     justify-content: center;
     text-align: center;
     width: 100%;
-    @include drumee.typo($size: 16px, $line: 25px, $color: var(--default-text-color));
+    @include drumee.typo(
+      $size: 16px,
+      $line: 25px,
+      $color: var(--default-text-color)
+    );
 
     & .name {
       top: 24px;
-      @include drumee.typo($size: 22px, $line: 26px, $color: var(--default-text-alert)); // $window-confirm-default-title-color);
+      @include drumee.typo(
+        $size: 22px,
+        $line: 26px,
+        $color: var(--default-text-alert)
+      ); // $window-confirm-default-title-color);
     }
   }
 
   &__message {
-    //text-align: center;
-    justify-content: center;
-    padding: 31px 10px 5px; //5px 10px 5px 10px;
-    margin: 0 auto;
-    @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
+    font-weight: 600;
+    @include drumee.typo(
+      $weight: 300,
+      $size: 24px,
+      $line: 26px,
+      $color: var(--neutral-900)
+    );
 
     &.trash {
       width: 50px;
       margin: 10px 0;
-      @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: violet);
+      @include drumee.typo(
+        $weight: 300,
+        $size: 16px,
+        $line: 26px,
+        $color: violet
+      );
     }
 
     &.delete-team {
@@ -116,7 +139,32 @@
     }
   }
 
-  @media (max-width:  var(--medium-width)) {
+  &__submessage {
+    font-weight: 400;
+    @include drumee.typo(
+      $weight: 300,
+      $size: 16px,
+      $line: 26px,
+      $color: var(--neutral-700)
+    );
+
+    &.trash {
+      width: 50px;
+      margin: 10px 0;
+      @include drumee.typo(
+        $weight: 300,
+        $size: 16px,
+        $line: 26px,
+        $color: violet
+      );
+    }
+
+    &.delete-team {
+      max-width: 450px;
+    }
+  }
+
+  @media (max-width: var(--medium-width)) {
     &__message {
       margin: 0 26px;
     }
@@ -124,15 +172,14 @@
 
   &__buttons {
     align-content: center;
-    height: 110px;
-    justify-content: center; //pace-evenly;
-    padding-top: 25px;
+    height: 100% !important;
+    justify-content: flex-end;
     width: 100%;
 
     .button {
       align-content: center;
       align-items: center;
-      border-radius: var(--border-radius);
+      border-radius: 24px;
       cursor: pointer;
       height: 35px;
       justify-content: center;
@@ -149,7 +196,11 @@
 
   &__button-secondary {
     border: 1px solid var(--btn-rollback-border);
-    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-rollback-text) );
+    @include drumee.typo(
+      $size: 16px,
+      $line: 18px,
+      $color: var(--btn-rollback-text)
+    );
 
     &:hover {
       border: 2px solid var(--btn-rollback-border-hover);
@@ -161,13 +212,16 @@
       margin-left: 0;
       width: 90px;
     }
-
   }
 
   &__button-primary {
     background-color: var(--btn-commit-background);
     border: 0px;
-    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-commit-text));
+    @include drumee.typo(
+      $size: 16px,
+      $line: 18px,
+      $color: var(--btn-commit-text)
+    );
 
     &:hover {
       background-color: var(--btn-commit-background-hover);
@@ -183,7 +237,11 @@
   &__button-danger {
     background-color: var(--btn-caution-background);
     border: 0px;
-    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-caution-text));
+    @include drumee.typo(
+      $size: 16px,
+      $line: 18px,
+      $color: var(--btn-caution-text)
+    );
 
     &:hover {
       background-color: var(--btn-caution-background-hover);

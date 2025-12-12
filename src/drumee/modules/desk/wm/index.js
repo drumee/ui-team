@@ -36,7 +36,6 @@ class __window_manager extends push {
       // ...exportMenu,
       _a.separator,
       _a.preferences,
-      "pricing",
     ];
     this._handelKbdEvents = this._handelKbdEvents.bind(this);
     RADIO_KBD.on(_e.keyup, this._handelKbdEvents)
@@ -87,11 +86,24 @@ class __window_manager extends push {
         this.openSharedLink(opt);
       }
     }
-    if (localStorage.debug) {
-      this.ensurePart("wrapper-modal").then((p) => {
-        p.feed({ kind: "settings_account" })
-      })
-    }
+  }
+
+  /**
+   * 
+   */
+  openAccountSettings() {
+    this.ensurePart("wrapper-modal").then((p) => {
+      p.feed({ kind: "settings_account" })
+    })
+  }
+
+  /**
+   * 
+   */
+  upgradePlage() {
+    this.ensurePart("wrapper-modal").then((p) => {
+      p.feed({ kind: "settings_pricing" })
+    })
   }
 
   /**
@@ -229,15 +241,15 @@ class __window_manager extends push {
         }
       }, 2000)
     });
-    let timer = setInterval(() => {
-      if (!window.Notification) return
-      clearInterval(timer);
-      Notification.requestPermission((p) => {
-        if (p != "granted") {
-          this.alert(LOCALE.NOTIFICATION_DISABLED)
-        }
-      })
-    }, 1000)
+    // let timer = setInterval(() => {
+    //   if (!window.Notification) return
+    //   clearInterval(timer);
+    //   Notification.requestPermission((p) => {
+    //     if (p != "granted") {
+    //       this.alert(LOCALE.NOTIFICATION_DISABLED)
+    //     }
+    //   })
+    // }, 1000)
   }
 
   /**
@@ -277,7 +289,7 @@ class __window_manager extends push {
       }
       this.visible = !document.hidden;
     };
-    this.checkUserInteraction();
+    // this.checkUserInteraction();
     this.loadReminders();
 
     window.addEventListener("online", () => {
@@ -682,6 +694,9 @@ class __window_manager extends push {
         this.openContent(cmd);
         return this.unselect();
 
+      case "upgrade-plan":
+        return this.upgradePlage(cmd);
+
       case _e.launch:
         return this.launch(args, { explicit: 1, singleton: 1 });
 
@@ -708,19 +723,6 @@ class __window_manager extends push {
           ;
       case _a.preferences:
         return this.__wrapperModal.feed({ kind: "settings_account" });
-      // return this.launch(
-      //   { kind: "window_account", start: service },
-      //   { explicit: 1, singleton: 1 }
-      // );
-
-      // case _a.settings:
-      //   return this.launch(
-      //     { kind: "window_account" },
-      //     { explicit: 1, singleton: 1 }
-      //   );
-
-      // case "open-creator":
-      //   return this.openCreator(cmd);
 
       case "open-player":
         return this.openPlayer(cmd);

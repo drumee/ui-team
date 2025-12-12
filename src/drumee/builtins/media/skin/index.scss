@@ -12,7 +12,7 @@
     }
 
     &[data-opened="1"] {
-      border: solid #476390 2px;
+      border: solidsolid var(--primary-600) 2px;
 
       .media-grid__container {
         &:after {
@@ -21,10 +21,10 @@
           display: block;
           width: 100%;
           height: 100%;
-          border: solid #ffffff 1px;
           top: 0;
           left: 0;
-          border-radius: var(--border-radius-tiny); //3px;
+          border: solid var(--primary-300) 1px;
+          border-radius: var(--corner-radius-2);
         }
       }
 

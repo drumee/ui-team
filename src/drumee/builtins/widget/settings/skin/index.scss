@@ -5,7 +5,9 @@
 .settings {
   &__ui {
     background-color: var(--white);
-    width: 452px;
+    // width: 452px;
+    // min-height: 640px;
+    width: 805px;
     border-radius: var(--corner-radius-7);
     border-width: 1px;
     padding-top: var(--spacer-7);
@@ -40,6 +42,10 @@
       margin: auto 15px auto 0;
       background-color: var(--neutral-300);
       border-radius: 100%;
+
+      &:hover {
+        color: var(--primary-500);
+      }
     }
   }
 

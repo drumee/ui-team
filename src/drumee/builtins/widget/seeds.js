@@ -8,8 +8,10 @@ module.exports = {
   settings_folder: './settings/folder',
   settings_hub: './settings/hub',
   settings_members_list: './settings/members-list',
+  settings_helpcenter: './settings/helpcenter',
   settings_member: './settings/member',
   settings_account: './settings/account',
   settings_pricing: './settings/pricing',
+  settings_filename: './settings/filename',
   widget_chat_item: './chat-item',
 };

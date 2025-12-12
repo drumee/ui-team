@@ -48,6 +48,16 @@ class __user_profile extends LetcBox {
 
   /**
    * 
+   */
+  restart(clearCache) {
+    this.debug("AAA:53", clearCache, __cache[this.mget(_a.id)])
+    if (clearCache) delete __cache[this.mget(_a.id)]
+    this.debug("AAA:55", clearCache, __cache[this.mget(_a.id)])
+    this.onDomRefresh()
+  }
+
+  /**
+   * 
    * @param {*} m 
    * @returns 
    */

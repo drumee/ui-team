@@ -1,0 +1,101 @@
+@use "sass:meta";
+@use "mixins/drumee";
+@use "../../skin" as *;
+
+.settings-account-modal {
+  &__main {
+    width: 100%;
+    height: 100%;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 22px;
+    background-color: var(--white);
+    border-radius: var(--corner-radius-6);
+    padding: var(--spacer-9);
+    max-width: 400px;
+    max-height: 450px;
+    gap: var(--spacer-5);
+    justify-content: center;
+
+    .text {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+
+    }
+
+    .action {
+      margin-left: auto;
+      color: var(--primary-600);
+      cursor: pointer;
+    }
+
+    .dtk-pwsetter__entry-main {
+      padding: 0
+    }
+
+  }
+
+  &__text {
+    &.highlight {
+      color: var(--primary-300);
+    }
+
+    .error {
+      color: var(--red-400);
+    }
+  }
+
+  &-error {
+    color: var(--red-400);
+  }
+
+  &-row {
+    input {
+      font-size: 30px;
+      letter-spacing: var(--spacer-3);
+    }
+  }
+
+  &__content {
+    width: 100%;
+
+    &-controls {
+      width: 100%;
+      gap: var(--spacer-5);
+    }
+
+    &-control {
+      width: 100%;
+      grid-template-columns: 320px 1fr;
+      gap: var(--space-2);
+
+      .text {
+        font-size: 14px;
+        line-height: 22px;
+      }
+
+      .title {
+        font-weight: 600;
+        color: var(--neutral-900);
+      }
+
+      .content {
+        font-weight: 400;
+        color: var(--neutral-600);
+      }
+
+      .button {
+        display: flex;
+        flex-direction: column-reverse;
+        justify-content: center;
+        margin-left: auto;
+        color: var(--red-500);
+        cursor: pointer;
+        font-weight: 600;
+      }
+    }
+  }
+
+
+}

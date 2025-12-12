@@ -21,6 +21,9 @@ class __window_interact_player extends __utils {
    */
   static initClass() {
     this.prototype.radioChannel = _.uniqueId('wm-radio-');
+    this.prototype.behaviorSet = {
+      bhv_radio: 1,
+    };
   }
 
   /**
@@ -642,5 +645,5 @@ class __window_interact_player extends __utils {
 
 
 }
-__window_interact_player.initClass() 
+__window_interact_player.initClass()
 module.exports = __window_interact_player;

@@ -1,0 +1,63 @@
+function item(ui, title, description, isFeture) {
+  const fig = `${ui.fig.family}__content-item`;
+
+  let titleItem;
+  if (isFeture) {
+    titleItem = Skeletons.Box.X({
+      className: `${fig} feature-title`,
+      kids: [
+        Skeletons.Note({
+          content: title,
+        }),
+      ],
+    });
+  } else {
+    titleItem = Skeletons.Box.X({
+      className: `${fig} title`,
+      kids: [
+        Skeletons.Note({
+          content: title,
+        }),
+      ],
+    });
+  }
+  return Skeletons.Box.Y({
+    className: `${fig} container`,
+    kids: [
+      titleItem,
+      Skeletons.Box.X({
+        className: `${fig} description`,
+        kids: [
+          Skeletons.Note({
+            content: description,
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
+ *
+ * @param {*} ui
+ * @param {*} opt
+ * @returns
+ */
+function user_guide(ui) {
+  return [
+    item(
+      ui,
+      "How to use Drumme?",
+      "The moon over Eldoria shimmered with an iridescent glow as the floating lantern trees awakened from their slumber, releasing gentle pulses of silver light into the evening air. Travelers along the crystal path paused to listen, for it was said that the trees whispered ancient stories to those who stood still long enough. A soft breeze carried the scent of starfruit blossoms, and somewhere in the distance, the skywhales began their nightly migration, singing low melodic tones that resonated through every stone and leaf. Though no one knew what tomorrow would bring, that night wrapped the world in quiet wonder, as if time itself were holding its breath.",
+      false
+    ),
+    item(
+      ui,
+      "Create folder",
+      "The moon over Eldoria shimmered with an iridescent glow as the floating lantern trees awakened from their slumber, releasing gentle pulses of silver light into the evening air. Travelers along the crystal path paused to listen, for it was said that the trees whispered ancient stories to those who stood still long enough. A soft breeze carried the scent of starfruit blossoms, and somewhere in the distance, the skywhales began their nightly migration, singing low melodic tones that resonated through every stone and leaf. Though no one knew what tomorrow would bring, that night wrapped the world in quiet wonder, as if time itself were holding its breath.",
+      true
+    ),
+  ];
+}
+
+export default user_guide;

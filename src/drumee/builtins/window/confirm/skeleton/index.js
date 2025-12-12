@@ -1,37 +1,27 @@
-/*
- * decaffeinate suggestions:
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/main/docs/suggestions.md
- */
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/addressbook/widget/contact-form/skeleton/tags.coffee
-//   TYPE : Skelton
-// ===================================================================**/
 
-const __skl_window_confirm = function(_ui_, content, mode) {
+const __skl_window_confirm = function(ui, content, mode) {
   if (mode == null) { mode = "hbfc"; }
-  mode = _ui_.mget(_a.mode) || mode;
-  const pfx = `${_ui_.fig.group}-confirm`;
+  mode = ui.mget(_a.mode) || mode;
+  const pfx = `${ui.fig.group}-confirm`;
   const header = Skeletons.Box.X({
-    className : `${pfx}__topbar ${_ui_.fig.group}__topbar XXX`, 
-    kids : [require('./header')(_ui_)]});
+    className : `${pfx}__topbar ${ui.fig.group}__topbar`, 
+    kids : [require('./header')(ui)]});
 
-  const body = content || _ui_.mget(_a.body);
+  const body = content || ui.mget(_a.body);
   if(body) {
     if (_.isFunction(body)) {
-      content = body(_ui_);
+      content = body(ui);
     } else {
       content = body;
     }
   } else {
-    content = require('./body')(_ui_);
+    content = require('./body')(ui);
   }
 
   const m = new RegExp(`[${mode}]`);
     
   const a = Skeletons.Box.Y({
-    className  : `${pfx}__main ${_ui_.fig.group}__modal`,
+    className  : `${pfx}__main ${ui.fig.group}__modal`,
     radio      : _a.parent,
     debug      : __filename,
     kids       : []});
@@ -47,7 +37,7 @@ const __skl_window_confirm = function(_ui_, content, mode) {
     }
   }
   if (m.test('f')) {
-    a.kids.push(require('./footer')(_ui_, mode));
+    a.kids.push(require('./footer')(ui, mode));
   }
     
   return a;

@@ -16,9 +16,9 @@ class desk_module extends LetcBox {
     this._dragLeave = this._dragLeave.bind(this);
     this.route = this.route.bind(this);
     this.onChildBubble = this.onChildBubble.bind(this);
-    this.checkIntro = this.checkIntro.bind(this);
+    // this.checkIntro = this.checkIntro.bind(this);
     this.dmzCopyMedia = this.dmzCopyMedia.bind(this);
-    this.checkUserOnBoarding = this.checkUserOnBoarding.bind(this);
+    // this.checkUserOnBoarding = this.checkUserOnBoarding.bind(this);
     this.onUiEvent = this.onUiEvent.bind(this);
     this.acknowledge = this.acknowledge.bind(this);
     this._openTab = this._openTab.bind(this);
@@ -48,25 +48,28 @@ class desk_module extends LetcBox {
       resizeIcon: 0,
     };
     this.declareHandlers();
+    this._updateAvatar = this._updateAvatar.bind(this);
 
     // this._updateContextMenu = this._updateContextMenu.bind(this);
-    // RADIO_BROADCAST.on(_e.select, this._updateContextMenu);
+    RADIO_BROADCAST.on("avatar-changed", this._updateAvatar);
     setTimeout(this.lazyClasses, 5000);
   }
 
   /**
    *
    */
-  // onDestroy() {
-  //   RADIO_BROADCAST.off(_e.select, this._updateContextMenu);
-  // }
+  onDestroy() {
+    RADIO_BROADCAST.off(_e.select, this._updateAvatar);
+  }
 
   /**
    *
    */
   async onDomRefresh() {
     this._pending = { available: false };
-    // this.updateWallpaper()
+    await Kind.waitFor('window_manager');
+    await Kind.waitFor('activity_panel');
+    await Kind.waitFor('activity_item');
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
@@ -81,18 +84,13 @@ class desk_module extends LetcBox {
     this.onDomRefresh();
   }
 
+
   /**
    *
    */
-  // _updateContextMenu(media) {
-  //   const m = this.getPart("menu-settings");
-  //   if (_.isEmpty(Wm.getGlobalSelection())) {
-  //     m.__items.el.dataset.action = 0;
-  //   } else {
-  //     m.__items.el.dataset.action = 1;
-  //   }
-  //   this.autoMenu(media);
-  // }
+  _updateAvatar() {
+    this.ensurePart("desk-avatar").then((p) => { this.debug("AAAA:82", p.respawn()) });
+  }
 
   /**
    *
@@ -332,7 +330,7 @@ class desk_module extends LetcBox {
     // }
 
     this.trigger(_e.ready);
-    this.checkIntro();
+    // this.checkIntro();
   }
 
   /**
@@ -356,7 +354,7 @@ class desk_module extends LetcBox {
     // if (Visitor.get("is_dmz_hub_copy") == _a.yes) {
     //   return this.dmzCopyMedia(c);
     // }
-    this.checkUserOnBoarding(c);
+    // this.checkUserOnBoarding(c);
   }
 
   /**
@@ -430,41 +428,51 @@ class desk_module extends LetcBox {
   /**
    * @param {Object} c
    */
-  checkUserOnBoarding(c) {
-    const { debug } = Visitor.parseModuleArgs() || {};
-    if (Visitor.data("intro") === _a.no && !debug) {
-      return;
-    }
+  // checkUserOnBoarding(c) {
+  //   const { debug } = Visitor.parseModuleArgs() || {};
+  //   if (Visitor.data("intro") === _a.no && !debug) {
+  //     return;
+  //   }
 
-    this.__wrapperPopup.feed(
-      require("./skeleton/common/intro-popup").default(this)
-    );
-  }
-
-  /**
-   *
-   */
-  async playIntroVideo() {
-    let c = await Wm.playTutorial("intro");
-    this.__wrapperPopup.clear();
-    c &&
-      c.once(_e.destroy, () => {
-        this.__wrapperPopup.feed(
-          require("./skeleton/common/intro-popup").default(this)
-        );
-      });
-  }
+  //   this.__wrapperPopup.feed(
+  //     require("./skeleton/common/intro-popup").default(this)
+  //   );
+  // }
 
   /**
    *
    */
-  skipIntroPopup() {
-    return this.postService({
-      service: SERVICE.drumate.intro_acknowledged,
-      hub_id: Visitor.id,
-    }).then((data) => {
-      Visitor.set(data);
-      return this.__wrapperPopup.clear();
+  // async playIntroVideo() {
+  //   let c = await Wm.playTutorial("intro");
+  //   this.__wrapperPopup.clear();
+  //   c &&
+  //     c.once(_e.destroy, () => {
+  //       this.__wrapperPopup.feed(
+  //         require("./skeleton/common/intro-popup").default(this)
+  //       );
+  //     });
+  // }
+
+  /**
+   *
+   */
+  // skipIntroPopup() {
+  //   return this.postService({
+  //     service: SERVICE.drumate.intro_acknowledged,
+  //     hub_id: Visitor.id,
+  //   }).then((data) => {
+  //     Visitor.set(data);
+  //     return this.__wrapperPopup.clear();
+  //   });
+  // }
+
+  /**
+   * 
+   * @param {*} kind 
+   */
+  openModel(kind) {
+    this.ensurePart("desk-content").then((p) => {
+      p.__wrapperModal.feed({ kind, uiHandler: [this] });
     });
   }
 
@@ -557,10 +565,10 @@ class desk_module extends LetcBox {
         this.popup.children.last().softDestroy();
         return Backbone.history.navigate(_K.module.desk);
 
-      case "general-menu":
-        return (this.getPart("top-bar").el.dataset.state = cmd.model.get(
-          _a.state
-        ));
+      // case "general-menu":
+      //   return (this.getPart("top-bar").el.dataset.state = cmd.model.get(
+      //     _a.state
+      //   ));
 
       case "skip-browser-check":
         localStorage.setItem("skip-browser-check", 1);
@@ -599,8 +607,8 @@ class desk_module extends LetcBox {
       case "copy-link":
         return Wm.copyLink();
 
-      case "toggle-fullscreen":
-        return Wm.toggleFullscreen();
+      case "settings-account":
+        return Wm.openAccountSettings();
 
       case "disconnect-shared":
         return this.disconnectShared(cmd);
@@ -612,22 +620,21 @@ class desk_module extends LetcBox {
         this.__wrapperPopup.clear();
         return Backbone.history.navigate(_K.module.desk);
 
-      case "skip-intro-popup":
-        return this.skipIntroPopup();
+      // case "skip-intro-popup":
+      //   return this.skipIntroPopup();
 
-      case "play-intro-video":
-        return this.playIntroVideo();
+      // case "play-intro-video":
+      //   return this.playIntroVideo();
 
       case "close-popup":
         return this.__wrapperPopup.clear();
 
-      case "open-settings":
-        return this.ensurePart("desk-content").then((p) => {
-          p.__windowsLayer.feed({
-            kind: "window_wallpaper_settings",
-            uiHandler: [this]
-          });
-        });
+      case 'open-settings':
+        return this.openModel("swindow_wallpaper_settings");
+
+      case 'open-user-guide':
+        return this.openModel("settings_helpcenter");
+
 
       case "open-chat":
         return Wm.launch({ kind: 'window_bigchat', source: cmd }, { explicit: 1, singleton: 1 });
@@ -637,13 +644,13 @@ class desk_module extends LetcBox {
         return uiRouter.setWallpaper(args.data);
 
       case "activity-update":
-        this.ensurePart("activity-count").then((p) => {
+        return this.ensurePart("activity-count").then((p) => {
           let content = args.unread_count || 0;
           if (parseInt(content) > 99) content = '99+';
           p.set({ content })
           p.el.dataset.count = content;
         })
-        return;
+
       default:
         Wm.unselect();
     }

@@ -1,8 +1,4 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : __dbg_path
-//   TYPE : Skelton
-// ==================================================================== *
+
 const { button } = require("../../../skeleton/toolkit/buttons");
 
 const __window_topbar = function (_ui_) {
@@ -21,7 +17,7 @@ const __window_topbar = function (_ui_) {
         service: "show-settings",
       });
     }
-  } catch (error) {}
+  } catch (error) { }
 
   const figname = "topbar";
 
@@ -54,9 +50,9 @@ const __window_topbar = function (_ui_) {
     className: `${_ui_.fig.family}__buttons-wrapper`,
     kids: [
       button(_ui_, {
-        label: "Upload new File",
+        label: LOCALE.UPLOAD,
         className: `${_ui_.fig.family}__upload-button`,
-        service: "",
+        service: _e.upload,
         priority: "primary",
       }),
       settingsButton,

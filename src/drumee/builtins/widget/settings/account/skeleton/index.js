@@ -1,15 +1,22 @@
-const { button } = require("../../../../skeleton/toolkit/buttons");
+const { button } = require("../../../../skeleton/toolkit");
 
 /**
  *
  * @param {*} ui
  * @param {*} opt
  */
-function nav_item(ui, ico, label) {
+function nav_item(ui, ico, label, page) {
   let fig = ui.fig.family;
+  let state = 0;
+  if (ui._page == page) state = 1;
   return Skeletons.Box.X({
     className: `${fig}__item`,
-    uiHandler: ui,
+    uiHandler: [ui],
+    radio: `nav-${ui._id}`,
+    state,
+    page,
+    service: `load-page`,
+    kidsOpt: { active: 0 },
     kids: [
       Skeletons.Button.Svg({
         ico,
@@ -37,10 +44,10 @@ function nav(ui) {
         className: `${ui.fig.family}__title`,
         content: LOCALE.SETTINGS,
       }),
-      nav_item(ui, 'profile', LOCALE.PROFILE),
-      nav_item(ui, 'settings', LOCALE.PREFERENCES),
-      nav_item(ui, 'storage', LOCALE.STORAGE),
-      nav_item(ui, 'shield', LOCALE.SECURITY),
+      nav_item(ui, 'profile', LOCALE.PROFILE, 0),
+      // nav_item(ui, 'settings', LOCALE.PREFERENCES, 1),
+      nav_item(ui, 'storage', LOCALE.STORAGE, 1),
+      nav_item(ui, 'shield', LOCALE.SECURITY, 2),
     ],
   });
   const legals = Skeletons.Box.Y({
@@ -58,69 +65,6 @@ function nav(ui) {
   });
   return [topics, legals]
 }
-
-function user(ui) {
-  const fig = `${ui.fig.family}__avatar`;
-  return Skeletons.Box.G({
-    className: `${fig}-main`,
-    kids: [
-      Skeletons.UserProfile({ auto_color: 0 }),
-      Skeletons.Box.Y({
-        className: `${fig}-details`,
-        kids: [
-          Skeletons.Element({
-            className: `${fig}-username item`,
-            content: Visitor.fullname(),
-          }),
-          Skeletons.Element({
-            className: `${fig}-email item`,
-            content: Visitor.profile().email,
-          }),
-          Skeletons.Element({
-            className: `${fig}-change item`,
-            content: LOCALE.CHANGE_AVATAR
-          }),
-        ]
-      })
-    ]
-  });
-}
-
-function form(ui) {
-  const fig = `${ui.fig.family}__form`;
-  return Skeletons.Box.G({
-    className: `${fig}-main`,
-    kids: [
-      Skeletons.Box.X({
-        className: `${fig}-field`,
-        kids: [
-          Skeletons.Element({
-            className: `${fig}-email item`,
-            content: LOCALE.FIRSTNAME,
-          }),
-          Skeletons.Element({
-            className: `${fig}-change item`,
-            content: LOCALE.CHANGE_AVATAR
-          }),
-        ]
-      }),
-      Skeletons.Box.X({
-        className: `${fig}-field`,
-        kids: [
-          Skeletons.Element({
-            className: `${fig}-username item`,
-            content: LOCALE.lastname,
-          }),
-          Skeletons.Element({
-            className: `${fig}-change item`,
-            content: LOCALE.CHANGE_AVATAR
-          }),
-        ]
-      })
-    ]
-  });
-}
-
 /**
  *
  * @param {*} ui
@@ -136,7 +80,7 @@ function settings_body(ui) {
       Skeletons.Note({
         className: `${fig}__title`,
         sys_pn: "tab-name",
-        content: LOCALE.PROFILE,
+        content: ui.tab_name[ui._page],
       }),
       Skeletons.Button.Svg({
         ico: _a.cross,
@@ -147,45 +91,50 @@ function settings_body(ui) {
     ],
   });
 
-  const widget = Skeletons.Box.Y({
+  const content = Skeletons.Box.Y({
     className: `${fig}__content`,
-    uiHandler: ui,
+    uiHandler: [ui],
     sys_pn: _a.content,
-    kids: [
-      user(ui),
-      form(ui)
-    ],
   });
 
 
   const group = ui.fig.group;
   const buttons = Skeletons.Box.X({
-    className: `${group}__buttons`,
+    className: `${group}__buttons ${fig}__buttons`,
     uiHandler: ui,
+    sys_pn: _a.footer,
+    dataset: { page: ui._page },
     kids: [
       button(ui, {
         label: LOCALE.APPLY_ALL_AND_SAVE,
         type: _a.toggle,
         className: `${group}__button`,
-        service: _e.close,
+        service: _e.save,
         priority: "primary",
       }),
     ],
   });
-  return Skeletons.Box.G({
-    className: `${fig}__main`,
-    debug: __filename,
-    kids: [
-      Skeletons.Box.Y({
-        className: `${fig}__nav`,
-        kids: nav(ui),
-      }),
-      Skeletons.Box.Y({
-        className: `${fig}__container`,
-        kids: [header, widget, buttons],
-      }),
-    ],
-  });
+
+  return [
+    Skeletons.Box.G({
+      className: `${fig}__main`,
+      debug: __filename,
+      kids: [
+        Skeletons.Box.Y({
+          className: `${fig}__nav`,
+          kids: nav(ui),
+        }),
+        Skeletons.Box.Y({
+          className: `${fig}__container`,
+          kids: [header, content, buttons],
+        }),
+      ],
+    }),
+    Skeletons.Wrapper.Y({
+      className: `${fig}__overlay`,
+      sys_pn: "overlay"
+    })
+  ]
 }
 
 export default settings_body;

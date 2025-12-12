@@ -8,11 +8,10 @@
     border: 1px solid var(--default-border-notification);
     border-radius: var(--corner-radius-6);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    width: 500px;
+    width: 800px;
     height: 700px;
-    left: 67px;
     top: 72px;
-    left: calc(100vw - 620px);
+    left: calc(100vw - 800px);
 
     &[data-device="mobile"] {
       left: 0;
@@ -70,6 +69,7 @@
 
       & .icon {
         margin: auto;
+        background-color: var(--neutral-300);
       }
     }
   }
@@ -206,12 +206,10 @@
   }
 
   &__colors-title {
-    @include drumee.typo(
-      $size: 14px,
+    @include drumee.typo($size: 14px,
       $line: 21px,
       $weight: 400,
-      $color: var(--default-text-color)
-    );
+      $color: var(--default-text-color));
     flex-shrink: 0;
   }
 

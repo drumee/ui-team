@@ -1,0 +1,119 @@
+@use "sass:meta";
+@use "mixins/drumee";
+@use "../../skin" as *;
+
+.settings-account-storage {
+  &__header {
+    &-content {
+      // height: 116px;
+      width: 100%;
+      gap: var(--spacer-4);
+    }
+
+    &-subtitle {
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 22px;
+    }
+
+    &-usage {
+      width: 100%;
+      gap: 5px;
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 22px;
+
+      .text {
+        display: flex;
+        flex-direction: column;
+        justify-content: end;
+
+      }
+
+      .used {
+        font-size: 32px;
+        line-height: 32px;
+        color: var(--neutral-900);
+      }
+
+      .available {
+        font-size: 14px;
+        color: var(--neutral-600);
+      }
+
+      .upgrade {
+        margin-left: auto;
+        color: var(--primary-600);
+        cursor: pointer;
+      }
+    }
+  }
+
+  &__filter-type {
+    width: 100%;
+    height: 22px;
+    gap: var(--spacer-7);
+
+    .text {
+      height: 22px;
+      gap: var(--spacer-4);
+      display: flex;
+      flex-direction: row;
+      align-content: center;
+      flex-wrap: wrap;
+      cursor: pointer;
+
+      &[data-radio="on"] {
+        &::before {
+          border: 2px solid var(--pink-700);
+          width: 14px;
+          height: 14px;
+        }
+      }
+
+      &::before {
+        content: " ";
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin: auto;
+      }
+    }
+
+    .video {
+      &::before {
+        background-color: var(--primary-500);
+      }
+    }
+
+    .image {
+      &::before {
+        background-color: var(--blue-400);
+      }
+    }
+
+    .document {
+      &::before {
+        background-color: var(--green-300);
+      }
+    }
+
+    .all {
+      &::before {
+        background-color: var(--red-300);
+      }
+    }
+  }
+
+  &__progress {
+    width: 100%;
+    height: 8px;
+    gap: 10px;
+    border-radius: 1000px;
+    background: linear-gradient(270deg, #DCB2FF 0%, #5756FF 100%);
+  }
+
+  &__list {
+    max-height: 350px;
+  }
+}

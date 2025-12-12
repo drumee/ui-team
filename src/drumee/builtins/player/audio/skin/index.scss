@@ -1,10 +1,9 @@
 @use "sass:meta";
-@use 'mixins/drumee';
-@include meta.load-css('metadata');
-@include meta.load-css('topbar');
+@use "mixins/drumee";
+@include meta.load-css("metadata");
+@include meta.load-css("topbar");
 
 .player-audio {
-
   &__ui {
     height: 100%;
     max-height: 290px;
@@ -34,7 +33,7 @@
   &__header {
     background-color: var(--default-bg);
     border-bottom: none;
-    border-radius: var(--default-border-radius-top);
+    border-radius: 24px 24px 0 0;
     color: var(--default-text-color);
     height: 44px;
     min-height: 44px;
@@ -103,7 +102,6 @@
   & .drumee-loading-wrapper {
     top: 70%;
   }
-
 
   &__ui {
     & .loader-progress {

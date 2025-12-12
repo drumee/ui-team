@@ -52,9 +52,9 @@ const __skl_window_team_topbar = function (_ui_, icon) {
     className: `${_ui_.fig.family}__buttons-wrapper`,
     kids: [
       button(_ui_, {
-        label: "Upload new File",
+        label: LOCALE.UPLOAD,
         className: `${_ui_.fig.family}__upload-button`,
-        service: "",
+        service:  _e.upload,
         priority: "primary",
       }),
       settingsButton,

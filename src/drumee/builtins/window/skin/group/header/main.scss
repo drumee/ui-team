@@ -75,8 +75,6 @@
       gap: 10px;
 
       .name {
-        align-items: flex-start;
-        white-space: nowrap;
         align-items: center;
         width: auto;
         @include drumee.typo(
@@ -119,11 +117,11 @@
         height: 30px;
         padding: 10px;
         display: flex;
-        color: var(--neutral-600);
         cursor: pointer;
         margin: auto 15px auto 0;
-        background-color: var(--neutral-300);
         border-radius: 100%;
+        background: rgba(255, 255, 255, 0.24);
+        color: white;
 
         &:hover {
           color: var(--primary-500);
