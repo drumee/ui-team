@@ -77,12 +77,14 @@ class settings_hub extends LetcBox {
       case _e.close:
       case "close-popup":
         this.goodbye();
-        // bảo đảm popup đóng nếu được mở từ dialogWrapper của source
-        if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
-          this.source.dialogWrapper.clear();
-        }
+        // if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
+        //   this.source.dialogWrapper.clear();
+        // }
         return;
 
+      case "edit-type":
+        console.log("AAA:86", cmd)
+        return;
       case _a.members:
         this._tab++;
         return this.feed({ kind: "settings_members_list", uiHandler: [this], media: this.mget(_a.media) });
@@ -90,7 +92,7 @@ class settings_hub extends LetcBox {
       case _a.back:
         this._tab--;
         return this.route()
-
+        
       default:
         this.debug("AAA:55", service, cmd)
     }

@@ -20,20 +20,22 @@ module.exports = function (ui) {
       online: ui.mget(_a.online),
       live_status: 1,
     });
-  } else {
+  } else { 
     profile_icon = Skeletons.Button.Svg({
       ico: "desktop_contactbook",
       className: `${prefix}__avatar profile-icon desktop_contactbook`,
     });
   }
 
-  const permissionLabel = (() => {
-    if (privilege && (_K.permission.owner & privilege)) return LOCALE.OWNER;
-    if (privilege && (_K.permission.modify & privilege)) return LOCALE.ALL_PERMISSIONS || "All permissions";
-    if (privilege && (_K.permission.upload & privilege)) return LOCALE.UPLOAD_ONLY || "Upload only";
-    if (privilege && (_K.permission.read & privilege)) return LOCALE.DOWNLOAD_ONLY || "Download only";
+  const resolveLabel = (p) => {
+    if (p && (_K.permission.owner & p)) return LOCALE.OWNER;
+    if (p && (_K.permission.modify & p)) return LOCALE.ALL_PERMISSIONS || "All permissions";
+    if (p && (_K.permission.upload & p)) return LOCALE.UPLOAD_ONLY || "Upload only";
+    if (p && (_K.permission.read & p)) return LOCALE.DOWNLOAD_ONLY || "Download only";
     return LOCALE.ALL_PERMISSIONS || "All permissions";
-  })();
+  };
+
+  const permissionLabel = resolveLabel(privilege);
 
   const info = Skeletons.Box.Y({
     className: `${prefix}__info`,
@@ -61,7 +63,7 @@ module.exports = function (ui) {
 
   const menuTrigger = Skeletons.Box.X({
     className: `${prefix}__permission-trigger`,
-    kids: [
+    kids: [   
       Skeletons.Note({
         content: permissionLabel,
         className: `${prefix}__permission-label`,
@@ -75,16 +77,20 @@ module.exports = function (ui) {
 
   const menuItems = !isOwner ? Skeletons.Box.Y({
     className: `${prefix}__permission-menu-items`,
-    kids: permissionOptions.map((opt) =>
-      Skeletons.Button.Label({
-        className: `${prefix}__permission-menu-item`,
+    kids: permissionOptions.map((opt) => {
+      const isActive = privilege && ((privilege & opt.privilege) === opt.privilege);
+      return Skeletons.Button.Label({
+        className: `${prefix}__permission-menu-item${isActive ? " active" : ""}`,
         label: opt.label,
+        ico: null,
         service: "change-permission",
+        name: "change-permission",
         uiHandler: [ui],
         privilege: opt.privilege,
         memberId: ui.mget(_a.entity) || ui.mget(_a.id),
-      })
-    ),
+        active: isActive ? 1 : 0,
+      });
+    }),
   }) : undefined;
 
   const permission = !isOwner ? Skeletons.Box.X({

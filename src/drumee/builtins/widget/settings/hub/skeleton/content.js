@@ -1,11 +1,11 @@
-const { folder_logo } = require("../../../../skeleton/toolkit/logo");
+const { filesize } = require("core/utils")
 
 /**
  * 
  * @param {*} ui 
  * @param {*} opt 
  */
-function item(ui, label, ...widget) {
+function item(ui, label, content, action) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__item ${ui.fig.group}__item`,
     uiHandler: ui,
@@ -14,21 +14,23 @@ function item(ui, label, ...widget) {
         className: `${ui.fig.family}__item-label ${ui.fig.group}__item-label`,
         content: label,
       }),
-      ...widget,
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__item-body`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${ui.fig.family}__item-content`,
+            kids: [content],
+          }),
+          action
+            ? Skeletons.Box.X({
+              className: `${ui.fig.family}__item-action`,
+              kids: [action],
+            })
+            : undefined,
+        ],
+      }),
     ],
   });
-}
-
-/**
- * 
- * @param {*} ui 
- * @param {*} opt 
- */
-function text(ui, label) {
-  return Skeletons.Note({
-    className: `${ui.fig.family}__item-text ${ui.fig.group}__item-text`,
-    content: label,
-  })
 }
 
 /**
@@ -43,12 +45,29 @@ function settings_body(ui, opt) {
   const membersCount = members.length || 0;
   
   // Owner info
-  const ownerId = ui.mget(_a.owner_id) || ui.mget(_a.entity);
+  const ownerFromList =
+    members.find(
+      (m) =>
+        (m[_a.privilege] && (m[_a.privilege] & _K.permission.owner)) ||
+        (m.privilege && (m.privilege & _K.permission.owner))
+    ) || {};
+
+  const ownerId =
+    ownerFromList[_a.entity] ||
+    ownerFromList[_a.id] ||
+    ui.mget(_a.owner_id) ||
+    ui.mget(_a.entity) ||
+    ui.mget(_a.id);
+
   const ownerName =
+    ownerFromList[_a.fullname] ||
+    ownerFromList[_a.surname] ||
     ui.mget(_a.owner_name) ||
     ui.mget(_a.owner) ||
-    ui.mget(_a.surname) ||
     ui.mget(_a.fullname) ||
+    ui.mget(_a.surname) ||
+    ui.mget(_a.firstname) ||
+    ui.mget(_a.email) ||
     LOCALE.UNKNOWN;
   
   // Type info
@@ -57,56 +76,14 @@ function settings_body(ui, opt) {
     LOCALE[`AREA_${area.toUpperCase()}_LABEL`] || 
     (area === "private" ? "Private" : area === "public" ? "Public" : LOCALE.AREA_PERSONAL_LABEL);
   
-  // Size info
-  const formatSize = (sizeValue) => {
-    if (!sizeValue) return "0 B";
-    if (typeof sizeValue === 'string') return sizeValue;
-    if (typeof sizeValue === 'object') {
-      // If it's an object, try to get a string representation
-      if (sizeValue.toString && sizeValue.toString() !== '[object Object]') {
-        return sizeValue.toString();
-      }
-      // Try common size properties
-      if (sizeValue.size) return formatSize(sizeValue.size);
-      if (sizeValue.value) return formatSize(sizeValue.value);
-      return "0 B";
-    }
-    if (typeof sizeValue === 'number') {
-      // Format bytes to human readable
-      const units = ['B', 'KB', 'MB', 'GB'];
-      let unitIndex = 0;
-      let size = sizeValue;
-      while (size >= 1024 && unitIndex < units.length - 1) {
-        size /= 1024;
-        unitIndex++;
-      }
-      return `${size.toFixed(size < 10 ? 1 : 0)} ${units[unitIndex]}`;
-    }
-    return String(sizeValue);
-  };
-  
-  const sizeLabel = formatSize(ui.mget(_a.size));
+  const sizeLabel = filesize(ui.mget(_a.filesize));
   const quotaValue = ui.mget(_a.quota) || ui.mget(_a.capacity);
-  const quotaLabel = quotaValue ? formatSize(quotaValue) : "";
+  const quotaLabel = quotaValue ? filesize(quotaValue) : "";
   const filesCount = ui.mget(_a.files_count) || ui.mget(_a.nodes) || "";
+
   
-  // Date formatting
-  const formatDate = (timestamp, dateStr, ageStr) => {
-    if (dateStr && dateStr !== "0") {
-      return dateStr;
-    }
-    if (timestamp) {
-      const date = new Date(timestamp * 1000);
-      return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    if (ageStr && ageStr !== "0") {
-      return ageStr;
-    }
-    return "0";
-  };
-  
-  const createdAt = formatDate(ui.mget(_a.ctime), ui.mget(_a.date) || ui.mget(_a.created_at) || ui.mget(_a.created), ui.mget(_a.age));
-  const updatedAt = formatDate(ui.mget(_a.mtime), ui.mget(_a.updated_at) || ui.mget(_a.last_change), ui.mget(_a.age));
+  const createdAt = Dayjs.unix(Number(ui.mget(_a.ctime) || 0)).format(Visitor.timeformat());
+  const updatedAt = Dayjs.unix(Number(ui.mget(_a.mtime) || 0)).format(Visitor.timeformat());
 
   const memberIcons = Skeletons.Box.X({
     className: `${fig}__member-icons`,
@@ -144,83 +121,107 @@ function settings_body(ui, opt) {
           Skeletons.Box.Y({
             className: `${ui.fig.group}__items ${fig}__items`,
             kids: [
-              item(ui, LOCALE.OWNER, Skeletons.Box.X({
-                className: `${fig}__owner`,
-                kids: [
-                  ownerId ? Skeletons.UserProfile({
-                    className: `${fig}__owner-avatar`,
-                    id: ownerId,
-                    auto_color: 1
-                  }) : undefined,
-                  Skeletons.Note({
-                    className: `${fig}__owner-name`,
-                    content: ownerName,
-                  }),
-                ],
-              })),
-              item(ui, LOCALE.TYPE, Skeletons.Box.X({
-                className: `${fig}__row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__item-text`,
-                    content: typeLabel,
-                  }),
-                  Skeletons.Button.Label({
-                    ico: "desktop_pen",
-                    className: `${fig}__edit`,
-                    label: LOCALE.EDIT || "Edit",
-                    uiHandler: [ui],
-                    service: "edit-type",
-                  }),
-                ],
-              })),
-              item(ui, LOCALE.SIZE, Skeletons.Box.X({
-                className: `${fig}__row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__item-text`,
-                    content: `${sizeLabel}${quotaLabel ? ` / ${quotaLabel}` : ""}`,
-                  }),
-                  filesCount ? Skeletons.Note({
-                    className: `${fig}__item-meta`,
-                    content: filesCount,
-                  }) : undefined,
-                ],
-              })),
-              item(ui, LOCALE.MEMBERS, Skeletons.Box.X({
-                className: `${fig}__row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__item-meta`,
-                    content: membersCount.toString(),
-                  }),
-                  memberIcons,
-                  Skeletons.Button.Svg({
-                    ico: "carret-right",
-                    className: `${fig}__chevron`,
-                    service: _a.members,
-                    uiHandler: [ui],
-                  }),
-                ],
-              })),
-              item(ui, LOCALE.CREATED, Skeletons.Box.X({
-                className: `${fig}__row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__item-text`,
-                    content: createdAt,
-                  }),
-                ],
-              })),
-              item(ui, LOCALE.LAST_CHANGE, Skeletons.Box.X({
-                className: `${fig}__row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__item-text`,
-                    content: updatedAt,
-                  }),
-                ],
-              })),
+              item(
+                ui,
+                LOCALE.OWNER,
+                Skeletons.Box.X({
+                  className: `${fig}__row ${fig}__owner`,
+                  kids: [
+                    Skeletons.UserProfile({
+                      className: `${fig}__owner-avatar`,
+                      id: ownerId,
+                      auto_color: 1,
+                    }),
+                    Skeletons.Note({
+                      className: `${fig}__item-text`,
+                      content: ownerName,
+                    }),
+                  ],
+                }),
+                Skeletons.Note({
+                })
+              ),
+              item(
+                ui,
+                LOCALE.TYPE,
+                Skeletons.Box.X({
+                  className: `${fig}__row`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${fig}__item-text`,
+                      content: typeLabel,
+                    }),
+                  ],
+                }),
+                Skeletons.Note ({
+                  className: `${fig}__edit`,
+                  label: LOCALE.EDIT,
+                  uiHandler: [ui],
+                  service: "edit-type",
+                })
+              ),
+
+              item(
+                ui,
+                LOCALE.SIZE,
+                Skeletons.Box.X({
+                  className: `${fig}__row`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${fig}__item-text`,
+                      content: `${sizeLabel}${quotaLabel ? ` / ${quotaLabel}` : ""}`,
+                    }),
+                    filesCount
+                      ? Skeletons.Note({
+                        className: `${fig}__item-meta`,
+                        content: filesCount,
+                      })
+                      : undefined,
+                  ],
+                }),
+                Skeletons.Note({
+                })
+              ),
+              item(
+                ui,
+                LOCALE.MEMBERS,
+                Skeletons.Box.X({
+                  className: `${fig}__row`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${fig}__item-meta`,
+                      content: membersCount.toString(),
+                    }),
+                    memberIcons,
+                  ],
+                }),
+                Skeletons.Button.Svg({
+                  ico: "carret-right",
+                  className: `${fig}__chevron`,
+                  service: _a.members,
+                  uiHandler: [ui],
+                })
+              ),
+              item(
+                ui,
+                LOCALE.CREATED,
+                Skeletons.Note({
+                  className: `${fig}__item-date`,
+                  content: createdAt,
+                }),
+                Skeletons.Note({
+                })
+              ),
+              item(
+                ui,
+                LOCALE.LAST_CHANGE,
+                Skeletons.Note({
+                  className: `${fig}__item-date`,
+                  content: updatedAt,
+                }),
+                Skeletons.Note({
+                })
+              ),
             ]
           })
         ]

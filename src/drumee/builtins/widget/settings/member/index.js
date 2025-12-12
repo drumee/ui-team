@@ -57,20 +57,28 @@ class settings_member extends LetcBox {
    * @param {*} args 
    */
   onUiEvent(cmd, args = {}) {
-    const service = args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
+    const service =
+      args.service ||
+      cmd.service ||
+      (cmd.mget && (cmd.mget(_a.service) || cmd.mget(_a.name))) ||
+      (cmd.get && (cmd.get(_a.service) || cmd.get(_a.name))) ||
+      cmd.name;
     
+    console.log("AAA:62", service)
     switch (service) {
       case "change-permission":
         const newPrivilege = cmd.mget('privilege') || cmd.privilege;
         const memberId = cmd.mget('memberId') || cmd.memberId || this.id;
         
         if (newPrivilege && memberId) {
+          this.mset(_a.privilege, newPrivilege);
           this.triggerHandlers({
             service: "update-member-permission",
             memberId: memberId,
             privilege: newPrivilege,
             member: this
           });
+          this.reload();
         }
         break;
     }
