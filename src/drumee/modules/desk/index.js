@@ -67,7 +67,9 @@ class desk_module extends LetcBox {
    */
   async onDomRefresh() {
     this._pending = { available: false };
-    // this.updateWallpaper()
+    await Kind.waitFor('window_manager');
+    await Kind.waitFor('activity_panel');
+    await Kind.waitFor('activity_item');
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
