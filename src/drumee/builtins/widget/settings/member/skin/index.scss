@@ -39,13 +39,21 @@
   }
 
   &__name {
-    @include drumee.typo($color: var(--default-text-color), $size: 16px, $weight: 600);
+    @include drumee.typo(
+      $color: var(--default-text-color),
+      $size: 16px,
+      $weight: 600
+    );
     line-height: 20px;
     @include drumee.overflow-text;
   }
 
   &__email {
-    @include drumee.typo($color: var(--default-text-neutral), $size: 14px, $weight: 400);
+    @include drumee.typo(
+      $color: var(--default-text-neutral),
+      $size: 14px,
+      $weight: 400
+    );
     line-height: 18px;
     @include drumee.overflow-text;
   }
@@ -58,7 +66,6 @@
     flex-shrink: 0;
     position: relative;
     overflow: visible;
-    z-index: 50;
   }
 
   &__permission-trigger {
@@ -76,7 +83,11 @@
   }
 
   &__permission-label {
-    @include drumee.typo($color: var(--default-text-neutral), $size: 14px, $weight: 500);
+    @include drumee.typo(
+      $color: var(--default-text-neutral),
+      $size: 14px,
+      $weight: 500
+    );
     white-space: nowrap;
   }
 
@@ -92,7 +103,6 @@
 
   &__permission-dropdown {
     position: relative;
-    z-index: 100;
     overflow: visible;
   }
 
@@ -113,7 +123,11 @@
     height: 40px;
     cursor: pointer;
     transition: background-color 120ms ease;
-    @include drumee.typo($color: var(--default-text-color), $size: 14px, $weight: 400);
+    @include drumee.typo(
+      $color: var(--default-text-color),
+      $size: 14px,
+      $weight: 400
+    );
 
     svg {
       display: none;
