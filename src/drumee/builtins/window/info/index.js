@@ -1,19 +1,7 @@
-/*
- * decaffeinate suggestions:
- * DS001: Remove Babel/TypeScript constructor workaround
- * DS102: Remove unnecessary code created because of implicit returns
- * DS206: Consider reworking classes to avoid initClass
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : desk/mfs/recycle-bin
-//   TYPE : 
-// ==================================================================== *
+
 
 const mfsInteract = require('../interact');
 class __window_info extends mfsInteract {
-
 
   /**
    * 

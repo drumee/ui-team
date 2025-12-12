@@ -11,8 +11,9 @@ class ___editor_note extends __player {
   async initialize(opt = {}) {
     require('./skin');
     this.size = _K.docViewer;
+    opt.radio = Env.get("wm-radio");
     super.initialize(opt);
-    const now = Dayjs().format("DD-MMM-YYYY à HH:MM");
+    const now = Dayjs().format(Visitor.timeformat());
     if (opt.maiden) { // Maiden note
       delete opt.maiden;
       this.model.unset('maiden')
@@ -48,9 +49,6 @@ class ___editor_note extends __player {
     if (this.media) {
       this.copyPropertiesFrom(this.media);
     }
-    this.model.set({
-      radio: Env.get("wm-radio"),
-    });
     window.onbeforeunload = this.checkUnsavedWork.bind(this);
     this.lastActiveWindow = Wm.getActiveWindow();
 

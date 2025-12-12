@@ -4,7 +4,7 @@ const __skl_window_confirm_body = function (ui) {
   let message;
   const pfx = `${ui.fig.group}-confirm`;
   const messageInput = ui.mget(_a.message) || "";
-  const submessageInput = ui.mget(_a.submessage) || "No message";
+  const submessageInput = ui.mget(_a.submessage) || "";
 
   if (_.isString(messageInput)) {
     message = [
