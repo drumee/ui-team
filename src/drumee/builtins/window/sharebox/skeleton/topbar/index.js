@@ -1,13 +1,4 @@
-/*
- * decaffeinate suggestions:
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/main/docs/suggestions.md
- */
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : __dbg_path
-//   TYPE : Skelton
-// ==================================================================== *
+
 const { button } = require("../../../../skeleton/toolkit/buttons");
 
 const __skl_window_team_topbar = function (_ui_, icon) {
@@ -64,9 +55,9 @@ const __skl_window_team_topbar = function (_ui_, icon) {
     className: `${_ui_.fig.family}__buttons-wrapper`,
     kids: [
       button(_ui_, {
-        label: "Upload new File",
+        label: LOCALE.UPLOAD,
         className: `${_ui_.fig.family}__upload-button`,
-        service: "",
+        service: _e.upload,
         priority: "primary",
       }),
       settingsButton,
