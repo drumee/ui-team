@@ -4,75 +4,12 @@ const { button } = require("../../../../skeleton/toolkit");
  *
  * @param {*} ui
  * @param {*} opt
- */
-function nav_item(ui, ico, label, page) {
-  let fig = ui.fig.family;
-  let state = 0;
-  if (ui._page == page) state = 1;
-  return Skeletons.Box.X({
-    className: `${fig}__item`,
-    uiHandler: [ui],
-    radio: `nav-${ui._id}`,
-    state,
-    page,
-    service: `load-page`,
-    kidsOpt: { active: 0 },
-    kids: [
-      Skeletons.Button.Svg({
-        ico,
-        className: `${fig}__item-icon`,
-        uiHandler: ui,
-      }),
-      Skeletons.Note({
-        className: `${fig}__item-text`,
-        content: label,
-      }),
-    ],
-  });
-}
-
-/**
- * 
- * @param {*} ui 
- */
-function nav(ui) {
-  let fig = ui.fig.family;
-  const topics = Skeletons.Box.Y({
-    className: `${fig}__topics`,
-    kids: [
-      Skeletons.Note({
-        className: `${ui.fig.family}__title`,
-        content: LOCALE.SETTINGS,
-      }),
-      nav_item(ui, 'profile', 'Welcome', 0),
-      nav_item(ui, 'settings', 'User Guide', 1),
-      nav_item(ui, 'storage', 'Documentations', 2),
-      nav_item(ui, 'shield', 'Community', 3),
-    ],
-  });
-  const legals = Skeletons.Box.Y({
-    className: `${fig}__legals`,
-    kids: [
-      Skeletons.Note({
-        className: `${ui.fig.family}__legals-text`,
-        content: LOCALE.PRIVACY_POLICY,
-      }),
-      Skeletons.Note({
-        className: `${ui.fig.family}__legals-text`,
-        content: LOCALE.TERMS_OF_SERVICE
-      }),
-    ],
-  });
-  return [topics, legals]
-}
-/**
- *
- * @param {*} ui
- * @param {*} opt
  * @returns
  */
-function settings_body(ui) {
+function helpcenter_body(ui) {
   const fig = ui.fig.family;
+
+  const navbar = require("./navbar").default(ui);
 
   const header = Skeletons.Box.X({
     className: `${fig}__header`,
@@ -86,8 +23,8 @@ function settings_body(ui) {
         ico: _a.cross,
         className: `${ui.fig.group}__icon close`,
         service: _e.close,
-        uiHandler: [ui]
-      })
+        uiHandler: [ui],
+      }),
     ],
   });
 
@@ -97,23 +34,22 @@ function settings_body(ui) {
     sys_pn: _a.content,
   });
 
-
   const group = ui.fig.group;
-  const buttons = Skeletons.Box.X({
-    className: `${group}__buttons ${fig}__buttons`,
-    uiHandler: ui,
-    sys_pn: _a.footer,
-    dataset: { page: ui._page },
-    kids: [
-      button(ui, {
-        label: LOCALE.APPLY_ALL_AND_SAVE,
-        type: _a.toggle,
-        className: `${group}__button`,
-        service: _e.save,
-        priority: "primary",
-      }),
-    ],
-  });
+  // const buttons = Skeletons.Box.X({
+  //   className: `${group}__buttons ${fig}__buttons`,
+  //   uiHandler: ui,
+  //   sys_pn: _a.footer,
+  //   dataset: { page: ui._page },
+  //   kids: [
+  //     button(ui, {
+  //       label: LOCALE.APPLY_ALL_AND_SAVE,
+  //       type: _a.toggle,
+  //       className: `${group}__button`,
+  //       service: _e.save,
+  //       priority: "primary",
+  //     }),
+  //   ],
+  // });
 
   return Skeletons.Box.G({
     className: `${fig}__main`,
@@ -121,14 +57,18 @@ function settings_body(ui) {
     kids: [
       Skeletons.Box.Y({
         className: `${fig}__nav`,
-        kids: nav(ui),
+        kids: navbar,
       }),
       Skeletons.Box.Y({
         className: `${fig}__container`,
-        kids: [header, content, buttons],
+        kids: [
+          header,
+          content,
+          // buttons
+        ],
       }),
     ],
   });
 }
 
-export default settings_body;
+export default helpcenter_body;
