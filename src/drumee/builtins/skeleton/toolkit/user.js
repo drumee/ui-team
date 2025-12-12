@@ -24,8 +24,8 @@ function menu_items(ui) {
         ico: 'desktop_questionmark',
         className: `${pfx}-item helpdesk`,
         label: LOCALE.HELPDESK,
-        service: _e.launch,
-        respawn: 'settings_helpcenter'
+        service: 'open-user-guide',
+        // respawn: 'settings_helpcenter'
       }),
       Skeletons.Button.Label({
         ico: 'desktop_disconnect',

@@ -465,6 +465,16 @@ class desk_module extends LetcBox {
   // }
 
   /**
+   * 
+   * @param {*} kind 
+   */
+  openModel(kind) {
+    this.ensurePart("desk-content").then((p) => {
+      p.__wrapperModal.feed({ kind, uiHandler: [this] });
+    });
+  }
+
+  /**
    * @param {Object} c
    */
   checkBrowserSupport(c) {
@@ -617,13 +627,12 @@ class desk_module extends LetcBox {
       case "close-popup":
         return this.__wrapperPopup.clear();
 
-      case "open-settings":
-        return this.ensurePart("desk-content").then((p) => {
-          p.__windowsLayer.feed({
-            kind: "window_wallpaper_settings",
-            uiHandler: [this]
-          });
-        });
+      case 'open-settings':
+        return this.openModel("swindow_wallpaper_settings");
+
+      case 'open-user-guide':
+        return this.openModel("settings_helpcenter");
+
 
       case "open-chat":
         return Wm.launch({ kind: 'window_bigchat', source: cmd }, { explicit: 1, singleton: 1 });
@@ -633,13 +642,13 @@ class desk_module extends LetcBox {
         return uiRouter.setWallpaper(args.data);
 
       case "activity-update":
-        this.ensurePart("activity-count").then((p) => {
+        return this.ensurePart("activity-count").then((p) => {
           let content = args.unread_count || 0;
           if (parseInt(content) > 99) content = '99+';
           p.set({ content })
           p.el.dataset.count = content;
         })
-        return;
+
       default:
         Wm.unselect();
     }
