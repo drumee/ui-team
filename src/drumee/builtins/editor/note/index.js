@@ -13,7 +13,7 @@ class ___editor_note extends __player {
     this.size = _K.docViewer;
     opt.radio = Env.get("wm-radio");
     super.initialize(opt);
-    const now = Dayjs().format(Visitor.timeformat());
+    const now = Dayjs().format("DD-MMM-YYYY@HH:MM");
     if (opt.maiden) { // Maiden note
       delete opt.maiden;
       this.model.unset('maiden')
@@ -210,11 +210,11 @@ class ___editor_note extends __player {
       pid,
       id: nid,
       position,
-      filename: `${filename}.html`,
+      filename: `${filename}.md`,
       filetype: _a.note,
-      metadata: {
-        dataType: "drumee.note"
-      },
+      // metadata: {
+      //   dataType: "drumee.note"
+      // },
       content: this.__textContent.getHTML()
     }
     this.postService(opt, { async: 1 }).then((data) => {

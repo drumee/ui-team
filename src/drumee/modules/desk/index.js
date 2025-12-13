@@ -630,7 +630,7 @@ class desk_module extends LetcBox {
         return this.__wrapperPopup.clear();
 
       case 'open-settings':
-        return this.openModel("swindow_wallpaper_settings");
+        return this.openModel("window_wallpaper_settings");
 
       case 'open-user-guide':
         return this.openModel("settings_helpcenter");

@@ -1,4 +1,3 @@
-const { folder_logo } = require("../../../../skeleton/toolkit/logo");
 const { button } = require("../../../../skeleton/toolkit/buttons");
 
 /**
@@ -6,7 +5,8 @@ const { button } = require("../../../../skeleton/toolkit/buttons");
  * @param {*} ui
  * @param {*} opt
  */
-function item(ui, icon, label, price, capacity, recommend) {
+function item(ui, opt) {
+  const { icon, label, price, capacity, recommend, plan } = opt;
   let capacityBadge = "";
   let recommendBadge = "";
   if (capacity) {
@@ -79,10 +79,13 @@ function item(ui, icon, label, price, capacity, recommend) {
     uiHandler: ui,
   });
 
+  let state = 0;
+  if (Visitor.profile().category == plan) state = 1;
   return Skeletons.Box.X({
     className: `${ui.fig.family}__item`,
     sys_pn: "item",
-    uiHandler: ui,
+    uiHandler: [ui],
+    initialState: state,
     radio: `color-radio-${ui._id}`,
     kids: [container, checkbox],
   });
@@ -96,10 +99,10 @@ function settings_content(ui) {
     className: `${fig}__item-wrapper`,
 
     kids: [
-      item(ui, "c1", "Drumee Free", "4.99", "5G"),
-      item(ui, "c2", "Drumee Plus", "13.99", "20G", true),
-      item(ui, "c3", "Drumee Premium", "39.99", "50G"),
-      item(ui, "c4", "Enterprise", "79.99", "99G"),
+      item(ui, { icon: "c1", label: "Drumee Free", price: "4.99", capacity: "5G", plan: "trial" }),
+      item(ui, { icon: "c2", label: "Drumee Plus", price: "13.99", capacity: "20G", recommend: true, plan: "pro" }),
+      item(ui, { icon: "c3", label: "Drumee Premium", price: "39.99", capacity: "50G", plan: "premium" }),
+      item(ui, { icon: "c4", label: "Enterprise", price: "79.99", capacity: "99G", plan: "enterprise" }),
     ],
   });
 
@@ -118,7 +121,7 @@ function settings_content(ui) {
         label: "Subscribe Now",
         type: _a.toggle,
         className: `${group}__button`,
-        service: _e.close,
+        service: "checkout",
         priority: "primary",
       }),
     ],
