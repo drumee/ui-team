@@ -38,7 +38,7 @@
     height: 100%;
     max-width: 400px;
     @include drumee.typo(
-      $size: 32px,
+      $size: 26px,
       $line: 24px,
       $weight: 400,
       $color: var(--default-text-reverse)
