@@ -1,38 +1,35 @@
-const ANIM          = 'bhv_anim';
-const _parent_ready = "parent:ready";
-const _rendered     = "rendered";
+
 const Rectangle = require('rectangle-node');
+class rectangle extends LetcBox {
 
-//####################################
-// The magic box
-// ===============
-//####################################
-class __box extends LetcBox {
 
-// ===========================================================
-//
-// ===========================================================
   constructor(...args) {
     super(...args);
     this.initBounds = this.initBounds.bind(this);
     this.intersect = this.intersect.bind(this);
   }
 
+  /**
+   * 
+   * @returns 
+   */
   initBounds() {
-    const f =()=> {
+    const f = () => {
       return this.bbox = new Rectangle(
         this.$el.offset().left,
         this.$el.offset().top,
-        this.$el.width(), //r.width, 
-        this.$el.height() // r.height
+        this.$el.width(),
+        this.$el.height()
       );
     };
     return this.waitElement(this.el, f);
   }
 
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} item 
+   * @returns 
+   */
   intersect(item) {
     const mbox = item.bbox;
     if ((mbox == null)) {
@@ -46,4 +43,4 @@ class __box extends LetcBox {
   }
 }
 
-module.exports = __box;
+module.exports = rectangle;

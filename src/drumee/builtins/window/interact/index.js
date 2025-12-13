@@ -899,7 +899,6 @@ class __window_interact extends windowCore {
         return;
       }
     }
-    this.debug("AAA:8880", opt)
     switch (position) {
       case -1:
         this.__list.prepend(opt);
@@ -979,6 +978,7 @@ class __window_interact extends windowCore {
    * @param {*} all
    */
   unselect(all = 1) {
+    console.trace()
     this.captured = {};
     if (all > 1) {
       pointerDragged = false;
