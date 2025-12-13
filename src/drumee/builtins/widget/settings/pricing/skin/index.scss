@@ -231,6 +231,10 @@
     align-self: stretch;
     cursor: pointer;
 
+    * {
+      pointer-events: none;
+    }
+
     &[data-state="1"] {
       border: 1px solid var(--primary-500);
 

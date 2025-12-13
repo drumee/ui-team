@@ -36,6 +36,7 @@ class __window_manager extends push {
       // ...exportMenu,
       _a.separator,
       _a.preferences,
+      "pricing"
     ];
     this._handelKbdEvents = this._handelKbdEvents.bind(this);
     RADIO_KBD.on(_e.keyup, this._handelKbdEvents)

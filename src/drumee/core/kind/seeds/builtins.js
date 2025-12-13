@@ -215,7 +215,6 @@ module.exports = {
   schedule_recipient:function(s,f){import('window/schedule/widget/recipient').then(m=>{s(m.default)}).catch(f)},
   selection:function(s,f){import('window/selection').then(m=>{s(m.default)}).catch(f)},
   user:function(s,f){import('desk/user').then(m=>{s(m.default)}).catch(f)},
-  window_account:function(s,f){import('window/account').then(m=>{s(m.default)}).catch(f)},
   window_addressbook:function(s,f){import('window/addressbook').then(m=>{s(m.default)}).catch(f)},
   window_bigchat:function(s,f){import('window/bigchat').then(m=>{s(m.default)}).catch(f)},
   window_channel:function(s,f){import('window/channel').then(m=>{s(m.default)}).catch(f)},

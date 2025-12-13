@@ -170,7 +170,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | schedule_recipient | window/schedule/widget/recipient | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/schedule/widget/recipient/index.js |
 | selection | window/selection | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/selection/index.js |
 | user | desk/user | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/user/index.js |
-| window_account | window/account | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/account/index.js |
 | window_addressbook | window/addressbook | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/index.js |
 | window_bigchat | window/bigchat | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/index.js |
 | window_channel | window/channel | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/channel/index.js |

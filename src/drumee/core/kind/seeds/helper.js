@@ -215,7 +215,6 @@ const a = {
   schedule_recipient:"window/schedule/widget/recipient",
   selection:"window/selection",
   user:"desk/user",
-  window_account:"window/account",
   window_addressbook:"window/addressbook",
   window_bigchat:"window/bigchat",
   window_channel:"window/channel",
