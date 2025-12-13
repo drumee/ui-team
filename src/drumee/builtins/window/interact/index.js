@@ -978,7 +978,6 @@ class __window_interact extends windowCore {
    * @param {*} all
    */
   unselect(all = 1) {
-    console.trace()
     this.captured = {};
     if (all > 1) {
       pointerDragged = false;
