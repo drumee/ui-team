@@ -196,8 +196,8 @@ function settings_body(ui, opt) {
                   ],
                 }),
                 Skeletons.Button.Svg({
-                  ico: "carret-right",
-                  className: `${fig}__chevron`,
+                  ico: "arrow--pages",
+                  className: `${fig}__arrow-next`,
                   service: _a.members,
                   uiHandler: [ui],
                 })

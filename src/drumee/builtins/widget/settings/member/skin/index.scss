@@ -39,22 +39,22 @@
   }
 
   &__name {
-    @include drumee.typo(
-      $color: var(--default-text-color),
-      $size: 16px,
-      $weight: 600
-    );
-    line-height: 20px;
+    color: var(--Neutral-900, #222732);
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 22px; 
+    letter-spacing: 0.14px;
     @include drumee.overflow-text;
   }
 
   &__email {
-    @include drumee.typo(
-      $color: var(--default-text-neutral),
-      $size: 14px,
-      $weight: 400
-    );
-    line-height: 18px;
+    color: var(--Neutral-600, #8C929C);
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 22px; 
+    letter-spacing: 0.14px;
     @include drumee.overflow-text;
   }
 
@@ -80,14 +80,21 @@
     &:hover {
       background-color: var(--default-bg-hover);
     }
+
+    
+    &__arrow-down {
+      transform: rotate(180deg);
+      color: var(--default-text-neutral);
+    }
   }
 
   &__permission-label {
-    @include drumee.typo(
-      $color: var(--default-text-neutral),
-      $size: 14px,
-      $weight: 500
-    );
+    color: var(--Neutral-600, #8C929C);
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 22px; /* 157.143% */
+    letter-spacing: 0.14px;
     white-space: nowrap;
   }
 
@@ -101,10 +108,41 @@
     }
   }
 
-  &__permission-dropdown {
-    position: relative;
-    overflow: visible;
+  &__arrow-down {
+    color: #AFB3BB;
+    flex-shrink: 0;
+    transform: rotate(90deg);
+    transition: transform 200ms ease;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      color: #AFB3BB;
+    }
   }
+
+  // Rotate arrow when dropdown is open
+  // Menu-topic with permission-dropdown class will have data-state attribute
+  &__permission-dropdown {
+    &[data-state="1"],
+    &[data-state="open"] {
+      .menu-topic-trigger .settings-member__arrow-down,
+      .settings-member__permission-trigger .settings-member__arrow-down {
+        transform: rotate(270deg);
+      }
+    }
+  }
+
+  // Alternative selector for menu-topic element
+  .menu-topic {
+    &[data-state="1"],
+    &[data-state="open"] {
+      .settings-member__arrow-down {
+        transform: rotate(270deg);
+      }
+    }
+  }
+
 
   &__permission-menu-items {
     background: var(--ewhite);
@@ -117,12 +155,32 @@
     overflow: visible;
   }
 
+  &__permission-menu-item-wrapper {
+    width: 100%;
+    cursor: pointer;
+    
+    &:hover {
+      .settings-member__permission-menu-item {
+        background-color: var(--default-bg-hover);
+      }
+    }
+
+    &.active {
+      .settings-member__permission-menu-item {
+        background-color: var(--primary-100);
+        font-weight: 400;
+        color: var(--primary-600);
+      }
+    }
+  }
+
   &__permission-menu-item {
     padding: 10px 12px;
     border-radius: 6px;
     height: 40px;
     cursor: pointer;
     transition: background-color 120ms ease;
+    width: 100%;
     @include drumee.typo(
       $color: var(--default-text-color),
       $size: 14px,
@@ -138,8 +196,9 @@
     }
 
     &.active {
-      background-color: var(--default-bg-hover);
-      font-weight: 600;
+      background-color: var(--primary-100);
+      font-weight: 400;
+      color: var(--primary-600);
     }
   }
 

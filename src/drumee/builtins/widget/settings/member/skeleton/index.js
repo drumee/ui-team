@@ -27,12 +27,39 @@ module.exports = function (ui) {
     });
   }
 
+  // Resolve permission label based on privilege value (similar to permission/index.js)
   const resolveLabel = (p) => {
-    if (p && (_K.permission.owner & p)) return LOCALE.OWNER;
-    if (p && (_K.permission.modify & p)) return LOCALE.ALL_PERMISSIONS || "All permissions";
-    if (p && (_K.permission.upload & p)) return LOCALE.UPLOAD_ONLY || "Upload only";
-    if (p && (_K.permission.read & p)) return LOCALE.DOWNLOAD_ONLY || "Download only";
-    return LOCALE.ALL_PERMISSIONS || "All permissions";
+    if (!p) return LOCALE.PERMISSION_READ || "Download only";
+    
+    const privilege = parseInt(p);
+    
+    // Check owner first
+    if (privilege === _K.privilege.owner || privilege === _K.permission.owner) {
+      return LOCALE.OWNER;
+    }
+    
+    // Check admin
+    if (privilege === _K.privilege.admin || privilege === _K.permission.admin) {
+      return LOCALE.ADMINISTRATOR || "Administrator";
+    }
+    
+    // Check delete/modify (all permissions)
+    if (privilege === _K.privilege.delete || privilege === _K.permission.modify) {
+      return LOCALE.PERMISSION_DELETE_ORGANIZE || LOCALE.ALL_PERMISSIONS || "All permissions";
+    }
+    
+    // Check write/upload (upload and download)
+    if (privilege === _K.privilege.write || privilege === _K.permission.upload || privilege === _K.permission.download) {
+      return LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only";
+    }
+    
+    // Check read/view (download only)
+    if (privilege === _K.privilege.read || privilege === _K.permission.view || privilege === _K.permission.read) {
+      return LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only";
+    }
+    
+    // Default fallback
+    return LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only";
   };
 
   const permissionLabel = resolveLabel(privilege);
@@ -53,12 +80,25 @@ module.exports = function (ui) {
     ],
   });
 
-  const isOwner = privilege && (_K.permission.owner & privilege);
+  const isOwner = privilege && (parseInt(privilege) === _K.privilege.owner || parseInt(privilege) === _K.permission.owner);
   
+  // Permission options using privilege values (not permission flags)
   const permissionOptions = [
-    { label: LOCALE.ALL_PERMISSIONS || "All permissions", value: "all", privilege: _K.permission.modify },
-    { label: LOCALE.UPLOAD_ONLY || "Upload only", value: "upload", privilege: _K.permission.upload },
-    { label: LOCALE.DOWNLOAD_ONLY || "Download only", value: "download", privilege: _K.permission.read },
+    { 
+      label: LOCALE.PERMISSION_DELETE_ORGANIZE || LOCALE.ALL_PERMISSIONS || "All permissions", 
+      value: "all", 
+      privilege: _K.privilege.delete // Use privilege value, not permission flag
+    },
+    { 
+      label: LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only", 
+      value: "upload", 
+      privilege: _K.privilege.write // Use privilege value, not permission flag
+    },
+    { 
+      label: LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only", 
+      value: "download", 
+      privilege: _K.privilege.read // Use privilege value, not permission flag
+    },
   ];
 
   const menuTrigger = Skeletons.Box.X({
@@ -69,8 +109,8 @@ module.exports = function (ui) {
         className: `${prefix}__permission-label`,
       }),
       !isOwner ? Skeletons.Button.Svg({
-        ico: "carret-down",
-        className: `${prefix}__permission-chevron`,
+        ico: "arrow--pages",
+        className: `${prefix}__arrow-down`,
       }) : undefined,
     ],
   });
@@ -78,17 +118,29 @@ module.exports = function (ui) {
   const menuItems = !isOwner ? Skeletons.Box.Y({
     className: `${prefix}__permission-menu-items`,
     kids: permissionOptions.map((opt) => {
-      const isActive = privilege && ((privilege & opt.privilege) === opt.privilege);
-      return Skeletons.Button.Label({
-        className: `${prefix}__permission-menu-item${isActive ? " active" : ""}`,
-        label: opt.label,
-        ico: null,
+      // Check if current privilege matches the option privilege value
+      const currentPrivilege = parseInt(privilege) || 0;
+      const isActive = currentPrivilege === opt.privilege;
+      const memberId = ui.mget(_a.entity) || ui.mget(_a.id);
+      
+      // Wrap Button.Label in a Box with service and dataset to ensure event is triggered correctly
+      return Skeletons.Box.X({
+        className: `${prefix}__permission-menu-item-wrapper${isActive ? " active" : ""}`,
         service: "change-permission",
         name: "change-permission",
         uiHandler: [ui],
-        privilege: opt.privilege,
-        memberId: ui.mget(_a.entity) || ui.mget(_a.id),
-        active: isActive ? 1 : 0,
+        dataset: {
+          privilege: opt.privilege,
+          memberId: memberId,
+        },
+        kids: [
+          Skeletons.Button.Label({
+            className: `${prefix}__permission-menu-item${isActive ? " active" : ""}`,
+            label: opt.label,
+            ico: null,
+            active: isActive ? 1 : 0,
+          })
+        ],
       });
     }),
   }) : undefined;
