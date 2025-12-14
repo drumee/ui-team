@@ -19,10 +19,12 @@ class settings_account extends LetcBox {
     this.getApi = this.getApi.bind(this);
     this.skeletons = [
       require("./skeleton/profile").default,
+      require("./skeleton/preferences").default,
+      require("./skeleton/billing").default,
       require("./skeleton/storage").default,
       require("./skeleton/security").default
     ]
-    this.tab_name = [LOCALE.PROFILE, LOCALE.STORAGE, LOCALE.SECURITY]
+    this.tab_name = [LOCALE.PROFILE, LOCALE.PREFERENCES, "Billing Information", LOCALE.STORAGE, LOCALE.SECURITY]
   }
 
   /**
