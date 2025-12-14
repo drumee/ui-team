@@ -3,6 +3,7 @@
 @use "../../skin" as *;
 @use "storage";
 @use "security";
+@use "billing";
 @use "modal";
 
 .settings-account {
@@ -33,7 +34,6 @@
     padding: var(--spacer-5);
     justify-content: center;
     align-items: center;
-
   }
 
   &__main {
@@ -102,7 +102,6 @@
       line-height: 18px;
       color: var(--neutral-600);
     }
-
   }
 
   &__topics {
@@ -172,7 +171,7 @@
       position: absolute;
       width: 0;
       height: 5px;
-      background: linear-gradient(270deg, #DCB2FF 0%, #5756FF 100%);
+      background: linear-gradient(270deg, #dcb2ff 0%, #5756ff 100%);
       bottom: -16px;
       border-radius: 10px;
       transition: all 1s;
@@ -184,7 +183,6 @@
       width: 0;
       height: 0;
     }
-
 
     &-main {
       height: 70px;
@@ -226,7 +224,6 @@
     &-main {
       width: 100%;
       gap: 16px;
-
     }
 
     &-field {
@@ -302,5 +299,86 @@
 
   &__button-main {
     margin-top: auto;
+  }
+
+  &-billing {
+    &.main {
+      gap: 30px;
+    }
+
+    &__header {
+      &.main {
+        padding: 20px;
+        background-color: var(--neutral-200);
+        align-items: center;
+        justify-content: space-around;
+        width: 400px;
+        height: 60px;
+        border-radius: 12px;
+      }
+      &.item {
+        cursor: pointer;
+        &[data-state="1"] {
+          background-color: white;
+          padding: 12px;
+          border-radius: 6px;
+          color: var(--neutral-900);
+        }
+      }
+      &.discount {
+        margin-left: 4px;
+        color: lightgreen;
+        font-weight: 600;
+      }
+    }
+
+    &__content {
+      &.main {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+      &.item {
+        border: 1px solid var(--neutral-300);
+        border-radius: 12px;
+        padding: 20px;
+        gap: 20px;
+      }
+
+      &.header {
+        gap: 10px;
+      }
+      &.title {
+        color: var(--neutral-900);
+
+        font-weight: 600;
+        font-size: 20px;
+      }
+      &.subtitle {
+        font-weight: 600;
+        color: var(--neutral-900);
+
+        font-size: 14px;
+      }
+      &.description {
+        color: var(--neutral-600);
+        font-size: 14px;
+      }
+
+      &.button {
+        justify-content: center;
+        align-items: center;
+        border: 1px solid var(--neutral-300);
+        border-radius: 12px;
+        padding: 6px;
+
+        &.primary {
+          color: white;
+          background-color: black;
+        }
+        &.secondary {
+          color: black;
+        }
+      }
+    }
   }
 }

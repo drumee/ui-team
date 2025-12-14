@@ -1,0 +1,16 @@
+@use "sass:meta";
+@use "mixins/drumee";
+@use "../../skin" as *;
+
+.settings-accoun-billing {
+  &__header {
+    &.main {
+      padding: 20px;
+      background-color: var(--neutral-200);
+      align-items: center;
+      justify-content: space-around;
+      width: 400px;
+      border-radius: 12px;
+    }
+  }
+}
