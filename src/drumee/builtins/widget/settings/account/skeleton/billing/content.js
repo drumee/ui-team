@@ -49,8 +49,8 @@ function item(ui, title, subtitle, description, buttonTitle, features) {
     });
   }
 
-  const featureItems = features.map((f) =>
-    Skeletons.Box.X({
+  const featureItems = features.map((f) => {
+    return Skeletons.Box.X({
       className: `${fig} features item`,
       uiHandler: [ui],
 
@@ -60,11 +60,11 @@ function item(ui, title, subtitle, description, buttonTitle, features) {
         }),
       ],
     })
-  );
+  });
 
   const featuresWrapper = Skeletons.Box.Y({
     className: `${fig} features`,
-    kids: [featureItems],
+    kids: featureItems,
   });
 
   return Skeletons.Box.Y({
