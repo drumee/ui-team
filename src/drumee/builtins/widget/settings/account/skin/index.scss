@@ -8,7 +8,7 @@
 
 .settings-account {
   &__ui {
-    min-height: 640px;
+    height: 640px;
     // width: 805px;
     background-color: var(--white);
     border-radius: var(--corner-radius-4);
@@ -80,6 +80,7 @@
     padding: var(--spacer-5);
     gap: var(--spacer-5);
     flex: 1;
+    overflow: auto;
   }
 
   &__spacer {
@@ -306,7 +307,7 @@
       gap: 30px;
     }
 
-    &__header {
+    &__tabs-trigger {
       &.main {
         padding: 20px;
         background-color: var(--neutral-200);
@@ -378,6 +379,59 @@
         &.secondary {
           color: black;
         }
+      }
+
+      &.features {
+        gap: 20px;
+        &.__item {
+          gap: 10px;
+          align-items: center;
+        }
+        &.icon {
+          width: 16px;
+          height: 16px;
+        }
+        &.description {
+          font-size: 13px;
+          padding-bottom: 4px;
+          color: var(--neutral-600);
+        }
+      }
+      &.popular-badge {
+        background-color: var(--primary-500);
+        color: white;
+        border-radius: 24px;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        padding: 10px;
+        top: -14px;
+        left: 50%;
+        font-size: 10px;
+        transform: translateX(-50%);
+      }
+    }
+
+    &__footer {
+      &.main {
+        gap: 20px;
+        background-color: var(--neutral-200);
+        padding: 20px;
+        border-radius: 12px;
+      }
+      &.header {
+        font-weight: 600;
+        font-size: 20px;
+      }
+      &.title {
+        font-weight: 600;
+        margin-right: 10px;
+      }
+      &.email {
+        cursor: pointer;
+        text-decoration: underline;
+        color: var(--primary-500);
+        margin-left: 10px;
       }
     }
   }

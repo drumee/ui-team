@@ -20,7 +20,7 @@ module.exports = function (ui) {
       online: ui.mget(_a.online),
       live_status: 1,
     });
-  } else { 
+  } else {
     profile_icon = Skeletons.Button.Svg({
       ico: "desktop_contactbook",
       className: `${prefix}__avatar profile-icon desktop_contactbook`,
@@ -30,34 +30,34 @@ module.exports = function (ui) {
   // Resolve permission label based on privilege value (similar to permission/index.js)
   const resolveLabel = (p) => {
     if (!p) return LOCALE.PERMISSION_READ || "Download only";
-    
+
     const privilege = parseInt(p);
-    
+
     // Check owner first
     if (privilege === _K.privilege.owner || privilege === _K.permission.owner) {
       return LOCALE.OWNER;
     }
-    
+
     // Check admin
     if (privilege === _K.privilege.admin || privilege === _K.permission.admin) {
-      return LOCALE.ADMINISTRATOR || "Administrator";
+      return "All permissions" || LOCALE.ADMINISTRATOR || "Administrator";
     }
-    
+
     // Check delete/modify (all permissions)
     if (privilege === _K.privilege.delete || privilege === _K.permission.modify) {
       return LOCALE.PERMISSION_DELETE_ORGANIZE || LOCALE.ALL_PERMISSIONS || "All permissions";
     }
-    
+
     // Check write/upload (upload and download)
     if (privilege === _K.privilege.write || privilege === _K.permission.upload || privilege === _K.permission.download) {
       return LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only";
     }
-    
+
     // Check read/view (download only)
     if (privilege === _K.privilege.read || privilege === _K.permission.view || privilege === _K.permission.read) {
       return LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only";
     }
-    
+
     // Default fallback
     return LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only";
   };
@@ -81,29 +81,29 @@ module.exports = function (ui) {
   });
 
   const isOwner = privilege && (parseInt(privilege) === _K.privilege.owner || parseInt(privilege) === _K.permission.owner);
-  
+
   // Permission options using privilege values (not permission flags)
   const permissionOptions = [
-    { 
-      label: LOCALE.PERMISSION_DELETE_ORGANIZE || LOCALE.ALL_PERMISSIONS || "All permissions", 
-      value: "all", 
+    {
+      label: LOCALE.PERMISSION_DELETE_ORGANIZE || LOCALE.ALL_PERMISSIONS || "All permissions",
+      value: "all",
       privilege: _K.privilege.delete // Use privilege value, not permission flag
     },
-    { 
-      label: LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only", 
-      value: "upload", 
+    {
+      label: LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only",
+      value: "upload",
       privilege: _K.privilege.write // Use privilege value, not permission flag
     },
-    { 
-      label: LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only", 
-      value: "download", 
+    {
+      label: LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only",
+      value: "download",
       privilege: _K.privilege.read // Use privilege value, not permission flag
     },
   ];
 
   const menuTrigger = Skeletons.Box.X({
     className: `${prefix}__permission-trigger`,
-    kids: [   
+    kids: [
       Skeletons.Note({
         content: permissionLabel,
         className: `${prefix}__permission-label`,
@@ -122,13 +122,15 @@ module.exports = function (ui) {
       const currentPrivilege = parseInt(privilege) || 0;
       const isActive = currentPrivilege === opt.privilege;
       const memberId = ui.mget(_a.entity) || ui.mget(_a.id);
-      
+
       // Wrap Button.Label in a Box with service and dataset to ensure event is triggered correctly
       return Skeletons.Box.X({
         className: `${prefix}__permission-menu-item-wrapper${isActive ? " active" : ""}`,
         service: "change-permission",
         name: "change-permission",
         uiHandler: [ui],
+        privilege: opt.privilege,
+        memberId: memberId,
         dataset: {
           privilege: opt.privilege,
           memberId: memberId,
@@ -144,7 +146,7 @@ module.exports = function (ui) {
       });
     }),
   }) : undefined;
-
+  console.log("AAA:147", menuItems)
   const permission = !isOwner ? Skeletons.Box.X({
     className: `${prefix}__permission`,
     kids: [{
