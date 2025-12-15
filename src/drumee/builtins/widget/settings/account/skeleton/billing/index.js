@@ -6,13 +6,20 @@
  */
 function billing(ui) {
   const fig = `${ui.fig.family}-billing`;
-  const header = require("./header").default(ui);
-  const content = require("./content").default(ui);
+  const tabsTrigger = require("./tabs-trigger").default(ui);
+  const monthly = require("./monthly").default(ui);
+  const yearly = require("./yearly").default(ui);
+  const footer = require("./footer").default(ui);
 
   return Skeletons.Box.Y({
     className: `${fig} main`,
     debug: __filename,
-    kids: [header, content],
+    kids: [
+      tabsTrigger,
+      // monthly,
+      yearly,
+      footer,
+    ],
   });
 }
 

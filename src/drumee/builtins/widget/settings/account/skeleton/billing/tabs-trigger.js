@@ -1,5 +1,5 @@
 function item(ui, content, discount) {
-  const fig = `${ui.fig.family}-billing__header`;
+  const fig = `${ui.fig.family}-billing__tabs-trigger`;
 
   let discountItem = "";
   if (discount) {
@@ -23,8 +23,8 @@ function item(ui, content, discount) {
   });
 }
 
-function billing_header(ui) {
-  const fig = `${ui.fig.family}-billing__header`;
+function billing_tabs_trigger(ui) {
+  const fig = `${ui.fig.family}-billing__tabs-trigger`;
 
   return Skeletons.Box.X({
     className: `${fig} main`,
@@ -34,4 +34,4 @@ function billing_header(ui) {
   });
 }
 
-export default billing_header;
+export default billing_tabs_trigger;
