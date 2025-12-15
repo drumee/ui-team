@@ -45,7 +45,6 @@ function item(
           content: buttonTitle,
           service: "checkout",
           plan,
-          state,
           description,
         }),
       ],
