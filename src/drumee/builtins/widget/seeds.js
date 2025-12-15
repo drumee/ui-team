@@ -7,6 +7,7 @@ module.exports = {
   widget_chat: './chat',
   settings_folder: './settings/folder',
   settings_hub: './settings/hub',
+  settings_hub_edit: './settings/hub-edit',
   settings_members_list: './settings/members-list',
   settings_helpcenter: './settings/helpcenter',
   settings_member: './settings/member',

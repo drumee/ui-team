@@ -1,0 +1,199 @@
+/**
+ * Time validity section with radio buttons for Unlimited and Set Limit
+ */
+export default function (_ui_, mode = _a.view, type = null) {
+  const validityFig = `${_ui_.fig.family}-validity`;
+
+  let _validitySwitchState = 0;
+  let _validityMode = _a.open;
+  if ((_ui_.data?.dmz_expiry == _a.infinity) && (type != 'toggle-edit')) {
+    _validitySwitchState = 1;
+    _validityMode = _a.closed;
+  }
+
+  // Radio button options
+  const unlimitedOption = {
+    value: _a.infinity,
+    label: LOCALE.UNLIMITED || "Unlimited",
+    description: LOCALE.UNLIMITED_DESCRIPTION || "Members can access to the folder at any time.",
+  };
+
+  const setLimitOption = {
+    value: _a.limited,
+    label: LOCALE.SET_LIMIT || "Set Limit",
+    description: LOCALE.SET_LIMIT_DESCRIPTION || "Members will only be able to access the folder during specific times.",
+  };
+
+  const currentMode = _ui_.formData?.validity_mode || _a.infinity;
+  const isUnlimited = currentMode === _a.infinity;
+
+  // Radio buttons
+  const unlimitedRadio = Skeletons.Button.Svg({
+    icons: ["radio-unchecked", "radio-checked"],
+    className: `${validityFig}__radio`,
+    state: isUnlimited ? 1 : 0,
+    service: "toggle-validity-mode",
+    uiHandler: _ui_,
+    _value: _a.infinity,
+  });
+
+  const setLimitRadio = Skeletons.Button.Svg({
+    icons: ["radio-unchecked", "radio-checked"],
+    className: `${validityFig}__radio`,
+    state: !isUnlimited ? 1 : 0,
+    service: "toggle-validity-mode",
+    uiHandler: _ui_,
+    _value: _a.limited,
+  });
+
+  // Time inputs (shown when Set Limit is selected)
+  let days = null;
+  let hours = null;
+  let action = null;
+
+  if (mode == _a.edit && !isUnlimited) {
+    action = Skeletons.Button.Label({
+      className: `${validityFig}__save-btn`,
+      label: LOCALE.OK || "Ok",
+      service: 'save-validity',
+      uiHandler: [_ui_],
+    });
+
+    days = Skeletons.EntryBox({
+      className: `${validityFig}__entry validity-entry days`,
+      uiHandler: _ui_,
+      placeholder: 'dd',
+      service: '',
+      type: _a.number,
+      sys_pn: 'month-setting-input',
+      autocomplete: _a.off,
+      value: _ui_.formData?.days || '',
+      name: 'days',
+      formItem: 'days',
+      min: 0,
+      max: 999,
+    });
+
+    hours = Skeletons.EntryBox({
+      className: `${validityFig}__entry validity-entry hours`,
+      uiHandler: _ui_,
+      service: '',
+      placeholder: 'hh',
+      type: _a.number,
+      sys_pn: 'hours-setting-input',
+      autocomplete: _a.off,
+      value: _ui_.formData?.hours || '',
+      name: 'hours',
+      formItem: 'hours',
+      min: 0,
+      max: 23,
+    });
+  }
+
+  if (mode == _a.view) {
+    days = Skeletons.Note({
+      className: `${validityFig}__note validity-entry-text`,
+      content: _ui_.formData?.days || '0'
+    });
+
+    hours = Skeletons.Note({
+      className: `${validityFig}__note validity-entry-text`,
+      content: _ui_.formData?.hours || '0'
+    });
+  }
+
+  // Only show setValidityWrapper when "Set Limit" is selected (not unlimited)
+  const setValidityWrapper = !isUnlimited ? Skeletons.Box.X({
+    className: `${validityFig}__set-validity`,
+    sys_pn: 'set-validity-wrapper',
+    dataset: {
+      mode: _a.open
+    },
+    kids: [
+      Skeletons.Box.X({
+        className: `${validityFig}__validity-action-wrapper ${mode}`,
+        kids: [
+          days,
+          days ? Skeletons.Note({
+            className: `${validityFig}__days-caption`,
+            content: LOCALE.DAYS || "Days"
+          }) : undefined,
+          hours,
+          hours ? Skeletons.Note({
+            className: `${validityFig}__hours-caption`,
+            content: LOCALE.HOURS || "Hours"
+          }) : undefined,
+          action
+        ].filter(Boolean)
+      }),
+    ]
+  }) : undefined;
+
+  return Skeletons.Box.Y({
+    className: `${validityFig}__section`,
+    sys_pn: 'validity-content',
+    kids: [
+      Skeletons.Note({
+        className: `${validityFig}__title`,
+        content: LOCALE.TIME_VALIDITY || "Time validity:",
+      }),
+      Skeletons.Box.Y({
+        className: `${validityFig}__options`,
+        kids: [
+          // Unlimited option
+          Skeletons.Box.X({
+            className: `${validityFig}__option${isUnlimited ? " active" : ""}`,
+            service: "toggle-validity-mode",
+            uiHandler: [_ui_],
+            radio: `validity-radio-${_ui_._id || _ui_.id || 'default'}`,
+            state: isUnlimited ? 1 : 0,
+            _value: _a.infinity,
+            kids: [
+              unlimitedRadio,
+              Skeletons.Box.Y({
+                className: `${validityFig}__option-content`,
+                kids: [
+                  Skeletons.Note({
+                    className: `${validityFig}__option-label`,
+                    content: unlimitedOption.label,
+                  }),
+                  Skeletons.Note({
+                    className: `${validityFig}__option-description`,
+                    content: unlimitedOption.description,
+                  }),
+                ],
+              }),
+            ],
+          }),
+          // Set Limit option
+          Skeletons.Box.X({
+            className: `${validityFig}__option${!isUnlimited ? " active" : ""}`,
+            service: "toggle-validity-mode",
+            uiHandler: [_ui_],
+            radio: `validity-radio-${_ui_._id || _ui_.id || 'default'}`,
+            state: !isUnlimited ? 1 : 0,
+            _value: _a.limited,
+            kids: [
+              setLimitRadio,
+              Skeletons.Box.Y({
+                className: `${validityFig}__option-content`,
+                kids: [
+                  Skeletons.Note({
+                    className: `${validityFig}__option-label`,
+                    content: setLimitOption.label,
+                  }),
+                  Skeletons.Note({
+                    className: `${validityFig}__option-description`,
+                    content: setLimitOption.description,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+      setValidityWrapper,
+    ].filter(Boolean),
+  });
+}
+

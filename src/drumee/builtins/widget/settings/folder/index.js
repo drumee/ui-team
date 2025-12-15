@@ -59,6 +59,10 @@ class settings_folder extends LetcBox {
         }
         return;
 
+      case "edit-type":
+        console.log("AAA:86", cmd)
+        return;
+
       case _a.members:
         this.feed({ kind: "settings_members_list", })
         return this.goodbye();
