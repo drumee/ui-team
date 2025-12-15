@@ -4,6 +4,7 @@
 
 .settings-hub {
   &__ui {
+    width: 552px;
     background-color: var(--white);
     border: 1px solid var(--default-border-notification);
     border-radius: var(--corner-radius-6);
@@ -118,6 +119,29 @@
     gap: 8px;
     flex: 1;
     justify-content: flex-end;
+  }
+
+  &__arrow-next {
+    width: 16px;
+    height: 16px;
+    color: #AFB3BB;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: color 120ms ease;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      color: #AFB3BB;
+    }
+
+    &:hover {
+      color: var(--default-text-color);
+      
+      svg {
+        color: var(--default-text-color);
+      }
+    }
   }
 
   &__owner {

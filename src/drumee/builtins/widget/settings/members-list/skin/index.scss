@@ -4,9 +4,9 @@
 .settings {
   &__ui {
     width: 100%;
-    max-width: 430px;
+    max-width: 520px;
     box-sizing: border-box;
-    padding: 0 var(--spacer-2);
+    padding: 0;
     gap: var(--spacer-2);
     display: flex;
     flex-direction: column;
@@ -86,10 +86,21 @@
     flex-direction: column;
     gap: 0;
     max-height: 500px;
-    overflow-y: visible; // allow dropdown overlay
+    overflow: visible; // allow dropdown overlay
     padding-right: 4px;
     width: 100%;
     box-sizing: border-box;
+    position: relative;
+
+    // Override list-smart__container overflow to allow dropdown overlay
+    // Note: This may affect scrolling, but is necessary for dropdown visibility
+    .list-smart__container,
+    .smart-container {
+      overflow: visible !important;
+      position: relative;
+      // Ensure dropdown can overlay
+      z-index: 1;
+    }
 
     &::-webkit-scrollbar {
       width: 6px;

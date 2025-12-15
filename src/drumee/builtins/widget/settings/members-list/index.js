@@ -1,9 +1,9 @@
 require("./skin");
 class settings_members_list extends DrumeeMFS {
   /**
-   *
-   * @param {*} opt
-   * @returns
+   * 
+   * @param {*} opt 
+   * @returns 
    */
   initialize(opt) {
     super.initialize(opt);
@@ -22,8 +22,8 @@ class settings_members_list extends DrumeeMFS {
   }
 
   /**
-   *
-   * @returns
+   * 
+   * @returns 
    */
   onDomRefresh() {
     this.feed(require("./skeleton").default(this));
