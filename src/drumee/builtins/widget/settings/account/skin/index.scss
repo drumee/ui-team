@@ -401,6 +401,11 @@
           background-color: black;
         }
 
+        .checkout {
+          z-index: 20000000;
+          cursor: pointer;
+        }
+
         &.secondary {
           color: black;
         }

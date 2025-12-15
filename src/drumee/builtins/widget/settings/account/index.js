@@ -245,6 +245,10 @@ class settings_account extends LetcBox {
         });
       case "checkout":
         this.debug("AAA:247", this._currentPlan)
+        this._currentPlan = {
+          value: PRICES[cmd.mget('plan')],
+          plan: cmd.mget(_a.description),
+        }
         if (!this._currentPlan || !this._currentPlan.value) {
           return;
         }

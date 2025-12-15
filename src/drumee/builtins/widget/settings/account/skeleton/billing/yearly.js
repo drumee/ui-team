@@ -41,9 +41,10 @@ function item(
       className: `${fig} button primary`,
       kids: [
         Skeletons.Note({
-          className: `${fig} buttonTitle primary`,
+          className: `${fig} buttonTitle primary checkout`,
           content: buttonTitle,
           service: "checkout",
+          uiHandler: [ui],
           plan,
           description,
         }),
@@ -93,7 +94,7 @@ function item(
 
   const featuresWrapper = Skeletons.Box.Y({
     className: `${fig} features`,
-    service: "select-plan",
+    // service: "select-plan",
     kids: featureItems,
   });
 
@@ -105,7 +106,6 @@ function item(
       kids: [
         Skeletons.Note({
           content: "Most Popular",
-          service: "select-plan",
         }),
       ],
     });
@@ -116,13 +116,13 @@ function item(
   let content = [header, button, featuresWrapper];
   if (popularBadge) content.unshift(popularBadge)
   return Skeletons.Box.Y({
-    className: `${fig} item`,
-    // kidsOpt: { active: 0 },
+    // className: `${fig} item`,
+    kidsOpt: { active: 0 },
     radio: `billing-radio-${ui._id}`,
     plan,
     state,
     description,
-    service: "select-plan",
+    // service: "select-plan",
     kids: content
   });
 }
