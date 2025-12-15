@@ -42,7 +42,7 @@ class settings_members_list extends DrumeeMFS {
       (cmd.mget && (cmd.mget(_a.service) || cmd.mget(_a.name))) ||
       (cmd.get && (cmd.get(_a.service) || cmd.get(_a.name))) ||
       cmd.name;
-
+    this.debug("AAA:45", service, cmd, args)
     switch (service) {
       case _a.back:
       case _e.close:
@@ -69,7 +69,7 @@ class settings_members_list extends DrumeeMFS {
           this.fetchService({
             service: SERVICE.hub.set_privilege,
             hub_id: this.mget(_a.hub_id),
-            entity: memberId,
+            users: [memberId],
             privilege: privilege,
           });
         }
