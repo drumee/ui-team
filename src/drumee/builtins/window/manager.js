@@ -7,8 +7,9 @@ const Rectangle = require('rectangle-node');
 const mfsInteract = require("./interact");
 const pseudo_media = require("media/pseudo");
 const { xhRequest } = require("core/socket/request")
-const DEFAULT_WIDTH = 572;
-const DEFAULT_HEIGHT = 370;
+const DEFAULT_WIDTH = 800;
+const DEFAULT_HEIGHT = 600;
+
 require('./skin/window');
 
 class __window_manager extends mfsInteract {

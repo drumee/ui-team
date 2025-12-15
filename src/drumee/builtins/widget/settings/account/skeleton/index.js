@@ -32,8 +32,8 @@ function nav_item(ui, ico, label, page) {
 }
 
 /**
- * 
- * @param {*} ui 
+ *
+ * @param {*} ui
  */
 function nav(ui) {
   let fig = ui.fig.family;
@@ -44,10 +44,11 @@ function nav(ui) {
         className: `${ui.fig.family}__title`,
         content: LOCALE.SETTINGS,
       }),
-      nav_item(ui, 'profile', LOCALE.PROFILE, 0),
-      // nav_item(ui, 'settings', LOCALE.PREFERENCES, 1),
-      nav_item(ui, 'storage', LOCALE.STORAGE, 1),
-      nav_item(ui, 'shield', LOCALE.SECURITY, 2),
+      nav_item(ui, "profile", LOCALE.PROFILE, 0),
+      nav_item(ui, "settings", LOCALE.PREFERENCES, 1),
+      nav_item(ui, "billing", "Billing Information", 2),
+      nav_item(ui, "storage", LOCALE.STORAGE, 3),
+      nav_item(ui, "shield", LOCALE.SECURITY, 4),
     ],
   });
   const legals = Skeletons.Box.Y({
@@ -59,11 +60,11 @@ function nav(ui) {
       }),
       Skeletons.Note({
         className: `${ui.fig.family}__legals-text`,
-        content: LOCALE.TERMS_OF_SERVICE
+        content: LOCALE.TERMS_OF_SERVICE,
       }),
     ],
   });
-  return [topics, legals]
+  return [topics, legals];
 }
 /**
  *
@@ -86,8 +87,8 @@ function settings_body(ui) {
         ico: _a.cross,
         className: `${ui.fig.group}__icon close`,
         service: _e.close,
-        uiHandler: [ui]
-      })
+        uiHandler: [ui],
+      }),
     ],
   });
 
@@ -96,7 +97,6 @@ function settings_body(ui) {
     uiHandler: [ui],
     sys_pn: _a.content,
   });
-
 
   const group = ui.fig.group;
   const buttons = Skeletons.Box.X({
@@ -132,9 +132,9 @@ function settings_body(ui) {
     }),
     Skeletons.Wrapper.Y({
       className: `${fig}__overlay`,
-      sys_pn: "overlay"
-    })
-  ]
+      sys_pn: "overlay",
+    }),
+  ];
 }
 
 export default settings_body;

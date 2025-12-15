@@ -1,13 +1,9 @@
 
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : 
-//   TYPE :
-// ==================================================================== *
+
 const Rectangle = require('rectangle-node');
-const __rectangle = require('reader/rectangle');
+const rectangle = require('reader/rectangle');
 // ------------------------------------------
-class __desk_selection extends __rectangle {
+class desk_selection extends rectangle {
   constructor(...args) {
     super(...args);
     this.enable = this.enable.bind(this);
@@ -17,7 +13,6 @@ class __desk_selection extends __rectangle {
     this._pointermove = this._pointermove.bind(this);
     this._pointerup = this._pointerup.bind(this);
   }
-
 
   /**
    * 
@@ -156,20 +151,20 @@ class __desk_selection extends __rectangle {
    * @returns 
    */
   _pointerdown(e) {
-    if (!this._accept(e) || !this.$rectangle) { 
+    if (!this._accept(e) || !this.$rectangle) {
       this._target = null;
       return;
     }
-    this._offsetX = e.pageX; 
-    this._offsetY = e.pageY; 
+    this._offsetX = e.pageX;
+    this._offsetY = e.pageY;
     this._selectd = {};
     this._idle = 1;
     let t = null;
     this._state = 1;
     this._bottomLimit = 0;
+    RADIO_POINTER.trigger("desk:selection", _a.down)
     if (Wm.el.contains(e.target)) {
       Wm.unselect(2);
-
     }
     for (let w of Array.from(Wm.windowsLayer.children.toArray())) {
       if (w.acceptMedia && w.el.contains(e.target)) {
@@ -196,8 +191,8 @@ class __desk_selection extends __rectangle {
     this._targetRect = t.contentRectangle();
     this._maxHeight = this._offsetY - this._targetRect.top() + this._window.scrollTop();
 
-    this._xScrolled = 0; 
-    this._yScrolled = 0; 
+    this._xScrolled = 0;
+    this._yScrolled = 0;
 
     try {
       this._selectd = t.getLocalSelection();
@@ -348,14 +343,12 @@ class __desk_selection extends __rectangle {
     this.setState(0);
     if (!this._idle) {
       this.status = _a.idle;
-      window._pointerDragged = true;
-      try {
-        Desk.autoMenu();
-      } catch (e) { }
+      window.pointerDragged = true;
+      RADIO_POINTER.trigger("desk:selection", _a.up)
     }
     this._idle = 1;
   }
 }
-__desk_selection.initClass();
+desk_selection.initClass();
 
-module.exports = __desk_selection;
+module.exports = desk_selection;

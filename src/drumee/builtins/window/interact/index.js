@@ -899,7 +899,6 @@ class __window_interact extends windowCore {
         return;
       }
     }
-    this.debug("AAA:8880", opt)
     switch (position) {
       case -1:
         this.__list.prepend(opt);
