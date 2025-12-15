@@ -45,10 +45,10 @@ function nav(ui) {
         content: LOCALE.SETTINGS,
       }),
       nav_item(ui, "profile", LOCALE.PROFILE, 0),
-      nav_item(ui, "settings", LOCALE.PREFERENCES, 1),
-      nav_item(ui, "billing", "Billing Information", 2),
-      nav_item(ui, "storage", LOCALE.STORAGE, 3),
-      nav_item(ui, "shield", LOCALE.SECURITY, 4),
+      // nav_item(ui, "settings", LOCALE.PREFERENCES, 1),
+      nav_item(ui, "billing", "Billing Information", 1),
+      nav_item(ui, "storage", LOCALE.STORAGE, 2),
+      nav_item(ui, "shield", LOCALE.SECURITY, 3),
     ],
   });
   const legals = Skeletons.Box.Y({

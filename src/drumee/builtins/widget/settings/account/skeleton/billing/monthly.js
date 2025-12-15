@@ -107,8 +107,8 @@ function item(
 
   return Skeletons.Box.Y({
     className: `${fig} item`,
-    // kidsOpt: { active: 0 },
-    // radio: `color-radio-${ui._id}`,
+    kidsOpt: { active: 0 },
+    radio: `billing-radio-${ui._id}`,
     kids: [header, button, featuresWrapper, popularBadge],
   });
 }

@@ -65,7 +65,9 @@ function header(ui) {
           }),
           Skeletons.Element({
             className: `upgrade text `,
-            service: "upgrade-plan",
+            page: 1,
+            // service: "upgrade-plan",
+            service: `load-page`,
             content: LOCALE.UPGRADE_PLAN,
           }),
         ]

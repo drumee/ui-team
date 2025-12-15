@@ -1,5 +1,8 @@
 require("@drumee/ui-toolkit");
-
+const PRICES = {
+  startups: 3059,
+  pro: 1444
+}
 /**
  *
  *
@@ -18,7 +21,7 @@ class settings_account extends LetcBox {
     this.getApi = this.getApi.bind(this);
     this.skeletons = [
       require("./skeleton/profile").default,
-      require("./skeleton/profile").default,
+      // require("./skeleton/profile").default,
       // require("./skeleton/preferences").default,
       require("./skeleton/billing/index").default,
       require("./skeleton/storage").default,
@@ -26,7 +29,7 @@ class settings_account extends LetcBox {
     ];
     this.tab_name = [
       LOCALE.PROFILE,
-      LOCALE.PREFERENCES,
+      // LOCALE.PREFERENCES,
       "Billing Information",
       LOCALE.STORAGE,
       LOCALE.SECURITY,
@@ -73,6 +76,11 @@ class settings_account extends LetcBox {
     this.ensurePart(_a.footer).then((p) => {
       p.el.dataset.page = this._page;
     });
+    if (this._page == 1) {
+      this.el.dataset.tab = "billing"
+    } else {
+      this.el.dataset.tab = "other"
+    }
   }
 
   /**
@@ -235,7 +243,21 @@ class settings_account extends LetcBox {
         return this.ensurePart(_a.list).then((p) => {
           p.restart();
         });
-
+      case "checkout":
+        this.debug("AAA:247", this._currentPlan)
+        if (!this._currentPlan || !this._currentPlan.value) {
+          return;
+        }
+        this.postService(SERVICE.payment.checkout, this._currentPlan).then((data) => {
+          let { url } = data;
+          window.open(url, 'popUpWindow', url);
+        })
+        break;
+      case "select-plan":
+        this._currentPlan = {
+          value: PRICES[cmd.mget('plan')],
+          plan: cmd.mget(_a.description),
+        }
       default:
         this.triggerHandlers({ service });
     }

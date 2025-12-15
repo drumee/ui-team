@@ -5,7 +5,8 @@ function item(
   description,
   buttonTitle,
   features,
-  isPopular
+  isPopular,
+  plan
 ) {
   const fig = `${ui.fig.family}-billing__content`;
 
@@ -42,6 +43,10 @@ function item(
         Skeletons.Note({
           className: `${fig} buttonTitle primary`,
           content: buttonTitle,
+          service: "checkout",
+          plan,
+          state,
+          description,
         }),
       ],
     });
@@ -89,6 +94,7 @@ function item(
 
   const featuresWrapper = Skeletons.Box.Y({
     className: `${fig} features`,
+    service: "select-plan",
     kids: featureItems,
   });
 
@@ -100,16 +106,25 @@ function item(
       kids: [
         Skeletons.Note({
           content: "Most Popular",
+          service: "select-plan",
         }),
       ],
     });
   }
+  let state = 0;
+  if (Visitor.profile().category == plan) state = 1;
 
+  let content = [header, button, featuresWrapper];
+  if (popularBadge) content.unshift(popularBadge)
   return Skeletons.Box.Y({
     className: `${fig} item`,
     // kidsOpt: { active: 0 },
-    // radio: `color-radio-${ui._id}`,
-    kids: [header, button, featuresWrapper, popularBadge],
+    radio: `billing-radio-${ui._id}`,
+    plan,
+    state,
+    description,
+    service: "select-plan",
+    kids: content
   });
 }
 
@@ -131,7 +146,8 @@ function billing_yearly(ui) {
           { title: "Up to 3", description: "editor access" },
           { title: "None", description: "admin roles" },
         ],
-        false
+        false,
+        "trial"
       ),
       item(
         ui,
@@ -147,7 +163,8 @@ function billing_yearly(ui) {
           { title: "Permissions & roles", description: "" },
           { title: "Guest access", description: "" },
         ],
-        true
+        true,
+        "pro",
       ),
       item(
         ui,
@@ -164,25 +181,27 @@ function billing_yearly(ui) {
           { title: "Guest access", description: "" },
           { title: "Activity logs", description: "" },
         ],
-        false
+        false,
+        "startups"
       ),
-      item(
-        ui,
-        "Enterprise",
-        "Contact sales",
-        "Custom pricing for your team",
-        "Contact sales",
-        [
-          { title: "Custom", description: "storage" },
-          { title: "Custom", description: "editor access" },
-          { title: "Yes", description: "admin roles" },
-          { title: "Up to 90 days", description: "version history" },
-          { title: "Permissions & roles", description: "" },
-          { title: "Guest access", description: "" },
-          { title: "Activity logs", description: "" },
-        ],
-        false
-      ),
+      // item(
+      //   ui,
+      //   "Enterprise",
+      //   "Contact sales",
+      //   "Custom pricing for your team",
+      //   "Contact sales",
+      //   [
+      //     { title: "Custom", description: "storage" },
+      //     { title: "Custom", description: "editor access" },
+      //     { title: "Yes", description: "admin roles" },
+      //     { title: "Up to 90 days", description: "version history" },
+      //     { title: "Permissions & roles", description: "" },
+      //     { title: "Guest access", description: "" },
+      //     { title: "Activity logs", description: "" },
+      //   ],
+      //   false,
+      //   3
+      // ),
     ],
   });
 }

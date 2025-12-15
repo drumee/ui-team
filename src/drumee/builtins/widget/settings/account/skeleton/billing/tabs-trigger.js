@@ -8,18 +8,19 @@ function item(ui, content, discount) {
       content: `Save ${discount}%`,
     });
   }
-
+  let tabs = [
+    Skeletons.Note({
+      className: `${fig} text`,
+      content: content,
+    }),
+  ];
+  if (discountItem) tabs.push(discountItem)
   return Skeletons.Box.X({
     className: `${fig} item`,
-    // kidsOpt: { active: 0 },
+    kidsOpt: { active: 0 },
     // radio: `color-radio-${ui._id}`,
-    kids: [
-      Skeletons.Note({
-        className: `${fig} text`,
-        content: content,
-      }),
-      discountItem,
-    ],
+    service: "checkout",
+    kids: tabs
   });
 }
 

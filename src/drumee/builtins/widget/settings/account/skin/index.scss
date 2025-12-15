@@ -22,6 +22,13 @@
       width: 100vw;
       height: 100vh;
     }
+
+    transition :width 1s;
+
+    &[data-tab="billing"] {
+      left: 0;
+      width: 100vw;
+    }
   }
 
   &__overlay {
@@ -317,8 +324,10 @@
         height: 60px;
         border-radius: 12px;
       }
+
       &.item {
         cursor: pointer;
+
         &[data-state="1"] {
           background-color: white;
           padding: 12px;
@@ -326,6 +335,7 @@
           color: var(--neutral-900);
         }
       }
+
       &.discount {
         margin-left: 4px;
         color: lightgreen;
@@ -335,31 +345,45 @@
 
     &__content {
       &.main {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 20px;
       }
+
       &.item {
         border: 1px solid var(--neutral-300);
         border-radius: 12px;
         padding: 20px;
         gap: 20px;
+        cursor: pointer;
+
+        &[data-radio="on"] {
+          border: 1px var(--primary-500) solid;
+          background-color: var(--primary-100);
+        }
+
+        // * {
+        //   pointer-events: noNE;
+        // }
       }
 
       &.header {
         gap: 10px;
       }
+
       &.title {
         color: var(--neutral-900);
 
         font-weight: 600;
         font-size: 20px;
       }
+
       &.subtitle {
         font-weight: 600;
         color: var(--neutral-900);
 
         font-size: 14px;
       }
+
       &.description {
         color: var(--neutral-600);
         font-size: 14px;
@@ -376,6 +400,7 @@
           color: white;
           background-color: black;
         }
+
         &.secondary {
           color: black;
         }
@@ -383,20 +408,29 @@
 
       &.features {
         gap: 20px;
+
         &.__item {
           gap: 10px;
           align-items: center;
         }
+
         &.icon {
           width: 16px;
           height: 16px;
         }
+
         &.description {
           font-size: 13px;
-          padding-bottom: 4px;
+          // padding-bottom: 4px;
           color: var(--neutral-600);
+          height: 100%;
+          flex-direction: column;
+          justify-content: end;
+          align-self: center;
         }
       }
+
+
       &.popular-badge {
         background-color: var(--primary-500);
         color: white;
@@ -419,14 +453,17 @@
         padding: 20px;
         border-radius: 12px;
       }
+
       &.header {
         font-weight: 600;
         font-size: 20px;
       }
+
       &.title {
         font-weight: 600;
         margin-right: 10px;
       }
+
       &.email {
         cursor: pointer;
         text-decoration: underline;
