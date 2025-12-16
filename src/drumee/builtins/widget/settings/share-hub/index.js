@@ -1,6 +1,6 @@
 require("./skin");
 
-class settings_hub_edit extends DrumeeMFS {
+class settings_share_hub extends DrumeeMFS {
   /**
    * @param {object} opt
    */
@@ -12,6 +12,11 @@ class settings_hub_edit extends DrumeeMFS {
     }
     this.permissionMode = _a.edit;
     this.validityMode = _a.view;
+    
+    // Initialize pending changes object to track all modifications
+    this.pendingChanges = {};
+    // Initialize initial data to compare changes
+    this.initialData = {};
   }
 
   /**
@@ -34,47 +39,20 @@ class settings_hub_edit extends DrumeeMFS {
                     cmd.name;
     this.debug('AAA:35 onUiEvent', service, cmd, args);
     switch (service) {
-      case _a.back:
       case _e.close:
-        // Trigger event to parent (settings_hub) to go back
-        if (this.mget(_a.media)) {
-          this.triggerHandlers({
-            service,
-          });
-          return;
-        }
-        return this.goodbye();
-
       case 'close-popup':
-        if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
-          this.source.dialogWrapper.clear();
-        }
         return this.goodbye();
-
       case 'change-permission':
         return this.triggerChangePermission(cmd);
 
-      case 'save-permission':
-        return this.savePermission();
-
       case 'toggle-validity-mode': 
         return this.toggleValidityMode(cmd);
-
-      case 'edit-validity':
-        this.validityMode = _a.edit;
-        return this.getPart('validity-content').feed(require('./skeleton/validity').default(this, _a.edit));
-
-      case 'save-validity':
-        return this.saveValidity();
 
       case 'toggle-password':
         return this.togglePassword(cmd);
 
       case 'toggle-password-visibility':
         return this.togglePasswordVisibility(cmd);
-
-      case 'save-password':
-        return this.savePassword();
 
       case 'change-access-type':
         return this.changeAccessType(cmd);
@@ -92,27 +70,170 @@ class settings_hub_edit extends DrumeeMFS {
 
   /**
    * Apply all changes and save
+   * Collects all pending changes and submits them
    */
   applyAllAndSave() {
-    // Save all settings
-    this.savePermission();
-    if (this.formData.hasPassword && this.formData.password) {
-      this.savePassword();
+    // Get current form values from inputs
+    let formData = {};
+    try {
+      formData = this.getData(_a.formItem) || {};
+    } catch (e) {
+      this.debug('Error getting form data:', e);
     }
-    if (this.formData.validity_mode === _a.limited) {
-      this.saveValidity();
+    
+    // Update pendingChanges with current form values
+    // Get current form values for validity (days/hours)
+    if (this.formData.validity_mode === _a.limited || this.pendingChanges.validity_mode === _a.limited) {
+      // Try to get from form inputs first, then fallback to formData
+      const daysInput = this.getPart('month-setting-input');
+      const hoursInput = this.getPart('hours-setting-input');
+      
+      if (daysInput && typeof daysInput.getValue === 'function') {
+        this.pendingChanges.days = daysInput.getValue() || '0';
+      } else {
+        this.pendingChanges.days = formData.days || this.formData.days || this.pendingChanges.days || '0';
+      }
+      
+      if (hoursInput && typeof hoursInput.getValue === 'function') {
+        this.pendingChanges.hours = hoursInput.getValue() || '0';
+      } else {
+        this.pendingChanges.hours = formData.hours || this.formData.hours || this.pendingChanges.hours || '0';
+      }
     }
-    // Close popup after saving
-    if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
-      this.source.dialogWrapper.clear();
+    
+    // Get current password value if password is enabled
+    if (this.formData.hasPassword || this.pendingChanges.hasPassword) {
+      const passwordInput = this.getPart('password-input');
+      if (passwordInput && typeof passwordInput.getValue === 'function') {
+        const passwordValue = passwordInput.getValue();
+        if (passwordValue !== undefined && passwordValue !== null) {
+          this.pendingChanges.password = passwordValue;
+        }
+      } else {
+        this.pendingChanges.password = formData.password || this.formData.password || this.pendingChanges.password || '';
+      }
     }
-    if (this.mget(_a.media)) {
-      this.triggerHandlers({
-        service,
-      });
-      return;
+    
+    // Save all pending changes
+    const savePromises = [];
+    
+    // Save permission if changed
+    if (this.pendingChanges.permission !== undefined && 
+        this.pendingChanges.permission !== this.initialData.privilege) {
+      savePromises.push(
+        this.saveSettings(_a.permission, { permission: this.pendingChanges.permission })
+          .then(() => {
+            this.initialData.privilege = this.pendingChanges.permission;
+            this.formData.privilege = this.pendingChanges.permission;
+          })
+      );
     }
-    return this.goodbye();
+    
+    // Save access type if changed
+    if (this.pendingChanges.accessType !== undefined && 
+        this.pendingChanges.accessType !== this.initialData.accessType) {
+      savePromises.push(
+        this.saveSettings('access_type', { access_type: this.pendingChanges.accessType })
+          .then(() => {
+            this.initialData.accessType = this.pendingChanges.accessType;
+            this.formData.accessType = this.pendingChanges.accessType;
+          })
+      );
+    }
+    
+    // Save password if changed
+    const passwordChanged = this.pendingChanges.password !== undefined && 
+                            this.pendingChanges.password !== this.initialData.password;
+    const hasPasswordChanged = this.pendingChanges.hasPassword !== undefined && 
+                              this.pendingChanges.hasPassword !== this.initialData.hasPassword;
+    
+    if (passwordChanged || hasPasswordChanged) {
+      const passwordToSave = this.pendingChanges.password || '';
+      savePromises.push(
+        this.saveSettings(_a.password, { password: passwordToSave })
+          .then(() => {
+            this.initialData.password = passwordToSave;
+            this.initialData.hasPassword = this.pendingChanges.hasPassword || 0;
+            this.formData.password = passwordToSave;
+            this.formData.hasPassword = this.pendingChanges.hasPassword || 0;
+          })
+      );
+    }
+    
+    // Save validity if changed
+    const validityChanged = this.pendingChanges.validity_mode !== undefined && 
+                           this.pendingChanges.validity_mode !== this.initialData.validity_mode;
+    const daysChanged = this.pendingChanges.days !== undefined && 
+                       this.pendingChanges.days !== this.initialData.days;
+    const hoursChanged = this.pendingChanges.hours !== undefined && 
+                        this.pendingChanges.hours !== this.initialData.hours;
+    
+    if (validityChanged || daysChanged || hoursChanged) {
+      const validityData = {
+        validity_mode: this.pendingChanges.validity_mode || this.formData.validity_mode,
+        days: this.pendingChanges.days || this.formData.days || '0',
+        hours: this.pendingChanges.hours || this.formData.hours || '0'
+      };
+      
+      // If unlimited, set days/hours to 0
+      if (validityData.validity_mode === _a.infinity) {
+        validityData.days = '0';
+        validityData.hours = '0';
+      }
+      
+      savePromises.push(
+        this.saveSettings(_a.expiry, validityData)
+          .then((responseData) => {
+            if (responseData && responseData.dmz_expiry !== undefined) {
+              this.data.dmz_expiry = responseData.dmz_expiry;
+            }
+            this.initialData.validity_mode = validityData.validity_mode;
+            this.initialData.days = validityData.days;
+            this.initialData.hours = validityData.hours;
+            this.formData.validity_mode = validityData.validity_mode;
+            this.formData.days = validityData.days;
+            this.formData.hours = validityData.hours;
+          })
+      );
+    }
+    
+    // Wait for all saves to complete, then close popup
+    Promise.all(savePromises).then(() => {
+      // Clear pending changes after successful save
+      this.pendingChanges = {};
+      
+      // Trigger handlers to notify parent if media exists
+      if (this.mget(_a.media)) {
+        this.triggerHandlers({
+          service: 'apply-all-save',
+        });
+      }
+      
+      // Close popup after saving - try multiple methods
+      if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
+        this.source.dialogWrapper.clear();
+      }
+      
+      // Always call goodbye to ensure popup closes
+      return this.goodbye();
+    }).catch((err) => {
+      this.debug('Error saving settings:', err);
+      
+      // Trigger handlers even on error
+      if (this.mget(_a.media)) {
+        this.triggerHandlers({
+          service: 'apply-all-save',
+        });
+      }
+      
+      // Still close popup even if there's an error
+      if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
+        this.source.dialogWrapper.clear();
+      }
+      
+      // Always call goodbye to ensure popup closes
+      return this.goodbye();
+    });
   }
 
   /**
@@ -130,7 +251,7 @@ class settings_hub_edit extends DrumeeMFS {
       hub_id: hubId
     }).then((data) => {
       this.data = data || {};
-      this.formData = {
+      const initialFormData = {
         password: (data && data.password) ? data.password : '',
         hasPassword: (data && data.hasPaswword) ? data.hasPaswword : 0,
         hours: (data && data.hours) ? data.hours : '0',
@@ -139,6 +260,22 @@ class settings_hub_edit extends DrumeeMFS {
         accessType: (data && data.access_type) ? data.access_type : 'private', // 'public' or 'private'
         validity_mode: (data && data.dmz_expiry === _a.infinity) ? _a.infinity : _a.limited
       };
+      
+      // Store initial data for comparison
+      this.initialData = {
+        password: initialFormData.password,
+        hasPassword: initialFormData.hasPassword,
+        hours: initialFormData.hours,
+        days: initialFormData.days,
+        privilege: initialFormData.privilege,
+        accessType: initialFormData.accessType,
+        validity_mode: initialFormData.validity_mode
+      };
+      
+      // Initialize formData and pendingChanges with initial values
+      this.formData = { ...initialFormData };
+      this.pendingChanges = {};
+      
       // Set validityMode to edit if validity_mode is limited, so inputs are shown
       this.validityMode = (this.formData.validity_mode === _a.limited) ? _a.edit : _a.view;
       this.mset(_a.privilege, this.formData.privilege);
@@ -147,7 +284,7 @@ class settings_hub_edit extends DrumeeMFS {
       this.debug("Error fetching settings:", err);
       // Fallback: use default values
       this.data = {};
-      this.formData = {
+      const defaultFormData = {
         password: '',
         hasPassword: 0,
         hours: '0',
@@ -156,6 +293,12 @@ class settings_hub_edit extends DrumeeMFS {
         accessType: 'private',
         validity_mode: _a.infinity
       };
+      
+      // Store initial data
+      this.initialData = { ...defaultFormData };
+      this.formData = { ...defaultFormData };
+      this.pendingChanges = {};
+      
       this.mset(_a.privilege, this.formData.privilege);
       this.feed(require('./skeleton').default(this));
     });
@@ -173,7 +316,7 @@ class settings_hub_edit extends DrumeeMFS {
   }
 
   /**
-   * Toggle a specific permission bit
+   * Toggle a specific permission bit (only update pendingChanges, don't save)
    * @param {*} cmd 
    */
   triggerChangePermission(cmd) {
@@ -185,7 +328,13 @@ class settings_hub_edit extends DrumeeMFS {
     // If bit is set, unset it; if not set, set it
     const newPrivilege = oldPrivilege ^ permissionBit;
     
+    // Update privilege in model and formData
     this.mset(_a.privilege, newPrivilege);
+    this.formData.privilege = newPrivilege;
+    
+    // Store in pendingChanges for later save
+    this.pendingChanges.permission = newPrivilege;
+    
     this.debug('AAA:188 privilege changed', oldPrivilege, '->', newPrivilege, 'bit:', permissionBit);
     
     // Update UI to reflect checkbox state change
@@ -216,6 +365,7 @@ class settings_hub_edit extends DrumeeMFS {
   }
 
   /**
+   * Toggle validity mode (only update pendingChanges, don't save)
    * @param {*} cmd 
    */
   toggleValidityMode(cmd) {
@@ -225,12 +375,24 @@ class settings_hub_edit extends DrumeeMFS {
     // Update formData immediately
     this.formData.validity_mode = mode;
     
+    // Store in pendingChanges
+    this.pendingChanges.validity_mode = mode;
+    
     if (mode == _a.limited) {
       this.validityMode = _a.edit;
+      // Keep current days/hours values in pendingChanges if they exist
+      if (!this.pendingChanges.days) {
+        this.pendingChanges.days = this.formData.days || '0';
+      }
+      if (!this.pendingChanges.hours) {
+        this.pendingChanges.hours = this.formData.hours || '0';
+      }
     } else {
-      // When switching to unlimited, reset days/hours but don't save yet
+      // When switching to unlimited, reset days/hours in pendingChanges
       this.formData.days = '0';
       this.formData.hours = '0';
+      this.pendingChanges.days = '0';
+      this.pendingChanges.hours = '0';
       this.validityMode = _a.edit; // Keep in edit mode to allow switching back
     }
     
@@ -269,6 +431,7 @@ class settings_hub_edit extends DrumeeMFS {
   }
 
   /**
+   * Toggle password checkbox (only update pendingChanges, don't save)
    * @param {*} cmd 
    */
   togglePassword(cmd) {
@@ -277,10 +440,18 @@ class settings_hub_edit extends DrumeeMFS {
     const newState = currentState ? 0 : 1;
     this.formData.hasPassword = newState;
     
+    // Store in pendingChanges
+    this.pendingChanges.hasPassword = newState;
+    
     if (!newState) {
       this.formData.password = '';
       this.formData.passwordVisible = 0;
-      this.saveSettings(_a.password, { password: '' });
+      this.pendingChanges.password = '';
+    } else {
+      // If enabling password, keep current password value if exists
+      if (this.formData.password) {
+        this.pendingChanges.password = this.formData.password;
+      }
     }
     
     // Update UI to show/hide password input
@@ -288,7 +459,7 @@ class settings_hub_edit extends DrumeeMFS {
   }
 
   /**
-   * Toggle password visibility (Show/Hide)
+   * Toggle password visibility (Show/Hide) - only UI change, no save
    */
   togglePasswordVisibility(cmd) {
     // Save current input value before re-rendering
@@ -298,12 +469,15 @@ class settings_hub_edit extends DrumeeMFS {
         const currentValue = passwordInput.getValue();
         if (currentValue !== undefined && currentValue !== null) {
           this.formData.password = currentValue;
+          // Update pendingChanges with current password value
+          this.pendingChanges.password = currentValue;
         }
       } else {
         // Fallback: try to get value from formData
         const formData = this.getData(_a.formItem);
         if (formData && formData.password !== undefined) {
           this.formData.password = formData.password;
+          this.pendingChanges.password = formData.password;
         }
       }
     } catch (e) {
@@ -312,13 +486,14 @@ class settings_hub_edit extends DrumeeMFS {
         const formData = this.getData(_a.formItem);
         if (formData && formData.password !== undefined) {
           this.formData.password = formData.password;
+          this.pendingChanges.password = formData.password;
         }
       } catch (e2) {
         this.debug('Error getting password value:', e2);
       }
     }
     
-    // Toggle visibility state
+    // Toggle visibility state (UI only, no save)
     const currentVisibility = this.formData.passwordVisible || 0;
     this.formData.passwordVisible = currentVisibility ? 0 : 1;
     
@@ -341,6 +516,7 @@ class settings_hub_edit extends DrumeeMFS {
   }
 
   /**
+   * Change access type (only update pendingChanges, don't save)
    * @param {*} cmd 
    */
   changeAccessType(cmd) {
@@ -352,20 +528,12 @@ class settings_hub_edit extends DrumeeMFS {
                        'private';
     this.debug('changeAccessType', accessType, cmd);
     this.formData.accessType = accessType;
-    this.data = this.data || {};
-    this.data.access_type = accessType;
+    
+    // Store in pendingChanges
+    this.pendingChanges.accessType = accessType;
+    
     // Update UI immediately to show new label
     this.feed(require('./skeleton').default(this));
-    // Save access type setting
-    this.saveSettings('access_type', { access_type: accessType }, (responseData) => {
-      // Update data after successful save
-      if (responseData && responseData.access_type) {
-        this.data.access_type = responseData.access_type;
-        this.formData.accessType = responseData.access_type;
-      }
-      // Feed again to ensure UI is updated with latest data
-      this.feed(require('./skeleton').default(this));
-    });
     return false; // Prevent event bubbling to parent
   }
 
@@ -382,13 +550,14 @@ class settings_hub_edit extends DrumeeMFS {
       flag: flag,
       ...data
     };
-    this.fetchService(opt).then((data) => {
+    return this.fetchService(opt).then((responseData) => {
       if (callback && _.isFunction(callback)) {
-        callback(data);
+        callback(responseData);
       }
+      return responseData;
     });
   }
 }
 
-module.exports = settings_hub_edit;
+module.exports = settings_share_hub;
 

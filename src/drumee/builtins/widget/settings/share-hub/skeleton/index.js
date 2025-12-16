@@ -6,12 +6,12 @@ const topbar = (ui) => {
     className: `${figFamily}__container`,
     sys_pn: _a.topBar,
     kids: [
-      Skeletons.Button.Svg({
-        ico: "arrow-left",
-        className: `${figFamily}__back`,
-        service: _a.back,
-        uiHandler: [ui],
-      }),
+      // Skeletons.Button.Svg({
+      //   ico: "arrow-left",
+      //   className: `${figFamily}__back`,
+      //   service: _a.back,
+      //   uiHandler: [ui],
+      // }),
       Skeletons.Note({
         className: `${figFamily}__title`,
         sys_pn: "window-name",

@@ -17,7 +17,7 @@
   }
 }
 
-.settings-hub-edit {
+.settings-share-hub {
   &__wrapper {
     border-radius: 24px;
     box-shadow: 0 10px 30px rgba(34, 34, 34, 0.1);
@@ -113,7 +113,7 @@
 }
 
 // Topbar styles (similar to members-list)
-.settings-hub-edit-topbar {
+.settings-share-hub-topbar {
   &__container {
     align-items: center;
     display: flex !important;
@@ -161,7 +161,7 @@
 }
 
 // Who can access section
-.settings-hub-edit-access {
+.settings-share-hub-access {
   &__section {
     display: flex;
     flex-direction: column;
@@ -374,13 +374,13 @@
     &:hover {
       background-color: var(--default-bg-hover);
       
-      .settings-hub-edit-access__menu-item {
+      .settings-share-hub-access__menu-item {
         background-color: transparent;
       }
     }
 
     &.active {
-      .settings-hub-edit-access__menu-item {
+      .settings-share-hub-access__menu-item {
         background-color: var(--primary-100);
         font-weight: 400;
         color: var(--primary-600);
@@ -448,7 +448,7 @@
 }
 
 // Password section
-.settings-hub-edit-password {
+.settings-share-hub-password {
   &__section {
     display: flex;
     flex-direction: column;
@@ -530,7 +530,7 @@
 }
 
 // Permission section
-.settings-hub-edit-permission {
+.settings-share-hub-permission {
   &__section {
     display: flex;
     flex-direction: column;
@@ -617,7 +617,7 @@
 }
 
 // Validity section
-.settings-hub-edit-validity {
+.settings-share-hub-validity {
   &__section {
     display: flex;
     flex-direction: column;
