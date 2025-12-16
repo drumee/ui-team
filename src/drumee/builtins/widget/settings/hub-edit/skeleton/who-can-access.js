@@ -43,7 +43,7 @@ export default function (ui) {
     kids: accessOptions.map((opt) => {
       const isActive = accessType === opt.value;
       return Skeletons.Box.X({
-        className: `${fig}__menu-item-wrapper${isActive ? " active" : ""}`,
+        className: `${fig}__menu-item-wrapper${isActive ? " disabled" : ""}`,
         service: "change-access-type",
         name: "change-access-type",
         uiHandler: [ui],
@@ -58,7 +58,7 @@ export default function (ui) {
             className: `${fig}__menu-item-icon`,
           }),
           Skeletons.Button.Label({
-            className: `${fig}__menu-item${isActive ? " active" : ""}`,
+            className: `${fig}__menu-item`,
             label: opt.label,
           })
         ],

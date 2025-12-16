@@ -283,9 +283,38 @@ class settings_hub_edit extends DrumeeMFS {
    * Toggle password visibility (Show/Hide)
    */
   togglePasswordVisibility(cmd) {
+    // Save current input value before re-rendering
+    try {
+      const passwordInput = this.getPart('password-input');
+      if (passwordInput && passwordInput.getValue) {
+        const currentValue = passwordInput.getValue();
+        if (currentValue !== undefined && currentValue !== null) {
+          this.formData.password = currentValue;
+        }
+      } else {
+        // Fallback: try to get value from formData
+        const formData = this.getData(_a.formItem);
+        if (formData && formData.password !== undefined) {
+          this.formData.password = formData.password;
+        }
+      }
+    } catch (e) {
+      // If getPart fails, try getData as fallback
+      try {
+        const formData = this.getData(_a.formItem);
+        if (formData && formData.password !== undefined) {
+          this.formData.password = formData.password;
+        }
+      } catch (e2) {
+        this.debug('Error getting password value:', e2);
+      }
+    }
+    
+    // Toggle visibility state
     const currentVisibility = this.formData.passwordVisible || 0;
     this.formData.passwordVisible = currentVisibility ? 0 : 1;
-    // Update UI to toggle password visibility
+    
+    // Update UI to toggle password visibility (value is preserved in formData.password)
     this.getPart('password-content').feed(require('./skeleton/password').default(this, _a.edit));
   }
 
