@@ -36,8 +36,17 @@ function content(ui) {
     className: `${fig}__content`,
     kids: [
       require('./who-can-access').default(ui),
+      Skeletons.Box.X({
+        className: `${fig}__divider`,
+      }),
       require('./password').default(ui, _a.edit),
+      Skeletons.Box.X({
+        className: `${fig}__divider`,
+      }),
       require('./permission').default(ui, ui.permissionMode || _a.edit),
+      Skeletons.Box.X({
+        className: `${fig}__divider`,
+      }),
       require('./validity').default(ui, ui.validityMode || _a.view),
     ],
   });
@@ -53,12 +62,14 @@ function footer(ui) {
       Skeletons.Button.Label({
         className: `${fig}__cancel-btn`,
         label: LOCALE.CANCEL || "Cancel",
+        icon: null,
         service: _e.close,
         uiHandler: [ui],
       }),
       Skeletons.Button.Label({
         className: `${fig}__save-btn`,
         label: LOCALE.APPLY_ALL_SAVE || "Apply all & Save",
+        icon: null,
         service: "apply-all-save",
         uiHandler: [ui],
       }),

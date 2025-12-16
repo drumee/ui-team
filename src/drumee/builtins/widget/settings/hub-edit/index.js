@@ -32,6 +32,7 @@ class settings_hub_edit extends DrumeeMFS {
                     cmd.get(_a.name) ||
                     (cmd.mget && (cmd.mget(_a.service) || cmd.mget(_a.name))) ||
                     cmd.name;
+    this.debug('AAA:35 onUiEvent', service, cmd, args);
     switch (service) {
       case _a.back:
       case _e.close:
@@ -138,6 +139,8 @@ class settings_hub_edit extends DrumeeMFS {
         accessType: (data && data.access_type) ? data.access_type : 'private', // 'public' or 'private'
         validity_mode: (data && data.dmz_expiry === _a.infinity) ? _a.infinity : _a.limited
       };
+      // Set validityMode to edit if validity_mode is limited, so inputs are shown
+      this.validityMode = (this.formData.validity_mode === _a.limited) ? _a.edit : _a.view;
       this.mset(_a.privilege, this.formData.privilege);
       this.feed(require('./skeleton').default(this));
     }).catch((err) => {
@@ -159,36 +162,45 @@ class settings_hub_edit extends DrumeeMFS {
   }
 
   /**
-   * 
+   * Check if a specific permission bit is set
+   * @param {number} permissionBit - The permission bit to check (e.g., _K.permission.upload)
+   * @returns {number} 1 if permission is set, 0 otherwise
    */
-  permissionCheck(check) {
-    let result = 0;
-    if (this.mget(_a.privilege) >= check) {
-      result = 1;
-    }
-    return result;
+  permissionCheck(permissionBit) {
+    const privilege = this.mget(_a.privilege) || 0;
+    // Use bitwise AND to check if the specific permission bit is set
+    return (privilege & permissionBit) ? 1 : 0;
   }
 
   /**
+   * Toggle a specific permission bit
    * @param {*} cmd 
    */
   triggerChangePermission(cmd) {
-    let val = cmd.mget('_value');
-    let oldPrivilege = this.mget(_a.privilege);
-    if (val > 1 && val === oldPrivilege) {
-      let p = val >> 1;
-      this.mset(_a.privilege, p);
-    } else {
-      this.mset(_a.privilege, val);
-    }
-    return this.updatePermissionItem();
+    const permissionBit = cmd.mget('_value');
+    this.debug('AAA:178 triggerChangePermission', permissionBit, cmd, this);
+    const oldPrivilege = this.mget(_a.privilege) || 0;
+    
+    // Toggle the specific permission bit using XOR
+    // If bit is set, unset it; if not set, set it
+    const newPrivilege = oldPrivilege ^ permissionBit;
+    
+    this.mset(_a.privilege, newPrivilege);
+    this.debug('AAA:188 privilege changed', oldPrivilege, '->', newPrivilege, 'bit:', permissionBit);
+    
+    // Update UI to reflect checkbox state change
+    this.updatePermissionItem();
   }
 
   /**
    * 
    */
   updatePermissionItem() {
-    this.getPart('permissions-content').feed(require('./skeleton/permission').default(this, this.permissionMode));
+    const part = this.getPart('permissions-content');
+    if (part && part.softClear) {
+      part.softClear();
+    }
+    part.feed(require('./skeleton/permission').default(this, this.permissionMode));
   }
 
   /**
@@ -207,31 +219,27 @@ class settings_hub_edit extends DrumeeMFS {
    * @param {*} cmd 
    */
   toggleValidityMode(cmd) {
-    const mode = cmd.mget(_a.value);
+    const mode = cmd.mget('_value') || cmd.mget(_a.value);
     this.debug('toggleValidityMode', mode, cmd, this);
 
+    // Update formData immediately
+    this.formData.validity_mode = mode;
+    
     if (mode == _a.limited) {
-      this.formData.validity_mode = _a.limited;
       this.validityMode = _a.edit;
-      return this.getPart('validity-content').feed(require('./skeleton/validity').default(this, _a.edit, 'toggle-edit'));
     } else {
+      // When switching to unlimited, reset days/hours but don't save yet
       this.formData.days = '0';
       this.formData.hours = '0';
-      this.formData.validity_mode = _a.infinity;
-      this.data = this.data || {};
-      this.data.dmz_expiry = _a.infinity;
-      let data = {
-        days: '0',
-        hours: '0',
-        validity_mode: _a.infinity
-      };
-      this.saveSettings(_a.expiry, data, (d) => {
-        this.data.dmz_expiry = d.dmz_expiry || _a.infinity;
-        this.validityMode = _a.view;
-        this.getPart('validity-content').feed(require('./skeleton/validity').default(this, _a.view));
-        return this.triggerHandlers({ service: 'update-expiry-status', status: this.data.dmz_expiry });
-      });
+      this.validityMode = _a.edit; // Keep in edit mode to allow switching back
     }
+    
+    // Re-render immediately to show the change
+    const part = this.getPart('validity-content');
+    if (part && part.softClear) {
+      part.softClear();
+    }
+    part.feed(require('./skeleton/validity').default(this, this.validityMode));
   }
 
   /**

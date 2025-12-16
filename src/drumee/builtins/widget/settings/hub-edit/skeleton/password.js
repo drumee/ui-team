@@ -45,7 +45,7 @@ export default function (ui, mode = _a.view) {
         name: _a.password,
         formItem: 'password'
       }),
-      Skeletons.Button.Label({
+      Skeletons.Note({
         className: `${passwordFig}__toggle-visibility`,
         label: passwordVisibility ? (LOCALE.HIDE || "Hide") : (LOCALE.SHOW || "Show"),
         service: "toggle-password-visibility",
@@ -60,8 +60,6 @@ export default function (ui, mode = _a.view) {
     kids: [
       Skeletons.Box.X({
         className: `${passwordFig}__wrapper`,
-        service: "toggle-password",
-        uiHandler: [ui],
         kids: [
           passwordCheckbox,
           Skeletons.Note({
