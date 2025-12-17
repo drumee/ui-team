@@ -89,10 +89,8 @@ class settings_hub extends LetcBox {
         this._tab--;
         return this.route()
       case "edit-type":
-        // Widget is now called from wm/index.js as "share-hub"
-        // this._tab++;
-        // return this.feed({ kind: "share-hub", uiHandler: [this], media: this.mget(_a.media) });
-        break;
+        this._tab++;
+        return this.feed({ kind: "settings_share_hub", uiHandler: [this], media: this.mget(_a.media) });
       default:
         this.debug("AAA:55", service, cmd)
     }

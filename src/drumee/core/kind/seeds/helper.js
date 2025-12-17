@@ -78,7 +78,7 @@ const a = {
   widget_chat:"widget/chat",
   settings_folder:"widget/settings/folder",
   settings_hub:"widget/settings/hub",
-  settings_hub_edit:"widget/settings/hub-edit",
+  settings_share_hub:"widget/settings/share-hub",
   settings_members_list:"widget/settings/members-list",
   settings_helpcenter:"widget/settings/helpcenter",
   settings_member:"widget/settings/member",

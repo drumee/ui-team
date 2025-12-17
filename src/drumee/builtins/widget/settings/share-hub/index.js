@@ -40,7 +40,14 @@ class settings_share_hub extends DrumeeMFS {
     this.debug('AAA:35 onUiEvent', service, cmd, args);
     switch (service) {
       case _e.close:
+      case _a.back:
       case 'close-popup':
+        if (this.mget(_a.media)) {
+          this.triggerHandlers({
+            service,
+          });
+          return;
+        }
         return this.goodbye();
       case 'change-permission':
         return this.triggerChangePermission(cmd);
@@ -59,12 +66,9 @@ class settings_share_hub extends DrumeeMFS {
 
       case 'apply-all-save':
         return this.applyAllAndSave();
-
-      default:
-        this.source = cmd;
-        this.service = service;
-        this.triggerHandlers();
-        this.service = '';
+    }
+    if (super.onUiEvent) {
+      return super.onUiEvent(cmd, args);
     }
   }
 
@@ -205,16 +209,12 @@ class settings_share_hub extends DrumeeMFS {
       // Trigger handlers to notify parent if media exists
       if (this.mget(_a.media)) {
         this.triggerHandlers({
-          service: 'apply-all-save',
+          service: _a.back,
         });
+        return;
       }
       
-      // Close popup after saving - try multiple methods
-      if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
-        this.source.dialogWrapper.clear();
-      }
-      
-      // Always call goodbye to ensure popup closes
+      // Always close popup after saving (widget is opened from window manager modal wrapper)
       return this.goodbye();
     }).catch((err) => {
       this.debug('Error saving settings:', err);
@@ -222,16 +222,11 @@ class settings_share_hub extends DrumeeMFS {
       // Trigger handlers even on error
       if (this.mget(_a.media)) {
         this.triggerHandlers({
-          service: 'apply-all-save',
+          service: _a.back,
         });
       }
       
-      // Still close popup even if there's an error
-      if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
-        this.source.dialogWrapper.clear();
-      }
-      
-      // Always call goodbye to ensure popup closes
+      // Always close popup even if there's an error
       return this.goodbye();
     });
   }
