@@ -80,6 +80,7 @@ module.exports = {
   settings_hub:function(s,f){import('widget/settings/hub').then(m=>{s(m.default)}).catch(f)},
   settings_share_hub:function(s,f){import('widget/settings/share-hub').then(m=>{s(m.default)}).catch(f)},
   settings_members_list:function(s,f){import('widget/settings/members-list').then(m=>{s(m.default)}).catch(f)},
+  settings_activity_hub:function(s,f){import('widget/settings/activity-hub').then(m=>{s(m.default)}).catch(f)},
   settings_helpcenter:function(s,f){import('widget/settings/helpcenter').then(m=>{s(m.default)}).catch(f)},
   settings_member:function(s,f){import('widget/settings/member').then(m=>{s(m.default)}).catch(f)},
   settings_account:function(s,f){import('widget/settings/account').then(m=>{s(m.default)}).catch(f)},

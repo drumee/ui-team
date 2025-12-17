@@ -9,6 +9,7 @@ module.exports = {
   settings_hub: './settings/hub',
   settings_share_hub: './settings/share-hub',
   settings_members_list: './settings/members-list',
+  settings_activity_hub: './settings/activity-hub',
   settings_helpcenter: './settings/helpcenter',
   settings_member: './settings/member',
   settings_account: './settings/account',

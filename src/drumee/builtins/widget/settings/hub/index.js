@@ -91,6 +91,10 @@ class settings_hub extends LetcBox {
       case "edit-type":
         this._tab++;
         return this.feed({ kind: "settings_share_hub", uiHandler: [this], media: this.mget(_a.media) });
+
+      case "activity-hub":
+        this._tab++;
+        return this.feed({ kind: "settings_activity_hub", uiHandler: [this], media: this.mget(_a.media) });
       default:
         this.debug("AAA:55", service, cmd)
     }

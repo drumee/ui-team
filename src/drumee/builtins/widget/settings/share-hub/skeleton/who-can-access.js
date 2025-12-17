@@ -4,10 +4,16 @@
  */
 export default function (ui) {
   const fig = `${ui.fig.family}-access`;
+  
+  // Try multiple sources to get accessType: formData, data, model, or default
   const accessType = ui.formData?.accessType || 
-                     ui.data?.access_type || 
+                     ui.data?.access_type ||
+                     (ui.mget && (ui.mget('access_type') || ui.mget(_a.access_type))) ||
+                     (ui.mget && ui.mget(_a.area) === 'public' ? 'public' : null) ||
+                     (ui.mget && ui.mget(_a.area) === 'share' ? 'public' : null) ||
+                     (ui.mget && ui.mget(_a.area) === 'dmz' ? 'public' : null) ||
+                     (ui.mget && ui.mget(_a.area) === 'private' ? 'private' : null) ||
                      'private';
-  const hasPassword = ui.formData?.hasPassword || 0;
 
   // Access type options
   const accessOptions = [
@@ -43,10 +49,11 @@ export default function (ui) {
     kids: accessOptions.map((opt) => {
       const isActive = accessType === opt.value;
       return Skeletons.Box.X({
-        className: `${fig}__menu-item-wrapper${isActive ? " disabled" : ""}`,
+        className: `${fig}__menu-item-wrapper${isActive ? " active" : ""}`,
         service: "change-access-type",
         name: "change-access-type",
         uiHandler: [ui],
+        _value: opt.value,
         value: opt.value,
         active: isActive ? 1 : 0,
         dataset: {
@@ -60,6 +67,10 @@ export default function (ui) {
           Skeletons.Button.Label({
             className: `${fig}__menu-item`,
             label: opt.label,
+            service: "change-access-type",
+            uiHandler: [ui],
+            _value: opt.value,
+            value: opt.value,
           })
         ],
       });
