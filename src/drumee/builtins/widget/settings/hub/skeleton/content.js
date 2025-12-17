@@ -219,7 +219,11 @@ function settings_body(ui, opt) {
                   className: `${fig}__item-date`,
                   content: updatedAt,
                 }),
-                Skeletons.Note({
+                Skeletons.Button.Svg({
+                  ico: "arrow--pages",
+                  className: `${fig}__arrow-next`,
+                  service: "activity-hub",
+                  uiHandler: [ui],
                 })
               ),
             ]

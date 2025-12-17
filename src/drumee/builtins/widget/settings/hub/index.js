@@ -81,10 +81,6 @@ class settings_hub extends LetcBox {
         //   this.source.dialogWrapper.clear();
         // }
         return;
-
-      case "edit-type":
-        console.log("AAA:86", cmd)
-        return;
       case _a.members:
         this._tab++;
         return this.feed({ kind: "settings_members_list", uiHandler: [this], media: this.mget(_a.media) });
@@ -92,7 +88,13 @@ class settings_hub extends LetcBox {
       case _a.back:
         this._tab--;
         return this.route()
-        
+      case "edit-type":
+        this._tab++;
+        return this.feed({ kind: "settings_share_hub", uiHandler: [this], media: this.mget(_a.media) });
+
+      case "activity-hub":
+        this._tab++;
+        return this.feed({ kind: "settings_activity_hub", uiHandler: [this], media: this.mget(_a.media) });
       default:
         this.debug("AAA:55", service, cmd)
     }

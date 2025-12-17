@@ -60,7 +60,7 @@ function settings_body(ui, opt) {
             className: `${ui.fig.group}__items ${fig}__items`,
             kids: [
               item(ui, LOCALE.OWNER, text(ui,"0")),
-              item(ui, LOCALE.TYPE, text(ui, LOCALE[`AREA_${ui.mget(_a.area).toUpperCase()}_LABEL`])),
+              item(ui, "okok type", text(ui, LOCALE[`AREA_${ui.mget(_a.area).toUpperCase()}_LABEL`])),
               item(ui, LOCALE.SIZE, text(ui,"0")),
               item(ui, LOCALE.MEMBERS, text(ui,"0")),
               item(ui, LOCALE.CREATED, text(ui,"0")),

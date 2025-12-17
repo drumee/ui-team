@@ -59,6 +59,10 @@ class settings_folder extends LetcBox {
         }
         return;
 
+      case "edit-type":
+        
+      return;
+
       case _a.members:
         this.feed({ kind: "settings_members_list", })
         return this.goodbye();
