@@ -15,7 +15,7 @@ const topbar = (ui) => {
       Skeletons.Note({
         className: `${figFamily}__title`,
         sys_pn: "window-name",
-        content: LOCALE.ACTIVITY || "Folder’s activity",
+        content: LOCALE.FOLDER_ACTIVITY || "Folder's activity",
         uiHandler: [ui],
       }),
       Skeletons.Button.Svg({
@@ -35,7 +35,7 @@ function content(ui) {
     className: `${ui.fig.family}__list`,
     debug: __filename,
     itemsOpt: {
-      kind: "activity_item",
+      kind: "settings_activity_hub_item",
       uiHandler: [ui]
     },
     spinner: true,

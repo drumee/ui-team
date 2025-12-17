@@ -84,7 +84,7 @@ class settings_hub extends LetcBox {
       case _a.members:
         this._tab++;
         return this.feed({ kind: "settings_members_list", uiHandler: [this], media: this.mget(_a.media) });
-
+        
       case _a.back:
         this._tab--;
         return this.route()

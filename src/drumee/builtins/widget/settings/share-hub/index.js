@@ -585,7 +585,7 @@ class settings_share_hub extends DrumeeMFS {
       }
     } else {
       // Fallback: re-render entire skeleton
-      this.feed(require('./skeleton').default(this));
+    this.feed(require('./skeleton').default(this));
     }
     
     return false; // Prevent event bubbling to parent

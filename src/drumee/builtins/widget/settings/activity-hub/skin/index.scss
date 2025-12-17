@@ -22,6 +22,7 @@
     box-shadow: 0 10px 30px rgba(34, 34, 34, 0.1);
     margin: 0 auto;
     max-width: 100%;
+    max-height: 650px;
     padding: 24px;
     width: 100%;
     box-sizing: border-box;
@@ -80,45 +81,27 @@
   }
 
   &__content {
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     width: 100%;
     box-sizing: border-box;
-    overflow: visible;
+    overflow: scroll;
     position: relative;
     z-index: 10;
+    
+    // Hide scrollbar but keep scroll functionality
+    scrollbar-width: none; // Firefox
+    -ms-overflow-style: none; // IE and Edge
+    
+    &::-webkit-scrollbar {
+      display: none; // Chrome, Safari, Opera
+    }
   }
 
   &__list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    max-height: 500px;
-    overflow: visible;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding-right: 4px;
-    width: 100%;
-    box-sizing: border-box;
-    position: relative;
-
-    .list-smart__container,
-    .smart-container {
-      overflow: visible !important;
-      position: relative;
-      z-index: 1;
-    }
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--default-border-notification);
-      border-radius: 3px;
-    }
 
     .drumee-spinner {
       height: 35px;
