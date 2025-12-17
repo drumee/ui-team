@@ -81,10 +81,6 @@ class settings_hub extends LetcBox {
         //   this.source.dialogWrapper.clear();
         // }
         return;
-
-      case "edit-type":
-        console.log("AAA:86", cmd)
-        return;
       case _a.members:
         this._tab++;
         return this.feed({ kind: "settings_members_list", uiHandler: [this], media: this.mget(_a.media) });
@@ -92,7 +88,11 @@ class settings_hub extends LetcBox {
       case _a.back:
         this._tab--;
         return this.route()
-        
+      case "edit-type":
+        // Widget is now called from wm/index.js as "share-hub"
+        // this._tab++;
+        // return this.feed({ kind: "share-hub", uiHandler: [this], media: this.mget(_a.media) });
+        break;
       default:
         this.debug("AAA:55", service, cmd)
     }

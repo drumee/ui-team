@@ -1059,7 +1059,7 @@ class __window_manager extends push {
         break;
       case _a.share:
       case "dmz":
-        item.kind = "widget_sharebox_setting";
+        item.kind = "share-hub";
         break;
       case "electron":
         item.kind = "electron_update";
