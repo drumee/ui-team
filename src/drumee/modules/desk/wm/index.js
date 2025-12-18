@@ -1049,14 +1049,17 @@ class __window_manager extends push {
   openSettings(media) {
     let item = media.model.toJSON();
     this.debug("AAA:13000", item)
+    // Toggle settings popup (same behavior as sharebox switchShowShareboxSettings)
+    if (this.isShowSettings) {
+      this.isShowSettings = false;
+      return this.__wrapperModal.clear();
+    }
+    this.isShowSettings = true;
+
     switch (media.mget(_a.area)) {
       case _a.personal:
-        item.kind = "settings_hub";
-        break;
       case _a.public:
       case _a.private:
-        item.kind = "settings_hub";
-        break;
       case _a.share:
       case "dmz":
         item.kind = "settings_hub";
@@ -1074,7 +1077,29 @@ class __window_manager extends push {
     item.uiHandler = [media];
     item.source = media;
     item.media = media;
+    item.hub_id = media.mget(_a.hub_id);
+    item.persistence = _a.once;
     this.__wrapperModal.feed(item);
+
+    const c = this.__wrapperModal.children && this.__wrapperModal.children.last
+      ? this.__wrapperModal.children.last()
+      : null;
+    if (!c) return;
+
+    c.once(_e.destroy, () => {
+      this.isShowSettings = false;
+      if (media && typeof media.unselect === "function") {
+        return media.unselect();
+      }
+    });
+    return c.on(_e.show, () => {
+      if (media && typeof media.on === "function") {
+        return media.on(_e.unselect, () => {
+          this.isShowSettings = false;
+          return this.__wrapperModal.clear();
+        });
+      }
+    });
   }
   /**
    *
