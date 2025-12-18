@@ -108,36 +108,18 @@ class __window_hub extends mfsInteract {
    * @param {*} cmd 
    * @returns 
    */
-  async openSettings(cmd) {
-    if (!this.dialogWrapper.isEmpty()) {
-      this.dialogWrapper.clear();
-      return;
-    }
-    let kind = 'hub_settings';
+  openSettings(cmd) {
+    let item = this.model.toJSON();
+    delete item.style;
+    item.dataset = { modal: 1 };
+    
     if (this.mget(_a.area) == _a.share) {
-      kind = 'widget_sharebox_setting';
+      item.kind = "settings_share_hub";
     } else {
-
+      item.kind = "settings_hub";
     }
-    await Kind.waitFor(kind);
-    this.dialogWrapper.feed({
-      kind,
-      label: this.settingsLabel,
-      className: "px-25 pt-25 pb-10",
-      uiHandler: [this],
-      media: this.mget(_a.media),
-      source: this,
-      persistence: _a.once
-    });
-    const c = this.dialogWrapper.children.last();
-    c.once(_e.destroy, () => {
-      return this.unselect();
-    });
-    return c.on(_e.show, () => {
-      return this.on(_e.unselect, () => {
-        return this.dialogWrapper.clear();
-      });
-    });
+    
+    return this.dialogWrapper.feed(item);
   }
 
   /**

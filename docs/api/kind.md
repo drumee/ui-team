@@ -72,6 +72,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | settings_share_hub | widget/settings/share-hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/share-hub/index.js |
 | settings_members_list | widget/settings/members-list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/members-list/index.js |
 | settings_activity_hub | widget/settings/activity-hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/activity-hub/index.js |
+| settings_activity_hub_item | widget/settings/activity-hub/item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/activity-hub/item/index.js |
 | settings_helpcenter | widget/settings/helpcenter | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/helpcenter/index.js |
 | settings_member | widget/settings/member | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/member/index.js |
 | settings_account | widget/settings/account | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/account/index.js |

@@ -81,6 +81,7 @@ const a = {
   settings_share_hub:"widget/settings/share-hub",
   settings_members_list:"widget/settings/members-list",
   settings_activity_hub:"widget/settings/activity-hub",
+  settings_activity_hub_item:"widget/settings/activity-hub/item",
   settings_helpcenter:"widget/settings/helpcenter",
   settings_member:"widget/settings/member",
   settings_account:"widget/settings/account",
