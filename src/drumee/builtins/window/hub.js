@@ -115,7 +115,7 @@ class __window_hub extends mfsInteract {
 
     // Open a NEW popup each time (same behavior as wm.openSettings)
     if (this.mget(_a.area) == _a.share || this.mget(_a.area) === "dmz") {
-      item.kind = "settings_share_hub";
+      item.kind = "settings_hub";
     } else {
       item.kind = "settings_hub";
     }
