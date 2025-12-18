@@ -1,0 +1,149 @@
+@use "sass:meta";
+@use "mixins/drumee";
+
+.settings-activity-hub-item {
+  &__container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    width: 100%;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--Neutral-200, #EBECF0);
+    
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__avatar-container {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+  }
+
+  &__avatar {
+    width: 32px;
+    height: 32px;
+    color: var(--Neutral-300, #D1D5DB);
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: default;
+    
+    svg {
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  &__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0; // Allow text to truncate
+    padding-right: 8px;
+  }
+
+  &__text {
+    @include drumee.typo(
+      $color: var(--Neutral-900, #222732),
+      $size: 14px,
+      $weight: 400,
+      $line: 20px
+    );
+    word-wrap: break-word;
+    
+    // Style bold text (file names)
+    strong,
+    b {
+      font-weight: 600;
+      color: var(--Neutral-900, #222732);
+    }
+  }
+
+  &__tag-wrapper {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--Neutral-100, #F5F5F7);
+    border-radius: 6px;
+    margin-top: 2px;
+    width: fit-content;
+  }
+
+  &__tag-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: default;
+    
+    svg {
+      width: 14px;
+      height: 14px;
+      color: var(--Neutral-600, #8C929C);
+    }
+  }
+
+  &__tag-text {
+    @include drumee.typo(
+      $color: var(--Neutral-700, #6B7280),
+      $size: 12px,
+      $weight: 500,
+      $line: 16px
+    );
+  }
+
+  &__timestamp {
+    @include drumee.typo(
+      $color: var(--Neutral-600, #8C929C),
+      $size: 12px,
+      $weight: 400,
+      $line: 18px
+    );
+    margin-top: 0;
+  }
+
+  &__thumbnail-container {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--Neutral-50, #FAFAFA);
+    
+    .media-grid {
+      border-radius: 8px;
+      
+      &__content {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 8px;
+      }
+      
+      .preview-container {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 8px;
+      }
+      
+      .vector {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 8px;
+      }
+    }
+  }
+}
+

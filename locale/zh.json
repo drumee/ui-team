@@ -1911,6 +1911,7 @@
   "MAX_FILE_SIZE_X": "最大文件大小不超过 {0}。",
   "DESKTOP_WALLPAPER": "我的壁纸",
   "ACTIVITY": "活动",
+  "FOLDER_ACTIVITY": "文件夹活动",
   "MARK_ALL_READ": "标记为已阅读",
   "X_UPLOADED_FILE_Y": "{0} 上传了文件 {1}",
   "UPLOADED_FILE": "已上传文件",

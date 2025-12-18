@@ -1911,6 +1911,7 @@
   "MAX_FILE_SIZE_X": "Максимальный размер файла до {0}.",
   "DESKTOP_WALLPAPER": "Мои обои",
   "ACTIVITY": "Активность",
+  "FOLDER_ACTIVITY": "Активность папки",
   "MARK_ALL_READ": "Отметить как все прочитанное",
   "X_UPLOADED_FILE_Y": "{0} загрузила файл {1}",
   "UPLOADED_FILE": "загрузил файл",

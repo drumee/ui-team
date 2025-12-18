@@ -1,0 +1,124 @@
+@use "sass:meta";
+@use "mixins/drumee";
+
+.settings {
+  &__ui {
+    width: 100%;
+    max-width: 520px;
+    box-sizing: border-box;
+    padding: 0;
+    gap: var(--spacer-2);
+    display: flex;
+    flex-direction: column;
+    background-color: var(--white);
+    overflow: visible; // allow dropdown overlay
+    border-radius: var(--corner-radius-6);
+  }
+}
+
+.settings-activity-hub {
+  &__wrapper {
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(34, 34, 34, 0.1);
+    margin: 0 auto;
+    max-width: 100%;
+    max-height: 650px;
+    padding: 24px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+    position: relative;
+    z-index: 10;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0;
+    min-height: auto;
+  }
+
+  &-topbar__container {
+    align-items: center;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 16px;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  &-topbar__back,
+  &-topbar__close {
+    align-items: center;
+    border-radius: 50%;
+    color: var(--default-text-neutral);
+    display: flex;
+    height: 36px;
+    justify-content: center;
+    width: 36px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: var(--default-bg-hover);
+      color: var(--default-text-color);
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &-topbar__title {
+    @include drumee.typo(
+      $color: var(--default-text-color),
+      $size: 20px,
+      $weight: 600
+    );
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+  }
+
+  &__content {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: scroll;
+    position: relative;
+    z-index: 10;
+    
+    // Hide scrollbar but keep scroll functionality
+    scrollbar-width: none; // Firefox
+    -ms-overflow-style: none; // IE and Edge
+    
+    &::-webkit-scrollbar {
+      display: none; // Chrome, Safari, Opera
+    }
+  }
+
+  &__list {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+
+    .drumee-spinner {
+      height: 35px;
+      margin: auto;
+      width: 35px;
+    }
+
+    .placeholder--no-activity {
+      margin: 20px auto;
+      padding-left: 15px;
+      @include drumee.typo(
+        $color: var(--default-text-color),
+        $size: 14px,
+        $line: 26px,
+        $weight: 400
+      );
+    }
+  }
+}
+

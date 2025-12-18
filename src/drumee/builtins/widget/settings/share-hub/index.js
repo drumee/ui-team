@@ -40,7 +40,14 @@ class settings_share_hub extends DrumeeMFS {
     this.debug('AAA:35 onUiEvent', service, cmd, args);
     switch (service) {
       case _e.close:
+      case _a.back:
       case 'close-popup':
+        if (this.mget(_a.media)) {
+          this.triggerHandlers({
+            service,
+          });
+          return;
+        }
         return this.goodbye();
       case 'change-permission':
         return this.triggerChangePermission(cmd);
@@ -59,12 +66,9 @@ class settings_share_hub extends DrumeeMFS {
 
       case 'apply-all-save':
         return this.applyAllAndSave();
-
-      default:
-        this.source = cmd;
-        this.service = service;
-        this.triggerHandlers();
-        this.service = '';
+    }
+    if (super.onUiEvent) {
+      return super.onUiEvent(cmd, args);
     }
   }
 
@@ -205,16 +209,12 @@ class settings_share_hub extends DrumeeMFS {
       // Trigger handlers to notify parent if media exists
       if (this.mget(_a.media)) {
         this.triggerHandlers({
-          service: 'apply-all-save',
+          service: _a.back,
         });
+        return;
       }
       
-      // Close popup after saving - try multiple methods
-      if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
-        this.source.dialogWrapper.clear();
-      }
-      
-      // Always call goodbye to ensure popup closes
+      // Always close popup after saving (widget is opened from window manager modal wrapper)
       return this.goodbye();
     }).catch((err) => {
       this.debug('Error saving settings:', err);
@@ -222,16 +222,11 @@ class settings_share_hub extends DrumeeMFS {
       // Trigger handlers even on error
       if (this.mget(_a.media)) {
         this.triggerHandlers({
-          service: 'apply-all-save',
+          service: _a.back,
         });
       }
       
-      // Still close popup even if there's an error
-      if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
-        this.source.dialogWrapper.clear();
-      }
-      
-      // Always call goodbye to ensure popup closes
+      // Always close popup even if there's an error
       return this.goodbye();
     });
   }
@@ -251,13 +246,38 @@ class settings_share_hub extends DrumeeMFS {
       hub_id: hubId
     }).then((data) => {
       this.data = data || {};
+      
+      // Get access_type from multiple sources: API data, model (from media), or default
+      const accessTypeFromApi = (data && data.access_type) ? data.access_type : null;
+      const accessTypeFromModel = this.mget('access_type') || this.mget(_a.access_type);
+      const areaFromModel = this.mget(_a.area); // 'public', 'private', 'share', 'dmz'
+      
+      // Map area to access_type if needed
+      let mappedAccessType = null;
+      if (areaFromModel === 'public' || areaFromModel === 'share' || areaFromModel === 'dmz') {
+        mappedAccessType = 'public';
+      } else if (areaFromModel === 'private') {
+        mappedAccessType = 'private';
+      }
+      
+      // Priority: API data > model access_type > mapped area > default
+      const finalAccessType = accessTypeFromApi || accessTypeFromModel || mappedAccessType || 'private';
+      
+      this.debug('getNodeSettingsApi access_type resolution:', {
+        api: accessTypeFromApi,
+        model_access_type: accessTypeFromModel,
+        area: areaFromModel,
+        mapped: mappedAccessType,
+        final: finalAccessType
+      });
+      
       const initialFormData = {
         password: (data && data.password) ? data.password : '',
         hasPassword: (data && data.hasPaswword) ? data.hasPaswword : 0,
         hours: (data && data.hours) ? data.hours : '0',
         days: (data && data.days) ? data.days : '0',
         privilege: (data && data.permission) ? data.permission : _K.privilege.read,
-        accessType: (data && data.access_type) ? data.access_type : 'private', // 'public' or 'private'
+        accessType: finalAccessType, // Use resolved access type
         validity_mode: (data && data.dmz_expiry === _a.infinity) ? _a.infinity : _a.limited
       };
       
@@ -520,20 +540,54 @@ class settings_share_hub extends DrumeeMFS {
    * @param {*} cmd 
    */
   changeAccessType(cmd) {
-    const accessType = cmd.mget(_a.value) || 
+    // Try multiple ways to get the value
+    const accessType = cmd.mget('_value') ||
+                       cmd.mget(_a.value) || 
+                       cmd.get('_value') ||
                        cmd.get(_a.value) || 
                        cmd.value || 
                        (cmd.el && cmd.el.dataset && cmd.el.dataset.value) ||
-                       (cmd.model && cmd.model.get && cmd.model.get(_a.value)) ||
+                       (cmd.model && cmd.model.get && (cmd.model.get('_value') || cmd.model.get(_a.value))) ||
                        'private';
-    this.debug('changeAccessType', accessType, cmd);
+    this.debug('changeAccessType', accessType, cmd, {
+      mget_value: cmd.mget && cmd.mget(_a.value),
+      mget__value: cmd.mget && cmd.mget('_value'),
+      get_value: cmd.get && cmd.get(_a.value),
+      get__value: cmd.get && cmd.get('_value'),
+      cmd_value: cmd.value,
+      dataset_value: cmd.el && cmd.el.dataset && cmd.el.dataset.value
+    });
+    
+    // Update formData immediately
     this.formData.accessType = accessType;
     
     // Store in pendingChanges
     this.pendingChanges.accessType = accessType;
     
-    // Update UI immediately to show new label
+    // Update data object as well for immediate UI update
+    if (!this.data) {
+      this.data = {};
+    }
+    this.data.access_type = accessType;
+    
+    // Re-render the who-can-access section to update dropdown trigger label
+    // Find the content part first
+    const contentPart = this.getPart(`${this.fig.family}__content`);
+    if (contentPart && contentPart.children && contentPart.children.length > 0) {
+      // The who-can-access section is the first child (before first divider)
+      const whoCanAccessPart = contentPart.children.at(0);
+      if (whoCanAccessPart && whoCanAccessPart.feed) {
+        whoCanAccessPart.softClear();
+        whoCanAccessPart.feed(require('./skeleton/who-can-access').default(this));
+      } else {
+        // Fallback: re-render entire skeleton
+        this.feed(require('./skeleton').default(this));
+      }
+    } else {
+      // Fallback: re-render entire skeleton
     this.feed(require('./skeleton').default(this));
+    }
+    
     return false; // Prevent event bubbling to parent
   }
 

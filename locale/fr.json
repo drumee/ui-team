@@ -1911,6 +1911,7 @@
   "MAX_FILE_SIZE_X": "Taille maximale du fichier : {0}.",
   "DESKTOP_WALLPAPER": "Mes fonds d'écran",
   "ACTIVITY": "Activité",
+  "FOLDER_ACTIVITY": "Activité du dossier",
   "MARK_ALL_READ": "Marquer tous comme lu",
   "X_UPLOADED_FILE_Y": "{0} a téléchargé le fichier {1}",
   "UPLOADED_FILE": "a téléchargé le fichier",
