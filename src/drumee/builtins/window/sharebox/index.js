@@ -108,7 +108,7 @@ class __window_sharebox extends __hub {
     this.isShowSettings = true;
 
     this.dialogWrapper.feed({
-      kind: 'widget_sharebox_setting',
+      kind: 'settings_hub',
       label: this.settingsLabel,
       className: "",
       uiHandler: [this],

@@ -1,6 +1,6 @@
 /**
  * Who can access section
- * Includes dropdown for access type (Public/Private) and password checkbox
+ * Read-only display of access type (Public/Private)
  */
 export default function (ui) {
   const fig = `${ui.fig.family}-access`;
@@ -24,8 +24,8 @@ export default function (ui) {
   const currentAccessOption = accessOptions.find(opt => opt.value === accessType) || accessOptions[0];
   const currentAccessLabel = currentAccessOption.label;
 
-  // Access type dropdown trigger
-  const accessTrigger = Skeletons.Box.X({
+  // Read-only access type (no dropdown / no changing here)
+  const accessReadonly = Skeletons.Box.X({
     className: `${fig}__trigger`,
     kids: [
       Skeletons.Button.Svg({
@@ -36,60 +36,8 @@ export default function (ui) {
         content: currentAccessLabel,
         className: `${fig}__label`,
       }),
-      Skeletons.Button.Svg({
-        ico: "arrow--pages",
-        className: `${fig}__chevron`,
-      }),
     ],
   });
-
-  // Access type dropdown items
-  const accessItems = Skeletons.Box.Y({
-    className: `${fig}__menu-items`,
-    kids: accessOptions.map((opt) => {
-      const isActive = accessType === opt.value;
-      return Skeletons.Box.X({
-        className: `${fig}__menu-item-wrapper${isActive ? " active" : ""}`,
-        service: "change-access-type",
-        name: "change-access-type",
-        uiHandler: [ui],
-        _value: opt.value,
-        value: opt.value,
-        active: isActive ? 1 : 0,
-        dataset: {
-          value: opt.value,
-        },
-        kids: [
-          Skeletons.Button.Svg({
-            ico: opt.ico,
-            className: `${fig}__menu-item-icon`,
-          }),
-          Skeletons.Button.Label({
-            className: `${fig}__menu-item`,
-            label: opt.label,
-            service: "change-access-type",
-            uiHandler: [ui],
-            _value: opt.value,
-            value: opt.value,
-          })
-        ],
-      });
-    }),
-  });
-
-  // Access type dropdown
-  const accessDropdown = {
-    kind: KIND.menu.topic,
-    className: `${fig}__dropdown`,
-    flow: _a.y,
-    opening: _e.click,
-    sys_pn: 'access-type-dropdown',
-    service: "access-type-menu",
-    persistence: _a.once,
-    trigger: accessTrigger,
-    items: accessItems,
-    offsetY: 8,
-  };
 
   return Skeletons.Box.Y({
     className: `${fig}__section`,
@@ -100,7 +48,7 @@ export default function (ui) {
       }),
       Skeletons.Box.X({
         className: `${fig}__dropdown-wrapper`,
-        kids: [accessDropdown],
+        kids: [accessReadonly],
       }),
       Skeletons.Note({
         className: `${fig}__description`,

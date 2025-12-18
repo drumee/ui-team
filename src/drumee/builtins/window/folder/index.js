@@ -62,6 +62,7 @@ class __window_folder extends mfsInteract {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service)
+    console.log("AAA:65", service, cmd)
     switch (service) {
       case _a.info:
         return this.showInfo()
@@ -70,17 +71,51 @@ class __window_folder extends mfsInteract {
         return this.mget(_a.trigger).download()
 
       case _e.settings:
-        let item = this.model.toJSON();
-        delete item.style;
-        item.dataset = { modal: 1 }
-        item.kind = "settings_folder";
-        return this.__wrapperDialog.feed(item);
+        return this.switchShowFolderSettings(cmd);
 
       default:
         super.onUiEvent(cmd, args);
     }
   }
 
+  /**
+   * 
+   * @param {*} cmd 
+   * @returns 
+   */
+/**
+   * To switch the sharebox settings 
+   * @returns 
+   */
+switchShowFolderSettings(cmd) {
+  console.log("AAA:89", cmd.model.toJSON())
+  if (this.isShowSettings) {
+    this.isShowSettings = false;
+    return this.dialogWrapper.clear();
+  }
+  this.isShowSettings = true;
+
+  this.dialogWrapper.feed({
+    kind: 'settings_hub',
+    label: this.settingsLabel,
+    className: "",
+    uiHandler: [this],
+    media: this.mget(_a.media),
+    hub_id: this.mget(_a.hub_id),
+    source: this,
+    persistence: _a.once
+  });
+  var c = this.dialogWrapper.children.last();
+  c.once(_e.destroy, () => {
+    this.isShowSettings = false;
+    return this.unselect();
+  });
+  return c.on(_e.show, () => {
+    return this.on(_e.unselect, () => {
+      return this.dialogWrapper.clear();
+    });
+  });
+}
   /**
    * 
   */
