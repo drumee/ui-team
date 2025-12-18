@@ -9,7 +9,7 @@ class __window_folder extends mfsInteract {
   }
 
   /**
-   * 
+   * ss
    * @param {*} opt 
    */
   initialize(opt) {

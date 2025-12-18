@@ -720,7 +720,7 @@ class __window_manager extends push {
         );
 
       case "pricing":
-        return this.__wrapperModal.append({ kind: "settings_pricing" })
+        return this.__wrapperModal.append({ kind: "organization_form" })
           ;
       case _a.preferences:
         return this.__wrapperModal.feed({ kind: "settings_account" });
