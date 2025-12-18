@@ -112,13 +112,18 @@ class __window_hub extends mfsInteract {
     let item = this.model.toJSON();
     delete item.style;
     item.dataset = { modal: 1 };
-    
-    if (this.mget(_a.area) == _a.share) {
+
+    // Open a NEW popup each time (same behavior as wm.openSettings)
+    if (this.mget(_a.area) == _a.share || this.mget(_a.area) === "dmz") {
       item.kind = "settings_share_hub";
     } else {
       item.kind = "settings_hub";
     }
-    
+
+    item.uiHandler = [this];
+    item.source = this;
+    item.media = this.media || this.mget(_a.media) || cmd;
+
     return this.dialogWrapper.feed(item);
   }
 
