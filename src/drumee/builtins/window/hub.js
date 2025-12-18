@@ -109,22 +109,37 @@ class __window_hub extends mfsInteract {
    * @returns 
    */
   openSettings(cmd) {
-    let item = this.model.toJSON();
-    delete item.style;
-    item.dataset = { modal: 1 };
-
-    // Open a NEW popup each time (same behavior as wm.openSettings)
-    if (this.mget(_a.area) == _a.share || this.mget(_a.area) === "dmz") {
-      item.kind = "settings_hub";
-    } else {
-      item.kind = "settings_hub";
+    // Follow the same pattern as sharebox switchShowShareboxSettings()
+    // so the settings popup stays inside the folder window's dialogWrapper.
+    if (this.isShowSettings) {
+      this.isShowSettings = false;
+      return this.dialogWrapper.clear();
     }
+    this.isShowSettings = true;
 
-    item.uiHandler = [this];
-    item.source = this;
-    item.media = this.media || this.mget(_a.media) || cmd;
+    this.dialogWrapper.feed({
+      kind: "settings_hub",
+      label: this.settingsLabel || LOCALE.PROJECT_ROOM_MANAGER,
+      className: "",
+      uiHandler: [this],
+      // Prefer the window's bound media (folder/hub) so the popup shows correct info
+      media: this.mget(_a.media) || this.media || cmd,
+      hub_id: this.mget(_a.hub_id),
+      source: this,
+      persistence: _a.once
+    });
 
-    return this.dialogWrapper.feed(item);
+    const c = this.dialogWrapper.children.last();
+    c.once(_e.destroy, () => {
+      this.isShowSettings = false;
+      return this.unselect();
+    });
+    return c.on(_e.show, () => {
+      return this.on(_e.unselect, () => {
+        this.isShowSettings = false;
+        return this.dialogWrapper.clear();
+      });
+    });
   }
 
   /**
