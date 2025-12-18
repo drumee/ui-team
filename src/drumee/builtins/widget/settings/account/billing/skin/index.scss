@@ -146,6 +146,16 @@
         height: 16px;
       }
 
+      .svg-wrapper {
+        gap: var(--spacer-3);
+      }
+
+      svg {
+        width: 16px;
+        height: 16px;
+        color: var(--green-400);
+      }
+
       &.description {
         font-size: 13px;
         padding-bottom: 4px;

@@ -17,6 +17,7 @@ const OPTIONS = {
     description: "5 seats included, each additional seat $5",
     buttonTitle: "Upgrade",
     unit_price: 1699,
+    badge: 1,
     features: [
       "50G",
       "5 included",
@@ -44,7 +45,7 @@ const OPTIONS = {
 }
 
 function item(ui, opt) {
-  const { title, subtitle, description, buttonTitle, features } = OPTIONS[opt]
+  const { title, subtitle, description, buttonTitle, features, badge } = OPTIONS[opt]
   const fig = `${ui.fig.family}__plan`;
 
   let descriptionItem = "";
@@ -101,12 +102,30 @@ function item(ui, opt) {
       uiHandler: [ui],
 
       kids: [
-        Skeletons.Note({
-          content: f,
-        }),
+        Skeletons.Button.Label({
+          flow: _a.x,
+          ico: "available",
+          label: f,
+        })
+        // Skeletons.Note({
+        //   content: f,
+        // }),
       ],
     })
   });
+
+  let popularBadge = "";
+
+  if (badge) {
+    popularBadge = Skeletons.Box.X({
+      className: `${fig} popular-badge`,
+      kids: [
+        Skeletons.Note({
+          content: "Most Popular",
+        }),
+      ],
+    });
+  }
 
   const featuresWrapper = Skeletons.Box.Y({
     className: `${fig}-features`,
@@ -117,7 +136,7 @@ function item(ui, opt) {
     className: `${fig}-item`,
     // kidsOpt: { active: 0 },
     // radio: `color-radio-${ui._id}`,
-    kids: [header, button, featuresWrapper],
+    kids: [header, button, featuresWrapper, popularBadge],
   });
 }
 
