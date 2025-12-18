@@ -13,17 +13,11 @@ class settings_activity_hub extends DrumeeMFS {
       this.copyPropertiesFrom(opt.media);
     }
     
-    // Get nid from various sources
-    const nid = this.mget(_a.nid) || 
-                this.mget(_a.node_id) || 
-                this.mget(_a.actual_home_id) ||
-                this.mget(_a.hub_id);
-    
-    // Set API configuration for List.Smart to fetch activity data
     this.mset({
       api: {
         service: SERVICE.activity.folder_log,
-        nid: nid,
+        nid: this.mget(_a.actual_home_id) ,
+        hub_id: this.mget(_a.hub_id),
       },
     });
   }

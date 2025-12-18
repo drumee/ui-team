@@ -7,7 +7,7 @@ export default function (ui) {
   
   // Try multiple sources to get accessType: formData, data, model, or default
   const accessType = ui.formData?.accessType || 
-                     ui.data?.access_type ||
+                     ui.data?.access_type || 
                      (ui.mget && (ui.mget('access_type') || ui.mget(_a.access_type))) ||
                      (ui.mget && ui.mget(_a.area) === 'public' ? 'public' : null) ||
                      (ui.mget && ui.mget(_a.area) === 'share' ? 'public' : null) ||

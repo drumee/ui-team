@@ -1051,7 +1051,7 @@ class __window_manager extends push {
     this.debug("AAA:13000", item)
     switch (media.mget(_a.area)) {
       case _a.personal:
-        item.kind = "settings_folder";
+        item.kind = "settings_hub";
         break;
       case _a.public:
       case _a.private:

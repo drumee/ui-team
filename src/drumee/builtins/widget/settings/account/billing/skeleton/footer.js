@@ -1,5 +1,5 @@
 function item(ui, title, content, email) {
-  const fig = `${ui.fig.family}-billing__footer`;
+  const fig = `${ui.fig.family}__footer`;
 
   let emailItem = "";
   if (email) {
@@ -10,7 +10,7 @@ function item(ui, title, content, email) {
           content: "Contract: ",
         }),
         Skeletons.Note({
-          className: `${fig} email`,
+          className: `${fig}-email`,
           content: email,
         }),
       ],
@@ -21,7 +21,7 @@ function item(ui, title, content, email) {
     className: `${fig} item`,
     kids: [
       Skeletons.Note({
-        className: `${fig} title`,
+        className: `${fig}-title`,
         content: title,
       }),
       Skeletons.Box.Y({
@@ -38,23 +38,23 @@ function item(ui, title, content, email) {
 }
 
 function billing_footer(ui) {
-  const fig = `${ui.fig.family}-billing__footer`;
+  const fig = `${ui.fig.family}__footer`;
 
   return Skeletons.Box.Y({
-    className: `${fig} main`,
+    className: `${fig}-main`,
     debug: __filename,
     kids: [
       Skeletons.Note({
-        className: `${fig} header`,
+        className: `${fig}-header`,
         content: "Additional seat pricing",
       }),
       ,
       item(ui, "Pro:", "5 seats included, additional seats $5/month each."),
-      item(
-        ui,
-        "Start Ups:",
-        "10 seats included, additional seats $5/month each."
-      ),
+      // item(
+      //   ui,
+      //   "Start Ups:",
+      //   "10 seats included, additional seats $5/month each."
+      // ),
       item(
         ui,
         "Enterprise:",

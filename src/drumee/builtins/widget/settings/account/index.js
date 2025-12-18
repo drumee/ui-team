@@ -21,9 +21,7 @@ class settings_account extends LetcBox {
     this.getApi = this.getApi.bind(this);
     this.skeletons = [
       require("./skeleton/profile").default,
-      // require("./skeleton/profile").default,
-      // require("./skeleton/preferences").default,
-      require("./skeleton/billing/index").default,
+      function (ui) { return { kind: "settings_billing", uiHandler: [ui] } },
       require("./skeleton/storage").default,
       require("./skeleton/security").default,
     ];
@@ -34,6 +32,7 @@ class settings_account extends LetcBox {
       LOCALE.STORAGE,
       LOCALE.SECURITY,
     ];
+
   }
 
   /**
