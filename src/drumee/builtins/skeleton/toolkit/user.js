@@ -12,7 +12,7 @@ function menu_items(ui) {
         label: LOCALE.MY_ACCOUNT,
         service: "settings-account"
       }),
-      Visitor.domainCan(_K.permission.admin_view) ?
+      Visitor.domainCan(_K.permission.admin_member) ?
         Skeletons.Button.Label({
           ico: 'user-settings',
           className: `${pfx}-item admin-panel`,

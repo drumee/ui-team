@@ -118,6 +118,7 @@ module.exports = {
   widget_members_list_item:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/members-list-item/index').then(m=>{s(m.default)}).catch(f)},
   widget_members_search:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/members-search/index').then(m=>{s(m.default)}).catch(f)},
   widget_members_list:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/members_list/index').then(m=>{s(m.default)}).catch(f)},
+  organization_form:function(s,f){import('src/drumee/builtins/window/adminpanel/widget/organization-form/index').then(m=>{s(m.default)}).catch(f)},
   chat_contact_list:function(s,f){import('src/drumee/builtins/window/bigchat/widget/chatcontact-list').then(m=>{s(m.default)}).catch(f)},
   chat_contact_item:function(s,f){import('src/drumee/builtins/window/bigchat/widget/chatcontact-item').then(m=>{s(m.default)}).catch(f)},
   chat_room:function(s,f){import('src/drumee/builtins/window/bigchat/widget/chat-room').then(m=>{s(m.default)}).catch(f)},

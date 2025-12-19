@@ -118,6 +118,7 @@ const a = {
   widget_members_list_item:"src/drumee/builtins/window/adminpanel/widget/members-list-item/index",
   widget_members_search:"src/drumee/builtins/window/adminpanel/widget/members-search/index",
   widget_members_list:"src/drumee/builtins/window/adminpanel/widget/members_list/index",
+  organization_form:"src/drumee/builtins/window/adminpanel/widget/organization-form/index",
   chat_contact_list:"src/drumee/builtins/window/bigchat/widget/chatcontact-list",
   chat_contact_item:"src/drumee/builtins/window/bigchat/widget/chatcontact-item",
   chat_room:"src/drumee/builtins/window/bigchat/widget/chat-room",
