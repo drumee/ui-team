@@ -270,7 +270,7 @@ function __skl_widget_member_form(ui) {
         state: 0,
         sys_pn: 'submit-button',
         ico: "arrow-right",
-        service: "create-prepared-counts",
+        service: _e.submit,
         className: `${fig}__button`,
         priority: "primary",
       })
