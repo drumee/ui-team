@@ -5,7 +5,7 @@
  * @returns 
  */
 export function button(ui, opt) {
-  let { label, ico, service, sys_pn, className, priority = "primary", type, haptic } = opt;
+  let { label, state = "", ico, service, sys_pn, className, priority = "primary", type, haptic } = opt;
   const pfx = className || `${ui.fig.group}__button`;
   let kids = []
   if (label) kids.push(
@@ -32,12 +32,12 @@ export function button(ui, opt) {
       main = Skeletons.Box.G;
     }
   }
-
   return main({
     className: `${pfx}-main ${priority}`,
     partHandler: [ui],
     uiHandler: [ui],
     sys_pn,
+    state,
     service,
     haptic,
     kidsOpt: {

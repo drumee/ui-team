@@ -1,12 +1,4 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2020
- * FILE : /src/drumee/builtins/window/adminpanel/js/skeleton/index.js
- * TYPE : Skelton
- * ===================================================================**/
 
-// ===========================================================
-//
-// ===========================================================
 function __skl_admin_panel  (_ui_){
   const menu = Skeletons.Box.X({ 
     debug     : __filename,

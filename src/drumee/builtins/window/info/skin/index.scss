@@ -1,4 +1,5 @@
 @use "mixins/drumee.scss";
+@use "skin/lib/button" as *;
 
 .window-info {
   .dialog__wrapper {
@@ -7,20 +8,42 @@
     height: 0;
   }
 
-  &-topbar {
-    &__container {
-      width: 100%;
-      height: 44px;
-      align-items: center;
-
-      svg {
-        color: var(--neutral-900);
-        &:hover {
-          color: var(--primary-500);
-        }
-      }
-    }
+  &__ui {
+    min-width: 600px;
+    min-height: 300px;
   }
+
+  .gradient-start-badge {
+    stop-color: var(--primary-300);
+  }
+
+  .gradient-end-badge {
+    stop-color: var(--primary-500);
+  }
+
+  &__logo {
+    align-items: center;
+  }
+
+  &__main {
+    padding: var(--spacer-5);
+  }
+
+  // &-topbar {
+  //   &__container {
+  //     width: 100%;
+  //     height: 44px;
+  //     align-items: center;
+
+  //     svg {
+  //       color: var(--neutral-900);
+
+  //       &:hover {
+  //         color: var(--primary-500);
+  //       }
+  //     }
+  //   }
+  // }
 
   &__container {
     height: 100%;
@@ -43,12 +66,10 @@
       //  white-space: break-spaces;
       //  line-break: anywhere;
       word-wrap: break-word;
-      @include drumee.typo(
-        $weight: 300,
+      @include drumee.typo($weight: 300,
         $size: 18px,
         $line: 33px,
-        $color: var(--default-text-color)
-      ); //24px
+        $color: var(--default-text-color)); //24px
 
       p {
         text-align: center;
@@ -56,12 +77,10 @@
 
       &.primary-color {
         padding: 5px;
-        @include drumee.typo(
-          $weight: 300,
+        @include drumee.typo($weight: 300,
           $size: 24px,
           $line: 33px,
-          $color: var(--secondary-text-color)
-        ); //var(--eblue));
+          $color: var(--secondary-text-color)); //var(--eblue));
       }
     }
   }
@@ -73,12 +92,10 @@
     margin-right: auto;
     margin-left: auto;
     margin-bottom: 6px;
-    @include drumee.typo(
-      $weight: 300,
+    @include drumee.typo($weight: 300,
       $size: 24px,
       $line: 33px,
-      $color: var(--default-text-color)
-    );
+      $color: var(--default-text-color));
 
     p {
       text-align: center;
@@ -91,29 +108,32 @@
     margin-bottom: 50px;
   }
 
-  &__button {
-    padding: 5px;
-    background-color: var(
-      --btn-rollback-background
-    ); //var(--egreen);//#18a3ac; //#18ac72
-    width: 90px; //120px;
-    height: 32px;
-    // padding: 5px;
-    justify-content: center;
-    border-radius: var(--border-radius); // 2px;
-    cursor: pointer;
-    @include drumee.typo(
-      $size: 16px,
-      $line: 28px,
-      $color: var(--btn-rollback-text)
-    ); //$weight:300
-    align-items: center;
-    border: 1px solid var(--btn-rollback-border);
-    justify-content: center;
+  // &__button {
+  //   padding: 5px;
+  //   background-color: var(--btn-rollback-background); //var(--egreen);//#18a3ac; //#18ac72
+  //   width: 90px; //120px;
+  //   height: 32px;
+  //   // padding: 5px;
+  //   justify-content: center;
+  //   border-radius: var(--border-radius); // 2px;
+  //   cursor: pointer;
+  //   @include drumee.typo($size: 16px,
+  //     $line: 28px,
+  //     $color: var(--btn-rollback-text)); //$weight:300
+  //   align-items: center;
+  //   border: 1px solid var(--btn-rollback-border);
+  //   justify-content: center;
 
-    &:hover {
-      border: 2px solid var(--btn-rollback-border-hover);
-      color: var(--btn-rollback-text-hover);
-    }
+  //   &:hover {
+  //     border: 2px solid var(--btn-rollback-border-hover);
+  //     color: var(--btn-rollback-text-hover);
+  //   }
+  // }
+
+  @include common-button;
+
+  &__buttons {
+    justify-content: center;
+    padding: 10px;
   }
 }

@@ -1214,9 +1214,9 @@
   "UNBLOCK": "解除封锁",
   "USE_MANAGER_TO_DELETE": "出于安全原因，不能通过垃圾箱直接删除共享框。<br> <br>要删除共享框，请打开其管理器-位于横幅中的滚轮图标-然后，您将在左上方看到删除图标。",
   "CONTAINS_NON_DELETABLE": "Эта папка содержит один или несколько элементов, которые нельзя удалить. Пожалуйста, сначала сделайте сортировку.",
-  "DRAG_DROP_EXCEL_FILE": "<p class = p1>将带有列表的Excel文件放在此处。</ p> <p class = alert>！ 警告</ p> <p class = p2>文件的格式必须在第一行中包含各列的确切名称。</ p> <p class = p3>请参阅下面的可下载文件。</ P >",
+  "DOWNLOAD_USERSLIST": "请从下方链接下载模板文件。填写您的用户列表，然后将其拖放到此区域。",
   "OPEN_MANAGER": "公开经理",
-  "SEE_THE_FORMAT": "下载Excel列表格式",
+  "DOWNLOAD_TEMPLATE_FILE": "下载模板文件",
   "CHOOSE_NEW_ADMIN": "新增管理员",
   "ADD_ADMINS": "添加管理员",
   "NO_MEMBERS_FOUND": "找不到会员",
@@ -1316,7 +1316,6 @@
   "CLEAR_ALL": "全部清除",
   "WEBINAR": "{0}网络研讨会",
   "UPLOAD_AGAIN": "重新上传",
-  "CREATE_ALL_ACCOUNTS": "创建所有帐户",
   "INVALID_USER": "无效的用户",
   "NOT_ONLINE_ASK_LATER": "不幸的是不在网上。 <br>稍后重新申请。",
   "ALREADY_SHARED_ASK_HIM_LATER": "该会员的桌面已被共享，请稍后再问。",
@@ -1911,7 +1910,6 @@
   "MAX_FILE_SIZE_X": "最大文件大小不超过 {0}。",
   "DESKTOP_WALLPAPER": "我的壁纸",
   "ACTIVITY": "活动",
-  "FOLDER_ACTIVITY": "文件夹活动",
   "MARK_ALL_READ": "标记为已阅读",
   "X_UPLOADED_FILE_Y": "{0} 上传了文件 {1}",
   "UPLOADED_FILE": "已上传文件",
@@ -1952,5 +1950,6 @@
   "ON": "已启用",
   "ENTER_CODE_TO_CHANGE_EMAIL": "要更改电子邮件地址，我们需要确认此操作是由您本人发起的。请输入发送至 {0} 的验证码。",
   "WRONG_CREDENTIALS": "凭据错误",
-  "UNCOMPLIANT_PASSWORD": "不合规的密码"
+  "UNCOMPLIANT_PASSWORD": "不合规的密码",
+  "CREATE_ACCOUNTS": "创建账户"
 }

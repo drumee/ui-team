@@ -47,7 +47,7 @@ class ___members_page extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-
+    this.debug("AAA:50", service)
     switch (service) {
       case 'see-desktop':
         this.invokeSeeDesktop(cmd)
@@ -58,13 +58,13 @@ class ___members_page extends LetcBox {
         this.loadImportMembers()
         break;
 
-      case 'import-member-re-upload':
-        this.loadImportDropPage()
-        break;
+      // case 'import-member-re-upload':
+      //   this.loadImportDropPage()
+      //   break;
 
-      case 'import-member-upload':
-        this.importAllAccounts()
-        break;
+      // case 'import-member-upload':
+      //   this.importAllAccounts()
+      //   break;
 
       case 'connection-log':
         return this.loadConnectionLog(cmd)
@@ -131,7 +131,6 @@ class ___members_page extends LetcBox {
       case 'trigger-all-admins':
         let allAdminEl = this.findPart('all-admins')
         this.waitElement(allAdminEl.el, () => {
-          // allAdminEl.$el.trigger(_e.click);
           allAdminEl.triggerHandlers();
         });
 
@@ -150,8 +149,8 @@ class ___members_page extends LetcBox {
         this.closeOverlay(cmd)
         break
 
-      case 'download-member-sample-file':
-        let url = `${bootstrap().static}sample/admin_member_upload_sample.xlsx`;
+      case 'download-members-template':
+        let url = `${bootstrap().static}sample/users-list.csv`;
         window.open(url, '_blank');
         return;
     }
@@ -741,15 +740,17 @@ class ___members_page extends LetcBox {
      * @type {File}
     */
     let file = f[0].get(_a.file);
-    if (file.isDirectory || !/(.+)\.xls(.*)$/.test(file.name)) {
+    if (file.isDirectory || !/(.+)\.csv(.*)$/.test(file.name)) {
       this.warn("REJECTED ", file, file.isDirectory, file.name, /(.+)\.xls*$/.test(file.name));
-      Wm.alert('excel'.underline("required-type").printf(LOCALE.REQUIRES_FILE_TYPE));
+      Wm.alert('csv'.underline("required-type").printf(LOCALE.REQUIRES_FILE_TYPE));
       return;
     }
-
+    this.debug("AAA:748", file)
+    // return
     let opt = {
-      service: SERVICE.adminpanel.members_import,
+      service: SERVICE.adminpanel.prepare_import,
       orgid: this.organisation.id,
+      upload: 1,
       nid: '0' // Only to avoid uploader complain
     }
     this.$el.append(__progress(this));
@@ -773,46 +774,36 @@ class ___members_page extends LetcBox {
     }
   }
 
-
-  /**
-   * @param {*} e
-   * @param {any} socket
+  /** 
+   * 
   */
-  onUploadEnd(e, socket) {
-    let data = e
-    if (e.data) {
-      data = e.data;
-    }
-    let status = data.valid;
-    let members = data.members;
-    this.importResponse = data;
+  onUploadResponse(data) {
     if (data.status == 'FILE_ERR') {
-      Wm.alert('excel'.underline("required-type").printf(LOCALE.REQUIRES_FILE_TYPE));
+      Wm.alert('csv'.underline("required-type").printf(LOCALE.REQUIRES_FILE_TYPE));
       return;
     }
+    if (data.status) {
+      this.ensurePart('import-list-error-msg').then((p) => {
+        setTimeout(() => { p.el.dataset.state = _a.open }, 300)
+        p.set({ content: data.status })
+      })
+      return;
+    }
+    let members = data;
     let membersListKind = members.map(row => {
       return require('./skeleton/import/members-list').AddRow(this, row)
     })
     this.getPart('upload-body-wrapper').feed(require('./skeleton/import/members-list').default(this))
     this.getPart('import-list-table').append(membersListKind)
-    let successService = 'import-member-re-upload';
-    let successLabel = LOCALE.UPLOAD_AGAIN; //'Upload Again';
-    let cancelService = 'close-overlay';
-    if (status) {
-      successService = 'import-member-upload'
-      successLabel = LOCALE.CREATE_ALL_ACCOUNTS //'Create All Accounts'
-      // cancelService   = 'import-member-re-upload'
+    let valid = members.filter(function name(p) {
+      return !p.error
+    })
+    if (valid.length) {
+      this.getPart('button-validate').setState(1)
     }
-
-    this.getPart('upload-footer-wrapper').feed(Preset.ConfirmButtons(this, {
-      cancelLabel: LOCALE.CANCEL || '',
-      cancelService: cancelService,
-      confirmLabel: successLabel,
-      confirmService: successService
-    }))
-    if (!status) {
-      this.getPart('import-list-error-msg').el.dataset.state = _a.open
-    }
+    // if (!status) {
+    //   this.getPart('import-list-error-msg').el.dataset.state = _a.open
+    // }
 
   }
 
@@ -832,6 +823,7 @@ class ___members_page extends LetcBox {
     this.getPart('import-list-error-msg').el.dataset.state = _a.closed
   }
 
+  
   /*
    *
   */
@@ -866,8 +858,6 @@ class ___members_page extends LetcBox {
     }
     return this.removeMemberFromList()
   }
-
-
 
   /**
    * @param {Object} data
@@ -943,19 +933,17 @@ class ___members_page extends LetcBox {
         this.loadActionPopupAcknowledgement(data[0])
         return this.updateMemberStatusResponse(data[0])
 
-      case SERVICE.adminpanel.members_import:
-        if (data.valid) {
-          // this.getItemsByKind("widget_member_tags")[0]
-          // .getItemsByAttr('type','allMembers')[0]
-          // .$el.trigger('click');
-          this.getItemsByKind("widget_member_tags")[0]
-            .getItemsByAttr('type', 'allMembers')[0]
-            .triggerHandlers();
-          this.closeOverlay();
-        } else {
-          this.onUploadEnd(data, '')
-        }
-        break;
+      // case SERVICE.adminpanel.members_import:
+      //   this.debug("AAA:948", data)
+      //   if (data.valid) {
+      //     this.getItemsByKind("widget_member_tags")[0]
+      //       .getItemsByAttr('type', 'allMembers')[0]
+      //       .triggerHandlers();
+      //     this.closeOverlay();
+      //   } else {
+      //     this.onUploadEnd(data, '')
+      //   }
+      //   break;
 
       case SERVICE.adminpanel.mimic_new:
         this.requestMimicNewVerify(data)

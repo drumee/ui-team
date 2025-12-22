@@ -1214,9 +1214,9 @@
   "UNBLOCK": "Unblock",
   "USE_MANAGER_TO_DELETE": "For security reasons, a sharing box cannot be deleted directly via the trash can. <br> <br> To delete it, open its manager - \"wheel\" icon located in the banner - and you will then see the delete icon at the top left.",
   "CONTAINS_NON_DELETABLE": "This folder contains one or more non-deletable items. Please do your sorting first.",
-  "DRAG_DROP_EXCEL_FILE": "<p class = p1> Drop the Excel file with the list here. </p> <p class = alert>! Warning </p> <p class = p2> The file must have the format with, in the first line, the exact names of the columns. </p> <p class = p3> See the downloadable file below. </ P >",
+  "DOWNLOAD_USERSLIST": "Download the template file from the link below. Fill it in with your users list and drop it in this area.",
   "OPEN_MANAGER": "Open manager",
-  "SEE_THE_FORMAT": "Download the Excel list format",
+  "DOWNLOAD_TEMPLATE_FILE": "Download the template file",
   "CHOOSE_NEW_ADMIN": "Add a new administrator",
   "ADD_ADMINS": "Add Admins",
   "NO_MEMBERS_FOUND": "No members found",
@@ -1316,7 +1316,6 @@
   "CLEAR_ALL": "Clear all",
   "WEBINAR": "{0} webinar",
   "UPLOAD_AGAIN": "Upload again",
-  "CREATE_ALL_ACCOUNTS": "Create all accounts",
   "INVALID_USER": "Invalid user",
   "NOT_ONLINE_ASK_LATER": "Unfortunately not online. <br> Reapply later.",
   "ALREADY_SHARED_ASK_HIM_LATER": "This member's desktop is already shared, please ask later.",
@@ -1911,7 +1910,6 @@
   "MAX_FILE_SIZE_X": "Max file size up to {0}.",
   "DESKTOP_WALLPAPER": "My wallpapers",
   "ACTIVITY": "Activity",
-  "FOLDER_ACTIVITY": "Folder's activity",
   "MARK_ALL_READ": "Mark as all read",
   "X_UPLOADED_FILE_Y": "{0} uploaded file {1}",
   "UPLOADED_FILE": "uploaded the file",
@@ -1952,5 +1950,6 @@
   "ON": "On",
   "ENTER_CODE_TO_CHANGE_EMAIL": "To change email address we need to ensure this action has been initiated by you. Please enter the code sent to {0}.",
   "WRONG_CREDENTIALS": "Wrong credentials",
-  "UNCOMPLIANT_PASSWORD": "Uncompliant password"
+  "UNCOMPLIANT_PASSWORD": "Uncompliant password",
+  "CREATE_ACCOUNTS": "Create accounts"
 }

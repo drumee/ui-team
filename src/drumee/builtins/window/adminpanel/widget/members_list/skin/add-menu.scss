@@ -10,7 +10,7 @@
       }
 
       & .menu-topic-items {
-        background-color: var(--default-background);
+        background-color: var(--white);
         border-radius: var(--border-radius);
         box-shadow: var(--drumee-container-dropdown);
         justify-content: center;
@@ -23,30 +23,33 @@
         &__wrapper {
           left: -57px;
           padding: 10px;
-          top: 22px !important;
+          top: 33px;
+          box-shadow: 0px 12px 24px 0px var(--neutral-300);
+          border-radius: var(--corner-radius-3);
+          background-color: var(--white);
         }
 
-        &:before {
-          background-color: var(--default-background);
-          box-shadow: -4px -6px 10px 1px rgba(63, 79, 117, 0.13);
-          content: "";
-          height: 10px;
-          left: 12px;
-          position: absolute;
-          top: -5px;
-          transform: rotate(45deg);
-          width: 10px;
-        }
+        // &:before {
+        //   background-color: var(--default-background);
+        //   box-shadow: -4px -6px 10px 1px rgba(63, 79, 117, 0.13);
+        //   content: "";
+        //   height: 10px;
+        //   left: 12px;
+        //   position: absolute;
+        //   top: -5px;
+        //   transform: rotate(45deg);
+        //   width: 10px;
+        // }
 
-        &:after {
-          background: var(--default-background);
-          border-radius: var(--default-border-radius-top);
-          content: "";
-          left: 0;
-          position: absolute;
-          top: 0;
-          width: 100%;
-        }
+        // &:after {
+        //   background: var(--default-background);
+        //   border-radius: var(--default-border-radius-top);
+        //   content: "";
+        //   left: 0;
+        //   position: absolute;
+        //   top: 0;
+        //   width: 100%;
+        // }
       }
     }
 
@@ -73,7 +76,7 @@
 
       svg {
         &:hover {
-          color: var(--default-icon-hover);
+          color: var(--primary-400);
           opacity: 1;
         }
       }
@@ -89,7 +92,7 @@
       padding: 8px 8px 5px 17px;
 
       &:hover {
-        background-color: var(--default-background-hover);
+        background-color: var(--neutral-300);
         color: var(--default-text-reverse);
 
         & .widget-members-list-menu__note {

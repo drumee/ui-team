@@ -1,35 +1,31 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /src/drumee/builtins/window/adminpanel/widget/member-list/skeleton/add-menu.js
-//   TYPE : Skeleton
-// ===================================================================**/
+
 /// <reference path="../../../../../../../../@types/index.d.ts" />
 
 /**
  * 
- * @param {*} _ui_ 
+ * @param {*} ui 
  */
-function __skl_widget_member_list_add_menu (_ui_) {
+function __skl_widget_member_list_add_menu (ui) {
 
   if(! Visitor.domainCan(_K.permission.admin_member)){
     return Skeletons.Box.X({});
   }
 
-  const tagType = _ui_._currentTag.mget(_a.type)
+  const tagType = ui._currentTag.mget(_a.type)
 
-  const menuFig = `${_ui_.fig.family}-menu`;
+  const menuFig = `${ui.fig.family}-menu`;
   
   const menuTrigger = Skeletons.Button.Svg({
     ico       : 'drumee-contact_add',
     className : `${menuFig}__icon ${menuFig}__trigger trigger-icon contact_add ${tagType}`,
-    service   : 'add-menu',
-    uiHandler : _ui_
+    // service   : 'add-menu',
+    uiHandler : ui
   });
   
   const addMember = Skeletons.Box.X({
     className   : `${menuFig}__item`,
     service     : 'create-member',
-    uiHandler   : _ui_,
+    uiHandler   : ui,
     kidsOpt     : {
       active      : 0
     },
@@ -44,7 +40,7 @@ function __skl_widget_member_list_add_menu (_ui_) {
   const importMembers = Skeletons.Box.X({
     className   : `${menuFig}__item`,
     service     : 'import-members',
-    uiHandler   : _ui_,
+    uiHandler   : ui,
     kidsOpt     : {
       active      : 0
     },
@@ -59,7 +55,7 @@ function __skl_widget_member_list_add_menu (_ui_) {
   const chooseAdmins = Skeletons.Box.X({
     className   : `${menuFig}__item`,
     service     : 'choose-admins',
-    uiHandler   : _ui_,
+    uiHandler   : ui,
     kidsOpt     : {
       active      : 0
     },
@@ -93,10 +89,10 @@ function __skl_widget_member_list_add_menu (_ui_) {
 
   const menu = Skeletons.Box.X({
     debug     : __filename,
-    className : `${menuFig}__dropdown ${_ui_.fig.group}__dropdown ${tagType}`,
+    className : `${menuFig}__dropdown ${ui.fig.group}__dropdown ${tagType}`,
     kids      : [{
       kind        : KIND.menu.topic,
-      className   : `${menuFig}__wrapper ${_ui_.fig.group}__wrapper`,
+      className   : `${menuFig}__wrapper ${ui.fig.group}__wrapper`,
       flow        : _a.y,
       opening     : _e.click,
       sys_pn      : 'add-member-dropdown',

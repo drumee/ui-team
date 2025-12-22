@@ -153,7 +153,6 @@
   "CREATE_PRIVATE_FOLDER": "Crear una carpeta privada",
   "CREATE_PERSONAL_FOLDER": "Crear una carpeta personal",
   "ACTIVITY": "Actividad",
-  "FOLDER_ACTIVITY": "Actividad de la carpeta",
   "MARK_ALL_READ": "Marcar como leído",
   "X_UPLOADED_FILE_Y": "{0} subió el archivo {1}",
   "UPLOADED_FILE": "subió el archivo",
@@ -203,5 +202,8 @@
   "WRONG_CREDENTIALS": "Credenciales incorrectas",
   "UNCOMPLIANT_PASSWORD": "Contraseña no compatible",
   "PASS_PHRASE_UPDATED": "La contraseña ha sido actualizada",
-  "ACK_PROFILE_UPDATED": "Tu perfil ha sido actualizado"
+  "ACK_PROFILE_UPDATED": "Tu perfil ha sido actualizado",
+  "DOWNLOAD_USERSLIST": "Descarga el archivo de plantilla del enlace a continuación. Ingresa tu lista de usuarios y suéltalo aquí.",
+  "DOWNLOAD_TEMPLATE_FILE": "Descargar el archivo de plantilla",
+  "CREATE_ACCOUNTS": "Crear cuentas"
 }

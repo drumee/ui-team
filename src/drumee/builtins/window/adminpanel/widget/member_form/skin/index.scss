@@ -1,15 +1,11 @@
-/** ================================================================== *
-#   Copyright Xialia.com  2011-2021
-#   FILE : /src/drumee/builtins/window/adminpanel/widget/member_form/skin/index.scss
-#   TYPE : Component style
-# ===================================================================**/
 @use 'mixins/drumee';
+@use "skin/lib/button" as *;
 
 .widget-member-form {
   &__ui {
     height: 100%;
     width: 100%;
-    font-family : var(--font-main);
+    font-family: var(--font-main);
   }
 
   &__main {
@@ -22,6 +18,14 @@
     height: 100%;
     margin: auto;
     min-width: 300px;
+
+    .entry-reminder_error {
+      position: absolute;
+    }
+
+    .entry-reminder__main.showerror {
+      padding: 0;
+    }
   }
 
   &__wrapper {
@@ -40,7 +44,7 @@
 
   &__area-code {
     align-items: baseline;
-    width: 70px;
+    width: 80px;
   }
 
   &__security-wrapper {
@@ -52,10 +56,10 @@
   &__message-box {
     height: 20px;
   }
-  
+
   &__note {
     &.area-code {
-      @include drumee.typo($size: 18px, $line: 16px, $weight:300, $color: var(--default-text-color));
+      @include drumee.typo($size: 18px, $line: 16px, $weight: 300, $color: var(--default-text-color));
       right: 2px;
       top: 0px;
     }
@@ -71,7 +75,7 @@
     }
 
     &.security {
-      cursor:default;
+      cursor: default;
     }
 
     &.error-msg {
@@ -85,43 +89,43 @@
   &__icon {
     height: 26px;
     margin-right: 21px;
-    opacity:0.55;
+    opacity: 0.55;
     width: 26px;
 
-    &.name {
-      opacity:1;
-      top:-4px;
-      padding: 2px;
-    }
+    // &.name {
+    //   opacity: 1;
+    //   top: -4px;
+    //   padding: 2px;
+    // }
 
-    &.email {
-      left: 4px;
-      top: -1px;
-      padding: 2.5px;
-    }
+    // &.email {
+    //   left: 4px;
+    //   top: -1px;
+    //   padding: 2.5px;
+    // }
 
-    &.mobile {
-      left: 4px;
-      top: -4px;
-      padding: 0px;
-    }
+    // &.mobile {
+    //   left: 4px;
+    //   top: -4px;
+    //   padding: 0px;
+    // }
 
-    &.ident {
-      left: 4px;
-      top: -4px;
-      padding: 1px;
-    }
+    // &.ident {
+    //   left: 4px;
+    //   top: -4px;
+    //   padding: 1px;
+    // }
 
-    &.address {
-      height: 28px;
-      left:3px;
-      opacity:0.75;
-      top:-3px;
-      width: 27px;
-    }
+    // &.address {
+    //   height: 28px;
+    //   left: 3px;
+    //   opacity: 0.75;
+    //   top: -3px;
+    //   width: 27px;
+    // }
 
-    &.security{
-      margin-left:5px;
+    &.security {
+      margin-left: 5px;
       opacity: 0.4;
     }
 
@@ -129,7 +133,7 @@
       border-radius: var(--checkbox-border-radius);
       border: 1px solid var(--default-checkbox-border);
       box-shadow: none;
-      color:var(--default-checkbox-background);
+      color: var(--default-checkbox-background);
       cursor: pointer;
       height: 15px;
       left: 1%;
@@ -154,7 +158,7 @@
         color: var(--default-text-success);
         opacity: 0.4;
         border: none;
-  
+
         &[data-status="0"] {
           border-radius: 2px;
           border: 1px solid var(--egrey-89);
@@ -183,11 +187,12 @@
     &.firstname,
     &.address-item {
       padding-bottom: 7px;
+      height: 41px;
     }
 
     &.mobile {
       left: 10px;
-      width: calc(100% - 125px);
+      width: calc(100% - 135px);
 
       .entry-reminder__main.showerror {
         overflow: visible;
@@ -210,65 +215,60 @@
         left: -4px;
       }
 
-      /* Chrome, Safari, Edge, Opera */
-      & input::-webkit-outer-spin-button,
-      & input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-      }
 
-      /* Firefox */
-      & input[type=number] {
-        -moz-appearance: textfield;
-      }
+
     }
 
     & input {
       @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-color));
       background-color: transparent;
       border-bottom: 1px solid var(--default-entry-border-bottom);
-      border-radius: 0px;
       margin-left: 0px;
       width: 100%;
+      border-radius: var(--corner-radius-4);
+      padding: 0 var(--spacer-5);
+      border: 1px solid var(--neutral-300);
 
       &::placeholder {
-        @include drumee.typo($size: 16px, $weight:300, $line: 19px, $color: var(--default-text-placeholder));
+        @include drumee.typo($size: 16px, $weight: 300, $line: 19px, $color: var(--default-text-placeholder));
       }
-      
+
       &:focus {
-        border-color: var(--focus-border-placeholder);
+        border-color: var(--primary-300);
         outline: none;
 
         @include drumee.placeholder-input {
-          color:var(--focus-text-placeholder);
+          color: var(--neutral-700);
         }
       }
+
       &.entry [data-status="error"] {
-        left:-20px;
+        left: -20px;
       }
     }
 
     & textarea {
       @include drumee.typo($size: 14px, $line: 20px);
       background-color: var(--default-background);
-      border-radius:var(--border-radius);
-      border: 1px solid var(--focus-border-placeholder);
       box-sizing: border-box;
       margin-bottom: 20px;
       margin-left: 1px;
       margin-top: 5px;
       min-height: 60px;
-      padding:6px;
+      padding: 6px;
       resize: none;
       width: 100%;
-      
+      border-radius: var(--corner-radius-4);
+      padding: 0 var(--spacer-5);
+      border: 1px solid var(--neutral-300);
+
       &::placeholder {
-        @include drumee.typo($size: 14px, $weight: 300, $color: var(--default-text-placeholder));
+        @include drumee.typo($size: 14px, $weight: 300, $color: var(--primary-300));
       }
 
       &:focus {
         outline: none;
-       }
+      }
     }
   }
 
@@ -277,50 +277,62 @@
     padding-bottom: 10px;
     width: 100%;
     margin: 20px auto;
-    
+
     & .button {
       @include drumee.typo($size: 16px, $line: 19px);
-      align-items:center;
-      border-radius:var(--border-radius);
+      align-items: center;
+      border-radius: var(--border-radius);
       height: 35px;
       justify-content: center;
       margin: 0 0% 0 8%;
       width: 115px;
     }
   }
-  
+
   &__button-cancel {
     border: 1px solid var(--btn-rollback-border);
     @include drumee.typo($color: var(--btn-rollback-text));
 
     &:hover {
-      border:2px solid var(--btn-rollback-border-hover);
-      color: var(--btn-rollback-text-hover);   
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
-  
+
   &__button-confirm {
     @include drumee.typo($color: var(--btn-commit-text));
-    background-color:var(--btn-commit-background);
+    background-color: var(--btn-commit-background);
     border: 1px solid var(--btn-commit-border);
-    
+
     &:hover {
-      background-color:var(--btn-commit-background-hover);
+      background-color: var(--btn-commit-background-hover);
       border-color: var(--btn-commit-border-hover);
     }
-  
+
     &[data-error=on] {
-      @include drumee.typo($weight:300, $color: var(--default-text-reverse));
+      @include drumee.typo($weight: 300, $color: var(--default-text-reverse));
       pointer-events: none;
       opacity: 0.2;
     }
   }
 
-  & .entry[data-status=error] input {border-bottom: 1px solid var(--default-border-error);}
+  & .entry[data-status=error] input {
+    border-bottom: 1px solid var(--default-border-error);
+  }
+
   & .address__ui.address-input-item__ui:only-child,
   & .phoneno__ui.phoneno-input-item__ui:only-child {
     & .destroy-tag {
       display: none;
     }
   }
+
+  &__buttons {
+    justify-content: center;
+    padding-bottom: var(--spacer-4);
+  }
+
+
+  @include common-button;
+
 }

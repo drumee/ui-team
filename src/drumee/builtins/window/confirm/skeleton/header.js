@@ -1,16 +1,8 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : __dbg_path
-//   TYPE : Skelton
-// ==================================================================== *
 
 const __skl_window_confirm_topbar = function (_ui_) {
-  // (hbfc) h ->header, b -> body, f -> footer c -> close
-  const mode = _ui_.mget(_a.mode) || "hbfcx";
-  const m = new RegExp(`[${mode}]`);
   const figname = "topbar";
   const pfx = `${_ui_.fig.group}-confirm`;
-  const a = Skeletons.Box.X({
+  return Skeletons.Box.X({
     className: `${pfx}-${figname}__container`,
     sys_pn: "topbar",
     debug: __filename,
@@ -29,12 +21,5 @@ const __skl_window_confirm_topbar = function (_ui_) {
       }),
     ],
   });
-  // if (m.test("x")) {
-  //   a.kids.unshift(Preset.Button.Close(_ui_));
-  // } else if (m.test("c")) {
-  //   a.kids.unshift(require("window/skeleton/topbar/control")(_ui_, "c"));
-  // }
-
-  return a;
 };
 module.exports = __skl_window_confirm_topbar;

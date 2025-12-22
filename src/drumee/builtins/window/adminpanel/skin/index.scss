@@ -26,7 +26,7 @@
     &.window__body {
       align-items: start !important;
       padding: 0;
-      border-radius: var(--border-radius-righ);
+      border-radius: var(--corner-radius-6);
     }
   }
 
@@ -43,7 +43,7 @@
   }
 
   &__header {
-    background-color: var(--admin-header-bg);
+    background: linear-gradient(135deg, var(--primary-300), var(--primary-500));
     border-bottom: none;
   }
 

@@ -129,7 +129,7 @@ class ___widget_member_form extends LetcBox {
    * @returns 
    */
   _submitMember() {
-    if(!(Organization.get(_a.privilege) & _K.permission.admin)){
+    if (!(Organization.get(_a.privilege) & _K.permission.admin)) {
       Wm.alert(LOCALE.WEAK_PRIVILEGE);
       return;
     }

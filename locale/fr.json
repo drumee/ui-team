@@ -1214,9 +1214,9 @@
   "UNBLOCK": "Débloquer",
   "USE_MANAGER_TO_DELETE": "Par sécurité une boîte de partage ne peut être supprimée directement via la poubelle.<br><br>Pour la supprimer, ouvrez son gestionnaire - bouton \"roue\" situé dans le bandeau - et vous verrez alors en haut à gauche l'icône de suppression.",
   "CONTAINS_NON_DELETABLE": "Ce dossier contient un ou plusieurs éléments non supprimables. Veuillez vérifier avant de supprimer.",
-  "DRAG_DROP_EXCEL_FILE": "<p class=p1>Déposer ici le fichier Excel avec la liste.</p><p class=alert>! Attention</p><p class=p2> Le fichier doit avoir le format avec, en première ligne, les noms exacts des colonnes.</p><p class=p3>Voir le fichier téléchargeable ci-dessous.</p>",
+  "DOWNLOAD_USERSLIST": "Téléchargez le fichier modèle via le lien ci-dessous. Remplissez-le avec votre liste d'utilisateurs et déposez-le dans cette zone.",
   "OPEN_MANAGER": "Ouvrir le gestionnaire",
-  "SEE_THE_FORMAT": "Télécharger le format de la liste Excel",
+  "DOWNLOAD_TEMPLATE_FILE": "Télécharger le fichier modèle",
   "CHOOSE_NEW_ADMIN": "Ajoutez un nouvel administrateur ",
   "ADD_ADMINS": "Ajouter des administrateurs",
   "NO_MEMBERS_FOUND": "Aucun membre trouvé",
@@ -1316,7 +1316,6 @@
   "CLEAR_ALL": "Tout effacer",
   "WEBINAR": "Webinaire de {0}",
   "UPLOAD_AGAIN": "Télécharger à nouveau",
-  "CREATE_ALL_ACCOUNTS": "Créer tous les comptes",
   "INVALID_USER": "Utilisateur invalide",
   "NOT_ONLINE_ASK_LATER": "n'est malheureusement pas en ligne.<br>Refaites une demande plus tard.",
   "ALREADY_SHARED_ASK_HIM_LATER": "Le bureau de ce membre est déjà partagé, veuillez lui demander plus tard.",
@@ -1911,7 +1910,6 @@
   "MAX_FILE_SIZE_X": "Taille maximale du fichier : {0}.",
   "DESKTOP_WALLPAPER": "Mes fonds d'écran",
   "ACTIVITY": "Activité",
-  "FOLDER_ACTIVITY": "Activité du dossier",
   "MARK_ALL_READ": "Marquer tous comme lu",
   "X_UPLOADED_FILE_Y": "{0} a téléchargé le fichier {1}",
   "UPLOADED_FILE": "a téléchargé le fichier",
@@ -1952,5 +1950,6 @@
   "ON": "Activé",
   "ENTER_CODE_TO_CHANGE_EMAIL": "Pour modifier votre adresse e-mail, nous devons nous assurer que vous êtes bien à l'origine de cette modification. Veuillez saisir le code envoyé au {0}.",
   "WRONG_CREDENTIALS": "Identifiants incorrects",
-  "UNCOMPLIANT_PASSWORD": "Mot de passe non conforme"
+  "UNCOMPLIANT_PASSWORD": "Mot de passe non conforme",
+  "CREATE_ACCOUNTS": "Créer les comptes"
 }

@@ -11,8 +11,8 @@
     &[data-active="active"],
     &[data-radio="on"],
     &:hover {
-      background:var(--default-background-hover);
-      color	:var(--default-text-hover) !important;
+      background:var(--neutral-300);
+      color	:var(--default-text-hover);
       
       & .form-tag {
         background: transparent;
