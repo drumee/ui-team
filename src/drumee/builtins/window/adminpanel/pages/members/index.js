@@ -59,7 +59,7 @@ class ___members_page extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug("AAA:50", cmd, service)
+    this.debug("AAA:50", args, cmd, service)
     switch (service) {
       case 'see-desktop':
         this.invokeSeeDesktop(cmd)
@@ -95,7 +95,9 @@ class ___members_page extends LetcBox {
         return this.chooseWhoCanSeeMember(cmd)
 
       case 'member-added':
-        this.debug("AAA:86", args, cmd, this)
+        this.addNewMember(args)
+        this.loadMembersList()
+        // this.debug("AAA:86", args, cmd, this)
         break;
       case 'show-member-detail':
         this.loadMemberDetail(cmd)
@@ -109,9 +111,9 @@ class ___members_page extends LetcBox {
         this.cancelCreateMemberForm()
         break
 
-      case 'add-member':
-        this.addNewMember(cmd)
-        break
+      // case 'add-member':
+      //   this.addNewMember(cmd)
+      //   break
 
       case _e.edit:
         this.loadEditMember(cmd)
@@ -268,7 +270,7 @@ class ___members_page extends LetcBox {
   /**
    * @param {(any|null)} source
   */
-  loadMembersList(args) {
+  loadMembersList(args = {}) {
     if (this._view == _a.min) {
       this.updateInstance(this.viewInstance = 2)
     } else {
@@ -347,13 +349,13 @@ class ___members_page extends LetcBox {
   /**
    * @param {LetcBox} cmd
    */
-  addNewMember(cmd) {
+  addNewMember(data) {
     this.openOverlay(require('./skeleton/action-popup/member-acknowledgement').default(this))
-    const data = cmd.source.response
+    // const data = cmd.source.response
     const memberList = this.getItemsByKind('widget_members_list')[0]
     memberList.addMemberItem(data)
-    memberList.triggerClick(data.drumate_id)
-    return
+    // memberList.triggerClick(data.drumate_id)
+    // return
   }
 
   /**
@@ -625,7 +627,7 @@ class ___members_page extends LetcBox {
     if (data.status == _a.archived) {
       return this.removeMemberFromList()
     }
-    return _.delay(f, 500)
+    // return _.delay(f, 500)
   }
 
   /**
@@ -662,7 +664,7 @@ class ___members_page extends LetcBox {
       return memberList.triggerClick()
     }
 
-    return _.delay(f, 500)
+    // return _.delay(f, 500)
   }
 
   /**

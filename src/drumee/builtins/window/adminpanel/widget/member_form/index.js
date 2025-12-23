@@ -183,8 +183,9 @@ class ___widget_member_form extends LetcBox {
       service: service,
       orgid: this._source.mget('orgId'),
       ...data
-    }).then((data) => {
-      this.triggerHandlers({ service: "member-added", data })
+    }).then((res) => {
+      let opt = { ...res, service: "member-added" }
+      this.triggerHandlers(opt)
     })
 
     return
@@ -228,7 +229,7 @@ class ___widget_member_form extends LetcBox {
   __dispatchRest(method, data) {
 
     switch (method) {
-      case SERVICE.adminpanel.member_add:
+      // case SERVICE.adminpanel.member_add:
       case SERVICE.adminpanel.member_update:
         //error handling
         switch (data.status) {
