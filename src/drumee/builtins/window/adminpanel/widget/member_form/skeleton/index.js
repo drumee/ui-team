@@ -152,46 +152,46 @@ function __skl_widget_member_form(ui) {
     ]
   })
 
-  const address = Skeletons.Box.X({
-    className: `${formFig}__wrapper address`,
-    kids: [
-      Skeletons.Button.Svg({
-        ico: 'ab_address',
-        className: `${formFig}__icon address ab_address`
-      }),
+  // const address = Skeletons.Box.X({
+  //   className: `${formFig}__wrapper address`,
+  //   kids: [
+  //     Skeletons.Button.Svg({
+  //       ico: 'ab_address',
+  //       className: `${formFig}__icon address ab_address`
+  //     }),
 
-      Skeletons.Box.Y({
-        className: `${formFig}__entry-wrapper address`,
-        formItem: _a.address,
-        dataType: _a.object,
-        kids: [
-          Skeletons.Entry({
-            className: `${formFig}__entry street address-item`,
-            formItem: _a.street,
-            placeholder: LOCALE.NUMBER_STREET,
-            uiHandler: ui,
-            value: data.address.street
-          }),
+  //     Skeletons.Box.Y({
+  //       className: `${formFig}__entry-wrapper address`,
+  //       formItem: _a.address,
+  //       dataType: _a.object,
+  //       kids: [
+  //         Skeletons.Entry({
+  //           className: `${formFig}__entry street address-item`,
+  //           formItem: _a.street,
+  //           placeholder: LOCALE.NUMBER_STREET,
+  //           uiHandler: ui,
+  //           value: data.address.street
+  //         }),
 
-          Skeletons.Entry({
-            className: `${formFig}__entry zip address-item`,
-            formItem: _a.city,
-            placeholder: LOCALE.ZIP_CODE_CITY,
-            uiHandler: ui,
-            value: data.address.city
-          }),
+  //         Skeletons.Entry({
+  //           className: `${formFig}__entry zip address-item`,
+  //           formItem: _a.city,
+  //           placeholder: LOCALE.ZIP_CODE_CITY,
+  //           uiHandler: ui,
+  //           value: data.address.city
+  //         }),
 
-          Skeletons.Entry({
-            className: `${formFig}__entry country address-item`,
-            formItem: _a.country,
-            placeholder: LOCALE.COUNTRY,
-            uiHandler: ui,
-            value: data.address.country
-          })
-        ]
-      })
-    ]
-  })
+  //         Skeletons.Entry({
+  //           className: `${formFig}__entry country address-item`,
+  //           formItem: _a.country,
+  //           placeholder: LOCALE.COUNTRY,
+  //           uiHandler: ui,
+  //           value: data.address.country
+  //         })
+  //       ]
+  //     })
+  //   ]
+  // })
 
 
   const _securityState = toggleState(data.otp)
@@ -287,7 +287,7 @@ function __skl_widget_member_form(ui) {
           email,
           // ident,
           mobile,
-          address,
+          // address,
           messageBox,
           buttons
         ]

@@ -7,18 +7,18 @@
 // ===========================================================
 //
 // ===========================================================
-function __skl_members_room_header (_ui_) {
-  const headerFig = `${_ui_.fig.family}-header`;
+function __skl_members_room_header (ui) {
+  const headerFig = `${ui.fig.family}-header`;
   
   let titleContent, titleIcon, actionIcon, drumateId, roleAutoSave, roleFetch;
   
-  if (_ui_.mget(_a.type) == 'member_create') {
+  if (ui.mget(_a.type) == 'member_create') {
     titleContent = LOCALE.CREATE_MEMBER //'Create a member'
     roleAutoSave = 0
     roleFetch = 0
 
   } else {
-    const data = _ui_.mget(_a.member) || _ui_._currentData.model.attributes || ''
+    const data = ui.mget(_a.member) || ui._currentData.model.attributes || ''
 
     const fname = data.firstname  || '';
     const lname = data.lastname  || '';
@@ -34,11 +34,11 @@ function __skl_members_room_header (_ui_) {
       fullname  : fullname
     });
 
-    if (_ui_._type == 'member_detail') {
+    if (ui._type == 'member_detail') {
       actionIcon = Skeletons.Box.X({
         className   : `${headerFig}__wrapper options-right`,
         kids        : [
-          require('./action-menu').default(_ui_, data)
+          require('./action-menu').default(ui, data)
         ]
       });
     }
@@ -56,7 +56,7 @@ function __skl_members_room_header (_ui_) {
     ]
   });
 
-  if (_ui_._type == 'member_edit') {
+  if (ui._type == 'member_edit') {
     roleAutoSave = 0
     roleFetch = 1
   }
@@ -66,7 +66,7 @@ function __skl_members_room_header (_ui_) {
     sys_pn     : 'member-role-menu',
     className  : `${headerFig}__wrapper options-left`,
     userId     : drumateId,
-    orgId      : _ui_.mget('orgId'),
+    orgId      : ui.mget('orgId'),
     autoSave   : roleAutoSave,
     fetchRoles : roleFetch
   }

@@ -4,19 +4,33 @@ class ___widget_members_listItem extends LetcBox {
    * 
    * @param {*} opt 
    */
-  initialize (opt={}){
+  initialize(opt = {}) {
     require('./skin');
     super.initialize(opt);
-    this._type  = this.mget(_a.type) || this.mget(_a.origin)
+    this._type = this.mget(_a.type) || this.mget(_a.origin)
     this.selectedMembersList = this.mget('selectedList') || []
     this.declareHandlers();
   }
 
   /**
    * 
+   */
+  data() {
+    const data = { ...this.model.toJSON() }
+    delete data.styleOpt;
+    delete data.widgetId;
+    delete data.width;
+    delete data.height;
+    delete data.styleOpt;
+    delete data.y;
+    delete data.x;
+    return data;
+  }
+  /**
+   * 
    * @returns 
    */
-  onDomRefresh(){
+  onDomRefresh() {
     this.feed(require('./skeleton').default(this));
     if (this._type == 'choose-member') {  //to prevent self check for whoCanSee
       this.selfMemberCheck()
@@ -30,16 +44,16 @@ class ___widget_members_listItem extends LetcBox {
    * @param {*} args 
    * @returns 
    */
-  onUiEvent (cmd, args = {}) {
+  onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    switch(service) {
-      case  'remove-admin':
+    switch (service) {
+      case 'remove-admin':
         this.source = cmd
-        return this.triggerHandlers({service: service})
-          
-      case  'admin-settings':
+        return this.triggerHandlers({ service: service })
+
+      case 'admin-settings':
         return this.updateMenuItems()
-      
+
       case _a.view:
       case _a.manage:
       case 'security':
@@ -48,10 +62,10 @@ class ___widget_members_listItem extends LetcBox {
 
       case 'set-admin-rights':
         return this.submitChangePermission()
-      
+
       default:
         this.source = cmd;
-        this.triggerHandlers({service: service})
+        this.triggerHandlers({ service: service })
     }
   }
 
@@ -59,7 +73,7 @@ class ___widget_members_listItem extends LetcBox {
    * 
    * @returns 
    */
-  selfMemberCheck () {
+  selfMemberCheck() {
     if (!this.mget('memberCheck')) {
       return
     }
@@ -73,7 +87,7 @@ class ___widget_members_listItem extends LetcBox {
   /**
    * 
    */
-  updateMenuItems () {
+  updateMenuItems() {
     this.getPart('settings-menu-content').feed(require('./skeleton/menu-item').default(this))
   }
 
@@ -96,7 +110,7 @@ class ___widget_members_listItem extends LetcBox {
    * @param {*} cmd 
    * @returns 
    */
-  triggerChangePermission (cmd) {
+  triggerChangePermission(cmd) {
     const newState = cmd.getState()
     let val = cmd.mget('_value')
     let newVal = val
@@ -106,20 +120,20 @@ class ___widget_members_listItem extends LetcBox {
     }
 
     this.mset(_a.privilege, newVal)
-    return  this.updateMenuItems()
+    return this.updateMenuItems()
   }
 
   /**
    * 
    * @returns 
    */
-  submitChangePermission () {
+  submitChangePermission() {
     this.postService({
-      service   : SERVICE.adminpanel.member_admin_add,
-      orgid     : this.mget('orgId'),
-      users     : [this.mget('drumate_id')],
-      privilege : this.mget(_a.privilege),
-    }).then((data)=>{
+      service: SERVICE.adminpanel.member_admin_add,
+      orgid: this.mget('orgId'),
+      users: [this.mget('drumate_id')],
+      privilege: this.mget(_a.privilege),
+    }).then((data) => {
       this.render();
       this.el.click();
     })
@@ -130,7 +144,7 @@ class ___widget_members_listItem extends LetcBox {
    * 
    * @returns 
    */
-  getUserState () {
+  getUserState() {
     let _state = 0
     if ((this._type == 'choose-member') || (this._type == 'choose-admin')) {
       const memberId = this.mget('drumate_id') || this.mget(_a.id)

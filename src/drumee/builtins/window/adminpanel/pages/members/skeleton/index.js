@@ -29,7 +29,13 @@ function __skl_members_page(ui) {
           Skeletons.Box.X({
             className: `${membersFig}__wrapper members_list list`,
             sys_pn: 'members_list',
-            kids: []
+            kids: [{
+              kind: 'widget_members_list',
+              className: 'widget_members_list',
+              sys_pn: 'widget_members_list',
+              type: 'allMembers',
+              orgId: ui.orgId,
+            }]
           }),
 
           Skeletons.Box.X({

@@ -1,9 +1,11 @@
+const { button } = require("builtins/skeleton/toolkit");
+
 function __skl_member_detail(ui) {
   const detailFig = ui.fig.family
 
   const data = ui._memberData || ui.mget('memberData')
 
-  const defaultText = LOCALE.NOT_INDICATED
+  const defaultText = "" //LOCALE.NOT_INDICATED
 
   let memberStatus, option;
 
@@ -129,34 +131,44 @@ function __skl_member_detail(ui) {
     ]
   })
 
-  const address = Skeletons.Box.G({
-    className: `${detailFig}__wrapper address`,
-    kids: [
-      Skeletons.Button.Svg({
-        ico: 'ab_address',
-        className: `${detailFig}__icon address ab_address`
-      }),
+  // const address = Skeletons.Box.G({
+  //   className: `${detailFig}__wrapper address`,
+  //   kids: [
+  //     Skeletons.Button.Svg({
+  //       ico: 'ab_address',
+  //       className: `${detailFig}__icon address ab_address`
+  //     }),
 
-      Skeletons.Box.Y({
-        className: `${detailFig}__items address`,
-        kids: [
-          Skeletons.Note({
-            className: `${detailFig}__note address details street`,
-            content: data.address.street || defaultText
-          }),
+  //     Skeletons.Box.Y({
+  //       className: `${detailFig}__items address`,
+  //       kids: [
+  //         Skeletons.Note({
+  //           className: `${detailFig}__note address details street`,
+  //           content: data.address.street || defaultText
+  //         }),
 
-          Skeletons.Note({
-            className: `${detailFig}__note details address city`,
-            content: data.address.city || defaultText
-          }),
+  //         Skeletons.Note({
+  //           className: `${detailFig}__note details address city`,
+  //           content: data.address.city || defaultText
+  //         }),
 
-          Skeletons.Note({
-            className: `${detailFig}__note details address country`,
-            content: data.address.country || defaultText
-          })
-        ]
-      })
-    ]
+  //         Skeletons.Note({
+  //           className: `${detailFig}__note details address country`,
+  //           content: data.address.country || defaultText
+  //         })
+  //       ]
+  //     })
+  //   ]
+  // })
+  const fig = ui.fig.family;
+  const resend = button(ui, {
+    label: LOCALE.RESEND_INVITE,
+    type: _a.toggle,
+    ico: "arrow-right",
+    service: _e.submit,
+    className: `${fig}__button`,
+    priority: "primary",
+    service: 'reset-member-password',
   })
 
   // member action option
@@ -169,12 +181,19 @@ function __skl_member_detail(ui) {
         }
         let deleteInvMember = ''
         if (data.connected == '0') {
-          deleteInvMember = Skeletons.Note({
-            className: `${detailFig}__button-action button-delete button clickable`,
-            content: LOCALE.DELETE_INVITE,
+          deleteInvMember = button(ui, {
+            label: LOCALE.DELETE_INVITE,
+            type: _a.toggle,
+            className: `${fig}__button`,
             service: 'delete-inactive-member',
-            uiHandler: ui
+            priority: "secondary",
           })
+          // deleteInvMember = Skeletons.Note({
+          //   className: `${detailFig}__button-action button-delete button clickable`,
+          //   content: LOCALE.DELETE_INVITE,
+          //   service: 'delete-inactive-member',
+          //   uiHandler: ui
+          // })
         }
         option = Skeletons.Box.G({
           className: `${detailFig}__wrapper options`,
@@ -184,17 +203,24 @@ function __skl_member_detail(ui) {
               content: _notVerifiedContent
             }),
             Skeletons.Box.X({
-              className: `${ui.fig.family}__buttons-wrapper-resend`,
-              kids: [
-                deleteInvMember,
-                Skeletons.Note({
-                  className: `${detailFig}__button-action button-resend button clickable`,
-                  content: LOCALE.RESEND_INVITE,
-                  service: 'reset-member-password',
-                  uiHandler: ui
-                })
-              ]
+              className: `${fig}__buttons`,
+              uiHandler: ui,
+              sys_pn: _a.footer,
+              dataset: { page: ui._page },
+              kids: [deleteInvMember, resend],
             })
+            // Skeletons.Box.X({
+            //   className: `${ui.fig.family}__buttons-wrapper-resend`,
+            //   kids: [
+            //     deleteInvMember,
+            //     Skeletons.Note({
+            //       className: `${detailFig}__button-action button-resend button clickable`,
+            //       content: LOCALE.RESEND_INVITE,
+            //       service: 'reset-member-password',
+            //       uiHandler: ui
+            //     })
+            //   ]
+            // })
 
           ]
         })
@@ -226,7 +252,7 @@ function __skl_member_detail(ui) {
     }
   }
 
-  const memberAction = Skeletons.Box.X({
+  const memberAction = Skeletons.Box.G({
     className: `${detailFig}__wrapper member-action`,
     kids: [option]
   })
@@ -243,7 +269,7 @@ function __skl_member_detail(ui) {
           email,
           ident,
           mobile,
-          address,
+          // address,
           // comment,
           memberAction
         ]

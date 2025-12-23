@@ -1,45 +1,33 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/skeleton/action-popup/content/delete-member.js
-//   TYPE : Skeleton
-// ===================================================================**/
+const { confirm_buttons } = require("builtins/skeleton/toolkit");
 
-function __skl_members_action_popup_content_delete_member (_ui_) {
-  const contentFig = `${_ui_.fig.family}-action-popup-confirmation`;
-  
+export default function (ui) {
+  const contentFig = `${ui.fig.family}-action-popup-confirmation`;
+
   const header = Skeletons.Note({
-    className :  `${contentFig}__note header`,
-    content   : LOCALE.DELETE_INVITATION
+    className: `${contentFig}__note header`,
+    content: LOCALE.DELETE_INVITATION
   });
 
   const subHeader = Skeletons.Note({
-    className : `${contentFig}__note sub-header`,
-    content   : LOCALE.CONFIRM_DELETE_INVITATION//CONFIRM_DELETE_CONTACT
+    className: `${contentFig}__note sub-header`,
+    content: LOCALE.CONFIRM_DELETE_INVITATION
   });
 
-  const profileDisplay = require('../profile-display').default(_ui_, 'no-sub-content')
-  
-  const buttons = Preset.ConfirmButtons(_ui_, {
-    cancelLabel       : LOCALE.CANCEL || '',
-    cancelService     : 'close-overlay',
-    confirmLabel      : LOCALE.DELETE || '',
-    confirmService    : 'confirm-invite-delete',
-    confirmBtnAction  : 'destroy'
-  });
+  const profileDisplay = require('../profile-display').default(ui, 'no-sub-content')
 
-  
-  const a = Skeletons.Box.Y({
-    debug       : __filename,
-    className   : `${contentFig}__content delete-member`,
-    kids        : [
+
+
+  return Skeletons.Box.Y({
+    debug: __filename,
+    className: `${contentFig}__content delete-member`,
+    kids: [
       header,
       subHeader,
       profileDisplay,
-      buttons
+      confirm_buttons(ui, { dataset: { height: _a.small } },
+        { service: 'close-overlay' },
+        { label: LOCALE.DELETE, service: 'confirm-invite-delete' }
+      )
     ]
   });
-
-  return a;
 };
-
-export default __skl_members_action_popup_content_delete_member;

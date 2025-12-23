@@ -1383,7 +1383,7 @@
   "MEMBER_CREATED_SUCCESSFULLY": "Member has been created successfully.",
   "RECEIVE_VERIFICATION_EMAIL": "He will receive verification email.",
   "EMAIL_AND_PHONE_NOT_VALIDATED": "Email and phone not yet validated",
-  "EMAIL_IS_NOT_YET_VALIDATED": "The contact has not yet validated their email.",
+  "EMAIL_IS_NOT_YET_VALIDATED": "The email address has not yet been verified.",
   "PHONE_IS_NOT_YET_VALIDATED": "Phone is not yet validated",
   "DOUBLE_AUTHENTICATION_WITH_SMS_CODE": "Double authentication with SMS",
   "TEAM_ROOM_CHAT": "Shared folder groups",

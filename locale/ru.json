@@ -1382,7 +1382,7 @@
   "MEMBER_CREATED_SUCCESSFULLY": "Участник был успешно создан.",
   "RECEIVE_VERIFICATION_EMAIL": "Он получит письмо с подтверждением.",
   "EMAIL_AND_PHONE_NOT_VALIDATED": "Электронная почта и телефон еще не подтверждены",
-  "EMAIL_IS_NOT_YET_VALIDATED": "Контакт еще не подтвердил свою электронную почту.",
+  "EMAIL_IS_NOT_YET_VALIDATED": "Адрес электронной почты еще не подтвержден.",
   "PHONE_IS_NOT_YET_VALIDATED": "Телефон еще не подтвержден",
   "DOUBLE_AUTHENTICATION_WITH_SMS_CODE": "Двойная аутентификация с помощью SMS",
   "TEAM_ROOM_CHAT": "Группа общих папок",

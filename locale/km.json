@@ -1378,7 +1378,7 @@
   "MEMBER_CREATED_SUCCESSFULLY": "សមាជិកត្រូវបានបង្កើតដោយជោគជ័យ។",
   "RECEIVE_VERIFICATION_EMAIL": "គាត់នឹងទទួលបានអ៊ីមែលផ្ទៀងផ្ទាត់។",
   "EMAIL_AND_PHONE_NOT_VALIDATED": "អ៊ីមែល និងទូរសព្ទមិនទាន់មានសុពលភាពនៅឡើយ",
-  "EMAIL_IS_NOT_YET_VALIDATED": "ទំនាក់ទំនងមិនទាន់បានផ្ទៀងផ្ទាត់អ៊ីមែលរបស់ពួកគេនៅឡើយទេ។",
+  "EMAIL_IS_NOT_YET_VALIDATED": "អាសយដ្ឋានអ៊ីមែលមិនទាន់ត្រូវបានផ្ទៀងផ្ទាត់នៅឡើយទេ។",
   "PHONE_IS_NOT_YET_VALIDATED": "ទូរស័ព្ទមិនទាន់មានសុពលភាពនៅឡើយ",
   "DOUBLE_AUTHENTICATION_WITH_SMS_CODE": "ការផ្ទៀងផ្ទាត់ពីរដងជាមួយសារ SMS",
   "TEAM_ROOM_CHAT": "ក្រុមថតដែលបានចែករំលែក",

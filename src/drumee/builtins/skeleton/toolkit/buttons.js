@@ -16,6 +16,7 @@ export function button(ui, opt) {
     })
   )
   let main = Skeletons.Box.G;
+  let no_icon = ""
   if (ico) {
     let el = Skeletons.Button.Svg({
       className: `${pfx} icon`,
@@ -31,9 +32,11 @@ export function button(ui, opt) {
       kids.push(el)
       main = Skeletons.Box.G;
     }
+  } else {
+    no_icon = 'no-icon'
   }
   return main({
-    className: `${pfx}-main ${priority}`,
+    className: `${pfx}-main ${priority} ${no_icon}`,
     partHandler: [ui],
     uiHandler: [ui],
     sys_pn,
@@ -45,4 +48,35 @@ export function button(ui, opt) {
     },
     kids
   })
+}
+
+
+export function confirm_buttons(ui, opt, b1, b2) {
+  const fig = ui.fig.family;
+  return Skeletons.Box.X({
+    className: `${fig}__buttons`,
+    uiHandler: [ui],
+    dataset: { page: ui._page },
+    ...opt,
+    kids: [
+      button(ui, {
+        label: LOCALE.CANCEL,
+        type: _a.toggle,
+        className: `${fig}__button`,
+        service: _e.cancel,
+        priority: "secondary",
+        state: 1,
+        ...b1
+      }),
+      button(ui, {
+        label: LOCALE.SUBMIT,
+        type: _a.toggle,
+        service: _e.submit,
+        className: `${fig}__button`,
+        priority: "primary",
+        state: 1,
+        ...b2
+      })
+    ],
+  });
 }

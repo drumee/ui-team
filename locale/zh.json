@@ -1383,7 +1383,7 @@
   "MEMBER_CREATED_SUCCESSFULLY": "成员已成功创建。",
   "RECEIVE_VERIFICATION_EMAIL": "他将收到验证电子邮件。",
   "EMAIL_AND_PHONE_NOT_VALIDATED": "电子邮件和电话尚未验证",
-  "EMAIL_IS_NOT_YET_VALIDATED": "该联系人尚未验证其电子邮件。",
+  "EMAIL_IS_NOT_YET_VALIDATED": "该电子邮件地址尚未验证。",
   "PHONE_IS_NOT_YET_VALIDATED": "电话尚未验证",
   "DOUBLE_AUTHENTICATION_WITH_SMS_CODE": "短信双重认证",
   "TEAM_ROOM_CHAT": "共享文件夹组",

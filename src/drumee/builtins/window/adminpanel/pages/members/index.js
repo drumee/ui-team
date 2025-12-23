@@ -30,7 +30,19 @@ class ___members_page extends LetcBox {
    * @param {any} child
    * @param {any} pn
   */
-  onPartReady(child, pn) { return null }
+  async onPartReady(child, pn) {
+    switch (pn) {
+      case 'widget_members_list':
+        await Kind.waitFor('members_room')
+        let items = await child.getItems()
+        if (items[0]) {
+          items[0].setState(1)
+          this.loadMemberDetail(items[0]);
+        }
+        break;
+    }
+    return null
+  }
 
   /**
    * 
@@ -47,7 +59,7 @@ class ___members_page extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug("AAA:50", service)
+    this.debug("AAA:50", cmd, service)
     switch (service) {
       case 'see-desktop':
         this.invokeSeeDesktop(cmd)
@@ -76,12 +88,15 @@ class ___members_page extends LetcBox {
         return this.toggleDoubleAuthentication(cmd)
 
       case 'show-member-list':
-        this.loadMembersList(cmd.source)
+        this.loadMembersList(args)
         break;
 
       case 'choose-who-can-see-member':
         return this.chooseWhoCanSeeMember(cmd)
 
+      case 'member-added':
+        this.debug("AAA:86", args, cmd, this)
+        break;
       case 'show-member-detail':
         this.loadMemberDetail(cmd)
         break;
@@ -253,20 +268,14 @@ class ___members_page extends LetcBox {
   /**
    * @param {(any|null)} source
   */
-  loadMembersList(source = null) {
-    const memberList = {
-      kind: 'widget_members_list',
-      className: 'widget_members_list',
-      sys_pn: 'widget_members_list',
-      orgId: this.orgId,
-      source: source
-    }
+  loadMembersList(args) {
     if (this._view == _a.min) {
       this.updateInstance(this.viewInstance = 2)
     } else {
       this.updateInstance(this.viewInstance = 1)
     }
-    return this.getBranch('members_list').feed(memberList);
+    delete args.service;
+    this.ensurePart('widget_members_list').then((p) => { p.reload(args) })
   }
 
 
@@ -274,16 +283,19 @@ class ___members_page extends LetcBox {
    * @param {(any|null)} source
   */
   loadMemberDetail(cmd) {
-    const source = cmd.source || null;
-
+    this.debug("AAAA:289", cmd)
+    let data = {}
+    if (cmd) {
+      data = cmd.data()
+    }
     const memberDetail = {
+      ...data,
       kind: 'members_room',
       className: 'members_room',
       sys_pn: 'page_members_room',
       orgId: this.orgId,
       type: 'member_detail',
-      source: source,
-      currentTag: cmd._currentTag,
+      currentTag: this._currentTag,
       parent: this
     }
 
@@ -301,6 +313,11 @@ class ___members_page extends LetcBox {
    * @param {(LetcBox|null)} source
   */
   loadCreateMember(source = null) {
+    if (!Visitor.quota().seat) {
+      return this.getBranch('member_room').feed(Skeletons.Note(
+        { content: LOCALE.QUOTA_EXCEEDED, className: `${this.fig.family}__message-content` }
+      ));
+    }
     const memberForm = {
       kind: 'members_room',
       className: 'members_room',
@@ -517,7 +534,6 @@ class ___members_page extends LetcBox {
       service: SERVICE.adminpanel.member_disconnect,
       orgid: this.orgId,
       user_id: data.drumate_id,
-      ////hub_id  : Visitor.get(_a.id)
     })
   }
 
@@ -745,8 +761,6 @@ class ___members_page extends LetcBox {
       Wm.alert('csv'.underline("required-type").printf(LOCALE.REQUIRES_FILE_TYPE));
       return;
     }
-    this.debug("AAA:748", file)
-    // return
     let opt = {
       service: SERVICE.adminpanel.prepare_import,
       orgid: this.organisation.id,
@@ -823,7 +837,7 @@ class ___members_page extends LetcBox {
     this.getPart('import-list-error-msg').el.dataset.state = _a.closed
   }
 
-  
+
   /*
    *
   */

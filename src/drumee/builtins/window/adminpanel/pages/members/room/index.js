@@ -6,13 +6,13 @@ class ___members_room extends LetcBox {
    * 
    * @param {*} opt 
    */
-  initialize (opt={}) {
+  initialize(opt = {}) {
     // @ts-ignore
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
     this._type = this.mget(_a.type)
-    this._currentData = this.mget(_a.source)
+    // this._currentData = this.mget(_a.source)
     this._currentTag = this.mget('currentTag') || null;
     this._drumateId = ''
   }
@@ -22,19 +22,19 @@ class ___members_room extends LetcBox {
    * @param {*} child 
    * @param {*} pn 
    */
-  onPartReady (child, pn) {
-    switch(pn) {
+  onPartReady(child, pn) {
+    switch (pn) {
       case _a.header:
-        if(this._type == 'member_create') {
+        if (this._type == 'member_create') {
           this.waitElement(child.el, () => {
             this.__header.feed(require('./skeleton/header').default(this))
           });
         }
         break;
-      
+
       case _a.content:
         this._content = child
-        if(this._type == 'member_create') {
+        if (this._type == 'member_create') {
           this.waitElement(child.el, this.routeContent.bind(this));
         }
         break;
@@ -45,42 +45,42 @@ class ___members_room extends LetcBox {
    * 
    * @returns 
    */
-  routeContent () {
+  routeContent() {
     let memberRoomOpt
     const type = this._type || this.mget(_a.type)
 
     switch (type) {
       case 'member_detail':
         memberRoomOpt = {
-          kind       : 'widget_member_detail',
-          className  : 'widget_member_detail',
-          sys_pn     : 'member_detail_page',
-          memberData : this.mget(_a.member)
+          kind: 'widget_member_detail',
+          className: 'widget_member_detail',
+          sys_pn: 'member_detail_page',
+          memberData: this.mget(_a.member)
         }
         break
-        
+
       case 'member_create':
         memberRoomOpt = {
-          kind       : 'widget_member_form',
-          className  : 'widget_member_form',
-          sys_pn     : 'member_form_page',
-          orgId      : this.mget('orgId'),
-          type       : type,
-          source     : this
+          kind: 'widget_member_form',
+          className: 'widget_member_form',
+          sys_pn: 'member_form_page',
+          orgId: this.mget('orgId'),
+          type: type,
+          source: this
         }
         break
-        
+
       case 'member_edit':
         memberRoomOpt = {
-          kind       : 'widget_member_form',
-          className  : 'widget_member_form',
-          sys_pn     : 'member_form_page',
-          orgId      : this.mget('orgId'),
-          type       : type,
-          source     : this
+          kind: 'widget_member_form',
+          className: 'widget_member_form',
+          sys_pn: 'member_form_page',
+          orgId: this.mget('orgId'),
+          type: type,
+          source: this
         }
         break
-        
+
       default:
         this.warn('Type is mandatory !!!')
     }
@@ -93,9 +93,9 @@ class ___members_room extends LetcBox {
   /**
    * 
    */
-  onDomRefresh () {
+  onDomRefresh() {
     if (this._type != 'member_create') {
-      this._drumateId = this._currentData.drumate_id || this._currentData.mget('drumate_id')
+      this._drumateId = this.mget('drumate_id')
       this._getMemberDetail()
     }
     this.feed(require('./skeleton').default(this));
@@ -106,20 +106,20 @@ class ___members_room extends LetcBox {
    * @param {*} cmd 
    * @param {*} args 
    */
-  onUiEvent (cmd, args = {}) {
+  onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    switch(service) {
+    switch (service) {
       case _e.edit:
         this.editMemberForm()
         break
-        
+
       case 'cancel-member':
         this.cancelMemberForm()
         break
-      
+
       default:
         this.source = cmd
-        this.triggerHandlers({ service: service})
+        this.triggerHandlers({ service: service })
     }
   }
 
@@ -127,21 +127,18 @@ class ___members_room extends LetcBox {
    * 
    * @returns 
    */
-  _getMemberDetail () {
-    const memberId = this._currentData.drumate_id || this._currentData.mget('drumate_id')
+  _getMemberDetail() {
+    const memberId = this.mget('drumate_id')
     if (memberId) {
       this.fetchService({
-        service : SERVICE.adminpanel.member_show,
-        orgid   : this.mget('orgId'),
-        user_id : memberId,
-        //hub_id  : Visitor.id
-      }).then((data)=>{
+        service: SERVICE.adminpanel.member_show,
+        orgid: this.mget('orgId'),
+        user_id: memberId,
+      }).then((data) => {
         if (data) {
           this.mset(_a.member, data)
-        } else {
-          this.mset(_a.member, this._currentData)
         }
-        this.ensurePart("header").then((p)=>{
+        this.ensurePart("header").then((p) => {
           p.feed(require('./skeleton/header').default(this))
         })
         this.routeContent();
@@ -156,7 +153,7 @@ class ___members_room extends LetcBox {
    * 
    * @returns 
    */
-  editMemberForm () {
+  editMemberForm() {
     this._type = 'member_edit'
     this.__header.feed(require('./skeleton/header').default(this))
     this.routeContent()
@@ -167,12 +164,12 @@ class ___members_room extends LetcBox {
    * 
    * @returns 
    */
-  cancelMemberForm () {
+  cancelMemberForm() {
     if (this._type == 'member_edit') {
       this._type = 'member_detail'
       this.__header.feed(require('./skeleton/header').default(this))
       this.routeContent()
-      
+
     } else {
       this.service = 'cancel-create-member'
       this.triggerHandlers()

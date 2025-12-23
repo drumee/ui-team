@@ -205,5 +205,6 @@
   "ACK_PROFILE_UPDATED": "Tu perfil ha sido actualizado",
   "DOWNLOAD_USERSLIST": "Descarga el archivo de plantilla del enlace a continuación. Ingresa tu lista de usuarios y suéltalo aquí.",
   "DOWNLOAD_TEMPLATE_FILE": "Descargar el archivo de plantilla",
-  "CREATE_ACCOUNTS": "Crear cuentas"
+  "CREATE_ACCOUNTS": "Crear cuentas",
+  "EMAIL_IS_NOT_YET_VALIDATED": "La dirección de correo electrónico aún no ha sido verificada."
 }

@@ -286,7 +286,7 @@ class __core_user extends Backbone.Model {
     let quota = { ...Visitor.quota() }
     if (quota) {
       for (let k in quota) {
-        if (k != _a.category) {
+        if (/[0-9]+/.test(quota[k])) {
           quota[k] = parseInt(quota[k])
         }
       }
