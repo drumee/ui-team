@@ -64,7 +64,7 @@ function __skl_members_list(ui) {
     api: ui.getAllMembers.bind(ui),
     itemsOpt: {
       kind: 'widget_members_list_item',
-      type: ui._type,
+      type: ui.mget(_a.type),
       orgId: ui.mget('orgId'),
       service: "show-member-detail",
       radio: 'member_selected_' + ui.mget(_a.widgetId),

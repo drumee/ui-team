@@ -6,15 +6,15 @@
 /// <reference path="../../../../../../../../@types/index.d.ts" />
 
 /**
- * @param {*} _ui_
+ * @param {*} ui
  * @param {string} _type
  * @param {any} _val
  * @param {string} _service
  * @param {string} _label
  */
-function addMenuItem(_ui_, _type, _val, _service, _label) {
-  const menuFig = `${_ui_.fig.family}-menu`;
-  let permissionCheck = _ui_.permissionCheck.bind(_ui_)
+function addMenuItem(ui, _type, _val, _service, _label) {
+  const menuFig = `${ui.fig.family}-menu`;
+  let permissionCheck = ui.permissionCheck.bind(ui)
   
   let item = Skeletons.Box.X({
     className : `${menuFig}__item`,
@@ -25,7 +25,7 @@ function addMenuItem(_ui_, _type, _val, _service, _label) {
         state         : permissionCheck(_val),
         _value        : _val,
         service       : _service,
-        uiHandler     : _ui_
+        uiHandler     : ui
       }),
 
       Skeletons.Note({
@@ -40,18 +40,18 @@ function addMenuItem(_ui_, _type, _val, _service, _label) {
 
 /**
  * 
- * @param {*} _ui_ 
+ * @param {*} ui 
  */
-function __skl_widget_member_list_item_setttings_menu_item (_ui_) {
-  const menuFig = `${_ui_.fig.family}-menu`;
+function __skl_widget_member_list_item_setttings_menu_item (ui) {
+  const menuFig = `${ui.fig.family}-menu`;
 
   const content = Skeletons.Box.Y({
     className  : `${menuFig}__content-items`,
     kids: [
-      addMenuItem(_ui_, _a.checkbox, _K.privilege.admin_view, _a.view, LOCALE.VIEW_MEMBERS_LIST), //'View members list'),
-      addMenuItem(_ui_, _a.checkbox, _K.privilege.admin_member, _a.manage, LOCALE.MANAGE_MEMBERS_LIST), //'Manage members list'),
-      addMenuItem(_ui_, _a.checkbox, _K.privilege.admin_security, 'security', LOCALE.MANAGE_SECURITY), //LOCALE.SECURITY 'security', 'Manage Security'),
-      addMenuItem(_ui_, _a.radio, _K.privilege.admin, 'owner-rights', LOCALE.ALL_OWNER_RIGHTS) //LOCALE.OWNER_RIGHTS 'owner-rights', 'All owner rights')
+      addMenuItem(ui, _a.checkbox, _K.privilege.admin_view, _a.view, LOCALE.VIEW_MEMBERS_LIST), //'View members list'),
+      addMenuItem(ui, _a.checkbox, _K.privilege.admin_member, _a.manage, LOCALE.MANAGE_MEMBERS_LIST), //'Manage members list'),
+      addMenuItem(ui, _a.checkbox, _K.privilege.admin_security, 'security', LOCALE.MANAGE_SECURITY), //LOCALE.SECURITY 'security', 'Manage Security'),
+      addMenuItem(ui, _a.radio, _K.privilege.admin, 'owner-rights', LOCALE.ALL_OWNER_RIGHTS) //LOCALE.OWNER_RIGHTS 'owner-rights', 'All owner rights')
     ]
   })
   

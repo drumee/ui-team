@@ -64,10 +64,15 @@ class ___widget_members_list extends LetcBox {
   reload(data) {
     this.mset(data)
     this.ensurePart('list-members').then((p) => {
+      if (data.type) {
+        let itemsOpt = p.mget(_a.itemsOpt)
+        itemsOpt.type = data.type;
+        p.mget({ itemsOpt })
+      }
       p.restart()
     })
   }
-  
+
   /**
    * 
    * @param {*} cmd 

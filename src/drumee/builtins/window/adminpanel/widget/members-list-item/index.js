@@ -8,6 +8,7 @@ class ___widget_members_listItem extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this._type = this.mget(_a.type) || this.mget(_a.origin)
+    this.debug("AAA:11",  this._type)
     this.selectedMembersList = this.mget('selectedList') || []
     this.declareHandlers();
   }

@@ -1,62 +1,58 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2020
- * FILE : /src/drumee/builtins/window/adminpanel/widget/members-list-item/js/skeleton/index.js
- * TYPE : Skeleton
- * ===================================================================**/
+
 /// <reference path="../../../../../../../../@types/index.d.ts" />
 
 /**
  * 
- * @param {*} _ui_ 
+ * @param {*} ui 
  */
-function __skl_widget_members_listItem  (_ui_) {
-  const mListItemFig = _ui_.fig.family;
+function __skl_widget_members_listItem  (ui) {
+  const mListItemFig = ui.fig.family;
 
   let options, checkBox;
 
-  const type = _ui_._type
+  const type = ui.mget(_a.type)
 
-  const fname = _ui_.mget(_a.firstname)  || ''
-  const lname = _ui_.mget(_a.lastname)  || ''
-  const fullname = _ui_.mget(_a.fullname) || fname  + " " + lname
+  const fname = ui.mget(_a.firstname)  || ''
+  const lname = ui.mget(_a.lastname)  || ''
+  const fullname = ui.mget(_a.fullname) || fname  + " " + lname
   const displayName = fullname || ''
 
   const profile_icon = Skeletons.UserProfile({
     className : `${mListItemFig}__profile`,
-    id        : _ui_.mget('drumate_id') || _ui_.mget(_a.id) ,
+    id        : ui.mget('drumate_id') || ui.mget(_a.id) ,
     firstname : fname || displayName,
     lastname  : lname,
     fullname  : fullname,
   });
 
   const name = Skeletons.Note({
-    className : `${mListItemFig}__note name ${_ui_._type}`,
+    className : `${mListItemFig}__note name ${type}`,
     content   : displayName
   })
 
-  if ((_ui_._type == 'choose-admin') || (_ui_._type == 'choose-member')) {
-    name.service = _ui_.mget('_service');
+  if ((type == 'choose-admin') || (type == 'choose-member')) {
+    name.service = ui.mget('_service');
     name.trigger = 'item';
-    name.uiHandler = _ui_;
+    name.uiHandler = ui;
   }
   
-  if ((_ui_._type == 'choose-admin') || (_ui_._type == 'choose-member')) {
-    const _state = _ui_.getUserState()
+  if ((type == 'choose-admin') || (type == 'choose-member')) {
+    const _state = ui.getUserState()
     checkBox = Skeletons.Button.Svg({
       className   : `${mListItemFig}__icon option-icons checkbox`,
       icons       : ["editbox_shapes-roundsquare", "available"],// box-tags backoffice_checkboxfill, editbox_shapes-roundsquare
       sys_pn      : 'member-item-checkbox',
       state       : _state,
-      value       : _ui_.mget('drumate_id') || _ui_.mget(_a.id),
+      value       : ui.mget('drumate_id') || ui.mget(_a.id),
       formItem    : 'selector',
-      service     : _ui_.mget('_service'),
+      service     : ui.mget('_service'),
       trigger     : 'checkbox',
-      uiHandler   : _ui_,
-      type        : _ui_._type
+      uiHandler   : ui,
+      type        : type
     })
   }
 
-  if ((Visitor.id != _ui_.mget('drumate_id')) && (type == 'allAdmins') && Visitor.domainCan(_K.permission.admin)) {
+  if ((Visitor.id != ui.mget('drumate_id')) && (type == 'allAdmins') && Visitor.domainCan(_K.permission.admin)) {
     options = Skeletons.Box.X({
       className  : `${mListItemFig}__options options-wrapper`,
       kidsOpt    : {
@@ -67,10 +63,10 @@ function __skl_widget_members_listItem  (_ui_) {
           ico         : 'tools_delete',
           className   : `${mListItemFig}__icon option-icons remove-admin tools_delete`,
           service     : 'remove-admin',
-          uiHandler   : _ui_
+          uiHandler   : ui
         }),
 
-        require('./settings-menu').default(_ui_)
+        require('./settings-menu').default(ui)
       ]
     })
   }
