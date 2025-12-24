@@ -58,7 +58,7 @@ function menu_items(ui) {
         className: `${pfx}-item personal`,
         helperName: 'folder',
         service: "add-folder",
-        filename: LOCALE.CREATED_FOLDER,
+        filename: LOCALE.CREATE_PERSONAL_FOLDER,
         area: _a.personal,
         kidsOpt: {
           active: 0

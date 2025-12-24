@@ -1,12 +1,4 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2020
- * FILE : /src/drumee/builtins/window/adminpanel/pages/members/room/skeleton/index.js
- * TYPE : Skelton
- * ===================================================================**/
 
-// ===========================================================
-//
-// ===========================================================
 function __skl_members_room  (_ui_) {
   const roomFig = _ui_.fig.family;
 
@@ -45,7 +37,7 @@ function __skl_members_room  (_ui_) {
     })
   }
 
-  let a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     className  : `${roomFig}__main`,
     debug      : __filename,
     kids       : [
@@ -53,7 +45,6 @@ function __skl_members_room  (_ui_) {
     ]
   })
 
-  return a;
 }
 
 export default __skl_members_room;

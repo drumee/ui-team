@@ -19,7 +19,6 @@ class __window_mfs extends DrumeeMFS {
 
   initialize(opt) {
     this._watchdog(opt);
-    this.debug("AAA:::UTILS", this.size)
     super.initialize(opt);
     this.topbarHeight = this.configs().topbarHeight;
     this._synced = {};

@@ -1,84 +1,81 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2021
- * FILE : /src/drumee/builtins/window/adminpanel/widget/member_tags/skeleton/index.js
- * TYPE : Skeleton
- * ===================================================================**/
+
 /// <reference path="../../../../../../../../@types/index.d.ts" />
 
 /**
  * 
- * @param {*} _ui_ 
+ * @param {*} ui 
  */
-function __skl_member_tags  (_ui_) {
-  const tagsFig = _ui_.fig.family;
+function __skl_member_tags(ui) {
+  const tagsFig = ui.fig.family;
 
-  const tag_id = _ui_.mget('radioId') || 'tag_selected'+_ui_.mget(_a.widgetId);
+  const tag_id = ui.mget('radioId') || 'tag_selected' + ui.mget(_a.widgetId);
 
   let addTagBtn = Skeletons.Box.X({});
-  if(Visitor.domainCan(_K.permission.admin_member)){
+  if (Visitor.domainCan(_K.permission.admin_member)) {
     addTagBtn = Skeletons.Button.Svg({
-      ico       : 'desktop_plus',
-      className : `${tagsFig}__icon add-tag desktop_plus`,
-      service   : 'add-tag',
-      uiHandler : _ui_
+      ico: 'desktop_plus',
+      className: `${tagsFig}__icon add-tag desktop_plus`,
+      service: 'add-tag',
+      uiHandler: ui
     })
   }
 
   const header = Skeletons.Box.X({
-    className : `${tagsFig}__header`,
-    kids      : [
+    className: `${tagsFig}__header`,
+    kids: [
       Skeletons.Note({
-        className : `${tagsFig}__note title`,
-        content   : LOCALE.SERVICE
+        className: `${tagsFig}__note title`,
+        content: LOCALE.SERVICE
       }),
       addTagBtn
     ]
   })
 
   const separator = Skeletons.Box.X({
-    className : `${tagsFig}__separator`
+    className: `${tagsFig}__separator`
   })
 
   const contentFig = `${tagsFig}-content`
   const tagList = Skeletons.List.Smart({
-    className   : `${contentFig}__item list`,
-    uiHandler   : [_ui_],
-    service     : 'tag-list-data',
-    flag        : 'all',
-    timer       : 50,
-    sys_pn      : _a.tags,
-    api         : _ui_.getTags.bind(_ui_),
-    itemsOpt    : {
-      kind        : 'widget_member_tag_item',
-      orgId       : _ui_.mget('orgId'),
-      uiHandler   : [_ui_],
-      radio       : tag_id
+    className: `${contentFig}__item list`,
+    uiHandler: [ui],
+    service: 'tag-list-data',
+    flag: 'all',
+    timer: 50,
+    sys_pn: _a.tags,
+    api: ui.getTags.bind(ui),
+    itemsOpt: {
+      kind: 'widget_member_tag_item',
+      orgId: ui.mget('orgId'),
+      uiHandler: [ui],
+      radio: tag_id
     }
   })
 
   const allMembers = Skeletons.Box.Y({
-    className : `${contentFig}__main`,
-    debug     : __filename,
-    kids      : [
+    className: `${contentFig}__main`,
+    debug: __filename,
+    kids: [
       Skeletons.Box.X({
-        className : `${contentFig}__container widget-member-tagItem__ui`,
-        service   : 'show-member-list',
-        type      : 'allMembers',
-        name      : LOCALE.ALL_MEMBERS,
-        sys_pn    : 'all-members',
-        uiHandler : [_ui_],
-        radio     : tag_id,
-        dataset   : {
-          state : 1,
-          radio : _a.on
+        className: `${contentFig}__container widget-member-tagItem__ui`,
+        service: 'show-member-list',
+        type: 'allMembers',
+        name: LOCALE.ALL_MEMBERS,
+        sys_pn: 'all-members',
+        uiHandler: [ui],
+        radio: tag_id,
+        state:1,
+        dataset: {
+          state: 1,
+          radio: _a.on
         },
-        kidsOpt   : {
-          active : 0
+        kidsOpt: {
+          active: 0
         },
-        kids      : [
+        kids: [
           Skeletons.Note({
-            className : `${contentFig}__note name`,
-            content   : LOCALE.ALL_MEMBERS
+            className: `${contentFig}__note name`,
+            content: LOCALE.ALL_MEMBERS
           })
         ]
       })
@@ -86,24 +83,24 @@ function __skl_member_tags  (_ui_) {
   })
 
   const allAdmins = Skeletons.Box.Y({
-    className : `${contentFig}__main`,
-    debug     : __filename,
-    kids      : [
+    className: `${contentFig}__main`,
+    debug: __filename,
+    kids: [
       Skeletons.Box.X({
-        className : `${contentFig}__container widget-member-tagItem__ui`,
-        service   : 'show-member-list',
-        type      : 'allAdmins',
-        sys_pn    : 'all-admins',
-        name      : LOCALE.ALL_ADMINISTRATORS,
-        uiHandler : [_ui_],
-        radio     : tag_id,
-        kidsOpt   : {
-          active : 0
+        className: `${contentFig}__container widget-member-tagItem__ui`,
+        service: 'show-member-list',
+        type: 'allAdmins',
+        sys_pn: 'all-admins',
+        name: LOCALE.ALL_ADMINISTRATORS,
+        uiHandler: [ui],
+        radio: tag_id,
+        kidsOpt: {
+          active: 0
         },
-        kids      : [
+        kids: [
           Skeletons.Note({
-            className : `${contentFig}__note name`,
-            content   : LOCALE.ALL_ADMINISTRATORS
+            className: `${contentFig}__note name`,
+            content: LOCALE.ALL_ADMINISTRATORS
           })
         ]
       })
@@ -111,24 +108,24 @@ function __skl_member_tags  (_ui_) {
   })
 
   const archivedMembers = Skeletons.Box.Y({
-    className : `${contentFig}__main`,
-    debug     : __filename,
-    kids      : [
+    className: `${contentFig}__main`,
+    debug: __filename,
+    kids: [
       Skeletons.Box.X({
-        className : `${contentFig}__container widget-member-tagItem__ui`,
-        service   : 'show-member-list',
-        type      : _a.archived,
-        sys_pn    : _a.archived,
-        name      : LOCALE.ARCHIVES,
-        uiHandler : [_ui_],
-        radio     : tag_id,
-        kidsOpt   : {
-          active : 0
+        className: `${contentFig}__container widget-member-tagItem__ui`,
+        service: 'show-member-list',
+        type: _a.archived,
+        sys_pn: _a.archived,
+        name: LOCALE.ARCHIVES,
+        uiHandler: [ui],
+        radio: tag_id,
+        kidsOpt: {
+          active: 0
         },
-        kids      : [
+        kids: [
           Skeletons.Note({
-            className : `${contentFig}__note name`,
-            content   : LOCALE.ARCHIVES
+            className: `${contentFig}__note name`,
+            content: LOCALE.ARCHIVES
           })
         ]
       })
@@ -136,14 +133,14 @@ function __skl_member_tags  (_ui_) {
   })
 
   const content = Skeletons.Box.X({
-    className : `${contentFig}`,
-    kids      : [
+    className: `${contentFig}`,
+    kids: [
       Skeletons.Box.Y({
-        className : `${contentFig}__items`,
-        kids      : [
+        className: `${contentFig}__items`,
+        kids: [
           Skeletons.Box.Y({
-            className : `${contentFig}__item`,
-            kids      : [
+            className: `${contentFig}__item`,
+            kids: [
               allMembers,
               allAdmins,
               tagList,
@@ -156,12 +153,12 @@ function __skl_member_tags  (_ui_) {
   })
 
   let a = Skeletons.Box.Y({
-    className  : `${tagsFig}__main`,
-    debug      : __filename,
-    kids       : [
+    className: `${tagsFig}__main`,
+    debug: __filename,
+    kids: [
       Skeletons.Box.Y({
-        className  : `${tagsFig}__container`,
-        kids : [
+        className: `${tagsFig}__container`,
+        kids: [
           header,
           separator,
           content
@@ -169,7 +166,7 @@ function __skl_member_tags  (_ui_) {
       })
     ]
   })
-  
+
   return a;
 }
 

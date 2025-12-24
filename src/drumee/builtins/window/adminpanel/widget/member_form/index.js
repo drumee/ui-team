@@ -31,6 +31,7 @@ class ___widget_member_form extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
+    this.debug("AAA:34", service)
     switch (service) {
       case 'choose-who-can-see-member':
         return this.chooseWhoCanSeeMember()
@@ -129,7 +130,7 @@ class ___widget_member_form extends LetcBox {
    * @returns 
    */
   _submitMember() {
-    if(!(Organization.get(_a.privilege) & _K.permission.admin)){
+    if (!(Organization.get(_a.privilege) & _K.permission.admin)) {
       Wm.alert(LOCALE.WEAK_PRIVILEGE);
       return;
     }
@@ -182,6 +183,9 @@ class ___widget_member_form extends LetcBox {
       service: service,
       orgid: this._source.mget('orgId'),
       ...data
+    }).then((res) => {
+      let opt = { ...res, service: "member-added" }
+      this.triggerHandlers(opt)
     })
 
     return
@@ -225,7 +229,7 @@ class ___widget_member_form extends LetcBox {
   __dispatchRest(method, data) {
 
     switch (method) {
-      case SERVICE.adminpanel.member_add:
+      // case SERVICE.adminpanel.member_add:
       case SERVICE.adminpanel.member_update:
         //error handling
         switch (data.status) {

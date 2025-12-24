@@ -1,39 +1,66 @@
+const { button} = require("builtins/skeleton/toolkit");
 
-module.exports = function(_ui_) {
+module.exports = function (ui) {
   let content;
-  const mode = _ui_.mget(_a.mode) || "hbf";
+  let fig = ui.fig.family;
+  const mode = ui.mget(_a.mode) || "hbf";
   const header = Skeletons.Box.X({
-    className : `${_ui_.fig.family}__header ${_ui_.fig.group}__header`, 
-    kids : [require('./topbar')(_ui_)]});
+    className: `${fig}__header ${ui.fig.group}__header`,
+    kids: [require('./topbar')(ui)]
+  });
 
-  const body = _ui_.mget(_a.body);
-  if(body) {
+  const body = ui.mget(_a.body);
+  if (body) {
     if (_.isFunction(body)) {
-      content = body(_ui_);
-    } else { 
+      content = body(ui);
+    } else {
       content = body;
     }
-  } else { 
-    content = require('./message')(_ui_);
+  } else {
+    content = require('./message')(ui);
   }
 
+  // const footer = Skeletons.Box.X({
+  //   className: `${fig}__footer`,
+  //   kids: [
+  //     Skeletons.Note({
+  //       className: `${fig}__button`,
+  //       content: "Ok",
+  //       service: _e.close
+  //     })
+  //   ]
+  // });
   const footer = Skeletons.Box.X({
-    className : `${_ui_.fig.family}__footer`, 
-    kids : [
-      Skeletons.Note({
-        className : `${_ui_.fig.family}__button`,
-        content : "Ok",
-        service : _e.close
-      })
-      ]});
-
+    className: `${fig}__buttons`,
+    uiHandler: ui,
+    sys_pn: _a.footer,
+    dataset: { page: ui._page },
+    kids: [
+      button(ui, {
+        label: LOCALE.CLOSE,
+        type: _a.toggle,
+        className: `${fig}__button`,
+        service: _e.close,
+        priority: "secondary",
+      }),
+      // button(ui, {
+      //   label: LOCALE.CONFIRM,
+      //   type: _a.toggle,
+      //   className: `${fig}__button`,
+      //   service: "create-organization",
+      //   ico: "arrow-right",
+      //   priority: "primary",
+      // }),
+    ],
+  });
   const m = new RegExp(`[${mode}]`);
-    
+
   const a = Skeletons.Box.Y({
-    className  : `${_ui_.fig.family}__main ${_ui_.fig.group}__main drive-popup`,
-    radio      : _a.parent,
-    debug      : __filename,
-    kids       : []});
+    className: `${fig}__main ${ui.fig.group}__main drive-popup`,
+    radio: _a.parent,
+    debug: __filename,
+    kids: []
+  });
 
   if (m.test('h')) {
     a.kids.push(header);

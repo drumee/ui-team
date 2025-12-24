@@ -1,29 +1,22 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : __dbg_path
-//   TYPE : Skelton
-// ==================================================================== *
 
 
-const __window_info_message = function(_ui_) {
+const __window_info_message = function (ui) {
   let message;
-  const messageInput = _ui_.mget(_a.message);
+  const messageInput = ui.mget(_a.message);
   if (_.isString(messageInput)) {
-    message = [Skeletons.Note(messageInput, `${_ui_.fig.family}__message inner`)];
+    message = [Skeletons.Note(messageInput, `${ui.fig.family}__message inner`)];
   } else if (_.isFunction(messageInput)) {
-    message = messageInput(_ui_);
+    message = messageInput(ui);
   } else if (_.isArray(messageInput)) {
     message = messageInput;
-  } else { 
+  } else {
     message = [messageInput];
   }
 
-  const a = Skeletons.Box.Y({
-    debug     : __filename,
-    className : `${_ui_.fig.family}__container`,
-    kids      : message
+  return Skeletons.Box.Y({
+    debug: __filename,
+    className: `${ui.fig.family}__container`,
+    kids: message
   });
-
-  return a;
 };
 module.exports = __window_info_message;

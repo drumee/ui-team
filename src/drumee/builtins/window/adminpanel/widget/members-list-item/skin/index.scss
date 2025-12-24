@@ -19,7 +19,7 @@
     &:hover,
     &[data-active=active],
     &[data-radio=on] {
-      background: var(--default-background-hover);
+      background: var(--neutral-300);
 
       & .profile-icon,
       & .name.note-reader {
@@ -46,10 +46,9 @@
   }
 
   &__list {
-    height: 35px;
-    // margin: 1px 0 0;
+    height: 40px;
     padding-bottom: 5px;
-    padding-left: 12px; //14px;
+    padding-left: 12px;
     padding-top: 5px;
   }
 
@@ -87,8 +86,7 @@
 
     &.remove-admin {
       height: 13px;
-      right: 10px; //36px;
-      // top: 6px;
+      right: 10px;
       width: 13px;
       opacity: 0.85;
     }
@@ -105,30 +103,34 @@
       &[data-state="1"] {
         box-shadow: none;
         color: var(--default-checkbox-checked);
-        border: 1px solid var(--default-checkbox-border); //$default-checkbox;
+        border: 1px solid var(--default-checkbox-border);
       }
     }
 
     &.display-icon {
       color: var(--default-user-icon);
-      height: 29px;
+      height: 30px;
       top: 0;
-      width: 29px;
-      min-width: 29px;
+      width: 30px;
+      min-width: 30px;
     }
   }
 
   &__profile {
     &.user-profile__ui {
       border-radius: 50%;
-      height: 29px; //27px;
-      width: 29px; //27px;
+      height: 30px; //27px;
+      width: 30px; //27px;
       bottom: 2px; // 1px;
-      min-width: 29px;
+      min-width: 30px;
 
       &[data-default="1"] {
         border: none;
       }
+    }
+
+    .note-content {
+      font-size: inherit;
     }
 
     & section {

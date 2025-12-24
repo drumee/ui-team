@@ -4,16 +4,16 @@
 
   &-action-popup {
 
-    &__wrapper {
-      &.profile.no-sub-content {
-        // margin-bottom: 30px;
-        margin: 0 auto auto;
-      }
+    // &__wrapper {
+    //   &.profile.no-sub-content {
+    //     // margin-bottom: 30px;
+    //     margin: 0 auto auto;
+    //   }
 
-      &.profile {
-        margin: 0 auto 10px;
-      }
-    }
+    //   &.profile {
+    //     margin: 0 auto 10px;
+    //   }
+    // }
 
     &__profile {
       &.avatar {
@@ -65,16 +65,18 @@
       &__content {
         align-items: center;
         justify-content: center;
-        margin: auto;
+        // margin: auto;
         padding: 0 10px;
         text-align: center;
         width: 100%;
         height: 100%;
+        gap: var(--spacer-5);
+
       }
 
-      &__buttons-container {
-        margin-top: 45px;
-      }
+      // &__buttons-container {
+      //   margin-top: 45px;
+      // }
 
       &__password {
         height: 40px;
@@ -83,7 +85,7 @@
       &__note {
         &.header {
           //margin-top: 30px;
-          margin: auto 0 0;
+          // margin: auto 0 0;
           @include drumee.typo($size: 18px, $line: 18px, $color: var(--default-text-color));
         }
 
@@ -124,7 +126,7 @@
         &.sub-header,
         &.sub-content {
           color: var(--default-text-color); // var(--egrey-2f);
-          margin: auto 0; //40px 0 20px; //;28px 0;
+          // margin: auto 0; //40px 0 20px; //;28px 0;
           text-align: center;
         }
 

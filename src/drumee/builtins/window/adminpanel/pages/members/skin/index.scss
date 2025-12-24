@@ -54,6 +54,16 @@
     }
   }
 
+  &__message-content {
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    gap: var(--spacer-5);
+  }
+
   // css for buttons
   &__buttons-wrapper {
     display: flex;

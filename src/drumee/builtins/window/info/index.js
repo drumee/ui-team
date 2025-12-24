@@ -11,29 +11,28 @@ class __window_info extends mfsInteract {
   initialize(opt) {
     require('./skin');
     super.initialize();
-    this.model.atLeast({ 
-      message : LOCALE.ACCESS_RESERVED_TO_MEMBERS});
+    this.model.atLeast({
+      message: "No message",
+      area: _a.personal
+    });
 
-    this.mset({ 
-      hub_id : Visitor.id, 
-      privilege : _K.privilege.owner
-    }); 
-    this.style.set({
-      width  : this.size.width,
-      height : this.size.height,
-      left   : (window.innerWidth/2) - (this.size.width/2)
+    this.mset({
+      hub_id: Visitor.id,
+      privilege: _K.privilege.owner
     });
     if (this.mget(_a.version)) {
       this.model.set({
-        body : require("./skeleton/revision")(this)});
+        body: require("./skeleton/revision")(this)
+      });
     }
   }
 
   /**
    * 
    */
-  onDomRefresh(){
+  onDomRefresh() {
     this.feed(require("./skeleton")(this));
+    this.raise()
   }
 }
 

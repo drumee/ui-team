@@ -30,7 +30,19 @@ class ___members_page extends LetcBox {
    * @param {any} child
    * @param {any} pn
   */
-  onPartReady(child, pn) { return null }
+  async onPartReady(child, pn) {
+    switch (pn) {
+      case 'widget_members_list':
+        await Kind.waitFor('members_room')
+        let items = await child.getItems()
+        if (items[0]) {
+          items[0].setState(1)
+          this.loadMemberDetail(items[0]);
+        }
+        break;
+    }
+    return null
+  }
 
   /**
    * 
@@ -47,7 +59,7 @@ class ___members_page extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-
+    this.debug("AAA:50", args, cmd, service)
     switch (service) {
       case 'see-desktop':
         this.invokeSeeDesktop(cmd)
@@ -58,13 +70,13 @@ class ___members_page extends LetcBox {
         this.loadImportMembers()
         break;
 
-      case 'import-member-re-upload':
-        this.loadImportDropPage()
-        break;
+      // case 'import-member-re-upload':
+      //   this.loadImportDropPage()
+      //   break;
 
-      case 'import-member-upload':
-        this.importAllAccounts()
-        break;
+      // case 'import-member-upload':
+      //   this.importAllAccounts()
+      //   break;
 
       case 'connection-log':
         return this.loadConnectionLog(cmd)
@@ -76,12 +88,17 @@ class ___members_page extends LetcBox {
         return this.toggleDoubleAuthentication(cmd)
 
       case 'show-member-list':
-        this.loadMembersList(cmd.source)
+        this.loadMembersList(args)
         break;
 
       case 'choose-who-can-see-member':
         return this.chooseWhoCanSeeMember(cmd)
 
+      case 'member-added':
+        this.addNewMember(args)
+        this.loadMembersList()
+        // this.debug("AAA:86", args, cmd, this)
+        break;
       case 'show-member-detail':
         this.loadMemberDetail(cmd)
         break;
@@ -94,9 +111,9 @@ class ___members_page extends LetcBox {
         this.cancelCreateMemberForm()
         break
 
-      case 'add-member':
-        this.addNewMember(cmd)
-        break
+      // case 'add-member':
+      //   this.addNewMember(cmd)
+      //   break
 
       case _e.edit:
         this.loadEditMember(cmd)
@@ -131,7 +148,6 @@ class ___members_page extends LetcBox {
       case 'trigger-all-admins':
         let allAdminEl = this.findPart('all-admins')
         this.waitElement(allAdminEl.el, () => {
-          // allAdminEl.$el.trigger(_e.click);
           allAdminEl.triggerHandlers();
         });
 
@@ -150,8 +166,8 @@ class ___members_page extends LetcBox {
         this.closeOverlay(cmd)
         break
 
-      case 'download-member-sample-file':
-        let url = `${bootstrap().static}sample/admin_member_upload_sample.xlsx`;
+      case 'download-members-template':
+        let url = `${bootstrap().static}sample/users-list.csv`;
         window.open(url, '_blank');
         return;
     }
@@ -254,20 +270,14 @@ class ___members_page extends LetcBox {
   /**
    * @param {(any|null)} source
   */
-  loadMembersList(source = null) {
-    const memberList = {
-      kind: 'widget_members_list',
-      className: 'widget_members_list',
-      sys_pn: 'widget_members_list',
-      orgId: this.orgId,
-      source: source
-    }
+  loadMembersList(args = {}) {
     if (this._view == _a.min) {
       this.updateInstance(this.viewInstance = 2)
     } else {
       this.updateInstance(this.viewInstance = 1)
     }
-    return this.getBranch('members_list').feed(memberList);
+    delete args.service;
+    this.ensurePart('widget_members_list').then((p) => { p.reload(args) })
   }
 
 
@@ -275,16 +285,19 @@ class ___members_page extends LetcBox {
    * @param {(any|null)} source
   */
   loadMemberDetail(cmd) {
-    const source = cmd.source || null;
-
+    this.debug("AAAA:289", cmd)
+    let data = {}
+    if (cmd) {
+      data = cmd.data()
+    }
     const memberDetail = {
+      ...data,
       kind: 'members_room',
       className: 'members_room',
       sys_pn: 'page_members_room',
       orgId: this.orgId,
       type: 'member_detail',
-      source: source,
-      currentTag: cmd._currentTag,
+      currentTag: this._currentTag,
       parent: this
     }
 
@@ -302,6 +315,11 @@ class ___members_page extends LetcBox {
    * @param {(LetcBox|null)} source
   */
   loadCreateMember(source = null) {
+    if (!Visitor.quota().seat) {
+      return this.getBranch('member_room').feed(Skeletons.Note(
+        { content: LOCALE.QUOTA_EXCEEDED, className: `${this.fig.family}__message-content` }
+      ));
+    }
     const memberForm = {
       kind: 'members_room',
       className: 'members_room',
@@ -331,13 +349,13 @@ class ___members_page extends LetcBox {
   /**
    * @param {LetcBox} cmd
    */
-  addNewMember(cmd) {
+  addNewMember(data) {
     this.openOverlay(require('./skeleton/action-popup/member-acknowledgement').default(this))
-    const data = cmd.source.response
+    // const data = cmd.source.response
     const memberList = this.getItemsByKind('widget_members_list')[0]
     memberList.addMemberItem(data)
-    memberList.triggerClick(data.drumate_id)
-    return
+    // memberList.triggerClick(data.drumate_id)
+    // return
   }
 
   /**
@@ -518,7 +536,6 @@ class ___members_page extends LetcBox {
       service: SERVICE.adminpanel.member_disconnect,
       orgid: this.orgId,
       user_id: data.drumate_id,
-      ////hub_id  : Visitor.get(_a.id)
     })
   }
 
@@ -610,7 +627,7 @@ class ___members_page extends LetcBox {
     if (data.status == _a.archived) {
       return this.removeMemberFromList()
     }
-    return _.delay(f, 500)
+    // return _.delay(f, 500)
   }
 
   /**
@@ -647,7 +664,7 @@ class ___members_page extends LetcBox {
       return memberList.triggerClick()
     }
 
-    return _.delay(f, 500)
+    // return _.delay(f, 500)
   }
 
   /**
@@ -741,15 +758,15 @@ class ___members_page extends LetcBox {
      * @type {File}
     */
     let file = f[0].get(_a.file);
-    if (file.isDirectory || !/(.+)\.xls(.*)$/.test(file.name)) {
+    if (file.isDirectory || !/(.+)\.csv(.*)$/.test(file.name)) {
       this.warn("REJECTED ", file, file.isDirectory, file.name, /(.+)\.xls*$/.test(file.name));
-      Wm.alert('excel'.underline("required-type").printf(LOCALE.REQUIRES_FILE_TYPE));
+      Wm.alert('csv'.underline("required-type").printf(LOCALE.REQUIRES_FILE_TYPE));
       return;
     }
-
     let opt = {
-      service: SERVICE.adminpanel.members_import,
+      service: SERVICE.adminpanel.prepare_import,
       orgid: this.organisation.id,
+      upload: 1,
       nid: '0' // Only to avoid uploader complain
     }
     this.$el.append(__progress(this));
@@ -773,46 +790,36 @@ class ___members_page extends LetcBox {
     }
   }
 
-
-  /**
-   * @param {*} e
-   * @param {any} socket
+  /** 
+   * 
   */
-  onUploadEnd(e, socket) {
-    let data = e
-    if (e.data) {
-      data = e.data;
-    }
-    let status = data.valid;
-    let members = data.members;
-    this.importResponse = data;
+  onUploadResponse(data) {
     if (data.status == 'FILE_ERR') {
-      Wm.alert('excel'.underline("required-type").printf(LOCALE.REQUIRES_FILE_TYPE));
+      Wm.alert('csv'.underline("required-type").printf(LOCALE.REQUIRES_FILE_TYPE));
       return;
     }
+    if (data.status) {
+      this.ensurePart('import-list-error-msg').then((p) => {
+        setTimeout(() => { p.el.dataset.state = _a.open }, 300)
+        p.set({ content: data.status })
+      })
+      return;
+    }
+    let members = data;
     let membersListKind = members.map(row => {
       return require('./skeleton/import/members-list').AddRow(this, row)
     })
     this.getPart('upload-body-wrapper').feed(require('./skeleton/import/members-list').default(this))
     this.getPart('import-list-table').append(membersListKind)
-    let successService = 'import-member-re-upload';
-    let successLabel = LOCALE.UPLOAD_AGAIN; //'Upload Again';
-    let cancelService = 'close-overlay';
-    if (status) {
-      successService = 'import-member-upload'
-      successLabel = LOCALE.CREATE_ALL_ACCOUNTS //'Create All Accounts'
-      // cancelService   = 'import-member-re-upload'
+    let valid = members.filter(function name(p) {
+      return !p.error
+    })
+    if (valid.length) {
+      this.getPart('button-validate').setState(1)
     }
-
-    this.getPart('upload-footer-wrapper').feed(Preset.ConfirmButtons(this, {
-      cancelLabel: LOCALE.CANCEL || '',
-      cancelService: cancelService,
-      confirmLabel: successLabel,
-      confirmService: successService
-    }))
-    if (!status) {
-      this.getPart('import-list-error-msg').el.dataset.state = _a.open
-    }
+    // if (!status) {
+    //   this.getPart('import-list-error-msg').el.dataset.state = _a.open
+    // }
 
   }
 
@@ -831,6 +838,7 @@ class ___members_page extends LetcBox {
     this.getPart('upload-footer-wrapper').feed(cancelBtn);
     this.getPart('import-list-error-msg').el.dataset.state = _a.closed
   }
+
 
   /*
    *
@@ -866,8 +874,6 @@ class ___members_page extends LetcBox {
     }
     return this.removeMemberFromList()
   }
-
-
 
   /**
    * @param {Object} data
@@ -943,19 +949,17 @@ class ___members_page extends LetcBox {
         this.loadActionPopupAcknowledgement(data[0])
         return this.updateMemberStatusResponse(data[0])
 
-      case SERVICE.adminpanel.members_import:
-        if (data.valid) {
-          // this.getItemsByKind("widget_member_tags")[0]
-          // .getItemsByAttr('type','allMembers')[0]
-          // .$el.trigger('click');
-          this.getItemsByKind("widget_member_tags")[0]
-            .getItemsByAttr('type', 'allMembers')[0]
-            .triggerHandlers();
-          this.closeOverlay();
-        } else {
-          this.onUploadEnd(data, '')
-        }
-        break;
+      // case SERVICE.adminpanel.members_import:
+      //   this.debug("AAA:948", data)
+      //   if (data.valid) {
+      //     this.getItemsByKind("widget_member_tags")[0]
+      //       .getItemsByAttr('type', 'allMembers')[0]
+      //       .triggerHandlers();
+      //     this.closeOverlay();
+      //   } else {
+      //     this.onUploadEnd(data, '')
+      //   }
+      //   break;
 
       case SERVICE.adminpanel.mimic_new:
         this.requestMimicNewVerify(data)
