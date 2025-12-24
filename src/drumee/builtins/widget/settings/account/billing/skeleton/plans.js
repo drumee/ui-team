@@ -13,10 +13,12 @@ const OPTIONS = {
   },
   pro: {
     title: "Pro",
-    subtitle: "Start from $16.99 / month",
+    subtitle_monthly: "Start from $16.99 / month",
+    subtitle_yearly: "Start from $14.44 / month",
     description: "5 seats included, each additional seat $5",
     buttonTitle: "Upgrade",
-    unit_price: 1699,
+    unit_price_monthly: 1699,
+    unit_price_yearly: 1444,
     badge: 1,
     features: [
       "50G",
@@ -44,8 +46,13 @@ const OPTIONS = {
   }
 }
 
-function item(ui, opt) {
-  const { title, subtitle, description, buttonTitle, features, badge } = OPTIONS[opt]
+function item(ui, opt, cycle = "monthly") {
+  const option = OPTIONS[opt];
+  const { title, description, buttonTitle, features, badge } = option;
+  // Handle different pricing for monthly/yearly
+  const subtitle = cycle === "yearly" && option.subtitle_yearly 
+    ? option.subtitle_yearly 
+    : (option.subtitle_monthly || option.subtitle || "Free");
   const fig = `${ui.fig.family}__plan`;
 
   let descriptionItem = "";
@@ -140,16 +147,16 @@ function item(ui, opt) {
   });
 }
 
-function billing_content(ui) {
+function billing_content(ui, cycle = "monthly") {
   const fig = `${ui.fig.family}__plans`;
 
   return Skeletons.Box.G({
     className: `${fig}-main`,
     debug: __filename,
     kids: [
-      item(ui, "free"),
-      item(ui, "pro"),
-      item(ui, "enterprise"),
+      item(ui, "free", cycle),
+      item(ui, "pro", cycle),
+      item(ui, "enterprise", cycle),
     ],
   });
 }

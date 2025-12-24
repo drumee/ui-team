@@ -6,7 +6,7 @@ function item(ui, opt) {
   if (discountRate) {
     discountItem = Skeletons.Note({
       className: `${fig}-discount`,
-      content: `Save ${discountRate}%`,
+      content: `-${discountRate}%`,
     });
   }
   
@@ -27,7 +27,10 @@ function item(ui, opt) {
     kidsOpt: { active: 0 },
     radio: `billing-radio-${ui._id}`,
     service,
-    discountRate,
+    pos,
+    value: pos,
+    bubble: false,
+    uiHandler: [ui],
     kids: tabs
   });
 }
@@ -46,7 +49,7 @@ function billing_tabs_trigger(ui) {
     kids: [
       item(ui, {content:"Monthly", discountRate:0, pos:0, service:"select-plan"}), 
       item(ui, {content:"Yearly", discountRate:15, pos:1, service:"select-plan"}), 
-      item(ui,  {content:"Checkout", discountRate:0, pos:2, service:"checkout"})
+      item(ui, {content:"Checkout", discountRate:0, pos:2, service:"checkout"})
     ],
   });
 }

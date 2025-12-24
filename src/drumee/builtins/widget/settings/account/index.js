@@ -243,7 +243,17 @@ class settings_account extends LetcBox {
           p.restart();
         });
       case "checkout":
-        this.debug("AAA:247", this._currentPlan)
+        // Check if we're on billing page - if yes, pass to child widget
+        const isBillingPage = (this._page === 1) || (this.el && this.el.dataset.tab === "billing");
+        this.debug("AAA:247 checkout service, _page:", this._page, "isBillingPage:", isBillingPage);
+        
+        if (isBillingPage) {
+          // Pass to child widget (settings_billing) - it will handle and return false
+          this.triggerHandlers({ service, ...cmd });
+          return false; // Prevent further processing in parent
+        }
+        
+        // If not on billing page, handle payment checkout
         this._currentPlan = {
           value: PRICES[cmd.mget('plan')],
           plan: cmd.mget(_a.description),
@@ -257,10 +267,19 @@ class settings_account extends LetcBox {
         })
         break;
       case "select-plan":
+        // Check if we're on billing page - if yes, pass to child widget
+        const isBillingPage2 = (this._page === 1) || (this.el && this.el.dataset.tab === "billing");
+        if (isBillingPage2) {
+          // Pass to child widget (settings_billing) - it will handle and return false
+          this.triggerHandlers({ service, ...cmd });
+          return false; // Prevent further processing in parent
+        }
+        // If not on billing page, handle in parent
         this._currentPlan = {
           value: PRICES[cmd.mget('plan')],
           plan: cmd.mget(_a.description),
         }
+        break;
       default:
         this.triggerHandlers({ service });
     }
