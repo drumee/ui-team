@@ -210,7 +210,7 @@ function checkout(ui) {
             type: "number",
             placeholder: "0",
             value: String(ui.state?.checkout?.seats || 5),
-            service: "update-seats",
+            // Don't specify service - use default _a.input, handler will identify field by name
           }),
         ],
       }),
@@ -227,7 +227,7 @@ function checkout(ui) {
             type: "number",
             placeholder: "0",
             value: String(ui.state?.checkout?.storage || 0),
-            service: "update-storage",
+            // Don't specify service - use default _a.input, handler will identify field by name
           }),
         ],
       }),
@@ -423,8 +423,9 @@ function checkout(ui) {
         label: LOCALE.PROCEED_TO_CHECKOUT,
         className: `${pfx}-checkout-button`,
         ico: "cart",
-        service: "proceed-checkout",
+        service: "proceed-checkout-billing",
         priority: "primary",
+        uiHandler: [ui],
         bubble: false,
       }),
     ],

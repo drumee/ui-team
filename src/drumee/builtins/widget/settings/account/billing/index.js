@@ -150,8 +150,9 @@ class settings_billing extends LetcBox {
           this._updateRightPanelContent();
         }
       }).catch(() => {
-        // If not found, fallback to full render
-        this.renderContent();
+        // If not found, don't render - just skip update to avoid resetting input fields
+        // Parts will be ready after initial render completes
+        this.debug("Right panel part not found, skipping update to avoid resetting inputs");
       });
       return;
     }
@@ -365,6 +366,13 @@ class settings_billing extends LetcBox {
     this.__content.feed(content);
   }
 
+  triggerHandlers(cmd, args = {}) {
+    super.triggerHandlers(cmd, args);
+    if (cmd.service === "proceed-checkout-billing") {
+      this._proceedToCheckout();
+    }
+  }
+
   /**
    * Handle UI events
    * @param {*} cmd
@@ -374,21 +382,38 @@ class settings_billing extends LetcBox {
     // Try multiple ways to get service name
     let service = args.service;
     if (!service && cmd) {
-      service = cmd.service || 
-                (cmd.mget && cmd.mget(_a.service)) || 
-                (cmd.get && cmd.get(_a.service)) ||
-                (cmd.model && cmd.model.get(_a.service)) ||
-                cmd.mget(_a.name) || 
-                cmd.get(_a.name) ||
-                (cmd.model && cmd.model.get(_a.name));
+      // Try from cmd.source first (if event comes from child widget)
+      if (cmd.source) {
+        service = cmd.source.mget && cmd.source.mget(_a.service);
+      }
+      // Then try from cmd directly
+      if (!service) {
+        service = cmd.service || 
+                  (cmd.mget && cmd.mget(_a.service)) || 
+                  (cmd.get && cmd.get(_a.service)) ||
+                  (cmd.model && cmd.model.get(_a.service)) ||
+                  cmd.mget(_a.name) || 
+                  cmd.get(_a.name) ||
+                  (cmd.model && cmd.model.get(_a.name));
+      }
     }
     
-    this.debug("Billing onUiEvent:", service, "cmd:", cmd, "args:", args);
+    this.debug("Billing onUiEvent - service:", service, "cmd:", cmd, "args:", args);
+    
+    // Ignore click events from input fields - they're just for focusing, not for processing
+    // Only process input events (service = _a.input) or other meaningful services
+    if (!service && args && args.type === 'click') {
+      // Click event without service - likely from input field focus, ignore
+      return false;
+    }
     
     if (!service) {
       this.debug("No service found, passing to parent");
       return super.onUiEvent(cmd, args);
     }
+    
+    // Convert service to string for comparison
+    service = String(service);
     
     switch (service) {
       case "select-plan":
@@ -543,13 +568,26 @@ class settings_billing extends LetcBox {
       case "update-storage":
       case "seats":
       case "storage":
+      case _a.input:
         // Handle seats or storage input changes in checkout
-        // Try to get field name from service or from cmd.name
+        // Entry fields can trigger with custom service or default _a.input
+        // When using _a.input, we need to get field name from cmd.name
         let field = null;
+        
+        // Try to get field name from service first
         if (service === "update-seats" || service === "seats") {
           field = "seats";
         } else if (service === "update-storage" || service === "storage") {
           field = "storage";
+        } else if (service === _a.input) {
+          // When service is _a.input (default), get field name from cmd.name
+          const cmdName = (cmd.mget && cmd.mget(_a.name)) || 
+                         (cmd.get && cmd.get(_a.name)) || 
+                         cmd.name ||
+                         (cmd.model && cmd.model.get(_a.name));
+          if (cmdName === "seats" || cmdName === "storage") {
+            field = cmdName;
+          }
         } else {
           // Fallback: try to get from cmd.name
           const cmdName = (cmd.mget && cmd.mget(_a.name)) || (cmd.get && cmd.get(_a.name)) || cmd.name;
@@ -560,15 +598,56 @@ class settings_billing extends LetcBox {
         
         if (field) {
           // Try multiple ways to get value
-        const value = (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value)) || 
-                        cmd.value || args.value || (cmd.model && cmd.model.get(_a.value)) ||
-                        (args && args[field]);
+          // When using _a.input, value might be in args, cmd, or directly from DOM
+          let value = null;
           
+          // Method 1: Get value directly from input field DOM element (most reliable for real-time typing)
+          // Entry input fields have _input property that points to jQuery element
+          if (cmd && cmd._input && typeof cmd._input.val === 'function') {
+            value = cmd._input.val();
+          } else if (cmd && typeof cmd.getValue === 'function') {
+            // Try getValue method if available
+            value = cmd.getValue();
+          } else if (cmd && cmd._id) {
+            // Fallback: get from DOM element directly
+            const inputEl = document.getElementById(`${cmd._id}-input`);
+            if (inputEl) {
+              value = inputEl.value;
+            }
+          }
+          
+          // Method 2: From args (when triggered by input field)
+          if (value == null && args && args[field] != null) {
+            value = args[field];
+          } else if (value == null && args && args.value != null) {
+            value = args.value;
+          }
+          
+          // Method 3: From cmd model (may be stale during typing)
+          if (value == null && cmd && cmd.model) {
+            value = cmd.model.get(_a.value) || cmd.model.get('value');
+          }
+          
+          // Method 4: From cmd directly
+          if (value == null && cmd) {
+            value = (cmd.mget && cmd.mget(_a.value)) || 
+                    (cmd.get && cmd.get(_a.value)) || 
+                    cmd.value;
+          }
+          
+          // Method 5: From args with field name
+          if (value == null && args) {
+            value = args[field];
+          }
+          
+          // Only update if we have a valid value
+          // Allow empty string (0) for storage field
           if (value != null && value !== undefined) {
+            // Convert to number, allow 0
             const numValue = parseInt(value);
             if (!isNaN(numValue) && numValue >= 0) {
               this.state.checkout[field] = numValue;
-          this.debug(`Checkout ${field} changed to:`, this.state.checkout[field]);
+              this.debug(`Checkout ${field} changed to:`, this.state.checkout[field], "value:", value, "source:", value ? "DOM" : "other");
               
               // Only update right panel (summary), don't re-render entire content
               // This prevents input fields from being reset while user is typing
@@ -578,7 +657,7 @@ class settings_billing extends LetcBox {
         }
         return false;
 
-      case "proceed-checkout":
+      case "proceed-checkout-billing":
         // Handle proceed to checkout button - integrate payment API
         this.debug("proceed-checkout service matched, calling _proceedToCheckout");
         this._proceedToCheckout();
