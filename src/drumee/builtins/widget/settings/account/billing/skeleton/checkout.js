@@ -22,20 +22,18 @@ function checkout(ui) {
           Skeletons.Box.X({
             className: `${pfx}-plan-buttons`,
             kids: [
-              Skeletons.Button.Label({
+              Skeletons.Note({
                 className: `${pfx}-plan-button`,
-                label: "Free",
-                ico: "user",
+                content: "Free",
                 state: 0, // Will be dynamic based on selected plan
                 radio: `checkout-plan-${ui._id}`,
                 service: "select-checkout-plan",
                 value: "free",
                 uiHandler: [ui],
               }),
-              Skeletons.Button.Label({
+              Skeletons.Note({
                 className: `${pfx}-plan-button`,
-                label: "Pro",
-                ico: "user",
+                content: "Pro",
                 state: 1, // Will be dynamic based on selected plan
                 radio: `checkout-plan-${ui._id}`,
                 service: "select-checkout-plan",
@@ -61,7 +59,6 @@ function checkout(ui) {
             name: "seats",
             placeholder: "0",
             value: "0",
-            ico: "users",
             interactive: true,
             uiHandler: [ui],
           }),
@@ -108,7 +105,7 @@ function checkout(ui) {
           Skeletons.Box.X({
             className: `${pfx}-billing-buttons`,
             kids: [
-              Skeletons.Button.Label({
+              Skeletons.Note({
                 className: `${pfx}-billing-button`,
                 label: "Monthly",
                 state: 1, // Will be dynamic
@@ -117,7 +114,7 @@ function checkout(ui) {
                 value: "monthly",
                 uiHandler: [ui],
               }),
-              Skeletons.Button.Label({
+              Skeletons.Note({
                 className: `${pfx}-billing-button`,
                 label: "Yearly -15%",
                 state: 0, // Will be dynamic
@@ -158,18 +155,26 @@ function checkout(ui) {
           }),
           Skeletons.Box.Y({
             className: `${pfx}-bundles-list`,
+            /** Set same attributes to all direct children */
+            kidsOpt: {
+              radio: `checkout-bundle-${ui._id}`,
+              service: "select-bundle",
+              className: `${pfx}-bundle-item`,
+              uiHandler: [ui],
+              active: 0, /** Prevent children to trigger events */
+            },
             kids: [
               // +100GB
               Skeletons.Box.X({
-                className: `${pfx}-bundle-item`,
-                radio: `checkout-bundle-${ui._id}`,
-                service: "select-bundle",
+                // className: `${pfx}-bundle-item`,
+                // radio: `checkout-bundle-${ui._id}`,
+                // service: "select-bundle",
                 value: "100",
-                uiHandler: [ui],
+                // uiHandler: [ui],
                 kids: [
                   Skeletons.Box.X({
-                    className: `${pfx}-bundle-radio`,
-                    state: 0,
+                    className: `${pfx}-bundle-radio xxx bundle-radio`,
+                    // state: 0,
                   }),
                   Skeletons.Box.Y({
                     className: `${pfx}-bundle-content`,
@@ -192,15 +197,15 @@ function checkout(ui) {
               }),
               // +200GB
               Skeletons.Box.X({
-                className: `${pfx}-bundle-item`,
-                radio: `checkout-bundle-${ui._id}`,
-                service: "select-bundle",
+                // className: `${pfx}-bundle-item`,
+                // radio: `checkout-bundle-${ui._id}`,
+                // service: "select-bundle",
                 value: "200",
-                uiHandler: [ui],
+                // uiHandler: [ui],
                 kids: [
                   Skeletons.Box.X({
-                    className: `${pfx}-bundle-radio`,
-                    state: 0,
+                    className: `${pfx}-bundle-radio bundle-radio`,
+                    // state: 0,
                   }),
                   Skeletons.Box.Y({
                     className: `${pfx}-bundle-content`,
@@ -223,15 +228,15 @@ function checkout(ui) {
               }),
               // +500GB
               Skeletons.Box.X({
-                className: `${pfx}-bundle-item`,
-                radio: `checkout-bundle-${ui._id}`,
-                service: "select-bundle",
+                // className: `${pfx}-bundle-item`,
+                // radio: `checkout-bundle-${ui._id}`,
+                // service: "select-bundle",
                 value: "500",
-                uiHandler: [ui],
+                // uiHandler: [ui],
                 kids: [
                   Skeletons.Box.X({
-                    className: `${pfx}-bundle-radio`,
-                    state: 0,
+                    className: `${pfx}-bundle-radio bundle-radio`,
+                    // state: 0,
                   }),
                   Skeletons.Box.Y({
                     className: `${pfx}-bundle-content`,
@@ -254,15 +259,15 @@ function checkout(ui) {
               }),
               // +1TB
               Skeletons.Box.X({
-                className: `${pfx}-bundle-item`,
-                radio: `checkout-bundle-${ui._id}`,
-                service: "select-bundle",
+                // className: `${pfx}-bundle-item`,
+                // radio: `checkout-bundle-${ui._id}`,
+                // service: "select-bundle",
                 value: "1000",
-                uiHandler: [ui],
+                // uiHandler: [ui],
                 kids: [
                   Skeletons.Box.X({
-                    className: `${pfx}-bundle-radio`,
-                    state: 0,
+                    className: `${pfx}-bundle-radio bundle-radio`,
+                    // state: 0,
                   }),
                   Skeletons.Box.Y({
                     className: `${pfx}-bundle-content`,

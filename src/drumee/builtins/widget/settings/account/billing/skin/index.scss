@@ -237,6 +237,7 @@
     &-plan-buttons,
     &-billing-buttons {
       gap: 10px;
+      height: 40px;
     }
 
     &-plan-button,
@@ -248,6 +249,10 @@
       background-color: var(--white);
       cursor: pointer;
       transition: all 0.2s;
+      flex-direction: row;
+      align-content: center;
+      flex-wrap: wrap;
+      justify-content: center;
 
       &[data-state="1"] {
         background-color: var(--primary-500);
@@ -310,6 +315,22 @@
       &[data-state="1"] {
         border-color: var(--primary-500);
         background-color: var(--primary-50);
+
+        .bundle-radio {
+          border-color: var(--primary-500);
+
+          &::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background-color: var(--primary-500);
+            border-radius: 50%;
+          }
+        }
       }
     }
 
@@ -320,21 +341,21 @@
       border-radius: 50%;
       position: relative;
 
-      &[data-state="1"] {
-        border-color: var(--primary-500);
-        
-        &::after {
-          content: "";
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 10px;
-          height: 10px;
-          background-color: var(--primary-500);
-          border-radius: 50%;
-        }
-      }
+      // &[data-state="1"] {
+      //   border-color: var(--primary-500);
+
+      //   &::after {
+      //     content: "";
+      //     position: absolute;
+      //     top: 50%;
+      //     left: 50%;
+      //     transform: translate(-50%, -50%);
+      //     width: 10px;
+      //     height: 10px;
+      //     background-color: var(--primary-500);
+      //     border-radius: 50%;
+      //   }
+      // }
     }
 
     &-bundle-content {
@@ -424,6 +445,14 @@
       gap: 8px;
       cursor: pointer;
       transition: all 0.2s;
+      height: 40px;
+      display: flex;
+      flex-direction: row;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
 
       &:hover {
         background-color: var(--primary-600);

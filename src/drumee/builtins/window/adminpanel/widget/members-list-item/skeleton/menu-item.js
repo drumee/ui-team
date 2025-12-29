@@ -42,21 +42,18 @@ function addMenuItem(ui, _type, _val, _service, _label) {
  * 
  * @param {*} ui 
  */
-function __skl_widget_member_list_item_setttings_menu_item (ui) {
+export default function (ui) {
   const menuFig = `${ui.fig.family}-menu`;
 
   const content = Skeletons.Box.Y({
     className  : `${menuFig}__content-items`,
     kids: [
-      addMenuItem(ui, _a.checkbox, _K.privilege.admin_view, _a.view, LOCALE.VIEW_MEMBERS_LIST), //'View members list'),
-      addMenuItem(ui, _a.checkbox, _K.privilege.admin_member, _a.manage, LOCALE.MANAGE_MEMBERS_LIST), //'Manage members list'),
-      addMenuItem(ui, _a.checkbox, _K.privilege.admin_security, 'security', LOCALE.MANAGE_SECURITY), //LOCALE.SECURITY 'security', 'Manage Security'),
-      addMenuItem(ui, _a.radio, _K.privilege.admin, 'owner-rights', LOCALE.ALL_OWNER_RIGHTS) //LOCALE.OWNER_RIGHTS 'owner-rights', 'All owner rights')
+      // addMenuItem(ui, _a.checkbox, _K.privilege.admin_view, _a.view, LOCALE.VIEW_MEMBERS_LIST),
+      addMenuItem(ui, _a.checkbox, _K.privilege.admin_member, _a.manage, LOCALE.MANAGE_MEMBERS_LIST),
+      addMenuItem(ui, _a.checkbox, _K.privilege.admin_security, 'security', LOCALE.MANAGE_SECURITY), 
+      addMenuItem(ui, _a.radio, _K.privilege.admin, 'owner-rights', LOCALE.ALL_OWNER_RIGHTS) 
     ]
   })
   
   return content;
 };
-
-
-export default __skl_widget_member_list_item_setttings_menu_item;

@@ -24,15 +24,17 @@ class settings_account extends LetcBox {
       function (ui) { return { kind: "settings_billing", uiHandler: [ui] } },
       require("./skeleton/storage").default,
       require("./skeleton/security").default,
+      require("./skeleton/admin").default,
     ];
     this.tab_name = [
       LOCALE.PROFILE,
-      // LOCALE.PREFERENCES,
       "Billing Information",
       LOCALE.STORAGE,
       LOCALE.SECURITY,
     ];
-
+    if(Visitor.quota().plan == 'pro'){
+      this.tab_name.push(LOCALE.ADMIN)
+    }
   }
 
   /**
