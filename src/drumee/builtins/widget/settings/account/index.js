@@ -187,8 +187,8 @@ class settings_account extends LetcBox {
   onUiEvent(cmd, args = {}) {
     const service =
       args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug("onUiEvent:65", service);
-    switch (service) {
+      this.debug("AAA:191", service);
+      switch (service) {
       case "close-overlay":
         return this.__overlay.clear();
 
@@ -242,26 +242,9 @@ class settings_account extends LetcBox {
         return this.ensurePart(_a.list).then((p) => {
           p.restart();
         });
-      case "checkout":
-        this.debug("AAA:247", this._currentPlan)
-        this._currentPlan = {
-          value: PRICES[cmd.mget('plan')],
-          plan: cmd.mget(_a.description),
-        }
-        if (!this._currentPlan || !this._currentPlan.value) {
-          return;
-        }
-        this.postService(SERVICE.payment.checkout, this._currentPlan).then((data) => {
-          let { url } = data;
-          window.open(url, 'popUpWindow', url);
-        })
-        break;
-      case "select-plan":
-        this._currentPlan = {
-          value: PRICES[cmd.mget('plan')],
-          plan: cmd.mget(_a.description),
-        }
       default:
+        // Tab trigger events (select-plan, checkout) are handled by child widget (settings_billing)
+        // They will be passed down via triggerHandlers and handled in billing/index.js
         this.triggerHandlers({ service });
     }
   }

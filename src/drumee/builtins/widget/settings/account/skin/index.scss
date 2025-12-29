@@ -23,7 +23,7 @@
       height: 100vh;
     }
 
-    transition :width 1s;
+    transition :none;
 
     &[data-tab="billing"] {
       left: 0;

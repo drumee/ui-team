@@ -5,7 +5,7 @@
  * @returns 
  */
 export function button(ui, opt) {
-  let { label, state = "", ico, service, sys_pn, className, priority = "primary", type, haptic } = opt;
+  let { label, state = "", ico, service, sys_pn, className, priority = "primary", type, haptic, radio, value } = opt;
   const pfx = className || `${ui.fig.group}__button`;
   let kids = []
   if (label) kids.push(
@@ -43,6 +43,8 @@ export function button(ui, opt) {
     state,
     service,
     haptic,
+    radio,
+    value,
     kidsOpt: {
       active: 0,
     },
