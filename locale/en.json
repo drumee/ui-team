@@ -1952,5 +1952,21 @@
   "ENTER_CODE_TO_CHANGE_EMAIL": "To change email address we need to ensure this action has been initiated by you. Please enter the code sent to {0}.",
   "WRONG_CREDENTIALS": "Wrong credentials",
   "UNCOMPLIANT_PASSWORD": "Uncompliant password",
-  "CREATE_ACCOUNTS": "Create accounts"
+  "CREATE_ACCOUNTS": "Create accounts",
+  "CURRENT_PLAN": "Current Plan",
+  "PRO": "Pro",
+  "NUMBER_OF_SEATS": "Number of Seats",
+  "ADDITIONAL_STORAGE_GB": "Additional Storage (GB)",
+  "BILLING_CYCLE": "Billing Cycle",
+  "YEARLY_DISCOUNT": "Yearly -15%",
+  "STORAGE_BUNDLES": "Storage Bundles",
+  "STORAGE_ADD_ON": "Storage Add-on",
+  "CHOOSE_ONE_STORAGE_UPGRADE": "Choose one storage upgrade.",
+  "TOTAL_OUTCOME": "Total outcome:",
+  "BASE_PRICE": "Base price:",
+  "INCLUDED_SEATS": "Included seats:",
+  "TOTAL_STORAGE": "Total Storage:",
+  "EFFECTIVE_PRICE_PER_SEAT": "Effective price per seat:",
+  "PROCEED_TO_CHECKOUT": "Proceed to Checkout",
+  "BEST_VALUE": "BEST VALUE"
 }

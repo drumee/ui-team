@@ -241,7 +241,7 @@
       .settings-billing__entry-input {
         flex: 1;
         border: none;
-        padding: 0 var(--spacer-5);
+        padding: 0 var(--spacer-2);
         height: 100%;
 
         input {
@@ -256,7 +256,7 @@
       width: 100%;
       height: 48px;
       border-radius: var(--corner-radius-4);
-      padding: 0 var(--spacer-5);
+      padding: 0 var(--spacer-2);
       border: 1px solid var(--neutral-200);
 
       input {
@@ -279,6 +279,22 @@
       width: 100%;
       gap: 40px;
       align-items: flex-start;
+    }
+
+    // Icon color for entry fields (seats and storage)
+    &-section {
+      .settings-billing__entry-icon {
+        color: #94A3B8;
+
+        svg {
+          color: #94A3B8;
+          
+          path {
+            stroke: #94A3B8;
+            fill: none;
+          }
+        }
+      }
     }
 
     &-left {
@@ -375,12 +391,20 @@
     }
 
     &-bundles-list {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    &-bundles-item {
+      width: 100%;
+      display: flex;
       gap: 12px;
     }
 
     &-bundle-item {
+      flex: 1;
+      width: 50%;
       padding: 12px;
       border: 2px solid var(--neutral-300);
       border-radius: 8px;
@@ -390,6 +414,7 @@
       display: flex;
       align-items: center;
       background-color: var(--white);
+      position: relative;
 
       &:hover {
         border-color: var(--primary-500);
@@ -411,8 +436,11 @@
       height: 20px;
       border: 2px solid var(--neutral-300);
       border-radius: 50%;
-      position: relative;
+      position: absolute;
+      top: 8px;
+      right: 8px;
       flex-shrink: 0;
+      z-index: 2;
 
       &[data-state="1"] {
         border-color: var(--primary-500);
@@ -443,6 +471,7 @@
     &-bundle-header {
       gap: 8px;
       align-items: center;
+      position: relative;
     }
 
     &-bundle-title {
@@ -452,18 +481,34 @@
     }
 
     &-bundle-badge {
-      padding: 2px 8px;
+      padding: 2px 6px;
       background-color: var(--green-500);
       color: var(--white);
       border-radius: 4px;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 600;
+      position: absolute;
+      top: -20px;
+      right: -10px;
+      z-index: 3;
+      white-space: nowrap;
     }
 
     &-bundle-price {
-      font-weight: 600;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
       font-size: 14px;
-      color: var(--neutral-900);
+
+      &-amount {
+        font-weight: 700;
+        color: #0F172A;
+      }
+
+      &-period {
+        font-weight: 400;
+        color: #64748B;
+      }
     }
 
     &-bundle-unit {
@@ -522,9 +567,37 @@
       gap: 8px;
       cursor: pointer;
       transition: all 0.2s;
+      display: flex;
+      flex-direction: row;
 
       &:hover {
         background-color: var(--primary-600);
+      }
+
+      // Icon styling - smaller size
+      svg,
+      .svg-wrapper {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        color: var(--white);
+
+        svg {
+          width: 16px;
+          height: 16px;
+          color: var(--white);
+
+          path {
+            stroke: var(--white);
+            fill: none;
+          }
+        }
+      }
+
+      // Label/text styling
+      .note-content,
+      .inner {
+        color: var(--white);
       }
     }
 

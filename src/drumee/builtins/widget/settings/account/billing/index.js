@@ -48,7 +48,6 @@ class settings_billing extends LetcBox {
         storage: 0, // Additional storage in GB
         billingCycle: "monthly", // "monthly" or "yearly"
         selectedBundle: null, // Selected storage bundle: "100", "200", "500", "1000", or null
-        selectedStorageOption: "included", // "included" or "increments"
       }
     };
     
@@ -113,10 +112,6 @@ class settings_billing extends LetcBox {
     // Keep backward compatibility
     this.tab = this.state.currentTab;
     
-    const fig = this.fig.family;
-    const tab = parseInt(this.state.currentTab); // Ensure it's a number
-    
-    this.debug("renderContent: tab =", tab, "state =", this.state);
     
     // Use cached references from onPartReady - these should always be available after initial render
     // If parts are not available, re-render entire skeleton
@@ -127,7 +122,7 @@ class settings_billing extends LetcBox {
     }
     
     // Update header tab states to show which tab is active
-    const header = require("./skeleton/header").default(this);
+        const header = require("./skeleton/header").default(this);
     this.__tabsTrigger.feed(header);
     
     // Update content based on current tab
@@ -138,8 +133,8 @@ class settings_billing extends LetcBox {
     // Clear existing content first to ensure fresh render with updated state
     if (this.__content && typeof this.__content.softClear === 'function') {
       this.__content.softClear();
-    }
-    
+        }
+        
     // Feed new content directly - this.__content is already the wrapper container
     // feed() will replace the children of this.__content
     this.__content.feed(content);
@@ -284,27 +279,21 @@ class settings_billing extends LetcBox {
           return false;
         }
         
-        // Always set the selected bundle (radio behavior - only one can be selected at a time)
-        // This ensures that when one item is selected, others are automatically deselected
+        // Radio behavior: only one bundle can be selected at a time
+        // When a new bundle is selected, it automatically deselects the previous one
         const bundleValue = String(bundle);
         const previousBundle = this.state.checkout.selectedBundle;
         
-        // Always update state to ensure radio behavior (only one selected)
-        this.state.checkout.selectedBundle = bundleValue;
-        this.debug("Checkout bundle selected:", bundleValue, "previous:", previousBundle);
-        
-        // Force re-render to update all bundle items with new state
-        // This ensures all items show correct state (selected/unselected)
-        this.renderContent();
-        return false;
-
-      case "select-storage-option":
-        // Handle storage option selection (included or increments)
-        const storageOption = (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value)) || 
-                              cmd.value || cmd.model?.get(_a.value) || cmd.model?.get('value');
-        if (storageOption === "included" || storageOption === "increments") {
-          this.state.checkout.selectedStorageOption = storageOption;
-          this.debug("Checkout storage option changed to:", storageOption);
+        // Update state with new selection (this automatically deselects others)
+        // If clicking the same item, keep it selected (don't toggle)
+        if (previousBundle !== bundleValue) {
+          this.state.checkout.selectedBundle = bundleValue;
+          
+          // Force re-render to update all bundle items with new state
+          // This ensures:
+          // 1. The newly selected item shows as active (border + radio dot)
+          // 2. The previously selected item shows as inactive (no border, no radio dot)
+          // 3. All other items remain inactive
           this.renderContent();
         }
         return false;
