@@ -73,11 +73,39 @@ class settings_billing extends LetcBox {
         break;
       case `${this.fig.family}__checkout-seats-input`:
         this._setupInputChangeListener(child, "seats");
+        this._restoreInputFocus(child, "seats");
         break;
       case `${this.fig.family}__checkout-storage-input`:
         this._setupInputChangeListener(child, "storage");
+        this._restoreInputFocus(child, "storage");
         break;
     }
+  }
+
+  _restoreInputFocus(entryWidget, fieldName) {
+    if (!this._focusedInput || this._focusedInput.fieldName !== fieldName) {
+      return;
+    }
+    
+    if (!entryWidget || !entryWidget._id) return;
+    
+    const inputId = `${entryWidget._id}-input`;
+    
+    this.waitElement(inputId, () => {
+      const inputEl = document.getElementById(inputId);
+      if (!inputEl) return;
+      
+      if (this._focusedInput.value !== undefined) {
+        inputEl.value = this._focusedInput.value;
+      }
+      
+      if (this._focusedInput.cursorPosition !== undefined) {
+        inputEl.focus();
+        inputEl.setSelectionRange(this._focusedInput.cursorPosition, this._focusedInput.cursorPosition);
+      }
+      
+      this._focusedInput = null;
+    });
   }
 
   _setupInputChangeListener(entryWidget, fieldName) {
@@ -99,7 +127,12 @@ class settings_billing extends LetcBox {
         
         if (numValue >= 0) {
           this.state.checkout[fieldName] = numValue;
-          this.updateRightPanel();
+          
+          if (this.state.currentTab === TAB_CHECKOUT) {
+            const cursorPosition = inputEl.selectionStart;
+            this._focusedInput = { fieldName, cursorPosition, value: inputEl.value };
+            this.renderContent();
+          }
         }
       };
       
@@ -133,11 +166,17 @@ class settings_billing extends LetcBox {
   }
 
   _updateRightPanelContent() {
-    if (!this.__rightPanel) return;
+    if (!this.__rightPanel) {
+      return;
+    }
     
     const { calculateCheckoutSummary } = require("./skeleton/checkout");
     const summary = calculateCheckoutSummary(this.state);
     const pfx = `${this.fig.family}__checkout`;
+    
+    if (typeof this.__rightPanel.softClear === 'function') {
+      this.__rightPanel.softClear();
+    }
     
     const rightPanelContent = Skeletons.Box.Y({
       className: `${pfx}-right`,
@@ -219,8 +258,10 @@ class settings_billing extends LetcBox {
           label: LOCALE.PROCEED_TO_CHECKOUT,
           className: `${pfx}-checkout-button`,
           ico: "cart",
-          service: "proceed-checkout",
+          service: "proceed-checkout-billing",
           priority: "primary",
+          uiHandler: [this],
+          bubble: false,
         }),
       ],
     });
@@ -287,7 +328,19 @@ class settings_billing extends LetcBox {
     }
         
     this.__content.feed(content);
-      }
+    
+    if (this._focusedInput && this.state.currentTab === TAB_CHECKOUT) {
+      const focusedField = this._focusedInput.fieldName;
+      const sysPn = `${this.fig.family}__checkout-${focusedField}-input`;
+      
+      this.ensurePart(sysPn).then((entryWidget) => {
+        if (entryWidget) {
+          this._restoreInputFocus(entryWidget, focusedField);
+        }
+      }).catch(() => {
+      });
+    }
+  }
   
   onUiEvent(cmd, args = {}) {
     let service = args.service;
@@ -404,8 +457,19 @@ class settings_billing extends LetcBox {
         return false;
 
       case "select-bundle":
-        const bundle = (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value)) || 
-                       cmd.value || cmd.model?.get(_a.value) || cmd.model?.get('value');
+        let bundle = null;
+        
+        if (cmd && cmd.model) {
+          bundle = cmd.model.get(_a.value) || cmd.model.get('value');
+        }
+        
+        if (bundle == null && cmd) {
+          bundle = (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value)) || cmd.value;
+        }
+        
+        if (bundle == null && args) {
+          bundle = args.value || args.bundle;
+        }
         
         if (!bundle || !["100", "200", "500", "1000"].includes(String(bundle))) {
           return false;
@@ -416,7 +480,7 @@ class settings_billing extends LetcBox {
         
         if (previousBundle !== bundleValue) {
           this.state.checkout.selectedBundle = bundleValue;
-        this.renderContent();
+          this.renderContent();
         }
         return false;
 
