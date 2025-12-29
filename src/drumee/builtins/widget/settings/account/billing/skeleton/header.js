@@ -11,8 +11,6 @@ function item(ui, opt) {
   }
   
   let state = 0;
-  // Compare tab values strictly (convert to numbers for comparison)
-  // Use state.currentTab if available, otherwise fallback to ui.tab
   const currentTab = parseInt(ui.state?.currentTab ?? ui.tab) || 0;
   const itemPos = parseInt(pos) || 0;
   if (itemPos === currentTab) {
@@ -39,18 +37,12 @@ function item(ui, opt) {
   });
 }
 
-/**
- * 
- * @param {*} ui 
- * @returns 
- */
 function billing_tabs_trigger(ui) {
   const fig = ui.fig.family;
   const figTrigger = `${fig}__tabs-trigger`;
 
   return Skeletons.Box.X({
     className: `${figTrigger}-main`,
-    debug: __filename,
     sys_pn: `${fig}__tabs-trigger`,
     kids: [
       item(ui, {content:"Monthly", discountRate:0, pos:0, service:"select-plan"}), 

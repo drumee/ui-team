@@ -42,19 +42,12 @@ function billing_footer(ui) {
 
   return Skeletons.Box.Y({
     className: `${fig}-main`,
-    debug: __filename,
     kids: [
       Skeletons.Note({
         className: `${fig}-header`,
         content: "Additional seat pricing",
       }),
-      ,
       item(ui, "Pro:", "5 seats included, additional seats $5/month each."),
-      // item(
-      //   ui,
-      //   "Start Ups:",
-      //   "10 seats included, additional seats $5/month each."
-      // ),
       item(
         ui,
         "Enterprise:",

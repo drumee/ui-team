@@ -1,21 +1,10 @@
-/**
- * Create a bundle item for Storage Add-on
- * @param {*} ui
- * @param {*} opt - { value, title, price, unit, badge }
- * @returns
- */
 const { button, entry } = require("../../../../../skeleton/toolkit");
 
 function bundleItem(ui, opt) {
   const { value, title, price, unit, badge } = opt;
   const pfx = `${ui.fig.family}__checkout`;
-  // Ensure we get the latest state - convert both to string for comparison
-  // Read state directly from ui.state.checkout.selectedBundle to ensure we get the latest value
-  // IMPORTANT: Always read from ui.state directly, not from any cached value
   const selectedBundle = String(ui.state?.checkout?.selectedBundle || "");
   const bundleValue = String(value || "");
-  // Only this item is selected if its value matches the selected bundle
-  // If selectedBundle is empty string, no item is selected
   const isSelected = selectedBundle !== "" && selectedBundle === bundleValue;
 
   const titleContent = badge
@@ -37,10 +26,9 @@ function bundleItem(ui, opt) {
         content: title,
       });
 
-  // Parse price: "$8 /mo" -> amount: "$8", period: "/mo"
   const priceMatch = String(price || "").match(/^(.+?)\s*(\/mo)$/);
-  const priceAmount = priceMatch ? priceMatch[1] : price; // "$8"
-  const pricePeriod = priceMatch ? priceMatch[2] : ""; // "/mo"
+  const priceAmount = priceMatch ? priceMatch[1] : price;
+  const pricePeriod = priceMatch ? priceMatch[2] : "";
 
   return Skeletons.Box.X({
     className: `${pfx}-bundle-item`,
@@ -50,7 +38,7 @@ function bundleItem(ui, opt) {
     state: isSelected ? 1 : 0,
     bubble: false,
     uiHandler: [ui],
-    radioRecursive: true, // Ensure child elements (bundle-radio) also update when parent state changes
+    radioRecursive: true,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}-bundle-radio`,
@@ -83,11 +71,6 @@ function bundleItem(ui, opt) {
   });
 }
 
-/**
- * Calculate pricing and summary values based on checkout state
- * @param {*} state - checkout state object
- * @returns {Object} Calculated values
- */
 function calculateCheckoutSummary(state) {
   const checkout = state?.checkout || {};
   const selectedPlan = checkout.selectedPlan || "pro";
@@ -96,13 +79,11 @@ function calculateCheckoutSummary(state) {
   const billingCycle = checkout.billingCycle || "monthly";
   const selectedBundle = checkout.selectedBundle;
 
-  // Base pricing (monthly)
   const planPrices = {
     free: { monthly: 0, yearly: 0 },
-    pro: { monthly: 16.99, yearly: 169.90 } // Yearly = monthly * 10 (with discount)
+    pro: { monthly: 16.99, yearly: 169.90 }
   };
 
-  // Storage bundle prices (monthly)
   const bundlePrices = {
     "100": 8,
     "200": 14,
@@ -110,27 +91,21 @@ function calculateCheckoutSummary(state) {
     "1000": 50
   };
 
-  // Calculate base price
   const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
   const period = billingCycle === "yearly" ? "year" : "month";
 
-  // Calculate storage bundle price
   const bundlePrice = selectedBundle ? (bundlePrices[selectedBundle] || 0) : 0;
   const bundleStorage = selectedBundle ? parseInt(selectedBundle) : 0;
 
-  // Calculate total storage (base + bundle + additional)
-  const baseStorage = selectedPlan === "pro" ? 50 : 5; // Pro includes 50GB, Free includes 5GB
+  const baseStorage = selectedPlan === "pro" ? 50 : 5;
   const totalStorage = baseStorage + bundleStorage + storage;
 
-  // Calculate total price
   const totalPrice = billingCycle === "yearly" 
-    ? (basePrice + (bundlePrice * 12)) // Yearly: base + bundle * 12 months
-    : (basePrice + bundlePrice); // Monthly: base + bundle
+    ? (basePrice + (bundlePrice * 12))
+    : (basePrice + bundlePrice);
 
-  // Calculate effective price per seat
   const effectivePricePerSeat = seats > 0 ? (totalPrice / seats) : 0;
 
-  // Format currency
   const formatCurrency = (amount) => {
     return `$${amount.toFixed(2)}`;
   };
@@ -148,23 +123,15 @@ function calculateCheckoutSummary(state) {
   };
 }
 
-/**
- * Checkout layout with configuration on left and summary on right
- * @param {*} ui
- * @returns
- */
 function checkout(ui) {
   const fig = `${ui.fig.family}__checkout`;
   const pfx = fig;
 
-  // Calculate summary values from state
   const summary = calculateCheckoutSummary(ui.state);
 
-  // Left Panel - Configuration
   const leftPanel = Skeletons.Box.Y({
     className: `${pfx}-left`,
     kids: [
-      // Current Plan section
       Skeletons.Box.Y({
         className: `${pfx}-section`,
         kids: [
@@ -198,7 +165,6 @@ function checkout(ui) {
         ],
       }),
 
-      // Number of Seats
       Skeletons.Box.Y({
         className: `${pfx}-section`,
         kids: [
@@ -210,12 +176,11 @@ function checkout(ui) {
             type: "number",
             placeholder: "0",
             value: String(ui.state?.checkout?.seats || 5),
-            // Don't specify service - use default _a.input, handler will identify field by name
+            sys_pn: `${pfx}-seats-input`,
           }),
         ],
       }),
 
-      // Additional Storage
       Skeletons.Box.Y({
         className: `${pfx}-section`,
         kids: [
@@ -227,12 +192,11 @@ function checkout(ui) {
             type: "number",
             placeholder: "0",
             value: String(ui.state?.checkout?.storage || 0),
-            // Don't specify service - use default _a.input, handler will identify field by name
+            sys_pn: `${pfx}-storage-input`,
           }),
         ],
       }),
 
-      // Billing Cycle
       Skeletons.Box.Y({
         className: `${pfx}-section`,
         kids: [
@@ -266,7 +230,6 @@ function checkout(ui) {
         ],
       }),
 
-      // Storage Bundles
       Skeletons.Box.Y({
         className: `${pfx}-section`,
         kids: [
@@ -341,7 +304,6 @@ function checkout(ui) {
     ],
   });
 
-  // Right Panel - Summary
   const rightPanel = Skeletons.Box.Y({
     className: `${pfx}-right`,
     sys_pn: `${pfx}-right-panel`,
@@ -433,7 +395,6 @@ function checkout(ui) {
 
   return Skeletons.Box.X({
     className: `${pfx}-main`,
-    debug: __filename,
     kids: [leftPanel, rightPanel],
   });
 }
