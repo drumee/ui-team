@@ -187,9 +187,61 @@ class settings_billing extends LetcBox {
     this.__rightPanel.feed(rightPanelContent(this));
   }
 
+  calculateCheckoutSummary(state) {
+    const checkout = state?.checkout || {};
+    const selectedPlan = checkout.selectedPlan || "pro";
+    const seats = parseInt(checkout.seats) || 5;
+    const storage = parseInt(checkout.storage) || 0;
+    const billingCycle = checkout.billingCycle || "monthly";
+    const selectedBundle = checkout.selectedBundle;
+
+    const planPrices = {
+      free: { monthly: 0, yearly: 0 },
+      pro: { monthly: 16.99, yearly: 169.9 },
+    };
+
+    const bundlePrices = {
+      100: 8,
+      200: 14,
+      500: 30,
+      1000: 50,
+    };
+
+    const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
+    const period = billingCycle === "yearly" ? "year" : "month";
+
+    const bundlePrice = selectedBundle ? bundlePrices[selectedBundle] || 0 : 0;
+    const bundleStorage = selectedBundle ? parseInt(selectedBundle) : 0;
+
+    const baseStorage = selectedPlan === "pro" ? 50 : 5;
+    const totalStorage = baseStorage + bundleStorage + storage;
+
+    const totalPrice =
+      billingCycle === "yearly"
+        ? basePrice + bundlePrice * 12
+        : basePrice + bundlePrice;
+
+    const effectivePricePerSeat = seats > 0 ? totalPrice / seats : 0;
+
+    const formatCurrency = (amount) => {
+      return `$${amount.toFixed(2)}`;
+    };
+
+    return {
+      basePrice: formatCurrency(basePrice),
+      bundlePrice: formatCurrency(bundlePrice),
+      totalPrice: formatCurrency(totalPrice),
+      period: period,
+      seats: seats.toString(),
+      totalStorage: `${totalStorage} GB`,
+      effectivePricePerSeat: formatCurrency(effectivePricePerSeat),
+      selectedPlan,
+      billingCycle,
+    };
+  }
+
   _proceedToCheckout() {
-    const { calculateCheckoutSummary } = require("./skeleton/checkout");
-    const summary = calculateCheckoutSummary(this.state);
+    const summary = this.calculateCheckoutSummary(this.state);
     
     const checkout = this.state.checkout || {};
     const selectedPlan = checkout.selectedPlan || "pro";

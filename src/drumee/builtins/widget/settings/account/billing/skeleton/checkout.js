@@ -73,64 +73,12 @@ function bundleItem(ui, opt) {
   });
 }
 
-function calculateCheckoutSummary(state) {
-  const checkout = state?.checkout || {};
-  const selectedPlan = checkout.selectedPlan || "pro";
-  const seats = parseInt(checkout.seats) || 5;
-  const storage = parseInt(checkout.storage) || 0;
-  const billingCycle = checkout.billingCycle || "monthly";
-  const selectedBundle = checkout.selectedBundle;
-
-  const planPrices = {
-    free: { monthly: 0, yearly: 0 },
-    pro: { monthly: 16.99, yearly: 169.9 },
-  };
-
-  const bundlePrices = {
-    100: 8,
-    200: 14,
-    500: 30,
-    1000: 50,
-  };
-
-  const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
-  const period = billingCycle === "yearly" ? "year" : "month";
-
-  const bundlePrice = selectedBundle ? bundlePrices[selectedBundle] || 0 : 0;
-  const bundleStorage = selectedBundle ? parseInt(selectedBundle) : 0;
-
-  const baseStorage = selectedPlan === "pro" ? 50 : 5;
-  const totalStorage = baseStorage + bundleStorage + storage;
-
-  const totalPrice =
-    billingCycle === "yearly"
-      ? basePrice + bundlePrice * 12
-      : basePrice + bundlePrice;
-
-  const effectivePricePerSeat = seats > 0 ? totalPrice / seats : 0;
-
-  const formatCurrency = (amount) => {
-    return `$${amount.toFixed(2)}`;
-  };
-
-  return {
-    basePrice: formatCurrency(basePrice),
-    bundlePrice: formatCurrency(bundlePrice),
-    totalPrice: formatCurrency(totalPrice),
-    period: period,
-    seats: seats.toString(),
-    totalStorage: `${totalStorage} GB`,
-    effectivePricePerSeat: formatCurrency(effectivePricePerSeat),
-    selectedPlan,
-    billingCycle,
-  };
-}
 
 function checkout(ui) {
   const fig = `${ui.fig.family}__checkout`;
   const pfx = fig;
 
-  const summary = calculateCheckoutSummary(ui.state);
+  const summary = ui.calculateCheckoutSummary(ui.state);
 
   const leftPanel = Skeletons.Box.Y({
     className: `${pfx}-left`,
@@ -451,5 +399,114 @@ function checkout(ui) {
   });
 }
 
+function rightPanelContent(ui) {
+  const fig = `${ui.fig.family}__checkout`;
+  const pfx = fig;
+  const summary = ui.calculateCheckoutSummary(ui.state);
+
+  return Skeletons.Box.Y({
+    className: `${pfx}-right`,
+    sys_pn: `${pfx}-right-panel`,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}-total-label`,
+        content: LOCALE.TOTAL_OUTCOME,
+      }),
+      Skeletons.Box.X({
+        className: `${pfx}-total-price`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}-total-price-amount`,
+            content: summary.totalPrice,
+          }),
+          Skeletons.Note({
+            className: `${pfx}-total-price-period`,
+            content: `/${summary.period}`,
+          }),
+        ],
+      }),
+      Skeletons.Box.Y({
+        className: `${pfx}-breakdown`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${pfx}-breakdown-item`,
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}-breakdown-label`,
+                content: LOCALE.BASE_PRICE,
+              }),
+              Skeletons.Note({
+                className: `${pfx}-breakdown-value`,
+                content: summary.basePrice,
+              }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}-breakdown-item`,
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}-breakdown-label`,
+                content: LOCALE.INCLUDED_SEATS,
+              }),
+              Skeletons.Note({
+                className: `${pfx}-breakdown-value`,
+                content: summary.seats,
+              }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}-breakdown-item ${pfx}-breakdown-total-storage`,
+            kids: [
+              Skeletons.Button.Icon({
+                className: `${pfx}-breakdown-icon`,
+                ico: "raw-hard-drive-green",
+              }),
+              Skeletons.Note({
+                className: `${pfx}-breakdown-total-storage-label`,
+                content: LOCALE.TOTAL_STORAGE,
+              }),
+              Skeletons.Note({
+                className: `${pfx}-breakdown-total-storage-value`,
+                content: summary.totalStorage,
+              }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat`,
+            kids: [
+              Skeletons.Button.Icon({
+                className: `${pfx}-breakdown-icon`,
+                ico: "raw-trending-up",
+              }),
+              Skeletons.Box.Y({
+                className: `${pfx}-breakdown-label-container`,
+                kids: [
+                  Skeletons.Note({
+                    className: `${pfx}-breakdown-label`,
+                    content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
+                  }),
+                  Skeletons.Note({
+                    className: `${pfx}-breakdown-value-effective-price-per-seat`,
+                    content: summary.effectivePricePerSeat,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+      Skeletons.Button.Label({
+        label: LOCALE.PROCEED_TO_CHECKOUT,
+        className: `${pfx}-checkout-button`,
+        ico: "raw-cart",
+        service: "proceed-checkout-billing",
+        priority: "primary",
+        uiHandler: [ui],
+        bubble: false,
+      }),
+    ],
+  });
+}
+
 export default checkout;
-export { calculateCheckoutSummary };
+export { rightPanelContent };
