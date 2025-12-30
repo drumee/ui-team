@@ -7,6 +7,7 @@ function item(ui, title, content, email) {
       className: `${fig} item`,
       kids: [
         Skeletons.Note({
+          className: `${fig}-email-title`,
           content: " Contact: ",
         }),
         Skeletons.Note({
