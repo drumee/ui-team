@@ -24,7 +24,7 @@
 
     &-main {
       grid-template-columns: repeat(3, 1fr);
-      gap: var(--spacer-2);
+      gap: var(--spacer-4);
     }
   }
 
@@ -173,6 +173,7 @@
     &.popular-badge {
       background-color: var(--primary-500);
       color: white;
+      border: 1px solid #b251fb;
       border-radius: 24px;
       align-items: center;
       justify-content: center;
