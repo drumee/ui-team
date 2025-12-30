@@ -177,7 +177,7 @@
       align-items: center;
       justify-content: center;
       position: absolute;
-      padding: 10px;
+      padding: 6px;
       top: -14px;
       left: 50%;
       font-size: 10px;
@@ -187,26 +187,33 @@
 
   &__footer {
     &-main {
+      margin-top: 20px;
       gap: 20px;
-      background-color: var(--neutral-200);
+      background-color: #F8FAFC;
       padding: 20px;
-      border-radius: 12px;
+      border-radius: 16px;
     }
 
     &-header {
       font-weight: 600;
       font-size: 20px;
+      color: #0F172A;
     }
 
     &-title {
       font-weight: 600;
       margin-right: 10px;
+      color: #0F172A;
+    }
+
+    &.content {
+      color: #475569;
     }
 
     &-email {
       cursor: pointer;
       text-decoration: underline;
-      color: var(--primary-500);
+      color: #2563EB;
       margin-left: 10px;
     }
   }

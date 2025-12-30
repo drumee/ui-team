@@ -7,7 +7,7 @@ function item(ui, title, content, email) {
       className: `${fig} item`,
       kids: [
         Skeletons.Note({
-          content: "Contract: ",
+          content: " Contact: ",
         }),
         Skeletons.Note({
           className: `${fig}-email`,
@@ -24,7 +24,7 @@ function item(ui, title, content, email) {
         className: `${fig}-title`,
         content: title,
       }),
-      Skeletons.Box.Y({
+      Skeletons.Box.X({
         className: `${fig} content`,
         kids: [
           Skeletons.Note({
@@ -48,6 +48,7 @@ function billing_footer(ui) {
         content: "Additional seat pricing",
       }),
       item(ui, "Pro:", "5 seats included, additional seats $5/month each."),
+      item(ui, "Start Ups:", "10 seats included, additional seats $5/month each"),
       item(
         ui,
         "Enterprise:",

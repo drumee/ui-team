@@ -272,6 +272,73 @@ class settings_billing extends LetcBox {
       });
   }
 
+  getSelectPlanData(cmd) {
+    let pos = null;
+    
+    if (cmd.model) {
+      pos = cmd.model.get(_a.pos) || cmd.model.get(_a.value) || cmd.model.get('pos') || cmd.model.get('value');
+    }
+    
+    if (pos == null) {
+      pos = (cmd.mget && cmd.mget(_a.pos)) || (cmd.get && cmd.get(_a.pos)) || 
+            (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value));
+    }
+    
+    if (pos == null) {
+      pos = cmd.pos || cmd.value;
+    }
+    
+    if (pos == null && cmd.el) {
+      pos = cmd.el.dataset?.pos || cmd.el.dataset?.value;
+    }
+    
+    if (pos == null && cmd.el) {
+      pos = cmd.el.getAttribute?.('data-pos') || cmd.el.getAttribute?.('data-value');
+    }
+    
+    if (pos == null && cmd.el) {
+      let parent = cmd.el.closest?.(`.${this.fig.family}__tabs-trigger-item`);
+      if (parent) {
+        const parentContainer = parent.parentElement;
+        if (parentContainer) {
+          const children = Array.from(parentContainer.children);
+          const index = children.indexOf(parent);
+          if (index !== -1 && index < TAB_CHECKOUT) {
+            pos = index;
+          }
+        }
+      }
+    }
+    
+    if (pos == null && cmd.el) {
+      const text = cmd.el.textContent?.toLowerCase() || cmd.el.innerText?.toLowerCase();
+      if (text && text.includes('monthly')) {
+        pos = TAB_MONTHLY;
+      } else if (text && text.includes('yearly')) {
+        pos = TAB_YEARLY;
+      }
+    }
+    
+    return pos;
+  }
+
+  handleSelectPlan(cmd) {
+    const pos = this.getSelectPlanData(cmd);
+    
+    if (pos != null && pos !== undefined) {
+      const posNum = parseInt(pos);
+      if (!isNaN(posNum) && (posNum === TAB_MONTHLY || posNum === TAB_YEARLY)) {
+        if (posNum !== this.state.currentTab) {
+          this.state.currentTab = posNum;
+          this.state.plansTab.cycle = posNum === TAB_MONTHLY ? "monthly" : "yearly";
+          this.tab = posNum;
+          this.renderContent();
+        }
+      }
+    }
+    return false;
+  }
+
   renderContent() {
     if (this.state.currentTab === undefined || this.state.currentTab === null || isNaN(this.state.currentTab)) {
       this.state.currentTab = TAB_MONTHLY;
@@ -341,64 +408,7 @@ class settings_billing extends LetcBox {
     
     switch (service) {
       case "select-plan":
-        let pos = null;
-        
-        if (cmd.model) {
-          pos = cmd.model.get(_a.pos) || cmd.model.get(_a.value) || cmd.model.get('pos') || cmd.model.get('value');
-        }
-        
-        if (pos == null) {
-          pos = (cmd.mget && cmd.mget(_a.pos)) || (cmd.get && cmd.get(_a.pos)) || 
-                (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value));
-        }
-        
-        if (pos == null) {
-          pos = cmd.pos || cmd.value;
-        }
-        
-        if (pos == null && cmd.el) {
-          pos = cmd.el.dataset?.pos || cmd.el.dataset?.value;
-        }
-        
-        if (pos == null && cmd.el) {
-          pos = cmd.el.getAttribute?.('data-pos') || cmd.el.getAttribute?.('data-value');
-        }
-        
-        if (pos == null && cmd.el) {
-          let parent = cmd.el.closest?.(`.${this.fig.family}__tabs-trigger-item`);
-          if (parent) {
-            const parentContainer = parent.parentElement;
-            if (parentContainer) {
-              const children = Array.from(parentContainer.children);
-              const index = children.indexOf(parent);
-              if (index !== -1 && index < TAB_CHECKOUT) {
-                pos = index;
-              }
-            }
-          }
-        }
-        
-        if (pos == null && cmd.el) {
-          const text = cmd.el.textContent?.toLowerCase() || cmd.el.innerText?.toLowerCase();
-          if (text && text.includes('monthly')) {
-            pos = TAB_MONTHLY;
-          } else if (text && text.includes('yearly')) {
-            pos = TAB_YEARLY;
-          }
-        }
-        
-        if (pos != null && pos !== undefined) {
-          const posNum = parseInt(pos);
-          if (!isNaN(posNum) && (posNum === TAB_MONTHLY || posNum === TAB_YEARLY)) {
-            if (posNum !== this.state.currentTab) {
-              this.state.currentTab = posNum;
-              this.state.plansTab.cycle = posNum === TAB_MONTHLY ? "monthly" : "yearly";
-              this.tab = posNum;
-              this.renderContent();
-            }
-          }
-        }
-        return false;
+        return this.handleSelectPlan(cmd);
 
       case "checkout":
         if (this.state.currentTab !== TAB_CHECKOUT) {
