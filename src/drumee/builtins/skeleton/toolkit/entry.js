@@ -5,7 +5,7 @@
  * @returns 
  */
 export function entry(ui, opt) {
-  let { value, name, placeholder = "", label, shower, sys_pn, type, service = _a.input } = opt;
+  let { value, name, placeholder = "", label, shower, sys_pn, type, service = _a.input, ico, icoPosition = "right" } = opt;
   const pfx = `${ui.fig.family}__entry`;
   let args = {
     className: `${pfx}-input`,
@@ -26,6 +26,32 @@ export function entry(ui, opt) {
     args.sys_pn = sys_pn;
     args.partHandler = [ui];
   }
+
+  // Create entry component
+  let entryComponent = Skeletons.Entry(args);
+
+  // If icon is provided, wrap entry in Box.X and add icon to place it inside border
+  if (ico) {
+    const iconComponent = Skeletons.Button.Icon({
+      className: `${pfx}-icon`,
+      ico: ico,
+      state: 0,
+    });
+
+    // Wrap entry in Box.X to contain icon inside border
+    entryComponent = Skeletons.Box.X({
+      className: `${pfx}-input-wrapper`,
+      kids: [entryComponent]
+    });
+
+    // Add icon to the correct position (left or right)
+    if (icoPosition === "left") {
+      entryComponent.kids.unshift(iconComponent);  // Add icon at the beginning
+    } else {
+      entryComponent.kids.push(iconComponent);    // Add icon at the end (default)
+    }
+  }
+
   return Skeletons.Box.G({
     className: `${pfx}-main`,
     kids: [
@@ -33,7 +59,7 @@ export function entry(ui, opt) {
         className: `${pfx}-label ${name}`,
         content: label,
       }),
-      Skeletons.Entry(args)
+      entryComponent
     ]
   })
 }

@@ -49,7 +49,6 @@ const OPTIONS = {
 function item(ui, opt, cycle = "monthly") {
   const option = OPTIONS[opt];
   const { title, description, buttonTitle, features, badge } = option;
-  // Handle different pricing for monthly/yearly
   const subtitle = cycle === "yearly" && option.subtitle_yearly 
     ? option.subtitle_yearly 
     : (option.subtitle_monthly || option.subtitle || "Free");
@@ -114,9 +113,6 @@ function item(ui, opt, cycle = "monthly") {
           ico: "available",
           label: f,
         })
-        // Skeletons.Note({
-        //   content: f,
-        // }),
       ],
     })
   });
@@ -141,8 +137,6 @@ function item(ui, opt, cycle = "monthly") {
 
   return Skeletons.Box.Y({
     className: `${fig}-item`,
-    // kidsOpt: { active: 0 },
-    // radio: `color-radio-${ui._id}`,
     kids: [header, button, featuresWrapper, popularBadge],
   });
 }
@@ -152,7 +146,6 @@ function billing_content(ui, cycle = "monthly") {
 
   return Skeletons.Box.G({
     className: `${fig}-main`,
-    debug: __filename,
     kids: [
       item(ui, "free", cycle),
       item(ui, "pro", cycle),

@@ -5,7 +5,7 @@
  * @returns 
  */
 export function button(ui, opt) {
-  let { label, state = "", ico, service, sys_pn, className, priority = "primary", type, haptic } = opt;
+  let { label, state = "", ico, service, sys_pn, className, priority = "primary", type, haptic, radio, value } = opt;
   const pfx = className || `${ui.fig.group}__button`;
   let kids = []
   if (label) kids.push(
@@ -17,6 +17,7 @@ export function button(ui, opt) {
   )
   let main = Skeletons.Box.G;
   let no_icon = ""
+  let icoPosition = opt.icoPosition || "right";
   if (ico) {
     let el = Skeletons.Button.Svg({
       className: `${pfx} icon`,
@@ -29,8 +30,15 @@ export function button(ui, opt) {
       kids.push(el)
       main = Skeletons.Box.X;
     } else {
-      kids.push(el)
-      main = Skeletons.Box.G;
+      // Default: use horizontal layout (Box.X) when icon is present
+      // Icon position: left (unshift) or right (push)
+      if (icoPosition === "left") {
+        kids.unshift(el);
+      } else {
+        // If label exists, icon goes after label; otherwise just icon
+        kids.push(el);
+      }
+      main = Skeletons.Box.X;
     }
   } else {
     no_icon = 'no-icon'
@@ -43,6 +51,8 @@ export function button(ui, opt) {
     state,
     service,
     haptic,
+    radio,
+    value,
     kidsOpt: {
       active: 0,
     },
