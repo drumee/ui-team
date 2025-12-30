@@ -238,7 +238,7 @@ function checkout(ui) {
                     content: `-15%`,
                     active: 0,
                   }),
-                ],  
+                ],
               }),
             ],
           }),
@@ -340,8 +340,13 @@ function checkout(ui) {
           }),
         ],
       }),
-      Skeletons.Box.Y({
+
+      Skeletons.Box.X({
         className: `${pfx}-breakdown`,
+      }),
+
+      Skeletons.Box.Y({
+        className: `${pfx}-breakdown-items`,
         kids: [
           Skeletons.Box.X({
             className: `${pfx}-breakdown-item`,
@@ -369,6 +374,15 @@ function checkout(ui) {
               }),
             ],
           }),
+        ],
+      }),
+
+      Skeletons.Box.X({
+        className: `${pfx}-breakdown`,
+      }),
+
+      Skeletons.Box.Y({
+        kids: [
           Skeletons.Box.X({
             className: `${pfx}-breakdown-item ${pfx}-breakdown-total-storage`,
             kids: [
@@ -377,7 +391,7 @@ function checkout(ui) {
                 ico: "raw-hard-drive-green",
               }),
               Skeletons.Note({
-                className: `${pfx}-breakdown-label`,
+                className: `${pfx}-breakdown-total-storage-label`,
                 content: LOCALE.TOTAL_STORAGE,
               }),
               Skeletons.Note({
@@ -386,8 +400,17 @@ function checkout(ui) {
               }),
             ],
           }),
+        ],
+      }),
+
+      Skeletons.Box.X({
+        className: `${pfx}-breakdown`,
+      }),
+
+      Skeletons.Box.Y({
+        kids: [
           Skeletons.Box.X({
-            className: `${pfx}-breakdown-item ${pfx}-breakdown`,
+            className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat `,
             kids: [
               Skeletons.Button.Icon({
                 className: `${pfx}-breakdown-icon`,

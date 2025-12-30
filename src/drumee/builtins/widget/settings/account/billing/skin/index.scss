@@ -505,7 +505,6 @@
       font-weight: 600;
       align-items: center;
     }
-    
 
     &-bundles-list {
       display: flex;
@@ -644,8 +643,6 @@
     }
 
     &-total-price {
-      background-color: #f0fdf4;
-
       align-items: baseline;
       gap: 4px;
 
@@ -665,40 +662,22 @@
     }
 
     &-breakdown {
-      gap: 12px;
-      padding-top: 20px;
-      border-top: 1px solid var(--neutral-300);
+      align-items: center;
+      margin-top: --var(--spacer-1);
+      margin-bottom: --var(--spacer-1);
+      border: 1px solid var(--neutral-300);
+    }
+
+    &-breakdown-items {
+      gap: var(--spacer-4);
     }
 
     &-breakdown-item {
       gap: 8px;
+      width: 100%;
+      display: flex;
       align-items: center;
-    }
-
-    &-breakdown-total-storage {
-      padding-top: 20px;
-      border-top: 1px solid var(--neutral-300);
-      background-color: #F0FDF4;
-      color: #166534;
-      padding: 8px;
-      border-radius: 8px;
-      &-value {
-        color: #166534;
-      }
-    }
-
-    &-breakdown-item.settings-billing__checkout-breakdown {
-      .settings-billing__checkout-breakdown-value {
-        color: #2563eb;
-      }
-    }
-
-    &-breakdown-icon {
-      width: 16px;
-      height: 16px;
-      svg.drumee-picto {
-        fill: none;
-      }
+      justify-content: space-between;
     }
 
     &-breakdown-label {
@@ -713,7 +692,49 @@
       color: var(--neutral-900);
 
       &-effective-price-per-seat {
-        color: #2563EB;
+        color: #2563eb;
+      }
+    }
+
+    &-breakdown-label-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacer-2);
+    }
+
+    &-breakdown-total-storage {
+      background-color: #f0fdf4;
+      color: #166534;
+      padding: 8px;
+      border-radius: 8px;
+      justify-content: space-between;
+
+      &-label {
+        color: #166534;
+        font-weight: 600;
+        font-size: 13px;
+        line-height: 20px;
+        letter-spacing: -0.85px;
+        flex: 1;
+        text-align: left;
+      }
+      &-value {
+        color: #166534;
+        text-align: right;
+      }
+    }
+
+    &-breakdown-effective-price-per-seat {
+      background-color: #EFF6FF;
+      justify-content: start;
+      
+    }
+
+    &-breakdown-icon {
+      width: 16px;
+      height: 16px;
+      svg.drumee-picto {
+        fill: none;
       }
     }
 
