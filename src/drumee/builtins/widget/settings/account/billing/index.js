@@ -146,11 +146,15 @@ class settings_billing extends LetcBox {
     });
   }
 
+  /**
+   * 
+   * @returns 
+   */
   updateRightPanel() {
     if (this.state.currentTab !== TAB_CHECKOUT) {
       return;
     }
-    
+
     if (!this.__rightPanel) {
       this.ensurePart(`${this.fig.family}__checkout-right-panel`).then((panel) => {
         if (panel) {
@@ -161,126 +165,26 @@ class settings_billing extends LetcBox {
       });
       return;
     }
-    
+
     this._updateRightPanelContent();
   }
 
+  /**
+   * 
+   * @returns 
+   */
   _updateRightPanelContent() {
     if (!this.__rightPanel) {
       return;
     }
-    
-    const { calculateCheckoutSummary } = require("./skeleton/checkout");
-    const summary = calculateCheckoutSummary(this.state);
-    const pfx = `${this.fig.family}__checkout`;
-    
+
+    const { rightPanelContent } = require("./skeleton/checkout");
+
     if (typeof this.__rightPanel.softClear === 'function') {
       this.__rightPanel.softClear();
     }
-    
-    const rightPanelContent = Skeletons.Box.Y({
-      className: `${pfx}-right`,
-      kids: [
-        Skeletons.Note({
-          className: `${pfx}-total-label`,
-          content: LOCALE.TOTAL_OUTCOME,
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}-total-price`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}-total-price-amount`,
-              content: summary.totalPrice,
-            }),
-            Skeletons.Note({
-              className: `${pfx}-total-price-period`,
-              content: `/${summary.period}`,
-            }),
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}-breakdown`,
-          kids: [
-            Skeletons.Box.X({
-              className: `${pfx}-breakdown-item`,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}-breakdown-label`,
-                  content: LOCALE.BASE_PRICE,
-                }),
-                Skeletons.Note({
-                  className: `${pfx}-breakdown-value`,
-                  content: summary.basePrice,
-                }),
-              ],
-            }),
-            Skeletons.Box.X({
-              className: `${pfx}-breakdown-item`,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}-breakdown-label`,
-                  content: LOCALE.INCLUDED_SEATS,
-                }),
-                Skeletons.Note({
-                  className: `${pfx}-breakdown-value`,
-                  content: summary.seats,
-                }),
-              ],
-            }),
-            Skeletons.Box.X({
-              className: `${pfx}-breakdown-item`,
-              kids: [
-                Skeletons.Button.Icon({
-                  className: `${pfx}-breakdown-icon`,
-                  ico: "hard-drive",
-                }),
-                Skeletons.Note({
-                  className: `${pfx}-breakdown-label`,
-                  content: LOCALE.TOTAL_STORAGE,
-                }),
-                Skeletons.Note({
-                  className: `${pfx}-breakdown-value`,
-                  content: summary.totalStorage,
-                }),
-              ],
-            }),
-            Skeletons.Box.X({
-              className: `${pfx}-breakdown-item ${pfx}-breakdown`,
-              kids: [
-                Skeletons.Button.Icon({
-                  className: `${pfx}-breakdown-icon`,
-                  ico: "trending-up",
-                }),
-                Skeletons.Box.Y({
-                  className: `${pfx}-breakdown-label-container`,
-                  kids: [
-                    Skeletons.Note({
-                      className: `${pfx}-breakdown-label`,
-                      content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
-                    }),
-                    Skeletons.Note({
-                      className: `${pfx}-breakdown-value`,
-                      content: summary.effectivePricePerSeat,
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-        Skeletons.Button.Label({
-          label: LOCALE.PROCEED_TO_CHECKOUT,
-          className: `${pfx}-checkout-button`,
-          ico: "cart",
-          service: "proceed-checkout-billing",
-          priority: "primary",
-          uiHandler: [this],
-          bubble: false,
-        }),
-      ],
-    });
-    
-    this.__rightPanel.feed(rightPanelContent);
+
+    this.__rightPanel.feed(rightPanelContent(this));
   }
 
   _proceedToCheckout() {
