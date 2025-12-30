@@ -436,7 +436,7 @@ function checkout(ui) {
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,
         className: `${pfx}-checkout-button`,
-        ico: "cart",
+        ico: "raw-cart",
         service: "proceed-checkout-billing",
         priority: "primary",
         uiHandler: [ui],
