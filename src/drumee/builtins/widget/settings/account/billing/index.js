@@ -185,9 +185,18 @@ class settings_billing extends LetcBox {
           className: `${pfx}-total-label`,
           content: LOCALE.TOTAL_OUTCOME,
         }),
-        Skeletons.Note({
+        Skeletons.Box.X({
           className: `${pfx}-total-price`,
-          content: `${summary.totalPrice} /${summary.period}`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}-total-price-amount`,
+              content: summary.totalPrice,
+            }),
+            Skeletons.Note({
+              className: `${pfx}-total-price-period`,
+              content: `/${summary.period}`,
+            }),
+          ],
         }),
         Skeletons.Box.Y({
           className: `${pfx}-breakdown`,
@@ -236,19 +245,24 @@ class settings_billing extends LetcBox {
               ],
             }),
             Skeletons.Box.X({
-              className: `${pfx}-breakdown-item`,
+              className: `${pfx}-breakdown-item ${pfx}-breakdown`,
               kids: [
                 Skeletons.Button.Icon({
                   className: `${pfx}-breakdown-icon`,
                   ico: "trending-up",
                 }),
-                Skeletons.Note({
-                  className: `${pfx}-breakdown-label`,
-                  content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
-                }),
-                Skeletons.Note({
-                  className: `${pfx}-breakdown-value`,
-                  content: summary.effectivePricePerSeat,
+                Skeletons.Box.Y({
+                  className: `${pfx}-breakdown-label-container`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${pfx}-breakdown-label`,
+                      content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
+                    }),
+                    Skeletons.Note({
+                      className: `${pfx}-breakdown-value`,
+                      content: summary.effectivePricePerSeat,
+                    }),
+                  ],
                 }),
               ],
             }),
