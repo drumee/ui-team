@@ -17,12 +17,21 @@ class settings_helpcenter extends LetcBox {
     this.skeletons = [
       require("./skeleton/welcome").default,
       require("./skeleton/user-guide").default,
-      require("./skeleton/welcome").default,
-      require("./skeleton/welcome").default,
+      require("./skeleton/documentations").default,
+      require("./skeleton/community").default,
+      require("./skeleton/term-of-service").default,
+      require("./skeleton/privacy-policy").default,
       // require("./skeleton/security").default,
     ];
     // this.tab_name = [LOCALE.PROFILE, LOCALE.STORAGE, LOCALE.SECURITY];
-    this.tab_name = ["Welcome", "User Guide", "Documentations", "Community"];
+    this.tab_name = [
+      "Welcome",
+      "User Guide",
+      "Documentations",
+      "Community",
+      "Terms of Service",
+      "Privacy Policy",
+    ];
   }
 
   /**
