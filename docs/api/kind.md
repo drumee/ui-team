@@ -77,7 +77,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | settings_hub | widget/settings/hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/hub/index.js |
 | settings_member | widget/settings/member | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/member/index.js |
 | settings_members_list | widget/settings/members-list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/members-list/index.js |
-| settings_pricing | widget/settings/pricing | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/pricing/index.js |
 | settings_share_hub | widget/settings/share-hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/share-hub/index.js |
 | widget_chat_item | widget/chat-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat-item/index.js |
 | widget_tag | src/drumee/builtins/window/addressbook/widget/tag | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/tag/index.js |

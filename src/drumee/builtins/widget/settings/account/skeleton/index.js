@@ -37,20 +37,26 @@ function nav_item(ui, ico, label, page) {
  */
 function nav(ui) {
   let fig = ui.fig.family;
+  const items = [
+    Skeletons.Note({
+      className: `${ui.fig.family}__title`,
+      content: LOCALE.SETTINGS,
+    }),
+    nav_item(ui, "profile", LOCALE.PROFILE, 0),
+    nav_item(ui, "billing", "Billing Information", 1),
+    nav_item(ui, "storage", LOCALE.STORAGE, 2),
+    nav_item(ui, "shield", LOCALE.SECURITY, 3),
+  ]
+
+  if (ui.canAdmin()) {
+    items.push(nav_item(ui, "two-users", LOCALE.ADMIN, 4),)
+  }
+
   const topics = Skeletons.Box.Y({
     className: `${fig}__topics`,
-    kids: [
-      Skeletons.Note({
-        className: `${ui.fig.family}__title`,
-        content: LOCALE.SETTINGS,
-      }),
-      nav_item(ui, "profile", LOCALE.PROFILE, 0),
-      // nav_item(ui, "settings", LOCALE.PREFERENCES, 1),
-      nav_item(ui, "billing", "Billing Information", 1),
-      nav_item(ui, "storage", LOCALE.STORAGE, 2),
-      nav_item(ui, "shield", LOCALE.SECURITY, 3),
-    ],
+    kids: items,
   });
+
   const legals = Skeletons.Box.Y({
     className: `${fig}__legals`,
     kids: [

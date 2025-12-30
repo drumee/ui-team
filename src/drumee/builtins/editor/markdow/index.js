@@ -2,6 +2,9 @@ const __player = require("player/interact");
 const { marked } = require("marked");
 const { xhRequest } = require("core/socket/request");
 
+const REMINDER_ID = 'reminder_id';
+
+
 require("./skin");
 require("./skin/viewer");
 class __editor_markdown extends __player {
@@ -9,10 +12,7 @@ class __editor_markdown extends __player {
    *
    */
   async initialize(opt = {}) {
-    this.size = _K.docViewer;
     super.initialize(opt);
-    this.size.with = window.innerWidth - 100;
-    this.style.set({ width: this.size.with });
     const renderer = require("./renderer");
     const { mangle } = require("marked-mangle");
     const { gfmHeadingId } = require("marked-gfm-heading-id");
@@ -22,6 +22,15 @@ class __editor_markdown extends __player {
     }));
     marked.use({ renderer });
     window.onbeforeunload = this.checkUnsavedWork.bind(this);
+    if (opt.media) {
+      this.copyPropertiesFrom(opt.media)
+    }
+    const now = Dayjs().format("DD-MMM-YYYY@HH:MM");
+    this.model.atLeast({
+      filename: LOCALE.NOTE_ON_DATE_X.format(now),
+      hub_id: Visitor.get(_a.id),
+    })
+    this.target = Wm.getActiveWindow();
   }
 
   /**
@@ -59,19 +68,32 @@ class __editor_markdown extends __player {
   onPartReady(child, pn) {
     switch (pn) {
       case _a.content:
-        if (window.innerWidth < 700) {
-          this.el.dataset.column = 1;
-        }
         this.display({ top: 85 });
         this.setupInteract();
         this.raise();
         this.viewerId = `${this.mget(_a.widgetId)}-viewer`;
         this.editorId = `${this.mget(_a.widgetId)}-editor`;
-        setTimeout(() => {
-          child.el.dataset.flow = 'g';
-        }, 1000);
-        child.el.dataset.column = this.el.dataset.column;
-        child.feed(require('./skeleton/content')(this))
+        // child.feed(require('./skeleton/content')(this))
+        break;
+      case 'pin':
+        if (!this.media || this.mget(REMINDER_ID)) return;
+        if (!this.media.canOrganize()) return;
+        this.waitElement(child.el, () => {
+          child.el.dataset.visibility = 1;
+        })
+        const opt = {
+          service: SERVICE.reminder.get,
+          nid: this.mget(_a.nid),
+          hub_id: this.mget(_a.hub_id),
+          reminder_id: this.mget(REMINDER_ID)
+        }
+        this.postService(opt, { async: 1 }).then((data) => {
+          if (data && data.reminder_id) {
+            if (_.isString(data.task)) data.task = JSON.parse(data.task);
+            // this.mset(data);
+            child.setState(1);
+          }
+        })
         break;
       default:
         super.onPartReady(child, pn);
@@ -79,22 +101,15 @@ class __editor_markdown extends __player {
   }
 
   /**
-   * Upon DOM refresh, after element actually insterted into DOM
+   * 
+   * @param {*} url 
    */
-  onDomRefresh() {
-    if (!this.media) {
-      this.suppress();
-      this.warn("EEE:42 -- Require media reference");
-      return;
-    }
-
-    let responseType = _a.text;
-    this.media.wait(0);
-    let { url } = this.media.actualNode();
-    this.el.setAttribute(_a.id, this.diagramId);
-    xhRequest(url, { responseType }).then((content) => {
-      this.content = content;
+  _loadContent(url) {
+    xhRequest(url, { responseType: _a.text }).then((content) => {
       this.feed(require("./skeleton")(this));
+      this.ensurePart(_a.content).then((p) => {
+        p.feed(require('./skeleton/content')(this, content))
+      })
     }).catch((e) => {
       this.suppress();
       let msg = e.reason || e.error || LOCALE.INTERNAL_ERROR;
@@ -102,58 +117,34 @@ class __editor_markdown extends __player {
       this.warn("ERR:98", e);
     });
   }
+  /**
+   * Upon DOM refresh, after element actually insterted into DOM
+   */
+  onDomRefresh() {
+    if (this.media) {
+      let { url } = this.media.actualNode();
+      this.media.wait(0);
+      this._loadContent(url)
+      return
+    }
+    if (this.mget(_a.task)) {
+      let { nid, hub_id } = this.mget(_a.task)
+      this.postService(SERVICE.media.get_node_attr, { nid, hub_id }).then((data) => {
+        this.mset(data);
+        let { url } = this.actualNode();
+        this._loadContent(url)
+      })
+      return
+    }
+
+    this.feed(require("./skeleton")(this));
+
+  }
 
   /**
-   *
+   * 
    */
-  saveContent(content = "", node, ext = 'md') {
-    let filetype;
-    switch (ext) {
-      case 'md':
-        filetype = 'markdown';
-        break
-      case 'html':
-      case 'htm':
-        filetype = _a.web;
-        break;
-      default:
-        filetype = _a.text;
-    }
-    let target = Wm.getActiveWindow();
-    let position = 0;
-    if (this.media && this.media.logicalParent) {
-      target = this.media.logicalParent;
-      position = this.media.index();
-    }
-    let filename = LOCALE.NOTE;
-    if (this.mget(_a.filename)) {
-      filename = this.mget(_a.filename);
-    } else if (this.media && this.media.mget(_a.filename)) {
-      filename = this.media.mget(_a.filename);
-    }
-    //let ext = this.mget(_a.ext) || 'note';
-    let { hub_id, nid, pid } = node;
-    let replace = 0;
-    if (nid) replace = 1;
-    let opt = {
-      service: SERVICE.media.save,
-      hub_id: hub_id || Visitor.get(_a.id),
-      nid: nid,
-      id: nid,
-      replace,
-      pid: pid || Visitor.get(_a.home_id),
-      filename: `${filename}.${ext}`,
-      filetype,
-      content,
-    };
-    if (!replace) opt.position = position;
-    let stylesheet = this.__styleSrc.getValue() || "";
-    if (stylesheet) {
-      opt.metadata = {
-        stylesheet
-      }
-    }
-
+  _saveContent(opt, target) {
     this.postService(opt, { async: 1 }).then((data) => {
       this._changed = 0;
       let [file] = target.getItemsByAttr(_a.nid, data.nid);
@@ -177,6 +168,106 @@ class __editor_markdown extends __player {
       }
       this.mset(data);
     });
+  }
+
+  /**
+ * 
+ */
+  pin(cmd) {
+    this.debug("AAAA:142", this.mget(REMINDER_ID), cmd.mget(_a.state));
+    let task = {
+      nid: this.mget(_a.nid),
+      hub_id: this.mget(_a.hub_id),
+      repeat: 'onload',
+      action: 'open',
+      filetype: _a.node,
+      kind: this.mget(_a.kind),
+      style: {
+        ...this.$el.offset(),
+        width: this.$el.width(),
+        height: this.$el.height(),
+      }
+    }
+    if (cmd.mget(_a.state)) {
+      this.postService({ service: SERVICE.reminder.create, hub_id: Visitor.id, task }, { async: 1 }).then((data) => {
+        delete data.id;
+        this.mset(data);
+      })
+    } else {
+      let id = this.mget(REMINDER_ID);
+      this.debug("AAAA:162", id, this.mget(REMINDER_ID), cmd.mget(_a.state));
+      if (!id) return;
+      this.postService({ service: SERVICE.reminder.remove, hub_id: Visitor.id, id }, { async: 1 }).then((data) => {
+        /** */
+      })
+    }
+  }
+
+  /**
+   *
+   */
+  saveContent(content = "", node, ext = 'md') {
+    let filetype;
+    switch (ext) {
+      case 'md':
+        filetype = 'markdown';
+        break
+      case 'html':
+      case 'htm':
+        filetype = _a.web;
+        break;
+      default:
+        filetype = _a.text;
+    }
+    let target = this.target;
+    let position = 0;
+    if (this.media && this.media.logicalParent) {
+      target = this.media.logicalParent;
+      position = this.media.index();
+    }
+    content = content || this.getData().content || "";
+    let a = content.split(' ');
+
+    let filename = this.mget(_a.filename);
+    if (a[0]) {
+      filename = (a[0] + (a[1] || "")).replace(/[\/<>!\$\*\&\~\#\"\'\`\^]/g, '')
+    }
+    //let ext = this.mget(_a.ext) || 'note';
+    let { hub_id, nid, pid } = node || this.actualNode();
+    let replace = 0;
+    if (nid) replace = 1;
+    let opt = {
+      service: SERVICE.media.save,
+      hub_id: hub_id || Visitor.get(_a.id),
+      nid,
+      id: nid,
+      replace,
+      pid: pid || Visitor.get(_a.home_id),
+      filename: `${filename}.${ext}`,
+      filetype,
+      content,
+    };
+    if (!replace) opt.position = position;
+
+    if (this.target) {
+      opt.pid = this.target.mget(_a.nid);
+      opt.hub_id = this.target.mget(_a.hub_id);
+      if (!this.target.canUpload()) {
+        let msg = `
+        You don't have the permission to save the file into to the folder {0}.<br>
+        Do you want to save it on you Deck?`
+        Wm.confirm(msg.format(this.target.mget(_a.filename))).then((r) => {
+          if (r.response == 'confirm') {
+            opt.hub_id = Visitor.get(_a.id);
+            opt.pid = Visitor.get(_a.home_id);
+            this._saveContent(opt, Wm)
+          }
+        }).catch((e) => { })
+      } else {
+        this._saveContent(opt, this.target)
+      }
+    }
+
   }
 
   /**
@@ -263,13 +354,16 @@ class __editor_markdown extends __player {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
       case _a.save:
-        this.saveContent(this.__editor.getValue(), this.actualNode());
+        this.saveContent();
         break;
       case "save-html":
         this.saveHtml();
         break;
       case "preview":
         this.preview(cmd);
+        break;
+      case 'pin-on':
+        this.pin(cmd);
         break;
       case "text-input":
         this._changed = 1;
@@ -279,15 +373,6 @@ class __editor_markdown extends __player {
           this.__viewer.el.innerHTML = html;
           this.timer = null;
         }, 3000);
-        break;
-      case "paste-file":
-        const reader = new FileReader();
-        let img = document.createElement(_K.tag.img);
-        reader.onloadend = () => {
-          img.setAttribute(_a.src, reader.result);
-          this.__textContent.insert({ el: img });
-        };
-        reader.readAsDataURL(args.file);
         break;
       case _e.close:
         this.goodbye();

@@ -24,7 +24,6 @@ class settings_account extends LetcBox {
       function (ui) { return { kind: "settings_billing", uiHandler: [ui] } },
       require("./skeleton/storage").default,
       require("./skeleton/security").default,
-      require("./skeleton/admin").default,
     ];
     this.tab_name = [
       LOCALE.PROFILE,
@@ -32,11 +31,18 @@ class settings_account extends LetcBox {
       LOCALE.STORAGE,
       LOCALE.SECURITY,
     ];
-    if(Visitor.quota().plan == 'pro'){
-      this.tab_name.push(LOCALE.ADMIN)
+    if(this.canAdmin()){
+      this.tab_name.push(LOCALE.ADMIN);
+      this.skeletons.push(require("./skeleton/admin").default)
     }
   }
 
+  /**
+   * 
+   */
+  canAdmin(){
+    return (Visitor.quota().plan == 'pro' && Visitor.domainCan(_K.permission.admin_member))
+  }
   /**
    *
    */

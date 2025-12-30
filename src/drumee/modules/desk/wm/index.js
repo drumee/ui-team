@@ -166,7 +166,7 @@ class __window_manager extends push {
       { async: 1 }
     ).then((data) => {
       if (!data || !data.length) return;
-      for (var c of data) {
+      for (let c of data) {
         if (_.isString(c.task)) c.task = JSON.parse(c.task);
         if (c.task && c.task.kind) {
           c.kind = c.task.kind;

@@ -20,6 +20,7 @@ const __media_tpl_grid = function (ui) {
       html = require('./filetype/audio.txt').default;
       break;
     case _a.note:
+    case 'markdown':
       html = require('./filetype/note.txt').default;
       break;
     default:

@@ -118,11 +118,9 @@
         position: absolute;
         padding: 7px;
         top: 18px;
-        @include drumee.typo(
-          $line: 15px,
+        @include drumee.typo($line: 15px,
           $size: 12px,
-          $color: var(--default-text-color)
-        );
+          $color: var(--default-text-color));
       }
     }
   }
@@ -132,12 +130,10 @@
     height: 100%;
     padding: 20px 40px;
 
-    @include drumee.typo(
-      $size: 13px,
+    @include drumee.typo($size: 13px,
       $line: 18px,
       $weight: 300,
-      $color: var(--default-text-color)
-    );
+      $color: var(--default-text-color));
 
     .text-editable {
       width: 100%;
