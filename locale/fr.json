@@ -1968,5 +1968,6 @@
   "TOTAL_STORAGE": "Stockage total",
   "EFFECTIVE_PRICE_PER_SEAT": "Prix effectif par siège :",
   "PROCEED_TO_CHECKOUT": "Passer à la caisse",
-  "BEST_VALUE": "MEILLEURE VALEUR"
+  "BEST_VALUE": "MEILLEURE VALEUR",
+  "BILLING_INFORMATION": "Informations de facturation"
 }

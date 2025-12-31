@@ -223,5 +223,6 @@
   "TOTAL_STORAGE": "Almacenamiento total",
   "EFFECTIVE_PRICE_PER_SEAT": "Precio efectivo por asiento:",
   "PROCEED_TO_CHECKOUT": "Proceder al pago",
-  "BEST_VALUE": "MEJOR VALOR"
+  "BEST_VALUE": "MEJOR VALOR",
+  "BILLING_INFORMATION": "Información de facturación"
 }

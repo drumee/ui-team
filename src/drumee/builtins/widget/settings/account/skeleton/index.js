@@ -43,7 +43,7 @@ function nav(ui) {
       content: LOCALE.SETTINGS,
     }),
     nav_item(ui, "profile", LOCALE.PROFILE, 0),
-    nav_item(ui, "billing", "Billing Information", 1),
+    nav_item(ui, "billing", LOCALE.BILLING_INFORMATION, 1),
     nav_item(ui, "storage", LOCALE.STORAGE, 2),
     nav_item(ui, "shield", LOCALE.SECURITY, 3),
   ]

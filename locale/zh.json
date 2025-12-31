@@ -1968,5 +1968,6 @@
   "TOTAL_STORAGE": "总存储",
   "EFFECTIVE_PRICE_PER_SEAT": "每个座位的有效价格：",
   "PROCEED_TO_CHECKOUT": "继续结账",
-  "BEST_VALUE": "最佳价值"
+  "BEST_VALUE": "最佳价值",
+  "BILLING_INFORMATION": "账单信息"
 }

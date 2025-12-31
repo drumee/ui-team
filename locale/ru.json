@@ -1968,5 +1968,6 @@
   "TOTAL_STORAGE": "Общее хранилище",
   "EFFECTIVE_PRICE_PER_SEAT": "Эффективная цена за место:",
   "PROCEED_TO_CHECKOUT": "Перейти к оформлению заказа",
-  "BEST_VALUE": "ЛУЧШАЯ ЦЕННОСТЬ"
+  "BEST_VALUE": "ЛУЧШАЯ ЦЕННОСТЬ",
+  "BILLING_INFORMATION": "Платежная информация"
 }

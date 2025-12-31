@@ -1968,5 +1968,6 @@
   "TOTAL_STORAGE": "Total Storage",
   "EFFECTIVE_PRICE_PER_SEAT": "Effective price per seat:",
   "PROCEED_TO_CHECKOUT": "Proceed to Checkout",
-  "BEST_VALUE": "BEST VALUE"
+  "BEST_VALUE": "BEST VALUE",
+  "BILLING_INFORMATION": "Billing Information"
 }
