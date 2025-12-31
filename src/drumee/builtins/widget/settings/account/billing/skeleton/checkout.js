@@ -16,26 +16,26 @@ function bundleItem(ui, opt) {
 
   const titleContent = badge
     ? Skeletons.Box.X({
-        className: `${pfx}-bundle-header`,
-        active: 0,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}-bundle-title`,
-            content: title,
-            active: 0,
-          }),
-          Skeletons.Note({
-            className: `${pfx}-bundle-badge`,
-            content: badge,
-            active: 0,
-          }),
-        ],
-      })
+      className: `${pfx}-bundle-header`,
+      active: 0,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}-bundle-title`,
+          content: title,
+          active: 0,
+        }),
+        Skeletons.Note({
+          className: `${pfx}-bundle-badge`,
+          content: badge,
+          active: 0,
+        }),
+      ],
+    })
     : Skeletons.Note({
-        className: `${pfx}-bundle-title`,
-        content: title,
-        active: 0,
-      });
+      className: `${pfx}-bundle-title`,
+      content: title,
+      active: 0,
+    });
 
   const priceMatch = String(price || "").match(/^(.+?)\s*(\/mo)$/);
   const priceAmount = priceMatch ? priceMatch[1] : price;
@@ -47,6 +47,7 @@ function bundleItem(ui, opt) {
     service: "select-bundle",
     name: "select-bundle",
     value: value,
+    formItem: 1,
     state: isSelected ? 1 : 0,
     bubble: false,
     uiHandler: [ui],
@@ -73,10 +74,10 @@ function bundleItem(ui, opt) {
               }),
               pricePeriod
                 ? Skeletons.Note({
-                    className: `${pfx}-bundle-price-period`,
-                    content: pricePeriod,
-                    active: 0,
-                  })
+                  className: `${pfx}-bundle-price-period`,
+                  content: pricePeriod,
+                  active: 0,
+                })
                 : null,
             ].filter(Boolean),
           }),
@@ -284,11 +285,11 @@ function checkout(ui) {
                     badge: LOCALE.BEST_VALUE,
                   }),
                 ],
-                      }),
-                    ],
-                  }),
-                ],
               }),
+            ],
+          }),
+        ],
+      }),
     ],
   });
 
@@ -300,9 +301,9 @@ function checkout(ui) {
         className: `${pfx}-total-label`,
         content: LOCALE.TOTAL_OUTCOME,
       }),
-              Skeletons.Box.X({
+      Skeletons.Box.X({
         className: `${pfx}-total-price`,
-                kids: [
+        kids: [
           Skeletons.Note({
             className: `${pfx}-total-price-amount`,
             content: summary.totalPrice,
@@ -314,21 +315,21 @@ function checkout(ui) {
         ],
       }),
 
-                  Skeletons.Box.X({
+      Skeletons.Box.X({
         className: `${pfx}-breakdown`,
-                  }),
+      }),
 
-                  Skeletons.Box.Y({
+      Skeletons.Box.Y({
         className: `${pfx}-breakdown-items`,
         kids: [
           Skeletons.Box.X({
             className: `${pfx}-breakdown-item`,
-                    kids: [
-                      Skeletons.Note({
+            kids: [
+              Skeletons.Note({
                 className: `${pfx}-breakdown-label`,
                 content: LOCALE.BASE_PRICE,
-                      }),
-                      Skeletons.Note({
+              }),
+              Skeletons.Note({
                 className: `${pfx}-breakdown-value`,
                 content: summary.basePrice,
               }),
@@ -340,41 +341,41 @@ function checkout(ui) {
               Skeletons.Note({
                 className: `${pfx}-breakdown-label`,
                 content: LOCALE.INCLUDED_SEATS,
-                      }),
-                      Skeletons.Note({
+              }),
+              Skeletons.Note({
                 className: `${pfx}-breakdown-value`,
                 content: summary.seats,
-                      }),
-                    ],
-                  }),
-                ],
               }),
+            ],
+          }),
+        ],
+      }),
 
-              Skeletons.Box.X({
+      Skeletons.Box.X({
         className: `${pfx}-breakdown`,
       }),
 
-                  Skeletons.Box.Y({
-                    kids: [
-                      Skeletons.Box.X({
+      Skeletons.Box.Y({
+        kids: [
+          Skeletons.Box.X({
             className: `${pfx}-breakdown-item ${pfx}-breakdown-total-storage`,
-                        kids: [
+            kids: [
               Skeletons.Button.Icon({
                 className: `${pfx}-breakdown-icon`,
                 ico: "raw-hard-drive-green",
               }),
-                          Skeletons.Note({
+              Skeletons.Note({
                 className: `${pfx}-breakdown-total-storage-label`,
                 content: LOCALE.TOTAL_STORAGE,
-                          }),
-                          Skeletons.Note({
+              }),
+              Skeletons.Note({
                 className: `${pfx}-breakdown-total-storage-value`,
                 content: summary.totalStorage,
               }),
             ],
-                          }),
-                        ],
-                      }),
+          }),
+        ],
+      }),
 
       Skeletons.Box.X({
         className: `${pfx}-breakdown`,
@@ -392,11 +393,11 @@ function checkout(ui) {
               Skeletons.Box.Y({
                 className: `${pfx}-breakdown-label-container`,
                 kids: [
-                      Skeletons.Note({
+                  Skeletons.Note({
                     className: `${pfx}-breakdown-label`,
                     content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
-                      }),
-                      Skeletons.Note({
+                  }),
+                  Skeletons.Note({
                     className: `${pfx}-breakdown-value-effective-price-per-seat`,
                     content: summary.effectivePricePerSeat,
                   }),
@@ -512,11 +513,11 @@ function rightPanelContent(ui) {
               Skeletons.Box.Y({
                 className: `${pfx}-breakdown-label-container`,
                 kids: [
-              Skeletons.Note({
-                className: `${pfx}-breakdown-label`,
+                  Skeletons.Note({
+                    className: `${pfx}-breakdown-label`,
                     content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
-              }),
-              Skeletons.Note({
+                  }),
+                  Skeletons.Note({
                     className: `${pfx}-breakdown-value-effective-price-per-seat`,
                     content: summary.effectivePricePerSeat,
                   }),
