@@ -18,7 +18,7 @@ class settings_billing extends LetcBox {
         selectedPlan: null,
       },
       checkout: {
-        selectedPlan: "pro",
+        selectedPlan: "free",
         seats: 5,
         storage: 0,
         billingCycle: "monthly",
@@ -80,54 +80,58 @@ class settings_billing extends LetcBox {
   }
 
   /**
-   * Fetch plan data from API and update current plan
-   * @returns {Promise} Promise that resolves when plan data is fetched and UI is updated
+   * Get current plan from Visitor.quota() and update state
+   * Quota structure: {plan: 'free', organization: 0, seat: 0, storage: 20000000000}
+   * @returns {Promise} Promise that resolves when plan data is processed and UI is updated
    */
   fetchPlanData() {
-    return this.postService({
-      service: SERVICE.subscription.get_plans,
-      hub_id: Visitor.id,
-    })
-      .then((response) => {
-        // API response structure: { data: { renewal: {...}, plans: [...] } }
-        const data = response?.data || response;
-        const renewal = data?.renewal;
-        if (renewal) {
-          const planName = renewal.plan ? renewal.plan.toLowerCase() : null;
-          const period = renewal.period || "monthly";
+    try {
+      // Get current plan from Visitor.quota()
+      // Structure: {plan: 'free', organization: 0, seat: 0, storage: 20000000000}
+      const quota = Visitor.quota();
+      
+      // Get plan name from quota.plan (primary source)
+      const planName = (quota?.plan || "pro").toLowerCase();
+      // Get period from plan_detail if available, default to monthly
+      const period = quota?.billing_cycle || "monthly";
 
-          // Map plan names: 'advanced' -> 'free', 'pro' -> 'pro', others -> 'pro' as default
-          let mappedPlan = "pro";
-          if (planName === "advanced" || planName === "free") {
-            mappedPlan = "free";
-          } else if (planName === "pro") {
-            mappedPlan = "pro";
-          } else if (planName === "enterprise") {
-            mappedPlan = "enterprise";
-          }
+      // Map plan names: 'advanced' -> 'free', 'pro' -> 'pro', others -> 'pro' as default
+      let mappedPlan = "pro";
+      if (planName === "advanced" || planName === "free") {
+        mappedPlan = "free";
+      } else if (planName === "pro") {
+        mappedPlan = "pro";
+      } else if (planName === "enterprise") {
+        mappedPlan = "enterprise";
+      }
 
-          // Update checkout state with current plan
-          this.state.checkout.selectedPlan = mappedPlan;
-          this.state.checkout.billingCycle = period === "year" ? "yearly" : "monthly";
+      // Get seat from quota
+      const seats = quota?.seat != null ? quota.seat : 5; // Default to 5 only if seat is null/undefined, not if it's 0
 
-          // Store plan data for reference
-          this.currentPlan = renewal;
-          this.currentPlanName = mappedPlan;
-          this._currentSubsType = period;
+      // Get storage from quota (in bytes, convert to GB)
+      // 1 GB = 1,000,000,000 bytes (decimal)
+      const storageBytes = quota?.storage || 0;
+      const storageGB = Math.floor(storageBytes / 1000000000);
 
-          // Set Visitor plan_detail - do not remove
-          Visitor.set("plan_detail", renewal);
-        }
+      // Update checkout state with current plan, seats, and storage
+      this.state.checkout.selectedPlan = mappedPlan;
+      this.state.checkout.billingCycle = period === "year" ? "yearly" : "monthly";
+      this.state.checkout.seats = seats;
+      this.state.checkout.storage = storageGB;
 
-        return this.feed(require("./skeleton").default(this));
-      })
-      .catch((e) => {
-        if (Wm && Wm.alert) {
-          Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
-        }
-        // Fallback: render with default state
-        return this.feed(require("./skeleton").default(this));
-      });
+      // Store plan data for reference
+      this.currentPlan = {
+        plan: planName,
+        period: period,
+      };
+      this._currentSubsType = period;
+      this.currentPlanName = mappedPlan;
+
+      return this.feed(require("./skeleton").default(this));
+    } catch (e) {
+      // Fallback: render with default state
+      return this.feed(require("./skeleton").default(this));
+    }
   }
 
   /**
