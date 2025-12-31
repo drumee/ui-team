@@ -76,7 +76,58 @@ class settings_billing extends LetcBox {
       this.state.currentTab = TAB_MONTHLY;
     }
     this.tab = this.state.currentTab;
-    this.feed(require("./skeleton").default(this));
+    return this.fetchPlanData();
+  }
+
+  /**
+   * Fetch plan data from API and update current plan
+   * @returns {Promise} Promise that resolves when plan data is fetched and UI is updated
+   */
+  fetchPlanData() {
+    return this.postService({
+      service: SERVICE.subscription.get_plans,
+      hub_id: Visitor.id,
+    })
+      .then((response) => {
+        // API response structure: { data: { renewal: {...}, plans: [...] } }
+        const data = response?.data || response;
+        const renewal = data?.renewal;
+        if (renewal) {
+          const planName = renewal.plan ? renewal.plan.toLowerCase() : null;
+          const period = renewal.period || "monthly";
+
+          // Map plan names: 'advanced' -> 'free', 'pro' -> 'pro', others -> 'pro' as default
+          let mappedPlan = "pro";
+          if (planName === "advanced" || planName === "free") {
+            mappedPlan = "free";
+          } else if (planName === "pro") {
+            mappedPlan = "pro";
+          } else if (planName === "enterprise") {
+            mappedPlan = "enterprise";
+          }
+
+          // Update checkout state with current plan
+          this.state.checkout.selectedPlan = mappedPlan;
+          this.state.checkout.billingCycle = period === "year" ? "yearly" : "monthly";
+
+          // Store plan data for reference
+          this.currentPlan = renewal;
+          this.currentPlanName = mappedPlan;
+          this._currentSubsType = period;
+
+          // Set Visitor plan_detail - do not remove
+          Visitor.set("plan_detail", renewal);
+        }
+
+        return this.feed(require("./skeleton").default(this));
+      })
+      .catch((e) => {
+        if (Wm && Wm.alert) {
+          Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
+        }
+        // Fallback: render with default state
+        return this.feed(require("./skeleton").default(this));
+      });
   }
 
   /**
@@ -663,9 +714,32 @@ class settings_billing extends LetcBox {
    * @returns {boolean} false to stop bubbling or super.onUiEvent result
    */
   onUiEvent(cmd, args = {}) {
-    const service =
-      args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
+    let service = args.service;
+    
+    if (!service && cmd) {
+      if (cmd.source) {
+        service = cmd.source.mget && cmd.source.mget(_a.service);
+      }
+      if (!service) {
+        service = cmd.service || 
+                  (cmd.mget && cmd.mget(_a.service)) || 
+                  (cmd.get && cmd.get(_a.service)) ||
+                  (cmd.model && cmd.model.get && cmd.model.get(_a.service)) ||
+                  (cmd.mget && cmd.mget(_a.name)) ||
+                  (cmd.get && cmd.get(_a.name)) ||
+                  cmd.name;
+      }
+    }
 
+    if (!service && args && args.type === 'click') {
+      return false;
+    }
+
+    if (!service) {
+      return super.onUiEvent(cmd, args);
+    }
+    console.log("AAAA:720 service", service);
+    service = String(service);
     switch (service) {
       case "select-plan":
         return this.handleSelectPlan(cmd);
