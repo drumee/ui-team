@@ -86,7 +86,6 @@ module.exports = {
   settings_hub:function(s,f){import('widget/settings/hub').then(m=>{s(m.default)}).catch(f)},
   settings_member:function(s,f){import('widget/settings/member').then(m=>{s(m.default)}).catch(f)},
   settings_members_list:function(s,f){import('widget/settings/members-list').then(m=>{s(m.default)}).catch(f)},
-  settings_seats:function(s,f){import('src/drumee/builtins/widget/settings/seats').then(m=>{s(m.default)}).catch(f)},
   settings_share_hub:function(s,f){import('widget/settings/share-hub').then(m=>{s(m.default)}).catch(f)},
   widget_chat_item:function(s,f){import('widget/chat-item').then(m=>{s(m.default)}).catch(f)},
   widget_tag:function(s,f){import('src/drumee/builtins/window/addressbook/widget/tag').then(m=>{s(m.default)}).catch(f)},

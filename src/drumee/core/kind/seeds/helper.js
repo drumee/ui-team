@@ -86,7 +86,6 @@ const a = {
   settings_hub:"widget/settings/hub",
   settings_member:"widget/settings/member",
   settings_members_list:"widget/settings/members-list",
-  settings_seats:"src/drumee/builtins/widget/settings/seats",
   settings_share_hub:"widget/settings/share-hub",
   widget_chat_item:"widget/chat-item",
   widget_tag:"src/drumee/builtins/window/addressbook/widget/tag",
