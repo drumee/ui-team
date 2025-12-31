@@ -261,9 +261,8 @@ class settings_billing extends LetcBox {
     
     this.postService(SERVICE.payment.checkout, paymentData)
       .then((data) => {
-        if (data && data.url) {
-          window.open(data.url, '_blank', 'noopener,noreferrer');
-        }
+        let { url } = data;
+        window.open(url, 'popUpWindow', url);
       })
       .catch((error) => {
         if (Wm && Wm.alert) {
@@ -416,7 +415,7 @@ class settings_billing extends LetcBox {
         if (planValue === "free" || planValue === "pro" || planValue === "enterprise") {
           if (planValue === "enterprise") {
             if (Wm && Wm.alert) {
-              Wm.alert("Please contact sales for Enterprise plan.");
+              Wm.alert("Please contact our sales team via frenz@drumee.org");
             }
           } else {
             this.state.checkout.selectedPlan = planValue;
