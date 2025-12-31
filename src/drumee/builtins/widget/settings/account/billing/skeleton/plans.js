@@ -48,6 +48,14 @@ const OPTIONS = {
   }
 }
 
+/**
+ * Create plan item component (Free, Pro, Enterprise)
+ * Display title, subtitle, description, button, features list, and popular badge
+ * @param {Object} ui - UI instance
+ * @param {string} opt - Plan option key (free, pro, enterprise)
+ * @param {string} cycle - Billing cycle (monthly or yearly)
+ * @returns {Object} Skeletons component
+ */
 function item(ui, opt, cycle = "monthly") {
   const option = OPTIONS[opt];
   const { title, description, buttonTitle, features, badge } = option;
@@ -147,6 +155,12 @@ function item(ui, opt, cycle = "monthly") {
   });
 }
 
+/**
+ * Create plans content layout with 3 plan items (Free, Pro, Enterprise)
+ * @param {Object} ui - UI instance
+ * @param {string} cycle - Billing cycle (monthly or yearly)
+ * @returns {Object} Skeletons component
+ */
 function billing_content(ui, cycle = "monthly") {
   const fig = `${ui.fig.family}__plans`;
 

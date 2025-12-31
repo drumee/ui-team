@@ -1,5 +1,12 @@
 const { button, entry } = require("../../../../../skeleton/toolkit");
 
+/**
+ * Create bundle item component for storage upgrade options
+ * Display title, price, unit and badge (if available)
+ * @param {Object} ui - UI instance
+ * @param {Object} opt - Options: value, title, price, unit, badge
+ * @returns {Object} Skeletons component
+ */
 function bundleItem(ui, opt) {
   const { value, title, price, unit, badge } = opt;
   const pfx = `${ui.fig.family}__checkout`;
@@ -74,6 +81,13 @@ function bundleItem(ui, opt) {
 }
 
 
+/**
+ * Create checkout layout with left panel (form) and right panel (summary)
+ * Left panel: plan selection, seats, storage, billing cycle, storage bundles
+ * Right panel: total price, breakdown, checkout button
+ * @param {Object} ui - UI instance
+ * @returns {Object} Skeletons component
+ */
 function checkout(ui) {
   const fig = `${ui.fig.family}__checkout`;
   const pfx = fig;
@@ -399,6 +413,12 @@ function checkout(ui) {
   });
 }
 
+/**
+ * Create right panel content (checkout summary) for dynamic updates
+ * Display total price, breakdown items, and checkout button
+ * @param {Object} ui - UI instance
+ * @returns {Object} Skeletons component
+ */
 function rightPanelContent(ui) {
   const fig = `${ui.fig.family}__checkout`;
   const pfx = fig;

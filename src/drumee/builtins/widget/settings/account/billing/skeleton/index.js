@@ -1,3 +1,10 @@
+/**
+ * Get content based on current tab
+ * Tab 2 (checkout): return checkout layout
+ * Other tabs: return plans layout with footer
+ * @param {Object} ui - UI instance
+ * @returns {Object} Skeletons component
+ */
 function getContent(ui) {
   const fig = ui.fig.family;
   const tab = ui.state?.currentTab ?? ui.tab ?? 0;
@@ -19,6 +26,11 @@ function getContent(ui) {
   }
 }
 
+/**
+ * Create main billing layout with header tabs and content container
+ * @param {Object} ui - UI instance
+ * @returns {Object} Skeletons component
+ */
 function billing(ui) {
   const fig = ui.fig.family;
   const header = require("./header").default(ui);
