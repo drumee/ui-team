@@ -13,6 +13,10 @@ function item(ui, title, content, email) {
         Skeletons.Note({
           className: `${fig}-email`,
           content: email,
+          tagName: _K.tag.a,
+          attrOpt: {
+            href: `mailto:${email}`,
+          },
         }),
       ],
     });

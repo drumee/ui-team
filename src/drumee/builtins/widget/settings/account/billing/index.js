@@ -405,10 +405,27 @@ class settings_billing extends LetcBox {
     }
     
     service = String(service);
-    
+    console.log("AAAA:408 service", service);
     switch (service) {
       case "select-plan":
         return this.handleSelectPlan(cmd);
+
+      case "select-plan-button":
+        const planValue = (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value)) || 
+                         cmd.value || cmd.model?.get(_a.value) || cmd.model?.get('value');
+        if (planValue === "free" || planValue === "pro" || planValue === "enterprise") {
+          if (planValue === "enterprise") {
+            if (Wm && Wm.alert) {
+              Wm.alert("Please contact sales for Enterprise plan.");
+            }
+          } else {
+            this.state.checkout.selectedPlan = planValue;
+            this.state.currentTab = TAB_CHECKOUT;
+            this.tab = TAB_CHECKOUT;
+            this.renderContent();
+          }
+        }
+        return false;
 
       case "checkout":
         if (this.state.currentTab !== TAB_CHECKOUT) {

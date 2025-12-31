@@ -206,5 +206,22 @@
   "DOWNLOAD_USERSLIST": "Descarga el archivo de plantilla del enlace a continuación. Ingresa tu lista de usuarios y suéltalo aquí.",
   "DOWNLOAD_TEMPLATE_FILE": "Descargar el archivo de plantilla",
   "CREATE_ACCOUNTS": "Crear cuentas",
-  "EMAIL_IS_NOT_YET_VALIDATED": "La dirección de correo electrónico aún no ha sido verificada."
+  "EMAIL_IS_NOT_YET_VALIDATED": "La dirección de correo electrónico aún no ha sido verificada.",
+  "SAVED": "Guardado",
+  "CURRENT_PLAN": "Plan actual",
+  "PRO": "Pro",
+  "NUMBER_OF_SEATS": "Número de asientos",
+  "ADDITIONAL_STORAGE_GB": "Almacenamiento adicional (GB)",
+  "BILLING_CYCLE": "Ciclo de facturación",
+  "YEARLY_DISCOUNT": "Anual -15%",
+  "STORAGE_BUNDLES": "Paquetes de almacenamiento",
+  "STORAGE_ADD_ON": "Complemento de almacenamiento",
+  "CHOOSE_ONE_STORAGE_UPGRADE": "Elija una actualización de almacenamiento. Haga clic para seleccionar o borrar.",
+  "TOTAL_OUTCOME": "Total:",
+  "BASE_PRICE": "Precio base:",
+  "INCLUDED_SEATS": "Asientos incluidos:",
+  "TOTAL_STORAGE": "Almacenamiento total",
+  "EFFECTIVE_PRICE_PER_SEAT": "Precio efectivo por asiento:",
+  "PROCEED_TO_CHECKOUT": "Proceder al pago",
+  "BEST_VALUE": "MEJOR VALOR"
 }
