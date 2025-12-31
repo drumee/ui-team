@@ -1,43 +1,26 @@
 
-function __skl_window_note(_ui_) {
-  const editor = Skeletons.Box.Y({
-    className: `${_ui_.fig.family}__editor--outer`,
+
+module.exports = function (ui, value = '') {
+  let opt = {
+    sys_pn: "editor",
+    service: "text-input",
+    className: `${ui.fig.family}__editor column`,
+    type: _a.textarea,
+    value,
+    name: _a.content,
+    formItem: _a.content,
+    interactive: 1,
+    escapeContextmenu: true,
+    placeholder: LOCALE.ENTER_TEXT,
+    attribute: {
+      id: ui.editorId,
+    },
+  };
+  if (!ui.canUpload()) opt.readonly = true;
+  return Skeletons.Box.G({
+    className: `${ui.fig.family}__editor--outer`,
     kids: [
-      Skeletons.Entry({
-        sys_pn: "editor",
-        service: "text-input",
-        className: `${_ui_.fig.family}__editor column`,
-        type: _a.textarea,
-        value: _ui_.content,
-        interactive: 1,
-        escapeContextmenu: true,
-        attribute: {
-          id: _ui_.editorId,
-        },
-      })
+      Skeletons.Entry(opt)
     ]
   });
-
-  // if (_ui_.el.dataset.column == '1') {
-  //   return [editor]
-  // }
-  // const viewer = Skeletons.Box.Y({
-  //   className: `${_ui_.fig.family}__viewer--outer column`,
-  //   sys_pn: "viewer-outer",
-  //   kids: [
-  //     Skeletons.Element({
-  //       sys_pn: "viewer",
-  //       service: _e.raise,
-  //       className: `${_ui_.fig.family}__viewer`,
-  //       state: 1,
-  //       flow: _a.y,
-  //       attribute: {
-  //         id: _ui_.viewerId,
-  //       },
-  //     })
-  //   ]
-  // })
-
-  return [editor]
 }
-module.exports = __skl_window_note;

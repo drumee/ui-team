@@ -1,8 +1,4 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2022
-//   FILE : /src/drumee/builtins/window/note/skeleton/index.js
-//   TYPE : Skelton
-// ===================================================================**/
+
 const fig = 'drumee-md-viewer';
 function codeBlock(code){
   return `<code class="${fig} code--line">${code}</code>`

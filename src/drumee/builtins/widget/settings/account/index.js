@@ -27,14 +27,22 @@ class settings_account extends LetcBox {
     ];
     this.tab_name = [
       LOCALE.PROFILE,
-      // LOCALE.PREFERENCES,
       "Billing Information",
       LOCALE.STORAGE,
       LOCALE.SECURITY,
     ];
-
+    if(this.canAdmin()){
+      this.tab_name.push(LOCALE.ADMIN);
+      this.skeletons.push(require("./skeleton/admin").default)
+    }
   }
 
+  /**
+   * 
+   */
+  canAdmin(){
+    return (Visitor.quota().plan == 'pro' && Visitor.domainCan(_K.permission.admin_member))
+  }
   /**
    *
    */

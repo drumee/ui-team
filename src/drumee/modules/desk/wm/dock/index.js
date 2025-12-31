@@ -339,7 +339,7 @@ class __desk_dock extends LetcBox {
 
       case 'add-note':
         let e = Wm.windowsLayer.append({
-          kind: 'editor_note',
+          kind: 'editor_markdown',
           uiHandler:[this]
         });
         return e;

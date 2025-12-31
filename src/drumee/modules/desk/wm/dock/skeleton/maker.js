@@ -58,14 +58,14 @@ function menu_items(ui) {
         className: `${pfx}-item personal`,
         helperName: 'folder',
         service: "add-folder",
-        filename: LOCALE.CREATE_PERSONAL_FOLDER,
+        filename: LOCALE.FOLDER,
         area: _a.personal,
         kidsOpt: {
           active: 0
         },
         kids: [
           { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.personal, mode: _a.vignette },
-          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATED_FOLDER })
+          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PERSONAL_FOLDER })
         ]
       }),
     ]

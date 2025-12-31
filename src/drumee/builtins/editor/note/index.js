@@ -328,8 +328,8 @@ class ___editor_note extends __player {
         /** */
       })
     }
-
   }
+  
   /**
    * User Interaction Evant Handler
    * @param {View} cmd

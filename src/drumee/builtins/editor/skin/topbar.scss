@@ -9,6 +9,13 @@
 }
 
 .editor-topbar {
+  &__container {
+    width: 100%;
+    grid-template-columns: auto 1fr 50px;
+    align-content: center;
+    justify-items: center;
+  }
+
   &__control {
     position: absolute;
     right: 0px;
@@ -26,28 +33,66 @@
 
       &:hover {
         color: var(--primary-500);
+
+        .tooltips {
+          color: var(--neutral-100);
+        }
       }
     }
   }
 
   &__title {
-    align-items: center;
     padding: 0;
-    flex: 1;
-    flex-direction: row;
     height: 100%;
-    max-width: 400px;
-    @include drumee.typo(
-      $size: 26px,
+    @include drumee.typo($size: 26px,
       $line: 24px,
       $weight: 400,
-      $color: var(--default-text-reverse)
-    );
+      $color: var(--default-text-reverse));
     @include drumee.overflow-text;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    align-items: center;
+    justify-items: center;
+  }
 
-    .icon {
-      width: 14px;
-      margin-left: 6px;
+  &__icon {
+    width: 30px;
+    height: 30px;
+    color: var(--neutral-100);
+    cursor: pointer;
+    padding: 3px;
+
+    &:hover {
+      color: var(--primary-500);
+
+      .tooltips {
+        color: var(--neutral-100);
+      }
+    }
+
+    &[data-visibility="0"] {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    &.pin {
+      z-index: 1;
+
+      &[data-state="1"] {
+        svg {
+          transform: rotate(-45deg);
+        }
+
+        .tooltips {
+          display: none !important;
+        }
+      }
+
+      &[data-visibility="0"] {
+        visibility: hidden;
+        pointer-events: none;
+      }
     }
   }
 }
