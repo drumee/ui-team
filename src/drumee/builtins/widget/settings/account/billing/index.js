@@ -3,19 +3,14 @@ const TAB_YEARLY = 1;
 const TAB_CHECKOUT = 2;
 
 class settings_billing extends LetcBox {
-
-  /**
-   * 
-   * @param {*} opt 
-   */
   initialize(opt) {
     require("./skin");
     super.initialize(opt);
     this.model.set({
       hub_id: Visitor.id,
-      flow: "g"
+      flow: "g",
     });
-
+    
     this.state = {
       currentTab: TAB_MONTHLY,
       plansTab: {
@@ -28,7 +23,7 @@ class settings_billing extends LetcBox {
         storage: 0,
         billingCycle: "monthly",
         selectedBundle: null,
-      }
+      },
     };
 
     this.tab = this.state.currentTab;
@@ -36,7 +31,7 @@ class settings_billing extends LetcBox {
   }
 
   /**
-   * 
+   * Setup WebSocket listener to receive payment events
    */
   _setupPaymentWebSocket() {
     const WS_EVENT = "ws:event";
@@ -44,48 +39,102 @@ class settings_billing extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} args 
+   * Handle WebSocket events related to payment
+   * @param {Object} args - WebSocket event arguments
    */
   _handlePaymentWebSocket(args = {}) {
     const { data, options } = args || {};
     const { service } = options || {};
 
-    if (service === SERVICE.payment.checkout || service === SERVICE.payment.status) {
+    if (
+      service === SERVICE.payment.checkout ||
+      service === SERVICE.payment.status
+    ) {
       this._handlePaymentStatus(data);
     }
   }
 
   /**
-   * 
-   * @param {*} data 
+   * Handle payment status updates from WebSocket
+   * @param {Object} data - Payment status data
    */
-  _handlePaymentStatus(data) {
-  }
+  _handlePaymentStatus(data) {}
 
   /**
-   * 
-   * @returns 
+   * Return view mode for widget
+   * @returns {string} Grid view mode
    */
   getViewMode() {
     return _a.grid;
   }
 
   /**
-   * 
+   * Re-initialize UI when DOM is refreshed
    */
   onDomRefresh() {
     if (this.state.currentTab === undefined || this.state.currentTab === null) {
       this.state.currentTab = TAB_MONTHLY;
     }
     this.tab = this.state.currentTab;
-    this.feed(require("./skeleton").default(this));
+    return this.fetchPlanData();
   }
 
   /**
-   * 
-   * @param {*} child 
-   * @param {*} pn 
+   * Fetch plan data from API and update current plan
+   * @returns {Promise} Promise that resolves when plan data is fetched and UI is updated
+   */
+  fetchPlanData() {
+    return this.postService({
+      service: SERVICE.subscription.get_plans,
+      hub_id: Visitor.id,
+    })
+      .then((response) => {
+        // API response structure: { data: { renewal: {...}, plans: [...] } }
+        const data = response?.data || response;
+        const renewal = data?.renewal;
+        if (renewal) {
+          const planName = renewal.plan ? renewal.plan.toLowerCase() : null;
+          const period = renewal.period || "monthly";
+
+          // Map plan names: 'advanced' -> 'free', 'pro' -> 'pro', others -> 'pro' as default
+          let mappedPlan = "pro";
+          if (planName === "advanced" || planName === "free") {
+            mappedPlan = "free";
+          } else if (planName === "pro") {
+            mappedPlan = "pro";
+          } else if (planName === "enterprise") {
+            mappedPlan = "enterprise";
+          }
+
+          // Update checkout state with current plan
+          this.state.checkout.selectedPlan = mappedPlan;
+          this.state.checkout.billingCycle = period === "year" ? "yearly" : "monthly";
+
+          // Store plan data for reference
+          this.currentPlan = renewal;
+          this.currentPlanName = mappedPlan;
+          this._currentSubsType = period;
+
+          // Set Visitor plan_detail - do not remove
+          Visitor.set("plan_detail", renewal);
+        }
+
+        return this.feed(require("./skeleton").default(this));
+      })
+      .catch((e) => {
+        if (Wm && Wm.alert) {
+          Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
+        }
+        // Fallback: render with default state
+        return this.feed(require("./skeleton").default(this));
+      });
+  }
+
+  /**
+   * Callback when a UI element is ready
+   * Setup listeners for input fields and cache references
+   * @param {Object} child - Child widget instance
+   * @param {string} pn - Part name identifier
    */
   onPartReady(child, pn) {
     switch (pn) {
@@ -110,10 +159,9 @@ class settings_billing extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} entryWidget 
-   * @param {*} fieldName 
-   * @returns 
+   * Restore focus and cursor position for input field after re-render
+   * @param {Object} entryWidget - Entry widget instance
+   * @param {string} fieldName - Field name (seats or storage)
    */
   _restoreInputFocus(entryWidget, fieldName) {
     if (!this._focusedInput || this._focusedInput.fieldName !== fieldName) {
@@ -134,7 +182,10 @@ class settings_billing extends LetcBox {
 
       if (this._focusedInput.cursorPosition !== undefined) {
         inputEl.focus();
-        inputEl.setSelectionRange(this._focusedInput.cursorPosition, this._focusedInput.cursorPosition);
+        inputEl.setSelectionRange(
+          this._focusedInput.cursorPosition,
+          this._focusedInput.cursorPosition
+        );
       }
 
       this._focusedInput = null;
@@ -142,10 +193,9 @@ class settings_billing extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} entryWidget 
-   * @param {*} fieldName 
-   * @returns 
+   * Setup event listeners for input field to update state when user types
+   * @param {Object} entryWidget - Entry widget instance
+   * @param {string} fieldName - Field name (seats or storage)
    */
   _setupInputChangeListener(entryWidget, fieldName) {
     if (!entryWidget || !entryWidget._id) return;
@@ -169,25 +219,29 @@ class settings_billing extends LetcBox {
 
           if (this.state.currentTab === TAB_CHECKOUT) {
             const cursorPosition = inputEl.selectionStart;
-            this._focusedInput = { fieldName, cursorPosition, value: inputEl.value };
+            this._focusedInput = {
+              fieldName,
+              cursorPosition,
+              value: inputEl.value,
+            };
             this.renderContent();
           }
         }
       };
 
-      inputEl.addEventListener('change', handleChange);
-      inputEl.addEventListener('input', handleChange);
+      inputEl.addEventListener("change", handleChange);
+      inputEl.addEventListener("input", handleChange);
 
-      entryWidget.once('destroy', () => {
-        inputEl.removeEventListener('change', handleChange);
-        inputEl.removeEventListener('input', handleChange);
+      entryWidget.once("destroy", () => {
+        inputEl.removeEventListener("change", handleChange);
+        inputEl.removeEventListener("input", handleChange);
       });
     });
   }
 
   /**
-   * 
-   * @returns 
+   * Update right panel (checkout summary) with latest data
+   * Only update if currently on checkout tab
    */
   updateRightPanel() {
     if (this.state.currentTab !== TAB_CHECKOUT) {
@@ -195,13 +249,14 @@ class settings_billing extends LetcBox {
     }
 
     if (!this.__rightPanel) {
-      this.ensurePart(`${this.fig.family}__checkout-right-panel`).then((panel) => {
-        if (panel) {
-          this.__rightPanel = panel;
-          this._updateRightPanelContent();
-        }
-      }).catch(() => {
-      });
+      this.ensurePart(`${this.fig.family}__checkout-right-panel`)
+        .then((panel) => {
+          if (panel) {
+            this.__rightPanel = panel;
+            this._updateRightPanelContent();
+          }
+        })
+        .catch(() => {});
       return;
     }
 
@@ -209,8 +264,7 @@ class settings_billing extends LetcBox {
   }
 
   /**
-   * 
-   * @returns 
+   * Re-render right panel content with latest summary
    */
   _updateRightPanelContent() {
     if (!this.__rightPanel) {
@@ -219,7 +273,7 @@ class settings_billing extends LetcBox {
 
     const { rightPanelContent } = require("./skeleton/checkout");
 
-    if (typeof this.__rightPanel.softClear === 'function') {
+    if (typeof this.__rightPanel.softClear === "function") {
       this.__rightPanel.softClear();
     }
 
@@ -227,50 +281,395 @@ class settings_billing extends LetcBox {
   }
 
   /**
-   * 
+   * Calculate checkout summary based on current state
+   * Includes: base price, bundle price, total price, storage, effective price per seat
+   * @param {Object} state - Component state
+   * @returns {Object} Summary object with formatted values
+   */
+  calculateCheckoutSummary(state) {
+    const checkout = state?.checkout || {};
+    const selectedPlan = checkout.selectedPlan || "pro";
+    const seats = parseInt(checkout.seats) || 5;
+    const storage = parseInt(checkout.storage) || 0;
+    const billingCycle = checkout.billingCycle || "monthly";
+    const selectedBundle = checkout.selectedBundle;
+
+    const planPrices = {
+      free: { monthly: 0, yearly: 0 },
+      pro: { monthly: 16.99, yearly: 169.9 },
+    };
+
+    const bundlePrices = {
+      100: 8,
+      200: 14,
+      500: 30,
+      1000: 50,
+    };
+
+    const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
+    const period = billingCycle === "yearly" ? "year" : "month";
+
+    const bundlePrice = selectedBundle ? bundlePrices[selectedBundle] || 0 : 0;
+    const bundleStorage = selectedBundle ? parseInt(selectedBundle) : 0;
+
+    const baseStorage = selectedPlan === "pro" ? 50 : 5;
+    const totalStorage = baseStorage + bundleStorage + storage;
+
+    const totalPrice =
+      billingCycle === "yearly"
+        ? basePrice + bundlePrice * 12
+        : basePrice + bundlePrice;
+
+    const effectivePricePerSeat = seats > 0 ? totalPrice / seats : 0;
+
+    const formatCurrency = (amount) => {
+      return `$${amount.toFixed(2)}`;
+    };
+
+    return {
+      basePrice: formatCurrency(basePrice),
+      bundlePrice: formatCurrency(bundlePrice),
+      totalPrice: formatCurrency(totalPrice),
+      period: period,
+      seats: seats.toString(),
+      totalStorage: `${totalStorage} GB`,
+      effectivePricePerSeat: formatCurrency(effectivePricePerSeat),
+      selectedPlan,
+      billingCycle,
+    };
+  }
+
+  /**
+   * Handle proceed to checkout: call payment API and open payment window
    */
   _proceedToCheckout() {
-    const { calculateCheckoutSummary } = require("./skeleton/checkout");
-    const summary = calculateCheckoutSummary(this.state);
+    const summary = this.calculateCheckoutSummary(this.state);
 
     const checkout = this.state.checkout || {};
     const selectedPlan = checkout.selectedPlan || "pro";
     const billingCycle = checkout.billingCycle || "monthly";
 
-    const totalPriceDollars = parseFloat(summary.totalPrice.replace('$', '')) || 0;
+    const totalPriceDollars =
+      parseFloat(summary.totalPrice.replace("$", "")) || 0;
     const value = Math.round(totalPriceDollars * 100);
     const interval = billingCycle === "yearly" ? "year" : "month";
-    const description = `${selectedPlan.toUpperCase()} Plan - ${billingCycle} - ${checkout.seats || 5} seats`;
+    const description = `${selectedPlan.toUpperCase()} Plan - ${billingCycle} - ${
+      checkout.seats || 5
+    } seats`;
 
     const paymentData = {
       value: value,
       plan: selectedPlan,
       interval: interval,
-      description: description
+      description: description,
     };
 
     this.postService(SERVICE.payment.checkout, paymentData)
       .then((data) => {
-        if (data && data.url) {
-          window.open(data.url, '_blank', 'noopener,noreferrer');
-        }
+        let { url } = data;
+        window.open(url, "popUpWindow", url);
       })
       .catch((error) => {
         if (Wm && Wm.alert) {
-          Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
+          Wm.alert(
+            LOCALE.SOMETHING_WENT_WRONG ||
+              "Something went wrong. Please try again."
+          );
         }
       });
   }
 
   /**
-   * 
-   * @returns 
+   * Get position/tab index from command object
+   * Search from multiple sources: model, mget/get, dataset, DOM element
+   * @param {Object} cmd - Command object from UI event
+   * @returns {number|null} Tab position or null
+   */
+  getSelectPlanData(cmd) {
+        let pos = null;
+        
+        if (cmd.model) {
+      pos =
+        cmd.model.get(_a.pos) ||
+        cmd.model.get(_a.value) ||
+        cmd.model.get("pos") ||
+        cmd.model.get("value");
+    }
+
+        if (pos == null) {
+      pos =
+        (cmd.mget && cmd.mget(_a.pos)) ||
+        (cmd.get && cmd.get(_a.pos)) ||
+        (cmd.mget && cmd.mget(_a.value)) ||
+        (cmd.get && cmd.get(_a.value));
+    }
+
+        if (pos == null) {
+          pos = cmd.pos || cmd.value;
+        }
+        
+        if (pos == null && cmd.el) {
+          pos = cmd.el.dataset?.pos || cmd.el.dataset?.value;
+        }
+        
+        if (pos == null && cmd.el) {
+      pos =
+        cmd.el.getAttribute?.("data-pos") ||
+        cmd.el.getAttribute?.("data-value");
+        }
+        
+        if (pos == null && cmd.el) {
+          let parent = cmd.el.closest?.(`.${this.fig.family}__tabs-trigger-item`);
+          if (parent) {
+            const parentContainer = parent.parentElement;
+            if (parentContainer) {
+              const children = Array.from(parentContainer.children);
+              const index = children.indexOf(parent);
+              if (index !== -1 && index < TAB_CHECKOUT) {
+            pos = index;
+              }
+            }
+          }
+        }
+        
+        if (pos == null && cmd.el) {
+      const text =
+        cmd.el.textContent?.toLowerCase() || cmd.el.innerText?.toLowerCase();
+      if (text && text.includes("monthly")) {
+            pos = TAB_MONTHLY;
+      } else if (text && text.includes("yearly")) {
+            pos = TAB_YEARLY;
+          }
+        }
+        
+    return pos;
+  }
+
+  /**
+   * Handle when user selects plan tab (Monthly/Yearly)
+   * Update state and re-render content
+   * @param {Object} cmd - Command object from UI event
+   * @returns {boolean} false to stop event bubbling
+   */
+  handleSelectPlan(cmd) {
+    const pos = this.getSelectPlanData(cmd);
+        
+        if (pos != null && pos !== undefined) {
+          const posNum = parseInt(pos);
+          if (!isNaN(posNum) && (posNum === TAB_MONTHLY || posNum === TAB_YEARLY)) {
+            if (posNum !== this.state.currentTab) {
+              this.state.currentTab = posNum;
+          this.state.plansTab.cycle =
+            posNum === TAB_MONTHLY ? "monthly" : "yearly";
+          this.tab = posNum;
+          this.renderContent();
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Helper: Get value from cmd or args
+   * Search from model, mget/get, or args.value
+   * @param {Object} cmd - Command object
+   * @param {Object} args - Arguments object
+   * @returns {*} Value or null
+   */
+  _getValueFromCmd(cmd, args) {
+    if (!cmd && !args) return null;
+
+    let value = null;
+
+    if (cmd && cmd.model) {
+      value = cmd.model.get(_a.value) || cmd.model.get("value");
+    }
+
+    if (value == null && cmd) {
+      value =
+        (cmd.mget && cmd.mget(_a.value)) ||
+        (cmd.get && cmd.get(_a.value)) ||
+        cmd.value;
+    }
+
+    if (value == null && args) {
+      value = args.value;
+    }
+
+    return value;
+  }
+
+  /**
+   * Helper: Get name from cmd
+   * Search from model, mget/get, or cmd.name
+   * @param {Object} cmd - Command object
+   * @returns {string|null} Name or null
+   */
+  _getNameFromCmd(cmd) {
+    if (!cmd) return null;
+
+    let name = null;
+
+    if (cmd.model) {
+      name = cmd.model.get(_a.name) || cmd.model.get("name");
+    }
+
+    if (name == null) {
+      name =
+        (cmd.mget && cmd.mget(_a.name)) ||
+        (cmd.get && cmd.get(_a.name)) ||
+        cmd.name;
+    }
+
+    return name;
+  }
+
+  /**
+   * Helper: Get input value from multiple sources
+   * Search from _input.val(), getValue(), DOM element, args, or model
+   * @param {Object} cmd - Command object
+   * @param {string} field - Field name
+   * @param {Object} args - Arguments object
+   * @returns {*} Value or null
+   */
+  _getInputValue(cmd, field, args) {
+    if (!cmd && !args) return null;
+
+    let value = null;
+
+    if (cmd && cmd._input && typeof cmd._input.val === "function") {
+      value = cmd._input.val();
+    } else if (cmd && typeof cmd.getValue === "function") {
+      value = cmd.getValue();
+    } else if (cmd && cmd._id) {
+      const inputEl = document.getElementById(`${cmd._id}-input`);
+      if (inputEl) {
+        value = inputEl.value;
+      }
+    }
+
+    if (value == null && args && field && args[field] != null) {
+      value = args[field];
+    }
+
+    if (value == null && args && args.value != null) {
+      value = args.value;
+    }
+
+    if (value == null && cmd && cmd.model) {
+      value = cmd.model.get(_a.value) || cmd.model.get("value");
+    }
+
+    if (value == null && cmd) {
+      value =
+        (cmd.mget && cmd.mget(_a.value)) ||
+        (cmd.get && cmd.get(_a.value)) ||
+        cmd.value;
+    }
+
+    return value;
+  }
+
+  /**
+   * Helper: Determine field name from service name
+   * Map service "update-seats"/"seats" -> "seats", "update-storage"/"storage" -> "storage"
+   * @param {string} service - Service name
+   * @param {Object} cmd - Command object (to get name if service is _a.input)
+   * @returns {string|null} Field name or null
+   */
+  _getFieldFromService(service, cmd) {
+    if (service === "update-seats" || service === "seats") {
+      return "seats";
+    }
+
+    if (service === "update-storage" || service === "storage") {
+      return "storage";
+    }
+
+    if (service === _a.input && cmd) {
+      const cmdName = this._getNameFromCmd(cmd);
+      if (cmdName === "seats" || cmdName === "storage") {
+        return cmdName;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Handle when user selects storage bundle
+   * Validate bundle value and update state
+   * @param {Object} cmd - Command object
+   * @param {Object} args - Arguments object
+   * @returns {boolean} false to stop event bubbling
+   */
+  _handleSelectBundle(cmd, args) {
+    const bundle = this._getValueFromCmd(cmd, args);
+
+    if (!bundle || !["100", "200", "500", "1000"].includes(String(bundle))) {
+      return false;
+    }
+
+    const bundleValue = String(bundle);
+    const previousBundle = this.state.checkout.selectedBundle;
+
+    if (previousBundle !== bundleValue) {
+      this.state.checkout.selectedBundle = bundleValue;
+              this.renderContent();
+    }
+
+    return false;
+  }
+
+  /**
+   * Handle when user changes input field (seats or storage)
+   * Validate value and update state, then update right panel
+   * @param {Object} cmd - Command object
+   * @param {Object} args - Arguments object
+   * @param {string} service - Service name
+   * @returns {boolean} false to stop event bubbling
+   */
+  _handleInputField(cmd, args, service) {
+    const field = this._getFieldFromService(service, cmd);
+
+    if (!field) {
+      return false;
+    }
+
+    const value = this._getInputValue(cmd, field, args);
+
+    if (value == null || value === undefined) {
+      return false;
+    }
+
+    const numValue = parseInt(value);
+    if (isNaN(numValue) || numValue < 0) {
+      return false;
+    }
+
+    this.state.checkout[field] = numValue;
+    this.updateRightPanel();
+
+    return false;
+  }
+
+  /**
+   * Re-render entire content based on currentTab
+   * Includes header tabs and corresponding content (plans or checkout)
+   * Restore input focus if currently on checkout tab
    */
   renderContent() {
-    if (this.state.currentTab === undefined || this.state.currentTab === null || isNaN(this.state.currentTab)) {
+    if (
+      this.state.currentTab === undefined ||
+      this.state.currentTab === null ||
+      isNaN(this.state.currentTab)
+    ) {
       this.state.currentTab = TAB_MONTHLY;
     }
-    if (this.state.currentTab < TAB_MONTHLY || this.state.currentTab > TAB_CHECKOUT) {
+    if (
+      this.state.currentTab < TAB_MONTHLY ||
+      this.state.currentTab > TAB_CHECKOUT
+    ) {
       this.state.currentTab = TAB_MONTHLY;
     }
 
@@ -287,7 +686,7 @@ class settings_billing extends LetcBox {
     const { getContent } = require("./skeleton");
     const content = getContent(this);
 
-    if (this.__content && typeof this.__content.softClear === 'function') {
+    if (this.__content && typeof this.__content.softClear === "function") {
       this.__content.softClear();
     }
 
@@ -297,35 +696,38 @@ class settings_billing extends LetcBox {
       const focusedField = this._focusedInput.fieldName;
       const sysPn = `${this.fig.family}__checkout-${focusedField}-input`;
 
-      this.ensurePart(sysPn).then((entryWidget) => {
-        if (entryWidget) {
-          this._restoreInputFocus(entryWidget, focusedField);
-        }
-      }).catch(() => {
-      });
+      this.ensurePart(sysPn)
+        .then((entryWidget) => {
+          if (entryWidget) {
+            this._restoreInputFocus(entryWidget, focusedField);
+          }
+        })
+        .catch(() => {});
     }
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @param {*} args 
-   * @returns 
+   * Handle all UI events from user interactions
+   * Route events to corresponding handler methods
+   * @param {Object} cmd - Command object
+   * @param {Object} args - Arguments object
+   * @returns {boolean} false to stop bubbling or super.onUiEvent result
    */
   onUiEvent(cmd, args = {}) {
     let service = args.service;
+    
     if (!service && cmd) {
       if (cmd.source) {
         service = cmd.source.mget && cmd.source.mget(_a.service);
       }
       if (!service) {
-        service = cmd.service ||
-          (cmd.mget && cmd.mget(_a.service)) ||
-          (cmd.get && cmd.get(_a.service)) ||
-          (cmd.model && cmd.model.get(_a.service)) ||
-          cmd.mget(_a.name) ||
-          cmd.get(_a.name) ||
-          (cmd.model && cmd.model.get(_a.name));
+        service = cmd.service || 
+                  (cmd.mget && cmd.mget(_a.service)) || 
+                  (cmd.get && cmd.get(_a.service)) ||
+                  (cmd.model && cmd.model.get && cmd.model.get(_a.service)) ||
+                  (cmd.mget && cmd.mget(_a.name)) ||
+                  (cmd.get && cmd.get(_a.name)) ||
+                  cmd.name;
       }
     }
 
@@ -336,66 +738,28 @@ class settings_billing extends LetcBox {
     if (!service) {
       return super.onUiEvent(cmd, args);
     }
-
+    console.log("AAAA:720 service", service);
     service = String(service);
-
     switch (service) {
       case "select-plan":
-        let pos = null;
+        return this.handleSelectPlan(cmd);
 
-        if (cmd.model) {
-          pos = cmd.model.get(_a.pos) || cmd.model.get(_a.value) || cmd.model.get('pos') || cmd.model.get('value');
-        }
-
-        if (pos == null) {
-          pos = (cmd.mget && cmd.mget(_a.pos)) || (cmd.get && cmd.get(_a.pos)) ||
-            (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value));
-        }
-
-        if (pos == null) {
-          pos = cmd.pos || cmd.value;
-        }
-
-        if (pos == null && cmd.el) {
-          pos = cmd.el.dataset?.pos || cmd.el.dataset?.value;
-        }
-
-        if (pos == null && cmd.el) {
-          pos = cmd.el.getAttribute?.('data-pos') || cmd.el.getAttribute?.('data-value');
-        }
-
-        if (pos == null && cmd.el) {
-          let parent = cmd.el.closest?.(`.${this.fig.family}__tabs-trigger-item`);
-          if (parent) {
-            const parentContainer = parent.parentElement;
-            if (parentContainer) {
-              const children = Array.from(parentContainer.children);
-              const index = children.indexOf(parent);
-              if (index !== -1 && index < TAB_CHECKOUT) {
-                pos = index;
-              }
+      case "select-plan-button":
+        const planValue = this._getValueFromCmd(cmd, args);
+        if (
+          planValue === "free" ||
+          planValue === "pro" ||
+          planValue === "enterprise"
+        ) {
+          if (planValue === "enterprise") {
+            if (Wm && Wm.alert) {
+              Wm.alert("Please contact our sales team via frenz@drumee.org");
             }
-          }
-        }
-
-        if (pos == null && cmd.el) {
-          const text = cmd.el.textContent?.toLowerCase() || cmd.el.innerText?.toLowerCase();
-          if (text && text.includes('monthly')) {
-            pos = TAB_MONTHLY;
-          } else if (text && text.includes('yearly')) {
-            pos = TAB_YEARLY;
-          }
-        }
-
-        if (pos != null && pos !== undefined) {
-          const posNum = parseInt(pos);
-          if (!isNaN(posNum) && (posNum === TAB_MONTHLY || posNum === TAB_YEARLY)) {
-            if (posNum !== this.state.currentTab) {
-              this.state.currentTab = posNum;
-              this.state.plansTab.cycle = posNum === TAB_MONTHLY ? "monthly" : "yearly";
-              this.tab = posNum;
-              this.renderContent();
-            }
+          } else {
+            this.state.checkout.selectedPlan = planValue;
+            this.state.currentTab = TAB_CHECKOUT;
+            this.tab = TAB_CHECKOUT;
+            this.renderContent();
           }
         }
         return false;
@@ -409,8 +773,7 @@ class settings_billing extends LetcBox {
         return false;
 
       case "select-checkout-plan":
-        const plan = (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value)) ||
-          cmd.value || cmd.model?.get(_a.value) || cmd.model?.get('value');
+        const plan = this._getValueFromCmd(cmd, args);
         if (plan === "free" || plan === "pro") {
           this.state.checkout.selectedPlan = plan;
           this.renderContent();
@@ -418,8 +781,7 @@ class settings_billing extends LetcBox {
         return false;
 
       case "select-billing-cycle":
-        const cycle = (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value)) ||
-          cmd.value || cmd.model?.get(_a.value) || cmd.model?.get('value');
+        const cycle = this._getValueFromCmd(cmd, args);
         if (cycle === "monthly" || cycle === "yearly") {
           this.state.checkout.billingCycle = cycle;
           this.renderContent();
@@ -427,102 +789,14 @@ class settings_billing extends LetcBox {
         return false;
 
       case "select-bundle":
-        let bundle = null;
-
-        if (cmd && cmd.model) {
-          bundle = cmd.model.get(_a.value) || cmd.model.get('value');
-        }
-
-        if (bundle == null && cmd) {
-          bundle = (cmd.mget && cmd.mget(_a.value)) || (cmd.get && cmd.get(_a.value)) || cmd.value;
-        }
-
-        if (bundle == null && args) {
-          bundle = args.value || args.bundle;
-        }
-
-        if (!bundle || !["100", "200", "500", "1000"].includes(String(bundle))) {
-          return false;
-        }
-
-        const bundleValue = String(bundle);
-        const previousBundle = this.state.checkout.selectedBundle;
-
-        if (previousBundle !== bundleValue) {
-          this.state.checkout.selectedBundle = bundleValue;
-          this.renderContent();
-        }
-        return false;
+        return this._handleSelectBundle(cmd, args);
 
       case "update-seats":
       case "update-storage":
       case "seats":
       case "storage":
       case _a.input:
-        let field = null;
-
-        if (service === "update-seats" || service === "seats") {
-          field = "seats";
-        } else if (service === "update-storage" || service === "storage") {
-          field = "storage";
-        } else if (service === _a.input) {
-          const cmdName = (cmd.mget && cmd.mget(_a.name)) ||
-            (cmd.get && cmd.get(_a.name)) ||
-            cmd.name ||
-            (cmd.model && cmd.model.get(_a.name));
-          if (cmdName === "seats" || cmdName === "storage") {
-            field = cmdName;
-          }
-        } else {
-          const cmdName = (cmd.mget && cmd.mget(_a.name)) || (cmd.get && cmd.get(_a.name)) || cmd.name;
-          if (cmdName === "seats" || cmdName === "storage") {
-            field = cmdName;
-          }
-        }
-
-        if (field) {
-          let value = null;
-
-          if (cmd && cmd._input && typeof cmd._input.val === 'function') {
-            value = cmd._input.val();
-          } else if (cmd && typeof cmd.getValue === 'function') {
-            value = cmd.getValue();
-          } else if (cmd && cmd._id) {
-            const inputEl = document.getElementById(`${cmd._id}-input`);
-            if (inputEl) {
-              value = inputEl.value;
-            }
-          }
-
-          if (value == null && args && args[field] != null) {
-            value = args[field];
-          } else if (value == null && args && args.value != null) {
-            value = args.value;
-          }
-
-          if (value == null && cmd && cmd.model) {
-            value = cmd.model.get(_a.value) || cmd.model.get('value');
-          }
-
-          if (value == null && cmd) {
-            value = (cmd.mget && cmd.mget(_a.value)) ||
-              (cmd.get && cmd.get(_a.value)) ||
-              cmd.value;
-          }
-
-          if (value == null && args) {
-            value = args[field];
-          }
-
-          if (value != null && value !== undefined) {
-            const numValue = parseInt(value);
-            if (!isNaN(numValue) && numValue >= 0) {
-              this.state.checkout[field] = numValue;
-              this.updateRightPanel();
-            }
-          }
-        }
-        return false;
+        return this._handleInputField(cmd, args, service);
 
       case "proceed-checkout-billing":
         this._proceedToCheckout();
@@ -534,5 +808,4 @@ class settings_billing extends LetcBox {
   }
 }
 
-
-module.exports = settings_billing
+module.exports = settings_billing;

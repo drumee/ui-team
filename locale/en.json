@@ -1961,12 +1961,13 @@
   "YEARLY_DISCOUNT": "Yearly -15%",
   "STORAGE_BUNDLES": "Storage Bundles",
   "STORAGE_ADD_ON": "Storage Add-on",
-  "CHOOSE_ONE_STORAGE_UPGRADE": "Choose one storage upgrade.",
+  "CHOOSE_ONE_STORAGE_UPGRADE": "Choose one storage upgrade. Click to select or clear.",
   "TOTAL_OUTCOME": "Total outcome:",
   "BASE_PRICE": "Base price:",
   "INCLUDED_SEATS": "Included seats:",
-  "TOTAL_STORAGE": "Total Storage:",
+  "TOTAL_STORAGE": "Total Storage",
   "EFFECTIVE_PRICE_PER_SEAT": "Effective price per seat:",
   "PROCEED_TO_CHECKOUT": "Proceed to Checkout",
-  "BEST_VALUE": "BEST VALUE"
+  "BEST_VALUE": "BEST VALUE",
+  "BILLING_INFORMATION": "Billing Information"
 }

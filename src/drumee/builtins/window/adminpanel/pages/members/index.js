@@ -353,8 +353,9 @@ class ___members_page extends LetcBox {
     this.openOverlay(require('./skeleton/action-popup/member-acknowledgement').default(this))
     // const data = cmd.source.response
     const memberList = this.getItemsByKind('widget_members_list')[0]
-    memberList.addMemberItem(data.member)
-    Visitor.respawn(data.admin)
+    memberList.addMemberItem(data)
+    // memberList.triggerClick(data.drumate_id)
+    // return
   }
 
   /**
@@ -518,29 +519,23 @@ class ___members_page extends LetcBox {
   /* 
    *
   */
-  deleteMember(data = {}) {
+  deleteMember(data) {
     return this.postService({
       service: SERVICE.adminpanel.member_delete,
       orgid: this.orgId,
       user_id: data.drumate_id,
       //hub_id  : Visitor.get(_a.id)
-    }).then((data) => {
-      this.deleteMemberResponse(data.member)
-      Visitor.respawn(data.admin)
     })
   }
 
   /* 
  *
 */
-  deleteInviteMember(data = {}) {
-    this.postService({
+  deleteInviteMember(data) {
+    return this.postService({
       service: SERVICE.adminpanel.member_disconnect,
       orgid: this.orgId,
       user_id: data.drumate_id,
-    }).then((data) => {
-      this.disconnectMemberResponse(data.member)
-      Visitor.respawn(data.admin)
     })
   }
 
@@ -931,11 +926,11 @@ class ___members_page extends LetcBox {
   */
   __dispatchRest(service, data, socket) {
     switch (service) {
-      // case SERVICE.adminpanel.member_delete:
-      //   return this.deleteMemberResponse(data)
+      case SERVICE.adminpanel.member_delete:
+        return this.deleteMemberResponse(data)
 
-      // case SERVICE.adminpanel.member_disconnect:
-      //   return this.disconnectMemberResponse(data)
+      case SERVICE.adminpanel.member_disconnect:
+        return this.disconnectMemberResponse(data)
 
 
 

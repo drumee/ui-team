@@ -1,3 +1,10 @@
+/**
+ * Create tab item for header (Monthly, Yearly, Checkout)
+ * Display content and discount rate (if available)
+ * @param {Object} ui - UI instance
+ * @param {Object} opt - Options: content, discountRate, pos, service
+ * @returns {Object} Skeletons component
+ */
 function item(ui, opt) {
   const {content, discountRate, pos, service} = opt;
   const fig = `${ui.fig.family}__tabs-trigger`;
@@ -37,6 +44,11 @@ function item(ui, opt) {
   });
 }
 
+/**
+ * Create header tabs trigger with 3 tabs: Monthly, Yearly, Checkout
+ * @param {Object} ui - UI instance
+ * @returns {Object} Skeletons component
+ */
 function billing_tabs_trigger(ui) {
   const fig = ui.fig.family;
   const figTrigger = `${fig}__tabs-trigger`;

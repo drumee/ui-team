@@ -18,6 +18,12 @@
     "multiline": "^0.3.4",
     "svg-sprite": "^2.0.4"
   },
+  "peerDependencies": {
+    "grunt": ">=0.4.0"
+  },
+  "engines": {
+    "node": ">= 0.8.0"
+  },
   "scripts": {
     "test": "grunt test"
   },

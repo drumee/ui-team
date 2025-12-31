@@ -1,3 +1,5 @@
+const { button, entry } = require("../../../../../skeleton/toolkit");
+
 const OPTIONS = {
   free: {
     title: "Free",
@@ -6,9 +8,9 @@ const OPTIONS = {
     buttonTitle: "",
     unit_price: 0,
     features: [
-      "20G",
-      "Up to 3",
-      "None",
+      { main: "20G", sub: "storage" },
+      { main: "Up to 3", sub: "editor access" },
+      { main: "None", sub: "admin roles" },
     ]
   },
   pro: {
@@ -21,12 +23,12 @@ const OPTIONS = {
     unit_price_yearly: 1444,
     badge: 1,
     features: [
-      "50G",
-      "5 included",
-      "1",
-      "1 days",
-      "Permissions & roles",
-      "Guest access",
+      { main: "50G", sub: "storage" },
+      { main: "5", sub: "editor access" },
+      { main: "1", sub: "admin role" },
+      { main: "7", sub: "days version history" },
+      { main: "", sub: "Permissions & roles" },
+      { main: "", sub: "Guest access" },
     ]
   },
   enterprise: {
@@ -35,17 +37,25 @@ const OPTIONS = {
     description: "Custom pricing for your team",
     buttonTitle: "Contact sales",
     features: [
-      "Custom",
-      "Custom",
-      "Yes",
-      "Up to 90 days",
-      "Permissions & roles",
-      "Guest access",
-      "Activity logs",
+      { main: "Custom", sub: "storage" },
+      { main: "Custom", sub: "editor access" },
+      { main: "Yes", sub: "admin role" },
+      { main: "Up to 90 days", sub: "version history" },
+      { main: "", sub: "Permissions & roles" },
+      { main: "", sub: "Guest access" },
+      { main: "", sub: "Activity logs" },
     ]
   }
 }
 
+/**
+ * Create plan item component (Free, Pro, Enterprise)
+ * Display title, subtitle, description, button, features list, and popular badge
+ * @param {Object} ui - UI instance
+ * @param {string} opt - Plan option key (free, pro, enterprise)
+ * @param {string} cycle - Billing cycle (monthly or yearly)
+ * @returns {Object} Skeletons component
+ */
 function item(ui, opt, cycle = "monthly") {
   const option = OPTIONS[opt];
   const { title, description, buttonTitle, features, badge } = option;
@@ -78,42 +88,46 @@ function item(ui, opt, cycle = "monthly") {
     ],
   });
 
-  let button = "";
+  let buttonBtn = "";
 
   if (buttonTitle) {
-    button = Skeletons.Box.X({
-      className: `${fig}-button primary`,
-      kids: [
-        Skeletons.Note({
-          className: `${fig} buttonTitle primary`,
-          content: buttonTitle,
-        }),
-      ],
+    buttonBtn =  button(ui, {
+      label: buttonTitle,
+      className: `${fig}-button ${badge ? "popular" : ""}`,
+      service: "select-plan-button",
+      value: opt,
+      priority: "primary",
+      uiHandler: [ui],
     });
   } else {
-    button = Skeletons.Box.X({
-      className: `${fig}-button secondary`,
-      kids: [
-        Skeletons.Note({
-          className: `${fig} buttonTitle secondary`,
-          content: "Get started",
-        }),
-      ],
+    buttonBtn = button(ui, {
+      label: "Get started",
+      className: `${fig}-button ${badge ? "popular" : ""}`,
+      service: "select-plan-button",
+      value: opt,
+      priority: "secondary",
+      uiHandler: [ui],
     });
   }
 
   const featureItems = features.map((f) => {
+    const feature = typeof f === 'string' ? { main: f, sub: "" } : f;
+    const { main, sub } = feature;
+    
     return Skeletons.Box.X({
       className: `${fig}-features item`,
       uiHandler: [ui],
-
       kids: [
         Skeletons.Button.Label({
           flow: _a.x,
           ico: "available",
-          label: f,
-        })
-      ],
+          label: main,
+        }),
+        sub ? Skeletons.Note({
+          className: `${fig}-features-sub`,
+          content: sub,
+        }) : null,
+      ].filter(Boolean),
     })
   });
 
@@ -136,11 +150,17 @@ function item(ui, opt, cycle = "monthly") {
   });
 
   return Skeletons.Box.Y({
-    className: `${fig}-item`,
-    kids: [header, button, featuresWrapper, popularBadge],
+    className: `${fig}-item ${badge ? "popular" : ""}`,
+    kids: [header, buttonBtn, featuresWrapper, popularBadge],
   });
 }
 
+/**
+ * Create plans content layout with 3 plan items (Free, Pro, Enterprise)
+ * @param {Object} ui - UI instance
+ * @param {string} cycle - Billing cycle (monthly or yearly)
+ * @returns {Object} Skeletons component
+ */
 function billing_content(ui, cycle = "monthly") {
   const fig = `${ui.fig.family}__plans`;
 

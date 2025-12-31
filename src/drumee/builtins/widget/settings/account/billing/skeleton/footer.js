@@ -1,3 +1,11 @@
+/**
+ * Create footer item with title, content and email link (if available)
+ * @param {Object} ui - UI instance
+ * @param {string} title - Item title
+ * @param {string} content - Item content
+ * @param {string} email - Email address (optional)
+ * @returns {Object} Skeletons component
+ */
 function item(ui, title, content, email) {
   const fig = `${ui.fig.family}__footer`;
 
@@ -7,11 +15,16 @@ function item(ui, title, content, email) {
       className: `${fig} item`,
       kids: [
         Skeletons.Note({
-          content: "Contract: ",
+          className: `${fig}-email-title`,
+          content: " Contact: ",
         }),
         Skeletons.Note({
           className: `${fig}-email`,
           content: email,
+          tagName: _K.tag.a,
+          attrOpt: {
+            href: `mailto:${email}`,
+          },
         }),
       ],
     });
@@ -24,7 +37,7 @@ function item(ui, title, content, email) {
         className: `${fig}-title`,
         content: title,
       }),
-      Skeletons.Box.Y({
+      Skeletons.Box.X({
         className: `${fig} content`,
         kids: [
           Skeletons.Note({
@@ -37,6 +50,11 @@ function item(ui, title, content, email) {
   });
 }
 
+/**
+ * Create billing footer with additional seat pricing information
+ * @param {Object} ui - UI instance
+ * @returns {Object} Skeletons component
+ */
 function billing_footer(ui) {
   const fig = `${ui.fig.family}__footer`;
 
@@ -48,6 +66,7 @@ function billing_footer(ui) {
         content: "Additional seat pricing",
       }),
       item(ui, "Pro:", "5 seats included, additional seats $5/month each."),
+      item(ui, "Start Ups:", "10 seats included, additional seats $5/month each"),
       item(
         ui,
         "Enterprise:",
