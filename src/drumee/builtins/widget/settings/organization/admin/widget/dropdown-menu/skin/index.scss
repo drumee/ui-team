@@ -1,0 +1,13 @@
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('card-menu');
+
+.widget-dropdown-menu {
+
+  &__ui,
+  &__main,
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+}

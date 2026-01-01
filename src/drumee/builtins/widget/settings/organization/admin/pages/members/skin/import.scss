@@ -1,0 +1,195 @@
+@use "mixins/drumee";
+@use "skin/lib/button" as *;
+
+.members-page {
+
+  &__members_upload_wrapper {
+    background: var(--default-background);
+    border-radius: var(--corner-radius-4);
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  &__members_upload-close-wrapper {
+    color: var(--default-thinline-icon);
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    z-index: 2;
+    width: 30px;
+    height: 30px;
+    padding: 9px;
+    display: flex;
+    cursor: pointer;
+    border-radius: 100%;
+    background: var(--neutral-200);
+
+    &:hover {
+      color: var(--primary-500);
+    }
+
+    & svg {
+      padding: 2px;
+    }
+  }
+
+  &__members_upload-title-wrapper {
+    @include drumee.typo($size: 18px, $color: var(--primary-500));
+    align-items: center;
+    justify-content: center;
+    margin: 10px;
+    padding-top: 10px;
+  }
+
+  &__members_drag-area {
+    background: var(--default-background);
+    padding: 0px 20px 0px 20px;
+    position: absolute;
+    z-index: 2;
+  }
+
+  &__droppable-area {
+    @include drumee.typo($size: 20px, $line: 23px, $color: var(--neutral-900));
+    align-items: center;
+    border-radius: var(--border-radius);
+    border: 1px dashed var(--neutral-300);
+    box-sizing: border-box;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+    align-content: center;
+    flex-wrap: wrap;
+  }
+
+  &__droppable-content {
+    max-width: 429px;
+  }
+
+  &__download-sample-file {
+    bottom: 25px;
+    cursor: pointer;
+    position: absolute;
+    text-align: center;
+    text-decoration: underline;
+    @include drumee.typo($size: 16px, $line: 16px, $weight: 300, $color: var(--default-text-color));
+
+    &:hover {
+      color: var(--backgroundless-text-hover);
+    }
+  }
+
+  &__members_upload-body-wrapper {
+    height: calc(100% - 140px);
+    width: 100%;
+    flex: 1;
+    // overflow: scroll;
+  }
+
+
+
+  &__members_upload-footer-wrapper {
+    height: 78px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  // Import list 
+  &__import-list-wrapper {
+    overflow-y: auto;
+    height: 100%;
+    width: 100%
+  }
+
+  &__import-list-table {
+    display: table !important;
+    margin: 0px 10px;
+  }
+
+  &__import-list-table-row {
+    display: table-row !important;
+  }
+
+  &__import-list-item-header {
+    @include drumee.typo($size: 14px, $color: var(--secondary-text-color));
+  }
+
+  &__import-list-item-content {
+    @include drumee.typo($size: 14px, $weight: 300, $color: var(--default-text-color));
+  }
+
+  &__import-list-item-status {
+    height: 20px;
+    width: 100%;
+
+    &[data-error="0"] {
+      color: var(--green-400)
+    }
+
+    &[data-error="1"] {
+      color: var(--red-400)
+    }
+
+    .item-status {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      gap: var(--spacer-2);
+
+      svg {
+        width: 20px;
+        padding: 2px;
+
+        &.ban {
+          padding: 4px;
+        }
+      }
+
+      .label {
+        line-height: 23px;
+      }
+    }
+  }
+
+  &__import-list-item-header,
+  &__import-list-item-content {
+    display: table-cell !important;
+    padding: 1px 5px;
+    height: 26px;
+
+    &.error {
+      // box-shadow: inset 0px 0px 4px 0px rgba(255, 0, 0, 0.5);
+      border-radius: 5px;
+      color: var(--default-text-error); //$ap-import-error-color;
+
+      &.require {
+        background: var(--default-background-error);
+        opacity: 0.2;
+      }
+    }
+  }
+
+  &__import-list-error-msg {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    align-items: center;
+    justify-content: center;
+
+    & .note-content {
+      text-align: center;
+      color: var(--default-text-error);
+    }
+  }
+
+  &__buttons {
+    justify-content: center;
+  }
+
+  &__button-main {
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
+  @include common-button;
+}

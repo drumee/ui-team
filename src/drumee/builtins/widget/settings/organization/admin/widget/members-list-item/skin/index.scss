@@ -1,0 +1,161 @@
+@use "sass:meta";
+@use 'mixins/drumee';
+@include meta.load-css('settings-menu');
+
+.widget-members-listItem {
+  height: 35px;
+  margin: 1px 0px 0px 0px;
+  padding-bottom: 5px;
+  padding-left: 14px;
+  padding-top: 5px;
+  @include drumee.typo($size :14px, $line: 16px, $color: var(--default-text-color));
+
+
+  &__ui {
+    background-color: inherit;
+    @include drumee.typo($color: var(--default-text-color));
+    cursor: pointer;
+
+    &:hover,
+    &[data-active=active],
+    &[data-radio=on] {
+      background: var(--neutral-300);
+
+      & .profile-icon,
+      & .name.note-reader {
+        @include drumee.typo($size :14px, $line: 16px, $color: var(--default-text-hover))
+      }
+    }
+
+    &:hover {
+      & .option-icons {
+        color: var(--default-icon-reverse);
+        border: none;
+
+        &.checkbox[data-state="1"] {
+          box-shadow: none;
+          color: var(--checkbox-checked-reverse); //var(--ewhite);
+          border: 1px solid var(--checkbox-checked-border-reverse);
+        }
+      }
+    }
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &__list {
+    height: 40px;
+    padding-bottom: 5px;
+    padding-left: 12px;
+    padding-top: 5px;
+  }
+
+  &__main,
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__options {
+    position: absolute;
+    right: 0;
+  }
+
+  &__icon {
+    color: var(--default-icon-neutral);
+    cursor: pointer;
+
+
+    &.option-icons {
+      height: 15px;
+      position: absolute;
+      // right: 36px; //10px;
+      top: 5px;
+      width: 15px;
+    }
+
+    &.admin-settings {
+      height: 14px;
+      right: 36px; //10px;
+      // top: 5px;
+      width: 14px;
+      opacity: 0.85;
+    }
+
+    &.remove-admin {
+      height: 13px;
+      right: 10px;
+      width: 13px;
+      opacity: 0.85;
+    }
+
+    &.checkbox {
+      width: 15px;
+      height: 15px;
+      right: 20px;
+      box-shadow: none;
+      border-radius: var(--checkbox-border-radius);
+      border: 1px solid var(--default-checkbox-border);
+      color: var(--default-checkbox-background);
+
+      &[data-state="1"] {
+        box-shadow: none;
+        color: var(--default-checkbox-checked);
+        border: 1px solid var(--default-checkbox-border);
+      }
+    }
+
+    &.display-icon {
+      color: var(--default-user-icon);
+      height: 30px;
+      top: 0;
+      width: 30px;
+      min-width: 30px;
+    }
+  }
+
+  &__profile {
+    &.user-profile__ui {
+      border-radius: 50%;
+      height: 30px; //27px;
+      width: 30px; //27px;
+      bottom: 2px; // 1px;
+      min-width: 30px;
+
+      &[data-default="1"] {
+        border: none;
+      }
+    }
+
+    .note-content {
+      font-size: inherit;
+    }
+
+    & section {
+      font-size: 80%;
+    }
+  }
+
+  &__note {
+    &.name {
+      margin-top: 2px;
+      max-width: 190px;
+      padding: 3px 3px 3px 15px;
+      width: 100%;
+      @include drumee.typo($size :14px, $line: 16px, $color: var(--default-text-color));
+      @include drumee.overflow-text;
+
+      .inner {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      &.allAdmins {
+        max-width: 155px; //150px;
+      }
+    }
+  }
+}
