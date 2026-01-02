@@ -1,18 +1,16 @@
 
-function __skl_admin_panel  (_ui_){
+export default function   (ui){
   const menu = Skeletons.Box.X({ 
     debug     : __filename,
-    className : `${_ui_.fig.family}__header ${_ui_.fig.group}__header`, 
+    className : `${ui.fig.family}__header ${ui.fig.group}__header`, 
     sys_pn    : "window-header",
     kidsOpt   : {
       radio     : _a.on,
-      uiHandler : _ui_
+      uiHandler : ui
     },
-    kids      : [ require('./common/top-bar').default(_ui_) ]}); 
+    kids      : [ require('./common/topbar').default(ui) ]}); 
   
-  const a = require('window/skeleton/content/main')(_ui_, menu);
+  const a = require('window/skeleton/content/main')(ui, menu);
   
   return a;
-}
-
-export default __skl_admin_panel;
+};

@@ -194,36 +194,36 @@ function __skl_widget_member_form(ui) {
   // })
 
 
-  const _securityState = toggleState(data.otp)
+  // const _securityState = toggleState(data.otp)
 
-  if (ui._type == 'member_edit') {
-    if (Visitor.domainCan(_K.permission.admin_view, data.privilege)) {
-      let _icon = 'account_cross'
-      if (_securityState) {
-        _icon = 'backoffice_checkboxfill'
-      }
+  // if (ui._type == 'member_edit') {
+  //   if (Visitor.domainCan(_K.permission.admin_view, data.privilege)) {
+  //     let _icon = 'account_cross'
+  //     if (_securityState) {
+  //       _icon = 'backoffice_checkboxfill'
+  //     }
 
-      security = Skeletons.Box.X({
-        className: `${formFig}__wrapper security`,
-        kids: [
-          Skeletons.Button.Svg({
-            ico: 'lock',
-            className: `${formFig}__icon security lock`
-          }),
+  //     security = Skeletons.Box.X({
+  //       className: `${formFig}__wrapper security`,
+  //       kids: [
+  //         Skeletons.Button.Svg({
+  //           ico: 'lock',
+  //           className: `${formFig}__icon security lock`
+  //         }),
 
-          Skeletons.Box.X({
-            className: `${formFig}__security-wrapper`,
-            kids: [
-              Skeletons.Note({
-                className: `${formFig}__note security`,
-                content: LOCALE.DOUBLE_AUTHENTICATION_WITH_SMS_CODE//'Double authentication with sms code'
-              }),
-            ]
-          })
-        ]
-      })
-    }
-  }
+  //         Skeletons.Box.X({
+  //           className: `${formFig}__security-wrapper`,
+  //           kids: [
+  //             Skeletons.Note({
+  //               className: `${formFig}__note security`,
+  //               content: LOCALE.DOUBLE_AUTHENTICATION_WITH_SMS_CODE//'Double authentication with sms code'
+  //             }),
+  //           ]
+  //         })
+  //       ]
+  //     })
+  //   }
+  // }
 
 
   const messageBox = Skeletons.Box.X({

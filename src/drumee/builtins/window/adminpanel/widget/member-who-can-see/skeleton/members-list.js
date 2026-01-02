@@ -1,12 +1,4 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/adminpanel/widget/member-who-can-see/skeleton/members-list.js
-//   TYPE : Skeleton
-// ===================================================================**/
 
-// ===========================================================
-//
-// ===========================================================
 function __skl_widget_member_whoCanSee_members_list (_ui_) {
   const membersListFig = `${_ui_.fig.family}`;
 

@@ -49,7 +49,7 @@ function nav(ui) {
   ]
 
   if (ui.canAdmin()) {
-    items.push(nav_item(ui, "two-users", LOCALE.ADMIN, 4),)
+    items.push(nav_item(ui, "two-users", "My seats", 4),)
   }
 
   const topics = Skeletons.Box.Y({

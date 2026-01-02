@@ -45,7 +45,7 @@ class settings_billing extends LetcBox {
   _handlePaymentWebSocket(args = {}) {
     const { data, options } = args || {};
     const { service } = options || {};
-
+    this.debug("AAA:48", args)
     if (
       service === SERVICE.payment.checkout ||
       service === SERVICE.payment.status

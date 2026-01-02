@@ -22,7 +22,7 @@ const __skl_admin_panel_common_topBar = function (ui) {
         className: `${ui.fig.family}__page-dropdown`,
         sys_pn: 'page_dropdown',
         kids: [
-          require('../common/dropdown').default(ui)
+          require('./dropdown').default(ui)
         ]
       }),
 

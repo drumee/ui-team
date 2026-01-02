@@ -116,10 +116,11 @@ class ___members_room extends LetcBox {
       case 'cancel-member':
         this.cancelMemberForm()
         break
-      case "member-added" :
+      case "member-added":
         this.triggerHandlers(args)
         break;
       default:
+        if (!service) return
         this.source = cmd
         this.triggerHandlers({ service: service })
     }

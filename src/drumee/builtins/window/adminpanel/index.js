@@ -100,9 +100,8 @@ class ___window_admin_panel extends __window_interact_singleton {
    * @param {any} cmd
    * @param {any} args
    */
-  onUiEvent(cmd, args) {
-    const service = cmd.get(_a.service) || cmd.get(_a.name);
-
+  onUiEvent(cmd, args = {}) {
+    const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
       case 'updateInstance':
         this.updateInstance(cmd.viewInstance);
@@ -167,7 +166,8 @@ class ___window_admin_panel extends __window_interact_singleton {
       kind: 'widget_members_search',
       className: 'search-result-box',
       search: val,
-      orgId: this.organisation.id
+      orgId: this.organisation.id,
+      uiHandler: [this]
     }
 
     this.getPart('search-result').feed(dataOpt)

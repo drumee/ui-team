@@ -1,12 +1,4 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/addressbook/widget/search/skeleton/index.coffee
-//   TYPE : Skelton
-// ===================================================================**/
 
-// ===========================================================
-//
-// ===========================================================
 function __skl_widget_members_search (_ui_) {
   
   const searchFig = `${_ui_.fig.family}`;

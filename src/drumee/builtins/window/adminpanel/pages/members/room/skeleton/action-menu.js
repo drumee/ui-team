@@ -1,8 +1,3 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/room/skeleton/action-menu.js
-//   TYPE : Skeleton
-// ===================================================================**/
 /// <reference path="../../../../../../../../../@types/index.d.ts" />
 
 /**
@@ -40,7 +35,7 @@ function __skl_member_room_action_menu(_ui_, data) {
   const menuTrigger = Skeletons.Button.Svg({
     ico       : 'drumee-user-setting',//'ap-member-action-menu',
     className : `${menuFig}__icon ${menuFig}__trigger trigger-icon ap-member-action-menu`,
-    service   : 'action-menu',
+    // service   : 'action-menu',
     uiHandler : _ui_
   });
 
@@ -59,20 +54,20 @@ function __skl_member_room_action_menu(_ui_, data) {
     ]
   });
 
-  const whoCanSee = Skeletons.Box.X({
-    className : `${menuFig}__item`,
-    service   : 'choose-who-can-see-member',
-    uiHandler : _ui_,
-    kidsOpt   : {
-      active : 0
-    },
-    kids      : [
-      Skeletons.Note({
-        className : `${menuFig}__note menu-item`,
-        content   :  LOCALE.WHO_CAN_SEE //'Authorized contacts'
-      })
-    ]
-  });
+  // const whoCanSee = Skeletons.Box.X({
+  //   className : `${menuFig}__item`,
+  //   service   : 'choose-who-can-see-member',
+  //   uiHandler : _ui_,
+  //   kidsOpt   : {
+  //     active : 0
+  //   },
+  //   kids      : [
+  //     Skeletons.Note({
+  //       className : `${menuFig}__note menu-item`,
+  //       content   :  LOCALE.WHO_CAN_SEE //'Authorized contacts'
+  //     })
+  //   ]
+  // });
 
   const connectionLog = Skeletons.Box.X({
     className : `${menuFig}__item`,
@@ -193,9 +188,9 @@ function __skl_member_room_action_menu(_ui_, data) {
 
   menuKids.push(modifyData)
   if (Visitor.domainCan(_K.permission.admin_security) && (Visitor.id != data.drumate_id)) {
-    if (data.status != _a.archived) {
-      menuKids.push(whoCanSee);
-    }
+    // if (data.status != _a.archived) {
+    //   menuKids.push(whoCanSee);
+    // }
     menuKids.push(connectionLog)
     menuKids.push(security)
     menuKids.push(resetPassword)
@@ -208,14 +203,14 @@ function __skl_member_room_action_menu(_ui_, data) {
   }
   
   if (Visitor.id == data.drumate_id) {
-    menuKids.push(whoCanSee)
+    // menuKids.push(whoCanSee)
     menuKids.push(connectionLog)
     menuKids.push(security)
   }
 
   if ((data.status == _a.locked) || (data.status == _a.archived)) {
     menuKids = []
-    menuKids.push(whoCanSee)
+    // menuKids.push(whoCanSee)
     menuKids.push(connectionLog)
     // menuKids.push(seeDesktop)
     menuKids.push(blockUnblockMember)

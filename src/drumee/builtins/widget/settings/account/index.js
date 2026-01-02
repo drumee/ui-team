@@ -31,16 +31,16 @@ class settings_account extends LetcBox {
       LOCALE.STORAGE,
       LOCALE.SECURITY,
     ];
-    if(this.canAdmin()){
-      this.tab_name.push(LOCALE.ADMIN);
-      this.skeletons.push(require("./skeleton/admin").default)
+    if (this.canAdmin()) {
+      this.tab_name.push("My seats");
+      this.skeletons.push(require("./skeleton/seats").default)
     }
   }
 
   /**
    * 
    */
-  canAdmin(){
+  canAdmin() {
     return (Visitor.quota().plan == 'pro' && Visitor.domainCan(_K.permission.admin_member))
   }
   /**
@@ -111,6 +111,30 @@ class settings_account extends LetcBox {
       p.set({ content });
       p.el.dataset.state = "1";
     });
+  }
+
+  /**  
+   * 
+  */
+  handSeatsManager() {
+    let kind = "window_adminpanel";
+    let e = Wm.getItemByKind(kind);
+    if (e && !e.isDestroyed()) {
+      e.raise();
+      return;
+    }
+    Wm.changeModalState(_a.closed); /** Hide the modal that contain this widget */
+    Wm.launch({ kind, source: this }, { explicit: 1, singleton: 1 });
+    let timer = setInterval(() => {
+      e = Wm.getItemByKind(kind);
+      if (e) {
+        clearInterval(timer)
+        e.once(_e.destroy, () => {
+          Wm.changeModalState(_a.open);
+        })
+      }
+    }, 1000)
+
   }
 
   /**
@@ -195,8 +219,8 @@ class settings_account extends LetcBox {
   onUiEvent(cmd, args = {}) {
     const service =
       args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-      this.debug("AAA:191", service);
-      switch (service) {
+    this.debug("AAA:191", service);
+    switch (service) {
       case "close-overlay":
         return this.__overlay.clear();
 
@@ -244,6 +268,9 @@ class settings_account extends LetcBox {
 
       case "change-password":
         return this.updatePassword(cmd);
+
+      case "manage-seats":
+        return this.handSeatsManager()
 
       case _e.sort:
         this._category = cmd.mget(_a.type);
