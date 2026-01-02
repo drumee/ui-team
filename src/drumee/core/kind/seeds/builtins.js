@@ -1,5 +1,5 @@
 /* ================================================================== *
-#   Copyright Thidima SA  2011-2025
+#   Copyright Thidima SA  2011-2026
 #   FILE : /src/drumee/core/kind/seeds/builtins.js
 #   TYPE : Automatic generation - DO NOT EDIT 
 # ===================================================================**/

@@ -345,26 +345,53 @@ class settings_billing extends LetcBox {
 
   /**
    * Handle proceed to checkout: call payment API and open payment window
+   * Uses getData() to collect form values from all widgets with formItem attribute
    */
   _proceedToCheckout() {
-    const summary = this.calculateCheckoutSummary(this.state);
+    // Get form data using Drumee magic function getData()
+    // This walks through the tree and collects values from widgets with formItem set
+    let formData = {};
+    try {
+      formData = this.getData(_a.formItem) || {};
+    } catch (e) {
+      this.debug('Error getting form data:', e);
+    }
 
+    // Fallback to state if formData is empty or missing values
     const checkout = this.state.checkout || {};
     const selectedPlan = checkout.selectedPlan || "pro";
     const billingCycle = checkout.billingCycle || "monthly";
+    
+    // Get values from form data, fallback to state
+    const seats = parseInt(formData.seats) || parseInt(checkout.seats) || 5;
+    const storage = parseInt(formData.storage) || parseInt(checkout.storage) || 0;
+    const selectedBundle = formData['select-bundle'] || checkout.selectedBundle;
+
+    // Recalculate summary with form values
+    const tempState = {
+      checkout: {
+        selectedPlan,
+        seats,
+        storage,
+        billingCycle,
+        selectedBundle,
+      },
+    };
+    const summary = this.calculateCheckoutSummary(tempState);
 
     const totalPriceDollars =
       parseFloat(summary.totalPrice.replace("$", "")) || 0;
     const value = Math.round(totalPriceDollars * 100);
     const interval = billingCycle === "yearly" ? "year" : "month";
-    const description = `${selectedPlan.toUpperCase()} Plan - ${billingCycle} - ${
-      checkout.seats || 5
-    } seats`;
+    const description = `${selectedPlan.toUpperCase()} Plan - ${billingCycle} - ${seats} seats`;
 
     const paymentData = {
       value: value,
       plan: selectedPlan,
       interval: interval,
+      seat: seats,
+      storage: storage,
+      billing_cycle: billingCycle,
       description: description,
     };
 
@@ -742,7 +769,6 @@ class settings_billing extends LetcBox {
     if (!service) {
       return super.onUiEvent(cmd, args);
     }
-    console.log("AAAA:720 service", service);
     service = String(service);
     switch (service) {
       case "select-plan":
