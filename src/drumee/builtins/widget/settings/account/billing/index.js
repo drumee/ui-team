@@ -10,7 +10,7 @@ class settings_billing extends LetcBox {
       hub_id: Visitor.id,
       flow: "g",
     });
-    
+
     this.state = {
       currentTab: TAB_MONTHLY,
       plansTab: {
@@ -58,7 +58,7 @@ class settings_billing extends LetcBox {
    * Handle payment status updates from WebSocket
    * @param {Object} data - Payment status data
    */
-  _handlePaymentStatus(data) {}
+  _handlePaymentStatus(data) { }
 
   /**
    * Return view mode for widget
@@ -260,7 +260,7 @@ class settings_billing extends LetcBox {
             this._updateRightPanelContent();
           }
         })
-        .catch(() => {});
+        .catch(() => { });
       return;
     }
 
@@ -344,67 +344,55 @@ class settings_billing extends LetcBox {
   }
 
   /**
+ * 
+ */
+  _openLink(url) {
+    if (Visitor.device() == _a.mobile) {
+      window.open(url, "_blank", "noopener; noreferrer");
+    } else {
+      let w = Math.min(900, screen.availWidth - 100);
+      let h = Math.min(700, screen.availHeight - 100);
+      let x = screen.availWidth/2 - w/2;
+      let y = 0;
+      window.open(url, "_blank", `popup, noopener, noreferrer, width=${w}, height=${h}, left=${x}, top=${y}`);
+    }
+  }
+
+  /**
    * Handle proceed to checkout: call payment API and open payment window
-   * Uses getData() to collect form values from all widgets with formItem attribute
    */
   _proceedToCheckout() {
-    // Get form data using Drumee magic function getData()
-    // This walks through the tree and collects values from widgets with formItem set
-    let formData = {};
-    try {
-      formData = this.getData(_a.formItem) || {};
-    } catch (e) {
-      this.debug('Error getting form data:', e);
-    }
+    const summary = this.calculateCheckoutSummary(this.state);
 
-    // Fallback to state if formData is empty or missing values
     const checkout = this.state.checkout || {};
     const selectedPlan = checkout.selectedPlan || "pro";
     const billingCycle = checkout.billingCycle || "monthly";
-    
-    // Get values from form data, fallback to state
-    const seats = parseInt(formData.seats) || parseInt(checkout.seats) || 5;
-    const storage = parseInt(formData.storage) || parseInt(checkout.storage) || 0;
-    const selectedBundle = formData['select-bundle'] || checkout.selectedBundle;
-
-    // Recalculate summary with form values
-    const tempState = {
-      checkout: {
-        selectedPlan,
-        seats,
-        storage,
-        billingCycle,
-        selectedBundle,
-      },
-    };
-    const summary = this.calculateCheckoutSummary(tempState);
 
     const totalPriceDollars =
       parseFloat(summary.totalPrice.replace("$", "")) || 0;
     const value = Math.round(totalPriceDollars * 100);
     const interval = billingCycle === "yearly" ? "year" : "month";
-    const description = `${selectedPlan.toUpperCase()} Plan - ${billingCycle} - ${seats} seats`;
+    const description = `${selectedPlan.toUpperCase()} Plan - ${billingCycle} - ${checkout.seats || 5
+      } seats`;
 
     const paymentData = {
       value: value,
       plan: selectedPlan,
       interval: interval,
-      seat: seats,
-      storage: storage,
-      billing_cycle: billingCycle,
       description: description,
     };
 
     this.postService(SERVICE.payment.checkout, paymentData)
       .then((data) => {
         let { url } = data;
-        window.open(url, "popUpWindow", url);
+        this._openLink(url);
       })
-      .catch((error) => {
+      .catch((e) => {
+        this.warn("Got backend error [_proceedToCheckout]:", e)
         if (Wm && Wm.alert) {
           Wm.alert(
             LOCALE.SOMETHING_WENT_WRONG ||
-              "Something went wrong. Please try again."
+            "Something went wrong. Please try again."
           );
         }
       });
@@ -417,9 +405,9 @@ class settings_billing extends LetcBox {
    * @returns {number|null} Tab position or null
    */
   getSelectPlanData(cmd) {
-        let pos = null;
-        
-        if (cmd.model) {
+    let pos = null;
+
+    if (cmd.model) {
       pos =
         cmd.model.get(_a.pos) ||
         cmd.model.get(_a.value) ||
@@ -427,7 +415,7 @@ class settings_billing extends LetcBox {
         cmd.model.get("value");
     }
 
-        if (pos == null) {
+    if (pos == null) {
       pos =
         (cmd.mget && cmd.mget(_a.pos)) ||
         (cmd.get && cmd.get(_a.pos)) ||
@@ -435,44 +423,44 @@ class settings_billing extends LetcBox {
         (cmd.get && cmd.get(_a.value));
     }
 
-        if (pos == null) {
-          pos = cmd.pos || cmd.value;
-        }
-        
-        if (pos == null && cmd.el) {
-          pos = cmd.el.dataset?.pos || cmd.el.dataset?.value;
-        }
-        
-        if (pos == null && cmd.el) {
+    if (pos == null) {
+      pos = cmd.pos || cmd.value;
+    }
+
+    if (pos == null && cmd.el) {
+      pos = cmd.el.dataset?.pos || cmd.el.dataset?.value;
+    }
+
+    if (pos == null && cmd.el) {
       pos =
         cmd.el.getAttribute?.("data-pos") ||
         cmd.el.getAttribute?.("data-value");
-        }
-        
-        if (pos == null && cmd.el) {
-          let parent = cmd.el.closest?.(`.${this.fig.family}__tabs-trigger-item`);
-          if (parent) {
-            const parentContainer = parent.parentElement;
-            if (parentContainer) {
-              const children = Array.from(parentContainer.children);
-              const index = children.indexOf(parent);
-              if (index !== -1 && index < TAB_CHECKOUT) {
+    }
+
+    if (pos == null && cmd.el) {
+      let parent = cmd.el.closest?.(`.${this.fig.family}__tabs-trigger-item`);
+      if (parent) {
+        const parentContainer = parent.parentElement;
+        if (parentContainer) {
+          const children = Array.from(parentContainer.children);
+          const index = children.indexOf(parent);
+          if (index !== -1 && index < TAB_CHECKOUT) {
             pos = index;
-              }
-            }
           }
         }
-        
-        if (pos == null && cmd.el) {
+      }
+    }
+
+    if (pos == null && cmd.el) {
       const text =
         cmd.el.textContent?.toLowerCase() || cmd.el.innerText?.toLowerCase();
       if (text && text.includes("monthly")) {
-            pos = TAB_MONTHLY;
+        pos = TAB_MONTHLY;
       } else if (text && text.includes("yearly")) {
-            pos = TAB_YEARLY;
-          }
-        }
-        
+        pos = TAB_YEARLY;
+      }
+    }
+
     return pos;
   }
 
@@ -484,12 +472,12 @@ class settings_billing extends LetcBox {
    */
   handleSelectPlan(cmd) {
     const pos = this.getSelectPlanData(cmd);
-        
-        if (pos != null && pos !== undefined) {
-          const posNum = parseInt(pos);
-          if (!isNaN(posNum) && (posNum === TAB_MONTHLY || posNum === TAB_YEARLY)) {
-            if (posNum !== this.state.currentTab) {
-              this.state.currentTab = posNum;
+
+    if (pos != null && pos !== undefined) {
+      const posNum = parseInt(pos);
+      if (!isNaN(posNum) && (posNum === TAB_MONTHLY || posNum === TAB_YEARLY)) {
+        if (posNum !== this.state.currentTab) {
+          this.state.currentTab = posNum;
           this.state.plansTab.cycle =
             posNum === TAB_MONTHLY ? "monthly" : "yearly";
           this.tab = posNum;
@@ -646,7 +634,7 @@ class settings_billing extends LetcBox {
 
     if (previousBundle !== bundleValue) {
       this.state.checkout.selectedBundle = bundleValue;
-              this.renderContent();
+      this.renderContent();
     }
 
     return false;
@@ -733,7 +721,7 @@ class settings_billing extends LetcBox {
             this._restoreInputFocus(entryWidget, focusedField);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }
 
@@ -746,19 +734,19 @@ class settings_billing extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     let service = args.service;
-    
+
     if (!service && cmd) {
       if (cmd.source) {
         service = cmd.source.mget && cmd.source.mget(_a.service);
       }
       if (!service) {
-        service = cmd.service || 
-                  (cmd.mget && cmd.mget(_a.service)) || 
-                  (cmd.get && cmd.get(_a.service)) ||
-                  (cmd.model && cmd.model.get && cmd.model.get(_a.service)) ||
-                  (cmd.mget && cmd.mget(_a.name)) ||
-                  (cmd.get && cmd.get(_a.name)) ||
-                  cmd.name;
+        service = cmd.service ||
+          (cmd.mget && cmd.mget(_a.service)) ||
+          (cmd.get && cmd.get(_a.service)) ||
+          (cmd.model && cmd.model.get && cmd.model.get(_a.service)) ||
+          (cmd.mget && cmd.mget(_a.name)) ||
+          (cmd.get && cmd.get(_a.name)) ||
+          cmd.name;
       }
     }
 
@@ -769,6 +757,7 @@ class settings_billing extends LetcBox {
     if (!service) {
       return super.onUiEvent(cmd, args);
     }
+    console.log("AAAA:720 service", service);
     service = String(service);
     switch (service) {
       case "select-plan":

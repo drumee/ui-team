@@ -59,8 +59,8 @@ const OPTIONS = {
 function item(ui, opt, cycle = "monthly") {
   const option = OPTIONS[opt];
   const { title, description, buttonTitle, features, badge } = option;
-  const subtitle = cycle === "yearly" && option.subtitle_yearly 
-    ? option.subtitle_yearly 
+  const subtitle = cycle === "yearly" && option.subtitle_yearly
+    ? option.subtitle_yearly
     : (option.subtitle_monthly || option.subtitle || "Free");
   const fig = `${ui.fig.family}__plan`;
 
@@ -91,11 +91,13 @@ function item(ui, opt, cycle = "monthly") {
   let buttonBtn = "";
 
   if (buttonTitle) {
-    buttonBtn =  button(ui, {
+    buttonBtn = button(ui, {
       label: buttonTitle,
       className: `${fig}-button ${badge ? "popular" : ""}`,
       service: "select-plan-button",
       value: opt,
+      name: opt,
+      formItem: 1,
       priority: "primary",
       uiHandler: [ui],
     });
@@ -104,6 +106,8 @@ function item(ui, opt, cycle = "monthly") {
       label: "Get started",
       className: `${fig}-button ${badge ? "popular" : ""}`,
       service: "select-plan-button",
+      name: opt,
+      formItem: 1,
       value: opt,
       priority: "secondary",
       uiHandler: [ui],
@@ -113,7 +117,7 @@ function item(ui, opt, cycle = "monthly") {
   const featureItems = features.map((f) => {
     const feature = typeof f === 'string' ? { main: f, sub: "" } : f;
     const { main, sub } = feature;
-    
+
     return Skeletons.Box.X({
       className: `${fig}-features item`,
       uiHandler: [ui],

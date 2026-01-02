@@ -79,6 +79,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | settings_members_list | widget/settings/members-list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/members-list/index.js |
 | settings_share_hub | widget/settings/share-hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/share-hub/index.js |
 | widget_chat_item | widget/chat-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat-item/index.js |
+| organization_form | src/drumee/builtins/widget/settings/organization/form | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/organization/form/index.js |
 | widget_tag | src/drumee/builtins/window/addressbook/widget/tag | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/tag/index.js |
 | widget_contacts | src/drumee/builtins/window/addressbook/widget/contacts | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/contacts/index.js |
 | widget_contact_detail | src/drumee/builtins/window/addressbook/widget/contact-detail | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/addressbook/widget/contact-detail/index.js |

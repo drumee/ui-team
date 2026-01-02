@@ -1,0 +1,148 @@
+@use "sass:meta";
+@use 'mixins/drumee';
+@use 'layout';
+@include meta.load-css('action-popup');
+@include meta.load-css('breadcrumbs');
+@include meta.load-css('connection-log');
+@include meta.load-css('import');
+@include meta.load-css('overlay-wrapper');
+@include meta.load-css('security');
+@include meta.load-css('member-acknowledgement');
+
+.members-page {
+
+  &__ui {
+    height: 100%;
+    width: 100%;
+
+    & .fullwidth {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__main {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__container {
+    height: 100%;
+    width: 100%;
+  }
+
+  &__wrapper {
+    background: var(--default-background);
+    //padding: 5px 0px;
+    //border-radius: 0 0 6px 0;
+
+    &.tags {
+      border-radius: var(--border-radius-left);
+      background: var(--default-background); //var(--default-block-background);    
+      min-width: 186px;
+    }
+
+    &.list {
+      // border-right: 1px solid var(--default-separator); 
+      margin-left: 1px;
+      min-width: 260px;
+      margin-right: 1px;
+    }
+
+    &.room {
+      width: 100%;
+    }
+  }
+
+  &__message-content {
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    gap: var(--spacer-5);
+  }
+
+  // css for buttons
+  &__buttons-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+
+    .button-cancel {
+      min-width: 115px;
+      height: 35px;
+      @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
+      border-radius: var(--border-radius);
+      border: 1px solid var(--btn-rollback-border);
+      margin-right: 30px;
+    }
+
+    &.resend-link {
+      margin-top: 50px; //20px;
+    }
+
+    & .button {
+      align-items: center;
+      height: 35px;
+      justify-content: center;
+      margin-top: 40px;
+      text-align: center;
+      width: 115px;
+    }
+
+    &.button:first-child {
+      margin-right: 30px; //50px;
+    }
+  }
+
+  &__button-cancel {
+    min-width: 150px;
+    height: 40px;
+    padding: 2px 5px;
+    @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
+    border-radius: var(--border-radius);
+    border: 1px solid var(--btn-rollback-border);
+
+    &:hover {
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
+    }
+  }
+
+  &__button-confirm {
+    background-color: var(--btn-commit-background);
+    min-width: 180px;
+    height: 40px;
+    @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-commit-text));
+    border: 0px;
+
+    &:hover {
+      border: 2px solid var(--btn-commit-border-hover);
+      background-color: var(--btn-commit-background-hover);
+    }
+
+    &.unblock,
+    &.unarchive {
+      background-color: var(--btn-commit-background);
+      width: 115px;
+      height: 35px;
+    }
+
+    &.destroy,
+    &.remove,
+    //    &.reset,
+    &.block,
+    &.archive {
+      background-color: var(--btn-caution-background);
+      width: 115px;
+      height: 35px;
+
+      &:hover {
+        background-color: var(--btn-caution-background);
+        border: 1px solid var(--btn-caution-border-hover);
+      }
+    }
+  }
+}

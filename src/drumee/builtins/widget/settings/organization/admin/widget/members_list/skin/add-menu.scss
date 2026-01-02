@@ -1,0 +1,114 @@
+@use "mixins/drumee";
+
+.widget-members-list {
+  &-menu {
+    &__wrapper {
+      &[data-state="1"] {
+        & .trigger-icon {
+          color: var(--default-icon-active);
+        }
+      }
+
+      & .menu-topic-items {
+        background-color: var(--white);
+        border-radius: var(--border-radius);
+        box-shadow: var(--drumee-container-dropdown);
+        justify-content: center;
+        max-width: 202px;
+        min-height: 50px;
+        min-width: 202px;
+        padding: 5px 0;
+        width: 100% !important;
+
+        &__wrapper {
+          left: -57px;
+          padding: 10px;
+          top: 33px;
+          box-shadow: 0px 12px 24px 0px var(--neutral-300);
+          border-radius: var(--corner-radius-3);
+          background-color: var(--white);
+        }
+
+        // &:before {
+        //   background-color: var(--default-background);
+        //   box-shadow: -4px -6px 10px 1px rgba(63, 79, 117, 0.13);
+        //   content: "";
+        //   height: 10px;
+        //   left: 12px;
+        //   position: absolute;
+        //   top: -5px;
+        //   transform: rotate(45deg);
+        //   width: 10px;
+        // }
+
+        // &:after {
+        //   background: var(--default-background);
+        //   border-radius: var(--default-border-radius-top);
+        //   content: "";
+        //   left: 0;
+        //   position: absolute;
+        //   top: 0;
+        //   width: 100%;
+        // }
+      }
+    }
+
+    &__icon {
+      align-items: center;
+      color: var(--default-icon-neutral);
+      cursor: pointer;
+      opacity: 0.85;
+
+      &.trigger-icon {
+        box-sizing: border-box;
+        height: 26px;
+        margin: 2px;
+        padding: 4px;
+        position: absolute;
+        right: 10px;
+        width: 28px;
+
+        &.tag {
+          opacity: 0.4;
+          pointer-events: none;
+        }
+      }
+
+      svg {
+        &:hover {
+          color: var(--primary-400);
+          opacity: 1;
+        }
+      }
+    }
+
+    &__item-wrapper {
+      width: 100%;
+    }
+
+    &__item {
+      cursor: pointer;
+      margin-bottom: 1px;
+      padding: 8px 8px 5px 17px;
+
+      &:hover {
+        background-color: var(--neutral-300);
+        color: var(--default-text-reverse);
+
+        & .widget-members-list-menu__note {
+          color: var(--default-text-hover);
+        }
+
+        & svg {
+          fill: var(--default-icon-reverse);
+        }
+      }
+    }
+
+    &__note {
+      bottom: 2px;
+      padding-top: 0px;
+      @include drumee.typo($size: 13px, $weight: 300, $line: 14px, $color: var(--default-text-color));
+    }
+  }
+}

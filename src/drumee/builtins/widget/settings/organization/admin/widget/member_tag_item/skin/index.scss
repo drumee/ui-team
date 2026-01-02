@@ -1,0 +1,119 @@
+@use 'mixins/drumee';
+
+.widget-member-tagItem {
+  &__ui {
+    background-color: inherit;
+    height: 35px;
+    margin-top:0;
+    overflow: hidden;
+    width: 100%;
+
+    &[data-active="active"],
+    &[data-radio="on"],
+    &:hover {
+      background:var(--neutral-300);
+      color	:var(--default-text-hover);
+      
+      & .form-tag {
+        background: transparent;
+        color	: inherit;
+      }
+
+      & .widget-member-tagItem__container {
+        &.editTag,
+        &.addTag {
+          & .destroy-tag {
+            color:var(--default-icon-neutral)  !important;
+          }
+        }
+      }
+      
+      & .widget-member-tagItem__note.name {
+        color :var(--default-text-reverse)  !important;
+        width: 120px;
+        @include drumee.overflow-text;
+      }
+      
+      & .edit-icon {
+        display: flex;
+      }
+    }
+    
+    &[data-form='on'] {
+      &[data-radio='on'],
+      &:hover {
+        background: transparent;
+        @include drumee.overflow-text;
+      }
+    }
+  }
+
+  &__main {
+    background-color: inherit;
+  }
+
+  &__container {
+    cursor: pointer;
+    margin: 1px 0.5px 0px 0px;
+    padding-bottom: 5px;
+    padding-left: 27px; 
+    padding-top: 5px;
+    @include drumee.typo($size: 14px, $line: 14px, $color: var(--default-text-color));
+  }
+
+  &__icon {
+    color : var(--default-icon-reverse); 
+    height: 14px;
+    margin: 4px;
+    position: absolute;
+    right: 4px;
+    width : 14px;
+
+
+    &.edit-icon {
+      display : none;
+  /*    &:focus{
+        display: flex;
+        visibility: visible;
+      }*/
+    }
+
+    &.destroy-tag {
+      color: var(--default-icon-neutral);
+      opacity: 0.75;
+    }
+  }
+
+  &__note {
+    &.name {
+      align-items: center;
+      width: 148px;
+      @include drumee.overflow-text;
+      .inner{
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  &__entry {
+    max-width: 117px;
+    & input {
+      background: var(--default-background);
+      border-bottom: 1px solid var(--default-entry-border-bottom);
+      cursor: text;
+      height: 25px;
+      &:hover {
+        border-color: var(--focus-border-placeholder);
+      }
+      &:focus {
+        border-color: var(--focus-border-placeholder);
+      }
+
+      &::placeholder {
+        @include drumee.typo($size: 14px, $line: 16px,$weight:300, $color: var(--default-text-placeholder));
+      }
+    }
+  }
+}

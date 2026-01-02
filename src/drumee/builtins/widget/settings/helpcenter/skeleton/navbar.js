@@ -47,6 +47,8 @@ function nav(ui) {
       nav_item(ui, "settings", "User Guide", 1),
       nav_item(ui, "storage", "Documentations", 2),
       nav_item(ui, "shield", "Community", 3),
+      nav_item(ui, "shield", "Terms of Service", 4),
+      nav_item(ui, "shield", "Privacy Policy", 5),
     ],
   });
   const legals = Skeletons.Box.Y({
