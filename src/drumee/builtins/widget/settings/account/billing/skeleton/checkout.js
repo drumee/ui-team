@@ -106,6 +106,8 @@ function checkout(ui) {
 
   const summary = ui.calculateCheckoutSummary(ui.state);
 
+  const isFreePlan = ui.state?.checkout?.selectedPlan === "free";
+  
   const leftPanel = Skeletons.Box.Y({
     className: `${pfx}-left`,
     kids: [
@@ -154,6 +156,8 @@ function checkout(ui) {
             placeholder: "0",
             value: String(ui.state?.checkout?.seats || 5),
             sys_pn: `${pfx}-seats-input`,
+            readonly: ui.state?.checkout?.selectedPlan === "free" ? true : false,
+            interactive: ui.state?.checkout?.selectedPlan === "free" ? 0 : 1,
           }),
         ],
       }),
@@ -170,6 +174,8 @@ function checkout(ui) {
             placeholder: "0",
             value: String(ui.state?.checkout?.storage || 0),
             sys_pn: `${pfx}-storage-input`,
+            readonly: ui.state?.checkout?.selectedPlan === "free" ? true : false,
+            interactive: ui.state?.checkout?.selectedPlan === "free" ? 0 : 1,
           }),
         ],
       }),
@@ -219,77 +225,80 @@ function checkout(ui) {
         ],
       }),
 
-      Skeletons.Box.Y({
-        className: `${pfx}-section-bundles`,
-        kids: [
-          Skeletons.Box.X({
-            className: `${pfx}-section-bundles-header`,
-            kids: [
-              Skeletons.Note({
-                className: `${pfx}-section-bundles-header-title`,
-                content: LOCALE.STORAGE_BUNDLES,
-              }),
-            ],
-          }),
-          Skeletons.Box.X({
-            className: `${pfx}-section-bundles-subtitle`,
-            kids: [
-              Skeletons.Button.Icon({
-                className: `${pfx}-section-bundles-icon`,
-                ico: "raw-hard-drive-blue",
-              }),
-              Skeletons.Note({
-                className: `${pfx}-section-bundles-subtitle`,
-                content: LOCALE.STORAGE_ADD_ON,
-              }),
-            ],
-          }),
-          Skeletons.Note({
-            className: `${pfx}-section-bundles-note`,
-            content: LOCALE.CHOOSE_ONE_STORAGE_UPGRADE,
-          }),
-          Skeletons.Box.Y({
-            className: `${pfx}-section-bundles-list`,
-            kids: [
-              Skeletons.Box.X({
-                className: `${pfx}-section-bundles-list-item`,
-                kids: [
-                  bundleItem(ui, {
-                    value: "100",
-                    title: "+100GB",
-                    price: "$8 /mo",
-                    unit: "$0.080/GB",
-                  }),
-                  bundleItem(ui, {
-                    value: "200",
-                    title: "+200GB",
-                    price: "$14 /mo",
-                    unit: "$0.070/GB",
-                  }),
-                ],
-              }),
-              Skeletons.Box.X({
-                className: `${pfx}-section-bundles-list-item`,
-                kids: [
-                  bundleItem(ui, {
-                    value: "500",
-                    title: "+500GB",
-                    price: "$30 /mo",
-                    unit: "$0.060/GB",
-                  }),
-                  bundleItem(ui, {
-                    value: "1000",
-                    title: "+1TB",
-                    price: "$50 /mo",
-                    unit: "$0.049/GB",
-                    badge: LOCALE.BEST_VALUE,
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
+      // Only show storage bundles section if plan is not "free"
+      ...(isFreePlan ? [] : [
+        Skeletons.Box.Y({
+          className: `${pfx}-section-bundles`,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}-section-bundles-header`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}-section-bundles-header-title`,
+                  content: LOCALE.STORAGE_BUNDLES,
+                }),
+              ],
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}-section-bundles-subtitle`,
+              kids: [
+                Skeletons.Button.Icon({
+                  className: `${pfx}-section-bundles-icon`,
+                  ico: "raw-hard-drive-blue",
+                }),
+                Skeletons.Note({
+                  className: `${pfx}-section-bundles-subtitle`,
+                  content: LOCALE.STORAGE_ADD_ON,
+                }),
+              ],
+            }),
+            Skeletons.Note({
+              className: `${pfx}-section-bundles-note`,
+              content: LOCALE.CHOOSE_ONE_STORAGE_UPGRADE,
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}-section-bundles-list`,
+              kids: [
+                Skeletons.Box.X({
+                  className: `${pfx}-section-bundles-list-item`,
+                  kids: [
+                    bundleItem(ui, {
+                      value: "100",
+                      title: "+100GB",
+                      price: "$8 /mo",
+                      unit: "$0.080/GB",
+                    }),
+                    bundleItem(ui, {
+                      value: "200",
+                      title: "+200GB",
+                      price: "$14 /mo",
+                      unit: "$0.070/GB",
+                    }),
+                  ],
+                }),
+                Skeletons.Box.X({
+                  className: `${pfx}-section-bundles-list-item`,
+                  kids: [
+                    bundleItem(ui, {
+                      value: "500",
+                      title: "+500GB",
+                      price: "$30 /mo",
+                      unit: "$0.060/GB",
+                    }),
+                    bundleItem(ui, {
+                      value: "1000",
+                      title: "+1TB",
+                      price: "$50 /mo",
+                      unit: "$0.049/GB",
+                      badge: LOCALE.BEST_VALUE,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ]),
     ],
   });
 

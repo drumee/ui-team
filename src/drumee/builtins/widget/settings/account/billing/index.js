@@ -10,7 +10,7 @@ class settings_billing extends LetcBox {
       hub_id: Visitor.id,
       flow: "g",
     });
-
+    
     this.state = {
       currentTab: TAB_MONTHLY,
       plansTab: {
@@ -111,7 +111,12 @@ class settings_billing extends LetcBox {
       // Get storage from quota (in bytes, convert to GB)
       // 1 GB = 1,000,000,000 bytes (decimal)
       const storageBytes = quota?.storage || 0;
-      const storageGB = Math.floor(storageBytes / 1000000000);
+      let storageGB = Math.floor(storageBytes / 1000000000);
+
+      // If plan is free, set storage to 20GB (fixed, not editable)
+      if (mappedPlan === "free") {
+        storageGB = 20;
+      }
 
       // Update checkout state with current plan, seats, and storage
       this.state.checkout.selectedPlan = mappedPlan;
@@ -407,9 +412,9 @@ class settings_billing extends LetcBox {
    * @returns {number|null} Tab position or null
    */
   getSelectPlanData(cmd) {
-    let pos = null;
-
-    if (cmd.model) {
+        let pos = null;
+        
+        if (cmd.model) {
       pos =
         cmd.model.get(_a.pos) ||
         cmd.model.get(_a.value) ||
@@ -417,7 +422,7 @@ class settings_billing extends LetcBox {
         cmd.model.get("value");
     }
 
-    if (pos == null) {
+        if (pos == null) {
       pos =
         (cmd.mget && cmd.mget(_a.pos)) ||
         (cmd.get && cmd.get(_a.pos)) ||
@@ -425,44 +430,44 @@ class settings_billing extends LetcBox {
         (cmd.get && cmd.get(_a.value));
     }
 
-    if (pos == null) {
-      pos = cmd.pos || cmd.value;
-    }
-
-    if (pos == null && cmd.el) {
-      pos = cmd.el.dataset?.pos || cmd.el.dataset?.value;
-    }
-
-    if (pos == null && cmd.el) {
+        if (pos == null) {
+          pos = cmd.pos || cmd.value;
+        }
+        
+        if (pos == null && cmd.el) {
+          pos = cmd.el.dataset?.pos || cmd.el.dataset?.value;
+        }
+        
+        if (pos == null && cmd.el) {
       pos =
         cmd.el.getAttribute?.("data-pos") ||
         cmd.el.getAttribute?.("data-value");
-    }
-
-    if (pos == null && cmd.el) {
-      let parent = cmd.el.closest?.(`.${this.fig.family}__tabs-trigger-item`);
-      if (parent) {
-        const parentContainer = parent.parentElement;
-        if (parentContainer) {
-          const children = Array.from(parentContainer.children);
-          const index = children.indexOf(parent);
-          if (index !== -1 && index < TAB_CHECKOUT) {
+        }
+        
+        if (pos == null && cmd.el) {
+          let parent = cmd.el.closest?.(`.${this.fig.family}__tabs-trigger-item`);
+          if (parent) {
+            const parentContainer = parent.parentElement;
+            if (parentContainer) {
+              const children = Array.from(parentContainer.children);
+              const index = children.indexOf(parent);
+              if (index !== -1 && index < TAB_CHECKOUT) {
             pos = index;
+              }
+            }
           }
         }
-      }
-    }
-
-    if (pos == null && cmd.el) {
+        
+        if (pos == null && cmd.el) {
       const text =
         cmd.el.textContent?.toLowerCase() || cmd.el.innerText?.toLowerCase();
       if (text && text.includes("monthly")) {
-        pos = TAB_MONTHLY;
+            pos = TAB_MONTHLY;
       } else if (text && text.includes("yearly")) {
-        pos = TAB_YEARLY;
-      }
-    }
-
+            pos = TAB_YEARLY;
+          }
+        }
+        
     return pos;
   }
 
@@ -474,12 +479,12 @@ class settings_billing extends LetcBox {
    */
   handleSelectPlan(cmd) {
     const pos = this.getSelectPlanData(cmd);
-
-    if (pos != null && pos !== undefined) {
-      const posNum = parseInt(pos);
-      if (!isNaN(posNum) && (posNum === TAB_MONTHLY || posNum === TAB_YEARLY)) {
-        if (posNum !== this.state.currentTab) {
-          this.state.currentTab = posNum;
+        
+        if (pos != null && pos !== undefined) {
+          const posNum = parseInt(pos);
+          if (!isNaN(posNum) && (posNum === TAB_MONTHLY || posNum === TAB_YEARLY)) {
+            if (posNum !== this.state.currentTab) {
+              this.state.currentTab = posNum;
           this.state.plansTab.cycle =
             posNum === TAB_MONTHLY ? "monthly" : "yearly";
           this.tab = posNum;
@@ -636,7 +641,7 @@ class settings_billing extends LetcBox {
 
     if (previousBundle !== bundleValue) {
       this.state.checkout.selectedBundle = bundleValue;
-      this.renderContent();
+              this.renderContent();
     }
 
     return false;
