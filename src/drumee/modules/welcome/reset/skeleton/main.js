@@ -1,6 +1,6 @@
 
-function __skl_welcome_reset_main (_ui_) {
-  const emailFig = _ui_.fig.family
+function __skl_welcome_reset_main (ui) {
+  const emailFig = ui.fig.family
 
   const emailValidators = [      
     {reason: LOCALE.ENTER_VALID_EMAIL , comply: Validator.email},
@@ -37,8 +37,8 @@ function __skl_welcome_reset_main (_ui_) {
             interactive   : 1,
             preselect     : 1,
             service       : _e.submit,
-            uiHandler     : [_ui_],
-            errorHandler  : [_ui_],
+            uiHandler     : [ui],
+            errorHandler  : [ui],
             validators    : emailValidators,
             showError     : false
           })
@@ -47,8 +47,8 @@ function __skl_welcome_reset_main (_ui_) {
     ]
   })
 
-  const submit = require('../../skeleton/common/button').default(_ui_, _e.submit, 'Go')
-  const msgBox = require('../../skeleton/common/message-box').default(_ui_)
+  const submit = require('../../skeleton/common/button').default(ui, _e.submit, 'Go')
+  const msgBox = require('../../skeleton/common/message-box').default(ui)
 
   let a = Skeletons.Box.Y({
     debug     : __filename,  

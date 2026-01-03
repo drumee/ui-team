@@ -20,6 +20,7 @@ class __welcome_reset extends __welcome_interact {
     this._secret = this.mget(_a.secret)
     this._type = '';
     this._method = {};
+    this.model.set({ flow: _a.y })
     this.declareHandlers();
   }
 
@@ -28,18 +29,18 @@ class __welcome_reset extends __welcome_interact {
   */
   onDomRefresh() {
     let sid = bootstrap().maiden_session;
-    if (this._secret) {
-      this.postService({
-        service: SERVICE.butler.check_token,
-        secret: this._secret,
-        sid
-      }, { async: 1 }).then((data) => {
-        this.checkTokenResponse(data);
-      }).catch(() => {
-        return this.feed(require('./skeleton').default(this));
-      });
-      return;
-    }
+    // if (this._secret) {
+    //   this.postService({
+    //     service: SERVICE.butler.check_token,
+    //     secret: this._secret,
+    //     sid
+    //   }, { async: 1 }).then((data) => {
+    //     this.checkTokenResponse(data);
+    //   }).catch(() => {
+    //     return this.feed(require('./skeleton').default(this));
+    //   });
+    //   return;
+    // }
     return this.feed(require('./skeleton').default(this));
 
   }
@@ -48,20 +49,20 @@ class __welcome_reset extends __welcome_interact {
    * @param {LetcBox} child
    * @param {LetcBox} pn
   */
-  onPartReady(child, pn) {
-    switch (pn) {
-      case _a.header:
-        child.feed(require('./skeleton/header').default(this));
-        break
+  // onPartReady(child, pn) {
+  //   switch (pn) {
+  //     case _a.header:
+  //       child.feed(require('./skeleton/header').default(this));
+  //       break
 
-      case _a.content:
-        child.feed(require('./skeleton/main').default(this));
-        break
+  //     case _a.content:
+  //       child.feed(require('./skeleton/main').default(this));
+  //       break
 
-      default:
-        return super.onPartReady(child, pn);
-    }
-  }
+  //     default:
+  //       return super.onPartReady(child, pn);
+  //   }
+  // }
 
   /**
    *
@@ -257,10 +258,11 @@ class __welcome_reset extends __welcome_interact {
    * @param {object} data
   */
   checkTokenResponse(data) {
+    this.debug("AAAA:261", data)
     if (_.isEmpty(data.metadata)) {
       return Welcome.say('reset_password');
     }
-    this.feed(require('./skeleton').default(this));
+    // this.feed(require('./skeleton').default(this));
     return this.responseRouter(data)
   }
 

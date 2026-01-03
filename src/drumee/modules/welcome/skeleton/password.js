@@ -3,20 +3,20 @@ function __skl_welcome_password(ui, cn, passmeter) {
 
   cn = cn || `${ui.fig.group}__row ${ui.fig.family}__row`;
 
-  const a = Skeletons.Box.X({
+  const a = Skeletons.Box.Y({
     className: `${cn} entry-status`,
     sys_pn: 'wrapper-pw',
     partHandler: [ui],
     kids: [
-      Skeletons.Button.Svg({
-        ico: "profile-lock",
-        className: `${ui.fig.group}__icon ${ui.fig.family}__icon lock`
-      }),
+      // Skeletons.Button.Svg({
+      //   ico: "profile-lock",
+      //   className: `${ui.fig.group}__icon ${ui.fig.family}__icon lock`
+      // }),
 
       Skeletons.EntryBox({
         uiHandler: [ui],
         type: _a.password,
-        className: `${ui.fig.group}__entry ${ui.fig.family}__entry`,
+        className: `${ui.fig.group}__entry ${ui.fig.family}__entry password`,
         service: _e.submit,
         name: _a.password,
         placeholder: LOCALE.PASSWORD,
