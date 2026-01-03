@@ -377,6 +377,8 @@ class settings_billing extends LetcBox {
 
     const paymentData = {
       value: value,
+      seats: checkout.seats || 0,
+      storage: checkout.storage || 0,
       plan: selectedPlan,
       interval: interval,
       description: description,
