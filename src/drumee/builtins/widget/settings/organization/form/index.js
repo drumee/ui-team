@@ -78,7 +78,7 @@ class organization_form extends LetcBox {
     if (r.exists) {
       return this.showError(LOCALE.DOMAIN_ALREADY_EXISTS);
     }
-    let domain = await this.postService(SERVICE.plan.upgrade, {
+    let domain = await this.postService(SERVICE.adminpanel.create_organisation, {
       ident,
       name,
       nid: Visitor.get(_a.home_id),

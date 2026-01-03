@@ -41,7 +41,8 @@ class settings_account extends LetcBox {
    * 
    */
   canAdmin() {
-    return (Visitor.quota().plan == 'pro' && Visitor.domainCan(_K.permission.admin_member))
+    if (Visitor.quota().plan !== 'Pro') return false;
+    return Visitor.domainCan(_K.permission.admin_member) || Visitor.get("domain_id") == 1
   }
   /**
    *
@@ -75,7 +76,7 @@ class settings_account extends LetcBox {
    *
    */
   load_page(cmd) {
-    this._page = cmd.mget(_a.page);
+    if (cmd) this._page = cmd.mget(_a.page);
     this.__content.feed(this.skeletons[this._page](this));
     this.ensurePart("tab-name").then((p) => {
       p.set({ content: this.tab_name[this._page] });
@@ -236,7 +237,10 @@ class settings_account extends LetcBox {
         return this.ensurePart("avatar-progress").then((p) => {
           p.el.style.width = `${args.progress}%`;
         });
-
+      case 'plan_updated':
+        this._page = 4;
+        this.feed(require("./skeleton").default(this));
+        break;
       case "avatar-reloaded":
         return setTimeout(async () => {
           this.ensurePart("user-profile").then((p) => {
