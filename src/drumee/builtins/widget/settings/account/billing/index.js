@@ -45,12 +45,13 @@ class settings_billing extends LetcBox {
   _handlePaymentWebSocket(args = {}) {
     const { data, options } = args || {};
     const { service } = options || {};
+    this.debug("AAA:48", args)
 
-    if (
-      service === SERVICE.payment.checkout ||
-      service === SERVICE.payment.status
-    ) {
-      this._handlePaymentStatus(data);
+    switch (service) {
+      case 'payment.plan_updated':
+        Visitor.respawn(data)
+        this.triggerHandlers({ service: "plan_updated" })
+        break;
     }
   }
 
@@ -89,7 +90,7 @@ class settings_billing extends LetcBox {
       // Get current plan from Visitor.quota()
       // Structure: {plan: 'free', organization: 0, seat: 0, storage: 20000000000}
       const quota = Visitor.quota();
-      
+
       // Get plan name from quota.plan (primary source)
       const planName = (quota?.plan || "pro").toLowerCase();
       // Get period from plan_detail if available, default to monthly
@@ -357,7 +358,7 @@ class settings_billing extends LetcBox {
     } else {
       let w = Math.min(900, screen.availWidth - 100);
       let h = Math.min(700, screen.availHeight - 100);
-      let x = screen.availWidth/2 - w/2;
+      let x = screen.availWidth / 2 - w / 2;
       let y = 0;
       window.open(url, "_blank", `popup, noopener, noreferrer, width=${w}, height=${h}, left=${x}, top=${y}`);
     }

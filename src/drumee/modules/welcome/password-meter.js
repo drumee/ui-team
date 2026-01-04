@@ -10,13 +10,13 @@ const __core = require('./core');
 */
 
 class __welcome_password_meter extends __core {
-    
+
 
 
   /**
    ** @param {object} opt
   */
-  initialize (opt = {}) {
+  initialize(opt = {}) {
     this.pwMeterScoreLimit = 59;
     return super.initialize(opt);
   }
@@ -24,10 +24,10 @@ class __welcome_password_meter extends __core {
   /**
    *
   */
-  checkSanity () {
+  checkSanity() {
     this.pwMeterScoreLimit = 59;
     const v = this._input.getValue();
-    this._letters[_.last(v)]=1;
+    this._letters[_.last(v)] = 1;
     if (v.length < 1) {
       this._letters = {};
     }
@@ -38,13 +38,13 @@ class __welcome_password_meter extends __core {
         return true;
       }
       this._button.el.dataset.state = 0;
-      return false; 
+      return false;
     }
-    const length = (_.keys(this._letters).length + v.length)/2;
+    const length = (_.keys(this._letters).length + v.length) / 2;
 
-    let r = (50*length)/8;
+    let r = (50 * length) / 8;
     this.pw_meter.el.dataset.state = 1;
-    for (let c of Array.from(v)) { 
+    for (let c of Array.from(v)) {
       if (specials.test(c)) {
         r = r + 10;
       }
@@ -53,13 +53,13 @@ class __welcome_password_meter extends __core {
       r = 100;
     }
 
-    this.pw_meter.el.style.left = toPercent(r/100);
+    this.pw_meter.el.style.left = toPercent(r / 100);
 
     if (r > this.pwMeterScoreLimit) {
       this.msg(this._buttonLabel, 0);
       return true;
     }
-    
+
     this._button.el.dataset.state = 0;
     return false;
   }
@@ -67,7 +67,7 @@ class __welcome_password_meter extends __core {
   /**
    *
   */
-  clearError () {
+  clearError() {
     this.debug('clearError', this);
     if (this._message.isEmpty()) {
       return;
@@ -87,15 +87,19 @@ class __welcome_password_meter extends __core {
    * @param {LetcBox} child
    * @param {LetcBox} pn
   */
-  onPartReady (child, pn) {
-    switch (pn) { 
+  onPartReady(child, pn) {
+    this.debug("AAAA:91", child, pn)
+    switch (pn) {
       case 'ref-pwm':
         return this.pw_meter = child;
-      
+        
+      case 'button-confirm':
+        return this._button = child;
+
       case 'ref-pwm-score-limit':
-        this.pw_limit = child;        
-        return this.pw_limit.$el.css('left',`calc(${this.pwMeterScoreLimit}% - 4px)`);
-      
+        this.pw_limit = child;
+        return this.pw_limit.$el.css('left', `calc(${this.pwMeterScoreLimit}% - 4px)`);
+
       default:
         return super.onPartReady(child, pn);
     }

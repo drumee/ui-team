@@ -5,6 +5,7 @@
 @use "security";
 @use "billing";
 @use "modal";
+@use "seats";
 
 .settings-account {
   &__ui {

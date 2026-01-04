@@ -123,7 +123,6 @@ class __welcome_router extends LetcBox {
         opt.uid = args[2];
         opt.secret = args[3];
       }
-      require_logout = 1;
       this.feed(require('./skeleton').default(this, { ...opt, kind: 'welcome_reset' }));
     }
 

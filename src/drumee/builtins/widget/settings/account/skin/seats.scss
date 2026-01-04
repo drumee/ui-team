@@ -1,0 +1,44 @@
+@use "sass:meta";
+@use "mixins/drumee";
+@use "../../skin" as *;
+@use "skin/lib/button" as *;
+
+.settings-account-seats {
+
+  &__main {
+    width: 100%;
+
+  }
+
+
+
+  &-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacer-4) var(--spacer-5) var(--spacer-4) var(--spacer-5);
+    width: 100%;
+    color: var(--neutral-600);
+    gap: var(--spacer-2);
+    @include drumee.typo($line: 22px, $size: 16px, $weight: 400, $color: var(--neutral-600));
+
+    // &:hover {
+    //   background-color: var(--default-bg-hover);
+    // }
+  }
+
+  &-title {
+    font-weight: 900;
+  }
+
+  &__buttons {
+    justify-content: center;
+  }
+
+  &__button-main {
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
+  @include common-button;
+}

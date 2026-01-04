@@ -1,27 +1,43 @@
-function __skl_welcome_reset  (_ui_) {
-  const resetFig = _ui_.fig.family
+function __skl_welcome_reset(ui) {
+  const fig = ui.fig.family
+  const { button } = require("builtins/skeleton/toolkit");
+  const msgBox = require('../../skeleton/common/message-box').default(ui)
 
   const header = Skeletons.Box.Y({
-    className  : `${resetFig}__header`,
-    sys_pn     : _a.header,
+    className: `${fig}__header`,
+    sys_pn: _a.header,
+    kids: require('./header').default(ui)
   })
 
   const content = Skeletons.Box.X({
-    className  : `${resetFig}__content`,
-    sys_pn     : _a.content,
+    className: `${fig}__content`,
+    sys_pn: _a.content,
+    kids: require('./password').default(ui)
   })
 
   let a = Skeletons.Box.Y({
-    className  : `${resetFig}__main`,
-    debug      : __filename,
-    kids       : [
+    className: `${fig}__main`,
+    debug: __filename,
+    kids: [
       Skeletons.Box.Y({
-        className  : `${resetFig}__container`,
-        kids : [
+        className: `${fig}__container`,
+        kids: [
           header,
           content
         ]
-      })
+      }),
+      msgBox,
+      button(ui, {
+        label: LOCALE.CONFIRM,
+        type: _a.toggle,
+        className: `${fig}__button`,
+        service: "create-password",
+        ico: "arrow-right",
+        sys_pn: "button-confirm",
+        flow: 'g',
+        priority: "primary",
+      }),
+
     ]
   })
 

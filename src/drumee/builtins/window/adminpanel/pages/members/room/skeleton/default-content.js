@@ -1,8 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/room/skeleton/default-content.js
-//   TYPE : Skeleton
-// ==================================================================== *
 
 function __skl_members_room_default_content (_ui_) {
   const contentFig = _ui_.fig.family

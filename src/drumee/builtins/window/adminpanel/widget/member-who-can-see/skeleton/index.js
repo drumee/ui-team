@@ -1,12 +1,4 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2020
- * FILE : /src/drumee/builtins/window/adminpanel/widget/member-who-can-see/skeleton/index.js
- * TYPE : Skeleton
- * ===================================================================**/
 
-// ===========================================================
-//
-// ===========================================================
 function __skl_widget_member_whoCanSee  (_ui_) {
   const whoCanSeeFig = _ui_.fig.family
   
@@ -15,7 +7,7 @@ function __skl_widget_member_whoCanSee  (_ui_) {
     kids       : [
       Skeletons.Note({
         className : `${whoCanSeeFig}__note title`,
-        content   : LOCALE.WHO_CAN_SEE// 'Authorized contacts' 
+        content   : LOCALE.WHO_CAN_SEE
       }),
       
       Skeletons.Button.Svg({

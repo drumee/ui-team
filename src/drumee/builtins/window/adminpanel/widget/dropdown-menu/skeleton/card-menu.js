@@ -19,8 +19,8 @@
  * @param {MenuItem} opt - Options 
  */
 
-const __skl_dropdown_menu_item = function (_ui_, opt = {}) {
-  const menuFig = `${_ui_.fig.family}-menu`;
+const menu_item = function (ui, opt = {}) {
+  const menuFig = `${ui.fig.family}-menu`;
   const mode = opt.mode || _a.enable
 
   const menuItem = Skeletons.Box.X({
@@ -41,11 +41,11 @@ const __skl_dropdown_menu_item = function (_ui_, opt = {}) {
 }
 /**
  * default Skeleton for dropdown_menu
- * @param {Object}  _ui_ 
+ * @param {Object}  ui 
  */
-const __skl_dropdown_menu = function (_ui_) {
+const __skl_dropdown_menu = function (ui) {
 
-  const menuFig = `${_ui_.fig.family}-menu`;
+  const menuFig = `${ui.fig.family}-menu`;
 
   const menuTrigger = Skeletons.Box.X({
     className: `${menuFig}__input_wrapper`,
@@ -55,16 +55,16 @@ const __skl_dropdown_menu = function (_ui_) {
         className: `${menuFig}__icon-dropdown`,
       }),
       Skeletons.Note({
-        content: _ui_.selected.display, // default label 
+        content: ui.selected.display, // default label 
         sys_pn: 'selected_text',
       }),
     ]
   })
 
 
-  const options = _ui_.mget('options')
+  const options = ui.mget('options')
     .map((option, index) =>
-      __skl_dropdown_menu_item(_ui_, { display: option.display, id: index, mode: option.mode }));
+      menu_item(ui, { display: option.display, id: index, mode: option.mode }));
 
   const menuItems = Skeletons.Box.X({
     className: `${menuFig}__items-wrapper`,
@@ -78,10 +78,10 @@ const __skl_dropdown_menu = function (_ui_) {
 
   const menu = Skeletons.Box.X({
     debug: __filename,
-    className: `${menuFig}__dropdown ${_ui_.fig.group}__dropdown`,
+    className: `${menuFig}__dropdown ${ui.fig.group}__dropdown`,
     kids: [{
       kind: KIND.menu.topic,
-      className: `${menuFig}__wrapper ${_ui_.fig.group}__wrapper`,
+      className: `${menuFig}__wrapper ${ui.fig.group}__wrapper`,
       flow: _a.y,
       opening: _e.click,
       sys_pn: "contact-card-dropdown",

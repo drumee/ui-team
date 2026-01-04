@@ -9,7 +9,7 @@ const __skl_admin_panel_common_topBar = function (ui) {
     windowTitle = (ui.organisation.name.printf(LOCALE.ADMINISTRATION_OF)) //
   }
 
-  const a = Skeletons.Box.X({
+  const a = Skeletons.Box.G({
     className: `${figFamily}__container ${figGroup}__container`,
     sys_pn: _a.topBar,
     service: _e.raise,
@@ -18,13 +18,13 @@ const __skl_admin_panel_common_topBar = function (ui) {
     },
     debug: __filename,
     kids: [
-      Skeletons.Box.X({
-        className: `${ui.fig.family}__page-dropdown`,
-        sys_pn: 'page_dropdown',
-        kids: [
-          require('../common/dropdown').default(ui)
-        ]
-      }),
+      // Skeletons.Box.X({
+      //   className: `${ui.fig.family}__page-dropdown`,
+      //   sys_pn: 'page_dropdown',
+      //   kids: [
+      //     require('../common/dropdown').default(ui)
+      //   ]
+      // }),
 
       require('./search').default(ui),
 
@@ -41,7 +41,7 @@ const __skl_admin_panel_common_topBar = function (ui) {
         ]
       }),
 
-      require('window/skeleton/topbar/control')(ui, 'sc')
+      require('window/skeleton/topbar/control')(ui, 'c')
 
     ]
   });

@@ -45,14 +45,14 @@ class __window_manager extends push {
   /**
    *
    */
-  updateContextMenuItems() {
-    // if (document.fullscreenElement != null) {
-    //   this.contextmenuItems.splice(3, 1, _a.fullscreen);
-    // } else {
-    //   this.contextmenuItems.splice(3, 1, _a.exitFullScreen);
-    // }
-    // return;
-  }
+  // updateContextMenuItems() {
+  //   if (document.fullscreenElement != null) {
+  //     this.contextmenuItems.splice(3, 1, _a.fullscreen);
+  //   } else {
+  //     this.contextmenuItems.splice(3, 1, _a.exitFullScreen);
+  //   }
+  //   return;
+  // }
 
   /**
    *
@@ -71,6 +71,15 @@ class __window_manager extends push {
     if (opt.kind) {
       this.launch(opt, { explicit: 1 });
     }
+  }
+
+  /**
+   * 
+   */
+  changeModalState(s){
+    this.ensurePart('wrapper-modal').then((p)=>{
+      p.el.dataset.state = s
+    })
   }
 
   /**
@@ -704,8 +713,8 @@ class __window_manager extends push {
       case "new-folder":
         return Wm.addFolder(cmd);
 
-      case "toggle-fullscreen":
-        return this.toggleFullscreen();
+      // case "toggle-fullscreen":
+      //   return this.toggleFullscreen();
 
       case _a.helpdesk:
         return this.launch(
@@ -871,14 +880,14 @@ class __window_manager extends push {
   /**
    *
    */
-  async toggleFullscreen() {
-    if (document.fullscreenElement != null) {
-      if (document.fullscreen) document.exitFullscreen();
-    } else {
-      await document.body.requestFullscreen();
-    }
-    this.updateContextMenuItems();
-  }
+  // async toggleFullscreen() {
+  //   if (document.fullscreenElement != null) {
+  //     if (document.fullscreen) document.exitFullscreen();
+  //   } else {
+  //     await document.body.requestFullscreen();
+  //   }
+  //   this.updateContextMenuItems();
+  // }
 
   /**
    *
