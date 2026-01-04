@@ -214,6 +214,35 @@ class settings_account extends LetcBox {
   }
 
   /**
+   * 
+   * @param {*} cmd 
+   */
+  changeMFA(cmd) {
+    this.debug("AAAA:264", cmd, this.getData())
+    let MFA = [LOCALE.OFF, LOCALE.ON];
+    let { email } = Visitor.profile();
+    return this.ensurePart("current-mfa").then(async (p) => {
+      let payload = await this.postService(SERVICE.otp.send, { id: Visitor.id, email })
+      p.mset({ value: cmd.mget('mfa'), content: MFA[cmd.mget('mfa')] })
+      this.debug("AAA:133", payload, p);
+      payload.hub_id = Visitor.id;
+      await Kind.waitFor('dtk_otp');
+      this.feed({
+        payload,
+        dataset: {
+          nested: 1
+        },
+        kind: 'dtk_otp',
+        api: SERVICE.desk.set_mfa,
+        title: "Multi factor athentication",
+        message: "We have sent a code to {0} validate you new settings".format(),
+        service: 'otp-signined'
+      });
+    });
+
+  }
+
+  /**
    * @param {*} cmd
    * @param {*} args
    */
@@ -261,9 +290,7 @@ class settings_account extends LetcBox {
         return this.load_page(cmd);
 
       case "change-mfa":
-        return this.ensurePart("current-mfa").then((p) => {
-          this.debug("AAA:133", p);
-        });
+        return this.changeMFA(cmd);
 
       case "prompt-password":
         return this.__overlay.feed(
