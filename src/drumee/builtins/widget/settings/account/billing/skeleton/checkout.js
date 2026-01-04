@@ -13,6 +13,7 @@ function bundleItem(ui, opt) {
   const selectedBundle = String(ui.state?.checkout?.selectedBundle || "");
   const bundleValue = String(value || "");
   const isSelected = selectedBundle !== "" && selectedBundle === bundleValue;
+  const isFreePlan = ui.state?.checkout?.selectedPlan === "free";
 
   const titleContent = badge
     ? Skeletons.Box.X({
@@ -49,6 +50,7 @@ function bundleItem(ui, opt) {
     value: value,
     formItem: 1,
     state: isSelected ? 1 : 0,
+    active: isFreePlan ? 0 : 1,
     bubble: false,
     uiHandler: [ui],
     radioRecursive: true,

@@ -13,7 +13,7 @@ export function entry(ui, opt) {
     value,
     formItem: name,
     innerClass: name,
-    mode: _a.interactive,
+    mode: interactive === 0 ? _a.commit : _a.interactive,
     service,
     placeholder,
     uiHandler: [ui],

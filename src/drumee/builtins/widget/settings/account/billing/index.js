@@ -656,6 +656,11 @@ class settings_billing extends LetcBox {
    * @returns {boolean} false to stop event bubbling
    */
   _handleInputField(cmd, args, service) {
+    // Block input when plan is free
+    if (this.state?.checkout?.selectedPlan === "free") {
+      return false;
+    }
+
     const field = this._getFieldFromService(service, cmd);
 
     if (!field) {
@@ -802,6 +807,11 @@ class settings_billing extends LetcBox {
         const plan = this._getValueFromCmd(cmd, args);
         if (plan === "free" || plan === "pro") {
           this.state.checkout.selectedPlan = plan;
+          // If switching to free plan, set storage to 20GB and clear bundle selection
+          if (plan === "free") {
+            this.state.checkout.storage = 20;
+            this.state.checkout.selectedBundle = "";
+          }
           this.renderContent();
         }
         return false;
