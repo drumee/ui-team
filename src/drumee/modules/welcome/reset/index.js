@@ -79,12 +79,12 @@ class __welcome_reset extends __welcome_interact {
         let a = () => {
           this.__noCodeOptions.el.dataset.mode = _a.open
         }
-        _.delay(a, 15000)
+        setTimeout(a, 15000)
         break
 
       case 'complete':
         this.feed({ kind: 'spinner', mode: 'welcome' });
-        _.delay(() => { location.hash = ''; location.reload() }, 2000);
+        setTimeout(() => { location.hash = ''; location.reload() }, 2000);
         return;
 
       default:
@@ -146,28 +146,43 @@ class __welcome_reset extends __welcome_interact {
       this._input.showError()
       return this.renderMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
     }
+    if (!this._secret) {
+      location.hash = "#/welcome/signin"
+      return
+    }
+    let sid = bootstrap().maiden_session;
+    this.postService({
+      service: SERVICE.butler.check_token,
+      secret: this._secret,
+      sid
+    }, { async: 1 }).then((data) => {
+      this.checkTokenResponse(data);
+    }).catch((e) => {
+      this.debug("Caught error in createPassword:", e, this)
+    });
 
     const data = this._input.getData()
-
-    this.postService({
-      service: SERVICE.butler.set_password,
-      secret: this._secret,
-      password: data.value,
-      id: this.mget(_a.uid)
-    }).then(async (resp) => {
-      let params = await this.fetchService(SERVICE.yp.get_env);
-      if (params.user && params.user.signed_in) {
-        Visitor.set(params.user);
-        location.hash = '#/desk';
-        setTimeout(() => {
-          location.reload()
-        }, 1000);
-      } else {
-        this.responseRouter(resp);
-      }
-    }).catch((e) => {
-      this.renderMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
-    })
+    this.debug("AAA:165", data, this)
+    // return
+    // this.postService({
+    //   service: SERVICE.butler.set_password,
+    //   secret: this._secret,
+    //   password: data.value,
+    //   id: this.mget(_a.uid)
+    // }).then(async (resp) => {
+    //   let params = await this.fetchService(SERVICE.yp.get_env);
+    //   if (params.user && params.user.signed_in) {
+    //     Visitor.set(params.user);
+    //     location.hash = '#/desk';
+    //     setTimeout(() => {
+    //       location.reload()
+    //     }, 1000);
+    //   } else {
+    //     this.responseRouter(resp);
+    //   }
+    // }).catch((e) => {
+    //   this.renderMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
+    // })
   }
 
   /**
@@ -217,20 +232,20 @@ class __welcome_reset extends __welcome_interact {
   renderMessage(msg = '', type = '') {
     const msgBox = require('./skeleton/acknowledgment').default(this, msg, type)
 
-    this.__buttonWrapper.el.dataset.mode = _a.closed
+    // this.__buttonWrapper.el.dataset.mode = _a.closed
     this.__messageBox.el.dataset.mode = _a.open
     this.__messageBox.feed(msgBox)
 
     const f = () => {
-      if (type == 'reset_token') {
-        const { protocol, main_domain } = bootstrap();
-        return location.href = `${protocol}://${main_domain}${location.pathname}${_K.module.signin}`
-      }
+      // if (type == 'reset_token') {
+      //   const { protocol, main_domain } = bootstrap();
+      //   return location.href = `${protocol}://${main_domain}${location.pathname}${_K.module.signin}`
+      // }
       this.__messageBox.el.dataset.mode = _a.closed
       this.__messageBox.clear()
-      return this.__buttonWrapper.el.dataset.mode = _a.open
+      // return this.__buttonWrapper.el.dataset.mode = _a.open
     }
-    return _.delay(f, 5000)
+    return setTimeout(f, 3000)
   }
 
   /**
@@ -259,11 +274,45 @@ class __welcome_reset extends __welcome_interact {
   */
   checkTokenResponse(data) {
     this.debug("AAAA:261", data)
-    if (_.isEmpty(data.metadata)) {
-      return Welcome.say('reset_password');
+    if (!data) {
+      return this.renderMessage(LOCALE.SOMETHING_WENT_WRONG)
     }
-    // this.feed(require('./skeleton').default(this));
-    return this.responseRouter(data)
+    switch (data.error) {
+      case 'INVALID_LINK':
+      case 'LINK_EXPIRES':
+        return this.renderMessage(LOCALE[data.error]);
+      case undefined:
+      case null:
+        const { password } = this.getData()
+        this.postService({
+          service: SERVICE.butler.set_password,
+          secret: this._secret,
+          password,
+          id: this.mget(_a.uid)
+        }).then(async (resp) => {
+          this.debug("AAAA:293", resp)
+          let params = await this.fetchService(SERVICE.yp.get_env);
+          this.debug("AAAA:293", resp)
+          if (params.user && params.user.signed_in) {
+            Visitor.set(params.user);
+            location.hash = '#/desk';
+            setTimeout(() => {
+              location.reload()
+            }, 1000);
+          } else {
+            this.renderMessage(LOCALE.SOMETHING_WENT_WRONG)
+            // this.responseRouter(resp);
+          }
+        }).catch((e) => {
+          this.renderMessage(LOCALE.SOMETHING_WENT_WRONG)
+        })
+    }
+
+    // if (_.isEmpty(data.metadata)) {
+    //   return Welcome.say('reset_password');
+    // }
+    // // this.feed(require('./skeleton').default(this));
+    // return this.responseRouter(data)
   }
 
   /**

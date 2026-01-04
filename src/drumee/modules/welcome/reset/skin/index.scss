@@ -131,7 +131,9 @@
 
     &.buttons-wrapper,
     &.message-wrapper {
-      margin: 75px 0 15px 0px;
+      // margin: 75px 0 15px 0px;
+      font-size: 16px;
+      color: var(--neutral-700);
 
       &.message.no-background {
         width: 400px;
@@ -152,7 +154,7 @@
 
       &[data-status="error"] {
         border-radius: var(--border-radius);
-        border: 2px solid var(--default-border-error); //var(--eorange-sunset);
+        border: 1px solid var(--default-border-error); //var(--eorange-sunset);
       }
     }
   }
@@ -284,7 +286,7 @@
 
   &__entry {
     & input {
-      border-bottom: none;
+      // border-bottom: none;
       @include drumee.typo($size: 18px, $line: 28px, $color: var(--default-text-color));
 
       &::placeholder {
@@ -294,7 +296,7 @@
 
     &[data-status="error"] {
       border-radius: var(--border-radius);
-      border: 2px solid var(--default-border-error); //var(--eorange-sunset);
+      border: 1px solid var(--red-500); //var(--eorange-sunset);
     }
 
     & .entry-reminder_error {

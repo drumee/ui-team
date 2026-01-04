@@ -1,45 +1,62 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/skeleton/action-popup/content/reset-member-password.js
-//   TYPE : Skeleton
-// ===================================================================**/
+const { button } = require("builtins/skeleton/toolkit");
 
-function __skl_members_action_popup_content_reset_member_password (_ui_) {
-  const contentFig = `${_ui_.fig.family}-action-popup-confirmation`;
-  const data = _ui_.mget(_a.member)
+function __skl_members_action_popup_content_reset_member_password(ui) {
+  const fig = `${ui.fig.family}-action-popup-confirmation`;
 
   const content = Skeletons.Box.Y({
-    className  : `${contentFig}__content`,
+    className: `${fig}__content`,
     kids: [
       Skeletons.Note({
-        className : `${contentFig}__note sub-header`,
-        content   : LOCALE.SEND_AGAIN_A_VALIDATION_EMAIL//CONFIRM_SEND_RESET_PASSWORD_LINK//Confirm you want to send reset password link for:`
+        className: `${fig}__note sub-header`,
+        content: LOCALE.SEND_AGAIN_A_VALIDATION_EMAIL//CONFIRM_SEND_RESET_PASSWORD_LINK//Confirm you want to send reset password link for:`
       }),
 
-      require('../profile-display').default(_ui_),
+      require('../profile-display').default(ui),
     ]
   })
-  
-  const buttons = Preset.ConfirmButtons(_ui_, {
-    cancelLabel       : LOCALE.CANCEL || '',
-    cancelService     : 'close-overlay',
-    confirmLabel      : LOCALE.CONFIRM,
-    confirmService    : 'confirm-reset-member-password',
-    confirmBtnAction  : 'reset'
-  });
 
-  buttons.className = `${buttons.className} resend-link`;
-  
-  const a = Skeletons.Box.Y({
-    debug       : __filename,
-    className   : `${contentFig}__content reset-member-password`,
-    kids        : [
+  // const buttons = Preset.ConfirmButtons(ui, {
+  //   cancelLabel: LOCALE.CANCEL || '',
+  //   cancelService: 'close-overlay',
+  //   confirmLabel: LOCALE.CONFIRM,
+  //   confirmService: 'confirm-reset-member-password',
+  //   confirmBtnAction: 'reset'
+  // });
+
+  // buttons.className = `${buttons.className} resend-link`;
+  let buttonsFig= `${ui.fig.family}-action-popup`
+  let buttons = Skeletons.Box.X({
+    className: `${buttonsFig}__buttons`,
+    uiHandler: ui,
+    sys_pn: _a.footer,
+    dataset: { page: ui._page },
+    kids: [
+      button(ui, {
+        label: LOCALE.CANCEL,
+        type: _a.toggle,
+        className: `${buttonsFig}__button`,
+        service: 'close-overlay',
+        priority: "secondary",
+      }), button(ui, {
+        label: LOCALE.RESEND_INVITE,
+        type: _a.toggle,
+        ico: "arrow-right",
+        service: _e.submit,
+        className: `${buttonsFig}__button`,
+        priority: "primary",
+        service: 'confirm-reset-member-password',
+      })
+    ],
+  })
+
+  return Skeletons.Box.Y({
+    debug: __filename,
+    className: `${fig}__content reset-member-password`,
+    kids: [
       content,
       buttons
     ]
   });
-
-  return a;
 };
 
 export default __skl_members_action_popup_content_reset_member_password;

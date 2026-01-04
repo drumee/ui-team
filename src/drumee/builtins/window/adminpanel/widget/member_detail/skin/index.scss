@@ -114,12 +114,13 @@
     }
 
     &.verified-status {
-      color: var(--default-icon-success);
-      border: 1px solid var(--default-border-success);
+      color: var(--primary-400);
+      border: 1px solid var(--primary-400);
       width: 20px;
-      height: 15px;
-      margin-top: 9px;
-      border-radius: var(--checkbox-border-radius);
+      height: 20px;
+      margin-top: 0px;
+      border-radius: 50%;
+      padding: 3px;
     }
   }
 

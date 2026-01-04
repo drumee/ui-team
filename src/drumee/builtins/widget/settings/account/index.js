@@ -41,7 +41,7 @@ class settings_account extends LetcBox {
    * 
    */
   canAdmin() {
-    if (Visitor.quota().plan !== 'Pro') return false;
+    if (!/^pro$/i.test(Visitor.quota()?.plan)) return false;
     return Visitor.domainCan(_K.permission.admin_member) || Visitor.get("domain_id") == 1
   }
   /**

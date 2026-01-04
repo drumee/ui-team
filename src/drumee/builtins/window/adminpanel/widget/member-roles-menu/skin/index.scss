@@ -23,58 +23,45 @@
 
     & .menu-topic-items {
       background-color: var(--default-background);
-      border-radius:var(--border-radius);
-      box-shadow:var(--drumee-container-dropdown);
+      border-radius: var(--border-radius);
       max-height: 250px;
       max-width: 160px;
       min-width: 160px;
       width: 100% !important;
-      &__wrapper{
-        left:-15px;
+      box-shadow: 0px 12px 24px 0px var(--neutral-300);
+
+      &__wrapper {
+        left: -15px;
         padding: 10px;
         top: 17px;
-       
-      }
-      &:before {
-        background-color: var(--default-background);
-        box-shadow:var(--shadow-before);
-        content: "";
-        height: 10px;
-        left: 18px;
-        position: absolute;
-        top: -5px;
-        transform: rotate(45deg);
-        width: 10px;
+
       }
 
-      &:after {
-        background: var(--default-background);         
-        border-radius: var(--default-border-radius-top);
-        content: "";
-        height: 10px;
-        left: 0;
-        position: absolute;
-        top: 0;
-        width: 100%;
-      }
+      // &:before {
+      //   background-color: var(--default-background);
+      //   box-shadow: var(--shadow-before);
+      //   content: "";
+      //   height: 10px;
+      //   left: 18px;
+      //   position: absolute;
+      //   top: -5px;
+      //   transform: rotate(45deg);
+      //   width: 10px;
+      // }
+
+      // &:after {
+      //   background: var(--default-background);
+      //   border-radius: var(--default-border-radius-top);
+      //   content: "";
+      //   height: 10px;
+      //   left: 0;
+      //   position: absolute;
+      //   top: 0;
+      //   width: 100%;
+      // }
     }
   }
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
 
   &__icon {
     color: var(--default-icon-neutral);
@@ -85,24 +72,25 @@
       margin: 2px 0px 0px 10px;
       width: 22px;
     }
-    &:hover{
-      color:var(--default-icon-hover);
+
+    &:hover {
+      color: var(--default-icon-hover);
     }
   }
 
   &__item {
     cursor: pointer;
-    margin-bottom:  1px;
+    margin-bottom: 1px;
     padding: 8px 8px 8px 10px;
 
     &:hover {
       background-color: var(--default-background-hover);
-      color:var(--default-text-hover);
+      color: var(--default-text-hover);
 
       & .widget-member-rolesMenu__note {
         color: var(--default-text-reverse);
       }
-      
+
       & svg {
         fill: var(--default-icon-reverse);
       }
@@ -113,8 +101,8 @@
     &__list {
       max-height: 170px;
       min-width: 160px;
-      
-      & .drumee-loading-wrapper  {
+
+      & .drumee-loading-wrapper {
         left: 50%;
         top: 50%;
       }
@@ -122,26 +110,24 @@
 
     &__wrapper {
       justify-content: space-evenly;
-      padding-bottom: 8px;
-      padding-top: 10px;
 
       &.button {
         align-items: center;
-        background:var(--btn-commit-background);
-        border-radius:var(--border-radius);
+        background-color: var(--primary-400);
+        border-radius: var(--corner-radius-max);
         cursor: pointer;
         display: flex;
         height: 28px;
-        justify-content: center;
-        margin: 5% auto 0;
-        width:68px;
-        @include drumee.typo ($color: var(--btn-commit-text),$line:20px, $size:14px);
+        width: 68px;
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--btn-commit-text);
+        justify-self: center;
+        margin: 5px auto;
+        transition: background-color 1s;
 
         &:hover {
-          margin: 5% auto 0;
-          min-width: 68px;
-          width: auto;
-          background-color:var(--btn-commit-background-hover);
+          background-color: var(--primary-500);
         }
       }
     }
@@ -149,24 +135,31 @@
     &__list-wrapper {
       height: 100%;
       width: 100%;
+      background-color: var(--white);
+      border-radius: var(--corner-radius-3);
+      background-color: var(--default-background);
     }
+
     &__list.roles {
       justify-content: center;
       max-height: 170px;
-      min-height: 80px;
-     
+      min-height: 60px;
     }
 
     &__note {
+      font-size: 14px;
+      line-height: 18px;
+      font-weight: 300;
+
       &.title {
         justify-content: center;
-        margin-top: -5px;
-        @include drumee.typo($size: 14px, $line: 28px, $weight:300, $color: var(--default-text-title));
+        line-height: 36px;
+        font-weight: 500;
       }
+
       &.name {
-        @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-color));
         justify-content: center;
-        padding-bottom:15px;
+        padding-bottom: 15px;
         padding-left: 4px;
         width: 100%;
       }

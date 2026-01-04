@@ -1,19 +1,10 @@
 @use "mixins/drumee";
+@use "skin/lib/button" as *;
 
 .members-page {
 
   &-action-popup {
 
-    // &__wrapper {
-    //   &.profile.no-sub-content {
-    //     // margin-bottom: 30px;
-    //     margin: 0 auto auto;
-    //   }
-
-    //   &.profile {
-    //     margin: 0 auto 10px;
-    //   }
-    // }
 
     &__profile {
       &.avatar {
@@ -161,6 +152,8 @@
           }
         }
       }
+
+
     }
 
     // css for /skeleton/action-popup/acknowledgement
@@ -202,5 +195,13 @@
         }
       }
     }
+
+    &__buttons {
+      justify-content: center;
+      padding-bottom: var(--spacer-4);
+    }
+
+    @include common-button;
+
   }
 }

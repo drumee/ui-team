@@ -1,6 +1,7 @@
 function __skl_welcome_reset(ui) {
   const fig = ui.fig.family
   const { button } = require("builtins/skeleton/toolkit");
+  const msgBox = require('../../skeleton/common/message-box').default(ui)
 
   const header = Skeletons.Box.Y({
     className: `${fig}__header`,
@@ -25,11 +26,12 @@ function __skl_welcome_reset(ui) {
           content
         ]
       }),
+      msgBox,
       button(ui, {
         label: LOCALE.CONFIRM,
         type: _a.toggle,
         className: `${fig}__button`,
-        service: "create-organization",
+        service: "create-password",
         ico: "arrow-right",
         sys_pn: "button-confirm",
         flow: 'g',
