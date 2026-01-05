@@ -821,6 +821,12 @@ class settings_billing extends LetcBox {
             this.state.checkout.storage = 20;
             this.state.checkout.selectedBundle = "";
           }
+          // If switching to pro plan, set seats to 5 and additional storage to 0
+          if (plan === "pro") {
+            this.state.checkout.seats = 5;
+            this.state.checkout.storage = 0;
+            this.state.checkout.selectedBundle = "";
+          }
           this.renderContent();
         }
         return false;
