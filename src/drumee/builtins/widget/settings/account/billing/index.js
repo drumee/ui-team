@@ -844,6 +844,10 @@ class settings_billing extends LetcBox {
         return this._handleInputField(cmd, args, service);
 
       case "proceed-checkout-billing":
+        // Block checkout when plan is free
+        if (this.state?.checkout?.selectedPlan === "free") {
+          return false;
+        }
         this._proceedToCheckout();
         return false;
 
