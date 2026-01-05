@@ -268,6 +268,10 @@ class settings_account extends LetcBox {
         });
       case 'plan_updated':
         this._page = 4;
+        if (!this.skeletons[this._page]) {
+          this.skeletons[this._page] = (require("./skeleton/seats").default);
+          this.tab_name[this._page] = "My seats";
+        }
         this.feed(require("./skeleton").default(this));
         break;
       case "avatar-reloaded":
