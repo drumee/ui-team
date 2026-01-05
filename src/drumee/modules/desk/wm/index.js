@@ -36,7 +36,6 @@ class __window_manager extends push {
       // ...exportMenu,
       _a.separator,
       _a.preferences,
-      "pricing"
     ];
     this._handelKbdEvents = this._handelKbdEvents.bind(this);
     RADIO_KBD.on(_e.keyup, this._handelKbdEvents)
@@ -1075,9 +1074,6 @@ class __window_manager extends push {
         break;
       case "electron":
         item.kind = "electron_update";
-        break;
-      case "pricing":
-        item.kind = "settings_pricing";
         break;
       default:
         this.alert(LOCALE.FILE_TYPE_NOT_SUPPORTED);

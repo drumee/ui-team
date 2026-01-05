@@ -106,10 +106,15 @@ function checkout(ui) {
   const fig = `${ui.fig.family}__checkout`;
   const pfx = fig;
 
-  const summary = ui.calculateCheckoutSummary(ui.state);
+  const summary = ui.calculateCheckoutSummary();
 
   const isFreePlan = ui.state?.checkout?.selectedPlan === "free";
-  
+  let { seats, selectedPlan, storage, billingCycle } = summary
+  let min, max;
+  if (seats > 1) {
+    min = 5;
+    max = 1000;
+  }
   const leftPanel = Skeletons.Box.Y({
     className: `${pfx}-left`,
     kids: [
@@ -128,7 +133,7 @@ function checkout(ui) {
                 className: `${pfx}-plan-button`,
                 service: "select-checkout-plan",
                 priority: "secondary",
-                state: ui.state?.checkout?.selectedPlan === "free" ? 1 : 0,
+                state: selectedPlan === "free" ? 1 : 0,
                 radio: `checkout-plan-${ui._id}`,
                 value: "free",
               }),
@@ -137,7 +142,7 @@ function checkout(ui) {
                 className: `${pfx}-plan-button`,
                 service: "select-checkout-plan",
                 priority: "secondary",
-                state: ui.state?.checkout?.selectedPlan === "pro" ? 1 : 0,
+                state: selectedPlan === "pro" ? 1 : 0,
                 radio: `checkout-plan-${ui._id}`,
                 value: "pro",
               }),
@@ -156,10 +161,11 @@ function checkout(ui) {
             icoPosition: "left",
             type: "number",
             placeholder: "0",
-            value: String(ui.state?.checkout?.seats || 0),
+            value: String(seats || 0),
+            // watch: "seats-changes",
             sys_pn: `${pfx}-seats-input`,
-            readonly: ui.state?.checkout?.selectedPlan === "free" ? true : false,
-            interactive: ui.state?.checkout?.selectedPlan === "free" ? 0 : 1,
+            readonly: selectedPlan === "free" ? true : false,
+            interactive: selectedPlan === "free" ? 0 : 1,
           }),
         ],
       }),
@@ -172,12 +178,12 @@ function checkout(ui) {
             name: "storage",
             ico: "raw-hard-drive",
             icoPosition: "left",
-            type: "number",
+            type: "text",
             placeholder: "0",
-            value: String(ui.state?.checkout?.storage || 0),
+            readonly: 1,
+            value: String(storage || 0),
             sys_pn: `${pfx}-storage-input`,
-            readonly: ui.state?.checkout?.selectedPlan === "free" ? true : false,
-            interactive: ui.state?.checkout?.selectedPlan === "free" ? 0 : 1,
+            interactive: selectedPlan === "free" ? 0 : 1,
           }),
         ],
       }),
@@ -197,13 +203,13 @@ function checkout(ui) {
                 className: `${pfx}-billing-cycle-button`,
                 service: "select-billing-cycle",
                 priority: "secondary",
-                state: ui.state?.checkout?.billingCycle === "monthly" ? 1 : 0,
+                state: billingCycle === "monthly" ? 1 : 0,
                 radio: `checkout-billing-cycle-${ui._id}`,
                 value: "monthly",
               }),
               Skeletons.Box.X({
                 className: `${pfx}-billing-cycle-button-main`,
-                state: ui.state?.checkout?.billingCycle === "yearly" ? 1 : 0,
+                state: billingCycle === "yearly" ? 1 : 0,
                 service: "select-billing-cycle",
                 uiHandler: [ui],
                 radio: `checkout-billing-cycle-${ui._id}`,
@@ -229,10 +235,10 @@ function checkout(ui) {
 
       // Only show storage bundles section if plan is not "free"
       ...(isFreePlan ? [] : [
-      Skeletons.Box.Y({
+        Skeletons.Box.Y({
           className: `${pfx}-section-bundles`,
-        kids: [
-          Skeletons.Box.X({
+          kids: [
+            Skeletons.Box.X({
               className: `${pfx}-section-bundles-header`,
               kids: [
                 Skeletons.Note({
@@ -243,25 +249,25 @@ function checkout(ui) {
             }),
             Skeletons.Box.X({
               className: `${pfx}-section-bundles-subtitle`,
-            kids: [
-              Skeletons.Button.Icon({
+              kids: [
+                Skeletons.Button.Icon({
                   className: `${pfx}-section-bundles-icon`,
                   ico: "raw-hard-drive-blue",
-              }),
-              Skeletons.Note({
+                }),
+                Skeletons.Note({
                   className: `${pfx}-section-bundles-subtitle`,
                   content: LOCALE.STORAGE_ADD_ON,
-              }),
-            ],
-          }),
-          Skeletons.Note({
+                }),
+              ],
+            }),
+            Skeletons.Note({
               className: `${pfx}-section-bundles-note`,
               content: LOCALE.CHOOSE_ONE_STORAGE_UPGRADE,
-          }),
-          Skeletons.Box.Y({
+            }),
+            Skeletons.Box.Y({
               className: `${pfx}-section-bundles-list`,
-                kids: [
-                  Skeletons.Box.X({
+              kids: [
+                Skeletons.Box.X({
                   className: `${pfx}-section-bundles-list-item`,
                   kids: [
                     bundleItem(ui, {
@@ -280,7 +286,7 @@ function checkout(ui) {
                 }),
                 Skeletons.Box.X({
                   className: `${pfx}-section-bundles-list-item`,
-                    kids: [
+                  kids: [
                     bundleItem(ui, {
                       value: "500",
                       title: "+500GB",
@@ -295,11 +301,11 @@ function checkout(ui) {
                       badge: LOCALE.BEST_VALUE,
                     }),
                   ],
-                      }),
-                    ],
-                  }),
-                ],
-              }),
+                }),
+              ],
+            }),
+          ],
+        }),
       ]),
     ],
   });
@@ -312,9 +318,9 @@ function checkout(ui) {
         className: `${pfx}-total-label`,
         content: LOCALE.TOTAL_OUTCOME,
       }),
-              Skeletons.Box.X({
+      Skeletons.Box.X({
         className: `${pfx}-total-price`,
-                kids: [
+        kids: [
           Skeletons.Note({
             className: `${pfx}-total-price-amount`,
             content: summary.totalPrice,
@@ -326,21 +332,21 @@ function checkout(ui) {
         ],
       }),
 
-                  Skeletons.Box.X({
+      Skeletons.Box.X({
         className: `${pfx}-breakdown`,
-                  }),
+      }),
 
-                  Skeletons.Box.Y({
+      Skeletons.Box.Y({
         className: `${pfx}-breakdown-items`,
         kids: [
           Skeletons.Box.X({
             className: `${pfx}-breakdown-item`,
-                    kids: [
-                      Skeletons.Note({
+            kids: [
+              Skeletons.Note({
                 className: `${pfx}-breakdown-label`,
                 content: LOCALE.BASE_PRICE,
-                      }),
-                      Skeletons.Note({
+              }),
+              Skeletons.Note({
                 className: `${pfx}-breakdown-value`,
                 content: summary.basePrice,
               }),
@@ -352,63 +358,63 @@ function checkout(ui) {
               Skeletons.Note({
                 className: `${pfx}-breakdown-label`,
                 content: LOCALE.INCLUDED_SEATS,
-                      }),
-                      Skeletons.Note({
+              }),
+              Skeletons.Note({
                 className: `${pfx}-breakdown-value`,
                 content: summary.seats,
-                      }),
-                    ],
-                  }),
-                ],
               }),
+            ],
+          }),
+        ],
+      }),
 
-              Skeletons.Box.X({
+      Skeletons.Box.X({
         className: `${pfx}-breakdown`,
       }),
 
       Skeletons.Box.Y({
-                kids: [
-                  Skeletons.Box.X({
+        kids: [
+          Skeletons.Box.X({
             className: `${pfx}-breakdown-item ${pfx}-breakdown-total-storage`,
-                    kids: [
+            kids: [
               Skeletons.Button.Icon({
                 className: `${pfx}-breakdown-icon`,
                 ico: "raw-hard-drive-green",
-                      }),
-                      Skeletons.Note({
+              }),
+              Skeletons.Note({
                 className: `${pfx}-breakdown-total-storage-label`,
                 content: LOCALE.TOTAL_STORAGE,
-                      }),
-                      Skeletons.Note({
+              }),
+              Skeletons.Note({
                 className: `${pfx}-breakdown-total-storage-value`,
                 content: summary.totalStorage,
-                      }),
-                    ],
-                  }),
-                ],
               }),
+            ],
+          }),
+        ],
+      }),
 
-              Skeletons.Box.X({
+      Skeletons.Box.X({
         className: `${pfx}-breakdown`,
       }),
 
       Skeletons.Box.Y({
-                kids: [
-                  Skeletons.Box.X({
+        kids: [
+          Skeletons.Box.X({
             className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat `,
             kids: [
               Skeletons.Button.Icon({
                 className: `${pfx}-breakdown-icon`,
                 ico: "raw-trending-up",
-                  }),
-                  Skeletons.Box.Y({
+              }),
+              Skeletons.Box.Y({
                 className: `${pfx}-breakdown-label-container`,
-                        kids: [
-                          Skeletons.Note({
+                kids: [
+                  Skeletons.Note({
                     className: `${pfx}-breakdown-label`,
                     content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
-                          }),
-                          Skeletons.Note({
+                  }),
+                  Skeletons.Note({
                     className: `${pfx}-breakdown-value-effective-price-per-seat`,
                     content: summary.effectivePricePerSeat,
                   }),
@@ -447,7 +453,7 @@ function checkout(ui) {
 function rightPanelContent(ui) {
   const fig = `${ui.fig.family}__checkout`;
   const pfx = fig;
-  const summary = ui.calculateCheckoutSummary(ui.state);
+  const summary = ui.calculateCheckoutSummary();
   const isFreePlan = ui.state?.checkout?.selectedPlan === "free";
 
   return Skeletons.Box.Y({
@@ -527,11 +533,11 @@ function rightPanelContent(ui) {
               Skeletons.Box.Y({
                 className: `${pfx}-breakdown-label-container`,
                 kids: [
-              Skeletons.Note({
-                className: `${pfx}-breakdown-label`,
+                  Skeletons.Note({
+                    className: `${pfx}-breakdown-label`,
                     content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
-              }),
-              Skeletons.Note({
+                  }),
+                  Skeletons.Note({
                     className: `${pfx}-breakdown-value-effective-price-per-seat`,
                     content: summary.effectivePricePerSeat,
                   }),

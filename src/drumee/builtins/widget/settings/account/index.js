@@ -58,7 +58,13 @@ class settings_account extends LetcBox {
   onPartReady(child, pn) {
     switch (pn) {
       case _a.content:
-        child.feed(this.skeletons[this._page](this));
+        // Validate _page exists and is within bounds
+        if (this._page != null && this._page >= 0 && this._page < this.skeletons.length) {
+          const skeletonFn = this.skeletons[this._page];
+          if (typeof skeletonFn === 'function') {
+            child.feed(skeletonFn(this));
+          }
+        }
         break;
     }
   }
@@ -271,11 +277,19 @@ class settings_account extends LetcBox {
         return this.ensurePart("avatar-progress").then((p) => {
           p.el.style.width = `${args.progress}%`;
         });
+
       case 'plan_updated':
         this._page = 4;
         if (!this.skeletons[this._page]) {
           this.skeletons[this._page] = (require("./skeleton/seats").default);
           this.tab_name[this._page] = "My seats";
+        }
+        // Switch to billing page (index 1) when plan is updated
+        // Only set to seats page (index 4) if user has admin rights and seats page exists
+        if (this.skeletons.length > 4 && this.canAdmin()) {
+          this._page = 4;
+        } else {
+          this._page = 1; // Billing page
         }
         this.feed(require("./skeleton").default(this));
         break;

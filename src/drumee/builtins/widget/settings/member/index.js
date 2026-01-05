@@ -1,5 +1,5 @@
 
-class settings_member extends LetcBox {
+class settings_member extends DrumeeMFS {
 
 
   /**

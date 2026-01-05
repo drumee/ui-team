@@ -2,6 +2,10 @@ const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
 const TAB_CHECKOUT = 2;
 
+const formatCurrency = (amount) => {
+  return `$${amount.toFixed(2)}`;
+};
+
 class settings_billing extends LetcBox {
   initialize(opt) {
     require("./skin");
@@ -10,7 +14,7 @@ class settings_billing extends LetcBox {
       hub_id: Visitor.id,
       flow: "g",
     });
-    
+
     this.state = {
       currentTab: TAB_MONTHLY,
       plansTab: {
@@ -19,12 +23,20 @@ class settings_billing extends LetcBox {
       },
       checkout: {
         selectedPlan: "free",
-        seats: 5,
+        seats: 0,
         storage: 0,
         billingCycle: "monthly",
         selectedBundle: null,
       },
     };
+    this.storage = {
+      free: 20,
+      pro: 20
+    }
+    this.seats = {
+      free: 0,
+      pro: 5
+    }
 
     this.tab = this.state.currentTab;
     this._setupPaymentWebSocket();
@@ -89,12 +101,10 @@ class settings_billing extends LetcBox {
     try {
       // Get current plan from Visitor.quota()
       // Structure: {plan: 'free', organization: 0, seat: 0, storage: 20000000000}
-      const quota = Visitor.quota();
-
+      let { total_seat, plan = "free", billing_cycle = "monthly", storage } = Visitor.quota() || {}
       // Get plan name from quota.plan (primary source)
-      const planName = (quota?.plan || "pro").toLowerCase();
+      const planName = (plan || "pro").toLowerCase();
       // Get period from plan_detail if available, default to monthly
-      const period = quota?.billing_cycle || "monthly";
 
       // Map plan names: 'advanced' -> 'free', 'pro' -> 'pro', others -> 'pro' as default
       let mappedPlan = "pro";
@@ -107,34 +117,37 @@ class settings_billing extends LetcBox {
       }
 
       // Get seat from quota
-      const seats = quota?.seat != null ? quota.seat : 0; // Default to 5 only if seat is null/undefined, not if it's 0
 
       // Get storage from quota (in bytes, convert to GB)
       // 1 GB = 1,000,000,000 bytes (decimal)
-      const storageBytes = quota?.storage || 0;
+      const storageBytes = storage || 0;
       let storageGB = Math.floor(storageBytes / 1000000000);
-
       // If plan is free, set storage to 20GB (fixed, not editable)
       if (mappedPlan === "free") {
         storageGB = 20;
       }
-
+      if (/^moth/i.test(billing_cycle)) {
+        billing_cycle = "monthly"
+      } else {
+        billing_cycle = "yearly"
+      }
       // Update checkout state with current plan, seats, and storage
       this.state.checkout.selectedPlan = mappedPlan;
-      this.state.checkout.billingCycle = period === "year" ? "yearly" : "monthly";
-      this.state.checkout.seats = seats;
+      this.state.checkout.billingCycle = billing_cycle;
+      this.state.checkout.seats = total_seat || 0;
       this.state.checkout.storage = storageGB;
-
+      this.debug("AAA!127", this.state.checkout)
       // Store plan data for reference
       this.currentPlan = {
         plan: planName,
-        period: period,
+        period: billing_cycle,
       };
-      this._currentSubsType = period;
+      this._currentSubsType = billing_cycle;
       this.currentPlanName = mappedPlan;
-
+      this.calculateCheckoutSummary()
       return this.feed(require("./skeleton").default(this));
     } catch (e) {
+      this.warn("fetchPlanData got error", e)
       // Fallback: render with default state
       return this.feed(require("./skeleton").default(this));
     }
@@ -160,10 +173,12 @@ class settings_billing extends LetcBox {
       case `${this.fig.family}__checkout-seats-input`:
         this._setupInputChangeListener(child, "seats");
         this._restoreInputFocus(child, "seats");
+        this.__seatsInput = child;
         break;
-      case `${this.fig.family}__checkout-storage-input`:
-        this._setupInputChangeListener(child, "storage");
-        this._restoreInputFocus(child, "storage");
+        // case `${this.fig.family}__checkout-storage-input`:
+        //   this._setupInputChangeListener(child, "storage");
+        //   this._restoreInputFocus(child, "storage");
+        //   this.__storageInput = child;
         break;
     }
   }
@@ -177,7 +192,7 @@ class settings_billing extends LetcBox {
     if (!this._focusedInput || this._focusedInput.fieldName !== fieldName) {
       return;
     }
-
+    this.debug("AAA:182", fieldName)
     if (!entryWidget || !entryWidget._id) return;
 
     const inputId = `${entryWidget._id}-input`;
@@ -223,7 +238,6 @@ class settings_billing extends LetcBox {
         if (value === "" || isNaN(numValue)) {
           numValue = fieldName === "storage" ? 0 : 5;
         }
-
         if (numValue >= 0) {
           this.state.checkout[fieldName] = numValue;
 
@@ -233,7 +247,9 @@ class settings_billing extends LetcBox {
               fieldName,
               cursorPosition,
               value: inputEl.value,
+              el: inputEl
             };
+            this.debug("AAA:222", numValue, fieldName)
             this.renderContent();
           }
         }
@@ -296,12 +312,27 @@ class settings_billing extends LetcBox {
    * @param {Object} state - Component state
    * @returns {Object} Summary object with formatted values
    */
-  calculateCheckoutSummary(state) {
+  calculateCheckoutSummary() {
+    let state = this.state;
     const checkout = state?.checkout || {};
     const selectedPlan = checkout.selectedPlan || "pro";
-    const seats = parseInt(checkout.seats) || 0;
-    const storage = parseInt(checkout.storage) || 0;
     const billingCycle = checkout.billingCycle || "monthly";
+
+    const baseStorage = this.storage[selectedPlan];
+    const baseSeats = this.seats[selectedPlan];
+    if (selectedPlan == "free") {
+      return {
+        seats: `${baseSeats}`,
+        selectedPlan,
+        storage: `${baseStorage}`,
+        billingCycle,
+        totalPrice: formatCurrency(0),
+        period: "month",
+        basePrice: formatCurrency(0),
+        totalStorage: `${baseStorage}`,
+      }
+    }
+
     const selectedBundle = checkout.selectedBundle;
 
     const planPrices = {
@@ -318,43 +349,54 @@ class settings_billing extends LetcBox {
 
     const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
     const period = billingCycle === "yearly" ? "year" : "month";
-
     const bundlePrice = selectedBundle ? bundlePrices[selectedBundle] || 0 : 0;
     const bundleStorage = selectedBundle ? parseInt(selectedBundle) : 0;
+    this.debug("AAA:370 324", this, selectedPlan, basePrice, period, bundlePrice)
 
     // Calculate total storage based on plan
-    let totalStorage;
-    if (selectedPlan === "free") {
-      // Free plan has fixed 20GB storage, no bundles or additional storage
-      totalStorage = 20;
-    } else {
-      // Pro plan: base storage (50GB) + bundle storage + additional storage
-      const baseStorage = 50;
-      totalStorage = baseStorage + bundleStorage + storage;
-    }
 
-    const totalPrice =
+    // Pro plan: base storage (50GB) + bundle storage + additional storage
+    let totalStorage = baseStorage + bundleStorage;
+
+    let totalPrice =
       billingCycle === "yearly"
-        ? basePrice + bundlePrice * 12
+        ? basePrice + bundlePrice * 10
         : basePrice + bundlePrice;
+    let extraSeats = 0;
+    this.debug("AAA:350", { selectedPlan, extraSeats, baseSeats, baseStorage })
+    if (this.__seatsInput) {
+      let value = this.__seatsInput.getValue()
+      this.debug("AAA:353", { baseSeats, value })
+      if (value > baseSeats) {
+        extraSeats = value - baseSeats;
+        if (billingCycle === "yearly") {
+          totalPrice = totalPrice + extraSeats * 50;
+        } else {
+          totalPrice = totalPrice + extraSeats * 5;
+        }
+      }
+      if (value < baseSeats) {
+        this.__seatsInput.setValue(baseSeats)
+      }
+    }
+    let seats = baseSeats + extraSeats
+    const effectivePricePerSeat = totalPrice / seats;
 
-    const effectivePricePerSeat = seats > 0 ? totalPrice / seats : 0;
-
-    const formatCurrency = (amount) => {
-      return `$${amount.toFixed(2)}`;
-    };
-
-    return {
+    let r = {
       basePrice: formatCurrency(basePrice),
       bundlePrice: formatCurrency(bundlePrice),
       totalPrice: formatCurrency(totalPrice),
       period: period,
-      seats: seats.toString(),
+      seats,
       totalStorage: `${totalStorage} GB`,
       effectivePricePerSeat: formatCurrency(effectivePricePerSeat),
       selectedPlan,
       billingCycle,
+      extraSeats,
+      bundleStorage
     };
+    this.debug("AAA:370", r)
+    return r
   }
 
   /**
@@ -376,29 +418,33 @@ class settings_billing extends LetcBox {
    * Handle proceed to checkout: call payment API and open payment window
    */
   _proceedToCheckout() {
-    const summary = this.calculateCheckoutSummary(this.state);
+    const {
+      bundleStorage, seats, totalStorage, period, totalPrice, selectedPlan = "pro", extraSeats
+    }
+      = this.calculateCheckoutSummary();
 
     const checkout = this.state.checkout || {};
-    const selectedPlan = checkout.selectedPlan || "pro";
     const billingCycle = checkout.billingCycle || "monthly";
 
     const totalPriceDollars =
-      parseFloat(summary.totalPrice.replace("$", "")) || 0;
+      parseFloat(totalPrice.replace("$", "")) || 0;
     const value = Math.round(totalPriceDollars * 100);
-    const interval = billingCycle === "yearly" ? "year" : "month";
     const description = `${selectedPlan.toUpperCase()} Plan - ${billingCycle} - ${checkout.seats || 5
       } seats`;
 
-    const paymentData = {
+    const payment = {
       value: value,
-      seats: checkout.seats || 0,
-      storage: checkout.storage || 0,
+      seats: seats || 0,
+      storage: totalStorage.replace(/ +.$/, '') || 0,
       plan: selectedPlan,
-      interval: interval,
-      description: description,
+      interval: period,
+      extraSeats,
+      description,
+      bundleStorage
     };
-
-    this.postService(SERVICE.payment.checkout, paymentData)
+    this.debug("payment", payment)
+    this.triggerHandlers({ service: "proceed-to-payment" })
+    this.postService(SERVICE.payment.checkout, { payment })
       .then((data) => {
         let { url } = data;
         this._openLink(url);
@@ -421,9 +467,9 @@ class settings_billing extends LetcBox {
    * @returns {number|null} Tab position or null
    */
   getSelectPlanData(cmd) {
-        let pos = null;
-        
-        if (cmd.model) {
+    let pos = null;
+
+    if (cmd.model) {
       pos =
         cmd.model.get(_a.pos) ||
         cmd.model.get(_a.value) ||
@@ -431,7 +477,7 @@ class settings_billing extends LetcBox {
         cmd.model.get("value");
     }
 
-        if (pos == null) {
+    if (pos == null) {
       pos =
         (cmd.mget && cmd.mget(_a.pos)) ||
         (cmd.get && cmd.get(_a.pos)) ||
@@ -439,44 +485,44 @@ class settings_billing extends LetcBox {
         (cmd.get && cmd.get(_a.value));
     }
 
-        if (pos == null) {
-          pos = cmd.pos || cmd.value;
-        }
-        
-        if (pos == null && cmd.el) {
-          pos = cmd.el.dataset?.pos || cmd.el.dataset?.value;
-        }
-        
-        if (pos == null && cmd.el) {
+    if (pos == null) {
+      pos = cmd.pos || cmd.value;
+    }
+
+    if (pos == null && cmd.el) {
+      pos = cmd.el.dataset?.pos || cmd.el.dataset?.value;
+    }
+
+    if (pos == null && cmd.el) {
       pos =
         cmd.el.getAttribute?.("data-pos") ||
         cmd.el.getAttribute?.("data-value");
-        }
-        
-        if (pos == null && cmd.el) {
-          let parent = cmd.el.closest?.(`.${this.fig.family}__tabs-trigger-item`);
-          if (parent) {
-            const parentContainer = parent.parentElement;
-            if (parentContainer) {
-              const children = Array.from(parentContainer.children);
-              const index = children.indexOf(parent);
-              if (index !== -1 && index < TAB_CHECKOUT) {
+    }
+
+    if (pos == null && cmd.el) {
+      let parent = cmd.el.closest?.(`.${this.fig.family}__tabs-trigger-item`);
+      if (parent) {
+        const parentContainer = parent.parentElement;
+        if (parentContainer) {
+          const children = Array.from(parentContainer.children);
+          const index = children.indexOf(parent);
+          if (index !== -1 && index < TAB_CHECKOUT) {
             pos = index;
-              }
-            }
           }
         }
-        
-        if (pos == null && cmd.el) {
+      }
+    }
+
+    if (pos == null && cmd.el) {
       const text =
         cmd.el.textContent?.toLowerCase() || cmd.el.innerText?.toLowerCase();
       if (text && text.includes("monthly")) {
-            pos = TAB_MONTHLY;
+        pos = TAB_MONTHLY;
       } else if (text && text.includes("yearly")) {
-            pos = TAB_YEARLY;
-          }
-        }
-        
+        pos = TAB_YEARLY;
+      }
+    }
+
     return pos;
   }
 
@@ -488,12 +534,12 @@ class settings_billing extends LetcBox {
    */
   handleSelectPlan(cmd) {
     const pos = this.getSelectPlanData(cmd);
-        
-        if (pos != null && pos !== undefined) {
-          const posNum = parseInt(pos);
-          if (!isNaN(posNum) && (posNum === TAB_MONTHLY || posNum === TAB_YEARLY)) {
-            if (posNum !== this.state.currentTab) {
-              this.state.currentTab = posNum;
+
+    if (pos != null && pos !== undefined) {
+      const posNum = parseInt(pos);
+      if (!isNaN(posNum) && (posNum === TAB_MONTHLY || posNum === TAB_YEARLY)) {
+        if (posNum !== this.state.currentTab) {
+          this.state.currentTab = posNum;
           this.state.plansTab.cycle =
             posNum === TAB_MONTHLY ? "monthly" : "yearly";
           this.tab = posNum;
@@ -650,7 +696,7 @@ class settings_billing extends LetcBox {
 
     if (previousBundle !== bundleValue) {
       this.state.checkout.selectedBundle = bundleValue;
-              this.renderContent();
+      this.renderContent();
     }
 
     return false;
@@ -778,7 +824,6 @@ class settings_billing extends LetcBox {
     if (!service) {
       return super.onUiEvent(cmd, args);
     }
-    console.log("AAAA:720 service", service);
     service = String(service);
     switch (service) {
       case "select-plan":
@@ -803,7 +848,15 @@ class settings_billing extends LetcBox {
           }
         }
         return false;
-
+      case "storage-changes":
+        this.state.checkout.storage = args.value;
+        this._updateRightPanelContent()
+        break;
+      case "seats-changes":
+        this.debug(("AAA:810, service, qrgs", service, args))
+        this.state.checkout.seats = args.value;
+        this._updateRightPanelContent()
+        break;
       case "checkout":
         if (this.state.currentTab !== TAB_CHECKOUT) {
           this.state.currentTab = TAB_CHECKOUT;
@@ -819,6 +872,12 @@ class settings_billing extends LetcBox {
           // If switching to free plan, set storage to 20GB and clear bundle selection
           if (plan === "free") {
             this.state.checkout.storage = 20;
+            this.state.checkout.selectedBundle = "";
+          }
+          // If switching to pro plan, set seats to 5 and additional storage to 0
+          if (plan === "pro") {
+            this.state.checkout.seats = 5;
+            this.state.checkout.storage = 0;
             this.state.checkout.selectedBundle = "";
           }
           this.renderContent();

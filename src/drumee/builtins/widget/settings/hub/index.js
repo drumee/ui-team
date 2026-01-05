@@ -4,7 +4,7 @@
  * @class settings_hub
  * @extends __window_interact
  */
-class settings_hub extends LetcBox {
+class settings_hub extends DrumeeMFS {
 
   /**
    * @param {*} opt
@@ -13,7 +13,15 @@ class settings_hub extends LetcBox {
     require("./skin");
     super.initialize(opt);
     if (opt.media) {
-      this.mset(opt.media.toJSON ? opt.media.toJSON() : opt.media);
+      // this.mset(opt.media.toJSON ? opt.media.toJSON() : opt.media);
+      this.copyPropertiesFrom(opt.media)
+    }
+    switch (this.mget(_a.area)) {
+      case _a.private:
+        this.manager = "settings_private_hub"
+        break
+      default:
+        this.manager = "settings_share_hub"
     }
   }
 
@@ -30,14 +38,16 @@ class settings_hub extends LetcBox {
   onDomRefresh() {
     this._tab = 0;
     this.feed(require("./skeleton").default(this));
-    // Fetch members if hub_id is available and members not already loaded
-    if (this.mget(_a.hub_id) && !this.mget(_a.members) && typeof this.fetchService === 'function') {
+    if (this.mget(_a.hub_id) && !this.mget(_a.members)) {
       this.fetchService({
         service: SERVICE.hub.get_members_by_type,
         hub_id: this.mget(_a.hub_id),
         nid: this.mget(_a.actual_home_id),
         type: 'all'
-      });
+      }, { async: 1 }).then((data) => {
+        this.mset({ members: data });
+        this.reload();
+      })
     }
   }
 
@@ -72,7 +82,7 @@ class settings_hub extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug("AAA:50", service, cmd)
+    this.debug("AAA:50", this, service, cmd)
     switch (service) {
       case _e.close:
       case "close-popup":
@@ -84,13 +94,13 @@ class settings_hub extends LetcBox {
       case _a.members:
         this._tab++;
         return this.feed({ kind: "settings_members_list", uiHandler: [this], media: this.mget(_a.media) });
-        
+
       case _a.back:
         this._tab--;
         return this.route()
       case "edit-type":
         this._tab++;
-        return this.feed({ kind: "settings_share_hub", uiHandler: [this], media: this.mget(_a.media) });
+        return this.feed({ kind: this.manager, uiHandler: [this], media: this.mget(_a.media) });
 
       case "activity-hub":
         this._tab++;
@@ -100,19 +110,6 @@ class settings_hub extends LetcBox {
     }
   }
 
-  /**
-   * @param {*} method 
-   * @param {*} data 
-   * @param {*} socket 
-   */
-  __dispatchRest(method, data, socket) {
-    switch (method) {
-      case SERVICE.hub.get_members_by_type:
-        this.mset({ members: data });
-        this.reload();
-        break;
-    }
-  }
 
 }
 

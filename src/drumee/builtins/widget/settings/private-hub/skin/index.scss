@@ -17,7 +17,7 @@
   }
 }
 
-.settings-share-hub {
+.settings-private-hub {
   &__wrapper {
     border-radius: 24px;
     box-shadow: 0 10px 30px rgba(34, 34, 34, 0.1);
@@ -50,7 +50,7 @@
   &__divider {
     width: calc(100% + 48px); // Full width including parent padding (24px * 2)
     height: 1px;
-    background: var(--Neutral-200, #EBECF0);
+    background: var(--neutral-200, #EBECF0);
     margin: 16px -24px; // Negative margin to offset parent padding
     padding: 0;
     flex-shrink: 0;
@@ -86,12 +86,12 @@
   }
 
   &__cancel-btn {
-    background: var(--Neutral-100, #F5F5F7);
-    color: var(--Neutral-900, #222732);
+    background: var(--neutral-100, #F5F5F7);
+    color: var(--neutral-900, #222732);
     margin-right: 12px;
 
     &:hover {
-      background: var(--Neutral-200, #E8E8EB);
+      background: var(--neutral-200, #E8E8EB);
     }
 
     svg {
@@ -115,7 +115,7 @@
 }
 
 // Topbar styles (similar to members-list)
-.settings-share-hub-topbar {
+.settings-private-hub-topbar {
   &__container {
     align-items: center;
     display: flex !important;
@@ -161,7 +161,7 @@
 }
 
 // Who can access section
-.settings-share-hub-access {
+.settings-private-hub-access {
   &__section {
     display: flex;
     flex-direction: column;
@@ -171,7 +171,7 @@
   &__title {
     font-size: 14px;
     font-weight: 400;
-    color: var(--Neutral-800, #414651);
+    color: var(--neutral-800, #414651);
     margin-bottom: 4px;
     line-height: 22px;
     letter-spacing: 0.14px;
@@ -219,7 +219,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    border: 1px solid var(--Neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #D1D5DB);
     border-radius: 8px;
     cursor: pointer;
     transition: border-color 120ms ease;
@@ -227,7 +227,7 @@
     box-sizing: border-box;
 
     &:hover {
-      border-color: var(--Neutral-400, #9CA3AF);
+      border-color: var(--neutral-400, #9CA3AF);
     }
   }
 
@@ -240,7 +240,7 @@
   &__label {
     flex: 1;
     font-size: 14px;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
   }
 
   &__chevron {
@@ -248,61 +248,16 @@
     height: 16px;
     flex-shrink: 0;
     rotate: 90deg;
-    color: var(--Neutral-600, #8C929C);
+    color: var(--neutral-600, #8C929C);
   }
 
   &__description {
     font-size: 14px;
-    color: var(--Neutral-600, #8C929C);
+    color: var(--neutral-600, #8C929C);
     line-height: 1.5;
   }
 
-  &__password-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
 
-  &__password-checkbox {
-    cursor: pointer;
-
-    svg {
-      width: 20px;
-      height: 20px;
-      border: 1px solid var(--Neutral-300, #D1D5DB);
-      border-radius: 4px;
-      background-color: var(--ewhite);
-      transition: all 120ms ease;
-    }
-
-    // Checkbox with white background when checked
-    &[data-state="1"],
-    &.selected {
-      svg {
-        background-color: var(--ewhite);
-        border: 1px solid var(--primary-600, #7C3AED);
-        color: var(--primary-600, #7C3AED);
-      }
-    }
-
-    &[data-state="0"] {
-      svg {
-        background-color: var(--ewhite);
-        border: 1px solid var(--Neutral-300, #D1D5DB);
-        color: transparent;
-      }
-    }
-  }
-
-  &__password-label {
-    font-size: 14px;
-    color: var(--Neutral-900, #222732);
-    cursor: pointer;
-  }
-
-  &__password-section {
-    margin-top: 12px;
-  }
 
   &__input-wrapper {
     position: relative;
@@ -313,7 +268,7 @@
   &__input {
     width: 100%;
     padding: 12px 60px 12px 16px; // padding-right: 60px để tránh bị label đè
-    border: 1px solid var(--Neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #D1D5DB);
     border-radius: 8px;
     font-size: 14px;
 
@@ -356,7 +311,7 @@
     padding: 4px;
     margin-top: 4px;
     z-index: 200;
-    border: 1px solid var(--Neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #D1D5DB);
     border-radius: 8px;
     overflow: visible;
   }
@@ -374,13 +329,13 @@
     &:hover {
       background-color: var(--default-bg-hover);
 
-      .settings-share-hub-access__menu-item {
+      .settings-private-hub-access__menu-item {
         background-color: transparent;
       }
     }
 
     &.active {
-      .settings-share-hub-access__menu-item {
+      .settings-private-hub-access__menu-item {
         background-color: var(--primary-100);
         font-weight: 400;
         color: var(--primary-600);
@@ -446,90 +401,8 @@
   }
 }
 
-// Password section
-.settings-share-hub-password {
-  &__section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  &__wrapper {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  &__checkbox {
-    cursor: pointer;
-
-    svg {
-      width: 20px;
-      height: 20px;
-      border: 1px solid var(--Neutral-300, #D1D5DB);
-      border-radius: 6px;
-      background-color: var(--ewhite);
-      transition: all 120ms ease;
-    }
-
-    // Checkbox with white background when checked
-    &[data-state="1"],
-    &.selected {
-      svg {
-        background-color: var(--primary-600, #7C3AED);
-        border: 1px solid var(--white, #ffffff);
-        color: var(--white, #ffffff);
-        padding: 2px;
-      }
-    }
-
-    &[data-state="0"] {
-      svg {
-        background-color: var(--ewhite);
-        border: 1px solid var(--Neutral-300, #D1D5DB);
-        color: transparent;
-      }
-    }
-  }
-
-  &__label {
-    font-size: 14px;
-    color: var(--Neutral-900, #222732);
-    cursor: pointer;
-  }
-
-  &__input-wrapper {
-    display: relative;
-    width: 100%;
-  }
-
-  &__input {
-    width: 100%;
-    padding: 12px 60px 12px 16px;
-    border: 1px solid var(--Neutral-300, #D1D5DB);
-    border-radius: 8px;
-    font-size: 14px;
-  }
-
-  &__toggle-visibility {
-    color: var(--primary-600, #7C3AED);
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 14px;
-    font-weight: 400;
-    cursor: pointer;
-    white-space: nowrap;
-
-    &:hover {
-      color: var(--primary-700, #6D28D9);
-    }
-  }
-}
-
 // Permission section
-.settings-share-hub-permission {
+.settings-private-hub-permission {
   &__section {
     display: flex;
     flex-direction: column;
@@ -539,7 +412,7 @@
   &__title {
     font-size: 16px;
     font-weight: 600;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
     margin-bottom: 4px;
   }
 
@@ -567,11 +440,11 @@
 
   &__note {
     font-size: 14px;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
     cursor: pointer;
 
     &:hover {
-      color: var(--Neutral-900, #222732);
+      color: var(--neutral-900, #222732);
     }
   }
 
@@ -582,7 +455,7 @@
     svg {
       width: 20px;
       height: 20px;
-      border: 1px solid var(--Neutral-300, #D1D5DB);
+      border: 1px solid var(--neutral-300, #D1D5DB);
       border-radius: 5px;
       background-color: var(--ewhite);
       transition: all 120ms ease;
@@ -603,7 +476,7 @@
       svg {
         background-color: var(--ewhite);
         border-radius: 5px;
-        border: 1px solid var(--Neutral-300, #D1D5DB);
+        border: 1px solid var(--neutral-300, #D1D5DB);
         color: transparent;
       }
     }
@@ -611,12 +484,12 @@
 
   &__note {
     font-size: 14px;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
   }
 }
 
 // Validity section
-.settings-share-hub-validity {
+.settings-private-hub-validity {
   &__section {
     display: flex;
     flex-direction: column;
@@ -626,7 +499,7 @@
   &__title {
     font-size: 14px;
     font-weight: 600;
-    color: var(--Neutral-900, #414651);
+    color: var(--neutral-900, #414651);
     margin-bottom: 4px;
   }
 
@@ -648,7 +521,7 @@
     transition: all 120ms ease;
 
     &:hover {
-      background: var(--Neutral-50, #FAFAFA);
+      background: var(--neutral-50, #FAFAFA);
     }
 
     &.active {
@@ -669,7 +542,7 @@
     height: 20px;
     flex-shrink: 0;
     margin-top: 2px;
-    border: 2px solid var(--Neutral-400, #C3C6CC);
+    border: 2px solid var(--neutral-400, #C3C6CC);
     border-radius: 100%;
     cursor: pointer;
     background: var(--ewhite);
@@ -690,12 +563,12 @@
   &__option-label {
     font-size: 14px;
     font-weight: 500;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
   }
 
   &__option-description {
     font-size: 13px;
-    color: var(--Neutral-600, #8C929C);
+    color: var(--neutral-600, #8C929C);
     line-height: 1.4;
   }
 
@@ -715,10 +588,10 @@
   &__entry {
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid var(--Neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #D1D5DB);
     border-radius: 12px;
     background: var(--Gray-White, #FFF);
-    color: var(--Neutral-400, #C3C6CC);
+    color: var(--neutral-400, #C3C6CC);
     font-size: 16px;
     font-style: normal;
     font-weight: 400;
@@ -728,7 +601,7 @@
     min-width: 0; // Allow flex items to shrink below their content size
 
     &::placeholder {
-      color: var(--Neutral-400, #C3C6CC);
+      color: var(--neutral-400, #C3C6CC);
       font-size: 16px;
       font-weight: 400;
       line-height: 26px;
@@ -738,7 +611,7 @@
     // Input text color when user types
     input,
     .entry-area {
-      color: var(--Neutral-400, #C3C6CC);
+      color: var(--neutral-400, #C3C6CC);
       font-size: 16px;
       font-weight: 400;
       line-height: 26px;
@@ -766,6 +639,6 @@
 
   &__note {
     font-size: 14px;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
   }
 }

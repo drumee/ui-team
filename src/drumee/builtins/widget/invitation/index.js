@@ -141,6 +141,7 @@ class __invitation_settings extends __recipient {
     await this._buildDefaults();
     this._skeleton = require("./skeleton/sharees/list");
     this._pending = require("./skeleton/pending");
+    this.debug("AAA:144", mode)
     switch (mode) {
       case 'mini':
         skl = require("./skeleton/mini");

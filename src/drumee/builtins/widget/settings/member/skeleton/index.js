@@ -31,30 +31,28 @@ module.exports = function (ui) {
   const resolveLabel = (p) => {
     if (!p) return LOCALE.PERMISSION_READ || "Download only";
 
-    const privilege = parseInt(p);
-
     // Check owner first
-    if (privilege === _K.privilege.owner || privilege === _K.permission.owner) {
+    if (ui.isMediaOwner()) {
       return LOCALE.OWNER;
     }
 
     // Check admin
-    if (privilege === _K.privilege.admin || privilege === _K.permission.admin) {
+    if (ui.canAdmin()) {
       return "All permissions" || LOCALE.ADMINISTRATOR || "Administrator";
     }
 
     // Check delete/modify (all permissions)
-    if (privilege === _K.privilege.delete || privilege === _K.permission.modify) {
+    if (ui.canOrganize()) {
       return LOCALE.PERMISSION_DELETE_ORGANIZE || LOCALE.ALL_PERMISSIONS || "All permissions";
     }
 
     // Check write/upload (upload and download)
-    if (privilege === _K.privilege.write || privilege === _K.permission.upload || privilege === _K.permission.download) {
+    if (ui.canUpload()) {
       return LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only";
     }
 
     // Check read/view (download only)
-    if (privilege === _K.privilege.read || privilege === _K.permission.view || privilege === _K.permission.read) {
+    if (ui.canDownload()) {
       return LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only";
     }
 
@@ -146,7 +144,6 @@ module.exports = function (ui) {
       });
     }),
   }) : undefined;
-  console.log("AAA:147", menuItems)
   const permission = !isOwner ? Skeletons.Box.X({
     className: `${prefix}__permission`,
     kids: [{

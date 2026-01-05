@@ -5,14 +5,18 @@
  * @returns 
  */
 export function entry(ui, opt) {
-  let { value, name, placeholder = "", label, shower, sys_pn, type, service = _a.input, ico, icoPosition = "right", readonly, interactive } = opt;
+  let {
+    value, name, placeholder = "", label, shower, sys_pn, type,
+    service = _a.input, ico, icoPosition = "right", readonly, interactive,
+    watch
+  } = opt;
   const pfx = `${ui.fig.family}__entry`;
   // Build className with readonly modifier if needed
   let inputClassName = `${pfx}-input`;
   if (readonly) {
     inputClassName += ` ${pfx}-input--readonly`;
   }
-  
+
   let args = {
     className: inputClassName,
     name,
@@ -26,17 +30,19 @@ export function entry(ui, opt) {
     state: 0,
     type,
     shower,
+    watch,
     radio: ui._id
   }
-  
+
   // Add readonly and interactive if provided
   if (readonly !== undefined) {
     args.readonly = readonly;
   }
+
   if (interactive !== undefined) {
     args.interactive = interactive;
   }
-  
+
   if (sys_pn) {
     args.sys_pn = sys_pn;
     args.partHandler = [ui];

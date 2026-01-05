@@ -713,6 +713,13 @@ class __core_mfs extends LetcBox {
   /**
    *
    */
+  canAdmin() {
+    return this.mget(_a.privilege) & _K.permission.admin;
+  }
+
+  /**
+   *
+   */
   canOrganize() {
     if (this.mget(_a.isalink) && !this.isHub) return false;
     return this.mget(_a.privilege) & _K.permission.modify;

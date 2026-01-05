@@ -123,6 +123,7 @@ class __drumee_entry_input extends LetcBox {
     this.getData = this.getData.bind(this);
     this.onArrowUp = this.onArrowUp.bind(this);
     this.onArrowDown = this.onArrowDown.bind(this);
+    this.onChange = this.onChange.bind(this);
     this._pace = this._pace.bind(this);
   }
 
@@ -163,7 +164,7 @@ class __drumee_entry_input extends LetcBox {
       type: _a.text,
       service: _e.interactive,
       minlength: this.mget(_a.minlength) || 0,
-      maxlength: this.mget(_a.maxlength) || 524288, 
+      maxlength: this.mget(_a.maxlength) || 524288,
       rows: 1,
       cols: 40,
       volatility: 0
@@ -192,6 +193,12 @@ class __drumee_entry_input extends LetcBox {
 
   /**
    * 
+   */
+  onDestroy() {
+    this.resetWatcher()
+  }
+  /**
+   * 
    * @returns 
    */
   onRender() {
@@ -202,6 +209,61 @@ class __drumee_entry_input extends LetcBox {
     }
   }
 
+  onChange(e) {
+    this.triggerHandlers({ service: this.mget('watch'), value: e.target.value })
+  }
+
+  /**
+   * 
+   */
+  resetWatcher() {
+    if (!this._input) {
+      return
+    }
+    let callback = this.onChange;
+    // User interactions
+    this._input.removeEventListener('input', callback);
+    this._input.removeEventListener('change', callback);
+    this._input.removeEventListener('paste', callback);
+    this._input.removeEventListener('cut', callback);
+  }
+  /**
+   * 
+   */
+  watchInput() {
+    let callback = this.onChange;
+    // User interactions
+    this._input.addEventListener('input', callback);
+    this._input.addEventListener('change', callback);
+    this._input.addEventListener('paste', callback);
+    this._input.addEventListener('cut', callback);
+
+    // Programmatic changes via property
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      Object.getPrototypeOf(this._input),
+      'value'
+    );
+
+    Object.defineProperty(this._input, 'value', {
+      get: originalDescriptor.get,
+      set: function (newValue) {
+        originalDescriptor.set.call(this, newValue);
+        callback({ target: this });
+      }
+    });
+
+    // Programmatic changes via setAttribute
+    const originalSetAttribute = this._input.setAttribute;
+    this._input.setAttribute = function (name, value) {
+      if (name === 'value') {
+        originalSetAttribute.call(this, name, value);
+        setTimeout(() => callback({ target: this }), 0);
+      } else {
+        originalSetAttribute.call(this, name, value);
+      }
+    };
+  }
+
   /**
    * 
    * @returns 
@@ -210,15 +272,18 @@ class __drumee_entry_input extends LetcBox {
     if (this.mget(_a.hidden)) {
       this.el.style.display = _a.none;
     }
+    if (this._input) {
+      this.resetWatcher();
+    }
     this.el.innerHTML = '';
     this.$el.append(require('./template')(this));
     this.el.setAttribute(_a.data.state, this.mget(_a.initialState));
     const value = this.mget(_a.value);
     this._lastValue = value;
     this._done = false;
-    this._input = this.$el.find(`#${this._id}-input`);
+    this._input = document.getElementById(`${this._id}-input`) //this.$el.find(`#${this._id}-input`);
     const f = () => {
-      this._input.val(value);
+      this._input.value = value;
       if (this.mget(_a.inputOpt) != null) {
         this._input.attr(this.mget(_a.inputOpt));
       }
@@ -233,9 +298,11 @@ class __drumee_entry_input extends LetcBox {
       if (this.mget(_a.locked)) {
         return this.lock();
       }
-
+      if (this.mget('watch')) {
+        this.watchInput()
+      }
     };
-    return this.waitElement(this._input[0], f);
+    return this.waitElement(this._input, f);
   }
 
   /**
@@ -310,10 +377,12 @@ class __drumee_entry_input extends LetcBox {
       return true;
     }
     if (this.mget('uppercase')) {
-      this._input.val(this._input.val().toUpperCase())
+      let v = this._input.value == null ? "" : this._input.value;
+      this._input.value = v.toUpperCase()
     } else if (this.mget('capitalize')) {
-      this._input.val(this._input.val().ucFirst())
+      this._input.value = v.ucFirst()
     }
+
     switch (this.mget(_a.mode)) {
       case _a.passthroughs:
         return true;
@@ -628,7 +697,7 @@ class __drumee_entry_input extends LetcBox {
   clear() {
     this._done = false;
     this.hideError();
-    return this._input.val('');
+    this._input.value = "";
   }
 
   /**
@@ -763,7 +832,7 @@ class __drumee_entry_input extends LetcBox {
     }
     this.model.set(_a.value, val);
     try {
-      return this._input.val(val);
+      return this._input.value = val;
     } catch (error) { }
   }
 
@@ -789,7 +858,7 @@ class __drumee_entry_input extends LetcBox {
    * @param {*} val 
    */
   setValue(val) {
-    this._input.val(val);
+    this._input.value = val;
     this.model.set(_a.value, val);
   }
 
@@ -800,7 +869,7 @@ class __drumee_entry_input extends LetcBox {
    */
   getValue(sync) {
     if (sync == null) { sync = false; }
-    const val = this._input.val();
+    const val = this._input.value;
     if (sync) {
       this.model.set(_a.value, val);
     }
@@ -815,10 +884,10 @@ class __drumee_entry_input extends LetcBox {
    */
   _sync() {
     if (this.status === _a.error) {
-      this._input.val(this._lastValue);
+      this._input.value = this._lastValue;
       return;
     }
-    const val = this.getValue();
+    let val = this.getValue();
     const range = this.mget(_a.range);
     if (range) {
       if (parseFloat(val) < range.min) {
@@ -884,7 +953,7 @@ class __drumee_entry_input extends LetcBox {
     let val = this.getValue() || 0;
     val = parseFloat(val) + parseFloat(delta);
     this.model.set(_a.value, val);
-    return this._input.val(val);
+    return this._input.value = val;
   }
 }
 __drumee_entry_input.initClass();
