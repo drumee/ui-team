@@ -1,3 +1,4 @@
+
 /**
  * 
  * @param {*} ui 
@@ -42,6 +43,12 @@ function header(ui) {
 }
 function menu(ui) {
   const pfx = `${ui.fig.family}-security__menu`;
+  let MFA = [LOCALE.OFF, LOCALE.ON];
+  let mfa = 0;
+  if (Visitor.profile().otp) {
+    mfa = 1;
+  }
+
   const items = Skeletons.Box.Y({
     debug: __filename,
     className: `${pfx}-items`,
@@ -51,20 +58,18 @@ function menu(ui) {
         content: LOCALE.OFF,
         className: `${pfx}-item`,
         service: 'change-mfa',
-        mfa: 0
+        mfa: 0,
+        state: 0 ^ mfa
       }),
       Skeletons.Element({
         content: LOCALE.ON,
         className: `${pfx}-item`,
         service: 'change-mfa',
-        mfa: 1
+        mfa: 1,
+        state: 1 ^ mfa
       }),
     ]
   });
-  let mfa = LOCALE.OFF;
-  if (Visitor.profile().mfa) {
-    mfa = LOCALE.ON;
-  }
 
   const trigger = Skeletons.Box.X({
     className: `${pfx}-trigger`,
@@ -73,7 +78,10 @@ function menu(ui) {
       Skeletons.Element({
         className: `${pfx}-username`,
         sys_pn: "current-mfa",
-        content: mfa
+        name: "mfa",
+        value: mfa,
+        formItem: 1,
+        content: MFA[mfa]
       }),
       Skeletons.Button.Svg({ className: `${pfx}-trigger-icon`, ico: "carret-down" }),
     ]
