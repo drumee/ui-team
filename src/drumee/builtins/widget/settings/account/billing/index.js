@@ -322,8 +322,16 @@ class settings_billing extends LetcBox {
     const bundlePrice = selectedBundle ? bundlePrices[selectedBundle] || 0 : 0;
     const bundleStorage = selectedBundle ? parseInt(selectedBundle) : 0;
 
-    const baseStorage = selectedPlan === "pro" ? 50 : 5;
-    const totalStorage = baseStorage + bundleStorage + storage;
+    // Calculate total storage based on plan
+    let totalStorage;
+    if (selectedPlan === "free") {
+      // Free plan has fixed 20GB storage, no bundles or additional storage
+      totalStorage = 20;
+    } else {
+      // Pro plan: base storage (50GB) + bundle storage + additional storage
+      const baseStorage = 50;
+      totalStorage = baseStorage + bundleStorage + storage;
+    }
 
     const totalPrice =
       billingCycle === "yearly"
