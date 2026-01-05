@@ -7,8 +7,14 @@
 export function entry(ui, opt) {
   let { value, name, placeholder = "", label, shower, sys_pn, type, service = _a.input, ico, icoPosition = "right", readonly, interactive } = opt;
   const pfx = `${ui.fig.family}__entry`;
+  // Build className with readonly modifier if needed
+  let inputClassName = `${pfx}-input`;
+  if (readonly) {
+    inputClassName += ` ${pfx}-input--readonly`;
+  }
+  
   let args = {
-    className: `${pfx}-input`,
+    className: inputClassName,
     name,
     value,
     formItem: name,
@@ -47,9 +53,15 @@ export function entry(ui, opt) {
       state: 0,
     });
 
+    // Build wrapper className with readonly modifier if needed
+    let wrapperClassName = `${pfx}-input-wrapper`;
+    if (readonly) {
+      wrapperClassName += ` ${pfx}-input-wrapper--readonly`;
+    }
+
     // Wrap entry in Box.X to contain icon inside border
     entryComponent = Skeletons.Box.X({
-      className: `${pfx}-input-wrapper`,
+      className: wrapperClassName,
       kids: [entryComponent]
     });
 
@@ -61,8 +73,14 @@ export function entry(ui, opt) {
     }
   }
 
+  // Build main className with readonly modifier if needed
+  let mainClassName = `${pfx}-main`;
+  if (readonly) {
+    mainClassName += ` ${pfx}-main--readonly`;
+  }
+
   return Skeletons.Box.G({
-    className: `${pfx}-main`,
+    className: mainClassName,
     kids: [
       Skeletons.Note({
         className: `${pfx}-label ${name}`,

@@ -107,7 +107,7 @@ class settings_billing extends LetcBox {
       }
 
       // Get seat from quota
-      const seats = quota?.seat != null ? quota.seat : 5; // Default to 5 only if seat is null/undefined, not if it's 0
+      const seats = quota?.seat != null ? quota.seat : 0; // Default to 5 only if seat is null/undefined, not if it's 0
 
       // Get storage from quota (in bytes, convert to GB)
       // 1 GB = 1,000,000,000 bytes (decimal)
@@ -299,7 +299,7 @@ class settings_billing extends LetcBox {
   calculateCheckoutSummary(state) {
     const checkout = state?.checkout || {};
     const selectedPlan = checkout.selectedPlan || "pro";
-    const seats = parseInt(checkout.seats) || 5;
+    const seats = parseInt(checkout.seats) || 0;
     const storage = parseInt(checkout.storage) || 0;
     const billingCycle = checkout.billingCycle || "monthly";
     const selectedBundle = checkout.selectedBundle;

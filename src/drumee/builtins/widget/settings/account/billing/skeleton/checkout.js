@@ -156,7 +156,7 @@ function checkout(ui) {
             icoPosition: "left",
             type: "number",
             placeholder: "0",
-            value: String(ui.state?.checkout?.seats || 5),
+            value: String(ui.state?.checkout?.seats || 0),
             sys_pn: `${pfx}-seats-input`,
             readonly: ui.state?.checkout?.selectedPlan === "free" ? true : false,
             interactive: ui.state?.checkout?.selectedPlan === "free" ? 0 : 1,
