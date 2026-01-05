@@ -44,10 +44,7 @@ function header(ui) {
 function menu(ui) {
   const pfx = `${ui.fig.family}-security__menu`;
   let MFA = [LOCALE.OFF, LOCALE.ON];
-  let mfa = 0;
-  if (Visitor.profile().otp) {
-    mfa = 1;
-  }
+  let mfa = parseInt(Visitor.profile().mfa) || 0;
 
   const items = Skeletons.Box.Y({
     debug: __filename,

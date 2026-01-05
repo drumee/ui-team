@@ -191,6 +191,7 @@ class settings_account extends LetcBox {
         email,
         hub_id: Visitor.id,
       });
+      this.debug("AAAA:194", secret)
       this._secret = secret;
       return this.__overlay.feed(
         require("./skeleton/form-otp").default(this, "update-profile")
@@ -222,15 +223,19 @@ class settings_account extends LetcBox {
     let MFA = [LOCALE.OFF, LOCALE.ON];
     let { email } = Visitor.profile();
     return this.ensurePart("current-mfa").then(async (p) => {
-      let payload = await this.postService(SERVICE.otp.send, { id: Visitor.id, email })
+      let { secret } = await this.postService(SERVICE.otp.send, { id: Visitor.id, email })
       p.mset({ value: cmd.mget('mfa'), content: MFA[cmd.mget('mfa')] })
+      let payload = {
+        hub_id: Visitor.id,
+        mfa: cmd.mget('mfa'),
+        secret
+      }
       this.debug("AAA:133", payload, p);
-      payload.hub_id = Visitor.id;
       await Kind.waitFor('dtk_otp');
-      this.feed({
+      this.__overlay.feed({
         payload,
         dataset: {
-          nested: 1
+          fit: "parent"
         },
         kind: 'dtk_otp',
         api: SERVICE.desk.set_mfa,
@@ -273,6 +278,15 @@ class settings_account extends LetcBox {
           this.tab_name[this._page] = "My seats";
         }
         this.feed(require("./skeleton").default(this));
+        break;
+      case "otp-signined":
+        this.debug("AAA:282", args);
+        if (args.data) Visitor.respawn(args.data);
+        this.__overlay.softClear()
+        setTimeout(() => {
+          this._page = 3;
+          this.feed(require("./skeleton").default(this));
+        }, 500)
         break;
       case "avatar-reloaded":
         return setTimeout(async () => {
