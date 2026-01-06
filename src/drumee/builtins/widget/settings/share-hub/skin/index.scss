@@ -237,6 +237,18 @@
     flex-shrink: 0;
   }
 
+  &__arrow-down {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--Neutral-600, #8C929C);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
   &__label {
     flex: 1;
     font-size: 14px;

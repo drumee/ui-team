@@ -17,6 +17,7 @@ module.exports = {
   settings_members_list: './settings/members-list',
   // settings_pricing: './settings/pricing',
   settings_share_hub: './settings/share-hub',
+  settings_share_hub_custom: './settings/share-hub-custom',
   settings_private_hub: './settings/private-hub',
   widget_chat_item: './chat-item',
 };

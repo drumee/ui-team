@@ -224,5 +224,12 @@
   "EFFECTIVE_PRICE_PER_SEAT": "Precio efectivo por asiento:",
   "PROCEED_TO_CHECKOUT": "Proceder al pago",
   "BEST_VALUE": "MEJOR VALOR",
-  "BILLING_INFORMATION": "Información de facturación"
+  "BILLING_INFORMATION": "Información de facturación",
+  "ENTER_EMAIL_TO_INVITE": "Ingrese el correo electrónico para invitar Ej: name@gmail.com",
+  "MY_CONTACT": "Mi contacto",
+  "PEOPLE_WITH_ACCESS": "Personas con acceso",
+  "VIEW_ALL_INVITED_MEMBERS": "Ver todos los miembros invitados (12)",
+  "COPY_LINK": "Copiar enlace",
+  "SHOW_QR_CODE": "Mostrar código QR",
+  "SETTING": "Configuración"
 }

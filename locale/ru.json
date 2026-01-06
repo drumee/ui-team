@@ -1969,5 +1969,12 @@
   "EFFECTIVE_PRICE_PER_SEAT": "Эффективная цена за место:",
   "PROCEED_TO_CHECKOUT": "Перейти к оформлению заказа",
   "BEST_VALUE": "ЛУЧШАЯ ЦЕННОСТЬ",
-  "BILLING_INFORMATION": "Платежная информация"
+  "BILLING_INFORMATION": "Платежная информация",
+  "ENTER_EMAIL_TO_INVITE": "Введите email для приглашения Например: name@gmail.com",
+  "MY_CONTACT": "Мои контакты",
+  "PEOPLE_WITH_ACCESS": "Люди с доступом",
+  "VIEW_ALL_INVITED_MEMBERS": "Просмотреть всех приглашенных участников (12)",
+  "COPY_LINK": "Копировать ссылку",
+  "SHOW_QR_CODE": "Показать QR-код",
+  "SETTING": "Настройки"
 }

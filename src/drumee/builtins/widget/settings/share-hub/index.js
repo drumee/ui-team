@@ -40,8 +40,24 @@ class settings_share_hub extends DrumeeMFS {
     this.debug('AAA:35 onUiEvent', service, cmd, args);
     switch (service) {
       case _e.close:
-      case _a.back:
       case 'close-popup':
+        if (this.mget(_a.media)) {
+          this.triggerHandlers({
+            service,
+          });
+          return;
+        }
+        return this.goodbye();
+      case _a.back:
+        // If back event comes from child widget (custom popup), render share-hub skeleton again
+        // Otherwise, trigger handler to parent (hub)
+        if (this._inCustomPopup) {
+          // We're coming back from custom popup, render share-hub skeleton again
+          this._inCustomPopup = false;
+          this.feed(require('./skeleton').default(this));
+          return;
+        }
+        // Otherwise, trigger handler to parent (hub)
         if (this.mget(_a.media)) {
           this.triggerHandlers({
             service,
@@ -537,6 +553,7 @@ class settings_share_hub extends DrumeeMFS {
 
   /**
    * Change access type (only update pendingChanges, don't save)
+   * If "custom" is selected, open custom popup
    * @param {*} cmd 
    */
   changeAccessType(cmd) {
@@ -557,6 +574,11 @@ class settings_share_hub extends DrumeeMFS {
       cmd_value: cmd.value,
       dataset_value: cmd.el && cmd.el.dataset && cmd.el.dataset.value
     });
+    
+    // If "custom" is selected, open custom popup instead of updating access type
+    if (accessType === 'custom') {
+      return this.openCustomPopup();
+    }
     
     // Update formData immediately
     this.formData.accessType = accessType;
@@ -585,10 +607,26 @@ class settings_share_hub extends DrumeeMFS {
       }
     } else {
       // Fallback: re-render entire skeleton
-    this.feed(require('./skeleton').default(this));
+      this.feed(require('./skeleton').default(this));
     }
     
     return false; // Prevent event bubbling to parent
+  }
+
+  /**
+   * Open custom access popup (child popup of share-hub)
+   */
+  openCustomPopup() {
+    // Set flag to indicate we're in custom popup
+    this._inCustomPopup = true;
+    // Feed custom widget as child popup, similar to how hub opens share-hub
+    this.feed({
+      kind: "settings_share_hub_custom",
+      uiHandler: [this],
+      media: this.mget(_a.media),
+      hub_id: this.mget(_a.hub_id),
+    });
+    return false;
   }
 
   /**

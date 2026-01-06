@@ -1969,5 +1969,12 @@
   "EFFECTIVE_PRICE_PER_SEAT": "每个座位的有效价格：",
   "PROCEED_TO_CHECKOUT": "继续结账",
   "BEST_VALUE": "最佳价值",
-  "BILLING_INFORMATION": "账单信息"
+  "BILLING_INFORMATION": "账单信息",
+  "ENTER_EMAIL_TO_INVITE": "输入要邀请的电子邮件 例如：name@gmail.com",
+  "MY_CONTACT": "我的联系人",
+  "PEOPLE_WITH_ACCESS": "有访问权限的人员",
+  "VIEW_ALL_INVITED_MEMBERS": "查看所有受邀成员 (12)",
+  "COPY_LINK": "复制链接",
+  "SHOW_QR_CODE": "显示二维码",
+  "SETTING": "设置"
 }

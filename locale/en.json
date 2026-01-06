@@ -1969,5 +1969,12 @@
   "EFFECTIVE_PRICE_PER_SEAT": "Effective price per seat:",
   "PROCEED_TO_CHECKOUT": "Proceed to Checkout",
   "BEST_VALUE": "BEST VALUE",
-  "BILLING_INFORMATION": "Billing Information"
+  "BILLING_INFORMATION": "Billing Information",
+  "ENTER_EMAIL_TO_INVITE": "Enter email to invite Ex: name@gmail.com",
+  "MY_CONTACT": "My Contact",
+  "PEOPLE_WITH_ACCESS": "People with access",
+  "VIEW_ALL_INVITED_MEMBERS": "View all invited members (12)",
+  "COPY_LINK": "Copy Link",
+  "SHOW_QR_CODE": "Show QR code",
+  "SETTING": "Setting"
 }

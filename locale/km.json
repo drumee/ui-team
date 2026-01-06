@@ -1969,5 +1969,12 @@
   "EFFECTIVE_PRICE_PER_SEAT": "តម្លៃដែលមានប្រសិទ្ធភាពក្នុងមួយកៅអី៖",
   "PROCEED_TO_CHECKOUT": "បន្តទៅការទូទាត់",
   "BEST_VALUE": "តម្លៃល្អបំផុត",
-  "BILLING_INFORMATION": "ព័ត៌មានវិក្កយបត្រ"
+  "BILLING_INFORMATION": "ព័ត៌មានវិក្កយបត្រ",
+  "ENTER_EMAIL_TO_INVITE": "បញ្ចូលអ៊ីម៉ែលដើម្បីអញ្ជើញ ឧទាហរណ៍៖ name@gmail.com",
+  "MY_CONTACT": "ទំនាក់ទំនងរបស់ខ្ញុំ",
+  "PEOPLE_WITH_ACCESS": "មនុស្សដែលមានការចូលប្រើ",
+  "VIEW_ALL_INVITED_MEMBERS": "មើលសមាជិកទាំងអស់ដែលត្រូវបានអញ្ជើញ (12)",
+  "COPY_LINK": "ចម្លងតំណ",
+  "SHOW_QR_CODE": "បង្ហាញ QR code",
+  "SETTING": "ការកំណត់"
 }
