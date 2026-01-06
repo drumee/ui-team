@@ -5,6 +5,97 @@
 @include meta.load-css('info-menu');
 @include meta.load-css('password');
 
+.dmz-wm {
+  &__icons-list {
+    width: 100%;
+
+    &.desk-content {
+      margin: 0 auto;
+
+      &.icons-list {
+        z-index: 1000;
+        height: 100%;
+        width: 100%;
+        max-height: calc(100vh - 190px);
+        &[data-type="evaluation"]::after{
+          @include drumee.license-trial();
+          @include drumee.typo($size:36px,$line:42px,$color: var(--default-text-title));
+          transform: none;
+          bottom: 0;
+          width: 100%;
+        }
+      }
+    }
+
+    & .media-grid .filename {
+      font-size: 12px;
+      min-height: 23px;
+    }
+  }
+  &.media-grid[data-selected="1"] {
+    box-shadow: none;
+  }
+
+  &__icons-scroll .media-grid[data-selected="1"] {
+    box-shadow: none;
+  }
+
+  &__icons-list .media-grid[data-selected="1"] {
+    box-shadow: none;
+  }
+
+  &-desk__wrapper .media-grid[data-selected="1"] {
+    box-shadow: none;
+  }
+
+  &__icons-scroll {
+    align-items: center;
+    display: grid;
+    grid-gap: 1rem;
+    grid-template-columns: repeat(auto-fill, 86px);
+    // grid-template-rows: repeat(auto-fill, 130px);
+    justify-content: center;
+    justify-items: center;
+    min-height: 100px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    grid-auto-rows: 100px;
+
+    &[data-device="mobile"] {
+      grid-template-columns: repeat(auto-fill, 160px);
+      grid-gap: 0.5rem;
+      grid-template-rows: repeat(auto-fill, 125px);
+    }
+
+ 
+
+    & .media-grid__ui {
+      & .filename {
+        @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));
+        border-radius:var(--border-radius-bottom);
+        cursor: pointer;
+        left: 0px;
+        max-height: 31px;
+        overflow: hidden;
+        padding: 2px 12px;
+        position: absolute;
+        text-align: center;
+        text-overflow: ellipsis;
+        width: 100%;
+
+        &.hub, &.folder {
+          color: var(--default-text-reverse);
+        }
+
+        &.image,
+        &.video {
+          background :linear-gradient(180deg,hsla(0,0%,100%,.2),hsla(0,0%,100%,0.9));
+        }
+      }
+    }
+}
+} 
+
 .dmz-sharebox,
 .dmz-meeting {
   @include dmz-header;
@@ -56,6 +147,12 @@
     &[data-device="mobile"] {
       height: 120px;
     }
+  }
+
+  &-header__container {
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
   &__footer {
