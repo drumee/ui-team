@@ -683,6 +683,7 @@ class __media_interact extends media_core {
         return this.lock();
 
       case _a.link:
+      case _a.share:
         return this.viewerLink().then((url) => {
           copyToClipboard(url);
           Wm.acknowledge();

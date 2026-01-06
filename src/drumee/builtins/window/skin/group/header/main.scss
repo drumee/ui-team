@@ -35,6 +35,8 @@
       left: calc(50% - 160px);
       box-shadow: 0px 0px 31px 0 rgba(0, 0, 0, 0.4);
       border-radius: var(--corner-radius-3);
+      background-color: white;
+      color: var(--primary-500);
     }
 
     &__action {
