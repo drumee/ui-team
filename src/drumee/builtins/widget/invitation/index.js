@@ -523,14 +523,11 @@ class __invitation_settings extends __recipient {
       this.debug("AAA:519", item.model.toJSON(), item)
       users.push(item.mget(_a.id))
     }
-    let args = {
-      users,
-      privilege: this.mget(_a.privilege),
-      message: this.mget(_a.message),
-      hub_id: this.mget(_a.hub_id),
-    }
+    let args = this.getData()
+    args.hub_id = this.mget(_a.hub_id)
+
+    this.debug("AAA:530", args);
     this.postService(SERVICE.hub.add_contributors, args).then(usersList => {
-      this.debug("AAA:530", usersList);
       this.goodbye()
     })
 
