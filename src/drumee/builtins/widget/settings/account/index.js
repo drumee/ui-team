@@ -254,13 +254,51 @@ class settings_account extends LetcBox {
   }
 
   /**
+* 
+*/
+  _openLink(url) {
+    this.__overlay.softClear()
+    if (Visitor.device() == _a.mobile) {
+      window.open(url, "_blank", "noopener; noreferrer");
+    } else {
+      let w = Math.min(900, screen.availWidth - 100);
+      let h = Math.min(700, screen.availHeight - 100);
+      let x = screen.availWidth / 2 - w / 2;
+      let y = 0;
+      window.open(url, "_blank", `noopener, noreferrer, width=${w}, height=${h}, left=${x}, top=${y}`);
+    }
+  }
+
+  /**
+   * 
+   */
+  _onPlanChanged() {
+    this._page = 4;
+    if (!this.skeletons[this._page]) {
+      this.skeletons[this._page] = (require("./skeleton/seats").default);
+      this.tab_name[this._page] = "My seats";
+    }
+    // Switch to billing page (index 1) when plan is updated
+    // Only set to seats page (index 4) if user has admin rights and seats page exists
+    if (this.skeletons.length > 4 && this.canAdmin()) {
+      this._page = 4;
+    } else {
+      this._page = 1; // Billing page
+    }
+    this.__overlay.softClear()
+    this.feed(require("./skeleton").default(this));
+    clearInterval(this.timer)
+
+  }
+
+  /**
    * @param {*} cmd
    * @param {*} args
    */
   onUiEvent(cmd, args = {}) {
     const service =
       args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug("AAA:191", service);
+    this.debug("AAA:191", cmd, args, service);
     switch (service) {
       case "close-overlay":
         return this.__overlay.clear();
@@ -272,26 +310,26 @@ class settings_account extends LetcBox {
         return this.ensurePart("avatar-widget").then((p) => {
           p.selectFile();
         });
-
+      case "open-payment-link":
+        this._openLink(cmd.mget(_a.value))
+        const onVisibilityChange = () => {
+          if (document.hidden) return
+          this._onPlanChanged()
+          document.removeEventListener("visibilitychange", onVisibilityChange);
+        }
+        document.addEventListener("visibilitychange", onVisibilityChange)
+        return;
       case "avatar-progress":
         return this.ensurePart("avatar-progress").then((p) => {
           p.el.style.width = `${args.progress}%`;
         });
-
+      case "proceed-to-payment":
+        return this.__overlay.feed(
+          require("./skeleton/payment").default(this, args.url)
+        );
+        break;
       case 'plan_updated':
-        this._page = 4;
-        if (!this.skeletons[this._page]) {
-          this.skeletons[this._page] = (require("./skeleton/seats").default);
-          this.tab_name[this._page] = "My seats";
-        }
-        // Switch to billing page (index 1) when plan is updated
-        // Only set to seats page (index 4) if user has admin rights and seats page exists
-        if (this.skeletons.length > 4 && this.canAdmin()) {
-          this._page = 4;
-        } else {
-          this._page = 1; // Billing page
-        }
-        this.feed(require("./skeleton").default(this));
+        this._onPlanChanged(cmd)
         break;
       case "otp-signined":
         this.debug("AAA:282", args);

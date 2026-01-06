@@ -399,20 +399,6 @@ class settings_billing extends LetcBox {
     return r
   }
 
-  /**
- * 
- */
-  _openLink(url) {
-    if (Visitor.device() == _a.mobile) {
-      window.open(url, "_blank", "noopener; noreferrer");
-    } else {
-      let w = Math.min(900, screen.availWidth - 100);
-      let h = Math.min(700, screen.availHeight - 100);
-      let x = screen.availWidth / 2 - w / 2;
-      let y = 0;
-      window.open(url, "_blank", `popup, noopener, noreferrer, width=${w}, height=${h}, left=${x}, top=${y}`);
-    }
-  }
 
   /**
    * Handle proceed to checkout: call payment API and open payment window
@@ -442,12 +428,10 @@ class settings_billing extends LetcBox {
       description,
       bundleStorage
     };
-    this.debug("payment", payment)
-    this.triggerHandlers({ service: "proceed-to-payment" })
     this.postService(SERVICE.payment.checkout, { payment })
       .then((data) => {
         let { url } = data;
-        this._openLink(url);
+        this.triggerHandlers({ service: "proceed-to-payment", url })
       })
       .catch((e) => {
         this.warn("Got backend error [_proceedToCheckout]:", e)
