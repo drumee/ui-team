@@ -13,46 +13,46 @@
       & .window-topbar__title .svg-wrapper {
         visibility: hidden;
       }
-      &::after {
-        content: attr(data-name);
-        position: absolute;
-        top: -30px;
-        left: -3px;
-        border-radius: var(--default-border-radius-top);
-        height: 27px;
-        width: 156px;
-        background-color: var(--teamroom-main);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-content: center;
-        justify-items: center;
-        align-items: center;
-        @include drumee.typo(
-          $size: 12px,
-          $line: 14px,
-          $weight: 400,
-          $color: var(--default-text-reverse)
-        );
-        padding-top: 5px;
-        padding-left: 6px;
-        padding-bottom: 3px;
-        box-shadow: var(--shadow-main);
-      }
+      // &::after {
+      //   content: attr(data-name);
+      //   position: absolute;
+      //   top: -30px;
+      //   left: -3px;
+      //   border-radius: var(--default-border-radius-top);
+      //   height: 27px;
+      //   width: 156px;
+      //   background-color: var(--teamroom-main);
+      //   display: flex;
+      //   flex-direction: column;
+      //   justify-content: center;
+      //   align-content: center;
+      //   justify-items: center;
+      //   align-items: center;
+      //   @include drumee.typo(
+      //     $size: 12px,
+      //     $line: 14px,
+      //     $weight: 400,
+      //     $color: var(--default-text-reverse)
+      //   );
+      //   padding-top: 5px;
+      //   padding-left: 6px;
+      //   padding-bottom: 3px;
+      //   box-shadow: var(--shadow-main);
+      // }
 
-      &:before {
-        content: " ";
-        position: absolute;
-        width: calc(100% + 6px);
-        height: calc(100% + 6px);
-        top: -3px;
-        left: -3px;
-        border: 7px solid var(--teamroom-main);
-        border-top-left-radius: 0px;
-        border-bottom-left-radius: 6px;
-        border-bottom-right-radius: 6px;
-        border-top-right-radius: 6px;
-      }
+      // &:before {
+      //   content: " ";
+      //   position: absolute;
+      //   width: calc(100% + 6px);
+      //   height: calc(100% + 6px);
+      //   top: -3px;
+      //   left: -3px;
+      //   border: 7px solid var(--teamroom-main);
+      //   border-top-left-radius: 0px;
+      //   border-bottom-left-radius: 6px;
+      //   border-bottom-right-radius: 6px;
+      //   border-top-right-radius: 6px;
+      // }
     }
   }
 

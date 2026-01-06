@@ -1,13 +1,9 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /src/drumee/modules/dmz/sharebox/skeleton/info-menu.js
-//   TYPE : Skeleton
-// ===================================================================**/
 
 
-function __skl_dmz_sharebox_info_menu (_ui_) {
 
-  const menuFig = `${_ui_.fig.family}-menu`;
+function __skl_dmz_sharebox_info_menu (ui) {
+
+  const menuFig = `${ui.fig.family}-menu`;
 
   let _downloadRightsIcon, _uploadRightsIcon;
 
@@ -15,13 +11,13 @@ function __skl_dmz_sharebox_info_menu (_ui_) {
     ico       : 'info',
     className : `${menuFig}__icon ${menuFig}__trigger trigger-icon account_info`,
     service   : 'info-menu',
-    uiHandler : _ui_
+    uiHandler : ui
   });
 
   const ownerTitle = Skeletons.Box.X({
     className : `${menuFig}__item title`,
     service   : _e.edit,
-    uiHandler : _ui_,
+    uiHandler : ui,
     kidsOpt   : {
       active : 0
     },
@@ -43,7 +39,7 @@ function __skl_dmz_sharebox_info_menu (_ui_) {
 
       Skeletons.Note({
         className : `${menuFig}__note menu-item owner-name`,
-        content   :  _ui_.mget('sender')
+        content   :  ui.mget('sender')
       })
     ]
   });
@@ -73,7 +69,7 @@ function __skl_dmz_sharebox_info_menu (_ui_) {
     ]
   });
 
-  if (_ui_.havePermission(_K.permission.download, _ui_.mget(_a.privilege))) {
+  if (ui.havePermission(_K.permission.download, ui.mget(_a.privilege))) {
     _downloadRightsIcon = 'available'
   } else {
     _downloadRightsIcon = 'cross'
@@ -98,7 +94,7 @@ function __skl_dmz_sharebox_info_menu (_ui_) {
     ]
   });
 
-  if (_ui_.havePermission(_K.permission.upload, _ui_.mget(_a.privilege))) {
+  if (ui.havePermission(_K.permission.upload, ui.mget(_a.privilege))) {
     _uploadRightsIcon = 'available'
   } else {
     _uploadRightsIcon = 'cross'
@@ -138,7 +134,7 @@ function __skl_dmz_sharebox_info_menu (_ui_) {
     kids      : [
       Skeletons.Note({
         className : `${menuFig}__note days expires-in-value`,
-        content   : _ui_.mget(_a.days) || '∞'
+        content   : ui.mget(_a.days) || '∞'
       }),
 
       Skeletons.Note({
@@ -148,7 +144,7 @@ function __skl_dmz_sharebox_info_menu (_ui_) {
 
       Skeletons.Note({
         className : `${menuFig}__note hours expires-in-value`,
-        content   : _ui_.mget(_a.hours) || '∞'
+        content   : ui.mget(_a.hours) || '∞'
       }),
 
       Skeletons.Note({
@@ -179,10 +175,10 @@ function __skl_dmz_sharebox_info_menu (_ui_) {
 
   const menu = Skeletons.Box.X({
     debug     : __filename,
-    className : `${menuFig}__dropdown ${_ui_.fig.group}__dropdown`,
+    className : `${menuFig}__dropdown ${ui.fig.group}__dropdown`,
     kids      : [{
       kind        : KIND.menu.topic,
-      className   : `${menuFig}__wrapper ${_ui_.fig.group}__wrapper`,
+      className   : `${menuFig}__wrapper ${ui.fig.group}__wrapper`,
       flow        : _a.y,
       opening     : _e.click,
       sys_pn      : 'member-action-dropdown',

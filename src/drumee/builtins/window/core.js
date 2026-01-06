@@ -21,7 +21,7 @@ class __window_core extends __utils {
     this.update_name = this.update_name.bind(this);
     this.fetchContent = this.fetchContent.bind(this);
     this.buildContent = this.buildContent.bind(this);
-    this.getFilePath = this.getFilePath.bind(this);
+    // this.getFilePath = this.getFilePath.bind(this);
     this.onPartReady = this.onPartReady.bind(this);
     this.onChildBubble = this.onChildBubble.bind(this);
     this.openContent = this.openContent.bind(this);
@@ -428,18 +428,23 @@ class __window_core extends __utils {
    * 
    * @returns 
    */
-  getFilePath() {
-    let p = "/";
-    this.__breadcrumbsContainer.children.each(
-      (c) => (p = `${p}/${c.mget(_a.filename)}`)
-    );
-    return p;
-  }
+  // getFilePath() {
+  //   let p = "/";
+  //   this.__breadcrumbsContainer.children.each(
+  //     (c) => (p = `${p}/${c.mget(_a.filename)}`)
+  //   );
+  //   return p;
+  // }
 
   /**
    * 
    */
   updateSummary(box) {
+    if (Visitor.parseModule().includes(_a.dmz)) {
+      this.debug("AAA:444", this)
+      // this.getPart("last-update").set({ content: "Metadata not available" })
+      return
+    }
     this.fetchService(SERVICE.media.summary, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((data) => {
       let mtime = Dayjs.unix(data.mtime).format(Visitor.timeformat());
       this.getPart("items-count").set({ content: LOCALE.X_FILES.format(data.file_count) })
@@ -514,19 +519,19 @@ class __window_core extends __utils {
       //   this.breadcrumbs = child;
       //   break;
 
-      // case "breadcrumbs-roll":
-      //   this.breadcrumbsRoll = child;
-      //   child.collection.on(_e.remove, () => {
-      //     if (child.collection.length === 0) {
-      //       this.__breadcrumbsContainer.setState(0);
-      //     }
+      case "breadcrumbs-roll":
+        this.breadcrumbsRoll = child;
+        // child.collection.on(_e.remove, () => {
+        //   if (child.collection.length === 0) {
+        //     this.__breadcrumbsContainer.setState(0);
+        //   }
 
-      //     if (child.collection.length) {
-      //       return this.__breadcrumbsContainer.setState(1);
-      //     }
-      //   });
-      //   this.trigger("breadcrumbs-roll-ready");
-      // break;
+        //   if (child.collection.length) {
+        //     return this.__breadcrumbsContainer.setState(1);
+        //   }
+        // });
+        this.trigger("breadcrumbs-roll-ready");
+        break;
 
       case "folder-summary":
         this.updateSummary(child)
@@ -581,26 +586,21 @@ class __window_core extends __utils {
    * @param {*} list 
    */
   buildBreadcrumbs(data = []) {
-    if (!this.breadcrumbsRoll) return;
+    // if (!this.breadcrumbsRoll) return;
     let items = [];
     for (let item of data) {
       items.push(require("./skeleton/topbar/breadcrumbs-item")(this, item));
     }
+
+    if (!items.length) return
     this.breadcrumbsRoll.feed(items);
-    this.breadcrumbsRoll.el.show();
-    this._path = data;
-    if (this.breadcrumbsRoll.collection.length < 2) {
-      this.__breadcrumbsContainer.el.hide();
-      if (this.actionContainer != null) {
-        this.actionContainer.el.dataset.state = 0;
-      }
+    if (items.length <= 1) {
+      this.breadcrumbsRoll.el.hide();
     } else {
-      this.__breadcrumbsContainer.el.show();
-      if (this.actionContainer != null) {
-        this.actionContainer.el.dataset.state = 1;
-      }
-      this.__breadcrumbsPrevious.el.show();
+      this.breadcrumbsRoll.el.show();
     }
+    this._path = data;
+    this.debug("AAA:599", items.length, items)
     const last = this.breadcrumbsRoll.children.last();
     if (last && this.name) {
       const fileName = last.mget(_a.filename) || "";
@@ -810,15 +810,15 @@ class __window_core extends __utils {
       case _e.sort:
         return this.sortContent(cmd);
 
-      case "previous":
-        let menu = this.breadcrumbsRoll;
-        let last = menu.children.last();
-        if (!last || menu.collection.length < 2) {
-          this.__breadcrumbsContainer.el.hide();
-          return;
-        }
-        let item = menu.children.findByIndex(menu.collection.length - 2);
-        return this.openContent(item, 1);
+      // case "previous":
+      //   let menu = this.breadcrumbsRoll;
+      //   let last = menu.children.last();
+      //   if (!last || menu.collection.length < 2) {
+      //     this.__breadcrumbsContainer.el.hide();
+      //     return;
+      //   }
+      //   let item = menu.children.findByIndex(menu.collection.length - 2);
+      //   return this.openContent(item, 1);
 
       case "show-navigation":
         return this.showNavigation();

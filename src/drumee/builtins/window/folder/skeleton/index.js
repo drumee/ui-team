@@ -1,14 +1,18 @@
-const __skl_folder_main = function (_ui_) {
+const __skl_folder_main = function (ui) {
+  const { breadcrumbs  } = require('../../skeleton/toolkit')
   const menu = Skeletons.Box.X({
     debug: __filename,
-    className: `${_ui_.fig.family}__header ${_ui_.fig.group}__header`,
+    className: `${ui.fig.family}__header ${ui.fig.group}__header`,
     kidsOpt: {
       radio: _a.on,
-      uiHandler: _ui_,
+      uiHandler: ui,
     },
-    kids: [require("./topbar")(_ui_)],
+    kids: [
+      require("./topbar")(ui),
+      breadcrumbs(ui)
+    ],
   });
 
-  return require('window/skeleton/content/main')(_ui_, menu);
+  return require('window/skeleton/content/main')(ui, menu);
 };
 module.exports = __skl_folder_main;

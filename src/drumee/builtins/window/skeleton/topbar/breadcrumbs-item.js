@@ -41,10 +41,10 @@ const __breadcrumbs_item = function (_ui_, item) {
       active: 0
     },
     kids: [
-      Skeletons.Button.Svg({
-        ico: folderIcon,
-        className: `${_ui_.fig.group}-breadcrumbs__item--icon ${iconColor}`
-      }),
+      // Skeletons.Button.Svg({
+      //   ico: folderIcon,
+      //   className: `${_ui_.fig.group}-breadcrumbs__item--icon ${iconColor}`
+      // }),
 
       Skeletons.Note({
         content: filename,

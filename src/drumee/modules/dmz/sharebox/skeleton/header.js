@@ -1,11 +1,7 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /ui/src/drumee/modules/dmz/sharebox/skeleton/header.js
-//   TYPE : Skeleton
-// ==================================================================== *
 
-function __skl_dmz_sharebox_header(_ui_) {
-  const headerFig = `${_ui_.fig.family}-header`
+
+function __skl_dmz_sharebox_header(ui) {
+  const headerFig = `${ui.fig.family}-header`
 
   let _uploadModeState, _downloadModeState;
 
@@ -15,13 +11,13 @@ function __skl_dmz_sharebox_header(_ui_) {
     kids: [
       Skeletons.Note({
         className: `${headerFig}__note title`,
-        content: _ui_.mget(_a.title)
+        content: ui.mget(_a.title)
       })
     ]
   })
 
 
-  if (_ui_.havePermission(_K.permission.upload)) {
+  if (ui.havePermission(_K.permission.upload, ui.mget(_a.privilege))) {
     _uploadModeState = _a.open
   } else {
     _uploadModeState = _a.closed
@@ -31,7 +27,7 @@ function __skl_dmz_sharebox_header(_ui_) {
     className: `${headerFig}__buttons-wrapper action-btn`,
     sys_pn: 'upload-button-wrapper',
     service: _e.upload,
-    uiHandler: _ui_,
+    uiHandler: ui,
     state: 0,
     dataset: {
       mode: _uploadModeState
@@ -47,7 +43,7 @@ function __skl_dmz_sharebox_header(_ui_) {
     ]
   })
 
-  if (_ui_.havePermission(_K.permission.download, _ui_.mget(_a.privilege))) {
+  if (ui.havePermission(_K.permission.download, ui.mget(_a.privilege))) {
     _downloadModeState = _a.open
   } else {
     _downloadModeState = _a.closed
@@ -57,7 +53,7 @@ function __skl_dmz_sharebox_header(_ui_) {
     className: `${headerFig}__buttons-wrapper action-btn`,
     sys_pn: 'download-button-wrapper',
     service: _e.download,
-    uiHandler: _ui_,
+    uiHandler: ui,
     state: 0,
     dataset: {
       mode: _downloadModeState
@@ -74,10 +70,10 @@ function __skl_dmz_sharebox_header(_ui_) {
   })
 
   let _actionBtnMode = _a.closed
-  if (_ui_.mget('is_verified')) {
+  if (ui.mget('is_verified')) {
     _actionBtnMode = _a.open
   }
-
+  _actionBtnMode = _a.open
   const actionButtons = Skeletons.Box.X({
     className: `${headerFig}__item action-buttons`,
     sys_pn: 'action-buttons',
@@ -93,7 +89,7 @@ function __skl_dmz_sharebox_header(_ui_) {
   const infoIcon = Skeletons.Box.X({
     className: `${headerFig}__item info`,
     kids: [
-      require('./info-menu').default(_ui_)
+      require('./info-menu').default(ui)
     ]
   })
 
@@ -105,23 +101,35 @@ function __skl_dmz_sharebox_header(_ui_) {
     ]
   })
 
-  if (_ui_.mget(_a.status) == "REQUIRED_PASSWORD") {
+  if (ui.mget(_a.status) == "REQUIRED_PASSWORD") {
     actionBox = Skeletons.Box.X({})
   }
+  const logo = Skeletons.Box.X({
+    active: 0,
+    className: `${headerFig}__logo-content`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "raw-logo-drumee-full",
+        lassName: `${headerFig}__logo-icon`,
+      })
+    ]
+  });
 
   let kids = [
-    { kind: 'custom_logo' },
+    // { kind: 'custom_logo' },
+    logo,
     title,
     actionBox
   ]
   if (Visitor.isMobile()) {
     kids = [
-      { kind: 'custom_logo' },
+      // { kind: 'custom_logo' },
+      logo,
       actionBox,
       title,
     ]
   }
-  _ui_.debug("AAA:124", kids, Visitor.isMobile())
+  ui.debug("AAA:124", ui, ui.mget(_a.privilege))
   return Skeletons.Box.G({
     debug: __filename,
     className: `${headerFig}__container`,
