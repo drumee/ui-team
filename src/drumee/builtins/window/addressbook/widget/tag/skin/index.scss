@@ -1,166 +1,165 @@
-
 @use 'mixins/drumee';
 
 
 .widget-tag {
-	&__ui {
-		border-radius:var(--border-radius-left);
-		height: 100%;
-		width: 100%;
-	}
-
-	&__main {
-		height: 100%;
-		overflow: hidden;
-	}
-	
-	&__container {
-		background-color: inherit;
-		height: 100%;
+  &__ui {
+    border-radius: var(--border-radius-left);
+    height: 100%;
+    width: 100%;
   }
 
-	&__header {
-		height: 34px;
-		padding: 5px;
-		width :	100%;
-	}
-	
-	&__separator {
-		background-color: var(--default-separator);
-		border-radius: 1px;
-		height: 1px;
-		margin: 3px 0 0 0px;
-		//opacity: 0.2;
-	}
+  &__main {
+    height: 100%;
+    overflow: hidden;
+  }
 
-	&-content {
-		height: 100%;
-		margin: -1px -4px 0px 0px;
-		overflow: hidden;
-		width: 100%;
+  &__container {
+    background-color: inherit;
+    height: 100%;
+  }
 
-		&__main {
-		//	margin-bottom: 1px;
-		  margin-top: 1px;
-		}
+  &__header {
+    height: 34px;
+    padding: 5px;
+    width: 100%;
+  }
 
-		&__digit {
-			z-index: 2!important;
-			align-items: center;
-			@include drumee.typo($color: var(--default-text-reverse), $weight:100, $line:1, $size: 10px);
-			background-color:var(--special-tag-note-chat);
-			border-radius: 50%;
-			height: 16px;
-			justify-content: center;
-			position: absolute;
-			width:16px;
-			left: 10px;
-  		top: 9px;
-		}
+  &__separator {
+    background-color: var(--default-separator);
+    border-radius: 1px;
+    height: 1px;
+    margin: 3px 0 0 0px;
+    //opacity: 0.2;
+  }
 
-		&__container {
-			height: 35px;
-		}
+  &-content {
+    height: 100%;
+    margin: -1px -4px 0px 0px;
+    overflow: hidden;
+    width: 100%;
 
-		&__note {
-			left:-3px;
-		  top: 1px;//0px;//2px;
-		}
+    &__main {
+      //	margin-bottom: 1px;
+      margin-top: 1px;
+    }
 
-		&__items {
-			height: 99%;//100%;
-			overflow: hidden;
-			width: 100%;
-		}
+    &__digit {
+      z-index: 2 !important;
+      align-items: center;
+      @include drumee.typo($color: var(--default-text-reverse), $weight: 100, $line: 1, $size: 10px);
+      background-color: var(--special-tag-note-chat);
+      border-radius: 50%;
+      height: 16px;
+      justify-content: center;
+      position: absolute;
+      width: 16px;
+      left: 10px;
+      top: 9px;
+    }
 
-		&__item {
-			height: 100%;
-			overflow: hidden;
-			padding-bottom: 15px;
-			width: calc(100% - 0px);
-			top:-1px;
+    &__container {
+      height: 35px;
+    }
 
-			& .smart-container {
-				overflow-x: hidden;
-				width: 100%;
+    &__note {
+      left: -3px;
+      top: 1px; //0px;//2px;
+    }
 
-				margin: 1px 0 0;
-			}
+    &__items {
+      height: 99%; //100%;
+      overflow: hidden;
+      width: 100%;
+    }
 
-			& .tag-sortable-placeholder {
-				background: var(--default-background-hover);
-				height:24px;
-				opacity: 0.3;
-				width: 100%;
-			}
-		}
+    &__item {
+      height: 100%;
+      overflow: hidden;
+      padding-bottom: 15px;
+      width: calc(100% - 0px);
+      top: -1px;
 
-		&__container {
-			cursor: pointer;
-			margin: 0px 0.5px 0px 0px;
-			padding-bottom: 5px;
-			padding-left: 32px;
-			padding-top: 5px;
-			width: 100%;
-			@include drumee.typo($size: 14px, $line: 16px, $color: var(--ab-special-tag-fg));
+      & .smart-container {
+        overflow-x: hidden;
+        width: 100%;
 
-			&.chat {
-				color: var(--bigchat-special-tag-color) !important;
-			}
+        margin: 1px 0 0;
+      }
 
-			&.addressbook-widget-tag-item__ui {
-				height: 30px;
-			}
+      & .tag-sortable-placeholder {
+        background: var(--default-background-hover);
+        height: 24px;
+        opacity: 0.3;
+        width: 100%;
+      }
+    }
 
-			&.min-view {
-				padding: 2px 0px 2px 42px;
-			}
+    &__container {
+      cursor: pointer;
+      margin: 0px 0.5px 0px 0px;
+      padding-bottom: 5px;
+      padding-left: 32px;
+      padding-top: 5px;
+      width: 100%;
+      @include drumee.typo($size: 14px, $line: 16px, $color: var(--ab-special-tag-fg));
 
-			&[data-active="active"],
+      &.chat {
+        color: var(--bigchat-special-tag-color) !important;
+      }
+
+      &.addressbook-widget-tag-item__ui {
+        height: 30px;
+      }
+
+      &.min-view {
+        padding: 2px 0px 2px 42px;
+      }
+
+      &[data-active="active"],
       &[data-radio="on"],
       &:hover {
-				background: var(--default-background-hover);
-				color	: var(--default-text-hover) !important;
-				width: 100%;
-     		}
-		}
-	}
+        background-color: var(--neutral-300);
+        color: var(--neutral-900);
+        width: 100%;
+      }
+    }
+  }
 
-	&__note {
-		&.title {
-			justify-content: center;
-			padding-bottom: 8px;
-			padding-top: 6px;
-			width: 100%;
-			@include drumee.typo($size: 15px, $line: 16px, $color: var(--ab-default-text-title));
-		}
-	}
+  &__note {
+    &.title {
+      justify-content: center;
+      padding-bottom: 8px;
+      padding-top: 6px;
+      width: 100%;
+      @include drumee.typo($size: 15px, $line: 16px, $color: var(--ab-default-text-title));
+    }
+  }
 
-	&__icon {
-		box-sizing: border-box;
-		color: var(--default-icon-neutral);
-		cursor: pointer;
-		height: 27px;
-		opacity:0.85;
-		padding: 7.5px;
-		position: absolute;
-		right: 3px;
-		top: 5px;
-		width: 27px;
-		
-		& svg {
-			fill : var(--default-icon-neutral);
-			opacity: 0.85;
+  &__icon {
+    box-sizing: border-box;
+    color: var(--default-icon-neutral);
+    cursor: pointer;
+    height: 27px;
+    opacity: 0.85;
+    padding: 7.5px;
+    position: absolute;
+    right: 3px;
+    top: 5px;
+    width: 27px;
 
-			&:hover {
-				fill : var(--default-icon-hover);
-				opacity:1;
-			}
-		}
-	}
+    & svg {
+      fill: var(--default-icon-neutral);
+      opacity: 0.85;
 
-	&__shareroom-wrapper,
-	&__support-wrapper  {
+      &:hover {
+        fill: var(--default-icon-hover);
+        opacity: 1;
+      }
+    }
+  }
+
+  &__shareroom-wrapper,
+  &__support-wrapper {
     align-items: center;
     cursor: pointer;
     font-size: 14px;
@@ -168,52 +167,52 @@
     justify-content: start;
     margin: 0px .5px 1px 0;
     padding-bottom: 7px;
-    padding-left:30px;
-		padding-top: 7px;
-		width: 100%;
-		@include drumee.typo($size: 14px, $line: 16px, $color: var(--ab-special-tag-fg));
+    padding-left: 30px;
+    padding-top: 7px;
+    width: 100%;
+    @include drumee.typo($size: 14px, $line: 16px, $color: var(--ab-special-tag-fg));
 
-		&.chat {
-			color: var(--bigchat-special-tag-color) !important;
-		}
-		
+    &.chat {
+      color: var(--bigchat-special-tag-color) !important;
+    }
+
     &[data-active="active"],
     &[data-radio="on"],
     &:hover {
       background: var(--default-background-hover);
-      color	: var(--default-text-hover) !important;
+      color: var(--default-text-hover) !important;
 
       & .addressbook-widget-tag-item__container {
-        color	: var(--default-text-hover) !important;
-			}
-			
-      & .addressbook-widget-tag-item__name{
+        color: var(--default-text-hover) !important;
+      }
+
+      & .addressbook-widget-tag-item__name {
         @include drumee.overflow-text;
       }
-	}
-	}
+    }
+  }
 
-	&__sharechat_notify,
-	&__supportchat_notify {
-		&[data-state="0"] {
-			visibility: hidden;
-		}
-	}
+  &__sharechat_notify,
+  &__supportchat_notify {
+    &[data-state="0"] {
+      visibility: hidden;
+    }
+  }
 
-	// &__support_name {
+  // &__support_name {
   // 	margin-left: -4px;
   // }
 
-	&__chat_note {
+  &__chat_note {
     //color: var(--eblue);
-    height: 9px;//15px
-		margin-left:-19px;//-22px;//-28px;
+    height: 9px; //15px
+    margin-left: -19px; //-22px;//-28px;
     margin-right: 10px;
-		margin-top:0px;// 3px;
-		width: 9px;//15px;
-		background-color: var(--special-tag-note-chat);//#1187f6;//var(--eblue);
+    margin-top: 0px; // 3px;
+    width: 9px; //15px;
+    background-color: var(--special-tag-note-chat); //#1187f6;//var(--eblue);
     border-radius: 50%;
     border: 1px solid var(--ewhite);
-	}
-	
+  }
+
 }

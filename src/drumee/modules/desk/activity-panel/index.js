@@ -113,6 +113,7 @@ class __activity_panel extends LetcBox {
   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
+    this.debug("AAA:116", service, cmd)
     switch (service) {
       case 'open-activity-panel':
         return this.togglePannel();
@@ -134,6 +135,11 @@ class __activity_panel extends LetcBox {
       case 'delete-entity':
         cmd.goodbye();
         return this.deleteEntityResponse(cmd);
+
+      case 'open-contact':
+        this.togglePannel()
+        return Wm.launch({ kind: 'window_addressbook', }, { explicit: 1, singleton: 1 });
+
     }
   }
 
@@ -307,21 +313,44 @@ class __activity_panel extends LetcBox {
   /**
    * 
   */
-  refreshActivity(timeout = 2000) {
-    let opt = { hub_id: Visitor.id }
-    this.postService(SERVICE.activity.get_unread_count, opt).then((data = {}) => {
-      this.triggerHandlers(data)
-    })
+  async refreshActivity(timeout = 2000) {
     if (!Visitor.id || !Visitor.isOnline()) {
       Visitor.once('online', () => {
         this.refreshActivity();
       })
       return
     }
-    if (this.__list && !this.__list.isDestroyed()) {
-      return this.__list.restart()
+
+    let opt = { hub_id: Visitor.id }
+    let { unread_count } = await this.postService(SERVICE.activity.get_unread_count, opt);
+    let invitation = await this.postService(SERVICE.contact.invite_get, { hub_id: Visitor.id });
+    unread_count = parseInt(invitation.length) + parseInt(unread_count);
+    this.triggerHandlers({ unread_count })
+    if (invitation && invitation.length) {
+      invitation.map((e) => {
+        let f = e.firstname || ""
+        let l = e.lastname || ""
+        let contact = { ...e, event: 'contact.invite', id: e.drumate_id, fullname: `${f} ${l}` };
+        e.kind = 'activity_item';
+        e.contact = contact;
+        e.service = "open-contact"
+        e.uiHandler = [this]
+      })
     }
-    this.feed(require('./skeleton')(this));
+    if (this.__list && !this.__list.isDestroyed()) {
+      // this.__list.mset({ kids: invitation })
+      // this.__list.once(_e.eod, () => {
+      //   this.debug("AAA:343", invitation, this.__list)
+      //   this.__list.prepend(invitation)
+      // })
+      // this.__list.mset({defaults:invitation})
+      this.__list.restart()
+      setTimeout(() => {
+        this.__list.prepend(invitation)
+      }, 1000)
+      return
+    }
+    this.feed(require('./skeleton')(this, invitation));
   }
 
   /**

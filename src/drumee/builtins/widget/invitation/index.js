@@ -27,7 +27,7 @@ class __invitation_settings extends __recipient {
    * 
    * @param {*} opt 
    */
-  initialize(opt) {
+  initialize(opt = {}) {
     require("./skin");
     super.initialize(opt);
     this.model.set({
@@ -36,7 +36,7 @@ class __invitation_settings extends __recipient {
     this._sharees = {};
     this._recipients = {};
     this._data = {
-      privilege: this.mget(_a.default_privilege) || _K.privilege.read,
+      privilege: this.mget(_a.default_privilege) || _K.privilege.write,
       limit: 0,
       days: 0,
       hours: 0
@@ -62,6 +62,7 @@ class __invitation_settings extends __recipient {
       };
       RADIO_CLICK.on(_e.click, this._auto_close);
     }
+    if (opt.media) this.copyPropertiesFrom(opt.media);
   }
 
   /**
@@ -512,12 +513,49 @@ class __invitation_settings extends __recipient {
 
   /**
    * 
+   * @param {*} data 
+   * @returns 
+   */
+  addContributors() {
+    // let 
+    let users = []
+    for (let item of this.__rollRecipients.children.toArray()) {
+      this.debug("AAA:519", item.model.toJSON(), item)
+      users.push(item.mget(_a.id))
+    }
+    let args = {
+      users,
+      privilege: this.mget(_a.privilege),
+      message: this.mget(_a.message),
+      hub_id: this.mget(_a.hub_id),
+    }
+    this.postService(SERVICE.hub.add_contributors, args).then(usersList => {
+      this.debug("AAA:530", usersList);
+      this.goodbye()
+    })
+
+    // return new Promise((resolve, reject) => {
+    //   if (_.isEmpty(data.users) && _.isEmpty(data.email)) {
+    //     resolve(true);
+    //     return;
+    //   }
+    //   data.hub_id = this.hub_id;
+    //   this.postService(SERVICE.hub.add_contributors, data).then(usersList => {
+    //     this.mset(_a.users, usersList);
+    //     return resolve(usersList);
+    //   })
+    // });
+  }
+
+  /**
+   * 
    */
   onUiEvent(cmd, args = {}) {
     let s;
     const service = args.service || cmd.service || cmd.mget(_a.service);
     this.service = service;
     let state = cmd.mget(_a.state);
+    this.debug("AAA:544", service, cmd)
     switch (service) {
       case _e.update:
         return this._updateData(cmd);
@@ -538,7 +576,7 @@ class __invitation_settings extends __recipient {
           if ((s.id === cmd.mget(_a.id)) || (s.email === cmd.mget(_a.email))) {
             continue;
           }
-          list.push({...s, ...this.recipientItem})
+          list.push({ ...s, ...this.recipientItem })
         }
         return this.mset(_a.sharees, list);
         recipientItem
@@ -556,9 +594,9 @@ class __invitation_settings extends __recipient {
             if (s.email === "*") {
               continue;
             }
-            list.push({...s, ...this.recipientItem, idle:1})
+            list.push({ ...s, ...this.recipientItem, idle: 1 })
           }
-          this.recipientsRoll.once(_e.started, ()=>{
+          this.recipientsRoll.once(_e.started, () => {
             this.debug("AAA:561", this.recipientsRoll._ready, "READY", list);
             this.recipientsRoll.feed(list);
             // setTimeout(()=>{
@@ -587,9 +625,15 @@ class __invitation_settings extends __recipient {
         return this.triggerHandlers();
 
       case _e.share:
-        this.service = service;
-        return this.triggerHandlers({ service });
+        this.debug("AAA:609", this, cmd)
+        this.addContributors();
+        return
 
+      case "update-permission":
+        this._data = { ...this._data, ...args.data }
+        this.debug("AAA:620", args)
+        // this.addContributors();
+        return
       case 'cancel-share':
         this.service = service;
         return this.triggerHandlers();

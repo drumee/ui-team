@@ -75,8 +75,8 @@ class __window_manager extends push {
   /**
    * 
    */
-  changeModalState(s){
-    this.ensurePart('wrapper-modal').then((p)=>{
+  changeModalState(s) {
+    this.ensurePart('wrapper-modal').then((p) => {
       p.el.dataset.state = s
     })
   }
@@ -678,6 +678,8 @@ class __window_manager extends push {
     return null;
   }
 
+
+
   /**
    *
    * @param {*} cmd
@@ -690,6 +692,9 @@ class __window_manager extends push {
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
+
+      case "manage-access":
+        return this.openAccessManager(cmd, args);
 
       case "confirm-removal":
         if (cmd.isGranted(_K.permission.owner)) {
@@ -1050,13 +1055,39 @@ class __window_manager extends push {
   }
 
   /**
+ * 
+ */
+  openAccessManager(cmd) {
+    this.debug("AAA:1061", cmd)
+    const invitation = {
+      kind: 'invitation',
+      signal: _e.ui.event,
+      media: cmd,
+      trigger: cmd,
+      hub_id: cmd.mget(_a.hub_id),
+      authority: cmd.mget(_a.privilege),
+      api: {
+        service: SERVICE.media.get_node_attr,
+        nid: cmd.mget(_a.nid),
+        hub_id: cmd.mget(_a.hub_id)
+      },
+      mode: 'direct',
+      topLabel: LOCALE.DOCUMENTS_ACCESS,
+      sharees: this.mget(_a.sharees),
+      closeButton: 1,
+      persistence: _a.once,
+      uiHandler: [this]
+    };
+    this.__wrapperModal.feed(invitation)
+  }
+
+  /**
  *
  * @param {*} media
  * @param {*} start
  */
   openSettings(media) {
     let item = media.model.toJSON();
-    this.debug("AAA:13000", item)
     // Toggle settings popup (same behavior as sharebox switchShowShareboxSettings)
     if (this.isShowSettings) {
       this.isShowSettings = false;
@@ -1106,6 +1137,7 @@ class __window_manager extends push {
       }
     });
   }
+
   /**
    *
    * @param {*} cmd

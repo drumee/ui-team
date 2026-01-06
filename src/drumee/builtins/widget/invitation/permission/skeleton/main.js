@@ -1,9 +1,9 @@
 const { toggleState } = require("core/utils")
-const __invitation_permission = function (_ui_) {
+const __invitation_permission = function (ui) {
   let needle, state;
-  const priv = ~~_ui_.model.get(_a.permission) || _ui_.model.get(_a.privilege);
-  const hours = ~~_ui_.model.get(_a.hours);
-  const days = ~~_ui_.model.get(_a.days);
+  const priv = ~~ui.model.get(_a.permission) || ui.model.get(_a.privilege);
+  const hours = ~~ui.model.get(_a.hours);
+  const days = ~~ui.model.get(_a.days);
 
   if (toggleState(days | hours)) {
     state = _a.open;
@@ -20,11 +20,11 @@ const __invitation_permission = function (_ui_) {
 
   const button = Skeletons.Box.Y({
     service: _e.close,
-    uiHandler: _ui_,
+    uiHandler: ui,
     kids: [
       SKL_Note(null, LOCALE.OK, {
         active: 0,
-        className: `${_ui_.fig.family}__btn`
+        className: `${ui.fig.family}__btn`
       })
     ]
   });
@@ -36,7 +36,7 @@ const __invitation_permission = function (_ui_) {
       name: _a.read,
       reference: _a.state, // use state instead of value
       bubble: 1,
-      className: `${_ui_.fig.family}__checkbox ${_ui_.fig.family}__text my-5 u-fd-row`
+      className: `${ui.fig.family}__checkbox ${ui.fig.family}__text my-5 u-fd-row`
     }, svg_option_icon),
     SKL_SVG_LABEL("available", {
       radio: channel,
@@ -45,7 +45,7 @@ const __invitation_permission = function (_ui_) {
       reference: _a.state,
       bubble: 1,
       name: _a.write,
-      className: `${_ui_.fig.family}__checkbox ${_ui_.fig.family}__text my-5  u-fd-row`
+      className: `${ui.fig.family}__checkbox ${ui.fig.family}__text my-5  u-fd-row`
     }, svg_option_icon),
     SKL_SVG_LABEL("available", {
       radio: channel,
@@ -55,55 +55,55 @@ const __invitation_permission = function (_ui_) {
       bubble: 1,
       name: _a.delete,
       dataset: {
-        modify: _ui_.mget(_a.modify)
+        modify: ui.mget(_a.modify)
       },
-      className: `${_ui_.fig.family}__checkbox ${_ui_.fig.family}__text my-5 u-fd-row` //option__disabled-modify
+      className: `${ui.fig.family}__checkbox ${ui.fig.family}__text my-5 u-fd-row` //option__disabled-modify
     }, svg_option_icon)
   ];
   const expiry = [
     SKL_SVG_LABEL("account_check", {
-      state: toggleState(_ui_.model.get(_a.limit)),
+      state: toggleState(ui.model.get(_a.limit)),
       label: LOCALE.EXPIRY,
       reference: _a.state, // use state instead of value
       name: _a.limit,
       state: toggleState(days | hours),
       bubble: 1,
-      className: `${_ui_.fig.family}__radio  ${_ui_.fig.family}__text my-5 u-fd-row`
+      className: `${ui.fig.family}__radio  ${ui.fig.family}__text my-5 u-fd-row`
     }, svg_option_icon),
 
     Skeletons.Box.X({
       className: "py-2 pl-24 u-ai-center mb-17",
       sys_pn: "wrapper-expiry",
-      part: _ui_,
+      part: ui,
       dataset: {
         state
       },
       kids: [
         Skeletons.Entry({
-          className: `${_ui_.fig.family}__input mr-5`,
+          className: `${ui.fig.family}__input mr-5`,
           name: _a.days,
-          uiHandler: _ui_,
+          uiHandler: ui,
           placeholder: `${days}`,
           sys_pn: "ref-days",
           bubble: 1,
           value: days //cmd.model.get(_a.days) #days_value
           // bubble      : 1
         }),
-        Skeletons.Note(LOCALE.DAYS, `${_ui_.fig.family}__text  mr-5`),
+        Skeletons.Note(LOCALE.DAYS, `${ui.fig.family}__text  mr-5`),
         Skeletons.Entry({
-          className: `${_ui_.fig.family}__input mr-5`,
+          className: `${ui.fig.family}__input mr-5`,
           name: _a.hours,
-          uiHandler: _ui_,
+          uiHandler: ui,
           bubble: 1,
           value: hours, //dhours_value
           placeholder: `${hours}`
         }),
-        Skeletons.Note(LOCALE.HOURS, `${_ui_.fig.family}__text`)
+        Skeletons.Note(LOCALE.HOURS, `${ui.fig.family}__text`)
       ]
     })
   ];
 
-  if ((needle = _ui_.mget(_a.mode), [_a.admin, _a.owner].includes(needle))) {
+  if ((needle = ui.mget(_a.mode), [_a.admin, _a.owner].includes(needle))) {
     content = expiry;
   } else {
     content = content.concat(expiry);
@@ -114,7 +114,7 @@ const __invitation_permission = function (_ui_) {
     flow: _a.y,
     debug: __filename,
     mode: _a.interactive,
-    uiHandler: _ui_,
+    uiHandler: ui,
     kids: content
   };
   const a = [form, button];

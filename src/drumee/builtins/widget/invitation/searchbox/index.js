@@ -267,6 +267,7 @@ class __invitation_searchbox extends LetcBox {
    */
   _showResults(cmd) {
     const data = cmd.results;
+    this.debug("AAA:270", this, cmd, cmd.results)
     this.results = data;
     if (_.isEmpty(data)) {
       this.resultsContainer.el.hide();

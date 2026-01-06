@@ -2,15 +2,6 @@
 const __recipients_roll = function (ui) {
   const o = { ...Preset.List.Orange_e };
   o.start = _a.bottom;
-  // const label = Skeletons.Box.X({
-  //   className: `${ui.fig.family}__label`,
-  //   kids: [
-  //     Skeletons.Note({
-  //       className: "content",
-  //       content: LOCALE.ACCESS_LIST
-  //     })
-  //   ]
-  // });
 
   const searchbox = {
     kind: 'invitation_search',
@@ -20,7 +11,10 @@ const __recipients_roll = function (ui) {
     sys_pn: 'invitation-search',
     service: _e.update,
     className: "inline",
-    api: ui.mget(_a.api),
+    api: {
+      service: SERVICE.drumate.my_contacts,
+      hub_id: Visitor.id
+    },
     contactbook: ui.mget('contactbook'),
     preselect: ui.mget(_a.preselect),
     uiHandler: ui,

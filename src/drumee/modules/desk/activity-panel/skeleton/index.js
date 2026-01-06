@@ -1,4 +1,4 @@
-module.exports = function (ui) {
+module.exports = function (ui, kids) {
   const fig = `${ui.fig.family}`;
   const header = Skeletons.Box.X({
     className: `${fig}__header`,
@@ -27,6 +27,7 @@ module.exports = function (ui) {
       kind: 'activity_item',
       uiHandler: [ui],
     },
+    defaults: kids
   });
 
   return Skeletons.Wrapper.Y({

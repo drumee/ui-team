@@ -1,16 +1,15 @@
-
 @use 'mixins/drumee';
 @use "buttons.scss";
 
 .invitation-settings {
   &__ui {
-    background-color:var(--default-bg);
-    border-radius: var(--border-radius);
+    background-color: var(--default-bg);
     height: auto;
-    // margin: 20px auto 0;
     min-width: 320px;
     width: 100%;
     z-index: 0;
+    max-width: 600px;
+    border-radius: var(--corner-radius-6);
   }
 
   &__access-list {
@@ -19,10 +18,10 @@
   }
 
   &__title {
-    @include drumee.typo($size: 12px, $line: 14px, $color:#FA8540, $weight: 400);
+    @include drumee.typo($size: 12px, $line: 14px, $color: #FA8540, $weight: 400);
 
     &-big {
-      @include drumee.typo($size: 16px, $line: 19px, $color:#FA8540, $weight: 400);
+      @include drumee.typo($size: 16px, $line: 19px, $color: #FA8540, $weight: 400);
     }
   }
 
@@ -33,28 +32,28 @@
 
   &__button {
     align-items: center;
-    border-radius:var(--border-radius);
+    border-radius: var(--border-radius);
     border: 1px solid var(--btn-rollback-border);
     cursor: pointer;
     height: 35px;
     justify-content: center;
-    margin: 25px auto 10px auto;//15px auto 10px auto;
+    margin: 25px auto 10px auto; //15px auto 10px auto;
     min-width: 115px;
     padding: 0 12px;
-    @include drumee.typo($size:15px,$line:25px,$color: var(--btn-rollback-text));
+    @include drumee.typo($size: 15px, $line: 25px, $color: var(--btn-rollback-text));
 
     &[data-editable="0"] {
       display: none;
     }
 
     &:hover {
-      border:2px solid var(--btn-rollback-text-hover);
+      border: 2px solid var(--btn-rollback-text-hover);
       color: var(--btn-rollback-text-hover);
     }
   }
 
   &__admin-header {
-    @include drumee.typo($size: 12px, $line: 14px, $color:#FA8540, $weight: 400);
+    @include drumee.typo($size: 12px, $line: 14px, $color: #FA8540, $weight: 400);
   }
 
   .dialog__wrapper {
@@ -79,12 +78,12 @@
 .invitation {
   &__tooltips {
     background-color: var(--default-bg);
-    border-radius: var(--border-radius);//6px;
-    box-shadow: var(--shadow-before);// 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
+    border-radius: var(--border-radius); //6px;
+    box-shadow: var(--shadow-before); // 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
     opacity: 1;
     padding: 10px;
     position: absolute;
-    @include drumee.typo($color:var(--default-text-tooltips),$size:12px,$line:14px,$weight:400);  
+    @include drumee.typo($color: var(--default-text-tooltips), $size: 12px, $line: 14px, $weight: 400);
 
     &::before {
       background-color: var(--default-bg);
@@ -104,8 +103,8 @@
 
   &__container-recipients {
     margin-top: 12px;
-    max-height:144px;
-    min-height:36px;
+    max-height: 144px;
+    min-height: 36px;
   }
 
   &__icon {
@@ -134,7 +133,8 @@
     width: 257px;
     z-index: 60000;
   }
-  .invitation-searchbox__ui{
+
+  .invitation-searchbox__ui {
     margin: 10px 0 0;
   }
 }

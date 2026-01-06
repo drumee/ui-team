@@ -3,7 +3,7 @@
  * @param {*} ui 
  * @param {*} data 
  */
-function get_event(data) {
+function get_event(ui, data) {
   let preview = data.src;
   if (data.dest?.nid) {
     preview = data.dest;
@@ -21,6 +21,8 @@ function get_event(data) {
       return LOCALE.REMOVED_X.format(LOCALE.FILE.toLowerCase());
     case "media.rename":
       return LOCALE.RENAME
+    case "contact.invite":
+      return "{0} invited you to join his/her network".format(ui.mget(_a.firstname))
     default:
       return data.event;
   }
@@ -41,24 +43,16 @@ function content(ui, data) {
   }
   return `
     <span id="${uid}-username" class="${pfx}-username"> ${fullname}</span>
-    <span id="${eventId}-event" class="${pfx}-event"> ${get_event(data)}</span>
+    <span id="${eventId}-event" class="${pfx}-event"> ${get_event(ui, data)}</span>
     <span id="${nid}-filename" class="${pfx}-filename"> ${filename}</span>
   `
 }
 
-module.exports = function (ui) {
-  const data = ui.model.toJSON()
-  let preview = data.src;
-  if (data.dest?.nid) {
-    preview = data.dest;
-  }
-  preview.kind = 'media_grid';
-  preview.mode = _a.vignette;
-  preview.uiHandler = Wm
-  preview.service = 'open-node'
-  const ctime = preview.ctime || 0;
+function get_preview(ui, preview, data) {
+  const ctime = preview.ctime || new Date().getTime();
   const m = Dayjs.unix(ctime);
   const pfx = ui.fig.family;
+  console.log("AAA:86", data)
   return Skeletons.Box.G({
     className: `${pfx}__main`,
     debug: __filename,
@@ -71,6 +65,7 @@ module.exports = function (ui) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__summary`,
+        service: data.service || ui.mget(_a.service),
         kids: [
           Skeletons.Note({
             className: `${pfx}__event`,
@@ -85,7 +80,24 @@ module.exports = function (ui) {
       }),
     ]
   });
+}
 
-  return a;
+module.exports = function (ui) {
+  const data = ui.model.toJSON()
+  let preview = data.src;
+  if (data.dest?.nid) {
+    preview = data.dest;
+  }
+  if (preview) {
+    preview.kind = 'media_grid';
+    preview.mode = _a.vignette;
+    preview.uiHandler = Wm
+    preview.service = 'open-node'
+    return get_preview(ui, preview, data)
+  } if (data.contact) {
+    preview = Skeletons.UserProfile(data.contact)
+    return get_preview(ui, preview, data.contact)
+  }
+  return get_preview(ui, { kind: 'blank' }, data)
 };
 

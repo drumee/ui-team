@@ -1,10 +1,6 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : builtins/widget/recipient/manager
-//   TYPE : Module
-// ==================================================================== *
 
-class __invitation_core extends LetcBox {
+
+class __invitation_core extends  DrumeeMFS{
  
   
 // ===========================================================
