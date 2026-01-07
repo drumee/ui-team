@@ -1,10 +1,21 @@
 /**
+ * Check if a specific permission bit is set
+ * @param {number} permissionBit - The permission bit to check (e.g., _K.permission.upload)
+ * @returns {number} 1 if permission is set, 0 otherwise
+ */
+function permissionCheck(ui, permissionBit) {
+  const privilege = ui.mget(_a.privilege) || 0;
+  // Use bitwise AND to check if the specific permission bit is set
+  return (privilege & permissionBit) ? 1 : 0;
+}
+
+
+/**
  * Permission section with checkboxes for Upload File and Download File
  */
 function addPermissionRow(ui, permission, service, content, name) {
   const permissionFig = `${ui.fig.family}-permission`;
 
-  // if (mode == _a.edit) {
   let icon = Skeletons.Button.Svg({
     permission,
     service,
@@ -12,21 +23,9 @@ function addPermissionRow(ui, permission, service, content, name) {
     name,
     icons: ["editbox_shapes-roundsquare", "available"],
     className: `${permissionFig}__checkbox`,
-    state: ui.permissionCheck(permission) ? 1 : 0,
+    state: permissionCheck(ui, permission) ? 1 : 0,
     uiHandler: [ui],
   });
-  // } else {
-  //   let svg = 'editbox_shapes-roundsquare';
-  //   let className = 'unselected';
-  //   if (permissionCheck(permission)) {
-  //     svg = 'available';
-  //     className = 'selected';
-  //   }
-  //   icon = Skeletons.Button.Svg({
-  //     ico: svg,
-  //     className: `${permissionFig}__checkbox ${className}`,
-  //   });
-  // }
   return Skeletons.Box.X({
     className: `${permissionFig}__item`,
     kids: [

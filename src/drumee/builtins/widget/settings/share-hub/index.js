@@ -102,7 +102,6 @@ class settings_share_hub extends DrumeeMFS {
     this.formData.days = days;
     this.formData.hours = hours;
 
-    this.debug("AAA:97", upload, this.formData, this.getData())
     const opt = {
       service: SERVICE.hub.update_external_settings,
       hub_id: this.mget(_a.hub_id),
@@ -221,66 +220,6 @@ class settings_share_hub extends DrumeeMFS {
     });
   }
 
-  /**
-   * Check if a specific permission bit is set
-   * @param {number} permissionBit - The permission bit to check (e.g., _K.permission.upload)
-   * @returns {number} 1 if permission is set, 0 otherwise
-   */
-  permissionCheck(permissionBit) {
-    const privilege = this.mget(_a.privilege) || 0;
-    // Use bitwise AND to check if the specific permission bit is set
-    return (privilege & permissionBit) ? 1 : 0;
-  }
-
-  /**
-   * Toggle a specific permission bit (only update pendingChanges, don't save)
-   * @param {*} cmd 
-   */
-  // triggerChangePermission(cmd) {
-  //   const permissionBit = cmd.mget('permission');
-  //   this.debug('AAA:178 triggerChangePermission', permissionBit, cmd, this);
-  //   const oldPrivilege = this.mget(_a.privilege) || 0;
-
-  //   // Toggle the specific permission bit using XOR
-  //   // If bit is set, unset it; if not set, set it
-  //   const newPrivilege = oldPrivilege ^ permissionBit;
-
-  //   // Update privilege in model and formData
-  //   this.mset(_a.privilege, newPrivilege);
-  //   this.formData.privilege = newPrivilege;
-
-  //   // Store in pendingChanges for later save
-  //   this.pendingChanges.permission = newPrivilege;
-
-  //   this.debug('AAA:188 privilege changed', oldPrivilege, '->', newPrivilege, 'bit:', permissionBit);
-  //   // this.mset({ permission: newPrivilege })
-  //   // this.debug("AAA:234", this.getData())
-  //   // Update UI to reflect checkbox state change
-  //   // this.updatePermissionItem();
-  // }
-
-  /**
-   * 
-   */
-  updatePermissionItem() {
-    const part = this.getPart('permissions-content');
-    if (part && part.softClear) {
-      part.softClear();
-    }
-    part.feed(require('./skeleton/permission').default(this, this.permissionMode));
-  }
-
-  /**
-   * 
-   */
-  savePermission() {
-    this.permissionMode = _a.view;
-    if (this.formData.privilege != this.mget(_a.privilege)) {
-      this.formData.privilege = this.mget(_a.privilege);
-      this.saveSettings(_a.permission, { "permission": this.formData.privilege });
-    }
-    return this.getPart('permissions-content').feed(require('./skeleton/permission').default(this, _a.view));
-  }
 
   /**
    * Toggle validity mode (only update pendingChanges, don't save)
@@ -322,31 +261,6 @@ class settings_share_hub extends DrumeeMFS {
     part.feed(require('./skeleton/validity').default(this, this.validityMode));
   }
 
-  /**
-   * 
-   */
-  // saveValidity() {
-  //   let fdata = this.getData(_a.formItem);
-  //   if (this.formData.hours != fdata.hours || this.formData.days != fdata.days) {
-  //     this.formData.days = fdata.days;
-  //     this.formData.hours = fdata.hours;
-  //     this.formData.validity_mode = _a.limited;
-  //     let data = {
-  //       days: fdata.days,
-  //       hours: fdata.hours,
-  //       validity_mode: _a.limited
-  //     };
-  //     this.saveSettings(_a.expiry, data, (d) => {
-  //       this.data.dmz_expiry = d.dmz_expiry;
-  //       this.validityMode = _a.view;
-  //       this.getPart('validity-content').feed(require('./skeleton/validity').default(this, _a.view));
-  //       return this.triggerHandlers({ service: 'update-expiry-status', status: this.data.dmz_expiry });
-  //     });
-  //   } else {
-  //     this.validityMode = _a.view;
-  //     this.getPart('validity-content').feed(require('./skeleton/validity').default(this, _a.view));
-  //   }
-  // }
 
   /**
    * Toggle password checkbox (only update pendingChanges, don't save)
@@ -417,119 +331,6 @@ class settings_share_hub extends DrumeeMFS {
 
     // Update UI to toggle password visibility (value is preserved in formData.password)
     this.getPart('password-content').feed(require('./skeleton/password').default(this, _a.edit));
-  }
-
-  /**
-   * 
-   */
-  // savePassword() {
-  //   let data = this.getData(_a.formItem);
-  //   this.formData.password = data.password || '';
-  //   this.formData.hasPassword = 0;
-  //   if (!_.isEmpty(data.password)) {
-  //     this.formData.hasPassword = 1;
-  //   }
-  //   this.saveSettings(_a.password, { password: this.formData.password });
-  //   return this.getPart('password-content').feed(require('./skeleton/password').default(this, _a.view));
-  // }
-
-  /**
-   * Change access type (only update pendingChanges, don't save)
-   * If "custom" is selected, open custom popup
-   * @param {*} cmd 
-   */
-  // changeAccessType(cmd) {
-  //   // Try multiple ways to get the value
-  //   const accessType = cmd.mget('_value') ||
-  //     cmd.mget(_a.value) ||
-  //     cmd.get('_value') ||
-  //     cmd.get(_a.value) ||
-  //     cmd.value ||
-  //     (cmd.el && cmd.el.dataset && cmd.el.dataset.value) ||
-  //     (cmd.model && cmd.model.get && (cmd.model.get('_value') || cmd.model.get(_a.value))) ||
-  //     'private';
-  //   this.debug('changeAccessType', accessType, cmd, {
-  //     mget_value: cmd.mget && cmd.mget(_a.value),
-  //     mget__value: cmd.mget && cmd.mget('_value'),
-  //     get_value: cmd.get && cmd.get(_a.value),
-  //     get__value: cmd.get && cmd.get('_value'),
-  //     cmd_value: cmd.value,
-  //     dataset_value: cmd.el && cmd.el.dataset && cmd.el.dataset.value
-  //   });
-
-  //   // If "custom" is selected, open custom popup instead of updating access type
-  //   if (accessType === 'custom') {
-  //     return this.openCustomPopup();
-  //   }
-
-  //   // Update formData immediately
-  //   this.formData.accessType = accessType;
-
-  //   // Store in pendingChanges
-  //   this.pendingChanges.accessType = accessType;
-
-  //   // Update data object as well for immediate UI update
-  //   if (!this.data) {
-  //     this.data = {};
-  //   }
-  //   this.data.access_type = accessType;
-
-  //   // Re-render the who-can-access section to update dropdown trigger label
-  //   // Find the content part first
-  //   const contentPart = this.getPart(`${this.fig.family}__content`);
-  //   if (contentPart && contentPart.children && contentPart.children.length > 0) {
-  //     // The who-can-access section is the first child (before first divider)
-  //     const whoCanAccessPart = contentPart.children.at(0);
-  //     if (whoCanAccessPart && whoCanAccessPart.feed) {
-  //       whoCanAccessPart.softClear();
-  //       whoCanAccessPart.feed(require('./skeleton/who-can-access').default(this));
-  //     } else {
-  //       // Fallback: re-render entire skeleton
-  //       this.feed(require('./skeleton').default(this));
-  //     }
-  //   } else {
-  //     // Fallback: re-render entire skeleton
-  //     this.feed(require('./skeleton').default(this));
-  //   }
-
-  //   return false; // Prevent event bubbling to parent
-  // }
-
-  /**
-   * Open custom access popup (child popup of share-hub)
-   */
-  // openCustomPopup() {
-  //   // Set flag to indicate we're in custom popup
-  //   this._inCustomPopup = true;
-  //   // Feed custom widget as child popup, similar to how hub opens share-hub
-  //   this.feed({
-  //     kind: "settings_share_hub_custom",
-  //     uiHandler: [this],
-  //     media: this.mget(_a.media),
-  //     hub_id: this.mget(_a.hub_id),
-  //   });
-  //   return false;
-  // }
-
-  /**
-   * 
-   * @param {expiry|permission|password|access_type} flag 
-   * @param {object} data 
-   * @param {function} callback 
-   */
-  saveSettings(flag, data = {}, callback = null) {
-    const opt = {
-      service: SERVICE.hub.update_external_settings,
-      hub_id: this.mget(_a.hub_id),
-      flag: flag,
-      ...data
-    };
-    return this.fetchService(opt).then((responseData) => {
-      if (callback && _.isFunction(callback)) {
-        callback(responseData);
-      }
-      return responseData;
-    });
   }
 }
 
