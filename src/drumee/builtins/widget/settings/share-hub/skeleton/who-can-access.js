@@ -99,7 +99,7 @@ export default function (ui) {
         className: `${fig}__title`,
         content: LOCALE.WHO_CAN_ACCESS || "Who can access:",
       }),
-      accessDropdown,
+      // accessDropdown,
       Skeletons.Note({
         className: `${fig}__description`,
         content: LOCALE.ACCESS_DESCRIPTION || "Anyone, including individuals outside your organisation, will be able to access this folder. Please proceed with caution when sharing sensitive information.",

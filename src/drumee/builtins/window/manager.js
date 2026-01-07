@@ -7,6 +7,7 @@ const Rectangle = require('rectangle-node');
 const mfsInteract = require("./interact");
 const pseudo_media = require("media/pseudo");
 const { xhRequest } = require("core/socket/request")
+const { createQrcode } = require('core/utils');
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
 
@@ -1280,31 +1281,14 @@ class __window_manager extends mfsInteract {
    */
   showQrCode(text = "") {
     let id = `canvas-${this.mget(_a.widgetId)}`;
-    const maxWidth = window.innerWidth - 20;
-    const maxHeight = window.innerHeight - 20;
     let content = Skeletons.Element({
       tagName: "img",
       sys_pn: "qr-code",
       attribute: { id },
-      //style,
     });
     let body = require("./skeleton/body-wrapper")(this, content);
     this.alert({ body });
-    let i = setInterval(async () => {
-      let canvas = document.getElementById(id);
-      if (canvas) {
-        clearInterval(i);
-        let { toDataURL } = require("qrcode");
-        let src = await toDataURL(text);
-        if (canvas.width > maxWidth) {
-          canvas.width = maxWidth;
-        }
-        if (canvas.height > maxHeight) {
-          canvas.height = maxHeight;
-        }
-        canvas.src = src;
-      }
-    }, 300);
+    createQrcode({ id, text })
   }
 
   /**

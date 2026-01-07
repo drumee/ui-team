@@ -1,4 +1,5 @@
 
+const { copyToClipboard, createQrcode, openUserMailAgent } = require('core/utils')
 
 /**
  * @class settings_hub
@@ -71,9 +72,12 @@ class settings_hub extends DrumeeMFS {
    * @param {*} child
    * @param {*} pn
    */
-  onPartReady(child, pn) {
-    switch (pn) {
-    }
+  showQrCode(url) {
+    this.ensurePart('overlay').then((p) => {
+      let id = `canvas-container-${this._id}`;
+      p.feed(require("./skeleton/qrcode").default(this, id));
+      createQrcode({ id, text: url })
+    })
   }
 
   /**
@@ -105,6 +109,42 @@ class settings_hub extends DrumeeMFS {
       case "activity-hub":
         this._tab++;
         return this.feed({ kind: "settings_activity_hub", uiHandler: [this], media: this.mget(_a.media) });
+
+      case 'copy-link':
+        return this.viewerLink().then((url) => {
+          copyToClipboard(url);
+          Wm.acknowledge();
+        });
+
+      case 'send-by-email':
+        return this.viewerLink().then((url) => {
+          openUserMailAgent({
+            subject: `Link access to my files`,
+            body: `Hi
+              here is the link to retrieve my files 
+              ${url} 
+            `
+          })
+          copyToClipboard(url);
+        });
+
+      case "share-qrcode":
+        if (/^(dmz|share)$/i.test(this.mget(_a.area))) {
+          this.viewerLink().then((url) => {
+            this.showQrCode(url);
+          });
+        } else {
+          this.viewerLink().then((url) => {
+            this.showQrCode(url + `/${this.mget(_a.nid)}/play`);
+          });
+        }
+        break;
+
+      case "close-overlay":
+        this.ensurePart('overlay').then((p) => {
+          p.softClear();
+        })
+        break;
       default:
         this.debug("AAA:55", service, cmd)
     }

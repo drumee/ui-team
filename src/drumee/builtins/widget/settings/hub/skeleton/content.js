@@ -37,13 +37,68 @@ function item(ui, label, content, action) {
  * 
  * @param {*} ui 
  * @param {*} opt 
+ */
+function type(ui, label, service) {
+  const icons = {
+    share: "desktop_public",
+    dmz: "desktop_public",
+    private: 'lock'
+  }
+  const labels = {
+    share: "Public Anyone",
+    dmz: LOCALE.PUBLIC_ANYONE,
+    private: LOCALE.PRIVATE
+  }
+  const family = `${ui.fig.family}`;
+  const figType = `${ui.fig.family}__item-type`;
+  return Skeletons.Box.G({
+    className: `${family}__item ${ui.fig.group}__item`,
+    uiHandler: ui,
+    service,
+    kidsOpt: {
+      active: 0
+    },
+    kids: [
+      Skeletons.Note({
+        className: `${family}__item-label ${ui.fig.group}__item-label`,
+        content: label,
+      }),
+      Skeletons.Box.G({
+        className: figType,
+        service: "edit-type",
+        kidsOpt: {
+          active: 0
+        },
+        kids: [
+          Skeletons.Button.Svg({
+            ico: icons[ui.mget(_a.area)] || 'settings',
+            className: `${figType}__icon`,
+          }),
+          Skeletons.Note({
+            content: labels[ui.mget(_a.area)] || ui.mget(_a.area),
+            className: `${figType}__label`,
+          }),
+          Skeletons.Button.Svg({
+            ico: "arrow--pages",
+            className: `${figType}__arrow`,
+          }),
+        ],
+      })
+    ],
+  });
+}
+
+/**
+ * 
+ * @param {*} ui 
+ * @param {*} opt 
  * @returns 
  */
 function settings_body(ui, opt) {
   const fig = `${ui.fig.family}`;
   const members = ui.mget(_a.members) || ui.mget(_a.users) || [];
-  const membersCount = members.length || 0;
-  
+  // const membersCount = members.length || 0;
+
   // Owner info
   const ownerFromList =
     members.find(
@@ -69,36 +124,17 @@ function settings_body(ui, opt) {
     ui.mget(_a.firstname) ||
     ui.mget(_a.email) ||
     LOCALE.UNKNOWN;
-  
-  // Type info
-  const area = ui.mget(_a.area) || "personal";
-  const typeLabel =
-    LOCALE[`AREA_${area.toUpperCase()}_LABEL`] || 
-    (area === "private" ? "Private" : area === "public" ? "Public" : LOCALE.AREA_PERSONAL_LABEL);
-  
+
+
   const sizeLabel = filesize(ui.mget(_a.filesize));
   const quotaValue = ui.mget(_a.quota) || ui.mget(_a.capacity);
   const quotaLabel = quotaValue ? filesize(quotaValue) : "";
   const filesCount = ui.mget(_a.files_count) || ui.mget(_a.nodes) || "";
 
-  
+
   const createdAt = Dayjs.unix(Number(ui.mget(_a.ctime) || 0)).format(Visitor.timeformat());
   const updatedAt = Dayjs.unix(Number(ui.mget(_a.mtime) || 0)).format(Visitor.timeformat());
 
-  const memberIcons = Skeletons.Box.X({
-    className: `${fig}__member-icons`,
-    kids: members.slice(0, 6).map((m) =>
-      Skeletons.UserProfile({
-        className: `${fig}__member-avatar`,
-        id: m[_a.entity] || m[_a.id],
-        firstname: m[_a.firstname] || m[_a.surname] || "",
-        lastname: m[_a.lastname] || "",
-        fullname: m[_a.fullname],
-        online: m[_a.online],
-        live_status: 1,
-      })
-    ),
-  });
 
   return Skeletons.Box.Y({
     className: `${fig}__container`,
@@ -121,6 +157,7 @@ function settings_body(ui, opt) {
           Skeletons.Box.Y({
             className: `${ui.fig.group}__items ${fig}__items`,
             kids: [
+              type(ui, LOCALE.TYPE, "edit-type"),
               item(
                 ui,
                 LOCALE.OWNER,
@@ -143,26 +180,6 @@ function settings_body(ui, opt) {
               ),
               item(
                 ui,
-                LOCALE.TYPE,
-                Skeletons.Box.X({
-                  className: `${fig}__row`,
-                  kids: [
-                    Skeletons.Note({
-                      className: `${fig}__item-text`,
-                      content: typeLabel,
-                    }),
-                  ],
-                }),
-                Skeletons.Note ({
-                  className: `${fig}__edit`,
-                  label: LOCALE.EDIT,
-                  uiHandler: [ui],
-                  service: "edit-type",
-                })
-              ),
-
-              item(
-                ui,
                 LOCALE.SIZE,
                 Skeletons.Box.X({
                   className: `${fig}__row`,
@@ -179,28 +196,7 @@ function settings_body(ui, opt) {
                       : undefined,
                   ],
                 }),
-                Skeletons.Note({
-                })
-              ),
-              item(
-                ui,
-                LOCALE.MEMBERS,
-                Skeletons.Box.X({
-                  className: `${fig}__row`,
-                  kids: [
-                    Skeletons.Note({
-                      className: `${fig}__item-meta`,
-                      content: membersCount.toString(),
-                    }),
-                    memberIcons,
-                  ],
-                }),
-                Skeletons.Button.Svg({
-                  ico: "arrow--pages",
-                  className: `${fig}__arrow-next`,
-                  service: _a.members,
-                  uiHandler: [ui],
-                })
+                Skeletons.Note({})
               ),
               item(
                 ui,
@@ -227,7 +223,8 @@ function settings_body(ui, opt) {
                 })
               ),
             ]
-          })
+          }),
+          require('./footer').default(ui)
         ]
       }),
     ],

@@ -350,9 +350,9 @@ export function reverseSortBy(sortByFunction) {
  * @returns 
  */
 export function modelComparator(name) {
-  return function modelComparator (model) {
+  return function modelComparator(model) {
     let v = model.get(name);
-    if(v.toLowerCase){
+    if (v.toLowerCase) {
       return v.toLowerCase();
     }
     return v;
@@ -589,5 +589,41 @@ export function appendLink(url) {
       document.head.appendChild(el);
       resolve(e);
     });
+  });
+}
+
+
+/**
+ * 
+ * @param {*} url 
+ * @returns 
+ */
+export function createQrcode(opt) {
+  const p = 50;
+  const { id, text = "", maxWidth = window.innerWidth - p, maxHeight = window.innerHeight - p } = opt;
+  let count = 0;
+  return new Promise((resolve, reject) => {
+    let i = setInterval(async () => {
+      count++;
+      const canvas = document.getElementById(id);
+      if (canvas) {
+        clearInterval(i);
+        let { toDataURL } = require("qrcode");
+        let src = await toDataURL(text);
+        if (canvas.width > maxWidth) {
+          canvas.width = maxWidth;
+        }
+        if (canvas.height > maxHeight) {
+          canvas.height = maxHeight;
+        }
+        canvas.src = src;
+        resolve(canvas)
+      } else {
+        if (count > 100) {
+          console.warn(`Failed to find provided element id=${id}`);
+          reject({ error: `Element not found` })
+        }
+      }
+    }, 300);
   });
 }
