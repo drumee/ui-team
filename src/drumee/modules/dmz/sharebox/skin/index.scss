@@ -149,10 +149,34 @@
     }
   }
 
-  &-header__container {
-    background: rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+  // &-header__container {
+  //   // background: rgba(0, 0, 0, 0.15);
+  //   // backdrop-filter: blur(8px);
+  //   // -webkit-backdrop-filter: blur(8px);
+  // }
+
+  &-header__buttons-wrapper {
+    gap: 10px;
+    width: 100%;
+  }
+
+  &-header__button {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 40px;
+    background: var(--neutral-900);
+    color: var(--white);
+    border-radius: 20px;
+    border: none;
+    height: auto;
+    width: auto;
+
+    &:hover {
+      box-shadow: none;
+      border: none;
+    }
   }
 
   &__footer {
