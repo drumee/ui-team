@@ -257,16 +257,29 @@ class settings_account extends LetcBox {
 * 
 */
   _openLink(url) {
-    this.__overlay.softClear()
-    if (Visitor.device() == _a.mobile) {
-      window.open(url, "_blank", "noopener; noreferrer");
-    } else {
-      let w = Math.min(900, screen.availWidth - 100);
-      let h = Math.min(700, screen.availHeight - 100);
-      let x = screen.availWidth / 2 - w / 2;
-      let y = 0;
-      window.open(url, "_blank", `noopener, noreferrer, width=${w}, height=${h}, left=${x}, top=${y}`);
+    // Best practice for iOS/iPadOS Safari
+    function openInNewTab(url) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      if (Visitor.device() == _a.desktop) {
+        let w = Math.min(900, screen.availWidth - 100);
+        let h = Math.min(700, screen.availHeight - 100);
+        let x = screen.availWidth / 2 - w / 2;
+        let y = 0;
+        link.rel = `noopener, noreferrer, width=${w}, height=${h}, left=${x}, top=${y}`;
+      }
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+      }, 500)
     }
+
+    // Usage
+    openInNewTab(url);
+    this.__overlay.softClear()
   }
 
   /**
@@ -310,8 +323,9 @@ class settings_account extends LetcBox {
         return this.ensurePart("avatar-widget").then((p) => {
           p.selectFile();
         });
-      case "open-payment-link":
-        this._openLink(cmd.mget(_a.value))
+      // case "open-payment-link":
+      case "proceed-to-payment":
+        this._openLink(args.url)
         const onVisibilityChange = () => {
           if (document.hidden) return
           this._onPlanChanged()
@@ -323,11 +337,11 @@ class settings_account extends LetcBox {
         return this.ensurePart("avatar-progress").then((p) => {
           p.el.style.width = `${args.progress}%`;
         });
-      case "proceed-to-payment":
-        return this.__overlay.feed(
-          require("./skeleton/payment").default(this, args.url)
-        );
-        break;
+      // case "proceed-to-payment":
+      //   return this.__overlay.feed(
+      //     require("./skeleton/payment").default(this, args.url)
+      //   );
+      //   break;
       case 'plan_updated':
         this._onPlanChanged(cmd)
         break;
