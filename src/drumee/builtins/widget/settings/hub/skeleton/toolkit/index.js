@@ -4,7 +4,6 @@
  * @returns {number} 1 if permission is set, 0 otherwise
  */
 function permissionCheck(ui, permissionBit) {
-  ui.debug("AAA:7", permissionBit, ui.mget(_a.privilege))
   const privilege = ui.mget(_a.privilege) || 0;
   // Use bitwise AND to check if the specific permission bit is set
   return (privilege & permissionBit) ? 1 : 0;
