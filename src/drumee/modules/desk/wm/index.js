@@ -1061,19 +1061,10 @@ class __window_manager extends push {
     this.debug("AAA:1061", cmd)
     const invitation = {
       kind: 'invitation',
-      signal: _e.ui.event,
+      topLabel: LOCALE.DOCUMENTS_ACCESS,
       media: cmd,
-      trigger: cmd,
       hub_id: cmd.mget(_a.hub_id),
       authority: cmd.mget(_a.privilege),
-      api: {
-        service: SERVICE.media.get_node_attr,
-        nid: cmd.mget(_a.nid),
-        hub_id: cmd.mget(_a.hub_id)
-      },
-      mode: 'direct',
-      topLabel: LOCALE.DOCUMENTS_ACCESS,
-      sharees: this.mget(_a.sharees),
       closeButton: 1,
       persistence: _a.once,
       uiHandler: [this]

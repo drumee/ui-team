@@ -39,17 +39,17 @@ class settings_hub extends DrumeeMFS {
   onDomRefresh() {
     this._tab = 0;
     this.feed(require("./skeleton").default(this));
-    if (this.mget(_a.hub_id) && !this.mget(_a.members)) {
-      this.fetchService({
-        service: SERVICE.hub.get_members_by_type,
-        hub_id: this.mget(_a.hub_id),
-        nid: this.mget(_a.actual_home_id),
-        type: 'all'
-      }, { async: 1 }).then((data) => {
-        this.mset({ members: data });
-        this.reload();
-      })
-    }
+    // if (this.mget(_a.hub_id) && !this.mget(_a.members)) {
+    //   this.fetchService({
+    //     service: SERVICE.hub.get_members_by_type,
+    //     hub_id: this.mget(_a.hub_id),
+    //     nid: this.mget(_a.actual_home_id),
+    //     type: 'all'
+    //   }, { async: 1 }).then((data) => {
+    //     this.mset({ members: data });
+    //     this.reload();
+    //   })
+    // }
   }
 
   /**

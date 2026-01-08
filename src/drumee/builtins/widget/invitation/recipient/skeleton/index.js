@@ -1,13 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/main/docs/suggestions.md
- */
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : desk/contact/skeleton/name/checkbox+label
-//   TYPE : Skelton
-// ==================================================================== *
 
 const __recipient_avatar_cb=function(_ui_, opt){
   let profile_icon;

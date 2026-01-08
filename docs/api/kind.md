@@ -78,7 +78,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | settings_member | widget/settings/member | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/member/index.js |
 | settings_members_list | widget/settings/members-list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/members-list/index.js |
 | settings_share_hub | widget/settings/share-hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/share-hub/index.js |
-| settings_share_hub_custom | widget/settings/share-hub-custom | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/share-hub-custom/index.js |
+| settings_access_manager | widget/settings/access-manager | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/access-manager/index.js |
 | settings_private_hub | widget/settings/private-hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/private-hub/index.js |
 | widget_chat_item | widget/chat-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat-item/index.js |
 | organization_form | src/drumee/builtins/widget/settings/organization/form | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/organization/form/index.js |

@@ -87,7 +87,7 @@ const a = {
   settings_member:"widget/settings/member",
   settings_members_list:"widget/settings/members-list",
   settings_share_hub:"widget/settings/share-hub",
-  settings_share_hub_custom:"widget/settings/share-hub-custom",
+  settings_access_manager:"widget/settings/access-manager",
   settings_private_hub:"widget/settings/private-hub",
   widget_chat_item:"widget/chat-item",
   members_room:"src/drumee/builtins/widget/settings/organization/admin/pages/members/room/index",

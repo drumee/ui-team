@@ -85,6 +85,7 @@ class __invitation_shareeroll extends LetcBox {
     }
   }
 
+  
   /**
    * 
    * @returns 

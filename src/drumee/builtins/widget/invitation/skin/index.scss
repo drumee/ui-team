@@ -1,15 +1,87 @@
 @use 'mixins/drumee';
-@use "buttons.scss";
+@use "buttons";
+@use "permission";
 
 .invitation-settings {
   &__ui {
     background-color: var(--default-bg);
-    height: auto;
+    height: 80vh;
     min-width: 320px;
     width: 100%;
     z-index: 0;
     max-width: 600px;
     border-radius: var(--corner-radius-6);
+  }
+
+  &-topbar {
+    &__container {
+      align-items: center;
+      gap: var(--spacer-5);
+      justify-content: space-between;
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    &__back,
+    &__close {
+      align-items: center;
+      border-radius: 50%;
+      color: var(--default-text-neutral);
+      display: flex;
+      height: 36px;
+      justify-content: center;
+      width: 36px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: var(--default-bg-hover);
+        color: var(--default-text-color);
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    &__title {
+      @include drumee.typo($color: var(--default-text-color),
+        $size: 20px,
+        $weight: 600);
+      flex: 1;
+      justify-content: center;
+      text-align: center;
+    }
+
+  }
+
+  &__settings-overlay {
+    position: absolute;
+    height: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--white);
+    gap: var(--spacer-5);
+
+  }
+
+  &__container,
+  &__main {
+    align-content: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  &__container {
+    z-index: 1;
+  }
+
+  &__main {
+    padding: var(--spacer-5);
+    height: 100%;
   }
 
   &__access-list {
@@ -52,26 +124,172 @@
     }
   }
 
-  &__admin-header {
-    @include drumee.typo($size: 12px, $line: 14px, $color: #FA8540, $weight: 400);
-  }
 
   .dialog__wrapper {
     align-items: center;
-    display: flex;
-    flex-direction: column;
-    // margin: 15px 0 10px;
     width: 100%;
-    z-index: 100000 !important;
+    // z-index: 100000 !important;
+    justify-content: center;
+    border-radius: var(--corner-radius-6);
+  }
 
-    .preset-acknowledge__container {
-      background-color: var(--default-bg);
-      @include drumee.drumee-box-shadow-1();
+  &__members {
+    width: 450px;
+  }
 
-      b {
-        font-weight: bold;
+  &-validity {
+    &__section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    &__title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--Neutral-900, #414651);
+      margin-bottom: 4px;
+    }
+
+    &__options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    &__option {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      transition: border-color 120ms ease;
+      cursor: pointer;
+      transition: all 120ms ease;
+
+      &:hover {
+        background: var(--Neutral-50, #FAFAFA);
+      }
+
+      &.active {
+        background: var(--primary-50, #F4E7FF);
+        border-color: var(--primary-600, #B251FB);
+      }
+
+      // Radio button row inside option
+      >.drumee-box {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
       }
     }
+
+    &__radio {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      border: 2px solid var(--Neutral-400, #C3C6CC);
+      border-radius: 100%;
+      cursor: pointer;
+      background: var(--ewhite);
+
+      &.active {
+        background: var(--primary-50, #F4E7FF);
+        border: 5px solid var(--primary-600, #B251FB);
+      }
+    }
+
+    &__option-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    &__option-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--Neutral-900, #222732);
+    }
+
+    &__option-description {
+      font-size: 13px;
+      color: var(--Neutral-600, #8C929C);
+      line-height: 1.4;
+    }
+
+    &__set-validity {
+      margin-top: 6px;
+      padding-left: 30px;
+      width: 100%;
+    }
+
+    &__validity-action-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    &__entry {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--Neutral-300, #D1D5DB);
+      border-radius: 12px;
+      background: var(--Gray-White, #FFF);
+      color: var(--Neutral-400, #C3C6CC);
+      font-size: 16px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 26px;
+      /* 162.5% */
+      letter-spacing: 0.16px;
+      min-width: 0; // Allow flex items to shrink below their content size
+
+      &::placeholder {
+        color: var(--Neutral-400, #C3C6CC);
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 26px;
+        letter-spacing: 0.16px;
+      }
+
+      // Input text color when user types
+      input,
+      .entry-area {
+        color: var(--Neutral-400, #C3C6CC);
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 26px;
+        letter-spacing: 0.16px;
+      }
+
+      font-size: 14px;
+    }
+
+
+    &__save-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      background: var(--primary-600, #7C3AED);
+      color: var(--white, #ffffff);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 120ms ease;
+
+      &:hover {
+        background: var(--primary-700, #6D28D9);
+      }
+    }
+
+    &__note {
+      font-size: 14px;
+      color: var(--Neutral-900, #222732);
+    }
+
   }
 }
 
@@ -129,12 +347,46 @@
   }
 
   &__container-recipients-roll {
-    margin: 20px auto 0px;
-    width: 257px;
     z-index: 60000;
+    width: 100%;
+    padding: 10px 60px;
+    border: 1px solid var(--neutral-200);
+    border-radius: var(--corner-radius-4);
   }
 
-  .invitation-searchbox__ui {
-    margin: 10px 0 0;
+
+  &__contact-container {
+    gap: var(--spacer-2);
+    grid-template-columns: 1fr 110px;
+
+    .entry-reminder__main.showerror {
+      padding: 0;
+    }
+
+    .invitation-searchbox__icon {
+      margin-left: 10px;
+    }
+  }
+
+  &__contact-invite {
+    line-height: 1;
+    height: 100%;
+    align-content: center;
+    flex-wrap: wrap;
+    font-size: 16px;
+    width: 100%;
+    padding: 7px 20px;
+    cursor: pointer;
+
+    .note-content {
+      color: var(--white);
+      border-radius: var(--corner-radius-max);
+      background: var(--primary-500);
+      align-items: center;
+      display: flex;
+      width: 100%;
+      height: 100%;
+      justify-content: center;
+    }
   }
 }

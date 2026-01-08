@@ -7,7 +7,6 @@ const __recipients_roll = function (ui) {
     kind: 'invitation_search',
     contactItem: ui.resultItem,
     debug: __filename,
-    signal: _e.ui.event,
     sys_pn: 'invitation-search',
     service: _e.update,
     className: "inline",
@@ -19,7 +18,19 @@ const __recipients_roll = function (ui) {
     preselect: ui.mget(_a.preselect),
     uiHandler: ui,
     addGuest: ui.mget('addGuest')
+
   };
+  const contact = Skeletons.Box.G({
+    className: `${ui.fig.group}__contact-container`,
+    kids: [
+      searchbox,
+      Skeletons.Note({
+        className: `${ui.fig.group}__contact-invite`,
+        content: "Invite +",
+        uiHandler: [ui],
+        service: "invite"
+      })]
+  });
 
   const list = Skeletons.List.Smart({
     className: `${ui.fig.group}__container-recipients ${ui.fig.family}__list-destination`,
@@ -30,14 +41,13 @@ const __recipients_roll = function (ui) {
     kids: ui.getPending(),
     vendorOpt: o
   });
-  const a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     state: ui.getState() ^ 1,
     debug: __filename,
     name: "recipients",
     className: `${ui.fig.group}__container-recipients-roll`,
-    kids: [list, searchbox]
+    kids: [list, contact]
   });
-  return a;
 };
 
 module.exports = __recipients_roll;

@@ -1,4 +1,7 @@
 const __recipient = require('./core');
+const { validity } = require("../settings/hub/skeleton/toolkit")
+
+const SVC_OPT = { async: 1 }
 
 class __invitation_settings extends __recipient {
   constructor(...args) {
@@ -62,7 +65,8 @@ class __invitation_settings extends __recipient {
       };
       RADIO_CLICK.on(_e.click, this._auto_close);
     }
-    if (opt.media) this.copyPropertiesFrom(opt.media);
+    this.formData = {}
+    this.pendingChanges = {}
   }
 
   /**
@@ -86,6 +90,7 @@ class __invitation_settings extends __recipient {
     await Kind.waitFor('invitation_contact');
     await Kind.waitFor('invitation_search');
     await Kind.waitFor('invitation_shareeroll');
+    this.debug("AAA:89", this)
     this.recipientItem = {
       kind: 'invitation_recipient',
       className: _a.destination,
@@ -127,8 +132,16 @@ class __invitation_settings extends __recipient {
   /**
    * 
    */
-  onDomRefresh() {
-    this.reload();
+  async onDomRefresh() {
+    await this._buildDefaults();
+    this.feed(require("./skeleton").default(this));
+    this.postService(SERVICE.hub.get_settings,
+      { hub_id: this.mget(_a.hub_id) }, SVC_OPT
+    ).then(async (data) => {
+      this.mset({ sharees: data.users })
+      let p = await this.ensurePart("existing-members");
+      p.feed(data.users)
+    })
   }
 
 
@@ -137,36 +150,7 @@ class __invitation_settings extends __recipient {
    * @returns 
    */
   async reload() {
-    let skl;
-    const mode = this.mget(_a.mode);
-    await this._buildDefaults();
-    this._skeleton = require("./skeleton/sharees/list");
-    this._pending = require("./skeleton/pending");
-    this.debug("AAA:144", mode)
-    switch (mode) {
-      case 'mini':
-        skl = require("./skeleton/mini");
-        this._skeleton = skl;
-        this._pending = skl;
-        break;
-      case 'direct':
-        skl = require("./skeleton/direct");
-        this._skeleton = skl;
-        this._pending = skl;
-        break;
-      case 'share-in':
-        skl = require("./skeleton/direct");
-        this._skeleton = skl;
-        this._pending = skl;
-        break;
-      case _a.projects:
-        this._pending = this._skeleton;
-        skl = this._skeleton;
-        break;
-      default:
-        skl = this._skeleton;
-    }
-    return this.feed(skl(this));
+    this.feed(require("./skeleton").default(this));
   }
 
   /**
@@ -238,6 +222,7 @@ class __invitation_settings extends __recipient {
 
       case "invitation-search":
         return this.searchBox = child;
+
     }
   }
 
@@ -520,28 +505,104 @@ class __invitation_settings extends __recipient {
     // let 
     let users = []
     for (let item of this.__rollRecipients.children.toArray()) {
-      this.debug("AAA:519", item.model.toJSON(), item)
       users.push(item.mget(_a.id))
     }
     let args = this.getData()
     args.hub_id = this.mget(_a.hub_id)
 
-    this.debug("AAA:530", args);
-    this.postService(SERVICE.hub.add_contributors, args).then(usersList => {
+    this.postService(SERVICE.hub.add_contributors, args, {}).then(usersList => {
       this.goodbye()
     })
+  }
 
-    // return new Promise((resolve, reject) => {
-    //   if (_.isEmpty(data.users) && _.isEmpty(data.email)) {
-    //     resolve(true);
-    //     return;
-    //   }
-    //   data.hub_id = this.hub_id;
-    //   this.postService(SERVICE.hub.add_contributors, data).then(usersList => {
-    //     this.mset(_a.users, usersList);
-    //     return resolve(usersList);
-    //   })
-    // });
+  /**
+   * Toggle validity mode (only update pendingChanges, don't save)
+   * @param {*} cmd 
+   */
+  toggleValidityMode(cmd) {
+    const mode = cmd.mget('expiry') || cmd.mget(_a.value);
+    this.debug('toggleValidityMode', mode, cmd, this);
+
+    // Update formData immediately
+    this.formData.validity_mode = mode;
+
+    // Store in pendingChanges
+    this.pendingChanges.validity_mode = mode;
+
+    if (mode == _a.limited) {
+      this.validityMode = _a.edit;
+      // Keep current days/hours values in pendingChanges if they exist
+      if (!this.pendingChanges.days) {
+        this.pendingChanges.days = this.formData.days || '0';
+      }
+      if (!this.pendingChanges.hours) {
+        this.pendingChanges.hours = this.formData.hours || '0';
+      }
+    } else {
+      // When switching to unlimited, reset days/hours in pendingChanges
+      this.formData.days = '0';
+      this.formData.hours = '0';
+      this.pendingChanges.days = '0';
+      this.pendingChanges.hours = '0';
+      this.validityMode = _a.edit; // Keep in edit mode to allow switching back
+    }
+
+    // Re-render immediately to show the change
+    const part = this.getPart('validity-content');
+    if (part && part.softClear) {
+      part.softClear();
+    }
+    part.feed(validity(this, this.validityMode));
+  }
+
+
+  /**
+   * 
+   * @param {*} cmd 
+   * @param {*} arg 
+   */
+  _changePermission(cmd, args) {
+    if (!this.pendingMember) {
+      return
+    }
+    this.ensurePart("settings").then((p) => {
+      let { name, state, } = args
+      let privilege = 0b0000;
+      switch (name) {
+        case _a.read:
+          if (state) {
+            privilege = _K.privilege.read;
+          } else {
+            privilege = _K.privilege.guest;
+          }
+          break
+        case _a.write:
+          if (state) {
+            privilege = _K.privilege.write;
+          } else {
+            privilege = _K.privilege.read;
+          }
+          break
+        case _a.modify:
+          if (state) {
+            privilege = _K.privilege.modify;
+          } else {
+            privilege = _K.privilege.write;
+          }
+          break
+        default:
+          return;
+      }
+      this.debug("AAA:603", args, p.getData(), privilege, cmd, this.pendingMember)
+      this.pendingMember.mset({ privilege })
+      p.feed(require("./skeleton/permission").default(this, this.pendingMember))
+      if (privilege < _K.privilege.read) {
+        this.ensurePart('update-permission').then((p) => {
+          p.set({ content: LOCALE.REMOVE })
+        })
+      }
+    })
+
   }
 
   /**
@@ -606,15 +667,38 @@ class __invitation_settings extends __recipient {
         this._setupMessage(cmd);
         return this.triggerHandlers({ service, state });
 
-      case 'setup-permission':
-        Kind.waitFor('invitation_permission').then(() => {
-          this._setupPermission(cmd);
-          this.triggerHandlers({ service, state });
-        });
-        return;
+      case 'preset-options-permission':
+        this.optionsWrapper.feed(require("./skeleton/preset-permission").default(this, cmd))
+        // this.ensurePart("options").then((p) => {
+        //   this.pendingMember = cmd;
+        // })
+        // break;
+        break;
+      case "prompt-permission":
+        this.ensurePart("settings").then((p) => {
+          this.pendingMember = cmd;
+          p.feed(require("./skeleton/permission").default(this, cmd))
+        })
+        break;
 
+      case "change-permission":
+        this._changePermission(cmd, args)
+        break;
+
+      case "cancel-share":
       case _e.close:
         return this.softDestroy();
+
+      case _a.back:
+        return this.__settings.clear();
+
+      case "save-pending-permission":
+        this.debug("AAA", this.pendingMember, this.__settings.getData());
+        this.__settings.softClear();
+        break;
+
+      case 'toggle-validity-mode':
+        return this.toggleValidityMode(cmd);
 
       case _e.found:
         this.service = _e.search;
@@ -622,14 +706,11 @@ class __invitation_settings extends __recipient {
         return this.triggerHandlers();
 
       case _e.share:
-        this.debug("AAA:609", this, cmd)
         this.addContributors();
         return
 
       case "update-permission":
         this._data = { ...this._data, ...args.data }
-        this.debug("AAA:620", args)
-        // this.addContributors();
         return
       case 'cancel-share':
         this.service = service;
@@ -641,8 +722,23 @@ class __invitation_settings extends __recipient {
       case _e.cancel:
         return this.recipientsRoll.clear();
 
-      default:
-        return this.triggerHandlers({ ...args, service });
+      case "invite":
+        this.goodbye()
+        Wm.launch({
+          kind: 'window_addressbook',
+          source: this.__addressbookLauncher
+        }, { explicit: 1, singleton: 1 });
+
+        let t = setInterval(() => {
+          let w = Wm.getItemsByKind('window_addressbook')[0]
+          if (w) {
+            clearInterval(t);
+            w.once(_e.destroy, () => {
+              Wm.openAccessManager(this.mget(_a.media))
+            })
+          }
+        }, 1000)
+        return
     }
   }
 }

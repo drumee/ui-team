@@ -131,7 +131,10 @@ function settings_body(ui, opt) {
   const quotaLabel = quotaValue ? filesize(quotaValue) : "";
   const filesCount = ui.mget(_a.files_count) || ui.mget(_a.nodes) || "";
 
-
+  let footer = "";
+  if ([_a.share, _a.dmz].includes(ui.mget(_a.area))) {
+    footer = require('./links').default(ui)
+  }
   const createdAt = Dayjs.unix(Number(ui.mget(_a.ctime) || 0)).format(Visitor.timeformat());
   const updatedAt = Dayjs.unix(Number(ui.mget(_a.mtime) || 0)).format(Visitor.timeformat());
 
@@ -224,7 +227,7 @@ function settings_body(ui, opt) {
               ),
             ]
           }),
-          require('./footer').default(ui)
+          footer
         ]
       }),
     ],

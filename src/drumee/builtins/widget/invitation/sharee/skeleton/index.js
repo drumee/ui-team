@@ -1,72 +1,78 @@
 
-const __sharee_editable=function(_ui_){
+const __sharee_editable = function (ui) {
 
   let a;
-  const firstname = _ui_.mget(_a.firstname) || '';
-  const lastname  = _ui_.mget(_a.lastname) || '';
-  const fullname  = _ui_.mget(_a.fullname) || (firstname + ' ' + lastname);
-  
+  const firstname = ui.mget(_a.firstname) || '';
+  const lastname = ui.mget(_a.lastname) || '';
+  const fullname = ui.mget(_a.fullname) || (firstname + ' ' + lastname);
+
   const avatar = Skeletons.UserProfile({
-    className : `${_ui_.fig.family}__profile avatar`,
-    id        : _ui_.mget(_a.id),
-    firstname : firstname || _ui_.mget(_a.surname),
+    className: `${ui.fig.family}__profile avatar`,
+    id: ui.mget(_a.id),
+    firstname: firstname || ui.mget(_a.surname),
     lastname,
     fullname,
-    online    : _ui_.mget(_a.online)
+    online: ui.mget(_a.online)
   });
 
   const user = Skeletons.Box.X({
-    className : `${_ui_.fig.family}__container`,
-    service   : "select-contact",
-    debug     : __filename,
+    className: `${ui.fig.family}__container`,
+    service: "select-contact",
+    debug: __filename,
     kids: [
-      avatar, 
+      avatar,
       Skeletons.Note({
-        active    : 0,
-        content   :  _ui_.mget(_a.surname) || _ui_.name,
-        className : `${_ui_.fig.family}__label`
+        active: 0,
+        content: ui.mget(_a.surname) || ui.name,
+        className: `${ui.fig.family}__label`
       }),
-      
+
       Skeletons.Button.Svg({
-        ico        : "desktop__cog",
-        className  : `${_ui_.fig.family}__icon settings`, 
-        service    : _e.view,
-        state      : 0,
-        dataset    : {
-          editable : _ui_.editable
+        ico: "desktop__cog",
+        className: `${ui.fig.family}__icon settings`,
+        service: _e.view,
+        state: 0,
+        dataset: {
+          editable: ui.editable
         },
-        uiHandler  : _ui_
+        uiHandler: ui
       })
 
       // TEMP DISABLED
       // Skeletons.Button.Svg
       //   ico        : "desktop_contacts"
-      //   className  : "#{_ui_.fig.family}__icon settings", 
+      //   className  : "#{ui.fig.family}__icon settings", 
       //   service    : "peer-folder"
       //   state      : 0
-      //   uiHandler  : _ui_
+      //   uiHandler  : ui
 
       // Skeletons.Button.Svg
       //   ico        : "desktop_delete"
-      //   className  : "#{_ui_.fig.family}__icon delete"
+      //   className  : "#{ui.fig.family}__icon delete"
       //   service    : _a.remove
       //   dataset    :
-      //     editable : _ui_.editable
-      //   uiHandler      : _ui_
-    ]});
+      //     editable : ui.editable
+      //   uiHandler      : ui
+    ]
+  });
 
-  const media = _ui_.mget(_a.media);
-  if ((media == null) || !(media.mget(_a.privilege) &_K.permission.admin)) {
-    user.kids.pop();    
+  const media = ui.mget(_a.media);
+  if ((media == null) || !(media.mget(_a.privilege) & _K.permission.admin)) {
+    user.kids.pop();
   }
-  return a = [
-    user,
-    Skeletons.Box.Y({
-      className : "",
-      sys_pn    : "options-content",
-      active    : 0,
-      wrapper   : 1
-    })
-  ];
+
+  return Skeletons.Box.Y({
+    debug: __filename,
+    className: `${ui.fig.family}__main`,
+    kids: [
+      user,
+      Skeletons.Wrapper.Y({
+        className: "",
+        sys_pn: "options-content",
+        active: 0,
+        wrapper: 1
+      })
+    ]
+  })
 };
 module.exports = __sharee_editable;

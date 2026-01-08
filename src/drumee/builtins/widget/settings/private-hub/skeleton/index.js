@@ -40,7 +40,12 @@ function members(ui) {
     },
     spinner: true,
     placeholder: Skeletons.Note(LOCALE.NO_CONTACT, "placeholder--no-contact"),
-    api: ui.mget(_a.api),
+    api: {
+      service: SERVICE.hub.get_members_by_type,
+      hub_id: ui.mget(_a.hub_id),
+      nid: ui.mget(_a.actual_home_id),
+      type: "all",
+    },
     vendorOpt: Preset.List.Orange_d,
     inspect: 1,
   });

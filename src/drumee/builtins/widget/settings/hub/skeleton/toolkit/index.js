@@ -1,7 +1,78 @@
 /**
+ * Check if a specific permission bit is set
+ * @param {number} permissionBit - The permission bit to check (e.g., _K.permission.upload)
+ * @returns {number} 1 if permission is set, 0 otherwise
+ */
+function permissionCheck(ui, permissionBit) {
+  ui.debug("AAA:7", permissionBit, ui.mget(_a.privilege))
+  const privilege = ui.mget(_a.privilege) || 0;
+  // Use bitwise AND to check if the specific permission bit is set
+  return (privilege & permissionBit) ? 1 : 0;
+}
+
+
+/**
+ * Permission section with checkboxes for Upload File and Download File
+ */
+export function addPermissionRow(ui, permission, service, content, name) {
+  const permissionFig = `${ui.fig.family}-permission`;
+
+  let icon = Skeletons.Button.Svg({
+    permission,
+    service,
+    itemForm: 1,
+    name,
+    icons: ["editbox_shapes-roundsquare", "available"],
+    className: `${permissionFig}__checkbox`,
+    state: permissionCheck(ui, permission) ? 1 : 0,
+    uiHandler: [ui],
+  });
+  return Skeletons.Box.X({
+    className: `${permissionFig}__item`,
+    kids: [
+      icon,
+      Skeletons.Note({
+        className: `${permissionFig}__note item-label`,
+        content,
+      })
+    ]
+  });
+}
+export function topbar(ui, label) {
+  const figFamily = `${ui.fig.family}-topbar`;
+
+  return Skeletons.Box.X({
+    debug: __filename,
+    className: `${figFamily}__container`,
+    sys_pn: _a.topBar,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "arrow-left",
+        className: `${figFamily}__back`,
+        service: _a.back,
+        uiHandler: [ui],
+      }),
+      Skeletons.Note({
+        className: `${figFamily}__title`,
+        sys_pn: "window-name",
+        content: label || LOCALE.SETTINGS || "Setting",
+        uiHandler: [ui],
+      }),
+      Skeletons.Button.Svg({
+        ico: _a.cross,
+        className: `${figFamily}__close`,
+        service: _e.close,
+        uiHandler: [ui],
+      }),
+    ],
+  });
+};
+
+
+/**
  * Time validity section with radio buttons for Unlimited and Set Limit
  */
-export default function (ui, mode = _a.view, type = null) {
+export function validity(ui, mode = _a.view, type = null) {
   const validityFig = `${ui.fig.family}-validity`;
 
   let _validitySwitchState = 0;

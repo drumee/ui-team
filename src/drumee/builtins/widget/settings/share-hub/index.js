@@ -1,5 +1,5 @@
 require("./skin");
-
+const { validity } = require("../hub/skeleton/toolkit")
 class settings_share_hub extends DrumeeMFS {
   /**
    * @param {object} opt
@@ -258,7 +258,7 @@ class settings_share_hub extends DrumeeMFS {
     if (part && part.softClear) {
       part.softClear();
     }
-    part.feed(require('./skeleton/validity').default(this, this.validityMode));
+    part.feed(validity(this, this.validityMode));
   }
 
 
