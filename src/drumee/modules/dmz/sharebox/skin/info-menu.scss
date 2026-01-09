@@ -4,6 +4,9 @@
 .dmz-meeting {
   &-menu {
     &__wrapper {
+      position: relative;
+      z-index: 1000;
+
       &[data-state="1"] {
         & .trigger-icon {
           opacity: 1;
@@ -20,11 +23,13 @@
         min-height: 300px;
         min-width: 250px;
         width: 100% !important;
+        z-index: 1000;
 
         &__wrapper {
           left: -200px;
           padding: 10px 0;
           top: 20px;
+          z-index: 1000;
 
           &[data-device="mobile"] {
             left: unset;
@@ -48,6 +53,7 @@
           top: -5px;
           transform: rotate(45deg);
           width: 10px;
+          z-index: 1001;
         }
 
         &:after {
@@ -55,7 +61,7 @@
         }
 
         &[data-state="open"] {
-          z-index: 9999 !important;
+          z-index: 1000;
         }
       }
     }
