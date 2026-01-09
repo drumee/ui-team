@@ -1,7 +1,12 @@
 const { topbar } = require("../../settings/hub/skeleton/toolkit")
 export default function (ui, member, service) {
   const permissionFig = `${ui.fig.family}-permission`;
-  // const { guest, read, write, modify } = _K.permission
+  const { read, write, modify } = _K.permission
+  let items = [
+    { permission: read, label: LOCALE.PERMISSION_READ, name: _a.read },
+    { permission: write, label: LOCALE.PERMISSION_UPLOAD_DOWNLOAD, name: _a.write },
+    { permission: modify, label: LOCALE.PERMISSION_DELETE_ORGANIZE, name: _a.modify }
+  ]
   return Skeletons.Box.Y({
     className: `${permissionFig}__main`,
     sys_pn: 'permissions-content',
@@ -27,6 +32,7 @@ export default function (ui, member, service) {
           {
             kind: "settings_permission",
             className: `${permissionFig}__form`,
+            items,
             ...member.data(),
             sys_pn: "permission-form",
             uiHandler: [ui]

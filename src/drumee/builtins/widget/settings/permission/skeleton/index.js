@@ -45,10 +45,13 @@ export function addPermissionRow(ui, permission, service, content, name) {
  * @returns 
  */
 function build_permission(ui, opt) {
-  const { permission, label, name } = opt;
+  const { permission, label, name, lock = 0 } = opt;
   const fig = `${ui.fig.family}`;
   return Skeletons.Box.X({
     className: `${fig}__item-wrapper`,
+    dataset: {
+      lock
+    },
     kids: [
       addPermissionRow(ui, permission, 'change-permission', label, name),
     ]
@@ -56,8 +59,14 @@ function build_permission(ui, opt) {
 }
 export default function (ui, formData) {
   const fig = `${ui.fig.family}`;
-  const { read, write, modify } = _K.permission;
-  
+  let kids = []
+  for (let item of ui.mget(_a.items)) {
+    kids.push(build_permission(ui, item))
+  }
+  let container = Skeletons.Box.Y
+  if (ui.mget('itemsFlow') == _a.x) {
+    container = Skeletons.Box.X
+  }
   return Skeletons.Box.Y({
     className: `${fig}__main`,
     sys_pn: 'permissions-content',
@@ -65,13 +74,9 @@ export default function (ui, formData) {
       Skeletons.Box.Y({
         className: `${fig}__content`,
         kids: [
-          Skeletons.Box.Y({
+          container({
             className: `${fig}__items`,
-            kids: [
-              build_permission(ui, { permission: read, label: LOCALE.PERMISSION_READ, name: _a.read }),
-              build_permission(ui, { permission: write, label: LOCALE.PERMISSION_UPLOAD_DOWNLOAD, name: _a.write }),
-              build_permission(ui, { permission: modify, label: LOCALE.PERMISSION_DELETE_ORGANIZE, name: _a.modify }),
-            ]
+            kids
           }),
           validity(ui, formData)
         ]
@@ -79,3 +84,5 @@ export default function (ui, formData) {
     ]
   });
 }
+
+

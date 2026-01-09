@@ -1,22 +1,22 @@
 /**
  * Password section with checkbox and input field
  */
-export default function (ui, mode = _a.view) {
+export default function (ui, formData, mode = _a.view) {
   const passwordFig = `${ui.fig.family}-password`;
-  const hasPassword = ui.formData?.hasPassword || 0;
-
-  if (mode == _a.view) {
-    return Skeletons.Box.X({
-      className: `${passwordFig}__section`,
-      sys_pn: 'password-content',
-      kids: [
-        Skeletons.Note({
-          className: `${passwordFig}__label`,
-          content: hasPassword ? LOCALE.PASSWORD_SET || "Password set" : LOCALE.NO_PASSWORD || "No password",
-        }),
-      ],
-    });
-  }
+  const hasPassword = formData.hasPassword || 0;
+  ui.debug("AAA:777", formData)
+  // if (mode == _a.view) {
+  //   return Skeletons.Box.X({
+  //     className: `${passwordFig}__section`,
+  //     sys_pn: 'password-content',
+  //     kids: [
+  //       Skeletons.Note({
+  //         className: `${passwordFig}__label`,
+  //         content: hasPassword ? LOCALE.PASSWORD_SET || "Password set" : LOCALE.NO_PASSWORD || "No password",
+  //       }),
+  //     ],
+  //   });
+  // }
 
   // Edit mode - show checkbox and input when checked
   const passwordCheckbox = Skeletons.Button.Svg({
@@ -29,11 +29,11 @@ export default function (ui, mode = _a.view) {
 
   // Password input wrapper (shown when checkbox is checked)
   // EntryBox with Hide/Show text button on the right
-  const passwordVisibility = ui.formData?.passwordVisible || 0;
+  const passwordVisibility = formData.passwordVisible || 0;
   const passwordInputWrapper = hasPassword ? Skeletons.Box.X({
     className: `${passwordFig}__input-wrapper`,
     kids: [
-      Skeletons.EntryBox({
+      Skeletons.Entry({
         className: `${passwordFig}__input`,
         uiHandler: [ui],
         placeholder: LOCALE.ENTER_PASSWORD || "Enter password",
@@ -41,14 +41,15 @@ export default function (ui, mode = _a.view) {
         type: passwordVisibility ? _a.text : _a.password,
         sys_pn: 'password-input',
         autocomplete: _a.off,
-        value: ui.formData?.password || '',
+        value: formData.password || '',
         name: _a.password,
-        formItem: 'password'
+        formItem: 1
       }),
       Skeletons.Note({
         className: `${passwordFig}__toggle-visibility`,
         label: passwordVisibility ? (LOCALE.HIDE || "Hide") : (LOCALE.SHOW || "Show"),
         service: "toggle-password-visibility",
+        state: 1,
         uiHandler: [ui],
       }),
     ],

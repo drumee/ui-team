@@ -1,35 +1,9 @@
 const { topbar, validity } = require("../../hub/skeleton/toolkit")
-
-// const topbar = (ui, name) => {
-//   const figFamily = `${ui.fig.family}-topbar`;
-
-//   return Skeletons.Box.X({
-//     debug: __filename,
-//     className: `${figFamily}__container`,
-//     sys_pn: _a.topBar,
-//     kids: [
-//       Skeletons.Button.Svg({
-//         ico: "arrow-left",
-//         className: `${figFamily}__back`,
-//         service: _a.back,
-//         uiHandler: [ui],
-//       }),
-//       Skeletons.Note({
-//         className: `${figFamily}__title`,
-//         sys_pn: "window-name",
-//         content: name || LOCALE.SETTINGS,
-//         uiHandler: [ui],
-//       }),
-//       Skeletons.Button.Svg({
-//         ico: _a.cross,
-//         className: `${figFamily}__close`,
-//         service: _e.close,
-//         uiHandler: [ui],
-//       }),
-//     ],
-//   });
-// };
-
+const { read, write, modify } = _K.permission
+let items = [
+  { permission: write, label: "Upload and Upload", name: _a.write },
+  { permission: read, label: "Download only", name: _a.read, lock: 1 },
+]
 function content(ui) {
   const fig = `${ui.fig.family}`;
 
@@ -45,11 +19,23 @@ function content(ui) {
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
-      require('./permission').default(ui, ui.permissionMode || _a.edit),
+      Skeletons.Note({
+        className: `${fig}__title`,
+        content: LOCALE.PERMISSION || "Permission:",
+      }),
+      {
+        kind: "settings_permission",
+        className: `${fig}__form`,
+        items,
+        itemsFlow: _a.x,
+        ...ui.data(),
+        sys_pn: "permission-form",
+        uiHandler: [ui]
+      },
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
-      validity(ui, ui.formData),
+      // validity(ui, ui.formData),
     ],
   });
 }

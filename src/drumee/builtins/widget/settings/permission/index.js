@@ -22,13 +22,17 @@ class settings_permission extends DrumeeMFS {
    * 
    */
   data() {
+    let days = parseInt(this.mget(_a.days));
+    let hours = parseInt(this.mget(_a.hours));
+    let expiry = 0;
+    if (hours || days) expiry = 1;
     return {
       ...this.pendingChanges,
       ...this.getData(),
-      expiry: this.mget(_a.expiry) || 0,
       privilege: this.mget(_a.privilege),
-      hours: this.mget(_a.hours),
-      days: this.mget(_a.days),
+      hours,
+      days,
+      expiry,
     }
   }
 
@@ -68,6 +72,7 @@ class settings_permission extends DrumeeMFS {
       }
       this.pendingChanges.expiry = 1;
     }
+    this.debug("AAA:71_ toggleValidityMode", formData, cmd.mget('expiry'))
     this.mset(formData)
     this.feed(require("./skeleton").default(this, formData));
   }
@@ -107,7 +112,7 @@ class settings_permission extends DrumeeMFS {
     }
     this.mset({ privilege })
     this.pendingChanges.privilege = privilege;
-    this.feed(require("./skeleton").default(this, this.pendingChanges))
+    this.feed(require("./skeleton").default(this, this.data()))
     this.ensurePart('validity-content').then((validity) => {
       let state = 0;
       if (privilege < _K.privilege.read) {
@@ -116,7 +121,7 @@ class settings_permission extends DrumeeMFS {
         state = 1;
       }
       validity.setState(state)
-      this.triggerHandlers({ service: "permission-changed", valid: state, ...this.pendingChanges })
+      this.triggerHandlers({ service: "permission-changed", valid: state, ...this.getData() })
     })
   }
 
