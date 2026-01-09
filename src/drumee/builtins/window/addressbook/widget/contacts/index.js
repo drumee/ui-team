@@ -46,6 +46,7 @@ class __addressbook_widget_contacts extends LetcBox {
   onPartReady(child, pn, section) {  
     switch (pn) {
       case "list-contacts":
+        this.__listContacts = child;
         return child.on(EOD, () => {
           return this.trigger(EOD);
         });
@@ -79,14 +80,19 @@ class __addressbook_widget_contacts extends LetcBox {
     }
     
     const source = this.mget(_a.source);
+    let option = null;
+    if (source && source.mget) {
+      option = source.mget(_a.option);
+    }
     
     const api = { 
       service : SERVICE.contact.show_contact,
       tag_id  : tagid,
-      option  : source.mget(_a.option),
+      option  : option,
       hub_id  : Visitor.get(_a.id)
     };
 
+    this.debug('getCurrentApi', api, { source, _currentTag: this._currentTag });
     return api;
   }
 
