@@ -1,11 +1,15 @@
 @use "mixins/drumee";
 
 .invitation-settings-permission {
+
+  &__form {
+    width: 450px;
+  }
+
   &__main {
     gap: var(--spacer-5);
     padding: var(--spacer-5);
     width: 100%;
-    max-width: 500px;
   }
 
   &__content {
@@ -52,6 +56,13 @@
     color: var(--white);
     min-width: 95px;
     justify-content: center;
+
+    &.permission-action {
+      &[data-state="0"] {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+    }
   }
 
   &__section {

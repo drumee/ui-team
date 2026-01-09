@@ -5,24 +5,10 @@ const __invitation_options_bar = function (ui) {
     ico: "desktop__cog", //"desktop_projectroom", 
     className: `${ui.fig.group}__container-buttons--option option permission`,
     uiHandler: [ui],
-    service: "preset-options-permission",
+    service: "prompt-default-permission",
     state: 0
     //radiotoggle: radio #"quick-options-group"
   });
-  // const message = Skeletons.Button.Svg({
-  //   ico: "desktop__chat",
-  //   className: `${ui.fig.group}__container-buttons--option option message`,
-  //   uiHandler: [ui],
-  //   service: "setup-message",
-  //   state: 0
-  //   //radiotoggle : radio #"quick-options-group"
-  // });
-
-  // if (ui.mget(_a.mode) === 'mini') {
-  //   kids = [message];
-  // } else {
-  //   kids = [permission];
-  // }
 
   return Skeletons.Box.Y({
     className: `${ui.fig.group}__container-options`,

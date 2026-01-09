@@ -316,7 +316,6 @@ class __invitation_searchbox extends LetcBox {
     const o = _.clone(this.contactItem);
     let api = '';
     o.root = this.mget(_a.uiHandler);
-    this.debug("AAAA:319", this.mget('apiAll'))
     if (this.mget('apiAll')) {
       api = this.mget('apiAll')
       if (api.page) { delete api.page }

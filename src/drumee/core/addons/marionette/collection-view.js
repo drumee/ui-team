@@ -30,8 +30,8 @@ CollectionView.prototype.buildChildView = function (model, ChildViewClass, child
   const { kind } = options;
   if ((kind == null)) {
     msg = "Object defined whithout kind";
-    this.warn(msg, childViewOptions, this);
-    return new __failover({ content: msg });
+    this.warn(msg, childViewOptions, this.el);
+    return new Marionette.View() //({ content: msg });
   }
   try {
     return new ChildViewClass(options);

@@ -71,15 +71,20 @@ export function topbar(ui, label) {
 /**
  * Time validity section with radio buttons for Unlimited and Set Limit
  */
-export function validity(ui, mode = _a.view, type = null) {
+export function validity(ui, formData = {}) {
   const validityFig = `${ui.fig.family}-validity`;
-
   let _validitySwitchState = 0;
   let _validityMode = _a.open;
-  if ((ui.data?.dmz_expiry == _a.infinity) && (type != 'toggle-edit')) {
+  let validity_mode = _a.infinity;
+  let mode = _a.view;
+  if (formData.expiry) {
+    validity_mode = _a.limited
+    mode = _a.edit
+  } else {
     _validitySwitchState = 1;
     _validityMode = _a.closed;
   }
+  ui.debug("AAAA:formData 76", ui.activeMode, mode, validity_mode, formData)
 
   // Radio button options
   const unlimitedOption = {
@@ -94,7 +99,7 @@ export function validity(ui, mode = _a.view, type = null) {
     description: LOCALE.SET_LIMIT_DESCRIPTION || "Members will only be able to access the folder during specific times.",
   };
 
-  const currentMode = ui.formData?.validity_mode || _a.infinity;
+  const currentMode = validity_mode || _a.infinity;
   const isUnlimited = currentMode === _a.infinity;
 
   // Radio buttons
@@ -129,7 +134,7 @@ export function validity(ui, mode = _a.view, type = null) {
       type: _a.number,
       sys_pn: 'month-setting-input',
       autocomplete: _a.off,
-      value: ui.formData?.days || '',
+      value: formData.days || '',
       name: 'days',
       formItem: 'days',
       min: 0,
@@ -144,7 +149,7 @@ export function validity(ui, mode = _a.view, type = null) {
       type: _a.number,
       sys_pn: 'hours-setting-input',
       autocomplete: _a.off,
-      value: ui.formData?.hours || '',
+      value: formData.hours || '',
       name: 'hours',
       formItem: 'hours',
       min: 0,
@@ -155,12 +160,12 @@ export function validity(ui, mode = _a.view, type = null) {
   if (mode == _a.view) {
     days = Skeletons.Note({
       className: `${validityFig}__note validity-entry-text`,
-      content: ui.formData?.days || '0'
+      content: formData.days || '0'
     });
 
     hours = Skeletons.Note({
       className: `${validityFig}__note validity-entry-text`,
-      content: ui.formData?.hours || '0'
+      content: formData.hours || '0'
     });
   }
 

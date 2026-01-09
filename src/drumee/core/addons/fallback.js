@@ -22,9 +22,7 @@ class __core_failover extends Marionette.View {
   }
 
   static initClass() {
-    this.prototype.events =
-      { click: 'dispatchUiEvent' };
-
+    this.prototype.events = { click: 'dispatchUiEvent' };
     this.prototype.figName = "core_failover";
   }
 
@@ -40,9 +38,7 @@ class __core_failover extends Marionette.View {
       innerClass: _a.error
     });
     console.trace();
-    console.log("QQQQ 37")
-    return this.fig =
-      { family: 'core-failover' };
+    this.fig = { family: 'core-failover' };
   }
 
   /**

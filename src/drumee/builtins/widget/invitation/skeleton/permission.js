@@ -1,17 +1,7 @@
-const { addPermissionRow, topbar, validity} = require("../../settings/hub/skeleton/toolkit")
-function build_permission(ui, opt) {
-  const { member, permission, label, name } = opt;
+const { topbar } = require("../../settings/hub/skeleton/toolkit")
+export default function (ui, member, service) {
   const permissionFig = `${ui.fig.family}-permission`;
-  return Skeletons.Box.X({
-    className: `${permissionFig}__item-wrapper`,
-    kids: [
-      addPermissionRow(member, permission, 'change-permission', label, name),
-    ]
-  })
-}
-export default function (ui, member) {
-  const permissionFig = `${ui.fig.family}-permission`;
-  const { guest, read, write, modify } = _K.permission
+  // const { guest, read, write, modify } = _K.permission
   return Skeletons.Box.Y({
     className: `${permissionFig}__main`,
     sys_pn: 'permissions-content',
@@ -21,7 +11,7 @@ export default function (ui, member) {
         className: `${permissionFig}__content`,
         kids: [
           Skeletons.Box.X({
-            className:`${permissionFig}__member`,
+            className: `${permissionFig}__member`,
             kids: [
               Skeletons.Note({
                 className: `${permissionFig}__title`,
@@ -34,15 +24,13 @@ export default function (ui, member) {
               })
             ]
           }),
-          Skeletons.Box.Y({
-            className: `${permissionFig}__items`,
-            kids: [
-              build_permission(ui, { member, permission: read, label: LOCALE.PERMISSION_READ, name: _a.read }),
-              build_permission(ui, { member, permission: write, label: LOCALE.PERMISSION_UPLOAD_DOWNLOAD, name: _a.write }),
-              build_permission(ui, { member, permission: modify, label: LOCALE.PERMISSION_DELETE_ORGANIZE, name: _a.modify }),
-            ]
-          }),
-          validity(ui, ui.validityMode || _a.view)
+          {
+            kind: "settings_permission",
+            className: `${permissionFig}__form`,
+            ...member.data(),
+            sys_pn: "permission-form",
+            uiHandler: [ui]
+          }
         ]
       }),
       Skeletons.Box.X({
@@ -51,8 +39,8 @@ export default function (ui, member) {
         kids: [
           Skeletons.Note({
             sys_pn: "update-permission",
-            service: "save-pending-permission",
-            className: `${permissionFig}-button`,
+            service,
+            className: `${permissionFig}-button permission-action`,
             content: LOCALE.SAVE
           }),
         ]

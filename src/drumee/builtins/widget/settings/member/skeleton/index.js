@@ -7,7 +7,6 @@ module.exports = function (ui) {
   const displayName = ui.mget(_a.surname) || ui.mget("display");
   const type = ui.mget(_a.type);
   const email = ui.email || ui.tooltips || ui.mget(_a.email) || "";
-  const privilege = parseInt(ui.mget(_a.privilege)) || ui.mget(_a.permission);
 
   let profile_icon;
   if (ui.mget("is_drumate")) {
@@ -29,9 +28,10 @@ module.exports = function (ui) {
 
   // Resolve permission label based on privilege value (similar to permission/index.js)
   const resolveLabel = (p) => {
-    if (!p) return LOCALE.PERMISSION_READ || "Download only";
 
-    // Check owner first
+  ui.debug("AAAA:123", ui.isMediaOwner(), ui.canAdmin(), ui.canUpload(), ui.canDownload())
+
+  // Check owner first
     if (ui.isMediaOwner()) {
       return LOCALE.OWNER;
     }
@@ -56,121 +56,57 @@ module.exports = function (ui) {
       return LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only";
     }
 
-    // Default fallback
-    return LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only";
+    return LOCALE.PERMISSION_READ || "Download only";
   };
 
-  const permissionLabel = resolveLabel(privilege);
 
   const info = Skeletons.Box.Y({
     className: `${prefix}__info`,
-    kids: [
-      Skeletons.Note({
-        content: ui.name,
-        className: `${prefix}__name ${type || ""}`,
-        active: 0,
-      }),
-      Skeletons.Note({
-        content: email,
-        className: `${prefix}__email`,
-        active: 0,
-      }),
-    ],
-  });
-
-  const isOwner = privilege && (parseInt(privilege) === _K.privilege.owner || parseInt(privilege) === _K.permission.owner);
-
-  // Permission options using privilege values (not permission flags)
-  const permissionOptions = [
-    {
-      label: LOCALE.PERMISSION_DELETE_ORGANIZE || LOCALE.ALL_PERMISSIONS || "All permissions",
-      value: "all",
-      privilege: _K.privilege.delete // Use privilege value, not permission flag
-    },
-    {
-      label: LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only",
-      value: "upload",
-      privilege: _K.privilege.write // Use privilege value, not permission flag
-    },
-    {
-      label: LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only",
-      value: "download",
-      privilege: _K.privilege.read // Use privilege value, not permission flag
-    },
-  ];
-
-  const menuTrigger = Skeletons.Box.X({
-    className: `${prefix}__permission-trigger`,
-    service: "prompt-permission",
     kidsOpt: {
       active: 0,
     },
     kids: [
       Skeletons.Note({
-        content: permissionLabel,
-        className: `${prefix}__permission-label`,
+        content: ui.name,
+        className: `${prefix}__name ${type || ""}`,
       }),
-      !isOwner ? Skeletons.Button.Svg({
-        ico: "arrow--pages",
-        className: `${prefix}__arrow-down`,
-      }) : undefined,
+      Skeletons.Note({
+        content: email,
+        className: `${prefix}__email`,
+      }),
     ],
   });
 
-  // const menuItems = !isOwner ? Skeletons.Box.Y({
-  //   className: `${prefix}__permission-menu-items`,
-  //   kids: permissionOptions.map((opt) => {
-  //     // Check if current privilege matches the option privilege value
-  //     const currentPrivilege = parseInt(privilege) || 0;
-  //     const isActive = currentPrivilege === opt.privilege;
-  //     const memberId = ui.mget(_a.entity) || ui.mget(_a.id);
 
-  //     // Wrap Button.Label in a Box with service and dataset to ensure event is triggered correctly
-  //     return Skeletons.Box.X({
-  //       className: `${prefix}__permission-menu-item-wrapper${isActive ? " active" : ""}`,
-  //       service: "change-permission",
-  //       name: "change-permission",
-  //       uiHandler: [ui],
-  //       privilege: opt.privilege,
-  //       memberId: memberId,
-  //       dataset: {
-  //         privilege: opt.privilege,
-  //         memberId: memberId,
-  //       },
-  //       kids: [
-  //         Skeletons.Button.Label({
-  //           className: `${prefix}__permission-menu-item${isActive ? " active" : ""}`,
-  //           label: opt.label,
-  //           ico: null,
-  //           active: isActive ? 1 : 0,
-  //         })
-  //       ],
-  //     });
-  //   }),
-  // }) : undefined;
-  // const permission = !isOwner ? Skeletons.Box.X({
-  //   className: `${prefix}__permission`,
-  //   kids: [{
-  //     kind: KIND.menu.topic,
-  //     className: `${prefix}__permission-dropdown`,
-  //     flow: _a.y,
-  //     opening: _e.click,
-  //     sys_pn: `permission-dropdown-${ui.mget(_a.entity) || ui.mget(_a.id)}`,
-  //     service: "permission-menu",
-  //     persistence: _a.once,
-  //     trigger: menuTrigger,
-  //     items: menuItems,
-  //     offsetY: 8,
-  //   }],
-  // }) : Skeletons.Box.X({
-  //   className: `${prefix}__permission`,
-  //   kids: [menuTrigger],
-  // });
+
+  let arrow = Skeletons.Button.Svg({
+    ico: "arrow--pages",
+    className: `${prefix}__arrow-down`,
+    active: 0,
+  });
+
+  if (ui.isMediaOwner()) {
+    arrow = ""
+  }
+
+  const configure = Skeletons.Box.X({
+    className: `${prefix}__permission-trigger`,
+    service: "prompt-permission",
+    kids: [
+      Skeletons.Note({
+        content: resolveLabel(),
+        className: `${prefix}__permission-label`,
+        active: 0,
+      }),
+      arrow
+    ],
+  });
+
 
   return Skeletons.Box.X({
     className: `${prefix}__item ${type || ""}`,
     debug: __filename,
     uiHandler: ui,
-    kids: [profile_icon, info, menuTrigger],
+    kids: [profile_icon, info, configure],
   });
 };

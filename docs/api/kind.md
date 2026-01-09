@@ -26,17 +26,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | devices_settings | builtins/widget/devices | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/devices/index.js |
 | document_page | builtins/player/document/page | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/document/page/index.js |
 | document_reader | builtins/player/document | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/document/index.js |
-| editor_note | builtins/editor/note | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/editor/note/index.js |
-| hub_administrator | builtins/window/hub/settings/administrator | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/administrator/index.js |
-| hub_filename | builtins/window/hub/settings/filename | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/filename/index.js |
-| hub_hubname | builtins/window/hub/settings/hubname | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/hubname/index.js |
-| hub_members | builtins/window/hub/settings/members | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/members/index.js |
-| hub_owner | builtins/window/hub/settings/owner | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/owner/index.js |
-| hub_permission | builtins/window/hub/settings/permission | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/permission/index.js |
-| hub_settings | builtins/window/hub/settings | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/settings/index.js |
-| hub_sharebox | builtins/window/hub/sharebox | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/sharebox/index.js |
-| hub_team | builtins/window/hub/team | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/team/index.js |
-| hub_website | builtins/window/hub/website | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/hub/website/index.js |
 | image_player | builtins/player/image | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/image/index.js |
 | image_viewer | builtins/player/image | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/image/index.js |
 | invitation_contact | builtins/widget/invitation/contact | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/contact/index.js |
@@ -59,10 +48,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | video_player | builtins/player/video | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/video/index.js |
 | video_viewer | builtins/player/video | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/player/video/index.js |
 | drumee_background | src/drumee/builtins/widget/background-image | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/background-image/index.js |
-| invitation_message | invitation/message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/message/index.js |
-| invitation_permission | invitation/permission | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/permission/index.js |
-| invitation_sharee | invitation/sharee | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/sharee/index.js |
-| invitation_shareeroll | invitation/sharee/roll | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/invitation/sharee/roll/index.js |
 | custom_logo | src/drumee/builtins/widget/logo | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/logo/index.js |
 | contact_invitation_form | widget/contact-invitation-form | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/contact-invitation-form/index.js |
 | disk_usage | widget/disk-usage | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/disk-usage/index.js |
@@ -77,6 +62,7 @@ See https://drumee.com/-/#/sandbox for examples.
 | settings_hub | widget/settings/hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/hub/index.js |
 | settings_member | widget/settings/member | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/member/index.js |
 | settings_members_list | widget/settings/members-list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/members-list/index.js |
+| settings_permission | widget/settings/permission | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/permission/index.js |
 | settings_share_hub | widget/settings/share-hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/share-hub/index.js |
 | settings_private_hub | widget/settings/private-hub | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/settings/private-hub/index.js |
 | widget_chat_item | widget/chat-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/widget/chat-item/index.js |

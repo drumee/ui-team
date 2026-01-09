@@ -78,26 +78,6 @@ class __invitation_core extends DrumeeMFS {
     return api;
   }
 
-
-  // ===========================================================
-  //
-  //
-  // ===========================================================
-  __dispatchRest(method, data, socket) {
-    //this.debug("AAAAAAAAAAAAAA 731", method, data, socket, this.mget(_a.api));
-    switch (method) {
-      case SERVICE.sharebox.revoke_permission:
-      case SERVICE.sharebox.remove_link:
-      case SERVICE.hub.delete_contributor:
-        this.service = "item-deleted";
-        this.triggerHandlers();
-        return this.softDestroy();
-      default:
-        // if (method === this.mget(_a.api).service) {
-        //   return this.softDestroy();
-        // }
-    }
-  }
 }
 //__invitation_core.initClass();
 

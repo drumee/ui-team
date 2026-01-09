@@ -15,7 +15,7 @@ module.exports = {
   settings_hub: './settings/hub',
   settings_member: './settings/member',
   settings_members_list: './settings/members-list',
-  // settings_pricing: './settings/pricing',
+  settings_permission: './settings/permission',
   settings_share_hub: './settings/share-hub',
   // settings_access_manager: './settings/access-manager',
   // settings_share_hub_custom: './settings/share-hub-custom',

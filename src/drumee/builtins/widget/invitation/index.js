@@ -67,6 +67,11 @@ class __invitation_settings extends __recipient {
     }
     this.formData = {}
     this.pendingChanges = {}
+    this.defaultPermission = {
+      privilege: _K.privilege.write,
+      days: 0,
+      hours: 0
+    }
   }
 
   /**
@@ -105,28 +110,6 @@ class __invitation_settings extends __recipient {
       };
     }
 
-    // The one being fetched by search request
-    this.contactItem = {
-      kind: "invitation_contact",
-      service: "add-item"
-    };
-
-    if (this.mget('contactItem')) {
-      this.contactItem = {
-        ...this.contactItem,
-        ...this.mget('contactItem')
-      }
-    }
-
-    if ((this.mget(_a.authority) == null)) {
-      this.warn(WARNING.attribute.recommanded.format(_a.authority));
-    }
-
-    if (this.mget(_a.authority) & (_K.permission.owner | _K.permission.admin)) {
-      return this.editable = 1;
-    } else {
-      return this.editable = 0;
-    }
   }
 
   /**
@@ -507,11 +490,15 @@ class __invitation_settings extends __recipient {
     for (let item of this.__rollRecipients.children.toArray()) {
       users.push(item.mget(_a.id))
     }
-    let args = this.getData()
+    let args = { ...this.defaultPermission, ...this.getData() }
     args.hub_id = this.mget(_a.hub_id)
 
     this.postService(SERVICE.hub.add_contributors, args, {}).then(usersList => {
-      this.goodbye()
+      // this.goodbye()
+      this.mset({ sharees: usersList })
+      this.__existingMembers.feed(usersList)
+      this.recipientsRoll.clear()
+      this.debug("AAAA:498", usersList)
     })
   }
 
@@ -520,39 +507,29 @@ class __invitation_settings extends __recipient {
    * @param {*} cmd 
    */
   toggleValidityMode(cmd) {
-    const mode = cmd.mget('expiry') || cmd.mget(_a.value);
-    this.debug('toggleValidityMode', mode, cmd, this);
-
-    // Update formData immediately
-    this.formData.validity_mode = mode;
-
-    // Store in pendingChanges
-    this.pendingChanges.validity_mode = mode;
-
-    if (mode == _a.limited) {
-      this.validityMode = _a.edit;
-      // Keep current days/hours values in pendingChanges if they exist
-      if (!this.pendingChanges.days) {
-        this.pendingChanges.days = this.formData.days || '0';
+    let formData = this.pendingMember.data()
+    formData.days = this.pendingChanges.days || formData.days;
+    formData.hours = this.pendingChanges.hours || formData.hours;
+    if (cmd.mget('expiry') == _a.infinity) {
+      formData = {
+        days: 0,
+        hours: 0
       }
-      if (!this.pendingChanges.hours) {
-        this.pendingChanges.hours = this.formData.hours || '0';
+    } else if (!formData.expiry) {
+      formData = {
+        days: 0,
+        hours: 1
       }
-    } else {
-      // When switching to unlimited, reset days/hours in pendingChanges
-      this.formData.days = '0';
-      this.formData.hours = '0';
-      this.pendingChanges.days = '0';
-      this.pendingChanges.hours = '0';
-      this.validityMode = _a.edit; // Keep in edit mode to allow switching back
     }
+    this.pendingChanges = this.__settings.getData();
+    this.debug('toggleValidityMode', this.pendingChanges, formData, cmd.mget('expiry'), cmd, this);
 
     // Re-render immediately to show the change
     const part = this.getPart('validity-content');
     if (part && part.softClear) {
       part.softClear();
     }
-    part.feed(validity(this, this.validityMode));
+    part.feed(validity(this, formData));
   }
 
 
@@ -566,7 +543,7 @@ class __invitation_settings extends __recipient {
       return
     }
     this.ensurePart("settings").then((p) => {
-      let { name, state, } = args
+      let { name, state } = args
       let privilege = 0b0000;
       switch (name) {
         case _a.read:
@@ -591,28 +568,72 @@ class __invitation_settings extends __recipient {
           }
           break
         default:
-          return;
       }
-      this.debug("AAA:603", args, p.getData(), privilege, cmd, this.pendingMember)
+      this.debug("AAA:603", this._tab, args, p.getData(), privilege, cmd, this.pendingMember)
       this.pendingMember.mset({ privilege })
       p.feed(require("./skeleton/permission").default(this, this.pendingMember))
-      if (privilege < _K.privilege.read) {
-        this.ensurePart('update-permission').then((p) => {
-          p.set({ content: LOCALE.REMOVE })
-        })
-      }
+      const validity = this.getPart('validity-content');
+      this.ensurePart('update-permission').then((p) => {
+        if (this._tab == "set-default-permission") {
+          this.ensurePart('update-permission').then((p) => {
+            p.set({ content: "OK", service: "save-default-permission" })
+          })
+        } else {
+          if (privilege < _K.privilege.read) {
+            p.set({ content: LOCALE.REMOVE, service: "revoke-member" })
+            validity.setState(0)
+          } else {
+            p.set({ content: LOCALE.SAVE, service: "save-pending-permission" })
+            validity.setState(1)
+          }
+        }
+      })
     })
-
   }
 
   /**
    * 
    */
+  set_member_privilege() {
+    let args = {
+      ...this.__permissionForm.gatherData(),
+      uid: this.pendingMember.mget(_a.id),
+      hub_id: this.mget(_a.hub_id),
+    }
+    this.__settings.clear();
+    this.postService(SERVICE.hub.set_member_privilege, args).then((users) => {
+      this.debug("AAA:605", users)
+      this.mset({ sharees: users })
+      this.__existingMembers.restart()
+      this.__existingMembers.feed(users)
+    })
+  }
+
+  /**
+   * 
+   */
+  set_recipients_privilege() {
+    this.warn("TO BE DONE")
+    // let args = {
+    //   ...this.__permissionForm.gatherData(),
+    //   uid: this.pendingMember.mget(_a.id),
+    //   hub_id: this.mget(_a.hub_id),
+    // }
+    // this.__settings.clear();
+    // this.postService(SERVICE.hub.set_member_privilege, args).then((users) => {
+    //   this.debug("AAA:6196", users)
+    //   this.mset({ sharees: users })
+    //   this.__existingMembers.feed(users)
+    // })
+  }
+
+  /**
+   * not_owner
+   */
   onUiEvent(cmd, args = {}) {
     let s;
     const service = args.service || cmd.service || cmd.mget(_a.service);
     this.service = service;
-    let state = cmd.mget(_a.state);
     this.debug("AAA:544", service, cmd)
     switch (service) {
       case _e.update:
@@ -637,52 +658,60 @@ class __invitation_settings extends __recipient {
           list.push({ ...s, ...this.recipientItem })
         }
         return this.mset(_a.sharees, list);
-        recipientItem
-      case "new-invitation":
-        if (this.mget(_a.mode) === 'mini') {
-          this.feed(require("./skeleton/mini")(this));
-        } else {
-          this.feed(require("./skeleton/direct")(this));
-          cur_sharees = this.mget(_a.sharees);
-          if (_.isEmpty(cur_sharees)) {
-            return;
-          }
-          list = [];
-          for (s of Array.from(cur_sharees)) {
-            if (s.email === "*") {
-              continue;
-            }
-            list.push({ ...s, ...this.recipientItem, idle: 1 })
-          }
-          this.recipientsRoll.once(_e.started, () => {
-            this.debug("AAA:561", this.recipientsRoll._ready, "READY", list);
-            this.recipientsRoll.feed(list);
-            // setTimeout(()=>{
-            // }, 50)
-          })
-        }
-        return this.triggerHandlers();
 
-      case 'setup-message':
-        this._setupMessage(cmd);
-        return this.triggerHandlers({ service, state });
-
-      case 'preset-options-permission':
-        this.optionsWrapper.feed(require("./skeleton/preset-permission").default(this, cmd))
-        // this.ensurePart("options").then((p) => {
-        //   this.pendingMember = cmd;
-        // })
-        // break;
+      case "set-recipients-permission":
+        this.defaultPermission = cmd.gatherData()
         break;
-      case "prompt-permission":
+
+      case 'prompt-default-permission':
+        this._service = "set-recipients-permission"
         this.ensurePart("settings").then((p) => {
-          this.pendingMember = cmd;
-          p.feed(require("./skeleton/permission").default(this, cmd))
+          this.pendingMember = this.recipientsRoll.children.first();
+          this.debug("AAAA:567", this.pendingMember)
+          p.feed(require("./skeleton/permission").default(this, this.pendingMember, this._service))
         })
         break;
 
-      case "change-permission":
-        this._changePermission(cmd, args)
+      case "set-user-permission":
+        this.set_member_privilege()
+        break;
+
+      case "prompt-permission":
+        this._service = "set-user-permission"
+        this.ensurePart("settings").then((p) => {
+          this.pendingMember = cmd;
+          p.feed(require("./skeleton/permission").default(this, cmd, this._service))
+        })
+        break;
+
+      case "revoke-member":
+        this.__settings.clear();
+        let opt = {
+          users: this.pendingMember.mget(_a.id),
+          hub_id: this.mget(_a.hub_id)
+        }
+        this.postService(SERVICE.hub.delete_contributor, opt)
+          .then((users) => {
+            this.mset({ sharees: users })
+            this.__existingMembers.feed(users)
+          })
+        return
+
+      case "permission-changed":
+        this.debug("AAA:680", cmd, args)
+        if (this._service == "set-recipients-permission") {
+          return this.__updatePermission.setState(args.valid)
+        }
+        this.__updatePermission.setState(1)
+        if (!args.valid) {
+          this.__updatePermission.set({ content: LOCALE.REMOVE })
+          this.__updatePermission.mset({ service: "revoke-member" })
+        } else {
+          this.__updatePermission.set({ content: LOCALE.SAVE })
+          this.__updatePermission.mset({ service: this._service })
+        }
+        // this._tab = service;
+        // this._changePermission(cmd, args)
         break;
 
       case "cancel-share":
@@ -692,35 +721,33 @@ class __invitation_settings extends __recipient {
       case _a.back:
         return this.__settings.clear();
 
-      case "save-pending-permission":
-        this.debug("AAA", this.pendingMember, this.__settings.getData());
-        this.__settings.softClear();
-        break;
 
-      case 'toggle-validity-mode':
-        return this.toggleValidityMode(cmd);
+      // case 'toggle-validity-mode':
+      //   return this.toggleValidityMode(cmd);
 
       case _e.found:
         this.service = _e.search;
         this.found = cmd.results;
         return this.triggerHandlers();
 
-      case _e.share:
+      case "add-members":
         this.addContributors();
         return
 
-      case "update-permission":
-        this._data = { ...this._data, ...args.data }
-        return
-      case 'cancel-share':
-        this.service = service;
-        return this.triggerHandlers();
+      // case "update-permission":
+      //   this._data = { ...this._data, ...args.data }
+      //   return
 
-      case 'revoke':
-        return this.deleteList.push(cmd.mget(_a.id));
+      // case 'cancel-share':
+      //   this.service = service;
+      //   return this.triggerHandlers();
+
+      // case 'revoke':
+      //   return this.deleteList.push(cmd.mget(_a.id));
 
       case _e.cancel:
         return this.recipientsRoll.clear();
+
 
       case "invite":
         this.goodbye()

@@ -140,11 +140,11 @@ class settings_share_hub extends DrumeeMFS {
     this.fetchService({
       service: SERVICE.hub.get_external_room_attr,
       hub_id: hubId
-    }).then((data) => {
-      this.data = data || {};
+    }).then((data = {}) => {
+      this.data = data;
 
       // Get access_type from multiple sources: API data, model (from media), or default
-      const accessTypeFromApi = (data && data.access_type) ? data.access_type : null;
+      const accessTypeFromApi = (data.access_type) ? data.access_type : null;
       const accessTypeFromModel = this.mget('access_type') || this.mget(_a.access_type);
       const areaFromModel = this.mget(_a.area); // 'public', 'private', 'share', 'dmz'
 
@@ -159,22 +159,14 @@ class settings_share_hub extends DrumeeMFS {
       // Priority: API data > model access_type > mapped area > default
       const finalAccessType = accessTypeFromApi || accessTypeFromModel || mappedAccessType || 'private';
 
-      this.debug('getNodeSettingsApi access_type resolution:', {
-        api: accessTypeFromApi,
-        model_access_type: accessTypeFromModel,
-        area: areaFromModel,
-        mapped: mappedAccessType,
-        final: finalAccessType
-      });
-
       const initialFormData = {
-        password: (data && data.password) ? data.password : '',
-        hasPassword: (data && data.hasPaswword) ? data.hasPaswword : 0,
-        hours: (data && data.hours) ? data.hours : '0',
-        days: (data && data.days) ? data.days : '0',
-        privilege: (data && data.permission) ? data.permission : _K.privilege.read,
+        password: (data.password) ? data.password : '',
+        hasPassword: (data.hasPaswword) ? data.hasPaswword : 0,
+        hours: (data.hours) ? data.hours : '0',
+        days: (data.days) ? data.days : '0',
+        privilege: (data.permission) ? data.permission : _K.privilege.read,
         accessType: finalAccessType, // Use resolved access type
-        validity_mode: (data && data.dmz_expiry === _a.infinity) ? _a.infinity : _a.limited
+        validity_mode: (data.dmz_expiry === _a.infinity) ? _a.infinity : _a.limited
       };
 
       // Store initial data for comparison
@@ -230,35 +222,26 @@ class settings_share_hub extends DrumeeMFS {
     this.debug('toggleValidityMode', mode, cmd, this);
 
     // Update formData immediately
-    this.formData.validity_mode = mode;
-
-    // Store in pendingChanges
-    this.pendingChanges.validity_mode = mode;
-
-    if (mode == _a.limited) {
-      this.validityMode = _a.edit;
-      // Keep current days/hours values in pendingChanges if they exist
-      if (!this.pendingChanges.days) {
-        this.pendingChanges.days = this.formData.days || '0';
+    let formData = { ...this.formData }
+    if (cmd.mget('expiry') == _a.infinity) {
+      formData = {
+        days: 0,
+        hours: 0
       }
-      if (!this.pendingChanges.hours) {
-        this.pendingChanges.hours = this.formData.hours || '0';
+    } else if (!formData.expiry) {
+      formData = {
+        days: 0,
+        hours: 1
       }
-    } else {
-      // When switching to unlimited, reset days/hours in pendingChanges
-      this.formData.days = '0';
-      this.formData.hours = '0';
-      this.pendingChanges.days = '0';
-      this.pendingChanges.hours = '0';
-      this.validityMode = _a.edit; // Keep in edit mode to allow switching back
     }
-
+    this.pendingChanges = this.__validityContent.getData();
+    this.debug('toggleValidityMode', this.pendingChanges, formData, cmd.mget('expiry'), cmd, this);
     // Re-render immediately to show the change
     const part = this.getPart('validity-content');
     if (part && part.softClear) {
       part.softClear();
     }
-    part.feed(validity(this, this.validityMode));
+    part.feed(validity(this, formData));
   }
 
 

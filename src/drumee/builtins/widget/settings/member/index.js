@@ -47,6 +47,18 @@ class settings_member extends DrumeeMFS {
   /**
    * 
    */
+  data() {
+    let {
+      expiry, privilege, hours, days
+    } = this.model.toJSON()
+    return {
+      expiry, privilege, hours, days
+    }
+  }
+
+  /**
+   * 
+   */
   onDomRefresh() {
     this.feed(require("./skeleton")(this));
   }

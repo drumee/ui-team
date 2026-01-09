@@ -1058,15 +1058,10 @@ class __window_manager extends push {
  * 
  */
   openAccessManager(cmd) {
-    this.debug("AAA:1061", cmd)
     const invitation = {
       kind: 'invitation',
       topLabel: LOCALE.DOCUMENTS_ACCESS,
       media: cmd,
-      hub_id: cmd.mget(_a.hub_id),
-      authority: cmd.mget(_a.privilege),
-      closeButton: 1,
-      persistence: _a.once,
       uiHandler: [this]
     };
     this.__wrapperModal.feed(invitation)

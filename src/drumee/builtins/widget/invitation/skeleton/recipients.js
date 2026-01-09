@@ -5,7 +5,10 @@ const __recipients_roll = function (ui) {
 
   const searchbox = {
     kind: 'invitation_search',
-    contactItem: ui.resultItem,
+    contactItem: {
+      kind: "invitation_contact",
+      service: "add-item"
+    },
     debug: __filename,
     sys_pn: 'invitation-search',
     service: _e.update,

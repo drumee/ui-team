@@ -1,7 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : desk/invitation/recipient/skeleton/recipient
-// ==================================================================== *
 const __recipient = require('../core');
 class __invitation_recipient extends __recipient {
 
@@ -60,12 +56,23 @@ class __invitation_recipient extends __recipient {
         });
       }
     }
-    if (!this.mget(_a.hub_id)) {
-      let m = this.get(_a.media);
-      if (m) this.mset(_a.hub_id, m.mget(_a.hub_id));
-    }
   }
 
+  /**
+   * 
+   */
+  data() {
+    return {
+      privilege: this.mget(_a.privilege) || _K.privilege.read,
+      days: this.mget(_a.days) || 0,
+      hours: this.mget(_a.hours) || 0,
+      lastname: this.mget(_a.lastname),
+      fullname: this.mget(_a.fullname),
+      firstname: this.mget(_a.firstname),
+      email: this.mget(_a.email),
+      id: this.mget(_a.id)
+    }
+  }
   /**
    * 
    */
@@ -162,7 +169,11 @@ class __invitation_recipient extends __recipient {
 
       case "revoke":
         this.removeOrrevoke(cmd);
-        return this.triggerHandlers({ service });
+        this.triggerHandlers({ service });
+        break;
+      default:
+        this.triggerHandlers({ service, name: cmd.mget(_a.name), state: cmd.mget(_a.state) });
+        break;
     }
   }
 }

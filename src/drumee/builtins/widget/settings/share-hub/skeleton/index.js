@@ -49,7 +49,7 @@ function content(ui) {
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
-      validity(ui, ui.validityMode || _a.view),
+      validity(ui, ui.formData),
     ],
   });
 }

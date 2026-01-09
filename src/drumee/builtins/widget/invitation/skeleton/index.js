@@ -10,7 +10,6 @@ export default function (ui) {
       uiHandler: [ui],
     },
     vendorOpt: Preset.List.Orange_d,
-    inspect: 1
   });
   return Skeletons.Box.Y({
     debug: __filename,
