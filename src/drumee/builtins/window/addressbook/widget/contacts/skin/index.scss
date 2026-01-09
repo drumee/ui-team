@@ -68,24 +68,25 @@
 
 	&__item {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		grid-template-columns: repeat(auto-fill, 250px);
 		gap: 16px;
 		padding: 16px;
 		height: calc(100% - 44px);
 		overflow-y: auto;
 		width: 100%;
+		justify-content: start;
 
 		// Responsive: max 3 columns, min 1 column
-		@media (min-width: 900px) {
-			grid-template-columns: repeat(3, 1fr);
+		@media (min-width: 800px) {
+			grid-template-columns: repeat(auto-fill, 250px);
 		}
 
-		@media (min-width: 600px) and (max-width: 899px) {
-			grid-template-columns: repeat(2, 1fr);
+		@media (min-width: 520px) and (max-width: 799px) {
+			grid-template-columns: repeat(auto-fill, 250px);
 		}
 
-		@media (max-width: 599px) {
-			grid-template-columns: 1fr;
+		@media (max-width: 519px) {
+			grid-template-columns: 250px;
 		}
 	}
 

@@ -313,6 +313,17 @@
     display: flex;
   }
 
+  &-topbar {
+    &__control {
+      position: absolute;
+      top: 0;
+      right: 0;
+      .icon {
+        background-color: #DDDFE4;
+      }
+    }
+  }
+
   &__maxview-content {
     height: 100%;
     justify-content: center;
