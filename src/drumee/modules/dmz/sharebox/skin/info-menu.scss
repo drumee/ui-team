@@ -12,7 +12,8 @@
 
       & .menu-topic-items {
         background-color: var(--default-background);
-        border-radius: var(--border-radius);
+        border-radius: 16px;
+        box-shadow: 0px 2px 8px 0px #2227320A;
         height: 100%;
         justify-content: center;
         max-width: 220px;
@@ -50,14 +51,7 @@
         }
 
         &:after {
-          background: var(--default-background);
-          border-radius: var(--border-radius-top);
-          content: "";
-          height: 10px;
-          left: 0;
-          position: absolute;
-          top: 0;
-          width: 100%;
+          display: none;
         }
 
         &[data-state="open"] {
@@ -68,7 +62,7 @@
 
     &__icon {
       align-items: center;
-      color: var(--default-icon-neutral);
+      color: var(--Neutral-500, #AFB3BB);
       cursor: pointer;
       height: 14px;
       width: 14px;
@@ -79,7 +73,7 @@
         width: 20px;
 
         :hover {
-          color: var(--default-thinline-icon-hover);
+          color: #B251FB;
         }
       }
 
@@ -88,12 +82,14 @@
         top: 0px;
       }
 
-      &.available {
-        color: var(--dmz-icon-valid);
+      &.available,
+      &.rights.available {
+        color: var(--Neutral-500, #AFB3BB) !important;
       }
 
-      &.account_check {
-        color: var(--dmz-icon-valid);
+      &.account_check,
+      &.rights.account_check {
+        color: var(--Neutral-500, #AFB3BB) !important;
       }
 
       &.owner-name {
@@ -121,15 +117,23 @@
         margin-bottom: 5px;
         padding: 10px 0 10px 20px;
       }
+
+      &.title {
+        &:not(:first-child) {
+          border-top: 1px solid #EBECF0;
+          margin-top: 8px;
+          padding-top: 14px;
+        }
+      }
     }
 
     &__note {
-      @include drumee.typo($size: 13px, $weight: 300, $line: 15px, $color: var(--default-text-color));
+      color: var(--default-text-color);
       padding-top: 0px;
 
       &.title {
         margin-top: 5px;
-        @include drumee.typo($size: 14px, $weight: 300, $line: 16px, $color: var(--sharebox-main)); //$sharebox-text
+        color: var(--sharebox-main);
       }
 
       &.owner-name,
@@ -139,14 +143,14 @@
       }
 
       &.expires-in-value {
-        @include drumee.typo($size: 13px, $weight: 300, $line: 14px, $color: var(--default-text-color));
+        color: #B251FB;
         background-color: var(--default-background);
         justify-content: center;
         padding: 0 5px;
       }
 
       &.expires-in-label {
-        @include drumee.typo($size: 13px, $weight: 300, $line: 14px, $color: var(--secondary-text-color));
+        color: #B251FB;
         margin: 0px 2px;
         padding-right: 2px;
       }
