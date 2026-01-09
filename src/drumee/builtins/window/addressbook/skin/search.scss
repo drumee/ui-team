@@ -4,7 +4,9 @@
   &-search {
     &__wrapper {
       z-index: 10;
-      justify-content: center;
+      width: 100%;
+      padding: 16px 20px;
+      background-color: #F4F4F6;
     }
 
     &[data-status="open"] {
@@ -16,7 +18,8 @@
     }
 
     &__box {
-      margin: 10px;
+      width: 100%;
+      max-width: 100%;
     }
 
     &__icon {
@@ -34,80 +37,42 @@
 
     &__bar {
       border-bottom: 1px solid var(--default-window-header-search);
-      // width: 100%;
+      width: 100%;
 
       & input {
         background-color: transparent;
         margin-top: 2px;
         width: 100%;
-        @include drumee.typo($size: 15px, $line: 16px, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 15px, $line: 16px, $color: var(--default-text-color));
 
         &::placeholder {
-          @include drumee.typo($size: 15px, $line: 16px, $weight: 300, $color: var(--default-text-reverse));
+          @include drumee.typo($size: 15px, $line: 16px, $weight: 300, $color: var(--default-text-color));
         }
       }
     }
   }
 
-  // Layout for responsive
-  &[data-size="max"] {
-    & .search-wrapper {
-      &[data-mode="open"] {
-        width: 35%;
-      }
+  // Layout for responsive - search below topbar, always visible
+  & .search-wrapper {
+    width: 100%;
+    position: relative;
+    left: 0;
+    border-radius: 0;
+    height: auto;
+    z-index: 10;
+
+    & .search-box {
+      display: flex;
+      width: 100%;
     }
-  }
 
-  &[data-size="medium"] {
-    & .search-wrapper {
-      &[data-mode="open"] {
-        width: 32%;
-      }
+    & .search-min-icon {
+      display: none;
     }
-  }
 
-  &[data-size="min"] {
-    & .search-wrapper {
-      &[data-mode="open"] {
-        width: 80%;
-      }
-    }
-  }
-
-  &[data-size="max"],
-  &[data-size="medium"],
-  &[data-size="min"] {
-    & .search-wrapper {
-      & .search-result-box {
-        max-width: 250px; //270px;
-        width: 95%;
-      }
-
-      &[data-mode="open"] {
-        border-radius: 6px 0 0 0;
-        height: 40px;
-        left: 40px;
-        position: absolute;
-        z-index: 10000;
-
-        & .search-box {
-          display: flex;
-        }
-
-        & .search-min-icon {
-          display: none;
-        }
-      }
-
-      &[data-mode="closed"] {
-        & .search-min-icon {
-          display: flex;
-        }
-
-        & .search-box {
-          display: none;
-        }
-      }
+    & .search-result-box {
+      max-width: 100%;
+      width: 100%;
     }
   }
 }
