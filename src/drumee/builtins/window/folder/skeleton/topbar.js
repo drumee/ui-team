@@ -13,17 +13,18 @@ const __skl_folder_topbar = function (ui) {
   });
 
   let downloadIcon = "";
-  if (Visitor.parseModule().includes(_a.dmz)) {
-    if (ui.havePermission(_K.permission.download)){
-      downloadIcon = Skeletons.Button.Svg({
-        ico: "download",
-        className: `${ui.fig.family}__icon download link`,
-        sys_pn: "download-button",
-        service: _e.download,
-        token: ui.mget(_a.token) || "",
-      });
-    }
-  }
+  // ui.debug("AAA:16", ui)
+  // if (Visitor.parseModule().includes(_a.dmz)) {
+  //   if (ui.canDownload()) {
+  //     downloadIcon = Skeletons.Button.Svg({
+  //       ico: "download",
+  //       className: `${ui.fig.family}__icon download link`,
+  //       sys_pn: "download-button",
+  //       service: _e.download,
+  //       token: ui.mget(_a.token) || "",
+  //     });
+  //   }
+  // }
 
   const nameWrapper = Skeletons.Box.Y({
     className: `${ui.fig.family}__name-wrapper`,
@@ -46,18 +47,21 @@ const __skl_folder_topbar = function (ui) {
     ],
   });
 
-  const buttons = Skeletons.Box.X({
-    className: `${ui.fig.family}__buttons-wrapper`,
-    kids: [
-      button(ui, {
-        label: LOCALE.UPLOAD,
-        className: `${ui.fig.family}__upload-button`,
-        service: _e.upload,
-        priority: "primary",
-      }),
-      settings,
-    ],
-  });
+  let buttons;
+  if (ui.canUpload()) {
+    buttons = Skeletons.Box.X({
+      className: `${ui.fig.family}__buttons-wrapper`,
+      kids: [
+        button(ui, {
+          label: LOCALE.UPLOAD,
+          className: `${ui.fig.family}__upload-button`,
+          service: _e.upload,
+          priority: "primary",
+        }),
+        settings,
+      ],
+    });
+  }
 
   const figname = "topbar";
   const a = Skeletons.Box.X({

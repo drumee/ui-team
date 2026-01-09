@@ -5,6 +5,8 @@
     border-radius: var(--corner-radius-6) var(--corner-radius-6) 0 0;
     width: 100%;
     z-index: 200;
+    align-content: center;
+    flex-wrap: wrap;
   }
 
   &-topbar {
@@ -14,6 +16,8 @@
       flex: 1;
       border-radius: var(--default-border-radius-top);
       width: 100%;
+      align-content: center;
+      flex-wrap: wrap;
 
       &[data-device="mobile"] {
         min-width: 305px;
@@ -69,7 +73,6 @@
       color: var(--ewhite);
       height: 100%;
       justify-content: space-between;
-      // margin-top: 10px;
       flex: 1;
       width: 100%;
       padding: 0 40px;

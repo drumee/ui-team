@@ -73,7 +73,7 @@
 
   &--secondary-btn {
     align-items: center;
-    border-radius: var(--border-radius);
+    border-radius: var(--corner-radius-max);
     border: 1px solid var(--btn-rollback-border);
     cursor: pointer;
     height: 35px;
@@ -81,15 +81,18 @@
     margin: 0px 10px 0px 0px;
     min-width: 115px;
     padding: 0 12px;
-    @include drumee.typo($size: 15px, $line: 25px, $color: var(--btn-rollback-text));
+    background-color: var(--neutral-300);
+    color: var(--neutral-900);
+    font-size: 15px;
+    line-height: 25px;
+
 
     &[data-editable="0"] {
       display: none;
     }
 
     &:hover {
-      border: 2px solid var(--btn-rollback-text-hover);
-      color: var(--btn-rollback-text-hover);
+      border: 2px solid var(--neutral-200);
     }
   }
 }

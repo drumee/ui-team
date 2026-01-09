@@ -23,6 +23,7 @@
   &__preview {
     width: 88px;
     height: 88px;
+    cursor: pointer;
 
     svg {
       width: 48px;
@@ -42,6 +43,7 @@
 
   &__summary {
     width: 100%;
+    cursor: pointer;
 
     &-username {
       @include drumee.typo($size: 14px, $weight: 600, $line: 22px, $color: var(--neutral-900));

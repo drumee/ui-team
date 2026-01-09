@@ -2,30 +2,35 @@
 const __recipients_roll = function (ui) {
   const o = { ...Preset.List.Orange_e };
   o.start = _a.bottom;
-  // const label = Skeletons.Box.X({
-  //   className: `${ui.fig.family}__label`,
-  //   kids: [
-  //     Skeletons.Note({
-  //       className: "content",
-  //       content: LOCALE.ACCESS_LIST
-  //     })
-  //   ]
-  // });
 
   const searchbox = {
     kind: 'invitation_search',
     contactItem: ui.resultItem,
     debug: __filename,
-    signal: _e.ui.event,
     sys_pn: 'invitation-search',
     service: _e.update,
     className: "inline",
-    api: ui.mget(_a.api),
+    api: {
+      service: SERVICE.drumate.my_contacts,
+      hub_id: Visitor.id
+    },
     contactbook: ui.mget('contactbook'),
     preselect: ui.mget(_a.preselect),
     uiHandler: ui,
     addGuest: ui.mget('addGuest')
+
   };
+  const contact = Skeletons.Box.G({
+    className: `${ui.fig.group}__contact-container`,
+    kids: [
+      searchbox,
+      Skeletons.Note({
+        className: `${ui.fig.group}__contact-invite`,
+        content: "Invite +",
+        uiHandler: [ui],
+        service: "invite"
+      })]
+  });
 
   const list = Skeletons.List.Smart({
     className: `${ui.fig.group}__container-recipients ${ui.fig.family}__list-destination`,
@@ -36,14 +41,13 @@ const __recipients_roll = function (ui) {
     kids: ui.getPending(),
     vendorOpt: o
   });
-  const a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     state: ui.getState() ^ 1,
     debug: __filename,
     name: "recipients",
     className: `${ui.fig.group}__container-recipients-roll`,
-    kids: [list, searchbox]
+    kids: [list, contact]
   });
-  return a;
 };
 
 module.exports = __recipients_roll;

@@ -650,6 +650,7 @@ class __media_interact extends media_core {
       case "direct-rename":
         return this.rename();
 
+
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));
 
@@ -796,6 +797,9 @@ class __media_interact extends media_core {
         this.emitServiceToHandler("hub-settings", args);
         break;
 
+      case "manage-access":
+        this.emitServiceToHandler(service, args);
+        break;
       case "export-to-server":
       case "import-from-server":
         Wm.launch(

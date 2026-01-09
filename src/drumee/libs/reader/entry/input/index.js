@@ -642,15 +642,22 @@ class __drumee_entry_input extends LetcBox {
   select(e) {
     this.status = _e.select;
     let value = this.getValue(true);
-    this.ensureElement(this._input[0]).then((p) => {
-      if (this._inputReady) {
-        p.select();
-      } else {
-        this.once("input:ready", () => {
-          p.select();
-        })
-      }
-    });
+    if (this._input && this._inputReady) {
+      this._input.select();
+    } else {
+      this.once("input:ready", () => {
+        this._input.select();
+      })
+    }
+    // this.ensureElement(this._input).then((p) => {
+    //   if (this._inputReady) {
+    //     p.select();
+    //   } else {
+    //     this.once("input:ready", () => {
+    //       p.select();
+    //     })
+    //   }
+    // });
     return value;
   }
 
@@ -670,7 +677,7 @@ class __drumee_entry_input extends LetcBox {
    * @returns 
    */
   focusAt(pos) {
-    const el = this._input[0];
+    const el = this._input;
     if (!el) {
       return;
     }

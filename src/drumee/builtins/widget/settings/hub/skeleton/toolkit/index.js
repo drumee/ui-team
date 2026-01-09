@@ -1,12 +1,82 @@
 /**
+ * Check if a specific permission bit is set
+ * @param {number} permissionBit - The permission bit to check (e.g., _K.permission.upload)
+ * @returns {number} 1 if permission is set, 0 otherwise
+ */
+function permissionCheck(ui, permissionBit) {
+  const privilege = ui.mget(_a.privilege) || 0;
+  // Use bitwise AND to check if the specific permission bit is set
+  return (privilege & permissionBit) ? 1 : 0;
+}
+
+
+/**
+ * Permission section with checkboxes for Upload File and Download File
+ */
+export function addPermissionRow(ui, permission, service, content, name) {
+  const permissionFig = `${ui.fig.family}-permission`;
+
+  let icon = Skeletons.Button.Svg({
+    permission,
+    service,
+    itemForm: 1,
+    name,
+    icons: ["editbox_shapes-roundsquare", "available"],
+    className: `${permissionFig}__checkbox`,
+    state: permissionCheck(ui, permission) ? 1 : 0,
+    uiHandler: [ui],
+  });
+  return Skeletons.Box.X({
+    className: `${permissionFig}__item`,
+    kids: [
+      icon,
+      Skeletons.Note({
+        className: `${permissionFig}__note item-label`,
+        content,
+      })
+    ]
+  });
+}
+export function topbar(ui, label) {
+  const figFamily = `${ui.fig.family}-topbar`;
+
+  return Skeletons.Box.X({
+    debug: __filename,
+    className: `${figFamily}__container`,
+    sys_pn: _a.topBar,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "arrow-left",
+        className: `${figFamily}__back`,
+        service: _a.back,
+        uiHandler: [ui],
+      }),
+      Skeletons.Note({
+        className: `${figFamily}__title`,
+        sys_pn: "window-name",
+        content: label || LOCALE.SETTINGS || "Setting",
+        uiHandler: [ui],
+      }),
+      Skeletons.Button.Svg({
+        ico: _a.cross,
+        className: `${figFamily}__close`,
+        service: _e.close,
+        uiHandler: [ui],
+      }),
+    ],
+  });
+};
+
+
+/**
  * Time validity section with radio buttons for Unlimited and Set Limit
  */
-export default function (_ui_, mode = _a.view, type = null) {
-  const validityFig = `${_ui_.fig.family}-validity`;
+export function validity(ui, mode = _a.view, type = null) {
+  const validityFig = `${ui.fig.family}-validity`;
 
   let _validitySwitchState = 0;
   let _validityMode = _a.open;
-  if ((_ui_.data?.dmz_expiry == _a.infinity) && (type != 'toggle-edit')) {
+  if ((ui.data?.dmz_expiry == _a.infinity) && (type != 'toggle-edit')) {
     _validitySwitchState = 1;
     _validityMode = _a.closed;
   }
@@ -24,7 +94,7 @@ export default function (_ui_, mode = _a.view, type = null) {
     description: LOCALE.SET_LIMIT_DESCRIPTION || "Members will only be able to access the folder during specific times.",
   };
 
-  const currentMode = _ui_.formData?.validity_mode || _a.infinity;
+  const currentMode = ui.formData?.validity_mode || _a.infinity;
   const isUnlimited = currentMode === _a.infinity;
 
   // Radio buttons
@@ -33,8 +103,8 @@ export default function (_ui_, mode = _a.view, type = null) {
     className: `${validityFig}__radio ${isUnlimited ? "active" : ""}`,
     state: isUnlimited ? 1 : 0,
     service: "toggle-validity-mode",
-    uiHandler: _ui_,
-    _value: _a.infinity,
+    uiHandler: ui,
+    expiry: _a.infinity,
   });
 
   const setLimitRadio = Skeletons.Button.Svg({
@@ -42,8 +112,8 @@ export default function (_ui_, mode = _a.view, type = null) {
     className: `${validityFig}__radio ${!isUnlimited ? "active" : ""}`,
     state: !isUnlimited ? 1 : 0,
     service: "toggle-validity-mode",
-    uiHandler: _ui_,
-    _value: _a.limited,
+    uiHandler: ui,
+    expiry: _a.limited,
   });
 
   // Time inputs (shown when Set Limit is selected)
@@ -53,13 +123,13 @@ export default function (_ui_, mode = _a.view, type = null) {
   if (mode == _a.edit && !isUnlimited) {
     days = Skeletons.EntryBox({
       className: `${validityFig}__entry validity-entry days`,
-      uiHandler: _ui_,
+      uiHandler: ui,
       placeholder: LOCALE.DAY || "Day",
       service: '',
       type: _a.number,
       sys_pn: 'month-setting-input',
       autocomplete: _a.off,
-      value: _ui_.formData?.days || '',
+      value: ui.formData?.days || '',
       name: 'days',
       formItem: 'days',
       min: 0,
@@ -68,13 +138,13 @@ export default function (_ui_, mode = _a.view, type = null) {
 
     hours = Skeletons.EntryBox({
       className: `${validityFig}__entry validity-entry hours`,
-      uiHandler: _ui_,
+      uiHandler: ui,
       service: '',
       placeholder: LOCALE.HOUR || "Hour",
       type: _a.number,
       sys_pn: 'hours-setting-input',
       autocomplete: _a.off,
-      value: _ui_.formData?.hours || '',
+      value: ui.formData?.hours || '',
       name: 'hours',
       formItem: 'hours',
       min: 0,
@@ -85,12 +155,12 @@ export default function (_ui_, mode = _a.view, type = null) {
   if (mode == _a.view) {
     days = Skeletons.Note({
       className: `${validityFig}__note validity-entry-text`,
-      content: _ui_.formData?.days || '0'
+      content: ui.formData?.days || '0'
     });
 
     hours = Skeletons.Note({
       className: `${validityFig}__note validity-entry-text`,
-      content: _ui_.formData?.hours || '0'
+      content: ui.formData?.hours || '0'
     });
   }
 
@@ -127,10 +197,10 @@ export default function (_ui_, mode = _a.view, type = null) {
           Skeletons.Box.X({
             className: `${validityFig}__option${isUnlimited ? " active" : ""}`,
             service: "toggle-validity-mode",
-            uiHandler: [_ui_],
-            radio: `validity-radio-${_ui_._id || _ui_.id || 'default'}`,
+            uiHandler: [ui],
+            radio: `validity-radio-${ui._id || ui.id || 'default'}`,
             state: isUnlimited ? 1 : 0,
-            _value: _a.infinity,
+            expiry: _a.infinity,
             kids: [
               unlimitedRadio,
               Skeletons.Box.Y({
@@ -140,8 +210,8 @@ export default function (_ui_, mode = _a.view, type = null) {
                     className: `${validityFig}__option-label`,
                     content: unlimitedOption.label,
                     service: "toggle-validity-mode",
-                    uiHandler: [_ui_],
-                    _value: _a.infinity,
+                    uiHandler: [ui],
+                    expiry: _a.infinity,
                   }),
                   Skeletons.Note({
                     className: `${validityFig}__option-description`,
@@ -157,10 +227,10 @@ export default function (_ui_, mode = _a.view, type = null) {
             kids: [
               Skeletons.Box.X({
                 service: "toggle-validity-mode",
-                uiHandler: [_ui_],
-                radio: `validity-radio-${_ui_._id || _ui_.id || 'default'}`,
+                uiHandler: [ui],
+                radio: `validity-radio-${ui._id || ui.id || 'default'}`,
                 state: !isUnlimited ? 1 : 0,
-                _value: _a.limited,
+                expiry: _a.limited,
                 kids: [
                   setLimitRadio,
                   Skeletons.Box.Y({
@@ -170,8 +240,8 @@ export default function (_ui_, mode = _a.view, type = null) {
                         className: `${validityFig}__option-label`,
                         content: setLimitOption.label,
                         service: "toggle-validity-mode",
-                        uiHandler: [_ui_],
-                        _value: _a.limited,
+                        uiHandler: [ui],
+                        expiry: _a.limited,
                       }),
                       Skeletons.Note({
                         className: `${validityFig}__option-description`,

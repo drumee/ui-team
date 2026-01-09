@@ -9,52 +9,51 @@
 // @return [Object] 
 //
 // ===========================================================
-const __sharees_list = function (_ui_) {
+const __sharees_list = function (ui) {
   let close, label;
-  if (_ui_.mget(_a.label)) {
-    label = _ui_.mget(_a.label);
+  if (ui.mget(_a.label)) {
+    label = ui.mget(_a.label);
   } else {
     label = LOCALE.MODIFY_LIST;
   }
   const sharees = {
     kind: 'invitation_shareeroll',
-    hub_id: _ui_.mget(_a.hub_id),
-    authority: _ui_.mget(_a.authority),
-    sharees: _ui_.mget(_a.sharees),
-    api: _ui_.mget(_a.api),
-    mode: _ui_.mget(_a.mode),
-    label: _ui_.mget('topLabel') || "????",
+    hub_id: ui.mget(_a.hub_id),
+    authority: ui.mget(_a.authority),
+    sharees: ui.mget(_a.sharees),
+    api: ui.mget(_a.api),
+    mode: ui.mget(_a.mode),
+    label: ui.mget('topLabel') || "????",
     sys_pn: "sharees-roll",
-    pipi: "popo",
     shareeItem: {
       kind: 'invitation_sharee',
-      authority: _ui_.mget(_a.authority),
-      hub: _ui_.hub,
-      media: _ui_.media,
-      hub: _ui_.mget(_a.hub),
-      uiHandler: _ui_,
-      ..._ui_.mget('shareeItem')
+      authority: ui.mget(_a.authority),
+      hub: ui.hub,
+      media: ui.media,
+      hub: ui.mget(_a.hub),
+      uiHandler: ui,
+      ...ui.mget('shareeItem')
     }
   };
 
-  if (_ui_.mget('closeButton')) {
-    close = Preset.Button.Close(_ui_);
+  if (ui.mget('closeButton')) {
+    close = Preset.Button.Close(ui);
   }
   const a = Skeletons.Box.Y({
     debug: __filename,
     name: "sharees",
-    className: `${_ui_.fig.group} ${_ui_.fig.group}__container-sharee`,
+    className: `${ui.fig.group} ${ui.fig.group}__container-sharee`,
     kids: [sharees]
   });
-  if (_ui_.mget('bottomLabel')) {
+  if (ui.mget('bottomLabel')) {
     const button = Skeletons.Note({
-      className: `${_ui_.fig.family}__button ${_ui_.fig.group}__list-title new-invitation `, // dialog__button--submit"
-      content: _ui_.mget('bottomLabel') || label,
+      className: `${ui.fig.family}__button ${ui.fig.group}__list-title new-invitation `, // dialog__button--submit"
+      content: ui.mget('bottomLabel') || label,
       sys_pn: "ref-addbutton",
-      service: _ui_.mget(_a.service) || "new-invitation",
-      uiHandler: _ui_
+      service: ui.mget(_a.service) || "new-invitation",
+      uiHandler: ui
       // dataset    : 
-      //   editable : _ui_.editable
+      //   editable : ui.editable
     });
     a.kids.push(button);
   }

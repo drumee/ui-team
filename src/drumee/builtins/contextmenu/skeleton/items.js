@@ -36,6 +36,7 @@ const __button = function (ui, trigger, k) {
     info: button({ content: LOCALE.GET_INFO, service: _e.settings, type: _a.info }),
     link: button({ content: LOCALE.SHARE_LINK, service: _a.link }),
     lock: button({ content: LOCALE.PROHIBIT_CHANGE, service: _e.lock }),
+    manageAccess: button({ content: LOCALE.SHARE, service: 'manage-access' }),
     meetingLink: button({ content: LOCALE.COPY_MEETING_LINK, service: 'copy-meeting-link' }),
     modify: button({ content: LOCALE.MODIFY, service: _a.modify }),
     newFolder: button({ content: LOCALE.NEW_FOLDER, service: 'new-folder' }),

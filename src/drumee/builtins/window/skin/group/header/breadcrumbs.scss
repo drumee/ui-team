@@ -21,22 +21,21 @@
     }
 
     &__container {
-      height: 44px;
+      height: 28px;
       left: 0;
       position: absolute;
-      top: 0;
-      width: 30px;
+      border: 0;
+      width: 100%;
+      bottom: 0;
+      gap: var(--spacer-3);
+      padding-left: var(--spacer-5);
 
       &[data-state="1"] {
         pointer-events: auto;
         opacity: 1;
       }
 
-      &[data-state="open"] {
-        position: relative;
-      }
-
-      &[data-state="closed"] {
+      &[data-state="0"] {
         display: none;
       }
     }
@@ -62,46 +61,23 @@
 
     &__item {
       cursor: pointer;
-      height: 30px;
-      margin: 4px 0;
       max-width: 150px;
-      padding: 0 14px;
       white-space: nowrap;
-      width: 100%;
+      color: var(--neutral-300);
+      align-content: center;
+      flex-wrap: wrap;
 
-      &--icon {
-        height: 24px;
-        width: 24px;
-
-        &.blue {
-          color: var(--folder-main);
-        }
-
-        &.purple,
-        &.team,
-        &.private {
-          color: var(--teamroom-main);
-        }
-
-        &.orange,
-        &.share,
-        &.dmz {
-          color: var(--sharebox-main);
-        }
-
-        &.website,
-        &.public {
-          color: var(--website-header-bg);
-        }
+      &:after {
+        content: ">";
+        margin: 0 var(--spacer-3);
       }
 
       &--filename {
-        @include drumee.typo($size: 14px, $line: 22px, $weight: 300, $color: var(--default-text-color));
-        align-content: center;
+        font-size: 14px;
+        align-content: start;
         align-items: center;
-        margin-left: 8px;
-        top: -2px;
-        width: calc(100% - 30px);
+        width: auto;
+        max-width: 180px;
         @include drumee.overflow-text;
       }
 
@@ -114,8 +90,15 @@
       &:hover,
       &:last-child {
         & .filename {
-          color: var(--default-text-title);
+          color: var(--neutral-50);
         }
+      }
+
+      &:last-child {
+        &:after {
+          content: "";
+        }
+
       }
     }
 

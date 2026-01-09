@@ -43,7 +43,7 @@
     font-size: 14px;
     font-style: normal;
     font-weight: 700;
-    line-height: 22px; 
+    line-height: 22px;
     letter-spacing: 0.14px;
     @include drumee.overflow-text;
   }
@@ -53,7 +53,7 @@
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
-    line-height: 22px; 
+    line-height: 22px;
     letter-spacing: 0.14px;
     @include drumee.overflow-text;
   }
@@ -81,7 +81,7 @@
       background-color: var(--default-bg-hover);
     }
 
-    
+
     &__arrow-down {
       transform: rotate(180deg);
       color: var(--default-text-neutral);
@@ -93,7 +93,8 @@
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
-    line-height: 22px; /* 157.143% */
+    line-height: 22px;
+    /* 157.143% */
     letter-spacing: 0.14px;
     white-space: nowrap;
   }
@@ -124,8 +125,10 @@
   // Rotate arrow when dropdown is open
   // Menu-topic with permission-dropdown class will have data-state attribute
   &__permission-dropdown {
+
     &[data-state="1"],
     &[data-state="open"] {
+
       .menu-topic-trigger .settings-member__arrow-down,
       .settings-member__permission-trigger .settings-member__arrow-down {
         transform: rotate(270deg);
@@ -135,6 +138,7 @@
 
   // Alternative selector for menu-topic element
   .menu-topic {
+
     &[data-state="1"],
     &[data-state="open"] {
       .settings-member__arrow-down {
@@ -158,7 +162,7 @@
   &__permission-menu-item-wrapper {
     width: 100%;
     cursor: pointer;
-    
+
     &:hover {
       .settings-member__permission-menu-item {
         background-color: var(--default-bg-hover);
@@ -181,11 +185,9 @@
     cursor: pointer;
     transition: background-color 120ms ease;
     width: 100%;
-    @include drumee.typo(
-      $color: var(--default-text-color),
+    @include drumee.typo($color: var(--default-text-color),
       $size: 14px,
-      $weight: 400
-    );
+      $weight: 400);
 
     svg {
       display: none;
@@ -208,5 +210,94 @@
     overflow: visible !important;
     position: absolute;
     z-index: 200;
+  }
+
+  &-permission {
+    &__section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    &__title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--neutral-900, #222732);
+      margin-bottom: 4px;
+    }
+
+    &__items {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      align-items: flex-start;
+      width: 100%;
+
+    }
+
+    &__item-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      min-width: 0; // Allow flex items to shrink below their content size
+
+    }
+
+    &__item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    &__note {
+      font-size: 14px;
+      color: var(--neutral-900, #222732);
+      cursor: pointer;
+
+      &:hover {
+        color: var(--neutral-900, #222732);
+      }
+    }
+
+    &__checkbox {
+      cursor: pointer;
+      flex-shrink: 0;
+
+      svg {
+        width: 20px;
+        height: 20px;
+        border: 1px solid var(--neutral-300, #D1D5DB);
+        border-radius: 5px;
+        background-color: var(--ewhite);
+        transition: all 120ms ease;
+      }
+
+      // Checkbox with white background when checked
+      &[data-state="1"],
+      &.selected {
+        svg {
+          padding: 3px;
+          background-color: var(--primary-600, #7C3AED);
+          border: 1px solid var(--white, #ffffff);
+          color: var(--white, #ffffff);
+        }
+      }
+
+      &[data-state="0"] {
+        svg {
+          background-color: var(--ewhite);
+          border-radius: 5px;
+          border: 1px solid var(--neutral-300, #D1D5DB);
+          color: transparent;
+        }
+      }
+    }
+
+    &__note {
+      font-size: 14px;
+      color: var(--neutral-900, #222732);
+    }
+
   }
 }

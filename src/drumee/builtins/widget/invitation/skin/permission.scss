@@ -1,0 +1,143 @@
+@use "mixins/drumee";
+
+.invitation-settings-permission {
+  &__main {
+    gap: var(--spacer-5);
+    padding: var(--spacer-5);
+    width: 100%;
+    max-width: 500px;
+  }
+
+  &__content {
+    gap: var(--spacer-5);
+    padding: var(--spacer-5);
+    width: 100%;
+    align-content: center;
+    flex-wrap: wrap;
+  }
+
+  &__member {
+    gap: var(--spacer-5);
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--neutral-900, #222732);
+    justify-content: center;
+    line-height: 40px;
+  }
+
+  &__avatar {
+    background-color: var(--egrey-b6);
+    border-radius: 50%;
+    height: 40px;
+    min-width: 40px;
+    width: 40px;
+    flex-shrink: 0;
+  }
+
+
+  &__buttons {
+    width: 100%;
+    justify-content: center;
+  }
+
+  &-button {
+    cursor: pointer;
+    width: auto;
+    padding: var(--spacer-3) var(--spacer-5);
+    border-radius: var(--corner-radius-max);
+    background-color: var(--primary-500);
+    color: var(--white);
+    min-width: 95px;
+    justify-content: center;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--neutral-900, #222732);
+    margin-bottom: 4px;
+  }
+
+  &__items {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: flex-start;
+    width: 100%;
+
+  }
+
+  &__item-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-width: 0; // Allow flex items to shrink below their content size
+
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  &__note {
+    font-size: 14px;
+    color: var(--neutral-900, #222732);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--neutral-900, #222732);
+    }
+  }
+
+  &__checkbox {
+    cursor: pointer;
+    flex-shrink: 0;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      border: 1px solid var(--neutral-300, #D1D5DB);
+      border-radius: 5px;
+      background-color: var(--ewhite);
+      transition: all 120ms ease;
+    }
+
+    // Checkbox with white background when checked
+    &[data-state="1"],
+    &.selected {
+      svg {
+        padding: 3px;
+        background-color: var(--primary-600, #7C3AED);
+        border: 1px solid var(--white, #ffffff);
+        color: var(--white, #ffffff);
+      }
+    }
+
+    &[data-state="0"] {
+      svg {
+        background-color: var(--ewhite);
+        border-radius: 5px;
+        border: 1px solid var(--neutral-300, #D1D5DB);
+        color: transparent;
+      }
+    }
+  }
+
+  &__note {
+    font-size: 14px;
+    color: var(--neutral-900, #222732);
+  }
+
+}

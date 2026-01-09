@@ -16,6 +16,7 @@ class __activity_item extends LetcBox {
    * 
    */
   onDomRefresh() {
+    this.debug("AAA:19", this)
     this.feed(require('./skeleton')(this));
   }
 
@@ -33,7 +34,8 @@ class __activity_item extends LetcBox {
    * @param {*} args 
    */
   onUiEvent(cmd, args = {}) {
-    const service = args.service || cmd.mget(_a.service);
+    const service = args.service || cmd.mget(_a.service) || this.mget(_a.service);
+    this.debug("AAA:38", cmd, service, this)
     this.triggerHandlers({ service });
 
   }

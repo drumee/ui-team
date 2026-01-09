@@ -1,32 +1,36 @@
-
 @use 'mixins/drumee';
 
-.invitation-sharee{
+.invitation-sharee {
   &__ui {
-    width: calc(100% - 30px);
-    border: 1px;
-    //margin-left:28px;
-    margin-left:26px;
-    padding-left:13px;
-    margin-right:28px;
+    width: 100%;
+
     &:hover {
-      background-color: var(--default-bg-hover);//#879BFF;
-      color: var(--default-text-hover);//var(--ewhite);
-     // border-radius:4px;
-      .settings, .delete, .view {
+      background-color: var(--default-bg-hover); //#879BFF;
+      color: var(--default-text-hover); //var(--ewhite);
+
+      // border-radius:4px;
+      .settings,
+      .delete,
+      .view {
         visibility: visible;
         color: var(--ewhite);
       }
+
       & .note-reader {
-        color:var(--default-text-hover);//var(--ewhite);
+        color: var(--default-text-hover); //var(--ewhite);
       }
     }
   }
+  
+  &__main {
+    align-items: center;
+    @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 36px, $weight: 400);
+    cursor: pointer;
+  }
+
   &__container {
     align-items: center;
-    // padding-left: 10px;
-    height: 35px; //36px;
-    @include drumee.typo($color:var(--default-text-color),$size:14px,$line:36px,$weight:400);
+    @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 36px, $weight: 400);
     cursor: pointer;
   }
 
@@ -39,10 +43,11 @@
       background-size: cover;
       background-repeat: no-repeat;
       background-position: 50% 50%;
-      background-color:var(--default-user-icon);// #D8D8D8;
+      background-color: var(--default-user-icon); // #D8D8D8;
       border-radius: 15px;
+
       //overflow: hidden;
-      &.public{
+      &.public {
         padding: 6px;
         color: var(--egrey-2f);
         background-color: white;
@@ -55,34 +60,40 @@
     width: 166px;
     padding: 0 0 0 14px;
     @include drumee.overflow-text;
-    .inner{
+
+    .inner {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
   }
-  &__icon{
+
+  &__icon {
     width: 14px;
     height: 14px;
     color: var(--default-icon-neutral);
     // visibility: hidden;
     cursor: pointer;
     margin-right: 16px;
-    &.settings{
+
+    &.settings {
       margin-left: auto;
-      &[data-editable="0"]{
+
+      &[data-editable="0"] {
         display: none;
         pointer-events: none;
       }
-      svg{
+
+      svg {
         position: absolute;
-      }          
+      }
     }
-    &.delete{
-      &[data-editable="0"]{
+
+    &.delete {
+      &[data-editable="0"] {
         display: none;
         pointer-events: none;
-      }          
+      }
     }
   }
 }

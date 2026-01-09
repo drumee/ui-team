@@ -1,52 +1,6 @@
-/**
- * Permission section with checkboxes for Upload File and Download File
- */
-function addPermissionRow(ui, _val, _service, _label, mode) {
+const { addPermissionRow } = require("../../hub/skeleton/toolkit")
+export default function (ui) {
   const permissionFig = `${ui.fig.family}-permission`;
-  let permissionCheck = ui.permissionCheck.bind(ui);
-  let icon = null;
-
-  if (mode == _a.edit) {
-    icon = Skeletons.Button.Svg({
-      icons: ["editbox_shapes-roundsquare", "available"],
-      className: `${permissionFig}__checkbox`,
-      state: permissionCheck(_val) ? 1 : 0,
-      _value: _val,
-      service: _service,
-      uiHandler: [ui],
-    });
-  } else {
-    let svg = 'editbox_shapes-roundsquare';
-    let className = 'unselected';
-    if (permissionCheck(_val)) {
-      svg = 'available';
-      className = 'selected';
-    }
-    icon = Skeletons.Button.Svg({
-      ico: svg,
-      className: `${permissionFig}__checkbox ${className}`,
-    });
-  }
-
-  let item = Skeletons.Box.X({
-    className: `${permissionFig}__item`,
-    kids: [
-      icon,
-      Skeletons.Note({
-        className: `${permissionFig}__note item-label`,
-        content: _label,
-        service: _service,
-        uiHandler: [ui],
-        _value: _val,
-      })
-    ]
-  });
-  return item;
-}
-
-export default function (ui, mode = _a.edit) {
-  const permissionFig = `${ui.fig.family}-permission`;
-
   return Skeletons.Box.Y({
     className: `${permissionFig}__section`,
     sys_pn: 'permissions-content',
@@ -61,13 +15,13 @@ export default function (ui, mode = _a.edit) {
           Skeletons.Box.X({
             className: `${permissionFig}__item-wrapper`,
             kids: [
-              addPermissionRow(ui, _K.permission.upload, 'change-permission', LOCALE.UPLOAD_FILE || "Upload File", mode),
+              addPermissionRow(ui, _K.permission.upload, 'change-permission', LOCALE.UPLOAD_FILE || "Upload File", _a.upload),
             ]
           }),
           Skeletons.Box.X({
-            className: `${permissionFig}__item-wrapper`,
+            className: `${permissionFig}__item-wrapper download`,
             kids: [
-              addPermissionRow(ui, _K.permission.download, 'change-permission', LOCALE.DOWNLOAD_FILE || "Download File", mode),
+              addPermissionRow(ui, _K.permission.download, 'change-permission', LOCALE.DOWNLOAD_FILE || "Download File", _a.download),
             ]
           }),
         ]

@@ -2,11 +2,11 @@
 
 @mixin desk-submit-btn {
   &--submit {
-    background: var(--btn-commit-background); //var(--egreen);
+    background: var(--primary-500);
     width: 110px;
     height: 32px;
     margin: auto;
-    border-radius: var(--border-radius);
+    border-radius: var(--corner-radius-max);
     //border-radius: 2px;
     cursor: pointer;
     display: flex;
@@ -15,7 +15,7 @@
     @include drumee.typo($color: var(--btn-commit-text), $size: 16px, $line: 26px); //$weight:300
 
     &:hover {
-      background-color: var(--btn-commit-background-hover);
+      background-color: var(--primary-600);
     }
   }
 }

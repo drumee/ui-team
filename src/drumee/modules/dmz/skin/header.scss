@@ -6,7 +6,7 @@
       justify-content: space-between;
       text-decoration: none;
       width: 100%;
-      grid-template-columns: 70px auto auto;
+      grid-template-columns: 128px auto auto;
 
       &[data-device="mobile"] {
         padding: 18px 0 0 0;
@@ -25,11 +25,16 @@
 
     }
 
+    &__logo-content {
+      height: 90px;
+      
+    }
+
     &__note.sender-name {
       justify-content: center;
       white-space: break-spaces;
       word-break: break-word;
-      @include drumee.typo($size: 28px, $line: 28px, $color: var(--default-text-reverse));
+      @include drumee.typo($size: 28px, $line: 28px, $color: var(--neutral-900));
     }
 
     &__title {
@@ -38,12 +43,12 @@
       overflow: hidden;
       width: 100%;
 
-      @include drumee.typo($size: 28px, $line: 28px, $color: var(--default-text-reverse));
+      @include drumee.typo($size: 28px, $line: 28px, $color: var(--neutral-900));
 
       &[data-device="mobile"] {
         margin-top: 5px;
         width: 100%;
-        @include drumee.typo($size: 20px, $line: 22px, $color: var(--default-text-reverse));
+        @include drumee.typo($size: 20px, $line: 22px, $color: var(--neutral-900));
       }
 
 
@@ -113,7 +118,7 @@
       height: 100%;
       justify-content: center;
       width: 100%;
-      @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-reverse));
+      @include drumee.typo($size: 14px, $line: 16px, $color: var(--neutral-900));
 
       &:hover {
         box-shadow: 0 0px 13px 0px rgba(169, 186, 255, 0.5);

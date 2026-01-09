@@ -1,32 +1,34 @@
-const topbar = (ui) => {
-  const figFamily = `${ui.fig.family}-topbar`;
+const { topbar, validity } = require("../../hub/skeleton/toolkit")
 
-  return Skeletons.Box.X({
-    debug: __filename,
-    className: `${figFamily}__container`,
-    sys_pn: _a.topBar,
-    kids: [
-      Skeletons.Button.Svg({
-        ico: "arrow-left",
-        className: `${figFamily}__back`,
-        service: _a.back,
-        uiHandler: [ui],
-      }),
-      Skeletons.Note({
-        className: `${figFamily}__title`,
-        sys_pn: "window-name",
-        content: LOCALE.SETTING || "Setting",
-        uiHandler: [ui],
-      }),
-      Skeletons.Button.Svg({
-        ico: _a.cross,
-        className: `${figFamily}__close`,
-        service: _e.close,
-        uiHandler: [ui],
-      }),
-    ],
-  });
-};
+// const topbar = (ui, name) => {
+//   const figFamily = `${ui.fig.family}-topbar`;
+
+//   return Skeletons.Box.X({
+//     debug: __filename,
+//     className: `${figFamily}__container`,
+//     sys_pn: _a.topBar,
+//     kids: [
+//       Skeletons.Button.Svg({
+//         ico: "arrow-left",
+//         className: `${figFamily}__back`,
+//         service: _a.back,
+//         uiHandler: [ui],
+//       }),
+//       Skeletons.Note({
+//         className: `${figFamily}__title`,
+//         sys_pn: "window-name",
+//         content: name || LOCALE.SETTINGS,
+//         uiHandler: [ui],
+//       }),
+//       Skeletons.Button.Svg({
+//         ico: _a.cross,
+//         className: `${figFamily}__close`,
+//         service: _e.close,
+//         uiHandler: [ui],
+//       }),
+//     ],
+//   });
+// };
 
 function content(ui) {
   const fig = `${ui.fig.family}`;
@@ -47,7 +49,7 @@ function content(ui) {
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
-      require('./validity').default(ui, ui.validityMode || _a.view),
+      validity(ui, ui.validityMode || _a.view),
     ],
   });
 }
@@ -82,8 +84,8 @@ export default function (ui) {
     debug: __filename,
     className: `${ui.fig.family}__wrapper`,
     kids: [
-        topbar(ui),
-      content(ui), 
+      topbar(ui),
+      content(ui),
       footer(ui)],
   });
 }

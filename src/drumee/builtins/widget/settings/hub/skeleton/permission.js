@@ -1,4 +1,3 @@
-const { folder_logo } = require("../../../../skeleton/toolkit/logo");
 
 /**
  * 

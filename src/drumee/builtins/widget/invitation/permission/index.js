@@ -3,40 +3,39 @@ class __invitation_permission extends LetcBox {
   static initClass() {
     this.prototype.figName = "invitation_permission";
     this.prototype.behaviorSet = {
-      bhv_auto_close   : 1,
-      bhv_socket       : 1
+      bhv_auto_close: 1,
+      bhv_socket: 1
     };
   }
 
-// ===========================================================
-// initialize
-// ===========================================================
+  // ===========================================================
+  // initialize
+  // ===========================================================
   initialize() {
     require('./skin');
     super.initialize();
     this.model.atLeast({
-      privilege  : _K.privilege.write,
-      permission : _K.privilege.write,
-      hours      : 0,
-      days       : 0,
-      limit      : 0,
-      modify     : _a.off
+      privilege: _K.privilege.write,
+      permission: _K.privilege.write,
+      hours: 0,
+      days: 0,
+      limit: 0,
+      modify: _a.off
     });
     return this.declareHandlers();
   }
-    
 
-// ===========================================================
-// 
-// ===========================================================
+
+  // ===========================================================
+  // 
+  // ===========================================================
   onDomRefresh() {
     this.reload();
-    return this.debug("qqqqqqqqqq 88", this);
   }
-    
-// ===========================================================
-// 
-// ===========================================================
+
+  // ===========================================================
+  // 
+  // ===========================================================
   reload(state) {
     if (this.mget(_a.skeleton)) {
       return this.feed(this.mget(_a.skeleton)(this));
@@ -45,41 +44,42 @@ class __invitation_permission extends LetcBox {
     }
   }
 
-// ===========================================================
-// 
-// ===========================================================
+  // ===========================================================
+  // 
+  // ===========================================================
   _commitChanges(cmd) {
     let opt;
     const data = this.getData();
     if ((data == null)) {
       this.softDestroy();
-      return; 
+      return;
     }
 
-    data.hub_id     = this.mget(_a.hub_id);
-    data.nid        = this.mget(_a.home_id);
+    data.hub_id = this.mget(_a.hub_id);
+    data.nid = this.mget(_a.home_id);
 
     if (this.mget(_a.share_id)) {
-      opt = { 
-        service    : SERVICE.sharebox.update_link,
-        share_id   : this.mget(_a.share_id)
+      opt = {
+        service: SERVICE.sharebox.update_link,
+        share_id: this.mget(_a.share_id)
       };
     } else if (this.mget(_a.api)) {
       opt = this.mget(_a.api);
     } else {
-      opt = { 
-        service    : SERVICE.sharebox.assign_permission,
-        email      : this.mget(_a.email)
+      opt = {
+        service: SERVICE.sharebox.assign_permission,
+        email: this.mget(_a.email)
       };
     }
     _.merge(data, opt);
-    this.debug("ZZZZZZZZZZZZ", data, this.mget(_a.api));
     return this.postService(data);
   }
 
-// ===========================================================
-// 
-// ===========================================================
+  /**
+   * 
+   * @param {*} cmd 
+   * @returns 
+   */
   onUiEvent(cmd) {
     let service;
     if (cmd.source) {
@@ -88,54 +88,50 @@ class __invitation_permission extends LetcBox {
       service = cmd.mget(_a.service);
     }
     const data = this.getData();
-    this.model.set({ 
-      days  : data.days,
-      hours : data.hours,
-      limit : data.limit
+    this.model.set({
+      days: data.days,
+      hours: data.hours,
+      limit: data.limit
     });
-    this.debug(`qqqqqqqqqq svc=${service} perm=${data.permission} 107`, data, this, cmd, cmd.source);
     switch (service) {
-      case _a.read: case _a.write: case _a.delete:
+      case _a.read:
+      case _a.write:
+      case _a.delete:
         var p = _K.privilege[service];
-        this.debug("qqqqqqqqqq 86", data.permission, p, this.model.attributes);
         if (data.permission === p) {
           p = _K.privilege[service] >> 1;
-          this.debug("qqqqqqqqqq 88");
         }
-        this.model.set({ 
-          privilege : p,
-          permission : p
+        this.model.set({
+          privilege: p,
+          permission: p
         });
+        data.permission = p
+        data.privilege = p
+        this.triggerHandlers({ service: "update-permission", data });
         return this.reload();
 
-      // when _a.write
-      //   if @mget(_a.permission)^_K.privilege[service]
-      //     p = _K.privilege[service]
-      //   else 
-      //     p =  _K.privilege[service] >> 1
-      //   @model.set 
-      //     permission : p
-      //   @reload()
 
       case _e.close:
         if (this.mget(_a.service) === _a.commit) {
           this._commitChanges(cmd);
-        } else { 
+        } else {
           this.triggerHandlers();
         }
         return this.suppress();
 
       case _e.update:
         var name = cmd.mget(_a.name);
-        this.model.set({ 
-          permission : _K.privilege[name]});
+        this.model.set({
+          permission: _K.privilege[name]
+        });
         this.reload();
         return this.triggerHandlers();
 
       case _e.commit:
         name = cmd.mget(_a.name);
-        this.model.set({ 
-          permission : _K.privilege[name]});
+        this.model.set({
+          permission: _K.privilege[name]
+        });
         this.reload();
         if (this.mget(_a.api) != null) {
           return this._commitChanges(cmd);
@@ -150,61 +146,58 @@ class __invitation_permission extends LetcBox {
           if (~~d === 0) {
             d = 30;
           }
-          this.model.set(_a.days, d); 
+          this.model.set(_a.days, d);
           return this.reload(_a.open);
-        } else { 
+        } else {
           this.findPart("wrapper-expiry").el.hide();
-          this.model.set({ 
-            days  : 0,
-            hours : 0
+          this.model.set({
+            days: 0,
+            hours: 0
           });
           return this.reload();
         }
     }
   }
-          // cmd.mset 
-          //   days  : 0
-          //   hours : 0
-        //@remove()
 
-// ===========================================================
-// 
-// ===========================================================
+  /**
+   * 
+   * @returns 
+   */
   getData() {
     const data = this.children.first().getData();
     const a =
-      {permission : this.mget(_a.permission)};
-    a.days  = data.days;
+      { permission: this.mget(_a.permission) };
+    a.days = data.days;
     a.hours = data.hours;
     a.limit = data.limit;
     if (this.mget('aliases') != null) {
       const object = this.mget('aliases');
-      for (var k in object) { 
+      for (var k in object) {
         var v = object[k];
         a[k] = data[v];
       }
     }
 
-    return a; 
+    return a;
   }
 
-// ===========================================================
-// 
-// ===========================================================
-
+  /**
+   * 
+   * @param {*} c 
+   * @param {*} o 
+   * @returns 
+   */
   onChildBubble(c, o) {
     return this.triggerHandlers();
   }
-    
-// ===========================================================
-//
-// @param [Object] method
-// @param [Object] data
-// @param [Object] socket
-//
-// @return [Object] 
-//
-// ===========================================================
+
+  /**
+   * 
+   * @param {*} method 
+   * @param {*} data 
+   * @param {*} socket 
+   * @returns 
+   */
   __dispatchRest(method, data, socket) {
     this.debug("AAAAAAAAAAAAAA 117", method, data, socket);
     switch (method) {
@@ -229,5 +222,5 @@ class __invitation_permission extends LetcBox {
 }
 __invitation_permission.initClass();
 
-      
+
 module.exports = __invitation_permission;

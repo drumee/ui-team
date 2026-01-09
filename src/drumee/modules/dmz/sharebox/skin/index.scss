@@ -6,6 +6,7 @@
 @include meta.load-css('password');
 
 .dmz-wm {
+
   &__icons-list {
     width: 100%;
 
@@ -17,13 +18,14 @@
         height: 100%;
         width: 100%;
         max-height: calc(100vh - 190px);
-        &[data-type="evaluation"]::after{
-          @include drumee.license-trial();
-          @include drumee.typo($size:36px,$line:42px,$color: var(--default-text-title));
-          transform: none;
-          bottom: 0;
-          width: 100%;
-        }
+
+        // &[data-type="evaluation"]::after {
+        //   @include drumee.license-trial();
+        //   @include drumee.typo($size: 36px, $line: 42px, $color: var(--default-text-title));
+        //   transform: none;
+        //   bottom: 0;
+        //   width: 100%;
+        // }
       }
     }
 
@@ -32,6 +34,7 @@
       min-height: 23px;
     }
   }
+
   &.media-grid[data-selected="1"] {
     box-shadow: none;
   }
@@ -67,12 +70,12 @@
       grid-template-rows: repeat(auto-fill, 125px);
     }
 
- 
+
 
     & .media-grid__ui {
       & .filename {
         @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));
-        border-radius:var(--border-radius-bottom);
+        border-radius: var(--border-radius-bottom);
         cursor: pointer;
         left: 0px;
         max-height: 31px;
@@ -83,18 +86,19 @@
         text-overflow: ellipsis;
         width: 100%;
 
-        &.hub, &.folder {
+        &.hub,
+        &.folder {
           color: var(--default-text-reverse);
         }
 
         &.image,
         &.video {
-          background :linear-gradient(180deg,hsla(0,0%,100%,.2),hsla(0,0%,100%,0.9));
+          background: linear-gradient(180deg, hsla(0, 0%, 100%, .2), hsla(0, 0%, 100%, 0.9));
         }
       }
     }
+  }
 }
-} 
 
 .dmz-sharebox,
 .dmz-meeting {
@@ -143,6 +147,7 @@
   &__header {
     height: 90px;
     width: 100%;
+    z-index: 1201;
 
     &[data-device="mobile"] {
       height: 120px;
@@ -250,4 +255,5 @@
     justify-content: center;
     @include drumee.typo($line: 60px, $size: 40px, $weight: 400, $color: var(--default-text-reverse));
   }
+
 }

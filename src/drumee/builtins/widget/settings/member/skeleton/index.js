@@ -101,6 +101,10 @@ module.exports = function (ui) {
 
   const menuTrigger = Skeletons.Box.X({
     className: `${prefix}__permission-trigger`,
+    service: "prompt-permission",
+    kidsOpt: {
+      active: 0,
+    },
     kids: [
       Skeletons.Note({
         content: permissionLabel,
@@ -113,60 +117,60 @@ module.exports = function (ui) {
     ],
   });
 
-  const menuItems = !isOwner ? Skeletons.Box.Y({
-    className: `${prefix}__permission-menu-items`,
-    kids: permissionOptions.map((opt) => {
-      // Check if current privilege matches the option privilege value
-      const currentPrivilege = parseInt(privilege) || 0;
-      const isActive = currentPrivilege === opt.privilege;
-      const memberId = ui.mget(_a.entity) || ui.mget(_a.id);
+  // const menuItems = !isOwner ? Skeletons.Box.Y({
+  //   className: `${prefix}__permission-menu-items`,
+  //   kids: permissionOptions.map((opt) => {
+  //     // Check if current privilege matches the option privilege value
+  //     const currentPrivilege = parseInt(privilege) || 0;
+  //     const isActive = currentPrivilege === opt.privilege;
+  //     const memberId = ui.mget(_a.entity) || ui.mget(_a.id);
 
-      // Wrap Button.Label in a Box with service and dataset to ensure event is triggered correctly
-      return Skeletons.Box.X({
-        className: `${prefix}__permission-menu-item-wrapper${isActive ? " active" : ""}`,
-        service: "change-permission",
-        name: "change-permission",
-        uiHandler: [ui],
-        privilege: opt.privilege,
-        memberId: memberId,
-        dataset: {
-          privilege: opt.privilege,
-          memberId: memberId,
-        },
-        kids: [
-          Skeletons.Button.Label({
-            className: `${prefix}__permission-menu-item${isActive ? " active" : ""}`,
-            label: opt.label,
-            ico: null,
-            active: isActive ? 1 : 0,
-          })
-        ],
-      });
-    }),
-  }) : undefined;
-  const permission = !isOwner ? Skeletons.Box.X({
-    className: `${prefix}__permission`,
-    kids: [{
-      kind: KIND.menu.topic,
-      className: `${prefix}__permission-dropdown`,
-      flow: _a.y,
-      opening: _e.click,
-      sys_pn: `permission-dropdown-${ui.mget(_a.entity) || ui.mget(_a.id)}`,
-      service: "permission-menu",
-      persistence: _a.once,
-      trigger: menuTrigger,
-      items: menuItems,
-      offsetY: 8,
-    }],
-  }) : Skeletons.Box.X({
-    className: `${prefix}__permission`,
-    kids: [menuTrigger],
-  });
+  //     // Wrap Button.Label in a Box with service and dataset to ensure event is triggered correctly
+  //     return Skeletons.Box.X({
+  //       className: `${prefix}__permission-menu-item-wrapper${isActive ? " active" : ""}`,
+  //       service: "change-permission",
+  //       name: "change-permission",
+  //       uiHandler: [ui],
+  //       privilege: opt.privilege,
+  //       memberId: memberId,
+  //       dataset: {
+  //         privilege: opt.privilege,
+  //         memberId: memberId,
+  //       },
+  //       kids: [
+  //         Skeletons.Button.Label({
+  //           className: `${prefix}__permission-menu-item${isActive ? " active" : ""}`,
+  //           label: opt.label,
+  //           ico: null,
+  //           active: isActive ? 1 : 0,
+  //         })
+  //       ],
+  //     });
+  //   }),
+  // }) : undefined;
+  // const permission = !isOwner ? Skeletons.Box.X({
+  //   className: `${prefix}__permission`,
+  //   kids: [{
+  //     kind: KIND.menu.topic,
+  //     className: `${prefix}__permission-dropdown`,
+  //     flow: _a.y,
+  //     opening: _e.click,
+  //     sys_pn: `permission-dropdown-${ui.mget(_a.entity) || ui.mget(_a.id)}`,
+  //     service: "permission-menu",
+  //     persistence: _a.once,
+  //     trigger: menuTrigger,
+  //     items: menuItems,
+  //     offsetY: 8,
+  //   }],
+  // }) : Skeletons.Box.X({
+  //   className: `${prefix}__permission`,
+  //   kids: [menuTrigger],
+  // });
 
   return Skeletons.Box.X({
     className: `${prefix}__item ${type || ""}`,
     debug: __filename,
     uiHandler: ui,
-    kids: [profile_icon, info, permission],
+    kids: [profile_icon, info, menuTrigger],
   });
 };

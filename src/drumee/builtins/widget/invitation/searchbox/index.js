@@ -31,12 +31,6 @@ class __invitation_searchbox extends LetcBox {
     if (this.mget("contactItem")) {
       _.merge(this.contactItem, this.mget("resultItem"));
     }
-    try {
-      this._sharees = this.mget(_a.uiHandler).mget(_a.sharees) || [];
-    } catch (error) {
-      this._sharees = [];
-    }
-
     this.model.atLeast({
       contactbook: 1,
       persistence: _a.once
@@ -50,6 +44,19 @@ class __invitation_searchbox extends LetcBox {
    */
   onBeforeDestroy() {
     return RADIO_CLICK.off(_e.click, this._onOutsideClick.bind(this));
+  }
+
+  /**
+   * 
+   */
+  getSharees() {
+    let sharees = [];
+    try {
+      sharees = this.mget(_a.uiHandler).mget(_a.sharees) || [];
+    } catch (error) {
+      sharees = [];
+    }
+    return sharees;
   }
 
   /**
@@ -267,16 +274,17 @@ class __invitation_searchbox extends LetcBox {
    */
   _showResults(cmd) {
     const data = cmd.results;
+    this.debug("AAA:270", this, cmd, cmd.results)
     this.results = data;
+    let sharees = this.getSharees()
     if (_.isEmpty(data)) {
       this.resultsContainer.el.hide();
       this.service = _e.update;
       this.triggerHandlers({ service: _e.update });
     } else {
-      // PERFO ISSUE ?
       for (let r of Array.from(data)) {
-        _.merge(r, this.contactItem);
-        for (let s of Array.from(this._sharees)) {
+        r = {...r, ...this.contactItem}
+        for (let s of Array.from(sharees)) {
           if (r.email === s.email) {
             r.state = 1;
             r.preselect = 1;
@@ -308,6 +316,7 @@ class __invitation_searchbox extends LetcBox {
     const o = _.clone(this.contactItem);
     let api = '';
     o.root = this.mget(_a.uiHandler);
+    this.debug("AAAA:319", this.mget('apiAll'))
     if (this.mget('apiAll')) {
       api = this.mget('apiAll')
       if (api.page) { delete api.page }

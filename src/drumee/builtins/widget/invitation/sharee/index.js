@@ -12,26 +12,23 @@ class __invitation_sharee extends __recipient {
   }
 
   static initClass() {
-    this.prototype.figName  = "invitation_sharee";
+    this.prototype.figName = "invitation_sharee";
   }
 
-// ===========================================================
-// initialize
-// ===========================================================
+  // ===========================================================
+  // initialize
+  // ===========================================================
 
   initialize() {
     require('./skin');
     super.initialize();
     const m = this.model;
-    this.model.set({ 
-      flow : _a.y}); 
-    this.name  = m.get(_a.fullname);
-    this.hub   = m.get(_a.hub);
-    this.id    = m.get(_a.id);
+    this.model.set({
+      flow: _a.y
+    });
+    this.name = m.get(_a.fullname);
+    this.id = m.get(_a.id);
     this.email = m.get(_a.email);
-    this.phone = m.get(_a.mobile);
-    this.media = m.get(_a.media);
-    this.master = m.get(_a.master);
     if (this.email === "*") {
       this.name = LOCALE.OPEN_LINK;
       this.url = Visitor.avatar(m.id); //Visitor.avatar()
@@ -44,60 +41,44 @@ class __invitation_sharee extends __recipient {
       }
       this.url = Visitor.avatar(m.id); //Visitor.avatar m
     }
-    //@debug "aaaaa 37", @, @name
-    let share_id = this.mget(_a.share_id);
-    if (this.media) {
-      share_id = this.mget(_a.share_id) || this.media.mget(_a.share_id);
-      this.mset({
-        hub_id     : this.media.mget(_a.hub_id),
-        nid        : this.media.mget(_a.nodeId)
-      });
-      if ((share_id == null)) {
-        this.mset(_a.share_id, this.media.mget(_a.share_id));
-      }
-    }
-    if (this.mget(_a.privilege) != null) { 
-      this.mset(_a.permission, this.mget(_a.privilege)); 
-    }
-    return this.mset(_a.signal, _e.ui.event);
   }
-      
-// ===========================================================
-// onDomRefresh
-// ===========================================================
+
+  // ===========================================================
+  // onDomRefresh
+  // ===========================================================
   onDomRefresh() {
     this.declareHandlers(); //s { part: @ }
-    if (this.mget(_a.id) === Visitor.id) { 
+    if (this.mget(_a.id) === Visitor.id) {
       this.el.dataset.me = 1;
-    } else { 
+    } else {
       this.el.dataset.me = 0;
     }
 
     if (this.mget(_a.authority) & (_K.permission.admin)) {
-      if (this.mget(_a.id) === Visitor.id) { 
+      if (this.mget(_a.id) === Visitor.id) {
         this.editable = 0;
       } else if (this.mget(_a.authority) > this.mget(_a.privilege)) {
         this.editable = 1;
       }
-    } else { 
+    } else {
       this.editable = 0;
     }
 
     if (this.mget(_a.email) !== "*") {
       this.feed(require("./skeleton")(this));
     }
-      
+
     const d = this.mget(DIALOG);
     if (d != null) {
       return this.dialogWrapper = d.dialogWrapper;
     }
   }
 
-    //@debug "HHHHGGGG", @, @el, @mget(_a.privilege), @mget(_a.authority), @mget(_a.id), @editable
+  //@debug "HHHHGGGG", @, @el, @mget(_a.privilege), @mget(_a.authority), @mget(_a.id), @editable
 
-// ===========================================================
-// onPartReady
-// ===========================================================
+  // ===========================================================
+  // onPartReady
+  // ===========================================================
   onPartReady(child, pn, section) {
     switch (pn) {
       case "options-content":
@@ -106,21 +87,21 @@ class __invitation_sharee extends __recipient {
   }
 
 
-// ===========================================================
+  // ===========================================================
   _createPeer(items) {
     const opt = {
-      service : SERVICE.media.make_dir_special, 
-      type    : 'p2p',
-      users   : [this.mget(_a.id)],
-      hub_id  : this.mget(_a.hub_id)
+      service: SERVICE.media.make_dir_special,
+      type: 'p2p',
+      users: [this.mget(_a.id)],
+      hub_id: this.mget(_a.hub_id)
     };
     // @debug "postService", opt, @
     return this.postService(opt);
   }
-    
-// ===========================================================
-// 
-// ===========================================================
+
+  // ===========================================================
+  // 
+  // ===========================================================
   _ackMessage(cmd) {
     const doff = this.dialogWrapper.$el.offset();
     const ioff = this.$el.offset();
@@ -131,61 +112,67 @@ class __invitation_sharee extends __recipient {
     if (_.isEmpty(user_name)) {
       user_name = this.mget(_a.lastname) || this.mget(_a.email);
     }
-    try { 
+    try {
       hub_name = this.mget(_a.hub).mget(_a.filename);
-    } catch (error) {}
-    const opt = require('libs/preset/ack')(this, 
+    } catch (error) { }
+    const opt = require('libs/preset/ack')(this,
       ''.format(LOCALE.ACK_PEER_TO_FOLDER, user_name, hub_name)
     );
     opt.styleOpt =
-      {top : y}; 
+      { top: y };
     this.dialogWrapper.feed(opt);
     const p = this.dialogWrapper.children.first();
-    return p.selfDestroy({callback: ()=> {
-      this.debug("RESTART", this.mget(_a.hub));
-      return this.mget(_a.hub).restart();
-    }
+    return p.selfDestroy({
+      callback: () => {
+        this.debug("RESTART", this.mget(_a.hub));
+        return this.mget(_a.hub).restart();
+      }
     });
   }
 
-// ===========================================================
-// _showDetails
-// ===========================================================
+  // ===========================================================
+  // _showDetails
+  // ===========================================================
   _showDetails(cmd) {
+    const c = this._options.children.last();
+    this.debug("AAA:138", cmd, c)
+    if (c) {
+      return c.goodbye()
+    }
+    this._options.feed(require('./skeleton/permission')(this, cmd));
+    // if (!this.dialogWrapper) {
+    //   this.dialogWrapper = this.mget(DIALOG);
+    // }
 
-    if (!this.dialogWrapper) {
-      this.dialogWrapper = this.mget(DIALOG);
-    }
-    
-    const p = this.dialogWrapper.getPart('permission');
-    if ((p != null) && !p.isDestroyed()) {
-      p.goodbye();
-      return;
-    }
-    this.dialogWrapper.append(require('./skeleton/permission')(this, cmd));
-    const c = this.dialogWrapper.children.last();
-    return c.once(_e.destroy, ()=> {
-      return this.model.set({ 
-        permission : c.mget(_a.permission),
-        days       : c.mget(_a.days),
-        hours      : c.mget(_a.hours)
+    // const p = this.dialogWrapper.getPart('permission');
+    // if ((p != null) && !p.isDestroyed()) {
+    //   p.goodbye();
+    //   return;
+    // }
+    // this.dialogWrapper.append(require('./skeleton/permission')(this, cmd));
+    return c.once(_e.destroy, () => {
+      this.debug("AAAA:145", c.model.toJSON())
+      return this.model.set({
+        permission: c.mget(_a.permission),
+        days: c.mget(_a.days),
+        hours: c.mget(_a.hours)
       });
     });
   }
 
-// ===========================================================
-// _shrink
-// ===========================================================
+  // ===========================================================
+  // _shrink
+  // ===========================================================
   _shrink(cmd) {
     // @_options.clear()
     this.dialogWrapper.clear();
     return this.el.setAttribute(_a.data.state, 0);
   }
-    // @parent.setSize(null, @parent.$el.height()-@_offset)
+  // @parent.setSize(null, @parent.$el.height()-@_offset)
 
-// ===========================================================
-// onUiEvent
-// ===========================================================
+  // ===========================================================
+  // onUiEvent
+  // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.mget(_a.service);
     this.debug(`aaaa 112 svc=${service}`, cmd, this);
@@ -204,27 +191,26 @@ class __invitation_sharee extends __recipient {
         return this._createPeer();
 
       case _e.update:
-        // @_options.clear()
         this.dialogWrapper.clear();
         var data = cmd.model.toJSON();
-        return this.model.set({ 
-          permission : data.permission,
-          days  : data.days,
-          hours : data.hours,
-          limit : data.limit
+        return this.model.set({
+          permission: data.permission,
+          days: data.days,
+          hours: data.hours,
+          limit: data.limit
         });
-        // @_shrink cmd
+      // @_shrink cmd
 
-      case _e.select: 
+      case _e.select:
         var s = this.mget(_a.state) ^ 1;
         this.mset(_a.state, s);
         return this.el.dataset.state = s;
 
-      default: 
+      default:
         return this.triggerHandlers();
     }
   }
 }
 __invitation_sharee.initClass();
-        
+
 module.exports = __invitation_sharee;
