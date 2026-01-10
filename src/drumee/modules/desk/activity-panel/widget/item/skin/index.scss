@@ -17,7 +17,9 @@
   &__preview-container {
     width: 75px;
     height: 75px;
-    // padding: 15px;
+    align-content: center;
+    flex-wrap: wrap;
+
   }
 
   &__preview {

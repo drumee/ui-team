@@ -127,12 +127,12 @@
   --btn-caution-background-hover: #ea4d44;
 
   --btn-commit-text: #FFFFFF;
-  --btn-commit-backgroundless-text: #18A3AC;
-  --btn-commit-background: #18A3AC;
-  --btn-commit-border: #18A3AC;
-  --btn-commit-border-hover: #16959e;
-  --btn-commit-text-hover: #16959e;
-  --btn-commit-background-hover: #16959e;
+  --btn-commit-backgroundless-text: --primary-300;
+  --btn-commit-background: -primary-500;
+  --btn-commit-border: --primary-100;
+  --btn-commit-border-hover: --primary-600;
+  --btn-commit-text-hover: --primary-200;
+  --btn-commit-background-hover: --primary-600;
 
   /************************ progress **********************/
   --progress-line-text: #879bff;
@@ -237,7 +237,7 @@
   --dock-launcher-border-hover: #879BFF;
   --dock-launcher-text-hover: #879BFF;
   --dock-launcher-background-hover: #879BFF;
-  
+
   /* ******* dock colors ******/
   --dock-main-background: #222732;
   --dock-divider-color: #5B616D;

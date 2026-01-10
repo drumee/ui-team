@@ -23,6 +23,8 @@ function get_event(ui, data) {
       return LOCALE.RENAME
     case "contact.invite":
       return "{0} invited you to join his/her network".format(ui.mget(_a.firstname))
+    case "chat.post":
+      return "sent you {0} messages".format(ui.mget("cnt"))
     default:
       return data.event;
   }
@@ -84,20 +86,26 @@ function get_preview(ui, preview, data) {
 
 module.exports = function (ui) {
   const data = ui.model.toJSON()
-  let preview = data.src;
-  if (data.dest?.nid) {
-    preview = data.dest;
+  let preview = {};
+  switch (data.type) {
+    case "chat":
+    case "invitation":
+      preview = Skeletons.UserProfile(data.contact)
+      return get_preview(ui, preview, data.contact)
+    default:
+      preview = data.src;
+      if (data.dest?.nid) {
+        preview = data.dest;
+      }
+      if(!preview){
+        return get_preview(ui, { kind: 'blank' }, data)
+      }
+      preview.kind = 'media_grid';
+      preview.mode = _a.vignette;
+      preview.uiHandler = Wm
+      preview.service = 'open-node'
+      return get_preview(ui, preview, data)
   }
-  if (preview) {
-    preview.kind = 'media_grid';
-    preview.mode = _a.vignette;
-    preview.uiHandler = Wm
-    preview.service = 'open-node'
-    return get_preview(ui, preview, data)
-  } if (data.contact) {
-    preview = Skeletons.UserProfile(data.contact)
-    return get_preview(ui, preview, data.contact)
-  }
-  return get_preview(ui, { kind: 'blank' }, data)
+  // return get_preview(ui, { kind: 'blank' }, data)
 };
 

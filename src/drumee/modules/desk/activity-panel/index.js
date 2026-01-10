@@ -4,7 +4,7 @@ const CATEGORIES = {
   teamchat: "teamChatCount",
   media: "mediaCount",
 }
-
+const WS_EVENT = "ws:event";
 require('./skin');
 
 //#########################################
@@ -42,31 +42,9 @@ class __activity_panel extends LetcBox {
     this.details = {};
     this.onVisibilityChange = this.onVisibilityChange.bind(this)
     document.addEventListener("visibilitychange", this.onVisibilityChange);
-    this.bindWsEvents();
+    this.onWsMessage = this.onWsMessage.bind(this)
   }
 
-  /**
-   * 
-   */
-  bindWsEvents() {
-    let events = wsRouter.hasListener(this);
-    if (events) {
-      return;
-    }
-    if (!window.activity) return;
-    activity.requestPermission(() => {
-      uiRouter.ensureWebsocket().then(() => {
-        let timer = setInterval(() => {
-          events = wsRouter.hasListener(this);
-          if (events) {
-            clearInterval(timer);
-          } else {
-            this.bindEvent("live", "activitycenter");
-          }
-        }, 2000)
-      });
-    })
-  }
 
 
   /**
@@ -95,7 +73,6 @@ class __activity_panel extends LetcBox {
    */
   onDomRefresh() {
     this.setState(0);
-    this.bindWsEvents();
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
     this.visible = !document.hidden;
@@ -103,6 +80,7 @@ class __activity_panel extends LetcBox {
     this.ensurePart(_a.list).then((p) => {
       this.refreshActivity()
     })
+    Wm.on(WS_EVENT, this.onWsMessage)
 
   }
 
@@ -139,6 +117,10 @@ class __activity_panel extends LetcBox {
       case 'open-contact':
         this.togglePannel()
         return Wm.launch({ kind: 'window_addressbook', }, { explicit: 1, singleton: 1 });
+
+      case 'open-chat':
+        this.togglePannel()
+        return Wm.launch({ kind: 'window_bigchat', }, { explicit: 1, singleton: 1 });
 
     }
   }
@@ -312,6 +294,49 @@ class __activity_panel extends LetcBox {
 
   /**
    * 
+   */
+  updatePriorityList(invitations = [], messages = []) {
+    let list = [];
+    for (let e of invitations) {
+      let f = e.firstname || ""
+      let l = e.lastname || ""
+      let contact = {
+        ...e,
+        event: 'contact.invite',
+        id: e.drumate_id,
+        fullname: `${f} ${l}`
+      };
+      e.kind = 'activity_item';
+      e.contact = contact;
+      e.service = "open-contact";
+      e.type = "invitation";
+      e.uiHandler = [this]
+      list.push(e)
+    }
+    for (let e of messages) {
+      let f = e.firstname || ""
+      let l = e.lastname || ""
+      e.kind = 'activity_item';
+      e.service = "open-chat";
+      e.type = "chat";
+      let contact = {
+        ...e,
+        event: 'chat.post',
+        id: e.drumate_id,
+        fullname: `${f} ${l}`
+      };
+      e.contact = contact;
+      e.uiHandler = [this]
+      list.push(e)
+    }
+    this.ensurePart('priority').then((p) => {
+      p.feed(list)
+    })
+
+  }
+
+  /**
+   * 
   */
   async refreshActivity(timeout = 2000) {
     if (!Visitor.id || !Visitor.isOnline()) {
@@ -323,34 +348,17 @@ class __activity_panel extends LetcBox {
 
     let opt = { hub_id: Visitor.id }
     let { unread_count } = await this.postService(SERVICE.activity.get_unread_count, opt);
-    let invitation = await this.postService(SERVICE.contact.invite_get, { hub_id: Visitor.id });
-    unread_count = parseInt(invitation.length) + parseInt(unread_count);
+    let invitations = await this.postService(SERVICE.contact.invite_get, { hub_id: Visitor.id });
+    let messages = await this.postService(SERVICE.drumate.notification_center, { hub_id: Visitor.id });
+    unread_count = parseInt(messages.length) + parseInt(invitations.length) + parseInt(unread_count);
     this.triggerHandlers({ unread_count })
-    if (invitation && invitation.length) {
-      invitation.map((e) => {
-        let f = e.firstname || ""
-        let l = e.lastname || ""
-        let contact = { ...e, event: 'contact.invite', id: e.drumate_id, fullname: `${f} ${l}` };
-        e.kind = 'activity_item';
-        e.contact = contact;
-        e.service = "open-contact"
-        e.uiHandler = [this]
-      })
-    }
+    this.debug("AAA:331", { unread_count }, invitations)
+    this.updatePriorityList(invitations, messages)
     if (this.__list && !this.__list.isDestroyed()) {
-      // this.__list.mset({ kids: invitation })
-      // this.__list.once(_e.eod, () => {
-      //   this.debug("AAA:343", invitation, this.__list)
-      //   this.__list.prepend(invitation)
-      // })
-      // this.__list.mset({defaults:invitation})
       this.__list.restart()
-      setTimeout(() => {
-        this.__list.prepend(invitation)
-      }, 1000)
       return
     }
-    this.feed(require('./skeleton')(this, invitation));
+    this.feed(require('./skeleton')(this, invitations));
   }
 
   /**
@@ -369,12 +377,17 @@ class __activity_panel extends LetcBox {
    * @param {*} data 
    * @param {*} options 
    */
-  onWsMessage(service, data, options) {
+  onWsMessage(args) {
+    let { service, data, options } = args
+    this.debug("AAAA:373", { service, data, options })
     if (!data) return;
     if (!_.isArray(data)) {
       data = [data]
     }
     switch (options.service) {
+      case "contact.invite":
+        this.refreshActivity()
+        break;
       case "messages.read":
         this._buildactivities(data);
         this.updateactivityCount();
@@ -384,7 +397,6 @@ class __activity_panel extends LetcBox {
         break;
       case "chat.post":
       case "channel.post":
-      case "contact.invite":
         this._currentPayload = { data, options };
       case "activity.resync":
       case "drumate.activity_remove":

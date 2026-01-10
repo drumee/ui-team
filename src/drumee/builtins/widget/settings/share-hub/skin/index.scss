@@ -511,8 +511,11 @@
   }
 
   &__input-wrapper {
-    display: relative;
     width: 100%;
+
+    &[data-state="0"] {
+      display: none;
+    }
   }
 
   &__input {

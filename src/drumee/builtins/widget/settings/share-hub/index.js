@@ -172,17 +172,7 @@ class settings_share_hub extends DrumeeMFS {
    * @param {*} cmd 
    */
   togglePassword(cmd) {
-    // Toggle password checkbox state
-    const { password } = this.getData()
-
-    // Store intermediate change in the model
-    let passwordVisible = 0;
-    if (cmd.mget(_a.state)) {
-      passwordVisible = 1;
-      this.mset({ passwordVisible, hasPassword: 1 })
-    }
-    // Update UI to show/hide password input
-    this.getPart('password-content').feed(require('./skeleton/password').default(this, this.data(), _a.edit));
+    this.__passwordInputWrapper.setState(cmd.mget(_a.state))
   }
 
   /**

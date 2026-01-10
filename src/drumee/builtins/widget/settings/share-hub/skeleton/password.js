@@ -30,8 +30,10 @@ export default function (ui, formData, mode = _a.view) {
   // Password input wrapper (shown when checkbox is checked)
   // EntryBox with Hide/Show text button on the right
   const passwordVisibility = formData.passwordVisible || 0;
-  const passwordInputWrapper = hasPassword ? Skeletons.Box.X({
+  const passwordInputWrapper = Skeletons.Box.X({
     className: `${passwordFig}__input-wrapper`,
+    state: 0,
+    sys_pn:"passwordInputWrapper",
     kids: [
       Skeletons.Entry({
         className: `${passwordFig}__input`,
@@ -53,7 +55,7 @@ export default function (ui, formData, mode = _a.view) {
         uiHandler: [ui],
       }),
     ],
-  }) : undefined;
+  })
 
   return Skeletons.Box.Y({
     className: `${passwordFig}__section`,

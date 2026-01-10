@@ -1,8 +1,4 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /ui/src/drumee/builtins/window/addressbook/widget/contact-detail/skeleton/email-item.coffee
-//   TYPE : Skeleton
-// ==================================================================== *
+
 
 const __skl_contact_detail_email_item = item => {
   const contactFig  =  'widget-contact-detail';
@@ -13,7 +9,7 @@ const __skl_contact_detail_email_item = item => {
     escapeContextmenu : true
   });
 
-  if (item.email.length > 22) {
+  if (item.email.length > 30) {
     emailContent.tooltips =
       {content : item.email};
   }
@@ -23,10 +19,10 @@ const __skl_contact_detail_email_item = item => {
     debug       : __filename,
     kids        : [
       emailContent,
-      Skeletons.Note({
-        className   : `${contactFig}__note category label`,
-        content     : item.category
-      })
+      // Skeletons.Note({
+      //   className   : `${contactFig}__note category label`,
+      //   content     : item.category
+      // })
     ]});
   return emailItemsOpt;
 };

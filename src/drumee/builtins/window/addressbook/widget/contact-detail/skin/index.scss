@@ -230,8 +230,14 @@
     padding-top: 5px;
     width: 100%;
 
+    .tooltips {
+      position: absolute;
+      top: 26px;
+    }
+
     &.email {
       padding-left: 5px;
+
     }
 
     &.name {
@@ -449,14 +455,14 @@
 
   &__buttons-wrapper {
     justify-items: center;
+    justify-content: center;
     width: 100%;
 
     & .button {
       align-items: center;
-      border-radius: var(--border-radius);
       height: 35px;
       justify-content: center;
-
+      border-radius: var(--corner-radius-max);
       width: 115px;
       @include drumee.typo($size: 16px, $line: 19px);
     }

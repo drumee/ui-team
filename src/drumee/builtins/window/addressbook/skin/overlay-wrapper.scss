@@ -78,32 +78,28 @@
         height: 35px;
         justify-content: center;
         min-width: 125px;
-        @include drumee.typo($size: 15px, $line: 16px);
+        font-size: 15px;
         padding: 7px;
-        border-radius: var(--border-radius);
-        -moz-osx-font-smoothing: grayscale;
-        -webkit-font-smoothing: antialiased;
+        border-radius: var(--corner-radius-max);
       }
 
       &__button-cancel {
-        border: 1px solid var(--btn-rollback-border);
-        color: var(--btn-rollback-text);
+        border: 1px solid var(--neutral-200);
+        color: var(--neutral-600);
         margin-right: 50px;
 
         &:hover {
-          border: 2px solid var(--btn-rollback-border-hover);
-          color: var(--btn-rollback-text-hover);
+          background-color: var(--neutral-300);
         }
       }
 
       &__button-confirm {
-        background-color: var(--btn-commit-background) !important;
-        border: 1px solid var(--btn-commit-border);
-        color: var(--btn-commit-text);
+        background-color: var(--primary-500);
+        color: var(--white);
+        border: 1px solid var(--corner-radius-max);
 
         &:hover {
-          background-color: var(--btn-commit-background-hover);
-          border-color: var(--btn-commit-border-hover);
+          background-color: var(--primary-600);
         }
       }
     }
