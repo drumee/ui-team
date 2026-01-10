@@ -6,7 +6,7 @@
 
 const __skl_addressbook_common_search = function(_ui_) {
 
-  const mode = _a.open;
+  const mode = _a.closed;
 
   const searchFig = `${_ui_.fig.family}-search`;
 

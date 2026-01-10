@@ -57,110 +57,20 @@ const __skl_contact_item = function (_ui_) {
     }
   }
 
-  // Contact info section
-  const nameLabel = Skeletons.Note({
-    className: `${contentFig}__label`,
-    content: LOCALE.NAME || "Name"
-  });
-
-  const nameValue = Skeletons.Note({
-    className: `${contentFig}__value`,
+  const name = Skeletons.Note({
+    className: `${contentFig}__name`,
     content: displayName
-  });
-
-  const nameRow = Skeletons.Box.X({
-    className: `${contentFig}__row`,
-    kids: [
-      nameLabel,
-      nameValue
-    ]
-  });
-
-  const emailLabel = Skeletons.Note({
-    className: `${contentFig}__label`,
-    content: LOCALE.EMAIL || "Email"
-  });
-
-  const emailValue = Skeletons.Note({
-    className: `${contentFig}__value`,
-    content: _ui_.mget(_a.email) || "Public folder"
-  });
-
-  const emailRow = Skeletons.Box.X({
-    className: `${contentFig}__row`,
-    kids: [
-      emailLabel,
-      emailValue
-    ]
-  });
-
-  const phoneLabel = Skeletons.Note({
-    className: `${contentFig}__label`,
-    content: LOCALE.PHONE || "Phone"
-  });
-
-  const phoneValue = Skeletons.Note({
-    className: `${contentFig}__value`,
-    content: _ui_.mget(_a.phone) || _ui_.mget('updated_at') || ""
-  });
-
-  const phoneRow = Skeletons.Box.X({
-    className: `${contentFig}__row`,
-    kids: [
-      phoneLabel,
-      phoneValue
-    ]
-  });
-
-  const contactInfo = Skeletons.Box.Y({
-    className: `${contentFig}__info`,
-    kids: [
-      nameRow,
-      emailRow,
-      phoneRow
-    ]
-  });
-
-  // Action buttons
-  const editButton = Skeletons.Button.Label({
-    className: `${contentFig}__edit-btn`,
-    label: LOCALE.EDIT_CONTACT || "Edit contact",
-    ico: "edit",
-    service: 'edit-contact',
-    uiHandler: _ui_
-  });
-
-  const removeButton = Skeletons.Button.Label({
-    className: `${contentFig}__remove-btn`,
-    label: LOCALE.REMOVE_CONTACT || "Remove contact",
-    ico: "trash",
-    service: 'remove-contact',
-    uiHandler: _ui_
-  });
-
-  const actionButtons = Skeletons.Box.X({
-    className: `${contentFig}__actions`,
-    kids: [
-      editButton,
-      removeButton
-    ]
   });
 
   const a = Skeletons.Box.Y({
     className: `${contentFig}__main`,
     debug: __filename,
     kids: [
-      Skeletons.Box.Y({
+      Skeletons.Box.X({
         className: `${contentFig}__container`,
         kids: [
-          Skeletons.Box.Y({
-            className: `${contentFig}__avatar-wrapper`,
-            kids: [
-              profile_icon
-            ]
-          }),
-          contactInfo,
-          actionButtons
+          profile_icon,
+          name
         ]
       })
     ]

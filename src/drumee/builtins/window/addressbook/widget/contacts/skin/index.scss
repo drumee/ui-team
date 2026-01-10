@@ -67,27 +67,9 @@
 	}
 
 	&__item {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, 250px);
-		gap: 16px;
-		padding: 16px;
 		height: calc(100% - 44px);
-		overflow-y: auto;
+		margin-top: -1px;
 		width: 100%;
-		justify-content: start;
-
-		// Responsive: max 3 columns, min 1 column
-		@media (min-width: 800px) {
-			grid-template-columns: repeat(auto-fill, 250px);
-		}
-
-		@media (min-width: 520px) and (max-width: 799px) {
-			grid-template-columns: repeat(auto-fill, 250px);
-		}
-
-		@media (max-width: 519px) {
-			grid-template-columns: 250px;
-		}
 	}
 
 	&__contacts {
