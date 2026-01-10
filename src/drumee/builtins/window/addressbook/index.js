@@ -85,6 +85,44 @@ class __window_addressbook extends __window_addressbook_interact {
           }
         });
 
+      case 'search-bar-input':
+        return this.waitElement(child.el, () => {
+          const inputEl = child.el.querySelector('input');
+          if (inputEl) {
+            const handleBlur = (e) => {
+              // Check if the click target is within the search result wrapper
+              const searchResult = this.getPart('search-result');
+              const relatedTarget = e.relatedTarget || document.activeElement;
+              
+              // Delay to allow click on search results before hiding
+              setTimeout(() => {
+                if (searchResult && searchResult.el) {
+                  // Check if focus moved to search result
+                  if (!searchResult.el.contains(document.activeElement) && 
+                      document.activeElement !== inputEl) {
+                    this._hideSearchResults();
+                  }
+                } else {
+                  this._hideSearchResults();
+                }
+              }, 200);
+            };
+            
+            inputEl.addEventListener('blur', handleBlur);
+            
+            inputEl.addEventListener('focus', () => {
+              // Show results if there's text in the input
+              const val = inputEl.value;
+              if (val && val.length >= 2) {
+                const source = child;
+                source.setValue(val);
+                this._loadSearchResults(source);
+              } else {
+                this._hideSearchResults();
+              }
+            });
+          }
+        });
 
       default:
         return super.onPartReady(child, pn, section);
@@ -252,6 +290,7 @@ class __window_addressbook extends __window_addressbook_interact {
 
       case 'close-search-bar':
         this.getPart('search-bar-input').setValue('');
+        this._hideSearchResults();
         return this.getPart(_a.search).el.dataset.mode = _a.closed;
 
       case 'delete-contact':
@@ -350,10 +389,11 @@ class __window_addressbook extends __window_addressbook_interact {
 
   /**
    * @param {*} source
-  */
+   */
   _loadSearchResults(source) {
     const val = source.getData(_a.formItem).value;
     if (val.length < 2) {
+      this._hideSearchResults();
       return;
     }
 
@@ -364,8 +404,21 @@ class __window_addressbook extends __window_addressbook_interact {
       type: _a.contact
     };
 
-    this.getPart('search-result').feed(dataOpt);
+    const searchResult = this.getPart('search-result');
+    searchResult.feed(dataOpt);
+    searchResult.el.dataset.state = '1';
     return this.getPart(_a.search).el.dataset.mode = _a.open;
+  }
+
+  /**
+   * Hide search results popup
+   */
+  _hideSearchResults() {
+    const searchResult = this.getPart('search-result');
+    if (searchResult) {
+      searchResult.el.dataset.state = '0';
+      searchResult.clear();
+    }
   }
 
   /**
