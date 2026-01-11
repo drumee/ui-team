@@ -760,21 +760,10 @@ class __invitation_settings extends __recipient {
 
 
       case "invite-contacts":
-        // this.goodbye()
         Wm.launch({
           kind: 'window_addressbook',
           source: this.__addressbookLauncher
         }, { explicit: 1, singleton: 1 });
-
-        // let t = setInterval(() => {
-        //   let w = Wm.getItemsByKind('window_addressbook')[0]
-        //   if (w) {
-        //     clearInterval(t);
-        //     w.once(_e.destroy, () => {
-        //       Wm.openAccessManager(this.mget(_a.media))
-        //     })
-        //   }
-        // }, 1000)
         return
 
       case "show-contacts-list":

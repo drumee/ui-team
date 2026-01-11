@@ -65,7 +65,7 @@ function menu_items(ui) {
         },
         kids: [
           { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.personal, mode: _a.vignette },
-          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PERSONAL_FOLDER })
+          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PRIVATE_FOLDER })
         ]
       }),
     ]

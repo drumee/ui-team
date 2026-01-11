@@ -10,6 +10,7 @@ class settings_private_hub extends DrumeeMFS {
     if (opt.media) {
       this.copyPropertiesFrom(opt.media);
     }
+    Kind.waitFor('invitation')
   }
 
   /**
