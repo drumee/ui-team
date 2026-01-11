@@ -29,9 +29,9 @@ module.exports = function (ui) {
   // Resolve permission label based on privilege value (similar to permission/index.js)
   const resolveLabel = (p) => {
 
-  ui.debug("AAAA:123", ui.isMediaOwner(), ui.canAdmin(), ui.canUpload(), ui.canDownload())
+    ui.debug("AAAA:123", ui.isMediaOwner(), ui.canAdmin(), ui.canUpload(), ui.canDownload())
 
-  // Check owner first
+    // Check owner first
     if (ui.isMediaOwner()) {
       return LOCALE.OWNER;
     }
@@ -81,17 +81,21 @@ module.exports = function (ui) {
 
   let arrow = Skeletons.Button.Svg({
     ico: "arrow--pages",
-    className: `${prefix}__arrow-down`,
+    className: `${prefix}__arrow-pages`,
     active: 0,
   });
 
-  if (ui.isMediaOwner()) {
-    arrow = ""
+  let active = 1;
+  // ui.debug("AAA:89", ui.getHandlers(_a.ui)[0].mget('visitor'))
+  if (ui.isMediaOwner() || !(ui.my_privilege & _K.permission.admin)) {
+    arrow = "";
+    active = 0;
   }
 
   const configure = Skeletons.Box.X({
     className: `${prefix}__permission-trigger`,
     service: "prompt-permission",
+    active,
     kids: [
       Skeletons.Note({
         content: resolveLabel(),

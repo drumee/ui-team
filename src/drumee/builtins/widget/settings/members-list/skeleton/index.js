@@ -36,7 +36,8 @@ function content(ui) {
     debug: __filename,
     itemsOpt: {
       kind: "settings_member",
-      uiHandler: [ui]
+      uiHandler: [ui],
+      visitor: this.mget('visitor')
     },
     spinner: true,
     placeholder: Skeletons.Note(LOCALE.NO_CONTACT, "placeholder--no-contact"),

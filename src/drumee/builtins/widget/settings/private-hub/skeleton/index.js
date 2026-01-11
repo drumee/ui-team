@@ -73,14 +73,29 @@ function content(ui) {
         className: `${fig}__divider`,
       }),
       members(ui),
-      require('./invitation').default(ui),
-      // Skeletons.Box.X({
-      //   className: `${fig}__divider`,
-      // }),
-      // require('./permission').default(ui, ui.permissionMode || _a.edit),
-      // Skeletons.Box.X({
-      //   className: `${fig}__divider`,
-      // }),
+      // require('./invitation').default(ui),
+      Skeletons.Box.X({
+        className: `${fig}__divider`,
+      }),
+      Skeletons.Box.X({
+        className: `${fig}__buttons`,
+        kids: [
+          Skeletons.Button.Label({
+            className: `${fig}__save-btn`,
+            label: "Add members",
+            icon: "plus",
+            service: "add-members",
+            uiHandler: [ui],
+          }),
+          Skeletons.Button.Label({
+            className: `${fig}__save-btn`,
+            label: "Invite contacts",
+            icon: "plus",
+            service: "invite-contacts",
+            uiHandler: [ui],
+          })
+        ]
+      })
     ],
   });
 }

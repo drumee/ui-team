@@ -74,6 +74,12 @@ class settings_members_list extends DrumeeMFS {
           });
         }
         break;
+        
+      case "prompt-permission":
+        this.triggerHandlers({
+          service, member: cmd
+        })
+        return
     }
 
     if (super.onUiEvent) {

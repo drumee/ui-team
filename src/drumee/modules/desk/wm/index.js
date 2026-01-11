@@ -32,8 +32,6 @@ class __window_manager extends push {
       _a.newFolder,
       _a.paste,
       _a.upload,
-      // _a.fullscreen,
-      // ...exportMenu,
       _a.separator,
       _a.preferences,
     ];

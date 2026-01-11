@@ -45,13 +45,13 @@ function menu_items(ui) {
         service: 'add-team',
         // respawn: 'hub_team',
         area: _a.private,
-        filename: LOCALE.MY_PRIVATE_FOLDER,
+        filename: "My team folder",
         kidsOpt: {
           active: 0
         },
         kids: [
           { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.private, mode: _a.vignette },
-          Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PRIVATE_FOLDER })
+          Skeletons.Note({ className: `${pfx}-item-text`, content: "Create a team folder" })
         ]
       }),
       Skeletons.Box.G({

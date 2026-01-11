@@ -4,21 +4,22 @@
   &-commands {
     width: 100%;
     justify-content: center;
+    gap: var(--spacer-4);
 
-    &[data-active="0"] {
-      pointer-events: none;
-      opacity: 0.5;
-    }
-
-    &[data-state="open"] {
-      z-index: 100 !important;
-    }
+    // &[data-state="open"] {
+    //   z-index: 100 !important;
+    // }
 
     .dialog__button--submit {
       margin: revert;
       min-width: 115px;
       height: 35px;
       @include drumee.typo($size: 15px, $line: 25px);
+
+      &[data-state="0"] {
+        pointer-events: none;
+        opacity: 0.5;
+      }
     }
   }
 

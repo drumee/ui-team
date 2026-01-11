@@ -37,6 +37,7 @@ export function addPermissionRow(ui, permission, service, content, name) {
     ]
   });
 }
+
 export function topbar(ui, label) {
   const figFamily = `${ui.fig.family}-topbar`;
 
@@ -265,3 +266,117 @@ export function validity(ui, formData = {}) {
   });
 }
 
+export function permission(ui, member, service) {
+  const permissionFig = `${ui.fig.family}-permission`;
+  const { read, write, modify } = _K.permission
+  let items = [
+    { permission: read, label: LOCALE.PERMISSION_READ, name: _a.read },
+    { permission: write, label: LOCALE.PERMISSION_UPLOAD_DOWNLOAD, name: _a.write },
+    { permission: modify, label: LOCALE.PERMISSION_DELETE_ORGANIZE, name: _a.modify }
+  ]
+  return Skeletons.Box.Y({
+    className: `${permissionFig}__main`,
+    sys_pn: 'permissions-content',
+    kids: [
+      topbar(ui, "Permission settings"),
+      Skeletons.Box.Y({
+        className: `${permissionFig}__content`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${permissionFig}__member`,
+            kids: [
+              Skeletons.Note({
+                className: `${permissionFig}__title`,
+                content: "Permission granted to {0}".format(member.mget(_a.fullname)),
+              }),
+              Skeletons.UserProfile({
+                className: `${permissionFig}__avatar`,
+                id: member.mget(_a.id),
+                live_status: 1,
+              })
+            ]
+          }),
+          {
+            kind: "settings_permission",
+            className: `${permissionFig}__form`,
+            items,
+            ...member.data(),
+            sys_pn: "permission-form",
+            partHandler: [ui],
+            uiHandler: [ui]
+          }
+        ]
+      }),
+      Skeletons.Box.X({
+        className: `${permissionFig}__buttons`,
+        sys_pn: "buttons",
+        kids: [
+          Skeletons.Note({
+            sys_pn: "update-permission",
+            service,
+            uiHandler: [ui],
+            partHandler: [ui],
+            className: `${permissionFig}-button permission-action`,
+            content: LOCALE.SAVE
+          }),
+        ]
+      })
+    ]
+  });
+}
+
+
+export function recipients (ui) {
+  const o = { ...Preset.List.Orange_e };
+  o.start = _a.bottom;
+
+  const searchbox = {
+    kind: 'invitation_search',
+    contactItem: {
+      kind: "invitation_contact",
+      service: "add-item"
+    },
+    debug: __filename,
+    sys_pn: 'invitation-search',
+    service: _e.update,
+    className: "inline",
+    api: {
+      service: SERVICE.drumate.my_contacts,
+      hub_id: Visitor.id
+    },
+    contactbook: ui.mget('contactbook'),
+    preselect: ui.mget(_a.preselect),
+    uiHandler: ui,
+    addGuest: ui.mget('addGuest')
+
+  };
+  const contact = Skeletons.Box.G({
+    className: `${ui.fig.group}__contact-container`,
+    kids: [
+      searchbox,
+      // Skeletons.Note({
+      //   className: `${ui.fig.group}__contact-invite`,
+      //   content: "Invite +",
+      //   uiHandler: [ui],
+      //   service: "invite"
+      // })
+    ]
+  });
+
+  const list = Skeletons.List.Smart({
+    className: `${ui.fig.group}__container-recipients ${ui.fig.family}__list-destination`,
+    innerClass: `${ui.fig.family}__access-list`,
+    flow: _a.y,
+    radiotoggle: _a.parent,
+    sys_pn: "roll-recipients",
+    kids: ui.getPending(),
+    vendorOpt: o
+  });
+  return Skeletons.Box.Y({
+    state: ui.getState() ^ 1,
+    debug: __filename,
+    name: "recipients",
+    className: `${ui.fig.group}__container-recipients-roll`,
+    kids: [list, contact]
+  });
+};

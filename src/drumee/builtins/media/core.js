@@ -204,11 +204,12 @@ class __media_core extends DrumeeMFS {
     let fileItems = [];
     if (this.canOrganize() || this.isMediaOwner()) {
       fileItems = [_a.rename, _a.upload, _a.download, _a.separator, _a.info];
-      if (this.canShare()) {
-        fileItems.push(_a.share)
-      } else if (this.canManageAccess()) {
-        fileItems.push('manageAccess')
-      }
+      /** Removed direct access until better getting clear UX */
+      // if (this.canShare()) {
+      //   fileItems.push(_a.share)
+      // } else if (this.canManageAccess()) {
+      //   fileItems.push('manageAccess')
+      // }
       fileItems.push(_a.separator, _a.trash)
     } else if (this.canDownload()) {
       fileItems = [_a.download, _a.separator, _a.info];
@@ -220,24 +221,6 @@ class __media_core extends DrumeeMFS {
       fileItems = [, _a.separator, _a.restoreToDesk, _a.deletePermanently];
     }
     return fileItems;
-    // let hubItems = this.contextmenuItemsForFolder();
-    // if (this.canUpload() || this.canOrganize() || this.isMediaOwner()) {
-    //   if (Visitor.canServerImpExp()) {
-    //     hubItems.unshift(_a.separator);
-    //     hubItems.unshift(_a.import);
-    //     hubItems.unshift(_a.export);
-    //   }
-    //   hubItems.unshift(_a.separator);
-    //   hubItems.unshift(_a.upload);
-    // } else {
-    //   if (Visitor.canServerImpExp()) {
-    //     hubItems.unshift(_a.separator);
-    //     hubItems.unshift(_a.importHidden);
-    //     hubItems.unshift(_a.exportHidden);
-    //     hubItems.unshift(_a.separator);
-    //   }
-    // }
-    // return hubItems;
   }
 
   /**

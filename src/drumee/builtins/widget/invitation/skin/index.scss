@@ -5,12 +5,22 @@
 .invitation-settings {
   &__ui {
     background-color: var(--default-bg);
-    height: 80vh;
+    height: auto;
     min-width: 320px;
     width: 100%;
     z-index: 0;
     max-width: 600px;
     border-radius: var(--corner-radius-6);
+
+    &[data-extendheight="1"] {
+      min-height: 500px;
+    }
+  }
+
+  &__main {
+    padding: var(--spacer-5);
+    height: 100%;
+    justify-content: start;
   }
 
   &-topbar {
@@ -68,8 +78,7 @@
 
   }
 
-  &__container,
-  &__main {
+  &__container {
     align-content: center;
     justify-content: center;
     flex-wrap: wrap;
@@ -79,10 +88,6 @@
     z-index: 1;
   }
 
-  &__main {
-    padding: var(--spacer-5);
-    height: 100%;
-  }
 
   &__access-list {
     display: flex;
@@ -355,14 +360,15 @@
     z-index: 60000;
     width: 100%;
     padding: 10px 60px;
-    border: 1px solid var(--neutral-200);
-    border-radius: var(--corner-radius-4);
+    gap: var(--spacer-5);
+    // border: 1px solid var(--neutral-200);
+    // border-radius: var(--corner-radius-4);
   }
 
 
   &__contact-container {
     gap: var(--spacer-2);
-    grid-template-columns: 1fr 110px;
+    grid-template-columns: 1fr;
 
     .entry-reminder__main.showerror {
       padding: 0;

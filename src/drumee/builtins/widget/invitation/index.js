@@ -47,7 +47,8 @@ class __invitation_settings extends __recipient {
     this.declareHandlers();
 
     this.model.atLeast({
-      action_bar: 1
+      action_bar: 1,
+      members: 1
     });
 
     this.media = this.mget(_a.media);
@@ -122,8 +123,10 @@ class __invitation_settings extends __recipient {
       { hub_id: this.mget(_a.hub_id) }, SVC_OPT
     ).then(async (data) => {
       this.mset({ sharees: data.users })
-      let p = await this.ensurePart("existing-members");
-      p.feed(data.users)
+      if (this.mget('members')) {
+        let p = await this.ensurePart("existing-members");
+        p.feed(data.users)
+      }
     })
   }
 
@@ -149,14 +152,17 @@ class __invitation_settings extends __recipient {
 
       case "roll-recipients":
         this.recipientsRoll = child;
+        this.debug("AAAA:155", child)
         var c = child.collection;
         c.on(_e.remove, () => {
+          this.debug("AAAA:remove 155", child)
           if (c.length === 0) {
-            this.feed(this._skeleton(this));
+            // this.feed(this._skeleton(this));
             return this._actionState(0);
           }
         });
         return c.on(_e.add, () => {
+          this.debug("AAAA:155 ADD", child)
           let s = 0;
           const f = c.filter(m => !m.get(_a.idle));
           if (f.length) {
@@ -206,6 +212,7 @@ class __invitation_settings extends __recipient {
       case "invitation-search":
         return this.searchBox = child;
 
+
     }
   }
 
@@ -215,13 +222,10 @@ class __invitation_settings extends __recipient {
    * @returns 
    */
   _actionState(s) {
-    if (this.actionsBar != null) {
-      this.actionsBar.el.dataset.active = s;
+    this.debug('aaa:222', s)
+    if (this.__addMemberButton) {
+      this.__addMemberButton.el.dataset.state = s;
     }
-    if (this.optionsBar != null) {
-      this.optionsBar.el.dataset.active = s;
-    }
-    return this.el.dataset.recipient = s;
   }
 
   /**
@@ -391,6 +395,7 @@ class __invitation_settings extends __recipient {
     }
     this.recipientsRoll.append(data);
     this.triggerHandlers(data);
+    this.el.dataset.extendheight = '0';
     cmd.focus();
   }
 
@@ -494,10 +499,10 @@ class __invitation_settings extends __recipient {
     args.hub_id = this.mget(_a.hub_id)
 
     this.postService(SERVICE.hub.add_contributors, args, {}).then(usersList => {
-      // this.goodbye()
       this.mset({ sharees: usersList })
-      this.__existingMembers.feed(usersList)
+      if (this.__existingMembers) this.__existingMembers.feed(usersList)
       this.recipientsRoll.clear()
+      this.triggerHandlers({ service: "contributors-added" })
       this.debug("AAAA:498", usersList)
     })
   }
@@ -604,8 +609,10 @@ class __invitation_settings extends __recipient {
     this.postService(SERVICE.hub.set_member_privilege, args).then((users) => {
       this.debug("AAA:605", users)
       this.mset({ sharees: users })
-      this.__existingMembers.restart()
-      this.__existingMembers.feed(users)
+      if (this.__existingMembers) {
+        this.__existingMembers.restart()
+        this.__existingMembers.feed(users)
+      }
     })
   }
 
@@ -634,7 +641,7 @@ class __invitation_settings extends __recipient {
     let s;
     const service = args.service || cmd.service || cmd.mget(_a.service);
     this.service = service;
-    this.debug("AAA:544", service, cmd)
+    this.debug("AAA:544", service, cmd, args)
     switch (service) {
       case _e.update:
         return this._updateData(cmd);
@@ -693,7 +700,9 @@ class __invitation_settings extends __recipient {
         this.postService(SERVICE.hub.delete_contributor, opt)
           .then((users) => {
             this.mset({ sharees: users })
-            this.__existingMembers.feed(users)
+            if (this.__existingMembers) {
+              this.__existingMembers.feed(users)
+            }
           })
         return
 
@@ -715,6 +724,7 @@ class __invitation_settings extends __recipient {
         break;
 
       case "cancel-share":
+      case _a.back:
       case _e.close:
         return this.softDestroy();
 
@@ -749,23 +759,27 @@ class __invitation_settings extends __recipient {
         return this.recipientsRoll.clear();
 
 
-      case "invite":
-        this.goodbye()
+      case "invite-contacts":
+        // this.goodbye()
         Wm.launch({
           kind: 'window_addressbook',
           source: this.__addressbookLauncher
         }, { explicit: 1, singleton: 1 });
 
-        let t = setInterval(() => {
-          let w = Wm.getItemsByKind('window_addressbook')[0]
-          if (w) {
-            clearInterval(t);
-            w.once(_e.destroy, () => {
-              Wm.openAccessManager(this.mget(_a.media))
-            })
-          }
-        }, 1000)
+        // let t = setInterval(() => {
+        //   let w = Wm.getItemsByKind('window_addressbook')[0]
+        //   if (w) {
+        //     clearInterval(t);
+        //     w.once(_e.destroy, () => {
+        //       Wm.openAccessManager(this.mget(_a.media))
+        //     })
+        //   }
+        // }, 1000)
         return
+
+      case "show-contacts-list":
+        return this.el.dataset.extendheight = args.state;
+
     }
   }
 }

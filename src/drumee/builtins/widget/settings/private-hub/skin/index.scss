@@ -99,10 +99,23 @@
     }
   }
 
+  &__buttons {
+    justify-content: end;
+    gap: var(--spacer-4);
+  }
+
   &__save-btn {
     background: var(--primary-600, #7C3AED);
     color: var(--white, #ffffff);
     font-weight: 500;
+
+    &.contact {
+      background: var(--primary-500, #7C3AED);
+
+      &:hover {
+        background: var(--primary-700, #6D28D9);
+      }
+    }
 
     &:hover {
       background: var(--primary-700, #6D28D9);
@@ -252,6 +265,10 @@
   }
 
   &__description {
+    &-wrapper {
+      grid-template-columns: 1fr 90px;
+    }
+
     font-size: 14px;
     color: var(--neutral-600, #8C929C);
     line-height: 1.5;

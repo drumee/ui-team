@@ -4,7 +4,7 @@
  */
 export default function (ui) {
   const fig = `${ui.fig.family}-access`;
-  
+
   // const currentAccessOption = { value: 'private', ico: 'lock', label: LOCALE.PRIVATE || "Private" }
 
   return Skeletons.Box.Y({

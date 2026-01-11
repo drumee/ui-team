@@ -109,7 +109,8 @@
     }
   }
 
-  &__arrow-down {
+  &__arrow-down,
+  &__arrow-pages {
     color: #AFB3BB;
     flex-shrink: 0;
     transform: rotate(90deg);

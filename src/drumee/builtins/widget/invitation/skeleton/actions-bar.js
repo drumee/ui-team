@@ -3,32 +3,46 @@ module.exports = function (ui) {
   return Skeletons.Box.X({
     className: `${ui.fig.group}__container-commands`,
     debug: __filename,
-    sys_pn: "ref-actions-bar-footer",
     kids: [
       Skeletons.Note({
-        className: `${ui.fig.group}__container--secondary-btn`,
-        uiHandler: [ui],
-        service: 'cancel-share',
-        editable: 1,
-        content: LOCALE.CLOSE
+        className: "dialog__button--submit",
+        uiHandler: ui,
+        service: "add-members",
+        sys_pn: "add-member-button",
+        content: "Add members",
+        state: 0,
       }),
-      Skeletons.Box.X({
-        className: "",
-        debug: __filename,
-        sys_pn: "ref-actions-bar",
-        dataset: {
-          active: ui.getState()
-        },
-        kids: [
-          Skeletons.Note({
-            className: "dialog__button--submit",
-            uiHandler: ui,
-            service: "add-members",
-            editable: 1,
-            content: LOCALE.SAVE
-          })
-        ]
-      })
+      Skeletons.Note({
+        className: "dialog__button--submit",
+        uiHandler: ui,
+        service: "invite-contacts",
+        content: "Invite contacts"
+      }),
+      // Skeletons.Note({
+      //   className: `${ui.fig.group}__container--secondary-btn`,
+      //   uiHandler: [ui],
+      //   service: 'cancel-share',
+      //   editable: 1,
+      //   content: LOCALE.CLOSE
+      // }),
+      // Skeletons.Box.X({
+      //   className: "",
+      //   debug: __filename,
+      //   sys_pn: "ref-actions-bar",
+      //   state: 0,
+      //   dataset: {
+      //     active: ui.getState()
+      //   },
+      //   kids: [
+      //     Skeletons.Note({
+      //       className: "dialog__button--submit",
+      //       uiHandler: ui,
+      //       service: "add-members",
+      //       editable: 1,
+      //       content: "Add members"
+      //     })
+      //   ]
+      // })
     ]
   });
 

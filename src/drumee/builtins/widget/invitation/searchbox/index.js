@@ -283,7 +283,7 @@ class __invitation_searchbox extends LetcBox {
       this.triggerHandlers({ service: _e.update });
     } else {
       for (let r of Array.from(data)) {
-        r = {...r, ...this.contactItem}
+        r = { ...r, ...this.contactItem }
         for (let s of Array.from(sharees)) {
           if (r.email === s.email) {
             r.state = 1;
@@ -310,6 +310,7 @@ class __invitation_searchbox extends LetcBox {
       // Performance : huge list take time to be removed
       setTimeout(() => {
         this.resultsRoll.clear()
+        this.triggerHandlers({ service: "show-contacts-list", state: 0 })
       }, 1000);
       return;
     }
@@ -335,6 +336,8 @@ class __invitation_searchbox extends LetcBox {
 
     this.resultsRoll.restart();
     this.resultsContainer.el.show();
+    this.triggerHandlers({ service: "show-contacts-list", state: 1 })
+
     return
   }
 
