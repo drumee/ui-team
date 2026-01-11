@@ -21,7 +21,7 @@
 
       &[data-device="mobile"] {
         min-width: 305px;
-        height: 35px;
+        height: 140px;
       }
 
       &.personnal {
@@ -78,6 +78,10 @@
       padding: 0 40px;
       align-items: center;
       gap: 10px;
+
+      &[data-device="mobile"] {
+        flex-direction: column;
+      }
 
       .name {
         align-items: center;
