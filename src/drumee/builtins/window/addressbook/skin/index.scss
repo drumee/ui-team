@@ -82,6 +82,11 @@
     &__add-btn {
       background: var(--neutral-900);
       color: var(--white);
+      
+      & svg {
+        color: var(--white);
+        fill: var(--white);
+      }
     }
 
     &__import-btn {

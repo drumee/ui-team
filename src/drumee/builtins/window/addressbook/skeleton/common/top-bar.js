@@ -50,7 +50,7 @@ const __skl_addressbook_common_topBar = function(_ui_) {
   const addButton = Skeletons.Button.Label({
     className : `${figFamily}__add-btn ${figGroup}__add-btn`,
     label     : LOCALE.ADD_NEW_CONTACTS || "Add new contacts",
-    ico       : "plus-normal",
+    ico       : "add",
     service   : 'add-contact',
     uiHandler : _ui_
   });
