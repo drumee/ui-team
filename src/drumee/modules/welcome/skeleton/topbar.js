@@ -13,7 +13,7 @@ function __skl_welcome_topbar(_ui_) {
         kids: [
           {
             kind: 'custom_logo',
-            label: 'Ultimate cloud technology'
+            label: 'Drumee'
           }
         ]
       })
