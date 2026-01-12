@@ -14,9 +14,9 @@
  * limitations under the License.
  * =============================================================================
  */
-@use '../../../skin/mixins/drumee.scss';
+@use "../../../skin/mixins/drumee.scss";
 
-@use 'goodbye';
+@use "goodbye";
 
 .router-butler {
   &__ui {
@@ -24,12 +24,12 @@
     left: 0;
     top: 0;
     z-index: -1;
-    justify-items:center;
-    justify-content:center;
-    align-items:center;
-    align-content:center;
-    display:flex;
-    flex-wrap:wrap;
+    justify-items: center;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+    display: flex;
+    flex-wrap: wrap;
 
     &[data-state="open"] {
       background-color: rgb(22 22 22 /55%) !important; //0.55
@@ -40,15 +40,24 @@
       top: 0;
       position: fixed;
     }
-
   }
 
   &__title {
-    @include drumee.typo($color: #fa8540, $size: 26px, $line: 33px, $weight: 300);
+    @include drumee.typo(
+      $color: #fa8540,
+      $size: 26px,
+      $line: 33px,
+      $weight: 300
+    );
   }
 
   &__label {
-    @include drumee.typo($color: var(--default-text-color), $size: 14px, $weight: 300, $line: 36px); // var(--egrey-2f)
+    @include drumee.typo(
+      $color: var(--default-text-color),
+      $size: 14px,
+      $weight: 300,
+      $line: 36px
+    ); // var(--egrey-2f)
 
     &.ph-reminder {
       display: none;
@@ -58,8 +67,13 @@
 
       &[data-state="1"] {
         display: block;
-        transition: all .5s;
-        @include drumee.typo($color: var(--secondary-text-color) , $size: 13px, $weight: 300, $line: 16px); //#4A90E2
+        transition: all 0.5s;
+        @include drumee.typo(
+          $color: var(--secondary-text-color),
+          $size: 13px,
+          $weight: 300,
+          $line: 16px
+        ); //#4A90E2
         text-align: left;
         margin: 0 auto 0 0;
       }
@@ -68,7 +82,12 @@
 
   &__message {
     bottom: 16px;
-    @include drumee.typo($color: var(--default-text-color), $size: 16px, $line: 18px, $weight: 400); //$egrey-78
+    @include drumee.typo(
+      $color: var(--default-text-color),
+      $size: 16px,
+      $line: 18px,
+      $weight: 400
+    ); //$egrey-78
     text-align: left;
 
     &.subtitle {
@@ -78,7 +97,12 @@
     }
 
     &.error {
-      @include drumee.typo($color: var(--default-text-error), $size: 14px, $line: 18px, $weight: 300);
+      @include drumee.typo(
+        $color: var(--default-text-error),
+        $size: 14px,
+        $line: 18px,
+        $weight: 300
+      );
     }
   }
 
@@ -95,7 +119,8 @@
     justify-content: space-between;
     align-items: center;
     background: var(--default-bg); //white;
-    box-shadow: 0 0 7px 0 rgb(0 0 0 / 14%), 0 0 6px 0 #f8fafc, 0 3px 5px 0 rgb(0 0 0 / 20%);
+    box-shadow: 0 0 7px 0 rgb(0 0 0 / 14%), 0 0 6px 0 #f8fafc,
+      0 3px 5px 0 rgb(0 0 0 / 20%);
     overflow: hidden;
 
     &[data-device="mobile"] {
@@ -139,12 +164,20 @@
       max-width: 600px;
       min-width: 450px;
       background-color: white;
-      border-radius: var(--border-radius);
+      border-radius: 24px;
       overflow: hidden;
     }
 
+    &.close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+    }
+
     &.header {
-      height: 70px;
+      height: 80px;
+      padding: 0 40px;
+      background-color: var(--neutral-100);
       justify-items: center;
       justify-content: center;
       align-items: center;
@@ -153,7 +186,12 @@
     }
 
     &.title {
-      @include drumee.typo($color: var(--default-text-error), $size: 20px, $line: 28px, $weight: 300);
+      @include drumee.typo(
+        $color: var(--default-text-error),
+        $size: 20px,
+        $line: 28px,
+        $weight: 300
+      );
     }
   }
 
@@ -169,13 +207,23 @@
 
     &.no-go {
       background-color: var(--btn-commit-background);
-      @include drumee.typo($color: var(--secondary-text-color), $size: 13px, $line: 16px, $weight: 300); //var(--egrey-78)
+      @include drumee.typo(
+        $color: var(--secondary-text-color),
+        $size: 13px,
+        $line: 16px,
+        $weight: 300
+      ); //var(--egrey-78)
     }
 
     &.go {
       min-width: 115px;
       background-color: var(--btn-commit-background);
-      @include drumee.typo($size: 16px, $line: 35px, $weight: 400, $color: var(--btn-commit-text));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 35px,
+        $weight: 400,
+        $color: var(--btn-commit-text)
+      );
     }
 
     &.action,
@@ -192,7 +240,12 @@
     }
 
     &.link {
-      @include drumee.typo($color: var(--secondary-text-color), $size: 13px, $line: 16px, $weight: 300); //var(--egrey-78)
+      @include drumee.typo(
+        $color: var(--secondary-text-color),
+        $size: 13px,
+        $line: 16px,
+        $weight: 300
+      ); //var(--egrey-78)
     }
   }
 
@@ -216,7 +269,12 @@
       height: auto;
       min-width: 200px;
       white-space: nowrap;
-      @include drumee.typo($color: #ff4578, $size: 12px, $line: 16px, $weight: 300);
+      @include drumee.typo(
+        $color: #ff4578,
+        $size: 12px,
+        $line: 16px,
+        $weight: 300
+      );
     }
   }
 }

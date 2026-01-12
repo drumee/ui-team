@@ -389,7 +389,6 @@ const PRIVACY = {
       ],
       after: [
         "By using Drumee, you acknowledge that you have read and understood this Privacy Policy.",
-        "Privacy Policy",
       ],
     },
   ],

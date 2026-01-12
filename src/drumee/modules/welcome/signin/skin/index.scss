@@ -4,10 +4,10 @@
 #   TYPE : Component style
 # ===================================================================**/
 
-@use 'mixins/drumee.scss';
-@use 'cross-signin';
-@use 'gateway';
-@use 'url';
+@use "mixins/drumee.scss";
+@use "cross-signin";
+@use "gateway";
+@use "url";
 
 .welcome-signin {
   &__ui,
@@ -20,9 +20,9 @@
 
   &__ui {
     padding-top: 70px;
-    &[data-mode="reconnect"]{
-      background: radial-gradient(109.24% 109.24% at 21.67% 0,rgba(91,115,210,.4) 0,#606889 100%),#879bff;
-      padding: 0;
+    &[data-mode="reconnect"] {
+      background-color: var(--neutral-100);
+      padding: 40px;
     }
   }
 
@@ -34,7 +34,7 @@
   &__header {
     height: auto;
     width: 100%;
-    &[data-mode="reconnect"]{
+    &[data-mode="reconnect"] {
       display: none;
       // height: 40px;
       // justify-content: center;
@@ -43,7 +43,7 @@
 
   &__header-content {
     align-items: center;
-    &[data-mode="reconnect"]{
+    &[data-mode="reconnect"] {
       max-height: 30px;
     }
   }
@@ -57,13 +57,13 @@
     width: auto;
     padding-top: 40px;
 
-    &[data-mode="reconnect"]{
+    &[data-mode="reconnect"] {
       min-height: 0;
       padding-top: 10px;
       min-height: 300px;
     }
 
-    &.content{
+    &.content {
       align-items: center;
       justify-content: center;
     }
@@ -71,10 +71,10 @@
     & .welcome__pw-meter.wrapper {
       margin-top: 28px;
     }
-    
+
     &.welcome__row {
       &[data-status="error"] {
-        border-radius:var(--border-radius);
+        border-radius: var(--border-radius);
         border: 2px solid var(--default-border-error);
       }
     }
@@ -87,7 +87,7 @@
     margin: 5px 0; //10px 0;
     max-height: 70px;
     width: 100%;
-    &[data-mode="reconnect"]{
+    &[data-mode="reconnect"] {
       height: 60px;
     }
 
@@ -102,21 +102,28 @@
         display: none;
       }
     }
-    &.password{
-      input{
+    &.password {
+      input {
         margin-left: 55px;
       }
     }
   }
 
-
   &__row {
     align-items: center;
     background-color: var(--default-bg-block);
-    border-radius:var(--border-radius);
+    border-radius: 12px;
     height: 100%;
     max-height: 56px;
     width: 100%;
+
+    &.email {
+      border: 1px solid var(--neutral-300);
+    }
+
+    &.entry-status {
+      border: 1px solid var(--neutral-300);
+    }
 
     &.mobile-title,
     &.email-title {
@@ -128,7 +135,7 @@
       background-color: transparent;
     }
 
-    &.company{
+    &.company {
       background-color: transparent;
     }
 
@@ -136,7 +143,7 @@
     &.message-wrapper {
       justify-content: center;
     }
-    
+
     .welcome__icon {
       height: 24px;
       margin: auto 24px;
@@ -151,12 +158,16 @@
     &.mobile-number {
       max-height: 70px;
     }
-    
+
     &.company-url {
       //top: 60px;
-      & .drumee-text{
+      & .drumee-text {
         margin: 0px -20px;
-        @include drumee.typo($size: 16px, $line: 16px, $color: var(--white-f9));
+        @include drumee.typo(
+          $size: 16px,
+          $line: 16px,
+          $color: var(--neutral-600)
+        );
       }
     }
     &.buttons-wrapper,
@@ -164,7 +175,7 @@
       margin: 15px 0;
       height: 60px;
       &.message.no-background {
-        width:100%;
+        width: 100%;
         height: auto;
       }
     }
@@ -174,9 +185,9 @@
       &[data-mode="closed"] {
         display: none;
       }
-      
+
       &[data-error="yes"] {
-        opacity: .5;
+        opacity: 0.5;
         pointer-events: none;
       }
     }
@@ -185,7 +196,7 @@
       height: 100%;
       padding: 0;
       &[data-status="error"] {
-        border-radius:var(--border-radius);
+        border-radius: var(--border-radius);
         border: 2px solid var(--default-border-error);
       }
     }
@@ -197,21 +208,45 @@
   }
 
   &__note {
-    @include drumee.typo($size: 20px, $line: 28px,$weight:400, $color: var(--default-text-reverse));
+    @include drumee.typo(
+      $size: 20px,
+      $line: 28px,
+      $weight: 400,
+      $color: var(--default-text-reverse)
+    );
     justify-content: center;
     text-align: center;
     width: 100%;
-    &[data-state="reconnect"]{
-      @include drumee.typo($size: 14px, $line: 20px,$weight:300, $color:var(--default-text-reverse));
+    &[data-state="reconnect"] {
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 300,
+        $color: var(--default-text-reverse)
+      );
+    }
+
+    &.message {
+      color: var(--default-text-error);
     }
 
     &.header {
-      @include drumee.typo($size: 38px, $line: 45px,$weight:500, $color:var(--default-text-reverse));
-      &[data-mode="reconnect"]{
-        @include drumee.typo($size: 12px, $line: 12px,$weight:300, $color:var(--default-text-reverse));
-      }  
+      @include drumee.typo(
+        $size: 38px,
+        $line: 45px,
+        $weight: 500,
+        $color: var(--default-text-reverse)
+      );
+      &[data-mode="reconnect"] {
+        @include drumee.typo(
+          $size: 12px,
+          $line: 12px,
+          $weight: 300,
+          $color: var(--default-text-reverse)
+        );
+      }
     }
-    &.sub-header{
+    &.sub-header {
       padding-top: 20px;
     }
 
@@ -221,7 +256,12 @@
     }
 
     &.drumee-com {
-      @include drumee.typo($size: 20px, $line: 28px,$weight:500,$color: var(--white-f9));
+      @include drumee.typo(
+        $size: 20px,
+        $line: 28px,
+        $weight: 500,
+        $color: var(--white-f9)
+      );
       position: absolute;
       right: -130px;
     }
@@ -233,7 +273,12 @@
     }
 
     &.password-tips {
-      @include drumee.typo($size: 12px, $line: 16px, $weight:400, $color: var(--white-f9));
+      @include drumee.typo(
+        $size: 12px,
+        $line: 16px,
+        $weight: 400,
+        $color: var(--white-f9)
+      );
       padding-top: 47px;
     }
 
@@ -250,7 +295,11 @@
 
     &.helper,
     &.not-now {
-      @include drumee.typo($size: 16px, $line: 16px, $color: var(--white-f9));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 16px,
+        $color: var(--neutral-600)
+      );
       width: 100%;
     }
 
@@ -267,25 +316,25 @@
     &.no-account {
       justify-content: flex-end;
     }
-    
+
     &.text-underline {
       cursor: pointer;
       text-decoration-line: underline;
       &:hover {
-        color:var(--eviolet);//#6a85ff; 
+        color: var(--eviolet); //#6a85ff;
       }
     }
   }
 
   &__icon {
-    color: var(--default-icon-neutral);//var(--egrey-89);
+    color: var(--default-icon-neutral); //var(--egrey-89);
     cursor: pointer;
     height: 18px;
     width: 18px; //20px;
 
     &.input-wrapper {
       position: absolute;
-      margin:12px 20px;// 8px 12px 12px 15px;
+      margin: 12px 20px; // 8px 12px 12px 15px;
     }
 
     &.mobile,
@@ -307,14 +356,14 @@
     }
 
     &.email {
-      height:21px;
+      height: 21px;
       left: 2px;
       top: 5px;
       width: 21px;
 
       svg {
-        fill:#2F2F2F;
-        opacity:0.8;
+        fill: #2f2f2f;
+        opacity: 0.8;
       }
     }
 
@@ -328,23 +377,32 @@
     }
   }
 
-  &__protocol{
+  &__protocol {
     position: relative;
   }
   &__entry {
     & input {
       border-bottom: none;
-      border-radius:0 6px 6px 0px;
+      border-radius: 0 6px 6px 0px;
       padding: 4px;
-      @include drumee.typo($size: 18px, $line: 28px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 28px,
+        $color: var(--default-text-color)
+      );
 
       &::placeholder {
-        @include drumee.typo($size: 19px, $line: 28px, $weight: 300, $color: var(--connect-text-placeholder));
+        @include drumee.typo(
+          $size: 19px,
+          $line: 28px,
+          $weight: 300,
+          $color: var(--connect-text-placeholder)
+        );
       }
     }
 
     &[data-status="error"] {
-      border-radius:var(--border-radius);
+      border-radius: var(--border-radius);
       border: 2px solid var(--default-border-error);
     }
 
@@ -357,9 +415,9 @@
       padding: 0 0 0 55px;
       width: 100%;
     }
-    
+
     &.input-box {
-      border-radius:var(--border-radius);
+      border-radius: var(--border-radius);
       align-items: center;
       background-color: var(--default-bg);
       height: 56px;
@@ -373,9 +431,8 @@
     .pw-shower {
       cursor: pointer;
       left: auto;
-      right : 10px;
+      right: 10px;
     }
-
   }
 
   .pw-shower {
@@ -387,22 +444,31 @@
   }
 
   &__button-confirm {
-    @include drumee.typo($size: 20px, $line: 28px, $color: var(--default-text-reverse));
+    @include drumee.typo(
+      $size: 20px,
+      $line: 28px,
+      $color: var(--default-text-reverse)
+    );
     align-items: center;
-    background-color: var(--egreen-soft);
-    border-radius:var(--border-radius);
+    background-color: var(--primary-500);
+    border-radius: 24px;
     cursor: pointer;
     height: 100%;
     justify-content: center;
     width: 100%;
 
     &:hover {
-      box-shadow: 0 0 13px 0 rgba(169,186,255,.5);
+      box-shadow: 0 0 13px 0 rgba(169, 186, 255, 0.5);
     }
   }
 
   &-go {
-    @include drumee.typo($color: var(--default-text-reverse), $size: 18px, $line: 21px, $weight: 300);
+    @include drumee.typo(
+      $color: var(--default-text-reverse),
+      $size: 18px,
+      $line: 21px,
+      $weight: 300
+    );
     align-items: center;
     background-color: var(--egreen-soft);
     cursor: pointer;
@@ -412,12 +478,17 @@
     width: 100%;
 
     &[data-device="mobile"] {
-      @include drumee.typo($color: var(--default-text-reverse), $size: 16px, $line: 13px, $weight: 300);
+      @include drumee.typo(
+        $color: var(--default-text-reverse),
+        $size: 16px,
+        $line: 13px,
+        $weight: 300
+      );
     }
 
-    &[data-mode="1"]{
+    &[data-mode="1"] {
       opacity: 1;
-      pointer-events:auto;
+      pointer-events: auto;
     }
 
     &[data-error="1"] {
@@ -426,14 +497,18 @@
     }
   }
 
-  .drumee-api-popup__ui{
+  .drumee-api-popup__ui {
     position: absolute;
   }
-  
+
   // for loader -- Do not remove
   @keyframes loader {
-    0% { transform: rotate(0deg); }
-    100% {  transform: rotate(359deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(359deg);
+    }
   }
 
   &__icon {

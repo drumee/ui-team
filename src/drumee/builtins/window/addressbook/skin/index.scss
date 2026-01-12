@@ -1,20 +1,19 @@
 @use "sass:meta";
 @use "mixins/drumee";
-@use 'layout.scss';
-@include meta.load-css('search');
-@include meta.load-css('overlay-wrapper');
-@include meta.load-css('breadcrumbs');
+@use "layout.scss";
+@include meta.load-css("search");
+@include meta.load-css("overlay-wrapper");
+@include meta.load-css("breadcrumbs");
 
 .window-addressbook {
-
   &__header {
     background-color: var(--ab-header-bg);
     border-bottom: none;
+    padding-left: 40px;
   }
 
   &-topbar {
-
-    @include meta.load-css('breadcrumbs.scss');
+    @include meta.load-css("breadcrumbs.scss");
 
     &__content {
       align-items: center;
@@ -45,10 +44,18 @@
             padding-right: 1px;
             padding-top: 0px;
             width: 19px;
-            @include drumee.typo($size: 11px, $line: 14px, $color: var(--default-text-notification));
+            @include drumee.typo(
+              $size: 11px,
+              $line: 14px,
+              $color: var(--default-text-notification)
+            );
 
             .inner {
-              @include drumee.typo($size: 11px, $line: 14px, $color: var(--default-text-notification));
+              @include drumee.typo(
+                $size: 11px,
+                $line: 14px,
+                $color: var(--default-text-notification)
+              );
             }
           }
         }
@@ -56,7 +63,11 @@
 
       & .title {
         align-items: center;
-        @include drumee.typo($size: 18px, $line: 16px, $color: var(--default-text-reverse));
+        @include drumee.typo(
+          $size: 24px,
+          $line: 16px,
+          $color: var(--default-text-reverse)
+        );
       }
     }
 
@@ -201,7 +212,12 @@
     &__name {
       padding-top: 2px;
       padding-left: 8px;
-      @include drumee.typo($size: 14px, $weight: 300, $line: 16px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 300,
+        $line: 16px,
+        $color: var(--default-text-color)
+      );
 
       &.contactbook {
         margin-left: -6px;
@@ -219,12 +235,8 @@
 
     &.window__body {
       padding: 0;
-      border-radius: var(--border-radius-bottom);
+      border-radius: 0 0 24px 24px;
     }
-
-
-
-
   }
 
   &__max-view {
@@ -285,7 +297,11 @@
     justify-content: center;
     min-width: 280px;
     text-align: center;
-    @include drumee.typo($size: 16px, $line: 30px, $color: var(--tertiary-text-color));
+    @include drumee.typo(
+      $size: 16px,
+      $line: 30px,
+      $color: var(--tertiary-text-color)
+    );
 
     & .nocontact-text {
       justify-content: center;
