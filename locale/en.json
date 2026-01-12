@@ -943,7 +943,7 @@
   "ALWAYS": "Always",
   "UPLOAD_TIME": "Upload time",
   "WEIGHT": "Weight",
-  "LAST_CHANGE": "Last change at {0}",
+  "LAST_CHANGE": "Last change at",
   "LAST_ACCESS": "Last access",
   "ADD_CONTACTS": "Add contacts",
   "ACK_DELETE_PUBLIC_LINK": "Public link has been deleted",
