@@ -1,4 +1,4 @@
-const { button, entry } = require("../../../../../skeleton/toolkit");
+const { button } = require("../../../../../skeleton/toolkit");
 
 const OPTIONS = {
   free: {

@@ -336,11 +336,22 @@ class __desk_dock extends LetcBox {
       case 'add-media':
         return this.handleMediaUpload();
 
+      case "open-searchbox":
+        this.__searchbox.setState(cmd.mget(_a.state))
+        return
+
+      case "search-files":
+        if (this._timer) clearTimeout(this._timer);
+        this._timer = setTimeout(() => {
+          Wm.search(cmd, args);
+          this._timer = null;
+        }, 1000);
+        return;
 
       case 'add-note':
         let e = Wm.windowsLayer.append({
           kind: 'editor_markdown',
-          uiHandler:[this]
+          uiHandler: [this]
         });
         return e;
 

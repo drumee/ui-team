@@ -29,25 +29,29 @@ const _reconnect = function (_ui_, vhost) {
     dataset: {
       mode: "reconnect",
     },
-  }
+  };
 
   const a = Skeletons.Box.Y({
     className: `${_ui_.fig.family}__reconnect main`,
     debug: __filename,
     sys_pn: "raw-content",
     kids: [
-      Preset.Button.Close(_ui_, "close-reconnect"),
+      // Preset.Button.Close(_ui_, "close-reconnect"),
+      Skeletons.Box.X({
+        className: `${_ui_.fig.family}__reconnect close`,
+        kids: [Preset.Button.Close(_ui_, "close-reconnect")],
+      }),
       Skeletons.Box.X({
         className: `${_ui_.fig.family}__reconnect header`,
         kids: [
           Skeletons.Note({
             className: `${_ui_.fig.family}__reconnect title`,
-            content: LOCALE.SESSION_EXPIRED
-          })
-        ]
+            content: LOCALE.SESSION_EXPIRED,
+          }),
+        ],
       }),
-      body
-    ]
+      body,
+    ],
   });
   return a;
 };

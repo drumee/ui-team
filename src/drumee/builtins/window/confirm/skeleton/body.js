@@ -1,5 +1,3 @@
-
-
 const __skl_window_confirm_body = function (ui) {
   let message;
   const pfx = `${ui.fig.group}-confirm`;

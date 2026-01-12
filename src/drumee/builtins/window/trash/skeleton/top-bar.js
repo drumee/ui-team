@@ -4,7 +4,6 @@
 //   TYPE : Skelton
 // ==================================================================== *
 
-
 // ===========================================================
 // __skl_trash_topbar
 //
@@ -13,33 +12,37 @@
 // @return [Object]
 //
 // ===========================================================
-const __skl_trash_topbar = function(_ui_) {
+const __skl_trash_topbar = function (_ui_) {
   const figname = "topbar";
   const a = Skeletons.Box.X({
-    className : `${_ui_.fig.family}-${figname}__container u-jc-sb`,
-    sys_pn    : "browser-top-bar",
-    debug     : __filename,
-    service   : _e.raise,
-    kids : [
-      !Visitor.isMimicActiveUser() ?
-        Skeletons.Box.X({ 
-          className : `${_ui_.fig.family}-${figname}__title purge`,
-          kids: [
-            Skeletons.Note({
-              content   : LOCALE.PURGE,
-              className : "purge",
-              service   : "empty-bin",
-              uiHandler     : _ui_
-            }) 
-          ]}) : undefined,
+    className: `${_ui_.fig.family}-${figname}__container u-jc-sb`,
+    sys_pn: "browser-top-bar",
+    debug: __filename,
+    service: _e.raise,
+    kids: [
+      !Visitor.isMimicActiveUser()
+        ? Skeletons.Box.X({
+            className: `${_ui_.fig.family}-${figname}__title purge`,
+            kids: [
+              Skeletons.Note({
+                content: LOCALE.PURGE,
+                className: "purge",
+                service: "empty-bin",
+                uiHandler: _ui_,
+              }),
+            ],
+          })
+        : undefined,
 
       Skeletons.Box.X({
         className: `${_ui_.fig.family}-${figname}__title u-ai-center`,
-        kids :[
+        kids: [
           Skeletons.Note(LOCALE.ARCHIVES), //"archive"
-        ]}),
-      require('window/skeleton/topbar/control')(_ui_)
-    ]});
+        ],
+      }),
+      require("window/skeleton/topbar/control")(_ui_, "c"),
+    ],
+  });
 
   return a;
 };

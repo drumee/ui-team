@@ -1,18 +1,18 @@
 @use "sass:meta";
-@use 'mixins/drumee';
-@include meta.load-css('header');
+@use "mixins/drumee";
+@include meta.load-css("header");
 
 .window-trash {
-
   .window-confirm {
     &__main {
       align-items: center;
       background-color: var(--default-bg);
-      border-radius: var(--border-radius);
+      border-radius: 24px;
       height: 250px;
-      justify-content: space-around;
+      justify-content: center;
       margin: auto;
       width: 500px;
+      padding: 40px;
     }
 
     &__message {
@@ -21,7 +21,8 @@
     }
 
     &__buttons {
-      width: 100%; //83%;
+      width: 100%;
+      justify-content: center;
     }
   }
 

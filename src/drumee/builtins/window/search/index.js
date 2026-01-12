@@ -1,8 +1,4 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /src/drumee/builtins/window/search/index.js
-//   TYPE : Component
-// ==================================================================== *
+
 
 const __window_interact = require('../interact');
 
@@ -55,7 +51,7 @@ class __window_search extends __window_interact {
   */
   onDomRefresh() {
     const f = () => {
-      return this.feed(require("./skeleton/main")(this));
+      return this.feed(require("./skeleton")(this));
     };
 
     this.waitElement(this.el, f);

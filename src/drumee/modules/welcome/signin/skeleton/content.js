@@ -1,5 +1,5 @@
 function __skl_welcome_signin_content(_ui_) {
-  const contentFig = _ui_.fig.family
+  const contentFig = _ui_.fig.family;
   let dataset = _ui_.mget(_a.dataset) || {};
   const email = Skeletons.Box.X({
     className: `${contentFig}__wrapper email`,
@@ -10,14 +10,14 @@ function __skl_welcome_signin_content(_ui_) {
         className: `${contentFig}__row email`,
         kids: [
           Skeletons.Button.Svg({
-            ico: 'profile-signup',
-            className: `${contentFig}__icon email input-wrapper profile-signup`
+            ico: "profile-signup",
+            className: `${contentFig}__icon email input-wrapper profile-signup`,
           }),
 
           Skeletons.EntryBox({
             value: _ui_.currentUsername,
             className: `${contentFig}__entry email with-icon`,
-            sys_pn: 'ref-ident',
+            sys_pn: "ref-ident",
             placeholder: LOCALE.EMAIL,
             mode: _a.commit,
             preselect: 1,
@@ -26,43 +26,46 @@ function __skl_welcome_signin_content(_ui_) {
             uiHandler: [_ui_],
             errorHandler: [_ui_],
             showError: false,
-          })
-        ]
-      })
-    ]
-  })
+          }),
+        ],
+      }),
+    ],
+  });
 
-  const cn = `${contentFig}__wrapper password ${_ui_.fig.group}__row ${_ui_.fig.family}__row`
+  const cn = `${contentFig}__wrapper password ${_ui_.fig.group}__row ${_ui_.fig.family}__row`;
   const password = Skeletons.Box.X({
     className: `${contentFig}__wrapper password`,
-    kids: [require('../../skeleton/password').default(_ui_)]
-  })
+    kids: [require("../../skeleton/password").default(_ui_)],
+  });
 
-  const submit = require('../../skeleton/common/button').default(_ui_, _e.submit, LOCALE.LOGIN)
-  const msgBox = require('../../skeleton/common/message-box').default(_ui_)
+  const submit = require("../../skeleton/common/button").default(
+    _ui_,
+    _e.submit,
+    LOCALE.LOGIN
+  );
+  const msgBox = require("../../skeleton/common/message-box").default(_ui_);
   let href = `${_K.module.welcome}/signin/org`;
   let content = LOCALE.LOGIN_OTHER_POD;
-  if (Organization.get('domain_id') > 1) {
+  if (Organization.get("domain_id") > 1) {
     let { endpoint } = bootstrap();
     href = `${endpoint}${_K.module.welcome}/signin`;
     content = LOCALE.LOGIN_PERSONAL_ACCOUNT;
   }
 
-  let helper = '';
-  let create_account = '';
+  let helper = "";
+  let create_account = "";
 
-
-  if (Platform.get('isPublic')) {
+  if (Platform.get("isPublic")) {
     create_account = Skeletons.Note({
-      className: `${contentFig}__note no-account helper text-underline`,
+      className: `${contentFig}__note no-account helper `,
       content: LOCALE.Q_NO_ACCOUNT,
       dataset,
-      href: "#/welcome/signup"
+      href: "#/welcome/signup",
       // service: 'open-signup'
-    })
+    });
   }
 
-  if (Platform.get('arch') == "cloud") {
+  if (Platform.get("arch") == "cloud") {
     helper = Skeletons.Box.Y({
       className: `${contentFig}__wrapper helper`,
       kids: [
@@ -71,13 +74,13 @@ function __skl_welcome_signin_content(_ui_) {
           dataset,
           kids: [
             Skeletons.Note({
-              className: `${contentFig}__note forgot-password helper text-underline`,
+              className: `${contentFig}__note forgot-password helper `,
               content: LOCALE.Q_FORGOT_PASSWORD,
               dataset,
-              href: '#/welcome/reset'
+              href: "#/welcome/reset",
             }),
-            create_account
-          ]
+            create_account,
+          ],
         }),
 
         Skeletons.Box.X({
@@ -85,32 +88,25 @@ function __skl_welcome_signin_content(_ui_) {
           dataset,
           kids: [
             Skeletons.Note({
-              className: `${contentFig}__note helper text-underline`,
+              className: `${contentFig}__note helper `,
               dataset,
               content,
               href,
-            })
-          ]
-        })
-      ]
-    })
+            }),
+          ],
+        }),
+      ],
+    });
   }
 
   const a = Skeletons.Box.Y({
     debug: __filename,
     className: `${contentFig}__items content`,
     dataset,
-    kids: [
-      email,
-      password,
-      submit,
-      msgBox,
-      helper
-    ]
-  })
+    kids: [email, password, submit, msgBox, helper],
+  });
 
   return a;
-
 }
 
 module.exports = __skl_welcome_signin_content;

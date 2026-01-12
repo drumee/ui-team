@@ -1,18 +1,16 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 
 const __skl_folder_topbar = function (ui) {
-  let name = ui.mget(_a.filename) || ui.mget(_a.name);
   const logo = require("../../skeleton/logo")(ui);
   const subtitle = require("../../skeleton/subtitle")(ui);
 
 
-  name = Skeletons.Note({
+  let name = Skeletons.Note({
     className: "name",
     sys_pn: "ref-window-name",
-    content: name,
+    content: LOCALE.SEARCH_RESULTS,
   });
 
-  let downloadIcon = "";
   const nameWrapper = Skeletons.Box.Y({
     className: `${ui.fig.family}__name-wrapper`,
     kids: [name, subtitle],
@@ -34,22 +32,6 @@ const __skl_folder_topbar = function (ui) {
     ],
   });
 
-  let buttons;
-  if (ui.canUpload()) {
-    buttons = Skeletons.Box.X({
-      className: `${ui.fig.family}__buttons-wrapper`,
-      kids: [
-        button(ui, {
-          label: LOCALE.UPLOAD,
-          className: `${ui.fig.family}__upload-button`,
-          service: _e.upload,
-          priority: "primary",
-        }),
-        settings,
-      ],
-    });
-  }
-
   const figname = "topbar";
   const a = Skeletons.Box.X({
     className: `${ui.fig.group}-${figname}__container u-jc-sb`,
@@ -60,7 +42,6 @@ const __skl_folder_topbar = function (ui) {
       group: ui.fig.group,
     },
     kids: [
-      downloadIcon,
       Skeletons.Box.X({
         className: `${ui.fig.group}-${figname}__container ${ui.mget(
           _a.area
@@ -70,9 +51,7 @@ const __skl_folder_topbar = function (ui) {
             className: `${ui.fig.group}-${figname}__title`,
             sys_pn: "ref-window-title",
             kids: [
-              // info,
               titleWrapper,
-              buttons,
             ],
           }),
         ],
