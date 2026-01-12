@@ -6,7 +6,6 @@
   &__ui {
     width: 552px;
     background-color: var(--white);
-    border: 1px solid var(--default-border-notification);
     border-radius: var(--corner-radius-6);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
@@ -80,7 +79,8 @@
 
   &__vignette {
     width: 100%;
-    height: 106px;
+    height: 86px;
+    margin-bottom: 16px;
     justify-content: center;
     align-content: center;
     flex-wrap: wrap;
