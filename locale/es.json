@@ -105,7 +105,7 @@
   "EMAIL": "Dirección de correo electrónico",
   "PASSKEY": "Llave maestra",
   "UPLOAD_FAILED": "Los siguientes archivos no se pudieron enviar debido a errores encontrados.",
-  "LAST_CHANGE": "Último cambio a las {0}",
+  "LAST_CHANGE": "Último cambio",
   "FILESIZE": "Tamaño del archivo",
   "FILENAME": "Nombre del archivo",
   "CREATED": "Creado",
