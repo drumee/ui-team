@@ -74,13 +74,14 @@
     flex-direction: column;
     background-color: var(--white);
     overflow: hidden;
-    border-radius: var(--corner-radius-6);
+    border-top-left-radius: var(--corner-radius-6);
+    border-top-right-radius: var(--corner-radius-6);
   }
 
   &__vignette {
     width: 100%;
-    height: 86px;
-    margin-bottom: 16px;
+    height: 106px;
+    padding-bottom: 16px;
     justify-content: center;
     align-content: center;
     flex-wrap: wrap;
@@ -296,10 +297,10 @@
   &__footer {
     display: flex !important;
     flex-direction: row !important;
-    gap: 0;
+    gap: 8px;
     justify-content: space-around;
     align-items: center;
-    padding-top: 16px;
+    padding: 16px;
     border-top: 1px solid var(--neutral-200, #EBECF0);
     flex-shrink: 0;
   }
