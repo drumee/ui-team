@@ -218,9 +218,6 @@ module.exports = {
   butler:function(s,f){import('router/butler').then(m=>{s(m.default)}).catch(f)},
   ws_channel:function(s,f){import('router/websocket').then(m=>{s(m.default)}).catch(f)},
   module_desk:function(s,f){import('modules/desk').then(m=>{s(m.default)}).catch(f)},
-  module_devel:function(s,f){import('modules/devel').then(m=>{s(m.default)}).catch(f)},
   module_dmz:function(s,f){import('modules/dmz').then(m=>{s(m.default)}).catch(f)},
-  module_plugins:function(s,f){import('modules/plugins').then(m=>{s(m.default)}).catch(f)},
-  module_sandbox:function(s,f){import('modules/sandbox').then(m=>{s(m.default)}).catch(f)},
   module_welcome:function(s,f){import('modules/welcome').then(m=>{s(m.default)}).catch(f)},
 }
