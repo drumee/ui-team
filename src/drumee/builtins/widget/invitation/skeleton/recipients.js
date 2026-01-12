@@ -21,7 +21,6 @@ const __recipients_roll = function (ui) {
     preselect: ui.mget(_a.preselect),
     uiHandler: ui,
     addGuest: ui.mget('addGuest')
-
   };
   const contact = Skeletons.Box.G({
     className: `${ui.fig.group}__contact-container`,

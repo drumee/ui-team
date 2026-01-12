@@ -565,21 +565,11 @@ class desk_module extends LetcBox {
         this.popup.children.last().softDestroy();
         return Backbone.history.navigate(_K.module.desk);
 
-      // case "general-menu":
-      //   return (this.getPart("top-bar").el.dataset.state = cmd.model.get(
-      //     _a.state
-      //   ));
 
       case "skip-browser-check":
         localStorage.setItem("skip-browser-check", 1);
         Wm.closeAlert();
         return;
-
-      // case "menu-settings":
-      //   if (cmd.mget(_a.state)) {
-      //     return this._updateContextMenu();
-      //   }
-      //   break;
 
       case _e.copy:
       case _e.cut:

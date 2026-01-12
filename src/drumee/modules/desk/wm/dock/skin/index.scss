@@ -12,6 +12,41 @@
 // .theme-red .grad-end { stop-color: #DD2476; }
 
 .desk-dock {
+  &__ui {
+    bottom: 60px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    position: fixed;
+    width: 100%;
+    z-index: 10000;
+    left: 0;
+    right: 0;
+  }
+
+  &__container {
+
+    &.searchbox {
+      overflow: hidden;
+      width: 120px;
+      transition: width 1s;
+
+      &[data-state="0"] {
+        width: 0;
+      }
+    }
+  }
+
+  &__searchbox-input {
+    width: 100%;
+    overflow: hidden;
+    padding: 10px;
+    height: 44px;
+
+    input {
+      border-radius: var(--corner-radius-max);
+    }
+  }
 
   // Vertical divider - reusable class
   &--divider {
@@ -55,17 +90,6 @@
     }
   }
 
-  &__ui {
-    bottom: 60px;
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    position: fixed;
-    width: 100%;
-    z-index: 10000;
-    left: 0;
-    right: 0;
-  }
 
   &__main {
     background-color: var(--dock-main-background);
@@ -200,7 +224,7 @@
       padding: var(--spacer-5);
       gap: var(--spacer-1);
       background-color: var(--white);
-      z-index:-1 !important;
+      z-index: -1 !important;
       bottom: 0;
     }
 
@@ -458,6 +482,7 @@
 
     &-icon {
       pointer-events: none;
+
       .media-grid__container {
         .badge {
           width: 28px;
@@ -469,7 +494,7 @@
     }
 
     &-text {
-    
+
       white-space: nowrap;
       align-content: center;
       flex-wrap: wrap;

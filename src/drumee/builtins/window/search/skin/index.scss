@@ -2,19 +2,37 @@
 @use 'mixins/drumee';
 
 .window-search {
+  &__header {
+    border-bottom: none;
+    background: linear-gradient(135deg, #dcb2ff, #b251fb);
+
+    &-title {
+      align-items: center;
+      @include drumee.typo($size: 18px,
+        $line: 24px,
+        $weight: 400,
+        $color: var(--core-default-text-reverse));
+    }
+
+    &-control {
+      .icon {
+        color: var(--core-default-icon-reverse);
+      }
+    }
+  }
+
   &-topbar {
     &__container {
       flex: 1;
       border-bottom: 1px solid var(--default-border-notification);
       border-radius: var(--default-border-radius-top); //6px 6px 0 0;
-      height: 44px;
     }
 
     &__title {
       margin: auto;
       @include drumee.typo($size: 14px, $line: 21px, $weight: 300, $color: var(--default-text-color));
     }
-    
+
     &__control {
       position: absolute;
       height: 100%;
@@ -25,4 +43,50 @@
       }
     }
   }
+
+  &__icon {
+    cursor: pointer;
+    color: var(--core-default-icon-reverse);
+
+    &.logo {
+      display: flex;
+      width: 55px;
+      height: 48px;
+      aspect-ratio: 55/48;
+      margin-top: 10px;
+    }
+
+    &-info {
+      cursor: pointer;
+      height: 25px;
+      margin: 0px 15px auto 5px;
+      min-width: 21px;
+      padding: 4px;
+      width: 21px;
+    }
+
+
+    &:hover {
+      color: var(--core-default-icon-hover);
+    }
+  }
+
+  &__name-wrapper {
+    gap: 10px;
+  }
+
+  &__subtitle-wrapper {
+    gap: 10px;
+    color: var(--neutral-300);
+
+    &.files {
+      padding-right: 10px;
+      border-right: 1px solid var(--neutral-300);
+    }
+  }
+
+  &__buttons-wrapper {
+    gap: 10px;
+  }
+
 }
