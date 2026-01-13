@@ -22,7 +22,9 @@ export default function (ui, formData, mode = _a.view) {
 
   // Password input wrapper (shown when checkbox is checked)
   // EntryBox with Hide/Show text button on the right
-  const passwordVisibility = formData.passwordVisible || 0;
+  const passwordVisibility = data.passwordVisible || 0;
+  // Get password from formData, data, or ui.data()
+  const passwordValue = data.password || formData?.password || '';
   const passwordInputWrapper = Skeletons.Box.X({
     className: `${passwordFig}__input-wrapper`,
     state: hasPassword ? 1 : 0,
@@ -36,7 +38,7 @@ export default function (ui, formData, mode = _a.view) {
         type: passwordVisibility ? _a.text : _a.password,
         sys_pn: 'password-input',
         autocomplete: _a.off,
-        value: formData.password || '',
+        value: passwordValue,
         name: _a.password,
         formItem: 1
       }),

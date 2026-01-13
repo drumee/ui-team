@@ -136,9 +136,11 @@ class settings_share_hub extends DrumeeMFS {
     if (hasPassword === undefined && modelData.hasPaswword !== undefined) {
       hasPassword = modelData.hasPaswword;
     }
-    let { passwordVisible, days, hours, permission } = modelData;
+    let { passwordVisible, days, hours, permission, password: apiPassword } = modelData;
     if (permission < _K.privilege.read) permission = _K.privilege.read
-    let { password } = this.getData()
+    // Get password from form input first, fallback to API response if available
+    let formPassword = this.getData().password;
+    let password = formPassword || apiPassword || '';
     return {
       days,
       hours,

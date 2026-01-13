@@ -512,6 +512,8 @@
 
   &__input-wrapper {
     width: 100%;
+    position: relative;
+    box-sizing: border-box;
 
     &[data-state="0"] {
       display: none;
@@ -524,6 +526,21 @@
     border: 1px solid var(--Neutral-300, #D1D5DB);
     border-radius: 8px;
     font-size: 14px;
+    box-sizing: border-box;
+    position: relative;
+
+    // Ensure input element inside has 100% width
+    input,
+    .entry-area,
+    .note-input {
+      width: 100% !important;
+      box-sizing: border-box;
+    }
+
+    // Ensure the entry container takes full width
+    .root-node {
+      width: 100%;
+    }
   }
 
   &__toggle-visibility {
