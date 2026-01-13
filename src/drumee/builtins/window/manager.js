@@ -901,6 +901,7 @@ class __window_manager extends mfsInteract {
    * @returns
    */
   openContent(media) {
+    if (!media.wait) return;
     if (media.mget(_a.status) === _a.deleted) {
       media.wait(0);
       return;

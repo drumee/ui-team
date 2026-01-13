@@ -420,7 +420,7 @@ class __window_core extends __utils {
     child.on(_e.show, () => {
       this.fetchContent();
       this._path = this.buildHistory();
-      if (this.media) this.media.wait(0);
+      if (this.media && this.media.wait) this.media.wait(0);
     });
   }
 

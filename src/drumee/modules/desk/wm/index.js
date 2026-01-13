@@ -2,7 +2,8 @@
 require("./skin");
 const { copyToClipboard } = require("core/utils")
 const { TweenLite, TimelineMax } = require("gsap/all")
-
+let lastClickTime = new Date().getTime();
+let lastMediaId = null;
 const push = require("./push");
 
 class __window_manager extends push {
@@ -721,6 +722,10 @@ class __window_manager extends push {
         return;
 
       case "open-node":
+        let now = new Date().getTime()
+        if ((now - lastClickTime) < 1000) return /** Prevent too fast click */
+
+        lastClickTime = now
         this.openContent(cmd);
         return this.unselect();
 
