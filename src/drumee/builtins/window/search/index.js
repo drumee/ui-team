@@ -59,6 +59,46 @@ class __window_search extends __window_interact {
   }
 
   /**
+   * Override onPartReady to update count when list is ready
+   */
+  onPartReady(child, pn, section) {
+    super.onPartReady(child, pn, section);
+    if (pn === _a.list && child && child.collection) {
+      // Update count when list collection changes
+      const updateCount = () => {
+        const count = child.collection.length;
+        const itemsCountPart = this.getPart("items-count");
+        const lastUpdatePart = this.getPart("last-update");
+        
+        if (count === 0) {
+          // Show "Files not found" when count is 0
+          if (itemsCountPart) {
+            itemsCountPart.set({ content: '' });
+          }
+          if (lastUpdatePart) {
+            lastUpdatePart.set({ content: LOCALE.FILES_NOT_FOUND });
+          }
+        } else {
+          // Show file count when count > 0
+          if (itemsCountPart) {
+            itemsCountPart.set({ content: LOCALE.X_FILES.format(count) });
+          }
+          if (lastUpdatePart) {
+            lastUpdatePart.set({ content: '' });
+          }
+        }
+      };
+      // Update count initially
+      updateCount();
+      // Listen to collection updates
+      child.collection.on('add remove reset update', updateCount);
+      // Also listen to list data events to update count when response arrives
+      child.on('data', updateCount);
+      child.on('eod', updateCount);
+    }
+  }
+
+  /**
    * @param {*} cmd
    * @param {*} args
   */

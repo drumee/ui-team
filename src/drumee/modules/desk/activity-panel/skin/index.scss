@@ -8,7 +8,7 @@
 
     position: absolute;
     right: 25px;
-    top: -13px;
+    top: -10px;
     width: 500px;
     height: auto;
     max-height:75px;
@@ -31,9 +31,8 @@
 
   &__main {
     background: var(--default-bg);
-    border-radius: 5px;
+    border-radius: var(--corner-radius-6);
     height: calc(100% - 32px);
-    padding: 15px 0px 3px 0px;
     width: 100%;
   }
 

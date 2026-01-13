@@ -445,6 +445,11 @@ class __window_core extends __utils {
       // this.getPart("last-update").set({ content: "Metadata not available" })
       return
     }
+    // Skip updateSummary for search window - it doesn't have a valid nid
+    // Search window handles count update in its own onPartReady
+    if (this.isSearch) {
+      return;
+    }
     this.fetchService(SERVICE.media.summary, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((data) => {
       let mtime = Dayjs.unix(data.mtime).format(Visitor.timeformat());
       this.getPart("items-count").set({ content: LOCALE.X_FILES.format(data.file_count) })
