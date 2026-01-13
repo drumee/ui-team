@@ -577,23 +577,29 @@ class __window_manager extends push {
    * @param {*} cmd
    */
   confirmRemoveHub(media, args) {
-    this.ensurePart('wrapper-modal').then(async (p) => {
-      await Kind.waitFor('window_confirm')
-      p.feed({
-        kind: 'window_confirm',
-        maxsize: 2,
-        title: LOCALE.DELETE,
-        message: LOCALE.MSG_DELETE_HUB.format(media.mget(_a.filename)),
-        confirm: LOCALE.DELETE,
-      }).ask().then(() => {
-        this.animateMediaToTrash(media).then(() => {
-          this.postService({
-            service: SERVICE.hub.delete_hub,
-            hub_id: media.mget(_a.hub_id)
-          });
-        })
-        p.clear()
-      }).catch(() => { });
+    return new Promise((resolve, reject) => {
+      this.ensurePart('wrapper-modal').then(async (p) => {
+        await Kind.waitFor('window_confirm')
+        p.feed({
+          kind: 'window_confirm',
+          maxsize: 2,
+          title: LOCALE.DELETE,
+          message: LOCALE.MSG_DELETE_HUB.format(media.mget(_a.filename)),
+          confirm: LOCALE.DELETE,
+        }).ask().then(() => {
+          this.animateMediaToTrash(media).then(() => {
+            this.postService({
+              service: SERVICE.hub.delete_hub,
+              hub_id: media.mget(_a.hub_id)
+            }).then((data) => {
+              resolve(data)
+            });
+          })
+          p.clear()
+        }).catch((e) => {
+          reject(e)
+        });
+      })
     })
   }
 
@@ -684,9 +690,9 @@ class __window_manager extends push {
    * @param {*} args
    * @returns
    */
-  onUiEvent(cmd, args = {}) {
+  async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.status || cmd.mget(_a.service);
-    this.debug("AAA:633", service)
+    this.debug("AAA:695", service)
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
@@ -699,6 +705,18 @@ class __window_manager extends push {
           this.confirmRemoveHub(cmd, args);
         } else {
           this.confirmLeaveHub(cmd, args);
+        }
+        return;
+
+      case "confirm-remove-selection":
+        for (let hub of args.selection) {
+          this.debug("AAA:714", hub, hub.isHub)
+          if (!hub.isHub) continue;
+          if (hub.isGranted(_K.permission.owner)) {
+            await this.confirmRemoveHub(hub, args);
+          } else {
+            await this.confirmLeaveHub(hub, args);
+          }
         }
         return;
 

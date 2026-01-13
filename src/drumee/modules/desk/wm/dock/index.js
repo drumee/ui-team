@@ -251,7 +251,8 @@ class __desk_dock extends LetcBox {
     let list = [];
     let forbiden = 0;
     let hub = 0;
-    for (var n of Wm.getGlobalSelection()) {
+    let selection = Wm.getGlobalSelection();
+    for (var n of selection) {
       if (n.mget(_a.privilege) & _K.permission.delete) {
         if (n.mget(_a.filetype) == _a.hub) {
           hub++;
@@ -268,10 +269,9 @@ class __desk_dock extends LetcBox {
     }
 
     if (hub) {
-      Wm.openManager(this, {
-        service: "open-manager",
-        message: LOCALE.USE_MANAGER_TO_DELETE
-      })
+      this.triggerHandlers({
+        service: "confirm-remove-selection", selection
+      });
     }
 
     if (_.isEmpty(list) && (!forbiden && !hub)) {
