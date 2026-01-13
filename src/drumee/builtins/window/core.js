@@ -446,16 +446,8 @@ class __window_core extends __utils {
       return
     }
     // Skip updateSummary for search window - it doesn't have a valid nid
+    // Search window handles count update in its own onPartReady
     if (this.isSearch) {
-      // For search window, count files from the list instead
-      const list = this.findPart(_a.list);
-      if (list && list.collection) {
-        const count = list.collection.length;
-        const itemsCountPart = this.getPart("items-count");
-        if (itemsCountPart) {
-          itemsCountPart.set({ content: LOCALE.X_FILES.format(count) });
-        }
-      }
       return;
     }
     this.fetchService(SERVICE.media.summary, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((data) => {
