@@ -337,7 +337,8 @@ class __desk_dock extends LetcBox {
         return this.handleMediaUpload();
 
       case "open-searchbox":
-        this.__searchbox.setState(cmd.mget(_a.state))
+        let state = this.__searchbox.get(_a.state) ^ 1;
+        this.__searchbox.setState(state)
         return
 
       case "search-files":
@@ -345,6 +346,16 @@ class __desk_dock extends LetcBox {
         this._timer = setTimeout(() => {
           Wm.search(cmd, args);
           this._timer = null;
+          let t = setInterval(() => {
+            let w = Wm.getItemByKind('window_search');
+            if (w) {
+              w.once(_e.destroy, () => {
+                this.__searchbox.setState(0)
+                this.__searchboxInput.setValue('')
+              })
+              clearInterval(t)
+            }
+          }, 500)
         }, 1000);
         return;
 

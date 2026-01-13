@@ -57,6 +57,7 @@ const __desk_dock = function (ui) {
         type: _a.text,
         sys_pn: 'searchbox-input',
         autocomplete: _a.off,
+        preselect: 1,
         interactive: 1
       }),
     ]
