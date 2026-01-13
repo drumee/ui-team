@@ -106,7 +106,7 @@ class __router_butler extends LetcBox {
    *
    */
   reconnect() {
-    if (this.isRecconnecting || this.isDisconnecting) return; 
+    if (this.isRecconnecting || this.isDisconnecting) return;
     let { access } = getModule() || {};
     if (access != _a.private) return;
     this.isRecconnecting = true;
@@ -405,7 +405,13 @@ class __router_butler extends LetcBox {
       return setTimeout(() => {
         Visitor.clear();
         Host.clear();
-        Drumee.start();
+        const {main_domain} = bootstrap()
+        if (main_domain == location.hostname) {
+          Drumee.start();
+        }else{
+          location.hostname = main_domain
+        }
+        this.debug("AAA:409", this)
       }, Visitor.timeout(1000));
     };
 
