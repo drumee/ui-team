@@ -24,6 +24,7 @@ class settings_hub extends DrumeeMFS {
       default:
         this.manager = "settings_share_hub"
     }
+    this.mset({ flow: _a.y })
     this.contextmenuItems = []
   }
 

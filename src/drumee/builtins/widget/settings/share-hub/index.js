@@ -156,7 +156,6 @@ class settings_share_hub extends DrumeeMFS {
       service: SERVICE.hub.get_external_room_attr,
       hub_id: hubId
     }).then((data = {}) => {
-      this.debug('AAA:164', data)
       this.mset(data)
       this.feed(require('./skeleton').default(this, this.data(), _a.edit));
     }).catch((err) => {

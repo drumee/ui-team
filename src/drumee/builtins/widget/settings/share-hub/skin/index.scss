@@ -1,21 +1,6 @@
 @use "sass:meta";
 @use "mixins/drumee";
 
-.settings {
-  &__ui {
-    width: 100%;
-    max-width: 520px;
-    box-sizing: border-box;
-    padding: 0;
-    gap: var(--spacer-2);
-    display: flex;
-    flex-direction: column;
-    background-color: var(--white);
-    border-radius: var(--corner-radius-6);
-    max-height: calc(100vh - 200px);
-    overflow: auto;
-  }
-}
 
 .settings-share-hub {
   &__wrapper {
@@ -29,15 +14,13 @@
     overflow: visible;
     position: relative;
     z-index: 10;
-    display: flex !important;
-    flex-direction: column !important;
     gap: 0;
     min-height: auto;
+    overflow: auto;
+    max-height: calc(100vh - 140px);
   }
 
   &__content {
-    display: flex !important;
-    flex-direction: column !important;
     width: 100%;
     box-sizing: border-box;
     overflow: visible;
@@ -50,7 +33,7 @@
   &__divider {
     width: calc(100% + 48px); // Full width including parent padding (24px * 2)
     height: 1px;
-    background: var(--Neutral-200, #EBECF0);
+    background: var(--neutral-200, #EBECF0);
     margin: 16px -24px; // Negative margin to offset parent padding
     padding: 0;
     flex-shrink: 0;
@@ -58,8 +41,6 @@
   }
 
   &__footer {
-    display: flex !important;
-    flex-direction: row !important;
     gap: 0;
     justify-content: flex-end;
     align-self: stretch;
@@ -86,12 +67,12 @@
   }
 
   &__cancel-btn {
-    background: var(--Neutral-100, #F5F5F7);
-    color: var(--Neutral-900, #222732);
+    background: var(--neutral-100, #F5F5F7);
+    color: var(--neutral-900, #222732);
     margin-right: 12px;
 
     &:hover {
-      background: var(--Neutral-200, #E8E8EB);
+      background: var(--neutral-200, #E8E8EB);
     }
 
     svg {
@@ -171,7 +152,7 @@
   &__title {
     font-size: 14px;
     font-weight: 400;
-    color: var(--Neutral-800, #414651);
+    color: var(--neutral-800, #414651);
     margin-bottom: 4px;
     line-height: 22px;
     letter-spacing: 0.14px;
@@ -219,7 +200,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    border: 1px solid var(--Neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #D1D5DB);
     border-radius: 8px;
     cursor: pointer;
     transition: border-color 120ms ease;
@@ -227,7 +208,7 @@
     box-sizing: border-box;
 
     &:hover {
-      border-color: var(--Neutral-400, #9CA3AF);
+      border-color: var(--neutral-400, #9CA3AF);
     }
   }
 
@@ -241,7 +222,7 @@
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: var(--Neutral-600, #8C929C);
+    color: var(--neutral-600, #8C929C);
 
     svg {
       width: 16px;
@@ -252,7 +233,7 @@
   &__label {
     flex: 1;
     font-size: 14px;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
   }
 
   &__chevron {
@@ -260,12 +241,12 @@
     height: 16px;
     flex-shrink: 0;
     rotate: 90deg;
-    color: var(--Neutral-600, #8C929C);
+    color: var(--neutral-600, #8C929C);
   }
 
   &__description {
     font-size: 14px;
-    color: var(--Neutral-600, #8C929C);
+    color: var(--neutral-600, #8C929C);
     line-height: 1.5;
   }
 
@@ -281,7 +262,7 @@
     svg {
       width: 20px;
       height: 20px;
-      border: 1px solid var(--Neutral-300, #D1D5DB);
+      border: 1px solid var(--neutral-300, #D1D5DB);
       border-radius: 4px;
       background-color: var(--ewhite);
       transition: all 120ms ease;
@@ -300,7 +281,7 @@
     &[data-state="0"] {
       svg {
         background-color: var(--ewhite);
-        border: 1px solid var(--Neutral-300, #D1D5DB);
+        border: 1px solid var(--neutral-300, #D1D5DB);
         color: transparent;
       }
     }
@@ -308,7 +289,7 @@
 
   &__password-label {
     font-size: 14px;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
     cursor: pointer;
   }
 
@@ -325,7 +306,7 @@
   &__input {
     width: 100%;
     padding: 12px 60px 12px 16px; // padding-right: 60px để tránh bị label đè
-    border: 1px solid var(--Neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #D1D5DB);
     border-radius: 8px;
     font-size: 14px;
 
@@ -368,7 +349,7 @@
     padding: 4px;
     margin-top: 4px;
     z-index: 200;
-    border: 1px solid var(--Neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #D1D5DB);
     border-radius: 8px;
     overflow: visible;
   }
@@ -467,9 +448,10 @@
   }
 
   &__wrapper {
-    display: flex;
     align-items: center;
     gap: 12px;
+    overflow: auto;
+    max-height: calc(100vh - 140px);
   }
 
   &__checkbox {
@@ -478,7 +460,7 @@
     svg {
       width: 20px;
       height: 20px;
-      border: 1px solid var(--Neutral-300, #D1D5DB);
+      border: 1px solid var(--neutral-300, #D1D5DB);
       border-radius: 6px;
       background-color: var(--ewhite);
       transition: all 120ms ease;
@@ -498,7 +480,7 @@
     &[data-state="0"] {
       svg {
         background-color: var(--ewhite);
-        border: 1px solid var(--Neutral-300, #D1D5DB);
+        border: 1px solid var(--neutral-300, #D1D5DB);
         color: transparent;
       }
     }
@@ -506,7 +488,7 @@
 
   &__label {
     font-size: 14px;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
     cursor: pointer;
   }
 
@@ -521,7 +503,7 @@
   &__input {
     width: 100%;
     padding: 12px 60px 12px 16px;
-    border: 1px solid var(--Neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #D1D5DB);
     border-radius: 8px;
     font-size: 14px;
   }
@@ -554,7 +536,7 @@
   &__title {
     font-size: 16px;
     font-weight: 600;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
     margin-bottom: 4px;
   }
 
@@ -588,11 +570,11 @@
 
   &__note {
     font-size: 14px;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
     cursor: pointer;
 
     &:hover {
-      color: var(--Neutral-900, #222732);
+      color: var(--neutral-900, #222732);
     }
   }
 
@@ -603,7 +585,7 @@
     svg {
       width: 20px;
       height: 20px;
-      border: 1px solid var(--Neutral-300, #D1D5DB);
+      border: 1px solid var(--neutral-300, #D1D5DB);
       border-radius: 5px;
       background-color: var(--ewhite);
       transition: all 120ms ease;
@@ -624,7 +606,7 @@
       svg {
         background-color: var(--ewhite);
         border-radius: 5px;
-        border: 1px solid var(--Neutral-300, #D1D5DB);
+        border: 1px solid var(--neutral-300, #D1D5DB);
         color: transparent;
       }
     }
@@ -632,7 +614,7 @@
 
   &__note {
     font-size: 14px;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
   }
 }
 
@@ -647,7 +629,7 @@
   &__title {
     font-size: 14px;
     font-weight: 600;
-    color: var(--Neutral-900, #414651);
+    color: var(--neutral-900, #414651);
     margin-bottom: 4px;
   }
 
@@ -669,7 +651,7 @@
     transition: all 120ms ease;
 
     &:hover {
-      background: var(--Neutral-50, #FAFAFA);
+      background: var(--neutral-50, #FAFAFA);
     }
 
     &.active {
@@ -690,7 +672,7 @@
     height: 20px;
     flex-shrink: 0;
     margin-top: 2px;
-    border: 2px solid var(--Neutral-400, #C3C6CC);
+    border: 2px solid var(--neutral-400, #C3C6CC);
     border-radius: 100%;
     cursor: pointer;
     background: var(--ewhite);
@@ -711,12 +693,12 @@
   &__option-label {
     font-size: 14px;
     font-weight: 500;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
   }
 
   &__option-description {
     font-size: 13px;
-    color: var(--Neutral-600, #8C929C);
+    color: var(--neutral-600, #8C929C);
     line-height: 1.4;
   }
 
@@ -736,10 +718,10 @@
   &__entry {
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid var(--Neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #D1D5DB);
     border-radius: 12px;
     background: var(--Gray-White, #FFF);
-    color: var(--Neutral-400, #C3C6CC);
+    color: var(--neutral-400, #C3C6CC);
     font-size: 16px;
     font-style: normal;
     font-weight: 400;
@@ -749,7 +731,7 @@
     min-width: 0; // Allow flex items to shrink below their content size
 
     &::placeholder {
-      color: var(--Neutral-400, #C3C6CC);
+      color: var(--neutral-400, #C3C6CC);
       font-size: 16px;
       font-weight: 400;
       line-height: 26px;
@@ -759,7 +741,7 @@
     // Input text color when user types
     input,
     .entry-area {
-      color: var(--Neutral-400, #C3C6CC);
+      color: var(--neutral-400, #C3C6CC);
       font-size: 16px;
       font-weight: 400;
       line-height: 26px;
@@ -787,6 +769,6 @@
 
   &__note {
     font-size: 14px;
-    color: var(--Neutral-900, #222732);
+    color: var(--neutral-900, #222732);
   }
 }

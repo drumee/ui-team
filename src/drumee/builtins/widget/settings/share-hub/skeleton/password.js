@@ -1,10 +1,10 @@
 /**
  * Password section with checkbox and input field
  */
-export default function (ui, formData, mode = _a.view) {
+export default function (ui) {
   const passwordFig = `${ui.fig.family}-password`;
-  const hasPassword = formData.hasPassword || 0;
-  ui.debug("AAA:777", formData)
+  let { hasPassword, passwordVisible = 0, password } = ui.data()
+  ui.debug("AAA:777", ui, ui.data())
   // if (mode == _a.view) {
   //   return Skeletons.Box.X({
   //     className: `${passwordFig}__section`,
@@ -29,11 +29,11 @@ export default function (ui, formData, mode = _a.view) {
 
   // Password input wrapper (shown when checkbox is checked)
   // EntryBox with Hide/Show text button on the right
-  const passwordVisibility = formData.passwordVisible || 0;
+  const passwordVisibility = passwordVisible || 0;
   const passwordInputWrapper = Skeletons.Box.X({
     className: `${passwordFig}__input-wrapper`,
     state: 0,
-    sys_pn:"passwordInputWrapper",
+    sys_pn: "passwordInputWrapper",
     kids: [
       Skeletons.Entry({
         className: `${passwordFig}__input`,
@@ -43,7 +43,7 @@ export default function (ui, formData, mode = _a.view) {
         type: passwordVisibility ? _a.text : _a.password,
         sys_pn: 'password-input',
         autocomplete: _a.off,
-        value: formData.password || '',
+        value: password || '',
         name: _a.password,
         formItem: 1
       }),
