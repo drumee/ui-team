@@ -59,6 +59,27 @@ class __window_search extends __window_interact {
   }
 
   /**
+   * Override onPartReady to update count when list is ready
+   */
+  onPartReady(child, pn, section) {
+    super.onPartReady(child, pn, section);
+    if (pn === _a.list && child && child.collection) {
+      // Update count when list collection changes
+      const updateCount = () => {
+        const count = child.collection.length;
+        const itemsCountPart = this.getPart("items-count");
+        if (itemsCountPart) {
+          itemsCountPart.set({ content: LOCALE.X_FILES.format(count) });
+        }
+      };
+      // Update count initially
+      updateCount();
+      // Listen to collection updates
+      child.collection.on('add remove reset update', updateCount);
+    }
+  }
+
+  /**
    * @param {*} cmd
    * @param {*} args
   */
