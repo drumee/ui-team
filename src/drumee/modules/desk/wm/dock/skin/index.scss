@@ -42,10 +42,10 @@
     overflow: hidden;
     padding: 10px;
     height: 44px;
-    padding-left: 10px;
-    padding-right: 10px;
 
     input {
+      padding-left: 10px;
+      padding-right: 10px;
       border-radius: var(--corner-radius-max);
     }
   }
