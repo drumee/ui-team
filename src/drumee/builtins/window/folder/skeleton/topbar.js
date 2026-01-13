@@ -22,7 +22,7 @@ const __skl_folder_topbar = function (ui) {
     kids: [logo, nameWrapper],
   });
 
-  const settings = Skeletons.Box.X({
+  let settings = Skeletons.Box.X({
     className: `${ui.fig.family}__settings`,
     kids: [
       Skeletons.Button.Svg({
@@ -33,7 +33,9 @@ const __skl_folder_topbar = function (ui) {
       }),
     ],
   });
-
+  if ((ui.mget(_a.area) == _a.personal) || (ui.mget(_a.nid) !== !ui.mget(_a.home_id))){
+    settings = ""
+  }
   let buttons;
   if (ui.canUpload()) {
     buttons = Skeletons.Box.X({

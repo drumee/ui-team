@@ -601,11 +601,13 @@ class __window_core extends __utils {
     this.breadcrumbsRoll.feed(items);
     if (items.length <= 1) {
       this.breadcrumbsRoll.el.hide();
+      if(this.__settingsBox) this.__settingsBox.el.show()
     } else {
       this.breadcrumbsRoll.el.show();
+      this.debug("AAA:697", this.__refWindowIcon)
+      if(this.__settingsBox) this.__settingsBox.el.hide()
     }
     this._path = data;
-    this.debug("AAA:599", items.length, items)
     const last = this.breadcrumbsRoll.children.last();
     if (last && this.name) {
       const fileName = last.mget(_a.filename) || "";

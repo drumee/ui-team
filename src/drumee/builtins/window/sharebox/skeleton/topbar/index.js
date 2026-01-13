@@ -47,6 +47,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   });
 
   const settingsButton = Skeletons.Box.X({
+    sys_pn: "settings-box",
     className: `${ui.fig.family}__settings`,
     kids: [settings],
   });

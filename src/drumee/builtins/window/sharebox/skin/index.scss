@@ -70,10 +70,9 @@
     // background-color: var(--sharebox-main);
     background: linear-gradient(135deg, #ffa5e6, #ff65d5);
 
-    &[data-content="folder"] {
-      // background-color: var(--folder-main);
-      background: linear-gradient(135deg, #dcb2ff, #b251fb);
-    }
+    // &[data-content="folder"] {
+    //   background: linear-gradient(135deg, #dcb2ff, #b251fb);
+    // }
 
     &-title {
       @include drumee.typo(

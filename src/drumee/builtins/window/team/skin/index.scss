@@ -60,10 +60,9 @@
     border-bottom: none;
     // background-color: var(--teamroom-main);
     background: linear-gradient(135deg, #ff90a7, #ff5779);
-    &[data-content="folder"] {
-      // background-color: var(--folder-main);
-      background: linear-gradient(135deg, #dcb2ff, #b251fb);
-    }
+    // &[data-content="folder"] {
+    //   background: linear-gradient(135deg, #dcb2ff, #b251fb);
+    // }
     &-title {
       max-width: 163px;
       align-items: center;
