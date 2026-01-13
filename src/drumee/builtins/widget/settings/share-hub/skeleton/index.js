@@ -15,7 +15,7 @@ function content(ui) {
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
-      require('./password').default(ui, _a.edit),
+      require('./password').default(ui, ui.data(), _a.edit),
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),

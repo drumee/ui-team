@@ -3,20 +3,13 @@
  */
 export default function (ui, formData, mode = _a.view) {
   const passwordFig = `${ui.fig.family}-password`;
-  const hasPassword = formData.hasPassword || 0;
-  ui.debug("AAA:777", formData)
-  // if (mode == _a.view) {
-  //   return Skeletons.Box.X({
-  //     className: `${passwordFig}__section`,
-  //     sys_pn: 'password-content',
-  //     kids: [
-  //       Skeletons.Note({
-  //         className: `${passwordFig}__label`,
-  //         content: hasPassword ? LOCALE.PASSWORD_SET || "Password set" : LOCALE.NO_PASSWORD || "No password",
-  //       }),
-  //     ],
-  //   });
-  // }
+  // Get formData from parameter or ui.data(), handle both hasPassword and hasPaswword (API typo)
+  const data = formData || ui.data() || {};
+  let hasPassword = data.hasPassword;
+  if (hasPassword === undefined && data.hasPaswword !== undefined) {
+    hasPassword = data.hasPaswword;
+  }
+  hasPassword = hasPassword || (data.password ? 1 : 0) || 0;
 
   // Edit mode - show checkbox and input when checked
   const passwordCheckbox = Skeletons.Button.Svg({
@@ -32,7 +25,7 @@ export default function (ui, formData, mode = _a.view) {
   const passwordVisibility = formData.passwordVisible || 0;
   const passwordInputWrapper = Skeletons.Box.X({
     className: `${passwordFig}__input-wrapper`,
-    state: 0,
+    state: hasPassword ? 1 : 0,
     sys_pn:"passwordInputWrapper",
     kids: [
       Skeletons.Entry({
@@ -68,7 +61,9 @@ export default function (ui, formData, mode = _a.view) {
           Skeletons.Note({
             className: `${passwordFig}__label`,
             content: LOCALE.SET_UP_PASSWORD || "Set up password",
+            state: hasPassword ? 1 : 0,
             service: "toggle-password",
+            interactive: 1,
             uiHandler: [ui],
           }),
         ],
