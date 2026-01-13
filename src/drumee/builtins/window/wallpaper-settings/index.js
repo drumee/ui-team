@@ -281,7 +281,12 @@ class __window_wallpaper_settings extends __window_interact {
         return this.goodbye();
 
       case "cancel-set-bg":
-        return this.restoreSettings();
+        this.restoreSettings().then(() => {
+          this.goodbye();
+        }).catch(() => {
+          this.goodbye();
+        });
+        return;
 
       case "set-bg-color":
         this.applySelectedColor(cmd);
@@ -385,7 +390,7 @@ class __window_wallpaper_settings extends __window_interact {
     const opt = this._currentSeetings;
     this._error = null;
     this._pendingFile = null;
-    this.postService({
+    return this.postService({
       service: SERVICE.drumate.update_settings,
       settings: opt,
       hub_id: Visitor.id,
