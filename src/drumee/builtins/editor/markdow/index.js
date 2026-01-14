@@ -252,8 +252,12 @@ class __editor_markdown extends __player {
     let a = content.split(' ');
 
     let filename = this.mget(_a.filename);
-    if (a[0]) {
-      filename = (a[0] + (a[1] || "")).replace(/[\/<>!\$\*\&\~\#\"\'\`\^]/g, '')
+    if (!this.mget(_a.nid)) {
+      if (a[0]) {
+        filename = (a[0] + (a[1] || "")).replace(/[\/<>!\$\*\&\~\#\"\'\`\^]/g, '')
+      }else{
+        filename = this.mget(_a.filename);
+      }
     }
     //let ext = this.mget(_a.ext) || 'note';
     let { hub_id, nid, pid } = node || this.actualNode();

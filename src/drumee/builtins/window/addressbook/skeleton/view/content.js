@@ -55,74 +55,10 @@ const __skl_addressbook_view_content = function (_ui_) {
     ],
   });
 
-  const createProfileItem = (label, value) =>
-    Skeletons.Box.X({
-      className: `${_ui_.fig.family}__profile-item`,
-      kids: [
-        Skeletons.Note({
-          className: `${_ui_.fig.family}__profile-item label`,
-          content: label,
-        }),
-        Skeletons.Note({
-          className: `${_ui_.fig.family}__profile-item value`,
-          content: value,
-        }),
-      ],
-    });
-
-  const createActionItem = (text) =>
-    Skeletons.Box.Y({
-      className: `${_ui_.fig.family}__action-item`,
-      kids: [
-        Skeletons.Button.Svg({
-          ico: "magnifying-glass",
-          className: `${_ui_.fig.family}__action-item icon`,
-          service: "toggle-search-bar",
-        }),
-        Skeletons.Note({
-          className: `${_ui_.fig.family}__action-item text`,
-          content: text,
-        }),
-      ],
-    });
-
-  const createFamilyItem = () =>
-    Skeletons.Box.Y({
-      className: `${_ui_.fig.family}__item-wrapper`,
-      kids: [
-        Skeletons.Box.X({
-          className: `${_ui_.fig.family}__image-wrapper`,
-          kids: [
-            Skeletons.Box.X({
-              className: `${_ui_.fig.family}__image`,
-            }),
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${_ui_.fig.family}__profile-wrapper`,
-          kids: [
-            createProfileItem("Name", "Henry Jr"),
-            createProfileItem("Email", "henry@mail.comhenry@mail.com"),
-            createProfileItem("Phone", "0123456789"),
-          ],
-        }),
-        Skeletons.Box.G({
-          className: `${_ui_.fig.family}__action-wrapper`,
-          kids: [createActionItem("Henry Jr"), createActionItem("Henry Jr")],
-        }),
-      ],
-    });
-
-  const items = Skeletons.Box.G({
-    className: `${_ui_.fig.family}__container`,
-    kind: "media_grid",
-    kids: Array.from({ length: 6 }, () => createFamilyItem()),
-  });
-
   const content = Skeletons.Box.Y({
     className: `${_ui_.fig.family}__max-view ${_ui_.fig.group}__max-view`,
 
-    kids: [require("../common/search")(_ui_), items, view],
+    kids: [require("../common/search")(_ui_), view],
   });
 
   return content;

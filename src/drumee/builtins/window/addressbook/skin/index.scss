@@ -211,13 +211,10 @@
     &__item {
       cursor: pointer;
       padding: 6px 20px;
-      margin: 0 6px;
-      align-items: center;
 
       &:hover {
         background-color: var(--neutral-300);
         color: var(----neutral-600);
-        border-radius: 6px;
 
         & .window-addressbook-menu__name {
           color: var(--default-text-hover);
@@ -256,7 +253,6 @@
     &.window__body {
       padding: 0;
       border-radius: 0 0 24px 24px;
-      overflow: scroll;
     }
   }
 
@@ -347,72 +343,5 @@
     background-color: var(--ewhite);
     left: calc(50% - 60px);
     top: calc(50% - 60px);
-  }
-
-  &__container {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    padding: 0 20px 20px;
-  }
-
-  &__item-wrapper {
-    gap: 16px;
-    border: 1px solid var(--neutral-300);
-    padding: 20px;
-    border-radius: 24px;
-  }
-
-  &__image-wrapper {
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    border-bottom: 1px solid var(--neutral-200);
-  }
-
-  &__image {
-    width: 100px;
-    height: 100px;
-    border-radius: 100%;
-    background-color: var(--primary-500);
-  }
-
-  &__profile-wrapper {
-    gap: 8px;
-    border-bottom: 1px solid var(--neutral-200);
-    padding-bottom: 20px;
-  }
-
-  &__profile-item {
-    justify-content: space-between;
-    &.label {
-      color: var(--neutral-600);
-      padding-right: 40px;
-    }
-    &.value {
-      color: var(--neutral-700);
-      font-weight: bold;
-      white-space: normal;
-      word-break: break-word;
-      overflow-wrap: break-word;
-      text-align: end;
-    }
-  }
-
-  &__action-wrapper {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-  }
-
-  &__action-item {
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    &.icon {
-      width: 16px;
-      height: 16px;
-    }
-    &.text {
-      color: var(--neutral-600);
-    }
   }
 }
