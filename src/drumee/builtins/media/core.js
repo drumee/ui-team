@@ -204,12 +204,9 @@ class __media_core extends DrumeeMFS {
     let fileItems = [];
     if (this.canOrganize() || this.isMediaOwner()) {
       fileItems = [_a.rename, _a.upload, _a.download, _a.separator, _a.info];
-      /** Removed direct access until better getting clear UX */
-      // if (this.canShare()) {
-      //   fileItems.push(_a.share)
-      // } else if (this.canManageAccess()) {
-      //   fileItems.push('manageAccess')
-      // }
+      if (this.canShare()) {
+        fileItems.push(_a.share)
+      }
       fileItems.push(_a.separator, _a.trash)
     } else if (this.canDownload()) {
       fileItems = [_a.download, _a.separator, _a.info];
