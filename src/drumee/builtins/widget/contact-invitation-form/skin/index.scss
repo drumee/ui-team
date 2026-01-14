@@ -3,7 +3,7 @@
 #   FILE : /src/drumee/builtins/widget/contact-invitation-form/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .contact-invitationForm {
   &__ui {
@@ -28,18 +28,13 @@
 
   &__wrapper {
     @include drumee.typo($size: 16px, $line: 21px, $color: var(--egrey-78));
+    gap: 8px;
 
     &.header {
       align-content: center;
       align-items: center;
       height: 60px;
       justify-content: center;
-    }
-
-    &.email {
-      align-content: center;
-      align-items: center;
-      height: 60px;
     }
 
     &.buttons {
@@ -59,49 +54,96 @@
       align-content: center;
       justify-content: center;
       justify-items: center;
-      @include drumee.typo($size: 16px, $weight: 300, $line: 18px, $color: var(--default-text-alert));
+      @include drumee.typo(
+        $size: 16px,
+        $weight: 300,
+        $line: 18px,
+        $color: var(--default-text-alert)
+      );
+    }
+  }
+
+  &__label-wrapper {
+    gap: 16px;
+    align-items: center;
+  }
+
+  &__label-item {
+    &.text {
+      font-weight: bold;
+    }
+
+    &.user-help {
+      height: 36px;
+      width: 36px;
+      cursor: pointer;
+      background-color: var(--primary-500);
+      border-radius: 8px;
+      padding: 6px;
+      color: white;
     }
   }
 
   &__note {
     &.header {
-      @include drumee.typo($size: 18px, $line: 21px, $color: var(--secondary-text-color)); //var(--eblue));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 21px,
+        $color: var(--secondary-text-color)
+      ); //var(--eblue));
     }
   }
 
   &__entry {
-    @include drumee.typo($size: 16px, $line: 21px, $color: var(--default-text-color)); //var(--egrey-2f));
+    @include drumee.typo(
+      $size: 16px,
+      $line: 21px,
+      $color: var(--default-text-color)
+    ); //var(--egrey-2f));
     width: 100%;
+    border: 1px solid var(--neutral-300);
+    padding: 10px;
+    border-radius: 12px;
 
-    &[data-status='error'] {
+    &[data-status="error"] {
       & input {
         border-bottom: 1px solid var(--default-border-error); //var(--default-border-error);
 
         &:focus {
-          border-color: var(--default-border-error); // var(--default-border-error);
+          border-color: var(
+            --default-border-error
+          ); // var(--default-border-error);
         }
       }
     }
 
     & input {
-      border-bottom: 1px solid var(--default-entry-border-bottom); //var(--entry-border-bottom);
       width: 100%;
-      @include drumee.typo($size: 16px, $line: 21px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 21px,
+        $color: var(--default-text-color)
+      );
 
-      &[data-status='error'] {
+      &[data-status="error"] {
         border-bottom: var(--default-border-error);
       }
 
       &:focus {
-        border-color: var(--neutral-600); //var(--focus-border-bottom);
+        border-color: var(--neutral-600);
 
         @include drumee.placeholder-input {
-          color: var(--neutral-600); // var(--focus-text-placeholder);
+          color: var(--neutral-600);
         }
       }
 
       &::placeholder {
-        @include drumee.typo($size: 16px, $line: 21px, $weight: 300, $color: var(--default-text-placeholder));
+        @include drumee.typo(
+          $size: 16px,
+          $line: 21px,
+          $weight: 300,
+          $color: var(--default-text-placeholder)
+        );
       }
     }
 
@@ -110,8 +152,11 @@
       margin-top: 15px;
 
       & textarea {
-        @include drumee.typo($size: 16px, $line: 21px, $color: var(--default-text-color)); // var(--egrey-2f));
-        background: var(--default-bg-block);
+        @include drumee.typo(
+          $size: 16px,
+          $line: 21px,
+          $color: var(--default-text-color)
+        ); // var(--egrey-2f));
         border-radius: var(--border-radius);
         border: none;
         outline: none;
@@ -119,7 +164,12 @@
         resize: none;
 
         &::placeholder {
-          @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder)); // var(--default-text-placeholder));
+          @include drumee.typo(
+            $size: 14px,
+            $line: 14px,
+            $weight: 300,
+            $color: var(--default-text-placeholder)
+          ); // var(--default-text-placeholder));
         }
       }
     }
@@ -186,7 +236,7 @@
       background-color: var(--primary-600);
     }
 
-    &[data-error=on] {
+    &[data-error="on"] {
       opacity: 0.2;
       pointer-events: none;
       @include drumee.typo($weight: 300, $color: var(--white));

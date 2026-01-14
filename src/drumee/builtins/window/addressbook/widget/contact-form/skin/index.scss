@@ -1,7 +1,7 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 .addressbook-widget-contactForm {
   &__ui {
-    font-family : var(--font-main);
+    font-family: var(--font-main);
     height: 100%;
     width: 100%;
   }
@@ -21,16 +21,16 @@
   }
 
   &__separator {
-		background-color: var(--default-separator);
-		border-radius: 1px;
-		height: 1px;
-		margin: 2px 0px 0px;
-		width: 100%;
+    background-color: var(--default-separator);
+    border-radius: 1px;
+    height: 1px;
+    margin: 2px 0px 0px;
+    width: 100%;
   }
 
   &__profile {
     &.avatar {
-      border-radius: 50%;  
+      border-radius: 50%;
       height: 29px;
       width: 29px;
     }
@@ -47,7 +47,7 @@
     margin-top: -3px;
 
     &.title {
-      overflow:hidden;
+      overflow: hidden;
       padding: 6px;
       white-space: nowrap;
       @include drumee.typo($size: 16px, $line: 16px);
@@ -69,10 +69,9 @@
     top: 7px;
 
     &.name {
-      padding-bottom: 44px;
-      padding-top: 33px;
+      padding: 20px;
     }
-    
+
     &.header {
       align-items: center;
       height: 35px;
@@ -102,41 +101,49 @@
     max-width: 520px;
     width: 100%;
   }
-  &__icon-info{
-    color:var(--default-icon-neutral);
+  &__icon-info {
+    color: var(--default-icon-neutral);
     height: 25px;
-    margin-left: 65%;
-    margin-right: 10%;
-    margin-top: -24px;
-    padding: 5px;
     width: 25px;
 
     svg {
-      opacity:0.75;
+      opacity: 0.75;
     }
 
     .tooltips {
+      position: relative;
       background-color: var(--background-tooltips);
-      border-radius:var(--border-radius);
-      margin-left:-215px;
-      margin-top: 16px;
-      padding:3px 10px 3px 10px;
+      border-radius: var(--border-radius);
+      margin-left: -100px;
+      margin-top: 4px;
+      padding: 3px 10px 3px 10px;
       text-align: justify;
       width: 266px;
-      @include drumee.typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
+      z-index: 1;
+      @include drumee.typo(
+        $size: 11px,
+        $line: 15px,
+        $color: var(--default-text-tooltips)
+      );
     }
+  }
+
+  &__label-wrapper {
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__label-input {
+    font-weight: bold;
   }
 
   &__entry-wrapper {
     width: 100%;
-
-    & .form-input {
-      width: 65%;
-    }
+    gap: 10px;
 
     & .notes {
-      margin-left: 9%;
-      width: 79%;
+      width: 100%;
+      margin: 10px;
     }
 
     & .familyname {
@@ -149,18 +156,29 @@
 
     & input {
       background-color: transparent;
-      border-bottom: 1px solid var(--default-entry-border-bottom);
-      border-radius: 0px;
+      border-radius: 12px;
       margin-left: 0px;
-      overflow:hidden;
+      overflow: hidden;
       white-space: nowrap;
       width: 100%;
-      @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-color));
+      padding: 10px;
+      border: 1px solid var(--neutral-300);
+      margin-top: 10px;
+      @include drumee.typo(
+        $size: 16px,
+        $line: 19px,
+        $color: var(--default-text-color)
+      );
       @include drumee.overflow-text;
 
       &::placeholder {
-        width:300px;
-        @include drumee.typo($size: 16px, $weight:300, $line: 19px, $color: var(--default-text-placeholder));
+        width: 300px;
+        @include drumee.typo(
+          $size: 16px,
+          $weight: 300,
+          $line: 19px,
+          $color: var(--default-text-placeholder)
+        );
       }
 
       &:focus {
@@ -168,38 +186,42 @@
         outline: none;
 
         @include drumee.placeholder-input {
-          @include drumee.typo($size: 16px, $weight:400, $line: 19px,$color: var(--focus-text-placeholder));
+          @include drumee.typo(
+            $size: 16px,
+            $weight: 400,
+            $line: 19px,
+            $color: var(--focus-text-placeholder)
+          );
         }
       }
     }
 
     & textarea {
       @include drumee.typo($size: 14px, $line: 20px);
-      background-color: var(--default-background);
-      border-radius:var(--border-radius);
-      border: 1px solid var(--eblue);
+      border-radius: var(--border-radius);
+      border: 1px solid var(--neutral-300);
       box-sizing: border-box;
-      margin-bottom: 20px;
-      margin-left: 1px;
-      margin-top: 5px;
-      min-height: 60px;
-      padding:6px;
+      padding: 10px;
       resize: none;
       width: 100%;
-      
+
       &::placeholder {
-        @include drumee.typo($size: 14px, $weight: 300, $color: var(--default-text-placeholder));
+        @include drumee.typo(
+          $size: 14px,
+          $weight: 300,
+          $color: var(--default-text-placeholder)
+        );
       }
 
       &:focus {
         outline: none;
-       }
+      }
     }
   }
 
   &__entry {
     &.email {
-      &[data-status='error'] {
+      &[data-status="error"] {
         border-bottom: 1px solid var(--default-border-error);
 
         & input:focus {
@@ -211,16 +233,25 @@
     &.message {
       margin-left: 15px;
       width: 100%;
-      
+
       & textarea {
         background: var(--default-block-background);
         border: none;
         resize: none;
         width: 100%;
-        @include drumee.typo($size: 14px, $line: 18px, $color: var(--default-text-color));
-  
+        @include drumee.typo(
+          $size: 14px,
+          $line: 18px,
+          $color: var(--default-text-color)
+        );
+
         &::placeholder {
-          @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
+          @include drumee.typo(
+            $size: 14px,
+            $line: 14px,
+            $weight: 300,
+            $color: var(--default-text-placeholder)
+          );
         }
 
         &:focus {
@@ -236,7 +267,7 @@
   }
 
   &__message-wrapper {
-    border-radius:var(--border-radius);
+    border-radius: var(--border-radius);
     justify-content: center;
     padding: 0% 13% 0% 5%;
     width: 100%;
@@ -251,7 +282,7 @@
       height: 29px;
       width: 29px;
     }
-    
+
     &.multiple {
       margin: 0 5%;
     }
@@ -264,8 +295,8 @@
     &.profile-signup {
       left: 13px;
       margin: 0 6%;
-      opacity:1;
-      top:-4px;
+      opacity: 1;
+      top: -4px;
     }
 
     &.tags {
@@ -286,10 +317,10 @@
 
     &.ab_address {
       height: 31px;
-      left:2px;
+      left: 2px;
       margin-right: 21px;
-      opacity:0.75;
-      top:-6px;
+      opacity: 0.75;
+      top: -6px;
       width: 31px;
     }
 
@@ -305,7 +336,7 @@
       cursor: pointer;
       height: 16px;
       margin: 4px;
-      opacity:1;
+      opacity: 1;
       padding: 3px;
       width: 16px;
     }
@@ -319,7 +350,7 @@
       width: 16px;
 
       &:hover {
-        color:var(--eviolet);
+        color: var(--eviolet);
         opacity: 1;
       }
     }
@@ -328,11 +359,11 @@
       cursor: pointer;
       height: 14px;
       margin: 0px 5px;
-      opacity:0.35;
+      opacity: 0.35;
       top: 10px;
       width: 14px;
     }
-    
+
     &.invite-icon {
       cursor: pointer;
       height: 16px;
@@ -343,7 +374,6 @@
         color: var(--egreen);
       }
     }
-
   }
 
   &__note {
@@ -351,7 +381,12 @@
       border-bottom: 1px solid var(--default-entry-border-bottom);
 
       & .note-content {
-        @include drumee.typo($size: 16px, $weight:300, $line: 19px, $color: var(--default-text-placeholder));
+        @include drumee.typo(
+          $size: 16px,
+          $weight: 300,
+          $line: 19px,
+          $color: var(--default-text-placeholder)
+        );
       }
 
       &[data-selected="1"] {
@@ -373,11 +408,13 @@
       }
     }
   }
-  
+
   &__items-wrapper {
     background: var(--default-background);
     border-radius: var(--border-radius);
-    box-shadow: var(--shadow-container);// 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    box-shadow: var(
+      --shadow-container
+    ); // 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
     max-height: 250px;
     max-width: 150px;
     overflow-y: auto;
@@ -398,47 +435,43 @@
     padding-top: 30px;
     width: 100%;
     justify-content: center;
-    
-    & .button {   
-      align-items:center;
+
+    & .button {
+      align-items: center;
       border-radius: var(--border-radius);
       height: 35px;
       justify-content: center;
-      margin: 0 7% 0 4%;//0% 15% 0 10%;
+      margin: 0 7% 0 4%; //0% 15% 0 10%;
       max-width: 115px;
       width: 100%;
       @include drumee.typo($size: 16px, $line: 19px);
     }
   }
-  
+
   &__button-cancel {
     @include drumee.typo($weight: 300, $color: var(--btn-rollback-text));
     border: 1px solid var(--btn-rollback-border);
 
     &:hover {
-      border:2px solid var(--btn-rollback-border-hover);
-      color: var(--btn-rollback-text-hover);     
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
-  
-  &__button-confirm {  
-    background-color: var(--btn-commit-background);
-    border: 1px solid var(--btn-commit-border);
+
+  &__button-confirm {
+    background-color: var(--primary-500);
     @include drumee.typo($color: var(--btn-commit-text));
 
-    &:hover {
-      background-color:var(--btn-commit-background-hover);
-      border:var(--btn-commit-border-hover);
-    }
-  
-    &[data-error=on] {
+    &[data-error="on"] {
       pointer-events: none;
       opacity: 0.2;
       @include drumee.typo($weight: 300, $color: var(--default-text-reverse));
     }
   }
 
-  & .entry[data-status=error] input {border-bottom: 1px solid var(--default-border-error);}
+  & .entry[data-status="error"] input {
+    border-bottom: 1px solid var(--default-border-error);
+  }
   & .address__ui.address-input-item__ui:only-child,
   & .phoneno__ui.phoneno-input-item__ui:only-child {
     & .destroy-tag {
