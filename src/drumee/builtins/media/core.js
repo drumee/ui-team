@@ -212,8 +212,8 @@ class __media_core extends DrumeeMFS {
     } else if (this.canDownload()) {
       fileItems = [_a.download, _a.separator, _a.info];
       if (this.canShare()) fileItems.push(_a.share);
-      if (this.canRemove()) fileItems.push(_a.trash);
     }
+    fileItems.push(_a.trash);
     // for media files in trash
     if (this.mget(_a.status) == _a.deleted) {
       fileItems = [, _a.separator, _a.restoreToDesk, _a.deletePermanently];
