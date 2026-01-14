@@ -183,6 +183,7 @@ class __media_core extends DrumeeMFS {
     }
 
     items.push('share_qrcode');
+    items.push(_a.lock);
 
     /** Children of window_search */
     if (this.mget(_a.role) == _a.search) {
@@ -551,7 +552,7 @@ class __media_core extends DrumeeMFS {
       clearTimeout(this._timer.select);
       this.shift(side);
     };
-    this._timer.select = _.delay(f, 200);
+    this._timer.select = setTimeout(f, 200);
   }
 
   /**
@@ -648,7 +649,7 @@ class __media_core extends DrumeeMFS {
     this.mset(_a.phase, _a.upload);
     this.isUploading = 0;
     this.trigger(_e.reset);
-    _.delay(() => {
+    setTimeout(() => {
       this.trigger(_e.uploaded);
     }, 1000);
 
@@ -1344,6 +1345,18 @@ class __media_core extends DrumeeMFS {
     return this.mget(_a.status) === _a.locked;
   }
 
+  /**
+   * 
+   * @param {*} msg 
+   */
+  actionDenied(msg = LOCALE.FORBIDEN_DELETE) {
+    this.moveForbiden(msg);
+    this.anim(
+      [0.3, { scale: 0.9, alpha: 0.7 }],
+      [0.3, { scale: 1, alpha: 1 }]
+    );
+    setTimeout(() => { this.moveAllowed() }, Visitor.timeout());
+  }
 
   /**
    * 
@@ -1351,99 +1364,10 @@ class __media_core extends DrumeeMFS {
    * @param {*} trashbin 
    * @returns 
    */
-  delete(single_node = 1, trashbin, force = 0) {
-    let f, msg;
-    let granted = this.isGranted(_K.permission.delete);
-    if (!force && this.mget(_a.filetype) === _a.hub) {
-      this.triggerHandlers({
-        service: "confirm-removal",
-      });
-      return null;
-    }
-    if (this.containsHub && !force) {
-      this.triggerHandlers({
-        service: "no-trash-hubs",
-        message: LOCALE.CONTAINS_NON_DELETABLE,
-      });
-      this.moveForbiden(LOCALE.ACTION_NOT_PERMITTED);
-      return null;
-    }
-
-    if (this.mget(_a.status) === _a.locked) {
-      granted = false;
-      msg = LOCALE.FILE_NOT_DISPOSABLE;
-    }
-    if (!granted) {
-      msg = msg || LOCALE.FORBIDEN_DELETE;
-      this.moveForbiden(msg);
-      this.anim(
-        [0.3, { scale: 0.9, alpha: 0.7 }],
-        [0.3, { scale: 1, alpha: 1 }]
-      );
-      f = () => {
-        this.moveAllowed();
-      };
-      _.delay(f, Visitor.timeout());
-      return null;
-    }
-
-    if (!granted) {
-      return null;
-    }
-
-    Wm.animateMediaToTrash(this).then(() => {
-      this.logicalParent.syncGeometry()
-      if (this.mget(_a.status) === SEEDING) {
-        this.suppress();
-        return;
-      }
-      if (single_node) {
-        this.postService(this.makeTrashOptions());
-      } else {
-        this.goodbye()
-      }
-    }).catch(() => {
-      this.putIntoTrash();
-    })
-    // const helper = this.$el.clone();
-    // helper.removeAttr("class");
-    // helper.addClass(`deleting ${this.fig.family}__helper-wrapper`);
-    // const pos = this.$el.offset();
-    // helper.css({
-    //   position: _a.absolute,
-    //   left: pos.left,
-    //   top: pos.top - this.$el.height(),
-    //   zIndex: 200002, // Must be hight than modal popup
-    // });
-
-    // Wm.$el.append(helper);
-
-    // f = () => {
-    //   const tl = new TimelineMax();
-    //   tl.to(trashbin, 0.3, { scale: 1.2 }).to(trashbin, 0.3, { scale: 1 });
-    //   trashbin.parent().children(".temp-anim").remove();
-    //   helper.remove();
-    //   this.logicalParent.syncGeometry()
-    //   if (this.mget(_a.status) === SEEDING) {
-    //     this.suppress();
-    //     return;
-    //   }
-    //   if (single_node) {
-    //     this.postService(this.makeTrashOptions());
-    //   } else {
-    //     this.goodbye()
-    //   }
-    // };
-
-    // const dest_x = trashbin.offset().left;
-    // const dest_y = trashbin.offset().top;
-    // TweenLite.to(helper, 1.4, {
-    //   left: dest_x,
-    //   top: dest_y,
-    //   scale: 0,
-    //   alpha: 0,
-    //   onComplete: f,
-    // });
+  delete() {
+    this.triggerHandlers({
+      service: "remove-selection", media: this
+    });
   }
 
   /**
@@ -1452,24 +1376,6 @@ class __media_core extends DrumeeMFS {
    * @returns 
    */
   putIntoTrash(single_node = 1) {
-    if (this.mget(_a.filetype) === _a.hub) {
-      this.triggerHandlers({ service: "open-manager" });
-      return;
-    }
-    if (this.containsHub) {
-      this.triggerHandlers({ service: "no-trash-hubs" });
-      return;
-    }
-    if (!this.isGranted(_K.permission.delete)) {
-      this.destroy();
-      const key = this.mget(_a.filetype).toUpperCase();
-      this.moveForbiden((LOCALE[key] || "").printf(LOCALE.FORBIDEN_DELETE));
-      const f = () => {
-        return this.moveAllowed();
-      };
-      _.delay(f, Visitor.timeout());
-      return true;
-    }
     if (this.mget(_a.status) === SEEDING) {
       this.suppress();
       return;
@@ -1573,7 +1479,6 @@ class __media_core extends DrumeeMFS {
       ownpath = ownpath.replace(/\/+/g, '/');
       ownpath = ownpath.replace(/\/+$/g, '');
       args.ownpath = ownpath;
-      this.debug("AAA:1596", this, args, f.fullPath)
 
       queue.add(args);
       // this.type = null;
@@ -1784,6 +1689,7 @@ class __media_core extends DrumeeMFS {
       case _a.public:
       case _a.share:
       case _a.private:
+        args.pid = args.nid;
         this.postService(SERVICE.desk.create_hub, args).then(good).catch(bad);
         break;
       default:

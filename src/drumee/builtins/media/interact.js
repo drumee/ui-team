@@ -658,12 +658,7 @@ class __media_interact extends media_core {
         return this.download();
 
       case _e.remove:
-        let trash = Wm.getTrashBin();
-        if (trash) {
-          this.delete(1, trash.$el)
-        } else {
-          this.putIntoTrash();
-        }
+        this.delete()
         return;
 
       case "load-script":

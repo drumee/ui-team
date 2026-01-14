@@ -574,10 +574,44 @@ class __window_manager extends push {
   }
 
   /**
+ * 
+ * @param {*} list  -- List of nodes 
+ */
+  putIntoTrash(list) {
+    let nodes = [];
+    if (list.length == 1) {
+      list[0].delete(1, this.__trashBin.$el);
+      return
+    }
+    for (var n of list) {
+      if (n.mget(_a.filetype) == _a.hub) {
+        n.unselect();
+        n.moveForbiden(LOCALE.ACTION_NOT_PERMITTED);
+        continue;
+      }
+      nodes.push({
+        nid: n.mget(_a.nodeId),
+        hub_id: n.mget(_a.hub_id),
+        parent_id: n.mget(_a.parent_id),
+      })
+    }
+    if (_.isEmpty(nodes)) return;
+    this.postService({
+      service: SERVICE.media.trash,
+      nodes,
+      hub_id: nodes[0].hub_id
+    }).then((data) => {
+    }).catch(e => {
+      this.warn("Failed to delete nodes", nodes, e)
+    })
+  }
+
+  /**
    *
    * @param {*} cmd
    */
-  confirmRemoveHub(media, args) {
+  confirmRemoveHub(media) {
+    media.select()
     return new Promise((resolve, reject) => {
       this.ensurePart('wrapper-modal').then(async (p) => {
         await Kind.waitFor('window_confirm')
@@ -598,18 +632,19 @@ class __window_manager extends push {
           })
           p.clear()
         }).catch((e) => {
-          reject(e)
+          resolve({})
         });
       })
     })
   }
 
+
   /**
    *
    * @param {*} cmd
    */
-  confirmLeaveHub(media, args) {
-    this.debug("AAA:554", this, media, args)
+  confirmLeaveHub(media) {
+    this.debug("AAA:554", this, media)
     this.ensurePart('wrapper-modal').then(async (p) => {
       await Kind.waitFor('window_confirm')
       p.feed({
@@ -629,6 +664,156 @@ class __window_manager extends push {
         p.clear()
       }).catch(() => { });
     })
+  }
+
+  /**
+   *
+   * @param {*} cmd
+   */
+  confirmRemoveHubsInside(media) {
+    this.ensurePart('wrapper-modal').then(async (p) => {
+      await Kind.waitFor('window_confirm')
+      let msg = `The directory {0} contains one or more shares folders. Deleting it shall remove all the content within them`;
+      p.feed({
+        kind: 'window_confirm',
+        maxsize: 2,
+        title: "Caution! Shared folders inside.",
+        message: msg.format(media.mget(_a.filename)),
+        confirm: LOCALE.REMOVE
+      }).ask().then(async () => {
+        let ids = media.mget(_a.hubs).split(/,/g)
+        for (let hub_id of ids) {
+          /** Get attr from desk */
+          let data = await this.fetchService(SERVICE.media.get_node_attr, {
+            nid: hub_id,
+            hub_id: Visitor.id
+          })
+          if (!_.isArray(data)) data = [data]
+          for (let item of data) {
+            if (item.privilege & _K.permission.owner) {
+              await this.postService({
+                service: SERVICE.hub.delete_hub,
+                hub_id: item.actual_hub_id,
+                nid: item.actual_home_id
+              })
+            } else if (item.privilege & _K.permission.read) {
+              await this.postService({
+                service: SERVICE.desk.leave_hub,
+                nid: item.actual_hub_id,
+                hub_id: Visitor.id
+              })
+            }
+          }
+          this.animateMediaToTrash(media).then(() => {
+            media.logicalParent.syncGeometry()
+            media.putIntoTrash(1);
+          }).catch(() => {
+            media.putIntoTrash(1);
+          })
+        }
+        p.clear()
+      }).catch(() => { });
+    })
+  }
+
+  /**
+   * 
+   * @param {*} media 
+   */
+  getMediaSelection(media) {
+    let selection = Wm.getGlobalSelection();
+    if (media && media.isMfs && media.mget(_a.nid)) {
+      let duplicated = 0;
+      for (let m of selection) {
+        if (m.mget(_a.nid) == media.mget(_a.nid)) {
+          duplicated = 1;
+          break;
+        }
+      }
+      this.debug("AAA:684 duplicated", duplicated)
+      if (!duplicated) {
+        selection.push(media)
+      }
+    }
+    let own_hubs = []
+    let other_hubs = []
+    let hubs_inside = []
+    let allowed = [];
+    let rejected = [];
+    let locked = [];
+    for (let m of selection) {
+      if (m.mget(_a.status) === _a.locked) {
+        locked.push(m)
+        continue;
+      }
+      if (m.isHub) {
+        if (m.isGranted(_K.permission.owner)) {
+          own_hubs.push(m)
+        } else {
+          other_hubs.push(m)
+        }
+      } else if (m.isFolder) {
+        if (m.containsHub) {
+          hubs_inside.push(m)
+        } else if (m.canRemove()) {
+          allowed.push(m)
+        } else {
+          rejected.push(m)
+        }
+      } else if (m.canRemove()) {
+        allowed.push(m)
+      } else {
+        rejected.push(m)
+      }
+    }
+    this.debug("AAA:684", selection)
+    return {
+      own_hubs, other_hubs, hubs_inside, allowed, rejected, locked
+    }
+  }
+
+  /**
+   * 
+   */
+  async removeMediaSelection(media) {
+    let {
+      own_hubs, other_hubs, hubs_inside, allowed, rejected, locked
+    } = this.getMediaSelection(media)
+
+    for (let r of rejected) {
+      r.actionDenied()
+    }
+
+    for (let r of allowed) {
+      this.animateMediaToTrash(r).then(() => {
+        r.logicalParent.syncGeometry()
+        if (r.mget(_a.status) === "seeding") {
+          r.suppress();
+          return;
+        }
+        r.putIntoTrash(1);
+      }).catch(() => {
+        r.putIntoTrash(1);
+      })
+    }
+
+    for (let r of own_hubs) {
+      await this.confirmRemoveHub(r);
+    }
+
+    for (let r of other_hubs) {
+      await this.confirmLeaveHub(r);
+    }
+
+    for (let r of hubs_inside) {
+      await this.confirmRemoveHubsInside(r);
+    }
+
+    for (let r of locked) {
+      r.actionDenied(LOCALE.FILE_NOT_DISPOSABLE);
+    }
+
+    this.debug("AAA:684", { own_hubs, other_hubs, hubs_inside, allowed, rejected })
   }
 
   /**
@@ -693,7 +878,7 @@ class __window_manager extends push {
    */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.status || cmd.mget(_a.service);
-    this.debug("AAA:695", service)
+    this.debug("AAA:695", cmd, service)
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
@@ -707,6 +892,10 @@ class __window_manager extends push {
         } else {
           this.confirmLeaveHub(cmd, args);
         }
+        return;
+
+      case "remove-selection":
+        await this.removeMediaSelection(args.media)
         return;
 
       case "confirm-remove-selection":
@@ -736,7 +925,7 @@ class __window_manager extends push {
         return this.launch(args, { explicit: 1, singleton: 1 });
 
       case "new-folder":
-        return Wm.addFolder(cmd);
+        return this.addFolder(cmd);
 
       // case "toggle-fullscreen":
       //   return this.toggleFullscreen();
