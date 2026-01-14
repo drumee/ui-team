@@ -211,10 +211,13 @@
     &__item {
       cursor: pointer;
       padding: 6px 20px;
+      margin: 0 6px;
+      align-items: center;
 
       &:hover {
         background-color: var(--neutral-300);
         color: var(----neutral-600);
+        border-radius: 6px;
 
         & .window-addressbook-menu__name {
           color: var(--default-text-hover);
