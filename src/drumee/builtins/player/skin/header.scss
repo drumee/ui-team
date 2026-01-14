@@ -3,7 +3,7 @@
 .player {
   &__header {
     // background: var(--default-bg);
-    background: linear-gradient(135deg, #dcb2ff, #b251fb);
+    background: linear-gradient(135deg, var(--blue-100), var(--blue-800));
     border-radius: 24px 24px 0 0;
     color: white;
     cursor: pointer;
@@ -13,11 +13,9 @@
 
     &.container {
       &:after {
-        background: linear-gradient(
-          to bottom,
-          rgba(0, 0, 0, 0.12) 0%,
-          rgba(0, 0, 0, 0) 100%
-        );
+        background: linear-gradient(to bottom,
+            rgba(0, 0, 0, 0.12) 0%,
+            rgba(0, 0, 0, 0) 100%);
         content: " ";
         height: 7px;
         position: absolute;
@@ -41,12 +39,10 @@
     max-width: 400px;
     align-items: center;
     width: auto;
-    @include drumee.typo(
-      $size: 26px,
+    @include drumee.typo($size: 26px,
       $line: 40px,
       $weight: 400,
-      $color: var(--default-text-reverse)
-    );
+      $color: var(--default-text-reverse));
     @include drumee.overflow-text;
 
     .inner {
@@ -82,12 +78,10 @@
       width: 100%;
       padding-left: 10px;
       padding-top: 4px;
-      @include drumee.typo(
-        $color: var(--core-default-text-color),
+      @include drumee.typo($color: var(--core-default-text-color),
         $size: 12px,
         $line: 16px,
-        $weight: 300
-      );
+        $weight: 300);
       @include drumee.overflow-text;
 
       .icon {
@@ -106,12 +100,10 @@
     }
 
     .info-item {
-      @include drumee.typo(
-        $color: var(--core-default-text-color),
+      @include drumee.typo($color: var(--core-default-text-color),
         $size: 12px,
         $line: 16px,
-        $weight: 300
-      );
+        $weight: 300);
       text-align: left;
       width: 50%;
       padding-left: 10px;
@@ -148,6 +140,7 @@
 
         &:hover {
           color: var(--default-icon-hover);
+
           svg {
             color: var(--default-icon-hover);
           }

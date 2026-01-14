@@ -16,7 +16,6 @@ class __activity_item extends LetcBox {
    * 
    */
   onDomRefresh() {
-    this.debug("AAA:19", this)
     this.feed(require('./skeleton')(this));
   }
 

@@ -16,6 +16,7 @@ module.exports = function (ui, value = '') {
       id: ui.editorId,
     },
   };
+  this.debug("AAA:19", ui, ui.canUpload())
   if (!ui.canUpload()) opt.readonly = true;
   return Skeletons.Box.G({
     className: `${ui.fig.family}__editor--outer`,

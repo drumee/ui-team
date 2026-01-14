@@ -2,9 +2,9 @@
 
 .window-trash {
   &__header {
-    height: 132px;
-    background-color: var(--neutral-400);
+    background: linear-gradient(135deg, var(--gray-100), var(--gray-800));
   }
+
   &-topbar {
     &__container {
       flex: 1;
@@ -16,12 +16,10 @@
 
     &__title {
       margin: auto;
-      @include drumee.typo(
-        $size: 24px,
+      @include drumee.typo($size: 24px,
         $line: 24px,
         $weight: 300,
-        $color: var(--default-text-color)
-      ); //$weight:400,
+        $color: var(--default-text-color)); //$weight:400,
       @include drumee.overflow-text;
 
       &.purge {
