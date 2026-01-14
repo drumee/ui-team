@@ -55,35 +55,10 @@ const __skl_addressbook_common_topBar = function(_ui_) {
     uiHandler : _ui_
   });
 
-  const importButton = Skeletons.Button.Label({
-    className : `${figFamily}__import-btn ${figGroup}__import-btn`,
-    label     : LOCALE.IMPORT || "Import",
-    ico       : "arrow-up",
-    service   : 'import-address-book',
-    uiHandler : _ui_
-  });
-
-  const deleteButton = Skeletons.Button.Svg({
-    className : `${figFamily}__delete-btn ${figGroup}__delete-btn`,
-    ico       : "trash",
-    service   : 'delete-archive-list',
-    uiHandler : _ui_
-  });
-
-  const settingsButton = Skeletons.Button.Svg({
-    className : `${figFamily}__settings-btn ${figGroup}__settings-btn`,
-    ico       : "setting",
-    service   : _e.settings,
-    uiHandler : _ui_
-  });
-
   const rightSection = Skeletons.Box.X({
     className : `${figFamily}__right ${figGroup}__right`,
     kids      : [
-      addButton,
-      importButton,
-      deleteButton,
-      settingsButton
+      addButton
     ]
   });
   
