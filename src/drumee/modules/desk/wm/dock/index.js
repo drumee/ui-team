@@ -251,7 +251,8 @@ class __desk_dock extends LetcBox {
     let list = [];
     let forbiden = 0;
     let hub = 0;
-    for (var n of Wm.getGlobalSelection()) {
+    let selection = Wm.getGlobalSelection();
+    for (var n of selection) {
       if (n.mget(_a.privilege) & _K.permission.delete) {
         if (n.mget(_a.filetype) == _a.hub) {
           hub++;
@@ -268,10 +269,9 @@ class __desk_dock extends LetcBox {
     }
 
     if (hub) {
-      Wm.openManager(this, {
-        service: "open-manager",
-        message: LOCALE.USE_MANAGER_TO_DELETE
-      })
+      this.triggerHandlers({
+        service: "confirm-remove-selection", selection
+      });
     }
 
     if (_.isEmpty(list) && (!forbiden && !hub)) {
@@ -337,7 +337,8 @@ class __desk_dock extends LetcBox {
         return this.handleMediaUpload();
 
       case "open-searchbox":
-        this.__searchbox.setState(cmd.mget(_a.state))
+        let state = this.__searchbox.get(_a.state) ^ 1;
+        this.__searchbox.setState(state)
         return
 
       case "search-files":
@@ -345,6 +346,16 @@ class __desk_dock extends LetcBox {
         this._timer = setTimeout(() => {
           Wm.search(cmd, args);
           this._timer = null;
+          let t = setInterval(() => {
+            let w = Wm.getItemByKind('window_search');
+            if (w) {
+              w.once(_e.destroy, () => {
+                this.__searchbox.setState(0)
+                this.__searchboxInput.setValue('')
+              })
+              clearInterval(t)
+            }
+          }, 500)
         }, 1000);
         return;
 

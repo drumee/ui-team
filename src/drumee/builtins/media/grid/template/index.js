@@ -40,13 +40,6 @@ const __media_tpl_grid = function (ui) {
       html = html + require('../../template/checkbox')(m);
     }
   }
-  // if (m.isalink && (m.filetype !== _a.hub)) {
-  //   html = html + require('../../template/shortcut')(m);
-  // }
-
-  // if ((m.filetype === _a.hub) && (m.dmz_expiry === _a.expired)) {
-  //   html = html + require('../../template/expiry-status')(m);
-  // }
 
   return `<div class=\"full media-grid__content ${m.filetype}\">${html}</div>`;
 };

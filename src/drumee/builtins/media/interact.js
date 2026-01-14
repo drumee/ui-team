@@ -619,7 +619,7 @@ class __media_interact extends media_core {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     let { nid, hub_id } = this.actualNode();
-    this.debug("AAA:622", service, cmd, args)
+    this.debug("AAAX:622", service, cmd, args)
     switch (service) {
       case _e.rename:
         this.service = service;

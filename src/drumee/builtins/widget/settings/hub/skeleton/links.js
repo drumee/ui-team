@@ -15,7 +15,7 @@ export default function footer(ui) {
         },
         kids: [
           Skeletons.Button.Svg({
-            ico: "copy_link",
+            ico: "copylink",
             className: `${fig}__footer-icon`,
           }),
           Skeletons.Note({

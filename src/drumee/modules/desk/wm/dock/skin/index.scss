@@ -13,7 +13,7 @@
 
 .desk-dock {
   &__ui {
-    bottom: 60px;
+    bottom: var(--spacer-5);
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -227,6 +227,7 @@
       gap: var(--spacer-1);
       background-color: var(--white);
       z-index: -1 !important;
+      box-shadow: var(--shadow-main);
       bottom: 0;
     }
 

@@ -8,6 +8,7 @@
     background-color: var(--white);
     border-radius: var(--corner-radius-6);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: var(--spacer-5) 0;
 
     &[data-modal="1"] {
       left: 0;
@@ -70,12 +71,12 @@
   &__main {
     width: 100%;
     height: auto;
-    display: flex;
-    flex-direction: column;
     background-color: var(--white);
     overflow: hidden;
     border-top-left-radius: var(--corner-radius-6);
     border-top-right-radius: var(--corner-radius-6);
+    overflow: auto;
+    max-height: calc(100vh - 140px);
   }
 
   &__vignette {
