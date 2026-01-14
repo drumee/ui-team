@@ -99,10 +99,12 @@
     background: var(--default-bg); //var(--ewhite);
     box-shadow: 0px 0px 31px 0 rgba(0, 0, 0, 0.4);
     padding: 10px;
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 30px,
       $color: var(--tertiary-text-color),
-      $weight: 300); //$egrey-89
+      $weight: 300
+    ); //$egrey-89
     border-radius: var(--border-radius); //4px;
     left: calc(24px - 50%);
     top: -18px;
@@ -127,14 +129,14 @@
 
     &[data-state="open"] {
       width: 100%;
-      height: calc(100% - 116px);
+      height: calc(100% - 132px);
       left: 0;
       right: 0;
-      top: 116px;
+      top: 132px;
       bottom: 0;
       justify-items: center;
       align-items: center;
-      border-radius: var(--border-radius-bottom);
+      border-radius: 0 0 24px 24px;
       background-color: var(--transparency-container-overlay);
       padding: 20px 0;
     }
