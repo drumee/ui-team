@@ -248,9 +248,24 @@ class __desk_dock extends LetcBox {
    * @param {*} cmd 
    */
   trash(cmd) {
-    this.triggerHandlers({
-      service: "remove-selection"
-    });
+    if (Wm.getGlobalSelection().length) {
+      this.triggerHandlers({
+        service: "remove-selection"
+      });
+    } else {
+      const old = Wm.getItemByKind('window_trash');
+      if ((old != null) && !old.isDestroyed()) {
+        old.goodbye();
+        return;
+      }
+      const item = {
+        kind: 'window_trash',
+        service: "open-node",
+        trigger: cmd,
+        uiHandler: [this]
+      };
+      Wm.windowsLayer.append(item)
+    }
   }
 
   /**
