@@ -1,4 +1,4 @@
-const { topbar } = require("../../hub/skeleton/toolkit")
+const { topbar, validity } = require("../../hub/skeleton/toolkit")
 const { read, write, modify } = _K.permission
 let items = [
   { permission: write, label: "Upload and Upload", name: _a.write },
@@ -15,7 +15,7 @@ function content(ui) {
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
-      require('./password').default(ui),
+      require('./password').default(ui, ui.data(), _a.edit),
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
