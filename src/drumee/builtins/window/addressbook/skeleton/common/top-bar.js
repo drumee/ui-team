@@ -45,18 +45,18 @@ const __skl_addressbook_common_topBar = function (_ui_) {
                     className: `${figFamily}__subtitle-wrapper`,
                     kids: [
                       Skeletons.Note({
-                        sys_pn: "ref-window-name",
+                        sys_pn: "contact-count",
                         uiHandler: _ui_,
                         partHandler: _ui_,
                         className: `${figFamily}__subtitle-wrapper contacts`,
-                        content: "16 contacts",
+                        content: "0 contacts",
                       }),
-                      Skeletons.Note({
-                        sys_pn: "ref-window-name",
-                        uiHandler: _ui_,
-                        partHandler: _ui_,
-                        content: "Last updated: 4:59 pm. Jun 30, 2025",
-                      }),
+                      // Skeletons.Note({
+                      //   sys_pn: "ref-window-name",
+                      //   uiHandler: _ui_,
+                      //   partHandler: _ui_,
+                      //   content: "Last updated: 4:59 pm. Jun 30, 2025",
+                      // }),
                     ],
                   }),
                 ],

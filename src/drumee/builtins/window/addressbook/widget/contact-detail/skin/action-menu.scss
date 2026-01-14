@@ -62,8 +62,11 @@
       margin-bottom: 1px;
       padding: 5px 5px 5px 15px;
 
-      &:hover {
-        background-color: var(--default-background-hover);
+      &:hover,
+      &[data-state="1"],
+      &.active,
+      &.selected {
+        background-color: var(--default-bg-hover);
         color: var(--default-text-hover);
 
         & .widget-contact-detail-menu__note {

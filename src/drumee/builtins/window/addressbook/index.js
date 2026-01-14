@@ -72,6 +72,26 @@ class __window_addressbook extends __window_addressbook_interact {
         return this.waitElement(child.el, this.loadAfterAllPartReady);
 
       case 'widget_contacts':
+        this._widgetContacts = child;
+        // Wait for list-contacts to be ready before updating count
+        this.waitElement(child.el, () => {
+          const listContacts = child.getPart('list-contacts');
+          if (listContacts) {
+            this.waitElement(listContacts.el, () => {
+              this._updateContactCount();
+              // Listen to collection changes to update count
+              if (listContacts.collection) {
+                listContacts.collection.on('add remove reset update', () => {
+                  this._updateContactCount();
+                });
+              }
+              // Also listen to list data events
+              listContacts.on('data eod', () => {
+                this._updateContactCount();
+              });
+            });
+          }
+        });
         return this.waitElement(child.el, this.loadAfterWidgetContacts, child);
 
       case 'widget_tag':
@@ -140,11 +160,51 @@ class __window_addressbook extends __window_addressbook_interact {
   }
 
   /**
+   * Update contact count in topbar
+   */
+  _updateContactCount() {
+    try {
+      const widgetContacts = this._widgetContacts || this.getItemsByKind('widget_contacts')[0];
+      if (!widgetContacts) {
+        this.debug('_updateContactCount: widgetContacts not found');
+        return;
+      }
+
+      const listContacts = widgetContacts.getPart('list-contacts');
+      if (!listContacts) {
+        this.debug('_updateContactCount: list-contacts not found');
+        return;
+      }
+
+      // Try to get count from collection
+      let count = 0;
+      if (listContacts.collection) {
+        count = listContacts.collection.length || 0;
+      } else if (listContacts.children && listContacts.children.length) {
+        // Fallback: count children if collection not available
+        count = listContacts.children.length || 0;
+      }
+
+      const countPart = this.getPart('contact-count');
+      if (countPart) {
+        const text = count === 1 ? '1 contact' : `${count} contacts`;
+        countPart.set({ content: text });
+        this.debug('_updateContactCount: Updated to', text);
+      } else {
+        this.debug('_updateContactCount: contact-count part not found');
+      }
+    } catch (e) {
+      this.debug('Error updating contact count:', e);
+    }
+  }
+
+  /**
    * @param {*} widgetContacts
   */
   loadAfterWidgetContacts(widgetContacts) {
     const EOD = 'end:of:data';
     const f = () => {
+      this._updateContactCount(); // Update count when data loads
       if (this.router && this.initialLoad) {
         this.initialLoad = false;
         if (this.router.data && this.router.page === 'open-contact') {
