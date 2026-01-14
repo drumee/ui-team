@@ -93,9 +93,12 @@ class __dmz_sharebox extends LetcBox {
   */
   async onDomRefresh() {
     let token = this.mget(_a.token);
+    let hub_id = Visitor.parseLocation().keysel || ""
+
     let data = await this.postService(SERVICE.dmz.login,
-      { token, hub_id: "" }
+      { token, hub_id }
     );
+
     this.mset(data);
     if (data.guest_name) {
       Visitor.set({
@@ -135,6 +138,7 @@ class __dmz_sharebox extends LetcBox {
     this.postService(this.nodeInfoService, opt)
       .then((data) => {
         if (data && _.isEmpty(data.status)) {
+          this.debug("AAAA:141", data)
           this.__header.feed(this.headerSkeleton(this));
           this.loadDeskContent();
         } else {
@@ -209,13 +213,16 @@ class __dmz_sharebox extends LetcBox {
       return this.renderErrorMessage(msg)
     }
 
+    let hub_id = Visitor.parseLocation().keysel || ""
+
     const inputData = this._input.getData();
     let opt = {
       token: this.mget(_a.token),
-      hub_id: "", // If not set, default will be user id
+      hub_id,
       password: inputData.value
     }
     this.postService(SERVICE.dmz.login, opt).then((data) => {
+      this.debug("AAAA:224", data)
       if (data && data.is_verified) {
         this.mset(data);
         localStorage.setItem('token', data.token);
@@ -278,10 +285,10 @@ class __dmz_sharebox extends LetcBox {
   */
   dmzCheckPasswordResponse(data) {
     if (data.is_verified && data.is_guest) {
-      this.getInfoData()
+      // this.getInfoData()
+      location.reload()
     } else {
-      const msg = LOCALE.DMZ_ENTER_PASSWORD_TO_ACCESS_FILES;
-      this.renderErrorMessage(msg)
+      this.renderErrorMessage(LOCALE.WRONG_CREDENTIALS)
     }
   }
 
@@ -300,6 +307,7 @@ class __dmz_sharebox extends LetcBox {
 
     buttonWrapper.el.dataset.mode = _a.closed;
     msgWrapper.el.dataset.mode = _a.open;
+    msgWrapper.el.dataset.error = _a.yes;
     msgWrapper.feed(msgBox);
 
     const f = () => {
@@ -307,7 +315,7 @@ class __dmz_sharebox extends LetcBox {
       msgWrapper.clear()
       buttonWrapper.el.dataset.mode = _a.open
     }
-    return _.delay(f, Visitor.timeout(3000))
+    return _.delay(f, Visitor.timeout(2000))
   }
 
   /**

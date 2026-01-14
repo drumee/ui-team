@@ -60,11 +60,6 @@ class settings_share_hub extends DrumeeMFS {
           return;
         }
         return this.goodbye();
-      // case 'change-permission':
-      //   return this.triggerChangePermission(cmd);
-
-      // case 'toggle-validity-mode':
-      //   return this.toggleValidityMode(cmd);
 
       case 'toggle-password':
         return this.togglePassword(cmd);
@@ -72,8 +67,6 @@ class settings_share_hub extends DrumeeMFS {
       case 'toggle-password-visibility':
         return this.togglePasswordVisibility(cmd);
 
-      // case 'change-access-type':
-      //   return this.changeAccessType(cmd);
 
       case 'apply-all-save':
         return this.applyAllAndSave();
@@ -93,14 +86,12 @@ class settings_share_hub extends DrumeeMFS {
     }
     args.permission = args.privilege;
     this.debug("AAA:102", args)
-    // return;
-    // this.formData.permission = _K.permission.download | _K.permission.anonymous
-    // if (upload) {
-    //   this.formData.permission = _K.permission.upload | this.formData.permission
-    // }
-    // this.formData.days = days;
-    // this.formData.hours = hours;
-
+    this.__passwordInputWrapper.el.dataset.status = ""
+    if (args.passwordSet && !args.password && !this.mget('hasPassword')) {
+      this.debug("AAA:90", args)
+      this.__passwordInputWrapper.el.dataset.status = _a.error
+      return
+    }
     const opt = {
       service: SERVICE.hub.update_external_settings,
       hub_id: this.mget(_a.hub_id),

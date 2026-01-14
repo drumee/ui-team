@@ -54,7 +54,6 @@ function get_preview(ui, preview, data) {
   const ctime = preview.ctime || new Date().getTime();
   const m = Dayjs.unix(ctime);
   const pfx = ui.fig.family;
-  console.log("AAA:86", data)
   return Skeletons.Box.G({
     className: `${pfx}__main`,
     debug: __filename,

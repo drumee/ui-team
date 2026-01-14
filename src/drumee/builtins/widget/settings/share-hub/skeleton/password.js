@@ -23,6 +23,8 @@ export default function (ui) {
     icons: ["editbox_shapes-roundsquare", "available"],
     className: `${passwordFig}__checkbox`,
     state: hasPassword ? 1 : 0,
+    name: "passwordSet",
+    itemForm: 1,
     service: "toggle-password",
     uiHandler: [ui],
   });

@@ -6,7 +6,9 @@
       justify-content: space-around;
       text-decoration: none;
       width: 100%;
-      grid-template-columns: 128px auto auto;
+      grid-template-columns: 128px 1fr 297px;
+      padding: 0 var(--spacer-7);
+      align-items: center;
 
       &[data-device="mobile"] {
         padding: 18px 0 0 0;
@@ -15,13 +17,6 @@
         display: flex;
       }
 
-      .custom-logo[data-device="mobile"] {
-        position: absolute;
-        left: 10px;
-        width: 55px;
-        height: 55px;
-        top: 0;
-      }
     }
 
     &__logo-content {
@@ -32,11 +27,9 @@
       justify-content: center;
       white-space: break-spaces;
       word-break: break-word;
-      @include drumee.typo(
-        $size: 28px,
+      @include drumee.typo($size: 28px,
         $line: 28px,
-        $color: var(--neutral-900)
-      );
+        $color: var(--neutral-900));
     }
 
     &__title {
@@ -45,27 +38,22 @@
       overflow: hidden;
       width: 100%;
 
-      @include drumee.typo(
-        $size: 28px,
+      @include drumee.typo($size: 28px,
         $line: 28px,
-        $color: var(--neutral-900)
-      );
+        $color: var(--neutral-900));
 
       &[data-device="mobile"] {
         margin-top: 5px;
         width: 100%;
-        @include drumee.typo(
-          $size: 20px,
+        @include drumee.typo($size: 20px,
           $line: 22px,
-          $color: var(--neutral-900)
-        );
+          $color: var(--neutral-900));
       }
     }
 
     &__action-box {
       align-items: center;
-      justify-content: flex-end;
-      max-width: 300px;
+      justify-content: center;
 
       &[data-device="mobile"] {
         max-width: none;
@@ -80,9 +68,9 @@
       height: 100%;
       justify-content: center;
       align-items: center;
-      align-content: center;
       justify-items: center;
       margin: 0 5px;
+      gap: var(--spacer-4);
 
       &.info {
         right: 40px;
@@ -106,9 +94,6 @@
 
     &__buttons-wrapper {
       height: 40px;
-      margin: 0 10px;
-      right: 30px;
-      width: 100px;
 
       &[data-mode="closed"] {
         display: none;
@@ -124,11 +109,9 @@
       height: 100%;
       justify-content: center;
       width: 100%;
-      @include drumee.typo(
-        $size: 14px,
+      @include drumee.typo($size: 14px,
         $line: 16px,
-        $color: var(--neutral-900)
-      );
+        $color: var(--neutral-900));
 
       &:hover {
         box-shadow: 0 0px 13px 0px rgba(169, 186, 255, 0.5);

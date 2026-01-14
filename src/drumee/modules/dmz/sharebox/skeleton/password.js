@@ -40,7 +40,7 @@ function __skl_dmz_sharebox_password (_ui_) {
   })
 
   const button = Skeletons.Box.X({
-    className : `${passwordFig}__row buttons-wrapper buttons no-background`,
+    className : `${passwordFig}__row buttons-wrapper buttons`,
     sys_pn    : 'button-wrapper',
     service   : 'verify-password',
     uiHandler : _ui_,

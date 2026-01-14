@@ -88,7 +88,7 @@
 
         &.hub,
         &.folder {
-          color: var(--default-text-reverse);
+          color: var(--neutral-600);
         }
 
         &.image,
@@ -165,6 +165,10 @@
     width: 100%;
   }
 
+  &-header__expiry-info {
+    gap: var(--spacer-3);
+  }
+
   &-header__button {
     cursor: pointer;
     display: flex;
@@ -213,6 +217,8 @@
 
   &__content {
     z-index: 1200;
+    justify-content: center;
+    height: auto;
 
     &.desk-content {
       width: calc(100% - 10px);
@@ -232,14 +238,15 @@
   }
 
   &__note {
-    @include drumee.typo($size: 20px, $line: 28px, $weight: 400, $color: var(--default-text-reverse));
+    @include drumee.typo($size: 20px, $line: 28px, $weight: 400, $color: var(--neutral-600));
     justify-content: center;
     text-align: center;
     width: 100%;
+
   }
 
   &__footer-note {
-    @include drumee.typo($size: 16px, $line: 20px, $weight: 400, $color: var(--default-text-reverse));
+    @include drumee.typo($size: 16px, $line: 20px, $weight: 400, $color: var(--neutral-600));
     bottom: 6px;
     justify-content: flex-end;
     height: 25px;
@@ -253,7 +260,7 @@
     left: calc(50% - 150px);
     width: 300px;
     justify-content: center;
-    @include drumee.typo($line: 60px, $size: 40px, $weight: 400, $color: var(--default-text-reverse));
+    @include drumee.typo($line: 60px, $size: 40px, $weight: 400, $color: var(--neutral-600));
   }
 
 }

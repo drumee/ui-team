@@ -85,6 +85,46 @@ function __skl_dmz_sharebox_header(ui) {
       downloadBtn
     ]
   })
+  
+  const expiry = Skeletons.Box.X({
+    className: `${headerFig}__expiry-info`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${headerFig}__expiry title`,
+        kids: [
+          Skeletons.Note({
+            className: `${headerFig}__note menu-item title expires-in`,
+            content: LOCALE.EXPIRES_IN//'Expires In'
+          })
+        ]
+      }),
+      Skeletons.Box.X({
+        className: `${headerFig}__expiry-time`,
+        kids: [
+          Skeletons.Note({
+            className: `${headerFig}__note days expires-in-value`,
+            content: ui.mget(_a.days) || '∞'
+          }),
+
+          Skeletons.Note({
+            className: `${headerFig}__note menu-item days expires-in-label`,
+            content: LOCALE.DAYS
+          }),
+
+          Skeletons.Note({
+            className: `${headerFig}__note hours expires-in-value`,
+            content: ui.mget(_a.hours) || '∞'
+          }),
+
+          Skeletons.Note({
+            className: `${headerFig}__note menu-item hours expires-in-label`,
+            content: LOCALE.HOURS
+          })
+        ]
+      })
+    ]
+  })
+
 
   const infoIcon = Skeletons.Box.X({
     className: `${headerFig}__item info`,
@@ -96,8 +136,8 @@ function __skl_dmz_sharebox_header(ui) {
   let actionBox = Skeletons.Box.X({
     className: `${headerFig}__action-box`,
     kids: [
-      infoIcon,
-      actionButtons
+      // infoIcon,
+      actionButtons,
     ]
   })
 
@@ -116,10 +156,10 @@ function __skl_dmz_sharebox_header(ui) {
   });
 
   let kids = [
-    // { kind: 'custom_logo' },
     logo,
     title,
-    actionBox
+    actionBox,
+    // expiry
   ]
   if (Visitor.isMobile()) {
     kids = [
@@ -129,7 +169,6 @@ function __skl_dmz_sharebox_header(ui) {
       title,
     ]
   }
-  ui.debug("AAA:124", ui, ui.mget(_a.privilege))
   return Skeletons.Box.G({
     debug: __filename,
     className: `${headerFig}__container`,

@@ -498,6 +498,11 @@
     &[data-state="0"] {
       display: none;
     }
+
+    &[data-status="error"] {
+      border: 1px solid var(--red-500);
+    }
+
   }
 
   &__input {
