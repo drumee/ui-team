@@ -796,6 +796,8 @@
   "STILL_NOT_DONE": "Pas encore fait",
   "STORAGE": "Stockage",
   "DATE_AND_TIME": "Date et heure",
+  "CUSTOMIZE_DATE_FORMAT": "Personnaliser le format de date (DD/MM/YYYY)",
+  "TIMEZONE": "Fuseau horaire",
   "STYLE": "Style",
   "STYLEOPT": "Attributs CSS3",
   "STYLES": "Styles",

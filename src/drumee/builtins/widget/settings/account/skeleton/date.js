@@ -1,5 +1,7 @@
 const { entry } = require("../../../../skeleton/toolkit");
 
+const LOCALE = require("../../../../locale");
+
 /**
  * Date format options
  */
@@ -651,7 +653,7 @@ function form(ui) {
         kids: [
           Skeletons.Note({
             className: `${fig}-section-title`,
-            content: "Date & Time",
+            content: LOCALE.DATE_AND_TIME,
           }),
           Skeletons.Box.G({
             className: `${fig}-row`,
@@ -661,7 +663,7 @@ function form(ui) {
                 kids: [
                   Skeletons.Note({
                     className: `${ui.fig.family}__entry-label`,
-                    content: "Customize Date Format (DD/MM/YYYY)",
+                    content: LOCALE.CUSTOMIZE_DATE_FORMAT,
                   }),
                   dateFormatMenu(ui),
                 ]
@@ -676,7 +678,7 @@ function form(ui) {
                 kids: [
                   Skeletons.Note({
                     className: `${ui.fig.family}__entry-label`,
-                    content: "Timezone",
+                    content: LOCALE.TIMEZONE,
                   }),
                   timezoneMenu(ui),
                 ]
@@ -697,7 +699,6 @@ function form(ui) {
  */
 function settings_body(ui) {
   return [
-    Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
     form(ui)
   ];
 }

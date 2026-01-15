@@ -796,6 +796,8 @@
   "STILL_NOT_DONE": "还没有完成",
   "STORAGE": "存储",
   "DATE_AND_TIME": "日期和时间",
+  "CUSTOMIZE_DATE_FORMAT": "自定义日期格式 (DD/MM/YYYY)",
+  "TIMEZONE": "时区",
   "STYLE": "样式",
   "STYLEOPT": "CSS3属性",
   "STYLES": "样式",
