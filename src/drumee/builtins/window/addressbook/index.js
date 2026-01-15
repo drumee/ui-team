@@ -25,7 +25,7 @@ class __window_addressbook extends __window_addressbook_interact {
     this._state = 0;
     this.breadcrumbsList = [];
     this.activeNodes = {};
-    this._setSize({ minHeight: 500, minWidth: 340 });
+    // this._setSize({ minHeight: 600, minWidth: 340 });
     if (this.mget(_a.source)) {
       this.minimizeLocation = {
         left: this.mget(_a.source).$el.offset().left - 20

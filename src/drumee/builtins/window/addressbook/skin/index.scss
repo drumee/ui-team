@@ -6,6 +6,16 @@
 @include meta.load-css("breadcrumbs");
 
 .window-addressbook {
+  &__ui {
+    width: 900px;
+    height: 650px;
+    max-width: 100vw;
+    max-height: 100vh;
+    top: 0;
+    left: calc(50vw - 400px);
+    border-bottom: none;
+  }
+
   &__header {
     background-color: var(--ab-header-bg);
     border-bottom: none;
@@ -252,7 +262,7 @@
   &__max-view {
     // height: 100%;
     width: 100%;
-    flex:1;
+    flex: 1;
     // height: calc(100% - 76px);
   }
 
