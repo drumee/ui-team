@@ -1,8 +1,8 @@
-require("jquery-ui/ui/widgets/draggable");
-require("jquery-ui/ui/widgets/droppable");
-require("jquery-ui/ui/widgets/resizable");
-// require("jquery-ui-touch-punch")
-
+if (window.innerWidth > 900) {
+  require("jquery-ui/ui/widgets/droppable");
+  require("jquery-ui/ui/widgets/resizable");
+  require("jquery-ui-touch-punch")
+}
 const Rectangle = require('rectangle-node');
 const mfsInteract = require("./interact");
 const pseudo_media = require("media/pseudo");

@@ -5,6 +5,7 @@
     &__wrapper {
       z-index: 10;
       justify-content: center;
+      box-shadow: var(--shadow-main);
     }
 
     &__result-wrapper {
@@ -14,20 +15,13 @@
       transform: translateX(-50%);
     }
 
-    // &[data-status="open"] {
-    //   display: flex;
-    // }
-
-    // &[data-status="closed"] {
-    //   display: none;
-    // }
 
     &__box {
       background-color: var(--neutral-100);
       padding: 10px;
       border-radius: 12px;
       width: 50%;
-      margin: 10px auto 20px;
+      margin: 10px auto;
       border: 1px solid var(--neutral-300);
     }
 

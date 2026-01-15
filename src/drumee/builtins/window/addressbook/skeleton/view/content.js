@@ -1,10 +1,6 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : builins/window/addressbook/skeleton/view/max-view
-//   TYPE : Skelton
-// ==================================================================== *
 
-const __skl_addressbook_view_content = function (_ui_) {
+
+const __skl_addressbook_view_content = function (ui) {
   let breadcrumb;
 
   const tags = {
@@ -26,18 +22,18 @@ const __skl_addressbook_view_content = function (_ui_) {
   };
 
   const maxContent = Skeletons.Box.X({
-    className: `${_ui_.fig.family}__max-content ${_ui_.fig.group}__max-content max-content`,
+    className: `${ui.fig.family}__max-content ${ui.fig.group}__max-content max-content`,
     sys_pn: "max-content",
   });
 
   const view = Skeletons.Box.X({
     debug: __filename,
     sys_pn: "max-view",
-    className: `${_ui_.fig.family}__max-view ${_ui_.fig.group}__max-view`,
+    className: `${ui.fig.family}__max-view ${ui.fig.group}__max-view view-content`,
 
     kids: [
-      (breadcrumb = require("../common/breadcrumbs")(_ui_)),
-      require("../common/overlay-wrapper")(_ui_),
+      (breadcrumb = require("../common/breadcrumbs")(ui)),
+      require("../common/overlay-wrapper")(ui),
       Skeletons.Box.X({
         className: "tags-list",
         sys_pn: "tags",
@@ -56,9 +52,8 @@ const __skl_addressbook_view_content = function (_ui_) {
   });
 
   const content = Skeletons.Box.Y({
-    className: `${_ui_.fig.family}__max-view ${_ui_.fig.group}__max-view`,
-
-    kids: [require("../common/search")(_ui_), view],
+    className: `${ui.fig.family}__max-view ${ui.fig.group}__max-view AZERTWQA main-content`,
+    kids: [require("../common/search")(ui), view],
   });
 
   return content;

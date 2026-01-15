@@ -245,10 +245,8 @@
   }
 
   &__body {
-    height: 100% !important;
+    height: calc(100% - 132px);
     margin: 0 auto;
-    min-height: auto !important;
-    min-width: auto !important;
     overflow: hidden;
     width: 100% !important;
 
@@ -259,10 +257,16 @@
   }
 
   &__max-view {
-    // height: 100%;
     width: 100%;
     flex: 1;
-    // height: calc(100% - 76px);
+
+    &.main-content {
+      height: calc(100% - 132px);
+    }
+
+    &.view-content {
+      height: calc(100% - 76px);
+    }
   }
 
   &__min-view {
