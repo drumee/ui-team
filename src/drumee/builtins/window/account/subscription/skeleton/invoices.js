@@ -35,7 +35,7 @@ function addRow(_ui_, item) {
     kids: [
       Skeletons.Note({
         className : `${tableFig}__item data-cell date`,
-        content   : Dayjs.unix(item.paidtime).locale(Visitor.language()).format("DD/MM/YYYY")
+        content   : Dayjs.unix(item.paidtime).locale(Visitor.language()).format(Visitor.dateformat())
       }),
 
       Skeletons.Note({

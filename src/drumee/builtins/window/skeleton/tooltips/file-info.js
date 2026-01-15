@@ -17,13 +17,13 @@ const __window_fileinfo = function(_ui_){
   let changed, created;
   const ctime = _ui_.model.get(_a.createTime);
   if (ctime != null) {
-    created = Dayjs.unix(ctime).format("DD/MM/YYYY");
+    created = Dayjs.unix(ctime).format(Visitor.dateformat());
   } else { 
     created = "";
   }
   const mtime = _ui_.model.get("mtime");
   if (mtime != null) {
-    changed = Dayjs.unix(mtime).format("DD/MM/YYYY");
+    changed = Dayjs.unix(mtime).format(Visitor.dateformat());
   } else { 
     changed = "";
   }

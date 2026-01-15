@@ -237,7 +237,7 @@ class __photo extends LetcBox {
     if (refresh == null) { refresh = false; }
     this._minWidth = 200;
     return this.model.set({
-      date: Dayjs.unix(this.image.get(_a.createTime)).format("DD-MM-YYYY à HH:MM")
+      date: Dayjs.unix(this.image.get(_a.createTime)).format(Visitor.timeformat())
     });
   }
 

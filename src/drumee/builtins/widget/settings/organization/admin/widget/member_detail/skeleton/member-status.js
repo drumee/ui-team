@@ -5,7 +5,7 @@ function __skl_member_detail_member_status  (_ui_, data) {
 
   const statusChangedTime = Skeletons.Note({
     className  : `${detailFig}__note member-status timestamp`,
-    content    : Dayjs.unix(data.status_date).format("DD/MM/YYYY HH [h] mm")
+    content    : Dayjs.unix(data.status_date).format(Visitor.timeformat())
   })
   
   statusContentText = LOCALE.ACCOUNT_BLOCKED //'Account blocked'
