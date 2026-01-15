@@ -2,7 +2,7 @@ const __skl_contact_invitationForm = function (ui) {
   this.debug("__skl_contact_invitationForm", ui);
 
   const inviteFormFig = ui.fig.family;
-  const { mode } = ui;
+  const { mode } = ui.model.toJSON();
 
   let header = "";
   if (mode === "addressBook") {
@@ -65,19 +65,19 @@ const __skl_contact_invitationForm = function (ui) {
     ],
   });
 
-  const message = Skeletons.Box.X({
-    className: `${inviteFormFig}__wrapper message`,
-    kids: [
-      Skeletons.Entry({
-        className: `${inviteFormFig}__entry message`,
-        type: _a.textarea,
-        name: _a.message,
-        formItem: _a.message,
-        innerClass: _a.message,
-        placeholder: LOCALE.YOUR_MSG || "",
-      }), //'your message'
-    ],
-  });
+  // const message = Skeletons.Box.X({
+  //   className: `${inviteFormFig}__wrapper message`,
+  //   kids: [
+  //     Skeletons.Entry({
+  //       className: `${inviteFormFig}__entry message`,
+  //       type: _a.textarea,
+  //       name: _a.message,
+  //       formItem: _a.message,
+  //       innerClass: _a.message,
+  //       placeholder: LOCALE.YOUR_MSG || "",
+  //     }), //'your message'
+  //   ],
+  // });
 
   const errorWrapper = Skeletons.Wrapper.Y({
     className: `${inviteFormFig}__wrapper error-message`,
@@ -105,7 +105,7 @@ const __skl_contact_invitationForm = function (ui) {
 
   const form = Skeletons.Box.Y({
     className: `${inviteFormFig}__container`,
-    kids: [emailorIdent, message, errorWrapper],
+    kids: [emailorIdent, errorWrapper],
   });
 
   const a = Skeletons.Box.Y({

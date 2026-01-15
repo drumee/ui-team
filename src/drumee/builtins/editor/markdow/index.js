@@ -24,6 +24,13 @@ class __editor_markdown extends __player {
     window.onbeforeunload = this.checkUnsavedWork.bind(this);
     if (opt.media) {
       this.copyPropertiesFrom(opt.media)
+    } else {
+      /** If not source file, default to the owner's */
+      this.mset({
+        hub_id: Visitor.id,
+        pid: Visitor.get(_a.home_id),
+        privilege: _K.privilege.owner
+      })
     }
     const now = Dayjs().format("DD-MMM-YYYY@HH:MM");
     this.model.atLeast({
@@ -42,6 +49,23 @@ class __editor_markdown extends __player {
       this.checkUnsavedWork.bind(this)
     );
   }
+
+  /**
+   * 
+   */
+  getCurrentMedia() {
+    if (this.target) {
+      return {
+        pid: this.target.getCurrentNid(),
+        hub_id: this.target.mget(_a.hub_id),
+      }
+    }
+    return {
+      hub_id: Visitor.id,
+      pid: Visitor.get(_a.home_id),
+    }
+  }
+
 
   /**
    *
@@ -73,7 +97,7 @@ class __editor_markdown extends __player {
         this.raise();
         this.viewerId = `${this.mget(_a.widgetId)}-viewer`;
         this.editorId = `${this.mget(_a.widgetId)}-editor`;
-        // child.feed(require('./skeleton/content')(this))
+        child.feed(require('./skeleton/content')(this))
         break;
       case 'pin':
         if (!this.media || this.mget(REMINDER_ID)) return;
@@ -153,8 +177,7 @@ class __editor_markdown extends __player {
           kind: target._getKind(),
           filetype: _a.note,
           logicalParent: target,
-          pid: target.getCurrentNid(),
-          hub_id: target.mget(_a.hub_id),
+          ...this.getCurrentMedia(),
           ...data,
         };
         delete item.replace;
@@ -171,8 +194,8 @@ class __editor_markdown extends __player {
   }
 
   /**
- * 
- */
+  * 
+  */
   pin(cmd) {
     this.debug("AAAA:142", this.mget(REMINDER_ID), cmd.mget(_a.state));
     let task = {
@@ -229,8 +252,12 @@ class __editor_markdown extends __player {
     let a = content.split(' ');
 
     let filename = this.mget(_a.filename);
-    if (a[0]) {
-      filename = (a[0] + (a[1] || "")).replace(/[\/<>!\$\*\&\~\#\"\'\`\^]/g, '')
+    if (!this.mget(_a.nid)) {
+      if (a[0]) {
+        filename = (a[0] + (a[1] || "")).replace(/[\/<>!\$\*\&\~\#\"\'\`\^]/g, '')
+      }else{
+        filename = this.mget(_a.filename);
+      }
     }
     //let ext = this.mget(_a.ext) || 'note';
     let { hub_id, nid, pid } = node || this.actualNode();

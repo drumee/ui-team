@@ -248,33 +248,11 @@ class __desk_dock extends LetcBox {
    * @param {*} cmd 
    */
   trash(cmd) {
-    let list = [];
-    let forbiden = 0;
-    let hub = 0;
-    let selection = Wm.getGlobalSelection();
-    for (var n of selection) {
-      if (n.mget(_a.privilege) & _K.permission.delete) {
-        if (n.mget(_a.filetype) == _a.hub) {
-          hub++;
-          n.unselect();
-          n.moveForbiden(LOCALE.ACTION_NOT_PERMITTED);
-          continue;
-        }
-        list.push(n);
-      } else {
-        forbiden++;
-        n.unselect();
-        n.moveForbiden(LOCALE.WEAK_PRIVILEGE);
-      }
-    }
-
-    if (hub) {
+    if (Wm.getGlobalSelection().length) {
       this.triggerHandlers({
-        service: "confirm-remove-selection", selection
+        service: "remove-selection"
       });
-    }
-
-    if (_.isEmpty(list) && (!forbiden && !hub)) {
+    } else {
       const old = Wm.getItemByKind('window_trash');
       if ((old != null) && !old.isDestroyed()) {
         old.goodbye();
@@ -286,9 +264,7 @@ class __desk_dock extends LetcBox {
         trigger: cmd,
         uiHandler: [this]
       };
-      Wm.windowsLayer.append(item);
-    } else {
-      this.putIntoTrash(list);
+      Wm.windowsLayer.append(item)
     }
   }
 

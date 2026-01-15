@@ -60,11 +60,6 @@ class settings_share_hub extends DrumeeMFS {
           return;
         }
         return this.goodbye();
-      // case 'change-permission':
-      //   return this.triggerChangePermission(cmd);
-
-      // case 'toggle-validity-mode':
-      //   return this.toggleValidityMode(cmd);
 
       case 'toggle-password':
         return this.togglePassword(cmd);
@@ -72,8 +67,6 @@ class settings_share_hub extends DrumeeMFS {
       case 'toggle-password-visibility':
         return this.togglePasswordVisibility(cmd);
 
-      // case 'change-access-type':
-      //   return this.changeAccessType(cmd);
 
       case 'apply-all-save':
         return this.applyAllAndSave();
@@ -93,14 +86,12 @@ class settings_share_hub extends DrumeeMFS {
     }
     args.permission = args.privilege;
     this.debug("AAA:102", args)
-    // return;
-    // this.formData.permission = _K.permission.download | _K.permission.anonymous
-    // if (upload) {
-    //   this.formData.permission = _K.permission.upload | this.formData.permission
-    // }
-    // this.formData.days = days;
-    // this.formData.hours = hours;
-
+    this.__passwordInputWrapper.el.dataset.status = ""
+    if (args.passwordSet && !args.password && !this.mget('hasPassword')) {
+      this.debug("AAA:90", args)
+      this.__passwordInputWrapper.el.dataset.status = _a.error
+      return
+    }
     const opt = {
       service: SERVICE.hub.update_external_settings,
       hub_id: this.mget(_a.hub_id),
@@ -130,9 +121,17 @@ class settings_share_hub extends DrumeeMFS {
    * Return relevant require by the widget permission
    */
   data() {
-    let { hasPassword, passwordVisible, days, hours, permission } = this.model.toJSON()
+    let modelData = this.model.toJSON();
+    // Handle API typo: hasPaswword (2 w's) -> hasPassword (1 w)
+    let hasPassword = modelData.hasPassword;
+    if (hasPassword === undefined && modelData.hasPaswword !== undefined) {
+      hasPassword = modelData.hasPaswword;
+    }
+    let { passwordVisible, days, hours, permission, password: apiPassword } = modelData;
     if (permission < _K.privilege.read) permission = _K.privilege.read
-    let { password } = this.getData()
+    // Get password from form input first, fallback to API response if available
+    let formPassword = this.getData().password;
+    let password = formPassword || apiPassword || '';
     return {
       days,
       hours,
@@ -156,6 +155,11 @@ class settings_share_hub extends DrumeeMFS {
       service: SERVICE.hub.get_external_room_attr,
       hub_id: hubId
     }).then((data = {}) => {
+      this.debug('AAA:164', data)
+      // Handle API typo: hasPaswword (2 w's) -> hasPassword (1 w)
+      if (data.hasPaswword !== undefined) {
+        data.hasPassword = data.hasPaswword;
+      }
       this.mset(data)
       this.feed(require('./skeleton').default(this, this.data(), _a.edit));
     }).catch((err) => {
@@ -171,7 +175,48 @@ class settings_share_hub extends DrumeeMFS {
    * @param {*} cmd 
    */
   togglePassword(cmd) {
-    this.__passwordInputWrapper.setState(cmd.mget(_a.state))
+    // Get new state from cmd, or toggle from current state
+    let newState = cmd.mget(_a.state);
+    if (newState === undefined || newState === null) {
+      // If cmd doesn't have state, toggle from current wrapper state
+      const currentState = this.__passwordInputWrapper?.getState() || 0;
+      newState = 1 ^ currentState; // Toggle: 0 -> 1, 1 -> 0
+    }
+    
+    // Find checkbox element and update its state
+    const passwordContent = this.getPart('password-content');
+    if (passwordContent && passwordContent.el) {
+      const checkboxEl = passwordContent.el.querySelector(`.${this.fig.family}-password__checkbox`);
+      if (checkboxEl) {
+        // Update checkbox element state
+        checkboxEl.setAttribute(_a.data.state, newState);
+        
+        // Find checkbox component and update its state
+        const findCheckboxComponent = (parent) => {
+          if (!parent || !parent.children) return null;
+          for (let child of parent.children.toArray()) {
+            if (child.el === checkboxEl) {
+              return child;
+            }
+            const found = findCheckboxComponent(child);
+            if (found) return found;
+          }
+          return null;
+        };
+        
+        const checkboxComponent = findCheckboxComponent(passwordContent);
+        if (checkboxComponent && typeof checkboxComponent.setState === 'function') {
+          checkboxComponent.setState(newState);
+        } else if (checkboxComponent && checkboxComponent.model) {
+          checkboxComponent.model.set(_a.state, newState);
+        }
+      }
+    }
+    
+    // Update password input wrapper state
+    if (this.__passwordInputWrapper) {
+      this.__passwordInputWrapper.setState(newState);
+    }
   }
 
   /**
