@@ -96,34 +96,36 @@ function type(ui, label, service) {
  */
 function settings_body(ui, opt) {
   const fig = `${ui.fig.family}`;
-  const members = ui.mget(_a.members) || ui.mget(_a.users) || [];
+  const { owner } = ui.model.toJSON()
+  ui.debug("AAAA:100", owner)
+  // const members = ui.mget(_a.members) || ui.mget(_a.users) || [];
   // const membersCount = members.length || 0;
 
   // Owner info
-  const ownerFromList =
-    members.find(
-      (m) =>
-        (m[_a.privilege] && (m[_a.privilege] & _K.permission.owner)) ||
-        (m.privilege && (m.privilege & _K.permission.owner))
-    ) || {};
+  // const ownerFromList =
+  //   members.find(
+  //     (m) =>
+  //       (m[_a.privilege] && (m[_a.privilege] & _K.permission.owner)) ||
+  //       (m.privilege && (m.privilege & _K.permission.owner))
+  //   ) || {};
 
-  const ownerId =
-    ownerFromList[_a.entity] ||
-    ownerFromList[_a.id] ||
-    ui.mget(_a.owner_id) ||
-    ui.mget(_a.entity) ||
-    ui.mget(_a.id);
+  // const ownerId =
+  //   ownerFromList[_a.entity] ||
+  //   ownerFromList[_a.id] ||
+  //   ui.mget(_a.owner_id) ||
+  //   ui.mget(_a.entity) ||
+  //   ui.mget(_a.id);
 
-  const ownerName =
-    ownerFromList[_a.fullname] ||
-    ownerFromList[_a.surname] ||
-    ui.mget(_a.owner_name) ||
-    ui.mget(_a.owner) ||
-    ui.mget(_a.fullname) ||
-    ui.mget(_a.surname) ||
-    ui.mget(_a.firstname) ||
-    ui.mget(_a.email) ||
-    LOCALE.UNKNOWN;
+  // const ownerName =
+  //   ownerFromList[_a.fullname] ||
+  //   ownerFromList[_a.surname] ||
+  //   ui.mget(_a.owner_name) ||
+  //   ui.mget(_a.owner) ||
+  //   ui.mget(_a.fullname) ||
+  //   ui.mget(_a.surname) ||
+  //   ui.mget(_a.firstname) ||
+  //   ui.mget(_a.email) ||
+  //   LOCALE.UNKNOWN;
 
 
   const sizeLabel = filesize(ui.mget(_a.filesize));
@@ -165,12 +167,12 @@ function settings_body(ui, opt) {
                   kids: [
                     Skeletons.UserProfile({
                       className: `${fig}__owner-avatar`,
-                      id: ownerId,
+                      id: owner.id,
                       auto_color: 1,
                     }),
                     Skeletons.Note({
                       className: `${fig}__item-text`,
-                      content: ownerName,
+                      content: owner.firstname,
                     }),
                   ],
                 }),

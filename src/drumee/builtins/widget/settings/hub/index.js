@@ -56,9 +56,11 @@ class settings_hub extends DrumeeMFS {
    */
   onDomRefresh() {
     this._tab = 0;
-    this.fetchService(SERVICE.hub.show_privilege, { hub_id: this.mget(_a.hub_id) }).then((data) => {
-      this.mset({ visitor: data })
-      this.debug("AAA:43", data)
+    this.fetchService(SERVICE.hub.show_privilege, {
+      hub_id: this.mget(_a.hub_id),
+      type: _a.owner,
+    }).then((data) => {
+      this.mset(data)
       this.feed(require("./skeleton").default(this));
     })
   }

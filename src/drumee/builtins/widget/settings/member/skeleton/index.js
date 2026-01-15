@@ -1,16 +1,24 @@
 
 module.exports = function (ui) {
   const prefix = ui.fig.family;
-  const fname = ui.mget(_a.firstname) || "";
-  const lname = ui.mget(_a.lastname) || "";
-  const fullname = ui.mget(_a.fullname) || `${fname} ${lname}`;
+  let fname = ui.mget(_a.firstname) || "";
+  let lname = ui.mget(_a.lastname) || "";
+  let fullname = ui.mget(_a.fullname) || `${fname} ${lname}`;
   const displayName = ui.mget(_a.surname) || ui.mget("display");
   const type = ui.mget(_a.type);
   const email = ui.email || ui.tooltips || ui.mget(_a.email) || "";
-
+  let surname = ""
+  if (ui.mget(_a.id) == Visitor.id) {
+    fname = "Me";
+    lname = "Myself";
+    fullname = "Me";
+    surname = "Me";
+  }else{
+    surname =`${fname} ${lname}`.trim()
+  }
   let profile_icon;
   if (ui.mget("is_drumate")) {
-    profile_icon = Skeletons.UserProfile({
+    let opt = {
       className: `${prefix}__avatar`,
       id: ui.mget(_a.entity) || ui.mget(_a.id) || ui.mget("drumate_id"),
       firstname: fname || displayName,
@@ -18,7 +26,10 @@ module.exports = function (ui) {
       fullname,
       online: ui.mget(_a.online),
       live_status: 1,
-    });
+      surname
+    }
+    ui.debug("AAA:26", opt)
+    profile_icon = Skeletons.UserProfile(opt);
   } else {
     profile_icon = Skeletons.Button.Svg({
       ico: "desktop_contactbook",
@@ -29,7 +40,6 @@ module.exports = function (ui) {
   // Resolve permission label based on privilege value (similar to permission/index.js)
   const resolveLabel = (p) => {
 
-    ui.debug("AAAA:123", ui.isMediaOwner(), ui.canAdmin(), ui.canUpload(), ui.canDownload())
 
     // Check owner first
     if (ui.isMediaOwner()) {
@@ -67,7 +77,7 @@ module.exports = function (ui) {
     },
     kids: [
       Skeletons.Note({
-        content: ui.name,
+        content: surname,
         className: `${prefix}__name ${type || ""}`,
       }),
       Skeletons.Note({
