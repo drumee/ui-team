@@ -1,7 +1,5 @@
 const { entry } = require("../../../../skeleton/toolkit");
 
-const LOCALE = require("../../../../locale");
-
 /**
  * Date format options
  */

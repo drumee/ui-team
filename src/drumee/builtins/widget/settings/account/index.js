@@ -428,111 +428,95 @@ class settings_account extends LetcBox {
         return this.handSeatsManager()
 
       case "select-dateformat":
-        return this.ensurePart("current-dateformat").then((p) => {
-          const value = cmd.mget(_a.value);
-          // Get label from DATEFORMAT_OPTIONS
-          const DATEFORMAT_OPTIONS = [
-            { value: "DD/MM/YYYY", label: "DD/MM/YYYY" },
-            { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
-            { value: "YYYY/MM/DD", label: "YYYY/MM/DD" },
-            { value: "DD.MM.YYYY", label: "DD.MM.YYYY" },
-            { value: "DD-MM-YYYY", label: "DD-MM-YYYY" },
-          ];
-          const selectedOption = DATEFORMAT_OPTIONS.find(opt => opt.value === value);
-          const label = selectedOption ? selectedOption.label : (cmd.mget(_a.content) || value);
-          
-          // Update display and value
-          p.mset({ value, content: label });
-          if (p.el) {
-            p.el.textContent = label;
-          }
-          
-          // Update trigger in dropdown menu
-          this.ensurePart("dateformat-dropdown").then((dropdown) => {
-            // Update trigger display
-            dropdown.ensurePart("trigger").then((trigger) => {
-              trigger.ensurePart("current-dateformat").then((display) => {
-                display.mset({ value, content: label });
-                if (display.el) {
-                  display.el.textContent = label;
+        const value = cmd.mget(_a.value);
+        // Get label from DATEFORMAT_OPTIONS
+        const DATEFORMAT_OPTIONS = [
+          { value: "DD/MM/YYYY", label: "DD/MM/YYYY" },
+          { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
+          { value: "YYYY/MM/DD", label: "YYYY/MM/DD" },
+          { value: "DD.MM.YYYY", label: "DD.MM.YYYY" },
+          { value: "DD-MM-YYYY", label: "DD-MM-YYYY" },
+        ];
+        const selectedOption = DATEFORMAT_OPTIONS.find(opt => opt.value === value);
+        const label = selectedOption ? selectedOption.label : (cmd.mget(_a.content) || value);
+        
+        // Update trigger in dropdown menu
+        return this.ensurePart("dateformat-dropdown").then((dropdown) => {
+          // Update trigger display
+          return dropdown.ensurePart("trigger").then((trigger) => {
+            return trigger.ensurePart("current-dateformat").then((display) => {
+              display.mset({ value, content: label });
+              if (display.el) {
+                display.el.textContent = label;
+              }
+              
+              // Update all items state
+              return dropdown.ensurePart("items").then((items) => {
+                if (items && items.children) {
+                  items.children.each((child) => {
+                    const itemValue = child.mget(_a.value);
+                    if (itemValue === value) {
+                      child.el.dataset.state = "1";
+                      if (child.setState) child.setState(1);
+                    } else {
+                      child.el.dataset.state = "0";
+                      if (child.setState) child.setState(0);
+                    }
+                  });
                 }
               });
-            });
-            
-            // Update all items state
-            dropdown.ensurePart("items").then((items) => {
-              if (items && items.children) {
-                items.children.each((child) => {
-                  const itemValue = child.mget(_a.value);
-                  if (itemValue === value) {
-                    child.el.dataset.state = "1";
-                    if (child.setState) child.setState(1);
-                  } else {
-                    child.el.dataset.state = "0";
-                    if (child.setState) child.setState(0);
-                  }
-                });
-              }
             });
           });
         });
 
       case "select-timezone":
-        return this.ensurePart("current-timezone").then((p) => {
-          const value = cmd.mget(_a.value);
-          // Get label from cmd content (which should be the label from the item)
-          let label = cmd.mget(_a.content);
-          
-          // If label is not available or equals value, try to format it
-          if (!label || label === value) {
-            try {
-              const now = new Date();
-              const formatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: value,
-                timeZoneName: 'longOffset'
-              });
-              const parts = formatter.formatToParts(now);
-              const tzNamePart = parts.find(p => p.type === 'timeZoneName');
-              const offset = tzNamePart ? tzNamePart.value : '';
-              const cityName = value.split('/').pop().replace(/_/g, ' ');
-              label = offset ? `(${offset}) ${cityName}` : cityName;
-            } catch (e) {
-              label = value.split('/').pop().replace(/_/g, ' ');
-            }
+        const tzValue = cmd.mget(_a.value);
+        // Get label from cmd content (which should be the label from the item)
+        let tzLabel = cmd.mget(_a.content);
+        
+        // If label is not available or equals value, try to format it
+        if (!tzLabel || tzLabel === tzValue) {
+          try {
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('en-US', {
+              timeZone: tzValue,
+              timeZoneName: 'longOffset'
+            });
+            const parts = formatter.formatToParts(now);
+            const tzNamePart = parts.find(p => p.type === 'timeZoneName');
+            const offset = tzNamePart ? tzNamePart.value : '';
+            const cityName = tzValue.split('/').pop().replace(/_/g, ' ');
+            tzLabel = offset ? `(${offset}) ${cityName}` : cityName;
+          } catch (e) {
+            tzLabel = tzValue.split('/').pop().replace(/_/g, ' ');
           }
-          
-          // Update display and value
-          p.mset({ value, content: label });
-          if (p.el) {
-            p.el.textContent = label;
-          }
-          
-          // Update trigger in dropdown menu
-          this.ensurePart("timezone-dropdown").then((dropdown) => {
-            // Update trigger display
-            dropdown.ensurePart("trigger").then((trigger) => {
-              trigger.ensurePart("current-timezone").then((display) => {
-                display.mset({ value, content: label });
-                if (display.el) {
-                  display.el.textContent = label;
+        }
+        
+        // Update trigger in dropdown menu
+        return this.ensurePart("timezone-dropdown").then((dropdown) => {
+          // Update trigger display
+          return dropdown.ensurePart("trigger").then((trigger) => {
+            return trigger.ensurePart("current-timezone").then((display) => {
+              display.mset({ value: tzValue, content: tzLabel });
+              if (display.el) {
+                display.el.textContent = tzLabel;
+              }
+              
+              // Update all items state
+              return dropdown.ensurePart("items").then((items) => {
+                if (items && items.children) {
+                  items.children.each((child) => {
+                    const itemValue = child.mget(_a.value);
+                    if (itemValue === tzValue) {
+                      child.el.dataset.state = "1";
+                      if (child.setState) child.setState(1);
+                    } else {
+                      child.el.dataset.state = "0";
+                      if (child.setState) child.setState(0);
+                    }
+                  });
                 }
               });
-            });
-            
-            // Update all items state
-            dropdown.ensurePart("items").then((items) => {
-              if (items && items.children) {
-                items.children.each((child) => {
-                  const itemValue = child.mget(_a.value);
-                  if (itemValue === value) {
-                    child.el.dataset.state = "1";
-                    if (child.setState) child.setState(1);
-                  } else {
-                    child.el.dataset.state = "0";
-                    if (child.setState) child.setState(0);
-                  }
-                });
-              }
             });
           });
         });
