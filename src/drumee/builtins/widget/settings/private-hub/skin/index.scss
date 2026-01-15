@@ -1,26 +1,9 @@
 @use "sass:meta";
 @use "mixins/drumee";
 
-.settings {
-  &__ui {
-    width: 100%;
-    max-width: 520px;
-    box-sizing: border-box;
-    padding: 0;
-    gap: var(--spacer-2);
-    display: flex;
-    flex-direction: column;
-    background-color: var(--white);
-    border-radius: var(--corner-radius-6);
-    max-height: calc(100vh - 200px);
-    overflow: auto;
-  }
-}
-
 .settings-private-hub {
   &__wrapper {
     border-radius: 24px;
-    box-shadow: 0 10px 30px rgba(34, 34, 34, 0.1);
     margin: 0 auto;
     max-width: 100%;
     padding: 24px;
@@ -50,7 +33,7 @@
   &__divider {
     width: calc(100% + 48px); // Full width including parent padding (24px * 2)
     height: 1px;
-    background: var(--neutral-200, #EBECF0);
+    background: var(--neutral-200, #ebecf0);
     margin: 16px -24px; // Negative margin to offset parent padding
     padding: 0;
     flex-shrink: 0;
@@ -86,12 +69,12 @@
   }
 
   &__cancel-btn {
-    background: var(--neutral-100, #F5F5F7);
+    background: var(--neutral-100, #f5f5f7);
     color: var(--neutral-900, #222732);
     margin-right: 12px;
 
     &:hover {
-      background: var(--neutral-200, #E8E8EB);
+      background: var(--neutral-200, #e8e8eb);
     }
 
     svg {
@@ -105,20 +88,20 @@
   }
 
   &__save-btn {
-    background: var(--primary-600, #7C3AED);
+    background: var(--primary-600, #7c3aed);
     color: var(--white, #ffffff);
     font-weight: 500;
 
     &.contact {
-      background: var(--primary-500, #7C3AED);
+      background: var(--primary-500, #7c3aed);
 
       &:hover {
-        background: var(--primary-700, #6D28D9);
+        background: var(--primary-700, #6d28d9);
       }
     }
 
     &:hover {
-      background: var(--primary-700, #6D28D9);
+      background: var(--primary-700, #6d28d9);
     }
 
     svg {
@@ -164,9 +147,11 @@
   }
 
   &__title {
-    @include drumee.typo($color: var(--default-text-color),
+    @include drumee.typo(
+      $color: var(--default-text-color),
       $size: 20px,
-      $weight: 600);
+      $weight: 600
+    );
     flex: 1;
     justify-content: center;
     text-align: center;
@@ -232,7 +217,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    border: 1px solid var(--neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #d1d5db);
     border-radius: 8px;
     cursor: pointer;
     transition: border-color 120ms ease;
@@ -240,7 +225,7 @@
     box-sizing: border-box;
 
     &:hover {
-      border-color: var(--neutral-400, #9CA3AF);
+      border-color: var(--neutral-400, #9ca3af);
     }
   }
 
@@ -261,7 +246,7 @@
     height: 16px;
     flex-shrink: 0;
     rotate: 90deg;
-    color: var(--neutral-600, #8C929C);
+    color: var(--neutral-600, #8c929c);
   }
 
   &__description {
@@ -270,11 +255,9 @@
     }
 
     font-size: 14px;
-    color: var(--neutral-600, #8C929C);
+    color: var(--neutral-600, #8c929c);
     line-height: 1.5;
   }
-
-
 
   &__input-wrapper {
     position: relative;
@@ -285,7 +268,7 @@
   &__input {
     width: 100%;
     padding: 12px 60px 12px 16px; // padding-right: 60px để tránh bị label đè
-    border: 1px solid var(--neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #d1d5db);
     border-radius: 8px;
     font-size: 14px;
 
@@ -299,7 +282,7 @@
     right: 16px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--primary-600, #7C3AED);
+    color: var(--primary-600, #7c3aed);
     font-size: 14px;
     font-weight: 400;
     cursor: pointer;
@@ -307,7 +290,7 @@
     z-index: 1;
 
     &:hover {
-      color: var(--primary-700, #6D28D9);
+      color: var(--primary-700, #6d28d9);
     }
 
     // Ẩn SVG icon, chỉ hiển thị label text
@@ -328,7 +311,7 @@
     padding: 4px;
     margin-top: 4px;
     z-index: 200;
-    border: 1px solid var(--neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #d1d5db);
     border-radius: 8px;
     overflow: visible;
   }
@@ -386,9 +369,11 @@
     flex: 1;
     display: flex;
     align-items: center;
-    @include drumee.typo($color: var(--default-text-color),
+    @include drumee.typo(
+      $color: var(--default-text-color),
       $size: 14px,
-      $weight: 400);
+      $weight: 400
+    );
 
     svg {
       display: none;
@@ -472,7 +457,7 @@
     svg {
       width: 20px;
       height: 20px;
-      border: 1px solid var(--neutral-300, #D1D5DB);
+      border: 1px solid var(--neutral-300, #d1d5db);
       border-radius: 5px;
       background-color: var(--ewhite);
       transition: all 120ms ease;
@@ -483,7 +468,7 @@
     &.selected {
       svg {
         padding: 3px;
-        background-color: var(--primary-600, #7C3AED);
+        background-color: var(--primary-600, #7c3aed);
         border: 1px solid var(--white, #ffffff);
         color: var(--white, #ffffff);
       }
@@ -493,7 +478,7 @@
       svg {
         background-color: var(--ewhite);
         border-radius: 5px;
-        border: 1px solid var(--neutral-300, #D1D5DB);
+        border: 1px solid var(--neutral-300, #d1d5db);
         color: transparent;
       }
     }
@@ -538,16 +523,16 @@
     transition: all 120ms ease;
 
     &:hover {
-      background: var(--neutral-50, #FAFAFA);
+      background: var(--neutral-50, #fafafa);
     }
 
     &.active {
-      background: var(--primary-50, #F4E7FF);
-      border-color: var(--primary-600, #B251FB);
+      background: var(--primary-50, #f4e7ff);
+      border-color: var(--primary-600, #b251fb);
     }
 
     // Radio button row inside option
-    >.drumee-box {
+    > .drumee-box {
       display: flex;
       align-items: flex-start;
       gap: 12px;
@@ -559,14 +544,14 @@
     height: 20px;
     flex-shrink: 0;
     margin-top: 2px;
-    border: 2px solid var(--neutral-400, #C3C6CC);
+    border: 2px solid var(--neutral-400, #c3c6cc);
     border-radius: 100%;
     cursor: pointer;
     background: var(--ewhite);
 
     &.active {
-      background: var(--primary-50, #F4E7FF);
-      border: 5px solid var(--primary-600, #B251FB);
+      background: var(--primary-50, #f4e7ff);
+      border: 5px solid var(--primary-600, #b251fb);
     }
   }
 
@@ -585,7 +570,7 @@
 
   &__option-description {
     font-size: 13px;
-    color: var(--neutral-600, #8C929C);
+    color: var(--neutral-600, #8c929c);
     line-height: 1.4;
   }
 
@@ -605,10 +590,10 @@
   &__entry {
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid var(--neutral-300, #D1D5DB);
+    border: 1px solid var(--neutral-300, #d1d5db);
     border-radius: 12px;
-    background: var(--Gray-White, #FFF);
-    color: var(--neutral-400, #C3C6CC);
+    background: var(--Gray-White, #fff);
+    color: var(--neutral-400, #c3c6cc);
     font-size: 16px;
     font-style: normal;
     font-weight: 400;
@@ -618,7 +603,7 @@
     min-width: 0; // Allow flex items to shrink below their content size
 
     &::placeholder {
-      color: var(--neutral-400, #C3C6CC);
+      color: var(--neutral-400, #c3c6cc);
       font-size: 16px;
       font-weight: 400;
       line-height: 26px;
@@ -628,7 +613,7 @@
     // Input text color when user types
     input,
     .entry-area {
-      color: var(--neutral-400, #C3C6CC);
+      color: var(--neutral-400, #c3c6cc);
       font-size: 16px;
       font-weight: 400;
       line-height: 26px;
@@ -638,11 +623,10 @@
     font-size: 14px;
   }
 
-
   &__save-btn {
     padding: 8px 16px;
     border-radius: 6px;
-    background: var(--primary-600, #7C3AED);
+    background: var(--primary-600, #7c3aed);
     color: var(--white, #ffffff);
     font-size: 14px;
     font-weight: 500;
@@ -650,7 +634,7 @@
     transition: background-color 120ms ease;
 
     &:hover {
-      background: var(--primary-700, #6D28D9);
+      background: var(--primary-700, #6d28d9);
     }
   }
 

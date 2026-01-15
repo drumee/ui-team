@@ -1,13 +1,12 @@
 // @use "sass:meta";
-@use 'mixins/drumee';
-@use 'layout';
-@use 'breadcrumbs';
-@use 'search';
-@use 'menu';
-@use 'overlay-wrapper';
+@use "mixins/drumee";
+@use "layout";
+@use "breadcrumbs";
+@use "search";
+@use "menu";
+@use "overlay-wrapper";
 
 .window-bigchat {
-
   &__ui {
     background-color: inherit;
   }
@@ -26,8 +25,8 @@
     min-height: auto !important;
     min-width: auto !important;
     overflow: hidden;
-
     width: 100% !important;
+    border-radius: 0 0 24px 24px;
 
     &.window__body {
       padding: 0;
@@ -42,22 +41,42 @@
   &-topbar {
     // @include meta.load-css('breadcrumbs.scss');
 
-    &__content {
-      align-items: center;
-      display: flex;
-      height: 100%;
-      justify-content: center;
-      margin: auto;
-      position: absolute;
-      width: 100%;
+    &__container {
+      justify-content: space-between;
+      padding: 0 40px;
     }
 
     &__content {
-      margin: auto;
+      align-items: center;
+      height: 100%;
+    }
 
+    &__title-wrapper {
+      gap: 10px;
+      align-items: center;
+    }
+
+    &__name-wrapper {
+      gap: 10px;
+    }
+
+    &__subtitle-wrapper {
+      gap: 10px;
+      color: white;
+      &.contacts {
+        padding-right: 10px;
+        border-right: 1px solid var(--neutral-400);
+      }
+    }
+
+    &__content {
       & .title {
         align-items: center;
-        @include drumee.typo($size: 18px, $line: 16px, $color: var(--default-text-reverse));
+        @include drumee.typo(
+          $size: 32px,
+          $line: 16px,
+          $color: var(--default-text-reverse)
+        );
       }
     }
 
@@ -88,8 +107,16 @@
         width: 22px;
       }
     }
+    &__trigger-wrapper {
+      align-items: center;
+      gap: 10px;
+      color: white;
+      background-color: var(--neutral-950);
+      padding: 10px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+    }
   }
-
 
   &__max-view {
     height: 100%;
@@ -120,9 +147,13 @@
     padding-bottom: 5px;
     padding-left: 4px;
     padding-top: 5px;
-    margin: 1px .5px 0 0;
+    margin: 1px 0.5px 0 0;
     height: 35px;
-    @include drumee.typo($size: 14px, $line: 16px, $color: var(--bigchat-special-share-room-color));
+    @include drumee.typo(
+      $size: 14px,
+      $line: 16px,
+      $color: var(--bigchat-special-share-room-color)
+    );
 
     &[data-active="active"],
     &[data-radio="on"],
@@ -146,7 +177,11 @@
   }
 
   &.adressbook-widget-tag__note.title {
-    @include drumee.typo($size: 15px, $line: 16px, $color: var(--bigchat-default-text-title));
+    @include drumee.typo(
+      $size: 15px,
+      $line: 16px,
+      $color: var(--bigchat-default-text-title)
+    );
   }
 
   &__separator {
@@ -162,6 +197,7 @@
     overflow: hidden;
     width: 100%;
     border-radius: var(--border-radius-righ);
+    padding-bottom: 10px;
   }
 
   &__sharechat_notify[data-state="0"] {
@@ -182,7 +218,11 @@
     }
 
     &__note {
-      @include drumee.typo($size: 16px, $line: 30px, $color: var(--tertiary-text-color));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 30px,
+        $color: var(--tertiary-text-color)
+      );
       height: 100%;
       justify-content: center;
       min-width: 35px;

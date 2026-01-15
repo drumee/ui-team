@@ -58,6 +58,7 @@
     border-bottom: none;
     z-index: 200;
     background: linear-gradient(135deg, #dcb2ff, #b251fb);
+    border-radius: 24px 24px 0 0;
 
     &[data-header="0"] {
       display: none;
@@ -88,7 +89,6 @@
 
   &-topbar {
     &__icon {
-
       width: 46px;
       height: 46px;
       margin-left: 10px;
@@ -127,10 +127,11 @@
         position: absolute;
         padding: 7px;
         top: 18px;
-        @include drumee.typo($line: 15px,
+        @include drumee.typo(
+          $line: 15px,
           $size: 12px,
-          $color: var(--default-text-color));
-
+          $color: var(--default-text-color)
+        );
       }
     }
   }
@@ -141,10 +142,12 @@
     height: 100%;
     overflow: auto;
     padding: 10px;
-    @include drumee.typo($size: 13px,
+    @include drumee.typo(
+      $size: 13px,
       $line: 18px,
       $weight: 300,
-      $color: var(--default-text-color));
+      $color: var(--default-text-color)
+    );
 
     &--outer {
       display: flex;
@@ -169,23 +172,43 @@
     }
 
     h1 {
-      @include drumee.typo($size: 30px, $line: 1.2, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 30px,
+        $line: 1.2,
+        $color: var(--default-text-color)
+      );
     }
 
     h2 {
-      @include drumee.typo($size: 26px, $line: 1.2, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 26px,
+        $line: 1.2,
+        $color: var(--default-text-color)
+      );
     }
 
     h3 {
-      @include drumee.typo($size: 22px, $line: 1.2, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 22px,
+        $line: 1.2,
+        $color: var(--default-text-color)
+      );
     }
 
     h4 {
-      @include drumee.typo($size: 18px, $line: 1.2, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 1.2,
+        $color: var(--default-text-color)
+      );
     }
 
     h5 {
-      @include drumee.typo($size: 16px, $line: 1.2, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 1.2,
+        $color: var(--default-text-color)
+      );
     }
   }
 
@@ -195,10 +218,12 @@
     height: 100%;
     padding: 10px;
     overflow: auto;
-    @include drumee.typo($size: 13px,
+    @include drumee.typo(
+      $size: 13px,
       $line: 18px,
       $weight: 300,
-      $color: var(--default-text-color));
+      $color: var(--default-text-color)
+    );
 
     &--outer {
       display: flex;
