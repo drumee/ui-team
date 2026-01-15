@@ -48,8 +48,7 @@
       color: white;
 
       &.contacts {
-        padding-right: 10px;
-        border-right: 1px solid var(--neutral-400);
+        // Removed divider (border-right)
       }
     }
 
