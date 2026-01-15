@@ -1,4 +1,4 @@
-const { entry } = require("../../../../skeleton/toolkit");
+const { entry, button } = require("../../../../skeleton/toolkit");
 
 /**
  * Date format options
@@ -696,8 +696,28 @@ function form(ui) {
  * @returns
  */
 function settings_body(ui) {
+  const fig = ui.fig.family;
+  const group = ui.fig.group;
+  
+  const buttons = Skeletons.Box.X({
+    className: `${group}__buttons ${fig}__buttons`,
+    uiHandler: ui,
+    sys_pn: _a.footer,
+    dataset: { page: ui._page },
+    kids: [
+      button(ui, {
+        label: LOCALE.APPLY_ALL_AND_SAVE,
+        type: _a.toggle,
+        className: `${group}__button`,
+        service: _e.save,
+        priority: "primary",
+      }),
+    ],
+  });
+  
   return [
-    form(ui)
+    form(ui),
+    buttons
   ];
 }
 
