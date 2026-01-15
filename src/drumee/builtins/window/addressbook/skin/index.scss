@@ -47,54 +47,57 @@
       gap: 10px;
       color: white;
 
-      &.contacts {
-        // Removed divider (border-right)
+
+    }
+
+    &__add-btn {
+      background: var(--neutral-900);
+      color: var(--white);
+
+      & svg {
+        color: var(--white);
+        fill: var(--white);
       }
     }
 
-    &__content {
-      & .notifier {
-        margin-right: 41px;
-        top: -18px;
+    & .addressbook-widget-notification {
+      &__digit {
+        font-size: 12px;
+        height: 19px;
+        padding-right: 1px;
+        padding-top: 0px;
+        width: 19px;
+        @include drumee.typo($size: 11px,
+          $line: 14px,
+          $color: var(--default-text-notification));
 
-        & .addressbook-widget-notification {
-          &__digit {
-            font-size: 12px;
-            height: 19px;
-            padding-right: 1px;
-            padding-top: 0px;
-            width: 19px;
-            @include drumee.typo($size: 11px,
-              $line: 14px,
-              $color: var(--default-text-notification));
-
-            .inner {
-              @include drumee.typo($size: 11px,
-                $line: 14px,
-                $color: var(--default-text-notification));
-            }
-          }
+        .inner {
+          @include drumee.typo($size: 11px,
+            $line: 14px,
+            $color: var(--default-text-notification));
         }
-      }
-
-      & .title {
-        align-items: center;
-        @include drumee.typo($size: 32px,
-          $line: 16px,
-          $color: var(--default-text-reverse));
-      }
-    }
-
-    &-breadcrumbs__icon {
-      &.breadcrumb-icon {
-        color: var(--default-icon-reverse);
-        height: 22px;
-        margin-top: 10px;
-        padding: 3px;
-        width: 22px;
       }
     }
   }
+
+  & .title {
+    align-items: center;
+    @include drumee.typo($size: 32px,
+      $line: 16px,
+      $color: var(--default-text-reverse));
+  }
+
+
+  &-breadcrumbs__icon {
+    &.breadcrumb-icon {
+      color: var(--default-icon-reverse);
+      height: 22px;
+      margin-top: 10px;
+      padding: 3px;
+      width: 22px;
+    }
+  }
+
 
   &-menu {
     &__trigger-wrapper {
@@ -281,6 +284,10 @@
 
   &__min-view-content {
     width: 100%;
+  }
+
+  &__contact-wrapper {
+    width: 320px;
   }
 
   &__icon {

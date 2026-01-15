@@ -32,7 +32,7 @@ const __skl_addressbook_view_content = function (ui) {
     className: `${ui.fig.family}__max-view ${ui.fig.group}__max-view view-content`,
 
     kids: [
-      (breadcrumb = require("../common/breadcrumbs")(ui)),
+      // (breadcrumb = require("../common/breadcrumbs")(ui)),
       require("../common/overlay-wrapper")(ui),
       Skeletons.Box.X({
         className: "tags-list",
@@ -41,7 +41,7 @@ const __skl_addressbook_view_content = function (ui) {
       }),
 
       Skeletons.Box.X({
-        className: "contact-wrapper",
+        className: `${ui.fig.family}__contact-wrapper`,
         sys_pn: "contact-wrapper",
         kids: [
           // contacts

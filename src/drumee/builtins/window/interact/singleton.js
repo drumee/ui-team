@@ -63,7 +63,7 @@ class __window_interact_singleton extends __window_chatInteract {
       x = 0;
       y = 0;
       w = window.innerWidth;
-      opt.width =  w;
+      opt.width = w;
       h = window.innerHeight;
       opt.height = h;
     }
@@ -86,7 +86,7 @@ class __window_interact_singleton extends __window_chatInteract {
    * @param {*} cmd 
    */
   onDestroy() {
-    if(this.updateNotificationCount){
+    if (this.updateNotificationCount) {
       RADIO_BROADCAST.off('notification:counts', this.updateNotificationCount.bind(this));
     }
     if (super.onDestroy) super.onDestroy();
@@ -96,7 +96,7 @@ class __window_interact_singleton extends __window_chatInteract {
    * 
    */
   bindActivityHandlerEvent() {
-    if(this.updateNotificationCount){
+    if (this.updateNotificationCount) {
       RADIO_BROADCAST.on('notification:counts', this.updateNotificationCount.bind(this));
     }
     // RADIO_BROADCAST.on('notification:counts', this.updateNotificationCount.bind(this));
@@ -294,8 +294,9 @@ class __window_interact_singleton extends __window_chatInteract {
     if (this.instanceUpdated && _.isFunction(this.instanceUpdated)) {
       this.instanceUpdated(this.viewInstance);
     }
-
-    if (this.getPart('overlay-wrapper') && (this.getPart('overlay-wrapper').el.dataset.mode === _a.open) && this.contactBreadcrumbsContainer) {
+    if (!this.contactBreadcrumbsContainer) return
+    let overlay = this.getPart('overlay-wrapper');
+    if (overlay && overlay.el.dataset.mode === _a.open) {
       this.contactBreadcrumbsContainer.el.dataset.state = 0;
     }
   }
