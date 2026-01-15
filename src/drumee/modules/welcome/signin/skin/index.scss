@@ -31,6 +31,11 @@
     width: 100%;
   }
 
+  &__logo-content {
+    justify-content: center;
+    align-items: center;
+  }
+
   &__header {
     height: auto;
     width: 100%;
@@ -55,7 +60,6 @@
     max-width: 350px;
     min-width: 320px;
     width: auto;
-    padding-top: 40px;
 
     &[data-mode="reconnect"] {
       min-height: 0;
@@ -235,7 +239,7 @@
         $size: 38px,
         $line: 45px,
         $weight: 500,
-        $color: var(--default-text-reverse)
+        $color: var(--neutral-900)
       );
       &[data-mode="reconnect"] {
         @include drumee.typo(

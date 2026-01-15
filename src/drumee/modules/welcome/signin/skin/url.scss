@@ -4,7 +4,7 @@
 #   TYPE : Component style
 # ===================================================================**/
 
-@use '../../../../skin/mixins/drumee.scss';
+@use "../../../../skin/mixins/drumee.scss";
 
 .welcome-signin-url {
   width: 100%;
@@ -17,7 +17,12 @@
   }
 
   &__title {
-    @include drumee.typo($size: 28px, $line: 45px, $weight: 400, $color: var(--default-text-reverse));
+    @include drumee.typo(
+      $size: 28px,
+      $line: 45px,
+      $weight: 400,
+      $color: var(--neutral-900)
+    );
   }
 
   &__entry {
@@ -33,6 +38,9 @@
       border-radius: var(--border-radius);
       border: 2px solid var(--default-border-error);
     }
+    &[data-device="mobile"] {
+      width: 200px;
+    }
   }
 
   &__input {
@@ -42,26 +50,35 @@
     height: 100%;
     max-width: 280px;
     & input {
-      @include drumee.typo($size: 18px, $line: 28px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 28px,
+        $color: var(--default-text-color)
+      );
       border-bottom: none;
       border-radius: 0 6px 6px 0px;
       padding: 5px;
       padding-left: 15px;
 
       &::placeholder {
-        @include drumee.typo($size: 18px, $line: 28px, $weight: 300, $color: var(--connect-text-placeholder));
+        @include drumee.typo(
+          $size: 18px,
+          $line: 28px,
+          $weight: 300,
+          $color: var(--connect-text-placeholder)
+        );
       }
     }
   }
 
   &__protocol {
-    @include drumee.typo($size: 18px, $line: 28px, $color: var(--white-f9));
+    @include drumee.typo($size: 18px, $line: 28px, $color: var(--neutral-900));
     position: absolute;
     right: 104%;
   }
 
   &__domain {
-    @include drumee.typo($size: 18px, $line: 28px, $color: var(--white-f9));
+    @include drumee.typo($size: 18px, $line: 28px, $color: var(--neutral-900));
     left: 102%;
     position: absolute;
   }
@@ -80,5 +97,4 @@
     @include drumee.typo($size: 18px, $line: 28px, $color: var(--white-f9));
     text-decoration: underline;
   }
-
 }

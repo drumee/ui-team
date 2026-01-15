@@ -1,9 +1,7 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 @use "skin/lib/button" as *;
 
 .welcome-reset {
-
-
   &__ui {
     padding-top: 70px;
     align-content: center;
@@ -40,6 +38,11 @@
     border: 1px solid var(--neutral-200);
     padding: var(--spacer-7);
     border-radius: var(--corner-radius-6);
+
+    &[data-device="mobile"] {
+      width: auto;
+      margin: 0 10px;
+    }
   }
 
   &__content-password {
@@ -65,7 +68,7 @@
       }
 
       & .strength {
-        background-color: #ABAFC7;
+        background-color: #abafc7;
       }
     }
   }
@@ -144,7 +147,7 @@
       }
 
       &[data-error="yes"] {
-        opacity: .5;
+        opacity: 0.5;
         pointer-events: none;
       }
     }
@@ -168,10 +171,20 @@
     justify-content: center;
     text-align: center;
     width: 100%;
-    @include drumee.typo($size: 20px, $line: 28px, $weight: 400, $color: var(--neutral-900));
+    @include drumee.typo(
+      $size: 20px,
+      $line: 28px,
+      $weight: 400,
+      $color: var(--neutral-900)
+    );
 
     &.header {
-      @include drumee.typo($size: 38px, $line: 45px, $weight: 500, $color: var(--neutral-900));
+      @include drumee.typo(
+        $size: 38px,
+        $line: 45px,
+        $weight: 500,
+        $color: var(--neutral-900)
+      );
     }
 
     // &.steps {
@@ -182,7 +195,12 @@
       // color: var(--white-f9);
       position: absolute;
       right: -130px;
-      @include drumee.typo($size: 20px, $line: 28px, $weight: 500, $color: var(--white-f9));
+      @include drumee.typo(
+        $size: 20px,
+        $line: 28px,
+        $weight: 500,
+        $color: var(--white-f9)
+      );
     }
 
     &.input-label {
@@ -193,7 +211,12 @@
 
     &.password-tips {
       padding-top: 47px;
-      @include drumee.typo($size: 12px, $line: 16px, $weight: 400, $color: var(--white-f9));
+      @include drumee.typo(
+        $size: 12px,
+        $line: 16px,
+        $weight: 400,
+        $color: var(--white-f9)
+      );
     }
 
     &.mobile-number {
@@ -232,7 +255,7 @@
       text-decoration-line: underline;
 
       &:hover {
-        color: var(--eviolet); //#6a85ff; 
+        color: var(--eviolet); //#6a85ff;
       }
     }
   }
@@ -251,8 +274,7 @@
     &.mobile,
     &.mobile-number,
     &.acknowledgment {
-      color: var(--neutral-900);
-      ; //var(--ewhite);
+      color: var(--neutral-900); //var(--ewhite);
     }
 
     &.mobile,
@@ -287,10 +309,19 @@
   &__entry {
     & input {
       // border-bottom: none;
-      @include drumee.typo($size: 18px, $line: 28px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 28px,
+        $color: var(--default-text-color)
+      );
 
       &::placeholder {
-        @include drumee.typo($size: 18px, $line: 28px, $weight: 300, $color: var(--default-text-placeholder)); //var(--egrey-b6));
+        @include drumee.typo(
+          $size: 18px,
+          $line: 28px,
+          $weight: 300,
+          $color: var(--default-text-placeholder)
+        ); //var(--egrey-b6));
       }
     }
 
@@ -359,8 +390,7 @@
 
   &__button-main {
     height: auto;
-    padding-top: 4px;
-    padding-bottom: 4px;
+    padding: 10px 32px;
     display: grid;
 
     &.primary {
@@ -373,5 +403,4 @@
       }
     }
   }
-
 }
