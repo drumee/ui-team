@@ -24,12 +24,14 @@ class settings_account extends LetcBox {
       function (ui) { return { kind: "settings_billing", uiHandler: [ui] } },
       require("./skeleton/storage").default,
       require("./skeleton/security").default,
+      require("./skeleton/date").default,
     ];
     this.tab_name = [
       LOCALE.PROFILE,
       "Billing Information",
       LOCALE.STORAGE,
       LOCALE.SECURITY,
+      LOCALE.DATE_AND_TIME,
     ];
     if (this.canAdmin()) {
       this.tab_name.push("My seats");
@@ -176,6 +178,54 @@ class settings_account extends LetcBox {
         require("./skeleton/ack").default(this, LOCALE.PASS_PHRASE_UPDATED)
       );
       // this.__content.feed(this.skeletons[this._page](this));
+    });
+  }
+
+  /**
+   *
+   */
+  async updateDateSettings() {
+    const data = this.getData();
+    const { dateformat, timezone } = data;
+    
+    // Build settings object
+    const settings = {};
+    if (dateformat) {
+      settings.dateformat = dateformat;
+    }
+    if (timezone) {
+      settings.timezone = timezone;
+    }
+    
+    // If timeformat is not set, derive it from dateformat
+    if (dateformat && !data.timeformat) {
+      settings.timeformat = `${dateformat} - HH:mm:ss`;
+    }
+    
+    return this.postService({
+      service: SERVICE.drumate.update_settings,
+      settings: settings,
+      hub_id: Visitor.id
+    }).then((response) => {
+      // Update Visitor settings - response should contain updated settings
+      let updatedSettings = {};
+      if (response && response.settings) {
+        try {
+          updatedSettings = JSON.parse(response.settings);
+        } catch (e) {
+          updatedSettings = { ...Visitor.settings() || {}, ...settings };
+        }
+      } else {
+        updatedSettings = { ...Visitor.settings() || {}, ...settings };
+      }
+      Visitor.set({ settings: updatedSettings });
+      
+      this.__overlay.feed(
+        require("./skeleton/ack").default(this, "Date & Time settings updated successfully")
+      );
+    }).catch((err) => {
+      this.warn('Error updating date settings:', err);
+      this.showError("Failed to update date settings");
     });
   }
 
@@ -354,6 +404,10 @@ class settings_account extends LetcBox {
 
       case "update-profile":
       case _e.save:
+        // Check if current page is Date settings (page 4)
+        if (this._page === 4) {
+          return this.updateDateSettings(cmd);
+        }
         return this.updateProfile(cmd);
 
       case "load-page":
@@ -372,6 +426,116 @@ class settings_account extends LetcBox {
 
       case "manage-seats":
         return this.handSeatsManager()
+
+      case "select-dateformat":
+        return this.ensurePart("current-dateformat").then((p) => {
+          const value = cmd.mget(_a.value);
+          // Get label from DATEFORMAT_OPTIONS
+          const DATEFORMAT_OPTIONS = [
+            { value: "DD/MM/YYYY", label: "DD/MM/YYYY" },
+            { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
+            { value: "YYYY/MM/DD", label: "YYYY/MM/DD" },
+            { value: "DD.MM.YYYY", label: "DD.MM.YYYY" },
+            { value: "DD-MM-YYYY", label: "DD-MM-YYYY" },
+          ];
+          const selectedOption = DATEFORMAT_OPTIONS.find(opt => opt.value === value);
+          const label = selectedOption ? selectedOption.label : (cmd.mget(_a.content) || value);
+          
+          // Update display and value
+          p.mset({ value, content: label });
+          if (p.el) {
+            p.el.textContent = label;
+          }
+          
+          // Update trigger in dropdown menu
+          this.ensurePart("dateformat-dropdown").then((dropdown) => {
+            // Update trigger display
+            dropdown.ensurePart("trigger").then((trigger) => {
+              trigger.ensurePart("current-dateformat").then((display) => {
+                display.mset({ value, content: label });
+                if (display.el) {
+                  display.el.textContent = label;
+                }
+              });
+            });
+            
+            // Update all items state
+            dropdown.ensurePart("items").then((items) => {
+              if (items && items.children) {
+                items.children.each((child) => {
+                  const itemValue = child.mget(_a.value);
+                  if (itemValue === value) {
+                    child.el.dataset.state = "1";
+                    if (child.setState) child.setState(1);
+                  } else {
+                    child.el.dataset.state = "0";
+                    if (child.setState) child.setState(0);
+                  }
+                });
+              }
+            });
+          });
+        });
+
+      case "select-timezone":
+        return this.ensurePart("current-timezone").then((p) => {
+          const value = cmd.mget(_a.value);
+          // Get label from cmd content (which should be the label from the item)
+          let label = cmd.mget(_a.content);
+          
+          // If label is not available or equals value, try to format it
+          if (!label || label === value) {
+            try {
+              const now = new Date();
+              const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: value,
+                timeZoneName: 'longOffset'
+              });
+              const parts = formatter.formatToParts(now);
+              const tzNamePart = parts.find(p => p.type === 'timeZoneName');
+              const offset = tzNamePart ? tzNamePart.value : '';
+              const cityName = value.split('/').pop().replace(/_/g, ' ');
+              label = offset ? `(${offset}) ${cityName}` : cityName;
+            } catch (e) {
+              label = value.split('/').pop().replace(/_/g, ' ');
+            }
+          }
+          
+          // Update display and value
+          p.mset({ value, content: label });
+          if (p.el) {
+            p.el.textContent = label;
+          }
+          
+          // Update trigger in dropdown menu
+          this.ensurePart("timezone-dropdown").then((dropdown) => {
+            // Update trigger display
+            dropdown.ensurePart("trigger").then((trigger) => {
+              trigger.ensurePart("current-timezone").then((display) => {
+                display.mset({ value, content: label });
+                if (display.el) {
+                  display.el.textContent = label;
+                }
+              });
+            });
+            
+            // Update all items state
+            dropdown.ensurePart("items").then((items) => {
+              if (items && items.children) {
+                items.children.each((child) => {
+                  const itemValue = child.mget(_a.value);
+                  if (itemValue === value) {
+                    child.el.dataset.state = "1";
+                    if (child.setState) child.setState(1);
+                  } else {
+                    child.el.dataset.state = "0";
+                    if (child.setState) child.setState(0);
+                  }
+                });
+              }
+            });
+          });
+        });
 
       case _e.sort:
         this._category = cmd.mget(_a.type);
