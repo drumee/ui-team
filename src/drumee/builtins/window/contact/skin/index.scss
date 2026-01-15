@@ -1,22 +1,27 @@
-
-@use 'mixins/drumee.scss';
+@use "mixins/drumee.scss";
 
 .window-contact {
-  &__ui{
-    width : 572px;
-    min-height: 390px;
+  &__ui {
+    width: 572px;
     left: calc(50vw - 286px);
-    top : 85px;
+    top: 85px;
   }
   &__header {
     &.window__header {
       border-bottom: none;
-      background-color: var(--ab-header-bg);//var(--bigchat-header-bg); // #18a3ac
+      background-color: var(
+        --ab-header-bg
+      ); //var(--bigchat-header-bg); // #18a3ac
     }
 
     &-title {
       align-items: center;
-      @include drumee.typo($size:18px, $line:24px, $weight:400, $color:var(--default-text-reverse));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 24px,
+        $weight: 400,
+        $color: var(--default-text-reverse)
+      );
 
       .icon {
         position: relative;
@@ -26,7 +31,7 @@
 
     &-control {
       .icon {
-        color: var(--default-icon-reverse);//var(--ewhite);
+        color: var(--default-icon-reverse); //var(--ewhite);
       }
     }
   }
@@ -53,7 +58,7 @@
 
   &__icon {
     &.icon_success {
-      color: var(--default-icon-success);//#18ac72;
+      color: var(--default-icon-success); //#18ac72;
       height: 26px;
       margin: auto;
       width: 36px;
@@ -61,10 +66,15 @@
   }
 
   &__note {
-    @include drumee.typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
+    @include drumee.typo(
+      $size: 18px,
+      $weight: 300,
+      $line: 26px,
+      $color: var(--default-text-color)
+    );
 
     &.input-content {
-      color: var(--secondary-text-color);//#4A90E2;
+      color: var(--secondary-text-color); //#4A90E2;
     }
   }
 
@@ -87,22 +97,22 @@
 
   &__button-cancel {
     border: 1px solid var(--btn-rollback-border); //#f1f1f6;
-    border-radius: 6px;//var(--border-radius);
-    color: var(--btn-rollback-text);// #89929e;
+    border-radius: 6px; //var(--border-radius);
+    color: var(--btn-rollback-text); // #89929e;
     margin-right: 50px;
-    &:hover{
-      border:2px solid var(--btn-rollback-border-hover);
-      color: var(--btn-rollback-text-hover);  
+    &:hover {
+      border: 2px solid var(--btn-rollback-border-hover);
+      color: var(--btn-rollback-text-hover);
     }
   }
 
   &__button-confirm {
-    background-color:var(--btn-commit-background); 
-    border-radius: 6px;//var(--border-radius);
+    background-color: var(--btn-commit-background);
+    border-radius: 6px; //var(--border-radius);
     color: var(--btn-commit-text);
     width: auto;
-    &:hover{
-      background-color:var(--btn-commit-background-hover); 
+    &:hover {
+      background-color: var(--btn-commit-background-hover);
     }
   }
 }

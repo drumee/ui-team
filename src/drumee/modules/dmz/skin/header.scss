@@ -11,25 +11,27 @@
       align-items: center;
 
       &[data-device="mobile"] {
-        padding: 18px 0 0 0;
-        position: absolute;
-        flex-direction: column;
-        display: flex;
+        padding: 20px;
+        grid-template-columns: 1fr;
+        gap: 40px;
       }
-
     }
 
     &__logo-content {
       height: 90px;
+      justify-content: center;
+      align-items: center;
     }
 
     &__note.sender-name {
       justify-content: center;
       white-space: break-spaces;
       word-break: break-word;
-      @include drumee.typo($size: 28px,
+      @include drumee.typo(
+        $size: 28px,
         $line: 28px,
-        $color: var(--neutral-900));
+        $color: var(--neutral-900)
+      );
     }
 
     &__title {
@@ -38,30 +40,20 @@
       overflow: hidden;
       width: 100%;
 
-      @include drumee.typo($size: 28px,
+      @include drumee.typo(
+        $size: 28px,
         $line: 28px,
-        $color: var(--neutral-900));
-
-      &[data-device="mobile"] {
-        margin-top: 5px;
-        width: 100%;
-        @include drumee.typo($size: 20px,
-          $line: 22px,
-          $color: var(--neutral-900));
-      }
+        $color: var(--neutral-900)
+      );
     }
 
     &__action-box {
       align-items: center;
       justify-content: center;
 
-      &[data-device="mobile"] {
-        max-width: none;
-        width: 100%;
-        flex-direction: row-reverse;
-        justify-content: flex-start;
-        justify-items: flex-end;
-      }
+      // &[data-device="mobile"] {
+
+      // }
     }
 
     &__item {
@@ -109,9 +101,11 @@
       height: 100%;
       justify-content: center;
       width: 100%;
-      @include drumee.typo($size: 14px,
+      @include drumee.typo(
+        $size: 14px,
         $line: 16px,
-        $color: var(--neutral-900));
+        $color: var(--neutral-900)
+      );
 
       &:hover {
         box-shadow: 0 0px 13px 0px rgba(169, 186, 255, 0.5);

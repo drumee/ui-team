@@ -63,9 +63,6 @@ const __skl_bigchat_common_topBar = function (_ui_) {
                 kids: [
                   Skeletons.Box.X({
                     className: `${figFamily}__trigger-wrapper`,
-                    service: "open-contact",
-                    type: _a.invite,
-                    uiHandler: _ui_,
                     kids: [
                       Skeletons.Button.Svg({
                         ico: "drumee-contact_add",
@@ -75,9 +72,9 @@ const __skl_bigchat_common_topBar = function (_ui_) {
                         uiHandler: _ui_,
                       }),
                       Skeletons.Note({
-                        sys_pn: "ref-window-name",
+                        service: "open-contact",
+                        type: _a.invite,
                         uiHandler: _ui_,
-                        partHandler: _ui_,
                         content: "Add new contacts",
                       }),
                     ],
