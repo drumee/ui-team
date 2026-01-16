@@ -102,10 +102,8 @@
 
     &__container {
       cursor: pointer;
-      margin: 0px 0.5px 0px 0px;
-      padding-bottom: 5px;
-      padding-left: 32px;
-      padding-top: 5px;
+      padding-left: 20px;
+      align-items: center;
       width: 100%;
       @include drumee.typo(
         $size: 14px,
@@ -180,10 +178,7 @@
     font-size: 14px;
     height: 30px;
     justify-content: start;
-    margin: 0px 0.5px 1px 0;
-    padding-bottom: 7px;
-    padding-left: 30px;
-    padding-top: 7px;
+    padding: 7px 0 7px 20px;
     width: 100%;
     @include drumee.typo(
       $size: 14px,
