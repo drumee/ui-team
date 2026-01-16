@@ -41,12 +41,15 @@
 
     &__buttons {
       overflow: visible;
-      gap: var(--spacer-6);
+      gap: var(--spacer-4);
       margin-left: var(--spacer-8);
 
       .tooltips {
         position: absolute;
         white-space: nowrap;
+        margin-top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
       }
     }
   }
@@ -252,7 +255,11 @@
 
     textarea {
       width: 100%;
-      border: 0.5px solid lightblue;
+      height: 100%;
+      border: 1px solid var(--neutral-200);
+      border-radius: 24px;
+      padding: 40px;
+      resize: none;
     }
   }
 }

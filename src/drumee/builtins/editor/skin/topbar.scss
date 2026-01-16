@@ -48,10 +48,12 @@
   &__title {
     padding: 0;
     height: 100%;
-    @include drumee.typo($size: 26px,
+    @include drumee.typo(
+      $size: 26px,
       $line: 24px,
       $weight: 400,
-      $color: var(--default-text-reverse));
+      $color: var(--default-text-reverse)
+    );
     @include drumee.overflow-text;
     width: 100%;
     align-items: center;
@@ -61,11 +63,13 @@
   }
 
   &__icon {
-    width: 30px;
-    height: 30px;
-    color: var(--neutral-100);
+    width: 46px;
+    height: 46px;
+    color: var(--neutral-900);
     cursor: pointer;
-    padding: 3px;
+    padding: 12px;
+    background-color: var(--neutral-200);
+    border-radius: 100%;
 
     &:hover {
       color: var(--primary-500);
