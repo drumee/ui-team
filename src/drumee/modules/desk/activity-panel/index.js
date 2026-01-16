@@ -91,7 +91,7 @@ class __activity_panel extends LetcBox {
   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug("AAA:116", service, cmd)
+    // this.debug("AAA:116", service, cmd)
     switch (service) {
       case 'open-activity-panel':
         return this.togglePannel();

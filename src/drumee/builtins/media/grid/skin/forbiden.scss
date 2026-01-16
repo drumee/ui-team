@@ -3,17 +3,19 @@
 .media-grid {
   &-forbiden {
     &__container {
-      width: 180px;
+      width: auto;
       height: auto;
       display: flex;
+      margin-left: -50%;
       flex-direction: column;
       position: absolute;
       justify-content: center;
-      border: 1px solid var(--eorange-sunset);
-      border-radius: var(--border-radius-small);
+      border: 1px solid var(--red-400);
+      border-radius: var(--corner-radius-3);
       background-color: var(--default-bg);
       box-shadow: var(--shadow-container);
       Z-index: 200;
+      font-size: 14px;
 
       &[data-drag="ok"] {
         display: none;
@@ -23,7 +25,7 @@
     &__text {
       width: 100%;
       padding: 5px;
-      @include drumee.typo($line: 13px, $size: 12px, $weight: 400, $color: var(--eorange-sunset));
+      @include drumee.typo($line: 13px, $size: 12px, $weight: 400, $color: var(--red-400));
       text-align: center;
     }
 
@@ -31,8 +33,8 @@
       width: 17px;
       height: 17px;
       padding: 2px;
-      border: 1px solid var(--eorange-sunset);
-      background-color: var(--eorange-sunset);
+      border: 1px solid var(--red-400);
+      background-color: var(--red-400);
       color: var(--default-icon-reverse);
       fill: var(--default-icon-reverse);
       border-radius: 50px;

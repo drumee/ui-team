@@ -25,12 +25,15 @@
         display: block;
       }
 
+      border-radius:var(--corner-radius-3);
+      border: 1px dashed var(--primary-500);
+
       &.document,
       &.image,
       &.other,
       &.video {
         &:after {
-          border: 1px dashed black;
+          border: 1px dashed var(--primary-500);
         }
       }
     }
@@ -40,7 +43,7 @@
     }
 
     &.preload {
-      background-color: grey;
+      background-color: var(--primary-500);
     }
 
     &[data-hover="on"] {
@@ -74,6 +77,7 @@
     }
 
     &[data-icontype="vignette"] {
+
       &:before,
       &:after {
         display: none;

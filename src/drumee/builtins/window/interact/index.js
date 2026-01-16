@@ -689,7 +689,7 @@ class __window_interact extends windowCore {
         return this;
       }
       if (c.cid !== moving.cid && area > 0) {
-        if (area < 0.33) {
+        if (area < 0.15) {
           // Look for multiple overlaps
           captured.push(c);
         } else {
@@ -850,7 +850,7 @@ class __window_interact extends windowCore {
    */
   _insertMedia(m, position) {
     let opt;
-    if (position == null) {
+    if (position == null || _.isNaN(position)) {
       position = 0;
     }
     if (m.model != null) {
@@ -907,7 +907,7 @@ class __window_interact extends windowCore {
         this.__list.append(opt);
         break;
       default:
-        this.__list.collection.add(opt, { at: position }); //toJSON()
+        this.__list.collection.add(opt, { at: position });
     }
   }
 

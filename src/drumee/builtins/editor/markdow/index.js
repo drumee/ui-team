@@ -32,7 +32,10 @@ class __editor_markdown extends __player {
         privilege: _K.privilege.owner
       })
     }
-    const now = Dayjs().format("DD-MMM-YYYY@HH:MM");
+
+    const now = Dayjs().format(Visitor.timeformat());
+    let filename = LOCALE.NOTE_ON_DATE_X.format(now);
+    filename = filename.replace(/\//g, '-')
     this.model.atLeast({
       filename: LOCALE.NOTE_ON_DATE_X.format(now),
       hub_id: Visitor.get(_a.id),
@@ -171,6 +174,12 @@ class __editor_markdown extends __player {
   _saveContent(opt, target) {
     this.postService(opt, { async: 1 }).then((data) => {
       this._changed = 0;
+      let content = `${LOCALE.SAVED} > ${data.file_path}`
+      this.__acknowledgement.set({ content })
+      this.__acknowledgementContainer.setState(1)
+      setTimeout(() => {
+        this.__acknowledgementContainer.setState(0)
+      }, 1000)
       let [file] = target.getItemsByAttr(_a.nid, data.nid);
       if (!file) {
         const item = {
@@ -181,7 +190,7 @@ class __editor_markdown extends __player {
           ...data,
         };
         delete item.replace;
-        target.insertMedia(item);
+        target.insertMedia(item, 0);
         target.scrollToBottom();
         return
       }
@@ -249,13 +258,13 @@ class __editor_markdown extends __player {
       position = this.media.index();
     }
     content = content || this.getData().content || "";
-    let a = content.split(' ');
+    let a = content.split(/[ +\n]/);
 
     let filename = this.mget(_a.filename);
     if (!this.mget(_a.nid)) {
       if (a[0]) {
-        filename = (a[0] + (a[1] || "")).replace(/[\/<>!\$\*\&\~\#\"\'\`\^]/g, '')
-      }else{
+        filename = (a[0] + (a[1] ? a[1] : "")).replace(/[\/<>!\$\*\&\~\#\"\'\`\^\n]/g, '-')
+      } else {
         filename = this.mget(_a.filename);
       }
     }
