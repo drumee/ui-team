@@ -13,6 +13,7 @@
     max-width: 900px;
     min-height: 100vh;
     background-color: white;
+    font-family: var(--font-main);
   }
 
   &__topbar {
@@ -51,11 +52,13 @@
     margin: 0 5px;
     justify-content: center;
     @include drumee.typo($color: rebeccapurple, $size: 14px, $line: 24px, $weight: 400);
+
     &-container {
       align-items: center;
       height: 100%;
       margin-left: auto;
     }
+
     &[data-radio="off"] {
       opacity: 0.4;
       color: var(--egrey-78);
@@ -86,6 +89,7 @@
       background-color: white;
       border-radius: 3px;
       min-width: 700px;
+
       .btn.btn--confirm {
         &[data-effect="slide"] {
           background: linear-gradient(to right, rgb(189, 195, 199), rgb(44, 62, 80), rgb(189, 195, 199));
@@ -134,7 +138,7 @@
       @include drumee.typo($color: var(--egrey-78), $size: 18px, $line: 24px, $weight: 400);
     }
 
-    &-languages{
+    &-languages {
       justify-content: center;
       justify-content: center;
       margin-bottom: 2px;
@@ -148,11 +152,14 @@
       width: 50px;
       border-radius: 3px;
       @include drumee.typo($color: var(--egrey-78), $size: 16px, $line: 24px, $weight: 400);
-      &[data-state="1"],&[data-radio="on"]{
+
+      &[data-state="1"],
+      &[data-radio="on"] {
         background-color: #4a90e2;
         color: white;
       }
-      &:hover{
+
+      &:hover {
         background-color: #4a90e2;
         color: white;
       }
@@ -163,6 +170,7 @@
     justify-content: center;
     align-items: center;
     margin-top: 10px;
+    gap: var(--spacer-5);
 
     .btn {
       margin: 0 10px;
@@ -171,13 +179,31 @@
     }
   }
 
+  &__button {
+    justify-content: center;
+    align-items: center;
+    border-radius: var(--corner-radius-3);
+    border: 1px solid var(--neutral-300);
+    background-color: var(--green-400);
+    padding: var(--spacer-4);
+    color: var(--neutral-50);
+    cursor: pointer;
+
+    &.cancel {
+      color: var(--neutral-600);
+      background-color: var(--neutral-200);
+    }
+  }
+
   &__ack {
-    &-item{
+    &-item {
       @include drumee.typo($color: var(--egrey-78), $size: 14px, $line: 24px, $weight: 300);
     }
-    &-clipboard{
+
+    &-clipboard {
       @include drumee.typo($color: red, $size: 14px, $line: 24px, $weight: 300);
-      &[data-state="0"]{
+
+      &[data-state="0"] {
         display: none;
       }
     }
@@ -239,6 +265,7 @@
       padding: 2px;
       cursor: pointer;
       @include drumee.typo($color: var(--egrey-78), $size: 14px, $line: 18px, $weight: 300);
+
       &:hover {
         color: white;
         background-color: grey;
@@ -266,7 +293,8 @@
         pointer-events: none;
       }
     }
-    &.build{
+
+    &.build {
       padding: 3px;
       margin-left: auto;
       color: #4a90e2;

@@ -9,6 +9,8 @@
     border-radius: var(--corner-radius-6);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     padding: var(--spacer-5) 0;
+    max-height: calc(100vh - 200px);
+    margin-top: -20px;
 
     &[data-modal="1"] {
       left: 0;

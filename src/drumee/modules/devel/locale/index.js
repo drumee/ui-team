@@ -1,8 +1,4 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : drumee/builtins/admin/locale
-//   TYPE : 
-// ==================================================================== *
+
 
 require('./skin');
 const { copyToClipboard } = require("core/utils")

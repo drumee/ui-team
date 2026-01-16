@@ -16,15 +16,6 @@ class __menu_input extends LetcBox {
     this.clickHandler = this.clickHandler.bind(this);
     this.showMenu = this.showMenu.bind(this);
     this.populateItems = this.populateItems.bind(this);
-    let items = []
-    for (let k of _.keys(emojiFlags)) {
-      if (/[A-Z]{2,2}/.test(k)) {
-        let { name: locale_name, emoji } = emojiFlags.countryCode(k) || {}
-        items.push({ country_code: k, emoji, locale_name })
-      }
-    }
-    this.mset({ items })
-    // this.debug("AAA:19", items, this.mget('items'), emojiFlags)
   }
 
   /**
