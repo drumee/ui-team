@@ -485,8 +485,32 @@
     @include drumee.typo($color: var(--btn-commit-text));
 
     &:hover {
-      background-color: var(--btn-commit-background-hover);
+      background-color: var(--btn-caution-background-hover);
     }
+
+    &.resend {
+      background-color: var(--btn-commit-background);
+      color: var(--btn-commit-text);
+      max-width: 165px;
+      width: auto;
+      padding: 5px 10px; //5px
+
+      &:hover {
+        background-color: var(--btn-commit-background-hover);
+      }
+    }
+
+    &.archived, &.unarchive {
+      background-color: var(--primary-600, #7C3AED);
+      color: var(--white, #ffffff);
+      border: 0px;
+      width: 115px;
+
+      &:hover {
+        background-color: var(--primary-700, #6D28D9);
+      }
+    }
+    
 
     &.destroy,
     &.block {

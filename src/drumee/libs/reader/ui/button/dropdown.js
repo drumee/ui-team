@@ -74,11 +74,11 @@ class __img_box extends LetcBox {
     const format = this.get(_a.format) || _a.slide;
     this.model.set({
       url      : require('options/url/link')(this.model, format),
-      date     : Dayjs.unix(this.model.get(_a.createTime)).format("DD-MM-YYYY à HH:MM")
+      date     : Dayjs.unix(this.model.get(_a.createTime)).format(Visitor.timeformat())
     });
     this.core.model.set({
       url      : require('options/url/link')(this.model, format),
-      date     : Dayjs.unix(this.model.get(_a.createTime)).format("DD-MM-YYYY à HH:MM")
+      date     : Dayjs.unix(this.model.get(_a.createTime)).format(Visitor.timeformat())
     });
     return this._initImage();
   }

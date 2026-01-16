@@ -1,8 +1,3 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/addressbook/widget/contact-form/skeleton/tags.coffee
-//   TYPE : Skelton
-// ===================================================================**/
 
 const __skl_addressbook_widget_contact_form_tags = function(_ui_) {
   const {

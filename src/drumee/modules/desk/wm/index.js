@@ -3,7 +3,6 @@ require("./skin");
 const { copyToClipboard } = require("core/utils")
 const { TweenLite, TimelineMax } = require("gsap/all")
 let lastClickTime = new Date().getTime();
-let lastMediaId = null;
 const push = require("./push");
 
 class __window_manager extends push {

@@ -34,7 +34,7 @@ function get_event(data) {
 function formatTimestamp(ctime) {
   if (!ctime) return "";
   const m = Dayjs.unix(ctime);
-  return m.format(Visitor.timeformat ? Visitor.timeformat() : "h:mm a. MMM D, YYYY");
+  return m.format(Visitor.timeformat());
 }
 
 module.exports = function (ui) {

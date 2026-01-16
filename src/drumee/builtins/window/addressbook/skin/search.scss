@@ -5,6 +5,7 @@
     &__wrapper {
       z-index: 10;
       justify-content: center;
+      box-shadow: var(--shadow-main);
     }
 
     &__result-wrapper {
@@ -14,21 +15,16 @@
       transform: translateX(-50%);
     }
 
-    // &[data-status="open"] {
-    //   display: flex;
-    // }
-
-    // &[data-status="closed"] {
-    //   display: none;
-    // }
 
     &__box {
-      background-color: var(--neutral-100);
-      padding: 10px;
-      border-radius: 12px;
-      width: 50%;
-      margin: 10px auto 20px;
-      border: 1px solid var(--neutral-300);
+      width: 100%;
+      max-width: 100%;
+      background-color: var(--white);
+      border-radius: 999px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     &__icon {
@@ -56,58 +52,32 @@
     }
   }
 
-  // &[data-size="max"] {
-  //   & .search-wrapper {
-  //     &[data-mode="open"] {
-  //       width: 35%;
-  //     }
-  //   }
-  // }
 
-  // &[data-size="medium"] {
-  //   & .search-wrapper {
-  //     &[data-mode="open"] {
-  //       width: 32%;
-  //     }
-  //   }
-  // }
+  & .search-result-box {
+    max-width: 100%;
+    width: 100%;
+  }
 
-  // &[data-size="min"] {
-  //   & .search-wrapper {
-  //     &[data-mode="open"] {
-  //       width: 80%;
-  //     }
-  //   }
-  // }
+  & .search-result-wrapper {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--white);
+    border-radius: 12px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+    margin-top: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
 
-  // &[data-size="max"],
-  // &[data-size="medium"],
-  // &[data-size="min"] {
-  //   & .search-wrapper {
-  //     & .search-result-box {
-  //       max-width: 250px; //270px;
-  //       width: 95%;
-  //     }
+    &[data-state="1"] {
+      display: block;
+    }
 
-  //     &[data-mode="open"] {
-  //       & .search-box {
-  //         display: flex;
-  //       }
-
-  //       & .search-min-icon {
-  //         display: none;
-  //       }
-  //     }
-
-  //     &[data-mode="closed"] {
-  //       & .search-min-icon {
-  //         display: flex;
-  //       }
-
-  //       & .search-box {
-  //         display: none;
-  //       }
-  //     }
-  //   }
-  // }
+    &[data-state="0"] {
+      display: none;
+    }
+  }
 }

@@ -1749,6 +1749,7 @@ class __media_core extends DrumeeMFS {
     }
     let { src, dest } = args;
     this.mset("renamed", [src.filename, dest.filename]);
+    this.debug("AAA:1754", dest, data)
     this.mset(dest)
     this.restart();
   }

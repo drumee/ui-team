@@ -1,4 +1,5 @@
 @use "mixins/drumee";
+
 .addressbook-widget-contactForm {
   &__ui {
     font-family: var(--font-main);
@@ -101,6 +102,7 @@
     max-width: 520px;
     width: 100%;
   }
+
   &__icon-info {
     color: var(--default-icon-neutral);
     height: 25px;
@@ -120,11 +122,9 @@
       text-align: justify;
       width: 266px;
       z-index: 1;
-      @include drumee.typo(
-        $size: 11px,
+      @include drumee.typo($size: 11px,
         $line: 15px,
-        $color: var(--default-text-tooltips)
-      );
+        $color: var(--default-text-tooltips));
     }
   }
 
@@ -164,21 +164,17 @@
       padding: 10px;
       border: 1px solid var(--neutral-300);
       margin-top: 10px;
-      @include drumee.typo(
-        $size: 16px,
+      @include drumee.typo($size: 16px,
         $line: 19px,
-        $color: var(--default-text-color)
-      );
+        $color: var(--default-text-color));
       @include drumee.overflow-text;
 
       &::placeholder {
         width: 300px;
-        @include drumee.typo(
-          $size: 16px,
+        @include drumee.typo($size: 16px,
           $weight: 300,
           $line: 19px,
-          $color: var(--default-text-placeholder)
-        );
+          $color: var(--default-text-placeholder));
       }
 
       &:focus {
@@ -186,12 +182,10 @@
         outline: none;
 
         @include drumee.placeholder-input {
-          @include drumee.typo(
-            $size: 16px,
+          @include drumee.typo($size: 16px,
             $weight: 400,
             $line: 19px,
-            $color: var(--focus-text-placeholder)
-          );
+            $color: var(--focus-text-placeholder));
         }
       }
     }
@@ -206,11 +200,9 @@
       width: 100%;
 
       &::placeholder {
-        @include drumee.typo(
-          $size: 14px,
+        @include drumee.typo($size: 14px,
           $weight: 300,
-          $color: var(--default-text-placeholder)
-        );
+          $color: var(--default-text-placeholder));
       }
 
       &:focus {
@@ -239,19 +231,15 @@
         border: none;
         resize: none;
         width: 100%;
-        @include drumee.typo(
-          $size: 14px,
+        @include drumee.typo($size: 14px,
           $line: 18px,
-          $color: var(--default-text-color)
-        );
+          $color: var(--default-text-color));
 
         &::placeholder {
-          @include drumee.typo(
-            $size: 14px,
+          @include drumee.typo($size: 14px,
             $line: 14px,
             $weight: 300,
-            $color: var(--default-text-placeholder)
-          );
+            $color: var(--default-text-placeholder));
         }
 
         &:focus {
@@ -381,12 +369,10 @@
       border-bottom: 1px solid var(--default-entry-border-bottom);
 
       & .note-content {
-        @include drumee.typo(
-          $size: 16px,
+        @include drumee.typo($size: 16px,
           $weight: 300,
           $line: 19px,
-          $color: var(--default-text-placeholder)
-        );
+          $color: var(--default-text-placeholder));
       }
 
       &[data-selected="1"] {
@@ -412,9 +398,7 @@
   &__items-wrapper {
     background: var(--default-background);
     border-radius: var(--border-radius);
-    box-shadow: var(
-      --shadow-container
-    ); // 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+    box-shadow: var(--shadow-container); // 0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
     max-height: 250px;
     max-width: 150px;
     overflow-y: auto;
@@ -435,16 +419,16 @@
     padding-top: 30px;
     width: 100%;
     justify-content: center;
-
+    gap: var(--spacer-6);
     & .button {
       align-items: center;
-      border-radius: var(--border-radius);
       height: 35px;
       justify-content: center;
       margin: 0 7% 0 4%; //0% 15% 0 10%;
       max-width: 115px;
       width: 100%;
       @include drumee.typo($size: 16px, $line: 19px);
+      border-radius: var(--corner-radius-max);
     }
   }
 
@@ -472,6 +456,7 @@
   & .entry[data-status="error"] input {
     border-bottom: 1px solid var(--default-border-error);
   }
+
   & .address__ui.address-input-item__ui:only-child,
   & .phoneno__ui.phoneno-input-item__ui:only-child {
     & .destroy-tag {

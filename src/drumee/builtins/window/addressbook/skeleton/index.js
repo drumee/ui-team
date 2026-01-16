@@ -1,8 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : builins/window/addressbook/skeleton/index
-//   TYPE : Skelton
-// ==================================================================== *
 
 const __skl_window_addressbook = function(_ui_) {
   const menu = Skeletons.Box.X({ 

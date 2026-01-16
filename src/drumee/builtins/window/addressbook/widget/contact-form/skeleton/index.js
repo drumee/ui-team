@@ -1,17 +1,4 @@
-/*
- * decaffeinate suggestions:
- * DS205: Consider reworking code to avoid use of IIFEs
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/main/docs/suggestions.md
- */
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/addressbook/widget/contact-form/skeleton/index.coffee
-//   TYPE : Skeleton
-// ===================================================================**/
 
-// ===========================================================
-//
-// ===========================================================
 const __skl_plus_icon = function (_ui_, name) {
   const plusIcon = Skeletons.Button.Svg({
     ico: "desktop_plus",
