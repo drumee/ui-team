@@ -239,16 +239,18 @@ class settings_account extends LetcBox {
     const data = this.getData();
     const { password } = data;
     
+    // Clear any previous error first
+    this.ensurePart("error").then((p) => {
+      if (p) {
+        p.set({ content: "" });
+        p.el.dataset.state = "0";
+      }
+    });
+    
     // Validate password
     if (!password) {
       return this.showError(LOCALE.PASSWORD_REQUIRED || "Password is required");
     }
-    
-    // Clear any previous error
-    this.ensurePart("error").then((p) => {
-      p.set({ content: "" });
-      p.el.dataset.state = "0";
-    });
     
     // TODO: Backend service will be implemented later
     // For now, simulate the request
@@ -257,7 +259,7 @@ class settings_account extends LetcBox {
       password: password,
       hub_id: Visitor.id
     }).then((response) => {
-      // Handle success
+      // Handle response with error
       if (response && response.error) {
         // Handle password error
         if (response.error === "wrong_password") {
@@ -265,6 +267,14 @@ class settings_account extends LetcBox {
         }
         return this.showError(LOCALE.UNKNOWN_ERROR || "An error occurred");
       }
+      
+      // Clear error on success
+      this.ensurePart("error").then((p) => {
+        if (p) {
+          p.set({ content: "" });
+          p.el.dataset.state = "0";
+        }
+      });
       
       // Show success popup
       this.__overlay.feed(
@@ -277,6 +287,13 @@ class settings_account extends LetcBox {
       this.warn('Error backing up data:', err);
       // If service doesn't exist yet, show success message for now
       if (err && err.message && err.message.includes("not found")) {
+        // Clear error on success
+        this.ensurePart("error").then((p) => {
+          if (p) {
+            p.set({ content: "" });
+            p.el.dataset.state = "0";
+          }
+        });
         this.__overlay.feed(
           require("./skeleton/ack").default(this, LOCALE.BACKUP_SUCCESS || "Your backup request has been submitted. You will receive an email with a download link shortly.")
         );
