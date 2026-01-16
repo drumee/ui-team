@@ -1,0 +1,90 @@
+@use "sass:meta";
+@use "mixins/drumee";
+@use "../../skin" as *;
+
+.settings-account-data {
+  &__form {
+    &-main {
+      width: 100%;
+      gap: 24px;
+    }
+
+    &-title {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 28px;
+      color: var(--neutral-900);
+    }
+
+    &-message {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 22px;
+      color: var(--neutral-600);
+    }
+
+    &-row {
+      grid-template-columns: 1fr;
+      gap: var(--spacer-5);
+    }
+
+    &-error {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 22px;
+      color: var(--red-400);
+
+      &[data-state="0"] {
+        display: none;
+      }
+    }
+  }
+
+  // Entry styling for password field - using settings-account classes
+  // The entry classes are defined in the parent component (settings-account)
+  // We just need to ensure the input has proper padding for the eye icon
+  &__form {
+    &-row {
+      .settings-account__entry-input {
+        position: relative;
+        padding-right: 44px; // Extra padding for eye icon (20px icon + 12px spacing + 12px right padding)
+        overflow: visible;
+
+        input {
+          padding-right: 44px; // Match container padding
+        }
+
+        // Style for shower (eye icon) button
+        .shower {
+          position: absolute;
+          right: 12px; // Inside the input border
+          top: 50%;
+          transform: translateY(-50%);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1;
+          width: 20px;
+          height: 20px;
+
+          svg {
+            width: 20px;
+            height: 20px;
+            color: var(--neutral-600);
+          }
+
+          &:hover {
+            svg {
+              color: var(--neutral-900);
+            }
+          }
+        }
+
+        .entry-reminder__icon {
+          right: 0px;
+        }
+      }
+    }
+  }
+}

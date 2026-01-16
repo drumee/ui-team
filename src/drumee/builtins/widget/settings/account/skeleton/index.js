@@ -47,10 +47,11 @@ function nav(ui) {
     nav_item(ui, "storage", LOCALE.STORAGE, 2),
     nav_item(ui, "shield", LOCALE.SECURITY, 3),
     nav_item(ui, "calendar", LOCALE.DATE_AND_TIME, 4),
+    nav_item(ui, "raw-hard-drive", LOCALE.MY_DATA, 5),
   ]
 
   if (ui.canAdmin()) {
-    items.push(nav_item(ui, "two-users", "My seats", 5),)
+    items.push(nav_item(ui, "two-users", "My seats", 6),)
   }
 
   const topics = Skeletons.Box.Y({

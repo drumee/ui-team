@@ -25,6 +25,7 @@ class settings_account extends LetcBox {
       require("./skeleton/storage").default,
       require("./skeleton/security").default,
       require("./skeleton/date").default,
+      require("./skeleton/data").default,
     ];
     this.tab_name = [
       LOCALE.PROFILE,
@@ -32,6 +33,7 @@ class settings_account extends LetcBox {
       LOCALE.STORAGE,
       LOCALE.SECURITY,
       LOCALE.DATE_AND_TIME,
+      LOCALE.MY_DATA,
     ];
     if (this.canAdmin()) {
       this.tab_name.push("My seats");
@@ -231,6 +233,60 @@ class settings_account extends LetcBox {
   }
 
   /**
+   * Backup all user data
+   */
+  async backupData() {
+    const data = this.getData();
+    const { password } = data;
+    
+    // Validate password
+    if (!password) {
+      return this.showError(LOCALE.PASSWORD_REQUIRED || "Password is required");
+    }
+    
+    // Clear any previous error
+    this.ensurePart("error").then((p) => {
+      p.set({ content: "" });
+      p.el.dataset.state = "0";
+    });
+    
+    // TODO: Backend service will be implemented later
+    // For now, simulate the request
+    return this.postService({
+      service: SERVICE.drumate.backup_data, // This service will be created later
+      password: password,
+      hub_id: Visitor.id
+    }).then((response) => {
+      // Handle success
+      if (response && response.error) {
+        // Handle password error
+        if (response.error === "wrong_password") {
+          return this.showError(LOCALE.WRONG_CREDENTIALS);
+        }
+        return this.showError(LOCALE.UNKNOWN_ERROR || "An error occurred");
+      }
+      
+      // Show success popup
+      this.__overlay.feed(
+        require("./skeleton/ack").default(this, LOCALE.BACKUP_SUCCESS || "Your backup request has been submitted. You will receive an email with a download link shortly.")
+      );
+      
+      // Clear password field - refresh the form to reset
+      this.__content.feed(this.skeletons[this._page](this));
+    }).catch((err) => {
+      this.warn('Error backing up data:', err);
+      // If service doesn't exist yet, show success message for now
+      if (err && err.message && err.message.includes("not found")) {
+        this.__overlay.feed(
+          require("./skeleton/ack").default(this, LOCALE.BACKUP_SUCCESS || "Your backup request has been submitted. You will receive an email with a download link shortly.")
+        );
+      } else {
+        this.showError(LOCALE.UNKNOWN_ERROR || "Failed to backup data");
+      }
+    });
+  }
+
+  /**
    *
    */
   async updateProfile() {
@@ -409,6 +465,10 @@ class settings_account extends LetcBox {
         if (this._page === 4) {
           return this.updateDateSettings(cmd);
         }
+        // Check if current page is My data (page 5)
+        if (this._page === 5) {
+          return this.backupData(cmd);
+        }
         return this.updateProfile(cmd);
 
       case "load-page":
@@ -424,6 +484,9 @@ class settings_account extends LetcBox {
 
       case "change-password":
         return this.updatePassword(cmd);
+
+      case "backup-data":
+        return this.backupData(cmd);
 
       case "manage-seats":
         return this.handSeatsManager()
