@@ -186,8 +186,9 @@ class settings_account extends LetcBox {
    */
   async updateDateSettings() {
     const data = this.getData();
-    const { dateformat, timezone } = data;
+    let { dateformat, timezone } = data;
     
+    this.debug("AAA:192", data);
     // Build settings object
     const settings = {};
     if (dateformat) {
@@ -440,38 +441,44 @@ class settings_account extends LetcBox {
         const selectedOption = DATEFORMAT_OPTIONS.find(opt => opt.value === value);
         const label = selectedOption ? selectedOption.label : (cmd.mget(_a.content) || value);
         
-        // Update trigger in dropdown menu - find from content part
-        return this.ensurePart(_a.content).then((content) => {
-          return content.ensurePart("dateformat-dropdown").then((dropdown) => {
-            // Update trigger display
-            return dropdown.ensurePart("trigger").then((trigger) => {
-              return trigger.ensurePart("current-dateformat").then((display) => {
-                display.mset({ value, content: label });
-                if (display.el) {
-                  display.el.textContent = label;
-                }
-                
-                // Update all items state
-                return dropdown.ensurePart("items").then((items) => {
-                  if (items && items.children) {
-                    items.children.each((child) => {
-                      const itemValue = child.mget(_a.value);
-                      if (itemValue === value) {
-                        child.el.dataset.state = "1";
-                        if (child.setState) child.setState(1);
-                      } else {
-                        child.el.dataset.state = "0";
-                        if (child.setState) child.setState(0);
-                      }
-                    });
-                  }
-                });
-              });
+        // Find dropdown using findPart (searches in all children)
+        const dateformatDropdown = this.findPart("dateformat-dropdown");
+        if (dateformatDropdown) {
+          // Find display element directly from dropdown (searches in all children)
+          const display = dateformatDropdown.findPart("current-dateformat");
+          if (display) {
+            display.mset({ value, content: label });
+            if (display.el) {
+              display.el.textContent = label;
+            }
+          }
+          
+          // Update all items state - ensure only one item is selected
+          const items = dateformatDropdown.getPart(_a.items);
+          if (items && items.children) {
+            items.children.each((child) => {
+              const itemValue = child.mget(_a.value);
+              if (itemValue === value) {
+                child.el.dataset.state = "1";
+                child.mset({ state: 1 });
+                if (child.setState) child.setState(1);
+              } else {
+                child.el.dataset.state = "0";
+                child.mset({ state: 0 });
+                if (child.setState) child.setState(0);
+              }
             });
-          });
-        });
+          }
+          
+          // Close dropdown after selection (similar to menuInput)
+          if (dateformatDropdown._closeItems) {
+            dateformatDropdown._closeItems();
+          }
+        }
+        return;
 
       case "select-timezone":
+        this.debug("AAA:484", cmd);
         const tzValue = cmd.mget(_a.value);
         // Get label from cmd content (which should be the label from the item)
         let tzLabel = cmd.mget(_a.content);
@@ -494,36 +501,41 @@ class settings_account extends LetcBox {
           }
         }
         
-        // Update trigger in dropdown menu - find from content part
-        return this.ensurePart(_a.content).then((content) => {
-          return content.ensurePart("timezone-dropdown").then((dropdown) => {
-            // Update trigger display
-            return dropdown.ensurePart("trigger").then((trigger) => {
-              return trigger.ensurePart("current-timezone").then((display) => {
-                display.mset({ value: tzValue, content: tzLabel });
-                if (display.el) {
-                  display.el.textContent = tzLabel;
-                }
-                
-                // Update all items state
-                return dropdown.ensurePart("items").then((items) => {
-                  if (items && items.children) {
-                    items.children.each((child) => {
-                      const itemValue = child.mget(_a.value);
-                      if (itemValue === tzValue) {
-                        child.el.dataset.state = "1";
-                        if (child.setState) child.setState(1);
-                      } else {
-                        child.el.dataset.state = "0";
-                        if (child.setState) child.setState(0);
-                      }
-                    });
-                  }
-                });
-              });
+        // Find dropdown using findPart (searches in all children)
+        const timezoneDropdown = this.findPart("timezone-dropdown");
+        if (timezoneDropdown) {
+          // Find display element directly from dropdown (searches in all children)
+          const display = timezoneDropdown.findPart("current-timezone");
+          if (display) {
+            display.mset({ value: tzValue, content: tzLabel });
+            if (display.el) {
+              display.el.textContent = tzLabel;
+            }
+          }
+          
+          // Update all items state - ensure only one item is selected
+          const items = timezoneDropdown.getPart(_a.items);
+          if (items && items.children) {
+            items.children.each((child) => {
+              const itemValue = child.mget(_a.value);
+              if (itemValue === tzValue) {
+                child.el.dataset.state = "1";
+                child.mset({ state: 1 });
+                if (child.setState) child.setState(1);
+              } else {
+                child.el.dataset.state = "0";
+                child.mset({ state: 0 });
+                if (child.setState) child.setState(0);
+              }
             });
-          });
-        });
+          }
+          
+          // Close dropdown after selection (similar to menuInput)
+          if (timezoneDropdown._closeItems) {
+            timezoneDropdown._closeItems();
+          }
+        }
+        return;
 
       case _e.sort:
         this._category = cmd.mget(_a.type);

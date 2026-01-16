@@ -526,6 +526,7 @@ function dateFormatMenu(ui) {
         value: opt.value,
         state: opt.value === currentDateFormat ? 1 : 0,
         formItem: 1,
+        radio: `dateformat-${ui._id}`,
       })
     )
   });
@@ -596,6 +597,7 @@ function timezoneMenu(ui) {
         value: opt.value,
         state: opt.value === currentTimezone ? 1 : 0,
         formItem: 1,
+        radio: `timezone-${ui._id}`,
       })
     )
   });
