@@ -2,6 +2,11 @@
 @use "mixins/drumee";
 
 .settings-private-hub {
+  &__ui {
+    max-height: 100%;
+    overflow: auto;
+  }
+
   &__wrapper {
     border-radius: 24px;
     margin: 0 auto;
@@ -9,13 +14,7 @@
     padding: 24px;
     width: 100%;
     box-sizing: border-box;
-    overflow: visible;
-    position: relative;
     z-index: 10;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0;
-    min-height: auto;
   }
 
   &__content {
@@ -147,11 +146,9 @@
   }
 
   &__title {
-    @include drumee.typo(
-      $color: var(--default-text-color),
+    @include drumee.typo($color: var(--default-text-color),
       $size: 20px,
-      $weight: 600
-    );
+      $weight: 600);
     flex: 1;
     justify-content: center;
     text-align: center;
@@ -369,11 +366,9 @@
     flex: 1;
     display: flex;
     align-items: center;
-    @include drumee.typo(
-      $color: var(--default-text-color),
+    @include drumee.typo($color: var(--default-text-color),
       $size: 14px,
-      $weight: 400
-    );
+      $weight: 400);
 
     svg {
       display: none;
@@ -532,7 +527,7 @@
     }
 
     // Radio button row inside option
-    > .drumee-box {
+    >.drumee-box {
       display: flex;
       align-items: flex-start;
       gap: 12px;

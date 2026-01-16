@@ -218,6 +218,7 @@ const a = {
   butler:"router/butler",
   ws_channel:"router/websocket",
   module_desk:"modules/desk",
+  module_devel:"modules/devel",
   module_dmz:"modules/dmz",
   module_welcome:"modules/welcome",
 }

@@ -1,5 +1,5 @@
 const { menuInput, entry } = require("../../../../skeleton/toolkit");
-
+const emojiFlags = require('emoji-flags');
 
 /**
  * 
@@ -38,6 +38,13 @@ function user(ui) {
 
 function form(ui) {
   const fig = `${ui.fig.family}__form`;
+  let items = []
+  for (let k of _.keys(emojiFlags)) {
+    if (/[A-Z]{2,2}/.test(k)) {
+      let { name: locale_name, emoji } = emojiFlags.countryCode(k) || {}
+      items.push({ country_code: k, emoji, locale_name })
+    }
+  }
   return Skeletons.Box.Y({
     className: `${fig}-main`,
     kids: [
@@ -83,6 +90,7 @@ function form(ui) {
               menuInput(ui, {
                 className: `${ui.fig.family}__country-input`,
                 name: 'country_code',
+                items,
                 service: "select-country",
                 refAttribute: 'locale_name',
                 placeholder: 'Select a country',

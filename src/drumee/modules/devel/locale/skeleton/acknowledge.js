@@ -1,20 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : builtins/admin/skeleton/update-translations
-//   TYPE :
-// ==================================================================== *
-
-// ===========================================================
-// _form (update-translations)
-//
-// @param [Object] manager
-//
-// ===========================================================
 
 const targets = {
   ui: 'locale/',
@@ -48,14 +31,14 @@ const __locale_acknowledge = function (_ui_, data, message) {
   });
   if (!data) return a;
   for (let k in data) {
-    _ui_.debug("AAA:50", k, data[k]);
     let dest = targets[k] || '.';
     let src = data[k].replace(/[\/]+$/, '');
+    src = `${bootstrap().main_domain}:${src}`;
     let text;
     if(/.+\.(.+)$/.test(data[k])){
-      text = `rsync -av ${src} ${dest}`;;
+      text = `rsync -av ${src} ${dest}`;
     }else{
-      text = `rsync -av ${src}/ ${dest}`;;
+      text = `rsync -av ${src}/ ${dest}`;
     }
 
     a.kids.push(Skeletons.Box.X({
