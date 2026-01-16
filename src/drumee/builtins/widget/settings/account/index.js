@@ -440,30 +440,32 @@ class settings_account extends LetcBox {
         const selectedOption = DATEFORMAT_OPTIONS.find(opt => opt.value === value);
         const label = selectedOption ? selectedOption.label : (cmd.mget(_a.content) || value);
         
-        // Update trigger in dropdown menu
-        return this.ensurePart("dateformat-dropdown").then((dropdown) => {
-          // Update trigger display
-          return dropdown.ensurePart("trigger").then((trigger) => {
-            return trigger.ensurePart("current-dateformat").then((display) => {
-              display.mset({ value, content: label });
-              if (display.el) {
-                display.el.textContent = label;
-              }
-              
-              // Update all items state
-              return dropdown.ensurePart("items").then((items) => {
-                if (items && items.children) {
-                  items.children.each((child) => {
-                    const itemValue = child.mget(_a.value);
-                    if (itemValue === value) {
-                      child.el.dataset.state = "1";
-                      if (child.setState) child.setState(1);
-                    } else {
-                      child.el.dataset.state = "0";
-                      if (child.setState) child.setState(0);
-                    }
-                  });
+        // Update trigger in dropdown menu - find from content part
+        return this.ensurePart(_a.content).then((content) => {
+          return content.ensurePart("dateformat-dropdown").then((dropdown) => {
+            // Update trigger display
+            return dropdown.ensurePart("trigger").then((trigger) => {
+              return trigger.ensurePart("current-dateformat").then((display) => {
+                display.mset({ value, content: label });
+                if (display.el) {
+                  display.el.textContent = label;
                 }
+                
+                // Update all items state
+                return dropdown.ensurePart("items").then((items) => {
+                  if (items && items.children) {
+                    items.children.each((child) => {
+                      const itemValue = child.mget(_a.value);
+                      if (itemValue === value) {
+                        child.el.dataset.state = "1";
+                        if (child.setState) child.setState(1);
+                      } else {
+                        child.el.dataset.state = "0";
+                        if (child.setState) child.setState(0);
+                      }
+                    });
+                  }
+                });
               });
             });
           });
@@ -492,30 +494,32 @@ class settings_account extends LetcBox {
           }
         }
         
-        // Update trigger in dropdown menu
-        return this.ensurePart("timezone-dropdown").then((dropdown) => {
-          // Update trigger display
-          return dropdown.ensurePart("trigger").then((trigger) => {
-            return trigger.ensurePart("current-timezone").then((display) => {
-              display.mset({ value: tzValue, content: tzLabel });
-              if (display.el) {
-                display.el.textContent = tzLabel;
-              }
-              
-              // Update all items state
-              return dropdown.ensurePart("items").then((items) => {
-                if (items && items.children) {
-                  items.children.each((child) => {
-                    const itemValue = child.mget(_a.value);
-                    if (itemValue === tzValue) {
-                      child.el.dataset.state = "1";
-                      if (child.setState) child.setState(1);
-                    } else {
-                      child.el.dataset.state = "0";
-                      if (child.setState) child.setState(0);
-                    }
-                  });
+        // Update trigger in dropdown menu - find from content part
+        return this.ensurePart(_a.content).then((content) => {
+          return content.ensurePart("timezone-dropdown").then((dropdown) => {
+            // Update trigger display
+            return dropdown.ensurePart("trigger").then((trigger) => {
+              return trigger.ensurePart("current-timezone").then((display) => {
+                display.mset({ value: tzValue, content: tzLabel });
+                if (display.el) {
+                  display.el.textContent = tzLabel;
                 }
+                
+                // Update all items state
+                return dropdown.ensurePart("items").then((items) => {
+                  if (items && items.children) {
+                    items.children.each((child) => {
+                      const itemValue = child.mget(_a.value);
+                      if (itemValue === tzValue) {
+                        child.el.dataset.state = "1";
+                        if (child.setState) child.setState(1);
+                      } else {
+                        child.el.dataset.state = "0";
+                        if (child.setState) child.setState(0);
+                      }
+                    });
+                  }
+                });
               });
             });
           });

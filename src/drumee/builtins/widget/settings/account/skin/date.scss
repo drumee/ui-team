@@ -3,6 +3,10 @@
 @use "../../skin" as *;
 
 .settings-account {
+  &__container {
+    min-width: 400px !important;
+  }
+
   &__form {
     &-section {
       width: 100%;

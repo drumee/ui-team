@@ -649,10 +649,6 @@ function form(ui) {
       Skeletons.Box.Y({
         className: `${fig}-section`,
         kids: [
-          Skeletons.Note({
-            className: `${fig}-section-title`,
-            content: LOCALE.DATE_AND_TIME,
-          }),
           Skeletons.Box.G({
             className: `${fig}-row`,
             kids: [
