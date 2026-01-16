@@ -79,15 +79,15 @@ class __window_sharebox extends __hub {
         this.isFileUpdated = 0;
         return this.openEmailNotification(cmd);
 
-      case _e.close:
-        const shareBoxInit = this.media.mget('init')
-        if (this.isFileUpdated || shareBoxInit) {
-          this.isFileUpdated = 0;
-          this.openEmailNotification(cmd, true, shareBoxInit);
-          this.media.mset('init', false)
-          return
-        }
-        return super.onUiEvent(cmd, args);
+      // case _e.close:
+      //   const shareBoxInit = this.media.mget('init')
+      //   if (this.isFileUpdated || shareBoxInit) {
+      //     this.isFileUpdated = 0;
+      //     this.openEmailNotification(cmd, true, shareBoxInit);
+      //     this.media.mset('init', false)
+      //     return
+      //   }
+      //   return super.onUiEvent(cmd, args);
 
       case 'update-expiry-status':
         return this.updateExpiryStatus(args);
