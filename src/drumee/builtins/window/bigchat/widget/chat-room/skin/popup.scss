@@ -2,7 +2,6 @@
 
 .chat-room {
   &__popup {
-
     &-wrapper {
       border-radius: var(--border-radius);
       background-color: var(--default-background);
@@ -31,7 +30,11 @@
     }
 
     &_header-title {
-      @include drumee.typo($size: 18px, $line: 16px, $color: var(--default-text-title));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 16px,
+        $color: var(--default-text-title)
+      );
 
       &.resend-invite {
         align-items: baseline;
@@ -65,12 +68,21 @@
       margin-top: 30px;
       text-align: center;
       width: 323px;
-      @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $weight: 300,
+        $size: 16px,
+        $line: 26px,
+        $color: var(--default-text-color)
+      );
     }
 
     &__note.fullname {
       padding-top: 7px; //5px;
-      @include drumee.typo($size: 18px, $line: 16px, $color: var(--secondary-text-color));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 16px,
+        $color: var(--secondary-text-color)
+      );
     }
 
     &__entry {
@@ -79,8 +91,14 @@
         width: 100%;
 
         & textarea {
-          @include drumee.typo($size: 16px, $line: 21px, $color: var(--default-text-color));
-          background: var(--default-block-background); //$default-block-background;
+          @include drumee.typo(
+            $size: 16px,
+            $line: 21px,
+            $color: var(--default-text-color)
+          );
+          background: var(
+            --default-block-background
+          ); //$default-block-background;
           border-radius: var(--border-radius); //6px
           border: none;
           outline: none;
@@ -88,7 +106,12 @@
           resize: none;
 
           &::placeholder {
-            @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
+            @include drumee.typo(
+              $size: 14px,
+              $line: 14px,
+              $weight: 300,
+              $color: var(--default-text-placeholder)
+            );
           }
         }
       }
@@ -124,7 +147,11 @@
       &__button-cancel {
         border-radius: var(--border-radius);
         border: 1px solid var(--btn-rollback-border);
-        @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
+        @include drumee.typo(
+          $size: 16px,
+          $line: 16px,
+          $color: var(--btn-rollback-text)
+        );
 
         &:hover {
           border: 2px solid var(--btn-rollback-border-hover);
@@ -135,7 +162,11 @@
       &__button-confirm {
         background-color: var(--btn-caution-background);
         border: 0px;
-        @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-caution-text));
+        @include drumee.typo(
+          $size: 16px,
+          $line: 16px,
+          $color: var(--btn-caution-text)
+        );
 
         &:hover {
           background-color: var(--btn-caution-background-hover);
@@ -161,7 +192,12 @@
     &_message-info {
       text-align: center;
       width: 323px;
-      @include drumee.typo($weight: 300, $size: 18px, $line: 26px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $weight: 300,
+        $size: 18px,
+        $line: 26px,
+        $color: var(--default-text-color)
+      );
 
       &.first-node {
         margin: 22px 30px 22px 30px;
@@ -188,7 +224,7 @@
       &.desktop_contactbook {
         height: 26px;
         margin-right: 10px;
-        opacity: .55;
+        opacity: 0.55;
         width: 26px;
       }
 
@@ -234,12 +270,12 @@
   }
 
   &__button-confirm {
-    background-color: var(--btn-commit-background);
+    background-color: var(--primary-500);
     margin-left: 35px;
     @include drumee.typo($color: var(--btn-commit-text));
 
     &:hover {
-      background-color: var(--btn-commit-background-hover);
+      background-color: var(--primary-600);
     }
 
     &.destroy,

@@ -1,18 +1,17 @@
 @use "sass:meta";
-@use 'mixins/drumee';
-@include meta.load-css('attachment');
-@include meta.load-css('menu');
-@include meta.load-css('reply-message');
+@use "mixins/drumee";
+@include meta.load-css("attachment");
+@include meta.load-css("menu");
+@include meta.load-css("reply-message");
 
 .widget-chatItem {
-
   &__ui {
     background-color: var(--default-bg);
     width: calc(100% - 70px);
     @include drumee.typo($size: 12px, $line: 14px);
     display: flex;
     flex-direction: column;
-    margin-top: 10px;
+    margin-top: 20px;
     align-items: center;
     min-height: 38px;
 
@@ -23,7 +22,6 @@
     }
 
     &.me {
-
       width: calc(100% - 1px);
       align-items: flex-end;
     }
@@ -151,7 +149,6 @@
     }
 
     &-content {
-
       justify-content: flex-end;
       display: flex;
       flex-direction: column;
@@ -170,7 +167,7 @@
         margin: -4px 1px 0px;
         visibility: hidden;
 
-        &[data-is_seen='1'] {
+        &[data-is_seen="1"] {
           visibility: visible;
         }
 
@@ -178,23 +175,31 @@
           display: none;
         }
       }
-
     }
 
     &-date {
       margin-top: -2px;
-      @include drumee.typo($size: 10px, $line: 9px, $weight: 300, $color: var(--tertiary-text-color));
+      @include drumee.typo(
+        $size: 10px,
+        $line: 9px,
+        $weight: 300,
+        $color: var(--tertiary-text-color)
+      );
 
       &.me {
         margin-top: 0px;
-        @include drumee.typo($size: 10px, $line: 9px, $weight: 500, $color: var(--tertiary-text-color));
+        @include drumee.typo(
+          $size: 10px,
+          $line: 9px,
+          $weight: 500,
+          $color: var(--tertiary-text-color)
+        );
       }
 
       &.other {
         margin-top: 0px;
       }
     }
-
   }
 
   &__forward-tag-wrapper {
@@ -224,8 +229,6 @@
         border: 1px solid var(--default-checkbox-border);
         color: var(--default-checkbox-checked);
 
-
-
         svg {
           visibility: visible;
         }
@@ -244,20 +247,13 @@
       padding-left: 4px;
       padding-top: 4px;
       text-transform: capitalize;
-      @include drumee.typo($size: 12px, $line: 12px, $color: var(--secondary-text-color));
+      @include drumee.typo(
+        $size: 12px,
+        $line: 12px,
+        $color: var(--secondary-text-color)
+      );
     }
   }
-
-
-
-
-
-
-
-
-
-
-
 
   &__dategroup,
   &__date-of-day {
@@ -269,7 +265,11 @@
       margin: auto;
       max-width: 200px;
       width: 82px;
-      @include drumee.typo($size: 11px, $line: 20px, $color: var(--tertiary-text-color));
+      @include drumee.typo(
+        $size: 11px,
+        $line: 20px,
+        $color: var(--tertiary-text-color)
+      );
       display: flex;
       flex-direction: row;
       justify-content: center;
@@ -290,7 +290,11 @@
     margin: auto;
     max-width: 200px;
     width: 82px;
-    @include drumee.typo($size: 11px, $line: 12px, $color: var(--tertiary-text-color));
+    @include drumee.typo(
+      $size: 11px,
+      $line: 12px,
+      $color: var(--tertiary-text-color)
+    );
   }
 
   &__profile {
@@ -305,7 +309,6 @@
     top: 5px;
     left: 5px;
 
-
     &.user-profile {
       &__ui {
         overflow: visible;
@@ -316,24 +319,11 @@
     }
 
     & .user-profile {
-
       &__icon {
         height: 100%;
         @include drumee.typo($size: 9px, $line: 10px);
       }
     }
-
-
-
-
-
-
-
-
-
-
-
-
   }
 
   &__content {
@@ -342,13 +332,17 @@
   }
 
   &__name {
-
     margin-bottom: -3px;
     padding-top: 5px;
     text-transform: capitalize;
     white-space: nowrap;
     width: 121px;
-    @include drumee.typo($size: 11px, $line: 10px, $weight: 400, $color: var(--default-text-color));
+    @include drumee.typo(
+      $size: 11px,
+      $line: 10px,
+      $weight: 400,
+      $color: var(--default-text-color)
+    );
 
     & .inner.note-content {
       overflow: hidden;
@@ -356,7 +350,6 @@
       white-space: nowrap;
     }
   }
-
 
   &__messages {
     height: calc(100% - 80px);
@@ -382,7 +375,6 @@
       display: flex;
     }
 
-
     &.me {
       justify-content: flex-end;
     }
@@ -390,7 +382,12 @@
     &-content {
       overflow: hidden;
       word-wrap: break-word;
-      @include drumee.typo($size: 12px, $line: 14px, $weight: 400, $color: var(--egrey-26));
+      @include drumee.typo(
+        $size: 12px,
+        $line: 14px,
+        $weight: 400,
+        $color: var(--egrey-26)
+      );
 
       & a {
         color: var(--secondary-text-color);
@@ -417,7 +414,12 @@
 
   &__call-duration {
     margin-left: 10px;
-    @include drumee.typo($size: 13px, $line: 14px, $weight: 400, $color: var(--default-text-title));
+    @include drumee.typo(
+      $size: 13px,
+      $line: 14px,
+      $weight: 400,
+      $color: var(--default-text-title)
+    );
   }
 
   &__media-attachment {
@@ -431,5 +433,4 @@
       flex-direction: row-reverse;
     }
   }
-
 }
