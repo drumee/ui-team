@@ -9,21 +9,21 @@ function form(ui) {
   const fig = `${ui.fig.family}-data`;
   
   return Skeletons.Box.Y({
-    className: `${fig}-main`,
+    className: `${fig}__form-main`,
     kids: [
       // Title
       Skeletons.Note({
-        className: `${fig}-title`,
+        className: `${fig}__form-title`,
         content: LOCALE.BACKUP_ALL_MY_DATA,
       }),
       // Message
       Skeletons.Note({
-        className: `${fig}-message content text`,
+        className: `${fig}__form-message content text`,
         content: LOCALE.BACKUP_MESSAGE,
       }),
       // Password entry
       Skeletons.Box.G({
-        className: `${fig}-row`,
+        className: `${fig}__form-row`,
         kids: [
           Skeletons.Box.G({
             className: `${ui.fig.family}__entry-main`,
@@ -50,7 +50,7 @@ function form(ui) {
       // Error message
       Skeletons.Note({
         sys_pn: "error",
-        className: `${fig}-error`,
+        className: `${fig}__form-error`,
         state: 0,
         content: ""
       }),
