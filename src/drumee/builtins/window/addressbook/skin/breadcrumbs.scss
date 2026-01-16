@@ -29,7 +29,8 @@
       color: var(--default-icon-reverse);
       cursor: pointer;
       margin: 0px 2px;
-
+      width: 18px;
+      height: 18px;
       &:hover {
         background-color: var(--default-icon-hover);
         opacity: 1;

@@ -1,36 +1,28 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : __dbg_path
-//   TYPE : Skelton
-// ==================================================================== *
 
-// ===========================================================
-//
-// ===========================================================
-const __topbar_breadcrumbs = function(_ui_) {
+const __topbar_breadcrumbs = function(ui) {
 
-  const figFamily = `${_ui_.fig.family}-topbar-breadcrumbs`;
+  const figFamily = `${ui.fig.family}-topbar-breadcrumbs`;
 
   
   const backButton = Skeletons.Button.Svg({
     ico       : "arrow--map",
     className : `${figFamily}__icon breadcrumb-icon back arrow--map`,
     service   : "previous-page",
-    uiHandler : _ui_
+    uiHandler : ui
   });
 
   const nextButton = Skeletons.Button.Svg({
     ico       : "arrow--map",
     className : `${figFamily}__icon breadcrumb-icon next arrow--map`,
     service   : "next-page",
-    uiHandler : _ui_
+    uiHandler : ui
   });
   
   const a = Skeletons.Box.X({
     debug       : __filename, 
     className   : `${figFamily}__container addressbook`,
     sys_pn      : "contact-breadcrumbs-container",
-    partHandler : _ui_,
+    partHandler : ui,
     state       : 0,
     kids        : [
       Skeletons.Box.X({

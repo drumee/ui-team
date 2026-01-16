@@ -70,6 +70,33 @@
 		height: calc(100% - 44px);
 		margin-top: -1px;
 		width: 100%;
+		padding: 16px;
+
+		.smart-container {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+			gap: 16px;
+			width: 100%;
+
+			// Responsive: max 3 columns, min 1 column
+			// For screens >= 800px: show max 3 columns
+			@media (min-width: 800px) {
+				grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+				max-width: calc(3 * 250px + 2 * 16px);
+			}
+
+			// For screens 520px - 799px: show max 2 columns
+			@media (min-width: 520px) and (max-width: 799px) {
+				grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+				max-width: calc(2 * 250px + 1 * 16px);
+			}
+
+			// For screens < 520px: show 1 column
+			@media (max-width: 519px) {
+				grid-template-columns: 1fr;
+				max-width: 100%;
+			}
+		}
 	}
 
 	&__contacts {

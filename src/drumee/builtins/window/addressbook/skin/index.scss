@@ -6,6 +6,16 @@
 @include meta.load-css("breadcrumbs");
 
 .window-addressbook {
+  &__ui {
+    width: 900px;
+    height: 650px;
+    max-width: 100vw;
+    max-height: 100vh;
+    top: 0;
+    left: calc(50vw - 400px);
+    border-bottom: none;
+  }
+
   &__header {
     background-color: var(--ab-header-bg);
     border-bottom: none;
@@ -37,55 +47,57 @@
       gap: 10px;
       color: white;
 
-      &.contacts {
-        padding-right: 10px;
-        border-right: 1px solid var(--neutral-400);
+
+    }
+
+    &__add-btn {
+      background: var(--neutral-900);
+      color: var(--white);
+
+      & svg {
+        color: var(--white);
+        fill: var(--white);
       }
     }
 
-    &__content {
-      & .notifier {
-        margin-right: 41px;
-        top: -18px;
+    & .addressbook-widget-notification {
+      &__digit {
+        font-size: 12px;
+        height: 19px;
+        padding-right: 1px;
+        padding-top: 0px;
+        width: 19px;
+        @include drumee.typo($size: 11px,
+          $line: 14px,
+          $color: var(--default-text-notification));
 
-        & .addressbook-widget-notification {
-          &__digit {
-            font-size: 12px;
-            height: 19px;
-            padding-right: 1px;
-            padding-top: 0px;
-            width: 19px;
-            @include drumee.typo($size: 11px,
-              $line: 14px,
-              $color: var(--default-text-notification));
-
-            .inner {
-              @include drumee.typo($size: 11px,
-                $line: 14px,
-                $color: var(--default-text-notification));
-            }
-          }
+        .inner {
+          @include drumee.typo($size: 11px,
+            $line: 14px,
+            $color: var(--default-text-notification));
         }
-      }
-
-      & .title {
-        align-items: center;
-        @include drumee.typo($size: 32px,
-          $line: 16px,
-          $color: var(--default-text-reverse));
-      }
-    }
-
-    &-breadcrumbs__icon {
-      &.breadcrumb-icon {
-        color: var(--default-icon-reverse);
-        height: 22px;
-        margin-top: 10px;
-        padding: 3px;
-        width: 22px;
       }
     }
   }
+
+  & .title {
+    align-items: center;
+    @include drumee.typo($size: 32px,
+      $line: 16px,
+      $color: var(--default-text-reverse));
+  }
+
+
+  &-breadcrumbs__icon {
+    &.breadcrumb-icon {
+      color: var(--default-icon-reverse);
+      height: 22px;
+      margin-top: 10px;
+      padding: 3px;
+      width: 22px;
+    }
+  }
+
 
   &-menu {
     &__trigger-wrapper {
@@ -236,10 +248,8 @@
   }
 
   &__body {
-    height: 100% !important;
+    height: calc(100% - 132px);
     margin: 0 auto;
-    min-height: auto !important;
-    min-width: auto !important;
     overflow: hidden;
     width: 100% !important;
 
@@ -250,10 +260,16 @@
   }
 
   &__max-view {
-    // height: 100%;
     width: 100%;
-    flex:1;
-    // height: calc(100% - 76px);
+    flex: 1;
+
+    &.main-content {
+      height: calc(100% - 132px);
+    }
+
+    &.view-content {
+      height: calc(100% - 76px);
+    }
   }
 
   &__min-view {
@@ -268,6 +284,10 @@
 
   &__min-view-content {
     width: 100%;
+  }
+
+  &__contact-wrapper {
+    width: 320px;
   }
 
   &__icon {

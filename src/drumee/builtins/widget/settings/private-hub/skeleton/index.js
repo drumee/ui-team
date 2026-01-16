@@ -39,7 +39,7 @@ function members(ui) {
       uiHandler: [ui]
     },
     spinner: true,
-    placeholder: Skeletons.Note(LOCALE.NO_CONTACT, "placeholder--no-contact"),
+    placeholder: Skeletons.Note("Please, add contact", "placeholder--no-contact"),
     api: {
       service: SERVICE.hub.get_members_by_type,
       hub_id: ui.mget(_a.hub_id),
@@ -64,6 +64,28 @@ function members(ui) {
 
 function content(ui) {
   const fig = `${ui.fig.family}`;
+  let admin = "";
+  if (ui.canAdmin()) {
+    admin = Skeletons.Box.X({
+      className: `${fig}__buttons`,
+      kids: [
+        Skeletons.Button.Label({
+          className: `${fig}__save-btn`,
+          label: "Add members",
+          icon: "plus",
+          service: "add-members",
+          uiHandler: [ui],
+        }),
+        // Skeletons.Button.Label({
+        //   className: `${fig}__save-btn`,
+        //   label: "Invite contacts",
+        //   icon: "plus",
+        //   service: "invite-contacts",
+        //   uiHandler: [ui],
+        // })
+      ]
+    });
+  }
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${fig}__content`,
@@ -77,25 +99,7 @@ function content(ui) {
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
-      Skeletons.Box.X({
-        className: `${fig}__buttons`,
-        kids: [
-          Skeletons.Button.Label({
-            className: `${fig}__save-btn`,
-            label: "Add members",
-            icon: "plus",
-            service: "add-members",
-            uiHandler: [ui],
-          }),
-          Skeletons.Button.Label({
-            className: `${fig}__save-btn`,
-            label: "Invite contacts",
-            icon: "plus",
-            service: "invite-contacts",
-            uiHandler: [ui],
-          })
-        ]
-      })
+      admin
     ],
   });
 }

@@ -1,8 +1,4 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : ../src/drumee/builtins/window/addressbook/widget/contacts/skeleton/index
-//   TYPE :
-// ==================================================================== *
+
 const __skl_addressbook_widget_contacts = function(_ui_) {
   
   let tagName = LOCALE.ALL_CONTACTS;
