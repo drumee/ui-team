@@ -57,7 +57,7 @@ class __image_core extends Marionette.View {
     const sizing = this.get(_a.sizing) || _a.cover;
     return this.model.set({
       url      : require('options/url/link')(this.model, format),
-      date     : Dayjs.unix(this.model.get(_a.createTime)).format("DD-MM-YYYY à HH:MM"),
+      date     : Dayjs.unix(this.model.get(_a.createTime)).format(Visitor.timeformat()),
       sizing
     });
   }

@@ -231,5 +231,8 @@
   "VIEW_ALL_INVITED_MEMBERS": "Ver todos los miembros invitados (12)",
   "COPY_LINK": "Copiar enlace",
   "SHOW_QR_CODE": "Mostrar código QR",
-  "SETTING": "Configuración"
+  "SETTING": "Configuración",
+  "DATE_AND_TIME": "Fecha y hora",
+  "CUSTOMIZE_DATE_FORMAT": "Personalizar formato de fecha (DD/MM/YYYY)",
+  "TIMEZONE": "Zona horaria"
 }

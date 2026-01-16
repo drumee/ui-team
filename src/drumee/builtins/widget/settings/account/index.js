@@ -24,12 +24,14 @@ class settings_account extends LetcBox {
       function (ui) { return { kind: "settings_billing", uiHandler: [ui] } },
       require("./skeleton/storage").default,
       require("./skeleton/security").default,
+      require("./skeleton/date").default,
     ];
     this.tab_name = [
       LOCALE.PROFILE,
       "Billing Information",
       LOCALE.STORAGE,
       LOCALE.SECURITY,
+      LOCALE.DATE_AND_TIME,
     ];
     if (this.canAdmin()) {
       this.tab_name.push("My seats");
@@ -176,6 +178,55 @@ class settings_account extends LetcBox {
         require("./skeleton/ack").default(this, LOCALE.PASS_PHRASE_UPDATED)
       );
       // this.__content.feed(this.skeletons[this._page](this));
+    });
+  }
+
+  /**
+   *
+   */
+  async updateDateSettings() {
+    const data = this.getData();
+    let { dateformat, timezone } = data;
+    
+    this.debug("AAA:192", data);
+    // Build settings object
+    const settings = {};
+    if (dateformat) {
+      settings.dateformat = dateformat;
+    }
+    if (timezone) {
+      settings.timezone = timezone;
+    }
+    
+    // If timeformat is not set, derive it from dateformat
+    if (dateformat && !data.timeformat) {
+      settings.timeformat = `${dateformat} - HH:mm:ss`;
+    }
+    
+    return this.postService({
+      service: SERVICE.drumate.update_settings,
+      settings: settings,
+      hub_id: Visitor.id
+    }).then((response) => {
+      // Update Visitor settings - response should contain updated settings
+      let updatedSettings = {};
+      if (response && response.settings) {
+        try {
+          updatedSettings = JSON.parse(response.settings);
+        } catch (e) {
+          updatedSettings = { ...Visitor.settings() || {}, ...settings };
+        }
+      } else {
+        updatedSettings = { ...Visitor.settings() || {}, ...settings };
+      }
+      Visitor.set({ settings: updatedSettings });
+      
+      this.__overlay.feed(
+        require("./skeleton/ack").default(this, "Date & Time settings updated successfully")
+      );
+    }).catch((err) => {
+      this.warn('Error updating date settings:', err);
+      this.showError("Failed to update date settings");
     });
   }
 
@@ -354,6 +405,10 @@ class settings_account extends LetcBox {
 
       case "update-profile":
       case _e.save:
+        // Check if current page is Date settings (page 4)
+        if (this._page === 4) {
+          return this.updateDateSettings(cmd);
+        }
         return this.updateProfile(cmd);
 
       case "load-page":
@@ -372,6 +427,115 @@ class settings_account extends LetcBox {
 
       case "manage-seats":
         return this.handSeatsManager()
+
+      case "select-dateformat":
+        const value = cmd.mget(_a.value);
+        // Get label from DATEFORMAT_OPTIONS
+        const DATEFORMAT_OPTIONS = [
+          { value: "DD/MM/YYYY", label: "DD/MM/YYYY" },
+          { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
+          { value: "YYYY/MM/DD", label: "YYYY/MM/DD" },
+          { value: "DD.MM.YYYY", label: "DD.MM.YYYY" },
+          { value: "DD-MM-YYYY", label: "DD-MM-YYYY" },
+        ];
+        const selectedOption = DATEFORMAT_OPTIONS.find(opt => opt.value === value);
+        const label = selectedOption ? selectedOption.label : (cmd.mget(_a.content) || value);
+        
+        // Find dropdown using findPart (searches in all children)
+        const dateformatDropdown = this.findPart("dateformat-dropdown");
+        if (dateformatDropdown) {
+          // Find display element directly from dropdown (searches in all children)
+          const display = dateformatDropdown.findPart("current-dateformat");
+          if (display) {
+            display.mset({ value, content: label });
+            if (display.el) {
+              display.el.textContent = label;
+            }
+          }
+          
+          // Update all items state - ensure only one item is selected
+          const items = dateformatDropdown.getPart(_a.items);
+          if (items && items.children) {
+            items.children.each((child) => {
+              const itemValue = child.mget(_a.value);
+              if (itemValue === value) {
+                child.el.dataset.state = "1";
+                child.mset({ state: 1 });
+                if (child.setState) child.setState(1);
+              } else {
+                child.el.dataset.state = "0";
+                child.mset({ state: 0 });
+                if (child.setState) child.setState(0);
+              }
+            });
+          }
+          
+          // Close dropdown after selection (similar to menuInput)
+          if (dateformatDropdown._closeItems) {
+            dateformatDropdown._closeItems();
+          }
+        }
+        return;
+
+      case "select-timezone":
+        this.debug("AAA:484", cmd);
+        const tzValue = cmd.mget(_a.value);
+        // Get label from cmd content (which should be the label from the item)
+        let tzLabel = cmd.mget(_a.content);
+        
+        // If label is not available or equals value, try to format it
+        if (!tzLabel || tzLabel === tzValue) {
+          try {
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('en-US', {
+              timeZone: tzValue,
+              timeZoneName: 'longOffset'
+            });
+            const parts = formatter.formatToParts(now);
+            const tzNamePart = parts.find(p => p.type === 'timeZoneName');
+            const offset = tzNamePart ? tzNamePart.value : '';
+            const cityName = tzValue.split('/').pop().replace(/_/g, ' ');
+            tzLabel = offset ? `(${offset}) ${cityName}` : cityName;
+          } catch (e) {
+            tzLabel = tzValue.split('/').pop().replace(/_/g, ' ');
+          }
+        }
+        
+        // Find dropdown using findPart (searches in all children)
+        const timezoneDropdown = this.findPart("timezone-dropdown");
+        if (timezoneDropdown) {
+          // Find display element directly from dropdown (searches in all children)
+          const display = timezoneDropdown.findPart("current-timezone");
+          if (display) {
+            display.mset({ value: tzValue, content: tzLabel });
+            if (display.el) {
+              display.el.textContent = tzLabel;
+            }
+          }
+          
+          // Update all items state - ensure only one item is selected
+          const items = timezoneDropdown.getPart(_a.items);
+          if (items && items.children) {
+            items.children.each((child) => {
+              const itemValue = child.mget(_a.value);
+              if (itemValue === tzValue) {
+                child.el.dataset.state = "1";
+                child.mset({ state: 1 });
+                if (child.setState) child.setState(1);
+              } else {
+                child.el.dataset.state = "0";
+                child.mset({ state: 0 });
+                if (child.setState) child.setState(0);
+              }
+            });
+          }
+          
+          // Close dropdown after selection (similar to menuInput)
+          if (timezoneDropdown._closeItems) {
+            timezoneDropdown._closeItems();
+          }
+        }
+        return;
 
       case _e.sort:
         this._category = cmd.mget(_a.type);
