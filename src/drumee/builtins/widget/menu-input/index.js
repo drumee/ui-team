@@ -16,6 +16,21 @@ class __menu_input extends LetcBox {
     this.clickHandler = this.clickHandler.bind(this);
     this.showMenu = this.showMenu.bind(this);
     this.populateItems = this.populateItems.bind(this);
+    
+    // If items are provided in opt, use them; otherwise use emojiFlags (country code default)
+    let items = this.mget(_a.items);
+    if (!items || items.length === 0) {
+      // Default: populate items from emojiFlags for country code
+      items = []
+      for (let k of _.keys(emojiFlags)) {
+        if (/[A-Z]{2,2}/.test(k)) {
+          let { name: locale_name, emoji } = emojiFlags.countryCode(k) || {}
+          items.push({ country_code: k, emoji, locale_name })
+        }
+      }
+    }
+    this.mset({ items })
+    // this.debug("AAA:19", items, this.mget('items'), emojiFlags)
   }
 
   /**
@@ -45,12 +60,35 @@ class __menu_input extends LetcBox {
     if (pointerDragged) {
       return;
     }
-    if (e && this.el.contains(e.currentTarget)) {
+    
+    // Check if click is inside the widget or items dropdown
+    if (e && e.target) {
+      const target = e.target;
+      // Check if click is inside main widget element
+      if (this.el && this.el.contains(target)) {
+        return;
+      }
+      
+      // Check if click is inside items dropdown wrapper (positioned absolutely)
+      this.ensurePart('items').then((itemsPart) => {
+        if (itemsPart && !itemsPart.isEmpty()) {
+          // Get the items wrapper element
+          const itemsWrapper = this.el.querySelector('.menu-input__items-wrapper');
+          if (itemsWrapper && itemsWrapper.contains(target)) {
+            return; // Click is inside items dropdown, don't close
+          }
+        }
+        // Click is outside both widget and dropdown, close it
+        this.clearItems();
+      });
       return;
     }
+    
     if (origin && (this.contains(origin) || ([_e.data, _a.idle].includes(origin.status)))) {
       return;
     }
+    
+    // Close dropdown if click is outside
     this.clearItems();
   }
 
@@ -77,6 +115,10 @@ class __menu_input extends LetcBox {
    */
   showMenu(cmd) {
     let r = []
+    // Clear input field to allow user to search from scratch
+    this.ensurePart("entry").then((p) => {
+      p.setValue("");
+    })
     this.ensurePart("shower").then((p) => {
       p.setState(0)
     })
@@ -85,6 +127,7 @@ class __menu_input extends LetcBox {
         p.clear()
         return
       }
+      // Show all items when menu opens
       let items = this.mget(_a.items);
       for (let item of items) {
         r.push(this.getItem(item));
@@ -134,11 +177,21 @@ class __menu_input extends LetcBox {
    */
   getItem(item) {
     let refAttribute = this.mget('refAttribute');
-    let ref = item[refAttribute]
+    let ref = item[refAttribute] || item.label || item.value || '';
+    
+    // If item has emoji (country code case), use flag format
+    let content;
+    if (item.emoji) {
+      content = `<span class="flag">${item.emoji}</span><span class="name">${ref}</span>`;
+    } else {
+      // For other items (timezone, date format, etc.), use simple text
+      content = ref;
+    }
+    
     return Skeletons.Note({
       ...item,
       className: `${this.fig.family}__item`,
-      content: `<span class="flag">${item.emoji}</span><span class="name">${ref}</span>`,
+      content: content,
       service: "item-selected",
       uiHandler: [this],
       state: 0
@@ -153,22 +206,41 @@ class __menu_input extends LetcBox {
   populateItems(cmd) {
     let r = []
     if (!cmd || !cmd.getValue) return r;
-    let val = cmd.getValue() || '.*';
-    let reg = new RegExp(val, 'i')
-    let refAttribute = this.mget('refAttribute');
-    this._selIndex = 0;
-    this.ensurePart("shower").then((p) => {
-      p.setState(0)
-    })
-    for (let item of this.mget(_a.items)) {
-      let ref = item[refAttribute]
-      if (reg.test(ref) || reg.test(item.label)) {
-        r.push(this.getItem(item));
+    
+    let val = cmd.getValue() || '';
+    
+    // Check if items list is empty (menu just opened)
+    this.ensurePart('items').then((itemsPart) => {
+      const isMenuJustOpened = itemsPart.isEmpty();
+      
+      // If menu just opened and input has value (from previous selection), clear it and show all
+      if (isMenuJustOpened && val && val !== '.*') {
+        // Clear input to allow fresh search - do it first
+        this.ensurePart("entry").then((entryPart) => {
+          entryPart.setValue("");
+        });
+        // Use empty pattern to show all items when menu just opened
+        val = '.*';
       }
-    }
-    this.ensurePart('items').then((p) => {
-      p.feed(r)
-    })
+      
+      let reg = new RegExp(val, 'i')
+      let refAttribute = this.mget('refAttribute');
+      this._selIndex = 0;
+      this.ensurePart("shower").then((p) => {
+        p.setState(0)
+      })
+      
+      for (let item of this.mget(_a.items)) {
+        let ref = item[refAttribute] || item.label || '';
+        // Search by refAttribute/label, value, or label
+        if (reg.test(ref) || reg.test(item.label || '') || reg.test(item.value || '')) {
+          r.push(this.getItem(item));
+        }
+      }
+      
+      itemsPart.feed(r);
+    });
+    
     return r;
   }
 
@@ -231,8 +303,16 @@ class __menu_input extends LetcBox {
     let i = 0;
     if (/down/i.test(key)) {
       if (content.isEmpty()) {
+        // Clear input and show all items when opening menu with arrow down
         let input = await this.ensurePart("entry");
-        this.populateItems(input);
+        input.setValue(""); // Clear input to show all items
+        // Show all items instead of filtering
+        let r = []
+        let items = this.mget(_a.items);
+        for (let item of items) {
+          r.push(this.getItem(item));
+        }
+        content.feed(r);
         return;
       }
     }

@@ -102,12 +102,12 @@ export function entry(ui, opt) {
  */
 export function menuInput(ui, opt = {}) {
   const pfx = `${ui.fig.family}`;
-  let { className = "" } = opt;
+  let { className = "", name = 'country_code' } = opt;
   return {
     ...opt,
     state: 0,
     radio: ui._id,
-    name: 'country_code',
+    name: name,
     kind: 'menu_input',
     className: `${pfx}__entry-input ${className}`,
     uiHandler: [ui]

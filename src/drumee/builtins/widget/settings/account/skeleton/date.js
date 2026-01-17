@@ -1,4 +1,4 @@
-const { entry, button } = require("../../../../skeleton/toolkit");
+const { entry, button, menuInput } = require("../../../../skeleton/toolkit");
 
 /**
  * Date format options
@@ -505,71 +505,30 @@ function getCommonTimezones() {
 }
 
 /**
- * Create dropdown menu for date format
+ * Create menu input for date format
  */
 function dateFormatMenu(ui) {
-  const pfx = `${ui.fig.family}__dateformat-menu`;
   const settings = Visitor.settings() || {};
   const currentDateFormat = settings.dateformat || Visitor.dateformat();
   
   // Find current option
   const currentOption = DATEFORMAT_OPTIONS.find(opt => opt.value === currentDateFormat) || DATEFORMAT_OPTIONS[0];
   
-  const items = Skeletons.Box.Y({
-    className: `${pfx}-items`,
-    flow: _a.vertical,
-    kids: DATEFORMAT_OPTIONS.map(opt => 
-      Skeletons.Element({
-        content: opt.label,
-        className: `${pfx}-item`,
-        service: 'select-dateformat',
-        value: opt.value,
-        state: opt.value === currentDateFormat ? 1 : 0,
-        formItem: 1,
-        radio: `dateformat-${ui._id}`,
-      })
-    )
-  });
-
-  const trigger = Skeletons.Box.X({
-    className: `${pfx}-trigger`,
-    kidsOpt: { active: 0 },
-    kids: [
-      Skeletons.Element({
-        className: `${pfx}-display`,
-        sys_pn: "current-dateformat",
-        name: "dateformat",
-        value: currentDateFormat,
-        formItem: 1,
-        content: currentOption.label
-      }),
-      Skeletons.Button.Svg({ className: `${pfx}-trigger-icon`, ico: "carret-down" }),
-    ]
-  });
-
-  return Skeletons.Box.X({
-    className: `${pfx}-container`,
-    kids: [{
-      kind: KIND.menu.topic,
-      className: `${pfx}-content`,
-      flow: _a.y,
-      opening: _e.click,
-      service: "dateformat-menu",
-      sys_pn: "dateformat-dropdown",
-      persistence: _a.once,
-      trigger,
-      items,
-      shower: 1,
-      offsetY: 20
-    }]
+  return menuInput(ui, {
+    name: 'dateformat',
+    service: "select-dateformat",
+    refAttribute: 'label',
+    placeholder: 'Select date format',
+    value: currentDateFormat,
+    items: DATEFORMAT_OPTIONS,
+    className: `${ui.fig.family}__dateformat-input`
   });
 }
 
 /**
- * Create dropdown menu for timezone
+ * Create menu input for timezone
  */
 function timezoneMenu(ui) {
-  const pfx = `${ui.fig.family}__timezone-menu`;
   const settings = Visitor.settings() || {};
   const currentTimezone = settings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   
@@ -586,53 +545,14 @@ function timezoneMenu(ui) {
     };
   }
   
-  const items = Skeletons.Box.Y({
-    className: `${pfx}-items`,
-    flow: _a.vertical,
-    kids: TIMEZONE_OPTIONS.map(opt => 
-      Skeletons.Element({
-        content: opt.label,
-        className: `${pfx}-item`,
-        service: 'select-timezone',
-        value: opt.value,
-        state: opt.value === currentTimezone ? 1 : 0,
-        formItem: 1,
-        radio: `timezone-${ui._id}`,
-      })
-    )
-  });
-
-  const trigger = Skeletons.Box.X({
-    className: `${pfx}-trigger`,
-    kidsOpt: { active: 0 },
-    kids: [
-      Skeletons.Element({
-        className: `${pfx}-display`,
-        sys_pn: "current-timezone",
-        name: "timezone",
-        value: currentTimezone,
-        formItem: 1,
-        content: currentOption.label
-      }),
-      Skeletons.Button.Svg({ className: `${pfx}-trigger-icon`, ico: "carret-down" }),
-    ]
-  });
-
-  return Skeletons.Box.X({
-    className: `${pfx}-container`,
-    kids: [{
-      kind: KIND.menu.topic,
-      className: `${pfx}-content`,
-      flow: _a.y,
-      opening: _e.click,
-      service: "timezone-menu",
-      sys_pn: "timezone-dropdown",
-      persistence: _a.once,
-      trigger,
-      items,
-      shower: 1,
-      offsetY: 20
-    }]
+  return menuInput(ui, {
+    name: 'timezone',
+    service: "select-timezone",
+    refAttribute: 'label',
+    placeholder: 'Select timezone',
+    value: currentTimezone,
+    items: TIMEZONE_OPTIONS,
+    className: `${ui.fig.family}__timezone-input`
   });
 }
 
