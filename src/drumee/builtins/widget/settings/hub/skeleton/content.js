@@ -51,6 +51,15 @@ function type(ui, label, service) {
   }
   const family = `${ui.fig.family}`;
   const figType = `${ui.fig.family}__item-type`;
+  let arrow;
+  if (ui.isHub) {
+    arrow = Skeletons.Button.Svg({
+      ico: "arrow--pages",
+      className: `${figType}__arrow`,
+    })
+  } else {
+    arrow = Skeletons.Note({})
+  }
   return Skeletons.Box.G({
     className: `${family}__item ${ui.fig.group}__item`,
     uiHandler: ui,
@@ -65,7 +74,7 @@ function type(ui, label, service) {
       }),
       Skeletons.Box.G({
         className: figType,
-        service: "edit-type",
+        service,
         kidsOpt: {
           active: 0
         },
@@ -78,10 +87,7 @@ function type(ui, label, service) {
             content: labels[ui.mget(_a.area)] || ui.mget(_a.area),
             className: `${figType}__label`,
           }),
-          Skeletons.Button.Svg({
-            ico: "arrow--pages",
-            className: `${figType}__arrow`,
-          }),
+          arrow
         ],
       })
     ],
@@ -108,8 +114,20 @@ function settings_body(ui, opt) {
 
   const createdAt = Dayjs.unix(Number(ui.mget(_a.ctime) || 0)).format(Visitor.timeformat());
   const updatedAt = Dayjs.unix(Number(ui.mget(_a.mtime) || 0)).format(Visitor.timeformat());
+  let service = "edit-type";
+  if (!ui.isHub) service = 'nop';
+  let activity;
+  if (ui.isRegularFile) {
+    activity = Skeletons.Note({})
+  } else {
+    activity = Skeletons.Button.Svg({
+      ico: "arrow--pages",
+      className: `${fig}__arrow-next`,
+      service: "activity-hub",
+      uiHandler: [ui],
+    })
 
-
+  }
   return Skeletons.Box.Y({
     className: `${fig}__container`,
     debug: __filename,
@@ -122,8 +140,10 @@ function settings_body(ui, opt) {
             kids: [{
               kind: 'media_grid',
               className: `${ui.fig.group}__vignette-media ${fig}__vignette-media`,
+              ...ui.actualNode(),
               filetype: ui.mget(_a.filetype),
               area: ui.mget(_a.area),
+              ext: ui.mget(_a.ext),
               mode: _a.vignette,
               service: "nop"
             }]
@@ -131,7 +151,7 @@ function settings_body(ui, opt) {
           Skeletons.Box.Y({
             className: `${ui.fig.group}__items ${fig}__items`,
             kids: [
-              type(ui, LOCALE.TYPE, "edit-type"),
+              type(ui, LOCALE.TYPE, service),
               item(
                 ui,
                 LOCALE.OWNER,
@@ -149,8 +169,7 @@ function settings_body(ui, opt) {
                     }),
                   ],
                 }),
-                Skeletons.Note({
-                })
+                Skeletons.Note({})
               ),
               item(
                 ui,
@@ -189,12 +208,7 @@ function settings_body(ui, opt) {
                   className: `${fig}__item-date`,
                   content: updatedAt,
                 }),
-                Skeletons.Button.Svg({
-                  ico: "arrow--pages",
-                  className: `${fig}__arrow-next`,
-                  service: "activity-hub",
-                  uiHandler: [ui],
-                })
+                activity
               ),
             ]
           }),

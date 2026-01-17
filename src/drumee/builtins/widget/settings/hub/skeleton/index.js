@@ -4,12 +4,14 @@ export default function (ui) {
   if ([_a.share, _a.dmz].includes(ui.mget(_a.area))) {
     footer = require('./links').default(ui)
   }
+  let title = LOCALE.FOLDER_INFO;
+  if(ui.isRegularFile) title = 'File info'
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.family}__main`,
     sys_pn: "main-content",
     kids: [
-      require('../../skeleton/header').default(ui, LOCALE.FOLDER_INFO),
+      require('../../skeleton/header').default(ui, title),
       require('./content').default(ui),
       footer,
       Skeletons.Wrapper.Y({
