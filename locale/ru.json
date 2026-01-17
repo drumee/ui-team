@@ -161,8 +161,6 @@
   "COUNTRY": "Страна",
   "CREATE": "Создать",
   "CREATED": "Создано",
-  "CREATE_ACCOUNT": "Создать аккаунт в Drumee",
-  "CREATE_CHANGE_LINK": "Создать/изменить ссылку",
   "CREATE_FROM_MODELS": "Создать из шаблонов",
   "CREATE_NEW_WEBSITE": "Создать новый сайт",
   "CREATE_PUBLIC_LINK": "Создать общедоступную ссылку",
@@ -1950,7 +1948,7 @@
   "ENTER_CODE_TO_CHANGE_EMAIL": "Для изменения адреса электронной почты необходимо убедиться, что это действие было инициировано вами. Пожалуйста, введите код, отправленный на {0}.",
   "WRONG_CREDENTIALS": "Неверные учетные данные",
   "UNCOMPLIANT_PASSWORD": "Несоответствующий пароль",
-  "LAST_CHANGE": "",
+  "LAST_CHANGE": "Последнее изменение в",
   "DATE_AND_TIME": "Дата и время",
   "CUSTOMIZE_DATE_FORMAT": "Настроить формат даты (DD/MM/YYYY)",
   "TIMEZONE": "Часовой пояс",
@@ -1979,5 +1977,7 @@
   "VIEW_ALL_INVITED_MEMBERS": "Просмотреть всех приглашенных участников ({0})",
   "COPY_LINK": "Копировать ссылку",
   "SHOW_QR_CODE": "Показать QR-код",
-  "SETTING": "Настройки"
+  "SETTING": "Настройки",
+  "CREATE_ACCOUNT": "Создать аккаунт в Drumee",
+  "CREATE_CHANGE_LINK": "Создать/изменить ссылку"
 }

@@ -157,8 +157,6 @@
   "COUNTRY": "ប្រទេស",
   "CREATE": "បង្កើត",
   "CREATED": "បានបង្កើត",
-  "CREATE_ACCOUNT": "បង្កើតគណនី Drumee របស់អ្នក។",
-  "CREATE_CHANGE_LINK": "បង្កើត/ផ្លាស់ប្តូរតំណ",
   "CREATE_FROM_MODELS": "បង្កើតពីគំរូ",
   "CREATE_NEW_WEBSITE": "បង្កើតគេហទំព័រថ្មី។",
   "CREATE_PUBLIC_LINK": "បង្កើតតំណសាធារណៈ",
@@ -1950,7 +1948,7 @@
   "ENTER_CODE_TO_CHANGE_EMAIL": "ដើម្បីផ្លាស់ប្តូរអាសយដ្ឋានអ៊ីមែល យើងត្រូវធានាថាសកម្មភាពនេះត្រូវបានផ្តួចផ្តើមដោយអ្នក។ សូមបញ្ចូលលេខកូដដែលបានផ្ញើទៅកាន់ {0}។",
   "WRONG_CREDENTIALS": "លិខិតសម្គាល់មិនត្រឹមត្រូវ",
   "UNCOMPLIANT_PASSWORD": "ពាក្យសម្ងាត់មិនអនុលោមតាម",
-  "LAST_CHANGE": "",
+  "LAST_CHANGE": "ការកែប្រែចុងក្រោយនៅ",
   "DATE_AND_TIME": "កាលបរិច្ឆេទ និងពេលវេលា",
   "CUSTOMIZE_DATE_FORMAT": "ប្ដូរទម្រង់កាលបរិច្ឆេទ (DD/MM/YYYY)",
   "TIMEZONE": "តំបន់ពេលវេលា",
@@ -1979,5 +1977,7 @@
   "VIEW_ALL_INVITED_MEMBERS": "មើលសមាជិកទាំងអស់ដែលត្រូវបានអញ្ជើញ ({0})",
   "COPY_LINK": "ចម្លងតំណ",
   "SHOW_QR_CODE": "បង្ហាញ QR code",
-  "SETTING": "ការកំណត់"
+  "SETTING": "ការកំណត់",
+  "CREATE_ACCOUNT": "បង្កើតគណនី Drumee របស់អ្នក។",
+  "CREATE_CHANGE_LINK": "បង្កើត/ផ្លាស់ប្តូរតំណ"
 }

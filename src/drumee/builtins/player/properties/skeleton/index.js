@@ -1,16 +1,17 @@
 
-function player_props(_ui_) {
+function player_props(ui) {
+  const topbar = require("../../skeleton/topbar")(ui);
   const menu = Skeletons.Box.X({
-    debug     : __filename,
-    className : `${_ui_.fig.family}__header ${_ui_.fig.group}__header`,
-    sys_pn    : "window-header",
-    kidsOpt:{
-      radio : _a.on,
-      uiHandler    : _ui_
+    debug: __filename,
+    className: `${ui.fig.family}__header ${ui.fig.group}__header`,
+    sys_pn: "window-header",
+    kidsOpt: {
+      radio: _a.on,
+      uiHandler: ui
     },
-    kids : [require('./topbar')(_ui_)]
+    kids: [topbar]
   })
-  const a = require('window/skeleton/content/main')(_ui_, menu)
+  const a = require('window/skeleton/content/main')(ui, menu)
   a.debug = __filename
   return a
 }

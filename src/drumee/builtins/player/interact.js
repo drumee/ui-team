@@ -57,7 +57,10 @@ class __window_interact_player extends __utils {
         this._trigger.addPlayer(this);
       }
       pos = this._trigger.$el.offset();
+      if ((pos.left + width) > window.innerWidth) pos.left = window.innerWidth - width;
+      if ((pos.top + height) > window.innerHeight) pos.top = window.innerHeight - height;
       if (pos.top < 0) pos.top = 0;
+      if (pos.left < 0) pos.left = 0;
     } else {
       pos = {
         left:

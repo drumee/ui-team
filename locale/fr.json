@@ -161,8 +161,6 @@
   "COUNTRY": "Pays",
   "CREATE": "Créer",
   "CREATED": "Créé",
-  "CREATE_ACCOUNT": "Créez votre compte Drumee",
-  "CREATE_CHANGE_LINK": "Créer/modifier le lien",
   "CREATE_FROM_MODELS": "Créer à partir de modèles",
   "CREATE_NEW_WEBSITE": "Créer un nouveau site internet",
   "CREATE_PUBLIC_LINK": "Créer un lien public",
@@ -1950,7 +1948,7 @@
   "ENTER_CODE_TO_CHANGE_EMAIL": "Pour modifier votre adresse e-mail, nous devons nous assurer que vous êtes bien à l'origine de cette modification. Veuillez saisir le code envoyé au {0}.",
   "WRONG_CREDENTIALS": "Identifiants incorrects",
   "UNCOMPLIANT_PASSWORD": "Mot de passe non conforme",
-  "LAST_CHANGE": "",
+  "LAST_CHANGE": "Dernière modification à",
   "DATE_AND_TIME": "Date et heure",
   "CUSTOMIZE_DATE_FORMAT": "កាលបរិច្ឆេទ និងពេលវេលា",
   "TIMEZONE": "Fuseau horaire",
@@ -1979,5 +1977,7 @@
   "VIEW_ALL_INVITED_MEMBERS": "Voir tous les membres invités ({0})",
   "COPY_LINK": "Copier le lien",
   "SHOW_QR_CODE": "Afficher le code QR",
-  "SETTING": "Paramètre"
+  "SETTING": "Paramètre",
+  "CREATE_ACCOUNT": "Créez votre compte Drumee",
+  "CREATE_CHANGE_LINK": "Créer/modifier le lien"
 }

@@ -729,7 +729,6 @@ class __window_manager extends push {
           break;
         }
       }
-      this.debug("AAA:684 duplicated", duplicated)
       if (!duplicated) {
         selection.push(media)
       }
@@ -877,7 +876,7 @@ class __window_manager extends push {
    */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.status || cmd.mget(_a.service);
-    this.debug("AAA:695", cmd, service)
+    this.debug("onUiEvent:879", cmd, service)
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
@@ -924,10 +923,7 @@ class __window_manager extends push {
         return this.launch(args, { explicit: 1, singleton: 1 });
 
       case "new-folder":
-        return this.addFolder(cmd);
-
-      // case "toggle-fullscreen":
-      //   return this.toggleFullscreen();
+        return this.addFolder({ position: 0, area: _a.personal, filename: LOCALE.NEW_FOLDER })
 
       case _a.helpdesk:
         return this.launch(
@@ -1012,7 +1008,7 @@ class __window_manager extends push {
         break;
 
       case _a.paste:
-        Wm.paste(this);
+        this.paste(this);
         break;
 
       case _a.properties:
@@ -1049,14 +1045,11 @@ class __window_manager extends push {
     }
     if (target != null && _.isFunction(target.append)) {
       target.pasteMedia();
-      // @debug 'sdfsd if', @
       target.scrollToBottom();
     } else {
-      // @debug 'sdfsd else', @
       this.pasteMedia();
       this.scrollToBottom();
     }
-    return Desk.changeContextMenu(0);
   }
 
   /**

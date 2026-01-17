@@ -161,8 +161,6 @@
   "COUNTRY": "Country",
   "CREATE": "Create",
   "CREATED": "Created",
-  "CREATE_ACCOUNT": "Create your Drumee account",
-  "CREATE_CHANGE_LINK": "Create/change link",
   "CREATE_FROM_MODELS": "Create from models",
   "CREATE_NEW_WEBSITE": "Create a new website",
   "CREATE_PUBLIC_LINK": "Create public link",
@@ -1950,7 +1948,7 @@
   "ENTER_CODE_TO_CHANGE_EMAIL": "To change email address we need to ensure this action has been initiated by you. Please enter the code sent to {0}.",
   "WRONG_CREDENTIALS": "Wrong credentials",
   "UNCOMPLIANT_PASSWORD": "Uncompliant password",
-  "LAST_CHANGE": "Last change at {0}",
+  "LAST_CHANGE": "Last change at",
   "DATE_AND_TIME": "Date & Time",
   "CUSTOMIZE_DATE_FORMAT": "",
   "TIMEZONE": "Timezone",
@@ -1979,5 +1977,7 @@
   "VIEW_ALL_INVITED_MEMBERS": "View all invited members ({0})",
   "COPY_LINK": "Copy Link",
   "SHOW_QR_CODE": "Show QR code",
-  "SETTING": "Setting"
+  "SETTING": "Setting",
+  "CREATE_ACCOUNT": "Create your Drumee account",
+  "CREATE_CHANGE_LINK": "Create/change link"
 }

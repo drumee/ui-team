@@ -650,6 +650,18 @@ class __media_interact extends media_core {
       case "direct-rename":
         return this.rename();
 
+      case _a.duplicate:
+        this.debug("AAAA 929", this)
+        let opt = {
+          service: SERVICE.media.copy,
+          nid: this.mget(_a.nodeId),
+          pid: this.mget(_a.pid),
+          action: _a.copy,
+          recipient_id: this.mget(_a.hub_id),
+          hub_id: this.mget(_a.hub_id),
+        };
+        this.postService(opt)
+        return
 
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));

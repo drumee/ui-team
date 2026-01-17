@@ -183,7 +183,6 @@ class __media_core extends DrumeeMFS {
     }
 
     items.push('share_qrcode');
-    items.push(_a.lock);
 
     /** Children of window_search */
     if (this.mget(_a.role) == _a.search) {

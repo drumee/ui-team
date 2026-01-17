@@ -5,7 +5,6 @@ require("builtins/window/confirm/skin");
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
-    this.changeContextMenu = this.changeContextMenu.bind(this);
     this.refreshContextMenu = this.refreshContextMenu.bind(this);
     this.onPartReady = this.onPartReady.bind(this);
     this.mediaDragLeaveAvatar = this.mediaDragLeaveAvatar.bind(this);
@@ -94,13 +93,6 @@ class desk_module extends LetcBox {
 
   /**
    *
-   */
-  changeContextMenu(state) {
-    this.findPart("menu-settings").changeState(state);
-  }
-
-  /**
-   *
    * @returns
    */
   refreshContextMenu() {
@@ -123,17 +115,6 @@ class desk_module extends LetcBox {
     }
   }
 
-  /**
-   *
-   */
-  // autoMenu() {
-  //   if (_.isEmpty(Wm.getGlobalSelection())) {
-  //     this.changeContextMenu(0);
-  //   } else {
-  //     this.changeContextMenu(1);
-  //     this.refreshContextMenu();
-  //   }
-  // }
 
   /**
    *

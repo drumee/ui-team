@@ -1,40 +1,45 @@
 
-const __skl_window_note_topbar = function(_ui_, icon) {
-  let filename;
-  if(_ui_.media) {
-    filename = _ui_.media.mget(_a.filename);
-  } else { 
-    filename = LOCALE.NOTE;
-  }
+const __skl_window_note_topbar = function (ui, icon) {
   const figname = "topbar";
+  const downloadIcon = Skeletons.Button.Svg({
+    ico: "download",
+    sys_pn: "download-button",
+    className: `${ui.fig.family}-${figname}__icon`,
+    service: _e.download,
+    uiHandler: ui,
+  });
+
   const a = Skeletons.Box.X({
-    className : `${_ui_.fig.family}-${figname}__container ${_ui_.mget(_a.area)}`,
-    sys_pn    : "topbar",
-    service   : _e.raise,
-    debug     : __filename,
-    kids : [
+    className: `${ui.fig.family}-${figname}__container ${ui.mget(_a.area)}`,
+    sys_pn: "topbar",
+    service: _e.raise,
+    debug: __filename,
+    kids: [
       Skeletons.Box.X({
-        className: `${_ui_.fig.group}-${figname}__title ${_ui_.fig.family}-${figname}__title`,
-        service   : _e.raise,
+        className: `${ui.fig.group}-${figname}__title ${ui.fig.group}__title ${ui.fig.family}-${figname}__title`,
+        service: _e.raise,
         kids: [
           Skeletons.Note({
-            sys_pn    : "ref-window-name",
-            uiHandler : _ui_,
-            partHandler : _ui_,
-            className : _a.name,
-            content   : filename,
-            active    : 0
-          }) 
-        ]}),
+            sys_pn: "ref-window-name",
+            uiHandler: ui,
+            partHandler: ui,
+            className: _a.name,
+            content: ui.mget(_a.filename),
+            active: 0
+          }),
+          downloadIcon
+        ]
+      }),
       Skeletons.Wrapper.Y({
-        className : `${_ui_.fig.group}__wrapper--context dialog__wrapper--context`,
-        name      : "context",
-        uiHandler   : _ui_,
-        partHandler : _ui_
+        className: `${ui.fig.group}__wrapper--context dialog__wrapper--context`,
+        name: "context",
+        uiHandler: ui,
+        partHandler: ui
       }),
 
-      require('window/skeleton/topbar/control')(_ui_, 'sc')
-    ]});
+      require('window/skeleton/topbar/control')(ui, 'sc')
+    ]
+  });
   return a;
 };
 module.exports = __skl_window_note_topbar;

@@ -161,8 +161,6 @@
   "COUNTRY": "国家",
   "CREATE": "创建",
   "CREATED": "创建",
-  "CREATE_ACCOUNT": "创建您的Drumee帐户",
-  "CREATE_CHANGE_LINK": "创建/更改链接",
   "CREATE_FROM_MODELS": "从模板创建",
   "CREATE_NEW_WEBSITE": "创建一个新网站",
   "CREATE_PUBLIC_LINK": "创建公共链接",
@@ -1950,7 +1948,7 @@
   "ENTER_CODE_TO_CHANGE_EMAIL": "要更改电子邮件地址，我们需要确认此操作是由您本人发起的。请输入发送至 {0} 的验证码。",
   "WRONG_CREDENTIALS": "凭据错误",
   "UNCOMPLIANT_PASSWORD": "不合规的密码",
-  "LAST_CHANGE": "",
+  "LAST_CHANGE": "最后修改于",
   "DATE_AND_TIME": "日期和时间",
   "CUSTOMIZE_DATE_FORMAT": "自定义日期格式 (DD/MM/YYYY)",
   "TIMEZONE": "时区",
@@ -1979,5 +1977,7 @@
   "VIEW_ALL_INVITED_MEMBERS": "查看所有受邀成员 ({0})",
   "COPY_LINK": "复制链接",
   "SHOW_QR_CODE": "显示二维码",
-  "SETTING": "设置"
+  "SETTING": "设置",
+  "CREATE_ACCOUNT": "创建您的Drumee帐户",
+  "CREATE_CHANGE_LINK": "创建/更改链接"
 }

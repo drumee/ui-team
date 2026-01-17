@@ -125,14 +125,15 @@
   &__buttons {
     align-content: center;
     height: 110px;
-    justify-content: center; //pace-evenly;
+    justify-content: center;
     padding-top: 25px;
     width: 100%;
+    font-size: 16px;
+    line-height: 18px;
 
     .button {
       align-content: center;
       align-items: center;
-      border-radius: var(--border-radius);
       cursor: pointer;
       height: 35px;
       justify-content: center;
@@ -149,11 +150,12 @@
 
   &__button.first {
     border: 1px solid var(--btn-rollback-border);
-    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-rollback-text) );
+    color: var(--btn-rollback-text);
+    border-radius: var(--corner-radius-max);
 
     &:hover {
-      border: 2px solid var(--btn-rollback-border-hover);
-      color: var(--btn-rollback-text-hover);
+      border: 2px solid var(--primary-500);
+      color: var(--primary-500);
     }
 
     &.forbiden {
@@ -167,10 +169,12 @@
   &__button.normal {
     background-color: var(--btn-commit-background);
     border: 0px;
-    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-commit-text));
+    background-color: var(--primary-500);
+    color: var(--white);
+    border-radius: var(--corner-radius-max);
 
     &:hover {
-      background-color: var(--btn-commit-background-hover);
+      background-color: var(--primary-600);
     }
 
     &.large {
@@ -183,7 +187,7 @@
   &__button.danger {
     background-color: var(--btn-caution-background);
     border: 0px;
-    @include drumee.typo($size: 16px, $line: 18px, $color: var(--btn-caution-text));
+    color: var(--btn-caution-text);
 
     &:hover {
       background-color: var(--btn-caution-background-hover);

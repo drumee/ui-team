@@ -1,15 +1,15 @@
-/* ============================================================= *
-*   Copyright xialia.com  2011-2021
-* ============================================================== */
+
 const { copyToClipboard } = require("core/utils")
 const __player = require('player/interact');
+require('../skin');
+require('./skin');
+
 class __player_props extends __player {
   /**
    * 
    */
   async initialize(opt = {}) {
-    require('../skin');
-    require('./skin');
+    
     super.initialize(opt);
     this.media = opt.media;
     this.size = _K.docViewer;
@@ -32,7 +32,7 @@ class __player_props extends __player {
   onPartReady(child, pn) {
     switch (pn) {
       case _a.content:
-        child.feed(require("./skeleton/content")(this))
+        child.feed(require("./skeleton/content").default(this))
         break;
       default:
         super.onPartReady(child, pn);
@@ -62,7 +62,6 @@ class __player_props extends __player {
       case _e.close:
         this.goodbye();
       case _e.copy:
-        this.debug("AAA:80", cmd.mget(_a.value), this);
         copyToClipboard(cmd.mget(_a.value));
         this.acknowledge(LOCALE.URL_COPIED);
         break;

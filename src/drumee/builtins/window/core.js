@@ -21,7 +21,6 @@ class __window_core extends __utils {
     this.update_name = this.update_name.bind(this);
     this.fetchContent = this.fetchContent.bind(this);
     this.buildContent = this.buildContent.bind(this);
-    // this.getFilePath = this.getFilePath.bind(this);
     this.onPartReady = this.onPartReady.bind(this);
     this.onChildBubble = this.onChildBubble.bind(this);
     this.openContent = this.openContent.bind(this);
