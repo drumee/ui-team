@@ -16,6 +16,9 @@ class settings_hub extends DrumeeMFS {
     if (opt.media) {
       // this.mset(opt.media.toJSON ? opt.media.toJSON() : opt.media);
       this.copyPropertiesFrom(opt.media)
+      this.isRegularFile = opt.media.isRegularFile;
+      this.isHub = opt.media.isHub;
+      this.isFolder = opt.media.isFolder;
     }
     switch (this.mget(_a.area)) {
       case _a.private:
