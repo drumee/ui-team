@@ -660,7 +660,10 @@ class __media_interact extends media_core {
           recipient_id: this.mget(_a.hub_id),
           hub_id: this.mget(_a.hub_id),
         };
-        this.postService(opt)
+        this.postService(SERVICE.media.copy, opt, { async: 1 }).then((data) => {
+          data.kind = this._getKind();
+          this.getLogicalParent().append(data)
+        })
         return
 
       case "set-as-homepage":
