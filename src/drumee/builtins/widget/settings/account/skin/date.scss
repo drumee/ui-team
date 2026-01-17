@@ -25,8 +25,8 @@
     }
   }
 
-  &__dateformat-menu,
-  &__timezone-menu {
+  &__dateformat-input,
+  &__timezone-input {
     &-container {
       width: 100%;
       display: flex;
@@ -36,6 +36,46 @@
 
     &-content {
       width: 100%;
+    }
+    
+    // Style for menu-input widget entry container and shower
+    .menu-input__entry {
+      &-container {
+        position: relative;
+        height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 var(--spacer-5);
+      }
+      
+      &-shower {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        padding: 0;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 22px;
+        color: var(--neutral-900);
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      input {
+        height: 100%;
+        padding: 0;
+        font-size: 14px;
+        line-height: 22px;
+        min-height: 46px;
+      }
+    }
+    
+    .menu-input__entry-icon {
+      flex-shrink: 0;
+      margin-left: var(--spacer-2);
     }
 
     &-trigger {

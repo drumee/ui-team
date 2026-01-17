@@ -32,10 +32,19 @@ function entry(ui) {
   let shower_state = 0;
   let content = '';
   if (v) {
+    // Try country code first (has emoji)
     let { name, emoji } = emojiFlags.countryCode(v) || {}
     if (name && emoji) {
       shower_state = 1;
       content = `<span class="flag">${emoji}</span><span class="name">${name}</span>`
+    } else {
+      // For other items (timezone, date format, etc.), use label from items array
+      let items = ui.mget(_a.items) || [];
+      let selectedItem = items.find(item => item.value === v);
+      if (selectedItem && selectedItem.label) {
+        shower_state = 1;
+        content = selectedItem.label;
+      }
     }
   }
   return Skeletons.Box.X({
