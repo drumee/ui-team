@@ -3,7 +3,7 @@ const { fitBoxes } = require("core/utils")
 require('../skin');
 require('./skin');
 
-const { TweenMax, Cubic, Expo } = require("gsap/all");
+const { TweenMax, Cubic } = gsap;
 const __core = require('player/interact');
 class __player_image extends __core {
 

@@ -1,4 +1,4 @@
-const { TweenMax } = require("gsap");
+const { TweenMax } = gsap;
 class __drumee_slider extends LetcBox {
   constructor(...args) {
     super(...args);

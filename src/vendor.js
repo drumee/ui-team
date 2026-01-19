@@ -15,27 +15,23 @@
  * =============================================================================
  */
 
-const STYLE = "color: green; font-weight: bold;"
 
-const App = require('./drumee');
-window.Drumee = new App();
-if ((window.__filename == null)) {
-  window.__filename = null;
-}
-// window.DrumeeMFS = require('./core/mfs');
-window.DrumeeMediaInteract = require('builtins/media/interact');
+window.jQuery = require("jquery");
+window.$ = window.jQuery;
+require("lodash");
+require("backbone");
+require("backbone.radio");
+window.Marionette = require("backbone.marionette");
+require("jquery-ui/ui/widgets/droppable");
+require("jquery-ui/ui/widgets/resizable");
 
-/**
- * 
- */
-$(document).ready(function () {
-  console.log(`Staring Drumee Web...`);
-  console.log(`Build commit=%c${__COMMIT__}, mode=${__BUILD__}`, STYLE);
-  console.log(`UI version=%c${Drumee.version}`, STYLE);
-  // Drumee.loadSprites();
-  // Drumee.loadLocale();
-  Drumee.start();
-  const event = new Event('drumee:app:started');
-  event.root = this.content;
-  document.dispatchEvent(event);
-});
+const gsap = require("gsap/all");
+// /**
+//  * 
+//  */
+document.onreadystatechange = function () {
+  console.log(`Loading Vendor...`, Marionette, window.Backbone);
+  window.gsap = gsap;
+  // window.$ = jquery;
+  // window.Marionette = Marionette;
+};

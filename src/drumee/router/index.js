@@ -23,8 +23,8 @@ const { getModule, moduleName } = require('./modules');
 class drumee_router extends LetcBox {
   constructor(...args) {
     super(...args);
-    this.onBeforeDestroy = this.onBeforeDestroy.bind(this);
-    this.onDomRefresh = this.onDomRefresh.bind(this);
+    // this.onBeforeDestroy = this.onBeforeDestroy.bind(this);
+    // this.onDomRefresh = this.onDomRefresh.bind(this);
     this.restart = this.restart.bind(this);
     this.responsive = this.responsive.bind(this);
     this.setWallpaper = this.setWallpaper.bind(this);

@@ -1,38 +1,24 @@
+window.WARNING = require('lex/warning');
+window.ERROR = require('lex/error');
+window._a = require('lex/attribute');
+window._K = require('lex/constants');
+window._T = require('lex/template');
+window.KIND = require('lex/type/reader');
+window._e = require('lex/event');
+
+const { createSafeObject } = require("core/utils");
 const relativeTime = require('dayjs/plugin/relativeTime');
 const duration = require('dayjs/plugin/duration')
 const dayjs = require('dayjs');
 dayjs.extend(relativeTime);
 dayjs.extend(duration);
 window.Dayjs = dayjs;
-module.exports = function (l) {
-  if (!Platform.get('intl').includes(l)) {
-    return require('./en.json')
-  }
-  if (/^en.*$/.test(l)) {
-    require('dayjs/locale/en');
-    dayjs.locale(l);
-    return require('./en.json')
-  };
-  if (/^fr.*$/.test(l)) {
-    require('dayjs/locale/fr');
-    dayjs.locale(l);
-    return require('./fr.json')
-  };
-  if (/^km.*$/.test(l)) {
-    require('dayjs/locale/km');
-    dayjs.locale(l);
-    return require('./km.json')
-  };
-  if (/^ru.*$/.test(l)) {
-    require('dayjs/locale/ru');
-    dayjs.locale(l);
-    return require('./ru.json')
-  };
-  if (/^zh.*$/.test(l)) {
-    require('dayjs/locale/zh');
-    dayjs.locale(l);
-    return require('./zh.json')
-  };
-  //require('dayjs/locale/en');
-  return require('./en.json')
-}
+
+/**
+ * 
+ */
+$(document).ready(function () {
+  console.log(`Loading Locale...`);
+  require('./en.json')
+   window.LOCALE = createSafeObject(require('./en.json'));
+});

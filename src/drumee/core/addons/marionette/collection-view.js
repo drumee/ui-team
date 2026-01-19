@@ -274,6 +274,7 @@ CollectionView.prototype.respawn = function (data) {
   return this.parent.collection.add(letc, { at: index });
 };
 
+
 /**
  * 
  * @returns 

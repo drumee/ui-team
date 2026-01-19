@@ -627,3 +627,75 @@ export function createQrcode(opt) {
     }, 300);
   });
 }
+
+export function createSafeObject(initial = {}) {
+  const data = { ...initial };
+  
+  const handler = {
+    get(target, prop) {
+      // Handle method calls
+      if (methods.hasOwnProperty(prop)) {
+        return methods[prop].bind(proxy);
+      }
+      
+      // Handle property access
+      if (prop in data) {
+        return data[prop];
+      }
+      
+      // Return key as string for missing properties
+      return String(prop);
+    },
+    
+    set(target, prop, value) {
+      // Don't allow overriding methods
+      if (prop in methods) {
+        console.warn(`Cannot override method "${prop}"`);
+        return false;
+      }
+      data[prop] = value;
+      return true;
+    }
+  };
+  
+  // Built-in methods
+  const methods = {
+    set(key, value) {
+      data[key] = value;
+      return this;
+    },
+    
+    get(key) {
+      return key in data ? data[key] : String(key);
+    },
+    
+    extend(newProps) {
+      Object.assign(data, newProps);
+      return this;
+    },
+    
+    delete(key) {
+      delete data[key];
+      return this;
+    },
+    
+    has(key) {
+      return key in data;
+    },
+    
+    keys() {
+      return Object.keys(data);
+    },
+    
+    values() {
+      return Object.values(data);
+    },
+    
+    toObject() {
+      return { ...data };
+    }
+  };
+  
+  const proxy = new Proxy({}, handler);
+  return proxy;
+}

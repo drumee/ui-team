@@ -1,7 +1,7 @@
 
 require("./skin");
 const { copyToClipboard } = require("core/utils")
-const { TweenLite, TimelineMax } = require("gsap/all")
+const { TweenLite, TimelineMax } = gsap;
 let lastClickTime = new Date().getTime();
 const push = require("./push");
 

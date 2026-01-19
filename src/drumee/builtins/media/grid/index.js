@@ -1,4 +1,4 @@
-const { TweenLite } = require("gsap/all")
+const { TweenLite } = gsap;
 const Rectangle = require('rectangle-node');
 
 class __media_grid extends DrumeeMediaInteract {

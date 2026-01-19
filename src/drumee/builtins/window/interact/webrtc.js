@@ -1,6 +1,6 @@
 
 const windowCore = require('./index');
-const { TweenMax } = require("gsap/all");
+const { TweenMax } = gsap;
 
 class __window_webrtc extends windowCore {
 

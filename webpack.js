@@ -141,7 +141,10 @@ module.exports = function () {
     case 'app':
       main = join(UI_SRC_PATH, 'src', 'drumee', 'index.web');
       let dom = join(UI_SRC_PATH, 'src', 'drumee', 'index.dom');
-      return makeOptions({ main, dom, core }, opt);
+      let locale = join(UI_SRC_PATH, 'locale');
+      let sprite = join(UI_SRC_PATH, 'src', 'sprite');
+      let vendor = join(UI_SRC_PATH, 'src', 'vendor');
+      return makeOptions({ main, dom, core, locale, sprite, vendor }, opt);
     default:
       console.error(`The build target ${BUILD_TARGET} was unexpected`)
   }

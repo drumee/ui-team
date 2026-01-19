@@ -1,6 +1,6 @@
 
 const { filesize, fitBoxes } = require("core/utils")
-const { TweenMax, Expo } = require("gsap/all");
+const { TweenMax, Expo } = gsap;
 const PlayerInteract = require('player/interact');
 const { loadPdfDocument } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";

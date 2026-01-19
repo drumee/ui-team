@@ -1,5 +1,5 @@
-require("jquery-ui/ui/widgets/droppable");
-require("jquery-ui/ui/widgets/resizable");
+// require("jquery-ui/ui/widgets/droppable");
+// require("jquery-ui/ui/widgets/resizable");
 
 if (window.innerWidth > 900) {
   require("jquery-ui-touch-punch")
