@@ -125,7 +125,7 @@ class __window_search extends __window_interact {
 getCurrentApi(type) {
   let api;
   api = {
-    service: SERVICE.media.search, //SERVICE.desk.search,
+    service: SERVICE.desk.search,
     hub_id: Visitor.id,
     string: this.mget(_a.string)
   };
