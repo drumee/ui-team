@@ -1,12 +1,12 @@
-const { userMenu } = require('builtins/skeleton/toolkit/user');
+const { userMenu } = require("builtins/skeleton/toolkit/user");
 
 /**
- * 
+ *
  */
 function menuBar(ui) {
   const pfx = `${ui.fig.family}-topbar`;
   const icoClass = `${pfx}__icon`;
-  const service = 'toggle-activity-panel';
+  const service = "toggle-activity-panel";
   return Skeletons.Box.X({
     className: `${pfx}__user-menu`,
     sys_pn: "user-menu",
@@ -15,22 +15,41 @@ function menuBar(ui) {
     kids: [
       Skeletons.Box.X({
         kids: [
-          Skeletons.Button.Svg({
-            className: icoClass,
-            service,
-            ico: "bell",
-            dataset: { service }
-          }),
-          Skeletons.Note({ className: `${pfx}__activity-count`, sys_pn: "activity-count", activie: 0 }),
-          Skeletons.Button.Svg({ className: icoClass, service: 'open-chat', ico: "message" }),
-          Skeletons.Button.Svg({ className: icoClass, service: 'open-settings', ico: "settings" }),
-          userMenu(ui, "desk-avatar")
-        ]
-      }),
-    ]
-  })
-}
+          !Visitor.isMobile()
+            ? Skeletons.Button.Svg({
+                className: icoClass,
+                service,
+                ico: "bell",
+                dataset: { service },
+              })
+            : undefined,
 
+          Skeletons.Note({
+            className: `${pfx}__activity-count`,
+            sys_pn: "activity-count",
+            activie: 0,
+          }),
+          !Visitor.isMobile()
+            ? Skeletons.Button.Svg({
+                className: icoClass,
+                service: "open-chat",
+                ico: "message",
+              })
+            : undefined,
+
+          !Visitor.isMobile()
+            ? Skeletons.Button.Svg({
+                className: icoClass,
+                service: "open-settings",
+                ico: "settings",
+              })
+            : undefined,
+          userMenu(ui, "desk-avatar"),
+        ],
+      }),
+    ],
+  });
+}
 
 module.exports = function (ui) {
   const pfx = `${ui.fig.family}-topbar`;
@@ -47,10 +66,10 @@ module.exports = function (ui) {
           Skeletons.Button.Svg({
             ico: "raw-logo-drumee-full",
             lassName: `${ui.fig.family}__logo-icon`,
-          })
-        ]
+          }),
+        ],
       }),
-      menuBar(ui)
-    ]
+      menuBar(ui),
+    ],
   });
 };
