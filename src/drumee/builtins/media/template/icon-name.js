@@ -41,7 +41,6 @@ const __icon_name = function (m) {
     case _a.script:
     case _a.schedule:
     case _a.settings:
-      console.log("AAA44", m)
       let extension = m.ext.toLocaleLowerCase();
       try {
         chartId = _file_icon(extension);

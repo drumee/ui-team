@@ -4,14 +4,7 @@ const { TweenMax, Expo } = gsap;
 const PlayerInteract = require('player/interact');
 const { loadPdfDocument } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";
-
 class __player_document extends PlayerInteract {
-
-  constructor(...args) {
-    super(...args);
-    this.checkPreview = this.checkPreview.bind(this);
-    this.handleWsEvent = this.handleWsEvent.bind(this);
-  }
 
   /**
    * 
@@ -29,6 +22,8 @@ class __player_document extends PlayerInteract {
     //this.bindEvent("live");
     this.scaleFactor = 2;
 
+    this.checkPreview = this.checkPreview.bind(this);
+    this.onWsMessage = this.onWsMessage.bind(this);
     // to set media - do not remove
     if (!this.media) {
       this.media = opt.source || opt.trigger;
@@ -45,7 +40,7 @@ class __player_document extends PlayerInteract {
       this.loader.destroy();
       this.loader = null;
     }
-    Wm.off(WS_EVENT, this.handleWsEvent)
+    Wm.off(WS_EVENT, this.onWsMessage)
     if (super.onBeforeDestroy) {
       super.onBeforeDestroy()
     }
@@ -55,16 +50,18 @@ class __player_document extends PlayerInteract {
     }
 
   }
+
   /**
    * 
    * @param {*} args 
    */
-  handleWsEvent(args = {}) {
-    this.debug("AAA:83", args)
-    let { data, options } = args || {};
-    let { echoId, service } = options
-    let { src, dest } = data.args || {};
-    switch (service) {
+  onWsMessage(args) {
+    let { service, data, options } = args
+    this.debug("AAAA:68", { service, data, options })
+    switch (options.service) {
+      case "media.status":
+        this.checkPreview(args)
+        break;
     }
   }
 
@@ -91,22 +88,9 @@ class __player_document extends PlayerInteract {
  * 
  */
   onDomRefresh() {
-    Wm.on(WS_EVENT, this.handleWsEvent)
+    Wm.on(WS_EVENT, this.onWsMessage)
     this.initSize();
     this.reload(300);
-  }
-
-  /**
- * 
- * @param {*} args 
- */
-  handleWsEvent(args = {}) {
-    this.debug("AAA:83", args)
-    let { data, options } = args || {};
-    let { echoId, service } = options
-    let { src, dest } = data.args || {};
-    switch (service) {
-    }
   }
 
 
@@ -253,20 +237,6 @@ class __player_document extends PlayerInteract {
     })
   }
 
-  /**
- * 
- */
-  handleWsEvent(args = {}) {
-    let { data, options } = args || {};
-    let { echoId, service } = options
-    switch (service) {
-      case "media.status":
-        this.checkPreview(args);
-        break;
-    }
-
-  }
-
 
   /**
    * 
@@ -287,8 +257,11 @@ class __player_document extends PlayerInteract {
       this.previewTimer = null;
       if (options.progress == 100) {
         this.mset(data);
-        this.reload(200);
+        this.prepare();
+        this.__progress.el.hide();
       }
+    } else {
+      this.__progress.el.style.width = `${options.progress}%`
     }
   }
 
@@ -418,6 +391,7 @@ class __player_document extends PlayerInteract {
     };
 
     this.fetchService(opt).then((data) => {
+      this.debug("AAA:424", m, data)
       if (m) m.wait(0);
       if (_.isEmpty(data)) {
         this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW);

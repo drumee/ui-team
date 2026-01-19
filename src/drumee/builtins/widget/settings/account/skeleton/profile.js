@@ -42,7 +42,7 @@ function form(ui) {
   for (let k of _.keys(emojiFlags)) {
     if (/[A-Z]{2,2}/.test(k)) {
       let { name: locale_name, emoji } = emojiFlags.countryCode(k) || {}
-      items.push({ country_code: k, emoji, locale_name })
+      items.push({ country_code: k, value: k, emoji, label: locale_name, locale_name })
     }
   }
   return Skeletons.Box.Y({
@@ -92,7 +92,6 @@ function form(ui) {
                 name: 'country_code',
                 items,
                 service: "select-country",
-                refAttribute: 'locale_name',
                 placeholder: 'Select a country',
                 value: Visitor.profile().country_code,
               }),

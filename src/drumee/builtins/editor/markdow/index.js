@@ -117,7 +117,8 @@ class __editor_markdown extends __player {
         this.postService(opt, { async: 1 }).then((data) => {
           if (data && data.reminder_id) {
             if (_.isString(data.task)) data.task = JSON.parse(data.task);
-            // this.mset(data);
+            this.mset(REMINDER_ID, data.id);
+            this.mset(_a.task, data.task);
             child.setState(1);
           }
         })
@@ -388,6 +389,7 @@ class __editor_markdown extends __player {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
+    this.debug("AAA:391", service)
     switch (service) {
       case _a.save:
         this.saveContent();

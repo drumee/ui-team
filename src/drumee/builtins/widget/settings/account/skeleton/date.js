@@ -517,7 +517,6 @@ function dateFormatMenu(ui) {
   return menuInput(ui, {
     name: 'dateformat',
     service: "select-dateformat",
-    refAttribute: 'label',
     placeholder: 'Select date format',
     value: currentDateFormat,
     items: DATEFORMAT_OPTIONS,
@@ -548,7 +547,6 @@ function timezoneMenu(ui) {
   return menuInput(ui, {
     name: 'timezone',
     service: "select-timezone",
-    refAttribute: 'label',
     placeholder: 'Select timezone',
     value: currentTimezone,
     items: TIMEZONE_OPTIONS,

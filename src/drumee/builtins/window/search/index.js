@@ -124,16 +124,8 @@ class __window_search extends __window_interact {
 */
 getCurrentApi(type) {
   let api;
-  // if(localStorage.getItem('seo')){
-  //   api = {
-  //     service: SERVICE.seo.find,
-  //     hub_id: Visitor.id,
-  //     string: this.model.get(_a.string)
-  //   };
-  //   return api;
-  // };
   api = {
-    service: SERVICE.desk.search,
+    service: SERVICE.media.search, //SERVICE.desk.search,
     hub_id: Visitor.id,
     string: this.mget(_a.string)
   };
