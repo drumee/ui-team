@@ -11,21 +11,17 @@
       border-bottom: 1px solid var(--default-separator);
       border-radius: var(--default-border-radius-top);
       height: 100%;
-      padding-left: 40px;
+      padding: 0 40px;
     }
 
     &__title {
-      margin: auto;
-      @include drumee.typo($size: 24px,
+      @include drumee.typo(
+        $size: 24px,
         $line: 24px,
         $weight: 300,
-        $color: var(--default-text-color)); //$weight:400,
+        $color: var(--default-text-color)
+      ); //$weight:400,
       @include drumee.overflow-text;
-
-      &.purge {
-        position: absolute;
-        height: 100%;
-      }
 
       .purge {
         width: max-content;
@@ -34,7 +30,6 @@
         justify-content: center;
         background-color: var(--default-bg-block);
         border: 1px solid var(--white-f9);
-        margin: auto 0 auto 15px;
         padding: 10px 20px;
         @include drumee.typo($size: 14px, $line: 24px, $weight: 400);
 
@@ -47,6 +42,41 @@
     &__control {
       position: absolute;
       right: 0;
+    }
+  }
+
+  &__buttons-wrapper {
+    align-items: center;
+    gap: 12px;
+    padding-right: 40px;
+  }
+
+  &__toggle-button {
+    &.checkbox {
+      gap: 4px;
+      cursor: pointer;
+
+      &[data-state="0"] {
+        svg {
+          color: var(--neutral-100);
+        }
+      }
+
+      &[data-state="1"] {
+        svg {
+          color: var(--primary-800);
+        }
+      }
+    }
+
+    &.icon {
+      width: 24px;
+      height: 24px;
+    }
+
+    &.note {
+      color: white;
+      width: 150px;
     }
   }
 }
