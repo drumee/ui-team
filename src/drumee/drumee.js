@@ -18,6 +18,7 @@
 require('./core');
 window.errorStack = [];
 const { xhRequest } = require("core/socket/request");
+const { createSafeObject } = require("core/utils");
 const { version } = require('../../package.json')
 class Drumee extends Marionette.Application {
 
@@ -83,7 +84,7 @@ class Drumee extends Marionette.Application {
   failover(data = {}) {
     console.warn("ENV_ERROR", data);
     if (!window.LOCALE) {
-      window.LOCALE = require("locale")(navigator.language);
+      window.LOCALE = createSafeObject(); //require("locale")(navigator.language);
     }
     let b = bootstrap();
     const { body } = document;
@@ -156,31 +157,19 @@ class Drumee extends Marionette.Application {
    */
   load_router(data, locale) {
     let { user } = data;
-    let { lang } = user;
-    if (!lang) {
-      lang = Visitor.language();
+    if (!navigator.cookieEnabled) {
+      alert(LOCALE.COOKIES_REQUIRED);
+      return;
     }
-    require.ensure(["application"], e => {
-      window.LOCALE = require("../../locale")(lang);
-      if (_.isFunction(locale)) {
-        LOCALE = { ...LOCALE, ...locale(lang) };
-      }
-      LOCALE.__currentLanguage = lang;
-      console.log(`Selected ${lang} as UI language`);
-      if (!navigator.cookieEnabled) {
-        alert(LOCALE.COOKIES_REQUIRED);
-        return;
-      }
-      const gw = require('./router');
-      this.router = new gw();
-      this.showView(this.router);
-      Visitor.listenChanges();
-      Organization.listenChanges();
-      if (user.id) {
-        Visitor.respawn(user);
-      }
-      if (!Backbone.History.started) Backbone.history.start();
-    });
+    const gw = require('./router');
+    this.router = new gw();
+    this.showView(this.router);
+    Visitor.listenChanges();
+    Organization.listenChanges();
+    if (user.id) {
+      Visitor.respawn(user);
+    }
+    if (!Backbone.History.started) Backbone.history.start();
   }
 
   /**
@@ -190,27 +179,9 @@ class Drumee extends Marionette.Application {
     if (!lang) {
       return LOCALE;
     }
-    LOCALE = require("locale")(lang);
-    LOCALE.__currentLanguage = lang;
+    // LOCALE = require("locale")(lang);
+    // LOCALE.__currentLanguage = lang;
     return LOCALE;
-  }
-
-  /**
-   * 
-   */
-  loadSprites() {
-    function create_el(content, type) {
-      const el = document.createElement(_K.tag.div);
-      el.style = "display:none !important";
-      el.className = `svg-sprite-${type}`;
-      el.style.cssText = "display:none !important";
-      el.innerHTML = content;
-      document.body.insertBefore(el, document.body.childNodes[0]);
-    }
-    let raw = require('../../bb-templates/svg/raw.sprite.txt').default;
-    let normalized = require('../../bb-templates/svg/normalized.sprite.txt').default;
-    create_el(raw, 'raw');
-    create_el(normalized, 'normalized');
   }
 
 

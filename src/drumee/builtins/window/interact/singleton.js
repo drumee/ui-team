@@ -1,5 +1,5 @@
 const __window_chatInteract = require('./chat');
-const { TweenMax } = require("gsap/all");
+const { TweenMax } = gsap;
 
 class __window_interact_singleton extends __window_chatInteract {
   constructor(...args) {

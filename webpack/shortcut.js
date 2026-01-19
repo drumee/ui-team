@@ -1,9 +1,9 @@
 const shortcuts = {
-  '$': "jquery",
-  '_': "lodash",
-  'jQuery': "jquery",
-  'Backbone': "backbone",
-  'Marionette': "backbone.marionette",
+  // '$': "jquery",
+  // '_': "lodash",
+  // 'jQuery': "jquery",
+  // 'Backbone': "backbone",
+  // 'Marionette': "backbone.marionette",
 
   // ------------------- Drumee's proxies -------------------
   'PROXY_BACKTRACK': "libs/proxy/backtrack",

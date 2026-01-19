@@ -4,7 +4,7 @@ const OPEN_NODE = "open-node";
 const WS_EVENT = "ws:event";
 
 const Rectangle = require('rectangle-node');
-const { TweenMax, Expo } = require("gsap/all");
+const { TweenMax, Expo } = gsap;
 const ViewMode = new Map();
 const DEFAULT = 'default';
 ViewMode.set(DEFAULT, _a.icon);

@@ -2,7 +2,7 @@
 
 require('./skin')
 const Rectangle = require('rectangle-node');
-const { TweenLite, Expo } = require("gsap/all");
+const { TweenLite, Expo } = gsap;
 const _default_class = "menu-topic drumee-widget";
 
 class __menu_topic extends LetcBox {

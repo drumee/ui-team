@@ -1,6 +1,6 @@
 const CHANGE_RADIO = "change:radio";
 const Rectangle = require('rectangle-node');
-const { TweenMax } = require("gsap/all");
+const { TweenMax } = gsap;
 const { copyToClipboard, timestamp } = require("core/utils")
 
 const windowCore = require("../core");

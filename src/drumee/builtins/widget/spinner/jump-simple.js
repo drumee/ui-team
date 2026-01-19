@@ -25,10 +25,6 @@ class __spinner_jump extends Marionette.View {
 // ===========================================================
   initialize(opt) {
     this._pluginLoaded = _.after(2, this._display);
-    return require.ensure(['application'], ()=> {
-      require('gsapp/plugins/DrawSVGPlugin');
-      return this._pluginLoaded();
-    });
   }
 
 // ----------------------

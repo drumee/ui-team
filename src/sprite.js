@@ -15,27 +15,26 @@
  * =============================================================================
  */
 
-const STYLE = "color: green; font-weight: bold;"
 
-const App = require('./drumee');
-window.Drumee = new App();
-if ((window.__filename == null)) {
-  window.__filename = null;
+function loadSprite() {
+  function create_el(content, type) {
+    const el = document.createElement(_K.tag.div);
+    el.style = "display:none !important";
+    el.className = `svg-sprite-${type}`;
+    el.style.cssText = "display:none !important";
+    el.innerHTML = content;
+    document.body.insertBefore(el, document.body.childNodes[0]);
+  }
+  let raw = require('../bb-templates/svg/raw.sprite.txt').default;
+  let normalized = require('../bb-templates/svg/normalized.sprite.txt').default;
+  create_el(raw, 'raw');
+  create_el(normalized, 'normalized');
 }
-// window.DrumeeMFS = require('./core/mfs');
-window.DrumeeMediaInteract = require('builtins/media/interact');
-
+  ;
 /**
  * 
  */
 $(document).ready(function () {
-  console.log(`Staring Drumee Web...`);
-  console.log(`Build commit=%c${__COMMIT__}, mode=${__BUILD__}`, STYLE);
-  console.log(`UI version=%c${Drumee.version}`, STYLE);
-  // Drumee.loadSprites();
-  // Drumee.loadLocale();
-  Drumee.start();
-  const event = new Event('drumee:app:started');
-  event.root = this.content;
-  document.dispatchEvent(event);
+  console.log(`Loading Sprite...`);
+  loadSprite()
 });

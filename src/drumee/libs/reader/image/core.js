@@ -1,6 +1,6 @@
 const {
   TweenLite
-} = require("gsap/all");
+} = gsap;
 const { fitBoxes } = require("core/utils")
 
 class __image_core extends Marionette.View {

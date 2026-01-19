@@ -1,10 +1,4 @@
-window.WARNING = require('lex/warning');
-window.ERROR = require('lex/error');
-window._a = require('lex/attribute');
-window._K = require('lex/constants');
-window._T = require('lex/template');
-window.KIND = require('lex/type/reader');
-window._e = require('lex/event');
+
 
 require('./addons');
 
@@ -32,3 +26,4 @@ window.Env = new Backbone.Model();
 window.Host = require('./host')();
 window.Visitor = require('./user')();
 window.Organization = require('./organization')();
+window.DrumeeMFS = require('./mfs');

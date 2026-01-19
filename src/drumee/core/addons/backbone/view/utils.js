@@ -1,6 +1,4 @@
 
-const { TweenMax, TimelineMax } = require("gsap/all");
-
 
 /**
  * 
@@ -116,12 +114,12 @@ Backbone.View.prototype.selfDestroy = function(o={}, a={}) {
         left  : trigger.$el.offset().left - this.parent.$el.offset().left,
         top   : trigger.$el.offset().top - this.parent.$el.offset().top
       };
-      TweenMax.set(this.$el, {transformOrigin:"0 0"});
+      gsap.TweenMax.set(this.$el, {transformOrigin:"0 0"});
     }
       
     anim = {autoAlpha:0, scale:0.2, ...anim, ...a};
 
-    const tl = new TimelineMax({onComplete: _fire});
+    const tl = new gsap.TimelineMax({onComplete: _fire});
     return tl.to(this.$el, duration, anim);
   };
   return _.delay(go, timeout);
@@ -201,7 +199,7 @@ Backbone.View.prototype.renderVector=function(data, use_bg, target) {
  */
 Backbone.View.prototype.anim=function() {
     const args = Array.prototype.slice.call(arguments);
-    const tl = new TimelineMax();
+    const tl = new gsap.TimelineMax();
     for (let a of Array.from(args)) { 
       if (_.isArray(a)) { 
         tl.to(this.$el, a[0], a[1]);

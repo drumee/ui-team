@@ -1,4 +1,4 @@
-const { TweenMax, Power2 } = require("gsap");
+const { TweenMax, Power2 } = gsap;
 
 class __slider_ribbon extends LetcBox {
   constructor(...args) {

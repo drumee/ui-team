@@ -1,6 +1,6 @@
 
 const { fitBoxes } = require("core/utils")
-const { TweenMax, Expo } = require("gsap/all");
+const { TweenMax, Expo } = gsap;
 const Rectangle = require('rectangle-node');
 const CHANGE_RADIO = "change:radio";
 const __utils = require("window/utils");

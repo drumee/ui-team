@@ -47,7 +47,7 @@ class DrumeeSyncer {
    * @returns 
    */
   get_hash(stats) {
-    console.log(`BUILDING FROM HASH=${stats.hash}`, stats.compiler, __dirname);
+    console.log(`BUILDING FROM HASH=${stats.hash}`, stats.compiler, __dirname, this.options);
     let { sync_templates, bundle_path, bundle_base, no_hash } = this.options;
     let file = resolve(bundle_path, "index.json");
     const { stdout } = exec("git log -1 --pretty=format:'%h'", { silent: true });

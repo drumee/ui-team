@@ -1,10 +1,5 @@
-/* =========================================================== *
-*   Copyright Xialia.com  2011-2021
-*   FILE : /src/drumee/builtins/player/schedule/index.js
-*   TYPE : Component
-* ============================================================ */
 
-const { TweenMax, Expo } = require("gsap/all");
+const { TweenMax, Expo } = gsap;
 const { copyToClipboard, fitBoxes } = require("core/utils")
 
 const __core = require('player/interact');

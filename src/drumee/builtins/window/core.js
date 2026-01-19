@@ -6,7 +6,7 @@ const __utils = require("./utils");
 const TIMERS = {
   reorder: null
 }
-const { TweenMax } = require("gsap/all");
+const { TweenMax } = gsap;
 const { copyToClipboard, reverseSortBy, modelComparator } = require("core/utils")
 
 

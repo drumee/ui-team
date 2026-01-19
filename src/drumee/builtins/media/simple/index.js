@@ -1,15 +1,9 @@
 
-const MOVING_CLASS    = 'moving';
 require('./skin');
-const {
-  TweenLite
-} = require("gsap/all");
+const { TweenLite } = gsap;
 
 const media_core = require('../interact');
 
-//-------------------------------------
-// __media_simple
-//-------------------------------------
 class __media_simple extends media_core {
   constructor(...args) {
     super(...args);
@@ -23,48 +17,55 @@ class __media_simple extends media_core {
   }
 
   static initClass() {
-    this.prototype.figName  = "media_simple";
-    this.prototype.isSimple    = 1; 
+    this.prototype.figName = "media_simple";
+    this.prototype.isSimple = 1;
   }
 
-// ===========================================================
-//
-// ===========================================================
+
+  /**
+   * 
+   * @param {*} opt 
+   * @returns 
+   */
   initialize(opt) {
     super.initialize(opt);
-    this.mset({ 
-      flow : _a.x});
+    this.mset({
+      flow: _a.x
+    });
     //@debug "media simple index",opt,@
     this.innerContent = require('./template');
     this.cursorPosition = { left: 30, top: 30 };
     return this.size = {
-      width:90.5, 
-      height:75.5
+      width: 90.5,
+      height: 75.5
     };
   }
-    
-// ===========================================================
-//
-// ===========================================================
+
+  /**
+   * 
+   * @returns 
+   */
   helper() {
     return require('./template/helper')(this);
   }
 
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} toggle 
+   * @returns 
+   */
   enablePreview(toggle) {
     switch (this.model.get(_a.filetype)) {
-      case _a.image: 
-      case _a.video: 
+      case _a.image:
+      case _a.video:
       case _a.vector:
         this.iconType = _a.vignette;
-        var f = ()=> {
+        var f = () => {
           this.$preview = $(`#${this._id}-preview`);
-          return this.$preview.css({ 
-            'background-image'   : `url(${this.url()})`,
-            'background-size'    : "cover",
-            'background-repeat'  : "no-repeat",
+          return this.$preview.css({
+            'background-image': `url(${this.url()})`,
+            'background-size': "cover",
+            'background-repeat': "no-repeat",
             'background-position': _K.position.center
           });
         };
@@ -74,36 +75,23 @@ class __media_simple extends media_core {
       default:
         this.iconType = _a.vector;
     }
-    return this.content.el.dataset.icontype = this.iconType; 
+    return this.content.el.dataset.icontype = this.iconType;
   }
 
-
-// # ==================
-// #
-// # ==================
-//   loadVector: () =>
-//     t = "#{@_id}-icon"
-//     if @_vector?
-//       this.waitElement "#{@_id}-icon", ()=>
-//         @renderVector(@_vector, yes, t)
-//       return 
-
-//     f =(data) =>
-//       @_vector = data
-//       @renderVector(data, yes, t)
-//     Utils.fetch @url(_a.orig), f
-
-// ===========================================================
-//
-// ===========================================================
-  _updateNotification(c) {}
-    // Do not remove
+  /**
+   * 
+   * @param {*} c 
+   */
+  _updateNotification(c) { }
+  // Do not remove
 
 
-// ===========================================================
-// shift
-// ===========================================================
-  shift(side){
+  /**
+   * 
+   * @param {*} side 
+   * @returns 
+   */
+  shift(side) {
     let y;
     if (this._animIsActive) {
       return;
@@ -116,38 +104,44 @@ class __media_simple extends media_core {
       case _a.right:
         y = 15;
         break;
-      
-      default: 
-        y = 0; 
+
+      default:
+        y = 0;
     }
     this._shiftY = y;
     return TweenLite.to(this.$el, .2, {
       y,
-      onStart    : this._onStartShifting,
-      onComplete : this._onStopShifting
+      onStart: this._onStartShifting,
+      onComplete: this._onStopShifting
     });
   }
 
-// ===========================================================
-// shift
-// ===========================================================
-  resetMotion(){
+
+  /**
+   * 
+   * @returns 
+   */
+  resetMotion() {
     this.el.dataset.over = _a.off;
     this.el.dataset.hover = _a.off;
     return this.shift();
   }
 
-// ===========================================================
-//
-// ===========================================================
-  _onStartShifting(e){
+  /**
+   * 
+   * @param {*} e 
+   * @returns 
+   */
+  _onStartShifting(e) {
     return this._animIsActive = true;
   }
 
-// ===========================================================
-//
-// ===========================================================
-  _onStopShifting(e){
+  /**
+   * 
+   * @param {*} e 
+   * @returns 
+   */
+  _onStopShifting(e) {
     return this._animIsActive = false;
   }
 }
