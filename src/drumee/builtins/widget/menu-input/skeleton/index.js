@@ -44,6 +44,21 @@ function entry(ui) {
       if (selectedItem && selectedItem.label) {
         shower_state = 1;
         content = selectedItem.label;
+      } else {
+        // If value is not in items list, it's a custom value - format it for display
+        const numValue = parseInt(v);
+        if (!isNaN(numValue)) {
+          shower_state = 1;
+          if (numValue === 0) {
+            content = LOCALE.NEVER || "Never";
+          } else if (numValue === 60) {
+            content = "1 hour";
+          } else if (numValue === 120) {
+            content = "2 hours";
+          } else {
+            content = `${v} minutes`;
+          }
+        }
       }
     }
   }

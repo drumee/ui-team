@@ -51,7 +51,7 @@ const __compliances = {
     explain: LOCALE.REQUIRE_DNS_NAME
   },
   number: {
-    regexp: /^[0-9]+$/,
+    regexp: /^-?[0-9]+$/,
     explain: LOCALE.REQUIRE_NUMBER
   },
   decimal: {

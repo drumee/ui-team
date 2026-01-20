@@ -305,6 +305,76 @@ class settings_account extends LetcBox {
   }
 
   /**
+   * Update auto-lock timeout setting
+   * @param {*} cmd 
+   */
+  async updateAutoLockTimeout(cmd) {
+    // menuInput widget automatically updates its value when item is selected
+    // Get value from getData() (widget's current value) or from cmd (item element)
+    const data = this.getData();
+    let timeout = data.auto_lock_timeout || "0";
+    
+    // If not found in getData(), try to get from cmd (item element from menuInput widget)
+    if (!timeout || timeout === "0") {
+      if (cmd && typeof cmd.mget === 'function') {
+        timeout = cmd.mget('value') || cmd.mget('auto_lock_timeout') || "0";
+      } else if (cmd && cmd.model && typeof cmd.model.get === 'function') {
+        timeout = cmd.model.get('value') || cmd.model.get('auto_lock_timeout') || "0";
+      }
+    }
+    
+    // Handle custom value: if user typed a number directly in input field
+    // Get the actual input value from the entry widget
+    if (timeout === "custom" || timeout === "") {
+      // Try to get value from input field directly
+      const autoLockWidget = this.getPart("auto-lock-timeout") || this.el.querySelector(`[name="auto_lock_timeout"]`);
+      if (autoLockWidget) {
+        const entryPart = autoLockWidget.getPart ? await autoLockWidget.getPart("entry") : null;
+        if (entryPart && entryPart._input) {
+          const inputValue = entryPart._input.value;
+          if (inputValue && inputValue !== "" && inputValue !== "custom") {
+            // Validate it's a valid number (can be negative)
+            const numValue = parseInt(inputValue);
+            if (!isNaN(numValue)) {
+              timeout = inputValue;
+            }
+          }
+        }
+      }
+      // If still "custom" or empty, default to "0"
+      if (timeout === "custom" || timeout === "") {
+        timeout = "0";
+      }
+    }
+    
+    this.debug("updateAutoLockTimeout", cmd, timeout, data);
+    
+    const settings = {
+      auto_lock_timeout: timeout
+    };
+    
+    return this.postService({
+      service: SERVICE.drumate.update_settings,
+      settings: settings,
+      hub_id: Visitor.id
+    }).then((response) => {
+      let updatedSettings = {};
+      if (response && response.settings) {
+        try {
+          updatedSettings = JSON.parse(response.settings);
+        } catch (e) {
+          updatedSettings = { ...Visitor.settings() || {}, ...settings };
+        }
+      } else {
+        updatedSettings = { ...Visitor.settings() || {}, ...settings };
+      }
+      Visitor.set({ settings: updatedSettings });
+    }).catch((err) => {
+      this.warn('Error updating auto-lock timeout:', err);
+    });
+  }
+
+  /**
 * 
 */
   _openLink(url) {
@@ -347,8 +417,29 @@ class settings_account extends LetcBox {
    * @param {*} args
    */
   onUiEvent(cmd, args = {}) {
-    const service =
-      args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
+    // Try multiple ways to get service
+    let service = args.service;
+    if (!service && cmd) {
+      if (typeof cmd.mget === 'function') {
+        service = cmd.mget(_a.service) || cmd.mget(_a.name);
+      } else if (cmd.service) {
+        service = cmd.service;
+      } else if (cmd.model && typeof cmd.model.get === 'function') {
+        service = cmd.model.get(_a.service) || cmd.model.get(_a.name);
+      } else if (cmd.target) {
+        // Try to get from DOM element
+        const el = cmd.target.closest('[data-service]') || cmd.target;
+        if (el && el.dataset && el.dataset.service) {
+          service = el.dataset.service;
+        }
+      } else if (cmd.el) {
+        // Try to get from cmd.el dataset
+        if (cmd.el.dataset && cmd.el.dataset.service) {
+          service = cmd.el.dataset.service;
+        }
+      }
+    }
+    
     this.debug("AAA:191", cmd, args, service);
     switch (service) {
       case "close-overlay":
@@ -416,6 +507,11 @@ class settings_account extends LetcBox {
 
       case "change-mfa":
         return this.changeMFA(cmd);
+
+      case "select-auto-lock-timeout":
+        // menuInput widget automatically updates its value when item is selected
+        // We can get the value from getData() or from cmd (item element)
+        return this.updateAutoLockTimeout(cmd);
 
       case "prompt-password":
         return this.__overlay.feed(

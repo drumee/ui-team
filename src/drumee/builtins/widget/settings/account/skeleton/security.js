@@ -103,6 +103,53 @@ function menu(ui) {
   });
 };
 
+const { menuInput } = require("../../../../skeleton/toolkit");
+
+/**
+ * Auto-lock timeout options (in minutes)
+ */
+const AUTO_LOCK_OPTIONS = [
+  { value: "0", label: LOCALE.NEVER || "Never" },
+  { value: "5", label: "5 minutes" },
+  { value: "10", label: "10 minutes" },
+  { value: "15", label: "15 minutes" },
+  { value: "30", label: "30 minutes" },
+  { value: "60", label: "1 hour" },
+  { value: "120", label: "2 hours" },
+];
+
+/**
+ * Format timeout value for display
+ */
+function formatTimeoutDisplay(value) {
+  const numValue = parseInt(value);
+  if (isNaN(numValue)) return LOCALE.NEVER || "Never";
+  if (numValue === 0) return LOCALE.NEVER || "Never";
+  if (numValue === 60) return "1 hour";
+  if (numValue === 120) return "2 hours";
+  return `${value} minutes`;
+}
+
+/**
+ * Create menu input for auto-lock timeout (similar to date format/timezone dropdown)
+ */
+function autoLockMenu(ui) {
+  const settings = Visitor.settings() || {};
+  const currentTimeout = settings.auto_lock_timeout || "0";
+  
+  // Check if current timeout is a custom value (not in predefined options)
+  const isCustomValue = !AUTO_LOCK_OPTIONS.some(opt => opt.value === currentTimeout);
+  const displayValue = isCustomValue ? formatTimeoutDisplay(currentTimeout) : currentTimeout;
+  
+  return menuInput(ui, {
+    name: 'auto_lock_timeout',
+    service: "select-auto-lock-timeout",
+    placeholder: '', // Remove placeholder
+    value: currentTimeout, // Store actual value, not display value
+    items: AUTO_LOCK_OPTIONS,
+    className: `${ui.fig.family}-security__auto-lock-input`
+  });
+}
 
 /**
  * 
@@ -119,6 +166,14 @@ function content(ui) {
         kids: [
           control(ui, LOCALE.MULTI_FACTOR_AUTH, LOCALE.MFA_TIPS),
           menu(ui),
+        ]
+      }),
+      Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
+      Skeletons.Box.G({
+        className: `${fig}-control`,
+        kids: [
+          control(ui, LOCALE.AUTO_LOCK_TITLE || "Auto-lock", LOCALE.AUTO_LOCK_TIPS || "Automatically lock the screen or logout after X minutes of inactivity."),
+          autoLockMenu(ui),
         ]
       }),
       Skeletons.Element({ className: `${ui.fig.family}__spacer` }),

@@ -102,7 +102,7 @@ export function entry(ui, opt) {
  */
 export function menuInput(ui, opt = {}) {
   const pfx = `${ui.fig.family}`;
-  let { className = "", name = 'country_code' } = opt;
+  let { className = "", name = opt.name || 'country_code' } = opt;
   return {
     ...opt,
     state: 0,
