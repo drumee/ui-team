@@ -58,14 +58,14 @@ function menu_items(ui) {
         className: `${pfx}-item personal`,
         helperName: 'folder',
         service: "add-folder",
-        filename: "Directory",
+        filename: "Folder",
         area: _a.personal,
         kidsOpt: {
           active: 0
         },
         kids: [
           { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.personal, mode: _a.vignette },
-          Skeletons.Note({ className: `${pfx}-item-text`, content: "Create a directory" })
+          Skeletons.Note({ className: `${pfx}-item-text`, content: "Create a folder" })
         ]
       }),
     ]
@@ -114,24 +114,6 @@ const __desk_dock_items_makers = function (ui) {
     className: `${ui.fig.family}__container application maker`,
     kids: [
       folderMenu(ui),
-      // button(ui, {
-      //   ico: "dock-gallery",
-      //   className: `${pfx} gallery`,
-      //   helperName: 'gallery'
-      // }, LOCALE.PHOTO_PLAYER),
-
-      // button(ui, {
-      //   ico: "dock-music",
-      //   className: `${pfx} sharebox`,
-      //   helperName: 'sharebox'
-      // }, LOCALE.MUSIC_PLAYER),
-
-      // button(ui, {
-      //   ico: "dock-media",
-      //   className: `${pfx} team`,
-      //   helperName: 'teamroom'
-      // }, LOCALE.VIDEO_PLAYER)
-
     ]
   });
 
