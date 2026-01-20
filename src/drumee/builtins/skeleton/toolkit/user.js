@@ -1,4 +1,3 @@
-
 function menu_items(ui) {
   const pfx = `${ui.fig.family}-topbar__user-menu`;
   return Skeletons.Box.Y({
@@ -7,40 +6,65 @@ function menu_items(ui) {
     flow: _a.vertical,
     kids: [
       Skeletons.Button.Label({
-        ico: 'desktop_account--white',
+        ico: "desktop_account--white",
         className: `${pfx}-item account`,
         label: LOCALE.MY_ACCOUNT,
-        service: "settings-account"
+        service: "settings-account",
       }),
-      Visitor.domainCan(_K.permission.admin_member) ?
-        Skeletons.Button.Label({
-          ico: 'user-settings',
-          className: `${pfx}-item admin-panel`,
-          label: LOCALE.ADMIN,
-          service: _e.launch,
-          respawn: 'window_adminpanel'
-        }) : undefined,
+      Visitor.domainCan(_K.permission.admin_member)
+        ? Skeletons.Button.Label({
+            ico: "user-settings",
+            className: `${pfx}-item admin-panel`,
+            label: LOCALE.ADMIN,
+            service: _e.launch,
+            respawn: "window_adminpanel",
+          })
+        : undefined,
       Skeletons.Button.Label({
-        ico: 'desktop_questionmark',
+        ico: "desktop_questionmark",
         className: `${pfx}-item helpdesk`,
         label: LOCALE.HELPDESK,
-        service: 'open-user-guide',
+        service: "open-user-guide",
         // respawn: 'settings_helpcenter'
       }),
+      Visitor.isMobile()
+        ? Skeletons.Button.Label({
+            ico: "bell",
+            className: `${pfx}-item admin-panel`,
+            label: "Notifications",
+            service: "toggle-activity-panel",
+          })
+        : undefined,
+      Visitor.isMobile()
+        ? Skeletons.Button.Label({
+            ico: "message",
+            className: `${pfx}-item admin-panel`,
+            label: "Chat",
+            service: "open-chat",
+          })
+        : undefined,
+      Visitor.isMobile()
+        ? Skeletons.Button.Label({
+            ico: "settings",
+            className: `${pfx}-item admin-panel`,
+            label: "Backgrounds",
+            service: "open-settings",
+          })
+        : undefined,
       Skeletons.Button.Label({
-        ico: 'desktop_disconnect',
+        ico: "desktop_disconnect",
         className: `${pfx}-item disconnect`,
         label: LOCALE.DISCONNECT,
-        on_click: Butler.logout
-      })
-    ]
+        on_click: Butler.logout,
+      }),
+    ],
   });
-};
+}
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function userMenu(ui, sys_pn) {
   const pfx = `${ui.fig.family}-topbar__user-menu`;
@@ -51,10 +75,13 @@ export function userMenu(ui, sys_pn) {
       Skeletons.UserProfile({ auto_color: 0, sys_pn }),
       Skeletons.Element({
         className: `${pfx}-username`,
-        content: Visitor.firstname()
+        content: Visitor.firstname(),
       }),
-      Skeletons.Button.Svg({ className: `${pfx}-trigger-icon`, ico: "carret-down" }),
-    ]
+      Skeletons.Button.Svg({
+        className: `${pfx}-trigger-icon`,
+        ico: "carret-down",
+      }),
+    ],
   });
 
   return Skeletons.Box.X({
@@ -71,9 +98,8 @@ export function userMenu(ui, sys_pn) {
         persistence: _a.once,
         trigger,
         items: menu_items(ui),
-        offsetY: 20
-      }
-    ]
+        offsetY: 20,
+      },
+    ],
   });
-
-};
+}

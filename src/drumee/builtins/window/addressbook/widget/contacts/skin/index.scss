@@ -67,10 +67,10 @@
 	}
 
 	&__item {
-		height: calc(100% - 44px);
-		margin-top: -1px;
+		// height: calc(100% - 44px);
+		// margin-top: -1px;
 		width: 100%;
-		padding: 16px;
+		padding: 0 16px;
 
 		.smart-container {
 			display: grid;

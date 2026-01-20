@@ -449,12 +449,37 @@ class __window_core extends __utils {
     if (this.isSearch) {
       return;
     }
-    this.fetchService(SERVICE.media.summary, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((data) => {
-      let mtime = Dayjs.unix(data.mtime).format(Visitor.timeformat());
-      this.getPart("items-count").set({ content: LOCALE.X_FILES.format(data.file_count) })
-      this.getPart("last-update").set({ content: LOCALE.LAST_CHANGE.format(mtime) })
-    }).catch(() => {
-      this.getPart("last-update").set({ content: LOCALE.FILES_NOT_FOUND })
+    this.fetchService(SERVICE.media.summary, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((response) => {
+      // Response structure: { data: { file_count, mtime, ... } }
+      const data = response && response.data ? response.data : response;
+      
+      // Update items count
+      if (data && typeof data.file_count !== 'undefined') {
+        this.getPart("items-count").set({ content: LOCALE.X_FILES.format(data.file_count) })
+      }
+      
+      // Update last-update with proper error handling
+      if (data && data.mtime) {
+        try {
+          const timeformat = Visitor.timeformat() || "DD/MM/YYYY HH:mm:ss";
+          const mtime = Dayjs.unix(data.mtime);
+          if (mtime.isValid()) {
+            const formattedTime = mtime.format(timeformat);
+            // LOCALE.LAST_CHANGE is "Last change at", so we concatenate it with the time
+            this.getPart("last-update").set({ content: `${LOCALE.LAST_CHANGE} ${formattedTime}` })
+          } else {
+            this.getPart("last-update").set({ content: "" })
+          }
+        } catch (e) {
+          this.warn('Error formatting last-update:', e);
+          this.getPart("last-update").set({ content: "" })
+        }
+      } else {
+        this.getPart("last-update").set({ content: "" })
+      }
+    }).catch((err) => {
+      this.warn('Error fetching summary:', err);
+      this.getPart("last-update").set({ content: "" })
     })
 
   }

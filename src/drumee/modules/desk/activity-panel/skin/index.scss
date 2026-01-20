@@ -1,4 +1,4 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .activity-panel {
   &__ui {
@@ -11,7 +11,7 @@
     top: -10px;
     width: 500px;
     height: auto;
-    max-height:75px;
+    max-height: 75px;
     padding-top: var(--spacer-6);
     padding-bottom: var(--spacer-6);
     gap: var(--spacer-6);
@@ -22,11 +22,12 @@
     z-index: 1000000;
 
     &[data-device="mobile"] {
-      right: unset;
-      left: 0;
-      width: 100%;
+      right: auto;
+      left: 50%;
+      width: calc(100% - 32px);
+      transform: translateX(-50%);
+      margin-top: 20px;
     }
-
   }
 
   &__main {
@@ -35,8 +36,6 @@
     height: calc(100% - 32px);
     width: 100%;
   }
-
-
 
   &__header {
     width: 100%;
@@ -64,9 +63,8 @@
       // padding: 5px 10px 0 10px;
       gap: 6px;
       display: flex;
-      flex-direction: column
+      flex-direction: column;
     }
-
   }
 
   &__title {

@@ -3,6 +3,10 @@
 @use "buttons" as *;
 
 .window-wallpaper-settings {
+  &__body {
+    height: 100%;
+  }
+
   &__ui {
     background-color: var(--white);
     border: 1px solid var(--default-border-notification);
@@ -14,9 +18,10 @@
     left: calc(100vw - 800px);
 
     &[data-device="mobile"] {
-      left: 0;
-      width: 100%;
-      height: calc(100vh - 72px);
+      width: calc(100% - 32px);
+      left: auto !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
     }
   }
 
@@ -48,6 +53,10 @@
       padding: 0 24px;
       width: 100%;
       padding: 40px;
+
+      &[data-device="mobile"] {
+        align-items: center;
+      }
 
       & .title {
         text-align: left;
@@ -206,10 +215,12 @@
   }
 
   &__colors-title {
-    @include drumee.typo($size: 14px,
+    @include drumee.typo(
+      $size: 14px,
       $line: 21px,
       $weight: 400,
-      $color: var(--default-text-color));
+      $color: var(--default-text-color)
+    );
     flex-shrink: 0;
   }
 
