@@ -323,6 +323,32 @@ class settings_account extends LetcBox {
       }
     }
     
+    // Handle custom value: if user typed a number directly in input field
+    // Get the actual input value from the entry widget
+    if (timeout === "custom" || timeout === "") {
+      // Try to get value from input field directly
+      const autoLockWidget = this.getPart("auto-lock-timeout") || this.el.querySelector(`[name="auto_lock_timeout"]`);
+      if (autoLockWidget) {
+        const entryPart = autoLockWidget.getPart ? await autoLockWidget.getPart("entry") : null;
+        if (entryPart && entryPart._input) {
+          const inputValue = entryPart._input.value;
+          if (inputValue && inputValue !== "" && inputValue !== "custom") {
+            // Validate it's a valid number (can be negative)
+            const numValue = parseInt(inputValue);
+            if (!isNaN(numValue)) {
+              timeout = inputValue;
+            }
+          }
+        }
+      }
+      // If still "custom" or empty, default to "0"
+      if (timeout === "custom" || timeout === "") {
+        timeout = "0";
+      }
+    }
+    
+    this.debug("updateAutoLockTimeout", cmd, timeout, data);
+    
     const settings = {
       auto_lock_timeout: timeout
     };

@@ -119,17 +119,33 @@ const AUTO_LOCK_OPTIONS = [
 ];
 
 /**
+ * Format timeout value for display
+ */
+function formatTimeoutDisplay(value) {
+  const numValue = parseInt(value);
+  if (isNaN(numValue)) return LOCALE.NEVER || "Never";
+  if (numValue === 0) return LOCALE.NEVER || "Never";
+  if (numValue === 60) return "1 hour";
+  if (numValue === 120) return "2 hours";
+  return `${value} minutes`;
+}
+
+/**
  * Create menu input for auto-lock timeout (similar to date format/timezone dropdown)
  */
 function autoLockMenu(ui) {
   const settings = Visitor.settings() || {};
   const currentTimeout = settings.auto_lock_timeout || "0";
   
+  // Check if current timeout is a custom value (not in predefined options)
+  const isCustomValue = !AUTO_LOCK_OPTIONS.some(opt => opt.value === currentTimeout);
+  const displayValue = isCustomValue ? formatTimeoutDisplay(currentTimeout) : currentTimeout;
+  
   return menuInput(ui, {
     name: 'auto_lock_timeout',
     service: "select-auto-lock-timeout",
-    placeholder: LOCALE.SELECT_TIMEOUT || 'Select timeout',
-    value: currentTimeout,
+    placeholder: '', // Remove placeholder
+    value: currentTimeout, // Store actual value, not display value
     items: AUTO_LOCK_OPTIONS,
     className: `${ui.fig.family}-security__auto-lock-input`
   });

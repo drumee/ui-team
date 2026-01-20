@@ -275,6 +275,63 @@ class __menu_input extends LetcBox {
    */
   commitSelection(cmd) {
     this.debug("AAA:181", cmd)
+    // Get value from item - support refLabel, value, country_code (for country), and name
+    let refLabel = this.mget('refLabel');
+    let value = cmd.mget(refLabel) || cmd.mget('value') || cmd.mget('country_code') || cmd.mget(_a.name);
+    
+    // If cmd is null or value is empty, try to get from input field (direct input)
+    if (!cmd || !value || value === "") {
+      return this.ensurePart("entry").then((entryPart) => {
+        if (entryPart && entryPart._input) {
+          const inputValue = entryPart._input.value.trim();
+          if (inputValue && inputValue !== "") {
+            // Validate it's a valid number (can be negative)
+            const numValue = parseInt(inputValue);
+            if (!isNaN(numValue)) {
+              value = inputValue;
+              // Format display content
+              let displayContent = value;
+              if (value === "0") {
+                displayContent = LOCALE.NEVER || "Never";
+              } else if (numValue === 60) {
+                displayContent = "1 hour";
+              } else if (numValue === 120) {
+                displayContent = "2 hours";
+              } else {
+                displayContent = `${value} minutes`;
+              }
+              
+              // Update shower with formatted display
+              this.ensurePart("shower").then((p) => {
+                p.set({ content: displayContent });
+                p.setState(1);
+              });
+              this.ensurePart("entry").then((p) => {
+                p.setValue("");
+                this.clearItems();
+              });
+              this.mset({ value });
+              this.triggerHandlers({ source: entryPart });
+              return;
+            }
+          }
+        }
+        // If invalid or empty, use default
+        value = "0";
+        this.ensurePart("shower").then((p) => {
+          p.set({ content: LOCALE.NEVER || "Never" });
+          p.setState(1);
+        });
+        this.ensurePart("entry").then((p) => {
+          p.setValue("");
+          this.clearItems();
+        });
+        this.mset({ value });
+        this.triggerHandlers({ source: cmd || this });
+      });
+    }
+    
+    // For normal item selection, use standard flow
     this.ensurePart("shower").then((p) => {
       let content = cmd.mget(_a.content) || cmd.mget(_a.value)
       p.set({ content })
@@ -285,9 +342,6 @@ class __menu_input extends LetcBox {
       this.clearItems();
     })
     // Icon will be reset to carret-down (state 0) in clearItems()
-    // Get value from item - support refLabel, value, country_code (for country), and name
-    let refLabel = this.mget('refLabel');
-    let value = cmd.mget(refLabel) || cmd.mget('value') || cmd.mget('country_code') || cmd.mget(_a.name);
     this.mset({ value })
     this.triggerHandlers({ source: cmd })
   }
@@ -313,8 +367,13 @@ class __menu_input extends LetcBox {
       return;
     }
     let curSel = this._curSelection;
-    if (key == _e.Enter && curSel) {
-      return this.commitSelection(curSel)
+    if (key == _e.Enter) {
+      // If Enter is pressed and there's a selected item, commit it
+      if (curSel) {
+        return this.commitSelection(curSel)
+      }
+      // If Enter is pressed but no item is selected, commit direct input value
+      return this.commitSelection(null)
     }
     let i = 0;
     if (/down/i.test(key)) {
