@@ -234,5 +234,9 @@
   "SETTING": "Configuración",
   "DATE_AND_TIME": "Fecha y hora",
   "CUSTOMIZE_DATE_FORMAT": "Personalizar formato de fecha (DD/MM/YYYY)",
-  "TIMEZONE": "Zona horaria"
+  "TIMEZONE": "Zona horaria",
+  "AUTO_LOCK_TITLE": "Bloqueo automático",
+  "AUTO_LOCK_TIPS": "Bloquear automáticamente la pantalla o cerrar sesión después de X minutos de inactividad.",
+  "SELECT_TIMEOUT": "Seleccionar tiempo de espera",
+  "NEVER": "Nunca"
 }

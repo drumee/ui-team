@@ -272,7 +272,9 @@ class __menu_input extends LetcBox {
     this.ensurePart("carret").then((p) => {
       p.setState(1);
     })
-    this.mset({ value: cmd.mget('country_code') })
+    // Get value from item - support both country_code (for country) and value (for other items like timezone, dateformat, etc.)
+    const itemValue = cmd.mget('value') || cmd.mget('country_code');
+    this.mset({ value: itemValue })
     this.triggerHandlers({ source: cmd })
   }
 

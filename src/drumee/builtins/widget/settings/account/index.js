@@ -305,6 +305,49 @@ class settings_account extends LetcBox {
   }
 
   /**
+   * Update auto-lock timeout setting
+   * @param {*} cmd 
+   */
+  async updateAutoLockTimeout(cmd) {
+    // Get value from source (the selected item) or from form data
+    const source = cmd.mget(_a.source);
+    let timeout = "0";
+    
+    if (source) {
+      // Get value from the selected item
+      timeout = source.mget('value') || source.mget('auto_lock_timeout') || "0";
+    } else {
+      // Fallback: get from form data
+      const data = this.getData();
+      timeout = data.auto_lock_timeout || "0";
+    }
+    
+    const settings = {
+      auto_lock_timeout: timeout
+    };
+    
+    return this.postService({
+      service: SERVICE.drumate.update_settings,
+      settings: settings,
+      hub_id: Visitor.id
+    }).then((response) => {
+      let updatedSettings = {};
+      if (response && response.settings) {
+        try {
+          updatedSettings = JSON.parse(response.settings);
+        } catch (e) {
+          updatedSettings = { ...Visitor.settings() || {}, ...settings };
+        }
+      } else {
+        updatedSettings = { ...Visitor.settings() || {}, ...settings };
+      }
+      Visitor.set({ settings: updatedSettings });
+    }).catch((err) => {
+      this.warn('Error updating auto-lock timeout:', err);
+    });
+  }
+
+  /**
 * 
 */
   _openLink(url) {
@@ -416,6 +459,9 @@ class settings_account extends LetcBox {
 
       case "change-mfa":
         return this.changeMFA(cmd);
+
+      case "select-auto-lock-timeout":
+        return this.updateAutoLockTimeout(cmd);
 
       case "prompt-password":
         return this.__overlay.feed(
