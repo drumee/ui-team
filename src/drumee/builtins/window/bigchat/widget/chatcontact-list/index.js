@@ -328,6 +328,8 @@ class ___widget_chatcontactList extends LetcBox {
 
         list.collection.sort();
         item.updateNotification();
+        // Trigger update event for topbar
+        list.trigger('change:room_count');
         break;
     }
 
