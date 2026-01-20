@@ -9,9 +9,8 @@ const OPTIONS = {
     unit_price: 0,
     features: [
       { main: "20G", sub: "storage" },
-      { main: "Up to 3", sub: "editor access" },
       { main: "None", sub: "admin roles" },
-    ]
+    ],
   },
   pro: {
     title: "Pro",
@@ -23,13 +22,13 @@ const OPTIONS = {
     unit_price_yearly: 1444,
     badge: 1,
     features: [
-      { main: "50G", sub: "storage" },
+      { main: "20G", sub: "storage" },
       { main: "5", sub: "editor access" },
       { main: "1", sub: "admin role" },
       { main: "7", sub: "days version history" },
       { main: "", sub: "Permissions & roles" },
       { main: "", sub: "Guest access" },
-    ]
+    ],
   },
   enterprise: {
     title: "Enterprise",
@@ -44,9 +43,9 @@ const OPTIONS = {
       { main: "", sub: "Permissions & roles" },
       { main: "", sub: "Guest access" },
       { main: "", sub: "Activity logs" },
-    ]
-  }
-}
+    ],
+  },
+};
 
 /**
  * Create plan item component (Free, Pro, Enterprise)
@@ -59,9 +58,10 @@ const OPTIONS = {
 function item(ui, opt, cycle = "monthly") {
   const option = OPTIONS[opt];
   const { title, description, buttonTitle, features, badge } = option;
-  const subtitle = cycle === "yearly" && option.subtitle_yearly
-    ? option.subtitle_yearly
-    : (option.subtitle_monthly || option.subtitle || "Free");
+  const subtitle =
+    cycle === "yearly" && option.subtitle_yearly
+      ? option.subtitle_yearly
+      : option.subtitle_monthly || option.subtitle || "Free";
   const fig = `${ui.fig.family}__plan`;
 
   let descriptionItem = "";
@@ -115,7 +115,7 @@ function item(ui, opt, cycle = "monthly") {
   }
 
   const featureItems = features.map((f) => {
-    const feature = typeof f === 'string' ? { main: f, sub: "" } : f;
+    const feature = typeof f === "string" ? { main: f, sub: "" } : f;
     const { main, sub } = feature;
 
     return Skeletons.Box.X({
@@ -127,12 +127,14 @@ function item(ui, opt, cycle = "monthly") {
           ico: "available",
           label: main,
         }),
-        sub ? Skeletons.Note({
-          className: `${fig}-features-sub`,
-          content: sub,
-        }) : null,
+        sub
+          ? Skeletons.Note({
+              className: `${fig}-features-sub`,
+              content: sub,
+            })
+          : null,
       ].filter(Boolean),
-    })
+    });
   });
 
   let popularBadge = "";
