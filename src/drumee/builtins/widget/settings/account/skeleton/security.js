@@ -169,14 +169,14 @@ function content(ui) {
         ]
       }),
       Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
-      Skeletons.Box.G({
-        className: `${fig}-control`,
-        kids: [
-          control(ui, LOCALE.AUTO_LOCK_TITLE || "Auto-lock", LOCALE.AUTO_LOCK_TIPS || "Automatically lock the screen or logout after X minutes of inactivity."),
-          autoLockMenu(ui),
-        ]
-      }),
-      Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
+      // Skeletons.Box.G({
+      //   className: `${fig}-control`,
+      //   kids: [
+      //     control(ui, LOCALE.AUTO_LOCK_TITLE || "Auto-lock", LOCALE.AUTO_LOCK_TIPS || "Automatically lock the screen or logout after X minutes of inactivity."),
+      //     autoLockMenu(ui),
+      //   ]
+      // }),
+      // Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
       Skeletons.Box.G({
         className: `${fig}-control`,
         kids: [

@@ -13,7 +13,7 @@ const dayjs = require('dayjs');
 dayjs.extend(relativeTime);
 dayjs.extend(duration);
 window.Dayjs = dayjs;
-
+window.createSafeObject = createSafeObject;
 /**
  * 
  */

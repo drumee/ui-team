@@ -130,6 +130,9 @@ class ___window_bigchat extends __window_bigchat_interact {
     this.feed(require('./skeleton')(this));
     super.onDomRefresh();
     this.bindActivityHandlerEvent();
+    this.fetchService(SERVICE.contact.show_contact, { hub_id: Visitor.id, option: 'active' }).then((data) => {
+      this.ensurePart('contact-count').then((p) => { p.set({ content: `${data.length} contacts` }) })
+    })
   }
 
   /**
@@ -351,7 +354,6 @@ class ___window_bigchat extends __window_bigchat_interact {
     if ((this._view === _a.min) || (this._view === _a.medium)) {
       this.updateInstance(this.viewInstance = 2);
     }
-
     return this.getBranch('contact-wrapper').feed(contacts);
   }
 
@@ -591,22 +593,22 @@ class ___window_bigchat extends __window_bigchat_interact {
    */
   updateNotificationCount(args) {
     let data;
-    if(args){
+    if (args) {
       this.chatNotificationCount = args;
-      this.tagNotificationList = args.tags; 
+      this.tagNotificationList = args.tags;
       data = args;
-    }else{
-      if(!this.chatNotificationCount) return;
+    } else {
+      if (!this.chatNotificationCount) return;
       data = this.chatNotificationCount;
     }
 
-    this.ensurePart("all_conversations_counter").then((p)=>{
+    this.ensurePart("all_conversations_counter").then((p) => {
       this.updateCounter(p, data.allConversationsCount);
     })
-    this.ensurePart("contact_counter").then((p)=>{
+    this.ensurePart("contact_counter").then((p) => {
       this.updateCounter(p, data.contactChatCount);
     })
-    this.ensurePart("team_counter").then((p)=>{
+    this.ensurePart("team_counter").then((p) => {
       this.updateCounter(p, data.teamChatCount);
     })
     this.updateBackButtonCounter();

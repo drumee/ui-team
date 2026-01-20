@@ -1,7 +1,7 @@
-const __skl_bigchat_common_topBar = function (_ui_) {
-  const mode = _ui_._view;
-  const figFamily = `${_ui_.fig.family}-topbar`;
-  const figGroup = `${_ui_.fig.group}-topbar`;
+const __skl_bigchat_common_topBar = function (ui) {
+  const mode = ui._view;
+  const figFamily = `${ui.fig.family}-topbar`;
+  const figGroup = `${ui.fig.group}-topbar`;
 
   const a = Skeletons.Box.X({
     className: `${figFamily}__container ${figGroup}__container`,
@@ -18,14 +18,14 @@ const __skl_bigchat_common_topBar = function (_ui_) {
           Skeletons.Box.X({
             className: `${figFamily}__title-wrapper`,
             kids: [
-              require("./logo").default(_ui_, "c1"),
+              require("./logo").default(ui, "c1"),
               Skeletons.Box.Y({
                 className: `${figFamily}__name-wrapper`,
                 kids: [
                   Skeletons.Note({
                     sys_pn: "ref-window-name",
-                    uiHandler: _ui_,
-                    partHandler: _ui_,
+                    uiHandler: ui,
+                    partHandler: ui,
                     className: "title",
                     content: LOCALE.CHAT,
                   }),
@@ -33,17 +33,17 @@ const __skl_bigchat_common_topBar = function (_ui_) {
                     className: `${figFamily}__subtitle-wrapper`,
                     kids: [
                       Skeletons.Note({
-                        sys_pn: "ref-window-name",
-                        uiHandler: _ui_,
-                        partHandler: _ui_,
+                        sys_pn: "contact-count",
+                        uiHandler: ui,
+                        partHandler: ui,
                         className: `${figFamily}__subtitle-wrapper contacts`,
-                        content: "16 contacts",
+                        content: "",
                       }),
                       Skeletons.Note({
-                        sys_pn: "ref-window-name",
-                        uiHandler: _ui_,
-                        partHandler: _ui_,
-                        content: "Last updated: 4:59 pm. Jun 30, 2025",
+                        sys_pn: "last-change",
+                        uiHandler: ui,
+                        partHandler: ui,
+                        content: "",
                       }),
                     ],
                   }),
@@ -69,12 +69,12 @@ const __skl_bigchat_common_topBar = function (_ui_) {
                         className: `${figFamily}__icon ${figFamily}__trigger dropdown-toggle-icon contact_add`,
                         service: "open-contact",
                         type: _a.invite,
-                        uiHandler: _ui_,
+                        uiHandler: ui,
                       }),
                       Skeletons.Note({
                         service: "open-contact",
                         type: _a.invite,
-                        uiHandler: _ui_,
+                        uiHandler: ui,
                         content: "Add new contacts",
                       }),
                     ],
@@ -83,11 +83,11 @@ const __skl_bigchat_common_topBar = function (_ui_) {
               })
             : undefined,
 
-          // require("./search")(_ui_),
+          // require("./search")(ui),
         ],
       }),
 
-      require("window/skeleton/topbar/control")(_ui_, "c"),
+      require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });
 

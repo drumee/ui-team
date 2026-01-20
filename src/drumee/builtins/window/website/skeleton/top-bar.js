@@ -1,5 +1,6 @@
 
 const { button } = require("../../../skeleton/toolkit/buttons");
+const { breadcrumbs } = require('../../skeleton/toolkit')
 
 const __window_topbar = function (ui) {
   const name = ui.model.get(_a.filename) || "???";
@@ -31,8 +32,6 @@ const __window_topbar = function (ui) {
         className: _a.name,
         content: name,
       }),
-
-      ,
       subtitle,
     ],
   });
