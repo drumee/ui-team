@@ -309,17 +309,18 @@ class settings_account extends LetcBox {
    * @param {*} cmd 
    */
   async updateAutoLockTimeout(cmd) {
-    // Get value from source (the selected item) or from form data
-    const source = cmd.mget(_a.source);
-    let timeout = "0";
+    // menuInput widget automatically updates its value when item is selected
+    // Get value from getData() (widget's current value) or from cmd (item element)
+    const data = this.getData();
+    let timeout = data.auto_lock_timeout || "0";
     
-    if (source) {
-      // Get value from the selected item
-      timeout = source.mget('value') || source.mget('auto_lock_timeout') || "0";
-    } else {
-      // Fallback: get from form data
-      const data = this.getData();
-      timeout = data.auto_lock_timeout || "0";
+    // If not found in getData(), try to get from cmd (item element from menuInput widget)
+    if (!timeout || timeout === "0") {
+      if (cmd && typeof cmd.mget === 'function') {
+        timeout = cmd.mget('value') || cmd.mget('auto_lock_timeout') || "0";
+      } else if (cmd && cmd.model && typeof cmd.model.get === 'function') {
+        timeout = cmd.model.get('value') || cmd.model.get('auto_lock_timeout') || "0";
+      }
     }
     
     const settings = {
@@ -390,8 +391,29 @@ class settings_account extends LetcBox {
    * @param {*} args
    */
   onUiEvent(cmd, args = {}) {
-    const service =
-      args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
+    // Try multiple ways to get service
+    let service = args.service;
+    if (!service && cmd) {
+      if (typeof cmd.mget === 'function') {
+        service = cmd.mget(_a.service) || cmd.mget(_a.name);
+      } else if (cmd.service) {
+        service = cmd.service;
+      } else if (cmd.model && typeof cmd.model.get === 'function') {
+        service = cmd.model.get(_a.service) || cmd.model.get(_a.name);
+      } else if (cmd.target) {
+        // Try to get from DOM element
+        const el = cmd.target.closest('[data-service]') || cmd.target;
+        if (el && el.dataset && el.dataset.service) {
+          service = el.dataset.service;
+        }
+      } else if (cmd.el) {
+        // Try to get from cmd.el dataset
+        if (cmd.el.dataset && cmd.el.dataset.service) {
+          service = cmd.el.dataset.service;
+        }
+      }
+    }
+    
     this.debug("AAA:191", cmd, args, service);
     switch (service) {
       case "close-overlay":
@@ -461,6 +483,8 @@ class settings_account extends LetcBox {
         return this.changeMFA(cmd);
 
       case "select-auto-lock-timeout":
+        // menuInput widget automatically updates its value when item is selected
+        // We can get the value from getData() or from cmd (item element)
         return this.updateAutoLockTimeout(cmd);
 
       case "prompt-password":

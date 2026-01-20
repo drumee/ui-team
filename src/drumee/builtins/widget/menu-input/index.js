@@ -96,7 +96,13 @@ class __menu_input extends LetcBox {
    * 
    */
   clearItems() {
-    this.ensurePart('items').then((p) => { p.clear() })
+    this.ensurePart('items').then((p) => { 
+      p.clear();
+      // Reset icon to carret-down when menu closes
+      this.ensurePart("carret").then((carretPart) => {
+        carretPart.setState(0);
+      });
+    })
   }
 
   /**
@@ -124,7 +130,12 @@ class __menu_input extends LetcBox {
     })
     this.ensurePart('items').then((p) => {
       if (!p.isEmpty()) {
+        // Menu is already open, close it
         p.clear()
+        // Reset icon to carret-down when closing
+        this.ensurePart("carret").then((carretPart) => {
+          carretPart.setState(0);
+        });
         return
       }
       // Show all items when menu opens
@@ -133,6 +144,10 @@ class __menu_input extends LetcBox {
         r.push(this.getItem(item));
       }
       p.feed(r)
+      // Toggle icon to carret-up when menu opens
+      this.ensurePart("carret").then((carretPart) => {
+        carretPart.setState(1);
+      });
     })
   }
 
@@ -269,9 +284,7 @@ class __menu_input extends LetcBox {
       p.setValue("");
       this.clearItems();
     })
-    this.ensurePart("carret").then((p) => {
-      p.setState(1);
-    })
+    // Icon will be reset to carret-down (state 0) in clearItems()
     // Get value from item - support refLabel, value, country_code (for country), and name
     let refLabel = this.mget('refLabel');
     let value = cmd.mget(refLabel) || cmd.mget('value') || cmd.mget('country_code') || cmd.mget(_a.name);

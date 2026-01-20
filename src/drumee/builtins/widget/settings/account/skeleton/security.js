@@ -114,12 +114,12 @@ const AUTO_LOCK_OPTIONS = [
   { value: "10", label: "10 minutes" },
   { value: "15", label: "15 minutes" },
   { value: "30", label: "30 minutes" },
-  { value: "60", label: "60 minutes" },
-  { value: "120", label: "120 minutes" },
+  { value: "60", label: "1 hour" },
+  { value: "120", label: "2 hours" },
 ];
 
 /**
- * Create menu input for auto-lock timeout
+ * Create menu input for auto-lock timeout (similar to date format/timezone dropdown)
  */
 function autoLockMenu(ui) {
   const settings = Visitor.settings() || {};
@@ -128,11 +128,10 @@ function autoLockMenu(ui) {
   return menuInput(ui, {
     name: 'auto_lock_timeout',
     service: "select-auto-lock-timeout",
-    refAttribute: 'label',
     placeholder: LOCALE.SELECT_TIMEOUT || 'Select timeout',
     value: currentTimeout,
     items: AUTO_LOCK_OPTIONS,
-    className: `${ui.fig.family}__auto-lock-input`
+    className: `${ui.fig.family}-security__auto-lock-input`
   });
 }
 
@@ -158,12 +157,7 @@ function content(ui) {
         className: `${fig}-control`,
         kids: [
           control(ui, LOCALE.AUTO_LOCK_TITLE || "Auto-lock", LOCALE.AUTO_LOCK_TIPS || "Automatically lock the screen or logout after X minutes of inactivity."),
-          Skeletons.Box.G({
-            className: `${ui.fig.family}__entry-main`,
-            kids: [
-              autoLockMenu(ui),
-            ]
-          }),
+          autoLockMenu(ui),
         ]
       }),
       Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
