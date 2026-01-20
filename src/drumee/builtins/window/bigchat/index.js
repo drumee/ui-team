@@ -92,6 +92,17 @@ class ___window_bigchat extends __window_bigchat_interact {
           child.on('change:room_count', (count) => {
             this.currentPageListCount = count;
           })
+          // Update topbar when contact list is ready
+          this.updateTopBar();
+          // Listen for collection changes to update topbar
+          if (child.__listContacts && child.__listContacts.collection) {
+            const updateTopBarDebounced = _.debounce(() => {
+              this.updateTopBar();
+            }, 100);
+            child.__listContacts.collection.on('add remove reset sort', updateTopBarDebounced);
+            // Also listen for ctime changes on items
+            child.__listContacts.collection.on('change:ctime', updateTopBarDebounced);
+          }
         })
 
       case _a.content:
@@ -130,9 +141,6 @@ class ___window_bigchat extends __window_bigchat_interact {
     this.feed(require('./skeleton')(this));
     super.onDomRefresh();
     this.bindActivityHandlerEvent();
-    this.fetchService(SERVICE.contact.show_contact, { hub_id: Visitor.id, option: 'active' }).then((data) => {
-      this.ensurePart('contact-count').then((p) => { p.set({ content: `${data.length} contacts` }) })
-    })
   }
 
   /**
@@ -586,6 +594,117 @@ class ___window_bigchat extends __window_bigchat_interact {
   updateInstance(viewInstance) {
     super.updateInstance(viewInstance);
     this.updateNotificationCount();
+  }
+
+  /**
+   * Update topbar with contact count and last updated time
+   */
+  updateTopBar() {
+    try {
+      const chatContactList = this.getItemsByKind('chat_contact_list')[0];
+      if (!chatContactList || !chatContactList.__listContacts) {
+        return;
+      }
+
+      const collection = chatContactList.__listContacts.collection;
+      if (!collection) {
+        return;
+      }
+
+      // Get contact count from API contact.show_contact
+      this.fetchService({
+        service: SERVICE.contact.show_contact,
+        hub_id: Visitor.get(_a.id),
+        page: 1
+      }).then((data) => {
+        // API returns array of contacts, count is the length
+        const contactCount = _.isArray(data) ? data.length : 0;
+        const countText = contactCount === 1 ? '1 contact' : `${contactCount} contacts`;
+
+        // Update contact count
+        this.ensurePart('contact-count').then((part) => {
+          if (part) {
+            part.set({ content: countText });
+          }
+        });
+      }).catch((err) => {
+        this.debug('Error fetching contact count:', err);
+        // Fallback to collection length if API fails
+        const contactCount = collection.length || 0;
+        const countText = contactCount === 1 ? '1 contact' : `${contactCount} contacts`;
+        this.ensurePart('contact-count').then((part) => {
+          if (part) {
+            part.set({ content: countText });
+          }
+        });
+      });
+
+      // Get latest message timestamp from API chat.messages
+      // Get the first contact/room from collection to get entity_id
+      const firstItem = collection.first();
+      if (firstItem) {
+        const entityId = firstItem.get('entity_id') || firstItem.get('contact_id');
+        if (entityId) {
+          this.fetchService({
+            service: SERVICE.chat.messages,
+            entity_id: entityId,
+            hub_id: Visitor.get(_a.id),
+            page: 1,
+            order: 'desc'
+          }).then((messages) => {
+            // API returns array of messages, first item is latest (order: desc)
+            let lastUpdatedText = '';
+            if (_.isArray(messages) && messages.length > 0) {
+              const latestMessage = messages[0];
+              const ctime = latestMessage.ctime;
+              if (ctime) {
+                // Format: "4:59 pm. Jun 30, 2025"
+                // Dayjs is available globally (exposed via locale/index.js)
+                const dayjs = Dayjs.unix(ctime).locale(Visitor.language());
+                lastUpdatedText = `Last updated: ${dayjs.format('h:mm a. MMM D, YYYY')}`;
+              }
+            }
+
+            // Update last updated
+            this.ensurePart('last-updated').then((part) => {
+              if (part) {
+                part.set({ content: lastUpdatedText });
+              }
+            });
+          }).catch((err) => {
+            this.debug('Error fetching latest message:', err);
+            // Fallback to collection first item ctime if API fails
+            const ctime = firstItem.get('ctime');
+            let lastUpdatedText = '';
+            if (ctime) {
+              const dayjs = Dayjs.unix(ctime).locale(Visitor.language());
+              lastUpdatedText = `Last updated: ${dayjs.format('h:mm a. MMM D, YYYY')}`;
+            }
+            this.ensurePart('last-updated').then((part) => {
+              if (part) {
+                part.set({ content: lastUpdatedText });
+              }
+            });
+          });
+        } else {
+          // No entity_id, clear last updated
+          this.ensurePart('last-updated').then((part) => {
+            if (part) {
+              part.set({ content: '' });
+            }
+          });
+        }
+      } else {
+        // No items in collection, clear last updated
+        this.ensurePart('last-updated').then((part) => {
+          if (part) {
+            part.set({ content: '' });
+          }
+        });
+      }
+    } catch (e) {
+      this.debug('Error updating topbar:', e);
+    }
   }
 
   /**

@@ -40,7 +40,7 @@ const __skl_bigchat_common_topBar = function (ui) {
                         content: "",
                       }),
                       Skeletons.Note({
-                        sys_pn: "last-change",
+                        sys_pn: "last-updated",
                         uiHandler: ui,
                         partHandler: ui,
                         content: "",
