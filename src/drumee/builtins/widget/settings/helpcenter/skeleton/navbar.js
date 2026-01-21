@@ -51,20 +51,8 @@ function nav(ui) {
       nav_item(ui, "shield", "Privacy Policy", 5),
     ],
   });
-  const legals = Skeletons.Box.Y({
-    className: `${fig}__legals`,
-    kids: [
-      Skeletons.Note({
-        className: `${ui.fig.family}__legals-text`,
-        content: LOCALE.PRIVACY_POLICY,
-      }),
-      Skeletons.Note({
-        className: `${ui.fig.family}__legals-text`,
-        content: LOCALE.TERMS_OF_SERVICE,
-      }),
-    ],
-  });
-  return [topics, legals];
+
+  return [topics];
 }
 
 export default nav;
