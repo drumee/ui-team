@@ -1,7 +1,7 @@
 const { topbar, validity } = require("../../hub/skeleton/toolkit")
 const { read, write, modify } = _K.permission
 let items = [
-  { permission: write, label: "Upload and Upload", name: _a.write },
+  { permission: write, label: "Upload and Download", name: _a.write },
   { permission: read, label: "Download only", name: _a.read, lock: 1 },
 ]
 function content(ui) {
