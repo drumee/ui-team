@@ -122,7 +122,8 @@ class __player_document extends PlayerInteract {
     this.pdfDocument = pdfDocument;
     const { pageCount } = pdfDocument;
     this.totalPages = pageCount;
-    let batchSize = Math.min(pageCount, 4);
+    // In mobile mode, load all pages at once to avoid scroll detection issues
+    const batchSize = Visitor.isMobile() ? pageCount : Math.min(pageCount, 4);
     this.loadedPages = 0;
     for (let i = 0; i < batchSize; i++) {
       // let page = await pdf.getPage(i);
@@ -480,13 +481,15 @@ class __player_document extends PlayerInteract {
       case _a.list:
         this.pagesList = child;
         this.timer = null;
-        child.on(_e.scroll, ((list) => {
-          let th = list.contentHeight() * this.loadedPages * .5;
-          if (this.timer || list.scrollDir != _a.down) return;
-          if (list.getOffsetY() < th) return;
-          this.nextPages()
-        }))
-
+        // Skip scroll-based lazy loading in mobile mode (all pages loaded upfront)
+        if (!Visitor.isMobile()) {
+          child.on(_e.scroll, ((list) => {
+            let th = list.contentHeight() * this.loadedPages * .5;
+            if (this.timer || list.scrollDir != _a.down) return;
+            if (list.getOffsetY() < th) return;
+            this.nextPages()
+          }))
+        }
         break;
       case "navbar":
         return this.navbar = child;
