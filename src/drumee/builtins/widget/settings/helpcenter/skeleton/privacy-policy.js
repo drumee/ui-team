@@ -41,7 +41,7 @@ function bulletSpacer(fig, variant = "dot") {
 function renderParts(ui, parts) {
   const fig = figOf(ui);
   return parts.map((p) =>
-    note(p.text, p.bold ? `${fig} description bold-note` : undefined)
+    note(p.text, p.bold ? `${fig} description bold-note` : undefined),
   );
 }
 
@@ -82,7 +82,7 @@ function renderBullet(ui, b) {
           bulletSpacer(fig, "subdot"),
           bulletMarker("subdot"),
           ...renderParts(ui, it.parts),
-        ])
+        ]),
       ),
     ]);
   }
@@ -100,9 +100,9 @@ function section(ui, { title, paragraphs = [], bullets = [], after = [] }) {
       boxX(`${fig} description`, [
         note(
           p.text ?? p,
-          p.isBold ? `${fig} description bold-note` : undefined
+          p.isBold ? `${fig} description bold-note` : undefined,
         ),
-      ])
+      ]),
     ),
 
     ...bullets.map((b) => renderBullet(ui, b)).filter(Boolean),
@@ -111,9 +111,9 @@ function section(ui, { title, paragraphs = [], bullets = [], after = [] }) {
       boxX(`${fig} description`, [
         note(
           a.text ?? a,
-          a.isBold ? `${fig} description bold-note` : undefined
+          a.isBold ? `${fig} description bold-note` : undefined,
         ),
-      ])
+      ]),
     ),
   ]);
 }
@@ -121,7 +121,7 @@ function section(ui, { title, paragraphs = [], bullets = [], after = [] }) {
 // ---------- data ----------
 const PRIVACY = {
   title: "Privacy Policy",
-  lastUpdated: "Dec 16, 2025",
+  lastUpdated: "2026",
   intro: [
     "Drumee (“Drumee”, “we”, “our”, or “us”) is committed to protecting your privacy. This Privacy Policy explains what information we process, how we protect it, and the choices you have when using Drumee.",
     "Drumee is designed as a privacy-first cloud workspace. We do not exploit user data, and we do not use your content for advertising, profiling, or any secondary purposes.",
