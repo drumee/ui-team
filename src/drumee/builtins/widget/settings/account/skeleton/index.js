@@ -47,10 +47,10 @@ function nav(ui) {
     nav_item(ui, "storage", LOCALE.STORAGE, 2),
     nav_item(ui, "shield", LOCALE.SECURITY, 3),
     nav_item(ui, "calendar", LOCALE.DATE_AND_TIME, 4),
-  ]
+  ];
 
   if (ui.canAdmin()) {
-    items.push(nav_item(ui, "two-users", "My seats", 5),)
+    items.push(nav_item(ui, "two-users", "My seats", 5));
   }
 
   const topics = Skeletons.Box.Y({
@@ -58,20 +58,7 @@ function nav(ui) {
     kids: items,
   });
 
-  const legals = Skeletons.Box.Y({
-    className: `${fig}__legals`,
-    kids: [
-      Skeletons.Note({
-        className: `${ui.fig.family}__legals-text`,
-        content: LOCALE.PRIVACY_POLICY,
-      }),
-      Skeletons.Note({
-        className: `${ui.fig.family}__legals-text`,
-        content: LOCALE.TERMS_OF_SERVICE,
-      }),
-    ],
-  });
-  return [topics, legals];
+  return [topics];
 }
 /**
  *
