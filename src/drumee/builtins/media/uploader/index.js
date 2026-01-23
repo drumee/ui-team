@@ -118,7 +118,7 @@ class __media_uploader extends LetcBox {
       return;
     }
     const rate = (e.loaded + this._bytesSent) / this._bytesToBeSent;
-    const val = parseInt(100 * rate);
+    const val = Math.min(100, parseInt(100 * rate));
 
     if (this.mget(_a.mode) === _a.row) {
       if (this.$progress != null) {
