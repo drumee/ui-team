@@ -185,7 +185,13 @@ class ___widget_member_form extends LetcBox {
       ...data
     }).then((res) => {
       let opt = { ...res, service: "member-added" }
-      this.triggerHandlers(opt)
+      this.debug("AAA:188", opt, this)
+      switch (opt.status) {
+        case 'EMAIL_NOT_AVAILABLE':
+          return this.__emailInput.showError(LOCALE.THIS_EMAIL_ALREADY_EXISTS); //'This email already exists.'
+        default:
+          this.triggerHandlers(opt)
+      }
     })
 
     return

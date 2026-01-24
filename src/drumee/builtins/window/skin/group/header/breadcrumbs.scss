@@ -66,10 +66,14 @@
       color: var(--neutral-300);
       align-content: center;
       flex-wrap: wrap;
+      overflow: hidden;
 
       &:after {
         content: ">";
         margin: 0 var(--spacer-3);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
       &--filename {
