@@ -76,31 +76,6 @@ function __skl_widget_member_form(ui) {
     ]
   })
 
-  // const ident = Skeletons.Box.X({
-  //   className: `${formFig}__wrapper ident`,
-  //   kids: [
-  //     Skeletons.Button.Svg({
-  //       ico: 'account_id',
-  //       className: `${formFig}__icon ident account_id`
-  //     }),
-
-  //     Skeletons.EntryBox({
-  //       className: `${formFig}__entry ident`,
-  //       formItem: _a.ident,
-  //       innerClass: _a.ident,
-  //       interactive: 1,
-  //       sys_pn: 'ident-input',
-  //       placeholder: LOCALE.USERNAME,
-  //       value: data.ident,
-  //       uiHandler: ui,
-  //       errorHandler: [ui],
-  //       // validators    : [
-  //       //   { reason: LOCALE.ERR_ID_REQUIRED, comply: Validator.require }
-  //       // ],
-  //       showError: 1
-  //     }),
-  //   ]
-  // })
 
   const mobile = Skeletons.Box.X({
     className: `${formFig}__wrapper mobile`,
@@ -152,78 +127,6 @@ function __skl_widget_member_form(ui) {
     ]
   })
 
-  // const address = Skeletons.Box.X({
-  //   className: `${formFig}__wrapper address`,
-  //   kids: [
-  //     Skeletons.Button.Svg({
-  //       ico: 'ab_address',
-  //       className: `${formFig}__icon address ab_address`
-  //     }),
-
-  //     Skeletons.Box.Y({
-  //       className: `${formFig}__entry-wrapper address`,
-  //       formItem: _a.address,
-  //       dataType: _a.object,
-  //       kids: [
-  //         Skeletons.Entry({
-  //           className: `${formFig}__entry street address-item`,
-  //           formItem: _a.street,
-  //           placeholder: LOCALE.NUMBER_STREET,
-  //           uiHandler: ui,
-  //           value: data.address.street
-  //         }),
-
-  //         Skeletons.Entry({
-  //           className: `${formFig}__entry zip address-item`,
-  //           formItem: _a.city,
-  //           placeholder: LOCALE.ZIP_CODE_CITY,
-  //           uiHandler: ui,
-  //           value: data.address.city
-  //         }),
-
-  //         Skeletons.Entry({
-  //           className: `${formFig}__entry country address-item`,
-  //           formItem: _a.country,
-  //           placeholder: LOCALE.COUNTRY,
-  //           uiHandler: ui,
-  //           value: data.address.country
-  //         })
-  //       ]
-  //     })
-  //   ]
-  // })
-
-
-  // const _securityState = toggleState(data.otp)
-
-  // if (ui._type == 'member_edit') {
-  //   if (Visitor.domainCan(_K.permission.admin_view, data.privilege)) {
-  //     let _icon = 'account_cross'
-  //     if (_securityState) {
-  //       _icon = 'backoffice_checkboxfill'
-  //     }
-
-  //     security = Skeletons.Box.X({
-  //       className: `${formFig}__wrapper security`,
-  //       kids: [
-  //         Skeletons.Button.Svg({
-  //           ico: 'lock',
-  //           className: `${formFig}__icon security lock`
-  //         }),
-
-  //         Skeletons.Box.X({
-  //           className: `${formFig}__security-wrapper`,
-  //           kids: [
-  //             Skeletons.Note({
-  //               className: `${formFig}__note security`,
-  //               content: LOCALE.DOUBLE_AUTHENTICATION_WITH_SMS_CODE//'Double authentication with sms code'
-  //             }),
-  //           ]
-  //         })
-  //       ]
-  //     })
-  //   }
-  // }
 
 
   const messageBox = Skeletons.Box.X({
@@ -238,15 +141,6 @@ function __skl_widget_member_form(ui) {
   if (ui._type == 'member_edit')
     buttonLabel = LOCALE.MODIFY
 
-  // const buttons = Preset.ConfirmButtons(ui,
-  //   {
-  //     confirmLabel: buttonLabel,
-  //     haptic: 1000,
-  //     cancelService: _e.cancel
-  //   },
-  //   {
-  //     sys_pn: 'submit-button'
-  //   })
 
   const fig = ui.fig.family;
   const buttons = Skeletons.Box.X({
@@ -271,12 +165,13 @@ function __skl_widget_member_form(ui) {
         sys_pn: 'submit-button',
         ico: "arrow-right",
         service: _e.submit,
+        haptic: 5000,
         className: `${fig}__button`,
         priority: "primary",
       })
     ],
   });
-  let a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     className: `${formFig}__main`,
     debug: __filename,
     kids: [
@@ -285,9 +180,7 @@ function __skl_widget_member_form(ui) {
         kids: [
           name,
           email,
-          // ident,
           mobile,
-          // address,
           messageBox,
           buttons
         ]
@@ -295,7 +188,6 @@ function __skl_widget_member_form(ui) {
     ]
   })
 
-  return a;
 }
 
 export default __skl_widget_member_form

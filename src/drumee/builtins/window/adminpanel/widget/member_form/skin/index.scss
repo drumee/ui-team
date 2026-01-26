@@ -304,6 +304,11 @@
     background-color: var(--btn-commit-background);
     border: 1px solid var(--btn-commit-border);
 
+    &[data-haptic="1"] {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
     &:hover {
       background-color: var(--btn-commit-background-hover);
       border-color: var(--btn-commit-border-hover);
