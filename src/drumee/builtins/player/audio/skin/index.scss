@@ -13,7 +13,8 @@
     width: 100%;
 
     &[data-device="mobile"] {
-      max-width: 460px;
+      width: 400px !important;
+      transform: translateX(10%) translateY(50%) !important;
     }
   }
 

@@ -1,4 +1,3 @@
-
 const { button } = require("../../../../skeleton/toolkit/buttons");
 
 const __skl_window_team_topbar = function (ui, icon) {
@@ -43,6 +42,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   });
 
   const titleWrapper = Skeletons.Box.X({
+    className: `${ui.fig.family}__title-wrapper`,
     kids: [logo, nameWrapper],
   });
 

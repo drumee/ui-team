@@ -9,12 +9,20 @@
       width: 55px;
       height: 48px;
       aspect-ratio: 55/48;
-      margin-top: 10px;
     }
   }
 
   &__name-wrapper {
     gap: 10px;
+    &[data-device="mobile"] {
+      gap: 0;
+    }
+  }
+
+  &__title-wrapper {
+    &[data-device="mobile"] {
+      align-items: center;
+    }
   }
 
   &__subtitle-wrapper {
@@ -24,6 +32,10 @@
     &.files {
       padding-right: 10px;
       border-right: 1px solid var(--neutral-300);
+    }
+
+    &[data-device="mobile"] {
+      display: none;
     }
   }
 
@@ -109,9 +121,11 @@
       }
 
       .tooltips {
-        @include drumee.typo($size: 12px,
+        @include drumee.typo(
+          $size: 12px,
           $line: 20px,
-          $color: var(--default-text-tooltips));
+          $color: var(--default-text-tooltips)
+        );
         background-color: var(--background-tooltips);
         border-radius: var(--border-radius);
         max-height: 90px;
@@ -151,9 +165,11 @@
         }
 
         & .tooltips {
-          @include drumee.typo($size: 12px,
+          @include drumee.typo(
+            $size: 12px,
             $line: 20px,
-            $color: var(--default-text-tooltips));
+            $color: var(--default-text-tooltips)
+          );
           background-color: var(--background-tooltips);
           border-radius: var(--border-radius);
           max-height: 90px;
@@ -204,10 +220,12 @@
     }
 
     &__count {
-      @include drumee.typo($size: 8px,
+      @include drumee.typo(
+        $size: 8px,
         $line: 12px,
         $weight: 400,
-        $color: var(--sharebox-main));
+        $color: var(--sharebox-main)
+      );
       align-items: center;
       background-color: var(--default-background);
       border-radius: 50%;

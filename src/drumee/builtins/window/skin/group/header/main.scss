@@ -82,21 +82,28 @@
 
       &[data-device="mobile"] {
         flex-direction: column;
+        padding: 20px 60px;
       }
 
       .name {
         align-items: center;
         width: auto;
-        @include drumee.typo($size: 32px,
+        @include drumee.typo(
+          $size: 32px,
           $line: 40px,
           $weight: 400,
-          $color: var(--default-text-reverse));
+          $color: var(--default-text-reverse)
+        );
         @include drumee.overflow-text;
 
         .inner {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        &[data-device="mobile"] {
+          font-size: 20px;
         }
       }
 

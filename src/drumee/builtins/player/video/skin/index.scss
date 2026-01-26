@@ -12,6 +12,12 @@
     overflow: hidden;
     height: 100%;
     width: 100%;
+
+    &[data-device="mobile"] {
+      width: 400px !important;
+      height: 500px !important;
+      transform: translateX(4%) translateY(15%);
+    }
   }
 
   &__main {

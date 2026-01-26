@@ -22,7 +22,7 @@ const __skl_window_team_topbar = function (ui, icon) {
       service: "show-settings",
     });
   }
-  ui.debug("AAAA:25", ui.mget(_a.area), ui.mget(_a.home_id), ui.mget(_a.nid))
+  ui.debug("AAAA:25", ui.mget(_a.area), ui.mget(_a.home_id), ui.mget(_a.nid));
   const figname = "topbar";
   const nameWrapper = Skeletons.Box.Y({
     className: `${ui.fig.family}__name-wrapper`,
@@ -40,6 +40,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   });
 
   const titleWrapper = Skeletons.Box.X({
+    className: `${ui.fig.family}__title-wrapper`,
     kids: [logo, nameWrapper],
   });
 
