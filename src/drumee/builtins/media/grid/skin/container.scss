@@ -25,7 +25,7 @@
         display: block;
       }
 
-      border-radius:var(--corner-radius-3);
+      border-radius: var(--corner-radius-3);
       border: 1px dashed var(--primary-500);
 
       &.document,
@@ -77,7 +77,6 @@
     }
 
     &[data-icontype="vignette"] {
-
       &:before,
       &:after {
         display: none;

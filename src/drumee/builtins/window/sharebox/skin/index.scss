@@ -127,4 +127,16 @@
     min-height: 287px;
     background-color: var(--ewhite);
   }
+  &[data-device="mobile"] {
+    .settings-hub__main {
+      width: 100%;
+      height: auto;
+      background-color: var(--white);
+      overflow: hidden;
+      border-radius: var(--corner-radius-6);
+      overflow: auto;
+      max-height: calc(100vh - 140px);
+      padding-top: 20px;
+    }
+  }
 }

@@ -22,13 +22,15 @@
 
     &[data-device="mobile"] {
       left: 0;
-      width: 100%;
+      width: 95%;
       height: calc(100vh - 72px);
+      top: -36%;
     }
   }
 
   &__subwidget {
     padding: var(--spacer-5);
+    overflow: scroll;
   }
 
   &-topbar__container {
@@ -63,9 +65,11 @@
   }
 
   &-topbar__title {
-    @include drumee.typo($color: var(--default-text-color),
+    @include drumee.typo(
+      $color: var(--default-text-color),
       $size: 20px,
-      $weight: 600);
+      $weight: 600
+    );
     flex: 1;
     text-align: center;
   }
@@ -75,8 +79,7 @@
     height: auto;
     background-color: var(--white);
     overflow: hidden;
-    border-top-left-radius: var(--corner-radius-6);
-    border-top-right-radius: var(--corner-radius-6);
+    border-radius: var(--corner-radius-6);
     overflow: auto;
     max-height: calc(100vh - 140px);
   }
@@ -111,10 +114,10 @@
     height: 48px;
     grid-template-columns: 30% 70%;
     align-content: center;
-    display: grid;
+    gap: 10px;
 
     &-label {
-      color: var(--neutral-600, #8C929C);
+      color: var(--neutral-600, #8c929c);
       font-family: "Armin Grotesk";
       font-size: 14px;
       font-style: normal;
@@ -149,7 +152,7 @@
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
-      border: 1px solid var(--neutral-300, #D1D5DB);
+      border: 1px solid var(--neutral-300, #d1d5db);
       border-radius: 8px;
       cursor: pointer;
       transition: border-color 120ms ease;
@@ -204,7 +207,7 @@
   &__arrow-next {
     width: 16px;
     height: 16px;
-    color: #AFB3BB;
+    color: #afb3bb;
     flex-shrink: 0;
     cursor: pointer;
     transition: color 120ms ease;
@@ -212,7 +215,7 @@
     svg {
       width: 16px;
       height: 16px;
-      color: #AFB3BB;
+      color: #afb3bb;
     }
 
     &:hover {
@@ -304,11 +307,11 @@
     justify-content: space-around;
     align-items: center;
     padding: 16px;
-    border-top: 1px solid var(--neutral-200, #EBECF0);
+    border-top: 1px solid var(--neutral-200, #ebecf0);
     flex-shrink: 0;
   }
 
-  // Footer 
+  // Footer
   &__footer {
     &-action {
       display: flex;
@@ -329,7 +332,7 @@
     &-icon {
       width: 24px;
       height: 24px;
-      color: var(--neutral-600, #8C929C);
+      color: var(--neutral-600, #8c929c);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -341,9 +344,11 @@
     }
 
     &-label {
-      @include drumee.typo($color: var(--neutral-600, #8C929C),
+      @include drumee.typo(
+        $color: var(--neutral-600, #8c929c),
         $size: 12px,
-        $weight: 400);
+        $weight: 400
+      );
       text-align: center;
       white-space: nowrap;
     }
@@ -351,7 +356,7 @@
 
   // Overlay
   &__overlay {
-    background-color: rgba(0, 0, 0, .3);
+    background-color: rgba(0, 0, 0, 0.3);
     padding: 20px;
     width: 100%;
     height: 100%;
