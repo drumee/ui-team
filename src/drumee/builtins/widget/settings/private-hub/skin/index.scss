@@ -5,6 +5,9 @@
   &__ui {
     max-height: 100%;
     overflow: auto;
+    &[data-device="mobile"] {
+      padding: 20px;
+    }
   }
 
   &__wrapper {
@@ -15,6 +18,9 @@
     width: 100%;
     box-sizing: border-box;
     z-index: 10;
+    &[data-device="mobile"] {
+      padding: 0;
+    }
   }
 
   &__content {
@@ -146,9 +152,11 @@
   }
 
   &__title {
-    @include drumee.typo($color: var(--default-text-color),
+    @include drumee.typo(
+      $color: var(--default-text-color),
       $size: 20px,
-      $weight: 600);
+      $weight: 600
+    );
     flex: 1;
     justify-content: center;
     text-align: center;
@@ -366,9 +374,11 @@
     flex: 1;
     display: flex;
     align-items: center;
-    @include drumee.typo($color: var(--default-text-color),
+    @include drumee.typo(
+      $color: var(--default-text-color),
       $size: 14px,
-      $weight: 400);
+      $weight: 400
+    );
 
     svg {
       display: none;
@@ -527,7 +537,7 @@
     }
 
     // Radio button row inside option
-    >.drumee-box {
+    > .drumee-box {
       display: flex;
       align-items: flex-start;
       gap: 12px;

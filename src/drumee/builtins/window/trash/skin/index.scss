@@ -6,6 +6,11 @@
   &__ui {
     max-width: 700px;
     max-height: 90vh;
+    &[data-device="mobile"] {
+      width: 400px !important;
+      height: 500px !important;
+      transform: translateX(4%) translateY(15%);
+    }
   }
 
   .window-confirm {
@@ -18,6 +23,10 @@
       margin: auto;
       width: 500px;
       padding: 40px;
+      &[data-device="mobile"] {
+        width: 300px;
+        padding: 0;
+      }
     }
 
     &__message {

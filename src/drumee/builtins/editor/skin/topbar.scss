@@ -56,10 +56,13 @@
     );
     @include drumee.overflow-text;
     width: 100%;
-    align-items: center;
     justify-content: center;
     align-items: center;
     justify-items: center;
+    &[data-device="mobile"] {
+      justify-content: start;
+      margin-left: 100px;
+    }
   }
 
   &__icon {

@@ -9,12 +9,20 @@
       width: 55px;
       height: 48px;
       aspect-ratio: 55/48;
-      margin-bottom: 10px;
+    }
+  }
+
+  &__title-wrapper {
+    &[data-device="mobile"] {
+      align-items: center;
     }
   }
 
   &__name-wrapper {
     gap: 10px;
+    &[data-device="mobile"] {
+      gap: 0;
+    }
   }
 
   &__subtitle-wrapper {
@@ -24,6 +32,9 @@
     &.files {
       padding-right: 10px;
       border-right: 1px solid var(--neutral-300);
+    }
+    &[data-device="mobile"] {
+      display: none;
     }
   }
 
@@ -144,10 +155,12 @@
     }
 
     &__count {
-      @include drumee.typo($size: 8px,
+      @include drumee.typo(
+        $size: 8px,
         $line: 12px,
         $weight: 400,
-        $color: var(--teamroom-main));
+        $color: var(--teamroom-main)
+      );
       align-items: center;
       background-color: var(--default-background);
       border-radius: 50%;

@@ -1,6 +1,14 @@
 @use "mixins/drumee";
 
 .window-folder {
+  &__ui {
+    &[data-device="mobile"] {
+      width: 400px !important;
+      height: 500px !important;
+      transform: translateX(4%) translateY(15%);
+    }
+  }
+
   &__header {
     border-bottom: none;
     background: linear-gradient(135deg, #dcb2ff, #b251fb);
@@ -31,7 +39,6 @@
       width: 55px;
       height: 48px;
       aspect-ratio: 55/48;
-      margin-top: 10px;
     }
 
     &-info {
@@ -54,8 +61,17 @@
     }
   }
 
+  &__title-wrapper {
+    &[data-device="mobile"] {
+      align-items: center;
+    }
+  }
+
   &__name-wrapper {
     gap: 10px;
+    &[data-device="mobile"] {
+      gap: 0;
+    }
   }
 
   &__subtitle-wrapper {
@@ -65,6 +81,10 @@
     &.files {
       padding-right: 10px;
       border-right: 1px solid var(--neutral-300);
+    }
+
+    &[data-device="mobile"] {
+      display: none;
     }
   }
 

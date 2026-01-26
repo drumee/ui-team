@@ -2,6 +2,11 @@
 
 .window-website {
   &__ui {
+    &[data-device="mobile"] {
+      width: 400px !important;
+      height: 500px !important;
+      transform: translateX(4%) translateY(15%);
+    }
     &[data-content="folder"] {
       & .window-website-topbar__icon {
         display: none;
@@ -74,7 +79,13 @@
       width: 55px;
       height: 48px;
       aspect-ratio: 55/48;
-      margin-top: 8px;
+      // margin-top: 8px;
+    }
+  }
+
+  &__title-wrapper {
+    &[data-device="mobile"] {
+      align-items: center;
     }
   }
 
@@ -89,6 +100,10 @@
     &.files {
       padding-right: 10px;
       border-right: 1px solid var(--neutral-300);
+    }
+
+    &[data-device="mobile"] {
+      display: none;
     }
   }
 
@@ -202,10 +217,12 @@
       border-radius: 50%;
       align-items: center;
       justify-content: center;
-      @include drumee.typo($size: 8px,
+      @include drumee.typo(
+        $size: 8px,
         $line: 12px,
         $weight: 400,
-        $color: #2f2f2f);
+        $color: #2f2f2f
+      );
       right: -6px;
       top: 8px;
 

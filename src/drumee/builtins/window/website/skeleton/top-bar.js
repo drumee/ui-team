@@ -1,6 +1,5 @@
-
 const { button } = require("../../../skeleton/toolkit/buttons");
-const { breadcrumbs } = require('../../skeleton/toolkit')
+const { breadcrumbs } = require("../../skeleton/toolkit");
 
 const __window_topbar = function (ui) {
   const name = ui.model.get(_a.filename) || "???";
@@ -18,7 +17,7 @@ const __window_topbar = function (ui) {
         service: "show-settings",
       });
     }
-  } catch (error) { }
+  } catch (error) {}
 
   const figname = "topbar";
 
@@ -37,6 +36,7 @@ const __window_topbar = function (ui) {
   });
 
   const titleWrapper = Skeletons.Box.X({
+    className: `${ui.fig.family}__title-wrapper`,
     kids: [logo, nameWrapper],
   });
 

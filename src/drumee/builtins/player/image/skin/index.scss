@@ -1,6 +1,13 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .player-image {
+  &__ui {
+    &[data-device="mobile"] {
+      width: 400px !important;
+      height: 500px !important;
+      transform: translateX(4%) translateY(15%);
+    }
+  }
 
   img.smart-image {
     object-fit: cover;

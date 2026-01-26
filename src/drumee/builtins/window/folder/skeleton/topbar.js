@@ -5,7 +5,6 @@ const __skl_folder_topbar = function (ui) {
   const logo = require("../../skeleton/logo")(ui);
   const subtitle = require("../../skeleton/subtitle")(ui);
 
-
   name = Skeletons.Note({
     className: "name",
     sys_pn: "ref-window-name",
@@ -19,6 +18,7 @@ const __skl_folder_topbar = function (ui) {
   });
 
   const titleWrapper = Skeletons.Box.X({
+    className: `${ui.fig.family}__title-wrapper`,
     kids: [logo, nameWrapper],
   });
 
@@ -33,8 +33,11 @@ const __skl_folder_topbar = function (ui) {
       }),
     ],
   });
-  if ((ui.mget(_a.area) == _a.personal) || (ui.mget(_a.nid) !== !ui.mget(_a.home_id))){
-    settings = ""
+  if (
+    ui.mget(_a.area) == _a.personal ||
+    ui.mget(_a.nid) !== !ui.mget(_a.home_id)
+  ) {
+    settings = "";
   }
   let buttons;
   if (ui.canUpload()) {
@@ -64,9 +67,7 @@ const __skl_folder_topbar = function (ui) {
     kids: [
       downloadIcon,
       Skeletons.Box.X({
-        className: `${ui.fig.group}-${figname}__container ${ui.mget(
-          _a.area
-        )}`,
+        className: `${ui.fig.group}-${figname}__container ${ui.mget(_a.area)}`,
         kids: [
           Skeletons.Box.X({
             className: `${ui.fig.group}-${figname}__title`,

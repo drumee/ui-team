@@ -16,6 +16,11 @@
     justify-content: flex-start;
     align-items: center;
 
+    &[data-device="mobile"] {
+      min-width: unset !important;
+      width: 400px !important;
+    }
+
     &[data-type="confirm"] {
       background-color: var(--default-bg);
       border-radius: 24px;
