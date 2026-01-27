@@ -25,6 +25,10 @@
     &-main {
       grid-template-columns: repeat(3, 1fr);
       gap: var(--spacer-4);
+      &[data-device="mobile"] {
+        grid-template-columns: 1fr;
+        gap: var(--spacer-6);
+      }
     }
   }
 
@@ -250,10 +254,14 @@
 
     &.content {
       color: #475569;
+      flex-direction: column;
     }
 
     &-email-title {
       margin-left: 10px;
+      &[data-device="mobile"] {
+        margin-left: 0;
+      }
     }
 
     &-email {

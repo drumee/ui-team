@@ -13,19 +13,21 @@
     height: 640px;
     // width: 805px;
     background-color: var(--white);
-    border-radius: var(--corner-radius-4);
+    border-radius: var(--corner-radius-4) !important;
     display: flex;
     // gap: var(--spacer-5);
     padding: 0;
     overflow: hidden;
 
     &[data-device="mobile"] {
+      padding: 0;
       left: 0;
-      width: 100vw;
-      height: 100vh;
+      width: 90% !important;
+      height: 100%;
+      margin: 10px;
     }
 
-    transition :none;
+    transition: none;
 
     &[data-tab="billing"] {
       left: 0;
@@ -55,6 +57,10 @@
     grid-template-columns: 208px 1fr;
     gap: var(--spacer-5);
 
+    &[data-device="mobile"] {
+      grid-template-columns: 1fr;
+      grid-auto-rows: auto 1fr;
+    }
   }
 
   &__container {
@@ -63,6 +69,9 @@
     display: flex;
     background-color: var(--white);
     overflow: hidden;
+    &[data-device="mobile"] {
+      min-width: 0 !important;
+    }
   }
 
   &__nav {
@@ -120,6 +129,14 @@
     width: 100%;
     padding: var(--spacer-5) var(--spacer-4);
     border-bottom: 1px solid var(--neutral-200);
+
+    &[data-device="mobile"] {
+      gap: 0;
+      width: 400px;
+      flex-direction: row;
+      align-items: center;
+      overflow-x: auto;
+    }
   }
 
   &__item {
@@ -133,6 +150,12 @@
     line-height: 18px;
     border-radius: var(--corner-radius-3);
     cursor: pointer;
+
+    &[data-device="mobile"] {
+      flex-shrink: 0;
+      width: 150px;
+      justify-content: center;
+    }
 
     &[data-radio="on"] {
       border: 1px var(--primary-500) solid;
@@ -150,6 +173,9 @@
       line-height: 18px;
       font-weight: 600;
       color: var(--neutral-900);
+      &[data-device="mobile"] {
+        margin-top: 4px;
+      }
     }
 
     &.active {
@@ -175,6 +201,12 @@
       font-weight: 600;
       line-height: 22px;
       letter-spacing: 0.14px;
+    }
+
+    &[data-device="mobile"] {
+      flex-shrink: 0;
+      margin-right: 20px;
+      font-size: 20px;
     }
   }
 
@@ -312,5 +344,4 @@
   &__button-main {
     margin-top: auto;
   }
-
 }

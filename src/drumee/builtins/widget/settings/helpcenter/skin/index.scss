@@ -10,9 +10,10 @@
     background-color: var(--white);
     border-radius: var(--corner-radius-4);
     display: flex;
-    padding: 0;
+    padding: 20px;
     overflow: hidden;
     &[data-device="mobile"] {
+      padding: 0;
       left: 0;
       width: 90%;
       height: 100%;
@@ -193,8 +194,10 @@
     width: 100%;
     padding: var(--spacer-5) var(--spacer-4);
     border-bottom: 1px solid var(--neutral-200);
+    gap: 10px;
 
     &[data-device="mobile"] {
+      gap: 0;
       width: 400px;
       flex-direction: row;
       align-items: center;
