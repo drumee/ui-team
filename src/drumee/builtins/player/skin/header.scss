@@ -179,6 +179,16 @@
           border-radius: 100%;
         }
 
+        &.rotate-left {
+          transform: scaleX(-1);
+          width: 46px;
+          height: 46px;
+          padding: 14px;
+          background: var(--default-bg);
+          color: var(--neutral-900);
+          border-radius: 100%;
+        }
+
         &:hover {
           svg {
             color: var(--primary-500);

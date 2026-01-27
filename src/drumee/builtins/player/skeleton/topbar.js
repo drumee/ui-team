@@ -16,11 +16,29 @@ const __player_topbar = function (_ui_, size) {
     uiHandler: _ui_,
   });
 
+  const rotateLeftIcon = Skeletons.Button.Svg({
+    ico: "desktop_rotate",
+    sys_pn: "rotate-left-button",
+    className: "icon rotate-left",
+    service: _e.rotate,
+    value: -90,
+    uiHandler: _ui_,
+  });
+
+  const rotateRightIcon = Skeletons.Button.Svg({
+    ico: "desktop_rotate",
+    sys_pn: "rotate-right-button",
+    className: "icon link ",
+    service: _e.rotate,
+    value: 90,
+    uiHandler: _ui_,
+  });
+
   let actionIcons = "";
   if (_ui_.canDownload()) {
     actionIcons = Skeletons.Box.X({
       className: `${_ui_.fig.group}-topbar__icon-wrapper`,
-      kids: [downloadIcon],
+      kids: [downloadIcon, rotateLeftIcon, rotateRightIcon],
     });
   }
 
