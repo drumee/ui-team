@@ -49,7 +49,7 @@
     padding: 0;
     height: 100%;
     @include drumee.typo(
-      $size: 26px,
+      $size: 24px,
       $line: 24px,
       $weight: 400,
       $color: var(--default-text-reverse)
@@ -61,7 +61,7 @@
     justify-items: center;
     &[data-device="mobile"] {
       justify-content: start;
-      margin-left: 100px;
+      margin-left: 40px;
     }
   }
 
@@ -85,6 +85,7 @@
     &[data-visibility="0"] {
       visibility: hidden;
       pointer-events: none;
+      display: none;
     }
 
     &.pin {

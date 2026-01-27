@@ -1,7 +1,6 @@
 @use "sass:meta";
-@use 'mixins/drumee';
-@include meta.load-css('forbiden');
-
+@use "mixins/drumee";
+@include meta.load-css("forbiden");
 
 /* Theme 2 */
 // .theme-blue .grad-start { stop-color: #36D1DC; }
@@ -25,7 +24,6 @@
   }
 
   &__container {
-
     &.searchbox {
       overflow: hidden;
       width: 120px;
@@ -52,7 +50,6 @@
 
   // Vertical divider - reusable class
   &--divider {
-
     &-left::before,
     &-right::after {
       background-color: var(--dock-divider-color);
@@ -92,7 +89,6 @@
     }
   }
 
-
   &__main {
     background-color: var(--dock-main-background);
     border-radius: 9999px;
@@ -101,8 +97,6 @@
     justify-content: center;
     max-width: 100vw;
     padding: 5px 5px;
-
-
 
     &::before {
       border-radius: 9999px;
@@ -188,11 +182,14 @@
 
     &-text {
       white-space: nowrap;
-      @include drumee.typo($line: 15px, $size: 12px, $color: var(--dock-text-color));
+      @include drumee.typo(
+        $line: 15px,
+        $size: 12px,
+        $color: var(--dock-text-color)
+      );
       transition: color 0.2s ease;
     }
   }
-
 
   &__container.application {
     display: flex;
@@ -229,8 +226,10 @@
       z-index: -1 !important;
       box-shadow: var(--shadow-main);
       bottom: 0;
+      &[data-device="mobile"] {
+        transform: translate(-50px, -60px) !important;
+      }
     }
-
   }
 
   &__container.nav-container,
@@ -263,7 +262,9 @@
       width: 20px;
       display: block;
       margin: 0 auto;
-      transition: transform 0.2s ease, color 0.2s ease;
+      transition:
+        transform 0.2s ease,
+        color 0.2s ease;
       border-radius: 0;
       position: relative;
     }
@@ -286,7 +287,11 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       width: 100%;
-      @include drumee.typo($line: 15px, $size: 12px, $color: var(--default-text-reverse));
+      @include drumee.typo(
+        $line: 15px,
+        $size: 12px,
+        $color: var(--default-text-reverse)
+      );
     }
 
     &:hover {
@@ -347,7 +352,6 @@
     }
 
     &.maker {
-
       &.note {
         svg {
           padding: 0;
@@ -459,8 +463,15 @@
     white-space: nowrap;
     z-index: 10;
     user-select: none;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    @include drumee.typo($size: 11px, $line: 14px, $weight: 400, $color: var(--dock-text-color));
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+    @include drumee.typo(
+      $size: 11px,
+      $line: 14px,
+      $weight: 400,
+      $color: var(--dock-text-color)
+    );
 
     &::before {
       background: var(--dock-main-background);
@@ -497,12 +508,10 @@
     }
 
     &-text {
-
       white-space: nowrap;
       align-content: center;
       flex-wrap: wrap;
     }
-
   }
 
   @media (max-width: var(--small-width)) {
@@ -526,7 +535,6 @@
   }
 
   &__mobile-launch-wrapper {
-
     @media (max-width: var(--small-width)) {
       .desk-dock__container.application.maker {
         display: flex !important;
@@ -540,7 +548,6 @@
       .desk-dock__container.application {
         &::after {
           background-color: transparent !important;
-          ;
         }
 
         &.hub {
@@ -551,7 +558,6 @@
       }
 
       .launcher {
-
         & .calendar,
         & .addressbook,
         & .schedule {
@@ -561,7 +567,7 @@
     }
 
     & .menu-topic-items__wrapper {
-      background-color: rgba(47, 47, 47, .37);
+      background-color: rgba(47, 47, 47, 0.37);
       backdrop-filter: blur(27px);
       border-radius: 5px;
       bottom: 39px;
