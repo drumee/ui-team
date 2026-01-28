@@ -26,12 +26,7 @@ require("jquery-ui/ui/widgets/droppable");
 require("jquery-ui/ui/widgets/resizable");
 
 const gsap = require("gsap/all");
-// /**
-//  * 
-//  */
 document.onreadystatechange = function () {
   console.log(`Loading Vendor...`, Marionette, window.Backbone);
   window.gsap = gsap;
-  // window.$ = jquery;
-  // window.Marionette = Marionette;
 };

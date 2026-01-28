@@ -142,7 +142,7 @@ class __editor_markdown extends __player {
       this.suppress();
       let msg = e.reason || e.error || LOCALE.INTERNAL_ERROR;
       Wm.alert(msg);
-      this.warn("ERR:98", e);
+      this.warn("_loadContent Error:14x5", e);
     });
   }
   /**

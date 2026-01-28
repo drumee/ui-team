@@ -69,8 +69,10 @@
     display: flex;
     background-color: var(--white);
     overflow: hidden;
+
     &[data-device="mobile"] {
       min-width: 0 !important;
+      max-width: 90vw;
     }
   }
 
@@ -173,6 +175,7 @@
       line-height: 18px;
       font-weight: 600;
       color: var(--neutral-900);
+
       &[data-device="mobile"] {
         margin-top: 4px;
       }
@@ -287,6 +290,10 @@
 
       &.name {
         grid-template-columns: 1fr 1fr;
+
+        &[data-device="mobile"] {
+          grid-template-columns: 1fr;
+        }
       }
     }
 
