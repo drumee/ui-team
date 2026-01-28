@@ -14,6 +14,11 @@
     top: 0;
     left: calc(50vw - 400px);
     border-bottom: none;
+    &[data-device="mobile"] {
+      width: 400px !important;
+      height: 500px !important;
+      transform: translateX(4%) translateY(15%);
+    }
   }
 
   &__header {
@@ -27,6 +32,10 @@
     &__container {
       justify-content: space-between;
       padding: 0 40px;
+      &[data-device="mobile"] {
+        gap: 10px;
+        justify-content: center;
+      }
     }
 
     &__menu {
@@ -46,8 +55,9 @@
     &__subtitle-wrapper {
       gap: 10px;
       color: white;
-
-
+      &[data-device="mobile"] {
+        display: none;
+      }
     }
 
     &__add-btn {
@@ -67,14 +77,18 @@
         padding-right: 1px;
         padding-top: 0px;
         width: 19px;
-        @include drumee.typo($size: 11px,
+        @include drumee.typo(
+          $size: 11px,
           $line: 14px,
-          $color: var(--default-text-notification));
+          $color: var(--default-text-notification)
+        );
 
         .inner {
-          @include drumee.typo($size: 11px,
+          @include drumee.typo(
+            $size: 11px,
             $line: 14px,
-            $color: var(--default-text-notification));
+            $color: var(--default-text-notification)
+          );
         }
       }
     }
@@ -82,11 +96,12 @@
 
   & .title {
     align-items: center;
-    @include drumee.typo($size: 32px,
+    @include drumee.typo(
+      $size: 32px,
       $line: 16px,
-      $color: var(--default-text-reverse));
+      $color: var(--default-text-reverse)
+    );
   }
-
 
   &-breadcrumbs__icon {
     &.breadcrumb-icon {
@@ -97,7 +112,6 @@
       width: 22px;
     }
   }
-
 
   &-menu {
     &__trigger-wrapper {
@@ -236,10 +250,12 @@
     &__name {
       padding-top: 2px;
       padding-left: 8px;
-      @include drumee.typo($size: 14px,
+      @include drumee.typo(
+        $size: 14px,
         $weight: 300,
         $line: 16px,
-        $color: var(--default-text-color));
+        $color: var(--default-text-color)
+      );
 
       &.contactbook {
         margin-left: -6px;
@@ -329,9 +345,11 @@
     justify-content: center;
     min-width: 280px;
     text-align: center;
-    @include drumee.typo($size: 16px,
+    @include drumee.typo(
+      $size: 16px,
       $line: 30px,
-      $color: var(--tertiary-text-color));
+      $color: var(--tertiary-text-color)
+    );
 
     & .nocontact-text {
       justify-content: center;

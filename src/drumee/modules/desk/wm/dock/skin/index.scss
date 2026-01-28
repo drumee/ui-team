@@ -254,6 +254,11 @@
     &[data-device="mobile"] {
       width: 40px;
       height: 40px;
+
+      svg {
+        height: 16px;
+        width: 16px;
+      }
     }
 
     svg {
@@ -295,6 +300,21 @@
     }
 
     &:hover {
+      &[data-device="mobile"] {
+        &::before {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 30px;
+          height: 30px;
+          background-color: var(--default-bg);
+          border-radius: 50%;
+          z-index: 0;
+        }
+      }
+
       &::before {
         content: "";
         position: absolute;

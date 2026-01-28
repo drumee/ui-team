@@ -9,6 +9,11 @@
 .window-bigchat {
   &__ui {
     background-color: inherit;
+    &[data-device="mobile"] {
+      width: 400px !important;
+      height: 500px !important;
+      transform: translateX(4%) translateY(15%);
+    }
   }
 
   &__main {
@@ -44,11 +49,18 @@
     &__container {
       justify-content: space-between;
       padding: 0 40px;
+      &[data-device="mobile"] {
+        gap: 10px;
+        justify-content: center;
+      }
     }
 
     &__content {
       align-items: center;
       height: 100%;
+      &[data-device="mobile"] {
+        height: auto;
+      }
     }
 
     &__title-wrapper {
@@ -66,6 +78,9 @@
       &.contacts {
         padding-right: 10px;
         border-right: 1px solid var(--neutral-400);
+      }
+      &[data-device="mobile"] {
+        display: none;
       }
     }
 
