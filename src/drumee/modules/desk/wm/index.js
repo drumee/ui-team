@@ -248,15 +248,6 @@ class __window_manager extends push {
         }
       }, 2000)
     });
-    // let timer = setInterval(() => {
-    //   if (!window.Notification) return
-    //   clearInterval(timer);
-    //   Notification.requestPermission((p) => {
-    //     if (p != "granted") {
-    //       this.alert(LOCALE.NOTIFICATION_DISABLED)
-    //     }
-    //   })
-    // }, 1000)
   }
 
   /**
@@ -288,15 +279,12 @@ class __window_manager extends push {
     this.visible = !document.hidden;
     document.onvisibilitychange = async (e) => {
       if (!this.visible) {
-        this.verbose("AAA:214 -- VISIBILITY", this.visible);
         ActivityHandler && ActivityHandler.resync();
         await uiRouter.ensureWebsocket();
-        //wsRouter.ping({ type: 'checkConnection' })
         this.updatePeersState();
       }
       this.visible = !document.hidden;
     };
-    // this.checkUserInteraction();
     this.loadReminders();
 
     window.addEventListener("online", () => {

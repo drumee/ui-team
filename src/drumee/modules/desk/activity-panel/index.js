@@ -352,7 +352,6 @@ class __activity_panel extends LetcBox {
     let messages = await this.postService(SERVICE.drumate.notification_center, { hub_id: Visitor.id });
     unread_count = parseInt(messages.length) + parseInt(invitations.length) + parseInt(unread_count);
     this.triggerHandlers({ unread_count })
-    this.debug("AAA:331", { unread_count }, invitations)
     this.updatePriorityList(invitations, messages)
     if (this.__list && !this.__list.isDestroyed()) {
       this.__list.restart()

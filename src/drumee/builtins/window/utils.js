@@ -74,6 +74,13 @@ class __window_mfs extends DrumeeMFS {
       args.last = 5;
     }
     let changed = 0;
+    if (this.__list && !this.__list.isDestroyed()) {
+      for (let m of this.__list.children.toArray()) {
+        if(m.isUploading){
+          return
+        }
+      }
+    }
     this.fetchService(SERVICE.changelog.read, args).then((data = []) => {
       if (!data.length) return;
       let rows = data.filter((e) => {
