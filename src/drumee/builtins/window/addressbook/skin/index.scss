@@ -168,6 +168,10 @@
         &__wrapper {
           left: -5px;
           padding: 10px;
+          &[data-device="mobile"] {
+            left: 50%;
+            transform: translateX(-50%);
+          }
         }
 
         // &:before {
@@ -279,6 +283,14 @@
     width: 100%;
     flex: 1;
 
+    &[data-device="mobile"] {
+      &.view-content {
+        flex-direction: column;
+        height: auto;
+        overflow: scroll;
+      }
+    }
+
     &.main-content {
       height: calc(100% - 132px);
     }
@@ -304,6 +316,9 @@
 
   &__contact-wrapper {
     width: 320px;
+    &[data-device="mobile"] {
+      width: 100%;
+    }
   }
 
   &__icon {

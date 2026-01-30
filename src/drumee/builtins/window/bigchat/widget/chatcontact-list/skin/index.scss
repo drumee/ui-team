@@ -106,6 +106,10 @@
     width: 100%;
     padding: 10px;
 
+    &[data-device="mobile"] {
+      padding: 40px;
+    }
+
     & .drumee-spinner {
       height: 35px;
       margin: auto;

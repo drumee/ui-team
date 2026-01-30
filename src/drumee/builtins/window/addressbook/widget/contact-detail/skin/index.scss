@@ -1,11 +1,9 @@
 @use "sass:meta";
-@use 'mixins/drumee';
-@include meta.load-css('action-menu.scss');
-@include meta.load-css('popup.scss');
+@use "mixins/drumee";
+@include meta.load-css("action-menu.scss");
+@include meta.load-css("popup.scss");
 
 .addressbook-widget-contact-detail {
-
-
   &.box {
     background-color: var(--default-background);
   }
@@ -20,6 +18,9 @@
     height: 100%;
     overflow-y: auto;
     width: 100%;
+    &[data-device="mobile"] {
+      overflow-y: unset;
+    }
   }
 
   &__container {
@@ -48,6 +49,9 @@
       align-items: center;
       justify-content: space-between;
       padding: 0px 10px;
+      &[data-device="mobile"] {
+        padding: 0px 40px;
+      }
     }
 
     &.invite-header {
@@ -61,7 +65,11 @@
 
     &.notifier {
       align-items: center;
-      @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-success));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 19px,
+        $color: var(--default-text-success)
+      );
     }
 
     &.message {
@@ -119,7 +127,7 @@
     &.ab_address {
       height: 28px;
       left: 2px;
-      opacity: .7;
+      opacity: 0.7;
       top: -7px;
     }
 
@@ -179,7 +187,11 @@
 
       .tooltips {
         border-radius: var(--border-radius);
-        @include drumee.typo($size: 11px, $line: 15px, $color: var(--default-text-tooltips));
+        @include drumee.typo(
+          $size: 11px,
+          $line: 15px,
+          $color: var(--default-text-tooltips)
+        );
         background-color: var(--background-tooltips);
         margin-left: -180px;
         margin-top: 25px;
@@ -237,7 +249,6 @@
 
     &.email {
       padding-left: 5px;
-
     }
 
     &.name {
@@ -261,10 +272,18 @@
   &__note {
     padding-bottom: 2px;
     padding-left: 5px;
-    @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-color));
+    @include drumee.typo(
+      $size: 16px,
+      $line: 19px,
+      $color: var(--default-text-color)
+    );
 
     &.blocked {
-      @include drumee.typo($size: 12px, $line: 14px, $color: var(--default-text-reverse));
+      @include drumee.typo(
+        $size: 12px,
+        $line: 14px,
+        $color: var(--default-text-reverse)
+      );
       align-items: center;
       background: var(--default-background-alert);
       border-radius: var(--border-radius);
@@ -277,7 +296,11 @@
     }
 
     &.fullname {
-      @include drumee.typo($size: 15px, $line: 16px, $color: var(--secondary-text-color));
+      @include drumee.typo(
+        $size: 15px,
+        $line: 16px,
+        $color: var(--secondary-text-color)
+      );
       align-items: center;
       max-width: 250px;
       overflow: hidden;
@@ -337,11 +360,14 @@
         padding-left: 0px;
         white-space: nowrap;
 
-
         width: 200px;
 
         & .tooltips {
-          @include drumee.typo($size: 12px, $line: 12px, $color: var(--default-text-tooltips));
+          @include drumee.typo(
+            $size: 12px,
+            $line: 12px,
+            $color: var(--default-text-tooltips)
+          );
           background-color: var(--background-tooltips);
           border-radius: var(--border-radius);
           height: 100%;
@@ -362,7 +388,11 @@
 
     &.comment {
       border-radius: var(--border-radius);
-      @include drumee.typo($size: 16px, $line: 20px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 20px,
+        $color: var(--default-text-color)
+      );
       background-color: var(--default-background);
       border: 1px solid var(--default-frame);
       box-sizing: border-box;
@@ -402,13 +432,19 @@
       padding: 5px;
       text-align: center;
       width: 170px;
-      @include drumee.typo($size: 16px, $line: 20px, $color: var(--btn-commit-text));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 20px,
+        $color: var(--btn-commit-text)
+      );
 
       &.memory {
         height: 60px;
         min-width: 120px;
         width: 190px;
         @include drumee.typo($size: 16px, $line: 26px);
+        color: white;
+        background-color: var(--btn-commit-background-hover);
       }
 
       &:hover {
@@ -425,11 +461,20 @@
       & input {
         border-bottom: 1px solid var(--default-entry-border-bottom);
         width: 100%;
-        @include drumee.typo($size: 16px, $line: 19px, $color: var(--default-text-color));
+        @include drumee.typo(
+          $size: 16px,
+          $line: 19px,
+          $color: var(--default-text-color)
+        );
 
         &::placeholder {
           text-transform: capitalize;
-          @include drumee.typo($size: 16px, $line: 19px, $weight: 300, $color: var(--default-text-placeholder));
+          @include drumee.typo(
+            $size: 16px,
+            $line: 19px,
+            $weight: 300,
+            $color: var(--default-text-placeholder)
+          );
         }
       }
     }
@@ -439,7 +484,11 @@
 
       & textarea {
         border-radius: var(--border-radius);
-        @include drumee.typo($size: 12px, $line: 14px, $color: var(--default-text-color));
+        @include drumee.typo(
+          $size: 12px,
+          $line: 14px,
+          $color: var(--default-text-color)
+        );
         background: var(--default-block-background);
         border: none;
         outline: none;
@@ -447,7 +496,12 @@
         resize: none;
 
         &::placeholder {
-          @include drumee.typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));
+          @include drumee.typo(
+            $size: 12px,
+            $line: 14px,
+            $weight: 300,
+            $color: var(--default-text-placeholder)
+          );
         }
       }
     }
@@ -457,6 +511,7 @@
     justify-items: center;
     justify-content: center;
     width: 100%;
+    padding-top: var(--spacer-8);
 
     & .button {
       align-items: center;
@@ -489,28 +544,28 @@
     }
 
     &.resend {
-      background-color: var(--btn-commit-background);
+      background-color: var(--primary-500);
       color: var(--btn-commit-text);
       max-width: 165px;
       width: auto;
-      padding: 5px 10px; //5px
+      padding: 5px 20px;
 
       &:hover {
         background-color: var(--btn-commit-background-hover);
       }
     }
 
-    &.archived, &.unarchive {
-      background-color: var(--primary-600, #7C3AED);
+    &.archived,
+    &.unarchive {
+      background-color: var(--primary-600, #7c3aed);
       color: var(--white, #ffffff);
       border: 0px;
       width: 115px;
 
       &:hover {
-        background-color: var(--primary-700, #6D28D9);
+        background-color: var(--primary-700, #6d28d9);
       }
     }
-    
 
     &.destroy,
     &.block {

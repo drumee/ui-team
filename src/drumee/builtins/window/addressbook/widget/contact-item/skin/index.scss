@@ -1,24 +1,24 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .contact-item {
   &__ui {
     background-color: inherit;
     cursor: pointer;
     overflow: hidden;
-    @include drumee.typo( $color: var(--default-text-color));
+    @include drumee.typo($color: var(--default-text-color));
 
     &:hover,
-    &[data-active=active],
-    &[data-radio=on] {
+    &[data-active="active"],
+    &[data-radio="on"] {
       background: var(--default-background-hover);
-      
+
       & .profile-icon,
-      & .note-reader{
+      & .note-reader {
         color: var(--default-text-hover);
       }
     }
   }
-  
+
   &__main {
     background-color: inherit;
   }
@@ -28,33 +28,33 @@
   }
 
   &__icon {
-    color:var(--default-icon-neutral);
-    height: 28px; 
-    width: 25px; 
+    color: var(--default-icon-neutral);
+    height: 28px;
+    width: 25px;
     min-width: 25px;
-    margin-top: -1px; 
+    margin-top: -1px;
     margin-left: 2px;
 
     & .note-reader {
       &:hover {
-      color:var(--default-icon-hover);
+        color: var(--default-icon-hover);
       }
     }
-    &.memory{
+    &.memory {
       height: 22px;
-      margin-top:  2px;
-      width:22px;
-      min-width:22px;
+      margin-top: 2px;
+      width: 22px;
+      min-width: 22px;
       margin-left: 5px;
     }
     &.sent {
       height: 24px;
       margin-top: 0px;
       width: 24px;
-      &.user-help{
+      &.user-help {
         height: 31px;
         margin-top: -4px;
-        width:31px;
+        width: 31px;
         min-width: 31px;
       }
     }
@@ -62,18 +62,16 @@
   &__profile {
     &.user-profile__ui {
       border-radius: 50%;
-      height:29px; 
-      width:29px; 
+      height: 29px;
+      width: 29px;
       margin-top: -2px;
 
-      &[data-default="1"]{
+      &[data-default="1"] {
         border: none;
       }
     }
   }
 }
-
-
 
 .widget-contacts__item {
   & .contact-item {
@@ -81,10 +79,11 @@
     padding-top: 5px;
     padding-bottom: 5px;
     margin: 1px 0px 0px 1px;
-    
+    border-radius: var(--spacer-2);
+
     height: 35px;
-    @include drumee.typo( $size :14px, $line: 16px);
-    
+    @include drumee.typo($size: 14px, $line: 16px);
+
     &__profile {
       & section {
         font-size: 80%;
@@ -92,9 +91,13 @@
     }
 
     &__name {
-      @include drumee.typo( $size :14px, $line: 16px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 14px,
+        $line: 16px,
+        $color: var(--default-text-color)
+      );
       margin-top: 3px;
-      overflow:hidden;
+      overflow: hidden;
       padding: 2px 3px 3px 15px;
       width: 200px;
       @include drumee.overflow-text;
@@ -110,23 +113,23 @@
 
 .addressbook-widget-search__item {
   & .contact-item {
-    padding: 4px 5px 3px 12px; 
+    padding: 4px 5px 3px 12px;
     height: 33px;
-    @include drumee.typo($size:12px, $line: 14px);
+    @include drumee.typo($size: 12px, $line: 14px);
 
-    &__icon{
+    &__icon {
       color: var(--default-icon-neutral);
       height: 28px;
-      
+
       width: 25px;
-      &:hover{
-        color:var(--default-icon-reverse);
+      &:hover {
+        color: var(--default-icon-reverse);
       }
     }
     &__profile {
       color: var(--default-user-icon);
       height: 29px;
-     
+
       width: 29px;
     }
 

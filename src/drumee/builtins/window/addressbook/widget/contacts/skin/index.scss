@@ -1,113 +1,123 @@
 @use "mixins/drumee";
 
 .widget-contacts {
-	&__ui {
-		background-color: var(--default-block-background);
-		width: calc(100% - 2px);
-	}
-	
-	&-header {
-		padding: 5px;
-		width :	100%;
-		height: 34px; 
-		
-		&__title {
-			@include drumee.typo($size: 15px, $line: 16px, $color: var(--ab-default-text-title)); 
-			padding-bottom: 8px;			
-			padding-top: 7px; 
-			margin-left: auto;
-			margin-right: auto;
-		}
+  &__ui {
+    background-color: var(--default-block-background);
+    width: calc(100% - 2px);
+    &[data-device="mobile"] {
+      padding: 20px 20px 40px;
+      background-color: transparent;
+    }
+  }
 
-		&__icon {
-			background-color: var(--default-background);
-			cursor: pointer;
-			margin: 5px;
-			position: absolute;
-			right: 0;
-			& svg {
-				fill : var(--default-icon-neutral);
-			}
-		}
-	}
+  &-header {
+    padding: 5px;
+    width: 100%;
+    height: 34px;
 
-	&__separator {
-		background-color: var(--default-separator);
-		border-radius: 1px;
-		height: 1px;
-		margin: 3px 0 0 0;
-		
-		width: 100%;
-	}
+    &__title {
+      @include drumee.typo(
+        $size: 15px,
+        $line: 16px,
+        $color: var(--ab-default-text-title)
+      );
+      padding-bottom: 8px;
+      padding-top: 7px;
+      margin-left: auto;
+      margin-right: auto;
+    }
 
-	&-content {
-		margin-top:5px;
-		padding-bottom: 5px;
-		padding-left: 14px;
-		padding-top: 5px;
+    &__icon {
+      background-color: var(--default-background);
+      cursor: pointer;
+      margin: 5px;
+      position: absolute;
+      right: 0;
+      & svg {
+        fill: var(--default-icon-neutral);
+      }
+    }
+  }
 
-		&__items {
-			width: 100%;
-		}
-		
-		&__icon {
-			& svg {
-				fill :var(--default-user-icon);
-			}
-		}
-		
-		&__name {
-			@include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-color));			
-			margin-top: 3px; 
-			padding: 3px 3px 3px 15px;
-			max-width: 190px;
-			width: 100%;
-			@include drumee.overflow-text;
-		}
-	}
+  &__separator {
+    background-color: var(--default-separator);
+    border-radius: 1px;
+    height: 1px;
+    margin: 3px 0 0 0;
 
-	&__item {
-		// height: calc(100% - 44px);
-		// margin-top: -1px;
-		width: 100%;
-		padding: 0 16px;
+    width: 100%;
+  }
 
-		.smart-container {
-			display: grid;
-			grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-			gap: 16px;
-			width: 100%;
+  &-content {
+    margin-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 14px;
+    padding-top: 5px;
 
-			// Responsive: max 3 columns, min 1 column
-			// For screens >= 800px: show max 3 columns
-			@media (min-width: 800px) {
-				grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-				max-width: calc(3 * 250px + 2 * 16px);
-			}
+    &__items {
+      width: 100%;
+    }
 
-			// For screens 520px - 799px: show max 2 columns
-			@media (min-width: 520px) and (max-width: 799px) {
-				grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-				max-width: calc(2 * 250px + 1 * 16px);
-			}
+    &__icon {
+      & svg {
+        fill: var(--default-user-icon);
+      }
+    }
 
-			// For screens < 520px: show 1 column
-			@media (max-width: 519px) {
-				grid-template-columns: 1fr;
-				max-width: 100%;
-			}
-		}
-	}
+    &__name {
+      @include drumee.typo(
+        $size: 14px,
+        $line: 16px,
+        $color: var(--default-text-color)
+      );
+      margin-top: 3px;
+      padding: 3px 3px 3px 15px;
+      max-width: 190px;
+      width: 100%;
+      @include drumee.overflow-text;
+    }
+  }
 
-	&__contacts {
-		height: 100%;
-		overflow: hidden;
-		width: 100%;
-	}
+  &__item {
+    width: 100%;
+    padding: 12px 16px;
 
-  .drumee-spinner{
-	  height: 35px;
-	  margin: auto;
-	  width : 35px;
-	}
+    .smart-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+      width: 100%;
+
+      // Responsive: max 3 columns, min 1 column
+      // For screens >= 800px: show max 3 columns
+      @media (min-width: 800px) {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        max-width: calc(3 * 250px + 2 * 16px);
+      }
+
+      // For screens 520px - 799px: show max 2 columns
+      @media (min-width: 520px) and (max-width: 799px) {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        max-width: calc(2 * 250px + 1 * 16px);
+      }
+
+      // For screens < 520px: show 1 column
+      @media (max-width: 519px) {
+        grid-template-columns: 1fr;
+        max-width: 100%;
+      }
+    }
+  }
+
+  &__contacts {
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .drumee-spinner {
+    height: 35px;
+    margin: auto;
+    width: 35px;
+  }
 }
