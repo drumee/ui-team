@@ -1,4 +1,3 @@
-// const emojiFlags = require('emoji-flags');
 
 class __menu_input extends LetcBox {
 
@@ -19,16 +18,17 @@ class __menu_input extends LetcBox {
 
     // If items are provided in opt, use them; otherwise use emojiFlags (country code default)
     let items = this.mget(_a.items) || [];
-    // if (!items || items.length === 0) {
-    //   // Default: populate items from emojiFlags for country code
-    //   items = []
-    //   for (let k of _.keys(emojiFlags)) {
-    //     if (/[A-Z]{2,2}/.test(k)) {
-    //       let { name: locale_name, emoji } = emojiFlags.countryCode(k) || {}
-    //       items.push({ country_code: k, emoji, locale_name })
-    //     }
-    //   }
-    // }
+    if (!items || items.length === 0) {
+      const emojiFlags = require('emoji-flags');
+      // Default: populate items from emojiFlags for country code
+      items = []
+      for (let k of _.keys(emojiFlags)) {
+        if (/[A-Z]{2,2}/.test(k)) {
+          let { name: locale_name, emoji } = emojiFlags.countryCode(k) || {}
+          items.push({ country_code: k, emoji, locale_name })
+        }
+      }
+    }
     this.mset({ items })
     // this.debug("AAA:19", items, this.mget('items'), emojiFlags)
   }
@@ -96,7 +96,7 @@ class __menu_input extends LetcBox {
    * 
    */
   clearItems() {
-    this.ensurePart('items').then((p) => { 
+    this.ensurePart('items').then((p) => {
       p.clear();
       // Reset icon to carret-down when menu closes
       this.ensurePart("carret").then((carretPart) => {
@@ -278,7 +278,7 @@ class __menu_input extends LetcBox {
     // Get value from item - support refLabel, value, country_code (for country), and name
     let refLabel = this.mget('refLabel');
     let value = cmd.mget(refLabel) || cmd.mget('value') || cmd.mget('country_code') || cmd.mget(_a.name);
-    
+
     // If cmd is null or value is empty, try to get from input field (direct input)
     if (!cmd || !value || value === "") {
       return this.ensurePart("entry").then((entryPart) => {
@@ -300,7 +300,7 @@ class __menu_input extends LetcBox {
               } else {
                 displayContent = `${value} minutes`;
               }
-              
+
               // Update shower with formatted display
               this.ensurePart("shower").then((p) => {
                 p.set({ content: displayContent });
@@ -330,7 +330,7 @@ class __menu_input extends LetcBox {
         this.triggerHandlers({ source: cmd || this });
       });
     }
-    
+
     // For normal item selection, use standard flow
     this.ensurePart("shower").then((p) => {
       let content = cmd.mget(_a.content) || cmd.mget(_a.value)
