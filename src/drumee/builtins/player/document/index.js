@@ -57,9 +57,9 @@ class __player_document extends PlayerInteract {
    */
   onWsMessage(args) {
     let { service, data, options } = args
-    this.debug("AAAA:68", { service, data, options })
     switch (options.service) {
       case "media.status":
+        this.debug("AAAA:onWsMessage:62", { service, data, options })
         this.checkPreview(args)
         break;
     }
@@ -73,12 +73,14 @@ class __player_document extends PlayerInteract {
       const arrayBuffer = await response.arrayBuffer();
       const pdfData = new Uint8Array(arrayBuffer);
       // Load the document
+      this.message(`${LOCALE.LOADING} ${this.mget(_a.filepath)}`)
       const pdfDocument = await loadPdfDocument(pdfData);
       window.addEventListener('beforeunload', () => {
         pdfDocument.close();
       });
       return pdfDocument;
     } catch (error) {
+      this.message('')
       this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW, e);
       this.warn('Error rendering PDF:', error);
     }
@@ -197,7 +199,12 @@ class __player_document extends PlayerInteract {
    * 
    */
   message(content) {
-    if (!this.__progressText) return;
+    if (!this.__progressText || !this.__progress) return;
+    if (content) {
+      this.__progress.setState(1)
+    } else {
+      this.__progress.setState(0)
+    }
     this.__progressText.set({ content });
   }
 
@@ -296,6 +303,8 @@ class __player_document extends PlayerInteract {
   async display() {
     const { url } = this.actualNode(_a.pdf);
     let w = this.size.width;
+    if (this._isBuildingPages) return;
+    this._isBuildingPages = 1;
     try {
       const a = this.info['page size'].split(/ +/);
       w = parseInt(a[0]);
@@ -307,10 +316,11 @@ class __player_document extends PlayerInteract {
       this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW, e);
       return
     }
-
-    let pdfDocument = await this.getDocument(url)
-    this.loadPages(pdfDocument)
     this.message(LOCALE.DOWNLOADING);
+    let pdfDocument = await this.getDocument(url)
+    await this.loadPages(pdfDocument)
+    this._isBuildingPages = 1;
+    this.message();
   }
 
 
@@ -452,11 +462,10 @@ class __player_document extends PlayerInteract {
       return;
     }
 
-    if (!this.__progressBar || this.__progressBar.isDestroyed()) return;
-    this.__progressBar.el.style.width = `${v}%`;
     if (this.__progress) {
-      this.__progress.el.dataset.state = 1;
       this.message(LOCALE.DOWNLOADING + ` - ${filesize(p.loaded)}/${filesize(p.total)}`);
+      if (!this.__progressBar || this.__progressBar.isDestroyed()) return;
+      this.__progressBar.el.style.width = `${v}%`;
     }
     return true;
   }

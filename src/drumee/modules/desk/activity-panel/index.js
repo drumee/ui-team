@@ -378,7 +378,7 @@ class __activity_panel extends LetcBox {
    */
   onWsMessage(args) {
     let { service, data, options } = args
-    this.debug("AAAA:373", { service, data, options })
+    // this.debug("AAAA:373", { service, data, options })
     if (!data) return;
     if (!_.isArray(data)) {
       data = [data]
