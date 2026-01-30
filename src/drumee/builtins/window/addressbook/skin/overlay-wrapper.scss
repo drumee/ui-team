@@ -14,6 +14,9 @@
       position: absolute;
       width: 100%;
       z-index: 110;
+      &[data-device="mobile"] {
+        height: 200%;
+      }
     }
 
     & .overlay-notifier {
@@ -60,7 +63,12 @@
       }
 
       &__note {
-        @include drumee.typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
+        @include drumee.typo(
+          $size: 18px,
+          $weight: 300,
+          $line: 26px,
+          $color: var(--default-text-color)
+        );
 
         &.input-content {
           color: var(--eblue);
