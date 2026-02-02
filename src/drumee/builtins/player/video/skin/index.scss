@@ -14,9 +14,10 @@
     width: 100%;
 
     &[data-device="mobile"] {
-      width: 400px !important;
+      width: 360px !important;
       height: 500px !important;
-      transform: translateX(4%) translateY(15%);
+      left: 50% !important;
+      transform: translateX(-50%) translateY(15%);
     }
   }
 
