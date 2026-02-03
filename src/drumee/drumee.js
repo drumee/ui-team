@@ -169,6 +169,9 @@ class Drumee extends Marionette.Application {
     if (user.id) {
       Visitor.respawn(user);
     }
+    const event = new Event('drumee:app:started');
+    event.root = this.content;
+    document.dispatchEvent(event);
     if (!Backbone.History.started) Backbone.history.start();
   }
 

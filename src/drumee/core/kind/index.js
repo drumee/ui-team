@@ -165,8 +165,9 @@ class __kind extends Backbone.Model {
   loadPlugin({ name, kind }) {
     return new Promise((resolve, reject) => {
       if (this.exists(kind)) {
-        this.warn(`${kind} already exists. Overloading not permitted as plugin`);
-        return reject();
+        this.debug(`${kind} already exists. Using existing`);
+        return resolve(this.get(kind))
+        // return reject();
       }
       if (!SERVICE.bootstrap.plugin) {
         this.warn("Plugin service not found");
@@ -175,12 +176,13 @@ class __kind extends Backbone.Model {
       this.fetchService(SERVICE.bootstrap.plugin, {
         name,
       }).then((data) => {
+        this.debug("Got plugin data", data)
         if (!data || !data.path) {
           this.warn("Plugin service not found");
           return reject();
         }
         if (Plugins.get(data.path)) {
-           this.warn(`${kind} already loaded, skipped`, data.path);
+           this.debug(`${kind} already loaded, skipped`, data.path);
           return resolve(this.get(kind))
         }
         this.once("addons:registered", () => { resolve(this.get(kind)) })

@@ -205,6 +205,7 @@ export function dayOfTime(time, format) {
  * @returns 
  */
 export function loadJS(url) {
+  console.log("AAA:208 loding js from", url)
   const a = new Promise(function (resolve, reject) {
     const xhr = new XMLHttpRequest();
     // xhr.allowCORS(xhr, url);
