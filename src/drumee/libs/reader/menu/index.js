@@ -333,11 +333,16 @@ class __menu_topic extends LetcBox {
     this.__items.el.dataset.state = _a.open;
     this.__itemsWrapper.el.dataset.state = _a.open;
     this._animIsActive = true;
-    let items_height = this.__items.$el.height();
+    let items_height = this.__itemsWrapper.el.outerHeight();
+    let items_width = this.__itemsWrapper.el.outerWidth();
     let trigger_height = this.__trigger.$el.height();
     switch (this.mget(_a.direction)) {
       case _a.down:
         TweenLite.set(this.__items.$el, { y: -(items_height + trigger_height) });
+        TweenLite.set(this.__itemsWrapper.$el, {
+          y: 0,
+          opacity: 0,
+        });
         break;
       case _a.up:
         TweenLite.set(this.__items.$el, { y: items_height });
@@ -345,6 +350,12 @@ class __menu_topic extends LetcBox {
           y: 0,
           opacity: 0,
         });
+        break;
+      case _a.left:
+        TweenLite.set(this.__items.$el, { x: items_width });
+        break;
+      case _a.right:
+        TweenLite.set(this.__items.$el, { x: -items_width });
         break;
     }
   }
@@ -363,8 +374,10 @@ class __menu_topic extends LetcBox {
     this.trigger("change:state", this)
     this.trigger(_e.open);
     const d = this.mget(_a.duration) || Visitor.timeout(this.mget(_a.duration));
-    let items_width = this.__items.$el.width();
-    let items_height = this.__items.$el.height();
+    let items_height = this.__itemsWrapper.el.outerHeight();
+    let items_width = this.__itemsWrapper.el.outerWidth();
+    // let items_width = this.__items.$el.width();
+    // let items_height = this.__items.$el.height();
     let trigger_height = this.__trigger.$el.height();
     let opt = {
       onStart: this._onStartOpening,
@@ -385,7 +398,7 @@ class __menu_topic extends LetcBox {
           ...opt
         });
         TweenLite.to(this.__itemsWrapper.$el, {
-          y: -(items_height - trigger_height),
+          y: -(items_height + trigger_height),
         });
         break;
       case _a.left:

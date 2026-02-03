@@ -57,7 +57,6 @@ class settings_billing extends LetcBox {
   _handlePaymentWebSocket(args = {}) {
     const { data, options } = args || {};
     const { service } = options || {};
-    this.debug("AAA:48", args)
 
     switch (service) {
       case 'payment.plan_updated':
@@ -136,7 +135,6 @@ class settings_billing extends LetcBox {
       this.state.checkout.billingCycle = billing_cycle;
       this.state.checkout.seats = total_seat || 0;
       this.state.checkout.storage = storageGB;
-      this.debug("AAA!127", this.state.checkout)
       // Store plan data for reference
       this.currentPlan = {
         plan: planName,
@@ -171,8 +169,8 @@ class settings_billing extends LetcBox {
         this.__rightPanel = child;
         break;
       case `${this.fig.family}__checkout-seats-input`:
-        this._setupInputChangeListener(child, "seats");
-        this._restoreInputFocus(child, "seats");
+        // this._setupInputChangeListener(child, "seats");
+        // this._restoreInputFocus(child, "seats");
         this.__seatsInput = child;
         break;
         // case `${this.fig.family}__checkout-storage-input`:
@@ -188,82 +186,80 @@ class settings_billing extends LetcBox {
    * @param {Object} entryWidget - Entry widget instance
    * @param {string} fieldName - Field name (seats or storage)
    */
-  _restoreInputFocus(entryWidget, fieldName) {
-    if (!this._focusedInput || this._focusedInput.fieldName !== fieldName) {
-      return;
-    }
-    this.debug("AAA:182", fieldName)
-    if (!entryWidget || !entryWidget._id) return;
+  // _restoreInputFocus(entryWidget, fieldName) {
+  //   if (!this._focusedInput || this._focusedInput.fieldName !== fieldName) {
+  //     return;
+  //   }
+  //   if (!entryWidget || !entryWidget._id) return;
 
-    const inputId = `${entryWidget._id}-input`;
+  //   const inputId = `${entryWidget._id}-input`;
 
-    this.waitElement(inputId, () => {
-      const inputEl = document.getElementById(inputId);
-      if (!inputEl) return;
+  //   this.waitElement(inputId, () => {
+  //     const inputEl = document.getElementById(inputId);
+  //     if (!inputEl) return;
 
-      if (this._focusedInput.value !== undefined) {
-        inputEl.value = this._focusedInput.value;
-      }
+  //     if (this._focusedInput.value !== undefined) {
+  //       inputEl.value = this._focusedInput.value;
+  //     }
 
-      if (this._focusedInput.cursorPosition !== undefined) {
-        inputEl.focus();
-        inputEl.setSelectionRange(
-          this._focusedInput.cursorPosition,
-          this._focusedInput.cursorPosition
-        );
-      }
+  //     if (this._focusedInput.cursorPosition !== undefined) {
+  //       inputEl.focus();
+  //       inputEl.setSelectionRange(
+  //         this._focusedInput.cursorPosition,
+  //         this._focusedInput.cursorPosition
+  //       );
+  //     }
 
-      this._focusedInput = null;
-    });
-  }
+  //     this._focusedInput = null;
+  //   });
+  // }
 
   /**
    * Setup event listeners for input field to update state when user types
    * @param {Object} entryWidget - Entry widget instance
    * @param {string} fieldName - Field name (seats or storage)
    */
-  _setupInputChangeListener(entryWidget, fieldName) {
-    if (!entryWidget || !entryWidget._id) return;
+  // _setupInputChangeListener(entryWidget, fieldName) {
+  //   if (!entryWidget || !entryWidget._id) return;
 
-    const inputId = `${entryWidget._id}-input`;
+  //   const inputId = `${entryWidget._id}-input`;
 
-    this.waitElement(inputId, () => {
-      const inputEl = document.getElementById(inputId);
-      if (!inputEl) return;
+  //   this.waitElement(inputId, () => {
+  //     const inputEl = document.getElementById(inputId);
+  //     if (!inputEl) return;
 
-      const handleChange = () => {
-        const value = inputEl.value;
-        let numValue = parseInt(value);
+  //     const handleChange = () => {
+  //       const value = inputEl.value;
+  //       let numValue = parseInt(value);
 
-        if (value === "" || isNaN(numValue)) {
-          numValue = fieldName === "storage" ? 0 : 5;
-        }
-        if (numValue >= 0) {
-          this.state.checkout[fieldName] = numValue;
+  //       if (value === "" || isNaN(numValue)) {
+  //         numValue = fieldName === "storage" ? 0 : 5;
+  //       }
+  //       if (numValue >= 0) {
+  //         this.state.checkout[fieldName] = numValue;
 
-          if (this.state.currentTab === TAB_CHECKOUT) {
-            const cursorPosition = inputEl.selectionStart;
-            this._focusedInput = {
-              fieldName,
-              cursorPosition,
-              value: inputEl.value,
-              el: inputEl
-            };
-            this.debug("AAA:222", numValue, fieldName)
-            this.renderContent();
-          }
-        }
-      };
+  //         if (this.state.currentTab === TAB_CHECKOUT) {
+  //           const cursorPosition = inputEl.selectionStart;
+  //           this._focusedInput = {
+  //             fieldName,
+  //             cursorPosition,
+  //             value: inputEl.value,
+  //             el: inputEl
+  //           };
+  //           this.renderContent(inputEl);
+  //         }
+  //       }
+  //     };
 
-      inputEl.addEventListener("change", handleChange);
-      inputEl.addEventListener("input", handleChange);
+  //     inputEl.addEventListener("change", handleChange);
+  //     inputEl.addEventListener("input", handleChange);
 
-      entryWidget.once("destroy", () => {
-        inputEl.removeEventListener("change", handleChange);
-        inputEl.removeEventListener("input", handleChange);
-      });
-    });
-  }
+  //     entryWidget.once("destroy", () => {
+  //       inputEl.removeEventListener("change", handleChange);
+  //       inputEl.removeEventListener("input", handleChange);
+  //     });
+  //   });
+  // }
 
   /**
    * Update right panel (checkout summary) with latest data
@@ -351,7 +347,6 @@ class settings_billing extends LetcBox {
     const period = billingCycle === "yearly" ? "year" : "month";
     const bundlePrice = selectedBundle ? bundlePrices[selectedBundle] || 0 : 0;
     const bundleStorage = selectedBundle ? parseInt(selectedBundle) : 0;
-    this.debug("AAA:370 324", this, selectedPlan, basePrice, period, bundlePrice)
 
     // Calculate total storage based on plan
 
@@ -363,10 +358,8 @@ class settings_billing extends LetcBox {
         ? basePrice + bundlePrice * 10
         : basePrice + bundlePrice;
     let extraSeats = 0;
-    this.debug("AAA:350", { selectedPlan, extraSeats, baseSeats, baseStorage })
     if (this.__seatsInput) {
       let value = this.__seatsInput.getValue()
-      this.debug("AAA:353", { baseSeats, value })
       if (value > baseSeats) {
         extraSeats = value - baseSeats;
         if (billingCycle === "yearly") {
@@ -395,7 +388,6 @@ class settings_billing extends LetcBox {
       extraSeats,
       bundleStorage
     };
-    this.debug("AAA:370", r)
     return r
   }
 
@@ -643,11 +635,11 @@ class settings_billing extends LetcBox {
    * @returns {string|null} Field name or null
    */
   _getFieldFromService(service, cmd) {
-    if (service === "update-seats" || service === "seats") {
+    if (["update-seats", "input-seats", "seats"].includes(service)) {
       return "seats";
     }
 
-    if (service === "update-storage" || service === "storage") {
+    if (["update-storage", "storage"].includes(service)) {
       return "storage";
     }
 
@@ -701,7 +693,6 @@ class settings_billing extends LetcBox {
     }
 
     const field = this._getFieldFromService(service, cmd);
-
     if (!field) {
       return false;
     }
@@ -784,31 +775,8 @@ class settings_billing extends LetcBox {
    * @returns {boolean} false to stop bubbling or super.onUiEvent result
    */
   onUiEvent(cmd, args = {}) {
-    let service = args.service;
-
-    if (!service && cmd) {
-      if (cmd.source) {
-        service = cmd.source.mget && cmd.source.mget(_a.service);
-      }
-      if (!service) {
-        service = cmd.service ||
-          (cmd.mget && cmd.mget(_a.service)) ||
-          (cmd.get && cmd.get(_a.service)) ||
-          (cmd.model && cmd.model.get && cmd.model.get(_a.service)) ||
-          (cmd.mget && cmd.mget(_a.name)) ||
-          (cmd.get && cmd.get(_a.name)) ||
-          cmd.name;
-      }
-    }
-
-    if (!service && args && args.type === 'click') {
-      return false;
-    }
-
-    if (!service) {
-      return super.onUiEvent(cmd, args);
-    }
-    service = String(service);
+    let service = args.service || cmd.mget(_a.service);
+    this.debug("AAA:811", service, args, cmd)
     switch (service) {
       case "select-plan":
         return this.handleSelectPlan(cmd);
@@ -837,7 +805,6 @@ class settings_billing extends LetcBox {
         this._updateRightPanelContent()
         break;
       case "seats-changes":
-        this.debug(("AAA:810, service, qrgs", service, args))
         this.state.checkout.seats = args.value;
         this._updateRightPanelContent()
         break;
@@ -879,9 +846,12 @@ class settings_billing extends LetcBox {
       case "select-bundle":
         return this._handleSelectBundle(cmd, args);
 
+      case "input-seats":
+        if (/^(Backspace|)$/.test(cmd.status)) {
+          return
+        }
       case "update-seats":
       case "update-storage":
-      case "seats":
       case "storage":
       case _a.input:
         return this._handleInputField(cmd, args, service);
@@ -894,8 +864,6 @@ class settings_billing extends LetcBox {
         this._proceedToCheckout();
         return false;
 
-      default:
-        return super.onUiEvent(cmd, args);
     }
   }
 }
