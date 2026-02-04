@@ -1,3 +1,6 @@
+require('backbone');
+require('backbone.radio');
+
 require('./array');
 require('./map');
 require('./number');
@@ -9,7 +12,6 @@ require('./console/warn');
 require('./dom/events-handler');
 require('./dom/html');
 require('./dom/mouse-event');
-
 require('./backbone/model');
 require('./backbone/collection');
 require('./backbone/view/behavior');

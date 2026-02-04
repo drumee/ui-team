@@ -16,17 +16,15 @@
  */
 
 
-window.jQuery = require("jquery");
-window.$ = window.jQuery;
-require("lodash");
-require("backbone");
-require("backbone.radio");
-window.Marionette = require("backbone.marionette");
-require("jquery-ui/ui/widgets/droppable");
-require("jquery-ui/ui/widgets/resizable");
 
 const gsap = require("gsap/all");
-document.onreadystatechange = function () {
-  console.log(`Loading Vendor...`, Marionette, window.Backbone);
-  window.gsap = gsap;
-};
+
+document.addEventListener('readystatechange', () => {
+  if (document.readyState == 'complete') {
+    console.log(`Loading Vendor...`);
+    window.gsap = gsap;
+    const event = new Event('drumee:bootstraping');
+    event.name = 'vendor'
+    document.dispatchEvent(event);
+  }
+}, false);

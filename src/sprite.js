@@ -30,11 +30,12 @@ function loadSprite() {
   create_el(raw, 'raw');
   create_el(normalized, 'normalized');
 }
-  ;
-/**
- * 
- */
-$(document).ready(function () {
-  console.log(`Loading Sprite...`);
-  loadSprite()
-});
+document.addEventListener('readystatechange', () => {
+  if (document.readyState == 'complete') {
+    console.log(`Loading Sprite...`);
+    loadSprite()
+    const event = new Event('drumee:bootstraping');
+    event.name = 'sprite'
+    document.dispatchEvent(event);
+  }
+}, false);
