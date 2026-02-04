@@ -220,5 +220,6 @@ module.exports = {
   module_desk:function(s,f){import('modules/desk').then(m=>{s(m.default)}).catch(f)},
   module_devel:function(s,f){import('modules/devel').then(m=>{s(m.default)}).catch(f)},
   module_dmz:function(s,f){import('modules/dmz').then(m=>{s(m.default)}).catch(f)},
+  module_sandbox:function(s,f){import('modules/sandbox').then(m=>{s(m.default)}).catch(f)},
   module_welcome:function(s,f){import('modules/welcome').then(m=>{s(m.default)}).catch(f)},
 }

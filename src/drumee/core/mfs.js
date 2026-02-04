@@ -85,10 +85,20 @@ class __core_mfs extends LetcBox {
       });
     }
     this.isMfs = 1;
-    if ([_a.hub, _a.folder].includes(this.mget(_a.filetype))) {
+    let type = this.mget(_a.filetype);
+
+    if ([_a.hub, _a.folder].includes(type)) {
       this.mset({ filesize: 0 });
     } else {
       this.mset({ filesize: parseInt(this.mget(_a.filesize)) });
+    }
+    if ([_a.hub, _a.folder].includes(type) && !this.isSimple) {
+      this.isHubOrFolder = 1;
+      if (type === _a.hub) {
+        this.isHub = 1;
+      } else if (type === _a.folder) {
+        this.isFolder = 1;
+      }
     }
     this.metadata();
   }

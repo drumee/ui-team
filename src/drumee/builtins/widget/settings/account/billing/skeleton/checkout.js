@@ -164,6 +164,7 @@ function checkout(ui) {
             value: String(seats || 0),
             // watch: "seats-changes",
             sys_pn: `${pfx}-seats-input`,
+            service: "input-seats",
             readonly: selectedPlan === "free" ? true : false,
             interactive: selectedPlan === "free" ? 0 : 1,
           }),
@@ -313,6 +314,7 @@ function checkout(ui) {
   const rightPanel = Skeletons.Box.Y({
     className: `${pfx}-right`,
     sys_pn: `${pfx}-right-panel`,
+    partHandler: [ui],
     kids: [
       Skeletons.Note({
         className: `${pfx}-total-label`,

@@ -17,12 +17,21 @@ const _entry_template = function (ui) {
     `;
   } else {
     tag = _a.input;
+    let minmax = ''
+    if (m.type === _a.number) {
+      if (/^[0-9]+$/.test(m.min)) {
+        minmax = `min="${m.min}"`
+      }
+      if (/^[0-9]+$/.test(m.max)) {
+        minmax = `${minmax} max="${m.max}"`
+      }
+    }
     entry = `
       <${tag} id="${m.widgetId}-input" type="${m.type}" 
       class="${m.inputClass} inner note-input" 
       placeholder="${m.placeholder}" name="${m.name}" autocomplete="${ac}" 
       value="${m.value}" minlength="${m.minlength}" maxlength="${m.maxlength}" 
-      min="${m.min}" ${readonly} max="${m.max}">
+      ${minmax} ${readonly}>
     `;
     if (m.formcomplete && (m.formcomplete === _a.off)) {
       entry = `<form autocomplete='${m.formcomplete}'>${entry}</form>`;

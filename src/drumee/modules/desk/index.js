@@ -61,10 +61,8 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off(_e.select, this._updateAvatar);
   }
 
-  /**
-   *
-   */
-  async onDomRefresh() {
+  async loadDefault() {
+    console.trace()
     this._pending = { available: false };
     await Kind.waitFor('window_manager');
     await Kind.waitFor('activity_panel');
@@ -72,6 +70,12 @@ class desk_module extends LetcBox {
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
+  }
+
+  /**
+   *
+   */
+  async onDomRefresh() {
     this.route();
   }
 
@@ -291,11 +295,31 @@ class desk_module extends LetcBox {
    *
    */
   route(opt) {
-    // if (opt == null) {
-    //   opt = [];
-    // }
-    // opt = Visitor.parseModule();
-    // const sub_module = opt[1];
+    // this.debug("AAA:294", opt, Visitor.parseModule())
+
+    if (opt == null) {
+      opt = [];
+    }
+    let { submodule } = Visitor.parseModuleArgs();
+    this.debug("AAA:035", submodule)
+    switch (submodule) {
+      case "reward":
+      case "reward-hub":
+        Kind.loadPlugin({ name: "reward-hub", kind: "reward_hub_router" }).then(async (p) => {
+          this.debug("REWARD LOADED", p)
+          let reward = await Kind.waitFor('reward_hub_router')
+          this.debug("REWARD", reward)
+          this.feed({ kind: "reward_hub_router" })
+        }).catch((e) => {
+          console.error("Failed to load reward-hub. Swith to default")
+          this.loadDefault()
+        })
+        break;
+      default:
+        setTimeout(() => {
+          this.loadDefault()
+        }, 500)
+    }
     // if (sub_module != null) {
     //   Kind.waitFor("window_launcher").then(() => {
     //     this._openTab(sub_module, opt);

@@ -103,15 +103,15 @@ class __media_core extends DrumeeMFS {
     };
 
     this.initURL();
-    let type = this.mget(_a.filetype);
-    if ([_a.hub, _a.folder].includes(type) && !this.isSimple) {
-      this.isHubOrFolder = 1;
-      if (type === _a.hub) {
-        this.isHub = 1;
-      } else if (type === _a.folder) {
-        this.isFolder = 1;
-      }
-    }
+    // let type = this.mget(_a.filetype);
+    // if ([_a.hub, _a.folder].includes(type) && !this.isSimple) {
+    //   this.isHubOrFolder = 1;
+    //   if (type === _a.hub) {
+    //     this.isHub = 1;
+    //   } else if (type === _a.folder) {
+    //     this.isFolder = 1;
+    //   }
+    // }
     switch (this.mget(_a.filetype)) {
       case _a.folder:
         if (_.isEmpty(this.mget(_a.hubs))) break;
