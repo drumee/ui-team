@@ -166,6 +166,13 @@
     gap: var(--spacer-5);
     flex: 1;
     overflow: scroll;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    scrollbar-width: none;
+
+    -ms-overflow-style: none;
   }
 
   &__spacer {
