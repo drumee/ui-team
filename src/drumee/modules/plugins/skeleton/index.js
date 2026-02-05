@@ -1,7 +1,10 @@
 
-module.exports = function (ui) {
-  return Skeletons.Box.Y(ui, {
-    className: `${ui.fig.family}`,
-    kids: Skeletons.Note("This is your Drumee plugin")
+export default function (ui, name) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__main`,
+    kids: Skeletons.Note({
+      className: `${ui.fig.family}__message`,
+      content: `The plugin ${decodeURI(name)} is being loaded. Please wait...`
+    })
   })
 }

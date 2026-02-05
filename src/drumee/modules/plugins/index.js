@@ -10,6 +10,7 @@ class __module_plugins extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
+    this.mset({ flow: _a.y })
   }
 
 
@@ -18,12 +19,11 @@ class __module_plugins extends LetcBox {
    */
   route() {
     let opt = Visitor.parseModuleArgs();
-    let { name, kind } = opt;
+    let { name, kind, title } = opt;
     this.debug(`Loading plugin name=${name} to be used as kind=${kind}`)
+    this.feed(require("./skeleton").default(this, title || name))
     Kind.loadPlugin({ name, kind }).then(async (p) => {
-      this.debug("PLUGIN LOADED", p)
-      let plugin = await Kind.waitFor(kind)
-      this.debug("PLUGIN", plugin)
+      await Kind.waitFor(kind)
       this.feed({ ...opt, kind })
       const event = new Event('drumee:plugins:ready');
       this.debug("Plugins router loaded")
