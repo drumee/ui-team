@@ -212,6 +212,9 @@
     justify-content: space-between;
     gap: 16px;
     border-top: 1px solid var(--neutral-200);
+    &[data-device="mobile"] {
+      flex-direction: column;
+    }
   }
 
   &__colors-title {

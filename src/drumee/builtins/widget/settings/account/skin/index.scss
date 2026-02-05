@@ -103,6 +103,13 @@
     gap: var(--spacer-5);
     flex: 1;
     overflow: auto;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    scrollbar-width: none;
+
+    -ms-overflow-style: none;
   }
 
   &__spacer {
@@ -134,7 +141,7 @@
 
     &[data-device="mobile"] {
       gap: 0;
-      width: 400px;
+      width: 360px;
       flex-direction: row;
       align-items: center;
       overflow-x: auto;
