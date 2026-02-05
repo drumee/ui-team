@@ -31,7 +31,6 @@ class ___widget_member_form extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug("AAA:34", service)
     switch (service) {
       case 'choose-who-can-see-member':
         return this.chooseWhoCanSeeMember()
@@ -180,16 +179,16 @@ class ___widget_member_form extends LetcBox {
     }
 
     this.postService({
-      service: service,
+      service,
       orgid: this._source.mget('orgId'),
       ...data
-    }).then((res) => {
+    }, { async: 1 }).then((res) => {
       let opt = { ...res, service: "member-added" }
       switch (opt.status) {
         case 'EMAIL_NOT_AVAILABLE':
           return this.__emailInput.showError(LOCALE.THIS_EMAIL_ALREADY_EXISTS);
         default:
-          this.ensurePart('button-validate').then((p)=>{
+          this.ensurePart('button-validate').then((p) => {
             p.dataset.haptic = "0"
           })
           this.triggerHandlers(opt)
@@ -237,7 +236,6 @@ class ___widget_member_form extends LetcBox {
   __dispatchRest(method, data) {
 
     switch (method) {
-      // case SERVICE.adminpanel.member_add:
       case SERVICE.adminpanel.member_update:
         //error handling
         switch (data.status) {

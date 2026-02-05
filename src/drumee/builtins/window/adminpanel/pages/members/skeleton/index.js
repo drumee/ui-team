@@ -41,7 +41,7 @@ function __skl_members_page(ui) {
           Skeletons.Box.X({
             className: `${membersFig}__wrapper member_room room`,
             sys_pn: 'member_room',
-            kids: []
+            kids: [{ kind: 'members_room', type: '' }]
           }),
         ]
       })

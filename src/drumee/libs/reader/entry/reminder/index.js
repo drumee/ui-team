@@ -168,7 +168,6 @@ class __entry_reminder extends LetcBox {
    * @returns 
    */
   showError(reason) {
-    this.debug("__entry_reminder showError", this, reason);
     reason = reason || this.reason;
     this.el.setAttribute(_a.data.status, _a.error);
     if (this.mget('showError')) {

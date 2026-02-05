@@ -351,11 +351,18 @@ class ___members_page extends LetcBox {
    */
   addNewMember(data) {
     this.openOverlay(require('./skeleton/action-popup/member-acknowledgement').default(this))
-    // const data = cmd.source.response
     const memberList = this.getItemsByKind('widget_members_list')[0]
-    memberList.addMemberItem(data)
-    // memberList.triggerClick(data.drumate_id)
-    // return
+    if (memberList) {
+      memberList.addMemberItem(data)
+      let t = setInterval(() => {
+        let item = memberList.getItemsByAttr(_a.email, data.member?.email)[0]
+        if (item) {
+          item.setState(1)
+          this.loadMemberDetail(item);
+          clearInterval(t)
+        }
+      }, 500)
+    }
   }
 
   /**
@@ -536,6 +543,8 @@ class ___members_page extends LetcBox {
       service: SERVICE.adminpanel.member_disconnect,
       orgid: this.orgId,
       user_id: data.drumate_id,
+    }).then((res) => {
+      this.disconnectMemberResponse(res)
     })
   }
 
@@ -872,6 +881,9 @@ class ___members_page extends LetcBox {
     if (data.status == 'INVALID_STATUS') {
       return
     }
+    if (this.__memberRoom) {
+      this.__memberRoom.feed({ kind: 'members_room', type: '' })
+    }
     return this.removeMemberFromList()
   }
 
@@ -929,8 +941,8 @@ class ___members_page extends LetcBox {
       case SERVICE.adminpanel.member_delete:
         return this.deleteMemberResponse(data)
 
-      case SERVICE.adminpanel.member_disconnect:
-        return this.disconnectMemberResponse(data)
+      // case SERVICE.adminpanel.member_disconnect:
+      //   return this.disconnectMemberResponse(data)
 
 
 
@@ -949,17 +961,6 @@ class ___members_page extends LetcBox {
         this.loadActionPopupAcknowledgement(data[0])
         return this.updateMemberStatusResponse(data[0])
 
-      // case SERVICE.adminpanel.members_import:
-      //   this.debug("AAA:948", data)
-      //   if (data.valid) {
-      //     this.getItemsByKind("widget_member_tags")[0]
-      //       .getItemsByAttr('type', 'allMembers')[0]
-      //       .triggerHandlers();
-      //     this.closeOverlay();
-      //   } else {
-      //     this.onUploadEnd(data, '')
-      //   }
-      //   break;
 
       case SERVICE.adminpanel.mimic_new:
         this.requestMimicNewVerify(data)

@@ -94,9 +94,12 @@ class ___members_room extends LetcBox {
    * 
    */
   onDomRefresh() {
+    this.debug("AAAA:97", this)
     if (this._type != 'member_create') {
       this._drumateId = this.mget('drumate_id')
-      this._getMemberDetail()
+      if (this._drumateId) {
+        this._getMemberDetail()
+      }
     }
     this.feed(require('./skeleton').default(this));
   }
