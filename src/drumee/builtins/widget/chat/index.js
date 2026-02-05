@@ -721,7 +721,7 @@ class __widget_chat extends LetcBox {
 
     const type = this.mget(_a.type);
     if (list.hasPendingUpload()) {
-      return this.showError(LOCALE.WAIT_UPLOAD, 'hourglass');
+      return this.showError(LOCALE.WAIT_UPLOAD, 'desktop_waiting');
     }
 
     const replaceChars = { '<': '&#60;', '>': '&#62;' };

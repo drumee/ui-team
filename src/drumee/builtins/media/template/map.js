@@ -26,7 +26,6 @@ const __media_tpl_map = function (ext, d) {
     schedule: "drumee-phone-cam",
     scss: "raw-documents_code",
     settings: "settings",
-    txt: "file-txt",
     xls: "raw-documents_excel",
     xls: "raw-documents_excel",
     xlsx: "raw-documents_excel",

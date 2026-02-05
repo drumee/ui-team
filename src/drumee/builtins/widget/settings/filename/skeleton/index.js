@@ -8,7 +8,7 @@ const { filesize } = require("core/utils")
 function ssettings_filename(ui) {
   let fig = ui.fig.family;
 
-  let ico = 'file-txt';
+  let ico = 'info';
   let filetype = ui.mget(_a.filetype)
   switch (filetype) {
     case _a.image:
