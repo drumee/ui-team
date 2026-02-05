@@ -6,9 +6,10 @@
     left: calc(50vw - 286px);
     top: 85px;
     &[data-device="mobile"] {
-      width: 400px !important;
-      height: 400px !important;
-      transform: translateX(4%) translateY(15%);
+      width: 360px !important;
+      height: 500px !important;
+      left: 50% !important;
+      transform: translateX(-50%) translateY(15%);
     }
   }
   &__header {
