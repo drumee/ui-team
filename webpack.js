@@ -144,7 +144,8 @@ module.exports = function () {
       let locale = join(UI_SRC_PATH, 'locale');
       let sprite = join(UI_SRC_PATH, 'src', 'sprite');
       let vendor = join(UI_SRC_PATH, 'src', 'vendor');
-      return makeOptions({ main, dom, locale, sprite, vendor }, opt);
+      let core = join(UI_SRC_PATH, 'src', 'drumee', 'core');
+      return makeOptions({ core, main, dom, locale, sprite, vendor }, opt);
     default:
       console.error(`The build target ${BUILD_TARGET} was unexpected`)
   }

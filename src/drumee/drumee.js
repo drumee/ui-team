@@ -15,7 +15,7 @@
  * =============================================================================
  */
 
-require('./core');
+
 window.errorStack = [];
 const { xhRequest } = require("core/socket/request");
 const { createSafeObject } = require("core/utils");

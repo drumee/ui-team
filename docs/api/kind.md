@@ -174,5 +174,6 @@ See https://drumee.com/-/#/sandbox for examples.
 | module_desk | modules/desk | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/desk/index.js |
 | module_devel | modules/devel | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/devel/index.js |
 | module_dmz | modules/dmz | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/dmz/index.js |
+| module_plugins | modules/plugins | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/plugins/index.js |
 | module_sandbox | modules/sandbox | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/sandbox/index.js |
 | module_welcome | modules/welcome | https://github.com/drumee/ui-team/tree/main/src/drumee/modules/welcome/index.js |

@@ -15,18 +15,18 @@ export const STATE = {
 };
 
 export const RADIO = {
-  1: _a.on,
-  on: _a.on,
-  in: _a.on,
-  yes: _a.on,
-  true: _a.on,
-  0: _a.off,
-  off: _a.off,
-  out: _a.off,
-  no: _a.off,
-  fasle: _a.off,
-  undefined: _a.off,
-  null: _a.off,
+  1: "on",
+  on: "on",
+  in: "on",
+  yes: "on",
+  true: "on",
+  0: "off",
+  off: "off",
+  out: "off",
+  no: "off",
+  fasle: "off",
+  undefined: "off",
+  null: "off",
 };
 
 export const BOOLEAN = {

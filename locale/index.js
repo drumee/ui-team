@@ -14,11 +14,13 @@ dayjs.extend(relativeTime);
 dayjs.extend(duration);
 window.Dayjs = dayjs;
 window.createSafeObject = createSafeObject;
-/**
- * 
- */
-$(document).ready(function () {
-  console.log(`Loading Locale...`);
-  require('./en.json')
-   window.LOCALE = createSafeObject(require('./en.json'));
-});
+
+document.addEventListener('readystatechange', () => {
+  if (document.readyState == 'complete') {
+    console.log(`Loading Locale...`, document.readyState);
+    window.LOCALE = createSafeObject(require('./en.json'));
+    const event = new Event('drumee:bootstraping');
+    event.name = 'locale'
+    document.dispatchEvent(event);
+  }
+}, false);

@@ -14,22 +14,31 @@
  * limitations under the License.
  * =============================================================================
  */
-
 const STYLE = "color: green; font-weight: bold;"
-
-const App = require('./drumee');
-window.Drumee = new App();
-if ((window.__filename == null)) {
-  window.__filename = null;
-}
-window.DrumeeMediaInteract = require('builtins/media/interact');
+let bunldes = new Map();
 
 /**
  * 
  */
-$(document).ready(function () {
+function load_app() {
+  const App = require('./drumee');
+  window.Drumee = new App();
   console.log(`Staring Drumee Web...`);
   console.log(`Build commit=%c${__COMMIT__}, mode=${__BUILD__}`, STYLE);
   console.log(`UI version=%c${Drumee.version}`, STYLE);
+  window.DrumeeMediaInteract = require('builtins/media/interact');
   Drumee.start();
-});
+  document.removeEventListener('drumee:bootstraping', preload);
+}
+
+/**
+ * 
+ */
+function preload(e) {
+  bunldes.set(e.name, 1);
+  if (bunldes.size > 3) {
+    load_app()
+  }
+}
+
+document.addEventListener('drumee:bootstraping', preload);
