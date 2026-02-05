@@ -17,20 +17,20 @@ class __module_plugins extends LetcBox {
    * 
    */
   route() {
-    let { name, kind } = Visitor.parseModuleArgs();
+    let opt = Visitor.parseModuleArgs();
+    let { name, kind } = opt;
     this.debug(`Loading plugin name=${name} to be used as kind=${kind}`)
     Kind.loadPlugin({ name, kind }).then(async (p) => {
       this.debug("PLUGIN LOADED", p)
       let plugin = await Kind.waitFor(kind)
       this.debug("PLUGIN", plugin)
-      this.feed({ kind })
+      this.feed({ ...opt, kind })
       const event = new Event('drumee:plugins:ready');
       this.debug("Plugins router loaded")
       document.dispatchEvent(event);
     }).catch((e) => {
       console.error("Failed to load PLUGIN-hub.", e)
     })
-
   }
 
   /**

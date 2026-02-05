@@ -182,7 +182,7 @@ class __drumee_svg extends Marionette.View {
     if (_.isEmpty(url)) {
       let nid;
       ({ url, nid } = this.actualNode());
-      if (!nid) return;
+      if (!nid || !url) return;
     }
 
     const t = this.__icon;

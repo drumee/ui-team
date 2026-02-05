@@ -61,8 +61,10 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off(_e.select, this._updateAvatar);
   }
 
+  /**
+   * 
+   */
   async loadDefault() {
-    console.trace()
     this._pending = { available: false };
     await Kind.waitFor('window_manager');
     await Kind.waitFor('activity_panel');
@@ -295,47 +297,16 @@ class desk_module extends LetcBox {
    *
    */
   route(opt) {
-    // this.debug("AAA:294", opt, Visitor.parseModule())
-
     if (opt == null) {
       opt = [];
     }
-    let { submodule } = Visitor.parseModuleArgs();
-    this.debug("AAA:035", submodule)
-    switch (submodule) {
-      case "reward":
-      case "reward-hub":
-        Kind.loadPlugin({ name: "reward-hub", kind: "reward_hub_router" }).then(async (p) => {
-          this.debug("REWARD LOADED", p)
-          let reward = await Kind.waitFor('reward_hub_router')
-          this.debug("REWARD", reward)
-          this.feed({ kind: "reward_hub_router" })
-        }).catch((e) => {
-          console.error("Failed to load reward-hub. Swith to default")
-          this.loadDefault()
-        })
-        break;
-      default:
-        setTimeout(() => {
-          this.loadDefault()
-        }, 500)
+    if(Visitor.parseModuleArgs().submodule){
+      this.warn("Plugins have been move to module/plgins");
+      this.warn("Use this link #/plugins?name=plugin-name&kind=entry_kind");
+      return
     }
-    // if (sub_module != null) {
-    //   Kind.waitFor("window_launcher").then(() => {
-    //     this._openTab(sub_module, opt);
-    //   });
-    // } else {
-    //   if (!this.moduleWrapper) {
-    //     Backbone.history.location.reload();
-    //     return;
-    //   }
-    //   if (!this.moduleWrapper.isEmpty()) {
-    //     this.moduleWrapper.children.last().softDestroy();
-    //   }
-    // }
-
+    this.loadDefault()
     this.trigger(_e.ready);
-    // this.checkIntro();
   }
 
   /**
