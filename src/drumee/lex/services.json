@@ -64,5 +64,17 @@
     "validate_forgot_password_token": "yp.validate_forgot_password_token",
     "verify_email": "yp.verify_email",
     "public_key": "yp.public_key"
+  },
+  "reward_hub": {
+    "get_env": "reward_hub.get_env",
+    "get_referral_code": "reward_hub.get_referral_code",
+    "get_balance": "reward_hub.get_balance",
+    "get_history": "reward_hub.get_history",
+    "claim": "reward_hub.claim",
+    "complete_task": "reward_hub.complete_task",
+    "check_referral": "reward_hub.check_referral",
+    "bind_referral": "reward_hub.bind_referral",
+    "get_tasks": "reward_hub.get_tasks",
+    "check_cooldown": "reward_hub.check_cooldown"
   }
 }
