@@ -598,6 +598,9 @@ class desk_module extends LetcBox {
       case 'open-settings':
         return this.openModel("window_wallpaper_settings");
 
+      case 'open-reward-hub':
+        return this.openModel("reward_hub_router");
+
       case 'open-user-guide':
         return this.openModel("settings_helpcenter");
 
