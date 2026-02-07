@@ -586,11 +586,6 @@ class desk_module extends LetcBox {
         this.__wrapperPopup.clear();
         return Backbone.history.navigate(_K.module.desk);
 
-      // case "skip-intro-popup":
-      //   return this.skipIntroPopup();
-
-      // case "play-intro-video":
-      //   return this.playIntroVideo();
 
       case "close-popup":
         return this.__wrapperPopup.clear();
@@ -605,7 +600,7 @@ class desk_module extends LetcBox {
             this.openModel(kind);
           })
         }).catch((e) => {
-          return loadDefault();
+          this.warn(`Failed to load plugin`)
         })
 
       case 'open-user-guide':
