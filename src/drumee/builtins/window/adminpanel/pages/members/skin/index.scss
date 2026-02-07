@@ -74,7 +74,7 @@
       min-width: 115px;
       height: 35px;
       @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
-      border-radius: var(--border-radius);
+      border-radius: var(--corner-radius-max);
       border: 1px solid var(--btn-rollback-border);
       margin-right: 30px;
     }
@@ -102,8 +102,8 @@
     height: 40px;
     padding: 2px 5px;
     @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
-    border-radius: var(--border-radius);
     border: 1px solid var(--btn-rollback-border);
+    border-radius: var(--corner-radius-max);
 
     &:hover {
       border: 2px solid var(--btn-rollback-border-hover);
@@ -112,37 +112,16 @@
   }
 
   &__button-confirm {
-    background-color: var(--btn-commit-background);
+    background-color: var(--primary-500);
     min-width: 180px;
     height: 40px;
     @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-commit-text));
     border: 0px;
+    border-radius: var(--corner-radius-max);
 
     &:hover {
-      border: 2px solid var(--btn-commit-border-hover);
-      background-color: var(--btn-commit-background-hover);
-    }
-
-    &.unblock,
-    &.unarchive {
-      background-color: var(--btn-commit-background);
-      width: 115px;
-      height: 35px;
-    }
-
-    &.destroy,
-    &.remove,
-    //    &.reset,
-    &.block,
-    &.archive {
-      background-color: var(--btn-caution-background);
-      width: 115px;
-      height: 35px;
-
-      &:hover {
-        background-color: var(--btn-caution-background);
-        border: 1px solid var(--btn-caution-border-hover);
-      }
+      border: 2px solid var(--primary-500);
+      background-color: var(--primary-600);
     }
   }
 }

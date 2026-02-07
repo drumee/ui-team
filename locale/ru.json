@@ -1995,5 +1995,8 @@
   "DAY": "День",
   "HOUR": "Час",
   "APPLY_ALL_SAVE": "Применить всё и сохранить",
-  "PUBLIC_ANYONE": "Публично, для всех"
+  "PUBLIC_ANYONE": "Публично, для всех",
+  "KICK_OUT_MEMBER": "выгнать этого участника",
+  "CUSTOMIZE_BACKGROUND": "Настройте обои",
+  "COLORS": "Цвета"
 }

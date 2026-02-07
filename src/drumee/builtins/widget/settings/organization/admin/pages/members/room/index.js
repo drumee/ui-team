@@ -82,7 +82,7 @@ class ___members_room extends LetcBox {
         break
 
       default:
-        this.warn('Type is mandatory !!!')
+        memberRoomOpt = require("./skeleton/default-content")
     }
 
     memberRoomOpt.currentTag = this._currentTag;
@@ -112,7 +112,6 @@ class ___members_room extends LetcBox {
       case _e.edit:
         this.editMemberForm()
         break
-
       case 'cancel-member':
         this.cancelMemberForm()
         break
@@ -122,7 +121,7 @@ class ___members_room extends LetcBox {
       default:
         if (!service) return
         this.source = cmd
-        this.triggerHandlers({ service: service })
+        this.triggerHandlers({ service })
     }
   }
 
@@ -146,9 +145,6 @@ class ___members_room extends LetcBox {
         })
         this.routeContent();
       })
-    } else {
-      this.warn('Drumate Id is mandatory !')
-      return
     }
   }
 

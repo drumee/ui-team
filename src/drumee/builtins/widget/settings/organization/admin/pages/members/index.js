@@ -414,7 +414,8 @@ class ___members_page extends LetcBox {
       case 'delete-inactive-member':
         _content = require('./skeleton/action-popup/content/delete-invite-member').default(this)
         break
-
+        
+      case 'kick-out-member':
       case 'delete-member':
         _content = require('./skeleton/action-popup/content/delete-member').default(this)
         break

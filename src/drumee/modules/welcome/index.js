@@ -23,7 +23,6 @@ class __welcome_router extends LetcBox {
    */
   onDomRefresh() {
     const args = Visitor.parseModule();
-    this.debug("AAA:26", args, this.tab)
     this.route();
   }
 
@@ -99,7 +98,6 @@ class __welcome_router extends LetcBox {
     if (!plugins || !plugins.signin) {
       return loadDefault();
     }
-    this.debug("AAA:95 GOT signin plugin", plugins.signin)
     let { name, kind } = plugins.signin;
     if (Kind.get(kind)) {
       return this.feed({ kind });

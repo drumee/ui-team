@@ -1995,5 +1995,8 @@
   "DAY": "Day",
   "HOUR": "Hour",
   "APPLY_ALL_SAVE": "Apply all & Save",
-  "PUBLIC_ANYONE": "Public, anyone"
+  "PUBLIC_ANYONE": "Public, anyone",
+  "KICK_OUT_MEMBER": "Kick this member out",
+  "CUSTOMIZE_BACKGROUND": "Customize the wallpaper",
+  "COLORS": "Colors"
 }

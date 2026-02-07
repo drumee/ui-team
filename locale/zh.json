@@ -1995,5 +1995,8 @@
   "DAY": "天",
   "HOUR": "小时",
   "APPLY_ALL_SAVE": "应用全部并保存",
-  "PUBLIC_ANYONE": "公众，任何人"
+  "PUBLIC_ANYONE": "公众，任何人",
+  "KICK_OUT_MEMBER": "将此成员踢出",
+  "CUSTOMIZE_BACKGROUND": "自定义壁纸",
+  "COLORS": "颜色"
 }

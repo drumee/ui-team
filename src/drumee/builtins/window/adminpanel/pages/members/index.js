@@ -128,10 +128,11 @@ class ___members_page extends LetcBox {
       case 'remove-admin':
       case 'reset-member-password':
       case 'change-member-password':
-      case 'block-unblock-member':
+      case 'kick-out-member':
       case 'toggle-archive-member':
         return this.loadActionPopup(cmd, service);
 
+      case 'confirm-kick-out':
       case 'confirm-delete':
       case 'confirm-invite-delete':
       case 'confirm-remove-admin':
@@ -428,7 +429,7 @@ class ___members_page extends LetcBox {
         break
 
       case 'remove-admin':
-        this.mset(_a.member, source.model.attributes)
+        this.mset(_a.member, source.model.toJSON())
         _content = require('./skeleton/action-popup/content/remove-admin').default(this)
         break
 
@@ -450,8 +451,9 @@ class ___members_page extends LetcBox {
         _content = require('./skeleton/action-popup/content/set-member-password').default(this)
         break
 
-      case 'block-unblock-member':
-        _content = require('./skeleton/action-popup/content/block-unblock-member').default(this)
+      case 'kick-out-member':
+        // this.mset(_a.member, source.model.toJSON())
+        _content = require('./skeleton/action-popup/content/kick-member').default(this)
         break
 
       case 'toggle-archive-member':
@@ -487,12 +489,8 @@ class ___members_page extends LetcBox {
         case 'reset-member-password':
           return this.resetMemberPassword(data)
 
-        case 'block-unblock-member':
-          _status = _a.locked
-          if (data.status == _a.locked) {
-            _status = _a.active
-          }
-          return this.updateMemberStatus(data, _status)
+        case 'confirm-kick-out':
+          return this.kickOutMember(data, _status)
 
         case 'toggle-archive-member':
           _status = _a.archived
@@ -531,13 +529,19 @@ class ___members_page extends LetcBox {
       service: SERVICE.adminpanel.member_delete,
       orgid: this.orgId,
       user_id: data.drumate_id,
-      //hub_id  : Visitor.get(_a.id)
     })
   }
 
+  /**
+   * 
+   */
+  kickOutMember(data) {
+    this.debug('AAAA:635', data)
+  }
+
   /* 
- *
-*/
+  *
+  */
   deleteInviteMember(data) {
     return this.postService({
       service: SERVICE.adminpanel.member_disconnect,

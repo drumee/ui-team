@@ -86,7 +86,6 @@ class __core_mfs extends LetcBox {
     }
     this.isMfs = 1;
     let type = this.mget(_a.filetype);
-
     if ([_a.hub, _a.folder].includes(type)) {
       this.mset({ filesize: 0 });
     } else {

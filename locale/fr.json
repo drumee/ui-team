@@ -1995,5 +1995,8 @@
   "DAY": "Jour",
   "HOUR": "Heure",
   "APPLY_ALL_SAVE": "Tout appliquer et enregistrer",
-  "PUBLIC_ANYONE": "Public, n'importe qui"
+  "PUBLIC_ANYONE": "Public, n'importe qui",
+  "KICK_OUT_MEMBER": "Expulser ce membre",
+  "CUSTOMIZE_BACKGROUND": "Personnaliser le fond d'écran",
+  "COLORS": "Couleurs"
 }

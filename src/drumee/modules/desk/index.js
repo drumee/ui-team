@@ -300,7 +300,7 @@ class desk_module extends LetcBox {
     if (opt == null) {
       opt = [];
     }
-    if(Visitor.parseModuleArgs().submodule){
+    if (Visitor.parseModuleArgs().submodule) {
       this.warn("Plugins have been move to module/plgins");
       this.warn("Use this link #/plugins?name=plugin-name&kind=entry_kind");
       return
@@ -599,7 +599,14 @@ class desk_module extends LetcBox {
         return this.openModel("window_wallpaper_settings");
 
       case 'open-reward-hub':
-        return this.openModel("reward_hub_router");
+        let kind = "reward_hub_router"
+        return Kind.loadPlugin({ name:"reward-hub", kind }).then(() => {
+          Kind.waitFor(kind).then((k) => {
+            this.openModel(kind);
+          })
+        }).catch((e) => {
+          return loadDefault();
+        })
 
       case 'open-user-guide':
         return this.openModel("settings_helpcenter");
