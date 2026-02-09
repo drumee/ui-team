@@ -51,6 +51,14 @@ function menu_items(ui) {
             service: "open-settings",
           })
         : undefined,
+      Visitor.isMobile()
+        ? Skeletons.Button.Label({
+            ico: "reward",
+            className: `${pfx}-item admin-panel`,
+            label: "Reward hub",
+            service: "open-reward-hub",
+          })
+        : undefined,
       Skeletons.Button.Label({
         ico: "desktop_disconnect",
         className: `${pfx}-item disconnect`,
