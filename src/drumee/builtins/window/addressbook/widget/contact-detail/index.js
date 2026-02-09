@@ -15,11 +15,12 @@ class __addressbook_widget_contact_detail extends LetcBox {
   onDomRefresh() {
     this._parent = this.getParentByKind('window_addressbook');
     const src = this.mget(_a.source);
+    this.debug("AAA:18", src)
     this._currentContact = src;
     if (!src) {
       return this.warn("No contact");
     }
-    if ((src.type === _a.myContact) || (src.mget(_a.type) === _a.myContact)) {
+    if (src.mget(_a.type) === _a.myContact) {
       return this._getContactDetail(src);
     }
     this.mset(_a.contact, src.model.toJSON());
@@ -92,16 +93,18 @@ class __addressbook_widget_contact_detail extends LetcBox {
    * @returns 
    */
   _getContactDetail(src) {
-    const contactID = src.id || this._currentContact.mget(_a.id);
+    this.mset(_a.contact, src.model.toJSON())
+    this.feed(require("./skeleton")(this));
+    // const contactID = src.id || this._currentContact.mget(_a.id);
 
-    return this.fetchService({
-      service: SERVICE.contact.get_contact,
-      contact_id: contactID,
-      hub_id: Visitor.get(_a.id)
-    }).then((data)=>{
-      this.mset(_a.contact, { type: 'my_contact', ...data })
-      this.feed(require("./skeleton")(this));
-    })
+    // return this.fetchService({
+    //   service: SERVICE.contact.get_contact,
+    //   contact_id: contactID,
+    //   hub_id: Visitor.get(_a.id)
+    // }).then((data) => {
+    //   this.mset(_a.contact, { type: 'my_contact', ...data })
+    //   this.feed(require("./skeleton")(this));
+    // })
   }
 
   /**
@@ -209,7 +212,7 @@ class __addressbook_widget_contact_detail extends LetcBox {
         service: _service,
         contact_id: contact.id,
         hub_id: Visitor.get(_a.id)
-      }).then((data)=>{
+      }).then((data) => {
         this._toggleBlockAcknowledgement();
       })
     }
@@ -283,7 +286,7 @@ class __addressbook_widget_contact_detail extends LetcBox {
         contact_id: contact.id,
         status: _status,
         hub_id: Visitor.get(_a.id)
-      }).then((data)=>{
+      }).then((data) => {
         this._toggleArchiveAcknowledgement();
       })
     }
@@ -340,7 +343,7 @@ class __addressbook_widget_contact_detail extends LetcBox {
         service: SERVICE.contact.delete_contact,
         contact_id: contactID,
         hub_id: Visitor.get(_a.id)
-      }).then((data)=>{
+      }).then((data) => {
         this._deleteAcknowledgement();
       })
     }
@@ -437,7 +440,7 @@ class __addressbook_widget_contact_detail extends LetcBox {
       email: contact.email || [],
       mobile: contact.mobile || [],
       address: contact.address || []
-    }).the((data)=>{
+    }).the((data) => {
       this._updateInviteResponse()
     })
   }

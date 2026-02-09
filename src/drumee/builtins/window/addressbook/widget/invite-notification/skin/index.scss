@@ -7,21 +7,21 @@
 
 .addressbook-widget-invite-notification {
   &__ui {
-    border-radius:var(--border-radius);
+    border-radius: var(--border-radius);
     align-items: center;
     background-color: inherit;
     background: var(--default-background);
     justify-content: center;
     margin: auto;
-    min-height:350px;
+    min-height: 350px;
     width: 600px;
   }
 
   &__main,
   &__container {
-    border-radius:var(--border-radius);
+    border-radius: var(--border-radius);
     background-color: inherit;
-    height : 100%;
+    height: 100%;
     width: 100%;
   }
 
@@ -47,15 +47,15 @@
 
   &__icon {
     cursor: pointer;
-    
+
     &.navigate {
-      color : var(--egrey-89);
+      color: var(--egrey-89);
       height: 10px;
       width: 10px;
     }
-    
+
     &.close {
-      color:var(--default-thinline-icon);
+      color: var(--default-thinline-icon);
       height: 12px;
       position: absolute;
       right: 16px;
@@ -73,7 +73,7 @@
       top: -5px;
 
       & .note-content {
-        background: #556E7F;//var(--egreen);
+        background: #556E7F; //var(--egreen);
         border-radius: 50%;
         height: 20px;
         text-align: center;
@@ -83,7 +83,7 @@
     }
 
     &.fullname {
-      @include drumee.typo($size: 24px, $weight:300, $line: 28px, $color: var(--eorange));
+      @include drumee.typo($size: 24px, $weight: 300, $line: 28px, $color: var(--eorange));
       margin: auto;
       overflow: hidden;
       padding: 0 25px;
@@ -100,7 +100,8 @@
     &.static-text {
       margin: auto;
       @include drumee.typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
-      .inner{
+
+      .inner {
         @include drumee.typo($size: 18px, $weight: 300, $line: 26px, $color: var(--default-text-color));
       }
     }
@@ -113,7 +114,7 @@
 
     &.content {
       overflow-y: auto;
-      padding-bottom:5px;
+      padding-bottom: 5px;
       @include drumee.typo($size: 14px, $line: 20px, $color: var(--default-text-color));
     }
   }
@@ -136,52 +137,47 @@
     min-width: 300px;
     padding: 10px 8px;
   }
-  
+
   &__button-cancel,
   &__button-confirm {
+    align-items: center;
+    height: 35px;
     justify-content: center;
-    padding: 10px 35px 10px 35px;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-font-smoothing: antialiased;
+    min-width: 125px;
+    font-size: 15px;
+    padding: 7px;
+    border-radius: var(--corner-radius-max);
   }
-  
+
   &__button-cancel {
-    border-radius: var(--border-radius);
-    border: 1px solid var(--btn-rollback-border);
-    @include drumee.typo($size: 16px, $weight: 300, $line: 19px, $color: var(--btn-rollback-text));
+    border: 1px solid var(--neutral-200);
+    color: var(--neutral-600);
+    margin-right: 50px;
 
     &:hover {
-      border:2px solid var(--btn-rollback-border-hover);
-      color: var(--btn-rollback-text-hover);     
+      background-color: var(--neutral-300);
     }
   }
-  
+
   &__button-confirm {
-    background-color: var(--btn-commit-background);  
-    border-radius: var(--border-radius);
-    border: 1px solid var(--btn-commit-border);
-    margin-left: 70px;
-    @include drumee.typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));
+    background-color: var(--primary-500);
+    color: var(--white);
+    border: 1px solid var(--corner-radius-max);
 
     &:hover {
-      background-color:var(--btn-commit-background-hover);
-      border-color: var(--btn-commit-border-hover);
+      background-color: var(--primary-600);
     }
-  
-    &.informed {
-      align-items: center;
-      background-color: var(--btn-rollback-background);
-      border-radius: var(--border-radius); 
-      border: 1px solid var(--btn-rollback-border);
-      height: 28px;
-      margin-left: 0px;
-      width: 68px;
-      @include drumee.typo($size: 14px, $line: 19px, $color: var(--btn-rollback-text)); //$weight: 300,
 
-      &:hover {
-        border:2px solid var(--btn-rollback-border-hover);
-        color: var(--btn-rollback-text-hover); 
-      }
-    }
+    // &.informed {
+    //   align-items: center;
+    //   height: 28px;
+    //   margin-left: 0px;
+    //   width: 68px;
+
+    //   &:hover {
+    //     border: 2px solid var(--btn-rollback-border-hover);
+    //     color: var(--btn-rollback-text-hover);
+    //   }
+    // }
   }
 }

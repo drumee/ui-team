@@ -1,39 +1,31 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/addressbook/widget/contact-item/skeleton/index.coffee
-//   TYPE : Skelton
-// ===================================================================**/
-
-// ===========================================================
-//
-// ===========================================================
-const __skl_contact_item = function (_ui_) {
+const __skl_contact_item = function (ui) {
 
   let profile_icon;
-  const fname = _ui_.mget(_a.firstname) || '';
-  const lname = _ui_.mget(_a.lastname) || '';
-  const fullname = _ui_.mget(_a.fullname) || (fname + " " + lname);
-  const displayName = _ui_.mget(_a.surname) || _ui_.mget('display');
+  const fname = ui.mget(_a.firstname) || '';
+  const lname = ui.mget(_a.lastname) || '';
+  const fullname = ui.mget(_a.fullname) || (fname + " " + lname);
+  const displayName = ui.mget(_a.surname) || ui.mget('display');
 
-  const contentFig = _ui_.fig.family;
+  const contentFig = ui.fig.family;
 
-  if (_ui_.mget('flag') === 'share') {
+  if (ui.mget('flag') === 'share') {
     profile_icon = Skeletons.Button.Svg({
       ico: 'raw-drumee_projectroom',
       className: `${contentFig}__icon raw-drumee_projectroom`
     });
   } else {
-    const status = _ui_.mget('status');
+    const status = ui.mget('status');
     switch (status) {
-      case _a.active: case _a.informed:
+      case _a.active: 
+      case _a.informed:
         profile_icon = Skeletons.UserProfile({
           className: `${contentFig}__profile`,
-          id: _ui_.mget(_a.entity) || _ui_.mget(_a.id) || _ui_.mget('drumate_id'),
+          id: ui.mget(_a.entity) || ui.mget(_a.id) || ui.mget('drumate_id'),
           firstname: fname || displayName,
           lastname: lname,
           fullname,
           auto_color: 1,
-          online: _ui_.mget(_a.online),
+          online: ui.mget(_a.online),
           live_status: 1
         });
         break;

@@ -1,9 +1,9 @@
 
-const __skl_contact_detail_show = function (_ui_) {
+module.exports = function (ui) {
 
   let actionMenu, profile_icon, tag;
-  const contact = _ui_.mget(_a.contact);
-  const { family } = _ui_.fig;
+  const contact = ui.mget(_a.contact);
+  const { family } = ui.fig;
   const {
     status
   } = contact;
@@ -11,9 +11,10 @@ const __skl_contact_detail_show = function (_ui_) {
   const firstname = contact[_a.firstname] || '';
   const lastname = contact[_a.lastname] || '';
   const fullname = contact[_a.fullname] || (firstname + ' ' + lastname);
-
+  ui.debug("AAA:14", status)
   switch (status) {
-    case _a.active: case _a.informed:
+    case _a.active:
+    case _a.informed:
       profile_icon = Skeletons.UserProfile({
         className: `${family}__profile avatar`,
         id: contact[_a.entity] || contact['contact_id'] || contact[_a.id],
@@ -72,13 +73,13 @@ const __skl_contact_detail_show = function (_ui_) {
   });
 
   if (!Visitor.isMimicActiveUser()) {
-    actionMenu = require('./action-menu')(_ui_, contact);
+    actionMenu = require('./action-menu')(ui, contact);
   } else {
     actionMenu = Skeletons.Box.X({
       className: `${family}__action-menu-wrapper`,
       kids: [
         // if not Visitor.isMimicActiveUser()
-        //   require('./action-menu')(_ui_, contact)
+        //   require('./action-menu')(ui, contact)
       ]
     });
   }
@@ -226,7 +227,7 @@ const __skl_contact_detail_show = function (_ui_) {
               className: `${family}__note invite-button details ${status}`,
               content: _content,
               service: 'resend-invite',
-              uiHandler: _ui_
+              uiHandler: ui
             })
           ]
         })
@@ -234,7 +235,7 @@ const __skl_contact_detail_show = function (_ui_) {
     });
   }
 
-  const a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     className: `${family}__container`,
     debug: __filename,
     kids: [
@@ -256,9 +257,5 @@ const __skl_contact_detail_show = function (_ui_) {
       })
     ]
   });
-
-  return a;
 };
 
-
-module.exports = __skl_contact_detail_show;

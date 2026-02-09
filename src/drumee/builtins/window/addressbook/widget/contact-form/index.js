@@ -203,7 +203,6 @@ class __addressbook_widget_contactForm extends LetcBox {
       return;
     }
 
-    this.debug(" _submitContact", this);
     const data = this.getData(_a.formItem);
     const replaceCategory = row => {
       let cat = 'prof';
@@ -255,7 +254,6 @@ class __addressbook_widget_contactForm extends LetcBox {
       ...data
     });
 
-    return this.debug(" _submitContact data", this, data);
   }
 
   /**

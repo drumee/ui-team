@@ -113,13 +113,13 @@ class __window_addressbook extends __window_addressbook_interact {
               // Check if the click target is within the search result wrapper
               const searchResult = this.getPart('search-result');
               const relatedTarget = e.relatedTarget || document.activeElement;
-              
+
               // Delay to allow click on search results before hiding
               setTimeout(() => {
                 if (searchResult && searchResult.el) {
                   // Check if focus moved to search result
-                  if (!searchResult.el.contains(document.activeElement) && 
-                      document.activeElement !== inputEl) {
+                  if (!searchResult.el.contains(document.activeElement) &&
+                    document.activeElement !== inputEl) {
                     this._hideSearchResults();
                   }
                 } else {
@@ -127,9 +127,9 @@ class __window_addressbook extends __window_addressbook_interact {
                 }
               }, 200);
             };
-            
+
             inputEl.addEventListener('blur', handleBlur);
-            
+
             inputEl.addEventListener('focus', () => {
               // Show results if there's text in the input
               const val = inputEl.value;
@@ -721,6 +721,7 @@ class __window_addressbook extends __window_addressbook_interact {
   loadContactDetailView(cmd) {
     let contactsDetail;
     const contact = cmd.source || this.source;
+    this.debug("AAA:724", contact)
     if ((cmd != null ? cmd.kind : undefined) === 'widget_contact_detail') {
       contactsDetail = cmd;
 

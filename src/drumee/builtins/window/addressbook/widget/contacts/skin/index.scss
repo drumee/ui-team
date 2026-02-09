@@ -4,6 +4,7 @@
   &__ui {
     background-color: var(--default-block-background);
     width: calc(100% - 2px);
+
     &[data-device="mobile"] {
       padding: 20px 20px 40px;
       background-color: transparent;
@@ -16,11 +17,9 @@
     height: 34px;
 
     &__title {
-      @include drumee.typo(
-        $size: 15px,
+      @include drumee.typo($size: 15px,
         $line: 16px,
-        $color: var(--ab-default-text-title)
-      );
+        $color: var(--ab-default-text-title));
       padding-bottom: 8px;
       padding-top: 7px;
       margin-left: auto;
@@ -33,6 +32,7 @@
       margin: 5px;
       position: absolute;
       right: 0;
+
       & svg {
         fill: var(--default-icon-neutral);
       }
@@ -65,11 +65,9 @@
     }
 
     &__name {
-      @include drumee.typo(
-        $size: 14px,
+      @include drumee.typo($size: 14px,
         $line: 16px,
-        $color: var(--default-text-color)
-      );
+        $color: var(--default-text-color));
       margin-top: 3px;
       padding: 3px 3px 3px 15px;
       max-width: 190px;
@@ -81,11 +79,12 @@
   &__item {
     width: 100%;
     padding: 12px 16px;
+    max-height: calc(100% - 50px);
 
     .smart-container {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 16px;
+      gap: var(--spacer-1);
       width: 100%;
 
       // Responsive: max 3 columns, min 1 column
