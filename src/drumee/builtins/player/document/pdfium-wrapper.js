@@ -36,7 +36,7 @@ export async function loadPdfDocument(pdfData) {
 
   // Load the document
   const docPtr = pdfium.FPDF_LoadMemDocument(filePtr, pdfData.length, 0);
-
+  console.log("AAAA:39", pdfData.length)
   if (!docPtr) {
     const error = pdfium.FPDF_GetLastError();
     pdfium.pdfium.wasmExports.free(filePtr);
@@ -85,6 +85,7 @@ export async function loadPdfDocument(pdfData) {
 
       // Load the page
       const pagePtr = pdfium.FPDF_LoadPage(docPtr, pageIndex);
+      console.log("AAA:88 --rendering", pageIndex)
       if (!pagePtr) {
         throw new Error(`Failed to load page ${pageIndex}`);
       }

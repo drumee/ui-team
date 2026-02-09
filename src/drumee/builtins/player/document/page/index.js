@@ -48,15 +48,16 @@ class __player_page extends LetcBox {
    */
   async build(c) {
     let pdfDocument = this.mget("pdfDocument");
-    let pageNum = this.mget("pageNum");
+    let pageIndex = this.mget("pageIndex");
     let pageWidth = this.mget("pageWidth");
-    let scale =1;
+    let scale = 1;
     if (pageWidth) {
       scale = this.__canvasWrapper.$el.width() / pageWidth;
     }
     let canvas = await this.ensurePart('canvas');
+    let rotation = this.mget(_a.rotation) || 0
     try {
-      let viewport = await pdfDocument.renderPage(pageNum, scale, 0, canvas.el);
+      let viewport = await pdfDocument.renderPage(pageIndex, scale, rotation, canvas.el);
       this.ratio = viewport.width / viewport.height;
     } catch (e) {
       this.warn("Failed to render page", e)

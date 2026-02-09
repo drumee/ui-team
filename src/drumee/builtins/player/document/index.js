@@ -2,7 +2,7 @@
 const { filesize, fitBoxes } = require("core/utils")
 const { TweenMax, Expo } = gsap;
 const PlayerInteract = require('player/interact');
-const { loadPdfDocument } = require('./pdfium-wrapper')
+const { loadPdfDocument, initializePdfium } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";
 class __player_document extends PlayerInteract {
 
@@ -29,6 +29,7 @@ class __player_document extends PlayerInteract {
       this.media = opt.source || opt.trigger;
     }
     this.pollCount = 0;
+    initializePdfium() /** Lazy loading */
   }
 
 
@@ -59,7 +60,7 @@ class __player_document extends PlayerInteract {
     let { service, data, options } = args
     switch (options.service) {
       case "media.status":
-        this.debug("AAAA:onWsMessage:62", { service, data, options })
+        this.debug("onWsMessage:62", { service, data, options })
         this.checkPreview(args)
         break;
     }
@@ -124,11 +125,9 @@ class __player_document extends PlayerInteract {
     this.pdfDocument = pdfDocument;
     const { pageCount } = pdfDocument;
     this.totalPages = pageCount;
-    // In mobile mode, load all pages at once to avoid scroll detection issues
-    const batchSize = Visitor.isMobile() ? pageCount : Math.min(pageCount, 4);
     this.loadedPages = 0;
-    for (let i = 0; i < batchSize; i++) {
-      // let page = await pdf.getPage(i);
+    this._pages = []
+    for (let i = 0; i < pageCount; i++) {
       let p = {
         kind: "document_page",
         pdfDocument,
@@ -138,45 +137,16 @@ class __player_document extends PlayerInteract {
         pageWidth: this.pageWidth,
         pageHeight: this.pageHeight,
         uiHandler: [this],
-        pageNum: i,
+        pageIndex: i,
         attribute: {
           id: `page-${i}`
         },
       };
-      this.pagesList.append(p);
-      this.loadedPages++;
+      this._pages.push(p)
     }
+    this.nextPages()
   }
 
-  /**
-    * 
-    * @param {*} pdf 
-    */
-  async nextPages() {
-    let pdfDocument = this.pdfDocument;
-    this.loadedPages++;
-    let pageNum = this.loadedPages
-    if (pageNum >= this.totalPages) {
-      return;
-    }
-    // let page = await pdf.getPage(pageNum);
-    let p = {
-      kind: "document_page",
-      // page,
-      pageWidth: this.pageWidth,
-      pageHeight: this.pageHeight,
-      logicalParent: this,
-      pdfDocument,
-      ratio: this.ratio,
-      uiHandler: [this],
-      pageNum,
-      attribute: {
-        id: `page-${pageNum}`
-      },
-    };
-    this.pagesList.append(p);
-
-  }
 
   /**
    * 
@@ -226,7 +196,7 @@ class __player_document extends PlayerInteract {
     };
     this.pollCount++;
     this.fetchService(opt).then((data) => {
-      this.debug("AAA:223 get buil state", opt, data)
+      this.debug("AAA:223 getting build state", opt, data)
       if (/^(ok|done)$/.test(data.buildState) || !data.buildState) {
         this.message("");
         this.pollCount = 0;
@@ -402,7 +372,6 @@ class __player_document extends PlayerInteract {
     };
 
     this.fetchService(opt).then((data) => {
-      this.debug("AAA:424", m, data)
       if (m) m.wait(0);
       if (_.isEmpty(data)) {
         this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW);
@@ -474,8 +443,17 @@ class __player_document extends PlayerInteract {
    * 
    * @param {*} v 
    */
-  onPageRendered(p) {
+  nextPages() {
+    let p = this._pages.shift()
+    if (!p) return
+    this.pagesList.append(p);
+    this.loadedPages++;
     this.__progress.el.dataset.state = 0;
+    if (this._pages.length >= 1 && this.loadedPages <= 2) {
+      setTimeout(() => {
+        this.nextPages()
+      }, 1000)
+    }
   }
 
 
@@ -630,10 +608,6 @@ class __player_document extends PlayerInteract {
         break;
 
       case _a.link:
-        break;
-
-      case 'page-rendered':
-        this.onPageRendered(args.pageNum);
         break;
 
       case "read-new-version":
