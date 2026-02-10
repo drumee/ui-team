@@ -45,13 +45,13 @@ function menuBar(ui) {
               })
             : undefined,
 
-          // !Visitor.isMobile()
-          //   ? Skeletons.Button.Svg({
-          //       className: icoClass,
-          //       service: "open-reward-hub",
-          //       ico: "reward",
-          //     })
-          //   : undefined,
+          !Visitor.isMobile()
+            ? Skeletons.Button.Svg({
+                className: icoClass,
+                service: "open-reward-hub",
+                ico: "reward",
+              })
+            : undefined,
           userMenu(ui, "desk-avatar"),
         ],
       }),
