@@ -10,7 +10,7 @@
   &__ui {
     position: absolute;
     background: transparent;
-    min-width: 300px;
+    min-width: 600px;
     min-height: 300px;
     z-index: 1000;
     border-radius: var(--corner-radius-6);
@@ -18,6 +18,10 @@
     overflow: visible;
     max-width: 100vw;
     max-height: calc(100vh - 132px);
+
+    &[data-device="mobile"] {
+      min-width: 300px;
+    }
 
     &[data-state="1"] {
       z-index: 10000 !important;
