@@ -81,6 +81,8 @@ See https://drumee.com/-/#/sandbox for examples.
 | admin_security_page | src/drumee/builtins/window/adminpanel/pages/admin-security | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/admin-security/index.js |
 | broadcast_message_page | src/drumee/builtins/window/adminpanel/pages/broadcast-message | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/broadcast-message/index.js |
 | domain_page | src/drumee/builtins/window/adminpanel/pages/domain-page | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/domain-page/index.js |
+| members_page | src/drumee/builtins/window/adminpanel/pages/members | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/members/index.js |
+| members_room | src/drumee/builtins/window/adminpanel/pages/members/room | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/adminpanel/pages/members/room/index.js |
 | chat_contact_list | src/drumee/builtins/window/bigchat/widget/chatcontact-list | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chatcontact-list/index.js |
 | chat_contact_item | src/drumee/builtins/window/bigchat/widget/chatcontact-item | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chatcontact-item/index.js |
 | chat_room | src/drumee/builtins/window/bigchat/widget/chat-room | https://github.com/drumee/ui-team/tree/main/src/drumee/builtins/window/bigchat/widget/chat-room/index.js |

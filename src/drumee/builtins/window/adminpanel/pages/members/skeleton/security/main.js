@@ -3,20 +3,13 @@ const { toggleState } = require("core/utils")
 function __skl_members_security(ui) {
   const securityFig = `${ui.fig.family}-security`;
   const data = ui.mget(_a.member)
-  let _mode, isMobileNo, _fContent;
+  let _mode, _fContent;
 
   _mode = _a.enable
-  isMobileNo = _a.yes
-  if (_.isEmpty(data.mobile)) {
-    isMobileNo = _a.no
-    _mode = _a.disable
-    _fContent = LOCALE.CHANGE_IMPOSSIBLE
-  }
 
   if (Visitor.domainCan(_K.permission.admin_member, data.privilege)) {
-    isMobileNo = _a.no
     _mode = _a.disable
-    _fContent = LOCALE.FOR_SECURITY_DOUBLE_AUTHENTICATION//'For Security reasons, double authentication is mandatory'
+    _fContent = LOCALE.FOR_SECURITY_DOUBLE_AUTHENTICATION
   }
 
   const footerContent = Skeletons.Note({
@@ -48,15 +41,15 @@ function __skl_members_security(ui) {
     ]
   })
 
-  const headerInfo = Skeletons.Box.X({
-    className: `${securityFig}__header-info`,
-    kids: [
-      Skeletons.Note({
-        className: `${securityFig}__note header-info`,
-        content: LOCALE.ADMIN_SECURITY_POPUP_HEADER_SUB_INFO
-      })
-    ]
-  })
+  // const headerInfo = Skeletons.Box.X({
+  //   className: `${securityFig}__header-info`,
+  //   kids: [
+  //     Skeletons.Note({
+  //       className: `${securityFig}__note header-info`,
+  //       content: LOCALE.ADMIN_SECURITY_POPUP_HEADER_SUB_INFO
+  //     })
+  //   ]
+  // })
 
   const optIcon = Skeletons.Box.X({
     className: `${securityFig}__optIcon`,
@@ -67,7 +60,11 @@ function __skl_members_security(ui) {
       })
     ]
   })
-
+  let state = 1;
+  ui.debug("AAAA:64", ui, data.otp)
+  if (data.otp == 0) {
+    state = 0
+  }
   const subContent = Skeletons.Box.Y({
     className: `${securityFig}__subContent`,
     kids: [
@@ -84,9 +81,8 @@ function __skl_members_security(ui) {
             sys_pn: 'security-switch',
             service: 'toggle-double-authentication',
             uiHandler: ui,
-            state: toggleState(data.otp),
-            values: ['0', _a.sms],
-            isMobile: isMobileNo,
+            state,
+            values: ['0', _a.email],
             vendorOpt: [
               { label: LOCALE.DISABLED },
               { label: LOCALE.ENABLED }
@@ -122,7 +118,7 @@ function __skl_members_security(ui) {
     className: `${securityFig}__main`,
     kids: [
       header,
-      headerInfo,
+      // headerInfo,
       content,
       footer
     ]

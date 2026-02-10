@@ -1,6 +1,6 @@
 
-function button(_ui_, content, c = 1) {
-  const fig = `${_ui_.fig.family}-gateway`;
+function button(ui, content, c = 1) {
+  const fig = `${ui.fig.family}-gateway`;
   let b = Skeletons.Box.G({
     className: `${fig}__icons c-${c}`,
     kids: []
@@ -40,8 +40,8 @@ function button(_ui_, content, c = 1) {
   return a;
 }
 
-function __skl_welcome_signin_gateway(_ui_) {
-  const fig = `${_ui_.fig.family}-gateway`;
+function __skl_welcome_signin_gateway(ui) {
+  const fig = `${ui.fig.family}-gateway`;
 
   return {
     header: Skeletons.Note({
@@ -51,8 +51,8 @@ function __skl_welcome_signin_gateway(_ui_) {
     content: Skeletons.Box.X({
       className: `${fig}__buttons`,
       kids: [
-        button(_ui_, LOCALE.DRUMEE_DESK, 1),
-        button(_ui_, LOCALE.DRUMEE_COMPANY, 3)
+        button(ui, LOCALE.DRUMEE_DESK, 1),
+        button(ui, LOCALE.DRUMEE_COMPANY, 3)
       ]
     })
   };

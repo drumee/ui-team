@@ -71,16 +71,18 @@ class __welcome_signin extends __welcome_interact {
         });
         break;
       default:
-        let tab = Visitor.parseModule()[2];
-        switch (tab) {
-          case "url":
-          case "org":
-            this.prompt_url();
-            break;
-          default:
-            opt = require("./skeleton/auth")(this);
-            this.feed(this._skeleton(this, opt));
-        }
+        opt = require("./skeleton/auth")(this);
+        this.feed(this._skeleton(this, opt));
+      // let tab = Visitor.parseModule()[2];
+      // switch (tab) {
+      //   case "url":
+      //   case "org":
+      //     this.prompt_url();
+      //     break;
+      //   default:
+      //     opt = require("./skeleton/auth")(this);
+      //     this.feed(this._skeleton(this, opt));
+      // }
     }
   }
 
@@ -321,7 +323,7 @@ class __welcome_signin extends __welcome_interact {
     const f = () => {
       this.__noCodeOptions.el.dataset.mode = _a.open;
     };
-    return _.delay(f, Visitor.timeout(15000));
+    return _.delay(f, Visitor.timeout(5000));
   }
 
   /**
@@ -329,7 +331,6 @@ class __welcome_signin extends __welcome_interact {
    * @param {Object} data
    */
   prompt_url(data) {
-    //uiRouter.setWallpaper('company');
     let opt = require("./skeleton/url")(this);
     this.feed(this._skeleton(this, opt));
   }

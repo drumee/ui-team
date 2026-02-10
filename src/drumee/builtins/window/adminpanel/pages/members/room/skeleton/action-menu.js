@@ -9,17 +9,10 @@ function __skl_member_room_action_menu(ui, data) {
 
   const menuFig = `${ui.fig.family}-menu`;
 
-  if (!Visitor.domainCan(_K.permission.admin_member)) {
+  if (!Visitor.domainCan(_K.permission.admin_member) || ui.mget('connected') == 0) {
     return Skeletons.Box.X({});
   }
 
-  if (
-    (!Visitor.domainCan(_K.permission.admin)) &&
-    (Visitor.id != ui._currentData.mget('drumate_id')) &&
-    (Visitor.get(_a.privilege) <= ui._currentData.mget(_a.privilege))
-  ) {
-    return Skeletons.Box.X({});
-  }
 
   let menuKids = [];
 
@@ -107,9 +100,9 @@ function __skl_member_room_action_menu(ui, data) {
     ]
   });
 
-  kick_out_member = Skeletons.Box.X({
+  let kick_out_member = Skeletons.Box.X({
     className: `${menuFig}__item`,
-    service: 'kick-out-member',
+    service: 'prompt-kick-out',
     uiHandler: ui,
     kidsOpt: {
       active: 0
@@ -122,26 +115,6 @@ function __skl_member_room_action_menu(ui, data) {
     ]
   });
 
-  // if ((data.status == _a.locked) || (data.status == _a.archived)) {
-  //   archiveLabel = LOCALE.ARCHIVE_MEMBER//'Archive member'
-  //   if (data.status == _a.archived) {
-  //     archiveLabel = LOCALE.UNARCHIVE_MEMBER//'Unarchive member'
-  //   }
-  //   toggleArchiveMember = Skeletons.Box.X({
-  //     className: `${menuFig}__item`,
-  //     service: 'toggle-archive-member',
-  //     uiHandler: ui,
-  //     kidsOpt: {
-  //       active: 0
-  //     },
-  //     kids: [
-  //       Skeletons.Note({
-  //         className: `${menuFig}__note menu-item`,
-  //         content: archiveLabel
-  //       })
-  //     ]
-  //   });
-  // }
 
   menuKids.push(modifyData)
   if (Visitor.domainCan(_K.permission.admin_security) && (Visitor.id != data.drumate_id)) {

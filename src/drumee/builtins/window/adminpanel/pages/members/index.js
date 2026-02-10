@@ -128,7 +128,7 @@ class ___members_page extends LetcBox {
       case 'remove-admin':
       case 'reset-member-password':
       case 'change-member-password':
-      case 'kick-out-member':
+      case 'prompt-kick-out':
       case 'toggle-archive-member':
         return this.loadActionPopup(cmd, service);
 
@@ -224,6 +224,8 @@ class ___members_page extends LetcBox {
    * to open the popup for security option of a member
    */
   loadSecurityOption(cmd) {
+    this.debug("AAA:227", cmd, cmd.mget(_a.member))
+    this.pendingRoom = cmd;
     this.mset(_a.member, cmd.mget(_a.member))
     return this.openOverlay(require('./skeleton/security/main').default(this))
   }
@@ -232,20 +234,26 @@ class ___members_page extends LetcBox {
    * @param {LetcBox} cmd
    */
   toggleDoubleAuthentication(cmd) {
-    if (cmd.mget('isMobile') == _a.no) {
-      return null
-    }
-
-    const data = this.mget(_a.member)
+    let member = this.mget(_a.member)
     const _value = cmd.mget(_a.value)
-
-    if ((data.drumate_id) && (data.authentification != _value)) {
+    if ((member.drumate_id) && (member.authentification != _value)) {
       return this.postService({
-        service: SERVICE.adminpanel.member_authentification,
-        orgid: this.orgId,
-        user_id: data.drumate_id,
-        option: _value,
+        service: SERVICE.adminpanel.set_mfa,
+        user_id: member.drumate_id,
+        mfa: _value,
         //hub_id  : Visitor.get(_a.id)
+      }).then((data) => {
+        let { profile } = data
+        member.otp = profile.mfa;
+        member.mfa = profile.mfa;
+        this.mset({ member })
+        if (this.pendingMember) {
+          this.pendingMember.mset({ otp: profile.mfa, mfa: profile.mfa })
+        }
+        if (this.pendingRoom) {
+          member = { ...this.pendingRoom.mget(_a.member), otp: profile.mfa, mfa: profile.mfa }
+          this.pendingRoom.mset({ member })
+        }
       })
     }
     return null
@@ -286,13 +294,14 @@ class ___members_page extends LetcBox {
    * @param {(any|null)} source
   */
   loadMemberDetail(cmd) {
-    this.debug("AAAA:289", cmd)
     let data = {}
     if (cmd) {
       if (_.isFunction(cmd.data)) {
         data = cmd.data()
+        this.pendingMember = cmd;
       } else {
         this.warn("Source has no data function", cmd)
+        this.pendingMember = null;
         return
       }
     }
@@ -416,10 +425,9 @@ class ___members_page extends LetcBox {
    * 
   */
   loadActionPopupContent(cmd, type) {
-    this.debug("AAA:419", type)
     const source = cmd.source
     let _content;
-
+    this.debug("AAA:430", type)
     this.mset({
       member: cmd.mget(_a.member),
       serviceType: type
@@ -457,7 +465,7 @@ class ___members_page extends LetcBox {
         _content = require('./skeleton/action-popup/content/set-member-password').default(this)
         break
 
-      case 'kick-out-member':
+      case 'prompt-kick-out':
         // this.mset(_a.member, source.model.toJSON())
         _content = require('./skeleton/action-popup/content/kick-member').default(this)
         break
@@ -480,12 +488,14 @@ class ___members_page extends LetcBox {
   confirmActionPopup() {
     const type = this.mget('serviceType')
     const data = this.mget(_a.member)
+    this.debug("AAA:491", type, data)
     let _status;
     if (data && data.drumate_id) {
       switch (type) {
         case 'delete-inactive-member':
           return this.deleteInviteMember(data)
 
+        case 'prompt-kick-out':
         case 'delete-member':
           return this.deleteMember(data)
 
@@ -494,9 +504,6 @@ class ___members_page extends LetcBox {
 
         case 'reset-member-password':
           return this.resetMemberPassword(data)
-
-        case 'confirm-kick-out':
-          return this.kickOutMember(data, _status)
 
         case 'toggle-archive-member':
           _status = _a.archived
@@ -535,17 +542,11 @@ class ___members_page extends LetcBox {
       service: SERVICE.adminpanel.member_delete,
       orgid: this.orgId,
       user_id: data.drumate_id,
-    }, { async: 1 }).then((data)=>{
+    }, { async: 1 }).then((data) => {
       this.deleteMemberResponse(data)
     })
   }
 
-  /**
-   * 
-   */
-  kickOutMember(data) {
-    this.debug('AAAA:635', data)
-  }
 
   /* 
   *

@@ -1,17 +1,9 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2020
- * FILE : /src/drumee/modules/welcome/signin/skeleton/otp.js
- * TYPE : Skeleton
- * ===================================================================**/
 
-// ===========================================================
-//
-// ===========================================================
 
-function __skl_welcome_signin_otp (_ui_) {
-  const otpFig = _ui_.fig.family
+function __skl_welcome_signin_otp (ui) {
+  const otpFig = ui.fig.family
 
-  const mobileNumber = _ui_.data?.mobile || ''
+  const mobileNumber = ui.data?.mobile || ''
 
   const title = Skeletons.Box.X({
     className  : `${otpFig}__wrapper mobile-number`,
@@ -46,8 +38,8 @@ function __skl_welcome_signin_otp (_ui_) {
             formItem      : _a.code,
             preselect     : 1,
             placeholder   : LOCALE.ENTER_CODE,
-            uiHandler     : [_ui_],
-            errorHandler  : [_ui_],
+            uiHandler     : [ui],
+            errorHandler  : [ui],
             validators    : [
               { reason: LOCALE.CODE_REQUIRED  , comply: Validator.require }
             ],
@@ -58,8 +50,8 @@ function __skl_welcome_signin_otp (_ui_) {
     ]
   })
 
-  const submit = require('../../skeleton/common/button').default(_ui_, 'authenticate', 'Go')
-  const msgBox = require('../../skeleton/common/message-box').default(_ui_)
+  const submit = require('../../skeleton/common/button').default(ui, 'authenticate', 'Go')
+  const msgBox = require('../../skeleton/common/message-box').default(ui)
 
   const noCode = Skeletons.Box.Y({
     className  : `${otpFig}__wrapper no-code`,
@@ -85,7 +77,7 @@ function __skl_welcome_signin_otp (_ui_) {
             className  : `${otpFig}__note resent-code helper text-underline`,
             content    : LOCALE.RESEND_NEW_CODE,
             service    : 'resend-otp',
-            uiHandler  : [_ui_]
+            uiHandler  : [ui]
           }),
         ]
       })

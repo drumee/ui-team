@@ -1,6 +1,6 @@
-function __skl_welcome_signin_content(_ui_) {
-  const contentFig = _ui_.fig.family;
-  let dataset = _ui_.mget(_a.dataset) || {};
+function __skl_welcome_signin_content(ui) {
+  const contentFig = ui.fig.family;
+  let dataset = ui.mget(_a.dataset) || {};
   const email = Skeletons.Box.X({
     className: `${contentFig}__wrapper email`,
     sys_pn: 'wrapper-ident"',
@@ -15,7 +15,7 @@ function __skl_welcome_signin_content(_ui_) {
           }),
 
           Skeletons.EntryBox({
-            value: _ui_.currentUsername,
+            value: ui.currentUsername,
             className: `${contentFig}__entry email with-icon`,
             sys_pn: "ref-ident",
             placeholder: LOCALE.EMAIL,
@@ -23,8 +23,8 @@ function __skl_welcome_signin_content(_ui_) {
             preselect: 1,
             onlyKeyboard: 1,
             service: _e.submit,
-            uiHandler: [_ui_],
-            errorHandler: [_ui_],
+            uiHandler: [ui],
+            errorHandler: [ui],
             showError: false,
           }),
         ],
@@ -32,18 +32,18 @@ function __skl_welcome_signin_content(_ui_) {
     ],
   });
 
-  const cn = `${contentFig}__wrapper password ${_ui_.fig.group}__row ${_ui_.fig.family}__row`;
+  const cn = `${contentFig}__wrapper password ${ui.fig.group}__row ${ui.fig.family}__row`;
   const password = Skeletons.Box.X({
     className: `${contentFig}__wrapper password`,
-    kids: [require("../../skeleton/password").default(_ui_)],
+    kids: [require("../../skeleton/password").default(ui)],
   });
 
   const submit = require("../../skeleton/common/button").default(
-    _ui_,
+    ui,
     _e.submit,
     LOCALE.LOGIN
   );
-  const msgBox = require("../../skeleton/common/message-box").default(_ui_);
+  const msgBox = require("../../skeleton/common/message-box").default(ui);
   let href = `${_K.module.welcome}/signin/org`;
   let content = LOCALE.LOGIN_OTHER_POD;
   if (Organization.get("domain_id") > 1) {
@@ -61,7 +61,6 @@ function __skl_welcome_signin_content(_ui_) {
       content: LOCALE.Q_NO_ACCOUNT,
       dataset,
       href: "#/welcome/signup",
-      // service: 'open-signup'
     });
   }
 

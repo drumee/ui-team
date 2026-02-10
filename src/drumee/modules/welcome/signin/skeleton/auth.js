@@ -1,16 +1,8 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2020
- * FILE : /src/drumee/modules/welcome/signin/skeleton/index.js
- * TYPE : Skeleton
- * ===================================================================**/
 
-// ===========================================================
-//
-// ===========================================================
 
-function __skl_welcome_signin_auth(_ui_) {
-  const fig = `${_ui_.fig.family}`;
-  let dataset = _ui_.mget(_a.dataset) || {};
+function __skl_welcome_signin_auth(ui) {
+  const fig = `${ui.fig.family}`;
+  let dataset = ui.mget(_a.dataset) || {};
   let name = Organization.name();
   let headerTitle = (name.printf(LOCALE.CONNECTION_TO));
 
@@ -36,7 +28,7 @@ function __skl_welcome_signin_auth(_ui_) {
 
   return {
     header,
-    content: require('./content')(_ui_)
+    content: require('./content')(ui)
   };
 
 };

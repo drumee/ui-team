@@ -96,7 +96,7 @@
       &.header {
         justify-content: center;
         width: 100%;
-        @include drumee.typo($size: 18px, $line: 25px, $color: var(--default-text-title));
+        @include drumee.typo($size: 18px, $line: 25px, $color: var(--primary-600));
       }
 
       &.header-info {
@@ -145,21 +145,22 @@
             @include drumee.typo($size: 16px, $line: 19px);
             text-align: left;
             width: auto;
+            cursor: pointer;
           }
 
           &.on {
-            color: var(--toggle-switch-on); //$ap-toggle-switch-on;
+            color: var(--primary-500);
 
             &[data-state="0"] {
-              color: var(--toggle-switch-off); //$ap-toggle-switch-off ;
+              color: var(--neutral-500);
             }
           }
 
           &.off {
-            color: var(--toggle-switch-off); // $ap-toggle-switch-off;
+            color: var(--neutral-500);
 
             &[data-state="0"] {
-              color: var(--toggle-switch-on); // $ap-toggle-switch-on;
+              color: var(--primary-500);
             }
           }
 

@@ -1,6 +1,6 @@
 
-function __skl_members_room  (ui) {
-  const roomFig = ui.fig.family;
+function __skl_members_room  (_ui_) {
+  const roomFig = _ui_.fig.family;
 
   let container;
 
@@ -18,11 +18,11 @@ function __skl_members_room  (ui) {
     sys_pn    : _a.content
   })
 
-  if ((ui.mget(_a.type) != 'member_create') && (_.isEmpty(ui._drumateId))) {
+  if ((_ui_.mget(_a.type) != 'member_create') && (_.isEmpty(_ui_._drumateId))) {
     container = Skeletons.Box.Y({
       className  : `${roomFig}__container`,
       kids : [
-        require('./default-content').default(ui)
+        require('./default-content').default(_ui_)
       ]
     })
 

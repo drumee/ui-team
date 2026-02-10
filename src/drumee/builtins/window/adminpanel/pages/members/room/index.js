@@ -1,6 +1,4 @@
-/// <reference path="../../../../../../../../@types/index.d.ts" />
 class ___members_room extends LetcBox {
-
 
   /**
    * 
@@ -13,6 +11,7 @@ class ___members_room extends LetcBox {
     this.declareHandlers();
     this._type = this.mget(_a.type)
     // this._currentData = this.mget(_a.source)
+    this.debug("AAA:14", opt.source)
     this._currentTag = this.mget('currentTag') || null;
     this._drumateId = ''
   }
@@ -82,7 +81,7 @@ class ___members_room extends LetcBox {
         break
 
       default:
-        this.warn('Type is mandatory !!!')
+        memberRoomOpt = require("./skeleton/default-content")
     }
 
     memberRoomOpt.currentTag = this._currentTag;
@@ -96,9 +95,7 @@ class ___members_room extends LetcBox {
   onDomRefresh() {
     if (this._type != 'member_create') {
       this._drumateId = this.mget('drumate_id')
-      if (this._drumateId) {
-        this._getMemberDetail()
-      }
+      this._getMemberDetail()
     }
     this.feed(require('./skeleton').default(this));
   }
@@ -114,7 +111,6 @@ class ___members_room extends LetcBox {
       case _e.edit:
         this.editMemberForm()
         break
-
       case 'cancel-member':
         this.cancelMemberForm()
         break
@@ -148,9 +144,6 @@ class ___members_room extends LetcBox {
         })
         this.routeContent();
       })
-    } else {
-      this.warn('Drumate Id is mandatory !')
-      return
     }
   }
 

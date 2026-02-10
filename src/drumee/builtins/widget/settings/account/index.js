@@ -1,8 +1,5 @@
-require("@drumee/ui-toolkit");
-const PRICES = {
-  startups: 3059,
-  pro: 1444
-}
+const { loadWidgets } = require("@drumee/ui-toolkit");
+loadWidgets()
 /**
  *
  *
@@ -276,7 +273,6 @@ class settings_account extends LetcBox {
    * @param {*} cmd 
    */
   changeMFA(cmd) {
-    this.debug("AAAA:264", cmd, this.getData())
     let MFA = [LOCALE.OFF, LOCALE.ON];
     let { email } = Visitor.profile();
     return this.ensurePart("current-mfa").then(async (p) => {
@@ -287,7 +283,6 @@ class settings_account extends LetcBox {
         mfa: cmd.mget('mfa'),
         secret
       }
-      this.debug("AAA:133", payload, p);
       await Kind.waitFor('dtk_otp');
       this.__overlay.feed({
         payload,

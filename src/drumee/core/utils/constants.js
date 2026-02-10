@@ -5,6 +5,7 @@ export const STATE = {
   yes: 1,
   true: 1,
   sms: 1,
+  email: 1,
   0: 0,
   off: 0,
   out: 0,
