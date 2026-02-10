@@ -43,21 +43,17 @@
   }
 
   &__title {
-    @include drumee.typo(
-      $color: #fa8540,
+    @include drumee.typo($color: var(--primary-500),
       $size: 26px,
       $line: 33px,
-      $weight: 300
-    );
+      $weight: 300);
   }
 
   &__label {
-    @include drumee.typo(
-      $color: var(--default-text-color),
+    @include drumee.typo($color: var(--default-text-color),
       $size: 14px,
       $weight: 300,
-      $line: 36px
-    ); // var(--egrey-2f)
+      $line: 36px); // var(--egrey-2f)
 
     &.ph-reminder {
       display: none;
@@ -68,12 +64,10 @@
       &[data-state="1"] {
         display: block;
         transition: all 0.5s;
-        @include drumee.typo(
-          $color: var(--secondary-text-color),
+        @include drumee.typo($color: var(--secondary-text-color),
           $size: 13px,
           $weight: 300,
-          $line: 16px
-        ); //#4A90E2
+          $line: 16px); //#4A90E2
         text-align: left;
         margin: 0 auto 0 0;
       }
@@ -82,12 +76,10 @@
 
   &__message {
     bottom: 16px;
-    @include drumee.typo(
-      $color: var(--default-text-color),
+    @include drumee.typo($color: var(--default-text-color),
       $size: 16px,
       $line: 18px,
-      $weight: 400
-    ); //$egrey-78
+      $weight: 400); //$egrey-78
     text-align: left;
 
     &.subtitle {
@@ -97,12 +89,10 @@
     }
 
     &.error {
-      @include drumee.typo(
-        $color: var(--default-text-error),
+      @include drumee.typo($color: var(--default-text-error),
         $size: 14px,
         $line: 18px,
-        $weight: 300
-      );
+        $weight: 300);
     }
   }
 
@@ -186,12 +176,10 @@
     }
 
     &.title {
-      @include drumee.typo(
-        $color: var(--default-text-error),
+      @include drumee.typo($color: var(--default-text-error),
         $size: 20px,
         $line: 28px,
-        $weight: 300
-      );
+        $weight: 300);
     }
   }
 
@@ -206,46 +194,42 @@
     }
 
     &.no-go {
-      background-color: var(--btn-commit-background);
-      @include drumee.typo(
-        $color: var(--secondary-text-color),
+      background-color: var(--primary-500);
+      @include drumee.typo($color: var(--secondary-text-color),
         $size: 13px,
         $line: 16px,
-        $weight: 300
-      ); //var(--egrey-78)
+        $weight: 300); //var(--egrey-78)
     }
 
     &.go {
       min-width: 115px;
-      background-color: var(--btn-commit-background);
-      @include drumee.typo(
-        $size: 16px,
+      background-color: var(--primary-500);
+      @include drumee.typo($size: 16px,
         $line: 35px,
         $weight: 400,
-        $color: var(--btn-commit-text)
-      );
+        $color: var(--btn-commit-text));
     }
 
     &.action,
     &.btn {
       margin: 0 10px;
       min-width: 115px;
-      border: 1px solid var(--btn-commit-border);
-      border-radius: var(--border-radius);
+      border-radius: var(--corner-radius-max);
+
+      background-color: var(--primary-500);
+      border: 1px solid var(--primary-400);
 
       &:hover {
-        background-color: var(--btn-commit-background-hover);
-        border: 1px solid var(--btn-commit-border-hover);
+        background-color: var(--primary-600);
+        border: 1px solid var(--primary-500);
       }
     }
 
     &.link {
-      @include drumee.typo(
-        $color: var(--secondary-text-color),
+      @include drumee.typo($color: var(--secondary-text-color),
         $size: 13px,
         $line: 16px,
-        $weight: 300
-      ); //var(--egrey-78)
+        $weight: 300); //var(--egrey-78)
     }
   }
 
@@ -269,12 +253,10 @@
       height: auto;
       min-width: 200px;
       white-space: nowrap;
-      @include drumee.typo(
-        $color: #ff4578,
+      @include drumee.typo($color: #ff4578,
         $size: 12px,
         $line: 16px,
-        $weight: 300
-      );
+        $weight: 300);
     }
   }
 }

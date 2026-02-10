@@ -94,7 +94,6 @@ class ___members_room extends LetcBox {
    * 
    */
   onDomRefresh() {
-    this.debug("AAAA:97", this)
     if (this._type != 'member_create') {
       this._drumateId = this.mget('drumate_id')
       if (this._drumateId) {
@@ -125,7 +124,7 @@ class ___members_room extends LetcBox {
       default:
         if (!service) return
         this.source = cmd
-        this.triggerHandlers({ service: service })
+        this.triggerHandlers({ service })
     }
   }
 

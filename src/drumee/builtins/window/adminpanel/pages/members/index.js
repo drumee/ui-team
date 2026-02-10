@@ -289,7 +289,12 @@ class ___members_page extends LetcBox {
     this.debug("AAAA:289", cmd)
     let data = {}
     if (cmd) {
-      data = cmd.data()
+      if (_.isFunction(cmd.data)) {
+        data = cmd.data()
+      } else {
+        this.warn("Source has no data function", cmd)
+        return
+      }
     }
     const memberDetail = {
       ...data,
@@ -411,6 +416,7 @@ class ___members_page extends LetcBox {
    * 
   */
   loadActionPopupContent(cmd, type) {
+    this.debug("AAA:419", type)
     const source = cmd.source
     let _content;
 
@@ -529,6 +535,8 @@ class ___members_page extends LetcBox {
       service: SERVICE.adminpanel.member_delete,
       orgid: this.orgId,
       user_id: data.drumate_id,
+    }, { async: 1 }).then((data)=>{
+      this.deleteMemberResponse(data)
     })
   }
 
@@ -872,6 +880,7 @@ class ___members_page extends LetcBox {
   deleteMemberResponse(data) {
     this.loadActionPopupAcknowledgement(data)
     if (data.status == 'INVALID_STATUS') {
+      Butler.say("Something went wrong")
       return
     }
     return this.removeMemberFromList()
@@ -942,8 +951,8 @@ class ___members_page extends LetcBox {
   */
   __dispatchRest(service, data, socket) {
     switch (service) {
-      case SERVICE.adminpanel.member_delete:
-        return this.deleteMemberResponse(data)
+      // case SERVICE.adminpanel.member_delete:
+      //   return this.deleteMemberResponse(data)
 
       // case SERVICE.adminpanel.member_disconnect:
       //   return this.disconnectMemberResponse(data)

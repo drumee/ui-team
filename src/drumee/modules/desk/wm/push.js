@@ -97,19 +97,23 @@ class __push_manager extends winman {
         if (/pickup|cancel|reject/.test(data.type)) Visitor.muteSound();
         return
 
+      case SERVICE.adminpanel.member_delete:
+        let { organization } = data
+        return Wm.choice(LOCALE.YOU_HAVE_BEEN_KICK_OUT.format(organization), LOCALE.GOT_IT).then(() => {
+          location.reload()
+        })
+      // case SERVICE.adminpanel.mimic_new:
+      //   return this.loadMimicNew(data);
 
-      case SERVICE.adminpanel.mimic_new:
-        return this.loadMimicNew(data);
+      // case SERVICE.adminpanel.mimic_reject:
+      //   return this.loadMimicReject(data);
 
-      case SERVICE.adminpanel.mimic_reject:
-        return this.loadMimicReject(data);
-
-      case SERVICE.adminpanel.mimic_active:
-      case SERVICE.adminpanel.mimic_end_bymimic:
-      case SERVICE.adminpanel.mimic_end_byuser:
-      case SERVICE.adminpanel.mimic_end_bytime:
-        _.delay(() => location.reload());
-        break;
+      // case SERVICE.adminpanel.mimic_active:
+      // case SERVICE.adminpanel.mimic_end_bymimic:
+      // case SERVICE.adminpanel.mimic_end_byuser:
+      // case SERVICE.adminpanel.mimic_end_bytime:
+      //   _.delay(() => location.reload());
+      //   break;
 
       case SERVICE.drumate.logout:
         if (!sender || sender.socket_id == Visitor.get(_a.socket_id)) {

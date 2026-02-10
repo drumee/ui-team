@@ -61,14 +61,14 @@
     text-align: center;
     width: 100%;
     height: 100%;
-    gap: var(--spacer-5);
+    gap: var(--spacer-4);
   }
 
-  // css for buttons
   &__buttons-wrapper {
     display: flex;
     justify-content: center;
     width: 100%;
+    gap: var(--spacer-4);
 
     .button-cancel {
       min-width: 115px;
@@ -76,24 +76,15 @@
       @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
       border-radius: var(--corner-radius-max);
       border: 1px solid var(--btn-rollback-border);
-      margin-right: 30px;
     }
 
-    &.resend-link {
-      margin-top: 50px; //20px;
-    }
 
     & .button {
       align-items: center;
       height: 35px;
       justify-content: center;
-      margin-top: 40px;
       text-align: center;
       width: 115px;
-    }
-
-    &.button:first-child {
-      margin-right: 30px; //50px;
     }
   }
 
@@ -106,7 +97,7 @@
     border-radius: var(--corner-radius-max);
 
     &:hover {
-      border: 2px solid var(--btn-rollback-border-hover);
+      border: 2px solid var(--primary-500);
       color: var(--btn-rollback-text-hover);
     }
   }
