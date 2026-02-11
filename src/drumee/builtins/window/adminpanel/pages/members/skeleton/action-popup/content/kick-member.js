@@ -9,7 +9,7 @@ export default function (ui) {
   const subHeader = Skeletons.Note({
     className: `${contentFig}__note sub-header`,
     content: `Content belonging to your organization will be removed from the member.
-    However personal content available to the member.`
+    However personal content remain available to the member.`
   });
 
   const profileDisplay = require('../profile-display').default(ui, 'no-sub-content')
