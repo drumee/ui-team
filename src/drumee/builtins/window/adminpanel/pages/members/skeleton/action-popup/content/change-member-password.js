@@ -17,6 +17,7 @@ export default function (ui) {
         sys_pn: 'ref-password',
         require: _a.password,
         shower: 1,
+        autocomplete: _a.off,
         service,
       })
     ]
