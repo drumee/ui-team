@@ -1,6 +1,6 @@
 // ================================================================== *
 //   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/skeleton/action-popup/content/delete-member.js
+//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/skeleton/action-popup/content/prompt-delete-member.js
 //   TYPE : Skeleton
 // ===================================================================**/
 
@@ -23,7 +23,7 @@ function __skl_members_action_popup_content_delete_member (_ui_) {
     cancelLabel       : LOCALE.CANCEL || '',
     cancelService     : 'close-overlay',
     confirmLabel      : LOCALE.DELETE || '',
-    confirmService    : 'confirm-delete',
+    confirmService    : 'commit-delete-member',
     confirmBtnAction  : 'destroy'
   });
 

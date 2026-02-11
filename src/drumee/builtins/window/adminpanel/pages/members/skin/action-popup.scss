@@ -69,8 +69,26 @@
       //   margin-top: 45px;
       // }
 
+      &__password-main {
+        border: 1px var(--neutral-400) solid;
+        padding: var(--spacer-2);
+        gap: var(--spacer-5);
+        display: flex;
+        border-radius: var(--corner-radius-4);
+      }
+
       &__password {
         height: 40px;
+
+        .entry-reminder__icon {
+          right: 0;
+        }
+
+        .entry-reminder__main {
+          input:focus {
+            border: none;
+          }
+        }
       }
 
       &__note {

@@ -61,8 +61,8 @@ function __skl_widget_members_listItem  (ui) {
       kids: [
         Skeletons.Button.Svg({
           ico         : 'tools_delete',
-          className   : `${mListItemFig}__icon option-icons remove-admin tools_delete`,
-          service     : 'remove-admin',
+          className   : `${mListItemFig}__icon option-icons prompt-remove-admin tools_delete`,
+          service     : 'prompt-remove-admin',
           uiHandler   : ui
         }),
 

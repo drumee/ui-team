@@ -19,14 +19,14 @@ export default function (ui) {
 
   return Skeletons.Box.Y({
     debug: __filename,
-    className: `${contentFig}__content delete-member`,
+    className: `${contentFig}__content prompt-delete-member`,
     kids: [
       header,
       subHeader,
       profileDisplay,
       confirm_buttons(ui, { dataset: { height: _a.small } },
         { service: 'close-overlay' },
-        { label: LOCALE.DELETE, service: 'confirm-invite-delete' }
+        { label: LOCALE.DELETE, service: 'commit-delete-inactive-member' }
       )
     ]
   });

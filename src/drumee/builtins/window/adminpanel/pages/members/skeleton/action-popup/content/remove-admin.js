@@ -1,6 +1,6 @@
 // ================================================================== *
 //   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/skeleton/action-popup/content/remove-admin.js
+//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/skeleton/action-popup/content/prompt-remove-admin.js
 //   TYPE : Skeleton
 // ===================================================================**/
 
@@ -23,14 +23,14 @@ function __skl_members_action_popup_content_remove_admin (_ui_) {
     cancelLabel       : LOCALE.CANCEL || '',
     cancelService     : 'close-overlay',
     confirmLabel      : LOCALE.REMOVE || '',
-    confirmService    : 'confirm-remove-admin',
+    confirmService    : 'commit-delete-admin',
     confirmBtnAction  : 'remove'
   });
 
   
   const a = Skeletons.Box.Y({
     debug       : __filename,
-    className   : `${contentFig}__content remove-admin`,
+    className   : `${contentFig}__content prompt-remove-admin`,
     kids        : [
       header,
       subHeader,

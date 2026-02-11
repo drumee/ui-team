@@ -1,10 +1,5 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/skeleton/action-popup/content/reset-member-password.js
-//   TYPE : Skeleton
-// ===================================================================**/
 
-function __skl_reset_password_link (_ui_) {
+export default function (_ui_) {
   const contentFig = `${_ui_.fig.family}-action-popup-confirmation`;
 
   const content = Skeletons.Box.Y({
@@ -18,15 +13,12 @@ function __skl_reset_password_link (_ui_) {
   })
   
   
-  const a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     debug       : __filename,
     className   : `${contentFig}__content reset-member-password`,
     kids        : [
       content,
     ]
   });
-
-  return a;
 };
 
-export default __skl_reset_password_link;

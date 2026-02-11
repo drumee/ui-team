@@ -72,7 +72,7 @@ function __skl_member_room_action_menu(ui, data) {
 
   const resetPassword = Skeletons.Box.X({
     className: `${menuFig}__item`,
-    service: 'reset-member-password',
+    service: 'prompt-reset-member-password',
     uiHandler: ui,
     kidsOpt: {
       active: 0
@@ -87,7 +87,7 @@ function __skl_member_room_action_menu(ui, data) {
 
   const changePassword = Skeletons.Box.X({
     className: `${menuFig}__item`,
-    service: 'change-member-password',
+    service: 'prompt-change-member-password',
     uiHandler: ui,
     kidsOpt: {
       active: 0

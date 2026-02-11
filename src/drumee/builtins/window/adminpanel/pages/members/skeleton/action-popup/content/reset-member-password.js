@@ -15,15 +15,6 @@ function __skl_members_action_popup_content_reset_member_password(ui) {
     ]
   })
 
-  // const buttons = Preset.ConfirmButtons(ui, {
-  //   cancelLabel: LOCALE.CANCEL || '',
-  //   cancelService: 'close-overlay',
-  //   confirmLabel: LOCALE.CONFIRM,
-  //   confirmService: 'confirm-reset-member-password',
-  //   confirmBtnAction: 'reset'
-  // });
-
-  // buttons.className = `${buttons.className} resend-link`;
   let buttonsFig= `${ui.fig.family}-action-popup`
   let buttons = Skeletons.Box.X({
     className: `${buttonsFig}__buttons`,
@@ -44,7 +35,7 @@ function __skl_members_action_popup_content_reset_member_password(ui) {
         service: _e.submit,
         className: `${buttonsFig}__button`,
         priority: "primary",
-        service: 'confirm-reset-member-password',
+        service: 'commit-reset-member-password',
       })
     ],
   })

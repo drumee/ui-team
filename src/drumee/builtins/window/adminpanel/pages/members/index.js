@@ -123,24 +123,25 @@ class ___members_page extends LetcBox {
         this.updateMember(cmd)
         break
 
-      case 'delete-inactive-member':
-      case 'delete-member':
-      case 'remove-admin':
-      case 'reset-member-password':
-      case 'change-member-password':
+      case 'prompt-delete-inactive-member':
+      case 'prompt-delete-member':
+      case 'prompt-remove-admin':
+      case 'prompt-reset-member-password':
+      case 'prompt-change-member-password':
       case 'prompt-kick-out':
-      case 'toggle-archive-member':
-        return this.loadActionPopup(cmd, service);
+      case 'prompt-toggle-archive-member':
+        return this.promptAction(cmd, service);
 
-      case 'confirm-kick-out':
-      case 'confirm-delete':
-      case 'confirm-invite-delete':
-      case 'confirm-remove-admin':
-      case 'confirm-reset-member-password':
-      case 'confirm-change-member-password':
-      case 'confirm-block-unblock':
-      case 'confirm-toggle-archive-member':
-        return this.confirmActionPopup()
+      case 'commit-kick-out':
+      case 'commit-delete':
+      case 'commit-invite-delete':
+      case 'commit-delete-inactive-member':
+      case 'commit-delete-admin':
+      case 'commit-reset-member-password':
+      case 'commit-change-member-password':
+      case 'commit-block-unblock':
+      case 'commit-toggle-archive-member':
+        return this.commitActionFromPopup(service)
 
       case 'choose-admins':
         this.loadChooseAdminLayer()
@@ -414,40 +415,32 @@ class ___members_page extends LetcBox {
   /**
    * @param {LetcBox} cmd
    */
-  loadActionPopup(cmd, type) {
+  promptAction(cmd, service) {
+    const source = cmd.source
     const overlayWrapper = this.getPart('overlay-wrapper')
     overlayWrapper.el.dataset.mode = _a.open
     this.getPart('wrapper-overlay-notifier').feed(require('./skeleton/action-popup/confirmation').default(this))
-    return this.loadActionPopupContent(cmd, type)
-  }
-
-  /**
-   * 
-  */
-  loadActionPopupContent(cmd, type) {
-    const source = cmd.source
-    let _content;
-    this.debug("AAA:430", type)
     this.mset({
       member: cmd.mget(_a.member),
-      serviceType: type
     })
 
-    switch (type) {
-      case 'delete-inactive-member':
+    let _content;
+
+    switch (service) {
+      case 'prompt-delete-inactive-member':
         _content = require('./skeleton/action-popup/content/delete-invite-member').default(this)
         break
 
-      case 'delete-member':
+      case 'prompt-delete-member':
         _content = require('./skeleton/action-popup/content/delete-member').default(this)
         break
 
-      case 'remove-admin':
+      case 'prompt-remove-admin':
         this.mset(_a.member, source.model.toJSON())
         _content = require('./skeleton/action-popup/content/remove-admin').default(this)
         break
 
-      case 'reset-member-password':
+      case 'prompt-reset-member-password':
         if (Platform.get('arch') == "cloud") {
           if (Organization.get('useEmail')) {
             _content = require('./skeleton/action-popup/content/reset-member-password').default(this)
@@ -461,8 +454,8 @@ class ___members_page extends LetcBox {
         }
         break
 
-      case 'change-member-password':
-        _content = require('./skeleton/action-popup/content/set-member-password').default(this)
+      case 'prompt-change-member-password':
+        _content = require('./skeleton/action-popup/content/change-member-password').default(this)
         break
 
       case 'prompt-kick-out':
@@ -470,7 +463,7 @@ class ___members_page extends LetcBox {
         _content = require('./skeleton/action-popup/content/kick-member').default(this)
         break
 
-      case 'toggle-archive-member':
+      case 'prompt-toggle-archive-member':
         _content = require('./skeleton/action-popup/content/archive-member').default(this)
         break
 
@@ -483,42 +476,42 @@ class ___members_page extends LetcBox {
   }
 
   /**
-   * 
+   * commitActionFromPopup
   */
-  confirmActionPopup() {
-    const type = this.mget('serviceType')
+  commitActionFromPopup(service) {
     const data = this.mget(_a.member)
-    this.debug("AAA:491", type, data)
-    let _status;
-    if (data && data.drumate_id) {
-      switch (type) {
-        case 'delete-inactive-member':
-          return this.deleteInviteMember(data)
+    if (!data || !data.drumate_id) {
+      this.warn("Invalid data", data)
+      return
+    }
+    this.debug("AAA:487:commitActionFromPopup", service)
+    switch (service) {
+      case 'commit-delete-inactive-member':
+        return this.deleteInviteMember(data)
 
-        case 'prompt-kick-out':
-        case 'delete-member':
-          return this.deleteMember(data)
+      case 'commit-kick-out':
+      case 'commit-delete-member':
+        return this.deleteMember(data)
 
-        case 'remove-admin':
-          return this.removeAdmin(data)
+      case 'commit-remove-admin':
+        return this.removeAdmin(data)
 
-        case 'reset-member-password':
-          return this.resetMemberPassword(data)
+      case 'commit-reset-member-password':
+        return this.resetMemberPassword(data)
 
-        case 'toggle-archive-member':
-          _status = _a.archived
-          if (data.status == _a.archived) {
-            _status = _a.locked
-          }
+      case 'commit-toggle-archive-member':
+        let _status = _a.archived
+        if (data.status == _a.archived) {
+          _status = _a.locked
+        }
 
-          return this.updateMemberStatus(data, _status)
+        return this.updateMemberStatus(data, _status)
 
-        case 'change-member-password':
-          return this.changeMemberPassword(data);
+      case 'commit-change-member-password':
+        return this.changeMemberPassword(data);
 
-        default:
-          return this.loadActionPopupAcknowledgement()
-      }
+      default:
+        return this.loadActionPopupAcknowledgement()
     }
   }
 

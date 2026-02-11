@@ -96,29 +96,35 @@
     align-items: center;
     padding: 8px;
     height: 35px;
-    width: 115px; //150px;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-font-smoothing: antialiased;
+    width: 115px;
   }
 
   &__button-cancel {
-    border: 1px solid var(--btn-rollback-border); //#f1f1f6;
-    border-radius: 6px; //var(--border-radius);
-    color: var(--btn-rollback-text); // #89929e;
-    margin-right: 50px;
+    min-width: 150px;
+    height: 40px;
+    padding: 2px 5px;
+    @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-rollback-text));
+    border: 1px solid var(--btn-rollback-border);
+    border-radius: var(--corner-radius-max);
+
     &:hover {
-      border: 2px solid var(--btn-rollback-border-hover);
+      border: 2px solid var(--primary-500);
       color: var(--btn-rollback-text-hover);
     }
   }
 
   &__button-confirm {
-    background-color: var(--btn-commit-background);
-    border-radius: 6px; //var(--border-radius);
-    color: var(--btn-commit-text);
-    width: auto;
+    background-color: var(--primary-500);
+    min-width: 180px;
+    height: 40px;
+    @include drumee.typo($size: 16px, $line: 16px, $color: var(--btn-commit-text));
+    border: 0px;
+    border-radius: var(--corner-radius-max);
+
     &:hover {
-      background-color: var(--btn-commit-background-hover);
+      border: 2px solid var(--primary-500);
+      background-color: var(--primary-600);
     }
   }
+
 }

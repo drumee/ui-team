@@ -168,7 +168,7 @@ function __skl_member_detail(ui) {
     service: _e.submit,
     className: `${fig}__button`,
     priority: "primary",
-    service: 'reset-member-password',
+    service: 'prompt-reset-member-password',
   })
 
   // member action option
@@ -185,13 +185,13 @@ function __skl_member_detail(ui) {
             label: LOCALE.DELETE_INVITE,
             type: _a.toggle,
             className: `${fig}__button`,
-            service: 'delete-inactive-member',
+            service: 'prompt-delete-inactive-member',
             priority: "secondary",
           })
           // deleteInvMember = Skeletons.Note({
           //   className: `${detailFig}__button-action button-delete button clickable`,
           //   content: LOCALE.DELETE_INVITE,
-          //   service: 'delete-inactive-member',
+          //   service: 'prompt-delete-inactive-member',
           //   uiHandler: ui
           // })
         }
@@ -216,7 +216,7 @@ function __skl_member_detail(ui) {
             //     Skeletons.Note({
             //       className: `${detailFig}__button-action button-resend button clickable`,
             //       content: LOCALE.RESEND_INVITE,
-            //       service: 'reset-member-password',
+            //       service: 'prompt-reset-member-password',
             //       uiHandler: ui
             //     })
             //   ]
@@ -239,7 +239,7 @@ function __skl_member_detail(ui) {
         option = Skeletons.Note({
           className: `${detailFig}__button-action button-delete button clickable`,
           content: LOCALE.DELETE_MEMBER,
-          service: 'delete-member',
+          service: 'prompt-delete-member',
           uiHandler: ui,
         })
       } else {

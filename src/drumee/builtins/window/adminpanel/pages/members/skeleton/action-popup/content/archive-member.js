@@ -1,10 +1,5 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/window/adminpanel/pages/members/skeleton/action-popup/content/archive-member.js
-//   TYPE : Skeleton
-// ===================================================================**/
 
-function __skl_members_action_popup_content_archive_member (_ui_) {
+export default function (_ui_) {
   const contentFig = `${_ui_.fig.family}-action-popup-confirmation`;
   const data = _ui_.mget(_a.member)
 
@@ -38,12 +33,12 @@ function __skl_members_action_popup_content_archive_member (_ui_) {
     cancelLabel       : LOCALE.CANCEL || '',
     cancelService     : 'close-overlay',
     confirmLabel,
-    confirmService    : 'confirm-toggle-archive-member',
+    confirmService    : 'cpmmit-toggle-archive-member',
     confirmBtnAction  : type
   });
 
   
-  const a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     debug       : __filename,
     className   : `${contentFig}__content archive-member`,
     kids        : [
@@ -52,7 +47,5 @@ function __skl_members_action_popup_content_archive_member (_ui_) {
     ]
   });
 
-  return a;
 };
 
-export default __skl_members_action_popup_content_archive_member;

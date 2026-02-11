@@ -12,19 +12,19 @@ function __skl_members_action_popup_acknowledgement (_ui_, data = {}) {
 
   const mData = data || _ui_.mget(_a.member) || ''
 
-  if (type == 'delete-member') {
+  if (type == 'prompt-delete-member') {
     titleContent = LOCALE.ACCOUNT_DELETED//DELETE_MEMBER
   }
 
-  if (type == 'delete-inactive-member') {
+  if (type == 'prompt-delete-inactive-member') {
     titleContent = LOCALE.CONTACT_DELETED
   }
 
-  if (type == 'remove-admin') {
+  if (type == 'prompt-remove-admin') {
     titleContent = LOCALE.REMOVE_ADMIN //'has been removed from the Admin group.'
   }
 
-  if (type == 'reset-member-password') {
+  if (type == 'prompt-reset-member-password') {
     titleContent = LOCALE.POPUP_ACKNOWLEDGEMENT_LINK//'password reset link has been sent successfully.'
   }
   
@@ -36,7 +36,7 @@ function __skl_members_action_popup_acknowledgement (_ui_, data = {}) {
     }
   }
 
-  if (type == 'toggle-archive-member') {
+  if (type == 'prompt-toggle-archive-member') {
     titleContent = LOCALE.TOGGLE_NO_ARCHIVE_MEMBER //'has been un-archived. But the member is still blocked and can be found on &#60;&#60;Members list&#62;&#62;'
     
     if (mData.status == _a.archived) {

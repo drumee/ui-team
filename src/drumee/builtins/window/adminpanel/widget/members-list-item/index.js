@@ -47,7 +47,7 @@ class ___widget_members_listItem extends LetcBox {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
-      case 'remove-admin':
+      case 'prompt-remove-admin':
         this.source = cmd
         return this.triggerHandlers({ service: service })
 

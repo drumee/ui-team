@@ -84,7 +84,7 @@ class Drumee extends Marionette.Application {
   failover(data = {}) {
     console.warn("ENV_ERROR", data);
     if (!window.LOCALE) {
-      window.LOCALE = createSafeObject(); //require("locale")(navigator.language);
+      window.LOCALE = createSafeObject();
     }
     let b = bootstrap();
     const { body } = document;

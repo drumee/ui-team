@@ -18,14 +18,14 @@ export default function (ui) {
     cancelLabel: LOCALE.CANCEL || '',
     cancelService: 'close-overlay',
     confirmLabel: LOCALE.KICK_OUT_MEMBER || '',
-    confirmService: 'confirm-kick-out',
+    confirmService: 'commit-kick-out',
     confirmBtnAction: 'destroy'
   });
 
 
   const a = Skeletons.Box.Y({
     debug: __filename,
-    className: `${contentFig}__content delete-member`,
+    className: `${contentFig}__content prompt-delete-member`,
     kids: [
       header,
       subHeader,
