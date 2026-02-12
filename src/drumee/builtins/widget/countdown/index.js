@@ -22,6 +22,7 @@ class ___countdown_timer extends LetcBox {
     // @ts-ignore
     require('./skin');
     super.initialize(opt);
+    this.counter_id = opt.counter_id || 'counter';
     this.declareHandlers();
   }
 
@@ -38,7 +39,7 @@ class ___countdown_timer extends LetcBox {
    */
   onPartReady(child, pn) {
     switch (pn) {
-      case 'counter':
+      case this.counter_id:
         this.updateCounter();
         break;
     }
@@ -74,8 +75,8 @@ class ___countdown_timer extends LetcBox {
         this.triggerHandlers()
         return;
       }
-      if(remainSec < 60){
-        this.__counter.el.dataset.blink = `${remainSec%2}`;
+      if (remainSec < 60) {
+        this.__counter.el.dataset.blink = `${remainSec % 2}`;
       }
       let format = "mm:ss";
       duration = Dayjs.duration(remainSec, "seconds");
@@ -83,7 +84,7 @@ class ___countdown_timer extends LetcBox {
         format = "HH:mm:ss";
       }
       let content = duration.format(format)
-      this.getPart('counter').set({ content });
+      this.getPart(this.counter_id).set({ content });
     }, interval);
   }
 

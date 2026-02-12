@@ -49,7 +49,7 @@ function menuBar(ui) {
           service: "load-custom-plugin",
           ico: "reward",
           plugin: plugins.custom,
-          haptic: 3000
+          haptic: 3000,
         })
       )
     }

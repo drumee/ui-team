@@ -40,12 +40,12 @@ module.exports = function (webpack, opt) {
     require('./shortcut')(webpack),
     new CleanWebpackPlugin(),
     new webpack.ProgressPlugin(),
-    new StatsWriterPlugin({
-      fields: ["assets", "modules"],
-      stats: {
-        source: true // Needed for webpack5+
-      }
-    }),
+    // new StatsWriterPlugin({
+    //   fields: ["assets", "modules"],
+    //   stats: {
+    //     source: true // Needed for webpack5+
+    //   }
+    // }),
     new DuplicatesPlugin({
       // Emit compilation warning or error? (Default: `false`)
       emitErrors: false,
