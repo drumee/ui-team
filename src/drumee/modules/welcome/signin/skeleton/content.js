@@ -44,13 +44,13 @@ function __skl_welcome_signin_content(ui) {
     LOCALE.LOGIN
   );
   const msgBox = require("../../skeleton/common/message-box").default(ui);
-  let href = `${_K.module.welcome}/signin/org`;
-  let content = LOCALE.LOGIN_OTHER_POD;
-  if (Organization.get("domain_id") > 1) {
-    let { endpoint } = bootstrap();
-    href = `${endpoint}${_K.module.welcome}/signin`;
-    content = LOCALE.LOGIN_PERSONAL_ACCOUNT;
-  }
+  // let href = `${_K.module.welcome}/signin/org`;
+  // let content = LOCALE.LOGIN_OTHER_POD;
+  // if (Organization.get("domain_id") > 1) {
+  //   let { endpoint } = bootstrap();
+  //   href = `${endpoint}${_K.module.welcome}/signin`;
+  //   content = LOCALE.LOGIN_PERSONAL_ACCOUNT;
+  // }
 
   let helper = "";
   let create_account = "";
@@ -82,18 +82,18 @@ function __skl_welcome_signin_content(ui) {
           ],
         }),
 
-        Skeletons.Box.X({
-          className: `${contentFig}__row company-url helper no-background`,
-          dataset,
-          kids: [
-            Skeletons.Note({
-              className: `${contentFig}__note helper `,
-              dataset,
-              content,
-              href,
-            }),
-          ],
-        }),
+        // Skeletons.Box.X({
+        //   className: `${contentFig}__row company-url helper no-background`,
+        //   dataset,
+        //   kids: [
+        //     Skeletons.Note({
+        //       className: `${contentFig}__note helper `,
+        //       dataset,
+        //       content,
+        //       href,
+        //     }),
+        //   ],
+        // }),
       ],
     });
   }

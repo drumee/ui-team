@@ -42,19 +42,21 @@ class __welcome_router extends LetcBox {
       return
     }
     let plugins = Platform.get('plugins');
-    if(!plugins) {
+    this.debug("AAA:54 GOT plugin", plugins)
+    if (!plugins) {
       this.loadDefault()
       return;
     }
     try {
-      plugins = JSON.parse(plugins)
+      if (_.isString(plugins)) {
+        plugins = JSON.parse(plugins)
+      }
     } catch (e) {
       return loadDefault();
     }
     if (!plugins || !plugins.signup) {
       return loadDefault();
     }
-    this.debug("AAA:54 GOT signup plugin", plugins.signup)
     let { name, kind } = plugins.signup;
     if (Kind.get(kind)) {
       return this.feed({ kind });
@@ -89,9 +91,11 @@ class __welcome_router extends LetcBox {
       setTimeout(f, Visitor.timeout(700));
       return
     }
-    let plugins = Platform.get('plugins') ||'{}';
+    let plugins = Platform.get('plugins');
     try {
-      plugins = JSON.parse(plugins)
+      if (_.isString(plugins)) {
+        plugins = JSON.parse(plugins)
+      }
     } catch (e) {
       return loadDefault();
     }

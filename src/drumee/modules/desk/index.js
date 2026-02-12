@@ -94,7 +94,9 @@ class desk_module extends LetcBox {
    *
    */
   _updateAvatar() {
-    this.ensurePart("desk-avatar").then((p) => { this.debug("AAAA:82", p.respawn()) });
+    this.ensurePart("desk-avatar").then((p) => {
+      p.respawn()
+    });
   }
 
   /**
@@ -593,9 +595,9 @@ class desk_module extends LetcBox {
       case 'open-settings':
         return this.openModel("window_wallpaper_settings");
 
-      case 'open-reward-hub':
-        let kind = "reward_hub_router"
-        return Kind.loadPlugin({ name:"reward-hub", kind }).then(() => {
+      case 'load-custom-plugin':
+        let { name, kind } = cmd.mget('plugin')
+        return Kind.loadPlugin({ name, kind }).then(() => {
           Kind.waitFor(kind).then((k) => {
             this.openModel(kind);
           })

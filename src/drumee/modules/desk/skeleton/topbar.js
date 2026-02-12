@@ -7,6 +7,54 @@ function menuBar(ui) {
   const pfx = `${ui.fig.family}-topbar`;
   const icoClass = `${pfx}__icon`;
   const service = "toggle-activity-panel";
+  let items;
+  if (Visitor.isMobile()) {
+    items = [
+      Skeletons.Note({
+        className: `${pfx}__activity-count`,
+        sys_pn: "activity-count",
+        activie: 0,
+      })
+    ]
+  } else {
+    items = [
+      Skeletons.Button.Svg({
+        className: icoClass,
+        service,
+        ico: "bell",
+        dataset: { service },
+      }),
+      Skeletons.Note({
+        className: `${pfx}__activity-count`,
+        sys_pn: "activity-count",
+        activie: 0,
+      }),
+      Skeletons.Button.Svg({
+        className: icoClass,
+        service: "open-chat",
+        ico: "message",
+      }),
+
+      Skeletons.Button.Svg({
+        className: icoClass,
+        service: "open-settings",
+        ico: "settings",
+      })
+    ]
+    let plugins = Platform.get('plugins')
+    if (plugins && plugins.custom) {
+      items.push(
+        Skeletons.Button.Svg({
+          className: icoClass,
+          service: "load-custom-plugin",
+          ico: "reward",
+          plugin: plugins.custom,
+          haptic: 3000
+        })
+      )
+    }
+  }
+  ui.debug("AAA:56", items)
   return Skeletons.Box.X({
     className: `${pfx}__user-menu`,
     sys_pn: "user-menu",
@@ -15,43 +63,7 @@ function menuBar(ui) {
     kids: [
       Skeletons.Box.X({
         kids: [
-          !Visitor.isMobile()
-            ? Skeletons.Button.Svg({
-                className: icoClass,
-                service,
-                ico: "bell",
-                dataset: { service },
-              })
-            : undefined,
-
-          Skeletons.Note({
-            className: `${pfx}__activity-count`,
-            sys_pn: "activity-count",
-            activie: 0,
-          }),
-          !Visitor.isMobile()
-            ? Skeletons.Button.Svg({
-                className: icoClass,
-                service: "open-chat",
-                ico: "message",
-              })
-            : undefined,
-
-          !Visitor.isMobile()
-            ? Skeletons.Button.Svg({
-                className: icoClass,
-                service: "open-settings",
-                ico: "settings",
-              })
-            : undefined,
-
-          // !Visitor.isMobile()
-          //   ? Skeletons.Button.Svg({
-          //       className: icoClass,
-          //       service: "open-reward-hub",
-          //       ico: "reward",
-          //     })
-          //   : undefined,
+          ...items,
           userMenu(ui, "desk-avatar"),
         ],
       }),
