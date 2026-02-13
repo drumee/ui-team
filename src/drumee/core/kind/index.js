@@ -6,7 +6,6 @@ const Addons = require("./seeds/addons");
 let Helper;
 const { fetchService } = require("../socket/service")
 const { loadJS } = require("../../core/utils");
-
 const Plugins = new Map();
 
 /**
