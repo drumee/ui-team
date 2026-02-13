@@ -1,7 +1,6 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
 
-
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -62,13 +61,13 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   async loadDefault() {
     this._pending = { available: false };
-    await Kind.waitFor('window_manager');
-    await Kind.waitFor('activity_panel');
-    await Kind.waitFor('activity_item');
+    await Kind.waitFor("window_manager");
+    await Kind.waitFor("activity_panel");
+    await Kind.waitFor("activity_item");
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
@@ -89,13 +88,12 @@ class desk_module extends LetcBox {
     this.onDomRefresh();
   }
 
-
   /**
    *
    */
   _updateAvatar() {
     this.ensurePart("desk-avatar").then((p) => {
-      p.respawn()
+      p.respawn();
     });
   }
 
@@ -122,7 +120,6 @@ class desk_module extends LetcBox {
       protectBtn.setLabel(LOCALE.PROTECTED);
     }
   }
-
 
   /**
    *
@@ -187,7 +184,7 @@ class desk_module extends LetcBox {
         child.on(_e.open, () => {
           try {
             return (this.__userContainer.el.dataset.state = 1);
-          } catch (error) { }
+          } catch (error) {}
         });
         if (!Visitor.get(_a.privilege)) {
           Visitor.once("online", () => {
@@ -197,7 +194,7 @@ class desk_module extends LetcBox {
         return child.on(_e.close, () => {
           try {
             return (this.__userContainer.el.dataset.state = 0);
-          } catch (error) { }
+          } catch (error) {}
         });
 
       case "wrapper-module":
@@ -305,9 +302,9 @@ class desk_module extends LetcBox {
     if (Visitor.parseModuleArgs().submodule) {
       this.warn("Plugins have been move to module/plgins");
       this.warn("Use this link #/plugins?name=plugin-name&kind=entry_kind");
-      return
+      return;
     }
-    this.loadDefault()
+    this.loadDefault();
     this.trigger(_e.ready);
   }
 
@@ -383,7 +380,7 @@ class desk_module extends LetcBox {
   showPaymentStatus(data) {
     const infoSkl = require("./skeleton/payment/status-info").default(
       this,
-      data
+      data,
     );
     return this.__wrapperPopup.feed(infoSkl);
   }
@@ -445,8 +442,8 @@ class desk_module extends LetcBox {
   // }
 
   /**
-   * 
-   * @param {*} kind 
+   *
+   * @param {*} kind
    */
   openModel(kind) {
     this.ensurePart("desk-content").then((p) => {
@@ -524,7 +521,7 @@ class desk_module extends LetcBox {
       case _e.launch:
         return Wm.launch(
           { kind: cmd.mget(_a.respawn) },
-          { explicit: 1, singleton: 1 }
+          { explicit: 1, singleton: 1 },
         );
 
       case "toggle-activity-panel":
@@ -535,14 +532,13 @@ class desk_module extends LetcBox {
       case "open-contact-manager":
         return Wm.launch(
           { kind: cmd.mget(_a.respawn), args: cmd.mget(_a.router) },
-          { explicit: 1, singleton: 1 }
+          { explicit: 1, singleton: 1 },
         );
 
       case "close-popup":
       case "close-modal":
         this.popup.children.last().softDestroy();
         return Backbone.history.navigate(_K.module.desk);
-
 
       case "skip-browser-check":
         localStorage.setItem("skip-browser-check", 1);
@@ -588,29 +584,44 @@ class desk_module extends LetcBox {
         this.__wrapperPopup.clear();
         return Backbone.history.navigate(_K.module.desk);
 
-
       case "close-popup":
         return this.__wrapperPopup.clear();
 
-      case 'open-settings':
+      case "open-settings":
         return this.openModel("window_wallpaper_settings");
 
-      case 'load-custom-plugin':
-        let { name, kind } = cmd.mget('plugin')
-        return Kind.loadPlugin({ name, kind }).then(() => {
-          Kind.waitFor(kind).then((k) => {
-            this.openModel(kind);
-          })
-        }).catch((e) => {
-          this.warn(`Failed to load plugin`)
-        })
+      // can xoa
 
-      case 'open-user-guide':
+      case "open-reward-hub":
+        let kind = "reward_hub_router";
+        return Kind.loadPlugin({ name: "reward-hub", kind })
+          .then(() => {
+            Kind.waitFor(kind).then((k) => {
+              this.openModel(kind);
+            });
+          })
+          .catch((e) => {
+            this.warn(`Failed to load plugin`);
+          });
+
+      // case 'load-custom-plugin':
+      //   let { name, kind } = cmd.mget('plugin')
+      //   return Kind.loadPlugin({ name, kind }).then(() => {
+      //     Kind.waitFor(kind).then((k) => {
+      //       this.openModel(kind);
+      //     })
+      //   }).catch((e) => {
+      //     this.warn(`Failed to load plugin`)
+      //   })
+
+      case "open-user-guide":
         return this.openModel("settings_helpcenter");
 
-
       case "open-chat":
-        return Wm.launch({ kind: 'window_bigchat', source: cmd }, { explicit: 1, singleton: 1 });
+        return Wm.launch(
+          { kind: "window_bigchat", source: cmd },
+          { explicit: 1, singleton: 1 },
+        );
 
       case "set-wallpaper-color":
       case "set-wallpaper-image":
@@ -619,10 +630,10 @@ class desk_module extends LetcBox {
       case "activity-update":
         return this.ensurePart("activity-count").then((p) => {
           let content = args.unread_count || 0;
-          if (parseInt(content) > 99) content = '99+';
-          p.set({ content })
+          if (parseInt(content) > 99) content = "99+";
+          p.set({ content });
           p.el.dataset.count = content;
-        })
+        });
 
       default:
         Wm.unselect();
@@ -662,14 +673,14 @@ class desk_module extends LetcBox {
       case "supportticket":
         return Wm.launch(
           { kind: `window_${name}` },
-          { explicit: 1, singleton: 1 }
+          { explicit: 1, singleton: 1 },
         );
 
       case "adminpanel":
         if (Visitor.domainCan(_K.permission.admin_view)) {
           return Wm.launch(
             { kind: `window_${name}` },
-            { explicit: 1, singleton: 1 }
+            { explicit: 1, singleton: 1 },
           );
         }
         break;
