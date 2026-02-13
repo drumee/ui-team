@@ -1,30 +1,21 @@
-/* ================================================================== *
- * Copyright Xialia.com  2011-2020
- * FILE : /src/drumee/builtins/widget/countdown/js/skeleton/index.js
- * TYPE : Skelton
- * ===================================================================**/
 
-// ===========================================================
-//
-// ===========================================================
-function __skl_countdown_timer  (_ui_){
-  let a = Skeletons.Box.Y({
-    className  : `${_ui_.fig.family}__main`,
-    debug      : __filename,
-    kids       : [
+export default function (ui) {
+  let kids = Skeletons.Note({
+    className: `${ui.fig.family}__counter`,
+    sys_pn: ui.counter_id,
+    content: "00:00"
+  })
+  if (ui.mget(_a.content)) {
+    kids = ui.mget(_a.content)
+  }
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__main`,
+    debug: __filename,
+    kids: [
       Skeletons.Box.X({
-        className  : `${_ui_.fig.family}__container`,
-        kids : [
-          Skeletons.Note({
-            className  : `${_ui_.fig.family}__counter`,
-            sys_pn: 'counter',
-            content: "00:00"
-          })
-          
-        ]
+        className: `${ui.fig.family}__container`,
+        kids
       })
     ]
   })
-  return a;
 }
-export default __skl_countdown_timer
