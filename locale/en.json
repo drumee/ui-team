@@ -1999,5 +1999,6 @@
   "KICK_OUT_MEMBER": "Kick this member out",
   "CUSTOMIZE_BACKGROUND": "Customize the wallpaper",
   "COLORS": "Colors",
-  "YOU_HAVE_BEEN_KICK_OUT": "You have been emoved from the organization {0}. However, content that belonged to you are still reachable with the same account credentials."
+  "YOU_HAVE_BEEN_KICK_OUT": "You have been emoved from the organization {0}. However, content that belonged to you are still reachable with the same account credentials.",
+  "WEEKS": "Week(s)"
 }

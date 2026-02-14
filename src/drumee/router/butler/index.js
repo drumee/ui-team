@@ -132,7 +132,7 @@ class __router_butler extends LetcBox {
   /**
    *
    */
-  login(vhost) {
+  login(vhost, title) {
     return new Promise((resolve, reject) => {
       if (this.isRecconnecting) return resolve();
       let { access } = getModule() || {};
@@ -154,7 +154,7 @@ class __router_butler extends LetcBox {
           if (!r) return;
           r.goodbye();
         });
-        this.feed(require("./skeleton/reconnect")(this, vhost));
+        this.feed(require("./skeleton/reconnect")(this, vhost, title));
         this.isRecconnecting = true;
       });
     })
@@ -291,11 +291,11 @@ class __router_butler extends LetcBox {
   }
 
   /**
- *
- * @param {*} message
- * @param {*} cb
- * @returns
- */
+  *
+  * @param {*} message
+  * @param {*} cb
+  * @returns
+  */
   confirm(message) {
     return new Promise((resolve, reject) => {
       this.feed(require("./skeleton/confirm")(this, message));
@@ -405,10 +405,10 @@ class __router_butler extends LetcBox {
       return setTimeout(() => {
         Visitor.clear();
         Host.clear();
-        const {main_domain} = bootstrap()
+        const { main_domain } = bootstrap()
         if (main_domain == location.hostname) {
           Drumee.start();
-        }else{
+        } else {
           location.hostname = main_domain
         }
         this.debug("AAA:409", this)

@@ -1999,5 +1999,6 @@
   "KICK_OUT_MEMBER": "将此成员踢出",
   "CUSTOMIZE_BACKGROUND": "自定义壁纸",
   "COLORS": "颜色",
-  "YOU_HAVE_BEEN_KICK_OUT": "您已被从组织 {0} 中移除。但是，您之前拥有的内容仍然可以使用相同的帐户凭据访问。"
+  "YOU_HAVE_BEEN_KICK_OUT": "您已被从组织 {0} 中移除。但是，您之前拥有的内容仍然可以使用相同的帐户凭据访问。",
+  "WEEKS": "周"
 }

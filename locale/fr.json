@@ -1999,5 +1999,6 @@
   "KICK_OUT_MEMBER": "Expulser ce membre",
   "CUSTOMIZE_BACKGROUND": "Personnaliser le fond d'écran",
   "COLORS": "Couleurs",
-  "YOU_HAVE_BEEN_KICK_OUT": "Vous avez été retiré de l'organisation {0}. Cependant, le contenu qui vous appartenait reste accessible avec les mêmes identifiants de compte."
+  "YOU_HAVE_BEEN_KICK_OUT": "Vous avez été retiré de l'organisation {0}. Cependant, le contenu qui vous appartenait reste accessible avec les mêmes identifiants de compte.",
+  "WEEKS": "Semaine(s)"
 }
