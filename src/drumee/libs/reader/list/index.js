@@ -137,6 +137,15 @@ class __list extends LetcBox {
   /**
    * 
    */
+  setApi(changes) {
+    let api = { ...this.mget(_a.api), ...changes }
+    this.mset({ api })
+    return api;
+  }
+
+  /**
+   * 
+   */
   start(reset = 0) {
     this._curPage = 1;
     this._waiting = false; // wait util data received
@@ -458,7 +467,7 @@ class __list extends LetcBox {
    */
   _onScroll(e, pos) {
     this._scrolled = true; // Prevent mousewheel overrun
-    if(this._onMouseWheelTimeout){
+    if (this._onMouseWheelTimeout) {
       this.el.removeEventListener("mousewheel", this._onMouseWhee)
       clearTimeout(this._onMouseWheelTimeout)
     }

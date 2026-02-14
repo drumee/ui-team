@@ -23,10 +23,11 @@ class __module_plugins extends LetcBox {
     this.debug(`Loading plugin name=${name} to be used as kind=${kind}`)
     this.feed(require("./skeleton").default(this, title || name))
     Kind.loadPlugin({ name, kind }).then(async (p) => {
+      this.debug("Waiting plugin router to be loaded")
       await Kind.waitFor(kind)
       this.feed({ ...opt, kind })
-      const event = new Event('drumee:plugins:ready');
       this.debug("Plugins router loaded")
+      const event = new Event('drumee:plugins:ready');
       document.dispatchEvent(event);
     }).catch((e) => {
       console.error("Failed to load PLUGIN-hub.", e)
