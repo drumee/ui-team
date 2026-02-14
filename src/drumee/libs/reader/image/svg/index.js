@@ -45,6 +45,14 @@ class __drumee_svg extends Marionette.View {
 
   /**
    * 
+   */
+  async loadPromise(p) {
+    let module = await p;
+    this.$el.append(module.default);
+  }
+
+  /**
+   * 
    * @returns 
    */
   onDomRefresh() {
@@ -52,7 +60,20 @@ class __drumee_svg extends Marionette.View {
     this.el.innerHTML = "";
     let chartName = this.mget('chartName');
     if (!chartName) {
-      this.$el.append(require("./template")(this));
+      let content = this.mget(_a.content);
+      if (!content) {
+        this.$el.append(require("./template")(this));
+      } else if (content instanceof Promise) {
+        this.loadPromise(content)
+      } else if (_.isFunction(content.then)) {
+        content.then((data) => {
+          this.$el.append(data);
+        })
+      } else if (_.isFunction(content)) {
+        this.$el.append(content(this))
+      } else {
+        this.$el.append(content)
+      }
     } else {
       this.$el.append(require("./template/builtin")(this));
     }
