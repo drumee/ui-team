@@ -1,4 +1,4 @@
-const _svg_template = function(_ui_){
+module.exports = function(_ui_){
   const m = _ui_.model.toJSON();
   const a = `
   <svg id="icon-${m.widgetId}" class="full inner drumee-picto ${m.innerClass}"> 
@@ -18,5 +18,3 @@ const _svg_template = function(_ui_){
   }
   return a;  
 };
-
-module.exports = _svg_template;
