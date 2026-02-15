@@ -14,14 +14,14 @@
  * limitations under the License.
  * =============================================================================
  */
-const _reconnect = function (_ui_, vhost) {
+const _reconnect = function (ui, vhost, title) {
   let { email } = Visitor.profile();
   let kind = "welcome_signin";
   let body = {
     kind,
     sys_pn: "reconnect-popup",
-    uiHandler: [_ui_],
-    partHandler: [_ui_],
+    uiHandler: [ui],
+    partHandler: [ui],
     reconnect: 1,
     vhost,
     uid: Visitor.id,
@@ -32,21 +32,21 @@ const _reconnect = function (_ui_, vhost) {
   };
 
   const a = Skeletons.Box.Y({
-    className: `${_ui_.fig.family}__reconnect main`,
+    className: `${ui.fig.family}__reconnect main`,
     debug: __filename,
     sys_pn: "raw-content",
     kids: [
-      // Preset.Button.Close(_ui_, "close-reconnect"),
+      // Preset.Button.Close(ui, "close-reconnect"),
       Skeletons.Box.X({
-        className: `${_ui_.fig.family}__reconnect close`,
-        kids: [Preset.Button.Close(_ui_, "close-reconnect")],
+        className: `${ui.fig.family}__reconnect close`,
+        kids: [Preset.Button.Close(ui, "close-reconnect")],
       }),
       Skeletons.Box.X({
-        className: `${_ui_.fig.family}__reconnect header`,
+        className: `${ui.fig.family}__reconnect header`,
         kids: [
           Skeletons.Note({
-            className: `${_ui_.fig.family}__reconnect title`,
-            content: LOCALE.SESSION_EXPIRED,
+            className: `${ui.fig.family}__reconnect title`,
+            content: title || LOCALE.SESSION_EXPIRED,
           }),
         ],
       }),
