@@ -53,18 +53,6 @@ function menuBar(ui) {
         }),
       );
     }
-
-    //can xoa
-
-    items.push(
-      Skeletons.Button.Svg({
-        className: icoClass,
-        service: "open-reward-hub",
-        ico: "reward",
-        plugin: plugins.custom,
-        haptic: 3000,
-      }),
-    );
   }
   ui.debug("AAA:56", items);
   return Skeletons.Box.X({

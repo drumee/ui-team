@@ -590,11 +590,9 @@ class desk_module extends LetcBox {
       case "open-settings":
         return this.openModel("window_wallpaper_settings");
 
-      // can xoa
-
-      case "open-reward-hub":
-        let kind = "reward_hub_router";
-        return Kind.loadPlugin({ name: "reward-hub", kind })
+      case "load-custom-plugin":
+        let { name, kind } = cmd.mget("plugin");
+        return Kind.loadPlugin({ name, kind })
           .then(() => {
             Kind.waitFor(kind).then((k) => {
               this.openModel(kind);
@@ -603,16 +601,6 @@ class desk_module extends LetcBox {
           .catch((e) => {
             this.warn(`Failed to load plugin`);
           });
-
-      // case 'load-custom-plugin':
-      //   let { name, kind } = cmd.mget('plugin')
-      //   return Kind.loadPlugin({ name, kind }).then(() => {
-      //     Kind.waitFor(kind).then((k) => {
-      //       this.openModel(kind);
-      //     })
-      //   }).catch((e) => {
-      //     this.warn(`Failed to load plugin`)
-      //   })
 
       case "open-user-guide":
         return this.openModel("settings_helpcenter");
