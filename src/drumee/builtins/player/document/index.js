@@ -469,14 +469,12 @@ class __player_document extends PlayerInteract {
         this.pagesList = child;
         this.timer = null;
         // Skip scroll-based lazy loading in mobile mode (all pages loaded upfront)
-        if (!Visitor.isMobile()) {
-          child.on(_e.scroll, ((list) => {
-            let th = list.contentHeight() * this.loadedPages * .5;
-            if (this.timer || list.scrollDir != _a.down) return;
-            if (list.getOffsetY() < th) return;
-            this.nextPages()
-          }))
-        }
+        child.on(_e.scroll, ((list) => {
+          let th = list.contentHeight() * this.loadedPages * .5;
+          if (this.timer || list.scrollDir != _a.down) return;
+          if (list.getOffsetY() < th) return;
+          this.nextPages()
+        }))
         break;
       case "navbar":
         return this.navbar = child;
