@@ -161,18 +161,21 @@ class Drumee extends Marionette.Application {
       alert(LOCALE.COOKIES_REQUIRED);
       return;
     }
-    const gw = require('./router');
-    this.router = new gw();
-    this.showView(this.router);
     Visitor.listenChanges();
     Organization.listenChanges();
     if (user.id) {
       Visitor.respawn(user);
     }
-    const event = new Event('drumee:app:started');
-    event.root = this.content;
-    document.dispatchEvent(event);
-    if (!Backbone.History.started) Backbone.history.start();
+    const gw = require('./router');
+    this.router = new gw();
+    if (bootstrap().isPlugin) {
+      const event = new Event('drumee:app:started');
+      event.app = this;
+      document.dispatchEvent(event);
+    } else {
+      this.showView(this.router);
+      if (!Backbone.History.started) Backbone.history.start();
+    }
   }
 
   /**
