@@ -64,9 +64,7 @@
       }
 
       .filename {
-        &.document {
-          background: var(--default-bg-block);
-        }
+        background-color: var(--primary-100-5);
       }
     }
 
