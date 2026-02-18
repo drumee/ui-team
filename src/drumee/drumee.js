@@ -166,13 +166,13 @@ class Drumee extends Marionette.Application {
     if (user.id) {
       Visitor.respawn(user);
     }
+    const gw = require('./router');
+    this.router = new gw();
     if (bootstrap().isPlugin) {
       const event = new Event('drumee:app:started');
       event.app = this;
       document.dispatchEvent(event);
     } else {
-      const gw = require('./router');
-      this.router = new gw();
       this.showView(this.router);
       if (!Backbone.History.started) Backbone.history.start();
     }
