@@ -5,23 +5,23 @@
   &__ui {
     max-height: 100%;
     overflow: auto;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    scrollbar-width: none;
+
+    -ms-overflow-style: none;
   }
 
   &__wrapper {
-    border-radius: 24px;
-    // box-shadow: 0 10px 30px rgba(34, 34, 34, 0.1);
     margin: 0 auto;
     max-width: 100%;
-    padding: 0 24px;
+    padding: 0 var(--spacer-6);
     width: 100%;
     box-sizing: border-box;
-    // overflow: visible;
-    // position: relative;
     z-index: 10;
     gap: 0;
-    // min-height: auto;
-    // overflow: auto;
-    // max-height: calc(100vh - 140px);
   }
 
   &__content {
@@ -35,10 +35,10 @@
   }
 
   &__divider {
-    width: calc(100% + 48px); // Full width including parent padding (24px * 2)
+    width: calc(100% + 48px);
     height: 1px;
-    background: var(--neutral-200, #ebecf0);
-    margin: 16px -24px; // Negative margin to offset parent padding
+    background: var(--neutral-200);
+    margin: var(--spacer-5) -24px;
     padding: 0;
     flex-shrink: 0;
     box-sizing: border-box;
@@ -49,7 +49,7 @@
     justify-content: flex-end;
     align-self: stretch;
     align-items: center;
-    padding-top: 20px;
+    padding-top: var(--spacer-5);
     flex-shrink: 0;
     min-height: 60px;
   }
@@ -57,7 +57,7 @@
   &__cancel-btn,
   &__save-btn {
     padding: 10px 24px;
-    border-radius: 50px;
+    border-radius: var(--corner-radius-5);
     font-size: 14px;
     font-weight: 400;
     cursor: pointer;
@@ -71,12 +71,12 @@
   }
 
   &__cancel-btn {
-    background: var(--neutral-100, #f5f5f7);
-    color: var(--neutral-900, #222732);
+    background: var(--neutral-100);
+    color: var(--neutral-900);
     margin-right: 12px;
 
     &:hover {
-      background: var(--neutral-200, #e8e8eb);
+      background: var(--neutral-200);
     }
 
     svg {
@@ -85,12 +85,12 @@
   }
 
   &__save-btn {
-    background: var(--primary-600, #7c3aed);
-    color: var(--white, #ffffff);
+    background: var(--primary-600);
+    color: var(--white);
     font-weight: 500;
 
     &:hover {
-      background: var(--primary-700, #6d28d9);
+      background: var(--primary-700);
     }
 
     svg {
@@ -99,7 +99,6 @@
   }
 }
 
-// Topbar styles (similar to members-list)
 .settings-share-hub-topbar {
   &__container {
     align-items: center;
@@ -107,7 +106,7 @@
     flex-direction: row !important;
     gap: 16px;
     justify-content: space-between;
-    margin-bottom: 20px;
+    margin-bottom: var(--spacer-5);
     width: 100%;
     flex-shrink: 0;
   }
@@ -152,14 +151,13 @@
   &__section {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--spacer-5);
   }
 
   &__title {
     font-size: 14px;
     font-weight: 400;
-    color: var(--neutral-800, #414651);
-    margin-bottom: 4px;
+    color: var(--neutral-800);
     line-height: 22px;
     letter-spacing: 0.14px;
   }
@@ -206,7 +204,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    border: 1px solid var(--neutral-300, #d1d5db);
+    border: 1px solid var(--neutral-300);
     border-radius: 8px;
     cursor: pointer;
     transition: border-color 120ms ease;
@@ -214,7 +212,7 @@
     box-sizing: border-box;
 
     &:hover {
-      border-color: var(--neutral-400, #9ca3af);
+      border-color: var(--neutral-400);
     }
   }
 
@@ -228,7 +226,7 @@
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: var(--neutral-600, #8c929c);
+    color: var(--neutral-600);
 
     svg {
       width: 16px;
@@ -239,7 +237,7 @@
   &__label {
     flex: 1;
     font-size: 14px;
-    color: var(--neutral-900, #222732);
+    color: var(--neutral-900);
   }
 
   &__chevron {
@@ -247,12 +245,12 @@
     height: 16px;
     flex-shrink: 0;
     rotate: 90deg;
-    color: var(--neutral-600, #8c929c);
+    color: var(--neutral-600);
   }
 
   &__description {
     font-size: 14px;
-    color: var(--neutral-600, #8c929c);
+    color: var(--neutral-600);
     line-height: 1.5;
   }
 
@@ -268,8 +266,8 @@
     svg {
       width: 20px;
       height: 20px;
-      border: 1px solid var(--neutral-300, #d1d5db);
-      border-radius: 4px;
+      border: 1px solid var(--neutral-300);
+      border-radius: var(--corner-radius-2);
       background-color: var(--ewhite);
       transition: all 120ms ease;
     }
@@ -279,15 +277,15 @@
     &.selected {
       svg {
         background-color: var(--ewhite);
-        border: 1px solid var(--primary-600, #7c3aed);
-        color: var(--primary-600, #7c3aed);
+        border: 1px solid var(--primary-600);
+        color: var(--primary-600);
       }
     }
 
     &[data-state="0"] {
       svg {
         background-color: var(--ewhite);
-        border: 1px solid var(--neutral-300, #d1d5db);
+        border: 1px solid var(--neutral-300);
         color: transparent;
       }
     }
@@ -295,7 +293,7 @@
 
   &__password-label {
     font-size: 14px;
-    color: var(--neutral-900, #222732);
+    color: var(--neutral-900);
     cursor: pointer;
   }
 
@@ -311,8 +309,8 @@
 
   &__input {
     width: 100%;
-    padding: 12px 60px 12px 16px; // padding-right: 60px để tránh bị label đè
-    border: 1px solid var(--neutral-300, #d1d5db);
+    padding: 12px 60px 12px 16px;
+    border: 1px solid var(--neutral-300);
     border-radius: 8px;
     font-size: 14px;
 
@@ -326,7 +324,7 @@
     right: 16px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--primary-600, #7c3aed);
+    color: var(--primary-600);
     font-size: 14px;
     font-weight: 400;
     cursor: pointer;
@@ -334,10 +332,9 @@
     z-index: 1;
 
     &:hover {
-      color: var(--primary-700, #6d28d9);
+      color: var(--primary-700);
     }
 
-    // Ẩn SVG icon, chỉ hiển thị label text
     svg {
       display: none;
     }
@@ -355,7 +352,7 @@
     padding: 4px;
     margin-top: 4px;
     z-index: 200;
-    border: 1px solid var(--neutral-300, #d1d5db);
+    border: 1px solid var(--neutral-300);
     border-radius: 8px;
     overflow: visible;
   }
@@ -457,7 +454,7 @@
 
   &__wrapper {
     align-items: center;
-    gap: 12px;
+    gap: var(--spacer-4);
     overflow: auto;
     max-height: calc(100vh - 140px);
   }
@@ -468,27 +465,26 @@
     svg {
       width: 20px;
       height: 20px;
-      border: 1px solid var(--neutral-300, #d1d5db);
-      border-radius: 6px;
+      border: 1px solid var(--neutral-300);
+      border-radius: var(--corner-radius-2);
       background-color: var(--ewhite);
       transition: all 120ms ease;
     }
 
-    // Checkbox with white background when checked
     &[data-state="1"],
     &.selected {
       svg {
-        background-color: var(--primary-600, #7c3aed);
-        border: 1px solid var(--white, #ffffff);
-        color: var(--white, #ffffff);
-        padding: 2px;
+        background-color: var(--primary-600);
+        border: 1px solid var(--white);
+        color: var(--white);
+        padding: var(--spacer-2);
       }
     }
 
     &[data-state="0"] {
       svg {
         background-color: var(--ewhite);
-        border: 1px solid var(--neutral-300, #d1d5db);
+        border: 1px solid var(--neutral-300);
         color: transparent;
       }
     }
@@ -496,7 +492,7 @@
 
   &__label {
     font-size: 14px;
-    color: var(--neutral-900, #222732);
+    color: var(--neutral-900);
     cursor: pointer;
   }
 
@@ -516,14 +512,13 @@
 
   &__input {
     width: 100%;
-    padding: 12px 60px 12px 16px;
-    border: 1px solid var(--neutral-300, #d1d5db);
-    border-radius: 8px;
+    padding: var(--spacer-4);
+    border: 1px solid var(--neutral-300);
+    border-radius: var(--corner-radius-3);
     font-size: 14px;
     box-sizing: border-box;
     position: relative;
 
-    // Ensure input element inside has 100% width
     input,
     .entry-area,
     .note-input {
@@ -531,14 +526,13 @@
       box-sizing: border-box;
     }
 
-    // Ensure the entry container takes full width
     .root-node {
       width: 100%;
     }
   }
 
   &__toggle-visibility {
-    color: var(--primary-600, #7c3aed);
+    color: var(--primary-600);
     position: absolute;
     right: 16px;
     top: 50%;
@@ -549,7 +543,7 @@
     white-space: nowrap;
 
     &:hover {
-      color: var(--primary-700, #6d28d9);
+      color: var(--primary-700);
     }
   }
 }
@@ -565,7 +559,7 @@
   &__title {
     font-size: 16px;
     font-weight: 600;
-    color: var(--neutral-900, #222732);
+    color: var(--neutral-900);
     margin-bottom: 4px;
   }
 
@@ -581,7 +575,7 @@
     flex: 1;
     display: flex;
     align-items: center;
-    min-width: 0; // Allow flex items to shrink below their content size
+    min-width: 0;
 
     &.download {
       opacity: 0.4;
@@ -598,11 +592,11 @@
 
   &__note {
     font-size: 14px;
-    color: var(--neutral-900, #222732);
+    color: var(--neutral-900);
     cursor: pointer;
 
     &:hover {
-      color: var(--neutral-900, #222732);
+      color: var(--neutral-900);
     }
   }
 
@@ -613,20 +607,19 @@
     svg {
       width: 20px;
       height: 20px;
-      border: 1px solid var(--neutral-300, #d1d5db);
+      border: 1px solid var(--neutral-300);
       border-radius: 5px;
       background-color: var(--ewhite);
       transition: all 120ms ease;
     }
 
-    // Checkbox with white background when checked
     &[data-state="1"],
     &.selected {
       svg {
         padding: 3px;
-        background-color: var(--primary-600, #7c3aed);
-        border: 1px solid var(--white, #ffffff);
-        color: var(--white, #ffffff);
+        background-color: var(--primary-600);
+        border: 1px solid var(--white);
+        color: var(--white);
       }
     }
 
@@ -634,7 +627,7 @@
       svg {
         background-color: var(--ewhite);
         border-radius: 5px;
-        border: 1px solid var(--neutral-300, #d1d5db);
+        border: 1px solid var(--neutral-300);
         color: transparent;
       }
     }
@@ -642,7 +635,7 @@
 
   &__note {
     font-size: 14px;
-    color: var(--neutral-900, #222732);
+    color: var(--neutral-900);
   }
 }
 
@@ -657,7 +650,7 @@
   &__title {
     font-size: 14px;
     font-weight: 600;
-    color: var(--neutral-900, #414651);
+    color: var(--neutral-900);
     margin-bottom: 4px;
   }
 
@@ -679,15 +672,14 @@
     transition: all 120ms ease;
 
     &:hover {
-      background: var(--neutral-50, #fafafa);
+      background: var(--neutral-50,);
     }
 
     &.active {
-      background: var(--primary-50, #f4e7ff);
-      border-color: var(--primary-600, #b251fb);
+      background: var(--primary-50);
+      border-color: var(--primary-600);
     }
 
-    // Radio button row inside option
     > .drumee-box {
       display: flex;
       align-items: flex-start;
@@ -700,14 +692,14 @@
     height: 20px;
     flex-shrink: 0;
     margin-top: 2px;
-    border: 2px solid var(--neutral-400, #c3c6cc);
+    border: 2px solid var(--neutral-400);
     border-radius: 100%;
     cursor: pointer;
     background: var(--ewhite);
 
     &.active {
-      background: var(--primary-50, #f4e7ff);
-      border: 5px solid var(--primary-600, #b251fb);
+      background: var(--primary-50);
+      border: 5px solid var(--primary-600);
     }
   }
 
@@ -721,12 +713,12 @@
   &__option-label {
     font-size: 14px;
     font-weight: 500;
-    color: var(--neutral-900, #222732);
+    color: var(--neutral-900);
   }
 
   &__option-description {
     font-size: 13px;
-    color: var(--neutral-600, #8c929c);
+    color: var(--neutral-600);
     line-height: 1.4;
   }
 
@@ -746,30 +738,28 @@
   &__entry {
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid var(--neutral-300, #d1d5db);
+    border: 1px solid var(--neutral-300);
     border-radius: 12px;
     background: var(--Gray-White, #fff);
-    color: var(--neutral-400, #c3c6cc);
+    color: var(--neutral-400);
     font-size: 16px;
     font-style: normal;
     font-weight: 400;
     line-height: 26px;
-    /* 162.5% */
     letter-spacing: 0.16px;
-    min-width: 0; // Allow flex items to shrink below their content size
+    min-width: 0;
 
     &::placeholder {
-      color: var(--neutral-400, #c3c6cc);
+      color: var(--neutral-400);
       font-size: 16px;
       font-weight: 400;
       line-height: 26px;
       letter-spacing: 0.16px;
     }
 
-    // Input text color when user types
     input,
     .entry-area {
-      color: var(--neutral-400, #c3c6cc);
+      color: var(--neutral-400);
       font-size: 16px;
       font-weight: 400;
       line-height: 26px;
@@ -782,20 +772,20 @@
   &__save-btn {
     padding: 8px 16px;
     border-radius: 6px;
-    background: var(--primary-600, #7c3aed);
-    color: var(--white, #ffffff);
+    background: var(--primary-600);
+    color: var(--white);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: background-color 120ms ease;
 
     &:hover {
-      background: var(--primary-700, #6d28d9);
+      background: var(--primary-700);
     }
   }
 
   &__note {
     font-size: 14px;
-    color: var(--neutral-900, #222732);
+    color: var(--neutral-900);
   }
 }

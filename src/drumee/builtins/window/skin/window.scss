@@ -140,9 +140,9 @@
       bottom: 0;
       justify-items: center;
       align-items: center;
-      border-radius: 0 0 24px 24px;
+      border-radius: 0 0 var(--corner-radius-6) var(--corner-radius-6);
       background-color: var(--transparency-container-overlay);
-      padding: 20px 0;
+      padding: var(--spacer-6) 0;
     }
   }
 }
