@@ -28,9 +28,9 @@
     .icon {
       width: 30px;
       height: 30px;
-      padding: 9px;
+      padding: var(--spacer-3);
       cursor: pointer;
-      margin: auto 15px auto 0;
+      margin: auto var(--spacer-5) auto 0;
       background: rgba(255, 255, 255, 0.24);
       color: white;
       border-radius: 100%;
@@ -70,7 +70,7 @@
     height: 46px;
     color: var(--neutral-900);
     cursor: pointer;
-    padding: 12px;
+    padding: var(--spacer-4);
     background-color: var(--neutral-200);
     border-radius: 100%;
 

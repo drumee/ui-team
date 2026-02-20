@@ -89,12 +89,10 @@
     max-height: 100%;
     overflow-y: visible;
     width: 100%;
-    padding-bottom: 24px;
 
     .list-smart__container {
       height: 100%;
-      margin-top: 15px;
-      padding: 0 10px;
+      padding: var(--spacer-4);
     }
 
     & .list-smart__container::-webkit-scrollbar {

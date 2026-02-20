@@ -4,7 +4,7 @@
   &__header {
     // background: var(--default-bg);
     background: linear-gradient(135deg, var(--blue-100), var(--blue-800));
-    border-radius: 24px 24px 0 0;
+    border-radius: var(--spacer-6) var(--spacer-6) 0 0;
     color: white;
     cursor: pointer;
     height: 132px;
@@ -30,7 +30,7 @@
     &.main {
       width: 100%;
       justify-content: center;
-      gap: 8px;
+      gap: var(--spacer-3);
       &[data-device="mobile"] {
         padding: 0 60px;
       }
@@ -167,13 +167,13 @@
         color: var(--default-icon-neutral);
         cursor: pointer;
         height: 14px;
-        margin: auto 13px auto 0;
+        margin: auto var(--spacer-4) auto 0;
         width: 14px;
 
         &.link {
           width: 46px;
           height: 46px;
-          padding: 14px;
+          padding: var(--spacer-4);
           background: var(--default-bg);
           color: var(--neutral-900);
           border-radius: 100%;
@@ -183,7 +183,7 @@
           transform: scaleX(-1);
           width: 46px;
           height: 46px;
-          padding: 14px;
+          padding: var(--spacer-4);
           background: var(--default-bg);
           color: var(--neutral-900);
           border-radius: 100%;
@@ -208,7 +208,7 @@
       .icon {
         display: flex;
         cursor: pointer;
-        padding: 10px;
+        padding: var(--spacer-3);
         align-items: center;
         justify-content: center;
         width: 30px;
