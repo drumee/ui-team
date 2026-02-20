@@ -647,26 +647,26 @@ class __media_core extends DrumeeMFS {
       nid: this.get((_a.nid))
     }
     this.debug("aaa:651", args, this)
-    this.postService(svc, args, { async: 1 }
-    ).then((attr) => {
-      if (attr) {
-        attr.kind = this._getKind();
-        attr.service = OPEN_NODE;
-        attr.uiHandler = this.mget(_a.uiHandler);
-        attr.widgetId = this.mget(_a.widgetId)
-        if (this.isHub) {
-          attr.nid = attr.actual_hub_id;
-          attr.home_id = attr.actual_home_id;
-          attr.hub_id = attr.actual_hub_id;
-        }
-        // this.model.clear();
-        this.mset(attr);
-        this.restart();
-      }
-    }).catch((e) => {
-      this.warn('Failed to update', args)
-      console.trace()
-    });
+    // this.postService(svc, args, { async: 1 }
+    // ).then((attr) => {
+    //   if (attr) {
+    //     attr.kind = this._getKind();
+    //     attr.service = OPEN_NODE;
+    //     attr.uiHandler = this.mget(_a.uiHandler);
+    //     attr.widgetId = this.mget(_a.widgetId)
+    //     if (this.isHub) {
+    //       attr.nid = attr.actual_hub_id;
+    //       attr.home_id = attr.actual_home_id;
+    //       attr.hub_id = attr.actual_hub_id;
+    //     }
+    //     // this.model.clear();
+    //     this.mset(attr);
+    //     this.restart();
+    //   }
+    // }).catch((e) => {
+    //   this.warn('Failed to update', args)
+    //   console.trace()
+    // });
   }
 
   /**
