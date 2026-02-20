@@ -19,7 +19,7 @@
 
   &__header {
     height: 34px;
-    padding: 5px;
+    padding: var(--spacer-3);
     width: 100%;
   }
 
@@ -137,8 +137,7 @@
   &__note {
     &.title {
       justify-content: center;
-      padding-bottom: 8px;
-      padding-top: 6px;
+      align-items: center;
       width: 100%;
       @include drumee.typo(
         $size: 15px,

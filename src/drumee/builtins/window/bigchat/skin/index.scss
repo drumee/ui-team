@@ -45,11 +45,9 @@
   }
 
   &-topbar {
-    // @include meta.load-css('breadcrumbs.scss');
-
     &__container {
       justify-content: space-between;
-      padding: 0 40px;
+      padding: 0 var(--spacer-8);
       &[data-device="mobile"] {
         gap: 10px;
         justify-content: center;
@@ -65,19 +63,19 @@
     }
 
     &__title-wrapper {
-      gap: 10px;
+      gap: var(--spacer-4);
       align-items: center;
     }
 
     &__name-wrapper {
-      gap: 10px;
+      gap: var(--spacer-4);
     }
 
     &__subtitle-wrapper {
-      gap: 10px;
+      gap: var(--spacer-4);
       color: white;
       &.contacts {
-        padding-right: 10px;
+        padding-right: var(--spacer-4);
         border-right: 1px solid var(--neutral-400);
       }
       &[data-device="mobile"] {
@@ -125,11 +123,11 @@
     }
     &__trigger-wrapper {
       align-items: center;
-      gap: 10px;
+      gap: var(--spacer-4);
       color: white;
       background-color: var(--neutral-950);
-      padding: 10px 20px;
-      border-radius: 20px;
+      padding: var(--spacer-4) var(--spacer-6);
+      border-radius: var(--corner-radius-5);
       cursor: pointer;
     }
   }
@@ -212,8 +210,7 @@
     justify-content: center;
     overflow: hidden;
     width: 100%;
-    border-radius: var(--border-radius-righ);
-    padding-bottom: 10px;
+    padding-bottom: var(--spacer-4);
   }
 
   &__sharechat_notify[data-state="0"] {
