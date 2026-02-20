@@ -881,8 +881,7 @@ class __window_manager extends push {
         return;
 
       case "remove-selection":
-        await this.removeMediaSelection(args.media)
-        return;
+        return this.removeMediaSelection(args.media)
 
       case "confirm-remove-selection":
         for (let hub of args.selection) {
@@ -1176,9 +1175,12 @@ class __window_manager extends push {
     if (!s) {
       return;
     }
-    const url = s.viewerLink(_a.orig);
-    copyToClipboard(url);
-    return Desk.acknowledge(LOCALE.ACK_COPY_LINK);
+    s.viewerLink(_a.orig).then((url) => {
+      setTimeout(async () => {
+        await copyToClipboard(url);
+        Wm.acknowledge();
+      }, 0);
+    });
   }
 
   /**

@@ -62,7 +62,6 @@ class __window_folder extends mfsInteract {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service)
-    console.log("AAA:65", service, cmd)
     switch (service) {
       case _a.info:
         return this.showInfo()
@@ -72,6 +71,9 @@ class __window_folder extends mfsInteract {
 
       case _e.settings:
         return this.switchShowFolderSettings(cmd);
+
+      case "remove-selection":
+        return Wm.removeMediaSelection(cmd)
 
       default:
         super.onUiEvent(cmd, args);
@@ -83,39 +85,39 @@ class __window_folder extends mfsInteract {
    * @param {*} cmd 
    * @returns 
    */
-/**
-   * To switch the sharebox settings 
-   * @returns 
-   */
-switchShowFolderSettings(cmd) {
-  console.log("AAA:89", cmd.model.toJSON())
-  if (this.isShowSettings) {
-    this.isShowSettings = false;
-    return this.dialogWrapper.clear();
-  }
-  this.isShowSettings = true;
-
-  this.dialogWrapper.feed({
-    kind: 'settings_hub',
-    label: this.settingsLabel,
-    className: "",
-    uiHandler: [this],
-    media: this.mget(_a.media),
-    hub_id: this.mget(_a.hub_id),
-    source: this,
-    persistence: _a.once
-  });
-  var c = this.dialogWrapper.children.last();
-  c.once(_e.destroy, () => {
-    this.isShowSettings = false;
-    return this.unselect();
-  });
-  return c.on(_e.show, () => {
-    return this.on(_e.unselect, () => {
+  /**
+     * To switch the sharebox settings 
+     * @returns 
+     */
+  switchShowFolderSettings(cmd) {
+    if (this.isShowSettings) {
+      this.isShowSettings = false;
       return this.dialogWrapper.clear();
+    }
+    this.isShowSettings = true;
+
+    this.dialogWrapper.feed({
+      kind: 'settings_hub',
+      label: this.settingsLabel,
+      className: "",
+      uiHandler: [this],
+      media: this.mget(_a.media),
+      hub_id: this.mget(_a.hub_id),
+      source: this,
+      persistence: _a.once
     });
-  });
-}
+    var c = this.dialogWrapper.children.last();
+    c.once(_e.destroy, () => {
+      this.isShowSettings = false;
+      return this.unselect();
+    });
+    return c.on(_e.show, () => {
+      return this.on(_e.unselect, () => {
+        return this.dialogWrapper.clear();
+      });
+    });
+  }
+  
   /**
    * 
   */

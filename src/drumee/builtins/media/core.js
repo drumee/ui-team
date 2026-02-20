@@ -103,15 +103,6 @@ class __media_core extends DrumeeMFS {
     };
 
     this.initURL();
-    // let type = this.mget(_a.filetype);
-    // if ([_a.hub, _a.folder].includes(type) && !this.isSimple) {
-    //   this.isHubOrFolder = 1;
-    //   if (type === _a.hub) {
-    //     this.isHub = 1;
-    //   } else if (type === _a.folder) {
-    //     this.isFolder = 1;
-    //   }
-    // }
     switch (this.mget(_a.filetype)) {
       case _a.folder:
         if (_.isEmpty(this.mget(_a.hubs))) break;
@@ -321,6 +312,9 @@ class __media_core extends DrumeeMFS {
       url: this.actualNode(f).url,
       type: this.mget(_a.filetype),
     });
+    if (this.mget(_a.parent_id) == Wm.mget(_a.home_id)) {
+      this.mset({ role: 'desk' })
+    }
   }
 
   /**
@@ -637,6 +631,42 @@ class __media_core extends DrumeeMFS {
         }
       })
     }
+  }
+
+  /**
+   * 
+   */
+  async updateAttributes() {
+    let svc = SERVICE.media.get_node_attr;
+    let hub_id = this.mget(_a.hub_id)
+    if (this.isHub) {
+      hub_id = Wm.mget(_a.hub_id)
+    }
+    let args = {
+      hub_id,
+      nid: this.get((_a.nid))
+    }
+    this.debug("aaa:651", args, this)
+    this.postService(svc, args, { async: 1 }
+    ).then((attr) => {
+      if (attr) {
+        attr.kind = this._getKind();
+        attr.service = OPEN_NODE;
+        attr.uiHandler = this.mget(_a.uiHandler);
+        attr.widgetId = this.mget(_a.widgetId)
+        if (this.isHub) {
+          attr.nid = attr.actual_hub_id;
+          attr.home_id = attr.actual_home_id;
+          attr.hub_id = attr.actual_hub_id;
+        }
+        // this.model.clear();
+        this.mset(attr);
+        this.restart();
+      }
+    }).catch((e) => {
+      this.warn('Failed to update', args)
+      console.trace()
+    });
   }
 
   /**
@@ -1086,6 +1116,7 @@ class __media_core extends DrumeeMFS {
     if (window.ActivityHandler) this.stopListening(window.ActivityHandler, 'notificationUpdated');
     this.initData();
     this.initURL();
+    this.initContainer()
     const { md5Hash } = this.metadata();
     this.mset({ md5Hash });
     this.trigger(_e.restart);
@@ -1748,7 +1779,6 @@ class __media_core extends DrumeeMFS {
     }
     let { src, dest } = args;
     this.mset("renamed", [src.filename, dest.filename]);
-    this.debug("AAA:1754", dest, data)
     this.mset(dest)
     this.restart();
   }

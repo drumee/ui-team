@@ -31,7 +31,6 @@ class __window_core extends __utils {
     this.setCurrentApi = this.setCurrentApi.bind(this);
     this.respawn = this.respawn.bind(this);
     this.onServerComplain = this.onServerComplain.bind(this);
-    this.__dispatchRest = this.__dispatchRest.bind(this);
     this.syncOrder = this.syncOrder.bind(this);
   }
 
@@ -440,7 +439,6 @@ class __window_core extends __utils {
    */
   updateSummary(box) {
     if (Visitor.parseModule().includes(_a.dmz)) {
-      this.debug("AAA:444", this)
       // this.getPart("last-update").set({ content: "Metadata not available" })
       return
     }
@@ -452,12 +450,12 @@ class __window_core extends __utils {
     this.fetchService(SERVICE.media.summary, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((response) => {
       // Response structure: { data: { file_count, mtime, ... } }
       const data = response && response.data ? response.data : response;
-      
+
       // Update items count
       if (data && typeof data.file_count !== 'undefined') {
         this.getPart("items-count").set({ content: LOCALE.X_FILES.format(data.file_count) })
       }
-      
+
       // Update last-update with proper error handling
       if (data && data.mtime) {
         try {
@@ -625,11 +623,10 @@ class __window_core extends __utils {
     this.breadcrumbsRoll.feed(items);
     if (items.length <= 1) {
       this.breadcrumbsRoll.el.hide();
-      if(this.__settingsBox) this.__settingsBox.el.show()
+      if (this.__settingsBox) this.__settingsBox.el.show()
     } else {
       this.breadcrumbsRoll.el.show();
-      this.debug("AAA:697", this.__refWindowIcon)
-      if(this.__settingsBox) this.__settingsBox.el.hide()
+      if (this.__settingsBox) this.__settingsBox.el.hide()
     }
     this._path = data;
     const last = this.breadcrumbsRoll.children.last();
@@ -807,7 +804,6 @@ class __window_core extends __utils {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.model.get(_a.service);
     if (!args.no_raise) this.raise(cmd);
-    this.debug("AAA:780", service)
     switch (service) {
       case _e.close:
         if (this.mget(_a.source)) {
@@ -841,16 +837,6 @@ class __window_core extends __utils {
       case _e.sort:
         return this.sortContent(cmd);
 
-      // case "previous":
-      //   let menu = this.breadcrumbsRoll;
-      //   let last = menu.children.last();
-      //   if (!last || menu.collection.length < 2) {
-      //     this.__breadcrumbsContainer.el.hide();
-      //     return;
-      //   }
-      //   let item = menu.children.findByIndex(menu.collection.length - 2);
-      //   return this.openContent(item, 1);
-
       case "show-navigation":
         return this.showNavigation();
 
@@ -870,8 +856,10 @@ class __window_core extends __utils {
 
       case _a.link:
         return this.viewerLink().then((url) => {
-          copyToClipboard(url);
-          this.acknowledge();
+          setTimeout(async () => {
+            await copyToClipboard(url);
+            this.acknowledge();
+          }, 0);
         });
 
       case "fullscreen":
@@ -949,7 +937,12 @@ class __window_core extends __utils {
 
       default:
         if (lastClick.shiftKey || lastClick.altKey || lastClick.ctrlKey) {
-          copyToClipboard(this.viewerLink());
+          this.viewerLink().then((url) => {
+            setTimeout(async () => {
+              await copyToClipboard(url);
+              Wm.acknowledge();
+            }, 0);
+          })
         }
         break;
     }
@@ -1094,16 +1087,16 @@ class __window_core extends __utils {
    * @param {*} socket 
    * @returns 
    */
-  __dispatchRest(method, data, socket) {
-    switch (method) {
+  // __dispatchRest(method, data, socket) {
+  //   switch (method) {
 
-      case SERVICE.media.node_info:
-        return (location.hash = `#/desk/browser/${data.pid}/${data.hub_id}`);
+  //     case SERVICE.media.node_info:
+  //       return (location.hash = `#/desk/browser/${data.pid}/${data.hub_id}`);
 
-      default:
-        return this.warn(WARNING.method.unprocessed.format(method), data);
-    }
-  }
+  //     default:
+  //       return this.warn(WARNING.method.unprocessed.format(method), data);
+  //   }
+  // }
 }
 module.exports = __window_core;
 

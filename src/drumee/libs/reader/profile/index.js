@@ -94,13 +94,15 @@ class __user_profile extends LetcBox {
         style: opt
       }));
     }
-    this.__imageBox.feed(Skeletons.Button.Svg({
-      ico: "logo",
-      className: `${this.fig.family}__icon ${this.fig.family}__initiales`,
-      sys_pn: 'initiales',
-      active: this.mget(_a.active),
-      style: opt
-    }));
+    this.__imageBox.feed(
+      Skeletons.Element({
+        className: `${this.fig.family}__icon ${this.fig.family}__initiales`,
+        sys_pn: 'initiales',
+        active: this.mget(_a.active),
+        content: require('./templates/avatar').default(this),
+        style: opt
+      })
+    )
   }
 
 

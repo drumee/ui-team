@@ -1,7 +1,11 @@
-export function badgeShare(model) {
-  const { area, widgetId } = model;
+export function badgeShare(model, child_area, pos = 0) {
+  const { area, widgetId = _.uniqueId() } = model;
+  let child = ""
+  if (pos) {
+    child = `child child-${child_area} pos-${pos}`
+  }
   return `
-    <svg class="badge ${area}" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg class="badge ${area} ${child}" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g filter="url(#filter-${widgetId})">
         <path d="M22 0C33.5979 0 43 9.40202 43 21C43 32.5979 33.5979 42 22 42C10.402 42 1 32.5979 1 21C1.00002 9.40203 10.402 1.51027e-05 22 0ZM22 3.23077C12.1863 3.23078 4.23078 11.1863 4.23077 21C4.23077 30.8136 12.1863 38.7692 22 38.7692C31.8136 38.7692 39.7692 30.8136 39.7692 21C39.7692 11.1863 31.8136 3.23077 22 3.23077Z" fill="white"/>
       </g>

@@ -148,20 +148,23 @@ class settings_hub extends DrumeeMFS {
 
       case 'copy-link':
         return this.viewerLink().then((url) => {
-          copyToClipboard(url);
-          Wm.acknowledge();
+          setTimeout(async () => {
+            await copyToClipboard(url);
+            Wm.acknowledge();
+          }, 0);
         });
 
       case 'send-by-email':
         return this.viewerLink().then((url) => {
-          openUserMailAgent({
-            subject: `Link access to my files`,
-            body: `Hi
+          setTimeout(async () => {
+            openUserMailAgent({
+              subject: `Link access to my files`,
+              body: `Hi
               here is the link to retrieve my files 
               ${url} 
             `
-          })
-          copyToClipboard(url);
+            })
+          }, 0)
         });
 
       case "share-qrcode":

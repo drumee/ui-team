@@ -1,6 +1,6 @@
-const _helpers = function (_ui_, content, name) {
-  const pfx = `${_ui_.fig.family}__helper`
-  const a = Skeletons.Box.X({
+function _helpers(ui, content, name) {
+  const pfx = `${ui.fig.family}__helper`
+  return Skeletons.Box.X({
     debug: __filename,
     className: `${pfx}-container`,
     service : `video-help`,
@@ -10,11 +10,6 @@ const _helpers = function (_ui_, content, name) {
       active:0
     },
     kids: [
-      // Skeletons.Button.Svg({
-      //   ico: 'desktop_videofile',
-      //   className: `${pfx}-icon`,
-      //   innerClass:'helper',
-      // }),
       Skeletons.Note({
         className: `${pfx}-text`,
         content
@@ -22,14 +17,13 @@ const _helpers = function (_ui_, content, name) {
     ]
   });
 
-  return a;
 };
 
-const __dock_button = function (_ui_, opt, label, extra) {
+module.exports = function (ui, opt, label, extra) {
   const a = Skeletons.Box.X({
     debug: __filename,
-    className: `${_ui_.fig.family}__action`,
-    helper: _helpers(_ui_, label, opt.helperName),
+    className: `${ui.fig.family}__action`,
+    helper: _helpers(ui, label, opt.helperName),
     kids: [Skeletons.Button.Svg({innerClass:'action', ...opt})]
   })
   if(extra){
@@ -38,4 +32,4 @@ const __dock_button = function (_ui_, opt, label, extra) {
   return a;
 };
 
-module.exports = __dock_button;
+

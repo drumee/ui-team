@@ -1,4 +1,8 @@
 .gradient-start {
+  &-inner-folder {
+    stop-color: #CCB2FF;
+  }
+
   &-personal {
     stop-color: #DCB2FF;
   }
@@ -18,6 +22,10 @@
 }
 
 .gradient-end {
+  &-inner-folder {
+    stop-color: #9251FB;
+  }
+
   &-personal {
     stop-color: #B251FB;
   }
