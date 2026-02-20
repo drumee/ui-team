@@ -1,5 +1,5 @@
 @use "sass:meta";
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .invitation-searchbox {
   &__ui {
@@ -17,8 +17,12 @@
   &__title {
     height: 30px;
     justify-content: center;
-    padding: 0 30px;
-    @include drumee.typo($size: 14px, $line: 30px, $color: var(--default-text-title), $weight: 300);
+    @include drumee.typo(
+      $size: 14px,
+      $line: 30px,
+      $color: var(--default-text-title),
+      $weight: 300
+    );
   }
 
   &__container {
@@ -29,7 +33,7 @@
     &-results {
       align-self: center;
       background: var(--default-bg);
-      border-radius: var(--border-radius);
+      border-radius: var(--corner-radius-4);
       box-shadow: var(--drumee-shadow-box);
       margin: auto;
       max-height: 216px;
@@ -37,7 +41,8 @@
       position: absolute;
       top: 5px;
       width: 260px;
-      padding: 5px 10px 0px 10px;
+      padding: var(--spacer-4);
+      border: 1px solid var(--neutral-300);
     }
 
     &-commands {
@@ -62,7 +67,7 @@
     }
 
     &-buttons {
-      color: #89929E;
+      color: #89929e;
       margin: auto;
 
       &[data-state="0"] {
@@ -78,7 +83,7 @@
         width: 30px;
 
         &[data-state="1"] {
-          background-color: #879BFF;
+          background-color: #879bff;
           border-radius: var(--checkbox-border-radius);
           color: var(--ewhite);
         }
@@ -97,8 +102,12 @@
     margin: auto;
     min-width: 68px;
     width: auto;
-    padding: 14px;
-    @include drumee.typo($size: 15px, $line: 20px, $color: var(--btn-rollback-text));
+    padding: var(--spacer-4) var(--spacer-6);
+    @include drumee.typo(
+      $size: 15px,
+      $line: 20px,
+      $color: var(--btn-rollback-text)
+    );
 
     &:hover {
       border: 1px solid var(--btn-rollback-border-hover);
@@ -108,7 +117,12 @@
 
   &__header {
     justify-content: center;
-    @include drumee.typo($size: 14px, $line: 16px, $color: var(--emauve-dark), $weight: 400);
+    @include drumee.typo(
+      $size: 14px,
+      $line: 16px,
+      $color: var(--emauve-dark),
+      $weight: 400
+    );
   }
 
   &__list {
@@ -131,7 +145,7 @@
   &__input {
     &--inline {
       border: 1px solid transparent;
-      margin: 0 0 0 0px;
+      margin: 0;
       width: 100%;
 
       .entry-search__main {
@@ -143,7 +157,7 @@
         height: 44px;
         border: 1px solid var(--neutral-200);
         border-radius: var(--corner-radius-4);
-        padding: 2px 5px;
+        padding: var(--spacer-2) var(--spacer-4);
 
         .entry-reminder__main showerror {
           height: 100%;
@@ -156,17 +170,26 @@
           flex-shrink: 0;
           margin: 0 auto;
           min-height: 0;
-          padding: 0 2px;
+          padding: 0 var(--spacer-1);
           width: 100%;
           height: 40px;
-          @include drumee.typo($color: var(--default-text-color), $size: 14px, $line: 28px, $weight: 400);
+          @include drumee.typo(
+            $color: var(--default-text-color),
+            $size: 14px,
+            $line: 28px,
+            $weight: 400
+          );
 
           @include drumee.placeholder-input {
-            @include drumee.typo($color: var(--default-text-placeholder), $size: 14px, $line: 28px, $weight: 300);
+            @include drumee.typo(
+              $color: var(--default-text-placeholder),
+              $size: 14px,
+              $line: 28px,
+              $weight: 300
+            );
           }
         }
       }
-
     }
   }
 
@@ -174,10 +197,9 @@
     color: var(--default-icon-neutral);
     cursor: pointer;
     height: 22px;
-    margin: auto 2px auto 0;
+    margin: auto var(--spacer-2) auto 0;
     opacity: 0.85;
     width: 26px;
-
 
     &[data-state="1"] {
       border-radius: var(--border-radius-small);

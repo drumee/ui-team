@@ -4,8 +4,8 @@
   &__item {
     align-items: center;
     display: flex;
-    gap: 16px;
-    padding: 12px 16px;
+    gap: var(--spacer-5);
+    padding: var(--spacer-4) var(--spacer-5);
     transition: background-color 120ms ease;
     width: 100%;
     box-sizing: border-box;
@@ -23,7 +23,7 @@
 
   &__avatar {
     background-color: var(--egrey-b6);
-    border-radius: 50%;
+    border-radius: 100%;
     height: 40px;
     min-width: 40px;
     width: 40px;
@@ -34,7 +34,7 @@
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--spacer-2);
     min-width: 0;
   }
 
@@ -49,7 +49,7 @@
   }
 
   &__email {
-    color: var(--Neutral-600, #8C929C);
+    color: var(--Neutral-600, #8c929c);
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
@@ -71,16 +71,14 @@
   &__permission-trigger {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--spacer-3);
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 6px;
+    padding: var(--spacer-2) var(--spacer-3);
     transition: background-color 120ms ease;
 
     &:hover {
       background-color: var(--default-bg-hover);
     }
-
 
     &__arrow-down {
       transform: rotate(180deg);
@@ -89,7 +87,7 @@
   }
 
   &__permission-label {
-    color: var(--Neutral-600, #8C929C);
+    color: var(--Neutral-600, #8c929c);
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
@@ -111,7 +109,7 @@
 
   &__arrow-down,
   &__arrow-pages {
-    color: #AFB3BB;
+    color: #afb3bb;
     flex-shrink: 0;
     transform: rotate(90deg);
     transition: transform 200ms ease;
@@ -119,17 +117,15 @@
     svg {
       width: 16px;
       height: 16px;
-      color: #AFB3BB;
+      color: #afb3bb;
     }
   }
 
   // Rotate arrow when dropdown is open
   // Menu-topic with permission-dropdown class will have data-state attribute
   &__permission-dropdown {
-
     &[data-state="1"],
     &[data-state="open"] {
-
       .menu-topic-trigger .settings-member__arrow-down,
       .settings-member__permission-trigger .settings-member__arrow-down {
         transform: rotate(270deg);
@@ -139,7 +135,6 @@
 
   // Alternative selector for menu-topic element
   .menu-topic {
-
     &[data-state="1"],
     &[data-state="open"] {
       .settings-member__arrow-down {
@@ -147,7 +142,6 @@
       }
     }
   }
-
 
   &__permission-menu-items {
     background: var(--ewhite);
@@ -186,9 +180,11 @@
     cursor: pointer;
     transition: background-color 120ms ease;
     width: 100%;
-    @include drumee.typo($color: var(--default-text-color),
+    @include drumee.typo(
+      $color: var(--default-text-color),
       $size: 14px,
-      $weight: 400);
+      $weight: 400
+    );
 
     svg {
       display: none;
@@ -233,7 +229,6 @@
       gap: 12px;
       align-items: flex-start;
       width: 100%;
-
     }
 
     &__item-wrapper {
@@ -241,7 +236,6 @@
       display: flex;
       align-items: center;
       min-width: 0; // Allow flex items to shrink below their content size
-
     }
 
     &__item {
@@ -268,7 +262,7 @@
       svg {
         width: 20px;
         height: 20px;
-        border: 1px solid var(--neutral-300, #D1D5DB);
+        border: 1px solid var(--neutral-300, #d1d5db);
         border-radius: 5px;
         background-color: var(--ewhite);
         transition: all 120ms ease;
@@ -279,7 +273,7 @@
       &.selected {
         svg {
           padding: 3px;
-          background-color: var(--primary-600, #7C3AED);
+          background-color: var(--primary-600, #7c3aed);
           border: 1px solid var(--white, #ffffff);
           color: var(--white, #ffffff);
         }
@@ -289,7 +283,7 @@
         svg {
           background-color: var(--ewhite);
           border-radius: 5px;
-          border: 1px solid var(--neutral-300, #D1D5DB);
+          border: 1px solid var(--neutral-300, #d1d5db);
           color: transparent;
         }
       }
@@ -299,6 +293,5 @@
       font-size: 14px;
       color: var(--neutral-900, #222732);
     }
-
   }
 }

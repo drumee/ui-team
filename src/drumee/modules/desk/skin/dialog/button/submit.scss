@@ -1,18 +1,21 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 @mixin desk-submit-btn {
   &--submit {
     background: var(--primary-500);
-    width: 110px;
-    height: 32px;
+    height: 40px;
     margin: auto;
-    border-radius: var(--corner-radius-max);
-    //border-radius: 2px;
+    border-radius: var(--corner-radius-4);
+    padding: var(--spacer-4) var(--spacer-6);
     cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
-    @include drumee.typo($color: var(--btn-commit-text), $size: 16px, $line: 26px); //$weight:300
+    @include drumee.typo(
+      $color: var(--btn-commit-text),
+      $size: 16px,
+      $line: 26px
+    ); //$weight:300
 
     &:hover {
       background-color: var(--primary-600);
@@ -20,14 +23,11 @@
   }
 }
 
-
 @mixin settings-button {
-
   &__buttons {
     gap: var(--spacer-6);
     width: 100%;
   }
-
 
   &__button-main {
     height: 48px;
@@ -41,7 +41,7 @@
     cursor: pointer;
 
     &[data-haptic="1"] {
-      opacity: .6;
+      opacity: 0.6;
       pointer-events: none;
     }
 
@@ -100,5 +100,4 @@
     justify-content: center;
     line-height: 20px;
   }
-
 }

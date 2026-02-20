@@ -5,11 +5,8 @@
 .settings {
   &__ui {
     background-color: var(--white);
-    border-radius: var(--corner-radius-7);
-    gap: var(--spacer-7);
     opacity: 1;
     max-width: 1000px;
-    // padding: 20px;
 
     &[data-device="mobile"] {
       left: 0;

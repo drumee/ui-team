@@ -31,19 +31,26 @@
   &__subwidget {
     padding: var(--spacer-5);
     overflow: scroll;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    scrollbar-width: none;
+
+    -ms-overflow-style: none;
   }
 
   &-topbar__container {
     align-items: center;
     display: flex;
-    gap: 16px;
+    gap: var(--spacer-5);
     justify-content: space-between;
   }
 
   &-topbar__back,
   &-topbar__close {
     align-items: center;
-    border-radius: 50%;
+    border-radius: 100%;
     color: var(--default-text-neutral);
     display: flex;
     height: 36px;
@@ -297,28 +304,24 @@
     color: var(--neutral-400);
   }
 
-  // Footer
   &__footer {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px;
+    gap: var(--spacer-3);
     justify-content: space-around;
     align-items: center;
-    padding: 16px;
+    padding: var(--spacer-5);
     border-top: 1px solid var(--neutral-200, #ebecf0);
     flex-shrink: 0;
   }
 
-  // Footer
   &__footer {
     &-action {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: var(--spacer-3);
       cursor: pointer;
-      padding: 8px 16px;
-      border-radius: 6px;
+      padding: var(--spacer-3) var(--spacer-5);
+      border-radius: var(--corner-radius-2);
       transition: background-color 120ms ease;
       flex: 1;
 
@@ -402,7 +405,7 @@
 .settings-hub-permission {
   &__member {
     justify-content: center;
-    gap: 12px;
+    gap: var(--spacer-4);
     width: 100%;
   }
 

@@ -56,8 +56,8 @@
 
   &__cancel-btn,
   &__save-btn {
-    padding: 10px 24px;
-    border-radius: var(--corner-radius-5);
+    padding: var(--spacer-4) var(--spacer-6);
+    border-radius: var(--corner-radius-4);
     font-size: 14px;
     font-weight: 400;
     cursor: pointer;
@@ -114,7 +114,7 @@
   &__back,
   &__close {
     align-items: center;
-    border-radius: 50%;
+    border-radius: 100%;
     color: var(--default-text-neutral);
     display: flex;
     height: 36px;
