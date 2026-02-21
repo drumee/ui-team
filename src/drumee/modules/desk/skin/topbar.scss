@@ -5,10 +5,7 @@
     width: 100%;
     height: 72px;
     justify-content: space-between;
-    padding-top: var(--spacer-4);
-    padding-right: var(--spacer-6);
-    padding-bottom: var(--spacer-4);
-    padding-left: var(--spacer-6);
+    padding: var(--spacer-4) var(--spacer-6);
   }
 
   &__logo {
@@ -53,31 +50,33 @@
     }
 
     &-username {
-      @include drumee.typo($line: 22px,
+      @include drumee.typo(
+        $line: 22px,
         $size: 16px,
         $weight: 400,
-        $color: var(--neutral-900));
+        $color: var(--neutral-900)
+      );
       height: 40px;
       align-content: center;
       flex-wrap: wrap;
     }
 
     &-trigger {
-      gap: 12px;
+      gap: var(--spacer-4);
       background-color: var(--neutral-100);
       border-radius: var(--corner-radius-max);
 
       &-icon {
         width: 20px;
         height: 20px;
-        padding: 2px;
+        padding: var(--spacer-1);
         align-self: center;
       }
     }
 
     .menu-topic-items {
       background-color: var(--white);
-      border-radius: var(--spacer-4);
+      border-radius: var(--corner-radius-3);
       border-width: 1px;
       padding: var(--spacer-4);
 
@@ -97,15 +96,17 @@
       display: flex;
       flex-direction: row-reverse;
       justify-content: space-between;
-      padding: var(--spacer-4) var(--spacer-5) var(--spacer-4) var(--spacer-5);
-      border-radius: var(--spacer-4);
+      padding: var(--spacer-4) var(--spacer-5);
+      border-radius: var(--corner-radius-3);
       width: 100%;
       color: var(--neutral-600);
       gap: var(--spacer-2);
-      @include drumee.typo($line: 22px,
+      @include drumee.typo(
+        $line: 22px,
         $size: 16px,
         $weight: 400,
-        $color: var(--neutral-600));
+        $color: var(--neutral-600)
+      );
 
       span.label {
         display: flex;
@@ -118,7 +119,7 @@
       svg {
         width: 20px;
         height: 20px;
-        padding: 2px;
+        padding: var(--spacer-1);
         align-self: center;
       }
 
@@ -132,10 +133,11 @@
     color: var(--neutral-900);
     width: 40px;
     height: 40px;
-    padding: 9px;
+    padding: var(--spacer-3);
+    border-radius: var(--corner-radius-4);
 
     &[data-haptic="1"] {
-      opacity: .5;
+      opacity: 0.5;
       pointer-events: none;
     }
 

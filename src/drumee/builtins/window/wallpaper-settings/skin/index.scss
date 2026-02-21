@@ -50,9 +50,8 @@
     &__content {
       height: 100%;
       justify-content: left;
-      padding: 0 24px;
       width: 100%;
-      padding: 40px;
+      padding: var(--spacer-8);
 
       &[data-device="mobile"] {
         align-items: center;
@@ -89,13 +88,13 @@
     max-width: 500px;
     width: 90%;
     min-height: 184px;
-    padding: 16px 24px;
+    padding: var(--spacer-5) var(--spacer-6);
     justify-content: center;
     align-items: center;
-    gap: 12px;
+    gap: var(--spacer-4);
     align-self: center;
     border-radius: var(--corner-radius-4);
-    margin: 16px auto;
+    margin: var(--spacer-5) auto;
     background-color: var(--neutral-200);
     background-size: cover;
     transition: all 0.3s ease;
@@ -136,16 +135,16 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: var(--spacer-3);
     }
   }
 
   &__upload-button {
     display: flex;
     height: 40px;
-    padding: 8px var(--spacer-6, 24px);
+    padding: var(--spacer-3) var(--spacer-6);
     align-items: center;
-    gap: 8px;
+    gap: var(--spacer-3);
     cursor: pointer;
     flex-shrink: 0;
     border-radius: var(--corner-radius-max);
@@ -161,14 +160,13 @@
   &__images-list {
     flex: 1;
     width: 100%;
-    padding: 10px 12px;
+    padding: var(--spacer-4);
     overflow-y: auto;
 
     .smart-container {
-      gap: 12px;
+      gap: var(--spacer-4);
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-      // Let aspect-ratio on items determine row height automatically
       grid-auto-rows: min-content;
       align-items: start;
     }
@@ -180,17 +178,14 @@
   }
 
   &__image {
-    // Ratio 92/64 - maintain aspect ratio
     aspect-ratio: 92 / 64;
     width: 100%;
-    border-radius: 9px;
     cursor: pointer;
     object-fit: cover;
     border: 2px solid transparent;
 
-    // Style for preview container inside media.preview
     .content-preview {
-      border-radius: var(--corner-radius-2);
+      border-radius: var(--corner-radius-3);
       overflow: hidden;
     }
 
@@ -205,12 +200,11 @@
   }
 
   &__colors {
-    padding: 16px 24px;
-    display: flex;
+    padding: var(--spacer-5) var(--spacer-6);
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: var(--spacer-5);
     border-top: 1px solid var(--neutral-200);
     &[data-device="mobile"] {
       flex-direction: column;
@@ -270,11 +264,11 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      padding: 0 20px;
+      padding: 0 var(--spacer-6);
     }
 
     &__footer {
-      padding: 16px 24px;
+      padding: var(--spacer-5) var(--spacer-6);
       display: flex;
       justify-content: flex-end;
       background-color: var(--white);
@@ -282,15 +276,9 @@
     }
   }
 
-  &__colors {
-    padding: 20px;
-    justify-content: space-between;
-    align-items: center;
-  }
-
   .window-wallpaper-settings {
     &__colors-wrapper {
-      gap: 20px;
+      gap: var(--spacer-6);
 
       &.item {
         width: 20px;
@@ -347,14 +335,5 @@
   &__buttons {
     justify-content: flex-end;
     margin: 10px 0 10px -10px;
-  }
-
-  &__button-main {
-    &.primary {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 40px;
-    }
   }
 }

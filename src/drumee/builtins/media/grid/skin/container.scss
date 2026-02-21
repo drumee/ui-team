@@ -75,7 +75,6 @@
     }
 
     &[data-icontype="vignette"] {
-
       &:before,
       &:after {
         display: none;
@@ -105,8 +104,8 @@
       justify-content: flex-start;
       align-content: center;
       flex-wrap: wrap;
-      padding: 2px 2px 24px 2px;
-      border-radius: var(--spacer-1);
+      padding: var(--spacer-1) var(--spacer-1) var(--spacer-6) var(--spacer-1);
+      border-radius: var(--corner-radius-2);
 
       &.image {
         max-width: 86px;
@@ -145,7 +144,6 @@
       &.vector {
         background-color: var(--neutral-500);
       }
-
     }
 
     .preview-icon {

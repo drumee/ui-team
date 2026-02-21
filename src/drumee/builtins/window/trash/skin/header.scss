@@ -2,7 +2,7 @@
 
 .window-trash {
   &__header {
-    background: linear-gradient(135deg, var(--gray-100), var(--gray-800));
+    background: linear-gradient(135deg, var(--neutral-400), var(--gray-500));
   }
 
   &-topbar {
@@ -11,7 +11,7 @@
       border-bottom: 1px solid var(--default-separator);
       border-radius: var(--default-border-radius-top);
       height: 100%;
-      padding: 0 40px;
+      padding: 0 var(--spacer-8);
     }
 
     &__title {
@@ -26,11 +26,11 @@
       .purge {
         width: max-content;
         cursor: pointer;
-        border-radius: 12px;
+        border-radius: var(--corner-radius-4);
         justify-content: center;
         background-color: var(--default-bg-block);
         border: 1px solid var(--white-f9);
-        padding: 10px 20px;
+        padding: var(--spacer-4) var(--spacer-6);
         @include drumee.typo($size: 14px, $line: 24px, $weight: 400);
 
         &:hover {
@@ -47,8 +47,8 @@
 
   &__buttons-wrapper {
     align-items: center;
-    gap: 12px;
-    padding-right: 40px;
+    gap: var(--spacer-4);
+    padding-right: var(--spacer-8);
   }
 
   &__toggle-button {

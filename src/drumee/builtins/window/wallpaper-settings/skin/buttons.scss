@@ -1,37 +1,35 @@
 @mixin wallpaper-settings-button {
-
   &__buttons {
     gap: var(--spacer-6);
     width: 100%;
     display: flex;
     justify-content: flex-end;
   }
-  
+
   &__button-main {
     height: 40px;
     opacity: 1;
-    border-radius: var(--corner-radius-max);
-    padding: 8px 16px;
+    border-radius: var(--corner-radius-4);
+    padding: var(--spacer-4) var(--spacer-6);
     cursor: pointer;
-    display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
     border: none;
 
     &[data-haptic="1"] {
-      opacity: .6;
+      opacity: 0.6;
       pointer-events: none;
     }
 
     &.primary {
       background: var(--primary-500);
       color: var(--white);
-      
+
       &:hover {
         background: var(--primary-600);
       }
-      
+
       &:active {
         background: var(--primary-700);
         transform: scale(0.98);
@@ -41,11 +39,11 @@
     &.secondary {
       background-color: var(--neutral-200);
       color: var(--neutral-900);
-      
+
       &:hover {
         background-color: var(--neutral-300);
       }
-      
+
       &:active {
         background-color: var(--neutral-400);
         transform: scale(0.98);
@@ -67,6 +65,4 @@
     font-size: 14px;
     font-weight: 400;
   }
-
 }
-

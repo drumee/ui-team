@@ -38,12 +38,11 @@
   &__searchbox-input {
     width: 100%;
     overflow: hidden;
-    padding: 10px;
+    padding: var(--spacer-4);
     height: 44px;
 
     input {
-      padding-left: 10px;
-      padding-right: 10px;
+      padding: 0 var(--spacer-4);
       border-radius: var(--corner-radius-max);
     }
   }
@@ -96,7 +95,7 @@
     align-items: center;
     justify-content: center;
     max-width: 100vw;
-    padding: 5px 5px;
+    padding: var(--spacer-2);
 
     &::before {
       border-radius: 9999px;
@@ -346,7 +345,7 @@
       .desk-dock__tooltips {
         color: var(--dock-text-color) !important;
         background-color: var(--dock-main-background) !important;
-        border-radius: 8px !important;
+        border-radius: var(--corner-radius-3) !important;
 
         &::before {
           background: var(--dock-main-background) !important;
@@ -489,9 +488,9 @@
 
   &__tooltips {
     background-color: var(--dock-main-background);
-    border-radius: 8px;
+    border-radius: var(--corner-radius-3);
     opacity: 1;
-    padding: 8px;
+    padding: var(--spacer-3);
     position: absolute;
     top: -55px;
     white-space: nowrap;
