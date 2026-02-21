@@ -32,10 +32,10 @@ class __media_grid extends DrumeeMediaInteract {
     this.cursorPosition = { left: 30, top: 30 };
 
     this.size = {
-      width: 90.5,
-      height: 75.5
+      width: 132,
+      height: 132
     }
-
+    this.initContainer()
     switch (opt.mode) {
       case _a.vignette:
         return this.innerContent = require('./template/vignette')
@@ -43,6 +43,44 @@ class __media_grid extends DrumeeMediaInteract {
         this.innerContent = require('./template');
     }
 
+  }
+
+
+  /**
+   * 
+   */
+  initContainer() {
+    let filetype = this.mget(_a.filetype);
+    let hubs = this.mget("hubs");
+    let areas = this.mget("areas");
+    let hub = 0;
+    this.containsHub = filetype == _a.hub;
+    if (!_.isEmpty(hubs)) {
+      hub = 1;
+      this.containsHub = true;
+      this.isHub = 1;
+    }
+
+    this.container = [
+      Skeletons.Box.X({
+        className: `${this.fig.family}__container ${this.mget(_a.filetype)}`,
+        sys_pn: _a.content,
+        active: 0,
+        dataset: {
+          hub,
+        },
+      })
+    ]
+
+    if (areas && filetype == _a.folder) {
+      this.container.push(
+        Skeletons.Element({
+          className: `${this.fig.family}__areas`,
+          flow: _a.y,
+          content: require('./template/folder/areas')(this)
+        })
+      )
+    }
   }
 
   /**

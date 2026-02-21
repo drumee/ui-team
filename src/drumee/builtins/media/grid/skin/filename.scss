@@ -19,6 +19,7 @@
     white-space: nowrap;
     bottom: -10px;
     border-radius: var(--corner-radius-3);
+    z-index: 10;
     &.geek {
       background-color: rgba(225, 255, 255, 0.45);
       border-radius: var(--corner-radius-2);

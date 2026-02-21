@@ -1,5 +1,25 @@
 const button = require('./button');
 
+/**
+ * 
+ */
+function _folder_icon(ui, area) {
+  const pfx = `${ui.fig.family}__folder`;
+  return {
+    kind: 'media_grid',
+    className: `${pfx}-item-icon`,
+    filetype: _a.hub,
+    role: "desk",
+    area,
+    mode: _a.vignette
+  }
+}
+
+/**
+ * 
+ * @param {*} ui 
+ * @returns 
+ */
 function menu_items(ui) {
   const pfx = `${ui.fig.family}__folder`;
   let website = '';
@@ -14,7 +34,7 @@ function menu_items(ui) {
         active: 0
       },
       kids: [
-        { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.public, mode: _a.vignette },
+        _folder_icon(ui, _a.public),
         Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_PUBLIC_FOLDER })
       ]
     })
@@ -35,7 +55,7 @@ function menu_items(ui) {
           active: 0
         },
         kids: [
-          { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.share, mode: _a.vignette },
+          _folder_icon(ui, _a.share),
           Skeletons.Note({ className: `${pfx}-item-text`, content: LOCALE.CREATE_SHARED_FOLDER })
         ]
       }),
@@ -50,7 +70,7 @@ function menu_items(ui) {
           active: 0
         },
         kids: [
-          { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.private, mode: _a.vignette },
+          _folder_icon(ui, _a.private),
           Skeletons.Note({ className: `${pfx}-item-text`, content: "Create a team folder" })
         ]
       }),
@@ -64,7 +84,7 @@ function menu_items(ui) {
           active: 0
         },
         kids: [
-          { kind: 'media_grid', className: `${pfx}-item-icon`, filetype: _a.hub, area: _a.personal, mode: _a.vignette },
+          _folder_icon(ui, _a.personal),
           Skeletons.Note({ className: `${pfx}-item-text`, content: "Create a folder" })
         ]
       }),

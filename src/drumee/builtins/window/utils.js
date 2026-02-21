@@ -76,7 +76,7 @@ class __window_mfs extends DrumeeMFS {
     let changed = 0;
     if (this.__list && !this.__list.isDestroyed()) {
       for (let m of this.__list.children.toArray()) {
-        if(m.isUploading){
+        if (m.isUploading) {
           return
         }
       }
@@ -255,7 +255,7 @@ class __window_mfs extends DrumeeMFS {
     var f = () => {
       return l.suppress();
     };
-    return _.delay(f, Visitor.timeout());
+    return setTimeout(f, Visitor.timeout());
   }
 
   /**
@@ -284,6 +284,19 @@ class __window_mfs extends DrumeeMFS {
     const { data } = xhr;
     const { nid, pid } = data;
     let { echoId } = options;
+    // if (this.media) {
+    //   this.media.updateAttributes()
+    // }
+    this.debug("AAA:290", { nid, pid })
+    this.__list?.children.forEach((c) => {
+      try {
+        if (c.mget(_a.nid) == pid && _.isFunction(c.updateAttributes)) {
+          c.updateAttributes()
+        }
+      } catch (e) {
+        this.warn("Failed to update", e)
+      }
+    })
     if (echoId == this.mget('echoId')) {
       return;
     }
@@ -323,12 +336,21 @@ class __window_mfs extends DrumeeMFS {
     }
     let { nid, hub_id, filepath } = args;
     if (this.media) {
+      this.media.updateAttributes()
       if (this.media.mget(_a.nid) == nid) {
         this.goodbye()
         return;
       }
     }
-
+    this.__list?.children.forEach((c) => {
+      try {
+        let nodes = c.mget(_a.nodes)?.split(',') || []
+        if (nodes.includes(nid) && _.isFunction(c.updateAttributes)) {
+          c.updateAttributes()
+        }
+      } catch (e) {
+      }
+    })
     /** Remove children */
     this.getItemsByAttr(_a.nid, nid).filter((c) => {
       if (!c || c.mget(_a.pid) != this.getCurrentNid()) return false;
@@ -418,6 +440,15 @@ class __window_mfs extends DrumeeMFS {
     */
   moveContent(src, dest) {
     let { nid, echoId } = src;
+    let items = Wm.getItemsByAttr(_a.nid, src.nid);
+    items = items.concat(Wm.getItemsByAttr(_a.nid, dest.nid))
+    items = items.concat(Wm.getItemsByAttr(_a.nid, src.parent_id))
+    for (let item of items) {
+      if (item && _.isFunction(item.updateAttributes)) {
+        item.updateAttributes()
+      }
+    }
+
     if (echoId == this.mget('echoId')) {
       return;
     }

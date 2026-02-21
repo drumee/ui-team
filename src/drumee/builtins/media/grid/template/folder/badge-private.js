@@ -1,7 +1,11 @@
-export function badgePrivate(model) {
-  const { area, widgetId } = model;
+export function badgePrivate(model, child_area, pos = 0) {
+  const { area, widgetId = _.uniqueId() } = model;
+  let child = ""
+  if (pos) {
+    child = `child child-${child_area} pos-${pos}`
+  }
   return `
-    <svg class="badge ${area}" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg class="badge ${area} ${child}" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g clip-path="url(#clip-${widgetId})">
       <g filter="url(#filter-${widgetId})">
 <path d="M23.6738 27.6513C24.3961 27.7161 25.0833 27.9934 25.6479 28.4485C26.2124 28.9037 26.6288 29.5167 26.8453 30.2088C27.0618 30.9008 27.0683 31.6413 26.8638 32.3369C26.6594 33.0327 26.2532 33.6521 25.6966 34.117C25.1401 34.5819 24.4583 34.8714 23.7373 34.9487C23.1065 35.0164 22.4706 34.9195 21.8911 34.669L21.6464 34.5518C21.0842 34.2575 20.6091 33.8232 20.2665 33.2928L20.1273 33.0601C19.7799 32.4236 19.6294 31.698 19.6942 30.9757L19.7277 30.7027C19.8697 29.8471 20.3102 29.0712 20.9677 28.5113L21.1024 28.403C21.8342 27.8371 22.7525 27.5683 23.6738 27.6513Z" fill="white"/>

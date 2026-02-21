@@ -62,16 +62,41 @@
     }
   }
 
+  &__gradient-mascot {
+    &-start {
+      stop-color: var(--primary-500);
+    }
+
+    &-end {
+      stop-color: var(--primary-400);
+    }
+  }
+
+  &__acknowledge {
+    &-icon {
+      width: 100%;
+      justify-content: center;
+
+      svg {
+        width: 140px;
+        height: 140px;
+      }
+    }
+
+    &-text {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
   &__icons-scroll {
     margin: 0;
     padding-top: 10px;
 
     &[data-type="trial"]::after {
-      @include drumee.typo(
-        $size: 36px,
+      @include drumee.typo($size: 36px,
         $line: 42px,
-        $color: var(--default-text-title)
-      );
+        $color: var(--default-text-title));
       transform: none;
       bottom: 0;
       width: 100%;
@@ -145,11 +170,9 @@
     align-items: center;
     cursor: pointer;
     text-align: center;
-    @include drumee.typo(
-      $size: 14px,
+    @include drumee.typo($size: 14px,
       $line: 15px,
-      $color: var(--default-text-reverse)
-    ); //$size: 13px,
+      $color: var(--default-text-reverse)); //$size: 13px,
   }
 
   b {

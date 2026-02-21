@@ -236,22 +236,7 @@ class __media_interact extends media_core {
         uiHandler: [this.getLogicalParent()],
       });
     }
-    let hub = 0;
-    this.containsHub = this.mget(_a.filetype) == _a.hub;
-    if (!_.isEmpty(this.mget(_a.hubs))) {
-      hub = 1;
-      this.containsHub = true;
-    }
-    this.feed(
-      Skeletons.Box.X({
-        className: `${this.fig.family}__container ${this.mget(_a.filetype)}`,
-        sys_pn: _a.content,
-        active: 0,
-        dataset: {
-          hub,
-        },
-      })
-    );
+    this.feed(this.container);
     this.el.dataset.selected = this.mget(_a.state);
     this.el.setAttribute(_a.id, `media-${this._id}`);
     this.parent.off(_e.scroll, this.initBounds.bind(this));
@@ -696,8 +681,10 @@ class __media_interact extends media_core {
       case _a.link:
       case _a.share:
         return this.viewerLink().then((url) => {
-          copyToClipboard(url);
-          Wm.acknowledge();
+          setTimeout(async () => {
+            await copyToClipboard(url);
+            Wm.acknowledge();
+          }, 0);
         });
 
       case "direct-url":
@@ -706,13 +693,17 @@ class __media_interact extends media_core {
           this.viewerLink().then((link) => {
             url = `${link}/${nid}/get`;
           });
-          copyToClipboard(url);
-          Wm.acknowledge();
+          setTimeout(async () => {
+            await copyToClipboard(url);
+            Wm.acknowledge();
+          }, 0);
           return;
         }
         if (!url) break;
-        copyToClipboard(url);
-        Wm.acknowledge();
+        setTimeout(async () => {
+          await copyToClipboard(url);
+          Wm.acknowledge();
+        }, 0);
         break;
 
       case _a.acknowledge:
@@ -996,7 +987,7 @@ class __media_interact extends media_core {
    *
    */
   afterMoveIn(m, paste = 0, mode) {
-    this.refreshNotification();
+    this.update();
     m.getLogicalParent().syncOrder();
     this._poke();
     if (paste) return;

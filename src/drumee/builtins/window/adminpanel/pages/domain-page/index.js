@@ -1,8 +1,4 @@
-/* ============================================================= *
-*   Copyright Xialia.com  2011-2020
-*   FILE : /home/somanos/devel/ui/letc/template/index.coffee
-*   TYPE : Component
-* ============================================================== */
+
 
 const { copyToClipboard } = require("core/utils")
 

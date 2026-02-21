@@ -72,7 +72,7 @@ class __core_mfs extends LetcBox {
    */
   initData() {
     const ctime = this.mget(_a.createTime) || 0;
-    const m = Dayjs.unix(ctime); //Dayjs()(ctime, "X");
+    const m = Dayjs.unix(ctime);
     this.model.set(_a.age, m.fromNow());
     this.model.set(_a.date, m.format(DATEFORMAT));
     this.model.set(_a.size, filesize(this.mget(_a.filesize)));
@@ -651,7 +651,7 @@ class __core_mfs extends LetcBox {
           this.viewerURL = r.link;
         }
     }
-    return this.viewerURL;
+    return this.viewerURL.replace(/\/+/g, '/');
   }
 
   /**

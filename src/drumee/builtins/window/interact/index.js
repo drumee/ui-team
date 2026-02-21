@@ -1104,8 +1104,12 @@ class __window_interact extends windowCore {
     e.stopPropagation();
     this.model.set(_a.service, _a.select);
     if (e.ctrlKey || e.shiftKey) {
-      const url = this.viewerLink(_a.orig, e);
-      copyToClipboard(url);
+      this.viewerLink(_a.orig, e).then((url) => {
+        setTimeout(async () => {
+          await copyToClipboard(url);
+          Wm.acknowledge();
+        }, 0);
+      });
     }
     this.model.set(_a.state, 1 ^ this.mget(_a.state));
     this.el.dataset.selected = this.mget(_a.state);

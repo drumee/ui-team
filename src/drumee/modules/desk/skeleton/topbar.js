@@ -54,7 +54,6 @@ function menuBar(ui) {
       );
     }
   }
-  ui.debug("AAA:56", items);
   return Skeletons.Box.X({
     className: `${pfx}__user-menu`,
     sys_pn: "user-menu",
