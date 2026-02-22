@@ -38,19 +38,20 @@
   }
 
   &__wrapper {
-    padding-bottom: 17px;
     width: 100%;
+    align-items: center;
 
     &.name {
-      padding-top: 44px;
+      align-items: center;
+      gap: var(--spacer-4);
     }
 
     &.header {
       align-items: center;
       justify-content: space-between;
-      padding: 0px 10px;
+      padding: var(--spacer-1) var(--spacer-4);
       &[data-device="mobile"] {
-        padding: 0px 40px;
+        padding: 0 var(--spacer-8);
       }
     }
 
@@ -88,14 +89,10 @@
     align-items: center;
     flex: 1;
     justify-content: center;
-    padding: 2px;
-    top: 0;
   }
 
   &__icon {
     height: 26px;
-    margin-right: 25px;
-    margin-top: 5px;
     opacity: 0.55;
     width: 26px;
     min-width: 26px;
@@ -103,9 +100,7 @@
 
     &.profile-signup {
       height: 26px;
-      left: 2px;
       opacity: 1;
-      top: -4px;
       width: 29px;
     }
 
@@ -221,7 +216,8 @@
     height: 100%;
     margin: auto;
     min-width: 315px;
-    padding-bottom: 5px;
+    padding-bottom: var(--spacer-2);
+    gap: var(--spacer-4);
   }
 
   &__invite {
@@ -238,8 +234,7 @@
   }
 
   &__items {
-    justify-content: space-between;
-    padding-top: 5px;
+    justify-content: center;
     width: 100%;
 
     .tooltips {
@@ -248,7 +243,7 @@
     }
 
     &.email {
-      padding-left: 5px;
+      padding-left: var(--spacer-5);
     }
 
     &.name {
@@ -270,8 +265,6 @@
   }
 
   &__note {
-    padding-bottom: 2px;
-    padding-left: 5px;
     @include drumee.typo(
       $size: 16px,
       $line: 19px,
@@ -429,7 +422,6 @@
       height: 40px;
       justify-content: center;
       min-width: 115px;
-      padding: 5px;
       text-align: center;
       width: 170px;
       @include drumee.typo(

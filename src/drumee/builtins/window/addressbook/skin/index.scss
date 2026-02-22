@@ -32,7 +32,7 @@
 
     &__container {
       justify-content: space-between;
-      padding: 0 40px;
+      padding: 0 var(--spacer-8);
       &[data-device="mobile"] {
         gap: 10px;
         justify-content: center;
@@ -45,16 +45,16 @@
     }
 
     &__title-wrapper {
-      gap: 10px;
+      gap: var(--spacer-4);
       align-items: center;
     }
 
     &__name-wrapper {
-      gap: 10px;
+      gap: var(--spacer-4);
     }
 
     &__subtitle-wrapper {
-      gap: 10px;
+      gap: var(--spacer-4);
       color: white;
       &[data-device="mobile"] {
         display: none;
@@ -117,11 +117,11 @@
   &-menu {
     &__trigger-wrapper {
       align-items: center;
-      gap: 10px;
+      gap: var(--spacer-4);
       color: white;
       background-color: var(--neutral-950);
-      padding: 10px 20px;
-      border-radius: 20px;
+      padding: var(--spacer-4) var(--spacer-6);
+      border-radius: var(--corner-radius-5);
       cursor: pointer;
     }
 
@@ -142,33 +142,24 @@
       width: 100%;
     }
 
+    &__items {
+      gap: var(--spacer-2);
+    }
+
     &__wrapper {
-      padding-left: 15px;
-
+      padding-left: var(--spacer-5);
       z-index: 999 !important;
-
-      // &[data-state="1"] {
-      //   & .menu-trigger {
-      //     background-color: var(--default-background);
-      //     border-radius: var(--border-radius);
-      //   }
-
-      //   & .dropdown-toggle-icon {
-      //     color: var(--ab-icon-header);
-      //   }
-      // }
-
       & .menu-topic-items {
-        border-radius: var(--border-radius);
+        border-radius: var(--corner-radius-4);
         box-shadow: var(--shadow-container);
         background-color: var(--default-background);
         width: 285px;
-        padding: 10px 0;
+        padding: var(--spacer-4);
         border: 1px solid var(--neutral-300);
 
         &__wrapper {
           left: -5px;
-          padding: 10px;
+          padding: var(--spacer-4);
           &[data-device="mobile"] {
             left: 50%;
             transform: translateX(-50%);
@@ -217,7 +208,7 @@
       }
 
       &.dropdown-icon {
-        margin-right: 10px;
+        margin-right: var(--spacer-5);
 
         & svg {
           fill: var(--primary-400);
@@ -236,11 +227,13 @@
 
     &__item {
       cursor: pointer;
-      padding: 6px 20px;
+      padding: var(--spacer-3) var(--spacer-6);
+      align-items: center;
+      border-radius: var(--corner-radius-3);
 
       &:hover {
-        background-color: var(--neutral-300);
-        color: var(----neutral-600);
+        background-color: var(--primary-500);
+        color: var(--white);
 
         & .window-addressbook-menu__name {
           color: var(--default-text-hover);
@@ -253,8 +246,6 @@
     }
 
     &__name {
-      padding-top: 2px;
-      padding-left: 8px;
       @include drumee.typo(
         $size: 14px,
         $weight: 300,
