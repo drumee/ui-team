@@ -16,7 +16,7 @@
   }
 
   &__content-container {
-    margin-top: 20px;
+    margin-top: var(--spacer-6);
   }
 
   &__plans {
@@ -54,17 +54,16 @@
       justify-content: space-around;
       height: 42px;
       border-radius: var(--corner-radius-3);
-      display: flex;
-      padding: 3px 25px;
+      padding: var(--spacer-1) var(--spacer-6);
       align-items: center;
-      gap: 26px;
+      gap: var(--spacer-6);
       max-width: 400px;
     }
 
     &-item {
       cursor: pointer;
       display: flex;
-      padding: 8px 11px;
+      padding: var(--spacer-3) var(--spacer-4);
       justify-content: center;
       align-items: center;
       gap: var(--spacer-2);
@@ -93,15 +92,14 @@
 
   &__plan {
     &-main {
-      // grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
+      gap: var(--spacer-6);
     }
 
     &-item {
       border: 1px solid var(--neutral-300);
-      border-radius: 12px;
-      padding: 20px;
-      gap: 20px;
+      border-radius: var(--corner-radius-4);
+      padding: var(--spacer-6);
+      gap: var(--spacer-5);
 
       &.popular {
         border: 1px solid #b251fb;
@@ -109,7 +107,7 @@
     }
 
     &-header {
-      gap: 10px;
+      gap: var(--spacer-4);
     }
 
     &-title {
@@ -134,9 +132,8 @@
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      padding: 3px;
-      border-radius: 12px;
-      display: flex;
+      padding: var(--spacer-2);
+      border-radius: var(--corner-radius-4);
 
       &.primary {
         color: white;
@@ -162,10 +159,10 @@
     }
 
     &-features {
-      gap: 20px;
+      gap: var(--spacer-5);
 
       &.item {
-        gap: 6px;
+        gap: var(--spacer-2);
         font-size: 11px;
         align-items: center;
         justify-content: flex-start;
@@ -233,32 +230,31 @@
 
   &__footer {
     &-main {
-      margin-top: 20px;
-      gap: 20px;
-      background-color: #f8fafc;
-      padding: 20px;
-      border-radius: 16px;
+      margin-top: var(--spacer-5);
+      gap: var(--spacer-5);
+      padding: var(--spacer-5);
     }
 
     &-header {
       font-weight: 600;
       font-size: 20px;
-      color: #0f172a;
+      color: var(--neutral-900);
     }
 
     &-title {
       font-weight: 600;
-      margin-right: 10px;
-      color: #0f172a;
+      margin-right: var(--spacer-4);
+      color: var(--neutral-900);
     }
 
     &.content {
-      color: #475569;
+      color: var(--neutral-700);
+
       flex-direction: column;
     }
 
     &-email-title {
-      margin-left: 10px;
+      margin-left: var(--spacer-3);
       &[data-device="mobile"] {
         margin-left: 0;
       }
@@ -267,8 +263,8 @@
     &-email {
       cursor: pointer;
       text-decoration: underline;
-      color: #2563eb;
-      margin-left: 6px;
+      color: var(--primary-500);
+      margin-left: var(--spacer-3);
     }
   }
 
@@ -294,7 +290,6 @@
       height: 48px;
       border-radius: var(--corner-radius-4);
       border: 1px solid var(--neutral-200);
-      display: flex;
       align-items: center;
       gap: 0;
 
@@ -363,11 +358,10 @@
   &__checkout {
     &-main {
       width: 100%;
-      gap: 40px;
+      gap: var(--spacer-8);
       align-items: flex-start;
     }
 
-    // Icon color for entry fields (seats and storage)
     &-section {
       .settings-billing__entry-icon {
         svg.drumee-picto {
@@ -381,19 +375,19 @@
 
     &-left {
       flex: 1;
-      gap: 30px;
+      gap: var(--spacer-6);
     }
 
     &-right {
       width: 400px;
-      gap: 20px;
-      padding: 20px;
+      gap: var(--spacer-5);
+      padding: var(--spacer-6);
       background-color: var(--neutral-100);
-      border-radius: 12px;
+      border-radius: var(--corner-radius-4);
     }
 
     &-section {
-      gap: 12px;
+      gap: var(--spacer-4);
     }
 
     &-section-title {
@@ -406,8 +400,7 @@
     &-storage-buttons,
     &-billing-buttons {
       width: 100%;
-      gap: 10px;
-      display: flex;
+      gap: var(--spacer-3);
     }
 
     &-plan-button,
@@ -415,7 +408,7 @@
       &-main {
         flex: 1;
         width: 50%;
-        padding: 10px 20px;
+        padding: var(--spacer-3);
         border: 2px solid var(--transparent);
         border-radius: 8px;
         background-color: var(--white);
@@ -424,13 +417,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
 
         &[data-state="1"] {
-          background-color: #f4e7ff;
+          background-color: var(--primary-100);
           color: var(--neutral-900);
-          border-radius: 8px;
-          border: 2px solid #b251fb;
+          border-radius: var(--corner-radius-3);
+          border: 2px solid var(--primary-400);
         }
 
         &[data-state="0"] {
@@ -443,31 +435,28 @@
 
     &-billing-cycle-buttons {
       width: 100%;
-      gap: 10px;
-      display: flex;
-      background-color: #f1f5f9;
-      padding: 2px;
-      border-radius: 8px;
+      gap: var(--spacer-3);
+      background-color: var(--neutral-200);
+      padding: var(--spacer-2);
+      border-radius: var(--corner-radius-3);
 
       &-main {
         flex: 1;
         width: 50%;
-        padding: 10px 20px;
+        padding: var(--spacer-3);
         border: 2px solid var(--transparent);
-        border-radius: 8px;
+        border-radius: var(--corner-radius-3);
         background-color: var(--white);
         cursor: pointer;
         transition: all 0.2s;
-        display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
 
         &[data-state="1"] {
-          background-color: #f4e7ff;
+          background-color: var(--primary-100);
           color: var(--neutral-900);
-          border-radius: 8px;
-          border: 2px solid #b251fb;
+          border-radius: var(--corner-radius-3);
+          border: 2px solid var(--primary-400);
         }
 
         &[data-state="0"] {
@@ -482,9 +471,9 @@
       &-main {
         flex: 1;
         width: 50%;
-        padding: 10px 20px;
+        padding: var(--spacer-3);
         border: none;
-        border-radius: 8px;
+        border-radius: var(--corner-radius-3);
         background-color: var(--transparent);
         cursor: pointer;
         transition: all 0.2s;
@@ -526,9 +515,9 @@
     }
 
     &-section-bundles {
-      gap: 6px;
+      gap: var(--spacer-3);
       &-header {
-        gap: 8px;
+        gap: var(--spacer-3);
         font-size: 10px;
         font-weight: 600;
         align-items: center;
@@ -550,65 +539,61 @@
         }
       }
       &-note {
-        font-size: 9px;
+        font-size: 12px;
         font-weight: 400;
         color: var(--neutral-600);
       }
       &-list {
-        display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: var(--spacer-4);
       }
       &-item {
         width: 100%;
-        display: flex;
-        gap: 12px;
+        gap: var(--spacer-4);
       }
       &-bundle-item {
         flex: 1;
         width: 50%;
-        padding: 12px;
+        padding: var(--spacer-4);
         border: 2px solid var(--neutral-300);
-        border-radius: 8px;
-        gap: 12px;
+        border-radius: var(--corner-radius-3);
+        gap: var(--spacer-4);
         cursor: pointer;
       }
     }
 
     &-section-bundles-header {
-      gap: 8px;
+      gap: var(--spacer-3);
       font-size: 10px;
       font-weight: 600;
       align-items: center;
     }
 
     &-bundles-list {
-      display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: var(--spacer-4);
     }
 
     &-section-bundles-list-item {
       display: flex;
-      gap: 12px;
+      gap: var(--spacer-4);
     }
 
     &-bundles-item {
       width: 100%;
       display: flex;
-      gap: 12px;
+      gap: var(--spacer-4);
     }
 
     &-bundle-item {
       flex: 1;
       width: 50%;
-      padding: 12px;
+      padding: var(--spacer-4);
       border: 2px solid var(--neutral-300);
-      border-radius: 8px;
-      gap: 12px;
+      border-radius: var(--corner-radius-3);
+      gap: var(--spacer-4);
       cursor: pointer;
       transition: all 0.2s;
-      display: flex;
       align-items: center;
       background-color: var(--white);
       position: relative;
@@ -662,11 +647,11 @@
 
     &-bundle-content {
       flex: 1;
-      gap: 4px;
+      gap: var(--spacer-2);
     }
 
     &-bundle-header {
-      gap: 8px;
+      gap: var(--spacer-3);
       align-items: center;
       position: relative;
     }
@@ -678,10 +663,10 @@
     }
 
     &-bundle-badge {
-      padding: 2px 6px;
+      padding: var(--spacer-1) var(--spacer-3);
       background-color: var(--green-500);
       color: var(--white);
-      border-radius: 4px;
+      border-radius: var(--corner-radius-2);
       font-size: 9px;
       font-weight: 600;
       position: absolute;
@@ -692,19 +677,18 @@
     }
 
     &-bundle-price {
-      display: flex;
       align-items: baseline;
-      gap: 4px;
+      gap: var(--spacer-2);
       font-size: 14px;
 
       &-amount {
         font-weight: 700;
-        color: #0f172a;
+        color: var(--neutral-900);
       }
 
       &-period {
         font-weight: 400;
-        color: #64748b;
+        color: var(--neutral-600);
       }
     }
 
@@ -720,7 +704,7 @@
 
     &-total-price {
       align-items: baseline;
-      gap: 4px;
+      gap: var(--spacer-2);
 
       &-amount {
         font-weight: 700;
@@ -733,22 +717,19 @@
         font-size: 14px;
         line-height: 20px;
         letter-spacing: -0.85px;
-        color: #64748b;
+        color: var(--neutral-600);
       }
     }
 
     &-breakdown {
       align-items: center;
-      margin-top: --var(--spacer-1);
-      margin-bottom: --var(--spacer-1);
       border: 1px solid var(--neutral-300);
     }
 
     &-breakdown-item {
-      padding: 10px;
-      gap: 8px;
+      padding: var(--spacer-3);
+      gap: var(--spacer-3);
       width: 100%;
-      display: flex;
       align-items: center;
       justify-content: space-between;
     }
@@ -765,7 +746,7 @@
       color: var(--neutral-900);
 
       &-effective-price-per-seat {
-        color: #2563eb;
+        color: var(--blue-600);
       }
     }
 
@@ -776,14 +757,13 @@
     }
 
     &-breakdown-total-storage {
-      background-color: #f0fdf4;
-      color: #166534;
-      padding: 8px;
-      border-radius: 8px;
+      background-color: var(--green-100);
+      padding: var(--spacer-3);
+      border-radius: var(--corner-radius-3);
       justify-content: space-between;
 
       &-label {
-        color: #166534;
+        color: var(--green-600);
         font-weight: 600;
         font-size: 13px;
         line-height: 20px;
@@ -792,14 +772,15 @@
         text-align: left;
       }
       &-value {
-        color: #166534;
+        color: var(--green-600);
         text-align: right;
       }
     }
 
     &-breakdown-effective-price-per-seat {
-      background-color: #eff6ff;
+      background-color: var(--blue-100);
       justify-content: start;
+      border-radius: var(--corner-radius-3);
     }
 
     &-breakdown-icon {
@@ -812,14 +793,14 @@
 
     &-checkout-button {
       width: 100%;
-      padding: 14px;
+      padding: var(--spacer-4);
       background-color: var(--primary-500);
       color: var(--white);
-      border-radius: 8px;
+      border-radius: var(--corner-radius-4);
       font-weight: 600;
       justify-content: center;
       align-items: center;
-      gap: 8px;
+      gap: var(--spacer-3);
       cursor: pointer;
       transition: all 0.2s;
       display: flex;
@@ -842,7 +823,6 @@
         }
       }
 
-      // Icon styling - smaller size
       svg,
       .svg-wrapper {
         width: 16px;
@@ -862,7 +842,6 @@
         }
       }
 
-      // Label/text styling
       .note-content,
       .inner {
         color: var(--white);

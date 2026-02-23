@@ -52,11 +52,13 @@
       width: auto;
       height: auto;
       position: absolute;
-      padding: 10px;
+      padding: var(--spacer-4);
       background-color: var(--white);
       box-shadow: var(--drumee-shadow-main);
-      border-radius: 3px;
       max-height: 265px;
+      border: 1px solid var(--neutral-300);
+      border-radius: var(--corner-radius-3);
+      gap: var(--spacer-3);
 
       &[data-axis="x"] {
         overflow-x: auto;
@@ -67,10 +69,8 @@
         overflow-x: hidden;
         overflow-y: auto;
       }
-
     }
   }
-
 
   &__entry {
     width: 100%;
@@ -152,18 +152,16 @@
     &-icon {
       width: 16px;
       height: 16px;
-      padding: 2px;
+      padding: var(--spacer-1);
+      cursor: pointer;
 
       svg {
-        color: var(--Neutral-500);
+        color: var(--neutral-500);
       }
     }
   }
 
-
   &__item {
-    display: flex;
-    flex-direction: row;
     flex-wrap: wrap;
     align-content: center;
     justify-content: start;
@@ -171,14 +169,9 @@
     white-space: nowrap;
     min-width: 0px;
     height: 48px;
-    border-radius: 12px;
-    padding-top: 8px;
-    padding-right: 16px;
-    padding-bottom: 8px;
-    padding-left: 16px;
-    gap: 16px;
+    border-radius: var(--corner-radius-3);
+    padding: var(--spacer-3) var(--spacer-5);
     background: var(--white);
-    display: flex;
 
     .inner.note-content {
       width: 280px;
@@ -205,11 +198,11 @@
     }
 
     &:hover {
-      background: var(--menu-item-hover);
+      background: var(--neutral-200);
     }
 
     &[data-state="1"] {
-      background: var(--menu-item-hover);
+      background: var(--neutral-200);
     }
   }
 }

@@ -26,16 +26,16 @@
       height: 42px;
       border-radius: var(--corner-radius-3);
       display: flex;
-      padding: 3px 25px;
+      padding: var(--spacer-1) var(--spacer-6);
       align-items: center;
-      gap: 26px;
+      gap: var(--spacer-5);
       max-width: 400px;
     }
 
     &.item {
       cursor: pointer;
       display: flex;
-      padding: 8px 11px;
+      padding: var(--spacer-3) var(--spacer-4);
       justify-content: center;
       align-items: center;
       gap: var(--spacer-5);
