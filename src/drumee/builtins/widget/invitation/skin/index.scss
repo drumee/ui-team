@@ -1,4 +1,4 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 @use "buttons";
 @use "permission";
 
@@ -56,14 +56,15 @@
     }
 
     &__title {
-      @include drumee.typo($color: var(--default-text-color),
+      @include drumee.typo(
+        $color: var(--default-text-color),
         $size: 20px,
-        $weight: 600);
+        $weight: 600
+      );
       flex: 1;
       justify-content: center;
       text-align: center;
     }
-
   }
 
   &__settings-overlay {
@@ -75,7 +76,6 @@
     bottom: 0;
     background-color: var(--white);
     gap: var(--spacer-5);
-
   }
 
   &__container {
@@ -88,23 +88,37 @@
     z-index: 1;
   }
 
-
   &__access-list {
     display: flex;
     flex-direction: column;
   }
 
   &__title {
-    @include drumee.typo($size: 12px, $line: 14px, $color: #FA8540, $weight: 400);
+    @include drumee.typo(
+      $size: 12px,
+      $line: 14px,
+      $color: #fa8540,
+      $weight: 400
+    );
 
     &-big {
-      @include drumee.typo($size: 16px, $line: 19px, $color: #FA8540, $weight: 400);
+      @include drumee.typo(
+        $size: 16px,
+        $line: 19px,
+        $color: #fa8540,
+        $weight: 400
+      );
     }
   }
 
   &__label {
     padding-bottom: 15px;
-    @include drumee.typo($size: 12px, $line: 14px, $color: var(--default-text-color), $weight: 400);
+    @include drumee.typo(
+      $size: 12px,
+      $line: 14px,
+      $color: var(--default-text-color),
+      $weight: 400
+    );
   }
 
   &__button {
@@ -117,7 +131,11 @@
     margin: 25px auto 10px auto; //15px auto 10px auto;
     min-width: 115px;
     padding: 0 12px;
-    @include drumee.typo($size: 15px, $line: 25px, $color: var(--btn-rollback-text));
+    @include drumee.typo(
+      $size: 15px,
+      $line: 25px,
+      $color: var(--btn-rollback-text)
+    );
 
     &[data-editable="0"] {
       display: none;
@@ -128,7 +146,6 @@
       color: var(--btn-rollback-text-hover);
     }
   }
-
 
   .dialog__wrapper {
     align-items: center;
@@ -179,16 +196,16 @@
       transition: all 120ms ease;
 
       &:hover {
-        background: var(--Neutral-50, #FAFAFA);
+        background: var(--Neutral-50, #fafafa);
       }
 
       &.active {
-        background: var(--primary-50, #F4E7FF);
-        border-color: var(--primary-600, #B251FB);
+        background: var(--primary-50, #f4e7ff);
+        border-color: var(--primary-600, #b251fb);
       }
 
       // Radio button row inside option
-      >.drumee-box {
+      > .drumee-box {
         display: flex;
         align-items: flex-start;
         gap: 12px;
@@ -200,14 +217,14 @@
       height: 20px;
       flex-shrink: 0;
       margin-top: 2px;
-      border: 2px solid var(--Neutral-400, #C3C6CC);
+      border: 2px solid var(--Neutral-400, #c3c6cc);
       border-radius: 100%;
       cursor: pointer;
       background: var(--ewhite);
 
       &.active {
-        background: var(--primary-50, #F4E7FF);
-        border: 5px solid var(--primary-600, #B251FB);
+        background: var(--primary-50, #f4e7ff);
+        border: 5px solid var(--primary-600, #b251fb);
       }
     }
 
@@ -226,7 +243,7 @@
 
     &__option-description {
       font-size: 13px;
-      color: var(--Neutral-600, #8C929C);
+      color: var(--Neutral-600, #8c929c);
       line-height: 1.4;
     }
 
@@ -246,10 +263,10 @@
     &__entry {
       flex: 1;
       padding: 12px 16px;
-      border: 1px solid var(--Neutral-300, #D1D5DB);
+      border: 1px solid var(--Neutral-300, #d1d5db);
       border-radius: 12px;
-      background: var(--Gray-White, #FFF);
-      color: var(--Neutral-400, #C3C6CC);
+      background: var(--Gray-White, #fff);
+      color: var(--Neutral-400, #c3c6cc);
       font-size: 16px;
       font-style: normal;
       font-weight: 400;
@@ -259,7 +276,7 @@
       min-width: 0; // Allow flex items to shrink below their content size
 
       &::placeholder {
-        color: var(--Neutral-400, #C3C6CC);
+        color: var(--Neutral-400, #c3c6cc);
         font-size: 16px;
         font-weight: 400;
         line-height: 26px;
@@ -269,7 +286,7 @@
       // Input text color when user types
       input,
       .entry-area {
-        color: var(--Neutral-400, #C3C6CC);
+        color: var(--Neutral-400, #c3c6cc);
         font-size: 16px;
         font-weight: 400;
         line-height: 26px;
@@ -279,11 +296,10 @@
       font-size: 14px;
     }
 
-
     &__save-btn {
       padding: 8px 16px;
       border-radius: 6px;
-      background: var(--primary-600, #7C3AED);
+      background: var(--primary-600, #7c3aed);
       color: var(--white, #ffffff);
       font-size: 14px;
       font-weight: 500;
@@ -291,7 +307,7 @@
       transition: background-color 120ms ease;
 
       &:hover {
-        background: var(--primary-700, #6D28D9);
+        background: var(--primary-700, #6d28d9);
       }
     }
 
@@ -299,7 +315,6 @@
       font-size: 14px;
       color: var(--Neutral-900, #222732);
     }
-
   }
 }
 
@@ -307,11 +322,18 @@
   &__tooltips {
     background-color: var(--default-bg);
     border-radius: var(--border-radius); //6px;
-    box-shadow: var(--shadow-before); // 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
+    box-shadow: var(
+      --shadow-before
+    ); // 0 -2px 8px 1px rgba(63, 79, 117, 0.13), 0 5px 12px 0 rgba(86, 65, 113, 0.08), 0 -2px 4px 0 rgba(194, 185, 203, 0);
     opacity: 1;
     padding: 10px;
     position: absolute;
-    @include drumee.typo($color: var(--default-text-tooltips), $size: 12px, $line: 14px, $weight: 400);
+    @include drumee.typo(
+      $color: var(--default-text-tooltips),
+      $size: 12px,
+      $line: 14px,
+      $weight: 400
+    );
 
     &::before {
       background-color: var(--default-bg);
@@ -330,13 +352,13 @@
   }
 
   &__container-recipients {
-    margin-top: 12px;
+    margin-top: var(--spacer-4);
     max-height: 144px;
     min-height: 36px;
   }
 
   &__icon {
-    color: #89929E;
+    color: #89929e;
     cursor: pointer;
     height: 22px;
     width: 22px;
@@ -344,7 +366,12 @@
   }
 
   &-settings__label {
-    @include drumee.typo($color: var(--teamroom-main), $size: 16px, $line: 22px, $weight: 400);
+    @include drumee.typo(
+      $color: var(--teamroom-main),
+      $size: 16px,
+      $line: 22px,
+      $weight: 400
+    );
     justify-content: center;
     padding-bottom: 0;
   }
@@ -359,12 +386,9 @@
   &__container-recipients-roll {
     z-index: 60000;
     width: 100%;
-    padding: 10px 60px;
+    padding: var(--spacer-4) var(--spacer-10);
     gap: var(--spacer-5);
-    // border: 1px solid var(--neutral-200);
-    // border-radius: var(--corner-radius-4);
   }
-
 
   &__contact-container {
     gap: var(--spacer-2);

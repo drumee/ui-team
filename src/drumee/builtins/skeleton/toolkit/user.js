@@ -1,5 +1,17 @@
 function menu_items(ui) {
   const pfx = `${ui.fig.family}-topbar__user-menu`;
+  let plugins = Platform.get("plugins");
+  const reward_hub =
+    plugins && plugins.custom
+      ? Skeletons.Button.Label({
+          ico: "reward",
+          className: `${pfx}-item admin-panel`,
+          label: "Reward hub",
+          service: "load-custom-plugin",
+          plugin: plugins.custom,
+          haptic: 3000,
+        })
+      : undefined;
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${pfx}__items`,
@@ -51,14 +63,9 @@ function menu_items(ui) {
             service: "open-settings",
           })
         : undefined,
-      Visitor.isMobile()
-        ? Skeletons.Button.Label({
-            ico: "reward",
-            className: `${pfx}-item admin-panel`,
-            label: "Reward hub",
-            service: "open-reward-hub",
-          })
-        : undefined,
+
+      Visitor.isMobile() ? reward_hub : undefined,
+
       Skeletons.Button.Label({
         ico: "desktop_disconnect",
         className: `${pfx}-item disconnect`,

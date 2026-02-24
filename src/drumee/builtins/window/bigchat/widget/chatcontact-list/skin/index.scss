@@ -33,13 +33,7 @@
         $line: 16px,
         $color: var(--bigchat-default-text-title)
       );
-      padding-bottom: 8px;
-      padding-top: 6px;
-
-      .inner {
-        margin-top: 5px;
-        padding-left: 0px;
-      }
+      align-items: center;
     }
 
     &__icon {
@@ -59,8 +53,7 @@
     background-color: var(--default-separator);
     border-radius: 1px;
     height: 1px;
-    margin: 3px 0 0px 0;
-
+    margin-top: var(--spacer-2);
     width: 100%;
   }
 
@@ -104,10 +97,10 @@
     height: calc(100% - 40px);
     margin-top: -1px;
     width: 100%;
-    padding: 10px;
+    padding: var(--spacer-4);
 
     &[data-device="mobile"] {
-      padding: 40px;
+      padding: var(--spacer-8);
     }
 
     & .drumee-spinner {

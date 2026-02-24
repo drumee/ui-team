@@ -1,4 +1,4 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .media-grid {
   &__checkbox {
@@ -11,7 +11,7 @@
     cursor: pointer;
     text-align: center;
     background-color: transparent;
-    padding: 4px 6px 6px 4px;
+    padding: var(--spacer-2);
 
     &[data-hover="on"] {
       visibility: visible;
@@ -29,7 +29,7 @@
         border-radius: var(--checkbox-border-radius);
         fill: var(--primary-500);
         border: 1.5px solid var(--primary-500);
-        background-color: var(--default-bg); //var(--white); 
+        background-color: var(--default-bg); //var(--white);
       }
     }
 

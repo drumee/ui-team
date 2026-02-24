@@ -31,20 +31,26 @@
   &__subwidget {
     padding: var(--spacer-5);
     overflow: scroll;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    scrollbar-width: none;
+
+    -ms-overflow-style: none;
   }
 
   &-topbar__container {
     align-items: center;
     display: flex;
-    gap: 16px;
+    gap: var(--spacer-5);
     justify-content: space-between;
-    margin-bottom: 20px;
   }
 
   &-topbar__back,
   &-topbar__close {
     align-items: center;
-    border-radius: 50%;
+    border-radius: 100%;
     color: var(--default-text-neutral);
     display: flex;
     height: 36px;
@@ -87,7 +93,7 @@
   &__vignette {
     width: 100%;
     height: 106px;
-    padding-bottom: 16px;
+    padding-bottom: var(--spacer-5);
     justify-content: center;
     align-content: center;
     flex-wrap: wrap;
@@ -114,16 +120,15 @@
     height: 48px;
     grid-template-columns: 30% 70%;
     align-content: center;
-    gap: 10px;
+    gap: var(--spacer-4);
 
     &-label {
-      color: var(--neutral-600, #8c929c);
+      color: var(--neutral-600);
       font-family: "Armin Grotesk";
       font-size: 14px;
       font-style: normal;
       font-weight: 400;
       line-height: 22px;
-      /* 157.143% */
       letter-spacing: 0.14px;
     }
 
@@ -150,9 +155,9 @@
 
     &-type {
       align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      border: 1px solid var(--neutral-300, #d1d5db);
+      gap: var(--spacer-4);
+      padding: var(--spacer-4) var(--spacer-5);
+      border: 1px solid var(--neutral-300);
       border-radius: 8px;
       cursor: pointer;
       transition: border-color 120ms ease;
@@ -186,7 +191,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--spacer-4);
   }
 
   &__item-action {
@@ -299,28 +304,24 @@
     color: var(--neutral-400);
   }
 
-  // Footer
   &__footer {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px;
+    gap: var(--spacer-3);
     justify-content: space-around;
     align-items: center;
-    padding: 16px;
+    padding: var(--spacer-5);
     border-top: 1px solid var(--neutral-200, #ebecf0);
     flex-shrink: 0;
   }
 
-  // Footer
   &__footer {
     &-action {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: var(--spacer-3);
       cursor: pointer;
-      padding: 8px 16px;
-      border-radius: 6px;
+      padding: var(--spacer-3) var(--spacer-5);
+      border-radius: var(--corner-radius-2);
       transition: background-color 120ms ease;
       flex: 1;
 
@@ -404,7 +405,7 @@
 .settings-hub-permission {
   &__member {
     justify-content: center;
-    gap: 12px;
+    gap: var(--spacer-4);
     width: 100%;
   }
 

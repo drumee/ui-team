@@ -7,11 +7,10 @@
     height: 480px;
     top: 45px;
     left: calc(50vw - 220px);
-    box-shadow: var(--shadow-container);
     overflow: visible;
     flex-direction: column;
     display: flex;
-    border-radius: 24px;
+    border-radius: var(--spacer-6);
 
     &[data-device="mobile"] {
       width: 360px !important;
@@ -124,7 +123,7 @@
       $weight: 300,
       $color: var(--default-text-color)
     );
-    padding: 20px 40px;
+    padding: var(--spacer-6) var(--spacer-8);
     user-select: text;
     border: none;
   }
@@ -137,16 +136,16 @@
       .icon {
         width: 30px;
         height: 30px;
-        padding: 10px;
+        padding: var(--spacer-3);
         color: var(--default-text-reverse);
         cursor: pointer;
-        margin: auto 15px auto 0;
+        margin: auto var(--spacer-5) auto 0;
       }
     }
 
     &__title {
       align-items: center;
-      padding: 0 40px;
+      padding: 0 var(--spacer-8);
       flex: 1;
       flex-direction: row;
       height: 100%;

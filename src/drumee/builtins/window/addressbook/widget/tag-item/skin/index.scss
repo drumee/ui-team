@@ -3,15 +3,14 @@
 #   FILE : /src/drumee/builtins/window/addressbook/widget/tag-item/skin/index.scss
 #   TYPE : Style Component
 # ===================================================================**/
-@use 'mixins/drumee';
-
+@use "mixins/drumee";
 
 .addressbook-widget-tag-item {
   &__ui {
     background-color: inherit;
     width: 100%;
-    margin-top:1px;
-    height: 35px;// 30px;
+    margin-top: 1px;
+    height: 35px; // 30px;
     overflow: hidden;
 
     &[data-active="active"],
@@ -19,10 +18,10 @@
     &:hover {
       background: var(--default-background-hover);
       color: var(--default-text-hover) !important;
-      
+
       &.form-tag {
         background: transparent;
-        color	: inherit;
+        color: inherit;
       }
 
       & .addressbook-widget-tag-item__container {
@@ -35,28 +34,28 @@
       }
 
       & .addressbook-widget-tag-item__note.name {
-        color : var(--default-text-reverse) !important;
+        color: var(--default-text-reverse) !important;
         width: 120px;
         @include drumee.overflow-text;
-        .inner{
+        .inner {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
       }
-      
+
       & .edit-icon {
         display: flex;
       }
     }
 
-    &[data-form='on'] {
-      &[data-radio='on'],
+    &[data-form="on"] {
+      &[data-radio="on"],
       &:hover {
         background: transparent;
         @include drumee.overflow-text;
       }
-    }    
+    }
   }
 
   &__main {
@@ -64,12 +63,14 @@
   }
 
   &__container {
-    @include drumee.typo($size: 14px, $line: 14px, $color: var(--default-text-color));
+    @include drumee.typo(
+      $size: 14px,
+      $line: 14px,
+      $color: var(--default-text-color)
+    );
     cursor: pointer;
-    margin: 1px 0.5px 0px 0px;
-    padding-bottom:4px;
-    padding-left: 15px;
-    padding-top: 4px;
+    margin: var(--spacer-2) 0;
+    align-items: center;
 
     &.min-view {
       padding: 2px 0px 2px 42px;
@@ -77,7 +78,7 @@
   }
 
   &__note {
-    &.name { 
+    &.name {
       align-items: center;
       width: 148px;
       @include drumee.overflow-text;
@@ -85,64 +86,72 @@
   }
 
   &__icon {
-    color : var(--default-icon-reverse);   
+    color: var(--default-icon-reverse);
     height: 14px;
-    margin: 3px 4px 4px;//4px;
     position: absolute;
     right: 4px;
-    width : 14px;
+    width: 14px;
 
     &.edit-icon {
-      display : none;
+      display: none;
     }
 
     &.destroy-tag {
       color: var(--default-icon-neutral);
-      opacity:0.75;
+      opacity: 0.75;
     }
   }
 
   &__entry {
     max-width: 117px;
-    left: 13px;
     overflow: hidden;
-    
+
     & input {
-      @include drumee.typo($size: 14px, $line: 16px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 14px,
+        $line: 16px,
+        $color: var(--default-text-color)
+      );
       background: var(--default-block-background); //var(--white-f9);
       border-bottom: 1px solid var(--default-entry-border-bottom);
       cursor: text;
       height: 25px;
+      padding-left: var(--spacer-4);
       &:hover {
-        border-color: var(--focus-border-placeholder);//var(--eblue);
+        border-color: var(--focus-border-placeholder); //var(--eblue);
       }
       &:focus {
-        border-color:var(--focus-border-placeholder);
+        border-color: var(--focus-border-placeholder);
       }
 
       &::placeholder {
-        @include drumee.typo($size: 14px, $line: 16px,$weight:300, $color: var(--default-text-placeholder));
+        @include drumee.typo(
+          $size: 14px,
+          $line: 16px,
+          $weight: 300,
+          $color: var(--default-text-placeholder)
+        );
       }
     }
   }
 
-  &__chat_note{
+  &__chat_note {
     align-items: center;
-  //  color:var(--eblue);
-    height: 9px;//14px
-    left:-1px;// -4px;
+    //  color:var(--eblue);
+    height: 9px; //14px
+    left: -1px; // -4px;
     margin-bottom: auto;
     margin-right: 5px;
     margin-top: auto;
-    width: 9px;//14px
-    background-color: var(--special-tag-note-chat);//#1187f6;//var(--eblue);
+    width: 9px; //14px
+    background-color: var(--special-tag-note-chat); //#1187f6;//var(--eblue);
     border-radius: 50%;
     border: 1px solid var(--ewhite);
-    &:hover{
-      color:var(--default-text-hover); 
+    &:hover {
+      color: var(--default-text-hover);
     }
   }
- 
+
   &__chat_wrapper[data-state="0"] {
     visibility: hidden;
   }

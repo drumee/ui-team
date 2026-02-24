@@ -8,6 +8,13 @@
     &[data-device="mobile"] {
       padding: 20px;
     }
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    scrollbar-width: none;
+
+    -ms-overflow-style: none;
   }
 
   &__wrapper {
@@ -36,10 +43,10 @@
   }
 
   &__divider {
-    width: calc(100% + 48px); // Full width including parent padding (24px * 2)
+    width: calc(100% + 48px);
     height: 1px;
     background: var(--neutral-200, #ebecf0);
-    margin: 16px -24px; // Negative margin to offset parent padding
+    margin: var(--spacer-6) -24px;
     padding: 0;
     flex-shrink: 0;
     box-sizing: border-box;
@@ -59,8 +66,8 @@
 
   &__cancel-btn,
   &__save-btn {
-    padding: 10px 24px;
-    border-radius: 50px;
+    padding: var(--spacer-4) var(--spacer-6);
+    border-radius: var(--corner-radius-4);
     font-size: 14px;
     font-weight: 400;
     cursor: pointer;
@@ -163,19 +170,18 @@
   }
 }
 
-// Who can access section
 .settings-private-hub-access {
   &__section {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--spacer-5);
   }
 
   &__title {
     font-size: 14px;
     font-weight: 400;
     color: var(--neutral-800, #414651);
-    margin-bottom: 4px;
+    margin-bottom: var(--spacer-2);
     line-height: 22px;
     letter-spacing: 0.14px;
   }

@@ -75,9 +75,8 @@
       justify-content: space-between;
       flex: 1;
       width: 100%;
-      padding: 0 40px;
+      padding: 0 var(--spacer-8);
       align-items: center;
-      gap: 10px;
 
       &[data-device="mobile"] {
         flex-direction: column;
@@ -110,7 +109,7 @@
         cursor: pointer;
         width: 35px;
         height: 35px;
-        padding: 4px;
+        padding: var(--spacer-2);
         color: var(--neutral-300);
         margin: auto 15px auto 5px;
 
@@ -129,13 +128,13 @@
       .icon {
         width: 30px;
         height: 30px;
-        padding: 10px;
+        padding: var(--spacer-3);
         display: flex;
         cursor: pointer;
-        margin: auto 15px auto 0;
+        margin: auto var(--spacer-4) auto 0;
         border-radius: 100%;
         background: rgba(255, 255, 255, 0.24);
-        color: white;
+        color: var(--white);
 
         &:hover {
           color: var(--primary-500);

@@ -14,8 +14,8 @@ function menuBar(ui) {
         className: `${pfx}__activity-count`,
         sys_pn: "activity-count",
         activie: 0,
-      })
-    ]
+      }),
+    ];
   } else {
     items = [
       Skeletons.Button.Svg({
@@ -39,9 +39,9 @@ function menuBar(ui) {
         className: icoClass,
         service: "open-settings",
         ico: "settings",
-      })
-    ]
-    let plugins = Platform.get('plugins')
+      }),
+    ];
+    let plugins = Platform.get("plugins");
     if (plugins && plugins.custom) {
       items.push(
         Skeletons.Button.Svg({
@@ -50,8 +50,8 @@ function menuBar(ui) {
           ico: "reward",
           plugin: plugins.custom,
           haptic: 3000,
-        })
-      )
+        }),
+      );
     }
   }
   return Skeletons.Box.X({
@@ -61,10 +61,7 @@ function menuBar(ui) {
     active: 0,
     kids: [
       Skeletons.Box.X({
-        kids: [
-          ...items,
-          userMenu(ui, "desk-avatar"),
-        ],
+        kids: [...items, userMenu(ui, "desk-avatar")],
       }),
     ],
   });

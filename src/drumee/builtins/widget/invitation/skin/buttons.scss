@@ -13,7 +13,7 @@
     .dialog__button--submit {
       margin: revert;
       min-width: 115px;
-      height: 35px;
+      height: 40px;
       @include drumee.typo($size: 15px, $line: 25px);
 
       &[data-state="0"] {
@@ -86,7 +86,6 @@
     color: var(--neutral-900);
     font-size: 15px;
     line-height: 25px;
-
 
     &[data-editable="0"] {
       display: none;

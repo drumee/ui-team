@@ -1,5 +1,5 @@
 @use "sass:meta";
-@use 'mixins/drumee';
+@use "mixins/drumee";
 @use "color.scss";
 @include meta.load-css("access.scss");
 @include meta.load-css("checkbox.scss");
@@ -15,7 +15,6 @@
 @include meta.load-css("effects.scss");
 @include meta.load-css("forbiden.scss");
 
-
 .media-grid {
   &__ui {
     position: relative;
@@ -26,7 +25,6 @@
     z-index: 100;
 
     &.drumee-spinner {
-
       box-shadow: none;
       width: 75px;
       height: 75px;
@@ -45,12 +43,9 @@
       background-color: var(--default-bg);
       z-index: 200;
     }
-
   }
 
-
   &[data-hover="on"] {
-
     .media__container[data-icontype] {
       z-index: 100;
 
@@ -72,12 +67,17 @@
       right: -43px;
 
       &__icon {
-        fill: #18AC72;
-        border: 1px solid #18AC72;
+        fill: #18ac72;
+        border: 1px solid #18ac72;
       }
 
       &__text {
-        @include drumee.typo($line: 21px, $size: 10px, $weight: 300, $color: var(--secondary-text-color));
+        @include drumee.typo(
+          $line: 21px,
+          $size: 10px,
+          $weight: 300,
+          $color: var(--secondary-text-color)
+        );
       }
     }
   }
@@ -90,7 +90,6 @@
       fill: var(--primay-400);
     }
   }
-
 
   &[data-phase="copy"] {
     opacity: 0.9;
@@ -114,7 +113,6 @@
 
   &[data-hover="on"],
   &[data-selected="1"] {
-
     .__checkbox,
     .__deletion {
       visibility: visible;
@@ -123,8 +121,6 @@
   }
 
   &[data-selected="1"] {
-    box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
-
     &:after {
       content: " ";
       position: absolute;
@@ -152,7 +148,6 @@
       }
     }
   }
-
 
   .check-box {
     position: absolute;

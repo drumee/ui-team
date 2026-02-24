@@ -19,7 +19,6 @@
 
   &__header {
     height: 34px;
-    padding: 5px;
     width: 100%;
   }
 
@@ -27,20 +26,17 @@
     background-color: var(--default-separator);
     border-radius: 1px;
     height: 1px;
-    margin: 3px 0 0 0px;
-    //opacity: 0.2;
+    margin-top: var(--spacer-2);
   }
 
   &-content {
     height: 100%;
-    margin: -1px -4px 0px 0px;
     overflow: hidden;
     width: 100%;
-    padding: 20px;
+    padding: var(--spacer-6);
 
     &__main {
-      //	margin-bottom: 1px;
-      margin-top: 1px;
+      margin-top: var(--spacer-1);
     }
 
     &__digit {
@@ -66,11 +62,6 @@
       height: 35px;
     }
 
-    &__note {
-      left: -3px;
-      top: 1px; //0px;//2px;
-    }
-
     &__items {
       height: 99%; //100%;
       overflow: hidden;
@@ -80,10 +71,10 @@
     &__item {
       height: 100%;
       overflow: hidden;
-      padding-bottom: 15px;
+      padding-bottom: var(--spacer-5);
       width: calc(100% - 0px);
       top: -1px;
-      gap: 6px;
+      gap: var(--spacer-3);
 
       & .smart-container {
         overflow-x: hidden;
@@ -102,7 +93,7 @@
 
     &__container {
       cursor: pointer;
-      padding-left: 20px;
+      padding-left: var(--spacer-5);
       align-items: center;
       width: 100%;
       @include drumee.typo(
@@ -127,7 +118,7 @@
       &[data-radio="on"],
       &:hover {
         background-color: var(--neutral-300);
-        border-radius: 8px;
+        border-radius: var(--corner-radius-2);
         color: var(--neutral-900);
         width: 100%;
       }
@@ -137,8 +128,7 @@
   &__note {
     &.title {
       justify-content: center;
-      padding-bottom: 8px;
-      padding-top: 6px;
+      align-items: center;
       width: 100%;
       @include drumee.typo(
         $size: 15px,
@@ -154,7 +144,7 @@
     cursor: pointer;
     height: 27px;
     opacity: 0.85;
-    padding: 7.5px;
+    padding: var(--spacer-3);
     position: absolute;
     right: 3px;
     top: 5px;
@@ -178,7 +168,7 @@
     font-size: 14px;
     height: 30px;
     justify-content: start;
-    padding: 7px 0 7px 20px;
+    padding: var(--spacer-3) var(--spacer-5);
     width: 100%;
     @include drumee.typo(
       $size: 14px,
@@ -194,7 +184,7 @@
     &[data-radio="on"],
     &:hover {
       background: var(--neutral-300);
-      border-radius: 8px;
+      border-radius: var(--corner-radius-2);
 
       & .addressbook-widget-tag-item__container {
         color: var(--default-text-hover) !important;

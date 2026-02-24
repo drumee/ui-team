@@ -1,18 +1,21 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .widget-tagFormMenu {
   &-tag-menu {
-
     &__button_wrapper {
       align-items: center;
-      background: var(--btn-commit-background);
+      background: var(--btn-commit-background-hover);
       border-radius: var(--border-radius);
       cursor: pointer;
       height: 28px;
       justify-content: center;
       margin: 5% auto 0;
       width: 68px;
-      @include drumee.typo ($color: var(--btn-commit-text), $line: 1, $size: 14px);
+      @include drumee.typo(
+        $color: var(--btn-commit-text),
+        $line: 1,
+        $size: 14px
+      );
 
       &:hover {
         background-color: var(--btn-commit-background-hover);
@@ -31,16 +34,15 @@
       & .menu-topic-items {
         border-radius: var(--border-radius);
         background-color: var(--default-background);
-        box-shadow: var(--drumee-container-dropdown) ;
+        box-shadow: var(--drumee-container-dropdown);
         max-height: 250px;
         max-width: 160px;
         min-width: 160px;
         width: 100% !important;
 
         &__wrapper {
-          padding: 10px;
-          top: 19px;
-          left: -106%;
+          border: 1px solid var(--neutral-300);
+          border-radius: var(--corner-radius-4);
         }
 
         &:before {
@@ -90,8 +92,7 @@
     }
 
     &__items-wrapper {
-      padding-top: 15px;
-      padding-bottom: 8px;
+      padding: var(--spacer-5) var(--spacer-2);
     }
 
     &__item {
@@ -134,8 +135,12 @@
     &__note {
       &.title {
         justify-content: center;
-        margin-top: -10px;
-        @include drumee.typo($size: 14px, $line: 28px, $weight: 300, $color: var(--secondary-text-color));
+        @include drumee.typo(
+          $size: 14px,
+          $line: 28px,
+          $weight: 300,
+          $color: var(--secondary-text-color)
+        );
       }
 
       &.name {
@@ -143,7 +148,12 @@
         padding-bottom: 15px;
 
         width: 100%;
-        @include drumee.typo($size: 12px, $line: 14px, $weight: 300, $color: var(--default-text-color));
+        @include drumee.typo(
+          $size: 12px,
+          $line: 14px,
+          $weight: 300,
+          $color: var(--default-text-color)
+        );
       }
     }
 

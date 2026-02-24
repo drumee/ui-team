@@ -47,7 +47,7 @@
       opacity: 0.75;
       color: var(--default-icon-reverse);
       cursor: pointer;
-      margin: 0px 2px;
+      margin: 0px var(--spacer-1);
 
       &:hover {
         background-color: var(--default-background-hover);
