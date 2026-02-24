@@ -633,40 +633,28 @@ class __media_core extends DrumeeMFS {
     }
   }
 
+
   /**
-   * 
+   * Update numbers and areas of the inner nodes to ease sanity check 
    */
-  async updateAttributes() {
+  async updateInnerNodes() {
+    if (!this.isFolder) return;
     let svc = SERVICE.media.get_node_attr;
     let hub_id = this.mget(_a.hub_id)
-    if (this.isHub) {
-      hub_id = Wm.mget(_a.hub_id)
-    }
+    let nid = this.get(_a.nid)
     let args = {
-      hub_id,
-      nid: this.get((_a.nid))
+      hub_id, nid
     }
-    this.debug("aaa:651", args, this)
-    // this.postService(svc, args, { async: 1 }
-    // ).then((attr) => {
-    //   if (attr) {
-    //     attr.kind = this._getKind();
-    //     attr.service = OPEN_NODE;
-    //     attr.uiHandler = this.mget(_a.uiHandler);
-    //     attr.widgetId = this.mget(_a.widgetId)
-    //     if (this.isHub) {
-    //       attr.nid = attr.actual_hub_id;
-    //       attr.home_id = attr.actual_home_id;
-    //       attr.hub_id = attr.actual_hub_id;
-    //     }
-    //     // this.model.clear();
-    //     this.mset(attr);
-    //     this.restart();
-    //   }
-    // }).catch((e) => {
-    //   this.warn('Failed to update', args)
-    //   console.trace()
-    // });
+    let widgetId = this.mget(_a.widgetId)
+    this.postService(svc, args, { async: 1 }
+    ).then((attr) => {
+      attr.widgetId = widgetId;
+      this.mset(attr);
+      this.restart();
+    }).catch((e) => {
+      this.warn('Failed to update', args)
+      console.trace()
+    });
   }
 
   /**
@@ -937,7 +925,10 @@ class __media_core extends DrumeeMFS {
           pid: dest.nid,
           action: _a.move,
         };
-        if (this.isHub) opt.service = SERVICE.media.relocate;
+        if (this.isHub) {
+          opt.service = SERVICE.media.relocate;
+          this.preserveWidgetId = this.mget(_a.widgetId);
+        }
         break;
       case _a.copied:
         opt = {
@@ -1987,15 +1978,13 @@ class __media_core extends DrumeeMFS {
       opt = { ...opt.args.dest }
     }
 
-    // if (opt.actual_home_id == this.mget(_a.actual_home_id)) {
-    //   RADIO_BROADCAST.trigger("moved:away", { ...opt, cid: this.cid });
-    // }
     opt.service = OPEN_NODE;
     opt.kind = this._getKind();
     opt.uiHandler = this.mget(_a.uiHandler);
     opt.isAttachment = this.isAttachment();
     this.model.clear();
     opt.privilege = opt.permission || this.logicalParent.mget(_a.privilege);
+    if (this.preserveWidgetId) opt.widgetId = this.preserveWidgetId;
     this.model.set(opt);
     this.restart();
   }
@@ -2108,7 +2097,7 @@ class __media_core extends DrumeeMFS {
         return Wm.unselect();
 
       case SERVICE.media.update_status:
-      case SERVICE.media.get_node_attr:
+        // case SERVICE.media.get_node_attr:
         this.model.set(data);
         return this.restart();
 

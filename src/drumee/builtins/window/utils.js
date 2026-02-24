@@ -284,19 +284,7 @@ class __window_mfs extends DrumeeMFS {
     const { data } = xhr;
     const { nid, pid } = data;
     let { echoId } = options;
-    // if (this.media) {
-    //   this.media.updateAttributes()
-    // }
-    this.debug("AAA:290", { nid, pid })
-    this.__list?.children.forEach((c) => {
-      try {
-        if (c.mget(_a.nid) == pid && _.isFunction(c.updateAttributes)) {
-          c.updateAttributes()
-        }
-      } catch (e) {
-        this.warn("Failed to update", e)
-      }
-    })
+    this.updateInnerHubsPreview(data)
     if (echoId == this.mget('echoId')) {
       return;
     }
@@ -334,23 +322,8 @@ class __window_mfs extends DrumeeMFS {
       }
       return;
     }
+    this.updateInnerHubsPreview(args)
     let { nid, hub_id, filepath } = args;
-    if (this.media) {
-      this.media.updateAttributes()
-      if (this.media.mget(_a.nid) == nid) {
-        this.goodbye()
-        return;
-      }
-    }
-    this.__list?.children.forEach((c) => {
-      try {
-        let nodes = c.mget(_a.nodes)?.split(',') || []
-        if (nodes.includes(nid) && _.isFunction(c.updateAttributes)) {
-          c.updateAttributes()
-        }
-      } catch (e) {
-      }
-    })
     /** Remove children */
     this.getItemsByAttr(_a.nid, nid).filter((c) => {
       if (!c || c.mget(_a.pid) != this.getCurrentNid()) return false;
@@ -435,20 +408,33 @@ class __window_mfs extends DrumeeMFS {
     });
   }
 
+
+  /**
+   * Folders can contain hubs. This funtion show hubs symboles whenever there are some hubs 
+   * down the tree
+   * @param {*} src 
+   * @param {*} dest 
+   */
+  updateInnerHubsPreview(src, dest) {
+    this.__list?.children.forEach((c) => {
+      let src_path = new RegExp(`^${c.mget(_a.filepath)}/`)
+      if (src && src_path.test(src.filepath)) {
+        if (!this._pendingUpdates[c.cid]) c.updateInnerNodes()
+        this._pendingUpdates[c.cid] = 1;
+      }
+      if (dest && src_path.test(dest.filepath)) {
+        if (!this._pendingUpdates[c.cid]) c.updateInnerNodes()
+        this._pendingUpdates[c.cid] = 1;
+      }
+    })
+  }
+
   /**
     *
     */
   moveContent(src, dest) {
     let { nid, echoId } = src;
-    let items = Wm.getItemsByAttr(_a.nid, src.nid);
-    items = items.concat(Wm.getItemsByAttr(_a.nid, dest.nid))
-    items = items.concat(Wm.getItemsByAttr(_a.nid, src.parent_id))
-    for (let item of items) {
-      if (item && _.isFunction(item.updateAttributes)) {
-        item.updateAttributes()
-      }
-    }
-
+    this.updateInnerHubsPreview(src, dest)
     if (echoId == this.mget('echoId')) {
       return;
     }
@@ -471,6 +457,7 @@ class __window_mfs extends DrumeeMFS {
     let { data, options } = args || {};
     let { echoId, service } = options
     let { src, dest } = data.args || {};
+    this._pendingUpdates = {}
     switch (service) {
       case SERVICE.media.rename:
         this.renameContent(data)
@@ -541,14 +528,12 @@ class __window_mfs extends DrumeeMFS {
     }
   }
 
-
   /**
    * 
    * @param {*} message 
    * @param {*} _ui_ 
    */
   warning(message, closeService = "close-dialog", buttonStyle = "") {
-    this.warn("AAA:32", message);
     if (!this.overlayWrapper || this.overlayWrapper.isDestroyed()) {
       this.append(Skeletons.Wrapper.Y({
         className: `${this.fig.group}__dialog-overlay`,

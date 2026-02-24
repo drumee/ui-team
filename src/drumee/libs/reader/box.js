@@ -126,7 +126,7 @@ class __drumee_box extends Marionette.CollectionView {
     }
     const me = this;
 
-    var walk = function (c) {
+    function walk (c) {
       let data = {};
       const name = c.mget(key);
 

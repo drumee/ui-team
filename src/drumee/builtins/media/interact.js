@@ -987,7 +987,6 @@ class __media_interact extends media_core {
    *
    */
   afterMoveIn(m, paste = 0, mode) {
-    this.update();
     m.getLogicalParent().syncOrder();
     this._poke();
     if (paste) return;

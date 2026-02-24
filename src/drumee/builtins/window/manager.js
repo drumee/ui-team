@@ -150,7 +150,6 @@ class __window_manager extends mfsInteract {
    */
   upload(e, token) {
     let target;
-    this.debug("upload wallpaper", e.ui, token);
     if (e && e.target.dataset.partname == "ref-bin") {
       return; // Drop over trash bin
     }
