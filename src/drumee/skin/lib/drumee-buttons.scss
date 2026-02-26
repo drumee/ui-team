@@ -1,0 +1,18 @@
+.drumee-buttons{
+  &--cancel{
+    background-color:var(--primary)
+  }
+  &--commit{
+    background-color:var(--primary)
+  }
+  &--alert,
+  &--caution{
+    background-color:var(--primary)
+  }
+  &--info{
+    background-color:var(--primary)
+  }
+  &--error{
+    background-color:var(--primary)
+  }
+}
