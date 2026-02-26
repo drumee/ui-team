@@ -135,9 +135,6 @@ module.exports = function () {
   let main, api;
   let core = join(UI_SRC_PATH, 'src', 'drumee', 'core');
   switch (BUILD_TARGET) {
-    // case 'api':
-    //   api = join(UI_SRC_PATH, 'src', 'drumee', 'api');
-    //   return makeOptions({ api, core }, opt);
     case 'app':
       main = join(UI_SRC_PATH, 'src', 'drumee', 'index.web');
       let dom = join(UI_SRC_PATH, 'src', 'drumee', 'index.dom');

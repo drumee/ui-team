@@ -25,8 +25,8 @@ function loadSprite() {
     el.innerHTML = content;
     document.body.insertBefore(el, document.body.childNodes[0]);
   }
-  let raw = require('../bb-templates/svg/raw.sprite.txt').default;
-  let normalized = require('../bb-templates/svg/normalized.sprite.txt').default;
+  let raw = require('../icons/sprites/raw.sprite.txt').default;
+  let normalized = require('../icons/sprites/normalized.sprite.txt').default;
   create_el(raw, 'raw');
   create_el(normalized, 'normalized');
 }
