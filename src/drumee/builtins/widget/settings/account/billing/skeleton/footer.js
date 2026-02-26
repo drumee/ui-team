@@ -66,7 +66,7 @@ function billing_footer(ui) {
         content: "Additional seat pricing",
       }),
       item(ui, "Pro:", "5 seats included, additional seats $5/month each."),
-      item(ui, "Start Ups:", "10 seats included, additional seats $5/month each"),
+      // item(ui, "Start Ups:", "10 seats included, additional seats $5/month each"),
       item(
         ui,
         "Enterprise:",
