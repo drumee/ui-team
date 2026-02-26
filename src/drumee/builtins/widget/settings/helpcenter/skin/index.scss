@@ -32,10 +32,10 @@
 
   &__content-item {
     &.container {
-      padding: 12px;
+      padding: var(--spacer-4);
       justify-content: center;
       align-items: flex-start;
-      gap: 8px;
+      gap: var(--spacer-3);
       align-self: stretch;
     }
 
@@ -68,7 +68,7 @@
     }
 
     &.description a {
-      color: #1a73e8;
+      color: var(--blue-600);
       text-decoration: underline;
     }
 
@@ -81,7 +81,7 @@
       line-height: 22px;
       letter-spacing: 0.14px;
       align-items: center;
-      gap: 6px;
+      gap: var(--spacer-3);
       svg {
         width: 16px;
         height: 16px;
@@ -107,9 +107,9 @@
     &.tos-pill {
       display: inline-flex;
       align-items: center;
-      padding: 2px 10px;
+      padding: var(--spacer-1) var(--spacer-4);
       border-radius: 8px;
-      background: #f2f2f2;
+      background: var(--white);
       color: var(--neutral-900);
       font-size: 14px;
       line-height: 22px;
@@ -247,7 +247,7 @@
       font-weight: 600;
       color: var(--neutral-900);
       &[data-device="mobile"] {
-        margin-top: 4px;
+        margin-top: var(--spacer-2);
       }
     }
 
@@ -258,15 +258,15 @@
 
   &__item-container {
     align-items: center;
-    gap: 10px;
+    gap: var(--spacer-4);
   }
 
   &__title-wrapper {
-    gap: 10px;
+    gap: var(--spacer-4);
   }
 
   &__title {
-    gap: 10px;
+    gap: var(--spacer-4);
 
     &.text {
       color: var(--neutral-900);
