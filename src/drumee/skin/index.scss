@@ -3,10 +3,11 @@
 @use "./lib/input";
 @use "./lib/align";
 @use "./lib/container";
-@use "./lib/svg.scss";
+@use "./lib/svg";
 @use "./lib/menu";
 @use "./lib/utils";
 @use "./lib/button";
+@use "./lib/drumee-buttons";
 body {
   min-height: 100vh;
   background-color: rgb(248, 250, 252);
