@@ -1,0 +1,21 @@
+<svg width="47" height="42" viewBox="0 0 47 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#raw-drumee-simple)">
+<path d="M12.5077 8.44149C17.7381 6.58442 19.4958 11.2098 20.7429 10.8439C33.4224 7.12234 33.8096 10.7337 35.4059 15.2061C35.4871 15.498 35.5491 15.8038 35.5942 16.1203C37.0156 17.2451 37.9209 18.9418 37.9209 20.8401C37.9209 23.3284 36.3657 25.4706 34.1311 26.4318C33.259 29.6598 30.6769 32 27.6269 32C26.1326 32 24.7505 31.4381 23.6269 30.4853C22.5456 31.4381 21.2158 32 19.7778 32C17.327 32 15.19 30.368 14.0631 27.9499C13.9953 27.9519 13.9271 27.953 13.8587 27.953C10.3055 27.953 7.92091 25.2077 7.9209 21.8212C7.92091 19.8364 8.41485 18.072 9.94942 16.9513C9.33808 13.1503 9.59253 9.47652 12.5077 8.44149ZM23.8679 14.3261C22.7731 14.3261 21.8856 15.202 21.8856 16.2826V19.6739C21.8856 20.7545 22.7731 21.6304 23.8679 21.6304C24.9628 21.6304 25.8503 20.7545 25.8503 19.6739V16.2826C25.8503 15.202 24.9628 14.3261 23.8679 14.3261ZM29.4186 14.3261C28.3238 14.3261 27.4362 15.202 27.4362 16.2826V19.6739C27.4362 20.7545 28.3238 21.6304 29.4186 21.6304C30.5134 21.6304 31.401 20.7545 31.401 19.6739V16.2826C31.401 15.202 30.5134 14.3261 29.4186 14.3261Z" fill="url(#paint-raw-drumee-simple)"/>
+</g>
+<defs>
+  <filter id="raw-drumee-simple" x="0.000144005" y="1.39937" width="45.8415" height="39.8415" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+  <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+  <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+  <feOffset dy="1.32013"/>
+  <feGaussianBlur stdDeviation="3.96038"/>
+  <feComposite in2="hardAlpha" operator="out"/>
+  <feColorMatrix type="matrix" values="0 0 0 0 0.533333 0 0 0 0 0.113725 0 0 0 0 0.827451 0 0 0 0.48 0"/>
+  <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_28_258"/>
+  <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_28_258" result="shape"/>
+  </filter>
+  <linearGradient id="paint-raw-drumee-simple" x1="22.7288" y1="26.6562" x2="22.7288" y2="35.9375" gradientUnits="userSpaceOnUse">
+  <stop stop-color="white"/>
+  <stop offset="1" stop-color="#DCB2FF"/>
+  </linearGradient>
+</defs>
+</svg>
