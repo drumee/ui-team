@@ -38,6 +38,11 @@
       grid-template-columns: 320px 1fr;
       gap: var(--spacer-2);
 
+      &[data-device="mobile"] {
+        grid-template-columns: 1fr;
+        gap: var(--spacer-4);
+      }
+
       .text {
         font-size: 14px;
         line-height: 22px;
@@ -61,6 +66,9 @@
         color: var(--red-500);
         cursor: pointer;
         font-weight: 600;
+        &[data-device="mobile"] {
+          padding-right: var(--spacer-4);
+        }
       }
     }
   }
@@ -68,9 +76,11 @@
   &__menu {
     &-container {
       margin: auto 0 auto auto;
-      height: 22px;
-      width: 60px;
       cursor: pointer;
+      border: 1px solid var(--neutral-300);
+      padding: var(--spacer-4);
+      align-items: center;
+      border-radius: var(--corner-radius-3);
     }
 
     &-content {
@@ -103,7 +113,7 @@
       .menu-topic-items {
         background-color: var(--white);
         border-radius: var(--spacer-4);
-        border-width: 1px;
+        border: 1px solid var(--neutral-300);
 
         &__wrapper {
           &[data-direction="down"] {
