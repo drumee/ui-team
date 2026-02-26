@@ -80,7 +80,7 @@
 
       &[data-device="mobile"] {
         flex-direction: column;
-        padding: 20px 60px;
+        padding: var(--spacer-6) var(--spacer-9);
       }
 
       .name {

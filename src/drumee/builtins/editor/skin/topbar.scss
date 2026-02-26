@@ -61,7 +61,7 @@
     justify-items: center;
     &[data-device="mobile"] {
       justify-content: start;
-      margin-left: 40px;
+      margin-left: var(--spacer-8);
     }
   }
 

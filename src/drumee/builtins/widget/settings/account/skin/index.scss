@@ -110,6 +110,10 @@
     scrollbar-width: none;
 
     -ms-overflow-style: none;
+
+    &[data-device="mobile"] {
+      padding: var(--spacer-3);
+    }
   }
 
   &__spacer {
@@ -184,7 +188,7 @@
       color: var(--neutral-900);
 
       &[data-device="mobile"] {
-        margin-top: 4px;
+        margin-top: var(--spacer-2);
       }
     }
 
@@ -215,7 +219,7 @@
 
     &[data-device="mobile"] {
       flex-shrink: 0;
-      margin-right: 20px;
+      margin-right: var(--spacer-5);
       font-size: 20px;
     }
   }

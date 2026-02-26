@@ -3,8 +3,11 @@
 .player-audio {
   &-topbar {
     &__main {
-      background: linear-gradient(135deg, #dcb2ff, #b251fb);
-
+      background: linear-gradient(
+        135deg,
+        var(--primary-400),
+        var(--primary-600)
+      );
       border-bottom: none;
       border-radius: var(--spacer-6) var(--spacer-6) 0 0;
       cursor: pointer;
