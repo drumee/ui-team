@@ -64,12 +64,12 @@ class DrumeeSyncer {
     console.log(`Writing data into ${file} `, data);
     try {
       writeFileSync(file, data);
-      if (sync_templates) {
-        console.log("SYNCING TEMPLATES...");
-        const src = resolve(this.src_path, "bb-templates");
-        const dest = resolve(bundle_base, "bb-templates");
-        exec(`rsync -razv ${src}/ ${dest}/`);
-      }
+      // if (sync_templates) {
+      //   console.log("SYNCING TEMPLATES...");
+      //   const src = resolve(this.src_path, "bb-templates");
+      //   const dest = resolve(bundle_base, "bb-templates");
+      //   exec(`rsync -razv ${src}/ ${dest}/`);
+      // }
       if (UI_RUNTIME_HOST) {
         let cmd = resolve(__dirname, "sync.sh");
         if(existsSync(cmd)){
