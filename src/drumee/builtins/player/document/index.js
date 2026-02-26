@@ -472,7 +472,7 @@ class __player_document extends PlayerInteract {
         child.on(_e.scroll, ((list) => {
           let th = list.contentHeight() * this.loadedPages * .25;
           if (this.timer || list.scrollDir != _a.down) return;
-          if (list.getOffsetY() < th) return;
+          // if (list.getOffsetY() < th) return;
           this.nextPages()
         }))
         break;
