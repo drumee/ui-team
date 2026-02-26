@@ -120,7 +120,6 @@ function normalize() {
     public_path,
     target,
     mode,
-    sync_templates: 1
   };
   if (OUTPUT_FILENAME == "[name].js") {
     opt.no_hash = 1;
