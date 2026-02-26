@@ -470,7 +470,7 @@ class __player_document extends PlayerInteract {
         this.timer = null;
         // Skip scroll-based lazy loading in mobile mode (all pages loaded upfront)
         child.on(_e.scroll, ((list) => {
-          let th = list.contentHeight() * this.loadedPages * .5;
+          let th = list.contentHeight() * this.loadedPages * .25;
           if (this.timer || list.scrollDir != _a.down) return;
           if (list.getOffsetY() < th) return;
           this.nextPages()
