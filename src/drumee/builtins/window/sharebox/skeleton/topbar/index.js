@@ -6,6 +6,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   const name = ui.model.get(_a.filename) || "";
   const logo = require("../../../skeleton/logo")(ui);
   const subtitle = require("../../../skeleton/subtitle")(ui);
+  const cnWidowUploadBtn = "window-button—upload";
 
   if (icon == null || ui.mget(_a.media) == null) {
     settings = { kind: KIND.wrapper };
@@ -48,16 +49,16 @@ const __skl_window_team_topbar = function (ui, icon) {
 
   const settingsButton = Skeletons.Box.X({
     sys_pn: "settings-box",
-    className: `${ui.fig.family}__settings`,
+    className: `${cnWidowUploadBtn}__settings`,
     kids: [settings],
   });
 
   const buttons = Skeletons.Box.X({
-    className: `${ui.fig.family}__buttons-wrapper`,
+    className: `${cnWidowUploadBtn}__buttons-wrapper`,
     kids: [
       button(ui, {
         label: LOCALE.UPLOAD,
-        className: `${ui.fig.family}__upload-button`,
+        className: `${cnWidowUploadBtn}__upload-button`,
         service: _e.upload,
         priority: "primary",
       }),

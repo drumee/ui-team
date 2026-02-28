@@ -1,3 +1,4 @@
+const { button } = require("../../../../builtins/skeleton/toolkit/buttons");
 
 module.exports = function (ui) {
   return Skeletons.Box.X({
@@ -12,11 +13,16 @@ module.exports = function (ui) {
         content: "Add members",
         state: 0,
       }),
-      Skeletons.Note({
-        className: "dialog__button--submit",
-        uiHandler: ui,
+      // Skeletons.Note({
+      //   className: "dialog__button--submit",
+      //   uiHandler: ui,
+      //   service: "invite-contacts",
+      //   content: "Invite contacts"
+      // }),
+      button(ui, {
+        label: "Invite contacts",
+        className: `drumee-buttons--primary`,
         service: "invite-contacts",
-        content: "Invite contacts"
       }),
       // Skeletons.Note({
       //   className: `${ui.fig.group}__container--secondary-btn`,
@@ -43,7 +49,6 @@ module.exports = function (ui) {
       //     })
       //   ]
       // })
-    ]
+    ],
   });
-
 };

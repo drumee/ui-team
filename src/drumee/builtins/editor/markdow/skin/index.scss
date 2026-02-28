@@ -104,55 +104,6 @@
     }
   }
 
-  &-topbar {
-    &__icon {
-      width: 46px;
-      height: 46px;
-      margin-left: 10px;
-      cursor: pointer;
-      z-index: 1000;
-      padding: 14px;
-      background-color: var(--neutral-200);
-      color: var(--neutral-900);
-      border-radius: 100%;
-      align-items: center;
-
-      &.pin {
-        z-index: 1;
-
-        &[data-state="1"] {
-          svg {
-            transform: rotate(-45deg);
-          }
-
-          .tooltips {
-            display: none !important;
-          }
-        }
-
-        &[data-visibility="0"] {
-          visibility: hidden;
-          pointer-events: none;
-        }
-      }
-
-      .tooltips {
-        white-space: nowrap;
-        background-color: var(--bg-tooltips);
-        border-radius: var(--border-radius-tiny);
-        width: fit-content;
-        position: absolute;
-        padding: 7px;
-        top: 18px;
-        @include drumee.typo(
-          $line: 15px,
-          $size: 12px,
-          $color: var(--default-text-color)
-        );
-      }
-    }
-  }
-
   &__viewer {
     width: 100%;
     max-height: 100%;

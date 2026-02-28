@@ -4,7 +4,7 @@ const __skl_folder_topbar = function (ui) {
   let name = ui.mget(_a.filename) || ui.mget(_a.name);
   const logo = require("../../skeleton/logo")(ui);
   const subtitle = require("../../skeleton/subtitle")(ui);
-
+  const cnWidowUploadBtn = "window-button—upload";
   name = Skeletons.Note({
     className: "name",
     sys_pn: "ref-window-name",
@@ -42,11 +42,11 @@ const __skl_folder_topbar = function (ui) {
   let buttons;
   if (ui.canUpload()) {
     buttons = Skeletons.Box.X({
-      className: `${ui.fig.family}__buttons-wrapper`,
+      className: `${cnWidowUploadBtn}__buttons-wrapper`,
       kids: [
         button(ui, {
           label: LOCALE.UPLOAD,
-          className: `${ui.fig.family}__upload-button`,
+          className: `${cnWidowUploadBtn}__upload-button`,
           service: _e.upload,
           priority: "primary",
         }),

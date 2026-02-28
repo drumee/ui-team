@@ -42,12 +42,6 @@
       justify-content: center;
     }
 
-    &.buttons {
-      max-width: 265px;
-      padding-top: 20px;
-      width: 62%;
-    }
-
     &.error-message {
       align-items: center;
       min-height: 30px;
@@ -59,10 +53,12 @@
       align-content: center;
       justify-content: center;
       justify-items: center;
-      @include drumee.typo($size: 16px,
+      @include drumee.typo(
+        $size: 16px,
         $weight: 300,
         $line: 18px,
-        $color: var(--default-text-alert));
+        $color: var(--default-text-alert)
+      );
     }
   }
 
@@ -89,16 +85,20 @@
 
   &__note {
     &.header {
-      @include drumee.typo($size: 18px,
+      @include drumee.typo(
+        $size: 18px,
         $line: 21px,
-        $color: var(--secondary-text-color)); //var(--eblue));
+        $color: var(--secondary-text-color)
+      ); //var(--eblue));
     }
   }
 
   &__entry {
-    @include drumee.typo($size: 16px,
+    @include drumee.typo(
+      $size: 16px,
       $line: 21px,
-      $color: var(--default-text-color)); //var(--egrey-2f));
+      $color: var(--default-text-color)
+    ); //var(--egrey-2f));
     width: 100%;
     border: 1px solid var(--neutral-300);
     padding: 10px;
@@ -109,16 +109,20 @@
         border-bottom: 1px solid var(--default-border-error); //var(--default-border-error);
 
         &:focus {
-          border-color: var(--default-border-error); // var(--default-border-error);
+          border-color: var(
+            --default-border-error
+          ); // var(--default-border-error);
         }
       }
     }
 
     & input {
       width: 100%;
-      @include drumee.typo($size: 16px,
+      @include drumee.typo(
+        $size: 16px,
         $line: 21px,
-        $color: var(--default-text-color));
+        $color: var(--default-text-color)
+      );
 
       &[data-status="error"] {
         border-bottom: var(--default-border-error);
@@ -133,10 +137,12 @@
       }
 
       &::placeholder {
-        @include drumee.typo($size: 16px,
+        @include drumee.typo(
+          $size: 16px,
           $line: 21px,
           $weight: 300,
-          $color: var(--default-text-placeholder));
+          $color: var(--default-text-placeholder)
+        );
       }
     }
 
@@ -145,9 +151,11 @@
       margin-top: 15px;
 
       & textarea {
-        @include drumee.typo($size: 16px,
+        @include drumee.typo(
+          $size: 16px,
           $line: 21px,
-          $color: var(--default-text-color)); // var(--egrey-2f));
+          $color: var(--default-text-color)
+        ); // var(--egrey-2f));
         border-radius: var(--border-radius);
         border: none;
         outline: none;
@@ -155,10 +163,12 @@
         resize: none;
 
         &::placeholder {
-          @include drumee.typo($size: 14px,
+          @include drumee.typo(
+            $size: 14px,
             $line: 14px,
             $weight: 300,
-            $color: var(--default-text-placeholder)); // var(--default-text-placeholder));
+            $color: var(--default-text-placeholder)
+          ); // var(--default-text-placeholder));
         }
       }
     }
@@ -191,9 +201,10 @@
   }
 
   &__buttons-wrapper {
-    height: 60px;
     justify-items: center;
     width: 100%;
+    gap: var(--spacer-4);
+    justify-content: center;
 
     & .button {
       @include drumee.typo($size: 16px, $line: 19px);
@@ -209,7 +220,6 @@
   &__button-cancel {
     @include drumee.typo($weight: 300, $color: var(--btn-rollback-text));
     background-color: var(--neutral-300);
-    margin-right: 17px;
 
     &:hover {
       border: 2px solid var(--neutral-100);
@@ -219,7 +229,6 @@
   &__button-confirm {
     @include drumee.typo($color: var(--btn-commit-text));
     background-color: var(--primary-500);
-    margin-left: 17px;
 
     &:hover {
       background-color: var(--primary-600);

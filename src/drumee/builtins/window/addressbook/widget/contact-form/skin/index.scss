@@ -433,48 +433,53 @@
   }
 
   &__footer {
+    gap: 0;
+    justify-content: flex-end;
+    align-self: stretch;
     align-items: center;
-    height: 100%;
-    max-height: 80px;
-    width: 100%;
+    flex-shrink: 0;
+    min-height: 60px;
   }
 
   &__buttons-wrapper {
-    justify-items: center;
-    padding-top: 30px;
-    width: 100%;
-    justify-content: center;
-    gap: var(--spacer-6);
+    gap: var(--spacer-4);
+
     & .button {
+      @include drumee.typo($size: 16px, $line: 19px);
       align-items: center;
+      border-radius: var(--corner-radius-max);
       height: 35px;
       justify-content: center;
-      margin: 0 7% 0 4%; //0% 15% 0 10%;
-      max-width: 115px;
-      width: 100%;
-      @include drumee.typo($size: 16px, $line: 19px);
-      border-radius: var(--corner-radius-max);
+      padding: var(--spacer-1) var(--spacer-6);
     }
   }
 
   &__button-cancel {
     @include drumee.typo($weight: 300, $color: var(--btn-rollback-text));
-    border: 1px solid var(--btn-rollback-border);
+    background-color: var(--neutral-300);
 
     &:hover {
-      border: 2px solid var(--btn-rollback-border-hover);
-      color: var(--btn-rollback-text-hover);
+      border: 2px solid var(--neutral-100);
     }
   }
 
   &__button-confirm {
-    background-color: var(--primary-500);
     @include drumee.typo($color: var(--btn-commit-text));
+    background-color: var(--primary-500);
+
+    &:hover {
+      background-color: var(--primary-600);
+    }
 
     &[data-error="on"] {
-      pointer-events: none;
       opacity: 0.2;
-      @include drumee.typo($weight: 300, $color: var(--default-text-reverse));
+      pointer-events: none;
+      @include drumee.typo($weight: 300, $color: var(--white));
+    }
+
+    &[data-wait="1"] {
+      opacity: 0.4;
+      pointer-events: none;
     }
   }
 
