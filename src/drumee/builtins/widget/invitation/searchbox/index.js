@@ -254,16 +254,17 @@ class __invitation_searchbox extends LetcBox {
     }
     let str = this.searchboxRef.getValue() || '';
 
-    if (!str.isEmail()) { //match _USING.regexp.email
+    if (typeof str !== 'string' || !str.isEmail()) {
       return null;
     }
     str = str.replace(/ +/g, '');
     const re = new RegExp(`^${str}$`, 'i');
-    for (let c of Array.from(this.resultsRoll.children.toArray())) {
-      const fn = c.mget(_a.fullname).replace(/ +/g, '');
-      if (re.test(c.mget(_a.email)) || re.test(fn)) {
-        return c;
-      }
+    const children = this.resultsRoll && this.resultsRoll.children ? this.resultsRoll.children.toArray() : [];
+    for (let c of Array.from(children)) {
+      const email = c.mget && c.mget(_a.email);
+      const fullname = c.mget && c.mget(_a.fullname);
+      if (email != null && re.test(String(email))) return c;
+      if (fullname != null && typeof fullname === 'string' && re.test(fullname.replace(/ +/g, ''))) return c;
     }
     return str;
   }

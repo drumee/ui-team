@@ -277,17 +277,22 @@ class __invitation_settings extends __recipient {
     const users = [];
     this.recipientsRoll.collection.each(c => {
       if (!c.get(_a.idle)) {
-        emails.push(c.get(_a.email));
+        const email = c.get(_a.email);
         const id = c.get(_a.id);
+        emails.push(email);
         if (id != null) {
-          return users.push(id);
+          users.push(id);
+        } else if (email != null && (typeof email === "string" ? email.indexOf("@") !== -1 : (email && typeof email.isEmail === "function" && email.isEmail()))) {
+          users.push(typeof email === "string" ? email : (email.email || String(email)));
         }
       }
     });
     const input = this.searchBox.getData() || {};
     if ((input.email != null) && !(Array.from(emails).includes(input.email))) {
-      if (input.email.isEmail()) {
-        emails.push(input.email);
+      const emailVal = input.email;
+      if (typeof emailVal === "string" && emailVal.indexOf("@") !== -1 || (emailVal && typeof emailVal.isEmail === "function" && emailVal.isEmail())) {
+        emails.push(emailVal);
+        users.push(typeof emailVal === "string" ? emailVal : (emailVal.email || String(emailVal)));
       }
     }
     this._data.email = emails;
@@ -648,6 +653,15 @@ class __invitation_settings extends __recipient {
 
       case "add-item":
         return this._addInvitee(cmd);
+
+      case "add-guest":
+        const email = args.email || cmd.email;
+        if (email && !this._emailExists(email)) {
+          const data = { email: typeof email === "string" ? email.trim() : email, ...this.recipientItem };
+          this.recipientsRoll.append(data);
+          this._actionState(1);
+        }
+        return;
 
       case "add-selection":
         return this._addSelection(cmd);
