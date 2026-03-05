@@ -144,9 +144,11 @@ class __invitation_searchbox extends LetcBox {
     if (this.mget(_a.api)) {
       return this.mget(_a.api);
     }
+    const ui = this.mget(_a.uiHandler);
+    const hubId = (ui && _.isFunction(ui.mget) && ui.mget(_a.hub_id)) || Visitor.id;
     let a = {
       service: SERVICE.drumate.my_contacts,
-      hub_id: Visitor.id,
+      hub_id: hubId,
       page: 1,
     };
     if (this.mget('only_drumate') || this.mget('only_drumate') == null) {
@@ -198,11 +200,18 @@ class __invitation_searchbox extends LetcBox {
    * @param {*} src 
    */
   _addGuest(src) {
-    let email = this.searchboxRef.source.getValue('') || '';
-    if (email.isEmail()) this.searchboxRef.source.setValue('');
+    if (!this.searchboxRef || typeof this.searchboxRef.getValue !== 'function') {
+      return;
+    }
+    let email = this.searchboxRef.getValue() || '';
+    if (typeof email === 'string' && email.trim() && (typeof email.isEmail === 'function' ? email.isEmail() : email.indexOf('@') !== -1)) {
+      if (typeof this.searchboxRef.setValue === 'function') {
+        this.searchboxRef.setValue('');
+      }
+    }
     return this.triggerHandlers({
       service: 'add-guest',
-      email,
+      email: typeof email === 'string' ? email.trim() : email,
     });
   }
   /**
@@ -222,8 +231,11 @@ class __invitation_searchbox extends LetcBox {
    * 
    */
   pendingValue(clear = 0) {
+    if (!this.searchboxRef) return '';
     let r = this.searchboxRef.getValue();
-    if (clear) this.searchboxRef.source.setValue('');
+    if (clear && typeof this.searchboxRef.setValue === 'function') {
+      this.searchboxRef.setValue('');
+    }
     return r;
   }
 
@@ -239,8 +251,8 @@ class __invitation_searchbox extends LetcBox {
     this.triggerHandlers({ items: this.selection });
     this.resultsContainer.el.hide();
     this.actionsBar.el.dataset.active = 0;
-    if (this.searchboxRef.source) {
-      return this.searchboxRef.source.setValue('');
+    if (this.searchboxRef && typeof this.searchboxRef.setValue === 'function') {
+      this.searchboxRef.setValue('');
     }
   }
 
@@ -324,12 +336,14 @@ class __invitation_searchbox extends LetcBox {
       api = this.mget('apiAll')
       if (api.page) { delete api.page }
     } else {
+      const ui = this.mget(_a.uiHandler);
+      const hubId = (ui && _.isFunction(ui.mget) && ui.mget(_a.hub_id)) || Visitor.id;
       api = {
         service: SERVICE.drumate.my_contacts,
         value: "%",
         only_drumate: 1,
-        hub_id: Visitor.id
-      }
+        hub_id: hubId
+      };
     }
 
     this.resultsRoll.model.set({
@@ -360,21 +374,27 @@ class __invitation_searchbox extends LetcBox {
   */
   submitInput() {
     this.status = _a.commit;
+    if (!this.searchboxRef || typeof this.searchboxRef.getValue !== 'function') {
+      return true;
+    }
     let email = this.searchboxRef.getValue() || '';
     if (this.mget('addGuest')) {
-      if (email.trim() == '') {
+      if (typeof email !== 'string' || email.trim() === '') {
         return true;
       }
       var item = this.checkSanity();
       if (!item) {
         this.status = _a.error;
         this.triggerHandlers({ error: this.status });
-        this.searchboxRef._input.showError(LOCALE.ENTER_A_VALID_EMAIL)
+        if (this.searchboxRef._input && typeof this.searchboxRef._input.showError === 'function') {
+          this.searchboxRef._input.showError(LOCALE.ENTER_A_VALID_EMAIL);
+        }
         return false;
       }
       this._addGuest();
       return true;
     }
+    return true;
   }
 
   /**
@@ -430,4 +450,5 @@ class __invitation_searchbox extends LetcBox {
   }
 }
 
+module.exports = __invitation_searchbox;
 module.exports = __invitation_searchbox;
