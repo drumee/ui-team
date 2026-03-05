@@ -273,9 +273,10 @@ class __invitation_searchbox extends LetcBox {
    * 
    * @param {*} cmd 
    */
-  _showResults(cmd) {
-    const data = cmd.results;
-    this.debug("AAA:270", this, cmd, cmd.results)
+  _showResults(cmd, args = {}) {
+    const raw = (args && args.results) != null ? args.results : (cmd && cmd.results);
+    const data = Array.isArray(raw) ? raw : (raw && raw.data) || [];
+    this.debug("AAA:270", this, cmd, args, raw)
     this.results = data;
     let sharees = this.getSharees()
     if (_.isEmpty(data)) {
@@ -283,20 +284,21 @@ class __invitation_searchbox extends LetcBox {
       this.service = _e.update;
       this.triggerHandlers({ service: _e.update });
     } else {
-      for (let r of Array.from(data)) {
-        r = { ...r, ...this.contactItem }
+      const items = data.map((r) => {
+        const item = { ...r, ...this.contactItem };
         for (let s of Array.from(sharees)) {
-          if (r.email === s.email) {
-            r.state = 1;
-            r.preselect = 1;
+          if (item.email === s.email) {
+            item.state = 1;
+            item.preselect = 1;
           }
         }
-        if ((r.role == null)) {
-          r.role = _a.found;
+        if ((item.role == null)) {
+          item.role = _a.found;
         }
-      }
+        return item;
+      });
       this.resultsContainer.el.show();
-      this.resultsRoll.feed(data);
+      this.resultsRoll.feed(items);
       this.service = _e.found;
       this.triggerHandlers({ service: _e.found });
     }
@@ -385,7 +387,7 @@ class __invitation_searchbox extends LetcBox {
 
     switch (service) {
       case "items-found":
-        this._showResults(cmd);
+        this._showResults(cmd, args);
         this.refreshIconState();
         return;
 

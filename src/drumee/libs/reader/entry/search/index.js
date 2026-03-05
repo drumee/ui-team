@@ -141,7 +141,8 @@ class __entry_search extends LetcBox {
    * @returns 
    */
   _found(orig, args) {
-    const data = args.results;
+    const raw = args.results;
+    const data = Array.isArray(raw) ? raw : (raw && raw.data) || [];
     const itemsOpt = this.get(_a.itemsOpt);
     const map = this.model.get(_a.itemsMap) || {};
     const found = _.map(data, item => {
@@ -165,16 +166,14 @@ class __entry_search extends LetcBox {
     if (wrapper != null) {
       if (_.isFunction(wrapper.feed)) {
         wrapper.feed(found);
-        return;
-      }
-      if (this.getPart(wrapper) != null) {
+      } else if (this.getPart(wrapper) != null) {
         this.getPart(wrapper).feed(found);
-        return;
       }
     }
     this.results = found;
     this.source = orig;
-    return this.triggerHandlers(args);
+    const payload = { ...args, results: found, service: this.mget(_a.service) || 'items-found', __inputStatus: _a.results };
+    return this.triggerHandlers(payload);
   }
 
   /**

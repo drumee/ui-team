@@ -490,26 +490,33 @@ class __invitation_settings extends __recipient {
   }
 
   /**
-   * 
-   * @param {*} data 
-   * @returns 
+   * Send contact.invite for each email in the list so invited users receive the email.
+   * Then call hub.add_contributors to add members / register share guests.
    */
   addContributors() {
-    // let 
-    let users = []
-    for (let item of this.__rollRecipients.children.toArray()) {
-      users.push(item.mget(_a.id))
-    }
-    let args = { ...this.defaultPermission, ...this.getData() }
-    args.hub_id = this.mget(_a.hub_id)
+    const args = { ...this.defaultPermission, ...this.getData() };
+    args.hub_id = args.hub_id || this.mget(_a.hub_id);
+    const hubId = args.hub_id;
 
-    this.postService(SERVICE.hub.add_contributors, args, {}).then(usersList => {
-      this.mset({ sharees: usersList })
-      if (this.__existingMembers) this.__existingMembers.feed(usersList)
-      this.recipientsRoll.clear()
-      this.triggerHandlers({ service: "contributors-added" })
-      this.debug("AAAA:498", usersList)
-    })
+    const emailsToInvite = (args.users || []).filter(
+      (u) => typeof u === "string" && u.indexOf("@") !== -1
+    );
+
+    const invitePromises = emailsToInvite.map((email) =>
+      this.postService(SERVICE.contact.invite, { email, hub_id: hubId }, {}).catch((err) => {
+        this.warn("[invitation] contact.invite failed for", email, err);
+      })
+    );
+
+    Promise.allSettled(invitePromises).then(() => {
+      this.postService(SERVICE.hub.add_contributors, args, {}).then((usersList) => {
+        this.mset({ sharees: usersList });
+        if (this.__existingMembers) this.__existingMembers.feed(usersList);
+        this.recipientsRoll.clear();
+        this.triggerHandlers({ service: "contributors-added" });
+        this.debug("AAAA:498", usersList);
+      });
+    });
   }
 
   /**
@@ -550,7 +557,7 @@ class __invitation_settings extends __recipient {
    */
   _changePermission(cmd, args) {
     if (!this.pendingMember) {
-      return
+      return``
     }
     this.ensurePart("settings").then((p) => {
       let { name, state } = args
