@@ -207,7 +207,6 @@ class __editor_markdown extends __player {
   * 
   */
   pin(cmd) {
-    this.debug("AAAA:142", this.mget(REMINDER_ID), cmd.mget(_a.state));
     let task = {
       nid: this.mget(_a.nid),
       hub_id: this.mget(_a.hub_id),
@@ -228,7 +227,6 @@ class __editor_markdown extends __player {
       })
     } else {
       let id = this.mget(REMINDER_ID);
-      this.debug("AAAA:162", id, this.mget(REMINDER_ID), cmd.mget(_a.state));
       if (!id) return;
       this.postService({ service: SERVICE.reminder.remove, hub_id: Visitor.id, id }, { async: 1 }).then((data) => {
         /** */
@@ -389,7 +387,7 @@ class __editor_markdown extends __player {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug("AAA:391", service)
+    // this.debug("AAA:391", service)
     switch (service) {
       case _a.save:
         this.saveContent();

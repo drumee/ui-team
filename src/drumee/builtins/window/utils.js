@@ -35,6 +35,7 @@ class __window_mfs extends DrumeeMFS {
     if (this._responsive) RADIO_BROADCAST.on(_e.responsive, this._responsive);
     if (this._kbHandler) RADIO_KBD.on(_e.keyup, this._kbHandler);
     this.onVisibilityChange = this.onVisibilityChange.bind(this)
+    this._checkChangelog = this._checkChangelog.bind(this)
     document.addEventListener("visibilitychange", this.onVisibilityChange);
     this._changelog_id = null;
     this._goneHiddenTime = new Date().getTime();
@@ -107,7 +108,7 @@ class __window_mfs extends DrumeeMFS {
       })
       this._changelog_id = data[0].id + 1;
       changed = changed + rows.length;
-      if (changed) {
+      if (changed && this.fetchContent) {
         this.fetchContent()
       }
     })
