@@ -162,6 +162,7 @@ class __player_document extends PlayerInteract {
    */
   confirmReload() {
     if (!this.__overlay.isEmpty()) return;
+    this._isBuildingPages = 1;
     this.__overlay.feed(require('./skeleton/content-changed').default(this));
   }
 
@@ -196,7 +197,6 @@ class __player_document extends PlayerInteract {
     };
     this.pollCount++;
     this.fetchService(opt).then((data) => {
-      this.debug("AAA:223 getting build state", opt, data)
       if (/^(ok|done)$/.test(data.buildState) || !data.buildState) {
         this.message("");
         this.pollCount = 0;
@@ -294,8 +294,12 @@ class __player_document extends PlayerInteract {
   }
 
 
+  /**
+   * 
+   * @param {*} e 
+   */
   handleError(e) {
-    this.warn("AAA:182", e);
+    this.warn("handleError", e);
     let content = LOCALE.ERROR_SERVER;
     switch (e.status) {
       case 403:
@@ -343,6 +347,7 @@ class __player_document extends PlayerInteract {
     this.isRebuilding = 1;
     this.fetchService(opt).then((data) => {
       this.isRebuilding = 0;
+      this._isBuildingPages = 0;
       if (data.buildState == "wait") {
         if (!this.__progressText || this.__progressText.isDestroyed()) {
           this.feed(require('./skeleton')(this, LOCALE.PREVIEW_GENERATION));
@@ -372,6 +377,7 @@ class __player_document extends PlayerInteract {
     };
 
     this.fetchService(opt).then((data) => {
+      this.debug("AAA:378, data", data)
       if (m) m.wait(0);
       if (_.isEmpty(data)) {
         this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW);
@@ -399,12 +405,14 @@ class __player_document extends PlayerInteract {
   reload(wait = 0) {
     this.el.dataset.state = 1;
     this.el.style.opacity = 1;
+    this.debug("AAA:405 reloading", this)
     if (this.reloadTimer) return;
     /** Prevent mulpiple reload */
     this.reloadTimer = setTimeout(() => {
       this.reloadTimer = null;
     }, 2000);
     Kind.waitFor('document_page').then(() => {
+      this._isBuildingPages = 0;
       this.feed(require('./skeleton')(this, LOCALE.PREVIEW_GENERATION));
       if (wait) {
         setTimeout(this.prepare.bind(this), wait);
