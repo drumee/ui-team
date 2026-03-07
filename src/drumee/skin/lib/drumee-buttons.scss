@@ -1,25 +1,67 @@
-.drumee-buttons {
-  &--cancel {
-    background-color: var(--primary);
-  }
-  &--commit {
-    background-color: var(--primary);
-  }
-  &--alert,
-  &--caution {
-    background-color: var(--primary);
-  }
-  &--info {
-    background-color: var(--primary);
-  }
-  &--error {
-    background-color: var(--primary);
-  }
-  &--primary {
-    background-color: var(--primary-500);
-    padding: var(--spacer-4) var(--spacer-6);
-    border-radius: var(--corner-radius-max);
-    color: var(--white);
-    cursor: pointer;
+/**
+ * Drumee Button System
+ *
+ * SCSS automatically generates button variant classes
+ * using the pattern:
+ *
+ * .drumee-buttons--{type}
+ *
+ * Each variant includes:
+ * - padding
+ * - border-radius
+ * - cursor pointer
+ * - background color
+ * - text color
+ *
+ * To add a new button type:
+ * 1. Add a new entry in $button-types
+ * 2. Define bg and color
+ */
+
+@mixin drumee-button-base($bg, $color) {
+  padding: var(--spacer-4) var(--spacer-6);
+  border-radius: var(--corner-radius-max);
+  cursor: pointer;
+  background-color: $bg;
+  color: $color;
+}
+
+$button-types: (
+  cancel: (
+    bg: var(--neutral-300),
+    color: var(--neutral-600),
+  ),
+  commit: (
+    bg: var(--green-400),
+    color: var(--white)
+  ),
+  alert: (
+    bg: var(--yellow-400),
+    color: var(--white)
+  ),
+  caution: (
+    bg: var(--red-400),
+    color: var(--white)
+  ),
+  info: (
+    bg: var(--blue-400),
+    color: var(--white)
+  ),
+  error: (
+    bg: var(--red-400),
+    color: var(--white)
+  ),
+  primary: (
+    bg: var(--primary-500),
+    color: var(--white)
+  )
+);
+
+@each $name, $config in $button-types {
+  .drumee-buttons--#{$name} {
+    @include drumee-button-base(
+      map-get($config, bg),
+      map-get($config, color)
+    );
   }
 }
