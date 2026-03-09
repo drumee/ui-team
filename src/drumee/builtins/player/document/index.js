@@ -80,10 +80,10 @@ class __player_document extends PlayerInteract {
         pdfDocument.close();
       });
       return pdfDocument;
-    } catch (error) {
+    } catch (e) {
       this.message('')
       this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW, e);
-      this.warn('Error rendering PDF:', error);
+      this.warn('Error rendering PDF:', e);
     }
   }
 
@@ -393,7 +393,7 @@ class __player_document extends PlayerInteract {
       }
       this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW);
     }).catch((e) => {
-      if (m) m.wait(0);
+      if (m && m.wait) m.wait(0);
       this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW, e);
     })
 
