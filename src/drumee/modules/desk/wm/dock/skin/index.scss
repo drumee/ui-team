@@ -545,6 +545,10 @@
       align-content: center;
       flex-wrap: wrap;
     }
+    &-icon {
+      width: 36px;
+      height: 36px;
+    }
   }
 
   @media (max-width: var(--small-width)) {

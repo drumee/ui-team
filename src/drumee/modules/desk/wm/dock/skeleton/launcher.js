@@ -33,12 +33,12 @@ const __dock_widget_launchers = function (ui, ismobile) {
   };
 
   const kids = [
-    button(ui, {
-      ico: "dock-note",
-      className: `${pfx} note big`,
-      service: "add-note",
-      helperName: 'note'
-    }, LOCALE.NOTE),
+    // button(ui, {
+    //   ico: "dock-note",
+    //   className: `${pfx} note big`,
+    //   service: "add-note",
+    //   helperName: 'note'
+    // }, LOCALE.NOTE),
     // button(ui, {
     //   ico: "logo",
     //   className: `${pfx} note big`,
@@ -60,7 +60,7 @@ const __dock_widget_launchers = function (ui, ismobile) {
 
   const a = Skeletons.Box.X({
     debug: __filename,
-    className: `${ui.fig.family}__container application launcher ${profileType} ${ui.fig.family}--divider-left`,
+    className: `${ui.fig.family}__container application launcher ${profileType} `,
     kids: kids
   });
 

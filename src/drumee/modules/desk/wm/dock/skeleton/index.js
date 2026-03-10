@@ -90,7 +90,10 @@ const __desk_dock = function (ui) {
       require('./maker')(ui),
       searchbox,
       search_btn,
+      require('./note-modal')(ui),
+
       require('./launcher')(ui),
+
       trash
     ]
   });
