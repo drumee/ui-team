@@ -29,11 +29,11 @@ function menuBar(ui) {
         sys_pn: "activity-count",
         activie: 0,
       }),
-      Skeletons.Button.Svg({
-        className: icoClass,
-        service: "open-chat",
-        ico: "message",
-      }),
+      // Skeletons.Button.Svg({
+      //   className: icoClass,
+      //   service: "open-chat",
+      //   ico: "message",
+      // }),
 
       Skeletons.Button.Svg({
         className: icoClass,

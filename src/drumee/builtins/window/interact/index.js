@@ -787,7 +787,7 @@ class __window_interact extends windowCore {
       }
       this.verbose("makeOptions::486", item.phase);
     } else if (item.actual_home_id !== this.mget(_a.home_id)) {
-      if (item.filetype === _a.hub && this.mget(_a.home_id) === item.home_id) {
+      if (item.filetype === _a.hub) {
         item.phase = _a.moved;
       } else {
         item.phase = _a.copied;

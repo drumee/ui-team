@@ -10,7 +10,6 @@ class __window_trash extends mfsInteract {
     this._openNode = this._openNode.bind(this);
     this.getCurrentApi = this.getCurrentApi.bind(this);
     this.onUiEvent = this.onUiEvent.bind(this);
-    this.__dispatchRest = this.__dispatchRest.bind(this);
   }
 
 
