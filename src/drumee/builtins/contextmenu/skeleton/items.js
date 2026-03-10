@@ -25,6 +25,7 @@ const __button = function (ui, trigger, k) {
     directUrl: button({ content: LOCALE.URL_ADDRESS, service: 'direct-url' }),
     download: button({ content: LOCALE.DOWNLOAD, service: _e.download }),
     duplicate: button({ content: LOCALE.DUPLICATE, service: _a.duplicate }),
+    edit: button({ content: LOCALE.EDIT, service: 'open-node', mode: _a.edit }),
     execute: button({ content: LOCALE.EXCUTE, service: 'load-script' }),
     exitFullScreen: button({ content: LOCALE.EXIT_FULLSCREEN, service: 'toggle-fullscreen' }),
     export: button({ content: LOCALE.EXPORT_TO_SERVER, service: 'export-to-server', type: _a.export }),

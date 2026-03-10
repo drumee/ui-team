@@ -864,7 +864,7 @@ class __window_manager extends push {
    */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.status || cmd.mget(_a.service);
-    this.debug("onUiEvent:879", cmd, service)
+    this.debug("onUiEvent:879", cmd, args, service)
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
@@ -900,7 +900,7 @@ class __window_manager extends push {
         if ((now - lastClickTime) < 1000) return /** Prevent too fast click */
 
         lastClickTime = now
-        this.openContent(cmd);
+        this.openContent(cmd, args);
         return this.unselect();
 
       case "upgrade-plan":

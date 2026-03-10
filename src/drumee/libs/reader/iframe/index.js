@@ -5,21 +5,20 @@ class __drumee_iframe extends Marionette.View {
     this.onDomRefresh = this.onDomRefresh.bind(this);
   }
 
-  static initClass() {
-    //templateName: _T.iframe.reader
-    this.prototype.nativeClassName = "widget iframe-reader";
-    this.prototype.figName = "drumee_iframe";
-  
-  
-    this.prototype.template  = null;
-  }
+  // static initClass() {
+  //   this.prototype.nativeClassName = "widget iframe-reader";
+  //   this.prototype.figName = "drumee_iframe";
+  //   this.prototype.template  = null;
+  // }
 
-// ===========================================================
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} opt 
+   * @returns 
+   */
   initialize(opt){
     this.model.atLeast({
-      source : _K.char.empty,  //"#{location.pathname}/html/iframe-maiden.html"
+      source : _K.char.empty,
       option : 'allowfullscreen',
       border : 0,
       callbacks : _K.char.empty
@@ -30,21 +29,20 @@ class __drumee_iframe extends Marionette.View {
     this.model.set({ 
       widgetId : this._id});
 
-    return super.initialize(opt);
+    super.initialize(opt);
   }
-    //@parse()
-    
-// ===========================================================
-// parse
-//
-// ===========================================================
-  parse() {
-    let src = this.mget(_a.url) || this.model.get(_a.source);
+
+    /**
+     * 
+     * @returns 
+     */
+    parse() {
+    let src = this.mget(_a.url) || this.mget(_a.source);
     if (_.isEmpty(src)) {
       this.warn("NO SOURCE for IFRAME", this);
       return;
     }
-    this.debug(`initialize src=${src} / '${this.model.get(_a.source)}'`, this);
+    this.debug(`initialize src=${src} / '${this.mget(_a.source)}'`, this);
 
     if (src.match(/<iframe(.+i)frame>/)) {
       src = src.replace(_K.tag.iframe, _K.tag.div);
@@ -63,11 +61,6 @@ class __drumee_iframe extends Marionette.View {
         this.model.set(_a.allow, allow);
       }
     }
-    //   protocol = src.replace(/^.+src=\"|:\/\/.+$/g, _K.char.empty)
-    // else if src.match(/http.*:\/\//)
-    //   protocol = src.replace(/^.+src=\"|:\/\/.+$/g, _K.char.empty)
-    // else
-    //   protocol = location.protocol.replace(/:/,_K.char.empty)
     const uri = src.replace(/^.+:\/\/|\" .+$/g, _K.char.empty);
     if (src.match(/^\/\//)) {
       src = src;
@@ -77,9 +70,9 @@ class __drumee_iframe extends Marionette.View {
     this.model.set(_a.source, src);
     // if(this.mget(_a.url))
     //   @model.set _a.source, this.mget(_a.url)
-    if (_.isObject(this.model.get('callbacks'))) {
+    if (_.isObject(this.mget('callbacks'))) {
       let cb = '';
-      const object = this.model.get('callbacks');
+      const object = this.mget('callbacks');
       for (var k in object) {
         var v = object[k];
         cb = `${k}=\"${v}()\" ${cb}`;
@@ -88,13 +81,13 @@ class __drumee_iframe extends Marionette.View {
     }
   }
 
-// ===========================================================
-// onDomRefresh
-//
-// ===========================================================
+  /**
+   * 
+   * @returns 
+   */
   onDomRefresh() {
-    const src = this.model.get(_a.url) || this.model.get(_a.source);
-    this.debug(`Iframe.Designer src='${src}'`, _.isEmpty(src), this);
+    const src = this.mget(_a.src) || this.mget(_a.url) || this.mget(_a.source);
+    this.debug(` src='${src}'`, _.isEmpty(src), this);
     if (_.isEmpty(src)) {
       this.$el.append(require('./template/placeholder')(this));
       this.debug("Iframe.Designer isEmpty", this);
@@ -107,11 +100,11 @@ class __drumee_iframe extends Marionette.View {
       this.debug(`Iframe.Designer src='${src}'`, iframe);
       iframe.attr(_a.height, this.$el.height());
       iframe.attr(_a.width, this.$el.width());
-      return iframe.attr(_a.allow, this.model.get(_a.allow));
+      return iframe.attr(_a.allow, this.mget(_a.allow));
     };
     this.waitElement(iframe[0], f);
     return this._iframe = iframe;
   }
 }
-__drumee_iframe.initClass();
+// __drumee_iframe.initClass();
 module.exports = __drumee_iframe;

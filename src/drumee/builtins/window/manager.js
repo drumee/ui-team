@@ -865,8 +865,8 @@ class __window_manager extends mfsInteract {
   /**
    *
    */
-  _launchApp(media) {
-    const item = this.getWindowPreset(media);
+  _launchApp(media, args) {
+    const item = this.getWindowPreset(media, args);
     const fType = media.mget(_a.filetype);
     let app = require("./configs/application")(fType, item);
     if (_.isEmpty(app) || !app.kind) {
@@ -900,7 +900,7 @@ class __window_manager extends mfsInteract {
    * @param {*} moving
    * @returns
    */
-  openContent(media) {
+  openContent(media, args) {
     if (!media.wait) return;
     if (media.mget(_a.status) === _a.deleted) {
       media.wait(0);
@@ -964,7 +964,7 @@ class __window_manager extends mfsInteract {
           }
         }
 
-        if (this._launchApp(media)) return;
+        if (this._launchApp(media, args)) return;
 
         if (!window.open(c.mget(_a.src), "_blank")) {
           Butler.say(LOCALE.WINDOW_BLOCKED);

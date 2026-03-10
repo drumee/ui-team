@@ -51,6 +51,7 @@
       position: absolute;
       height: 5px;
       width: 0;
+      transition: width 0.5s;
       background-color: var(--primary-500);
       z-index: 1;
     }

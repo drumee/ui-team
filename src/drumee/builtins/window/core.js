@@ -743,7 +743,7 @@ class __window_core extends __utils {
    * @param {*} media 
    * @returns 
    */
-  openContent(media, previous) {
+  openContent(media, args) {
     if (this.isTrash) {
       this.mset(_a.cancel, LOCALE.OK);
       media.wait(0);
@@ -752,16 +752,16 @@ class __window_core extends __utils {
     }
     const fType = media.mget(_a.filetype);
     if (this.mget(_a.kind) == "window_search" || fType != _a.folder) {
-      Wm.openContent(media);
+      Wm.openContent(media, args);
       return;
     }
-    this.updateTopbar(media, previous);
+    this.updateTopbar(media, args);
     if (this.getViewMode() === _a.row) {
       this.__content.feed(require("./skeleton/content/row")(this));
     } else {
       this.__content.feed(require("./skeleton/content/grid")(this));
     }
-    if (super.openContent) super.openContent(media);
+    if (super.openContent) super.openContent(media, args);
   }
 
   /**
@@ -844,7 +844,7 @@ class __window_core extends __utils {
         return this.openCreator(cmd);
 
       case "open-node":
-        return this.openContent(cmd);
+        return this.openContent(cmd, args);
 
       case "change-view":
         return this.change_view(cmd);

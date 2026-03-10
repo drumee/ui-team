@@ -93,6 +93,9 @@ class __player_document extends PlayerInteract {
   onDomRefresh() {
     Wm.on(WS_EVENT, this.onWsMessage)
     this.initSize();
+    if (this.mget(_a.mode) == _a.edit) {
+      return this.edit()
+    }
     this.reload(300);
   }
 
@@ -264,7 +267,6 @@ class __player_document extends PlayerInteract {
     } else {
       this.confirmReload();
     }
-
   }
 
   /**
@@ -402,10 +404,31 @@ class __player_document extends PlayerInteract {
   /**
    * 
    */
+  edit() {
+    this.feed(require('./skeleton')(this, "Loading. Please wait"));
+    const { nid, hub_id } = this.actualNode()
+    this.ensurePart(_a.content).then((p) => {
+      let { protocol, user_domain, svc } = bootstrap()
+      let url = `${protocol}://${user_domain}${svc}onlyoffice.html?hub_id=${hub_id}&nid=${nid}`
+      let opt = { kind: 'iframe', url }
+      this.debug("AAA:441", p, opt)
+      p.feed(opt)
+
+      const iframe = document.getElementById('myIframe');
+
+      iframe.addEventListener('load', function (e) {
+        console.log('Iframe', e);
+        // 在这里执行加载完成后的操作，例如隐藏加载动画
+      });
+    })
+  }
+
+  /**
+   * 
+   */
   reload(wait = 0) {
     this.el.dataset.state = 1;
     this.el.style.opacity = 1;
-    this.debug("AAA:405 reloading", this)
     if (this.reloadTimer) return;
     /** Prevent mulpiple reload */
     this.reloadTimer = setTimeout(() => {

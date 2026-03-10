@@ -10,21 +10,11 @@ const UPLOADER = "media_uploader";
 const SEEDING = "seeding";
 const IGNORED_FILES = /Thumbs.db|.DS_Store|__MACOSX|.thumbnails|\~+/;
 const MAX_BLOB_SIZE = 100000000;
-
-// Lazy load upload progress window
-/** Temporary disabling due to UX Issues  */
-// let UploadProgressWindow = null;
-// function getUploadProgressWindow() {
-//   if (!UploadProgressWindow) {
-//     try {
-//       UploadProgressWindow = require("window/upload-progress");
-//     } catch (e) {
-//       // Window not available
-//       return null;
-//     }
-//   }
-//   return UploadProgressWindow;
-// }
+const EDITABLE = [
+  'docx', 'docm', 'dotx', 'dotm', 'odt', 'ott', 'xlsx', 'xlsm', 'xltx',
+  'xltm', 'xlsb', 'ods', 'ots', 'pptx', 'pptm', 'potx', 'potm', 'ppsx',
+  'ppsm', 'odp', 'otp'
+];
 
 /**
  * 
@@ -264,6 +254,11 @@ class __media_core extends DrumeeMFS {
     switch (this.mget(_a.filetype)) {
       case _a.note:
         extra.push("pinOn");
+        break;
+      case _a.document:
+        if (this.canUpload() && EDITABLE.includes(this.mget(_a.ext).toLowerCase())) {
+          if ((this.mget(_a.status) !== _a.locked)) extra.push(_a.edit);
+        }
         break;
       case _a.web:
         extra.push("setAsHomepage");

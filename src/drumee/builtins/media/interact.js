@@ -292,6 +292,7 @@ class __media_interact extends media_core {
         return;
     }
     this._clickTimestap = timestamp();
+    this.debug("AAA:295", service)
     switch (service) {
       case "open-creator":
       case "open-settings":
@@ -632,11 +633,14 @@ class __media_interact extends media_core {
         }
         break;
 
+      case OPEN_NODE:
+        let args = { service, mode: _a.edit };
+        return this.triggerHandlers(args);
+
       case "direct-rename":
         return this.rename();
 
       case _a.duplicate:
-        this.debug("AAAA 929", this)
         let opt = {
           service: SERVICE.media.copy,
           nid: this.mget(_a.nodeId),
