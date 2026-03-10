@@ -38,12 +38,15 @@ const __player_topbar = function (ui, size) {
   if (ui.canDownload()) {
     actionIcons = Skeletons.Box.X({
       className: `${ui.fig.group}-topbar__icon-wrapper`,
-      kids: [downloadIcon],
+      kids: [
+        // downloadIcon
+        require("./menu")(ui),
+      ],
     });
   }
 
   if (ui.canUpload() && ui.media && ui.media.imgCapable()) {
-    actionIcons.kids.push(rotateLeftIcon, rotateRightIcon)
+    actionIcons.kids.push(rotateLeftIcon, rotateRightIcon);
   }
 
   const dl = Skeletons.Box.X({
