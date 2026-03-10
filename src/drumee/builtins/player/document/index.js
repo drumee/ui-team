@@ -405,21 +405,28 @@ class __player_document extends PlayerInteract {
    * 
    */
   edit() {
+    this.el.dataset.mode = _a.edit;
     this.feed(require('./skeleton')(this, "Loading. Please wait"));
     const { nid, hub_id } = this.actualNode()
-    this.ensurePart(_a.content).then((p) => {
+    this.ensurePart(_a.content).then(async (p) => {
       let { protocol, user_domain, svc } = bootstrap()
       let url = `${protocol}://${user_domain}${svc}onlyoffice.html?hub_id=${hub_id}&nid=${nid}`
-      let opt = { kind: 'iframe', url }
-      this.debug("AAA:441", p, opt)
+      await Kind.waitFor('iframe');
+      this.__progress.el.hide();
+      let opt = {
+        kind: 'iframe', url, onLoad: (e) => {
+          this.debug(LOCALE.LOADING, e);
+        }
+      };
+      this.debug("AAA:441", p, opt, p.children.last());
       p.feed(opt)
 
-      const iframe = document.getElementById('myIframe');
+      // const iframe = document.getElementById('myIframe');
 
-      iframe.addEventListener('load', function (e) {
-        console.log('Iframe', e);
-        // 在这里执行加载完成后的操作，例如隐藏加载动画
-      });
+      // iframe.addEventListener('load', function (e) {
+      //   console.log('Iframe', e);
+      //   // 在这里执行加载完成后的操作，例如隐藏加载动画
+      // });
     })
   }
 
@@ -570,12 +577,40 @@ class __player_document extends PlayerInteract {
     let o = require("window/configs/default")();
     this.el.dataset.ready = 1;
     let maxWidth = 742;
+    let maxHeight = 900;
+    const max_height = window.innerHeight - o.offsetY - 2 * o.marginY;
+    const max_width = window.innerWidth - 2 * o.marginX;
+    if (this.mget(_a.mode) == _a.edit) {
+      maxWidth = max_width;
+      maxHeight = max_height;
+      if (maxWidth > 1024) maxWidth = 1024;
+      if (maxHeight > 2028) maxHeight = 2048;
+      this.size = this.max_size();
+      this.size.width = maxWidth;
+      this.size.height = maxHeight;
+      TweenMax.fromTo(this.$el, 1.5,
+        { scale: 0.15, opacity: 0 },
+        {
+          scale: 1,
+          opacity: 1,
+          ease: Expo.easeInOut,
+          top: this.offset.top,
+          left: this.size.left,
+          width: this.size.width,
+          height: this.size.height,
+        }
+      );
+      return
+    }
     this.size = this.max_size();
     this.size.width = this.size.width * .9;
     this.size.height = this.size.height * .9;
+
+
     if (this.size.width > maxWidth) {
       this.size.width = maxWidth;
     }
+    this.debug("AAA:564", this.size, maxWidth, maxHeight)
     this.$el.height(this.size.height);
 
     let s = fitBoxes(this.size, { width: window.innerWidth, height: window.innerHeight });
@@ -583,8 +618,6 @@ class __player_document extends PlayerInteract {
     let dy = o.marginY;
     let shiftY = this.mget('shiftY') || 0;
     let shiftX = this.mget('shiftX') || 0;
-    const max_height = window.innerHeight - o.offsetY - 2 * o.marginY;
-    const max_width = window.innerWidth - 2 * o.marginX;
     if (height > max_height) {
       s.width = s.width * max_height / height;
       height = max_height;
