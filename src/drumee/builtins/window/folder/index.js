@@ -62,7 +62,7 @@ class __window_folder extends mfsInteract {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service)
-    this.debug("AAAAARG:65", args)
+    this.debug("AAA:65", service, cmd, args)
     switch (service) {
       case _a.info:
         return this.showInfo()

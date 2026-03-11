@@ -1,18 +1,4 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : desk/counter/project/skeleton/main
-//   TYPE : Skelton
-// ==================================================================== *
-
-// ===========================================================
-// __window_warning
-//
-// @param [Object] _ui_
-//
-// @return [Object] 
-//
-// ===========================================================
-const __window_warning = function(_ui_, title, content) {
+module.exports = function(_ui_, title, content) {
   const prefix = "warning";
   const body = [
     Skeletons.Box.X({
@@ -22,12 +8,6 @@ const __window_warning = function(_ui_, title, content) {
           content   : title,
           className : `${_ui_.fig.group}-${prefix}__header my-30`
         })
-        // Skeletons.Button.Svg({
-        //   ico       : "desktop_information--new"
-        //   tooltips  :
-        //     content : "For security reasons, it is not reasonnable to allow nest hubs"
-        //   className   : "#{_ui_.fig.group}__info ml-20 u-ai-center"
-        // })
       ]
     }),        
     Skeletons.Box.Y({
@@ -54,7 +34,7 @@ const __window_warning = function(_ui_, title, content) {
     })
   ];
 
-  const a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     className  : `mb-20 ${_ui_.fig.group}-${prefix}__main`,
     debug : __filename,
     kids: [
@@ -67,6 +47,4 @@ const __window_warning = function(_ui_, title, content) {
       })
     ]
   });
-  return a;
 };
-module.exports = __window_warning;

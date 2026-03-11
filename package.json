@@ -124,6 +124,7 @@
     "merge": "^2.1.1",
     "multiline": "^1.0.2",
     "nouislider": "^15.6.1",
+    "print-js": "^1.6.0",
     "qrcode": "^1.5.3",
     "rectangle-node": "^0.1.0",
     "rectangle-overlap": "^2.0.0",

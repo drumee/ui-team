@@ -1630,8 +1630,8 @@ class __media_core extends DrumeeMFS {
       return null;
     }
 
-    if (/^(.|.+\/.+| +|\-+)$/.test(value)) {
-      Wm.alert("Invalid name");
+    if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(value)) {
+      Wm.alert(LOCALE.INVALID_FILENAME);
       return null;
     }
 
@@ -1654,9 +1654,9 @@ class __media_core extends DrumeeMFS {
    */
   mkdir(fname) {
     const value = fname || LOCALE.FOLDER;
-    if (/^(.|.+\/.+| )$/.test(value)) {
-      Wm.alert("Invalid name");
-      return null;
+    if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(value)) {
+      Wm.alert(LOCALE.INVALID_FILENAME);
+      return this.seedFolder();
     }
     if (this._pendingSeed) return;
     this._pendingSeed = 1;

@@ -23,7 +23,6 @@ class __player_vector extends __core {
    * @param {*} pn 
    */
   onPartReady(child, pn) {
-    this.debug("AAA:35", pn);
     switch (pn) {
       case _a.content:
         child.on(_e.show, () => {
@@ -66,7 +65,7 @@ class __player_vector extends __core {
       }
       let r = await blob.text();
       this.contentText = r;
-      this.feed(require('../skeleton/main')(this));
+      this.feed(require('./skeleton')(this));
     }
   }
 

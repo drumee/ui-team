@@ -1,7 +1,7 @@
 
 const __document_player = function (ui, msg) {
   let state;
-  const topbar = require("../../skeleton/topbar")(ui);
+  const topbar = require("./topbar")(ui);
 
   const list = Skeletons.List.Smart({
     className: `${ui.fig.family}__list pdfViewer`,

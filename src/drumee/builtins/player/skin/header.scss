@@ -2,7 +2,6 @@
 
 .player {
   &__header {
-    // background: var(--default-bg);
     background: linear-gradient(135deg, var(--blue-300), var(--blue-800));
     border-radius: var(--spacer-6) var(--spacer-6) 0 0;
     color: white;
@@ -29,7 +28,7 @@
 
     &.main {
       width: 100%;
-      justify-content: space-between;
+      justify-content: center;
       gap: var(--spacer-3);
       padding: 0 var(--spacer-10);
       &[data-device="mobile"] {

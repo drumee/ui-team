@@ -2,8 +2,9 @@
 const { filesize, fitBoxes } = require("core/utils")
 const { TweenMax, Expo } = gsap;
 const PlayerInteract = require('player/interact');
-const { loadPdfDocument, initializePdfium } = require('./pdfium-wrapper')
+const { loadPdfDocument, initializePdfium, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";
+const printJS = require('print-js')
 class __player_document extends PlayerInteract {
 
   /**
@@ -29,7 +30,8 @@ class __player_document extends PlayerInteract {
       this.media = opt.source || opt.trigger;
     }
     this.pollCount = 0;
-    initializePdfium() /** Lazy loading */
+    /** Lazy loading */
+    initializePdfium()
   }
 
 
@@ -158,6 +160,7 @@ class __player_document extends PlayerInteract {
     if (this.loadedPages) return;
     if (!this.__progress) return;
     this.__progress.el.dataset.state = 1;
+    this.__progressBar.el.style.width = 0;
   }
 
   /**
@@ -412,21 +415,12 @@ class __player_document extends PlayerInteract {
       let { protocol, user_domain, svc } = bootstrap()
       let url = `${protocol}://${user_domain}${svc}onlyoffice.html?hub_id=${hub_id}&nid=${nid}`
       await Kind.waitFor('iframe');
-      this.__progress.el.hide();
       let opt = {
         kind: 'iframe', url, onLoad: (e) => {
-          this.debug(LOCALE.LOADING, e);
+          this.__progress.el.hide();
         }
       };
-      this.debug("AAA:441", p, opt, p.children.last());
       p.feed(opt)
-
-      // const iframe = document.getElementById('myIframe');
-
-      // iframe.addEventListener('load', function (e) {
-      //   console.log('Iframe', e);
-      //   // 在这里执行加载完成后的操作，例如隐藏加载动画
-      // });
     })
   }
 
@@ -664,6 +658,7 @@ class __player_document extends PlayerInteract {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.model.get(_a.service);
+    let { url, filename, nid, hub_id } = this.actualNode()
     switch (service) {
       case _e.close:
         this.goodbye();
@@ -672,12 +667,52 @@ class __player_document extends PlayerInteract {
       case _a.link:
         break;
 
+      case _a.edit:
+        this.edit()
+        break;
+
       case "read-new-version":
         this.reload(200);
         break;
 
       case "skip-new-version":
         this.__overlay.clear();
+        break;
+
+      case 'download-pdf':
+        url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`;
+        let f = filename.split('.')
+        f.pop()
+        filename = f.join() + '.pdf'
+        this.debug("AAAA:678", url, filename)
+        this.fetchFile({ url, download: filename })
+        break;
+
+      case "print":
+        this.loadedPages = 0;
+        this.initProgess()
+        this.once(_e.eod, (blob) => {
+          this.debug("AAAA:680", blob, printJS)
+          const blobUrl = URL.createObjectURL(blob);
+          printJS({
+            printable: blobUrl,
+            type: 'pdf',
+            onError: (error) => {
+              console.error('Print failed:', error);
+              URL.revokeObjectURL(blobUrl);
+            },
+            onPrintDialogClose: () => {
+              this.__progress.setState(0)
+              URL.revokeObjectURL(blobUrl); // Clean up
+            }
+          });
+        })
+        url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`
+        this.fetchFile({ url })
+        break;
+
+      case _e.download:
+        this.fetchFile({ url, download: filename })
         break;
 
       default:

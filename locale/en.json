@@ -2000,5 +2000,11 @@
   "CUSTOMIZE_BACKGROUND": "Customize the wallpaper",
   "COLORS": "Colors",
   "YOU_HAVE_BEEN_KICK_OUT": "You have been emoved from the organization {0}. However, content that belonged to you are still reachable with the same account credentials.",
-  "WEEKS": "Week(s)"
+  "WEEKS": "Week(s)",
+  "INVALID_FILENAME": "The name must not contain slashes (/), nor only periods (.), nor begin with a single hyphen (-).",
+  "DOWNLOAD_ORIG": "Download the original file",
+  "DOWNLOAD_AS_PDF": "Download a PDF version",
+  "PRINT": "Print",
+  "PRESENTATION": "Presentation",
+  "READ_ONLY_MODE": "Read only mode"
 }

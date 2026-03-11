@@ -2000,5 +2000,11 @@
   "CUSTOMIZE_BACKGROUND": "自定义壁纸",
   "COLORS": "颜色",
   "YOU_HAVE_BEEN_KICK_OUT": "您已被从组织 {0} 中移除。但是，您之前拥有的内容仍然可以使用相同的帐户凭据访问。",
-  "WEEKS": "周"
+  "WEEKS": "周",
+  "INVALID_FILENAME": "名称中不能包含斜杠 (/)，也不能只包含句点 (.)，更不能以单个连字符 (-) 开头。",
+  "DOWNLOAD_ORIG": "下载原始文件",
+  "DOWNLOAD_AS_PDF": "下载PDF版本",
+  "PRINT": "打印",
+  "PRESENTATION": "推介会",
+  "READ_ONLY_MODE": "只读模式"
 }
