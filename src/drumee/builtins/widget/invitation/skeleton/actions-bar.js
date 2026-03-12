@@ -1,4 +1,3 @@
-const { button } = require("../../../../builtins/skeleton/toolkit/buttons");
 
 module.exports = function (ui) {
   return Skeletons.Box.X({
@@ -14,11 +13,6 @@ module.exports = function (ui) {
         content: LOCALE.INVITE || "Invite",
         state: 0,
       }),
-      button(ui, {
-        label: "Invite contacts",
-        className: `drumee-buttons--primary`,
-        service: "invite-contacts",
-      }),
-    ],
+    ]
   });
 };
