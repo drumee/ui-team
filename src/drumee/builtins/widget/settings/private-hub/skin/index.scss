@@ -278,7 +278,7 @@
 
   &__input {
     width: 100%;
-    padding: 12px 60px 12px 16px; // padding-right: 60px để tránh bị label đè
+    padding: 12px 60px 12px 16px;
     border: 1px solid var(--neutral-300, #d1d5db);
     border-radius: 8px;
     font-size: 14px;
@@ -304,7 +304,7 @@
       color: var(--primary-700, #6d28d9);
     }
 
-    // Ẩn SVG icon, chỉ hiển thị label text
+    // Hide SVG icon, only show label text
     svg {
       display: none;
     }

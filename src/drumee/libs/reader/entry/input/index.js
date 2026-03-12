@@ -100,7 +100,6 @@ class __drumee_entry_input extends LetcBox {
     this.commit = this.commit.bind(this);
     this.checkSanity = this.checkSanity.bind(this);
     this._runApi = this._runApi.bind(this);
-    this._scheduleRunApi = this._scheduleRunApi.bind(this);
     this._onClick = this._onClick.bind(this);
     this._onSelect = this._onSelect.bind(this);
     this.select = this.select.bind(this);
@@ -151,8 +150,6 @@ class __drumee_entry_input extends LetcBox {
    */
   initialize(opt) {
     super.initialize(opt);
-    this._searchDebounceTimer = null;
-    this._apiRequestId = 0;
     this._require = this.mget(_a.require);
     this._comply = __compliances[this._require] || {};
     const ph = this.mget(_a.placeholder) || LOCALE.FORM_ENTRY;
@@ -441,7 +438,7 @@ class __drumee_entry_input extends LetcBox {
         }
         if (this.checkSanity()) {
           if (this.mget(_a.api) != null) {
-            this._scheduleRunApi();
+            this._runApi();
           } else {
             this.getValue(true);
           }
@@ -451,29 +448,6 @@ class __drumee_entry_input extends LetcBox {
         }
         this.triggerHandlers(this._status(_e.interactive));
     }
-  }
-
-  /**
-   * Schedule a debounced API run for search-as-you-type. Cancels previous pending run.
-   * When delay is 0 or not set for api, uses default 350ms.
-   */
-  _scheduleRunApi() {
-    if (this._searchDebounceTimer != null) {
-      clearTimeout(this._searchDebounceTimer);
-      this._searchDebounceTimer = null;
-    }
-    let api = this.mget(_a.api);
-    const delay = (_.isObject(api) && (api.searchDelay != null || api.delay != null))
-      ? (api.searchDelay != null ? api.searchDelay : api.delay)
-      : 350;
-    if (delay <= 0) {
-      this._runApi();
-      return;
-    }
-    this._searchDebounceTimer = setTimeout(() => {
-      this._searchDebounceTimer = null;
-      this._runApi();
-    }, delay);
   }
 
   /**
@@ -519,10 +493,6 @@ class __drumee_entry_input extends LetcBox {
     }
     if (this._done) {
       return;
-    }
-    if (this._searchDebounceTimer != null) {
-      clearTimeout(this._searchDebounceTimer);
-      this._searchDebounceTimer = null;
     }
     if (this.mget(_a.api) != null) {
       return this._runApi();
@@ -590,18 +560,14 @@ class __drumee_entry_input extends LetcBox {
     if ((this.status === null) || (this.status === _a.error)) {
       return;
     }
-    if (this._searchDebounceTimer != null) {
-      clearTimeout(this._searchDebounceTimer);
-      this._searchDebounceTimer = null;
-    }
 
     const val = this.getValue(1);
 
-    let api = this.mget(_a.api);
-    const min = this.mget('minLength') != null ? ~~this.mget('minLength') : (_.isObject(api) && api.minLength != null ? ~~api.minLength : null);
-    if ((min != null) && (val.length < min)) {
+    const min = this.mget('minLength');
+    if ((min != null) && (val.length < ~~min)) {
       return;
     }
+    let api = this.mget(_a.api);
     if (_.isString(api)) {
       request = {
         service: api,
@@ -623,14 +589,7 @@ class __drumee_entry_input extends LetcBox {
     }
     let service = request.service;
     delete request.service;
-
-    this._apiRequestId = (this._apiRequestId || 0) + 1;
-    const reqId = this._apiRequestId;
-
     this.postService(service, request).then((data) => {
-      if (reqId !== this._apiRequestId) {
-        return;
-      }
       const results = Array.isArray(data) ? data : (data && data.data) || [];
       this.status = _a.results;
       this.results = results;

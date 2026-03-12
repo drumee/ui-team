@@ -1024,7 +1024,6 @@ class __window_manager extends push {
           "search",
           "Backspace",
           _e.update,
-          _e.Enter,
         ];
         if (ignoredServices.includes(service)) {
           return;

@@ -342,9 +342,7 @@ export function recipients (ui) {
     className: "inline",
     api: {
       service: SERVICE.drumate.my_contacts,
-      hub_id: ui.mget(_a.hub_id) || Visitor.id,
-      searchDelay: 350,
-      minLength: 2
+      hub_id: Visitor.id
     },
     contactbook: ui.mget('contactbook'),
     preselect: ui.mget(_a.preselect),

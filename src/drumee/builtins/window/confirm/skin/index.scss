@@ -87,7 +87,7 @@
       width: 100%;
     }
 
-    // Đảm bảo note-content và các phần tử bên trong căn giữa
+    // Ensure note-content and child elements are centered
     .note-content,
     .inner,
     p {
@@ -156,7 +156,7 @@
       $color: var(--neutral-900)
     );
 
-    // Đảm bảo các phần tử con cũng căn giữa
+    // Ensure child elements are centered
     .note-content,
     .inner,
     p {
@@ -201,7 +201,7 @@
       $color: var(--neutral-700)
     );
 
-    // Đảm bảo các phần tử con cũng căn giữa
+    // Ensure child elements are centered
     .note-content,
     .inner,
     p {
@@ -279,7 +279,7 @@
     }
 
     &.forbiden {
-      height: 32px; //35px;
+      height: 32px;
       margin-left: 0;
       width: 90px;
     }

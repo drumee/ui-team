@@ -193,7 +193,6 @@ class settings_hub extends DrumeeMFS {
           topbar: 1,
           topLabel: LOCALE.DOCUMENTS_ACCESS,
           uiHandler: [this],
-          hub_id: this.mget(_a.hub_id),
           members: 0,
           media: this.mget(_a.media)
         })

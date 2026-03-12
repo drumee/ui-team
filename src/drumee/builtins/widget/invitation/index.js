@@ -25,6 +25,27 @@ class __invitation_settings extends __recipient {
     this.onUiEvent = this.onUiEvent.bind(this);
   }
 
+  /**
+   * Toggle loading state while submitting invite:
+   * - disable Invite button (sys_pn: add-member-button)
+   * - show/hide settings overlay (sys_pn: settings)
+   */
+  _setInviteLoading(state) {
+    const s = state ? 1 : 0;
+    // Enable/disable Invite button
+    if (this.addButton && this.addButton.el) {
+      this.addButton.el.dataset.state = state ? 0 : 1;
+    }
+    if (this.__addMemberButton && this.__addMemberButton.el) {
+      this.__addMemberButton.el.dataset.state = state ? 0 : 1;
+    }
+    // Show/hide overlay while loading
+    if (this.settingsWrapper && this.settingsWrapper.el) {
+      this.settingsWrapper.el.dataset.loading = s;
+      this.settingsWrapper.el.style.display = state ? 'block' : 'none';
+    }
+  }
+
 
   /**
    * 
@@ -498,6 +519,9 @@ class __invitation_settings extends __recipient {
     args.hub_id = args.hub_id || this.mget(_a.hub_id);
     const hubId = args.hub_id;
 
+    // Enable loading state: disable button + show overlay
+    this._setInviteLoading(1);
+
     const emailsToInvite = (args.users || []).filter(
       (u) => typeof u === "string" && u.indexOf("@") !== -1
     );
@@ -508,15 +532,21 @@ class __invitation_settings extends __recipient {
       })
     );
 
-    Promise.allSettled(invitePromises).then(() => {
-      this.postService(SERVICE.hub.add_contributors, args, {}).then((usersList) => {
+    Promise.allSettled(invitePromises)
+      .then(() => {
+        return this.postService(SERVICE.hub.add_contributors, args, {});
+      })
+      .then((usersList) => {
         this.mset({ sharees: usersList });
         if (this.__existingMembers) this.__existingMembers.feed(usersList);
         this.recipientsRoll.clear();
         this.triggerHandlers({ service: "contributors-added" });
         this.debug("AAAA:498", usersList);
+      })
+      .finally(() => {
+        // Disable loading state after all requests finish (success or error)
+        this._setInviteLoading(0);
       });
-    });
   }
 
   /**
