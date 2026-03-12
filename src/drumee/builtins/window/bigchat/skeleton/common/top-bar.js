@@ -2,6 +2,7 @@ const __skl_bigchat_common_topBar = function (ui) {
   const mode = ui._view;
   const figFamily = `${ui.fig.family}-topbar`;
   const figGroup = `${ui.fig.group}-topbar`;
+  const cnWidowMenuBtn = "window-menu";
 
   const a = Skeletons.Box.X({
     className: `${figFamily}__container ${figGroup}__container`,
@@ -55,18 +56,16 @@ const __skl_bigchat_common_topBar = function (ui) {
       }),
 
       Skeletons.Box.X({
-        className: `${figFamily}__buttons-wrapper`,
         kids: [
           !Visitor.isMimicActiveUser()
             ? Skeletons.Box.X({
-                className: `${figFamily}__menu ${figGroup}__menu topbar-menu`,
                 kids: [
                   Skeletons.Box.X({
-                    className: `${figFamily}__trigger-wrapper`,
+                    className: `${cnWidowMenuBtn}__button-wrapper`,
                     kids: [
                       Skeletons.Button.Svg({
                         ico: "drumee-contact_add",
-                        className: `${figFamily}__icon ${figFamily}__trigger dropdown-toggle-icon contact_add`,
+                        className: `${cnWidowMenuBtn}__icon`,
                         service: "open-contact",
                         type: _a.invite,
                         uiHandler: ui,

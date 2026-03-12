@@ -7,13 +7,14 @@
 const __skl_addressbook_common_menu = function (_ui_) {
   let importAddressBook, inviteContact;
   const menuFig = `${_ui_.fig.family}-menu`;
+  const cnWidowMenuBtn = "window-menu";
 
   const menuTrigger = Skeletons.Box.X({
-    className: `${menuFig}__trigger-wrapper`,
+    className: `${cnWidowMenuBtn}__button-wrapper`,
     kids: [
       Skeletons.Button.Svg({
         ico: "drumee-contact_add",
-        className: `${menuFig}__icon ${menuFig}__trigger dropdown-toggle-icon contact_add`,
+        className: `${cnWidowMenuBtn}__icon`,
       }),
       Skeletons.Note({
         sys_pn: "ref-window-name",

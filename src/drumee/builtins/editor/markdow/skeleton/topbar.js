@@ -1,5 +1,3 @@
-
-
 const __skl_window_note_topbar = function (ui, icon) {
   let filename = ui.mget(_a.filename);
   const pfx = ui.fig.group;
@@ -7,16 +5,17 @@ const __skl_window_note_topbar = function (ui, icon) {
   let state = ui.mget("pin") || 0;
   let visibility = 0;
   if (ui.mget(_a.nid)) visibility = 1;
-  let save = ""
+  let save = "";
+  const cnEditor = `editor`;
 
   if (ui.canUpload()) {
     save = Skeletons.Button.Svg({
       ico: "floppy",
       service: _e.save,
-      className: `${pfx}-topbar__icon save`,
+      className: `${cnEditor}-topbar__icon save`,
       haptic: 1000,
-      tooltips: LOCALE.SAVE_CHANGES
-    })
+      tooltips: LOCALE.SAVE_CHANGES,
+    });
   }
   return Skeletons.Box.G({
     className: `${pfx}-${figname}__container ${ui.mget(_a.area)}`,
@@ -33,14 +32,14 @@ const __skl_window_note_topbar = function (ui, icon) {
             service: "pin-on",
             state,
             sys_pn: "pin",
-            className: `${pfx}-topbar__icon pin`,
+            className: `${cnEditor}-topbar__icon pin`,
             tooltips: LOCALE.PIN_ON_DESK,
             haptic: 1000,
             dataset: {
-              visibility
-            }
+              visibility,
+            },
           }),
-        ]
+        ],
       }),
       Skeletons.Box.X({
         className: `${pfx}-${figname}__title`,
@@ -52,12 +51,12 @@ const __skl_window_note_topbar = function (ui, icon) {
             partHandler: ui,
             className: _a.name,
             content: filename,
-            active: 0
-          })
-        ]
+            active: 0,
+          }),
+        ],
       }),
-      require('window/skeleton/topbar/control')(ui, 'c')
-    ]
+      require("window/skeleton/topbar/control")(ui, "c"),
+    ],
   });
 };
 module.exports = __skl_window_note_topbar;

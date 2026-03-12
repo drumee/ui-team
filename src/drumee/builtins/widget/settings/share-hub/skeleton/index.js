@@ -1,9 +1,18 @@
-const { topbar, validity } = require("../../hub/skeleton/toolkit")
-const { read, write, modify } = _K.permission
+const { topbar, validity } = require("../../hub/skeleton/toolkit");
+const { read, write, modify } = _K.permission;
 let items = [
-  { permission: write, label: LOCALE.UPLOAD_AND_DOWNLOAD || "Upload and Download", name: _a.write },
-  { permission: read, label: LOCALE.DOWNLOAD_ONLY || "Download only", name: _a.read, lock: 1 },
-]
+  {
+    permission: write,
+    label: LOCALE.UPLOAD_AND_DOWNLOAD || "Upload and Download",
+    name: _a.write,
+  },
+  {
+    permission: read,
+    label: LOCALE.DOWNLOAD_ONLY || "Download only",
+    name: _a.read,
+    lock: 1,
+  },
+];
 function content(ui) {
   const fig = `${ui.fig.family}`;
 
@@ -11,11 +20,11 @@ function content(ui) {
     debug: __filename,
     className: `${fig}__content`,
     kids: [
-      require('./who-can-access').default(ui),
+      require("./who-can-access").default(ui),
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
-      require('./password').default(ui, ui.data(), _a.edit),
+      require("./password").default(ui, ui.data(), _a.edit),
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
@@ -30,7 +39,7 @@ function content(ui) {
         itemsFlow: _a.x,
         ...ui.data(),
         sys_pn: "permission-form",
-        uiHandler: [ui]
+        uiHandler: [ui],
       },
       Skeletons.Box.X({
         className: `${fig}__divider`,
@@ -43,25 +52,22 @@ function content(ui) {
 function footer(ui) {
   const fig = `${ui.fig.family}`;
 
+  const buttons = Skeletons.Box.X({
+    kids: [
+      Preset.ConfirmButtons(ui, {
+        cancelLabel: LOCALE.CANCEL || "Cancel",
+        cancelService: _e.close,
+        confirmLabel: LOCALE.APPLY_ALL_SAVE || "Apply all & Save",
+        confirmService: "apply-all-save",
+        confirmBtnAction: "reset",
+      }),
+    ],
+  });
+
   return Skeletons.Box.X({
     debug: __filename,
     className: `${fig}__footer`,
-    kids: [
-      Skeletons.Button.Label({
-        className: `${fig}__cancel-btn`,
-        label: LOCALE.CANCEL || "Cancel",
-        icon: null,
-        service: _e.close,
-        uiHandler: [ui],
-      }),
-      Skeletons.Button.Label({
-        className: `${fig}__save-btn`,
-        label: LOCALE.APPLY_ALL_SAVE || "Apply all & Save",
-        icon: null,
-        service: "apply-all-save",
-        uiHandler: [ui],
-      }),
-    ],
+    kids: [buttons],
   });
 }
 
@@ -69,10 +75,6 @@ export default function (ui) {
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.family}__wrapper`,
-    kids: [
-      topbar(ui),
-      content(ui),
-      footer(ui)],
+    kids: [topbar(ui), content(ui), footer(ui)],
   });
 }
-

@@ -110,11 +110,12 @@
         width: 35px;
         height: 35px;
         padding: var(--spacer-2);
-        color: var(--neutral-300);
-        margin: auto 15px auto 5px;
 
-        &:hover {
-          color: var(--primary-500);
+        svg {
+          color: var(--neutral-900);
+          &:hover {
+            color: var(--primary-500);
+          }
         }
       }
     }

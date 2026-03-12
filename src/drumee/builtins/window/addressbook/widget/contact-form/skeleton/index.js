@@ -1,4 +1,3 @@
-
 const __skl_plus_icon = function (_ui_, name) {
   const plusIcon = Skeletons.Button.Svg({
     ico: "desktop_plus",
@@ -311,16 +310,20 @@ const __skl_addressbook_widget_contact_form = function (_ui_) {
     buttonLabel = LOCALE.MODIFY;
   }
 
-  const buttons = Preset.ConfirmButtons(
-    _ui_,
-    {
-      confirmLabel: buttonLabel,
-      cancelService: "cancel-edit",
-    },
-    {
-      sys_pn: "submit-button",
-    }
-  );
+  const buttons = Skeletons.Box.X({
+    kids: [
+      reset.ConfirmButtons(
+        _ui_,
+        {
+          confirmLabel: buttonLabel,
+          cancelService: "cancel-edit",
+        },
+        {
+          sys_pn: "submit-button",
+        },
+      ),
+    ],
+  });
 
   const a = Skeletons.Box.Y({
     className: `${formFig}__main`,

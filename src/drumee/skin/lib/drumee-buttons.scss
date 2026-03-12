@@ -1,18 +1,25 @@
-.drumee-buttons{
-  &--cancel{
-    background-color:var(--primary)
+.drumee-buttons {
+  &--cancel {
+    background-color: var(--primary);
   }
-  &--commit{
-    background-color:var(--primary)
+  &--commit {
+    background-color: var(--primary);
   }
   &--alert,
-  &--caution{
-    background-color:var(--primary)
+  &--caution {
+    background-color: var(--primary);
   }
-  &--info{
-    background-color:var(--primary)
+  &--info {
+    background-color: var(--primary);
   }
-  &--error{
-    background-color:var(--primary)
+  &--error {
+    background-color: var(--primary);
+  }
+  &--primary {
+    background-color: var(--primary-500);
+    padding: var(--spacer-4) var(--spacer-6);
+    border-radius: var(--corner-radius-max);
+    color: var(--white);
+    cursor: pointer;
   }
 }

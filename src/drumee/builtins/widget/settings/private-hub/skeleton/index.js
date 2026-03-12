@@ -1,3 +1,5 @@
+const { button } = require("../../../../../builtins/skeleton/toolkit/buttons");
+
 const topbar = (ui) => {
   const figFamily = `${ui.fig.family}-topbar`;
 
@@ -36,10 +38,13 @@ function members(ui) {
     debug: __filename,
     itemsOpt: {
       kind: "settings_member",
-      uiHandler: [ui]
+      uiHandler: [ui],
     },
     spinner: true,
-    placeholder: Skeletons.Note("Please, add contact", "placeholder--no-contact"),
+    placeholder: Skeletons.Note(
+      "Please, add contact",
+      "placeholder--no-contact",
+    ),
     api: {
       service: SERVICE.hub.get_members_by_type,
       hub_id: ui.mget(_a.hub_id),
@@ -69,12 +74,17 @@ function content(ui) {
     admin = Skeletons.Box.X({
       className: `${fig}__buttons`,
       kids: [
-        Skeletons.Button.Label({
-          className: `${fig}__save-btn`,
+        // Skeletons.Button.Label({
+        //   className: `${fig}__save-btn`,
+        //   label: "Add members",
+        //   icon: "drumee-add-contact",
+        //   service: "add-members",
+        //   uiHandler: [ui],
+        // }),
+        button(ui, {
           label: "Add members",
-          icon: "plus",
+          className: `drumee-buttons--primary`,
           service: "add-members",
-          uiHandler: [ui],
         }),
         // Skeletons.Button.Label({
         //   className: `${fig}__save-btn`,
@@ -83,14 +93,14 @@ function content(ui) {
         //   service: "invite-contacts",
         //   uiHandler: [ui],
         // })
-      ]
+      ],
     });
   }
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${fig}__content`,
     kids: [
-      require('./who-can-access').default(ui),
+      require("./who-can-access").default(ui),
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
@@ -99,7 +109,7 @@ function content(ui) {
       Skeletons.Box.X({
         className: `${fig}__divider`,
       }),
-      admin
+      admin,
     ],
   });
 }
@@ -140,4 +150,3 @@ export default function (ui) {
     ],
   });
 }
-

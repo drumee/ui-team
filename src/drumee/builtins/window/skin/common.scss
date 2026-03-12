@@ -1,45 +1,91 @@
 .gradient-start {
   &-inner-folder {
-    stop-color: #CCB2FF;
+    stop-color: #ccb2ff;
   }
 
   &-personal {
-    stop-color: #DCB2FF;
+    stop-color: #dcb2ff;
   }
 
   &-private {
-    stop-color: #FF90A7;
+    stop-color: #ff90a7;
   }
 
   &-share,
   &-dmz {
-    stop-color: #FFA5E6;
+    stop-color: #ffa5e6;
   }
 
   &-public {
-    stop-color: #89DCFF;
+    stop-color: #89dcff;
   }
 }
 
 .gradient-end {
   &-inner-folder {
-    stop-color: #9251FB;
+    stop-color: #9251fb;
   }
 
   &-personal {
-    stop-color: #B251FB;
+    stop-color: #b251fb;
   }
 
   &-private {
-    stop-color: #FF5779;
+    stop-color: #ff5779;
   }
 
   &-share,
   &-dmz {
-    stop-color: #FF65D5;
+    stop-color: #ff65d5;
   }
 
   &-public {
-    stop-color: #2AAAFF;
+    stop-color: #2aaaff;
+  }
+}
+
+.window-button—upload {
+  &__buttons-wrapper {
+    gap: var(--spacer-4);
+  }
+
+  &__upload-button {
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacer-4) var(--spacer-8);
+    background: var(--neutral-900);
+    color: var(--white);
+    border-radius: var(--corner-radius-max);
+  }
+
+  &__settings {
+    justify-content: center;
+    align-items: center;
+    border-radius: 100%;
+    background: var(--neutral-200);
+    cursor: pointer;
+    width: 46px;
+    height: 46px;
+  }
+}
+
+.window-menu {
+  &__button-wrapper {
+    align-items: center;
+    gap: var(--spacer-2);
+    color: white;
+    background-color: var(--neutral-950);
+    padding: var(--spacer-4) var(--spacer-6);
+    border-radius: var(--corner-radius-max);
+    cursor: pointer;
+  }
+
+  &__icon {
+    color: var(--default-icon-reverse);
+    cursor: pointer;
+    height: 24px;
+    padding: 2.5px;
+    width: 24px;
   }
 }
