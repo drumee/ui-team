@@ -64,7 +64,11 @@ module.exports = function (ui) {
   }
 
   if (ui.canUpload() && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
-    edit = item(ui, _a.edit, "desktop_edit", LOCALE.EDIT)
+    if (ui.mget(_a.mode) == _a.edit) {
+      edit = item(ui, 'preview', "desktop_preview", LOCALE.PREVIEW)
+    } else {
+      edit = item(ui, _a.edit, "desktop_edit", LOCALE.EDIT)
+    }
   } else {
     edit = null;
   }
@@ -85,22 +89,20 @@ module.exports = function (ui) {
     ],
   });
 
-  const menu = Skeletons.Box.X({
+  return Skeletons.Box.X({
     debug: __filename,
     className: `${menuFig}__dropdown ${ui.fig.group}__dropdown`,
     kids: [
       {
         kind: KIND.menu.topic,
+        sys_pn: "document-menu",
         className: `${menuFig}__wrapper ${ui.fig.group}__wrapper`,
         flow: _a.y,
         opening: _e.click,
-        sys_pn: "document-menu",
         persistence: _a.none,
         trigger: menuTrigger,
         items: menuItems,
       },
     ],
   });
-
-  return menu;
 };
