@@ -25,6 +25,27 @@ class __invitation_settings extends __recipient {
     this.onUiEvent = this.onUiEvent.bind(this);
   }
 
+  /**
+   * Toggle loading state while submitting invite:
+   * - disable Invite button (sys_pn: add-member-button)
+   * - show/hide settings overlay (sys_pn: settings)
+   */
+  _setInviteLoading(state) {
+    const s = state ? 1 : 0;
+    // Enable/disable Invite button
+    if (this.addButton && this.addButton.el) {
+      this.addButton.el.dataset.state = state ? 0 : 1;
+    }
+    if (this.__addMemberButton && this.__addMemberButton.el) {
+      this.__addMemberButton.el.dataset.state = state ? 0 : 1;
+    }
+    // Show/hide overlay while loading
+    if (this.settingsWrapper && this.settingsWrapper.el) {
+      this.settingsWrapper.el.dataset.loading = s;
+      this.settingsWrapper.el.style.display = state ? 'block' : 'none';
+    }
+  }
+
 
   /**
    * 
@@ -277,17 +298,22 @@ class __invitation_settings extends __recipient {
     const users = [];
     this.recipientsRoll.collection.each(c => {
       if (!c.get(_a.idle)) {
-        emails.push(c.get(_a.email));
+        const email = c.get(_a.email);
         const id = c.get(_a.id);
+        emails.push(email);
         if (id != null) {
-          return users.push(id);
+          users.push(id);
+        } else if (email != null && (typeof email === "string" ? email.indexOf("@") !== -1 : (email && typeof email.isEmail === "function" && email.isEmail()))) {
+          users.push(typeof email === "string" ? email : (email.email || String(email)));
         }
       }
     });
     const input = this.searchBox.getData() || {};
     if ((input.email != null) && !(Array.from(emails).includes(input.email))) {
-      if (input.email.isEmail()) {
-        emails.push(input.email);
+      const emailVal = input.email;
+      if (typeof emailVal === "string" && emailVal.indexOf("@") !== -1 || (emailVal && typeof emailVal.isEmail === "function" && emailVal.isEmail())) {
+        emails.push(emailVal);
+        users.push(typeof emailVal === "string" ? emailVal : (emailVal.email || String(emailVal)));
       }
     }
     this._data.email = emails;
@@ -485,26 +511,30 @@ class __invitation_settings extends __recipient {
   }
 
   /**
-   * 
-   * @param {*} data 
-   * @returns 
+   * Gọi hub.add_contributors để invite vào hub.
+   * add_contributors kiểm tra email, xử lý pending_invitation và gửi email khi cần.
    */
   addContributors() {
-    // let 
-    let users = []
-    for (let item of this.__rollRecipients.children.toArray()) {
-      users.push(item.mget(_a.id))
-    }
-    let args = { ...this.defaultPermission, ...this.getData() }
-    args.hub_id = this.mget(_a.hub_id)
+    const args = { ...this.defaultPermission, ...this.getData() };
+    args.hub_id = args.hub_id || this.mget(_a.hub_id);
 
-    this.postService(SERVICE.hub.add_contributors, args, {}).then(usersList => {
-      this.mset({ sharees: usersList })
-      if (this.__existingMembers) this.__existingMembers.feed(usersList)
-      this.recipientsRoll.clear()
-      this.triggerHandlers({ service: "contributors-added" })
-      this.debug("AAAA:498", usersList)
-    })
+    // Enable loading state: disable button + show overlay
+    this._setInviteLoading(1);
+
+    this.postService(SERVICE.hub.add_contributors, args, {})
+      .then((usersList) => {
+        this.mset({ sharees: usersList });
+        if (this.__existingMembers) this.__existingMembers.feed(usersList);
+        this.recipientsRoll.clear();
+        this.triggerHandlers({ service: "contributors-added" });
+        this.debug("AAAA:498", usersList);
+      })
+      .catch((err) => {
+        this.warn("[invitation] hub.add_contributors failed", err);
+      })
+      .finally(() => {
+        this._setInviteLoading(0);
+      });
   }
 
   /**
@@ -545,7 +575,7 @@ class __invitation_settings extends __recipient {
    */
   _changePermission(cmd, args) {
     if (!this.pendingMember) {
-      return
+      return``
     }
     this.ensurePart("settings").then((p) => {
       let { name, state } = args
@@ -648,6 +678,15 @@ class __invitation_settings extends __recipient {
 
       case "add-item":
         return this._addInvitee(cmd);
+
+      case "add-guest":
+        const email = args.email || cmd.email;
+        if (email && !this._emailExists(email)) {
+          const data = { email: typeof email === "string" ? email.trim() : email, ...this.recipientItem };
+          this.recipientsRoll.append(data);
+          this._actionState(1);
+        }
+        return;
 
       case "add-selection":
         return this._addSelection(cmd);
