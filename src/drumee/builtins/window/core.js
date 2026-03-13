@@ -793,6 +793,26 @@ class __window_core extends __utils {
 
   /**
    * 
+   */
+
+  newDocument(cmd) {
+    let aw = Wm.getActiveWindow()
+    let { nid, hub_id } = aw.getCurrentApi()
+    this.postService(SERVICE.onlyoffice.new_doc, { nid, hub_id, name: cmd.mget(_a.name) }).then((data) => {
+      let timer = setInterval(() => {
+        for (let media of aw.getItemsByAttr(_a.nid, data.nid)) {
+          if (/^media/.test(media.mget(_a.kind))) {
+            clearInterval(timer);
+            media.wait(1)
+            this.openContent(media, { service:"open-node", mode: _a.edit })
+          }
+        }
+      }, 500)
+    })
+  }
+
+  /**
+   * 
    * @param {*} cmd 
    * @param {*} args 
    * @returns 

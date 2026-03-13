@@ -297,11 +297,12 @@ class __desk_dock extends LetcBox {
    */
   onUiEvent(cmd, args) {
     const service = cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
+    let aw;
     switch (service) {
       case 'add-website':
       case 'add-team':
       case 'add-sharebox':
-        const aw = Wm.getActiveWindow();
+        aw = Wm.getActiveWindow();
         if (aw.isHub) {
           aw.warning(LOCALE.NOT_POSSIBLE_NESTING_HUBS);
           return;
@@ -341,6 +342,9 @@ class __desk_dock extends LetcBox {
           uiHandler: [this]
         });
         return e;
+
+        case 'new-document':
+        return Wm.getActiveWindow().newDocument(cmd);
 
       case 'address-book':
         const route = cmd.mget(_a.route);
