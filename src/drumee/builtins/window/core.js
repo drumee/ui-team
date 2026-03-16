@@ -691,24 +691,20 @@ class __window_core extends __utils {
    *
    * @param {*} m
    */
-  updateTopbar(m, previous = 0) {
+  updateTopbar(m) {
     let data = [];
-    if (this.isTrash) return;
+    if (this.isTrash || this.isSearch) return;
     this.copyPropertiesFrom(m);
     if (m.isMfs || m.isFolder) {
       data = this.buildHistory(m);
     } else {
-      if (previous) {
-        this._path.pop();
-        data = this._path;
-      } else {
-        data = [];
-        let index = 0;
-        for (let p of this._path) {
-          if (index <= m.getIndex()) {
-            data.push(p)
-          }
-          index++;
+      let list = _.keys(this._history).sort(function name(a, b) {
+        return a.length - b.lenght
+      })
+      for (let k of list) {
+        data.push(this._history[k])
+        if (k == m.mget(_a.filepath)) {
+          break;
         }
       }
     }
@@ -743,7 +739,7 @@ class __window_core extends __utils {
    * @param {*} media 
    * @returns 
    */
-  openContent(media, previous) {
+  openContent(media, args) {
     if (this.isTrash) {
       this.mset(_a.cancel, LOCALE.OK);
       media.wait(0);
@@ -752,16 +748,16 @@ class __window_core extends __utils {
     }
     const fType = media.mget(_a.filetype);
     if (this.mget(_a.kind) == "window_search" || fType != _a.folder) {
-      Wm.openContent(media);
+      Wm.openContent(media, args);
       return;
     }
-    this.updateTopbar(media, previous);
+    this.updateTopbar(media, args);
     if (this.getViewMode() === _a.row) {
       this.__content.feed(require("./skeleton/content/row")(this));
     } else {
       this.__content.feed(require("./skeleton/content/grid")(this));
     }
-    if (super.openContent) super.openContent(media);
+    if (super.openContent) super.openContent(media, args);
   }
 
   /**
@@ -844,7 +840,7 @@ class __window_core extends __utils {
         return this.openCreator(cmd);
 
       case "open-node":
-        return this.openContent(cmd);
+        return this.openContent(cmd, args);
 
       case "change-view":
         return this.change_view(cmd);

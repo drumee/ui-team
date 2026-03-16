@@ -55,12 +55,10 @@
     display: grid;
     grid-gap: 1rem;
     grid-template-columns: repeat(auto-fill, 86px);
-    // grid-template-rows: repeat(auto-fill, 130px);
     justify-content: center;
     justify-items: center;
     min-height: 100px;
-    padding-top: 16px;
-    padding-bottom: 16px;
+    padding: var(--spacer-5) 0;
     grid-auto-rows: 100px;
 
     &[data-device="mobile"] {
@@ -119,7 +117,8 @@
   }
 
   &__background {
-    background: radial-gradient(
+    background:
+      radial-gradient(
         109.24% 109.24% at 21.67% 0%,
         rgba(91, 115, 210, 0.4) 0%,
         #5b73d2 100%

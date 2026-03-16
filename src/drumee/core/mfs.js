@@ -312,7 +312,7 @@ class __core_mfs extends LetcBox {
         this.triggerMethod(_e.eod, blob);
         a.remove();
       };
-      _.delay(f, 300);
+      setTimeout(f, 300);
     };
     a.addEventListener(_e.click, clickHandler, false);
     a.click();
@@ -436,8 +436,8 @@ class __core_mfs extends LetcBox {
             o.progress.update({ loaded, total });
           } else {
             try {
-              self.triggerMethod("fetch:progress", { loaded, total }) ||
-                self.trigger(_e.progress, { loaded, total });
+              self.triggerMethod("fetch:progress", { loaded, total });
+              self.trigger(_e.progress, { loaded, total });
             } catch (e) { }
           }
           return reader.read().then(read_data);

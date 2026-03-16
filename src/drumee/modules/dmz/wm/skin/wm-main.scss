@@ -12,6 +12,10 @@
     left: 0;
     top: 0;
     width: 0;
+    &[data-device="mobile"] {
+      width: 100%;
+      height: 100%;
+    }
   }
 
   &_ui {
@@ -26,7 +30,7 @@
     background-color: transparent;
     box-shadow: none;
   }
-  
+
   &__main {
     width: 100%;
     height: 100%;
@@ -44,9 +48,13 @@
         height: 100%;
         width: 100%;
         max-height: calc(100vh - 190px);
-        &[data-type="evaluation"]::after{
+        &[data-type="evaluation"]::after {
           @include drumee.license-trial();
-          @include drumee.typo($size:36px,$line:42px,$color: var(--default-text-title));
+          @include drumee.typo(
+            $size: 36px,
+            $line: 42px,
+            $color: var(--default-text-title)
+          );
           transform: none;
           bottom: 0;
           width: 100%;
@@ -80,8 +88,12 @@
 
     & .media-grid__ui {
       & .filename {
-        @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));
-        border-radius:var(--border-radius-bottom);
+        @include drumee.typo(
+          $line: 14px,
+          $size: 11px,
+          $color: var(--default-text-color)
+        );
+        border-radius: var(--border-radius-bottom);
         cursor: pointer;
         left: 0px;
         max-height: 31px;
@@ -92,17 +104,22 @@
         text-overflow: ellipsis;
         width: 100%;
 
-        &.hub, &.folder {
+        &.hub,
+        &.folder {
           color: var(--default-text-reverse);
         }
 
         &.image,
         &.video {
-          background :linear-gradient(180deg,hsla(0,0%,100%,.2),hsla(0,0%,100%,0.9));
+          background: linear-gradient(
+            180deg,
+            hsla(0, 0%, 100%, 0.2),
+            hsla(0, 0%, 100%, 0.9)
+          );
         }
       }
     }
-}
+  }
 
   &__wrapper-modal {
     top: 0;
@@ -113,7 +130,9 @@
     &[data-state="open"] {
       width: 100%;
       height: 100%;
-      background: var(--transparency-container-overlay);//$transparency-container-overlay; //rgba(0,0,0, .3);
+      background: var(
+        --transparency-container-overlay
+      ); //$transparency-container-overlay; //rgba(0,0,0, .3);
       right: 0;
       bottom: 0;
     }
@@ -130,5 +149,4 @@
       }
     }
   }
-
 }

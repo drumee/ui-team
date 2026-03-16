@@ -16,6 +16,14 @@
       left: 50% !important;
       transform: translateX(-50%) translateY(15%);
     }
+
+    &[data-mode="edit"] {
+      width: 100%;
+      height: calc(100% - 90px);
+      max-width: 1024px;
+      left: 0;
+      top: 0;
+    }
   }
 
   &__main {
@@ -23,6 +31,12 @@
     min-height: 300px;
     min-width: 300px;
     width: 100%;
+  }
+
+  &__header {
+    &.main {
+      justify-content: center;
+    }
   }
 
   &__progress {
@@ -51,6 +65,7 @@
       position: absolute;
       height: 5px;
       width: 0;
+      transition: width 0.5s;
       background-color: var(--primary-500);
       z-index: 1;
     }
@@ -204,6 +219,109 @@
           background-color: var(--primary-600);
           border-color: var(--btn-commit-border-hover);
         }
+      }
+    }
+  }
+
+  &-menu {
+    &__trigger-wrapper {
+      align-items: center;
+      gap: var(--spacer-4);
+      color: white;
+      background-color: var(--neutral-950);
+      padding: var(--spacer-4) var(--spacer-6);
+      border-radius: var(--corner-radius-5);
+      cursor: pointer;
+    }
+
+    &__dropdown {
+      align-items: center;
+    }
+
+    &__separator {
+      background-color: var(--default-separator);
+      border-radius: 1px;
+      height: 1.5px;
+      margin: 5px 20px;
+      width: calc(100% - 40px);
+    }
+
+    &__items-wrapper,
+    &__items {
+      width: 100%;
+    }
+
+    &__items {
+      gap: var(--spacer-2);
+    }
+
+    &__wrapper {
+      & .menu-topic-items {
+        border-radius: var(--corner-radius-4);
+        box-shadow: var(--shadow-container);
+        background-color: var(--default-background);
+        width: 285px;
+        padding: var(--spacer-4);
+        border: 1px solid var(--neutral-300);
+
+        &__wrapper {
+          left: -5px;
+          padding: var(--spacer-4);
+
+          &[data-device="mobile"] {
+            left: 50%;
+            transform: translateX(-50%);
+          }
+        }
+      }
+    }
+
+    &__icon {
+      height: 16px;
+      width: 16px;
+
+      &.dropdown-toggle-icon {
+        color: var(--default-icon-reverse);
+        cursor: pointer;
+        height: 28px;
+        padding: 2.5px 2px 2.5px 3px;
+        width: 28px;
+      }
+
+      & svg {
+        fill: var(--primary-400);
+      }
+    }
+
+    &__item {
+      cursor: pointer;
+      padding: var(--spacer-4) var(--spacer-6);
+      align-items: center;
+      border-radius: var(--corner-radius-3);
+      gap: var(--spacer-5);
+
+      &:hover {
+        background-color: var(--primary-500);
+        color: var(--white);
+
+        & .player-document-menu__name {
+          color: var(--white);
+        }
+
+        & svg {
+          fill: var(--white);
+        }
+      }
+    }
+
+    &__name {
+      @include drumee.typo($size: 14px,
+        $weight: 300,
+        $line: 16px,
+        $color: var(--default-text-color));
+
+      &:hover {
+        color: var(--primary-500);
       }
     }
   }

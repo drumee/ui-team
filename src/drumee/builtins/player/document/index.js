@@ -2,8 +2,9 @@
 const { filesize, fitBoxes } = require("core/utils")
 const { TweenMax, Expo } = gsap;
 const PlayerInteract = require('player/interact');
-const { loadPdfDocument, initializePdfium } = require('./pdfium-wrapper')
+const { loadPdfDocument, initializePdfium, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";
+const printJS = require('print-js')
 class __player_document extends PlayerInteract {
 
   /**
@@ -29,7 +30,8 @@ class __player_document extends PlayerInteract {
       this.media = opt.source || opt.trigger;
     }
     this.pollCount = 0;
-    initializePdfium() /** Lazy loading */
+    /** Lazy loading */
+    initializePdfium()
   }
 
 
@@ -93,6 +95,9 @@ class __player_document extends PlayerInteract {
   onDomRefresh() {
     Wm.on(WS_EVENT, this.onWsMessage)
     this.initSize();
+    if (this.mget(_a.mode) == _a.edit) {
+      return this.edit()
+    }
     this.reload(300);
   }
 
@@ -155,6 +160,7 @@ class __player_document extends PlayerInteract {
     if (this.loadedPages) return;
     if (!this.__progress) return;
     this.__progress.el.dataset.state = 1;
+    this.__progressBar.el.style.width = 0;
   }
 
   /**
@@ -264,7 +270,6 @@ class __player_document extends PlayerInteract {
     } else {
       this.confirmReload();
     }
-
   }
 
   /**
@@ -402,10 +407,29 @@ class __player_document extends PlayerInteract {
   /**
    * 
    */
+  edit() {
+    this.el.dataset.mode = _a.edit;
+    this.feed(require('./skeleton')(this, "Loading. Please wait"));
+    const { nid, hub_id } = this.actualNode()
+    this.ensurePart(_a.content).then(async (p) => {
+      let { protocol, user_domain, svc } = bootstrap()
+      let url = `${protocol}://${user_domain}${svc}onlyoffice.html?hub_id=${hub_id}&nid=${nid}`
+      await Kind.waitFor('iframe');
+      let opt = {
+        kind: 'iframe', url, onLoad: (e) => {
+          this.__progress.el.hide();
+        }
+      };
+      p.feed(opt)
+    })
+  }
+
+  /**
+   * 
+   */
   reload(wait = 0) {
     this.el.dataset.state = 1;
     this.el.style.opacity = 1;
-    this.debug("AAA:405 reloading", this)
     if (this.reloadTimer) return;
     /** Prevent mulpiple reload */
     this.reloadTimer = setTimeout(() => {
@@ -547,12 +571,40 @@ class __player_document extends PlayerInteract {
     let o = require("window/configs/default")();
     this.el.dataset.ready = 1;
     let maxWidth = 742;
+    let maxHeight = 900;
+    const max_height = window.innerHeight - o.offsetY - 2 * o.marginY;
+    const max_width = window.innerWidth - 2 * o.marginX;
+    if (this.mget(_a.mode) == _a.edit) {
+      maxWidth = max_width;
+      maxHeight = max_height;
+      if (maxWidth > 1024) maxWidth = 1024;
+      if (maxHeight > 2028) maxHeight = 2048;
+      this.size = this.max_size();
+      this.size.width = maxWidth;
+      this.size.height = maxHeight;
+      TweenMax.fromTo(this.$el, 1.5,
+        { scale: 0.15, opacity: 0 },
+        {
+          scale: 1,
+          opacity: 1,
+          ease: Expo.easeInOut,
+          top: this.offset.top,
+          left: this.size.left,
+          width: this.size.width,
+          height: this.size.height,
+        }
+      );
+      return
+    }
     this.size = this.max_size();
     this.size.width = this.size.width * .9;
     this.size.height = this.size.height * .9;
+
+
     if (this.size.width > maxWidth) {
       this.size.width = maxWidth;
     }
+    this.debug("AAA:564", this.size, maxWidth, maxHeight)
     this.$el.height(this.size.height);
 
     let s = fitBoxes(this.size, { width: window.innerWidth, height: window.innerHeight });
@@ -560,8 +612,6 @@ class __player_document extends PlayerInteract {
     let dy = o.marginY;
     let shiftY = this.mget('shiftY') || 0;
     let shiftX = this.mget('shiftX') || 0;
-    const max_height = window.innerHeight - o.offsetY - 2 * o.marginY;
-    const max_width = window.innerWidth - 2 * o.marginX;
     if (height > max_height) {
       s.width = s.width * max_height / height;
       height = max_height;
@@ -608,6 +658,7 @@ class __player_document extends PlayerInteract {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.model.get(_a.service);
+    let { url, filename, nid, hub_id } = this.actualNode()
     switch (service) {
       case _e.close:
         this.goodbye();
@@ -616,12 +667,52 @@ class __player_document extends PlayerInteract {
       case _a.link:
         break;
 
+      case _a.edit:
+        this.edit()
+        break;
+
       case "read-new-version":
         this.reload(200);
         break;
 
       case "skip-new-version":
         this.__overlay.clear();
+        break;
+
+      case 'download-pdf':
+        url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`;
+        let f = filename.split('.')
+        f.pop()
+        filename = f.join() + '.pdf'
+        this.debug("AAAA:678", url, filename)
+        this.fetchFile({ url, download: filename })
+        break;
+
+      case "print":
+        this.loadedPages = 0;
+        this.initProgess()
+        this.once(_e.eod, (blob) => {
+          this.debug("AAAA:680", blob, printJS)
+          const blobUrl = URL.createObjectURL(blob);
+          printJS({
+            printable: blobUrl,
+            type: 'pdf',
+            onError: (error) => {
+              console.error('Print failed:', error);
+              URL.revokeObjectURL(blobUrl);
+            },
+            onPrintDialogClose: () => {
+              this.__progress.setState(0)
+              URL.revokeObjectURL(blobUrl); // Clean up
+            }
+          });
+        })
+        url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`
+        this.fetchFile({ url })
+        break;
+
+      case _e.download:
+        this.fetchFile({ url, download: filename })
         break;
 
       default:

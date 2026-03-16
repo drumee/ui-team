@@ -64,7 +64,8 @@
     box-shadow: var(--shadow-main);
     height: 100%;
     width: 100%;
-
+    background-color: var(--default-bg);
+    
     &.player.document {
       background-color: var(--multimedia-player-doc-bg);
     }

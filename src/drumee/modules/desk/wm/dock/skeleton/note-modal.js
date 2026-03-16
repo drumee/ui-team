@@ -1,20 +1,4 @@
 const button = require("./button");
-
-/**
- *
- */
-function _folder_icon(ui, area) {
-  const pfx = `${ui.fig.family}__folder`;
-  return {
-    kind: "media_grid",
-    className: `${pfx}-item-icon`,
-    filetype: _a.hub,
-    role: "desk",
-    area,
-    mode: _a.vignette,
-  };
-}
-
 /**
  *
  * @param {*} ui
@@ -23,95 +7,51 @@ function _folder_icon(ui, area) {
 function menu_items(ui) {
   const pfx = `${ui.fig.family}__folder`;
 
+  const items = [
+    {
+      service: "add-document",
+      ico: "desktop_docfile",
+      label: LOCALE.DOCUMENT,
+    },
+    {
+      service: "add-presentation",
+      ico: "presentation",
+      label: LOCALE.PRESENTATION,
+    },
+    {
+      service: "add-spreadsheet",
+      ico: "account_websites",
+      label: LOCALE.SPREADSHEET,
+    },
+    {
+      service: "add-note",
+      ico: "dock-note",
+      label: LOCALE.NOTE,
+    },
+  ];
+
+  const renderItem = ({ service, ico, label }) =>
+    Skeletons.Box.G({
+      className: `${pfx}-item small`,
+      service,
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Button.Svg({
+          ico,
+          className: `${pfx}-item-small-icon`,
+        }),
+        Skeletons.Note({
+          className: `${pfx}-item-text`,
+          content: label,
+        }),
+      ],
+    });
+
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${pfx}-items`,
     flow: _a.vertical,
-    kids: [
-      Skeletons.Box.G({
-        className: `${pfx}-item `,
-        // service: 'add-sharebox',
-        // filename: LOCALE.DOCUMENT,
-        // area: _a.share,
-        kidsOpt: {
-          active: 0,
-        },
-        kids: [
-          // _folder_icon(ui, _a.share),
-          Skeletons.Button.Svg({
-            ico: "storage",
-            className: `${pfx}-item-icon`,
-          }),
-          Skeletons.Note({
-            className: `${pfx}-item-text`,
-            content: LOCALE.DOCUMENT,
-          }),
-        ],
-      }),
-      Skeletons.Box.G({
-        className: `${pfx}-item `,
-        // service: 'add-team',
-        // helperName: 'teamroom',
-        // area: _a.private,
-        // filename: LOCALE.PRESENTATION,
-        kidsOpt: {
-          active: 0,
-        },
-        kids: [
-          // _folder_icon(ui, _a.private),
-          Skeletons.Button.Svg({
-            ico: "storage",
-            className: `${pfx}-item-icon`,
-          }),
-          Skeletons.Note({
-            className: `${pfx}-item-text`,
-            content: LOCALE.PRESENTATION,
-          }),
-        ],
-      }),
-      Skeletons.Box.G({
-        className: `${pfx}-item `,
-        // service: "add-folder",
-        // helperName: 'folder',
-        // filename: LOCALE.SPREADSHEET,
-        // area: _a.personal,
-        kidsOpt: {
-          active: 0,
-        },
-        kids: [
-          // _folder_icon(ui, _a.personal),
-          Skeletons.Button.Svg({
-            ico: "storage",
-            className: `${pfx}-item-icon`,
-          }),
-          Skeletons.Note({
-            className: `${pfx}-item-text`,
-            content: LOCALE.SPREADSHEET,
-          }),
-        ],
-      }),
-      Skeletons.Box.G({
-        className: `${pfx}-item `,
-        service: "add-note",
-        // filename: LOCALE.NOTE,
-        // area: _a.personal,
-        // helperName: 'folder',
-        kidsOpt: {
-          active: 0,
-        },
-        kids: [
-          // _folder_icon(ui, _a.personal),
-          Skeletons.Button.Svg({
-            ico: "storage",
-            className: `${pfx}-item-icon`,
-          }),
-          Skeletons.Note({
-            className: `${pfx}-item-text`,
-            content: LOCALE.NOTE,
-          }),
-        ],
-      }),
-    ],
+    kids: items.map(renderItem),
   });
 }
 function folderMenu(ui) {

@@ -1,6 +1,6 @@
 
 function player_props(ui) {
-  const topbar = require("../../skeleton/topbar")(ui);
+  const topbar = require("./topbar")(ui);
   const menu = Skeletons.Box.X({
     debug: __filename,
     className: `${ui.fig.family}__header ${ui.fig.group}__header`,

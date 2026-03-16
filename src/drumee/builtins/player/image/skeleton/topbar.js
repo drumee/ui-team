@@ -1,4 +1,4 @@
-const __player_topbar = function (ui, size) {
+module.exports = function (ui, size) {
   size = size || ui.size;
   const name = Skeletons.Note({
     className: `${ui.fig.group}__title mr-11`,
@@ -39,8 +39,7 @@ const __player_topbar = function (ui, size) {
     actionIcons = Skeletons.Box.X({
       className: `${ui.fig.group}-topbar__icon-wrapper`,
       kids: [
-        // downloadIcon
-        require("./menu")(ui),
+        downloadIcon,
       ],
     });
   }
@@ -55,7 +54,7 @@ const __player_topbar = function (ui, size) {
     kids: [actionIcons],
   });
 
-  const a = Skeletons.Box.X({
+  return Skeletons.Box.X({
     className: `${ui.fig.group}__header container u-jc-sb`,
     debug: __filename,
     sys_pn: "topbar",
@@ -67,29 +66,10 @@ const __player_topbar = function (ui, size) {
         uiHandler: ui,
         kids: [
           name,
-          // Skeletons.Box.X({
-          //   className: `${ui.fig.group}-topbar__info`,
-          //   kids: [
-          //     Skeletons.Button.Svg({
-          //       ico: "account_info",
-          //       className: "icon info",
-          //       service: "info",
-          //       uiHandler: ui,
-          //     }),
-          //   ],
-          // }),
-          // Skeletons.Wrapper.X({
-          //   className: `${ui.fig.group}__wrapper-info`,
-          //   name: "info",
-          // }),
           dl,
         ],
       }),
-
-      require("./control")(ui),
+      require("../../skeleton/control")(ui),
     ],
   });
-
-  return a;
 };
-module.exports = __player_topbar;

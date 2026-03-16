@@ -522,10 +522,19 @@
   }
 
   &__folder-item {
-    display: grid;
     grid-template-columns: 48px 1fr;
     gap: var(--spacer-2);
     cursor: pointer;
+    padding: var(--spacer-3) var(--spacer-4);
+    border-radius: var(--corner-radius-3);
+
+    &:hover {
+      background-color: var(--neutral-200);
+    }
+
+    &.small {
+      grid-template-columns: 36px 1fr;
+    }
 
     &-icon {
       pointer-events: none;
@@ -548,6 +557,10 @@
     &-icon {
       width: 36px;
       height: 36px;
+    }
+    &-small-icon {
+      width: 24px;
+      height: 24px;
     }
   }
 

@@ -2000,5 +2000,11 @@
   "CUSTOMIZE_BACKGROUND": "Personnaliser le fond d'écran",
   "COLORS": "Couleurs",
   "YOU_HAVE_BEEN_KICK_OUT": "Vous avez été retiré de l'organisation {0}. Cependant, le contenu qui vous appartenait reste accessible avec les mêmes identifiants de compte.",
-  "WEEKS": "Semaine(s)"
+  "WEEKS": "Semaine(s)",
+  "INVALID_FILENAME": "Le nom ne doit pas contenir de barres obliques (/), ni seulement des points (.), ni commencer par un seul trait d'union (-).",
+  "DOWNLOAD_ORIG": "Télécharger le fichier original",
+  "DOWNLOAD_AS_PDF": "Télécharger la version PDF",
+  "PRINT": "Imprimer",
+  "PRESENTATION": "Présentation",
+  "READ_ONLY_MODE": "Mode lecture seule"
 }

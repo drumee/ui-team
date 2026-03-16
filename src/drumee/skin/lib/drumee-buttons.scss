@@ -17,6 +17,7 @@
  * 1. Add a new entry in $button-types
  * 2. Define bg and color
  */
+@use 'sass:map';
 
 @mixin drumee-button-base($bg, $color) {
   padding: var(--spacer-4) var(--spacer-6);
@@ -27,41 +28,26 @@
 }
 
 $button-types: (
-  cancel: (
-    bg: var(--neutral-300),
+  cancel: (bg: var(--neutral-300),
     color: var(--neutral-600),
   ),
-  commit: (
-    bg: var(--green-400),
-    color: var(--white)
-  ),
-  alert: (
-    bg: var(--yellow-400),
-    color: var(--white)
-  ),
-  caution: (
-    bg: var(--red-400),
-    color: var(--white)
-  ),
-  info: (
-    bg: var(--blue-400),
-    color: var(--white)
-  ),
-  error: (
-    bg: var(--red-400),
-    color: var(--white)
-  ),
-  primary: (
-    bg: var(--primary-500),
-    color: var(--white)
-  )
+  commit: (bg: var(--green-400),
+    color: var(--white)),
+  alert: (bg: var(--yellow-400),
+    color: var(--white)),
+  caution: (bg: var(--red-400),
+    color: var(--white)),
+  info: (bg: var(--blue-400),
+    color: var(--white)),
+  error: (bg: var(--red-400),
+    color: var(--white)),
+  primary: (bg: var(--primary-500),
+    color: var(--white))
 );
 
 @each $name, $config in $button-types {
   .drumee-buttons--#{$name} {
-    @include drumee-button-base(
-      map-get($config, bg),
-      map-get($config, color)
-    );
+    @include drumee-button-base(map.get($config, bg),
+      map.get($config, color));
   }
 }
