@@ -4,7 +4,7 @@ const __window_core = require("../core");
 /**
  * @class __window_upload_progress
  * @extends __window_core
- * Window hiển thị tiến trình upload ở góc phải dưới màn hình
+ * Window to display upload progress at bottom right of screen
  */
 class __window_upload_progress extends __window_core {
   constructor(...args) {

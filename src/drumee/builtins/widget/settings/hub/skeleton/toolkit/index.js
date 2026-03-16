@@ -347,8 +347,7 @@ export function recipients (ui) {
     contactbook: ui.mget('contactbook'),
     preselect: ui.mget(_a.preselect),
     uiHandler: ui,
-    addGuest: ui.mget('addGuest')
-
+    addGuest: ui.mget('addGuest') ?? true
   };
   const contact = Skeletons.Box.G({
     className: `${ui.fig.group}__contact-container`,

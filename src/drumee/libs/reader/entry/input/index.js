@@ -590,10 +590,11 @@ class __drumee_entry_input extends LetcBox {
     let service = request.service;
     delete request.service;
     this.postService(service, request).then((data) => {
+      const results = Array.isArray(data) ? data : (data && data.data) || [];
       this.status = _a.results;
-      this.results = data;
+      this.results = results;
       this.triggerHandlers({
-        results: data,
+        results,
         ...this._status(_a.results)
       });
     });

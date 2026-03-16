@@ -53,7 +53,7 @@ class settings_folder extends LetcBox {
       case _e.close:
       case "close-popup":
         this.goodbye();
-        // bảo đảm dialog wrapper (nếu có) được đóng
+        // ensure dialog wrapper (if any) is closed
         if (this.source && this.source.dialogWrapper && typeof this.source.dialogWrapper.clear === "function") {
           this.source.dialogWrapper.clear();
         }

@@ -1015,6 +1015,19 @@ class __window_manager extends push {
         return;
 
       default:
+        // Internal search/contact events that bubble from invitation_searchbox – do not warn
+        const ignoredServices = [
+          _a.interactive,
+          _a.results,
+          _e.found,
+          "items-found",
+          "search",
+          "Backspace",
+          _e.update,
+        ];
+        if (ignoredServices.includes(service)) {
+          return;
+        }
         this.unselect(1);
         return this.warn("AAA:471", WARNING.method.unprocessed.format(service));
     }
