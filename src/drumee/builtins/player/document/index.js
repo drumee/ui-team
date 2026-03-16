@@ -422,9 +422,10 @@ class __player_document extends PlayerInteract {
     this.mset({ mode: _a.edit })
     this.feed(require('./skeleton')(this, LOCALE.DOWNLOADING));
     const { nid, hub_id } = this.actualNode()
+    let { user_domain, svc } = bootstrap()
     this.ensurePart(_a.content).then(async (p) => {
-      let { protocol, user_domain, svc } = bootstrap()
-      let url = `${protocol}://${user_domain}${svc}onlyoffice.html?hub_id=${hub_id}&nid=${nid}`
+      let host = user_domain || location.host
+      let url = `https://${host}${svc}onlyoffice.html?hub_id=${hub_id}&nid=${nid}`
       await Kind.waitFor('iframe');
       let opt = {
         kind: 'iframe',
