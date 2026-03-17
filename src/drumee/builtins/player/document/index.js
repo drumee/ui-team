@@ -407,21 +407,48 @@ class __player_document extends PlayerInteract {
   /**
    * 
    */
+  updateMenu() {
+    this.ensurePart('document-menu').then((p) => {
+      let { kids } = require('./skeleton/menu')(this)
+      p.renderItems(kids[0].items)
+    })
+  }
+
+  /**
+   * 
+   */
   edit() {
     this.el.dataset.mode = _a.edit;
-    this.feed(require('./skeleton')(this, "Loading. Please wait"));
+    this.mset({ mode: _a.edit })
+    this.feed(require('./skeleton')(this, LOCALE.DOWNLOADING));
     const { nid, hub_id } = this.actualNode()
+    let { user_domain, svc } = bootstrap()
     this.ensurePart(_a.content).then(async (p) => {
-      let { protocol, user_domain, svc } = bootstrap()
-      let url = `${protocol}://${user_domain}${svc}onlyoffice.html?hub_id=${hub_id}&nid=${nid}`
+      let host = user_domain || location.host
+      let url = `https://${host}${svc}onlyoffice.html?hub_id=${hub_id}&nid=${nid}`
       await Kind.waitFor('iframe');
       let opt = {
-        kind: 'iframe', url, onLoad: (e) => {
+        kind: 'iframe',
+        url,
+        onLoad: (e) => {
           this.__progress.el.hide();
+          this.updateMenu()
         }
       };
       p.feed(opt)
+
     })
+  }
+
+  /**
+   * 
+   */
+  preview() {
+    this.reloadTimer = 0;
+    this.reload(0);
+    this.el.dataset.mode = _a.preview;
+    this.mset({ mode: _a.preview })
+    this.updateMenu();
   }
 
   /**
@@ -500,11 +527,8 @@ class __player_document extends PlayerInteract {
       case _a.list:
         this.pagesList = child;
         this.timer = null;
-        // Skip scroll-based lazy loading in mobile mode (all pages loaded upfront)
         child.on(_e.scroll, ((list) => {
-          let th = list.contentHeight() * this.loadedPages * .25;
           if (this.timer || list.scrollDir != _a.down) return;
-          // if (list.getOffsetY() < th) return;
           this.nextPages()
         }))
         break;
@@ -604,7 +628,6 @@ class __player_document extends PlayerInteract {
     if (this.size.width > maxWidth) {
       this.size.width = maxWidth;
     }
-    this.debug("AAA:564", this.size, maxWidth, maxHeight)
     this.$el.height(this.size.height);
 
     let s = fitBoxes(this.size, { width: window.innerWidth, height: window.innerHeight });
@@ -671,6 +694,10 @@ class __player_document extends PlayerInteract {
         this.edit()
         break;
 
+      case _a.preview:
+        this.preview()
+        break;
+
       case "read-new-version":
         this.reload(200);
         break;
@@ -692,7 +719,6 @@ class __player_document extends PlayerInteract {
         this.loadedPages = 0;
         this.initProgess()
         this.once(_e.eod, (blob) => {
-          this.debug("AAAA:680", blob, printJS)
           const blobUrl = URL.createObjectURL(blob);
           printJS({
             printable: blobUrl,

@@ -49,6 +49,7 @@
 
   // Vertical divider - reusable class
   &--divider {
+
     &-left::before,
     &-right::after {
       background-color: var(--dock-divider-color);
@@ -181,11 +182,9 @@
 
     &-text {
       white-space: nowrap;
-      @include drumee.typo(
-        $line: 15px,
+      @include drumee.typo($line: 15px,
         $size: 12px,
-        $color: var(--dock-text-color)
-      );
+        $color: var(--dock-text-color));
       transition: color 0.2s ease;
     }
   }
@@ -225,6 +224,7 @@
       z-index: -1 !important;
       box-shadow: var(--shadow-main);
       bottom: 0;
+
       &[data-device="mobile"] {
         transform: translate(-50px, -60px) !important;
       }
@@ -291,11 +291,9 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       width: 100%;
-      @include drumee.typo(
-        $line: 15px,
+      @include drumee.typo($line: 15px,
         $size: 12px,
-        $color: var(--default-text-reverse)
-      );
+        $color: var(--default-text-reverse));
     }
 
     &:hover {
@@ -459,6 +457,7 @@
             z-index: 0;
           }
         }
+
         &::before {
           content: "";
           position: absolute;
@@ -499,12 +498,10 @@
     transition:
       background-color 0.2s ease,
       color 0.2s ease;
-    @include drumee.typo(
-      $size: 11px,
+    @include drumee.typo($size: 11px,
       $line: 14px,
       $weight: 400,
-      $color: var(--dock-text-color)
-    );
+      $color: var(--dock-text-color));
 
     &::before {
       background: var(--dock-main-background);
@@ -554,13 +551,17 @@
       align-content: center;
       flex-wrap: wrap;
     }
+
     &-icon {
       width: 36px;
       height: 36px;
+      color: var(--neutral-50);
     }
+
     &-small-icon {
       width: 24px;
       height: 24px;
+      color: var(--neutral-50);
     }
   }
 
@@ -608,6 +609,7 @@
       }
 
       .launcher {
+
         & .calendar,
         & .addressbook,
         & .schedule {
