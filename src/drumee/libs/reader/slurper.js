@@ -1,4 +1,4 @@
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/server-essentials")
 
 class __media_slurper extends LetcBox {
   constructor(...args) {

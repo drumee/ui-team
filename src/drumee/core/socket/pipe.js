@@ -1,4 +1,4 @@
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/server-essentials")
 
 //########################################
 class socket_pipe extends WPP.Socket {

@@ -1,4 +1,4 @@
-const { filesize } = require("core/utils");
+const { filesize } = require("@drumee/server-essentials");
 
 const __window_interact = require("../interact");
 const UploadProgressWindow = require("../upload-progress");

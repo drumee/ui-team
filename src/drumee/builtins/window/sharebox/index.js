@@ -1,5 +1,5 @@
 
-const { copyToClipboard } = require("core/utils");
+const { copyToClipboard } = require("@drumee/server-essentials");
 const __hub = require('../hub');
 class __window_sharebox extends __hub {
   /**

@@ -1,5 +1,5 @@
 
-const { filesize, fitBoxes } = require("core/utils")
+const { filesize, fitBoxes } = require("@drumee/server-essentials")
 const { TweenMax, Expo } = gsap;
 const PlayerInteract = require('player/interact');
 const { loadPdfDocument, initializePdfium, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')

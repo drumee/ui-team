@@ -1,6 +1,6 @@
 
 const __recipient = require('../core');
-const { copyToClipboard, openLink } = require("core/utils")
+const { copyToClipboard, openLink } = require("@drumee/server-essentials")
 
 class __invitation_publiclink extends __recipient {
   constructor(...args) {

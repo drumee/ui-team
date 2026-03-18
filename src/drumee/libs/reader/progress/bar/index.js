@@ -1,4 +1,4 @@
-const { filesize } = require("core/utils")
+const { filesize } = require("@drumee/server-essentials")
 
 class ___progress_bar extends LetcBox {
 

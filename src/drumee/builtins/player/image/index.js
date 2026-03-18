@@ -1,4 +1,4 @@
-const { fitBoxes } = require("core/utils")
+const { fitBoxes } = require("@drumee/server-essentials")
 
 require('../skin');
 require('./skin');

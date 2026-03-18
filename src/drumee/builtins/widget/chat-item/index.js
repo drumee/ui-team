@@ -1,4 +1,4 @@
-const { toggleState } = require("core/utils")
+const { toggleState } = require("@drumee/server-essentials")
 require('./skin');
 class ___widget_chatItem extends LetcBox {
 

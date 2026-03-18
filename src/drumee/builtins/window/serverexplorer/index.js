@@ -1,5 +1,5 @@
 
-const { randomString } = require("core/utils")
+const { randomString } = require("@drumee/server-essentials")
 const __window_singleton_interact = require('window/interact/singleton');
 
 class __window_serverexplorer extends __window_singleton_interact {

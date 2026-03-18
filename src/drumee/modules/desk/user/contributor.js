@@ -1,4 +1,4 @@
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/server-essentials")
 
 const _default_class = "project-room__list-item u-ai-center";//widget desk-contibutor project-room__list-item-wrapper"
 

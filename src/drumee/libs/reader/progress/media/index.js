@@ -1,4 +1,4 @@
-const { filesize, arcLength } = require("core/utils")
+const { filesize, arcLength } = require("@drumee/server-essentials")
 
 class __svg_progress extends LetcBox {
 

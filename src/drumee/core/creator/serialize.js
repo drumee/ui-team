@@ -1,5 +1,5 @@
 
-const { isNumeric } = require("core/utils")
+const { isNumeric } = require("@drumee/server-essentials")
 
 const __serialize = function(c) {
   const m = c.model;

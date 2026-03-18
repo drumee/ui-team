@@ -1,4 +1,4 @@
-const { toggleState, radioState } = require("core/utils")
+const { toggleState, radioState } = require("@drumee/server-essentials")
 
 class __bhv_radiotoggle extends Marionette.Behavior {
   constructor(...args) {

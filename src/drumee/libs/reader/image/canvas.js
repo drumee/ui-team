@@ -1,5 +1,5 @@
 
-const { capFirst } = require("core/utils")
+const { capFirst } = require("@drumee/server-essentials")
 class __image_canvas extends Marionette.View {
   constructor(...args) {
     this._start = this._start.bind(this);

@@ -1,4 +1,4 @@
-const { dataTransfer } = require("core/utils")
+const { dataTransfer } = require("@drumee/server-essentials")
 
 class __lib_messenger extends LetcBox {
   constructor(...args) {

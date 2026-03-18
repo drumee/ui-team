@@ -1,4 +1,4 @@
-const { filesize, arcLength } = require("core/utils")
+const { filesize, arcLength } = require("@drumee/server-essentials")
 
 const __spinner = '-\|/';
 const { uploadFile } = require("core/socket/upload")

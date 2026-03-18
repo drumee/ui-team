@@ -1,6 +1,6 @@
 const __room = require('builtins/webrtc/room/jitsi');
 
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/server-essentials")
 class __window_connect extends __room {
 
   /**

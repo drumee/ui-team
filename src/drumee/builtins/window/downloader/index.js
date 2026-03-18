@@ -1,5 +1,5 @@
 
-const { filesize } = require("core/utils")
+const { filesize } = require("@drumee/server-essentials")
 
 /**
  * 

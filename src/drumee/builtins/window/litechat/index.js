@@ -1,5 +1,5 @@
 
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/server-essentials")
 const __room = require('builtins/webrtc/room/jitsi');
 class __window_litechat extends __room {
 

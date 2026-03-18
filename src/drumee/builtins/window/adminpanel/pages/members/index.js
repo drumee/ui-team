@@ -1,4 +1,4 @@
-const { openUserMailAgent } = require("core/utils")
+const { openUserMailAgent } = require("@drumee/server-essentials")
 const __progress = require('libs/template/progress');
 const { uploadFile } = require("core/socket/upload")
 

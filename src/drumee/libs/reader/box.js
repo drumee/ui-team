@@ -1,4 +1,4 @@
-const { isNumeric } = require("core/utils")
+const { isNumeric } = require("@drumee/server-essentials")
 const _parent_ready = "parent:ready";
 const _rendered = "rendered";
 const { postService, fetchService } = require("core/socket/service")

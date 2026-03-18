@@ -5,7 +5,7 @@ const USER_CLASSES = {};
 const Addons = require("./seeds/addons");
 let Helper;
 const { fetchService } = require("../socket/service")
-const { loadJS } = require("../../core/utils");
+const { loadJS } = require("@drumee/server-essentials");
 const Plugins = new Map();
 
 /**

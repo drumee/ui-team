@@ -1,5 +1,5 @@
 const mfsInteract = require('window/interact/singleton')
-const { copyToClipboard, openUserMailAgent } = require("core/utils")
+const { copyToClipboard, openUserMailAgent } = require("@drumee/server-essentials")
 
 class __schedule_invitation extends mfsInteract {
 

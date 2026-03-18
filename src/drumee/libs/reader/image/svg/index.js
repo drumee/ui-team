@@ -1,4 +1,4 @@
-const { toggleState } = require("core/utils")
+const { toggleState } = require("@drumee/server-essentials")
 
 const { xhRequest } = require("core/socket/request");
 

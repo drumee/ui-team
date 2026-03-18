@@ -1,6 +1,6 @@
 
 require("./skin");
-const { copyToClipboard } = require("core/utils")
+const { copyToClipboard } = require("@drumee/server-essentials")
 const { TweenLite, TimelineMax } = gsap;
 let lastClickTime = new Date().getTime();
 const push = require("./push");

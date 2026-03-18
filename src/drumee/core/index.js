@@ -14,7 +14,7 @@ function load_core() {
   window.Skeletons = require('toolkit/skeletons');
   window.Websocket = null;
 
-  window.Validator = require('core/utils/validator');
+  window.Validator = require('@drumee/server-essentials').validator
   window.Kind = require("core/kind");
   window.pointerDragged = false;
   window.LetcBlank = require("libs/reader/blank");

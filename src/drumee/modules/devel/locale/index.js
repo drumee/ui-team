@@ -1,7 +1,7 @@
 
 
 require('./skin');
-const { copyToClipboard } = require("core/utils")
+const { copyToClipboard } = require("@drumee/server-essentials")
 
 class __admin_locale extends LetcBox {
 

@@ -1,5 +1,5 @@
 
-const { fitBoxes } = require("core/utils")
+const { fitBoxes } = require("@drumee/server-essentials")
 const __window_interact_player = require('player/interact');
 
 /**

@@ -1,18 +1,10 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : src/drumee/core/html
-//   TYPE : protype extension
-// ==================================================================== *
-
 const VIEW_STYLE = "color: blue; font-weight: bold;"
 const VERBOSE_STYLE = "color: orange; font-weight: bold;"
 const GOSSIP_STYLE = "color: grey; font-weight: bold;"
 const MODEL_STYLE = "color: green; font-weight: bold;"
 const COLLECTION_STYLE = "color: orange; font-weight: bold;"
-const { log } = require("../../utils");
+const { log, LOG_NAME, LOG_LEVEL } = require("@drumee/server-essentials");
 
-
-const { LOG_NAME, LOG_LEVEL } = require("../../utils/constants");
 const { info, debug, verbose, gossip } = LOG_NAME;
 
 /**

@@ -16,7 +16,7 @@
  */
 require("./skin");
 const { getModule } = require('../modules');
-const { filesize } = require("core/utils")
+const { filesize } = require("@drumee/server-essentials")
 
 const SEPARATOR = `<div class="mt-20 mb-20"></div>`;
 

@@ -1,4 +1,4 @@
-const { toggleState } = require("core/utils")
+const { toggleState } = require("@drumee/server-essentials")
 const _button = function (label, service, name, cn) {
   const urlSeparator = new RegExp(/[\/&\?]/g);
   const opt = location.hash.split(urlSeparator);

@@ -1,5 +1,5 @@
 
-const { dayOfTime } = require("core/utils")
+const { dayOfTime } = require("@drumee/server-essentials")
 const __locale_item = function(view, ext) { 
   let updated_at;
   const name = '';

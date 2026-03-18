@@ -1,6 +1,6 @@
 
 const { TweenMax, Expo } = gsap;
-const { copyToClipboard, fitBoxes } = require("core/utils")
+const { copyToClipboard, fitBoxes } = require("@drumee/server-essentials")
 
 const __core = require('player/interact');
 class ___player_schedule extends __core {

@@ -8,7 +8,7 @@ const Rectangle = require('rectangle-node');
 const mfsInteract = require("./interact");
 const pseudo_media = require("media/pseudo");
 const { xhRequest } = require("core/socket/request")
-const { createQrcode } = require('core/utils');
+const { createQrcode } = require('@drumee/server-essentials');
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
 

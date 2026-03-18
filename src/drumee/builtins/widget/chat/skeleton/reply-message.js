@@ -5,7 +5,7 @@
 // ==================================================================== *
 
 const { Autolinker } = require("autolinker");
-const { colorFromName } = require("core/utils");
+const { colorFromName } = require("@drumee/server-essentials");
 
 const __skl_chat_reply_message = function(_ui_, msg) {
   

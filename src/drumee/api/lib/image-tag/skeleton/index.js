@@ -1,4 +1,4 @@
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/server-essentials")
 const __api_image_tag = function (_ui_) {
 
   let body = Skeletons.Box.X({

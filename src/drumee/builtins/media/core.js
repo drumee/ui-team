@@ -1,4 +1,4 @@
-const { filesize, timestamp, dataTransfer } = require("core/utils")
+const { filesize, timestamp, dataTransfer } = require("@drumee/server-essentials")
 
 const MEDIA_GRID = "media_grid";
 const MEDIA_ROW = "media_row";

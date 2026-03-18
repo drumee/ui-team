@@ -1,6 +1,6 @@
 const WS_EVENT = "ws:event";
 
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/server-essentials")
 const winman = require("window/manager");
 
 class __push_manager extends winman {

@@ -1,4 +1,4 @@
-const { timestamp, toggleState, toBoolean, fitBoxes } = require("core/utils")
+const { timestamp, toggleState, toBoolean, fitBoxes } = require("@drumee/server-essentials")
 
 const {showAvatar, hideAvatar, changeSettings, getVideoTrack} = require('../../utils');
 class __endpoint_lense extends LetcBox {

@@ -1,5 +1,5 @@
 
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/server-essentials")
 const { protocol, main_domain } = bootstrap()
 const __welcome_default = function (_ui_) {
 
