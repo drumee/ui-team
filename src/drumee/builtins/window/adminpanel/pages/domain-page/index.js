@@ -1,6 +1,6 @@
 
 
-const { copyToClipboard } = require("@drumee/server-essentials")
+const { copyToClipboard } = require("@drumee/ui-essentials")
 
 class ___domain_page extends LetcBox {
 

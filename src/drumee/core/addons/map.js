@@ -1,6 +1,6 @@
 // ==================================================================== *
 //   Copyright Xialia.com  2011-2019
-//   FILE : src/drumee/@drumee/server-essentials
+//   FILE : src/drumee/@drumee/ui-essentials
 //   TYPE : 
 // ==================================================================== *
 

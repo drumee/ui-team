@@ -1,4 +1,4 @@
-const { toBoolean } = require("@drumee/server-essentials")
+const { toBoolean } = require("@drumee/ui-essentials")
 
 class __chart_sline extends LetcBox {
   // ===========================================================

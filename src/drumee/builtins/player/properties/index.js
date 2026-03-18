@@ -1,5 +1,5 @@
 
-const { copyToClipboard } = require("@drumee/server-essentials")
+const { copyToClipboard } = require("@drumee/ui-essentials")
 const __player = require('player/interact');
 require('../skin');
 require('./skin');

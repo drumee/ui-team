@@ -1,4 +1,4 @@
-const { colon } = require("@drumee/server-essentials")
+const { colon } = require("@drumee/ui-essentials")
 
 
 const main = function(_ui_) {

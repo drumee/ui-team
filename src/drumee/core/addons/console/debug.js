@@ -3,7 +3,7 @@ const VERBOSE_STYLE = "color: orange; font-weight: bold;"
 const GOSSIP_STYLE = "color: grey; font-weight: bold;"
 const MODEL_STYLE = "color: green; font-weight: bold;"
 const COLLECTION_STYLE = "color: orange; font-weight: bold;"
-const { log, LOG_NAME, LOG_LEVEL } = require("@drumee/server-essentials");
+const { log, LOG_NAME, LOG_LEVEL } = require("@drumee/ui-essentials");
 
 const { info, debug, verbose, gossip } = LOG_NAME;
 

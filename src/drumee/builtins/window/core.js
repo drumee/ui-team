@@ -7,7 +7,7 @@ const TIMERS = {
   reorder: null
 }
 const { TweenMax } = gsap;
-const { copyToClipboard, reverseSortBy, modelComparator } = require("@drumee/server-essentials")
+const { copyToClipboard, reverseSortBy, modelComparator } = require("@drumee/ui-essentials")
 
 
 class __window_core extends __utils {

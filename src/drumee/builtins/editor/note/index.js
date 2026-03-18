@@ -1,6 +1,6 @@
 
 const __player = require('player/interact');
-const { xhRequest } = require("core/socket/request");
+const { xhRequest } = require("@drumee/ui-essentials");
 
 const REMINDER_ID = 'reminder_id';
 

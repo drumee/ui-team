@@ -1,4 +1,4 @@
-const { filesize } = require("@drumee/server-essentials");
+const { filesize } = require("@drumee/ui-essentials");
 const __window_core = require("../core");
 
 /**
@@ -791,7 +791,7 @@ class __window_upload_progress extends __window_core {
       // Update file size text
       const sizeEl = itemEl.querySelector(`.${this.fig.family}__file-item-size`);
       if (sizeEl && item.fileSize) {
-        const { filesize } = require("@drumee/server-essentials");
+        const { filesize } = require("@drumee/ui-essentials");
         sizeEl.textContent = filesize(item.fileSize);
       }
       

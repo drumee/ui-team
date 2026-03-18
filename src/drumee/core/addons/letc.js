@@ -11,7 +11,7 @@ const { View } = Backbone;
 //
 // ========================
 
-const { isNumeric, timestamp, log } = require("@drumee/server-essentials");
+const { isNumeric, timestamp, log } = require("@drumee/ui-essentials");
 const ORIENTATION = {
   'landscape-primary': 'x',
   'landscape': 'x',

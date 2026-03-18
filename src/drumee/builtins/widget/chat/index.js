@@ -1,5 +1,5 @@
 
-const { copyToClipboard, dataTransfer } = require("@drumee/server-essentials")
+const { copyToClipboard, dataTransfer } = require("@drumee/ui-essentials")
 require('./skin');
 
 /**

@@ -4,7 +4,7 @@
 //   TYPE : Skeleton
 // ==================================================================== *
 
-const { timestamp } = require("@drumee/server-essentials")
+const { timestamp } = require("@drumee/ui-essentials")
 const __api_form = function(_ui_) {
 
   let body  = Skeletons.Box.X({ 

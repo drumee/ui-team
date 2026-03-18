@@ -5,7 +5,7 @@
 * ========================================================== */
 
 /// <reference path="../../../../../../../@types/index.d.ts" />
-const { copyToClipboard } = require("@drumee/server-essentials")
+const { copyToClipboard } = require("@drumee/ui-essentials")
 
 class ___widget_sharebox_setting extends LetcBox {
 

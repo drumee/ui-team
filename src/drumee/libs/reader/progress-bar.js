@@ -1,4 +1,4 @@
-const { toPercent } = require("@drumee/server-essentials")
+const { toPercent } = require("@drumee/ui-essentials")
 
 class __progress_bar extends LetcBox {
   constructor(...args) {

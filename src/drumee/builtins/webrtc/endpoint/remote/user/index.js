@@ -1,4 +1,4 @@
-const { toggleState } = require("@drumee/server-essentials")
+const { toggleState } = require("@drumee/ui-essentials")
 const PARTICIPANT_ID = "participant_id";
 const __stream = require("builtins/webrtc/endpoint");
 const { events: JEVENTS } = require('jitsi/lib-jitsi-meet.min.js');

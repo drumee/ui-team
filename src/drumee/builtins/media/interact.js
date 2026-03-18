@@ -1,11 +1,11 @@
 
 
-const { timestamp, loadJS, toggleState } = require("@drumee/server-essentials")
+const { timestamp, loadJS, toggleState } = require("@drumee/ui-essentials")
 const Rectangle = require('rectangle-node');
 const OPEN_NODE = "open-node";
 require("./skin");
 const media_core = require("./core");
-const { copyToClipboard } = require("@drumee/server-essentials")
+const { copyToClipboard } = require("@drumee/ui-essentials")
 class __media_interact extends media_core {
   constructor(...args) {
     super(...args);

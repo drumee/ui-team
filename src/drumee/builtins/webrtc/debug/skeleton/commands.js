@@ -1,4 +1,4 @@
-const { toggleState } = require("@drumee/server-essentials")
+const { toggleState } = require("@drumee/ui-essentials")
 const __webrtc_commands = function(_ui_) {
 
   const figname = "commands";

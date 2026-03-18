@@ -1,5 +1,5 @@
 const _nav_items = function (_ui_) {
-  const { toggleState } = require("@drumee/server-essentials")
+  const { toggleState } = require("@drumee/ui-essentials")
   const r = _.uniqueId("nav-group-");
 
   const result = [];

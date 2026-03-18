@@ -1,5 +1,5 @@
 
-const { fitBoxes } = require("@drumee/server-essentials")
+const { fitBoxes } = require("@drumee/ui-essentials")
 const __stream = require('builtins/webrtc/stream');
 
 class ___player_stream extends __stream {

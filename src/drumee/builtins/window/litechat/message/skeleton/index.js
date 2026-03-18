@@ -1,4 +1,4 @@
-const { colorFromName } = require("@drumee/server-essentials");
+const { colorFromName } = require("@drumee/ui-essentials");
 const __litechat_message = function(_ui_) {
   const chatItemFig = _ui_.fig.family;
   const menu = '';

@@ -1,6 +1,6 @@
-const { openUserMailAgent } = require("@drumee/server-essentials")
+const { openUserMailAgent } = require("@drumee/ui-essentials")
 const __progress = require('libs/template/progress');
-const { uploadFile } = require("core/socket/upload")
+const { uploadFile } = require("@drumee/ui-essentials")
 
 class ___members_page extends LetcBox {
 

@@ -1,4 +1,4 @@
-const { timestamp } = require("@drumee/server-essentials")
+const { timestamp } = require("@drumee/ui-essentials")
 
 const handler_base = require('../handler.coffee');
 class __history extends handler_base {

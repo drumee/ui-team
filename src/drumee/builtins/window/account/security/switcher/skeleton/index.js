@@ -1,4 +1,4 @@
-const { toggleState, radioState } = require("@drumee/server-essentials")
+const { toggleState, radioState } = require("@drumee/ui-essentials")
 
 const sklSwitch = function (_ui_) {
   const labels = _ui_.mget(_a.labels);

@@ -1,4 +1,4 @@
-const { loadWidgets } = require("@drumee/server-essentials");
+const { loadWidgets } = require("@drumee/ui-essentials");
 loadWidgets()
 /**
  *

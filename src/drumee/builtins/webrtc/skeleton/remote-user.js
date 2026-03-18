@@ -1,5 +1,5 @@
 
-const { toggleState } = require("@drumee/server-essentials")
+const { toggleState } = require("@drumee/ui-essentials")
 const __webrtc_remote_user = function(_ui_, data, service) {
   const a = {
     kind      : 'webrtc_remote_user',

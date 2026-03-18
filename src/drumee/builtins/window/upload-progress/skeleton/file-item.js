@@ -1,5 +1,5 @@
 const { getFileIcon, formatSpeed } = require('./helpers');
-const { filesize } = require("@drumee/server-essentials");
+const { filesize } = require("@drumee/ui-essentials");
 
 /**
  * Extract and normalize file item options

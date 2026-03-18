@@ -1,4 +1,4 @@
-const { filesize } = require("@drumee/server-essentials")
+const { filesize } = require("@drumee/ui-essentials")
 
 const __window_downloader_progress = function (_ui_, total) {
   const pfx = `${_ui_.fig.family}`;

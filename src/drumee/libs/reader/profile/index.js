@@ -1,4 +1,4 @@
-const { colorFromName } = require("@drumee/server-essentials")
+const { colorFromName } = require("@drumee/ui-essentials")
 
 const __cache = {};
 class __user_profile extends LetcBox {

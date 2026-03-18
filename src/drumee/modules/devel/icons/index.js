@@ -1,5 +1,5 @@
 
-const { copyToClipboard } = require("@drumee/server-essentials");
+const { copyToClipboard } = require("@drumee/ui-essentials");
 class __devel_icons extends LetcBox {
 
   /**

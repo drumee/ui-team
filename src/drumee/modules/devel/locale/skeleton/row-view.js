@@ -1,5 +1,5 @@
 
-const { dayOfTime } = require("@drumee/server-essentials")
+const { dayOfTime } = require("@drumee/ui-essentials")
 const __locale_row_view = function(view, ext) { 
   let updated_at;
   const access_icon_options = {

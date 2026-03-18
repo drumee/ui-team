@@ -1,4 +1,4 @@
-const { colorFromName, filesize } = require("@drumee/server-essentials");
+const { colorFromName, filesize } = require("@drumee/ui-essentials");
 class __account_data extends DrumeeMFS {
   /**
    * 

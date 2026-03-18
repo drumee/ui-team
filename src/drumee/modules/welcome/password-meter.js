@@ -1,4 +1,4 @@
-const { toPercent } = require("@drumee/server-essentials")
+const { toPercent } = require("@drumee/ui-essentials")
 
 const specials = require('assets/special-chars');
 const __core = require('./core');

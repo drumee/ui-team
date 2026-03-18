@@ -1,4 +1,4 @@
-const { toggleState } = require("@drumee/server-essentials")
+const { toggleState } = require("@drumee/ui-essentials")
 const { button } = require("builtins/skeleton/toolkit");
 
 function __skl_widget_member_form(ui) {

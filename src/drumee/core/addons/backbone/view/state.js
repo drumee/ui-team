@@ -1,4 +1,4 @@
-const { toOnOff, toggleState } = require("@drumee/server-essentials")
+const { toOnOff, toggleState } = require("@drumee/ui-essentials")
 
 Backbone.View.prototype.setState = function(state, recursive) {
   if (recursive == null) { recursive = 0; }

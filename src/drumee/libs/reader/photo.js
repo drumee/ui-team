@@ -1,6 +1,6 @@
 
 require('yuki-createjs');
-const { isNumeric, fitBoxes, capFirst } = require("@drumee/server-essentials")
+const { isNumeric, fitBoxes, capFirst } = require("@drumee/ui-essentials")
 
 createjs.Graphics.Polygon = function (x, y, points) {
   this.x = x;

@@ -7,8 +7,8 @@ if (window.innerWidth > 900) {
 const Rectangle = require('rectangle-node');
 const mfsInteract = require("./interact");
 const pseudo_media = require("media/pseudo");
-const { xhRequest } = require("core/socket/request")
-const { createQrcode } = require('@drumee/server-essentials');
+const { xhRequest } = require("@drumee/ui-essentials")
+const { createQrcode } = require('@drumee/ui-essentials');
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
 

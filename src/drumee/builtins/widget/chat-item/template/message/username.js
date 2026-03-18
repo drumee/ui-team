@@ -1,5 +1,5 @@
 // ==================================================================== *
-const { colorFromName } = require("@drumee/server-essentials");
+const { colorFromName } = require("@drumee/ui-essentials");
 const __chat_item_username = function(m) {
   let fullname = m.fullname;
   let color = colorFromName(fullname);

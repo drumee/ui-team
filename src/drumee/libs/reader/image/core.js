@@ -1,7 +1,7 @@
 const {
   TweenLite
 } = gsap;
-const { fitBoxes } = require("@drumee/server-essentials")
+const { fitBoxes } = require("@drumee/ui-essentials")
 
 class __image_core extends Marionette.View {
   constructor(...args) {

@@ -1,4 +1,4 @@
-const { toggleState } = require("@drumee/server-essentials")
+const { toggleState } = require("@drumee/ui-essentials")
 class __webrtc_stream extends LetcBox {
 
   /***

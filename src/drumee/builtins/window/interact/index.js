@@ -1,7 +1,7 @@
 const CHANGE_RADIO = "change:radio";
 const Rectangle = require('rectangle-node');
 const { TweenMax } = gsap;
-const { copyToClipboard, timestamp } = require("@drumee/server-essentials")
+const { copyToClipboard, timestamp } = require("@drumee/ui-essentials")
 
 const windowCore = require("../core");
 class __window_interact extends windowCore {

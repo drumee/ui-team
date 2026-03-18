@@ -4,7 +4,7 @@
 //   TYPE : Skeleton
 // ==================================================================== *
 
-const { colorFromName } = require("@drumee/server-essentials");
+const { colorFromName } = require("@drumee/ui-essentials");
 const __chat_item_username = function(m) {
     let e = m.entity || m;
     let lastname = e.lastname || '';

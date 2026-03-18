@@ -5,7 +5,7 @@
 // ============================================================= *
 
 require("./skin");
-const { xhRequest } = require("core/socket/request");
+const { xhRequest } = require("@drumee/ui-essentials");
 
 class __chart_mutiline extends LetcBox {
 

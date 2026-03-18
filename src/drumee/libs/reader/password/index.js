@@ -1,5 +1,5 @@
 
-const { toPercent } = require("@drumee/server-essentials")
+const { toPercent } = require("@drumee/ui-essentials")
 class __libs_password extends LetcBox {
   constructor(...args) {
     this.onPartReady = this.onPartReady.bind(this);

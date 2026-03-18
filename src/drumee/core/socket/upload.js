@@ -1,4 +1,4 @@
-const { makeHeaders } = require("core/socket/utils")
+const { makeHeaders } = require("@drumee/ui-essentials")
 
 
 /**

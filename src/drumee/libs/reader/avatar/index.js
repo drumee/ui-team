@@ -1,6 +1,6 @@
-const { arcLength } = require("@drumee/server-essentials")
+const { arcLength } = require("@drumee/ui-essentials")
 const __progess = require('libs/template/progress');
-const { uploadFile } = require("core/socket/upload")
+const { uploadFile } = require("@drumee/ui-essentials")
 const Loader = new Map();
 require('./skin');
 class __user_avatar extends DrumeeMFS {

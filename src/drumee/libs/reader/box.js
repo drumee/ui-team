@@ -1,7 +1,7 @@
-const { isNumeric } = require("@drumee/server-essentials")
+const { isNumeric } = require("@drumee/ui-essentials")
 const _parent_ready = "parent:ready";
 const _rendered = "rendered";
-const { postService, fetchService } = require("core/socket/service")
+const { postService, fetchService } = require("@drumee/ui-essentials")
 const validChild = function (e) { return e && e.kind };
 
 

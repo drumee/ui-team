@@ -1,5 +1,5 @@
-const { filesize, dataTransfer } = require("@drumee/server-essentials")
-const { makeHeaders } = require("core/socket/utils")
+const { filesize, dataTransfer } = require("@drumee/ui-essentials")
+const { makeHeaders } = require("@drumee/ui-essentials")
 const PROPERTIES = [
   _a.area,
   _a.actual_home_id,

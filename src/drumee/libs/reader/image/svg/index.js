@@ -1,6 +1,6 @@
-const { toggleState } = require("@drumee/server-essentials")
+const { toggleState } = require("@drumee/ui-essentials")
 
-const { xhRequest } = require("core/socket/request");
+const { xhRequest } = require("@drumee/ui-essentials");
 
 class __drumee_svg extends Marionette.View {
   constructor(...args) {

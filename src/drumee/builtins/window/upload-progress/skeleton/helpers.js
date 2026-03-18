@@ -1,4 +1,4 @@
-const { filesize } = require("@drumee/server-essentials");
+const { filesize } = require("@drumee/ui-essentials");
 
 /**
  * Get file icon based on file type (mimetype or extension)

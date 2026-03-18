@@ -1,4 +1,4 @@
-const { timestamp } = require("@drumee/server-essentials")
+const { timestamp } = require("@drumee/ui-essentials")
 
 let __dbg_path;
 if (__BUILD__ === 'dev') {

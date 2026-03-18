@@ -1,4 +1,4 @@
-const { timestamp } = require("@drumee/server-essentials")
+const { timestamp } = require("@drumee/ui-essentials")
 const EOD = "end:of:data";
 class ___widget_chatcontactList extends LetcBox {
 

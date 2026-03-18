@@ -3,7 +3,7 @@
 //   FILE : ../src/drumee/libs/reader/note
 //   TYPE :
 // ==================================================================== *
-const { isHTML } = require("@drumee/server-essentials")
+const { isHTML } = require("@drumee/ui-essentials")
 
 const _show          = 'style="display:inline"';
 const _hide          = 'style="display:none"';

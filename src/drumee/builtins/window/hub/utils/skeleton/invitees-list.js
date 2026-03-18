@@ -4,7 +4,7 @@
 //   TYPE : 
 // ==================================================================== *
 
-const { timestamp } = require("@drumee/server-essentials")
+const { timestamp } = require("@drumee/ui-essentials")
 const URL_BASE = `${location.origin}${location.pathname}`;
 
 const __invitees_list=function(manager, id, email){

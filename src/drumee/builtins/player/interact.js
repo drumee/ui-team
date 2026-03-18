@@ -1,5 +1,5 @@
 
-const { fitBoxes } = require("@drumee/server-essentials")
+const { fitBoxes } = require("@drumee/ui-essentials")
 const { TweenMax, Expo } = gsap;
 const Rectangle = require('rectangle-node');
 const CHANGE_RADIO = "change:radio";

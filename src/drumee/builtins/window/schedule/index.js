@@ -1,6 +1,6 @@
 //const __webinar_socket = require('./socket');
 const __interact = require('window/interact');
-const { copyToClipboard } = require("@drumee/server-essentials")
+const { copyToClipboard } = require("@drumee/ui-essentials")
 
 class __window_schedule extends __interact {
 

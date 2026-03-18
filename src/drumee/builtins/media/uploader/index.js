@@ -1,7 +1,7 @@
-const { filesize, arcLength } = require("@drumee/server-essentials")
+const { filesize, arcLength } = require("@drumee/ui-essentials")
 
 const __spinner = '-\|/';
-const { uploadFile } = require("core/socket/upload")
+const { uploadFile } = require("@drumee/ui-essentials")
 
 class __media_uploader extends LetcBox {
   constructor(...args) {

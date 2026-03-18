@@ -1,6 +1,6 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const COLORS = ["gray", "red", "pink", "blue", "green", "yellow", "orange"];
-const { filesize, dataTransfer } = require("@drumee/server-essentials");
+const { filesize, dataTransfer } = require("@drumee/ui-essentials");
 
 function __skl_window_wallpaper_settings_content(ui, opt) {
   const contentFig = `${ui.fig.family}-content`;

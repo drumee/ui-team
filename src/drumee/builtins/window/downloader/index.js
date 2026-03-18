@@ -1,5 +1,5 @@
 
-const { filesize } = require("@drumee/server-essentials")
+const { filesize } = require("@drumee/ui-essentials")
 
 /**
  * 

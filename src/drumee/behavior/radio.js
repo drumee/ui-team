@@ -1,4 +1,4 @@
-const { toggleState } = require("@drumee/server-essentials")
+const { toggleState } = require("@drumee/ui-essentials")
 const _clear = 'clear:radio';
 class behavior_radio extends Marionette.Behavior {
 

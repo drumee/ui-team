@@ -9,7 +9,7 @@ const DATEFORMAT = {
   zh: "YYYY/MM/DD",
 }
 let defaultQuota;
-const { timestamp, randomString } = require("@drumee/server-essentials")
+const { timestamp, randomString } = require("@drumee/ui-essentials")
 
 
 class __core_user extends Backbone.Model {

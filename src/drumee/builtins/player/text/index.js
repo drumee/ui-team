@@ -2,7 +2,7 @@
 *   Copyright xialia.com  2011-2021
 * ============================================================== */
 
-const { xhRequest } = require("core/socket/request");
+const { xhRequest } = require("@drumee/ui-essentials");
 
 const __player = require('player/interact');
 const REMINDER_ID = 'reminder_id';

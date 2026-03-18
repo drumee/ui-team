@@ -1,4 +1,4 @@
-const { timestamp } = require("@drumee/server-essentials")
+const { timestamp } = require("@drumee/ui-essentials")
 const _access_item = function(manager, data) {
   let actions;
   _dbg("zzzzzzzzzzzzzzz", data);

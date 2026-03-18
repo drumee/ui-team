@@ -3,7 +3,7 @@
 //   FILE : ../src/drumee/libs/reader/note
 //   TYPE :
 // =============================================================== *
-const { xhRequest } = require("core/socket/request");
+const { xhRequest } = require("@drumee/ui-essentials");
 const _default_icon  = "rating-star";
 const _default_class = "drumee-widget button-reader";
 const _id_tag        = 'button-';
