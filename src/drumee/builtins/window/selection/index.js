@@ -1,9 +1,9 @@
 
 
-const Rectangle = require('rectangle-node');
-const rectangle = require('reader/rectangle');
+const Rectangle = require("@drumee/ui-core/letc/widgets/rectangle");
+
 // ------------------------------------------
-class desk_selection extends rectangle {
+class desk_selection extends Rectangle {
   constructor(...args) {
     super(...args);
     this.enable = this.enable.bind(this);
@@ -317,7 +317,7 @@ class desk_selection extends rectangle {
       width: draw_w,
       height: draw_h
     });
-    const r = new Rectangle(draw_x, selection_y, draw_w, selection_h);
+    const r = this.createRectangle(draw_x, selection_y, draw_w, selection_h);
     for (let m of Array.from(this.media)) {
       if ((m.bbox == null)) {
         continue;

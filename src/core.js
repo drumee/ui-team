@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2024 Thidima SA. All Rights Reserved.
+ * Copyright 2025 Thidima SA. All Rights Reserved.
  * Licensed under the GNU AFFERO GENERAL PUBLIC LICENSE, Version 3 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,7 +14,5 @@
  * limitations under the License.
  * =============================================================================
  */
-module.exports = {
-  butler: './butler',
-  ws_channel: './websocket',
-};
+
+require('@drumee/ui-core').load()

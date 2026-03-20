@@ -145,7 +145,7 @@ class __security_ident extends __pad {
         // Visitor.respawn(data)
         Visitor.set(_a.profile, data.profile);
 
-        this._modal.feed(require('libs/preset/ack')(
+        this._modal.feed(require('@drumee/ui-core/letc/preset/ack')(
           this, LOCALE.ACK_SAVE_CHANGES, {height:"100%"}
         )
         );
@@ -168,7 +168,7 @@ class __security_ident extends __pad {
           }); 
           return; 
         }
-        this._modal.feed(require('libs/preset/ack')(
+        this._modal.feed(require('@drumee/ui-core/letc/preset/ack')(
           this, (ident.printf(LOCALE.ALREADY_EXISTS)), {height:"100%"}
         )
         );

@@ -136,7 +136,7 @@ class __security_email extends __pad {
     switch (method) {
       case SERVICE.drumate.change_email:
         Visitor.set(_a.profile, data.profile);
-        this._modal.feed(require('libs/preset/ack')(
+        this._modal.feed(require('@drumee/ui-core/letc/preset/ack')(
           this, LOCALE.ACK_EMAIL_ADDRESS_UPDATED, {height:"100%"}
         )
         );
@@ -158,7 +158,7 @@ class __security_email extends __pad {
           }); 
           return; 
         }
-        this._modal.feed(require('libs/preset/ack')(
+        this._modal.feed(require('@drumee/ui-core/letc/preset/ack')(
           this, (email.printf(LOCALE.EMAIL_ALREADY_EXISTS)), {height:"100%"}
         )
         );

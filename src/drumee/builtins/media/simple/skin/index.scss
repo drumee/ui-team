@@ -4,11 +4,11 @@
 @include meta.load-css("access.scss");
 @include meta.load-css("checkbox.scss");
 @include meta.load-css("container.scss");
-@include meta.load-css("folder.scss");
-@include meta.load-css("hub.scss");
+// @include meta.load-css("folder.scss");
+// @include meta.load-css("hub.scss");
 @include meta.load-css("moving.scss");
 @include meta.load-css("progress.scss");
-@include meta.load-css("share.scss");
+// @include meta.load-css("share.scss");
 
 .media-simple {
   &__ui {

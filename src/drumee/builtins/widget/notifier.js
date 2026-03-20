@@ -8,11 +8,8 @@ class __utils_notifier extends Marionette.View {
   }
 
   static initClass() {
-    this.prototype.templateName = _T.wrapper.content;
-    this.prototype.events =
-      { 'click': '_click' };
-    this.prototype.ui =
-      { spinner: 'i.fa' };
+    // this.prototype.templateName = _T.wrapper.content;
+    this.prototype.events = { 'click': '_click' };
   }
 
   /**

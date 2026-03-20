@@ -12,7 +12,6 @@ const { createQrcode } = require('@drumee/ui-essentials');
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
 
-require('./skin/window');
 
 class __window_manager extends mfsInteract {
   constructor(...args) {
@@ -41,6 +40,7 @@ class __window_manager extends mfsInteract {
    * @param {*} opt
    */
   initialize(opt) {
+    require('./skin/window');
     super.initialize(opt);
     window.Wm = this;
     if (this.mget("desk")) {

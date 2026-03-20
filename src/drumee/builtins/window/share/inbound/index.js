@@ -155,7 +155,7 @@ class __share_inbound extends LetcBox {
         }
       case SERVICE.sharebox.create_inbound_link:
         var msg = LOCALE.MSG_SHARE_ACK;
-        this.feed(require('libs/preset/ack')(this, msg, {height : this.$el.height()}));
+        this.feed(require('@drumee/ui-core/letc/preset/ack')(this, msg, {height : this.$el.height()}));
         var timeout = (1000*Visitor.parseModuleArgs().timeout) || 2000;
         var f = ()=> {
           return this.clear();

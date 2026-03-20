@@ -249,7 +249,7 @@ class __window_mfs extends DrumeeMFS {
    * 
    */
   acknowledge(msg = LOCALE.ACK_COPY_LINK) {
-    var c = require('libs/preset/ack')(this, msg);
+    var c = require('@drumee/ui-core/letc/preset/ack')(this, msg);
     c.className = `${c.className} ${this.fig.group}-topbar__copy-link-ack`;
     this.append(c);
     const l = this.children.last();

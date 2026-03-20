@@ -21,6 +21,7 @@ let bunldes = new Map();
  * 
  */
 function load_app() {
+  Kind.registerAddons(require("./seeds"));
   const App = require('./drumee');
   window.Drumee = new App();
   console.log(`Staring Drumee Web...`);
