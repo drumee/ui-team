@@ -32,10 +32,9 @@
 .box {
   position: relative;
   z-index: auto;
-  background-color: transparent;
 
   &::-webkit-scrollbar {
-    width: 5px; //4px;
+    width: 5px; //14px;
     margin-right: 2px;
     max-width: 10px;
     height: 100%;

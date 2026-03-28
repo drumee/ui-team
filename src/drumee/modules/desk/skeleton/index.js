@@ -1,5 +1,5 @@
 const _desk_main = function (ui) {
-  const a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     className: `${ui.fig.family}__main`,
     debug: __filename,
     sys_pn: "main",
@@ -7,73 +7,56 @@ const _desk_main = function (ui) {
       wallpaper: ui._wallpaper,
     },
     kids: [
+
+      // Modal / popup overlay (above everything)
       Skeletons.Wrapper.Y({
-        // name: "popup",
         sys_pn: "wrapper-popup",
         className: `${ui.fig.family}__modal-container`,
         flow: _a.none,
         wrapper: 1,
-        uiHandler: ui
+        uiHandler: ui,
       }),
 
+      // Topbar: logo | breadcrumb | search | invite | bell | avatar
       Skeletons.Box.Y({
         sys_pn: "top-bar",
         className: `${ui.fig.family}__topbar`,
-        kids: [require('./topbar')(ui)]
+        kids: [require('./topbar')(ui)],
       }),
 
-      // Skeletons.Box.Y({
-      //   sys_pn: "user-container",
-      //   className: `${ui.fig.family}__topbar-user-container`,
-      //   kids: [require('desk/skeleton/common/topbar/user')(ui)],
-      //   uiHandler: ui,
-      //   partHandler: [ui]
-      // }),
-
-      Skeletons.Box.Y({
-        sys_pn: "activity-container",
-        className: `${ui.fig.family}__activity-container`,
-        kids: [{
-          sys_pn: "activity-panel",
-          kind: 'activity_panel',
-          service:'activity-update',
-          uiHandler: [ui],
-          partHandler: [ui]
-        }],
-        uiHandler: ui,
-        partHandler: [ui]
-      }),
-
-      // Skeletons.Wrapper.Y({
-      //   name: "module",
-      //   uiHandler: ui,
-      //   className: `u-jc-center absolute ${ui.fig.family}__wrapper --module am-wrapper desk-account`
-      // }),
-
-      // Skeletons.Wrapper.Y({
-      //   name: "chat",
-      //   uiHandler: ui,
-      //   className: "desk-chat"
-      // }),
-
+      // Body: sidebar + window manager side by side
       Skeletons.Box.X({
-        sys_pn: "desk-wrapper",
-        className: `${ui.fig.family}__wm-container`,
-        kids: [{
-          kind: 'window_manager',
-          sys_pn: "desk-content",
-        }]
+        sys_pn: "desk-body",
+        className: `${ui.fig.family}__body`,
+        kids: [
+
+          // Left sidebar: current space | navigation | settings
+          Skeletons.Box.Y({
+            sys_pn: "sidebar-container",
+            className: `${ui.fig.family}__sidebar-container`,
+            kids: [require('./sidebar')(ui)],
+          }),
+
+          // Main content: window manager (floating windows + file grid)
+          Skeletons.Box.X({
+            sys_pn: "desk-wrapper",
+            className: `${ui.fig.family}__wm-container`,
+            kids: [{
+              kind: "window_manager",
+              sys_pn: "desk-content",
+            }],
+          }),
+        ],
       }),
 
+      // Tooltip layer
       Skeletons.Box.Y({
         className: "desk__tooltip",
         sys_pn: "desk-tooltip",
-        wrapper: 1
-      })
-    ]
+        wrapper: 1,
+      }),
+    ],
   });
-
-
-  return a;
 };
+
 module.exports = _desk_main;

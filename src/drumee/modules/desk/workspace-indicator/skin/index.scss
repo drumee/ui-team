@@ -1,0 +1,37 @@
+@use "mixins/drumee";
+
+.desk-workspace-indicator {
+  &__main {
+    background-color: inherit;
+    padding: 16px 12px 8px;
+    width: 100%;
+  }
+
+  &__label {
+    @include drumee.typo($color: #787B7F, $size: 10px, $line: 16px);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  &__workspace-row {
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #22c55e;
+    flex-shrink: 0;
+  }
+
+  &__name {
+    @include drumee.typo($size: 13px, $line: 20px);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

@@ -629,6 +629,8 @@ class __window_core extends __utils {
       if (this.__settingsBox) this.__settingsBox.el.hide()
     }
     this._path = data;
+    // Broadcast to desk-level breadcrumb widget
+    RADIO_BROADCAST.trigger("desk:breadcrumb", data, this);
     const last = this.breadcrumbsRoll.children.last();
     if (last && this.name) {
       const fileName = last.mget(_a.filename) || "";

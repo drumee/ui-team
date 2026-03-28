@@ -76,6 +76,7 @@
   "dependencies": {
     "@drumee/ui-core": "^1.1.21",
     "@drumee/ui-essentials": "^1.0.0",
+    "@drumee/ui-styles": "^1.0.6",
     "@drumee/ui-toolkit": "^0.0.19",
     "@embedpdf/pdfium": "^1.3.0",
     "@webcomponents/webcomponentsjs": "^2.6.0",
