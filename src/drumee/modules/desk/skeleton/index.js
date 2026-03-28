@@ -13,13 +13,13 @@ const _desk_main = function (ui) {
         className: `${ui.fig.family}__modal-container`,
         flow: _a.none,
         wrapper: 1,
-        uiHandler: ui
+        uiHandler: ui,
       }),
 
       Skeletons.Box.Y({
         sys_pn: "top-bar",
         className: `${ui.fig.family}__topbar`,
-        kids: [require('./topbar')(ui)]
+        kids: [require("./topbar")(ui)],
       }),
 
       // Skeletons.Box.Y({
@@ -33,15 +33,17 @@ const _desk_main = function (ui) {
       Skeletons.Box.Y({
         sys_pn: "activity-container",
         className: `${ui.fig.family}__activity-container`,
-        kids: [{
-          sys_pn: "activity-panel",
-          kind: 'activity_panel',
-          service:'activity-update',
-          uiHandler: [ui],
-          partHandler: [ui]
-        }],
+        kids: [
+          {
+            sys_pn: "activity-panel",
+            kind: "activity_panel",
+            service: "activity-update",
+            uiHandler: [ui],
+            partHandler: [ui],
+          },
+        ],
         uiHandler: ui,
-        partHandler: [ui]
+        partHandler: [ui],
       }),
 
       // Skeletons.Wrapper.Y({
@@ -59,20 +61,21 @@ const _desk_main = function (ui) {
       Skeletons.Box.X({
         sys_pn: "desk-wrapper",
         className: `${ui.fig.family}__wm-container`,
-        kids: [{
-          kind: 'window_manager',
-          sys_pn: "desk-content",
-        }]
+        kids: [
+          {
+            kind: "window_manager",
+            sys_pn: "desk-content",
+          },
+        ],
       }),
 
       Skeletons.Box.Y({
         className: "desk__tooltip",
         sys_pn: "desk-tooltip",
-        wrapper: 1
-      })
-    ]
+        wrapper: 1,
+      }),
+    ],
   });
-
 
   return a;
 };

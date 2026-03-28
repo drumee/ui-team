@@ -1,4 +1,3 @@
-
 const _icons_list = function (ui) {
   const a = Skeletons.List.Smart({
     className: `${ui.fig.family}__icons-list`,
@@ -13,7 +12,7 @@ const _icons_list = function (ui) {
       kind: "media",
       service: "open-node",
       on_start: "open-node",
-      uiHandler: [ui]
+      uiHandler: [ui],
     },
     api: {
       service: SERVICE.desk.home,
@@ -23,8 +22,8 @@ const _icons_list = function (ui) {
   if (Visitor.isMobile()) {
     a.style = {
       ...a.style,
-      height: window.innerHeight - 160
-    }
+      height: window.innerHeight - 160,
+    };
   }
 
   return a;
@@ -40,8 +39,7 @@ const ___window_manager = function (ui) {
     bugReportLabel = LOCALE.BUG_REPORTS;
   }
 
-
-  const a = Skeletons.Box.Y({
+  const a = Skeletons.Box.G({
     sys_pn: "wm-container",
     className: `${ui.fig.family}__main desk-window-wrapper`,
     debug: __filename,
@@ -51,6 +49,10 @@ const ___window_manager = function (ui) {
     kids: [
       Skeletons.FileSelector({
         partHandler: ui,
+      }),
+
+      Skeletons.Box.Y({
+        kids: [require("./side-bar")(ui)],
       }),
 
       _icons_list(ui),
@@ -74,9 +76,7 @@ const ___window_manager = function (ui) {
       }),
 
       Skeletons.Box.X({
-        kids: [
-          { kind: "dock", sys_pn: "dock" },
-        ],
+        kids: [{ kind: "dock", sys_pn: "dock" }],
       }),
     ],
   });

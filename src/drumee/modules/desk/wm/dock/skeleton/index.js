@@ -6,41 +6,42 @@ const __desk_dock = function (ui) {
     className: `${fig}__container nav-container ${fig}--divider-right`,
     kids: [
       Skeletons.Button.Svg({
-        ico: 'dock-nav',
+        ico: "dock-nav",
         className: `${fig}__button nav`,
         service: _e.launch,
         uiHandler: ui,
-        innerClass: 'bigchat',
-        sys_pn: 'bigchat-launcher',
-        respawn: 'window_bigchat',
+        innerClass: "bigchat",
+        sys_pn: "bigchat-launcher",
+        respawn: "window_bigchat",
         service: _e.launch,
         tooltips: {
           className: `${fig}__tooltips ${ui.fig.name}-tooltips`,
-          content: LOCALE.CHAT
-        }
-      })
-    ]
-  }); ``
+          content: LOCALE.CHAT,
+        },
+      }),
+    ],
+  });
+  ``;
 
   const search_btn = Skeletons.Box.X({
     debug: __filename,
     className: `${fig}__container trash-container ${fig}--divider-left`,
     service: "open-searchbox",
     kidsOpt: {
-      active: 0
+      active: 0,
     },
     state: 0,
     kids: [
       Skeletons.Button.Svg({
-        ico: 'magnifying-glass',
+        ico: "magnifying-glass",
         className: `${fig}__button trash`,
         uiHandler: ui,
         tooltips: {
           className: `${fig}__tooltips ${ui.fig.name}-tooltips`,
-          content: LOCALE.SEARCH
-        }
-      })
-    ]
+          content: LOCALE.SEARCH,
+        },
+      }),
+    ],
   });
 
   const searchbox = Skeletons.Box.X({
@@ -53,31 +54,31 @@ const __desk_dock = function (ui) {
         className: `${fig}__searchbox-input`,
         uiHandler: [ui],
         placeholder: "Enter filename",
-        service: 'search-files',
+        service: "search-files",
         type: _a.text,
-        sys_pn: 'searchbox-input',
+        sys_pn: "searchbox-input",
         autocomplete: _a.off,
         preselect: 1,
-        interactive: 1
+        interactive: 1,
       }),
-    ]
+    ],
   });
   const trash = Skeletons.Box.X({
     debug: __filename,
     className: `${fig}__container trash-container ${fig}--divider-left`,
     kids: [
       Skeletons.Button.Svg({
-        ico: 'dock-trash',
+        ico: "dock-trash",
         className: `${fig}__button trash`,
         service: _e.trash,
         sys_pn: "trash-bin",
         uiHandler: ui,
         tooltips: {
           className: `${fig}__tooltips ${ui.fig.name}-tooltips`,
-          content: LOCALE.BASKET
-        }
-      })
-    ]
+          content: LOCALE.BASKET,
+        },
+      }),
+    ],
   });
   const a = Skeletons.Box.X({
     className: `${fig}__main`,
@@ -87,18 +88,16 @@ const __desk_dock = function (ui) {
       navButton,
       // require('./minifier').default(ui),
       // require('./mobile')(ui),
-      require('./maker')(ui),
+      require("./maker")(ui),
       searchbox,
       search_btn,
-      require('./doc-menu')(ui),
+      // require('./doc-menu')(ui),
 
-      require('./launcher')(ui),
+      require("./launcher")(ui),
 
-      trash
-    ]
+      trash,
+    ],
   });
-
-
 
   return a;
 };
