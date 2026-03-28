@@ -21,7 +21,7 @@ const createWorkspaceItem = (ui, opt = {}) => {
     className: cls(fig, "workspace-item"),
     service: "open-node",
     on_start: "open-node",
-    uiHandler: [ui],
+    uiHandler: [Wm],
     kids: [
       createStatus(fig, "workspace-item-status"),
       createText(fig, "workspace-item-name", opt.filename),
@@ -83,7 +83,7 @@ const createHeader = (ui, workspaceName) => {
   return Skeletons.Box.Y({
     className: cls(fig, "header"),
     kids: [
-      createText(fig, "header-title", "CURRENT WORKSPACE"),
+      createText(fig, "header-title", LOCALE.CURRENT_WORKSPACE),
       Skeletons.Box.X({
         className: cls(fig, "header-workspace"),
         kids: [
@@ -102,7 +102,7 @@ const createWorkspaceSection = (ui) => {
   return Skeletons.Box.Y({
     className: cls(fig, "workspace"),
     kids: [
-      createText(fig, "workspace-title", "WORKSPACES"),
+      createText(fig, "workspace-title", LOCALE.WORKSPACES),
       createWorkspaceList(ui),
     ],
   });
@@ -123,8 +123,8 @@ const createFooter = (ui, username) => {
   return Skeletons.Box.Y({
     className: cls(fig, "topics"),
     kids: [
-      createNavItem(ui, "profile", "Apps (Admin)"),
-      createNavItem(ui, "billing", "Settings"),
+      createNavItem(ui, "storage", LOCALE.APPS),
+      createNavItem(ui, "settings", LOCALE.SETTINGS),
 
       Skeletons.Box.X({
         className: cls(fig, "footer-user-btn"),
@@ -151,11 +151,10 @@ const createNav = (ui) => {
     kids: [
       createHeader(ui, "Acme Agency"),
 
-      createNavItem(ui, "profile", LOCALE.PROFILE),
-      createNavItem(ui, "billing", LOCALE.BILLING_INFORMATION),
-      createNavItem(ui, "storage", LOCALE.STORAGE),
-      createNavItem(ui, "shield", LOCALE.SECURITY),
-      createNavItem(ui, "calendar", LOCALE.DATE_AND_TIME),
+      createNavItem(ui, "ab_address", LOCALE.HOME),
+      createNavItem(ui, "bell", LOCALE.NOTIFICATIONS),
+      createNavItem(ui, "desktop_chat", LOCALE.CHAT),
+      createNavItem(ui, "drumee-trash", LOCALE.TRASH),
 
       createWorkspaceSection(ui),
     ],

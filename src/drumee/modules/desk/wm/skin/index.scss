@@ -216,6 +216,7 @@
     width: 100%;
     padding: var(--spacer-5) var(--spacer-4);
     border-bottom: 1px solid var(--neutral-200);
+    gap: var(--spacer-2);
 
     &[data-device="mobile"] {
       gap: 0;
