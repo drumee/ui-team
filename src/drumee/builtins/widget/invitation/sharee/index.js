@@ -115,7 +115,7 @@ class __invitation_sharee extends __recipient {
     try {
       hub_name = this.mget(_a.hub).mget(_a.filename);
     } catch (error) { }
-    const opt = require('libs/preset/ack')(this,
+    const opt = require('@drumee/ui-core/letc/preset/ack')(this,
       ''.format(LOCALE.ACK_PEER_TO_FOLDER, user_name, hub_name)
     );
     opt.styleOpt =

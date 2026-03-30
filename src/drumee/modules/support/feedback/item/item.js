@@ -1,4 +1,4 @@
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/ui-essentials")
 
 const _default_class = "feedback__item";
 

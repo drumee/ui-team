@@ -1,4 +1,4 @@
-const { toggleState } = require("core/utils")
+const { toggleState } = require("@drumee/ui-essentials")
 const __invitation_permission = function (ui) {
   let needle, state;
   const priv = ~~ui.model.get(_a.permission) || ui.model.get(_a.privilege);

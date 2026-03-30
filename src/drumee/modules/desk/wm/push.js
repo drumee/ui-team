@@ -1,6 +1,6 @@
 const WS_EVENT = "ws:event";
 
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
 
 class __push_manager extends winman {
@@ -31,6 +31,7 @@ class __push_manager extends winman {
       }
       for (let c of contacts) {
         this.myContactsStatus.set(c.his_id, { status: c.his_state });
+        RADIO_BROADCAST.trigger(_e.peerData, { id: c.his_id, status: c.his_state });
       }
     });
   }

@@ -1,7 +1,7 @@
 let CAMERA = "camera";
 const JitsiMeetJS = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
 const { events: JEVENTS } = JitsiMeetJS;
-const { fitBoxes } = require("core/utils")
+const { fitBoxes } = require("@drumee/ui-essentials")
 
 const __room = require(".");
 

@@ -1,5 +1,5 @@
 
-const { copyToClipboard, dataTransfer } = require("core/utils")
+const { copyToClipboard, dataTransfer } = require("@drumee/ui-essentials")
 require('./skin');
 
 /**
@@ -881,7 +881,7 @@ class __widget_chat extends LetcBox {
     const _message = cmd.mget(_a.message);
     const ackMsg = LOCALE.MESSAGE_COPIED_CLIPBOARD;
     copyToClipboard(_message);
-    this.__wrapperAck.feed(require('libs/preset/ack')(this, ackMsg, { height: this.$el.height() }));
+    this.__wrapperAck.feed(require('@drumee/ui-core/letc/preset/ack')(this, ackMsg, { height: this.$el.height() }));
     const f = () => {
       this.__wrapperAck.feed('');
       return this.__wrapperAck.el.dataset.state = _a.closed;

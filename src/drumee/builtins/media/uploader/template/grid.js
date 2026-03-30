@@ -1,4 +1,4 @@
-const { arcLength } = require("core/utils")
+const { arcLength } = require("@drumee/ui-essentials")
 
 const __media_grid_progess   = function(_ui_){
   let html;

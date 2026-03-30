@@ -1,4 +1,4 @@
-const { colorFromName } = require("core/utils");
+const { colorFromName } = require("@drumee/ui-essentials");
 const __skl_chat_item_reply_message = function(_ui_) {
   
   let _message, attachmentWrapper, color, userName;

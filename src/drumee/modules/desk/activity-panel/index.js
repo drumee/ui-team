@@ -5,7 +5,6 @@ const CATEGORIES = {
   media: "mediaCount",
 }
 const WS_EVENT = "ws:event";
-require('./skin');
 
 //#########################################
 
@@ -22,6 +21,7 @@ class __activity_panel extends LetcBox {
    * @param {*} opt 
    */
   initialize(opt = {}) {
+    require('./skin');
     super.initialize(opt);
     this.declareHandlers();
     this.activityState = 0;

@@ -1,10 +1,10 @@
+const { createSafeObject } = require("@drumee/ui-essentials");
 window.WARNING = require('lex/warning');
 window.ERROR = require('lex/error');
 window._K = require('lex/constants');
-window._T = require('lex/template');
-window.KIND = require('lex/type/reader');
+// window._T = require('lex/template');
+// window.KIND = require('lex/type/reader');
 
-const { createSafeObject } = require("core/utils");
 const relativeTime = require('dayjs/plugin/relativeTime');
 const duration = require('dayjs/plugin/duration')
 const dayjs = require('dayjs');

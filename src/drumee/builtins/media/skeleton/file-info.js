@@ -1,4 +1,4 @@
-const { filesize } = require("core/utils")
+const { filesize } = require("@drumee/ui-essentials")
 
 const _row = function (_ui_, c1, c2) {
   let x2;

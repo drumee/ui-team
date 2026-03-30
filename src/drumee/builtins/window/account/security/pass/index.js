@@ -1,4 +1,4 @@
-const { toPercent } = require("core/utils")
+const { toPercent } = require("@drumee/ui-essentials")
 
 const __pad = require('../pad');
 const specials = require('assets/special-chars');
@@ -100,7 +100,7 @@ class __security_pass extends __pad {
       new_password : val,
       hub_id       : Visitor.id
     }).then((data)=>{
-      this._modal.feed(require('libs/preset/ack')(
+      this._modal.feed(require('@drumee/ui-core/letc/preset/ack')(
         this, LOCALE.PASS_PHRASE_UPDATED, {height:"100%"}
       )
       );

@@ -1,0 +1,28 @@
+@use "mixins/drumee";
+
+.workspace-item {
+  &__ui {
+    align-items: center;
+    gap: var(--spacer-2);
+    padding: var(--spacer-3);
+    cursor: pointer;
+    transition: background 0.2s;
+    border-radius: var(--corner-radius-2);
+
+  }
+
+  &:hover {
+    background: var(--neutral-300);
+  }
+
+  &[active="1"] {
+    background: var(--neutral-700);
+  }
+
+  &-status {
+    width: var(--spacer-3);
+    height: var(--spacer-3);
+    background: var(--green-400);
+    border-radius: 50%;
+  }
+}

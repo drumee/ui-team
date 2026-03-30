@@ -1,6 +1,6 @@
 
 require("./skin");
-const { copyToClipboard } = require("core/utils")
+const { copyToClipboard } = require("@drumee/ui-essentials")
 const { TweenLite, TimelineMax } = gsap;
 let lastClickTime = new Date().getTime();
 const push = require("./push");
@@ -101,6 +101,19 @@ class __window_manager extends push {
   openAccountSettings() {
     this.ensurePart("wrapper-modal").then((p) => {
       p.feed({ kind: "settings_account" })
+    })
+  }
+
+  /**
+   * 
+   */
+  loadWorkspace(workspace) {
+    const { hub_id, actual_home_id: nid } = workspace.model.toJSON()
+    this.ensurePart(_a.list).then((l) => {
+      this.debug("AAAA:113", l.mget(_a.api), { hub_id, nid }, workspace)
+      let new_api = l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
+      l.restart()
+      this.debug("AAAA:116", l.mget(_a.api), { new_api })
     })
   }
 

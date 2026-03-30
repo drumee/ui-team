@@ -633,7 +633,7 @@ class desk_module extends LetcBox {
    * @param {*} message
    */
   acknowledge(message) {
-    let c = require("libs/preset/ack")(this, message, null, {
+    let c = require("@drumee/ui-core/letc/preset/ack")(this, message, null, {
       presetClass: "link",
     });
     c.className = `${c.className} ${this.fig.group}-topbar__acknowledge-content`;

@@ -1,4 +1,4 @@
-const { colon } = require("core/utils")
+const { colon } = require("@drumee/ui-essentials")
 
 
 const main = function(_ui_) {

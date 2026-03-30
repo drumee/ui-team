@@ -1,5 +1,5 @@
 
-const { toggleState } = require("core/utils")
+const { toggleState } = require("@drumee/ui-essentials")
 class behavior_toggle extends Marionette.Behavior {
 
   /**

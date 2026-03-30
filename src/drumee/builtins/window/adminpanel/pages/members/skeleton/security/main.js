@@ -1,4 +1,4 @@
-const { toggleState } = require("core/utils")
+const { toggleState } = require("@drumee/ui-essentials")
 
 function __skl_members_security(ui) {
   const securityFig = `${ui.fig.family}-security`;

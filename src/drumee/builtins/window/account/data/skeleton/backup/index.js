@@ -1,5 +1,5 @@
 
-const { filesize } = require("core/utils")
+const { filesize } = require("@drumee/ui-essentials")
 const __account_data_backup = function(_ui_, data) {
   const size = filesize(data.size);
   const pfx = `${_ui_.fig.family}-deletion`;

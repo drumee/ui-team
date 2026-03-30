@@ -1,0 +1,43 @@
+/* ==================================================================== *
+ * desk_breadcrumb styles
+ * ==================================================================== */
+@use "mixins/drumee";
+
+.desk-breadcrumb {
+  &__main {
+    background-color: inherit;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  &__separator {
+    @include drumee.typo($color: #787B7F, $size: 14px, $line: 24px);
+    user-select: none;
+    padding: 0 2px;
+  }
+}
+
+// Breadcrumb items scoped to desk context
+.desk-breadcrumb .window-breadcrumbs__item {
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+
+  &--filename {
+    @include drumee.typo($size: 13px, $line: 24px);
+  }
+
+  &:last-child .window-breadcrumbs__item--filename {
+    font-weight: 600;
+  }
+
+  &:hover .window-breadcrumbs__item--filename {
+    text-decoration: underline;
+  }
+}

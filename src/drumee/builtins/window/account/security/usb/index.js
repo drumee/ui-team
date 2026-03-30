@@ -146,7 +146,7 @@ class __security_usb extends __pad {
     switch (method) {
       case SERVICE.drumate.update_profile:
         Visitor.set(_a.profile, data.profile);
-        this._modal.feed(require('libs/preset/ack')(
+        this._modal.feed(require('@drumee/ui-core/letc/preset/ack')(
           this, LOCALE.ACK_PHONE_UPDATED, {height:"100%"}
         )
         );

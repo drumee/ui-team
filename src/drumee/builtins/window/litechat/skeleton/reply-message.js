@@ -3,7 +3,7 @@
 //   FILE : /src/drumee/builtins/window/litechat/skeleton/reply-message.coffee
 //   TYPE : Skeleton
 // ==================================================================== *
-const { colorFromName } = require("core/utils");
+const { colorFromName } = require("@drumee/ui-essentials");
 const __skl_chat_reply_message = function(_ui_, msg) {
   
   const chatReplyFig = `${_ui_.fig.family}-reply`;

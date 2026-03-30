@@ -5,18 +5,10 @@ class __tooltips extends Marionette.View {
     this.move = this.move.bind(this);
   }
 
-  static initClass() {
-    this.prototype.templateName = _T.wrapper.content;
-    this.prototype.className = "xia-center tooltip";
-  }
-// =================== *
-//
-// =================== *
-
-// ===========================================================
-// initialize
-//
-// ===========================================================
+  /**
+   * 
+   * @returns 
+   */
   initialize() {
     super.initialize();
     if ((this.model.get(_a.content) == null)) {
@@ -24,40 +16,31 @@ class __tooltips extends Marionette.View {
       return this.model.set(_a.content, c);
     }
   }
-// ======================================================
-//
-// ======================================================
 
-// ===========================================================
-// update
-//
-// @param [Object] content
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} content 
+   * @returns 
+   */
   update(content){
     this.model.set(_a.content, content);
     return this.render();
   }
-// ======================================================
-//
-// ======================================================
 
-// ===========================================================
-// move
-//
-// @param [Object] e
-//
-// ===========================================================
+  /**
+   * 
+   * @param {*} e 
+   * @returns 
+   */
   move(e){
     const left = e.clientX || e.pageX;
     let top = e.clientY || e.pageY;
     top = top + window.scrollY;
-    //_dbg "--PP move", left, top
-    return this.$el.css({
+    this.$el.css({
       left,
       top
     });
   }
 }
-__tooltips.initClass();
+
 module.exports = __tooltips;

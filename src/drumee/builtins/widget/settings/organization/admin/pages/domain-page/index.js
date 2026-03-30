@@ -4,7 +4,7 @@
 *   TYPE : Component
 * ============================================================== */
 
-const { copyToClipboard } = require("core/utils")
+const { copyToClipboard } = require("@drumee/ui-essentials")
 
 class ___domain_page extends LetcBox {
 

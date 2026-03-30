@@ -1,4 +1,4 @@
-const { toggleState } = require("core/utils")
+const { toggleState } = require("@drumee/ui-essentials")
 let __dbg_path;
 if (__BUILD__ === 'dev') {
   __dbg_path = 'desk/skeleton/common/access-control';

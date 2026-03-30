@@ -8,10 +8,6 @@ class utils_content extends Marionette.View {
     this.onDomRefresh = this.onDomRefresh.bind(this);
   }
 
-  static initClass() {
-    this.prototype.templateName = _T.wrapper.content;
-  }
-
   /**
    * 
    * @param {*} opt 
@@ -71,5 +67,4 @@ class utils_content extends Marionette.View {
     }
   }
 }
-utils_content.initClass();
 module.exports = utils_content;

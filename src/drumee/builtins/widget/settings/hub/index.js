@@ -1,5 +1,5 @@
 
-const { copyToClipboard, createQrcode, openUserMailAgent } = require('core/utils')
+const { copyToClipboard, createQrcode, openUserMailAgent } = require('@drumee/ui-essentials')
 const { permission } = require("../../../widget/settings/hub/skeleton/toolkit")
 /**
  * @class settings_hub

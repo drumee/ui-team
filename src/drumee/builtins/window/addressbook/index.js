@@ -1,6 +1,6 @@
 
-const { uploadFile } = require("core/socket/upload")
-const { dataTransfer } = require("core/utils")
+const { uploadFile } = require("@drumee/ui-essentials")
+const { dataTransfer } = require("@drumee/ui-essentials")
 
 const __window_addressbook_interact = require('window/interact/singleton');
 

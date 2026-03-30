@@ -1,6 +1,6 @@
 
 const __recipient = require('../core');
-const { copyToClipboard, openLink } = require("core/utils")
+const { copyToClipboard, openLink } = require("@drumee/ui-essentials")
 
 class __invitation_publiclink extends __recipient {
   constructor(...args) {
@@ -119,7 +119,7 @@ class __invitation_publiclink extends __recipient {
 
       case _e.copy:
         copyToClipboard(this.mget(_a.link));
-        this.feed(require('libs/preset/ack')(this, LOCALE.ACK_COPY_LINK, {
+        this.feed(require('@drumee/ui-core/letc/preset/ack')(this, LOCALE.ACK_COPY_LINK, {
           height: this.$el.height()
         })
         );
@@ -207,7 +207,7 @@ class __invitation_publiclink extends __recipient {
           link: null,
           share_id: null
         });
-        this.feed(require('libs/preset/ack')(this, LOCALE.ACK_DELETE_PUBLIC_LINK, {
+        this.feed(require('@drumee/ui-core/letc/preset/ack')(this, LOCALE.ACK_DELETE_PUBLIC_LINK, {
           height: this.$el.height()
         })
         );

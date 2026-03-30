@@ -17,8 +17,7 @@
 
 
 window.errorStack = [];
-const { xhRequest } = require("core/socket/request");
-const { createSafeObject } = require("core/utils");
+const { createSafeObject, xhRequest } = require("@drumee/ui-essentials");
 const { version } = require('../../package.json')
 class Drumee extends Marionette.Application {
 
@@ -203,7 +202,7 @@ class Drumee extends Marionette.Application {
    * 
    */
   utils() {
-    return require("core/utils");
+    return require("@drumee/ui-essentials");
   }
 }
 Drumee.initClass();

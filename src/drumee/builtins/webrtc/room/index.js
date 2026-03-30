@@ -1,5 +1,5 @@
 const JitsiMeetJS = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
-const { timestamp } = require("core/utils")
+const { timestamp } = require("@drumee/ui-essentials")
 
 const __interact = require("window/interact/webrtc");
 class __webrtc_room extends __interact {

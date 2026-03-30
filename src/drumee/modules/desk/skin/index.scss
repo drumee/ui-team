@@ -14,6 +14,7 @@ html {
 @include meta.load-css("desk/dmz-copy-media");
 @include meta.load-css("desk/intro-popup");
 @include meta.load-css("dialog");
+@include meta.load-css("sidebar");
 
 .desk-module {
   &__ui {

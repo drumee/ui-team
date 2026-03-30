@@ -1,5 +1,3 @@
-const { loadWidgets } = require("@drumee/ui-toolkit");
-loadWidgets()
 /**
  *
  *

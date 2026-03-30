@@ -4,7 +4,7 @@
 //   TYPE : 
 // ============================================================== *
 
-const { copyToClipboard } = require("core/utils")
+const { copyToClipboard } = require("@drumee/ui-essentials")
 
 const __properties = function (_ui_, data) {
   let kids = [];

@@ -1,5 +1,5 @@
 
-const { fitBoxes } = require("core/utils")
+const { fitBoxes } = require("@drumee/ui-essentials")
 const __core = require('player/interact');
 class __player_video extends __core {
   constructor(...args) {

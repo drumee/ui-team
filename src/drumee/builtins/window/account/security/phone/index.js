@@ -125,7 +125,7 @@ class __security_phone extends __pad {
       hub_id      : Visitor.id
     }).then(()=>{
       Visitor.set(_a.profile, data);
-      this._modal.feed(require('libs/preset/ack')(
+      this._modal.feed(require('@drumee/ui-core/letc/preset/ack')(
         this, LOCALE.ACK_PHONE_UPDATED, {height:"100%"}
       )
       );
