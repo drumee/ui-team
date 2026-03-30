@@ -6,6 +6,8 @@
     height: 72px;
     justify-content: space-between;
     padding: var(--spacer-4) var(--spacer-6);
+    background-color: #282538;
+    gap: var(--spacer-6);
   }
 
   &__logo {
@@ -139,10 +141,6 @@
       opacity: 0.5;
       pointer-events: none;
     }
-
-    &:hover {
-      background-color: var(--default-bg-hover);
-    }
   }
 
   &__activity-count {
@@ -170,6 +168,65 @@
 
     &[data-count="0"] {
       display: none;
+    }
+  }
+
+  &__search-container {
+    align-items: center;
+    gap: var(--spacer-4);
+    background-color: #0b0a21;
+    border-radius: var(--corner-radius-3);
+    padding: 0 var(--spacer-4);
+  }
+
+  &__icon {
+    width: auto;
+    height: auto;
+    padding: 0;
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: #e4e3ff;
+    }
+  }
+
+  &__search-input {
+    input {
+      background-color: transparent;
+      color: #c8c4d7;
+    }
+  }
+
+  &__search-note {
+    align-items: center;
+    padding: var(--spacer-3);
+    background-color: #282538;
+    color: #e4e3ff;
+    gap: var(--spacer-2);
+    border-radius: var(--corner-radius-1);
+  }
+
+  &__invite-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacer-2);
+    color: #b1adff;
+    border: 1px solid #5950ff;
+    padding: 0 var(--spacer-4);
+    border-radius: var(--corner-radius-3);
+    cursor: pointer;
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: #b1adff;
+    }
+    &:hover {
+      background-color: #5950ff;
+      color: #fff;
+      border-color: #5950ff;
+      svg {
+        fill: #fff;
+      }
     }
   }
 }

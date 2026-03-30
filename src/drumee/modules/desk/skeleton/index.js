@@ -16,34 +16,30 @@ const _desk_main = function (ui) {
         uiHandler: ui,
       }),
 
-      // Topbar: logo | breadcrumb | search | invite | bell | avatar
-      Skeletons.Box.Y({
-        sys_pn: "top-bar",
-        className: `${ui.fig.family}__topbar`,
-        kids: [require("./topbar")(ui)],
-      }),
-
-      // Body: sidebar + window manager side by side
       Skeletons.Box.X({
-        sys_pn: "desk-body",
         className: `${ui.fig.family}__body`,
         kids: [
-          // Left sidebar: current space | navigation | settings
+          require("./sidebar")(ui),
           Skeletons.Box.Y({
-            sys_pn: "sidebar-container",
-            className: `${ui.fig.family}__sidebar-container`,
-            kids: [require("./sidebar")(ui)],
-          }),
-
-          // Main content: window manager (floating windows + file grid)
-          Skeletons.Box.X({
-            sys_pn: "desk-wrapper",
-            className: `${ui.fig.family}__wm-container`,
+            sys_pn: "desk-body",
+            className: `${ui.fig.family}__right-side`,
             kids: [
-              {
-                kind: "window_manager",
-                sys_pn: "desk-content",
-              },
+              Skeletons.Box.Y({
+                sys_pn: "top-bar",
+                className: `${ui.fig.family}__topbar`,
+                kids: [require("./topbar")(ui)],
+              }),
+
+              Skeletons.Box.X({
+                sys_pn: "desk-wrapper",
+                className: `${ui.fig.family}__wm-container`,
+                kids: [
+                  {
+                    kind: "window_manager",
+                    sys_pn: "desk-content",
+                  },
+                ],
+              }),
             ],
           }),
         ],

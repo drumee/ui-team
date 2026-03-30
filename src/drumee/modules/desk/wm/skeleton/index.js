@@ -39,7 +39,7 @@ const ___window_manager = function (ui) {
     bugReportLabel = LOCALE.BUG_REPORTS;
   }
 
-  const a = Skeletons.Box.G({
+  const a = Skeletons.Box.Y({
     sys_pn: "wm-container",
     className: `${ui.fig.family}__main desk-window-wrapper`,
     debug: __filename,
@@ -49,10 +49,6 @@ const ___window_manager = function (ui) {
     kids: [
       Skeletons.FileSelector({
         partHandler: ui,
-      }),
-
-      Skeletons.Box.Y({
-        kids: [require("./side-bar")(ui)],
       }),
 
       _icons_list(ui),

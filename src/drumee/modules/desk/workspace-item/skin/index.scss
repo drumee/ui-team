@@ -8,11 +8,10 @@
     cursor: pointer;
     transition: background 0.2s;
     border-radius: var(--corner-radius-2);
-
   }
 
   &:hover {
-    background: var(--neutral-300);
+    background: #5950ff;
   }
 
   &[active="1"] {

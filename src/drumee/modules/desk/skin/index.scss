@@ -38,13 +38,21 @@ html {
     bottom: 0;
   }
 
-  &__wm-container {
-    width: 100vw;
-    height: calc(100vh - 72px);
-  }
+  // &__wm-container {
+  //   width: 100vw;
+  //   height: calc(100vh - 72px);
+  // }
 
   &__activity-container {
     width: 100%;
     height: auto;
+  }
+
+  &__body {
+    height: 100vh;
+  }
+
+  &__right-side {
+    flex-grow: 1;
   }
 }

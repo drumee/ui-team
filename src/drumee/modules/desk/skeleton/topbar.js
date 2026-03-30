@@ -12,7 +12,6 @@ module.exports = function (ui) {
     debug: __filename,
     className: `${pfx}__main`,
     kids: [
-
       // 1. Logo
       Skeletons.Box.X({
         className: `${pfx}__logo`,
@@ -38,19 +37,42 @@ module.exports = function (ui) {
       }),
 
       // 4. Search box
-      Skeletons.Entry({
-        className: `${pfx}__search-input`,
-        sys_pn: "search-box",
-        uiHandler: [ui],
-        placeholder: LOCALE.SEARCH || "Search...",
-        service: _e.search,
-        type: _a.text,
-        autocomplete: _a.off,
-        interactive: 1,
+      Skeletons.Box.X({
+        className: `${pfx}__search-container`,
+        kids: [
+          Skeletons.Button.Svg({
+            ico: "magnifying-glass",
+            className: `${pfx}__icon`,
+          }),
+          Skeletons.Entry({
+            className: `${pfx}__search-input`,
+            sys_pn: "search-box",
+            uiHandler: [ui],
+            placeholder: LOCALE.SEARCH || "Search...",
+            service: _e.search,
+            type: _a.text,
+            autocomplete: _a.off,
+            interactive: 1,
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__search-note`,
+            kids: [
+              Skeletons.Button.Svg({
+                ico: "magnifying-glass",
+                className: `${pfx}__icon`,
+              }),
+              Skeletons.Note({
+                className: `${pfx}__search-text`,
+                content: "K",
+              }),
+            ],
+          }),
+        ],
       }),
 
       // 5. Invite members button
       Skeletons.Button.Label({
+        ico: "drumee-add-contact",
         className: `${pfx}__invite-btn`,
         label: LOCALE.INVITE_MEMBER || "Invite member",
         service: "invite-member",
@@ -58,17 +80,17 @@ module.exports = function (ui) {
       }),
 
       // 6. Bell (notifications)
-      Skeletons.Button.Svg({
-        className: icoClass,
-        sys_pn: "bell-btn",
-        service: "toggle-activity-panel",
-        ico: "bell",
-        dataset: { service: "toggle-activity-panel" },
-        uiHandler: [ui],
-      }),
+      // Skeletons.Button.Svg({
+      //   className: icoClass,
+      //   sys_pn: "bell-btn",
+      //   service: "toggle-activity-panel",
+      //   ico: "bell",
+      //   dataset: { service: "toggle-activity-panel" },
+      //   uiHandler: [ui],
+      // }),
 
       // 7. User avatar
-      userMenu(ui, "desk-avatar"),
+      // userMenu(ui, "desk-avatar"),
     ],
   });
 };
