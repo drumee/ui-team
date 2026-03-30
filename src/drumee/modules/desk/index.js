@@ -14,9 +14,9 @@ class desk_module extends LetcBox {
     this._dragLeave = this._dragLeave.bind(this);
     this.route = this.route.bind(this);
     this.onChildBubble = this.onChildBubble.bind(this);
-    // this.checkIntro = this.checkIntro.bind(this);
+    this.checkIntro = this.checkIntro.bind(this);
     this.dmzCopyMedia = this.dmzCopyMedia.bind(this);
-    // this.checkUserOnBoarding = this.checkUserOnBoarding.bind(this);
+    this.checkUserOnBoarding = this.checkUserOnBoarding.bind(this);
     this.onUiEvent = this.onUiEvent.bind(this);
     this.acknowledge = this.acknowledge.bind(this);
     this._openTab = this._openTab.bind(this);
@@ -71,6 +71,7 @@ class desk_module extends LetcBox {
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
+    this.checkIntro();
   }
 
   /**
@@ -323,13 +324,40 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Check if user needs onboarding and show the onboarding plugin
    * @param {Object} c
    */
   checkIntro(c) {
-    // if (Visitor.get("is_dmz_hub_copy") == _a.yes) {
-    //   return this.dmzCopyMedia(c);
-    // }
-    // this.checkUserOnBoarding(c);
+    if (Visitor.get("is_dmz_hub_copy") == _a.yes) {
+      return this.dmzCopyMedia(c);
+    }
+    this.checkUserOnBoarding(c);
+  }
+
+  /**
+   * Show onboarding widget if user hasn't completed onboarding
+   */
+  checkUserOnBoarding(c) {
+    this.fetchService({
+      service: SERVICE.onboarding.check,
+      hub_id: Visitor.id,
+    }).then((data) => {
+      if (data && data.completed) {
+        return;
+      }
+      Kind.loadPlugin({ name: 'onboarding', kind: 'onboarding' }).then(async () => {
+        await Kind.waitFor('onboarding');
+        this.__wrapperPopup.feed({
+          kind: 'onboarding',
+          type: 'app',
+          uiHandler: [this],
+        });
+      }).catch((e) => {
+        this.warn("Failed to load onboarding plugin", e);
+      });
+    }).catch((e) => {
+      this.warn("Failed to check onboarding status", e);
+    });
   }
 
   /**
@@ -400,19 +428,6 @@ class desk_module extends LetcBox {
     });
   }
 
-  /**
-   * @param {Object} c
-   */
-  // checkUserOnBoarding(c) {
-  //   const { debug } = Visitor.parseModuleArgs() || {};
-  //   if (Visitor.data("intro") === _a.no && !debug) {
-  //     return;
-  //   }
-
-  //   this.__wrapperPopup.feed(
-  //     require("./skeleton/common/intro-popup").default(this)
-  //   );
-  // }
 
   /**
    *
