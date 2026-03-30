@@ -906,7 +906,7 @@ class __window_manager extends mfsInteract {
       media.wait(0);
       return;
     }
-
+    this.debug("AAA:909", media, args)
     if (pointerDragged) {
       return;
     }

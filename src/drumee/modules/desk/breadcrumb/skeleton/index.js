@@ -19,7 +19,7 @@ function skl_desk_breadcrumb(ui, data = []) {
   const items = [];
   data.forEach((item, i) => {
     items.push(breadcrumbItem(handler, item));
-    if (i < data.length - 1) {
+    if (i < data.length) {
       items.push(
         Skeletons.Note({
           content: "›",

@@ -32,6 +32,7 @@ class __desk_breadcrumb extends LetcBox {
    */
   _onBreadcrumb(data = [], source) {
     this._sourceWindow = source;
+    this.debug("AAAA:35", data, source)
     this.feed(require('./skeleton')(this, data));
   }
 }
