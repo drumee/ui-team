@@ -612,32 +612,33 @@ class __window_core extends __utils {
    * 
    * @param {*} list 
    */
-  buildBreadcrumbs(data = []) {
-    // if (!this.breadcrumbsRoll) return;
-    let items = [];
-    for (let item of data) {
-      items.push(require("./skeleton/topbar/breadcrumbs-item")(this, item));
-    }
-
-    if (!items.length) return
-    this.breadcrumbsRoll.feed(items);
-    if (items.length <= 1) {
-      this.breadcrumbsRoll.el.hide();
-      if (this.__settingsBox) this.__settingsBox.el.show()
-    } else {
-      this.breadcrumbsRoll.el.show();
-      if (this.__settingsBox) this.__settingsBox.el.hide()
-    }
-    this._path = data;
-    // Broadcast to desk-level breadcrumb widget
+  updateBreadcrumb(data = []) {
     RADIO_BROADCAST.trigger("desk:breadcrumb", data, this);
-    const last = this.breadcrumbsRoll.children.last();
-    if (last && this.name) {
-      const fileName = last.mget(_a.filename) || "";
-      if (fileName) {
-        this.name.set({ content: fileName });
-      }
-    }
+    // if (!this.breadcrumbsRoll) return;
+    // let items = [];
+    // for (let item of data) {
+    //   items.push(require("./skeleton/topbar/breadcrumbs-item")(this, item));
+    // }
+
+    // if (!items.length) return
+    // this.breadcrumbsRoll.feed(items);
+    // if (items.length <= 1) {
+    //   this.breadcrumbsRoll.el.hide();
+    //   if (this.__settingsBox) this.__settingsBox.el.show()
+    // } else {
+    //   this.breadcrumbsRoll.el.show();
+    //   if (this.__settingsBox) this.__settingsBox.el.hide()
+    // }
+    // this._path = data;
+    // // Broadcast to desk-level breadcrumb widget
+    // RADIO_BROADCAST.trigger("desk:breadcrumb", data, this);
+    // const last = this.breadcrumbsRoll.children.last();
+    // if (last && this.name) {
+    //   const fileName = last.mget(_a.filename) || "";
+    //   if (fileName) {
+    //     this.name.set({ content: fileName });
+    //   }
+    // }
   }
 
   /**
@@ -733,7 +734,8 @@ class __window_core extends __utils {
         }
       }, 1000)
     }
-    this.buildBreadcrumbs(data);
+    RADIO_BROADCAST.trigger("desk:breadcrumb", data, this);
+    // this.updateBreadcrumb(data);
   }
 
   /**
@@ -806,7 +808,7 @@ class __window_core extends __utils {
           if (/^media/.test(media.mget(_a.kind))) {
             clearInterval(timer);
             media.wait(1)
-            this.openContent(media, { service:"open-node", mode: _a.edit })
+            this.openContent(media, { service: "open-node", mode: _a.edit })
           }
         }
       }, 500)

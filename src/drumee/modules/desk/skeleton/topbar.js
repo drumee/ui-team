@@ -12,31 +12,15 @@ module.exports = function (ui) {
     debug: __filename,
     className: `${pfx}__main`,
     kids: [
-      // 1. Logo
-      Skeletons.Box.X({
-        className: `${pfx}__logo`,
-        kids: [
-          Skeletons.Button.Svg({
-            ico: "raw-logo-drumee-full",
-            className: `${pfx}__logo-icon`,
-          }),
-        ],
-      }),
-
-      // 2. Breadcrumb
+      // Breadcrumb
       {
         kind: "desk_breadcrumb",
         sys_pn: "breadcrumb",
         className: `${pfx}__breadcrumb`,
       },
 
-      // 3. Spacer — pushes right-side items to the right
-      Skeletons.Box.X({
-        className: `${pfx}__spacer`,
-        style: { flex: 1 },
-      }),
 
-      // 4. Search box
+      // Search box
       Skeletons.Box.X({
         className: `${pfx}__search-container`,
         kids: [
@@ -70,7 +54,7 @@ module.exports = function (ui) {
         ],
       }),
 
-      // 5. Invite members button
+      // Invite members button
       Skeletons.Button.Label({
         ico: "drumee-add-contact",
         className: `${pfx}__invite-btn`,
@@ -78,19 +62,6 @@ module.exports = function (ui) {
         service: "invite-member",
         uiHandler: [ui],
       }),
-
-      // 6. Bell (notifications)
-      // Skeletons.Button.Svg({
-      //   className: icoClass,
-      //   sys_pn: "bell-btn",
-      //   service: "toggle-activity-panel",
-      //   ico: "bell",
-      //   dataset: { service: "toggle-activity-panel" },
-      //   uiHandler: [ui],
-      // }),
-
-      // 7. User avatar
-      // userMenu(ui, "desk-avatar"),
     ],
   });
 };

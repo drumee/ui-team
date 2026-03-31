@@ -4,6 +4,12 @@
 @use "mixins/drumee";
 
 .desk-breadcrumb {
+  &__ui {
+    flex: 1;
+    justify-content: center;
+    display: flex;
+  }
+
   &__main {
     background-color: inherit;
     display: flex;
