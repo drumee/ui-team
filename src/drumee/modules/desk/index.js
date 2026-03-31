@@ -338,25 +338,23 @@ class desk_module extends LetcBox {
    * Show onboarding widget if user hasn't completed onboarding
    */
   checkUserOnBoarding(c) {
-    this.fetchService({
-      service: SERVICE.onboarding.check,
-      hub_id: Visitor.id,
-    }).then((data) => {
-      if (data && data.completed) {
-        return;
-      }
-      Kind.loadPlugin({ name: 'onboarding', kind: 'onboarding' }).then(async () => {
-        await Kind.waitFor('onboarding');
-        this.__wrapperPopup.feed({
-          kind: 'onboarding',
-          type: 'app',
-          uiHandler: [this],
-        });
-      }).catch((e) => {
-        this.warn("Failed to load onboarding plugin", e);
+    if (!SERVICE.onboarding) {
+      this.warn("SERVICE.onboarding is not available, skipping onboarding check");
+      return;
+    }
+    const { onboarded } = Visitor.get(_a.profile) || {};
+    if (onboarded) {
+      return;
+    }
+    Kind.loadPlugin({ name: 'onboarding', kind: 'onboarding' }).then(async () => {
+      await Kind.waitFor('onboarding');
+      this.__wrapperPopup.feed({
+        kind: 'onboarding',
+        type: 'app',
+        uiHandler: [this],
       });
     }).catch((e) => {
-      this.warn("Failed to check onboarding status", e);
+      this.warn("Failed to load onboarding plugin", e);
     });
   }
 
