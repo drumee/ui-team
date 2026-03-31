@@ -19,11 +19,11 @@
         max-height: calc(100vh - 190px);
 
         // &[data-type="evaluation"]::after {
-        //   @include drumee.license-trial();
-        //   @include drumee.typo($size: 36px, $line: 42px, $color: var(--default-text-title));
-        //   transform: none;
-        //   bottom: 0;
-        //   width: 100%;
+        // @include drumee.license-trial();
+        // @include drumee.typo($size: 36px, $line: 42px, $color: var(--default-text-title));
+        // transform: none;
+        // bottom: 0;
+        // width: 100%;
         // }
       }
     }
@@ -154,9 +154,10 @@
   }
 
   &__header {
-    height: 90px;
-    width: 100%;
     z-index: 100;
+    background: linear-gradient(135deg, var(--primary-300), var(--primary-500));
+    margin: var(--spacer-5);
+    border-radius: var(--corner-radius-4);
 
     &[data-device="mobile"] {
       height: auto;
@@ -164,36 +165,44 @@
   }
 
   // &-header__container {
-  //   // background: rgba(0, 0, 0, 0.15);
-  //   // backdrop-filter: blur(8px);
-  //   // -webkit-backdrop-filter: blur(8px);
+  // // background: rgba(0, 0, 0, 0.15);
+  // // backdrop-filter: blur(8px);
+  // // -webkit-backdrop-filter: blur(8px);
   // }
 
   &-header__buttons-wrapper {
-    gap: 10px;
-    width: 100%;
+    gap: var(--spacer-3);
+    align-items: center;
+    background-color: var(--primary-900);
+    padding: var(--spacer-5);
+    border-radius: var(--corner-radius-max);
+    color: var(--white);
+    cursor: pointer;
+    &:hover {
+      background-color: var(--primary-800);
+      transform: translateY(-2px);
+    }
   }
 
   &-header__expiry-info {
     gap: var(--spacer-3);
   }
 
-  &-header__button {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 40px;
-    background: var(--neutral-900);
+  &-header__button-note {
     color: var(--white);
-    border-radius: 20px;
-    border: none;
-    height: auto;
-    width: 100px;
 
     &:hover {
       box-shadow: none;
       border: none;
+    }
+  }
+
+  &-header__button-icon {
+    width: 16px;
+    height: 16px;
+    svg {
+      width: 16px;
+      height: 16px;
     }
   }
 
