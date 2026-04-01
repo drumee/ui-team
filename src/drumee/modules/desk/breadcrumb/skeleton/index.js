@@ -4,31 +4,19 @@
  * Each item delegates "open-node" to the source window.
  * ==================================================================== */
 
-const breadcrumbItem = require("builtins/window/skeleton/topbar/breadcrumbs-item");
-
 /**
  * @param {Object} ui   - The desk_breadcrumb widget instance
  * @param {Array}  data - Path items array from window/core.js buildBreadcrumbs()
  */
 function skl_desk_breadcrumb(ui, data = []) {
   const pfx = ui.fig.family;
-
-  // Delegate open-node clicks to the source window, not to desk
-  const handler = ui._sourceWindow || ui;
-
   const items = [];
+  if (!_.isArray(data)) data = [data]
   data.forEach((item, i) => {
-    items.push(breadcrumbItem(handler, item));
-    if (i < data.length) {
-      items.push(
-        Skeletons.Note({
-          content: "›",
-          className: `${pfx}__separator`,
-        })
-      );
+    if (item.filename || item.name) {
+      items.push({ ...item, kind: "desk_breadcrumb_item", service: "breadcrum-jump" });
     }
   });
-
   return Skeletons.Box.X({
     className: `${pfx}__main`,
     debug: __filename,

@@ -6,7 +6,7 @@
     height: 72px;
     justify-content: space-between;
     padding: var(--spacer-4) var(--spacer-6);
-    background-color: var(--primary-purple-90);
+    background-color: var(--normal-bg-90);
     gap: var(--spacer-6);
   }
 
@@ -174,7 +174,7 @@
   &__search-container {
     align-items: center;
     gap: var(--spacer-4);
-    background-color: var(--primary-purple-100);
+    background-color: var(--normal-bg-100);
     border-radius: var(--corner-radius-3);
     padding: 0 var(--spacer-4);
   }

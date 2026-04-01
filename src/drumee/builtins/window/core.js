@@ -75,6 +75,7 @@ class __window_core extends __utils {
       } catch (error) { }
     });
     this.contextmenuSkeleton = require("builtins/contextmenu/skeleton");
+    this._raised = 0;
     this._history = {};
   }
 
@@ -414,7 +415,7 @@ class __window_core extends __utils {
   buildContent(child, svc) {
     this.__content = child;
     this.setupInteract();
-    this.raise();
+    if (!this._raised) this.raise();
     child.on(_e.show, () => {
       this.fetchContent();
       this._path = this.buildHistory();
@@ -493,7 +494,6 @@ class __window_core extends __utils {
     const hub_id = this.model.get(_a.hub_id) || this.model.get(_a.holder_id);
     switch (pn) {
       case _a.content:
-        this.raise();
         this.buildContent(child);
         if (this.model.get("usePid")) {
           this.fetchService({
@@ -542,23 +542,6 @@ class __window_core extends __utils {
         this.actionContainer = child;
         break;
 
-      // case "breadcrumbs":
-      //   this.breadcrumbs = child;
-      //   break;
-
-      case "breadcrumbs-roll":
-        this.breadcrumbsRoll = child;
-        // child.collection.on(_e.remove, () => {
-        //   if (child.collection.length === 0) {
-        //     this.__breadcrumbsContainer.setState(0);
-        //   }
-
-        //   if (child.collection.length) {
-        //     return this.__breadcrumbsContainer.setState(1);
-        //   }
-        // });
-        this.trigger("breadcrumbs-roll-ready");
-        break;
 
       case "folder-summary":
         this.updateSummary(child)
@@ -573,15 +556,6 @@ class __window_core extends __utils {
     }
 
     return (child.onChildBubble = this.onChildBubble);
-  }
-
-  /**
-   * 
-   * @param {*} menu 
-   * @returns 
-   */
-  adjustBreadcrumbs(menu) {
-    return this.breadcrumbsRoll;
   }
 
   /**
@@ -602,43 +576,11 @@ class __window_core extends __utils {
           break;
       }
     }
-
     if (!pointerDragged) {
       this.triggerMethod(CHANGE_RADIO);
+      RADIO_BROADCAST.trigger("breadcrumb:update", { event: _e.raised, media: this.media });
     }
-  }
-
-  /**
-   * 
-   * @param {*} list 
-   */
-  updateBreadcrumb(data = []) {
-    RADIO_BROADCAST.trigger("desk:breadcrumb", data, this);
-    // if (!this.breadcrumbsRoll) return;
-    // let items = [];
-    // for (let item of data) {
-    //   items.push(require("./skeleton/topbar/breadcrumbs-item")(this, item));
-    // }
-
-    // if (!items.length) return
-    // this.breadcrumbsRoll.feed(items);
-    // if (items.length <= 1) {
-    //   this.breadcrumbsRoll.el.hide();
-    //   if (this.__settingsBox) this.__settingsBox.el.show()
-    // } else {
-    //   this.breadcrumbsRoll.el.show();
-    //   if (this.__settingsBox) this.__settingsBox.el.hide()
-    // }
-    // this._path = data;
-    // // Broadcast to desk-level breadcrumb widget
-    // RADIO_BROADCAST.trigger("desk:breadcrumb", data, this);
-    // const last = this.breadcrumbsRoll.children.last();
-    // if (last && this.name) {
-    //   const fileName = last.mget(_a.filename) || "";
-    //   if (fileName) {
-    //     this.name.set({ content: fileName });
-    //   }
-    // }
+    this._raised = 1;
   }
 
   /**
@@ -734,8 +676,7 @@ class __window_core extends __utils {
         }
       }, 1000)
     }
-    RADIO_BROADCAST.trigger("desk:breadcrumb", data, this);
-    // this.updateBreadcrumb(data);
+    RADIO_BROADCAST.trigger("breadcrumb:update", data, this);
   }
 
   /**

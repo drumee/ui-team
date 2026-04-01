@@ -8,6 +8,7 @@
 @use "./lib/utils";
 @use "./lib/button";
 @use "./lib/drumee-buttons";
+@use "./vars/themes/dark.scss";
 body {
   min-height: 100vh;
   background-color: rgb(248, 250, 252);

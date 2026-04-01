@@ -148,7 +148,6 @@
 }
 
 @include meta.load-css("group/header/main.scss");
-@include meta.load-css("group/header/breadcrumbs.scss");
 @include meta.load-css("group/body/filter.scss");
 @include meta.load-css("group/body/main.scss");
 @include meta.load-css("group/body/contextmenu.scss");

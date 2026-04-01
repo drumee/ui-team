@@ -37,7 +37,6 @@ class __window_interact extends windowCore {
     this.isFileUpdated = 0;
 
     this.declareHandlers();
-    this.raise = this.onChildBubble;
     let width = _K.docViewer.width;
     let height = _K.docViewer.height;
     let minWidth = 700;
@@ -81,6 +80,13 @@ class __window_interact extends windowCore {
     }
   }
 
+  /**
+   * 
+   */
+  raise(){
+    this.debug("AAAA:96", this)
+    this.triggerMethod(CHANGE_RADIO);
+  }
   /**
    *
    */
