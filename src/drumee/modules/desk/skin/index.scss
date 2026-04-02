@@ -22,11 +22,11 @@ html {
     height: 100%;
     overflow: hidden;
     font-family: var(--font-main);
-    background-color: transparent;
+    background-color: var(--normal-bg);
   }
 
   &__main {
-    background-color: transparent;
+    background-color: var(--normal-bg);
     max-height: 100vh;
     overflow: auto;
   }

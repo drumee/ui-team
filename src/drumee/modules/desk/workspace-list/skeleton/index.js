@@ -27,6 +27,7 @@ module.exports = function (ui) {
     api: {
       service: SERVICE.desk.home,
       hub_id: Visitor.id,
+      type: _a.hub
     },
   });
 

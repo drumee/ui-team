@@ -115,6 +115,10 @@ class __window_manager extends push {
       l.restart()
       this.debug("AAAA:116", l.mget(_a.api), { new_api })
     })
+    this.ensurePart("wrapper-modal").then((p) => {
+      p.clear()
+    })
+    this.windowsLayer.clear()
   }
 
   /**

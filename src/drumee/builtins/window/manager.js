@@ -62,7 +62,6 @@ class __window_manager extends mfsInteract {
     this.clipboard = {};
     this.pseudo_media = new pseudo_media();
     this.pseudo_media.parent = this;
-    this.raise = this.onChildBubble;
     this.offsetY = -115;
     this._dlFifo = [];
     this.declareHandlers();
@@ -88,6 +87,14 @@ class __window_manager extends mfsInteract {
       item.$el.offset().top -
       10
     );
+  }
+
+  /**
+   * 
+   */
+  raise(){
+    this.debug("AAAA:96", this)
+    console.trace()
   }
 
   /**

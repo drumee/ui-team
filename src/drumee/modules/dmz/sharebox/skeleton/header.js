@@ -66,6 +66,30 @@ function __skl_dmz_sharebox_header(ui) {
     ],
   });
 
+  const navBtn = Skeletons.Box.X({
+    className: `${headerFig}__buttons-wrapper action-btn`,
+    // sys_pn: "download-button-wrapper",
+    // service: _e.download,
+    // uiHandler: ui,
+    // state: 0,
+    // dataset: {
+    // mode: _downloadModeState,
+    // },
+    // kidsOpt: {
+    // active: 0,
+    // },
+    kids: [
+      Skeletons.Note({
+        className: `${headerFig}__button-note`,
+        content: "Get your own workspace",
+      }),
+      Skeletons.Button.Svg({
+        ico: "arrow-right",
+        className: `${headerFig}__button-icon`,
+      }),
+    ],
+  });
+
   let _actionBtnMode = _a.closed;
   if (ui.mget("is_verified")) {
     _actionBtnMode = _a.open;
@@ -77,7 +101,10 @@ function __skl_dmz_sharebox_header(ui) {
     dataset: {
       mode: _actionBtnMode,
     },
-    kids: [uploadBtn, downloadBtn],
+    kids: [
+      // uploadBtn, downloadBtn,
+      navBtn,
+    ],
   });
 
   const expiry = Skeletons.Box.X({

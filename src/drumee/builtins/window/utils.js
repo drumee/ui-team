@@ -24,6 +24,7 @@ class __window_mfs extends DrumeeMFS {
     this._synced = {};
     this.mset({ echoId: Visitor.get(_a.socket_id) + this.cid })
     this.setViewMode();
+    RADIO_BROADCAST.trigger("breadcrumb:update", opt, this);
     let m = opt.media;
     if (!m) return;
     this.media = m;
@@ -126,6 +127,8 @@ class __window_mfs extends DrumeeMFS {
     if (super.onBeforeDestroy) {
       super.onBeforeDestroy(opt)
     }
+    this.debug("AAA:130 onBeforeDestroy", this)
+    RADIO_BROADCAST.trigger("breadcrumb:update", { event: _e.closed });
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
   }
 

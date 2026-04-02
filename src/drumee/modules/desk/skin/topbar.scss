@@ -6,7 +6,7 @@
     height: 72px;
     justify-content: space-between;
     padding: var(--spacer-4) var(--spacer-6);
-    background-color: #282538;
+    background-color: var(--normal-bg-90);
     gap: var(--spacer-6);
   }
 
@@ -131,7 +131,7 @@
   }
 
   &__icon {
-    color: var(--neutral-900);
+    color: var(--primary-purple-10);
     width: 40px;
     height: 40px;
     padding: var(--spacer-3);
@@ -174,7 +174,7 @@
   &__search-container {
     align-items: center;
     gap: var(--spacer-4);
-    background-color: #0b0a21;
+    background-color: var(--normal-bg-100);
     border-radius: var(--corner-radius-3);
     padding: 0 var(--spacer-4);
   }
@@ -193,15 +193,15 @@
   &__search-input {
     input {
       background-color: transparent;
-      color: #c8c4d7;
+      font-size: 16px;
     }
   }
 
   &__search-note {
     align-items: center;
     padding: var(--spacer-3);
-    background-color: #282538;
-    color: #e4e3ff;
+    background-color: var(--primary-purple-90);
+    color: var(--primary-purple-10);
     gap: var(--spacer-2);
     border-radius: var(--corner-radius-1);
   }
@@ -210,22 +210,22 @@
     display: flex;
     align-items: center;
     gap: var(--spacer-2);
-    color: #b1adff;
-    border: 1px solid #5950ff;
+    color: var(--primary-purple-20);
+    border: 1px solid var(--primary-purple-40);
     padding: 0 var(--spacer-4);
     border-radius: var(--corner-radius-3);
     cursor: pointer;
     svg {
       width: 16px;
       height: 16px;
-      fill: #b1adff;
+      fill: var(--primary-purple-20);
     }
     &:hover {
-      background-color: #5950ff;
-      color: #fff;
-      border-color: #5950ff;
+      background-color: var(--primary-purple-40);
+      color: var(--white);
+      border-color: var(--primary-purple-40);
       svg {
-        fill: #fff;
+        fill: var(--white);
       }
     }
   }

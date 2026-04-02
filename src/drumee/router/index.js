@@ -136,7 +136,14 @@ class drumee_router extends LetcBox {
     if (data) {
       Visitor.respawn(data);
     }
-    let { nid, hub_id, color } = Visitor.wallpaper() || {};
+    let { nid, hub_id, color, theme = 'dark' } = Visitor.wallpaper() || {};
+    switch(theme){
+      case 'light':
+        return require("./skin/themes/light");
+      default:
+        return require("./skin/themes/dark");
+    }
+    return;
     this._wallpaper = '';
     if (color && color.primary) {
       this.el.style.background = '';

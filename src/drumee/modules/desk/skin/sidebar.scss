@@ -12,10 +12,10 @@
     gap: var(--spacer-4);
     font-size: 14px;
     cursor: pointer;
-    color: #e4e3ff;
+    color: var(--primary-purple-10);
 
     &:hover {
-      border-left: 4px solid #5950ff;
+      border-left: 4px solid var(--primary-purple-40);
       background-color: #6c5ce71a;
     }
 
@@ -50,7 +50,7 @@
     justify-content: space-between;
     width: 220px;
     padding: var(--spacer-5) 0;
-    background-color: #282538;
+    background-color: var(--normal-bg-90);
     align-items: center;
   }
 
@@ -64,17 +64,17 @@
 
   &__header {
     font-size: 12px !important;
-    color: #b1adff;
+    color: var(--primary-purple-20);
     margin: var(--spacer-4) auto auto var(--spacer-7);
   }
 
   &__workspace {
-    color: #e4e3ff;
+    color: var(--primary-purple-10);
     padding: 0 var(--spacer-4);
   }
 
   &__workspace-title {
-    color: #b1adff;
+    color: var(--primary-purple-20);
   }
 
   &__footer {
