@@ -19,6 +19,9 @@ class __breadcrumb_item extends DrumeeMFS {
       this.copyPropertiesFrom(opt.meda);
       this.meda = opt.meda;
     }
+    if (opt.filetype == _a.hub && opt.home_id) {
+      this.mset(_a.nid, opt.home_id)
+    }
   }
 
   /**
@@ -35,9 +38,7 @@ class __breadcrumb_item extends DrumeeMFS {
    * @param {Object} args
    */
   onUiEvent(trigger, args = {}) {
-    const service = args.service || trigger.get(_a.service);
-    this.debug(`onUiEvent service was called with : `, { service, args, trigger })
-    this.triggerHandlers();
+    this.triggerHandlers(trigger, args);
   }
 
 }

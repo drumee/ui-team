@@ -11,9 +11,10 @@
 function skl_desk_breadcrumb(ui, data = []) {
   const pfx = ui.fig.family;
   const items = [];
+  ui.debug("AAA:14", data)
   if (!_.isArray(data)) data = [data]
   data.forEach((item, i) => {
-    if (item.filename || item.name) {
+    if (item && (item.filename || item.name)) {
       items.push({ ...item, kind: "desk_breadcrumb_item", service: "breadcrum-jump" });
     }
   });

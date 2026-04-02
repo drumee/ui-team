@@ -108,17 +108,19 @@ class __window_manager extends push {
    * 
    */
   loadWorkspace(workspace) {
-    const { hub_id, actual_home_id: nid } = workspace.model.toJSON()
+    let data = workspace.model.toJSON()
+    const { hub_id, actual_home_id: nid } = data
+    if (this._curWorkspace?.hub_id == hub_id) return;
+    this._curWorkspace = { hub_id, nid };
     this.ensurePart(_a.list).then((l) => {
-      this.debug("AAAA:113", l.mget(_a.api), { hub_id, nid }, workspace)
-      let new_api = l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
+      l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
       l.restart()
-      this.debug("AAAA:116", l.mget(_a.api), { new_api })
     })
     this.ensurePart("wrapper-modal").then((p) => {
       p.clear()
     })
     this.windowsLayer.clear()
+    this.updateBreadcrumb(data)
   }
 
   /**
