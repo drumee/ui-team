@@ -83,7 +83,7 @@
           $size: 16px,
           $line: 24px,
           $weight: 400,
-          $color: var(--primary-purple-10)
+          $color: var(--normal-fg-10)
         );
         @include drumee.overflow-text;
 
@@ -106,9 +106,9 @@
       .icon {
         width: 20px;
         height: 20px;
-        color: var(--primary-purple-10);
+        color: var(--normal-fg-10);
         &:hover {
-          color: var(--primary-purple-20);
+          color: var(--normal-fg-20);
         }
       }
     }

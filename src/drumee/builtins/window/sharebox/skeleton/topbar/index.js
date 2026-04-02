@@ -59,6 +59,10 @@ const __skl_window_team_topbar = function (ui, icon) {
   const buttons = Skeletons.Box.X({
     className: `${cnWidowUploadBtn}__buttons-wrapper`,
     kids: [
+      Skeletons.Button.Svg({
+        className: `${ui.fig.family}__icon-btn`,
+        ico: "desktop_confcalls",
+      }),
       Skeletons.Button.Label({
         className: `${cnWidowUploadBtn}__upload-button`,
         label: LOCALE.UPLOAD,

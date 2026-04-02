@@ -54,9 +54,8 @@
     align-items: center;
     justify-content: center;
     padding: var(--spacer-3) var(--spacer-6);
-    background: var(--primary-purple-90);
-    color: var(--primary-purple-10);
-    background-color: var(--primary-purple-90);
+    color: var(--normal-fg-10);
+    background-color: var(--normal-bg-90);
     border-radius: var(--corner-radius-2);
     font-size: 14px;
     display: flex;
@@ -66,7 +65,7 @@
       height: 16px;
     }
     &:hover {
-      color: var(--primary-purple-20);
+      color: var(--normal-fg-20);
     }
   }
 

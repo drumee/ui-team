@@ -20,30 +20,30 @@
   }
 
   &__header {
-    border-bottom: none;
-    background: linear-gradient(135deg, var(--blue-300), var(--blue-400));
-    border-radius: var(--corner-radius-6) var(--corner-radius-6) 0 0;
+    background-color: var(--normal-bg-100);
+    border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
   }
 
   &__icon {
     cursor: pointer;
 
     &.logo {
-      display: flex;
-      width: 55px;
-      height: 48px;
-      aspect-ratio: 55/48;
-    }
-  }
-
-  &__title-wrapper {
-    &[data-device="mobile"] {
-      align-items: center;
+      width: 16px;
+      height: 16px;
     }
   }
 
   &__name-wrapper {
     gap: var(--spacer-4);
+  }
+
+  &__title-wrapper {
+    align-items: center;
+    gap: var(--spacer-4);
+
+    &[data-device="mobile"] {
+      align-items: center;
+    }
   }
 
   &__subtitle-wrapper {
@@ -57,6 +57,47 @@
 
     &[data-device="mobile"] {
       display: none;
+    }
+  }
+
+  &__badge {
+    background-color: var(--primary-purple-80);
+    padding: var(--spacer-3);
+    border-radius: var(--corner-radius-1);
+    color: var(--mint-400);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  &__buttons-wrapper {
+    gap: var(--spacer-4);
+    align-items: center;
+  }
+
+  &__icon-btn {
+    cursor: pointer;
+    background-color: var(--normal-bg-90);
+    color: var(--normal-fg-10);
+    padding: var(--spacer-2) var(--spacer-4);
+    border-radius: var(--corner-radius-2);
+    &:hover {
+      color: var(--normal-fg-20);
+    }
+
+    svg {
+      width: 24px;
+      height: 20px;
+    }
+  }
+
+  &__settings {
+    &.icon {
+      width: 20px;
+      height: 20px;
+      color: var(--normal-fg-10);
+      &:hover {
+        color: var(--normal-fg-20);
+      }
     }
   }
 

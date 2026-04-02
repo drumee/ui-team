@@ -12,7 +12,7 @@
     gap: var(--spacer-4);
     font-size: 14px;
     cursor: pointer;
-    color: var(--primary-purple-10);
+    color: var(--normal-fg-10);
 
     &:hover {
       border-left: 4px solid var(--primary-purple-40);
@@ -64,17 +64,17 @@
 
   &__header {
     font-size: 12px !important;
-    color: var(--primary-purple-20);
+    color: var(--normal-fg-20);
     margin: var(--spacer-4) auto auto var(--spacer-7);
   }
 
   &__workspace {
-    color: var(--primary-purple-10);
+    color: var(--normal-fg-10);
     padding: 0 var(--spacer-4);
   }
 
   &__workspace-title {
-    color: var(--primary-purple-20);
+    color: var(--normal-fg-20);
   }
 
   &__footer {

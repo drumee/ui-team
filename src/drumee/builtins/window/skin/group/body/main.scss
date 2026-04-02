@@ -5,14 +5,9 @@
     width: 100%;
     height: 100%;
     position: relative;
-    background-color: var(--primary-purple-90);
+    background-color: var(--normal-bg-90);
     border-radius: var(--corner-radius-5);
-    // margin: 0 auto;
-    // border: 1px solid var(--neutral-300);
-
-    // &.w-800px {
-    //   width: 800px;
-    // }
+    border: 1px solid var(--primary-purple-90);
 
     &[data-device="mobile"] {
       min-width: 305px;

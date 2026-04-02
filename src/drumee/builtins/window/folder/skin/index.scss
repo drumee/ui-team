@@ -11,7 +11,7 @@
   }
 
   &__header {
-    background-color: var(--primary-purple-100);
+    background-color: var(--normal-bg-100);
     &-title {
       align-items: center;
       @include drumee.typo(
@@ -102,13 +102,29 @@
     align-items: center;
   }
 
+  &__icon-btn {
+    cursor: pointer;
+    background-color: var(--normal-bg-90);
+    color: var(--normal-fg-10);
+    padding: var(--spacer-2) var(--spacer-4);
+    border-radius: var(--corner-radius-2);
+    &:hover {
+      color: var(--normal-fg-20);
+    }
+
+    svg {
+      width: 24px;
+      height: 20px;
+    }
+  }
+
   &__settings {
     &.icon {
       width: 20px;
       height: 20px;
-      color: var(--primary-purple-10);
+      color: var(--normal-fg-10);
       &:hover {
-        color: var(--primary-purple-20);
+        color: var(--normal-fg-20);
       }
     }
   }

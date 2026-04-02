@@ -38,7 +38,25 @@ const __window_topbar = function (ui) {
 
   const titleWrapper = Skeletons.Box.X({
     className: `${ui.fig.family}__title-wrapper`,
-    kids: [logo, nameWrapper],
+    kids: [
+      logo,
+      Skeletons.Note({
+        sys_pn: "ref-window-name",
+        uiHandler: ui,
+        partHandler: ui,
+        className: _a.name,
+        content: name,
+      }),
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__badge`,
+        kids: [
+          Skeletons.Note({
+            content: "SHARED",
+          }),
+          ,
+        ],
+      }),
+    ],
   });
 
   const settingsButton = Skeletons.Box.X({
@@ -50,13 +68,19 @@ const __window_topbar = function (ui) {
   const buttons = Skeletons.Box.X({
     className: `${cnWidowUploadBtn}__buttons-wrapper`,
     kids: [
-      button(ui, {
-        label: LOCALE.UPLOAD,
+      Skeletons.Button.Svg({
+        className: `${ui.fig.family}__icon-btn`,
+        ico: "desktop_confcalls",
+      }),
+      Skeletons.Button.Label({
         className: `${cnWidowUploadBtn}__upload-button`,
+        label: LOCALE.UPLOAD,
+        ico: "desktop_upload",
         service: _e.upload,
-        priority: "primary",
+        uiHandler: ui,
       }),
       settingsButton,
+      require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });
 
@@ -75,7 +99,6 @@ const __window_topbar = function (ui) {
           buttons,
         ],
       }),
-      require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });
   return a;
