@@ -53,20 +53,27 @@
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    padding: var(--spacer-4) var(--spacer-8);
-    background: var(--neutral-900);
-    color: var(--white);
-    border-radius: var(--corner-radius-max);
+    padding: var(--spacer-3) var(--spacer-6);
+    background: var(--primary-purple-90);
+    color: var(--primary-purple-10);
+    background-color: var(--primary-purple-90);
+    border-radius: var(--corner-radius-2);
+    font-size: 14px;
+    display: flex;
+    gap: var(--spacer-2);
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+    &:hover {
+      color: var(--primary-purple-20);
+    }
   }
 
   &__settings {
     justify-content: center;
     align-items: center;
-    border-radius: 100%;
-    background: var(--neutral-200);
     cursor: pointer;
-    width: 46px;
-    height: 46px;
   }
 }
 

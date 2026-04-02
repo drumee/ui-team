@@ -23,8 +23,7 @@
   }
 
   &__header {
-    border-bottom: none;
-    background: linear-gradient(135deg, var(--red-200), var(--red-300));
+    background-color: var(--primary-purple-100);
     &-title {
       max-width: 163px;
       align-items: center;

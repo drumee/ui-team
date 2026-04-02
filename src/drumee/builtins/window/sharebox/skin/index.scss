@@ -27,8 +27,7 @@
   }
 
   &__header {
-    border-bottom: none;
-    background: linear-gradient(135deg, var(--pink-200), var(--pink-300));
+    background-color: var(--primary-purple-100);
     &-title {
       @include drumee.typo(
         $size: 18px,

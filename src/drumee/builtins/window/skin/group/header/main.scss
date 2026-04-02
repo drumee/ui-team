@@ -2,17 +2,14 @@
 
 .window {
   &__header {
-    border-radius: var(--corner-radius-6) var(--corner-radius-6) 0 0;
-    width: 100%;
+    border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
     align-content: center;
     flex-wrap: wrap;
-    height: 132px;
+    padding: var(--spacer-4) 0;
   }
 
   &-topbar {
     &__container {
-      height: 132px;
-      width: 100%;
       flex: 1;
       border-radius: var(--default-border-radius-top);
       width: 100%;
@@ -70,12 +67,9 @@
     }
 
     &__title {
-      color: var(--ewhite);
-      height: 100%;
       justify-content: space-between;
       flex: 1;
-      width: 100%;
-      padding: 0 var(--spacer-8);
+      padding: 0 var(--spacer-6);
       align-items: center;
 
       &[data-device="mobile"] {
@@ -85,12 +79,11 @@
 
       .name {
         align-items: center;
-        width: auto;
         @include drumee.typo(
-          $size: 32px,
-          $line: 40px,
+          $size: 16px,
+          $line: 24px,
           $weight: 400,
-          $color: var(--default-text-reverse)
+          $color: var(--primary-purple-10)
         );
         @include drumee.overflow-text;
 
@@ -104,41 +97,18 @@
           font-size: 20px;
         }
       }
-
-      .icon {
-        cursor: pointer;
-        width: 35px;
-        height: 35px;
-        padding: var(--spacer-2);
-
-        svg {
-          color: var(--neutral-900);
-          &:hover {
-            color: var(--primary-500);
-          }
-        }
-      }
     }
 
     &__control {
-      position: absolute;
-      height: 50%;
-      right: 0;
-      display: flex;
-
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
       .icon {
-        width: 30px;
-        height: 30px;
-        padding: var(--spacer-3);
-        display: flex;
-        cursor: pointer;
-        margin: auto var(--spacer-4) auto 0;
-        border-radius: 100%;
-        background: rgba(255, 255, 255, 0.24);
-        color: var(--white);
-
+        width: 20px;
+        height: 20px;
+        color: var(--primary-purple-10);
         &:hover {
-          color: var(--primary-500);
+          color: var(--primary-purple-20);
         }
       }
     }

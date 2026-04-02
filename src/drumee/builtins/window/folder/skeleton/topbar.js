@@ -19,7 +19,19 @@ const __skl_folder_topbar = function (ui) {
 
   const titleWrapper = Skeletons.Box.X({
     className: `${ui.fig.family}__title-wrapper`,
-    kids: [logo, nameWrapper],
+    kids: [
+      logo,
+      name,
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__badge`,
+        kids: [
+          Skeletons.Note({
+            content: "RESTRICTED",
+          }),
+          ,
+        ],
+      }),
+    ],
   });
 
   let settings = Skeletons.Box.X({
@@ -44,13 +56,15 @@ const __skl_folder_topbar = function (ui) {
     buttons = Skeletons.Box.X({
       className: `${cnWidowUploadBtn}__buttons-wrapper`,
       kids: [
-        button(ui, {
-          label: LOCALE.UPLOAD,
+        Skeletons.Button.Label({
           className: `${cnWidowUploadBtn}__upload-button`,
+          label: LOCALE.UPLOAD,
+          ico: "desktop_upload",
           service: _e.upload,
-          priority: "primary",
+          uiHandler: ui,
         }),
         settings,
+        require("window/skeleton/topbar/control")(ui, "c"),
       ],
     });
   }
@@ -88,8 +102,6 @@ const __skl_folder_topbar = function (ui) {
           state: _a.closed,
         },
       }),
-
-      require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });
 

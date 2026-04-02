@@ -5,10 +5,8 @@
     cursor: pointer;
 
     &.logo {
-      display: flex;
-      width: 55px;
-      height: 48px;
-      aspect-ratio: 55/48;
+      width: 16px;
+      height: 16px;
     }
   }
 
@@ -20,9 +18,20 @@
   }
 
   &__title-wrapper {
+    align-items: center;
+    gap: var(--spacer-4);
     &[data-device="mobile"] {
       align-items: center;
     }
+  }
+
+  &__badge {
+    background-color: var(--primary-purple-80);
+    padding: var(--spacer-3);
+    border-radius: var(--corner-radius-1);
+    color: var(--private);
+    font-size: 12px;
+    font-weight: 600;
   }
 
   &__subtitle-wrapper {
@@ -41,35 +50,16 @@
 
   &__buttons-wrapper {
     gap: var(--spacer-4);
-  }
-
-  &__upload-button {
-    cursor: pointer;
     align-items: center;
-    justify-content: center;
-    padding: var(--spacer-4) var(--spacer-6);
-    background: var(--neutral-900);
-    color: var(--white);
-    border-radius: var(--corner-radius-4);
   }
 
   &__settings {
-    justify-content: center;
-    align-items: center;
-    border-radius: 100%;
-    background: var(--neutral-200);
-    cursor: pointer;
-    width: 46px;
-    height: 46px;
-
     &.icon {
-      margin: 0;
-      width: 30px;
-      height: 30px;
-      color: var(--neutral-900);
-
+      width: 20px;
+      height: 20px;
+      color: var(--primary-purple-10);
       &:hover {
-        color: var(--primary-500);
+        color: var(--primary-purple-20);
       }
     }
   }
