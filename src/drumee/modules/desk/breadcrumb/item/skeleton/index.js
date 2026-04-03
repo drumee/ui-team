@@ -53,10 +53,10 @@ module.exports = function (ui) {
       active: 0
     },
     kids: [
-      index > 0 ? Skeletons.Note({
+      Skeletons.Note({
         content: ">",
         className: `${pfx}__separator`,
-      }) : null,
+      }),
       Skeletons.Note({
         content: filename,
         className: `${pfx}__filename`

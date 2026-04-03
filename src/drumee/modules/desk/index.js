@@ -519,7 +519,7 @@ class desk_module extends LetcBox {
    * @param {*} data 
    */
   updateBreadcrumb(data, src) {
-    RADIO_BROADCAST.trigger("breadcrumb:update", data, src);
+    RADIO_BROADCAST.trigger("breadcrumb:content", data, src);
   }
 
   /**
@@ -529,13 +529,14 @@ class desk_module extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
-    this.debug(`SERVICE=${service})`, args);
+    this.debug(`SERVICE=${service}`, args);
     if (pointerDragged || !window.Wm) {
       return;
     }
     switch (service) {
       case _e.home:
         this.updateBreadcrumb({ event: _e.home })
+        Wm.reload()
         return;
 
       case _e.lock:

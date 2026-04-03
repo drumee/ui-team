@@ -4,11 +4,7 @@
  * Each item delegates "open-node" to the source window.
  * ==================================================================== */
 
-/**
- * @param {Object} ui   - The desk_breadcrumb widget instance
- * @param {Array}  data - Path items array from window/core.js buildBreadcrumbs()
- */
-function skl_desk_breadcrumb(ui, data = []) {
+module.exports = function (ui, data = []) {
   const pfx = ui.fig.family;
   const items = [];
   ui.debug("AAA:14", data)
@@ -21,8 +17,9 @@ function skl_desk_breadcrumb(ui, data = []) {
   return Skeletons.Box.X({
     className: `${pfx}__main`,
     debug: __filename,
-    kids: items,
+    kids: [
+      Skeletons.Note({ className: `${pfx}__context`, sys_pn: _a.context }),
+      Skeletons.Box.X({ className: `${pfx}__content`, sys_pn: _a.content, kids: items })
+    ],
   });
-}
-
-module.exports = skl_desk_breadcrumb;
+};

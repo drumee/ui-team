@@ -84,8 +84,6 @@ class __window_interact extends windowCore {
    * 
    */
   raise() {
-    this.debug("AAAA:96", this, this._pendingDestroy)
-    console.trace()
     if (this._pendingDestroy) {
       return
     }

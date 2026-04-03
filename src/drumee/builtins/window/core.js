@@ -419,7 +419,7 @@ class __window_core extends __utils {
     if (!this._raised) this.raise();
     child.on(_e.show, () => {
       this.fetchContent();
-      this._path = this.buildHistory();
+      // this._path = this.buildHistory();
       if (this.media && this.media.wait) this.media.wait(0);
     });
   }
@@ -579,7 +579,7 @@ class __window_core extends __utils {
     }
     if (!pointerDragged) {
       this.triggerMethod(CHANGE_RADIO);
-      this.updateBreadcrumb({ event: _e.raised, media: this })
+      this.updateBreadcrumb({ ...this.model.toJSON(), event: _e.raised })
     }
     this._raised = 1;
   }
@@ -588,49 +588,49 @@ class __window_core extends __utils {
    * 
    * @param {*} trigger 
    */
-  buildHistory(trigger) {
-    let t = trigger || this.media || this;
-    const {
-      ext,
-      filename,
-      actual_home_id: home_id,
-      hub_id,
-      nid,
-      filetype,
-      filepath,
-      area,
-      pid,
-      ownpath,
-      md5Hash,
-    } = t.model.toJSON();
-    if (!filepath) return [];
-    let length = filepath.length;
-    this._history[filepath] = {
-      ext,
-      filename,
-      home_id,
-      hub_id,
-      nid,
-      filetype,
-      filepath,
-      area,
-      pid,
-      length,
-      ownpath,
-      md5Hash,
-    }
-    function compare(a, b) {
-      if (a.length < b.length) {
-        return -1;
-      }
-      if (a.length > b.length) {
-        return 1;
-      }
-      return 0;
-    }
-    let values = _.values(this._history).sort(compare);
-    return values;
-  }
+  // buildHistory(trigger) {
+  //   let t = trigger || this.media || this;
+  //   const {
+  //     ext,
+  //     filename,
+  //     actual_home_id: home_id,
+  //     hub_id,
+  //     nid,
+  //     filetype,
+  //     filepath,
+  //     area,
+  //     pid,
+  //     ownpath,
+  //     md5Hash,
+  //   } = t.model.toJSON();
+  //   if (!filepath) return [];
+  //   let length = filepath.length;
+  //   this._history[filepath] = {
+  //     ext,
+  //     filename,
+  //     home_id,
+  //     hub_id,
+  //     nid,
+  //     filetype,
+  //     filepath,
+  //     area,
+  //     pid,
+  //     length,
+  //     ownpath,
+  //     md5Hash,
+  //   }
+  //   function compare(a, b) {
+  //     if (a.length < b.length) {
+  //       return -1;
+  //     }
+  //     if (a.length > b.length) {
+  //       return 1;
+  //     }
+  //     return 0;
+  //   }
+  //   let values = _.values(this._history).sort(compare);
+  //   return values;
+  // }
 
 
   /**
@@ -638,36 +638,34 @@ class __window_core extends __utils {
    * @param {*} m
    */
   updateTopbar(m) {
-    let data = [];
-    if (this.isTrash || this.isSearch) return;
     this.copyPropertiesFrom(m);
-    if (m.isMfs || m.isFolder) {
-      data = this.buildHistory(m);
-    } else {
-      let list = _.keys(this._history).sort(function name(a, b) {
-        return a.length - b.lenght
-      })
-      for (let k of list) {
-        data.push(this._history[k])
-        if (k == m.mget(_a.filepath)) {
-          break;
-        }
-      }
-    }
-    this._history = {}
-    for (let row of data) {
-      this._history[row.filepath] = row;
-    }
+    // if (m.isMfs || m.isFolder) {
+    //   data = this.buildHistory(m);
+    // } else {
+    //   let list = _.keys(this._history).sort(function name(a, b) {
+    //     return a.length - b.lenght
+    //   })
+    //   for (let k of list) {
+    //     data.push(this._history[k])
+    //     if (k == m.mget(_a.filepath)) {
+    //       break;
+    //     }
+    //   }
+    // }
+    // this._history = {}
+    // for (let row of data) {
+    //   this._history[row.filepath] = row;
+    // }
     const folderName = this.get(_a.filename) || m.get(_a.filename);
-    if (this.__windowHeader) {
-      if (data.length > 1) {
-        this.__windowHeader.el.dataset.content = _a.folder;
-        this.el.dataset.content = _a.folder;
-      } else {
-        this.__windowHeader.el.dataset.content = _a.root;
-        this.el.dataset.content = _a.root;
-      }
-    }
+    // if (this.__windowHeader) {
+    //   if (data.length > 1) {
+    //     this.__windowHeader.el.dataset.content = _a.folder;
+    //     this.el.dataset.content = _a.folder;
+    //   } else {
+    //     this.__windowHeader.el.dataset.content = _a.root;
+    //     this.el.dataset.content = _a.root;
+    //   }
+    // }
     if (this.__refWindowName != null) {
       this.__refWindowName.set({ content: folderName });
       /** FIX ME: sometime new value is not updated */
@@ -677,7 +675,7 @@ class __window_core extends __utils {
         }
       }, 1000)
     }
-    Desk.updateBreadcrumb(data, this)
+    this.updateBreadcrumb({ ...m.model.toJSON(), event: _a.browse })
   }
 
   /**

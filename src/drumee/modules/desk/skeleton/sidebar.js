@@ -19,6 +19,9 @@ const createNavItem = (ui, ico, label, service = "") => {
     uiHandler: [ui],
     radio: `nav-${ui._id}`,
     service,
+    kidsOpt: {
+      active: 0
+    },
     kids: [
       Skeletons.Button.Svg({
         ico,

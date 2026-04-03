@@ -8,18 +8,13 @@
   &__ui {
     background-color: inherit;
     cursor: pointer;
-  }
-
-  &__filename {
-    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 24px);
     user-select: none;
-    padding: 0 2px;
   }
 
+  &__filename,
   &__separator {
-    @include drumee.typo($color: var(--normal-fg-20), $size: 12px, $letter: -.2em, $line: 24px);
-    user-select: none;
-    padding: 0 2px;
+    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 24px);
   }
+
 
 }

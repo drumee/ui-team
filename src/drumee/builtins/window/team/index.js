@@ -27,7 +27,7 @@ class __window_team extends __hub {
         left: 0
       })
     }
-    this.bindActivityHandlerEvent();
+    // this.bindActivityHandlerEvent();
     this.defaultSkeleton = require("./skeleton/main");
     this.settingsLabel = LOCALE.PROJECT_ROOM_MANAGER;
   }
@@ -36,9 +36,9 @@ class __window_team extends __hub {
    * 
    * @param {Letc} cmd 
   */
-  onDestroy(cmd) {
-    RADIO_BROADCAST.off('notification:details', this.updateNotificationCount.bind(this));
-  }
+  // onDestroy(cmd) {
+  //   RADIO_BROADCAST.off('notification:details', this.updateNotificationCount.bind(this));
+  // }
 
   /**
    * @param {*} c
@@ -125,21 +125,21 @@ class __window_team extends __hub {
   /**
    * 
    */
-  bindActivityHandlerEvent() {
-    RADIO_BROADCAST.on('notification:details', this.updateNotificationCount.bind(this));
-  }
+  // bindActivityHandlerEvent() {
+  //   RADIO_BROADCAST.on('notification:details', this.updateNotificationCount.bind(this));
+  // }
 
   /**
    * 
    */
-  updateNotificationCount(args) {
-    let data = args[this.mget(_a.hub_id)];
-    if (!data || !data.content || !data.content.teamchat) return;
-    let { cnt } = data.content.teamchat;
-    if (cnt === null) return
-    this.mset('notificationCount', cnt)
-    this.updateCount(cnt);
-  }
+  // updateNotificationCount(args) {
+  //   let data = args[this.mget(_a.hub_id)];
+  //   if (!data || !data.content || !data.content.teamchat) return;
+  //   let { cnt } = data.content.teamchat;
+  //   if (cnt === null) return
+  //   this.mset('notificationCount', cnt)
+  //   this.updateCount(cnt);
+  // }
 
   /**
    * @param {String} method

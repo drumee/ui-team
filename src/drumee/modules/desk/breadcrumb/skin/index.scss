@@ -32,6 +32,11 @@
     user-select: none;
     padding: 0 2px;
   }
+
+  &__context {
+    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 24px);
+    cursor: pointer;
+  }
 }
 
 // Breadcrumb items scoped to desk context

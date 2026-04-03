@@ -110,7 +110,7 @@ class __window_manager extends push {
   loadWorkspace(workspace) {
     let data = workspace.model.toJSON()
     const { hub_id, actual_home_id: nid } = data
-    if (this._curWorkspace?.hub_id == hub_id) return;
+    // if (this._curWorkspace?.hub_id == hub_id) return;
     this._curWorkspace = { hub_id, nid };
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
@@ -120,7 +120,7 @@ class __window_manager extends push {
       p.clear()
     })
     this.windowsLayer.clear()
-    this.updateBreadcrumb(data)
+    this.updateBreadcrumb({ ...data, service: "change-workspace" })
   }
 
   /**
@@ -275,6 +275,7 @@ class __window_manager extends push {
   _handelKbdEvents(e) {
     // this.debug("AAA:240", e)
   }
+
 
   /**
    *
