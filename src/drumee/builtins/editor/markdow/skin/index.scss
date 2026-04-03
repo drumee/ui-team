@@ -3,19 +3,10 @@
 
 .editor-markdown {
   &__ui {
-    background-color: var(--default-bg);
-    width: 80vw;
-    max-width: 1000px;
-    height: 480px;
-    top: 45px;
-    left: calc(50vw - 220px);
-    box-shadow: var(--shadow-container);
+    max-width: 40vw;
+    max-height: 60vh;
     overflow: visible;
-    flex-direction: column;
-    display: flex;
-    border-radius: var(--corner-radius-6);
-    max-height: 75vh;
-
+    border-radius: var(--corner-radius-5);
     &[data-device="mobile"] {
       width: 360px !important;
       height: 500px !important;
@@ -42,7 +33,7 @@
     &__buttons {
       overflow: visible;
       gap: var(--spacer-4);
-      margin-left: var(--spacer-8);
+      align-items: center;
 
       .tooltips {
         position: absolute;
@@ -56,12 +47,9 @@
 
   &__header {
     width: 100%;
-    height: 132px;
-    min-height: 132px;
-    border-bottom: none;
-    z-index: 200;
-    background: linear-gradient(135deg, #dcb2ff, #b251fb);
-    border-radius: var(--spacer-6) var(--spacer-6) 0 0;
+    background: var(--normal-bg-100);
+    border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
+    padding: var(--spacer-4) var(--spacer-6);
 
     &[data-header="0"] {
       display: none;
@@ -77,17 +65,15 @@
     width: 100%;
     height: 100%;
     align-items: center;
-    border-radius: var(--border-radius);
     overflow: hidden;
+    border: 1px solid var(--neutral-800);
+    border-radius: var(--corner-radius-5);
   }
 
   &__body {
-    overflow: auto;
     width: 100%;
-    height: calc(100% - 44px);
-    max-height: calc(100% - 44px);
+    height: 100%;
     overflow: hidden;
-    grid-template-columns: 1fr;
   }
 
   &__acknowledgement-container {
@@ -182,23 +168,16 @@
 
   &__editor {
     width: 100%;
-    max-height: 100%;
     height: 100%;
     padding: var(--spacer-5);
     overflow: auto;
-    @include drumee.typo(
-      $size: 13px,
-      $line: 18px,
-      $weight: 300,
-      $color: var(--default-text-color)
-    );
 
     &--outer {
-      display: flex;
       flex: 1;
       height: 100%;
       max-height: 100%;
       overflow: auto;
+      background-color: var(--normal-bg-90);
     }
 
     .text-editable {
@@ -221,10 +200,12 @@
     textarea {
       width: 100%;
       height: 100%;
-      border: 1px solid var(--neutral-200);
-      border-radius: var(--corner-radius-6);
+      border: 1px solid var(--neutral-800);
+      background-color: var(--normal-bg-90);
+      border-radius: var(--corner-radius-5);
       padding: var(--spacer-8);
       resize: none;
+      color: var(--normal-fg-10);
     }
   }
 }

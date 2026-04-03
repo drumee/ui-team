@@ -14,33 +14,23 @@
 
 .editor-topbar {
   &__container {
+    justify-content: space-between;
+    align-items: center;
     width: 100%;
-    grid-template-columns: auto 1fr 50px;
-    align-content: center;
-    justify-items: center;
   }
 
   &__control {
-    position: absolute;
-    right: 0px;
-    top: 15px;
-
     .icon {
-      width: 30px;
-      height: 30px;
-      padding: var(--spacer-3);
       cursor: pointer;
-      margin: auto var(--spacer-5) auto 0;
-      background: rgba(255, 255, 255, 0.24);
-      color: white;
-      border-radius: 100%;
+      color: var(--normal-fg-10);
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
 
       &:hover {
-        color: var(--primary-500);
-
-        .tooltips {
-          color: var(--neutral-100);
-        }
+        color: var(--normal-fg-20);
       }
     }
 
@@ -93,19 +83,9 @@
   }
 
   &__title {
-    padding: 0;
-    height: 100%;
-    @include drumee.typo(
-      $size: 24px,
-      $line: 24px,
-      $weight: 400,
-      $color: var(--default-text-reverse)
-    );
+    @include drumee.typo($size: 16px, $line: 24px, $color: var(--normal-fg-10));
     @include drumee.overflow-text;
-    width: 100%;
-    justify-content: center;
     align-items: center;
-    justify-items: center;
     &[data-device="mobile"] {
       justify-content: start;
       margin-left: var(--spacer-8);
@@ -113,19 +93,22 @@
   }
 
   &__icon {
-    width: 46px;
-    height: 46px;
-    color: var(--neutral-900);
     cursor: pointer;
-    padding: var(--spacer-4);
-    background-color: var(--neutral-200);
-    border-radius: 100%;
+    background-color: var(--normal-bg-90);
+    color: var(--normal-fg-10);
+    padding: var(--spacer-2) var(--spacer-4);
+    border-radius: var(--corner-radius-2);
+
+    svg {
+      width: 24px;
+      height: 20px;
+    }
 
     &:hover {
-      color: var(--primary-500);
+      color: var(--normal-fg-20);
 
       .tooltips {
-        color: var(--neutral-100);
+        color: var(--normal-fg-20);
       }
     }
 

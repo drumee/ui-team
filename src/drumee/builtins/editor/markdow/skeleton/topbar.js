@@ -17,12 +17,26 @@ const __skl_window_note_topbar = function (ui, icon) {
       tooltips: LOCALE.SAVE_CHANGES,
     });
   }
-  return Skeletons.Box.G({
+  return Skeletons.Box.X({
     className: `${pfx}-${figname}__container ${ui.mget(_a.area)}`,
     sys_pn: _a.topBar,
     service: _e.raise,
     debug: __filename,
     kids: [
+      Skeletons.Box.X({
+        className: `${pfx}-${figname}__title`,
+        service: _e.raise,
+        kids: [
+          Skeletons.Note({
+            sys_pn: "ref-window-name",
+            uiHandler: ui,
+            partHandler: ui,
+            className: _a.name,
+            content: filename,
+            active: 0,
+          }),
+        ],
+      }),
       Skeletons.Box.X({
         className: `${ui.fig.family}-topbar__buttons`,
         kids: [
@@ -39,23 +53,9 @@ const __skl_window_note_topbar = function (ui, icon) {
               visibility,
             },
           }),
+          require("window/skeleton/topbar/control")(ui, "c"),
         ],
       }),
-      Skeletons.Box.X({
-        className: `${pfx}-${figname}__title`,
-        service: _e.raise,
-        kids: [
-          Skeletons.Note({
-            sys_pn: "ref-window-name",
-            uiHandler: ui,
-            partHandler: ui,
-            className: _a.name,
-            content: filename,
-            active: 0,
-          }),
-        ],
-      }),
-      require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });
 };
