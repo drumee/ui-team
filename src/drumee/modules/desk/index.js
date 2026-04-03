@@ -338,16 +338,13 @@ class desk_module extends LetcBox {
    * Show onboarding widget if user hasn't completed onboarding
    */
   checkUserOnBoarding(c) {
-    if (!SERVICE.onboarding) {
-      this.warn("SERVICE.onboarding is not available, skipping onboarding check");
-      return;
-    }
+
     this.fetchService({
-      service: SERVICE.onboarding.check_completion,
+      service: SERVICE.yp.get_env,
       hub_id: Visitor.id,
     }).then((data) => {
-      const { is_completed } = data?.data || data || {};
-      if (is_completed) {
+      const onboarded = data?.user?.onboarded;
+      if (onboarded) {
         return;
       }
       Kind.loadPlugin({ name: 'onboarding', kind: 'onboarding' }).then(async () => {
@@ -361,7 +358,7 @@ class desk_module extends LetcBox {
         this.warn("Failed to load onboarding plugin", e);
       });
     }).catch((e) => {
-      this.warn("Failed to check onboarding completion", e);
+      this.warn("Failed to check onboarding status", e);
     });
   }
 
