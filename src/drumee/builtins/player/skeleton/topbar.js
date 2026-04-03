@@ -1,7 +1,7 @@
 const __player_topbar = function (ui, size) {
   size = size || ui.size;
   const name = Skeletons.Note({
-    className: `${ui.fig.group}__title mr-11`,
+    className: `${ui.fig.group}__title`,
     sys_pn: "player-title",
     content: ui.model.get(_a.filename),
     service: _e.raise,
@@ -83,10 +83,9 @@ const __player_topbar = function (ui, size) {
           //   name: "info",
           // }),
           dl,
+          require("./control")(ui),
         ],
       }),
-
-      require("./control")(ui),
     ],
   });
 

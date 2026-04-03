@@ -17,12 +17,8 @@ module.exports = function (ui, size) {
         className: `${ui.fig.group}__header ${ui.fig.family}__header main u-ai-center`,
         service: _e.raise,
         uiHandler: ui,
-        kids: [
-          name,
-          require("./menu")(ui),
-        ],
+        kids: [name, require("./menu")(ui)],
       }),
-      require("../../skeleton/control")(ui),
     ],
   });
 };

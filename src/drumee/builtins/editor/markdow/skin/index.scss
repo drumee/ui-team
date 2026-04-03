@@ -77,13 +77,10 @@
   }
 
   &__acknowledgement-container {
-    position: absolute;
-    bottom: 0;
-    left: var(--spacer-8);
-    color: var(--white);
-    padding: var(--spacer-4);
-    background-color: rgba(0, 0, 0, 0.1);
-    border-radius: var(--corner-radius-2);
+    color: var(--normal-fg-10);
+    &:hover {
+      color: var(--normal-fg-20);
+    }
 
     &[data-state="0"] {
       display: none;

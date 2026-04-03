@@ -4,7 +4,7 @@ const __skl_folder_topbar = function (ui) {
   let name = ui.mget(_a.filename) || ui.mget(_a.name);
   const logo = require("../../skeleton/logo")(ui);
   const subtitle = require("../../skeleton/subtitle")(ui);
-  const cnWidowUploadBtn = "window-button—upload";
+  const cnWidowTopbarActions = "window-topbar-actions";
   name = Skeletons.Note({
     className: "name",
     sys_pn: "ref-window-name",
@@ -26,7 +26,7 @@ const __skl_folder_topbar = function (ui) {
         className: `${ui.fig.family}__badge`,
         kids: [
           Skeletons.Note({
-            content: "RESTRICTED",
+            content: "PRIVATE",
           }),
           ,
         ],
@@ -34,16 +34,11 @@ const __skl_folder_topbar = function (ui) {
     ],
   });
 
-  let settings = Skeletons.Box.X({
-    className: `${ui.fig.family}__settings`,
-    kids: [
-      Skeletons.Button.Svg({
-        ico: "setting",
-        className: `${ui.fig.family}__settings icon`,
-        service: _e.settings,
-        uiHandler: ui,
-      }),
-    ],
+  let settings = Skeletons.Button.Svg({
+    ico: "setting",
+    className: `${ui.fig.family}__icon-button`,
+    service: _e.settings,
+    uiHandler: ui,
   });
   if (
     ui.mget(_a.area) == _a.personal ||
@@ -54,14 +49,14 @@ const __skl_folder_topbar = function (ui) {
   let buttons;
   if (ui.canUpload()) {
     buttons = Skeletons.Box.X({
-      className: `${cnWidowUploadBtn}__buttons-wrapper`,
+      className: `${cnWidowTopbarActions}__buttons-wrapper`,
       kids: [
         Skeletons.Button.Svg({
-          className: `${ui.fig.family}__icon-btn`,
+          className: `${cnWidowTopbarActions}__icon-bg-button`,
           ico: "desktop_confcalls",
         }),
         Skeletons.Button.Label({
-          className: `${cnWidowUploadBtn}__upload-button`,
+          className: `${cnWidowTopbarActions}__label-button`,
           label: LOCALE.UPLOAD,
           ico: "desktop_upload",
           service: _e.upload,

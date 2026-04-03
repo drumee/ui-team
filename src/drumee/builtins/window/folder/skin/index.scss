@@ -89,44 +89,12 @@
   }
 
   &__badge {
-    background-color: #f870691a;
+    background-color: #9663ff26;
     padding: var(--spacer-3);
     border-radius: var(--corner-radius-1);
-    color: var(--restricted);
+    color: var(--private);
     font-size: 12px;
     font-weight: 600;
-  }
-
-  &__buttons-wrapper {
-    gap: var(--spacer-4);
-    align-items: center;
-  }
-
-  &__icon-btn {
-    cursor: pointer;
-    background-color: var(--normal-bg-90);
-    color: var(--normal-fg-10);
-    padding: var(--spacer-2) var(--spacer-4);
-    border-radius: var(--corner-radius-2);
-    &:hover {
-      color: var(--normal-fg-20);
-    }
-
-    svg {
-      width: 24px;
-      height: 20px;
-    }
-  }
-
-  &__settings {
-    &.icon {
-      width: 20px;
-      height: 20px;
-      color: var(--normal-fg-10);
-      &:hover {
-        color: var(--normal-fg-20);
-      }
-    }
   }
 
   &__title {

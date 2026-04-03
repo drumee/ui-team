@@ -38,15 +38,14 @@ module.exports = function (ui, size) {
   if (ui.canDownload()) {
     actionIcons = Skeletons.Box.X({
       className: `${ui.fig.group}-topbar__icon-wrapper`,
-      kids: [
-        downloadIcon,
-      ],
+      kids: [downloadIcon],
     });
   }
 
   if (ui.canUpload() && ui.media && ui.media.imgCapable()) {
     actionIcons.kids.push(rotateLeftIcon, rotateRightIcon);
   }
+  actionIcons.kids.push(require("../../skeleton/control")(ui));
 
   const dl = Skeletons.Box.X({
     className: `${ui.fig.group}-topbar__action`,
@@ -64,12 +63,8 @@ module.exports = function (ui, size) {
         className: `${ui.fig.group}__header main u-ai-center`,
         service: _e.raise,
         uiHandler: ui,
-        kids: [
-          name,
-          dl,
-        ],
+        kids: [name, dl],
       }),
-      require("../../skeleton/control")(ui),
     ],
   });
 };

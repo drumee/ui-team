@@ -1,24 +1,29 @@
-
-const __button = function(ui, k){
-  const a = { 
-    f : require("./fullscreen")(ui),
-    v : require("./representation")(ui),
-    s : require("./sizing")(ui),
-    c : require("./close")(ui),
-    m : require("./minimize").default(ui)
+const __button = function (ui, k) {
+  const a = {
+    f: require("./fullscreen")(ui),
+    v: require("./representation")(ui),
+    s: require("./sizing")(ui),
+    c: require("./close")(ui),
+    m: require("./minimize").default(ui),
   };
   return a[k] || Skeletons.Box.X(ui);
 };
 
-module.exports = function(ui, mode) {
-  if (mode == null) { mode = "vmsc"; }
-  const a =  Skeletons.Box.X({
-    debug     : __filename,
-    className : `${ui.fig.group}-topbar__control ${ui.fig.family}-topbar__control`,
-    kids : []});
+module.exports = function (ui, mode) {
+  const cnWidowTopbarActions = "window-topbar-actions";
+  if (mode == null) {
+    mode = "vmsc";
+  }
+  const a = Skeletons.Box.X({
+    debug: __filename,
+    // className : `${ui.fig.group}-topbar__control ${ui.fig.family}-topbar__control`,
+    className: `${cnWidowTopbarActions}__icon-button`,
+
+    kids: [],
+  });
 
   const m = new RegExp(`[${mode}]`);
-  for (var n of Array.from(mode.split(''))) {
+  for (var n of Array.from(mode.split(""))) {
     if (m.test(n)) {
       a.kids.push(__button(ui, n));
     }

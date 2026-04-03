@@ -3,7 +3,7 @@ const { breadcrumbs } = require("../../skeleton/toolkit");
 
 const __window_topbar = function (ui) {
   const name = ui.model.get(_a.filename) || "???";
-  const cnWidowUploadBtn = "window-button—upload";
+  const cnWidowTopbarActions = "window-topbar-actions";
   let settings = { kind: KIND.wrapper };
   const logo = require("../../skeleton/logo")(ui);
   const subtitle = require("../../skeleton/subtitle")(ui);
@@ -14,7 +14,7 @@ const __window_topbar = function (ui) {
         uiHandler: ui,
         partHandler: ui,
         sys_pn: "ref-window-icon",
-        className: `${ui.fig.family}__settings icon`,
+        className: `${cnWidowTopbarActions}__icon-button`,
         service: "show-settings",
       });
     }
@@ -59,27 +59,21 @@ const __window_topbar = function (ui) {
     ],
   });
 
-  const settingsButton = Skeletons.Box.X({
-    className: `${cnWidowUploadBtn}__settings`,
-    sys_pn: "settings-box",
-    kids: [settings],
-  });
-
   const buttons = Skeletons.Box.X({
-    className: `${cnWidowUploadBtn}__buttons-wrapper`,
+    className: `${cnWidowTopbarActions}__buttons-wrapper`,
     kids: [
       Skeletons.Button.Svg({
-        className: `${ui.fig.family}__icon-btn`,
+        className: `${cnWidowTopbarActions}__icon-bg-button`,
         ico: "desktop_confcalls",
       }),
       Skeletons.Button.Label({
-        className: `${cnWidowUploadBtn}__upload-button`,
+        className: `${cnWidowTopbarActions}__label-button`,
         label: LOCALE.UPLOAD,
         ico: "desktop_upload",
         service: _e.upload,
         uiHandler: ui,
       }),
-      settingsButton,
+      settings,
       require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });

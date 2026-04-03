@@ -1,5 +1,3 @@
-
-
 function __skl_window_note(ui) {
   const menu = Skeletons.Box.X({
     debug: __filename,
@@ -7,29 +5,12 @@ function __skl_window_note(ui) {
     sys_pn: "window-header",
     kidsOpt: {
       radio: _a.on,
-      uiHandler: ui
+      uiHandler: ui,
     },
-    kids: [
-      require('./topbar')(ui),
-      Skeletons.Box.X({
-        debug: __filename,
-        className: `${ui.fig.family}__acknowledgement-container`,
-        kidsOpt: {
-          radio: _a.on,
-          uiHandler: ui
-        },
-        sys_pn: "acknowledgement-container",
-        kids: [
-          Skeletons.Note({
-            className: `${ui.fig.family}__acknowledgement`,
-            sys_pn: "acknowledgement",
-          })
-        ]
-      })
-    ]
-  })
-  const a = require('window/skeleton/content/main')(ui, menu)
-  a.debug = __filename
-  return a
+    kids: [require("./topbar")(ui)],
+  });
+  const a = require("window/skeleton/content/main")(ui, menu);
+  a.debug = __filename;
+  return a;
 }
 module.exports = __skl_window_note;

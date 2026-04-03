@@ -1,15 +1,33 @@
 const EDITABLE = [
-  'docx', 'docm', 'dotx', 'dotm', 'odt', 'ott', 'xlsx', 'xlsm', 'xltx',
-  'xltm', 'xlsb', 'ods', 'ots', 'pptx', 'pptm', 'potx', 'potm', 'ppsx',
-  'ppsm', 'odp', 'otp'
+  "docx",
+  "docm",
+  "dotx",
+  "dotm",
+  "odt",
+  "ott",
+  "xlsx",
+  "xlsm",
+  "xltx",
+  "xltm",
+  "xlsb",
+  "ods",
+  "ots",
+  "pptx",
+  "pptm",
+  "potx",
+  "potm",
+  "ppsx",
+  "ppsm",
+  "odp",
+  "otp",
 ];
 
 /**
- * 
- * @param {*} ui 
- * @param {*} ico 
- * @param {*} content 
- * @returns 
+ *
+ * @param {*} ui
+ * @param {*} ico
+ * @param {*} content
+ * @returns
  */
 function item(ui, service, ico, content) {
   const menuFig = `${ui.fig.family}-menu`;
@@ -39,41 +57,49 @@ module.exports = function (ui) {
   const menuFig = `${ui.fig.family}-menu`;
   const cnWidowMenuBtn = "window-menu";
 
-  const menuTrigger = Skeletons.Box.X({
-    className: `${cnWidowMenuBtn}__button-wrapper`,
-    kids: [
-      Skeletons.Button.Svg({
-        ico: "carret-down",
-        className: `${cnWidowMenuBtn}__icon`,
-      }),
-      Skeletons.Note({
-        // sys_pn: "ref-window-name",
-        uiHandler: ui,
-        partHandler: ui,
-        content: LOCALE.DOCUMENT,
-      }),
-    ],
+  // const menuTrigger = Skeletons.Box.X({
+  //   className: `${cnWidowMenuBtn}__button-wrapper`,
+  //   kids: [
+  //     Skeletons.Button.Svg({
+  //       ico: "carret-down",
+  //       className: `${cnWidowMenuBtn}__icon`,
+  //     }),
+  //     Skeletons.Note({
+  //       // sys_pn: "ref-window-name",
+  //       uiHandler: ui,
+  //       partHandler: ui,
+  //       content: LOCALE.DOCUMENT,
+  //     }),
+  //   ],
+  // });
+
+  const menuTrigger = Skeletons.Button.Label({
+    className: `${cnWidowMenuBtn}__menu-trigger`,
+    label: LOCALE.DOCUMENT,
+    ico: "carret-down",
+    uiHandler: ui,
+    partHandler: ui,
   });
 
-  download = item(ui, _a.download, _a.download, LOCALE.DOWNLOAD_ORIG)
+  download = item(ui, _a.download, _a.download, LOCALE.DOWNLOAD_ORIG);
 
   if (ui.mget(_a.ext) == _a.pdf) {
-    downloadPDF = null
+    downloadPDF = null;
   } else {
-    downloadPDF = item(ui, 'download-pdf', "file-pdf", LOCALE.DOWNLOAD_AS_PDF)
+    downloadPDF = item(ui, "download-pdf", "file-pdf", LOCALE.DOWNLOAD_AS_PDF);
   }
 
   if (ui.canUpload() && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
     if (ui.mget(_a.mode) == _a.edit) {
-      edit = item(ui, 'preview', "desktop_preview", LOCALE.PREVIEW)
+      edit = item(ui, "preview", "desktop_preview", LOCALE.PREVIEW);
     } else {
-      edit = item(ui, _a.edit, "desktop_edit", LOCALE.EDIT)
+      edit = item(ui, _a.edit, "desktop_edit", LOCALE.EDIT);
     }
   } else {
     edit = null;
   }
 
-  print = item(ui, "print", "print", LOCALE.PRINT)
+  print = item(ui, "print", "print", LOCALE.PRINT);
 
   const separator = Skeletons.Box.X({
     className: `${menuFig}__separator`,
@@ -91,7 +117,7 @@ module.exports = function (ui) {
 
   return Skeletons.Box.X({
     debug: __filename,
-    className: `${menuFig}__dropdown ${ui.fig.group}__dropdown`,
+    className: `${menuFig}__dropdown ${ui.fig.group}__buttons-wrapper`,
     kids: [
       {
         kind: KIND.menu.topic,
@@ -103,6 +129,7 @@ module.exports = function (ui) {
         trigger: menuTrigger,
         items: menuItems,
       },
+      require("../../skeleton/control")(ui),
     ],
   });
 };

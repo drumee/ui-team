@@ -8,13 +8,12 @@
   }
 
   &__ui {
-    background-color: var(--default-bg);
-    border-radius: var(--spacer-6);
+    border-radius: var(--corner-radius-5);
     box-shadow: var(--shadow-main);
     min-height: 250px;
     min-width: 340px;
     z-index: 1000;
-    border: 1px solid var(--neutral-300);
+    border: 1px solid var(--neutral-800);
 
     &[data-selected="upload"] {
       border: 2px orange solid;
@@ -60,12 +59,11 @@
   }
 
   &__main {
-    border-radius: var(--spacer-6);
+    border-radius: var(--corner-radius-5);
     box-shadow: var(--shadow-main);
     height: 100%;
     width: 100%;
-    background-color: var(--default-bg);
-    
+
     &.player.document {
       background-color: var(--multimedia-player-doc-bg);
     }

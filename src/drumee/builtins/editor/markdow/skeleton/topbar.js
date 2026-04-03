@@ -40,6 +40,21 @@ const __skl_window_note_topbar = function (ui, icon) {
       Skeletons.Box.X({
         className: `${ui.fig.family}-topbar__buttons`,
         kids: [
+          Skeletons.Box.X({
+            debug: __filename,
+            className: `${ui.fig.family}__acknowledgement-container`,
+            kidsOpt: {
+              radio: _a.on,
+              uiHandler: ui,
+            },
+            sys_pn: "acknowledgement-container",
+            kids: [
+              Skeletons.Note({
+                className: `${ui.fig.family}__acknowledgement`,
+                sys_pn: "acknowledgement",
+              }),
+            ],
+          }),
           save,
           Skeletons.Button.Svg({
             ico: "drumee-tools_pin",

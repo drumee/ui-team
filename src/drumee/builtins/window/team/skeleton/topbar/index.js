@@ -6,7 +6,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   const name = ui.model.get(_a.filename) || ui.model.get(_a.name) || "";
   const logo = require("../../../skeleton/logo")(ui);
   const subtitle = require("../../../skeleton/subtitle")(ui);
-  const cnWidowUploadBtn = "window-button—upload";
+  const cnWidowTopbarActions = "window-topbar-actions";
   if (icon == null || ui.mget(_a.media) == null) {
     settings = { kind: KIND.wrapper };
   } else {
@@ -19,7 +19,7 @@ const __skl_window_team_topbar = function (ui, icon) {
       uiHandler: ui,
       part: ui,
       sys_pn: "ref-window-icon",
-      className: `${ui.fig.family}__settings icon`,
+      className: `${cnWidowTopbarActions}__icon-button`,
       service: "show-settings",
     });
   }
@@ -41,7 +41,7 @@ const __skl_window_team_topbar = function (ui, icon) {
         className: `${ui.fig.family}__badge`,
         kids: [
           Skeletons.Note({
-            content: "SHARED",
+            content: "RESTRICTED",
           }),
           ,
         ],
@@ -49,27 +49,21 @@ const __skl_window_team_topbar = function (ui, icon) {
     ],
   });
 
-  const settingsButton = Skeletons.Box.X({
-    sys_pn: "settings-box",
-    className: `${cnWidowUploadBtn}__settings`,
-    kids: [settings],
-  });
-
   const buttons = Skeletons.Box.X({
-    className: `${cnWidowUploadBtn}__buttons-wrapper`,
+    className: `${cnWidowTopbarActions}__buttons-wrapper`,
     kids: [
       Skeletons.Button.Svg({
-        className: `${ui.fig.family}__icon-btn`,
+        className: `${cnWidowTopbarActions}__icon-bg-button`,
         ico: "desktop_confcalls",
       }),
       Skeletons.Button.Label({
-        className: `${cnWidowUploadBtn}__upload-button`,
+        className: `${cnWidowTopbarActions}__label-button`,
         label: LOCALE.UPLOAD,
         ico: "desktop_upload",
         service: _e.upload,
         uiHandler: ui,
       }),
-      settingsButton,
+      settings,
       require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });
@@ -83,18 +77,7 @@ const __skl_window_team_topbar = function (ui, icon) {
       // require("./left")(ui),
       Skeletons.Box.X({
         className: `${ui.fig.group}-${figname}__title`,
-        kids: [
-          // Skeletons.Note({
-          //   sys_pn: "ref-window-name",
-          //   uiHandler: ui,
-          //   partHandler: ui,
-          //   className: _a.name,
-          //   content: name,
-          // }),
-          // settings,
-          titleWrapper,
-          buttons,
-        ],
+        kids: [titleWrapper, buttons],
       }),
       Skeletons.Wrapper.Y({
         className: `${ui.fig.group}__wrapper--context dialog__wrapper--context`,

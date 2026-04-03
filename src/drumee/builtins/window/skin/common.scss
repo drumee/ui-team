@@ -44,12 +44,12 @@
   }
 }
 
-.window-button—upload {
+.window-topbar-actions {
   &__buttons-wrapper {
     gap: var(--spacer-4);
   }
 
-  &__upload-button {
+  &__label-button {
     cursor: pointer;
     align-items: center;
     justify-content: center;
@@ -69,10 +69,38 @@
     }
   }
 
-  &__settings {
-    justify-content: center;
-    align-items: center;
+  &__icon-button {
+    display: flex;
     cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    color: var(--normal-fg-10);
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+    &:hover {
+      color: var(--normal-fg-20);
+    }
+    .icon {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &__icon-bg-button {
+    cursor: pointer;
+    background-color: var(--normal-bg-90);
+    color: var(--normal-fg-10);
+    padding: var(--spacer-2) var(--spacer-4);
+    border-radius: var(--corner-radius-2);
+    svg {
+      width: 24px;
+      height: 20px;
+    }
+    &:hover {
+      color: var(--normal-fg-20);
+    }
   }
 }
 
