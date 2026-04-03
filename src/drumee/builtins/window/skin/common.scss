@@ -43,6 +43,23 @@
     stop-color: #2aaaff;
   }
 }
+.window-topbar-title {
+  &__wrapper {
+    align-items: center;
+    gap: var(--spacer-4);
+
+    &[data-device="mobile"] {
+      align-items: center;
+    }
+  }
+
+  &__logo {
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
 
 .window-topbar-actions {
   &__buttons-wrapper {

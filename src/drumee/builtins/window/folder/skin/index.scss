@@ -29,35 +29,6 @@
     }
   }
 
-  &__icon {
-    cursor: pointer;
-    color: var(--core-default-icon-reverse);
-
-    &.logo {
-      width: 16px;
-      height: 16px;
-    }
-
-    &-info {
-      cursor: pointer;
-      height: 25px;
-      margin: 0px 15px auto 5px;
-      min-width: 21px;
-      padding: 4px;
-      width: 21px;
-    }
-
-    &.download {
-      left: 20px;
-      width: 20px;
-      z-index: 1;
-    }
-
-    &:hover {
-      color: var(--core-default-icon-hover);
-    }
-  }
-
   &__name-wrapper {
     gap: var(--spacer-4);
     &[data-device="mobile"] {
@@ -65,16 +36,7 @@
     }
   }
 
-  &__title-wrapper {
-    align-items: center;
-    gap: var(--spacer-4);
-
-    &[data-device="mobile"] {
-      align-items: center;
-    }
-  }
-
-  &__subtitle-wrapper {
+  & &__subtitle-wrapper {
     gap: var(--spacer-4);
     color: var(--neutral-300);
 

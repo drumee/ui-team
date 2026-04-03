@@ -4,6 +4,7 @@ const { breadcrumbs } = require("../../skeleton/toolkit");
 const __window_topbar = function (ui) {
   const name = ui.model.get(_a.filename) || "???";
   const cnWidowTopbarActions = "window-topbar-actions";
+  const cnWidowTopbarTitle = "window-topbar-title";
   let settings = { kind: KIND.wrapper };
   const logo = require("../../skeleton/logo")(ui);
   const subtitle = require("../../skeleton/subtitle")(ui);
@@ -37,7 +38,7 @@ const __window_topbar = function (ui) {
   });
 
   const titleWrapper = Skeletons.Box.X({
-    className: `${ui.fig.family}__title-wrapper`,
+    className: `${cnWidowTopbarTitle}__wrapper`,
     kids: [
       logo,
       Skeletons.Note({
@@ -51,7 +52,7 @@ const __window_topbar = function (ui) {
         className: `${ui.fig.family}__badge`,
         kids: [
           Skeletons.Note({
-            content: "SHARED",
+            content: "PUBLIC",
           }),
           ,
         ],

@@ -1,27 +1,10 @@
 @use "mixins/drumee";
 
 .window-sharebox {
-  &__icon {
-    cursor: pointer;
-
-    &.logo {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
   &__name-wrapper {
     gap: var(--spacer-4);
     &[data-device="mobile"] {
       gap: 0;
-    }
-  }
-
-  &__title-wrapper {
-    align-items: center;
-    gap: var(--spacer-4);
-    &[data-device="mobile"] {
-      align-items: center;
     }
   }
 

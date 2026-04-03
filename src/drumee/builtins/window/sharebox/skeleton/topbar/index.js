@@ -7,6 +7,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   const logo = require("../../../skeleton/logo")(ui);
   const subtitle = require("../../../skeleton/subtitle")(ui);
   const cnWidowTopbarActions = "window-topbar-actions";
+  const cnWidowTopbarTitle = "window-topbar-title";
 
   if (icon == null || ui.mget(_a.media) == null) {
     settings = { kind: KIND.wrapper };
@@ -28,7 +29,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   const figname = "topbar";
 
   const titleWrapper = Skeletons.Box.X({
-    className: `${ui.fig.family}__title-wrapper`,
+    className: `${cnWidowTopbarTitle}__wrapper`,
     kids: [
       logo,
       Skeletons.Note({

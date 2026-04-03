@@ -5,6 +5,8 @@ const __skl_folder_topbar = function (ui) {
   const logo = require("../../skeleton/logo")(ui);
   const subtitle = require("../../skeleton/subtitle")(ui);
   const cnWidowTopbarActions = "window-topbar-actions";
+  const cnWidowTopbarTitle = "window-topbar-title";
+
   name = Skeletons.Note({
     className: "name",
     sys_pn: "ref-window-name",
@@ -18,7 +20,7 @@ const __skl_folder_topbar = function (ui) {
   });
 
   const titleWrapper = Skeletons.Box.X({
-    className: `${ui.fig.family}__title-wrapper`,
+    className: `${cnWidowTopbarTitle}__wrapper`,
     kids: [
       logo,
       name,
