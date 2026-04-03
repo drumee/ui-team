@@ -128,6 +128,7 @@ class __window_core extends __utils {
    */
   onDestroy() {
     RADIO_BROADCAST.off(_e.responsive, this._responsive);
+    this.updateBreadcrumb({ event: _e.closed })
   }
 
   /**
@@ -578,7 +579,7 @@ class __window_core extends __utils {
     }
     if (!pointerDragged) {
       this.triggerMethod(CHANGE_RADIO);
-      RADIO_BROADCAST.trigger("breadcrumb:update", { event: _e.raised, media: this.media });
+      this.updateBreadcrumb({ event: _e.raised, media: this })
     }
     this._raised = 1;
   }
@@ -676,7 +677,46 @@ class __window_core extends __utils {
         }
       }, 1000)
     }
-    RADIO_BROADCAST.trigger("breadcrumb:update", data, this);
+    Desk.updateBreadcrumb(data, this)
+  }
+
+  /**
+   * Load content of the provided node
+   * @param {*} node
+   * @param {*} moving
+   * @returns
+   */
+  openNode(node, args) {
+    let { area,
+      ext,
+      filename,
+      filepath,
+      filetype,
+      home_id,
+      hub_id,
+      md5Hash,
+      nid,
+      ownpath,
+      pid
+    } = node.model.toJSON()
+    this.mset({
+      area,
+      ext,
+      filename,
+      filepath,
+      filetype,
+      home_id,
+      hub_id,
+      md5Hash,
+      nid,
+      ownpath,
+      pid
+    })
+    this.ensurePart(_a.list).then((l) => {
+      l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
+      l.restart()
+    })
+    this.__refWindowName.set({ content: filename })
   }
 
   /**
@@ -764,7 +804,7 @@ class __window_core extends __utils {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.model.get(_a.service);
-    if (!args.no_raise) this.raise(cmd);
+    // if (!args.no_raise) this.raise(cmd);
     switch (service) {
       case _e.close:
         if (this.mget(_a.source)) {

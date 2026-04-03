@@ -89,13 +89,6 @@ class __window_manager extends mfsInteract {
     );
   }
 
-  /**
-   * 
-   */
-  raise(){
-    this.debug("AAAA:96", this)
-    console.trace()
-  }
 
   /**
    *
@@ -913,7 +906,6 @@ class __window_manager extends mfsInteract {
       media.wait(0);
       return;
     }
-    this.debug("AAA:909", media, args)
     if (pointerDragged) {
       return;
     }

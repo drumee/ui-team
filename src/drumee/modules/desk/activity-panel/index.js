@@ -81,7 +81,6 @@ class __activity_panel extends LetcBox {
       this.refreshActivity()
     })
     Wm.on(WS_EVENT, this.onWsMessage)
-
   }
 
 
@@ -121,7 +120,6 @@ class __activity_panel extends LetcBox {
       case 'open-chat':
         this.togglePannel()
         return Wm.launch({ kind: 'window_bigchat', }, { explicit: 1, singleton: 1 });
-
     }
   }
 

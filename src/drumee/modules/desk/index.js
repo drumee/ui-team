@@ -185,7 +185,7 @@ class desk_module extends LetcBox {
         child.on(_e.open, () => {
           try {
             return (this.__userContainer.el.dataset.state = 1);
-          } catch (error) {}
+          } catch (error) { }
         });
         if (!Visitor.get(_a.privilege)) {
           Visitor.once("online", () => {
@@ -195,7 +195,7 @@ class desk_module extends LetcBox {
         return child.on(_e.close, () => {
           try {
             return (this.__userContainer.el.dataset.state = 0);
-          } catch (error) {}
+          } catch (error) { }
         });
 
       case "wrapper-module":
@@ -518,6 +518,14 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * 
+   * @param {*} data 
+   */
+  updateBreadcrumb(data, src) {
+    RADIO_BROADCAST.trigger("breadcrumb:update", data, src);
+  }
+
+  /**
    *
    * @param {*} cmd
    * @param {*} args
@@ -529,6 +537,10 @@ class desk_module extends LetcBox {
       return;
     }
     switch (service) {
+      case _e.home:
+        this.updateBreadcrumb({ event: _e.home })
+        return;
+
       case _e.lock:
         return Wm.lock();
 

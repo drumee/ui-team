@@ -30,20 +30,6 @@ const createNavItem = (ui, ico, label, service = "") => {
   });
 };
 
-// ---------- Header ----------
-const createHeader = (ui, workspaceName) => {
-  const fig = getSidebarFig(ui);
-
-  return Skeletons.Box.Y({
-    className: cls(fig, "header"),
-    kids: [
-      Skeletons.Box.X({
-        className: cls(fig, "header-workspace"),
-        kids: [createText(fig, "header-name", workspaceName)],
-      }),
-    ],
-  });
-};
 
 // ---------- Workspace Section ----------
 const createWorkspaceSection = (ui) => {
@@ -58,7 +44,6 @@ const createWorkspaceSection = (ui) => {
         className: cls(fig, "workspace-main"),
         uiHandler: [ui],
       },
-      // createWorkspaceList(ui),
     ],
   });
 };
@@ -118,7 +103,7 @@ const createNav = (ui) => {
 
       Skeletons.Box.Y({
         kids: [
-          createNavItem(ui, "ab_address", LOCALE.HOME),
+          createNavItem(ui, "ab_address", LOCALE.HOME, _e.home),
           createNavItem(ui, "bell", LOCALE.NOTIFICATIONS),
           createNavItem(ui, "desktop_chat", LOCALE.CHAT),
           createNavItem(ui, "drumee-trash", LOCALE.TRASH),

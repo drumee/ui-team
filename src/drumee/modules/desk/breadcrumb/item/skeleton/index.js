@@ -41,13 +41,14 @@ module.exports = function (ui) {
     debug: __filename,
     className: `${pfx}__main`,
     uiHandler: [ui],
-    filetype: _a.folder,
+    filetype: ui.mget(_a.filetype),
     home_id: ui.mget(_a.home_id),
     filename,
     filepath: ui.mget(_a.filepath),
     nid,
     hub_id: ui.mget(_a.hub_id),
     pid,
+    service: _a.browse,
     kidsOpt: {
       active: 0
     },

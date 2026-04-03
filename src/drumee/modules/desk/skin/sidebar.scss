@@ -15,8 +15,8 @@
     color: var(--normal-fg-10);
 
     &:hover {
-      border-left: 4px solid var(--primary-purple-40);
-      background-color: #6c5ce71a;
+      border-left: 4px solid var(--hover-border-40);
+      background-color: var(--hover-bg-40);
     }
 
     &[data-device="mobile"] {
@@ -26,8 +26,8 @@
     }
 
     &[data-radio="on"] {
-      border: 1px var(--primary-500) solid;
-      background-color: var(--primary-100);
+      border: 1px var(--radio-on-border) solid;
+      background-color: var(--radio-on-bg);
     }
 
     &-icon {
@@ -42,7 +42,7 @@
     }
 
     &.active {
-      border: 1px solid var(--primary-500);
+      border: 1px solid var(--active-border);
     }
   }
 
