@@ -3,37 +3,14 @@
 .player-audio {
   &-topbar {
     &__main {
-      background: linear-gradient(
-        135deg,
-        var(--primary-400),
-        var(--primary-600)
-      );
+      background: var(--normal-bg-100);
       border-bottom: none;
-      border-radius: var(--spacer-6) var(--spacer-6) 0 0;
+      border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
       cursor: pointer;
-      height: 100px;
-      min-height: 44px;
       width: 100%;
-      color: var(--default-bg);
-      justify-content: center;
-    }
-
-    &__action {
-      left: 10px;
-      right: auto;
-      z-index: 1;
-    }
-
-    &__control {
-      .icon {
-        color: var(--default-bg);
-        height: 32px;
-        width: 32px;
-
-        &:hover {
-          color: var(--primary-500);
-        }
-      }
+      color: var(--normal-fg-10);
+      justify-content: space-between;
+      padding: var(--spacer-4) var(--spacer-6);
     }
 
     &__title {
