@@ -56,6 +56,7 @@ module.exports = function (ui) {
   let download, downloadPDF, edit, print;
   const menuFig = `${ui.fig.family}-menu`;
   const cnWidowMenuBtn = "window-menu";
+  const cnWidowTopbarActions = "window-topbar-actions";
 
   // const menuTrigger = Skeletons.Box.X({
   //   className: `${cnWidowMenuBtn}__button-wrapper`,
@@ -74,7 +75,7 @@ module.exports = function (ui) {
   // });
 
   const menuTrigger = Skeletons.Button.Label({
-    className: `${cnWidowMenuBtn}__menu-trigger`,
+    className: `${cnWidowTopbarActions}__label-button`,
     label: LOCALE.DOCUMENT,
     ico: "carret-down",
     uiHandler: ui,
@@ -117,7 +118,7 @@ module.exports = function (ui) {
 
   return Skeletons.Box.X({
     debug: __filename,
-    className: `${menuFig}__dropdown ${ui.fig.group}__buttons-wrapper`,
+    className: `${cnWidowTopbarActions}__buttons-wrapper`,
     kids: [
       {
         kind: KIND.menu.topic,
