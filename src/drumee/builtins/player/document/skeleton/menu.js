@@ -22,17 +22,9 @@ const EDITABLE = [
   "otp",
 ];
 
-/**
- *
- * @param {*} ui
- * @param {*} ico
- * @param {*} content
- * @returns
- */
 function item(ui, service, ico, content) {
-  const menuFig = `${ui.fig.family}-menu`;
   return Skeletons.Box.X({
-    className: `${menuFig}__item`,
+    className: `dropdown-menu__item`,
     uiHandler: ui,
     service,
     kidsOpt: {
@@ -41,11 +33,10 @@ function item(ui, service, ico, content) {
     kids: [
       Skeletons.Button.Svg({
         ico,
-        className: `${menuFig}__icon`,
+        className: `dropdown-menu__icon`,
       }),
-
       Skeletons.Note({
-        className: `${menuFig}__name `,
+        className: `dropdown-menu__name`,
         content,
       }),
     ],
@@ -54,25 +45,8 @@ function item(ui, service, ico, content) {
 
 module.exports = function (ui) {
   let download, downloadPDF, edit, print;
-  const menuFig = `${ui.fig.family}-menu`;
-  const cnWidowMenuBtn = "window-menu";
-  const cnWidowTopbarActions = "window-topbar-actions";
 
-  // const menuTrigger = Skeletons.Box.X({
-  //   className: `${cnWidowMenuBtn}__button-wrapper`,
-  //   kids: [
-  //     Skeletons.Button.Svg({
-  //       ico: "carret-down",
-  //       className: `${cnWidowMenuBtn}__icon`,
-  //     }),
-  //     Skeletons.Note({
-  //       // sys_pn: "ref-window-name",
-  //       uiHandler: ui,
-  //       partHandler: ui,
-  //       content: LOCALE.DOCUMENT,
-  //     }),
-  //   ],
-  // });
+  const cnWidowTopbarActions = "window-topbar-actions";
 
   const menuTrigger = Skeletons.Button.Label({
     className: `${cnWidowTopbarActions}__label-button`,
@@ -103,14 +77,14 @@ module.exports = function (ui) {
   print = item(ui, "print", "print", LOCALE.PRINT);
 
   const separator = Skeletons.Box.X({
-    className: `${menuFig}__separator`,
+    className: `dropdown-menu__separator`,
   });
 
   const menuItems = Skeletons.Box.X({
-    className: `${menuFig}__items-wrapper`,
+    className: `dropdown-menu__items-wrapper`,
     kids: [
       Skeletons.Box.Y({
-        className: `${menuFig}__items`,
+        className: `dropdown-menu__items`,
         kids: [download, downloadPDF, separator, edit, print],
       }),
     ],
@@ -123,7 +97,7 @@ module.exports = function (ui) {
       {
         kind: KIND.menu.topic,
         sys_pn: "document-menu",
-        className: `${menuFig}__wrapper ${ui.fig.group}__wrapper`,
+        className: `dropdown-menu__wrapper`,
         flow: _a.y,
         opening: _e.click,
         persistence: _a.none,
