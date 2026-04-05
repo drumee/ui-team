@@ -134,74 +134,75 @@
       color: var(--normal-fg-20);
     }
   }
-}
-.dropdown-menu {
-  &__wrapper {
-    .menu-topic-items {
-      border-radius: var(--corner-radius-2);
-      background-color: var(--normal-bg-100);
-      width: 200px;
-      padding: var(--spacer-4);
-      border: 1px solid var(--neutral-800);
 
-      &__wrapper {
+  &__dropdown-menu {
+    &__wrapper {
+      .menu-topic-items {
+        border-radius: var(--corner-radius-2);
+        background-color: var(--normal-bg-100);
+        width: 200px;
         padding: var(--spacer-4);
+        border: 1px solid var(--neutral-800);
 
-        &[data-device="mobile"] {
-          left: 50%;
-          transform: translateX(-50%);
+        &__wrapper {
+          padding: var(--spacer-4);
+
+          &[data-device="mobile"] {
+            left: 50%;
+            transform: translateX(-50%);
+          }
         }
       }
     }
-  }
 
-  &__items {
-    width: 100%;
-    gap: var(--spacer-2);
-  }
+    &__items {
+      width: 100%;
+      gap: var(--spacer-2);
+    }
 
-  &__item {
-    cursor: pointer;
-    padding: var(--spacer-2) var(--spacer-4);
-    align-items: center;
-    border-radius: var(--corner-radius-1);
-    gap: var(--spacer-5);
+    &__item {
+      cursor: pointer;
+      padding: var(--spacer-2) var(--spacer-4);
+      align-items: center;
+      border-radius: var(--corner-radius-1);
+      gap: var(--spacer-5);
 
-    &:hover {
-      background-color: var(--primary-500);
-      color: var(--white);
-
-      .dropdown-menu__name {
+      &:hover {
+        background-color: var(--primary-500);
         color: var(--white);
+
+        .window-topbar-actions__dropdown-menu__name {
+          color: var(--white);
+        }
+
+        svg {
+          fill: var(--white);
+        }
       }
+    }
+
+    &__icon {
+      width: 24px;
+      height: 24px;
 
       svg {
-        fill: var(--white);
+        fill: var(--normal-fg-10);
       }
     }
-  }
 
-  &__icon {
-    width: 24px;
-    height: 24px;
-
-    svg {
-      fill: var(--normal-fg-10);
+    &__name {
+      font-size: 14px;
+      line-height: 16px;
+      color: var(--normal-fg-10);
     }
-  }
 
-  &__name {
-    font-size: 14px;
-    line-height: 16px;
-    color: var(--normal-fg-10);
-  }
-
-  &__separator {
-    background-color: var(--default-separator);
-    border-radius: 1px;
-    height: 1.5px;
-    margin: 5px 20px;
-    width: calc(100% - 40px);
+    &__separator {
+      background-color: var(--default-separator);
+      border-radius: 1px;
+      height: 1.5px;
+      margin: 5px 20px;
+      width: calc(100% - 40px);
+    }
   }
 }
 

@@ -1,18 +1,19 @@
-const cnWidowTopbarActions = "window-topbar-actions";
+const cnWindowTopbarActions = "window-topbar-actions";
+const cnWindowTopbarDropdownMenu = `${cnWindowTopbarActions}__dropdown-menu`;
 
 function item(ui, service, ico, content) {
   return Skeletons.Box.X({
-    className: `dropdown-menu__item`,
+    className: `${cnWindowTopbarDropdownMenu}__item`,
     uiHandler: ui,
     service,
     kids: [
       Skeletons.Button.Svg({
         ico,
-        className: `dropdown-menu__icon`,
+        className: `${cnWindowTopbarDropdownMenu}__icon`,
       }),
       Skeletons.Note({
         content,
-        className: `dropdown-menu__name`,
+        className: `${cnWindowTopbarDropdownMenu}__name`,
       }),
     ],
   });
@@ -20,14 +21,14 @@ function item(ui, service, ico, content) {
 
 module.exports = function (ui) {
   const trigger = Skeletons.Button.Svg({
-    className: `${cnWidowTopbarActions}__dropdown-button`,
+    className: `${cnWindowTopbarActions}__dropdown-button`,
     ico: "desktop_confcalls",
     uiHandler: ui,
     partHandler: ui,
   });
 
   const menuItems = Skeletons.Box.Y({
-    className: `dropdown-menu__items`,
+    className: `${cnWindowTopbarDropdownMenu}__items`,
     kids: [
       item(ui, "meeting", "desktop_confcalls", "Google Meet"),
       item(ui, "webinar", "desktop_confcalls", "Zoom"),
@@ -40,7 +41,7 @@ module.exports = function (ui) {
     kind: KIND.menu.topic,
     sys_pn: "meeting-menu",
 
-    className: ` dropdown-menu__wrapper`,
+    className: `${cnWindowTopbarDropdownMenu}__wrapper`,
 
     flow: _a.y,
     opening: _e.click,

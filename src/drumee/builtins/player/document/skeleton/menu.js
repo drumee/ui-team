@@ -22,9 +22,12 @@ const EDITABLE = [
   "otp",
 ];
 
+const cnWindowTopbarActions = "window-topbar-actions";
+const cnWindowTopbarDropdownMenu = `${cnWindowTopbarActions}__dropdown-menu`;
+
 function item(ui, service, ico, content) {
   return Skeletons.Box.X({
-    className: `dropdown-menu__item`,
+    className: `${cnWindowTopbarDropdownMenu}__item`,
     uiHandler: ui,
     service,
     kidsOpt: {
@@ -33,10 +36,10 @@ function item(ui, service, ico, content) {
     kids: [
       Skeletons.Button.Svg({
         ico,
-        className: `dropdown-menu__icon`,
+        className: `${cnWindowTopbarDropdownMenu}__icon`,
       }),
       Skeletons.Note({
-        className: `dropdown-menu__name`,
+        className: `${cnWindowTopbarDropdownMenu}__name`,
         content,
       }),
     ],
@@ -46,10 +49,8 @@ function item(ui, service, ico, content) {
 module.exports = function (ui) {
   let download, downloadPDF, edit, print;
 
-  const cnWidowTopbarActions = "window-topbar-actions";
-
   const menuTrigger = Skeletons.Button.Label({
-    className: `${cnWidowTopbarActions}__label-button`,
+    className: `${cnWindowTopbarActions}__label-button`,
     label: LOCALE.DOCUMENT,
     ico: "carret-down",
     uiHandler: ui,
@@ -77,14 +78,14 @@ module.exports = function (ui) {
   print = item(ui, "print", "print", LOCALE.PRINT);
 
   const separator = Skeletons.Box.X({
-    className: `dropdown-menu__separator`,
+    className: `${cnWindowTopbarDropdownMenu}__separator`,
   });
 
   const menuItems = Skeletons.Box.X({
-    className: `dropdown-menu__items-wrapper`,
+    className: `${cnWindowTopbarDropdownMenu}__items-wrapper`,
     kids: [
       Skeletons.Box.Y({
-        className: `dropdown-menu__items`,
+        className: `${cnWindowTopbarDropdownMenu}__items`,
         kids: [download, downloadPDF, separator, edit, print],
       }),
     ],
@@ -92,12 +93,12 @@ module.exports = function (ui) {
 
   return Skeletons.Box.X({
     debug: __filename,
-    className: `${cnWidowTopbarActions}__buttons-wrapper`,
+    className: `${cnWindowTopbarActions}__buttons-wrapper`,
     kids: [
       {
         kind: KIND.menu.topic,
         sys_pn: "document-menu",
-        className: `dropdown-menu__wrapper`,
+        className: `${cnWindowTopbarDropdownMenu}__wrapper`,
         flow: _a.y,
         opening: _e.click,
         persistence: _a.none,
