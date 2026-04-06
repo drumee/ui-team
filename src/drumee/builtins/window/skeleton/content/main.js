@@ -30,6 +30,6 @@ module.exports = function (_ui_, header, size) {
     className: `${_ui_.fig.family}__main ${_ui_.fig.group}__main drive-popup`,
     radio: _a.parent,
     debug: __filename,
-    kids: [header, tooltips, body, dialog],
+    kids: [header, tooltips, body, dialog, require("../create-menu")(_ui_)],
   });
 };

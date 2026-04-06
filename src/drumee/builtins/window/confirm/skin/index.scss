@@ -15,6 +15,7 @@
     position: absolute;
     justify-content: flex-start;
     align-items: center;
+    border: 1px solid var(--neutral-800);
 
     &[data-device="mobile"] {
       min-width: unset !important;
@@ -22,9 +23,9 @@
     }
 
     &[data-type="confirm"] {
-      background-color: var(--default-bg);
-      border-radius: 24px;
-      padding: 32px;
+      background-color: var(--normal-bg-90);
+      border-radius: var(--corner-radius-5);
+      padding: var(--spacer-6);
       width: auto;
       height: auto;
       max-height: 100%;
@@ -38,13 +39,13 @@
     &[data-maxsize="1"] {
       max-height: 400px;
       max-width: 600px;
-      background-color: var(--default-bg);
+      background-color: var(--normal-bg-90);
     }
 
     &[data-maxsize="0"] {
       max-height: 400px;
       max-width: 560px;
-      background-color: var(--default-bg);
+      background-color: var(--normal-bg-90);
     }
   }
 
@@ -73,7 +74,6 @@
   }
 
   &__body {
-    align-content: center;
     align-items: center;
     flex: 1;
     justify-content: center;
@@ -153,7 +153,7 @@
       $weight: 300,
       $size: 24px,
       $line: 26px,
-      $color: var(--neutral-900)
+      $color: var(--normal-fg-10)
     );
 
     // Ensure child elements are centered
@@ -249,7 +249,7 @@
 
     .button {
       align-items: center;
-      border-radius: var(--corner-radius-max);
+      border-radius: var(--corner-radius-2);
       cursor: pointer;
       height: 35px;
       justify-content: center;
