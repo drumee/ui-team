@@ -5,7 +5,6 @@ const __skl_window_team_topbar = function (ui, icon) {
   const media = ui.mget(_a.media);
   const name = ui.model.get(_a.filename) || ui.model.get(_a.name) || "";
   const logo = require("../../../skeleton/logo")(ui);
-  const subtitle = require("../../../skeleton/subtitle")(ui);
   const cnWidowTopbarActions = "window-topbar-actions";
   const cnWidowTopbarTitle = "window-topbar-title";
   if (icon == null || ui.mget(_a.media) == null) {
@@ -24,7 +23,6 @@ const __skl_window_team_topbar = function (ui, icon) {
       service: "show-settings",
     });
   }
-  ui.debug("AAAA:25", ui.mget(_a.area), ui.mget(_a.home_id), ui.mget(_a.nid));
   const figname = "topbar";
 
   const titleWrapper = Skeletons.Box.X({
@@ -42,7 +40,7 @@ const __skl_window_team_topbar = function (ui, icon) {
         className: `${ui.fig.family}__badge`,
         kids: [
           Skeletons.Note({
-            content: "RESTRICTED",
+            content: LOCALE.RESTRICTED,
           }),
           ,
         ],
@@ -69,7 +67,7 @@ const __skl_window_team_topbar = function (ui, icon) {
     ],
   });
 
-  const a = Skeletons.Box.X({
+  return Skeletons.Box.X({
     className: `${ui.fig.group}-${figname}__container ${ui.mget(_a.area)}`,
     sys_pn: _a.topBar,
     service: _e.raise,
@@ -88,6 +86,5 @@ const __skl_window_team_topbar = function (ui, icon) {
       }),
     ],
   });
-  return a;
 };
 module.exports = __skl_window_team_topbar;

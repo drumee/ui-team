@@ -158,7 +158,6 @@ class __desk_breadcrumb extends LetcBox {
    */
   _updateContent(data = [], source) {
     this.debug("AAA:141 _updateContent", data, source)
-    console.trace()
     switch (data.event) {
       case _a.closed:
         return this._onWindowClosed()
@@ -167,7 +166,6 @@ class __desk_breadcrumb extends LetcBox {
     }
 
     this._onBrowse(data)
-    // this._buildContent(data)
   }
 
   /**

@@ -124,8 +124,8 @@ class __window_mfs extends DrumeeMFS {
       })
       this._changelog_id = data[0].id + 1;
       changed = changed + rows.length;
-      if (changed && this.fetchContent) {
-        this.fetchContent()
+      if (changed && this.loadContent) {
+        this.loadContent()
       }
     })
 

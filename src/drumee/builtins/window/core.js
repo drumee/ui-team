@@ -19,7 +19,7 @@ class __window_core extends __utils {
     this.change_view = this.change_view.bind(this);
     this.reload = this.reload.bind(this);
     this.update_name = this.update_name.bind(this);
-    this.fetchContent = this.fetchContent.bind(this);
+    this.loadContent = this.loadContent.bind(this);
     this.buildContent = this.buildContent.bind(this);
     this.onPartReady = this.onPartReady.bind(this);
     this.onChildBubble = this.onChildBubble.bind(this);
@@ -392,17 +392,39 @@ class __window_core extends __utils {
     }
   }
 
+  /**
+ * Load inplace
+ * @param {*} media 
+ * @returns 
+ */
+  openContent(media, args) {
+    if (this.isTrash) {
+      this.mset(_a.cancel, LOCALE.OK);
+      media.wait(0);
+      this.confirm(LOCALE.RESTORE_BEFORE_OPEN, "bf1");
+      return;
+    }
+    const fType = media.mget(_a.filetype);
+    if (this.mget(_a.kind) == "window_search" || fType != _a.folder) {
+      Wm.openContent(media, args);
+      return;
+    }
+    this.updateTopbar(media, args);
+    this.loadContent()
+    if (super.openContent) super.openContent(media, args);
+  }
+
 
   /**
-   * 
+   * Initial load
    */
-  fetchContent() {
+  loadContent() {
     this.ensurePart(_a.content).then((p) => {
       if (this.getViewMode() === _a.row) {
-        this.__content.el.dataset.scroll = "x";
+        p.el.dataset.scroll = "x";
         p.feed(require("./skeleton/content/row")(this));
       } else {
-        this.__content.el.dataset.scroll = "y";
+        p.el.dataset.scroll = "y";
         p.feed(require("./skeleton/content/grid")(this));
       }
     });
@@ -417,8 +439,10 @@ class __window_core extends __utils {
     this.__content = child;
     this.setupInteract();
     if (!this._raised) this.raise();
+    console.trace()
+
     child.on(_e.show, () => {
-      this.fetchContent();
+      this.loadContent();
       // this._path = this.buildHistory();
       if (this.media && this.media.wait) this.media.wait(0);
     });
@@ -717,31 +741,6 @@ class __window_core extends __utils {
     this.__refWindowName.set({ content: filename })
   }
 
-  /**
-   * 
-   * @param {*} media 
-   * @returns 
-   */
-  openContent(media, args) {
-    if (this.isTrash) {
-      this.mset(_a.cancel, LOCALE.OK);
-      media.wait(0);
-      this.confirm(LOCALE.RESTORE_BEFORE_OPEN, "bf1");
-      return;
-    }
-    const fType = media.mget(_a.filetype);
-    if (this.mget(_a.kind) == "window_search" || fType != _a.folder) {
-      Wm.openContent(media, args);
-      return;
-    }
-    this.updateTopbar(media, args);
-    if (this.getViewMode() === _a.row) {
-      this.__content.feed(require("./skeleton/content/row")(this));
-    } else {
-      this.__content.feed(require("./skeleton/content/grid")(this));
-    }
-    if (super.openContent) super.openContent(media, args);
-  }
 
   /**
    * 
@@ -990,6 +989,7 @@ class __window_core extends __utils {
    * @returns 
    */
   getCurrentApi(type) {
+    console.log("AAA:9992", this)
     let api;
     const { nid, hub_id } = this.actualNode();
     const f = type || this._curFilter;

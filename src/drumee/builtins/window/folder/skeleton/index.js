@@ -1,18 +1,30 @@
-const __skl_folder_main = function (ui) {
-  const { breadcrumbs  } = require('../../skeleton/toolkit')
-  const menu = Skeletons.Box.X({
-    debug: __filename,
+const { dialog, tooltips } = require("../../skeleton/toolkit")
+
+function grid (ui) {
+  const header = Skeletons.Box.X({
     className: `${ui.fig.family}__header ${ui.fig.group}__header`,
     kidsOpt: {
       radio: _a.on,
       uiHandler: ui,
     },
+    service: _e.raise,
     kids: [
       require("./topbar")(ui),
-      breadcrumbs(ui)
     ],
   });
 
-  return require('window/skeleton/content/main')(ui, menu);
+
+  const body = Skeletons.Box.Y({
+    className: `${ui.fig.family}__body ${ui.fig.group}__body`,
+    sys_pn: _a.content,
+    type: _a.type,
+  });
+
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__main ${ui.fig.group}__main drive-popup`,
+    radio: _a.parent,
+    debug: __filename,
+    kids: [header, tooltips, body, dialog],
+  });
 };
-module.exports = __skl_folder_main;
+module.exports = grid;

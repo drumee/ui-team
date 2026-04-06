@@ -1,5 +1,4 @@
 const __window_website_main = function (ui, size, icon) {
-  const { breadcrumbs } = require('../../skeleton/toolkit')
   const menu = Skeletons.Box.X({
     className: `${ui.fig.family}__header ${ui.fig.group}__header`,
     sys_pn: "window-header",
@@ -8,8 +7,7 @@ const __window_website_main = function (ui, size, icon) {
       uiHandler: ui,
     },
     kids: [
-      require("./top-bar")(ui),
-      breadcrumbs(ui)
+      require("./topbar")(ui),
     ],
   });
   // const a = require('window/skeleton/content/main')(ui, menu);

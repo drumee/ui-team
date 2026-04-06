@@ -169,12 +169,10 @@ class __window_folder extends mfsInteract {
         kind: KIND.media.helper,
         signal: _e.ui.event,
         service: "open-node",
-        handler: {
-          uiHandler: this
-        }
+        uiHandler: [this]
       };
-      _.merge(item, ext);
-      return item;
+
+      return {...item, ...ext};
     });
     list.collection.set(found);
   }

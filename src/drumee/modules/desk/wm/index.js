@@ -1373,7 +1373,7 @@ class __window_manager extends push {
     }
     if (w != null && !w.isDestroyed()) {
       w.mset(_a.string, str);
-      w.fetchContent();
+      w.loadContent();
     } else {
       const item = {
         kind,
