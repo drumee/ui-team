@@ -266,16 +266,11 @@
   }
 
   &__button-secondary {
-    border: 1px solid var(--btn-rollback-border);
-    @include drumee.typo(
-      $size: 16px,
-      $line: 18px,
-      $color: var(--btn-rollback-text)
-    );
+    border: 1px solid var(--normal-fg-10);
+    @include drumee.typo($size: 16px, $line: 18px, $color: var(--normal-fg-10));
 
     &:hover {
-      border: 2px solid var(--btn-rollback-border-hover);
-      color: var(--btn-rollback-text-hover);
+      color: var(--normal-fg-20);
     }
 
     &.forbiden {

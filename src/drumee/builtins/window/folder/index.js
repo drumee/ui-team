@@ -1,5 +1,5 @@
-const mfsInteract = require('../interact');
-require('./skin');
+const mfsInteract = require("../interact");
+require("./skin");
 
 class __window_folder extends mfsInteract {
   constructor(...args) {
@@ -10,7 +10,7 @@ class __window_folder extends mfsInteract {
 
   /**
    * ss
-   * @param {*} opt 
+   * @param {*} opt
    */
   initialize(opt) {
     this.isFolder = 1;
@@ -19,33 +19,32 @@ class __window_folder extends mfsInteract {
 
     this._flow = _a.horizontal;
     this.model.atLeast({
-      value: _a.normal
+      value: _a.normal,
     });
 
     if (this.model.get(_a.hub_id) !== Visitor.id) {
       this.model.set({
-        filetype: _a.hub
+        filetype: _a.hub,
       });
     }
     this.style.set({
       width: this.size.width,
-      height: this.size.height
+      height: this.size.height,
     });
     this.skeleton = require("./skeleton")(this);
     if (this.mget(_a.trigger) && this.mget(_a.privilege) == null) {
       this.mset({
-        privilege: this.mget(_a.trigger).mget(_a.privilege)
-      })
+        privilege: this.mget(_a.trigger).mget(_a.privilege),
+      });
     }
   }
 
-
   /**
-   * 
-   * @param {*} c 
+   *
+   * @param {*} c
    */
   onChildBubble(c) {
-    if ((c != null) && (c.logicalParent === this) && (c.service === _e.select)) {
+    if (c != null && c.logicalParent === this && c.service === _e.select) {
       return;
     }
     super.onChildBubble(c);
@@ -55,26 +54,26 @@ class __window_folder extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @param {*} args 
-   * @returns 
+   *
+   * @param {*} cmd
+   * @param {*} args
+   * @returns
    */
   onUiEvent(cmd, args = {}) {
-    const service = args.service || cmd.mget(_a.service)
-    this.debug("AAA:65", service, cmd, args)
+    const service = args.service || cmd.mget(_a.service);
+    this.debug("AAA:65", service, cmd, args);
     switch (service) {
       case _a.info:
-        return this.showInfo()
+        return this.showInfo();
 
       case _e.download:
-        return this.mget(_a.trigger).download()
+        return this.mget(_a.trigger).download();
 
       case _e.settings:
         return this.switchShowFolderSettings(cmd);
 
       case "remove-selection":
-        return Wm.removeMediaSelection(cmd)
+        return Wm.removeMediaSelection(cmd);
 
       default:
         super.onUiEvent(cmd, args);
@@ -82,14 +81,14 @@ class __window_folder extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @returns 
+   *
+   * @param {*} cmd
+   * @returns
    */
   /**
-     * To switch the sharebox settings 
-     * @returns 
-     */
+   * To switch the sharebox settings
+   * @returns
+   */
   switchShowFolderSettings(cmd) {
     if (this.isShowSettings) {
       this.isShowSettings = false;
@@ -98,14 +97,14 @@ class __window_folder extends mfsInteract {
     this.isShowSettings = true;
 
     this.dialogWrapper.feed({
-      kind: 'settings_hub',
+      kind: "settings_hub",
       label: this.settingsLabel,
       className: "",
       uiHandler: [this],
       media: this.mget(_a.media),
       hub_id: this.mget(_a.hub_id),
       source: this,
-      persistence: _a.once
+      persistence: _a.once,
     });
     var c = this.dialogWrapper.children.last();
     c.once(_e.destroy, () => {
@@ -118,24 +117,26 @@ class __window_folder extends mfsInteract {
       });
     });
   }
-  
+
   /**
-   * 
-  */
+   *
+   */
   showInfo() {
-    const state = this.__wrapperInfo.el.dataset.state
+    const state = this.__wrapperInfo.el.dataset.state;
     if (state === _a.closed) {
       return this.fetchService(SERVICE.media.info, {
         hub_id: this.mget(_a.hub_id),
         nid: this.mget(_a.nid),
-      }).then((data) => {
-        this.__wrapperInfo.feed(require('./skeleton/info')(this, data));
-      }).catch((e) => {
-        this.warn(e);
-        this.__wrapperInfo.feed(require('./skeleton/no-info')(this));
       })
+        .then((data) => {
+          this.__wrapperInfo.feed(require("./skeleton/info")(this, data));
+        })
+        .catch((e) => {
+          this.warn(e);
+          this.__wrapperInfo.feed(require("./skeleton/no-info")(this));
+        });
     } else {
-      this.__wrapperInfo.clear()
+      this.__wrapperInfo.clear();
     }
   }
 
@@ -144,34 +145,34 @@ class __window_folder extends mfsInteract {
   // *********************************************
 
   /**
-   * 
-   * @param {*} service 
-   * @param {*} data 
-   * @returns 
+   *
+   * @param {*} service
+   * @param {*} data
+   * @returns
    */
   onSearchEvent(service, data) {
     const list = this.getPart(_a.list);
-    if (service === 'clear') {
+    if (service === "clear") {
       list.collection.set(this._backup);
       return;
     }
-    if (!_.isArray(data) || (data.length === 0)) {
+    if (!_.isArray(data) || data.length === 0) {
       return;
     }
-    if ((this._backup == null)) {
-      this._backup = _.map(list.collection.models, model => {
+    if (this._backup == null) {
+      this._backup = _.map(list.collection.models, (model) => {
         const r = _.clone(model.toJSON());
         return r;
       });
     }
-    const found = _.map(data, item => {
+    const found = _.map(data, (item) => {
       const ext = {
         kind: KIND.media.helper,
         signal: _e.ui.event,
         service: "open-node",
         handler: {
-          uiHandler: this
-        }
+          uiHandler: this,
+        },
       };
       _.merge(item, ext);
       return item;
@@ -181,4 +182,3 @@ class __window_folder extends mfsInteract {
 }
 
 module.exports = __window_folder;
-

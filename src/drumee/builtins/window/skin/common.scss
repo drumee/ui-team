@@ -207,64 +207,6 @@
 }
 
 .window-create-menu {
-  &__buttons-wrapper {
-    gap: var(--spacer-4);
-  }
-
-  &__label-button {
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacer-3) var(--spacer-6);
-    color: var(--normal-fg-10);
-    background-color: var(--normal-bg-90);
-    border-radius: var(--corner-radius-2);
-    font-size: 14px;
-    display: flex;
-    gap: var(--spacer-2);
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-    &:hover {
-      color: var(--normal-fg-20);
-    }
-  }
-
-  &__icon-button {
-    display: flex;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    color: var(--normal-fg-10);
-    svg {
-      width: 20px;
-      height: 20px;
-    }
-    &:hover {
-      color: var(--normal-fg-20);
-    }
-    .icon {
-      width: 20px;
-      height: 20px;
-    }
-  }
-
-  &__icon-bg-button {
-    cursor: pointer;
-    background-color: var(--normal-bg-90);
-    color: var(--normal-fg-10);
-    padding: var(--spacer-2) var(--spacer-4);
-    border-radius: var(--corner-radius-2);
-    svg {
-      width: 24px;
-      height: 20px;
-    }
-    &:hover {
-      color: var(--normal-fg-20);
-    }
-  }
-
   &__dropdown-button {
     cursor: pointer;
     background-color: var(--normal-fg-20);
@@ -352,6 +294,23 @@
       height: 1.5px;
       margin: 5px 20px;
       width: calc(100% - 40px);
+    }
+  }
+}
+
+.window-filter {
+  &__bar {
+    gap: var(--spacer-6);
+    padding: var(--spacer-4) var(--spacer-6);
+    color: var(--normal-fg-10);
+    border-bottom: 1px solid var(--normal-bg-100);
+  }
+
+  &__tab {
+    cursor: pointer;
+
+    &:hover {
+      color: var(--normal-fg-20);
     }
   }
 }
