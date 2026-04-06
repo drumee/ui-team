@@ -51,10 +51,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   const buttons = Skeletons.Box.X({
     className: `${cnWidowTopbarActions}__buttons-wrapper`,
     kids: [
-      Skeletons.Button.Svg({
-        className: `${cnWidowTopbarActions}__icon-bg-button`,
-        ico: "desktop_confcalls",
-      }),
+      require("../../../skeleton/topbar/meeting-menu")(ui),
       Skeletons.Button.Label({
         className: `${cnWidowTopbarActions}__label-button`,
         label: LOCALE.UPLOAD,

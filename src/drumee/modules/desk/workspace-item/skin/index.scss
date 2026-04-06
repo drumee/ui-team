@@ -8,10 +8,16 @@
     cursor: pointer;
     transition: background 0.2s;
     border-radius: var(--corner-radius-2);
+
+    &[data-radio=on] {
+      border: 1px var(--radio-on-border) solid;
+      background-color: var(--radio-on-bg);
+    }
   }
 
   &:hover {
-    background: #5950ff;
+    border-left: 4px solid var(--hover-border-40);
+    background-color: var(--hover-bg-40);
   }
 
   &[active="1"] {

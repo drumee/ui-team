@@ -13,10 +13,11 @@ class desk_module extends LetcBox {
     this._upload = this._upload.bind(this);
     this._dragLeave = this._dragLeave.bind(this);
     this.route = this.route.bind(this);
+    this.loadDefault = this.loadDefault.bind(this);
     this.onChildBubble = this.onChildBubble.bind(this);
-    this.checkIntro = this.checkIntro.bind(this);
+    // this.checkIntro = this.checkIntro.bind(this);
     this.dmzCopyMedia = this.dmzCopyMedia.bind(this);
-    this.checkUserOnBoarding = this.checkUserOnBoarding.bind(this);
+    // this.checkUserOnBoarding = this.checkUserOnBoarding.bind(this);
     this.onUiEvent = this.onUiEvent.bind(this);
     this.acknowledge = this.acknowledge.bind(this);
     this._openTab = this._openTab.bind(this);
@@ -71,7 +72,7 @@ class desk_module extends LetcBox {
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
     await this.ensurePart("wrapper-popup");
-    this.checkIntro();
+    this.trigger(_e.ready);
   }
 
   /**
@@ -152,19 +153,19 @@ class desk_module extends LetcBox {
       case "search-box":
         return (this._searchBoxInner = child);
 
-      case "wrapper-popup":
-        this.popup = child;
-        return this.popup.collection.on(_e.remove, () => {
-          const c = this.popup.children.last();
-          if (c.isLazyClass || this.popup.isEmpty()) {
-            return;
-          }
-          const f = () => {
-            Wm.windowsLayer.$el.removeClass("creating-hub");
-            return (this.popup.el.dataset.state = _a.closed);
-          };
-          return setTimeout(f, Visitor.timeout(300));
-        });
+      // case "wrapper-popup":
+      //   this.popup = child;
+      //   return this.popup.collection.on(_e.remove, () => {
+      //     const c = this.popup.children.last();
+      //     if (c.isLazyClass || this.popup.isEmpty()) {
+      //       return;
+      //     }
+      //     const f = () => {
+      //       Wm.windowsLayer.$el.removeClass("creating-hub");
+      //       return (this.popup.el.dataset.state = _a.closed);
+      //     };
+      //     return setTimeout(f, Visitor.timeout(300));
+      //   });
 
       case "main-menu":
         return (this._mainMenu = child);
@@ -181,56 +182,56 @@ class desk_module extends LetcBox {
       case "desk-wrapper":
         return (this.desk_wrapper = child);
 
-      case "user-dropdown":
-        child.on(_e.open, () => {
-          try {
-            return (this.__userContainer.el.dataset.state = 1);
-          } catch (error) { }
-        });
-        if (!Visitor.get(_a.privilege)) {
-          Visitor.once("online", () => {
-            child.restart();
-          });
-        }
-        return child.on(_e.close, () => {
-          try {
-            return (this.__userContainer.el.dataset.state = 0);
-          } catch (error) { }
-        });
+      // case "user-dropdown":
+      //   child.on(_e.open, () => {
+      //     try {
+      //       return (this.__userContainer.el.dataset.state = 1);
+      //     } catch (error) { }
+      //   });
+      //   if (!Visitor.get(_a.privilege)) {
+      //     Visitor.once("online", () => {
+      //       child.restart();
+      //     });
+      //   }
+      //   return child.on(_e.close, () => {
+      //     try {
+      //       return (this.__userContainer.el.dataset.state = 0);
+      //     } catch (error) { }
+      //   });
 
-      case "wrapper-module":
-        this.moduleWrapper = child;
-        child.collection.on(_e.remove, (c) => {
-          if (this._swapping) {
-            return;
-          }
-          if (child.collection.length === 0) {
-            Backbone.history.navigate(_K.module.desk);
-            this.getPart("top-bar").el.dataset.state = 0;
-          }
-          this._mainMenu.el.setAttribute(_a.data.state, "");
-          child.el.hide();
-          return Wm.showIcons();
-        });
-        return;
+      // case "wrapper-module":
+      //   this.moduleWrapper = child;
+      //   child.collection.on(_e.remove, (c) => {
+      //     if (this._swapping) {
+      //       return;
+      //     }
+      //     if (child.collection.length === 0) {
+      //       Backbone.history.navigate(_K.module.desk);
+      //       this.getPart("top-bar").el.dataset.state = 0;
+      //     }
+      //     this._mainMenu.el.setAttribute(_a.data.state, "");
+      //     child.el.hide();
+      //     return Wm.showIcons();
+      //   });
+      //   return;
 
       case "desk-tooltip":
         return (this.tooltip = child);
 
-      case "share-bar-countdown-timer":
-        var f = () => {
-          const data = {
-            service: SERVICE.adminpanel.mimic_end_bytime,
-            hub_id: Visitor.get(_a.id),
-            orgid: Visitor.get("org_id"),
-            mimic_id: Visitor.get("mimic_id"),
-          };
-          this.postService(data);
-        };
-        return child.on(_e.done, () => setTimeout(f, 5000));
+      // case "share-bar-countdown-timer":
+      //   var f = () => {
+      //     const data = {
+      //       service: SERVICE.adminpanel.mimic_end_bytime,
+      //       hub_id: Visitor.get(_a.id),
+      //       orgid: Visitor.get("org_id"),
+      //       mimic_id: Visitor.get("mimic_id"),
+      //     };
+      //     this.postService(data);
+      //   };
+      //   return child.on(_e.done, () => setTimeout(f, 5000));
 
-      case "menu-settings":
-        return child.on(_e.open, this.refreshContextMenu);
+      // case "menu-settings":
+      //   return child.on(_e.open, this.refreshContextMenu);
     }
   }
 
@@ -296,7 +297,7 @@ class desk_module extends LetcBox {
   /**
    *
    */
-  route(opt) {
+  async route(opt) {
     if (opt == null) {
       opt = [];
     }
@@ -305,8 +306,25 @@ class desk_module extends LetcBox {
       this.warn("Use this link #/plugins?name=plugin-name&kind=entry_kind");
       return;
     }
-    this.loadDefault();
-    this.trigger(_e.ready);
+    this._pending = { available: false };
+    if (Visitor.profile().onboarded) {
+      this.loadDefault()
+    } else {
+      Kind.loadPlugin({ name: 'onboarding', kind: 'onboarding' }).then(async () => {
+        await Kind.waitFor('onboarding');
+        this.feed({
+          kind: 'onboarding',
+          type: 'app',
+          service: "onboarding-completed",
+          uiHandler: [this],
+        });
+        let w = this.children.last();
+        w.once(_e.destroy, this.loadDefault)
+      }).catch((e) => {
+        this.warn("Failed to load onboarding plugin. switching to default", e);
+        this.loadDefault()
+      });
+    }
   }
 
   /**
@@ -327,40 +345,20 @@ class desk_module extends LetcBox {
    * Check if user needs onboarding and show the onboarding plugin
    * @param {Object} c
    */
-  checkIntro(c) {
-    if (Visitor.get("is_dmz_hub_copy") == _a.yes) {
-      return this.dmzCopyMedia(c);
-    }
-    this.checkUserOnBoarding(c);
-  }
+  // checkIntro(c) {
+  //   if (Visitor.get("is_dmz_hub_copy") == _a.yes) {
+  //     return this.dmzCopyMedia(c);
+  //   }
+  //   this.checkUserOnBoarding(c);
+  // }
 
   /**
    * Show onboarding widget if user hasn't completed onboarding
    */
-  checkUserOnBoarding(c) {
-
-    this.fetchService({
-      service: SERVICE.yp.get_env,
-      hub_id: Visitor.id,
-    }).then((data) => {
-      const onboarded = data?.user?.onboarded;
-      if (onboarded) {
-        return;
-      }
-      Kind.loadPlugin({ name: 'onboarding', kind: 'onboarding' }).then(async () => {
-        await Kind.waitFor('onboarding');
-        this.__wrapperPopup.feed({
-          kind: 'onboarding',
-          type: 'app',
-          uiHandler: [this],
-        });
-      }).catch((e) => {
-        this.warn("Failed to load onboarding plugin", e);
-      });
-    }).catch((e) => {
-      this.warn("Failed to check onboarding status", e);
-    });
-  }
+  // checkUserOnBoarding(c) {
+  //   this.debug("AAA:341", Visitor.profile().onboarded)
+  //   if (Visitor.profile().onboarded) return;
+  // }
 
   /**
    *
@@ -462,9 +460,9 @@ class desk_module extends LetcBox {
    *
    * @param {*} kind
    */
-  openModel(kind) {
-    this.ensurePart("desk-content").then((p) => {
-      p.__wrapperModal.feed({ kind, uiHandler: [this] });
+  loadOverlay(kind, opt) {
+    this.ensurePart("overlay").then((p) => {
+      p.feed({ kind, uiHandler: [this], opt });
     });
   }
 
@@ -539,8 +537,10 @@ class desk_module extends LetcBox {
         Wm.reload()
         return;
 
-      case _e.lock:
-        return Wm.lock();
+      // case _e.lock:
+      //   return Wm.lock();
+      case "onboarding-completed":
+        return this.loadDefault()
 
       case _e.upload:
         return Wm.handleUpload();
@@ -554,9 +554,24 @@ class desk_module extends LetcBox {
           { explicit: 1, singleton: 1 },
         );
 
-      case "toggle-activity-panel":
+      case "toggle-activity":
         return this.ensurePart("activity-panel").then((p) => {
+          this.debug("AAA:555", p)
           p.togglePannel();
+        });
+
+      case "toggle-trash":
+        return this.ensurePart("trash-panel").then((p) => {
+          if (p.isEmpty()) {
+            p.feed({
+              kind: 'window_trash',
+              service: "open-node",
+              trigger: cmd,
+              uiHandler: [this]
+            })
+          } else {
+            p.clear()
+          }
         });
 
       case "open-contact-manager":
@@ -567,7 +582,7 @@ class desk_module extends LetcBox {
 
       case "close-popup":
       case "close-modal":
-        this.popup.children.last().softDestroy();
+        // this.popup.children.last().softDestroy();
         return Backbone.history.navigate(_K.module.desk);
 
       case "skip-browser-check":
@@ -611,47 +626,47 @@ class desk_module extends LetcBox {
         return noOperation();
 
       case "close-info-popup":
-        this.__wrapperPopup.clear();
+        // this.__wrapperPopup.clear();
         return Backbone.history.navigate(_K.module.desk);
 
       case "close-popup":
-        return this.__wrapperPopup.clear();
+        return;
 
       case "open-settings":
-        return this.openModel("window_wallpaper_settings");
+        return this.loadOverlay("window_wallpaper_settings");
 
       case "load-custom-plugin":
         let { name, kind } = cmd.mget("plugin");
         return Kind.loadPlugin({ name, kind })
           .then(() => {
             Kind.waitFor(kind).then((k) => {
-              this.openModel(kind);
+              this.loadOverlay(kind);
             });
           })
           .catch((e) => {
             this.warn(`Failed to load plugin`);
           });
 
-      case "open-user-guide":
-        return this.openModel("settings_helpcenter");
+      // case "open-user-guide":
+      //   return this.loadOverlay("settings_helpcenter");
 
-      case "open-chat":
-        return Wm.launch(
-          { kind: "window_bigchat", source: cmd },
-          { explicit: 1, singleton: 1 },
-        );
+      // case "open-chat":
+      //   return Wm.launch(
+      //     { kind: "window_bigchat", source: cmd },
+      //     { explicit: 1, singleton: 1 },
+      //   );
 
-      case "set-wallpaper-color":
-      case "set-wallpaper-image":
-        return uiRouter.setWallpaper(args.data);
+      // case "set-wallpaper-color":
+      // case "set-wallpaper-image":
+      //   return uiRouter.setWallpaper(args.data);
 
-      case "activity-update":
-        return this.ensurePart("activity-count").then((p) => {
-          let content = args.unread_count || 0;
-          if (parseInt(content) > 99) content = "99+";
-          p.set({ content });
-          p.el.dataset.count = content;
-        });
+      // case "activity-update":
+      //   return this.ensurePart("activity-count").then((p) => {
+      //     let content = args.unread_count || 0;
+      //     if (parseInt(content) > 99) content = "99+";
+      //     p.set({ content });
+      //     p.el.dataset.count = content;
+      //   });
 
       default:
         Wm.unselect();

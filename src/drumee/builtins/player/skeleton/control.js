@@ -1,5 +1,7 @@
 const __topbar_control = function (ui) {
   let fullscreen_ctrl, rotate_ctrl, size_ctrl;
+  const cnWidowTopbarActions = "window-topbar-actions";
+
   let state = 0;
   if (ui.getViewMode() === _a.row) {
     state = 1;
@@ -43,7 +45,7 @@ const __topbar_control = function (ui) {
 
   const close = Skeletons.Button.Svg({
     ico: "cross",
-    className: "icon",
+    className: `${cnWidowTopbarActions}__icon-button`,
     service: _e.close,
     uiHandler: ui,
   });

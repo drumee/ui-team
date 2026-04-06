@@ -22,17 +22,12 @@ const EDITABLE = [
   "otp",
 ];
 
-/**
- *
- * @param {*} ui
- * @param {*} ico
- * @param {*} content
- * @returns
- */
+const cnWindowTopbarActions = "window-topbar-actions";
+const cnWindowTopbarDropdownMenu = `${cnWindowTopbarActions}__dropdown-menu`;
+
 function item(ui, service, ico, content) {
-  const menuFig = `${ui.fig.family}-menu`;
   return Skeletons.Box.X({
-    className: `${menuFig}__item`,
+    className: `${cnWindowTopbarDropdownMenu}__item`,
     uiHandler: ui,
     service,
     kidsOpt: {
@@ -41,11 +36,10 @@ function item(ui, service, ico, content) {
     kids: [
       Skeletons.Button.Svg({
         ico,
-        className: `${menuFig}__icon`,
+        className: `${cnWindowTopbarDropdownMenu}__icon`,
       }),
-
       Skeletons.Note({
-        className: `${menuFig}__name `,
+        className: `${cnWindowTopbarDropdownMenu}__name`,
         content,
       }),
     ],
@@ -54,27 +48,9 @@ function item(ui, service, ico, content) {
 
 module.exports = function (ui) {
   let download, downloadPDF, edit, print;
-  const menuFig = `${ui.fig.family}-menu`;
-  const cnWidowMenuBtn = "window-menu";
-
-  // const menuTrigger = Skeletons.Box.X({
-  //   className: `${cnWidowMenuBtn}__button-wrapper`,
-  //   kids: [
-  //     Skeletons.Button.Svg({
-  //       ico: "carret-down",
-  //       className: `${cnWidowMenuBtn}__icon`,
-  //     }),
-  //     Skeletons.Note({
-  //       // sys_pn: "ref-window-name",
-  //       uiHandler: ui,
-  //       partHandler: ui,
-  //       content: LOCALE.DOCUMENT,
-  //     }),
-  //   ],
-  // });
 
   const menuTrigger = Skeletons.Button.Label({
-    className: `${cnWidowMenuBtn}__menu-trigger`,
+    className: `${cnWindowTopbarActions}__label-button`,
     label: LOCALE.DOCUMENT,
     ico: "carret-down",
     uiHandler: ui,
@@ -102,14 +78,14 @@ module.exports = function (ui) {
   print = item(ui, "print", "print", LOCALE.PRINT);
 
   const separator = Skeletons.Box.X({
-    className: `${menuFig}__separator`,
+    className: `${cnWindowTopbarDropdownMenu}__separator`,
   });
 
   const menuItems = Skeletons.Box.X({
-    className: `${menuFig}__items-wrapper`,
+    className: `${cnWindowTopbarDropdownMenu}__items-wrapper`,
     kids: [
       Skeletons.Box.Y({
-        className: `${menuFig}__items`,
+        className: `${cnWindowTopbarDropdownMenu}__items`,
         kids: [download, downloadPDF, separator, edit, print],
       }),
     ],
@@ -117,12 +93,12 @@ module.exports = function (ui) {
 
   return Skeletons.Box.X({
     debug: __filename,
-    className: `${menuFig}__dropdown ${ui.fig.group}__buttons-wrapper`,
+    className: `${cnWindowTopbarActions}__buttons-wrapper`,
     kids: [
       {
         kind: KIND.menu.topic,
         sys_pn: "document-menu",
-        className: `${menuFig}__wrapper ${ui.fig.group}__wrapper`,
+        className: `${cnWindowTopbarDropdownMenu}__wrapper`,
         flow: _a.y,
         opening: _e.click,
         persistence: _a.none,

@@ -1,32 +1,38 @@
-const { button } = require("../../../../skeleton/toolkit/buttons");
-
-const __skl_window_team_topbar = function (ui, icon) {
-  let settings;
-  const media = ui.mget(_a.media);
-  const name = ui.model.get(_a.filename) || "";
-  const logo = require("../../../skeleton/logo")(ui);
-  const subtitle = require("../../../skeleton/subtitle")(ui);
+const __window_topbar = function (ui) {
+  const name = ui.model.get(_a.filename) || "???";
   const cnWidowTopbarActions = "window-topbar-actions";
   const cnWidowTopbarTitle = "window-topbar-title";
-
-  if (icon == null || ui.mget(_a.media) == null) {
-    settings = { kind: KIND.wrapper };
-  } else {
-    if (!media.isGranted(_K.permission.admin)) {
-      icon = "desktop_info";
+  let settings = { kind: KIND.wrapper };
+  const logo = require("../../skeleton/logo")(ui);
+  const subtitle = require("../../skeleton/subtitle")(ui);
+  try {
+    if (ui.mget(_a.media).mget(_a.privilege) & _K.privilege.owner) {
+      settings = Skeletons.Button.Svg({
+        ico: "setting",
+        uiHandler: ui,
+        partHandler: ui,
+        sys_pn: "ref-window-icon",
+        className: `${cnWidowTopbarActions}__icon-button`,
+        service: "show-settings",
+      });
     }
-
-    settings = Skeletons.Button.Svg({
-      ico: "setting",
-      uiHandler: ui,
-      part: ui,
-      sys_pn: "ref-window-icon",
-      className: `${cnWidowTopbarActions}__icon-button`,
-      service: "show-settings",
-    });
-  }
+  } catch (error) {}
 
   const figname = "topbar";
+
+  const nameWrapper = Skeletons.Box.Y({
+    className: `${ui.fig.family}__name-wrapper`,
+    kids: [
+      Skeletons.Note({
+        sys_pn: "ref-window-name",
+        uiHandler: ui,
+        partHandler: ui,
+        className: _a.name,
+        content: name,
+      }),
+      subtitle,
+    ],
+  });
 
   const titleWrapper = Skeletons.Box.X({
     className: `${cnWidowTopbarTitle}__wrapper`,
@@ -37,13 +43,13 @@ const __skl_window_team_topbar = function (ui, icon) {
         uiHandler: ui,
         partHandler: ui,
         className: _a.name,
-        content: name.withoutTag(),
+        content: name,
       }),
       Skeletons.Box.X({
         className: `${ui.fig.family}__badge`,
         kids: [
           Skeletons.Note({
-            content: "SHARED",
+            content: "PUBLIC",
           }),
           ,
         ],
@@ -54,8 +60,10 @@ const __skl_window_team_topbar = function (ui, icon) {
   const buttons = Skeletons.Box.X({
     className: `${cnWidowTopbarActions}__buttons-wrapper`,
     kids: [
-      require("../../../skeleton/topbar/meeting-menu")(ui),
-
+      Skeletons.Button.Svg({
+        className: `${cnWidowTopbarActions}__icon-bg-button`,
+        ico: "desktop_confcalls",
+      }),
       Skeletons.Button.Label({
         className: `${cnWidowTopbarActions}__label-button`,
         label: LOCALE.UPLOAD,
@@ -67,12 +75,14 @@ const __skl_window_team_topbar = function (ui, icon) {
       require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });
+
   const a = Skeletons.Box.X({
     className: `${ui.fig.group}-${figname}__container ${ui.mget(_a.area)}`,
-    sys_pn: _a.topBar,
+    sys_pn: "browser-top-bar",
     service: _e.raise,
     debug: __filename,
     kids: [
+      // require("window/skeleton/topbar/breadcrumbs")(ui),
       Skeletons.Box.X({
         className: `${ui.fig.group}-${figname}__title`,
         kids: [
@@ -81,16 +91,8 @@ const __skl_window_team_topbar = function (ui, icon) {
           buttons,
         ],
       }),
-      // require("./left")(ui),
-
-      Skeletons.Wrapper.Y({
-        className: `${ui.fig.group}__wrapper--context dialog__wrapper--context`,
-        name: "context",
-        uiHandler: ui,
-        partHandler: ui,
-      }),
     ],
   });
   return a;
 };
-module.exports = __skl_window_team_topbar;
+module.exports = __window_topbar;

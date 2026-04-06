@@ -2,16 +2,15 @@
 // require("jquery-ui/ui/widgets/resizable");
 
 if (window.innerWidth > 900) {
-  require("jquery-ui-touch-punch")
+  require("jquery-ui-touch-punch");
 }
-const Rectangle = require('rectangle-node');
+const Rectangle = require("rectangle-node");
 const mfsInteract = require("./interact");
 const pseudo_media = require("media/pseudo");
-const { xhRequest } = require("@drumee/ui-essentials")
-const { createQrcode } = require('@drumee/ui-essentials');
+const { xhRequest } = require("@drumee/ui-essentials");
+const { createQrcode } = require("@drumee/ui-essentials");
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
-
 
 class __window_manager extends mfsInteract {
   constructor(...args) {
@@ -27,7 +26,7 @@ class __window_manager extends mfsInteract {
    */
   static initClass() {
     this.prototype.isFolder = 1;
-    this.prototype.radioChannel = _.uniqueId('wm-radio-');
+    this.prototype.radioChannel = _.uniqueId("wm-radio-");
     this.prototype.events = {
       click: "_click",
       dragenter: "fileDragEnter",
@@ -40,7 +39,7 @@ class __window_manager extends mfsInteract {
    * @param {*} opt
    */
   initialize(opt) {
-    require('./skin/window');
+    require("./skin/window");
     super.initialize(opt);
     window.Wm = this;
     if (this.mget("desk")) {
@@ -69,16 +68,16 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
+   *
    */
   _kbHandler(e) {
-    this.debug("AAAA:69", e)
+    this.debug("AAAA:69", e);
   }
 
   /**
-   * 
-   * @param {*} item 
-   * @returns 
+   *
+   * @param {*} item
+   * @returns
    */
   maxHeight(item) {
     return (
@@ -89,12 +88,11 @@ class __window_manager extends mfsInteract {
     );
   }
 
-
   /**
    *
    * @param {*} client
    */
-  getContactStatus(id) { }
+  getContactStatus(id) {}
 
   /**
    *
@@ -132,8 +130,8 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-  *
-  */
+   *
+   */
   handleUpload() {
     let target = this.getActiveWindow();
     return this.__fileselector.open((e) => {
@@ -190,7 +188,7 @@ class __window_manager extends mfsInteract {
       case _e.drop:
         target = target || this._target || this.getActiveWindow() || this;
         if (!target.el) {
-          return
+          return;
         }
         target.el.dataset.over = _a.off;
         break;
@@ -219,9 +217,9 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} moving 
-   * @returns 
+   *
+   * @param {*} moving
+   * @returns
    */
   selectWindow(moving) {
     let target = null;
@@ -233,7 +231,6 @@ class __window_manager extends mfsInteract {
       if (c.isWallpaperSettings) return c;
       if (c.acceptMedia) {
         if (moving.intersect(c) > 0.7) {
-
           if (c.isChatWindow) {
             if (moving.mget("isAttachment")) {
               return null;
@@ -267,9 +264,9 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} view 
-   * @returns 
+   *
+   * @param {*} view
+   * @returns
    */
   release(view) {
     this._currentBrowser = null;
@@ -288,10 +285,10 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} w 
-   * @param {*} type 
-   * @returns 
+   *
+   * @param {*} w
+   * @param {*} type
+   * @returns
    */
   responsive(w, type) {
     if (this._isResizing || !this.iconsList || this.getViewMode() === _a.row) {
@@ -379,10 +376,10 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} c 
-   * @param {*} args 
-   * @returns 
+   *
+   * @param {*} c
+   * @param {*} args
+   * @returns
    */
   onChildBubble(c, args) {
     if (args == null) {
@@ -404,9 +401,8 @@ class __window_manager extends mfsInteract {
     return this.windowsLayer.append(v);
   }
 
-
   /**
-   * 
+   *
    */
   addFolder(opt) {
     const target = this.getActiveWindow(1);
@@ -425,9 +421,9 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} mkdir 
-   * @returns 
+   *
+   * @param {*} mkdir
+   * @returns
    */
   getActiveWindow(mkdir) {
     if (mkdir == null) {
@@ -503,8 +499,8 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   getGlobalSelection() {
     let f = [];
@@ -519,10 +515,10 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} child 
-   * @param {*} pn 
-   * @returns 
+   *
+   * @param {*} child
+   * @param {*} pn
+   * @returns
    */
   onPartReady(child, pn) {
     switch (pn) {
@@ -563,7 +559,7 @@ class __window_manager extends mfsInteract {
             c.style.get(_a.top),
             c.style.get(_a.left),
             w,
-            h
+            h,
           );
           let i = 1;
           for (var k of child.children.toArray()) {
@@ -572,7 +568,7 @@ class __window_manager extends mfsInteract {
                 k.style.get(_a.top),
                 k.style.get(_a.left),
                 w,
-                h
+                h,
               );
               if (cr.intersection(kr)) {
                 let o = {
@@ -592,9 +588,9 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} kind 
-   * @returns 
+   *
+   * @param {*} kind
+   * @returns
    */
   getItemByKind(kind) {
     for (let c of Array.from(this.windowsLayer.children.toArray())) {
@@ -606,9 +602,9 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} kind 
-   * @returns 
+   *
+   * @param {*} kind
+   * @returns
    */
   countItemsByKind(kind) {
     let c = 0;
@@ -621,10 +617,10 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} c 
-   * @param {*} opt 
-   * @returns 
+   *
+   * @param {*} c
+   * @param {*} opt
+   * @returns
    */
   getFileposition(c, opt) {
     const m = c.model;
@@ -733,7 +729,7 @@ class __window_manager extends mfsInteract {
       pm.left,
       pm.top,
       c.$el.width(),
-      c.$el.height()
+      c.$el.height(),
     );
     if (pm.top > height / 2) {
       s = -10;
@@ -792,10 +788,10 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} c 
-   * @param {*} opt 
-   * @returns 
+   *
+   * @param {*} c
+   * @param {*} opt
+   * @returns
    */
   getWindowPreset(c, opt) {
     let home_id;
@@ -838,9 +834,9 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} media 
-   * @param {*} args 
+   *
+   * @param {*} media
+   * @param {*} args
    */
   openManager(media, args) {
     this.confirm({
@@ -870,7 +866,7 @@ class __window_manager extends mfsInteract {
     const fType = media.mget(_a.filetype);
     let app = require("./configs/application")(fType, item);
     if (_.isEmpty(app) || !app.kind) {
-      app = { ...app, kind: 'props_viewer', media }
+      app = { ...app, kind: "props_viewer", media };
     }
     app.style = this.getWindowPosition(media);
     if (app) {
@@ -882,7 +878,7 @@ class __window_manager extends mfsInteract {
         } catch (e) {
           let widget = this.windowsLayer.children.last();
           this.warn(`Failed to launch kind=${app.kind}`, widget, e);
-          if (widget && widget.mget('launchTag') == launchTag) {
+          if (widget && widget.mget("launchTag") == launchTag) {
             widget.suppress();
           }
           Wm.alert(LOCALE.INTERNAL_ERROR);
@@ -973,25 +969,25 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} media 
+   *
+   * @param {*} media
    */
   showProperties(media) {
     this.confirm(media.mget(_a.extension).printf(LOCALE.NO_PLAYER_FOR_X_FILE))
       .then(() => {
         media.download();
       })
-      .catch(() => { });
+      .catch(() => {});
   }
 
   /**
-   * 
-   * @param {*} media 
-   * @returns 
+   *
+   * @param {*} media
+   * @returns
    */
   checkAlreadyOpened(media) {
     let w = this.windowsLayer.children.find(
-      (r) => r.mget(_a.nid) == media.mget(_a.nid)
+      (r) => r.mget(_a.nid) == media.mget(_a.nid),
     );
     if (w && !w.isDestroyed()) {
       if (media.mget(_a.kind) == _a.media) {
@@ -1021,9 +1017,9 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} item 
-   * @returns 
+   *
+   * @param {*} item
+   * @returns
    */
   openPlayer(item) {
     let opt;
@@ -1046,9 +1042,9 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} item 
-   * @returns 
+   *
+   * @param {*} item
+   * @returns
    */
   openKind(item) {
     let opt;
@@ -1193,7 +1189,7 @@ class __window_manager extends mfsInteract {
     const kind = "window_confirm";
     if (_.isString(skl)) {
       skl = {
-        message: skl || LOCALE.CONFIRM
+        message: skl || LOCALE.CONFIRM,
       };
     } else {
       skl = {
@@ -1250,22 +1246,24 @@ class __window_manager extends mfsInteract {
       nid: opt.nid,
       hub_id: opt.hub_id,
     };
-    xhRequest(SERVICE.media.get_node_attr, args).then((payload) => {
-      const { data } = payload;
-      data.privilege = data.permission;
-      if (data.permission) {
-        return this.openWindow(data);
-      } else {
-        opt = {
-          kind: "window_info",
-          message: LOCALE.FILE_NOT_FOUND,
-        };
+    xhRequest(SERVICE.media.get_node_attr, args)
+      .then((payload) => {
+        const { data } = payload;
+        data.privilege = data.permission;
+        if (data.permission) {
+          return this.openWindow(data);
+        } else {
+          opt = {
+            kind: "window_info",
+            message: LOCALE.FILE_NOT_FOUND,
+          };
+          return this.windowsLayer.append(opt);
+        }
+      })
+      .catch((e) => {
+        opt = { kind: "window_info" };
         return this.windowsLayer.append(opt);
-      }
-    }).catch((e) => {
-      opt = { kind: "window_info" };
-      return this.windowsLayer.append(opt);
-    })
+      });
   }
 
   /**
@@ -1288,7 +1286,7 @@ class __window_manager extends mfsInteract {
     });
     let body = require("./skeleton/body-wrapper")(this, content);
     this.alert({ body });
-    createQrcode({ id, text })
+    createQrcode({ id, text });
   }
 
   /**
@@ -1297,7 +1295,6 @@ class __window_manager extends mfsInteract {
   showIcons() {
     this.iconsList.$el.show();
   }
-
 
   /**
    *
@@ -1309,8 +1306,6 @@ class __window_manager extends mfsInteract {
     //   this.openHubManager(c, "openSettings");
     // });
   }
-
-
 
   /**
    *
@@ -1327,8 +1322,7 @@ class __window_manager extends mfsInteract {
         .then(() => {
           location.reload();
         })
-        .catch(() => {
-        });
+        .catch(() => {});
     }
   }
 }

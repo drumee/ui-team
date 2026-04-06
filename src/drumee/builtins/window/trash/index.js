@@ -23,17 +23,19 @@ class __window_trash extends mfsInteract {
     this.isTrash = 1;
     this.mset({
       hub_id: Visitor.id,
-      privilege: _K.privilege.owner
+      privilege: _K.privilege.owner,
+      filename: LOCALE.TRASH
     });
-    let args = {
-      left: window.innerWidth - this.size.width - Wm.$el.offset().left - 10,
-      top: window.innerHeight - this.size.height - Wm.$el.offset().top - 75,
-      width: this.size.width,
-      height: this.size.height
-    }
-    if (args.left < 0) args.left = 0;
-    if (args.top < 0) args.top = 0;
-    this.style.set(args);
+
+    // let args = {
+    //   left: window.innerWidth - this.size.width - Wm.$el.offset().left - 10,
+    //   top: window.innerHeight - this.size.height - Wm.$el.offset().top - 75,
+    //   width: this.size.width,
+    //   height: this.size.height
+    // }
+    // if (args.left < 0) args.left = 0;
+    // if (args.top < 0) args.top = 0;
+    // this.style.set(args);
     this.contextmenuSkeleton = 'a';
     this.purgeInProgress = 0;
   }

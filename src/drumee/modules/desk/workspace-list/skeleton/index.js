@@ -22,7 +22,8 @@ module.exports = function (ui) {
     itemsOpt: {
       kind: "workspace_item",
       uiHandler: [ui],
-      service: "load-workspace"
+      service: "load-workspace",
+      radio: `sidebar-radio`, /** Shaed with sidebar items */
     },
     api: {
       service: SERVICE.desk.home,

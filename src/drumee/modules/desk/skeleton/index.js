@@ -7,19 +7,22 @@ const _desk_main = function (ui) {
       wallpaper: ui._wallpaper,
     },
     kids: [
-      // Modal / popup overlay (above everything)
-      Skeletons.Wrapper.Y({
-        sys_pn: "wrapper-popup",
-        className: `${ui.fig.family}__modal-container`,
-        flow: _a.none,
-        wrapper: 1,
-        uiHandler: ui,
-      }),
-
       Skeletons.Box.X({
         className: `${ui.fig.family}__body`,
         kids: [
           require("./sidebar")(ui),
+          Skeletons.Wrapper.Y({
+            sys_pn: "context-box",
+            className: `${ui.fig.family}__context-box`,
+            kids: [
+              // Modal / popup overlay (above everything)
+              Skeletons.Wrapper.Y({
+                sys_pn: "trash-panel",
+                className: `${ui.fig.family}__modal-container`,
+              }),
+              { kind: "activity_panel", sys_pn: "activity-panel" }
+            ]
+          }),
           Skeletons.Box.Y({
             sys_pn: "desk-body",
             className: `${ui.fig.family}__right-side`,
@@ -45,12 +48,7 @@ const _desk_main = function (ui) {
         ],
       }),
 
-      // Tooltip layer
-      Skeletons.Box.Y({
-        className: "desk__tooltip",
-        sys_pn: "desk-tooltip",
-        wrapper: 1,
-      }),
+
     ],
   });
 };

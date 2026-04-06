@@ -6,6 +6,8 @@
   &__ui {
     max-width: 700px;
     max-height: 90vh;
+    top: 189px;
+
     &[data-device="mobile"] {
       width: 360px !important;
       height: 500px !important;
@@ -24,6 +26,7 @@
       margin: auto;
       width: 500px;
       padding: var(--spacer-8);
+
       &[data-device="mobile"] {
         width: 300px;
         padding: 0;

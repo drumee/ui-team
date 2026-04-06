@@ -74,7 +74,7 @@
     "webpack": "^5.88.2"
   },
   "dependencies": {
-    "@drumee/ui-core": "^1.1.23",
+    "@drumee/ui-core": "^1.1.24",
     "@drumee/ui-essentials": "^1.0.0",
     "@drumee/ui-styles": "^1.0.6",
     "@drumee/ui-toolkit": "^0.0.20",

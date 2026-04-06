@@ -58,7 +58,7 @@ module.exports = {
   members_page: import("./builtins/window/adminpanel/pages/members"),
   members_room: import("./builtins/window/adminpanel/pages/members/room"),
   menu_input: import("./builtins/widget/menu-input"),
-  // messenger: import('./builtins/messenger'),
+  messenger: import('./builtins/messenger'),
   module_desk: import("./modules/desk"),
   module_devel: import("./modules/devel"),
   module_dmz: import("./modules/dmz"),

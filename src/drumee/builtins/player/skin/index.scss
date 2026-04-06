@@ -63,6 +63,7 @@
     box-shadow: var(--shadow-main);
     height: 100%;
     width: 100%;
+    background-color: var(--normal-bg-90);
 
     &.player.document {
       background-color: var(--multimedia-player-doc-bg);
@@ -70,14 +71,14 @@
   }
 
   &__container {
-    background-color: var(--neutral-200);
+    background-color: var(--normal-bg-90);
     height: 100%;
     min-height: 200px;
     overflow: hidden;
     width: 100%;
     justify-content: center;
     align-items: center;
-    border-radius: 0 0 var(--spacer-6) var(--spacer-6);
+    border-radius: 0 0 var(--corner-radius-5) var(--corner-radius-5);
 
     .image-viewer__progres {
       height: 60px;

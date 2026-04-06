@@ -262,15 +262,13 @@
 
     &__wrapper {
       & .menu-topic-items {
-        border-radius: var(--corner-radius-4);
-        box-shadow: var(--shadow-container);
-        background-color: var(--default-background);
+        border-radius: var(--corner-radius-2);
+        background-color: var(--normal-bg-100);
         width: 285px;
         padding: var(--spacer-4);
-        border: 1px solid var(--neutral-300);
+        border: 1px solid var(--neutral-800);
 
         &__wrapper {
-          left: -5px;
           padding: var(--spacer-4);
 
           &[data-device="mobile"] {
@@ -294,7 +292,7 @@
       }
 
       & svg {
-        fill: var(--primary-400);
+        fill: var(--normal-fg-10);
       }
     }
 
@@ -302,7 +300,7 @@
       cursor: pointer;
       padding: var(--spacer-4) var(--spacer-6);
       align-items: center;
-      border-radius: var(--corner-radius-3);
+      border-radius: var(--corner-radius-1);
       gap: var(--spacer-5);
 
       &:hover {
@@ -324,7 +322,7 @@
         $size: 14px,
         $weight: 300,
         $line: 16px,
-        $color: var(--default-text-color)
+        $color: var(--normal-fg-10)
       );
 
       &:hover {

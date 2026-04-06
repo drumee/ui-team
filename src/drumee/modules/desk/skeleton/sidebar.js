@@ -17,7 +17,7 @@ const createNavItem = (ui, ico, label, service = "") => {
   return Skeletons.Box.X({
     className: cls(fig, "item"),
     uiHandler: [ui],
-    radio: `nav-${ui._id}`,
+    radio: `sidebar-radio`, /** Shaed with workspace-items */
     service,
     kidsOpt: {
       active: 0
@@ -107,9 +107,9 @@ const createNav = (ui) => {
       Skeletons.Box.Y({
         kids: [
           createNavItem(ui, "ab_address", LOCALE.HOME, _e.home),
-          createNavItem(ui, "bell", LOCALE.NOTIFICATIONS),
-          createNavItem(ui, "desktop_chat", LOCALE.CHAT),
-          createNavItem(ui, "drumee-trash", LOCALE.TRASH),
+          createNavItem(ui, "bell", LOCALE.NOTIFICATIONS, 'toggle-activity'),
+          createNavItem(ui, "desktop_chat", LOCALE.CHAT, 'toggle-chat'),
+          createNavItem(ui, "drumee-trash", LOCALE.TRASH,  'toggle-trash'),
         ],
       }),
 
