@@ -39,7 +39,7 @@ const __media_skl_grid = function (_ui_) {
     debug: __filename,
     flow: _a.y,
     className: `${_ui_.fig.group}__icons-container`,
-    kids: [list],
+    kids: [list, require("../../create-menu")(_ui_)],
   };
 
   return a;
