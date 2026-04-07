@@ -32,8 +32,8 @@ class __media_grid extends DrumeeMediaInteract {
     this.cursorPosition = { left: 30, top: 30 };
 
     this.size = {
-      width: 132,
-      height: 132
+      width: 121,
+      height: 120
     }
     this.initContainer()
     switch (opt.mode) {

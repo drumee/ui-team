@@ -34,6 +34,22 @@
       height: 100%;
       transform: rotateZ(0deg);
       transition: transform 0.3s ease-in-out;
+
+      &.personal {
+        fill: #884EFF;
+      }
+
+      &.public {
+        fill: #44b8ff;
+      }
+
+      &.share {
+        fill: #FFA8DC;
+      }
+
+      &.private {
+        fill: #D65F59;
+      }
     }
 
     .badge {
@@ -99,6 +115,7 @@
     }
 
     &[data-icontype="vignette"] {
+
       &:before,
       &:after {
         display: none;

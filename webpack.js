@@ -27,7 +27,8 @@ function makeOptions(entry, opt) {
   let output = {
     path: opt.bundle_path,
     publicPath: opt.public_path,
-    filename: OUTPUT_FILENAME || "[name]-[fullhash].js",
+    filename: "[name]-[chunkhash].js",
+    clean: true,
   };
 
   console.group(`BUNDLING target **${opt.target}**`);
@@ -59,6 +60,9 @@ function makeOptions(entry, opt) {
       splitChunks: {
         minSize: 20000, // Minimum size for a chunk to be generated
       },
+      runtimeChunk: 'single', // Extracts webpack runtime code into a separate file (e.g., runtime~main.[hash].js)
+      moduleIds: 'deterministic', // (Webpack 5+) Stable module IDs
+      chunkIds: 'deterministic', // (Webpack 5+) Stable chunk IDs
     },
   };
 
@@ -131,11 +135,9 @@ function normalize() {
 
 module.exports = function () {
   const opt = normalize();
-  let main, api;
-  let core = join(UI_SRC_PATH, 'src', 'drumee', 'core');
   switch (BUILD_TARGET) {
     case 'app':
-      main = join(UI_SRC_PATH, 'src', 'drumee', 'index.web');
+      let main = join(UI_SRC_PATH, 'src', 'drumee', 'index.web');
       let locale = join(UI_SRC_PATH, 'locale');
       let sprite = join(UI_SRC_PATH, 'src', 'sprite');
       let vendor = join(UI_SRC_PATH, 'src', 'vendor');

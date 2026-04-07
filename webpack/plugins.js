@@ -2,8 +2,9 @@
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { DuplicatesPlugin } = require("inspectpack/plugin");
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-const { StatsWriterPlugin } = require("webpack-stats-plugin");
+const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
 
+const { join } = require('path')
 const Sync = require('./sync');
 
 
@@ -36,6 +37,7 @@ module.exports = function (webpack, opt) {
     //sourceMap: true
   })
 
+  console.log("AAA:40 PLUGINS", opt)
   const plugins = [
     new CleanWebpackPlugin(),
     new webpack.ProgressPlugin(),
@@ -47,6 +49,9 @@ module.exports = function (webpack, opt) {
     }),
     cssExtract,
     new webpack.DefinePlugin(pluginsOptions),
+    new WebpackManifestPlugin({
+      fileName: 'manifest.json'
+    }),
     new Sync(opt)
   ];
   return plugins;

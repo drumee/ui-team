@@ -54,6 +54,7 @@ class Drumee extends Marionette.Application {
       default:
         return this.failover(r.data);
     }
+
   }
 
   /**
@@ -145,7 +146,7 @@ class Drumee extends Marionette.Application {
         window.SERVICE = require('lex/services');
       }
     } catch (e) {
-      console.error("FAILED TO PARSE ENVIRONMENT DATA", e);
+      console.error("FAILED TO PARSE ENVIRONMENT DATA!", e);
       this.failover(e);
     }
   }
