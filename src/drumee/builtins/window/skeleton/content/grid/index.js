@@ -1,5 +1,5 @@
 const { button } = require("../../../../skeleton/toolkit/buttons");
-
+const { createMenu } = require("../../../skeleton/toolkit/index");
 const __media_skl_grid = function (_ui_) {
   const type = _ui_.mget(_a.type);
 
@@ -68,7 +68,33 @@ const __media_skl_grid = function (_ui_) {
     debug: __filename,
     flow: _a.y,
     className: `${_ui_.fig.group}__icons-container`,
-    kids: [filterBar, list, require("../../create-menu")(_ui_)],
+    kids: [
+      filterBar,
+      list,
+      createMenu(_ui_, {
+        triggerIco: "editbox_list-plus",
+        sys_pn: "create-menu",
+        items: [
+          { service: "meeting", ico: "dock-note", content: "Note" },
+          {
+            service: "webinar",
+            ico: "raw-documents_word",
+            content: "Document",
+          },
+          {
+            service: "channel",
+            ico: "raw-documents_excel",
+            content: "Spreadsheet",
+          },
+          {
+            service: "channel",
+            ico: "raw-documents_powerpoint",
+            content: "Presentation",
+          },
+          { service: "channel", ico: "dock-folder", content: "Folder" },
+        ],
+      }),
+    ],
   };
 
   return a;
