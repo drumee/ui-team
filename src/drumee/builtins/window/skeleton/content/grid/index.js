@@ -40,12 +40,15 @@ const __media_skl_grid = function (_ui_) {
 
   const cnWidowFilter = "window-filter";
 
+  // value: filetype param sent to BE (null = no filter)
+  // Mapped from api-response ftype field: image, video, audio, document, note, text
   const FILTER_TABS = [
-    { label: "All", value: "all" },
-    { label: "Docs", value: "docs" },
+    { label: "All", value: null },
+    { label: "Docs", value: "document" },
     { label: "PDF", value: "pdf" },
-    { label: "Images", value: "images" },
-    { label: "Other", value: "other" },
+    { label: "Images", value: "image" },
+    { label: "Videos", value: "video" },
+    { label: "Audio", value: "audio" },
   ];
 
   const filterBar = Skeletons.Box.X({
@@ -55,10 +58,11 @@ const __media_skl_grid = function (_ui_) {
       button(_ui_, {
         label: tab.label,
         className: `${cnWidowFilter}__tab`,
-        service: "select-media-filter",
+        service: "filter-by-type",
         state: index === 0 ? 1 : 0,
         radio: `media-filter-${_ui_._id}`,
         value: tab.value,
+        // filetype: tab.value,
       }),
     ),
   });
