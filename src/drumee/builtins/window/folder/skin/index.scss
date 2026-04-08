@@ -57,22 +57,6 @@
     color: var(--private);
     font-size: 12px;
     font-weight: 600;
-
-    &[data-area="share"] {
-      background-color: rgba(221, 130, 11, 0.15);
-      color: var(--share, #dd820b);
-    }
-
-    &[data-area="dmz"],
-    &[data-area="restricted"] {
-      background-color: rgba(221, 130, 11, 0.15);
-      color: var(--share, #dd820b);
-    }
-
-    &[data-area="public"] {
-      background-color: rgba(69, 180, 187, 0.15);
-      color: var(--public, #45b4bb);
-    }
   }
 
   &__title {
@@ -183,7 +167,6 @@
     overflow: hidden;
   }
 
-  // Chat panel
   &__chat-panel {
     width: 320px;
     min-width: 240px;
@@ -206,7 +189,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--primary-10, #E4E3FF);
+    color: #E4E3FF;
     border-bottom: 1px solid rgba(71, 69, 84, 0.05);
     flex-shrink: 0;
     font-family: 'Geist Mono', monospace;
@@ -268,5 +251,3 @@
     font-weight: 600;
   }
 }
-
-

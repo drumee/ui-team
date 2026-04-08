@@ -12,10 +12,12 @@
       left: 50% !important;
       transform: translateX(-50%) translateY(15%);
     }
+
     &[data-content="folder"] {
       & .window-team-topbar__menu {
         display: none;
       }
+
       & .window-topbar__title .svg-wrapper {
         visibility: hidden;
       }
@@ -24,23 +26,25 @@
 
   &__header {
     background-color: var(--normal-bg-100);
+
     &-title {
       max-width: 163px;
       align-items: center;
-      @include drumee.typo(
-        $size: 18px,
+      @include drumee.typo($size: 18px,
         $line: 24px,
         $weight: 400,
-        $color: var(--default-text-reverse)
-      );
+        $color: var(--default-text-reverse));
+
       .name {
         align-items: flex-start;
         @include drumee.overflow-text;
+
         @media (min-width: 626px) {
           justify-content: center;
           max-width: 300px;
         }
       }
+
       .icon {
         width: 21px;
         height: 21px;
@@ -50,14 +54,20 @@
         flex-shrink: 0;
       }
     }
+
     &-control {
       .icon {
         color: var(--default-icon-reverse);
       }
+
       &:hover {
         color: var(--default-icon-hover);
       }
     }
+  }
+
+  &__body {
+    grid-template-columns: 2fr 1fr;
   }
 
   &__split-body {
@@ -66,12 +76,6 @@
     display: flex;
     flex-direction: row;
     min-height: 0;
-  }
-
-  &__body {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
   }
 
   &__chat-panel {
@@ -96,7 +100,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--primary-10, #E4E3FF);
+    color: #E4E3FF;
     border-bottom: 1px solid rgba(71, 69, 84, 0.05);
     flex-shrink: 0;
     font-family: 'Geist Mono', monospace;
@@ -111,6 +115,9 @@
 
 // Scoped message bubble styles for team chat panel
 .window-team .window__chat-panel {
+  .widget-chatItem__ui {
+    background-color: transparent;
+  }
   .widget-chatItem__main {
     &.me, &.other {
       background-color: transparent;

@@ -111,7 +111,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--primary-10, #E4E3FF);
+    color: #E4E3FF;
     border-bottom: 1px solid rgba(71, 69, 84, 0.05);
     flex-shrink: 0;
     font-family: 'Geist Mono', monospace;
@@ -126,6 +126,9 @@
 
 // Scoped message bubble styles for share (restricted) chat panel
 .window-share .window__chat-panel {
+  .widget-chatItem__ui {
+    background-color: transparent;
+  }
   .widget-chatItem__main {
     &.me, &.other {
       background-color: transparent;
