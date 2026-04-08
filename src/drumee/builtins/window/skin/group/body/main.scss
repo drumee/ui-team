@@ -32,7 +32,7 @@
   &__body {
     margin: 0 auto;
     width: 100%;
-    height: calc(100% - 132px);
+    height: calc(100% - var(--header-height));
     border-radius: var(--border-radius-bottom);
     overflow: hidden;
     z-index: 100;

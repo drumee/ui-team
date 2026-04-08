@@ -1,9 +1,11 @@
 const { dialog, tooltips } = require("../../skeleton/toolkit")
 
 function grid(ui) {
+  const family = ui.fig.family;
+  const group = ui.fig.group;
   const header = Skeletons.Box.X({
     debug: __filename,
-    className: `${ui.fig.family}__header ${ui.fig.group}__header`,
+    className: `${family}__header ${group}__header`,
     sys_pn: "window-header",
     kidsOpt: {
       radio: _a.on,
@@ -14,23 +16,27 @@ function grid(ui) {
       require("./topbar")(ui, "desktop_sharebox_edit"),
     ],
   });
-  const body = Skeletons.Box.Y({
-    className: `${ui.fig.family}__body ${ui.fig.group}__body`,
-    sys_pn: _a.content,
-    type: _a.type,
+  
+  const body = Skeletons.Box.G({
+    className: `${family}__body  ${group}__body`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${family}__files ${group}__files`,
+        sys_pn: _a.content,
+        type: _a.type,
+      }),
+      Skeletons.Box.Y({
+        className: `${family}__chat ${group}__chat`,
+        sys_pn: "chat-wrapper",
+      })
+    ]
   });
-
   return Skeletons.Box.Y({
-    className: `${ui.fig.family}__main ${ui.fig.group}__main drive-popup`,
+    className: `${family}__main ${group}__main drive-popup`,
     radio: _a.parent,
     debug: __filename,
     kids: [header, tooltips, body, dialog],
   });
 
-  // return Skeletons.Box.X({
-  //   className: `${ui.fig.family}__main ${ui.fig.group}__main w-800px `,
-
-  //   kids: [require("window/skeleton/content/main")(ui, menu)],
-  // });
 };
 module.exports = grid;

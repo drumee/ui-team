@@ -1,4 +1,3 @@
-const { button } = require("../../../../skeleton/toolkit/buttons");
 const { meetingMenu } = require("../../../skeleton/toolkit/index");
 
 const __skl_window_team_topbar = function (ui, icon) {
