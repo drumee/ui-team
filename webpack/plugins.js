@@ -37,7 +37,6 @@ module.exports = function (webpack, opt) {
     //sourceMap: true
   })
 
-  console.log("AAA:40 PLUGINS", opt)
   const plugins = [
     new CleanWebpackPlugin(),
     new webpack.ProgressPlugin(),

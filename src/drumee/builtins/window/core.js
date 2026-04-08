@@ -439,26 +439,13 @@ class __window_core extends __utils {
     this.__content = child;
     this.setupInteract();
     if (!this._raised) this.raise();
-    console.trace();
 
     child.on(_e.show, () => {
       this.loadContent();
-      // this._path = this.buildHistory();
       if (this.media && this.media.wait) this.media.wait(0);
     });
   }
 
-  /**
-   *
-   * @returns
-   */
-  // getFilePath() {
-  //   let p = "/";
-  //   this.__breadcrumbsContainer.children.each(
-  //     (c) => (p = `${p}/${c.mget(_a.filename)}`)
-  //   );
-  //   return p;
-  // }
 
   /**
    *
