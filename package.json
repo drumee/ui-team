@@ -72,7 +72,6 @@
     "url-loader": "^4.1.1",
     "walkdir": "^0.4.1",
     "webpack": "^5.88.2",
-    "webpack-assets-manifest": "^6.5.1",
     "webpack-manifest-plugin": "^6.0.1"
   },
   "dependencies": {
