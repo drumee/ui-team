@@ -9,12 +9,28 @@
   }
 
   &__badge {
-    background-color: #f870691a;
+    background-color: rgba(150, 99, 255, 0.15);
     padding: var(--spacer-3);
     border-radius: var(--corner-radius-1);
-    color: var(--restricted);
+    color: var(--private, #884eff);
     font-size: 12px;
     font-weight: 600;
+
+    &[data-area="share"] {
+      background-color: rgba(221, 130, 11, 0.15);
+      color: var(--share, #dd820b);
+    }
+
+    &[data-area="dmz"],
+    &[data-area="restricted"] {
+      background-color: rgba(214, 95, 89, 0.15);
+      color: var(--restricted, #d65f59);
+    }
+
+    &[data-area="public"] {
+      background-color: rgba(69, 180, 187, 0.15);
+      color: var(--public, #45b4bb);
+    }
   }
 
   &__subtitle-wrapper {

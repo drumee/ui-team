@@ -87,25 +87,25 @@ class __lib_messenger extends LetcBox {
    */
   resetMessage() {
     this.__content.reset();
-    this.__submit.el.hide();
+    this.__submit.el.dataset.state = _a.idle;
     this.__wrapperPopup.clear();
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   showSend() {
-    return this.__submit.el.show();
+    this.__submit.el.dataset.state = _a.active;
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   hideSend() {
     if (this.hasAttachment()) return;
-    return this.__submit.el.hide();
+    this.__submit.el.dataset.state = _a.idle;
   }
 
   /**

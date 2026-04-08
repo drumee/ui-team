@@ -42,12 +42,32 @@
         color: var(--default-icon-hover);
       }
     }
-    &.submit svg {
-      background-color: transparent;
-      fill: var(--eviolet);
-      padding: 2px;
-      margin-left: -3px;
-      cursor: pointer;
+    &.submit {
+      svg {
+        background-color: transparent;
+        fill: var(--primary-10, #E4E3FF);
+        padding: 2px;
+        margin-left: -3px;
+        cursor: pointer;
+      }
+
+      &[data-state="idle"] {
+        opacity: 0.3;
+        cursor: default;
+        pointer-events: none;
+        svg {
+          fill: var(--primary-10, #E4E3FF);
+        }
+      }
+
+      &[data-state="active"] {
+        opacity: 1;
+        cursor: pointer;
+        pointer-events: auto;
+        svg {
+          fill: var(--primary-10, #E4E3FF);
+        }
+      }
     }
     &.attach svg {
       cursor: pointer;

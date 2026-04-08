@@ -69,7 +69,11 @@ module.exports = function (ui) {
     if (ui.mget(_a.mode) == _a.edit) {
       edit = item(ui, "preview", "desktop_preview", LOCALE.PREVIEW);
     } else {
-      edit = item(ui, _a.edit, "desktop_edit", LOCALE.EDIT);
+      if (Platform.get('doc_editor')) {
+        edit = item(ui, _a.edit, "desktop_edit", LOCALE.EDIT);
+      } else {
+        edit = null;
+      }
     }
   } else {
     edit = null;

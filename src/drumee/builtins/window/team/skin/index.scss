@@ -69,4 +69,87 @@
   &__body {
     grid-template-columns: 2fr 1fr;
   }
+
+  &__split-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    min-height: 0;
+  }
+
+  &__chat-panel {
+    width: 320px;
+    min-width: 240px;
+    max-width: 320px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-left: 4px solid rgba(255, 255, 255, 0.05);
+    background-color: var(--primary-90, #282538);
+    overflow: hidden;
+
+    &[data-active="0"] {
+      display: none;
+    }
+  }
+
+  &__chat-label {
+    padding: 16px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #E4E3FF;
+    border-bottom: 1px solid rgba(71, 69, 84, 0.05);
+    flex-shrink: 0;
+    font-family: 'Geist Mono', monospace;
+  }
+
+  &__chat-widget {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+// Scoped message bubble styles for team chat panel
+.window-team .window__chat-panel {
+  .widget-chatItem__ui {
+    background-color: transparent;
+  }
+  .widget-chatItem__main {
+    &.me, &.other {
+      background-color: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+    }
+  }
+  .widget-chatItem__conversation-content {
+    padding: 8px 12px;
+    width: fit-content;
+    max-width: 100%;
+    &.me {
+      background-color: var(--private, #884eff);
+      border-radius: 16px 16px 0 16px;
+      align-self: flex-end;
+      .note-content { color: #E4E3FF; }
+    }
+    &.other {
+      background-color: #0B0A21;
+      border-radius: 0 16px 16px 16px;
+      align-self: flex-start;
+      .note-content { color: #FAF6FF; }
+    }
+  }
+  .widget-chatItem__message-date {
+    color: #84848C;
+    font-size: 8px;
+  }
+  .widget-chatItem__date-of-day-content {
+    color: #C6BFFF;
+    font-size: 10px;
+    font-weight: 600;
+  }
 }

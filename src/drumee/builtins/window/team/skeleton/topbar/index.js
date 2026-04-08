@@ -25,6 +25,16 @@ const __skl_window_team_topbar = function (ui, icon) {
   }
   const figname = "topbar";
 
+  const area = ui.mget(_a.area);
+  const badgeLabels = {
+    [_a.private]: LOCALE.PRIVATE || "PRIVATE",
+    [_a.share]: LOCALE.SHARED || "SHARED",
+    [_a.dmz]: LOCALE.RESTRICTED || "RESTRICTED",
+    [_a.restricted]: LOCALE.RESTRICTED || "RESTRICTED",
+    [_a.public]: LOCALE.PUBLIC || "PUBLIC",
+  };
+  const badgeLabel = badgeLabels[area] || LOCALE.RESTRICTED;
+
   const titleWrapper = Skeletons.Box.X({
     className: `${cnWidowTopbarTitle}__wrapper`,
     kids: [
@@ -38,11 +48,11 @@ const __skl_window_team_topbar = function (ui, icon) {
       }),
       Skeletons.Box.X({
         className: `${ui.fig.family}__badge`,
+        dataset: { area },
         kids: [
           Skeletons.Note({
-            content: LOCALE.RESTRICTED,
+            content: badgeLabel,
           }),
-          ,
         ],
       }),
     ],
