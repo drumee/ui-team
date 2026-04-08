@@ -1,4 +1,5 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
+const { tabBar } = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   let name = ui.mget(_a.filename) || ui.mget(_a.name);
@@ -19,20 +20,34 @@ const __skl_folder_topbar = function (ui) {
     kids: [name, subtitle],
   });
 
+  const area = ui.mget(_a.area);
+  const badgeLabels = {
+    [_a.private]: "PRIVATE",
+    [_a.share]: "SHARED",
+    [_a.dmz]: "RESTRICTED",
+    [_a.restricted]: "RESTRICTED",
+    [_a.public]: "PUBLIC",
+  };
+  let badge = "";
+  if (area && badgeLabels[area]) {
+    badge = Skeletons.Box.X({
+      className: `${ui.fig.family}__badge`,
+      dataset: { area },
+      kids: [
+        Skeletons.Note({
+          content: badgeLabels[area],
+        }),
+      ],
+    });
+  }
+
   const titleWrapper = Skeletons.Box.X({
     className: `${cnWidowTopbarTitle}__wrapper`,
     kids: [
       logo,
       name,
-      Skeletons.Box.X({
-        className: `${ui.fig.family}__badge`,
-        kids: [
-          Skeletons.Note({
-            content: "PRIVATE",
-          }),
-          ,
-        ],
-      }),
+      badge,
+      tabBar(ui),
     ],
   });
 

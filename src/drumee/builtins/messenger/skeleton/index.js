@@ -54,8 +54,8 @@ const __skl_messenger = function(_ui_) {
         sys_pn    : _a.submit,
         uiHandler : _ui_,
         service   : _a.submit,
-        dataset: {  
-          state : _a.closed
+        dataset: {
+          state : _a.idle
         }
       })
       
