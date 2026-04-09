@@ -86,34 +86,6 @@
     overflow: hidden;
   }
 
-  &__chat-panel {
-    width: 320px;
-    min-width: 240px;
-    max-width: 320px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    border-left: 4px solid rgba(255, 255, 255, 0.05);
-    background-color: var(--primary-90, #282538);
-    overflow: hidden;
-
-    &[data-active="0"] {
-      display: none;
-    }
-  }
-
-  &__chat-label {
-    padding: 16px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--primary-10, #E4E3FF);
-    border-bottom: 1px solid rgba(71, 69, 84, 0.05);
-    flex-shrink: 0;
-    font-family: 'Geist Mono', monospace;
-  }
-
   &__chat-widget {
     flex: 1;
     min-height: 0;
@@ -152,9 +124,9 @@
   }
 
   &__chat-panel {
-    width: 320px;
-    min-width: 240px;
-    max-width: 320px;
+    width: 300px;
+    min-width: 300px;
+    max-width: 300px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -226,14 +198,14 @@
     font-weight: 600;
   }
   .lib-messenger__container {
-    background-color: var(--primary-purple-30, #847eff);
-    border-radius: 24px;
-    padding: 4px 8px;
+    background-color: #0b0a21;
+    border-radius: 8px;
+    padding: 10px 12px;
   }
   .lib-messenger__content .note-content {
     color: #E4E3FF;
     &:empty:before {
-      color: rgba(228, 227, 255, 0.5);
+      color: #6b7280;
     }
   }
 }

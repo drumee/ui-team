@@ -41,7 +41,7 @@ const __skl_sharebox = function(_ui_) {
         hub_id: _ui_.mget(_a.hub_id),
         placeholder: 'Type a message...',
         no_emoji: true,
-        send_icon: 'send-chat',
+        send_icon: 'raw-send-chat',
         sys_pn: 'folder-chat',
       },
     ],
