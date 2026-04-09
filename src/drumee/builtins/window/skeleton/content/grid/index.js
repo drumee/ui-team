@@ -66,6 +66,8 @@ const __media_skl_grid = function (_ui_) {
     ),
   });
 
+  const isVisible = _ui_.fig.name !== "trash";
+
   const a = {
     kind: KIND.box,
     debug: __filename,
@@ -74,29 +76,33 @@ const __media_skl_grid = function (_ui_) {
     kids: [
       filterBar,
       list,
-      createMenu(_ui_, {
-        triggerIco: "editbox_list-plus",
-        sys_pn: "create-menu",
-        items: [
-          { service: "meeting", ico: "dock-note", content: "Note" },
-          {
-            service: "webinar",
-            ico: "raw-documents_word",
-            content: "Document",
-          },
-          {
-            service: "channel",
-            ico: "raw-documents_excel",
-            content: "Spreadsheet",
-          },
-          {
-            service: "channel",
-            ico: "raw-documents_powerpoint",
-            content: "Presentation",
-          },
-          { service: "channel", ico: "dock-folder", content: "Folder" },
-        ],
-      }),
+      ...(isVisible
+        ? [
+            createMenu(_ui_, {
+              triggerIco: "editbox_list-plus",
+              sys_pn: "create-menu",
+              items: [
+                { service: "meeting", ico: "dock-note", content: "Note" },
+                {
+                  service: "webinar",
+                  ico: "raw-documents_word",
+                  content: "Document",
+                },
+                {
+                  service: "channel",
+                  ico: "raw-documents_excel",
+                  content: "Spreadsheet",
+                },
+                {
+                  service: "channel",
+                  ico: "raw-documents_powerpoint",
+                  content: "Presentation",
+                },
+                { service: "channel", ico: "dock-folder", content: "Folder" },
+              ],
+            }),
+          ]
+        : []),
     ],
   };
 

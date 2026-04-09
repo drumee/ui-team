@@ -1,6 +1,7 @@
-
 const __skl_trash_topbar = function (ui) {
   const figname = "topbar";
+  const cnWidowTopbarActions = "window-topbar-actions";
+  const cnWidowTopbarTitle = "window-topbar-title";
 
   const toggleButton = Skeletons.Box.X({
     className: `${ui.fig.family}__toggle-button checkbox`,
@@ -22,34 +23,34 @@ const __skl_trash_topbar = function (ui) {
   });
 
   const a = Skeletons.Box.X({
-    className: `${ui.fig.family}-${figname}__container u-jc-sb`,
+    className: `${ui.fig.group}-${figname}__title`,
     sys_pn: "browser-top-bar",
     debug: __filename,
     service: _e.raise,
     kids: [
       Skeletons.Box.X({
-        className: `${ui.fig.family}-${figname}__title u-ai-center`,
-        kids: [Skeletons.Note(LOCALE.ARCHIVES)],
+        className: `${cnWidowTopbarTitle}__wrapper`,
+        kids: [
+          Skeletons.Note({
+            className: `name`,
+            content: LOCALE.ARCHIVES,
+          }),
+        ],
       }),
 
       Skeletons.Box.X({
-        className: `${ui.fig.family}__buttons-wrapper`,
+        className: `${cnWidowTopbarActions}__buttons-wrapper`,
         kids: [
-          // toggleButton,
-          Skeletons.Box.X({
-            className: `${ui.fig.family}-${figname}__title purge`,
-            kids: [
-              Skeletons.Note({
-                content: LOCALE.PURGE,
-                className: "purge",
-                service: "empty-bin",
-                uiHandler: ui,
-              }),
-            ],
-          })
+          Skeletons.Button.Label({
+            className: `${cnWidowTopbarActions}__label-button`,
+            label: LOCALE.PURGE,
+            ico: "drumee-trash",
+            service: "empty-bin",
+            uiHandler: ui,
+          }),
+          require("window/skeleton/topbar/control")(ui, "c"),
         ],
       }),
-      require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });
 

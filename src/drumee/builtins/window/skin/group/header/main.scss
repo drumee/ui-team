@@ -67,8 +67,8 @@
     }
 
     &__title {
+      width: 100%;
       justify-content: space-between;
-      flex: 1;
       align-items: center;
 
       &[data-device="mobile"] {

@@ -2,16 +2,12 @@
 
 .window-trash {
   &__header {
-    background: linear-gradient(135deg, var(--neutral-400), var(--gray-500));
+    background-color: var(--normal-bg-100);
   }
 
   &-topbar {
     &__container {
       flex: 1;
-      border-bottom: 1px solid var(--default-separator);
-      border-radius: var(--default-border-radius-top);
-      height: 100%;
-      padding: 0 var(--spacer-8);
     }
 
     &__title {
