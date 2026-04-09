@@ -564,13 +564,15 @@ class desk_module extends LetcBox {
         return this.ensurePart("trash-panel").then((p) => {
           if (p.isEmpty()) {
             p.feed({
-              kind: 'window_trash',
+              kind: 'pannel_trash',
               service: "open-node",
               trigger: cmd,
               uiHandler: [this]
             })
+            // RADIO_BROADCAST.trigger("breadcrumb:context", { hub_id: Visitor.id, filename: LOCALE.TRASH });
           } else {
             p.clear()
+            // RADIO_BROADCAST.trigger("breadcrumb:context");
           }
         });
 

@@ -253,13 +253,13 @@ class __desk_dock extends LetcBox {
         service: "remove-selection"
       });
     } else {
-      const old = Wm.getItemByKind('window_trash');
+      const old = Wm.getItemByKind('pannel_trash');
       if ((old != null) && !old.isDestroyed()) {
         old.goodbye();
         return;
       }
       const item = {
-        kind: 'window_trash',
+        kind: 'pannel_trash',
         service: "open-node",
         trigger: cmd,
         uiHandler: [this]
