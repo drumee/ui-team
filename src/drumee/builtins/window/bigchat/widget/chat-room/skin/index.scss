@@ -5,7 +5,7 @@
 
 .chat-room {
   &__ui {
-    background-color: inherit;
+    background-color: var(--normal-bg-90);
     height: 100%;
     overflow: hidden;
     width: 100%;
@@ -50,7 +50,7 @@
         @include drumee.typo(
           $size: 15px,
           $line: 16px,
-          $color: var(--bigchat-default-text-title)
+          $color: var(--normal-fg-10)
         );
 
         @include drumee.overflow-text;

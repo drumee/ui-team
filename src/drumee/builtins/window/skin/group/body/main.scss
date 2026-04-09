@@ -33,7 +33,7 @@
     margin: 0 auto;
     width: 100%;
     height: calc(100% - var(--header-height));
-    border-radius: var(--border-radius-bottom);
+    border-radius: 0 0 var(--corner-radius-5) var(--corner-radius-5);
     overflow: hidden;
     z-index: 100;
 

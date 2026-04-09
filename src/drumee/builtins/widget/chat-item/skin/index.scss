@@ -6,7 +6,7 @@
 
 .widget-chatItem {
   &__ui {
-    background-color: var(--default-bg);
+    background-color: var(--normal-bg-100);
     width: calc(100% - 70px);
     @include drumee.typo($size: 12px, $line: 14px);
     display: flex;
@@ -83,14 +83,15 @@
     }
 
     &.me {
-      background-color: var(--dgc-chat-item-me-bg);
+      background-color: var(--normal-bg-90);
+      border: 1px solid var(--neutral-800);
       max-width: 85%;
       margin: 0 14px 0 auto;
     }
 
     &.other {
-      background-color: var(--dgc-chat-other-bg);
-      border: 1px solid var(--dgc-chat-other-bg);
+      background-color: var(--normal-bg-90);
+      border: 1px solid var(--neutral-800);
       box-sizing: border-box;
       margin-left: 4px;
       max-width: 90%;
@@ -386,7 +387,7 @@
         $size: 12px,
         $line: 14px,
         $weight: 400,
-        $color: var(--egrey-26)
+        $color: var(--normal-fg-10)
       );
 
       & a {

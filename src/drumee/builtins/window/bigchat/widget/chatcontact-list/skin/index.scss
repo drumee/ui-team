@@ -2,7 +2,7 @@
 
 .widget-chatcontactList {
   &__ui {
-    background-color: var(--default-block-background);
+    background-color: var(--normal-bg-90);
     width: calc(100% - 0px);
   }
 
@@ -31,7 +31,7 @@
       @include drumee.typo(
         $size: 15px,
         $line: 16px,
-        $color: var(--bigchat-default-text-title)
+        $color: var(--normal-fg-10)
       );
       align-items: center;
     }

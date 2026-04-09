@@ -103,7 +103,7 @@
       );
 
       &.chat {
-        color: var(--bigchat-special-tag-color) !important;
+        color: var(--normal-fg-10) !important;
       }
 
       &.addressbook-widget-tag-item__ui {
@@ -117,9 +117,9 @@
       &[data-active="active"],
       &[data-radio="on"],
       &:hover {
-        background-color: var(--neutral-300);
+        background-color: var(--default-background-hover);
         border-radius: var(--corner-radius-2);
-        color: var(--neutral-900);
+        color: var(--normal-fg-10);
         width: 100%;
       }
     }
@@ -177,17 +177,17 @@
     );
 
     &.chat {
-      color: var(--bigchat-special-tag-color) !important;
+      color: var(--normal-fg-10) !important;
     }
 
     &[data-active="active"],
     &[data-radio="on"],
     &:hover {
-      background: var(--neutral-300);
+      background: var(--default-background-hover);
       border-radius: var(--corner-radius-2);
 
       & .addressbook-widget-tag-item__container {
-        color: var(--default-text-hover) !important;
+        color: var(--normal-fg-10) !important;
       }
 
       & .addressbook-widget-tag-item__name {
