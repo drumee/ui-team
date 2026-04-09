@@ -19,7 +19,6 @@ module.exports = function (ui) {
         className: `${pfx}__breadcrumb`,
       },
 
-
       // Search box
       Skeletons.Box.X({
         className: `${pfx}__search-container`,
@@ -38,19 +37,19 @@ module.exports = function (ui) {
             autocomplete: _a.off,
             interactive: 1,
           }),
-          Skeletons.Box.X({
-            className: `${pfx}__search-note`,
-            kids: [
-              Skeletons.Button.Svg({
-                ico: "magnifying-glass",
-                className: `${pfx}__icon`,
-              }),
-              Skeletons.Note({
-                className: `${pfx}__search-text`,
-                content: "K",
-              }),
-            ],
-          }),
+          // Skeletons.Box.X({
+          //   className: `${pfx}__search-note`,
+          //   kids: [
+          //     Skeletons.Button.Svg({
+          //       ico: "magnifying-glass",
+          //       className: `${pfx}__icon`,
+          //     }),
+          //     Skeletons.Note({
+          //       className: `${pfx}__search-text`,
+          //       content: "K",
+          //     }),
+          //   ],
+          // }),
         ],
       }),
 

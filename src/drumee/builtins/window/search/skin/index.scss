@@ -1,17 +1,19 @@
 @use "sass:meta";
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .window-search {
   &__header {
     border-bottom: none;
-    background: linear-gradient(135deg, #dcb2ff, #b251fb);
+    background: var(--normal-bg-100);
 
     &-title {
       align-items: center;
-      @include drumee.typo($size: 18px,
+      @include drumee.typo(
+        $size: 18px,
         $line: 24px,
         $weight: 400,
-        $color: var(--core-default-text-reverse));
+        $color: var(--core-default-text-reverse)
+      );
     }
 
     &-control {
@@ -30,7 +32,12 @@
 
     &__title {
       margin: auto;
-      @include drumee.typo($size: 14px, $line: 21px, $weight: 300, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 14px,
+        $line: 21px,
+        $weight: 300,
+        $color: var(--default-text-color)
+      );
     }
 
     &__control {
@@ -39,7 +46,7 @@
       right: 0;
 
       .icon {
-        color: #2F2F2F;
+        color: #2f2f2f;
       }
     }
   }
@@ -65,7 +72,6 @@
       width: 21px;
     }
 
-
     &:hover {
       color: var(--core-default-icon-hover);
     }
@@ -88,5 +94,4 @@
   &__buttons-wrapper {
     gap: 10px;
   }
-
 }

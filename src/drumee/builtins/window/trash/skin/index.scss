@@ -1,9 +1,12 @@
 @use 'mixins/drumee';
+// @include meta.load-css("header");
 
 .window-trash {
   &__ui {
     max-width: 700px;
     max-height: 90vh;
+    top: 0px;
+    background-color: va(--normal-bg-100);
 
     &[data-device="mobile"] {
       width: 360px !important;
@@ -32,6 +35,7 @@
     justify-content: space-between;
     padding: 0 12px 0 16px;
     min-height: 46px;
+    color: var(--normal-fg-50);
   }
 
   &__header-left {
@@ -43,7 +47,6 @@
   &__header-icon {
     width: 20px;
     height: 20px;
-    opacity: 0.7;
   }
 
   &__header-title {
@@ -91,4 +94,76 @@
     width: 100%;
   }
 
+
+  .window-confirm {
+    &__main {
+      align-items: center;
+      background-color: var(--default-bg);
+      border-radius: var(--corner-radius-6);
+      height: 250px;
+      justify-content: center;
+      margin: auto;
+      width: 500px;
+      padding: var(--spacer-8);
+
+      &[data-device="mobile"] {
+        width: 300px;
+        padding: 0;
+      }
+    }
+
+    &__message {
+      text-align: center;
+      margin-top: var(--spacer-6);
+    }
+
+    &__buttons {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  &__purge {
+    &-header {
+      width: 100%;
+    }
+
+    &-container {
+      position: absolute;
+      width: 100%;
+      height: calc(100% - 46px);
+      align-items: center;
+      justify-content: center;
+      justify-items: center;
+      align-content: center;
+      justify-content: center;
+      flex-wrap: nowrap;
+      top: 46px;
+      background-color: gba(137, 146, 158, 0.4);
+      padding: 10px;
+    }
+
+    &-content {
+      height: 200px;
+      width: 100%;
+      background: var(--default-bg);
+      height: 200px;
+      justify-content: center;
+      border-radius: var(--border-radius);
+      padding: 10px;
+    }
+
+    &-progress {
+      background-color: var(--default-bg);
+    }
+
+    &-title {
+      @include drumee.typo($size: 16px, $line: 22px, $weight: 400); //#E9223B);
+      padding: 0 7px;
+      justify-content: center;
+      justify-items: center;
+      display: flex;
+      flex-direction: row;
+    }
+  }
 }

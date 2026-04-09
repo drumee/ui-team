@@ -1,4 +1,4 @@
-const { tabBar } = require("../../skeleton/toolkit");
+const { tabBar, meetingMenu} = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   let name = ui.mget(_a.filename) || ui.mget(_a.name);

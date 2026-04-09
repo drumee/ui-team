@@ -3,7 +3,7 @@ const { button } = require("../../../skeleton/toolkit/buttons");
 const __skl_folder_topbar = function (ui) {
   const logo = require("../../skeleton/logo")(ui);
   const subtitle = require("../../skeleton/subtitle")(ui);
-
+  const cnWidowTopbarTitle = "window-topbar-title";
 
   let name = Skeletons.Note({
     className: "name",
@@ -11,13 +11,9 @@ const __skl_folder_topbar = function (ui) {
     content: LOCALE.SEARCH_RESULTS,
   });
 
-  const nameWrapper = Skeletons.Box.Y({
-    className: `${ui.fig.family}__name-wrapper`,
-    kids: [name, subtitle],
-  });
-
   const titleWrapper = Skeletons.Box.X({
-    kids: [logo, nameWrapper],
+    className: `${cnWidowTopbarTitle}__wrapper`,
+    kids: [logo, name, subtitle],
   });
 
   const settings = Skeletons.Box.X({
@@ -43,16 +39,12 @@ const __skl_folder_topbar = function (ui) {
     },
     kids: [
       Skeletons.Box.X({
-        className: `${ui.fig.group}-${figname}__container ${ui.mget(
-          _a.area
-        )}`,
+        className: `${ui.fig.group}-${figname}__container ${ui.mget(_a.area)}`,
         kids: [
           Skeletons.Box.X({
             className: `${ui.fig.group}-${figname}__title`,
             sys_pn: "ref-window-title",
-            kids: [
-              titleWrapper,
-            ],
+            kids: [titleWrapper],
           }),
         ],
       }),
