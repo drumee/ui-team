@@ -446,7 +446,6 @@ class __window_core extends __utils {
     });
   }
 
-
   /**
    *
    */
@@ -930,10 +929,8 @@ class __window_core extends __utils {
         );
         return this.debug("import export", cmd, this);
       case "filter-by-type":
-        this._curFilter = cmd.options.value || null;
-        console.log("AAA:9991", this._curFilter);
         this.ensurePart(_a.list).then((l) => {
-          l.setApi(this.getCurrentApi());
+          l.setApi(this.getCurrentApi(cmd.options.value));
           l.restart();
         });
         return;
@@ -995,19 +992,35 @@ class __window_core extends __utils {
     console.log("AAA:9992", this);
     let api;
     const { nid, hub_id } = this.actualNode();
-    const f = type || this._curFilter;
-    console.log("AAA:9993", type, f);
+    const f = type;
+    console.log("AAA:9993", f);
     switch (f) {
+      case "all":
+      case "docs":
+      case "pdf":
+      case "image":
+      case "other":
+        api = {
+          service: SERVICE.media.show_node_by,
+          page: 1,
+          type: f,
+          order: _K.order.descending,
+          hub_id,
+          nid,
+        };
+        break;
+
       case _a.image:
       case _a.video:
       case _a.audio:
       case _a.document:
         api = {
-          service: SERVICE.media.get_all,
+          service: SERVICE.media.show_node_by,
           page: 1,
           type: f,
           order: _K.order.descending,
           hub_id,
+          nid,
         };
         break;
       case _a.folder:

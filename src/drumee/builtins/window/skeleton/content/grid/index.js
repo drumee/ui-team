@@ -43,8 +43,8 @@ const __media_skl_grid = function (_ui_) {
   // value: filetype param sent to BE (null = no filter)
   // Mapped from api-response ftype field: image, video, audio, document, note, text
   const FILTER_TABS = [
-    { label: "All", value: null },
-    { label: "Docs", value: "document" },
+    { label: "All", value: "all" },
+    { label: "Docs", value: "docs" },
     { label: "PDF", value: "pdf" },
     { label: "Images", value: "image" },
     { label: "Other", value: "other" },
