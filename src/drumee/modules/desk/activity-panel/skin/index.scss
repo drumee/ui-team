@@ -8,16 +8,16 @@
 
     position: absolute;
     top: 125px;
+    left: 10px;
     min-width: 400px;
     height: auto;
     max-height: 75px;
-    padding-top: var(--spacer-6);
-    padding-bottom: var(--spacer-6);
+    padding: var(--spacer-4);
     gap: var(--spacer-6);
-    border-radius: var(--corner-radius-6);
-    border-width: 1px;
+    border-radius: var(--corner-radius-2);
+    border: 1px solid var(--neutral-800);
     box-shadow: var(--shadow-main);
-    background-color: var(--normal-bg);
+    background-color: var(--normal-bg-100);
     z-index: 1000000;
 
     &[data-device="mobile"] {
@@ -30,10 +30,7 @@
   }
 
   &__main {
-    background: var(--default-bg);
-    border-radius: var(--corner-radius-6);
-    height: calc(100% - 32px);
-    width: 100%;
+    color: var(--normal-fg-10);
   }
 
   &__header {

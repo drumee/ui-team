@@ -1,5 +1,5 @@
 const { button } = require("../../../../skeleton/toolkit/buttons");
-
+const { createMenu } = require("../../../skeleton/toolkit/index");
 const __media_skl_grid = function (_ui_) {
   const type = _ui_.mget(_a.type);
 
@@ -40,11 +40,13 @@ const __media_skl_grid = function (_ui_) {
 
   const cnWidowFilter = "window-filter";
 
+  // value: filetype param sent to BE (null = no filter)
+  // Mapped from api-response ftype field: image, video, audio, document, note, text
   const FILTER_TABS = [
     { label: "All", value: "all" },
     { label: "Docs", value: "docs" },
     { label: "PDF", value: "pdf" },
-    { label: "Images", value: "images" },
+    { label: "Images", value: "image" },
     { label: "Other", value: "other" },
   ];
 
@@ -55,20 +57,53 @@ const __media_skl_grid = function (_ui_) {
       button(_ui_, {
         label: tab.label,
         className: `${cnWidowFilter}__tab`,
-        service: "select-media-filter",
+        service: "filter-by-type",
         state: index === 0 ? 1 : 0,
         radio: `media-filter-${_ui_._id}`,
         value: tab.value,
+        // filetype: tab.value,
       }),
     ),
   });
+
+  const isVisible = _ui_.fig.name !== "trash";
 
   const a = {
     kind: KIND.box,
     debug: __filename,
     flow: _a.y,
     className: `${_ui_.fig.group}__icons-container`,
-    kids: [filterBar, list, require("../../create-menu")(_ui_)],
+    kids: [
+      filterBar,
+      list,
+      ...(isVisible
+        ? [
+            createMenu(_ui_, {
+              triggerIco: "editbox_list-plus",
+              sys_pn: "create-menu",
+              items: [
+                { service: "meeting", ico: "dock-note", content: "Note" },
+                {
+                  service: "webinar",
+                  ico: "raw-documents_word",
+                  content: "Document",
+                },
+                {
+                  service: "channel",
+                  ico: "raw-documents_excel",
+                  content: "Spreadsheet",
+                },
+                {
+                  service: "channel",
+                  ico: "raw-documents_powerpoint",
+                  content: "Presentation",
+                },
+                { service: "channel", ico: "dock-folder", content: "Folder" },
+              ],
+            }),
+          ]
+        : []),
+    ],
   };
 
   return a;

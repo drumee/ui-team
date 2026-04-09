@@ -4,11 +4,14 @@ const MEDIA_ROW = "media_row";
 const EOD = "end:of:data";
 const __utils = require("./utils");
 const TIMERS = {
-  reorder: null
-}
+  reorder: null,
+};
 const { TweenMax } = gsap;
-const { copyToClipboard, reverseSortBy, modelComparator } = require("@drumee/ui-essentials")
-
+const {
+  copyToClipboard,
+  reverseSortBy,
+  modelComparator,
+} = require("@drumee/ui-essentials");
 
 class __window_core extends __utils {
   constructor(...args) {
@@ -35,8 +38,8 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} opt 
+   *
+   * @param {*} opt
    */
   initialize(opt) {
     super.initialize(opt);
@@ -51,7 +54,7 @@ class __window_core extends __utils {
     });
     this.model.atLeast({
       service: _e.raise,
-    })
+    });
     this.acceptMedia = 1;
     const t = this.mget(_a.trigger);
     if (t) {
@@ -72,7 +75,7 @@ class __window_core extends __utils {
     window.addEventListener("beforeunload", (e) => {
       try {
         this.onBeforeDestroy();
-      } catch (error) { }
+      } catch (error) {}
     });
     this.contextmenuSkeleton = require("builtins/contextmenu/skeleton");
     this._raised = 0;
@@ -115,20 +118,19 @@ class __window_core extends __utils {
 
     if (localStorage.getItem("debugWindowContextmenu")) {
       items = items.concat(
-        localStorage.getItem("debugWindowContextmenu").split(/[ ,;:]+/)
+        localStorage.getItem("debugWindowContextmenu").split(/[ ,;:]+/),
       );
     }
-    items = items.concat("showHidden")
+    items = items.concat("showHidden");
     return items;
   }
-
 
   /**
    *
    */
   onDestroy() {
     RADIO_BROADCAST.off(_e.responsive, this._responsive);
-    this.updateBreadcrumb({ event: _e.closed })
+    this.updateBreadcrumb({ event: _e.closed });
   }
 
   /**
@@ -146,11 +148,11 @@ class __window_core extends __utils {
    *
    * Abstrct -- dont remove
    */
-  notify() { }
+  notify() {}
 
   /**
-   * 
-   * @param {*} cb 
+   *
+   * @param {*} cb
    */
   _syncOrder(cb) {
     if (this.iconsList == null || this.iconsList.isDestroyed()) {
@@ -187,9 +189,9 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} cb 
-   * @returns 
+   *
+   * @param {*} cb
+   * @returns
    */
   syncOrder(cb) {
     if (!Visitor.isOnline()) {
@@ -210,19 +212,19 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} w 
-   * @param {*} type 
-   * @returns 
+   *
+   * @param {*} w
+   * @param {*} type
+   * @returns
    */
   restart(w, type) {
     return this.iconsList.restart();
   }
 
   /**
-   * 
-   * @param {*} id 
-   * @returns 
+   *
+   * @param {*} id
+   * @returns
    */
   removeById(id) {
     if (this.iconsList.isDestroyed()) {
@@ -237,11 +239,10 @@ class __window_core extends __utils {
     return result;
   }
 
-
   /**
    * Abstrcat method
    */
-  setContentSize() { }
+  setContentSize() {}
 
   /**
    *
@@ -277,9 +278,9 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @param {*} mode 
+   *
+   * @param {*} cmd
+   * @param {*} mode
    */
   change_size(cmd, mode) {
     let size;
@@ -336,9 +337,9 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @returns 
+   *
+   * @param {*} cmd
+   * @returns
    */
   change_view(cmd) {
     if (this.__content == null) {
@@ -359,18 +360,18 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @returns 
+   *
+   * @param {*} cmd
+   * @returns
    */
   reload(cmd) {
     return this.triggerMethod(_e.show);
   }
 
   /**
-   * 
-   * @param {*} attr 
-   * @param {*} name 
+   *
+   * @param {*} attr
+   * @param {*} name
    */
   update_name(attr, name) {
     if (this.name && attr == _a.filename) {
@@ -380,9 +381,9 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} target 
-   * @returns 
+   *
+   * @param {*} target
+   * @returns
    */
   toggleState(target) {
     if (target.getAttribute(_a.data.state) === "0") {
@@ -393,10 +394,10 @@ class __window_core extends __utils {
   }
 
   /**
- * Load inplace
- * @param {*} media 
- * @returns 
- */
+   * Load inplace
+   * @param {*} media
+   * @returns
+   */
   openContent(media, args) {
     if (this.isTrash) {
       this.mset(_a.cancel, LOCALE.OK);
@@ -410,10 +411,9 @@ class __window_core extends __utils {
       return;
     }
     this.updateTopbar(media, args);
-    this.loadContent()
+    this.loadContent();
     if (super.openContent) super.openContent(media, args);
   }
-
 
   /**
    * Initial load
@@ -431,89 +431,83 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} child 
-   * @param {*} svc 
+   *
+   * @param {*} child
+   * @param {*} svc
    */
   buildContent(child, svc) {
     this.__content = child;
     this.setupInteract();
     if (!this._raised) this.raise();
-    console.trace()
 
     child.on(_e.show, () => {
       this.loadContent();
-      // this._path = this.buildHistory();
       if (this.media && this.media.wait) this.media.wait(0);
     });
   }
 
   /**
-   * 
-   * @returns 
-   */
-  // getFilePath() {
-  //   let p = "/";
-  //   this.__breadcrumbsContainer.children.each(
-  //     (c) => (p = `${p}/${c.mget(_a.filename)}`)
-  //   );
-  //   return p;
-  // }
-
-  /**
-   * 
+   *
    */
   updateSummary(box) {
     if (Visitor.parseModule().includes(_a.dmz)) {
       // this.getPart("last-update").set({ content: "Metadata not available" })
-      return
+      return;
     }
     // Skip updateSummary for search window - it doesn't have a valid nid
     // Search window handles count update in its own onPartReady
     if (this.isSearch) {
       return;
     }
-    this.fetchService(SERVICE.media.summary, { hub_id: this.mget(_a.hub_id), nid: this.mget(_a.nid) }).then((response) => {
-      // Response structure: { data: { file_count, mtime, ... } }
-      const data = response && response.data ? response.data : response;
-
-      // Update items count
-      if (data && typeof data.file_count !== 'undefined') {
-        this.getPart("items-count").set({ content: LOCALE.X_FILES.format(data.file_count) })
-      }
-
-      // Update last-update with proper error handling
-      if (data && data.mtime) {
-        try {
-          const timeformat = Visitor.timeformat() || "DD/MM/YYYY HH:mm:ss";
-          const mtime = Dayjs.unix(data.mtime);
-          if (mtime.isValid()) {
-            const formattedTime = mtime.format(timeformat);
-            // LOCALE.LAST_CHANGE is "Last change at", so we concatenate it with the time
-            this.getPart("last-update").set({ content: `${LOCALE.LAST_CHANGE} ${formattedTime}` })
-          } else {
-            this.getPart("last-update").set({ content: "" })
-          }
-        } catch (e) {
-          this.warn('Error formatting last-update:', e);
-          this.getPart("last-update").set({ content: "" })
-        }
-      } else {
-        this.getPart("last-update").set({ content: "" })
-      }
-    }).catch((err) => {
-      this.warn('Error fetching summary:', err);
-      this.getPart("last-update").set({ content: "" })
+    this.fetchService(SERVICE.media.summary, {
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
     })
+      .then((response) => {
+        // Response structure: { data: { file_count, mtime, ... } }
+        const data = response && response.data ? response.data : response;
 
+        // Update items count
+        if (data && typeof data.file_count !== "undefined") {
+          this.getPart("items-count").set({
+            content: LOCALE.X_FILES.format(data.file_count),
+          });
+        }
+
+        // Update last-update with proper error handling
+        if (data && data.mtime) {
+          try {
+            const timeformat = Visitor.timeformat() || "DD/MM/YYYY HH:mm:ss";
+            const mtime = Dayjs.unix(data.mtime);
+            if (mtime.isValid()) {
+              const formattedTime = mtime.format(timeformat);
+              // LOCALE.LAST_CHANGE is "Last change at", so we concatenate it with the time
+              this.getPart("last-update").set({
+                content: `${LOCALE.LAST_CHANGE} ${formattedTime}`,
+              });
+            } else {
+              this.getPart("last-update").set({ content: "" });
+            }
+          } catch (e) {
+            this.warn("Error formatting last-update:", e);
+            this.getPart("last-update").set({ content: "" });
+          }
+        } else {
+          this.getPart("last-update").set({ content: "" });
+        }
+      })
+      .catch((err) => {
+        this.warn("Error fetching summary:", err);
+        this.getPart("last-update").set({ content: "" });
+      });
   }
 
   /**
-   * 
-   * @param {*} child 
-   * @param {*} pn 
-   * @param {*} section 
-   * @returns 
+   *
+   * @param {*} child
+   * @param {*} pn
+   * @param {*} section
+   * @returns
    */
   onPartReady(child, pn, section) {
     const hub_id = this.model.get(_a.hub_id) || this.model.get(_a.holder_id);
@@ -567,10 +561,9 @@ class __window_core extends __utils {
         this.actionContainer = child;
         break;
 
-
       case "folder-summary":
-        this.updateSummary(child)
-        break
+        this.updateSummary(child);
+        break;
       case "info-wrapper":
         this._infoWrapper = child;
         break;
@@ -584,9 +577,9 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} o 
-   * @returns 
+   *
+   * @param {*} o
+   * @returns
    */
   onChildBubble(o) {
     if (pointerDragged) {
@@ -603,14 +596,14 @@ class __window_core extends __utils {
     }
     if (!pointerDragged) {
       this.triggerMethod(CHANGE_RADIO);
-      this.updateBreadcrumb({ ...this.model.toJSON(), event: _e.raised })
+      this.updateBreadcrumb({ ...this.model.toJSON(), event: _e.raised });
     }
     this._raised = 1;
   }
 
   /**
-   * 
-   * @param {*} trigger 
+   *
+   * @param {*} trigger
    */
   // buildHistory(trigger) {
   //   let t = trigger || this.media || this;
@@ -656,7 +649,6 @@ class __window_core extends __utils {
   //   return values;
   // }
 
-
   /**
    *
    * @param {*} m
@@ -697,9 +689,9 @@ class __window_core extends __utils {
         if (this.__refWindowName.mget(_a.content) != folderName) {
           this.__refWindowName.set({ content: folderName });
         }
-      }, 1000)
+      }, 1000);
     }
-    this.updateBreadcrumb({ ...m.model.toJSON(), event: _a.browse })
+    this.updateBreadcrumb({ ...m.model.toJSON(), event: _a.browse });
   }
 
   /**
@@ -709,7 +701,8 @@ class __window_core extends __utils {
    * @returns
    */
   openNode(node, args) {
-    let { area,
+    let {
+      area,
       ext,
       filename,
       filepath,
@@ -719,8 +712,8 @@ class __window_core extends __utils {
       md5Hash,
       nid,
       ownpath,
-      pid
-    } = node.model.toJSON()
+      pid,
+    } = node.model.toJSON();
     this.mset({
       area,
       ext,
@@ -732,18 +725,17 @@ class __window_core extends __utils {
       md5Hash,
       nid,
       ownpath,
-      pid
-    })
+      pid,
+    });
     this.ensurePart(_a.list).then((l) => {
-      l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
-      l.restart()
-    })
-    this.__refWindowName.set({ content: filename })
+      l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
+      l.restart();
+    });
+    this.__refWindowName.set({ content: filename });
   }
 
-
   /**
-   * 
+   *
    */
   sortContent(cmd) {
     let order, name;
@@ -774,30 +766,34 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
+   *
    */
 
   newDocument(cmd) {
-    let aw = Wm.getActiveWindow()
-    let { nid, hub_id } = aw.getCurrentApi()
-    this.postService(SERVICE.onlyoffice.new_doc, { nid, hub_id, name: cmd.mget(_a.name) }).then((data) => {
+    let aw = Wm.getActiveWindow();
+    let { nid, hub_id } = aw.getCurrentApi();
+    this.postService(SERVICE.onlyoffice.new_doc, {
+      nid,
+      hub_id,
+      name: cmd.mget(_a.name),
+    }).then((data) => {
       let timer = setInterval(() => {
         for (let media of aw.getItemsByAttr(_a.nid, data.nid)) {
           if (/^media/.test(media.mget(_a.kind))) {
             clearInterval(timer);
-            media.wait(1)
-            this.openContent(media, { service: "open-node", mode: _a.edit })
+            media.wait(1);
+            this.openContent(media, { service: "open-node", mode: _a.edit });
           }
         }
-      }, 500)
-    })
+      }, 500);
+    });
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @param {*} args 
-   * @returns 
+   *
+   * @param {*} cmd
+   * @param {*} args
+   * @returns
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.model.get(_a.service);
@@ -912,13 +908,13 @@ class __window_core extends __utils {
       case _e.upload:
         return Wm.handleUpload();
       case "show-hidden-files":
-        localStorage.setItem("showHidden", 'yes');
-        this.iconsList.model.unset('skip');
+        localStorage.setItem("showHidden", "yes");
+        this.iconsList.model.unset("skip");
         this.iconsList.restart();
         break;
       case "hide-hidden-files":
         localStorage.removeItem("showHidden");
-        this.iconsList.model.set({ skip: { filename: /^\./ } })
+        this.iconsList.model.set({ skip: { filename: /^\./ } });
         this.iconsList.restart();
         break;
       case "export-to-server":
@@ -929,9 +925,15 @@ class __window_core extends __utils {
             type: cmd.mget(_a.type),
             source: this.media,
           },
-          { explicit: 1, singleton: 1 }
+          { explicit: 1, singleton: 1 },
         );
         return this.debug("import export", cmd, this);
+      case "filter-by-type":
+        this.ensurePart(_a.list).then((l) => {
+          l.setApi(this.getCurrentApi(cmd.options.value));
+          l.restart();
+        });
+        return;
 
       default:
         if (lastClick.shiftKey || lastClick.altKey || lastClick.ctrlKey) {
@@ -940,7 +942,7 @@ class __window_core extends __utils {
               await copyToClipboard(url);
               Wm.acknowledge();
             }, 0);
-          })
+          });
         }
         break;
     }
@@ -951,10 +953,10 @@ class __window_core extends __utils {
   // **********************************************************
 
   /**
-   * 
-   * @param {*} offset 
-   * @param {*} refresh 
-   * @returns 
+   *
+   * @param {*} offset
+   * @param {*} refresh
+   * @returns
    */
   getContentStyle(offset, refresh) {
     if (refresh) {
@@ -970,8 +972,8 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   getCurrentNid() {
     const p = this.mget(_a.nodeId);
@@ -981,29 +983,44 @@ class __window_core extends __utils {
     return p;
   }
 
-
-
   /**
-   * 
-   * @param {*} type 
-   * @returns 
+   *
+   * @param {*} type
+   * @returns
    */
   getCurrentApi(type) {
-    console.log("AAA:9992", this)
+    console.log("AAA:9992", this);
     let api;
     const { nid, hub_id } = this.actualNode();
-    const f = type || this._curFilter;
+    const f = type;
+    console.log("AAA:9993", f);
     switch (f) {
+      case "all":
+      case "docs":
+      case "pdf":
+      case "image":
+      case "other":
+        api = {
+          service: SERVICE.media.show_node_by,
+          page: 1,
+          type: f,
+          order: _K.order.descending,
+          hub_id,
+          nid,
+        };
+        break;
+
       case _a.image:
       case _a.video:
       case _a.audio:
       case _a.document:
         api = {
-          service: SERVICE.media.get_all,
+          service: SERVICE.media.show_node_by,
           page: 1,
           type: f,
           order: _K.order.descending,
           hub_id,
+          nid,
         };
         break;
       case _a.folder:
@@ -1033,9 +1050,9 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} opt 
-   * @returns 
+   *
+   * @param {*} opt
+   * @returns
    */
   setCurrentApi(opt) {
     if (opt) {
@@ -1044,9 +1061,9 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} args 
-   * @returns 
+   *
+   * @param {*} args
+   * @returns
    */
   respawn(args) {
     if (args.nid === args.pid) {
@@ -1064,27 +1081,27 @@ class __window_core extends __utils {
   }
 
   /**
-   * 
-   * @param {*} xhr 
-   * @returns 
+   *
+   * @param {*} xhr
+   * @returns
    */
   onServerComplain(xhr) {
     const { error_code, error } = xhr;
-    this.warn("[1020] GOT SERVER COMPLAINS", xhr)
+    this.warn("[1020] GOT SERVER COMPLAINS", xhr);
     if (/.+exceeded$/.test(error) || error_code == 402) {
       Butler.upgrade().then(() => {
         this.goodbye();
-      })
+      });
       return;
     }
   }
 
   /**
-   * 
-   * @param {*} method 
-   * @param {*} data 
-   * @param {*} socket 
-   * @returns 
+   *
+   * @param {*} method
+   * @param {*} data
+   * @param {*} socket
+   * @returns
    */
   // __dispatchRest(method, data, socket) {
   //   switch (method) {
@@ -1098,4 +1115,3 @@ class __window_core extends __utils {
   // }
 }
 module.exports = __window_core;
-

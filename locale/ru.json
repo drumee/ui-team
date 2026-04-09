@@ -2135,5 +2135,6 @@
   "LOGIN_PERSONAL_ACCOUNT": "Войти в мою учетную запись",
   "SIGNUP_COMPLETED": "Отличная работа!<br>\nВы готовы к погружению.",
   "DRUMEEOS_IS_NOW_READY": "DrumeeOS теперь готова.<br>\nДавайте начнём изучать и формировать ваш опыт.",
-  "GO_TO_DRUMEEOS": "Перейти к DrumeeOS"
+  "GO_TO_DRUMEEOS": "Перейти к DrumeeOS",
+  "X_ITEMS_FOUND": "Найдено {0} товаров"
 }

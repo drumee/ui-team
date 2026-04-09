@@ -1,5 +1,6 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const { breadcrumbs } = require("../../skeleton/toolkit");
+const { meetingMenu } = require("../../skeleton/toolkit/index");
 
 const __window_topbar = function (ui) {
   const name = ui.model.get(_a.filename) || "???";
@@ -63,7 +64,26 @@ const __window_topbar = function (ui) {
   const buttons = Skeletons.Box.X({
     className: `${cnWidowTopbarActions}__buttons-wrapper`,
     kids: [
-      require("../../skeleton/topbar/meeting-menu")(ui),
+      meetingMenu(ui, {
+        items: [
+          {
+            service: "meeting",
+            ico: "logo-google",
+            content: "Google Meet",
+          },
+          { service: "webinar", ico: "desktop_confcalls", content: "Zoom" },
+          {
+            service: "channel",
+            ico: "desktop_confcalls",
+            content: "Microsoft Teams",
+          },
+          {
+            service: "channel",
+            ico: "raw-logo-drumee-icon",
+            content: "Drumee Call",
+          },
+        ],
+      }),
 
       Skeletons.Button.Label({
         className: `${cnWidowTopbarActions}__label-button`,

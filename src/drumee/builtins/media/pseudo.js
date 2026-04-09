@@ -14,7 +14,7 @@ class __media_pseudo extends LetcBox {
    */
   initialize(opt) {
     super.initialize();
-    this.bbox = new Rectangle(0, 0, 99, 87);
+    this.bbox = new Rectangle(0, 0, 121, 120);
     this.isPseudo = true;
     this.mset({
       kind: 'media_pseudo',

@@ -1,3 +1,5 @@
+const { createMenu } = require("../../../skeleton/toolkit/index");
+
 const __media_skl_row = function (_ui_) {
   let a;
   const type = _ui_.mget(_a.type);
@@ -83,7 +85,33 @@ const __media_skl_row = function (_ui_) {
   return (a = Skeletons.Box.Y({
     debug: __filename,
     className: `${_ui_.fig.group}__content-main`,
-    kids: [header, list],
+    kids: [
+      header,
+      list,
+      createMenu(_ui_, {
+        triggerIco: "editbox_list-plus",
+        sys_pn: "create-menu",
+        items: [
+          { service: "meeting", ico: "dock-note", content: "Note" },
+          {
+            service: "webinar",
+            ico: "raw-documents_word",
+            content: "Document",
+          },
+          {
+            service: "channel",
+            ico: "raw-documents_excel",
+            content: "Spreadsheet",
+          },
+          {
+            service: "channel",
+            ico: "raw-documents_powerpoint",
+            content: "Presentation",
+          },
+          { service: "channel", ico: "dock-folder", content: "Folder" },
+        ],
+      }),
+    ],
   }));
 };
 

@@ -71,7 +71,8 @@
     "underscore-template-loader": "^1.1.0",
     "url-loader": "^4.1.1",
     "walkdir": "^0.4.1",
-    "webpack": "^5.88.2"
+    "webpack": "^5.88.2",
+    "webpack-manifest-plugin": "^6.0.1"
   },
   "dependencies": {
     "@drumee/ui-core": "^1.1.24",

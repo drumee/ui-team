@@ -425,7 +425,7 @@ class __player_document extends PlayerInteract {
     let { user_domain, svc } = bootstrap()
     this.ensurePart(_a.content).then(async (p) => {
       let host = user_domain || location.host
-      let url = `https://${host}${svc}onlyoffice.html?hub_id=${hub_id}&nid=${nid}`
+      let url = `https://${host}${svc}${Platform.get('doc_editor')}.html?hub_id=${hub_id}&nid=${nid}`
       await Kind.waitFor('iframe');
       let opt = {
         kind: 'iframe',

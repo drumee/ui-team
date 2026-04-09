@@ -9,15 +9,14 @@
     transition: background 0.2s;
     border-radius: var(--corner-radius-2);
 
-    &[data-radio=on] {
+    &[data-radio="on"] {
       border: 1px var(--radio-on-border) solid;
       background-color: var(--radio-on-bg);
     }
   }
 
   &:hover {
-    border-left: 4px solid var(--hover-border-40);
-    background-color: var(--hover-bg-40);
+    background-color: var(--primary-purple-80-5);
   }
 
   &[active="1"] {

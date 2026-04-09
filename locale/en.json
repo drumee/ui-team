@@ -2135,5 +2135,6 @@
   "LOGIN_PERSONAL_ACCOUNT": "Log in to my account",
   "SIGNUP_COMPLETED": "Great job!<br>\nYou're ready to dive in",
   "DRUMEEOS_IS_NOW_READY": "DrumeeOS is now ready.<br>\nLet's begin exploring and shaping your experience.",
-  "GO_TO_DRUMEEOS": "Go to DrumeeOS"
+  "GO_TO_DRUMEEOS": "Go to DrumeeOS",
+  "X_ITEMS_FOUND": "{0} items found"
 }

@@ -1,8 +1,3 @@
-// @use './account';
-@use './admin';
-@use './addressbook';
-// @use './folder';
-@use './sharebox';
-@use './website';
-@use './bigchat';
-@use './team';
+.window {
+  --header-height: 56px;
+}
