@@ -13,7 +13,6 @@ const { stdout } = exec("git log -1 --pretty=format:'%h:%H' --abbrev-commit", { 
 let [short] = stdout.split(':');
 const { version } = require('../package.json');
 
-
 module.exports = function (webpack, opt) {
   let mode = opt.mode || 'developement';
   let templates = opt.temlates_path || '';
@@ -24,14 +23,14 @@ module.exports = function (webpack, opt) {
     __COMMIT__: `"${short}"`
   };
 
-  let filename = '[name].css';
+  let filename = '[name].[contenthash].css';
   let chunkFilename = '[id].css';
   if (/^prod/.test(mode)) {
-    filename = '[name].[hash].css';
+    filename,
     chunkFilename = '[id].[hash].css';
   }
   const cssExtract = new MiniCssExtractPlugin({
-    ignoreOrder: false, // Enable to remove warnings about conflicting order
+    ignoreOrder: true, // Enable to remove warnings about conflicting order
     filename,
     chunkFilename,
     //sourceMap: true
