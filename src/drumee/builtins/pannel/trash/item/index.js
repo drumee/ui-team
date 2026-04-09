@@ -2,14 +2,19 @@ require('./skin');
 
 class __trash_item extends LetcBox {
 
-  initialize(opt = {}) {
-    super.initialize(opt);
-  }
 
+  /**
+   * 
+   */
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
   }
 
+  /**
+   * 
+   * @param {*} cmd 
+   * @param {*} args 
+   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service);
     const parent = this.mget('logicalParent');

@@ -11,7 +11,12 @@ module.exports = function (ui) {
           Skeletons.Note({ className: `${pfx}__header-title`, content: LOCALE.TRASH }),
         ],
       }),
-      Skeletons.Image.Svg({ ico: 'cross', className: `${pfx}__header-icon` }),
+      Skeletons.Image.Svg({
+        ico: 'cross',
+        className: `${pfx}__header-icon`,
+        service: "toggle-trash",
+        uiHandler: [Desk]
+      }),
     ],
   });
 

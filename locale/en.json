@@ -2136,5 +2136,8 @@
   "SIGNUP_COMPLETED": "Great job!<br>\nYou're ready to dive in",
   "DRUMEEOS_IS_NOW_READY": "DrumeeOS is now ready.<br>\nLet's begin exploring and shaping your experience.",
   "GO_TO_DRUMEEOS": "Go to DrumeeOS",
-  "X_ITEMS_FOUND": "{0} items found"
+  "X_ITEMS_FOUND": "{0} items found",
+  "X_DAYS_LEFT": "{0} days left",
+  "DELETED_BY": "Deleted by",
+  "RESTORE": "Restore"
 }

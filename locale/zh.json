@@ -2136,5 +2136,8 @@
   "SIGNUP_COMPLETED": "干得漂亮！<br>\n你已经准备好大干一场了。",
   "DRUMEEOS_IS_NOW_READY": "DrumeeOS 现已准备就绪。<br>\n让我们开始探索并打造您的专属体验吧。",
   "GO_TO_DRUMEEOS": "前往 DrumeeOS",
-  "X_ITEMS_FOUND": "找到 0 件商品"
+  "X_ITEMS_FOUND": "找到 0 件商品",
+  "X_DAYS_LEFT": "还剩 {0} 天",
+  "DELETED_BY": "已删除",
+  "RESTORE": "恢复"
 }

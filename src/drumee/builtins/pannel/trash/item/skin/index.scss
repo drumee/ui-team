@@ -10,12 +10,20 @@
     align-items: center;
     padding: 10px 16px;
     gap: 14px;
-    border-bottom: 1px solid var(--neutral-100);
     width: 100%;
-    transition: background-color 0.12s;
+    transition: background-color 0.5s;
 
     &:hover {
-      background-color: var(--neutral-50, rgba(0, 0, 0, 0.03));
+      background-color: var(--reverse-bg);
+
+      .delete,
+      .restore {
+        display: flex;
+      }
+
+      .days-badge {
+        display: none;
+      }
     }
   }
 
@@ -25,26 +33,15 @@
     height: 36px;
     flex-shrink: 0;
 
-    &.hub {
-      color: #4A90D9;
+    svg {
+      width: 100%;
+      height: 100%;
     }
 
-    &.image {
-      color: #30C9C9;
+    .folder-shape {
+      fill: var(--folder-fill);
     }
 
-    &.pdf {
-      color: #E9223B;
-    }
-
-    &.zip,
-    &.archive {
-      color: #9B59B6;
-    }
-
-    &.file {
-      color: var(--neutral-400);
-    }
   }
 
   /* ── Info block: name + metadata ─────────────────────────── */
@@ -53,6 +50,8 @@
     min-width: 0;
     gap: 3px;
     justify-content: center;
+    @include drumee.typo($size: 10px, $weight: 400, $line: 140%);
+    color: var(--gray-60);
   }
 
   &__name {
@@ -60,6 +59,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--normal-fg-10);
   }
 
   &__meta {
@@ -78,14 +78,18 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+    width: 128px;
   }
 
   &__days-badge {
     @include drumee.typo($color: #fff, $size: 11px, $weight: 600, $line: 16px);
-    background-color: var(--alert-600, #E9223B);
-    border-radius: 20px;
-    padding: 2px 10px;
-    white-space: nowrap;
+    /* Auto layout */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 2px 8px;
+    background: rgba(255, 0, 31, 0.2);
+    border-radius: 2px;
   }
 
   &__btn {
@@ -99,8 +103,41 @@
       opacity: 1;
     }
 
+
+    &.delete,
+    &.restore {
+      display: none;
+      cursor: pointer;
+    }
+
+    &.restore {
+      width: 90px;
+      overflow: visible;
+      flex-direction: column;
+      justify-content: center;
+      background-color: yellow;
+      border-radius: 2px;
+      align-content: center;
+      flex-wrap: wrap;
+      /* Button */
+
+      padding: 8px 12px 9px;
+      /* light overlay */
+      background: var(--overlay-bg-05);
+      border-radius: 4px;
+
+
+    }
+
     &.delete:hover {
       color: var(--alert-600, #E9223B);
+
+      // .tooltops {
+      //   right: 0;
+      //   position: absolute;
+      // }
+
     }
+
   }
 }

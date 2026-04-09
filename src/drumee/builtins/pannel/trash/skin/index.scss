@@ -48,6 +48,7 @@
   &__header-icon {
     width: 20px;
     height: 20px;
+    cursor: poiner;
   }
 
   &__header-title {
@@ -76,6 +77,7 @@
     padding: 4px 10px;
     border-radius: var(--corner-radius-6);
     transition: color 0.15s;
+    cursor: poiner;
 
     &:hover {
       color: var(--alert-600, #E9223B);
