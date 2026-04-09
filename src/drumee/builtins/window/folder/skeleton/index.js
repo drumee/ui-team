@@ -28,12 +28,12 @@ function grid (ui) {
     ],
   });
 
-  const body = Skeletons.Box.Y({
-    className: `${ui.fig.family}__body ${ui.fig.group}__body`,
+  const __files = Skeletons.Box.Y({
+    className: `${ui.fig.group}__files-panel`,
     sys_pn: _a.content,
     type: _a.type,
   });
-
+  
   const chatLabel = Skeletons.Note({
     className: `${ui.fig.group}__chat-label`,
     content: getChatLabel(ui),
@@ -58,11 +58,10 @@ function grid (ui) {
     ],
   });
 
-  const splitBody = Skeletons.Box.X({
+  const splitBody = Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
-    kids: [body, chatPanel],
+    kids: [__files, chatPanel],
   });
-
   return Skeletons.Box.Y({
     className: `${ui.fig.family}__main ${ui.fig.group}__main drive-popup`,
     radio: _a.parent,

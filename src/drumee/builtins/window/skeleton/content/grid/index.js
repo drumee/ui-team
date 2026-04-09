@@ -1,23 +1,23 @@
 const { button } = require("../../../../skeleton/toolkit/buttons");
 const { createMenu } = require("../../../skeleton/toolkit/index");
-const __media_skl_grid = function (_ui_) {
-  const type = _ui_.mget(_a.type);
+const __media_skl_grid = function (ui) {
+  const type = ui.mget(_a.type);
 
   const opt = {
     kind: _a.media,
     type,
-    logicalParent: _ui_,
-    role: _ui_.mget(_a.role) || "",
+    logicalParent: ui,
+    role: ui.mget(_a.role) || "",
     uiHandler: null,
   };
 
-  if (_ui_.mget(_a.itemsOpt)) {
-    _.merge(opt, _ui_.mget(_a.itemsOpt));
+  if (ui.mget(_a.itemsOpt)) {
+    _.merge(opt, ui.mget(_a.itemsOpt));
   }
 
   const list = Skeletons.List.Smart({
-    className: `${_ui_.fig.group}__icons-list`,
-    innerClass: `${_ui_.fig.group}__icons-scroll`,
+    className: `${ui.fig.group}__icons-list`,
+    innerClass: `${ui.fig.group}__icons-scroll`,
     sys_pn: _a.list,
     flow: _a.none,
     timer: 2000,
@@ -31,7 +31,7 @@ const __media_skl_grid = function (_ui_) {
       filename: /^\./,
     },
     vendorOpt: Preset.List.Orange_e,
-    api: _ui_.getCurrentApi,
+    api: ui.getCurrentApi,
   });
 
   if (localStorage.getItem("showHidden")) {
@@ -54,54 +54,54 @@ const __media_skl_grid = function (_ui_) {
     className: `${cnWidowFilter}__bar`,
     flow: _a.x,
     kids: FILTER_TABS.map((tab, index) =>
-      button(_ui_, {
+      button(ui, {
         label: tab.label,
         className: `${cnWidowFilter}__tab`,
         service: "filter-by-type",
         state: index === 0 ? 1 : 0,
-        radio: `media-filter-${_ui_._id}`,
+        radiotoggle: `media-filter-${ui._id}`,
         value: tab.value,
         // filetype: tab.value,
       }),
     ),
   });
 
-  const isVisible = _ui_.fig.name !== "trash";
+  const isVisible = ui.fig.name !== "trash";
 
   const a = {
     kind: KIND.box,
     debug: __filename,
     flow: _a.y,
-    className: `${_ui_.fig.group}__icons-container`,
+    className: `${ui.fig.group}__icons-container`,
     kids: [
       filterBar,
       list,
       ...(isVisible
         ? [
-            createMenu(_ui_, {
-              triggerIco: "editbox_list-plus",
-              sys_pn: "create-menu",
-              items: [
-                { service: "meeting", ico: "dock-note", content: "Note" },
-                {
-                  service: "webinar",
-                  ico: "raw-documents_word",
-                  content: "Document",
-                },
-                {
-                  service: "channel",
-                  ico: "raw-documents_excel",
-                  content: "Spreadsheet",
-                },
-                {
-                  service: "channel",
-                  ico: "raw-documents_powerpoint",
-                  content: "Presentation",
-                },
-                { service: "channel", ico: "dock-folder", content: "Folder" },
-              ],
-            }),
-          ]
+          createMenu(ui, {
+            triggerIco: "editbox_list-plus",
+            sys_pn: "create-menu",
+            items: [
+              { service: "meeting", ico: "dock-note", content: "Note" },
+              {
+                service: "webinar",
+                ico: "raw-documents_word",
+                content: "Document",
+              },
+              {
+                service: "channel",
+                ico: "raw-documents_excel",
+                content: "Spreadsheet",
+              },
+              {
+                service: "channel",
+                ico: "raw-documents_powerpoint",
+                content: "Presentation",
+              },
+              { service: "channel", ico: "dock-folder", content: "Folder" },
+            ],
+          }),
+        ]
         : []),
     ],
   };
