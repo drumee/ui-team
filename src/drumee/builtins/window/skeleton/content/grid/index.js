@@ -47,8 +47,7 @@ const __media_skl_grid = function (_ui_) {
     { label: "Docs", value: "document" },
     { label: "PDF", value: "pdf" },
     { label: "Images", value: "image" },
-    { label: "Videos", value: "video" },
-    { label: "Audio", value: "audio" },
+    { label: "Other", value: "other" },
   ];
 
   const filterBar = Skeletons.Box.X({
