@@ -27,6 +27,9 @@ const __skl_widget_chat_footer = function (ui) {
         mode: _e.commit,
         service: _e.send,
         content: ui.getStoredMessage(),
+        placeholder: ui.mget(_a.placeholder),
+        no_emoji: ui.mget('no_emoji'),
+        send_icon: ui.mget('send_icon'),
         bubble: 0
       }),
 
