@@ -1,7 +1,7 @@
 
 const mfsInteract = require('../../window/utils');
 require('./skin');
-class __pannel_trash extends mfsInteract {
+class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
     super.initialize(opt);
@@ -110,4 +110,4 @@ class __pannel_trash extends mfsInteract {
   }
 }
 
-module.exports = __pannel_trash;
+module.exports = __panel_trash;
