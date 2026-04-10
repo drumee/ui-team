@@ -5,7 +5,7 @@ module.exports = function (ui) {
     className: `${pfx}__main`,
     debug: __filename,
     kids: [
-      require('./topbar')(ui),
+      require("./topbar")(ui),
       Skeletons.List.Smart({
         className: `${pfx}__list`,
         sys_pn: _a.list,
@@ -13,13 +13,21 @@ module.exports = function (ui) {
         spinner: true,
         spinnerWait: 500,
         itemsOpt: {
-          kind: 'pannel_trash_item',
+          kind: "pannel_trash_item",
           logicalParent: ui,
           uiHandler: ui,
         },
         vendorOpt: Preset.List.Orange_e,
         api: ui.getCurrentApi,
-        placeholder:require('./placeholder')(ui),
+        placeholder: require("./placeholder")(ui),
+      }),
+      Skeletons.Box.X({
+        className: `${pfx}__footer`,
+        kids: [
+          Skeletons.Note({
+            content: "Items are automatically deleted after 30 days",
+          }),
+        ],
       }),
     ],
   });

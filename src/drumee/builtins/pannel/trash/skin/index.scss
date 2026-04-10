@@ -1,4 +1,4 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 // @include meta.load-css("header");
 
 .panel-trash {
@@ -8,6 +8,7 @@
     top: 0px;
     left: 0px;
     background-color: var(--normal-bg-90);
+    border: 1px solid var(--neutral-800);
 
     &[data-device="mobile"] {
       width: 360px !important;
@@ -26,29 +27,30 @@
   /* ── Topbar wrapper (header + status bar) ───────────────── */
   &__topbar {
     flex-shrink: 0;
-    border-bottom: 1px solid var(--neutral-200);
   }
 
   /* ── Header row: icon + title + close ───────────────────── */
   &__header {
     align-items: center;
     justify-content: space-between;
-    padding: 0 12px 0 16px;
-    min-height: 46px;
+    padding: var(--spacer-4) var(--spacer-6);
     color: var(--normal-fg-10);
-    background-color: var(--normal-bg-90);
+    background-color: var(--normal-bg-100);
   }
 
   &__header-left {
     align-items: center;
-    gap: 10px;
+    gap: var(--spacer-4);
     flex: 1;
   }
 
   &__header-icon {
     width: 20px;
     height: 20px;
-    cursor: poiner;
+    cursor: pointer;
+    &:hover {
+      color: var(--normal-fg-20);
+    }
   }
 
   &__header-title {
@@ -59,18 +61,27 @@
   &__status-bar {
     align-items: center;
     justify-content: space-between;
-    padding: 6px 16px;
-    border-top: 1px solid var(--neutral-100);
+    padding: var(--spacer-4) var(--spacer-6);
   }
 
   &__selection-count {
-    @include drumee.typo($color: var(--neutral-500), $size: 12px, $weight: 600, $line: 18px);
+    @include drumee.typo(
+      $color: var(--neutral-500),
+      $size: 12px,
+      $weight: 600,
+      $line: 18px
+    );
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   &__empty-btn {
-    @include drumee.typo($color: var(--neutral-500), $size: 12px, $weight: 600, $line: 18px);
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
+      $size: 12px,
+      $weight: 600,
+      $line: 18px
+    );
     text-transform: uppercase;
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -80,7 +91,7 @@
     cursor: poiner;
 
     &:hover {
-      color: var(--alert-600, #E9223B);
+      color: var(--normal-fg-20);
     }
   }
 
@@ -98,7 +109,6 @@
     width: 100%;
   }
 
-
   /* ── Placeholder (empty state) ──────────────────────────── */
   &__placeholder {
     flex: 1;
@@ -110,9 +120,8 @@
   &__placeholder-content {
     flex: 1;
     align-items: center;
-    justify-content: center;
-    gap: 20px;
-    padding: 40px 24px 24px;
+    gap: var(--spacer-5);
+    color: var(--normal-fg-10);
   }
 
   &__placeholder-card {
@@ -129,45 +138,59 @@
   &__placeholder-card-icon {
     width: 44px;
     height: 44px;
-    color: var(--primary-400, #7B6EF6);
+    color: var(--primary-400, #7b6ef6);
   }
 
   &__placeholder-card-badge {
     position: absolute;
     bottom: -10px;
     right: -10px;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background-color: var(--neutral-700, #1e2030);
-    color: var(--primary-400, #7B6EF6);
-    padding: 3px;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--corner-radius-4);
+    background-color: var(--normal-bg-100);
+    color: var(--normal-fg-20);
+    padding: var(--spacer-3);
   }
 
   &__placeholder-title {
     @include drumee.typo($size: 18px, $weight: 700, $line: 26px);
     text-align: center;
+    margin-bottom: var(--spacer-10);
   }
 
   &__placeholder-refresh-btn {
-    background-color: var(--primary-500, #5B4EF5);
+    background-color: var(--primary-purple-40);
     color: #fff;
-    border-radius: var(--corner-radius-6);
-    padding: 10px 24px;
-    gap: 8px;
+    border-radius: var(--corner-radius-2);
+    padding: var(--spacer-4) var(--spacer-6);
+    gap: var(--spacer-3);
     cursor: pointer;
     transition: background-color 0.15s;
+    display: flex;
+    align-items: center;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
 
     &:hover {
-      background-color: var(--primary-600, #4A3EE0);
+      background-color: var(--primary-purple-30);
     }
   }
 
   &__placeholder-history {
-    @include drumee.typo($color: var(--neutral-500), $size: 12px, $weight: 600, $line: 18px);
+    @include drumee.typo(
+      $color: var(--neutral-500),
+      $size: 12px,
+      $weight: 600,
+      $line: 18px
+    );
     text-transform: uppercase;
     letter-spacing: 0.06em;
     cursor: pointer;
+    margin-bottom: var(--spacer-6);
 
     &:hover {
       color: var(--neutral-300);
@@ -190,7 +213,12 @@
 
   &__placeholder-storage,
   &__placeholder-policy {
-    @include drumee.typo($color: var(--neutral-600), $size: 11px, $weight: 600, $line: 16px);
+    @include drumee.typo(
+      $color: var(--neutral-600),
+      $size: 11px,
+      $weight: 600,
+      $line: 16px
+    );
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -265,5 +293,13 @@
       display: flex;
       flex-direction: row;
     }
+  }
+
+  &__footer {
+    justify-content: center;
+    align-items: center;
+    background-color: var(--normal-bg-100);
+    color: var(--normal-fg-10);
+    padding: var(--spacer-4);
   }
 }
