@@ -97,7 +97,7 @@
     display: flex;
     flex-direction: column;
     border-left: 4px solid rgba(255, 255, 255, 0.05);
-    background-color: var(--primary-90, #282538);
+    background-color: var(--grey-70, #84848C);
     overflow: hidden;
 
     &[data-active="0"] {
@@ -106,7 +106,7 @@
   }
 
   &__chat-label {
-    padding: 16px;
+    padding: var(--spacer-4) var(--spacer-6);
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -126,6 +126,9 @@
 
 // Scoped message bubble styles for share (restricted) chat panel
 .window-share .window__chat-panel {
+  .widget-chat__ui {
+    background-color: transparent;
+  }
   .widget-chatItem__ui {
     background-color: transparent;
   }
@@ -163,10 +166,20 @@
     font-size: 10px;
     font-weight: 600;
   }
+  .lib-messenger__icon.attach {
+    display: none;
+  }
   .lib-messenger__container {
     background-color: #0b0a21;
     border-radius: 8px;
     padding: 10px 12px;
+  }
+  .lib-messenger__content {
+    background-color: transparent;
+  }
+  .lib-messenger__main {
+    background-color: #0b0a21;
+    border-radius: 8px;
   }
   .lib-messenger__content .note-content {
     color: #E4E3FF;
