@@ -2,7 +2,6 @@
 
 .widget-tag {
   &__ui {
-    border-radius: var(--border-radius-left);
     height: 100%;
     width: 100%;
   }
@@ -23,10 +22,8 @@
   }
 
   &__separator {
-    background-color: var(--default-separator);
-    border-radius: 1px;
+    background-color: var(--normal-fg-10);
     height: 1px;
-    margin-top: var(--spacer-2);
   }
 
   &-content {
@@ -36,7 +33,7 @@
     padding: var(--spacer-6);
 
     &__main {
-      margin-top: var(--spacer-1);
+      color: var(--normal-fg-10);
     }
 
     &__digit {
@@ -133,14 +130,14 @@
       @include drumee.typo(
         $size: 15px,
         $line: 16px,
-        $color: var(--ab-default-text-title)
+        $color: var(--normal-fg-10)
       );
+      height: 34px;
     }
   }
 
   &__icon {
     box-sizing: border-box;
-    color: var(--default-icon-neutral);
     cursor: pointer;
     height: 27px;
     opacity: 0.85;
@@ -151,12 +148,10 @@
     width: 27px;
 
     & svg {
-      fill: var(--default-icon-neutral);
-      opacity: 0.85;
+      fill: var(--normal-fg-10);
 
       &:hover {
-        fill: var(--default-icon-hover);
-        opacity: 1;
+        fill: var(--normal-fg-20);
       }
     }
   }

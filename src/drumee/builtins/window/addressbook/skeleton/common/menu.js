@@ -8,22 +8,16 @@ const __skl_addressbook_common_menu = function (_ui_) {
   let importAddressBook, inviteContact;
   const menuFig = `${_ui_.fig.family}-menu`;
   const cnWidowMenuBtn = "window-menu";
+  const cnWidowTopbarActions = "window-topbar-actions";
 
-  const menuTrigger = Skeletons.Box.X({
-    className: `${cnWidowMenuBtn}__button-wrapper`,
-    kids: [
-      Skeletons.Button.Svg({
-        ico: "drumee-contact_add",
-        className: `${cnWidowMenuBtn}__icon`,
-      }),
-      Skeletons.Note({
-        sys_pn: "ref-window-name",
-        uiHandler: _ui_,
-        partHandler: _ui_,
-        content: "Add new contacts",
-      }),
-    ],
+  const menuTrigger = Skeletons.Button.Label({
+    className: `${cnWidowTopbarActions}__label-button`,
+    label: "Add new contacts",
+    ico: "drumee-contact_add",
+    uiHandler: _ui_,
+    partHandler: _ui_,
   });
+
   if (Visitor.canShow("invite-user")) {
     inviteContact = Skeletons.Box.X({
       className: `${menuFig}__item`,
