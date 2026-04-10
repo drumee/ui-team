@@ -2,7 +2,7 @@ module.exports = function (ui) {
   const pfx = ui.fig.family;
 
   return Skeletons.Box.Y({
-    className: `${pfx}__main`,
+    className: `${pfx}__main ${ui.fig.group}__main`,
     debug: __filename,
     kids: [
       require("./topbar")(ui),

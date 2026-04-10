@@ -1,6 +1,6 @@
 module.exports = {
-  activity_item: function () { return import("desk/activity-panel/widget/item")},
-  activity_panel: function () { return import("desk/activity-panel")},
+  activity_item: function () { return import("./builtins/panel/activity/widget/item")},
+  activity_panel: function () { return import("./builtins/panel/activity")},
   addressbook_widget_notification:
     function () { return import("./builtins/window/addressbook/widget/notification")},
   admin_security_page:
@@ -181,8 +181,8 @@ module.exports = {
   window_sharebox: function () { return import("./builtins/window/sharebox")},
   window_team: function () { return import("./builtins/window/team")},
   // pannel_trash: function () { return import("./builtins/window/trash")},
-  pannel_trash: function () { return import("./builtins/pannel/trash")},
-  pannel_trash_item: function () { return import("./builtins/pannel/trash/item")},
+  pannel_trash: function () { return import("./builtins/panel/trash")},
+  pannel_trash_item: function () { return import("./builtins/panel/trash/item")},
   window_upload_progress: function () { return import("./builtins/window/upload-progress")},
   window_wallpaper_settings: function () { return import("./builtins/window/wallpaper-settings")},
   window_website: function () { return import("./builtins/window/website") },

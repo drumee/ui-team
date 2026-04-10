@@ -2,7 +2,7 @@ module.exports = function (ui) {
   const pfx = ui.fig.family;
 
   const header = Skeletons.Box.X({
-    className: `${pfx}__header`,
+    className: `${pfx}__header ${ui.fig.group}__header`,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__header-left`,

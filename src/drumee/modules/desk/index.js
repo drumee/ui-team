@@ -561,7 +561,7 @@ class desk_module extends LetcBox {
         });
 
       case "toggle-trash":
-        return this.ensurePart("trash-panel").then((p) => {
+        return this.ensurePart("panel").then((p) => {
           if (p.isEmpty()) {
             p.feed({
               kind: 'pannel_trash',
@@ -571,8 +571,11 @@ class desk_module extends LetcBox {
             })
             // RADIO_BROADCAST.trigger("breadcrumb:context", { hub_id: Visitor.id, filename: LOCALE.TRASH });
           } else {
-            p.clear()
-            // RADIO_BROADCAST.trigger("breadcrumb:context");
+            this.debug("AAAqA:567", p)
+            Trash.el.dataset.position = "0";
+            setTimeout(() => {
+              p.clear()
+            }, 500)
           }
         });
 

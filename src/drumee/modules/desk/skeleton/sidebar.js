@@ -109,7 +109,7 @@ const createNav = (ui) => {
           createNavItem(ui, "ab_address", LOCALE.HOME, _e.home),
           createNavItem(ui, "bell", LOCALE.NOTIFICATIONS, 'toggle-activity'),
           createNavItem(ui, "desktop_chat", LOCALE.CHAT, 'toggle-chat'),
-          createNavItem(ui, "drumee-trash", LOCALE.TRASH,  'toggle-trash'),
+          createNavItem(ui, "drumee-trash", LOCALE.TRASH, 'toggle-trash'),
         ],
       }),
 
@@ -121,13 +121,8 @@ const createNav = (ui) => {
 // ---------- Export ----------
 module.exports = function (ui) {
   const fig = getSidebarFig(ui);
-
-  return Skeletons.Box.X({
-    kids: [
-      Skeletons.Box.Y({
-        className: cls(fig, "main"),
-        kids: [createNav(ui), createFooter(ui, Visitor.firstname())],
-      }),
-    ],
-  });
+  return Skeletons.Box.Y({
+    className: cls(fig, "main"),
+    kids: [createNav(ui), createFooter(ui, Visitor.firstname())],
+  })
 };

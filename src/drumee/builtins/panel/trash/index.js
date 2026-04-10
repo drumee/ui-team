@@ -4,6 +4,9 @@ require('./skin');
 class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
+    opt.dataset = {
+      position: 0
+    }
     super.initialize(opt);
     this.declareHandlers();
     this.isTrash = 1;
@@ -14,6 +17,7 @@ class __panel_trash extends mfsInteract {
       filename: LOCALE.TRASH,
     }
     this.mset(data);
+    window.Trash = this
   }
   /**
    *
@@ -22,12 +26,13 @@ class __panel_trash extends mfsInteract {
    * @param {*} section
    * @returns
    */
-  onPartReady(child, pn, section) {
+  onPartReady(child, pn) {
     switch (pn) {
       case _a.list:
         child.on(_e.eod, async () => {
           this.ensurePart('items-count').then((p) => {
             p.set({ content: LOCALE.X_ITEMS_FOUND.format(child.collection.length) })
+            this.el.dataset.position = "1";
           })
         })
         break;
@@ -35,7 +40,7 @@ class __panel_trash extends mfsInteract {
   }
 
   /**
-   * 
+   * ss
    */
   onDomRefresh() {
     this.feed(require('./skeleton')(this));

@@ -1,6 +1,15 @@
 @use "mixins/drumee";
 
 .desk-module-sidebar {
+  &__main {
+    justify-content: space-between;
+    width: 220px;
+    padding: var(--spacer-5) 0;
+    background-color: var(--normal-bg-90);
+    align-items: center;
+    z-index: 7001;
+  }
+
   &__nav {
     width: 100%;
     gap: var(--spacer-5);
@@ -26,8 +35,6 @@
     }
 
     &[data-radio="on"] {
-      // border: 1px var(--radio-on-border) solid;
-      // background-color: var(--radio-on-bg);
       color: var(--primary-600);
     }
 
@@ -47,16 +54,10 @@
     }
   }
 
-  &__main {
-    justify-content: space-between;
-    width: 220px;
-    padding: var(--spacer-5) 0;
-    background-color: var(--normal-bg-90);
-    align-items: center;
-  }
 
   &__logo {
     align-items: center;
+
     &-icon {
       width: 180px;
       height: 40px;
