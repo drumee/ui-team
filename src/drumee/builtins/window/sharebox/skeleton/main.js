@@ -40,7 +40,7 @@ const __skl_window_sharebox = function (ui) {
         hub_id: ui.mget(_a.hub_id),
         placeholder: 'Type a message...',
         no_emoji: true,
-        send_icon: 'send-chat',
+        send_icon: 'raw-send-chat',
         sys_pn: 'folder-chat',
       },
     ],
