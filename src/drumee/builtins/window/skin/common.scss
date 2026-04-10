@@ -315,6 +315,86 @@
   }
 }
 
+// Shared window chat column (DOM: ui.fig.group === "window" → .window__chat-*)
+.window__chat-panel {
+  box-sizing: border-box;
+  flex: 0 1 300px;
+  width: 250px;
+  min-width: 200px;
+  max-width: 250px;
+  display: flex;
+  flex-direction: column;
+  border-left: 4px solid #e4e3ff14;
+  background-color: transparent;
+  overflow: hidden;
+
+  &[data-active="0"] {
+    display: none;
+  }
+
+  // Footer stack: messenger + attachments + message-options (skeleton: widget-chat_chat_footer)
+  .widget-chat__main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    height: auto;
+  }
+
+  .widget-chat__container {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    height: 100%;
+  }
+
+  .widget-chat__body {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .widget-chat_chat_footer {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 100%;
+    min-width: 0;
+    gap: 0;
+
+    .widget-chat__messenger-wrapper {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .widget-chat__message-options-wrapper {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+}
+
+// Note reader + .note-content (aligned with .window-filter__bar)
+.window__chat-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-6);
+  padding: var(--spacer-4) var(--spacer-6);
+  color: var(--normal-fg-10);
+  flex-shrink: 0;
+
+  .note-content {
+    color: inherit;
+  }
+}
+
+.window__chat-widget {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .window-menu {
   &__button-wrapper {
     align-items: center;
