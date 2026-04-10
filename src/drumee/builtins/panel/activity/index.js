@@ -5,15 +5,17 @@ const CATEGORIES = {
   media: "mediaCount",
 }
 const WS_EVENT = "ws:event";
+require('./skin');
 
-//#########################################
-
-class __pannel_activity extends LetcBox {
+class __panel_activity extends LetcBox {
   constructor(...args) {
     super(...args);
     this.updateSubactivityCount = this.updateSubactivityCount.bind(this);
     this.updateactivityCount = this.updateactivityCount.bind(this);
     this.refreshActivity = this.refreshActivity.bind(this);
+    this.onWsMessage = this.onWsMessage.bind(this);
+    this.onVisibilityChange = this.onVisibilityChange.bind(this);
+    this.getCurrentApi = this.getCurrentApi.bind(this);
   }
 
   /**
@@ -21,22 +23,22 @@ class __pannel_activity extends LetcBox {
    * @param {*} opt 
    */
   initialize(opt = {}) {
-    require('./skin');
+    this.activityState = 0;
+    opt.state = 0;
     super.initialize(opt);
     this.declareHandlers();
-    this.activityState = 0;
-    this.model.set({ state: this.activityState });
 
     window.ActivityHandler = this;
 
-    this._onOutsideClick = (e, origin) => {
-      if (pointerDragged || e?.getService() == 'toggle-activity-panel') return;
-      if (e && !this.el.contains(e.currentTarget)) {
-        this.closeactivityPanel();
-      }
-    }
+    // this._onOutsideClick = (e, origin) => {
+    //   if (pointerDragged || e?.getService() == 'toggle-activity-panel') return;
+    //   if (e && !this.el.contains(e.currentTarget)) {
+    //     this.debug("AAA:36", this.mget(_a.state))
+    //     // this.closePanel();
+    //   }
+    // }
 
-    RADIO_CLICK.on(_e.click, this._onOutsideClick)
+    // RADIO_CLICK.on(_e.click, this._onOutsideClick)
     this._currentCount = 0;
     this._currentPayload = {};
     this.details = {};
@@ -51,7 +53,7 @@ class __pannel_activity extends LetcBox {
    * 
    */
   onDestroy() {
-    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+    // RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
   }
@@ -73,39 +75,50 @@ class __pannel_activity extends LetcBox {
    */
   onDomRefresh() {
     this.setState(0);
+    this.debug("AAA:77", this.activityState, this.mget(_a.state))
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
     this.visible = !document.hidden;
     this.feed(require('./skeleton')(this));
     this.ensurePart(_a.list).then((p) => {
       this.refreshActivity()
+      this.debug("AAA:85", this.activityState, this.mget(_a.state))
     })
     Wm.on(WS_EVENT, this.onWsMessage)
   }
 
+  /**
+   * 
+   * @returns 
+   */
+  getCurrentApi() {
+    return {
+      service: SERVICE.activity.get_feed,
+      hub_id: Visitor.id,
+      filter: this._filter,
+      unread_only: this._unreadsOnly,
+    };
+  }
 
   /**
    * @param {*} cmd 
    * @param {*} args 
   */
-  onUiEvent(cmd, args = {}) {
+  async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    // this.debug("AAA:116", service, cmd)
+    this.debug("AAA:103", service, cmd)
     switch (service) {
       case 'open-activity-panel':
-        return this.togglePannel();
+        return this.toggleState();
 
       case 'close-activity-panel':
-        if (this.activityState == 0) {
-          return;
-        }
-        this.closeactivityPanel();
+        this.setState(0);
         return '';
 
       case 'clear-all':
         return this.postService(SERVICE.activity.mark_all_read, { hub_id: Visitor.id }).then((data) => {
           this.__list.clear();
-          this.togglePannel();
+          this.toggleState();
           this.triggerHandlers({ service: "activity-update" })
         })
 
@@ -114,40 +127,78 @@ class __pannel_activity extends LetcBox {
         return this.deleteEntityResponse(cmd);
 
       case 'open-contact':
-        this.togglePannel()
+        this.toggleState()
         return Wm.launch({ kind: 'window_addressbook', }, { explicit: 1, singleton: 1 });
 
       case 'open-chat':
-        this.togglePannel()
+        this.toggleState()
         return Wm.launch({ kind: 'window_bigchat', }, { explicit: 1, singleton: 1 });
+
+      case 'open-activity-panel':
+        return this.togglePanel();
+
+      case 'close-activity-panel':
+        return this.closePanel();
+
+      case 'toggle-unreads':
+        this._unreadsOnly = this._unreadsOnly ? 0 : 1;
+        return this.ensurePart(_a.list).then((list) => list.restart());
+
+      case 'tab-all':
+        return this._setTab('all');
+
+      case 'tab-mentions':
+        return this._setTab('mentions');
+
+      case 'tab-shares':
+        return this._setTab('shares');
+
+      case 'clear-all':
+        return this.postService(SERVICE.activity.mark_all_read, { hub_id: Visitor.id }).then(() => {
+          this.ensurePart(_a.list).then((list) => list.restart());
+          this.triggerHandlers({ service: 'activity-update' });
+        });
+
     }
+    const { unread_count } = await this.postService(
+      SERVICE.activity.get_unread_count,
+      { hub_id: Visitor.id }
+    );
+    this.triggerHandlers({ unread_count });
+    if (this.__list && !this.__list.isDestroyed()) {
+      this.__list.restart();
+      return;
+    }
+    this.feed(require('./skeleton')(this));
   }
 
   /**
    * 
    */
-  togglePannel() {
-    if (this.activityState == 0) {
-      this.activityState = 1;
-      this.refreshActivity()
-      this.el.dataset.state = 1;
-      this.setState(1);
-      return '';
-    }
-    return this.closeactivityPanel();
+  // toggleState() {
+  //   this.debug("AAA:179", this.activityState, this.mget(_a.state))
+  //   if (this.activityState == 0) {
+  //     this.activityState = 1;
+  //     // this.refreshActivity()
+  //     // this.el.dataset.state = 1;
+  //     // this.setState(1);
+  //     this.debug("AAA:185", this.activityState)
+  //     return;
+  //   }
+  //   return this.closePanel();
 
-  }
+  // }
 
   /**
    * 
    */
-  closeactivityPanel() {
-    this.activityState = 0;
-    this.el.dataset.state = 0;
-    this.setState(0);
-    // if (!this.__content) return;
-    // this.__content.clear();
-  }
+  // closePanel() {
+  //   this.activityState = 0;
+  //   // this.el.dataset.state = 0;
+  //   this.setState(0);
+  //   // if (!this.__content) return;
+  //   // this.__content.clear();
+  // }
 
   /**
    * 
@@ -188,86 +239,16 @@ class __pannel_activity extends LetcBox {
     document.title = "(" + count + ") " + document.title;
   }
 
-  /**
-   * 
-   */
-  shouldNofity(delegate = 0) {
-    let { options, data } = this._currentPayload;
-    if (!options || !options.sender || _.isEmpty(data)) return;
-    let content = data[0] || data;
-    setTimeout(() => {
-      this._currentPayload = {};
-      this._lastSender = null;
-    }, Visitor.timeout(5000));
-    let sender = options.sender;
-    let author_id = content.author_id || sender.uid || sender.id;
-    if (!author_id) return;
-    if (author_id == this._lastSender || author_id == Visitor.id) return;
-    Visitor.playSound(_K.activitys.drip, 0);
-    this._lastSender = author_id;
-    let preview = content.message || options.service || content.action || options.action;
-    if (preview) {
-      if (preview.length > 60) {
-        preview = preview.substring(0, 60) + '...';
-      }
-    }
-    const title = sender.fullname || sender.firstname;
-    let body = preview || "";
-    const notif = {
-      body,
-      icon: Visitor.avatar(author_id)
-    };
-    if (delegate) {
-      notif.title = title;
-      return notif;
-    }
-    if (!window.activity) return;
-    new activity(title, notif);
-  }
+
+
 
   /**
    * 
+   * @param {*} filter 
    */
-  updateSubactivityCount() {
-    let res = {
-      totalChatCount: 0,
-      contactChatCount: 0,
-      teamChatCount: 0,
-      supportCount: 0,
-      tags: {}
-    }
-
-    for (let item of this.data()) {
-      if (item.tag_id) {
-        if (_.isString(item.tag_id)) {
-          item.tag_id = item.tag_id.split(',');
-        }
-        item.tag_id.forEach((r) => {
-          res.tags[r] = (res.tags[r]) ? res.tags[r] + 1 : 1;
-        })
-      }
-    }
-
-    for (let k in this.summary) {
-      res[k] = _.keys(this.summary[k]).length;
-      res[CATEGORIES[k]] = res[k];
-      res.totalChatCount += _.keys(this.summary[k]).length;
-    }
-    this.updateactivityTitle();
-    res.allConversationsCount = res.contactChatCount + res.teamChatCount;
-    RADIO_BROADCAST.trigger('activity:counts', res);
-    RADIO_BROADCAST.trigger('activity:details', this.details);
-    RADIO_BROADCAST.trigger('activity:summary', this.summary);
-    this.shouldNofity();
-    return res;
-  }
-
-  /**
-   * 
-   */
-  data() {
-    if (!this.details) return [];
-    return _.values(this.details) || []
+  _setTab(filter) {
+    this._filter = filter;
+    this.ensurePart(_a.list).then((list) => list.restart());
   }
 
 
@@ -349,7 +330,7 @@ class __pannel_activity extends LetcBox {
     let invitations = await this.postService(SERVICE.contact.invite_get, { hub_id: Visitor.id });
     let messages = await this.postService(SERVICE.drumate.notification_center, { hub_id: Visitor.id });
     unread_count = parseInt(messages.length) + parseInt(invitations.length) + parseInt(unread_count);
-    this.triggerHandlers({ unread_count })
+    // this.triggerHandlers({ unread_count })
     this.updatePriorityList(invitations, messages)
     if (this.__list && !this.__list.isDestroyed()) {
       this.__list.restart()
@@ -405,10 +386,10 @@ class __pannel_activity extends LetcBox {
       case "media.new":
         if (this.timer) return;
         this.timer = setTimeout(() => {
-          this.resync();
+          this.refreshActivity();
           this.timer = null;
         }, 1000);
-        return;
+        break;
     }
   }
 
@@ -515,6 +496,89 @@ class __pannel_activity extends LetcBox {
 
   }
 
+  /**
+ * 
+ */
+  shouldNofity(delegate = 0) {
+    let { options, data } = this._currentPayload;
+    if (!options || !options.sender || _.isEmpty(data)) return;
+    let content = data[0] || data;
+    setTimeout(() => {
+      this._currentPayload = {};
+      this._lastSender = null;
+    }, Visitor.timeout(5000));
+    let sender = options.sender;
+    let author_id = content.author_id || sender.uid || sender.id;
+    if (!author_id) return;
+    if (author_id == this._lastSender || author_id == Visitor.id) return;
+    Visitor.playSound(_K.activitys.drip, 0);
+    this._lastSender = author_id;
+    let preview = content.message || options.service || content.action || options.action;
+    if (preview) {
+      if (preview.length > 60) {
+        preview = preview.substring(0, 60) + '...';
+      }
+    }
+    const title = sender.fullname || sender.firstname;
+    let body = preview || "";
+    const notif = {
+      body,
+      icon: Visitor.avatar(author_id)
+    };
+    if (delegate) {
+      notif.title = title;
+      return notif;
+    }
+    if (!window.activity) return;
+    new activity(title, notif);
+  }
+
+  /**
+   * 
+   */
+  updateSubactivityCount() {
+    let res = {
+      totalChatCount: 0,
+      contactChatCount: 0,
+      teamChatCount: 0,
+      supportCount: 0,
+      tags: {}
+    }
+
+    for (let item of this.data()) {
+      if (item.tag_id) {
+        if (_.isString(item.tag_id)) {
+          item.tag_id = item.tag_id.split(',');
+        }
+        item.tag_id.forEach((r) => {
+          res.tags[r] = (res.tags[r]) ? res.tags[r] + 1 : 1;
+        })
+      }
+    }
+
+    for (let k in this.summary) {
+      res[k] = _.keys(this.summary[k]).length;
+      res[CATEGORIES[k]] = res[k];
+      res.totalChatCount += _.keys(this.summary[k]).length;
+    }
+    this.updateactivityTitle();
+    res.allConversationsCount = res.contactChatCount + res.teamChatCount;
+    RADIO_BROADCAST.trigger('activity:counts', res);
+    RADIO_BROADCAST.trigger('activity:details', this.details);
+    RADIO_BROADCAST.trigger('activity:summary', this.summary);
+    this.shouldNofity();
+    return res;
+  }
+
+  /**
+   * 
+   */
+  data() {
+    if (!this.details) return [];
+    return _.values(this.details) || []
+  }
+
+
 }
 
-module.exports = __pannel_activity
+module.exports = __panel_activity;

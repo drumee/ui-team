@@ -13,7 +13,7 @@ module.exports = function (ui) {
         spinner: true,
         spinnerWait: 500,
         itemsOpt: {
-          kind: "pannel_trash_item",
+          kind: "panel_trash_item",
           logicalParent: ui,
           uiHandler: ui,
         },

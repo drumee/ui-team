@@ -170,7 +170,7 @@ class __media_core extends DrumeeMFS {
       hubItems.push(_a.separator, _a.openFileLocation);
     }
 
-    /** Children of pannel_trash */
+    /** Children of panel_trash */
     if (this.mget(_a.status) == _a.deleted) {
       fileItems = [_a.separator, _a.restoreToDesk, _a.deletePermanently];
     }

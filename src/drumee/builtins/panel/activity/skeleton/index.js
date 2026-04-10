@@ -1,48 +1,26 @@
-module.exports = function (ui, kids) {
-  const fig = `${ui.fig.family}`;
-  const header = Skeletons.Box.X({
-    className: `${fig}__header`,
+module.exports = function (ui) {
+  const pfx = ui.fig.family;
+
+  return Skeletons.Box.Y({
+    className: `${pfx}__main`,
+    debug: __filename,
     kids: [
-      Skeletons.Note({
-        className: `${fig}__title`,
-        content: LOCALE.ACTIVITY
-      }),
-      Skeletons.Note({
-        className: `${fig}__action`,
-        content: LOCALE.MARK_ALL_READ,
-        service: "clear-all"
+      require('./topbar')(ui),
+      require('./tabbar')(ui),
+      Skeletons.List.Smart({
+        className: `${pfx}__list`,
+        sys_pn: _a.list,
+        flow: _a.none,
+        spinner: true,
+        spinnerWait: 500,
+        api: ui.getCurrentApi,
+        itemsOpt: {
+          kind: 'activity2_item',
+          uiHandler: [ui],
+        },
+        vendorOpt: Preset.List.Orange_e,
+        evArgs: Skeletons.Note(LOCALE.NO_NOTIFICATIONS, `${pfx}__empty`),
       }),
     ],
   });
-
-  const list = Skeletons.List.Smart({
-    className: `${fig}__list`,
-    spinner: Skeletons.Note("", _a.spinner),
-    sys_pn: _a.list,
-    api: {
-      service: SERVICE.activity.get_feed,
-      hub_id: Visitor.id
-    },
-    itemsOpt: {
-      kind: 'activity_item',
-      uiHandler: [ui],
-    },
-    defaults: kids
-  });
-  const priority = Skeletons.Wrapper.Y({
-    className: `${fig}__list`,
-    spinner: Skeletons.Note("", _a.spinner),
-    sys_pn: "priority",
-  });
-
-  return Skeletons.Box.Y({
-    debug: __filename,
-    className: `${ui.fig.family}__main`,
-    kids: [
-      header,
-      priority,
-      list
-    ]
-  });
-
 };

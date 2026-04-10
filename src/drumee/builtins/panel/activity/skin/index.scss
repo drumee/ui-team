@@ -1,84 +1,123 @@
-@use "mixins/drumee";
+@use 'mixins/drumee';
 
 .panel-activity {
   &__ui {
-    &[data-state="0"] {
-      display: none;
+    width: 450px;
+    height: 100vh;
+    top: 0px;
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--neutral-800);
+    transition: left .5s;
+
+    &[data-state="1"] {
+      left: 0;
+      pointer-events: auto;
     }
 
-    position: absolute;
-    top: 125px;
-    left: 10px;
-    min-width: 400px;
-    height: auto;
-    max-height: 75px;
-    padding: var(--spacer-4);
-    gap: var(--spacer-6);
-    border-radius: var(--corner-radius-2);
-    border: 1px solid var(--neutral-800);
-    box-shadow: var(--shadow-main);
-    background-color: var(--normal-bg-100);
-    z-index: 1000000;
+    &[data-state="0"] {
+      left: -450px;
+      pointer-events: none;
+    }
+
 
     &[data-device="mobile"] {
-      right: auto;
-      left: 50%;
-      width: calc(100% - 32px);
-      transform: translateX(-50%);
-      margin-top: 20px;
+      width: 360px !important;
+      height: 500px !important;
+      left: 50% !important;
+      transform: translateX(-50%) translateY(15%);
     }
   }
 
   &__main {
-    color: var(--normal-fg-10);
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
   }
 
+  /* ── Topbar wrapper (header + status bar) ───────────────── */
+  &__topbar {
+    flex-shrink: 0;
+  }
+
+  /* ── Header row: icon + title + close ───────────────────── */
   &__header {
-    width: 100%;
-    height: 32px;
+    align-items: center;
     justify-content: space-between;
-    padding-right: var(--spacer-6);
-    padding-left: var(--spacer-6);
-    opacity: 1;
+    padding: var(--spacer-4) var(--spacer-6);
+    color: var(--normal-fg-10);
+    background-color: var(--normal-bg-100);
+
   }
 
-  &__list {
-    align-content: center;
-    align-items: center;
-    display: flex;
-    flex-flow: column;
-    height: auto;
-    justify-content: center;
-    justify-items: center;
-    width: 100%;
-    max-height: 300px;
-    overflow: auto;
 
-    & .smart-container {
-      height: 100%;
-      // padding: 5px 10px 0 10px;
-      gap: 6px;
-      display: flex;
-      flex-direction: column;
+  &__title {
+    @include drumee.typo($size: 18px, $weight: 700, $line: 26px);
+  }
+
+  &__unread-toggle {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__unread-label {
+    @include drumee.typo($color: var(--neutral-400), $size: 13px, $weight: 400, $line: 20px);
+  }
+
+  &__toggle-btn {
+    width: 36px;
+    height: 20px;
+    border-radius: 20px;
+    background-color: var(--primary-500, #5B4EF5);
+    padding: 2px;
+
+    &[data-state="0"] {
+      background-color: var(--neutral-600);
     }
   }
 
-  &__title {
-    font-weight: 600;
-    font-style: bold;
-    font-size: 18px;
-    line-height: 30px;
-    letter-spacing: 0%;
-    vertical-align: middle;
+  /* ── Tab bar ─────────────────────────────────────────────── */
+  &__tabbar {
+    gap: 4px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--neutral-800, #2a2d3e);
+    flex-shrink: 0;
   }
 
-  &__action {
-    font-weight: 400;
-    font-style: normal;
-    font-size: 14px;
-    line-height: 22px;
-    align-content: center;
-    flex-wrap: wrap;
+  &__tab {
+    @include drumee.typo($color: var(--neutral-500), $size: 14px, $weight: 500, $line: 20px);
+    padding: 8px 4px;
+    margin-right: 16px;
     cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+
+    &:hover {
+      color: var(--neutral-200);
+    }
+
+    &[data-state="1"] {
+      color: var(--normal-fg-10);
+      border-bottom-color: var(--primary-400, #7B6EF6);
+    }
+  }
+
+  /* ── Notification list ───────────────────────────────────── */
+  &__list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(80vh - 110px);
+
+    .smart-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+  }
+
+  &__empty {
+    @include drumee.typo($color: var(--neutral-500), $size: 14px, $line: 22px);
+    padding: 40px 16px;
+    text-align: center;
+    width: 100%;
   }
 }

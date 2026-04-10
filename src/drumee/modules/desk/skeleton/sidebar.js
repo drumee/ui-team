@@ -26,7 +26,6 @@ const createNavItem = (ui, ico, label, service = "") => {
       Skeletons.Button.Svg({
         ico,
         className: cls(fig, "item-icon"),
-        uiHandler: ui,
       }),
       createText(fig, "item-text", label),
     ],

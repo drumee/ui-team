@@ -10,9 +10,11 @@
     background-color: var(--normal-bg-90);
     border: 1px solid var(--neutral-800);
     transition: left .5s;
+    pointer-events: none;
 
     &[data-position="1"] {
       left: 0;
+      pointer-events: auto;
     }
 
     &[data-device="mobile"] {

@@ -13,15 +13,21 @@ const _desk_main = function (ui) {
           require("./sidebar")(ui),
           Skeletons.Box.Y({
             sys_pn: "panel",
-            className: `${ui.fig.family}__panel-box`,
-            // kids: [
-            //   // Modal / popup overlay (above everything)
-            //   Skeletons.Wrapper.Y({
-            //     sys_pn: "trash-panel",
-            //     className: `${ui.fig.family}__modal-container`,
-            //   }),
-            //   { kind: "activity_panel", sys_pn: "activity-panel" }
-            // ]
+            className: `${ui.fig.family}__panel-container`,
+            kids: [
+              // Modal / popup overlay (above everything)
+              Skeletons.Box.Y({
+                sys_pn: "trash-panel",
+                className: `${ui.fig.family}__panel-inner`,
+              }),
+              Skeletons.Box.Y({
+                className: `${ui.fig.family}__panel-inner`,
+                kids: [
+                  { kind: "panel_activity", sys_pn: "activity-panel", state: 0 }
+                ]
+                // { kind: "panel_activity", sys_pn: "activity-panel" }
+              }),
+            ]
           }),
           Skeletons.Box.Y({
             sys_pn: "desk-body",

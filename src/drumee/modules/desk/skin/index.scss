@@ -31,8 +31,8 @@ html {
     overflow: auto;
   }
 
-  &__panel-box {
-    z-index: 7000;
+  &__panel-container {
+    z-index: 10001;
     width: 0;
     top: 0;
     bottom: 0;
