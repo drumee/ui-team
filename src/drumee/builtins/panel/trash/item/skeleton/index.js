@@ -62,6 +62,11 @@ module.exports = function (ui) {
             className: `${pfx}__btn restore`,
             service: "restore-to-desk",
             content: LOCALE.RESTORE,
+            tooltips: {
+              content:
+                "Restore to original location. Drag to choose a different destination if needed.",
+              className: `${pfx}__btn restore-info`,
+            },
             uiHandler: ui,
           }),
 
