@@ -2136,5 +2136,8 @@
   "SIGNUP_COMPLETED": "Excellent travail !<br>\nVous êtes prêt à vous lancer.",
   "DRUMEEOS_IS_NOW_READY": "DrumeeOS est maintenant prêt.<br>\nCommençons à explorer et à façonner votre expérience.",
   "GO_TO_DRUMEEOS": "Accédez à DrumeeOS",
-  "X_ITEMS_FOUND": "{0} éléments trouvés"
+  "X_ITEMS_FOUND": "{0} éléments trouvés",
+  "X_DAYS_LEFT": "Il reste {0} jours",
+  "DELETED_BY": "Supprimé par",
+  "RESTORE": "Restaurer"
 }

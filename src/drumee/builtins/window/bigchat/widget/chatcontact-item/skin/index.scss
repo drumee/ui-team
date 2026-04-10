@@ -62,7 +62,7 @@
       @include drumee.typo(
         $size: 14px,
         $line: 16px,
-        $color: var(--default-text-color)
+        $color: var(--normal-fg-10)
       );
       .inner {
         overflow: hidden;
@@ -81,7 +81,7 @@
         $size: 11px,
         $line: 12px,
         $weight: 300,
-        $color: var(--tertiary-text-color)
+        $color: var(--normal-fg-10)
       );
       .inner {
         overflow: hidden;
@@ -106,7 +106,7 @@
       @include drumee.typo(
         $size: 10px,
         $line: 11px,
-        $color: var(--tertiary-text-color)
+        $color: var(--normal-fg-10)
       );
     }
   }

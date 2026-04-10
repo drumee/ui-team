@@ -1,4 +1,4 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .chat-room {
   &-menu {
@@ -15,7 +15,7 @@
       }
 
       & .menu-topic-items {
-        background-color: var(--default-background);
+        background-color: var(--normal-bg-90);
         border-radius: var(--border-radius);
         box-shadow: var(--drumee-container-dropdown);
         margin-top: 0px;
@@ -27,29 +27,6 @@
           padding: 10px;
           top: 31px !important;
         }
-
-        &:before {
-          background-color: var(--default-background);
-          box-shadow: var(--shadow-before);
-          content: "";
-          height: 10px;
-          position: absolute;
-          right: 8px;
-          top: -6px;
-          transform: rotate(45deg);
-          width: 10px;
-        }
-
-        &:after {
-          background: var(--default-background);
-          border-radius: var(--default-border-radius-top);
-          content: "";
-          height: 10px;
-          left: 0;
-          position: absolute;
-          top: 0;
-          width: 100%;
-        }
       }
     }
 
@@ -58,10 +35,14 @@
       color: var(--default-icon-neutral);
       cursor: pointer;
 
+      svg {
+        fill: var(--normal-fg-10);
+      }
+
       &.trigger-icon {
         color: inherit;
         height: 24px;
-        opacity: .45;
+        opacity: 0.45;
         padding: 3.5px;
         right: 25px;
         top: 3px;
@@ -75,18 +56,18 @@
 
     &__items {
       width: 100%;
-      margin-top: 2px;
-      padding-bottom: 5px;
+      padding: var(--spacer-2);
+      gap: var(--spacer-3);
     }
 
     &__item {
       cursor: pointer;
-      margin-bottom: 1px;
-      padding: 10px 10px 5px 15px;
+      padding: var(--spacer-3);
+      border-radius: var(--corner-radius-1);
 
       &:hover {
         background-color: var(--default-background-hover);
-        color: var(--default-text-hover);
+        color: var(--normal-fg-10);
 
         & .chat-room-menu__note {
           color: var(--default-text-hover);
@@ -100,10 +81,20 @@
 
     &__note {
       padding-top: 0px;
-      @include drumee.typo($size: 12px, $weight: 300, $line: 14px, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 12px,
+        $weight: 300,
+        $line: 14px,
+        $color: var(--normal-fg-10)
+      );
 
       &.coming-soon {
-        @include drumee.typo($size: 12px, $weight: 300, $line: 14px, $color: var(--default-text-inactive));
+        @include drumee.typo(
+          $size: 12px,
+          $weight: 300,
+          $line: 14px,
+          $color: var(--default-text-inactive)
+        );
         opacity: 0.5;
       }
 

@@ -1,6 +1,6 @@
 .window-bigchat {
   & .widget_tag {
-    background: var(--default-background);
+    background: var(--normal-bg-90);
     height: 100%;
     min-width: 205px; //186px;
     overflow-y: hidden;
@@ -10,7 +10,7 @@
 
   & .contact-wrapper {
     min-width: 255px;
-    background-color: var(--default-block-background);
+    background-color: var(--normal-bg-90);
     max-width: 255px;
     &[data-device="mobile"] {
       max-width: unset;
@@ -96,7 +96,7 @@
       }
 
       .tags-list {
-        background: var(--default-block-background);
+        background: var(--normal-bg-90);
         display: flex;
         flex: 2;
         height: 100%;
