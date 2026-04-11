@@ -10,14 +10,14 @@ const __button = function (ui, k) {
 };
 
 module.exports = function (ui, mode) {
-  const cnWidowTopbarActions = "window-topbar-actions";
+  const cnWidowButton = "window-button";
   if (mode == null) {
     mode = "vmsc";
   }
   const a = Skeletons.Box.X({
     debug: __filename,
     // className : `${ui.fig.group}-topbar__control ${ui.fig.family}-topbar__control`,
-    className: `${cnWidowTopbarActions}__icon-button`,
+    className: `${cnWidowButton}__icon-button`,
 
     kids: [],
   });

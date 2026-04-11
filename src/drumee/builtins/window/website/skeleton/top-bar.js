@@ -1,10 +1,10 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const { breadcrumbs } = require("../../skeleton/toolkit");
-const { meetingMenu } = require("../../skeleton/toolkit/index");
+const { dropdownMenuButton } = require("../../skeleton/toolkit/index");
 
 const __window_topbar = function (ui) {
   const name = ui.model.get(_a.filename) || "???";
-  const cnWidowTopbarActions = "window-topbar-actions";
+  const cnWindowButton = "window-button";
   const cnWidowTopbarTitle = "window-topbar-title";
   let settings = { kind: KIND.wrapper };
   const logo = require("../../skeleton/logo")(ui);
@@ -16,7 +16,7 @@ const __window_topbar = function (ui) {
         uiHandler: ui,
         partHandler: ui,
         sys_pn: "ref-window-icon",
-        className: `${cnWidowTopbarActions}__icon-button`,
+        className: `${cnWindowButton}__icon-button`,
         service: "show-settings",
       });
     }
@@ -62,10 +62,19 @@ const __window_topbar = function (ui) {
   });
 
   const buttons = Skeletons.Box.X({
-    className: `${cnWidowTopbarActions}__buttons-wrapper`,
+    className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
-      meetingMenu(ui, {
-        items: [
+      dropdownMenuButton(ui, {
+        className: cnWindowButton,
+
+        trigger: Skeletons.Button.Svg({
+          className: `${cnWindowButton}__icon-bg-button primary`,
+          ico: "desktop_confcalls",
+          uiHandler: ui,
+          partHandler: ui,
+        }),
+
+        menuItems: [
           {
             service: "meeting",
             ico: "logo-google",
@@ -86,7 +95,7 @@ const __window_topbar = function (ui) {
       }),
 
       Skeletons.Button.Label({
-        className: `${cnWidowTopbarActions}__label-button`,
+        className: `${cnWindowButton}__label-button`,
         label: LOCALE.UPLOAD,
         ico: "desktop_upload",
         service: _e.upload,

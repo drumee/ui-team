@@ -1,6 +1,6 @@
 const __window_topbar = function (ui) {
   const name = ui.model.get(_a.filename) || "???";
-  const cnWidowTopbarActions = "window-topbar-actions";
+  const cnWidowButton = "window-button";
   const cnWidowTopbarTitle = "window-topbar-title";
   let settings = { kind: KIND.wrapper };
   const logo = require("../../skeleton/logo")(ui);
@@ -12,7 +12,7 @@ const __window_topbar = function (ui) {
         uiHandler: ui,
         partHandler: ui,
         sys_pn: "ref-window-icon",
-        className: `${cnWidowTopbarActions}__icon-button`,
+        className: `${cnWidowButton}__icon-button`,
         service: "show-settings",
       });
     }
@@ -58,14 +58,14 @@ const __window_topbar = function (ui) {
   });
 
   const buttons = Skeletons.Box.X({
-    className: `${cnWidowTopbarActions}__buttons-wrapper`,
+    className: `${cnWidowButton}__buttons-wrapper`,
     kids: [
       Skeletons.Button.Svg({
-        className: `${cnWidowTopbarActions}__icon-bg-button`,
+        className: `${cnWidowButton}__icon-bg-button`,
         ico: "desktop_confcalls",
       }),
       Skeletons.Button.Label({
-        className: `${cnWidowTopbarActions}__label-button`,
+        className: `${cnWidowButton}__label-button`,
         label: LOCALE.UPLOAD,
         ico: "desktop_upload",
         service: _e.upload,

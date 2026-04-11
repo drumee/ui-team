@@ -8,10 +8,10 @@ const __skl_addressbook_common_menu = function (_ui_) {
   let importAddressBook, inviteContact;
   const menuFig = `${_ui_.fig.family}-menu`;
   const cnWidowMenuBtn = "window-menu";
-  const cnWidowTopbarActions = "window-topbar-actions";
+  const cnWidowButton = "window-button";
 
   const menuTrigger = Skeletons.Button.Label({
-    className: `${cnWidowTopbarActions}__label-button`,
+    className: `${cnWidowButton}__label-button`,
     label: "Add new contacts",
     ico: "drumee-contact_add",
     uiHandler: _ui_,

@@ -2,7 +2,7 @@ const __skl_addressbook_common_topBar = function (ui) {
   const mode = ui._view;
   const figFamily = `${ui.fig.family}-topbar`;
   const figGroup = `${ui.fig.group}-topbar`;
-  const cnWidowTopbarActions = "window-topbar-actions";
+  const cnWidowButton = "window-button";
   const cnWidowTopbarTitle = "window-topbar-title";
 
   const notifier = {
@@ -112,7 +112,7 @@ const __skl_addressbook_common_topBar = function (ui) {
             ],
           }),
           Skeletons.Box.X({
-            className: `${cnWidowTopbarActions}__buttons-wrapper`,
+            className: `${cnWidowButton}__buttons-wrapper`,
             kids: [
               !Visitor.isMimicActiveUser()
                 ? Skeletons.Box.X({

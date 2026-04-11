@@ -61,7 +61,7 @@
   }
 }
 
-.window-topbar-actions {
+.window-button {
   &__buttons-wrapper {
     gap: var(--spacer-4);
   }
@@ -83,6 +83,14 @@
     }
     &:hover {
       color: var(--normal-fg-20);
+    }
+    &.primary {
+      color: var(--normal-fg-10);
+      background-color: var(--normal-bg-90);
+    }
+    &.secondary {
+      color: var(--normal-bg-100);
+      background-color: var(--primary-400);
     }
   }
 
@@ -118,20 +126,13 @@
     &:hover {
       color: var(--normal-fg-20);
     }
-  }
-
-  &__dropdown-button {
-    cursor: pointer;
-    background-color: var(--normal-bg-90);
-    color: var(--normal-fg-10);
-    padding: var(--spacer-2) var(--spacer-4);
-    border-radius: var(--corner-radius-2);
-    svg {
-      width: 24px;
-      height: 20px;
+    &.primary {
+      color: var(--normal-fg-10);
+      background-color: var(--normal-bg-90);
     }
-    &:hover {
-      color: var(--normal-fg-20);
+    &.secondary {
+      color: var(--normal-bg-100);
+      background-color: var(--primary-400);
     }
   }
 
@@ -171,7 +172,7 @@
         background-color: var(--primary-500);
         color: var(--white);
 
-        .window-topbar-actions__dropdown-menu__name {
+        .window-button__dropdown-menu__name {
           color: var(--white);
         }
 
@@ -207,6 +208,26 @@
 }
 
 .window-create-menu {
+  &__label-button {
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacer-3) var(--spacer-6);
+    color: var(--normal-fg-10);
+    background-color: var(--normal-bg-90);
+    border-radius: var(--corner-radius-2);
+    font-size: 14px;
+    display: flex;
+    gap: var(--spacer-2);
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+    &:hover {
+      color: var(--normal-fg-20);
+    }
+  }
+
   &__dropdown-button {
     cursor: pointer;
     background-color: var(--normal-fg-20);

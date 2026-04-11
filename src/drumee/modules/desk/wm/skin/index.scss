@@ -316,7 +316,7 @@
   &-actions {
     &__buttons-wrapper {
       gap: var(--spacer-4);
-      padding: var(--spacer-4) var(--spacer-8) 0;
+      padding: var(--spacer-4) var(--spacer-9) 0;
     }
 
     &__label-button {
@@ -424,7 +424,7 @@
           background-color: var(--primary-500);
           color: var(--white);
 
-          .window-topbar-actions__dropdown-menu__name {
+          .window-button__dropdown-menu__name {
             color: var(--white);
           }
 
