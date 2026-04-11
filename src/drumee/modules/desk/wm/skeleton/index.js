@@ -1,3 +1,5 @@
+const { createMenu } = require("./create-menu");
+
 const _icons_list = function (ui) {
   const a = Skeletons.List.Smart({
     className: `${ui.fig.family}__icons-list`,
@@ -49,6 +51,28 @@ const ___window_manager = function (ui) {
     kids: [
       Skeletons.FileSelector({
         partHandler: ui,
+      }),
+
+      Skeletons.Box.X({
+        className: `${ui.fig.family}-actions__buttons-wrapper`,
+        kids: [
+          createMenu(ui, {
+            triggerIco: "editbox_list-plus",
+            sys_pn: "create-menu",
+            items: [
+              {
+                service: "new-folder",
+                ico: "dock-folder",
+                content: "New folder",
+              },
+              {
+                service: "new-workspace",
+                ico: "desktop_group",
+                content: "New Workspace",
+              },
+            ],
+          }),
+        ],
       }),
 
       _icons_list(ui),
