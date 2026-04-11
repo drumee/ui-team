@@ -1,3 +1,5 @@
+const { userMenu } = require("../../../builtins/skeleton/toolkit/user");
+
 /**
  * Sidebar module (refactored)
  */
@@ -66,8 +68,9 @@ const createFooter = (ui, username) => {
     className: cls(fig, "footer"),
     kids: [
       createNavItem(ui, "storage", LOCALE.APPS),
-      createNavItem(ui, "settings", LOCALE.SETTINGS),
-
+      createNavItem(ui, "settings", LOCALE.SETTINGS, 'toggle-settings'),
+      // userMenu(ui)
+      // Skeletons.UserProfile({ auto_color:1, oneLetter:1, className: cls(fig, "footer-user-btn") }),
       Skeletons.Box.X({
         className: cls(fig, "footer-user-btn"),
         kids: [

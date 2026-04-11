@@ -25,7 +25,10 @@ const _desk_main = function (ui) {
                 kids: [
                   { kind: "panel_activity", sys_pn: "activity-panel", state: 0 }
                 ]
-                // { kind: "panel_activity", sys_pn: "activity-panel" }
+              }),
+              Skeletons.Box.Y({
+                sys_pn: "settings-panel",
+                className: `${ui.fig.family}__panel-inner`,
               }),
             ]
           }),

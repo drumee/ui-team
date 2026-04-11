@@ -11,13 +11,16 @@
 .settings-account {
   &__ui {
     height: 640px;
-    // width: 805px;
-    background-color: var(--white);
-    border-radius: var(--corner-radius-4) !important;
-    display: flex;
-    // gap: var(--spacer-5);
+    width: 805px;
     padding: 0;
     overflow: hidden;
+    left: -805px;
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--neutral-800);
+    transition: left .5s;
+    &[data-position="1"] {
+      left: 0;
+    }
 
     &[data-device="mobile"] {
       padding: 0;
@@ -103,6 +106,7 @@
     gap: var(--spacer-5);
     flex: 1;
     overflow: auto;
+
     &::-webkit-scrollbar {
       display: none;
     }

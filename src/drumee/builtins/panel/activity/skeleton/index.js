@@ -15,7 +15,7 @@ module.exports = function (ui) {
         spinnerWait: 500,
         api: ui.getCurrentApi,
         itemsOpt: {
-          kind: 'activity2_item',
+          kind: 'activity_item',
           uiHandler: [ui],
         },
         vendorOpt: Preset.List.Orange_e,

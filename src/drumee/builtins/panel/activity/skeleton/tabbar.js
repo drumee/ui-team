@@ -17,6 +17,7 @@ module.exports = function (ui) {
         sys_pn: tab.pn,
         state: i === 0 ? 1 : 0,
         uiHandler: ui,
+        radio:`radio-${ui._id}`
       })
     ),
   });

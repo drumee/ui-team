@@ -522,26 +522,37 @@ class desk_module extends LetcBox {
 
   /**
    * 
+   * @param {*} kind 
+   */
+  _loadKind(p, kind) {
+    p.feed({
+      kind,
+      uiHandler: [this]
+    })
+    this.ensurePart("activity-panel").then((p) => {
+      p.setState(0);
+    });
+    this._pendingKind = kind;
+  }
+  /**
+   * 
    */
 
-  toggleTrash() {
+  togglePanel(kind, trigger) {
     return this.ensurePart("trash-panel").then((p) => {
       if (p.isEmpty()) {
-        p.feed({
-          kind: 'panel_trash',
-          uiHandler: [this]
-        })
-        this.ensurePart("activity-panel").then((p) => {
-          p.setState(0);
-        });
+        this._loadKind(p, kind)
       } else {
-        p.children.last().el.dataset.position = "0";
-        setTimeout(() => {
-          p.clear()
-        }, 500)
+        if (this._pendingKind == kind) {
+          p.children.last().el.dataset.position = "0";
+          setTimeout(() => {
+            p.clear()
+          }, 500)
+        } else {
+          this._loadKind(p, kind)
+        }
       }
     });
-
   }
 
   /**
@@ -580,7 +591,6 @@ class desk_module extends LetcBox {
 
       case "toggle-activity":
         return this.ensurePart("activity-panel").then((p) => {
-          this.debug("AAA:555", p)
           p.toggleState();
           if (p.mget(_a.state)) {
             this.ensurePart("trash-panel").then((p) => {
@@ -589,12 +599,13 @@ class desk_module extends LetcBox {
           }
         });
 
-      case "toggle-chat":
+      case "toggle-settings":
         this.debug("AAA:585", cmd)
+        return this.togglePanel('settings_account', cmd)
         return;
 
       case "toggle-trash":
-        return this.toggleTrash(cmd)
+        return this.togglePanel('panel_trash', cmd)
 
       case "open-contact-manager":
         return Wm.launch(
