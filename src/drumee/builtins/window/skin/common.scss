@@ -225,6 +225,7 @@
   &__dropdown-menu {
     &__wrapper {
       align-items: end;
+      padding-bottom: var(--spacer-4);
       .menu-topic-trigger {
         right: var(--spacer-10);
       }
