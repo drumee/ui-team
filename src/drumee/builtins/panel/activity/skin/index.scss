@@ -1,0 +1,123 @@
+@use 'mixins/drumee';
+
+.panel-activity {
+  &__ui {
+    width: 450px;
+    height: 100vh;
+    top: 0px;
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--neutral-800);
+    transition: left .5s;
+
+    &[data-state="1"] {
+      left: 0;
+      pointer-events: auto;
+    }
+
+    &[data-state="0"] {
+      left: -450px;
+      pointer-events: none;
+    }
+
+
+    &[data-device="mobile"] {
+      width: 360px !important;
+      height: 500px !important;
+      left: 50% !important;
+      transform: translateX(-50%) translateY(15%);
+    }
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* ── Topbar wrapper (header + status bar) ───────────────── */
+  &__topbar {
+    flex-shrink: 0;
+  }
+
+  /* ── Header row: icon + title + close ───────────────────── */
+  &__header {
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacer-4) var(--spacer-6);
+    color: var(--normal-fg-10);
+    background-color: var(--normal-bg-100);
+
+  }
+
+
+  &__title {
+    @include drumee.typo($size: 18px, $weight: 700, $line: 26px);
+  }
+
+  &__unread-toggle {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__unread-label {
+    @include drumee.typo($color: var(--neutral-400), $size: 13px, $weight: 400, $line: 20px);
+  }
+
+  &__toggle-btn {
+    width: 36px;
+    height: 20px;
+    border-radius: 20px;
+    background-color: var(--primary-500, #5B4EF5);
+    padding: 2px;
+
+    &[data-state="0"] {
+      background-color: var(--neutral-600);
+    }
+  }
+
+  /* ── Tab bar ─────────────────────────────────────────────── */
+  &__tabbar {
+    gap: 4px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--neutral-800, #2a2d3e);
+    flex-shrink: 0;
+  }
+
+  &__tab {
+    @include drumee.typo($color: var(--neutral-500), $size: 14px, $weight: 500, $line: 20px);
+    padding: 8px 4px;
+    margin-right: 16px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+
+    &:hover {
+      color: var(--neutral-200);
+    }
+
+    &[data-state="1"] {
+      color: var(--normal-fg-10);
+      border-bottom-color: var(--primary-400, #7B6EF6);
+    }
+  }
+
+  /* ── Notification list ───────────────────────────────────── */
+  &__list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(80vh - 110px);
+
+    .smart-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+  }
+
+  &__empty {
+    @include drumee.typo($color: var(--neutral-500), $size: 14px, $line: 22px);
+    padding: 40px 16px;
+    text-align: center;
+    width: 100%;
+  }
+}
