@@ -44,6 +44,7 @@ module.exports = {
   locale_language: function () { return import("./modules/devel/locale/language")},
   locale: function () { return import("./modules/devel/locale/index")},
   media_efs: function () { return import("./builtins/window/serverexplorer/widget/efs")},
+  media_form: function () { return import("./builtins/media/form")},
   media_grid: function () { return import("./builtins/media/grid")},
   media_notifications: function () { return import("./builtins/media/notifications")},
   media_origin: function () { return import("./builtins/media/notifications/origin")},

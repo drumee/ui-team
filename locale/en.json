@@ -2139,5 +2139,18 @@
   "X_ITEMS_FOUND": "{0} items found",
   "X_DAYS_LEFT": "{0} days left",
   "DELETED_BY": "Deleted by",
-  "RESTORE": "Restore"
+  "RESTORE": "Restore",
+  "SUB_FOLDER_HINT": "Create subfolder to organize your data on tree-based structure",
+  "PRIVATE_WORKSPACE_HINT": "Only you can see this folder and its content",
+  "SHARE_WORKSPACE_HINT": "Anyone with the unique link can see theWorkspace",
+  "RESTRICTED_WORKSPACE_HINT": "Workspace shared with specific people",
+  "PUBLIC_WORKSPACE": "Public Workspace",
+  "RESTRICTED_WORKSPACE": "Restricted Workspace",
+  "PRIVATE_WORKSPACE": "Private Workspace",
+  "SUB_FOLDER": "Subfolder",
+  "NEW_FILE": "New file",
+  "NEW_WORKSPACE": "New Workspace",
+  "NEW_SUB_FOLDER": "New subfolder",
+  "CREATE_NEW_WORSPACE": "Create new Workspace",
+  "CREATE_NEW_WORSPACE_HINT": "A Workspace dedicated contains files, folders, messages, data, etc."
 }

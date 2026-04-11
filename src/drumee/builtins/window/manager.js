@@ -92,7 +92,7 @@ class __window_manager extends mfsInteract {
    *
    * @param {*} client
    */
-  getContactStatus(id) {}
+  getContactStatus(id) { }
 
   /**
    *
@@ -977,7 +977,7 @@ class __window_manager extends mfsInteract {
       .then(() => {
         media.download();
       })
-      .catch(() => {});
+      .catch(() => { });
   }
 
   /**
@@ -1322,7 +1322,7 @@ class __window_manager extends mfsInteract {
         .then(() => {
           location.reload();
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }
 }

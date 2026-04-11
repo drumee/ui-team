@@ -61,14 +61,19 @@ const ___window_manager = function (ui) {
             sys_pn: "create-menu",
             items: [
               {
-                service: "new-folder",
+                service: "new-sub-folder",
                 ico: "dock-folder",
-                content: "New folder",
+                content: LOCALE.NEW_SUB_FOLDER,
               },
               {
                 service: "new-workspace",
-                ico: "desktop_group",
-                content: "New Workspace",
+                ico: "desktop_desktop",
+                content: LOCALE.NEW_WORKSPACE,
+              },
+              {
+                service: "new-file",
+                ico: "desktop_docfile",
+                content: LOCALE.NEW_FILE,
               },
             ],
           }),

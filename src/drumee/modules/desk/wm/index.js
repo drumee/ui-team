@@ -929,7 +929,10 @@ class __window_manager extends push {
       case _e.launch:
         return this.launch(args, { explicit: 1, singleton: 1 });
 
-      case "new-folder":
+      case "new-workspace":
+        return this.__wrapperModal.append({kind:'media_form'})
+
+        case "new-sub-folder":
         return this.addFolder({ position: 0, area: _a.personal, filename: LOCALE.NEW_FOLDER })
 
       case _a.helpdesk:

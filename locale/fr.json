@@ -2139,5 +2139,18 @@
   "X_ITEMS_FOUND": "{0} éléments trouvés",
   "X_DAYS_LEFT": "Il reste {0} jours",
   "DELETED_BY": "Supprimé par",
-  "RESTORE": "Restaurer"
+  "RESTORE": "Restaurer",
+  "SUB_FOLDER_HINT": "Créez un sous-dossier pour organiser vos données selon une structure arborescente.",
+  "PRIVATE_WORKSPACE_HINT": "Vous seul pouvez voir ce dossier et son contenu.",
+  "SHARE_WORKSPACE_HINT": "Toute personne possédant le lien unique peut voir l'espace de travail.",
+  "RESTRICTED_WORKSPACE_HINT": "Espace de travail partagé avec des personnes désignées",
+  "PUBLIC_WORKSPACE": "Espace de travail public",
+  "RESTRICTED_WORKSPACE": "Espace de travail restreint",
+  "PRIVATE_WORKSPACE": "Espace de travail privé",
+  "SUB_FOLDER": "Sous-dossier",
+  "NEW_FILE": "Nouveau fichier",
+  "NEW_WORKSPACE": "Nouvel espace de travail",
+  "NEW_SUB_FOLDER": "Nouveau sous-dossier",
+  "CREATE_NEW_WORSPACE": "Créer un nouvel espace de travail",
+  "CREATE_NEW_WORSPACE_HINT": "Un espace de travail dédié contient des fichiers, des dossiers, des messages, des données, etc."
 }

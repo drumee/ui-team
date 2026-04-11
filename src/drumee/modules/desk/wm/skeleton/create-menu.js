@@ -30,8 +30,11 @@ export function createMenu(ui, opt = {}) {
     kids: items.map(({ service, ico, content }) =>
       Skeletons.Box.X({
         className: `${cnDropdown}__item`,
-        uiHandler: ui,
+        uiHandler: [ui],
         service,
+        kidsOpt: {
+          active: 0
+        },
         kids: [
           Skeletons.Button.Svg({
             ico,
