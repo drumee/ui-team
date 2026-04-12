@@ -1,4 +1,4 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .form-folder {
   &__ui {
@@ -28,11 +28,21 @@
   }
 
   &__title {
-    @include drumee.typo($size: 18px, $weight: 700, $line: 26px);
+    @include drumee.typo(
+      $size: 18px,
+      $weight: 700,
+      $line: 26px,
+      $color: var(--normal-fg-10)
+    );
   }
 
   &__subtitle {
-    @include drumee.typo($color: var(--neutral-500), $size: 13px, $weight: 400, $line: 20px);
+    @include drumee.typo(
+      $color: var(--neutral-500),
+      $size: 13px,
+      $weight: 400,
+      $line: 20px
+    );
   }
 
   &__close {
@@ -43,6 +53,7 @@
     flex-shrink: 0;
     margin-left: 8px;
     cursor: pointer;
+    color: var(--normal-fg-10);
 
     &:hover {
       opacity: 1;
@@ -56,7 +67,12 @@
   }
 
   &__field-label {
-    @include drumee.typo($color: var(--neutral-400), $size: 11px, $weight: 700, $line: 16px);
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
+      $size: 11px,
+      $weight: 700,
+      $line: 16px
+    );
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
@@ -64,8 +80,8 @@
   /* ── Text input ──────────────────────────────────────────── */
   &__input {
     width: 100%;
-    background-color: var(--neutral-800, #2a2d3e);
-    border: 1px solid var(--neutral-700, #3a3d50);
+    background-color: var(--normal-bg-100);
+    border: 1px solid var(--neutral-800);
     border-radius: var(--corner-radius-2);
     padding: 10px 14px;
     @include drumee.typo($size: 14px, $weight: 400, $line: 22px);
@@ -76,16 +92,16 @@
       border: none;
       outline: none;
       width: 100%;
-      color: inherit;
+      color: var(--normal-fg-10);
       @include drumee.typo($size: 14px, $line: 22px);
 
       &::placeholder {
-        color: var(--neutral-600);
+        color: var(--normal-fg-10);
       }
     }
 
     &:focus-within {
-      border-color: var(--primary-400, #7B6EF6);
+      border-color: var(--primary-400, #7b6ef6);
     }
   }
 
@@ -100,18 +116,21 @@
     justify-content: space-between;
     padding: 14px 16px;
     border-radius: var(--corner-radius-2);
-    border: 1px solid var(--neutral-700, #3a3d50);
-    background-color: var(--neutral-800, #2a2d3e);
+    border: 1px solid var(--normal-bg-100);
+    background-color: var(--normal-bg-100);
+    opacity: 0.5;
     cursor: pointer;
-    transition: border-color 0.15s, background-color 0.15s;
+    transition:
+      border-color 0.15s,
+      background-color 0.15s;
 
     &[data-state="1"] {
-      border-color: var(--primary-400, #7B6EF6);
-      background-color: var(--neutral-750, #252840);
+      border-color: var(--primary-400);
+      opacity: 1;
     }
 
     &:hover {
-      border-color: var(--neutral-500);
+      border-color: var(--primary-400);
     }
   }
 
@@ -127,9 +146,21 @@
     flex-shrink: 0;
     color: var(--neutral-400);
 
-    .form-folder__option[data-state="1"] & {
-      color: var(--primary-400, #7B6EF6);
+    &.personal {
+      color: var(--private);
     }
+
+    &.share {
+      color: var(--restricted);
+    }
+
+    &.team {
+      color: var(--link-share);
+    }
+
+    // .form-folder__option[data-state="1"] & {
+    //   color: var(--primary-400, #7b6ef6);
+    // }
   }
 
   &__option-info {
@@ -137,11 +168,16 @@
   }
 
   &__option-label {
-    @include drumee.typo($size: 14px, $weight: 600, $line: 20px);
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10)
+    );
   }
 
   &__option-circle {
-    border: 2px solid var(--primary-400, #7B6EF6);
+    border: 2px solid var(--primary-400, #7b6ef6);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -159,14 +195,18 @@
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background-color: var(--primary-400, #7B6EF6);
+        background-color: var(--primary-400, #7b6ef6);
       }
-
     }
   }
 
   &__option-desc {
-    @include drumee.typo($color: var(--neutral-500), $size: 12px, $weight: 400, $line: 18px);
+    @include drumee.typo(
+      $color: var(--neutral-500),
+      $size: 12px,
+      $weight: 400,
+      $line: 18px
+    );
   }
 
   &__option-radio {
@@ -176,7 +216,7 @@
     color: var(--neutral-600);
 
     .form-folder__option[data-state="1"] & {
-      color: var(--primary-400, #7B6EF6);
+      color: var(--primary-400, #7b6ef6);
     }
   }
 
@@ -189,10 +229,8 @@
   &__submit {
     width: 100%;
     height: 36px;
-    justify-content: center;
     padding: 12px;
     border-radius: var(--corner-radius-2);
-    background-color: var(--primary-500, #5B4EF5);
     @include drumee.typo($color: #fff, $size: 15px, $weight: 600, $line: 22px);
     cursor: pointer;
     transition: background-color 0.15s;
@@ -201,18 +239,20 @@
     gap: 8px;
     display: flex;
     flex-direction: row;
+    background: var(--primary-purple-40);
 
-    /* Primary/50 */
-    background: var(--normal-bg-100);
-
-    /* Inside auto layout */
     flex: none;
     order: 0;
     align-self: stretch;
     flex-grow: 0;
 
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
     &:hover {
-      background-color: var(--primary-600, #4A3EE0);
+      background-color: var(--primary-purple-30);
     }
   }
 }

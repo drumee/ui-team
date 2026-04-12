@@ -6,26 +6,26 @@ const STATUS_OPTIONS = [
   //   initial: 1,
   //   name: 'subfolder'
   // },
-  // {
-  //   ico: 'lock',
-  //   label: LOCALE.PRIVATE_WORKSPACE,
-  //   desc: LOCALE.PRIVATE_WORKSPACE_HINT,
-  //   initial: 0,
-  //   name: 'personal'
-  // },
   {
-    ico: 'desktop_sharing',
+    ico: "lock",
+    label: LOCALE.PRIVATE_WORKSPACE,
+    desc: LOCALE.PRIVATE_WORKSPACE_HINT,
+    initial: 0,
+    name: "personal",
+  },
+  {
+    ico: "desktop_sharing",
     label: LOCALE.PUBLIC_WORKSPACE,
     desc: LOCALE.SHARE_WORKSPACE_HINT,
     initial: 1,
-    name: 'share'
+    name: "share",
   },
   {
-    ico: 'desktop_group',
+    ico: "desktop_group",
     label: LOCALE.RESTRICTED_WORKSPACE,
     desc: LOCALE.RESTRICTED_WORKSPACE_HINT,
     initial: 0,
-    name: 'team'
+    name: "team",
   },
 ];
 
@@ -34,7 +34,7 @@ function statusOption(ui, opt) {
   return Skeletons.Box.X({
     className: `${pfx}__option`,
     state: opt.initial,
-    service: 'select-status',
+    service: "select-status",
     dataset: { value: opt.value },
     uiHandler: ui,
     formItem: opt.name,
@@ -43,12 +43,21 @@ function statusOption(ui, opt) {
       Skeletons.Box.X({
         className: `${pfx}__option-left`,
         kids: [
-          Skeletons.Image.Svg({ ico: opt.ico, className: `${pfx}__option-ico` }),
+          Skeletons.Image.Svg({
+            ico: opt.ico,
+            className: `${pfx}__option-ico ${opt.name}`,
+          }),
           Skeletons.Box.Y({
             className: `${pfx}__option-info`,
             kids: [
-              Skeletons.Note({ className: `${pfx}__option-label`, content: opt.label }),
-              Skeletons.Note({ className: `${pfx}__option-desc`, content: opt.desc }),
+              Skeletons.Note({
+                className: `${pfx}__option-label`,
+                content: opt.label,
+              }),
+              Skeletons.Note({
+                className: `${pfx}__option-desc`,
+                content: opt.desc,
+              }),
             ],
           }),
         ],
@@ -72,14 +81,20 @@ module.exports = function (ui) {
       Skeletons.Box.Y({
         className: `${pfx}__header-text`,
         kids: [
-          Skeletons.Note({ className: `${pfx}__title`, content: LOCALE.CREATE_NEW_WORSPACE }),
-          Skeletons.Note({ className: `${pfx}__subtitle`, content: LOCALE.CREATE_NEW_WORSPACE_HINT }),
+          Skeletons.Note({
+            className: `${pfx}__title`,
+            content: LOCALE.CREATE_NEW_WORSPACE,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__subtitle`,
+            content: LOCALE.CREATE_NEW_WORSPACE_HINT,
+          }),
         ],
       }),
       Skeletons.Button.Svg({
         className: `${pfx}__close`,
-        ico: 'cross',
-        service: 'close',
+        ico: "cross",
+        service: "close",
         uiHandler: [ui],
       }),
     ],
@@ -88,14 +103,17 @@ module.exports = function (ui) {
   const nameField = Skeletons.Box.Y({
     className: `${pfx}__field-group`,
     kids: [
-      Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.FOLDER_NAME }),
+      Skeletons.Note({
+        className: `${pfx}__field-label`,
+        content: LOCALE.FOLDER_NAME,
+      }),
       Skeletons.Entry({
         className: `${pfx}__input`,
-        sys_pn: 'folder-name',
-        formItem: 'filename',
+        sys_pn: "folder-name",
+        formItem: "filename",
         placeholder: LOCALE.FOLDER_NAME,
-        require: 'text',
-        mode: 'commit',
+        require: "text",
+        mode: "commit",
         preselect: 1,
       }),
     ],
@@ -104,7 +122,10 @@ module.exports = function (ui) {
   const statusField = Skeletons.Box.Y({
     className: `${pfx}__field-group`,
     kids: [
-      Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.TYPE }),
+      Skeletons.Note({
+        className: `${pfx}__field-label`,
+        content: LOCALE.TYPE,
+      }),
       Skeletons.Box.Y({
         className: `${pfx}__options`,
         kids: STATUS_OPTIONS.map((opt) => statusOption(ui, opt)),
@@ -117,8 +138,9 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Button.Label({
         className: `${pfx}__submit`,
+        ico: "dock-folder",
         label: LOCALE.CREATE,
-        service: 'create-folder',
+        service: "create-folder",
         uiHandler: ui,
       }),
     ],
