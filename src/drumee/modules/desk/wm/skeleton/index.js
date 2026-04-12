@@ -1,4 +1,4 @@
-const { createMenu } = require("./create-menu");
+const { dropdownMenuButton } = require("./dropdown-btn");
 
 const _icons_list = function (ui) {
   const a = Skeletons.List.Smart({
@@ -41,6 +41,8 @@ const ___window_manager = function (ui) {
     bugReportLabel = LOCALE.BUG_REPORTS;
   }
 
+  const cnWindowMangerActions = `${ui.fig.family}-actions`;
+
   const a = Skeletons.Box.Y({
     sys_pn: "wm-container",
     className: `${ui.fig.family}__main desk-window-wrapper`,
@@ -56,10 +58,18 @@ const ___window_manager = function (ui) {
       Skeletons.Box.X({
         className: `${ui.fig.family}-actions__buttons-wrapper`,
         kids: [
-          createMenu(ui, {
-            triggerIco: "editbox_list-plus",
-            sys_pn: "create-menu",
-            items: [
+          dropdownMenuButton(ui, {
+            className: cnWindowMangerActions,
+
+            trigger: Skeletons.Button.Label({
+              className: `${cnWindowMangerActions}__label-button secondary`,
+              label: "Add new",
+              ico: "editbox_list-plus",
+              uiHandler: ui,
+              partHandler: ui,
+            }),
+
+            menuItems: [
               {
                 service: "new-sub-folder",
                 ico: "dock-folder",

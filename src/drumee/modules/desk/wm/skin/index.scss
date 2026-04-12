@@ -337,6 +337,14 @@
       &:hover {
         color: var(--normal-fg-10);
       }
+      &.primary {
+        color: var(--normal-fg-10);
+        background-color: var(--normal-bg-90);
+      }
+      &.secondary {
+        color: var(--normal-bg-100);
+        background-color: var(--primary-400);
+      }
     }
 
     &__icon-button {
@@ -370,6 +378,14 @@
       }
       &:hover {
         color: var(--normal-fg-20);
+      }
+      &.primary {
+        color: var(--normal-fg-10);
+        background-color: var(--normal-bg-90);
+      }
+      &.secondary {
+        color: var(--normal-bg-100);
+        background-color: var(--primary-400);
       }
     }
 

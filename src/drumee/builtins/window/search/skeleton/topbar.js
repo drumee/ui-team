@@ -39,7 +39,7 @@ const __skl_folder_topbar = function (ui) {
     },
     kids: [
       Skeletons.Box.X({
-        className: `${ui.fig.group}-${figname}__container ${ui.mget(_a.area)}`,
+        // className: `${ui.fig.group}-${figname}__container ${ui.mget(_a.area)}`,
         kids: [
           Skeletons.Box.X({
             className: `${ui.fig.group}-${figname}__title`,

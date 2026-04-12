@@ -68,6 +68,7 @@ const __media_skl_grid = function (ui) {
 
   const isVisible = ui.fig.name !== "trash";
   const cnWindowButton = "window-button";
+  const cnWindowBody = "window-body";
 
   const a = {
     kind: KIND.box,
@@ -78,35 +79,44 @@ const __media_skl_grid = function (ui) {
       filterBar,
       ...(isVisible
         ? [
-            dropdownMenuButton(ui, {
-              className: cnWindowButton,
+            Skeletons.Box.X({
+              className: `${cnWindowBody}__buttons-container`,
+              kids: [
+                dropdownMenuButton(ui, {
+                  className: cnWindowButton,
 
-              trigger: Skeletons.Button.Label({
-                className: `${cnWindowButton}__label-button secondary`,
-                label: "Add new",
-                ico: "editbox_list-plus",
-                uiHandler: ui,
-                partHandler: ui,
-              }),
+                  trigger: Skeletons.Button.Label({
+                    className: `${cnWindowButton}__label-button secondary`,
+                    label: "Add new",
+                    ico: "editbox_list-plus",
+                    uiHandler: ui,
+                    partHandler: ui,
+                  }),
 
-              menuItems: [
-                { service: "meeting", ico: "dock-note", content: "Note" },
-                {
-                  service: "webinar",
-                  ico: "raw-documents_word",
-                  content: "Document",
-                },
-                {
-                  service: "channel",
-                  ico: "raw-documents_excel",
-                  content: "Spreadsheet",
-                },
-                {
-                  service: "channel",
-                  ico: "raw-documents_powerpoint",
-                  content: "Presentation",
-                },
-                { service: "channel", ico: "dock-folder", content: "Folder" },
+                  menuItems: [
+                    { service: "meeting", ico: "dock-note", content: "Note" },
+                    {
+                      service: "webinar",
+                      ico: "raw-documents_word",
+                      content: "Document",
+                    },
+                    {
+                      service: "channel",
+                      ico: "raw-documents_excel",
+                      content: "Spreadsheet",
+                    },
+                    {
+                      service: "channel",
+                      ico: "raw-documents_powerpoint",
+                      content: "Presentation",
+                    },
+                    {
+                      service: "channel",
+                      ico: "dock-folder",
+                      content: "Folder",
+                    },
+                  ],
+                }),
               ],
             }),
           ]
