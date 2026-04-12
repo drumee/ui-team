@@ -1,4 +1,4 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .panel-activity {
   &__ui {
@@ -7,7 +7,7 @@
     top: 0px;
     background-color: var(--normal-bg-90);
     border: 1px solid var(--neutral-800);
-    transition: left .5s;
+    transition: left 0.5s;
 
     &[data-state="1"] {
       left: 0;
@@ -18,7 +18,6 @@
       left: -450px;
       pointer-events: none;
     }
-
 
     &[data-device="mobile"] {
       width: 360px !important;
@@ -37,6 +36,8 @@
   /* ── Topbar wrapper (header + status bar) ───────────────── */
   &__topbar {
     flex-shrink: 0;
+    justify-content: space-between;
+    padding: var(--spacer-4) var(--spacer-6);
   }
 
   /* ── Header row: icon + title + close ───────────────────── */
@@ -46,12 +47,15 @@
     padding: var(--spacer-4) var(--spacer-6);
     color: var(--normal-fg-10);
     background-color: var(--normal-bg-100);
-
   }
 
-
   &__title {
-    @include drumee.typo($size: 18px, $weight: 700, $line: 26px);
+    @include drumee.typo(
+      $size: 18px,
+      $weight: 700,
+      $line: 26px,
+      $color: var(--normal-fg-10)
+    );
   }
 
   &__unread-toggle {
@@ -60,36 +64,73 @@
   }
 
   &__unread-label {
-    @include drumee.typo($color: var(--neutral-400), $size: 13px, $weight: 400, $line: 20px);
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-10)
+    );
   }
 
   &__toggle-btn {
     width: 36px;
     height: 20px;
     border-radius: 20px;
-    background-color: var(--primary-500, #5B4EF5);
+    background-color: var(--primary-500, #5b4ef5);
     padding: 2px;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &::after {
+      content: "";
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s ease;
+    }
 
     &[data-state="0"] {
       background-color: var(--neutral-600);
+
+      &::after {
+        transform: translateX(0);
+      }
+    }
+
+    &[data-state="1"] {
+      &::after {
+        transform: translateX(16px);
+      }
     }
   }
 
   /* ── Tab bar ─────────────────────────────────────────────── */
   &__tabbar {
     gap: 4px;
-    padding: 0 16px;
-    border-bottom: 1px solid var(--neutral-800, #2a2d3e);
+    padding: var(--spacer-4) var(--spacer-6);
     flex-shrink: 0;
+    background-color: var(--normal-bg-100);
   }
 
   &__tab {
-    @include drumee.typo($color: var(--neutral-500), $size: 14px, $weight: 500, $line: 20px);
+    @include drumee.typo(
+      $color: var(--neutral-500),
+      $size: 14px,
+      $weight: 500,
+      $line: 20px
+    );
     padding: 8px 4px;
     margin-right: 16px;
     cursor: pointer;
     border-bottom: 2px solid transparent;
-    transition: color 0.15s, border-color 0.15s;
+    transition:
+      color 0.15s,
+      border-color 0.15s;
 
     &:hover {
       color: var(--neutral-200);
@@ -97,7 +138,7 @@
 
     &[data-state="1"] {
       color: var(--normal-fg-10);
-      border-bottom-color: var(--primary-400, #7B6EF6);
+      border-bottom-color: var(--primary-400, #7b6ef6);
     }
   }
 
