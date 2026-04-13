@@ -711,7 +711,10 @@ class __widget_chat extends LetcBox {
     let api = {};
 
     switch (area) {
+      case _a.dmz:
+      case _a.public:
       case _a.share:
+      case _a.private:
         api = {
           service: SERVICE.channel.post,
           message,
@@ -730,35 +733,6 @@ class __widget_chat extends LetcBox {
         };
         break;
 
-      case _a.ticket:
-        api = {
-          service: SERVICE.channel.post_ticket,
-          ticket_id: this.mget('ticket_id'),
-          attachment: attachments,
-          message,
-          hub_id: this.hubId
-        };
-        break;
-
-      case _a.supportTicket:
-        var data = this.getData(_a.formItem);
-        var _category = [data.category];
-        var _where = [data.where];
-        var _alltime = 0;
-        if (data.alltime === _a.yes) {
-          _alltime = 1;
-        }
-
-        api = {
-          service: SERVICE.channel.send_ticket,
-          category: _category,
-          where: _where,
-          alltime: _alltime,
-          attachment: attachments,
-          message,
-          hub_id: this.hubId
-        };
-        break;
 
       default:
         this.warn(` ${area} -- NOT SUPPORTED`);

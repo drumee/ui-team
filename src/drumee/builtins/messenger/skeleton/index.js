@@ -23,17 +23,15 @@ const __skl_messenger = function (ui) {
 
     upload,
 
-    Skeletons.Entry({
+    Skeletons.RichText({
       sys_pn: _a.content,
       name: _a.content,
-      type: _a.textarea,
-      value: ui.mget(_a.content),
+      content: ui.mget(_a.content),
       mode: _a.interactive,
       placeholder: ui.getPlaceholder(),
       autofocus: ui.mget('autofocus'),
       className: `${ui.fig.family}__content`,
-      service: _e.submit,
-      resizable: 0
+      service: _e.submit
     }),
   ];
 

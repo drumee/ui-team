@@ -27,8 +27,9 @@
       overflow-y: auto;
       padding: 10px 10px;
       white-space: pre-wrap;
-      color: var(--normal-bg-100);
+      color: var(--normal-fg-50);
       @include drumee.typo($line: 24px, $size: 11px);
+      width: 100%;
 
       &::-webkit-scrollbar {
         height: 100%;
@@ -214,6 +215,7 @@
     background: var(--normal-bg-100);
     border: none;
     resize: none;
+    color: var(--normal-fg-50);
   }
 
 }
