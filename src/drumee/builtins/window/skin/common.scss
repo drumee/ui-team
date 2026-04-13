@@ -360,16 +360,22 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    flex-shrink: 0;
+    flex-shrink: 1;
     width: 100%;
     min-width: 0;
     gap: 0;
     padding: 16px;
 
+    .widget-chat-reply__wrapper {
+      max-height: 70px;
+      overflow: hidden;
+    }
+
     .widget-chat__messenger-wrapper {
       width: 100%;
       min-width: 0;
       border-top: none;
+      flex-shrink: 0;
     }
 
     .widget-chat__message-options-wrapper {
@@ -393,6 +399,63 @@
       svg {
         width: 20px;
         height: 20px;
+      }
+    }
+  }
+
+  // Reply/quote message styles for dark theme sidebar
+  .widget-chatItem-reply {
+    &__main {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-left: 2px solid #847EFF;
+      border-radius: 0 8px 8px 0;
+      padding: 6px 8px;
+    }
+
+    &__container {
+      padding-left: 6px;
+    }
+
+    &__note {
+      &.name .note-content {
+        color: #C6BFFF;
+        font-size: 10px;
+        font-weight: 600;
+      }
+
+      &.conversation .note-content {
+        color: #E4E3FF;
+        font-size: 11px;
+        opacity: 0.7;
+      }
+    }
+  }
+
+  // Reply preview in messenger input area
+  .widget-chat-reply {
+    &__main {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-left: 2px solid #847EFF;
+      border-radius: 0 8px 8px 0;
+      padding: 6px 8px;
+    }
+
+    &__note {
+      &.name .note-content {
+        color: #C6BFFF;
+      }
+
+      &.conversation .note-content {
+        color: #E4E3FF;
+        opacity: 0.7;
+      }
+    }
+
+    &__icon {
+      color: #84848C;
+
+      &:hover {
+        color: #E4E3FF;
       }
     }
   }
