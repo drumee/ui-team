@@ -23,25 +23,24 @@
   }
 
   &__header {
-    background-color: var(--ab-header-bg);
-    border-bottom: none;
+    background-color: var(--normal-bg-100);
+  }
+
+  &__icon {
+    svg {
+      width: 16px;
+      height: 16px;
+    }
   }
 
   &-topbar {
     @include meta.load-css("breadcrumbs.scss");
 
     &__container {
-      justify-content: space-between;
-      padding: 0 var(--spacer-8);
       &[data-device="mobile"] {
         gap: 10px;
         justify-content: center;
       }
-    }
-
-    &__menu {
-      align-items: center;
-      height: 50px;
     }
 
     &__title-wrapper {
@@ -260,14 +259,9 @@
   }
 
   &__body {
-    height: calc(100% - 132px);
-    margin: 0 auto;
-    overflow: hidden;
-    width: 100% !important;
-
     &.window__body {
       padding: 0;
-      border-radius: 0 0 24px 24px;
+      border-radius: 0 0 var(--corner-radius-5) var(--corner-radius-5);
     }
   }
 
@@ -328,7 +322,7 @@
 
   &__max-content {
     align-items: flex-start;
-    background: var(--default-background);
+    background: var(--normal-bg-90);
     border-radius: var(--border-radius-righ);
     flex-grow: 1;
     height: 100%;

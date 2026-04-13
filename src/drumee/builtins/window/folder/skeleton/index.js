@@ -34,33 +34,10 @@ function grid (ui) {
     type: _a.type,
   });
 
-  const chatLabel = Skeletons.Note({
-    className: `${ui.fig.group}__chat-label`,
-    content: getChatLabel(ui),
-  });
-
-  const chatPanel = Skeletons.Box.Y({
-    className: `${ui.fig.group}__chat-panel`,
-    sys_pn: 'chat-panel',
-    kids: [
-      chatLabel,
-      {
-        kind: 'widget_chat',
-        className: `${ui.fig.group}__chat-widget`,
-        type: _a.share,
-        view: 'quickChat',
-        hub_id: ui.mget(_a.hub_id),
-        placeholder: 'Type a message...',
-        no_emoji: true,
-        send_icon: 'raw-send-chat',
-        sys_pn: 'folder-chat',
-      },
-    ],
-  });
 
   const splitBody = Skeletons.Box.X({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
-    kids: [body, chatPanel],
+    kids: [body],
   });
 
   return Skeletons.Box.Y({

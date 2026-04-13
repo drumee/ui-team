@@ -9,7 +9,7 @@
 // ===========================================================
 function __player_audio_topbar(_ui_) {
   const topBarFig = `${_ui_.fig.family}-topbar`;
-  const cnWidowTopbarActions = "window-topbar-actions";
+  const cnWidowButton = "window-button";
 
   const downloadIcon = Skeletons.Box.X({
     className: `${_ui_.fig.group}-topbar__action ${topBarFig}__action`,
@@ -36,7 +36,7 @@ function __player_audio_topbar(_ui_) {
   });
 
   const buttons = Skeletons.Box.X({
-    className: `${cnWidowTopbarActions}__buttons-wrapper`,
+    className: `${cnWidowButton}__buttons-wrapper`,
     kids: [downloadIcon, require("../../skeleton/control")(_ui_)],
   });
 

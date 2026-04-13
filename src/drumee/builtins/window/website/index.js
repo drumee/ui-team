@@ -24,7 +24,7 @@ class __window_website extends __hub {
 
     this.isHub = 1;
     this.settingsLabel = LOCALE.WEBSITE_SETTINGS;
-    this.defaultSkeleton = require("./skeleton/main");
+    this.defaultSkeleton = require("./skeleton");
     require('./skin');
   }
 

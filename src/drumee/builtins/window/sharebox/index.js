@@ -15,7 +15,7 @@ class __window_sharebox extends __hub {
       height: this.size.height
     });
     this.settingsLabel = LOCALE.PROJECT_ROOM_MANAGER;
-    this.defaultSkeleton = require("./skeleton/main");
+    this.defaultSkeleton = require("./skeleton");
     this.bindEvent(_a.live);
   }
 

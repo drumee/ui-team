@@ -12,7 +12,7 @@
 
       & .menu-topic-items {
         border-radius: var(--corner-radius-3);
-        background-color: var(--default-background);
+        background-color: var(--normal-bg-90);
         max-width: 1600px;
         min-width: 155px;
         width: 100% !important;
@@ -32,11 +32,14 @@
       color: var(--default-icon-neutral);
       cursor: pointer;
 
+      svg {
+        fill: var(--normal-fg-10);
+      }
+
       &.trigger-icon {
         box-sizing: border-box;
         color: inherit;
         height: 24px;
-        opacity: 0.45;
         top: 3px;
         width: 22.5px;
 
@@ -61,11 +64,11 @@
       &[data-state="1"],
       &.active,
       &.selected {
-        background-color: var(--default-bg-hover);
+        background-color: var(--primary-purple-30);
         color: var(--default-text-hover);
 
         & .widget-contact-detail-menu__note {
-          color: var(--default-text-hover);
+          color: var(--normal-fg-10);
         }
 
         & svg {
@@ -85,7 +88,7 @@
         $size: 14px,
         $weight: 300,
         $line: 14px,
-        $color: var(--default-text-color)
+        $color: var(--normal-fg-10)
       );
 
       &.same-domain-info {

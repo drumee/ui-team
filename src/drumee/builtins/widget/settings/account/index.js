@@ -62,6 +62,7 @@ class settings_account extends LetcBox {
             child.feed(skeletonFn(this));
           }
         }
+        this.el.dataset.position = "1"
         break;
     }
   }

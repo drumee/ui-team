@@ -65,7 +65,7 @@
       border-radius: 50%;
       height: 29px;
       width: 29px;
-      margin-top: -2px;
+      background-color: var(--normal-fg-10);
 
       &[data-default="1"] {
         border: none;
@@ -91,11 +91,9 @@
       @include drumee.typo(
         $size: 14px,
         $line: 16px,
-        $color: var(--default-text-color)
+        $color: var(--normal-fg-10)
       );
-      margin-top: 3px;
       overflow: hidden;
-      padding: 2px 3px 3px 15px;
       width: 200px;
       @include drumee.overflow-text;
 
@@ -110,8 +108,6 @@
 
 .addressbook-widget-search__item {
   & .contact-item {
-    padding: 4px 5px 3px 12px;
-    height: 33px;
     @include drumee.typo($size: 12px, $line: 14px);
 
     &__icon {

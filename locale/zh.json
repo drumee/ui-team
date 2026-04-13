@@ -2139,5 +2139,20 @@
   "X_ITEMS_FOUND": "找到 0 件商品",
   "X_DAYS_LEFT": "还剩 {0} 天",
   "DELETED_BY": "已删除",
-  "RESTORE": "恢复"
+  "RESTORE": "恢复",
+  "SUB_FOLDER_HINT": "创建子文件夹，以树状结构组织数据。",
+  "PRIVATE_WORKSPACE_HINT": "只有您才能看到此文件夹及其内容。",
+  "SHARE_WORKSPACE_HINT": "任何拥有唯一链接的人都可以查看工作区。",
+  "RESTRICTED_WORKSPACE_HINT": "与特定人员共享的工作空间",
+  "PUBLIC_WORKSPACE": "公共工作空间",
+  "RESTRICTED_WORKSPACE": "受限工作区",
+  "PRIVATE_WORKSPACE": "私人工作空间",
+  "SUB_FOLDER": "子文件夹",
+  "NEW_FILE": "新文件",
+  "NEW_WORKSPACE": "新工作区",
+  "NEW_SUB_FOLDER": "新建子文件夹",
+  "CREATE_NEW_WORSPACE": "创建新的工作区",
+  "CREATE_NEW_WORSPACE_HINT": "专用工作区包含文件、文件夹、消息、数据等。",
+  "NOTIFICATIONS": "通知",
+  "TYPE_MESSAGE": "输入消息"
 }

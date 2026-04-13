@@ -1,0 +1,109 @@
+@use 'mixins/drumee';
+
+.activity-item {
+  &__group {
+    width: 100%;
+  }
+
+  /* ── Date group header ───────────────────────────────────── */
+  &__date-header {
+    @include drumee.typo($color: var(--neutral-500), $size: 11px, $weight: 700, $line: 16px);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 14px 16px 6px;
+    width: 100%;
+  }
+
+  /* ── Item row ────────────────────────────────────────────── */
+  &__row {
+    align-items: center;
+    padding: 10px 16px;
+    gap: 12px;
+    width: 100%;
+    transition: background-color 0.12s;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--neutral-800, rgba(255, 255, 255, 0.04));
+    }
+  }
+
+  /* ── Avatar + badge ──────────────────────────────────────── */
+  &__avatar-wrap {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  &__badge {
+    position: absolute;
+    bottom: -3px;
+    left: -3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: var(--neutral-700, #2a2d3e);
+    padding: 3px;
+    color: var(--neutral-100);
+
+    &.mention,
+    &.chat\.post { color: #5B8FFF; background-color: #1e2a4a; }
+    &.media\.new  { color: #4FC8E4; background-color: #1a313a; }
+    &.share       { color: #A78BFA; background-color: #2a1f40; }
+    &.flag        { color: #F87171; background-color: #3a1f1f; }
+    &.comment     { color: #34D399; background-color: #1a3028; }
+  }
+
+  /* ── Text block ──────────────────────────────────────────── */
+  &__text-block {
+    flex: 1;
+    min-width: 0;
+    gap: 3px;
+    justify-content: center;
+  }
+
+  &__text {
+    @include drumee.typo($size: 13px, $weight: 400, $line: 20px);
+    word-break: break-word;
+  }
+
+  &__name {
+    @include drumee.typo($size: 13px, $weight: 600, $line: 20px);
+  }
+
+  &__action-text {
+    @include drumee.typo($color: var(--neutral-400), $size: 13px, $weight: 400, $line: 20px);
+  }
+
+  &__link {
+    @include drumee.typo($color: var(--primary-400, #7B6EF6), $size: 13px, $weight: 500, $line: 20px);
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__time {
+    @include drumee.typo($color: var(--neutral-500), $size: 11px, $weight: 400, $line: 16px);
+  }
+
+  /* ── Unread dot ──────────────────────────────────────────── */
+  &__unread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--primary-500, #5B4EF5);
+    flex-shrink: 0;
+    align-self: center;
+  }
+}

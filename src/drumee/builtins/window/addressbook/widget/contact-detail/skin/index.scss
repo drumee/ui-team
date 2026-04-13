@@ -29,11 +29,8 @@
   }
 
   &__separator {
-    background-color: var(--default-separator);
-    border-radius: 1px;
+    background-color: var(--normal-fg-10);
     height: 1px;
-    margin: 2px 0 0 0px;
-
     width: 100%;
   }
 
@@ -97,6 +94,9 @@
     width: 26px;
     min-width: 26px;
     min-height: 26px;
+    svg {
+      fill: var(--normal-fg-10);
+    }
 
     &.profile-signup {
       height: 26px;
@@ -145,7 +145,7 @@
     }
 
     &.profile-icon {
-      color: var(--eblue);
+      color: var(--normal-fg-10);
       height: 25px;
       margin-right: 0px;
       margin-top: 3px;
@@ -203,6 +203,7 @@
       height: 29px;
       margin-top: 3px;
       width: 29px;
+      background-color: var(--normal-fg-10);
     }
 
     & .user-profile__initiales {
@@ -244,6 +245,7 @@
 
     &.email {
       padding-left: var(--spacer-5);
+      color: var(--normal-fg-10);
     }
 
     &.name {
@@ -311,7 +313,7 @@
     }
 
     &.label {
-      color: var(--ab-default-text-title);
+      color: var(--normal-fg-10);
     }
 
     &.tags {
@@ -325,6 +327,7 @@
       overflow: hidden;
       width: 220px;
       @include drumee.overflow-text;
+      color: var(--normal-fg-10);
 
       & .inner.note-content {
         text-overflow: ellipsis;
@@ -436,11 +439,11 @@
         width: 190px;
         @include drumee.typo($size: 16px, $line: 26px);
         color: white;
-        background-color: var(--btn-commit-background-hover);
+        background-color: var(--primary-500);
       }
 
       &:hover {
-        background-color: var(--btn-commit-background-hover);
+        background-color: var(--primary-600);
         border-color: var(--btn-commit-border-hover);
       }
     }

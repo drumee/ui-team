@@ -7,15 +7,12 @@
 
 .addressbook-widget-search {
   &__ui {
-    background-color: var(--default-background);
-    border-radius: 12px;
-    box-shadow: var(--shadow-container);
+    background-color: var(--normal-bg-90);
     font-family: var(--font-main);
-    min-width: 238px;
-    padding: 10px;
-    width: 400px;
+    padding: var(--spacer-4);
     z-index: 99;
     border: 1px solid var(--neutral-300);
+    border-radius: var(--corner-radius-3);
   }
 
   &__main {
@@ -70,12 +67,9 @@
       @include drumee.typo(
         $size: 13px,
         $line: 16px,
-        $color: var(--default-text-color)
+        $color: var(--normal-fg-10)
       );
       letter-spacing: 0;
-      margin-left: 8px;
-      margin-top: 5px;
-      margin-bottom: auto;
     }
 
     &__icon {

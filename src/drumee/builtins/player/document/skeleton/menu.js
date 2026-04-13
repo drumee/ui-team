@@ -22,12 +22,12 @@ const EDITABLE = [
   "otp",
 ];
 
-const cnWindowTopbarActions = "window-topbar-actions";
-const cnWindowTopbarDropdownMenu = `${cnWindowTopbarActions}__dropdown-menu`;
+const cnWindowButton = "window-button";
+const cnWindowButtonDropdownMenu = `${cnWindowButton}__dropdown-menu`;
 
 function item(ui, service, ico, content) {
   return Skeletons.Box.X({
-    className: `${cnWindowTopbarDropdownMenu}__item`,
+    className: `${cnWindowButtonDropdownMenu}__item`,
     uiHandler: ui,
     service,
     kidsOpt: {
@@ -36,10 +36,10 @@ function item(ui, service, ico, content) {
     kids: [
       Skeletons.Button.Svg({
         ico,
-        className: `${cnWindowTopbarDropdownMenu}__icon`,
+        className: `${cnWindowButtonDropdownMenu}__icon`,
       }),
       Skeletons.Note({
-        className: `${cnWindowTopbarDropdownMenu}__name`,
+        className: `${cnWindowButtonDropdownMenu}__name`,
         content,
       }),
     ],
@@ -50,7 +50,7 @@ module.exports = function (ui) {
   let download, downloadPDF, edit, print;
 
   const menuTrigger = Skeletons.Button.Label({
-    className: `${cnWindowTopbarActions}__label-button`,
+    className: `${cnWindowButton}__label-button`,
     label: LOCALE.DOCUMENT,
     ico: "carret-down",
     uiHandler: ui,
@@ -69,7 +69,7 @@ module.exports = function (ui) {
     if (ui.mget(_a.mode) == _a.edit) {
       edit = item(ui, "preview", "desktop_preview", LOCALE.PREVIEW);
     } else {
-      if (Platform.get('doc_editor')) {
+      if (Platform.get("doc_editor")) {
         edit = item(ui, _a.edit, "desktop_edit", LOCALE.EDIT);
       } else {
         edit = null;
@@ -82,14 +82,14 @@ module.exports = function (ui) {
   print = item(ui, "print", "print", LOCALE.PRINT);
 
   const separator = Skeletons.Box.X({
-    className: `${cnWindowTopbarDropdownMenu}__separator`,
+    className: `${cnWindowButtonDropdownMenu}__separator`,
   });
 
   const menuItems = Skeletons.Box.X({
-    className: `${cnWindowTopbarDropdownMenu}__items-wrapper`,
+    className: `${cnWindowButtonDropdownMenu}__items-wrapper`,
     kids: [
       Skeletons.Box.Y({
-        className: `${cnWindowTopbarDropdownMenu}__items`,
+        className: `${cnWindowButtonDropdownMenu}__items`,
         kids: [download, downloadPDF, separator, edit, print],
       }),
     ],
@@ -97,12 +97,12 @@ module.exports = function (ui) {
 
   return Skeletons.Box.X({
     debug: __filename,
-    className: `${cnWindowTopbarActions}__buttons-wrapper`,
+    className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       {
         kind: KIND.menu.topic,
         sys_pn: "document-menu",
-        className: `${cnWindowTopbarDropdownMenu}__wrapper`,
+        className: `${cnWindowButtonDropdownMenu}__wrapper`,
         flow: _a.y,
         opening: _e.click,
         persistence: _a.none,

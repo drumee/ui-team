@@ -28,7 +28,7 @@ class __window_team extends __hub {
       })
     }
     // this.bindActivityHandlerEvent();
-    this.defaultSkeleton = require("./skeleton/main");
+    this.defaultSkeleton = require("./skeleton");
     this.settingsLabel = LOCALE.PROJECT_ROOM_MANAGER;
   }
 
