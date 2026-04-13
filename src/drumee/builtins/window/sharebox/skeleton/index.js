@@ -1,6 +1,5 @@
+
 const { windowHeader, splitBody, dialog, tooltips } = require("../../skeleton/toolkit")
-
-
 function grid(ui) {
   const topbar = require("./topbar")(ui, "desktop_sharebox_edit")
   return Skeletons.Box.Y({

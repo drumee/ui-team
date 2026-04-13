@@ -92,7 +92,7 @@ export function tooltips(ui) {
 export function dialog(ui) {
   return Skeletons.Wrapper.Y({
     className: `${ui.fig.group}__wrapper-container`,
-    name: "tooltips",
+    name: "dialog",
   });
 }
 
@@ -170,7 +170,12 @@ function getChatLabel(ui) {
   return name ? `${name} - ${LOCALE.CHAT}` : 'FOLDER-SCOPED CHAT';
 }
 
-export function chatPanel(ui){
+/**
+ * 
+ * @param {Chat Panel} ui 
+ * @returns 
+ */
+export function chatPanel(ui) {
   return Skeletons.Box.Y({
     className: `${ui.fig.group}__chat-panel`,
     sys_pn: 'chat-panel',
@@ -190,6 +195,55 @@ export function chatPanel(ui){
         send_icon: 'raw-send-chat',
         sys_pn: 'folder-chat',
       },
+    ],
+  });
+
+}
+
+/**
+ * 
+ * @param {*} ui 
+ * @returns 
+ */
+export function iconsContainer(ui) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__body ${ui.fig.group}__body`,
+    sys_pn: _a.content,
+    type: _a.type,
+  });
+}
+
+
+/**
+ * 
+ * @param {*} ui 
+ * @returns 
+ */
+export function splitBody(ui) {
+  return Skeletons.Box.X({
+    className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
+    kids: [iconsContainer(ui), chatPanel(ui)],
+  });
+}
+
+
+/**
+ * 
+ * @param {*} ui 
+ * @returns 
+ */
+export function windowHeader(ui, topbar) {
+  return Skeletons.Box.X({
+    debug: __filename,
+    className: `${ui.fig.family}__header ${ui.fig.group}__header`,
+    sys_pn: "window-header",
+    kidsOpt: {
+      radio: _a.on,
+      uiHandler: ui,
+    },
+    service: _e.raise,
+    kids: [
+      topbar
     ],
   });
 

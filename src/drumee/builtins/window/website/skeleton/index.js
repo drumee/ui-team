@@ -1,8 +1,7 @@
-const { windowHeader, splitBody, dialog, tooltips } = require("../../skeleton/toolkit")
-
+const { splitBody, dialog, tooltips } = require("../../skeleton/toolkit")
 
 function grid(ui) {
-  const topbar = require("./topbar")(ui, "desktop_sharebox_edit")
+  const topbar = require("./topbar")(ui)
   return Skeletons.Box.Y({
     className: `${ui.fig.family}__main ${ui.fig.group}__main drive-popup`,
     radio: _a.parent,

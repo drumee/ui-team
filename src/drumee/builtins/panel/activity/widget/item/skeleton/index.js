@@ -11,7 +11,7 @@ function getBadgeIco(event) {
 }
 
 module.exports = function (ui) {
-  const pfx = 'activity2-item';
+  const pfx = 'activity-item';
   const data  = ui.model.toJSON();
   const {
     fullname, firstname, lastname,
