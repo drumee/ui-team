@@ -2152,5 +2152,7 @@
   "NEW_WORKSPACE": "新工作区",
   "NEW_SUB_FOLDER": "新建子文件夹",
   "CREATE_NEW_WORSPACE": "创建新的工作区",
-  "CREATE_NEW_WORSPACE_HINT": "专用工作区包含文件、文件夹、消息、数据等。"
+  "CREATE_NEW_WORSPACE_HINT": "专用工作区包含文件、文件夹、消息、数据等。",
+  "NOTIFICATIONS": "通知",
+  "TYPE_MESSAGE": "输入消息"
 }
