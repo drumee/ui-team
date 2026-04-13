@@ -12,25 +12,28 @@ export function breadcrumbs(ui, opt) {
  * @param {Object} ui - The widget instance
  */
 export function tabBar(ui) {
-  const pfx = ui.fig.group;
+  const cnRoot = "window-body__tab-bar";
   return Skeletons.Box.X({
-    className: `${pfx}__tab-bar`,
+    className: `${cnRoot}-wrapper`,
     kids: [
-      Skeletons.Button.Svg({
-        ico: "folder",
-        tooltips: LOCALE.FILES,
+      Skeletons.Button.Label({
+        className: `${cnRoot}-item`,
+        label: LOCALE.FILES,
+        ico: "desktop_docfile",
         service: "tab-files",
         uiHandler: ui,
       }),
-      Skeletons.Button.Svg({
-        ico: "chat",
-        tooltips: LOCALE.CHAT,
+      Skeletons.Button.Label({
+        className: `${cnRoot}-item`,
+        label: LOCALE.CHAT,
+        ico: "tchat",
         service: "tab-chat",
         uiHandler: ui,
       }),
-      Skeletons.Button.Svg({
-        ico: "task",
-        tooltips: LOCALE.TASK,
+      Skeletons.Button.Label({
+        className: `${cnRoot}-item`,
+        label: LOCALE.TASK,
+        ico: "list",
         service: "tab-task",
         uiHandler: ui,
       }),
@@ -84,14 +87,14 @@ export function gridFilesBrowser(ui) {
 
 export function tooltips(ui) {
   return Skeletons.Wrapper.Y({
-    className: `${ui.fig.group}__wrapper-container`,
+    className: `${ui.fig.group}__wrapper-tooltips`,
     name: "tooltips",
   });
 }
 
 export function dialog(ui) {
   return Skeletons.Wrapper.Y({
-    className: `${ui.fig.group}__wrapper-container`,
+    className: `${ui.fig.group}__wrapper-modal`,
     name: "dialog",
   });
 }
@@ -187,10 +190,11 @@ export function chatPanel(ui) {
       {
         kind: 'widget_chat',
         className: `${ui.fig.group}__chat-widget`,
-        type: _a.share,
+        type: ui.mget(_a.area),
+        area: ui.mget(_a.area),
         view: 'quickChat',
         hub_id: ui.mget(_a.hub_id),
-        placeholder: 'Type a message...',
+        placeholder: LOCALE.TYPE_MESSAGE + '...',
         no_emoji: true,
         send_icon: 'raw-send-chat',
         sys_pn: 'folder-chat',
@@ -205,9 +209,9 @@ export function chatPanel(ui) {
  * @param {*} ui 
  * @returns 
  */
-export function iconsContainer(ui) {
+export function filesContainer(ui) {
   return Skeletons.Box.Y({
-    className: `${ui.fig.family}__body ${ui.fig.group}__body`,
+    className: `${ui.fig.family}__files-panel ${ui.fig.group}__files-panel`,
     sys_pn: _a.content,
     type: _a.type,
   });
@@ -220,9 +224,9 @@ export function iconsContainer(ui) {
  * @returns 
  */
 export function splitBody(ui) {
-  return Skeletons.Box.X({
+  return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
-    kids: [iconsContainer(ui), chatPanel(ui)],
+    kids: [filesContainer(ui), chatPanel(ui)],
   });
 }
 

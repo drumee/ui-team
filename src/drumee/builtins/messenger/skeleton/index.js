@@ -1,12 +1,12 @@
 
-const __skl_messenger = function(_ui_) {
+const __skl_messenger = function (ui) {
 
   let a, upload;
-  if(_ui_.canUpload()) {
+  if (ui.canUpload()) {
     upload = Skeletons.Button.Svg({
-      className : `${_ui_.fig.family}__icon attach`,
-      ico       : "message_attach",
-      service   : "attach"
+      className: `${ui.fig.family}__icon attach`,
+      ico: "message_attach",
+      service: "attach"
     });
   } else {
     upload = Skeletons.Box.X();
@@ -14,63 +14,66 @@ const __skl_messenger = function(_ui_) {
 
   const kids = [
     Skeletons.FileSelector({
-      sys_pn:"fselector",
-      bubble : 0,
-      service : "",
-      partHandler : [_ui_],
-      uiHandler : [_ui_]
+      sys_pn: "fselector",
+      bubble: 0,
+      service: "",
+      partHandler: [ui],
+      uiHandler: [ui]
     }),
 
     upload,
 
-    Skeletons.RichText({
-      sys_pn      : _a.content,
-      name        : _a.content,
-      content     : _ui_.mget(_a.content),
-      mode        : _a.interactive,
-      placeholder : _ui_.getPlaceholder(),
-      autofocus   : _ui_.mget('autofocus'),
-      className   : `${_ui_.fig.family}__content`,
-      service     : _e.submit
+    Skeletons.Entry({
+      sys_pn: _a.content,
+      name: _a.content,
+      type: _a.textarea,
+      value: ui.mget(_a.content),
+      mode: _a.interactive,
+      placeholder: ui.getPlaceholder(),
+      autofocus: ui.mget('autofocus'),
+      className: `${ui.fig.family}__content`,
+      service: _e.submit,
+      resizable: 0
     }),
   ];
 
-  if (!_ui_.mget('no_emoji')) {
+  if (!ui.mget('no_emoji')) {
     kids.push(Skeletons.Button.Svg({
-      className : `${_ui_.fig.family}__icon emoji`,
-      ico       : "message_smile",
-      sys_pn    : "message-smile",
-      uiHandler : _ui_,
-      service   : _a.emoji
+      className: `${ui.fig.family}__icon emoji`,
+      ico: "message_smile",
+      sys_pn: "message-smile",
+      uiHandler: ui,
+      service: _a.emoji
     }));
   }
 
   kids.push(Skeletons.Button.Svg({
-    className : `${_ui_.fig.family}__icon submit`,
-    ico       : _ui_.mget('send_icon') || "send",
-    sys_pn    : _a.submit,
-    uiHandler : _ui_,
-    service   : _a.submit,
+    className: `${ui.fig.family}__icon submit`,
+    ico: ui.mget('send_icon') || "send",
+    sys_pn: _a.submit,
+    uiHandler: ui,
+    service: _a.submit,
     dataset: {
-      state : _a.idle
+      state: _a.idle
     }
   }));
 
   const container = Skeletons.Box.X({
-    className     : `${_ui_.fig.family}__container`,
-    debug         : __filename,
-    kids          : kids
+    className: `${ui.fig.family}__container`,
+    debug: __filename,
+    kids: kids
   });
 
-  return a = [
+  return [
     Skeletons.Box.Y({
-      className     : `${_ui_.fig.family}__main`,
-      debug         : __filename,
-      kids : [container]}),
+      className: `${ui.fig.family}__main`,
+      debug: __filename,
+      kids: [container]
+    }),
 
     Skeletons.Wrapper.Y({
-      className     : `${_ui_.fig.family}__wrapper-popup`,
-      name : "popup"
+      className: `${ui.fig.family}__wrapper-popup`,
+      name: "popup"
     })
 
   ];

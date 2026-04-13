@@ -1,18 +1,13 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /src/drumee/builtins/widget/chat/skeleton/index.coffee
-//   TYPE : Skelton
-// ===================================================================**/
 
 /**
  * 
- * @param {*} _ui_ 
+ * @param {*} ui 
  * @returns 
  */
-const __skl_widget_chat = function (_ui_) {
+const __skl_widget_chat = function (ui) {
 
   let content;
-  const chatFig = _ui_.fig.family;
+  const chatFig = ui.fig.family;
 
   const fileDragDropWrapper = Skeletons.Box.X({
     className: `${chatFig}__drag-drop-wrapper`,
@@ -49,57 +44,44 @@ const __skl_widget_chat = function (_ui_) {
     ]
   });
 
-  if (_ui_.type === _a.supportTicket) {
-    const supportTicket =
-      { kind: 'create_support_ticket' };
+  const list = Skeletons.List.Smart({
+    sys_pn: _a.list,
+    flow: _a.none,
+    className: `${chatFig}__messages`,
+    uiHandler: ui,
+    start: _a.bottom,
+    formItem: 'messages',
+    dataType: _a.array,
+    dataset: {
+      role: _a.container,
+    },
+    spinnerWait: 500,
+    spinner: true,
+    placeholder: Skeletons.Note(LOCALE.NO_DISCUSSIONS_YET, 'no-content'),
+    itemsOpt: {
+      kind: 'widget_chat_item',
+      area: ui.mget(_a.area),
+      logicalParent: ui,
+      uiHandler: ui
+    },
+    vendorOpt: Preset.List.Orange_e,
+    api: ui.getCurrentApi
+  });
 
-    content = Skeletons.Box.X({
-      className: `${chatFig}__chat-content`,
-      kids: [
-        supportTicket
-      ]
-    });
-
-  } else {
-    const list = Skeletons.List.Smart({
-      sys_pn: _a.list,
-      flow: _a.none,
-      className: `${chatFig}__messages`,
-      uiHandler: _ui_,
-      start: _a.bottom,
-      formItem: 'messages',
-      dataType: _a.array,
-      dataset: {
-        role: _a.container,
-      },
-      spinnerWait: 500,
-      spinner: true,
-      evArgs: Skeletons.Note(LOCALE.NO_DISCUSSIONS_YET, 'no-content'),
-      itemsOpt: {
-        kind: 'widget_chat_item',
-        className: `widget_chat_item ${_ui_.type}`,
-        type: _ui_.type,
-        logicalParent: _ui_,
-        uiHandler: _ui_
-      },
-      vendorOpt: Preset.List.Orange_e,
-      api: _ui_.getCurrentApi
-    });
-    if (!_ui_.getCurrentApi()) {
-      delete list.api;
-    }
-    content = Skeletons.Box.X({
-      className: `${chatFig}__chat-content`,
-      kids: [
-        list,
-        scrollButton
-      ]
-    });
+  if (!ui.getCurrentApi()) {
+    delete list.api;
   }
+  content = Skeletons.Box.X({
+    className: `${chatFig}__chat-content`,
+    kids: [
+      list,
+      scrollButton
+    ]
+  });
+
   const body = Skeletons.Box.Y({
-    className: `${chatFig}__body drive-content u-ai-center`,
+    className: `${chatFig}__body`,
     sys_pn: _a.content,
-    type: _a.type,
     kids: [
       fileDragDropWrapper,
       content
@@ -125,7 +107,7 @@ const __skl_widget_chat = function (_ui_) {
           Skeletons.Wrapper.Y({
             className: `${chatFig}_chat_footer ack-wrapper`,
             sys_pn: 'chat-footer',
-            kids: require('./footer')(_ui_)
+            kids: require('./footer')(ui)
           })
         ]
       })

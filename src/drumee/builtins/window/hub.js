@@ -118,7 +118,8 @@ class __window_hub extends mfsInteract {
     this.isShowSettings = true;
 
     this.dialogWrapper.feed({
-      kind: "settings_hub",
+      // kind: "settings_hub",
+      kind: "settings_permission",
       label: this.settingsLabel || LOCALE.PROJECT_ROOM_MANAGER,
       className: "",
       uiHandler: [this],

@@ -291,6 +291,7 @@ module.exports = {
     return import("widget/chat-item");
   },
   widget_chat: function () {
+    // return import("./builtins/chat/hub");
     return import("widget/chat");
   },
   widget_contact_detail: function () {

@@ -1,25 +1,19 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : builins/widget/chat/skeleton/action-button.coffee
-//   TYPE : Skeleton
-// ==================================================================== *
-
-const __skl_chat_action_button = function(_ui_, type) {
-  this.debug("action button", _ui_);
+const __skl_chat_action_button = function(ui, type) {
+  this.debug("action button", ui);
   
-  const chatBtnFig = `${_ui_.fig.family}`;
+  const chatBtnFig = `${ui.fig.family}`;
 
   const fowardButton = Skeletons.Note({
     className : `${chatBtnFig}__button-confirm button-confirm button clickable`,
     content   : LOCALE.FORWARD_TO, //'Forward to'
     service   : 'forward-message',
-    uiHandler : _ui_
+    uiHandler : ui
   });
 
   const deleteForMeButton = Skeletons.Box.X({
     className : `${chatBtnFig}__button-delete button-delete delete-for-me button clickable`,
     service   : 'delete-for-me',
-    uiHandler : _ui_,
+    uiHandler : ui,
     kidsOpt   : {
       active    : 0
     },
@@ -42,7 +36,7 @@ const __skl_chat_action_button = function(_ui_, type) {
       active    : _a.yes
     },
     service   : 'delete-for-all',
-    uiHandler : _ui_,
+    uiHandler : ui,
     kidsOpt   : {
       active    : 0
     },
@@ -62,7 +56,7 @@ const __skl_chat_action_button = function(_ui_, type) {
     className : `${chatBtnFig}__button-cancel button-cancel button clickable`,
     content   : LOCALE.CANCEL, //'Cancel'
     service   : 'cancel-message-selection',
-    uiHandler : _ui_
+    uiHandler : ui
   });
 
 

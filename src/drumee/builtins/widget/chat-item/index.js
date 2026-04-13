@@ -131,12 +131,15 @@ class ___widget_chatItem extends LetcBox {
     this.model.on(_e.change, this._onDataChanged.bind(this))
     this.el.onclick = this.dispatchUiEvent.bind(this);
     let author = this.mget(_a.author);
+    let area = this.mget(_a.area);
     this.$el.addClass(author);
+    this.$el.addClass(area);
     let html = '';
     let m = {
       fig: this.fig.family,
       widgetId: this._id,
       author,
+      area
     }
     const dod = this.showDateOfDay();
     if (dod) {
@@ -147,7 +150,7 @@ class ___widget_chatItem extends LetcBox {
     let preattachment = 0;
     if (this.mget('is_attachment')) preattachment = 1;
     this.feed(Skeletons.Box.Z({
-      className: `${this.fig.family}__main ${author} ${this.mget(_a.type)}`,
+      className: `${this.fig.family}__main ${author} ${area}`,
       sys_pn: _a.main,
       flow: _a.none,
       escapeContextmenu: true,

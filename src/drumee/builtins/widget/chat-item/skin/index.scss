@@ -6,7 +6,6 @@
 
 .widget-chatItem {
   &__ui {
-    background-color: var(--normal-bg-100);
     width: calc(100% - 70px);
     @include drumee.typo($size: 12px, $line: 14px);
     display: flex;
@@ -14,12 +13,6 @@
     margin-top: 20px;
     align-items: center;
     min-height: 38px;
-
-    &[data-radio="on"] {
-      .widget-chatItem__main {
-        background-color: var(--default-background-hover);
-      }
-    }
 
     &.me {
       width: calc(100% - 1px);
@@ -83,10 +76,10 @@
     }
 
     &.me {
-      background-color: var(--normal-bg-90);
-      border: 1px solid var(--neutral-800);
+      // background-color: var(--normal-bg-90);
+      // border: 1px solid var(--neutral-800);
       max-width: 85%;
-      margin: 0 14px 0 auto;
+      // margin: 0 14px 0 auto;
     }
 
     &.other {
@@ -180,21 +173,17 @@
 
     &-date {
       margin-top: -2px;
-      @include drumee.typo(
-        $size: 10px,
+      @include drumee.typo($size: 10px,
         $line: 9px,
         $weight: 300,
-        $color: var(--tertiary-text-color)
-      );
+        $color: var(--tertiary-text-color));
 
       &.me {
         margin-top: 0px;
-        @include drumee.typo(
-          $size: 10px,
+        @include drumee.typo($size: 10px,
           $line: 9px,
           $weight: 500,
-          $color: var(--tertiary-text-color)
-        );
+          $color: var(--tertiary-text-color));
       }
 
       &.other {
@@ -248,11 +237,9 @@
       padding-left: 4px;
       padding-top: 4px;
       text-transform: capitalize;
-      @include drumee.typo(
-        $size: 12px,
+      @include drumee.typo($size: 12px,
         $line: 12px,
-        $color: var(--secondary-text-color)
-      );
+        $color: var(--secondary-text-color));
     }
   }
 
@@ -266,11 +253,9 @@
       margin: auto;
       max-width: 200px;
       width: 82px;
-      @include drumee.typo(
-        $size: 11px,
+      @include drumee.typo($size: 11px,
         $line: 20px,
-        $color: var(--tertiary-text-color)
-      );
+        $color: var(--tertiary-text-color));
       display: flex;
       flex-direction: row;
       justify-content: center;
@@ -291,11 +276,9 @@
     margin: auto;
     max-width: 200px;
     width: 82px;
-    @include drumee.typo(
-      $size: 11px,
+    @include drumee.typo($size: 11px,
       $line: 12px,
-      $color: var(--tertiary-text-color)
-    );
+      $color: var(--tertiary-text-color));
   }
 
   &__profile {
@@ -338,12 +321,10 @@
     text-transform: capitalize;
     white-space: nowrap;
     width: 121px;
-    @include drumee.typo(
-      $size: 11px,
+    @include drumee.typo($size: 11px,
       $line: 10px,
       $weight: 400,
-      $color: var(--default-text-color)
-    );
+      $color: var(--default-text-color));
 
     & .inner.note-content {
       overflow: hidden;
@@ -383,12 +364,10 @@
     &-content {
       overflow: hidden;
       word-wrap: break-word;
-      @include drumee.typo(
-        $size: 12px,
+      @include drumee.typo($size: 12px,
         $line: 14px,
         $weight: 400,
-        $color: var(--normal-fg-10)
-      );
+        $color: var(--normal-fg-10));
 
       & a {
         color: var(--secondary-text-color);
@@ -415,12 +394,10 @@
 
   &__call-duration {
     margin-left: 10px;
-    @include drumee.typo(
-      $size: 13px,
+    @include drumee.typo($size: 13px,
       $line: 14px,
       $weight: 400,
-      $color: var(--default-text-title)
-    );
+      $color: var(--default-text-title));
   }
 
   &__media-attachment {
@@ -432,6 +409,20 @@
   &__name {
     &.me {
       flex-direction: row-reverse;
+    }
+  }
+
+  &__conversation-content {
+    &.me {
+      background-color: var(--area-personal);
+      border-radius: 16px 0 16px 16px;
+      align-self: flex-end;
+      align-self: flex-end;
+      padding: 10px 20px;
+
+      &.private {
+        background-color: var(--area-private);
+      }
     }
   }
 }

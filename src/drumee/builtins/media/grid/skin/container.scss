@@ -37,19 +37,19 @@
       fill: #885EFF;
 
       &.personal {
-        fill: #884EFF;
+        fill: var(--area-personal);
       }
 
       &.public {
-        fill: #44b8ff;
+        fill: var(--area-public);
       }
 
       &.share {
-        fill: #FFA8DC;
+        fill: var(--area-share);
       }
 
       &.private {
-        fill: #D65F59;
+        fill: var(--area-private);
       }
     }
 

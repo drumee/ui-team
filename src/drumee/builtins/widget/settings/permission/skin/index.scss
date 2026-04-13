@@ -1,258 +1,186 @@
-@use "mixins/drumee";
+@use 'mixins/drumee';
 
 .settings-permission {
   &__ui {
-    width: 100%;
-    padding: var(--spacer-3);
-  }
-
-  &__content {
-    gap: var(--spacer-5);
-  }
-
-  // Permission section
-  &__section {
+    position: absolute;
+    width: 360px;
+    height: 100%;
+    right: -360px;
+    bottom: 0px;
+    top: 0;
+    background-color: var(--primary-purple-90);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    align-items: flex-start;
+    padding: 0px;
+    box-shadow: -24px 0px 48px rgba(0, 0, 0, 0.5);
+    transition: right .5s;
+    border-radius: var(--spacer-4);
+
+    &[data-position="0"] {
+      right: -360px;
+    }
+
+    &[data-position="1"] {
+      right: 0;
+    }
+
+  }
+
+
+  // ── Main wrapper ──────────────────────────────────────────────
+  &__main {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding: 24px 20px;
+    box-sizing: border-box;
+  }
+
+  // ── Header ────────────────────────────────────────────────────
+  &__header {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  &__header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
   }
 
   &__title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--neutral-900, #222732);
-    margin-bottom: 4px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 28px;
+    color: var(--gray-white);
   }
 
-  &__items {
-    display: flex;
-    flex-direction: row;
-    gap: var(--spacer-4);
-    align-items: flex-start;
-    width: 100%;
+  &__subtitle {
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 18px;
+    color: var(--neutral-600);
   }
 
-  &__item-wrapper {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    min-width: 0; // Allow flex items to shrink below their content size
-
-    &[data-lock="1"] {
-      opacity: 0.4;
-      pointer-events: none;
-    }
-  }
-  &__item {
-    align-items: center;
-    gap: var(--spacer-4);
-    width: 100%;
-  }
-
-  &__note {
-    font-size: 14px;
-    color: var(--neutral-900, #222732);
-    cursor: pointer;
-
-    &:hover {
-      color: var(--neutral-900, #222732);
-    }
-  }
-
-  &__checkbox {
-    cursor: pointer;
+  &__close {
     flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.7;
 
     svg {
-      width: 20px;
-      height: 20px;
-      border: 1px solid var(--neutral-300, #d1d5db);
-      border-radius: var(--corner-radius-2);
-      background-color: var(--ewhite);
-      transition: all 120ms ease;
+      width: 18px;
+      height: 18px;
+      color: var(--gray-white);
     }
 
-    // Checkbox with white background when checked
-    &[data-state="1"],
-    &.selected {
-      svg {
-        padding: var(--spacer-2);
-        background-color: var(--primary-600, #7c3aed);
-        border: 1px solid var(--white, #ffffff);
-        color: var(--white, #ffffff);
-      }
-    }
-
-    &[data-state="0"] {
-      svg {
-        background-color: var(--ewhite);
-        border-radius: var(--corner-radius-2);
-        border: 1px solid var(--neutral-300, #d1d5db);
-        color: transparent;
-      }
+    &:hover {
+      opacity: 1;
     }
   }
 
-  &__note {
-    font-size: 14px;
-    color: var(--neutral-900, #222732);
+  // ── Divider ───────────────────────────────────────────────────
+  &__divider {
+    border: none;
+    border-top: 1px solid var(--primary-purple-80);
+    margin: 0 0 20px 0;
+    width: 100%;
   }
 
-  // Validity section
-  &-validity {
-    &__section {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+  // ── Invite section ────────────────────────────────────────────
+  &__invite-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
 
-      &[data-state="0"] {
-        opacity: 0.4;
-        pointer-events: none;
-      }
-    }
+  &__section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--neutral-500);
+    margin-bottom: 2px;
+  }
 
-    &__title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--neutral-900, #414651);
-      margin-bottom: var(--spacer-2);
-    }
+  &__email-input {
+    width: 100%;
+    border-radius: 8px;
+    background-color: var(--primary-purple-80);
+    border: 1px solid var(--primary-purple-80);
+    padding: 12px 14px;
+    box-sizing: border-box;
 
-    &__options {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacer-4);
-    }
-
-    &__option {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacer-4);
-      padding: var(--spacer-5);
-      border: 2px solid transparent;
-      border-radius: var(--corner-radius-4);
-      transition: border-color 120ms ease;
-      cursor: pointer;
-      transition: all 120ms ease;
-
-      &:hover {
-        background: var(--neutral-50, #fafafa);
-      }
-
-      &.active {
-        background: var(--primary-50, #f4e7ff);
-        border-color: var(--primary-600, #b251fb);
-      }
-
-      > .drumee-box {
-        display: flex;
-        align-items: flex-start;
-        gap: var(--spacer-4);
-      }
-    }
-
-    &__radio {
-      width: 20px;
-      height: 20px;
-      flex-shrink: 0;
-      margin-top: var(--spacer-1);
-      border: 2px solid var(--neutral-400, #c3c6cc);
-      border-radius: 100%;
-      cursor: pointer;
-      background: var(--ewhite);
-
-      &.active {
-        background: var(--primary-50, #f4e7ff);
-        border: 5px solid var(--primary-600, #b251fb);
-      }
-    }
-
-    &__option-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    &__option-label {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--neutral-900, #222732);
-    }
-
-    &__option-description {
-      font-size: 13px;
-      color: var(--neutral-600, #8c929c);
-      line-height: 1.4;
-    }
-
-    &__set-validity {
-      margin-top: var(--spacer-2);
-      padding-left: var(--spacer-6);
+    input,
+    .entry-area {
+      background: transparent;
+      border: none;
+      outline: none;
       width: 100%;
-    }
-
-    &__validity-action-wrapper {
-      display: flex;
-      align-items: center;
-      gap: var(--spacer-4);
-      width: 100%;
-    }
-
-    &__entry {
-      flex: 1;
-      padding: var(--spacer-4) var(--spacer-5);
-      border: 1px solid var(--neutral-300, #d1d5db);
-      border-radius: var(--corner-radius-4);
-      background: var(--Gray-White, #fff);
-      color: var(--neutral-400, #c3c6cc);
-      font-size: 16px;
-      font-style: normal;
+      font-size: 14px;
       font-weight: 400;
-      line-height: 26px;
-      /* 162.5% */
-      letter-spacing: 0.16px;
-      min-width: 0; // Allow flex items to shrink below their content size
+      line-height: 20px;
+      color: var(--neutral-400);
 
       &::placeholder {
-        color: var(--neutral-400, #c3c6cc);
-        font-size: 16px;
-        font-weight: 400;
-        line-height: 26px;
-        letter-spacing: 0.16px;
-      }
-
-      // Input text color when user types
-      input,
-      .entry-area {
-        color: var(--neutral-400, #c3c6cc);
-        font-size: 16px;
-        font-weight: 400;
-        line-height: 26px;
-        letter-spacing: 0.16px;
-      }
-
-      font-size: 14px;
-    }
-
-    &__save-btn {
-      padding: 8px 16px;
-      border-radius: 6px;
-      background: var(--primary-600, #7c3aed);
-      color: var(--white, #ffffff);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background-color 120ms ease;
-
-      &:hover {
-        background: var(--primary-700, #6d28d9);
+        color: var(--neutral-500);
       }
     }
+  }
 
-    &__note {
-      font-size: 14px;
-      color: var(--neutral-900, #222732);
+  &__send-btn {
+    width: 100%;
+    padding: 14px 0;
+    background-color: var(--primary-40);
+    color: var(--gray-white);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background-color: var(--primary-50);
     }
+  }
+
+  // ── Permissions matrix section ────────────────────────────────
+  &__matrix-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+  }
+
+  // ── Member list ───────────────────────────────────────────────
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
   }
 }

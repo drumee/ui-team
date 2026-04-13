@@ -1,4 +1,4 @@
-const { splitBody, dialog, tooltips } = require("../../skeleton/toolkit")
+const { windowHeader, splitBody, dialog, tooltips } = require("../../skeleton/toolkit")
 
 function grid(ui) {
   const topbar = require("./topbar")(ui)

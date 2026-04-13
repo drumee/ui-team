@@ -175,6 +175,14 @@
     gap: 4px;
     margin-left: 12px;
   }
+
+  &__tab-item {
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--normal-fg-10);
+    }
+  }
 }
 
 // Scoped message bubble styles for folder chat panel
@@ -186,7 +194,8 @@
     background-color: transparent;
   }
   .widget-chatItem__main {
-    &.me, &.other {
+    &.me,
+    &.other {
       background-color: transparent;
       border: none;
       border-radius: 0;
@@ -201,21 +210,25 @@
       background-color: var(--private, #884eff);
       border-radius: 16px 0 16px 16px;
       align-self: flex-end;
-      .note-content { color: #E4E3FF; }
+      .note-content {
+        color: #e4e3ff;
+      }
     }
     &.other {
-      background-color: #0B0A21;
+      background-color: #0b0a21;
       border-radius: 0 16px 16px 16px;
       align-self: flex-start;
-      .note-content { color: #FAF6FF; }
+      .note-content {
+        color: #faf6ff;
+      }
     }
   }
   .widget-chatItem__message-date {
-    color: #84848C;
+    color: #84848c;
     font-size: 8px;
   }
   .widget-chatItem__date-of-day-content {
-    color: #C6BFFF;
+    color: #c6bfff;
     font-size: 10px;
     font-weight: 600;
   }
@@ -235,7 +248,7 @@
     border-radius: 8px;
   }
   .lib-messenger__content .note-content {
-    color: #E4E3FF;
+    color: #e4e3ff;
     &:empty:before {
       color: #6b7280;
     }

@@ -38,24 +38,18 @@ class __widget_chat extends LetcBox {
     this.peer = this.mget('peer') || null;
     this.updateChatUserStatus();
     this.queue = [];
-    const type = this.mget(_a.type);
-    if (type === _a.private) {
+    const area = this.mget(_a.area);
+    this.debug("AAA:42", opt, this)
+    if (area === _a.personal) {
       this.hubId = Visitor.id;
       this.entityId = this.mget(_a.hub_id);
-      this.storageKey = `${type}-${this.hubId}-${this.entityId}`;
-    }
-
-    if (type === _a.share) {
+      this.storageKey = `${area}-${this.hubId}-${this.entityId}`;
+    } else {
       this.hubId = this.mget(_a.hub_id);
       this.entityId = '';
-      this.storageKey = `${type}-${this.hubId}`;
     }
+    this.storageKey = `${area}-${this.hubId}`;
 
-    if ((type === _a.ticket) || (type === _a.supportTicket)) {
-      this.hubId = Visitor.id;
-      this.entityId = this.mget(_a.hub_id);
-      this.storageKey = `${type}-${this.hubId}-${this.mget('ticket_id')}`;
-    }
     this.hubId = this.hubId || this.mget(_a.hub_id);
     this.declareHandlers();
     this.bindEvent(_a.live);
@@ -98,7 +92,7 @@ class __widget_chat extends LetcBox {
    * @returns 
    */
   updateChatUserStatus() {
-    if (!this.peer || (this.mget(_a.type) !== _a.private)) {
+    if (!this.peer || (this.mget(_a.area) !== _a.personal)) {
       return;
     }
     let isReadOnly = false;
@@ -237,11 +231,11 @@ class __widget_chat extends LetcBox {
    * @returns 
    */
   onPasteBase64(args) {
-    if (args.type && /^data:image/.test(args.type)) {
+    if (args.area && /^data:image/.test(args.area)) {
       let { chat_upload_id: nid, hub_id, home_id } = this.mget(_a.home);
       let pm = {
         respawn: 'media_paste',
-        type: args.type,
+        area: args.area,
         src: args.src,
         home_id,
         nid,
@@ -293,13 +287,6 @@ class __widget_chat extends LetcBox {
         })
         break;
       case _a.list:
-        const type = this.mget(_a.type);
-        if (![_a.share, _a.private, _a.ticket, _a.supportTicket].includes(type)) {
-          child.feed(Skeletons.Note("Invaild Chat Type"));
-          this.warn(`Invaild Type Provided, valied types : ${_a.share} or ${_a.private}`);
-          break;
-        }
-
         child.onAddKid = this.handleScroll.bind(this);
         break;
       case 'chat-content':
@@ -422,7 +409,7 @@ class __widget_chat extends LetcBox {
         break;
 
       case 'show-message-selector':
-        this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.type));
+        this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.area));
         setTimeout(() => {
           this.showMsgCount(cmd);
         }, 300);
@@ -500,7 +487,7 @@ class __widget_chat extends LetcBox {
    */
   upload(e, token) {
     let target;
-    switch (e.type) {
+    switch (e.area) {
       case _e.change:
         target = this.getActiveWindow();
         break;
@@ -514,7 +501,7 @@ class __widget_chat extends LetcBox {
     }
 
     let p = 0;
-    if (e.type === _e.change) {
+    if (e.area === _e.change) {
       p = 0;
     }
     return this.sendTo(target, e, p, token);
@@ -666,9 +653,9 @@ class __widget_chat extends LetcBox {
    */
   getCurrentApi() {
     let api;
-    const type = this.mget(_a.type);
-    if (type === _a.private) {
-      if (!this.entityId) return null;
+    if (!this.hubId) return null;
+    const area = this.mget(_a.area);
+    if (area === _a.personal) {
       api = {
         service: SERVICE.chat.messages,
         entity_id: this.entityId,
@@ -678,16 +665,6 @@ class __widget_chat extends LetcBox {
       return api;
     }
 
-    if (!this.hubId) return null;
-    if (type === _a.ticket) {
-      api = {
-        service: SERVICE.channel.show_ticket,
-        hub_id: this.hubId,
-        ticket_id: this.mget('ticket_id'),
-        order: 'desc'
-      };
-      return api;
-    }
 
     api = {
       service: SERVICE.channel.messages,
@@ -719,7 +696,7 @@ class __widget_chat extends LetcBox {
       return;
     }
 
-    const type = this.mget(_a.type);
+    const area = this.mget(_a.area);
     if (list.hasPendingUpload()) {
       return this.showError(LOCALE.WAIT_UPLOAD, 'desktop_waiting');
     }
@@ -733,7 +710,7 @@ class __widget_chat extends LetcBox {
 
     let api = {};
 
-    switch (type) {
+    switch (area) {
       case _a.share:
         api = {
           service: SERVICE.channel.post,
@@ -743,7 +720,7 @@ class __widget_chat extends LetcBox {
         };
         break;
 
-      case _a.private:
+      case _a.personal:
         api = {
           service: SERVICE.chat.post,
           entity_id: this.entityId,
@@ -784,7 +761,7 @@ class __widget_chat extends LetcBox {
         break;
 
       default:
-        this.warn(` ${type} -- NOT SUPPORTED`);
+        this.warn(` ${area} -- NOT SUPPORTED`);
     }
 
     if (_.isEmpty(api)) {
@@ -978,11 +955,11 @@ class __widget_chat extends LetcBox {
    */
   deleteMessage(cmd, service) {
     let _service;
-    const type = this.mget(_a.type);
+    const area = this.mget(_a.area);
     if (cmd == null) { cmd = {}; }
-    if (type === _a.private) {
+    if (area === _a.personal) {
       _service = SERVICE.chat.delete;
-    } else if (type === _a.share) {
+    } else if (area === _a.share) {
       _service = SERVICE.channel.delete;
     }
 
@@ -1052,11 +1029,11 @@ class __widget_chat extends LetcBox {
    * @param {Object} options
    */
   onWsMessage(service, data, options) {
-    const type = this.mget(_a.type);
+    const area = this.mget(_a.area);
     switch (options.service) {
       case SERVICE.contact.block:
       case SERVICE.contact.unblock:
-        if (!this.peer || (this.mget(_a.type) !== _a.private)) {
+        if (!this.peer || (this.mget(_a.area) !== _a.personal)) {
           return;
         }
         if (this.entityId !== data.entity) {
@@ -1071,17 +1048,17 @@ class __widget_chat extends LetcBox {
       case SERVICE.chat.post:
       case SERVICE.chat.forward:
       case SERVICE.channel.post_ticket:
-        var hubMatch = (type === _a.share) && (this.hubId === data.hub_id);
-        var privateMach = (type === _a.private) && (this.entityId === data.entity_id);
-        var ticketMach = (type === _a.ticket) && (data.ticket_id === this.mget('ticket_id'));
+        var hubMatch = (area === _a.share) && (this.hubId === data.hub_id);
+        var privateMach = (area === _a.personal) && (this.entityId === data.entity_id);
+        var ticketMach = (area === _a.ticket) && (data.ticket_id === this.mget('ticket_id'));
         if (hubMatch || privateMach || ticketMach) {
           this.handleReceivedMsg(data);
 
-          if (type === _a.share) {
+          if (area === _a.share) {
             service = SERVICE.channel.acknowledge;
-          } else if (type === _a.private) {
+          } else if (area === _a.personal) {
             service = SERVICE.chat.acknowledge;
-          } else if (type === _a.ticket) {
+          } else if (area === _a.ticket) {
             service = SERVICE.channel.acknowledge_ticket;
           }
 
@@ -1091,7 +1068,7 @@ class __widget_chat extends LetcBox {
               hub_id: this.hubId,
               message_id: data.message_id
             }
-            if (type === _a.ticket) {
+            if (area === _a.ticket) {
               postData.ticket_id = data.ticket_id
             }
             this.postService(postData);

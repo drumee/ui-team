@@ -1,4 +1,4 @@
-const { tabBar, dropdownMenuButton } = require("../../skeleton/toolkit");
+const { dropdownMenuButton } = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   let name = ui.mget(_a.filename) || ui.mget(_a.name);
@@ -42,7 +42,7 @@ const __skl_folder_topbar = function (ui) {
 
   const titleWrapper = Skeletons.Box.X({
     className: `${cnWidowTopbarTitle}__wrapper`,
-    kids: [logo, name, badge, tabBar(ui)],
+    kids: [logo, name, badge],
   });
 
   let settings = Skeletons.Button.Svg({

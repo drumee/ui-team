@@ -1,88 +1,117 @@
-const { validity } = require("../../hub/skeleton/toolkit")
-/**
- * Check if a specific permission bit is set
- * @param {number} permissionBit - The permission bit to check (e.g., _K.permission.upload)
- * @returns {number} 1 if permission is set, 0 otherwise
- */
-function permissionCheck(ui, permissionBit) {
-  const privilege = ui.mget(_a.privilege) || 0;
-  // Use bitwise AND to check if the specific permission bit is set
-  return (privilege & permissionBit) ? 1 : 0;
+function members(ui) {
+  const list = Skeletons.List.Smart({
+    flow: _a.vertical,
+    sys_pn: "members-list",
+    className: `${ui.fig.family}__list`,
+    debug: __filename,
+    itemsOpt: {
+      kind: "settings_member",
+      uiHandler: [ui],
+    },
+    spinner: true,
+    placeholder: Skeletons.Note(
+      "Please, add contact",
+      "placeholder--no-contact",
+    ),
+    api: {
+      service: SERVICE.hub.get_members_by_type,
+      hub_id: ui.mget(_a.hub_id),
+      nid: ui.mget(_a.actual_home_id),
+      type: "all",
+    },
+    vendorOpt: Preset.List.Orange_d,
+    inspect: 1,
+  });
+
+  const kids = ui.mget(_a.members) || [];
+  if (!ui.mget(_a.api) && kids.length) {
+    list.kids = kids;
+  }
+
+  return Skeletons.Box.Y({
+    debug: __filename,
+    className: `${ui.fig.family}__content`,
+    kids: [list],
+  });
 }
 
-
 /**
- * Permission section with checkboxes for Upload File and Download File
+ * Permission management panel skeleton
+ * @param {*} ui
+ * @returns
  */
-export function addPermissionRow(ui, permission, service, content, name) {
-  const fig = `${ui.fig.family}`;
+module.exports = function (ui) {
+  const fig = ui.fig.family;
 
-  let icon = Skeletons.Button.Svg({
-    permission,
-    service,
-    itemForm: 1,
-    name,
-    icons: ["editbox_shapes-roundsquare", "available"],
-    className: `${fig}__checkbox`,
-    state: permissionCheck(ui, permission) ? 1 : 0,
-    uiHandler: [ui],
-  });
-  return Skeletons.Box.X({
-    className: `${fig}__item`,
+  const header = Skeletons.Box.X({
+    className: `${fig}__header`,
     kids: [
-      icon,
-      Skeletons.Note({
-        className: `${fig}__note item-label`,
-        content,
+      Skeletons.Box.Y({
+        className: `${fig}__header-text`,
+        kids: [
+          Skeletons.Note({
+            className: `${fig}__title`,
+            content: LOCALE.WHO_HAS_ACCESS
+          }),
+          Skeletons.Note({
+            className: `${fig}__subtitle`,
+            content: LOCALE.MANAGE_FOLDER_PERMISSIONS
+          })
+        ]
+      }),
+      Skeletons.Button.Svg({
+        ico: 'cross',
+        className: `${fig}__close`,
+        service: _e.close,
+        uiHandler: ui
       })
     ]
   });
-}
-/**
- * 
- * @param {*} ui 
- * @param {*} opt 
- * @returns 
- */
-function build_permission(ui, opt) {
-  const { permission, label, name, lock = 0 } = opt;
-  const fig = `${ui.fig.family}`;
-  return Skeletons.Box.X({
-    className: `${fig}__item-wrapper`,
-    dataset: {
-      lock
-    },
+
+  const inviteSection = Skeletons.Box.Y({
+    className: `${fig}__invite-section`,
     kids: [
-      addPermissionRow(ui, permission, 'change-permission', label, name),
-    ]
-  })
-}
-export default function (ui, formData) {
-  const fig = `${ui.fig.family}`;
-  let kids = []
-  for (let item of ui.mget(_a.items)) {
-    kids.push(build_permission(ui, item))
-  }
-  let container = Skeletons.Box.Y
-  if (ui.mget('itemsFlow') == _a.x) {
-    container = Skeletons.Box.X
-  }
-  return Skeletons.Box.Y({
-    className: `${fig}__main`,
-    sys_pn: 'permissions-content',
-    kids: [
-      Skeletons.Box.Y({
-        className: `${fig}__content`,
-        kids: [
-          container({
-            className: `${fig}__items`,
-            kids
-          }),
-          validity(ui, formData)
-        ]
+      Skeletons.Note({
+        className: `${fig}__section-label`,
+        content: LOCALE.INVITE_MEMBER
       }),
+      Skeletons.Entry({
+        className: `${fig}__email-input`,
+        placeholder: LOCALE.ENTER_EMAIL,
+        require: 'email',
+        sys_pn: 'ref-invite-email',
+        mode: 'commit',
+        service: 'send-invitation',
+        uiHandler: ui
+      }),
+      Skeletons.Note({
+        className: `${fig}__send-btn`,
+        content: LOCALE.SEND_INVITATION,
+        service: 'send-invitation',
+        uiHandler: ui
+      })
     ]
   });
-}
 
+  const permissionSection = Skeletons.Box.Y({
+    className: `${fig}__matrix-section`,
+    kids: [
+      Skeletons.Note({
+        className: `${fig}__section-label`,
+        content: LOCALE.PERMISSIONS_MATRIX
+      }),
+      members(ui)
+    ]
+  });
 
+  return Skeletons.Box.Y({
+    className: `${fig}__main`,
+    debug: __filename,
+    kids: [
+      header,
+      Skeletons.Element({ tagName: 'hr', className: `${fig}__divider` }),
+      inviteSection,
+      permissionSection,
+    ]
+  });
+};
