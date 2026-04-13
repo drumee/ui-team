@@ -1,0 +1,175 @@
+@use "mixins/drumee";
+
+.activity-item {
+  &__ui {
+    width: 100%;
+    height: 72px;
+    &:hover {
+      background-color: var(--primary-purple-80-5);
+    }
+  }
+
+  &__row {
+    align-items: center;
+    padding: var(--spacer-4) var(--spacer-6);
+    gap: var(--spacer-4);
+    width: 100%;
+    transition: background-color 0.5s;
+
+    &:hover {
+      .delete,
+      .restore {
+        display: flex;
+      }
+
+      .days-badge {
+        display: none;
+      }
+    }
+  }
+
+  /* ── File type icon ──────────────────────────────────────── */
+  &__file-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    padding: var(--spacer-3);
+    background-color: var(--normal-bg-100);
+    border-radius: var(--corner-radius-2);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: var(--normal-fg-10);
+    }
+
+    .folder-shape {
+      fill: var(--folder-fill);
+    }
+  }
+
+  /* ── Info block: name + metadata ─────────────────────────── */
+  &__info {
+    flex: 1;
+    min-width: 0;
+    gap: var(--spacer-2);
+    justify-content: center;
+    @include drumee.typo($size: 10px, $weight: 400, $line: 140%);
+  }
+
+  &__name {
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--normal-fg-10);
+  }
+
+  &__meta {
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__modifier {
+    @include drumee.typo($color: var(--normal-fg-20), $size: 12px, $line: 18px);
+    white-space: nowrap;
+  }
+
+  &__deleted-by,
+  &__date {
+    @include drumee.typo($color: var(--neutral-500), $size: 12px, $line: 18px);
+    white-space: nowrap;
+  }
+
+  /* ── Actions: badge + buttons ────────────────────────────── */
+  &__actions {
+    align-items: center;
+    gap: var(--spacer-3);
+    flex-shrink: 0;
+    width: 128px;
+  }
+
+  &__days-badge {
+    @include drumee.typo(
+      $color: var(--error),
+      $size: 11px,
+      $weight: 600,
+      $line: 16px
+    );
+    /* Auto layout */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--spacer-2) var(--spacer-4);
+    background: rgba(255, 0, 31, 0.2);
+    border-radius: var(--corner-radius-1);
+  }
+
+  &__btn {
+    width: 36px;
+    height: 36px;
+    padding: var(--spacer-3);
+    transition: opacity 0.15s;
+
+    &:hover {
+      color: var(--normal-fg-20);
+    }
+
+    &.delete,
+    &.restore {
+      display: none;
+      cursor: pointer;
+    }
+
+    &.delete {
+      background-color: rgba(255, 0, 31, 0.2);
+      border-radius: var(--corner-radius-1);
+      color: var(--error);
+      &:hover {
+        svg {
+          fill: var(--red-700);
+        }
+      }
+    }
+
+    &.restore {
+      width: 100%;
+      overflow: visible;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: var(--spacer-2) var(--spacer-4);
+      background: var(--normal-bg-100);
+      border-radius: var(--corner-radius-1);
+      color: var(--normal-fg-10);
+      font-size: 13px;
+      &:hover {
+        color: var(--normal-fg-20);
+      }
+
+      &-info {
+        position: absolute;
+        width: 250px;
+        left: -160px;
+        top: 48px;
+        padding: var(--spacer-4);
+        background-color: var(--primary-purple-40);
+        color: var(--normal-fg-10);
+        border-radius: var(--corner-radius-1);
+        height: auto;
+        z-index: 2;
+      }
+    }
+  }
+}
+
+.list-smart__container {
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 100%;
+  scrollbar-color: var(--primary-400) var(--white);
+  scrollbar-width: thin;
+  height: 100%;
+}
