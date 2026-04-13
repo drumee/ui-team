@@ -362,6 +362,12 @@
   }
 
   // Footer stack: messenger + attachments + message-options (skeleton: widget-chat_chat_footer)
+  .widget-chat__ui {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
   .widget-chat__main {
     display: flex;
     flex-direction: column;
@@ -381,6 +387,7 @@
   .widget-chat__body {
     flex: 1;
     min-height: 0;
+    height: auto;
     padding: 16px;
     gap: 16px;
   }
@@ -389,7 +396,8 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    flex-shrink: 1;
+    flex-shrink: 0;
+    margin-top: auto;
     width: 100%;
     min-width: 0;
     gap: 0;
@@ -508,6 +516,8 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .window-menu {
