@@ -37,6 +37,9 @@ export function dropdownMenuButton(ui, opt = {}) {
         className: `${cnDropdown}__item`,
         uiHandler: ui,
         service,
+        kidsOpt: {
+          active: 0,
+        },
         kids: [
           Skeletons.Button.Svg({
             ico,

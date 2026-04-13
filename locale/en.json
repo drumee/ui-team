@@ -2152,5 +2152,7 @@
   "NEW_WORKSPACE": "New Workspace",
   "NEW_SUB_FOLDER": "New subfolder",
   "CREATE_NEW_WORSPACE": "Create new Workspace",
-  "CREATE_NEW_WORSPACE_HINT": "A Workspace dedicated contains files, folders, messages, data, etc."
+  "CREATE_NEW_WORSPACE_HINT": "A Workspace dedicated contains files, folders, messages, data, etc.",
+  "NOTIFICATIONS": "Notifications",
+  "TYPE_MESSAGE": "Type a message"
 }

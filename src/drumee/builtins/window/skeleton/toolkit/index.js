@@ -166,3 +166,34 @@ export function dropdownMenuButton(ui, opt = {}) {
     items: itemsNode,
   };
 }
+
+
+function getChatLabel(ui) {
+  const name = ui.mget(_a.filename) || ui.mget(_a.name) || '';
+  return name ? `${name} - ${LOCALE.CHAT}` : 'FOLDER-SCOPED CHAT';
+}
+
+export function chatPanel(ui){
+  return Skeletons.Box.Y({
+    className: `${ui.fig.group}__chat-panel`,
+    sys_pn: 'chat-panel',
+    kids: [
+      Skeletons.Note({
+        className: `${ui.fig.group}__chat-label`,
+        content: getChatLabel(ui),
+      }),
+      {
+        kind: 'widget_chat',
+        className: `${ui.fig.group}__chat-widget`,
+        type: _a.share,
+        view: 'quickChat',
+        hub_id: ui.mget(_a.hub_id),
+        placeholder: 'Type a message...',
+        no_emoji: true,
+        send_icon: 'raw-send-chat',
+        sys_pn: 'folder-chat',
+      },
+    ],
+  });
+
+}
