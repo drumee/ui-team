@@ -12,25 +12,28 @@ export function breadcrumbs(ui, opt) {
  * @param {Object} ui - The widget instance
  */
 export function tabBar(ui) {
-  const pfx = ui.fig.group;
+  const cnRoot = "window-body__tab-bar";
   return Skeletons.Box.X({
-    className: `${pfx}__tab-bar`,
+    className: `${cnRoot}-wrapper`,
     kids: [
-      Skeletons.Button.Svg({
-        ico: "folder",
-        tooltips: LOCALE.FILES,
+      Skeletons.Button.Label({
+        className: `${cnRoot}-item`,
+        label: LOCALE.FILES,
+        ico: "desktop_docfile",
         service: "tab-files",
         uiHandler: ui,
       }),
-      Skeletons.Button.Svg({
-        ico: "chat",
-        tooltips: LOCALE.CHAT,
+      Skeletons.Button.Label({
+        className: `${cnRoot}-item`,
+        label: LOCALE.CHAT,
+        ico: "tchat",
         service: "tab-chat",
         uiHandler: ui,
       }),
-      Skeletons.Button.Svg({
-        ico: "task",
-        tooltips: LOCALE.TASK,
+      Skeletons.Button.Label({
+        className: `${cnRoot}-item`,
+        label: LOCALE.TASK,
+        ico: "list",
         service: "tab-task",
         uiHandler: ui,
       }),

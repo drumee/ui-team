@@ -1,8 +1,8 @@
-const { dialog, tooltips } = require("../../skeleton/toolkit")
+const { dialog, tooltips, tabBar } = require("../../skeleton/toolkit");
 
 function getChatLabel(ui) {
-  const name = ui.mget(_a.filename) || ui.mget(_a.name) || '';
-  return name ? `${name} - CHAT` : 'FOLDER-SCOPED CHAT';
+  const name = ui.mget(_a.filename) || ui.mget(_a.name) || "";
+  return name ? `${name} - CHAT` : "FOLDER-SCOPED CHAT";
 }
 
 function grid(ui) {
@@ -17,9 +17,7 @@ function grid(ui) {
       uiHandler: ui,
     },
     service: _e.raise,
-    kids: [
-      require("./topbar")(ui, "desktop_sharebox_edit"),
-    ],
+    kids: [require("./topbar")(ui, "desktop_sharebox_edit")],
   });
 
   const body = Skeletons.Box.Y({
@@ -30,22 +28,22 @@ function grid(ui) {
 
   const chatPanel = Skeletons.Box.Y({
     className: `${ui.fig.group}__chat-panel`,
-    sys_pn: 'chat-panel',
+    sys_pn: "chat-panel",
     kids: [
       Skeletons.Note({
         className: `${ui.fig.group}__chat-label`,
         content: getChatLabel(ui),
       }),
       {
-        kind: 'widget_chat',
+        kind: "widget_chat",
         className: `${ui.fig.group}__chat-widget`,
         type: _a.share,
-        view: 'quickChat',
+        view: "quickChat",
         hub_id: ui.mget(_a.hub_id),
-        placeholder: 'Type a message...',
+        placeholder: "Type a message...",
         no_emoji: true,
-        send_icon: 'raw-send-chat',
-        sys_pn: 'folder-chat',
+        send_icon: "raw-send-chat",
+        sys_pn: "folder-chat",
       },
     ],
   });
@@ -59,7 +57,7 @@ function grid(ui) {
     className: `${family}__main ${group}__main drive-popup`,
     radio: _a.parent,
     debug: __filename,
-    kids: [header, tooltips, splitBody, dialog],
+    kids: [header, tooltips, tabBar(ui), splitBody, dialog],
   });
-};
+}
 module.exports = grid;
