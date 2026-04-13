@@ -199,7 +199,7 @@
     max-width: 100%;
     &.me {
       background-color: var(--private, #884eff);
-      border-radius: 16px 16px 0 16px;
+      border-radius: 16px 0 16px 16px;
       align-self: flex-end;
       .note-content { color: #E4E3FF; }
     }
@@ -225,7 +225,7 @@
   .lib-messenger__container {
     background-color: #0b0a21;
     border-radius: 8px;
-    padding: 10px 12px;
+    padding: 5px 7px;
   }
   .lib-messenger__content {
     background-color: transparent;

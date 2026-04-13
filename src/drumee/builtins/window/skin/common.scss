@@ -352,6 +352,8 @@
   .widget-chat__body {
     flex: 1;
     min-height: 0;
+    padding: 16px;
+    gap: 16px;
   }
 
   .widget-chat_chat_footer {
@@ -362,15 +364,36 @@
     width: 100%;
     min-width: 0;
     gap: 0;
+    padding: 16px;
 
     .widget-chat__messenger-wrapper {
       width: 100%;
       min-width: 0;
+      border-top: none;
     }
 
     .widget-chat__message-options-wrapper {
       width: 100%;
       min-width: 0;
+    }
+
+    .lib-messenger__container {
+      align-items: center;
+    }
+
+    .lib-messenger__icon {
+      margin: 0;
+      padding: 0;
+      height: auto;
+      width: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
     }
   }
 }

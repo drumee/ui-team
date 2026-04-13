@@ -126,7 +126,7 @@
     max-width: 100%;
     &.me {
       background-color: var(--share, #dd820b);
-      border-radius: 16px 16px 0 16px;
+      border-radius: 16px 0 16px 16px;
       align-self: flex-end;
       .note-content { color: #E4E3FF; }
     }
