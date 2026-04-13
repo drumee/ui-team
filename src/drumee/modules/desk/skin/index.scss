@@ -31,12 +31,21 @@ html {
     overflow: auto;
   }
 
-  &__context-box {
-    z-index: 7000;
+  &__panel-container {
+    z-index: 10001;
     width: 0;
     top: 0;
     bottom: 0;
     overflow: visible;
+  }
+
+  &__panel-inner {
+    position: absolute;
+    width: 0;
+    overflow: visible;
+    height: 100%;
+    top: 0;
+    bottom: 0;
   }
 
   &__activity-container {

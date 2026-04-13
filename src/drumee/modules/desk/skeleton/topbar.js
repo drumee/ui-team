@@ -1,4 +1,3 @@
-const { userMenu } = require("builtins/skeleton/toolkit/user");
 
 /**
  * Topbar — left to right:

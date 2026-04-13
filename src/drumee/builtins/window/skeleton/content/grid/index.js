@@ -1,5 +1,5 @@
 const { button } = require("../../../../skeleton/toolkit/buttons");
-const { createMenu } = require("../../../skeleton/toolkit/index");
+const { dropdownMenuButton } = require("../../../skeleton/toolkit/index");
 const __media_skl_grid = function (ui) {
   const type = ui.mget(_a.type);
 
@@ -67,6 +67,8 @@ const __media_skl_grid = function (ui) {
   });
 
   const isVisible = ui.fig.name !== "trash";
+  const cnWindowButton = "window-button";
+  const cnWindowBody = "window-body";
 
   const a = {
     kind: KIND.box,
@@ -75,34 +77,52 @@ const __media_skl_grid = function (ui) {
     className: `${ui.fig.group}__icons-container`,
     kids: [
       filterBar,
-      list,
       ...(isVisible
         ? [
-          createMenu(ui, {
-            triggerIco: "editbox_list-plus",
-            sys_pn: "create-menu",
-            items: [
-              { service: "meeting", ico: "dock-note", content: "Note" },
-              {
-                service: "webinar",
-                ico: "raw-documents_word",
-                content: "Document",
-              },
-              {
-                service: "channel",
-                ico: "raw-documents_excel",
-                content: "Spreadsheet",
-              },
-              {
-                service: "channel",
-                ico: "raw-documents_powerpoint",
-                content: "Presentation",
-              },
-              { service: "channel", ico: "dock-folder", content: "Folder" },
-            ],
-          }),
-        ]
+            Skeletons.Box.X({
+              className: `${cnWindowBody}__buttons-container`,
+              kids: [
+                dropdownMenuButton(ui, {
+                  className: cnWindowButton,
+
+                  trigger: Skeletons.Button.Label({
+                    className: `${cnWindowButton}__label-button secondary`,
+                    label: "Add new",
+                    ico: "editbox_list-plus",
+                    uiHandler: ui,
+                    partHandler: ui,
+                  }),
+
+                  menuItems: [
+                    { service: "meeting", ico: "dock-note", content: "Note" },
+                    {
+                      service: "webinar",
+                      ico: "raw-documents_word",
+                      content: "Document",
+                    },
+                    {
+                      service: "channel",
+                      ico: "raw-documents_excel",
+                      content: "Spreadsheet",
+                    },
+                    {
+                      service: "channel",
+                      ico: "raw-documents_powerpoint",
+                      content: "Presentation",
+                    },
+                    {
+                      service: "channel",
+                      ico: "dock-folder",
+                      content: "Folder",
+                    },
+                  ],
+                }),
+              ],
+            }),
+          ]
         : []),
+      list,
+      ,
     ],
   };
 

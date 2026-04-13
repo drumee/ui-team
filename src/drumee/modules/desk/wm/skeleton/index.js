@@ -1,3 +1,5 @@
+const { dropdownMenuButton } = require("./dropdown-btn");
+
 const _icons_list = function (ui) {
   const a = Skeletons.List.Smart({
     className: `${ui.fig.family}__icons-list`,
@@ -39,6 +41,8 @@ const ___window_manager = function (ui) {
     bugReportLabel = LOCALE.BUG_REPORTS;
   }
 
+  const cnWindowMangerActions = `${ui.fig.family}-actions`;
+
   const a = Skeletons.Box.Y({
     sys_pn: "wm-container",
     className: `${ui.fig.family}__main desk-window-wrapper`,
@@ -49,6 +53,41 @@ const ___window_manager = function (ui) {
     kids: [
       Skeletons.FileSelector({
         partHandler: ui,
+      }),
+
+      Skeletons.Box.X({
+        className: `${ui.fig.family}-actions__buttons-wrapper`,
+        kids: [
+          dropdownMenuButton(ui, {
+            className: cnWindowMangerActions,
+
+            trigger: Skeletons.Button.Label({
+              className: `${cnWindowMangerActions}__label-button secondary`,
+              label: "Add new",
+              ico: "editbox_list-plus",
+              uiHandler: ui,
+              partHandler: ui,
+            }),
+
+            menuItems: [
+              {
+                service: "new-sub-folder",
+                ico: "dock-folder",
+                content: LOCALE.NEW_SUB_FOLDER,
+              },
+              {
+                service: "new-workspace",
+                ico: "desktop_desktop",
+                content: LOCALE.NEW_WORKSPACE,
+              },
+              {
+                service: "new-file",
+                ico: "desktop_docfile",
+                content: LOCALE.NEW_FILE,
+              },
+            ],
+          }),
+        ],
       }),
 
       _icons_list(ui),

@@ -92,15 +92,16 @@ export function tooltips(ui) {
 export function dialog(ui) {
   return Skeletons.Wrapper.Y({
     className: `${ui.fig.group}__wrapper-container`,
-    name: "tooltips",
+    name: "dialog",
   });
 }
 
 /**
  * @typedef {{ service: string, ico: string, content: string }} MenuItem
  * @typedef {{
- *   items?: MenuItem[],
+ *   menuItems?: MenuItem[],
  *   triggerIco?: string,
+ *   trigger?: any,
  *   sys_pn?: string,
  *   className?: string
  * }} MenuOptions
@@ -110,89 +111,26 @@ export function dialog(ui) {
  * @param {any} ui
  * @param {MenuOptions} opt
  */
-export function createMenu(ui, opt = {}) {
-  const cnWindowCreateMenu = opt.className ?? "window-create-menu";
-  const cnDropdown = `${cnWindowCreateMenu}__dropdown-menu`;
-
-  const items = opt.items ?? [];
-  const triggerIco = opt.triggerIco ?? "editbox_list-plus";
-  const sys_pn = opt.sys_pn ?? "meeting-menu";
-
-  const trigger = Skeletons.Button.Svg({
-    className: `${cnWindowCreateMenu}__dropdown-button`,
-    ico: triggerIco,
-    uiHandler: ui,
-    partHandler: ui,
-  });
-
-  const menuItems = Skeletons.Box.Y({
-    className: `${cnDropdown}__items`,
-    kids: items.map(({ service, ico, content }) =>
-      Skeletons.Box.X({
-        className: `${cnDropdown}__item`,
-        uiHandler: ui,
-        service,
-        kids: [
-          Skeletons.Button.Svg({
-            ico,
-            className: `${cnDropdown}__icon`,
-          }),
-          Skeletons.Note({
-            content,
-            className: `${cnDropdown}__name`,
-          }),
-        ],
-      }),
-    ),
-  });
-
-  return {
-    kind: KIND.menu.topic,
-    sys_pn,
-
-    className: `${cnDropdown}__wrapper`,
-
-    flow: _a.y,
-    opening: _e.click,
-    persistence: _a.none,
-
-    trigger,
-    items: menuItems,
-  };
-}
-
-/**
- * @typedef {{ service: string, ico: string, content: string }} MenuItem
- * @typedef {{
- *   items?: MenuItem[],
- *   triggerIco?: string,
- *   sys_pn?: string,
- *   className?: string
- * }} MenuOptions
- */
-
-/**
- * @param {any} ui
- * @param {MenuOptions} opt
- */
-export function meetingMenu(ui, opt = {}) {
-  const cnRoot = opt.className ?? "window-topbar-actions";
+export function dropdownMenuButton(ui, opt = {}) {
+  const cnRoot = opt.className ?? "window-button";
   const cnDropdown = `${cnRoot}__dropdown-menu`;
 
-  const items = opt.items ?? [];
-  const triggerIco = opt.triggerIco ?? "desktop_confcalls";
-  const sys_pn = opt.sys_pn ?? "meeting-menu";
+  const menuItems = opt.menuItems ?? [];
+  const triggerIco = opt.triggerIco ?? "desktop_questionmark";
+  const sys_pn = opt.sys_pn ?? "empty_sys_pn";
 
-  const trigger = Skeletons.Button.Svg({
-    className: `${cnRoot}__dropdown-button`,
-    ico: triggerIco,
-    uiHandler: ui,
-    partHandler: ui,
-  });
+  const trigger =
+    opt.trigger ??
+    Skeletons.Button.Svg({
+      className: `${cnRoot}__dropdown-button`,
+      ico: triggerIco,
+      uiHandler: ui,
+      partHandler: ui,
+    });
 
-  const menuItems = Skeletons.Box.Y({
+  const itemsNode = Skeletons.Box.Y({
     className: `${cnDropdown}__items`,
-    kids: items.map(({ service, ico, content }) =>
+    kids: menuItems.map(({ service, ico, content }) =>
       Skeletons.Box.X({
         className: `${cnDropdown}__item`,
         uiHandler: ui,
@@ -222,6 +160,91 @@ export function meetingMenu(ui, opt = {}) {
     persistence: _a.none,
 
     trigger,
-    items: menuItems,
+    items: itemsNode,
   };
+}
+
+
+function getChatLabel(ui) {
+  const name = ui.mget(_a.filename) || ui.mget(_a.name) || '';
+  return name ? `${name} - ${LOCALE.CHAT}` : 'FOLDER-SCOPED CHAT';
+}
+
+/**
+ * 
+ * @param {Chat Panel} ui 
+ * @returns 
+ */
+export function chatPanel(ui) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.group}__chat-panel`,
+    sys_pn: 'chat-panel',
+    kids: [
+      Skeletons.Note({
+        className: `${ui.fig.group}__chat-label`,
+        content: getChatLabel(ui),
+      }),
+      {
+        kind: 'widget_chat',
+        className: `${ui.fig.group}__chat-widget`,
+        type: _a.share,
+        view: 'quickChat',
+        hub_id: ui.mget(_a.hub_id),
+        placeholder: 'Type a message...',
+        no_emoji: true,
+        send_icon: 'raw-send-chat',
+        sys_pn: 'folder-chat',
+      },
+    ],
+  });
+
+}
+
+/**
+ * 
+ * @param {*} ui 
+ * @returns 
+ */
+export function iconsContainer(ui) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__body ${ui.fig.group}__body`,
+    sys_pn: _a.content,
+    type: _a.type,
+  });
+}
+
+
+/**
+ * 
+ * @param {*} ui 
+ * @returns 
+ */
+export function splitBody(ui) {
+  return Skeletons.Box.X({
+    className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
+    kids: [iconsContainer(ui), chatPanel(ui)],
+  });
+}
+
+
+/**
+ * 
+ * @param {*} ui 
+ * @returns 
+ */
+export function windowHeader(ui, topbar) {
+  return Skeletons.Box.X({
+    debug: __filename,
+    className: `${ui.fig.family}__header ${ui.fig.group}__header`,
+    sys_pn: "window-header",
+    kidsOpt: {
+      radio: _a.on,
+      uiHandler: ui,
+    },
+    service: _e.raise,
+    kids: [
+      topbar
+    ],
+  });
+
 }

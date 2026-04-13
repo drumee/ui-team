@@ -2,8 +2,7 @@
 
 .widget-contacts {
   &__ui {
-    background-color: var(--default-block-background);
-    width: calc(100% - 2px);
+    background-color: var(--normal-bg-90);
 
     &[data-device="mobile"] {
       padding: 20px 20px 40px;
@@ -21,7 +20,7 @@
       @include drumee.typo(
         $size: 15px,
         $line: 16px,
-        $color: var(--ab-default-text-title)
+        $color: var(--normal-fg-10)
       );
     }
 
@@ -39,8 +38,7 @@
   }
 
   &__separator {
-    background-color: var(--default-separator);
-    border-radius: 1px;
+    background-color: var(--normal-fg-10);
     height: 1px;
     width: 100%;
   }
@@ -111,6 +109,7 @@
     height: 100%;
     overflow: hidden;
     width: 100%;
+    border: 1px solid var(--neutral-800);
   }
 
   .drumee-spinner {

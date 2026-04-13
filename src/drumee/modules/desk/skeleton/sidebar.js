@@ -1,3 +1,5 @@
+const { userMenu } = require("../../../builtins/skeleton/toolkit/user");
+
 /**
  * Sidebar module (refactored)
  */
@@ -26,7 +28,6 @@ const createNavItem = (ui, ico, label, service = "") => {
       Skeletons.Button.Svg({
         ico,
         className: cls(fig, "item-icon"),
-        uiHandler: ui,
       }),
       createText(fig, "item-text", label),
     ],
@@ -67,8 +68,9 @@ const createFooter = (ui, username) => {
     className: cls(fig, "footer"),
     kids: [
       createNavItem(ui, "storage", LOCALE.APPS),
-      createNavItem(ui, "settings", LOCALE.SETTINGS),
-
+      createNavItem(ui, "settings", LOCALE.SETTINGS, 'toggle-settings'),
+      // userMenu(ui)
+      // Skeletons.UserProfile({ auto_color:1, oneLetter:1, className: cls(fig, "footer-user-btn") }),
       Skeletons.Box.X({
         className: cls(fig, "footer-user-btn"),
         kids: [
@@ -109,7 +111,7 @@ const createNav = (ui) => {
           createNavItem(ui, "ab_address", LOCALE.HOME, _e.home),
           createNavItem(ui, "bell", LOCALE.NOTIFICATIONS, 'toggle-activity'),
           createNavItem(ui, "desktop_chat", LOCALE.CHAT, 'toggle-chat'),
-          createNavItem(ui, "drumee-trash", LOCALE.TRASH,  'toggle-trash'),
+          createNavItem(ui, "drumee-trash", LOCALE.TRASH, 'toggle-trash'),
         ],
       }),
 
@@ -121,13 +123,8 @@ const createNav = (ui) => {
 // ---------- Export ----------
 module.exports = function (ui) {
   const fig = getSidebarFig(ui);
-
-  return Skeletons.Box.X({
-    kids: [
-      Skeletons.Box.Y({
-        className: cls(fig, "main"),
-        kids: [createNav(ui), createFooter(ui, Visitor.firstname())],
-      }),
-    ],
-  });
+  return Skeletons.Box.Y({
+    className: cls(fig, "main"),
+    kids: [createNav(ui), createFooter(ui, Visitor.firstname())],
+  })
 };

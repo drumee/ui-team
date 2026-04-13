@@ -17,6 +17,10 @@
     }
   }
 
+  &__main {
+    background-color: var(--default-background);
+  }
+
   &__container {
     background-color: inherit;
   }
@@ -28,6 +32,7 @@
     min-width: auto !important;
     overflow: hidden;
     width: 100% !important;
+    border-radius: 0 0 24px 24px;
 
     &.window__body {
       padding: 0;
@@ -35,12 +40,14 @@
   }
 
   &__header {
-    background-color: var(--normal-bg-100);
+    background-color: var(--bigchat-header-bg);
     border-bottom: none;
   }
 
   &-topbar {
     &__container {
+      justify-content: space-between;
+      padding: 0 var(--spacer-8);
       &[data-device="mobile"] {
         gap: var(--spacer-4);
         justify-content: center;
@@ -124,13 +131,6 @@
     }
   }
 
-  &__icon {
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
   &__max-view {
     height: 100%;
     width: 100%;
@@ -141,7 +141,7 @@
     }
 
     .widget-tag__note.title {
-      color: var(--normal-fg-10);
+      color: var(--bigchat-default-text-title);
     }
   }
 
@@ -173,10 +173,10 @@
     &:hover {
       background: var(--default-background-hover);
 
-      color: var(--normal-fg-10) !important;
+      color: var(--default-text-hover) !important;
 
       & .addressbook-widget-tag-item__container {
-        color: var(--normal-fg-10) !important;
+        color: var(--default-text-hover) !important;
       }
 
       & .addressbook-widget-tag-item__name {
@@ -204,11 +204,12 @@
   }
 
   &__max-content {
-    background: var(--normal-bg-90);
+    background: var(--default-background);
     height: 100%;
     justify-content: center;
     overflow: hidden;
     width: 100%;
+    padding-bottom: var(--spacer-4);
   }
 
   &__sharechat_notify[data-state="0"] {

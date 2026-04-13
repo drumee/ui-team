@@ -61,7 +61,13 @@
   }
 }
 
-.window-topbar-actions {
+.window-body {
+  &__buttons-container {
+    padding: var(--spacer-4) var(--spacer-6) 0;
+  }
+}
+
+.window-button {
   &__buttons-wrapper {
     gap: var(--spacer-4);
   }
@@ -83,6 +89,14 @@
     }
     &:hover {
       color: var(--normal-fg-20);
+    }
+    &.primary {
+      color: var(--normal-fg-10);
+      background-color: var(--normal-bg-90);
+    }
+    &.secondary {
+      color: var(--normal-bg-100);
+      background-color: var(--primary-400);
     }
   }
 
@@ -118,20 +132,13 @@
     &:hover {
       color: var(--normal-fg-20);
     }
-  }
-
-  &__dropdown-button {
-    cursor: pointer;
-    background-color: var(--normal-bg-90);
-    color: var(--normal-fg-10);
-    padding: var(--spacer-2) var(--spacer-4);
-    border-radius: var(--corner-radius-2);
-    svg {
-      width: 24px;
-      height: 20px;
+    &.primary {
+      color: var(--normal-fg-10);
+      background-color: var(--normal-bg-90);
     }
-    &:hover {
-      color: var(--normal-fg-20);
+    &.secondary {
+      color: var(--normal-bg-100);
+      background-color: var(--primary-400);
     }
   }
 
@@ -146,6 +153,7 @@
 
         &__wrapper {
           padding: var(--spacer-4);
+          z-index: 99999 !important;
 
           &[data-device="mobile"] {
             left: 50%;
@@ -171,7 +179,7 @@
         background-color: var(--primary-500);
         color: var(--white);
 
-        .window-topbar-actions__dropdown-menu__name {
+        .window-button__dropdown-menu__name {
           color: var(--white);
         }
 
@@ -207,6 +215,26 @@
 }
 
 .window-create-menu {
+  &__label-button {
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacer-3) var(--spacer-6);
+    color: var(--normal-fg-10);
+    background-color: var(--normal-bg-90);
+    border-radius: var(--corner-radius-2);
+    font-size: 14px;
+    display: flex;
+    gap: var(--spacer-2);
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+    &:hover {
+      color: var(--normal-fg-20);
+    }
+  }
+
   &__dropdown-button {
     cursor: pointer;
     background-color: var(--normal-fg-20);
@@ -225,6 +253,7 @@
   &__dropdown-menu {
     &__wrapper {
       align-items: end;
+      padding-bottom: var(--spacer-4);
       .menu-topic-trigger {
         right: var(--spacer-10);
       }
@@ -313,6 +342,109 @@
       color: var(--normal-fg-20);
     }
   }
+}
+
+// Shared window chat column (DOM: ui.fig.group === "window" → .window__chat-*)
+.window__chat-panel {
+  box-sizing: border-box;
+  flex: 0 1 300px;
+  width: 250px;
+  min-width: 200px;
+  max-width: 250px;
+  display: flex;
+  flex-direction: column;
+  border-left: 4px solid #e4e3ff14;
+  background-color: transparent;
+  overflow: hidden;
+
+  &[data-active="0"] {
+    display: none;
+  }
+
+  // Footer stack: messenger + attachments + message-options (skeleton: widget-chat_chat_footer)
+  .widget-chat__main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    height: auto;
+  }
+
+  .widget-chat__container {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    height: 100%;
+  }
+
+  .widget-chat__body {
+    flex: 1;
+    min-height: 0;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .widget-chat_chat_footer {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 100%;
+    min-width: 0;
+    gap: 0;
+    padding: 16px;
+
+    .widget-chat__messenger-wrapper {
+      width: 100%;
+      min-width: 0;
+      border-top: none;
+    }
+
+    .widget-chat__message-options-wrapper {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .lib-messenger__container {
+      align-items: center;
+    }
+
+    .lib-messenger__icon {
+      margin: 0;
+      padding: 0;
+      height: auto;
+      width: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+}
+
+// Note reader + .note-content (aligned with .window-filter__bar)
+.window__chat-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-6);
+  padding: var(--spacer-4) var(--spacer-6);
+  color: var(--normal-fg-10);
+  flex-shrink: 0;
+
+  .note-content {
+    color: inherit;
+  }
+}
+
+.window__chat-widget {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .window-menu {

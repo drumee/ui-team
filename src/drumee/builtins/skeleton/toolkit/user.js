@@ -104,7 +104,7 @@ export function userMenu(ui, sys_pn) {
     debug: __filename,
     kids: [
       {
-        kind: KIND.menu.topic,
+        kind: 'menu_topic',
         className: `${pfx}-content`,
         flow: _a.y,
         opening: _e.click,
@@ -112,6 +112,7 @@ export function userMenu(ui, sys_pn) {
         sys_pn: "user-dropdown",
         persistence: _a.once,
         trigger,
+        direction:_a.up,
         items: menu_items(ui),
         offsetY: 20,
       },

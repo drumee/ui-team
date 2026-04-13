@@ -46,7 +46,8 @@
     &[data-scroll="x"] {
       overflow-x: auto;
       scrollbar-width: thin;
-      scrollbar-color: var(--default-scrollbar-color) var(--default-scrollbar-white);
+      scrollbar-color: var(--default-scrollbar-color)
+        var(--default-scrollbar-white);
     }
 
     .ui-resizable-e {
@@ -65,11 +66,9 @@
   }
 
   &-filter__tab {
-
     &[data-radiotoggle="on"] {
-      background-color:var(--normal-bg-10);
+      background-color: var(--normal-bg-10);
     }
-
   }
 
   &__body {
@@ -77,14 +76,15 @@
     margin: 0 auto;
     width: 100%;
     height: calc(100% - var(--header-height));
-    border-radius: var(--border-radius-bottom);
+    border-radius: 0 0 var(--corner-radius-5) var(--corner-radius-5);
     overflow: hidden;
     z-index: 100;
 
     &[data-scroll="x"] {
       overflow-x: auto;
       scrollbar-width: thin;
-      scrollbar-color: var(--default-scrollbar-color) var(--default-scrollbar-white);
+      scrollbar-color: var(--default-scrollbar-color)
+        var(--default-scrollbar-white);
     }
 
     .ui-resizable-e {
@@ -127,9 +127,11 @@
       }
 
       &[data-type="evaluation"]::after {
-        @include drumee.typo($size: 22px,
+        @include drumee.typo(
+          $size: 22px,
           $line: 1.3,
-          $color: var(--default-text-title));
+          $color: var(--default-text-title)
+        );
       }
     }
 

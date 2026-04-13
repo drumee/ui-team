@@ -67,7 +67,7 @@ class desk_module extends LetcBox {
   async loadDefault() {
     this._pending = { available: false };
     await Kind.waitFor("window_manager");
-    await Kind.waitFor("activity_panel");
+    await Kind.waitFor("panel_activity");
     await Kind.waitFor("activity_item");
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
@@ -521,13 +521,48 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * 
+   * @param {*} kind 
+   */
+  _loadKind(p, kind) {
+    p.feed({
+      kind,
+      uiHandler: [this]
+    })
+    this.ensurePart("activity-panel").then((p) => {
+      p.setState(0);
+    });
+    this._pendingKind = kind;
+  }
+  /**
+   * 
+   */
+
+  togglePanel(kind, trigger) {
+    return this.ensurePart("trash-panel").then((p) => {
+      if (p.isEmpty()) {
+        this._loadKind(p, kind)
+      } else {
+        if (this._pendingKind == kind) {
+          p.children.last().el.dataset.position = "0";
+          setTimeout(() => {
+            p.clear()
+          }, 500)
+        } else {
+          this._loadKind(p, kind)
+        }
+      }
+    });
+  }
+
+  /**
    *
    * @param {*} cmd
    * @param {*} args
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
-    this.debug(`SERVICE=${service}`, args);
+    this.debug(`SERVICE=${service}`, cmd, args);
     if (pointerDragged || !window.Wm) {
       return;
     }
@@ -556,25 +591,21 @@ class desk_module extends LetcBox {
 
       case "toggle-activity":
         return this.ensurePart("activity-panel").then((p) => {
-          this.debug("AAA:555", p)
-          p.togglePannel();
-        });
-
-      case "toggle-trash":
-        return this.ensurePart("trash-panel").then((p) => {
-          if (p.isEmpty()) {
-            p.feed({
-              kind: 'pannel_trash',
-              service: "open-node",
-              trigger: cmd,
-              uiHandler: [this]
+          p.toggleState();
+          if (p.mget(_a.state)) {
+            this.ensurePart("trash-panel").then((p) => {
+              p.clear()
             })
-            // RADIO_BROADCAST.trigger("breadcrumb:context", { hub_id: Visitor.id, filename: LOCALE.TRASH });
-          } else {
-            p.clear()
-            // RADIO_BROADCAST.trigger("breadcrumb:context");
           }
         });
+
+      case "toggle-settings":
+        this.debug("AAA:585", cmd)
+        return this.togglePanel('settings_account', cmd)
+        return;
+
+      case "toggle-trash":
+        return this.togglePanel('panel_trash', cmd)
 
       case "open-contact-manager":
         return Wm.launch(
@@ -670,8 +701,8 @@ class desk_module extends LetcBox {
       //     p.el.dataset.count = content;
       //   });
 
-      default:
-        Wm.unselect();
+      // default:
+      // Wm.unselect();
     }
   }
 
