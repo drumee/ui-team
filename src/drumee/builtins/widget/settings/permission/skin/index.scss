@@ -1,4 +1,4 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .settings-permission {
   &__ui {
@@ -14,7 +14,7 @@
     align-items: flex-start;
     padding: 0px;
     box-shadow: -24px 0px 48px rgba(0, 0, 0, 0.5);
-    transition: right .5s;
+    transition: right 0.5s;
     border-radius: var(--spacer-4);
 
     &[data-position="0"] {
@@ -24,9 +24,7 @@
     &[data-position="1"] {
       right: 0;
     }
-
   }
-
 
   // ── Main wrapper ──────────────────────────────────────────────
   &__main {
@@ -59,7 +57,7 @@
     font-size: 20px;
     font-weight: 700;
     line-height: 28px;
-    color: var(--gray-white);
+    color: var(--normal-fg-10);
   }
 
   &__subtitle {
@@ -77,23 +75,22 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    opacity: 0.7;
 
     svg {
       width: 18px;
       height: 18px;
-      color: var(--gray-white);
+      color: var(--normal-fg-10);
     }
 
     &:hover {
-      opacity: 1;
+      color: var(--normal-fg-20);
     }
   }
 
   // ── Divider ───────────────────────────────────────────────────
   &__divider {
     border: none;
-    border-top: 1px solid var(--primary-purple-80);
+    border-top: 1px solid var(--normal-bg-100);
     margin: 0 0 20px 0;
     width: 100%;
   }
@@ -111,15 +108,14 @@
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--neutral-500);
+    color: var(--normal-fg-10);
     margin-bottom: 2px;
   }
 
   &__email-input {
     width: 100%;
     border-radius: 8px;
-    background-color: var(--primary-purple-80);
-    border: 1px solid var(--primary-purple-80);
+    background-color: var(--normal-bg-100);
     padding: 12px 14px;
     box-sizing: border-box;
 
@@ -142,14 +138,14 @@
 
   &__send-btn {
     width: 100%;
-    padding: 14px 0;
+    padding: 12px 14px;
     background-color: var(--primary-40);
-    color: var(--gray-white);
+    color: var(--normal-fg-10);
     font-size: 15px;
     font-weight: 600;
     line-height: 20px;
     text-align: center;
-    border-radius: 8px;
+    border-radius: var(--corner-radius-2);
     cursor: pointer;
     transition: background-color 120ms ease;
     box-sizing: border-box;
@@ -182,5 +178,11 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+  }
+}
+
+.window__wrapper-modal {
+  &[data-state="open"] {
+    border-radius: var(--corner-radius-5);
   }
 }

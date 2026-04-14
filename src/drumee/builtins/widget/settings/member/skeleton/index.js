@@ -1,4 +1,3 @@
-
 module.exports = function (ui) {
   const prefix = ui.fig.family;
   let fname = ui.mget(_a.firstname) || "";
@@ -7,14 +6,14 @@ module.exports = function (ui) {
   const displayName = ui.mget(_a.surname) || ui.mget("display");
   const type = ui.mget(_a.type);
   const email = ui.email || ui.tooltips || ui.mget(_a.email) || "";
-  let surname = ""
+  let surname = "";
   if (ui.mget(_a.id) == Visitor.id) {
     fname = "Me";
     lname = "Myself";
     fullname = "Me";
     surname = "Me";
-  }else{
-    surname =`${fname} ${lname}`.trim()
+  } else {
+    surname = `${fname} ${lname}`.trim();
   }
   let profile_icon;
   if (ui.mget("is_drumate")) {
@@ -26,9 +25,9 @@ module.exports = function (ui) {
       fullname,
       online: ui.mget(_a.online),
       live_status: 1,
-      surname
-    }
-    ui.debug("AAA:26", opt)
+      surname,
+    };
+    ui.debug("AAA:26", opt);
     profile_icon = Skeletons.UserProfile(opt);
   } else {
     profile_icon = Skeletons.Button.Svg({
@@ -39,8 +38,6 @@ module.exports = function (ui) {
 
   // Resolve permission label based on privilege value (similar to permission/index.js)
   const resolveLabel = (p) => {
-
-
     // Check owner first
     if (ui.isMediaOwner()) {
       return LOCALE.OWNER;
@@ -53,12 +50,18 @@ module.exports = function (ui) {
 
     // Check delete/modify (all permissions)
     if (ui.canOrganize()) {
-      return LOCALE.PERMISSION_DELETE_ORGANIZE || LOCALE.ALL_PERMISSIONS || "All permissions";
+      return (
+        LOCALE.PERMISSION_DELETE_ORGANIZE ||
+        LOCALE.ALL_PERMISSIONS ||
+        "All permissions"
+      );
     }
 
     // Check write/upload (upload and download)
     if (ui.canUpload()) {
-      return LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only";
+      return (
+        LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only"
+      );
     }
 
     // Check read/view (download only)
@@ -68,7 +71,6 @@ module.exports = function (ui) {
 
     return LOCALE.PERMISSION_READ || "Download only";
   };
-
 
   const info = Skeletons.Box.Y({
     className: `${prefix}__info`,
@@ -86,8 +88,6 @@ module.exports = function (ui) {
       }),
     ],
   });
-
-
 
   let arrow = Skeletons.Button.Svg({
     ico: "arrow--pages",
@@ -112,10 +112,9 @@ module.exports = function (ui) {
         className: `${prefix}__permission-label`,
         active: 0,
       }),
-      arrow
+      arrow,
     ],
   });
-
 
   return Skeletons.Box.X({
     className: `${prefix}__item ${type || ""}`,
