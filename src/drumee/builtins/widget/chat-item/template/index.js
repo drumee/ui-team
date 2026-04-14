@@ -10,13 +10,13 @@ module.exports = function (ui) {
     body = require('./call-stat')(m)
   } else {
     body = require('./conversation')(m);
-    if (m.type == _a.share && m.author != _a.me) {
+    if (m.area == _a.share && m.author != _a.me) {
       let uname = require('./username')(m);
       body = `${uname}${body}`;
     }
   }
   const footer = require('./footer')(m);
-  let content = `<div data-type="${m.type}" id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${body} ${footer}</div>`
+  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${body} ${footer}</div>`
   html = `${content}`;
   return html;
 };    

@@ -4,7 +4,7 @@ require('./skin');
 class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
-    opt.dataset = { ...opt.dataset, position: "0" }
+    opt.dataset = { ...opt.dataset, anim: "out" }
     super.initialize(opt);
     this.declareHandlers();
     this.isTrash = 1;
@@ -27,10 +27,10 @@ class __panel_trash extends mfsInteract {
   onPartReady(child, pn) {
     switch (pn) {
       case _a.list:
-        child.on(_e.eod, async () => {
+        child.once(_e.eod, async () => {
           this.ensurePart('items-count').then((p) => {
             p.set({ content: LOCALE.X_ITEMS_FOUND.format(child.collection.length) })
-            this.el.dataset.position = "1";
+            this.el.dataset.anim = "in";
           })
         })
         break;

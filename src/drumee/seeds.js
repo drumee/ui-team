@@ -32,6 +32,9 @@ module.exports = {
   chat_contact_list: function () {
     return import("./builtins/window/bigchat/widget/chatcontact-list");
   },
+  chat_p2p: function () {
+    return import("./builtins/widget/chat-p2p");
+  },
   chat_room: function () {
     return import("./builtins/window/bigchat/widget/chat-room");
   },
@@ -292,7 +295,7 @@ module.exports = {
   },
   widget_chat: function () {
     // return import("./builtins/chat/hub");
-    return import("widget/chat");
+    return import("./builtins/widget/chat");
   },
   widget_contact_detail: function () {
     return import("./builtins/window/addressbook/widget/contact-detail");

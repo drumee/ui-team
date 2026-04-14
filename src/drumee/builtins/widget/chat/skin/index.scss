@@ -39,6 +39,10 @@
     }
   }
 
+  /** Used to cache profile image*/
+  &__avatar-cache {
+    display: none;
+  }
 
   &__chat-content {
     height: 100%;
@@ -120,14 +124,8 @@
       height: 100%;
     }
 
-    &[data-type="evaluation"]::after {
-      @include drumee.license-trial();
-      @include drumee.typo($size: 18px,
-        $line: 1.3,
-        $color: var(--default-text-title));
-      top: 0;
-      transform: none;
-      width: 100%;
+    &[data-area="personal"] {
+      background-color: var(--normal-bg-100);
     }
   }
 
@@ -355,6 +353,7 @@
     @include drumee.typo($size: 13px,
       $line: 12px,
       $color: var(--btn-rollback-text));
+    width: 100%;
 
     &:hover {
       border: 2px solid var(--btn-rollback-border-hover);

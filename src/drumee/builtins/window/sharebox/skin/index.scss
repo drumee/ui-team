@@ -105,66 +105,66 @@
 }
 
 // Scoped message bubble styles for sharebox chat panel
-.window-sharebox .window__chat-panel {
-  .widget-chat__ui {
-    background-color: transparent;
-  }
-  .widget-chatItem__ui {
-    background-color: transparent;
-  }
-  .widget-chatItem__main {
-    &.me, &.other {
-      background-color: transparent;
-      border: none;
-      border-radius: 0;
-      padding: 0;
-    }
-  }
-  .widget-chatItem__conversation-content {
-    padding: 8px 12px;
-    width: fit-content;
-    max-width: 100%;
-    &.me {
-      background-color: var(--share, #dd820b);
-      border-radius: 16px 0 16px 16px;
-      align-self: flex-end;
-      .note-content { color: #E4E3FF; }
-    }
-    &.other {
-      background-color: #0B0A21;
-      border-radius: 0 16px 16px 16px;
-      align-self: flex-start;
-      .note-content { color: #FAF6FF; }
-    }
-  }
-  .widget-chatItem__message-date {
-    color: #84848C;
-    font-size: 8px;
-  }
-  .widget-chatItem__date-of-day-content {
-    color: #C6BFFF;
-    font-size: 10px;
-    font-weight: 600;
-  }
-  .lib-messenger__icon.attach {
-    display: none;
-  }
-  .lib-messenger__container {
-    background-color: #0b0a21;
-    border-radius: 8px;
-    padding: 10px 12px;
-  }
-  .lib-messenger__content {
-    background-color: transparent;
-  }
-  .lib-messenger__main {
-    background-color: #0b0a21;
-    border-radius: 8px;
-  }
-  .lib-messenger__content .note-content {
-    color: #E4E3FF;
-    &:empty:before {
-      color: #6b7280;
-    }
-  }
-}
+// .window-sharebox .window__chat-panel {
+//   .widget-chat__ui {
+//     background-color: transparent;
+//   }
+//   .widget-chatItem__ui {
+//     background-color: transparent;
+//   }
+//   .widget-chatItem__main {
+//     &.me, &.other {
+//       background-color: transparent;
+//       border: none;
+//       border-radius: 0;
+//       padding: 0;
+//     }
+//   }
+//   .widget-chatItem__conversation-content {
+//     padding: 8px 12px;
+//     width: fit-content;
+//     max-width: 100%;
+//     &.me {
+//       background-color: var(--share, #dd820b);
+//       border-radius: 16px 0 16px 16px;
+//       align-self: flex-end;
+//       .note-content { color: #E4E3FF; }
+//     }
+//     &.other {
+//       background-color: #0B0A21;
+//       border-radius: 0 16px 16px 16px;
+//       align-self: flex-start;
+//       .note-content { color: #FAF6FF; }
+//     }
+//   }
+//   .widget-chatItem__message-date {
+//     color: #84848C;
+//     font-size: 8px;
+//   }
+//   .widget-chatItem__date-of-day-content {
+//     color: #C6BFFF;
+//     font-size: 10px;
+//     font-weight: 600;
+//   }
+//   .lib-messenger__icon.attach {
+//     display: none;
+//   }
+//   .lib-messenger__container {
+//     background-color: #0b0a21;
+//     border-radius: 8px;
+//     padding: 10px 12px;
+//   }
+//   .lib-messenger__content {
+//     background-color: transparent;
+//   }
+//   .lib-messenger__main {
+//     background-color: #0b0a21;
+//     border-radius: 8px;
+//   }
+//   .lib-messenger__content .note-content {
+//     color: #E4E3FF;
+//     &:empty:before {
+//       color: #6b7280;
+//     }
+//   }
+// }

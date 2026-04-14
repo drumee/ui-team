@@ -33,6 +33,13 @@ class ___widget_chatcontactItem extends LetcBox {
 
   /**
    * 
+   */
+  getAvatarHtml(){
+    return this.__profile?.__imageBox?.el.innerHTML
+  }
+
+  /**
+   * 
    * @param {*} child 
    * @param {*} pn 
    * @param {*} section 

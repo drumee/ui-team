@@ -39,14 +39,13 @@ class __widget_chat extends LetcBox {
     this.updateChatUserStatus();
     this.queue = [];
     const area = this.mget(_a.area);
-    this.debug("AAA:42", opt, this)
     if (area === _a.personal) {
       this.hubId = Visitor.id;
-      this.entityId = this.mget(_a.hub_id);
-      this.storageKey = `${area}-${this.hubId}-${this.entityId}`;
+      this.peerId = this.mget(_a.peer_id);
+      this.storageKey = `${area}-${this.hubId}-${this.peerId}`;
     } else {
       this.hubId = this.mget(_a.hub_id);
-      this.entityId = '';
+      this.peerId = '';
     }
     this.storageKey = `${area}-${this.hubId}`;
 
@@ -638,13 +637,31 @@ class __widget_chat extends LetcBox {
     if (!items.length) {
       return;
     }
-    this.debug("AAA:664", items)
     let list = this.attachmentList;
     if (list && !list.isDestroyed()) {
       list.addNewMedia(items);
       return;
     }
     //this.attachMediaWrapper(this.__wrapperAttachment, items);
+  }
+
+  /**
+ * 
+ * @param {*} peer 
+ */
+  reload(peer) {
+    let data = { ...peer.model.toJSON() };
+    delete data.styleOpt;
+    delete data.kids;
+    delete data.widgetId;
+    delete data.x;
+    delete data.y;
+    this.hubId = data.hub_id
+    this.peerId = data.drumate_id
+    this.mset(data)
+    this.ensurePart(_a.list).then((list) => {
+      list.restart()
+    })
   }
 
   /**
@@ -658,7 +675,7 @@ class __widget_chat extends LetcBox {
     if (area === _a.personal) {
       api = {
         service: SERVICE.chat.messages,
-        entity_id: this.entityId,
+        peer_id: this.peerId,
         hub_id: this.hubId,
         order: 'desc'
       };
@@ -671,7 +688,6 @@ class __widget_chat extends LetcBox {
       hub_id: this.hubId,
       order: 'desc'
     };
-
     return api;
   }
 
@@ -726,7 +742,7 @@ class __widget_chat extends LetcBox {
       case _a.personal:
         api = {
           service: SERVICE.chat.post,
-          entity_id: this.entityId,
+          entity_id: this.peerId,
           attachment: attachments,
           message,
           hub_id: this.hubId
@@ -1010,7 +1026,7 @@ class __widget_chat extends LetcBox {
         if (!this.peer || (this.mget(_a.area) !== _a.personal)) {
           return;
         }
-        if (this.entityId !== data.entity) {
+        if (this.peerId !== data.entity) {
           return;
         }
         this.peer.is_blocked = data.is_blocked;
@@ -1023,7 +1039,7 @@ class __widget_chat extends LetcBox {
       case SERVICE.chat.forward:
       case SERVICE.channel.post_ticket:
         var hubMatch = (area === _a.share) && (this.hubId === data.hub_id);
-        var privateMach = (area === _a.personal) && (this.entityId === data.entity_id);
+        var privateMach = (area === _a.personal) && (this.peerId === data.entity_id);
         var ticketMach = (area === _a.ticket) && (data.ticket_id === this.mget('ticket_id'));
         if (hubMatch || privateMach || ticketMach) {
           this.handleReceivedMsg(data);

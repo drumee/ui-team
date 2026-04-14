@@ -4,7 +4,7 @@ const { Autolinker } = require("autolinker");
 const __chat_dod = function(m) {
   let message = Autolinker.link(m.message);
   message = message.nl2br() || ' ';
-  html = `<div class="${m.fig}__conversation-content selectable-text ${m.area} ${m.author}">${message}</div>`;
+  html = `<div data-area="${m.area}" class="${m.fig}__conversation-content selectable-text ${m.area} ${m.author}">${message}</div>`;
 
   return html;
 };

@@ -67,7 +67,6 @@
     }
 
     &.other {
-      margin-left: 32px;
 
       &.private,
       &.ticket {
@@ -76,17 +75,10 @@
     }
 
     &.me {
-      // background-color: var(--normal-bg-90);
-      // border: 1px solid var(--neutral-800);
       max-width: 85%;
-      // margin: 0 14px 0 auto;
     }
 
     &.other {
-      background-color: var(--normal-bg-90);
-      border: 1px solid var(--neutral-800);
-      box-sizing: border-box;
-      margin-left: 4px;
       max-width: 90%;
 
       &.private,
@@ -413,15 +405,50 @@
   }
 
   &__conversation-content {
+    padding: 10px 20px;
+    width: 100%;
+
     &.me {
       background-color: var(--area-personal);
+      align-self: flex-end;
+      align-self: flex-end;
       border-radius: 16px 0 16px 16px;
-      align-self: flex-end;
-      align-self: flex-end;
-      padding: 10px 20px;
+
+      &[data-area="personal"] {
+        border-radius: 16px 16px 0px 16px;
+      }
 
       &.private {
         background-color: var(--area-private);
+      }
+
+      &.share {
+        background-color: var(--area-share);
+        color: var(--normal-fg-800);
+      }
+
+      &.public {
+        color: var(--normal-fg-800);
+        background-color: var(--area-public);
+      }
+
+      &.personal {
+        background: var(--area-personal);
+      }
+    }
+
+    &.other {
+      background-color: var(--normal-bg-90);
+      border-radius: 0px 16px 16px 16px;
+
+      &[data-area="personal"] {
+        padding: 16px 18.36px 16px 16px;
+        box-shadow: var(--shadow-top-tiny);
+        border-radius: 16px 16px 16px 0px;
+      }
+
+      &[data-area="private"] {
+        background-color: var(--normal-bg-100);
       }
     }
   }

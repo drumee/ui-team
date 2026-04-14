@@ -1,0 +1,191 @@
+@use 'mixins/drumee';
+
+.chat-p2p {
+  &__ui {
+    width: 880px;
+    height: 100vh;
+    top: 0px;
+    right: -880px;
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--neutral-800);
+    transition: right .5s;
+    position: absolute;
+    box-shadow: var(--shadow-left-big);
+
+    &[data-anim="in"] {
+      right: 0;
+    }
+
+    &[data-anim="out"] {
+      right: -880px;
+    }
+  }
+
+  &__main {
+    background-color: inherit;
+    height: 100%;
+    width: 100%;
+  }
+
+  // ── Left sidebar ────────────────────────────────────────────────
+
+  &__sidebar {
+    background-color: var(--primary-bg-100);
+    border-right: 1px solid var(--primary-purple-80);
+    flex-shrink: 0;
+    height: 100%;
+    overflow: hidden;
+    width: 240px;
+  }
+
+  &__sidebar-header {
+    align-items: center;
+    flex-shrink: 0;
+    justify-content: space-between;
+    padding: 20px 16px 12px;
+  }
+
+  &__inbox-title {
+    @include drumee.typo($size: 22px, $weight: 600, $color: var(--normal-fg-10));
+  }
+
+  &__compose-btn {
+    color: var(--normal-fg-10);
+    height: 22px;
+    width: 22px;
+  }
+
+  // ── Filter tabs ─────────────────────────────────────────────────
+
+  &__filters {
+    align-items: center;
+    flex-shrink: 0;
+    gap: 6px;
+    padding: 0 16px 12px;
+  }
+
+  &__filter-btn {
+    &.button-label__ui {
+      border-radius: 20px;
+      cursor: pointer;
+      padding: 4px 12px;
+      @include drumee.typo($size: 12px, $weight: 500, $color: var(--neutral-500));
+
+      &[data-radio='on'],
+      &[data-state='1'] {
+        background-color: var(--primary-40);
+        @include drumee.typo($size: 12px, $weight: 600, $color: var(--gray-white));
+      }
+    }
+
+    .label {
+      display: inline-block;
+    }
+  }
+
+  // ── Contact list ─────────────────────────────────────────────────
+
+  &__contact-list {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 8px;
+
+    .smart-container {
+      height: 100%;
+    }
+
+    .no-contact {
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      @include drumee.typo($size: 13px, $color: var(--neutral-600));
+    }
+  }
+
+  // ── Right chat area ──────────────────────────────────────────────
+
+  &__chat-area {
+    background-color: var(--normal-bg-90);
+    flex: 1;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  // ── Chat header ──────────────────────────────────────────────────
+
+  &__chat-header {
+    align-items: center;
+    background-color: var(--normal-bg-100);
+    border-bottom: 1px solid var(--primary-purple-80);
+    flex-shrink: 0;
+    justify-content: space-between;
+    min-height: 60px;
+    padding: 0 16px;
+  }
+
+  &__header {
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  &__header-info {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__header-profile {
+    &.user-profile__ui {
+      border-radius: 50%;
+      height: 36px;
+      min-width: 36px;
+      width: 36px;
+    }
+  }
+
+  &__header-text {
+    justify-content: center;
+  }
+
+  &__header-name {
+    @include drumee.typo($size: 15px, $weight: 600, $color: var(--normal-fg-10));
+  }
+
+  &__header-status {
+    @include drumee.typo($size: 11px, $weight: 500, $color: var(--special-tag-note-online));
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__header-actions {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__header-btn {
+    color: var(--normal-fg-50);
+    cursor: pointer;
+    height: 32px;
+    padding: 4px;
+    width: 32px;
+
+    &:hover {
+      color: var(--normal-fg-10);
+    }
+  }
+
+  // ── Chat panel ───────────────────────────────────────────────────
+
+  &__chat-panel {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+
+    &>.widget-chat__ui {
+      height: 100%;
+      width: 100%;
+    }
+  }
+}

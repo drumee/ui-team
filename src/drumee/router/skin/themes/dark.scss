@@ -4,11 +4,13 @@
   --hover-bg-40: var(--primary-purple-40);
   --hover-border-40: var(--primary-purple-40);
   --normal-bg-100: var(--primary-purple-100);
-  --normal-bg-90: var(--primary-purple-90);
-  --normal-bg-90: var(--primary-purple-90);
+  --normal-bg-50: var(--primary-50);
+  --normal-bg-50: var(--primary-50);
+  --normal-bg-90: var(--primary-90);
   --normal-fg-10: var(--primary-purple-10);
   --normal-fg-20: var(--primary-purple-20);
   --normal-fg-50: var(--neutral-50);
+  --normal-fg-800: var(--neutral-800);
   --overlay-bg: var(--primary-purple-80-5);
   --overlay-bg-05: rgba(255, 255, 255, 0.05);
   --overlay-fg: var(--primary-purple-80);
@@ -17,4 +19,7 @@
   --reverse-bg: var(--primary-purple-10);
   --reverse-fg: var(--primary-purple-90);
   --folder-fill: #885EFF;
+  --shadow-left-big: -24px 0px 48px rgba(0, 0, 0, 0.5);
+  --shadow-right-big: 24px 0px 48px rgba(0, 0, 0, 0.5);
+  --shadow-top-tiny: 0px 1px 2px rgba(0, 0, 0, 0.05);
 }

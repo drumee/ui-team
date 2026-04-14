@@ -537,14 +537,13 @@ class desk_module extends LetcBox {
   /**
    * 
    */
-
-  togglePanel(kind, trigger) {
-    return this.ensurePart("trash-panel").then((p) => {
+  togglePanel(kind, pn) {
+    return this.ensurePart(pn).then((p) => {
       if (p.isEmpty()) {
         this._loadKind(p, kind)
       } else {
         if (this._pendingKind == kind) {
-          p.children.last().el.dataset.position = "0";
+          p.children.last().el.dataset.anim = "out";
           setTimeout(() => {
             p.clear()
           }, 500)
@@ -599,13 +598,16 @@ class desk_module extends LetcBox {
           }
         });
 
-      case "toggle-settings":
+      case "toggle-chat":
+        this.debug("AAA:585", cmd)
+        return this.togglePanel('chat_p2p', "chat-panel")
+
+        case "toggle-settings":
         this.debug("AAA:585", cmd)
         return this.togglePanel('settings_account', cmd)
-        return;
 
       case "toggle-trash":
-        return this.togglePanel('panel_trash', cmd)
+        return this.togglePanel('panel_trash', "trash-panel")
 
       case "open-contact-manager":
         return Wm.launch(

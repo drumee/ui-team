@@ -10,9 +10,12 @@
     background-color: var(--normal-bg-90);
     border: 1px solid var(--neutral-800);
     transition: left .5s;
-
-    &[data-position="1"] {
+    box-shadow: var(--shadow-right-big);
+    &[data-anim="in"] {
       left: 0;
+    }
+    &[data-anim="out"] {
+      left: -500px;
     }
 
     &[data-device="mobile"] {

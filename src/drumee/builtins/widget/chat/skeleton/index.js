@@ -19,7 +19,7 @@ const __skl_widget_chat = function (ui) {
       })
     ]
   });
-
+  ui.debug("AAA:18:API", ui.getCurrentApi())
   const scrollButton = Skeletons.Box.X({
     className: `${chatFig}__button-scroll`,
     state: 0,
@@ -54,6 +54,7 @@ const __skl_widget_chat = function (ui) {
     dataType: _a.array,
     dataset: {
       role: _a.container,
+      area: ui.mget(_a.area)
     },
     spinnerWait: 500,
     spinner: true,
@@ -92,7 +93,7 @@ const __skl_widget_chat = function (ui) {
     className: `${chatFig}__ack-wrapper ack-wrapper`,
     name: 'ack'
   });
-
+  const { firstname, lastname } = Visitor.profile()
   const a = Skeletons.Box.Y({
     className: `${chatFig}__main`,
     debug: __filename,
@@ -108,6 +109,23 @@ const __skl_widget_chat = function (ui) {
             className: `${chatFig}_chat_footer ack-wrapper`,
             sys_pn: 'chat-footer',
             kids: require('./footer')(ui)
+          }),
+          Skeletons.Box.Y({
+            className: `${chatFig}__avatar-cache`,
+            sys_pn: 'avatar-cache',
+            kids: [
+              Skeletons.UserProfile({
+                className: `${chatFig}__profile`,
+                id: Visitor.id,
+                firstname,
+                lastname,
+                fullname: Visitor.fullname(),
+                online: 1,
+                live_status: 1,
+                auto_color: 1,
+                sys_pn: "my-profile"
+              }),
+            ]
           })
         ]
       })

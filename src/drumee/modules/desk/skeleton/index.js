@@ -13,7 +13,7 @@ const _desk_main = function (ui) {
           require("./sidebar")(ui),
           Skeletons.Box.Y({
             sys_pn: "panel",
-            className: `${ui.fig.family}__panel-container`,
+            className: `${ui.fig.family}__panel-container left`,
             kids: [
               // Modal / popup overlay (above everything)
               Skeletons.Box.Y({
@@ -53,6 +53,10 @@ const _desk_main = function (ui) {
                 ],
               }),
             ],
+          }),
+          Skeletons.Box.Y({
+            sys_pn: "chat-panel",
+            className: `${ui.fig.family}__panel-container right`,
           }),
         ],
       }),
