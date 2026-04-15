@@ -1228,6 +1228,17 @@ class __window_manager extends push {
       e.stopPropagation();
       e.stopImmediatePropagation();
       e.preventDefault();
+
+      // Handle file-mention clicks
+      if (e.target.classList.contains('file-mention')) {
+        const nid = e.target.dataset.nid;
+        const hub_id = e.target.dataset.hub_id;
+        if (nid && hub_id) {
+          this.openSharedLink({ nid, hub_id, kind: _a.media });
+          return;
+        }
+      }
+
       let re = new RegExp(_K.module.desk + "/wm/");
       let text = e.target.innerText;
       let href;
