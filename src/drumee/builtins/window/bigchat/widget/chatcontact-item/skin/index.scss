@@ -16,16 +16,12 @@
     &:hover,
     &[data-active="active"],
     &[data-radio="on"] {
-      background: var(--default-background-hover);
+      background: var(--primary-purple-80-5);
       & .profile-icon,
       & .note-reader {
         color: var(--default-text-hover);
       }
     }
-  }
-
-  &__main {
-    background-color: inherit;
   }
 
   &__container {
@@ -41,12 +37,13 @@
 
   &__profile {
     &.user-profile__ui {
-      border-radius: 50%;
+      border-radius: var(--corner-radius-1);
       height: 29px;
       width: 29px;
       min-width: 29px;
       margin-bottom: auto;
       margin-top: auto;
+      background-color: var(--normal-fg-10);
 
       &[data-default="1"] {
         border: none;
@@ -62,7 +59,7 @@
       @include drumee.typo(
         $size: 14px,
         $line: 16px,
-        $color: var(--normal-fg-10)
+        $color: var(--normal-fg-20)
       );
       .inner {
         overflow: hidden;
@@ -128,5 +125,21 @@
       $line: 1,
       $size: 10px
     );
+  }
+
+  .user-profile__ui[data-online="1"]:before,
+  .user-profile__ui[data-online="2"]:before {
+    background-color: var(--primary-30);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--white);
+    content: " ";
+    height: 8px;
+    right: 0;
+    position: absolute;
+    bottom: 0;
+    width: 8px;
+    z-index: 9;
+    left: auto;
+    top: auto;
   }
 }
