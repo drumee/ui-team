@@ -8,6 +8,7 @@
     background-color: var(--normal-bg-90);
     align-items: center;
     z-index: 10002;
+    border-right: 1px solid var(--neutral-800);
   }
 
   &__nav {
@@ -53,7 +54,6 @@
       border: 1px solid var(--active-border);
     }
   }
-
 
   &__logo {
     align-items: center;
