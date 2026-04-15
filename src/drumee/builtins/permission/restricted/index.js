@@ -1,4 +1,4 @@
-class __settings_permission extends DrumeeMFS {
+class __permission_restricted extends DrumeeMFS {
 
   /**
    * @param {Object} opt
@@ -20,7 +20,6 @@ class __settings_permission extends DrumeeMFS {
    * @param {String} pn
    */
   onPartReady(child, pn) {
-    this.debug("AAA:23", pn)
     switch (pn) {
       case 'members-list':
         child.on(_e.eod, async () => {
@@ -78,4 +77,4 @@ class __settings_permission extends DrumeeMFS {
   }
 }
 
-module.exports = __settings_permission;
+module.exports = __permission_restricted;

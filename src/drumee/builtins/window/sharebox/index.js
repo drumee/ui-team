@@ -44,12 +44,13 @@ class __window_sharebox extends __hub {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
+    this.debug("AAA:47", service, cmd)
     switch (service) {
       case SERVICE.desk.leave_hub:
         return this.goodbye();
 
-      case 'show-settings':
-        return this.switchShowShareboxSettings();
+      // case 'show-settings':
+      //   return this.switchShowShareboxSettings();
 
       case "copy-share-link":
         this.postService({

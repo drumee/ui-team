@@ -1,3 +1,13 @@
+const AREA_LABELS = {
+  personal: LOCALE.PRIVATE,
+  private: LOCALE.RESTRICTED,
+  share: LOCALE.SHARED,
+  dmz: LOCALE.RESTRICTED,
+  restricted: LOCALE.RESTRICTED,
+  public: LOCALE.PUBLIC,
+};
+
+
 export function breadcrumbs(ui, opt) {
   return Skeletons.Wrapper.X({
     debug: __filename,
@@ -56,7 +66,6 @@ export function gridFilesBrowser(ui) {
   if (ui.mget(_a.itemsOpt)) {
     opt = { ...opt, ...ui.mget(_a.itemsOpt) };
   }
-  console.log("AAAA:42", ui);
   const list = Skeletons.List.Smart({
     className: `${pfx}__icons-list`,
     innerClass: `${pfx}__icons-scroll`,
@@ -74,7 +83,6 @@ export function gridFilesBrowser(ui) {
     },
     vendorOpt: Preset.List.Orange_e,
     api: function (x) {
-      console.log("AAAA:60", x, ui);
       return ui.getCurrentApi();
     },
   });
@@ -250,5 +258,100 @@ export function windowHeader(ui, topbar) {
       topbar
     ],
   });
+}
 
+/**
+ * 
+ * @param {*} ui 
+ * @returns 
+ */
+export function newFileMenu(ui) {
+  const cnWindowButton = `${ui.fig.group}-button`;
+  const cnWindowBody = `${ui.fig.group}-split-body`;
+  return Skeletons.Box.X({
+    className: `${cnWindowBody}__buttons-container`,
+    kids: [
+      dropdownMenuButton(ui, {
+        className: cnWindowButton,
+
+        trigger: Skeletons.Button.Label({
+          className: `${cnWindowButton}__label-button secondary`,
+          label: "Add new",
+          ico: "editbox_list-plus",
+          uiHandler: ui,
+          partHandler: ui,
+        }),
+
+        menuItems: [
+          { service: "meeting", ico: "dock-note", content: "Note" },
+          {
+            service: "webinar",
+            ico: "raw-documents_word",
+            content: "Document",
+          },
+          {
+            service: "channel",
+            ico: "raw-documents_excel",
+            content: "Spreadsheet",
+          },
+          {
+            service: "channel",
+            ico: "raw-documents_powerpoint",
+            content: "Presentation",
+          },
+          {
+            service: "channel",
+            ico: "dock-folder",
+            content: "Folder",
+          },
+        ],
+      }),
+    ]
+  })
+}
+
+/**
+ * 
+ * @param {*} ui 
+ */
+export function visioMenu(ui) {
+  if (!Visitor.canUseVisio() || ui.mget(_a.area) == _a.personal) return '';
+  return dropdownMenuButton(ui, {
+    className: cnWindowButton,
+
+    trigger: Skeletons.Button.Svg({
+      className: `${cnWindowButton}__icon-bg-button primary`,
+      ico: "desktop_confcalls",
+      uiHandler: ui,
+      partHandler: ui,
+    }),
+
+    menuItems: [
+      {
+        service: "meeting",
+        ico: "logo-google",
+        content: "Google Meet",
+      },
+      { service: "webinar", ico: "desktop_confcalls", content: "Zoom" },
+      {
+        service: "channel",
+        ico: "desktop_confcalls",
+        content: "Microsoft Teams",
+      },
+      {
+        service: "channel",
+        ico: "raw-logo-drumee-icon",
+        content: "Drumee Call",
+      },
+    ],
+  })
+}
+
+/**
+ * 
+ * @param {*} ui 
+ * @returns 
+ */
+export function getAreaLabel(area) {
+  return AREA_LABELS[area] || ''
 }
