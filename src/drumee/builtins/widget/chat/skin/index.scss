@@ -369,6 +369,70 @@
     @include drumee.typo($size: 12px,
       $color: var(--secondary-text-color)); //$weight:300,
   }
+
+  // File mention dropdown
+  &__mention-dropdown {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    max-height: 180px;
+    overflow-y: auto;
+    background: var(--neutral-900, #222732);
+    border: 1px solid var(--neutral-700, #5b616d);
+    border-radius: 8px;
+    margin-bottom: 4px;
+    padding: 6px 0;
+    z-index: 100;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
+
+    // Scrollbar styling
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: var(--neutral-700, #5b616d);
+      border-radius: 4px;
+    }
+
+    &[data-state="open"] {
+      display: flex;
+      flex-direction: column;
+    }
+
+    &[data-state="closed"] {
+      display: none;
+    }
+
+    .mention-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+    }
+
+    .mention-item__name {
+      font-size: 12px;
+      color: var(--gray-white, #fff);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      .note-content {
+        color: inherit;
+      }
+    }
+  }
 }
 
 .window-bigchat,

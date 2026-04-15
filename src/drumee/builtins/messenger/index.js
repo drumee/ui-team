@@ -12,6 +12,10 @@ class __lib_messenger extends LetcBox {
     this.getPlaceholder = this.getPlaceholder.bind(this);
     this.__dispatchRest = this.__dispatchRest.bind(this);
     this.canUpload = this.canUpload.bind(this);
+    this._onMentionSelect = this._onMentionSelect.bind(this);
+    this._closeMentionPopup = this._closeMentionPopup.bind(this);
+    this._mentionActive = false;
+    this._mentionFilter = '';
   }
 
   static initClass() {
@@ -149,10 +153,10 @@ class __lib_messenger extends LetcBox {
 
 
   /**
-   * 
-   * @param {*} cmd 
-   * @param {*} args 
-   * @returns 
+   *
+   * @param {*} cmd
+   * @param {*} args
+   * @returns
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
@@ -165,8 +169,10 @@ class __lib_messenger extends LetcBox {
       case _a.interactive:
         if (args.text && args.text.length) {
           this.showSend();
+          this._handleMentionInput(args.text);
           this.triggerHandlers(args);
         } else {
+          this._closeMentionPopup();
           this.hideSend();
         }
         return;
@@ -219,8 +225,78 @@ class __lib_messenger extends LetcBox {
   }
 
   /**
-   * 
-   * @returns 
+   * Detect @ in text and manage mention popup
+   */
+  _handleMentionInput(text) {
+    if (!text) {
+      this._closeMentionPopup();
+      return;
+    }
+
+    // Simple detection: find last @word pattern in the text
+    const mentionMatch = text.match(/@(\S*)$/);
+
+    if (mentionMatch) {
+      this._mentionActive = true;
+      this._mentionFilter = mentionMatch[1].toLowerCase();
+      this._showMentionPopup();
+    } else if (this._mentionActive) {
+      this._closeMentionPopup();
+    }
+  }
+
+  /**
+   * Show file mention dropdown
+   */
+  _showMentionPopup() {
+    this.triggerHandlers({
+      service: 'mention-filter',
+      filter: this._mentionFilter
+    });
+  }
+
+  /**
+   * Close mention popup
+   */
+  _closeMentionPopup() {
+    if (!this._mentionActive) return;
+    this._mentionActive = false;
+    this._mentionFilter = '';
+    this.triggerHandlers({ service: 'mention-close' });
+  }
+
+  /**
+   * Called when user selects a file from mention dropdown
+   */
+  _onMentionSelect(file) {
+    const content = this.__content;
+    if (!content || !content.content) return;
+
+    const el = content.content;
+    const text = el.innerText;
+
+    // Replace @filter with encoded mention pattern
+    // Format: [@filename](mention:hub_id:nid) — survives plain text extraction
+    const replaced = text.replace(/@\S*$/, '');
+    const mentionText = `[@${file.filename}](mention:${file.hub_id}:${file.nid})`;
+    el.innerText = replaced + mentionText + '\u00A0';
+
+    // Move cursor to end
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    content.sync();
+    this._closeMentionPopup();
+    this.showSend();
+  }
+
+  /**
+   *
+   * @returns
    */
   getCurrentApi() {
     if (this.mget(_a.api)) {
