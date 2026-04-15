@@ -144,6 +144,22 @@
   &__header-info {
     align-items: center;
     gap: 10px;
+
+    .user-profile__ui[data-online="1"]:before,
+    .user-profile__ui[data-online="2"]:before {
+      background-color: var(--primary-30);
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px var(--white);
+      content: " ";
+      height: 8px;
+      right: 0;
+      position: absolute;
+      bottom: 0;
+      width: 8px;
+      z-index: 9;
+      left: auto;
+      top: auto;
+    }
   }
 
   &__header-profile {
