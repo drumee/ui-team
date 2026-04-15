@@ -5,9 +5,8 @@ const __skl_window_team_topbar = function (ui, icon) {
   const media = ui.mget(_a.media);
   const name = ui.model.get(_a.filename) || "";
   const logo = require("../../../skeleton/logo")(ui);
-  const subtitle = require("../../../skeleton/subtitle")(ui);
-  const cnWindowButton = "window-button";
-  const cnWidowTopbarTitle = "window-topbar-title";
+  const cnWindowButton = `${ui.fig.group}-button`;
+  const cnWidowTopbarTitle = `${ui.fig.group}-topbar-title`;
 
   if (icon == null || ui.mget(_a.media) == null) {
     settings = { kind: KIND.wrapper };

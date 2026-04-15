@@ -315,6 +315,7 @@ export function newFileMenu(ui) {
  * @param {*} ui 
  */
 export function visioMenu(ui) {
+  const cnWindowButton = `${ui.fig.group}-button`;
   if (!Visitor.canUseVisio() || ui.mget(_a.area) == _a.personal) return '';
   return dropdownMenuButton(ui, {
     className: cnWindowButton,
