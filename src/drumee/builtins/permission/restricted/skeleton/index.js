@@ -91,7 +91,7 @@ module.exports = function (ui) {
             service: 'send-invitation',
             uiHandler: [ui]
           }),
-          permissionMenu(ui, fig),
+          permissionMenu(ui, ui, 'select-invite-role', fig),
         ]
       }),
       Skeletons.Note({

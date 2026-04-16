@@ -201,6 +201,16 @@
     padding: 9px 12px;
     transition: background-color 120ms ease;
 
+    &[data-state="1"] {
+      background-color: rgba(255, 255, 255, 0.08);
+
+      .option-radio {
+        border-color: var(--primary-40);
+        box-shadow: inset 0 0 0 4px var(--primary-purple-90, #1b1b2e),
+          inset 0 0 0 8px var(--primary-40);
+      }
+    }
+
     &:hover {
       background-color: var(--normal-bg-100);
     }
@@ -220,10 +230,10 @@
     height: 14px;
     width: 14px;
 
-    &.active {
-      border-color: var(--primary-40);
-      box-shadow: inset 0 0 0 3px var(--primary-purple-80), inset 0 0 0 6px var(--primary-40);
-    }
+    // &.active {
+    //   border-color: var(--primary-40);
+    //   box-shadow: inset 0 0 0 3px var(--primary-purple-80), inset 0 0 0 6px var(--primary-40);
+    // }
   }
 
   &__send-btn {

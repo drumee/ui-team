@@ -1,3 +1,4 @@
+const {resolveRole}= require('../../../../skeleton/toolkit/permission');
 module.exports = function (ui) {
   const prefix = ui.fig.family;
   let fname = ui.mget(_a.firstname) || "";
@@ -27,7 +28,6 @@ module.exports = function (ui) {
       live_status: 1,
       surname,
     };
-    ui.debug("AAA:26", opt);
     profile_icon = Skeletons.UserProfile(opt);
   } else {
     profile_icon = Skeletons.Button.Svg({
@@ -61,59 +61,8 @@ module.exports = function (ui) {
       canEdit = 0;
     }
   }
-  // Resolve current role from privilege bitmask
-  const resolveRoleValue = () => {
-    if (ui.isMediaOwner() || ui.canAdmin()) return 'admin';
-    if (ui.canOrganize() || ui.canUpload()) return 'edit';
-    if (ui.canDownload()) return 'view';
-    return 'chat';
-  };
 
-  const roleItems = [
-    { value: 'admin', label: 'Admin' },
-    { value: 'view', label: LOCALE.VIEW || 'View' },
-    { value: 'edit', label: LOCALE.EDIT || 'Edit' },
-    { value: 'chat', label: LOCALE.CHAT || 'Chat' },
-  ];
-
-  const currentRole = resolveRoleValue();
-  const currentRoleItem = roleItems.find(r => r.value === currentRole) || roleItems[0];
-
-  // const roleTrigger = Skeletons.Box.X({
-  //   className: `${prefix}__role-trigger`,
-  //   kids: [
-  //     Skeletons.Note({
-  //       content: currentRoleItem.label,
-  //       className: `${prefix}__role-label`,
-  //     }),
-  //     Skeletons.Button.Svg({
-  //       ico: 'carret-down',
-  //       className: `${prefix}__role-chevron`,
-  //     }),
-  //   ],
-  // });
-
-  // const roleMenuItems = Skeletons.Box.Y({
-  //   className: `${prefix}__role-menu`,
-  //   kids: roleItems.map(role => Skeletons.Box.X({
-  //     className: `${prefix}__role-option`,
-  //     service: 'change-role',
-  //     name: role.value,
-  //     uiHandler: [ui],
-  //     kids: [
-  //       Skeletons.Note({
-  //         content: role.label,
-  //         className: `${prefix}__role-option-label`,
-  //       }),
-  //       Skeletons.Note({
-  //         className: `${prefix}__role-option-radio${role.value === currentRole ? ' active' : ''}`,
-  //       }),
-  //     ],
-  //   })),
-  // });
-
-
-
+  const currentRoleItem = resolveRole(ui)
   const status = Skeletons.Box.X({
     className: `${prefix}__role-trigger`,
     kidsOpt: {
