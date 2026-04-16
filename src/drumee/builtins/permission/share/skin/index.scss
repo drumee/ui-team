@@ -1,4 +1,4 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 
 .permission-share {
   &__ui {
@@ -41,15 +41,23 @@
   }
 
   &__title {
-    @include drumee.typo($color: var(--white, #fff), $size: 18px, $weight: 600, $line: 28px);
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
+      $size: 18px,
+      $weight: 600,
+      $line: 28px
+    );
   }
 
   &__close-btn {
     width: 28px;
     height: 28px;
     padding: var(--spacer-2);
-    color: var(--neutral-400);
+    color: var(--normal-fg-10);
     cursor: pointer;
+    &:hover {
+      color: var(--normal-fg-20);
+    }
   }
 
   // ── Sections ────────────────────────────────────────────────
@@ -65,7 +73,12 @@
   }
 
   &__section-label {
-    @include drumee.typo($color: var(--neutral-500, #6b7280), $size: 11px, $weight: 600, $line: 16px);
+    @include drumee.typo(
+      $color: var(--normal-fg-20),
+      $size: 11px,
+      $weight: 600,
+      $line: 16px
+    );
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -89,7 +102,7 @@
     position: relative;
 
     &::after {
-      content: '';
+      content: "";
       position: absolute;
       width: 18px;
       height: 18px;
@@ -114,7 +127,7 @@
   &__url-row {
     align-items: center;
     gap: var(--spacer-3);
-    background-color: var(--neutral-800, #1f2937);
+    background-color: var(--normal-bg-100);
     border-radius: var(--corner-radius-3);
     padding: var(--spacer-3) var(--spacer-4);
     width: 100%;
@@ -127,20 +140,20 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($color: var(--neutral-400, #9ca3af), $size: 13px, $line: 20px);
+    @include drumee.typo($color: var(--normal-fg-10), $size: 13px, $line: 20px);
   }
 
   &__copy-btn {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
-    color: var(--neutral-400);
+    color: var(--normal-fg-20);
   }
 
   // ── Access level ─────────────────────────────────────────────
 
   &__access-list {
-    gap: var(--spacer-2);
+    gap: var(--spacer-4);
     width: 100%;
   }
 
@@ -149,7 +162,7 @@
     gap: var(--spacer-4);
     padding: var(--spacer-4) var(--spacer-5);
     border-radius: var(--corner-radius-3);
-    background-color: var(--neutral-800, #1f2937);
+    background-color: var(--normal-bg-100);
     cursor: pointer;
     transition: background-color 120ms ease;
     width: 100%;
@@ -163,12 +176,12 @@
     width: 20px;
     height: 20px;
     flex-shrink: 0;
-    color: var(--primary-400, #818cf8);
+    color: var(--normal-fg-20);
   }
 
   &__access-label {
     flex: 1;
-    @include drumee.typo($color: var(--white, #fff), $size: 14px, $line: 22px);
+    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 22px);
   }
 
   &__access-check {
@@ -177,7 +190,7 @@
     flex-shrink: 0;
 
     &[data-state="1"] {
-      color: var(--primary-400, #818cf8);
+      color: var(--normal-fg-20);
     }
 
     &[data-state="0"] {
@@ -190,7 +203,7 @@
   &__expiry-row {
     align-items: center;
     gap: var(--spacer-3);
-    background-color: var(--neutral-800, #1f2937);
+    background-color: var(--normal-bg-100);
     border-radius: var(--corner-radius-3);
     padding: var(--spacer-3) var(--spacer-4);
     width: 100%;
@@ -198,7 +211,11 @@
 
   &__expiry-label {
     flex: 1;
-    @include drumee.typo($color: var(--neutral-300, #d1d5db), $size: 14px, $line: 22px);
+    @include drumee.typo(
+      $color: var(--neutral-300, #d1d5db),
+      $size: 14px,
+      $line: 22px
+    );
   }
 
   &__calendar-btn {
@@ -210,15 +227,20 @@
 
   &__clear-btn {
     padding: var(--spacer-1) var(--spacer-4);
-    border-radius: var(--corner-radius-max);
-    background-color: var(--primary-600, #4f46e5);
-    @include drumee.typo($color: var(--white, #fff), $size: 13px, $weight: 500, $line: 20px);
+    border-radius: var(--corner-radius-1);
+    background-color: var(--primary-40);
+    @include drumee.typo(
+      $color: var(--white, #fff),
+      $size: 13px,
+      $weight: 500,
+      $line: 20px
+    );
     cursor: pointer;
     transition: background-color 120ms ease;
     flex-shrink: 0;
 
     &:hover {
-      background-color: var(--primary-700, #4338ca);
+      background-color: var(--primary-50);
     }
   }
 
@@ -227,15 +249,26 @@
   &__apply-btn {
     width: 100%;
     padding: var(--spacer-4);
-    border-radius: var(--corner-radius-4);
-    background-color: var(--primary-600, var(--primary-600, #4f46e5));
-    @include drumee.typo($color: var(--white, #fff), $size: 15px, $weight: 600, $line: 24px);
+    border-radius: var(--corner-radius-2);
+    background-color: var(--primary-40);
+    @include drumee.typo(
+      $color: var(--white, #fff),
+      $size: 15px,
+      $weight: 600,
+      $line: 24px
+    );
     text-align: center;
     cursor: pointer;
     transition: background-color 120ms ease;
+    align-items: center;
+    justify-content: center;
 
     &:hover {
-      background-color: var(--primary-700, #4338ca);
+      background-color: var(--primary-50);
     }
   }
+}
+
+.window__wrapper-modal[data-state="open"] {
+  border-radius: var(--corner-radius-5);
 }
