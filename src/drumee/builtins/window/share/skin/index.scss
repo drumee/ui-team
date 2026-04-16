@@ -133,25 +133,4 @@
     font-size: 10px;
     font-weight: 600;
   }
-  .lib-messenger__icon.attach {
-    display: none;
-  }
-  .lib-messenger__container {
-    background-color: #0b0a21;
-    border-radius: 8px;
-    padding: 10px 12px;
-  }
-  .lib-messenger__content {
-    background-color: transparent;
-  }
-  .lib-messenger__main {
-    background-color: #0b0a21;
-    border-radius: 8px;
-  }
-  .lib-messenger__content .note-content {
-    color: #E4E3FF;
-    &:empty:before {
-      color: #6b7280;
-    }
-  }
 }

@@ -456,13 +456,20 @@
 
 // File mention link in chat messages
 .file-mention {
-  color: var(--primary-400, #c781ff);
   text-decoration: underline;
   text-decoration-skip-ink: auto;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 400;
+  color: inherit;
 
   &:hover {
-    color: var(--primary-300, #dcb2ff);
+    opacity: 0.8;
+  }
+}
+
+// Mention color per bubble context
+.widget-chatItem__conversation-content {
+  &.other .file-mention {
+    color: #D65F59;
   }
 }

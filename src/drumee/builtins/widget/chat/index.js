@@ -714,7 +714,15 @@ class __widget_chat extends LetcBox {
    * @returns 
    */
   sendMessage(args = {}) {
-    let message = args.text || this.getStorage().message;
+    let message = '';
+    // Get message with encoded mentions if available
+    const messenger = this.findPart(_a.message);
+    if (messenger && _.isFunction(messenger.getMessageWithMentions)) {
+      message = messenger.getMessageWithMentions();
+    }
+    if (!message) {
+      message = args.text || this.getStorage().message;
+    }
     const list = this.attachmentList;
     if (!list) {
       this.warn("Could not find attachment list", this);
@@ -1187,12 +1195,19 @@ class __widget_chat extends LetcBox {
     let file;
 
     // cmd is the clicked view, its el.dataset has the file info
-    if (cmd && cmd.el && cmd.el.dataset) {
-      file = {
-        nid: cmd.el.dataset.nid,
-        hub_id: cmd.el.dataset.hub_id,
-        filename: cmd.el.dataset.filename
-      };
+    // If clicked on a child element (e.g. the text), walk up to find .mention-item
+    if (cmd && cmd.el) {
+      let el = cmd.el;
+      if (!el.dataset.nid) {
+        el = el.closest('.mention-item') || el;
+      }
+      if (el.dataset) {
+        file = {
+          nid: el.dataset.nid,
+          hub_id: el.dataset.hub_id,
+          filename: el.dataset.filename
+        };
+      }
     }
 
     if (!file || !file.nid) return;
