@@ -32,6 +32,7 @@
   &__container {
     height: 100%;
     width: 100%;
+    background-color: var(--normal-bg-90);
 
     .drumee-spinner {
       width: 30px;
@@ -41,7 +42,9 @@
 
   /** Used to cache profile image*/
   &__avatar-cache {
-    display: none;
+    display: none !important;
+    height: 0 !important;
+    overflow: hidden;
   }
 
   &__chat-content {
