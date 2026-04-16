@@ -275,16 +275,28 @@ class __lib_messenger extends LetcBox {
     const el = content.content;
     const text = el.innerText;
 
-    // Replace @filter with encoded mention pattern
-    // Format: [@filename](mention:hub_id:nid) — survives plain text extraction
+    // Remove the @filter text from the end
     const replaced = text.replace(/@\S*$/, '');
-    const mentionText = `[@${file.filename}](mention:${file.hub_id}:${file.nid})`;
-    el.innerText = replaced + mentionText + '\u00A0';
+    el.innerText = replaced;
 
-    // Move cursor to end
+    // Insert mention as a visible <a> tag in contenteditable
+    const mention = document.createElement('a');
+    mention.className = 'file-mention';
+    mention.dataset.hub_id = file.hub_id;
+    mention.dataset.nid = file.nid;
+    mention.dataset.filename = file.filename;
+    mention.contentEditable = 'false';
+    mention.textContent = `@${file.filename}`;
+
+    el.appendChild(mention);
+
+    // Add space after and move cursor
+    const space = document.createTextNode('\u00A0');
+    el.appendChild(space);
+
     const range = document.createRange();
-    range.selectNodeContents(el);
-    range.collapse(false);
+    range.setStartAfter(space);
+    range.collapse(true);
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
@@ -292,6 +304,35 @@ class __lib_messenger extends LetcBox {
     content.sync();
     this._closeMentionPopup();
     this.showSend();
+  }
+
+  /**
+   * Get message text with encoded mentions for sending
+   */
+  getMessageWithMentions() {
+    const content = this.__content;
+    if (!content || !content.content) return '';
+
+    const el = content.content;
+    let result = '';
+
+    for (const node of el.childNodes) {
+      if (node.nodeType === 3) {
+        // Text node
+        result += node.textContent;
+      } else if (node.nodeType === 1 && node.classList.contains('file-mention')) {
+        // Mention <a> tag → encode as pattern
+        const filename = node.dataset.filename || node.textContent.replace(/^@/, '');
+        const hub_id = node.dataset.hub_id;
+        const nid = node.dataset.nid;
+        result += `[@${filename}](mention:${hub_id}:${nid})`;
+      } else if (node.nodeType === 1) {
+        // Other elements — get text
+        result += node.textContent;
+      }
+    }
+
+    return result.trim();
   }
 
   /**

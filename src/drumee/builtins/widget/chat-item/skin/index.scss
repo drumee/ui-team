@@ -456,13 +456,75 @@
 
 // File mention link in chat messages
 .file-mention {
-  color: var(--primary-400, #c781ff);
   text-decoration: underline;
   text-decoration-skip-ink: auto;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 400;
+  color: inherit;
 
   &:hover {
-    color: var(--primary-300, #dcb2ff);
+    opacity: 0.8;
+  }
+}
+
+// Mention color per bubble context
+.widget-chatItem__conversation-content {
+  &.other .file-mention {
+    color: #D65F59;
+  }
+}
+
+// Avatar in sidebar chat (both window__chat-panel and desk panel contexts)
+.window__chat-panel,
+.desk-module__panel-container {
+  .widget-chatItem__profile {
+    position: static !important;
+    width: 22px !important;
+    height: 22px !important;
+    flex-shrink: 0;
+    margin: 0 6px 0 0 !important;
+    top: auto !important;
+    left: auto !important;
+
+    &.other {
+      display: flex;
+    }
+
+    &.me {
+      display: none;
+    }
+  }
+
+  .widget-chatItem__profile-image {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .widget-chatItem__message-username {
+    font-size: 10px;
+    font-weight: 600;
+    color: #C6BFFF !important;
+    margin-bottom: 4px;
+  }
+
+  // Layout: avatar sits beside the message content for "other"
+  .widget-chatItem__message-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .widget-chatItem__main.other {
+    .widget-chatItem__message-container {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+    }
+
+    .widget-chatItem__message-content {
+      flex: 1;
+      min-width: 0;
+    }
   }
 }

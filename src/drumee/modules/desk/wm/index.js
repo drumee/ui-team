@@ -1224,23 +1224,81 @@ class __window_manager extends push {
    * @param {*} e
    */
   onAnchorClick(e) {
-    if (e.target && e.target.tagName == "A") {
+    // Find the <a> tag — could be e.target or a parent of e.target
+    let anchor = e.target;
+    if (anchor.tagName !== "A") {
+      anchor = anchor.closest('a');
+    }
+    if (anchor && anchor.tagName == "A") {
       e.stopPropagation();
       e.stopImmediatePropagation();
       e.preventDefault();
 
       // Handle file-mention clicks
-      if (e.target.classList.contains('file-mention')) {
-        const nid = e.target.dataset.nid;
-        const hub_id = e.target.dataset.hub_id;
+      if (anchor.classList.contains('file-mention')) {
+        const nid = anchor.dataset.nid;
+        const hub_id = anchor.dataset.hub_id;
         if (nid && hub_id) {
-          this.openSharedLink({ nid, hub_id, kind: _a.media });
+          // Fetch file info then launch via same path as folder thumbnail click
+          this.fetchService(
+            {
+              service: SERVICE.media.node_info,
+              nid,
+              hub_id,
+            },
+            { async: 1 }
+          ).then((r) => {
+            if (!r || !r.filetype) return;
+            const m = new Backbone.Model(r);
+            const fType = r.filetype;
+            const application = require("builtins/window/configs/application");
+
+            Kind.waitFor(_a.media).then((k) => {
+              const media = new k({ model: m });
+              const preset = {
+                nid: r.nid || nid,
+                hub_id: r.hub_id || hub_id,
+                filename: r.filename,
+                filetype: fType,
+                vhost: r.vhost,
+                home_id: r.home_id,
+                holder_id: r.holder_id,
+                area: r.area,
+                privilege: r.privilege,
+                useKeyEvent: 1,
+                service: "open-node",
+                state: _a.on,
+                uiHandler: [this],
+                media,
+                trigger: media,
+                radio: _a.on,
+              };
+
+              let app = application(fType, preset);
+              if (_.isEmpty(app) || !app.kind) {
+                app = { ...app, kind: "props_viewer", media };
+              }
+              app.style = this.getWindowPosition(media);
+
+              const launchTag = _.uniqueId();
+              Kind.waitFor(app.kind).then(() => {
+                try {
+                  app.launchTag = launchTag;
+                  this.windowsLayer.append(app);
+                } catch (err) {
+                  this.warn("Failed to open mentioned file", err);
+                }
+              });
+            });
+          }).catch((err) => {
+            this.warn("Failed to fetch mentioned file info", err);
+          });
           return;
         }
       }
 
       let re = new RegExp(_K.module.desk + "/wm/");
-      let text = e.target.innerText;
+      let text = anchor.innerText;
       let href;
       if (/^http/.test(text)) {
         href = text;
