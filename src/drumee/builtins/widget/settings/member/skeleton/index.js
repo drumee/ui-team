@@ -133,12 +133,10 @@ module.exports = function (ui) {
     uiHandler: [ui],
   }) : null;
 
-  let r = Skeletons.Box.X({
+  return Skeletons.Box.X({
     className: `${prefix}__item ${type || ""}`,
     debug: __filename,
     uiHandler: ui,
     kids: [profile_icon, info, status, deleteBtn],
   });
-  ui.debug("AAA:123", ui, r);
-  return r;
 };

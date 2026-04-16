@@ -60,9 +60,6 @@ class settings_member extends DrumeeMFS {
    * 
    */
   onDomRefresh() {
-    let visitor = this.getHandlers(_a.ui)[0]?.mget('visitor') || {}
-    this.debug("AAA:64", visitor)
-    this.my_privilege = visitor.privilege || 0;
     this.feed(require("./skeleton")(this));
   }
 

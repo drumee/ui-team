@@ -1,4 +1,4 @@
-const { permissionMenu } = require('../../../builtins/skeleton/toolkit');
+const { permissionItems } = require('../../../builtins/skeleton/toolkit');
 class __permission_restricted extends DrumeeMFS {
 
   /**
@@ -95,12 +95,11 @@ class __permission_restricted extends DrumeeMFS {
       case 'prompt-permission':
         const {trigger} = args;
         this.ensurePart('role-dropdown').then((p) => {
-          p.feed(permissionMenu(this, this.fig.family, cmd.currentRole));
+          p.feed(permissionItems(this, this.fig.family, cmd));
           let y = trigger.$el.offset().top - this.$el.offset().top + trigger.$el.outerHeight();
           let x = trigger.$el.offset().left - this.$el.offset().left - trigger.$el.outerWidth();
           p.el.style.left = `${x}px`;
           p.el.style.top = `${y}px`;
-          this.debug("AAA:122", "Prompting permission menu for role change", p, cmd, this.$el.position(), cmd.$el.position());
         })
         break;
 
