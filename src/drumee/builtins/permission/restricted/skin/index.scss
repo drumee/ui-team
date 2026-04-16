@@ -112,27 +112,117 @@
     margin-bottom: 2px;
   }
 
-  &__email-input {
-    width: 100%;
-    border-radius: 8px;
+  // ── Invite row (email + role dropdown) ───────────────────────
+  &__invite-row {
+    align-items: center;
     background-color: var(--normal-bg-100);
-    padding: 12px 14px;
+    border-radius: 8px;
     box-sizing: border-box;
+    display: flex;
+    gap: 8px;
+    padding: 4px 4px 4px 14px;
+    width: 100%;
+  }
+
+  &__email-input {
+    flex: 1;
+    min-width: 0;
 
     input,
     .entry-area {
       background: transparent;
       border: none;
-      outline: none;
-      width: 100%;
+      color: var(--neutral-400);
       font-size: 14px;
       font-weight: 400;
       line-height: 20px;
-      color: var(--neutral-400);
+      outline: none;
+      width: 100%;
 
       &::placeholder {
         color: var(--neutral-500);
       }
+    }
+  }
+
+  // ── Invite role dropdown ───────────────────────────────────────
+  &__role-dropdown {
+    flex-shrink: 0;
+  }
+
+  &__role-trigger {
+    align-items: center;
+    background-color: var(--primary-purple-80);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    gap: 6px;
+    padding: 8px 10px;
+    transition: background-color 120ms ease;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: var(--primary-purple-70);
+    }
+  }
+
+  &__role-label {
+    color: var(--normal-fg-20);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  &__role-chevron {
+    flex-shrink: 0;
+
+    svg {
+      color: var(--normal-fg-20);
+      height: 14px;
+      width: 14px;
+    }
+  }
+
+  &__role-menu {
+    background-color: var(--primary-purple-80);
+    border-radius: var(--corner-radius-2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    min-width: 130px;
+    overflow: hidden;
+    padding: 4px;
+  }
+
+  &__role-option {
+    align-items: center;
+    border-radius: var(--corner-radius-1);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 12px;
+    transition: background-color 120ms ease;
+
+    &:hover {
+      background-color: var(--normal-bg-100);
+    }
+  }
+
+  &__role-option-label {
+    color: var(--normal-fg-10);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+  }
+
+  &__role-option-radio {
+    border: 2px solid var(--neutral-500);
+    border-radius: 50%;
+    flex-shrink: 0;
+    height: 14px;
+    width: 14px;
+
+    &.active {
+      border-color: var(--primary-40);
+      box-shadow: inset 0 0 0 3px var(--primary-purple-80), inset 0 0 0 6px var(--primary-40);
     }
   }
 
@@ -178,6 +268,11 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+  }
+
+
+  &__role-overlay {
+    position: absolute;
   }
 }
 

@@ -67,14 +67,14 @@ class settings_member extends DrumeeMFS {
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @param {*} args 
+   *
+   * @param {*} cmd
+   * @param {*} args
    */
   onUiEvent(cmd, args = {}) {
     const service = cmd.mget(_a.service)
 
-    this.debug("=== settings_member.onUiEvent ===", this, service);
+    this.debug("===77== settings_member.onUiEvent ===", this, service);
     switch (service) {
       case "change-permission":
         this.triggerHandlers({ service, member: this, name: cmd.mget(_a.name), state: cmd.mget(_a.state) });
@@ -82,6 +82,15 @@ class settings_member extends DrumeeMFS {
       case "prompt-permission":
         this.triggerHandlers({ service, member: this })
         break;
+      case "change-role":
+        this.triggerHandlers({ service, member: this, role: cmd.mget(_a.name) });
+        break;
+      case "remove-member":
+        this.triggerHandlers({ service, member: this });
+        break;
+
+      default:
+        this.triggerHandlers({ service, trigger: cmd });
     }
 
   }

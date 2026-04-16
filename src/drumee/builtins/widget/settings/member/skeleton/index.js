@@ -36,42 +36,6 @@ module.exports = function (ui) {
     });
   }
 
-  // Resolve permission label based on privilege value (similar to permission/index.js)
-  const resolveLabel = (p) => {
-    // Check owner first
-    if (ui.isMediaOwner()) {
-      return LOCALE.OWNER;
-    }
-
-    // Check admin
-    if (ui.canAdmin()) {
-      return "All permissions" || LOCALE.ADMINISTRATOR || "Administrator";
-    }
-
-    // Check delete/modify (all permissions)
-    if (ui.canOrganize()) {
-      return (
-        LOCALE.PERMISSION_DELETE_ORGANIZE ||
-        LOCALE.ALL_PERMISSIONS ||
-        "All permissions"
-      );
-    }
-
-    // Check write/upload (upload and download)
-    if (ui.canUpload()) {
-      return (
-        LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only"
-      );
-    }
-
-    // Check read/view (download only)
-    if (ui.canDownload()) {
-      return LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only";
-    }
-
-    return LOCALE.PERMISSION_READ || "Download only";
-  };
-
   const info = Skeletons.Box.Y({
     className: `${prefix}__info`,
     kidsOpt: {
@@ -89,37 +53,92 @@ module.exports = function (ui) {
     ],
   });
 
-  let arrow = Skeletons.Button.Svg({
-    ico: "arrow--pages",
-    className: `${prefix}__arrow-pages`,
-    active: 0,
-  });
-
-  let active = 1;
-  // ui.debug("AAA:89", ui.getHandlers(_a.ui)[0].mget('visitor'))
-  if (ui.isMediaOwner() || !(ui.my_privilege & _K.permission.admin)) {
-    arrow = "";
-    active = 0;
+  // Determine if current viewer can edit roles
+  let canEdit = 0;
+  if (ui.getHandlers(_a.ui)[0].mget(_a.privilege) & _K.privilege.admin) {
+    canEdit = 1;
+    if (ui.isMediaOwner()) {
+      canEdit = 0;
+    }
   }
+  // Resolve current role from privilege bitmask
+  const resolveRoleValue = () => {
+    if (ui.isMediaOwner() || ui.canAdmin()) return 'admin';
+    if (ui.canOrganize() || ui.canUpload()) return 'edit';
+    if (ui.canDownload()) return 'view';
+    return 'chat';
+  };
 
-  const configure = Skeletons.Box.X({
-    className: `${prefix}__permission-trigger`,
-    service: "prompt-permission",
-    active,
+  const roleItems = [
+    { value: 'admin', label: 'Admin' },
+    { value: 'view', label: LOCALE.VIEW || 'View' },
+    { value: 'edit', label: LOCALE.EDIT || 'Edit' },
+    { value: 'chat', label: LOCALE.CHAT || 'Chat' },
+  ];
+
+  const currentRole = resolveRoleValue();
+  const currentRoleItem = roleItems.find(r => r.value === currentRole) || roleItems[0];
+
+  // const roleTrigger = Skeletons.Box.X({
+  //   className: `${prefix}__role-trigger`,
+  //   kids: [
+  //     Skeletons.Note({
+  //       content: currentRoleItem.label,
+  //       className: `${prefix}__role-label`,
+  //     }),
+  //     Skeletons.Button.Svg({
+  //       ico: 'carret-down',
+  //       className: `${prefix}__role-chevron`,
+  //     }),
+  //   ],
+  // });
+
+  // const roleMenuItems = Skeletons.Box.Y({
+  //   className: `${prefix}__role-menu`,
+  //   kids: roleItems.map(role => Skeletons.Box.X({
+  //     className: `${prefix}__role-option`,
+  //     service: 'change-role',
+  //     name: role.value,
+  //     uiHandler: [ui],
+  //     kids: [
+  //       Skeletons.Note({
+  //         content: role.label,
+  //         className: `${prefix}__role-option-label`,
+  //       }),
+  //       Skeletons.Note({
+  //         className: `${prefix}__role-option-radio${role.value === currentRole ? ' active' : ''}`,
+  //       }),
+  //     ],
+  //   })),
+  // });
+
+
+
+  const status = Skeletons.Box.X({
+    className: `${prefix}__role-trigger`,
+    kidsOpt: {
+      active: 0,
+    },
     kids: [
       Skeletons.Note({
-        content: resolveLabel(),
-        className: `${prefix}__permission-label`,
-        active: 0,
+        content: currentRoleItem.label,
+        className: `${prefix}__role-label`,
       }),
-      arrow,
     ],
   });
+  const deleteBtn = canEdit ? Skeletons.Button.Svg({
+    ico: 'trash',
+    className: `${prefix}__delete-btn`,
+    service: 'remove-member',
+    uiHandler: [ui],
+  }) : null;
 
-  return Skeletons.Box.X({
+  let r = Skeletons.Box.X({
     className: `${prefix}__item ${type || ""}`,
     debug: __filename,
     uiHandler: ui,
-    kids: [profile_icon, info, configure],
+    kids: [profile_icon, info, status, deleteBtn],
   });
+  ui.debug("AAA:123", ui, r);
+  return r;
 };

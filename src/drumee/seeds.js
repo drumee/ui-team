@@ -236,21 +236,21 @@ module.exports = {
   settings_helpcenter: function () {
     return import("widget/settings/helpcenter");
   },
-  settings_hub: function () {
-    return import("widget/settings/hub");
-  },
+  // settings_hub: function () {
+  //   return import("widget/settings/hub");
+  // },
   settings_member: function () {
-    return import("widget/settings/member");
+    return import("./builtins/widget/settings/member");
   },
-  settings_members_list: function () {
-    return import("widget/settings/members-list");
-  },
-  settings_private_hub: function () {
-    return import("widget/settings/private-hub");
-  },
-  settings_share_hub: function () {
-    return import("widget/settings/share-hub");
-  },
+  // settings_members_list: function () {
+  //   return import("./builtins/widget/settings/members-list");
+  // },
+  // settings_private_hub: function () {
+  //   return import("widget/settings/private-hub");
+  // },
+  // settings_share_hub: function () {
+  //   return import("widget/settings/share-hub");
+  // },
   tag_item: function () {
     return import("./builtins/window/addressbook/widget/tag-item");
   },
