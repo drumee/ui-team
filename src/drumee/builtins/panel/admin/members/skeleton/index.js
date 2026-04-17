@@ -10,7 +10,6 @@ module.exports = function (ui) {
         className: `${pfx}__directory`,
         kids: [
           require('./dir-header')(ui),
-          require('./table-header')(ui),
           Skeletons.List.Smart({
             className: `${pfx}__list`,
             sys_pn: 'members-list',

@@ -10,7 +10,7 @@ class __admin_members extends LetcBox {
   }
 
   async onDomRefresh() {
-    await this._loadStats();
+    // await this._loadStats();
     this.feed(require('./skeleton')(this));
   }
 
