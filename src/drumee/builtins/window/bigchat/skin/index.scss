@@ -18,7 +18,7 @@
   }
 
   &__main {
-    background-color: var(--default-background);
+    background-color: var(--normal-bg-90);
   }
 
   &__container {
@@ -204,7 +204,7 @@
   }
 
   &__max-content {
-    background: var(--default-background);
+    background: var(--normal-bg-90);
     height: 100%;
     justify-content: center;
     overflow: hidden;
