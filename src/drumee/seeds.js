@@ -11,6 +11,12 @@ module.exports = {
   addressbook_widget_notification: function () {
     return import("./builtins/window/addressbook/widget/notification");
   },
+  admin_members: function () {
+    return import("./builtins/panel/admin/members");
+  },
+  admin_members_item: function () {
+    return import("./builtins/panel/admin/members/item");
+  },
   admin_security_page: function () {
     return import("./builtins/window/adminpanel/pages/admin-security");
   },
