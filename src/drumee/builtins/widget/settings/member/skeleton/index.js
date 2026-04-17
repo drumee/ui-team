@@ -1,3 +1,4 @@
+const {resolveRole}= require('../../../../skeleton/toolkit/permission');
 module.exports = function (ui) {
   const prefix = ui.fig.family;
   let fname = ui.mget(_a.firstname) || "";
@@ -27,7 +28,6 @@ module.exports = function (ui) {
       live_status: 1,
       surname,
     };
-    ui.debug("AAA:26", opt);
     profile_icon = Skeletons.UserProfile(opt);
   } else {
     profile_icon = Skeletons.Button.Svg({
@@ -35,42 +35,6 @@ module.exports = function (ui) {
       className: `${prefix}__avatar profile-icon desktop_contactbook`,
     });
   }
-
-  // Resolve permission label based on privilege value (similar to permission/index.js)
-  const resolveLabel = (p) => {
-    // Check owner first
-    if (ui.isMediaOwner()) {
-      return LOCALE.OWNER;
-    }
-
-    // Check admin
-    if (ui.canAdmin()) {
-      return "All permissions" || LOCALE.ADMINISTRATOR || "Administrator";
-    }
-
-    // Check delete/modify (all permissions)
-    if (ui.canOrganize()) {
-      return (
-        LOCALE.PERMISSION_DELETE_ORGANIZE ||
-        LOCALE.ALL_PERMISSIONS ||
-        "All permissions"
-      );
-    }
-
-    // Check write/upload (upload and download)
-    if (ui.canUpload()) {
-      return (
-        LOCALE.PERMISSION_UPLOAD_DOWNLOAD || LOCALE.UPLOAD_ONLY || "Upload only"
-      );
-    }
-
-    // Check read/view (download only)
-    if (ui.canDownload()) {
-      return LOCALE.PERMISSION_READ || LOCALE.DOWNLOAD_ONLY || "Download only";
-    }
-
-    return LOCALE.PERMISSION_READ || "Download only";
-  };
 
   const info = Skeletons.Box.Y({
     className: `${prefix}__info`,
@@ -89,37 +53,39 @@ module.exports = function (ui) {
     ],
   });
 
-  let arrow = Skeletons.Button.Svg({
-    ico: "arrow--pages",
-    className: `${prefix}__arrow-pages`,
-    active: 0,
-  });
-
-  let active = 1;
-  // ui.debug("AAA:89", ui.getHandlers(_a.ui)[0].mget('visitor'))
-  if (ui.isMediaOwner() || !(ui.my_privilege & _K.permission.admin)) {
-    arrow = "";
-    active = 0;
+  // Determine if current viewer can edit roles
+  let canEdit = 0;
+  if (ui.getHandlers(_a.ui)[0].mget(_a.privilege) & _K.privilege.admin) {
+    canEdit = 1;
+    if (ui.isMediaOwner()) {
+      canEdit = 0;
+    }
   }
 
-  const configure = Skeletons.Box.X({
-    className: `${prefix}__permission-trigger`,
-    service: "prompt-permission",
-    active,
+  const currentRoleItem = resolveRole(ui)
+  const status = Skeletons.Box.X({
+    className: `${prefix}__role-trigger`,
+    kidsOpt: {
+      active: 0,
+    },
     kids: [
       Skeletons.Note({
-        content: resolveLabel(),
-        className: `${prefix}__permission-label`,
-        active: 0,
+        content: currentRoleItem.label,
+        className: `${prefix}__role-label`,
       }),
-      arrow,
     ],
   });
+  const deleteBtn = canEdit ? Skeletons.Button.Svg({
+    ico: 'trash',
+    className: `${prefix}__delete-btn`,
+    service: 'remove-member',
+    uiHandler: [ui],
+  }) : null;
 
   return Skeletons.Box.X({
     className: `${prefix}__item ${type || ""}`,
     debug: __filename,
     uiHandler: ui,
-    kids: [profile_icon, info, configure],
+    kids: [profile_icon, info, status, deleteBtn],
   });
 };

@@ -5,18 +5,20 @@ module.exports = function (ui) {
   const m = ui.model.toJSON();
   m.fig = ui.fig.family;
   let body;
+  let avatar = '';
 
   if (m.message_type == _a.call) {
     body = require('./call-stat')(m)
   } else {
     body = require('./conversation')(m);
-    if (m.area == _a.share && m.author != _a.me) {
+    if (m.author != _a.me) {
       let uname = require('./username')(m);
+      avatar = require('./avatar')(m);
       body = `${uname}${body}`;
     }
   }
   const footer = require('./footer')(m);
   let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${body} ${footer}</div>`
-  html = `${content}`;
+  html = `${avatar}${content}`;
   return html;
-};    
+};

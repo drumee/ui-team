@@ -377,6 +377,15 @@ class __widget_chat extends LetcBox {
       case _a.interactive:
         return this.onInputChange(args);
 
+      case 'mention-filter':
+        return this._showMentionFiles(args.filter);
+
+      case 'mention-close':
+        return this._closeMentionDropdown();
+
+      case 'mention-select':
+        return this._onMentionFileSelect(cmd, args);
+
       case _e.send:
       case _e.commit:
         return this.sendMessage(args);
@@ -705,7 +714,15 @@ class __widget_chat extends LetcBox {
    * @returns 
    */
   sendMessage(args = {}) {
-    let message = args.text || this.getStorage().message;
+    let message = '';
+    // Get message with encoded mentions if available
+    const messenger = this.findPart(_a.message);
+    if (messenger && _.isFunction(messenger.getMessageWithMentions)) {
+      message = messenger.getMessageWithMentions();
+    }
+    if (!message) {
+      message = args.text || this.getStorage().message;
+    }
     const list = this.attachmentList;
     if (!list) {
       this.warn("Could not find attachment list", this);
@@ -1087,6 +1104,120 @@ class __widget_chat extends LetcBox {
         break;
 
     }
+  }
+
+  /**
+   * Show file mention dropdown filtered by text
+   */
+  _showMentionFiles(filter) {
+    const dropdown = this.getPart('mention-dropdown');
+    if (!dropdown) return;
+
+    const hubId = this.hubId;
+    const home = this.mget(_a.home);
+    if (!home) return;
+
+    // Get the parent window's current folder nid for listing files
+    let folderNid = home.home_id;
+    try {
+      const handlers = this.getHandlers(_a.ui);
+      if (handlers && handlers[0]) {
+        const parentNid = handlers[0].mget && handlers[0].mget(_a.nid);
+        if (parentNid) folderNid = parentNid;
+      }
+    } catch (e) { }
+
+    this.fetchService({
+      service: SERVICE.media.show_node_by,
+      hub_id: hubId,
+      nid: folderNid
+    }).then((data) => {
+      // fetchService returns payload.data (array) or full payload
+      let files = Array.isArray(data) ? data : (data.rows || data.data || []);
+
+      files = files.filter(f =>
+        f.filetype !== _a.hub && f.filetype !== _a.folder
+      );
+
+      if (filter) {
+        files = files.filter(f =>
+          (f.filename || '').toLowerCase().includes(filter)
+        );
+      }
+
+      if (!files.length) {
+        dropdown.el.dataset.state = _a.closed;
+        dropdown.clear();
+        return;
+      }
+
+      const items = files.slice(0, 8).map(f => {
+        return Skeletons.Box.X({
+          className: 'mention-item',
+          dataset: {
+            nid: f.nid,
+            hub_id: hubId,
+            filename: f.filename
+          },
+          service: 'mention-select',
+          uiHandler: [this],
+          kids: [
+            Skeletons.Note({
+              className: 'mention-item__name',
+              content: f.filename
+            })
+          ]
+        });
+      });
+
+      dropdown.feed(items);
+      dropdown.el.dataset.state = _a.open;
+    }).catch((err) => {
+      this.warn("Mention files error:", err);
+      this._closeMentionDropdown();
+    });
+  }
+
+  /**
+   * Close mention dropdown
+   */
+  _closeMentionDropdown() {
+    const dropdown = this.getPart('mention-dropdown');
+    if (!dropdown) return;
+    dropdown.el.dataset.state = _a.closed;
+    dropdown.clear();
+  }
+
+  /**
+   * Handle file selection from mention dropdown
+   */
+  _onMentionFileSelect(cmd, args) {
+    let file;
+
+    // cmd is the clicked view, its el.dataset has the file info
+    // If clicked on a child element (e.g. the text), walk up to find .mention-item
+    if (cmd && cmd.el) {
+      let el = cmd.el;
+      if (!el.dataset.nid) {
+        el = el.closest('.mention-item') || el;
+      }
+      if (el.dataset) {
+        file = {
+          nid: el.dataset.nid,
+          hub_id: el.dataset.hub_id,
+          filename: el.dataset.filename
+        };
+      }
+    }
+
+    if (!file || !file.nid) return;
+
+    this.ensurePart(_a.message).then((messenger) => {
+      if (_.isFunction(messenger._onMentionSelect)) {
+        messenger._onMentionSelect(file);
+      }
+    });
+    this._closeMentionDropdown();
   }
 
   /**

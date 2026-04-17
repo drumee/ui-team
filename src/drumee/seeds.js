@@ -200,6 +200,12 @@ module.exports = {
   organization_form: function () {
     return import("./builtins/widget/settings/organization/form");
   },
+  permission_restricted: function () {
+    return import("./builtins/permission/restricted");
+  },
+  permission_shared: function () {
+    return import("./builtins/permission/share");
+  },
   schedule_invitation: function () {
     return import("./builtins/window/schedule/widget/invitation");
   },
@@ -230,24 +236,21 @@ module.exports = {
   settings_helpcenter: function () {
     return import("widget/settings/helpcenter");
   },
-  settings_hub: function () {
-    return import("widget/settings/hub");
-  },
+  // settings_hub: function () {
+  //   return import("widget/settings/hub");
+  // },
   settings_member: function () {
-    return import("widget/settings/member");
+    return import("./builtins/widget/settings/member");
   },
-  settings_members_list: function () {
-    return import("widget/settings/members-list");
-  },
-  settings_permission: function () {
-    return import("widget/settings/permission");
-  },
-  settings_private_hub: function () {
-    return import("widget/settings/private-hub");
-  },
-  settings_share_hub: function () {
-    return import("widget/settings/share-hub");
-  },
+  // settings_members_list: function () {
+  //   return import("./builtins/widget/settings/members-list");
+  // },
+  // settings_private_hub: function () {
+  //   return import("widget/settings/private-hub");
+  // },
+  // settings_share_hub: function () {
+  //   return import("widget/settings/share-hub");
+  // },
   tag_item: function () {
     return import("./builtins/window/addressbook/widget/tag-item");
   },

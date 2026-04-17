@@ -14,6 +14,13 @@ const __skl_widget_chat_footer = function (ui) {
         }
       }),
 
+      Skeletons.Wrapper.Y({
+        className: `${chatFig}__mention-dropdown`,
+        sys_pn: 'mention-dropdown',
+        dataset: {
+          state: _a.closed
+        }
+      }),
 
       Skeletons.Messenger({
         className: `${chatFig}__messenger`,

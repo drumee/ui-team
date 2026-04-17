@@ -28,7 +28,7 @@ if [ "$dest_host" != "" ]; then
   export banner_shown=shown
   echo OPTION: $OPT
   ssh ${dest_user}@${UI_RUNTIME_HOST} mkdir -p $target
-  rsync -avrp --delete-excluded  $OPT $src_path/ $target/
+  rsync -avrp  $src_path/ $target/
 
   echo "Done!"
 fi
