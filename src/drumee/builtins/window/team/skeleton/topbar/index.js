@@ -1,4 +1,4 @@
-const { dropdownMenuButton } = require("../../../skeleton/toolkit/index");
+const { newFileMenu, visioMenu, getAreaLabel } = require("../../../skeleton/toolkit");
 
 const __skl_window_team_topbar = function (ui, icon) {
   let settings;
@@ -26,14 +26,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   const figname = "topbar";
 
   const area = ui.mget(_a.area);
-  const badgeLabels = {
-    [_a.private]: LOCALE.PRIVATE || "PRIVATE",
-    [_a.share]: LOCALE.SHARED || "SHARED",
-    [_a.dmz]: LOCALE.RESTRICTED || "RESTRICTED",
-    [_a.restricted]: LOCALE.RESTRICTED || "RESTRICTED",
-    [_a.public]: LOCALE.PUBLIC || "PUBLIC",
-  };
-  const badgeLabel = badgeLabels[area] || LOCALE.RESTRICTED;
+  const badgeLabel = getAreaLabel(area) || LOCALE.RESTRICTED;
 
   const titleWrapper = Skeletons.Box.X({
     className: `${cnWidowTopbarTitle}__wrapper`,
@@ -61,35 +54,8 @@ const __skl_window_team_topbar = function (ui, icon) {
   const buttons = Skeletons.Box.X({
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
-      dropdownMenuButton(ui, {
-        className: cnWindowButton,
-
-        trigger: Skeletons.Button.Svg({
-          className: `${cnWindowButton}__icon-bg-button primary`,
-          ico: "desktop_confcalls",
-          uiHandler: ui,
-          partHandler: ui,
-        }),
-
-        menuItems: [
-          {
-            service: "meeting",
-            ico: "logo-google",
-            content: "Google Meet",
-          },
-          { service: "webinar", ico: "desktop_confcalls", content: "Zoom" },
-          {
-            service: "channel",
-            ico: "desktop_confcalls",
-            content: "Microsoft Teams",
-          },
-          {
-            service: "channel",
-            ico: "raw-logo-drumee-icon",
-            content: "Drumee Call",
-          },
-        ],
-      }),
+      visioMenu(ui),
+      newFileMenu(ui),
       Skeletons.Button.Label({
         className: `${cnWindowButton}__label-button`,
         label: LOCALE.UPLOAD,

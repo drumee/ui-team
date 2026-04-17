@@ -1,14 +1,12 @@
-const { button } = require("../../../../skeleton/toolkit/buttons");
-const { dropdownMenuButton } = require("../../../skeleton/toolkit/index");
+const { visioMenu, newFileMenu, getAreaLabel } = require("../../../skeleton/toolkit/index");
 
 const __skl_window_team_topbar = function (ui, icon) {
   let settings;
   const media = ui.mget(_a.media);
   const name = ui.model.get(_a.filename) || "";
   const logo = require("../../../skeleton/logo")(ui);
-  const subtitle = require("../../../skeleton/subtitle")(ui);
-  const cnWindowButton = "window-button";
-  const cnWidowTopbarTitle = "window-topbar-title";
+  const cnWindowButton = `${ui.fig.group}-button`;
+  const cnWidowTopbarTitle = `${ui.fig.group}-topbar-title`;
 
   if (icon == null || ui.mget(_a.media) == null) {
     settings = { kind: KIND.wrapper };
@@ -44,7 +42,7 @@ const __skl_window_team_topbar = function (ui, icon) {
         className: `${ui.fig.family}__badge`,
         kids: [
           Skeletons.Note({
-            content: "SHARED",
+            content: getAreaLabel(ui.mget(_a.area)),
           }),
           ,
         ],
@@ -55,36 +53,8 @@ const __skl_window_team_topbar = function (ui, icon) {
   const buttons = Skeletons.Box.X({
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
-      dropdownMenuButton(ui, {
-        className: cnWindowButton,
-
-        trigger: Skeletons.Button.Svg({
-          className: `${cnWindowButton}__icon-bg-button primary`,
-          ico: "desktop_confcalls",
-          uiHandler: ui,
-          partHandler: ui,
-        }),
-
-        menuItems: [
-          {
-            service: "meeting",
-            ico: "logo-google",
-            content: "Google Meet",
-          },
-          { service: "webinar", ico: "desktop_confcalls", content: "Zoom" },
-          {
-            service: "channel",
-            ico: "desktop_confcalls",
-            content: "Microsoft Teams",
-          },
-          {
-            service: "channel",
-            ico: "raw-logo-drumee-icon",
-            content: "Drumee Call",
-          },
-        ],
-      }),
-
+      visioMenu(ui),
+      newFileMenu(ui),
       Skeletons.Button.Label({
         className: `${cnWindowButton}__label-button`,
         label: LOCALE.UPLOAD,

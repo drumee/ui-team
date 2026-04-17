@@ -1,3 +1,4 @@
+const {permissionMenu} = require("../../../skeleton/toolkit");
 function members(ui) {
   const list = Skeletons.List.Smart({
     flow: _a.vertical,
@@ -6,6 +7,7 @@ function members(ui) {
     debug: __filename,
     itemsOpt: {
       kind: "settings_member",
+      service: 'prompt-permission',
       uiHandler: [ui],
     },
     spinner: true,
@@ -18,6 +20,7 @@ function members(ui) {
       hub_id: ui.mget(_a.hub_id),
       nid: ui.mget(_a.actual_home_id),
       type: "all",
+      uiHandler: [ui],
     },
     vendorOpt: Preset.List.Orange_d,
     inspect: 1,
@@ -42,6 +45,7 @@ function members(ui) {
  */
 module.exports = function (ui) {
   const fig = ui.fig.family;
+  const inviteRole = ui._inviteRole || 'admin';
 
   const header = Skeletons.Box.X({
     className: `${fig}__header`,
@@ -63,7 +67,7 @@ module.exports = function (ui) {
         ico: 'cross',
         className: `${fig}__close`,
         service: _e.close,
-        uiHandler: ui
+        uiHandler: [ui]
       })
     ]
   });
@@ -75,20 +79,26 @@ module.exports = function (ui) {
         className: `${fig}__section-label`,
         content: LOCALE.INVITE_MEMBER
       }),
-      Skeletons.Entry({
-        className: `${fig}__email-input`,
-        placeholder: LOCALE.ENTER_EMAIL,
-        require: 'email',
-        sys_pn: 'ref-invite-email',
-        mode: 'commit',
-        service: 'send-invitation',
-        uiHandler: ui
+      Skeletons.Box.X({
+        className: `${fig}__invite-row`,
+        kids: [
+          Skeletons.Entry({
+            className: `${fig}__email-input`,
+            placeholder: LOCALE.ENTER_EMAIL,
+            require: 'email',
+            sys_pn: 'ref-invite-email',
+            mode: 'commit',
+            service: 'send-invitation',
+            uiHandler: [ui]
+          }),
+          permissionMenu(ui, ui, 'select-invite-role', fig),
+        ]
       }),
       Skeletons.Note({
         className: `${fig}__send-btn`,
         content: LOCALE.SEND_INVITATION,
         service: 'send-invitation',
-        uiHandler: ui
+        uiHandler: [ui]
       })
     ]
   });
@@ -112,6 +122,11 @@ module.exports = function (ui) {
       Skeletons.Element({ tagName: 'hr', className: `${fig}__divider` }),
       inviteSection,
       permissionSection,
+      Skeletons.Wrapper.Y({
+        className: `${fig}__role-overlay`,
+        sys_pn: 'role-dropdown',
+        uiHandler: [ui],
+      }),
     ]
   });
 };

@@ -49,14 +49,13 @@
     width: 28px;
     height: 28px;
     padding: 4px;
-    opacity: 0.6;
     flex-shrink: 0;
     margin-left: 8px;
     cursor: pointer;
     color: var(--normal-fg-10);
 
     &:hover {
-      opacity: 1;
+      color: var(--normal-fg-20);
     }
   }
 

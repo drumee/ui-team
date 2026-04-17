@@ -1,19 +1,5 @@
 const { dialog, tooltips, tabBar } = require("../../skeleton/toolkit");
 
-function getChatLabel(ui) {
-  const area = ui.mget(_a.area);
-  switch (area) {
-    case _a.share:
-      return "CONVERSATION";
-    case _a.dmz:
-    case _a.restricted:
-      return "TEAM CHAT";
-    case _a.private:
-      return `${ui.mget(_a.filename) || ui.mget(_a.name) || ""} - CHAT`;
-    default:
-      return "FOLDER-SCOPED CHAT";
-  }
-}
 
 function grid(ui) {
   const header = Skeletons.Box.X({
@@ -26,15 +12,14 @@ function grid(ui) {
     kids: [require("./topbar")(ui)],
   });
 
-  const body = Skeletons.Box.Y({
-    className: `${ui.fig.family}__body ${ui.fig.group}__body`,
-    sys_pn: _a.content,
-    type: _a.type,
-  });
 
   const splitBody = Skeletons.Box.X({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
-    kids: [body],
+    kids: [Skeletons.Box.Y({
+      className: `${ui.fig.family}__body ${ui.fig.group}__body`,
+      sys_pn: _a.content,
+      type: _a.type,
+    })],
   });
 
   return Skeletons.Box.Y({

@@ -89,7 +89,7 @@ class __window_hub extends mfsInteract {
     this.fetchService(SERVICE.hub.get_attributes, {
       hub_id: this.mget(_a.hub_id)
     }).then((data) => {
-      if(!data || !data.hub_id){
+      if (!data || !data.hub_id) {
         this.feed(this.defaultSkeleton(this));
         return;
       }
@@ -116,10 +116,22 @@ class __window_hub extends mfsInteract {
       return this.dialogWrapper.clear();
     }
     this.isShowSettings = true;
-
+    let kind;
+    this.debug("AAA:120", this.mget(_a.area), this)
+    switch (this.mget(_a.area)) {
+      case _a.share:
+      case _a.dmz:
+        kind = 'permission_shared';
+        break
+      case _a.private:
+        kind = 'permission_restricted';
+        break
+      default:
+        this.warn("openSettings: unsupported area", this.mget(_a.area))
+        return
+    }
     this.dialogWrapper.feed({
-      // kind: "settings_hub",
-      kind: "settings_permission",
+      kind,
       label: this.settingsLabel || LOCALE.PROJECT_ROOM_MANAGER,
       className: "",
       uiHandler: [this],
@@ -221,6 +233,7 @@ class __window_hub extends mfsInteract {
   onUiEvent(cmd, args = {}) {
     if (args == null) { args = {}; }
     const service = args.service || cmd.service || cmd.mget(_a.service);
+    this.debug("AAA:236", service, this.mget(_a.area), this)
     switch (service) {
       case _e.access:
         if (!this.dialogWrapper.isEmpty()) {

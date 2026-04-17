@@ -1,5 +1,4 @@
 const { button } = require("../../../../skeleton/toolkit/buttons");
-const { dropdownMenuButton } = require("../../../skeleton/toolkit/index");
 const __media_skl_grid = function (ui) {
   const type = ui.mget(_a.type);
 
@@ -43,11 +42,11 @@ const __media_skl_grid = function (ui) {
   // value: filetype param sent to BE (null = no filter)
   // Mapped from api-response ftype field: image, video, audio, document, note, text
   const FILTER_TABS = [
-    { label: "All", value: "all" },
-    { label: "Docs", value: "docs" },
-    { label: "PDF", value: "pdf" },
-    { label: "Images", value: "image" },
-    { label: "Other", value: "other" },
+    { label: LOCALE.ALL, value: "all" },
+    { label: LOCALE.DOCS, value: "docs" },
+    { label: LOCALE.PDF, value: "pdf" },
+    { label: LOCALE.IMAGES, value: "image" },
+    { label: LOCALE.OTHER, value: "other" },
   ];
 
   const filterBar = Skeletons.Box.X({
@@ -66,67 +65,15 @@ const __media_skl_grid = function (ui) {
     ),
   });
 
-  const isVisible = ui.fig.name !== "trash";
-  const cnWindowButton = "window-button";
-  const cnWindowBody = "window-body";
 
-  const a = {
-    kind: KIND.box,
+  return Skeletons.Box.Y({
     debug: __filename,
-    flow: _a.y,
     className: `${ui.fig.group}__icons-container`,
     kids: [
       filterBar,
-      ...(isVisible
-        ? [
-            Skeletons.Box.X({
-              className: `${cnWindowBody}__buttons-container`,
-              kids: [
-                dropdownMenuButton(ui, {
-                  className: cnWindowButton,
-
-                  trigger: Skeletons.Button.Label({
-                    className: `${cnWindowButton}__label-button secondary`,
-                    label: "Add new",
-                    ico: "editbox_list-plus",
-                    uiHandler: ui,
-                    partHandler: ui,
-                  }),
-
-                  menuItems: [
-                    { service: "meeting", ico: "dock-note", content: "Note" },
-                    {
-                      service: "webinar",
-                      ico: "raw-documents_word",
-                      content: "Document",
-                    },
-                    {
-                      service: "channel",
-                      ico: "raw-documents_excel",
-                      content: "Spreadsheet",
-                    },
-                    {
-                      service: "channel",
-                      ico: "raw-documents_powerpoint",
-                      content: "Presentation",
-                    },
-                    {
-                      service: "channel",
-                      ico: "dock-folder",
-                      content: "Folder",
-                    },
-                  ],
-                }),
-              ],
-            }),
-          ]
-        : []),
       list,
-      ,
-    ],
-  };
-
-  return a;
+    ]
+  })
 };
 
 module.exports = __media_skl_grid;
