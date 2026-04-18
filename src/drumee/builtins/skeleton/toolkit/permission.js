@@ -5,7 +5,6 @@ const roleItems = [
   { value: 'chat', permission: _K.permission.chat, label: LOCALE.CHAT },
   { value: 'view', permission: _K.permission.view, label: LOCALE.VIEW },
 ];
-//
 
 // Resolve current role from permission bitmask
 export function resolveRole(ui) {
@@ -21,7 +20,6 @@ export function resolveRole(ui) {
 };
 
 /**
- *
  * @param {*} ui
  * @returns
  */
@@ -79,7 +77,7 @@ export function permissionMenu(ui, member, service, fig = ui.fig.family) {
     opening: _e.click,
     persistence: _a.once,
     trigger,
-    items: permissionItems(ui, member, fig, service),
+    items: permissionItems(ui, member, service, fig),
     offsetY: 4,
   };
 }
