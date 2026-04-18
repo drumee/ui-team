@@ -165,11 +165,13 @@ class __window_manager extends push {
   _openChatWithUser(drumate_id) {
     if (!drumate_id) return;
 
-    Desk.togglePanel('chat_p2p', 'chat-panel');
+    Desk.ensurePart('chat-panel').then(panel => {
+      if (panel.isEmpty()) {
+        Desk.togglePanel('chat_p2p', 'chat-panel');
+      }
 
-    const tryOpen = (retries = 20) => {
-      Desk.ensurePart('chat-panel').then(panel => {
-        const widget = panel && panel.children && panel.children.last && panel.children.last();
+      const tryOpen = (retries = 20) => {
+        const widget = panel.children && panel.children.last && panel.children.last();
         if (widget && _.isFunction(widget.openChatByPeerId)) {
           try {
             widget.openChatByPeerId(drumate_id);
@@ -181,10 +183,10 @@ class __window_manager extends push {
         if (retries > 0) {
           setTimeout(() => tryOpen(retries - 1), 200);
         }
-      });
-    };
+      };
 
-    setTimeout(tryOpen, 300);
+      setTimeout(tryOpen, 300);
+    });
   }
 
   /**
