@@ -67,7 +67,6 @@ module.exports = function (ui) {
       kind: "chat_contact_item",
       service: "load-conversation",
       radio: ui._radioId,
-      flag: "contact",
       uiHandler: [ui],
     },
     api: ui.getCurrentApi,

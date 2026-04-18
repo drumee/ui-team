@@ -70,18 +70,25 @@ class __chat_p2p extends LetcBox {
     delete peer.kids;
     delete peer.uiHandler;
 
+    // Ensure flag survives toLETC filtering — read directly from model
+    const flag = (contact.mget && contact.mget(_a.flag)) || peer.flag;
+    peer.flag = flag;
+
     const hub_id = peer.entity_id;
     if (!hub_id) return;
 
     let type;
-    switch (peer.flag) {
+    let home = null;
+    let nid = null;
+    switch (flag) {
       case _a.share:
         type = _a.share;
         try {
-          const home = await this.fetchService(SERVICE.media.home,
+          home = await this.fetchService(SERVICE.media.home,
             { hub_id }, { async: 1 });
           peer.home = home;
           peer.nid = home && home.home_id;
+          nid = peer.nid;
         } catch (e) {
           this.warn("Failed to fetch share home", e);
           return;
@@ -92,16 +99,28 @@ class __chat_p2p extends LetcBox {
         break;
       case _a.contact:
       default:
-        type = _a.private;
+        type = _a.privateRoom;
+        try {
+          home = await this.fetchService(SERVICE.media.home,
+            { hub_id: Visitor.id }, { async: 1 });
+          nid = home && home.home_id;
+        } catch (e) {
+          this.warn("Failed to fetch personal home", e);
+        }
     }
 
     const widget_chat = {
       kind: 'widget_chat',
       className: 'share-room-widget__chat',
       type,
+      area: type,
       view: 'bigChat',
       hub_id,
-      peer
+      peer_id: type === _a.privateRoom ? (peer.drumate_id || peer.entity_id) : '',
+      peer,
+      home,
+      nid,
+      widgetId: `chat-p2p-${type}-${hub_id}`,
     };
 
     if (type === _a.supportTicket && peer.ticket_id) {

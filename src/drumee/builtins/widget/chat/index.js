@@ -39,15 +39,16 @@ class __widget_chat extends LetcBox {
     this.updateChatUserStatus();
     this.queue = [];
     const area = this.mget(_a.area) || this.mget(_a.type);
-    if (area === _a.personal || area === _a.private || area === _a.privateRoom) {
+    if (area === _a.personal || area === _a.privateRoom) {
       this.hubId = Visitor.id;
       this.peerId = this.mget(_a.peer_id) || (this.peer && (this.peer.drumate_id || this.peer.entity_id || this.peer.id)) || '';
       this.storageKey = `${area}-${this.hubId}-${this.peerId}`;
     } else {
       this.hubId = this.mget(_a.hub_id);
       this.peerId = '';
+      const nid = this.mget(_a.nid) || '';
+      this.storageKey = nid ? `${area}-${this.hubId}-${nid}` : `${area}-${this.hubId}`;
     }
-    this.storageKey = `${area}-${this.hubId}`;
 
     this.hubId = this.hubId || this.mget(_a.hub_id);
     this.declareHandlers();
@@ -680,8 +681,8 @@ class __widget_chat extends LetcBox {
   getCurrentApi() {
     let api;
     if (!this.hubId) return null;
-    const area = this.mget(_a.area);
-    if (area === _a.personal) {
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    if (area === _a.personal || area === _a.privateRoom) {
       api = {
         service: SERVICE.chat.messages,
         peer_id: this.peerId,
@@ -747,6 +748,7 @@ class __widget_chat extends LetcBox {
       case _a.dmz:
       case _a.public:
       case _a.share:
+      case _a.private:
       case _a.ticket:
       case 'supportTicket':
         api = {
@@ -757,7 +759,6 @@ class __widget_chat extends LetcBox {
         };
         break;
 
-      case _a.private:
       case _a.privateRoom:
       case _a.personal:
         api = {
@@ -1039,11 +1040,12 @@ class __widget_chat extends LetcBox {
    * @param {Object} options
    */
   onWsMessage(service, data, options) {
-    const area = this.mget(_a.area);
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
     switch (options.service) {
       case SERVICE.contact.block:
       case SERVICE.contact.unblock:
-        if (!this.peer || (this.mget(_a.area) !== _a.personal)) {
+        if (!this.peer || !isPrivate) {
           return;
         }
         if (this.peerId !== data.entity) {
@@ -1059,14 +1061,14 @@ class __widget_chat extends LetcBox {
       case SERVICE.chat.forward:
       case SERVICE.channel.post_ticket:
         var hubMatch = (area === _a.share) && (this.hubId === data.hub_id);
-        var privateMach = (area === _a.personal) && (this.peerId === data.entity_id);
+        var privateMach = isPrivate && (this.peerId === data.entity_id);
         var ticketMach = (area === _a.ticket) && (data.ticket_id === this.mget('ticket_id'));
         if (hubMatch || privateMach || ticketMach) {
           this.handleReceivedMsg(data);
 
           if (area === _a.share) {
             service = SERVICE.channel.acknowledge;
-          } else if (area === _a.personal) {
+          } else if (isPrivate) {
             service = SERVICE.chat.acknowledge;
           } else if (area === _a.ticket) {
             service = SERVICE.channel.acknowledge_ticket;
@@ -1122,30 +1124,43 @@ class __widget_chat extends LetcBox {
 
     const getIconName = require('builtins/media/template/icon-name');
 
-    let folderNid = home.home_id;
+    let folderNid = this.mget(_a.nid);
+    let folderHubId = hubId;
     try {
-      const handlers = this.getHandlers(_a.ui);
-      if (handlers && handlers[0]) {
-        const parentNid = handlers[0].mget && handlers[0].mget(_a.nid);
-        if (parentNid) folderNid = parentNid;
+      const folderWindow = this.getParentByKind && (
+        this.getParentByKind('window_folder') ||
+        this.getParentByKind('window_team') ||
+        this.getParentByKind('window_sharebox')
+      );
+      if (folderWindow) {
+        const winNid = folderWindow.mget && folderWindow.mget(_a.nid);
+        const winHubId = folderWindow.mget && folderWindow.mget(_a.hub_id);
+        if (winNid) folderNid = winNid;
+        if (winHubId) folderHubId = winHubId;
       }
     } catch (e) { }
+    if (!folderNid) folderNid = home.home_id;
 
     const filesPromise = this.fetchService({
       service: SERVICE.media.show_node_by,
-      hub_id: hubId,
+      hub_id: folderHubId,
       nid: folderNid
-    }).catch(() => []);
+    }).catch(() => null);
 
     const contactsPromise = this.fetchService({
       service: SERVICE.chat.chat_rooms,
       flag: 'contact',
       hub_id: Visitor.get(_a.id)
-    }).catch(() => []);
+    }).catch(() => null);
 
     Promise.all([filesPromise, contactsPromise]).then(([filesData, contactsData]) => {
-      let files = Array.isArray(filesData) ? filesData : (filesData.rows || filesData.data || []);
-      let contacts = Array.isArray(contactsData) ? contactsData : (contactsData.rows || contactsData.data || []);
+      const toRows = (d) => {
+        if (!d) return [];
+        if (Array.isArray(d)) return d;
+        return d.rows || d.data || [];
+      };
+      let files = toRows(filesData);
+      let contacts = toRows(contactsData);
 
       files = files.filter(f => f.filetype !== _a.hub);
 

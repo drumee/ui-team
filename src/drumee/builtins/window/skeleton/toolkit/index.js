@@ -202,6 +202,7 @@ export function chatPanel(ui) {
         area: ui.mget(_a.area),
         view: 'quickChat',
         hub_id: ui.mget(_a.hub_id),
+        nid: ui.mget(_a.nid),
         placeholder: LOCALE.TYPE_MESSAGE + '...',
         no_emoji: true,
         send_icon: 'raw-send-chat',

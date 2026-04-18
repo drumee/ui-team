@@ -24,7 +24,9 @@ class __media_wrapper extends LetcBox {
   */
   onBeforeDestroy() {
     /** Prevent updating on reload */
-    this.__content.onRemoveChild = null;
+    if (this.__content) {
+      this.__content.onRemoveChild = null;
+    }
   }
 
   /**

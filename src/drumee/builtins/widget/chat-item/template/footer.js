@@ -1,6 +1,7 @@
 // ==================================================================== *
 const __chat_item_footer = function(m) {
-  let date = Dayjs.unix(m.ctime).locale(Visitor.language()).format("HH:mm");
+  const ts = m.ctime && m.ctime > 0 ? m.ctime : Math.floor(Date.now() / 1000);
+  let date = Dayjs.unix(ts).locale(Visitor.language()).format("HH:mm");
   html = `<div class="${m.fig}__message-footer ${m.author}"  id="${m.widgetId}-footer">
   <div class="${m.fig}__message-date ${m.author}"> ${date} </div>
   <div id="readstatus-${m.widgetId}" class="${m.fig}__icon-read readed-icon ${m.author}" data-is_readed="${m.is_readed}" data-is_seen="${m.is_seen}" >
