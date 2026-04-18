@@ -1,13 +1,10 @@
-
 class settings_member extends DrumeeMFS {
-
-
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   initialize() {
-    require('./skin');
+    require("./skin");
     super.initialize();
     const m = this.model;
     if (m.get(_a.entity)) {
@@ -15,8 +12,8 @@ class settings_member extends DrumeeMFS {
     }
     this.url = Visitor.avatar(m);
     this.name = m.get(_a.surname);
-    const firstname = m.get(_a.firstname) || '';
-    const lastname = m.get(_a.lastname) || '';
+    const firstname = m.get(_a.firstname) || "";
+    const lastname = m.get(_a.lastname) || "";
     this.id = m.get(_a.entity) || m.get(_a.id);
     this.email = m.get(_a.email);
     this.phone = m.get(_a.mobile);
@@ -31,7 +28,7 @@ class settings_member extends DrumeeMFS {
       this.name = this.email;
     }
 
-    if ((this.mget(_a.origin) == _a.share) && (this.mget(_a.status) == _a.memory)) {
+    if (this.mget(_a.origin) == _a.share && this.mget(_a.status) == _a.memory) {
       this.name = this.email;
     }
 
@@ -45,19 +42,20 @@ class settings_member extends DrumeeMFS {
   }
 
   /**
-   * 
+   *
    */
   data() {
-    let {
-      expiry, privilege, hours, days
-    } = this.model.toJSON()
+    let { expiry, privilege, hours, days } = this.model.toJSON();
     return {
-      expiry, privilege, hours, days
-    }
+      expiry,
+      privilege,
+      hours,
+      days,
+    };
   }
 
   /**
-   * 
+   *
    */
   onDomRefresh() {
     this.feed(require("./skeleton")(this));
@@ -69,18 +67,28 @@ class settings_member extends DrumeeMFS {
    * @param {*} args
    */
   onUiEvent(cmd, args = {}) {
-    const service = cmd.mget(_a.service)
+    const service = cmd.mget(_a.service);
 
     this.debug("===77== settings_member.onUiEvent ===", this, service);
     switch (service) {
       case "change-permission":
-        this.triggerHandlers({ service, member: this, name: cmd.mget(_a.name), state: cmd.mget(_a.state) });
+        this.triggerHandlers({
+          service,
+          member: this,
+          name: cmd.mget(_a.name),
+          state: cmd.mget(_a.state),
+        });
         break;
       case "prompt-permission":
-        this.triggerHandlers({ service, member: this })
+        console.log("===77== settings_member.prompt-permission ===", this);
+        this.triggerHandlers({ service, member: this, trigger: cmd });
         break;
       case "change-role":
-        this.triggerHandlers({ service, member: this, role: cmd.mget(_a.name) });
+        this.triggerHandlers({
+          service,
+          member: this,
+          role: cmd.mget(_a.name),
+        });
         break;
       case "remove-member":
         this.triggerHandlers({ service, member: this });
@@ -89,10 +97,7 @@ class settings_member extends DrumeeMFS {
       default:
         this.triggerHandlers({ service, trigger: cmd });
     }
-
   }
-
 }
-
 
 module.exports = settings_member;
