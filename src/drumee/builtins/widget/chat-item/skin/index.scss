@@ -467,6 +467,13 @@
   }
 }
 
+// User/contact mention in chat messages
+.user-mention {
+  color: #847EFF;
+  font-weight: 500;
+  cursor: default;
+}
+
 // Mention color per bubble context
 .widget-chatItem__conversation-content {
   &.other .file-mention {

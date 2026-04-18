@@ -1107,7 +1107,7 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * Show file mention dropdown filtered by text
+   * Show file/folder/contact mention dropdown filtered by text
    */
   _showMentionFiles(filter) {
     const dropdown = this.getPart('mention-dropdown');
@@ -1117,7 +1117,8 @@ class __widget_chat extends LetcBox {
     const home = this.mget(_a.home);
     if (!home) return;
 
-    // Get the parent window's current folder nid for listing files
+    const getIconName = require('builtins/media/template/icon-name');
+
     let folderNid = home.home_id;
     try {
       const handlers = this.getHandlers(_a.ui);
@@ -1127,53 +1128,98 @@ class __widget_chat extends LetcBox {
       }
     } catch (e) { }
 
-    this.fetchService({
+    const filesPromise = this.fetchService({
       service: SERVICE.media.show_node_by,
       hub_id: hubId,
       nid: folderNid
-    }).then((data) => {
-      // fetchService returns payload.data (array) or full payload
-      let files = Array.isArray(data) ? data : (data.rows || data.data || []);
+    }).catch(() => []);
 
-      files = files.filter(f =>
-        f.filetype !== _a.hub && f.filetype !== _a.folder
-      );
+    const contactsPromise = this.fetchService({
+      service: SERVICE.chat.chat_rooms,
+      flag: 'contact',
+      hub_id: Visitor.get(_a.id)
+    }).catch(() => []);
+
+    Promise.all([filesPromise, contactsPromise]).then(([filesData, contactsData]) => {
+      let files = Array.isArray(filesData) ? filesData : (filesData.rows || filesData.data || []);
+      let contacts = Array.isArray(contactsData) ? contactsData : (contactsData.rows || contactsData.data || []);
+
+      files = files.filter(f => f.filetype !== _a.hub);
 
       if (filter) {
         files = files.filter(f =>
           (f.filename || '').toLowerCase().includes(filter)
         );
+        contacts = contacts.filter(c => {
+          const name = `${c.firstname || ''} ${c.lastname || ''} ${c.surname || ''}`.toLowerCase();
+          return name.includes(filter);
+        });
       }
 
-      if (!files.length) {
+      let html = '';
+
+      // Files/folders section
+      if (files.length) {
+        html += '<div class="mention-section-header">Files</div>';
+        files.slice(0, 6).forEach(f => {
+          const iconInfo = getIconName({ filetype: f.filetype, ext: f.ext || '', mimetype: f.mimetype || '', area: f.area });
+          const chartId = iconInfo.chartId || 'desktop_docfile';
+
+          html += `<div class="mention-item" data-nid="${f.nid}" data-hub_id="${hubId}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
+            <div class="mention-item__icon"><svg class="mention-item__svg">${Template.Xmlns(chartId)}</svg></div>
+            <div class="mention-item__name">${_.escape(f.filename)}</div>
+          </div>`;
+        });
+      }
+
+      // Contacts section
+      if (contacts.length) {
+        html += '<div class="mention-section-header">People</div>';
+        contacts.slice(0, 6).forEach(c => {
+          const drumate_id = c.drumate_id || c.entity_id || c.id;
+          const firstname = c.firstname || c.surname || '';
+          const lastname = c.lastname || '';
+          const fullname = `${firstname} ${lastname}`.trim();
+          const avatarUrl = Visitor.avatar(drumate_id, _a.vignette);
+
+          html += `<div class="mention-item mention-item--contact" data-drumate_id="${drumate_id}" data-firstname="${_.escape(firstname)}" data-lastname="${_.escape(lastname)}" data-fullname="${_.escape(fullname)}" data-type="contact" data-service="mention-select">
+            <div class="mention-item__avatar"><img class="mention-item__avatar-img" src="${avatarUrl}"></div>
+            <div class="mention-item__name">${_.escape(fullname)}</div>
+          </div>`;
+        });
+      }
+
+      if (!html) {
         dropdown.el.dataset.state = _a.closed;
-        dropdown.clear();
         return;
       }
 
-      const items = files.slice(0, 8).map(f => {
-        return Skeletons.Box.X({
-          className: 'mention-item',
-          dataset: {
-            nid: f.nid,
-            hub_id: hubId,
-            filename: f.filename
-          },
-          service: 'mention-select',
-          uiHandler: [this],
-          kids: [
-            Skeletons.Note({
-              className: 'mention-item__name',
-              content: f.filename
-            })
-          ]
-        });
-      });
-
-      dropdown.feed(items);
+      // Inject HTML directly and bind click handlers
+      dropdown.el.innerHTML = html;
       dropdown.el.dataset.state = _a.open;
+
+      // Bind click on mention items
+      const self = this;
+      dropdown.el.querySelectorAll('.mention-item').forEach(el => {
+        el.onclick = function (e) {
+          e.stopPropagation();
+          const d = this.dataset;
+          let item;
+          if (d.type === 'contact') {
+            item = { type: 'contact', drumate_id: d.drumate_id, firstname: d.firstname, lastname: d.lastname, fullname: d.fullname };
+          } else {
+            item = { type: 'file', nid: d.nid, hub_id: d.hub_id, filename: d.filename };
+          }
+          self.ensurePart(_a.message).then((messenger) => {
+            if (_.isFunction(messenger._onMentionSelect)) {
+              messenger._onMentionSelect(item);
+            }
+          });
+          self._closeMentionDropdown();
+        };
+      });
     }).catch((err) => {
-      this.warn("Mention files error:", err);
+      this.warn("Mention error:", err);
       this._closeMentionDropdown();
     });
   }
@@ -1185,36 +1231,44 @@ class __widget_chat extends LetcBox {
     const dropdown = this.getPart('mention-dropdown');
     if (!dropdown) return;
     dropdown.el.dataset.state = _a.closed;
-    dropdown.clear();
+    dropdown.el.innerHTML = '';
   }
 
   /**
-   * Handle file selection from mention dropdown
+   * Handle file or contact selection from mention dropdown
    */
   _onMentionFileSelect(cmd, args) {
-    let file;
+    let item;
 
-    // cmd is the clicked view, its el.dataset has the file info
-    // If clicked on a child element (e.g. the text), walk up to find .mention-item
     if (cmd && cmd.el) {
       let el = cmd.el;
-      if (!el.dataset.nid) {
+      if (!el.dataset.type) {
         el = el.closest('.mention-item') || el;
       }
-      if (el.dataset) {
-        file = {
-          nid: el.dataset.nid,
-          hub_id: el.dataset.hub_id,
-          filename: el.dataset.filename
+      const d = el.dataset;
+      if (d.type === 'contact') {
+        item = {
+          type: 'contact',
+          drumate_id: d.drumate_id,
+          firstname: d.firstname,
+          lastname: d.lastname,
+          fullname: d.fullname
+        };
+      } else {
+        item = {
+          type: 'file',
+          nid: d.nid,
+          hub_id: d.hub_id,
+          filename: d.filename
         };
       }
     }
 
-    if (!file || !file.nid) return;
+    if (!item) return;
 
     this.ensurePart(_a.message).then((messenger) => {
       if (_.isFunction(messenger._onMentionSelect)) {
-        messenger._onMentionSelect(file);
+        messenger._onMentionSelect(item);
       }
     });
     this._closeMentionDropdown();

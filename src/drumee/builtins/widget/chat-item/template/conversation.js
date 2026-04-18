@@ -7,7 +7,13 @@ const __chat_dod = function(m) {
   // Decode file mentions: [@filename](mention:hub_id:nid) → clickable <a> tag
   message = message.replace(
     /\[@([^\]]+)\]\(mention:([^:]+):([^)]+)\)/g,
-    '<a class="file-mention" data-hub_id="$2" data-nid="$3" data-filetype="file">@$1</a>'
+    '<a class="file-mention" data-hub_id="$2" data-nid="$3">@$1</a>'
+  );
+
+  // Decode contact mentions: [@name](user:drumate_id) → styled <a> tag
+  message = message.replace(
+    /\[@([^\]]+)\]\(user:([^)]+)\)/g,
+    '<a class="user-mention" data-drumate_id="$2">@$1</a>'
   );
 
   message = Autolinker.link(message);

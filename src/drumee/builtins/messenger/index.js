@@ -266,9 +266,9 @@ class __lib_messenger extends LetcBox {
   }
 
   /**
-   * Called when user selects a file from mention dropdown
+   * Called when user selects a file or contact from mention dropdown
    */
-  _onMentionSelect(file) {
+  _onMentionSelect(item) {
     const content = this.__content;
     if (!content || !content.content) return;
 
@@ -279,18 +279,24 @@ class __lib_messenger extends LetcBox {
     const replaced = text.replace(/@\S*$/, '');
     el.innerText = replaced;
 
-    // Insert mention as a visible <a> tag in contenteditable
     const mention = document.createElement('a');
-    mention.className = 'file-mention';
-    mention.dataset.hub_id = file.hub_id;
-    mention.dataset.nid = file.nid;
-    mention.dataset.filename = file.filename;
     mention.contentEditable = 'false';
-    mention.textContent = `@${file.filename}`;
+
+    if (item.type === 'contact') {
+      mention.className = 'user-mention';
+      mention.dataset.drumate_id = item.drumate_id;
+      mention.dataset.fullname = item.fullname;
+      mention.textContent = `@${item.fullname}`;
+    } else {
+      mention.className = 'file-mention';
+      mention.dataset.hub_id = item.hub_id;
+      mention.dataset.nid = item.nid;
+      mention.dataset.filename = item.filename;
+      mention.textContent = `@${item.filename}`;
+    }
 
     el.appendChild(mention);
 
-    // Add space after and move cursor
     const space = document.createTextNode('\u00A0');
     el.appendChild(space);
 
@@ -318,16 +324,17 @@ class __lib_messenger extends LetcBox {
 
     for (const node of el.childNodes) {
       if (node.nodeType === 3) {
-        // Text node
         result += node.textContent;
       } else if (node.nodeType === 1 && node.classList.contains('file-mention')) {
-        // Mention <a> tag → encode as pattern
         const filename = node.dataset.filename || node.textContent.replace(/^@/, '');
         const hub_id = node.dataset.hub_id;
         const nid = node.dataset.nid;
         result += `[@${filename}](mention:${hub_id}:${nid})`;
+      } else if (node.nodeType === 1 && node.classList.contains('user-mention')) {
+        const fullname = node.dataset.fullname || node.textContent.replace(/^@/, '');
+        const drumate_id = node.dataset.drumate_id;
+        result += `[@${fullname}](user:${drumate_id})`;
       } else if (node.nodeType === 1) {
-        // Other elements — get text
         result += node.textContent;
       }
     }
