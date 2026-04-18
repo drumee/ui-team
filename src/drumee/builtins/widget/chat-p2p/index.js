@@ -83,6 +83,27 @@ class __chat_p2p extends LetcBox {
   }
 
   /**
+   * Open the chat for a peer by drumate_id (used by external callers, e.g. mention click).
+   * Waits for the contact list to load, then triggers the matching item.
+   * @param {String} drumate_id
+   */
+  openChatByPeerId(drumate_id) {
+    if (!drumate_id) return;
+    const tryOpen = (retries = 20) => {
+      this.ensurePart('contact-list').then(list => {
+        const items = (list.children && list.children.toArray) ? list.children.toArray() : [];
+        const match = items.find(it => it.mget && it.mget(_a.drumate_id) == drumate_id);
+        if (match) {
+          this.openChat(match);
+          return;
+        }
+        if (retries > 0) setTimeout(() => tryOpen(retries - 1), 200);
+      });
+    };
+    tryOpen();
+  }
+
+  /**
    * @param {View} trigger
    * @param {Object} args
    */

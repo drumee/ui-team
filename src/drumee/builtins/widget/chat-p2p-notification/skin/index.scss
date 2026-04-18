@@ -1,0 +1,44 @@
+@use 'mixins/drumee';
+
+.chat-p2p-widget-notification {
+  &__ui {
+    background-color: var(--eorange);
+    border-radius: 2px;
+    box-shadow: var(--shadow-main);
+    color: var(--white);
+    cursor: pointer;
+    flex-shrink: 0;
+    left: 35px;
+    position: absolute;
+    top: -12px;
+    z-index: 1000;
+  }
+
+  &__icon {
+    &[data-over="yes"] {
+      &:after {
+        background-color: transparent;
+        border: 2px solid var(--eorange);
+        content: "";
+        height: 80px;
+        left: -20px;
+        position: absolute;
+        top: -20px;
+        width: 80px;
+      }
+    }
+  }
+
+  &__digit {
+    @include drumee.typo($size: 9px, $color: var(--default-text-reverse));
+    align-items: center;
+    background-color: var(--default-background-alert);
+    border-radius: 50%;
+    font-weight: bold;
+    height: 19px;
+    justify-content: center;
+    margin: 10px 8px 8px;
+    position: absolute;
+    width: 19px;
+  }
+}

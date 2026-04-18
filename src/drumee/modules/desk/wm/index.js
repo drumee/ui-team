@@ -159,6 +159,35 @@ class __window_manager extends push {
   }
 
   /**
+   * Open chat-p2p panel and start chat with the given user.
+   * Used by user-mention click handler.
+   */
+  _openChatWithUser(drumate_id) {
+    if (!drumate_id) return;
+
+    Desk.togglePanel('chat_p2p', 'chat-panel');
+
+    const tryOpen = (retries = 20) => {
+      Desk.ensurePart('chat-panel').then(panel => {
+        const widget = panel && panel.children && panel.children.last && panel.children.last();
+        if (widget && _.isFunction(widget.openChatByPeerId)) {
+          try {
+            widget.openChatByPeerId(drumate_id);
+          } catch (e) {
+            this.warn("Failed to open chat with user", e);
+          }
+          return;
+        }
+        if (retries > 0) {
+          setTimeout(() => tryOpen(retries - 1), 200);
+        }
+      });
+    };
+
+    setTimeout(tryOpen, 300);
+  }
+
+  /**
    *
    */
   checkUserInteraction() {
@@ -1233,6 +1262,15 @@ class __window_manager extends push {
       e.stopPropagation();
       e.stopImmediatePropagation();
       e.preventDefault();
+
+      // Handle user-mention clicks → open bigchat with that user
+      if (anchor.classList.contains('user-mention')) {
+        const drumate_id = anchor.dataset.drumate_id;
+        if (drumate_id) {
+          this._openChatWithUser(drumate_id);
+          return;
+        }
+      }
 
       // Handle file-mention clicks
       if (anchor.classList.contains('file-mention')) {

@@ -20,6 +20,9 @@ module.exports = {
   bigchat_widget_notification: function () {
     return import("./builtins/window/bigchat/widget/notification");
   },
+  chat_p2p_widget_notification: function () {
+    return import("./builtins/widget/chat-p2p-notification");
+  },
   broadcast_message_page: function () {
     return import("./builtins/window/adminpanel/pages/broadcast-message");
   },

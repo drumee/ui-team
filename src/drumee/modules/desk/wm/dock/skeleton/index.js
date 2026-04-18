@@ -8,12 +8,10 @@ const __desk_dock = function (ui) {
       Skeletons.Button.Svg({
         ico: "dock-nav",
         className: `${fig}__button nav`,
-        service: _e.launch,
         uiHandler: ui,
         innerClass: "bigchat",
-        sys_pn: "bigchat-launcher",
-        respawn: "window_bigchat",
-        service: _e.launch,
+        sys_pn: "chat-p2p-launcher",
+        service: "toggle-chat",
         tooltips: {
           className: `${fig}__tooltips ${ui.fig.name}-tooltips`,
           content: LOCALE.CHAT,

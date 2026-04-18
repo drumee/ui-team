@@ -144,8 +144,6 @@
   }
 
   &__messenger {
-    height: 100%;
-
     // Remove all focus/active borders in chat input
     .rich-text,
     .lib-messenger__content,
@@ -166,6 +164,10 @@
       display: none;
     }
 
+    .lib-messenger__ui {
+      height: auto;
+    }
+
     .lib-messenger__main {
       background-color: transparent;
       height: auto;
@@ -177,13 +179,16 @@
       border-radius: 8px;
       padding: 10px 12px;
       gap: 5px;
+      height: auto;
       min-height: 44px;
+      box-sizing: border-box;
     }
 
     .lib-messenger__content {
       background-color: transparent;
       border-radius: 0;
       height: auto;
+      overflow: visible;
 
       .note-content {
         padding: 0;

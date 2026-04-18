@@ -38,10 +38,10 @@ class __widget_chat extends LetcBox {
     this.peer = this.mget('peer') || null;
     this.updateChatUserStatus();
     this.queue = [];
-    const area = this.mget(_a.area);
-    if (area === _a.personal) {
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    if (area === _a.personal || area === _a.private || area === _a.privateRoom) {
       this.hubId = Visitor.id;
-      this.peerId = this.mget(_a.peer_id);
+      this.peerId = this.mget(_a.peer_id) || (this.peer && (this.peer.drumate_id || this.peer.entity_id || this.peer.id)) || '';
       this.storageKey = `${area}-${this.hubId}-${this.peerId}`;
     } else {
       this.hubId = this.mget(_a.hub_id);
@@ -729,7 +729,7 @@ class __widget_chat extends LetcBox {
       return;
     }
 
-    const area = this.mget(_a.area);
+    const area = this.mget(_a.area) || this.mget(_a.type);
     if (list.hasPendingUpload()) {
       return this.showError(LOCALE.WAIT_UPLOAD, 'desktop_waiting');
     }
@@ -747,7 +747,8 @@ class __widget_chat extends LetcBox {
       case _a.dmz:
       case _a.public:
       case _a.share:
-      case _a.private:
+      case _a.ticket:
+      case 'supportTicket':
         api = {
           service: SERVICE.channel.post,
           message,
@@ -756,6 +757,8 @@ class __widget_chat extends LetcBox {
         };
         break;
 
+      case _a.private:
+      case _a.privateRoom:
       case _a.personal:
         api = {
           service: SERVICE.chat.post,

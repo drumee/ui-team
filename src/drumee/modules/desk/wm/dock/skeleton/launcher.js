@@ -21,11 +21,11 @@ const __dock_widget_launchers = function (ui, ismobile) {
   };
 
   const bigChatNotifier = {
-    kind: 'bigchat_widget_notification',
-    className: `${ui.fig.family}__bigchat-notifier`,
+    kind: 'chat_p2p_widget_notification',
+    className: `${ui.fig.family}__chat-p2p-notifier`,
     label: 'Chat Notification',
-    service: 'bigchat',
-    type: 'bigchat',
+    service: 'toggle-chat',
+    type: 'chat-p2p',
     route: {
       page: 'notification'
     },

@@ -733,8 +733,10 @@ class desk_module extends LetcBox {
         };
         return setTimeout(f, 200);
 
-      case "account":
       case "bigchat":
+        return this.togglePanel('chat_p2p', "chat-panel");
+
+      case "account":
       case "addressbook":
       case "transferbox":
       case "helpdesk":

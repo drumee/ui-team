@@ -132,7 +132,7 @@ class __panel_activity extends LetcBox {
 
       case 'open-chat':
         this.toggleState()
-        return Wm.launch({ kind: 'window_bigchat', }, { explicit: 1, singleton: 1 });
+        return Desk.togglePanel('chat_p2p', 'chat-panel');
 
       case 'open-activity-panel':
         return this.togglePanel();
