@@ -1146,6 +1146,13 @@ class __widget_chat extends LetcBox {
 
       files = files.filter(f => f.filetype !== _a.hub);
 
+      contacts = contacts.filter((c) => {
+        const firstname = c.firstname || c.surname || '';
+        const lastname = c.lastname || '';
+        const fullname = `${firstname} ${lastname}`.trim();
+        return fullname.length > 0;
+      });
+
       if (filter) {
         files = files.filter(f =>
           (f.filename || '').toLowerCase().includes(filter)

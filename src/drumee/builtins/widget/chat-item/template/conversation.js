@@ -10,10 +10,14 @@ const __chat_dod = function(m) {
     '<a class="file-mention" data-hub_id="$2" data-nid="$3">@$1</a>'
   );
 
-  // Decode contact mentions: [@name](user:drumate_id) → styled <a> tag
+  // Decode contact mentions: [@name](user:drumate_id) → styled <a> tag (empty name → không hiển thị)
   message = message.replace(
-    /\[@([^\]]+)\]\(user:([^)]+)\)/g,
-    '<a class="user-mention" data-drumate_id="$2">@$1</a>'
+    /\[@([^\]]*)\]\(user:([^)]+)\)/g,
+    (match, name, drumateId) => {
+      const label = (name || '').trim();
+      if (!label) return '';
+      return `<a class="user-mention" data-drumate_id="${drumateId}">@${label}</a>`;
+    }
   );
 
   message = Autolinker.link(message);
