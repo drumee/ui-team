@@ -15,39 +15,42 @@ export function resolveRole(ui) {
     if (ui.mget(_a.privilege) & _K.permission.read) return roleItems[2];
     if (ui.mget(_a.privilege) & _K.permission.chat) return roleItems[3];
   } catch (e) {
-    return { value: 'view', label: LOCALE.VIEW };
+    return { value: "view", label: LOCALE.VIEW };
   }
-  return { value: 'view', label: LOCALE.VIEW };
-};
+  return { value: "view", label: LOCALE.VIEW };
+}
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function permissionItems(ui, member, service, fig = ui.fig.family) {
-  const currentRole = resolveRole((member || ui)).value;
+  const currentRole = resolveRole(member || ui).value;
+  console.log("===77== permissionItems ===", currentRole, member, ui);
   return Skeletons.Box.Y({
     className: `${fig}__role-menu`,
-    kids: roleItems.map(role => Skeletons.Box.X({
-      className: `${fig}__role-option`,
-      service,
-      radio: `permission-radio-${ui._id}`,
-      name: role.value,
-      itemForm: role.value,
-      permission: role.permission,
-      uiHandler: [ui],
-      state: role.value === currentRole ? 1 : 0,
-      kids: [
-        Skeletons.Note({
-          content: role.label,
-          className: `${fig}__role-option-label`,
-        }),
-        Skeletons.Note({
-          className: `${fig}__role-option-radio option-radio`,
-        }),
-      ],
-    })),
+    kids: roleItems.map((role) =>
+      Skeletons.Box.X({
+        className: `${fig}__role-option`,
+        service,
+        radio: `permission-radio-${ui._id}`,
+        name: role.value,
+        itemForm: role.value,
+        permission: role.permission,
+        uiHandler: [ui],
+        state: role.value === currentRole ? 1 : 0,
+        kids: [
+          Skeletons.Note({
+            content: role.label,
+            className: `${fig}__role-option-label`,
+          }),
+          Skeletons.Note({
+            className: `${fig}__role-option-radio option-radio`,
+          }),
+        ],
+      }),
+    ),
   });
 }
 
@@ -55,7 +58,6 @@ export function permissionItems(ui, member, service, fig = ui.fig.family) {
  * Permission dropdown for the invite row.
  */
 export function permissionMenu(ui, member, service, fig = ui.fig.family) {
-  const currentRole = resolveRole((member || ui)).value;
   const currentItem = roleItems.find(r => r.value === currentRole) || roleItems[0];
   const trigger = Skeletons.Box.X({
     className: `${fig}__role-trigger`,
@@ -65,12 +67,11 @@ export function permissionMenu(ui, member, service, fig = ui.fig.family) {
         className: `${fig}__role-label`,
       }),
       Skeletons.Button.Svg({
-        ico: 'carret-down',
+        ico: "carret-down",
         className: `${fig}__role-chevron`,
       }),
     ],
   });
-
 
   return {
     kind: KIND.menu.topic,

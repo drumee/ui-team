@@ -1,4 +1,4 @@
-const {resolveRole}= require('../../../../skeleton/toolkit/permission');
+const { resolveRole } = require("../../../../skeleton/toolkit/permission");
 module.exports = function (ui) {
   const prefix = ui.fig.family;
   let fname = ui.mget(_a.firstname) || "";
@@ -62,9 +62,11 @@ module.exports = function (ui) {
     }
   }
 
-  const currentRoleItem = resolveRole(ui)
+  const currentRoleItem = resolveRole(ui);
   const status = Skeletons.Box.X({
     className: `${prefix}__role-trigger`,
+    service: "prompt-permission",
+    uiHandler: [ui],
     kidsOpt: {
       active: 0,
     },
@@ -75,12 +77,14 @@ module.exports = function (ui) {
       }),
     ],
   });
-  const deleteBtn = canEdit ? Skeletons.Button.Svg({
-    ico: 'trash',
-    className: `${prefix}__delete-btn`,
-    service: 'remove-member',
-    uiHandler: [ui],
-  }) : null;
+  const deleteBtn = canEdit
+    ? Skeletons.Button.Svg({
+        ico: "trash",
+        className: `${prefix}__delete-btn`,
+        service: "remove-member",
+        uiHandler: [ui],
+      })
+    : null;
 
   return Skeletons.Box.X({
     className: `${prefix}__item ${type || ""}`,
