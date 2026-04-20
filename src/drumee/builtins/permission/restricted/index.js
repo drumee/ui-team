@@ -1,16 +1,15 @@
-const { permissionItems } = require('../../../builtins/skeleton/toolkit');
+const { permissionItems } = require("../../../builtins/skeleton/toolkit");
 class __permission_restricted extends DrumeeMFS {
-
   /**
    * @param {Object} opt
    */
   initialize(opt = {}) {
-    opt.dataset = { ...opt.dataset, position: "0" }
+    opt.dataset = { ...opt.dataset, position: "0" };
 
-    require('./skin');
+    require("./skin");
     super.initialize(opt);
     this.declareHandlers();
-    this._inviteRole = 'admin';
+    this._inviteRole = "admin";
     let m = opt.media;
     if (!m) return;
     this.media = m;
@@ -23,10 +22,10 @@ class __permission_restricted extends DrumeeMFS {
    */
   onPartReady(child, pn) {
     switch (pn) {
-      case 'members-list':
+      case "members-list":
         child.on(_e.eod, async () => {
           this.el.dataset.position = "1";
-        })
+        });
         break;
       default:
         if (super.onPartReady) super.onPartReady(child, pn);
@@ -37,7 +36,7 @@ class __permission_restricted extends DrumeeMFS {
    * Upon DOM refresh, after element actually inserted into DOM
    */
   onDomRefresh() {
-    this.feed(require('./skeleton')(this));
+    this.feed(require("./skeleton")(this));
     // this.ensurePart("members-list").then((p) => {
     //   this.el.dataset.position = "1";
     // })
@@ -55,31 +54,31 @@ class __permission_restricted extends DrumeeMFS {
         this.el.dataset.position = "0";
         setTimeout(() => {
           this.suppress();
-        }, 500)
-        return
+        }, 500);
+        return;
 
-      case 'send-invitation':
-        this.ensurePart('ref-invite-email').then((entry) => {
-          const email = entry.el.querySelector('input')?.value?.trim();
+      case "send-invitation":
+        this.ensurePart("ref-invite-email").then((entry) => {
+          const email = entry.el.querySelector("input")?.value?.trim();
           if (!email) return;
           this.postService({
             service: SERVICE.hub.add_contributors,
             hub_id: this.mget(_a.hub_id),
             email,
-            role: this._inviteRole || 'admin',
+            role: this._inviteRole || "admin",
           }).then((users) => {
             this.mset(_a.users, users);
-            this.feed(require('./skeleton')(this));
+            this.feed(require("./skeleton")(this));
           });
         });
         break;
 
-      case 'select-invite-role':
+      case "select-invite-role":
         this._inviteRole = cmd.mget && cmd.mget(_a.name);
-        this.feed(require('./skeleton')(this));
+        this.feed(require("./skeleton")(this));
         break;
 
-      case 'change-role':
+      case "change-role":
         if (args.member && args.role) {
           this.postService({
             service: SERVICE.hub.set_privilege,
@@ -87,23 +86,34 @@ class __permission_restricted extends DrumeeMFS {
             uid: args.member.mget(_a.entity) || args.member.mget(_a.id),
             role: args.role,
           }).then(() => {
-            this.feed(require('./skeleton')(this));
+            this.feed(require("./skeleton")(this));
           });
         }
         break;
 
-      case 'prompt-permission':
-        const {trigger} = args;
-        this.ensurePart('role-dropdown').then((p) => {
-          p.feed(permissionItems(this, this.fig.family, cmd));
-          let y = trigger.$el.offset().top - this.$el.offset().top + trigger.$el.outerHeight();
-          let x = trigger.$el.offset().left - this.$el.offset().left - trigger.$el.outerWidth();
+      case "prompt-permission":
+        const { service, member, trigger } = args;
+        this.ensurePart("role-dropdown").then((p) => {
+          if (!service) {
+            p.el.style.display = "none";
+            return;
+          }
+          p.feed(permissionItems(this, member, "", this.fig.family));
+          let y =
+            trigger.$el.offset().top -
+            this.$el.offset().top +
+            trigger.$el.outerHeight();
+          let x =
+            trigger.$el.offset().left -
+            this.$el.offset().left -
+            trigger.$el.outerWidth();
+          p.el.style.display = "flex";
           p.el.style.left = `${x}px`;
           p.el.style.top = `${y}px`;
-        })
+        });
         break;
 
-      case 'remove-member':
+      case "remove-member":
         if (args.member) {
           this.postService({
             service: SERVICE.hub.remove_member,
@@ -111,7 +121,7 @@ class __permission_restricted extends DrumeeMFS {
             uid: args.member.mget(_a.entity) || args.member.mget(_a.id),
           }).then((users) => {
             this.mset(_a.users, users);
-            this.feed(require('./skeleton')(this));
+            this.feed(require("./skeleton")(this));
           });
         }
         break;

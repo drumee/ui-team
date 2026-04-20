@@ -136,7 +136,7 @@ class drumee_router extends LetcBox {
     if (data) {
       Visitor.respawn(data);
     }
-    let { nid, hub_id, color, theme = 'dark' } = Visitor.wallpaper() || {};
+    let { nid, hub_id, color, theme = 'light' } = Visitor.wallpaper() || {};
     switch(theme){
       case 'light':
         return require("./skin/themes/light");

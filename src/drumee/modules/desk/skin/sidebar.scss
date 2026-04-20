@@ -42,9 +42,15 @@
     &-icon {
       width: 16px;
       height: 16px;
+      &.red {
+        color: var(--error);
+      }
     }
 
     &-text {
+      &.red {
+        color: var(--error);
+      }
       &[data-device="mobile"] {
         margin-top: var(--spacer-2);
       }
@@ -95,15 +101,24 @@
       background-color: var(--primary-500);
       align-items: center;
       justify-content: center;
-      border-radius: 50%;
+      border-radius: var(--corner-radius-3);
 
       &-note {
         color: var(--white);
       }
     }
 
+    &-name-wrapper {
+      gap: var(--spacer-2);
+      justify-content: center;
+    }
     &-username {
-      color: #e4e3ff;
+      color: var(--normal-fg-10);
+    }
+
+    &-user-plan {
+      color: var(--neutral-500);
+      font-size: 10px;
     }
   }
 }
