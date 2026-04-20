@@ -4,7 +4,7 @@
   &__main {
     justify-content: space-between;
     width: 220px;
-    padding: var(--spacer-5) 0;
+    padding: 16px 0;
     background-color: var(--normal-bg-90);
     align-items: center;
     z-index: 10002;
@@ -13,17 +13,19 @@
 
   &__nav {
     width: 100%;
-    gap: var(--spacer-5);
+    gap: 4px;
   }
 
   &__item {
     align-items: center;
-    padding: var(--spacer-3) var(--spacer-4);
-    gap: var(--spacer-4);
+    padding: 8px 24px 7px;
+    gap: 12px;
     font-size: 14px;
     cursor: pointer;
     color: var(--normal-fg-10);
     border-left: 4px solid transparent;
+    min-height: 35px;
+    box-sizing: border-box;
 
     &:hover {
       border-left-color: var(--hover-border-40);
@@ -44,14 +46,14 @@
 
     &[data-partname="theme-toggle"] {
       .desk-module-sidebar__item-icon {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
       }
     }
 
     &-icon {
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
       color: inherit;
       &.red {
         color: var(--signout-fg, var(--error));
@@ -85,12 +87,12 @@
   &__header {
     font-size: 12px !important;
     color: var(--normal-fg-20);
-    margin: var(--spacer-4) auto auto var(--spacer-7);
+    margin: var(--spacer-4) auto auto 24px;
   }
 
   &__workspace {
     color: var(--normal-fg-10);
-    padding: 0 var(--spacer-4);
+    padding: 0 24px;
   }
 
   &__workspace-title {
@@ -99,21 +101,22 @@
 
   &__footer {
     width: 100%;
+    gap: 16px;
 
     &-user-btn {
       align-items: center;
-      padding: var(--spacer-3) var(--spacer-4);
-      gap: var(--spacer-3);
+      padding: 8px 24px;
+      gap: 12px;
       cursor: pointer;
     }
 
     &-avatar {
-      width: var(--spacer-8);
-      height: var(--spacer-8);
-      background-color: var(--primary-500);
+      width: 32px;
+      height: 32px;
+      background-color: var(--avatar-bg);
       align-items: center;
       justify-content: center;
-      border-radius: var(--corner-radius-3);
+      border-radius: 8px;
 
       &-note {
         color: var(--white);
@@ -129,7 +132,7 @@
     }
 
     &-user-plan {
-      color: var(--neutral-500);
+      color: var(--normal-fg-50);
       font-size: 10px;
     }
   }

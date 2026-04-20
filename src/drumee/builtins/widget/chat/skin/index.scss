@@ -181,7 +181,7 @@
       padding: 10px 12px;
       gap: 5px;
       height: auto;
-      min-height: 44px;
+      min-height: 36px;
       box-sizing: border-box;
     }
 
@@ -661,7 +661,7 @@
     width: 100%;
     min-width: 0;
     gap: 0;
-    padding: 16px;
+    padding: 0;
 
     .widget-chat-reply__wrapper {
       max-height: 70px;
@@ -686,9 +686,10 @@
   display: flex;
   align-items: center;
   gap: var(--spacer-6);
-  padding: var(--spacer-4) var(--spacer-6);
+  padding: 16px;
   color: var(--normal-fg-10);
   flex-shrink: 0;
+  border-bottom: 1px solid var(--border-muted);
 
   .note-content {
     color: inherit;
