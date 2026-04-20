@@ -609,6 +609,18 @@ class desk_module extends LetcBox {
       case "toggle-trash":
         return this.togglePanel('panel_trash', "trash-panel")
 
+      case "toggle-theme": {
+        const cur = (Visitor.wallpaper() || {}).theme
+          || (() => { try { return localStorage.getItem('drumee.theme'); } catch { return null; } })()
+          || 'light';
+        const next = cur === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem('drumee.theme', next); } catch (e) {}
+        const wp = { ...(Visitor.wallpaper() || {}), theme: next };
+        if (typeof Visitor.setWallpaper === 'function') Visitor.setWallpaper(wp);
+        return;
+      }
+
       case "open-contact-manager":
         return Wm.launch(
           { kind: cmd.mget(_a.respawn), args: cmd.mget(_a.router) },

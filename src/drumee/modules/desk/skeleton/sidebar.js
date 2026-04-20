@@ -68,7 +68,7 @@ const createFooter = (ui, username) => {
     className: cls(fig, "footer"),
     kids: [
       createNavItem(ui, "settings", LOCALE.SETTINGS, "toggle-settings"),
-      createNavItem(ui, "storage", LOCALE.DISPLAY_MODE, ""),
+      createNavItem(ui, "storage", LOCALE.DISPLAY_MODE, "toggle-theme"),
       createNavItem(ui, "carret-right", LOCALE.SIGN_OUT, "", "red", Butler.logout),
       // userMenu(ui)
       // Skeletons.UserProfile({ auto_color:1, oneLetter:1, className: cls(fig, "footer-user-btn") }),

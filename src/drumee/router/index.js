@@ -136,13 +136,12 @@ class drumee_router extends LetcBox {
     if (data) {
       Visitor.respawn(data);
     }
-    let { nid, hub_id, color, theme = 'light' } = Visitor.wallpaper() || {};
-    switch(theme){
-      case 'light':
-        return require("./skin/themes/light");
-      default:
-        return require("./skin/themes/dark");
-    }
+    let { nid, hub_id, color } = Visitor.wallpaper() || {};
+    const stored = (() => { try { return localStorage.getItem('drumee.theme'); } catch { return null; } })();
+    const theme = (Visitor.wallpaper() || {}).theme || stored || 'light';
+    require("./skin/themes/light");
+    require("./skin/themes/dark");
+    document.documentElement.dataset.theme = (theme === 'dark') ? 'dark' : 'light';
     return;
     this._wallpaper = '';
     if (color && color.primary) {
