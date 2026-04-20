@@ -13,7 +13,7 @@ const createText = (fig, suffix, content) =>
   Skeletons.Note({ className: cls(fig, suffix), content });
 
 // ---------- Nav Item ----------
-const createNavItem = (ui, ico, label, service = "", color = "") => {
+const createNavItem = (ui, ico, label, service = "", color = "", on_click) => {
   const fig = `${ui.fig.family}-sidebar`;
 
   return Skeletons.Box.X({
@@ -21,6 +21,7 @@ const createNavItem = (ui, ico, label, service = "", color = "") => {
     uiHandler: [ui],
     radio: `sidebar-radio` /** Shaed with workspace-items */,
     service,
+    on_click,
     kidsOpt: {
       active: 0,
     },
@@ -68,7 +69,7 @@ const createFooter = (ui, username) => {
     kids: [
       createNavItem(ui, "settings", LOCALE.SETTINGS, "toggle-settings"),
       createNavItem(ui, "storage", LOCALE.DISPLAY_MODE, ""),
-      createNavItem(ui, "carret-right", LOCALE.SIGN_OUT, "", "red"),
+      createNavItem(ui, "carret-right", LOCALE.SIGN_OUT, "", "red", Butler.logout),
       // userMenu(ui)
       // Skeletons.UserProfile({ auto_color:1, oneLetter:1, className: cls(fig, "footer-user-btn") }),
       Skeletons.Box.X({
