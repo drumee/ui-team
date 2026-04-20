@@ -13,7 +13,7 @@ const createText = (fig, suffix, content) =>
   Skeletons.Note({ className: cls(fig, suffix), content });
 
 // ---------- Nav Item ----------
-const createNavItem = (ui, ico, label, service = "", color = "", on_click) => {
+const createNavItem = (ui, ico, label, service = "", color = "", on_click, sys_pn) => {
   const fig = `${ui.fig.family}-sidebar`;
 
   return Skeletons.Box.X({
@@ -22,6 +22,7 @@ const createNavItem = (ui, ico, label, service = "", color = "", on_click) => {
     radio: `sidebar-radio` /** Shaed with workspace-items */,
     service,
     on_click,
+    sys_pn,
     kidsOpt: {
       active: 0,
     },
@@ -61,6 +62,12 @@ const getInitials = (name = "") =>
     .join("")
     .toUpperCase();
 
+const getThemeIcon = () => {
+  const stored = (() => { try { return localStorage.getItem('drumee.theme'); } catch { return null; } })();
+  const theme = (Visitor.wallpaper() || {}).theme || stored || 'raw-light';
+  return theme === 'raw-dark' ? 'raw-light' : 'raw-dark';
+};
+
 const createFooter = (ui, username) => {
   const fig = getSidebarFig(ui);
 
@@ -68,8 +75,8 @@ const createFooter = (ui, username) => {
     className: cls(fig, "footer"),
     kids: [
       createNavItem(ui, "settings", LOCALE.SETTINGS, "toggle-settings"),
-      createNavItem(ui, "storage", LOCALE.DISPLAY_MODE, "toggle-theme"),
-      createNavItem(ui, "carret-right", LOCALE.SIGN_OUT, "", "red", Butler.logout),
+      createNavItem(ui, getThemeIcon(), LOCALE.DISPLAY_MODE, "toggle-theme", "", undefined, "theme-toggle"),
+      createNavItem(ui, "signout", LOCALE.SIGN_OUT, "", "red", Butler.logout),
       // userMenu(ui)
       // Skeletons.UserProfile({ auto_color:1, oneLetter:1, className: cls(fig, "footer-user-btn") }),
       Skeletons.Box.X({

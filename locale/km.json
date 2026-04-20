@@ -2154,5 +2154,9 @@
   "CREATE_NEW_WORSPACE": "បង្កើត​កន្លែងធ្វើការ​ថ្មី",
   "CREATE_NEW_WORSPACE_HINT": "កន្លែងធ្វើការដែលបានឧទ្ទិសដល់មានឯកសារ ថតឯកសារ សារ ទិន្នន័យ ជាដើម។",
   "NOTIFICATIONS": "ការជូនដំណឹង",
-  "TYPE_MESSAGE": "វាយបញ្ចូលសារ"
+  "TYPE_MESSAGE": "វាយបញ្ចូលសារ",
+  "INVITE_MEMBERS": "អញ្ជើញសមាជិក",
+  "TERR": "dssd",
+  "DISPLAY_MODE": "របៀបបង្ហាញ",
+  "SIGN_OUT": "ចាកចេញ"
 }
