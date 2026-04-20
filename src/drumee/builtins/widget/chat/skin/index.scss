@@ -175,7 +175,8 @@
 
     .lib-messenger__container {
       align-items: center;
-      background-color: #0B0A21;
+      background-color: var(--normal-bg);
+      border: 1px solid var(--border-muted);
       border-radius: 8px;
       padding: 10px 12px;
       gap: 5px;
@@ -195,7 +196,7 @@
         min-height: 24px;
         max-height: 96px;
         overflow-y: auto;
-        color: #E4E3FF;
+        color: var(--normal-fg-10);
         outline: none;
         border: none;
         box-shadow: none;
@@ -208,7 +209,7 @@
         }
 
         &::before {
-          color: #6b7280;
+          color: var(--normal-fg-50);
         }
 
         &::-webkit-scrollbar {
@@ -218,7 +219,7 @@
           background: transparent;
         }
         &::-webkit-scrollbar-thumb {
-          background: var(--neutral-700, #5b616d);
+          background: var(--border-strong);
           border-radius: 3px;
         }
       }
@@ -244,7 +245,7 @@
       svg {
         width: 14px;
         height: 12px;
-        fill: #E4E3FF;
+        fill: var(--normal-fg-10);
         padding: 0;
         margin: 0;
       }
@@ -482,13 +483,13 @@
     right: 0;
     max-height: 220px;
     overflow-y: auto;
-    background: var(--neutral-900, #222732);
-    border: 1px solid var(--neutral-700, #5b616d);
+    background: var(--normal-bg-90);
+    border: 1px solid var(--border-muted);
     border-radius: 8px;
     margin-bottom: 4px;
     padding: 6px 0;
     z-index: 100;
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-top-tiny);
 
     &::-webkit-scrollbar {
       width: 4px;
@@ -497,7 +498,7 @@
       background: transparent;
     }
     &::-webkit-scrollbar-thumb {
-      background: var(--neutral-700, #5b616d);
+      background: var(--border-strong);
       border-radius: 4px;
     }
 
@@ -515,7 +516,7 @@
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 1px;
-      color: var(--neutral-500, #afb3bb);
+      color: var(--normal-fg-50);
       flex-shrink: 0;
       pointer-events: none;
 
@@ -534,7 +535,7 @@
       display: flex;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: var(--hover-bg-40);
       }
 
       * {
@@ -549,7 +550,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--neutral-400, #c3c6cc);
+      color: var(--normal-fg-20);
 
       .mention-item__svg {
         width: 100%;
@@ -575,7 +576,7 @@
 
     .mention-item__name {
       font-size: 12px;
-      color: var(--gray-white, #fff);
+      color: var(--normal-fg-10);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -613,8 +614,8 @@
   max-width: 250px;
   display: flex;
   flex-direction: column;
-  border-left: 4px solid #e4e3ff14;
-  background-color: transparent;
+  border-left: 1px solid var(--border-muted);
+  background-color: var(--normal-bg-90);
   overflow: hidden;
 
   &[data-active="0"] {
