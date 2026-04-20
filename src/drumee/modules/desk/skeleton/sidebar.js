@@ -63,9 +63,11 @@ const getInitials = (name = "") =>
     .toUpperCase();
 
 const getThemeIcon = () => {
-  const stored = (() => { try { return localStorage.getItem('drumee.theme'); } catch { return null; } })();
-  const theme = (Visitor.wallpaper() || {}).theme || stored || 'raw-light';
-  return theme === 'raw-dark' ? 'raw-light' : 'raw-dark';
+  const theme = document.documentElement.dataset.theme
+    || (Visitor.wallpaper() || {}).theme
+    || (() => { try { return localStorage.getItem('drumee.theme'); } catch { return null; } })()
+    || 'light';
+  return theme === 'dark' ? 'raw-light' : 'raw-dark';
 };
 
 const createFooter = (ui, username) => {
