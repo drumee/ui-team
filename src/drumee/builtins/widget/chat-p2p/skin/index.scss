@@ -7,7 +7,7 @@
     top: 0px;
     right: -880px;
     background-color: var(--normal-bg-90);
-    border: 1px solid var(--neutral-800);
+    border: 1px solid var(--normal-fg-800);
     transition: right 0.5s;
     position: absolute;
     box-shadow: var(--shadow-left-big);
@@ -31,7 +31,7 @@
 
   &__sidebar {
     background-color: var(--normal-bg-90);
-    border-right: 1px solid var(--neutral-800);
+    border-right: 1px solid var(--normal-fg-800);
     flex-shrink: 0;
     height: 100%;
     overflow: hidden;
@@ -128,7 +128,7 @@
   &__chat-header {
     align-items: center;
     background-color: var(--normal-bg-100);
-    border-bottom: 1px solid var(--neutral-800);
+    border-bottom: 1px solid var(--normal-fg-800);
     flex-shrink: 0;
     justify-content: space-between;
     min-height: 60px;

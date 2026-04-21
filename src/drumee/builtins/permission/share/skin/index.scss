@@ -8,7 +8,7 @@
     right: -360px;
     bottom: 0px;
     top: 0;
-    background-color: var(--primary-purple-90);
+    background-color: var(--normal-bg-90);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -168,7 +168,7 @@
     width: 100%;
 
     &:hover {
-      background-color: var(--neutral-700, #374151);
+      background-color: var(--primary-20);
     }
   }
 
@@ -211,18 +211,14 @@
 
   &__expiry-label {
     flex: 1;
-    @include drumee.typo(
-      $color: var(--neutral-300, #d1d5db),
-      $size: 14px,
-      $line: 22px
-    );
+    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 22px);
   }
 
   &__calendar-btn {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
-    color: var(--neutral-400);
+    color: var(--normal-fg-10);
   }
 
   &__clear-btn {
@@ -230,7 +226,7 @@
     border-radius: var(--corner-radius-1);
     background-color: var(--primary-40);
     @include drumee.typo(
-      $color: var(--white, #fff),
+      $color: var(--primary-10),
       $size: 13px,
       $weight: 500,
       $line: 20px
@@ -252,7 +248,7 @@
     border-radius: var(--corner-radius-2);
     background-color: var(--primary-40);
     @include drumee.typo(
-      $color: var(--white, #fff),
+      $color: var(--primary-10),
       $size: 15px,
       $weight: 600,
       $line: 24px

@@ -1,4 +1,5 @@
-html[data-theme="light"], :root {
+html[data-theme="light"],
+:root {
   /* Surface */
   --normal-bg: #FFFFFF;
   --normal-bg-100: #FFFFFF;
@@ -41,4 +42,18 @@ html[data-theme="light"], :root {
   --shadow-top-tiny: 0px 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-left-big: -24px 0 48px rgba(0, 0, 0, 0.10);
   --shadow-right-big: 24px 0 48px rgba(0, 0, 0, 0.10);
+
+  :root {
+    --normal-bg: var(--neutral-100);
+    --normal-bg-90: var(--tertiary-grey-20);
+    --normal-bg-100: var(--tertiary-grey-30);
+    --normal-fg: var(--neutral-800);
+    --normal-fg-10: var(--primary-purple-90);
+    --normal-fg-20: var(--primary-purple-100);
+    --normal-fg-800: var(--neutral-800);
+    --reverse-bg: var(--primary-800);
+    --reverse-fg: var(--neutral-100);
+    --overlay-bg: var(--primary-purple-80-5);
+    --overlay-fg: var(--primary-purple-80);
+  }
 }
