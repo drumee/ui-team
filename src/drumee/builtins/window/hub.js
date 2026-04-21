@@ -104,9 +104,20 @@ class __window_hub extends mfsInteract {
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @returns 
+   * Show folder content tab (files, chat, task)
+   */
+  showFolderTab(tab) {
+    this.activeTab = tab;
+    const chatPanel = this.getPart('chat-panel');
+    if (chatPanel) {
+      chatPanel.el.dataset.active = tab === _a.chat ? '1' : '0';
+    }
+  }
+
+  /**
+   *
+   * @param {*} cmd
+   * @returns
    */
   openSettings(cmd) {
     // Follow the same pattern as sharebox switchShowShareboxSettings()
@@ -235,6 +246,15 @@ class __window_hub extends mfsInteract {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     this.debug("AAA:236", service, this.mget(_a.area), this)
     switch (service) {
+      case "tab-files":
+        return this.showFolderTab(_a.files);
+
+      case "tab-chat":
+        return this.showFolderTab(_a.chat);
+
+      case "tab-task":
+        return this.showFolderTab(_a.task);
+
       case _e.access:
         if (!this.dialogWrapper.isEmpty()) {
           this.dialogWrapper.clear();

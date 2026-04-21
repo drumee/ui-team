@@ -77,7 +77,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Note({
         className: `${fig}__section-label`,
-        content: LOCALE.INVITE_MEMBER
+        content: LOCALE.INVITE_MEMBERS
       }),
       Skeletons.Box.X({
         className: `${fig}__invite-row`,

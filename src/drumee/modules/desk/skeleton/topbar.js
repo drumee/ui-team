@@ -56,7 +56,7 @@ module.exports = function (ui) {
       Skeletons.Button.Label({
         ico: "drumee-add-contact",
         className: `${pfx}__invite-btn`,
-        label: LOCALE.INVITE_MEMBER || "Invite member",
+        label: LOCALE.INVITE_MEMBERS || "Invite members",
         service: "invite-member",
         uiHandler: [ui],
       }),
