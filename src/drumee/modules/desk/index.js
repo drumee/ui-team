@@ -15,9 +15,9 @@ class desk_module extends LetcBox {
     this.route = this.route.bind(this);
     this.loadDefault = this.loadDefault.bind(this);
     this.onChildBubble = this.onChildBubble.bind(this);
-    // this.checkIntro = this.checkIntro.bind(this);
+    this.checkIntro = this.checkIntro.bind(this);
     this.dmzCopyMedia = this.dmzCopyMedia.bind(this);
-    // this.checkUserOnBoarding = this.checkUserOnBoarding.bind(this);
+    this.checkUserOnBoarding = this.checkUserOnBoarding.bind(this);
     this.onUiEvent = this.onUiEvent.bind(this);
     this.acknowledge = this.acknowledge.bind(this);
     this._openTab = this._openTab.bind(this);
@@ -345,20 +345,20 @@ class desk_module extends LetcBox {
    * Check if user needs onboarding and show the onboarding plugin
    * @param {Object} c
    */
-  // checkIntro(c) {
-  //   if (Visitor.get("is_dmz_hub_copy") == _a.yes) {
-  //     return this.dmzCopyMedia(c);
-  //   }
-  //   this.checkUserOnBoarding(c);
-  // }
+  checkIntro(c) {
+    if (Visitor.get("is_dmz_hub_copy") == _a.yes) {
+      return this.dmzCopyMedia(c);
+    }
+    this.checkUserOnBoarding(c);
+  }
 
   /**
    * Show onboarding widget if user hasn't completed onboarding
    */
-  // checkUserOnBoarding(c) {
-  //   this.debug("AAA:341", Visitor.profile().onboarded)
-  //   if (Visitor.profile().onboarded) return;
-  // }
+  checkUserOnBoarding(c) {
+    this.debug("AAA:341", Visitor.profile().onboarded)
+    if (Visitor.profile().onboarded) return;
+  }
 
   /**
    *

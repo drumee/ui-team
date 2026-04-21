@@ -72,37 +72,11 @@ class __window_folder extends mfsInteract {
       case _e.settings:
         return this.switchShowFolderSettings(cmd);
 
-      case "tab-files":
-        return this.showFolderTab(_a.files);
-
-      case "tab-chat":
-        return this.showFolderTab(_a.chat);
-
-      case "tab-task":
-        return this.showFolderTab(_a.task);
-
       case "remove-selection":
         return Wm.removeMediaSelection(cmd);
 
       default:
         super.onUiEvent(cmd, args);
-    }
-  }
-
-  /**
-   *
-   * @param {*} cmd
-   * @returns
-   */
-  /**
-   * Show folder content tab (files, chat, task)
-   * @param {string} tab
-   */
-  showFolderTab(tab) {
-    this.activeTab = tab;
-    const chatPanel = this.getPart('chat-panel');
-    if (chatPanel) {
-      chatPanel.el.dataset.active = tab === _a.chat ? '1' : '0';
     }
   }
 

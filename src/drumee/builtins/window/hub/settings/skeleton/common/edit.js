@@ -32,7 +32,7 @@ const __hub_admin_field_edit = function (_ui_) {
     kids: [
       Skeletons.Note({
         className: `${fig}__section-label`,
-        content: LOCALE.INVITE_MEMBER
+        content: LOCALE.INVITE_MEMBERS
       }),
       Skeletons.Entry({
         className: `${fig}__email-input`,

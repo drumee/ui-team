@@ -1,4 +1,4 @@
-const { windowHeader, splitBody, dialog, tooltips } = require("../../skeleton/toolkit")
+const { windowHeader, splitBody, dialog, tooltips, tabBar } = require("../../skeleton/toolkit")
 
 function grid(ui) {
   const topbar = require("./topbar")(ui, "desktop_sharebox_edit")
@@ -6,7 +6,7 @@ function grid(ui) {
     className: `${ui.fig.family}__main ${ui.fig.group}__main drive-popup`,
     radio: _a.parent,
     debug: __filename,
-    kids: [dialog(ui), windowHeader(ui, topbar), splitBody(ui), tooltips(ui)],
+    kids: [dialog(ui), windowHeader(ui, topbar), tabBar(ui), splitBody(ui), tooltips(ui)],
   });
 }
 module.exports = grid;
