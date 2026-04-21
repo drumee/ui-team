@@ -1,0 +1,455 @@
+@use 'mixins/drumee';
+
+.admin-storage {
+  &__ui,
+  &__main {
+    width: 100%;
+    height: 100%;
+    background-color: inherit;
+  }
+
+  &__main {
+    padding: 24px;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  /* ── Topbar ──────────────────────────────────── */
+  &__topbar {
+    flex-shrink: 0;
+    gap: 4px;
+  }
+
+  &__title {
+    @include drumee.typo($color: var(--neutral-900, #1a1a2e), $size: 24px, $weight: 700);
+  }
+
+  &__subtitle {
+    @include drumee.typo($color: var(--neutral-500, #9898b0), $size: 13px);
+    max-width: 480px;
+  }
+
+  /* ── Overview row ────────────────────────────── */
+  &__overview {
+    width: 100%;
+    gap: 16px;
+    flex-shrink: 0;
+    align-items: stretch;
+  }
+
+  /* ── Capacity card (left) ────────────────────── */
+  &__capacity-card {
+    flex: 1;
+    padding: 20px 24px;
+    background-color: var(--neutral-800, #1e1e3a);
+    border-radius: 14px;
+    gap: 14px;
+  }
+
+  &__capacity-header {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__capacity-label {
+    @include drumee.typo($color: var(--primary-light, #8b8ff8), $size: 11px, $weight: 700);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: monospace;
+  }
+
+  &__capacity-actions {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__more-btn {
+    color: var(--neutral-400, #b8b8d0);
+    cursor: pointer;
+  }
+
+  &__upgrade-btn {
+    padding: 7px 16px;
+    background-color: var(--primary, #5b5fef);
+    border-radius: 8px;
+    @include drumee.typo($color: #fff, $size: 13px, $weight: 600);
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    &:hover { background-color: #4a4edc; }
+  }
+
+  &__capacity-value {
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  &__used-val {
+    @include drumee.typo($color: #fff, $size: 48px, $weight: 700);
+    line-height: 1;
+  }
+
+  &__unit-sep,
+  &__total-val {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 22px, $weight: 400);
+  }
+
+  &__trend-header {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__trend-label {
+    @include drumee.typo($color: var(--primary-light, #8b8ff8), $size: 10px, $weight: 700);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: monospace;
+  }
+
+  &__utilized-pct {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 11px, $weight: 600);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  &__progress-bar {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: var(--neutral-700, #3a3a5c);
+  }
+
+  &__bar-seg {
+    height: 100%;
+
+    &.docs  { background: linear-gradient(90deg, #4f52d3, #6366f1); }
+    &.media { background: linear-gradient(90deg, #6366f1, #38bdf8); }
+    &.avail { background-color: var(--neutral-700, #3a3a5c); }
+  }
+
+  &__legend {
+    width: 100%;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  &__legend-item {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.docs  { background-color: #6366f1; }
+    &.media { background-color: #38bdf8; }
+    &.avail { background-color: var(--neutral-500, #9898b0); }
+  }
+
+  &__legend-info { gap: 1px; }
+
+  &__legend-label {
+    @include drumee.typo($color: #fff, $size: 12px, $weight: 500);
+  }
+
+  &__legend-val {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 11px);
+  }
+
+  /* ── Side panel (right) ──────────────────────── */
+  &__side-panel {
+    width: 300px;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  &__alert-card {
+    padding: 16px;
+    background-color: var(--neutral-800, #1e1e3a);
+    border-radius: 12px;
+    border-left: 4px solid #f97316;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  &__alert-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background-color: #fff3e0;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__alert-ico {
+    width: 18px;
+    height: 18px;
+  }
+
+  &__alert-body { gap: 4px; flex: 1; }
+
+  &__alert-title {
+    @include drumee.typo($color: #fff, $size: 14px, $weight: 600);
+  }
+
+  &__alert-desc {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 12px);
+    line-height: 1.5;
+  }
+
+  &__alert-action {
+    @include drumee.typo($color: #f97316, $size: 12px, $weight: 500);
+    cursor: pointer;
+    text-decoration: underline;
+    &:hover { color: #fb923c; }
+  }
+
+  &__opt-card {
+    padding: 16px;
+    background-color: var(--neutral-800, #1e1e3a);
+    border-radius: 12px;
+    gap: 12px;
+  }
+
+  &__opt-label {
+    @include drumee.typo($color: var(--neutral-500, #9898b0), $size: 10px, $weight: 700);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  &__opt-row {
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__opt-ico {
+    width: 20px;
+    height: 20px;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+
+  &__opt-name {
+    @include drumee.typo($color: #fff, $size: 13px);
+    flex: 1;
+  }
+
+  &__opt-value {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 12px, $weight: 600);
+  }
+
+  &__opt-browse {
+    @include drumee.typo($color: var(--primary-light, #8b8ff8), $size: 12px, $weight: 500);
+    cursor: pointer;
+    &:hover { text-decoration: underline; }
+  }
+
+  /* ── File Versioning ─────────────────────────── */
+  &__versioning {
+    width: 100%;
+    background-color: var(--neutral-800, #1e1e3a);
+    border-radius: 14px;
+    overflow: hidden;
+    flex-shrink: 0;
+    gap: 0;
+  }
+
+  &__versioning-header {
+    padding: 16px 20px;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--neutral-700, #3a3a5c);
+  }
+
+  &__versioning-info { gap: 2px; }
+
+  &__versioning-title {
+    @include drumee.typo($color: #fff, $size: 16px, $weight: 600);
+  }
+
+  &__versioning-desc {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 12px);
+  }
+
+  &__versioning-controls {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__ws-filter {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--neutral-600, #5a5a78);
+    @include drumee.typo($color: var(--neutral-300, #d4d4e8), $size: 12px);
+    gap: 6px;
+    cursor: pointer;
+    background-color: transparent;
+    &:hover { background-color: var(--neutral-700, #3a3a5c); }
+  }
+
+  &__file-search {
+    width: 180px;
+    border: 1px solid var(--neutral-600, #5a5a78);
+    border-radius: 8px;
+    padding: 6px 12px;
+    @include drumee.typo($color: var(--neutral-300, #d4d4e8), $size: 12px);
+    background-color: var(--neutral-700, #3a3a5c);
+  }
+
+  &__retention-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    background-color: var(--primary, #5b5fef);
+    @include drumee.typo($color: #fff, $size: 12px, $weight: 500);
+    gap: 6px;
+    cursor: pointer;
+    &:hover { background-color: #4a4edc; }
+  }
+
+  /* ── Files table ─────────────────────────────── */
+  &__files-header {
+    padding: 10px 20px;
+    align-items: center;
+    background-color: var(--neutral-750, #252540);
+    border-bottom: 1px solid var(--neutral-700, #3a3a5c);
+    gap: 0;
+  }
+
+  &__select-all { flex-shrink: 0; width: 36px; }
+
+  &__fcol {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 11px, $weight: 600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    &.file      { flex: 0 0 32%; }
+    &.folder    { flex: 0 0 14%; }
+    &.workspace { flex: 0 0 14%; }
+    &.size      { flex: 0 0 10%; }
+    &.versions  { flex: 0 0 10%; }
+    &.actions   { flex: 0 0 10%; justify-content: flex-end; }
+  }
+
+  &__files-list { width: 100%; min-height: 60px; }
+
+  &__empty {
+    padding: 32px;
+    text-align: center;
+    @include drumee.typo($color: var(--neutral-500, #9898b0), $size: 14px);
+    width: 100%;
+  }
+
+  &__files-footer {
+    padding: 12px 20px;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--neutral-700, #3a3a5c);
+  }
+
+  &__view-all {
+    @include drumee.typo($color: var(--neutral-300, #d4d4e8), $size: 13px);
+    cursor: pointer;
+    &:hover { color: #fff; }
+    &::after { content: ' →'; }
+  }
+
+  &__delete-selected {
+    @include drumee.typo($color: #ef4444, $size: 13px);
+    cursor: pointer;
+    &:hover { color: #dc2626; }
+  }
+
+  /* ── User Storage Distribution ───────────────── */
+  &__user-dist {
+    width: 100%;
+    background-color: var(--neutral-800, #1e1e3a);
+    border-radius: 14px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  &__user-dist-header {
+    padding: 16px 20px;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--neutral-700, #3a3a5c);
+  }
+
+  &__user-dist-title {
+    @include drumee.typo($color: #fff, $size: 16px, $weight: 600);
+  }
+
+  &__sort-wrap {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__sort-label {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 13px);
+  }
+
+  &__sort-btn {
+    @include drumee.typo($color: var(--primary-light, #8b8ff8), $size: 13px, $weight: 500);
+    gap: 4px;
+    cursor: pointer;
+    &:hover { text-decoration: underline; }
+  }
+
+  &__user-header {
+    padding: 10px 20px;
+    align-items: center;
+    background-color: var(--neutral-750, #252540);
+    border-bottom: 1px solid var(--neutral-700, #3a3a5c);
+    gap: 0;
+  }
+
+  &__ucol {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 11px, $weight: 600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    &.user    { flex: 0 0 32%; }
+    &.role    { flex: 0 0 14%; }
+    &.usage   { flex: 0 0 30%; }
+    &.storage { flex: 0 0 14%; }
+    &.action  { flex: 0 0 10%; text-align: center; }
+  }
+
+  &__user-list { width: 100%; min-height: 60px; }
+
+  &__user-footer {
+    padding: 12px 20px;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--neutral-700, #3a3a5c);
+  }
+
+  &__user-showing {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 12px);
+  }
+
+  &__user-pager {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__user-pager-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--neutral-600, #5a5a78);
+    background-color: transparent;
+    color: var(--neutral-300, #d4d4e8);
+    cursor: pointer;
+    &:hover { background-color: var(--neutral-700, #3a3a5c); }
+  }
+}

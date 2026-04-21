@@ -1,0 +1,75 @@
+@use 'mixins/drumee';
+
+.admin-storage-file {
+  &__ui {
+    width: 100%;
+  }
+
+  &__row {
+    width: 100%;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--neutral-200, #ebebf0);
+    gap: 0;
+
+    &:hover { background-color: var(--neutral-50, #f8f8fc); }
+
+    &[data-selected='1'] { background-color: var(--primary-alpha, #eef0fd); }
+  }
+
+  &__checkbox {
+    flex-shrink: 0;
+    width: 36px;
+  }
+
+  &__fcol {
+    align-items: center;
+
+    &.file      { flex: 0 0 32%; gap: 10px; }
+    &.folder    { flex: 0 0 14%; }
+    &.workspace { flex: 0 0 14%; }
+    &.size      { flex: 0 0 10%; @include drumee.typo($color: var(--neutral-700, #3a3a5c), $size: 13px); }
+    &.versions  { flex: 0 0 10%; @include drumee.typo($color: var(--neutral-700, #3a3a5c), $size: 13px); }
+    &.actions   { flex: 0 0 10%; gap: 4px; justify-content: flex-end; }
+  }
+
+  &__file-ico {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  &__filename {
+    @include drumee.typo($color: var(--neutral-900, #1a1a2e), $size: 13px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__folder-tag,
+  &__workspace-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--neutral-300, #d4d4e8);
+    @include drumee.typo($color: var(--neutral-600, #5a5a78), $size: 11px, $weight: 600);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-family: monospace;
+    background-color: var(--neutral-100, #f0f0f8);
+  }
+
+  &__more-btn,
+  &__del-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  &__del-btn {
+    color: #dc2626;
+    &:hover { background-color: #fef2f2; }
+  }
+}

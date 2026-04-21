@@ -1,0 +1,145 @@
+@use 'mixins/drumee';
+
+.admin-rules {
+  &__ui,
+  &__main {
+    width: 100%;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  // ── Shared panel shell ───────────────────────────────────
+  &__creation,
+  &__invite {
+    padding: 24px;
+    background-color: var(--neutral-800, #1e1f38);
+    border: 1px solid var(--neutral-700, #2e2f48);
+    border-radius: 10px;
+    gap: 16px;
+  }
+
+  &__creation { flex: 0 0 360px; }
+  &__invite   { flex: 1; }
+
+  // ── Panel title ──────────────────────────────────────────
+  &__panel-title {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__panel-ico {
+    width: 20px;
+    height: 20px;
+    color: var(--neutral-300, #a8a8c0);
+  }
+
+  &__panel-name {
+    @include drumee.typo($color: var(--neutral-50, #f0f0f8), $size: 17px, $weight: 600, $line: 24px);
+  }
+
+  &__group-label {
+    @include drumee.typo($color: var(--neutral-300, #a8a8c0), $size: 13px, $weight: 500, $line: 20px);
+  }
+
+  // ── Radio options ────────────────────────────────────────
+  &__options {
+    gap: 8px;
+  }
+
+  &__option {
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background-color: var(--neutral-850, #181929);
+    border: 1px solid var(--neutral-700, #2e2f48);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+
+    &.has-desc { align-items: flex-start; }
+
+    &:hover { border-color: var(--neutral-500, #5a5a78); }
+
+    &[data-state='1'] {
+      border-color: var(--primary, #5b5fef);
+      background-color: var(--primary-alpha, #1a1c40);
+
+      .admin-rules__radio {
+        background-color: var(--primary, #5b5fef);
+        border-color: var(--primary, #5b5fef);
+
+        &::after {
+          opacity: 1;
+        }
+      }
+    }
+  }
+
+  // CSS-only radio indicator (circle + checkmark)
+  &__radio {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--neutral-500, #5a5a78);
+    flex-shrink: 0;
+    position: relative;
+    transition: background-color 0.15s, border-color 0.15s;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 6px;
+      width: 5px;
+      height: 9px;
+      border: 2px solid #fff;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+      opacity: 0;
+      transition: opacity 0.1s;
+    }
+  }
+
+  &__option-label {
+    @include drumee.typo($color: var(--neutral-100, #e8e8f0), $size: 14px, $weight: 500, $line: 20px);
+  }
+
+  &__option-body { gap: 4px; }
+
+  &__option-desc {
+    @include drumee.typo($color: var(--neutral-400, #8888a0), $size: 12px, $line: 18px);
+  }
+
+  // ── Approval toggle ──────────────────────────────────────
+  &__toggle-row {
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid var(--neutral-700, #2e2f48);
+  }
+
+  &__toggle-label {
+    @include drumee.typo($color: var(--neutral-200, #c8c8e0), $size: 13px, $line: 20px);
+  }
+
+  &__toggle {
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+
+    &[data-state='1'] { color: var(--primary, #5b5fef); }
+    &[data-state='0'] { color: var(--neutral-500, #5a5a78); }
+  }
+
+  // ── Invite two-column layout ─────────────────────────────
+  &__invite-cols {
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  &__invite-col {
+    flex: 1;
+    gap: 8px;
+  }
+}
