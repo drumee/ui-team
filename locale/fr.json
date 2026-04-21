@@ -2154,5 +2154,9 @@
   "CREATE_NEW_WORSPACE": "Créer un nouvel espace de travail",
   "CREATE_NEW_WORSPACE_HINT": "Un espace de travail dédié contient des fichiers, des dossiers, des messages, des données, etc.",
   "NOTIFICATIONS": "Notifications",
-  "TYPE_MESSAGE": "Saisissez un message"
+  "TYPE_MESSAGE": "Saisissez un message",
+  "INVITE_MEMBERS": "Inviter des membres",
+  "TERR": "dd",
+  "DISPLAY_MODE": "Mode d'affichage",
+  "SIGN_OUT": "Déconnexion"
 }

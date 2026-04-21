@@ -11,7 +11,7 @@
     align-items: center;
     min-height: 100vh;
     width: 100vw;
-    background-color: var(--Neutral-100);
+    background-color: var(--normal-bg);
     overflow: auto;
     font-family: var(--font-main);
     height: 100%;
@@ -19,6 +19,7 @@
     display: flex;
     align-content: flex-start;
     flex: 1;
+    color: var(--normal-fg-10);
   }
 
   &__main {

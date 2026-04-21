@@ -2154,5 +2154,9 @@
   "CREATE_NEW_WORSPACE": "创建新的工作区",
   "CREATE_NEW_WORSPACE_HINT": "专用工作区包含文件、文件夹、消息、数据等。",
   "NOTIFICATIONS": "通知",
-  "TYPE_MESSAGE": "输入消息"
+  "TYPE_MESSAGE": "输入消息",
+  "INVITE_MEMBERS": "邀请成员",
+  "TERR": "sdsd",
+  "DISPLAY_MODE": "显示模式",
+  "SIGN_OUT": "退出登录"
 }

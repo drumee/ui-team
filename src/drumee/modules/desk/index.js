@@ -618,6 +618,9 @@ class desk_module extends LetcBox {
         try { localStorage.setItem('drumee.theme', next); } catch (e) {}
         const wp = { ...(Visitor.wallpaper() || {}), theme: next };
         if (typeof Visitor.setWallpaper === 'function') Visitor.setWallpaper(wp);
+        const iconName = next === 'dark' ? 'raw-light' : 'raw-dark';
+        const useEl = document.querySelector('[data-partname="theme-toggle"] svg use');
+        if (useEl) useEl.setAttribute('xlink:href', `#--icon-${iconName}`);
         return;
       }
 
