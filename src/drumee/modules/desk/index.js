@@ -335,7 +335,7 @@ class desk_module extends LetcBox {
       this.loadDefault();
     }
     //  els
-    this._loadOnboarding();
+    // this._loadOnboarding();
     {
     }
   }
