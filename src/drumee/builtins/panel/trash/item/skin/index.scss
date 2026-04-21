@@ -4,9 +4,6 @@
   &__ui {
     width: 100%;
     height: 72px;
-    &:hover {
-      background-color: var(--primary-purple-80-5);
-    }
   }
 
   &__row {
@@ -34,7 +31,7 @@
     height: 40px;
     flex-shrink: 0;
     padding: var(--spacer-3);
-    background-color: var(--normal-bg-100);
+    background-color: var(--normal-bg-40);
     border-radius: var(--corner-radius-2);
 
     svg {
@@ -140,12 +137,12 @@
       align-items: center;
       flex-wrap: wrap;
       padding: var(--spacer-2) var(--spacer-4);
-      background: var(--normal-bg-100);
+      background: var(--trash-btn-bg);
       border-radius: var(--corner-radius-1);
-      color: var(--normal-fg-10);
+      color: var(--trash-btn-fg);
       font-size: 13px;
       &:hover {
-        color: var(--normal-fg-20);
+        color: var(--trash-btn-fg-hover);
       }
 
       &-info {
@@ -155,7 +152,7 @@
         top: 48px;
         padding: var(--spacer-4);
         background-color: var(--primary-purple-40);
-        color: var(--normal-fg-10);
+        color: var(--white);
         border-radius: var(--corner-radius-1);
         height: auto;
         z-index: 2;

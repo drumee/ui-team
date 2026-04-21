@@ -23,6 +23,7 @@ html[data-theme="dark"] {
   --reverse-bg: #e4e3ff;
   --reverse-fg: #282538;
   --reverse-lb: #b1adff;
+  --reverse-lb-hover: var(--primary-10);
 
   /* Border */
   --border-default: rgba(71, 69, 84, 0.4);
@@ -44,4 +45,9 @@ html[data-theme="dark"] {
   --shadow-top-tiny: 0px 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-left-big: -24px 0 48px rgba(0, 0, 0, 0.5);
   --shadow-right-big: 24px 0 48px rgba(0, 0, 0, 0.5);
+
+  /* Other */
+  --trash-btn-bg: var(--primary-purple-100);
+  --trash-btn-fg: var(--primary-10);
+  --trash-btn-fg-hover: var(--primary-20);
 }
