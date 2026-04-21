@@ -684,6 +684,9 @@ class desk_module extends LetcBox {
       case "copy-link":
         return Wm.copyLink();
 
+      case "new-workspace":
+        return Wm.onUiEvent(cmd, args);
+
       case "settings-account":
         return Wm.openAccountSettings();
 
