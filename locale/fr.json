@@ -2214,5 +2214,8 @@
   "ONBOARDING_GOAL_CLIENTS": "Travailler avec des clients - dossier contextuel",
   "ONBOARDING_GOAL_STORE": "Stocker des donnees sensibles - sous votre controle",
   "ONBOARDING_GOAL_WORKFLOWS": "Construire vos propres workflows sur vos donnees",
-  "ONBOARDING_GOAL_PERSONAL": "Gestion personnelle de fichiers - un seul systeme"
+  "ONBOARDING_GOAL_PERSONAL": "Gestion personnelle de fichiers - un seul systeme",
+  "ENTER_YOUR_EMAIL": "Entrez votre email",
+  "ENTER_YOUR_PASSWORD": "Entrez votre mot de passe",
+  "LOG_IN_TO_WORKSPACE": "Se connecter"
 }

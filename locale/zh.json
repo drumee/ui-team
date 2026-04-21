@@ -2214,5 +2214,8 @@
   "ONBOARDING_GOAL_CLIENTS": "与客户合作 - 原生上下文文件夹",
   "ONBOARDING_GOAL_STORE": "存储敏感数据 - 完全由您掌控",
   "ONBOARDING_GOAL_WORKFLOWS": "在您的数据上构建自己的工作流",
-  "ONBOARDING_GOAL_PERSONAL": "个人文件管理 - 一个系统"
+  "ONBOARDING_GOAL_PERSONAL": "个人文件管理 - 一个系统",
+  "ENTER_YOUR_EMAIL": "输入您的邮箱",
+  "ENTER_YOUR_PASSWORD": "输入您的密码",
+  "LOG_IN_TO_WORKSPACE": "登录工作空间"
 }

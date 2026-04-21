@@ -2214,5 +2214,8 @@
   "ONBOARDING_GOAL_CLIENTS": "Work with clients - context-native folder",
   "ONBOARDING_GOAL_STORE": "Store sensitive data - fully under your control",
   "ONBOARDING_GOAL_WORKFLOWS": "Build your own workflows on your data",
-  "ONBOARDING_GOAL_PERSONAL": "Personal file management - one system"
+  "ONBOARDING_GOAL_PERSONAL": "Personal file management - one system",
+  "ENTER_YOUR_EMAIL": "Enter your email",
+  "ENTER_YOUR_PASSWORD": "Enter your password",
+  "LOG_IN_TO_WORKSPACE": "Log In to Workspace"
 }

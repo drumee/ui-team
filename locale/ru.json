@@ -2214,5 +2214,8 @@
   "ONBOARDING_GOAL_CLIENTS": "Работа с клиентами - контекстные папки",
   "ONBOARDING_GOAL_STORE": "Хранение данных - полный контроль",
   "ONBOARDING_GOAL_WORKFLOWS": "Создание рабочих процессов на ваших данных",
-  "ONBOARDING_GOAL_PERSONAL": "Личное управление файлами - одна система"
+  "ONBOARDING_GOAL_PERSONAL": "Личное управление файлами - одна система",
+  "ENTER_YOUR_EMAIL": "Введите ваш email",
+  "ENTER_YOUR_PASSWORD": "Введите ваш пароль",
+  "LOG_IN_TO_WORKSPACE": "Войти в пространство"
 }

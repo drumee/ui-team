@@ -2214,5 +2214,8 @@
   "ONBOARDING_GOAL_CLIENTS": "ធ្វើការជាមួយអតិថិជន",
   "ONBOARDING_GOAL_STORE": "រក្សាទុកទិន្នន័យរសើប",
   "ONBOARDING_GOAL_WORKFLOWS": "បង្កើតលំហូរការងាររបស់អ្នក",
-  "ONBOARDING_GOAL_PERSONAL": "គ្រប់គ្រងឯកសារផ្ទាល់ខ្លួន"
+  "ONBOARDING_GOAL_PERSONAL": "គ្រប់គ្រងឯកសារផ្ទាល់ខ្លួន",
+  "ENTER_YOUR_EMAIL": "បញ្ចូលអ៊ីមែលរបស់អ្នក",
+  "ENTER_YOUR_PASSWORD": "បញ្ចូលពាក្យសម្ងាត់របស់អ្នក",
+  "LOG_IN_TO_WORKSPACE": "ចូលទីតាំងការងារ"
 }
