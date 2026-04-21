@@ -309,7 +309,9 @@ class desk_module extends LetcBox {
     this._pending = { available: false };
     if (Visitor.profile().onboarded) {
       this.loadDefault()
-    } else {
+    }
+    //  else 
+     {
       Kind.loadPlugin({ name: 'onboarding', kind: 'onboarding' }).then(async () => {
         await Kind.waitFor('onboarding');
         this.feed({
