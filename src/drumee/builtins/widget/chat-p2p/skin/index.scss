@@ -7,7 +7,7 @@
     top: 0px;
     right: -880px;
     background-color: var(--normal-bg-90);
-    border: 1px solid var(--normal-fg-800);
+    border: 1px solid var(--border-muted);
     transition: right 0.5s;
     position: absolute;
     box-shadow: var(--shadow-left-big);
@@ -31,7 +31,7 @@
 
   &__sidebar {
     background-color: var(--normal-bg-90);
-    border-right: 1px solid var(--normal-fg-800);
+    border-right: 1px solid var(--border-muted);
     flex-shrink: 0;
     height: 100%;
     overflow: hidden;
@@ -76,16 +76,16 @@
     border-radius: 20px;
     cursor: pointer;
     padding: 4px 12px;
-    @include drumee.typo($size: 12px, $weight: 500, $color: var(--neutral-500));
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $color: var(--normal-fg-50)
+    );
 
     &[data-radio="on"],
     &[data-state="1"] {
-      background-color: var(--primary-40);
-      @include drumee.typo(
-        $size: 12px,
-        $weight: 600,
-        $color: var(--gray-white)
-      );
+      background-color: var(--active-border);
+      @include drumee.typo($size: 12px, $weight: 600, $color: #ffffff);
     }
 
     svg {
@@ -109,7 +109,7 @@
       align-items: center;
       height: 100%;
       justify-content: center;
-      @include drumee.typo($size: 13px, $color: var(--neutral-600));
+      @include drumee.typo($size: 13px, $color: var(--normal-fg-50));
     }
   }
 
@@ -127,12 +127,12 @@
 
   &__chat-header {
     align-items: center;
-    background-color: var(--normal-bg-100);
-    border-bottom: 1px solid var(--normal-fg-800);
+    background-color: var(--normal-bg-90);
+    border-bottom: 1px solid var(--border-muted);
     flex-shrink: 0;
     justify-content: space-between;
-    min-height: 60px;
-    padding: var(--spacer-4) var(--spacer-6);
+    min-height: 56px;
+    padding: 16px 20px;
   }
 
   &__header {
@@ -149,7 +149,7 @@
     .user-profile__ui[data-online="2"]:before {
       background-color: var(--primary-30);
       border-radius: 50%;
-      box-shadow: 0 0 0 1px var(--white);
+      box-shadow: 0 0 0 1px var(--normal-bg-90);
       content: " ";
       height: 8px;
       right: 0;
