@@ -1,0 +1,105 @@
+@use 'mixins/drumee';
+
+.admin-roles-request {
+  &__ui {
+    width: 100%;
+  }
+
+  &__row {
+    width: 100%;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--neutral-800, #2a2b3d);
+    gap: 16px;
+  }
+
+  &__avatar {
+    flex: 0 0 44px;
+    height: 44px;
+    width: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  &__info {
+    flex: 1;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__info-top {
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__creator {
+    @include drumee.typo($color: var(--neutral-100, #e8e8f0), $size: 14px, $weight: 500, $line: 20px);
+    white-space: nowrap;
+  }
+
+  &__tags {
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  &__tag {
+    @include drumee.typo($color: var(--neutral-200, #c8c8e0), $size: 11px, $weight: 600, $line: 18px);
+    border: 1px solid var(--neutral-600, #4a4a60);
+    border-radius: 4px;
+    padding: 2px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  &__time-row {
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__clock-ico {
+    width: 14px;
+    height: 14px;
+    color: var(--neutral-400, #8888a0);
+  }
+
+  &__time-ago {
+    @include drumee.typo($color: var(--neutral-400, #8888a0), $size: 12px, $line: 18px);
+  }
+
+  &__actions {
+    flex-shrink: 0;
+    gap: 8px;
+    align-items: center;
+  }
+
+  &__approve-btn {
+    height: 36px;
+    padding: 0 16px;
+    background-color: var(--success-alpha, #1a3a2a);
+    border: 1px solid var(--success, #2d7a4f);
+    border-radius: 6px;
+    gap: 6px;
+    align-items: center;
+    @include drumee.typo($color: var(--success, #4caf7d), $size: 13px, $weight: 600, $line: 36px);
+    cursor: pointer;
+
+    &:hover { background-color: var(--success, #2d7a4f); color: #fff; }
+  }
+
+  &__reject-btn {
+    height: 36px;
+    padding: 0 16px;
+    background-color: var(--danger-alpha, #3a1a1a);
+    border: 1px solid var(--danger, #7a2d2d);
+    border-radius: 6px;
+    gap: 6px;
+    align-items: center;
+    @include drumee.typo($color: var(--danger, #e55555), $size: 13px, $weight: 600, $line: 36px);
+    cursor: pointer;
+
+    &:hover { background-color: var(--danger, #7a2d2d); color: #fff; }
+  }
+}

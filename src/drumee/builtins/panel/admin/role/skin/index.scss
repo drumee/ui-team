@@ -1,0 +1,243 @@
+@use 'mixins/drumee';
+
+.admin-roles {
+  &__ui,
+  &__main {
+    width: 100%;
+    height: 100%;
+    background-color: var(--neutral-900, #14152a);
+    overflow-y: auto;
+  }
+
+  // ── Topbar ──────────────────────────────────────────────
+  &__topbar {
+    width: 100%;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 28px 32px 20px;
+    gap: 16px;
+  }
+
+  &__topbar-info { gap: 4px; }
+
+  &__title {
+    @include drumee.typo($color: var(--neutral-50, #f0f0f8), $size: 28px, $weight: 700, $line: 36px);
+  }
+
+  &__subtitle {
+    @include drumee.typo($color: var(--neutral-400, #8888a0), $size: 13px, $line: 20px);
+  }
+
+  &__save-btn {
+    height: 44px;
+    padding: 0 24px;
+    background-color: var(--primary, #5b5fef);
+    border-radius: 8px;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+    @include drumee.typo($color: #ffffff, $size: 14px, $weight: 600, $line: 44px);
+    cursor: pointer;
+
+    &:hover { background-color: var(--primary-dark, #4a4edc); }
+  }
+
+  // ── Stats ────────────────────────────────────────────────
+  &__stats {
+    width: 100%;
+    padding: 0 32px 24px;
+    gap: 16px;
+  }
+
+  &__stat-card {
+    flex: 1;
+    padding: 20px;
+    background-color: var(--neutral-800, #1e1f38);
+    border: 1px solid var(--neutral-700, #2e2f48);
+    border-radius: 10px;
+    gap: 16px;
+    align-items: center;
+  }
+
+  &__stat-icon-wrap {
+    width: 48px;
+    height: 48px;
+    background-color: var(--primary-alpha, #1e2060);
+    border-radius: 10px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__stat-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--primary-light, #8888ff);
+  }
+
+  &__stat-info { gap: 4px; }
+
+  &__stat-title {
+    @include drumee.typo($color: var(--neutral-100, #e8e8f0), $size: 15px, $weight: 600, $line: 22px);
+  }
+
+  &__stat-value {
+    @include drumee.typo($color: var(--neutral-400, #8888a0), $size: 13px, $line: 20px);
+  }
+
+  // ── Rules row ────────────────────────────────────────────
+  &__rules-row {
+    width: 100%;
+    padding: 0 32px 24px;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  // ── Shared section styles ─────────────────────────────────
+  &__creation-rules,
+  &__invite-rules {
+    flex: 1;
+    padding: 24px;
+    background-color: var(--neutral-800, #1e1f38);
+    border: 1px solid var(--neutral-700, #2e2f48);
+    border-radius: 10px;
+    gap: 16px;
+  }
+
+  &__invite-rules { flex: 1.6; }
+
+  &__section-title {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__section-ico {
+    width: 20px;
+    height: 20px;
+    color: var(--neutral-300, #a8a8c0);
+  }
+
+  &__section-name {
+    @include drumee.typo($color: var(--neutral-50, #f0f0f8), $size: 17px, $weight: 600, $line: 24px);
+  }
+
+  &__section-sub {
+    @include drumee.typo($color: var(--neutral-300, #a8a8c0), $size: 13px, $weight: 500, $line: 20px);
+    margin-bottom: 4px;
+  }
+
+  // ── Radio options ────────────────────────────────────────
+  &__options {
+    gap: 8px;
+  }
+
+  &__option-row {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__option {
+    flex: 1;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background-color: var(--neutral-850, #191a30);
+    border: 1px solid var(--neutral-700, #2e2f48);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+
+    &.has-desc { align-items: flex-start; }
+
+    &[data-state='1'] {
+      border-color: var(--primary, #5b5fef);
+      background-color: var(--primary-alpha, #1a1c40);
+
+      .admin-roles__option-radio { color: var(--primary, #5b5fef); }
+    }
+
+    &:hover { border-color: var(--neutral-500, #5a5a78); }
+  }
+
+  &__option-radio {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--neutral-500, #5a5a78);
+  }
+
+  &__option-label {
+    @include drumee.typo($color: var(--neutral-100, #e8e8f0), $size: 14px, $weight: 500, $line: 20px);
+  }
+
+  &__option-body { gap: 4px; }
+
+  &__option-desc {
+    @include drumee.typo($color: var(--neutral-400, #8888a0), $size: 12px, $line: 18px);
+  }
+
+  &__option-avatars {
+    gap: -8px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  // ── Approval toggle ──────────────────────────────────────
+  &__toggle-row {
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid var(--neutral-700, #2e2f48);
+    margin-top: 4px;
+  }
+
+  &__toggle-label {
+    @include drumee.typo($color: var(--neutral-200, #c8c8e0), $size: 13px, $line: 20px);
+  }
+
+  &__toggle {
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+
+    &[data-state='1'] { color: var(--primary, #5b5fef); }
+    &[data-state='0'] { color: var(--neutral-500, #5a5a78); }
+  }
+
+  // ── Invite cols ──────────────────────────────────────────
+  &__invite-cols {
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  &__invite-col {
+    flex: 1;
+    gap: 8px;
+  }
+
+  // ── Pending section ──────────────────────────────────────
+  &__pending {
+    width: 100%;
+    padding: 0 32px 32px;
+    gap: 16px;
+  }
+
+  &__pending-title {
+    @include drumee.typo($color: var(--neutral-50, #f0f0f8), $size: 20px, $weight: 600, $line: 28px);
+  }
+
+  &__pending-list {
+    width: 100%;
+    background-color: var(--neutral-800, #1e1f38);
+    border: 1px solid var(--neutral-700, #2e2f48);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  &__empty {
+    @include drumee.typo($color: var(--neutral-400, #8888a0), $size: 14px, $line: 20px);
+    padding: 40px;
+    text-align: center;
+    width: 100%;
+  }
+}

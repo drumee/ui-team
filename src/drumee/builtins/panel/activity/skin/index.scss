@@ -6,7 +6,7 @@
     height: 100vh;
     top: 0px;
     background-color: var(--normal-bg-90);
-    border: 1px solid var(--neutral-800);
+    border: 1px solid var(--normal-fg-800);
     transition: left 0.5s;
 
     &[data-state="1"] {

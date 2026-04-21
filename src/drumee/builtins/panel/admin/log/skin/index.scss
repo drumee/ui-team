@@ -1,0 +1,217 @@
+@use 'mixins/drumee';
+
+.admin-log {
+  &__ui,
+  &__main {
+    width: 100%;
+    height: 100%;
+    background-color: inherit;
+  }
+
+  &__main {
+    padding: 24px;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  /* ── Topbar ──────────────────────────────────── */
+  &__topbar {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    @include drumee.typo($color: var(--neutral-900, #1a1a2e), $size: 20px, $weight: 700);
+  }
+
+  &__topbar-actions {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__search {
+    width: 220px;
+    border: 1px solid var(--neutral-300, #d4d4e8);
+    border-radius: 8px;
+    padding: 6px 12px;
+    @include drumee.typo($color: var(--neutral-700, #3a3a5c), $size: 13px);
+    background-color: #fff;
+  }
+
+  &__date-filter,
+  &__export-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--neutral-300, #d4d4e8);
+    @include drumee.typo($color: var(--neutral-700, #3a3a5c), $size: 13px, $weight: 500);
+    gap: 6px;
+    cursor: pointer;
+    background-color: #fff;
+
+    &:hover { background-color: var(--neutral-50, #f8f8fc); }
+  }
+
+  &__export-btn {
+    background-color: var(--primary, #5b5fef);
+    border-color: var(--primary, #5b5fef);
+    color: #fff;
+
+    &:hover { background-color: #4a4edc; }
+  }
+
+  /* ── Table ───────────────────────────────────── */
+  &__table-wrap {
+    width: 100%;
+    background-color: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--neutral-200, #ebebf0);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  &__table-header {
+    width: 100%;
+    background-color: var(--neutral-50, #f8f8fc);
+    border-bottom: 1px solid var(--neutral-200, #ebebf0);
+    padding: 10px 16px;
+    align-items: center;
+    gap: 0;
+  }
+
+  &__col {
+    @include drumee.typo($color: var(--neutral-500, #9898b0), $size: 11px, $weight: 600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    &.user     { flex: 0 0 28%; }
+    &.action   { flex: 0 0 22%; }
+    &.resource { flex: 0 0 30%; }
+    &.timestamp { flex: 0 0 20%; }
+  }
+
+  &__list {
+    width: 100%;
+    min-height: 100px;
+  }
+
+  &__empty {
+    padding: 40px;
+    text-align: center;
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 14px);
+    width: 100%;
+  }
+
+  /* ── Table footer ────────────────────────────── */
+  &__table-footer {
+    width: 100%;
+    padding: 12px 16px;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--neutral-200, #ebebf0);
+    background-color: var(--neutral-50, #f8f8fc);
+  }
+
+  &__showing {
+    @include drumee.typo($color: var(--neutral-500, #9898b0), $size: 12px);
+  }
+
+  &__pager {
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__pager-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--neutral-300, #d4d4e8);
+    background-color: #fff;
+    cursor: pointer;
+
+    &:hover { background-color: var(--neutral-100, #f0f0f8); }
+  }
+
+  /* ── Stat cards ──────────────────────────────── */
+  &__stats {
+    width: 100%;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  &__stat-card {
+    flex: 1;
+    padding: 16px 20px;
+    background-color: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--neutral-200, #ebebf0);
+    border-left: 4px solid transparent;
+    gap: 8px;
+
+    &.blue   { border-left-color: var(--primary, #5b5fef); }
+    &.orange { border-left-color: #f97316; }
+    &.pink   { border-left-color: #ec4899; }
+  }
+
+  &__stat-top {
+    width: 100%;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  &__stat-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background-color: var(--neutral-100, #f0f0f8);
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__stat-ico {
+    width: 18px;
+    height: 18px;
+  }
+
+  &__stat-extra {
+    @include drumee.typo($size: 11px, $weight: 600);
+    padding: 2px 8px;
+    border-radius: 12px;
+
+    &.blue   { color: var(--primary, #5b5fef); background-color: #eff0fd; }
+    &.orange { color: #f97316; background-color: #fff7ed; }
+    &.pink   { color: #ec4899; background-color: #fdf2f8; }
+  }
+
+  &__stat-label {
+    @include drumee.typo($color: var(--neutral-500, #9898b0), $size: 12px);
+  }
+
+  &__stat-value {
+    @include drumee.typo($color: var(--neutral-900, #1a1a2e), $size: 24px, $weight: 700);
+
+    &.orange { color: #f97316; }
+    &.pink   { color: #ec4899; }
+  }
+
+  &__stat-bar {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background-color: var(--neutral-200, #ebebf0);
+    overflow: hidden;
+  }
+
+  &__stat-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background-color: var(--primary, #5b5fef);
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+
+  &__stat-desc {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 11px);
+  }
+}

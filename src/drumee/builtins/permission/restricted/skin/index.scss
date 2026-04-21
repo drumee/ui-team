@@ -8,7 +8,7 @@
     right: -360px;
     bottom: 0px;
     top: 0;
-    background-color: var(--primary-purple-90);
+    background-color: var(--normal-bg-90);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -176,7 +176,7 @@
   }
 
   &__role-label {
-    color: var(--normal-fg-10);
+    color: var(--primary-10);
     font-size: 13px;
     font-weight: 500;
     line-height: 20px;
@@ -186,7 +186,7 @@
     flex-shrink: 0;
 
     svg {
-      color: var(--normal-fg-20);
+      color: var(--primary-10);
       height: 14px;
       width: 14px;
     }
@@ -250,7 +250,7 @@
     width: 100%;
     padding: 12px 14px;
     background-color: var(--primary-40);
-    color: var(--normal-fg-10);
+    color: var(--primary-10);
     font-size: 15px;
     font-weight: 600;
     line-height: 20px;

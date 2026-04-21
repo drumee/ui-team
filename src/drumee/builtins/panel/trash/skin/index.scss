@@ -8,8 +8,8 @@
     top: 0px;
     left: -500px;
     background-color: var(--normal-bg-90);
-    border: 1px solid var(--neutral-800);
-    transition: left .5s;
+    border: 1px solid var(--normal-fg-800);
+    transition: left 0.5s;
     box-shadow: var(--shadow-right-big);
     &[data-anim="in"] {
       left: 0;
@@ -44,7 +44,6 @@
     padding: var(--spacer-4) var(--spacer-6);
     color: var(--normal-fg-10);
     background-color: var(--normal-bg-100);
-
   }
 
   &__header-left {
@@ -75,19 +74,23 @@
   }
 
   &__selection-count {
-    @include drumee.typo($color: var(--neutral-500),
+    @include drumee.typo(
+      $color: var(--neutral-500),
       $size: 12px,
       $weight: 600,
-      $line: 18px);
+      $line: 18px
+    );
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   &__empty-btn {
-    @include drumee.typo($color: var(--normal-fg-10),
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
       $size: 12px,
       $weight: 600,
-      $line: 18px);
+      $line: 18px
+    );
     text-transform: uppercase;
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -187,10 +190,12 @@
   }
 
   &__placeholder-history {
-    @include drumee.typo($color: var(--neutral-500),
+    @include drumee.typo(
+      $color: var(--neutral-500),
       $size: 12px,
       $weight: 600,
-      $line: 18px);
+      $line: 18px
+    );
     text-transform: uppercase;
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -217,10 +222,12 @@
 
   &__placeholder-storage,
   &__placeholder-policy {
-    @include drumee.typo($color: var(--neutral-600),
+    @include drumee.typo(
+      $color: var(--neutral-600),
       $size: 11px,
       $weight: 600,
-      $line: 16px);
+      $line: 16px
+    );
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }

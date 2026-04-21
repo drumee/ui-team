@@ -17,7 +17,7 @@
     }
 
     &:hover {
-      background-color: var(--primary-purple-80-5);
+      background-color: var(--primary-20);
     }
   }
 
@@ -129,10 +129,8 @@
   // Rotate arrow when dropdown is open
   // Menu-topic with permission-dropdown class will have data-state attribute
   &__permission-dropdown {
-
     &[data-state="1"],
     &[data-state="open"] {
-
       .menu-topic-trigger .settings-member__arrow-down,
       .settings-member__permission-trigger .settings-member__arrow-down {
         transform: rotate(270deg);
@@ -142,7 +140,6 @@
 
   // Alternative selector for menu-topic element
   .menu-topic {
-
     &[data-state="1"],
     &[data-state="open"] {
       .settings-member__arrow-down {
@@ -188,9 +185,11 @@
     cursor: pointer;
     transition: background-color 120ms ease;
     width: 100%;
-    @include drumee.typo($color: var(--default-text-color),
+    @include drumee.typo(
+      $color: var(--default-text-color),
       $size: 14px,
-      $weight: 400);
+      $weight: 400
+    );
 
     svg {
       display: none;
@@ -279,7 +278,8 @@
       background-color: rgba(255, 255, 255, 0.08);
       .option-radio {
         border-color: var(--primary-40);
-        box-shadow: inset 0 0 0 4px var(--primary-purple-90, #1b1b2e),
+        box-shadow:
+          inset 0 0 0 4px var(--primary-purple-90, #1b1b2e),
           inset 0 0 0 8px var(--primary-40);
       }
     }
