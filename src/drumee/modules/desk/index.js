@@ -328,16 +328,10 @@ class desk_module extends LetcBox {
     if (localStorage.getItem("force-onboarding")) {
       return this._loadOnboarding();
     }
-    if (
-      Visitor.profile().onboarded &&
-      !localStorage.getItem("force-onboarding")
-    ) {
-      this.loadDefault();
+    if (Visitor.profile().onboarded) {
+      return this.loadDefault();
     }
-    //  els
-    // this._loadOnboarding();
-    {
-    }
+    this._loadOnboarding();
   }
 
   /**

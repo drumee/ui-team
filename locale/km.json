@@ -2217,5 +2217,12 @@
   "ONBOARDING_GOAL_PERSONAL": "គ្រប់គ្រងឯកសារផ្ទាល់ខ្លួន",
   "ENTER_YOUR_EMAIL": "បញ្ចូលអ៊ីមែលរបស់អ្នក",
   "ENTER_YOUR_PASSWORD": "បញ្ចូលពាក្យសម្ងាត់របស់អ្នក",
-  "LOG_IN_TO_WORKSPACE": "ចូលទីតាំងការងារ"
+  "LOG_IN_TO_WORKSPACE": "ចូលទីតាំងការងារ",
+  "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "តើយើងគួរហៅអ្នកថាអ្វី?",
+  "ONBOARDING_WHAT_KIND_OF_WORK": "សួស្តី {0} តើអ្នកធ្វើការអ្វី?",
+  "ONBOARDING_HOW_MANY_PEOPLE": "តើអ្នកធ្វើការជាមួយមនុស្សប៉ុន្មាននាក់ {0}?",
+  "ONBOARDING_HELP_TAILOR": "ជួយយើងកែសម្រួលទីតាំងការងាររបស់អ្នក",
+  "ONBOARDING_WHAT_TO_START_WITH": "តើអ្នកចង់ចាប់ផ្តើមពីអ្វី?",
+  "ONBOARDING_INVITE_TEAM": "អញ្ជើញសមាជិកក្រុមរបស់អ្នក",
+  "INVITE_PLACEHOLDER": "ឈ្មោះ@ក្រុមហ៊ុន.com"
 }

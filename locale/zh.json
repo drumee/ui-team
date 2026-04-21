@@ -2217,5 +2217,12 @@
   "ONBOARDING_GOAL_PERSONAL": "个人文件管理 - 一个系统",
   "ENTER_YOUR_EMAIL": "输入您的邮箱",
   "ENTER_YOUR_PASSWORD": "输入您的密码",
-  "LOG_IN_TO_WORKSPACE": "登录工作空间"
+  "LOG_IN_TO_WORKSPACE": "登录工作空间",
+  "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "我们应该怎么称呼你？",
+  "ONBOARDING_WHAT_KIND_OF_WORK": "你好 {0}，你从事什么工作？",
+  "ONBOARDING_HOW_MANY_PEOPLE": "你和多少人一起工作，{0}？",
+  "ONBOARDING_HELP_TAILOR": "帮助我们定制您的工作空间",
+  "ONBOARDING_WHAT_TO_START_WITH": "你想从什么开始？",
+  "ONBOARDING_INVITE_TEAM": "邀请您的团队成员",
+  "INVITE_PLACEHOLDER": "姓名@公司.com"
 }
