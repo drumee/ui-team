@@ -328,16 +328,10 @@ class desk_module extends LetcBox {
     if (localStorage.getItem("force-onboarding")) {
       return this._loadOnboarding();
     }
-    if (
-      Visitor.profile().onboarded &&
-      !localStorage.getItem("force-onboarding")
-    ) {
-      this.loadDefault();
+    if (Visitor.profile().onboarded) {
+      return this.loadDefault();
     }
-    //  els
     this._loadOnboarding();
-    {
-    }
   }
 
   /**
@@ -636,7 +630,7 @@ class desk_module extends LetcBox {
         document.documentElement.dataset.theme = next;
         try {
           localStorage.setItem("drumee.theme", next);
-        } catch (e) {}
+        } catch (e) { }
         const wp = { ...(Visitor.wallpaper() || {}), theme: next };
         if (typeof Visitor.setWallpaper === "function")
           Visitor.setWallpaper(wp);
