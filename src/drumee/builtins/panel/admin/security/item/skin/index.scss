@@ -1,0 +1,70 @@
+@use 'mixins/drumee';
+
+.admin-security-workspace {
+  &__ui { width: 100%; }
+
+  &__card {
+    flex: 0 0 calc(50% - 8px);
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+    background-color: var(--neutral-800, #1e1f38);
+    border-bottom: 1px solid var(--neutral-700, #2e2f48);
+  }
+
+  &__folder-ico {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    color: var(--primary-light, #8888ff);
+  }
+
+  &__card-info {
+    flex: 1;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__ws-name {
+    @include drumee.typo($color: var(--neutral-50, #f0f0f8), $size: 15px, $weight: 600, $line: 22px);
+  }
+
+  &__ws-meta {
+    @include drumee.typo($color: var(--neutral-400, #8888a0), $size: 12px, $line: 18px);
+  }
+
+  &__tags {
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  &__tag {
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border: 1px solid var(--neutral-600, #4a4a60);
+    border-radius: 20px;
+  }
+
+  &__tag-ico {
+    width: 12px;
+    height: 12px;
+    color: var(--neutral-400, #8888a0);
+  }
+
+  &__tag-label {
+    @include drumee.typo($color: var(--neutral-300, #a8a8c0), $size: 11px, $weight: 500, $line: 16px);
+    white-space: nowrap;
+  }
+
+  &__edit-btn {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    color: var(--neutral-500, #5a5a78);
+    cursor: pointer;
+
+    &:hover { color: var(--neutral-200, #c8c8e0); }
+  }
+}

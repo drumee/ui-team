@@ -1,0 +1,85 @@
+@use 'mixins/drumee';
+
+.admin-storage-user {
+  &__ui {
+    width: 100%;
+  }
+
+  &__urow {
+    width: 100%;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--neutral-700, #3a3a5c);
+    gap: 0;
+
+    &:hover { background-color: rgba(255, 255, 255, 0.03); }
+  }
+
+  &__ucol {
+    align-items: center;
+
+    &.user    { flex: 0 0 32%; gap: 12px; }
+    &.role    { flex: 0 0 14%; }
+    &.usage   { flex: 0 0 30%; gap: 12px; align-items: center; }
+    &.storage { flex: 0 0 14%; @include drumee.typo($color: #fff, $size: 14px, $weight: 500); }
+    &.action  { flex: 0 0 10%; justify-content: center; }
+  }
+
+  &__uavatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &__uidentity { gap: 2px; }
+
+  &__uname {
+    @include drumee.typo($color: #fff, $size: 14px, $weight: 500);
+  }
+
+  &__uemail {
+    @include drumee.typo($color: var(--neutral-400, #b8b8d0), $size: 12px);
+  }
+
+  &__role-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--neutral-600, #5a5a78);
+    background-color: var(--neutral-750, #252540);
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--primary-light, #8b8ff8);
+    white-space: nowrap;
+  }
+
+  &__usage-track {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background-color: var(--neutral-700, #3a3a5c);
+    overflow: hidden;
+  }
+
+  &__usage-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #6366f1, #38bdf8);
+    min-width: 4px;
+  }
+
+  &__usage-pct {
+    @include drumee.typo($color: var(--neutral-300, #d4d4e8), $size: 13px, $weight: 600);
+    flex-shrink: 0;
+    width: 36px;
+    text-align: right;
+  }
+
+  &__settings-btn {
+    color: var(--neutral-500, #9898b0);
+    cursor: pointer;
+    &:hover { color: var(--primary-light, #8b8ff8); }
+  }
+}

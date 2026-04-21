@@ -86,7 +86,7 @@
 
   &__header {
     font-size: 12px !important;
-    color: var(--normal-fg-20);
+    color: var(--reverse-lb);
     margin: var(--spacer-4) auto auto 24px;
   }
 
@@ -96,12 +96,11 @@
   }
 
   &__workspace-title {
-    color: var(--normal-fg-20);
+    color: var(--reverse-lb);
   }
 
   &__footer {
     width: 100%;
-    gap: 16px;
 
     &-user-btn {
       align-items: center;

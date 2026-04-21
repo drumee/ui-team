@@ -67,7 +67,6 @@
     }
 
     &.other {
-
       &.private,
       &.ticket {
         margin-left: 0;
@@ -165,17 +164,21 @@
 
     &-date {
       margin-top: -2px;
-      @include drumee.typo($size: 10px,
+      @include drumee.typo(
+        $size: 10px,
         $line: 9px,
         $weight: 300,
-        $color: var(--tertiary-text-color));
+        $color: var(--tertiary-text-color)
+      );
 
       &.me {
         margin-top: 0px;
-        @include drumee.typo($size: 10px,
+        @include drumee.typo(
+          $size: 10px,
           $line: 9px,
           $weight: 500,
-          $color: var(--tertiary-text-color));
+          $color: var(--tertiary-text-color)
+        );
       }
 
       &.other {
@@ -229,9 +232,11 @@
       padding-left: 4px;
       padding-top: 4px;
       text-transform: capitalize;
-      @include drumee.typo($size: 12px,
+      @include drumee.typo(
+        $size: 12px,
         $line: 12px,
-        $color: var(--secondary-text-color));
+        $color: var(--secondary-text-color)
+      );
     }
   }
 
@@ -245,9 +250,11 @@
       margin: auto;
       max-width: 200px;
       width: 82px;
-      @include drumee.typo($size: 11px,
+      @include drumee.typo(
+        $size: 11px,
         $line: 20px,
-        $color: var(--tertiary-text-color));
+        $color: var(--tertiary-text-color)
+      );
       display: flex;
       flex-direction: row;
       justify-content: center;
@@ -268,9 +275,11 @@
     margin: auto;
     max-width: 200px;
     width: 82px;
-    @include drumee.typo($size: 11px,
+    @include drumee.typo(
+      $size: 11px,
       $line: 12px,
-      $color: var(--tertiary-text-color));
+      $color: var(--tertiary-text-color)
+    );
   }
 
   &__profile {
@@ -313,10 +322,12 @@
     text-transform: capitalize;
     white-space: nowrap;
     width: 121px;
-    @include drumee.typo($size: 11px,
+    @include drumee.typo(
+      $size: 11px,
       $line: 10px,
       $weight: 400,
-      $color: var(--default-text-color));
+      $color: var(--default-text-color)
+    );
 
     & .inner.note-content {
       overflow: hidden;
@@ -356,10 +367,12 @@
     &-content {
       overflow: hidden;
       word-wrap: break-word;
-      @include drumee.typo($size: 12px,
+      @include drumee.typo(
+        $size: 12px,
         $line: 14px,
         $weight: 400,
-        $color: var(--normal-fg-10));
+        $color: var(--normal-fg-10)
+      );
 
       & a {
         color: var(--secondary-text-color);
@@ -386,10 +399,12 @@
 
   &__call-duration {
     margin-left: 10px;
-    @include drumee.typo($size: 13px,
+    @include drumee.typo(
+      $size: 13px,
       $line: 14px,
       $weight: 400,
-      $color: var(--default-text-title));
+      $color: var(--default-text-title)
+    );
   }
 
   &__media-attachment {
@@ -424,11 +439,11 @@
 
       &.share {
         background-color: var(--area-share);
-        color: var(--normal-fg-800);
+        color: var(--border-muted);
       }
 
       &.public {
-        color: var(--normal-fg-800);
+        color: var(--border-muted);
         background-color: var(--area-public);
       }
 
@@ -469,7 +484,7 @@
 
 // User/contact mention in chat messages
 .user-mention {
-  color: #847EFF;
+  color: #847eff;
   font-weight: 500;
   cursor: pointer;
 
@@ -482,7 +497,7 @@
 // Mention color per bubble context
 .widget-chatItem__conversation-content {
   &.other .file-mention {
-    color: #D65F59;
+    color: #d65f59;
   }
 }
 
@@ -517,7 +532,7 @@
   .widget-chatItem__message-username {
     font-size: 10px;
     font-weight: 600;
-    color: #C6BFFF !important;
+    color: #c6bfff !important;
     margin-bottom: 4px;
   }
 

@@ -7,7 +7,7 @@
     position: relative;
     background-color: var(--normal-bg-90);
     border-radius: var(--corner-radius-5);
-    border: 1px solid var(--normal-fg-800);
+    border: 1px solid var(--border-muted);
 
     &[data-device="mobile"] {
       min-width: 305px;
