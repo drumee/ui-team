@@ -76,9 +76,9 @@ const createFooter = (ui, username) => {
   return Skeletons.Box.Y({
     className: cls(fig, "footer"),
     kids: [
-      createNavItem(ui, "settings", LOCALE.SETTINGS, "toggle-settings"),
+      createNavItem(ui, "sidebar_settings", LOCALE.SETTINGS, "toggle-settings"),
       createNavItem(ui, getThemeIcon(), LOCALE.DISPLAY_MODE, "toggle-theme", "", undefined, "theme-toggle"),
-      createNavItem(ui, "signout", LOCALE.SIGN_OUT, "", "red", Butler.logout),
+      createNavItem(ui, "sidebar_signout", LOCALE.SIGN_OUT, "", "red", Butler.logout),
       // userMenu(ui)
       // Skeletons.UserProfile({ auto_color:1, oneLetter:1, className: cls(fig, "footer-user-btn") }),
       Skeletons.Box.X({
@@ -124,10 +124,11 @@ const createNav = (ui) => {
 
       Skeletons.Box.Y({
         kids: [
-          createNavItem(ui, "ab_address", LOCALE.HOME, _e.home),
-          createNavItem(ui, "bell", LOCALE.NOTIFICATIONS, "toggle-activity"),
-          createNavItem(ui, "desktop_chat", LOCALE.CHAT, "toggle-chat"),
-          createNavItem(ui, "drumee-trash", LOCALE.TRASH, "toggle-trash"),
+          createNavItem(ui, "sidebar_home", LOCALE.HOME, _e.home),
+          createNavItem(ui, "sidebar_notifications", LOCALE.NOTIFICATIONS, "toggle-activity"),
+          createNavItem(ui, "sidebar_inbox", LOCALE.INBOX, "toggle-inbox"),
+          createNavItem(ui, "sidebar_trash", LOCALE.TRASH, "toggle-trash"),
+          createNavItem(ui, "sidebar_apps", LOCALE.APPS, "toggle-apps"),
         ],
       }),
 
