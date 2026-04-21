@@ -2217,5 +2217,12 @@
   "ONBOARDING_GOAL_PERSONAL": "Personal file management - one system",
   "ENTER_YOUR_EMAIL": "Enter your email",
   "ENTER_YOUR_PASSWORD": "Enter your password",
-  "LOG_IN_TO_WORKSPACE": "Log In to Workspace"
+  "LOG_IN_TO_WORKSPACE": "Log In to Workspace",
+  "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "What should we call you?",
+  "ONBOARDING_WHAT_KIND_OF_WORK": "Hi {0}, what kind of work do you do?",
+  "ONBOARDING_HOW_MANY_PEOPLE": "How many people do you work with, {0}?",
+  "ONBOARDING_HELP_TAILOR": "Help us tailor your workspace",
+  "ONBOARDING_WHAT_TO_START_WITH": "What do you want to start with?",
+  "ONBOARDING_INVITE_TEAM": "Invite your team members",
+  "INVITE_PLACEHOLDER": "name@company.com"
 }

@@ -2217,5 +2217,12 @@
   "ONBOARDING_GOAL_PERSONAL": "Gestion personnelle de fichiers - un seul systeme",
   "ENTER_YOUR_EMAIL": "Entrez votre email",
   "ENTER_YOUR_PASSWORD": "Entrez votre mot de passe",
-  "LOG_IN_TO_WORKSPACE": "Se connecter"
+  "LOG_IN_TO_WORKSPACE": "Se connecter",
+  "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "Comment devons-nous vous appeler ?",
+  "ONBOARDING_WHAT_KIND_OF_WORK": "Bonjour {0}, quel type de travail faites-vous ?",
+  "ONBOARDING_HOW_MANY_PEOPLE": "Avec combien de personnes travaillez-vous, {0} ?",
+  "ONBOARDING_HELP_TAILOR": "Aidez-nous a personnaliser votre espace",
+  "ONBOARDING_WHAT_TO_START_WITH": "Par quoi voulez-vous commencer ?",
+  "ONBOARDING_INVITE_TEAM": "Invitez les membres de votre equipe",
+  "INVITE_PLACEHOLDER": "nom@entreprise.com"
 }

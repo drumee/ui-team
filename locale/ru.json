@@ -2217,5 +2217,12 @@
   "ONBOARDING_GOAL_PERSONAL": "Личное управление файлами - одна система",
   "ENTER_YOUR_EMAIL": "Введите ваш email",
   "ENTER_YOUR_PASSWORD": "Введите ваш пароль",
-  "LOG_IN_TO_WORKSPACE": "Войти в пространство"
+  "LOG_IN_TO_WORKSPACE": "Войти в пространство",
+  "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "Как нам вас называть?",
+  "ONBOARDING_WHAT_KIND_OF_WORK": "Привет {0}, чем вы занимаетесь?",
+  "ONBOARDING_HOW_MANY_PEOPLE": "Сколько людей работает с вами, {0}?",
+  "ONBOARDING_HELP_TAILOR": "Помогите нам настроить рабочее пространство",
+  "ONBOARDING_WHAT_TO_START_WITH": "С чего вы хотите начать?",
+  "ONBOARDING_INVITE_TEAM": "Пригласите членов вашей команды",
+  "INVITE_PLACEHOLDER": "имя@компания.com"
 }
