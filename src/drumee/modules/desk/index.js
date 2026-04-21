@@ -293,6 +293,24 @@ class desk_module extends LetcBox {
   _dragLeave(e, ui) {
     Wm.el.dataset.selected = _a.off;
   }
+  _loadOnboarding() {
+    Kind.loadPlugin({ name: "onboarding", kind: "onboarding" })
+      .then(async () => {
+        await Kind.waitFor("onboarding");
+        this.feed({
+          kind: "onboarding",
+          type: "app",
+          service: "onboarding-completed",
+          uiHandler: [this],
+        });
+        let w = this.children.last();
+        w.once(_e.destroy, this.loadDefault);
+      })
+      .catch((e) => {
+        this.warn("Failed to load onboarding plugin. switching to default", e);
+        this.loadDefault();
+      });
+  }
 
   /**
    *
@@ -307,25 +325,18 @@ class desk_module extends LetcBox {
       return;
     }
     this._pending = { available: false };
-    if (Visitor.profile().onboarded) {
-      this.loadDefault()
+    if (localStorage.getItem("force-onboarding")) {
+      return this._loadOnboarding();
     }
-    //  else 
-     {
-      Kind.loadPlugin({ name: 'onboarding', kind: 'onboarding' }).then(async () => {
-        await Kind.waitFor('onboarding');
-        this.feed({
-          kind: 'onboarding',
-          type: 'app',
-          service: "onboarding-completed",
-          uiHandler: [this],
-        });
-        let w = this.children.last();
-        w.once(_e.destroy, this.loadDefault)
-      }).catch((e) => {
-        this.warn("Failed to load onboarding plugin. switching to default", e);
-        this.loadDefault()
-      });
+    if (
+      Visitor.profile().onboarded &&
+      !localStorage.getItem("force-onboarding")
+    ) {
+      this.loadDefault();
+    }
+    //  els
+    this._loadOnboarding();
+    {
     }
   }
 
@@ -358,7 +369,7 @@ class desk_module extends LetcBox {
    * Show onboarding widget if user hasn't completed onboarding
    */
   checkUserOnBoarding(c) {
-    this.debug("AAA:341", Visitor.profile().onboarded)
+    this.debug("AAA:341", Visitor.profile().onboarded);
     if (Visitor.profile().onboarded) return;
   }
 
@@ -429,7 +440,6 @@ class desk_module extends LetcBox {
       this.dmzDetailResponse(data);
     });
   }
-
 
   /**
    *
@@ -515,42 +525,42 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} data 
+   *
+   * @param {*} data
    */
   updateBreadcrumb(data, src) {
     RADIO_BROADCAST.trigger("breadcrumb:content", data, src);
   }
 
   /**
-   * 
-   * @param {*} kind 
+   *
+   * @param {*} kind
    */
   _loadKind(p, kind) {
     p.feed({
       kind,
-      uiHandler: [this]
-    })
+      uiHandler: [this],
+    });
     this.ensurePart("activity-panel").then((p) => {
       p.setState(0);
     });
     this._pendingKind = kind;
   }
   /**
-   * 
+   *
    */
   togglePanel(kind, pn) {
     return this.ensurePart(pn).then((p) => {
       if (p.isEmpty()) {
-        this._loadKind(p, kind)
+        this._loadKind(p, kind);
       } else {
         if (this._pendingKind == kind) {
           p.children.last().el.dataset.anim = "out";
           setTimeout(() => {
-            p.clear()
-          }, 500)
+            p.clear();
+          }, 500);
         } else {
-          this._loadKind(p, kind)
+          this._loadKind(p, kind);
         }
       }
     });
@@ -569,14 +579,14 @@ class desk_module extends LetcBox {
     }
     switch (service) {
       case _e.home:
-        this.updateBreadcrumb({ event: _e.home })
-        Wm.reload()
+        this.updateBreadcrumb({ event: _e.home });
+        Wm.reload();
         return;
 
       // case _e.lock:
       //   return Wm.lock();
       case "onboarding-completed":
-        return this.loadDefault()
+        return this.loadDefault();
 
       case _e.upload:
         return Wm.handleUpload();
@@ -595,34 +605,46 @@ class desk_module extends LetcBox {
           p.toggleState();
           if (p.mget(_a.state)) {
             this.ensurePart("trash-panel").then((p) => {
-              p.clear()
-            })
+              p.clear();
+            });
           }
         });
 
       case "toggle-chat":
-        this.debug("AAA:585", cmd)
-        return this.togglePanel('chat_p2p', "chat-panel")
+        this.debug("AAA:585", cmd);
+        return this.togglePanel("chat_p2p", "chat-panel");
 
-        case "toggle-settings":
-        this.debug("AAA:585", cmd)
-        return this.togglePanel('settings_account', cmd)
+      case "toggle-settings":
+        this.debug("AAA:585", cmd);
+        return this.togglePanel("settings_account", cmd);
 
       case "toggle-trash":
-        return this.togglePanel('panel_trash', "trash-panel")
+        return this.togglePanel("panel_trash", "trash-panel");
 
       case "toggle-theme": {
-        const cur = (Visitor.wallpaper() || {}).theme
-          || (() => { try { return localStorage.getItem('drumee.theme'); } catch { return null; } })()
-          || 'light';
-        const next = cur === 'dark' ? 'light' : 'dark';
+        const cur =
+          (Visitor.wallpaper() || {}).theme ||
+          (() => {
+            try {
+              return localStorage.getItem("drumee.theme");
+            } catch {
+              return null;
+            }
+          })() ||
+          "light";
+        const next = cur === "dark" ? "light" : "dark";
         document.documentElement.dataset.theme = next;
-        try { localStorage.setItem('drumee.theme', next); } catch (e) {}
+        try {
+          localStorage.setItem("drumee.theme", next);
+        } catch (e) {}
         const wp = { ...(Visitor.wallpaper() || {}), theme: next };
-        if (typeof Visitor.setWallpaper === 'function') Visitor.setWallpaper(wp);
-        const iconName = next === 'dark' ? 'raw-light' : 'raw-dark';
-        const useEl = document.querySelector('[data-partname="theme-toggle"] svg use');
-        if (useEl) useEl.setAttribute('xlink:href', `#--icon-${iconName}`);
+        if (typeof Visitor.setWallpaper === "function")
+          Visitor.setWallpaper(wp);
+        const iconName = next === "dark" ? "raw-light" : "raw-dark";
+        const useEl = document.querySelector(
+          '[data-partname="theme-toggle"] svg use',
+        );
+        if (useEl) useEl.setAttribute("xlink:href", `#--icon-${iconName}`);
         return;
       }
 
@@ -751,7 +773,7 @@ class desk_module extends LetcBox {
         return setTimeout(f, 200);
 
       case "bigchat":
-        return this.togglePanel('chat_p2p', "chat-panel");
+        return this.togglePanel("chat_p2p", "chat-panel");
 
       case "account":
       case "addressbook":
