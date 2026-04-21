@@ -238,5 +238,14 @@
   "AUTO_LOCK_TITLE": "Bloqueo automático",
   "AUTO_LOCK_TIPS": "Bloquear automáticamente la pantalla o cerrar sesión después de X minutos de inactividad.",
   "SELECT_TIMEOUT": "Seleccionar tiempo de espera",
-  "NEVER": "Nunca"
+  "NEVER": "Nunca",
+  "CREATE_NEW_WORKSPACE": "Crear nuevo espacio de trabajo",
+  "CREATE_NEW_WORKSPACE_HINT": "Especifica un nombre para tu nueva unidad organizativa.",
+  "WORKSPACE_NAME": "Nombre del espacio de trabajo",
+  "WORKSPACE_NAME_PLACEHOLDER": "ej. Estrategia Q4",
+  "PRIVATE_HINT": "Solo tú puedes ver esta carpeta",
+  "RESTRICTED_SHARE": "Compartir restringido",
+  "RESTRICTED_SHARE_HINT": "Compartido con personas específicas",
+  "LINK_SHARED": "Enlace compartido",
+  "LINK_SHARED_HINT": "Cualquier persona con el enlace único"
 }

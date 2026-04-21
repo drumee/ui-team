@@ -2,10 +2,10 @@
 
 .form-folder {
   &__ui {
-    width: 400px;
+    width: 360px;
     border-radius: var(--corner-radius-4);
-    background-color: var(--normal-bg-90, #1e2030);
-    box-shadow: var(--shadow-main);
+    background-color: var(--normal-bg-90);
+    box-shadow: 0px 1px 11px 0px rgba(0, 0, 0, 0.13);
     overflow: hidden;
   }
 
@@ -20,6 +20,8 @@
     align-items: flex-start;
     justify-content: space-between;
     width: 100%;
+    padding-bottom: 25px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   &__header-text {
@@ -30,8 +32,8 @@
   &__title {
     @include drumee.typo(
       $size: 18px,
-      $weight: 700,
-      $line: 26px,
+      $weight: 600,
+      $line: 24px,
       $color: var(--normal-fg-10)
     );
   }
@@ -39,9 +41,9 @@
   &__subtitle {
     @include drumee.typo(
       $color: var(--neutral-500),
-      $size: 13px,
+      $size: 12px,
       $weight: 400,
-      $line: 20px
+      $line: 17px
     );
   }
 
@@ -68,22 +70,19 @@
   &__field-label {
     @include drumee.typo(
       $color: var(--normal-fg-10),
-      $size: 11px,
-      $weight: 700,
-      $line: 16px
+      $size: 12px,
+      $weight: 600,
+      $line: normal
     );
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
   }
 
   /* ── Text input ──────────────────────────────────────────── */
   &__input {
     width: 100%;
-    background-color: var(--normal-bg-100);
-    border: 1px solid var(--neutral-800);
+    background-color: var(--white);
     border-radius: var(--corner-radius-2);
-    padding: 10px 14px;
-    @include drumee.typo($size: 14px, $weight: 400, $line: 22px);
+    padding: 12px;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 17px);
     transition: border-color 0.15s;
 
     input {
@@ -92,74 +91,105 @@
       outline: none;
       width: 100%;
       color: var(--normal-fg-10);
-      @include drumee.typo($size: 14px, $line: 22px);
+      @include drumee.typo($size: 12px, $line: 17px);
 
       &::placeholder {
-        color: var(--normal-fg-10);
+        color: var(--neutral-500);
+        opacity: 0.6;
       }
     }
 
     &:focus-within {
-      border-color: var(--primary-400, #7b6ef6);
+      outline: 1px solid var(--primary-400, #7b6ef6);
     }
   }
 
-  /* ── Status option cards ─────────────────────────────────── */
+  /* ── Status options container ────────────────────────────── */
   &__options {
     width: 100%;
     gap: 8px;
+    background-color: var(--normal-bg-90);
+    border-radius: 4px;
+    padding: 8px 0;
   }
 
+  /* ── Per-type signal color tokens ───────────────────────── */
   &__option {
+    &[data-type="personal"] {
+      --opt-signal: var(--private, #884eff);
+      --opt-tint: rgba(136, 78, 255, 0.1);
+      --opt-border: rgba(136, 78, 255, 0.2);
+    }
+
+    &[data-type="team"] {
+      --opt-signal: var(--restricted, #d65f59);
+      --opt-tint: rgba(214, 95, 89, 0.1);
+      --opt-border: rgba(214, 95, 89, 0.2);
+    }
+
+    &[data-type="share"] {
+      --opt-signal: var(--link-share, #ffa8dc);
+      --opt-tint: rgba(255, 168, 220, 0.1);
+      --opt-border: rgba(255, 168, 220, 0.2);
+    }
+
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px;
-    border-radius: var(--corner-radius-2);
-    border: 1px solid var(--normal-bg-100);
-    background-color: var(--normal-bg-100);
+    padding: 9px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background-color: rgba(0, 0, 0, 0.05);
     opacity: 0.5;
     cursor: pointer;
     transition:
       border-color 0.15s,
-      background-color 0.15s;
+      background-color 0.15s,
+      opacity 0.15s;
 
     &[data-state="1"] {
-      border-color: var(--primary-400);
+      border-color: var(--opt-border);
+      background-color: var(--opt-tint);
       opacity: 1;
+
+      .form-folder__option-circle {
+        border-color: var(--opt-signal);
+
+        &::after {
+          background-color: var(--opt-signal);
+        }
+      }
     }
 
     &:hover {
-      border-color: var(--primary-400);
+      border-color: var(--opt-border);
+      opacity: 1;
     }
   }
 
   &__option-left {
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     flex: 1;
   }
 
+  /* ── Icon — color follows signal per type ────────────────── */
   &__option-ico {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
     color: var(--neutral-400);
 
     &.personal {
-      color: var(--private);
-    }
-
-    &.share {
-      color: var(--restricted);
+      color: var(--private, #884eff);
     }
 
     &.team {
-      color: var(--link-share);
+      color: var(--restricted, #d65f59);
     }
 
-    // .form-folder__option[data-state="1"] & {
-    //   color: var(--primary-400, #7b6ef6);
-    // }
+    &.share {
+      color: var(--link-share, #ffa8dc);
+    }
   }
 
   &__option-info {
@@ -168,54 +198,42 @@
 
   &__option-label {
     @include drumee.typo(
-      $size: 14px,
-      $weight: 600,
-      $line: 20px,
+      $size: 10px,
+      $weight: 700,
+      $line: 14px,
       $color: var(--normal-fg-10)
     );
-  }
-
-  &__option-circle {
-    border: 2px solid var(--primary-400, #7b6ef6);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 0px;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-
-    .form-folder__option[data-state="1"] & {
-      &::after {
-        position: absolute;
-        left: 2px;
-        top: 2px;
-        content: " ";
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background-color: var(--primary-400, #7b6ef6);
-      }
-    }
   }
 
   &__option-desc {
     @include drumee.typo(
       $color: var(--neutral-500),
-      $size: 12px,
+      $size: 8px,
       $weight: 400,
-      $line: 18px
+      $line: 11px
     );
   }
 
-  &__option-radio {
+  /* ── Radio circle ────────────────────────────────────────── */
+  &__option-circle {
+    position: relative;
+    flex-shrink: 0;
     width: 20px;
     height: 20px;
-    flex-shrink: 0;
-    color: var(--neutral-600);
+    border-radius: 50%;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    transition: border-color 0.15s;
 
-    .form-folder__option[data-state="1"] & {
-      color: var(--primary-400, #7b6ef6);
+    &::after {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: transparent;
+      transition: background-color 0.15s;
     }
   }
 
@@ -228,9 +246,9 @@
   &__submit {
     width: 100%;
     height: 36px;
-    padding: 12px;
-    border-radius: var(--corner-radius-2);
-    @include drumee.typo($color: #fff, $size: 15px, $weight: 600, $line: 22px);
+    padding: 8px 24px;
+    border-radius: 4px;
+    @include drumee.typo($color: #fff, $size: 14px, $weight: 600, $line: 20px);
     cursor: pointer;
     transition: background-color 0.15s;
     justify-content: center;
@@ -238,10 +256,7 @@
     gap: 8px;
     display: flex;
     flex-direction: row;
-    background: var(--primary-40);
-
-    flex: none;
-    order: 0;
+    background: var(--primary-50, #433cc5);
     align-self: stretch;
     flex-grow: 0;
 
@@ -251,7 +266,7 @@
     }
 
     &:hover {
-      background-color: var(--primary-50);
+      background-color: var(--primary-40, #5950ff);
     }
   }
 }
