@@ -29,27 +29,62 @@ module.exports = function (ui) {
             uiHandler: [ui],
           }),
 
-          // Search bar
-          Skeletons.Box.X({
-            className: `${pfx}__search-bar`,
+          // Search bar + suggestions
+          Skeletons.Box.Y({
+            className: `${pfx}__search-container`,
+            sys_pn: "search-container",
+            partHandler: ui,
             kids: [
-              Skeletons.Image.Svg({
-                ico: "magnifying-glass",
-                className: `${pfx}__search-icon`,
+              Skeletons.Box.X({
+                className: `${pfx}__search-bar`,
+                kids: [
+                  Skeletons.Image.Svg({
+                    ico: "magnifying-glass",
+                    className: `${pfx}__search-icon`,
+                  }),
+                  Skeletons.Entry({
+                    className: `${pfx}__search-input`,
+                    sys_pn: "search-box",
+                    uiHandler: [ui],
+                    partHandler: ui,
+                    placeholder: LOCALE.SEARCH || "Search...",
+                    service: _e.search,
+                    type: _a.text,
+                    autocomplete: _a.off,
+                    interactive: 1,
+                  }),
+                  Skeletons.Note({
+                    className: `${pfx}__search-kbd`,
+                    content: "⌘K",
+                  }),
+                ],
               }),
-              Skeletons.Entry({
-                className: `${pfx}__search-input`,
-                sys_pn: "search-box",
-                uiHandler: [ui],
-                placeholder: LOCALE.SEARCH || "Search...",
-                service: _e.search,
-                type: _a.text,
-                autocomplete: _a.off,
-                interactive: 1,
-              }),
-              Skeletons.Note({
-                className: `${pfx}__search-kbd`,
-                content: "⌘K",
+
+              // Suggestions dropdown — shown on search bar focus
+              Skeletons.Box.Y({
+                className: `${pfx}__search-suggestions`,
+                sys_pn: "search-suggestions",
+                partHandler: ui,
+                state: 0,
+                kids: [
+                  Skeletons.List.Smart({
+                    className: `${pfx}__suggestions-list`,
+                    flow: _a.none,
+                    spinner: true,
+                    spinnerWait: 300,
+                    vendorOpt: Preset.List.Orange_e,
+                    api: {
+                      service: SERVICE.desk.home,
+                      hub_id: Visitor.id,
+                      type: _a.hub,
+                    },
+                    itemsOpt: {
+                      kind: "workspace_item",
+                      uiHandler: [ui],
+                      service: "load-workspace",
+                    },
+                  }),
+                ],
               }),
             ],
           }),
