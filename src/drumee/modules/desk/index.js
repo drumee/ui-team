@@ -642,6 +642,9 @@ class desk_module extends LetcBox {
         return;
       }
 
+      case "toggle-settings":
+        return this.togglePanel('admin_members', "trash-panel")
+
       case "open-contact-manager":
         return Wm.launch(
           { kind: cmd.mget(_a.respawn), args: cmd.mget(_a.router) },

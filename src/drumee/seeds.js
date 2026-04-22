@@ -11,8 +11,50 @@ module.exports = {
   addressbook_widget_notification: function () {
     return import("./builtins/window/addressbook/widget/notification");
   },
+  admin_main: function () {
+    return import("./builtins/panel/admin");
+  },
+  admin_members: function () {
+    return import("./builtins/panel/admin/members");
+  },
+  admin_members_item: function () {
+    return import("./builtins/panel/admin/members/item");
+  },
+  admin_rules: function () {
+    return import("./builtins/panel/admin/rules");
+  },
+  admin_permissions: function () {
+    return import("./builtins/panel/admin/permissions");
+  },
+  admin_roles: function () {
+    return import("./builtins/panel/admin/role");
+  },
+  admin_roles_request: function () {
+    return import("./builtins/panel/admin/role/item");
+  },
+  admin_security: function () {
+    return import("./builtins/panel/admin/security");
+  },
+  admin_security_workspace: function () {
+    return import("./builtins/panel/admin/security/item");
+  },
   admin_security_page: function () {
     return import("./builtins/window/adminpanel/pages/admin-security");
+  },
+  admin_log: function () {
+    return import("./builtins/panel/admin/log");
+  },
+  admin_log_item: function () {
+    return import("./builtins/panel/admin/log/item");
+  },
+  admin_storage: function () {
+    return import("./builtins/panel/admin/storage");
+  },
+  admin_storage_file: function () {
+    return import("./builtins/panel/admin/storage/item");
+  },
+  admin_storage_user: function () {
+    return import("./builtins/panel/admin/storage/user");
   },
   audio_player: function () {
     return import("./builtins/player/audio");

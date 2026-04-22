@@ -1,17 +1,16 @@
 _K.permission.chat = _K.permission.write | _K.permission.read;
 const roleItems = [
-  { value: "admin", permission: _K.permission.admin, label: "Admin" },
-  { value: "edit", permission: _K.permission.write, label: LOCALE.EDIT },
-  { value: "chat", permission: _K.permission.chat, label: LOCALE.CHAT },
-  { value: "view", permission: _K.permission.view, label: LOCALE.VIEW },
+  { value: 'admin', permission: _K.permission.admin, label: 'Admin' },
+  { value: 'edit', permission: _K.permission.write, label: LOCALE.EDIT },
+  { value: 'chat', permission: _K.permission.chat, label: LOCALE.CHAT },
+  { value: 'view', permission: _K.permission.view, label: LOCALE.VIEW },
 ];
-//
+
 
 // Resolve current role from permission bitmask
 export function resolveRole(ui) {
   try {
-    if (ui.isMediaOwner() || ui.mget(_a.privilege) & _K.permission.admin)
-      return roleItems[0];
+    if (ui.isMediaOwner() || ui.mget(_a.privilege) & _K.permission.admin) return roleItems[0];
     if (ui.mget(_a.privilege) & _K.permission.write) return roleItems[1];
     if (ui.mget(_a.privilege) & _K.permission.read) return roleItems[2];
     if (ui.mget(_a.privilege) & _K.permission.chat) return roleItems[3];
@@ -58,9 +57,7 @@ export function permissionItems(ui, member, service, fig = ui.fig.family) {
  * Permission dropdown for the invite row.
  */
 export function permissionMenu(ui, member, service, fig = ui.fig.family) {
-  const currentRole = resolveRole(member || ui).value;
-  const currentItem =
-    roleItems.find((r) => r.value === currentRole) || roleItems[0];
+  const currentItem = roleItems.find(r => r.value === currentRole) || roleItems[0];
   const trigger = Skeletons.Box.X({
     className: `${fig}__role-trigger`,
     kids: [
