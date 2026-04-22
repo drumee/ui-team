@@ -678,18 +678,28 @@ class desk_module extends LetcBox {
       case _e.paste:
         return Wm.paste();
 
-      case _e.search:
+      case "search-files":
         if (this._timer) clearTimeout(this._timer);
         this._timer = setTimeout(() => {
           Wm.search(cmd, args);
           this._timer = null;
+          const t = setInterval(() => {
+            const w = Wm.getItemByKind("window_search");
+            if (w) {
+              w.once(_e.destroy, () => {
+                if (this._searchBoxInner) this._searchBoxInner.setValue("");
+                this._hideSearchSuggestions();
+              });
+              clearInterval(t);
+            }
+          }, 500);
         }, 1000);
         return;
 
       case _e.Enter:
         if (this._timer) clearTimeout(this._timer);
         this._timer = null;
-        if (cmd.mget(_a.service) == _a.search) {
+        if (cmd.mget(_a.service) == "search-files") {
           Wm.search(cmd, args);
         }
         return;
