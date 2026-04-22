@@ -20,6 +20,10 @@ npm run add-widget   # Scaffold a new widget
 
 There is no test runner configured in this project.
 
+### Icons
+
+SVG icons live in `icons/src/normalized/` and `icons/src/raw/`. After adding or modifying any SVG source file, run `npm run build:icons` to regenerate the sprite sheets in `icons/sprites/`.
+
 ## Architecture
 
 ### Bootstrap Flow
