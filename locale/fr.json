@@ -2138,6 +2138,7 @@
   "X_DAYS_LEFT": "Il reste {0} jours",
   "DELETED_BY": "Supprimé par",
   "RESTORE": "Restaurer",
+  "RESTORE_HINT": "Restaurer à l'emplacement d'origine. Faites glisser pour choisir une destination différente si nécessaire.",
   "SUB_FOLDER_HINT": "Créez un sous-dossier pour organiser vos données selon une structure arborescente.",
   "PRIVATE_WORKSPACE_HINT": "Vous seul pouvez voir ce dossier et son contenu.",
   "SHARE_WORKSPACE_HINT": "Toute personne possédant le lien unique peut voir l'espace de travail.",

@@ -2138,6 +2138,7 @@
   "X_DAYS_LEFT": "{0} days left",
   "DELETED_BY": "Deleted by",
   "RESTORE": "Restore",
+  "RESTORE_HINT": "Restore to original location. Drag to choose a different destination if needed.",
   "SUB_FOLDER_HINT": "Create subfolder to organize your data on tree-based structure",
   "PRIVATE_WORKSPACE_HINT": "Only you can see this folder and its content",
   "SHARE_WORKSPACE_HINT": "Anyone with the unique link can see theWorkspace",

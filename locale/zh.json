@@ -2138,6 +2138,7 @@
   "X_DAYS_LEFT": "还剩 {0} 天",
   "DELETED_BY": "已删除",
   "RESTORE": "恢复",
+  "RESTORE_HINT": "恢复到原始位置。拖动以选择不同的目标位置。",
   "SUB_FOLDER_HINT": "创建子文件夹，以树状结构组织数据。",
   "PRIVATE_WORKSPACE_HINT": "只有您才能看到此文件夹及其内容。",
   "SHARE_WORKSPACE_HINT": "任何拥有唯一链接的人都可以查看工作区。",

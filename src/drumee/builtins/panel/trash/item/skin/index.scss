@@ -147,6 +147,9 @@
 
       &-info {
         position: absolute;
+        display: flex;
+        align-items: start;
+        gap: 8px;
         width: 250px;
         left: -160px;
         top: 48px;
@@ -156,8 +159,17 @@
         border-radius: var(--corner-radius-1);
         height: auto;
         z-index: 2;
+        font-size: 12px;
       }
     }
+  }
+  &__restore-info-ico {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    fill: var(--white);
+    color: var(--white);
   }
 }
 
