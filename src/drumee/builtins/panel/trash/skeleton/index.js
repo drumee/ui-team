@@ -25,7 +25,7 @@ module.exports = function (ui) {
         className: `${pfx}__footer`,
         kids: [
           Skeletons.Note({
-            content: "Items are automatically deleted after 30 days",
+            content: LOCALE.TRASH_FOOTER,
           }),
         ],
       }),

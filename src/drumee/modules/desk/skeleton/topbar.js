@@ -1,4 +1,3 @@
-
 /**
  * Topbar — left to right:
  * breadcrumb | [new-workspace | search | invite]
@@ -25,7 +24,7 @@ module.exports = function (ui) {
           Skeletons.Button.Label({
             ico: "plus",
             className: `${pfx}__new-workspace-btn`,
-            label: LOCALE.NEW_WORKSPACE || "New workspace",
+            label: LOCALE.ADD_NEW || "Add new",
             service: "new-workspace",
             uiHandler: [ui],
           }),

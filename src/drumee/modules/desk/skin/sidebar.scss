@@ -39,9 +39,10 @@
     }
 
     &[data-radio="on"] {
-      color: var(--normal-fg-20);
+      color: var(--primary-50);
       background-color: var(--active-item-bg);
       border-left-color: var(--active-border);
+      font-weight: bold;
     }
 
     &[data-partname="theme-toggle"] {
