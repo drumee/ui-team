@@ -1,64 +1,103 @@
-
 /**
  * Topbar — left to right:
- * logo | breadcrumb | search box | invite button | bell | avatar
+ * breadcrumb | [new-workspace | search | invite]
  */
 module.exports = function (ui) {
   const pfx = `${ui.fig.family}-topbar`;
-  const icoClass = `${pfx}__icon`;
 
   return Skeletons.Box.X({
     debug: __filename,
     className: `${pfx}__main`,
     kids: [
-      // Breadcrumb
+      // Breadcrumb (left)
       {
         kind: "desk_breadcrumb",
         sys_pn: "breadcrumb",
         className: `${pfx}__breadcrumb`,
       },
 
-      // Search box
+      // Actions cluster (right)
       Skeletons.Box.X({
-        className: `${pfx}__search-container`,
+        className: `${pfx}__actions-cluster`,
         kids: [
-          Skeletons.Button.Svg({
-            ico: "magnifying-glass",
-            className: `${pfx}__icon`,
-          }),
-          Skeletons.Entry({
-            className: `${pfx}__search-input`,
-            sys_pn: "search-box",
+          // New workspace button
+          Skeletons.Button.Label({
+            ico: "plus",
+            className: `${pfx}__new-workspace-btn`,
+            label: LOCALE.ADD_NEW || "Add new",
+            service: "new-workspace",
             uiHandler: [ui],
-            placeholder: LOCALE.SEARCH || "Search...",
-            service: _e.search,
-            type: _a.text,
-            autocomplete: _a.off,
-            interactive: 1,
           }),
-          // Skeletons.Box.X({
-          //   className: `${pfx}__search-note`,
-          //   kids: [
-          //     Skeletons.Button.Svg({
-          //       ico: "magnifying-glass",
-          //       className: `${pfx}__icon`,
-          //     }),
-          //     Skeletons.Note({
-          //       className: `${pfx}__search-text`,
-          //       content: "K",
-          //     }),
-          //   ],
-          // }),
-        ],
-      }),
 
-      // Invite members button
-      Skeletons.Button.Label({
-        ico: "drumee-add-contact",
-        className: `${pfx}__invite-btn`,
-        label: LOCALE.INVITE_MEMBERS || "Invite members",
-        service: "invite-member",
-        uiHandler: [ui],
+          // Search bar + suggestions
+          Skeletons.Box.Y({
+            className: `${pfx}__search-container`,
+            sys_pn: "search-container",
+            partHandler: ui,
+            kids: [
+              Skeletons.Box.X({
+                className: `${pfx}__search-bar`,
+                kids: [
+                  Skeletons.Image.Svg({
+                    ico: "magnifying-glass",
+                    className: `${pfx}__search-icon`,
+                  }),
+                  Skeletons.Entry({
+                    className: `${pfx}__search-input`,
+                    sys_pn: "search-box",
+                    uiHandler: [ui],
+                    partHandler: ui,
+                    placeholder: LOCALE.SEARCH || "Search...",
+                    service: _e.search,
+                    type: _a.text,
+                    autocomplete: _a.off,
+                    interactive: 1,
+                  }),
+                  Skeletons.Note({
+                    className: `${pfx}__search-kbd`,
+                    content: "⌘K",
+                  }),
+                ],
+              }),
+
+              // Suggestions dropdown — shown on search bar focus
+              Skeletons.Box.Y({
+                className: `${pfx}__search-suggestions`,
+                sys_pn: "search-suggestions",
+                partHandler: ui,
+                state: 0,
+                kids: [
+                  Skeletons.List.Smart({
+                    className: `${pfx}__suggestions-list`,
+                    flow: _a.none,
+                    spinner: true,
+                    spinnerWait: 300,
+                    vendorOpt: Preset.List.Orange_e,
+                    api: {
+                      service: SERVICE.desk.home,
+                      hub_id: Visitor.id,
+                      type: _a.hub,
+                    },
+                    itemsOpt: {
+                      kind: "workspace_item",
+                      uiHandler: [ui],
+                      service: "load-workspace",
+                    },
+                  }),
+                ],
+              }),
+            ],
+          }),
+
+          // Invite button
+          Skeletons.Button.Label({
+            ico: "drumee-add-contact",
+            className: `${pfx}__invite-btn`,
+            label: LOCALE.INVITE || "Invite",
+            service: "invite-member",
+            uiHandler: [ui],
+          }),
+        ],
       }),
     ],
   });

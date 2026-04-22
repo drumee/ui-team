@@ -63,8 +63,7 @@ module.exports = function (ui) {
             service: "restore-to-desk",
             content: LOCALE.RESTORE,
             tooltips: {
-              content:
-                "Restore to original location. Drag to choose a different destination if needed.",
+              content: `<svg class="${pfx}__restore-info-ico"><use href="#--icon-info"></use></svg><span>${LOCALE.RESTORE_HINT || "Restore to original location. Drag to choose a different destination if needed."}</span>`,
               className: `${pfx}__btn restore-info`,
             },
             uiHandler: ui,

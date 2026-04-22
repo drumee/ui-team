@@ -1,31 +1,24 @@
 const STATUS_OPTIONS = [
-  // {
-  //   ico: 'dock-folder',
-  //   label: LOCALE.SUB_FOLDER,
-  //   desc: LOCALE.SUB_FOLDER_HINT,
-  //   initial: 1,
-  //   name: 'subfolder'
-  // },
   {
     ico: "lock",
-    label: LOCALE.PRIVATE_WORKSPACE,
-    desc: LOCALE.PRIVATE_WORKSPACE_HINT,
-    initial: 0,
+    label: LOCALE.PRIVATE,
+    desc: LOCALE.PRIVATE_HINT,
+    initial: 1,
     name: "personal",
   },
   {
-    ico: "desktop_sharing",
-    label: LOCALE.PUBLIC_WORKSPACE,
-    desc: LOCALE.SHARE_WORKSPACE_HINT,
-    initial: 1,
-    name: "share",
-  },
-  {
     ico: "desktop_group",
-    label: LOCALE.RESTRICTED_WORKSPACE,
-    desc: LOCALE.RESTRICTED_WORKSPACE_HINT,
+    label: LOCALE.RESTRICTED_SHARE,
+    desc: LOCALE.RESTRICTED_SHARE_HINT,
     initial: 0,
     name: "team",
+  },
+  {
+    ico: "desktop_sharing",
+    label: LOCALE.LINK_SHARED,
+    desc: LOCALE.LINK_SHARED_HINT,
+    initial: 0,
+    name: "share",
   },
 ];
 
@@ -35,8 +28,8 @@ function statusOption(ui, opt) {
     className: `${pfx}__option`,
     state: opt.initial,
     service: "select-status",
-    dataset: { value: opt.value },
-    uiHandler: ui,
+    dataset: { value: opt.value, type: opt.name },
+    uiHandler: [ui],
     formItem: opt.name,
     radio: `${ui._id}`,
     kids: [
@@ -63,11 +56,6 @@ function statusOption(ui, opt) {
         ],
       }),
       Skeletons.Element({ className: `${pfx}__option-circle` }),
-      // Skeletons.Image.Svg({
-      //   ico: opt.initial ? 'radio-on' : 'radio-off',
-      //   className: `${pfx}__option-radio`,
-      //   sys_pn: `radio-${opt.value}`,
-      // }),
     ],
   });
 }
@@ -83,11 +71,11 @@ module.exports = function (ui) {
         kids: [
           Skeletons.Note({
             className: `${pfx}__title`,
-            content: LOCALE.CREATE_NEW_WORSPACE,
+            content: LOCALE.CREATE_NEW_WORKSPACE,
           }),
           Skeletons.Note({
             className: `${pfx}__subtitle`,
-            content: LOCALE.CREATE_NEW_WORSPACE_HINT,
+            content: LOCALE.CREATE_NEW_WORKSPACE_HINT,
           }),
         ],
       }),
@@ -105,13 +93,13 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Note({
         className: `${pfx}__field-label`,
-        content: LOCALE.FOLDER_NAME,
+        content: LOCALE.WORKSPACE_NAME,
       }),
       Skeletons.Entry({
         className: `${pfx}__input`,
         sys_pn: "folder-name",
         formItem: "filename",
-        placeholder: LOCALE.FOLDER_NAME,
+        placeholder: LOCALE.WORKSPACE_NAME_PLACEHOLDER,
         require: "text",
         mode: "commit",
         preselect: 1,
@@ -124,7 +112,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Note({
         className: `${pfx}__field-label`,
-        content: LOCALE.TYPE,
+        content: LOCALE.STATUS,
       }),
       Skeletons.Box.Y({
         className: `${pfx}__options`,
@@ -138,10 +126,9 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Button.Label({
         className: `${pfx}__submit`,
-        ico: "dock-folder",
         label: LOCALE.CREATE,
         service: "create-folder",
-        uiHandler: ui,
+        uiHandler: [ui],
       }),
     ],
   });

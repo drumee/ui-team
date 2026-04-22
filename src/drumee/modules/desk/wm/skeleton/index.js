@@ -55,40 +55,40 @@ const ___window_manager = function (ui) {
         partHandler: ui,
       }),
 
-      Skeletons.Box.X({
-        className: `${ui.fig.family}-actions__buttons-wrapper`,
-        kids: [
-          dropdownMenuButton(ui, {
-            className: cnWindowMangerActions,
+      // Skeletons.Box.X({
+      //   className: `${ui.fig.family}-actions__buttons-wrapper`,
+      //   kids: [
+      //     dropdownMenuButton(ui, {
+      //       className: cnWindowMangerActions,
 
-            trigger: Skeletons.Button.Label({
-              className: `${cnWindowMangerActions}__label-button secondary`,
-              label: "Add new",
-              ico: "editbox_list-plus",
-              uiHandler: ui,
-              partHandler: ui,
-            }),
+      //       trigger: Skeletons.Button.Label({
+      //         className: `${cnWindowMangerActions}__label-button secondary`,
+      //         label: "Add new",
+      //         ico: "editbox_list-plus",
+      //         uiHandler: ui,
+      //         partHandler: ui,
+      //       }),
 
-            menuItems: [
-              {
-                service: "new-sub-folder",
-                ico: "dock-folder",
-                content: LOCALE.NEW_SUB_FOLDER,
-              },
-              {
-                service: "new-workspace",
-                ico: "desktop_desktop",
-                content: LOCALE.NEW_WORKSPACE,
-              },
-              {
-                service: "new-file",
-                ico: "desktop_docfile",
-                content: LOCALE.NEW_FILE,
-              },
-            ],
-          }),
-        ],
-      }),
+      //       menuItems: [
+      //         {
+      //           service: "new-sub-folder",
+      //           ico: "dock-folder",
+      //           content: LOCALE.NEW_SUB_FOLDER,
+      //         },
+      //         {
+      //           service: "new-workspace",
+      //           ico: "desktop_desktop",
+      //           content: LOCALE.NEW_WORKSPACE,
+      //         },
+      //         {
+      //           service: "new-file",
+      //           ico: "desktop_docfile",
+      //           content: LOCALE.NEW_FILE,
+      //         },
+      //       ],
+      //     }),
+      //   ],
+      // }),
 
       _icons_list(ui),
 
@@ -110,9 +110,9 @@ const ___window_manager = function (ui) {
         name: "modal",
       }),
 
-      Skeletons.Box.X({
-        kids: [{ kind: "dock", sys_pn: "dock" }],
-      }),
+      // Skeletons.Box.X({
+      //   kids: [{ kind: "dock", sys_pn: "dock" }],
+      // }),
     ],
   });
 

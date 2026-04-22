@@ -150,8 +150,18 @@ class desk_module extends LetcBox {
       case "avatar-listener":
         return (this._avatarListener = child);
 
+      case "search-container":
+        this._searchContainer = child;
+        child.el.addEventListener("focusin", () => this._showSearchSuggestions());
+        return;
+
       case "search-box":
-        return (this._searchBoxInner = child);
+        this._searchBoxInner = child;
+        return;
+
+      case "search-suggestions":
+        this._searchSuggestions = child;
+        return;
 
       // case "wrapper-popup":
       //   this.popup = child;
@@ -630,7 +640,7 @@ class desk_module extends LetcBox {
         document.documentElement.dataset.theme = next;
         try {
           localStorage.setItem("drumee.theme", next);
-        } catch (e) { }
+        } catch (e) {}
         const wp = { ...(Visitor.wallpaper() || {}), theme: next };
         if (typeof Visitor.setWallpaper === "function")
           Visitor.setWallpaper(wp);
@@ -687,6 +697,13 @@ class desk_module extends LetcBox {
       case "copy-link":
         return Wm.copyLink();
 
+      case "load-workspace":
+        this._hideSearchSuggestions();
+        return Wm.loadWorkspace(cmd);
+
+      case "new-workspace":
+        return Wm.onUiEvent(cmd, args);
+
       case "settings-account":
         return Wm.openAccountSettings();
 
@@ -741,6 +758,25 @@ class desk_module extends LetcBox {
 
       // default:
       // Wm.unselect();
+    }
+  }
+
+  _showSearchSuggestions() {
+    if (!this._searchSuggestions) return;
+    this._searchSuggestions.setState(1);
+    if (this._suggestionsDismiss) return;
+    this._suggestionsDismiss = (e) => {
+      const inside = this._searchContainer && this._searchContainer.el.contains(e.target);
+      if (!inside) this._hideSearchSuggestions();
+    };
+    document.addEventListener("mousedown", this._suggestionsDismiss);
+  }
+
+  _hideSearchSuggestions() {
+    if (this._searchSuggestions) this._searchSuggestions.setState(0);
+    if (this._suggestionsDismiss) {
+      document.removeEventListener("mousedown", this._suggestionsDismiss);
+      this._suggestionsDismiss = null;
     }
   }
 
