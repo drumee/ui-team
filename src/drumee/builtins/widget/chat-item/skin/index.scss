@@ -6,57 +6,27 @@
 
 .widget-chatItem {
   &__ui {
-    width: calc(100% - 70px);
-    @include drumee.typo($size: 12px, $line: 14px);
+    width: 100%;
+    @include drumee.typo($size: 14px, $line: 1.4);
     display: flex;
     flex-direction: column;
-    margin-top: 20px;
-    align-items: center;
+    margin-top: 32px;
     min-height: 38px;
+    padding: 0 32px;
 
     &.me {
-      width: calc(100% - 1px);
       align-items: flex-end;
     }
 
     &.other {
-      margin: 9px 0px -3px auto;
-      padding-left: 14px;
-      width: 100%;
       align-items: flex-start;
-    }
-
-    &.private &.ticket {
-      .other {
-        padding-left: 10px;
-      }
     }
   }
 
   &__main {
     width: 100%;
-    border-radius: 6px;
-    max-width: 85%;
-    min-width: 110px;
-    padding: 6px 15px 2px 5px;
-    width: fit-content;
-    display: flex;
-    flex-direction: column-reverse;
-
-    &[data-active="yes"] {
-      width: calc(100% - 70px);
-      margin-right: 35px;
-    }
 
     &[data-preattachment="1"] {
-      max-width: 85%;
-      border-radius: var(--border-radius);
-      min-width: 110px;
-      padding: 6px 15px 2px 5px;
-      width: fit-content;
-      display: flex;
-      flex-direction: column-reverse;
-
       &::before {
         content: " ";
         position: relative;
@@ -66,37 +36,12 @@
       }
     }
 
-    &.other {
-      &.private,
-      &.ticket {
-        margin-left: 0;
-      }
-    }
-
-    &.me {
-      max-width: 85%;
-    }
-
-    &.other {
-      max-width: 90%;
-
-      &.private,
-      &.ticket {
-        margin-left: 0;
-      }
-
-      &.share {
-        padding-left: 40px;
-      }
-    }
-
     &.forward {
       background-color: var(--dgc-chat-reply-bg);
     }
 
     &[data-selected="1"] {
       background-color: var(--default-background-hover);
-
       color: var(--default-text-reverse);
 
       & a {
@@ -115,10 +60,18 @@
     }
 
     &-container {
-      width: 100%;
+      width: fit-content;
+      max-width: 100%;
       user-select: text;
-      justify-content: flex-end;
-      flex-direction: column;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      gap: 16px;
+
+      &.me {
+        flex-direction: row-reverse;
+        margin-left: auto;
+      }
     }
 
     &-selector-wrapper {
@@ -134,22 +87,32 @@
     }
 
     &-content {
-      justify-content: flex-end;
       display: flex;
       flex-direction: column;
-      margin-left: 5px;
+      gap: 8px;
+      min-width: 0;
+
+      &.me {
+        align-items: flex-end;
+      }
+
+      &.other {
+        align-items: flex-start;
+      }
     }
 
     &-footer {
       display: flex;
       flex-direction: row;
-      align-content: space-between;
       align-items: center;
-      justify-content: flex-end;
-      margin-top: 5px;
+      justify-content: flex-start;
+      gap: 4px;
+
+      &.me {
+        justify-content: flex-end;
+      }
 
       & .readed-icon {
-        margin: -4px 1px 0px;
         visibility: hidden;
 
         &[data-is_seen="1"] {
@@ -163,27 +126,12 @@
     }
 
     &-date {
-      margin-top: -2px;
       @include drumee.typo(
         $size: 10px,
-        $line: 9px,
-        $weight: 300,
-        $color: var(--tertiary-text-color)
+        $line: 1.4,
+        $weight: 400,
+        $color: var(--normal-fg-50)
       );
-
-      &.me {
-        margin-top: 0px;
-        @include drumee.typo(
-          $size: 10px,
-          $line: 9px,
-          $weight: 500,
-          $color: var(--tertiary-text-color)
-        );
-      }
-
-      &.other {
-        margin-top: 0px;
-      }
     }
   }
 
@@ -284,22 +232,24 @@
 
   &__profile {
     box-shadow: none;
-    margin-right: 5px;
-    position: absolute;
-    width: 30px;
-    height: 100%;
-    align-items: flex-start;
-    display: flex;
-    flex-direction: column;
-    top: 5px;
-    left: 5px;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    align-self: flex-end;
+
+    &-image {
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      object-fit: cover;
+    }
 
     &.user-profile {
       &__ui {
         overflow: visible;
-        border-radius: 50%;
-        height: 29px;
-        width: 29px;
+        border-radius: 12px;
+        height: 32px;
+        width: 32px;
       }
     }
 
@@ -420,51 +370,34 @@
   }
 
   &__conversation-content {
-    padding: 10px 20px;
+    padding: 16px;
     width: 100%;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-10)
+    );
 
     &.me {
-      background-color: var(--area-personal);
+      background-color: #433cc5;
+      color: #e4e3ff;
       align-self: flex-end;
-      align-self: flex-end;
-      border-radius: 16px 0 16px 16px;
+      border-radius: 16px 16px 0 16px;
+      box-shadow:
+        0 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0 4px 6px -4px rgba(0, 0, 0, 0.1);
 
-      &[data-area="personal"] {
-        border-radius: 16px 16px 0px 16px;
-      }
-
-      &.private {
-        background-color: var(--area-private);
-      }
-
-      &.share {
-        background-color: var(--area-share);
-        color: var(--border-muted);
-      }
-
-      &.public {
-        color: var(--border-muted);
-        background-color: var(--area-public);
-      }
-
-      &.personal {
-        background: var(--area-personal);
+      & a {
+        color: #e4e3ff;
       }
     }
 
     &.other {
-      background-color: var(--normal-bg-90);
-      border-radius: 0px 16px 16px 16px;
-
-      &[data-area="personal"] {
-        padding: 16px 18.36px 16px 16px;
-        box-shadow: var(--shadow-top-tiny);
-        border-radius: 16px 16px 16px 0px;
-      }
-
-      &[data-area="private"] {
-        background-color: var(--normal-bg-100);
-      }
+      background-color: #f2f2f7;
+      color: #0b0a21;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      border-radius: 16px 16px 16px 0;
     }
   }
 }
@@ -501,57 +434,3 @@
   }
 }
 
-// Avatar in sidebar chat (both window__chat-panel and desk panel contexts)
-.window__chat-panel,
-.desk-module__panel-container {
-  .widget-chatItem__profile {
-    position: static !important;
-    width: 22px !important;
-    height: 22px !important;
-    flex-shrink: 0;
-    margin: 0 6px 0 0 !important;
-    top: auto !important;
-    left: auto !important;
-
-    &.other {
-      display: flex;
-    }
-
-    &.me {
-      display: none;
-    }
-  }
-
-  .widget-chatItem__profile-image {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-
-  .widget-chatItem__message-username {
-    font-size: 10px;
-    font-weight: 600;
-    color: #c6bfff !important;
-    margin-bottom: 4px;
-  }
-
-  // Layout: avatar sits beside the message content for "other"
-  .widget-chatItem__message-container {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .widget-chatItem__main.other {
-    .widget-chatItem__message-container {
-      display: flex;
-      flex-direction: row;
-      align-items: flex-start;
-    }
-
-    .widget-chatItem__message-content {
-      flex: 1;
-      min-width: 0;
-    }
-  }
-}

@@ -36,8 +36,8 @@ class ___widget_chatItem extends LetcBox {
     let id = `content-${this.mget(_a.widgetId)}`;
     child.escapeContextmenu = true;
     child.append(Skeletons.Element({
-      flow: _a.y,
-      className: `${this.fig.family}__message-container`,
+      flow: _a.x,
+      className: `${this.fig.family}__message-container ${this.mget(_a.author)}`,
       content: this.innerContent,
       escapeContextmenu: true,
     }));

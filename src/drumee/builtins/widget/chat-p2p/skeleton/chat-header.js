@@ -44,30 +44,26 @@ module.exports = function (ui, contact) {
           Skeletons.Note({
             className: `${fig}__header-status`,
             sys_pn: 'header-status',
-            content: LOCALE.ACTIVE_NOW || 'Active now'
+            content: LOCALE.ACTIVE_NOW
           })
         ]
       })
     ]
   });
 
-  const videoBtn = Visitor.canUseVisio()
-    ? Skeletons.Button.Svg({
-        ico: 'video',
-        className: `${fig}__header-btn`,
-        service: 'video-call',
-        uiHandler: ui
-      })
-    : null;
+  const videoBtn = Skeletons.Button.Svg({
+    ico: 'video',
+    className: `${fig}__header-btn`,
+    service: 'video-call',
+    uiHandler: ui
+  });
 
-  const phoneBtn = Visitor.canUseVisio()
-    ? Skeletons.Button.Svg({
-        ico: 'telephone_handset',
-        className: `${fig}__header-btn`,
-        service: 'audio-call',
-        uiHandler: ui
-      })
-    : null;
+  const phoneBtn = Skeletons.Button.Svg({
+    ico: 'telephone_handset',
+    className: `${fig}__header-btn`,
+    service: 'audio-call',
+    uiHandler: ui
+  });
 
   const actions = Skeletons.Box.X({
     className: `${fig}__header-actions`,

@@ -98,6 +98,7 @@ const __skl_widget_chatcontactItem = function (ui) {
         className: `${contentFig}__container`,
         kids: [
           Skeletons.Box.X({
+            className: `${contentFig}__avatar-wrapper`,
             kids: [
               chat_icon,
               counterNote
@@ -105,14 +106,18 @@ const __skl_widget_chatcontactItem = function (ui) {
           }),
 
           Skeletons.Box.Y({
-            className: `${contentFig}__container`,
+            className: `${contentFig}__info`,
             kids: [
-              name,
+              Skeletons.Box.X({
+                className: `${contentFig}__info-top`,
+                kids: [
+                  name,
+                  chatTime
+                ]
+              }),
               chatMessage
             ]
-          }),
-
-          chatTime
+          })
         ]
       })
     ]

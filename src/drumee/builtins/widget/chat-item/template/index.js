@@ -5,7 +5,7 @@ module.exports = function (ui) {
   const m = ui.model.toJSON();
   m.fig = ui.fig.family;
   let body;
-  let avatar = '';
+  let avatar = require('./avatar')(m);
 
   if (m.message_type == _a.call) {
     body = require('./call-stat')(m)
@@ -13,12 +13,11 @@ module.exports = function (ui) {
     body = require('./conversation')(m);
     if (m.author != _a.me) {
       let uname = require('./username')(m);
-      avatar = require('./avatar')(m);
       body = `${uname}${body}`;
     }
   }
   const footer = require('./footer')(m);
-  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${body} ${footer}</div>`
+  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${body}${footer}</div>`;
   html = `${avatar}${content}`;
   return html;
 };

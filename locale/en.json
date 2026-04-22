@@ -976,6 +976,7 @@
   "CREATE_PERSONAL_FOLDER": "Create a personal folder",
   "CREATE_LINK": "Create a link",
   "ACTIVE_PUBLIC_LINK": "public link",
+  "ACTIVE_NOW": "Active now",
   "ACCESS_LIST": "Access list",
   "NO_ACCESS_TO_FILE": "No access to file\n",
   "CREATE_ACCESSES": "Create accesses",

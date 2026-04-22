@@ -379,7 +379,7 @@ class __widget_chat extends LetcBox {
         return this.onInputChange(args);
 
       case 'mention-filter':
-        return this._showMentionFiles(args.filter);
+        return this._showMentionFiles(args.filter, args.mentionType);
 
       case 'mention-close':
         return this._closeMentionDropdown();
@@ -1112,9 +1112,11 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * Show file/folder/contact mention dropdown filtered by text
+   * Show mention dropdown filtered by text
+   * @param {string} filter - text after trigger character
+   * @param {string} mentionType - 'contact' (from @) or 'file' (from /)
    */
-  _showMentionFiles(filter) {
+  _showMentionFiles(filter, mentionType) {
     const dropdown = this.getPart('mention-dropdown');
     if (!dropdown) return;
 
@@ -1124,34 +1126,41 @@ class __widget_chat extends LetcBox {
 
     const getIconName = require('builtins/media/template/icon-name');
 
-    let folderNid = this.mget(_a.nid);
-    let folderHubId = hubId;
-    try {
-      const folderWindow = this.getParentByKind && (
-        this.getParentByKind('window_folder') ||
-        this.getParentByKind('window_team') ||
-        this.getParentByKind('window_sharebox')
-      );
-      if (folderWindow) {
-        const winNid = folderWindow.mget && folderWindow.mget(_a.nid);
-        const winHubId = folderWindow.mget && folderWindow.mget(_a.hub_id);
-        if (winNid) folderNid = winNid;
-        if (winHubId) folderHubId = winHubId;
-      }
-    } catch (e) { }
-    if (!folderNid) folderNid = home.home_id;
+    let filesPromise = Promise.resolve(null);
+    let contactsPromise = Promise.resolve(null);
 
-    const filesPromise = this.fetchService({
-      service: SERVICE.media.show_node_by,
-      hub_id: folderHubId,
-      nid: folderNid
-    }).catch(() => null);
+    if (mentionType === 'file') {
+      let folderNid = this.mget(_a.nid);
+      let folderHubId = hubId;
+      try {
+        const folderWindow = this.getParentByKind && (
+          this.getParentByKind('window_folder') ||
+          this.getParentByKind('window_team') ||
+          this.getParentByKind('window_sharebox')
+        );
+        if (folderWindow) {
+          const winNid = folderWindow.mget && folderWindow.mget(_a.nid);
+          const winHubId = folderWindow.mget && folderWindow.mget(_a.hub_id);
+          if (winNid) folderNid = winNid;
+          if (winHubId) folderHubId = winHubId;
+        }
+      } catch (e) { }
+      if (!folderNid) folderNid = home.home_id;
 
-    const contactsPromise = this.fetchService({
-      service: SERVICE.chat.chat_rooms,
-      flag: 'contact',
-      hub_id: Visitor.get(_a.id)
-    }).catch(() => null);
+      filesPromise = this.fetchService({
+        service: SERVICE.media.show_node_by,
+        hub_id: folderHubId,
+        nid: folderNid
+      }).catch(() => null);
+    }
+
+    if (mentionType === 'contact') {
+      contactsPromise = this.fetchService({
+        service: SERVICE.chat.chat_rooms,
+        flag: 'contact',
+        hub_id: Visitor.get(_a.id)
+      }).catch(() => null);
+    }
 
     Promise.all([filesPromise, contactsPromise]).then(([filesData, contactsData]) => {
       const toRows = (d) => {
@@ -1183,7 +1192,6 @@ class __widget_chat extends LetcBox {
 
       let html = '';
 
-      // Files/folders section
       if (files.length) {
         html += '<div class="mention-section-header">Files</div>';
         files.slice(0, 6).forEach(f => {
@@ -1197,7 +1205,6 @@ class __widget_chat extends LetcBox {
         });
       }
 
-      // Contacts section
       if (contacts.length) {
         html += '<div class="mention-section-header">People</div>';
         contacts.slice(0, 6).forEach(c => {
@@ -1219,11 +1226,9 @@ class __widget_chat extends LetcBox {
         return;
       }
 
-      // Inject HTML directly and bind click handlers
       dropdown.el.innerHTML = html;
       dropdown.el.dataset.state = _a.open;
 
-      // Bind click on mention items
       const self = this;
       dropdown.el.querySelectorAll('.mention-item').forEach(el => {
         el.onclick = function (e) {

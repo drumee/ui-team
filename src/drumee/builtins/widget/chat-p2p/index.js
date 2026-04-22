@@ -11,7 +11,7 @@ class __chat_p2p extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
     this._radioId = `peer-${this.mget(_a.widgetId)}`;
-    this._filter = _a.all;
+    this._filter = _a.contact;
     this.bindEvent(_a.live);
   }
 
@@ -65,6 +65,14 @@ class __chat_p2p extends LetcBox {
    */
   async openChat(contact) {
     if (!contact || !contact.mget) return;
+
+    this.ensurePart('contact-list').then(list => {
+      if (list.children) {
+        list.children.forEach(c => {
+          if (c.el) c.el.dataset.radio = (c === contact) ? 'on' : 'off';
+        });
+      }
+    });
 
     const peer = contact.toLETC ? contact.toLETC() : { ...contact.model.toJSON() };
     delete peer.kids;
@@ -175,7 +183,7 @@ class __chat_p2p extends LetcBox {
         break;
 
       case 'filter-all':
-        this._filter = _a.all;
+        this._filter = _a.contact;
         this.ensurePart('contact-list').then(list => list.refresh && list.refresh());
         break;
 
