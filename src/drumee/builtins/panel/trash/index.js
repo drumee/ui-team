@@ -56,6 +56,15 @@ class __panel_trash extends mfsInteract {
     };
   }
 
+  _updateItemsCount() {
+    return this.ensurePart(_a.list).then((listPart) => {
+      const count = listPart.collection ? listPart.collection.length : 0;
+      return this.ensurePart('items-count').then((p) => {
+        p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
+      });
+    }).catch(() => {});
+  }
+
   _restoreFile(media) {
     if (!media) return;
     return this.postService({
@@ -71,6 +80,7 @@ class __panel_trash extends mfsInteract {
       }],
     }).then(() => {
       media.suppress();
+      this._updateItemsCount();
       Wm.reloadAll();
     });
   }
@@ -83,6 +93,7 @@ class __panel_trash extends mfsInteract {
       hub_id: Visitor.id,
     }).then(() => {
       media.suppress();
+      this._updateItemsCount();
     });
   }
 

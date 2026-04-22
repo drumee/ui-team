@@ -9,14 +9,21 @@ function menu_items(ui) {
 
   const items = [
     {
+      service: "add-folder",
+      ico: "raw-folder",
+      label: LOCALE.FOLDER,
+      area: _a.personal,
+      filename: LOCALE.NEW_FOLDER,
+    },
+    {
+      service: "add-note",
+      ico: "raw-note",
+      label: LOCALE.NOTE,
+    },
+    {
       name: "document.docx",
       ico: "raw-documents_word",
       label: LOCALE.DOCUMENT,
-    },
-    {
-      name: "presentation.pptx",
-      ico: "raw-documents_powerpoint",
-      label: LOCALE.PRESENTATION,
     },
     {
       name: "spreadsheet.xlsx",
@@ -24,17 +31,19 @@ function menu_items(ui) {
       label: LOCALE.SPREADSHEET,
     },
     {
-      service: "add-note",
-      ico: "raw-note",
-      label: LOCALE.NOTE,
+      name: "presentation.pptx",
+      ico: "raw-documents_powerpoint",
+      label: LOCALE.PRESENTATION,
     },
   ];
 
-  const renderItem = ({  name, ico, label }) =>
+  const renderItem = ({ name, ico, label, service, area, filename }) =>
     Skeletons.Box.G({
       className: `${pfx}-item`,
-      service: "new-document",
+      service: service || "new-document",
       name,
+      area,
+      filename,
       kidsOpt: { active: 0 },
       kids: [
         Skeletons.Button.Svg({

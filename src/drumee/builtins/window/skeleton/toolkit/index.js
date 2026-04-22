@@ -277,33 +277,42 @@ export function newFileMenu(ui) {
 
         trigger: Skeletons.Button.Label({
           className: `${cnWindowButton}__label-button secondary`,
-          label: "Add new",
+          label: LOCALE.ADD_NEW || "Add new",
           ico: "editbox_list-plus",
           uiHandler: ui,
           partHandler: ui,
         }),
 
         menuItems: [
-          { service: "meeting", ico: "dock-note", content: "Note" },
           {
-            service: "webinar",
+            service: "add-folder",
+            ico: "raw-folder",
+            content: LOCALE.FOLDER,
+            area: ui.mget(_a.area) || _a.personal,
+            filename: LOCALE.NEW_FOLDER,
+          },
+          {
+            service: "add-note",
+            ico: "raw-note",
+            content: LOCALE.NOTE,
+          },
+          {
+            service: "new-document",
+            name: "document.docx",
             ico: "raw-documents_word",
-            content: "Document",
+            content: LOCALE.DOCUMENT,
           },
           {
-            service: "channel",
+            service: "new-document",
+            name: "spreadsheet.xlsx",
             ico: "raw-documents_excel",
-            content: "Spreadsheet",
+            content: LOCALE.SPREADSHEET,
           },
           {
-            service: "channel",
+            service: "new-document",
+            name: "presentation.pptx",
             ico: "raw-documents_powerpoint",
-            content: "Presentation",
-          },
-          {
-            service: "channel",
-            ico: "dock-folder",
-            content: "Folder",
+            content: LOCALE.PRESENTATION,
           },
         ],
       }),
