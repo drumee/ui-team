@@ -86,7 +86,7 @@
 
   &__empty-btn {
     @include drumee.typo(
-      $color: var(--normal-fg-10),
+      $color: var(--reverse-lb),
       $size: 12px,
       $weight: 600,
       $line: 18px
@@ -100,7 +100,7 @@
     cursor: poiner;
 
     &:hover {
-      color: var(--normal-fg-20);
+      color: var(--reverse-lb-hover);
     }
   }
 

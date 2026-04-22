@@ -13,7 +13,15 @@ const createText = (fig, suffix, content) =>
   Skeletons.Note({ className: cls(fig, suffix), content });
 
 // ---------- Nav Item ----------
-const createNavItem = (ui, ico, label, service = "", color = "", on_click, sys_pn) => {
+const createNavItem = (
+  ui,
+  ico,
+  label,
+  service = "",
+  color = "",
+  on_click,
+  sys_pn,
+) => {
   const fig = `${ui.fig.family}-sidebar`;
 
   return Skeletons.Box.X({
@@ -63,11 +71,18 @@ const getInitials = (name = "") =>
     .toUpperCase();
 
 const getThemeIcon = () => {
-  const theme = document.documentElement.dataset.theme
-    || (Visitor.wallpaper() || {}).theme
-    || (() => { try { return localStorage.getItem('drumee.theme'); } catch { return null; } })()
-    || 'light';
-  return theme === 'dark' ? 'raw-light' : 'raw-dark';
+  const theme =
+    document.documentElement.dataset.theme ||
+    (Visitor.wallpaper() || {}).theme ||
+    (() => {
+      try {
+        return localStorage.getItem("drumee.theme");
+      } catch {
+        return null;
+      }
+    })() ||
+    "light";
+  return theme === "dark" ? "raw-light" : "raw-dark";
 };
 
 const createFooter = (ui, username) => {
@@ -77,8 +92,23 @@ const createFooter = (ui, username) => {
     className: cls(fig, "footer"),
     kids: [
       createNavItem(ui, "sidebar_settings", LOCALE.SETTINGS, "toggle-settings"),
-      createNavItem(ui, getThemeIcon(), LOCALE.DISPLAY_MODE, "toggle-theme", "", undefined, "theme-toggle"),
-      createNavItem(ui, "sidebar_signout", LOCALE.SIGN_OUT, "", "red", Butler.logout),
+      createNavItem(
+        ui,
+        getThemeIcon(),
+        LOCALE.DISPLAY_MODE,
+        "toggle-theme",
+        "",
+        undefined,
+        "theme-toggle",
+      ),
+      createNavItem(
+        ui,
+        "sidebar_signout",
+        LOCALE.SIGN_OUT,
+        "",
+        "red",
+        Butler.logout,
+      ),
       // userMenu(ui)
       // Skeletons.UserProfile({ auto_color:1, oneLetter:1, className: cls(fig, "footer-user-btn") }),
       Skeletons.Box.X({
@@ -118,14 +148,19 @@ const createNav = (ui) => {
             ico: "raw-logo-drumee-full",
             className: `${fig}__logo-icon`,
           }),
-          createText(fig, "header", "WORKSPACE NAME"),
+          createText(fig, "header", LOCALE.WORKSPACE_NAME),
         ],
       }),
 
       Skeletons.Box.Y({
         kids: [
           createNavItem(ui, "sidebar_home", LOCALE.HOME, _e.home),
-          createNavItem(ui, "sidebar_notifications", LOCALE.NOTIFICATIONS, "toggle-activity"),
+          createNavItem(
+            ui,
+            "sidebar_notifications",
+            LOCALE.NOTIFICATIONS,
+            "toggle-activity",
+          ),
           createNavItem(ui, "sidebar_inbox", LOCALE.INBOX, "toggle-inbox"),
           createNavItem(ui, "sidebar_trash", LOCALE.TRASH, "toggle-trash"),
           createNavItem(ui, "sidebar_apps", LOCALE.APPS, "toggle-apps"),

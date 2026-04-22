@@ -76,7 +76,7 @@
     width: 36px;
     height: 20px;
     border-radius: 20px;
-    background-color: var(--primary-500, #5b4ef5);
+    background-color: var(--primary-30);
     padding: 2px;
     position: relative;
     cursor: pointer;
@@ -114,12 +114,12 @@
     gap: 4px;
     padding: var(--spacer-4) var(--spacer-6);
     flex-shrink: 0;
-    background-color: var(--normal-bg-100);
+    background-color: var(--normal-bg-80);
   }
 
   &__tab {
     @include drumee.typo(
-      $color: var(--neutral-500),
+      $color: var(--normal-fg-10),
       $size: 14px,
       $weight: 500,
       $line: 20px
@@ -137,8 +137,8 @@
     }
 
     &[data-state="1"] {
-      color: var(--normal-fg-10);
-      border-bottom-color: var(--primary-400, #7b6ef6);
+      color: var(--primary-40);
+      border-bottom-color: var(--primary-40);
     }
   }
 
