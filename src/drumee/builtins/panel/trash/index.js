@@ -87,7 +87,15 @@ class __panel_trash extends mfsInteract {
   }
 
   _emptyBin() {
-    return this.confirm(LOCALE.Q_DELETE_ALL_FILES).then(() => {
+    return Wm.confirm({
+      title: LOCALE.TRASH,
+      message: LOCALE.Q_DELETE_ALL_FILES,
+      confirm: LOCALE.DELETE || 'Delete',
+      confirm_type: 'primary',
+      cancel: LOCALE.CANCEL || 'Cancel',
+      cancel_type: 'secondary',
+      mode: 'hbf'
+    }).then(() => {
       return this.postService({
         service: SERVICE.media.empty_bin,
         hub_id: Visitor.id,
@@ -95,7 +103,7 @@ class __panel_trash extends mfsInteract {
         this.feed(require('./skeleton')(this));
         RADIO_MEDIA.trigger(_a.free, data);
       });
-    });
+    }).catch(() => {});
   }
 
   onUiEvent(cmd, args = {}) {
@@ -107,6 +115,12 @@ class __panel_trash extends mfsInteract {
         return this.deleteFilePermanently(args.media || cmd);
       case 'restore-to-desk':
         return this._restoreFile(args.media || cmd);
+      case 'refresh':
+        this.feed(require('./skeleton')(this));
+        return;
+      case 'view-history':
+        // TODO: open trash history view
+        return;
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);
     }
