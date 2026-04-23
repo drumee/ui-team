@@ -559,13 +559,13 @@
 .folder-section,
 .file-section {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 120px);
+  grid-auto-flow: column;
   gap: 24px;
   padding: 24px 40px;
   width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: thin;
 
   &:empty {
@@ -575,11 +575,11 @@
 }
 
 .folder-section {
-  grid-auto-rows: 121px;
-  max-height: calc(121px * 2 + 24px + 48px);
+  grid-template-rows: repeat(2, 121px);
+  grid-auto-columns: 120px;
 }
 
 .file-section {
-  grid-auto-rows: 160px;
-  max-height: calc(160px * 2 + 24px + 48px);
+  grid-template-rows: repeat(2, 160px);
+  grid-auto-columns: 120px;
 }
