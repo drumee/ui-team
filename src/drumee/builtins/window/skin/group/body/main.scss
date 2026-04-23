@@ -123,7 +123,10 @@
         grid-template-columns: unset !important;
         height: auto !important;
         min-height: 100%;
+      }
 
+      // Popup folder windows only (not workspace manager grid)
+      &:not(.window-manager__icons-scroll):has(.folder-section) {
         .folder-section,
         .file-section {
           padding: 16px 24px 8px;
