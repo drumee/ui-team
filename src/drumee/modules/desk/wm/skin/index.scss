@@ -564,8 +564,8 @@
   padding: 24px 40px;
   width: 100%;
   box-sizing: border-box;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-width: thin;
 
   &:empty {
