@@ -562,12 +562,24 @@
   grid-auto-flow: column;
   gap: 24px;
   padding: 24px 40px;
+  padding-bottom: 36px;
   width: 100%;
   box-sizing: content-box;
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: hidden;
   scrollbar-width: thin;
   flex-shrink: 0;
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--normal-bg-100);
+    border-radius: 6px;
+  }
 
   &:empty {
     display: none;
