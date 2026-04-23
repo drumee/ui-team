@@ -2353,5 +2353,16 @@
   "USAGE_LOW_TO_HIGH": "Usage croissant",
   "USAGE_PERCENTAGE": "Pourcentage d'utilisation",
   "STORAGE_GB": "Stockage (Go)",
-  "NO_USERS": "Aucun utilisateur trouvé"
+  "NO_USERS": "Aucun utilisateur trouvé",
+  "ACTIVE_NOW": "En ligne",
+  "NOTHING_IN_TRASH": "Rien dans la corbeille",
+  "TRASH_EMPTY_HINT": "Votre espace de travail est parfaitement propre. Les fichiers supprimés apparaîtront ici pendant 30 jours.",
+  "REFRESH_VIEW": "Actualiser",
+  "VIEW_HISTORY": "Voir l'historique",
+  "ORGANIZE": "Organiser",
+  "MAKE_A_COPY": "Faire une copie",
+  "LINK_TO_TASK_TRACKER": "Lier au suivi des tâches",
+  "SEND_LINK_BY_EMAIL": "Envoyer le lien par email",
+  "ADD_MEMBERS": "Ajouter des membres",
+  "ONLY_MEMBERS_CAN_ACCESS": "Seuls les membres de la liste ci-dessous peuvent accéder au contenu de ce dossier."
 }
