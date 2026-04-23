@@ -226,6 +226,7 @@ class __window_mfs extends DrumeeMFS {
       if (timer) clearTimeout(timer);
       child.el.dataset.wait = 0;
       child.$el.removeClass('drumee-sprinner');
+      this._partitionFoldersAndFiles(child);
       this.syncContent(EOD);
       this._dataReady = true;
       this.trigger(EOD);
@@ -235,6 +236,34 @@ class __window_mfs extends DrumeeMFS {
       this.sortContent();
     }
     child.el.dataset.role = _a.container;
+  }
+
+  _partitionFoldersAndFiles(listPart) {
+    const scrollEl = listPart.el.querySelector('.smart-container');
+    if (!scrollEl) return;
+    const items = [...scrollEl.children];
+    if (!items.length) return;
+
+    let folderWrap = scrollEl.querySelector('.folder-section');
+    let fileWrap = scrollEl.querySelector('.file-section');
+    if (folderWrap || fileWrap) return;
+
+    folderWrap = document.createElement('div');
+    folderWrap.className = 'folder-section';
+    fileWrap = document.createElement('div');
+    fileWrap.className = 'file-section';
+
+    items.forEach(item => {
+      const ft = item.dataset?.filetype;
+      if (ft === _a.folder || ft === _a.hub) {
+        folderWrap.appendChild(item);
+      } else {
+        fileWrap.appendChild(item);
+      }
+    });
+
+    scrollEl.appendChild(folderWrap);
+    scrollEl.appendChild(fileWrap);
   }
 
 

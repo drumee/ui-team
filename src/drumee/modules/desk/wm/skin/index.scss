@@ -549,30 +549,37 @@
 }
 
 // Folder/file separation: folders on top, files below (Figma B.1 folder-line / file-line)
-.window__icons-scroll {
+.folder-section,
+.file-section {
   display: flex;
   flex-wrap: wrap;
   gap: 24px;
-  padding: 24px 40px;
+  padding: 0 40px;
   align-content: flex-start;
+  width: 100%;
+}
 
-  // Folders render first (order 0), files after (order 1)
-  [data-filetype="folder"],
-  [data-filetype="hub"] {
-    order: 0;
+.folder-section {
+  padding-top: 24px;
+  padding-bottom: 24px;
+  max-height: calc(120px * 2 + 24px + 48px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+
+  &:empty {
+    display: none;
   }
+}
 
-  // Full-width separator between folder row and file row
-  &::after {
-    content: "";
-    order: 1;
-    width: 100%;
-    height: 0;
-    flex-basis: 100%;
-  }
+.file-section {
+  padding-top: 24px;
+  max-height: calc(160px * 2 + 24px + 48px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 
-  // All non-folder items
-  [data-filetype]:not([data-filetype="folder"]):not([data-filetype="hub"]):not([data-filetype=""]) {
-    order: 2;
+  &:empty {
+    display: none;
   }
 }
