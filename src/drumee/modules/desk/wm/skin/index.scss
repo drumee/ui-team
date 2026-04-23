@@ -563,10 +563,11 @@
   gap: 24px;
   padding: 24px 40px;
   width: 100%;
-  box-sizing: border-box;
+  box-sizing: content-box;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   scrollbar-width: thin;
+  flex-shrink: 0;
 
   &:empty {
     display: none;
