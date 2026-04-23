@@ -36,7 +36,7 @@
     "@babel/parser": "^7.28.5",
     "@babel/preset-env": "^7.19.1",
     "@babel/traverse": "^7.28.5",
-    "@drumee/ui-dev-tools": "^1.0.34",
+    "@drumee/ui-dev-tools": "^1.0.36",
     "@eslint/js": "^9.4.0",
     "argparse": "^2.0.1",
     "babel-loader": "^8.2.5",
