@@ -640,6 +640,20 @@ class __media_interact extends media_core {
       case "direct-rename":
         return this.rename();
 
+      case "organize":
+        // Organize: shows submenu with Move + Link to task tracker.
+        // Submenu rendering handled by contextmenu skin (hover state).
+        return;
+
+      case "move":
+        // Open move-to dialog (existing flow); fallback to duplicate-target picker.
+        if (typeof this.move === "function") return this.move();
+        return this.warn("move handler not implemented for this media");
+
+      case "link-to-task-tracker":
+        // Reserved for B.4 task tracker integration.
+        return this.warn("link-to-task-tracker not yet implemented");
+
       case _a.duplicate:
         let opt = {
           service: SERVICE.media.copy,

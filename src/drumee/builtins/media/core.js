@@ -207,9 +207,9 @@ class __media_core extends DrumeeMFS {
   contextmenuItemsForFolder() {
     let fileItems = [];
     if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems = [_a.rename, _a.upload, _a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
-      if (this.canShare()) fileItems.push(_a.share)
-      fileItems.push(_a.separator, _a.trash)
+      // Figma B.1.2 (Private folder action): Download, Rename, Organize, Make a copy, Delete
+      fileItems = [_a.download, _a.rename, 'organize', 'makeACopy', _a.separator, _a.trash];
+      if (this.canShare()) fileItems.splice(fileItems.length - 1, 0, _a.share);
     } else if (this.canDownload()) {
       fileItems = [_a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
       if (this.canShare()) fileItems.push(_a.share);
