@@ -547,3 +547,36 @@
     justify-content: start;
   }
 }
+
+// Folder/file separated grid sections (Figma B.1 folder-line / file-line)
+.window__folder-section,
+.window__file-section {
+  width: 100%;
+  overflow: hidden;
+
+  .smart-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 0 40px 24px;
+    align-content: flex-start;
+  }
+}
+
+.window__folder-section {
+  .smart-container {
+    max-height: calc(120px * 2 + 24px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+}
+
+.window__file-section {
+  .smart-container {
+    max-height: calc(160px * 2 + 24px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+}

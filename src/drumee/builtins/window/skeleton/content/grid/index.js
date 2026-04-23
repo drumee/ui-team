@@ -14,33 +14,43 @@ const __media_skl_grid = function (ui) {
     _.merge(opt, ui.mget(_a.itemsOpt));
   }
 
-  const list = Skeletons.List.Smart({
-    className: `${ui.fig.group}__icons-list`,
-    innerClass: `${ui.fig.group}__icons-scroll`,
-    sys_pn: _a.list,
+  const folderList = Skeletons.List.Smart({
+    className: `${ui.fig.group}__folder-section`,
+    innerClass: `${ui.fig.group}__folder-scroll`,
+    sys_pn: "folder-list",
     flow: _a.none,
     timer: 2000,
-    dataset: {
-      role: _a.container,
-    },
+    dataset: { role: _a.container },
     spinnerWait: 1500,
     spinner: true,
     itemsOpt: opt,
-    skip: {
-      filename: /^\./,
-    },
+    skip: { filename: /^\./ },
     vendorOpt: Preset.List.Orange_e,
-    api: ui.getCurrentApi,
+    api: ui.getFolderApi || ui.getCurrentApi,
+  });
+
+  const fileList = Skeletons.List.Smart({
+    className: `${ui.fig.group}__file-section`,
+    innerClass: `${ui.fig.group}__file-scroll`,
+    sys_pn: "file-list",
+    flow: _a.none,
+    timer: 2000,
+    dataset: { role: _a.container },
+    spinnerWait: 1500,
+    spinner: true,
+    itemsOpt: opt,
+    skip: { filename: /^\./ },
+    vendorOpt: Preset.List.Orange_e,
+    api: ui.getFileApi || ui.getCurrentApi,
   });
 
   if (localStorage.getItem("showHidden")) {
-    delete list.skip;
+    delete folderList.skip;
+    delete fileList.skip;
   }
 
   const cnWidowFilter = "window-filter";
 
-  // value: filetype param sent to BE (null = no filter)
-  // Mapped from api-response ftype field: image, video, audio, document, note, text
   const FILTER_TABS = [
     { label: LOCALE.ALL, value: "all" },
     { label: LOCALE.DOCS, value: "docs" },
@@ -60,20 +70,15 @@ const __media_skl_grid = function (ui) {
         state: index === 0 ? 1 : 0,
         radiotoggle: `media-filter-${ui._id}`,
         value: tab.value,
-        // filetype: tab.value,
       }),
     ),
   });
 
-
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.group}__icons-container`,
-    kids: [
-      filterBar,
-      list,
-    ]
-  })
+    kids: [filterBar, folderList, fileList],
+  });
 };
 
 module.exports = __media_skl_grid;

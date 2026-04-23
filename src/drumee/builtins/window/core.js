@@ -31,6 +31,8 @@ class __window_core extends __utils {
     this.getContentStyle = this.getContentStyle.bind(this);
     this.getCurrentNid = this.getCurrentNid.bind(this);
     this.getCurrentApi = this.getCurrentApi.bind(this);
+    this.getFolderApi = this.getFolderApi.bind(this);
+    this.getFileApi = this.getFileApi.bind(this);
     this.setCurrentApi = this.setCurrentApi.bind(this);
     this.respawn = this.respawn.bind(this);
     this.onServerComplain = this.onServerComplain.bind(this);
@@ -525,6 +527,8 @@ class __window_core extends __utils {
 
       case _a.list:
       case "navigation":
+      case "folder-list":
+      case "file-list":
         this.buildIconsList(child, pn);
         break;
 
@@ -1047,6 +1051,14 @@ class __window_core extends __utils {
       api.token = Wm.mget(_a.token);
     }
     return api;
+  }
+
+  getFolderApi() {
+    return this.getCurrentApi(_a.folder);
+  }
+
+  getFileApi() {
+    return this.getCurrentApi();
   }
 
   /**
