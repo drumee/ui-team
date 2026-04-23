@@ -14,39 +14,27 @@ const __media_skl_grid = function (ui) {
     _.merge(opt, ui.mget(_a.itemsOpt));
   }
 
-  const folderList = Skeletons.List.Smart({
-    className: `${ui.fig.group}__folder-section`,
-    innerClass: `${ui.fig.group}__folder-scroll`,
-    sys_pn: "folder-list",
+  const list = Skeletons.List.Smart({
+    className: `${ui.fig.group}__icons-list`,
+    innerClass: `${ui.fig.group}__icons-scroll`,
+    sys_pn: _a.list,
     flow: _a.none,
     timer: 2000,
-    dataset: { role: _a.container },
+    dataset: {
+      role: _a.container,
+    },
     spinnerWait: 1500,
     spinner: true,
     itemsOpt: opt,
-    skip: { filename: /^\./ },
+    skip: {
+      filename: /^\./,
+    },
     vendorOpt: Preset.List.Orange_e,
-    api: ui.getFolderApi || ui.getCurrentApi,
-  });
-
-  const fileList = Skeletons.List.Smart({
-    className: `${ui.fig.group}__file-section`,
-    innerClass: `${ui.fig.group}__file-scroll`,
-    sys_pn: "file-list",
-    flow: _a.none,
-    timer: 2000,
-    dataset: { role: _a.container },
-    spinnerWait: 1500,
-    spinner: true,
-    itemsOpt: opt,
-    skip: { filename: /^\./ },
-    vendorOpt: Preset.List.Orange_e,
-    api: ui.getFileApi || ui.getCurrentApi,
+    api: ui.getCurrentApi,
   });
 
   if (localStorage.getItem("showHidden")) {
-    delete folderList.skip;
-    delete fileList.skip;
+    delete list.skip;
   }
 
   const cnWidowFilter = "window-filter";
@@ -77,8 +65,11 @@ const __media_skl_grid = function (ui) {
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.group}__icons-container`,
-    kids: [filterBar, folderList, fileList],
-  });
+    kids: [
+      filterBar,
+      list,
+    ]
+  })
 };
 
 module.exports = __media_skl_grid;

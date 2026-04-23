@@ -79,6 +79,7 @@ class __media_core extends DrumeeMFS {
     this.declareHandlers();
     this.initData();
     this.mset({ echoId: this.getLogicalParent().mget('echoId') })
+    this.el.dataset.filetype = this.mget(_a.filetype) || '';
 
     if (this.imgCapable()) {
       this._setIconType = () => {
