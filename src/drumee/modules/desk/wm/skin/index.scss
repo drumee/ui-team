@@ -596,9 +596,6 @@
 .file-section {
   grid-template-rows: repeat(2, 160px);
   grid-auto-columns: 120px;
-  flex: 1;
-  min-height: 0;
-  align-content: start;
 }
 
 // Tablet (768px - 1024px)
