@@ -558,11 +558,10 @@
 
 .folder-section,
 .file-section {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 120px);
   gap: 24px;
   padding: 24px 40px;
-  align-content: flex-start;
   width: 100%;
   box-sizing: border-box;
   overflow-x: auto;
@@ -573,16 +572,14 @@
     display: none;
     padding: 0;
   }
-
-  & > * {
-    flex-shrink: 0;
-  }
 }
 
 .folder-section {
-  max-height: calc(120px * 2 + 24px + 48px);
+  grid-auto-rows: 121px;
+  max-height: calc(121px * 2 + 24px + 48px);
 }
 
 .file-section {
+  grid-auto-rows: 160px;
   max-height: calc(160px * 2 + 24px + 48px);
 }
