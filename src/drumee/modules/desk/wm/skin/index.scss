@@ -563,8 +563,7 @@
   display: grid;
   grid-auto-flow: column;
   gap: 24px;
-  padding: 24px 40px;
-  padding-bottom: 36px;
+  padding: 24px 40px 8px;
   width: 100%;
   box-sizing: content-box;
   overflow-x: auto;
@@ -573,14 +572,14 @@
   flex-shrink: 0;
 
   &::-webkit-scrollbar {
-    height: 6px;
+    height: 4px;
   }
   &::-webkit-scrollbar-track {
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
     background-color: var(--normal-bg-100);
-    border-radius: 6px;
+    border-radius: 4px;
   }
 
   &:empty {
@@ -608,7 +607,7 @@
   .file-section {
     gap: 16px;
     padding: 16px 24px;
-    padding-bottom: 28px;
+    padding-bottom: 8px;
   }
   .folder-section {
     grid-template-rows: repeat(2, 110px);
@@ -636,7 +635,7 @@
   .file-section {
     gap: 12px;
     padding: 12px 16px;
-    padding-bottom: 24px;
+    padding-bottom: 8px;
   }
   .folder-section {
     grid-template-rows: repeat(2, 95px);
@@ -664,7 +663,7 @@
   .file-section {
     gap: 8px;
     padding: 8px 12px;
-    padding-bottom: 20px;
+    padding-bottom: 8px;
   }
   .folder-section {
     grid-template-rows: repeat(2, 80px);
