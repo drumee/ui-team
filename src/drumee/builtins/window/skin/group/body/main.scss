@@ -123,6 +123,32 @@
         grid-template-columns: unset !important;
         height: auto !important;
         min-height: 100%;
+
+        .folder-section,
+        .file-section {
+          padding: 16px 24px 8px;
+          gap: 16px;
+        }
+
+        .folder-section {
+          grid-template-rows: repeat(2, 110px);
+          grid-auto-columns: 90px;
+
+          .media-grid__container {
+            transform: scale(0.75);
+            transform-origin: top center;
+          }
+        }
+
+        .file-section {
+          grid-template-rows: repeat(2, 130px);
+          grid-auto-columns: 90px;
+
+          .media-grid__container {
+            transform: scale(0.75);
+            transform-origin: top center;
+          }
+        }
       }
     }
   }
