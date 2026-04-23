@@ -577,13 +577,9 @@
 .folder-section {
   grid-template-rows: repeat(2, 140px);
   grid-auto-columns: 120px;
-  height: calc(140px * 2 + 24px);
-  min-height: calc(140px * 2 + 24px);
 }
 
 .file-section {
   grid-template-rows: repeat(2, 160px);
   grid-auto-columns: 120px;
-  height: calc(160px * 2 + 24px);
-  min-height: calc(160px * 2 + 24px);
 }
