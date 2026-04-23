@@ -554,7 +554,8 @@
   display: flex !important;
   flex-direction: column !important;
   grid-template-columns: unset !important;
-  height: 100%;
+  height: auto !important;
+  min-height: 100%;
 }
 
 .folder-section,
