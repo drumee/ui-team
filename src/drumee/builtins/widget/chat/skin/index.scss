@@ -648,8 +648,23 @@
     flex: 1;
     min-height: 0;
     height: auto;
-    padding: 16px;
+    padding: 16px 4px 16px 16px;
     gap: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--normal-bg-100) transparent;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--normal-bg-100);
+      border-radius: 4px;
+    }
   }
 
   .widget-chat_chat_footer {
