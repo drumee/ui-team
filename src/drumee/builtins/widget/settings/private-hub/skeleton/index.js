@@ -82,7 +82,7 @@ function content(ui) {
         //   uiHandler: [ui],
         // }),
         button(ui, {
-          label: "Add members",
+          label: LOCALE.ADD_MEMBERS,
           className: `drumee-buttons--primary`,
           service: "add-members",
         }),

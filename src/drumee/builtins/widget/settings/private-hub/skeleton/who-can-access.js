@@ -20,7 +20,7 @@ export default function (ui) {
       // }),
       Skeletons.Note({
         className: `${fig}__description`,
-        content: "Only members in the list below can access content within this folder.",
+        content: LOCALE.ONLY_MEMBERS_CAN_ACCESS,
       }),
     ],
   });

@@ -226,10 +226,10 @@ class settings_share_hub extends DrumeeMFS {
     const passwordInput = this.getPart('password-input');
     if (!cmd.mget(_a.state)) {
       passwordInput.mset({ type: _a.password })
-      cmd.set({ content: "Show" })
+      cmd.set({ content: LOCALE.SHOW })
     } else {
       passwordInput.mset({ type: _a.type })
-      cmd.set({ content: "Hide" })
+      cmd.set({ content: LOCALE.HIDE })
     }
     passwordInput.reload();
   }

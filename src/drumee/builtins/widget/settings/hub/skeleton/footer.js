@@ -56,7 +56,7 @@ export default function footer(ui) {
           }),
           Skeletons.Note({
             className: `${fig}__footer-label`,
-            content: "Send link by email",
+            content: LOCALE.SEND_LINK_BY_EMAIL,
           }),
         ],
       }),
