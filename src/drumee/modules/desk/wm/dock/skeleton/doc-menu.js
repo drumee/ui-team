@@ -10,7 +10,7 @@ function menu_items(ui) {
   const items = [
     {
       service: "add-folder",
-      ico: "raw-folder",
+      ico: "dock-folder",
       label: LOCALE.FOLDER,
       area: _a.personal,
       filename: LOCALE.NEW_FOLDER,

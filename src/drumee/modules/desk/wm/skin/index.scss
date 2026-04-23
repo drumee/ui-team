@@ -565,6 +565,9 @@
   align-content: flex-start;
   width: 100%;
   box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 
   &:empty {
     display: none;
@@ -578,24 +581,8 @@
 
 .folder-section {
   max-height: calc(120px * 2 + 24px + 48px);
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-
-  & > * {
-    width: 120px;
-    height: 120px;
-  }
 }
 
 .file-section {
   max-height: calc(160px * 2 + 24px + 48px);
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-
-  & > * {
-    width: 120px;
-    height: 160px;
-  }
 }

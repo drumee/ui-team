@@ -141,11 +141,12 @@ export function dropdownMenuButton(ui, opt = {}) {
 
   const itemsNode = Skeletons.Box.Y({
     className: `${cnDropdown}__items`,
-    kids: menuItems.map(({ service, ico, content }) =>
+    kids: menuItems.map(({ service, ico, content, ...extra }) =>
       Skeletons.Box.X({
         className: `${cnDropdown}__item`,
         uiHandler: ui,
         service,
+        ...extra,
         kids: [
           Skeletons.Button.Svg({
             ico,
@@ -286,7 +287,7 @@ export function newFileMenu(ui) {
         menuItems: [
           {
             service: "add-folder",
-            ico: "raw-folder",
+            ico: "dock-folder",
             content: LOCALE.FOLDER,
             area: ui.mget(_a.area) || _a.personal,
             filename: LOCALE.NEW_FOLDER,
