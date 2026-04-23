@@ -239,19 +239,32 @@ class __window_mfs extends DrumeeMFS {
   }
 
   _partitionFoldersAndFiles(listPart) {
+    setTimeout(() => {
+      this._doPartition(listPart);
+    }, 100);
+  }
+
+  _doPartition(listPart) {
     const scrollEl = listPart.el.querySelector('.smart-container');
     if (!scrollEl) return;
-    const items = [...scrollEl.children];
-    if (!items.length) return;
 
     let folderWrap = scrollEl.querySelector('.folder-section');
     let fileWrap = scrollEl.querySelector('.file-section');
-    if (folderWrap || fileWrap) return;
 
-    folderWrap = document.createElement('div');
-    folderWrap.className = 'folder-section';
-    fileWrap = document.createElement('div');
-    fileWrap.className = 'file-section';
+    if (!folderWrap) {
+      folderWrap = document.createElement('div');
+      folderWrap.className = 'folder-section';
+      scrollEl.insertBefore(folderWrap, scrollEl.firstChild);
+    }
+    if (!fileWrap) {
+      fileWrap = document.createElement('div');
+      fileWrap.className = 'file-section';
+      folderWrap.after(fileWrap);
+    }
+
+    const items = [...scrollEl.children].filter(
+      el => el !== folderWrap && el !== fileWrap
+    );
 
     items.forEach(item => {
       const ft = item.dataset?.filetype;
@@ -261,9 +274,6 @@ class __window_mfs extends DrumeeMFS {
         fileWrap.appendChild(item);
       }
     });
-
-    scrollEl.appendChild(folderWrap);
-    scrollEl.appendChild(fileWrap);
   }
 
 
