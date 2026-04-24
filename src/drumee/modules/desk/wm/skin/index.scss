@@ -563,13 +563,13 @@
   display: grid;
   grid-auto-flow: column;
   gap: 24px;
-  padding: 24px 40px 8px;
+  padding: 16px 40px 8px;
   width: 100%;
   box-sizing: content-box;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
-  flex-shrink: 0;
+  flex: 0 0 auto !important;
 
   &::-webkit-scrollbar {
     height: 4px;
