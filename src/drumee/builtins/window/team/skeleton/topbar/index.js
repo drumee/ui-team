@@ -1,4 +1,8 @@
-const { newFileMenu, visioMenu, getAreaLabel } = require("../../../skeleton/toolkit");
+const {
+  newFileMenu,
+  visioMenu,
+  getAreaLabel,
+} = require("../../../skeleton/toolkit");
 
 const __skl_window_team_topbar = function (ui, icon) {
   let settings;
@@ -55,6 +59,12 @@ const __skl_window_team_topbar = function (ui, icon) {
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       visioMenu(ui),
+      Skeletons.Button.Svg({
+        className: `${cnWindowButton}__icon-bg-button primary-rectangular`,
+        ico: "desktop_confcalls",
+        uiHandler: ui,
+        partHandler: ui,
+      }),
       newFileMenu(ui),
       Skeletons.Button.Label({
         className: `${cnWindowButton}__label-button`,

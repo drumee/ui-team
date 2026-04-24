@@ -159,9 +159,9 @@
     &:hover {
       color: var(--normal-fg-20);
     }
-    &.primary {
-      color: var(--normal-fg-10);
-      background-color: var(--normal-bg-90);
+    &.primary-rectangular {
+      color: var(--white);
+      background-color: var(--primary-40);
     }
     &.secondary {
       color: var(--normal-bg-100);
