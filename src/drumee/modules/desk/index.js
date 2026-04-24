@@ -228,6 +228,11 @@ class desk_module extends LetcBox {
       case "desk-tooltip":
         return (this.tooltip = child);
 
+      case "sidebar-home":
+        child.setState(1);
+        child.el.dataset.radiotoggle = _a.on;
+        return;
+
       // case "share-bar-countdown-timer":
       //   var f = () => {
       //     const data = {

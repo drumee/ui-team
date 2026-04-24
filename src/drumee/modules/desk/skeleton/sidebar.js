@@ -21,7 +21,6 @@ const createNavItem = (
   color = "",
   on_click,
   sys_pn,
-  initialState,
 ) => {
   const fig = `${ui.fig.family}-sidebar`;
 
@@ -32,7 +31,6 @@ const createNavItem = (
     service,
     on_click,
     sys_pn,
-    initialState,
     kidsOpt: {
       active: 0,
     },
@@ -156,7 +154,7 @@ const createNav = (ui) => {
 
       Skeletons.Box.Y({
         kids: [
-          createNavItem(ui, "sidebar_home", LOCALE.HOME, _e.home, "", null, "sidebar-home", 1),
+          createNavItem(ui, "sidebar_home", LOCALE.HOME, _e.home, "", null, "sidebar-home"),
           createNavItem(
             ui,
             "sidebar_notifications",
