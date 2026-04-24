@@ -21,16 +21,18 @@ const createNavItem = (
   color = "",
   on_click,
   sys_pn,
+  initialState,
 ) => {
   const fig = `${ui.fig.family}-sidebar`;
 
   return Skeletons.Box.X({
     className: cls(fig, "item"),
     uiHandler: [ui],
-    radio: `sidebar-radio` /** Shaed with workspace-items */,
+    radio: `sidebar-radio`,
     service,
     on_click,
     sys_pn,
+    initialState,
     kidsOpt: {
       active: 0,
     },
@@ -154,7 +156,7 @@ const createNav = (ui) => {
 
       Skeletons.Box.Y({
         kids: [
-          createNavItem(ui, "sidebar_home", LOCALE.HOME, _e.home),
+          createNavItem(ui, "sidebar_home", LOCALE.HOME, _e.home, "", null, "sidebar-home", 1),
           createNavItem(
             ui,
             "sidebar_notifications",
