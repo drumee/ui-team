@@ -29,9 +29,8 @@
   &__icons-list {
     display: flex;
     flex-direction: row;
-    height: 100%;
-    justify-content: center;
-    align-items: center;
+    justify-content: flex-start;
+    align-items: flex-start;
     max-height: calc(100vh - 215px);
     overflow-y: auto;
     width: 100%;
@@ -549,27 +548,38 @@
 }
 
 // Folder/file separation: folders on top, files below (Figma B.1 folder-line / file-line)
-// Override smart-container grid to column flex when sections are present
 .smart-container:has(.folder-section) {
-  display: flex !important;
+  display: flex !important; // override framework inline display:grid
   flex-direction: column !important;
   grid-template-columns: unset !important;
   height: auto !important;
   min-height: 100%;
 }
 
+// ── Shared ──
 .folder-section,
 .file-section {
   display: grid;
-  grid-auto-flow: column;
   gap: 24px;
-  padding: 24px 40px 8px;
+  padding: 16px 40px 8px;
   width: 100%;
   box-sizing: content-box;
+  flex: 0 0 auto !important; // override framework's inline flex-grow:1
+
+  &:empty {
+    display: none;
+    padding: 0;
+  }
+}
+
+// ── Folder: 2 rows, fill width, horizontal scroll when overflow ──
+.folder-section {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, 140px);
+  grid-auto-columns: 120px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
-  flex-shrink: 0;
 
   &::-webkit-scrollbar {
     height: 4px;
@@ -581,33 +591,21 @@
     background-color: var(--normal-bg-100);
     border-radius: 4px;
   }
-
-  &:empty {
-    display: none;
-    padding: 0;
-  }
 }
 
-.folder-section {
-  grid-template-rows: repeat(2, 140px);
-  grid-auto-columns: 120px;
-}
-
+// ── File: responsive grid, normal vertical scroll ──
 .file-section {
-  grid-template-rows: repeat(2, 160px);
-  grid-auto-columns: 120px;
-  flex: 1;
-  min-height: 0;
-  align-content: start;
+  grid-template-columns: repeat(auto-fill, 120px);
+  grid-auto-rows: 160px;
+  overflow: visible;
 }
 
-// Tablet (768px - 1024px)
+// ── Responsive ──
 @media (max-width: 1024px) {
   .folder-section,
   .file-section {
     gap: 16px;
-    padding: 16px 24px;
-    padding-bottom: 8px;
+    padding: 16px 24px 8px;
   }
   .folder-section {
     grid-template-rows: repeat(2, 110px);
@@ -619,8 +617,8 @@
     }
   }
   .file-section {
-    grid-template-rows: repeat(2, 130px);
-    grid-auto-columns: 90px;
+    grid-template-columns: repeat(auto-fill, 90px);
+    grid-auto-rows: 130px;
 
     .media-grid__container {
       transform: scale(0.75);
@@ -629,13 +627,11 @@
   }
 }
 
-// Small tablet / large phone (481px - 767px)
 @media (max-width: 767px) {
   .folder-section,
   .file-section {
     gap: 12px;
-    padding: 12px 16px;
-    padding-bottom: 8px;
+    padding: 12px 16px 8px;
   }
   .folder-section {
     grid-template-rows: repeat(2, 95px);
@@ -647,8 +643,8 @@
     }
   }
   .file-section {
-    grid-template-rows: repeat(2, 110px);
-    grid-auto-columns: 80px;
+    grid-template-columns: repeat(auto-fill, 80px);
+    grid-auto-rows: 110px;
 
     .media-grid__container {
       transform: scale(0.65);
@@ -657,13 +653,11 @@
   }
 }
 
-// Mobile (≤480px)
 @media (max-width: 480px) {
   .folder-section,
   .file-section {
     gap: 8px;
-    padding: 8px 12px;
-    padding-bottom: 8px;
+    padding: 8px 12px 8px;
   }
   .folder-section {
     grid-template-rows: repeat(2, 80px);
@@ -675,8 +669,8 @@
     }
   }
   .file-section {
-    grid-template-rows: repeat(2, 90px);
-    grid-auto-columns: 70px;
+    grid-template-columns: repeat(auto-fill, 70px);
+    grid-auto-rows: 90px;
 
     .media-grid__container {
       transform: scale(0.55);

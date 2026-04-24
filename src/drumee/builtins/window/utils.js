@@ -222,6 +222,7 @@ class __window_mfs extends DrumeeMFS {
         child.el.dataset.wait = 1;
       }, 300);
     }
+    this._ensureSections(child);
     child.on(EOD, () => {
       if (timer) clearTimeout(timer);
       child.el.dataset.wait = 0;
@@ -238,10 +239,23 @@ class __window_mfs extends DrumeeMFS {
     child.el.dataset.role = _a.container;
   }
 
+  _ensureSections(listPart) {
+    const scrollEl = listPart.el.querySelector('.smart-container');
+    if (!scrollEl) return;
+    if (!scrollEl.querySelector('.folder-section')) {
+      const folderWrap = document.createElement('div');
+      folderWrap.className = 'folder-section';
+      scrollEl.appendChild(folderWrap);
+      const fileWrap = document.createElement('div');
+      fileWrap.className = 'file-section';
+      scrollEl.appendChild(fileWrap);
+    }
+  }
+
   _partitionFoldersAndFiles(listPart) {
     setTimeout(() => {
       this._doPartition(listPart);
-    }, 100);
+    }, 50);
   }
 
   _doPartition(listPart) {
@@ -274,6 +288,22 @@ class __window_mfs extends DrumeeMFS {
         fileWrap.appendChild(item);
       }
     });
+
+    scrollEl.style.display = 'flex';
+    scrollEl.style.flexDirection = 'column';
+    scrollEl.style.alignItems = 'stretch';
+    scrollEl.style.justifyContent = 'flex-start';
+
+    const folderCount = folderWrap.children.length;
+    if (folderCount === 0) return;
+    const style = getComputedStyle(folderWrap);
+    const colSize = parseInt(style.gridAutoColumns) || 120;
+    const gap = parseInt(style.gap) || 24;
+    const availW = folderWrap.clientWidth;
+    const cols = Math.max(1, Math.floor((availW + gap) / (colSize + gap)));
+    const rowH = style.gridTemplateRows.split(' ')[0];
+    folderWrap.style.gridTemplateRows =
+      folderCount <= cols ? rowH : `${rowH} ${rowH}`;
   }
 
 
@@ -362,6 +392,7 @@ class __window_mfs extends DrumeeMFS {
       } else {
         this.iconsList.append(data);
       }
+      this._partitionFoldersAndFiles(this.iconsList);
     }
     this.syncBounds();
   }
