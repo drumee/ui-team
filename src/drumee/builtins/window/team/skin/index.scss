@@ -25,15 +25,17 @@
   }
 
   &__header {
-    background-color: var(--normal-bg-100);
+    background-color: var(--normal-bg-80);
 
     &-title {
       max-width: 163px;
       align-items: center;
-      @include drumee.typo($size: 18px,
+      @include drumee.typo(
+        $size: 18px,
         $line: 24px,
         $weight: 400,
-        $color: var(--default-text-reverse));
+        $color: var(--default-text-reverse)
+      );
 
       .name {
         align-items: flex-start;
@@ -65,8 +67,6 @@
       }
     }
   }
-
-
 }
 
 // Scoped message bubble styles for team chat panel
