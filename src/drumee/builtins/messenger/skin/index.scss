@@ -78,7 +78,7 @@
     &.submit {
       svg {
         background-color: transparent;
-        fill: var(--primary-10);
+        fill: var(--primary-40);
         padding: 2px;
         margin-left: -3px;
         cursor: pointer;
@@ -90,7 +90,7 @@
         pointer-events: none;
 
         svg {
-          fill: var(--primary-10);
+          fill: var(--primary-40);
         }
       }
 
@@ -100,7 +100,7 @@
         pointer-events: auto;
 
         svg {
-          fill: var(--primary-30);
+          fill: var(--primary-40);
         }
       }
     }

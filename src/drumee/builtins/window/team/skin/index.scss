@@ -24,6 +24,20 @@
     }
   }
 
+  .topbar-folder-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 24px;
+
+    svg.folder-shape {
+      width: 100%;
+      height: auto;
+      fill: var(--area-private);
+    }
+  }
+
   &__split-body {
     &[data-tab="chat"] {
       .window__files-panel {

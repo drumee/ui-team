@@ -2,7 +2,7 @@ const { getAreaLabel, newFileMenu } = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   let name = ui.mget(_a.filename) || ui.mget(_a.name);
-  const logo = require("../../skeleton/logo")(ui);
+  const logo = require("../../skeleton/topbar/folder-icon")(ui.mget(_a.area));
   const subtitle = require("../../skeleton/subtitle")(ui);
   const cnWindowButton = `${ui.fig.group}-button`;
   const cnWidowTopbarTitle = `${ui.fig.group}-topbar-title`;

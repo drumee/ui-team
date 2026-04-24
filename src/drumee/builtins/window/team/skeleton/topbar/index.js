@@ -8,7 +8,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   let settings;
   const media = ui.mget(_a.media);
   const name = ui.model.get(_a.filename) || ui.model.get(_a.name) || "";
-  const logo = require("../../../skeleton/logo")(ui);
+  const logo = require("../../../skeleton/topbar/folder-icon")(ui.mget(_a.area));
   const cnWindowButton = "window-button";
   const cnWidowTopbarTitle = "window-topbar-title";
   if (icon == null || ui.mget(_a.media) == null) {

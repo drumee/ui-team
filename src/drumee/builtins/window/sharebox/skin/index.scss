@@ -72,6 +72,20 @@
     }
   }
 
+  .topbar-folder-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 24px;
+
+    svg.folder-shape {
+      width: 100%;
+      height: auto;
+      fill: var(--area-share);
+    }
+  }
+
   &__split-body {
     flex: 1;
     overflow: hidden;

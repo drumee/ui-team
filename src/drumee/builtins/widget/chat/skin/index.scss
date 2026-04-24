@@ -141,7 +141,6 @@
 
   &__messenger-wrapper {
     padding: 24px;
-    background: var(--normal-bg);
     width: 100%;
     position: relative;
   }
@@ -178,7 +177,7 @@
 
     .lib-messenger__container {
       align-items: center;
-      background-color: rgba(0, 0, 0, 0.05);
+      background-color: var(--white);
       border: none;
       border-radius: 8px;
       padding: 10px 12px;
