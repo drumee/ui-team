@@ -69,15 +69,13 @@
   }
 }
 
-.window-body {
-  &__tab-bar {
-    &-item {
-      &[data-state="1"] {
-        border: 1px solid var(--area-private);
-      }
-      &:hover {
-        color: var(--area-private);
-      }
+.window-team {
+  .window-body__tab-bar-item {
+    &[data-state="1"] {
+      border: 1px solid var(--area-private);
+    }
+    &:hover {
+      color: var(--area-private);
     }
   }
 }
