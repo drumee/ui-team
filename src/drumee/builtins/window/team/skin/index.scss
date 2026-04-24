@@ -69,6 +69,19 @@
   }
 }
 
+.window-body {
+  &__tab-bar {
+    &-item {
+      &[data-state="1"] {
+        border: 1px solid var(--area-private);
+      }
+      &:hover {
+        color: var(--area-private);
+      }
+    }
+  }
+}
+
 // Scoped message bubble styles for team chat panel
 // Moved to widget-chatItem to improve reusability
 /** This way of styling is not reusable */

@@ -23,6 +23,7 @@ export function breadcrumbs(ui, opt) {
  */
 export function tabBar(ui) {
   const cnRoot = "window-body__tab-bar";
+  const radioChannel = "tab-bar";
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper`,
     kids: [
@@ -31,21 +32,25 @@ export function tabBar(ui) {
         label: LOCALE.FILES,
         ico: "desktop_docfile",
         service: "tab-files",
-        uiHandler: ui,
+        radio: radioChannel,
+        initialState: 1,
+        uiHandler: [ui],
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item`,
         label: LOCALE.CHAT,
         ico: "tchat",
         service: "tab-chat",
-        uiHandler: ui,
+        radio: radioChannel,
+        uiHandler: [ui],
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item`,
         label: LOCALE.TASK,
         ico: "list",
         service: "tab-task",
-        uiHandler: ui,
+        radio: radioChannel,
+        uiHandler: [ui],
       }),
     ],
   });

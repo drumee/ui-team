@@ -104,6 +104,19 @@
   }
 }
 
+.window-body {
+  &__tab-bar {
+    &-item {
+      &[data-state="1"] {
+        border: 1px solid var(--area-share);
+      }
+      &:hover {
+        color: var(--area-share);
+      }
+    }
+  }
+}
+
 // Scoped message bubble styles for sharebox chat panel
 // .window-sharebox .window__chat-panel {
 //   .widget-chat__ui {
