@@ -29,9 +29,8 @@
   &__icons-list {
     display: flex;
     flex-direction: row;
-    height: 100%;
-    justify-content: center;
-    align-items: center;
+    justify-content: flex-start;
+    align-items: flex-start;
     max-height: calc(100vh - 215px);
     overflow-y: auto;
     width: 100%;
@@ -549,9 +548,8 @@
 }
 
 // Folder/file separation: folders on top, files below (Figma B.1 folder-line / file-line)
-// Override smart-container grid to column flex when sections are present
 .smart-container:has(.folder-section) {
-  display: flex !important;
+  display: flex !important; // override framework inline display:grid
   flex-direction: column !important;
   grid-template-columns: unset !important;
   height: auto !important;
@@ -566,7 +564,7 @@
   padding: 16px 40px 8px;
   width: 100%;
   box-sizing: content-box;
-  flex: 0 0 auto !important;
+  flex: 0 0 auto !important; // override framework's inline flex-grow:1
 
   &:empty {
     display: none;
@@ -578,7 +576,7 @@
 .folder-section {
   grid-auto-flow: column;
   grid-template-rows: repeat(2, 140px);
-  grid-auto-columns: minmax(120px, 1fr);
+  grid-auto-columns: 120px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
@@ -611,7 +609,7 @@
   }
   .folder-section {
     grid-template-rows: repeat(2, 110px);
-    grid-auto-columns: minmax(90px, 1fr);
+    grid-auto-columns: 90px;
 
     .media-grid__container {
       transform: scale(0.75);
@@ -637,7 +635,7 @@
   }
   .folder-section {
     grid-template-rows: repeat(2, 95px);
-    grid-auto-columns: minmax(80px, 1fr);
+    grid-auto-columns: 80px;
 
     .media-grid__container {
       transform: scale(0.65);
@@ -663,7 +661,7 @@
   }
   .folder-section {
     grid-template-rows: repeat(2, 80px);
-    grid-auto-columns: minmax(70px, 1fr);
+    grid-auto-columns: 70px;
 
     .media-grid__container {
       transform: scale(0.55);
