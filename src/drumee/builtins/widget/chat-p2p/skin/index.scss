@@ -6,8 +6,8 @@
     height: 100vh;
     top: 0px;
     right: -880px;
-    background-color: var(--normal-bg-90);
-    border: 1px solid var(--border-muted);
+    background-color: var(--normal-bg);
+    border-left: 1px solid var(--border-muted);
     transition: right 0.5s;
     position: absolute;
     box-shadow: var(--shadow-left-big);
@@ -35,31 +35,43 @@
     flex-shrink: 0;
     height: 100%;
     overflow: hidden;
-    width: 240px;
+    width: 320px;
   }
 
   &__sidebar-header {
     align-items: center;
     flex-shrink: 0;
     justify-content: space-between;
-    padding: var(--spacer-6) var(--spacer-4);
+    padding: 24px;
   }
 
   &__inbox-title {
     @include drumee.typo(
-      $size: 22px,
+      $size: 24px,
       $weight: 600,
       $color: var(--normal-fg-10)
     );
+    line-height: 1.1;
   }
 
   &__compose-btn {
-    color: var(--normal-fg-10);
-    height: 22px;
-    width: 22px;
+    color: var(--active-border);
+    height: 21px;
+    width: 20px;
     cursor: pointer;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 20px;
+      height: 21px;
+      display: block;
+    }
+
     &:hover {
-      color: var(--normal-fg-20);
+      opacity: 0.8;
     }
   }
 
@@ -68,24 +80,36 @@
   &__filters {
     align-items: center;
     flex-shrink: 0;
-    gap: 6px;
-    padding: 0 var(--spacer-4) var(--spacer-4);
+    gap: 8px;
+    padding: 0 24px 24px;
   }
 
   &__filter-btn {
-    border-radius: 20px;
+    border-radius: 12px;
     cursor: pointer;
-    padding: 4px 12px;
+    padding: 5px 13px;
+    background-color: var(--overlay-bg-05);
     @include drumee.typo(
-      $size: 12px,
-      $weight: 500,
+      $size: 10px,
+      $weight: 600,
       $color: var(--normal-fg-50)
     );
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-family: var(--font-mono, var(--font-medium));
 
     &[data-radio="on"],
     &[data-state="1"] {
-      background-color: var(--active-border);
-      @include drumee.typo($size: 12px, $weight: 600, $color: #ffffff);
+      background-color: rgba(89, 80, 255, 0.1);
+      border: 1px solid rgba(89, 80, 255, 0.1);
+      @include drumee.typo(
+        $size: 10px,
+        $weight: 600,
+        $color: var(--active-border)
+      );
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-family: var(--font-mono, var(--font-medium));
     }
 
     svg {
@@ -99,7 +123,7 @@
     flex: 1;
     min-height: 0;
     overflow: hidden;
-    padding: 0 8px;
+    padding: 0 12px;
 
     .smart-container {
       height: 100%;
@@ -116,7 +140,8 @@
   // ── Right chat area ──────────────────────────────────────────────
 
   &__chat-area {
-    background-color: var(--normal-bg-90);
+    background-color: var(--normal-bg);
+    border-left: 1px solid var(--border-muted);
     flex: 1;
     height: 100%;
     min-width: 0;
@@ -127,12 +152,13 @@
 
   &__chat-header {
     align-items: center;
-    background-color: var(--normal-bg-90);
+    backdrop-filter: blur(6px);
+    background-color: var(--overlay-bg-05);
     border-bottom: 1px solid var(--border-muted);
     flex-shrink: 0;
     justify-content: space-between;
-    min-height: 56px;
-    padding: 16px 20px;
+    height: 80px;
+    padding: 0 32px;
   }
 
   &__header {
@@ -143,13 +169,13 @@
 
   &__header-info {
     align-items: center;
-    gap: 10px;
+    gap: 16px;
 
     .user-profile__ui[data-online="1"]:before,
     .user-profile__ui[data-online="2"]:before {
       background-color: var(--primary-30);
       border-radius: 50%;
-      box-shadow: 0 0 0 1px var(--normal-bg-90);
+      box-shadow: 0 0 0 1px var(--normal-bg);
       content: " ";
       height: 8px;
       right: 0;
@@ -164,17 +190,17 @@
 
   &__header-profile {
     &.user-profile__ui {
-      border-radius: var(--corner-radius-1);
-      height: 36px;
-      min-width: 36px;
-      width: 36px;
+      border-radius: 10px;
+      height: 40px;
+      min-width: 40px;
+      width: 40px;
       background-color: var(--normal-fg-10);
     }
 
     &.icon {
-      width: 36px;
-      height: 36px;
-      min-width: 36px;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
 
       svg {
         width: 100%;
@@ -185,40 +211,46 @@
 
   &__header-text {
     justify-content: center;
-    gap: var(--spacer-2);
+    gap: 2px;
   }
 
   &__header-name {
     @include drumee.typo(
-      $size: 15px,
-      $weight: 600,
+      $size: 18px,
+      $weight: 700,
       $color: var(--normal-fg-10)
     );
+    line-height: 22.5px;
   }
 
   &__header-status {
     @include drumee.typo(
-      $size: 11px,
-      $weight: 500,
-      $color: var(--normal-fg-20)
+      $size: 10px,
+      $weight: 600,
+      $color: var(--active-border)
     );
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.4px;
+    font-family: var(--font-mono, var(--font-medium));
   }
 
   &__header-actions {
     align-items: center;
-    gap: 4px;
+    gap: 16px;
   }
 
   &__header-btn {
-    color: var(--normal-fg-10);
+    color: var(--normal-fg-50);
     cursor: pointer;
     padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     svg {
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
+      display: block;
     }
 
     &:hover {

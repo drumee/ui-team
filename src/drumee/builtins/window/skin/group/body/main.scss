@@ -115,6 +115,44 @@
         height: calc(100% - 1rem);
         width: 100%;
       }
+
+      // When partition creates folder/file sections, switch to flex column
+      &:has(.folder-section) {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: unset !important;
+        height: auto !important;
+        min-height: 100%;
+      }
+
+      // Popup folder windows only (not workspace manager grid)
+      &:not(.window-manager__icons-scroll):has(.folder-section) {
+        .folder-section,
+        .file-section {
+          padding: 16px 24px 8px;
+          gap: 16px;
+        }
+
+        .folder-section {
+          grid-template-rows: repeat(2, 110px);
+          grid-auto-columns: 90px;
+
+          .media-grid__container {
+            transform: scale(0.75);
+            transform-origin: top center;
+          }
+        }
+
+        .file-section {
+          grid-template-rows: repeat(2, 130px);
+          grid-auto-columns: 90px;
+
+          .media-grid__container {
+            transform: scale(0.75);
+            transform-origin: top center;
+          }
+        }
+      }
     }
   }
 }

@@ -225,7 +225,7 @@ class __lib_messenger extends LetcBox {
   }
 
   /**
-   * Detect @ in text and manage mention popup
+   * Detect @ (contacts) or / (files) in text and manage mention popup
    */
   _handleMentionInput(text) {
     if (!text) {
@@ -233,12 +233,18 @@ class __lib_messenger extends LetcBox {
       return;
     }
 
-    // Simple detection: find last @word pattern in the text
-    const mentionMatch = text.match(/@(\S*)$/);
+    const contactMatch = text.match(/@(\S*)$/);
+    const fileMatch = text.match(/\/(\S*)$/);
 
-    if (mentionMatch) {
+    if (contactMatch) {
       this._mentionActive = true;
-      this._mentionFilter = mentionMatch[1].toLowerCase();
+      this._mentionType = 'contact';
+      this._mentionFilter = contactMatch[1].toLowerCase();
+      this._showMentionPopup();
+    } else if (fileMatch) {
+      this._mentionActive = true;
+      this._mentionType = 'file';
+      this._mentionFilter = fileMatch[1].toLowerCase();
       this._showMentionPopup();
     } else if (this._mentionActive) {
       this._closeMentionPopup();
@@ -246,12 +252,13 @@ class __lib_messenger extends LetcBox {
   }
 
   /**
-   * Show file mention dropdown
+   * Show mention dropdown (contacts or files)
    */
   _showMentionPopup() {
     this.triggerHandlers({
       service: 'mention-filter',
-      filter: this._mentionFilter
+      filter: this._mentionFilter,
+      mentionType: this._mentionType
     });
   }
 
@@ -275,8 +282,7 @@ class __lib_messenger extends LetcBox {
     const el = content.content;
     const text = el.innerText;
 
-    // Remove the @filter text from the end
-    const replaced = text.replace(/@\S*$/, '');
+    const replaced = text.replace(/[@/]\S*$/, '');
     el.innerText = replaced;
 
     const mention = document.createElement('a');

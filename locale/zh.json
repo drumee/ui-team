@@ -2353,5 +2353,16 @@
   "USAGE_LOW_TO_HIGH": "使用量从低到高",
   "USAGE_PERCENTAGE": "使用百分比",
   "STORAGE_GB": "存储空间 (GB)",
-  "NO_USERS": "未找到用户"
+  "NO_USERS": "未找到用户",
+  "ACTIVE_NOW": "当前在线",
+  "NOTHING_IN_TRASH": "回收站为空",
+  "TRASH_EMPTY_HINT": "您的工作空间非常整洁。已删除的文件将在此显示30天。",
+  "REFRESH_VIEW": "刷新视图",
+  "VIEW_HISTORY": "查看历史",
+  "ORGANIZE": "整理",
+  "MAKE_A_COPY": "创建副本",
+  "LINK_TO_TASK_TRACKER": "关联到任务跟踪器",
+  "SEND_LINK_BY_EMAIL": "通过邮件发送链接",
+  "ADD_MEMBERS": "添加成员",
+  "ONLY_MEMBERS_CAN_ACCESS": "只有以下列表中的成员才能访问此文件夹中的内容。"
 }

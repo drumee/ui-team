@@ -79,6 +79,7 @@ class __media_core extends DrumeeMFS {
     this.declareHandlers();
     this.initData();
     this.mset({ echoId: this.getLogicalParent().mget('echoId') })
+    this.el.dataset.filetype = this.mget(_a.filetype) || '';
 
     if (this.imgCapable()) {
       this._setIconType = () => {
@@ -207,13 +208,15 @@ class __media_core extends DrumeeMFS {
   contextmenuItemsForFolder() {
     let fileItems = [];
     if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems = [_a.rename, _a.upload, _a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
-      if (this.canShare()) fileItems.push(_a.share)
-      fileItems.push(_a.separator, _a.trash)
+      // Figma B.1.2/B.2.2/B.3.2 (Folder Action - all workspace types):
+      // Download, Rename, Organize, Make a copy, [Share?], Delete
+      fileItems = [_a.download, _a.rename, 'organize', 'makeACopy', _a.separator, _a.trash];
+      if (this.canShare()) fileItems.splice(fileItems.length - 1, 0, _a.share);
     } else if (this.canDownload()) {
-      fileItems = [_a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
+      // Restricted/shared recipient — Download only per Figma 2.2
+      fileItems = [_a.download];
       if (this.canShare()) fileItems.push(_a.share);
-      if (this.canRemove()) fileItems.push(_a.trash);
+      if (this.canRemove()) fileItems.push(_a.separator, _a.trash);
     }
     // for media files in trash
     if (this.mget(_a.status) == _a.deleted) {

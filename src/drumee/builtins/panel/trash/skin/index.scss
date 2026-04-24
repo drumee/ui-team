@@ -1,5 +1,4 @@
 @use "mixins/drumee";
-// @include meta.load-css("../../skin/index.scss");
 
 .panel-trash {
   &__ui {
@@ -10,7 +9,8 @@
     background-color: var(--normal-bg-90);
     border: 1px solid var(--border-muted);
     transition: left 0.5s;
-    box-shadow: var(--shadow-right-big);
+    box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
+
     &[data-anim="in"] {
       left: 0;
     }
@@ -41,21 +41,23 @@
   &__header {
     align-items: center;
     justify-content: space-between;
-    padding: var(--spacer-4) var(--spacer-6);
+    height: 56px;
+    padding: 0 24px;
+    background-color: var(--normal-bg);
     color: var(--normal-fg-10);
-    background-color: var(--normal-bg-100);
   }
 
   &__header-left {
     align-items: center;
-    gap: var(--spacer-4);
+    gap: 12px;
     flex: 1;
   }
 
   &__header-icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 18px;
     cursor: pointer;
+    color: var(--normal-fg-10);
 
     &:hover {
       color: var(--normal-fg-20);
@@ -63,44 +65,51 @@
   }
 
   &__header-title {
-    @include drumee.typo($size: 15px, $weight: 600, $line: 22px);
+    @include drumee.typo(
+      $size: 18px,
+      $weight: 700,
+      $line: 28px,
+      $color: var(--normal-fg-10)
+    );
+    letter-spacing: -0.45px;
   }
 
   /* ── Status bar row: selection count + empty trash ──────── */
   &__status-bar {
     align-items: center;
     justify-content: space-between;
-    padding: var(--spacer-4) var(--spacer-6);
+    padding: 12px 24px;
   }
 
   &__selection-count {
     @include drumee.typo(
-      $color: var(--neutral-500),
-      $size: 12px,
+      $color: var(--normal-fg-50),
+      $size: 10px,
       $weight: 600,
-      $line: 18px
+      $line: 1
     );
+    font-family: var(--font-mono, var(--font-medium));
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.4px;
   }
 
   &__empty-btn {
     @include drumee.typo(
-      $color: var(--reverse-lb),
-      $size: 12px,
+      $color: var(--active-border),
+      $size: 10px,
       $weight: 600,
-      $line: 18px
+      $line: 1
     );
+    font-family: var(--font-mono, var(--font-medium));
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.4px;
     cursor: pointer;
     padding: 4px 10px;
-    border-radius: var(--corner-radius-6);
-    transition: color 0.15s;
-    cursor: poiner;
+    border-radius: 6px;
+    transition: opacity 0.15s;
 
     &:hover {
-      color: var(--reverse-lb-hover);
+      opacity: 0.8;
     }
   }
 
@@ -111,137 +120,188 @@
     background-color: var(--normal-bg-90);
   }
 
-  &__empty {
-    @include drumee.typo($color: var(--neutral-400), $size: 14px, $line: 22px);
-    padding: 40px;
-    text-align: center;
-    width: 100%;
-  }
-
   /* ── Placeholder (empty state) ──────────────────────────── */
   &__placeholder {
     flex: 1;
-    justify-content: space-between;
     width: 100%;
     height: 100%;
+    background-color: var(--normal-bg-90);
+    justify-content: space-between;
   }
 
   &__placeholder-content {
     flex: 1;
     align-items: center;
-    gap: var(--spacer-5);
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
     color: var(--normal-fg-10);
   }
 
   &__placeholder-card {
     position: relative;
-    width: 100px;
-    height: 100px;
-    border-radius: 18px;
-    background-color: var(--neutral-800, #2a2d3e);
+    width: 128px;
+    height: 128px;
+    border-radius: 12px;
+    background-color: rgba(89, 80, 255, 0.1);
+    border: 1px solid rgba(89, 80, 255, 0.1);
     align-items: center;
     justify-content: center;
     margin-bottom: 8px;
   }
 
   &__placeholder-card-icon {
-    width: 44px;
-    height: 44px;
-    color: var(--primary-400, #7b6ef6);
+    width: 50px;
+    height: 36.25px;
+    color: var(--active-border);
   }
 
   &__placeholder-card-badge {
     position: absolute;
-    bottom: -10px;
-    right: -10px;
-    width: 36px;
-    height: 36px;
-    border-radius: var(--corner-radius-4);
-    background-color: var(--normal-bg-100);
-    color: var(--normal-fg-20);
-    padding: var(--spacer-3);
+    bottom: -8px;
+    right: -8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background-color: var(--normal-bg);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    color: var(--normal-fg-10);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
   }
 
   &__placeholder-title {
-    @include drumee.typo($size: 18px, $weight: 700, $line: 26px);
+    @include drumee.typo(
+      $size: 24px,
+      $weight: 600,
+      $line: 1.1,
+      $color: var(--normal-fg-10)
+    );
     text-align: center;
-    margin-bottom: var(--spacer-10);
+    margin-top: 32px;
+    margin-bottom: 8px;
+  }
+
+  &__placeholder-hint {
+    @include drumee.typo(
+      $color: var(--normal-fg-50),
+      $size: 14px,
+      $line: 1.4
+    );
+    text-align: center;
+    max-width: 240px;
+    margin-bottom: 40px;
   }
 
   &__placeholder-refresh-btn {
-    background-color: var(--primary-purple-40);
-    color: #fff;
-    border-radius: var(--corner-radius-2);
-    padding: var(--spacer-4) var(--spacer-6);
-    gap: var(--spacer-3);
+    background-color: var(--active-border);
+    color: #e4e3ff;
+    border-radius: 6px;
+    padding: 12px 24px;
+    gap: 8px;
     cursor: pointer;
-    transition: background-color 0.15s;
-    display: flex;
     align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s;
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 12px;
+      height: 12px;
+      color: #e4e3ff;
+    }
+
+    .inner,
+    .note-content {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 600,
+        $line: 20px,
+        $color: #e4e3ff
+      );
     }
 
     &:hover {
-      background-color: var(--primary-purple-30);
+      opacity: 0.9;
     }
   }
 
   &__placeholder-history {
     @include drumee.typo(
-      $color: var(--neutral-500),
+      $color: var(--normal-fg-50),
       $size: 12px,
       $weight: 600,
-      $line: 18px
+      $line: 1.4
     );
+    font-family: var(--font-mono, var(--font-medium));
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.48px;
     cursor: pointer;
-    margin-bottom: var(--spacer-6);
+    text-align: center;
+    margin-top: 16px;
 
     &:hover {
-      color: var(--neutral-300);
+      color: var(--normal-fg-20);
     }
-  }
-
-  &__placeholder-hint {
-    @include drumee.typo($color: var(--neutral-500), $size: 13px, $line: 20px);
-    text-align: center;
-    max-width: 240px;
   }
 
   &__placeholder-footer {
     justify-content: space-between;
     align-items: center;
-    padding: 10px 16px;
-    border-top: 1px solid var(--neutral-800, #2a2d3e);
+    height: 40px;
+    padding: 0 24px;
+    background-color: var(--normal-bg);
+    border-top: 1px solid var(--border-muted);
+    backdrop-filter: blur(6px);
     flex-shrink: 0;
   }
 
   &__placeholder-storage,
   &__placeholder-policy {
     @include drumee.typo(
-      $color: var(--neutral-600),
-      $size: 11px,
+      $color: var(--normal-fg-50),
+      $size: 10px,
       $weight: 600,
-      $line: 16px
+      $line: 1
     );
+    font-family: var(--font-mono, var(--font-medium));
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.4px;
   }
 
+  /* ── Footer row ──────────────────────────────────────────── */
+  &__footer {
+    justify-content: center;
+    align-items: center;
+    background-color: var(--normal-bg);
+    color: var(--normal-fg-50);
+    padding: 12px 24px;
+    border-top: 1px solid var(--border-muted);
+    @include drumee.typo($size: 10px, $weight: 600, $line: 1);
+    font-family: var(--font-mono, var(--font-medium));
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  /* ── Confirm dialog / purge ──────────────────────────────── */
   .window-confirm {
     &__main {
       align-items: center;
-      background-color: var(--default-bg);
-      border-radius: var(--corner-radius-6);
+      background-color: var(--normal-bg);
+      border-radius: 6px;
       height: 250px;
       justify-content: center;
       margin: auto;
       width: 500px;
-      padding: var(--spacer-8);
+      padding: 32px;
 
       &[data-device="mobile"] {
         width: 300px;
@@ -251,7 +311,7 @@
 
     &__message {
       text-align: center;
-      margin-top: var(--spacer-6);
+      margin-top: 24px;
     }
 
     &__buttons {
@@ -271,44 +331,30 @@
       height: calc(100% - 46px);
       align-items: center;
       justify-content: center;
-      justify-items: center;
-      align-content: center;
-      justify-content: center;
-      flex-wrap: nowrap;
       top: 46px;
-      background-color: gba(137, 146, 158, 0.4);
+      background-color: rgba(137, 146, 158, 0.4);
       padding: 10px;
     }
 
     &-content {
       height: 200px;
       width: 100%;
-      background: var(--default-bg);
-      height: 200px;
+      background: var(--normal-bg);
       justify-content: center;
       border-radius: var(--border-radius);
       padding: 10px;
     }
 
     &-progress {
-      background-color: var(--default-bg);
+      background-color: var(--normal-bg);
     }
 
     &-title {
-      @include drumee.typo($size: 16px, $line: 22px, $weight: 400); //#E9223B);
+      @include drumee.typo($size: 16px, $line: 22px, $weight: 400);
       padding: 0 7px;
       justify-content: center;
-      justify-items: center;
       display: flex;
       flex-direction: row;
     }
-  }
-
-  &__footer {
-    justify-content: center;
-    align-items: center;
-    background-color: var(--normal-bg-100);
-    color: var(--normal-fg-10);
-    padding: var(--spacer-4);
   }
 }

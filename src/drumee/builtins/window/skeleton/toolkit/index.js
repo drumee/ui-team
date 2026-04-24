@@ -141,11 +141,12 @@ export function dropdownMenuButton(ui, opt = {}) {
 
   const itemsNode = Skeletons.Box.Y({
     className: `${cnDropdown}__items`,
-    kids: menuItems.map(({ service, ico, content }) =>
+    kids: menuItems.map(({ service, ico, content, ...extra }) =>
       Skeletons.Box.X({
         className: `${cnDropdown}__item`,
         uiHandler: ui,
         service,
+        ...extra,
         kids: [
           Skeletons.Button.Svg({
             ico,
@@ -277,33 +278,42 @@ export function newFileMenu(ui) {
 
         trigger: Skeletons.Button.Label({
           className: `${cnWindowButton}__label-button secondary`,
-          label: "Add new",
+          label: LOCALE.ADD_NEW || "Add new",
           ico: "editbox_list-plus",
           uiHandler: ui,
           partHandler: ui,
         }),
 
         menuItems: [
-          { service: "meeting", ico: "dock-note", content: "Note" },
           {
-            service: "webinar",
-            ico: "raw-documents_word",
-            content: "Document",
-          },
-          {
-            service: "channel",
-            ico: "raw-documents_excel",
-            content: "Spreadsheet",
-          },
-          {
-            service: "channel",
-            ico: "raw-documents_powerpoint",
-            content: "Presentation",
-          },
-          {
-            service: "channel",
+            service: "add-folder",
             ico: "dock-folder",
-            content: "Folder",
+            content: LOCALE.FOLDER,
+            area: ui.mget(_a.area) || _a.personal,
+            filename: LOCALE.NEW_FOLDER,
+          },
+          {
+            service: "add-note",
+            ico: "raw-note",
+            content: LOCALE.NOTE,
+          },
+          {
+            service: "new-document",
+            name: "document.docx",
+            ico: "raw-documents_word",
+            content: LOCALE.DOCUMENT,
+          },
+          {
+            service: "new-document",
+            name: "spreadsheet.xlsx",
+            ico: "raw-documents_excel",
+            content: LOCALE.SPREADSHEET,
+          },
+          {
+            service: "new-document",
+            name: "presentation.pptx",
+            ico: "raw-documents_powerpoint",
+            content: LOCALE.PRESENTATION,
           },
         ],
       }),

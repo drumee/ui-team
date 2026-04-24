@@ -23,6 +23,10 @@ module.exports = function (ui) {
         className: `${pfx}__placeholder-title`,
         content: LOCALE.NOTHING_IN_TRASH,
       }),
+      Skeletons.Note({
+        className: `${pfx}__placeholder-hint`,
+        content: LOCALE.TRASH_EMPTY_HINT,
+      }),
       Skeletons.Button.Label({
         className: `${pfx}__placeholder-refresh-btn`,
         ico: "raw-circular-arrows",
@@ -35,10 +39,6 @@ module.exports = function (ui) {
         content: LOCALE.VIEW_HISTORY,
         service: "view-history",
         uiHandler: ui,
-      }),
-      Skeletons.Note({
-        className: `${pfx}__placeholder-hint`,
-        content: LOCALE.TRASH_EMPTY_HINT,
       }),
     ],
   });

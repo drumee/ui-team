@@ -56,6 +56,15 @@ class __panel_trash extends mfsInteract {
     };
   }
 
+  _updateItemsCount() {
+    return this.ensurePart(_a.list).then((listPart) => {
+      const count = listPart.collection ? listPart.collection.length : 0;
+      return this.ensurePart('items-count').then((p) => {
+        p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
+      });
+    }).catch(() => {});
+  }
+
   _restoreFile(media) {
     if (!media) return;
     return this.postService({
@@ -71,6 +80,7 @@ class __panel_trash extends mfsInteract {
       }],
     }).then(() => {
       media.suppress();
+      this._updateItemsCount();
       Wm.reloadAll();
     });
   }
@@ -83,11 +93,20 @@ class __panel_trash extends mfsInteract {
       hub_id: Visitor.id,
     }).then(() => {
       media.suppress();
+      this._updateItemsCount();
     });
   }
 
   _emptyBin() {
-    return this.confirm(LOCALE.Q_DELETE_ALL_FILES).then(() => {
+    return Wm.confirm({
+      title: LOCALE.TRASH,
+      message: LOCALE.Q_DELETE_ALL_FILES,
+      confirm: LOCALE.DELETE || 'Delete',
+      confirm_type: 'primary',
+      cancel: LOCALE.CANCEL || 'Cancel',
+      cancel_type: 'secondary',
+      mode: 'hbf'
+    }).then(() => {
       return this.postService({
         service: SERVICE.media.empty_bin,
         hub_id: Visitor.id,
@@ -95,7 +114,7 @@ class __panel_trash extends mfsInteract {
         this.feed(require('./skeleton')(this));
         RADIO_MEDIA.trigger(_a.free, data);
       });
-    });
+    }).catch(() => {});
   }
 
   onUiEvent(cmd, args = {}) {
@@ -107,6 +126,12 @@ class __panel_trash extends mfsInteract {
         return this.deleteFilePermanently(args.media || cmd);
       case 'restore-to-desk':
         return this._restoreFile(args.media || cmd);
+      case 'refresh':
+        this.feed(require('./skeleton')(this));
+        return;
+      case 'view-history':
+        // TODO: open trash history view
+        return;
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);
     }

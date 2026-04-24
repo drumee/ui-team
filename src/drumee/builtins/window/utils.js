@@ -226,6 +226,7 @@ class __window_mfs extends DrumeeMFS {
       if (timer) clearTimeout(timer);
       child.el.dataset.wait = 0;
       child.$el.removeClass('drumee-sprinner');
+      this._partitionFoldersAndFiles(child);
       this.syncContent(EOD);
       this._dataReady = true;
       this.trigger(EOD);
@@ -235,6 +236,44 @@ class __window_mfs extends DrumeeMFS {
       this.sortContent();
     }
     child.el.dataset.role = _a.container;
+  }
+
+  _partitionFoldersAndFiles(listPart) {
+    setTimeout(() => {
+      this._doPartition(listPart);
+    }, 100);
+  }
+
+  _doPartition(listPart) {
+    const scrollEl = listPart.el.querySelector('.smart-container');
+    if (!scrollEl) return;
+
+    let folderWrap = scrollEl.querySelector('.folder-section');
+    let fileWrap = scrollEl.querySelector('.file-section');
+
+    if (!folderWrap) {
+      folderWrap = document.createElement('div');
+      folderWrap.className = 'folder-section';
+      scrollEl.insertBefore(folderWrap, scrollEl.firstChild);
+    }
+    if (!fileWrap) {
+      fileWrap = document.createElement('div');
+      fileWrap.className = 'file-section';
+      folderWrap.after(fileWrap);
+    }
+
+    const items = [...scrollEl.children].filter(
+      el => el !== folderWrap && el !== fileWrap
+    );
+
+    items.forEach(item => {
+      const ft = item.dataset?.filetype;
+      if (ft === _a.folder || ft === _a.hub) {
+        folderWrap.appendChild(item);
+      } else {
+        fileWrap.appendChild(item);
+      }
+    });
   }
 
 

@@ -2,64 +2,105 @@
 
 .widget-chatcontactItem {
   &__ui {
-    background-color: inherit;
+    background-color: transparent;
     cursor: pointer;
+    width: 100%;
     min-width: 130px;
-    margin: var(--spacer-4) 0;
-    padding: var(--spacer-3) var(--spacer-4);
-    border-radius: var(--corner-radius-3);
+    padding: 16px;
+    border-radius: 8px;
     @include drumee.typo(
       $size: 14px,
-      $line: 16px,
-      $color: var(--default-text-color)
+      $line: 20px,
+      $color: var(--normal-fg-10)
     );
-    &:hover,
+
+    &:hover {
+      background-color: var(--overlay-bg-05);
+    }
+
     &[data-active="active"],
     &[data-radio="on"] {
-      background: var(--primary-purple-80-5);
-      & .profile-icon,
-      & .note-reader {
-        color: var(--default-text-hover);
-      }
+      background-color: var(--normal-bg);
+      box-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0px 4px 6px -4px rgba(0, 0, 0, 0.1);
     }
+  }
+
+  &__main {
+    width: 100%;
   }
 
   &__container {
     background-color: inherit;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+  }
+
+  &__avatar-wrapper {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+    justify-content: center;
+  }
+
+  &__info-top {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
   }
 
   &__icon {
-    color: var(--default-icon-neutral);
+    color: var(--normal-fg-50);
     height: 22px;
     width: 25px;
     margin: auto;
   }
 
   &__profile {
+    position: relative;
+
     &.user-profile__ui {
-      border-radius: var(--corner-radius-1);
-      height: 29px;
-      width: 29px;
-      min-width: 29px;
-      margin-bottom: auto;
-      margin-top: auto;
+      border-radius: 12px;
+      height: 48px;
+      width: 48px;
+      min-width: 48px;
       background-color: var(--normal-fg-10);
 
       &[data-default="1"] {
+        background-color: rgba(89, 80, 255, 0.1);
         border: none;
+      }
+
+      .user-profile__main,
+      & > .user-profile__main {
+        border-radius: 8px !important;
+        overflow: hidden;
+
+        img {
+          border-radius: 8px;
+        }
       }
     }
   }
 
   &__note {
     &.name {
-      padding: var(--spacer-2) var(--spacer-4);
-      max-width: 187px;
+      padding: 0;
+      flex: 1;
+      min-width: 0;
       user-select: text;
       @include drumee.typo(
         $size: 14px,
-        $line: 16px,
-        $color: var(--normal-fg-20)
+        $line: 20px,
+        $weight: 600,
+        $color: var(--normal-fg-10)
       );
       .inner {
         overflow: hidden;
@@ -70,15 +111,14 @@
     }
 
     &.message {
-      padding-left: var(--spacer-4);
-
-      max-width: 160px;
+      padding: 0;
+      width: 100%;
       user-select: text;
       @include drumee.typo(
-        $size: 11px,
-        $line: 12px,
-        $weight: 300,
-        $color: var(--normal-fg-10)
+        $size: 12px,
+        $line: 1.4,
+        $weight: 400,
+        $color: var(--normal-fg-50)
       );
       .inner {
         overflow: hidden;
@@ -87,7 +127,6 @@
       }
 
       & section {
-        max-width: 140px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -96,32 +135,30 @@
     }
 
     &.time {
-      padding-right: var(--spacer-4);
-      padding-top: var(--spacer-3);
-      position: absolute;
-      right: 0;
+      flex-shrink: 0;
       @include drumee.typo(
         $size: 10px,
-        $line: 11px,
-        $color: var(--normal-fg-10)
+        $line: 1.5,
+        $weight: 400,
+        $color: var(--normal-fg-50)
       );
     }
   }
 
   &__digit {
     align-items: center;
-    background-color: var(--special-tag-note-chat);
+    background-color: var(--active-border);
     border-radius: 50%;
-    height: 16px;
+    height: 18px;
     justify-content: center;
-
-    margin: 6px 0 0px -7px;
     position: absolute;
-    width: 16px;
+    width: 18px;
     z-index: 2 !important;
+    right: 0;
+    bottom: 0;
     @include drumee.typo(
-      $color: var(--white),
-      $weight: 100,
+      $color: #ffffff,
+      $weight: 600,
       $line: 1,
       $size: 10px
     );
@@ -129,15 +166,15 @@
 
   .user-profile__ui[data-online="1"]:before,
   .user-profile__ui[data-online="2"]:before {
-    background-color: var(--primary-30);
+    background-color: #847EFF;
     border-radius: 50%;
-    box-shadow: 0 0 0 1px var(--white);
+    box-shadow: 0 0 0 2px var(--normal-bg);
     content: " ";
-    height: 8px;
+    height: 10px;
     right: 0;
     position: absolute;
     bottom: 0;
-    width: 8px;
+    width: 10px;
     z-index: 9;
     left: auto;
     top: auto;

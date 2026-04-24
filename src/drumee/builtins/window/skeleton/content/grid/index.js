@@ -39,8 +39,6 @@ const __media_skl_grid = function (ui) {
 
   const cnWidowFilter = "window-filter";
 
-  // value: filetype param sent to BE (null = no filter)
-  // Mapped from api-response ftype field: image, video, audio, document, note, text
   const FILTER_TABS = [
     { label: LOCALE.ALL, value: "all" },
     { label: LOCALE.DOCS, value: "docs" },
@@ -60,11 +58,9 @@ const __media_skl_grid = function (ui) {
         state: index === 0 ? 1 : 0,
         radiotoggle: `media-filter-${ui._id}`,
         value: tab.value,
-        // filetype: tab.value,
       }),
     ),
   });
-
 
   return Skeletons.Box.Y({
     debug: __filename,
