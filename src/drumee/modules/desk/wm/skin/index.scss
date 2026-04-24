@@ -574,17 +574,17 @@
   }
 }
 
-// ── Folder: fill width, max 2 rows, scroll if overflow ──
+// ── Folder: 2 rows, fill width, horizontal scroll when overflow ──
 .folder-section {
-  grid-template-columns: repeat(auto-fill, 120px);
-  grid-auto-rows: 140px;
-  max-height: calc(140px * 2 + 24px + 32px);
-  overflow-y: auto;
-  overflow-x: hidden;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, 140px);
+  grid-auto-columns: minmax(120px, 1fr);
+  overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: thin;
 
   &::-webkit-scrollbar {
-    width: 4px;
+    height: 4px;
   }
   &::-webkit-scrollbar-track {
     background: transparent;
@@ -610,9 +610,8 @@
     padding: 16px 24px 8px;
   }
   .folder-section {
-    grid-template-columns: repeat(auto-fill, 90px);
-    grid-auto-rows: 110px;
-    max-height: calc(110px * 2 + 16px + 32px);
+    grid-template-rows: repeat(2, 110px);
+    grid-auto-columns: minmax(90px, 1fr);
 
     .media-grid__container {
       transform: scale(0.75);
@@ -637,9 +636,8 @@
     padding: 12px 16px 8px;
   }
   .folder-section {
-    grid-template-columns: repeat(auto-fill, 80px);
-    grid-auto-rows: 95px;
-    max-height: calc(95px * 2 + 12px + 24px);
+    grid-template-rows: repeat(2, 95px);
+    grid-auto-columns: minmax(80px, 1fr);
 
     .media-grid__container {
       transform: scale(0.65);
@@ -664,9 +662,8 @@
     padding: 8px 12px 8px;
   }
   .folder-section {
-    grid-template-columns: repeat(auto-fill, 70px);
-    grid-auto-rows: 80px;
-    max-height: calc(80px * 2 + 8px + 16px);
+    grid-template-rows: repeat(2, 80px);
+    grid-auto-columns: minmax(70px, 1fr);
 
     .media-grid__container {
       transform: scale(0.55);
