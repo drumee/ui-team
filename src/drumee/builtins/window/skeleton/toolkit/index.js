@@ -241,6 +241,7 @@ export function filesContainer(ui) {
 export function splitBody(ui) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
+    sys_pn: 'split-body',
     kids: [filesContainer(ui), chatPanel(ui)],
   });
 }

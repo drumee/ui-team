@@ -35,6 +35,15 @@
     height: calc(100% - var(--header-height));
     overflow: hidden;
     z-index: 100;
+    border-radius: var(--corner-radius-5);
+
+    &[data-tab="chat"] {
+      grid-template-columns: 1fr;
+
+      .window__files-panel {
+        display: none;
+      }
+    }
   }
 
   &__files-panel,

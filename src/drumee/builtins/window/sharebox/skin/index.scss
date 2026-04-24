@@ -78,6 +78,15 @@
     display: flex;
     flex-direction: row;
     min-height: 0;
+
+    &[data-tab="chat"] {
+      .window__files-panel {
+        display: none;
+      }
+      .window__chat-panel {
+        flex: 1;
+      }
+    }
   }
 
   &__body {
@@ -111,6 +120,12 @@
     }
     &:hover {
       color: var(--area-share);
+    }
+  }
+
+  .widget-chatItem__conversation-content {
+    &.me {
+      background-color: var(--area-share);
     }
   }
 }

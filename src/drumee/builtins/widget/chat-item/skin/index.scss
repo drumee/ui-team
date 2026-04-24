@@ -380,8 +380,7 @@
     );
 
     &.me {
-      background-color: #433cc5;
-      color: #e4e3ff;
+      color: var(--white);
       align-self: flex-end;
       border-radius: 16px 16px 0 16px;
       box-shadow:
@@ -394,10 +393,11 @@
     }
 
     &.other {
-      background-color: #f2f2f7;
+      background-color: var(--white);
       color: #0b0a21;
       box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       border-radius: 16px 16px 16px 0;
+      border: 1px solid var(--border-muted);
     }
   }
 }
@@ -433,4 +433,3 @@
     color: #d65f59;
   }
 }
-

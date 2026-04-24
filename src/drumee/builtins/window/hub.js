@@ -108,9 +108,9 @@ class __window_hub extends mfsInteract {
    */
   showFolderTab(tab) {
     this.activeTab = tab;
-    const chatPanel = this.getPart('chat-panel');
-    if (chatPanel) {
-      chatPanel.el.dataset.active = tab === _a.chat ? '1' : '0';
+    const splitBody = this.getPart('split-body');
+    if (splitBody) {
+      splitBody.el.dataset.tab = tab;
     }
   }
 

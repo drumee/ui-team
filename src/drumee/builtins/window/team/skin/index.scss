@@ -24,6 +24,17 @@
     }
   }
 
+  &__split-body {
+    &[data-tab="chat"] {
+      .window__files-panel {
+        display: none;
+      }
+      .window__chat-panel {
+        flex: 1;
+      }
+    }
+  }
+
   &__header {
     background-color: var(--normal-bg-80);
 
@@ -76,6 +87,12 @@
     }
     &:hover {
       color: var(--area-private);
+    }
+  }
+
+  .widget-chatItem__conversation-content {
+    &.me {
+      background-color: var(--area-private);
     }
   }
 }
