@@ -1,0 +1,80 @@
+@use "mixins/drumee";
+
+.media-grid {
+  .media-context-menu {
+    &__trigger {
+      position: absolute;
+      bottom: -8px;
+      right: -6px;
+      width: 16px;
+      height: 22px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 15;
+      border-radius: var(--corner-radius-1);
+
+      &:hover {
+        background-color: var(--hover-bg-40);
+      }
+    }
+
+    &__trigger-icon {
+      width: 12px;
+      height: 12px;
+      fill: var(--normal-fg-20);
+      pointer-events: none;
+    }
+
+    &__dropdown {
+      position: fixed;
+      background: var(--normal-bg-90);
+      border: 1px solid var(--border-muted);
+      border-radius: var(--corner-radius-3);
+      box-shadow: var(--drumee-shadow-box);
+      min-width: 168px;
+      z-index: 9999;
+      overflow: hidden;
+      padding: var(--spacer-4);
+
+      &[data-state="0"] {
+        display: none !important;
+      }
+    }
+
+    &__item {
+      padding: 7px 12px;
+      gap: 10px;
+      align-items: center;
+      cursor: pointer;
+      width: 100%;
+      border-radius: var(--corner-radius-1);
+
+      &:hover {
+        background-color: var(--hover-bg-40);
+      }
+    }
+
+    &__item-icon {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      color: var(--normal-fg-20);
+    }
+
+    &__item-label {
+      @include drumee.typo(
+        $size: 12px,
+        $line: 16px,
+        $weight: 400,
+        $color: var(--normal-fg-10)
+      );
+      white-space: nowrap;
+    }
+  }
+
+  &__ui:hover .media-context-menu__trigger {
+    display: flex;
+  }
+}
