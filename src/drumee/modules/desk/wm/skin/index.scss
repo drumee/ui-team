@@ -547,15 +547,6 @@
   }
 }
 
-// Folder/file separation: folders on top, files below (Figma B.1 folder-line / file-line)
-.smart-container:has(.folder-section) {
-  display: flex !important; // override framework inline display:grid
-  flex-direction: column !important;
-  grid-template-columns: unset !important;
-  height: auto !important;
-  min-height: 100%;
-}
-
 // ── Shared ──
 .folder-section,
 .file-section {

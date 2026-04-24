@@ -222,7 +222,7 @@ class __window_mfs extends DrumeeMFS {
         child.el.dataset.wait = 1;
       }, 300);
     }
-    this._ensureSections(child);
+    child.el.style.visibility = 'hidden';
     child.on(EOD, () => {
       if (timer) clearTimeout(timer);
       child.el.dataset.wait = 0;
@@ -239,31 +239,25 @@ class __window_mfs extends DrumeeMFS {
     child.el.dataset.role = _a.container;
   }
 
-  _ensureSections(listPart) {
-    const scrollEl = listPart.el.querySelector('.smart-container');
-    if (!scrollEl) return;
-    if (!scrollEl.querySelector('.folder-section')) {
-      const folderWrap = document.createElement('div');
-      folderWrap.className = 'folder-section';
-      scrollEl.appendChild(folderWrap);
-      const fileWrap = document.createElement('div');
-      fileWrap.className = 'file-section';
-      scrollEl.appendChild(fileWrap);
-    }
-  }
-
   _partitionFoldersAndFiles(listPart) {
-    setTimeout(() => {
-      this._doPartition(listPart);
-    }, 50);
+    this._doPartition(listPart, 0);
   }
 
-  _doPartition(listPart) {
+  _doPartition(listPart, attempt) {
     const scrollEl = listPart.el.querySelector('.smart-container');
     if (!scrollEl) return;
 
     let folderWrap = scrollEl.querySelector('.folder-section');
     let fileWrap = scrollEl.querySelector('.file-section');
+
+    const items = [...scrollEl.children].filter(
+      el => el !== folderWrap && el !== fileWrap && el.dataset?.filetype
+    );
+
+    if (!items.length && attempt < 10) {
+      setTimeout(() => this._doPartition(listPart, attempt + 1), 100);
+      return;
+    }
 
     if (!folderWrap) {
       folderWrap = document.createElement('div');
@@ -275,10 +269,6 @@ class __window_mfs extends DrumeeMFS {
       fileWrap.className = 'file-section';
       folderWrap.after(fileWrap);
     }
-
-    const items = [...scrollEl.children].filter(
-      el => el !== folderWrap && el !== fileWrap
-    );
 
     items.forEach(item => {
       const ft = item.dataset?.filetype;
@@ -295,15 +285,18 @@ class __window_mfs extends DrumeeMFS {
     scrollEl.style.justifyContent = 'flex-start';
 
     const folderCount = folderWrap.children.length;
-    if (folderCount === 0) return;
-    const style = getComputedStyle(folderWrap);
-    const colSize = parseInt(style.gridAutoColumns) || 120;
-    const gap = parseInt(style.gap) || 24;
-    const availW = folderWrap.clientWidth;
-    const cols = Math.max(1, Math.floor((availW + gap) / (colSize + gap)));
-    const rowH = style.gridTemplateRows.split(' ')[0];
-    folderWrap.style.gridTemplateRows =
-      folderCount <= cols ? rowH : `${rowH} ${rowH}`;
+    if (folderCount > 0) {
+      const style = getComputedStyle(folderWrap);
+      const colSize = parseInt(style.gridAutoColumns) || 120;
+      const gap = parseInt(style.gap) || 24;
+      const availW = folderWrap.clientWidth;
+      const cols = Math.max(1, Math.floor((availW + gap) / (colSize + gap)));
+      const rowH = style.gridTemplateRows.split(' ')[0];
+      folderWrap.style.gridTemplateRows =
+        folderCount <= cols ? rowH : `${rowH} ${rowH}`;
+    }
+
+    listPart.el.style.visibility = 'visible';
   }
 
 

@@ -116,15 +116,6 @@
         width: 100%;
       }
 
-      // When partition creates folder/file sections, switch to flex column
-      &:has(.folder-section) {
-        display: flex !important; // override framework inline display:grid
-        flex-direction: column !important;
-        grid-template-columns: unset !important;
-        height: auto !important;
-        min-height: 100%;
-      }
-
       // Popup folder windows only (not workspace manager grid)
       &:not(.window-manager__icons-scroll):has(.folder-section) {
         .folder-section,
