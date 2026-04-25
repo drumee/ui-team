@@ -1,79 +1,84 @@
 
 const __button = function (ui, trigger, k) {
   const pfx = `${ui.fig.group}__contextmenu-item contextmenu-item`;
-  // let button = Skeletons.Button.content;
-  // const icon = require('./icons')(ui);
-
+  const icons = require('./icons')();
   const cn = require('./classes')(ui);
-
 
   let canPaste = _a.disable;
   if (window.Wm && !_.isEmpty(window.Wm.clipboard.files)) {
     canPaste = _a.open;
   }
 
-
-  let button = Skeletons.Note;
+  const item = (service, content, extra = {}) => Skeletons.Box.X({
+    service,
+    ...extra,
+    kids: [
+      Skeletons.Button.Svg({ ico: icons[k], className: 'contextmenu-item__icon' }),
+      Skeletons.Note({ content, className: 'contextmenu-item__label' }),
+    ],
+  });
 
   let a = {
-    account: button({ content: LOCALE.MY_ACCOUNT, service: _a.account }),
-    background: button({ content: LOCALE.SET_AS_BACKGROUND, service: 'set-as-background' }),
-    copy: button({ content: LOCALE.COPY, service: _e.copy }),
-    delete: button({ content: LOCALE.DELETE, service: _e.delete }),
-    deleteMeeting: button({ content: LOCALE.DELETE_MEETING, service: 'delete-meeting' }),
-    deletePermanently: button({ content: LOCALE.DELETE_PERMENANTLY, service: 'delete-permanently' }),
-    directUrl: button({ content: LOCALE.URL_ADDRESS, service: 'direct-url' }),
-    download: button({ content: LOCALE.DOWNLOAD, service: _e.download }),
-    duplicate: button({ content: LOCALE.DUPLICATE, service: _a.duplicate }),
-    edit: button({ content: LOCALE.EDIT, service: 'open-node', mode: _a.edit }),
-    execute: button({ content: LOCALE.EXCUTE, service: 'load-script' }),
-    exitFullScreen: button({ content: LOCALE.EXIT_FULLSCREEN, service: 'toggle-fullscreen' }),
-    export: button({ content: LOCALE.EXPORT_TO_SERVER, service: 'export-to-server', type: _a.export }),
-    exportHidden: button({ content: LOCALE.EXPORT_TO_SERVER, service: _a.none, type: _a.export, dataset: { state: _a.disable } }),
-    fullscreen: button({ content: LOCALE.FULLSCREEN, service: 'toggle-fullscreen' }),
-    helpdesk: button({ content: LOCALE.HELPDESK, service: _a.helpdesk }),
-    import: button({ content: LOCALE.IMPORT_FROM_SERVER, service: 'import-from-server', type: _a.import }),
-    importHidden: button({ content: LOCALE.IMPORT_FROM_SERVER, service: _a.none, type: _a.import, dataset: { state: _a.disable } }),
-    info: button({ content: LOCALE.GET_INFO, service: _e.settings, type: _a.info }),
-    link: button({ content: LOCALE.SHARE_LINK, service: _a.link }),
-    linkToTaskTracker: button({ content: LOCALE.LINK_TO_TASK_TRACKER, service: 'link-to-task-tracker' }),
-    lock: button({ content: LOCALE.PROHIBIT_CHANGE, service: _e.lock }),
-    makeACopy: button({ content: LOCALE.MAKE_A_COPY, service: _a.duplicate }),
-    manageAccess: button({ content: LOCALE.SHARE, service: 'manage-access' }),
-    meetingLink: button({ content: LOCALE.COPY_MEETING_LINK, service: 'copy-meeting-link' }),
-    modify: button({ content: LOCALE.MODIFY, service: _a.modify }),
-    move: button({ content: LOCALE.MOVE, service: 'move' }),
-    newFolder: button({ content: LOCALE.NEW_FOLDER, service: 'new-folder' }),
-    openFileLocation: button({ content: LOCALE.OPEN_FILE_LOCATION, service: 'open-file-location' }),
-    organize: button({ content: LOCALE.ORGANIZE, service: 'organize' }),
-    paste: button({ content: LOCALE.PASTE, service: _e.paste, dataset: { state: canPaste } }),
-    pinOn: button({ content: LOCALE.PIN_ON, service: 'pin-on' }),
-    preferences: button({ content: LOCALE.PREFERENCES, service: _a.preferences }),
-    properties: button({ content: LOCALE.SHOW_PROPERTIES, service: _a.properties }),
-    qrcode: button({ content: LOCALE.SHOW_QRCODE, service: "show-qrcode" }),
-    remove: button({ content: LOCALE.REMOVE, service: _e.remove }),
-    rename: button({ content: LOCALE.RENAME, service: 'direct-rename' }),
-    restoreToDesk: button({ content: LOCALE.RESTORE_TO_DESK, service: 'restore-to-desk' }),
-    rotateLeft: button({ content: LOCALE.ROTATE_LEFT, service: _e.rotate, value: -90 }),
-    rotateRight: button({ content: LOCALE.ROTATE_RIGHT, service: _e.rotate, value: 90 }),
-    seo_index: button({ content: LOCALE.CREATE_SEO_INDEX, service: 'seo-index' }),
+    account: item(_a.account, LOCALE.MY_ACCOUNT),
+    background: item('set-as-background', LOCALE.SET_AS_BACKGROUND),
+    chat: item(_a.chat, LOCALE.CHAT),
+    copy: item(_e.copy, LOCALE.COPY),
+    delete: item(_e.delete, LOCALE.DELETE),
+    deleteMeeting: item('delete-meeting', LOCALE.DELETE_MEETING),
+    deletePermanently: item('delete-permanently', LOCALE.DELETE_PERMENANTLY),
+    directUrl: item('direct-url', LOCALE.URL_ADDRESS),
+    download: item(_e.download, LOCALE.DOWNLOAD),
+    duplicate: item(_a.duplicate, LOCALE.DUPLICATE),
+    edit: item('open-node', LOCALE.EDIT, { mode: _a.edit }),
+    execute: item('load-script', LOCALE.EXCUTE),
+    exitFullScreen: item('toggle-fullscreen', LOCALE.EXIT_FULLSCREEN),
+    export: item('export-to-server', LOCALE.EXPORT_TO_SERVER, { type: _a.export }),
+    exportHidden: item(_a.none, LOCALE.EXPORT_TO_SERVER, { type: _a.export, dataset: { state: _a.disable } }),
+    fullscreen: item('toggle-fullscreen', LOCALE.FULLSCREEN),
+    helpdesk: item(_a.helpdesk, LOCALE.HELPDESK),
+    import: item('import-from-server', LOCALE.IMPORT_FROM_SERVER, { type: _a.import }),
+    importHidden: item(_a.none, LOCALE.IMPORT_FROM_SERVER, { type: _a.import, dataset: { state: _a.disable } }),
+    info: item(_e.settings, LOCALE.GET_INFO, { type: _a.info }),
+    link: item(_a.link, LOCALE.SHARE_LINK),
+    linkToTaskTracker: item('link-to-task-tracker', LOCALE.LINK_TO_TASK_TRACKER),
+    lock: item(_e.lock, LOCALE.PROHIBIT_CHANGE),
+    makeACopy: item(_a.duplicate, LOCALE.MAKE_A_COPY),
+    manageAccess: item('manage-access', LOCALE.SHARE),
+    meetingLink: item('copy-meeting-link', LOCALE.COPY_MEETING_LINK),
+    modify: item(_a.modify, LOCALE.MODIFY),
+    move: item('move', LOCALE.MOVE),
+    newFolder: item('new-folder', LOCALE.NEW_FOLDER),
+    openFileLocation: item('open-file-location', LOCALE.OPEN_FILE_LOCATION),
+    organize: item('organize', LOCALE.ORGANIZE),
+    paste: item(_e.paste, LOCALE.PASTE, { dataset: { state: canPaste } }),
+    pinOn: item('pin-on', LOCALE.PIN_ON),
+    preferences: item(_a.preferences, LOCALE.PREFERENCES),
+    properties: item(_a.properties, LOCALE.SHOW_PROPERTIES),
+    qrcode: item('show-qrcode', LOCALE.SHOW_QRCODE),
+    remove: item(_e.remove, LOCALE.REMOVE),
+    rename: item('direct-rename', LOCALE.RENAME),
+    restoreToDesk: item('restore-to-desk', LOCALE.RESTORE_TO_DESK),
+    rotateLeft: item(_e.rotate, LOCALE.ROTATE_LEFT, { value: -90 }),
+    rotateRight: item(_e.rotate, LOCALE.ROTATE_RIGHT, { value: 90 }),
+    seo_index: item('seo-index', LOCALE.CREATE_SEO_INDEX),
     separator: Skeletons.Element({ className: 'separator' }),
-    setAsHomepage: button({ content: LOCALE.SET_AS_HOMEPAGE, service: 'set-as-homepage' }),
-    settings: button({ content: LOCALE.SETTINGS, service: _e.settings }),
-    share: button({ content: LOCALE.SHARE, service: _a.share }),
-    share_qrcode: button({ content: LOCALE.SHOW_QRCODE, service: "share-qrcode" }),
-    shortcut: button({ content: LOCALE.CREATE_SHORTCUT, service: _a.shortcut }),
-    startMeeting: button({ content: LOCALE.START_MEETING, service: 'start-meeting' }),
-    pricing: button({ content: "Pricing", service: "pricing" }),
-    trash: button({ content: LOCALE.MOVE_TO_TRASH, service: _e.remove }),
-    unlock: button({ content: LOCALE.UNPROTECTED, service: _e.lock }),
-    update: button({ content: LOCALE.UPDATE, service: _e.update }),
-    upload: button({ content: LOCALE.UPLOAD, service: _e.upload })
+    setAsHomepage: item('set-as-homepage', LOCALE.SET_AS_HOMEPAGE),
+    settings: item(_e.settings, LOCALE.SETTINGS),
+    share: item(_a.share, LOCALE.SHARE),
+    share_qrcode: item('share-qrcode', LOCALE.SHOW_QRCODE),
+    shortcut: item(_a.shortcut, LOCALE.CREATE_SHORTCUT),
+    startMeeting: item('start-meeting', LOCALE.START_MEETING),
+    pricing: item('pricing', 'Pricing'),
+    trash: item(_e.remove, LOCALE.MOVE_TO_TRASH),
+    unlock: item(_e.lock, LOCALE.UNPROTECTED),
+    update: item(_e.update, LOCALE.UPDATE),
+    upload: item(_e.upload, LOCALE.UPLOAD),
   };
+
   if (localStorage.getItem("showHidden")) {
-    a.showHidden = button({ content: LOCALE.HIDE_HIDDEN_FILES, service: 'hide-hidden-files' });
+    a.showHidden = item('hide-hidden-files', LOCALE.HIDE_HIDDEN_FILES);
   } else {
-    a.showHidden = button({ content: LOCALE.SHOW_HIDDEN_FILES, service: 'show-hidden-files' });
+    a.showHidden = item('show-hidden-files', LOCALE.SHOW_HIDDEN_FILES);
   }
 
   if (a[k]) {
@@ -83,9 +88,6 @@ const __button = function (ui, trigger, k) {
     if (cn[k]) {
       r.className = `${pfx} ${cn[k]}`;
     }
-    // if (icon[k]) {
-    //   r.chartId = icon[k];
-    // }
     return r;
   }
   return null;

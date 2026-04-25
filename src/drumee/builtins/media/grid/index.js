@@ -88,34 +88,39 @@ class __media_grid extends DrumeeMediaInteract {
   }
 
   /**
+   * @param {number} x
+   * @param {number} y
+   */
+  _openContextMenu(x, y) {
+    this.ensurePart('context-menu').then((menu) => {
+      if (menu.el.dataset.state === '1') {
+        menu.el.dataset.state = '0';
+        return;
+      }
+      const menuW = 168;
+      menu.el.style.top = `${y + 4}px`;
+      menu.el.style.left = `${Math.max(4, x - menuW)}px`;
+      menu.el.dataset.state = '1';
+      const closeOnOutside = (evt) => {
+        if (!this.el.contains(evt.target)) {
+          menu.el.dataset.state = '0';
+          document.removeEventListener('click', closeOnOutside, true);
+        }
+      };
+      document.addEventListener('click', closeOnOutside, true);
+    });
+  }
+
+  /**
    * @param {Event} e
    */
   dispatchUiEvent(e) {
     const service = this.el.getService(e);
     if (service === 'context-menu') {
       e.stopPropagation();
-      this.ensurePart('context-menu').then((menu) => {
-        const opening = menu.el.dataset.state !== '1';
-        if (opening) {
-          const trigger = this.el.querySelector('.media-context-menu__trigger');
-          if (trigger) {
-            const rect = trigger.getBoundingClientRect();
-            const menuW = 168;
-            menu.el.style.top = `${rect.bottom + 4}px`;
-            menu.el.style.left = `${Math.max(4, rect.right - menuW)}px`;
-          }
-          menu.el.dataset.state = '1';
-          const closeOnOutside = (evt) => {
-            if (!this.el.contains(evt.target)) {
-              menu.el.dataset.state = '0';
-              document.removeEventListener('click', closeOnOutside, true);
-            }
-          };
-          document.addEventListener('click', closeOnOutside, true);
-        } else {
-          menu.el.dataset.state = '0';
-        }
-      });
+      const trigger = this.el.querySelector('.media-context-menu__trigger');
+      const rect = trigger ? trigger.getBoundingClientRect() : { bottom: e.clientY, right: e.clientX };
+      this._openContextMenu(rect.right, rect.bottom);
       return;
     }
     super.dispatchUiEvent(e);
