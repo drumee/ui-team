@@ -114,7 +114,9 @@ class __window_manager extends push {
     this._curWorkspace = { hub_id, nid };
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
+      this._prepareListPartition(l);
       l.restart()
+      setTimeout(() => this._partitionFoldersAndFiles(l), 0);
     })
     this.ensurePart("wrapper-modal").then((p) => {
       p.clear()
