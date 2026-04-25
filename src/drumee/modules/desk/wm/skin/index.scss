@@ -551,8 +551,8 @@
   visibility: hidden;
 }
 
-.folder-section,
-.file-section {
+.window-manager__icons-scroll.smart-container > .folder-section,
+.window-manager__icons-scroll.smart-container > .file-section {
   > .media-grid__ui {
     visibility: visible;
   }

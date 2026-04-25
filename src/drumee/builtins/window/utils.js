@@ -312,7 +312,7 @@ class __window_mfs extends DrumeeMFS {
           this._partitionObserver.disconnect();
         }
         const done = this._doPartition(listPart);
-        if (this._partitionObserver) {
+        if (!done && this._partitionObserver) {
           this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
         }
         if (done) {
@@ -338,7 +338,7 @@ class __window_mfs extends DrumeeMFS {
       return;
     }
     this._setupPartitionObserver(listPart);
-    const maxAttempts = listPart.collection?.length ? 100 : 30;
+    const maxAttempts = listPart.collection?.length ? 50 : 30;
     if (attempt < maxAttempts) {
       this._partitionRetryTimer = setTimeout(() => {
         this._partitionRetryTimer = null;
