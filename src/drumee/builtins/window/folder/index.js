@@ -75,8 +75,36 @@ class __window_folder extends mfsInteract {
       case "remove-selection":
         return Wm.removeMediaSelection(cmd);
 
+      case "tab-files":
+        return this.showFolderTab(_a.files);
+
+      case "tab-chat":
+        return this.showFolderTab(_a.chat);
+
+      case "tab-task":
+        return this.showFolderTab(_a.task);
+
       default:
         super.onUiEvent(cmd, args);
+    }
+  }
+
+  /**
+   * Switch the split body between Files / Chat / Tasks tabs. CSS rules
+   * under [data-active-tab] in window/skin/group/body/main.scss hide
+   * the inactive panels.
+   *
+   * Uses setAttribute (not el.dataset.activeTab) so the runtime attr
+   * name matches the kebab-case attr emitted by the skeleton's initial
+   * render — the framework writes `data-${k}` literally.
+   */
+  showFolderTab(tab) {
+    this.activeTab = tab;
+    const body = this.getPart && this.getPart("split-body");
+    if (body && body.el) body.el.setAttribute("data-active-tab", tab);
+    const chatPanel = this.getPart && this.getPart("chat-panel");
+    if (chatPanel && chatPanel.el) {
+      chatPanel.el.dataset.active = tab === _a.chat ? "1" : "0";
     }
   }
 

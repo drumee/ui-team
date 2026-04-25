@@ -23,6 +23,8 @@ export function breadcrumbs(ui, opt) {
  */
 export function tabBar(ui) {
   const cnRoot = "window-body__tab-bar";
+  // Per-instance radio channel so multiple folder windows don't share state.
+  const radio = `tab-bar-${ui.cid}`;
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper`,
     kids: [
@@ -32,6 +34,9 @@ export function tabBar(ui) {
         ico: "desktop_docfile",
         service: "tab-files",
         uiHandler: ui,
+        radio,
+        initialState: 1,
+        dataset: { tab: "files" },
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item`,
@@ -39,6 +44,8 @@ export function tabBar(ui) {
         ico: "tchat",
         service: "tab-chat",
         uiHandler: ui,
+        radio,
+        dataset: { tab: "chat" },
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item`,
@@ -46,6 +53,8 @@ export function tabBar(ui) {
         ico: "list",
         service: "tab-task",
         uiHandler: ui,
+        radio,
+        dataset: { tab: "task" },
       }),
     ],
   });
@@ -236,7 +245,31 @@ export function filesContainer(ui) {
 export function splitBody(ui) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
-    kids: [filesContainer(ui), chatPanel(ui)],
+    sys_pn: "split-body",
+    // Literal kebab key so the rendered attribute matches the CSS
+    // `[data-active-tab=…]` selectors. The framework writes
+    // `data-${key}` literally (no camel→kebab conversion).
+    dataset: { "active-tab": "files" },
+    kids: [filesContainer(ui), chatPanel(ui), tasksContainer(ui)],
+  });
+}
+
+/**
+ * Tasks tab — Kanban board (To Do / In Progress / To review / Complete).
+ * UI-only for now; widget keeps state in localStorage.
+ */
+export function tasksContainer(ui) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__tasks-panel ${ui.fig.group}__tasks-panel`,
+    sys_pn: "tasks-panel",
+    kids: [
+      {
+        kind: "tasks_panel",
+        hub_id: ui.mget(_a.hub_id),
+        nid: ui.mget(_a.nid),
+        sys_pn: "tasks-board",
+      },
+    ],
   });
 }
 

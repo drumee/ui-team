@@ -18,7 +18,12 @@ class __form_folder extends LetcBox {
         return this.goodbye();
 
       case "select-status":
-        this._status = trigger.mget(_a.type) || trigger.mget(_a.name) || this._status;
+        // The skeleton stores the status name in `dataset.type` (DOM)
+        // and `formItem` (model). It is NOT a top-level model field.
+        this._status =
+          (trigger.el && trigger.el.dataset && trigger.el.dataset.type)
+          || trigger.mget(_a.formItem)
+          || this._status;
         return;
 
       case "create-folder":
@@ -41,12 +46,17 @@ class __form_folder extends LetcBox {
     const target = Wm.getActiveWindow(1);
     const status = this._status || "personal";
 
-    if (status === "personal") {
-      Wm.addFolder({ position: 0, area: _a.personal, filename });
-      return this.goodbye();
-    }
-
-    const area = status === "team" ? _a.private : _a.share;
+    // Backend accepts area ∈ {private, public, share}. Both Private and
+    // Restricted Share map to "private"; Restricted Share follows up
+    // with the existing permission_restricted dialog so the user can
+    // invite members. Link Shared maps to "share" and chains the
+    // permission_shared dialog.
+    const FLOW = {
+      personal: { area: _a.private, post: null },
+      team: { area: _a.private, post: "permission_restricted" },
+      share: { area: _a.share, post: "permission_shared" },
+    };
+    const { area, post } = FLOW[status] || FLOW.personal;
 
     this._pending = 1;
     this.postService(SERVICE.desk.create_hub, {
@@ -55,7 +65,27 @@ class __form_folder extends LetcBox {
       hub_id: Visitor.id,
       pid: target ? target.getCurrentNid() : Visitor.id,
     })
-      .then(() => this.goodbye())
+      .then((res) => {
+        const hub = _.isArray(res) ? res[0] : res;
+        if (!post || !hub) return this.goodbye();
+
+        const parent = this.parent;
+        if (!parent || !_.isFunction(parent.feed)) return this.goodbye();
+
+        // permission_* dialogs call media.mget(...); wrap the plain
+        // server response in a Backbone.View to satisfy that interface.
+        const mediaShim = new Backbone.View({
+          model: new Backbone.Model(hub),
+        });
+
+        parent.feed({
+          kind: post,
+          hub_id: hub.hub_id || hub.id,
+          media: mediaShim,
+          source: this,
+          persistence: _a.once,
+        });
+      })
       .catch((e) => {
         this._pending = 0;
         this.warn("Failed to create hub", e);
