@@ -35,13 +35,54 @@
     height: calc(100% - var(--header-height));
     overflow: hidden;
     z-index: 100;
-    border-radius: var(--corner-radius-5);
 
-    &[data-tab="chat"] {
-      grid-template-columns: 1fr;
-
+    // Tab-driven layouts. The tab bar (folder/index.js + hub.js
+    // showFolderTab) stamps data-active-tab on this container.
+    //
+    //   files  → keep the default 2fr/1fr split (files + chat sidebar)
+    //   chat   → chat takes the whole content, files hidden
+    //   task   → tasks placeholder takes the whole content
+    &[data-active-tab="files"] {
+      grid-template-columns: 2fr 1fr;
       .window__files-panel {
+        display: block;
+      }
+      .window__chat-panel {
+        display: flex;
+      }
+      .window__tasks-panel {
         display: none;
+      }
+    }
+
+    &[data-active-tab="chat"] {
+      grid-template-columns: 1fr;
+      .window__files-panel,
+      .window__tasks-panel {
+        display: none;
+      }
+      // In full-width mode the chat panel is the whole content. Override
+      // the sidebar width clamps from widget/chat/skin/index.scss:609
+      // (flex 0 1 300px / width 250px / max-width 250px) so it fills
+      // the entire content area, and drop the slim left border that
+      // only made sense as a sidebar divider.
+      .window__chat-panel {
+        flex: 1 1 auto;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        border-left: 0;
+      }
+    }
+
+    &[data-active-tab="task"] {
+      grid-template-columns: 1fr;
+      .window__files-panel,
+      .window__chat-panel {
+        display: none;
+      }
+      .window__tasks-panel {
+        display: flex;
       }
     }
   }
@@ -52,6 +93,17 @@
     width: 100%;
     height: 100%;
     border-radius: var(--border-radius-bottom);
+    overflow: hidden;
+    z-index: 100;
+  }
+
+  &__tasks-panel {
+    // Hidden by default — the splitBody skeleton always renders the
+    // node so it's there for the swap, but only the Tasks tab reveals it.
+    display: none;
+    margin: 0;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     z-index: 100;
   }
@@ -67,6 +119,17 @@
     padding: var(--spacer-4) var(--spacer-6);
     color: var(--normal-fg-10);
     flex-shrink: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    text-transform: uppercase;
+    font-family: "Geist Mono", monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  &__chat-widget {
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   &-filter__tab {

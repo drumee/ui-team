@@ -7,7 +7,6 @@ const AREA_LABELS = {
   public: LOCALE.PUBLIC,
 };
 
-
 export function breadcrumbs(ui, opt) {
   return Skeletons.Wrapper.X({
     debug: __filename,
@@ -23,7 +22,8 @@ export function breadcrumbs(ui, opt) {
  */
 export function tabBar(ui) {
   const cnRoot = "window-body__tab-bar";
-  const radioChannel = "tab-bar";
+  // Per-instance radio channel so multiple folder windows don't share state.
+  const radio = `tab-bar-${ui.cid}`;
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper`,
     kids: [
@@ -32,25 +32,28 @@ export function tabBar(ui) {
         label: LOCALE.FILES,
         ico: "desktop_docfile",
         service: "tab-files",
-        radio: radioChannel,
+        uiHandler: ui,
+        radio,
         initialState: 1,
-        uiHandler: [ui],
+        dataset: { tab: "files" },
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item`,
         label: LOCALE.CHAT,
         ico: "tchat",
         service: "tab-chat",
-        radio: radioChannel,
-        uiHandler: [ui],
+        uiHandler: ui,
+        radio,
+        dataset: { tab: "chat" },
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item`,
         label: LOCALE.TASK,
         ico: "list",
         service: "tab-task",
-        radio: radioChannel,
-        uiHandler: [ui],
+        uiHandler: ui,
+        radio,
+        dataset: { tab: "task" },
       }),
     ],
   });
@@ -181,48 +184,46 @@ export function dropdownMenuButton(ui, opt = {}) {
   };
 }
 
-
 function getChatLabel(ui) {
-  const name = ui.mget(_a.filename) || ui.mget(_a.name) || '';
-  return name ? `${name} - ${LOCALE.CHAT}` : 'FOLDER-SCOPED CHAT';
+  const name = ui.mget(_a.filename) || ui.mget(_a.name) || "";
+  return name ? `${name} - ${LOCALE.CHAT}` : "FOLDER-SCOPED CHAT";
 }
 
 /**
- * 
- * @param {Chat Panel} ui 
- * @returns 
+ *
+ * @param {Chat Panel} ui
+ * @returns
  */
 export function chatPanel(ui) {
   return Skeletons.Box.Y({
     className: `${ui.fig.group}__chat-panel`,
-    sys_pn: 'chat-panel',
+    sys_pn: "chat-panel",
     kids: [
       Skeletons.Note({
         className: `${ui.fig.group}__chat-label`,
         content: getChatLabel(ui),
       }),
       {
-        kind: 'widget_chat',
+        kind: "widget_chat",
         className: `${ui.fig.group}__chat-widget`,
         type: ui.mget(_a.area),
         area: ui.mget(_a.area),
-        view: 'quickChat',
+        view: "quickChat",
         hub_id: ui.mget(_a.hub_id),
         nid: ui.mget(_a.nid),
-        placeholder: LOCALE.TYPE_MESSAGE + '...',
+        placeholder: LOCALE.TYPE_MESSAGE + "...",
         no_emoji: true,
-        send_icon: 'raw-send-chat',
-        sys_pn: 'folder-chat',
+        send_icon: "raw-send-chat",
+        sys_pn: "folder-chat",
       },
     ],
   });
-
 }
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function filesContainer(ui) {
   return Skeletons.Box.Y({
@@ -232,25 +233,46 @@ export function filesContainer(ui) {
   });
 }
 
-
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function splitBody(ui) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
-    sys_pn: 'split-body',
-    kids: [filesContainer(ui), chatPanel(ui)],
+    sys_pn: "split-body",
+    // Literal kebab key so the rendered attribute matches the CSS
+    // `[data-active-tab=…]` selectors. The framework writes
+    // `data-${key}` literally (no camel→kebab conversion).
+    dataset: { "active-tab": "files" },
+    kids: [filesContainer(ui), chatPanel(ui), tasksContainer(ui)],
   });
 }
 
+/**
+ * Tasks tab — Kanban board (To Do / In Progress / To review / Complete).
+ * UI-only for now; widget keeps state in localStorage.
+ */
+export function tasksContainer(ui) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__tasks-panel ${ui.fig.group}__tasks-panel`,
+    sys_pn: "tasks-panel",
+    kids: [
+      {
+        kind: "tasks_panel",
+        hub_id: ui.mget(_a.hub_id),
+        nid: ui.mget(_a.nid),
+        sys_pn: "tasks-board",
+      },
+    ],
+  });
+}
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function windowHeader(ui, topbar) {
   return Skeletons.Box.X({
@@ -262,16 +284,14 @@ export function windowHeader(ui, topbar) {
       uiHandler: ui,
     },
     service: _e.raise,
-    kids: [
-      topbar
-    ],
+    kids: [topbar],
   });
 }
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function newFileMenu(ui) {
   const cnWindowButton = `${ui.fig.group}-button`;
@@ -323,17 +343,17 @@ export function newFileMenu(ui) {
           },
         ],
       }),
-    ]
-  })
+    ],
+  });
 }
 
 /**
- * 
- * @param {*} ui 
+ *
+ * @param {*} ui
  */
 export function visioMenu(ui) {
   const cnWindowButton = `${ui.fig.group}-button`;
-  if (!Visitor.canUseVisio() || ui.mget(_a.area) == _a.personal) return '';
+  if (!Visitor.canUseVisio() || ui.mget(_a.area) == _a.personal) return "";
   return dropdownMenuButton(ui, {
     className: cnWindowButton,
 
@@ -362,14 +382,14 @@ export function visioMenu(ui) {
         content: "Drumee Call",
       },
     ],
-  })
+  });
 }
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function getAreaLabel(area) {
-  return AREA_LABELS[area] || ''
+  return AREA_LABELS[area] || "";
 }

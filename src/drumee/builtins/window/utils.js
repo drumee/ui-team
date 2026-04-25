@@ -287,6 +287,7 @@ class __window_mfs extends DrumeeMFS {
       if (flw) flw.remove();
     }
     this._setupPartitionObserver(listPart);
+    this._partitionFoldersAndFiles(listPart);
     listPart.once(EOD, () => {
       listPart.el.dataset.wait = 0;
       listPart.$el.removeClass('drumee-sprinner');

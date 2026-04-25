@@ -10,8 +10,20 @@
     }
   }
 
+  // The header wrapper carries both `.window-folder__header` and the
+  // shared `.window__header` (which sets padding/border-radius). Scope
+  // under `.window-folder__main` to bump specificity above the shared
+  // rule and zero everything — visual styling lives on the topbar
+  // container itself.
+  &__main &__header {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    overflow: visible;
+    flex-wrap: nowrap;
+  }
+
   &__header {
-    background-color: var(--normal-bg-100);
     &-title {
       align-items: center;
       @include drumee.typo(
@@ -50,13 +62,305 @@
     }
   }
 
-  &__badge {
-    background-color: #9663ff26;
-    padding: var(--spacer-3);
-    border-radius: var(--corner-radius-1);
-    color: var(--private);
-    font-size: 12px;
-    font-weight: 600;
+  // ── Topbar (Figma node 272:49250 "Window Header") ────────────
+  // [icon][title  badge]      [search][Upload][+ Add new][×]
+  // Container: padding 0 21.9, bg Grey/30, ~50px tall.
+  // Compound parent boosts specificity above the shared
+  // `.window-topbar__container` rule in window/skin/group/header/main.scss.
+  &__main &-topbar {
+    &__container {
+      width: 100%;
+      height: 50px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 21.9px;
+      background-color: #e5e5ea; // Figma Grey/30
+      box-sizing: border-box;
+      border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
+      overflow: visible;
+      position: relative;
+      // Body panels sit at z-index 100 (skin/group/body/main.scss).
+      // We need to paint above so the Add-new dropdown isn't clipped.
+      z-index: 200;
+      // Defeat the shared rule's flex-wrap: wrap.
+      flex-wrap: nowrap;
+    }
+
+    &__left {
+      align-items: center;
+      gap: 0;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    // .window-topbar-title__logo is the area badge SVG (skeleton/logo.js).
+    .window-topbar-title__logo {
+      width: 20px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    &__heading {
+      align-items: center;
+      gap: 12px;
+      padding-left: 12px;
+      min-width: 0;
+    }
+
+    &__title {
+      // Buttons/Medium Button — Geist SemiBold 16/24, Primary/100 (#0B0A21)
+      font-family: "Geist", sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      line-height: 24px;
+      color: #0b0a21;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 280px;
+    }
+
+    // Default badge (Restricted / private). Per-area overrides below.
+    &__badge {
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 2px;
+      background-color: rgba(248, 112, 105, 0.1); // Signal/Restricted @10%
+      flex-shrink: 0;
+
+      &[data-area="share"],
+      &[data-area="dmz"] {
+        background-color: rgba(255, 168, 220, 0.16); // Signal/Link share @16%
+      }
+      &[data-area="personal"] {
+        background-color: rgba(136, 78, 255, 0.1); // Signal/Private @10%
+      }
+      &[data-area="public"] {
+        background-color: rgba(101, 208, 234, 0.16); // Secondary/50 @16%
+      }
+    }
+
+    &__badge-label {
+      // Mono Display/XXS — Geist Mono SemiBold 10 / 100% / +0.04em / UPPER
+      font-family: "Geist Mono", monospace;
+      font-weight: 600;
+      font-size: 10px;
+      line-height: 100%;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #d65f59; // Signal/Restricted
+    }
+
+    &__badge[data-area="share"] &__badge-label,
+    &__badge[data-area="dmz"] &__badge-label {
+      color: #d65fa8;
+    }
+    &__badge[data-area="personal"] &__badge-label {
+      color: #884eff;
+    }
+    &__badge[data-area="public"] &__badge-label {
+      color: #2a8ea8;
+    }
+
+    &__right {
+      align-items: center;
+      gap: 13.14px;
+      flex-shrink: 0;
+    }
+
+    // Search icon — Grey/20 background, radius 6, padding 4 8.
+    // (Figma 272:49259 / layout_FUIVGQ)
+    &__search-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 8px;
+      background-color: #f2f2f7; // Grey/20
+      border-radius: 6px;
+      cursor: pointer;
+      box-sizing: border-box;
+      color: #0b0a21;
+      flex-shrink: 0;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      &:hover {
+        background-color: #e5e5ea;
+      }
+    }
+
+    // Upload — Grey/20 background, radius 4.38, padding 6.57 13.14.
+    // (Figma 272:49261 / layout_VBYAYT)
+    &__upload-btn {
+      display: flex;
+      align-items: center;
+      gap: 6.57px;
+      padding: 6.57px 13.14px;
+      background-color: #f2f2f7; // Grey/20
+      border-radius: 4.38px;
+      cursor: pointer;
+      font-family: "Geist", sans-serif;
+      font-weight: 600;
+      font-size: 13.14px;
+      line-height: 1;
+      color: #0b0a21;
+      flex-shrink: 0;
+      white-space: nowrap;
+
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      &:hover {
+        background-color: #e5e5ea;
+      }
+    }
+
+    // Add new — Figma 272:49267 master button (102.93 × 30.66, Primary/20
+    // pill). dropdownMenuButton renders a chain of wrappers around the
+    // Button.Label trigger; relative+visible at every level so the
+    // dropdown can escape downward.
+    &__add-new-wrapper {
+      position: relative;
+      overflow: visible;
+      flex-shrink: 0;
+      width: 102.93px;
+      height: 30.66px;
+
+      .window-split-body__buttons-container {
+        padding: 0;
+        background: transparent;
+        width: 100%;
+        height: 100%;
+      }
+
+      .window-button__dropdown-menu__wrapper,
+      .menu-topic,
+      .menu-topic__ui {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: visible;
+      }
+
+      .menu-trigger {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .window-button__label-button {
+        width: 100%;
+        height: 100%;
+        background-color: #b1adff; // Primary/20
+        border-radius: 6px;
+        padding: 0 12px;
+        gap: 4px;
+        font-family: "Inter", sans-serif;
+        font-weight: 600;
+        font-size: 13.14px;
+        line-height: 17.52px;
+        color: #000;
+        cursor: pointer;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+
+        svg {
+          width: 13.14px;
+          height: 13.14px;
+        }
+
+        &:hover {
+          background-color: #847eff; // Primary/30
+          color: #fff;
+        }
+      }
+
+      // dropdownMenuButton doesn't pass direction:"down", so the
+      // framework leaves the popup wrapper unpositioned. Anchor it
+      // below the trigger ourselves.
+      .menu-topic-items__wrapper {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        z-index: 1000;
+        width: auto;
+        min-width: 200px;
+      }
+
+      .menu-topic-items,
+      .menu-items {
+        background-color: #ffffff;
+        border-radius: 6px;
+        box-shadow:
+          0 4px 6px -4px rgba(0, 0, 0, 0.1),
+          0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        padding: 6px;
+        min-width: 200px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      // skin/lib/menu.scss only hides the inner .menu-items via
+      // display:none on data-state. Hide the absolute wrapper too so
+      // it doesn't intercept clicks while closed.
+      .menu-topic-items__wrapper[data-state="closed"],
+      .menu-topic-items__wrapper[data-state="0"] {
+        display: none;
+      }
+
+      // Style each menu item row.
+      .window-button__dropdown-menu__item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: "Geist", sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        color: #0b0a21;
+        white-space: nowrap;
+
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        svg {
+          width: 16px;
+          height: 16px;
+          flex-shrink: 0;
+        }
+      }
+    }
+
+    // The window control (close ×) sits at the far right of the row.
+    // Figma 272:49268 / layout_VZ2RLI: row, gap 12, height 20.
+    .window-button__icon-button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 20px;
+      flex-shrink: 0;
+
+      svg {
+        width: 20px;
+        height: 20px;
+        color: #0b0a21;
+      }
+    }
   }
 
   .topbar-folder-icon {
