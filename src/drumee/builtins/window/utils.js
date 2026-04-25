@@ -23,7 +23,7 @@ class __window_mfs extends DrumeeMFS {
     this.topbarHeight = this.configs().topbarHeight;
     this._synced = {};
     this.mset({ echoId: Visitor.get(_a.socket_id) + this.cid })
-    this.setViewMode();
+    this.setViewMode(ViewMode.get(DEFAULT) || _a.icon);
     this.updateBreadcrumb(opt, this)
     let m = opt.media;
     if (!m) return;
@@ -138,6 +138,7 @@ class __window_mfs extends DrumeeMFS {
     if (this._responsive) RADIO_BROADCAST.off(_e.responsive, this._responsive);
     if (this._kbHandler) RADIO_KBD.off(_e.keyup, this._kbHandler);
     Wm.off(WS_EVENT, this.handleWsEvent)
+    this._cleanupPartition();
     if (super.onBeforeDestroy) {
       super.onBeforeDestroy(opt)
     }
@@ -223,8 +224,10 @@ class __window_mfs extends DrumeeMFS {
       }, 300);
     }
     child.el.style.visibility = 'hidden';
-    this._installPartitionedAttach(child);
-    child.on(EOD, () => {
+    const childScroll = child.el.querySelector('.smart-container');
+    if (childScroll) childScroll.style.visibility = 'hidden';
+    this._setupPartitionObserver(child);
+    child.once(EOD, () => {
       if (timer) clearTimeout(timer);
       child.el.dataset.wait = 0;
       child.$el.removeClass('drumee-sprinner');
@@ -240,73 +243,132 @@ class __window_mfs extends DrumeeMFS {
     child.el.dataset.role = _a.container;
   }
 
-  /**
-   * Override the CollectionView's attachHtml so newly rendered child views
-   * are routed directly into .folder-section / .file-section based on the
-   * model's filetype, instead of being attached to .smart-container as
-   * direct children (which the framework does by default).
-   *
-   * Why: List.Smart sets childViewContainer = '.smart-container'. Any
-   * Marionette-driven attach (initial render, collection.add, cleanSet
-   * full re-render) would otherwise put items as direct children of
-   * .smart-container and undo the manual reparenting we used to do in
-   * _doPartition. With .smart-container in flex-column + align-items:
-   * stretch, those stray direct children blow up to full container width.
-   */
-  _installPartitionedAttach(listView) {
-    if (listView._partitionedAttach) return;
-    listView._partitionedAttach = true;
-
-    listView.attachHtml = function (_els, $container) {
-      const scrollEl = ($container && $container[0]) || $container || this.$container[0];
-      if (!scrollEl) return;
-
-      let folderWrap = scrollEl.querySelector(':scope > .folder-section');
-      let fileWrap = scrollEl.querySelector(':scope > .file-section');
-      const created = !folderWrap || !fileWrap;
-      if (!folderWrap) {
-        folderWrap = document.createElement('div');
-        folderWrap.className = 'folder-section';
-        scrollEl.appendChild(folderWrap);
-      }
-      if (!fileWrap) {
-        fileWrap = document.createElement('div');
-        fileWrap.className = 'file-section';
-        scrollEl.appendChild(fileWrap);
-      }
-      if (created) {
-        scrollEl.style.display = 'flex';
-        scrollEl.style.flexDirection = 'column';
-        scrollEl.style.alignItems = 'stretch';
-        scrollEl.style.justifyContent = 'flex-start';
-      }
-
-      // Always re-route every view, not just unattached ones. Marionette's
-      // _getBuffer detaches every view.el into a DocumentFragment before
-      // calling attachHtml; if we skip already-attached views they stay
-      // orphaned in that buffer and disappear from the DOM. Re-appending
-      // an already-correct child is a no-op.
-      const views = (this.children && this.children._views) || [];
-      for (const view of views) {
-        if (!view || !view.el) continue;
-        const ft = (view.model && view.model.get && view.model.get(_a.filetype))
-          || view.el.dataset?.filetype;
-        const target = (ft === _a.folder || ft === _a.hub) ? folderWrap : fileWrap;
-        target.appendChild(view.el);
-      }
-    };
+  _cleanupPartition() {
+    if (this._partitionObserver) {
+      this._partitionObserver.disconnect();
+      this._partitionObserver = null;
+    }
+    if (this._partitionDebounce) {
+      clearTimeout(this._partitionDebounce);
+      this._partitionDebounce = null;
+    }
+    if (this._partitionRetryTimer) {
+      clearTimeout(this._partitionRetryTimer);
+      this._partitionRetryTimer = null;
+    }
+    if (this._partitionSettleTimer) {
+      clearTimeout(this._partitionSettleTimer);
+      this._partitionSettleTimer = null;
+    }
   }
 
-  _partitionFoldersAndFiles(listPart) {
-    this._doPartition(listPart);
+  _schedulePartitionCleanup() {
+    if (this._partitionSettleTimer) {
+      clearTimeout(this._partitionSettleTimer);
+    }
+    this._partitionSettleTimer = setTimeout(() => {
+      this._partitionSettleTimer = null;
+      this._cleanupPartition();
+    }, 500);
+  }
+
+  _prepareListPartition(listPart) {
+    this._cleanupPartition();
+    listPart.el.style.visibility = 'hidden';
+    const scrollEl = listPart.el.querySelector('.smart-container');
+    if (scrollEl) {
+      scrollEl.dataset.partitioning = 1;
+      scrollEl.style.visibility = 'hidden';
+    }
+    if (scrollEl) {
+      const fw = scrollEl.querySelector('.folder-section');
+      const flw = scrollEl.querySelector('.file-section');
+      if (fw) fw.remove();
+      if (flw) flw.remove();
+    }
+    this._setupPartitionObserver(listPart);
+    listPart.once(EOD, () => {
+      listPart.el.dataset.wait = 0;
+      listPart.$el.removeClass('drumee-sprinner');
+      this._partitionFoldersAndFiles(listPart);
+      this.syncContent(EOD);
+      this._dataReady = true;
+      this.trigger(EOD);
+    });
+  }
+
+  _setupPartitionObserver(listPart) {
+    if (this._partitionObserver) {
+      this._partitionObserver.disconnect();
+    }
+    if (this._partitionDebounce) {
+      clearTimeout(this._partitionDebounce);
+    }
+    this._partitionObserver = new MutationObserver(() => {
+      if (this._partitionDebounce) clearTimeout(this._partitionDebounce);
+      this._partitionDebounce = setTimeout(() => {
+        this._partitionDebounce = null;
+        if (this._partitionObserver) {
+          this._partitionObserver.disconnect();
+        }
+        const done = this._doPartition(listPart);
+        if (!done && this._partitionObserver) {
+          this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
+        }
+        if (done) {
+          this._schedulePartitionCleanup();
+        }
+      }, 100);
+    });
+    this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
+  }
+
+  _partitionFoldersAndFiles(listPart, attempt = 0) {
+    if (this._partitionDebounce) {
+      clearTimeout(this._partitionDebounce);
+      this._partitionDebounce = null;
+    }
+    if (this._partitionRetryTimer) {
+      clearTimeout(this._partitionRetryTimer);
+      this._partitionRetryTimer = null;
+    }
+    const done = this._doPartition(listPart);
+    if (done) {
+      this._schedulePartitionCleanup();
+      return;
+    }
+    this._setupPartitionObserver(listPart);
+    const maxAttempts = listPart.collection?.length ? 50 : 30;
+    if (attempt < maxAttempts) {
+      this._partitionRetryTimer = setTimeout(() => {
+        this._partitionRetryTimer = null;
+        this._partitionFoldersAndFiles(listPart, attempt + 1);
+      }, 100);
+      return;
+    }
+    this._cleanupPartition();
+    listPart.el.style.visibility = 'visible';
+    const scrollEl = listPart.el.querySelector('.smart-container');
+    if (scrollEl) {
+      scrollEl.style.visibility = 'visible';
+      scrollEl.dataset.partitioning = 0;
+    }
   }
 
   _doPartition(listPart) {
     const scrollEl = listPart.el.querySelector('.smart-container');
-    if (!scrollEl) return;
+    if (!scrollEl) return false;
 
-    let folderWrap = scrollEl.querySelector(':scope > .folder-section');
-    let fileWrap = scrollEl.querySelector(':scope > .file-section');
+    let folderWrap = scrollEl.querySelector('.folder-section');
+    let fileWrap = scrollEl.querySelector('.file-section');
+
+    const items = [...scrollEl.children].filter(
+      (el) => el !== folderWrap && el !== fileWrap && el.dataset?.filetype
+    );
+
+    if (!items.length) {
+      return false;
+    }
 
     if (!folderWrap) {
       folderWrap = document.createElement('div');
@@ -321,10 +383,7 @@ class __window_mfs extends DrumeeMFS {
 
     // Catch any stray direct children (e.g. items rendered before the
     // attachHtml override was installed) and route them by filetype.
-    const stray = [...scrollEl.children].filter(
-      el => el !== folderWrap && el !== fileWrap && el.dataset?.filetype
-    );
-    stray.forEach(item => {
+    items.forEach((item) => {
       const ft = item.dataset?.filetype;
       if (ft === _a.folder || ft === _a.hub) {
         folderWrap.appendChild(item);
@@ -337,6 +396,8 @@ class __window_mfs extends DrumeeMFS {
     scrollEl.style.flexDirection = 'column';
     scrollEl.style.alignItems = 'stretch';
     scrollEl.style.justifyContent = 'flex-start';
+    scrollEl.style.visibility = 'visible';
+    scrollEl.dataset.partitioning = 0;
 
     const folderCount = folderWrap.children.length;
     if (folderCount > 0) {
@@ -351,6 +412,7 @@ class __window_mfs extends DrumeeMFS {
     }
 
     listPart.el.style.visibility = 'visible';
+    return true;
   }
 
 

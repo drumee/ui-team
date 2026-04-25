@@ -114,7 +114,14 @@ class __window_manager extends push {
     this._curWorkspace = { hub_id, nid };
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
+      l.el.style.visibility = 'hidden';
+      const scrollEl = l.el.querySelector('.smart-container');
+      if (scrollEl) {
+        scrollEl.dataset.partitioning = 1;
+        scrollEl.style.visibility = 'hidden';
+      }
       l.restart()
+      this._prepareListPartition(l);
     })
     this.ensurePart("wrapper-modal").then((p) => {
       p.clear()
@@ -577,6 +584,8 @@ class __window_manager extends push {
    * @param {*} view
    */
   reload() {
+    this._cleanupPartition();
+    this._curWorkspace = null;
     this.feed(require("./skeleton")(this));
   }
 
