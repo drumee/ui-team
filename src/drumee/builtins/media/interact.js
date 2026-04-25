@@ -634,8 +634,7 @@ class __media_interact extends media_core {
         break;
 
       case OPEN_NODE:
-        let args = { service, mode: _a.edit };
-        return this.triggerHandlers(args);
+        return this.triggerHandlers({ service, mode: _a.edit });
 
       case "direct-rename":
         return this.rename();
