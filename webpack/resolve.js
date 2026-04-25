@@ -49,6 +49,14 @@ module.exports = function (basedir) {
       'helper': resolve(basedir, drumee_modules, 'designer', 'skeleton', 'helper'),
       'hub': resolve(basedir, drumee_modules, 'hub'),
       'invitation': resolve(basedir, drumee_path, 'builtins', 'widget', 'invitation'),
+      // Force a single jQuery instance across the app and its libraries.
+      // @drumee/ui-core ships jQuery 4.0.0 nested in its own node_modules,
+      // while jquery-ui 1.14.2 (used here for the mouse widget that
+      // jquery-ui-touch-punch depends on) requires jQuery 3.x. Without
+      // this alias, ui-core registers $.widget against its v4 copy where
+      // it silently fails to register $.ui.mouse, then touch-punch reads
+      // $.ui.mouse.prototype on the same window.jQuery and throws.
+      'jquery$': resolve(basedir, node_path, 'jquery'),
       'jquery_ui_custom': resolve(basedir, vendor_path, 'jquery-ui-1.12.1.custom'),
       'jitsi': resolve(basedir, vendor_path, 'lib-jitsi-meet/dist/umd'),
       'lex': resolve(basedir, drumee_path, 'lex'),

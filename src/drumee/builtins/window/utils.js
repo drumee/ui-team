@@ -23,7 +23,7 @@ class __window_mfs extends DrumeeMFS {
     this.topbarHeight = this.configs().topbarHeight;
     this._synced = {};
     this.mset({ echoId: Visitor.get(_a.socket_id) + this.cid })
-    this.setViewMode();
+    this.setViewMode(ViewMode.get(DEFAULT) || _a.icon);
     this.updateBreadcrumb(opt, this)
     let m = opt.media;
     if (!m) return;
@@ -224,6 +224,8 @@ class __window_mfs extends DrumeeMFS {
       }, 300);
     }
     child.el.style.visibility = 'hidden';
+    const childScroll = child.el.querySelector('.smart-container');
+    if (childScroll) childScroll.style.visibility = 'hidden';
     this._setupPartitionObserver(child);
     child.once(EOD, () => {
       if (timer) clearTimeout(timer);
@@ -254,12 +256,30 @@ class __window_mfs extends DrumeeMFS {
       clearTimeout(this._partitionRetryTimer);
       this._partitionRetryTimer = null;
     }
+    if (this._partitionSettleTimer) {
+      clearTimeout(this._partitionSettleTimer);
+      this._partitionSettleTimer = null;
+    }
+  }
+
+  _schedulePartitionCleanup() {
+    if (this._partitionSettleTimer) {
+      clearTimeout(this._partitionSettleTimer);
+    }
+    this._partitionSettleTimer = setTimeout(() => {
+      this._partitionSettleTimer = null;
+      this._cleanupPartition();
+    }, 500);
   }
 
   _prepareListPartition(listPart) {
     this._cleanupPartition();
     listPart.el.style.visibility = 'hidden';
     const scrollEl = listPart.el.querySelector('.smart-container');
+    if (scrollEl) {
+      scrollEl.dataset.partitioning = 1;
+      scrollEl.style.visibility = 'hidden';
+    }
     if (scrollEl) {
       const fw = scrollEl.querySelector('.folder-section');
       const flw = scrollEl.querySelector('.file-section');
@@ -294,8 +314,9 @@ class __window_mfs extends DrumeeMFS {
         const done = this._doPartition(listPart);
         if (!done && this._partitionObserver) {
           this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
-        } else {
-          this._partitionObserver = null;
+        }
+        if (done) {
+          this._schedulePartitionCleanup();
         }
       }, 100);
     });
@@ -313,18 +334,24 @@ class __window_mfs extends DrumeeMFS {
     }
     const done = this._doPartition(listPart);
     if (done) {
-      this._cleanupPartition();
+      this._schedulePartitionCleanup();
       return;
     }
     this._setupPartitionObserver(listPart);
-    if (attempt < 30) {
+    const maxAttempts = listPart.collection?.length ? 50 : 30;
+    if (attempt < maxAttempts) {
       this._partitionRetryTimer = setTimeout(() => {
         this._partitionRetryTimer = null;
         this._partitionFoldersAndFiles(listPart, attempt + 1);
       }, 100);
-    } else {
-      this._cleanupPartition();
-      listPart.el.style.visibility = 'visible';
+      return;
+    }
+    this._cleanupPartition();
+    listPart.el.style.visibility = 'visible';
+    const scrollEl = listPart.el.querySelector('.smart-container');
+    if (scrollEl) {
+      scrollEl.style.visibility = 'visible';
+      scrollEl.dataset.partitioning = 0;
     }
   }
 
@@ -336,29 +363,27 @@ class __window_mfs extends DrumeeMFS {
     let fileWrap = scrollEl.querySelector('.file-section');
 
     const items = [...scrollEl.children].filter(
-      el => el !== folderWrap && el !== fileWrap && el.dataset?.filetype
+      (el) => el !== folderWrap && el !== fileWrap && el.dataset?.filetype
     );
 
     if (!items.length) {
-      if (scrollEl.children.length <= 2 && !listPart.collection?.length) {
-        listPart.el.style.visibility = 'visible';
-        return true;
-      }
       return false;
     }
 
     if (!folderWrap) {
       folderWrap = document.createElement('div');
       folderWrap.className = 'folder-section';
-      scrollEl.insertBefore(folderWrap, scrollEl.firstChild);
+      scrollEl.appendChild(folderWrap);
     }
     if (!fileWrap) {
       fileWrap = document.createElement('div');
       fileWrap.className = 'file-section';
-      folderWrap.after(fileWrap);
+      scrollEl.appendChild(fileWrap);
     }
 
-    items.forEach(item => {
+    // Catch any stray direct children (e.g. items rendered before the
+    // attachHtml override was installed) and route them by filetype.
+    items.forEach((item) => {
       const ft = item.dataset?.filetype;
       if (ft === _a.folder || ft === _a.hub) {
         folderWrap.appendChild(item);
@@ -371,6 +396,8 @@ class __window_mfs extends DrumeeMFS {
     scrollEl.style.flexDirection = 'column';
     scrollEl.style.alignItems = 'stretch';
     scrollEl.style.justifyContent = 'flex-start';
+    scrollEl.style.visibility = 'visible';
+    scrollEl.dataset.partitioning = 0;
 
     const folderCount = folderWrap.children.length;
     if (folderCount > 0) {

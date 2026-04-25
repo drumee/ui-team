@@ -1,88 +1,67 @@
-/* ==================================================================== *
-* Widget automatically generated on 2026-04-11T12:51:56.987Z
-* npm run add-widget -- --fig=form.folder --dest=src/drumee/builtins/media/form
-* ==================================================================== */
-
 class __form_folder extends LetcBox {
 
-  //constructor(...args) {
-  //  super(...args);
-  //}
-
-
-  /**
-   * 
-   */
   initialize(opt = {}) {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
-    /* uncomment below line to subscribe to websocket events */
-    // this.bindEvent("live");
+    this._status = "personal";
   }
 
-  /**
-   * 
-   * @param {View} child
-   * @param {String} pn
-   */
-  onPartReady(child, pn) {
-    //this.debug("onPartReady", child, pn);
-    switch (pn) {
-      case "my-part-name":
-        /** Do something **/
-        break;
-      default:
-      /** Delegate to parent if any **/
-      //if(super.onPartReady) super.onPartReady(child, pn);
-    }
-  }
-
-  /**
-   * Upon DOM refresh, after element actually insterted into DOM
-   */
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
   }
 
-  /**
-   * User Interaction Evant Handler
-   * @param {View} trigger
-   * @param {Object} args
-   */
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.get(_a.service);
-    this.debug(`onUiEvent service was called with : `, this, { service, args, trigger })
     switch (service) {
       case _e.close:
-        this.goodbye()
-        break;
+        return this.goodbye();
+
+      case "select-status":
+        this._status = trigger.mget(_a.type) || trigger.mget(_a.name) || this._status;
+        return;
+
+      case "create-folder":
+        return this._submit();
+
       default:
-        /** Delegate to parent if any **/
-        if (super.onUiEvent) super.onUiEvent(trigger, args)
+        if (super.onUiEvent) super.onUiEvent(trigger, args);
     }
   }
 
+  _submit() {
+    if (this._pending) return;
+    const data = this.getData(_a.formItem) || {};
+    const filename = (data.filename || "").trim();
+    if (!filename) {
+      Wm.alert(LOCALE.REQUIRE_THIS_FIELD || "Please enter a name");
+      return;
+    }
 
-  /** Optional. 
-   * uncomment and call this.bindEvent to subscribe to websocket events
-   **/
-  /** 
-   * Websocket Service Endpoint
-   * @param {String} service
-   * @param {Object} options
-   */
-  //onWsMessage(svc, data, options={}){
-  //  const {service} = options || svc;
-  //  switch(service){
-  //  case  "my-service":
-  //      this.debug("AAA:94",service, data)
-  //    break;
-  //    default:
-  //      /** Delegate to parent if any **/
-  //      if(super.onWsMessage) super.onWsMessage(service, data, options)
-  //  }
-  //}
+    const target = Wm.getActiveWindow(1);
+    const status = this._status || "personal";
+
+    if (status === "personal") {
+      Wm.addFolder({ position: 0, area: _a.personal, filename });
+      return this.goodbye();
+    }
+
+    const area = status === "team" ? _a.private : _a.share;
+
+    this._pending = 1;
+    this.postService(SERVICE.desk.create_hub, {
+      area,
+      filename,
+      hub_id: Visitor.id,
+      pid: target ? target.getCurrentNid() : Visitor.id,
+    })
+      .then(() => this.goodbye())
+      .catch((e) => {
+        this._pending = 0;
+        this.warn("Failed to create hub", e);
+        if (this.onServerError) this.onServerError(e);
+      });
+  }
 }
 
-module.exports = __form_folder
+module.exports = __form_folder;
