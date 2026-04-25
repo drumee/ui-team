@@ -138,6 +138,7 @@ class __window_mfs extends DrumeeMFS {
     if (this._responsive) RADIO_BROADCAST.off(_e.responsive, this._responsive);
     if (this._kbHandler) RADIO_KBD.off(_e.keyup, this._kbHandler);
     Wm.off(WS_EVENT, this.handleWsEvent)
+    this._cleanupPartition();
     if (super.onBeforeDestroy) {
       super.onBeforeDestroy(opt)
     }
@@ -223,7 +224,8 @@ class __window_mfs extends DrumeeMFS {
       }, 300);
     }
     child.el.style.visibility = 'hidden';
-    child.on(EOD, () => {
+    this._setupPartitionObserver(child);
+    child.once(EOD, () => {
       if (timer) clearTimeout(timer);
       child.el.dataset.wait = 0;
       child.$el.removeClass('drumee-sprinner');
@@ -239,13 +241,96 @@ class __window_mfs extends DrumeeMFS {
     child.el.dataset.role = _a.container;
   }
 
-  _partitionFoldersAndFiles(listPart) {
-    this._doPartition(listPart, 0);
+  _cleanupPartition() {
+    if (this._partitionObserver) {
+      this._partitionObserver.disconnect();
+      this._partitionObserver = null;
+    }
+    if (this._partitionDebounce) {
+      clearTimeout(this._partitionDebounce);
+      this._partitionDebounce = null;
+    }
+    if (this._partitionRetryTimer) {
+      clearTimeout(this._partitionRetryTimer);
+      this._partitionRetryTimer = null;
+    }
   }
 
-  _doPartition(listPart, attempt) {
+  _prepareListPartition(listPart) {
+    this._cleanupPartition();
+    listPart.el.style.visibility = 'hidden';
     const scrollEl = listPart.el.querySelector('.smart-container');
-    if (!scrollEl) return;
+    if (scrollEl) {
+      const fw = scrollEl.querySelector('.folder-section');
+      const flw = scrollEl.querySelector('.file-section');
+      if (fw) fw.remove();
+      if (flw) flw.remove();
+    }
+    this._setupPartitionObserver(listPart);
+    listPart.once(EOD, () => {
+      listPart.el.dataset.wait = 0;
+      listPart.$el.removeClass('drumee-sprinner');
+      this._partitionFoldersAndFiles(listPart);
+      this.syncContent(EOD);
+      this._dataReady = true;
+      this.trigger(EOD);
+    });
+  }
+
+  _setupPartitionObserver(listPart) {
+    if (this._partitionObserver) {
+      this._partitionObserver.disconnect();
+    }
+    if (this._partitionDebounce) {
+      clearTimeout(this._partitionDebounce);
+    }
+    this._partitionObserver = new MutationObserver(() => {
+      if (this._partitionDebounce) clearTimeout(this._partitionDebounce);
+      this._partitionDebounce = setTimeout(() => {
+        this._partitionDebounce = null;
+        if (this._partitionObserver) {
+          this._partitionObserver.disconnect();
+        }
+        const done = this._doPartition(listPart);
+        if (!done && this._partitionObserver) {
+          this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
+        } else {
+          this._partitionObserver = null;
+        }
+      }, 100);
+    });
+    this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
+  }
+
+  _partitionFoldersAndFiles(listPart, attempt = 0) {
+    if (this._partitionDebounce) {
+      clearTimeout(this._partitionDebounce);
+      this._partitionDebounce = null;
+    }
+    if (this._partitionRetryTimer) {
+      clearTimeout(this._partitionRetryTimer);
+      this._partitionRetryTimer = null;
+    }
+    const done = this._doPartition(listPart);
+    if (done) {
+      this._cleanupPartition();
+      return;
+    }
+    this._setupPartitionObserver(listPart);
+    if (attempt < 30) {
+      this._partitionRetryTimer = setTimeout(() => {
+        this._partitionRetryTimer = null;
+        this._partitionFoldersAndFiles(listPart, attempt + 1);
+      }, 100);
+    } else {
+      this._cleanupPartition();
+      listPart.el.style.visibility = 'visible';
+    }
+  }
+
+  _doPartition(listPart) {
+    const scrollEl = listPart.el.querySelector('.smart-container');
+    if (!scrollEl) return false;
 
     let folderWrap = scrollEl.querySelector('.folder-section');
     let fileWrap = scrollEl.querySelector('.file-section');
@@ -254,9 +339,12 @@ class __window_mfs extends DrumeeMFS {
       el => el !== folderWrap && el !== fileWrap && el.dataset?.filetype
     );
 
-    if (!items.length && attempt < 10) {
-      setTimeout(() => this._doPartition(listPart, attempt + 1), 100);
-      return;
+    if (!items.length) {
+      if (scrollEl.children.length <= 2 && !listPart.collection?.length) {
+        listPart.el.style.visibility = 'visible';
+        return true;
+      }
+      return false;
     }
 
     if (!folderWrap) {
@@ -297,6 +385,7 @@ class __window_mfs extends DrumeeMFS {
     }
 
     listPart.el.style.visibility = 'visible';
+    return true;
   }
 
 
