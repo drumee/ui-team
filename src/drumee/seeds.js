@@ -167,6 +167,12 @@ module.exports = {
   media_form: function () {
     return import("./builtins/media/form");
   },
+  folder_form: function () {
+    return import("./builtins/media/folder-form");
+  },
+  tasks_panel: function () {
+    return import("./builtins/window/tasks");
+  },
   media_grid: function () {
     return import("./builtins/media/grid");
   },

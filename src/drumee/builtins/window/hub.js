@@ -108,6 +108,10 @@ class __window_hub extends mfsInteract {
    */
   showFolderTab(tab) {
     this.activeTab = tab;
+    // setAttribute (not dataset.activeTab) so we toggle the same
+    // kebab-case attribute the skeleton renders initially.
+    const body = this.getPart('split-body');
+    if (body && body.el) body.el.setAttribute('data-active-tab', tab);
     const chatPanel = this.getPart('chat-panel');
     if (chatPanel) {
       chatPanel.el.dataset.active = tab === _a.chat ? '1' : '0';
