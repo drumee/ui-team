@@ -6,7 +6,7 @@ function grid(ui) {
     className: `${ui.fig.family}__header ${ui.fig.group}__header`,
     kidsOpt: {
       radio: _a.on,
-      uiHandler: ui,
+      uiHandler: [ui],
     },
     service: _e.raise,
     kids: [require("./topbar")(ui)],

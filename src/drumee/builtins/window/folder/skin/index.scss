@@ -156,9 +156,15 @@
   &__split-body {
     flex: 1;
     overflow: hidden;
-    display: flex;
-    flex-direction: row;
     min-height: 0;
+
+    &[data-view="chat"],
+    &[data-view="task"] {
+      .window__chat-panel,
+      .window-folder__tracker-blocker {
+        width: 100%;
+      }
+    }
   }
 
   &__body {
@@ -182,6 +188,113 @@
       height: 16px;
       fill: var(--normal-fg-10);
     }
+  }
+
+  &__create-folder-dialog {
+    width: 360px;
+    padding: 24px;
+    gap: 24px;
+    border-radius: 16px;
+    background: var(--normal-bg-100);
+    box-shadow: var(--drumee-shadow-box);
+  }
+
+  &__create-folder-header,
+  &__settings-action-header {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__create-folder-title,
+  &__settings-action-title,
+  &__tracker-title {
+    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--core-default-text-color));
+  }
+
+  &__create-folder-entry {
+    width: 100%;
+  }
+
+  &__create-folder-footer {
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  &__create-folder-button {
+    min-width: 96px;
+    padding: 10px 16px;
+    border-radius: 18px;
+    text-align: center;
+    cursor: pointer;
+
+    &.primary {
+      background: var(--private);
+      color: var(--core-default-text-reverse);
+    }
+
+    &.secondary {
+      background: var(--normal-bg-90);
+      color: var(--core-default-text-color);
+    }
+  }
+
+  &__settings-action-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 360px;
+    height: 100%;
+    padding: 16px 24px;
+    gap: 16px;
+    background: var(--normal-bg-100);
+    box-shadow: var(--drumee-shadow-box);
+  }
+
+  &__settings-action-list {
+    gap: 12px;
+  }
+
+  &__settings-action-item {
+    align-items: center;
+    justify-content: space-between;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &.destructive {
+      color: var(--red-500);
+    }
+  }
+
+  &__tracker-blocker {
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+  }
+
+  &__tracker-message {
+    color: var(--neutral-500);
+  }
+
+  &__meeting-view {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__meeting-files {
+    width: 40%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  &__meeting-room {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
   }
 }
 

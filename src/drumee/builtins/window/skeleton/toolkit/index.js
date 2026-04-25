@@ -31,21 +31,21 @@ export function tabBar(ui) {
         label: LOCALE.FILES,
         ico: "desktop_docfile",
         service: "tab-files",
-        uiHandler: ui,
+        uiHandler: [ui],
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item`,
         label: LOCALE.CHAT,
         ico: "tchat",
         service: "tab-chat",
-        uiHandler: ui,
+        uiHandler: [ui],
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item`,
         label: LOCALE.TASK,
         ico: "list",
         service: "tab-task",
-        uiHandler: ui,
+        uiHandler: [ui],
       }),
     ],
   });
@@ -135,7 +135,7 @@ export function dropdownMenuButton(ui, opt = {}) {
     Skeletons.Button.Svg({
       className: `${cnRoot}__dropdown-button`,
       ico: triggerIco,
-      uiHandler: ui,
+      uiHandler: [ui],
       partHandler: ui,
     });
 
@@ -144,7 +144,7 @@ export function dropdownMenuButton(ui, opt = {}) {
     kids: menuItems.map(({ service, ico, content, ...extra }) =>
       Skeletons.Box.X({
         className: `${cnDropdown}__item`,
-        uiHandler: ui,
+        uiHandler: [ui],
         service,
         ...extra,
         kids: [
@@ -179,13 +179,13 @@ export function dropdownMenuButton(ui, opt = {}) {
 
 function getChatLabel(ui) {
   const name = ui.mget(_a.filename) || ui.mget(_a.name) || '';
-  return name ? `${name} - ${LOCALE.CHAT}` : 'FOLDER-SCOPED CHAT';
+  return name ? `${name} - ${LOCALE.CHAT}` : LOCALE.CHAT;
 }
 
 /**
- * 
- * @param {Chat Panel} ui 
- * @returns 
+ *
+ * @param {Chat Panel} ui
+ * @returns
  */
 export function chatPanel(ui) {
   return Skeletons.Box.Y({
@@ -215,9 +215,9 @@ export function chatPanel(ui) {
 }
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function filesContainer(ui) {
   return Skeletons.Box.Y({
@@ -227,24 +227,37 @@ export function filesContainer(ui) {
   });
 }
 
+export function folderFilesView(ui) {
+  return [filesContainer(ui), chatPanel(ui)];
+}
+
+export function folderChatView(ui) {
+  const panel = chatPanel(ui);
+  panel.className = `${panel.className} ${ui.fig.family}__chat-panel-full`;
+  return panel;
+}
+
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function splitBody(ui) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
-    kids: [filesContainer(ui), chatPanel(ui)],
+    sys_pn: "folder-view",
+    partHandler: ui,
+    dataset: { view: "files" },
+    kids: folderFilesView(ui),
   });
 }
 
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function windowHeader(ui, topbar) {
   return Skeletons.Box.X({
@@ -253,7 +266,7 @@ export function windowHeader(ui, topbar) {
     sys_pn: "window-header",
     kidsOpt: {
       radio: _a.on,
-      uiHandler: ui,
+      uiHandler: [ui],
     },
     service: _e.raise,
     kids: [
@@ -263,9 +276,9 @@ export function windowHeader(ui, topbar) {
 }
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function newFileMenu(ui) {
   const cnWindowButton = `${ui.fig.group}-button`;
@@ -280,7 +293,7 @@ export function newFileMenu(ui) {
           className: `${cnWindowButton}__label-button secondary`,
           label: LOCALE.ADD_NEW || "Add new",
           ico: "editbox_list-plus",
-          uiHandler: ui,
+          uiHandler: [ui],
           partHandler: ui,
         }),
 
@@ -322,8 +335,8 @@ export function newFileMenu(ui) {
 }
 
 /**
- * 
- * @param {*} ui 
+ *
+ * @param {*} ui
  */
 export function visioMenu(ui) {
   const cnWindowButton = `${ui.fig.group}-button`;
@@ -334,7 +347,7 @@ export function visioMenu(ui) {
     trigger: Skeletons.Button.Svg({
       className: `${cnWindowButton}__icon-bg-button primary`,
       ico: "desktop_confcalls",
-      uiHandler: ui,
+      uiHandler: [ui],
       partHandler: ui,
     }),
 
@@ -342,27 +355,27 @@ export function visioMenu(ui) {
       {
         service: "meeting",
         ico: "logo-google",
-        content: "Google Meet",
+        content: LOCALE.GOOGLE_MEET,
       },
-      { service: "webinar", ico: "desktop_confcalls", content: "Zoom" },
+      { service: "webinar", ico: "desktop_confcalls", content: LOCALE.ZOOM },
       {
         service: "channel",
         ico: "desktop_confcalls",
-        content: "Microsoft Teams",
+        content: LOCALE.MICROSOFT_TEAMS,
       },
       {
         service: "channel",
         ico: "raw-logo-drumee-icon",
-        content: "Drumee Call",
+        content: LOCALE.DRUMEE_CALL,
       },
     ],
   })
 }
 
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 export function getAreaLabel(area) {
   return AREA_LABELS[area] || ''

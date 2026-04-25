@@ -1,4 +1,4 @@
-const { getAreaLabel, newFileMenu } = require("../../skeleton/toolkit");
+const { getAreaLabel, newFileMenu, visioMenu } = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   let name = ui.mget(_a.filename) || ui.mget(_a.name);
@@ -39,12 +39,9 @@ const __skl_folder_topbar = function (ui) {
     ico: "setting",
     className: `${ui.fig.family}__icon-button`,
     service: _e.settings,
-    uiHandler: ui,
+    uiHandler: [ui],
   });
-  if (
-    ui.mget(_a.area) == _a.personal ||
-    ui.mget(_a.nid) !== !ui.mget(_a.home_id)
-  ) {
+  if (ui.mget(_a.area) == _a.personal) {
     settings = "";
   }
   let buttons;
@@ -52,13 +49,14 @@ const __skl_folder_topbar = function (ui) {
     buttons = Skeletons.Box.X({
       className: `${cnWindowButton}__buttons-wrapper`,
       kids: [
+        visioMenu(ui),
         newFileMenu(ui),
         Skeletons.Button.Label({
           className: `${cnWindowButton}__label-button`,
           label: LOCALE.UPLOAD,
           ico: "desktop_upload",
           service: _e.upload,
-          uiHandler: ui,
+          uiHandler: [ui],
         }),
         settings,
         require("window/skeleton/topbar/control")(ui, "c"),
