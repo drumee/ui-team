@@ -547,6 +547,17 @@
   }
 }
 
+.window-manager__icons-scroll.smart-container > .media-grid__ui {
+  visibility: hidden;
+}
+
+.folder-section,
+.file-section {
+  > .media-grid__ui {
+    visibility: visible;
+  }
+}
+
 // ── Shared ──
 .folder-section,
 .file-section {

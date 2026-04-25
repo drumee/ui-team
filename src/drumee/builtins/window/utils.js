@@ -23,7 +23,7 @@ class __window_mfs extends DrumeeMFS {
     this.topbarHeight = this.configs().topbarHeight;
     this._synced = {};
     this.mset({ echoId: Visitor.get(_a.socket_id) + this.cid })
-    this.setViewMode();
+    this.setViewMode(ViewMode.get(DEFAULT) || _a.icon);
     this.updateBreadcrumb(opt, this)
     let m = opt.media;
     if (!m) return;
@@ -224,6 +224,8 @@ class __window_mfs extends DrumeeMFS {
       }, 300);
     }
     child.el.style.visibility = 'hidden';
+    const childScroll = child.el.querySelector('.smart-container');
+    if (childScroll) childScroll.style.visibility = 'hidden';
     this._setupPartitionObserver(child);
     child.once(EOD, () => {
       if (timer) clearTimeout(timer);
@@ -254,12 +256,30 @@ class __window_mfs extends DrumeeMFS {
       clearTimeout(this._partitionRetryTimer);
       this._partitionRetryTimer = null;
     }
+    if (this._partitionSettleTimer) {
+      clearTimeout(this._partitionSettleTimer);
+      this._partitionSettleTimer = null;
+    }
+  }
+
+  _schedulePartitionCleanup() {
+    if (this._partitionSettleTimer) {
+      clearTimeout(this._partitionSettleTimer);
+    }
+    this._partitionSettleTimer = setTimeout(() => {
+      this._partitionSettleTimer = null;
+      this._cleanupPartition();
+    }, 500);
   }
 
   _prepareListPartition(listPart) {
     this._cleanupPartition();
     listPart.el.style.visibility = 'hidden';
     const scrollEl = listPart.el.querySelector('.smart-container');
+    if (scrollEl) {
+      scrollEl.dataset.partitioning = 1;
+      scrollEl.style.visibility = 'hidden';
+    }
     if (scrollEl) {
       const fw = scrollEl.querySelector('.folder-section');
       const flw = scrollEl.querySelector('.file-section');
@@ -292,10 +312,11 @@ class __window_mfs extends DrumeeMFS {
           this._partitionObserver.disconnect();
         }
         const done = this._doPartition(listPart);
-        if (!done && this._partitionObserver) {
+        if (this._partitionObserver) {
           this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
-        } else {
-          this._partitionObserver = null;
+        }
+        if (done) {
+          this._schedulePartitionCleanup();
         }
       }, 100);
     });
@@ -313,18 +334,24 @@ class __window_mfs extends DrumeeMFS {
     }
     const done = this._doPartition(listPart);
     if (done) {
-      this._cleanupPartition();
+      this._schedulePartitionCleanup();
       return;
     }
     this._setupPartitionObserver(listPart);
-    if (attempt < 30) {
+    const maxAttempts = listPart.collection?.length ? 100 : 30;
+    if (attempt < maxAttempts) {
       this._partitionRetryTimer = setTimeout(() => {
         this._partitionRetryTimer = null;
         this._partitionFoldersAndFiles(listPart, attempt + 1);
       }, 100);
-    } else {
-      this._cleanupPartition();
-      listPart.el.style.visibility = 'visible';
+      return;
+    }
+    this._cleanupPartition();
+    listPart.el.style.visibility = 'visible';
+    const scrollEl = listPart.el.querySelector('.smart-container');
+    if (scrollEl) {
+      scrollEl.style.visibility = 'visible';
+      scrollEl.dataset.partitioning = 0;
     }
   }
 
@@ -340,11 +367,6 @@ class __window_mfs extends DrumeeMFS {
     );
 
     if (!items.length) {
-      // Nothing to partition yet: keep observer/retry running until items arrive.
-      if (scrollEl.children.length <= 2 && !listPart.collection?.length) {
-        listPart.el.style.visibility = 'visible';
-        return true;
-      }
       return false;
     }
 
@@ -374,6 +396,8 @@ class __window_mfs extends DrumeeMFS {
     scrollEl.style.flexDirection = 'column';
     scrollEl.style.alignItems = 'stretch';
     scrollEl.style.justifyContent = 'flex-start';
+    scrollEl.style.visibility = 'visible';
+    scrollEl.dataset.partitioning = 0;
 
     const folderCount = folderWrap.children.length;
     if (folderCount > 0) {
