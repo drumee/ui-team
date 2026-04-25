@@ -223,6 +223,7 @@ class __window_mfs extends DrumeeMFS {
       }, 300);
     }
     child.el.style.visibility = 'hidden';
+    this._installPartitionedAttach(child);
     child.on(EOD, () => {
       if (timer) clearTimeout(timer);
       child.el.dataset.wait = 0;
@@ -239,38 +240,91 @@ class __window_mfs extends DrumeeMFS {
     child.el.dataset.role = _a.container;
   }
 
-  _partitionFoldersAndFiles(listPart) {
-    this._doPartition(listPart, 0);
+  /**
+   * Override the CollectionView's attachHtml so newly rendered child views
+   * are routed directly into .folder-section / .file-section based on the
+   * model's filetype, instead of being attached to .smart-container as
+   * direct children (which the framework does by default).
+   *
+   * Why: List.Smart sets childViewContainer = '.smart-container'. Any
+   * Marionette-driven attach (initial render, collection.add, cleanSet
+   * full re-render) would otherwise put items as direct children of
+   * .smart-container and undo the manual reparenting we used to do in
+   * _doPartition. With .smart-container in flex-column + align-items:
+   * stretch, those stray direct children blow up to full container width.
+   */
+  _installPartitionedAttach(listView) {
+    if (listView._partitionedAttach) return;
+    listView._partitionedAttach = true;
+
+    listView.attachHtml = function (_els, $container) {
+      const scrollEl = ($container && $container[0]) || $container || this.$container[0];
+      if (!scrollEl) return;
+
+      let folderWrap = scrollEl.querySelector(':scope > .folder-section');
+      let fileWrap = scrollEl.querySelector(':scope > .file-section');
+      const created = !folderWrap || !fileWrap;
+      if (!folderWrap) {
+        folderWrap = document.createElement('div');
+        folderWrap.className = 'folder-section';
+        scrollEl.appendChild(folderWrap);
+      }
+      if (!fileWrap) {
+        fileWrap = document.createElement('div');
+        fileWrap.className = 'file-section';
+        scrollEl.appendChild(fileWrap);
+      }
+      if (created) {
+        scrollEl.style.display = 'flex';
+        scrollEl.style.flexDirection = 'column';
+        scrollEl.style.alignItems = 'stretch';
+        scrollEl.style.justifyContent = 'flex-start';
+      }
+
+      // Always re-route every view, not just unattached ones. Marionette's
+      // _getBuffer detaches every view.el into a DocumentFragment before
+      // calling attachHtml; if we skip already-attached views they stay
+      // orphaned in that buffer and disappear from the DOM. Re-appending
+      // an already-correct child is a no-op.
+      const views = (this.children && this.children._views) || [];
+      for (const view of views) {
+        if (!view || !view.el) continue;
+        const ft = (view.model && view.model.get && view.model.get(_a.filetype))
+          || view.el.dataset?.filetype;
+        const target = (ft === _a.folder || ft === _a.hub) ? folderWrap : fileWrap;
+        target.appendChild(view.el);
+      }
+    };
   }
 
-  _doPartition(listPart, attempt) {
+  _partitionFoldersAndFiles(listPart) {
+    this._doPartition(listPart);
+  }
+
+  _doPartition(listPart) {
     const scrollEl = listPart.el.querySelector('.smart-container');
     if (!scrollEl) return;
 
-    let folderWrap = scrollEl.querySelector('.folder-section');
-    let fileWrap = scrollEl.querySelector('.file-section');
-
-    const items = [...scrollEl.children].filter(
-      el => el !== folderWrap && el !== fileWrap && el.dataset?.filetype
-    );
-
-    if (!items.length && attempt < 10) {
-      setTimeout(() => this._doPartition(listPart, attempt + 1), 100);
-      return;
-    }
+    let folderWrap = scrollEl.querySelector(':scope > .folder-section');
+    let fileWrap = scrollEl.querySelector(':scope > .file-section');
 
     if (!folderWrap) {
       folderWrap = document.createElement('div');
       folderWrap.className = 'folder-section';
-      scrollEl.insertBefore(folderWrap, scrollEl.firstChild);
+      scrollEl.appendChild(folderWrap);
     }
     if (!fileWrap) {
       fileWrap = document.createElement('div');
       fileWrap.className = 'file-section';
-      folderWrap.after(fileWrap);
+      scrollEl.appendChild(fileWrap);
     }
 
-    items.forEach(item => {
+    // Catch any stray direct children (e.g. items rendered before the
+    // attachHtml override was installed) and route them by filetype.
+    const stray = [...scrollEl.children].filter(
+      el => el !== folderWrap && el !== fileWrap && el.dataset?.filetype
+    );
+    stray.forEach(item => {
       const ft = item.dataset?.filetype;
       if (ft === _a.folder || ft === _a.hub) {
         folderWrap.appendChild(item);

@@ -2,6 +2,9 @@
 // require("jquery-ui/ui/widgets/resizable");
 
 if (window.innerWidth > 900) {
+  // touch-punch reads $.ui.mouse.prototype at module load time; load the
+  // mouse widget first so it isn't undefined.
+  require("jquery-ui/ui/widgets/mouse");
   require("jquery-ui-touch-punch");
 }
 const Rectangle = require("rectangle-node");
