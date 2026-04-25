@@ -1,4 +1,4 @@
-const { events:JEVENTS } = require('jitsi/lib-jitsi-meet.min.js');
+const { events:JEVENTS } = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
 const __stream = require("builtins/webrtc/endpoint");
 class __remote_display extends __stream {
   initialize(opt) {

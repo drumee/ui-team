@@ -105,12 +105,13 @@ class __window_meeting extends __room {
         break;
 
       case _a.invite:
+        if (typeof cmd.callInitiated === 'function') cmd.callInitiated();
         this.postService(SERVICE.hub.poke, {
           hub_id: this.mget(_a.hub_id),
           uid: cmd.mget(_a.user_id),
           kind: this.mget(_a.kind),
           nid: this.mget(_a.room_id)
-        })
+        });
         break;
 
       case 'close-dialog':

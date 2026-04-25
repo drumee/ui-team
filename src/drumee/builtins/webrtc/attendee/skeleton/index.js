@@ -17,10 +17,6 @@ const __skl_conference_attendee = function(_ui_) {
     live_status : 1,
     sys_pn      : _a.profile
   });
-  let service = null;
-  if (_ui_.mget(_a.online) === 1) { 
-    service = _ui_.mget(_a.service);
-  }
   const a = Skeletons.Box.X({
     className  : `${family}__main`,
     debug      : __filename,
@@ -31,11 +27,11 @@ const __skl_conference_attendee = function(_ui_) {
         className  : `${family}__name`,
         content    : fullname
       }),
-      Skeletons.Button.Svg({
-        ico: "chat_connect",
-        className  : `${family}__icon ctrl-line`,
-        sys_pn : "ctrl-line",
-        state : 0
+      Skeletons.Button.Label({
+        ico       : "desktop_confcalls",
+        label     : LOCALE.CALL,
+        className : `${family}__ctrl-btn`,
+        sys_pn    : "ctrl-line",
       })
     ]});
 

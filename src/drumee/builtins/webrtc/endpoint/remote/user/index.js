@@ -1,7 +1,7 @@
 const { toggleState } = require("@drumee/ui-essentials")
 const PARTICIPANT_ID = "participant_id";
 const __stream = require("builtins/webrtc/endpoint");
-const { events: JEVENTS } = require('jitsi/lib-jitsi-meet.min.js');
+const { events: JEVENTS } = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
 
 class __remote_user extends __stream {
 

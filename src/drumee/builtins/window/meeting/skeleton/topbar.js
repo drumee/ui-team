@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : __dbg_path
-//   TYPE : Skelton
-// ==================================================================== *
-
 const __window_meeting_topbar = function (_ui_) {
   const { filename } = _ui_.model.get('details') || {};
   const name = filename || _ui_.model.get(_a.filename) || "";
@@ -33,29 +27,37 @@ const __window_meeting_topbar = function (_ui_) {
     notification.respawn = "window_channel";
   }
 
-  // if _ui_.options.service is "meeting"
-  //   chat = "";
-
   const devices = Skeletons.Box.X({
     sys_pn: "devices-list"
   });
-  // kids       : [{
-  //   kind:'devices_settings'
-  //   className : "#{_ui_.fig.family}__devices"
-  // }]
 
   const controls = _ui_.get('controls') || 'sc';
   const attendees = require('builtins/webrtc/skeleton/attendees')(_ui_);
+
+  const videoPill = Skeletons.Box.X({
+    className: `${_ui_.fig.family}__header-video-pill`,
+    kids: [
+      Skeletons.Image.Svg({ ico: "video", className: `${_ui_.fig.family}__header-video-icon` })
+    ]
+  });
+
+  const timerPill = Skeletons.Box.X({
+    className: `${_ui_.fig.family}__header-timer`,
+    sys_pn: "header-timer",
+    state: 0,
+    kids: [
+      Skeletons.Note({ className: "timer-dot" }),
+      Skeletons.Note({ className: "timer-value", content: "00:00", sys_pn: "header-timer-value" }),
+    ]
+  });
+
   const a = Skeletons.Box.X({
     className: `${_ui_.fig.group}-${figname}__container`,
     sys_pn: _a.topBar,
     service: _e.raise,
     debug: __filename,
     kids: [
-      chat,
-      notification,
-      attendees,
-      devices,
+      videoPill,
       Skeletons.Box.X({
         className: `${_ui_.fig.family}__${figname}-title`,
         kids: [
@@ -66,7 +68,6 @@ const __window_meeting_topbar = function (_ui_) {
             className: "name",
             content: name
           })
-          //settings
         ]
       }),
       Skeletons.Wrapper.Y({
@@ -75,7 +76,11 @@ const __window_meeting_topbar = function (_ui_) {
         uiHandler: _ui_,
         partHandler: _ui_
       }),
-
+      chat,
+      notification,
+      attendees,
+      devices,
+      timerPill,
       require('window/skeleton/topbar/control')(_ui_, controls)
     ]
   });

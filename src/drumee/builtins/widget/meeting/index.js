@@ -13,18 +13,34 @@ class __widget_meeting extends LetcBox {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
     switch (service) {
-      case "call-member":
-        Wm.openWindow({ kind: "connect", ...cmd.getAttr(), uiHandler: [this] });
+      case "call-member": {
+        const existing = Wm.getItemByKind("window_connect") || Wm.getItemByKind("window_meeting");
+        if (existing) {
+          Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
+          break;
+        }
+        const callee = cmd.getAttr();
+        const name = callee.fullname || `${callee.firstname || ""} ${callee.lastname || ""}`.trim();
+        Wm.launch({
+          kind: "window_connect",
+          hub_id: this.mget(_a.hub_id),
+          nid: this.mget(_a.nid),
+          filename: name,
+          display: name,
+          callee,
+        }, { explicit: 1, singleton: 1 });
         break;
+      }
 
       case "start-meeting":
-        Wm.openWindow({
+        Wm.launch({
           kind: "window_meeting",
           hub_id: this.mget(_a.hub_id),
-          name: this.mget(_a.name) || this.mget(_a.filename),
+          nid: this.mget(_a.nid),
+          filename: this.mget(_a.name) || this.mget(_a.filename),
           audio: 1,
           video: 1,
-        });
+        }, { explicit: 1 });
         this.goodbye();
         break;
 

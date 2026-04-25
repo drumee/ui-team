@@ -47,9 +47,8 @@ const __webrtc_body = function (_ui_, localUser, peer) {
       content: LOCALE.CONNECTING,
     })];
   }
-  const a = Skeletons.Box.Y({
+  const body = Skeletons.Box.Y({
     className: `${_ui_.fig.family}__body ${_ui_.fig.group}__body singleton`,
-    sys_pn: _a.content,
     kids: [
       Skeletons.Box.G({
         className: `${_ui_.fig.family}__endpoints ${_ui_.fig.group}__endpoints`,
@@ -79,6 +78,15 @@ const __webrtc_body = function (_ui_, localUser, peer) {
 
       require('./commands')(_ui_),
       require('./overlay-wrapper').default(_ui_),
+    ]
+  });
+
+  const a = Skeletons.Box.Y({
+    className: `${_ui_.fig.family}__shell ${_ui_.fig.group}__shell`,
+    sys_pn: _a.content,
+    kids: [
+      require('./topbar')(_ui_),
+      body,
     ]
   });
   return a;

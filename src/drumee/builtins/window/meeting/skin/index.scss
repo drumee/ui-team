@@ -4,6 +4,7 @@
 @use 'builtins/webrtc/skin/attendee' as *;
 @use 'builtins/webrtc/skin/sound-analyzer' as *;
 @use 'builtins/webrtc/skin/remote' as *;
+@use 'mixins/drumee';
 
 .window-meeting {
   @include webrtc-ui;
@@ -13,8 +14,160 @@
   @include webrtc-sound-analyzer;
   @include webrtc-remote;
 
-  &__header {
-    background-color: var(--teamroom-main);
+  // ── Window sizing ────────────────────────────────────────────────────
+  &__ui {
+    width: 600px;
+    height: 560px;
   }
 
+  // ── Shell fills __main fully ─────────────────────────────────────────
+  &__shell {
+    flex: 1;
+  }
+
+  // ── Body: column flex filling shell ─────────────────────────────────
+  &__body {
+    background-color: var(--grey-20, #f2f2f7);
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    flex: 1;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+
+  // ── Endpoints: takes all remaining height ────────────────────────────
+  &__endpoints {
+    flex: 1;
+    height: auto;
+  }
+
+  // ── Participants grid overrides ──────────────────────────────────────
+  .participants-manager__ui {
+    background-color: var(--grey-20, #f2f2f7);
+    gap: 10px;
+    padding: 10px;
+
+    .endpoint-local,
+    .endpoint-remote {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .endpoint-local {
+      background-color: transparent;
+    }
+
+    &[data-mode="normal"] {
+      .endpoint-local {
+        position: relative;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        min-height: 100px;
+        min-width: 100px;
+      }
+    }
+  }
+
+  // ── Command bar: white rounded footer (flow, not absolute) ───────────
+  &__commands-container {
+    flex-shrink: 0;
+    height: 48px;
+    background-color: var(--default-bg);
+    border-radius: 8px;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.04);
+    padding: 0 4px;
+    margin: 0 8px 8px;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100000;
+
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
+  &__commands {
+    background-color: transparent;
+    border-radius: 0;
+    height: 100%;
+    padding: 0;
+    align-items: center;
+    display: flex;
+    gap: 2px;
+
+    .device-button {
+      .audio.settings {
+        top: -5px;
+        right: -5px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+      }
+    }
+
+    .ctrl-button {
+      background-color: var(--default-bg);
+      border: none;
+      border-radius: 25px;
+      width: 32px;
+      height: 32px;
+      padding: 6px;
+      margin: 0;
+      color: var(--default-text-color);
+
+      &[data-muted="1"] {
+        opacity: 1;
+        pointer-events: auto;
+        color: var(--signal-error, #d74e49);
+      }
+
+      &[data-online="1"] {
+        background-color: var(--active-item-bg);
+        color: var(--primary-40, #5950ff);
+      }
+
+      &.screen[data-state="0"]::before,
+      &[data-state="0"]::before {
+        display: none;
+      }
+
+      &.more {
+        color: var(--secondary-text-color);
+      }
+
+      // Leave meeting button
+      &.line {
+        background-color: var(--primary-100, #0b0a21);
+        color: #fff;
+        border-radius: 8px;
+        width: auto;
+        height: 100%;
+        padding: 0 18px;
+        gap: 8px;
+        flex-shrink: 0;
+        align-items: center;
+
+        svg {
+          transform: none;
+          width: 15px;
+          height: 16px;
+          flex-shrink: 0;
+        }
+
+        .note-content {
+          @include drumee.typo($size: 12px, $line: normal, $weight: 600, $color: #fff);
+          white-space: nowrap;
+        }
+
+        &::before {
+          display: none;
+        }
+
+        &:hover {
+          background-color: #1a1930;
+        }
+      }
+    }
+  }
 }
