@@ -2364,5 +2364,13 @@
   "LINK_TO_TASK_TRACKER": "Lier au suivi des tâches",
   "SEND_LINK_BY_EMAIL": "Envoyer le lien par email",
   "ADD_MEMBERS": "Ajouter des membres",
-  "ONLY_MEMBERS_CAN_ACCESS": "Seuls les membres de la liste ci-dessous peuvent accéder au contenu de ce dossier."
+  "ONLY_MEMBERS_CAN_ACCESS": "Seuls les membres de la liste ci-dessous peuvent accéder au contenu de ce dossier.",
+  "NO_MEMBER": "Aucun membre",
+  "FOLDER_MEMBER": "Membre du dossier",
+  "DRUMEE_CALL": "Appel Drumee",
+  "CALL": "Appeler",
+  "ALL": "Tout",
+  "DOCS": "Documents",
+  "PDF": "PDF",
+  "IMAGES": "Images"
 }

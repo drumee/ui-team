@@ -674,6 +674,10 @@ class __media_interact extends media_core {
       case _e.download:
         return this.download();
 
+      case _e.delete:
+        this.trash();
+        return;
+
       case _e.remove:
         this.delete()
         return;

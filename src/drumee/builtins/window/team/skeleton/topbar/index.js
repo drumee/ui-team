@@ -66,6 +66,7 @@ const __skl_window_team_topbar = function (ui, icon) {
         ico: "folder-meeting",
         uiHandler: ui,
         partHandler: ui,
+        service: "open-call-panel",
       }),
       newFileMenu(ui),
       Skeletons.Button.Label({

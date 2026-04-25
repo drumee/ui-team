@@ -2366,5 +2366,13 @@
   "USAGE_LOW_TO_HIGH": "Usage Low to High",
   "USAGE_PERCENTAGE": "Usage Percentage",
   "STORAGE_GB": "Storage (GB)",
-  "NO_USERS": "No users found"
+  "NO_USERS": "No users found",
+  "NO_MEMBER": "No members",
+  "FOLDER_MEMBER": "Folder member",
+  "DRUMEE_CALL": "Drumee Call",
+  "CALL": "Call",
+  "ALL": "All",
+  "DOCS": "Docs",
+  "PDF": "PDF",
+  "IMAGES": "Images"
 }

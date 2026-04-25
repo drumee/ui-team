@@ -102,6 +102,9 @@ class __window_team extends __hub {
       case _e.settings:
         return this.openSettings();
 
+      case "open-call-panel":
+        return this.toggleCallPanel();
+
       case "change-owner":
         var opt = require('../hub/skeleton/change-owner')(this, args);
         this.mset({ confirm_type: 'primary' });
@@ -119,6 +122,42 @@ class __window_team extends __hub {
       default:
         return super.onUiEvent(cmd, args);
     }
+  }
+
+  async toggleCallPanel() {
+    const chatPanel = await this.ensurePart("chat-panel");
+
+    if (this._callPanel) {
+      this._callPanel.goodbye();
+      this._callPanel = null;
+      return;
+    }
+
+    chatPanel.feed({
+      kind: "widget_meeting",
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      name: this.mget(_a.filename) || this.mget(_a.name),
+      area: this.mget(_a.area),
+      uiHandler: [this],
+    });
+    this._callPanel = chatPanel.children.last();
+    this._callPanel.once(_e.destroy, () => {
+      this._callPanel = null;
+      chatPanel.feed({
+        kind: "widget_chat",
+        className: `${this.fig.group}__chat-widget`,
+        type: this.mget(_a.area),
+        area: this.mget(_a.area),
+        view: "quickChat",
+        hub_id: this.mget(_a.hub_id),
+        nid: this.mget(_a.nid),
+        placeholder: LOCALE.TYPE_MESSAGE + "...",
+        no_emoji: true,
+        send_icon: "raw-send-chat",
+        sys_pn: "folder-chat",
+      });
+    });
   }
 
 

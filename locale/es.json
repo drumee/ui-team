@@ -377,5 +377,13 @@
   "LINK_TO_TASK_TRACKER": "Vincular al seguimiento de tareas",
   "SEND_LINK_BY_EMAIL": "Enviar enlace por correo",
   "ADD_MEMBERS": "Añadir miembros",
-  "ONLY_MEMBERS_CAN_ACCESS": "Solo los miembros de la lista a continuación pueden acceder al contenido de esta carpeta."
+  "ONLY_MEMBERS_CAN_ACCESS": "Solo los miembros de la lista a continuación pueden acceder al contenido de esta carpeta.",
+  "NO_MEMBER": "Sin miembros",
+  "FOLDER_MEMBER": "Miembro de carpeta",
+  "DRUMEE_CALL": "Llamada Drumee",
+  "CALL": "Llamar",
+  "ALL": "Todo",
+  "DOCS": "Documentos",
+  "PDF": "PDF",
+  "IMAGES": "Imágenes"
 }

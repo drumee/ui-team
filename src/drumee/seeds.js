@@ -345,6 +345,12 @@ module.exports = {
     // return import("./builtins/chat/hub");
     return import("./builtins/widget/chat");
   },
+  widget_meeting: function () {
+    return import("./builtins/widget/meeting");
+  },
+  widget_meeting_member: function () {
+    return import("./builtins/widget/meeting/member");
+  },
   widget_contact_detail: function () {
     return import("./builtins/window/addressbook/widget/contact-detail");
   },

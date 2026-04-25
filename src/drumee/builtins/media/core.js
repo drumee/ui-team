@@ -1404,6 +1404,11 @@ class __media_core extends DrumeeMFS {
     }
   }
 
+  trash() {
+    if (!this.canRemove()) return;
+    this.putIntoTrash(1);
+  }
+
   /**
    * 
    */

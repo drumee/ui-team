@@ -2364,5 +2364,13 @@
   "LINK_TO_TASK_TRACKER": "关联到任务跟踪器",
   "SEND_LINK_BY_EMAIL": "通过邮件发送链接",
   "ADD_MEMBERS": "添加成员",
-  "ONLY_MEMBERS_CAN_ACCESS": "只有以下列表中的成员才能访问此文件夹中的内容。"
+  "ONLY_MEMBERS_CAN_ACCESS": "只有以下列表中的成员才能访问此文件夹中的内容。",
+  "NO_MEMBER": "没有成员",
+  "FOLDER_MEMBER": "文件夹成员",
+  "DRUMEE_CALL": "Drumee 通话",
+  "CALL": "呼叫",
+  "ALL": "全部",
+  "DOCS": "文档",
+  "PDF": "PDF",
+  "IMAGES": "图片"
 }
