@@ -284,6 +284,9 @@ module.exports = {
   settings_delete_account: function () {
     return import("widget/settings/delete-account");
   },
+  apps_main: function () {
+    return import("widget/apps/main");
+  },
   settings_filename: function () {
     return import("widget/settings/filename");
   },
