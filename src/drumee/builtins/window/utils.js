@@ -305,22 +305,23 @@ class __window_mfs extends DrumeeMFS {
       clearTimeout(this._partitionDebounce);
     }
     this._partitionObserver = new MutationObserver(() => {
+      const scrollEl = listPart.el.querySelector('.smart-container');
+      if (scrollEl?.querySelector(':scope > .media-grid__ui')) {
+        scrollEl.dataset.partitioning = 1;
+      }
       if (this._partitionDebounce) clearTimeout(this._partitionDebounce);
       this._partitionDebounce = setTimeout(() => {
         this._partitionDebounce = null;
         if (this._partitionObserver) {
           this._partitionObserver.disconnect();
         }
-        const done = this._doPartition(listPart);
-        if (!done && this._partitionObserver) {
-          this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
+        this._doPartition(listPart);
+        if (this._partitionObserver) {
+          this._partitionObserver.observe(listPart.el, { attributes: true, attributeFilter: ["data-filetype"], childList: true, subtree: true });
         }
-        if (done) {
-          this._schedulePartitionCleanup();
-        }
-      }, 100);
+      }, 16);
     });
-    this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
+    this._partitionObserver.observe(listPart.el, { attributes: true, attributeFilter: ["data-filetype"], childList: true, subtree: true });
   }
 
   _partitionFoldersAndFiles(listPart, attempt = 0) {
@@ -333,10 +334,7 @@ class __window_mfs extends DrumeeMFS {
       this._partitionRetryTimer = null;
     }
     const done = this._doPartition(listPart);
-    if (done) {
-      this._schedulePartitionCleanup();
-      return;
-    }
+    if (done) return;
     this._setupPartitionObserver(listPart);
     const maxAttempts = listPart.collection?.length ? 50 : 30;
     if (attempt < maxAttempts) {
@@ -367,6 +365,12 @@ class __window_mfs extends DrumeeMFS {
     );
 
     if (!items.length) {
+      if (folderWrap || fileWrap) {
+        scrollEl.style.visibility = 'visible';
+        scrollEl.dataset.partitioning = 0;
+        listPart.el.style.visibility = 'visible';
+        return true;
+      }
       return false;
     }
 
@@ -484,12 +488,17 @@ class __window_mfs extends DrumeeMFS {
     data.kind = this._getKind();
     data.service = OPEN_NODE;
     if (this.iconsList) {
+      this._setupPartitionObserver(this.iconsList);
       if (data.position >= 0) {
         this.iconsList.append(data, data.position);
       } else {
         this.iconsList.append(data);
       }
-      this._partitionFoldersAndFiles(this.iconsList);
+      setTimeout(() => {
+        if (this.iconsList && !this.iconsList.isDestroyed()) {
+          this._partitionFoldersAndFiles(this.iconsList);
+        }
+      }, 16);
     }
     this.syncBounds();
   }

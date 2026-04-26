@@ -644,6 +644,12 @@
 }
 
 .window-manager__icons-scroll.smart-container > .media-grid__ui {
+  flex: 0 0 auto;
+  height: 160px;
+  width: 120px;
+}
+
+.window-manager__icons-scroll.smart-container[data-partitioning="1"] > .media-grid__ui {
   visibility: hidden;
 }
 

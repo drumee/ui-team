@@ -181,6 +181,7 @@ class __window_manager extends push {
       data.nid || data.actual_home_id || data.home_id;
     // if (this._curWorkspace?.hub_id == hub_id) return;
     this._curWorkspace = { hub_id, nid, area: data.area };
+    this.mset({ hub_id, nid, nodeId: nid, area: data.area });
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
       l.el.style.visibility = 'hidden';
@@ -199,8 +200,24 @@ class __window_manager extends push {
     this.updateBreadcrumb({ ...data, service: "change-workspace" })
   }
 
+  getCurrentNid() {
+    if (this._curWorkspace?.nid != null) return this._curWorkspace.nid;
+    return super.getCurrentNid();
+  }
+
+  actualNode() {
+    if (this._curWorkspace?.hub_id && this._curWorkspace?.nid != null) {
+      return {
+        ...super.actualNode(),
+        hub_id: this._curWorkspace.hub_id,
+        nid: this._curWorkspace.nid,
+      };
+    }
+    return super.actualNode();
+  }
+
   /**
-   * 
+   *
    */
   upgradePlage() {
     this.ensurePart("wrapper-modal").then((p) => {
@@ -655,6 +672,7 @@ class __window_manager extends push {
   reload() {
     this._cleanupPartition();
     this._curWorkspace = null;
+    this.mset({ hub_id: Visitor.id, nid: Visitor.get(_a.home_id), nodeId: Visitor.get(_a.home_id), area: _a.personal });
     this.feed(require("./skeleton")(this));
   }
 
