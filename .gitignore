@@ -21,3 +21,7 @@ media-test/file_example_MP4_1920_18MG.mp4
 .playwright-mcp/
 .clinerules
 local-session-guide.md
+plans/
+docs/api/
+docs/journals/
+src/drumee/core/kind/seeds/
