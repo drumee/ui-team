@@ -626,6 +626,9 @@ class desk_module extends LetcBox {
       case "toggle-settings":
         return this.togglePanel("settings_main", "settings-main-slot");
 
+      case "toggle-apps":
+        return this.togglePanel("apps_main", "settings-main-slot");
+
       case "toggle-trash":
         return this.togglePanel("panel_trash", "trash-panel");
 
