@@ -14,8 +14,11 @@ class __workspace_item extends LetcBox {
    */
   initialize(opt = {}) {
     super.initialize(opt);
-    this.mset({ flow: _a.x })
+    this.mset({ flow: _a.y })
     this.declareHandlers();
+    this._expanded = 0;
+    this._childrenLoaded = 0;
+    this._loadingChildren = 0;
   }
 
   /**
@@ -25,13 +28,85 @@ class __workspace_item extends LetcBox {
     this.feed(require('./skeleton')(this));
   }
 
+  getNodeId() {
+    const role = this.mget("nodeRole");
+    if (role === "workspace") {
+      return this.mget(_a.actual_home_id) || this.mget(_a.home_id) || this.mget(_a.nid);
+    }
+    return this.mget(_a.nid) || this.mget(_a.actual_home_id) || this.mget(_a.home_id);
+  }
+
+  getHubId() {
+    return this.mget(_a.hub_id);
+  }
+
+  childOptions() {
+    return {
+      kind: "workspace_item",
+      uiHandler: this.mget(_a.uiHandler),
+      service: "load-folder",
+      nodeRole: "folder",
+      level: (this.mget("level") || 0) + 1,
+      radio: "sidebar-radio",
+    };
+  }
+
+  normalizeFolder(item = {}) {
+    return {
+      ...item,
+      ...this.childOptions(),
+      hub_id: item.hub_id || this.getHubId(),
+      nid: item.nid || item.actual_home_id || item.home_id || item.id,
+    };
+  }
+
+  fetchFolders() {
+    return this.fetchService(SERVICE.media.show_node_by, {
+      hub_id: this.getHubId(),
+      nid: this.getNodeId(),
+      type: _a.folder,
+    }).then((data = []) => {
+      const items = _.isArray(data) ? data : (data.list || data.rows || data.result || []);
+      if (!_.isArray(items)) return [];
+      return items.filter((item) => item.filetype === _a.folder || item.type === _a.folder);
+    });
+  }
+
+  toggleTree() {
+    if (this._loadingChildren) return;
+    this._expanded = this._expanded ? 0 : 1;
+    this.el.dataset.expanded = this._expanded;
+
+    if (!this._expanded) {
+      return this.ensurePart("children").then((p) => p.el.dataset.open = 0);
+    }
+
+    return this.ensurePart("children").then((p) => {
+      p.el.dataset.open = 1;
+      if (this._childrenLoaded) return;
+      this._loadingChildren = 1;
+      return this.fetchFolders()
+        .then((items) => {
+          this._childrenLoaded = 1;
+          p.feed(items.map((item) => this.normalizeFolder(item)));
+        })
+        .finally(() => {
+          this._loadingChildren = 0;
+        });
+    });
+  }
+
   /**
    *
    * @param {View} trigger
    * @param {Object} args
    */
   onUiEvent(trigger, args = {}) {
-    this.triggerHandlers()
+    const service = args.service || trigger.mget(_a.service);
+    if (service === "toggle-tree") {
+      return this.toggleTree();
+    }
+    this.triggerHandlers({ service: this.mget(_a.service) })
   }
 }
 

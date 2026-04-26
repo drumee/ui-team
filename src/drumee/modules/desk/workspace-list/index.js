@@ -15,6 +15,15 @@ class __desk_workspace extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
+    RADIO_BROADCAST.on("workspace:refresh", this.refreshList, this);
+  }
+
+  onBeforeDestroy() {
+    RADIO_BROADCAST.off("workspace:refresh", this.refreshList, this);
+  }
+
+  refreshList() {
+    return this.ensurePart(_a.list).then((list) => list.restart());
   }
 
   /**
@@ -31,10 +40,12 @@ class __desk_workspace extends LetcBox {
    */
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
-    this.debug("AAA:34", service, trigger)
     switch (service) {
       case "load-workspace":
         return Wm.loadWorkspace(trigger);
+
+      case "load-folder":
+        return Wm.loadWorkspaceNode(trigger);
 
       case "new-workspace":
         return Wm.launch(

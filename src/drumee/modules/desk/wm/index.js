@@ -104,14 +104,83 @@ class __window_manager extends push {
     })
   }
 
+  openCreateFolderDialog() {
+    this.ensurePart("wrapper-modal").then((p) => {
+      p.feed(require("builtins/window/folder/skeleton/create-folder-dialog")(this));
+      p.el.dataset.mode = "create-folder";
+    });
+    this.ensurePart("create-folder-name").then((entry) => entry.focus && entry.focus());
+  }
+
+  closeCreateFolderDialog() {
+    return this.ensurePart("wrapper-modal").then((p) => {
+      p.el.dataset.mode = "";
+      p.clear();
+    });
+  }
+
+  createFolderFromDialog(cmd) {
+    if (this._creatingFolder) return;
+    this._creatingFolder = 1;
+    const entry = this.getPart("create-folder-name");
+    const value = (cmd.getValue && cmd.getValue()) || (entry && entry.getValue && entry.getValue()) || LOCALE.NEW_FOLDER;
+    const filename = String(value).trim() || LOCALE.NEW_FOLDER;
+    if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(filename)) {
+      this._creatingFolder = 0;
+      return this.alert(LOCALE.INVALID_FILENAME);
+    }
+    const hub_id = this._curWorkspace?.hub_id || Visitor.id;
+    const nid = this._curWorkspace?.nid || Visitor.id;
+    return this.postService(SERVICE.media.make_dir, {
+      hub_id,
+      dirname: filename,
+      filename,
+      nid,
+      notify: 1,
+      socket_id: Visitor.get(_a.socket_id),
+      seeding: 1,
+      area: this._curWorkspace?.area || _a.personal,
+    }).then((data) => {
+      if (data && data.error) {
+        return this.alert(LOCALE[data.error] || data.error);
+      }
+      this.closeCreateFolderDialog();
+      this.ensurePart(_a.list).then((list) => {
+        const { hub_id, nid } = this._curWorkspace || {};
+        list.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
+        list.el.style.visibility = 'hidden';
+        const scrollEl = list.el.querySelector('.smart-container');
+        if (scrollEl) {
+          scrollEl.dataset.partitioning = 1;
+          scrollEl.style.visibility = 'hidden';
+        }
+        list.restart();
+        this._prepareListPartition(list);
+      });
+    }).catch((e) => {
+      this.warn("Failed to create folder", e);
+      this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
+    }).finally(() => {
+      this._creatingFolder = 0;
+    });
+  }
+
   /**
-   * 
+   *
    */
   loadWorkspace(workspace) {
-    let data = workspace.model.toJSON()
-    const { hub_id, actual_home_id: nid } = data
+    return this.loadWorkspaceNode(workspace);
+  }
+
+  loadWorkspaceNode(node) {
+    let data = node.model.toJSON()
+    const hub_id = data.hub_id;
+    const isWorkspace = data.nodeRole === "workspace";
+    const nid = isWorkspace ?
+      data.actual_home_id || data.home_id || data.nid :
+      data.nid || data.actual_home_id || data.home_id;
     // if (this._curWorkspace?.hub_id == hub_id) return;
-    this._curWorkspace = { hub_id, nid };
+    this._curWorkspace = { hub_id, nid, area: data.area };
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
       l.el.style.visibility = 'hidden';
@@ -1073,9 +1142,13 @@ class __window_manager extends push {
         return this.closeDialog();
 
       case "add-folder":
-        /** Tell the folder to open once folder got created */
-        cmd.mset({ reopen: 1 })
-        return;
+        return this.openCreateFolderDialog();
+
+      case "create-folder-submit":
+        return this.createFolderFromDialog(cmd);
+
+      case "close-folder-dialog":
+        return this.closeCreateFolderDialog();
 
       default:
         // Internal search/contact events that bubble from invitation_searchbox – do not warn

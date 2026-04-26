@@ -88,7 +88,7 @@ const __button = function (ui, trigger, k) {
 
     move: button({ content: LOCALE.MOVE, service: 'move' }),
 
-    newFolder: button({ content: LOCALE.NEW_FOLDER, service: 'new-folder' }),
+    newFolder: button({ content: LOCALE.NEW_FOLDER, service: 'add-folder' }),
 
     openFileLocation: button({ content: LOCALE.OPEN_FILE_LOCATION, service: 'open-file-location' }),
 

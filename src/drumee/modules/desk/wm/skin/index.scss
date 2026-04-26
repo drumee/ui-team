@@ -106,6 +106,93 @@
     }
   }
 
+  &__wrapper-modal {
+    &[data-mode="create-folder"] {
+      align-items: center;
+      background: rgba(0, 0, 0, 0.18);
+      height: 100%;
+      justify-content: center;
+      left: 0;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 20000;
+    }
+  }
+
+  &__create-folder-dialog {
+    background: #f2f2f7;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    width: 360px;
+  }
+
+  &__create-folder-header {
+    align-items: flex-start;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    justify-content: space-between;
+    padding: 24px 24px 25px;
+  }
+
+  &__create-folder-heading {
+    gap: 4px;
+  }
+
+  &__create-folder-title {
+    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: #0b0a21);
+  }
+
+  &__create-folder-subtitle {
+    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
+  }
+
+  &__create-folder-close {
+    color: #0b0a21;
+    height: 24px;
+    padding: 0;
+    width: 14px;
+  }
+
+  &__create-folder-content {
+    gap: 16px;
+    padding: 24px;
+  }
+
+  &__create-folder-label {
+    @include drumee.typo($size: 12px, $line: 14px, $weight: 600, $color: #0b0a21);
+  }
+
+  &__create-folder-entry {
+    width: 100%;
+
+    input {
+      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
+      background: #ffffff;
+      border: 0;
+      border-radius: 8px;
+      min-height: 41px;
+      padding: 12px;
+    }
+  }
+
+  &__create-folder-footer {
+    padding: 0 24px 24px;
+  }
+
+  &__create-folder-button {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    align-items: center;
+    border-radius: 4px;
+    cursor: pointer;
+    justify-content: center;
+    padding: 8px 24px;
+    text-align: center;
+    width: 100%;
+
+    &.primary {
+      background: #433cc5;
+    }
+  }
+
   &__layer {
     position: fixed;
     top: 0;

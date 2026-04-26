@@ -40,13 +40,7 @@ class __form_folder extends LetcBox {
 
     const target = Wm.getActiveWindow(1);
     const status = this._status || "personal";
-
-    if (status === "personal") {
-      Wm.addFolder({ position: 0, area: _a.personal, filename });
-      return this.goodbye();
-    }
-
-    const area = status === "team" ? _a.private : _a.share;
+    const area = status === "share" ? _a.share : _a.private;
 
     this._pending = 1;
     this.postService(SERVICE.desk.create_hub, {
@@ -55,7 +49,10 @@ class __form_folder extends LetcBox {
       hub_id: Visitor.id,
       pid: target ? target.getCurrentNid() : Visitor.id,
     })
-      .then(() => this.goodbye())
+      .then(() => {
+        RADIO_BROADCAST.trigger("workspace:refresh");
+        this.goodbye();
+      })
       .catch((e) => {
         this._pending = 0;
         this.warn("Failed to create hub", e);

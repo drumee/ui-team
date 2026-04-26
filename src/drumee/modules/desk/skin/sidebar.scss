@@ -3,26 +3,33 @@
 .desk-module-sidebar {
   &__main {
     justify-content: space-between;
-    width: 220px;
+    width: 231px;
     padding: 16px 0;
-    background-color: var(--normal-bg-90);
-    align-items: center;
+    background-color: #ffffff;
+    align-items: stretch;
     z-index: 10002;
-    border-right: 1px solid var(--border-muted);
+    border-right: none;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
   }
 
   &__nav {
+    width: 100%;
+    gap: 32px;
+  }
+
+  &__nav-main {
     width: 100%;
     gap: 4px;
   }
 
   &__item {
     align-items: center;
-    padding: 8px 24px 7px;
+    padding: 7.25px 24px 8px;
     gap: 12px;
     font-size: 14px;
+    line-height: 1.4;
     cursor: pointer;
-    color: var(--normal-fg-10);
+    color: #0b0a21;
     border-left: 4px solid transparent;
     min-height: 35px;
     box-sizing: border-box;
@@ -77,36 +84,52 @@
   }
 
   &__logo {
-    align-items: center;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 0 24px;
 
     &-icon {
-      width: 180px;
-      height: 40px;
+      width: 101px;
+      height: 20px;
     }
   }
 
   &__header {
-    font-size: 12px !important;
-    color: var(--reverse-lb);
-    margin: var(--spacer-4) auto auto 24px;
+    color: #433cc5;
+    font-family: "Geist Mono", monospace;
+    font-size: 10px !important;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
 
   &__workspace {
-    color: var(--normal-fg-10);
-    padding: 0 24px;
+    color: #0b0a21;
+    padding: 0;
+    width: 100%;
   }
 
   &__workspace-title {
-    color: var(--reverse-lb);
+    color: #433cc5;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+    padding: 7.25px 24px 8px;
+  }
+
+  &__workspace-main {
+    width: 100%;
   }
 
   &__footer {
     width: 100%;
-    gap: 2px;
+    gap: 16px;
 
     &-user-btn {
       align-items: center;
-      padding: 8px 24px;
+      padding: 16px 24px 0;
       gap: 12px;
       cursor: pointer;
     }
@@ -114,27 +137,33 @@
     &-avatar {
       width: 32px;
       height: 32px;
-      background-color: var(--avatar-bg);
+      background-color: #e4e3ff;
       align-items: center;
       justify-content: center;
       border-radius: 8px;
 
       &-note {
-        color: var(--white);
+        color: #433cc5;
+        font-size: 12px;
+        font-weight: 700;
       }
     }
 
     &-name-wrapper {
-      gap: var(--spacer-2);
+      gap: 2px;
       justify-content: center;
     }
     &-username {
-      color: var(--normal-fg-10);
+      color: #0b0a21;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
     }
 
     &-user-plan {
-      color: var(--normal-fg-50);
+      color: #84848c;
       font-size: 10px;
+      line-height: 1.4;
     }
   }
 }

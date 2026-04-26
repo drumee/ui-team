@@ -192,49 +192,78 @@
 
   &__create-folder-dialog {
     width: 360px;
-    padding: 24px;
-    gap: 24px;
-    border-radius: 16px;
-    background: var(--normal-bg-100);
-    box-shadow: var(--drumee-shadow-box);
+    background: #f2f2f7;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
   }
 
   &__create-folder-header,
   &__settings-action-header {
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
+  }
+
+  &__create-folder-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 24px 24px 25px;
+  }
+
+  &__create-folder-heading {
+    gap: 4px;
   }
 
   &__create-folder-title,
   &__settings-action-title,
   &__tracker-title {
-    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--core-default-text-color));
+    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: #0b0a21);
+  }
+
+  &__create-folder-subtitle {
+    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
+  }
+
+  &__create-folder-close {
+    height: 24px;
+    width: 14px;
+    color: #0b0a21;
+    padding: 0;
+  }
+
+  &__create-folder-content {
+    gap: 16px;
+    padding: 24px;
+  }
+
+  &__create-folder-label {
+    @include drumee.typo($size: 12px, $line: 14px, $weight: 600, $color: #0b0a21);
   }
 
   &__create-folder-entry {
     width: 100%;
+
+    input {
+      min-height: 41px;
+      padding: 12px;
+      border: 0;
+      border-radius: 8px;
+      background: #ffffff;
+      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
+    }
   }
 
   &__create-folder-footer {
-    justify-content: flex-end;
-    gap: 12px;
+    padding: 0 24px 24px;
   }
 
   &__create-folder-button {
-    min-width: 96px;
-    padding: 10px 16px;
-    border-radius: 18px;
+    width: 100%;
+    padding: 8px 24px;
+    border-radius: 4px;
     text-align: center;
     cursor: pointer;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
 
     &.primary {
-      background: var(--private);
-      color: var(--core-default-text-reverse);
-    }
-
-    &.secondary {
-      background: var(--normal-bg-90);
-      color: var(--core-default-text-color);
+      background: #433cc5;
     }
   }
 

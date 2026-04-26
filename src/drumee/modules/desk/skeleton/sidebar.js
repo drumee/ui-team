@@ -148,11 +148,12 @@ const createNav = (ui) => {
             ico: "raw-logo-drumee-full",
             className: `${fig}__logo-icon`,
           }),
-          createText(fig, "header", LOCALE.WORKSPACE_NAME),
+          createText(fig, "header", Organization.name() || LOCALE.WORKSPACE_NAME),
         ],
       }),
 
       Skeletons.Box.Y({
+        className: `${fig}__nav-main`,
         kids: [
           createNavItem(ui, "sidebar_home", LOCALE.HOME, _e.home, "", null, "sidebar-home"),
           createNavItem(

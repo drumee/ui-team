@@ -23,6 +23,8 @@ module.exports = function (ui) {
       kind: "workspace_item",
       uiHandler: [ui],
       service: "load-workspace",
+      nodeRole: "workspace",
+      level: 0,
       radio: `sidebar-radio`, /** Shaed with sidebar items */
     },
     api: {

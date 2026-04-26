@@ -2,31 +2,103 @@
 
 .workspace-item {
   &__ui {
+    width: 100%;
+    cursor: default;
+  }
+
+  &__row {
     align-items: center;
-    gap: var(--spacer-2);
-    padding: var(--spacer-3);
+    box-sizing: border-box;
+    color: #0b0a21;
     cursor: pointer;
-    transition: background 0.2s;
-    border-radius: var(--corner-radius-2);
+    font-size: 14px;
+    gap: 4px;
+    line-height: 1.4;
+    min-height: 32px;
+    padding-bottom: 6px;
+    padding-right: 24px;
+    padding-top: 6px;
+    width: 100%;
+
+    &[data-level="0"] {
+      padding-left: 40px;
+    }
+
+    &[data-level="1"] {
+      padding-left: 58px;
+    }
+
+    &[data-level="2"] {
+      padding-left: 76px;
+    }
+
+    &[data-level="3"] {
+      padding-left: 94px;
+    }
 
     &[data-radio="on"] {
-      border: 1px var(--radio-on-border) solid;
-      background-color: var(--radio-on-bg);
+      background: rgba(89, 80, 255, 0.1);
+      border-left: 4px solid #5950ff;
+    }
+
+    &[data-level="0"][data-radio="on"] {
+      padding-left: 36px;
+    }
+
+    &[data-level="1"][data-radio="on"] {
+      padding-left: 54px;
+    }
+
+    &[data-level="2"][data-radio="on"] {
+      padding-left: 72px;
+    }
+
+    &[data-level="3"][data-radio="on"] {
+      padding-left: 90px;
+    }
+
+    &:hover {
+      background: rgba(89, 80, 255, 0.06);
     }
   }
 
-  &:hover {
-    background-color: var(--primary-purple-80-5);
+  &__chevron {
+    color: #0b0a21;
+    height: 14px;
+    min-width: 14px;
+    padding: 0;
+    transition: transform 0.16s ease;
+    width: 14px;
   }
 
-  &[active="1"] {
-    background: var(--neutral-700);
+  &__name {
+    color: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  &-status {
-    width: var(--spacer-3);
-    height: var(--spacer-3);
-    background: var(--green-400);
-    border-radius: 50%;
+  &__children {
+    height: 0;
+    overflow: hidden;
+    width: 100%;
+
+    &[data-open="1"] {
+      height: auto;
+      overflow: visible;
+    }
+  }
+
+  &__children-list,
+  &__children-content {
+    width: 100%;
+  }
+
+  &__ui[data-expanded="1"] {
+    > .workspace-item__row .workspace-item__chevron {
+      transform: rotate(180deg);
+    }
   }
 }

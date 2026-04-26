@@ -16,7 +16,7 @@ function grid(ui) {
     className: `${ui.fig.family}__main ${ui.fig.group}__main drive-popup`,
     radio: _a.parent,
     debug: __filename,
-    kids: [header, tooltips, tabBar(ui), splitBody(ui), dialog],
+    kids: [header, tooltips(ui), tabBar(ui), splitBody(ui), dialog(ui)],
   });
 }
 module.exports = grid;
