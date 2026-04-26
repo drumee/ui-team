@@ -6,6 +6,7 @@ function tabs(ui) {
     { key: "security", label: LOCALE.SECURITY || "Security" },
     { key: "audit", label: LOCALE.AUDIT_LOGS || "Audit Logs" },
     { key: "storage", label: LOCALE.STORAGE || "Storage" },
+    { key: "admin-storage", label: LOCALE.ADMIN_STORAGE || "Admin Storage" },
   ];
   return Skeletons.Box.X({
     className: `${pfx}__tabs`,
@@ -510,6 +511,11 @@ export default function apps_main_skeleton(ui) {
   const pfx = ui.fig.family;
   let content;
   switch (ui._tab) {
+    case "permissions":
+      content = ui._activeWorkspace
+        ? require("./permission-detail").default(ui)
+        : require("./permission").default(ui);
+      break;
     case "audit":
       content = require("./audit").default(ui);
       break;
@@ -518,6 +524,9 @@ export default function apps_main_skeleton(ui) {
         ui._storageView === "retention"
           ? require("./retention").default(ui)
           : require("./storage").default(ui);
+      break;
+    case "admin-storage":
+      content = require("./admin-storage").default(ui);
       break;
     case "member":
     default:
@@ -536,6 +545,10 @@ export default function apps_main_skeleton(ui) {
   if (ui._editingMember) {
     const editOverlay = require("./edit-member").default(ui);
     if (editOverlay) root.push(editOverlay);
+  }
+  if (ui._editingFolder) {
+    const fpermOverlay = require("./folder-permission").default(ui);
+    if (fpermOverlay) root.push(fpermOverlay);
   }
   return root;
 }
