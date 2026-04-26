@@ -47,6 +47,7 @@ class __widget_chat extends LetcBox {
       this.hubId = this.mget(_a.hub_id);
       this.peerId = '';
       const nid = this.mget(_a.nid) || '';
+      this.scopedNid = this.mget('scope') === _a.folder ? nid : '';
       this.storageKey = nid ? `${area}-${this.hubId}-${nid}` : `${area}-${this.hubId}`;
     }
 
@@ -698,6 +699,9 @@ class __widget_chat extends LetcBox {
       hub_id: this.hubId,
       order: 'desc'
     };
+    if (this.getScopedNid()) {
+      api.nid = this.getScopedNid();
+    }
     return api;
   }
 
@@ -707,6 +711,27 @@ class __widget_chat extends LetcBox {
    */
   clear_notifications(mkdir) {
     if (mkdir == null) { mkdir = 0; }
+  }
+
+  /**
+   *
+   * @returns
+   */
+  getScopedNid() {
+    return this.scopedNid || '';
+  }
+
+  /**
+   *
+   * @param {*} data
+   * @returns
+   */
+  matchesScopedChannel(data = {}) {
+    if (_.isArray(data)) data = data[0] || {};
+    const nid = this.getScopedNid();
+    if (!nid) return true;
+    const messageNid = data.nid || data.parent_id || data.pid;
+    return `${messageNid}` === `${nid}`;
   }
 
   /**
@@ -757,6 +782,9 @@ class __widget_chat extends LetcBox {
           attachment: attachments,
           hub_id: this.hubId
         };
+        if (this.getScopedNid()) {
+          api.nid = this.getScopedNid();
+        }
         break;
 
       case _a.privateRoom:
@@ -1060,7 +1088,11 @@ class __widget_chat extends LetcBox {
       case SERVICE.chat.post:
       case SERVICE.chat.forward:
       case SERVICE.channel.post_ticket:
-        var hubMatch = (area === _a.share) && (this.hubId === data.hub_id);
+        var isChannel = [_a.dmz, _a.public, _a.share, _a.private].includes(area);
+        var hubMatch = isChannel && (this.hubId === data.hub_id);
+        if (hubMatch && !this.matchesScopedChannel(data)) {
+          hubMatch = false;
+        }
         var privateMach = isPrivate && (this.peerId === data.entity_id);
         var ticketMach = (area === _a.ticket) && (data.ticket_id === this.mget('ticket_id'));
         if (hubMatch || privateMach || ticketMach) {

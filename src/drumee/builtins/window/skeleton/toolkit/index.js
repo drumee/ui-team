@@ -197,6 +197,26 @@ function getChatLabel(ui) {
  * @returns
  */
 export function chatPanel(ui) {
+  const chat = {
+    kind: 'widget_chat',
+    className: `${ui.fig.group}__chat-widget`,
+    type: ui.mget(_a.area),
+    area: ui.mget(_a.area),
+    view: 'quickChat',
+    hub_id: ui.mget(_a.hub_id),
+    nid: ui.mget(_a.nid),
+    placeholder: LOCALE.TYPE_MESSAGE + '...',
+    no_emoji: true,
+    send_icon: 'raw-send-chat',
+    sys_pn: 'folder-chat',
+  };
+
+  if (ui.fig.family === "window-folder") {
+    chat.scope = _a.folder;
+    chat.hub_id = ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id);
+    chat.nid = ui.mget(_a.actual_home_id) || ui.mget(_a.nid);
+  }
+
   return Skeletons.Box.Y({
     className: `${ui.fig.group}__chat-panel`,
     sys_pn: 'chat-panel',
@@ -205,19 +225,7 @@ export function chatPanel(ui) {
         className: `${ui.fig.group}__chat-label`,
         content: getChatLabel(ui),
       }),
-      {
-        kind: 'widget_chat',
-        className: `${ui.fig.group}__chat-widget`,
-        type: ui.mget(_a.area),
-        area: ui.mget(_a.area),
-        view: 'quickChat',
-        hub_id: ui.mget(_a.hub_id),
-        nid: ui.mget(_a.nid),
-        placeholder: LOCALE.TYPE_MESSAGE + '...',
-        no_emoji: true,
-        send_icon: 'raw-send-chat',
-        sys_pn: 'folder-chat',
-      },
+      chat,
     ],
   });
 
