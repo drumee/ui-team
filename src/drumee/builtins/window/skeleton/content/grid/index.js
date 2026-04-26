@@ -48,12 +48,12 @@ const __media_skl_grid = function (ui) {
   ];
 
   const filterBar = Skeletons.Box.X({
-    className: `${cnWidowFilter}__bar`,
+    className: `${cnWidowFilter}__bar ${ui.fig.family}__filter-bar`,
     flow: _a.x,
     kids: FILTER_TABS.map((tab, index) =>
       button(ui, {
         label: tab.label,
-        className: `${cnWidowFilter}__tab`,
+        className: `${cnWidowFilter}__tab ${ui.fig.family}__filter-tab`,
         service: "filter-by-type",
         state: index === 0 ? 1 : 0,
         radiotoggle: `media-filter-${ui._id}`,
@@ -64,7 +64,7 @@ const __media_skl_grid = function (ui) {
 
   return Skeletons.Box.Y({
     debug: __filename,
-    className: `${ui.fig.group}__icons-container`,
+    className: `${ui.fig.group}__icons-container ${ui.fig.family}__icons-container`,
     kids: [
       filterBar,
       list,

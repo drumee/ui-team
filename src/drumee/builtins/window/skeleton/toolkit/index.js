@@ -24,27 +24,33 @@ export function breadcrumbs(ui, opt) {
 export function tabBar(ui) {
   const cnRoot = "window-body__tab-bar";
   return Skeletons.Box.X({
-    className: `${cnRoot}-wrapper`,
+    className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     kids: [
       Skeletons.Button.Label({
-        className: `${cnRoot}-item`,
+        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
         label: LOCALE.FILES,
         ico: "desktop_docfile",
         service: "tab-files",
+        state: 1,
+        dataset: { tab: "files" },
         uiHandler: [ui],
       }),
       Skeletons.Button.Label({
-        className: `${cnRoot}-item`,
+        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
         label: LOCALE.CHAT,
         ico: "tchat",
         service: "tab-chat",
+        state: 0,
+        dataset: { tab: _a.chat },
         uiHandler: [ui],
       }),
       Skeletons.Button.Label({
-        className: `${cnRoot}-item`,
+        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
         label: LOCALE.TASK,
         ico: "list",
         service: "tab-task",
+        state: 0,
+        dataset: { tab: _a.task },
         uiHandler: [ui],
       }),
     ],
@@ -178,6 +184,9 @@ export function dropdownMenuButton(ui, opt = {}) {
 
 
 function getChatLabel(ui) {
+  if (ui.fig.family === "window-folder") {
+    return LOCALE.FOLDER_SCOPED_CHAT || LOCALE.CHAT;
+  }
   const name = ui.mget(_a.filename) || ui.mget(_a.name) || '';
   return name ? `${name} - ${LOCALE.CHAT}` : LOCALE.CHAT;
 }
@@ -280,9 +289,10 @@ export function windowHeader(ui, topbar) {
  * @param {*} ui
  * @returns
  */
-export function newFileMenu(ui) {
+export function newFileMenu(ui, opt = {}) {
   const cnWindowButton = `${ui.fig.group}-button`;
   const cnWindowBody = `${ui.fig.group}-split-body`;
+  const triggerIco = opt.triggerIco || "editbox_list-plus";
   return Skeletons.Box.X({
     className: `${cnWindowBody}__buttons-container`,
     kids: [
@@ -292,7 +302,7 @@ export function newFileMenu(ui) {
         trigger: Skeletons.Button.Label({
           className: `${cnWindowButton}__label-button secondary`,
           label: LOCALE.ADD_NEW || "Add new",
-          ico: "editbox_list-plus",
+          ico: triggerIco,
           uiHandler: [ui],
           partHandler: ui,
         }),
@@ -338,15 +348,16 @@ export function newFileMenu(ui) {
  *
  * @param {*} ui
  */
-export function visioMenu(ui) {
+export function visioMenu(ui, opt = {}) {
   const cnWindowButton = `${ui.fig.group}-button`;
+  const triggerIco = opt.triggerIco || "desktop_confcalls";
   if (!Visitor.canUseVisio() || ui.mget(_a.area) == _a.personal) return '';
   return dropdownMenuButton(ui, {
     className: cnWindowButton,
 
     trigger: Skeletons.Button.Svg({
       className: `${cnWindowButton}__icon-bg-button primary`,
-      ico: "desktop_confcalls",
+      ico: triggerIco,
       uiHandler: [ui],
       partHandler: ui,
     }),

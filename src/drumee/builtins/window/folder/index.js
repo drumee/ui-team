@@ -404,6 +404,9 @@ class __window_folder extends mfsInteract {
 
     this.activeTab = tab;
 
+    this.$el.find(".window-folder__tab-bar-item").attr("data-state", 0);
+    this.$el.find(`.window-folder__tab-bar-item[data-tab='${tab}']`).attr("data-state", 1);
+
     return this.ensurePart("folder-view").then((view) => {
 
       view.el.dataset.view = tab;

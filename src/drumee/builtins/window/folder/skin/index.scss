@@ -192,7 +192,7 @@
 
   &__create-folder-dialog {
     width: 360px;
-    background: #f2f2f7;
+    background: var(--normal-bg-90);
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
   }
 
@@ -214,17 +214,17 @@
   &__create-folder-title,
   &__settings-action-title,
   &__tracker-title {
-    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: #0b0a21);
+    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--normal-fg-10));
   }
 
   &__create-folder-subtitle {
-    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
+    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--normal-fg-20));
   }
 
   &__create-folder-close {
     height: 24px;
     width: 14px;
-    color: #0b0a21;
+    color: var(--normal-fg-10);
     padding: 0;
   }
 
@@ -234,7 +234,7 @@
   }
 
   &__create-folder-label {
-    @include drumee.typo($size: 12px, $line: 14px, $weight: 600, $color: #0b0a21);
+    @include drumee.typo($size: 12px, $line: 14px, $weight: 600, $color: var(--normal-fg-10));
   }
 
   &__create-folder-entry {
@@ -245,8 +245,8 @@
       padding: 12px;
       border: 0;
       border-radius: 8px;
-      background: #ffffff;
-      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
+      background: var(--normal-bg-elevated);
+      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--normal-fg-20));
     }
   }
 
@@ -281,19 +281,53 @@
 
   &__settings-action-list {
     gap: 12px;
+    width: 100%;
   }
 
   &__settings-action-item {
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     min-height: 32px;
     padding: 0 12px;
     border-radius: 8px;
+    color: var(--normal-fg-10);
     cursor: pointer;
 
     &.destructive {
       color: var(--red-500);
     }
+  }
+
+  &__settings-action-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: currentColor);
+    @include drumee.overflow-text;
+  }
+
+  &__settings-action-icon,
+  &__settings-action-close {
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    color: currentColor;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    svg * {
+      fill: currentColor;
+    }
+  }
+
+  &__settings-action-close {
+    color: var(--normal-fg-20);
   }
 
   &__tracker-blocker {
@@ -357,7 +391,7 @@
       }
     }
     &.other {
-      background-color: #0b0a21;
+      background-color: var(--normal-fg-10);
       border-radius: 0 16px 16px 16px;
       align-self: flex-start;
       .note-content {
@@ -366,12 +400,457 @@
     }
   }
   .widget-chatItem__message-date {
-    color: #84848c;
+    color: var(--normal-fg-50);
     font-size: 8px;
   }
   .widget-chatItem__date-of-day-content {
     color: #c6bfff;
     font-size: 10px;
     font-weight: 600;
+  }
+}
+
+.window-folder {
+  &__ui:not([data-device="mobile"]) {
+    width: 900px !important;
+    height: 625px !important;
+  }
+
+  &__main.drive-popup {
+    overflow: hidden;
+    background: var(--normal-bg-90);
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    box-shadow: 0 1.095px 12.045px rgba(0, 0, 0, 0.13);
+  }
+
+  &__header {
+    min-height: 61px;
+    background: var(--normal-bg-80);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .window-topbar__container {
+    align-items: center;
+    width: 100%;
+    height: 61px;
+    padding: 0 22px;
+  }
+
+  .window-topbar__inner {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .window-topbar__title {
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .window-topbar-title__wrapper {
+    flex: 1 1 auto;
+    gap: 13px;
+    min-width: 0;
+  }
+
+  .window-topbar-title__logo {
+    flex: 0 0 auto;
+    width: 21.9px;
+    height: 17.52px;
+    color: #884eff;
+
+    svg {
+      width: 21.9px;
+      height: 17.52px;
+      fill: currentColor;
+    }
+  }
+
+  .window-topbar-title__wrapper .name {
+    max-width: 360px;
+    min-width: 0;
+    @include drumee.typo($size: 18px, $line: 26px, $weight: 600, $color: var(--normal-fg-10));
+    @include drumee.overflow-text;
+  }
+
+  &__badge {
+    align-items: center;
+    min-height: 20px;
+    padding: 4px 8px;
+    border-radius: 2px;
+    background: rgba(150, 99, 255, 0.15);
+    @include drumee.typo($size: 11px, $line: 11px, $weight: 600, $color: #884eff);
+    letter-spacing: 0.44px;
+    text-transform: uppercase;
+  }
+
+  .window-button__buttons-wrapper {
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 13.14px;
+    margin-left: auto;
+  }
+
+  .window-button__label-button,
+  .window-button__icon-bg-button {
+    align-items: center;
+    min-height: 28px;
+    padding: 6px 13px;
+    border-radius: 4px;
+    background: var(--normal-bg-90);
+    color: var(--normal-fg-10);
+    @include drumee.typo($size: 13px, $line: 16px, $weight: 600, $color: var(--normal-fg-10));
+
+    svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+  }
+
+  .window-button__label-button.secondary {
+    min-width: 103px;
+    min-height: 30.66px;
+    border-radius: 6px;
+    background: #b1adff;
+  }
+
+  .window-button__icon-bg-button {
+    min-width: 36px;
+    height: 28px;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+
+  &__icon-button,
+  .window-button__icon-button,
+  .ctrl-aspect {
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--normal-fg-10);
+
+    &.window-folder__icon-button {
+      width: 20px;
+      height: 20px;
+      padding: 0;
+    }
+
+    > .icon,
+    .ctrl-close,
+    .ctrl-aspect,
+    svg {
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      color: var(--normal-fg-10);
+      fill: currentColor;
+    }
+  }
+
+  .ctrl-aspect {
+    cursor: pointer;
+  }
+
+  &__settings-button {
+    color: var(--normal-fg-20);
+
+    svg,
+    use {
+      fill: none;
+      stroke: currentColor;
+    }
+  }
+
+  &__tab-bar-wrapper {
+    gap: 18px;
+    padding: 9px 18px;
+    border-bottom: 1px solid var(--border-default);
+    background: var(--normal-bg-90);
+  }
+
+  &__tab-bar-item {
+    min-width: 84px;
+    min-height: 35px;
+    padding: 9px 18px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: var(--overlay-bg-05);
+    gap: 6px;
+    @include drumee.typo($size: 13px, $line: 16px, $weight: 600, $color: var(--normal-fg-10));
+
+    &[data-state="1"] {
+      border-color: #884eff;
+      background: transparent;
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+  }
+
+  &__split-body {
+    grid-template-columns: 3fr 1fr;
+    height: 100%;
+    background: var(--normal-bg-90);
+  }
+
+  &__files-panel {
+    flex: 3 1 0;
+    min-width: 0;
+  }
+
+  .window__chat-panel {
+    flex: 1 0 25%;
+    min-width: 221px;
+  }
+
+  .window__files-panel {
+    border-radius: 0;
+    background: var(--normal-bg-90);
+  }
+
+  .window__chat-panel {
+    border-left: 1px solid var(--border-default);
+    border-radius: 0;
+    background: var(--normal-bg-90);
+  }
+
+  &__filter-bar {
+    gap: 26px;
+    padding: 9px 26px;
+    border-bottom: 1px solid var(--border-default);
+    background: var(--normal-bg-90);
+  }
+
+  &__filter-tab,
+  &__filter-tab-main {
+    min-height: 30px;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    @include drumee.typo($size: 13px, $line: 16px, $weight: 600, $color: var(--normal-fg-10));
+
+    &[data-state="1"],
+    &[data-radiotoggle="on"] {
+      border-bottom-color: #884eff;
+      color: var(--normal-fg-10);
+    }
+  }
+
+  .window__icons-list .smart-container {
+    align-content: flex-start;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 24px;
+  }
+
+  .window__icons-scroll {
+    align-content: flex-start;
+    align-items: flex-start;
+    justify-content: flex-start;
+    grid-template-columns: repeat(auto-fill, 120px);
+    grid-auto-rows: 144px;
+    gap: 24px;
+    padding: 24px;
+    margin: 0;
+  }
+
+  .window__chat-label {
+    align-items: center;
+    min-height: 61px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border-default);
+    @include drumee.typo($size: 11px, $line: 11px, $weight: 600, $color: var(--normal-fg-800));
+    letter-spacing: 0.44px;
+    text-transform: uppercase;
+  }
+
+  .window__chat-widget {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .widget-chat__messenger-wrapper {
+    padding: 18px;
+    background: var(--normal-bg-90);
+  }
+
+  .widget-chat__messenger {
+    .lib-messenger__container {
+      min-height: 40px;
+      padding: 11px 13px;
+      border-radius: 8px;
+      background: var(--normal-bg-elevated);
+    }
+
+    .lib-messenger__icon.attach {
+      display: flex;
+      color: var(--placeholder-fg);
+    }
+
+    .lib-messenger__content .note-content {
+      @include drumee.typo($size: 11px, $line: 15px, $weight: 400, $color: var(--normal-fg-20));
+
+      &::before {
+        color: var(--placeholder-fg);
+      }
+    }
+
+    .lib-messenger__icon.submit svg {
+      fill: var(--hover-border-40);
+    }
+  }
+
+  .widget-chatItem__conversation-content {
+    padding: 13px;
+
+    &.me {
+      background: var(--folder-fill);
+      border-radius: 18px 0 18px 18px;
+    }
+  }
+
+  .widget-chatItem__message-date {
+    color: var(--normal-fg-50);
+    font-size: 9px;
+  }
+
+  &__split-body[data-view="chat"] {
+    grid-template-columns: 1fr;
+
+    .window__chat-panel {
+      flex: 1 1 100%;
+      width: 100%;
+      min-width: 0;
+      max-width: none;
+      margin: 0;
+      border-left: 0;
+    }
+
+    .window__chat-label {
+      min-height: 43px;
+      padding: 14px 18px;
+    }
+
+    .window__chat-widget,
+    .widget-chat__ui,
+    .widget-chat__main,
+    .widget-chat__container,
+    .widget-chat__chat-content,
+    .widget-chat__messages {
+      width: 100%;
+      max-width: none;
+    }
+
+    .window__chat-widget {
+      height: calc(100% - 43px);
+    }
+
+    .widget-chat__messenger-wrapper {
+      width: 100%;
+      max-width: none;
+      padding: 18px;
+    }
+
+    .widget-chatItem__main {
+      padding-right: 0;
+    }
+
+    .widget-chatItem__conversation-content {
+      max-width: 350px;
+    }
+  }
+
+  &__split-body[data-view="task"] {
+    grid-template-columns: 1fr;
+    background: var(--normal-bg-elevated);
+  }
+
+  &__tracker-board {
+    width: 100%;
+    height: 100%;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--normal-bg-elevated);
+  }
+
+  &__tracker-column {
+    justify-content: space-between;
+    width: 200px;
+    height: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--overlay-bg-05);
+  }
+
+  &__tracker-column-content {
+    gap: 10px;
+    width: 100%;
+  }
+
+  &__tracker-column-header {
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 20px;
+  }
+
+  &__tracker-column-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--normal-fg-50);
+  }
+
+  &__tracker-column[data-tone="progress"] &__tracker-column-dot {
+    background: #65d0ea;
+  }
+
+  &__tracker-column[data-tone="review"] &__tracker-column-dot {
+    background: #e8a13b;
+  }
+
+  &__tracker-column[data-tone="complete"] &__tracker-column-dot {
+    background: #54b684;
+  }
+
+  &__tracker-column-title {
+    flex: 1 1 auto;
+    padding: 0 8px;
+    text-align: center;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--normal-fg-10));
+    @include drumee.overflow-text;
+  }
+
+  &__tracker-column-count {
+    min-width: 16px;
+    text-align: right;
+    letter-spacing: 0.4px;
+    @include drumee.typo($size: 10px, $line: 10px, $weight: 600, $color: var(--normal-fg-50));
+  }
+
+  &__tracker-card {
+    width: 100%;
+    min-height: 33px;
+    padding: 8px;
+    border: 0.5px solid var(--border-default);
+    border-radius: 4px;
+    background: var(--normal-bg-elevated);
+    @include drumee.typo($size: 12px, $line: 15px, $weight: 600, $color: var(--normal-fg-10));
+  }
+
+  &__tracker-add {
+    width: 100%;
+    padding: 4px;
+    border: 0.5px dashed var(--normal-fg-20);
+    border-radius: 4px;
+    text-align: center;
+    cursor: default;
+    opacity: 0.7;
+    @include drumee.typo($size: 10px, $line: 14px, $weight: 400, $color: var(--normal-fg-20));
   }
 }
