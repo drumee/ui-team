@@ -2494,5 +2494,13 @@
   "APPLY_RETENTION_NOW": "Apply retention policy now?",
   "APPLY_RETENTION_BODY": "Versions older than the selected retention window will be permanently deleted. This cannot be undone.",
   "APPLY_RETENTION_WARNING": "Only versions past their natural expiry date will be deleted.",
-  "APPLY_CHANGE": "Apply change"
+  "APPLY_CHANGE": "Apply change",
+  "MEMBER_ROLE": "Member Role",
+  "DEVICE": "Device",
+  "REMOVE_ALL": "Remove all",
+  "SAVE_CHANGES": "Save Changes",
+  "SEARCH_WORKSPACE_TO_ADD": "Search workspace to add",
+  "LOADING": "Loading…",
+  "MEMBERS_LOAD_FAILED": "Could not load members.",
+  "NO_MEMBERS_FOUND": "No members found."
 }
