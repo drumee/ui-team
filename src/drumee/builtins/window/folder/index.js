@@ -1,5 +1,7 @@
 const mfsInteract = require("../interact");
 
+const { folderFilesView, folderChatView } = require("../skeleton/toolkit");
+
 require("./skin");
 
 class __window_folder extends mfsInteract {
@@ -129,8 +131,11 @@ class __window_folder extends mfsInteract {
   }
 
   openCreateFolderDialog() {
-    this.dialogWrapper.feed(require("./skeleton/create-folder-dialog")(this));
-    this.ensurePart("create-folder-name").then((entry) => entry.focus && entry.focus());
+    return this.ensurePart("wrapper-dialog").then((wrapper) => {
+      this.dialogWrapper = wrapper;
+      wrapper.feed(require("./skeleton/create-folder-dialog")(this));
+      return this.ensurePart("create-folder-name").then((entry) => entry.focus && entry.focus());
+    });
   }
 
   createFolderFromDialog(cmd) {
@@ -190,22 +195,31 @@ class __window_folder extends mfsInteract {
   }
 
   /**
-   * Switch the split body between Files / Chat / Tasks tabs. CSS rules
-   * under [data-active-tab] in window/skin/group/body/main.scss hide
-   * the inactive panels.
-   *
-   * Uses setAttribute (not el.dataset.activeTab) so the runtime attr
-   * name matches the kebab-case attr emitted by the skeleton's initial
-   * render — the framework writes `data-${k}` literally.
+   * Switch the split body between Files / Chat / Task tabs. Re-feeds
+   * the `folder-view` part with the appropriate skeleton subtree so the
+   * task tab can render the user's tracker-blocker board, and the chat
+   * tab a full-width chat panel.
    */
   showFolderTab(tab) {
     this.activeTab = tab;
-    const body = this.getPart && this.getPart("split-body");
-    if (body && body.el) body.el.setAttribute("data-active-tab", tab);
-    const chatPanel = this.getPart && this.getPart("chat-panel");
-    if (chatPanel && chatPanel.el) {
-      chatPanel.el.dataset.active = tab === _a.chat ? "1" : "0";
-    }
+    this.$el.find(".window-folder__tab-bar-item").attr("data-state", 0);
+    this.$el.find(`.window-folder__tab-bar-item[data-tab='${tab}']`).attr("data-state", 1);
+
+    return this.ensurePart("folder-view").then((view) => {
+      view.el.dataset.view = tab;
+      switch (tab) {
+        case "files":
+          return view.feed(folderFilesView(this));
+        case _a.chat:
+          return view.feed(folderChatView(this));
+        case "meeting":
+          return view.feed(require("./skeleton/meeting-panel")(this));
+        case _a.task:
+          return view.feed(require("./skeleton/tracker-blocker")(this));
+        default:
+          return view.feed(folderFilesView(this));
+      }
+    });
   }
 
   openAdvancedSettings(cmd) {

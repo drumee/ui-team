@@ -33,28 +33,27 @@ export function tabBar(ui) {
         label: LOCALE.FILES,
         ico: "desktop_docfile",
         service: "tab-files",
-        uiHandler: [ui],
-        radio,
-        initialState: 1,
+        state: 1,
         dataset: { tab: "files" },
+        uiHandler: [ui],
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
         label: LOCALE.CHAT,
         ico: "tchat",
         service: "tab-chat",
+        state: 0,
+        dataset: { tab: _a.chat },
         uiHandler: [ui],
-        radio,
-        dataset: { tab: "chat" },
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
         label: LOCALE.TASK,
         ico: "list",
         service: "tab-task",
+        state: 0,
+        dataset: { tab: _a.task },
         uiHandler: [ui],
-        radio,
-        dataset: { tab: "task" },
       }),
     ],
   });
@@ -113,6 +112,7 @@ export function dialog(ui) {
   return Skeletons.Wrapper.Y({
     className: `${ui.fig.group}__wrapper-modal`,
     name: "dialog",
+    partHandler: ui,
   });
 }
 
@@ -144,7 +144,7 @@ export function dropdownMenuButton(ui, opt = {}) {
     Skeletons.Button.Svg({
       className: `${cnRoot}__dropdown-button`,
       ico: triggerIco,
-      uiHandler: [ui],
+      uiHandler: ui,
       partHandler: ui,
     });
 
@@ -153,7 +153,7 @@ export function dropdownMenuButton(ui, opt = {}) {
     kids: menuItems.map(({ service, ico, content, ...extra }) =>
       Skeletons.Box.X({
         className: `${cnDropdown}__item`,
-        uiHandler: [ui],
+        uiHandler: ui,
         service,
         ...extra,
         kids: [
@@ -266,32 +266,10 @@ export function folderChatView(ui) {
 export function splitBody(ui) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
-    sys_pn: "split-body",
+    sys_pn: "folder-view",
     partHandler: ui,
-    // Literal kebab key so the rendered attribute matches the CSS
-    // `[data-active-tab=…]` selectors. The framework writes
-    // `data-${key}` literally (no camel→kebab conversion).
-    dataset: { "active-tab": "files" },
-    kids: [filesContainer(ui), chatPanel(ui), tasksContainer(ui)],
-  });
-}
-
-/**
- * Tasks tab — Kanban board (To Do / In Progress / To review / Complete).
- * UI-only for now; widget keeps state in localStorage.
- */
-export function tasksContainer(ui) {
-  return Skeletons.Box.Y({
-    className: `${ui.fig.family}__tasks-panel ${ui.fig.group}__tasks-panel`,
-    sys_pn: "tasks-panel",
-    kids: [
-      {
-        kind: "tasks_panel",
-        hub_id: ui.mget(_a.hub_id),
-        nid: ui.mget(_a.nid),
-        sys_pn: "tasks-board",
-      },
-    ],
+    dataset: { view: "files" },
+    kids: folderFilesView(ui),
   });
 }
 
@@ -336,7 +314,7 @@ export function newFileMenu(ui, opt = {}) {
           className: `${cnWindowButton}__label-button secondary`,
           label: LOCALE.ADD_NEW || "Add new",
           ico: triggerIco,
-          uiHandler: [ui],
+          uiHandler: ui,
           partHandler: ui,
         }),
 
@@ -391,7 +369,7 @@ export function visioMenu(ui, opt = {}) {
     trigger: Skeletons.Button.Svg({
       className: `${cnWindowButton}__icon-bg-button primary`,
       ico: triggerIco,
-      uiHandler: [ui],
+      uiHandler: ui,
       partHandler: ui,
     }),
 

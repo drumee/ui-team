@@ -339,7 +339,7 @@ class __window_mfs extends DrumeeMFS {
         if (this._partitionObserver) {
           this._partitionObserver.disconnect();
         }
-        this._doPartition(listPart);
+        const done = this._doPartition(listPart);
         if (this._partitionObserver) {
           this._partitionObserver.observe(listPart.el, { attributes: true, attributeFilter: ["data-filetype"], childList: true, subtree: true });
         }

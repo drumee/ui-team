@@ -70,11 +70,11 @@
   &__main &-topbar {
     &__container {
       width: 100%;
-      height: 50px;
+      height: 61px; // Figma node 272:47973
       align-items: center;
       justify-content: space-between;
       padding: 0 21.9px;
-      background-color: #e5e5ea; // Figma Grey/30
+      background-color: var(--normal-bg-80); // Figma Grey/30
       box-sizing: border-box;
       border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
       overflow: visible;
@@ -113,7 +113,7 @@
       font-weight: 600;
       font-size: 16px;
       line-height: 24px;
-      color: #0b0a21;
+      color: var(--normal-fg-10);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -169,17 +169,16 @@
     }
 
     // Search icon — Grey/20 background, radius 6, padding 4 8.
-    // (Figma 272:49259 / layout_FUIVGQ)
     &__search-btn {
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 4px 8px;
-      background-color: #f2f2f7; // Grey/20
+      background-color: var(--normal-bg-90); // Grey/20
       border-radius: 6px;
       cursor: pointer;
       box-sizing: border-box;
-      color: #0b0a21;
+      color: var(--normal-fg-10);
       flex-shrink: 0;
 
       svg {
@@ -188,7 +187,7 @@
       }
 
       &:hover {
-        background-color: #e5e5ea;
+        background-color: var(--normal-bg-80);
       }
     }
 
@@ -199,14 +198,14 @@
       align-items: center;
       gap: 6.57px;
       padding: 6.57px 13.14px;
-      background-color: #f2f2f7; // Grey/20
+      background-color: var(--normal-bg-90); // Grey/20
       border-radius: 4.38px;
       cursor: pointer;
       font-family: "Geist", sans-serif;
       font-weight: 600;
       font-size: 13.14px;
       line-height: 1;
-      color: #0b0a21;
+      color: var(--normal-fg-10);
       flex-shrink: 0;
       white-space: nowrap;
 
@@ -216,7 +215,7 @@
       }
 
       &:hover {
-        background-color: #e5e5ea;
+        background-color: var(--normal-bg-80);
       }
     }
 
@@ -300,7 +299,7 @@
 
       .menu-topic-items,
       .menu-items {
-        background-color: #ffffff;
+        background-color: var(--normal-bg-elevated);
         border-radius: 6px;
         box-shadow:
           0 4px 6px -4px rgba(0, 0, 0, 0.1),
@@ -331,11 +330,11 @@
         font-family: "Geist", sans-serif;
         font-size: 13px;
         font-weight: 500;
-        color: #0b0a21;
+        color: var(--normal-fg-10);
         white-space: nowrap;
 
         &:hover {
-          background-color: rgba(0, 0, 0, 0.05);
+          background-color: var(--normal-bg-90);
         }
 
         svg {
@@ -358,7 +357,7 @@
       svg {
         width: 20px;
         height: 20px;
-        color: #0b0a21;
+        color: var(--normal-fg-10);
       }
     }
   }

@@ -1,24 +1,15 @@
 /* ==================================================================== *
- * Folder window topbar — merged: v2 figma-aligned cluster layout
- * (left: logo+heading+badge; right: search/upload/+add/controls)
- * combined with workspace branch additions (visio menu, settings,
- * view toggle).
+ * Folder window topbar — mirrors Figma node 272:49250
+ * "Window Header (Purple Accent)".
+ *
+ * Layout (single row, justify-content: space-between, padded 0 21.9px,
+ * background Grey/30 #E5E5EA):
+ *
+ *   [ folder-icon ][ "Folder" + area-badge ]            [ 🔍 ][ Upload ][ + Add new ][ × ]
+ *   ↑ left cluster                                      ↑ right cluster (gap 13.14)
  * ==================================================================== */
 
-const { getAreaLabel, newFileMenu, visioMenu } = require("../../skeleton/toolkit");
-
-function viewControl(ui) {
-  const state = ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0;
-  return Skeletons.Button.Svg({
-    ico: "square-split-horizontal",
-    className: `${ui.fig.family}__icon-button`,
-    service: "change-view",
-    sys_pn: "view-ctrl",
-    uiHandler: [ui],
-    state,
-    icons: ["square-split-horizontal", "square-split-horizontal"],
-  });
-}
+const { getAreaLabel, newFileMenu } = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   const cnFolder = `${ui.fig.family}-topbar`;
@@ -66,10 +57,8 @@ const __skl_folder_topbar = function (ui) {
     className: `${cnFolder}__search-btn`,
     ico: "magnifying-glass",
     service: "open-searchbox",
-    uiHandler: [ui],
+    uiHandler: ui,
   });
-
-  const visio = canUpload ? visioMenu(ui, { triggerIco: "video-camera-header" }) : "";
 
   const uploadBtn = canUpload
     ? Skeletons.Button.Label({
@@ -77,32 +66,22 @@ const __skl_folder_topbar = function (ui) {
         label: LOCALE.UPLOAD,
         ico: "desktop_upload",
         service: _e.upload,
-        uiHandler: [ui],
+        uiHandler: ui,
       })
     : "";
 
   const addNew = canUpload
     ? Skeletons.Box.X({
         className: `${cnFolder}__add-new-wrapper`,
-        kids: [newFileMenu(ui, { triggerIco: "plus-header" })],
+        kids: [newFileMenu(ui)],
       })
     : "";
 
-  const settings = (area === _a.personal)
-    ? ""
-    : Skeletons.Button.Svg({
-        ico: "gear-header",
-        className: `${cnFolder}__settings-btn`,
-        service: _e.settings,
-        uiHandler: [ui],
-      });
-
-  const view = viewControl(ui);
   const controls = require("window/skeleton/topbar/control")(ui, "c");
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [searchBtn, visio, uploadBtn, addNew, settings, view, controls],
+    kids: [searchBtn, uploadBtn, addNew, controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────

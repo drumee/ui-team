@@ -87,12 +87,13 @@
   &__icons-scroll {
     margin: 0;
     min-height: 0;
-    padding-top: 10px;
+    padding-top: 24px;
 
     &.smart-container {
       height: 100%;
       min-height: 0;
       overflow-y: auto;
+      align-content: flex-start;
     }
 
     &[data-type="trial"]::after {
