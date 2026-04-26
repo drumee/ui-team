@@ -565,7 +565,7 @@
   gap: 24px;
   padding: 16px 40px 8px;
   width: 100%;
-  box-sizing: content-box;
+  box-sizing: border-box;
   flex: 0 0 auto !important; // override framework's inline flex-grow:1
 
   &:empty {
@@ -574,13 +574,15 @@
   }
 }
 
-// ── Folder: 2 rows, fill width, horizontal scroll when overflow ──
+// ── Folder: row-major order, max 2 rows, h-scroll when overflow ──
+// Default: auto-fill row grid (wraps naturally).
+// JS sets explicit grid-template-columns when folders > 2 rows to enforce h-scroll.
 .folder-section {
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, 140px);
-  grid-auto-columns: 120px;
+  grid-template-columns: repeat(auto-fill, 120px);
+  grid-auto-rows: 140px;
   overflow-x: auto;
   overflow-y: hidden;
+  padding-bottom: 12px;
   scrollbar-width: thin;
 
   &::-webkit-scrollbar {
@@ -611,7 +613,6 @@
   }
   .folder-section {
     grid-template-rows: repeat(2, 110px);
-    grid-auto-columns: 90px;
 
     .media-grid__container {
       transform: scale(0.75);
@@ -637,7 +638,6 @@
   }
   .folder-section {
     grid-template-rows: repeat(2, 95px);
-    grid-auto-columns: 80px;
 
     .media-grid__container {
       transform: scale(0.65);
@@ -663,7 +663,6 @@
   }
   .folder-section {
     grid-template-rows: repeat(2, 80px);
-    grid-auto-columns: 70px;
 
     .media-grid__container {
       transform: scale(0.55);
