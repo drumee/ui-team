@@ -4,12 +4,21 @@
   &__ui {
     width: 100%;
     cursor: default;
+
+    &[data-current-workspace="1"] {
+      > .workspace-item__row[data-level="0"] {
+        background: var(--active-item-bg);
+        border-left: 4px solid var(--active-border);
+        font-weight: 700;
+        padding-left: 20px;
+      }
+    }
   }
 
   &__row {
     align-items: center;
     box-sizing: border-box;
-    color: #0b0a21;
+    color: var(--normal-fg);
     cursor: pointer;
     font-size: 14px;
     gap: 4px;
@@ -21,54 +30,57 @@
     width: 100%;
 
     &[data-level="0"] {
-      padding-left: 40px;
+      padding-left: 24px;
     }
 
     &[data-level="1"] {
-      padding-left: 58px;
+      padding-left: 40px;
     }
 
     &[data-level="2"] {
-      padding-left: 76px;
+      padding-left: 58px;
     }
 
     &[data-level="3"] {
-      padding-left: 94px;
+      padding-left: 76px;
     }
 
     &[data-radio="on"] {
-      background: rgba(89, 80, 255, 0.1);
-      border-left: 4px solid #5950ff;
+      background: var(--active-item-bg);
+      border-left: 4px solid var(--active-border);
     }
 
     &[data-level="0"][data-radio="on"] {
-      padding-left: 36px;
+      padding-left: 20px;
     }
 
     &[data-level="1"][data-radio="on"] {
-      padding-left: 54px;
+      padding-left: 36px;
     }
 
     &[data-level="2"][data-radio="on"] {
-      padding-left: 72px;
+      padding-left: 54px;
     }
 
     &[data-level="3"][data-radio="on"] {
-      padding-left: 90px;
+      padding-left: 72px;
     }
 
     &:hover {
-      background: rgba(89, 80, 255, 0.06);
+      background: var(--hover-bg-40);
     }
   }
 
   &__chevron {
-    color: #0b0a21;
+    background-color: var(--normal-fg);
     height: 14px;
     min-width: 14px;
     padding: 0;
+    transform: rotate(-90deg);
     transition: transform 0.16s ease;
     width: 14px;
+    -webkit-mask: url('data:image/svg+xml;utf8,<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7.69967L4.31667 5.01634L3.5 5.83301L7 9.33301L10.5 5.83301L9.68333 5.01634L7 7.69967Z" fill="%231D1B20"/></svg>') center / 14px 14px no-repeat;
+    mask: url('data:image/svg+xml;utf8,<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7.69967L4.31667 5.01634L3.5 5.83301L7 9.33301L10.5 5.83301L9.68333 5.01634L7 7.69967Z" fill="%231D1B20"/></svg>') center / 14px 14px no-repeat;
   }
 
   &__name {
@@ -98,7 +110,7 @@
 
   &__ui[data-expanded="1"] {
     > .workspace-item__row .workspace-item__chevron {
-      transform: rotate(180deg);
+      transform: rotate(0deg);
     }
   }
 }

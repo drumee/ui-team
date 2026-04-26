@@ -15,6 +15,8 @@ class __desk_workspace extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
+    this._openWorkspaceKey = null;
+    this._openWorkspaceItem = null;
     RADIO_BROADCAST.on("workspace:refresh", this.refreshList, this);
   }
 
@@ -23,7 +25,32 @@ class __desk_workspace extends LetcBox {
   }
 
   refreshList() {
+    this._openWorkspaceKey = null;
+    this._openWorkspaceItem = null;
     return this.ensurePart(_a.list).then((list) => list.restart());
+  }
+
+  getWorkspaceKey(item) {
+    return item.mget(_a.hub_id) || item.mget(_a.home_id) || item.mget(_a.actual_home_id) || item.mget(_a.nid);
+  }
+
+  openWorkspace(item) {
+    const key = this.getWorkspaceKey(item);
+    if (key === this._openWorkspaceKey) {
+      item.el.dataset.currentWorkspace = 1;
+      return item.expandTree();
+    }
+
+    const previous = this._openWorkspaceItem;
+    this._openWorkspaceKey = key;
+    this._openWorkspaceItem = item;
+
+    if (previous && previous !== item) {
+      previous.el.dataset.currentWorkspace = 0;
+      if (previous.collapseTree) previous.collapseTree();
+    }
+    item.el.dataset.currentWorkspace = 1;
+    return item.expandTree();
   }
 
   /**
@@ -41,8 +68,11 @@ class __desk_workspace extends LetcBox {
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
-      case "load-workspace":
-        return Wm.loadWorkspace(trigger);
+      case "load-workspace": {
+        const result = Wm.loadWorkspace(trigger);
+        if (result && result.then) return result.then(() => this.openWorkspace(trigger));
+        return this.openWorkspace(trigger);
+      }
 
       case "load-folder":
         return Wm.loadWorkspaceNode(trigger);

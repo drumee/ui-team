@@ -40,6 +40,7 @@ module.exports = function (ui) {
   return Skeletons.Box.X({
     debug: __filename,
     className: `${pfx}__main`,
+    dataset: { current: ui.mget("isCurrent") ? 1 : 0 },
     uiHandler: [ui],
     filetype: ui.mget(_a.filetype),
     home_id: ui.mget(_a.home_id),
@@ -54,7 +55,7 @@ module.exports = function (ui) {
     },
     kids: [
       Skeletons.Note({
-        content: ">",
+        content: "›",
         className: `${pfx}__separator`,
       }),
       Skeletons.Note({

@@ -3,10 +3,11 @@
 .desk-module-topbar {
   &__main {
     width: 100%;
-    height: 52px;
+    height: 44px;
+    box-sizing: border-box;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 24px;
+    padding: 8px 24px;
     background-color: var(--normal-bg-90);
     border-bottom: 1px solid var(--border-muted);
   }
@@ -191,14 +192,14 @@
     flex-shrink: 0;
 
     svg {
-      width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
       fill: #000000;
     }
 
     span.label,
     section.label {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       color: #000000;
       white-space: nowrap;
@@ -206,6 +207,36 @@
 
     &:hover {
       background-color: #9e99f5;
+    }
+  }
+
+  &__upload-btn {
+    display: flex;
+    height: 28px;
+    padding: 0 13px;
+    gap: 7px;
+    background-color: var(--white);
+    border-radius: 4px;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      fill: #0b0a21;
+    }
+
+    span.label,
+    section.label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0b0a21;
+      white-space: nowrap;
+    }
+
+    &:hover {
+      background-color: var(--normal-bg-80);
     }
   }
 
@@ -284,8 +315,8 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    width: 13.5px;
-    height: 13.5px;
+    width: 15px;
+    height: 15px;
     padding: 0;
     pointer-events: none;
     color: var(--primary-50);
@@ -302,7 +333,7 @@
 
     input {
       background-color: transparent;
-      font-size: 12px;
+      font-size: 13px;
       color: var(--normal-fg-10);
       width: 100%;
 
@@ -317,7 +348,7 @@
     background-color: var(--normal-bg-90);
     color: var(--primary-50);
     font-family: "Geist Mono", monospace;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -341,14 +372,14 @@
     flex-shrink: 0;
 
     svg {
-      width: 14.667px;
-      height: 10.667px;
+      width: 16px;
+      height: 12px;
       fill: var(--primary-50);
     }
 
     span.label,
     section.label {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
       line-height: 1.4;
       color: var(--primary-50);

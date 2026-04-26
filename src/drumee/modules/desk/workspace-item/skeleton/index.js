@@ -7,7 +7,7 @@ module.exports = function (ui) {
   const fig = ui.fig.family;
   const level = ui.mget("level") || 0;
   const nodeRole = ui.mget("nodeRole") || (level ? "folder" : "workspace");
-  const hasChevron = nodeRole === "workspace" || nodeRole === "folder";
+  const hasChevron = nodeRole === "folder";
 
   return [
     Skeletons.Box.X({
@@ -17,8 +17,7 @@ module.exports = function (ui) {
       radio: ui.mget(_a.radio),
       dataset: { level, role: nodeRole },
       kids: [
-        hasChevron ? Skeletons.Button.Svg({
-          ico: "arrow-down",
+        hasChevron ? Skeletons.Note({
           className: `${fig}__chevron`,
           service: "toggle-tree",
           uiHandler: [ui],

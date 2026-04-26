@@ -29,6 +29,14 @@ module.exports = function (ui) {
             uiHandler: [ui],
           }),
 
+          Skeletons.Button.Label({
+            ico: "desktop_upload",
+            className: `${pfx}__upload-btn`,
+            label: LOCALE.UPLOAD,
+            service: _e.upload,
+            uiHandler: [ui],
+          }),
+
           // Search bar + suggestions
           Skeletons.Box.Y({
             className: `${pfx}__search-container`,

@@ -63,14 +63,17 @@ class __desk_breadcrumb extends LetcBox {
       this.ensurePart(_a.content).then((p) => {
         p.clear();
       })
+      this.ensurePart(_a.context).then((p) => p.el.dataset.current = 1);
       return
     }
     this._data = data;
+    this.ensurePart(_a.context).then((p) => p.el.dataset.current = 0);
     this.ensurePart(_a.content).then((p) => {
+      const normalized = this._normalizeData(data);
       const items = [];
-      this._normalizeData(data).forEach((item, i) => {
+      normalized.forEach((item, i) => {
         if (item && (item.filename || item.name)) {
-          items.push({ ...item, kind: "desk_breadcrumb_item", service: "breadcrum-jump" });
+          items.push({ ...item, kind: "desk_breadcrumb_item", service: "breadcrum-jump", isCurrent: i === normalized.length - 1 });
         }
       });
       p.feed(items);

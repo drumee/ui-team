@@ -11,9 +11,32 @@
     user-select: none;
   }
 
-  &__filename,
+  &__main {
+    align-items: center;
+    min-width: 0;
+  }
+
+  &__filename {
+    @include drumee.typo($color: #0b0a21, $size: 13px, $line: 18px, $weight: 400);
+    max-width: 180px;
+    overflow: hidden;
+    padding-left: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   &__separator {
-    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 24px);
+    @include drumee.typo($color: #65656c, $size: 13px, $line: 18px);
+    height: 18px;
+    padding-left: 8px;
+    width: 13px;
+  }
+
+  &__main[data-current="1"] {
+    .breadcrumb-item__filename {
+      color: #000000;
+      font-weight: 700;
+    }
   }
 
 

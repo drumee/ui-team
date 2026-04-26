@@ -6,9 +6,10 @@
 .desk-breadcrumb {
   &__ui {
     flex: 1;
-    justify-content: center;
+    justify-content: flex-start;
     display: flex;
-    color: var(--normal-fg-20);
+    color: #65656c;
+    min-width: 0;
   }
 
   &__main {
@@ -16,26 +17,21 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 2px;
+    gap: 0;
     overflow: hidden;
     flex: 1;
-  }
-
-  &__filename {
-    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 24px);
-    user-select: none;
-    padding: 0 2px;
-  }
-
-  &__separator {
-    @include drumee.typo($color: var(--normal-fg-20), $size: 12px, $letter: -.2em, $line: 24px);
-    user-select: none;
-    padding: 0 2px;
+    min-width: 0;
   }
 
   &__context {
-    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 24px);
+    @include drumee.typo($color: #65656c, $size: 13px, $line: 18px);
     cursor: pointer;
+    flex-shrink: 0;
+
+    &[data-current="1"] {
+      color: #000000;
+      font-weight: 700;
+    }
   }
 }
 

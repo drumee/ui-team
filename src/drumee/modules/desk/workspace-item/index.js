@@ -72,28 +72,39 @@ class __workspace_item extends LetcBox {
     });
   }
 
-  toggleTree() {
-    if (this._loadingChildren) return;
-    this._expanded = this._expanded ? 0 : 1;
-    this.el.dataset.expanded = this._expanded;
-
-    if (!this._expanded) {
-      return this.ensurePart("children").then((p) => p.el.dataset.open = 0);
-    }
+  expandTree() {
+    this._expanded = 1;
+    this.el.dataset.expanded = 1;
 
     return this.ensurePart("children").then((p) => {
       p.el.dataset.open = 1;
       if (this._childrenLoaded) return;
-      this._loadingChildren = 1;
-      return this.fetchFolders()
+      if (this._loadingChildren) return this._loadingChildren;
+      this._loadingChildren = this.fetchFolders()
         .then((items) => {
           this._childrenLoaded = 1;
           p.feed(items.map((item) => this.normalizeFolder(item)));
         })
+        .catch((e) => {
+          if (this.warn) this.warn("Failed to load workspace folders", e);
+          p.feed([]);
+        })
         .finally(() => {
           this._loadingChildren = 0;
         });
+      return this._loadingChildren;
     });
+  }
+
+  collapseTree() {
+    this._expanded = 0;
+    this.el.dataset.expanded = 0;
+    return this.ensurePart("children").then((p) => p.el.dataset.open = 0);
+  }
+
+  toggleTree() {
+    if (this._expanded) return this.collapseTree();
+    return this.expandTree();
   }
 
   /**

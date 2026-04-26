@@ -11,7 +11,7 @@ module.exports = function (ui, data = []) {
   if (!_.isArray(data)) data = [data]
   data.forEach((item, i) => {
     if (item && (item.filename || item.name)) {
-      items.push({ ...item, kind: "desk_breadcrumb_item", service: "breadcrum-jump" });
+      items.push({ ...item, kind: "desk_breadcrumb_item", service: "breadcrum-jump", isCurrent: i === data.length - 1 });
     }
   });
   return Skeletons.Box.X({
