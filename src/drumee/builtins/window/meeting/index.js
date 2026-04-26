@@ -117,6 +117,7 @@ class __window_meeting extends __room {
       case 'close-dialog':
         this.warning();
         this.__wrapperOverlay.clear();
+        this.triggerHandlers({ service: "leave-meeting" });
         this.goodbye();
         break;
 

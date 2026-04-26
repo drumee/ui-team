@@ -64,6 +64,7 @@
         }
         .window__meeting-panel {
           display: flex;
+          border-left: 1px solid var(--border-muted);
         }
       }
     }

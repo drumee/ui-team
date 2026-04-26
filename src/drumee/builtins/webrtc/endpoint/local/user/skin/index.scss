@@ -1,6 +1,6 @@
-@use 'builtins/webrtc/skin/avatar' as *;
-@use 'builtins/webrtc/skin/video' as *;
-@use 'mixins/drumee';
+@use "builtins/webrtc/skin/avatar" as *;
+@use "builtins/webrtc/skin/video" as *;
+@use "mixins/drumee";
 
 .endpoint-local {
   @include webrtc-avatar;
@@ -113,13 +113,11 @@
 
   // ── Tile footer (mic + name + maximize) ─────────────────────────────
   &__tile-footer {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
     gap: 6px;
     align-items: center;
     z-index: 10;
+    width: 100%;
+    padding: var(--spacer-4);
   }
 
   &__tile-mic {
@@ -129,7 +127,6 @@
     padding: 7px;
     background-color: var(--signal-error, #d74e49);
     border-radius: 50%;
-    flex-shrink: 0;
     color: #fff;
 
     &[data-state="1"] {
@@ -166,7 +163,6 @@
     background-color: rgba(20, 17, 35, 0.4);
     backdrop-filter: blur(4px);
     border-radius: 50%;
-    flex-shrink: 0;
     color: #fff;
   }
 

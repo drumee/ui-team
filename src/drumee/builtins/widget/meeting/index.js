@@ -33,15 +33,7 @@ class __widget_meeting extends LetcBox {
       }
 
       case "start-meeting":
-        Wm.launch({
-          kind: "window_meeting",
-          hub_id: this.mget(_a.hub_id),
-          nid: this.mget(_a.nid),
-          filename: this.mget(_a.name) || this.mget(_a.filename),
-          audio: 1,
-          video: 1,
-        }, { explicit: 1 });
-        this.goodbye();
+        this.triggerHandlers({ service: "start-meeting" });
         break;
 
       case "cancel":
