@@ -1,0 +1,493 @@
+.settings-delete-account {
+  $bg-modal: #f2f2f7;
+  $ink-900: #0b0a21;
+  $ink-600: #65656c;
+  $ink-500: #84848c;
+  $danger: #d64e49;
+  $danger-soft: rgba(226, 69, 64, 0.10);
+  $neutral-soft: rgba(0, 0, 0, 0.05);
+  $purple-deep: #433cc5;
+  $purple-base: #5950ff;
+  $hint: #b1acff;
+
+  &__ui {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    font-family: "Geist", system-ui, sans-serif;
+  }
+
+  // ── Modal card ────────────────────────────────────────────
+  &__modal {
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    background: $bg-modal;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  // ── Header ────────────────────────────────────────────────
+  &__header {
+    padding: 40px 40px 24px;
+    gap: 24px;
+  }
+
+  &__header-row {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__title-row {
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__back {
+    width: 26px;
+    height: 26px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    svg {
+      width: 18px;
+      height: 18px;
+      fill: $ink-900;
+
+      .icon-fill-blue,
+      .icon-fill-grey { fill: $ink-900; }
+    }
+  }
+
+  &__title {
+    font-size: 24px;
+    line-height: 26px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__progress {
+    align-items: center;
+    gap: 8px;
+
+    &-dot {
+      width: 32px;
+      height: 6px;
+      border-radius: 12px;
+      background: $neutral-soft;
+
+      &--active { background: $danger; }
+    }
+  }
+
+  &__header-text { gap: 8px; }
+
+  &__subtitle {
+    font-size: 20px;
+    line-height: 22px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__description {
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  // ── Step 1: Consequence rows ──────────────────────────────
+  &__rows {
+    width: 100%;
+    padding: 0 32px;
+    gap: 16px;
+  }
+
+  &__row {
+    width: 100%;
+    height: 60px;
+    padding: 12px 16px 12px 12px;
+    border-radius: 6px;
+    align-items: center;
+    gap: 12px;
+
+    &--danger { background: $danger-soft; }
+    &--info { background: $neutral-soft; }
+  }
+
+  &__row-icon {
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: var(--white, #fff);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__icon-x {
+    width: 17px;
+    height: 17px;
+
+    svg {
+      width: 17px;
+      height: 17px;
+      fill: $danger;
+
+      .icon-fill-blue,
+      .icon-fill-grey { fill: $danger; }
+    }
+  }
+
+  &__icon-minus {
+    width: 17px;
+    height: 17px;
+    line-height: 14px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 600;
+    color: $ink-500;
+  }
+
+  &__row-text {
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__row-title {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__row-subtitle {
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  // ── Step 2: Export grid ───────────────────────────────────
+  &__export-grid {
+    width: 100%;
+    padding: 0 32px;
+    gap: 16px;
+  }
+
+  &__export-row {
+    width: 100%;
+    gap: 16px;
+
+    > * { flex: 1 1 0; min-width: 0; }
+  }
+
+  &__export-item {
+    height: 60px;
+    padding: 12px 16px;
+    background: $neutral-soft;
+    border-radius: 6px;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover { background: rgba(0, 0, 0, 0.07); }
+
+    // Inner elements pass clicks through to the row container
+    > * { pointer-events: none; }
+  }
+
+  &__checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: var(--white, #fff);
+    border: 1.5px solid rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+
+    &--checked {
+      background: $purple-deep;
+      border-color: $purple-deep;
+    }
+
+    &-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 12px;
+      height: 12px;
+      padding: 0;
+      margin: 0;
+      line-height: 0;
+
+      svg {
+        display: block;
+        width: 12px;
+        height: 12px;
+        fill: var(--white, #fff);
+
+        .icon-fill-blue,
+        .icon-fill-grey { fill: var(--white, #fff); }
+      }
+    }
+  }
+
+  &__export-text {
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__export-title {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__export-size {
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__export-download-row {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  &__download {
+    height: 36px;
+    width: 220px;
+    padding: 8px 16px 8px 12px;
+    background: $purple-base;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+
+    &:hover { filter: brightness(0.95); }
+
+    > * { pointer-events: none; }
+
+    &-ico {
+      width: 20px;
+      height: 20px;
+
+      svg {
+        width: 15px;
+        height: 15px;
+        fill: var(--white, #fff);
+
+        .icon-fill-blue,
+        .icon-fill-grey { fill: var(--white, #fff); }
+      }
+    }
+
+    &-label {
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 600;
+      color: var(--white, #fff);
+    }
+  }
+
+  // ── Step 3: Confirmation body ─────────────────────────────
+  &__confirm-body {
+    width: 100%;
+    padding: 0 32px;
+    gap: 32px;
+  }
+
+  &__warning {
+    width: 100%;
+    height: 45px;
+    padding: 12px 16px 12px 12px;
+    background: $danger-soft;
+    border-radius: 6px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__warning-icon {
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: var(--white, #fff);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__warning-svg {
+    width: 18px;
+    height: 16px;
+
+    svg {
+      width: 18px;
+      height: 16px;
+      fill: $danger;
+
+      .icon-fill-blue,
+      .icon-fill-grey { fill: $danger; }
+    }
+  }
+
+  &__warning-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+    color: $danger;
+  }
+
+  &__password-block {
+    width: 100%;
+    gap: 16px;
+  }
+
+  &__password-label {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__password-input {
+    width: 100%;
+    height: 45px;
+    padding: 12px;
+    background: $neutral-soft;
+    border-radius: 6px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__password-entry {
+    flex: 1;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 14px;
+      line-height: 20px;
+      color: $ink-900;
+
+      &::placeholder { color: $ink-600; }
+    }
+  }
+
+  &__password-toggle {
+    width: 21px;
+    height: 21px;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    svg {
+      width: 20px;
+      height: 13px;
+      fill: $ink-600;
+
+      .icon-fill-blue,
+      .icon-fill-grey { fill: $ink-600; }
+    }
+  }
+
+  // ── Footer buttons ────────────────────────────────────────
+  &__footer {
+    width: 100%;
+    padding: 32px;
+    gap: 8px;
+
+    &--triple {
+      .settings-delete-account__btn--continue { flex: 1; }
+    }
+  }
+
+  &__btn {
+    height: 48px;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    gap: 8px;
+    transition: filter 0.15s ease;
+
+    &:hover { filter: brightness(0.95); }
+
+    > * { pointer-events: none; }
+
+    &--cancel {
+      width: 137px;
+      flex-shrink: 0;
+      padding: 0 16px;
+      background: $danger;
+
+      .settings-delete-account__btn-label { color: var(--white, #fff); }
+    }
+
+    &--continue {
+      flex: 1;
+      padding: 0 24px;
+      background: $neutral-soft;
+
+      .settings-delete-account__btn-label,
+      .settings-delete-account__btn-arrow { color: $ink-900; }
+    }
+  }
+
+  &__btn-label {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+
+  &__btn-arrow {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+
+  // ── Step hint ─────────────────────────────────────────────
+  &__step-hint {
+    align-items: center;
+    gap: 12px;
+
+    &-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: $hint;
+      flex-shrink: 0;
+    }
+
+    &-label {
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 600;
+      color: $ink-600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+  }
+}

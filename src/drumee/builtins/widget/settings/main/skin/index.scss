@@ -1,0 +1,498 @@
+.settings-main {
+  // Color tokens used throughout
+  $purple-deep: #433cc5;     // Save Profile button + Edit-avatar pencil bg
+  $purple-base: #5950ff;     // Ghost-button tint base
+  $purple-text: #847dff;     // Ghost-button text
+  $ink-900:     #0b0a21;     // Primary text
+  $ink-600:     #65656c;     // Subtle text / field labels
+  $ink-400:     #aeaeb2;     // Tertiary text
+  $ink-500:     #84848c;     // EDIT AVATAR label
+  $card-bg:     rgba(0, 0, 0, 0.05);
+  $row-bg:      #ffffff;
+  $danger-fg:   #d64e49;     // Delete button + warning glyph
+  $danger-bg:   #f6504a;     // Used at low opacity for warning chip & delete row
+
+  &__ui {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--spacer-6);
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacer-6);
+    font-family: "Geist", system-ui, sans-serif;
+  }
+
+  // ── Header row ────────────────────────────────────────────
+  &__header {
+    &-row {
+      width: 100%;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--spacer-6);
+    }
+
+    &-text {
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    &-title {
+      font-size: 32px;
+      line-height: 35.2px;
+      font-weight: 600;
+      color: $ink-900;
+    }
+
+    &-subtitle {
+      font-size: 14px;
+      line-height: 19.6px;
+      font-weight: 400;
+      color: $ink-600;
+    }
+
+    &-save {
+      &-main {
+        height: 48px;
+        padding: 0 var(--spacer-6);
+        background: $purple-deep;
+        border-radius: 4px;
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+        min-width: 140px;
+        flex-shrink: 0;
+
+        &:hover { background: var(--primary-purple-60); }
+
+        .btn {
+          color: var(--white);
+          font-size: 16px;
+          line-height: 24px;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
+  // ── Row layout (two flex rows, asymmetric) ────────────────
+  &__row {
+    width: 100%;
+    gap: var(--spacer-6);
+    align-items: stretch;
+  }
+
+  &__row-1 {
+    .settings-main__profile-card     { flex: 698 1 0; min-width: 0; }
+    .settings-main__preferences-card { flex: 450 1 0; min-width: 0; }
+  }
+
+  &__row-2 {
+    .settings-main__credentials-card { flex: 375 1 0; min-width: 0; }
+    .settings-main__danger-card      { flex: 773 1 0; min-width: 0; }
+  }
+
+  // ── Card shell ────────────────────────────────────────────
+  &__card {
+    background: $card-bg;
+    border-radius: 8px;
+    padding: var(--spacer-6);
+    gap: var(--spacer-6);
+
+    &-heading { gap: 8px; }
+
+    &-title {
+      font-size: 18px;
+      line-height: 24px;
+      font-weight: 600;
+      color: $ink-900;
+    }
+
+    &-subtitle {
+      font-size: 12px;
+      line-height: 16.8px;
+      font-weight: 400;
+      color: $ink-400;
+    }
+  }
+
+  // ── General Profile card ──────────────────────────────────
+  &__profile {
+    &-body {
+      width: 100%;
+      gap: 40px;
+      align-items: flex-start;
+    }
+
+    &-avatar-block {
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      width: 128px;
+    }
+
+    &-avatar-frame {
+      position: relative;
+      width: 128px;
+      height: 128px;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--neutral-100);
+    }
+
+    &-avatar {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+    }
+
+    &-avatar-edit {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      background: $purple-deep;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+
+      svg { width: 14px; height: 14px; fill: var(--white); }
+    }
+
+    &-avatar-label {
+      font-size: 10px;
+      line-height: 14px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: $ink-500;
+      text-transform: uppercase;
+    }
+
+    &-avatar-input {
+      position: absolute;
+      width: 0; height: 0;
+      visibility: hidden;
+    }
+
+    &-fields {
+      flex: 1;
+      gap: var(--spacer-6);
+      min-width: 0;
+    }
+
+    &-fields-row {
+      width: 100%;
+      gap: var(--spacer-5);
+
+      > * { flex: 1 1 0; min-width: 0; }
+    }
+
+    &-bio {
+      width: 100%;
+      gap: var(--spacer-5);
+
+      &-label {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 700;
+        color: $ink-600;
+      }
+
+      &-input {
+        width: 100%;
+        background: $row-bg;
+        border-radius: 8px;
+        padding: var(--spacer-4) var(--spacer-5);
+        font-size: 14px;
+        line-height: 20px;
+        color: $ink-900;
+
+        textarea {
+          width: 100%;
+          min-height: 60px;
+          border: none;
+          outline: none;
+          resize: vertical;
+          font: inherit;
+          color: inherit;
+          background: transparent;
+        }
+      }
+    }
+  }
+
+  // Field helpers (shared with other cards)
+  &__entry {
+    &-main { gap: 4px; flex: 1; min-width: 0; }
+
+    &-label {
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 700;
+      color: $ink-600;
+    }
+
+    &-input {
+      width: 100%;
+      background: $row-bg;
+      border-radius: 8px;
+      height: 44px;
+      padding: 0 var(--spacer-5);
+
+      input {
+        width: 100%;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 14px;
+        line-height: 20px;
+        color: $ink-900;
+      }
+    }
+  }
+
+  // ── Preferences card ──────────────────────────────────────
+  &__preferences {
+    &-list {
+      width: 100%;
+      gap: var(--spacer-5);
+    }
+  }
+
+  // ── Account Credentials card ──────────────────────────────
+  &__credentials {
+    &-list {
+      width: 100%;
+      gap: var(--spacer-5);
+    }
+  }
+
+  // ── Danger zone card ──────────────────────────────────────
+  &__danger {
+    &-header {
+      align-items: center;
+      gap: var(--spacer-4);
+    }
+
+    &-warning {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: rgba(246, 81, 75, 0.15);
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      &-ico {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        svg {
+          width: 16px;
+          height: 14px;
+          fill: $danger-fg;
+
+          .icon-fill-blue,
+          .icon-fill-grey { fill: $danger-fg; }
+        }
+      }
+    }
+
+    &-list {
+      width: 100%;
+      gap: var(--spacer-5);
+    }
+
+    &-row {
+      // Standard row: white background; padding overridden via &__inner below.
+    }
+
+    &-row-delete {
+      background: rgba(246, 80, 74, 0.10);
+
+      .settings-main__inner-title { color: $ink-900; }
+    }
+  }
+
+  // ── Inner row (shared) ────────────────────────────────────
+  &__inner {
+    width: 100%;
+    padding: var(--spacer-5);
+    border-radius: 8px;
+    background: $row-bg;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacer-5);
+
+    &-left {
+      align-items: center;
+      gap: var(--spacer-5);
+      flex: 1;
+      min-width: 0;
+    }
+
+    &-ico {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      background: rgba(89, 80, 255, 0.10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      svg {
+        width: 18px;
+        height: 18px;
+        fill: $purple-base;
+      }
+    }
+
+    &-text {
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    &-title {
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 600;
+      color: $ink-900;
+    }
+
+    &-description {
+      font-size: 10px;
+      line-height: 14px;
+      font-weight: 400;
+      color: $ink-600;
+    }
+  }
+
+  // Toggle items use slightly tighter horizontal padding (16px ↔ Figma 24/16).
+  &__preferences-list .settings-main__inner {
+    padding: var(--spacer-5) var(--spacer-6);
+  }
+
+  // ── Toggle switch ─────────────────────────────────────────
+  &__toggle {
+    width: 40px;
+    height: 20px;
+    border-radius: 12px;
+    background: $ink-400;
+    padding: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+    align-items: center;
+    justify-content: flex-start;
+
+    &-knob {
+      width: 16px;
+      height: 16px;
+      border-radius: 12px;
+      background: var(--white);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+      transition: transform 0.2s ease;
+    }
+
+    &[data-state="1"] {
+      background: $purple-deep;
+
+      .settings-main__toggle-knob { transform: translateX(20px); }
+    }
+  }
+
+  // ── Ghost (light-purple) buttons used inside cards ────────
+  &__preferences-manage-main,
+  &__credentials-action-main,
+  &__danger-export-btn-main {
+    height: 32px;
+    padding: 0 var(--spacer-5);
+    border-radius: 4px;
+    background: rgba(89, 80, 255, 0.10);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+
+    .btn {
+      color: $purple-text;
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 600;
+    }
+
+    .icon svg { fill: $purple-text; width: 14px; height: 14px; }
+
+    &:hover { background: rgba(89, 80, 255, 0.18); }
+  }
+
+  &__danger-export-btn-main { gap: 8px; padding: 0 var(--spacer-5) 0 var(--spacer-4); }
+
+  // ── Filled red Delete button ──────────────────────────────
+  &__danger-delete-btn-main {
+    height: 32px;
+    padding: 0 var(--spacer-5);
+    border-radius: 4px;
+    background: $danger-fg;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    .btn {
+      color: var(--white);
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 600;
+    }
+
+    &:hover { background: #c33d38; }
+  }
+
+  // ── Overlay slot for sub-modals ───────────────────────────
+  // position: fixed so the backdrop blur covers the full viewport
+  // (top bar, side panels, chat panel) rather than only the settings slot.
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+
+    &[data-state="open"] {
+      pointer-events: auto;
+      background: rgba(11, 10, 33, 0.40);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+  }
+
+  // Mobile / narrow viewport: stack rows.
+  @media (max-width: 960px) {
+    &__ui { padding: var(--spacer-5); }
+
+    &__row { flex-direction: column; }
+    &__row-1, &__row-2 {
+      .settings-main__profile-card,
+      .settings-main__preferences-card,
+      .settings-main__credentials-card,
+      .settings-main__danger-card { flex: 1 1 auto; }
+    }
+
+    &__profile-body { flex-direction: column; align-items: stretch; }
+    &__profile-fields-row { flex-direction: column; }
+  }
+}

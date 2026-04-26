@@ -50,6 +50,10 @@ const _desk_main = function (ui) {
                     kind: "window_manager",
                     sys_pn: "desk-content",
                   },
+                  Skeletons.Box.Y({
+                    sys_pn: "settings-main-slot",
+                    className: `${ui.fig.family}__settings-main-slot`,
+                  }),
                 ],
               }),
             ],
