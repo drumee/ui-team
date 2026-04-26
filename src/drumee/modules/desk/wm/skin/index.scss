@@ -31,7 +31,9 @@
     flex-direction: row;
     justify-content: flex-start;
     align-items: flex-start;
-    max-height: calc(100vh - 215px);
+    height: 100%;
+    max-height: none;
+    min-height: 0;
     overflow-y: auto;
     width: 100%;
 
@@ -84,7 +86,14 @@
 
   &__icons-scroll {
     margin: 0;
+    min-height: 0;
     padding-top: 10px;
+
+    &.smart-container {
+      height: 100%;
+      min-height: 0;
+      overflow-y: auto;
+    }
 
     &[data-type="trial"]::after {
       @include drumee.typo(
@@ -661,25 +670,11 @@
   }
 }
 
-// ── Folder: 2 rows, fill width, horizontal scroll when overflow ──
+// ── Folder: responsive grid, wraps vertically above files ──
 .folder-section {
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, 140px);
-  grid-auto-columns: 120px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-
-  &::-webkit-scrollbar {
-    height: 4px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background-color: var(--normal-bg-100);
-    border-radius: 4px;
-  }
+  grid-template-columns: repeat(auto-fill, 120px);
+  grid-auto-rows: 140px;
+  overflow: visible;
 }
 
 // ── File: responsive grid, normal vertical scroll ──
@@ -697,8 +692,8 @@
     padding: 16px 24px 8px;
   }
   .folder-section {
-    grid-template-rows: repeat(2, 110px);
-    grid-auto-columns: 90px;
+    grid-template-columns: repeat(auto-fill, 90px);
+    grid-auto-rows: 130px;
 
     .media-grid__container {
       transform: scale(0.75);
@@ -723,8 +718,8 @@
     padding: 12px 16px 8px;
   }
   .folder-section {
-    grid-template-rows: repeat(2, 95px);
-    grid-auto-columns: 80px;
+    grid-template-columns: repeat(auto-fill, 80px);
+    grid-auto-rows: 110px;
 
     .media-grid__container {
       transform: scale(0.65);
@@ -749,8 +744,8 @@
     padding: 8px 12px 8px;
   }
   .folder-section {
-    grid-template-rows: repeat(2, 80px);
-    grid-auto-columns: 70px;
+    grid-template-columns: repeat(auto-fill, 70px);
+    grid-auto-rows: 90px;
 
     .media-grid__container {
       transform: scale(0.55);

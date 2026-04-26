@@ -399,18 +399,6 @@ class __window_mfs extends DrumeeMFS {
     scrollEl.style.visibility = 'visible';
     scrollEl.dataset.partitioning = 0;
 
-    const folderCount = folderWrap.children.length;
-    if (folderCount > 0) {
-      const style = getComputedStyle(folderWrap);
-      const colSize = parseInt(style.gridAutoColumns) || 120;
-      const gap = parseInt(style.gap) || 24;
-      const availW = folderWrap.clientWidth;
-      const cols = Math.max(1, Math.floor((availW + gap) / (colSize + gap)));
-      const rowH = style.gridTemplateRows.split(' ')[0];
-      folderWrap.style.gridTemplateRows =
-        folderCount <= cols ? rowH : `${rowH} ${rowH}`;
-    }
-
     listPart.el.style.visibility = 'visible';
     return true;
   }
