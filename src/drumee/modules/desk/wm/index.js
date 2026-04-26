@@ -131,8 +131,11 @@ class __window_manager extends push {
     // topbar's "+ Add new" check only needs hub_id to flip to folder
     // creation mode — nid can fill in asynchronously.
     this._curWorkspace = { hub_id, nid };
+    this._wsGeneration = (this._wsGeneration || 0) + 1;
+    const gen = this._wsGeneration;
 
     const apply = (resolvedNid) => {
+      if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: resolvedNid };
       this.ensurePart(_a.list).then((l) => {
         l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid: resolvedNid });
