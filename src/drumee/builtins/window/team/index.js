@@ -125,39 +125,51 @@ class __window_team extends __hub {
   }
 
   async toggleCallPanel() {
-    const chatPanel = await this.ensurePart("chat-panel");
+    if (this._callPanelOpening) return;
+
+    const meetingPanel = await this.ensurePart("meeting-panel");
+    const splitBody = await this.ensurePart("split-body");
 
     if (this._callPanel) {
-      this._callPanel.goodbye();
+      const panel = this._callPanel;
       this._callPanel = null;
+      splitBody.el.removeAttribute("data-call-panel");
+      panel.goodbye();
       return;
     }
 
-    chatPanel.feed({
+    this._callPanelOpening = true;
+    this._splitBody = splitBody;
+    splitBody.el.setAttribute("data-call-panel", "open");
+    meetingPanel.feed({
       kind: "widget_meeting",
       hub_id: this.mget(_a.hub_id),
       nid: this.mget(_a.nid),
       name: this.mget(_a.filename) || this.mget(_a.name),
       area: this.mget(_a.area),
       uiHandler: [this],
+      sys_pn: "active-meeting",
+      partHandler: this,
     });
-    this._callPanel = chatPanel.children.last();
-    this._callPanel.once(_e.destroy, () => {
-      this._callPanel = null;
-      chatPanel.feed({
-        kind: "widget_chat",
-        className: `${this.fig.group}__chat-widget`,
-        type: this.mget(_a.area),
-        area: this.mget(_a.area),
-        view: "quickChat",
-        hub_id: this.mget(_a.hub_id),
-        nid: this.mget(_a.nid),
-        placeholder: LOCALE.TYPE_MESSAGE + "...",
-        no_emoji: true,
-        send_icon: "raw-send-chat",
-        sys_pn: "folder-chat",
-      });
-    });
+  }
+
+  onPartReady(child, pn) {
+    switch (pn) {
+      case "active-meeting":
+        this._callPanelOpening = false;
+        this._callPanel = child;
+        child.once(_e.destroy, () => {
+          if (this._callPanel === child) {
+            this._callPanel = null;
+            if (this._splitBody) {
+              this._splitBody.el.removeAttribute("data-call-panel");
+            }
+          }
+        });
+        break;
+      default:
+        super.onPartReady(child, pn);
+    }
   }
 
 

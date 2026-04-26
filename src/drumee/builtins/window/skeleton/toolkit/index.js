@@ -238,6 +238,13 @@ export function filesContainer(ui) {
  * @param {*} ui
  * @returns
  */
+export function meetingPanel(ui) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__meeting-panel ${ui.fig.group}__meeting-panel`,
+    sys_pn: "meeting-panel",
+  });
+}
+
 export function splitBody(ui) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
@@ -246,7 +253,7 @@ export function splitBody(ui) {
     // `[data-active-tab=…]` selectors. The framework writes
     // `data-${key}` literally (no camel→kebab conversion).
     dataset: { "active-tab": "files" },
-    kids: [filesContainer(ui), chatPanel(ui), tasksContainer(ui)],
+    kids: [filesContainer(ui), chatPanel(ui), meetingPanel(ui), tasksContainer(ui)],
   });
 }
 

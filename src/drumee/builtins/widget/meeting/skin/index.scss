@@ -7,6 +7,7 @@
     width: 100%;
     overflow: hidden;
     background-color: var(--normal-bg-90);
+    border-left: 1px solid var(--border-muted);
   }
 
   &__container {
@@ -99,7 +100,6 @@
 
   &__start-btn {
     display: flex;
-    flex: 1;
     background-color: var(--primary-50);
     border-radius: 4px;
     justify-content: center;

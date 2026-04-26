@@ -33,7 +33,7 @@ module.exports = function (_ui_) {
         evArgs: Skeletons.Note(LOCALE.NO_MEMBER || "No members", "no-content"),
       }),
 
-      Skeletons.Box.Y({
+      Skeletons.Box.X({
         className: `${pfx}__footer`,
         kids: [
           Skeletons.Button.Label({

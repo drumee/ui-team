@@ -50,8 +50,21 @@
       .window__chat-panel {
         display: flex;
       }
+      .window__meeting-panel {
+        display: none;
+      }
       .window__tasks-panel {
         display: none;
+      }
+
+      &[data-call-panel="open"] {
+        grid-template-columns: 1fr 1fr;
+        .window__chat-panel {
+          display: none;
+        }
+        .window__meeting-panel {
+          display: flex;
+        }
       }
     }
 
