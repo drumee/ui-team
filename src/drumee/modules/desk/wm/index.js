@@ -166,38 +166,99 @@ class __window_manager extends push {
   }
 
   /**
-   *
+   * Switch the main grid to show the contents of `workspace` (a hub).
+   * Accepts any of actual_home_id / home_id / nid / id as the root
+   * directory id; falls back to hub.get_attributes when none is set.
    */
   loadWorkspace(workspace) {
-    return this.loadWorkspaceNode(workspace);
+    const data = workspace.model ? workspace.model.toJSON() : (workspace || {});
+    const hub_id = data.hub_id || data.id;
+    let nid = data.actual_home_id || data.home_id || data.nid;
+
+    if (!hub_id) {
+      this.warn("loadWorkspace: missing hub_id", data);
+      return;
+    }
+
+    if (this._curWorkspace
+      && this._curWorkspace.hub_id == hub_id
+      && this._curWorkspace.nid == nid) {
+      return;
+    }
+
+    // Set the context synchronously with whatever we have. The sidebar's
+    // desk.home payload only carries hub_id (no actual_home_id), so the
+    // nid often arrives later via the get_attributes fetch below.
+    this._curWorkspace = { hub_id, nid, area: data.area };
+    this.mset({ hub_id, nid, nodeId: nid, area: data.area });
+
+    const apply = (resolvedNid) => {
+      this._curWorkspace = { hub_id, nid: resolvedNid, area: data.area };
+      this.ensurePart(_a.list).then((l) => {
+        l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid: resolvedNid });
+        if (l.collection) l.collection.reset();
+        // Hide the list while partitioning, then restart and let the
+        // partition prep logic (added in v2) drive the visibility flip
+        // on EOD.
+        l.el.style.visibility = 'hidden';
+        const scrollEl = l.el.querySelector('.smart-container');
+        if (scrollEl) {
+          scrollEl.dataset.partitioning = 1;
+          scrollEl.style.visibility = 'hidden';
+        }
+        l.restart();
+        this._prepareListPartition(l);
+      });
+      this.ensurePart("wrapper-modal").then((p) => p.clear());
+      this.windowsLayer.clear();
+      this.updateBreadcrumb({ ...data, hub_id, nid: resolvedNid, service: "change-workspace" });
+    };
+
+    if (nid) {
+      apply(nid);
+      return;
+    }
+
+    // Fall back to fetching the hub's attributes to get its root nid.
+    this.fetchService(SERVICE.hub.get_attributes, { hub_id }).then((attrs) => {
+      const resolved = attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
+      if (!resolved) {
+        this.warn("loadWorkspace: cannot resolve workspace root", { hub_id, attrs });
+        return;
+      }
+      try { workspace.model && workspace.model.set(attrs); } catch (e) { }
+      apply(resolved);
+    }).catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
   }
 
+  /**
+   * Navigate into a child node (folder/file) within a workspace.
+   * Used by `load-folder` UI events from the sidebar subtree.
+   */
   loadWorkspaceNode(node) {
-    let data = node.model.toJSON()
-    const hub_id = data.hub_id;
+    const data = node.model ? node.model.toJSON() : (node || {});
+    const hub_id = data.hub_id || data.id;
     const isWorkspace = data.nodeRole === "workspace";
-    const nid = isWorkspace ?
-      data.actual_home_id || data.home_id || data.nid :
-      data.nid || data.actual_home_id || data.home_id;
-    // if (this._curWorkspace?.hub_id == hub_id) return;
+    const nid = isWorkspace
+      ? data.actual_home_id || data.home_id || data.nid
+      : data.nid || data.actual_home_id || data.home_id;
     this._curWorkspace = { hub_id, nid, area: data.area };
     this.mset({ hub_id, nid, nodeId: nid, area: data.area });
     this.ensurePart(_a.list).then((l) => {
-      l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid })
+      l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
+      if (l.collection) l.collection.reset();
       l.el.style.visibility = 'hidden';
       const scrollEl = l.el.querySelector('.smart-container');
       if (scrollEl) {
         scrollEl.dataset.partitioning = 1;
         scrollEl.style.visibility = 'hidden';
       }
-      l.restart()
+      l.restart();
       this._prepareListPartition(l);
-    })
-    this.ensurePart("wrapper-modal").then((p) => {
-      p.clear()
-    })
-    this.windowsLayer.clear()
-    this.updateBreadcrumb({ ...data, service: "change-workspace" })
+    });
+    this.ensurePart("wrapper-modal").then((p) => p.clear());
+    this.windowsLayer.clear();
+    this.updateBreadcrumb({ ...data, service: "change-workspace" });
   }
 
   getCurrentNid() {
@@ -671,6 +732,8 @@ class __window_manager extends push {
    */
   reload() {
     this._cleanupPartition();
+    // Clear the per-workspace context so the topbar's + Add new button
+    // reverts to the workspace creation flow on the home view.
     this._curWorkspace = null;
     this.mset({ hub_id: Visitor.id, nid: Visitor.get(_a.home_id), nodeId: Visitor.get(_a.home_id), area: _a.personal });
     this.feed(require("./skeleton")(this));
@@ -1057,7 +1120,16 @@ class __window_manager extends push {
         return this.launch(args, { explicit: 1, singleton: 1 });
 
       case "new-workspace":
-        return this.__wrapperModal.append({kind:'media_form'})
+        // Topbar + Add new is contextual: home → workspace form,
+        // inside a workspace → folder form scoped to that workspace.
+        if (this._curWorkspace && this._curWorkspace.hub_id) {
+          return this.__wrapperModal.feed({
+            kind: 'folder_form',
+            hub_id: this._curWorkspace.hub_id,
+            nid: this._curWorkspace.nid,
+          });
+        }
+        return this.__wrapperModal.append({ kind: 'media_form' });
 
         case "new-sub-folder":
         return this.addFolder({ position: 0, area: _a.personal, filename: LOCALE.NEW_FOLDER })

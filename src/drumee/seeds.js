@@ -167,6 +167,12 @@ module.exports = {
   media_form: function () {
     return import("./builtins/media/form");
   },
+  folder_form: function () {
+    return import("./builtins/media/folder-form");
+  },
+  tasks_panel: function () {
+    return import("./builtins/window/tasks");
+  },
   media_grid: function () {
     return import("./builtins/media/grid");
   },
@@ -271,6 +277,15 @@ module.exports = {
   },
   settings_billing: function () {
     return import("widget/settings/account/billing");
+  },
+  settings_main: function () {
+    return import("widget/settings/main");
+  },
+  settings_delete_account: function () {
+    return import("widget/settings/delete-account");
+  },
+  apps_main: function () {
+    return import("widget/apps/main");
   },
   settings_filename: function () {
     return import("widget/settings/filename");

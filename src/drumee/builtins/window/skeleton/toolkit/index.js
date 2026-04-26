@@ -23,6 +23,8 @@ export function breadcrumbs(ui, opt) {
  */
 export function tabBar(ui) {
   const cnRoot = "window-body__tab-bar";
+  // Per-instance radio channel so multiple folder windows don't share state.
+  const radio = `tab-bar-${ui.cid}`;
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     kids: [
@@ -31,27 +33,28 @@ export function tabBar(ui) {
         label: LOCALE.FILES,
         ico: "desktop_docfile",
         service: "tab-files",
-        state: 1,
-        dataset: { tab: "files" },
         uiHandler: [ui],
+        radio,
+        initialState: 1,
+        dataset: { tab: "files" },
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
         label: LOCALE.CHAT,
         ico: "tchat",
         service: "tab-chat",
-        state: 0,
-        dataset: { tab: _a.chat },
         uiHandler: [ui],
+        radio,
+        dataset: { tab: "chat" },
       }),
       Skeletons.Button.Label({
         className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
         label: LOCALE.TASK,
         ico: "list",
         service: "tab-task",
-        state: 0,
-        dataset: { tab: _a.task },
         uiHandler: [ui],
+        radio,
+        dataset: { tab: "task" },
       }),
     ],
   });
@@ -263,10 +266,32 @@ export function folderChatView(ui) {
 export function splitBody(ui) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
-    sys_pn: "folder-view",
+    sys_pn: "split-body",
     partHandler: ui,
-    dataset: { view: "files" },
-    kids: folderFilesView(ui),
+    // Literal kebab key so the rendered attribute matches the CSS
+    // `[data-active-tab=…]` selectors. The framework writes
+    // `data-${key}` literally (no camel→kebab conversion).
+    dataset: { "active-tab": "files" },
+    kids: [filesContainer(ui), chatPanel(ui), tasksContainer(ui)],
+  });
+}
+
+/**
+ * Tasks tab — Kanban board (To Do / In Progress / To review / Complete).
+ * UI-only for now; widget keeps state in localStorage.
+ */
+export function tasksContainer(ui) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__tasks-panel ${ui.fig.group}__tasks-panel`,
+    sys_pn: "tasks-panel",
+    kids: [
+      {
+        kind: "tasks_panel",
+        hub_id: ui.mget(_a.hub_id),
+        nid: ui.mget(_a.nid),
+        sys_pn: "tasks-board",
+      },
+    ],
   });
 }
 

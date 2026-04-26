@@ -770,23 +770,44 @@ class __window_core extends __utils {
    */
 
   newDocument(cmd) {
-    let aw = Wm.getActiveWindow();
-    let { nid, hub_id } = aw.getCurrentApi();
-    this.postService(SERVICE.onlyoffice.new_doc, {
-      nid,
-      hub_id,
-      name: cmd.mget(_a.name),
-    }).then((data) => {
-      let timer = setInterval(() => {
-        for (let media of aw.getItemsByAttr(_a.nid, data.nid)) {
-          if (/^media/.test(media.mget(_a.kind))) {
-            clearInterval(timer);
-            media.wait(1);
-            this.openContent(media, { service: "open-node", mode: _a.edit });
+    // Resolve the editor namespace dynamically from `doc_editor`
+    // sysconf (the viewer at player/document/index.js does the same).
+    // Hard-coding SERVICE.onlyoffice fails on endpoints where the
+    // plugin uses a different name or isn't loaded.
+    const editor = Platform && Platform.get && Platform.get("doc_editor");
+    const ns = editor && SERVICE && SERVICE[editor];
+    const service = ns && (ns.new_doc || ns.create || ns.create_doc);
+
+    if (!service) {
+      Wm.alert(
+        LOCALE.FEATURE_NOT_AVAILABLE
+        || "Document editor is not configured on this endpoint."
+      );
+      return;
+    }
+
+    const aw = Wm.getActiveWindow() || this;
+    const { nid, hub_id } = aw.getCurrentApi();
+    const name = cmd && cmd.mget && cmd.mget(_a.name);
+
+    this.postService(service, { nid, hub_id, name })
+      .then((data) => {
+        if (!data || !data.nid) return;
+        const timer = setInterval(() => {
+          for (let media of aw.getItemsByAttr(_a.nid, data.nid)) {
+            if (/^media/.test(media.mget(_a.kind))) {
+              clearInterval(timer);
+              media.wait(1);
+              this.openContent(media, { service: "open-node", mode: _a.edit });
+            }
           }
-        }
-      }, 500);
-    });
+        }, 500);
+        setTimeout(() => clearInterval(timer), 30000);
+      })
+      .catch((e) => {
+        this.warn("newDocument: server error", e);
+        if (this.onServerError) this.onServerError(e);
+      });
   }
 
   /**
@@ -907,13 +928,6 @@ class __window_core extends __utils {
 
       case _e.upload:
         return Wm.handleUpload();
-
-      case "add-folder":
-        if (this.openCreateFolderDialog) {
-          return this.openCreateFolderDialog();
-        }
-        return Wm.addFolder({ position: 0, area: this.mget(_a.area), filename: LOCALE.NEW_FOLDER });
-
       case "show-hidden-files":
         localStorage.setItem("showHidden", "yes");
         this.iconsList.model.unset("skip");
@@ -941,6 +955,33 @@ class __window_core extends __utils {
           l.restart();
         });
         return;
+
+      // "+ Add new" dropdown in window topbars (folder / team / sharebox).
+      // Routes via Wm.launch({ explicit: 1 }) so Kind.waitFor resolves
+      // the lazy-loaded bundle before mounting.
+      case "add-folder":
+        Kind.waitFor("folder_form").then(() => {
+          if (Wm && Wm.__wrapperModal) {
+            Wm.__wrapperModal.feed({
+              kind: "folder_form",
+              hub_id: this.mget(_a.hub_id),
+              nid: this.getCurrentNid(),
+            });
+          }
+        });
+        return;
+
+      case "add-note":
+        // No opt.media — that branch in editor_markdown.onDomRefresh is
+        // for opening an existing file. New-note path uses getCurrentMedia()
+        // which reads from `this.target = Wm.getActiveWindow()`.
+        return Wm.launch(
+          { kind: "editor_markdown", uiHandler: [this] },
+          { explicit: 1 }
+        );
+
+      case "new-document":
+        return this.newDocument(cmd);
 
       default:
         if (lastClick.shiftKey || lastClick.altKey || lastClick.ctrlKey) {
@@ -996,9 +1037,11 @@ class __window_core extends __utils {
    * @returns
    */
   getCurrentApi(type) {
+    console.log("AAA:9992", this);
     let api;
     const { nid, hub_id } = this.actualNode();
     const f = type;
+    console.log("AAA:9993", f);
     switch (f) {
       case "all":
       case "docs":

@@ -232,6 +232,7 @@ class __window_mfs extends DrumeeMFS {
       child.el.dataset.wait = 0;
       child.$el.removeClass('drumee-sprinner');
       this._partitionFoldersAndFiles(child);
+      this._applyFolderScrollMode(child);
       this.syncContent(EOD);
       this._dataReady = true;
       this.trigger(EOD);
@@ -262,7 +263,7 @@ class __window_mfs extends DrumeeMFS {
     }
   }
 
-  _schedulePartitionCleanup() {
+  _schedulePartitionCleanup(listPart) {
     if (this._partitionSettleTimer) {
       clearTimeout(this._partitionSettleTimer);
     }
@@ -270,6 +271,27 @@ class __window_mfs extends DrumeeMFS {
       this._partitionSettleTimer = null;
       this._cleanupPartition();
     }, 500);
+  }
+
+  _applyFolderScrollMode(listPart) {
+    const scrollEl = listPart?.el?.querySelector('.smart-container');
+    const folderWrap = scrollEl?.querySelector('.folder-section');
+    if (!folderWrap || !folderWrap.children.length) return;
+    folderWrap.style.gridTemplateColumns = '';
+    folderWrap.style.gridTemplateRows = '';
+    const count = folderWrap.children.length;
+    const fs = getComputedStyle(folderWrap);
+    const gap = parseInt(fs.gap) || 24;
+    const padLR = parseInt(fs.paddingLeft || 0) + parseInt(fs.paddingRight || 0);
+    const cellW = parseInt(fs.gridTemplateColumns?.split(' ')[0]) || 120;
+    const rowH = fs.gridAutoRows || '140px';
+    const availW = scrollEl.clientWidth - padLR;
+    const maxCols = Math.max(1, Math.floor((availW + gap) / (cellW + gap)));
+    if (count > maxCols * 2) {
+      const cols = Math.ceil(count / 2);
+      folderWrap.style.gridTemplateColumns = `repeat(${cols}, ${cellW}px)`;
+      folderWrap.style.gridTemplateRows = `repeat(2, ${rowH})`;
+    }
   }
 
   _prepareListPartition(listPart) {
@@ -287,10 +309,12 @@ class __window_mfs extends DrumeeMFS {
       if (flw) flw.remove();
     }
     this._setupPartitionObserver(listPart);
+    this._partitionFoldersAndFiles(listPart);
     listPart.once(EOD, () => {
       listPart.el.dataset.wait = 0;
       listPart.$el.removeClass('drumee-sprinner');
       this._partitionFoldersAndFiles(listPart);
+      this._applyFolderScrollMode(listPart);
       this.syncContent(EOD);
       this._dataReady = true;
       this.trigger(EOD);
@@ -319,7 +343,10 @@ class __window_mfs extends DrumeeMFS {
         if (this._partitionObserver) {
           this._partitionObserver.observe(listPart.el, { attributes: true, attributeFilter: ["data-filetype"], childList: true, subtree: true });
         }
-      }, 16);
+        if (done) {
+          this._schedulePartitionCleanup(listPart);
+        }
+      }, 100);
     });
     this._partitionObserver.observe(listPart.el, { attributes: true, attributeFilter: ["data-filetype"], childList: true, subtree: true });
   }
@@ -334,7 +361,10 @@ class __window_mfs extends DrumeeMFS {
       this._partitionRetryTimer = null;
     }
     const done = this._doPartition(listPart);
-    if (done) return;
+    if (done) {
+      this._schedulePartitionCleanup(listPart);
+      return;
+    }
     this._setupPartitionObserver(listPart);
     const maxAttempts = listPart.collection?.length ? 50 : 30;
     if (attempt < maxAttempts) {
@@ -403,6 +433,7 @@ class __window_mfs extends DrumeeMFS {
     scrollEl.style.visibility = 'visible';
     scrollEl.dataset.partitioning = 0;
 
+    this._applyFolderScrollMode(listPart);
     listPart.el.style.visibility = 'visible';
     return true;
   }

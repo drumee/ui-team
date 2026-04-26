@@ -1,0 +1,135 @@
+@use "mixins/drumee";
+
+.folder-form {
+  &__ui {
+    width: 360px;
+    border-radius: var(--corner-radius-4);
+    background-color: var(--normal-bg-90);
+    box-shadow: 0px 1px 11px 0px rgba(0, 0, 0, 0.13);
+    overflow: hidden;
+  }
+
+  &__main {
+    width: 100%;
+    gap: 20px;
+    padding: 24px;
+  }
+
+  &__header {
+    align-items: flex-start;
+    justify-content: space-between;
+    width: 100%;
+    padding-bottom: 25px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  &__header-text {
+    gap: 4px;
+    flex: 1;
+  }
+
+  &__title {
+    @include drumee.typo(
+      $size: 18px,
+      $weight: 600,
+      $line: 24px,
+      $color: var(--normal-fg-10)
+    );
+  }
+
+  &__subtitle {
+    @include drumee.typo(
+      $color: var(--neutral-500),
+      $size: 12px,
+      $weight: 400,
+      $line: 17px
+    );
+  }
+
+  &__close {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    flex-shrink: 0;
+    margin-left: 8px;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+
+    &:hover {
+      color: var(--normal-fg-20);
+    }
+  }
+
+  &__field-group {
+    width: 100%;
+    gap: 10px;
+  }
+
+  &__field-label {
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
+      $size: 12px,
+      $weight: 600,
+      $line: normal
+    );
+  }
+
+  &__input {
+    width: 100%;
+    background-color: var(--white);
+    border-radius: var(--corner-radius-2);
+    padding: 12px;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 17px);
+    transition: border-color 0.15s;
+
+    input {
+      background: transparent;
+      border: none;
+      outline: none;
+      width: 100%;
+      color: var(--normal-fg-10);
+      @include drumee.typo($size: 12px, $line: 17px);
+
+      &::placeholder {
+        color: var(--neutral-500);
+        opacity: 0.6;
+      }
+    }
+
+    &:focus-within {
+      outline: 1px solid var(--primary-400, #7b6ef6);
+    }
+  }
+
+  &__footer {
+    width: 100%;
+    padding-top: 4px;
+  }
+
+  &__submit {
+    width: 100%;
+    height: 36px;
+    padding: 8px 24px;
+    border-radius: 4px;
+    @include drumee.typo($color: #fff, $size: 14px, $weight: 600, $line: 20px);
+    cursor: pointer;
+    transition: background-color 0.15s;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    display: flex;
+    flex-direction: row;
+    background: var(--primary-50, #433cc5);
+    align-self: stretch;
+    flex-grow: 0;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background-color: var(--primary-40, #5950ff);
+    }
+  }
+}
