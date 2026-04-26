@@ -91,6 +91,19 @@ class apps_main extends LetcBox {
     this._allowEditorsRestore = false;
     this._showApplyConfirm = false;
     this._editingMember = null;
+    this._activeWorkspace = null;
+    this._wsDetailPage = 1;
+    this._editingFolder = null;
+    this._fpermMode = "restricted"; // "restricted" | "shared"
+    this._fpermAutoRevoke = false;
+    this._fpermAutoRevokeMins = 30;
+    this._fpermOneTimeOn = false;
+    this._fpermOneTimeUrl = "drumee.com/s/pink-folder-2023-x92...";
+    this._fpermAccess = { view: true, edit: false, chat: true };
+    this._fvSelected = new Set();
+    this._adminStorageView = "main"; // "main" | "all" | "detail"
+    this._fvAllPage = 1;
+    this._fvActiveFile = null;
     this._editDevices = [];
     this._editWorkspaces = [];
     this._onDocumentClick = this._onDocumentClick.bind(this);
@@ -363,6 +376,88 @@ class apps_main extends LetcBox {
       case "apps-reward":
         return;
 
+      case "apps-perm-open-workspace": {
+        const id = cmd.mget("workspace_id");
+        const data = require("./skeleton/permission-data").default;
+        const ws = data.find((w) => w.id === id);
+        if (ws) {
+          this._activeWorkspace = ws;
+          this._wsDetailPage = 1;
+          return this._render();
+        }
+        return;
+      }
+
+      case "apps-perm-back":
+        this._activeWorkspace = null;
+        return this._render();
+
+      case "apps-perm-page": {
+        const n = parseInt(cmd.mget("page_num"), 10);
+        if (!isNaN(n) && n >= 1) {
+          this._wsDetailPage = n;
+          return this._render();
+        }
+        return;
+      }
+
+      case "apps-perm-edit-folder": {
+        const id = cmd.mget("folder_id");
+        const data = require("./skeleton/permission-detail-data").default;
+        const f = data.find((row) => row.id === id);
+        if (f) {
+          this._editingFolder = f;
+          // Inherit popup mode from the workspace this folder lives in.
+          this._fpermMode =
+            (this._activeWorkspace && this._activeWorkspace.mode) ||
+            "restricted";
+          return this._render();
+        }
+        return;
+      }
+
+      case "apps-fperm-close":
+      case "apps-fperm-save":
+        this._editingFolder = null;
+        return this._render();
+
+      case "apps-fperm-toggle-auto":
+        this._fpermAutoRevoke = !this._fpermAutoRevoke;
+        return this._render();
+
+      case "apps-fperm-toggle-onetime":
+        this._fpermOneTimeOn = !this._fpermOneTimeOn;
+        return this._render();
+
+      case "apps-fperm-copy-link":
+        if (this._fpermOneTimeUrl && navigator && navigator.clipboard) {
+          navigator.clipboard
+            .writeText(this._fpermOneTimeUrl)
+            .catch(() => {});
+        }
+        return;
+
+      case "apps-fperm-toggle-access": {
+        const key = cmd.mget("access_key");
+        if (key && this._fpermAccess.hasOwnProperty(key)) {
+          this._fpermAccess = {
+            ...this._fpermAccess,
+            [key]: !this._fpermAccess[key],
+          };
+        }
+        return this._render();
+      }
+
+      case "apps-fperm-add-member":
+      case "apps-fperm-remove-all-members":
+      case "apps-fperm-change-role":
+      case "apps-fperm-remove-member":
+      case "apps-fperm-add-device":
+      case "apps-fperm-remove-all-devices":
+      case "apps-fperm-remove-device":
+      case "apps-perm-open-folder":
+        return;
+
       case "apps-audit-upgrade":
         this._auditUnlocked = true;
         return this._render();
@@ -418,6 +513,74 @@ class apps_main extends LetcBox {
       case "apps-storage-sort":
       case "apps-storage-prev":
       case "apps-storage-next":
+        return;
+
+      case "apps-fv-toggle-row": {
+        const id = cmd.mget("file_id");
+        if (this._fvSelected.has(id)) this._fvSelected.delete(id);
+        else this._fvSelected.add(id);
+        return this._render();
+      }
+
+      case "apps-fv-toggle-all": {
+        const data = require("./skeleton/admin-storage-data").default;
+        if (this._fvSelected.size === data.length) {
+          this._fvSelected.clear();
+        } else {
+          this._fvSelected = new Set(data.map((f) => f.id));
+        }
+        return this._render();
+      }
+
+      case "apps-fv-delete-selected":
+        this._fvSelected.clear();
+        return this._render();
+
+      case "apps-fv-view-all":
+        this._adminStorageView = "all";
+        return this._render();
+
+      case "apps-fv-back":
+        this._adminStorageView = "main";
+        this._fvActiveFile = null;
+        return this._render();
+
+      case "apps-fv-open-detail": {
+        const id = cmd.mget("file_id");
+        const data = require("./skeleton/admin-storage-data").default;
+        const f = data.find((row) => row.id === id) || {
+          id,
+          name: "Q2_Growth_Plan_v2.docx",
+        };
+        this._fvActiveFile = f;
+        this._adminStorageView = "detail";
+        return this._render();
+      }
+
+      case "apps-fv-detail-back":
+        this._fvActiveFile = null;
+        this._adminStorageView = "all";
+        return this._render();
+
+      case "apps-fv-show-in-folder":
+      case "apps-fv-download-all":
+      case "apps-fv-delete-old":
+      case "apps-fv-delete-version":
+        return;
+
+      case "apps-fv-page": {
+        const n = parseInt(cmd.mget("page_num"), 10);
+        if (!isNaN(n) && n >= 1) {
+          this._fvAllPage = n;
+          return this._render();
+        }
+        return;
+      }
+
+      case "apps-fv-delete-all":
+      case "apps-fv-delete-row":
+      case "apps-fv-row-menu":
+      case "apps-fv-filter-workspace":
         return;
 
       default:
