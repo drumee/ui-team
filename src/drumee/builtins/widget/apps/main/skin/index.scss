@@ -373,6 +373,21 @@
     gap: 0;
   }
 
+  &__table-empty {
+    width: 100%;
+    padding: 32px 24px;
+    align-items: center;
+    justify-content: center;
+    background: $bg;
+  }
+
+  &__table-empty-label {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    color: $ink-500;
+  }
+
   &__row {
     width: 100%;
     align-items: center;
@@ -1263,7 +1278,17 @@
     height: 60px;
     flex-shrink: 0;
 
-    svg { display: block; width: 70px; height: 60px; }
+    // The sprite build strips path fills. The cloud-pause icon has two
+    // paths (outer halo + inner cloud) that need different colors —
+    // restore them by index.
+    svg {
+      display: block;
+      width: 70px;
+      height: 60px;
+
+      path:nth-of-type(1) { fill: #ffffff; }
+      path:nth-of-type(2) { fill: $purple-deep; }
+    }
   }
 
   &__upsell-text {
@@ -2601,6 +2626,459 @@
   }
 
   &__apply-confirm-label {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    color: var(--white, #fff);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  //  EDIT-MEMBER OVERLAY
+  // ─────────────────────────────────────────────────────────
+  &__edit-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(11, 10, 33, 0.40);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    pointer-events: auto;
+  }
+
+  &__edit-card {
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 64px);
+    padding: 32px;
+    background: #f2f2f7;
+    border-radius: 12px;
+    gap: 24px;
+    overflow: hidden;
+    box-shadow:
+      0 24px 48px rgba(11, 10, 33, 0.16),
+      0 6px 16px rgba(11, 10, 33, 0.06);
+  }
+
+  // Header row
+  &__edit-header {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__edit-title {
+    font-size: 24px;
+    line-height: 28px;
+    font-weight: 700;
+    color: $ink-900;
+  }
+
+  &__edit-close {
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * { pointer-events: none; }
+    &:hover { opacity: 0.75; }
+
+    &-ico {
+      width: 14px;
+      height: 14px;
+
+      svg {
+        display: block;
+        width: 14px;
+        height: 14px;
+        fill: $ink-600;
+
+        .icon-fill-blue,
+        .icon-fill-grey { fill: $ink-600; }
+      }
+    }
+  }
+
+  // User card
+  &__edit-user {
+    width: 100%;
+    height: 64px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__edit-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: $audit-dark-avatar;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+
+    &--cyan {
+      background: rgba(137, 228, 246, 0.20);
+    }
+  }
+
+  &__edit-avatar-initials {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 700;
+    color: $storage-cyan;
+  }
+
+  &__edit-user-info {
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+  }
+
+  &__edit-user-name {
+    font-size: 16px;
+    line-height: 22px;
+    font-weight: 700;
+    color: $ink-900;
+  }
+
+  &__edit-user-email {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    color: $ink-500;
+  }
+
+  // Body (scrollable middle)
+  &__edit-body {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    gap: 24px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb {
+      background: $purple-base;
+      border-radius: 4px;
+    }
+  }
+
+  // Section heading (Role / Device)
+  &__edit-section-heading {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__edit-section-ico {
+    width: 20px;
+    height: 20px;
+
+    svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  &__edit-section-label {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 700;
+    color: $ink-900;
+  }
+
+  // Owner role row
+  &__edit-role-row {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  // Generic select pill
+  &__edit-select {
+    height: 33px;
+    min-width: 154px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+
+    > * { pointer-events: none; }
+
+    &:hover { background: rgba(0, 0, 0, 0.07); }
+
+    &-value {
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 400;
+      color: $ink-600;
+    }
+
+    &-caret {
+      width: 12px;
+      height: 12px;
+
+      svg { display: block; width: 12px; height: 12px; }
+    }
+  }
+
+  // Workspace list
+  &__edit-ws-list {
+    width: 100%;
+    gap: 12px;
+  }
+
+  &__edit-ws-row {
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__edit-ws-name {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    padding: 8px 12px;
+    background: var(--white, #fff);
+    border-radius: 4px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__edit-ws-ico {
+    width: 20px;
+    height: 20px;
+
+    svg { display: block; width: 18px; height: 16px; }
+  }
+
+  &__edit-ws-label {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-500;
+  }
+
+  &__edit-ws-search {
+    width: 100%;
+    height: 36px;
+    padding: 8px 8px 8px 12px;
+    background: var(--white, #fff);
+    border-radius: 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  &__edit-ws-search-placeholder {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-500;
+  }
+
+  &__edit-ws-search-add {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: $purple-deep;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * { pointer-events: none; }
+    &:hover { filter: brightness(0.95); }
+  }
+
+  &__edit-ws-search-plus {
+    font-size: 14px;
+    line-height: 14px;
+    font-weight: 600;
+    color: var(--white, #fff);
+  }
+
+  // Devices section
+  &__edit-devices {
+    width: 100%;
+    gap: 16px;
+  }
+
+  &__edit-devices-header {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__edit-remove-all {
+    height: 27px;
+    padding: 4px 8px 4px 4px;
+    background: rgba(246, 81, 75, 0.10);
+    border-radius: 4px;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+
+    > * { pointer-events: none; }
+
+    &:hover { filter: brightness(0.97); }
+
+    &-ico {
+      width: 18px;
+      height: 19px;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        display: block;
+        width: 13px;
+        height: 15px;
+        fill: $red;
+
+        .icon-fill-blue,
+        .icon-fill-grey { fill: $red; }
+      }
+    }
+
+    &-label {
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 400;
+      color: $red;
+    }
+  }
+
+  &__edit-device-list {
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__edit-device {
+    width: 100%;
+    padding: 12px;
+    background: var(--white, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__edit-device-ico {
+    width: 23px;
+    height: 23px;
+
+    svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+      fill: $ink-900;
+
+      .icon-fill-blue,
+      .icon-fill-grey { fill: $ink-900; }
+    }
+  }
+
+  &__edit-device-text {
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+  }
+
+  &__edit-device-name {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    color: $ink-900;
+  }
+
+  &__edit-device-info {
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__edit-device-remove {
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * { pointer-events: none; }
+    &:hover { opacity: 0.75; }
+
+    &-ico {
+      width: 13px;
+      height: 13px;
+
+      svg {
+        display: block;
+        width: 13px;
+        height: 13px;
+        fill: $red;
+
+        .icon-fill-blue,
+        .icon-fill-grey { fill: $red; }
+      }
+    }
+  }
+
+  // Save button
+  &__edit-save-btn {
+    width: 100%;
+    height: 48px;
+    padding: 12px 24px;
+    background: $purple-deep;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    gap: 8px;
+    flex-shrink: 0;
+    transition: filter 0.15s ease;
+
+    &:hover { filter: brightness(0.95); }
+
+    > * { pointer-events: none; }
+  }
+
+  &__edit-save-ico {
+    width: 24px;
+    height: 24px;
+
+    svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+      fill: var(--white, #fff);
+
+      .icon-fill-blue,
+      .icon-fill-grey { fill: var(--white, #fff); }
+    }
+  }
+
+  &__edit-save-label {
     font-size: 16px;
     line-height: 24px;
     font-weight: 600;

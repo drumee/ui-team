@@ -94,28 +94,40 @@ function statCard(pfx, opt) {
   });
 }
 
+function fmtNum(n) {
+  if (n == null) return "—";
+  const v = parseInt(n, 10);
+  if (isNaN(v)) return String(n);
+  return v.toLocaleString();
+}
+
 function statsRow(ui) {
   const pfx = ui.fig.family;
+  const s = ui._memberStats || {};
+  const total = s.total != null ? s.total : s.total_members;
+  const admins = s.admins != null ? s.admins : s.admin_count;
+  const guests = s.external_guests != null ? s.external_guests : s.guests;
+  const pending = s.pending_invites != null ? s.pending_invites : s.pending;
   return Skeletons.Box.X({
     className: `${pfx}__stats`,
     kids: [
       statCard(pfx, {
         label: LOCALE.TOTAL_MEMBERS || "Total Members",
-        value: "1,284",
+        value: fmtNum(total),
       }),
       statCard(pfx, {
         label: LOCALE.ADMINS || "Admins",
-        value: "12",
+        value: fmtNum(admins),
         valueClass: `${pfx}__stat-value--admins`,
       }),
       statCard(pfx, {
         label: LOCALE.EXTERNAL_GUESTS || "External Guests",
-        value: "45",
+        value: fmtNum(guests),
         valueClass: `${pfx}__stat-value--guests`,
       }),
       statCard(pfx, {
         label: LOCALE.PENDING_INVITES || "Pending Invites",
-        value: "8",
+        value: fmtNum(pending),
         valueClass: `${pfx}__stat-value--pending`,
       }),
     ],
@@ -379,13 +391,56 @@ function table(ui) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__table`,
-        kids: [
-          tableHeader(ui),
-          ...ui._members.map((m) => memberRow(ui, m)),
-        ],
+        kids: tableBodyKids(ui),
       }),
     ],
   });
+}
+
+function tableBodyKids(ui) {
+  const pfx = ui.fig.family;
+  const kids = [tableHeader(ui)];
+  if (ui._membersState === "loading") {
+    kids.push(
+      Skeletons.Box.X({
+        className: `${pfx}__table-empty`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__table-empty-label`,
+            content: LOCALE.LOADING || "Loading…",
+          }),
+        ],
+      })
+    );
+  } else if (ui._membersState === "error") {
+    kids.push(
+      Skeletons.Box.X({
+        className: `${pfx}__table-empty`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__table-empty-label`,
+            content:
+              LOCALE.MEMBERS_LOAD_FAILED || "Could not load members.",
+          }),
+        ],
+      })
+    );
+  } else if (!ui._members.length) {
+    kids.push(
+      Skeletons.Box.X({
+        className: `${pfx}__table-empty`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__table-empty-label`,
+            content: LOCALE.NO_MEMBERS_FOUND || "No members found.",
+          }),
+        ],
+      })
+    );
+  } else {
+    ui._members.forEach((m) => kids.push(memberRow(ui, m)));
+  }
+  return kids;
 }
 
 function pagination(ui) {
@@ -477,6 +532,10 @@ export default function apps_main_skeleton(ui) {
   ];
   if (ui._showApplyConfirm) {
     root.push(require("./apply-confirm").default(ui));
+  }
+  if (ui._editingMember) {
+    const editOverlay = require("./edit-member").default(ui);
+    if (editOverlay) root.push(editOverlay);
   }
   return root;
 }
