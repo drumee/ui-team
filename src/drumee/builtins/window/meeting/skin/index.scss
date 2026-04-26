@@ -142,6 +142,40 @@
     }
   }
 
+  // ── Leave button shown during pre-join waiting states ───────────────
+  &__leave-waiting-btn {
+    margin-bottom: 12px;
+    background-color: var(--normal-fg);
+    color: var(--grey-white, #fff);
+    border-radius: 8px;
+    padding: 8px 18px;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex;
+
+    svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+
+    .note-content {
+      @include drumee.typo(
+        $size: 12px,
+        $line: normal,
+        $weight: 600,
+        $color: var(--grey-white, #fff)
+      );
+      white-space: nowrap;
+    }
+
+    &:hover {
+      background-color: var(--normal-fg-20);
+    }
+  }
+
   // ── Participant name + mic overlay (frosted glass) ───────────────────
   .endpoint-remote__name-bar,
   .endpoint-local__name-bar {
