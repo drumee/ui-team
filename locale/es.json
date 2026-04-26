@@ -386,5 +386,15 @@
   "ALL": "Todo",
   "DOCS": "Documentos",
   "PDF": "PDF",
-  "IMAGES": "Imágenes"
+  "IMAGES": "Imágenes",
+  "LINK_EXPIRATION": "Expiración del enlace",
+  "CLEAR": "Borrar",
+  "APPLY_CHANGES": "Aplicar cambios",
+  "NO_EXPIRATION": "Sin expiración",
+  "CAN_VIEW_FILES": "Puede ver archivos",
+  "CAN_EDIT_UPLOAD": "Puede editar y subir",
+  "CAN_CHAT": "Puede chatear",
+  "MANAGE_ACCESS": "Gestionar acceso",
+  "PUBLIC_LINK": "Enlace público",
+  "ACCESS_LEVEL": "Nivel de acceso"
 }

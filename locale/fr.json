@@ -2374,5 +2374,15 @@
   "ALL": "Tout",
   "DOCS": "Documents",
   "PDF": "PDF",
-  "IMAGES": "Images"
+  "IMAGES": "Images",
+  "LINK_EXPIRATION": "Expiration du lien",
+  "CLEAR": "Effacer",
+  "APPLY_CHANGES": "Appliquer les modifications",
+  "NO_EXPIRATION": "Sans expiration",
+  "CAN_VIEW_FILES": "Peut consulter les fichiers",
+  "CAN_EDIT_UPLOAD": "Peut modifier et téléverser",
+  "CAN_CHAT": "Peut discuter",
+  "MANAGE_ACCESS": "Gérer les accès",
+  "PUBLIC_LINK": "Lien public",
+  "ACCESS_LEVEL": "Niveau d'accès"
 }

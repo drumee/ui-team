@@ -2495,5 +2495,14 @@
   "APPLY_RETENTION_NOW": "Apply retention policy now?",
   "APPLY_RETENTION_BODY": "Versions older than the selected retention window will be permanently deleted. This cannot be undone.",
   "APPLY_RETENTION_WARNING": "Only versions past their natural expiry date will be deleted.",
-  "APPLY_CHANGE": "Apply change"
+  "APPLY_CHANGE": "Apply change",
+  "LINK_EXPIRATION": "Link Expiration",
+  "CLEAR": "Clear",
+  "APPLY_CHANGES": "Apply Changes",
+  "NO_EXPIRATION": "No Expiration",
+  "CAN_VIEW_FILES": "Can View Files",
+  "CAN_EDIT_UPLOAD": "Can Edit & Upload",
+  "CAN_CHAT": "Can Chat",
+  "PUBLIC_LINK": "Public Link",
+  "ACCESS_LEVEL": "Access Level"
 }

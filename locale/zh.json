@@ -2374,5 +2374,15 @@
   "ALL": "全部",
   "DOCS": "文档",
   "PDF": "PDF",
-  "IMAGES": "图片"
+  "IMAGES": "图片",
+  "LINK_EXPIRATION": "链接有效期",
+  "CLEAR": "清除",
+  "APPLY_CHANGES": "应用更改",
+  "NO_EXPIRATION": "永不过期",
+  "CAN_VIEW_FILES": "可查看文件",
+  "CAN_EDIT_UPLOAD": "可编辑和上传",
+  "CAN_CHAT": "可聊天",
+  "MANAGE_ACCESS": "管理访问权限",
+  "PUBLIC_LINK": "公共链接",
+  "ACCESS_LEVEL": "访问级别"
 }

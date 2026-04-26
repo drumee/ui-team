@@ -2374,5 +2374,15 @@
   "ALL": "ទាំងអស់",
   "DOCS": "ឯកសារ",
   "PDF": "PDF",
-  "IMAGES": "រូបភាព"
+  "IMAGES": "រូបភាព",
+  "LINK_EXPIRATION": "ការផុតកំណត់តំណ",
+  "CLEAR": "សម្អាត",
+  "APPLY_CHANGES": "អនុវត្តការផ្លាស់ប្តូរ",
+  "NO_EXPIRATION": "គ្មានការផុតកំណត់",
+  "CAN_VIEW_FILES": "អាចមើលឯកសារ",
+  "CAN_EDIT_UPLOAD": "អាចកែសម្រួល និងបង្ហោះ",
+  "CAN_CHAT": "អាចជជែក",
+  "MANAGE_ACCESS": "គ្រប់គ្រងការចូលប្រើ",
+  "PUBLIC_LINK": "តំណសាធារណៈ",
+  "ACCESS_LEVEL": "កម្រិតការចូលប្រើ"
 }
