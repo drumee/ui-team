@@ -624,8 +624,10 @@ class desk_module extends LetcBox {
         return this.togglePanel("chat_p2p", "chat-panel");
 
       case "toggle-settings":
-        this.debug("AAA:585", cmd);
-        return this.togglePanel("settings_account", cmd);
+        return this.togglePanel("settings_main", "settings-main-slot");
+
+      case "toggle-apps":
+        return this.togglePanel("apps_main", "settings-main-slot");
 
       case "toggle-trash":
         return this.togglePanel("panel_trash", "trash-panel");

@@ -65,5 +65,31 @@ html {
   &__wm-container {
     width: 100%;
     height: 100%;
+    position: relative;
+  }
+
+  &__settings-main-slot {
+    position: absolute;
+    inset: 0;
+    // Sits above window_manager's __layer (z-index 1300, fixed) so the
+    // settings page fully covers the workspace, but below the slide-out
+    // panel containers at 10001.
+    z-index: 1500;
+    pointer-events: none;
+
+    > * {
+      pointer-events: auto;
+    }
+
+    &:empty {
+      display: none;
+    }
+
+    // When an overlay/modal inside the settings page is open, lift the
+    // slot above the sidebar (z-index 10002) and side-panel containers
+    // (10001) so its full-viewport backdrop blur covers everything.
+    &:has([data-state="open"]) {
+      z-index: 20001;
+    }
   }
 }
