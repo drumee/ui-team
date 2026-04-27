@@ -55,3 +55,28 @@
     text-decoration: underline;
   }
 }
+
+// ── Dark mode overrides ─────────────────────────────────────────
+html[data-theme="dark"] {
+  .desk-breadcrumb {
+    &__ui {
+      color: var(--normal-fg-20);
+    }
+
+    &__context {
+      color: var(--normal-fg-20);
+
+      &[data-current="1"] {
+        color: var(--normal-fg);
+      }
+    }
+  }
+
+  .desk-breadcrumb .window-breadcrumbs__item {
+    color: var(--normal-fg-20);
+
+    &:last-child .window-breadcrumbs__item--filename {
+      color: var(--normal-fg);
+    }
+  }
+}

@@ -401,3 +401,82 @@
     }
   }
 }
+
+// ── Dark mode overrides ─────────────────────────────────────────
+// Light mode keeps existing white/light-purple aesthetic; dark mode
+// swaps stark whites for elevated surfaces and softens the accent
+// purple so the topbar blends into the dark canvas.
+html[data-theme="dark"] {
+  .desk-module-topbar {
+    &__new-workspace-btn {
+      background-color: rgba(89, 80, 255, 0.25);
+
+      svg {
+        fill: var(--normal-fg);
+      }
+
+      span.label,
+      section.label {
+        color: var(--normal-fg);
+      }
+
+      &:hover {
+        background-color: rgba(89, 80, 255, 0.4);
+      }
+    }
+
+    &__upload-btn {
+      background-color: var(--normal-bg-elevated);
+
+      svg {
+        fill: var(--normal-fg);
+      }
+
+      span.label,
+      section.label {
+        color: var(--normal-fg);
+      }
+
+      &:hover {
+        background-color: var(--normal-bg-40);
+      }
+    }
+
+    &__search-bar {
+      background-color: var(--normal-bg-elevated);
+    }
+
+    &__search-icon {
+      color: var(--normal-fg-20);
+    }
+
+    &__search-input input {
+      color: var(--normal-fg);
+
+      &::placeholder {
+        color: var(--placeholder-fg);
+      }
+    }
+
+    &__search-kbd {
+      background-color: var(--normal-bg-80);
+      color: var(--normal-fg-20);
+    }
+
+    &__search-suggestions {
+      background-color: var(--normal-bg-elevated);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+      .workspace-item {
+        &-name {
+          color: var(--normal-fg);
+        }
+
+        &:hover,
+        &[data-state="1"] {
+          background-color: var(--hover-bg-40);
+        }
+      }
+    }
+  }
+}
