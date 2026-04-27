@@ -547,15 +547,9 @@
   }
 }
 
-.window-manager__icons-scroll.smart-container > .media-grid__ui {
-  visibility: hidden;
-}
-
-.window-manager__icons-scroll.smart-container > .folder-section,
-.window-manager__icons-scroll.smart-container > .file-section {
+.window-manager__icons-scroll.smart-container[data-partitioning="1"]
   > .media-grid__ui {
-    visibility: visible;
-  }
+  visibility: hidden;
 }
 
 // ── Shared ──

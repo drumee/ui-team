@@ -233,6 +233,14 @@ class desk_module extends LetcBox {
         child.el.dataset.radiotoggle = _a.on;
         return;
 
+      case "user-menu-trigger":
+        this._userMenuTrigger = child;
+        return;
+
+      case "user-menu-items":
+        this._userMenuItems = child;
+        return;
+
       // case "share-bar-countdown-timer":
       //   var f = () => {
       //     const data = {
@@ -709,6 +717,28 @@ class desk_module extends LetcBox {
       case "new-workspace":
         return Wm.onUiEvent(cmd, args);
 
+      case "invite-member":
+        return this._openInvitePopup(cmd);
+
+      case "toggle-user-menu":
+        return this._toggleUserMenu();
+
+      case "open-account":
+        this._closeUserMenu();
+        return Wm && Wm.onUiEvent
+          ? Wm.onUiEvent({ mget: () => _a.account }, { service: _a.account })
+          : null;
+
+      case _a.helpdesk:
+        this._closeUserMenu();
+        return Wm && Wm.onUiEvent
+          ? Wm.onUiEvent({ mget: () => _a.helpdesk }, { service: _a.helpdesk })
+          : null;
+
+      case "user-disconnect":
+        this._closeUserMenu();
+        return Butler && Butler.logout && Butler.logout();
+
       case "settings-account":
         return Wm.openAccountSettings();
 
@@ -764,6 +794,58 @@ class desk_module extends LetcBox {
       // default:
       // Wm.unselect();
     }
+  }
+
+  _toggleUserMenu() {
+    if (!this._userMenuItems) return;
+    const cur = this._userMenuItems.el.dataset.state || "closed";
+    const next = cur === "open" ? "closed" : "open";
+    this._userMenuItems.el.dataset.state = next;
+    if (next === "open") {
+      if (!this._userMenuDismiss) {
+        this._userMenuDismiss = (e) => {
+          if (
+            this._userMenuItems &&
+            !this._userMenuItems.el.contains(e.target) &&
+            this._userMenuTrigger &&
+            !this._userMenuTrigger.el.contains(e.target)
+          ) {
+            this._closeUserMenu();
+          }
+        };
+      }
+      setTimeout(() => document.addEventListener("mousedown", this._userMenuDismiss), 0);
+    } else {
+      this._closeUserMenu();
+    }
+  }
+
+  _closeUserMenu() {
+    if (this._userMenuItems) this._userMenuItems.el.dataset.state = "closed";
+    if (this._userMenuDismiss) {
+      document.removeEventListener("mousedown", this._userMenuDismiss);
+    }
+  }
+
+  _openInvitePopup(cmd) {
+    if (!Wm || !Wm.__wrapperModal) return;
+    if (this._invitePopup && !this._invitePopup.isDestroyed()) {
+      Wm.__wrapperModal.clear();
+      this._invitePopup = null;
+      return;
+    }
+    Kind.waitFor("invite_popup").then(() => {
+      const ws = (Wm && Wm._curWorkspace) || {};
+      Wm.__wrapperModal.feed({
+        kind: "invite_popup",
+        hub_id: ws.hub_id || Visitor.id,
+        uiHandler: [this],
+      });
+      this._invitePopup = Wm.__wrapperModal.children.last();
+      this._invitePopup.once(_e.destroy, () => {
+        this._invitePopup = null;
+      });
+    });
   }
 
   _showSearchSuggestions() {

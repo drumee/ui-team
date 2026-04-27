@@ -32,6 +32,13 @@
     overflow: hidden;
   }
 
+  &__ui[data-empty="1"] {
+    .panel-trash__status-bar,
+    .panel-trash__footer {
+      display: none;
+    }
+  }
+
   /* ── Topbar wrapper (header + status bar) ───────────────── */
   &__topbar {
     flex-shrink: 0;
@@ -154,6 +161,12 @@
     width: 50px;
     height: 36.25px;
     color: var(--active-border);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
   }
 
   &__placeholder-card-badge {
@@ -171,11 +184,12 @@
     align-items: center;
     justify-content: center;
     padding: 12px;
-    color: var(--normal-fg-10);
+    color: var(--active-border);
 
     svg {
       width: 16px;
       height: 16px;
+      fill: currentColor;
     }
   }
 
@@ -203,24 +217,31 @@
   }
 
   &__placeholder-refresh-btn {
+    display: inline-flex;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     background-color: var(--active-border);
     color: #e4e3ff;
     border-radius: 6px;
     padding: 12px 24px;
-    gap: 8px;
     cursor: pointer;
-    align-items: center;
-    justify-content: center;
     transition: opacity 0.15s;
 
+    .svg-wrapper,
+    .drumee-svg,
     svg {
       width: 12px;
       height: 12px;
+      flex-shrink: 0;
       color: #e4e3ff;
+      fill: currentColor;
     }
 
     .inner,
-    .note-content {
+    .note-content,
+    .drumee-text {
       @include drumee.typo(
         $size: 14px,
         $weight: 600,

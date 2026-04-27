@@ -180,28 +180,40 @@
 
   // New workspace button
   &__new-workspace-btn {
-    display: flex;
+    display: inline-flex;
+    flex-direction: row !important;
     height: 28px;
     padding: 0 12px;
-    gap: 4px;
+    gap: 6px;
     background-color: #b1adff;
     border-radius: 4px;
     align-items: center;
+    justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
 
+    .svg-wrapper,
+    .drumee-svg,
     svg {
       width: 12px;
       height: 12px;
-      fill: #000000;
+      flex-shrink: 0;
+      color: #0b0a21;
+      fill: currentColor;
     }
 
+    .inner,
+    .note-content,
+    .drumee-text,
     span.label,
     section.label {
       font-size: 12px;
       font-weight: 600;
-      color: #000000;
+      line-height: 1;
+      color: #0b0a21;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
     }
 
     &:hover {
@@ -330,43 +342,47 @@
 
   // Invite button
   &__invite-btn {
-    display: flex;
+    display: inline-flex;
+    flex-direction: row !important;
     height: 28px;
-    padding: 1px 17px;
+    padding: 0 17px;
     gap: 6px;
-    border: 1px solid var(--primary-50);
+    border: 1px solid var(--primary-50, #433cc5);
     border-radius: 4px;
     align-items: center;
+    justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
+    color: var(--primary-50, #433cc5);
 
+    .svg-wrapper,
+    .drumee-svg,
     svg {
-      width: 14.667px;
-      height: 10.667px;
-      fill: var(--primary-50);
+      width: 15px;
+      height: 11px;
+      flex-shrink: 0;
+      color: currentColor;
+      fill: currentColor;
     }
 
+    .inner,
+    .note-content,
+    .drumee-text,
     span.label,
     section.label {
       font-size: 12px;
       font-weight: 700;
-      line-height: 1.4;
-      color: var(--primary-50);
+      line-height: 1;
+      color: currentColor;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
     }
 
     &:hover {
       background-color: var(--primary-40);
       border-color: var(--primary-40);
-
-      svg {
-        fill: var(--white);
-      }
-
-      span.label,
-      section.label {
-        color: var(--white);
-      }
+      color: var(--white);
     }
   }
 }

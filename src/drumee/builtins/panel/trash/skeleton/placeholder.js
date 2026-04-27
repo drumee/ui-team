@@ -9,7 +9,7 @@ module.exports = function (ui) {
         className: `${pfx}__placeholder-card-icon`,
       }),
       Skeletons.Image.Svg({
-        ico: "desktop_check",
+        ico: "trash-check",
         className: `${pfx}__placeholder-card-badge`,
       }),
     ],
@@ -29,7 +29,7 @@ module.exports = function (ui) {
       }),
       Skeletons.Button.Label({
         className: `${pfx}__placeholder-refresh-btn`,
-        ico: "raw-circular-arrows",
+        ico: "refresh-view",
         label: LOCALE.REFRESH_VIEW,
         service: "refresh",
         uiHandler: ui,
@@ -49,7 +49,8 @@ module.exports = function (ui) {
       Skeletons.Note({
         className: `${pfx}__placeholder-storage`,
         sys_pn: "storage-info",
-        content: LOCALE.STORAGE_USED,
+        partHandler: ui,
+        content: LOCALE.STORAGE_USED.format(""),
       }),
       Skeletons.Note({
         className: `${pfx}__placeholder-policy`,

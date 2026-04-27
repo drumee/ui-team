@@ -27,8 +27,8 @@ if [ "$dest_host" != "" ]; then
   echo "*******************************************************"	
   export banner_shown=shown
   echo OPTION: $OPT
-  ssh ${dest_user}@${UI_RUNTIME_HOST} mkdir -p $target
-  rsync -avrp  $src_path/ $target/
+  ssh -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 ${dest_user}@${UI_RUNTIME_HOST} mkdir -p ${dest_path}
+  rsync -az -e "ssh -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3" $OPT $src_path/ $target
 
   echo "Done!"
 fi

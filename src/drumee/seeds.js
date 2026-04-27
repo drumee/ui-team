@@ -435,6 +435,9 @@ module.exports = {
   widget_simple_invitation: function () {
     return import("./builtins/window/schedule/widget/simple-invitation/index");
   },
+  invite_popup: function () {
+    return import("./builtins/widget/invite-popup/index");
+  },
   widget_suggest_contact_item: function () {
     return import("./builtins/window/sharebox/widget/suggest-contact-item");
   },

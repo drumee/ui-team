@@ -22,7 +22,7 @@ module.exports = function (ui) {
         kids: [
           // New workspace button
           Skeletons.Button.Label({
-            ico: "plus",
+            ico: "topbar-add",
             className: `${pfx}__new-workspace-btn`,
             label: LOCALE.ADD_NEW || "Add new",
             service: "new-workspace",
@@ -91,7 +91,7 @@ module.exports = function (ui) {
 
           // Invite button
           Skeletons.Button.Label({
-            ico: "drumee-add-contact",
+            ico: "topbar-invite",
             className: `${pfx}__invite-btn`,
             label: LOCALE.INVITE || "Invite",
             service: "invite-member",
