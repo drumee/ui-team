@@ -4,15 +4,9 @@
   &__ui {
     width: 100%;
     cursor: default;
-
-    &[data-current-workspace="1"] {
-      > .workspace-item__row[data-level="0"] {
-        background: var(--active-item-bg);
-        border-left: 4px solid var(--active-border);
-        font-weight: 700;
-        padding-left: 20px;
-      }
-    }
+    // data-current-workspace tracks tree-expansion state; visual highlight
+    // is delegated to the radio behavior (data-radio="on") so navigating
+    // to Settings/Apps clears the workspace highlight automatically.
   }
 
   &__row {
