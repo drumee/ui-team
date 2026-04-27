@@ -576,6 +576,24 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Close any full-viewport panel mounted in settings-main-slot
+   * (Apps, Settings) or trash-panel (Admin members, Trash). Called
+   * before navigating to Home or another workspace so the underlying
+   * window manager / grid view is not left occluded.
+   */
+  _closeMainPanels() {
+    this._pendingKind = null;
+    const slots = ["settings-main-slot", "trash-panel"];
+    return Promise.all(
+      slots.map((pn) =>
+        this.ensurePart(pn).then((p) => {
+          if (p && !p.isEmpty()) p.clear();
+        }),
+      ),
+    );
+  }
+
+  /**
    *
    * @param {*} cmd
    * @param {*} args
@@ -589,6 +607,7 @@ class desk_module extends LetcBox {
     switch (service) {
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });
+        this._closeMainPanels();
         Wm.reload();
         return;
 
@@ -624,12 +643,15 @@ class desk_module extends LetcBox {
         return this.togglePanel("chat_p2p", "chat-panel");
 
       case "toggle-settings":
+        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.SETTINGS });
         return this.togglePanel("settings_main", "settings-main-slot");
 
       case "toggle-apps":
+        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.APPS });
         return this.togglePanel("apps_main", "settings-main-slot");
 
       case "toggle-trash":
+        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.TRASH });
         return this.togglePanel("panel_trash", "trash-panel");
 
       case "toggle-theme": {
@@ -706,7 +728,11 @@ class desk_module extends LetcBox {
 
       case "load-workspace":
         this._hideSearchSuggestions();
-        return Wm.loadWorkspace(cmd);
+        // Close occluding panels FIRST, then loadWorkspace. Chain via
+        // promise — loadWorkspace only updates list.setApi() and the
+        // partition-prep visibility flip can bail if the list is still
+        // covered by an Apps/Settings panel during restart.
+        return this._closeMainPanels().then(() => Wm.loadWorkspace(cmd));
 
       case "new-workspace":
         return Wm.onUiEvent(cmd, args);

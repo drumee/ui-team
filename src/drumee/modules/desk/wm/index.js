@@ -186,6 +186,13 @@ class __window_manager extends push {
       return;
     }
 
+    // Close any settings/admin/apps panel that would occlude the workspace
+    // grid. Sidebar workspace items dispatch directly to Wm.loadWorkspace
+    // (not through desk.onUiEvent), so cleanup must live here too.
+    if (window.Desk && _.isFunction(window.Desk._closeMainPanels)) {
+      window.Desk._closeMainPanels();
+    }
+
     // Set the context synchronously with whatever we have. The sidebar's
     // desk.home payload only carries hub_id (no actual_home_id), so the
     // nid often arrives later via the get_attributes fetch below.
@@ -1122,14 +1129,19 @@ class __window_manager extends push {
       case "new-workspace":
         // Topbar + Add new is contextual: home → workspace form,
         // inside a workspace → folder form scoped to that workspace.
-        if (this._curWorkspace && this._curWorkspace.hub_id) {
-          return this.__wrapperModal.feed({
-            kind: 'folder_form',
-            hub_id: this._curWorkspace.hub_id,
-            nid: this._curWorkspace.nid,
-          });
-        }
-        return this.__wrapperModal.append({ kind: 'media_form' });
+        // clear() before feed() ensures the wrapper resets cleanly even if
+        // a previous popup is still mid-animation.
+        return this.ensurePart('wrapper-modal').then((p) => {
+          p.clear();
+          if (this._curWorkspace && this._curWorkspace.hub_id) {
+            return p.feed({
+              kind: 'folder_form',
+              hub_id: this._curWorkspace.hub_id,
+              nid: this._curWorkspace.nid,
+            });
+          }
+          return p.feed({ kind: 'media_form' });
+        });
 
         case "new-sub-folder":
         return this.addFolder({ position: 0, area: _a.personal, filename: LOCALE.NEW_FOLDER })
@@ -1147,8 +1159,7 @@ class __window_manager extends push {
         );
 
       case "pricing":
-        return this.__wrapperModal.append({ kind: "organization_form" })
-          ;
+        return this.__wrapperModal.feed({ kind: "organization_form" });
       case _a.preferences:
         return this.__wrapperModal.feed({ kind: "settings_account" });
 
