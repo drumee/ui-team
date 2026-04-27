@@ -18,6 +18,9 @@ class __folder_form extends LetcBox {
     const service = args.service || trigger.get(_a.service);
     switch (service) {
       case _e.close:
+        if (this.parent && _.isFunction(this.parent.clear)) {
+          return this.parent.clear();
+        }
         return this.goodbye();
 
       case "create-folder":

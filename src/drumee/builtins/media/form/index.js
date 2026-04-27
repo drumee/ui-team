@@ -15,6 +15,13 @@ class __form_folder extends LetcBox {
     const service = args.service || trigger.get(_a.service);
     switch (service) {
       case _e.close:
+        // Clear the parent wrapper synchronously instead of goodbye().
+        // goodbye() removes silently, leaving the wrapper's data-state
+        // stuck and breaking subsequent open clicks. clear() resets the
+        // collection cleanly so the wrapper can re-render next time.
+        if (this.parent && _.isFunction(this.parent.clear)) {
+          return this.parent.clear();
+        }
         return this.goodbye();
 
       case "select-status":
