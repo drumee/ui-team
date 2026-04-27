@@ -70,7 +70,7 @@ module.exports = function (ui) {
           }),
 
           Skeletons.Button.Svg({
-            ico: "trash",
+            ico: "trash-action",
             className: `${pfx}__btn delete`,
             service: "delete-permanently",
             // tooltips: LOCALE.DELETE,

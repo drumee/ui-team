@@ -10,7 +10,7 @@ const getSidebarFig = (ui) => `${ui.fig.family}-sidebar`;
 const cls = (fig, suffix) => `${fig}__${suffix}`;
 
 const createText = (fig, suffix, content) =>
-  Skeletons.Note({ className: cls(fig, suffix), content });
+  Skeletons.Note({ className: cls(fig, suffix), content, active: 0 });
 
 // ---------- Nav Item ----------
 const createNavItem = (
@@ -111,20 +111,76 @@ const createFooter = (ui, username) => {
       ),
       // userMenu(ui)
       // Skeletons.UserProfile({ auto_color:1, oneLetter:1, className: cls(fig, "footer-user-btn") }),
-      Skeletons.Box.X({
-        className: cls(fig, "footer-user-btn"),
+      Skeletons.Box.Y({
+        className: cls(fig, "footer-user-wrapper"),
+        sys_pn: "user-menu-anchor",
+        partHandler: ui,
+        kidsOpt: { active: 0 },
         kids: [
           Skeletons.Box.X({
-            className: cls(fig, "footer-avatar"),
+            className: cls(fig, "footer-user-btn"),
+            sys_pn: "user-menu-trigger",
+            partHandler: ui,
+            service: "toggle-user-menu",
+            uiHandler: [ui],
+            kidsOpt: { active: 0 },
             kids: [
-              createText(fig, "footer-avatar-note", getInitials(username)),
+              Skeletons.Box.X({
+                className: cls(fig, "footer-avatar"),
+                kidsOpt: { active: 0 },
+                kids: [
+                  createText(fig, "footer-avatar-note", getInitials(username)),
+                ],
+              }),
+              Skeletons.Box.Y({
+                className: cls(fig, "footer-name-wrapper"),
+                kidsOpt: { active: 0 },
+                kids: [
+                  createText(fig, "footer-username", username),
+                  createText(fig, "footer-user-plan", LOCALE.PRO_PLAN),
+                ],
+              }),
             ],
           }),
           Skeletons.Box.Y({
-            className: cls(fig, "footer-name-wrapper"),
+            className: cls(fig, "footer-user-menu"),
+            sys_pn: "user-menu-items",
+            partHandler: ui,
+            dataset: { state: "closed" },
+            kidsOpt: {
+              active: 0,
+            },
             kids: [
-              createText(fig, "footer-username", username),
-              createText(fig, "footer-user-plan", LOCALE.PRO_PLAN),
+              Skeletons.Box.X({
+                className: `${cls(fig, "footer-user-menu-item")} account`,
+                service: "open-account",
+                uiHandler: [ui],
+                kidsOpt: {
+                  active: 0,
+                },
+                kids: [
+                  Skeletons.Image.Svg({
+                    ico: "desktop_account--white",
+                    className: cls(fig, "footer-user-menu-icon"),
+                  }),
+                  createText(fig, "footer-user-menu-label", LOCALE.MY_ACCOUNT || "My account"),
+                ],
+              }),
+              Skeletons.Box.X({
+                className: `${cls(fig, "footer-user-menu-item")} helpdesk`,
+                service: _a.helpdesk,
+                uiHandler: [ui],
+                kidsOpt: {
+                  active: 0,
+                },
+                kids: [
+                  Skeletons.Image.Svg({
+                    ico: "desktop_questionmark",
+                    className: cls(fig, "footer-user-menu-icon"),
+                  }),
+                  createText(fig, "footer-user-menu-label", LOCALE.HELPDESK || "Helpdesk"),
+                ],
+              }),
             ],
           }),
         ],

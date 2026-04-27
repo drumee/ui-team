@@ -226,6 +226,7 @@ class __window_mfs extends DrumeeMFS {
     child.el.style.visibility = 'hidden';
     const childScroll = child.el.querySelector('.smart-container');
     if (childScroll) childScroll.style.visibility = 'hidden';
+    this._partitionListPart = child;
     this._setupPartitionObserver(child);
     child.once(EOD, () => {
       if (timer) clearTimeout(timer);
@@ -261,6 +262,15 @@ class __window_mfs extends DrumeeMFS {
       clearTimeout(this._partitionSettleTimer);
       this._partitionSettleTimer = null;
     }
+    if (this._partitionListPart) {
+      this._partitionListPart.el.style.visibility = 'visible';
+      const sc = this._partitionListPart.el.querySelector('.smart-container');
+      if (sc) {
+        sc.style.visibility = 'visible';
+        sc.dataset.partitioning = 0;
+      }
+      this._partitionListPart = null;
+    }
   }
 
   _schedulePartitionCleanup(listPart) {
@@ -295,7 +305,9 @@ class __window_mfs extends DrumeeMFS {
   }
 
   _prepareListPartition(listPart) {
+    this._partitionListPart = null;
     this._cleanupPartition();
+    this._partitionListPart = listPart;
     listPart.el.style.visibility = 'hidden';
     const scrollEl = listPart.el.querySelector('.smart-container');
     if (scrollEl) {
@@ -344,7 +356,13 @@ class __window_mfs extends DrumeeMFS {
           this._partitionObserver.observe(listPart.el, { attributes: true, attributeFilter: ["data-filetype"], childList: true, subtree: true });
         }
         if (done) {
+          if (this._partitionRetryTimer) {
+            clearTimeout(this._partitionRetryTimer);
+            this._partitionRetryTimer = null;
+          }
           this._schedulePartitionCleanup(listPart);
+        } else if (this._partitionObserver) {
+          this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
         }
       }, 100);
     });
@@ -434,6 +452,7 @@ class __window_mfs extends DrumeeMFS {
     scrollEl.dataset.partitioning = 0;
 
     this._applyFolderScrollMode(listPart);
+    this._partitionListPart = null;
     listPart.el.style.visibility = 'visible';
     return true;
   }

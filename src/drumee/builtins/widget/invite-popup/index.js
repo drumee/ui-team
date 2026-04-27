@@ -1,0 +1,506 @@
+/**
+ * Invite popup widget
+ * Mirrors Figma 316:77288 / 316:77652. Hooks the existing
+ * drumate.my_contacts (autocomplete) + hub.add_contributors (invite) APIs.
+ */
+const skeletonModule = require("./skeleton");
+const { ROLES, DEFAULT_ROLE_IDS, computePrivilege, summarizeRoles } = skeletonModule;
+
+class __invite_popup extends LetcBox {
+  constructor(...args) {
+    super(...args);
+    this.onDomRefresh = this.onDomRefresh.bind(this);
+    this.onPartReady = this.onPartReady.bind(this);
+    this.onUiEvent = this.onUiEvent.bind(this);
+    this._onSearchInput = this._onSearchInput.bind(this);
+    this._onWorkspaceInput = this._onWorkspaceInput.bind(this);
+  }
+
+  static initClass() {
+    require("./skin");
+  }
+
+  initialize(opt = {}) {
+    super.initialize(opt);
+    this.declareHandlers();
+    this._invitees = [];
+    this._workspaces = [
+      {
+        hub_id: opt.hub_id || null,
+        name: "",
+        roleIds: DEFAULT_ROLE_IDS.slice(),
+      },
+    ];
+    this._suggestions = [];
+    this._workspacesCache = null;
+    this._workspaceSearchTimers = {};
+    this._partRefs = {
+      workspaceInputs: {},
+      workspaceSuggestions: {},
+      roleLabels: {},
+      roleOptions: {},
+      workspaceRows: {},
+    };
+    this._nextRowIdx = 1;
+  }
+
+  onDomRefresh() {
+    this.feed(skeletonModule(this));
+    this.el.dataset.state = 1;
+    if (this.parent && this.parent.el) {
+      this._wrapperEl = this.parent.el;
+      this._wrapperEl.dataset.state = "open";
+    }
+    this._dismissDropdowns = (e) => {
+      if (!this.el.contains(e.target)) return;
+      setTimeout(() => this._maybeCloseDropdowns(e.target), 0);
+    };
+    document.addEventListener("mousedown", this._dismissDropdowns);
+  }
+
+  onBeforeDestroy() {
+    if (this._wrapperEl) {
+      this._wrapperEl.dataset.state = "closed";
+    }
+    if (this._dismissDropdowns) {
+      document.removeEventListener("mousedown", this._dismissDropdowns);
+    }
+  }
+
+  _maybeCloseDropdowns(target) {
+    // Close role/workspace dropdowns when clicking outside their cells
+    Object.entries(this._partRefs.roleOptions).forEach(([idx, optBox]) => {
+      const label = this._partRefs.roleLabels[idx]?.el;
+      const cell = label?.parentElement;
+      if (optBox && optBox.el?.dataset.state === "1" && cell && !cell.contains(target)) {
+        optBox.el.dataset.state = 0;
+      }
+    });
+    Object.entries(this._partRefs.workspaceSuggestions).forEach(([idx, sugBox]) => {
+      const inputEl = this._partRefs.workspaceInputs[idx]?.el;
+      if (sugBox && sugBox.el?.dataset.state === "1" && inputEl && !inputEl.contains(target) && !sugBox.el.contains(target)) {
+        sugBox.el.dataset.state = 0;
+      }
+    });
+  }
+
+  _closePopup() {
+    if (this.parent && _.isFunction(this.parent.clear)) {
+      this.parent.clear();
+    } else {
+      this.softDestroy();
+    }
+  }
+
+  onPartReady(child, pn) {
+    if (pn === "email-chips") {
+      this._chipsBox = child;
+    } else if (pn === "email-input") {
+      this._emailInput = child;
+      const inputEl = child.el.querySelector("input");
+      if (inputEl) {
+        inputEl.addEventListener("input", this._onSearchInput);
+        inputEl.addEventListener("keydown", (e) => {
+          if (e.key === "Backspace" && !inputEl.value && this._invitees.length) {
+            this._removeInvitee(this._invitees.length - 1);
+          }
+        });
+      }
+    } else if (pn === "suggestions") {
+      this._suggestionsBox = child;
+    } else if (pn === "send-btn") {
+      this._sendBtn = child;
+    } else if (pn === "workspaces") {
+      this._workspacesBox = child;
+    } else if (pn.startsWith("workspace-input:")) {
+      const idx = pn.split(":")[1];
+      this._partRefs.workspaceInputs[idx] = child;
+      const bind = () => {
+        const inputEl = child.el.querySelector("input");
+        if (!inputEl) return;
+        inputEl.addEventListener("input", (e) => this._onWorkspaceInput(idx, e));
+        inputEl.addEventListener("focus", () => {
+          this._fetchWorkspaces(idx, inputEl.value.trim());
+        });
+        inputEl.addEventListener("click", () => {
+          this._fetchWorkspaces(idx, inputEl.value.trim());
+        });
+      };
+      bind();
+      if (!child.el.querySelector("input")) setTimeout(bind, 50);
+    } else if (pn.startsWith("workspace-suggestions:")) {
+      const idx = pn.split(":")[1];
+      this._partRefs.workspaceSuggestions[idx] = child;
+    } else if (pn.startsWith("role-label:")) {
+      const idx = pn.split(":")[1];
+      this._partRefs.roleLabels[idx] = child;
+    } else if (pn.startsWith("role-options:")) {
+      const idx = pn.split(":")[1];
+      this._partRefs.roleOptions[idx] = child;
+    } else if (pn.startsWith("workspace-row:")) {
+      const idx = pn.split(":")[1];
+      this._partRefs.workspaceRows[idx] = child;
+    }
+  }
+
+  /* ── Email autocomplete ───────────────────────────────────── */
+
+  _onSearchInput(e) {
+    const value = (e.target.value || "").trim();
+    if (!value) {
+      this._hideSuggestions();
+      this._refreshSendState();
+      return;
+    }
+    this._fetchSuggestions(value);
+    this._refreshSendState();
+  }
+
+  _fetchSuggestions(value) {
+    if (this._searchTimer) clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(() => {
+      this.fetchService(
+        {
+          service: SERVICE.drumate.my_contacts,
+          status: "paper",
+          value: `${value}%`,
+          filter: this._invitees.map((i) => i.email),
+          hub_id: Visitor.id,
+        },
+        { async: 1 }
+      ).then((data) => {
+        this._showSuggestions(_.isArray(data) ? data : []);
+      });
+    }, 250);
+  }
+
+  _showSuggestions(data) {
+    this._suggestions = data;
+    if (!this._suggestionsBox) return;
+    if (!data.length) {
+      this._hideSuggestions();
+      return;
+    }
+    const items = data.map((row) => {
+      const fullName = [row.firstname, row.lastname].filter(Boolean).join(" ") || row.email;
+      return Skeletons.Box.X({
+        className: `${this.fig.family}__suggestion-item`,
+        dataset: { email: row.email, uid: row.id || row.uid || "" },
+        service: "pick-suggestion",
+        uiHandler: [this],
+        kids: [Skeletons.Note({ content: `${fullName} <${row.email}>` })],
+      });
+    });
+    this._suggestionsBox.feed(items);
+    this._suggestionsBox.el.dataset.state = 1;
+  }
+
+  _hideSuggestions() {
+    if (this._suggestionsBox) {
+      this._suggestionsBox.el.dataset.state = 0;
+      this._suggestionsBox.clear();
+    }
+  }
+
+  _addInvitee(data) {
+    if (!data || !data.email) return;
+    if (this._invitees.find((i) => i.email === data.email)) return;
+    this._invitees.push(data);
+    this._renderChips();
+    this._refreshSendState();
+    if (this._emailInput) {
+      const inputEl = this._emailInput.el.querySelector("input");
+      if (inputEl) {
+        inputEl.value = "";
+        inputEl.focus();
+      }
+    }
+    this._hideSuggestions();
+  }
+
+  _removeInvitee(idx) {
+    this._invitees.splice(idx, 1);
+    this._renderChips();
+    this._refreshSendState();
+  }
+
+  _renderChips() {
+    if (!this._chipsBox) return;
+    const pfx = this.fig.family;
+    const chips = this._invitees.map((inv, idx) => {
+      const label = inv.firstname || inv.lastname
+        ? [inv.firstname, inv.lastname].filter(Boolean).join(" ")
+        : inv.email;
+      return Skeletons.Box.X({
+        className: `${pfx}__chip`,
+        kids: [
+          Skeletons.Note({ content: label }),
+          Skeletons.Note({
+            className: `${pfx}__chip-remove`,
+            service: "remove-chip",
+            dataset: { idx },
+            uiHandler: [this],
+            content: "×",
+          }),
+        ],
+      });
+    });
+    this._chipsBox.feed(chips);
+  }
+
+  _refreshSendState() {
+    if (!this._sendBtn) return;
+    const hasInvitee = this._invitees.length > 0;
+    const inputVal = this._emailInput?.el.querySelector("input")?.value?.trim();
+    const hasPendingEmail = inputVal && /\S+@\S+\.\S+/.test(inputVal);
+    this._sendBtn.el.dataset.state = hasInvitee || hasPendingEmail ? 1 : 0;
+  }
+
+  _addPendingEmailFromInput() {
+    const inputEl = this._emailInput?.el.querySelector("input");
+    const value = (inputEl?.value || "").trim();
+    if (value && /\S+@\S+\.\S+/.test(value)) {
+      this._addInvitee({ email: value });
+    }
+  }
+
+  /* ── Workspace search ─────────────────────────────────────── */
+
+  _onWorkspaceInput(idx, e) {
+    this._fetchWorkspaces(idx, (e.target.value || "").trim());
+  }
+
+  /**
+   * Show all workspaces user can invite into (privilege >= 31 = admin/owner).
+   * desk.home returns hubs with privilege bitmask per workspace.
+   * `value` (optional) narrows the list by filename match.
+   */
+  _fetchWorkspaces(idx, value) {
+    clearTimeout(this._workspaceSearchTimers[idx]);
+    this._workspaceSearchTimers[idx] = setTimeout(async () => {
+      let list = this._workspacesCache;
+      if (!list) {
+        const data = await this.fetchService(
+          {
+            service: SERVICE.desk.home,
+            hub_id: Visitor.id,
+            type: _a.hub,
+          },
+          { async: 1 },
+        );
+        list = _.isArray(data) ? data : [];
+        this._workspacesCache = list;
+      }
+      // Only workspaces where current user has admin privilege (bit 31 = 0b11111)
+      const ADMIN = 0b0011111;
+      const inviteable = list.filter((w) => ((w.privilege | 0) & ADMIN) === ADMIN);
+      const filtered = value
+        ? inviteable.filter((w) =>
+            (w.filename || w.name || "").toLowerCase().includes(value.toLowerCase()),
+          )
+        : inviteable;
+      this._showWorkspaceSuggestions(idx, filtered);
+    }, value ? 200 : 0);
+  }
+
+  _showWorkspaceSuggestions(idx, list) {
+    const sugBox = this._partRefs.workspaceSuggestions[idx];
+    if (!sugBox) return;
+    if (!list.length) {
+      this._hideWorkspaceSuggestions(idx);
+      return;
+    }
+    const pfx = this.fig.family;
+    const items = list.map((row) =>
+      Skeletons.Note({
+        className: `${pfx}__workspace-option`,
+        content: row.filename || row.name,
+        dataset: { idx, hub_id: row.hub_id || row.id || row.actual_hub_id, name: row.filename || row.name },
+        service: "pick-workspace",
+        uiHandler: [this],
+      }),
+    );
+    sugBox.feed(items);
+    sugBox.el.dataset.state = 1;
+  }
+
+  _hideWorkspaceSuggestions(idx) {
+    const sugBox = this._partRefs.workspaceSuggestions[idx];
+    if (sugBox) {
+      sugBox.el.dataset.state = 0;
+      sugBox.clear();
+    }
+  }
+
+  /* ── Role / workspace row management ──────────────────────── */
+
+  _toggleRoleDropdown(idx) {
+    const opt = this._partRefs.roleOptions[idx];
+    if (!opt) return;
+    const cur = opt.el.dataset.state === "1";
+    Object.values(this._partRefs.roleOptions).forEach((o) => (o.el.dataset.state = 0));
+    opt.el.dataset.state = cur ? 0 : 1;
+  }
+
+  _pickRole(idx, roleId) {
+    const role = ROLES.find((r) => r.id === roleId);
+    if (!role) return;
+    const wsIdx = this._workspaceIdxByRowIdx(idx);
+    if (wsIdx == null) return;
+    const ws = this._workspaces[wsIdx];
+    if (!ws.roleIds) ws.roleIds = [];
+    const has = ws.roleIds.includes(roleId);
+    ws.roleIds = has
+      ? ws.roleIds.filter((id) => id !== roleId)
+      : ws.roleIds.concat(roleId);
+
+    // Update checkbox visual state
+    const optsBox = this._partRefs.roleOptions[idx];
+    if (optsBox) {
+      const node = optsBox.el.querySelector(`.invite-popup__role-option[data-id="${roleId}"]`);
+      if (node) node.dataset.checked = has ? 0 : 1;
+    }
+    // Update summary label
+    if (this._partRefs.roleLabels[idx]) {
+      this._partRefs.roleLabels[idx].set({ content: summarizeRoles(ws.roleIds) });
+    }
+  }
+
+  _pickWorkspace(idx, hub_id, name) {
+    const wsIdx = this._workspaceIdxByRowIdx(idx);
+    if (wsIdx == null) return;
+    this._workspaces[wsIdx].hub_id = hub_id;
+    this._workspaces[wsIdx].name = name;
+    const inputEl = this._partRefs.workspaceInputs[idx]?.el?.querySelector("input");
+    if (inputEl) inputEl.value = name;
+    this._hideWorkspaceSuggestions(idx);
+  }
+
+  _workspaceIdxByRowIdx(rowIdx) {
+    return parseInt(rowIdx, 10);
+  }
+
+  _addWorkspaceRow() {
+    if (!this._workspacesBox) return;
+    const idx = this._nextRowIdx++;
+    this._workspaces[idx] = {
+      hub_id: null,
+      name: "",
+      roleIds: DEFAULT_ROLE_IDS.slice(),
+    };
+    const row = skeletonModule.buildWorkspaceRow(this, idx);
+    this._workspacesBox.append(row);
+  }
+
+  _removeWorkspaceRow(idx) {
+    if (idx == null || isNaN(idx)) return;
+    // Keep at least one row
+    const remaining = Object.keys(this._partRefs.workspaceRows).length;
+    if (remaining <= 1) return;
+    const row = this._partRefs.workspaceRows[idx];
+    if (row && _.isFunction(row.goodbye)) {
+      row.goodbye();
+    } else if (row && row.el) {
+      row.el.remove();
+    }
+    delete this._partRefs.workspaceRows[idx];
+    delete this._partRefs.workspaceInputs[idx];
+    delete this._partRefs.workspaceSuggestions[idx];
+    delete this._partRefs.roleLabels[idx];
+    delete this._partRefs.roleOptions[idx];
+    delete this._workspaces[idx];
+  }
+
+  _sendInvitation() {
+    this._addPendingEmailFromInput();
+    if (!this._invitees.length) return;
+
+    const users = this._invitees.map((i) => i.email || i.id || i.uid);
+    const assignments = this._workspaces
+      .filter((w) => w && w.hub_id)
+      .map((w) => ({
+        hub_id: w.hub_id,
+        privilege: computePrivilege(w.roleIds || []),
+      }));
+
+    if (!assignments.length) {
+      const fallback = this.mget("hub_id") || Visitor.id;
+      assignments.push({
+        hub_id: fallback,
+        privilege: computePrivilege(this._workspaces[0]?.roleIds || DEFAULT_ROLE_IDS),
+      });
+    }
+
+    if (this._sendBtn) this._sendBtn.el.dataset.state = 0;
+
+    this.postService(SERVICE.hub.invite_with_roles, { users, assignments })
+      .then((result) => {
+        this.triggerHandlers({
+          service: "invitation-sent",
+          invitees: this._invitees,
+          result,
+        });
+        this._closePopup();
+      })
+      .catch((err) => {
+        this.warn("[invite-popup] hub.invite_with_roles failed", err);
+        if (this._sendBtn) this._sendBtn.el.dataset.state = 1;
+      });
+  }
+
+  _get(cmd, key) {
+    const v = cmd.mget ? cmd.mget(key) : undefined;
+    if (v != null && v !== "") return v;
+    return cmd.el ? cmd.el.dataset[key] : undefined;
+  }
+
+  onUiEvent(cmd, args = {}) {
+    const service = args.service || cmd.mget(_a.service);
+    switch (service) {
+      case "close-invite-popup":
+        return this._closePopup();
+
+      case "submit-email":
+        this._addPendingEmailFromInput();
+        this._refreshSendState();
+        return;
+
+      case "pick-suggestion":
+        return this._addInvitee({
+          email: this._get(cmd, "email"),
+          id: this._get(cmd, "uid") || null,
+        });
+
+      case "remove-chip":
+        return this._removeInvitee(parseInt(this._get(cmd, "idx"), 10));
+
+      case "search-workspace":
+        return;
+
+      case "toggle-role":
+        return this._toggleRoleDropdown(this._get(cmd, "idx"));
+
+      case "pick-role":
+        return this._pickRole(this._get(cmd, "idx"), this._get(cmd, "id"));
+
+      case "pick-workspace":
+        return this._pickWorkspace(
+          this._get(cmd, "idx"),
+          this._get(cmd, "hub_id"),
+          this._get(cmd, "name"),
+        );
+
+      case "add-workspace-role":
+        return this._addWorkspaceRow();
+
+      case "remove-workspace-row":
+        return this._removeWorkspaceRow(parseInt(this._get(cmd, "idx"), 10));
+
+      case "send-invitation":
+        return this._sendInvitation();
+    }
+  }
+}
+
+__invite_popup.initClass();
+module.exports = __invite_popup;

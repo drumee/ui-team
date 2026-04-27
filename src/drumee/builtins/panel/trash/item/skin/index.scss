@@ -14,7 +14,6 @@
     transition: background-color 0.5s;
 
     &:hover {
-      .delete,
       .restore {
         display: flex;
       }
@@ -112,20 +111,23 @@
       color: var(--normal-fg-20);
     }
 
-    &.delete,
     &.restore {
       display: none;
       cursor: pointer;
     }
 
     &.delete {
+      display: flex;
+      cursor: pointer;
       background-color: rgba(255, 0, 31, 0.2);
       border-radius: var(--corner-radius-1);
-      color: var(--error);
+      color: #d74e49;
+
+      svg {
+        fill: currentColor;
+      }
       &:hover {
-        svg {
-          fill: var(--red-700);
-        }
+        color: var(--red-700, #b91c1c);
       }
     }
 

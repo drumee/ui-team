@@ -196,11 +196,13 @@ class __window_manager extends push {
     // Set the context synchronously with whatever we have. The sidebar's
     // desk.home payload only carries hub_id (no actual_home_id), so the
     // nid often arrives later via the get_attributes fetch below.
-    this._curWorkspace = { hub_id, nid, area: data.area };
-    this.mset({ hub_id, nid, nodeId: nid, area: data.area });
+    this._wsGeneration = (this._wsGeneration || 0) + 1;
+    const gen = this._wsGeneration;
 
     const apply = (resolvedNid) => {
+      if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: resolvedNid, area: data.area };
+      this.mset({ hub_id, nid: resolvedNid, nodeId: resolvedNid, area: data.area });
       this.ensurePart(_a.list).then((l) => {
         l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid: resolvedNid });
         if (l.collection) l.collection.reset();
@@ -220,6 +222,12 @@ class __window_manager extends push {
       this.windowsLayer.clear();
       this.updateBreadcrumb({ ...data, hub_id, nid: resolvedNid, service: "change-workspace" });
     };
+
+    // nid often arrives later via the get_attributes fetch below. The
+    // topbar's "+ Add new" check only needs hub_id to flip to folder
+    // creation mode — nid can fill in asynchronously.
+    this._curWorkspace = { hub_id, nid, area: data.area };
+    this.mset({ hub_id, nid, nodeId: nid, area: data.area });
 
     if (nid) {
       apply(nid);

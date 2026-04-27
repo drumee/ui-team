@@ -1,5 +1,6 @@
 
 const mfsInteract = require('../../window/utils');
+const { filesize } = require('@drumee/ui-essentials');
 require('./skin');
 class __panel_trash extends mfsInteract {
 
@@ -17,6 +18,24 @@ class __panel_trash extends mfsInteract {
     this.mset(data);
     window.Trash = this
   }
+
+  _refreshStorageUsed() {
+    return this.fetchService({
+      service: SERVICE.desk.disk_usage,
+      hub_id: Visitor.id,
+      category: '*',
+      list: 1,
+    }, { async: 1 }).then((data) => {
+      if (!data) return;
+      const { quota, usage } = data;
+      if (quota) Visitor.set({ quota });
+      if (usage) Visitor.set({ disk_usage: usage });
+      const used = Visitor.diskUsed() || 0;
+      this.ensurePart('storage-info').then((p) => {
+        p.set({ content: LOCALE.STORAGE_USED.format(filesize(used)) });
+      });
+    }).catch(() => { });
+  }
   /**
    *
    * @param {*} child
@@ -28,11 +47,19 @@ class __panel_trash extends mfsInteract {
     switch (pn) {
       case _a.list:
         child.once(_e.eod, async () => {
+          const count = child.collection
+            ? child.collection.filter(m => m.get(_a.kind) !== 'placeholder' && m.get(_a.nid)).length
+            : 0;
+          this.el.dataset.empty = count ? 0 : 1;
           this.ensurePart('items-count').then((p) => {
-            p.set({ content: LOCALE.X_ITEMS_FOUND.format(child.collection.length) })
+            p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) })
             this.el.dataset.anim = "in";
           })
+          this._refreshStorageUsed();
         })
+        break;
+      case 'storage-info':
+        this._refreshStorageUsed();
         break;
     }
   }
@@ -58,7 +85,10 @@ class __panel_trash extends mfsInteract {
 
   _updateItemsCount() {
     return this.ensurePart(_a.list).then((listPart) => {
-      const count = listPart.collection ? listPart.collection.length : 0;
+      const count = listPart.collection
+        ? listPart.collection.filter(m => m.get(_a.kind) !== 'placeholder' && m.get(_a.nid)).length
+        : 0;
+      this.el.dataset.empty = count ? 0 : 1;
       return this.ensurePart('items-count').then((p) => {
         p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
       });
@@ -81,6 +111,7 @@ class __panel_trash extends mfsInteract {
     }).then(() => {
       media.suppress();
       this._updateItemsCount();
+      this._refreshStorageUsed();
       Wm.reloadAll();
     });
   }
@@ -94,6 +125,7 @@ class __panel_trash extends mfsInteract {
     }).then(() => {
       media.suppress();
       this._updateItemsCount();
+      this._refreshStorageUsed();
     });
   }
 
