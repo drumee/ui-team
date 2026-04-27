@@ -137,6 +137,14 @@ class __invite_popup extends LetcBox {
     } else if (pn.startsWith("role-options:")) {
       const idx = pn.split(":")[1];
       this._partRefs.roleOptions[idx] = child;
+      child.el.addEventListener("mousedown", (e) => {
+        const opt = e.target.closest(".invite-popup__role-option")
+          || e.target.closest(".inner")?.parentElement;
+        if (!opt || !opt.dataset.id) return;
+        e.stopPropagation();
+        e.preventDefault();
+        this._pickRole(opt.dataset.idx, opt.dataset.id);
+      });
     } else if (pn.startsWith("workspace-row:")) {
       const idx = pn.split(":")[1];
       this._partRefs.workspaceRows[idx] = child;
@@ -433,17 +441,26 @@ class __invite_popup extends LetcBox {
 
     if (this._sendBtn) this._sendBtn.el.dataset.state = 0;
 
-    this.postService(SERVICE.hub.invite_with_roles, { users, assignments })
-      .then((result) => {
+    const promises = assignments.map((a) =>
+      this.postService(SERVICE.hub.add_contributors, {
+        hub_id: a.hub_id,
+        privilege: a.privilege,
+        users,
+        email: users,
+      }),
+    );
+
+    Promise.all(promises)
+      .then((results) => {
         this.triggerHandlers({
           service: "invitation-sent",
           invitees: this._invitees,
-          result,
+          results,
         });
         this._closePopup();
       })
       .catch((err) => {
-        this.warn("[invite-popup] hub.invite_with_roles failed", err);
+        this.warn("[invite-popup] hub.add_contributors failed", err);
         if (this._sendBtn) this._sendBtn.el.dataset.state = 1;
       });
   }

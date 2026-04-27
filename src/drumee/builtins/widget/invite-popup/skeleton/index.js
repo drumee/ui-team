@@ -101,8 +101,6 @@ const buildWorkspaceRow = (ui, idx) => {
             kids: ROLES.map((r) =>
               Skeletons.Note({
                 className: `${pfx}__role-option`,
-                service: "pick-role",
-                uiHandler: [ui],
                 dataset: {
                   id: r.id,
                   idx,

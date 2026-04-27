@@ -2,10 +2,20 @@
 
 /* Overlay blur background — applied when invite-popup is shown inside the
    window-manager wrapper-modal. Matches Figma 100:60312 (dev mode). */
-.window-manager__wrapper-modal:has(> .invite-popup) {
-  background: var(--light-overlay, rgba(255, 255, 255, 0.05)) !important;
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+.window-manager__wrapper-modal:has(.invite-popup) {
+  display: flex !important;
+  position: fixed !important;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20000;
+  align-items: center;
+  justify-content: center;
+  overflow: clip;
+  border-radius: 0 0 8px 8px;
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(30px) !important;
+  -webkit-backdrop-filter: blur(30px) !important;
 }
 
 .invite-popup {
@@ -296,12 +306,12 @@
     @include drumee.typo(
       $size: 12px,
       $weight: 400,
-      $line: 16.8px,
+      $line: 36px,
       $color: var(--normal-fg-50)
     );
     background-color: rgba(0, 0, 0, 0.06);
     border-radius: 6px;
-    padding: 8px 12px;
+    padding: 0 12px;
     height: 36px;
     width: 100%;
     cursor: pointer;
@@ -309,9 +319,14 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     box-sizing: border-box;
+    align-items: center;
 
     .inner {
       pointer-events: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 36px;
     }
   }
 

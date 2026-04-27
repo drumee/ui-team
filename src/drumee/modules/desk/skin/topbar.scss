@@ -181,17 +181,22 @@
 
   // New workspace button
   &__new-workspace-btn {
-    display: inline-flex;
+    display: inline-flex !important;
     flex-direction: row !important;
     height: 28px;
     padding: 0 12px;
     gap: 6px;
     background-color: #b1adff;
     border-radius: 4px;
-    align-items: center;
+    align-items: center !important;
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
+
+    > * {
+      display: inline-flex;
+      align-items: center;
+    }
 
     .svg-wrapper,
     .drumee-svg,
@@ -210,7 +215,7 @@
     section.label {
       font-size: 13px;
       font-weight: 600;
-      line-height: 1;
+      line-height: 28px;
       color: #0b0a21;
       white-space: nowrap;
       display: inline-flex;
@@ -223,15 +228,21 @@
   }
 
   &__upload-btn {
-    display: flex;
+    display: inline-flex !important;
+    flex-direction: row !important;
     height: 28px;
     padding: 0 13px;
     gap: 7px;
     background-color: var(--white);
     border-radius: 4px;
-    align-items: center;
+    align-items: center !important;
     cursor: pointer;
     flex-shrink: 0;
+
+    > * {
+      display: inline-flex;
+      align-items: center;
+    }
 
     svg {
       width: 14px;
@@ -243,8 +254,11 @@
     section.label {
       font-size: 13px;
       font-weight: 600;
+      line-height: 28px;
       color: #0b0a21;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
     }
 
     &:hover {
