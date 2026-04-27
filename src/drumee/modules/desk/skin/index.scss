@@ -32,6 +32,10 @@ html {
   }
 
   &__panel-container {
+    // position:relative activates the z-index stacking context, otherwise
+    // z-index is ignored on static elements and slide-out panels (admin
+    // members, trash, chat) end up painted behind the window manager.
+    position: relative;
     z-index: 10001;
     width: 0;
     top: 0;
