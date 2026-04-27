@@ -114,7 +114,7 @@
     }
 
     &[data-state="1"] {
-      background-color: var(--primary-500, #6366f1);
+      background-color: var(--primary-40);
 
       &::after {
         transform: translateX(20px);
@@ -176,7 +176,13 @@
     width: 20px;
     height: 20px;
     flex-shrink: 0;
-    color: var(--normal-fg-20);
+    &[data-state="0"] {
+      color: var(--neutral-500);
+    }
+
+    &[data-state="1"] {
+      color: var(--primary-40);
+    }
   }
 
   &__access-label {
@@ -189,12 +195,12 @@
     height: 22px;
     flex-shrink: 0;
 
-    &[data-state="1"] {
-      color: var(--normal-fg-20);
+    &[data-state="0"] {
+      color: var(--neutral-500);
     }
 
-    &[data-state="0"] {
-      color: var(--neutral-500, #6b7280);
+    &[data-state="1"] {
+      color: var(--primary-40);
     }
   }
 

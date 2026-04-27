@@ -12,16 +12,23 @@ const __media_filename = function (m) {
     v = 'image-capable';
   }
 
-  if ((m.isAttachment) || (Visitor.inDmz) || (m.isalink && (m.filetype !== _a.hub)) || (m.status === _a.deleted)) {
+  const trigger = `
+    <div class="media-context-menu__trigger" data-service="context-menu">
+      <svg class="media-context-menu__trigger-icon">
+        <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#--icon-bold-dot-vertical"></use>
+      </svg>
+    </div>`;
+
+  if ((m.isAttachment) || (Visitor.inDmz) || (m.filetype === _a.hub) || (m.isalink && (m.filetype !== _a.hub)) || (m.status === _a.deleted)) {
     html = `
-    <div id="${m._id}-filename" class="filename ${uiHack} ${m.area} ${m.filetype} ${v}"> 
+    <div id="${m._id}-filename" class="filename ${uiHack} ${m.area} ${m.filetype} ${v}">
       ${filename}
     </div>`;
   } else {
     html = `
-    <div id="${m._id}-filename" data-service="${service}" class="filename ${uiHack} ${m.area} ${m.filetype} ${v}"> 
-      ${filename} 
-    </div>`;
+    <div id="${m._id}-filename" data-service="${service}" class="filename ${uiHack} ${m.area} ${m.filetype} ${v}">
+      ${filename}
+    </div>` + trigger;
   }
 
   if (filename && (filename.length > 20)) {

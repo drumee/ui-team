@@ -28,9 +28,7 @@ class __webrtc_attendee extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} child 
-   * @param {*} pn 
+   *
    */
   onStatusChanged(data) {
     this._online = data.status;
@@ -38,6 +36,7 @@ class __webrtc_attendee extends LetcBox {
     this.el.dataset.online = data.status;
     if (this.__ctrlLine) {
       this.__ctrlLine.el.dataset.online = data.status;
+      this.__ctrlLine.el.dataset.calling = 0;
       this.__ctrlLine.el.dataset.invite = 0;
     }
   }
@@ -156,22 +155,33 @@ class __webrtc_attendee extends LetcBox {
   }
 
   /**
-   * 
+   * Show "Inviting..." state on the call button.
+   * Called by the meeting window after the poke is sent.
    */
-  inviteSucceeded() {
+  callInitiated() {
     this.mset({ service: "revoke" });
-    this.__ctrlLine.setState(1);
+    if (!this.__ctrlLine) return;
+    this.__ctrlLine.el.dataset.calling = 1;
     this.__ctrlLine.el.dataset.invite = 1;
+    const label = this.__ctrlLine.el.querySelector('.note-content');
+    if (label) label.textContent = LOCALE.INVITING || "Inviting...";
   }
 
   /**
-   * 
+   * Reset call button to "Call" state.
+   * Called when the attendee joins or declines.
    */
-  inviteCancelled() {
+  callEnded() {
     this.mset({ service: _a.invite });
-    this.__ctrlLine.setState(0);
+    if (!this.__ctrlLine) return;
+    this.__ctrlLine.el.dataset.calling = 0;
     this.__ctrlLine.el.dataset.invite = 0;
+    const label = this.__ctrlLine.el.querySelector('.note-content');
+    if (label) label.textContent = LOCALE.CALL || "Call";
   }
+
+  inviteSucceeded() { this.callInitiated(); }
+  inviteCancelled() { this.callEnded(); }
 
 }
 

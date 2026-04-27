@@ -58,12 +58,13 @@
     }
   }
 
-
   &__button-scroll {
     position: absolute;
-    @include drumee.typo($line: 14px,
+    @include drumee.typo(
+      $line: 14px,
       $size: 12px,
-      $color: var(--default-icon-reverse));
+      $color: var(--default-icon-reverse)
+    );
     border: 1px solid var(--default-icon-active);
     display: none;
     flex-direction: row;
@@ -116,9 +117,11 @@
   &__messages {
     height: inherit;
     width: 100%;
-    @include drumee.typo($line: 16px,
+    @include drumee.typo(
+      $line: 16px,
       $size: 14px,
-      $color: var(--default-text-color));
+      $color: var(--default-text-color)
+    );
 
     & .smart-container {
       height: 100%;
@@ -179,7 +182,7 @@
 
     .lib-messenger__container {
       align-items: center;
-      background-color: rgba(0, 0, 0, 0.05);
+      background-color: var(--white);
       border: none;
       border-radius: 8px;
       padding: 8px 12px;
@@ -279,10 +282,12 @@
     & .note-content {
       height: 38px;
       min-width: 140px;
-      @include drumee.typo($line: 19px,
+      @include drumee.typo(
+        $line: 19px,
         $size: 16px,
         $weight: 300,
-        $color: var(--egreen));
+        $color: var(--egreen)
+      );
     }
   }
 
@@ -314,10 +319,12 @@
   &__note {
     &.counter {
       padding: 3px 0 4px 0;
-      @include drumee.typo($size: 12px,
+      @include drumee.typo(
+        $size: 12px,
         $line: 20px,
         $weight: 300,
-        $color: var(--default-text-color));
+        $color: var(--default-text-color)
+      );
     }
   }
 
@@ -358,10 +365,12 @@
           padding-left: 25px;
           margin-top: auto;
           margin-bottom: auto;
-          @include drumee.typo($size: 14px,
+          @include drumee.typo(
+            $size: 14px,
             $line: 14px,
             $weight: 300,
-            $color: var(--tertiary-text-color));
+            $color: var(--tertiary-text-color)
+          );
         }
       }
     }
@@ -389,10 +398,12 @@
         }
 
         & .note-reader {
-          @include drumee.typo($size: 14px,
+          @include drumee.typo(
+            $size: 14px,
             $line: 14px,
             $weight: 300,
-            $color: var(--dgc-chat-error-ack-text-color));
+            $color: var(--dgc-chat-error-ack-text-color)
+          );
           margin-bottom: auto;
           margin-top: auto;
           padding-left: 25px;
@@ -423,9 +434,11 @@
     background-color: var(--default-bg);
     border: 0.5px solid var(--btn-commit-border);
     justify-content: center;
-    @include drumee.typo($size: 13px,
+    @include drumee.typo(
+      $size: 13px,
       $line: 12px,
-      $color: var(--btn-commit-backgroundless-text));
+      $color: var(--btn-commit-backgroundless-text)
+    );
 
     &:hover {
       border: 2px solid var(--btn-commit-border-hover);
@@ -436,9 +449,11 @@
   &__button-delete {
     border: 0.5px solid var(--btn-caution-border);
     justify-content: center;
-    @include drumee.typo($size: 13px,
+    @include drumee.typo(
+      $size: 13px,
       $line: 12px,
-      $color: var(--btn-caution-backgroundless-text));
+      $color: var(--btn-caution-backgroundless-text)
+    );
 
     &:hover {
       border: 2px solid var(--btn-caution-border-hover);
@@ -458,9 +473,11 @@
   &__button-cancel {
     border: 1px solid var(--btn-rollback-border);
     justify-content: center;
-    @include drumee.typo($size: 13px,
+    @include drumee.typo(
+      $size: 13px,
       $line: 12px,
-      $color: var(--btn-rollback-text));
+      $color: var(--btn-rollback-text)
+    );
     width: 100%;
 
     &:hover {
@@ -474,8 +491,10 @@
     background: hsla(0, 0%, 78.4%, 0.5); //rgba(137, 146, 158, 0.2);
     height: 40px;
     justify-content: center;
-    @include drumee.typo($size: 12px,
-      $color: var(--secondary-text-color)); //$weight:300,
+    @include drumee.typo(
+      $size: 12px,
+      $color: var(--secondary-text-color)
+    ); //$weight:300,
   }
 
   // File mention dropdown
@@ -757,7 +776,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacer-6);
-  padding: 16px;
+  padding: var(--spacer-4) var(--spacer-6);
   color: var(--normal-fg-10);
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-muted);
@@ -773,4 +792,14 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.window__split-body[data-tab="chat"] {
+  .window__chat-panel {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border-left: none;
+  }
 }

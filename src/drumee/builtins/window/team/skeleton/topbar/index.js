@@ -1,10 +1,16 @@
-const { newFileMenu, visioMenu, getAreaLabel } = require("../../../skeleton/toolkit");
+const {
+  newFileMenu,
+  visioMenu,
+  getAreaLabel,
+} = require("../../../skeleton/toolkit");
 
 const __skl_window_team_topbar = function (ui, icon) {
   let settings;
   const media = ui.mget(_a.media);
   const name = ui.model.get(_a.filename) || ui.model.get(_a.name) || "";
-  const logo = require("../../../skeleton/logo")(ui);
+  const logo = require("../../../skeleton/topbar/folder-icon")(
+    ui.mget(_a.area),
+  );
   const cnWindowButton = "window-button";
   const cnWidowTopbarTitle = "window-topbar-title";
   if (icon == null || ui.mget(_a.media) == null) {
@@ -15,7 +21,7 @@ const __skl_window_team_topbar = function (ui, icon) {
     }
 
     settings = Skeletons.Button.Svg({
-      ico: "setting",
+      ico: "folder-settings",
       uiHandler: ui,
       part: ui,
       sys_pn: "ref-window-icon",
@@ -55,15 +61,30 @@ const __skl_window_team_topbar = function (ui, icon) {
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       visioMenu(ui),
+      Skeletons.Button.Svg({
+        className: `${cnWindowButton}__icon-bg-button`,
+        ico: "folder-meeting",
+        uiHandler: ui,
+        partHandler: ui,
+        service: "open-call-panel",
+      }),
       newFileMenu(ui),
       Skeletons.Button.Label({
         className: `${cnWindowButton}__label-button`,
         label: LOCALE.UPLOAD,
-        ico: "desktop_upload",
+        ico: "folder-upload",
         service: _e.upload,
         uiHandler: ui,
       }),
       settings,
+      Skeletons.Button.Svg({
+        ico: "folder-split-window",
+        uiHandler: ui,
+        part: ui,
+        sys_pn: "ref-window-icon",
+        className: `${cnWindowButton}__icon-button`,
+        service: "",
+      }),
       require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });

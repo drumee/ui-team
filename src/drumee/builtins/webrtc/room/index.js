@@ -44,9 +44,8 @@ class __webrtc_room extends __interact {
       super.onBeforeDestroy();
     } catch (e) { }
     this.leaveRoom();
-    if (this.watchdog) {
-      clearInterval(this.watchdog);
-    }
+    if (this.watchdog) clearInterval(this.watchdog);
+    if (this._timerInterval) clearInterval(this._timerInterval);
   }
 
   /**
@@ -75,6 +74,20 @@ class __webrtc_room extends __interact {
   /**
    *
    */
+  _updateElapsedTimer() {
+    const p = this.getPart("elapsed-timer");
+    if (!p || !this._elapsedStart) return;
+    const elapsed = Math.floor((Date.now() - this._elapsedStart) / 1000);
+    const s = elapsed % 60;
+    const m = Math.floor(elapsed / 60) % 60;
+    const h = Math.floor(elapsed / 3600);
+    const pad = n => String(n).padStart(2, "0");
+    p.el.textContent = h ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  }
+
+  /**
+   *
+   */
   stateMachine(s, data) {
     this.state = s;
     switch (s) {
@@ -82,6 +95,10 @@ class __webrtc_room extends __interact {
         this.isOnine = 1;
         this.mset({ start_at: timestamp() });
         if (this.watchdog) return;
+        this._elapsedStart = Date.now();
+        if (!this._timerInterval) {
+          this._timerInterval = setInterval(() => this._updateElapsedTimer(), 1000);
+        }
         let wd = setInterval(() => {
           let t = this.getLocalTrack(_a.audio);
           if (t && t.isActive()) {
@@ -200,6 +217,7 @@ class __webrtc_room extends __interact {
         if (a.mget(_a.uid) == peer.uid && _.isFunction(a.update)) {
           a.update({ role: peer.role });
         }
+        if (typeof a.callEnded === 'function') a.callEnded();
       }
     }
     this.stateMessage();

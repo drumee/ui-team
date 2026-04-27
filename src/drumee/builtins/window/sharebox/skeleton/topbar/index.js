@@ -4,7 +4,7 @@ const __skl_window_team_topbar = function (ui, icon) {
   let settings;
   const media = ui.mget(_a.media);
   const name = ui.model.get(_a.filename) || "";
-  const logo = require("../../../skeleton/logo")(ui);
+  const logo = require("../../../skeleton/topbar/folder-icon")(ui.mget(_a.area));
   const cnWindowButton = `${ui.fig.group}-button`;
   const cnWidowTopbarTitle = `${ui.fig.group}-topbar-title`;
 
@@ -63,6 +63,13 @@ const __skl_window_team_topbar = function (ui, icon) {
         uiHandler: ui,
       }),
       settings,
+      Skeletons.Button.Svg({
+        className: `${cnWindowButton}__icon-bg-button`,
+        ico: "folder-meeting",
+        uiHandler: ui,
+        partHandler: ui,
+        service: "open-call-panel",
+      }),
       require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });

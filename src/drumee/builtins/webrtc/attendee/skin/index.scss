@@ -120,28 +120,47 @@
     }
   }
 
-  &__icon {
-    height: 25px;
-    width: 27px;
-    padding: 2px;
-    margin-right: 10px;
-    color: var(--white);
+  &__ctrl-btn {
+    display: none;
+    background-color: var(--active-item-bg);
+    border-radius: 4px;
+    padding: 6px 10px;
+    gap: 6px;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
 
-    &[data-invite="1"] {
-      color: var(--default-bg-alert);
-      animation-duration: 1s;
-      animation-name: changeScale;
-      animation-iteration-count: infinite;
-      animation-direction: alternate;
-      color: var(--button-accept);
+    svg {
+      width: 16px;
+      height: 16px;
+      color: var(--primary-40);
+    }
 
-      &[data-state="0"] {
-        display: flex;
+    .note-content {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--normal-fg);
+      white-space: nowrap;
+    }
+
+    &[data-online="1"] {
+      display: flex;
+    }
+
+    &[data-calling="1"] {
+      opacity: 0.65;
+      pointer-events: none;
+
+      svg {
+        animation-duration: 1s;
+        animation-name: changeScale;
+        animation-iteration-count: infinite;
+        animation-direction: alternate;
       }
     }
 
-    &[data-state="0"] {
-      display: none;
+    &:hover {
+      background-color: rgba(89, 80, 255, 0.18);
     }
   }
 }

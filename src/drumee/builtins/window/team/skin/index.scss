@@ -24,16 +24,43 @@
     }
   }
 
+  .topbar-folder-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 24px;
+
+    svg.folder-shape {
+      width: 100%;
+      height: auto;
+      fill: var(--area-private);
+    }
+  }
+
+  &__split-body {
+    &[data-tab="chat"] {
+      .window__files-panel {
+        display: none;
+      }
+      .window__chat-panel {
+        flex: 1;
+      }
+    }
+  }
+
   &__header {
-    background-color: var(--normal-bg-100);
+    background-color: var(--normal-bg-80);
 
     &-title {
       max-width: 163px;
       align-items: center;
-      @include drumee.typo($size: 18px,
+      @include drumee.typo(
+        $size: 18px,
         $line: 24px,
         $weight: 400,
-        $color: var(--default-text-reverse));
+        $color: var(--default-text-reverse)
+      );
 
       .name {
         align-items: flex-start;
@@ -65,8 +92,23 @@
       }
     }
   }
+}
 
+.window-team {
+  .window-body__tab-bar-item {
+    &[data-state="1"] {
+      border: 1px solid var(--area-private);
+    }
+    &:hover {
+      color: var(--area-private);
+    }
+  }
 
+  .widget-chatItem__conversation-content {
+    &.me {
+      background-color: var(--area-private);
+    }
+  }
 }
 
 // Scoped message bubble styles for team chat panel

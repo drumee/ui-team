@@ -360,6 +360,12 @@ module.exports = {
     // return import("./builtins/chat/hub");
     return import("./builtins/widget/chat");
   },
+  widget_meeting: function () {
+    return import("./builtins/widget/meeting");
+  },
+  widget_meeting_member: function () {
+    return import("./builtins/widget/meeting/member");
+  },
   widget_contact_detail: function () {
     return import("./builtins/window/addressbook/widget/contact-detail");
   },
@@ -468,6 +474,9 @@ module.exports = {
   window_channel: function () {
     return import("./builtins/window/channel");
   },
+  window_connect: function () {
+    return import("./builtins/window/connect");
+  },
   window_choice: function () {
     return import("./builtins/window/choice");
   },
@@ -495,6 +504,9 @@ module.exports = {
   window_manager: function () {
     return import("./modules/desk/wm");
   },
+  window_meeting: function () {
+    return import("./builtins/window/meeting");
+  },
   window_search: function () {
     return import("./builtins/window/search");
   },
@@ -519,6 +531,24 @@ module.exports = {
   },
   window_website: function () {
     return import("./builtins/window/website");
+  },
+  webrtc_attendee: function () {
+    return import("./builtins/webrtc/attendee");
+  },
+  webrtc_local_user: function () {
+    return import("./builtins/webrtc/endpoint/local/user");
+  },
+  webrtc_participants: function () {
+    return import("./builtins/webrtc/participants");
+  },
+  webrtc_remote_display: function () {
+    return import("./builtins/webrtc/endpoint/remote/display");
+  },
+  webrtc_remote_user: function () {
+    return import("./builtins/webrtc/endpoint/remote/user");
+  },
+  sound_analyzer: function () {
+    return import("./builtins/widget/sound-analyzer");
   },
   ws_channel: function () {
     return import("./router/websocket");

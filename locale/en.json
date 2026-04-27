@@ -1514,6 +1514,8 @@
   "ENTER_YOUR_NAME": "Enter your name",
   "JOIN_MEETING": "Join meeting",
   "CHOOSE_PASSWORD": "Please choose the password for your account",
+  "LEAVE_MEETING": "Leave Meeting",
+  "SEE_CHAT_THREADS": "See chat threads",
   "CONFIM_LEAVE_MEETING": "Do you confim you wan't to leave the meeting?",
   "SHARE_SCREEN_WARNING": "you cannot share your screen when an other screen is already shared.",
   "MSG_LEAVE_HUB": "You want to leave the shared folder \"{0}\". If you confirm your departure, you will no longer be able to access the contents of this folder.",
@@ -2557,5 +2559,12 @@
   "VERSION_HISTORY": "Version History",
   "VERSION_HISTORY_SUB": "Revert or manage file snapshots",
   "EDITED_BY": "Edited by",
-  "DOWNLOAD_ALL_VERSIONS": "Download  all versions"
+  "DOWNLOAD_ALL_VERSIONS": "Download  all versions",
+  "LINK_EXPIRATION": "Link Expiration",
+  "CLEAR": "Clear",
+  "APPLY_CHANGES": "Apply Changes",
+  "NO_EXPIRATION": "No Expiration",
+  "CAN_VIEW_FILES": "Can View Files",
+  "CAN_EDIT_UPLOAD": "Can Edit & Upload",
+  "PUBLIC_LINK": "Public Link"
 }

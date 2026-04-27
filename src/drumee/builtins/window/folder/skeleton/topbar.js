@@ -27,18 +27,19 @@ const __skl_folder_topbar = function (ui) {
   });
 
   const badgeLabel = getAreaLabel(area);
-  const badge = (area && badgeLabel)
-    ? Skeletons.Box.X({
-        className: `${cnFolder}__badge`,
-        dataset: { area },
-        kids: [
-          Skeletons.Note({
-            className: `${cnFolder}__badge-label`,
-            content: badgeLabel,
-          }),
-        ],
-      })
-    : "";
+  const badge =
+    area && badgeLabel
+      ? Skeletons.Box.X({
+          className: `${cnFolder}__badge`,
+          dataset: { area },
+          kids: [
+            Skeletons.Note({
+              className: `${cnFolder}__badge-label`,
+              content: badgeLabel,
+            }),
+          ],
+        })
+      : "";
 
   const heading = Skeletons.Box.X({
     className: `${cnFolder}__heading`,

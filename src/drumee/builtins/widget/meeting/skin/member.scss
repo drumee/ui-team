@@ -1,0 +1,79 @@
+.widget-meeting-member {
+  &__ui {
+    border-radius: 8px;
+    padding: 12px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  &__member-row {
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+  }
+
+  &__member-avatar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  &__member-info {
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__member-name {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--normal-fg);
+    font-family: var(--font-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__member-email {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: var(--normal-fg-20);
+    font-family: var(--font-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__member-call-btn {
+    display: flex;
+    background-color: var(--active-item-bg);
+    border-radius: 4px;
+    padding: 8px;
+    gap: 8px;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:hover {
+      background-color: rgba(89, 80, 255, 0.18);
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+      color: var(--primary-40);
+    }
+
+    .note-content {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--normal-fg);
+      white-space: nowrap;
+    }
+  }
+}

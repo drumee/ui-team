@@ -1,0 +1,130 @@
+@use "sass:meta";
+@include meta.load-css("member");
+
+.widget-meeting {
+  &__ui {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: var(--normal-bg-90);
+    border-left: 1px solid var(--border-muted);
+  }
+
+  &__container {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  // ── Header ─────────────────────────────────────────────────────────
+  &__header {
+    padding: var(--spacer-4) var(--spacer-6);
+    border-bottom: 1px solid var(--border-default);
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--normal-fg);
+    font-family: var(--font-main);
+  }
+
+  // ── Members ────────────────────────────────────────────────────────
+  &__section-label {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--normal-fg);
+    font-family: var(--font-main);
+    padding: 16px 24px 8px;
+    flex-shrink: 0;
+  }
+
+  &__members-list {
+    flex: 1;
+    min-height: 0;
+    padding: 8px;
+
+    // inner scroll wrapper added by List.Smart
+    & > * {
+      gap: 8px;
+    }
+
+    .no-content {
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      color: var(--normal-fg-20);
+      font-size: 14px;
+    }
+  }
+
+  // ── Footer ─────────────────────────────────────────────────────────
+  &__footer {
+    padding: 16px 24px;
+    gap: 8px;
+    border-top: 1px solid var(--border-default);
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  &__cancel-btn {
+    display: flex;
+    background-color: var(--overlay-bg-05);
+    border-radius: 4px;
+    width: 100%;
+    padding: var(--spacer-4);
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .note-content {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--normal-fg);
+      font-family: var(--font-main);
+    }
+
+    &:hover {
+      background-color: var(--border-muted);
+    }
+  }
+
+  &__start-btn {
+    display: flex;
+    background-color: var(--primary-50);
+    border-radius: 4px;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    cursor: pointer;
+    gap: 8px;
+    width: 100%;
+    padding: var(--spacer-4);
+
+    .note-content {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      font-family: var(--font-main);
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+      color: white;
+    }
+
+    &:hover {
+      background-color: var(--primary-40);
+    }
+  }
+}

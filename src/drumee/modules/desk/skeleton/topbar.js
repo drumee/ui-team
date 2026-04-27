@@ -56,7 +56,7 @@ module.exports = function (ui) {
                     uiHandler: [ui],
                     partHandler: ui,
                     placeholder: LOCALE.SEARCH || "Search...",
-                    service: _e.search,
+                    service: "search-files",
                     type: _a.text,
                     autocomplete: _a.off,
                     interactive: 1,

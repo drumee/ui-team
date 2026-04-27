@@ -16,8 +16,9 @@
     overflow: hidden;
     left: -805px;
     background-color: var(--normal-bg-90);
-    border: 1px solid var(--neutral-800);
-    transition: left .5s;
+    border: 1px solid var(--border-muted);
+    border-radius: var(--corner-radius-5);
+    transition: left 0.5s;
     &[data-position="1"] {
       left: 0;
     }

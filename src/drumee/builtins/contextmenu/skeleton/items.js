@@ -38,6 +38,8 @@ const __button = function (ui, trigger, k) {
 
     background: button({ content: LOCALE.SET_AS_BACKGROUND, service: 'set-as-background' }),
 
+    seeChatThreads: button({ content: LOCALE.SEE_CHAT_THREADS, service: _a.chat }),
+
     copy: button({ content: LOCALE.COPY, service: _e.copy }),
 
     delete: button({ content: LOCALE.DELETE, service: _e.delete }),

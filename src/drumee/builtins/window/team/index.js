@@ -102,6 +102,15 @@ class __window_team extends __hub {
       case _e.settings:
         return this.openSettings();
 
+      case "open-call-panel":
+        return this.toggleCallPanel();
+
+      case "start-meeting":
+        return this.switchToMeeting();
+
+      case "leave-meeting":
+        return this.switchToWidget();
+
       case "change-owner":
         var opt = require('../hub/skeleton/change-owner')(this, args);
         this.mset({ confirm_type: 'primary' });
@@ -118,6 +127,88 @@ class __window_team extends __hub {
         });
       default:
         return super.onUiEvent(cmd, args);
+    }
+  }
+
+  async toggleCallPanel() {
+    if (this._callPanelOpening) return;
+
+    const meetingPanel = await this.ensurePart("meeting-panel");
+    const splitBody = await this.ensurePart("split-body");
+
+    if (this._callPanel) {
+      const panel = this._callPanel;
+      this._callPanel = null;
+      splitBody.el.removeAttribute("data-call-panel");
+      panel.goodbye();
+      return;
+    }
+
+    this._callPanelOpening = true;
+    this._splitBody = splitBody;
+    splitBody.el.setAttribute("data-call-panel", "open");
+    meetingPanel.feed({
+      kind: "widget_meeting",
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      name: this.mget(_a.filename) || this.mget(_a.name),
+      area: this.mget(_a.area),
+      uiHandler: [this],
+      sys_pn: "active-meeting",
+      partHandler: this,
+    });
+  }
+
+  async switchToMeeting() {
+    this._callPanelSwitching = true;
+    const meetingPanel = await this.ensurePart("meeting-panel");
+    meetingPanel.feed({
+      kind: "window_meeting",
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid) || this.mget(_a.actual_home_id),
+      filename: this.mget(_a.filename),
+      audio: 1,
+      video: 1,
+      area: this.mget(_a.area),
+      uiHandler: [this],
+      sys_pn: "active-meeting",
+      partHandler: this,
+    });
+    this._callPanelSwitching = false;
+  }
+
+  async switchToWidget() {
+    this._callPanelSwitching = true;
+    const meetingPanel = await this.ensurePart("meeting-panel");
+    meetingPanel.feed({
+      kind: "widget_meeting",
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      name: this.mget(_a.filename) || this.mget(_a.name),
+      area: this.mget(_a.area),
+      uiHandler: [this],
+      sys_pn: "active-meeting",
+      partHandler: this,
+    });
+    this._callPanelSwitching = false;
+  }
+
+  onPartReady(child, pn) {
+    switch (pn) {
+      case "active-meeting":
+        this._callPanelOpening = false;
+        this._callPanel = child;
+        child.once(_e.destroy, () => {
+          if (this._callPanel === child && !this._callPanelSwitching) {
+            this._callPanel = null;
+            if (this._splitBody) {
+              this._splitBody.el.removeAttribute("data-call-panel");
+            }
+          }
+        });
+        break;
+      default:
+        super.onPartReady(child, pn);
     }
   }
 

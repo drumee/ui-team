@@ -9,10 +9,10 @@
   }
 
   &__badge {
-    background-color: rgba(150, 99, 255, 0.15);
+    background-color: #f870691a;
     padding: var(--spacer-3);
     border-radius: var(--corner-radius-1);
-    color: var(--private, #884eff);
+    color: var(--restricted);
     font-size: 12px;
     font-weight: 600;
 

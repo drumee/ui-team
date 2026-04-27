@@ -4,49 +4,48 @@
  */
 module.exports = function (ui) {
   const fig = ui.fig.family;
-  const publicLink = ui.mget('public_link');
-  const privilege  = ui.mget(_a.privilege) || 0;
+  const publicLink = ui.mget("public_link");
+  const privilege = ui.mget(_a.privilege) || 0;
 
   const days = parseInt(ui.mget(_a.days)) || 0;
   const expiryLabel = days
-    ? `In ${days} Day${days !== 1 ? 's' : ''}`
-    : (LOCALE.NO_EXPIRATION || 'No expiration');
+    ? `In ${days} Day${days !== 1 ? "s" : ""}`
+    : LOCALE.NO_EXPIRATION || "No expiration";
 
   const accessItems = [
     {
-      ico  : 'eye',
-      label: LOCALE.CAN_VIEW_FILES  || 'Can View Files',
-      bit  : _K.permission.download,
+      ico: "eye",
+      label: LOCALE.CAN_VIEW_FILES || "Can View Files",
+      bit: _K.permission.download,
     },
     {
-      ico  : 'desktop_edit',
-      label: LOCALE.CAN_EDIT_UPLOAD || 'Can Edit & Upload',
-      bit  : _K.permission.write,
+      ico: "desktop_edit",
+      label: LOCALE.CAN_EDIT_UPLOAD || "Can Edit & Upload",
+      bit: _K.permission.write,
     },
     {
-      ico  : 'desktop__chat',
-      label: LOCALE.PARTICIPATION_CHAT || 'Participation Chat',
-      bit  : _K.permission.modify,
+      ico: "desktop__chat",
+      label: LOCALE.CAN_CHAT || "Can Chat",
+      bit: _K.permission.modify,
     },
   ];
 
   return Skeletons.Box.Y({
     className: `${fig}__main`,
-    debug    : __filename,
+    debug: __filename,
     kids: [
-
       // ── Header ──────────────────────────────────────────────
       Skeletons.Box.X({
         className: `${fig}__header`,
         kids: [
           Skeletons.Note({
             className: `${fig}__title`,
-            content  : LOCALE.MANAGE_ACCESS || 'Manage Access',
+            content: LOCALE.MANAGE_ACCESS || "Manage Access",
           }),
           Skeletons.Button.Svg({
-            ico      : 'cross',
+            ico: "cross",
             className: `${fig}__close-btn`,
-            service  : 'close',
+            service: "close",
             uiHandler: [ui],
           }),
         ],
@@ -56,7 +55,6 @@ module.exports = function (ui) {
       Skeletons.Box.Y({
         className: `${fig}__body`,
         kids: [
-
           // PUBLIC LINK
           Skeletons.Box.Y({
             className: `${fig}__section`,
@@ -66,31 +64,33 @@ module.exports = function (ui) {
                 kids: [
                   Skeletons.Note({
                     className: `${fig}__section-label`,
-                    content  : LOCALE.PUBLIC_LINK || 'PUBLIC LINK',
+                    content: LOCALE.PUBLIC_LINK || "PUBLIC LINK",
                   }),
                   Skeletons.Note({
                     className: `${fig}__toggle`,
-                    state    : publicLink ? 1 : 0,
-                    service  : 'toggle-public-link',
+                    state: publicLink ? 1 : 0,
+                    service: "toggle-public-link",
                     uiHandler: [ui],
                   }),
                 ],
               }),
-              publicLink ? Skeletons.Box.X({
-                className: `${fig}__url-row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__url-text`,
-                    content  : ui.mget('share_url') || '',
-                  }),
-                  Skeletons.Button.Svg({
-                    ico      : 'desktop_copy',
-                    className: `${fig}__copy-btn`,
-                    service  : 'copy-link',
-                    uiHandler: [ui],
-                  }),
-                ],
-              }) : null,
+              publicLink
+                ? Skeletons.Box.X({
+                    className: `${fig}__url-row`,
+                    kids: [
+                      Skeletons.Note({
+                        className: `${fig}__url-text`,
+                        content: ui.mget("share_url") || "",
+                      }),
+                      Skeletons.Button.Svg({
+                        ico: "desktop_copy",
+                        className: `${fig}__copy-btn`,
+                        service: "copy-link",
+                        uiHandler: [ui],
+                      }),
+                    ],
+                  })
+                : null,
             ],
           }),
 
@@ -100,7 +100,7 @@ module.exports = function (ui) {
             kids: [
               Skeletons.Note({
                 className: `${fig}__section-label`,
-                content  : LOCALE.ACCESS_LEVEL || 'ACCESS LEVEL',
+                content: LOCALE.ACCESS_LEVEL || "ACCESS LEVEL",
               }),
               Skeletons.Box.Y({
                 className: `${fig}__access-list`,
@@ -108,24 +108,37 @@ module.exports = function (ui) {
                   Skeletons.Box.X({
                     className: `${fig}__access-item`,
                     bit,
-                    service  : 'toggle-access',
+                    service: "toggle-access",
                     uiHandler: [ui],
                     kids: [
                       Skeletons.Button.Svg({
-                        ico      : ico,
+                        ico: ico,
                         className: `${fig}__access-icon`,
+                        bit,
+                        service: "toggle-access",
+                        uiHandler: [ui],
+                        state: privilege & bit ? 1 : 0,
                       }),
                       Skeletons.Note({
                         className: `${fig}__access-label`,
-                        content  : label,
+                        content: label,
+                        bit,
+                        service: "toggle-access",
+                        uiHandler: [ui],
                       }),
-                      Skeletons.Image.Svg({
-                        ico      : (privilege & bit) ? 'checked-circle' : 'editbox_shapes-circle',
+                      Skeletons.Button.Svg({
+                        ico:
+                          privilege & bit
+                            ? "checked-circle"
+                            : "editbox_shapes-circle",
                         className: `${fig}__access-check`,
-                        state    : (privilege & bit) ? 1 : 0,
+                        state: privilege & bit ? 1 : 0,
+                        bit,
+                        service: "toggle-access",
+                        uiHandler: [ui],
                       }),
                     ],
-                  })
+                  }),
                 ),
               }),
             ],
@@ -137,25 +150,25 @@ module.exports = function (ui) {
             kids: [
               Skeletons.Note({
                 className: `${fig}__section-label`,
-                content  : LOCALE.LINK_EXPIRATION || 'LINK EXPIRATION',
+                content: LOCALE.LINK_EXPIRATION || "LINK EXPIRATION",
               }),
               Skeletons.Box.X({
                 className: `${fig}__expiry-row`,
                 kids: [
                   Skeletons.Note({
                     className: `${fig}__expiry-label`,
-                    content  : expiryLabel,
+                    content: expiryLabel,
                   }),
                   Skeletons.Button.Svg({
-                    ico      : 'calendar',
+                    ico: "calendar",
                     className: `${fig}__calendar-btn`,
-                    service  : 'set-expiry',
+                    service: "set-expiry",
                     uiHandler: [ui],
                   }),
                   Skeletons.Note({
                     className: `${fig}__clear-btn`,
-                    content  : LOCALE.CLEAR || 'Clear',
-                    service  : 'clear-expiry',
+                    content: LOCALE.CLEAR || "Clear",
+                    service: "clear-expiry",
                     uiHandler: [ui],
                   }),
                 ],
@@ -168,11 +181,10 @@ module.exports = function (ui) {
       // ── Apply button ─────────────────────────────────────────
       Skeletons.Note({
         className: `${fig}__apply-btn`,
-        content  : LOCALE.APPLY_CHANGES || 'Apply Changes',
-        service  : 'apply',
+        content: LOCALE.APPLY_CHANGES || "Apply Changes",
+        service: "apply",
         uiHandler: [ui],
       }),
-
     ],
   });
 };

@@ -1,118 +1,56 @@
-@use 'builtins/webrtc/skin/avatar' as *;
-@use 'builtins/webrtc/skin/video' as *;
-@use 'mixins/drumee';
+@use "builtins/webrtc/skin/avatar" as *;
+@use "builtins/webrtc/skin/video" as *;
+@use "mixins/drumee";
 
 .endpoint-local {
   @include webrtc-avatar;
   @include webrtc-video;
+
   &__ui {
     height: 100%;
     width: 100%;
     overflow: hidden;
+    border-radius: 12px;
   }
 
   &__main {
     height: 100%;
     width: 100%;
-    justify-items: center;
+    position: relative;
     justify-content: center;
     align-items: center;
     align-content: center;
+    background-color: var(--primary-50, #433cc5);
     overflow: hidden;
-    border: 1px solid #313132;
-  }
-
-  &__user {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    justify-content: center;
-    align-content: center;
-    align-items: center;
-    overflow: hidden;
+    border-radius: 12px;
   }
 
   &__avatar {
     height: 100%;
     width: 100%;
+    position: relative;
+    z-index: 1;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
 
     &[data-video="1"] {
       display: none;
     }
 
     .user-profile {
-      width: 100%;
-      height: 100%;
-    }
-  }
-
-  &__label {
-    position: absolute;
-    justify-content: center;
-    top: 10px;
-    left: 10px;
-    padding: 5px;
-    width: auto;
-    max-width: calc(100% - 20px);
-    background-color: var(--default-transparent-black);
-    border-radius: var(--border-radius-small);
-    @include drumee.typo($size: 14px, $line: 16px, $weight: 300, $color: var(--default-text-reverse));
-
-    &[data-video="1"] {
-      visibility: hidden;
-    }
-  }
-
-  &__audio {
-    position: absolute;
-    color: var(--default-icon-neutral);
-    visibility: hidden;
-    width: 30px;
-    height: 30px;
-    padding: 5px;
-
-    &[data-state="0"] {
-      visibility: visible;
-      color: var(--default-icon-reverse);
-      margin: 0px 0 0 4px;
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
 
       &:before {
-        content: " ";
-        position: absolute;
-        height: 2px;
-        width: 20px;
-        top: 13px;
-        left: 4px;
-        background-color: var(--eorange-sunset);
-        transform-origin: 50% 50%;
-        transform: rotate(-45deg);
+        visibility: hidden;
       }
-    }
-  }
-
-  &__video {
-    width: 100%;
-    position: absolute;
-    background-color: var(--multimedia-background);
-
-    &[data-status="idle"] {
-      background-color: transparent;
-    }
-
-    &[data-state="0"] {
-      z-index: 0;
-      display: none;
-    }
-  }
-
-  &__avatar {
-    .user-profile__icon {
-      width: 150px;
-      height: 150px;
     }
 
     .user-profile__main {
-      background-color: #5E5E5E !important;
+      background-color: rgba(255, 255, 255, 0.08) !important;
+      border-radius: 50%;
       justify-content: center;
       align-items: center;
 
@@ -126,15 +64,114 @@
       border-radius: 100%;
 
       .note-content {
-        font-size: 45px;
-        font-weight: bold;
+        font-size: 46px;
+        font-weight: 500;
+        color: #fff;
       }
+    }
+  }
+
+  &__video {
+    width: 100%;
+    position: absolute;
+    z-index: 2;
+    background-color: var(--multimedia-background);
+    object-fit: cover;
+
+    &[data-status="idle"] {
+      background-color: transparent;
     }
 
-    .user-profile {
-      &:before {
-        visibility: hidden;
-      }
+    &[data-state="0"] {
+      z-index: 0;
+      display: none;
     }
+  }
+
+  // ── Top actions (pin + dots) ────────────────────────────────────────
+  &__tile-top-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    gap: 6px;
+    z-index: 10;
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  &__tile-pin,
+  &__tile-dots {
+    width: 28px;
+    height: 28px;
+    padding: 7px;
+    background-color: rgba(20, 17, 35, 0.4);
+    backdrop-filter: blur(4px);
+    border-radius: 50%;
+    flex-shrink: 0;
+    color: #fff;
+  }
+
+  // ── Tile footer (mic + name + maximize) ─────────────────────────────
+  &__tile-footer {
+    gap: 6px;
+    align-items: center;
+    z-index: 10;
+    width: 100%;
+    padding: var(--spacer-4);
+  }
+
+  &__tile-mic {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    padding: 7px;
+    background-color: var(--signal-error, #d74e49);
+    border-radius: 50%;
+    color: #fff;
+
+    &[data-state="1"] {
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  &__uname {
+    flex: 1;
+    min-width: 0;
+    background-color: rgba(20, 17, 35, 0.4);
+    backdrop-filter: blur(5.5px);
+    border-radius: 57px;
+    padding: 6px 10px;
+    justify-content: center;
+    overflow: hidden;
+
+    @include drumee.typo($size: 10px, $line: 1.4, $weight: 400, $color: #fff);
+
+    .note-content {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+      width: 100%;
+    }
+  }
+
+  &__tile-maximize {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    padding: 7px;
+    background-color: rgba(20, 17, 35, 0.4);
+    backdrop-filter: blur(4px);
+    border-radius: 50%;
+    color: #fff;
+  }
+
+  // ── Legacy elements (kept for audio but hidden) ──────────────────────
+  &__label {
+    display: none;
+  }
+
+  &__audio.local {
+    display: none;
   }
 }

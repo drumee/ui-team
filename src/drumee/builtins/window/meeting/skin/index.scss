@@ -1,9 +1,10 @@
-@use 'builtins/webrtc/skin/index' as *;
-@use 'builtins/webrtc/skin/topbar' as *;
-@use 'builtins/webrtc/skin/command' as *;
-@use 'builtins/webrtc/skin/attendee' as *;
-@use 'builtins/webrtc/skin/sound-analyzer' as *;
-@use 'builtins/webrtc/skin/remote' as *;
+@use "builtins/webrtc/skin/index" as *;
+@use "builtins/webrtc/skin/topbar" as *;
+@use "builtins/webrtc/skin/command" as *;
+@use "builtins/webrtc/skin/attendee" as *;
+@use "builtins/webrtc/skin/sound-analyzer" as *;
+@use "builtins/webrtc/skin/remote" as *;
+@use "mixins/drumee";
 
 .window-meeting {
   @include webrtc-ui;
@@ -13,8 +14,304 @@
   @include webrtc-sound-analyzer;
   @include webrtc-remote;
 
-  &__header {
-    background-color: var(--teamroom-main);
+  // ── Window: fill parent container (panel or standalone window) ───────
+  &__ui {
+    width: 100%;
+    height: 100%;
+    min-width: auto;
   }
 
+  // ── Shell: column flex, fills __ui ──────────────────────────────────
+  &__shell {
+    flex: 1;
+    flex-direction: column;
+  }
+
+  // ── Topbar: white in-flow bar (overrides base absolute overlay) ──────
+  &__in-topbar {
+    position: relative;
+    flex-shrink: 0;
+    background: var(--normal-bg-90);
+    border-bottom: 1px solid var(--border-muted);
+    padding: var(--spacer-4) var(--spacer-6);
+    gap: 8px;
+    align-items: center;
+    z-index: auto;
+    pointer-events: auto;
+
+    &-icon {
+      color: var(--normal-fg-10);
+    }
+
+    &-title {
+      flex: 1;
+      min-width: 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--normal-fg-10);
+      font-family: var(--font-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &-timer {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      background: var(--normal-fg-10);
+      color: var(--normal-bg-90);
+      border-radius: var(--corner-radius-1);
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 400;
+      font-family: var(--font-main);
+      letter-spacing: 0.2px;
+
+      &::before {
+        content: "";
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--signal-error, #d74e49);
+        flex-shrink: 0;
+      }
+    }
+
+    &-avatars {
+      gap: 4px;
+      flex-shrink: 0;
+      align-items: center;
+
+      .user-profile {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+    }
+  }
+
+  // ── Body: column flex with padding, fills remaining height ───────────
+  &__body {
+    background-color: var(--grey-20, #f2f2f7);
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    padding: 10px;
+    gap: 10px;
+  }
+
+  // ── Endpoints: takes all remaining space above command bar ───────────
+  &__endpoints {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+
+  // ── Participants grid ────────────────────────────────────────────────
+  .participants-manager__ui {
+    background-color: var(--grey-20, #f2f2f7);
+    gap: 10px;
+
+    .endpoint-local,
+    .endpoint-remote {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .endpoint-local {
+      background-color: var(--primary-50, #433cc5);
+    }
+
+    &[data-mode="normal"] {
+      .endpoint-local {
+        position: relative;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        min-height: 100px;
+        min-width: 100px;
+      }
+    }
+  }
+
+  // ── Leave button shown during pre-join waiting states ───────────────
+  &__leave-waiting-btn {
+    margin-bottom: 12px;
+    background-color: var(--normal-fg);
+    color: var(--grey-white, #fff);
+    border-radius: 8px;
+    padding: 8px 18px;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex;
+
+    svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+
+    .note-content {
+      @include drumee.typo(
+        $size: 12px,
+        $line: normal,
+        $weight: 600,
+        $color: var(--grey-white, #fff)
+      );
+      white-space: nowrap;
+    }
+
+    &:hover {
+      background-color: var(--normal-fg-20);
+    }
+  }
+
+  // ── Participant name + mic overlay (frosted glass) ───────────────────
+  .endpoint-remote__name-bar,
+  .endpoint-local__name-bar {
+    backdrop-filter: blur(5px);
+    background: rgba(20, 17, 35, 0.4);
+    border-radius: 57px;
+    padding: 5px 8px;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--grey-white, #fff);
+    font-family: var(--font-main);
+  }
+
+  .endpoint-remote__mic-indicator,
+  .endpoint-local__mic-indicator {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    width: 27px;
+    height: 27px;
+    padding: 6px;
+    flex-shrink: 0;
+  }
+
+  // ── Command bar: white rounded footer, in-flow ───────────────────────
+  &__commands-container {
+    position: relative;
+    bottom: auto;
+    flex-shrink: 0;
+    height: 48px;
+    background-color: var(--grey-white, #fff);
+    border-radius: 8px;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.04);
+    padding: 0 4px;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
+  &__commands {
+    background-color: transparent;
+    border-radius: 0;
+    height: 100%;
+    padding: 0;
+    align-items: center;
+    display: flex;
+    gap: 2px;
+
+    .device-button {
+      .audio.settings {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        padding: 1px;
+      }
+    }
+
+    .ctrl-button {
+      background-color: var(--grey-white, #fff);
+      border: none;
+      border-radius: 25px;
+      width: 28px;
+      height: 28px;
+      padding: 4px;
+      margin: 0;
+      color: var(--primary-100, #0b0a21);
+      flex-shrink: 0;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      &[data-muted="1"] {
+        opacity: 1;
+        pointer-events: auto;
+        color: var(--signal-error, #d74e49);
+      }
+
+      &[data-online="1"] {
+        background-color: rgba(89, 80, 255, 0.08);
+        color: var(--primary-40, #5950ff);
+      }
+
+      &.screen[data-state="0"]::before,
+      &[data-state="0"]::before {
+        display: none;
+      }
+
+      &.more {
+        color: var(--grey-80, #65656c);
+      }
+
+      // ── Leave meeting button ─────────────────────────────────────────
+      &.line {
+        background-color: var(--primary-100, #0b0a21);
+        color: var(--grey-white, #fff);
+        border-radius: 8px;
+        width: auto;
+        height: calc(100% - 8px);
+        padding: 0 18px;
+        gap: 10px;
+        flex-shrink: 0;
+        align-items: center;
+
+        svg {
+          width: 15px;
+          height: 16px;
+          flex-shrink: 0;
+          transform: none;
+        }
+
+        .note-content {
+          @include drumee.typo(
+            $size: 12px,
+            $line: normal,
+            $weight: 600,
+            $color: var(--grey-white, #fff)
+          );
+          white-space: nowrap;
+        }
+
+        &::before {
+          display: none;
+        }
+
+        &:hover {
+          background-color: #1a1930;
+        }
+      }
+    }
+  }
 }

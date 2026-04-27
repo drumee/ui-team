@@ -382,5 +382,15 @@
   "TASK_STATUS_TODO": "Por hacer",
   "TASK_STATUS_IN_PROGRESS": "En progreso",
   "TASK_STATUS_TO_REVIEW": "Para revisar",
-  "TASK_STATUS_COMPLETE": "Completado"
+  "TASK_STATUS_COMPLETE": "Completado",
+  "SEE_CHAT_THREADS": "Ver hilos de chat",
+  "LINK_EXPIRATION": "Expiración del enlace",
+  "CLEAR": "Borrar",
+  "APPLY_CHANGES": "Aplicar cambios",
+  "NO_EXPIRATION": "Sin expiración",
+  "CAN_VIEW_FILES": "Puede ver archivos",
+  "CAN_EDIT_UPLOAD": "Puede editar y subir",
+  "CAN_CHAT": "Puede chatear",
+  "PUBLIC_LINK": "Enlace público",
+  "ACCESS_LEVEL": "Nivel de acceso"
 }

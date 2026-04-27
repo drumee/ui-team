@@ -6,6 +6,7 @@
 @include meta.load-css("container.scss");
 @include meta.load-css("expiry-status.scss");
 @include meta.load-css("filename.scss");
+@include meta.load-css("context-menu.scss");
 // @include meta.load-css("hub.scss");
 @include meta.load-css("helper.scss");
 @include meta.load-css("progress.scss");
@@ -22,7 +23,6 @@
     height: 100%;
     cursor: pointer;
     user-select: none;
-    z-index: 100;
 
     &.drumee-spinner {
       box-shadow: none;

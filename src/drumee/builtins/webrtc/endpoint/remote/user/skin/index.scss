@@ -2,146 +2,181 @@
 @use 'builtins/webrtc/skin/avatar' as *;
 @use 'builtins/webrtc/skin/video' as *;
 
-.remote-user{
+.remote-user {
   @include webrtc-avatar;
   @include webrtc-video;
-  &__ui{
+
+  &__ui {
     height: 100%;
     width: 100%;
-    //padding: 2px;
     overflow: hidden;
+    border-radius: 12px;
   }
-  &__main{
+
+  &__main {
     height: 100%;
     width: 100%;
+    position: relative;
     justify-content: center;
-    align-items: center;  
-    background-color: var(--multimedia-background);// rgb(112, 145, 194);
+    align-items: center;
+    background-color: var(--multimedia-background);
     overflow: hidden;
+    border-radius: 12px;
   }
 
-  &__label{
-    margin-top: 40px;
-    @include drumee.typo($size: 18px, $line: 22px, $weight: 400, $color: var(--default-text-reverse));
-    .drumee-loading{
-      margin-left: 50%;
-      margin-top: -15px;
-    }
-  }
-
-  &__presenter-name{
+  &__avatar {
     position: absolute;
-    @include drumee.typo($size: 18px, $line: 22px, $weight: 400, $color: var(--default-text-reverse));
-    .drumee-loading{
-      margin-left: 50%;
-      margin-top: -15px;
-    }
-    &[data-state="0"]{
-      display: none;
-    }
-  }
-
-  &__user{
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    justify-content: center;
-    align-content: center;
-    align-items: center;  
-  }
-
-  &__error{
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    justify-content: center;
-    align-content: center;
-    align-items: center;  
-    z-index: 50000;
-    .drumee-text{
-      @include drumee.typo($size: 14px, $line: 16px, $weight: 400, $color: var(--default-text-reverse));
-    }
-    &[data-error="0"]{
-      display: none;
-    }
-    &[data-error="1"]{
-      // background-color: $default-backround-alert;
-      background-color: rgba(0, 0,0, 0.5);
-      display: flex;
-    }
-    .drumee-text{
-      @include drumee.typo($size: 14px, $line: 16px, $weight: 400, $color: var(--default-text-reverse));
-    }
-  }
-
-  &__video {
-    &[data-presenter="true"]{
-      opacity: .1;
-    }
-  }
-
-  &__audio{
-    position: absolute;
-    color: var(--main-grey);
-    visibility: hidden;
-    width: 30px;
-    height: 30px;
-    padding: 5px;
-    left: 10px;
-    top: 38px;
-    &[data-state="0"]{
-      visibility: visible;
-      color: var(--ewhite);  
-      z-index: 100000;
-      &:before{
-        content : " ";
-        position: absolute;
-        height: 2px;
-        width: 18px;
-        top: 12px;
-        left: 6px;
-        background-color: red;
-        transform-origin : 50% 50%;
-        transform: rotate(-45deg);
-      }
-    }
-  }
-  &__avatar{
-    position: absolute;
-    visibility: visible;
     width: 100%;
     height: 100%;
     z-index: 1;
     justify-content: center;
     align-content: center;
-    align-items: center;  
-    &[data-video="1"]{
-      visibility: hidden;
+    align-items: center;
+
+    &[data-video="1"] {
+      display: none;
     }
+
     .user-profile__icon {
       width: 120px;
       height: 120px;
     }
+
     .user-profile__main {
-      background-color: #5E5E5E !important;
+      background-color: #5e5e5e !important;
       justify-content: center;
       align-items: center;
+
       img {
         width: 100%;
         height: 100%;
       }
     }
+
     .user-profile__initiales {
       border-radius: 100%;
+
       .note-content {
         font-size: 45px;
         font-weight: bold;
       }
     }
-    .user-profile{
-      &:before{
+
+    .user-profile {
+      &:before {
         visibility: hidden;
       }
+    }
+  }
+
+  &__video {
+    height: 100%;
+    width: 100%;
+    background-color: var(--multimedia-background);
+    object-fit: cover;
+    transform: matrix(-1, 0, 0, 1, 0, 0);
+    position: absolute;
+    z-index: 2;
+
+    &[data-state="0"] {
+      display: none;
+    }
+
+    &[data-presenter="true"] {
+      opacity: 0.1;
+    }
+  }
+
+  // ── Tile footer bar (mute + name pill + dots) ──────────────────────────
+  &__tile-footer {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  &__tile-mic {
+    width: 27px;
+    height: 27px;
+    min-width: 27px;
+    padding: 6px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.85);
+
+    &[data-state="0"] {
+      color: #fff;
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  &__uname {
+    flex: 1;
+    min-width: 0;
+    background-color: rgba(20, 17, 35, 0.4);
+    backdrop-filter: blur(5.5px);
+    border-radius: 57px;
+    padding: 6px 10px;
+    justify-content: center;
+    overflow: hidden;
+
+    @include drumee.typo($size: 10px, $line: 1.4, $weight: 400, $color: #fff);
+
+    .note-content {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+      width: 100%;
+    }
+
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
+  &__tile-dots {
+    width: 27px;
+    height: 27px;
+    min-width: 27px;
+    padding: 6px;
+    background-color: rgba(20, 17, 35, 0.4);
+    backdrop-filter: blur(4px);
+    border-radius: 50%;
+    flex-shrink: 0;
+    color: #fff;
+  }
+
+  // ── Legacy audio mute (hidden — replaced by tile-mic) ─────────────────
+  &__audio.remote {
+    display: none;
+  }
+
+  &__error {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+    z-index: 50000;
+
+    .drumee-text {
+      @include drumee.typo($size: 14px, $line: 16px, $weight: 400, $color: var(--default-text-reverse));
+    }
+
+    &[data-error="0"] {
+      display: none;
+    }
+
+    &[data-error="1"] {
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
     }
   }
 }

@@ -15,7 +15,7 @@
     position: absolute;
     justify-content: flex-start;
     align-items: center;
-    border: 1px solid var(--neutral-800);
+    border: 1px solid var(--border-muted);
 
     &[data-device="mobile"] {
       min-width: unset !important;
@@ -266,7 +266,7 @@
   }
 
   &__button-secondary {
-    border: 1px solid var(--normal-fg-10);
+    border: 1px solid var(--border-muted);
     @include drumee.typo($size: 16px, $line: 18px, $color: var(--normal-fg-10));
 
     &:hover {
