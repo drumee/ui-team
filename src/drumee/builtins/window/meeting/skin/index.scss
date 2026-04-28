@@ -216,6 +216,51 @@
     &[data-state="0"] {
       display: none;
     }
+
+    // Leave button is sibling of __commands inside __commands-container.
+    // Target it directly here so its svg gets constrained.
+    > .ctrl-button.line {
+      background-color: #14111e;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      width: auto;
+      height: calc(100% - 8px);
+      padding: 0 18px;
+      gap: 10px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      margin: 0;
+
+      svg {
+        width: 15px;
+        height: 16px;
+        flex-shrink: 0;
+        transform: none;
+        color: #fff;
+        fill: currentColor;
+      }
+
+      .note-content {
+        @include drumee.typo(
+          $size: 12px,
+          $line: normal,
+          $weight: 600,
+          $color: #fff
+        );
+        white-space: nowrap;
+      }
+
+      &::before {
+        display: none;
+      }
+
+      &:hover {
+        background-color: #2a2640;
+      }
+    }
   }
 
   &__commands {

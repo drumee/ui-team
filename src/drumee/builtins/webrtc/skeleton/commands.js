@@ -4,7 +4,7 @@ function __webrtc_device(_ui_) {
     kids: [
       Skeletons.Button.Svg({
         className: "ctrl-button accept",
-        ico: "micro",
+        ico: "meeting-mic",
         state: _ui_.mget(_a.audio),
         sys_pn: "ctrl-audio",
         name: _a.audio,
@@ -39,7 +39,7 @@ const __window_connect_commands = function (_ui_) {
           __webrtc_device(_ui_),
           Skeletons.Button.Svg({
             className: "ctrl-button accept",
-            ico: "video",
+            ico: "meeting-video",
             state: _ui_.mget(_a.video),
             sys_pn: "ctrl-video",
             name: _a.video,
@@ -47,23 +47,18 @@ const __window_connect_commands = function (_ui_) {
             dataset: { muted: 1 }
           }),
           Skeletons.Button.Svg({
-            className: "ctrl-button screen",
-            ico: "screen_share",
-            sys_pn: "ctrl-screen",
-            name: _a.screen,
-            service: 'start-screenshare',
+            className: "ctrl-button hand-raise",
+            ico: "hand-raise",
+            sys_pn: "ctrl-hand",
+            name: "hand-raise",
+            service: "hand-raise",
             state: 0,
-            dataset: { muted: 1 }
-          }),
-          Skeletons.Button.Svg({
-            className: "ctrl-button more",
-            ico: "more",
           }),
         ]
       }),
       Skeletons.Button.Label({
         className: "ctrl-button line",
-        ico: "telephone_handset",
+        ico: "meeting-leave",
         label: LOCALE.LEAVE_MEETING,
         sys_pn: "ctrl-line",
         service: _e.close,
