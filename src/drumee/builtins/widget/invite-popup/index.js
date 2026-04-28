@@ -482,6 +482,16 @@ class __invite_popup extends LetcBox {
         return this._closePopup();
 
       case "submit-email":
+        // The email Entry runs with mode:"commit" + interactive:1, so the
+        // base widget fires triggerHandlers on every printable keyup with
+        // __inputStatus:"interactive". Only convert the typed text into a
+        // chip on an explicit Enter (__inputStatus === "commit"); otherwise
+        // typing/pasting `a@b.c` would be auto-frozen into a chip and the
+        // input cleared mid-edit.
+        if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
+          this._refreshSendState();
+          return;
+        }
         this._addPendingEmailFromInput();
         this._refreshSendState();
         return;

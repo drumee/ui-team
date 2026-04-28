@@ -91,7 +91,7 @@ const createFooter = (ui, username) => {
   return Skeletons.Box.Y({
     className: cls(fig, "footer"),
     kids: [
-      createNavItem(ui, "sidebar_settings", LOCALE.SETTINGS, "settings-account"),
+      createNavItem(ui, "sidebar_settings", LOCALE.SETTINGS, "toggle-settings"),
       createNavItem(
         ui,
         getThemeIcon(),
