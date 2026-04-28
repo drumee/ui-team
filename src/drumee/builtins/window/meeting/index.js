@@ -149,18 +149,10 @@ class __window_meeting extends __room {
     if (!s || !preJoinStates.includes(s)) {
       return super.stateMessage(s, timeout);
     }
-    const pfx = this.fig.family;
     const message = this.statusMessages[s] || s;
     this.ensurePart("message-container").then((c) => {
       c.feed([
         Skeletons.Note({ className: "message-text", content: message }),
-        Skeletons.Button.Label({
-          className: `${pfx}__leave-waiting-btn`,
-          ico: "meeting-leave",
-          label: LOCALE.LEAVE_MEETING,
-          service: "leave-meeting",
-          uiHandler: [this],
-        }),
       ]);
     });
   }

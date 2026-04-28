@@ -108,6 +108,12 @@ class __window_folder extends mfsInteract {
       case "tab-task":
         return this.showFolderTab(_a.task);
 
+      case "tab-meeting":
+        return this.showFolderTab("meeting");
+
+      case "leave-meeting":
+        return this.showFolderTab("files");
+
       case "meeting":
       case "webinar":
       case "channel":

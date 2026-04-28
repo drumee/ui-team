@@ -701,6 +701,22 @@
     padding: 8px 12px;
     width: fit-content;
     max-width: 100%;
+    &.me {
+      background-color: var(--private, #884eff);
+      border-radius: 16px 0 16px 16px;
+      align-self: flex-end;
+      .note-content {
+        color: #e4e3ff;
+      }
+    }
+    &.other {
+      background-color: var(--chat-bubble-other-bg, #f2f2f7);
+      border-radius: 0 16px 16px 16px;
+      align-self: flex-start;
+      .note-content {
+        color: var(--chat-bubble-other-fg, #0b0a21);
+      }
+    }
   }
   .widget-chatItem__message-date {
     color: var(--normal-fg-50);
@@ -900,6 +916,10 @@
     grid-template-columns: 3fr 1fr;
     height: 100%;
     background: var(--normal-bg-90);
+
+    &[data-view="meeting"] {
+      grid-template-columns: 1fr;
+    }
   }
 
   &__files-panel {
@@ -960,6 +980,28 @@
     gap: 24px;
     padding: 24px;
     margin: 0;
+    min-width: 0;
+
+    // Lock cell size — prevents stretching when only 1 item remains
+    // (eg. after switching filter tabs All → Docs → All) where the
+    // partition flow flips smart-container to flex column + makes
+    // file-section flex:1, which would otherwise stretch the cell.
+    .media-grid__ui {
+      width: 120px;
+      max-width: 120px;
+      height: 144px;
+      max-height: 144px;
+    }
+
+    // After partitioning, file/folder sections get flex:1 1 auto and
+    // grow vertically. Force grid content to stay at the top so empty
+    // space sits below instead of stretching items vertically.
+    .folder-section,
+    .file-section {
+      align-content: start;
+      align-items: start;
+      justify-items: start;
+    }
   }
 
   .window__chat-label {

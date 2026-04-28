@@ -3246,6 +3246,17 @@
     <path
       d="M20.501,-0.001 C20.501,-0.001 17.501,-0.001 17.501,-0.001 C17.224,-0.001 17.000,0.255 17.000,0.571 C17.000,0.886 17.224,1.142 17.501,1.142 C17.501,1.142 19.294,1.142 19.294,1.142 L11.001,10.620 C11.001,10.620 7.856,7.024 7.856,7.024 C7.766,6.921 7.640,6.857 7.502,6.857 C7.364,6.857 7.240,6.920 7.149,7.024 C7.149,7.024 0.150,15.024 0.150,15.024 C0.060,15.128 0.004,15.270 0.004,15.428 C0.004,15.744 0.227,16.000 0.503,16.000 C0.641,16.000 0.767,15.936 0.857,15.833 C0.857,15.833 7.502,8.236 7.502,8.236 C7.502,8.236 10.648,11.831 10.648,11.831 C10.738,11.935 10.864,12.000 11.001,12.000 C11.140,12.000 11.265,11.935 11.356,11.831 C11.356,11.831 20.000,1.950 20.000,1.950 C20.000,1.950 20.000,3.998 20.000,3.998 C20.000,3.999 20.000,3.999 20.000,3.999 C20.000,4.315 20.224,4.571 20.501,4.571 C20.776,4.571 21.000,4.315 21.000,3.999 C21.000,3.999 21.000,0.571 21.000,0.571 C21.000,0.255 20.776,-0.001 20.501,-0.001 z" />
   </symbol>
+  <symbol viewBox="0 0 16 16" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet" id="--icon-hand-raise">
+    <path d="M5.7 7V2.6a.85.85 0 0 1 1.7 0V7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+      stroke-linejoin="round" fill="none" />
+    <path d="M7.4 7V1.7a.85.85 0 0 1 1.7 0V7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+      stroke-linejoin="round" fill="none" />
+    <path d="M9.1 7V2.2a.85.85 0 0 1 1.7 0V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+      stroke-linejoin="round" fill="none" />
+    <path
+      d="M10.8 8V4.4a.85.85 0 0 1 1.7 0v6c0 2.4-1.7 4-4 4-1.5 0-2.8-.8-3.5-2.2L3.2 9.4a.85.85 0 0 1 1.45-.85L5.7 10V7"
+      stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  </symbol>
   <symbol viewBox="0 0 14 14" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet" id="--icon-hard-drive">
     <path d="M12.4893 6.81201H1.13672" stroke-width="1.13526" stroke-linecap="round" stroke-linejoin="round" />
     <path
@@ -3462,6 +3473,20 @@ q-20 -20 -19 -50t23 -53q12 -14 28 -21t33 -7zM637 709q27 0 46 17h-1q-10 -9 -30.5 
   <symbol viewBox="0 0 16 16" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet" id="--icon-meeting-leave">
     <path
       d="M0.8 16C0.358176 16 0 15.6418 0 15.2V0.8C0 0.358176 0.358176 0 0.8 0H12C12.4418 0 12.8 0.358176 12.8 0.8V3.2H11.2V1.6H1.6V14.4H11.2V12.8H12.8V15.2C12.8 15.6418 12.4418 16 12 16H0.8ZM11.2 11.2V8.8H5.6V7.2H11.2V4.8L15.2 8L11.2 11.2Z" />
+  </symbol>
+  <symbol viewBox="0 0 16 16" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet" id="--icon-meeting-mic">
+    <path d="M8 1.5a2 2 0 0 0-2 2v4.5a2 2 0 0 0 4 0V3.5a2 2 0 0 0-2-2z" stroke="currentColor" stroke-width="1.3"
+      stroke-linejoin="round" fill="none" />
+    <path d="M3.8 8.2a4.2 4.2 0 0 0 8.4 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"
+      fill="none" />
+    <path d="M8 12.4v2.1M5.5 14.5h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" />
+  </symbol>
+  <symbol viewBox="0 0 18 16" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet" id="--icon-meeting-video">
+    <path d="M2 4.5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 12 4.5v7a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 2 11.5v-7z"
+      stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none" />
+    <path d="M12 6.4l4-2v7l-4-2" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"
+      fill="none" />
+    <path d="M2.5 13.5l13-12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" />
   </symbol>
   <symbol viewBox="0 0 3 14" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet" id="--icon-menu_expand">
     <!-- Generator: Sketch 49.3 (51167) - http://www.bohemiancoding.com/sketch -->
