@@ -117,18 +117,26 @@
   }
 
   &__wrapper-modal {
-    &[data-mode="create-folder"] {
-      align-items: center;
-      background: rgba(0, 0, 0, 0.18);
-      height: 100%;
-      justify-content: center;
-      left: 0;
-      position: fixed;
-      top: 0;
+    &[data-state="open"] {
+      position: absolute;
+      inset: 0;
       width: 100%;
+      height: 100%;
       z-index: 20000;
+      align-items: center;
+      justify-content: center;
+      overflow: clip;
+      background: transparent;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    &[data-overlay="blur"],
+    &[data-state="open"][data-overlay="blur"] {
+      @include drumee.glass-overlay;
     }
   }
+
 
   &__create-folder-dialog {
     background: #f2f2f7;

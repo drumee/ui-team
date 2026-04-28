@@ -753,7 +753,7 @@ class desk_module extends LetcBox {
         return this._closeMainPanels().then(() => Wm.loadWorkspace(cmd));
 
       case "new-workspace":
-        return Wm.onUiEvent(cmd, args);
+        return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
 
       case "invite-member":
         return this._openInvitePopup(cmd);
@@ -869,6 +869,7 @@ class desk_module extends LetcBox {
     if (!Wm || !Wm.__wrapperModal) return;
     if (this._invitePopup && !this._invitePopup.isDestroyed()) {
       Wm.__wrapperModal.clear();
+      Wm.__wrapperModal.el.dataset.state = "closed";
       this._invitePopup = null;
       return;
     }

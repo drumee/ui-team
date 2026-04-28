@@ -50,6 +50,7 @@ class __invite_popup extends LetcBox {
     if (this.parent && this.parent.el) {
       this._wrapperEl = this.parent.el;
       this._wrapperEl.dataset.state = "open";
+      this._wrapperEl.dataset.overlay = "blur";
     }
     this._dismissDropdowns = (e) => {
       if (!this.el.contains(e.target)) return;
@@ -61,6 +62,7 @@ class __invite_popup extends LetcBox {
   onBeforeDestroy() {
     if (this._wrapperEl) {
       this._wrapperEl.dataset.state = "closed";
+      delete this._wrapperEl.dataset.overlay;
     }
     if (this._dismissDropdowns) {
       document.removeEventListener("mousedown", this._dismissDropdowns);
@@ -99,6 +101,7 @@ class __invite_popup extends LetcBox {
       this._emailInput = child;
       const inputEl = child.el.querySelector("input");
       if (inputEl) {
+        inputEl.setAttribute("autocomplete", "off");
         inputEl.addEventListener("input", this._onSearchInput);
         inputEl.addEventListener("keydown", (e) => {
           if (e.key === "Backspace" && !inputEl.value && this._invitees.length) {
@@ -260,14 +263,14 @@ class __invite_popup extends LetcBox {
     if (!this._sendBtn) return;
     const hasInvitee = this._invitees.length > 0;
     const inputVal = this._emailInput?.el.querySelector("input")?.value?.trim();
-    const hasPendingEmail = inputVal && /\S+@\S+\.\S+/.test(inputVal);
+    const hasPendingEmail = inputVal && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(inputVal);
     this._sendBtn.el.dataset.state = hasInvitee || hasPendingEmail ? 1 : 0;
   }
 
   _addPendingEmailFromInput() {
     const inputEl = this._emailInput?.el.querySelector("input");
     const value = (inputEl?.value || "").trim();
-    if (value && /\S+@\S+\.\S+/.test(value)) {
+    if (value && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) {
       this._addInvitee({ email: value });
     }
   }
@@ -299,9 +302,13 @@ class __invite_popup extends LetcBox {
         list = _.isArray(data) ? data : [];
         this._workspacesCache = list;
       }
-      // Only workspaces where current user has admin privilege (bit 31 = 0b11111)
       const ADMIN = 0b0011111;
-      const inviteable = list.filter((w) => ((w.privilege | 0) & ADMIN) === ADMIN);
+      const inviteable = list.filter((w) => {
+        if (((w.privilege | 0) & ADMIN) !== ADMIN) return false;
+        const area = w.area || "";
+        if (area === _a.private || area === _a.personal) return false;
+        return true;
+      });
       const filtered = value
         ? inviteable.filter((w) =>
             (w.filename || w.name || "").toLowerCase().includes(value.toLowerCase()),
@@ -402,9 +409,6 @@ class __invite_popup extends LetcBox {
 
   _removeWorkspaceRow(idx) {
     if (idx == null || isNaN(idx)) return;
-    // Keep at least one row
-    const remaining = Object.keys(this._partRefs.workspaceRows).length;
-    if (remaining <= 1) return;
     const row = this._partRefs.workspaceRows[idx];
     if (row && _.isFunction(row.goodbye)) {
       row.goodbye();

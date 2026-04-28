@@ -1,4 +1,24 @@
 @forward './typo';
 @forward './vendor';
 
+@mixin glass-overlay {
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  overflow: hidden;
+  flex-shrink: 0;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0 0 8px 8px;
+    background-color: rgba(250, 250, 250, 0.05);
+    backdrop-filter: blur(60px);
+    -webkit-backdrop-filter: blur(60px);
+    pointer-events: none;
+  }
+}
+
 

@@ -102,7 +102,12 @@ class __folder_form extends LetcBox {
         dirname: filename,
         notify: 1,
       })
-        .then(() => this.goodbye())
+        .then(() => {
+          if (this.parent && _.isFunction(this.parent.clear)) {
+            return this.parent.clear();
+          }
+          this.goodbye();
+        })
         .catch((e) => {
           this._pending = 0;
           this.warn("Failed to create folder", e);

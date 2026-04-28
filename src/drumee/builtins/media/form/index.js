@@ -75,10 +75,20 @@ class __form_folder extends LetcBox {
       .then((res) => {
         RADIO_BROADCAST.trigger("workspace:refresh");
         const hub = _.isArray(res) ? res[0] : res;
-        if (!post || !hub) return this.goodbye();
+        if (!post || !hub) {
+          if (this.parent && _.isFunction(this.parent.clear)) {
+            return this.parent.clear();
+          }
+          return this.goodbye();
+        }
 
         const parent = this.parent;
-        if (!parent || !_.isFunction(parent.feed)) return this.goodbye();
+        if (!parent || !_.isFunction(parent.feed)) {
+          if (this.parent && _.isFunction(this.parent.clear)) {
+            return this.parent.clear();
+          }
+          return this.goodbye();
+        }
 
         // permission_* dialogs call media.mget(...); wrap the plain
         // server response in a Backbone.View to satisfy that interface.

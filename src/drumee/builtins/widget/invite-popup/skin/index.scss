@@ -1,22 +1,5 @@
 @use "mixins/drumee";
 
-/* Overlay blur background — applied when invite-popup is shown inside the
-   window-manager wrapper-modal. Matches Figma 100:60312 (dev mode). */
-.window-manager__wrapper-modal:has(.invite-popup) {
-  display: flex !important;
-  position: fixed !important;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 20000;
-  align-items: center;
-  justify-content: center;
-  overflow: clip;
-  border-radius: 0 0 8px 8px;
-  background: rgba(255, 255, 255, 0.05) !important;
-  backdrop-filter: blur(30px) !important;
-  -webkit-backdrop-filter: blur(30px) !important;
-}
 
 .invite-popup {
   /* All interactive Notes: inner div must not intercept clicks */

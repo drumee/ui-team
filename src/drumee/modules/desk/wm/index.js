@@ -1135,20 +1135,21 @@ class __window_manager extends push {
         return this.launch(args, { explicit: 1, singleton: 1 });
 
       case "new-workspace":
-        // Topbar + Add new is contextual: home → workspace form,
-        // inside a workspace → folder form scoped to that workspace.
-        // clear() before feed() ensures the wrapper resets cleanly even if
-        // a previous popup is still mid-animation.
         return this.ensurePart('wrapper-modal').then((p) => {
           p.clear();
-          if (this._curWorkspace && this._curWorkspace.hub_id) {
-            return p.feed({
-              kind: 'folder_form',
-              hub_id: this._curWorkspace.hub_id,
-              nid: this._curWorkspace.nid,
+          p.el.dataset.state = "open";
+          p.el.dataset.overlay = "none";
+          const skel = (this._curWorkspace && this._curWorkspace.hub_id)
+            ? { kind: 'folder_form', hub_id: this._curWorkspace.hub_id, nid: this._curWorkspace.nid }
+            : { kind: 'media_form' };
+          p.feed(skel);
+          const child = p.children.last();
+          if (child) {
+            child.once(_e.destroy, () => {
+              p.el.dataset.state = "closed";
+              delete p.el.dataset.overlay;
             });
           }
-          return p.feed({ kind: 'media_form' });
         });
 
         case "new-sub-folder":

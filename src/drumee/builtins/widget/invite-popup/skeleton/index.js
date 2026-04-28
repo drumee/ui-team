@@ -56,9 +56,13 @@ const buildWorkspaceRow = (ui, idx) => {
     sys_pn: `workspace-row:${idx}`,
     partHandler: ui,
     dataset: { idx },
+    active: 0,
+    kidsOpt: { active: 0 },
     kids: [
       Skeletons.Box.Y({
         className: `${pfx}__workspace-cell`,
+        active: 0,
+        kidsOpt: { active: 0 },
         kids: [
           Skeletons.Entry({
             className: `${pfx}__workspace-input`,
@@ -70,7 +74,7 @@ const buildWorkspaceRow = (ui, idx) => {
             require: "any",
             mode: "commit",
             service: "search-workspace",
-            interactive: 1,
+            bubble: 0,
           }),
           Skeletons.Box.Y({
             className: `${pfx}__workspace-suggestions`,
@@ -173,7 +177,7 @@ module.exports = function (ui) {
         require: "any",
         mode: "commit",
         service: "submit-email",
-        interactive: 1,
+        bubble: 0,
       }),
     ],
   });
