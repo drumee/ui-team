@@ -380,6 +380,7 @@
     );
 
     &.me {
+      background-color: var(--chat-bubble-me-bg, #433cc5);
       color: var(--white);
       align-self: flex-end;
       border-radius: 16px 16px 0 16px;

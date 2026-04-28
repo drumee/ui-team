@@ -173,7 +173,7 @@ export function dropdownMenuButton(ui, opt = {}) {
     kids: menuItems.map(({ service, ico, content, ...extra }) =>
       Skeletons.Box.X({
         className: `${cnDropdown}__item`,
-        uiHandler: ui,
+        uiHandler: [ui],
         service,
         ...extra,
         kids: [
