@@ -694,11 +694,11 @@
       }
     }
     &.other {
-      background-color: var(--normal-fg-10);
+      background-color: var(--chat-bubble-other-bg, #f2f2f7);
       border-radius: 0 16px 16px 16px;
       align-self: flex-start;
       .note-content {
-        color: #faf6ff;
+        color: var(--chat-bubble-other-fg, #0b0a21);
       }
     }
   }
