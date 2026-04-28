@@ -673,34 +673,31 @@
     background-color: transparent;
   }
   .widget-chatItem__main {
-    &.me,
-    &.other {
-      background-color: transparent;
-      border: none;
-      border-radius: 0;
-      padding: 0;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+  }
+  // .me / .other live on the outer __conversation div (see chat-item
+  // template/note.js); the inner __conversation-content carries the bubble.
+  .widget-chatItem__conversation {
+    &.me .widget-chatItem__conversation-content {
+      background-color: var(--private, #884eff);
+      border-radius: 16px 0 16px 16px;
+      align-self: flex-end;
+      color: #e4e3ff;
+    }
+    &.other .widget-chatItem__conversation-content {
+      background-color: var(--normal-fg-10);
+      border-radius: 0 16px 16px 16px;
+      align-self: flex-start;
+      color: #faf6ff;
     }
   }
   .widget-chatItem__conversation-content {
     padding: 8px 12px;
     width: fit-content;
     max-width: 100%;
-    &.me {
-      background-color: var(--private, #884eff);
-      border-radius: 16px 0 16px 16px;
-      align-self: flex-end;
-      .note-content {
-        color: #e4e3ff;
-      }
-    }
-    &.other {
-      background-color: var(--normal-fg-10);
-      border-radius: 0 16px 16px 16px;
-      align-self: flex-start;
-      .note-content {
-        color: #faf6ff;
-      }
-    }
   }
   .widget-chatItem__message-date {
     color: var(--normal-fg-50);
