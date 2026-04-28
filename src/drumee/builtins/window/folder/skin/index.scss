@@ -672,6 +672,11 @@
   .widget-chatItem__ui {
     background-color: transparent;
   }
+  // Inset content from the right so the slimScroll bar (Preset.List.Orange_e)
+  // sits in its own gutter instead of overlapping outgoing bubbles.
+  .widget-chat__messages .smart-container {
+    padding-right: 12px;
+  }
   .widget-chatItem__main {
     background-color: transparent;
     border: none;
