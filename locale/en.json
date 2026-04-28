@@ -1108,6 +1108,7 @@
   "INVITE_ROLE_ADMIN": "Admin",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
+  "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
   "ADD_FROM_LIST": "Add contact from list",
   "FROM_LIST": "From list",
   "CREATE_SHARED_FOLDER": "Create an external folder",

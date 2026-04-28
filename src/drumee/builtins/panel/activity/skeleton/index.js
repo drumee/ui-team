@@ -7,6 +7,11 @@ module.exports = function (ui) {
     kids: [
       require('./topbar')(ui),
       require('./tabbar')(ui),
+      Skeletons.Box.Y({
+        className: `${pfx}__priority`,
+        sys_pn: 'priority',
+        partHandler: ui,
+      }),
       Skeletons.List.Smart({
         className: `${pfx}__list`,
         sys_pn: _a.list,

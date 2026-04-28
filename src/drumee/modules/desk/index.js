@@ -568,18 +568,34 @@ class desk_module extends LetcBox {
    */
   togglePanel(kind, pn) {
     return this.ensurePart(pn).then((p) => {
+      // A close animation is mid-flight: cancel it and snap the dying child
+      // out so we don't render the next kind through a fading sibling
+      // (which is what makes the workspace appear to overlay apps/settings
+      // on the second navigation).
+      if (this._closeTimer) {
+        clearTimeout(this._closeTimer);
+        this._closeTimer = null;
+        p.clear();
+        this._pendingKind = null;
+      }
+
       if (p.isEmpty()) {
         this._loadKind(p, kind);
-      } else {
-        if (this._pendingKind == kind) {
-          p.children.last().el.dataset.anim = "out";
-          setTimeout(() => {
-            p.clear();
-          }, 500);
-        } else {
-          this._loadKind(p, kind);
-        }
+        return;
       }
+
+      if (this._pendingKind == kind) {
+        const child = p.children.last();
+        if (child && child.el) child.el.dataset.anim = "out";
+        this._closeTimer = setTimeout(() => {
+          this._closeTimer = null;
+          this._pendingKind = null;
+          p.clear();
+        }, 500);
+        return;
+      }
+
+      this._loadKind(p, kind);
     });
   }
 
@@ -591,6 +607,10 @@ class desk_module extends LetcBox {
    */
   _closeMainPanels() {
     this._pendingKind = null;
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+      this._closeTimer = null;
+    }
     const slots = ["settings-main-slot", "trash-panel"];
     return Promise.all(
       slots.map((pn) =>

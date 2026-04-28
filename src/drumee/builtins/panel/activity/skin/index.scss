@@ -161,4 +161,8 @@
     text-align: center;
     width: 100%;
   }
+
+  &__ui[data-has-priority="1"] &__empty {
+    display: none;
+  }
 }
