@@ -18,44 +18,64 @@ export function breadcrumbs(ui, opt) {
 }
 
 /**
- * Tab bar with Files, Chat and Task buttons.
+ * Tab bar with Files, Chat, Task buttons (and optional Meeting).
+ *
+ * Meeting tab opt-in via `opt.meeting`: shared by folder/team/sharebox windows,
+ * but only window_folder handles `tab-meeting` (lifecycle via showFolderTab).
  * @param {Object} ui - The widget instance
+ * @param {Object} [opt] - { meeting?: boolean } extra tab toggles
  */
-export function tabBar(ui) {
+export function tabBar(ui, opt = {}) {
   const cnRoot = "window-body__tab-bar";
   // Per-instance radio channel so multiple folder windows don't share state.
   const radio = `tab-bar-${ui.cid}`;
+  const kids = [
+    Skeletons.Button.Label({
+      className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+      label: LOCALE.FILES,
+      ico: "desktop_docfile",
+      service: "tab-files",
+      state: 1,
+      dataset: { tab: "files" },
+      uiHandler: [ui],
+    }),
+    Skeletons.Button.Label({
+      className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+      label: LOCALE.CHAT,
+      ico: "tchat",
+      service: "tab-chat",
+      state: 0,
+      dataset: { tab: _a.chat },
+      uiHandler: [ui],
+    }),
+    Skeletons.Button.Label({
+      className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+      label: LOCALE.TASK,
+      ico: "list",
+      service: "tab-task",
+      state: 0,
+      dataset: { tab: _a.task },
+      uiHandler: [ui],
+    }),
+  ];
+
+  if (opt.meeting) {
+    kids.push(
+      Skeletons.Button.Label({
+        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+        label: LOCALE.MEETING,
+        ico: "folder-meeting",
+        service: "tab-meeting",
+        state: 0,
+        dataset: { tab: "meeting" },
+        uiHandler: [ui],
+      })
+    );
+  }
+
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
-    kids: [
-      Skeletons.Button.Label({
-        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-        label: LOCALE.FILES,
-        ico: "desktop_docfile",
-        service: "tab-files",
-        state: 1,
-        dataset: { tab: "files" },
-        uiHandler: [ui],
-      }),
-      Skeletons.Button.Label({
-        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-        label: LOCALE.CHAT,
-        ico: "tchat",
-        service: "tab-chat",
-        state: 0,
-        dataset: { tab: _a.chat },
-        uiHandler: [ui],
-      }),
-      Skeletons.Button.Label({
-        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-        label: LOCALE.TASK,
-        ico: "list",
-        service: "tab-task",
-        state: 0,
-        dataset: { tab: _a.task },
-        uiHandler: [ui],
-      }),
-    ],
+    kids,
   });
 }
 
