@@ -19,7 +19,7 @@ class __panel_activity extends LetcBox {
   }
 
   /**
-   * 
+   *
    * @param {*} opt 
    */
   initialize(opt = {}) {
@@ -243,11 +243,15 @@ class __panel_activity extends LetcBox {
 
 
   /**
-   * 
+   *
    * @param {*} filter 
    */
   _setTab(filter) {
-    this._filter = filter;
+    this._filter = filter || 'all';
+    this.ensurePart('priority').then((p) => {
+      if (!p || !p.el) return;
+      p.el.style.display = (this._filter === 'all') ? '' : 'none';
+    });
     this.ensurePart(_a.list).then((list) => list.restart());
   }
 
@@ -272,9 +276,9 @@ class __panel_activity extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
-  updatePriorityList(invitations = [], messages = []) {
+  updatePriorityList(invitations = [], messages = [], hubInvites = []) {
     let list = [];
     for (let e of invitations) {
       let f = e.firstname || ""
@@ -291,6 +295,23 @@ class __panel_activity extends LetcBox {
       e.type = "invitation";
       e.uiHandler = [this]
       list.push(e)
+    }
+    for (let e of hubInvites) {
+      const fullname = (e.from_fullname || e.fullname || '').trim();
+      const item = {
+        ...e,
+        kind: 'activity_item',
+        type: 'hub-invitation',
+        event: 'hub.invite_received',
+        service: 'open-workspace-invitation',
+        action: LOCALE.INVITED_YOU_TO_WORKSPACE || 'invited you to',
+        link_label: e.hub_name,
+        hub_id: e.hub_id,
+        author_id: e.author_id,
+        fullname,
+        uiHandler: [this]
+      };
+      list.push(item);
     }
     for (let e of messages) {
       let f = e.firstname || ""
@@ -309,9 +330,25 @@ class __panel_activity extends LetcBox {
       list.push(e)
     }
     this.ensurePart('priority').then((p) => {
-      p.feed(list)
+      if (!p) return;
+      p.feed(list);
+      if (this.el && this.el.dataset) {
+        this.el.dataset.hasPriority = list.length ? '1' : '0';
+      }
     })
 
+  }
+
+  async _fetchHubInvitations() {
+    try {
+      const rows = await this.postService(SERVICE.hub.invite_received_get, {
+        hub_id: Visitor.id
+      });
+      return _.isArray(rows) ? rows : [];
+    } catch (err) {
+      this.warn('[panel_activity] fetch hub invitations failed', err);
+      return [];
+    }
   }
 
   /**
@@ -329,9 +366,14 @@ class __panel_activity extends LetcBox {
     let { unread_count } = await this.postService(SERVICE.activity.get_unread_count, opt);
     let invitations = await this.postService(SERVICE.contact.invite_get, { hub_id: Visitor.id });
     let messages = await this.postService(SERVICE.drumate.notification_center, { hub_id: Visitor.id });
-    unread_count = parseInt(messages.length) + parseInt(invitations.length) + parseInt(unread_count);
+    let hubInvites = await this._fetchHubInvitations();
+    unread_count =
+      parseInt(messages.length) +
+      parseInt(invitations.length) +
+      parseInt(hubInvites.length) +
+      parseInt(unread_count);
     // this.triggerHandlers({ unread_count })
-    this.updatePriorityList(invitations, messages)
+    this.updatePriorityList(invitations, messages, hubInvites)
     if (this.__list && !this.__list.isDestroyed()) {
       this.__list.restart()
       return
@@ -357,13 +399,13 @@ class __panel_activity extends LetcBox {
    */
   onWsMessage(args) {
     let { service, data, options } = args
-    // this.debug("AAAA:373", { service, data, options })
     if (!data) return;
     if (!_.isArray(data)) {
       data = [data]
     }
     switch (options.service) {
       case "contact.invite":
+      case "hub.invite_received":
         this.refreshActivity()
         break;
       case "messages.read":

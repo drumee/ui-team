@@ -1,12 +1,13 @@
 function getBadgeIco(event) {
   switch (event) {
     case 'mention':
-    case 'chat.post':    return 'chat';
-    case 'media.new':    return 'cloud-upload';
-    case 'share':        return 'share';
-    case 'flag':         return 'flag';
-    case 'comment':      return 'comment';
-    default:             return 'bell';
+    case 'chat.post':           return 'chat';
+    case 'media.new':           return 'cloud-upload';
+    case 'share':               return 'share';
+    case 'flag':                return 'flag';
+    case 'comment':             return 'comment';
+    case 'hub.invite_received': return 'drumee-invitations';
+    default:                    return 'bell';
   }
 }
 
