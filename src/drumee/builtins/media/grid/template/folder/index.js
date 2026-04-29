@@ -3,11 +3,19 @@ const { badgePrivate } = require("./badge-private")
 const { badgeShare } = require("./badge-share")
 const { badgePublic } = require("./badge-public")
 
+const folderTrigger = `
+  <div class="media-context-menu__folder-trigger" data-service="context-menu">
+    <svg class="media-context-menu__folder-trigger-icon" width="11" height="9" viewBox="0 0 11 9" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="5.47501" cy="1.095" r="1.095" fill="white"/>
+      <circle cx="5.47501" cy="4.37997" r="1.095" fill="white"/>
+      <circle cx="5.47501" cy="7.66501" r="1.095" fill="white"/>
+    </svg>
+  </div>`;
+
 module.exports = function (model) {
   let { area, widgetId = _.uniqueId(), filetype, role } = model;
-  if (role != 'desk' && filetype != _a.hub) {
-    area = 'inner-folder'
-  }
+  const isDesk = role === 'desk' || filetype === _a.hub;
+  if (!area) area = 'inner-folder';
   let main = `
     <svg class="folder-shape ${area}" width="105" height="86" viewBox="0 0 105 86" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g filter="url(#filter-${widgetId})">

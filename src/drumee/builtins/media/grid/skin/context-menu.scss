@@ -95,4 +95,31 @@
   &__ui:hover .media-context-menu__trigger {
     display: flex;
   }
+
+  .media-context-menu__folder-trigger {
+    position: absolute;
+    right: 0;
+    bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 15;
+    padding: 6px 5px;
+    border-radius: var(--corner-radius-2);
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+
+      .media-context-menu__folder-trigger-icon circle {
+        fill: #65656c;
+      }
+    }
+  }
+
+  .media-context-menu__folder-trigger-icon {
+    width: 11px;
+    height: 9px;
+    pointer-events: none;
+  }
 }

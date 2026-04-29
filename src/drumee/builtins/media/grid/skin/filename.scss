@@ -10,15 +10,8 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    z-index: 10;
-  }
-
-  .filename-row {
-    display: flex;
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
+    z-index: 10;
   }
 
   // Folder / workspace / hub label sits in the flow inside its container
@@ -56,10 +49,6 @@
     text-overflow: ellipsis;
     bottom: -14px;
     border-radius: var(--corner-radius-3);
-    flex: 1;
-    min-width: 0;
-    text-align: left;
-
     &.geek {
       background-color: rgba(225, 255, 255, 0.45);
       border-radius: var(--corner-radius-2);

@@ -116,7 +116,8 @@ class __media_grid extends DrumeeMediaInteract {
     const service = this.el.getService(e);
     if (service === 'context-menu') {
       e.stopPropagation();
-      const trigger = this.el.querySelector('.media-context-menu__trigger');
+      const trigger = this.el.querySelector('.media-context-menu__trigger')
+        || this.el.querySelector('.media-context-menu__folder-trigger');
       const rect = trigger ? trigger.getBoundingClientRect() : { bottom: e.clientY, right: e.clientX };
       this._openContextMenu(rect.right, rect.bottom);
       return;

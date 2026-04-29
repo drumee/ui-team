@@ -33,28 +33,20 @@ const __media_filename = function (m) {
   const dateStr = !isFolder ? _formatDate(m.ctime) : "";
   const dateLine = dateStr ? `<div class="filename-date">${dateStr}</div>` : "";
 
-  if ((m.isAttachment) || (Visitor.inDmz) || (m.isalink && (m.filetype !== _a.hub)) || (m.status === _a.deleted)) {
-    html = `
+  const noTrigger = isFolder || m.isAttachment || Visitor.inDmz || (m.isalink && (m.filetype !== _a.hub)) || m.status === _a.deleted;
+  const fileTrigger = noTrigger ? "" : trigger;
+  const svc = noTrigger ? "" : `data-service="${service}"`;
+
+  html = `
     <div id="${m._id}-filename-wrap" class="filename-wrap">
       <div class="filename-row">
-        <div id="${m._id}-filename" class="filename ${uiHack} ${m.area} ${m.filetype} ${v}">
+        <div id="${m._id}-filename" ${svc} class="filename ${uiHack} ${m.area} ${m.filetype} ${v}">
           ${filename}
         </div>
+        ${fileTrigger}
       </div>
       ${dateLine}
     </div>`;
-  } else {
-    html = `
-    <div id="${m._id}-filename-wrap" class="filename-wrap">
-      <div class="filename-row">
-        <div id="${m._id}-filename" data-service="${service}" class="filename ${uiHack} ${m.area} ${m.filetype} ${v}">
-          ${filename}
-        </div>
-        ${trigger}
-      </div>
-      ${dateLine}
-    </div>`;
-  }
 
   if (filename && (filename.length > 20)) {
     const tooltips = `<div id="${m._id}-tooltips" class="filename-tooltips ${m.area} ${m.filetype}">${filename}</div>`;

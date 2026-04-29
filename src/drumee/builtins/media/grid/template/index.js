@@ -52,17 +52,7 @@ const __media_tpl_grid = function (ui) {
   }
 
   if (!Visitor.inDmz) {
-    html = html + require('../../template/command')(m);
     html = html + require('../../template/notify')(m);
-    //do not change -> because it wil affect external sharebox DMZ
-    if (!m.isAttachment && (m.filetype !== _a.schedule)) {
-      html = html + require('../../template/checkbox')(m);
-    }
-
-  } else {
-    if (m.privilege & _K.permission.download) {
-      html = html + require('../../template/checkbox')(m);
-    }
   }
 
   return `<div class=\"full media-grid__content ${m.filetype}\">${html}</div>`;
