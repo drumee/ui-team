@@ -77,6 +77,19 @@
     mask: url('data:image/svg+xml;utf8,<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7.69967L4.31667 5.01634L3.5 5.83301L7 9.33301L10.5 5.83301L9.68333 5.01634L7 7.69967Z" fill="%231D1B20"/></svg>') center / 14px 14px no-repeat;
   }
 
+  &__icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    padding: 0;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--normal-fg-20, #65656c);
+    }
+  }
+
   &__name {
     color: inherit;
     font-size: 14px;

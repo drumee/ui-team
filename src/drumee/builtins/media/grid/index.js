@@ -82,9 +82,7 @@ class __media_grid extends DrumeeMediaInteract {
       )
     }
 
-    if (filetype !== _a.hub) {
-      this.container.push(require('./template/context-menu')(this));
-    }
+    this.container.push(require('./template/context-menu')(this));
   }
 
   /**

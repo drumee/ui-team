@@ -8,6 +8,7 @@ module.exports = function (ui) {
   const level = ui.mget("level") || 0;
   const nodeRole = ui.mget("nodeRole") || (level ? "folder" : "workspace");
   const hasChevron = nodeRole === "folder";
+  const isWorkspace = nodeRole === "workspace";
 
   return [
     Skeletons.Box.X({
@@ -22,6 +23,10 @@ module.exports = function (ui) {
           service: "toggle-tree",
           uiHandler: [ui],
           bubble: 0,
+        }) : null,
+        isWorkspace ? Skeletons.Image.Svg({
+          ico: "dock-folder",
+          className: `${fig}__icon`,
         }) : null,
         Skeletons.Note({ className: `${fig}__name`, content: ui.mget(_a.filename) }),
       ],

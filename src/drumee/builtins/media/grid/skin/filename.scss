@@ -1,15 +1,31 @@
 @use "mixins/drumee";
 
 .media-grid {
+  .filename-wrap {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    z-index: 10;
+  }
+
+  .filename-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
   .filename {
     cursor: pointer;
     max-height: 31px;
     overflow: hidden;
     padding: var(--spacer-1) var(--spacer-4);
-    position: absolute;
     text-align: center;
     text-overflow: ellipsis;
-    width: calc(100% - 0px);
+    width: 100%;
     @include drumee.typo(
       $line: normal,
       $size: 12px,
@@ -17,13 +33,28 @@
       $color: #0b0a21
     );
     white-space: nowrap;
-    bottom: 0;
     border-radius: var(--corner-radius-3);
-    z-index: 10;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+
     &.geek {
       background-color: rgba(225, 255, 255, 0.45);
       border-radius: var(--corner-radius-2);
     }
+  }
+
+  .filename-date {
+    @include drumee.typo(
+      $size: 10px,
+      $weight: 400,
+      $line: 1.4,
+      $color: #65656c
+    );
+    white-space: nowrap;
+    text-align: left;
+    width: 100%;
+    padding: 0 var(--spacer-4);
   }
 
   .filename-tooltips {

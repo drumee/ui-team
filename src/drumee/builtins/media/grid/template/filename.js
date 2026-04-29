@@ -1,4 +1,14 @@
 let uiHack = localStorage.uiHack || "" ;
+
+const _formatDate = function (ts) {
+  if (!ts) return "";
+  try {
+    return Dayjs.unix(ts).format("MMM D, YYYY");
+  } catch (e) {
+    return "";
+  }
+};
+
 const __media_filename = function (m) {
   let html;
   const filename = m.filename || LOCALE.PROCESSING;
@@ -19,16 +29,31 @@ const __media_filename = function (m) {
       </svg>
     </div>`;
 
-  if ((m.isAttachment) || (Visitor.inDmz) || (m.filetype === _a.hub) || (m.isalink && (m.filetype !== _a.hub)) || (m.status === _a.deleted)) {
+  const isFolder = m.filetype === _a.folder || m.filetype === _a.hub;
+  const dateStr = !isFolder ? _formatDate(m.ctime) : "";
+  const dateLine = dateStr ? `<div class="filename-date">${dateStr}</div>` : "";
+
+  if ((m.isAttachment) || (Visitor.inDmz) || (m.isalink && (m.filetype !== _a.hub)) || (m.status === _a.deleted)) {
     html = `
-    <div id="${m._id}-filename" class="filename ${uiHack} ${m.area} ${m.filetype} ${v}">
-      ${filename}
+    <div id="${m._id}-filename-wrap" class="filename-wrap">
+      <div class="filename-row">
+        <div id="${m._id}-filename" class="filename ${uiHack} ${m.area} ${m.filetype} ${v}">
+          ${filename}
+        </div>
+      </div>
+      ${dateLine}
     </div>`;
   } else {
     html = `
-    <div id="${m._id}-filename" data-service="${service}" class="filename ${uiHack} ${m.area} ${m.filetype} ${v}">
-      ${filename}
-    </div>` + trigger;
+    <div id="${m._id}-filename-wrap" class="filename-wrap">
+      <div class="filename-row">
+        <div id="${m._id}-filename" data-service="${service}" class="filename ${uiHack} ${m.area} ${m.filetype} ${v}">
+          ${filename}
+        </div>
+        ${trigger}
+      </div>
+      ${dateLine}
+    </div>`;
   }
 
   if (filename && (filename.length > 20)) {

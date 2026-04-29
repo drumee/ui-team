@@ -163,6 +163,10 @@ class desk_module extends LetcBox {
         this._searchSuggestions = child;
         return;
 
+      case "add-menu":
+        this._addMenu = child;
+        return;
+
       // case "wrapper-popup":
       //   this.popup = child;
       //   return this.popup.collection.on(_e.remove, () => {
@@ -769,8 +773,19 @@ class desk_module extends LetcBox {
         // covered by an Apps/Settings panel during restart.
         return this._closeMainPanels().then(() => Wm.loadWorkspace(cmd));
 
+      case "toggle-add-menu":
+        return this._toggleAddMenu();
+
       case "new-workspace":
+        this._hideAddMenu();
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
+
+      case "new-note":
+      case "new-document":
+      case "new-spreadsheet":
+      case "new-presentation":
+        this._hideAddMenu();
+        return;
 
       case "invite-member":
         return this._openInvitePopup(cmd);
@@ -920,6 +935,31 @@ class desk_module extends LetcBox {
     if (this._suggestionsDismiss) {
       document.removeEventListener("mousedown", this._suggestionsDismiss);
       this._suggestionsDismiss = null;
+    }
+  }
+
+  _toggleAddMenu() {
+    if (!this._addMenu) return;
+    const open = this._addMenu.el.dataset.state === "1";
+    if (open) {
+      this._hideAddMenu();
+    } else {
+      this._addMenu.el.dataset.state = 1;
+      if (!this._addMenuDismiss) {
+        this._addMenuDismiss = (e) => {
+          const wrapper = this._addMenu.el.parentElement;
+          if (wrapper && !wrapper.contains(e.target)) this._hideAddMenu();
+        };
+        document.addEventListener("mousedown", this._addMenuDismiss);
+      }
+    }
+  }
+
+  _hideAddMenu() {
+    if (this._addMenu) this._addMenu.el.dataset.state = 0;
+    if (this._addMenuDismiss) {
+      document.removeEventListener("mousedown", this._addMenuDismiss);
+      this._addMenuDismiss = null;
     }
   }
 
