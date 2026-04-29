@@ -269,7 +269,7 @@ class __window_mfs extends DrumeeMFS {
       this._partitionObserver = null;
     }
     if (this._partitionDebounce) {
-      clearTimeout(this._partitionDebounce);
+      cancelAnimationFrame(this._partitionDebounce);
       this._partitionDebounce = null;
     }
     if (this._partitionRetryTimer) {
@@ -304,7 +304,7 @@ class __window_mfs extends DrumeeMFS {
     this._partitionSettleTimer = setTimeout(() => {
       this._partitionSettleTimer = null;
       if (this._partitionDebounce) {
-        clearTimeout(this._partitionDebounce);
+        cancelAnimationFrame(this._partitionDebounce);
         this._partitionDebounce = null;
       }
       if (this._partitionRetryTimer) {
@@ -380,15 +380,20 @@ class __window_mfs extends DrumeeMFS {
       this._partitionObserver.disconnect();
     }
     if (this._partitionDebounce) {
-      clearTimeout(this._partitionDebounce);
+      cancelAnimationFrame(this._partitionDebounce);
     }
     this._partitionObserver = new MutationObserver(() => {
       const scrollEl = listPart.el.querySelector('.smart-container');
       if (scrollEl?.querySelector(':scope > .media-grid__ui')) {
         scrollEl.dataset.partitioning = 1;
       }
-      if (this._partitionDebounce) clearTimeout(this._partitionDebounce);
-      this._partitionDebounce = setTimeout(() => {
+      // requestAnimationFrame instead of setTimeout(100): rAF fires BEFORE
+      // the next paint, so the new direct-child item is partitioned into
+      // its section in the same frame the mutation landed. The user never
+      // sees the brief "hidden direct child" intermediate state — no flash
+      // when uploading or pasting files.
+      if (this._partitionDebounce) cancelAnimationFrame(this._partitionDebounce);
+      this._partitionDebounce = requestAnimationFrame(() => {
         this._partitionDebounce = null;
         if (this._partitionObserver) {
           this._partitionObserver.disconnect();
@@ -406,14 +411,14 @@ class __window_mfs extends DrumeeMFS {
         } else if (this._partitionObserver) {
           this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
         }
-      }, 100);
+      });
     });
     this._partitionObserver.observe(listPart.el, { attributes: true, attributeFilter: ["data-filetype"], childList: true, subtree: true });
   }
 
   _partitionFoldersAndFiles(listPart, attempt = 0) {
     if (this._partitionDebounce) {
-      clearTimeout(this._partitionDebounce);
+      cancelAnimationFrame(this._partitionDebounce);
       this._partitionDebounce = null;
     }
     if (this._partitionRetryTimer) {
