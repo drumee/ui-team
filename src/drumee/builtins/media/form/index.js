@@ -4,7 +4,7 @@ class __form_folder extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
-    this._status = "personal";
+    this._status = "team";
   }
 
   onDomRefresh() {
@@ -53,17 +53,11 @@ class __form_folder extends LetcBox {
     const target = Wm.getActiveWindow(1);
     const status = this._status || "personal";
 
-    // Backend accepts area ∈ {private, public, share}. Both Private and
-    // Restricted Share map to "private"; Restricted Share follows up
-    // with the existing permission_restricted dialog so the user can
-    // invite members. Link Shared maps to "share" and chains the
-    // permission_shared dialog.
     const FLOW = {
-      personal: { area: _a.private, post: null },
-      team: { area: _a.private, post: "permission_restricted" },
-      share: { area: _a.share, post: "permission_shared" },
+      team: { area: "private", post: "permission_restricted" },
+      share: { area: "share", post: "permission_shared" },
     };
-    const { area, post } = FLOW[status] || FLOW.personal;
+    const { area, post } = FLOW[status] || FLOW.team;
 
     this._pending = 1;
     this.postService(SERVICE.desk.create_hub, {
