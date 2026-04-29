@@ -94,6 +94,7 @@ class __media_core extends DrumeeMFS {
     };
 
     this.initURL();
+    this.bindEvent(_a.live);
     switch (this.mget(_a.filetype)) {
       case _a.folder:
         if (_.isEmpty(this.mget(_a.hubs))) break;
@@ -110,6 +111,7 @@ class __media_core extends DrumeeMFS {
    * @returns 
    */
   onBeforeDestroy() {
+    this.unbindEvent(_a.live);
     RADIO_BROADCAST.off(
       "notification:details",
       this.updateNotificationCount.bind(this)
@@ -2041,7 +2043,7 @@ class __media_core extends DrumeeMFS {
       return;
     }
     // set by core/mfs when downloading a tree/branch
-    if (this._waitingForZip !== this.mget(_a.nid)) {
+    if (this._waitingForZip !== data.nid) {
       return;
     }
     this._waitingForZip = null;
