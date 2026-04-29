@@ -3,11 +3,19 @@ const { badgePrivate } = require("./badge-private")
 const { badgeShare } = require("./badge-share")
 const { badgePublic } = require("./badge-public")
 
+const folderTrigger = `
+  <div class="media-context-menu__folder-trigger" data-service="context-menu">
+    <svg class="media-context-menu__folder-trigger-icon" width="11" height="9" viewBox="0 0 11 9" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="5.47501" cy="1.095" r="1.095" fill="white"/>
+      <circle cx="5.47501" cy="4.37997" r="1.095" fill="white"/>
+      <circle cx="5.47501" cy="7.66501" r="1.095" fill="white"/>
+    </svg>
+  </div>`;
+
 module.exports = function (model) {
   let { area, widgetId = _.uniqueId(), filetype, role } = model;
-  if (role != 'desk' && filetype != _a.hub) {
-    area = 'inner-folder'
-  }
+  const isDesk = role === 'desk' || filetype === _a.hub;
+  if (!area) area = 'inner-folder';
   let main = `
     <svg class="folder-shape ${area}" width="105" height="86" viewBox="0 0 105 86" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g filter="url(#filter-${widgetId})">
@@ -26,17 +34,22 @@ module.exports = function (model) {
         </filter>
       </defs>
     </svg>`;
-  if (role != 'desk' && filetype != _a.hub) return main
-  switch (model.area) {
-    case _a.personal:
-      return main + badgePersonal(model);
-    case _a.private:
-      return main + badgePrivate(model);
-    case _a.share:
-    case _a.dmz:
-      return main + badgeShare(model);
-    case _a.public:
-      return main + badgePublic(model);
+
+  let badge = "";
+  if (isDesk) {
+    switch (model.area) {
+      case _a.personal:
+        badge = badgePersonal(model); break;
+      case _a.private:
+        badge = badgePrivate(model); break;
+      case _a.share:
+      case _a.dmz:
+        badge = badgeShare(model); break;
+      case _a.public:
+        badge = badgePublic(model); break;
+    }
   }
+
+  return main + badge + folderTrigger;
 };
 

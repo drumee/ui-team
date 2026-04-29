@@ -32,8 +32,6 @@
     .folder-shape {
       width: 105%;
       height: 100%;
-      transform: rotateZ(0deg);
-      transition: transform 0.3s ease-in-out;
       fill: #885EFF;
 
       &.personal {
@@ -89,10 +87,6 @@
 
     &[data-hover="on"] {
       z-index: 100;
-
-      .folder-shape {
-        transform: rotateZ(-5deg);
-      }
 
       .media-form__input {
         height: 20px;
