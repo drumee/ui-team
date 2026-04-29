@@ -62,6 +62,10 @@ const _desk_main = function (ui) {
             sys_pn: "chat-panel",
             className: `${ui.fig.family}__panel-container right`,
           }),
+          Skeletons.Wrapper.Y({
+            sys_pn: "overlay",
+            className: `${ui.fig.family}__overlay`,
+          }),
         ],
       }),
 

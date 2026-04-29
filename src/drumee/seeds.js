@@ -116,6 +116,9 @@ module.exports = {
   dmz_window_manager: function () {
     return import("./modules/dmz/wm");
   },
+  desk_tutorial: function () {
+    return import("./modules/desk/tutorial");
+  },
   desk_breadcrumb: function () {
     return import("./modules/desk/breadcrumb");
   },

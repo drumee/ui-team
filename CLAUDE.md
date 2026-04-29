@@ -15,8 +15,11 @@ npm run seeds        # Update browserslist and regenerate webpack entry points
 npm run deploy       # Deploy only (drumee-ui-deploy)
 npm run build:icons  # Rebuild SVG icon sprites
 npm run md:style     # Recompile markdown viewer CSS
-npm run add-widget   # Scaffold a new widget
+npm run setup        # Write dev environment config (run once after clone)
+npm run add-widget -- --fig=group.name --dest src/path/to/widget  # Scaffold a new widget
 ```
+
+`--fig` sets the widget identity (`group` + `family` BEM root); `--dest` is the output directory.
 
 There is no test runner configured in this project.
 
@@ -118,7 +121,7 @@ These methods are mixed into `Backbone.View` by `@drumee/ui-core/letc/addons/` �
 | `this.unbindEvent()` | `backbone/view/event.js` | Unsubscribe from WebSocket events |
 | `this.fireEvent(sig, ...)` | `backbone/view/event.js` | Trigger on self and all registered listeners |
 | `this.triggerHandlers(args)` | `letc/addons/letc.js` | Emit event upward to `uiHandler` parents |
-| `this.declareHandlers()` | `letc/addons/letc.js` | Register this widget with its `uiHandler`/`partHandler` |
+| `this.declareHandlers()` | `letc/addons/letc.js` | Register this widget with its `uiHandler`/`partHandler` — call in `initialize` when the widget handles events from children |
 | `this.getData(name?)` | `letc/addons/letc.js` | Collect `formItem`-bound field values from descendant inputs |
 | `this.ensurePart(pn)` | `marionette/collection-view.js` | Promise resolving to the named part once rendered |
 | `this.getParentByKind(kind)` | `backbone/view/tree.js` | Walk parent chain to find widget by kind string |
@@ -914,5 +917,91 @@ Public entry for drag-and-drop uploads. Extracts transferable items from the dro
 - **Access control**: `_K.permission.*` bitmask constants; use `isGranted(permission)`, `canUpload()`, `canAdmin()` etc. on MFS nodes
 - **Window manager**: `Wm` API for multi-window Z-ordering
 - **Domain-aware routing**: different behavior for `home.domain` vs `www.domain` subdomains
-- **Path aliases**: use the 40+ webpack aliases (e.g., `import x from 'desk/...'`) instead of relative paths across module boundaries
-- **Internationalization**: always use `LOCALE.*` for user-visible strings, never hardcode text
+- **Path aliases**: use the 40+ webpack aliases instead of relative paths across module boundaries. Key aliases: `builtins`, `desk`, `dmz`, `editor`, `lex`, `locale`, `media`, `player`, `skeleton`, `skin`, `toolkit`, `widget`, `window`, `welcome`
+- **Internationalization**: always use `LOCALE.*` for user-visible strings; add new keys to `locale/en.json` (and other locale files)
+
+---
+
+## Plugin Development
+
+Plugins are standalone webpack bundles that register widget kinds into the Kind registry at runtime. The host loads them on demand — no compile-time coupling.
+
+### Plugin structure
+
+```
+my-plugin/
+├── package.json          # name: '@drumee/my-plugin', main: 'lib/index.js'
+├── webpack.js
+└── src/
+    ├── index.js          # bootstrap — registers addons on drumee events
+    ├── seeds.js          # kind name → dynamic import map
+    └── widgets/my-router/
+        ├── index.js
+        ├── skin/
+        └── skeleton/
+```
+
+### `src/seeds.js`
+
+```javascript
+module.exports = {
+  'my_plugin_router': import('./widgets/my-router'),
+};
+```
+
+Kind names use `snake_case` and must match the widget class name exactly.
+
+### `src/index.js`
+
+```javascript
+const { loadWidgets } = require('@drumee/ui-toolkit');
+loadWidgets();
+
+function start() {
+  Kind.registerAddons(require('./seeds'));
+}
+
+if (document.readyState === 'complete') {
+  start();
+} else {
+  document.addEventListener(location.hash ? 'drumee:plugins:ready' : 'drumee:router:ready', start);
+}
+```
+
+### Widget class
+
+```javascript
+class my_plugin_router extends LetcBox {
+  initialize(opt = {}) {
+    super.initialize(opt);
+    this.declareHandlers();
+  }
+  async onDomRefresh() {
+    this.feed({ kind: 'my_plugin_form' });
+  }
+}
+module.exports = my_plugin_router;
+```
+
+All globals (`LetcBox`, `Kind`, `Visitor`, `LOCALE`, `_a`, `SERVICE`, `Skeletons`, etc.) are injected by the host — no imports needed.
+
+### Loading a plugin from a host module
+
+```javascript
+async loadMyFeature() {
+  const loadDefault = () => this.feed({ kind: 'builtin_fallback' });
+  let plugins = Platform.get('plugins');
+  if (!plugins?.my_feature) return loadDefault();
+  const { name, kind } = plugins.my_feature;
+  if (Kind.get(kind)) return this.feed({ kind }); // already registered
+  try {
+    await Kind.loadPlugin({ name, kind });
+    await Kind.waitFor(kind);
+    this.feed({ kind });
+  } catch (e) {
+    loadDefault();
+  }
+}
+```
+
+Plugin communicates upward via `this.triggerHandlers({ service: '...' })` — the host handles it in `onUiEvent` like any built-in widget.
