@@ -1,0 +1,723 @@
+@use "mixins/drumee";
+
+.address-book {
+  &__ui {
+    width: 720px;
+    height: 100vh;
+    top: 0;
+    right: -720px;
+    background-color: var(--normal-bg-90, #fff);
+    border-left: 1px solid var(--border-muted, #e5e5e5);
+    transition: right 0.3s;
+    position: absolute;
+    box-shadow: var(--shadow-left-big);
+
+    &[data-anim="in"]  { right: 0; }
+    &[data-anim="out"] { right: -720px; }
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+    background-color: inherit;
+    position: relative;
+  }
+
+  // ── Sidebar (contact list) ────────────────────────────────────────
+  &__sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    height: 100%;
+    background-color: var(--normal-bg-90, #fff);
+    border-right: 1px solid var(--border-muted, #e5e5e5);
+    overflow: hidden;
+  }
+
+  &__sidebar-header {
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 16px 12px;
+    flex-shrink: 0;
+  }
+
+  &__sidebar-title {
+    @include drumee.typo(
+      $size: 20px, $weight: 600, $line: 26px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__add-btn {
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: rgba(250, 133, 64, 0.12);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+
+    &:hover { background: rgba(250, 133, 64, 0.22); }
+  }
+
+  &__add-label {
+    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #fa8540);
+    pointer-events: none;
+  }
+
+  &__tabs {
+    align-items: center;
+    gap: 2px;
+    padding: 0 16px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  &__tab {
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 100px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, color 0.15s;
+
+    &[data-active="1"] {
+      background: rgba(250, 133, 64, 0.12);
+      .address-book__tab-label { color: #fa8540; }
+    }
+
+    &:hover:not([data-active="1"]) { background: rgba(0, 0, 0, 0.04); }
+  }
+
+  &__tab-label {
+    @include drumee.typo(
+      $size: 12px, $weight: 600, $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    pointer-events: none;
+  }
+
+  &__tab-count {
+    @include drumee.typo($size: 10px, $weight: 600, $line: 14px, $color: #fff);
+    padding: 0 6px;
+    min-width: 16px;
+    text-align: center;
+    border-radius: 100px;
+    background: #fa8540;
+    pointer-events: none;
+  }
+
+  &__search {
+    padding: 0 16px 10px;
+    flex-shrink: 0;
+  }
+
+  &__search-input {
+    width: 100%;
+    background: transparent;
+
+    input {
+      width: 100%;
+      padding: 7px 12px;
+      border: 1px solid var(--border-default, #d1d1d6);
+      border-radius: 8px;
+      outline: none;
+      background: var(--normal-bg-80, #f7f7f8);
+      box-sizing: border-box;
+      @include drumee.typo($size: 13px, $weight: 500, $line: 18px, $color: var(--normal-fg-10, #0b0a21));
+
+      &:focus {
+        background: var(--normal-bg-90, #fff);
+        border-color: #fa8540;
+        box-shadow: 0 0 0 3px rgba(250, 133, 64, 0.15);
+      }
+
+      &::placeholder { color: var(--normal-fg-50, #aeaeb2); font-weight: 400; }
+    }
+  }
+
+  &__sidebar-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &__sidebar-stack {
+    height: 100%;
+    gap: 8px;
+  }
+
+  &__contact-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 8px 16px;
+    gap: 1px;
+
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.15);
+      border-radius: 4px;
+    }
+  }
+
+  &__contact-item {
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover { background: rgba(0, 0, 0, 0.04); }
+    &[data-selected="1"] { background: rgba(250, 133, 64, 0.12); }
+  }
+
+  &__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+
+  &__avatar-text {
+    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #fff);
+    text-transform: uppercase;
+  }
+
+  &__contact-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 1px;
+    pointer-events: none;
+  }
+
+  &__contact-name {
+    @include drumee.typo(
+      $size: 13px, $weight: 600, $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__contact-sub {
+    @include drumee.typo(
+      $size: 11px, $weight: 400, $line: 14px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__contact-pill {
+    @include drumee.typo($size: 9px, $weight: 600, $line: 12px, $color: #e8a13b);
+    padding: 2px 6px;
+    border-radius: 100px;
+    background: rgba(232, 161, 59, 0.14);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+
+  &__empty {
+    @include drumee.typo(
+      $size: 12px, $weight: 400, $line: 16px,
+      $color: var(--normal-fg-50, #aeaeb2)
+    );
+    padding: 24px 16px;
+    text-align: center;
+    font-style: italic;
+  }
+
+  // ── Detail area ───────────────────────────────────────────────────
+  &__detail-area {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    background-color: var(--normal-bg-80, #f7f7f8);
+    overflow: hidden;
+  }
+
+  &__detail-panel {
+    width: 100%;
+    height: 100%;
+    padding: 24px;
+    gap: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+
+  &__detail-header {
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-muted, #e5e5e5);
+  }
+
+  &__detail-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__detail-avatar-text {
+    @include drumee.typo($size: 20px, $weight: 600, $line: 24px, $color: #fff);
+    text-transform: uppercase;
+  }
+
+  &__detail-name {
+    @include drumee.typo(
+      $size: 17px, $weight: 600, $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+    text-align: center;
+    word-break: break-word;
+  }
+
+  &__detail-status {
+    @include drumee.typo(
+      $size: 10px, $weight: 600, $line: 14px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    padding: 2px 10px;
+    border-radius: 100px;
+    background: rgba(0, 0, 0, 0.05);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__detail-fields {
+    gap: 14px;
+  }
+
+  &__field-row {
+    gap: 4px;
+  }
+
+  &__field-multi {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__field-label {
+    @include drumee.typo(
+      $size: 10px, $weight: 600, $line: 14px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__field-value {
+    @include drumee.typo(
+      $size: 13px, $weight: 500, $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+    word-break: break-word;
+  }
+
+  &__field-tag {
+    @include drumee.typo($size: 9px, $weight: 600, $line: 12px, $color: #fa8540);
+    padding: 1px 6px;
+    border-radius: 100px;
+    background: rgba(250, 133, 64, 0.12);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__detail-actions {
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  &__edit-form {
+    gap: 16px;
+  }
+
+  &__edit-field {
+    gap: 6px;
+  }
+
+  &__edit-list {
+    gap: 6px;
+  }
+
+  &__edit-row {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__row-pill {
+    @include drumee.typo($size: 10px, $weight: 600, $line: 14px, $color: var(--normal-fg-50, #65656c));
+    padding: 3px 8px;
+    border: 1px solid var(--border-default, #d1d1d6);
+    border-radius: 100px;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+    &[data-active="1"] {
+      background: rgba(250, 133, 64, 0.12);
+      color: #fa8540;
+      border-color: rgba(250, 133, 64, 0.3);
+    }
+  }
+
+  &__row-remove {
+    @include drumee.typo($size: 18px, $weight: 600, $line: 18px, $color: var(--normal-fg-50, #84848c));
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+    padding: 0 6px;
+
+    &:hover { color: #d65f59; }
+  }
+
+  &__row-add {
+    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #fa8540);
+    cursor: pointer;
+    user-select: none;
+    align-self: flex-start;
+    padding: 4px 0;
+    pointer-events: auto;
+
+    &:hover { text-decoration: underline; }
+  }
+
+  // ── Header import button ──────────────────────────────────────
+  &__header-actions {
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__icon-btn {
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid var(--border-default, #d1d1d6);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, border-color 0.15s;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: var(--normal-fg-50, #84848c);
+    }
+  }
+
+  &__icon-btn-label {
+    @include drumee.typo(
+      $size: 12px, $weight: 600, $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    pointer-events: none;
+  }
+
+  // ── Tags ──────────────────────────────────────────────────────
+  &__tag-chips,
+  &__tag-picker,
+  &__tag-filter {
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  &__tag-filter {
+    padding: 0 16px 8px;
+    flex-shrink: 0;
+  }
+
+  &__tag-chip {
+    @include drumee.typo(
+      $size: 11px, $weight: 600, $line: 14px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    padding: 3px 10px;
+    border: 1px solid var(--border-default, #d1d1d6);
+    border-radius: 100px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+
+    &[data-active="1"] {
+      background: rgba(250, 133, 64, 0.12);
+      color: #fa8540;
+      border-color: rgba(250, 133, 64, 0.3);
+    }
+  }
+
+  &__new-tag-input {
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  // ── Import modal options ──────────────────────────────────────
+  &__import-options {
+    gap: 8px;
+  }
+
+  &__import-option {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border: 1px solid var(--border-default, #d1d1d6);
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, border-color 0.15s;
+    gap: 4px;
+
+    &:hover {
+      background: rgba(250, 133, 64, 0.04);
+      border-color: rgba(250, 133, 64, 0.5);
+    }
+  }
+
+  &__import-option-title {
+    @include drumee.typo(
+      $size: 14px, $weight: 600, $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+    pointer-events: none;
+  }
+
+  &__import-option-sub {
+    @include drumee.typo(
+      $size: 12px, $weight: 400, $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    pointer-events: none;
+  }
+
+  &__import-status {
+    @include drumee.typo(
+      $size: 12px, $weight: 500, $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+    padding: 8px 12px;
+    background: rgba(250, 133, 64, 0.1);
+    border-radius: 6px;
+  }
+
+  &__modal-input--narrow {
+    max-width: 80px;
+    flex-shrink: 0;
+  }
+
+  // ── Buttons (shared) ──────────────────────────────────────────────
+  &__btn {
+    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #fff);
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
+
+    &--primary {
+      background: #fa8540;
+      &:hover {
+        background: #e7762e;
+        box-shadow: 0 4px 12px rgba(250, 133, 64, 0.3);
+      }
+    }
+
+    &--secondary {
+      color: var(--normal-fg-50, #65656c);
+      background: transparent;
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+        color: var(--normal-fg-10, #0b0a21);
+      }
+    }
+
+    &--danger {
+      color: #d65f59;
+      background: transparent;
+      border: 1px solid rgba(214, 95, 89, 0.3);
+      &:hover {
+        background: rgba(214, 95, 89, 0.08);
+        border-color: #d65f59;
+      }
+    }
+  }
+
+  // ── Empty detail ──────────────────────────────────────────────────
+  &__empty-detail {
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 32px;
+    box-sizing: border-box;
+  }
+
+  &__empty-detail-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--normal-fg-50, #aeaeb2);
+    opacity: 0.4;
+  }
+
+  &__empty-detail-title {
+    @include drumee.typo(
+      $size: 14px, $weight: 600, $line: 20px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+  }
+
+  &__empty-detail-sub {
+    @include drumee.typo(
+      $size: 12px, $weight: 400, $line: 16px,
+      $color: var(--normal-fg-50, #aeaeb2)
+    );
+    text-align: center;
+    max-width: 240px;
+  }
+
+  // ── Invite modal ──────────────────────────────────────────────────
+  &__modal-wrapper {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+
+    &:empty,
+    &[data-state="closed"] { display: none; }
+
+    & > * { pointer-events: auto; }
+  }
+
+  &__modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 10, 33, 0.4);
+    backdrop-filter: blur(2px);
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__modal {
+    width: 420px;
+    max-width: 92%;
+    background: var(--normal-bg-90, #fff);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+  }
+
+  &__modal-form {
+    padding: 24px;
+    gap: 20px;
+  }
+
+  &__modal-header {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__modal-title {
+    @include drumee.typo(
+      $size: 18px, $weight: 600, $line: 24px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__modal-close {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    border-radius: 6px;
+    color: var(--normal-fg-50, #84848c);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    overflow: hidden;
+    font-size: 0;
+
+    svg { width: 16px; height: 16px; display: block; }
+
+    &:hover {
+      color: var(--normal-fg-10, #0b0a21);
+      background: rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  &__modal-error {
+    @include drumee.typo($size: 13px, $weight: 500, $line: 18px, $color: #d65f59);
+    padding: 10px 12px;
+    background: rgba(214, 95, 89, 0.08);
+    border: 1px solid rgba(214, 95, 89, 0.2);
+    border-radius: 6px;
+  }
+
+  &__modal-field { gap: 8px; }
+
+  &__modal-label {
+    @include drumee.typo(
+      $size: 11px, $weight: 600, $line: 14px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__modal-input,
+  &__modal-textarea {
+    width: 100%;
+    background: transparent;
+
+    input,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-default, #d1d1d6);
+      border-radius: 8px;
+      outline: none;
+      background: var(--normal-bg-90, #fff);
+      box-sizing: border-box;
+      @include drumee.typo($size: 14px, $weight: 500, $line: 20px, $color: var(--normal-fg-10, #0b0a21));
+      transition: border-color 0.15s, box-shadow 0.15s;
+
+      &:focus {
+        border-color: #fa8540;
+        box-shadow: 0 0 0 3px rgba(250, 133, 64, 0.15);
+      }
+
+      &::placeholder { color: var(--normal-fg-50, #aeaeb2); font-weight: 400; }
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 72px;
+      font-family: inherit;
+    }
+  }
+
+  &__modal-actions {
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+  }
+}
