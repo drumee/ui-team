@@ -189,9 +189,9 @@
       justify-items: center;
       justify-content: center;
       display: grid;
-      grid-template-columns: repeat(auto-fill, 120px);
-      grid-auto-rows: 121px;
-      grid-gap: var(--spacer-5);
+      grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+      grid-auto-rows: var(--grid-cell-h-file); // single-list default = file height (sections override)
+      grid-gap: var(--grid-gap);
       min-height: 100px;
       align-items: center;
       padding: var(--spacer-2) var(--spacer-5) 0 var(--spacer-5);

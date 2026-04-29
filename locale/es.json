@@ -392,5 +392,7 @@
   "CAN_EDIT_UPLOAD": "Puede editar y subir",
   "CAN_CHAT": "Puede chatear",
   "PUBLIC_LINK": "Enlace público",
-  "ACCESS_LEVEL": "Nivel de acceso"
+  "ACCESS_LEVEL": "Nivel de acceso",
+  "JOIN_WORKSPACE": "Unirse al espacio",
+  "SHARED_BY_LINK": "Compartido por enlace"
 }

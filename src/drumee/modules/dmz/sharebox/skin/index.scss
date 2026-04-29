@@ -1,302 +1,655 @@
 @use "sass:meta";
 @use "mixins/drumee";
-@use "../../skin/header" as *;
-@use "../../skin/footer" as *;
+
 @include meta.load-css("info-menu");
 @include meta.load-css("password");
 
-.dmz-wm {
-  &__icons-list {
-    width: 100%;
-
-    &.desk-content {
-      margin: 0 auto;
-
-      &.icons-list {
-        z-index: 1000;
-        height: 100%;
-        width: 100%;
-        max-height: calc(100vh - 190px);
-
-        // &[data-type="evaluation"]::after {
-        // @include drumee.license-trial();
-        // @include drumee.typo($size: 36px, $line: 42px, $color: var(--default-text-title));
-        // transform: none;
-        // bottom: 0;
-        // width: 100%;
-        // }
-      }
-    }
-
-    & .media-grid .filename {
-      font-size: 12px;
-      min-height: 23px;
-    }
-  }
-
-  &.media-grid[data-selected="1"] {
-    box-shadow: none;
-  }
-
-  &__icons-scroll .media-grid[data-selected="1"] {
-    box-shadow: none;
-  }
-
-  &__icons-list .media-grid[data-selected="1"] {
-    box-shadow: none;
-  }
-
-  &-desk__wrapper .media-grid[data-selected="1"] {
-    box-shadow: none;
-  }
-
-  &__icons-scroll {
-    align-items: center;
-    display: grid;
-    grid-gap: 1rem;
-    grid-template-columns: repeat(auto-fill, 86px);
-    justify-content: center;
-    justify-items: center;
-    min-height: 100px;
-    padding: var(--spacer-5) 0;
-    grid-auto-rows: 100px;
-
-    &[data-device="mobile"] {
-      grid-template-columns: repeat(auto-fill, 160px);
-      grid-gap: 0.5rem;
-      grid-template-rows: repeat(auto-fill, 125px);
-    }
-
-    & .media-grid__ui {
-      & .filename {
-        @include drumee.typo(
-          $line: 14px,
-          $size: 11px,
-          $color: var(--default-text-color)
-        );
-        border-radius: var(--border-radius-bottom);
-        cursor: pointer;
-        left: 0px;
-        max-height: 31px;
-        overflow: hidden;
-        padding: 2px 12px;
-        position: absolute;
-        text-align: center;
-        text-overflow: ellipsis;
-        width: 100%;
-
-        &.hub,
-        &.folder {
-          color: var(--neutral-600);
-        }
-
-        &.image,
-        &.video {
-          background: linear-gradient(
-            180deg,
-            hsla(0, 0%, 100%, 0.2),
-            hsla(0, 0%, 100%, 0.9)
-          );
-        }
-      }
-    }
-  }
+/* Figma tokens — Drumee guest landing */
+.dmz-sharebox {
+  --sb-pink: #ffa8dc;
+  --sb-pink-15: rgba(255, 168, 220, 0.15);
+  --sb-pink-deep: #b43481;
+  --sb-text: #0b0a21;
+  --sb-text-muted: #65656c;
+  --sb-text-subtle: #84848c;
+  --sb-grey-20: #f2f2f7;
+  --sb-grey-30: #e5e5ea;
+  --sb-grey-60: #aeaeb2;
+  --sb-cta: #433cc5;
+  --sb-banner-from: #6c5ce7;
+  --sb-banner-to: #2900a0;
+  --sb-card-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
+  --sb-font-body: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sb-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
-.dmz-sharebox,
-.dmz-meeting {
-  @include dmz-header;
-  @include dmz-footer;
-
+/* Page-level chrome (outer viewport) */
+.dmz-sharebox {
   &__ui,
-  &__main,
-  &__container,
-  &__content {
+  &__container {
+    width: 100%;
     height: 100%;
+    min-height: 100vh;
+  }
+
+  &__main:not(.drive-popup) {
     width: 100%;
+    height: 100%;
+    min-height: 100vh;
+    background: var(--sb-grey-20);
+    font-family: var(--sb-font-body);
+    color: var(--sb-text);
   }
 
-  &__background {
-    background:
-      radial-gradient(
-        109.24% 109.24% at 21.67% 0%,
-        rgba(91, 115, 210, 0.4) 0%,
-        #5b73d2 100%
-      ),
-      #879bff;
-    height: 100vh;
-    position: absolute;
+  &__container {
+    flex: 1;
+  }
+
+  &__top-nav {
     width: 100%;
-
-    @media (max-height: 630px) and (min-height: 0px) {
-      height: 100vh;
-      top: 0px;
-    }
-
-    &[data-device="mobile"] {
-      margin-top: -31px;
-    }
-
-    .image-smart__ui {
-      filter: blur(0);
-      height: 100%;
-      object-fit: cover;
-      object-position: 50% 40%;
-      transition: all 4s;
-      width: 100%;
-
-      &[data-quality="low"] {
-        filter: blur(10px);
-        object-position: 50% 0;
-        transition: all 4s;
-      }
-    }
+    flex-shrink: 0;
   }
 
-  &__header {
-    z-index: 100;
-    background: linear-gradient(135deg, var(--primary-300), var(--primary-500));
-    margin: var(--spacer-5);
-    border-radius: var(--corner-radius-4);
-
-    &[data-device="mobile"] {
-      height: auto;
-    }
+  &__page-header {
+    width: 100%;
+    flex-shrink: 0;
+    padding: 24px 32px;
   }
 
-  // &-header__container {
-  // // background: rgba(0, 0, 0, 0.15);
-  // // backdrop-filter: blur(8px);
-  // // -webkit-backdrop-filter: blur(8px);
-  // }
-
-  &-header__buttons-wrapper {
-    gap: var(--spacer-3);
-    align-items: center;
-    background-color: var(--primary-900);
-    padding: var(--spacer-5);
-    border-radius: var(--corner-radius-max);
-    color: var(--white);
-    cursor: pointer;
-    &:hover {
-      background-color: var(--primary-800);
-      transform: translateY(-2px);
-    }
-  }
-
-  &-header__expiry-info {
-    gap: var(--spacer-3);
-  }
-
-  &-header__button-note {
-    color: var(--white);
-
-    &:hover {
-      box-shadow: none;
-      border: none;
-    }
-  }
-
-  &-header__button-icon {
-    width: 16px;
-    height: 16px;
-    svg {
-      width: 16px;
-      height: 16px;
-    }
+  &__content {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    z-index: 1200;
+    justify-content: center;
+    padding: 0 32px 32px;
   }
 
   &__footer {
-    height: 160px;
-
-    position: absolute;
     width: 100%;
+    position: sticky;
     bottom: 0;
+    padding: 24px 40px;
     z-index: 2000;
-
-    &[data-device="mobile"] {
-      height: 55px;
-      position: fixed;
-    }
 
     &[data-mode="closed"] {
       display: none;
     }
   }
+}
 
-  &-desk__container {
+/* Top app bar */
+.dmz-sharebox-top-nav {
+  &__container {
     width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    background: var(--sb-grey-20);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 
-  &-desk__wrapper {
-    width: 100%;
-    height: 100%;
+  &__logo {
+    width: 161px;
+    height: 32px;
+    align-items: center;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
   }
 
-  &__content {
-    z-index: 1200;
+  &__links {
+    gap: 32px;
+    align-items: center;
+  }
+
+  &__link {
+    align-items: center;
+    cursor: pointer;
+  }
+
+  &__link-label {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+  }
+
+  &__actions {
+    gap: 20px;
+    align-items: center;
+  }
+
+  &__login-btn {
+    align-items: center;
     justify-content: center;
-    height: auto;
+    padding: 8px 0;
+    cursor: pointer;
+  }
 
-    &.desk-content {
-      width: calc(100% - 10px);
+  &__login-label {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+  }
 
-      &.dmz-wm__ui {
-        background: transparent;
-        border-radius: 6px;
-        min-height: 320px;
-        min-width: 360px;
-        z-index: 1000;
-        align-items: center;
-        align-content: center;
-        justify-content: center;
-        justify-items: center;
+  &__join-btn {
+    background: var(--sb-cta);
+    border-radius: 4px;
+    padding: 6px 24px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+      filter: brightness(1.05);
+    }
+  }
+
+  &__join-label {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    font-family: var(--sb-font-body);
+    text-align: center;
+  }
+}
+
+/* Workspace breadcrumb header */
+.dmz-sharebox-header {
+  &__container {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__title-group {
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__folder-icon {
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    background: var(--sb-pink-15);
+    border-radius: 8px;
+    flex-shrink: 0;
+
+    .topbar-folder-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 20px;
+
+      svg.folder-shape {
+        width: 100%;
+        height: 100%;
+        fill: var(--sb-pink);
       }
     }
   }
 
-  &__note {
-    @include drumee.typo(
-      $size: 20px,
-      $line: 28px,
-      $weight: 400,
-      $color: var(--neutral-600)
-    );
-    justify-content: center;
-    text-align: center;
-    width: 100%;
+  &__title-block {
+    align-items: flex-start;
+    gap: 4px;
   }
 
-  &__footer-note {
-    @include drumee.typo(
-      $size: 16px,
-      $line: 20px,
-      $weight: 400,
-      $color: var(--neutral-600)
-    );
-    bottom: 6px;
-    justify-content: flex-end;
-    height: 25px;
-    right: 15px;
-    text-decoration: underline;
-    &[data-device="mobile"] {
-      justify-content: center;
-      right: 0;
-      bottom: 0;
+  &__title-text {
+    @include drumee.typo($size: 24px, $line: 1.1, $weight: 600, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+    white-space: nowrap;
+  }
+
+  &__subline {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__subline-icon {
+    width: 8px;
+    height: 10.5px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: var(--sb-text);
     }
   }
 
-  &__home {
-    position: absolute;
-    top: calc(50vh - 30px);
-    left: calc(50% - 150px);
-    width: 300px;
-    justify-content: center;
-    @include drumee.typo(
-      $line: 60px,
-      $size: 40px,
-      $weight: 400,
-      $color: var(--neutral-600)
-    );
+  &__subline-label {
+    @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
   }
+
+  &__breadcrumb {
+    background: #ffffff;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 6px;
+    padding: 8px 16px;
+    gap: 16px;
+    align-items: center;
+  }
+
+  &__breadcrumb-segment {
+    @include drumee.typo($size: 12px, $line: 1, $weight: 600, $color: var(--sb-grey-60));
+    font-family: var(--sb-font-body);
+
+    &.current {
+      color: var(--sb-pink);
+    }
+  }
+
+  &__breadcrumb-separator {
+    @include drumee.typo($size: 12px, $line: 1, $weight: 600, $color: var(--sb-grey-60));
+    font-family: var(--sb-font-body);
+  }
+}
+
+/* Sticky bottom banner */
+.dmz-sharebox-footer {
+  &__main {
+    width: 100%;
+    align-items: center;
+  }
+
+  &__banner {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    padding: 17px 32px;
+    background: linear-gradient(
+      90deg,
+      var(--sb-banner-from) 0%,
+      var(--sb-banner-from) 50%,
+      var(--sb-banner-to) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+  }
+
+  &__left {
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__right {
+    align-items: center;
+    gap: 24px;
+  }
+
+  &__icon-tile {
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+  }
+
+  &__icon {
+    width: 16px;
+    height: 20px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: #ffffff;
+    }
+  }
+
+  &__headline {
+    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: #ffffff);
+    font-family: var(--sb-font-body);
+    white-space: nowrap;
+  }
+
+  &__subline {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    font-family: var(--sb-font-body);
+    white-space: nowrap;
+  }
+
+  &__signup-btn {
+    background: #ffffff;
+    border-radius: 4px;
+    height: 40px;
+    padding: 12px 24px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+      filter: brightness(0.97);
+    }
+  }
+
+  &__signup-label {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--sb-cta));
+    font-family: var(--sb-font-body);
+    text-align: center;
+  }
+}
+
+/* ---------------------------------------------------------------------- *
+ * Desk-content card: mirrors window/skin/common.scss + window/sharebox/skin
+ * Applies to the toolkit-rendered chrome inside .dmz-sharebox__main.drive-popup
+ * ---------------------------------------------------------------------- */
+
+/* Inner card shell */
+.dmz-sharebox__main.drive-popup {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--sb-grey-20);
+  border-radius: 8px;
+  box-shadow: var(--sb-card-shadow);
+  overflow: hidden;
+}
+
+/* windowHeader output: .dmz-sharebox__header.dmz__header */
+.dmz__header {
+  flex-shrink: 0;
+  background: var(--sb-grey-30);
+  height: 56px;
+  padding: 0 22px;
+  align-items: center;
+
+  .dmz-topbar__container {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacer-5);
+  }
+
+  .dmz-topbar__title {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacer-5);
+  }
+}
+
+/* Topbar title cluster (mirrors window-topbar-title) */
+.dmz-topbar-title__wrapper {
+  align-items: center;
+  gap: var(--spacer-4);
+
+  .name {
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 600, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    fill: var(--sb-pink);
+  }
+}
+
+/* Pink "SHARED" badge (mirrors window-sharebox__badge) */
+.dmz-sharebox__badge {
+  background-color: var(--sb-pink);
+  padding: 4px 8px;
+  border-radius: 2px;
+
+  .note-content {
+    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--sb-pink-deep));
+    font-family: var(--sb-font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+}
+
+/* Buttons row (mirrors common.scss .window-button) */
+.dmz-button {
+  &__buttons-wrapper {
+    gap: var(--spacer-4);
+    align-items: center;
+  }
+
+  &__buttons-container {
+    padding: 0;
+  }
+
+  &__label-button {
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacer-2) var(--spacer-5);
+    color: var(--sb-text);
+    background-color: var(--sb-grey-20);
+    border-radius: var(--corner-radius-2);
+    font-size: 13.14px;
+    font-weight: 600;
+    font-family: var(--sb-font-body);
+    display: flex;
+    gap: var(--spacer-2);
+
+    svg {
+      width: 13.14px;
+      height: 13.14px;
+    }
+
+    &:hover {
+      filter: brightness(0.97);
+    }
+
+    &.secondary {
+      color: #000;
+      background-color: #b1adff; /* Primary/20 from Figma */
+    }
+  }
+
+  &__icon-button {
+    display: flex;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    color: var(--sb-text);
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+
+  &__icon-bg-button {
+    cursor: pointer;
+    background-color: var(--sb-grey-20);
+    color: var(--sb-text);
+    padding: 4px 8px;
+    border-radius: var(--corner-radius-2);
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover {
+      filter: brightness(0.97);
+    }
+
+    &.primary {
+      background-color: var(--sb-grey-20);
+    }
+  }
+
+  &__dropdown-menu {
+    &__wrapper {
+      .menu-topic-items {
+        border-radius: var(--corner-radius-2);
+        background-color: #ffffff;
+        width: 200px;
+        padding: var(--spacer-4);
+        border: 1px solid var(--sb-grey-30);
+
+        &__wrapper {
+          padding: var(--spacer-4);
+          z-index: 99999 !important;
+        }
+      }
+    }
+
+    &__items {
+      width: 100%;
+      gap: var(--spacer-2);
+    }
+
+    &__item {
+      cursor: pointer;
+      padding: var(--spacer-2) var(--spacer-4);
+      align-items: center;
+      border-radius: var(--corner-radius-1);
+      gap: var(--spacer-5);
+
+      &:hover {
+        background-color: var(--sb-cta);
+        color: #ffffff;
+
+        .dmz-button__dropdown-menu__name {
+          color: #ffffff;
+        }
+
+        svg {
+          fill: #ffffff;
+        }
+      }
+    }
+
+    &__icon {
+      width: 24px;
+      height: 24px;
+
+      svg {
+        fill: var(--sb-text);
+      }
+    }
+
+    &__name {
+      @include drumee.typo($size: 14px, $line: 16px, $color: var(--sb-text));
+      font-family: var(--sb-font-body);
+    }
+  }
+}
+
+/* Tab bar (toolkit hardcodes .window-body__tab-bar-* classes) */
+.window-body__tab-bar {
+  &-wrapper {
+    align-items: center;
+    gap: var(--spacer-4);
+    padding: 8.76px 17.52px 9.308px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--sb-grey-20);
+  }
+
+  &-item {
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    padding: 9.855px 18.615px;
+    color: var(--sb-text);
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 1.095px solid transparent;
+    border-radius: 6px;
+    font-size: 13.14px;
+    font-weight: 600;
+    font-family: var(--sb-font-body);
+    display: flex;
+    gap: var(--spacer-2);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      color: var(--sb-pink);
+    }
+  }
+}
+
+/* Sharebox-specific tab states (mirrors window-sharebox active border) */
+.dmz-sharebox__main.drive-popup .window-body__tab-bar-item[data-state="1"] {
+  border-color: var(--sb-pink);
+  background-color: transparent;
+}
+
+/* Split body (mirrors window-sharebox__split-body) */
+.dmz-sharebox__split-body,
+.dmz__split-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+
+  &[data-view="chat"] {
+    .dmz__files-panel,
+    .dmz-sharebox__files-panel {
+      display: none;
+    }
+
+    .dmz__chat-panel {
+      flex: 1;
+    }
+  }
+
+  &[data-view="task"] {
+    .dmz__files-panel,
+    .dmz-sharebox__files-panel,
+    .dmz__chat-panel {
+      display: none;
+    }
+  }
+}
+
+/* Files panel (3:1 split with chat) */
+.dmz-sharebox__files-panel,
+.dmz__files-panel {
+  flex: 3;
+  min-width: 0;
+  background: var(--sb-grey-20);
+  overflow: auto;
+}
+
+/* Chat panel */
+.dmz__chat-panel {
+  flex: 1;
+  min-width: 202px;
+  border-left: 1px solid rgba(0, 0, 0, 0.05);
+  background: var(--sb-grey-20);
+
+  .note-content.dmz__chat-label {
+    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--sb-text));
+    font-family: var(--sb-font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .widget-chatItem__conversation-content {
+    &.me {
+      background-color: var(--sb-pink);
+    }
+  }
+}
+
+/* Inner desk-content area used by dmz_window_manager */
+.dmz-sharebox__content.desk-content.dmz-wm__ui {
+  background: transparent;
+  border-radius: 8px;
+  min-height: 320px;
+  min-width: 360px;
+  z-index: 1000;
+  align-items: center;
+  align-content: center;
+  justify-content: center;
+  justify-items: center;
 }

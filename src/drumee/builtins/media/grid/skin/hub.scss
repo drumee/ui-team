@@ -1,3 +1,7 @@
+// NOTE: This file is @include-commented out in skin/index.scss (line 10) and is NOT loaded
+// for the media-grid widget. Badge size + per-variant color rules have been replaced by
+// token-driven .folder-badge--* modifiers in container.scss (Phase 03). Do not re-enable
+// the .icon size overrides here — they conflict with --grid-icon-folder-badge token sizing.
 .media-grid.hub {
   .icon {
     width: 25px;

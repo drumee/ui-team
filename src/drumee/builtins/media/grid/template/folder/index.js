@@ -34,22 +34,27 @@ module.exports = function (model) {
         </filter>
       </defs>
     </svg>`;
-
-  let badge = "";
-  if (isDesk) {
-    switch (model.area) {
-      case _a.personal:
-        badge = badgePersonal(model); break;
-      case _a.private:
-        badge = badgePrivate(model); break;
-      case _a.share:
-      case _a.dmz:
-        badge = badgeShare(model); break;
-      case _a.public:
-        badge = badgePublic(model); break;
-    }
+  if (!isDesk) {
+    return `<div class="media-grid__folder-art">${main}</div>`;
   }
 
-  return main + badge + folderTrigger;
+  let badge = '';
+  switch (model.area) {
+    case _a.personal:
+      badge = badgePersonal(model);
+      break;
+    case _a.private:
+      badge = badgePrivate(model);
+      break;
+    case _a.share:
+    case _a.dmz:
+      badge = badgeShare(model);
+      break;
+    case _a.public:
+      badge = badgePublic(model);
+      break;
+  }
+
+  return `<div class="media-grid__folder-art">${main}${badge}</div>${folderTrigger}`;
 };
 

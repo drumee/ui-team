@@ -304,8 +304,45 @@ class __dmz_wm extends winman {
       case "open-node":
         return this.openContent(cmd);
 
+      case "filter-by-type":
+        this.ensurePart(_a.list).then((l) => {
+          l.setApi(this.getCurrentApi(cmd.options.value));
+          l.restart();
+        });
+        return;
+
       default:
         return this.warn(WARNING.method.unprocessed.format(service));
+    }
+  }
+
+  /**
+   * Build the list API for a given filter type. Mirrors window/core.js getCurrentApi
+   * but reuses the dmz initial api (set by desk-content.js) as the base so nid /
+   * hub_id / share_id / recipient_id aren't lost on filter switches.
+   *
+   * @param {string} type — one of "all" | "docs" | "pdf" | "image" | "other"
+   */
+  getCurrentApi(type) {
+    const original = this.mget(_a.api) || {};
+    const base = {
+      service: SERVICE.media.show_node_by,
+      page: 1,
+      order: _K.order.descending,
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      share_id: original.share_id,
+      recipient_id: original.recipient_id,
+    };
+    switch (type) {
+      case "all":
+      case "docs":
+      case "pdf":
+      case "image":
+      case "other":
+        return { ...base, type };
+      default:
+        return base;
     }
   }
 

@@ -2574,5 +2574,7 @@
   "NO_EXPIRATION": "No Expiration",
   "CAN_VIEW_FILES": "Can View Files",
   "CAN_EDIT_UPLOAD": "Can Edit & Upload",
-  "PUBLIC_LINK": "Public Link"
+  "PUBLIC_LINK": "Public Link",
+  "JOIN_WORKSPACE": "Join Workspace",
+  "SHARED_BY_LINK": "Shared by link"
 }
