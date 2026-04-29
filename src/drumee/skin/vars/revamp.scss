@@ -194,3 +194,29 @@
   --area-share: #ffa8dc;
   --area-dmz: #ffa8dc;
 }
+
+/* Grid tokens — Figma fidelity (workspace/folder 121x120, file 120x160) */
+:root {
+  --grid-cell-w: 120px;
+  --grid-cell-h-folder: 144px;          // 120 cell + 24 for 2-line label
+  --grid-cell-h-file: 184px;             // 119 card + 8 gap + 56 meta (2-line filename + date)
+  --grid-icon-file: 60px;
+  --grid-icon-folder-badge: 28px;
+  --grid-card-radius: 8px;
+  --grid-card-bg: rgba(0, 0, 0, 0.05);
+  --grid-card-bg-hover: rgba(0, 0, 0, 0.08);
+  --grid-gap: 24px;
+  --grid-meta-row-h: 32px;               // single-line baseline; meta-row uses min-height
+  --grid-meta-row-h-max: 64px;           // 2-line filename (~34) + 2px gap + date (~14) + 8 padding
+  --grid-padding: 40px;
+  --grid-color-icon-file: #847eff;       // file preview icon (purple)
+  --grid-color-icon-extension: #ffffff;  // file extension label text — white on shape
+  --grid-color-name: #0b0a21;            // file filename (SemiBold 12)
+  --grid-color-folder-name: #65656c;     // folder/workspace label (Regular 14)
+  --grid-color-meta: #65656c;
+  --grid-color-folder-badge: #ffffff;    // badge glyph — white on colored folder
+  --grid-color-folder-private: #884eff;
+  --grid-color-folder-restricted: #d65f59;
+  --grid-color-folder-linkshare: #ffa8dc;
+  --grid-color-folder-personal: #847eff;
+}
