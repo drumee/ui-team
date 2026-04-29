@@ -134,6 +134,69 @@ class __window_folder extends mfsInteract {
   }
 
   /**
+   * Route upload pseudo-media into the correct partition list. Base
+   * __window_interact._insertMedia queries the single `list` part — folder
+   * window doesn't have one (filePartitionView splits into workspace-list /
+   * folder-list / file-list), so the base method silently returned and the
+   * pseudo never mounted. With no mount, the XHR upload never started, so
+   * the file never reached the server (matching the "reset still empty"
+   * symptom).
+   *
+   * Routing: opt.folder set → folder-list; opt.filetype === hub →
+   * workspace-list; otherwise file-list.
+   */
+  _insertMedia(m, position) {
+    let opt;
+    if (position == null || _.isNaN(position)) position = 0;
+    if (m.model != null) {
+      opt = this.makeOptions(m);
+      if (opt == null) return false;
+    } else {
+      opt = m;
+    }
+    if (_.isEmpty(opt)) return;
+    if (opt.isAttachment) delete opt.isAttachment;
+    opt.logicalParent = this;
+    if (this.captured && this.captured.over && opt.phase === _a.upload) {
+      return;
+    }
+
+    if (opt.phase === _a.upload && opt.file && typeof RADIO_MEDIA !== 'undefined') {
+      let destination = opt.destination;
+      if (!destination && typeof this._getDestination === 'function') {
+        destination = this._getDestination();
+      }
+      RADIO_MEDIA.trigger("upload:start", {
+        file: opt.file,
+        fileName: opt.file.name || opt.filename,
+        fileSize: opt.file.size || opt.size || 0,
+        destination,
+        position,
+        opt,
+      });
+    }
+
+    let pn = 'file-list';
+    if (opt.filetype === _a.hub) pn = 'workspace-list';
+    else if (opt.folder || opt.filetype === _a.folder) pn = 'folder-list';
+
+    this.ensurePart(pn).then((list) => {
+      if (!list || (list.isDestroyed && list.isDestroyed())) return;
+      switch (position) {
+        case -1:
+          list.prepend(opt);
+          break;
+        case 0:
+          list.append(opt);
+          break;
+        default:
+          if (list.collection) list.collection.add(opt, { at: position });
+          else list.append(opt);
+      }
+    });
+  }
+
+  /**
    * Live-append handler. Base `__window_mfs.newContent` writes into
    * `this.iconsList`, which is never set in partition mode. Dispatch by
    * filetype into the matching partition list so peer WS events render.
