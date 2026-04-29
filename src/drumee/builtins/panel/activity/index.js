@@ -128,7 +128,7 @@ class __panel_activity extends LetcBox {
 
       case 'open-contact':
         this.toggleState()
-        return Wm.launch({ kind: 'window_addressbook', }, { explicit: 1, singleton: 1 });
+        return Desk.togglePanel('address_book', 'chat-panel');
 
       case 'open-chat':
         this.toggleState()
