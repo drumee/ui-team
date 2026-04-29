@@ -370,7 +370,7 @@ class __window_folder extends mfsInteract {
   /**
    * Switch the split body between Files / Chat / Task tabs. Re-feeds
    * the `folder-view` part with the appropriate skeleton subtree so the
-   * task tab can render the user's tracker-blocker board, and the chat
+   * task tab mounts the `tasks_panel` widget (hub-scoped), and the chat
    * tab a full-width chat panel.
    */
   showFolderTab(tab) {
@@ -388,7 +388,12 @@ class __window_folder extends mfsInteract {
         case "meeting":
           return view.feed(require("./skeleton/meeting-panel")(this));
         case _a.task:
-          return view.feed(require("./skeleton/tracker-blocker")(this));
+          return view.feed({
+            kind: "tasks_panel",
+            hub_id: this.mget(_a.hub_id),
+            nid: this.mget(_a.nid),
+            uiHandler: [this],
+          });
         default:
           return view.feed(folderFilesView(this));
       }
