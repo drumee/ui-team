@@ -227,6 +227,84 @@
     }
   }
 
+  // Wrapper for "Add new" button + dropdown
+  &__add-wrapper {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  // "Add new" dropdown menu
+  &__add-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 130px;
+    background: var(--white);
+    border-radius: 4px;
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    padding: 8px;
+    gap: 4px;
+    z-index: 99999;
+    visibility: hidden;
+    pointer-events: none;
+
+    &[data-state="1"] {
+      visibility: visible;
+      pointer-events: auto;
+    }
+  }
+
+  &__add-menu-item {
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 4px;
+    gap: 4px;
+    border-radius: 4px;
+    align-items: center !important;
+    cursor: pointer;
+    white-space: nowrap;
+    width: 100%;
+    box-sizing: border-box;
+
+    > * {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    &[data-highlight="1"] {
+      background: var(--neutral-100, #f2f2f7);
+    }
+
+    &:hover {
+      background: rgba(89, 80, 255, 0.1);
+    }
+
+    .svg-wrapper,
+    .drumee-svg,
+    svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    span.label,
+    section.label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0b0a21;
+      white-space: nowrap;
+      line-height: normal;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    &.ico-workspace svg { fill: #5950ff; color: #5950ff; }
+    &.ico-note svg { fill: #e8a13b; color: #e8a13b; }
+    &.ico-document svg { fill: #847eff; color: #847eff; }
+    &.ico-spreadsheet svg { fill: #54b684; color: #54b684; }
+    &.ico-presentation svg { fill: #ffa8dc; color: #ffa8dc; }
+  }
+
   &__upload-btn {
     display: inline-flex !important;
     flex-direction: row !important;
@@ -284,20 +362,20 @@
     flex-shrink: 0;
   }
 
-  // Suggestions dropdown
+  // Suggestions dropdown (Figma: Access filter 100:47197)
   &__search-suggestions {
     visibility: hidden;
     pointer-events: none;
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
-    width: 192px;
+    width: 193px;
     background-color: var(--white);
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
     z-index: 99999;
-    padding: 4px 0;
-    max-height: 220px;
+    padding: 8px;
+    max-height: 160px;
     overflow-y: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -314,16 +392,38 @@
 
   &__suggestions-list {
     width: 100%;
+    gap: 8px;
 
     .workspace-item {
-      padding: 8px 12px;
+      padding: 4px;
       cursor: pointer;
       border-radius: 4px;
-      margin: 0 4px;
 
-      &-name {
-        font-size: 13px;
-        color: var(--neutral-900);
+      &__row {
+        min-height: auto;
+        padding: 0;
+        gap: 4px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #65656c;
+      }
+
+      &__icon {
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        flex-shrink: 0;
+
+        svg {
+          width: 16px;
+          height: 16px;
+          fill: #65656c;
+        }
+      }
+
+      &__name {
+        font-size: 12px;
+        color: #65656c;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -331,7 +431,16 @@
 
       &:hover,
       &[data-state="1"] {
-        background-color: var(--default-bg-hover);
+        background-color: rgba(89, 80, 255, 0.1);
+      }
+
+      &[data-radio="on"] {
+        background-color: rgba(89, 80, 255, 0.1);
+        border-left: none;
+
+        .workspace-item__row {
+          padding-left: 0;
+        }
       }
     }
   }
@@ -498,14 +607,43 @@ html[data-theme="dark"] {
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 
       .workspace-item {
-        &-name {
+        &__name {
+          color: var(--normal-fg);
+        }
+
+        &__icon svg {
+          fill: var(--normal-fg-20);
+        }
+
+        &__row {
           color: var(--normal-fg);
         }
 
         &:hover,
-        &[data-state="1"] {
+        &[data-state="1"],
+        &[data-radio="on"] {
           background-color: var(--hover-bg-40);
         }
+      }
+    }
+
+    &__add-menu {
+      background-color: var(--normal-bg-elevated);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    &__add-menu-item {
+      span.label,
+      section.label {
+        color: var(--normal-fg);
+      }
+
+      &[data-highlight="1"] {
+        background: var(--normal-bg-40);
+      }
+
+      &:hover {
+        background: rgba(89, 80, 255, 0.2);
       }
     }
   }

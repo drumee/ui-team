@@ -26,17 +26,25 @@ module.exports = function (model) {
         </filter>
       </defs>
     </svg>`;
-  if (role != 'desk' && filetype != _a.hub) return main
+  if (role != 'desk' && filetype != _a.hub) {
+    return `<div class="media-grid__folder-art">${main}</div>`;
+  }
+  let badge = '';
   switch (model.area) {
     case _a.personal:
-      return main + badgePersonal(model);
+      badge = badgePersonal(model);
+      break;
     case _a.private:
-      return main + badgePrivate(model);
+      badge = badgePrivate(model);
+      break;
     case _a.share:
     case _a.dmz:
-      return main + badgeShare(model);
+      badge = badgeShare(model);
+      break;
     case _a.public:
-      return main + badgePublic(model);
+      badge = badgePublic(model);
+      break;
   }
+  return `<div class="media-grid__folder-art">${main}${badge}</div>`;
 };
 

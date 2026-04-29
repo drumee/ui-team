@@ -138,7 +138,9 @@ class __window_mfs extends DrumeeMFS {
     if (this._responsive) RADIO_BROADCAST.off(_e.responsive, this._responsive);
     if (this._kbHandler) RADIO_KBD.off(_e.keyup, this._kbHandler);
     Wm.off(WS_EVENT, this.handleWsEvent)
-    this._cleanupPartition();
+    if (this._partitionObserver || this._partitionDebounce || this._partitionRetryTimer || this._partitionSettleTimer) {
+      this._cleanupPartition();
+    }
     if (super.onBeforeDestroy) {
       super.onBeforeDestroy(opt)
     }
@@ -209,9 +211,11 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
-   * 
-   * @param {*} child 
-   * @param {*} pn 
+   * Wire up the icons list when its part is ready.
+   * Folder window bypasses this via its own buildContent override (dual List.Smart).
+   * Non-folder surfaces (share, search, meeting, home wm) continue to use this path.
+   * @param {*} child
+   * @param {*} pn
    */
   buildIconsList(child, pn) {
     this.iconsList = child;
@@ -223,17 +227,27 @@ class __window_mfs extends DrumeeMFS {
         child.el.dataset.wait = 1;
       }, 300);
     }
-    child.el.style.visibility = 'hidden';
-    const childScroll = child.el.querySelector('.smart-container');
-    if (childScroll) childScroll.style.visibility = 'hidden';
-    this._partitionListPart = child;
-    this._setupPartitionObserver(child);
+
+    // Home wm uses 3-tier partition (workspace → folder → file). Other
+    // surfaces (share, search, meeting) keep flat list. Folder window
+    // bypasses buildIconsList entirely via buildContent override.
+    const usesPartition = this.isWm === 1;
+    if (usesPartition) {
+      child.el.style.visibility = 'hidden';
+      const scrollEl = child.el.querySelector('.smart-container');
+      if (scrollEl) scrollEl.style.visibility = 'hidden';
+      this._partitionListPart = child;
+      this._setupPartitionObserver(child);
+    }
+
     child.once(EOD, () => {
       if (timer) clearTimeout(timer);
       child.el.dataset.wait = 0;
       child.$el.removeClass('drumee-sprinner');
-      this._partitionFoldersAndFiles(child);
-      this._applyFolderScrollMode(child);
+      if (usesPartition) {
+        this._partitionFoldersAndFiles(child);
+        this._applyFolderScrollMode(child);
+      }
       this.syncContent(EOD);
       this._dataReady = true;
       this.trigger(EOD);
@@ -245,6 +259,10 @@ class __window_mfs extends DrumeeMFS {
     child.el.dataset.role = _a.container;
   }
 
+  /**
+   * Home grid partition (desk wm) — keeps MutationObserver for home workspace.
+   * Folder window does NOT call this (bypassed via buildContent override in folder/index.js).
+   */
   _cleanupPartition() {
     if (this._partitionObserver) {
       this._partitionObserver.disconnect();
@@ -315,8 +333,11 @@ class __window_mfs extends DrumeeMFS {
       scrollEl.style.visibility = 'hidden';
     }
     if (scrollEl) {
+      // 3-tier partition: workspace (hubs) → folder → file
+      const ww = scrollEl.querySelector('.workspace-section');
       const fw = scrollEl.querySelector('.folder-section');
       const flw = scrollEl.querySelector('.file-section');
+      if (ww) ww.remove();
       if (fw) fw.remove();
       if (flw) flw.remove();
     }
@@ -405,15 +426,17 @@ class __window_mfs extends DrumeeMFS {
     const scrollEl = listPart.el.querySelector('.smart-container');
     if (!scrollEl) return false;
 
+    // 3-tier order top → bottom: workspaces (hubs) → folders → files
+    let workspaceWrap = scrollEl.querySelector('.workspace-section');
     let folderWrap = scrollEl.querySelector('.folder-section');
     let fileWrap = scrollEl.querySelector('.file-section');
 
     const items = [...scrollEl.children].filter(
-      (el) => el !== folderWrap && el !== fileWrap && el.dataset?.filetype
+      (el) => el !== workspaceWrap && el !== folderWrap && el !== fileWrap && el.dataset?.filetype
     );
 
     if (!items.length) {
-      if (folderWrap || fileWrap) {
+      if (workspaceWrap || folderWrap || fileWrap) {
         scrollEl.style.visibility = 'visible';
         scrollEl.dataset.partitioning = 0;
         listPart.el.style.visibility = 'visible';
@@ -422,6 +445,12 @@ class __window_mfs extends DrumeeMFS {
       return false;
     }
 
+    // Append in stack order so DOM matches visual order (workspace top, file bottom).
+    if (!workspaceWrap) {
+      workspaceWrap = document.createElement('div');
+      workspaceWrap.className = 'workspace-section';
+      scrollEl.appendChild(workspaceWrap);
+    }
     if (!folderWrap) {
       folderWrap = document.createElement('div');
       folderWrap.className = 'folder-section';
@@ -433,11 +462,11 @@ class __window_mfs extends DrumeeMFS {
       scrollEl.appendChild(fileWrap);
     }
 
-    // Catch any stray direct children (e.g. items rendered before the
-    // attachHtml override was installed) and route them by filetype.
     items.forEach((item) => {
       const ft = item.dataset?.filetype;
-      if (ft === _a.folder || ft === _a.hub) {
+      if (ft === _a.hub) {
+        workspaceWrap.appendChild(item);
+      } else if (ft === _a.folder) {
         folderWrap.appendChild(item);
       } else {
         fileWrap.appendChild(item);
@@ -538,17 +567,11 @@ class __window_mfs extends DrumeeMFS {
     data.kind = this._getKind();
     data.service = OPEN_NODE;
     if (this.iconsList) {
-      this._setupPartitionObserver(this.iconsList);
       if (data.position >= 0) {
         this.iconsList.append(data, data.position);
       } else {
         this.iconsList.append(data);
       }
-      setTimeout(() => {
-        if (this.iconsList && !this.iconsList.isDestroyed()) {
-          this._partitionFoldersAndFiles(this.iconsList);
-        }
-      }, 16);
     }
     this.syncBounds();
   }

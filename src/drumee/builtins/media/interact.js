@@ -1024,6 +1024,24 @@ class __media_interact extends media_core {
     if (mode == _a.copy) return;
     m.suppress();
   }
+  download_tree() {
+    let nid;
+    let hub_id;
+    if (this.mget(_a.filetype) === _a.hub) {
+      nid = this.mget(_a.actual_home_id);
+      hub_id = this.mget(_a.id) || this.mget(_a.hub_id);
+    } else {
+      nid = this.mget(_a.nid);
+      hub_id = this.mget(_a.hub_id);
+    }
+    this.postService({
+      service: SERVICE.media.download,
+      nid,
+      hub_id,
+      socket_id: Visitor.get(_a.socket_id),
+    });
+    this._waitingForZip = this.mget(_a.nid);
+  }
 }
 __media_interact.initClass();
 

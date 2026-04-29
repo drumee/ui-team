@@ -1,7 +1,18 @@
 /**
  * Topbar — left to right:
- * breadcrumb | [new-workspace | search | invite]
+ * breadcrumb | [add-new | upload | search | invite]
  */
+
+const addMenuItem = (pfx, ui, ico, label, service, opts = {}) =>
+  Skeletons.Button.Label({
+    ico,
+    label,
+    className: `${pfx}__add-menu-item ${opts.iconClass || ""}`,
+    dataset: { highlight: opts.highlight ? 1 : 0 },
+    service,
+    uiHandler: [ui],
+  });
+
 module.exports = function (ui) {
   const pfx = `${ui.fig.family}-topbar`;
 
@@ -20,13 +31,33 @@ module.exports = function (ui) {
       Skeletons.Box.X({
         className: `${pfx}__actions-cluster`,
         kids: [
-          // New workspace button
-          Skeletons.Button.Label({
-            ico: "topbar-add",
-            className: `${pfx}__new-workspace-btn`,
-            label: LOCALE.ADD_NEW || "Add new",
-            service: "new-workspace",
-            uiHandler: [ui],
+          // "Add new" button + dropdown wrapper
+          Skeletons.Box.Y({
+            className: `${pfx}__add-wrapper`,
+            kids: [
+              Skeletons.Button.Label({
+                ico: "topbar-add",
+                className: `${pfx}__new-workspace-btn`,
+                label: LOCALE.ADD_NEW || "Add new",
+                service: "toggle-add-menu",
+                uiHandler: [ui],
+              }),
+
+              Skeletons.Box.Y({
+                className: `${pfx}__add-menu`,
+                sys_pn: "add-menu",
+                partHandler: ui,
+                dataset: { state: 0 },
+                active: 0,
+                kids: [
+                  addMenuItem(pfx, ui, "addmenu-folder", LOCALE.WORKSPACE || "Workspace", "new-workspace", { highlight: 1, iconClass: "ico-workspace" }),
+                  addMenuItem(pfx, ui, "addmenu-note", LOCALE.NOTE || "Note", "new-note", { iconClass: "ico-note" }),
+                  addMenuItem(pfx, ui, "addmenu-document", LOCALE.DOCUMENT || "Document", "new-document", { iconClass: "ico-document" }),
+                  addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", { iconClass: "ico-spreadsheet" }),
+                  addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", { iconClass: "ico-presentation" }),
+                ],
+              }),
+            ],
           }),
 
           Skeletons.Button.Label({

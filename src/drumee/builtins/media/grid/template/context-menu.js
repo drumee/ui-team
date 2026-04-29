@@ -9,7 +9,7 @@ module.exports = function (ui) {
     "organize",
     "duplicate",
     "seeChatThreads",
-    "delete",
+    "trash",
   ];
 
   return Skeletons.Box.Y({
