@@ -28,6 +28,46 @@
     height: 100%;
     gap: var(--spacer-3);
     justify-content: center;
+    position: relative; // anchor for badge absolute positioning
+
+    /* Folder/hub cells stack: shape on top, label in flow beneath.
+       Allows the label to wrap to 2 lines (Figma spec) without spilling
+       into the next row. File cells use a separate card+meta-row layout
+       so they don't need this column flow. */
+    &.folder,
+    &.hub {
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+
+      .folder-shape {
+        height: 100%;
+        width: 105%;
+      }
+
+      .badge {
+        // Inside .media-grid__folder-art (position: relative). Figma raw
+        // spec is bottom-7.5 / left-6, but visually too close to the
+        // folder's left edge — bump padding for breathing room while still
+        // sitting on the folder body.
+        bottom: 10px;
+        left: 18px;
+      }
+    }
+
+    /* Wrapper added by template/folder/index.js around shape + badge so
+       badge absolute-positioning is anchored to the folder-shape area
+       (not the whole cell). Aspect ratio matches Figma 99×79.5. */
+    .media-grid__folder-art {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 99 / 79.5;
+      max-height: 79.5px;
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
     .folder-shape {
       width: 105%;
@@ -59,16 +99,15 @@
       height: var(--grid-icon-folder-badge);
       bottom: 24px;
       left: 8px;
-      // Phosphor sprite icons inherit color via currentColor; default to private token.
-      color: var(--grid-color-folder-private);
+      // Glyph rendered WHITE on top of the colored folder shape. Folder color
+      // already varies by area (see .folder-shape variants); the badge sits
+      // above and only needs visual contrast — white wins over per-variant
+      // tinting that clashed with --area-private (#eb6159), --area-share, etc.
+      color: var(--grid-color-folder-badge);
       fill: currentColor;
-
-      &.folder-badge--private    { color: var(--grid-color-folder-private); }
-      &.folder-badge--linkshare  { color: var(--grid-color-folder-linkshare); }
-      &.folder-badge--restricted { color: var(--grid-color-folder-restricted); }
-      &.folder-badge--personal   { color: var(--grid-color-folder-personal); }
-      // Public shares the personal token pending Figma clarification (TBD — see badge-public.js).
-      &.folder-badge--public     { color: var(--grid-color-folder-personal); }
+      // Subtle white drop-shadow approximates Figma's dropShadow on the badge
+      // and keeps the glyph readable on light folder shades (linkshare pink).
+      filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.32));
     }
 
     &[data-over="over"] {
@@ -148,14 +187,18 @@
     height: 100%;
 
     .preview-container {
+      // Fill the parent card so image previews + centered icons both have
+      // a non-zero box. preview-content (image bg) fills via absolute inset
+      // below; preview-icon centers via flex.
+      position: relative;
       width: 100%;
+      height: 100%;
       flex: 1 1 auto;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: var(--grid-card-radius);
       overflow: hidden;
-      position: relative;
 
       &.image,
       &.web,
@@ -166,17 +209,15 @@
     }
 
     .preview-content {
+      // Image preview — fills preview-container via absolute inset so
+      // background-image: url(...) actually has a non-zero render box.
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
-      flex-wrap: wrap;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      align-content: center;
-      justify-content: center;
       border-radius: var(--grid-card-radius);
 
       &.vector {
@@ -195,7 +236,13 @@
 
       &.document,
       &.extension {
+        // The extension variant renders an SVG with a file-shape path AND a
+        // text label (e.g. "pdf", "dsc"). Shape stays purple; text flips
+        // white for contrast (was inheriting purple → invisible on shape).
         fill: var(--grid-color-icon-file);
+        text {
+          fill: var(--grid-color-icon-extension);
+        }
       }
 
       &.schedule {
@@ -227,21 +274,26 @@
     }
   }
 
-  /* Meta row beneath the card (filename + kebab + date — Figma 32px) */
+  /* Meta row beneath the card (filename + kebab + date).
+     Figma single-line baseline = 32px; allow grow up to 56px when filename
+     wraps to 2 lines so date never gets clipped. */
   &__meta-row {
     width: 100%;
-    height: var(--grid-meta-row-h);
+    min-height: var(--grid-meta-row-h);
+    max-height: var(--grid-meta-row-h-max);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 2px;
     padding-top: 8px;
     box-sizing: border-box;
 
     &-top {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       width: 100%;
+      gap: 4px;
     }
   }
 
@@ -257,13 +309,16 @@
   }
 
   /* When filename lives inside the new meta-row, override the legacy
-     absolute-positioned filename rule (filename.scss). Kebab sits to its
-     right; date row sits beneath. */
-  &__meta-row .filename {
+     absolute-positioned filename rule (filename.scss). filename.scss loads
+     AFTER container.scss in skin/index.scss; bump specificity by chaining
+     .media-grid + .media-grid__meta-row + .filename so this rule wins
+     against `.media-grid .filename { position: absolute }`.
+     Allow up to 2 lines (line-clamp 2) before truncating. */
+  &.media-grid &__meta-row .filename,
+  & &__meta-row .filename {
     position: static;
     bottom: auto;
     width: auto;
-    max-height: none;
     padding: 0;
     background: transparent;
     border-radius: 0;
@@ -275,12 +330,19 @@
     line-height: 1.4;
     color: var(--grid-color-name);
     overflow: hidden;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    max-height: calc(12px * 1.4 * 2); // 2 lines × line-height
     text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   &__meta-row .media-context-menu__trigger {
     flex: 0 0 auto;
     margin-left: 4px;
+    margin-top: 2px;
   }
 }

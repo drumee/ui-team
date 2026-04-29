@@ -33,8 +33,16 @@ const __media_tpl_grid = function (ui) {
     html = preview + filenameHtml;
   } else {
     // File items match Figma: 119x119 rounded card + 32px meta row (filename + kebab + date).
-    const date = m.age || m.date || '';
-    const dateHtml = date ? `<span class="media-grid__date">${date}</span>` : '';
+    // Date formatted from ctime (unix epoch). Recent (< 7d) → "3 days ago",
+    // older → "Oct 12, 2023" per Figma. Skip render if timestamp invalid (0/null).
+    const ts = Number(m.ctime) || Number(m.mtime) || 0;
+    let dateText = '';
+    if (ts > 0) {
+      const d = Dayjs.unix(ts);
+      const ageDays = Dayjs().diff(d, 'day');
+      dateText = ageDays < 7 ? d.fromNow() : d.format('MMM D, YYYY');
+    }
+    const dateHtml = dateText ? `<span class="media-grid__date">${dateText}</span>` : '';
     html =
       `<div class="media-grid__background">${preview}</div>` +
       `<div class="media-grid__meta-row">` +
