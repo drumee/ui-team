@@ -3,19 +3,23 @@ const { badgePrivate } = require("./badge-private")
 const { badgeShare } = require("./badge-share")
 const { badgePublic } = require("./badge-public")
 
-const folderTrigger = `
-  <div class="media-context-menu__folder-trigger" data-service="context-menu">
-    <svg class="media-context-menu__folder-trigger-icon" width="11" height="9" viewBox="0 0 11 9" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="5.47501" cy="1.095" r="1.095" fill="white"/>
-      <circle cx="5.47501" cy="4.37997" r="1.095" fill="white"/>
-      <circle cx="5.47501" cy="7.66501" r="1.095" fill="white"/>
-    </svg>
-  </div>`;
-
 module.exports = function (model) {
   let { area, widgetId = _.uniqueId(), filetype, role } = model;
-  const isDesk = role === 'desk' || filetype === _a.hub;
-  if (!area) area = 'inner-folder';
+  if (role != 'desk' && filetype != _a.hub) {
+    area = 'inner-folder'
+  }
+  // Kebab trigger lives inside folder-art so it shares the badge's coord
+  // system and can mirror the badge position (right vs left).
+  const showKebab = !model.isAttachment
+    && !Visitor.inDmz
+    && (model.status !== _a.deleted)
+    && !(model.isalink && filetype !== _a.hub);
+  const kebab = showKebab ? `
+    <div class="media-context-menu__trigger" data-service="context-menu">
+      <svg class="media-context-menu__trigger-icon">
+        <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#--icon-bold-dot-vertical"></use>
+      </svg>
+    </div>` : '';
   let main = `
     <svg class="folder-shape ${area}" width="105" height="86" viewBox="0 0 105 86" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g filter="url(#filter-${widgetId})">
@@ -35,7 +39,7 @@ module.exports = function (model) {
       </defs>
     </svg>`;
   if (role != 'desk' && filetype != _a.hub) {
-    return `<div class="media-grid__folder-art">${main}</div>`;
+    return `<div class="media-grid__folder-art">${main}${kebab}</div>`;
   }
   let badge = '';
   switch (model.area) {
@@ -53,6 +57,5 @@ module.exports = function (model) {
       badge = badgePublic(model);
       break;
   }
-  return `<div class="media-grid__folder-art">${main}${badge}</div>`;
+  return `<div class="media-grid__folder-art">${main}${badge}${kebab}</div>`;
 };
-

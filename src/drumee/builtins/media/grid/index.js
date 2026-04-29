@@ -82,57 +82,49 @@ class __media_grid extends DrumeeMediaInteract {
       )
     }
 
-    this.container.push(require('./template/context-menu')(this));
   }
 
   /**
-   * @param {number} x
-   * @param {number} y
-   */
-  _openContextMenu(x, y) {
-    this.ensurePart('context-menu').then((menu) => {
-      if (menu.el.dataset.state === '1') {
-        menu.el.dataset.state = '0';
-        return;
-      }
-      const menuW = 168;
-      menu.el.style.top = `${y + 4}px`;
-      menu.el.style.left = `${Math.max(4, x - menuW)}px`;
-      menu.el.dataset.state = '1';
-      const closeOnOutside = (evt) => {
-        if (!this.el.contains(evt.target)) {
-          menu.el.dataset.state = '0';
-          document.removeEventListener('click', closeOnOutside, true);
-        }
-      };
-      document.addEventListener('click', closeOnOutside, true);
-    });
-  }
-
-  /**
+   * Kebab → unified popup. Invokes the same SDK-bound handler that runs on
+   * a real right-click (`el.oncontextmenu`, set by `@drumee/ui-core/letc/
+   * addons/letc.js#__handleContextmenu`) so kebab and right-click produce
+   * an identical `.drumee-contextmenu` popup. Calling the bound handler as
+   * a function bypasses `dispatchEvent('contextmenu')` quirks where
+   * synthetic events do not reach property-style handlers.
+   *
    * @param {Event} e
    */
   dispatchUiEvent(e) {
     const service = this.el.getService(e);
     if (service === 'context-menu') {
       e.stopPropagation();
-      const trigger = this.el.querySelector('.media-context-menu__trigger')
-        || this.el.querySelector('.media-context-menu__folder-trigger');
-      const rect = trigger ? trigger.getBoundingClientRect() : { bottom: e.clientY, right: e.clientX };
-      this._openContextMenu(rect.right, rect.bottom);
+      e.preventDefault();
+      const trigger = this.el.querySelector('.media-context-menu__trigger');
+      const rect = trigger
+        ? trigger.getBoundingClientRect()
+        : { right: e.clientX, bottom: e.clientY };
+      const handler = this.el && this.el.oncontextmenu;
+      if (typeof handler === 'function') {
+        // Plain object provides every field the SDK's __handleContextmenu
+        // reads (`@drumee/ui-core letc/addons/letc.js:355`): pageX/pageY for
+        // popup positioning, the three stop* / preventDefault methods, plus
+        // shiftKey / ctrlKey for the debug short-circuit.
+        handler({
+          pageX: rect.right + (window.scrollX || 0),
+          pageY: rect.bottom + (window.scrollY || 0),
+          clientX: rect.right,
+          clientY: rect.bottom,
+          target: this.el,
+          shiftKey: false,
+          ctrlKey: false,
+          preventDefault() {},
+          stopPropagation() {},
+          stopImmediatePropagation() {},
+        });
+      }
       return;
     }
     super.dispatchUiEvent(e);
-  }
-
-  /**
-   * @param {*} cmd
-   * @param {*} args
-   */
-  onUiEvent(cmd, args = {}) {
-    const menu = this.getPart('context-menu');
-    if (menu) menu.el.dataset.state = '0';
-    super.onUiEvent(cmd, args);
   }
 
   /**
