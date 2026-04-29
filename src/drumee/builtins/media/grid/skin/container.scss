@@ -55,10 +55,20 @@
 
     .badge {
       position: absolute;
-      width: 38px;
-      height: 31px;
-      bottom: 26px;
-      left: 10px;
+      width: var(--grid-icon-folder-badge);
+      height: var(--grid-icon-folder-badge);
+      bottom: 24px;
+      left: 8px;
+      // Phosphor sprite icons inherit color via currentColor; default to private token.
+      color: var(--grid-color-folder-private);
+      fill: currentColor;
+
+      &.folder-badge--private    { color: var(--grid-color-folder-private); }
+      &.folder-badge--linkshare  { color: var(--grid-color-folder-linkshare); }
+      &.folder-badge--restricted { color: var(--grid-color-folder-restricted); }
+      &.folder-badge--personal   { color: var(--grid-color-folder-personal); }
+      // Public shares the personal token pending Figma clarification (TBD — see badge-public.js).
+      &.folder-badge--public     { color: var(--grid-color-folder-personal); }
     }
 
     &[data-over="over"] {
@@ -132,56 +142,42 @@
   &__content {
     display: flex;
     flex-direction: column;
-    justify-content: start;
+    justify-content: flex-start;
+    align-items: stretch;
     width: 100%;
     height: 100%;
-    flex-wrap: wrap;
-    align-content: center;
 
     .preview-container {
       width: 100%;
-      height: 100%;
+      flex: 1 1 auto;
       display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      align-content: center;
-      flex-wrap: wrap;
-      padding: var(--spacer-1) var(--spacer-1) var(--spacer-6) var(--spacer-1);
-      border-radius: var(--corner-radius-2);
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--grid-card-radius);
+      overflow: hidden;
+      position: relative;
 
-      &.image {
-        max-width: 86px;
-        max-height: 106px;
-        background-color: var(--white);
-      }
-
+      &.image,
       &.web,
       &.vector,
       &.video {
-        background-color: var(--white);
-        padding: 2px;
-        width: 86px;
-        height: 86px;
+        background-color: transparent;
       }
     }
 
     .preview-content {
       width: 100%;
       height: 100%;
-      max-width: 82px;
-      max-height: 82px;
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.8;
       flex-wrap: wrap;
       display: flex;
       flex-direction: column;
       align-items: center;
       align-content: center;
       justify-content: center;
-      border-radius: var(--spacer-1);
-      position: absolute;
+      border-radius: var(--grid-card-radius);
 
       &.vector {
         background-color: var(--neutral-500);
@@ -189,36 +185,102 @@
     }
 
     .preview-icon {
-      fill: var(--primary-400);
-      width: 85px;
-      height: 110px;
+      fill: var(--grid-color-icon-file);
+      width: var(--grid-icon-file);
+      height: var(--grid-icon-file);
 
       &.video {
-        fill: hsla(0, 0%, 98%, 0.8);
-        stroke: var(--neutral-900);
-        width: 28px;
-        height: 28px;
+        fill: var(--grid-color-icon-file);
       }
 
-      &.document {
-        fill: var(--ewhite);
+      &.document,
+      &.extension {
+        fill: var(--grid-color-icon-file);
       }
 
       &.schedule {
         fill: var(--special-schedule-icon);
-        stroke-width: 4px;
-        width: 33px;
-        height: 30px;
-        padding: 1px;
       }
 
       &.dmz {
-        top: calc(50% - 15px);
-      }
-
-      &.extension {
-        fill: white;
+        // top-positioning fallback for legacy DMZ overlay icon
       }
     }
+  }
+
+  /* Figma-aligned card wrapper (119x119 rounded, semi-transparent bg) */
+  &__background {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--grid-card-bg);
+    border-radius: var(--grid-card-radius);
+    overflow: hidden;
+    position: relative;
+    flex: 0 0 auto;
+
+    /* When the inner preview is a real image background, hide the card tint */
+    &:has(.preview-content[style*="background-image"]) {
+      background: transparent;
+    }
+  }
+
+  /* Meta row beneath the card (filename + kebab + date — Figma 32px) */
+  &__meta-row {
+    width: 100%;
+    height: var(--grid-meta-row-h);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-top: 8px;
+    box-sizing: border-box;
+
+    &-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+  }
+
+  &__date {
+    font-family: "Geist", sans-serif;
+    font-weight: 400;
+    font-size: 10px;
+    line-height: 1.4;
+    color: var(--grid-color-meta);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* When filename lives inside the new meta-row, override the legacy
+     absolute-positioned filename rule (filename.scss). Kebab sits to its
+     right; date row sits beneath. */
+  &__meta-row .filename {
+    position: static;
+    bottom: auto;
+    width: auto;
+    max-height: none;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    text-align: left;
+    flex: 1 1 auto;
+    font-family: "Geist", sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--grid-color-name);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta-row .media-context-menu__trigger {
+    flex: 0 0 auto;
+    margin-left: 4px;
   }
 }
