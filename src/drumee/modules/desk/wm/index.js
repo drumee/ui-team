@@ -276,6 +276,19 @@ class __window_manager extends push {
     this.updateBreadcrumb({ ...data, service: "change-workspace" });
   }
 
+  // Workspace (hub) clicks from grid views navigate inline via loadWorkspace —
+  // same flow the sidebar uses for `load-workspace`. The legacy openHubManager
+  // path (window_team / window_website / window_sharebox) stays reserved for
+  // explicit settings entry points that pass a `start` argument.
+  openContent(media, args) {
+    if (media && media.mget
+        && media.mget(_a.filetype) === _a.hub
+        && media.mget(_a.status) !== _a.deleted) {
+      return this.loadWorkspace(media);
+    }
+    return super.openContent(media, args);
+  }
+
   getCurrentNid() {
     if (this._curWorkspace?.nid != null) return this._curWorkspace.nid;
     return super.getCurrentNid();
