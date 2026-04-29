@@ -1,79 +1,80 @@
+/**
+ * Tutorial sidebar (visual only; no services).
+ * Mirrors the base desk sidebar: logo / nav / workspaces / footer (settings,
+ * theme, sign-out, user). Workspaces are static placeholders.
+ */
+
 const pfx = (ui) => `${ui.fig.family}__sb`;
 
-const navItem = (ui, ico, label, service) =>
-  Skeletons.Box.X({
-    className: `${pfx(ui)}-item`,
-    service,
-    uiHandler: [ui],
+const navItem = (ui, ico, label, opts = {}) => {
+  const p = pfx(ui);
+  return Skeletons.Box.X({
+    className: `${p}-item`,
     radio: 'tutorial-sidebar-radio',
     kids: [
-      Skeletons.Image.Svg({ ico, className: `${pfx(ui)}-item-icon` }),
-      Skeletons.Note({ className: `${pfx(ui)}-item-label`, content: label }),
+      Skeletons.Image.Svg({ ico, className: `${p}-item-icon ${opts.color || ''}` }),
+      Skeletons.Note({ className: `${p}-item-text ${opts.color || ''}`, content: label }),
     ],
   });
+};
 
-module.exports = function (ui) {
+const workspaceItem = (ui, name) => {
   const p = pfx(ui);
-
-  return Skeletons.Box.Y({
-    className: `${p}-sidebar`,
+  return Skeletons.Box.X({
+    className: `${p}-workspace-item`,
     kids: [
-      // Logo
-      Skeletons.Box.X({
-        className: `${p}-logo`,
+      Skeletons.Image.Svg({ ico: 'phosphor-folder', className: `${p}-workspace-item-icon` }),
+      Skeletons.Note({ className: `${p}-workspace-item-name`, content: name }),
+    ],
+  });
+};
+
+const workspaceSection = (ui) => {
+  const p = pfx(ui);
+  return Skeletons.Box.Y({
+    className: `${p}-workspace`,
+    kids: [
+      Skeletons.Note({ className: `${p}-workspace-title`, content: LOCALE.WORKSPACES }),
+      Skeletons.Box.Y({
+        className: `${p}-workspace-main`,
         kids: [
-          Skeletons.Image.Svg({ ico: 'raw-logo-drumee-full', className: `${p}-logo-icon` }),
-          Skeletons.Note({ className: `${p}-org-name`, content: Organization.name() || LOCALE.WORKSPACE_NAME }),
+          workspaceItem(ui, 'Workspace 1'),
+          workspaceItem(ui, 'Workspace 2'),
+          workspaceItem(ui, 'Workspace 3'),
         ],
       }),
+    ],
+  });
+};
 
-      // Nav
-      Skeletons.Box.Y({
-        className: `${p}-nav`,
-        kids: [
-          navItem(ui, 'sidebar_home', LOCALE.HOME, _e.home),
-          navItem(ui, 'sidebar_notifications', LOCALE.NOTIFICATIONS, 'toggle-activity'),
-          navItem(ui, 'sidebar_inbox', LOCALE.INBOX, 'toggle-inbox'),
-          navItem(ui, 'sidebar_trash', LOCALE.TRASH, 'toggle-trash'),
-          navItem(ui, 'sidebar_apps', LOCALE.APPS, 'toggle-apps'),
-        ],
-      }),
+const getInitials = (name = '') =>
+  name.trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase();
 
-      // Workspaces
+const footer = (ui, username) => {
+  const p = pfx(ui);
+  return Skeletons.Box.Y({
+    className: `${p}-footer`,
+    kids: [
+      navItem(ui, 'sidebar_settings', LOCALE.SETTINGS),
+      navItem(ui, 'raw-light', LOCALE.DISPLAY_MODE),
+      navItem(ui, 'sidebar_signout', LOCALE.SIGN_OUT, { color: 'red' }),
       Skeletons.Box.Y({
-        className: `${p}-workspaces`,
+        className: `${p}-footer-user-wrapper`,
         kids: [
-          Skeletons.Note({ className: `${p}-workspaces-title`, content: LOCALE.WORKSPACES }),
-          {
-            kind: 'workspace_list',
-            className: `${p}-workspace-list`,
-            uiHandler: [ui],
-          },
-        ],
-      }),
-
-      // Footer
-      Skeletons.Box.Y({
-        className: `${p}-footer`,
-        kids: [
-          navItem(ui, 'sidebar_settings', LOCALE.SETTINGS, 'toggle-settings'),
-          navItem(ui, 'sidebar_signout', LOCALE.SIGN_OUT, ''),
           Skeletons.Box.X({
-            className: `${p}-user`,
-            service: 'toggle-user-menu',
-            uiHandler: [ui],
+            className: `${p}-footer-user-btn`,
             kids: [
-              Skeletons.UserProfile({
-                className: `${p}-user-avatar`,
-                id: Visitor.id,
-                firstname: Visitor.firstname(),
-                auto_color: 1,
+              Skeletons.Box.X({
+                className: `${p}-footer-avatar`,
+                kids: [
+                  Skeletons.Note({ className: `${p}-footer-avatar-note`, content: getInitials(username) }),
+                ],
               }),
               Skeletons.Box.Y({
-                className: `${p}-user-info`,
+                className: `${p}-footer-name-wrapper`,
                 kids: [
-                  Skeletons.Note({ className: `${p}-user-name`, content: Visitor.firstname() }),
-                  Skeletons.Note({ className: `${p}-user-plan`, content: LOCALE.PRO_PLAN }),
+                  Skeletons.Note({ className: `${p}-footer-username`, content: username }),
+                  Skeletons.Note({ className: `${p}-footer-user-plan`, content: LOCALE.PRO_PLAN }),
                 ],
               }),
             ],
@@ -81,5 +82,40 @@ module.exports = function (ui) {
         ],
       }),
     ],
+  });
+};
+
+const nav = (ui) => {
+  const p = pfx(ui);
+  return Skeletons.Box.Y({
+    className: `${p}-nav`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${p}-logo`,
+        kids: [
+          Skeletons.Image.Svg({ ico: 'raw-logo-drumee-full', className: `${p}-logo-icon` }),
+          Skeletons.Note({ className: `${p}-header`, content: Organization.name() || LOCALE.WORKSPACE_NAME }),
+        ],
+      }),
+      Skeletons.Box.Y({
+        className: `${p}-nav-main`,
+        kids: [
+          navItem(ui, 'sidebar_home', LOCALE.HOME),
+          navItem(ui, 'sidebar_notifications', LOCALE.NOTIFICATIONS),
+          navItem(ui, 'sidebar_inbox', LOCALE.INBOX),
+          navItem(ui, 'sidebar_trash', LOCALE.TRASH),
+          navItem(ui, 'sidebar_apps', LOCALE.APPS),
+        ],
+      }),
+      workspaceSection(ui),
+    ],
+  });
+};
+
+module.exports = function (ui) {
+  const p = pfx(ui);
+  return Skeletons.Box.Y({
+    className: `${p}-main`,
+    kids: [nav(ui), footer(ui, Visitor.firstname())],
   });
 };
