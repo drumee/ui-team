@@ -4,7 +4,7 @@ class __form_folder extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
-    this._status = "personal";
+    this._status = "team";
   }
 
   onDomRefresh() {
@@ -54,11 +54,10 @@ class __form_folder extends LetcBox {
     const status = this._status || "personal";
 
     const FLOW = {
-      personal: { area: _a.personal, post: null },
-      team: { area: _a.private, post: "permission_restricted" },
-      share: { area: _a.share, post: "permission_shared" },
+      team: { area: "private", post: "permission_restricted" },
+      share: { area: "share", post: "permission_shared" },
     };
-    const { area, post } = FLOW[status] || FLOW.personal;
+    const { area, post } = FLOW[status] || FLOW.team;
 
     this._pending = 1;
     this.postService(SERVICE.desk.create_hub, {

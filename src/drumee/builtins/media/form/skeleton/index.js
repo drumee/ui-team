@@ -1,16 +1,9 @@
 const STATUS_OPTIONS = [
   {
-    ico: "lock",
-    label: LOCALE.PRIVATE,
-    desc: LOCALE.PRIVATE_HINT,
-    initial: 1,
-    name: "personal",
-  },
-  {
     ico: "desktop_group",
     label: LOCALE.RESTRICTED_SHARE,
     desc: LOCALE.RESTRICTED_SHARE_HINT,
-    initial: 0,
+    initial: 1,
     name: "team",
   },
   {
@@ -32,9 +25,12 @@ function statusOption(ui, opt) {
     uiHandler: [ui],
     formItem: opt.name,
     radio: `${ui._id}`,
+    kidsOpt: { active: 0 },
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__option-left`,
+        active: 0,
+        kidsOpt: { active: 0 },
         kids: [
           Skeletons.Image.Svg({
             ico: opt.ico,
@@ -42,6 +38,8 @@ function statusOption(ui, opt) {
           }),
           Skeletons.Box.Y({
             className: `${pfx}__option-info`,
+            active: 0,
+            kidsOpt: { active: 0 },
             kids: [
               Skeletons.Note({
                 className: `${pfx}__option-label`,
