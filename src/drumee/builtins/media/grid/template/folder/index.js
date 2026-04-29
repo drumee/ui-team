@@ -34,10 +34,9 @@ module.exports = function (model) {
         </filter>
       </defs>
     </svg>`;
-  if (!isDesk) {
+  if (role != 'desk' && filetype != _a.hub) {
     return `<div class="media-grid__folder-art">${main}</div>`;
   }
-
   let badge = '';
   switch (model.area) {
     case _a.personal:
@@ -54,7 +53,6 @@ module.exports = function (model) {
       badge = badgePublic(model);
       break;
   }
-
-  return `<div class="media-grid__folder-art">${main}${badge}</div>${folderTrigger}`;
+  return `<div class="media-grid__folder-art">${main}${badge}</div>`;
 };
 
