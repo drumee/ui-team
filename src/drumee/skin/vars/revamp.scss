@@ -205,6 +205,8 @@
   --grid-card-radius: 8px;
   --grid-card-bg: rgba(0, 0, 0, 0.05);
   --grid-card-bg-hover: rgba(0, 0, 0, 0.08);
+  --grid-selected-bg: rgba(0, 0, 0, 0.06);
+  --grid-hover-bg: rgba(0, 0, 0, 0.04);
   --grid-gap: 24px;
   --grid-meta-row-h: 32px;               // single-line baseline; meta-row uses min-height
   --grid-meta-row-h-max: 64px;           // 2-line filename (~34) + 2px gap + date (~14) + 8 padding
