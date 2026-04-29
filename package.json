@@ -38,6 +38,7 @@
     "@babel/traverse": "^7.28.5",
     "@drumee/ui-dev-tools": "^1.0.36",
     "@eslint/js": "^9.4.0",
+    "@phosphor-icons/core": "^2.1.1",
     "argparse": "^2.0.1",
     "babel-loader": "^8.2.5",
     "babel-plugin-syntax-dynamic-import": "^6.18.0",

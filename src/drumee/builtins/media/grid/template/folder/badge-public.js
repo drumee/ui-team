@@ -10,7 +10,7 @@ export function badgePublic(model, child_area, pos = 0) {
     child = `child child-${child_area} pos-${pos}`;
   }
   return `
-    <svg class="folder-badge folder-badge--public badge ${area} ${child}">
+    <svg class="folder-badge folder-badge--public badge ${area} ${child}" viewBox="0 0 256 256" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
       ${Template.Xmlns('phosphor-users')}
     </svg>`;
 }
