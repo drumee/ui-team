@@ -1,50 +1,39 @@
-
 function __skl_dmz_sharebox(_ui_) {
-  const shareboxFig = _ui_.fig.family
+  const shareboxFig = _ui_.fig.family;
+
+  const topNav = Skeletons.Box.X({
+    className: `${shareboxFig}__top-nav`,
+    sys_pn: "top-nav",
+  });
 
   const header = Skeletons.Box.X({
-    className: `${shareboxFig}__header`,
-    sys_pn: _a.header
-  })
+    className: `${shareboxFig}__page-header`,
+    sys_pn: _a.header,
+  });
 
   const content = Skeletons.Box.X({
     className: `${shareboxFig}__content`,
-    sys_pn: _a.content
-  })
+    sys_pn: _a.content,
+  });
 
   const footer = Skeletons.Wrapper.X({
     className: `${shareboxFig}__footer`,
     sys_pn: _a.footer,
     dataset: {
       mode: _a.closed,
-    }
-  })
-  const { protocol } = bootstrap();
-  const footerLink = Skeletons.Note({
-    className: `${shareboxFig}__footer-note`,
-    href: `${protocol}://drumee.org`,
-    target: '_blank',
-    content: 'Powered by Drumee'
-  })
+    },
+  });
 
-  let a = Skeletons.Box.X({
+  return Skeletons.Box.Y({
     className: `${shareboxFig}__main`,
     debug: __filename,
     kids: [
       Skeletons.Box.Y({
         className: `${shareboxFig}__container`,
-        kids: [
-          header,
-          content,
-          footer,
-          footerLink
-        ]
-      })
-    ]
+        kids: [topNav, header, content, footer],
+      }),
+    ],
   });
-
-  return a;
-
-};
+}
 
 export default __skl_dmz_sharebox;

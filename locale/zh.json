@@ -2389,5 +2389,7 @@
   "CAN_CHAT": "可聊天",
   "MANAGE_ACCESS": "管理访问权限",
   "PUBLIC_LINK": "公共链接",
-  "ACCESS_LEVEL": "访问级别"
+  "ACCESS_LEVEL": "访问级别",
+  "JOIN_WORKSPACE": "加入工作区",
+  "SHARED_BY_LINK": "通过链接分享"
 }
