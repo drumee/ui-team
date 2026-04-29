@@ -959,33 +959,37 @@
     align-content: flex-start;
     align-items: flex-start;
     justify-content: flex-start;
-    grid-template-columns: repeat(auto-fill, 120px);
-    grid-auto-rows: 144px;
-    gap: 24px;
-    padding: 24px;
+    grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+    grid-auto-rows: var(--grid-cell-h-file); // single-list default = file height
+    gap: var(--grid-gap);
+    padding: 24px; // folder window dialog uses tighter padding than home
     margin: 0;
     min-width: 0;
 
-    // Lock cell size — prevents stretching when only 1 item remains
-    // (eg. after switching filter tabs All → Docs → All) where the
-    // partition flow flips smart-container to flex column + makes
-    // file-section flex:1, which would otherwise stretch the cell.
+    // Lock cell width only; height is owned by per-section grid-auto-rows
+    // so workspace/folder rows (120) and file rows (160) coexist without
+    // stretching when section flex:1 fires.
     .media-grid__ui {
-      width: 120px;
-      max-width: 120px;
-      height: 144px;
-      max-height: 144px;
+      width: var(--grid-cell-w);
+      max-width: var(--grid-cell-w);
     }
 
-    // After partitioning, file/folder sections get flex:1 1 auto and
-    // grow vertically. Force grid content to stay at the top so empty
-    // space sits below instead of stretching items vertically.
+    // After partitioning, sections get flex:1 1 auto and grow vertically.
+    // Force grid content to stay at the top so empty space sits below
+    // instead of stretching items vertically. 3-tier order:
+    // workspace → folder → file.
+    .workspace-section,
     .folder-section,
     .file-section {
       align-content: start;
       align-items: start;
       justify-items: start;
+      grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+      gap: var(--grid-gap);
     }
+    .workspace-section { grid-auto-rows: var(--grid-cell-h-folder); }
+    .folder-section    { grid-auto-rows: var(--grid-cell-h-folder); }
+    .file-section      { grid-auto-rows: var(--grid-cell-h-file); }
   }
 
   .window__chat-label {
@@ -1181,5 +1185,34 @@
     cursor: default;
     opacity: 0.7;
     @include drumee.typo($size: 10px, $line: 14px, $weight: 400, $color: var(--normal-fg-20));
+  }
+
+  // --- Partition layout (dual List.Smart — folders above, files below) ---
+  &__partition-container {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--grid-gap, 24px);
+    padding: 24px;
+  }
+
+  &__workspace-section,
+  &__folder-section,
+  &__file-section {
+    display: flex;
+    flex-direction: column;
+
+    // Hide empty sections — data-empty is set by _toggleSectionEmpty()
+    &[data-empty="1"] {
+      display: none;
+    }
+  }
+
+  &__workspace-list,
+  &__folder-list,
+  &__file-list {
+    flex: 1 1 auto;
   }
 }

@@ -1,6 +1,6 @@
 const mfsInteract = require("../interact");
 
-const { folderFilesView, folderChatView } = require("../skeleton/toolkit");
+const { folderFilesView, folderChatView, filePartitionView } = require("../skeleton/toolkit");
 
 require("./skin");
 
@@ -10,6 +10,7 @@ class __window_folder extends mfsInteract {
     super(...args);
     this.onChildBubble = this.onChildBubble.bind(this);
     this.onSearchEvent = this.onSearchEvent.bind(this);
+    this._partitionFed = false;
   }
 
   /**
@@ -40,6 +41,172 @@ class __window_folder extends mfsInteract {
         privilege: this.mget(_a.trigger).mget(_a.privilege),
       });
     }
+  }
+
+  /**
+   * Override buildContent to inject partition skeleton into the files-panel
+   * instead of the standard grid/row loader. Bypasses loadContent's grid feed.
+   * `child.once` prevents listener stacking on re-mounts (subfolder navigation).
+   */
+  buildContent(child) {
+    this.__content = child;
+    this._partitionFed = false;
+    this.setupInteract();
+    if (!this._raised) this.raise();
+
+    child.once(_e.show, () => {
+      if (!this._partitionFed) {
+        this._partitionFed = true;
+        child.feed(filePartitionView(this));
+      }
+      if (this.media && this.media.wait) this.media.wait(0);
+    });
+  }
+
+  /**
+   * API for the workspace (hub) list — top section.
+   * Filters anything not a hub. Hubs typically appear at desk root only.
+   */
+  async getWorkspacesApi() {
+    const { nid, hub_id } = this.actualNode();
+    const data = await this.fetchService(SERVICE.media.show_folders, {
+      hub_id,
+      nid,
+      page: 1,
+    });
+    if (!data || !Array.isArray(data.items)) return data;
+    const items = data.items.filter((it) => it && it.filetype === _a.hub);
+    return { ...data, items };
+  }
+
+  /**
+   * API for the folder list — middle section.
+   * Filters to folder filetype only (no hubs, no files).
+   */
+  async getFoldersApi() {
+    const { nid, hub_id } = this.actualNode();
+    const data = await this.fetchService(SERVICE.media.show_folders, {
+      hub_id,
+      nid,
+      page: 1,
+    });
+    if (!data || !Array.isArray(data.items)) return data;
+    const items = data.items.filter((it) => it && it.filetype === _a.folder);
+    return { ...data, items };
+  }
+
+  /**
+   * API for the file list — bottom section.
+   * Filters out hubs and folders client-side.
+   */
+  async getFilesApi() {
+    const base = this.getCurrentApi();
+    const { service, ...params } = base || {};
+    if (!service) return { items: [] };
+    const data = await this.fetchService(service, params);
+    if (!data || !Array.isArray(data.items)) return data;
+    const items = data.items.filter(
+      (it) => it && it.filetype !== _a.folder && it.filetype !== _a.hub,
+    );
+    return { ...data, items };
+  }
+
+  /**
+   * Refresh all 3 partition lists (called after upload/delete/create events).
+   */
+  _refreshPartitionLists() {
+    this.ensurePart('workspace-list').then((l) => {
+      if (l && (!l.isDestroyed || !l.isDestroyed()) && l.restart) l.restart();
+    });
+    this.ensurePart('folder-list').then((l) => {
+      if (l && (!l.isDestroyed || !l.isDestroyed()) && l.restart) l.restart();
+    });
+    this.ensurePart('file-list').then((l) => {
+      if (l && (!l.isDestroyed || !l.isDestroyed()) && l.restart) l.restart();
+    });
+  }
+
+  /**
+   * Override loadContent — refresh both partition lists instead of re-feeding grid skeleton.
+   */
+  loadContent() {
+    this._refreshPartitionLists();
+  }
+
+  /**
+   * Live-append handler. Base `__window_mfs.newContent` writes into
+   * `this.iconsList`, which is never set in partition mode. Dispatch by
+   * filetype into the matching partition list so peer WS events render.
+   */
+  newContent(xhr, options = {}) {
+    const { data } = xhr || {};
+    if (!data) return;
+    const { nid, pid } = data;
+    const { echoId } = options || {};
+    if (this.updateInnerHubsPreview) this.updateInnerHubsPreview(data);
+    if (echoId === this.mget('echoId')) return;
+    if (this.mget(_a.nid) != pid) return;
+
+    // Dedup: if the item is already rendered, refresh in place.
+    const existing = this.getItemsByAttr(_a.nid, nid).filter((c) => {
+      if (!c) return false;
+      c.mset(data);
+      if (c.restart) setTimeout(() => c.restart(), 500);
+      return true;
+    });
+    if (existing.length) return;
+
+    // Route to the correct partition list (3-tier: workspace | folder | file).
+    let pn = 'file-list';
+    if (data.filetype === _a.hub) pn = 'workspace-list';
+    else if (data.filetype === _a.folder) pn = 'folder-list';
+    data.format = this.mget(_a.format) || _a.card;
+    data.kind = this._getKind();
+    data.service = 'open-node';
+    this.ensurePart(pn).then((l) => {
+      if (!l || (l.isDestroyed && l.isDestroyed())) return;
+      if (data.position >= 0) l.append(data, data.position);
+      else l.append(data);
+    });
+    if (this.syncBounds) this.syncBounds();
+  }
+
+  /**
+   * Wire empty-state toggle on partition lists. List.Smart only emits
+   * `_e.eod` reliably (no `populated`/`empty` events in this codebase),
+   * so use eod + collection size to drive the data-empty attribute.
+   */
+  onPartReady(child, pn) {
+    if (pn === 'workspace-list' || pn === 'folder-list' || pn === 'file-list') {
+      const sectionPn = pn.replace('-list', '-section');
+      if (child.on) {
+        child.on(_e.eod, () => {
+          const isEmpty = !child.collection || child.collection.length === 0;
+          this._toggleSectionEmpty(sectionPn, isEmpty);
+        });
+      }
+      if (child.collection && child.collection.on) {
+        child.collection.on('add remove reset', () => {
+          const isEmpty = child.collection.length === 0;
+          this._toggleSectionEmpty(sectionPn, isEmpty);
+        });
+      }
+    }
+    if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  /**
+   * Toggle data-empty attribute on a section container.
+   */
+  _toggleSectionEmpty(sectionPn, isEmpty) {
+    this.ensurePart(sectionPn).then((section) => {
+      if (!section || !section.el) return;
+      if (isEmpty) {
+        section.el.setAttribute('data-empty', '1');
+      } else {
+        section.el.removeAttribute('data-empty');
+      }
+    });
   }
 
   onChildBubble(c) {
