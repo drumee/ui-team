@@ -269,7 +269,7 @@ class __window_mfs extends DrumeeMFS {
       this._partitionObserver = null;
     }
     if (this._partitionDebounce) {
-      clearTimeout(this._partitionDebounce);
+      cancelAnimationFrame(this._partitionDebounce);
       this._partitionDebounce = null;
     }
     if (this._partitionRetryTimer) {
@@ -291,13 +291,34 @@ class __window_mfs extends DrumeeMFS {
     }
   }
 
+  // Settle after first successful partition: clear pending timers + flip
+  // visibility flags. Keep MutationObserver alive so subsequent inserts
+  // (uploads, new folders, paste) get re-partitioned. Disconnecting the
+  // observer here was the cause of "upload → grid resets to 1 column" —
+  // the new item lands directly in .smart-container (no section wrapper)
+  // and inherits the flex-column layout.
   _schedulePartitionCleanup(listPart) {
     if (this._partitionSettleTimer) {
       clearTimeout(this._partitionSettleTimer);
     }
     this._partitionSettleTimer = setTimeout(() => {
       this._partitionSettleTimer = null;
-      this._cleanupPartition();
+      if (this._partitionDebounce) {
+        cancelAnimationFrame(this._partitionDebounce);
+        this._partitionDebounce = null;
+      }
+      if (this._partitionRetryTimer) {
+        clearTimeout(this._partitionRetryTimer);
+        this._partitionRetryTimer = null;
+      }
+      if (listPart) {
+        listPart.el.style.visibility = 'visible';
+        const sc = listPart.el.querySelector('.smart-container');
+        if (sc) {
+          sc.style.visibility = 'visible';
+          sc.dataset.partitioning = 0;
+        }
+      }
     }, 500);
   }
 
@@ -359,15 +380,20 @@ class __window_mfs extends DrumeeMFS {
       this._partitionObserver.disconnect();
     }
     if (this._partitionDebounce) {
-      clearTimeout(this._partitionDebounce);
+      cancelAnimationFrame(this._partitionDebounce);
     }
     this._partitionObserver = new MutationObserver(() => {
       const scrollEl = listPart.el.querySelector('.smart-container');
       if (scrollEl?.querySelector(':scope > .media-grid__ui')) {
         scrollEl.dataset.partitioning = 1;
       }
-      if (this._partitionDebounce) clearTimeout(this._partitionDebounce);
-      this._partitionDebounce = setTimeout(() => {
+      // requestAnimationFrame instead of setTimeout(100): rAF fires BEFORE
+      // the next paint, so the new direct-child item is partitioned into
+      // its section in the same frame the mutation landed. The user never
+      // sees the brief "hidden direct child" intermediate state — no flash
+      // when uploading or pasting files.
+      if (this._partitionDebounce) cancelAnimationFrame(this._partitionDebounce);
+      this._partitionDebounce = requestAnimationFrame(() => {
         this._partitionDebounce = null;
         if (this._partitionObserver) {
           this._partitionObserver.disconnect();
@@ -385,14 +411,14 @@ class __window_mfs extends DrumeeMFS {
         } else if (this._partitionObserver) {
           this._partitionObserver.observe(listPart.el, { childList: true, subtree: true });
         }
-      }, 100);
+      });
     });
     this._partitionObserver.observe(listPart.el, { attributes: true, attributeFilter: ["data-filetype"], childList: true, subtree: true });
   }
 
   _partitionFoldersAndFiles(listPart, attempt = 0) {
     if (this._partitionDebounce) {
-      clearTimeout(this._partitionDebounce);
+      cancelAnimationFrame(this._partitionDebounce);
       this._partitionDebounce = null;
     }
     if (this._partitionRetryTimer) {
