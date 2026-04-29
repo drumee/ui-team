@@ -2389,5 +2389,7 @@
   "CAN_CHAT": "Peut discuter",
   "MANAGE_ACCESS": "Gérer les accès",
   "PUBLIC_LINK": "Lien public",
-  "ACCESS_LEVEL": "Niveau d'accès"
+  "ACCESS_LEVEL": "Niveau d'accès",
+  "JOIN_WORKSPACE": "Rejoindre l'espace",
+  "SHARED_BY_LINK": "Partagé par lien"
 }

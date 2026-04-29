@@ -63,13 +63,13 @@ const __skl_window_team_topbar = function (ui, icon) {
         uiHandler: ui,
       }),
       settings,
-      Skeletons.Button.Svg({
-        className: `${cnWindowButton}__icon-bg-button`,
-        ico: "folder-meeting",
-        uiHandler: ui,
-        partHandler: ui,
-        service: "open-call-panel",
-      }),
+      // Skeletons.Button.Svg({
+      //   className: `${cnWindowButton}__icon-bg-button`,
+      //   ico: "folder-meeting",
+      //   uiHandler: ui,
+      //   partHandler: ui,
+      //   service: "open-call-panel",
+      // }),
       require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });

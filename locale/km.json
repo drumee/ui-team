@@ -2389,5 +2389,7 @@
   "CAN_CHAT": "អាចជជែក",
   "MANAGE_ACCESS": "គ្រប់គ្រងការចូលប្រើ",
   "PUBLIC_LINK": "តំណសាធារណៈ",
-  "ACCESS_LEVEL": "កម្រិតការចូលប្រើ"
+  "ACCESS_LEVEL": "កម្រិតការចូលប្រើ",
+  "JOIN_WORKSPACE": "ចូលរួមកន្លែងធ្វើការ",
+  "SHARED_BY_LINK": "ចែករំលែកតាមតំណ"
 }

@@ -4,69 +4,93 @@
 //   TYPE : Skeleton
 // ==================================================================== *
 
-function _icons_list (_ui_) {
-  const a = Skeletons.List.Smart({
-    className     : `${_ui_.fig.family}__icons-list icons-list desk-content`,
-    innerClass    : `${_ui_.fig.family}__icons-scroll`,
-    sys_pn        : _a.list,
-    flow          : _a.y,
-    bubble        : 1,
-    timer        : 1000,
-    vendorOpt     : Preset.List.Orange_e,
-    itemsOpt      : {
-      kind      : 'media',
-      role      : 'dmz',
-      token     : _ui_.mget(_a.token),
-      signal    : _e.ui.event,
-      service   : 'open-node',
-      uiHandler : [_ui_],
-      on_start  : 'open-node'
-    },
-    api           : _ui_.mget(_a.api)
+const { button } = require("../../../../builtins/skeleton/toolkit/buttons");
+
+const FILTER_TABS = [
+  { label: LOCALE.ALL || "All", value: "all" },
+  { label: LOCALE.DOCS || "Docs", value: "docs" },
+  { label: LOCALE.PDF || "PDF", value: "pdf" },
+  { label: LOCALE.IMAGES || "Images", value: "image" },
+  { label: LOCALE.OTHER, value: "other" },
+];
+
+function _filter_bar(_ui_) {
+  const cnFilter = "window-filter";
+  return Skeletons.Box.X({
+    className: `${cnFilter}__bar ${_ui_.fig.family}__filter-bar`,
+    flow: _a.x,
+    kids: FILTER_TABS.map((tab, index) =>
+      button(_ui_, {
+        label: tab.label,
+        className: `${cnFilter}__tab ${_ui_.fig.family}__filter-tab`,
+        service: "filter-by-type",
+        state: index === 0 ? 1 : 0,
+        radiotoggle: `media-filter-${_ui_.cid}`,
+        value: tab.value,
+      }),
+    ),
   });
+}
 
-  return a;
-
-};
+function _icons_list(_ui_) {
+  return Skeletons.List.Smart({
+    className: `${_ui_.fig.family}__icons-list icons-list desk-content`,
+    innerClass: `${_ui_.fig.family}__icons-scroll`,
+    sys_pn: _a.list,
+    flow: _a.y,
+    bubble: 1,
+    timer: 1000,
+    vendorOpt: Preset.List.Orange_e,
+    itemsOpt: {
+      kind: "media",
+      role: "dmz",
+      token: _ui_.mget(_a.token),
+      signal: _e.ui.event,
+      service: "open-node",
+      uiHandler: [_ui_],
+      on_start: "open-node",
+    },
+    api: _ui_.mget(_a.api),
+  });
+}
 
 // ======================================================
 // Desk content _ui_
 // ======================================================
 
-function _desk_content (_ui_) {
-  const a = Skeletons.Box.Y({
-    className   : `${_ui_.fig.family}__main`,
-    sys_pn      : 'window-wrapper',
-    debug       : __filename,
-    styleOpt    : {
-      height  : _K.size.full
+function _desk_content(_ui_) {
+  return Skeletons.Box.Y({
+    className: `${_ui_.fig.family}__main`,
+    sys_pn: "window-wrapper",
+    debug: __filename,
+    styleOpt: {
+      height: _K.size.full,
     },
-    kids        : [
+    kids: [
+      _filter_bar(_ui_),
       _icons_list(_ui_),
-      { kind : 'selection', sys_pn:'ref-selection' },
+      { kind: "selection", sys_pn: "ref-selection" },
 
       Skeletons.FileSelector({
-        partHandler : _ui_
-      }),
-      
-      Skeletons.Wrapper.Y({
-        className : `${_ui_.fig.family}__windows-layer`,
-        sys_pn    : 'windows-layer'
+        partHandler: _ui_,
       }),
 
       Skeletons.Wrapper.Y({
-        className : `${_ui_.fig.family}__wrapper`,
-        name      : 'tooltips'
+        className: `${_ui_.fig.family}__windows-layer`,
+        sys_pn: "windows-layer",
       }),
 
       Skeletons.Wrapper.Y({
-        className : `${_ui_.fig.family}__wrapper-modal`,
-        name      : 'modal'
-      })
-    ]
+        className: `${_ui_.fig.family}__wrapper`,
+        name: "tooltips",
+      }),
+
+      Skeletons.Wrapper.Y({
+        className: `${_ui_.fig.family}__wrapper-modal`,
+        name: "modal",
+      }),
+    ],
   });
-
-  return a;
-};
+}
 
 export default _desk_content;

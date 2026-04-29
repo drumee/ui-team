@@ -24,9 +24,10 @@ class __dmz_sharebox extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
     this.defaultSkeleton = require('./skeleton').default;
+    this.topNavSkeleton = require('./skeleton/top-nav').default;
     this.headerSkeleton = require('./skeleton/header').default;
     this.footerSkeleton = require('dmz/skeleton/common/footer');
-    this.deskSkeleton = require("dmz/skeleton/common/desk-content")
+    this.deskSkeleton = require("./skeleton/desk-content").default;
     this.nodeInfoService = SERVICE.media.show_node_by;
   }
 
@@ -36,6 +37,11 @@ class __dmz_sharebox extends LetcBox {
   */
   onPartReady(child, pn) {
     switch (pn) {
+      case "top-nav":
+        return this.waitElement(child.el, () => {
+          child.feed(this.topNavSkeleton(this));
+        });
+
       case _a.header:
         return this.waitElement(child.el, () => {
           child.feed(this.headerSkeleton(this))
@@ -59,6 +65,17 @@ class __dmz_sharebox extends LetcBox {
         return this.waitElement(child.el, () => {
           this.wm = child;
         })
+
+      case 'folder-view':
+        this._folderView = child;
+        return;
+
+      case 'wrapper-dialog':
+        this.dialogWrapper = child;
+        return;
+
+      default:
+        if (super.onPartReady) super.onPartReady(child, pn);
     }
   }
 
@@ -174,15 +191,16 @@ class __dmz_sharebox extends LetcBox {
       case 'close-banner':
         return this.__footer.el.dataset.mode = _a.closed
 
+      case 'go-login':
+        location.href = _K.module.signin;
+        return;
+
       case _e.upload:
         return this.__fileselector.open(this._upload.bind(this));
 
       case _e.download:
         this.wm.download();
         return;
-
-      // case 'open-drumee-video':
-      //   return this.openDrumeeVideo();
 
       case 'open-signup':
         this.append({
@@ -192,6 +210,23 @@ class __dmz_sharebox extends LetcBox {
         });
         return;
 
+      case 'tab-files':
+        if (this._folderView) this._folderView.el.dataset.view = 'files';
+        return;
+
+      case 'tab-chat':
+        if (this._folderView) this._folderView.el.dataset.view = _a.chat;
+        return;
+
+      case 'tab-task':
+        if (this._folderView) this._folderView.el.dataset.view = _a.task;
+        return;
+
+      case _e.raise:
+        return;
+
+      default:
+        if (super.onUiEvent) return super.onUiEvent(cmd, args);
     }
   }
 
