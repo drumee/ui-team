@@ -1,48 +1,18 @@
 @use "mixins/drumee";
 
 .media-grid {
-  .media-context-menu {
-    // Default kebab placement = inside .media-grid__folder-art, mirroring
-    // the area badge (which sits at bottom: 10px, left: 18px). Always
-    // visible — no hover gate. File items use the meta-row override below
-    // and reset position to inline.
-    &__trigger {
-      position: absolute;
-      bottom: 10px;
-      right: 18px;
-      width: 18px;
-      height: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 15;
-      border-radius: var(--corner-radius-1);
-      color: var(--grid-color-folder-badge);
-
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.18);
-      }
-    }
-
-    &__trigger-icon {
-      width: 14px;
-      height: 14px;
-      fill: currentColor;
-      pointer-events: none;
-    }
-  }
-
-  // File items: kebab lives inline in the filename-row alongside the
-  // filename. Reset the absolute folder-art positioning + give it
-  // theme-aware foreground colour so it reads on the cell background
-  // (not on a coloured shape).
-  .filename-row .media-context-menu__trigger {
-    position: static;
+  // File kebab — sits inline in .meta-row-top alongside the filename.
+  // Theme-aware foreground via --grid-color-meta. Always-visible.
+  .media-context-menu__trigger {
     width: 16px;
     height: 16px;
     flex: 0 0 auto;
-    margin-left: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 15;
+    border-radius: var(--corner-radius-1);
     color: var(--grid-color-meta);
 
     &:hover {
@@ -51,8 +21,36 @@
     }
   }
 
-  .filename-row .media-context-menu__trigger-icon {
+  .media-context-menu__trigger-icon {
     width: 12px;
     height: 12px;
+    fill: currentColor;
+    pointer-events: none;
+  }
+
+  // Workspace / folder kebab — Figma 264:80393 / 264:81896. Three small
+  // white circles at the bottom-right corner of the folder shape, mirroring
+  // the area badge (badge sits at bottom: 10px, left: 18px). Always-visible.
+  .media-context-menu__folder-trigger {
+    position: absolute;
+    bottom: 10px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 15;
+    padding: 4px;
+    border-radius: var(--corner-radius-1);
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.18);
+    }
+  }
+
+  .media-context-menu__folder-trigger-icon {
+    width: 11px;
+    height: 9px;
+    pointer-events: none;
   }
 }
