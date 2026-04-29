@@ -1,58 +1,52 @@
 @use "mixins/drumee";
 
-// Kanban-board "Tasks" tab. Mirrors Figma 272:49324.
-//
-// Colors and tokens used:
-//   Grey/40   #D1D1D6  — task card border
-//   Grey/60   #AEAEB2  — To Do dot
-//   Grey/70   #84848C  — count badge text
-//   Grey/80   #65656C  — + Add label, dashed border
-//   Grey/black#000000  — task title
-//   Secondary/50 #65D0EA — In Progress dot
-//   Signal/Warning #E8A13B — To review dot
-//   Signal/Success #54B684 — Complete dot
-
 .tasks-panel {
   &__ui {
     width: 100%;
     height: 100%;
   }
 
+  &__root {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
   &__main {
     width: 100%;
     height: 100%;
     align-items: stretch;
-    gap: 8px;
-    padding: 12px 16px;
+    gap: 12px;
+    padding: 16px;
     box-sizing: border-box;
     overflow-x: auto;
     background-color: var(--normal-bg-90, #fff);
   }
 
+  // ── Columns ───────────────────────────────────────────────────
   &__column {
     flex: 1 1 0;
-    min-width: 180px;
+    min-width: 220px;
     align-items: stretch;
     justify-content: space-between;
-    padding: 10px;
-    border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.05);
+    padding: 12px;
+    border-radius: 10px;
+    background-color: var(--normal-bg-80, rgba(0, 0, 0, 0.04));
     box-sizing: border-box;
     overflow: hidden;
   }
 
   &__column-body {
     align-items: stretch;
-    gap: 10px;
+    gap: 8px;
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    padding-right: 2px;
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
+    &::-webkit-scrollbar { width: 4px; }
     &::-webkit-scrollbar-thumb {
       background-color: rgba(0, 0, 0, 0.15);
       border-radius: 4px;
@@ -64,6 +58,7 @@
     justify-content: space-between;
     width: 100%;
     flex-shrink: 0;
+    margin-bottom: 4px;
   }
 
   &__column-title-group {
@@ -81,129 +76,520 @@
 
   &__column-title {
     @include drumee.typo(
-      $size: 14px,
-      $weight: 600,
-      $line: 20px,
+      $size: 13px, $weight: 600, $line: 18px,
       $color: var(--normal-fg-10, #0b0a21)
     );
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
   }
 
   &__column-count {
     align-items: center;
     justify-content: center;
+    min-width: 22px;
     padding: 0 8px;
     border-radius: 100px;
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(0, 0, 0, 0.06);
   }
 
   &__column-count-text {
-    font-family: "Geist Mono", monospace;
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 100%;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #84848c;
+    @include drumee.typo(
+      $size: 11px, $weight: 600, $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
   }
 
+  // ── Task card ─────────────────────────────────────────────────
   &__task-card {
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 4px;
-    padding: 8px;
-    border: 0.5px solid #d1d1d6;
-    border-radius: 4px;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
     background-color: var(--normal-bg-90, #fff);
-    cursor: default;
-    transition: box-shadow 0.15s, border-color 0.15s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
 
     &:hover {
-      border-color: #84848c;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      border-color: rgba(11, 10, 33, 0.12);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 
-      .tasks-panel__task-remove {
-        opacity: 1;
-      }
+      .tasks-panel__task-remove { opacity: 1; }
     }
+
+    &:active { transform: translateY(1px); }
+  }
+
+  &__task-card-row {
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
   }
 
   &__task-title {
     @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 16px,
-      $color: #000000
+      $size: 13px, $weight: 500, $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
     );
     flex: 1 1 auto;
+    min-width: 0;
     word-break: break-word;
+    cursor: text;
   }
 
-  &__task-remove {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    color: #84848c;
-    opacity: 0;
-    transition: opacity 0.15s, color 0.15s;
-    cursor: pointer;
+  &__edit-input {
+    flex: 1 1 auto;
+    background: transparent;
 
-    &:hover {
-      color: #d65f59;
+    input {
+      width: 100%;
+      padding: 0;
+      border: none;
+      outline: none;
+      background: transparent;
+      @include drumee.typo(
+        $size: 13px, $weight: 500, $line: 18px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
     }
   }
 
+  &__task-remove {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    padding: 2px;
+    border-radius: 4px;
+    color: var(--normal-fg-50, #84848c);
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s, background 0.15s;
+    cursor: pointer;
+    // Constrain SVG strictly — defends against any stray text child.
+    overflow: hidden;
+    font-size: 0;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      display: block;
+    }
+
+    &:hover {
+      color: #d65f59;
+      background: rgba(214, 95, 89, 0.1);
+    }
+  }
+
+  &__task-meta {
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  &__task-due {
+    @include drumee.typo(
+      $size: 11px, $weight: 500, $line: 14px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    padding: 2px 8px;
+    border-radius: 100px;
+    background: rgba(0, 0, 0, 0.05);
+
+    &[data-overdue="1"] {
+      color: #fff;
+      background: #d65f59;
+    }
+  }
+
+  // ── Add button ────────────────────────────────────────────────
   &__add-btn {
     align-items: center;
-    justify-content: flex-start;
-    gap: 2px;
-    padding: 4px 8px;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px;
     margin-top: 8px;
-    border: 0.5px dashed #65656c;
-    border-radius: 4px;
+    border: 1px dashed rgba(11, 10, 33, 0.2);
+    border-radius: 8px;
     background-color: transparent;
     cursor: pointer;
     flex-shrink: 0;
-    transition: background-color 0.15s, border-color 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 
     &:hover {
       background-color: rgba(0, 0, 0, 0.03);
-      border-color: #0b0a21;
+      border-color: rgba(11, 10, 33, 0.4);
+
+      .tasks-panel__add-label { color: var(--normal-fg-10, #0b0a21); }
     }
   }
 
   &__add-label {
     @include drumee.typo(
-      $size: 10px,
-      $weight: 400,
-      $line: 14px,
-      $color: #65656c
+      $size: 12px, $weight: 500, $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
     );
   }
 
-  &__add-input-wrapper {
-    margin-top: 8px;
-    padding: 4px 6px;
-    border: 1px solid #b1adff;
-    border-radius: 4px;
-    background-color: var(--normal-bg-90, #fff);
-    flex-shrink: 0;
+  // ── Create modal ──────────────────────────────────────────────
+  &__create-wrapper {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+
+    &:empty,
+    &[data-state="closed"] { display: none; }
   }
 
-  &__add-input {
+  &__create-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 10, 33, 0.4);
+    backdrop-filter: blur(2px);
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__create-modal {
+    width: 420px;
+    max-width: 92%;
+    background: var(--normal-bg-90, #fff);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+  }
+
+  &__create-form {
+    padding: 24px;
+    gap: 20px;
+  }
+
+  &__create-header {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__create-title {
+    @include drumee.typo(
+      $size: 18px, $weight: 600, $line: 24px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__create-close {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    border-radius: 6px;
+    color: var(--normal-fg-50, #84848c);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    overflow: hidden;
+    font-size: 0;
+
+    svg { width: 16px; height: 16px; display: block; }
+
+    &:hover {
+      color: var(--normal-fg-10, #0b0a21);
+      background: rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  &__create-field {
+    gap: 8px;
+  }
+
+  &__create-label {
+    @include drumee.typo(
+      $size: 11px, $weight: 600, $line: 14px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__create-input {
     width: 100%;
     background: transparent;
 
     input {
       width: 100%;
-      border: none;
+      padding: 10px 12px;
+      border: 1px solid var(--border-default, #d1d1d6);
+      border-radius: 8px;
       outline: none;
-      background: transparent;
-      @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #000);
+      background: var(--normal-bg-90, #fff);
+      @include drumee.typo(
+        $size: 14px, $weight: 500, $line: 20px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+      transition: border-color 0.15s, box-shadow 0.15s;
+
+      &:focus {
+        border-color: #fa8540;
+        box-shadow: 0 0 0 3px rgba(250, 133, 64, 0.15);
+      }
 
       &::placeholder {
-        color: #aeaeb2;
+        color: var(--normal-fg-50, #aeaeb2);
         font-weight: 400;
       }
     }
+  }
+
+  &__create-status {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__create-status-pill {
+    @include drumee.typo(
+      $size: 12px, $weight: 500, $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    padding: 5px 12px;
+    border: 1px solid var(--border-default, #d1d1d6);
+    border-radius: 100px;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+    &:hover { background: rgba(0, 0, 0, 0.03); }
+
+    &[data-active="1"] {
+      background: rgba(250, 133, 64, 0.08);
+      font-weight: 600;
+    }
+  }
+
+  &__create-actions {
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  &__create-cancel {
+    @include drumee.typo(
+      $size: 13px, $weight: 500, $line: 18px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    padding: 9px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  &__create-submit {
+    @include drumee.typo(
+      $size: 13px, $weight: 600, $line: 18px,
+      $color: #fff
+    );
+    padding: 9px 18px;
+    border-radius: 8px;
+    background: #fa8540;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, box-shadow 0.15s;
+
+    &:hover {
+      background: #e7762e;
+      box-shadow: 0 4px 12px rgba(250, 133, 64, 0.3);
+    }
+  }
+
+  // ── Detail popover ────────────────────────────────────────────
+  &__detail-wrapper {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 360px;
+    max-width: 100%;
+    background: var(--normal-bg-90, #fff);
+    border-left: 1px solid var(--border-default, #e5e5e5);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.06);
+    z-index: 5;
+
+    &[data-state="closed"],
+    &:empty { display: none; }
+  }
+
+  &__detail-panel {
+    width: 100%;
+    height: 100%;
+    padding: 24px;
+    gap: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+
+  &__detail-header {
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__detail-title {
+    @include drumee.typo(
+      $size: 16px, $weight: 600, $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+    flex: 1 1 auto;
+    word-break: break-word;
+  }
+
+  &__detail-close {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    border-radius: 6px;
+    color: var(--normal-fg-50, #84848c);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    overflow: hidden;
+    font-size: 0;
+
+    svg { width: 16px; height: 16px; display: block; }
+
+    &:hover {
+      color: var(--normal-fg-10, #0b0a21);
+      background: rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  &__detail-label {
+    @include drumee.typo(
+      $size: 11px, $weight: 600, $line: 14px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__detail-status {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__detail-status-pill {
+    @include drumee.typo(
+      $size: 12px, $weight: 500, $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+    padding: 5px 12px;
+    border: 1px solid var(--border-default, #d1d1d6);
+    border-radius: 100px;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+    &:hover { background: rgba(0, 0, 0, 0.03); }
+
+    &[data-active="1"] {
+      background: rgba(250, 133, 64, 0.08);
+      font-weight: 600;
+    }
+  }
+
+  &__detail-due-row {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__detail-due-input {
+    flex: 1 1 auto;
+    background: transparent;
+
+    input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border-default, #d1d1d6);
+      border-radius: 6px;
+      outline: none;
+      @include drumee.typo(
+        $size: 13px, $weight: 500, $line: 18px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+
+      &:focus {
+        border-color: #fa8540;
+        box-shadow: 0 0 0 3px rgba(250, 133, 64, 0.15);
+      }
+    }
+  }
+
+  &__attachments {
+    gap: 8px;
+  }
+
+  &__attachments-header {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__attachment-add {
+    @include drumee.typo(
+      $size: 12px, $weight: 600, $line: 16px,
+      $color: #fa8540
+    );
+    cursor: pointer;
+    user-select: none;
+
+    &:hover { text-decoration: underline; }
+  }
+
+  &__attachment-row {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-default, #e5e5e5);
+    border-radius: 8px;
+  }
+
+  &__attachment-name {
+    @include drumee.typo(
+      $size: 13px, $weight: 500, $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+    flex: 1 1 auto;
+    word-break: break-all;
+  }
+
+  &__attachment-unlink {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    padding: 2px;
+    border-radius: 4px;
+    color: var(--normal-fg-50, #84848c);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    overflow: hidden;
+    font-size: 0;
+
+    svg { width: 14px; height: 14px; display: block; }
+
+    &:hover {
+      color: #d65f59;
+      background: rgba(214, 95, 89, 0.1);
+    }
+  }
+
+  &__attachments-empty {
+    @include drumee.typo(
+      $size: 12px, $weight: 400, $line: 16px,
+      $color: var(--normal-fg-50, #aeaeb2)
+    );
+    font-style: italic;
   }
 }
