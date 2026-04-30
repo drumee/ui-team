@@ -1,4 +1,4 @@
-const { tooltipBadge, folder, chatPanel } = require('../skeleton/toolkit');
+const { folder, chatPanel } = require('../skeleton/toolkit');
 
 const BADGES = [
   {

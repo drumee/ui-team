@@ -1,4 +1,4 @@
-const { tooltipBadge } = require('../../skeleton/toolkit');
+const { tooltip } = require('../../skeleton/toolkit');
 
 const ACTIONS = [
   { label: LOCALE.DOWNLOAD || 'Download', ico: 'desktop_download' },
@@ -113,13 +113,7 @@ module.exports = function (ui) {
           Skeletons.Button.Svg({ ico: 'cross', className: `${pfx}__header-close` }),
         ],
       }),
-      // Badge anchor: zero-size absolute element; badge overflows to the left
-      Skeletons.Box.Y({
-        className: `${pfx}__tooltip-anchor`,
-        partHandler: ui,
-        kids: [tooltipBadge(ui, BADGE)],
-      }),
-
+      tooltip(ui, BADGE),
       // Scrollable body
       Skeletons.Box.Y({
         className: `${pfx}__body`,

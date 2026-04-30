@@ -318,13 +318,13 @@
   // ── Badge anchor ─────────────────────────────────────────────────────────────
   // Zero-size absolutely-positioned point; badge overflows to the left
   &__tooltip-anchor {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 50;
-    overflow: visible;
-    width: 0;
-    height: 0;
+    // position: absolute;
+    // inset: 0;
+    // pointer-events: none;
+    // z-index: 50;
+    // overflow: visible;
+    // width: 0;
+    // height: 0;
     top: 100px;
     left: -313px;
 

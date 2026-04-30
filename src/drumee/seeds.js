@@ -128,6 +128,9 @@ module.exports = {
   tutorial_folder: function () {
     return import("./modules/desk/tutorial/folder");
   },
+  tutorial_task: function () {
+    return import("./modules/desk/tutorial/task");
+  },
   tutorial_meeting: function () {
     return import("./modules/desk/tutorial/meeting");
   },

@@ -1,4 +1,4 @@
-const { tooltipBadge, folder } = require('../../skeleton/toolkit');
+const { tooltip, folder } = require('../../skeleton/toolkit');
 
 const PARTICIPANTS = [
   { name: 'Lucas Zoe', muted: true, isMe: false },
@@ -110,12 +110,7 @@ function meetingPanel(ui, pfx) {
     sys_pn: 'meeting-panel',
     kids: [
       meetingHeader(ui, pfx),
-      // Badge anchor: zero-size absolute element; badge overflows to the left
-      Skeletons.Box.Y({
-        className: `${pfx}__tooltip-anchor`,
-        partHandler: ui,
-        kids: [tooltipBadge(ui, BADGE)],
-      }),
+      tooltip(ui, BADGE),
       videoGrid(ui, pfx),
       meetingToolbar(ui, pfx),
     ],

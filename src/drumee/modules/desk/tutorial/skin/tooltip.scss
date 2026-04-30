@@ -125,5 +125,15 @@
       background: #6558d6;
     }
   }
+  
+  &__tooltip-anchor {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    overflow: visible;
+    width: 0;
+    height: 0;
+  }
 
 }

@@ -46,7 +46,7 @@ class __tutorial_workspace extends LetcBox {
       return;
     }
     const overlay = await this.ensurePart('overlay');
-    const card = await this.ensurePart(`workspace-card-${this._stepIndex}`);
+    const card = await this.ensurePart(`workspace-item-${this._stepIndex}`);
     const overlayOffset = overlay.$el.offset();
     const { left, top } = card.$el.offset();
     const data = {

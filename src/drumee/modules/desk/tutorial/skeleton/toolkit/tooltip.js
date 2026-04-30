@@ -1,8 +1,5 @@
-const WORKSPACES = [
-  { name: 'Workspace 01', area: _a.personal, variant: 'purple', state: 1 },
-  { name: 'Workspace 02', area: _a.private, variant: 'salmon', state: 0 },
-  { name: 'Workspace 03', area: _a.share, variant: 'pink', state: 0 },
-];
+const { fileItem } = require("./folder")
+
 
 /**
  * Shared tutorial badge skeleton.
@@ -90,55 +87,15 @@ export function tooltipBadge(ui, { title, desc, badge_text, style, direction = '
 };
 
 /**
- * 
+ * Badge anchor: zero-size absolute element; badge overflows to the left
  */
-export function workspaceIcon(ui, area) {
-  const pfx = `${ui.fig.family}__folder`;
-  return {
-    kind: 'media_grid',
-    className: `${pfx}-item-icon`,
-    filetype: _a.hub,
-    role: "desk",
-    area,
-    active: 0,
-    service: "nop",
-    mode: _a.vignette
-  }
+export function tooltip(ui, opt) {
+  // 
+  return Skeletons.Box.Y({
+    className: `${ui.fig.group}__tooltip-anchor ${ui.fig.family}__tooltip-anchor`,
+    partHandler: ui,
+    kids: [tooltipBadge(ui, opt)],
+  })
 }
 
-export function workspaceCard(ui, ws, index) {
-  const fig = ui.fig.family;
-  const p = `${fig}__wg`;
-  const { name, variant, area, state } = ws;
-  const isFirst = index === 0;
 
-  return Skeletons.Box.Y({
-    className: `${p}-card ${ ui.fig.group}__grid-folder`,
-    sys_pn: `workspace-card-${index}`,
-    partHandler: [ui],
-    radio: `${ui._id}-badge`,
-    state,
-    active: 0,
-    kids: [
-      workspaceIcon(ui, area),
-      Skeletons.Note({ className: `${p}-label`, content: name }),
-    ],
-  });
-}
-
-export function workspaceContent(ui, opt = {}) {
-  const fig = ui.fig.family;
-  const p = `${fig}__wg`;
-  const { aspect = "normal" } = opt;
-  return Skeletons.Box.Y({
-    className: `${p}-content`,
-    dataset: { aspect },
-    kids: [
-      Skeletons.Box.X({
-        className: `${p}-grid`,
-        sys_pn: `workspace-container`,
-        kids: WORKSPACES.map((ws, i) => workspaceCard(ui, ws, i)),
-      }),
-    ],
-  });
-};

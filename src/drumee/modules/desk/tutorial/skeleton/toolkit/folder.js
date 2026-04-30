@@ -1,4 +1,4 @@
-const { workspaceIcon, tooltipBadge } = require('./tooltip');
+const { tooltip } = require('./tooltip');
 
 // ── Static data ───────────────────────────────────────────────────────────────
 const SUB_FOLDERS = [
@@ -19,8 +19,79 @@ const MESSAGES = [
   { sender: 'me', text: '/bg_concept.png @Sarah hello', time: '11:42 AM' },
 ];
 
+const WORKSPACES = [
+  { name: 'Workspace 01', area: _a.personal, variant: 'purple', state: 1 },
+  { name: 'Workspace 02', area: _a.private, variant: 'salmon', state: 0 },
+  { name: 'Workspace 03', area: _a.share, variant: 'pink', state: 0 },
+];
+
+/**
+ * 
+ */
+export function workspaceIcon(ui, area = _a.share) {
+  const pfx = `${ui.fig.family}__folder`;
+  return {
+    kind: 'media_grid',
+    className: `${pfx}-item-icon`,
+    filetype: _a.hub,
+    role: "desk",
+    area,
+    active: 0,
+    service: "nop",
+    mode: _a.vignette
+  }
+}
+
+export function workspaceItem(ui, ws, index) {
+  const fig = ui.fig.family;
+  const p = `${fig}__wg`;
+  const { name, variant, area, state } = ws;
+  let opt = {
+    className: `${p}-card ${ui.fig.group}__grid-folder`,
+    sys_pn: `workspace-item-${index}`,
+    partHandler: [ui],
+    radio: `${ui._id}-workspace`,
+    state,
+    active: 0,
+    name,
+    variant,
+    area,
+    state
+  }
+  return folderItem(ui, name, opt)
+  // return Skeletons.Box.Y({
+  //   className: `${p}-card ${ui.fig.group}__grid-folder`,
+  //   sys_pn: `workspace-card-${index}`,
+  //   partHandler: [ui],
+  //   radio: `${ui._id}-badge`,
+  //   state,
+  //   active: 0,
+  //   kids: [
+  //     workspaceIcon(ui, area),
+  //     Skeletons.Note({ className: `${p}-label`, content: name }),
+  //   ],
+  // });
+}
+
+export function workspaceContent(ui, opt = {}) {
+  const fig = ui.fig.family;
+  const p = `${fig}__wg`;
+  const { aspect = "normal" } = opt;
+  return Skeletons.Box.Y({
+    className: `${p}-content`,
+    dataset: { aspect },
+    kids: [
+      Skeletons.Box.X({
+        className: `${p}-grid`,
+        sys_pn: `workspace-container`,
+        kids: WORKSPACES.map((ws, i) => workspaceItem(ui, ws, i)),
+      }),
+    ],
+  });
+};
+
 // ── Folder header bar ─────────────────────────────────────────────────────────
-function folderHeader(ui, pfx) {
+export function folderHeader(ui, pfx) {
   return Skeletons.Box.X({
     className: `${pfx}__header`,
     sys_pn: 'folder-header',
@@ -51,7 +122,7 @@ function folderHeader(ui, pfx) {
 }
 
 // ── Tab bar ───────────────────────────────────────────────────────────────────
-function tabBar(ui, pfx) {
+export function tabBar(ui, pfx) {
   return Skeletons.Box.X({
     className: `${pfx}__tabs`,
     kids: [
@@ -63,7 +134,7 @@ function tabBar(ui, pfx) {
 }
 
 // ── Type filter ───────────────────────────────────────────────────────────────
-function typeFilter(ui, pfx) {
+export function typeFilter(ui, pfx) {
   const filters = [
     LOCALE.ALL || 'All', LOCALE.DOCS || 'Docs', 'PDF',
     LOCALE.IMAGES || 'Images', LOCALE.OTHER || 'Other',
@@ -77,18 +148,19 @@ function typeFilter(ui, pfx) {
 }
 
 // ── File grid ─────────────────────────────────────────────────────────────────
-export function folderItem(ui, name) {
+export function folderItem(ui, name, opt = {}) {
   let pfx = ui.fig.group
   return Skeletons.Box.Y({
     className: `${pfx}__grid-folder`,
+    ...opt,
     kids: [
-      workspaceIcon(ui, _a.share),
+      workspaceIcon(ui, opt.area),
       Skeletons.Note({ className: `${pfx}__grid-folder-name`, content: name }),
     ],
   });
 }
 
-function fileItem(ui, pfx, { name, date, ico }) {
+export function fileItem(ui, pfx, { name, date, ico }) {
   return Skeletons.Box.Y({
     className: `${pfx}__grid-file`,
     kids: [
@@ -102,7 +174,7 @@ function fileItem(ui, pfx, { name, date, ico }) {
   });
 }
 
-function filesPanel(ui, pfx) {
+export function filesPanel(ui, pfx) {
   return Skeletons.Box.Y({
     className: `${pfx}__files`,
     kids: [
@@ -143,7 +215,7 @@ export function chatMessage(pfx, msg) {
 }
 
 export function chatPanel(ui, pfx) {
-  let tooltip = null;
+  let tt = null;
   if (ui.mget(_a.service)) {
     const opt = {
       badge_text: 'STEP 2/5',
@@ -151,11 +223,12 @@ export function chatPanel(ui, pfx) {
       desc: `Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.`,
       direction: 'east',
     };
-    tooltip = Skeletons.Box.Y({
-      className: `${pfx}__tooltip-anchor`,
-      partHandler: ui,
-      kids: [tooltipBadge(ui, opt)],
-    });
+    tt = tooltip(ui, opt)
+    // tooltip = Skeletons.Box.Y({
+    //   className: `${pfx}__tooltip-anchor`,
+    //   partHandler: ui,
+    //   kids: [tooltipBadge(ui, opt)],
+    // });
   }
 
   return Skeletons.Box.Y({
@@ -167,7 +240,7 @@ export function chatPanel(ui, pfx) {
         className: `${pfx}__chat-messages`,
         kids: MESSAGES.map((msg) => chatMessage(pfx, msg)),
       }),
-      tooltip,
+      tt,
       Skeletons.Box.X({
         className: `${pfx}__chat-input-bar`,
         kids: [
