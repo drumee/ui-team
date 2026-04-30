@@ -14,7 +14,7 @@ module.exports = function (ui) {
             ico: 'toggle',
             sys_pn: 'unread-toggle',
             service: 'toggle-unreads',
-            state: 0,
+            state: ui._unreadsOnly ? 1 : 0,
             uiHandler: ui,
           }),
         ],

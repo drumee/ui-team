@@ -41,6 +41,7 @@ class __panel_activity extends LetcBox {
     // RADIO_CLICK.on(_e.click, this._onOutsideClick)
     this._currentCount = 0;
     this._currentPayload = {};
+    this._unreadsOnly = 1;
     this.details = {};
     this.onVisibilityChange = this.onVisibilityChange.bind(this)
     document.addEventListener("visibilitychange", this.onVisibilityChange);
@@ -125,6 +126,9 @@ class __panel_activity extends LetcBox {
       case 'delete-entity':
         cmd.goodbye();
         return this.deleteEntityResponse(cmd);
+
+      case 'dismiss-activity':
+        return this._dismissActivity(cmd);
 
       case 'open-contact':
         this.toggleState()
@@ -618,6 +622,23 @@ class __panel_activity extends LetcBox {
   data() {
     if (!this.details) return [];
     return _.values(this.details) || []
+  }
+
+  async _dismissActivity(cmd) {
+    const changelogId = cmd.mget('changelog_id') || cmd.mget(_a.id) || cmd.mget('id');
+    if (!changelogId) return;
+    try {
+      await this.postService(SERVICE.activity.dismiss, {
+        hub_id: Visitor.id,
+        changelog_id: changelogId,
+      });
+      if (this.__list && !this.__list.isDestroyed()) {
+        this.__list.restart();
+      }
+      this.triggerHandlers({ service: 'activity-update' });
+    } catch (e) {
+      this.warn('dismiss-activity failed', e);
+    }
   }
 
 
