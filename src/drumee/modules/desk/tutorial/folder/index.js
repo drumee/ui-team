@@ -1,4 +1,4 @@
-const { tooltipBadge } = require('../skeleton/toolkit');
+const { tooltipBadge, folder } = require('../skeleton/toolkit');
 
 const BADGES = [
   {
@@ -19,7 +19,7 @@ class __tutorial_folder extends LetcBox {
   }
 
   onDomRefresh() {
-    this.feed(require('./skeleton')(this));
+    this.feed(folder(this));
   }
 
   onPartReady(child, pn) {
