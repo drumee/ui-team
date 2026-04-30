@@ -5,12 +5,11 @@ module.exports = function (ui) {
   const filetype = ui.mget(_a.filetype) || "";
   const modifier = ui.mget(_a.modifier) || "me";
   const mtime = ui.mget(_a.mtime);
-
-  const deletionDate = Dayjs.unix(mtime).format(Visitor.timeformat());
-
-  const daysLeft = mtime
-    ? Math.max(0, 30 - Math.ceil((Date.now() / 1000 - mtime) / 86400))
+  const daysLeft = Number.isFinite(Number(ui.mget('days_remaining')))
+    ? Number(ui.mget('days_remaining'))
     : 30;
+
+  const deletionDate = mtime ? Dayjs.unix(mtime).format(Visitor.timeformat()) : Dayjs().format(Visitor.timeformat());
 
   return Skeletons.Box.X({
     className: `${pfx}__row`,
