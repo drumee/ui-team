@@ -5,8 +5,9 @@
     width: 450px;
     height: 100vh;
     top: 0px;
-    background-color: var(--normal-bg-90);
+    background-color: #f2f2f7;
     border: 1px solid var(--border-muted);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     transition: left 0.5s;
 
     &[data-state="1"] {
@@ -33,28 +34,28 @@
     overflow: hidden;
   }
 
-  /* ── Topbar wrapper (header + status bar) ───────────────── */
   &__topbar {
+    align-items: center;
     flex-shrink: 0;
+    height: 56px;
     justify-content: space-between;
-    padding: var(--spacer-4) var(--spacer-6);
+    padding: 0 20px;
   }
 
-  /* ── Header row: icon + title + close ───────────────────── */
   &__header {
     align-items: center;
     justify-content: space-between;
     padding: var(--spacer-4) var(--spacer-6);
-    color: var(--normal-fg-10);
-    background-color: var(--normal-bg-100);
+    color: #0b0a21;
+    background-color: #f2f2f7;
   }
 
   &__title {
     @include drumee.typo(
-      $size: 18px,
-      $weight: 700,
-      $line: 26px,
-      $color: var(--normal-fg-10)
+      $size: 16px,
+      $weight: 600,
+      $line: 24px,
+      $color: #0b0a21
     );
   }
 
@@ -65,18 +66,18 @@
 
   &__unread-label {
     @include drumee.typo(
-      $size: 13px,
+      $size: 12px,
       $weight: 400,
-      $line: 20px,
-      $color: var(--normal-fg-10)
+      $line: 17px,
+      $color: #0b0a21
     );
   }
 
   &__toggle-btn {
-    width: 36px;
+    width: 40px;
     height: 20px;
-    border-radius: 20px;
-    background-color: var(--primary-30);
+    border-radius: 12px;
+    background-color: #847eff;
     padding: 2px;
     position: relative;
     cursor: pointer;
@@ -95,7 +96,7 @@
     }
 
     &[data-state="0"] {
-      background-color: var(--neutral-600);
+      background-color: #d1d1d6;
 
       &::after {
         transform: translateX(0);
@@ -103,29 +104,29 @@
     }
 
     &[data-state="1"] {
+      background-color: #847eff;
+
       &::after {
-        transform: translateX(16px);
+        transform: translateX(20px);
       }
     }
   }
 
-  /* ── Tab bar ─────────────────────────────────────────────── */
   &__tabbar {
-    gap: 4px;
-    padding: var(--spacer-4) var(--spacer-6);
+    gap: 16px;
+    padding: 12px 20px;
     flex-shrink: 0;
-    background-color: var(--normal-bg-80);
+    background-color: rgba(0, 0, 0, 0.05);
   }
 
   &__tab {
     @include drumee.typo(
-      $color: var(--normal-fg-10),
-      $size: 14px,
-      $weight: 500,
-      $line: 20px
+      $color: #0b0a21,
+      $size: 12px,
+      $weight: 600,
+      $line: 12px
     );
-    padding: 8px 4px;
-    margin-right: 16px;
+    padding: 0 0 4px;
     cursor: pointer;
     border-bottom: 2px solid transparent;
     transition:
@@ -133,12 +134,13 @@
       border-color 0.15s;
 
     &:hover {
-      color: var(--primary-40);
+      color: #5950ff;
     }
 
     &[data-state="1"] {
-      color: var(--primary-40);
-      border-bottom-color: var(--primary-40);
+      color: #5950ff;
+      border-bottom-color: #5950ff;
+      padding-bottom: 6px;
     }
   }
 
@@ -146,7 +148,8 @@
   &__list {
     flex: 1;
     overflow-y: auto;
-    max-height: calc(80vh - 110px);
+    max-height: calc(100vh - 102px);
+    padding: 0 8px 16px;
 
     .smart-container {
       display: flex;
@@ -156,7 +159,7 @@
   }
 
   &__empty {
-    @include drumee.typo($color: var(--neutral-500), $size: 14px, $line: 22px);
+    @include drumee.typo($color: #65656c, $size: 12px, $line: 17px);
     padding: 40px 16px;
     text-align: center;
     width: 100%;

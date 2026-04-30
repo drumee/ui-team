@@ -5,105 +5,146 @@
     width: 100%;
   }
 
-  /* ── Date group header ───────────────────────────────────── */
-  &__date-header {
-    @include drumee.typo($color: var(--neutral-500), $size: 11px, $weight: 700, $line: 16px);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 14px 16px 6px;
-    width: 100%;
-  }
-
-  /* ── Item row ────────────────────────────────────────────── */
   &__row {
     align-items: center;
-    padding: 10px 16px;
-    gap: 12px;
-    width: 100%;
-    transition: background-color 0.12s;
+    border-radius: 8px;
     cursor: pointer;
+    gap: 12px;
+    min-height: 48px;
+    padding: 0 12px;
+    transition: background-color 0.12s;
+    width: 100%;
+
+    &.share {
+      min-height: 52px;
+      padding-top: 4px;
+    }
 
     &:hover {
-      background-color: var(--neutral-800, rgba(255, 255, 255, 0.04));
+      background-color: rgba(0, 0, 0, 0.04);
     }
   }
 
-  /* ── Avatar + badge ──────────────────────────────────────── */
   &__avatar-wrap {
-    position: relative;
-    width: 40px;
-    height: 40px;
     flex-shrink: 0;
+    height: 32px;
+    position: relative;
+    width: 32px;
   }
 
   &__avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
+    border-radius: 12px;
     flex-shrink: 0;
+    height: 32px;
+    overflow: hidden;
+    width: 32px;
   }
 
   &__badge {
+    align-items: center;
+    border-radius: 12px;
+    bottom: -4px;
+    display: flex;
+    height: 14px;
+    justify-content: center;
     position: absolute;
-    bottom: -3px;
-    left: -3px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background-color: var(--neutral-700, #2a2d3e);
-    padding: 3px;
-    color: var(--neutral-100);
+    right: -4px;
+    width: 14px;
 
-    &.mention,
-    &.chat\.post { color: #5B8FFF; background-color: #1e2a4a; }
-    &.media\.new  { color: #4FC8E4; background-color: #1a313a; }
-    &.share       { color: #A78BFA; background-color: #2a1f40; }
-    &.flag        { color: #F87171; background-color: #3a1f1f; }
-    &.comment     { color: #34D399; background-color: #1a3028; }
+    &::after {
+      background: #fff;
+      content: "";
+      display: block;
+      height: 6px;
+      width: 7px;
+    }
+
+    &.mention {
+      background: #5950ff;
+      border: 2px solid rgba(0, 0, 0, 0.05);
+
+      &::after {
+        background: transparent;
+        border: 1.5px solid #fff;
+        border-radius: 50%;
+        height: 5px;
+        width: 5px;
+      }
+    }
+
+    &.share {
+      background: #d65f59;
+
+      &::after {
+        clip-path: polygon(0 35%, 58% 35%, 58% 0, 100% 50%, 58% 100%, 58% 65%, 0 65%);
+      }
+    }
   }
 
-  /* ── Text block ──────────────────────────────────────────── */
   &__text-block {
     flex: 1;
-    min-width: 0;
-    gap: 3px;
     justify-content: center;
+    min-width: 0;
+    overflow: hidden;
   }
 
   &__text {
-    @include drumee.typo($size: 13px, $weight: 400, $line: 20px);
-    word-break: break-word;
-  }
-
-  &__name {
-    @include drumee.typo($size: 13px, $weight: 600, $line: 20px);
-  }
-
-  &__action-text {
-    @include drumee.typo($color: var(--neutral-400), $size: 13px, $weight: 400, $line: 20px);
+    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__link {
-    @include drumee.typo($color: var(--primary-400, #7B6EF6), $size: 13px, $weight: 500, $line: 20px);
-    cursor: pointer;
+    &.mention {
+      color: #5950ff;
+    }
 
-    &:hover {
-      text-decoration: underline;
+    &.restricted {
+      color: #d65f59;
+    }
+
+    &.link-share {
+      color: #ffa8dc;
     }
   }
 
   &__time {
-    @include drumee.typo($color: var(--neutral-500), $size: 11px, $weight: 400, $line: 16px);
+    @include drumee.typo($color: #65656c, $size: 10px, $weight: 400, $line: 14px);
+    margin-top: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
   }
 
-  /* ── Unread dot ──────────────────────────────────────────── */
-  &__unread-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: var(--primary-500, #5B4EF5);
+  &__actions {
+    align-items: center;
     flex-shrink: 0;
-    align-self: center;
+    gap: 6px;
+    height: 20px;
+    justify-content: flex-end;
+    width: 45px;
+  }
+
+  &__bookmark,
+  &__trash {
+    height: 20px;
+    width: 20px;
+
+    svg {
+      height: 20px;
+      width: 20px;
+    }
+  }
+
+  &__bookmark {
+    color: #d1d1d6;
+  }
+
+  &__trash {
+    color: #d74e49;
   }
 }
