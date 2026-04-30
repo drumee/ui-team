@@ -13,8 +13,13 @@
 
     &[data-aspect="faded"] {
       opacity: .45;
+      padding: var(--spacer-7) var(--spacer-6);
     }
   }
+
+   &__wg-content {
+    gap: 24px;
+   }
 
   &__layout {
     position: relative;

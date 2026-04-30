@@ -20,7 +20,7 @@ function meetingHeader(ui, pfx) {
       Skeletons.Box.X({
         className: `${pfx}__meeting-header-left`,
         kids: [
-          Skeletons.Box.Y({ className: `${pfx}__meeting-app-icon` }),
+          Skeletons.Button.Svg({ ico: 'folder-meeting', className: `${pfx}__meeting-app-icon` }),
           Skeletons.Note({ className: `${pfx}__meeting-title`, content: 'Product Meeting' }),
         ],
       }),

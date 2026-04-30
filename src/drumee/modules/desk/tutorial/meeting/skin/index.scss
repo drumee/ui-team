@@ -23,7 +23,12 @@
     height: 100%;
     right: 0;
     max-width: 960px;
-    max-height: 700px;
+    max-height: 620px;
+    transform: translate(-50%, -50%);
+    top: 50%;
+    left: 50%;
+    border: 1px solid var(--neutral-300);
+    border-radius: var(--corner-radius-5);
   }
 
   &__main {
@@ -36,15 +41,15 @@
 
   // ── Folder header bar ────────────────────────────────────────────────────────
   &__header {
-    width: 100%;
-    height: 44px;
+   width: 100%;
     box-sizing: border-box;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
-    background: var(--normal-bg);
+    padding:var(--spacer-4) var(--spacer-6);
+    background: var(--normal-bg-90);
     border-bottom: 1px solid var(--border-muted);
     flex-shrink: 0;
+    border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
   }
 
   &__header-left {
@@ -227,6 +232,7 @@
     padding: 8px 20px 0;
     border-bottom: 1px solid var(--border-muted);
     flex-shrink: 0;
+    background-color: var(--normal-bg);
   }
 
   &__filter-item {
@@ -334,6 +340,7 @@
     min-height: 0;
     background: #fff;
     border-left: 1px solid var(--border-muted);
+    border-bottom-right-radius: var(--corner-radius-5);
   }
 
   // Header
@@ -362,6 +369,14 @@
     border-radius: 8px;
     background: #5950ff;
     flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    svg{
+      width: 20px;
+      height: 20px;
+      fill: #fff;
+    }
   }
 
   &__meeting-title {
@@ -544,6 +559,7 @@
     background: #fff;
     border-top: 1px solid var(--border-muted);
     flex-shrink: 0;
+    border-bottom-right-radius: var(--corner-radius-5);
   }
 
   &__toolbar-actions {

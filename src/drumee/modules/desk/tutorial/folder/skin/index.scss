@@ -251,6 +251,7 @@
     padding: 8px 24px 0;
     border-bottom: 1px solid var(--border-muted);
     flex-shrink: 0;
+    background-color: var(--normal-bg);
   }
 
   &__filter-item {
@@ -489,8 +490,3 @@
 
 }
 
-.tutorial-main{
-  &__wg-grid{
-    padding: var(--spacer-7) var(--spacer-6);
-  }
-}
