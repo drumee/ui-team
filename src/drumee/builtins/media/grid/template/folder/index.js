@@ -19,7 +19,7 @@ const folderTrigger = `
 
 module.exports = function (model) {
   let { area, widgetId = _.uniqueId(), filetype, role } = model;
-  if (role != 'desk' && filetype != _a.hub) {
+  if (role != 'desk' && filetype != _a.hub && !area) {
     area = 'inner-folder'
   }
   const showKebab = !model.isAttachment
@@ -45,23 +45,23 @@ module.exports = function (model) {
         </filter>
       </defs>
     </svg>`;
-  if (role != 'desk' && filetype != _a.hub) {
+  if ((area === 'inner-folder' || model.isAttachment) && filetype != _a.hub) {
     return `<div class="media-grid__folder-art">${main}${kebab}</div>`;
   }
   let badge = '';
-  switch (model.area) {
+  switch (area) {
     case _a.personal:
-      badge = badgePersonal(model);
+      badge = badgePersonal({ ...model, area });
       break;
     case _a.private:
-      badge = badgePrivate(model);
+      badge = badgePrivate({ ...model, area });
       break;
     case _a.share:
     case _a.dmz:
-      badge = badgeShare(model);
+      badge = badgeShare({ ...model, area });
       break;
     case _a.public:
-      badge = badgePublic(model);
+      badge = badgePublic({ ...model, area });
       break;
   }
   return `<div class="media-grid__folder-art">${main}${badge}${kebab}</div>`;
