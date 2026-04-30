@@ -236,6 +236,8 @@ export function chatPanel(ui) {
 
   if (ui.fig.family === "window-folder") {
     chat.scope = _a.folder;
+    chat.type = _a.share;
+    chat.area = _a.share;
     chat.hub_id = ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id);
     chat.nid = ui.mget(_a.actual_home_id) || ui.mget(_a.nid);
   }
