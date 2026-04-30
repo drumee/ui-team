@@ -254,6 +254,10 @@ class __media_grid extends DrumeeMediaInteract {
    * 
    */
   dispatchNotifications(data) {
+    if (data && data.zipid) {
+      this.handleDownload(data);
+      return;
+    }
     if (data && data.hub_id != this.mget(_a.hub_id)) return;
     let reset_icon = (d) => {
       if (d && d.hub_id == this.mget(_a.hub_id)) {

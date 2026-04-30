@@ -464,7 +464,7 @@
     &[data-view="chat"],
     &[data-view="task"] {
       .window__chat-panel,
-      .window-folder__tracker-blocker {
+      .tasks-panel__ui {
         width: 100%;
       }
     }
@@ -631,19 +631,6 @@
 
   &__settings-action-close {
     color: var(--normal-fg-20);
-  }
-
-  &__tracker-blocker {
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    width: 100%;
-    height: 100%;
-    text-align: center;
-  }
-
-  &__tracker-message {
-    color: var(--neutral-500);
   }
 
   &__meeting-view {

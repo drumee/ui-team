@@ -674,6 +674,10 @@ class desk_module extends LetcBox {
       case "toggle-chat":
         return this.togglePanel("chat_p2p", "chat-panel");
 
+      case "toggle-contacts":
+        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.CONTACTS });
+        return this.togglePanel("address_book", "chat-panel");
+
       case "toggle-settings":
         RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.SETTINGS });
         return this.togglePanel("settings_main", "settings-main-slot");

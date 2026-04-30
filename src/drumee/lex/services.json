@@ -65,6 +65,16 @@
     "verify_email": "yp.verify_email",
     "public_key": "yp.public_key"
   },
+  "task": {
+    "list": "task.list",
+    "create": "task.create",
+    "update": "task.update",
+    "update_status": "task.update_status",
+    "delete": "task.delete",
+    "link_file": "task.link_file",
+    "unlink_file": "task.unlink_file",
+    "get_linked_files": "task.get_linked_files"
+  },
   "reward_hub": {
     "get_env": "reward_hub.get_env",
     "get_referral_code": "reward_hub.get_referral_code",

@@ -83,6 +83,9 @@ module.exports = {
   chat_room: function () {
     return import("./builtins/window/bigchat/widget/chat-room");
   },
+  address_book: function () {
+    return import("./builtins/widget/address-book");
+  },
   contact_form_items: function () {
     return import("./builtins/window/addressbook/widget/contact-form-items");
   },

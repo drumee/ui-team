@@ -219,6 +219,7 @@ const createNav = (ui) => {
             "toggle-activity",
           ),
           createNavItem(ui, "sidebar_inbox", LOCALE.INBOX, "toggle-inbox"),
+          createNavItem(ui, "account_contacts", LOCALE.CONTACTS, "toggle-contacts"),
           createNavItem(ui, "sidebar_trash", LOCALE.TRASH, "toggle-trash"),
           createNavItem(ui, "sidebar_apps", LOCALE.APPS, "toggle-apps"),
         ],
