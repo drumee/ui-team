@@ -1386,6 +1386,9 @@ class __media_core extends DrumeeMFS {
    * @returns 
    */
   delete() {
+    if (window.Wm && _.isFunction(Wm.removeMediaSelection)) {
+      return Wm.removeMediaSelection(this);
+    }
     this.triggerHandlers({
       service: "remove-selection", media: this
     });
