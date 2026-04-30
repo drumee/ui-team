@@ -1,0 +1,292 @@
+// Change-password modal — Figma 629:79336 (form), 629:80475 (success).
+// Mounted into settings_main's __overlay slot, which provides the
+// backdrop dim + blur.
+
+.settings-change-password {
+  $modal-bg:        #f2f2f7;          // Grey/20
+  $title-color:     #0b0a21;          // Primary/100
+  $body-color:      #65656c;          // Grey/80
+  $input-bg:        rgba(0, 0, 0, 0.05); // overlay lghtmode
+  $primary:         #433cc5;          // Primary/50
+  $primary-hover:   #3730a3;
+  $danger:          #d64e49;
+  $success-bg:      rgba(84, 182, 132, 0.15);
+  $success-fg:      #54b684;          // Signal/Success
+  $shadow:          0 1px 11px rgba(0, 0, 0, 0.13);
+  $font:            "Geist", system-ui, sans-serif;
+
+  // Auto-sized so the overlay's flex centering acts on the modal directly.
+  // Width/height 100% would fill the overlay and pin the modal top-left.
+  &__ui {
+    align-items: stretch;
+    justify-content: flex-start;
+    flex: 0 0 auto;
+  }
+
+  // ── Modal shell ─────────────────────────────────────────────
+  &__modal {
+    background: $modal-bg;
+    border-radius: 12px;
+    box-shadow: $shadow;
+    font-family: $font;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    &--form    { width: 520px; }
+    &--success { width: 450px; }
+
+    @media (max-width: 560px) {
+      width: calc(100vw - 32px) !important;
+      max-width: 520px;
+    }
+  }
+
+  // ── Header (form) ───────────────────────────────────────────
+  &__header {
+    padding: 32px;
+    gap: 8px;
+
+    &--success {
+      gap: 12px;
+      align-items: stretch;
+    }
+  }
+
+  &__title {
+    font-size: 20px;
+    line-height: 1.1;
+    font-weight: 600;
+    color: $title-color;
+    text-align: left;
+
+    &--success {
+      text-align: center;
+    }
+  }
+
+  &__subtitle {
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 400;
+    color: $body-color;
+  }
+
+  // ── Form fields ─────────────────────────────────────────────
+  &__fields {
+    padding: 0 32px;
+    gap: 12px;
+  }
+
+  &__field {
+    gap: 6px;
+    width: 100%;
+
+    &-label {
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 400;
+      color: $body-color;
+      letter-spacing: 0.04em;
+    }
+
+    &-input {
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: $input-bg;
+      border-radius: 4px;
+      padding: 12px;
+      width: 100%;
+      transition: box-shadow 0.15s ease;
+
+      &:focus-within {
+        box-shadow: 0 0 0 1px rgba(67, 60, 197, 0.4);
+      }
+    }
+
+    &-entry {
+      flex: 1;
+      min-width: 0;
+
+      input {
+        width: 100%;
+        background: transparent;
+        border: 0;
+        outline: 0;
+        padding: 0;
+        font-family: $font;
+        font-size: 14px;
+        line-height: 1.4;
+        color: $title-color;
+
+        &::placeholder {
+          color: $body-color;
+          letter-spacing: 0.05em;
+        }
+      }
+    }
+
+    &-toggle {
+      width: 21px;
+      height: 21px;
+      cursor: pointer;
+      flex-shrink: 0;
+      color: $body-color;
+
+      svg {
+        width: 21px;
+        height: 21px;
+        fill: currentColor;
+
+        .icon-fill-blue,
+        .icon-fill-grey { fill: currentColor; }
+      }
+
+      &:hover {
+        color: $title-color;
+      }
+    }
+  }
+
+  &__error {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: $danger;
+  }
+
+  // ── Footer / buttons ────────────────────────────────────────
+  &__footer {
+    padding: 32px;
+    gap: 8px;
+    align-items: stretch;
+
+    &--success {
+      padding: 0 32px 32px;
+    }
+  }
+
+  &__btn {
+    height: 48px;
+    padding: 12px 24px;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease;
+    user-select: none;
+
+    > * { pointer-events: none; }
+
+    &--cancel {
+      background: $input-bg;
+      width: 137px;
+      flex-shrink: 0;
+
+      .settings-change-password__btn-label { color: #000000; }
+
+      &:hover { background: rgba(0, 0, 0, 0.08); }
+    }
+
+    &--primary {
+      background: $primary;
+      flex: 1;
+
+      .settings-change-password__btn-label { color: #ffffff; }
+
+      &:hover:not(.is-loading) { background: $primary-hover; }
+      &.is-loading {
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+    }
+
+    &--full {
+      flex: 1;
+      width: 100%;
+    }
+  }
+
+  &__btn-label {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    text-align: center;
+    font-family: $font;
+  }
+
+  // ── Success view ────────────────────────────────────────────
+  &__success-stack {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__success-ico-wrap {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    background: $success-bg;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__success-ico {
+    width: 28px;
+    height: 28px;
+
+    svg {
+      width: 28px;
+      height: 28px;
+      fill: $success-fg;
+    }
+  }
+
+  &__success-description {
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 400;
+    color: $body-color;
+    text-align: center;
+    width: 100%;
+  }
+}
+
+// ── Dark mode ───────────────────────────────────────────────────
+html[data-theme="dark"] {
+  .settings-change-password {
+    &__modal {
+      background: var(--normal-bg-elevated);
+      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.55);
+    }
+
+    &__title { color: var(--normal-fg-10); }
+    &__subtitle,
+    &__field-label,
+    &__success-description { color: var(--normal-fg-20); }
+
+    &__field-input {
+      background: var(--overlay-bg-05);
+
+      &:focus-within {
+        box-shadow: 0 0 0 1px var(--active-border);
+      }
+    }
+
+    &__field-entry input {
+      color: var(--normal-fg-10);
+
+      &::placeholder { color: var(--placeholder-fg); }
+    }
+
+    &__field-toggle { color: var(--normal-fg-20); }
+    &__field-toggle:hover { color: var(--normal-fg-10); }
+
+    &__btn--cancel {
+      background: var(--overlay-bg-05);
+      .settings-change-password__btn-label { color: var(--normal-fg-10); }
+
+      &:hover { background: var(--hover-bg-40); }
+    }
+  }
+}

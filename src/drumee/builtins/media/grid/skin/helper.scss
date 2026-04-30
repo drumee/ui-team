@@ -7,8 +7,9 @@
     opacity: 1;
     overflow: visible;
     transform: scale(0.75);
-    //z-index : 10000;
-    z-index: 999999999999999;
+    // Must stay below `.desk-module__settings-main-slot` (1500); jQuery UI
+    // appends the helper to <body> so it competes at the root context.
+    z-index: 1450;
     box-shadow: none;
     background-color: transparent;
     @include drumee.typo($line: 14px, $size: 11px, $color: var(--default-text-color));

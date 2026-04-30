@@ -169,3 +169,42 @@
     display: none;
   }
 }
+
+// ── Dark mode overrides ─────────────────────────────────────────
+html[data-theme="dark"] {
+  .panel-activity {
+    &__ui {
+      background-color: var(--normal-bg-90);
+      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.5);
+    }
+
+    &__header {
+      background-color: var(--normal-bg-90);
+      color: var(--normal-fg-10);
+    }
+
+    &__title {
+      color: var(--normal-fg-10);
+    }
+
+    &__unread-label {
+      color: var(--normal-fg-10);
+    }
+
+    &__toggle-btn[data-state="0"] {
+      background-color: var(--normal-bg-40);
+    }
+
+    &__tabbar {
+      background-color: var(--overlay-bg-05);
+    }
+
+    &__tab {
+      color: var(--normal-fg-10);
+    }
+
+    &__empty {
+      color: var(--normal-fg-50);
+    }
+  }
+}

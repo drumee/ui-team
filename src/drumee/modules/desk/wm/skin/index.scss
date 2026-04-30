@@ -9,6 +9,9 @@
     width: calc(100% - 10px);
     height: 100%;
     min-height: calc(100vh - 160px);
+    // Confines home content's z-indices so re-rendered grid items can't
+    // escape to the root and paint above the settings/apps slot (1500).
+    isolation: isolate;
 
     &[data-device="mobile"] {
       height: calc(100vh - 260px);

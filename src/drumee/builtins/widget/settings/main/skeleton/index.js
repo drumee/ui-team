@@ -46,7 +46,9 @@ function cardHeading(ui, { title, subtitle }) {
 function generalProfileCard(ui) {
   const pfx = `${ui.fig.family}__profile`;
   const profile = Visitor.profile() || {};
-  const avatar = ui.mget(_a.avatar) || profile.avatar || "default";
+  // Visitor.avatar() builds <endpoint>/avatar/<id>?ts=<mtime>; bumping
+  // Visitor.mtime in _refreshAvatar() busts the browser cache.
+  const avatar = Visitor.id ? Visitor.avatar() : "default";
   const fullname = Visitor.fullname() || "";
 
   const avatarBlock = Skeletons.Box.Y({
@@ -70,7 +72,12 @@ function generalProfileCard(ui) {
         className: `${pfx}-avatar-label`,
         content: LOCALE.EDIT_AVATAR || "EDIT AVATAR",
       }),
-      { kind: "avatar", sys_pn: "avatar-widget", className: `${pfx}-avatar-input` },
+      // Skeletons.FileSelector hardcodes sys_pn:"fileselector" — match
+      // it via ensurePart("fileselector") in openAvatarPicker().
+      Skeletons.FileSelector({
+        accept: "image/*",
+        className: `${pfx}-avatar-input`,
+      }),
     ],
   });
 
@@ -312,7 +319,7 @@ function dangerZoneCard(ui) {
         className: `${pfx}-warning`,
         kids: [
           Skeletons.Button.Svg({
-            ico: "editbox_triangle",
+            ico: "apps-warning",
             className: `${pfx}-warning-ico`,
           }),
         ],
