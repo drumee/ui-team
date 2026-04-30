@@ -19,7 +19,12 @@
     height: 100%;
     right: 0;
     max-width: 850px;
-    max-height: 700px;
+   max-height: 620px;
+    transform: translate(-50%, -50%);
+    top: 50%;
+    left: 50%;
+    border: 1px solid var(--neutral-300);
+    border-radius: var(--corner-radius-5);
 
     &[data-aspect="faded"] {
       opacity: .45;
@@ -37,14 +42,14 @@
   // ── Folder header bar ───────────────────────────────────────────────────────
   &__header {
     width: 100%;
-    height: 44px;
     box-sizing: border-box;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
-    background: var(--normal-bg);
+    padding:var(--spacer-4) var(--spacer-6);
+    background: var(--normal-bg-90);
     border-bottom: 1px solid var(--border-muted);
     flex-shrink: 0;
+    border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
   }
 
   &__header-left {
@@ -482,4 +487,10 @@
     left: -313px;
   }
 
+}
+
+.tutorial-main{
+  &__wg-grid{
+    padding: var(--spacer-7) var(--spacer-6);
+  }
 }
