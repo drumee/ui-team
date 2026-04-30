@@ -122,6 +122,9 @@ module.exports = {
   desk_tutorial: function () {
     return import("./modules/desk/tutorial");
   },
+  tutorial_workspace: function () {
+    return import("./modules/desk/tutorial/workspace");
+  },
   desk_breadcrumb: function () {
     return import("./modules/desk/breadcrumb");
   },

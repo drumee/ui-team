@@ -8,14 +8,8 @@ module.exports = function (ui) {
         className: `${fig}__main`,
         kids: [
           require('./topbar')(ui),
-          require('./workspace-grid')(ui),
+          { kind: 'tutorial_workspace' },
         ],
-      }),
-      // Overlay slot — fed when a tutorial step is active
-      Skeletons.Wrapper.Y({
-        className: `${fig}__overlay`,
-        sys_pn: 'overlay',
-        partHandler: ui,
       }),
     ],
   });

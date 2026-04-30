@@ -76,7 +76,7 @@
     "webpack-manifest-plugin": "^6.0.1"
   },
   "dependencies": {
-    "@drumee/ui-core": "^1.1.24",
+    "@drumee/ui-core": "^1.1.34",
     "@drumee/ui-essentials": "^1.0.0",
     "@drumee/ui-styles": "^1.0.6",
     "@drumee/ui-toolkit": "^0.0.20",
@@ -140,7 +140,7 @@
     "svgo": "^2.8.0",
     "transformation-matrix": "^2.12.0",
     "underscore": "^1.13.4",
-    "uuid": "^9.0.0",
+    "uuid": "^14.0.0",
     "vdom-to-html": "^1.0.1",
     "vegas": "^2.5.4",
     "virtual-dom": "^2.1.1",
