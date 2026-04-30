@@ -50,4 +50,13 @@ html[data-theme="dark"] {
   --trash-btn-bg: var(--primary-purple-100);
   --trash-btn-fg: var(--primary-10);
   --trash-btn-fg-hover: var(--primary-20);
+
+  /* Grid view — readable filenames + brighter cards on dark surface */
+  --grid-color-name: #ffffff;
+  --grid-color-folder-name: #ffffff;
+  --grid-color-meta: #c7c7cc;
+  --grid-card-bg: rgba(255, 255, 255, 0.08);
+  --grid-card-bg-hover: rgba(255, 255, 255, 0.12);
+  --grid-selected-bg: rgba(255, 255, 255, 0.14);
+  --grid-hover-bg: rgba(255, 255, 255, 0.08);
 }

@@ -1,119 +1,50 @@
 @use "mixins/drumee";
 
 .media-grid {
-  .media-context-menu {
-    &__trigger {
-      position: absolute;
-      bottom: -8px;
-      right: -6px;
-      width: 16px;
-      height: 22px;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 15;
-      border-radius: var(--corner-radius-1);
-
-      &:hover {
-        background-color: var(--hover-bg-40);
-      }
-    }
-
-    &__trigger-icon {
-      width: 12px;
-      height: 12px;
-      fill: var(--normal-fg-20);
-      pointer-events: none;
-    }
-
-    &__dropdown {
-      position: fixed;
-      background: var(--normal-bg-90);
-      border: 1px solid var(--border-muted);
-      border-radius: var(--corner-radius-3);
-      box-shadow: var(--drumee-shadow-box);
-      min-width: 168px;
-      z-index: 9999;
-      overflow: hidden;
-      padding: var(--spacer-4);
-      gap: 4px;
-
-      &[data-state="0"] {
-        display: none !important;
-      }
-
-      .contextmenu-item {
-        padding: 7px 12px;
-        gap: 10px;
-        align-items: center;
-        cursor: pointer;
-        width: 100%;
-        border-radius: var(--corner-radius-1);
-        white-space: nowrap;
-
-        @include drumee.typo(
-          $size: 12px,
-          $line: 16px,
-          $weight: 400,
-          $color: var(--normal-fg-10)
-        );
-
-        &:hover {
-          background-color: var(--hover-bg-40);
-        }
-
-        &[data-state="disable"] {
-          opacity: 0.35;
-          cursor: not-allowed;
-        }
-
-        &.separator {
-          background-color: var(--border-muted);
-          height: 1px;
-          padding: 0;
-        }
-
-        &.trash {
-          color: var(--red-500);
-        }
-      }
-
-      .contextmenu-item__icon {
-        width: 14px;
-        height: 14px;
-        flex-shrink: 0;
-        color: var(--normal-fg-20);
-      }
-
-      .contextmenu-item__label {
-        white-space: nowrap;
-      }
-    }
-  }
-
-  &__ui:hover .media-context-menu__trigger {
-    display: flex;
-  }
-
-  .media-context-menu__folder-trigger {
-    position: absolute;
-    right: 0;
-    bottom: 28px;
+  // File kebab — sits inline in .meta-row-top alongside the filename.
+  // Theme-aware foreground via --grid-color-meta. Always-visible.
+  .media-context-menu__trigger {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 15;
-    padding: 6px 5px;
-    border-radius: var(--corner-radius-2);
+    border-radius: var(--corner-radius-1);
+    color: var(--grid-color-meta);
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.3);
+      background-color: var(--hover-bg-40);
+      color: var(--normal-fg);
+    }
+  }
 
-      .media-context-menu__folder-trigger-icon circle {
-        fill: #65656c;
-      }
+  .media-context-menu__trigger-icon {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+    pointer-events: none;
+  }
+
+  // Workspace / folder kebab — Figma 264:80393 / 264:81896. Three small
+  // white circles at the bottom-right corner of the folder shape, mirroring
+  // the area badge (badge sits at bottom: 10px, left: 18px). Always-visible.
+  .media-context-menu__folder-trigger {
+    position: absolute;
+    bottom: 10px;
+    right: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 15;
+    padding: 4px;
+    border-radius: var(--corner-radius-1);
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.18);
     }
   }
 

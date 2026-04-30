@@ -1040,7 +1040,7 @@ class __media_interact extends media_core {
       hub_id,
       socket_id: Visitor.get(_a.socket_id),
     });
-    this._waitingForZip = this.mget(_a.nid);
+    this._waitingForZip = nid;
   }
 }
 __media_interact.initClass();

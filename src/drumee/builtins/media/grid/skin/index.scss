@@ -120,8 +120,26 @@
     }
   }
 
+  // Hover highlight wraps the whole cell (icon + label + meta-row), not just
+  // the filename — replaces the legacy primary-100-5 tint over the label only.
+  // :not([data-selected="1"]) prevents stacking with the selected fill below.
+  &[data-hover="on"]:not([data-selected="1"]) {
+    &:before {
+      content: " ";
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      width: calc(100% + 12px);
+      height: calc(100% + 12px);
+      background: var(--grid-hover-bg);
+      border-radius: var(--corner-radius-3);
+      pointer-events: none;
+      z-index: 0;
+    }
+  }
+
   &[data-selected="1"] {
-    // Subtle gray fill on selected item instead of bordered frame.
+    // Subtle fill on selected item instead of bordered frame.
     // Padding around the cell so the highlight looks like a soft shape
     // wrapping both the icon area and the label/meta-row.
     &:before {
@@ -131,7 +149,7 @@
       left: -6px;
       width: calc(100% + 12px);
       height: calc(100% + 12px);
-      background: rgba(0, 0, 0, 0.06);
+      background: var(--grid-selected-bg);
       border-radius: var(--corner-radius-3);
       pointer-events: none;
       z-index: 0;

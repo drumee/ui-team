@@ -1,6 +1,6 @@
 const mfsInteract = require("../interact");
 
-const { folderFilesView, folderChatView, filePartitionView } = require("../skeleton/toolkit");
+const { folderFilesView, folderChatView } = require("../skeleton/toolkit");
 
 require("./skin");
 
@@ -10,7 +10,6 @@ class __window_folder extends mfsInteract {
     super(...args);
     this.onChildBubble = this.onChildBubble.bind(this);
     this.onSearchEvent = this.onSearchEvent.bind(this);
-    this._partitionFed = false;
   }
 
   /**
@@ -43,94 +42,72 @@ class __window_folder extends mfsInteract {
     }
   }
 
-  /**
-   * Override buildContent to inject partition skeleton into the files-panel
-   * instead of the standard grid/row loader. Bypasses loadContent's grid feed.
-   * `child.once` prevents listener stacking on re-mounts (subfolder navigation).
-   */
   buildContent(child) {
     this.__content = child;
-    this._partitionFed = false;
     this.setupInteract();
     if (!this._raised) this.raise();
-
-    child.once(_e.show, () => {
-      if (!this._partitionFed) {
-        this._partitionFed = true;
-        child.feed(filePartitionView(this));
-      }
-      if (this.media && this.media.wait) this.media.wait(0);
-    });
+    if (this.media && this.media.wait) this.media.wait(0);
   }
 
-  /**
-   * API for the workspace (hub) list — top section.
-   * Filters anything not a hub. Hubs typically appear at desk root only.
-   */
-  async getWorkspacesApi() {
-    const { nid, hub_id } = this.actualNode();
-    const data = await this.fetchService(SERVICE.media.show_folders, {
-      hub_id,
-      nid,
-      page: 1,
-    });
-    if (!data || !Array.isArray(data.items)) return data;
-    const items = data.items.filter((it) => it && it.filetype === _a.hub);
-    return { ...data, items };
-  }
-
-  /**
-   * API for the folder list — middle section.
-   * Filters to folder filetype only (no hubs, no files).
-   */
-  async getFoldersApi() {
-    const { nid, hub_id } = this.actualNode();
-    const data = await this.fetchService(SERVICE.media.show_folders, {
-      hub_id,
-      nid,
-      page: 1,
-    });
-    if (!data || !Array.isArray(data.items)) return data;
-    const items = data.items.filter((it) => it && it.filetype === _a.folder);
-    return { ...data, items };
-  }
-
-  /**
-   * API for the file list — bottom section.
-   * Filters out hubs and folders client-side.
-   */
-  async getFilesApi() {
-    const base = this.getCurrentApi();
-    const { service, ...params } = base || {};
-    if (!service) return { items: [] };
-    const data = await this.fetchService(service, params);
-    if (!data || !Array.isArray(data.items)) return data;
-    const items = data.items.filter(
-      (it) => it && it.filetype !== _a.folder && it.filetype !== _a.hub,
-    );
-    return { ...data, items };
-  }
-
-  /**
-   * Refresh all 3 partition lists (called after upload/delete/create events).
-   */
-  _refreshPartitionLists() {
-    this.ensurePart('workspace-list').then((l) => {
-      if (l && (!l.isDestroyed || !l.isDestroyed()) && l.restart) l.restart();
-    });
-    this.ensurePart('folder-list').then((l) => {
-      if (l && (!l.isDestroyed || !l.isDestroyed()) && l.restart) l.restart();
-    });
-    this.ensurePart('file-list').then((l) => {
-      if (l && (!l.isDestroyed || !l.isDestroyed()) && l.restart) l.restart();
-    });
-  }
-
-  /**
-   * Override loadContent — refresh both partition lists instead of re-feeding grid skeleton.
-   */
   loadContent() {
-    this._refreshPartitionLists();
+    this.ensurePart(_a.list).then((l) => {
+      if (!l || (l.isDestroyed && l.isDestroyed())) return;
+      l.restart();
+      this._prepareListPartition(l);
+    });
+  }
+
+  /**
+   * Folder window renders one smart list, then partitions its DOM into
+   * workspace/folder/file sections. Base _insertMedia is kept except it must
+   * target this list and re-run partitioning after pseudo/live inserts.
+   */
+  _insertMedia(m, position) {
+    let opt;
+    if (position == null || _.isNaN(position)) position = 0;
+    if (m.model != null) {
+      opt = this.makeOptions(m);
+      if (opt == null) return false;
+    } else {
+      opt = m;
+    }
+    if (_.isEmpty(opt)) return;
+    if (opt.isAttachment) delete opt.isAttachment;
+    opt.logicalParent = this;
+    if (this.captured && this.captured.over && opt.phase === _a.upload) {
+      return;
+    }
+
+    if (opt.phase === _a.upload && opt.file && typeof RADIO_MEDIA !== 'undefined') {
+      let destination = opt.destination;
+      if (!destination && typeof this._getDestination === 'function') {
+        destination = this._getDestination();
+      }
+      RADIO_MEDIA.trigger("upload:start", {
+        file: opt.file,
+        fileName: opt.file.name || opt.filename,
+        fileSize: opt.file.size || opt.size || 0,
+        destination,
+        position,
+        opt,
+      });
+    }
+
+    this.ensurePart(_a.list).then((list) => {
+      if (!list || (list.isDestroyed && list.isDestroyed())) return;
+      switch (position) {
+        case -1:
+          list.prepend(opt);
+          break;
+        case 0:
+          list.append(opt);
+          break;
+        default:
+          if (list.collection) list.collection.add(opt, { at: position });
+          else list.append(opt);
+      }
+      this._partitionFoldersAndFiles(list);
+    });
   }
 
   /**
@@ -156,57 +133,25 @@ class __window_folder extends mfsInteract {
     });
     if (existing.length) return;
 
-    // Route to the correct partition list (3-tier: workspace | folder | file).
-    let pn = 'file-list';
-    if (data.filetype === _a.hub) pn = 'workspace-list';
-    else if (data.filetype === _a.folder) pn = 'folder-list';
     data.format = this.mget(_a.format) || _a.card;
     data.kind = this._getKind();
     data.service = 'open-node';
-    this.ensurePart(pn).then((l) => {
+    this.ensurePart(_a.list).then((l) => {
       if (!l || (l.isDestroyed && l.isDestroyed())) return;
       if (data.position >= 0) l.append(data, data.position);
       else l.append(data);
+      this._partitionFoldersAndFiles(l);
     });
     if (this.syncBounds) this.syncBounds();
   }
 
-  /**
-   * Wire empty-state toggle on partition lists. List.Smart only emits
-   * `_e.eod` reliably (no `populated`/`empty` events in this codebase),
-   * so use eod + collection size to drive the data-empty attribute.
-   */
   onPartReady(child, pn) {
-    if (pn === 'workspace-list' || pn === 'folder-list' || pn === 'file-list') {
-      const sectionPn = pn.replace('-list', '-section');
-      if (child.on) {
-        child.on(_e.eod, () => {
-          const isEmpty = !child.collection || child.collection.length === 0;
-          this._toggleSectionEmpty(sectionPn, isEmpty);
-        });
-      }
-      if (child.collection && child.collection.on) {
-        child.collection.on('add remove reset', () => {
-          const isEmpty = child.collection.length === 0;
-          this._toggleSectionEmpty(sectionPn, isEmpty);
-        });
-      }
+    if (pn === _a.list) {
+      this.iconsList = child;
+      this._prepareListPartition(child);
+      return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
-  }
-
-  /**
-   * Toggle data-empty attribute on a section container.
-   */
-  _toggleSectionEmpty(sectionPn, isEmpty) {
-    this.ensurePart(sectionPn).then((section) => {
-      if (!section || !section.el) return;
-      if (isEmpty) {
-        section.el.setAttribute('data-empty', '1');
-      } else {
-        section.el.removeAttribute('data-empty');
-      }
-    });
   }
 
   onChildBubble(c) {
@@ -370,7 +315,7 @@ class __window_folder extends mfsInteract {
   /**
    * Switch the split body between Files / Chat / Task tabs. Re-feeds
    * the `folder-view` part with the appropriate skeleton subtree so the
-   * task tab can render the user's tracker-blocker board, and the chat
+   * task tab mounts the `tasks_panel` widget (hub-scoped), and the chat
    * tab a full-width chat panel.
    */
   showFolderTab(tab) {
@@ -388,7 +333,12 @@ class __window_folder extends mfsInteract {
         case "meeting":
           return view.feed(require("./skeleton/meeting-panel")(this));
         case _a.task:
-          return view.feed(require("./skeleton/tracker-blocker")(this));
+          return view.feed({
+            kind: "tasks_panel",
+            hub_id: this.mget(_a.hub_id),
+            nid: this.mget(_a.nid),
+            uiHandler: [this],
+          });
         default:
           return view.feed(folderFilesView(this));
       }

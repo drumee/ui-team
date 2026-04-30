@@ -19,10 +19,14 @@ const __media_tpl_grid = function (ui) {
       preview = require('./folder')(m);
       isFolder = true;
       break;
+    case _a.audio:
+      preview = require('./filetype/audio.txt').default;
+      break;
+    case _a.note:
+    case 'markdown':
+      preview = require('./filetype/note.txt').default;
+      break;
     default:
-      // audio, note, markdown and all file types route through preview.js.
-      // preview.js uses phosphorNameFor() to resolve Phosphor sprite glyphs.
-      // Legacy filetype/*.txt static blobs are intentionally bypassed.
       preview = require('./preview')(m);
   }
 

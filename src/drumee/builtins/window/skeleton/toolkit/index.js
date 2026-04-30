@@ -260,89 +260,15 @@ export function chatPanel(ui) {
  * @returns
  */
 export function filesContainer(ui) {
-  return Skeletons.Box.Y({
+  const opt = {
     className: `${ui.fig.family}__files-panel ${ui.fig.group}__files-panel`,
     sys_pn: _a.content,
     type: _a.type,
-  });
-}
-
-/**
- * Three-section partition skeleton for folder windows.
- * Rendered inside the `content` part (filesContainer Box.Y).
- * Order top → bottom: workspaces (hubs) → folders → files.
- * Each section owns its own List.Smart, hides via [data-empty="1"]
- * when its collection is empty so empty sections don't reserve space.
- * @param {Object} ui - window_folder instance
- */
-export function filePartitionView(ui) {
-  const pfx = ui.fig.family;
-  return Skeletons.Box.Y({
-    className: `${pfx}__partition-container`,
-    dataset: { partitioning: 1 },
-    kids: [
-      Skeletons.Box.Y({
-        className: `${pfx}__workspace-section workspace-section`,
-        sys_pn: 'workspace-section',
-        partHandler: ui,
-        kids: [
-          Skeletons.List.Smart({
-            className: `${pfx}__workspace-list`,
-            sys_pn: 'workspace-list',
-            flow: _a.none,
-            api: ui.getWorkspacesApi.bind(ui),
-            itemsOpt: { kind: 'media_grid', uiHandler: [ui] },
-            spinner: true,
-            spinnerWait: 500,
-            evArgs: Skeletons.Note('', `${pfx}__empty`),
-            vendorOpt: Preset.List.Orange_e,
-            uiHandler: [ui],
-            partHandler: ui,
-          }),
-        ],
-      }),
-      Skeletons.Box.Y({
-        className: `${pfx}__folder-section folder-section`,
-        sys_pn: 'folder-section',
-        partHandler: ui,
-        kids: [
-          Skeletons.List.Smart({
-            className: `${pfx}__folder-list`,
-            sys_pn: 'folder-list',
-            flow: _a.none,
-            api: ui.getFoldersApi.bind(ui),
-            itemsOpt: { kind: 'media_grid', uiHandler: [ui] },
-            spinner: true,
-            spinnerWait: 500,
-            evArgs: Skeletons.Note('', `${pfx}__empty`),
-            vendorOpt: Preset.List.Orange_e,
-            uiHandler: [ui],
-            partHandler: ui,
-          }),
-        ],
-      }),
-      Skeletons.Box.Y({
-        className: `${pfx}__file-section file-section`,
-        sys_pn: 'file-section',
-        partHandler: ui,
-        kids: [
-          Skeletons.List.Smart({
-            className: `${pfx}__file-list`,
-            sys_pn: 'file-list',
-            flow: _a.none,
-            api: ui.getFilesApi.bind(ui),
-            itemsOpt: { kind: 'media_grid', uiHandler: [ui] },
-            spinner: true,
-            spinnerWait: 500,
-            evArgs: Skeletons.Note(LOCALE.NO_FILES || '', `${pfx}__empty`),
-            vendorOpt: Preset.List.Orange_e,
-            uiHandler: [ui],
-            partHandler: ui,
-          }),
-        ],
-      }),
-    ],
-  });
+  };
+  if (ui.fig.family === "window-folder") {
+    opt.kids = [gridFilesBrowser(ui)];
+  }
+  return Skeletons.Box.Y(opt);
 }
 
 export function folderFilesView(ui) {
