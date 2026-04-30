@@ -59,6 +59,12 @@ class desk_module extends LetcBox {
    */
   onDestroy() {
     RADIO_BROADCAST.off(_e.select, this._updateAvatar);
+    if (this._searchInputEl && this._searchInputHandler) {
+      this._searchInputEl.removeEventListener('input', this._searchInputHandler);
+    }
+    if (this._searchBoxInner?.el && this._searchFocusHandler) {
+      this._searchBoxInner.el.removeEventListener('focusin', this._searchFocusHandler);
+    }
   }
 
   /**
@@ -152,11 +158,27 @@ class desk_module extends LetcBox {
 
       case "search-container":
         this._searchContainer = child;
-        child.el.addEventListener("focusin", () => this._showSearchSuggestions());
         return;
 
       case "search-box":
+        if (this._searchInputEl && this._searchInputHandler) {
+          this._searchInputEl.removeEventListener('input', this._searchInputHandler);
+        }
+        if (this._searchBoxInner?.el && this._searchFocusHandler) {
+          this._searchBoxInner.el.removeEventListener('focusin', this._searchFocusHandler);
+        }
         this._searchBoxInner = child;
+        this._searchInputEl = child.el.querySelector('input, textarea') || child.el;
+        this._searchInputHandler = () => {
+          if (this._timer) clearTimeout(this._timer);
+          this._timer = setTimeout(() => {
+            this._updateSearchSuggestions(child);
+            this._timer = null;
+          }, 300);
+        };
+        this._searchFocusHandler = () => this._updateSearchSuggestions(child);
+        this._searchInputEl.addEventListener('input', this._searchInputHandler);
+        child.el.addEventListener('focusin', this._searchFocusHandler);
         return;
 
       case "search-suggestions":
@@ -760,26 +782,16 @@ class desk_module extends LetcBox {
       case "search-files":
         if (this._timer) clearTimeout(this._timer);
         this._timer = setTimeout(() => {
-          Wm.search(cmd, args);
+          this._updateSearchSuggestions(cmd);
           this._timer = null;
-          const t = setInterval(() => {
-            const w = Wm.getItemByKind("window_search");
-            if (w) {
-              w.once(_e.destroy, () => {
-                if (this._searchBoxInner) this._searchBoxInner.setValue("");
-                this._hideSearchSuggestions();
-              });
-              clearInterval(t);
-            }
-          }, 500);
-        }, 1000);
+        }, 300);
         return;
 
       case _e.Enter:
         if (this._timer) clearTimeout(this._timer);
         this._timer = null;
         if (cmd.mget(_a.service) == "search-files") {
-          Wm.search(cmd, args);
+          this._updateSearchSuggestions(cmd);
         }
         return;
 
@@ -940,9 +952,33 @@ class desk_module extends LetcBox {
     });
   }
 
+  _getSearchValue(cmd) {
+    if (cmd && _.isFunction(cmd.getValue)) return (cmd.getValue() || '').trim();
+    if (this._searchBoxInner && _.isFunction(this._searchBoxInner.getValue)) {
+      return (this._searchBoxInner.getValue() || '').trim();
+    }
+    return (cmd?.mget?.(_a.value) || cmd?.mget?.('value') || '').trim();
+  }
+
+  _updateSearchSuggestions(cmd) {
+    const string = this._getSearchValue(cmd);
+    this._showSearchSuggestions();
+    return this.ensurePart('suggestions-list').then((list) => {
+      list.setApi({
+        service: SERVICE.desk.search,
+        hub_id: Visitor.id,
+        string,
+        page: 1,
+      });
+      list.restart();
+    });
+  }
+
   _showSearchSuggestions() {
     if (!this._searchSuggestions) return;
-    this._searchSuggestions.setState(1);
+    if (this._searchSuggestions.el.dataset.state !== "1") {
+      this._searchSuggestions.setState(1);
+    }
     if (this._suggestionsDismiss) return;
     this._suggestionsDismiss = (e) => {
       const inside = this._searchContainer && this._searchContainer.el.contains(e.target);

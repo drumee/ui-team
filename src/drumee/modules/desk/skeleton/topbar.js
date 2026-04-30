@@ -108,15 +108,12 @@ module.exports = function (ui) {
                 kids: [
                   Skeletons.List.Smart({
                     className: `${pfx}__suggestions-list`,
+                    sys_pn: "suggestions-list",
+                    partHandler: ui,
                     flow: _a.none,
                     spinner: true,
                     spinnerWait: 300,
                     vendorOpt: Preset.List.Orange_e,
-                    api: {
-                      service: SERVICE.desk.home,
-                      hub_id: Visitor.id,
-                      type: _a.hub,
-                    },
                     itemsOpt: {
                       kind: "workspace_item",
                       uiHandler: [ui],

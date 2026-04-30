@@ -1156,14 +1156,14 @@ class __widget_chat extends LetcBox {
     const home = this.mget(_a.home);
     if (!home) return;
 
-    const getIconName = require('builtins/media/template/icon-name');
+    const mediaGridPreview = require('builtins/media/grid/template/preview');
 
     let filesPromise = Promise.resolve(null);
     let contactsPromise = Promise.resolve(null);
+    let folderHubId = hubId;
 
     if (mentionType === 'file') {
       let folderNid = this.mget(_a.nid);
-      let folderHubId = hubId;
       try {
         const folderWindow = this.getParentByKind && (
           this.getParentByKind('window_folder') ||
@@ -1225,13 +1225,43 @@ class __widget_chat extends LetcBox {
       let html = '';
 
       if (files.length) {
+        const isImgCapable = (file) => {
+          if (/^-/.test(file.capability || '')) return 0;
+          if ((file.ext || '').toLowerCase() === 'svg') return 1;
+          if ((file.ext || '').toLowerCase() === _a.pdf) return 0;
+          if (/text/.test(file.mimetype || '')) return 0;
+          if (/shell|script|text/.test(file.filetype || '')) return 0;
+          return /^r/.test(file.capability || '') ? 1 : 0;
+        };
+        const previewUrl = (file) => file.url || file.vignette || file.thumbnail || file.src || file.preview || '';
+        const renderFileIcon = (file) => {
+          const url = previewUrl(file);
+          const model = {
+            ...file,
+            _id: file._id || file.id || file.nid,
+            area: file.area || this.mget(_a.area),
+            role: file.filetype === _a.folder ? 'mention' : (file.role || 'desk'),
+            imgCapable: url ? isImgCapable(file) : 0,
+            url,
+            widgetId: _.uniqueId('mention-preview-'),
+            isAttachment: 1,
+          };
+          switch (model.filetype) {
+            case _a.folder:
+              return require('builtins/media/grid/template/folder')(model);
+            case _a.audio:
+              return require('builtins/media/grid/template/filetype/audio.txt').default;
+            case _a.note:
+            case 'markdown':
+              return require('builtins/media/grid/template/filetype/note.txt').default;
+            default:
+              return mediaGridPreview(model);
+          }
+        };
         html += '<div class="mention-section-header">Files</div>';
         files.slice(0, 6).forEach(f => {
-          const iconInfo = getIconName({ filetype: f.filetype, ext: f.ext || '', mimetype: f.mimetype || '', area: f.area });
-          const chartId = iconInfo.chartId || 'desktop_docfile';
-
-          html += `<div class="mention-item" data-nid="${f.nid}" data-hub_id="${hubId}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
-            <div class="mention-item__icon"><svg class="mention-item__svg">${Template.Xmlns(chartId)}</svg></div>
+          html += `<div class="mention-item" data-nid="${_.escape(f.nid)}" data-hub_id="${_.escape(folderHubId)}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
+            <div class="mention-item__icon ${_.escape(f.area || '')}">${renderFileIcon(f)}</div>
             <div class="mention-item__name">${_.escape(f.filename)}</div>
           </div>`;
         });

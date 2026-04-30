@@ -18,7 +18,11 @@ const __skl_folder_topbar = function (ui) {
   const filename = ui.mget(_a.filename) || ui.mget(_a.name) || "";
 
   // ── Left cluster ─────────────────────────────────────────────
-  const logo = require("../../skeleton/logo")(ui);
+  const logo = Skeletons.Image.Svg({
+    ico: "folder-header",
+    className: `${cnFolder}__logo`,
+    dataset: { area },
+  });
 
   const title = Skeletons.Note({
     className: `${cnFolder}__title`,
@@ -54,10 +58,10 @@ const __skl_folder_topbar = function (ui) {
   // ── Right cluster ────────────────────────────────────────────
   const canUpload = ui.canUpload && ui.canUpload();
 
-  const searchBtn = Skeletons.Button.Svg({
-    className: `${cnFolder}__search-btn`,
-    ico: "magnifying-glass",
-    service: "open-searchbox",
+  const videoBtn = Skeletons.Button.Svg({
+    className: `${cnFolder}__video-btn`,
+    ico: "video-camera-header",
+    service: "tab-meeting",
     uiHandler: ui,
   });
 
@@ -74,15 +78,31 @@ const __skl_folder_topbar = function (ui) {
   const addNew = canUpload
     ? Skeletons.Box.X({
         className: `${cnFolder}__add-new-wrapper`,
-        kids: [newFileMenu(ui)],
+        kids: [newFileMenu(ui, { triggerIco: "plus-header" })],
       })
     : "";
+
+  const settingsBtn = Skeletons.Button.Svg({
+    className: `${cnFolder}__control-icon settings`,
+    ico: "gear-header",
+    service: _e.settings,
+    uiHandler: ui,
+  });
+
+  const splitBtn = Skeletons.Button.Svg({
+    className: `${cnFolder}__control-icon`,
+    ico: "square-split-horizontal",
+    service: "toggle-files-layout",
+    sys_pn: "view-ctrl",
+    state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0,
+    uiHandler: [ui],
+  });
 
   const controls = require("window/skeleton/topbar/control")(ui, "c");
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [searchBtn, uploadBtn, addNew, controls],
+    kids: [videoBtn, uploadBtn, addNew, settingsBtn, splitBtn, controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────

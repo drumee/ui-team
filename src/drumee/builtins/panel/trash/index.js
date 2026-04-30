@@ -134,7 +134,7 @@ class __panel_trash extends mfsInteract {
       title: LOCALE.TRASH,
       message: LOCALE.Q_DELETE_ALL_FILES,
       confirm: LOCALE.DELETE || 'Delete',
-      confirm_type: 'primary',
+      confirm_type: 'danger trash-delete',
       cancel: LOCALE.CANCEL || 'Cancel',
       cancel_type: 'secondary',
       mode: 'hbf'

@@ -312,5 +312,14 @@
     &:hover {
       background-color: var(--btn-caution-background-hover);
     }
+
+    &.trash-delete {
+      background-color: #d74e49;
+      color: #ffffff;
+
+      &:hover {
+        background-color: #c74641;
+      }
+    }
   }
 }

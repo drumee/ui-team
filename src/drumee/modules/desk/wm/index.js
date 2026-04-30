@@ -847,14 +847,15 @@ class __window_manager extends push {
           message: LOCALE.MSG_DELETE_HUB.format(media.mget(_a.filename)),
           confirm: LOCALE.DELETE,
         }).ask().then(() => {
-          this.animateMediaToTrash(media).then(() => {
-            this.postService({
-              service: SERVICE.hub.delete_hub,
-              hub_id: media.mget(_a.hub_id)
-            }).then((data) => {
-              resolve(data)
-            });
-          })
+          const deleteHub = () => this.postService({
+            service: SERVICE.hub.delete_hub,
+            hub_id: media.mget(_a.hub_id)
+          }).then((data) => {
+            media.suppress();
+            this.reload();
+            resolve(data)
+          });
+          this.animateMediaToTrash(media).then(deleteHub).catch(deleteHub);
           p.clear()
         }).catch((e) => {
           resolve({})

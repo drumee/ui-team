@@ -1,3 +1,5 @@
+const { button } = require("../../../skeleton/toolkit/buttons");
+
 const AREA_LABELS = {
   personal: LOCALE.PRIVATE,
   private: LOCALE.RESTRICTED,
@@ -27,9 +29,30 @@ export function breadcrumbs(ui, opt) {
  */
 export function tabBar(ui, opt = {}) {
   const cnRoot = "window-body__tab-bar";
-  // Per-instance radio channel so multiple folder windows don't share state.
-  const radio = `tab-bar-${ui.cid}`;
-  const kids = [
+  const isFolder = ui.fig.family === "window-folder";
+  const folderTab = ({ icon, label, service, state, tab }) =>
+    Skeletons.Box.X({
+      className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+      service,
+      state,
+      dataset: { tab },
+      uiHandler: [ui],
+      kids: [
+        Skeletons.Note({
+          className: `${ui.fig.family}__tab-bar-icon`,
+          content: icon,
+        }),
+        Skeletons.Note({
+          className: `${ui.fig.family}__tab-bar-label`,
+          content: label,
+        }),
+      ],
+    });
+  const kids = isFolder ? [
+    folderTab({ icon: "📄", label: LOCALE.FILES, service: "tab-files", state: 1, tab: "files" }),
+    folderTab({ icon: "💬", label: LOCALE.CHAT, service: "tab-chat", state: 0, tab: _a.chat }),
+    folderTab({ icon: "📋", label: "Tasks", service: "tab-task", state: 0, tab: _a.task }),
+  ] : [
     Skeletons.Button.Label({
       className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
       label: LOCALE.FILES,
@@ -75,6 +98,7 @@ export function tabBar(ui, opt = {}) {
 
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
+    dataset: isFolder ? { area: ui.mget(_a.area) } : {},
     kids,
   });
 }
@@ -236,6 +260,8 @@ export function chatPanel(ui) {
 
   if (ui.fig.family === "window-folder") {
     chat.scope = _a.folder;
+    chat.type = _a.share;
+    chat.area = _a.share;
     chat.hub_id = ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id);
     chat.nid = ui.mget(_a.actual_home_id) || ui.mget(_a.nid);
   }
@@ -243,6 +269,7 @@ export function chatPanel(ui) {
   return Skeletons.Box.Y({
     className: `${ui.fig.group}__chat-panel`,
     sys_pn: 'chat-panel',
+    dataset: ui.fig.family === "window-folder" ? { area: ui.mget(_a.area) } : {},
     kids: [
       Skeletons.Note({
         className: `${ui.fig.group}__chat-label`,
@@ -259,6 +286,30 @@ export function chatPanel(ui) {
  * @param {*} ui
  * @returns
  */
+export function fileTypeFilterBar(ui) {
+  const tabs = [
+    { label: "All", value: "all" },
+    { label: "Docs", value: "docs" },
+    { label: "PDF", value: "pdf" },
+    { label: "Images", value: "image" },
+    { label: "Other", value: "other" },
+  ];
+  return Skeletons.Box.X({
+    className: `${ui.fig.family}__filter-bar`,
+    dataset: { area: ui.mget(_a.area) },
+    kids: tabs.map((tab, index) =>
+      button(ui, {
+        label: tab.label,
+        className: `${ui.fig.family}__filter-tab`,
+        service: "filter-by-type",
+        state: index === 0 ? 1 : 0,
+        radiotoggle: `media-filter-${ui._id}`,
+        value: tab.value,
+      }),
+    ),
+  });
+}
+
 export function filesContainer(ui) {
   const opt = {
     className: `${ui.fig.family}__files-panel ${ui.fig.group}__files-panel`,
@@ -266,13 +317,25 @@ export function filesContainer(ui) {
     type: _a.type,
   };
   if (ui.fig.family === "window-folder") {
-    opt.kids = [gridFilesBrowser(ui)];
+    opt.kids = [fileTypeFilterBar(ui), gridFilesBrowser(ui)];
   }
   return Skeletons.Box.Y(opt);
 }
 
+export function folderFilesRowContainer(ui) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__files-panel ${ui.fig.group}__files-panel`,
+    sys_pn: _a.content,
+    type: _a.type,
+    kids: [require("../content/row")(ui)],
+  });
+}
+
 export function folderFilesView(ui) {
-  return [filesContainer(ui), chatPanel(ui)];
+  const files = ui.getViewMode && ui.getViewMode() === _a.row
+    ? folderFilesRowContainer(ui)
+    : filesContainer(ui);
+  return [files, chatPanel(ui)];
 }
 
 export function folderChatView(ui) {

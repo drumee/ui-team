@@ -78,16 +78,73 @@
   }
 
   &__icon {
-    width: 16px;
-    height: 16px;
+    align-items: center;
+    display: flex;
     flex-shrink: 0;
+    height: 22px;
+    justify-content: center;
+    overflow: visible;
     padding: 0;
+    position: relative;
+    width: 22px;
 
-    svg {
-      width: 16px;
-      height: 16px;
-      fill: var(--normal-fg-20, #65656c);
+    .media-grid__folder-art {
+      align-items: center;
+      display: flex;
+      height: 18px;
+      justify-content: center;
+      position: relative;
+      width: 22px;
     }
+
+    .folder-shape {
+      fill: #885eff;
+      height: 18px;
+      width: 22px;
+
+      &.personal,
+      &.inner-folder {
+        fill: var(--area-personal);
+      }
+
+      &.public {
+        fill: var(--area-public);
+      }
+
+      &.share,
+      &.dmz {
+        fill: var(--area-share);
+      }
+
+      &.private {
+        fill: var(--area-private);
+      }
+    }
+
+    .badge {
+      bottom: 2px;
+      color: var(--grid-color-folder-badge);
+      fill: currentColor;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+      height: 6px;
+      left: 4px;
+      position: absolute;
+      width: 6px;
+    }
+
+    &.file {
+      color: var(--normal-fg-20, #65656c);
+
+      svg {
+        height: 18px;
+        width: 18px;
+      }
+    }
+  }
+
+  &__text {
+    flex: 1;
+    min-width: 0;
   }
 
   &__name {
@@ -95,6 +152,16 @@
     font-size: 14px;
     line-height: 1.4;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__type {
+    color: var(--normal-fg-30, #8e8e93);
+    font-size: 10px;
+    line-height: 12px;
+    overflow: hidden;
+    text-transform: capitalize;
     text-overflow: ellipsis;
     white-space: nowrap;
   }

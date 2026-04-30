@@ -93,11 +93,27 @@
       min-width: 0;
     }
 
-    // .window-topbar-title__logo is the area badge SVG (skeleton/logo.js).
-    .window-topbar-title__logo {
+    &__logo {
       width: 20px;
       height: 16px;
+      color: var(--area-private);
       flex-shrink: 0;
+
+      &[data-area="personal"] {
+        color: var(--area-personal);
+      }
+      &[data-area="share"],
+      &[data-area="dmz"] {
+        color: var(--area-share);
+      }
+      &[data-area="public"] {
+        color: var(--area-public);
+      }
+
+      svg {
+        width: 20px;
+        height: 16px;
+      }
     }
 
     &__heading {
@@ -168,13 +184,13 @@
       flex-shrink: 0;
     }
 
-    // Search icon — Grey/20 background, radius 6, padding 4 8.
-    &__search-btn {
+    &__video-btn {
       display: flex;
       align-items: center;
       justify-content: center;
+      align-self: stretch;
       padding: 4px 8px;
-      background-color: var(--normal-bg-90); // Grey/20
+      background-color: var(--normal-bg-90);
       border-radius: 6px;
       cursor: pointer;
       box-sizing: border-box;
@@ -182,8 +198,8 @@
       flex-shrink: 0;
 
       svg {
-        width: 16px;
-        height: 16px;
+        width: 20px;
+        height: 20px;
       }
 
       &:hover {
@@ -202,7 +218,7 @@
       border-radius: 4.38px;
       cursor: pointer;
       font-family: "Geist", sans-serif;
-      font-weight: 600;
+      font-weight: 500;
       font-size: 13.14px;
       line-height: 1;
       color: var(--normal-fg-10);
@@ -210,8 +226,8 @@
       white-space: nowrap;
 
       svg {
-        width: 14px;
-        height: 14px;
+        width: 13.14px;
+        height: 13.14px;
       }
 
       &:hover {
@@ -263,7 +279,7 @@
         padding: 0 12px;
         gap: 4px;
         font-family: "Inter", sans-serif;
-        font-weight: 600;
+        font-weight: 500;
         font-size: 13.14px;
         line-height: 17.52px;
         color: #000;
@@ -345,6 +361,47 @@
       }
     }
 
+    &__control-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--normal-fg-20, var(--normal-fg-10));
+      flex-shrink: 0;
+      cursor: pointer;
+
+      &.inactive {
+        cursor: default;
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      &.settings svg,
+      &.settings use {
+        fill: none;
+        stroke: currentColor;
+      }
+
+      .window-folder__control-icon svg {
+        transition: transform .2s ease;
+      }
+    }
+
+    &__control-icon[data-state="1"] svg {
+      transform: rotate(90deg);
+    }
+
+    &__control-icon {
+      svg {
+        transition: transform .2s ease;
+      }
+
+      &[data-state="1"] svg {
+        transform: rotate(90deg);
+      }
+    }
+
     // The window control (close ×) sits at the far right of the row.
     // Figma 272:49268 / layout_VZ2RLI: row, gap 12, height 20.
     .window-button__icon-button {
@@ -354,10 +411,15 @@
       height: 20px;
       flex-shrink: 0;
 
+      .icon {
+        width: 20px;
+        height: 20px;
+        color: var(--normal-fg-20, var(--normal-fg-10));
+      }
+
       svg {
         width: 20px;
         height: 20px;
-        color: var(--normal-fg-10);
       }
     }
   }
@@ -476,21 +538,60 @@
     overflow: hidden;
   }
 
-  // Tab bar in header
-  &__tab-bar {
-    display: flex;
-    flex-direction: row;
+  &__tab-bar-wrapper {
     align-items: center;
-    gap: 4px;
-    margin-left: 12px;
+    gap: 16px;
+    padding: 8px 16px 8.5px;
+    background-color: var(--normal-bg-90);
+    border-bottom: 1px solid var(--border-muted, rgba(0, 0, 0, 0.2));
   }
 
-  &__tab-item {
-    svg {
-      width: 16px;
-      height: 16px;
-      fill: var(--normal-fg-10);
+  &__tab-bar-item {
+    height: 32px;
+    min-width: 84px;
+    padding: 8px 16px;
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    box-sizing: border-box;
+    color: var(--normal-fg-10);
+    font-family: "Geist", sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    gap: 6px;
+
+    &[data-state="1"] {
+      border-color: var(--area-private);
     }
+
+    &:hover {
+      color: var(--normal-fg-10);
+      background-color: rgba(0, 0, 0, 0.07);
+    }
+  }
+
+  &__tab-bar-wrapper[data-area="personal"] &__tab-bar-item[data-state="1"] {
+    border-color: var(--area-personal);
+  }
+  &__tab-bar-wrapper[data-area="share"] &__tab-bar-item[data-state="1"],
+  &__tab-bar-wrapper[data-area="dmz"] &__tab-bar-item[data-state="1"] {
+    border-color: var(--area-share);
+  }
+  &__tab-bar-wrapper[data-area="public"] &__tab-bar-item[data-state="1"] {
+    border-color: var(--area-public);
+  }
+
+  &__tab-bar-icon,
+  &__tab-bar-label {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+  }
+
+  &__tab-bar-icon {
+    font-size: 13px;
+    transform: translateY(-0.5px);
   }
 
   &__create-folder-dialog {
@@ -651,71 +752,6 @@
   }
 }
 
-// Scoped message bubble styles for folder chat panel
-.window-folder .window__chat-panel {
-  .widget-chat__ui {
-    background-color: transparent;
-  }
-  .widget-chatItem__ui {
-    background-color: transparent;
-  }
-  .widget-chat__messages .smart-container {
-    padding-right: 12px;
-  }
-  .widget-chatItem__main {
-    background-color: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 0;
-  }
-  // .me / .other live on the outer __conversation div (see chat-item
-  // template/note.js); the inner __conversation-content carries the bubble.
-  .widget-chatItem__conversation {
-    &.me .widget-chatItem__conversation-content {
-      background-color: var(--private, #884eff);
-      border-radius: 16px 0 16px 16px;
-      align-self: flex-end;
-      color: #e4e3ff;
-    }
-    &.other .widget-chatItem__conversation-content {
-      background-color: var(--normal-fg-10);
-      border-radius: 0 16px 16px 16px;
-      align-self: flex-start;
-      color: #faf6ff;
-    }
-  }
-  .widget-chatItem__conversation-content {
-    padding: 8px 12px;
-    width: fit-content;
-    max-width: 100%;
-    &.me {
-      background-color: var(--private, #884eff);
-      border-radius: 16px 0 16px 16px;
-      align-self: flex-end;
-      .note-content {
-        color: #e4e3ff;
-      }
-    }
-    &.other {
-      background-color: var(--chat-bubble-other-bg, #f2f2f7);
-      border-radius: 0 16px 16px 16px;
-      align-self: flex-start;
-      .note-content {
-        color: var(--chat-bubble-other-fg, #0b0a21);
-      }
-    }
-  }
-  .widget-chatItem__message-date {
-    color: var(--normal-fg-50);
-    font-size: 8px;
-  }
-  .widget-chatItem__date-of-day-content {
-    color: #c6bfff;
-    font-size: 10px;
-    font-weight: 600;
-  }
-}
-
 .window-folder {
   &__ui:not([data-device="mobile"]) {
     width: 900px !important;
@@ -870,35 +906,6 @@
     }
   }
 
-  &__tab-bar-wrapper {
-    gap: 18px;
-    padding: 9px 18px;
-    border-bottom: 1px solid var(--border-default);
-    background: var(--normal-bg-90);
-  }
-
-  &__tab-bar-item {
-    min-width: 84px;
-    min-height: 35px;
-    padding: 9px 18px;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    background: var(--overlay-bg-05);
-    gap: 6px;
-    @include drumee.typo($size: 13px, $line: 16px, $weight: 600, $color: var(--normal-fg-10));
-
-    &[data-state="1"] {
-      border-color: #884eff;
-      background: transparent;
-    }
-
-    svg {
-      width: 16px;
-      height: 16px;
-      fill: currentColor;
-    }
-  }
-
   &__split-body {
     grid-template-columns: 3fr 1fr;
     height: 100%;
@@ -924,6 +931,11 @@
     background: var(--normal-bg-90);
   }
 
+  .window__files-panel .window__icons-list {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
   .window__chat-panel {
     border-left: 1px solid var(--border-default);
     border-radius: 0;
@@ -931,24 +943,53 @@
   }
 
   &__filter-bar {
-    gap: 26px;
-    padding: 9px 26px;
-    border-bottom: 1px solid var(--border-default);
+    align-items: center;
+    gap: 24px;
+    padding: 8px 24px 8.5px;
+    border-bottom: 1px solid var(--border-default, #d1d1d6);
     background: var(--normal-bg-90);
   }
 
-  &__filter-tab,
   &__filter-tab-main {
-    min-height: 30px;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 0 0 4px;
     border-bottom: 2px solid transparent;
     background: transparent;
-    @include drumee.typo($size: 13px, $line: 16px, $weight: 600, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 12px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+
+    .window-folder__filter-tab,
+    .note-content {
+      @include drumee.typo($size: 12px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+    }
 
     &[data-state="1"],
     &[data-radiotoggle="on"] {
-      border-bottom-color: #884eff;
-      color: var(--normal-fg-10);
+      padding-bottom: 6px;
+      border-bottom-color: var(--area-private);
+      @include drumee.typo($size: 12.5px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+
+      .window-folder__filter-tab,
+      .note-content {
+        @include drumee.typo($size: 12.5px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+      }
     }
+  }
+
+  &__filter-bar[data-area="personal"] &__filter-tab-main[data-state="1"],
+  &__filter-bar[data-area="personal"] &__filter-tab-main[data-radiotoggle="on"] {
+    border-bottom-color: var(--area-personal);
+  }
+  &__filter-bar[data-area="share"] &__filter-tab-main[data-state="1"],
+  &__filter-bar[data-area="share"] &__filter-tab-main[data-radiotoggle="on"],
+  &__filter-bar[data-area="dmz"] &__filter-tab-main[data-state="1"],
+  &__filter-bar[data-area="dmz"] &__filter-tab-main[data-radiotoggle="on"] {
+    border-bottom-color: var(--area-share);
+  }
+  &__filter-bar[data-area="public"] &__filter-tab-main[data-state="1"],
+  &__filter-bar[data-area="public"] &__filter-tab-main[data-radiotoggle="on"] {
+    border-bottom-color: var(--area-public);
   }
 
   .window__icons-list {
@@ -1000,16 +1041,98 @@
     }
     .workspace-section { grid-auto-rows: var(--grid-cell-h-folder); }
     .folder-section    { grid-auto-rows: var(--grid-cell-h-folder); }
-    .file-section      { grid-auto-rows: var(--grid-cell-h-file); }
+    .file-section {
+      grid-template-columns: repeat(4, var(--grid-cell-w));
+      grid-auto-rows: var(--grid-cell-h-file);
+    }
+  }
+
+  .window__content-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .window__content-row {
+    height: 100%;
+    min-width: 0;
+
+    .smart-container {
+      direction: ltr;
+    }
+  }
+
+  .window__filter__main,
+  .media-row__main {
+    min-width: 0;
+    grid-template-columns: 44px 44px minmax(140px, 1fr) minmax(120px, 150px) 76px 76px;
+  }
+
+  .window__filter__main {
+    height: 36px;
+    box-shadow: 0 1px 2px rgba(63, 79, 117, 0.16);
+    overflow: hidden;
+  }
+
+  .window__filter__column {
+    height: 36px;
+    min-width: 0;
+    padding: 0 6px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 700, $color: var(--primary-400, #4a90e2));
+
+    svg {
+      width: 16px;
+      height: 16px;
+      padding: 2px;
+      margin-right: 4px;
+      flex-shrink: 0;
+    }
+
+    .label,
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: normal;
+      line-height: 16px;
+    }
+
+    &.name,
+    &.date,
+    &.size,
+    &.type {
+      min-width: 0;
+    }
+  }
+
+  .media-row__ui {
+    height: 42px;
+  }
+
+  .media-row__main {
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--normal-fg-10));
+  }
+
+  .media-row__field-filename,
+  .media-row__field-date,
+  .media-row__field-size,
+  .media-row__field-type {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--normal-fg-10));
   }
 
   .window__chat-label {
     align-items: center;
-    min-height: 61px;
-    padding: 16px 18px;
-    border-bottom: 1px solid var(--border-default);
-    @include drumee.typo($size: 11px, $line: 11px, $weight: 600, $color: var(--normal-fg-800));
-    letter-spacing: 0.44px;
+    min-height: 42px;
+    padding: 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--normal-fg-10));
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
@@ -1018,15 +1141,37 @@
     min-height: 0;
   }
 
+  .widget-chat__ui,
+  .widget-chatItem__ui {
+    background-color: transparent;
+  }
+
+  .widget-chatItem__main {
+    background-color: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  .widget-chat__body {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .widget-chat__messages .smart-container {
+    padding-right: 12px;
+  }
+
   .widget-chat__messenger-wrapper {
-    padding: 18px;
+    padding: 16px;
     background: var(--normal-bg-90);
   }
 
   .widget-chat__messenger {
     .lib-messenger__container {
-      min-height: 40px;
-      padding: 11px 13px;
+      align-items: center;
+      min-height: 42px;
+      padding: 10px 12px;
       border-radius: 8px;
       background: var(--normal-bg-elevated);
     }
@@ -1034,33 +1179,124 @@
     .lib-messenger__icon.attach {
       display: flex;
       color: var(--placeholder-fg);
+      width: 15px;
+      height: 16px;
     }
 
-    .lib-messenger__content .note-content {
-      @include drumee.typo($size: 11px, $line: 15px, $weight: 400, $color: var(--normal-fg-20));
+    .lib-messenger__content {
+      align-items: center;
+      background-color: transparent;
 
-      &::before {
-        color: var(--placeholder-fg);
+      .note-content {
+        min-height: 22px;
+        padding: 0 8px;
+        @include drumee.typo($size: 12px, $line: 22px, $weight: 400, $color: #aeaeb2);
+
+        &::before {
+          color: #aeaeb2;
+          @include drumee.typo($size: 12px, $line: 22px, $weight: 400, $color: #aeaeb2);
+        }
       }
     }
 
     .lib-messenger__icon.submit svg {
-      fill: var(--hover-border-40);
+      width: 14.25px;
+      height: 12px;
+      fill: var(--primary-30, #847eff);
     }
+  }
+
+  .widget-chatItem__ui {
+    margin-top: 16px;
   }
 
   .widget-chatItem__conversation-content {
-    padding: 13px;
+    max-width: 320px;
+    padding: 12px;
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 400, $color: var(--normal-fg-10));
+  }
 
-    &.me {
-      background: var(--folder-fill);
-      border-radius: 18px 0 18px 18px;
+  .widget-chatItem__conversation-content.me,
+  .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
+    background: var(--area-private);
+    border-radius: 16px 0 16px 16px;
+    box-shadow: none;
+    color: #e4e3ff;
+
+    .note-content,
+    a,
+    .file-mention,
+    .user-mention {
+      color: #ffffff;
     }
   }
 
+  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
+    background: var(--area-personal);
+  }
+  .window__chat-panel[data-area="share"] .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="share"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content,
+  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
+    background: var(--area-share);
+  }
+  .window__chat-panel[data-area="public"] .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="public"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
+    background: var(--area-public);
+  }
+
+  .widget-chatItem__conversation-content.other,
+  .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
+    background: var(--normal-bg-elevated);
+    border: 0;
+    border-radius: 0 16px 16px 16px;
+    box-shadow: none;
+    color: var(--normal-fg-10);
+
+    .file-mention,
+    .user-mention,
+    a {
+      color: var(--area-private);
+    }
+  }
+
+  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
+    .file-mention,
+    .user-mention,
+    a { color: var(--area-personal); }
+  }
+  .window__chat-panel[data-area="share"] .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="share"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content,
+  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
+    .file-mention,
+    .user-mention,
+    a { color: var(--area-share); }
+  }
+  .window__chat-panel[data-area="public"] .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="public"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
+    .file-mention,
+    .user-mention,
+    a { color: var(--area-public); }
+  }
+
+  .widget-chatItem__name,
+  .widget-chatItem__username-content,
+  .widget-chatItem__message-username {
+    @include drumee.typo($size: 10px, $line: 1.4, $weight: 700, $color: var(--normal-fg-10));
+  }
+
+  .widget-chatItem__username-content {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .widget-chatItem__message-date {
-    color: var(--normal-fg-50);
-    font-size: 9px;
+    @include drumee.typo($size: 8px, $line: 1.4, $weight: 400, $color: #84848c);
   }
 
   &__split-body[data-view="chat"] {

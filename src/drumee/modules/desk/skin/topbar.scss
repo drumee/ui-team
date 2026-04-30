@@ -406,6 +406,11 @@
         font-size: 12px;
         line-height: 1.4;
         color: #65656c;
+
+        &[data-level="0"],
+        &[data-radio="on"][data-level="0"] {
+          padding-left: 0;
+        }
       }
 
       &__icon {
@@ -417,7 +422,10 @@
         svg {
           width: 16px;
           height: 16px;
-          fill: #65656c;
+        }
+
+        &.file {
+          color: #65656c;
         }
       }
 
