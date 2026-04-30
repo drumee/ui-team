@@ -951,10 +951,18 @@
     }
   }
 
+  .window__icons-list {
+    align-content: flex-start;
+    align-items: flex-start;
+    justify-content: flex-start;
+    justify-items: flex-start;
+  }
+
   .window__icons-list .smart-container {
     align-content: flex-start;
     align-items: flex-start;
     justify-content: flex-start;
+    justify-items: flex-start;
     padding: 24px;
   }
 
