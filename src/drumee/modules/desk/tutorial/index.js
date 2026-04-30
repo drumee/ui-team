@@ -20,7 +20,7 @@ const BADGES = [
   },
 ];
 
-class desk_tutorial extends LetcBox {
+class tutorial_main extends LetcBox {
 
   initialize(opt = {}) {
     super.initialize(opt);
@@ -85,4 +85,4 @@ class desk_tutorial extends LetcBox {
   }
 }
 
-module.exports = desk_tutorial;
+module.exports = tutorial_main;

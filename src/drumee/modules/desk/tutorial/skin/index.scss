@@ -1,12 +1,12 @@
 @use "mixins/drumee";
 
-// BEM root: .desk-tutorial
+// BEM root: .tutorial-main
 // Prefix shorthands used in skeletons:
 //   __sb-*  → sidebar elements
 //   __tb-*  → topbar elements
 //   __wg-*  → workspace-grid elements
 
-.desk-tutorial {
+.tutorial-main {
   &__layout {
     position: relative; // anchor for the absolute overlay Box.Z
     width: 100%;
