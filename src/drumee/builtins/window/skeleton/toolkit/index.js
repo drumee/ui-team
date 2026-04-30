@@ -286,7 +286,7 @@ export function chatPanel(ui) {
  * @param {*} ui
  * @returns
  */
-function fileTypeFilterBar(ui) {
+export function fileTypeFilterBar(ui) {
   const tabs = [
     { label: "All", value: "all" },
     { label: "Docs", value: "docs" },
@@ -322,8 +322,20 @@ export function filesContainer(ui) {
   return Skeletons.Box.Y(opt);
 }
 
+export function folderFilesRowContainer(ui) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__files-panel ${ui.fig.group}__files-panel`,
+    sys_pn: _a.content,
+    type: _a.type,
+    kids: [require("../content/row")(ui)],
+  });
+}
+
 export function folderFilesView(ui) {
-  return [filesContainer(ui), chatPanel(ui)];
+  const files = ui.getViewMode && ui.getViewMode() === _a.row
+    ? folderFilesRowContainer(ui)
+    : filesContainer(ui);
+  return [files, chatPanel(ui)];
 }
 
 export function folderChatView(ui) {

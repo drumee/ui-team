@@ -89,9 +89,13 @@ const __skl_folder_topbar = function (ui) {
     uiHandler: ui,
   });
 
-  const splitBtn = Skeletons.Image.Svg({
-    className: `${cnFolder}__control-icon inactive`,
+  const splitBtn = Skeletons.Button.Svg({
+    className: `${cnFolder}__control-icon`,
     ico: "square-split-horizontal",
+    service: "toggle-files-layout",
+    sys_pn: "view-ctrl",
+    state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0,
+    uiHandler: [ui],
   });
 
   const controls = require("window/skeleton/topbar/control")(ui, "c");

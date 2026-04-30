@@ -382,6 +382,24 @@
         fill: none;
         stroke: currentColor;
       }
+
+      .window-folder__control-icon svg {
+        transition: transform .2s ease;
+      }
+    }
+
+    &__control-icon[data-state="1"] svg {
+      transform: rotate(90deg);
+    }
+
+    &__control-icon {
+      svg {
+        transition: transform .2s ease;
+      }
+
+      &[data-state="1"] svg {
+        transform: rotate(90deg);
+      }
     }
 
     // The window control (close ×) sits at the far right of the row.
@@ -539,7 +557,7 @@
     color: var(--normal-fg-10);
     font-family: "Geist", sans-serif;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 800;
     line-height: 1;
     gap: 6px;
 
@@ -939,13 +957,23 @@
     padding: 0 0 4px;
     border-bottom: 2px solid transparent;
     background: transparent;
-    @include drumee.typo($size: 12px, $line: 1, $weight: 800, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 12px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+
+    .window-folder__filter-tab,
+    .note-content {
+      @include drumee.typo($size: 12px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+    }
 
     &[data-state="1"],
     &[data-radiotoggle="on"] {
       padding-bottom: 6px;
       border-bottom-color: var(--area-private);
-      @include drumee.typo($size: 12.5px, $line: 1, $weight: 850, $color: var(--normal-fg-10));
+      @include drumee.typo($size: 12.5px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+
+      .window-folder__filter-tab,
+      .note-content {
+        @include drumee.typo($size: 12.5px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+      }
     }
   }
 
@@ -1017,6 +1045,85 @@
       grid-template-columns: repeat(4, var(--grid-cell-w));
       grid-auto-rows: var(--grid-cell-h-file);
     }
+  }
+
+  .window__content-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .window__content-row {
+    height: 100%;
+    min-width: 0;
+
+    .smart-container {
+      direction: ltr;
+    }
+  }
+
+  .window__filter__main,
+  .media-row__main {
+    min-width: 0;
+    grid-template-columns: 44px 44px minmax(140px, 1fr) minmax(120px, 150px) 76px 76px;
+  }
+
+  .window__filter__main {
+    height: 36px;
+    box-shadow: 0 1px 2px rgba(63, 79, 117, 0.16);
+    overflow: hidden;
+  }
+
+  .window__filter__column {
+    height: 36px;
+    min-width: 0;
+    padding: 0 6px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 700, $color: var(--primary-400, #4a90e2));
+
+    svg {
+      width: 16px;
+      height: 16px;
+      padding: 2px;
+      margin-right: 4px;
+      flex-shrink: 0;
+    }
+
+    .label,
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: normal;
+      line-height: 16px;
+    }
+
+    &.name,
+    &.date,
+    &.size,
+    &.type {
+      min-width: 0;
+    }
+  }
+
+  .media-row__ui {
+    height: 42px;
+  }
+
+  .media-row__main {
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--normal-fg-10));
+  }
+
+  .media-row__field-filename,
+  .media-row__field-date,
+  .media-row__field-size,
+  .media-row__field-type {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--normal-fg-10));
   }
 
   .window__chat-label {

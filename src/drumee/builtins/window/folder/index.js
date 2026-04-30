@@ -1,6 +1,6 @@
 const mfsInteract = require("../interact");
 
-const { folderFilesView, folderChatView } = require("../skeleton/toolkit");
+const { folderFilesView, folderChatView, fileTypeFilterBar, gridFilesBrowser } = require("../skeleton/toolkit");
 
 require("./skin");
 
@@ -53,7 +53,9 @@ class __window_folder extends mfsInteract {
     this.ensurePart(_a.list).then((l) => {
       if (!l || (l.isDestroyed && l.isDestroyed())) return;
       l.restart();
-      this._prepareListPartition(l);
+      if (this.getViewMode && this.getViewMode() !== _a.row) {
+        this._prepareListPartition(l);
+      }
     });
   }
 
@@ -106,7 +108,9 @@ class __window_folder extends mfsInteract {
           if (list.collection) list.collection.add(opt, { at: position });
           else list.append(opt);
       }
-      this._partitionFoldersAndFiles(list);
+      if (this.getViewMode && this.getViewMode() !== _a.row) {
+        this._partitionFoldersAndFiles(list);
+      }
     });
   }
 
@@ -140,7 +144,9 @@ class __window_folder extends mfsInteract {
       if (!l || (l.isDestroyed && l.isDestroyed())) return;
       if (data.position >= 0) l.append(data, data.position);
       else l.append(data);
-      this._partitionFoldersAndFiles(l);
+      if (this.getViewMode && this.getViewMode() !== _a.row) {
+        this._partitionFoldersAndFiles(l);
+      }
     });
     if (this.syncBounds) this.syncBounds();
   }
@@ -148,7 +154,9 @@ class __window_folder extends mfsInteract {
   onPartReady(child, pn) {
     if (pn === _a.list) {
       this.iconsList = child;
-      this._prepareListPartition(child);
+      if (this.getViewMode && this.getViewMode() !== _a.row) {
+        this._prepareListPartition(child);
+      }
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
@@ -162,6 +170,21 @@ class __window_folder extends mfsInteract {
     if (_.isEmpty(Wm.clipboard)) {
       return this.unselect();
     }
+  }
+
+  toggleFilesLayout(cmd) {
+    const mode = this.getViewMode && this.getViewMode() === _a.row ? _a.icon : _a.row;
+    this.setViewMode(mode);
+    this.ensurePart(_a.content).then((content) => {
+      if (!content || (content.isDestroyed && content.isDestroyed())) return;
+      if (mode === _a.row) {
+        content.feed(require("../skeleton/content/row")(this));
+        cmd?.changeState?.(1);
+        return;
+      }
+      content.feed([fileTypeFilterBar(this), gridFilesBrowser(this)]);
+      cmd?.changeState?.(0);
+    });
   }
 
   onUiEvent(cmd, args = {}) {
@@ -222,6 +245,9 @@ class __window_folder extends mfsInteract {
 
       case "tab-meeting":
         return this.showFolderTab("meeting");
+
+      case "toggle-files-layout":
+        return this.toggleFilesLayout(cmd);
 
       case "leave-meeting":
         return this.showFolderTab("files");
