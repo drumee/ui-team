@@ -51,19 +51,22 @@ module.exports = function (ui, contact) {
     ]
   });
 
-  const videoBtn = Skeletons.Button.Svg({
+  const flag = contact.mget(_a.flag);
+  const callable = flag !== _a.support;
+
+  const videoBtn = callable ? Skeletons.Button.Svg({
     ico: 'video',
     className: `${fig}__header-btn`,
     service: 'video-call',
-    uiHandler: ui
-  });
+    uiHandler: [ui]
+  }) : null;
 
-  const phoneBtn = Skeletons.Button.Svg({
+  const phoneBtn = callable ? Skeletons.Button.Svg({
     ico: 'telephone_handset',
     className: `${fig}__header-btn`,
     service: 'audio-call',
-    uiHandler: ui
-  });
+    uiHandler: [ui]
+  }) : null;
 
   const actions = Skeletons.Box.X({
     className: `${fig}__header-actions`,
@@ -74,13 +77,13 @@ module.exports = function (ui, contact) {
         ico: 'menu_expand',
         className: `${fig}__header-btn`,
         service: 'show-more',
-        uiHandler: ui
+        uiHandler: [ui]
       }),
       Skeletons.Button.Svg({
         ico: 'account_cross',
         className: `${fig}__header-btn`,
         service: 'close-chat',
-        uiHandler: ui
+        uiHandler: [ui]
       })
     ]
   });

@@ -11,13 +11,14 @@ class __window_connect extends __room {
     require('./skin');
     this.service_class = 'connect';
     super.initialize(opt);
+    const hubId = this.mget(_a.hub_id) || Wm.mget('wicket_id') || Visitor.id;
     this.mset({
-      hub_id: Wm.mget('wicket_id'), // Use sharebox as room host
+      hub_id: hubId,
       service_class: this.service_class,
-      video: 0,
       audio: 1,
       area: _a.private
     });
+    if (this.mget(_a.video) == null) this.mset({ video: 0 });
     this._state = 0;
     this.declareHandlers();
     this.statusMessages = {
@@ -290,8 +291,6 @@ class __window_connect extends __room {
         this.mset(caller);
         this.statusMessages.ring = LOCALE.X_IS_CALLING_YOU.format(this.caller.display);
         this.feed(require('./skeleton/init')(this, caller));
-        this._setService('ctrl-video', 'pickup');
-        this._setService('ctrl-audio', 'pickup');
         break;
 
       case 'offline':
@@ -321,8 +320,13 @@ class __window_connect extends __room {
         this.prevState = s;
         Visitor.muteSound();
         this.beforeLeavingState = null;
-        this.mset(this.caller);
-        this.mset({ nid: this.caller.room_id || this.caller.nid });
+        const room_id = this.caller.room_id || this.caller.nid;
+        this.mset({
+          room_id,
+          nid: room_id,
+          hub_id: Visitor.id,
+          drumate_id: this.caller.drumate_id || this.caller.uid,
+        });
         let c = await this.startConnection();
         if (!c) {
           this.defaultState(_a.cancel);
@@ -426,6 +430,14 @@ class __window_connect extends __room {
           this.goodbye();
         }
         break;
+      case "reject":
+        Visitor.muteSound();
+        if (this.caller) {
+          this.beforeLeavingState = _e.reject;
+        }
+        this.goodbye();
+        break;
+
       case _e.cancel:
       case _e.stop:
       case _e.close:

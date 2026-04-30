@@ -49,6 +49,12 @@ class __webrtc_room extends __interact {
   }
 
   /**
+   * Conference rooms don't represent a media path, so skip the
+   * breadcrumb fetch that would 403 on the room's synthetic ids.
+   */
+  updateBreadcrumb() { }
+
+  /**
    *
    */
   failed(message, file) {
@@ -277,12 +283,18 @@ class __webrtc_room extends __interact {
    *
    */
   initCommadPanel(args) {
-    this.__ctrlAudio.el.dataset.muted = 0;
-    this.__ctrlVideo.el.dataset.muted = 0;
-    this.__ctrlScreen.el.dataset.muted = 0;
-    this.__ctrlAudio.setState(1);
-    this.__ctrlAudio.mset(_a.service, _a.settings);
-    this.__ctrlVideo.mset(_a.service, _a.settings);
+    if (this.__ctrlAudio) {
+      this.__ctrlAudio.el.dataset.muted = 0;
+      this.__ctrlAudio.setState(1);
+      this.__ctrlAudio.mset(_a.service, _a.settings);
+    }
+    if (this.__ctrlVideo) {
+      this.__ctrlVideo.el.dataset.muted = 0;
+      this.__ctrlVideo.mset(_a.service, _a.settings);
+    }
+    if (this.__ctrlScreen) {
+      this.__ctrlScreen.el.dataset.muted = 0;
+    }
   }
 
   /**

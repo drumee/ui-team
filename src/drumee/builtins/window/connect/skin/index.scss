@@ -228,6 +228,101 @@
     }
   }
 
+  &__body {
+    position: relative;
+  }
+
+  &__identity {
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 24px 16px 96px;
+    flex: 1;
+    width: 100%;
+  }
+
+  &__caller-name {
+    @include drumee.typo($size: 22px, $line: 30px, $weight: 600, $color: var(--default-text-color));
+    text-align: center;
+    word-break: break-word;
+  }
+
+  &__avatar.user-profile {
+    width: auto;
+    height: auto;
+    position: relative;
+
+    .user-profile__icon {
+      width: 120px;
+      height: 120px;
+    }
+
+    .user-profile__main {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      overflow: hidden;
+      animation: drumee-call-pulse 1.6s ease-in-out infinite;
+    }
+
+    .user-profile__initiales {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+
+      .note-content {
+        font-size: 42px;
+        font-weight: 600;
+      }
+    }
+  }
+
+  @keyframes drumee-call-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(250, 133, 64, 0.45); }
+    50%      { box-shadow: 0 0 0 16px rgba(250, 133, 64, 0); }
+  }
+
+  &__message-container {
+    pointer-events: none;
+    position: absolute;
+    bottom: 92px;
+    left: 0;
+    right: 0;
+    height: auto;
+    margin: 0;
+    z-index: 10;
+
+    .message-text {
+      margin: 0 auto;
+      background-color: var(--default-transparent-black);
+      padding: 6px 14px;
+      border-radius: var(--border-radius);
+      @include drumee.typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 14px);
+    }
+  }
+
+  &__commands-container {
+    bottom: 18px;
+  }
+
+  &__commands {
+    gap: 28px;
+    background-color: transparent !important;
+
+    .ctrl-button {
+      width: 56px;
+      height: 56px;
+      padding: 14px;
+      border-radius: 50%;
+      margin: 0;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
+
   &__main {
     display: grid;
     grid-auto-flow: row;
