@@ -148,3 +148,28 @@
     color: #d74e49;
   }
 }
+
+// ── Dark mode overrides ─────────────────────────────────────────
+html[data-theme="dark"] {
+  .activity-item {
+    &__row:hover {
+      background-color: var(--hover-bg-40);
+    }
+
+    &__text {
+      color: var(--normal-fg-10);
+    }
+
+    &__time {
+      color: var(--normal-fg-50);
+    }
+
+    &__bookmark {
+      color: var(--normal-fg-50);
+    }
+
+    &__badge.mention {
+      border-color: var(--border-muted);
+    }
+  }
+}

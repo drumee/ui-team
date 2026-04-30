@@ -279,7 +279,7 @@
   &__danger {
     &-header {
       align-items: center;
-      gap: var(--spacer-4);
+      gap: 12px;
     }
 
     &-warning {
@@ -297,7 +297,7 @@
         justify-content: center;
 
         svg {
-          width: 16px;
+          width: 14px;
           height: 14px;
           fill: $danger-fg;
 
@@ -309,7 +309,7 @@
 
     &-list {
       width: 100%;
-      gap: var(--spacer-5);
+      gap: 16px;
     }
 
     &-row {
@@ -317,9 +317,9 @@
     }
 
     &-row-delete {
-      background: rgba(246, 80, 74, 0.10);
+      background: rgba(246, 81, 75, 0.10);
 
-      .settings-main__inner-title { color: $ink-900; }
+      .settings-main__inner-title { color: $danger-fg; }
     }
   }
 
@@ -475,8 +475,8 @@
     &[data-state="open"] {
       pointer-events: auto;
       background: rgba(11, 10, 33, 0.40);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
     }
   }
 
@@ -494,5 +494,71 @@
 
     &__profile-body { flex-direction: column; align-items: stretch; }
     &__profile-fields-row { flex-direction: column; }
+  }
+}
+
+// ── Dark mode overrides ─────────────────────────────────────────
+// Remap hardcoded light-mode surfaces and text to theme-aware tokens.
+html[data-theme="dark"] {
+  .settings-main {
+    &__ui {
+      background: var(--normal-bg);
+    }
+
+    &__header-title,
+    &__card-title,
+    &__inner-title {
+      color: var(--normal-fg-10);
+    }
+
+    &__header-subtitle,
+    &__profile-bio-label,
+    &__entry-label,
+    &__inner-description {
+      color: var(--normal-fg-20);
+    }
+
+    &__card-subtitle {
+      color: var(--normal-fg-50);
+    }
+
+    &__profile-avatar-label {
+      color: var(--normal-fg-50);
+    }
+
+    &__profile-avatar-frame {
+      background: var(--normal-bg-80);
+    }
+
+    &__card {
+      background: var(--overlay-bg-05);
+    }
+
+    &__inner {
+      background: var(--normal-bg-elevated);
+    }
+
+    &__profile-bio-input,
+    &__entry-input {
+      background: var(--normal-bg-elevated);
+      color: var(--normal-fg-10);
+
+      input,
+      textarea {
+        color: var(--normal-fg-10);
+      }
+    }
+
+    &__danger-row-delete {
+      background: rgba(246, 81, 75, 0.18);
+
+      .settings-main__inner-title {
+        color: var(--normal-fg-10);
+      }
+    }
+
+    &__toggle {
+      background: var(--normal-bg-40);
+    }
   }
 }

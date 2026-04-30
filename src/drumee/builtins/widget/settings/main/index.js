@@ -1,3 +1,5 @@
+const { uploadFile } = require("@drumee/ui-essentials");
+
 /**
  * Full-area Settings page rendered into the desk main center
  * when the sidebar Settings entry is clicked.
@@ -10,6 +12,8 @@ class settings_main extends LetcBox {
     require("./skin");
     super.initialize(opt);
     this.declareHandlers();
+    // LetcBox auto-binds fetchService/postService but not uploadFile.
+    this.uploadFile = uploadFile.bind(this);
     this.model.set({ hub_id: Visitor.id });
   }
 
@@ -35,19 +39,22 @@ class settings_main extends LetcBox {
    */
   async saveProfile() {
     const data = this.getData();
+    const current = Visitor.profile() || {};
     const profile = {
-      firstname: data.display_name || Visitor.profile().firstname,
-      lastname: Visitor.profile().lastname,
+      firstname: data.display_name || current.firstname,
+      lastname: current.lastname,
       username: data.username,
       bio: data.bio,
     };
-    return this.postService(SERVICE.drumate.update_profile, {
+    // hub_id pins the ACL owner check to the user's personal hub
+    // (acl/drumate.json: scope=hub, src=owner).
+    const res = await this.postService(SERVICE.drumate.update_profile, {
       hub_id: Visitor.id,
       profile,
-    }).then((res) => {
-      if (!res || !res.email) return;
-      Visitor.set({ profile: res });
     });
+    if (!res || res.error) return;
+    Visitor.set({ profile: { ...current, ...res } });
+    this.feed(require("./skeleton").default(this));
   }
 
   /**
@@ -93,10 +100,61 @@ class settings_main extends LetcBox {
    *
    */
   async editPassword() {
-    await Kind.waitFor("settings_account");
+    await Kind.waitFor("settings_change_password");
     return this.ensurePart("overlay").then((p) => {
-      p.feed({ kind: "settings_account" });
+      p.feed({ kind: "settings_change_password", uiHandler: [this] });
     });
+  }
+
+  /**
+   *
+   */
+  closeOverlay() {
+    return this.ensurePart("overlay").then((p) => p.clear());
+  }
+
+  /**
+   *
+   */
+  openAvatarPicker() {
+    return this.ensurePart("fileselector").then((p) => {
+      if (!p || typeof p.open !== "function") return;
+      p.open((e) => {
+        const file = (e && e.target && e.target.files && e.target.files[0]) || null;
+        if (file) this._uploadAvatar(file);
+      });
+    });
+  }
+
+  /**
+   * nid=-2 routes the upload to configure_icon → Generator.create_avatar
+   * via special_file() (server-core utils/mfs.js). nid=-1 would land it
+   * as favicon.<ext>; -3 as something else.
+   */
+  _uploadAvatar(file) {
+    if (!file || !file.type || !file.type.startsWith("image/")) return;
+    const xhr = this.uploadFile(file, { nid: -2, hub_id: Visitor.id });
+    if (!xhr) return;
+    xhr.addEventListener("readystatechange", () => {
+      if (xhr.readyState !== 4) return;
+      if (xhr.status >= 200 && xhr.status < 300) {
+        // Generator.create_avatar runs after the HTTP response is sent,
+        // so wait briefly for the new PNG to land before refetching.
+        setTimeout(() => this._refreshAvatar(), 800);
+      } else {
+        this.alert(LOCALE.AVATAR_UPLOAD_FAILED);
+      }
+    });
+  }
+
+  /**
+   * Visitor.avatar() short-circuits to a stored `http://...` URL when
+   * present (ui-core letc/user.js:604), bypassing mtime. Clear it so
+   * the constructed `<endpoint>/avatar/<id>?ts=<mtime>` URL is used.
+   */
+  _refreshAvatar() {
+    Visitor.set({ avatar: null, mtime: Date.now() });
+    this.feed(require("./skeleton").default(this));
   }
 
   /**
@@ -171,7 +229,7 @@ class settings_main extends LetcBox {
 
       case "edit-avatar":
       case "upload-avatar":
-        return this.ensurePart("avatar-widget").then((p) => p.selectFile());
+        return this.openAvatarPicker();
 
       case "toggle-email-notifications":
         return this.toggleEmailNotifications(cmd);
@@ -202,6 +260,10 @@ class settings_main extends LetcBox {
 
       case "delete-account-download":
         return this.exportDeleteAccountSelection(args);
+
+      case "change-password-cancel":
+      case "change-password-done":
+        return this.closeOverlay();
 
       default:
         return;
