@@ -20,6 +20,10 @@
     right: 0;
     max-width: 850px;
     max-height: 700px;
+
+    &[data-aspect="faded"] {
+      opacity: .45;
+    }
   }
 
   &__main {

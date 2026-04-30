@@ -140,12 +140,22 @@ function chatMessage(pfx, msg) {
 }
 
 function chatPanel(ui, pfx) {
-  const step = {
-    badge_text: 'STEP 2/5',
-    title: 'Chat lives in folder',
-    desc: `Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.`,
-    direction: 'north',
-  };
+  let tooltip = null;
+  if (ui.mget(_a.service)) {
+    const opt = {
+      badge_text: 'STEP 2/5',
+      title: 'Chat lives in folder',
+      desc: `Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.`,
+      direction: 'east',
+    };
+    tooltip = Skeletons.Box.Y({
+      className: `${pfx}__tooltip-anchor`,
+      partHandler: ui,
+      kids: [
+        tooltipBadge(ui, opt),
+      ],
+    })
+  }
 
   return Skeletons.Box.Y({
     className: `${pfx}__chat-panel`,
@@ -156,13 +166,7 @@ function chatPanel(ui, pfx) {
         className: `${pfx}__chat-messages`,
         kids: MESSAGES.map((msg) => chatMessage(pfx, msg)),
       }),
-      Skeletons.Box.Y({
-        className: `${pfx}__tooltip-anchor`,
-        partHandler: ui,
-        kids: [
-          tooltipBadge(ui, { ...step, direction: 'east' }),
-        ],
-      }),
+      tooltip,
       Skeletons.Box.X({
         className: `${pfx}__chat-input-bar`,
         kids: [
@@ -180,8 +184,10 @@ function chatPanel(ui, pfx) {
 // ── Root ─────────────────────────────────────────────────────────────────────
 module.exports = function (ui) {
   const pfx = ui.fig.family;
+  let aspect = ui.mget('aspect') || 'normal'
   return Skeletons.Box.Y({
     className: `${pfx}__main`,
+    dataset: { aspect },
     kids: [
       folderHeader(ui, pfx),
       tabBar(ui, pfx),

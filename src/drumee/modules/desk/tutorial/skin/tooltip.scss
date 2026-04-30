@@ -1,5 +1,8 @@
-.tutorial {
 
+// ── Shared tutorial badge (tutorial__s1-*) ────────────────────────────────
+// The toolkit uses ui.fig.group ("tutorial") as the BEM root for badge
+// elements so all tutorial widgets share these rules.
+.tutorial {
   // ── Step tooltip ──────────────────────────────────────────────────────────
   &__s1-tooltip {
     position: absolute;
