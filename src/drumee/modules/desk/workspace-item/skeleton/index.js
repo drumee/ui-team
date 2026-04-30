@@ -2,13 +2,38 @@
  * Sidebar workpace item (refactored)
  */
 
+const folderIcon = require("../../../../builtins/media/grid/template/folder");
+
+function getFolderIcon(ui, nodeRole, isWorkspace) {
+  const model = ui.model.toJSON();
+  return folderIcon({
+    ...model,
+    filetype: isWorkspace ? _a.hub : _a.folder,
+    role: isWorkspace ? 'desk' : nodeRole,
+    widgetId: ui._id || _.uniqueId('workspace-icon-'),
+    isAttachment: 1,
+  });
+}
+
+function fileIconName(filetype, ext) {
+  if (filetype === _a.image) return 'image';
+  if (filetype === _a.video) return 'video';
+  if (filetype === _a.audio) return 'desktop_musicfile';
+  if (ext === 'pdf') return 'file-pdf';
+  if (filetype === 'markdown' || ext === 'md') return 'markdown';
+  return 'desktop_docfile';
+}
+
 // ---------- Export ----------
 module.exports = function (ui) {
   const fig = ui.fig.family;
   const level = ui.mget("level") || 0;
-  const nodeRole = ui.mget("nodeRole") || (level ? "folder" : "workspace");
+  const isSearchResult = !!ui.mget('result_type');
+  const nodeRole = ui.mget("nodeRole") || (isSearchResult ? "result" : (level ? "folder" : "workspace"));
   const hasChevron = nodeRole === "folder";
   const isWorkspace = nodeRole === "workspace";
+  const filetype = ui.mget(_a.filetype);
+  const isFolderLike = filetype === _a.hub || filetype === _a.folder || isWorkspace || nodeRole === "folder";
 
   return [
     Skeletons.Box.X({
@@ -24,10 +49,13 @@ module.exports = function (ui) {
           uiHandler: [ui],
           bubble: 0,
         }) : null,
-        isWorkspace ? Skeletons.Image.Svg({
-          ico: "dock-folder",
-          className: `${fig}__icon`,
-        }) : null,
+        isFolderLike ? Skeletons.Element({
+          className: `${fig}__icon ${ui.mget(_a.area) || ''}`,
+          content: getFolderIcon(ui, nodeRole, isWorkspace || filetype === _a.hub),
+        }) : Skeletons.Image.Svg({
+          className: `${fig}__icon file ${filetype || ''}`,
+          ico: fileIconName(filetype, ui.mget(_a.ext)),
+        }),
         Skeletons.Note({ className: `${fig}__name`, content: ui.mget(_a.filename) }),
       ],
     }),
