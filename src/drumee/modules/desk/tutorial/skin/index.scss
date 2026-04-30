@@ -1,11 +1,20 @@
 @use "mixins/drumee";
-
+@use "./tooltip.scss";
 // BEM root: .tutorial-main
 // Prefix shorthands used in skeletons:
 //   __sb-*  → sidebar elements
 //   __tb-*  → topbar elements
 
 .tutorial-main {
+  &__wg-content {
+    height: 100%;
+    width: 100%;
+
+    &[data-aspect="faded"] {
+      opacity: .45;
+    }
+  }
+
   &__layout {
     position: relative;
     width: 100%;
@@ -229,6 +238,10 @@
     flex: 1;
   }
 
+  &__content {
+    flex: 1;
+  }
+
   // ── Topbar ────────────────────────────────────────────────────────────────
   &__tb-topbar {
     width: 100%;
@@ -272,7 +285,7 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       display: inline-flex;
       align-items: center;
     }
@@ -343,7 +356,7 @@
     width: 100%;
     box-sizing: border-box;
 
-    > * {
+    >* {
       display: inline-flex;
       align-items: center;
     }
@@ -375,11 +388,30 @@
       align-items: center;
     }
 
-    &.ico-workspace svg { fill: #5950ff; color: #5950ff; }
-    &.ico-note svg { fill: #e8a13b; color: #e8a13b; }
-    &.ico-document svg { fill: #847eff; color: #847eff; }
-    &.ico-spreadsheet svg { fill: #54b684; color: #54b684; }
-    &.ico-presentation svg { fill: #ffa8dc; color: #ffa8dc; }
+    &.ico-workspace svg {
+      fill: #5950ff;
+      color: #5950ff;
+    }
+
+    &.ico-note svg {
+      fill: #e8a13b;
+      color: #e8a13b;
+    }
+
+    &.ico-document svg {
+      fill: #847eff;
+      color: #847eff;
+    }
+
+    &.ico-spreadsheet svg {
+      fill: #54b684;
+      color: #54b684;
+    }
+
+    &.ico-presentation svg {
+      fill: #ffa8dc;
+      color: #ffa8dc;
+    }
   }
 
   &__tb-upload-btn {
@@ -394,7 +426,7 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       display: inline-flex;
       align-items: center;
     }

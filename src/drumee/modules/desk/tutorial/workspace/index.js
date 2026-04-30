@@ -7,12 +7,12 @@ const BADGES = [
     desc: 'Only you and specified collaborators can see its contents on the desk.',
   },
   {
-    badge_text: 'STEP 2/5',
+    badge_text: 'STEP 1/5',
     title: 'This is Restricted share',
     desc: 'Reserved only for specifically designated people.',
   },
   {
-    badge_text: 'STEP 3/5',
+    badge_text: 'STEP 1/5',
     title: 'This is Link share',
     desc: 'Allowing anyone with the link to access it, allowing guests to view the folder structure and chat without logging in.',
   },
@@ -67,7 +67,6 @@ class __tutorial_workspace extends LetcBox {
       case 'next-step':
         const max = BADGES.length - 1;
         this._stepIndex = this._stepIndex + 1;
-        this.debug("AAAA:60", this._stepIndex, max, (this._stepIndex > max));
         if (this._stepIndex > max) {
           this._stepIndex = -1;
           return this.triggerHandlers()

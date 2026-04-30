@@ -1,65 +1,4 @@
-@use 'mixins/drumee';
-
-.tutorial-workspace {
-  &__ui {
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  &__main {
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  // ── Workspace grid ────────────────────────────────────────────────────────
-  &__wg-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 32px 24px;
-  }
-
-  &__wg-grid {
-    flex-wrap: wrap;
-    gap: 24px;
-    pointer-events: none;
-  }
-
-  &__wg-card {
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-
-    &[data-state="0"] {
-      opacity: 0.45;
-    }
-  }
-
-  &__wg-label {
-    font-family: var(--font-main);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--normal-fg);
-    max-width: 140px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: center;
-  }
-
-  // ── Overlay ───────────────────────────────────────────────────────────────
-  &__overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 50;
-    overflow: visible;
-  }
+.tutorial {
 
   // ── Step tooltip ──────────────────────────────────────────────────────────
   &__s1-tooltip {
@@ -183,4 +122,5 @@
       background: #6558d6;
     }
   }
+
 }

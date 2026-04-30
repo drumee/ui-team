@@ -8,7 +8,13 @@ module.exports = function (ui) {
         className: `${fig}__main`,
         kids: [
           require('./topbar')(ui),
-          { kind: 'tutorial_workspace', service: "next-step", uiHandler: [ui] },
+          Skeletons.Box.Y({
+            className: `${fig}__content`,
+            sys_pn: _a.content,
+            kids: [
+              { kind: 'tutorial_workspace', service: "next-step", uiHandler: [ui] },
+            ]
+          })
         ],
       }),
     ],
