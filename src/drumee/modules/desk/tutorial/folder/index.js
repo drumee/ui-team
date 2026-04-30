@@ -1,4 +1,4 @@
-const { tooltipBadge, folder } = require('../skeleton/toolkit');
+const { tooltipBadge, folder, chatPanel } = require('../skeleton/toolkit');
 
 const BADGES = [
   {
@@ -19,7 +19,11 @@ class __tutorial_folder extends LetcBox {
   }
 
   onDomRefresh() {
-    this.feed(folder(this));
+    if (this.mget(_a.service)) {
+      this.feed(folder(this, chatPanel));
+    } else {
+      this.feed(folder(this));
+    }
   }
 
   onPartReady(child, pn) {

@@ -113,7 +113,7 @@ export function workspaceCard(ui, ws, index) {
   const isFirst = index === 0;
 
   return Skeletons.Box.Y({
-    className: `${p}-card`,
+    className: `${p}-card ${ ui.fig.group}__grid-folder`,
     sys_pn: `workspace-card-${index}`,
     partHandler: [ui],
     radio: `${ui._id}-badge`,

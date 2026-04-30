@@ -17,6 +17,10 @@ class tutorial_main extends LetcBox {
         { kind: 'tutorial_folder', aspect: "faded" },
         { kind: 'tutorial_settings', service: "next-step", uiHandler: [this] }
       ],
+      [
+        workspaceContent(this, { aspect: "faded" }),
+        { kind: 'tutorial_meeting', service: "next-step", uiHandler: [this] },
+      ],
     ];
 
   }

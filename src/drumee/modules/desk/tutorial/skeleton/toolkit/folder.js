@@ -6,17 +6,17 @@ const SUB_FOLDERS = [
 ];
 
 const FILES = [
-  { name: 'spec_v2.docx',   date: 'Oct 12, 2023', ico: 'addmenu-document' },
-  { name: 'spec_v2.pdf',    date: 'Oct 12, 2023', ico: 'file-pdf' },
-  { name: 'note',           date: 'Oct 12, 2023', ico: 'addmenu-note' },
+  { name: 'spec_v2.docx', date: 'Oct 12, 2023', ico: 'addmenu-document' },
+  { name: 'spec_v2.pdf', date: 'Oct 12, 2023', ico: 'file-pdf' },
+  { name: 'note', date: 'Oct 12, 2023', ico: 'addmenu-note' },
   { name: 'bg_concept.png', date: 'Oct 12, 2023', ico: 'image' },
 ];
 
 const MESSAGES = [
-  { sender: null,       text: '/bg_concept.png',                                                            time: null },
-  { sender: 'me',       text: "Did everyone see /bg_concept.png? I've updated the core requirements.",      time: '11:42 AM' },
-  { sender: 'Sarah K.', text: 'Please check the /bg_concept.png for the latest revisions.',                 time: '11:53 AM' },
-  { sender: 'me',       text: '/bg_concept.png @Sarah hello',                                               time: '11:42 AM' },
+  { sender: null, text: '/bg_concept.png', time: null },
+  { sender: 'me', text: "Did everyone see /bg_concept.png? I've updated the core requirements.", time: '11:42 AM' },
+  { sender: 'Sarah K.', text: 'Please check the /bg_concept.png for the latest revisions.', time: '11:53 AM' },
+  { sender: 'me', text: '/bg_concept.png @Sarah hello', time: '11:42 AM' },
 ];
 
 // ── Folder header bar ─────────────────────────────────────────────────────────
@@ -41,9 +41,9 @@ function folderHeader(ui, pfx) {
         className: `${pfx}__header-actions`,
         kids: [
           Skeletons.Button.Label({ ico: 'desktop_upload', className: `${pfx}__header-upload`, label: LOCALE.UPLOAD }),
-          Skeletons.Button.Label({ ico: 'topbar-add',     className: `${pfx}__header-add`,    label: LOCALE.ADD_NEW || 'Add new' }),
-          Skeletons.Button.Svg({  ico: 'apps-gear',       className: `${pfx}__header-settings` }),
-          Skeletons.Button.Svg({  ico: 'cross',           className: `${pfx}__header-close` }),
+          Skeletons.Button.Label({ ico: 'topbar-add', className: `${pfx}__header-add`, label: LOCALE.ADD_NEW || 'Add new' }),
+          Skeletons.Button.Svg({ ico: 'apps-gear', className: `${pfx}__header-settings` }),
+          Skeletons.Button.Svg({ ico: 'cross', className: `${pfx}__header-close` }),
         ],
       }),
     ],
@@ -56,8 +56,8 @@ function tabBar(ui, pfx) {
     className: `${pfx}__tabs`,
     kids: [
       Skeletons.Button.Label({ ico: 'apps-folder-card', className: `${pfx}__tab active`, label: LOCALE.FILES || 'Files' }),
-      Skeletons.Button.Label({ ico: 'apps-chat',        className: `${pfx}__tab`,        label: LOCALE.CHAT  || 'Chat' }),
-      Skeletons.Button.Label({ ico: 'checkbox',         className: `${pfx}__tab`,        label: LOCALE.TASKS || 'Tasks' }),
+      Skeletons.Button.Label({ ico: 'apps-chat', className: `${pfx}__tab`, label: LOCALE.CHAT || 'Chat' }),
+      Skeletons.Button.Label({ ico: 'checkbox', className: `${pfx}__tab`, label: LOCALE.TASKS || 'Tasks' }),
     ],
   });
 }
@@ -77,7 +77,8 @@ function typeFilter(ui, pfx) {
 }
 
 // ── File grid ─────────────────────────────────────────────────────────────────
-function folderItem(ui, pfx, name) {
+export function folderItem(ui, name) {
+  let pfx = ui.fig.group
   return Skeletons.Box.Y({
     className: `${pfx}__grid-folder`,
     kids: [
@@ -109,8 +110,8 @@ function filesPanel(ui, pfx) {
       Skeletons.Box.G({
         className: `${pfx}__grid`,
         kids: [
-          ...SUB_FOLDERS.map((name) => folderItem(ui, pfx, name)),
-          ...FILES.map((f)           => fileItem(ui, pfx, f)),
+          ...SUB_FOLDERS.map((name) => folderItem(ui, name)),
+          ...FILES.map((f) => fileItem(ui, pfx, f)),
         ],
       }),
     ],
@@ -126,17 +127,17 @@ export function chatMessage(pfx, msg) {
     return Skeletons.Box.Y({
       className: `${pfx}__chat-msg sent`,
       kids: [
-        Skeletons.Note({ className: `${pfx}__chat-bubble sent`,  content: msg.text }),
-        Skeletons.Note({ className: `${pfx}__chat-time`,         content: msg.time }),
+        Skeletons.Note({ className: `${pfx}__chat-bubble sent`, content: msg.text }),
+        Skeletons.Note({ className: `${pfx}__chat-time`, content: msg.time }),
       ],
     });
   }
   return Skeletons.Box.Y({
     className: `${pfx}__chat-msg received`,
     kids: [
-      Skeletons.Note({ className: `${pfx}__chat-sender`,         content: msg.sender }),
+      Skeletons.Note({ className: `${pfx}__chat-sender`, content: msg.sender }),
       Skeletons.Note({ className: `${pfx}__chat-bubble received`, content: msg.text }),
-      Skeletons.Note({ className: `${pfx}__chat-time`,            content: msg.time }),
+      Skeletons.Note({ className: `${pfx}__chat-time`, content: msg.time }),
     ],
   });
 }
@@ -182,7 +183,7 @@ export function chatPanel(ui, pfx) {
 }
 
 // ── Folder root view ──────────────────────────────────────────────────────────
-export function folder(ui) {
+export function folder(ui, rightPanel) {
   const pfx = ui.fig.family;
   const aspect = ui.mget('aspect') || 'normal';
   return Skeletons.Box.Y({
@@ -195,7 +196,7 @@ export function folder(ui) {
         className: `${pfx}__content`,
         kids: [
           filesPanel(ui, pfx),
-          chatPanel(ui, pfx),
+          rightPanel ? rightPanel(ui, pfx) : null,
         ],
       }),
     ],
