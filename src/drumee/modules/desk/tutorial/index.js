@@ -13,7 +13,13 @@ class tutorial_main extends LetcBox {
 
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
+    this.debug("NEXT", service)
     switch (service) {
+      case 'next-step':
+        break;
+      case 'skip-tour':
+        this.ensurePart('overlay').then((overlay) => overlay.feed(null));
+        break;
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);
     }

@@ -1,4 +1,4 @@
-const badge = require('../skeleton/toolkit/badge');
+const { tooltipBadge } = require('../skeleton/toolkit');
 
 const BADGES = [
   {
@@ -58,15 +58,20 @@ class __tutorial_workspace extends LetcBox {
     };
     card.setState(1);
     card.triggerMethod("also:click") // Propagate state to the others
-    this.debug("AAAA:60", card)
-    overlay.feed(badge(this, data));
+    overlay.feed(tooltipBadge(this, data));
   }
 
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case 'next-step':
-        this._stepIndex = Math.min(this._stepIndex + 1, BADGES.length - 1);
+        const max = BADGES.length - 1;
+        this._stepIndex = this._stepIndex + 1;
+        this.debug("AAAA:60", this._stepIndex, max, (this._stepIndex > max));
+        if (this._stepIndex > max) {
+          this._stepIndex = -1;
+          return this.triggerHandlers()
+        }
         this._showBadge();
         break;
       case 'skip-tour':

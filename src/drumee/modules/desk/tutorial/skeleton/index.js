@@ -8,7 +8,7 @@ module.exports = function (ui) {
         className: `${fig}__main`,
         kids: [
           require('./topbar')(ui),
-          { kind: 'tutorial_workspace' },
+          { kind: 'tutorial_workspace', service: "next-step", uiHandler: [ui] },
         ],
       }),
     ],
