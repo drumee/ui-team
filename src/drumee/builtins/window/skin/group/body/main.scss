@@ -202,57 +202,6 @@
         width: 100%;
       }
 
-      // Popup folder windows only (not workspace manager grid)
-      &:not(.window-manager__icons-scroll):has(.folder-section) {
-        .folder-section,
-        .file-section {
-          padding: 16px 24px 8px;
-          gap: 16px;
-        }
-
-        .folder-section {
-          grid-template-rows: repeat(2, 95px);
-          grid-auto-columns: 85px;
-
-          .media-grid__content.folder,
-          .media-grid__content.hub {
-            .folder-shape {
-              width: 73%;
-              height: 70%;
-            }
-
-            .badge {
-              width: 26px;
-              height: 22px;
-              bottom: 30px;
-              left: 6px;
-            }
-
-            .media-context-menu__folder-trigger {
-              right: 20px;
-              bottom: 34px;
-            }
-          }
-        }
-
-        .file-section {
-          grid-template-columns: repeat(auto-fill, 85px);
-          grid-auto-rows: 115px;
-          overflow: visible;
-          flex: 1 1 auto;
-
-          .media-grid__content {
-            .preview-container {
-              height: 83px;
-            }
-
-            .preview-icon {
-              width: 42px;
-              height: 42px;
-            }
-          }
-        }
-      }
     }
   }
 }
