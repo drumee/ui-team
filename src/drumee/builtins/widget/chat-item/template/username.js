@@ -1,16 +1,31 @@
-
+// ==================================================================== *
 const { colorFromName } = require("@drumee/ui-essentials");
+const __chat_item_username = function(m) {
+  const e = m.entity || m;
+  const lastname = e.lastname || m.lastname || '';
+  const surname = e.surname || m.surname || '';
+  const firstname = e.firstname || m.firstname || surname || '';
+  const safeText = (value) => String(value || '').replace(/[&<>'"]/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;',
+  }[char]));
+  const nonEmail = (value) => value && !String(value).includes('@') ? value : '';
+  const displayName = `${firstname} ${lastname}`.trim() || nonEmail(e.fullname) || nonEmail(m.fullname) || nonEmail(e.name) || nonEmail(m.name);
+  const fullname = displayName || e.email || m.email || e.mail || m.mail || m.author_id || '';
+  const safeName = safeText(fullname);
+  const color = colorFromName(fullname || 'user');
+  const html = `<div class="${m.fig}__username-container ${m.author}">
+    <div class="${m.fig}__username-content" style="color:${color};">
+      ${safeName}
+    </div>
+  </div>`;
 
-module.exports = function(m) {
-    let e = m.entity || m;
-    let lastname = e.lastname || '';
-    let surname  = e.surname || ''
-    let firstname = e.firstname || surname || '';
-    let fullname = surname || firstname + ' ' + lastname;
-    let color = colorFromName(fullname);
+  return html;
+};
 
-  return `<div style="color:${color};" class="${m.fig}__message-username other">${firstname}</div>`;
-
-}
+module.exports = __chat_item_username;
 
 
