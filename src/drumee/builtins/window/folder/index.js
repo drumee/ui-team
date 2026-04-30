@@ -1,6 +1,6 @@
 const mfsInteract = require("../interact");
 
-const { folderFilesView, folderChatView, filePartitionView } = require("../skeleton/toolkit");
+const { folderFilesView, folderChatView } = require("../skeleton/toolkit");
 
 require("./skin");
 
@@ -10,7 +10,6 @@ class __window_folder extends mfsInteract {
     super(...args);
     this.onChildBubble = this.onChildBubble.bind(this);
     this.onSearchEvent = this.onSearchEvent.bind(this);
-    this._partitionFed = false;
   }
 
   /**
@@ -44,23 +43,15 @@ class __window_folder extends mfsInteract {
   }
 
   /**
-   * Override buildContent to inject partition skeleton into the files-panel
-   * instead of the standard grid/row loader. Bypasses loadContent's grid feed.
-   * `child.once` prevents listener stacking on re-mounts (subfolder navigation).
+   * Folder files-panel mounts its partition lists directly from filesContainer.
+   * buildContent only wires interaction setup; relying on `_e.show` to feed the
+   * lists made the Files tab render an empty panel after tab re-feeds.
    */
   buildContent(child) {
     this.__content = child;
-    this._partitionFed = false;
     this.setupInteract();
     if (!this._raised) this.raise();
-
-    child.once(_e.show, () => {
-      if (!this._partitionFed) {
-        this._partitionFed = true;
-        child.feed(filePartitionView(this));
-      }
-      if (this.media && this.media.wait) this.media.wait(0);
-    });
+    if (this.media && this.media.wait) this.media.wait(0);
   }
 
   /**

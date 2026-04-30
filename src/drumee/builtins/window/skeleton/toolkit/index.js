@@ -260,11 +260,15 @@ export function chatPanel(ui) {
  * @returns
  */
 export function filesContainer(ui) {
-  return Skeletons.Box.Y({
+  const opt = {
     className: `${ui.fig.family}__files-panel ${ui.fig.group}__files-panel`,
     sys_pn: _a.content,
     type: _a.type,
-  });
+  };
+  if (ui.fig.family === "window-folder") {
+    opt.kids = [filePartitionView(ui)];
+  }
+  return Skeletons.Box.Y(opt);
 }
 
 /**
