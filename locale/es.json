@@ -394,5 +394,6 @@
   "PUBLIC_LINK": "Enlace público",
   "ACCESS_LEVEL": "Nivel de acceso",
   "JOIN_WORKSPACE": "Unirse al espacio",
-  "SHARED_BY_LINK": "Compartido por enlace"
+  "SHARED_BY_LINK": "Compartido por enlace",
+  "SKIP_TOUR": "Saltar el recorrido"
 }

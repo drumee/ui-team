@@ -1,0 +1,140 @@
+
+// ── Shared tutorial badge (tutorial__s1-*) ────────────────────────────────
+// The toolkit uses ui.fig.group ("tutorial") as the BEM root for badge
+// elements so all tutorial widgets share these rules.
+.tutorial {
+  // ── Step tooltip ──────────────────────────────────────────────────────────
+  &__s1-tooltip {
+    position: absolute;
+    transform: translateX(-50%);
+    align-items: center;
+    pointer-events: all;
+    z-index: 51;
+
+    &[data-direction="east"],
+    &[data-direction="west"] {
+      transform: translateY(-50%);
+    }
+  }
+
+  &__s1-connector {
+    align-items: center;
+  }
+
+  &__s1-connector-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #7b6ef0;
+    flex-shrink: 0;
+  }
+
+  &__s1-connector-line {
+    width: 2px;
+    height: 22px;
+    background: #7b6ef0;
+    flex-shrink: 0;
+
+    &[data-direction="east"],
+    &[data-direction="west"] {
+      width: 22px;
+      height: 2px;
+    }
+  }
+
+  &__s1-card {
+    width: 284px;
+    background: #f4f4f8;
+    border-radius: 16px;
+    padding: 24px;
+    gap: 14px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+    border: 1px solid var(--border-muted);
+  }
+
+  &__s1-badge {
+    align-items: center;
+    gap: 6px;
+    background: #e8e5fa;
+    border-radius: 99px;
+    padding: 4px 10px 4px 8px;
+    align-self: flex-start;
+  }
+
+  &__s1-badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #7b6ef0;
+    flex-shrink: 0;
+  }
+
+  &__s1-badge-text {
+    font-family: var(--font-main);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #7b6ef0;
+  }
+
+  &__s1-title {
+    font-family: var(--font-main);
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.25;
+  }
+
+  &__s1-desc {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 400;
+    color: #5a5a72;
+    line-height: 1.55;
+  }
+
+  &__s1-footer {
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+
+  &__s1-skip {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 500;
+    color: #5a5a72;
+    cursor: pointer;
+
+    &:hover {
+      color: #1a1a2e;
+    }
+  }
+
+  &__s1-next {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: #7b6ef0;
+    border-radius: 8px;
+    padding: 8px 18px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: #6558d6;
+    }
+  }
+  
+  &__tooltip-anchor {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    overflow: visible;
+    width: 0;
+    height: 0;
+  }
+
+}

@@ -1,0 +1,492 @@
+@use 'mixins/drumee';
+
+// BEM root: .tutorial-folder
+// Prefix shorthands used in skeleton:
+//   __header-*   → folder title bar
+//   __tabs / __tab → tab strip
+//   __filter-*   → type filter bar
+//   __grid-*     → file / folder grid
+//   __chat-*     → team-chat panel
+//   __s1-*       → tooltip badge (duplicated from tutorial-workspace)
+
+.tutorial-folder {
+
+  &__ui {
+    position: absolute;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    right: 0;
+    max-width: 850px;
+   max-height: 620px;
+    transform: translate(-50%, -50%);
+    top: 50%;
+    left: 50%;
+    border: 1px solid var(--neutral-300);
+    border-radius: var(--corner-radius-5);
+
+    &[data-aspect="faded"] {
+      opacity: .45;
+    }
+  }
+
+  &__main {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  // ── Folder header bar ───────────────────────────────────────────────────────
+  &__header {
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    padding:var(--spacer-4) var(--spacer-6);
+    background: var(--normal-bg-90);
+    border-bottom: 1px solid var(--border-muted);
+    flex-shrink: 0;
+    border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
+  }
+
+  &__header-left {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__header-icon {
+    width: 22px;
+    height: 22px;
+    color: var(--share-color, #ff8080);
+    flex-shrink: 0;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__header-name {
+    font-family: var(--font-main);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__header-restricted {
+    font-family: var(--font-main);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--error, #ff453a);
+    background: rgba(255, 69, 58, 0.10);
+    border: 1px solid rgba(255, 69, 58, 0.25);
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+
+  &__header-actions {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__header-upload {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    height: 28px;
+    padding: 0 13px;
+    gap: 6px;
+    background: var(--white);
+    border-radius: 4px;
+    align-items: center !important;
+    cursor: pointer;
+    flex-shrink: 0;
+    border: 1px solid var(--border-muted);
+
+    svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--normal-fg);
+    }
+
+    span.label,
+    section.label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--normal-fg);
+      white-space: nowrap;
+    }
+
+    &:hover {
+      background: var(--normal-bg-80);
+    }
+  }
+
+  &__header-add {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    height: 28px;
+    padding: 0 12px;
+    gap: 6px;
+    background: #b1adff;
+    border-radius: 4px;
+    align-items: center !important;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: #0b0a21;
+    }
+
+    span.label,
+    section.label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0b0a21;
+      white-space: nowrap;
+    }
+
+    &:hover {
+      background: #9e99f5;
+    }
+  }
+
+  &__header-settings,
+  &__header-close {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    border-radius: 4px;
+    color: var(--normal-fg-50);
+    flex-shrink: 0;
+    cursor: pointer;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    &:hover {
+      background: var(--hover-bg-40);
+      color: var(--normal-fg);
+    }
+  }
+
+  // ── Tab bar ─────────────────────────────────────────────────────────────────
+  &__tabs {
+    width: 100%;
+    height: 40px;
+    align-items: center;
+    padding: 0 16px;
+    gap: 4px;
+    border-bottom: 1px solid var(--border-muted);
+    flex-shrink: 0;
+    background: var(--normal-bg);
+  }
+
+  &__tab {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    height: 40px;
+    padding: 0 12px;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-50);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    box-sizing: border-box;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    span.label,
+    section.label {
+      font-size: 13px;
+      font-weight: 500;
+      color: inherit;
+    }
+
+    &.active {
+      color: var(--primary-50, #5950ff);
+      border-bottom-color: var(--primary-50, #5950ff);
+      font-weight: 600;
+    }
+
+    &:hover:not(.active) {
+      color: var(--normal-fg);
+      background: var(--hover-bg-40);
+    }
+  }
+
+  // ── Main content split ───────────────────────────────────────────────────────
+  &__content {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+  }
+
+  // ── Files panel ─────────────────────────────────────────────────────────────
+  &__files {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  // ── Type filter bar ──────────────────────────────────────────────────────────
+  &__filter {
+    align-items: center;
+    gap: 4px;
+    padding: 8px 24px 0;
+    border-bottom: 1px solid var(--border-muted);
+    flex-shrink: 0;
+    background-color: var(--normal-bg);
+  }
+
+  &__filter-item {
+    padding: 6px 12px;
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-50);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    box-sizing: border-box;
+
+    &.active {
+      color: var(--primary-50, #5950ff);
+      border-bottom-color: var(--primary-50, #5950ff);
+      font-weight: 600;
+    }
+
+    &:hover:not(.active) {
+      color: var(--normal-fg);
+    }
+  }
+
+  // ── File / folder grid ───────────────────────────────────────────────────────
+  &__grid {
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    align-content: flex-start;
+    pointer-events: none;
+    grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+    grid-auto-rows: var(--grid-cell-h-folder);
+    overflow: visible;
+  }
+
+  &__grid-folder {
+    align-items: center;
+    gap: 8px;
+    width: 110px;
+    cursor: pointer;
+    opacity: 0.55;
+  }
+
+  &__grid-folder-name {
+    font-family: var(--font-main);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--normal-fg);
+    max-width: 110px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+  }
+
+  &__grid-file {
+    align-items: center;
+    gap: 6px;
+    width: 110px;
+    cursor: pointer;
+    opacity: 0.55;
+  }
+
+  &__grid-file-icon-wrap {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    background: var(--normal-bg-90);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__grid-file-icon {
+    width: 40px;
+    height: 40px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__grid-file-name {
+    font-family: var(--font-main);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--normal-fg);
+    max-width: 110px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+  }
+
+  &__grid-file-date {
+    font-family: var(--font-main);
+    font-size: 10px;
+    color: var(--normal-fg-50);
+    text-align: center;
+  }
+
+  // ── Chat panel ───────────────────────────────────────────────────────────────
+  &__chat-panel {
+    width: 260px;
+    min-width: 260px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border-muted);
+    background: var(--normal-bg);
+  }
+
+  &__chat-header {
+    padding: 14px 16px;
+    font-family: "Geist Mono", monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--normal-fg-50);
+    border-bottom: 1px solid var(--border-muted);
+    flex-shrink: 0;
+  }
+
+  &__chat-messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px 12px;
+    gap: 10px;
+  }
+
+  &__chat-link {
+    align-self: center;
+    font-family: var(--font-main);
+    font-size: 12px;
+    color: var(--normal-fg-30);
+    background: var(--normal-bg-90);
+    border-radius: 8px;
+    padding: 4px 10px;
+    text-align: center;
+  }
+
+  &__chat-msg {
+    gap: 3px;
+
+    &.sent {
+      align-items: flex-end;
+    }
+
+    &.received {
+      align-items: flex-start;
+    }
+  }
+
+  &__chat-sender {
+    font-family: var(--font-main);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--normal-fg-50);
+    padding: 0 4px;
+  }
+
+  &__chat-bubble {
+    max-width: 210px;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-family: var(--font-main);
+    font-size: 13px;
+    line-height: 1.45;
+    word-break: break-word;
+
+    &.sent {
+      background: var(--error, #ff453a);
+      color: #fff;
+      border-bottom-right-radius: 3px;
+    }
+
+    &.received {
+      background: var(--normal-bg-90, #f2f2f7);
+      color: var(--normal-fg);
+      border-bottom-left-radius: 3px;
+    }
+  }
+
+  &__chat-time {
+    font-family: var(--font-main);
+    font-size: 10px;
+    color: var(--normal-fg-30);
+    padding: 0 4px;
+  }
+
+  &__chat-input-bar {
+    height: 48px;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    border-top: 1px solid var(--border-muted);
+    flex-shrink: 0;
+  }
+
+  &__chat-input-placeholder {
+    flex: 1;
+    font-family: var(--font-main);
+    font-size: 13px;
+    color: var(--normal-fg-30);
+  }
+
+  &__chat-send {
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    color: var(--primary-50, #5950ff);
+    flex-shrink: 0;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  // ── tooltip anchor ──────────────────────────────────────────────────────────────────
+  &__tooltip-anchor {
+    // position: absolute;
+    // inset: 0;
+    // pointer-events: none;
+    // z-index: 50;
+    // overflow: visible;
+    // width: 0;
+    // height: 0;
+    top: 100px;
+    left: -313px;
+  }
+
+}
+

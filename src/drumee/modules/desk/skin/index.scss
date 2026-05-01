@@ -43,6 +43,13 @@ html {
     overflow: visible;
   }
 
+  &__overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 10010;
+  }
+
   &__panel-inner {
     position: absolute;
     width: 0;
@@ -84,7 +91,7 @@ html {
     isolation: isolate;
     pointer-events: none;
 
-    > * {
+    >* {
       pointer-events: auto;
     }
 

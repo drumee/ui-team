@@ -119,6 +119,24 @@ module.exports = {
   dmz_window_manager: function () {
     return import("./modules/dmz/wm");
   },
+  desk_tutorial: function () {
+    return import("./modules/desk/tutorial");
+  },
+  tutorial_workspace: function () {
+    return import("./modules/desk/tutorial/workspace");
+  },
+  tutorial_folder: function () {
+    return import("./modules/desk/tutorial/folder");
+  },
+  tutorial_task: function () {
+    return import("./modules/desk/tutorial/task");
+  },
+  tutorial_meeting: function () {
+    return import("./modules/desk/tutorial/meeting");
+  },
+  tutorial_settings: function () {
+    return import("./modules/desk/tutorial/settings");
+  },
   desk_breadcrumb: function () {
     return import("./modules/desk/breadcrumb");
   },

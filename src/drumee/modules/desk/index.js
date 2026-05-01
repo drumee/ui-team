@@ -279,8 +279,11 @@ class desk_module extends LetcBox {
       //   };
       //   return child.on(_e.done, () => setTimeout(f, 5000));
 
-      // case "menu-settings":
-      //   return child.on(_e.open, this.refreshContextMenu);
+      case "overlay":
+        if (Visitor.parseModuleArgs().tutorial) {
+          setTimeout(() => { this._showTutorial() }, 2000)
+        }
+        return
     }
   }
 
@@ -342,6 +345,10 @@ class desk_module extends LetcBox {
   _dragLeave(e, ui) {
     Wm.el.dataset.selected = _a.off;
   }
+
+  /**
+   * 
+   */
   _loadOnboarding() {
     Kind.loadPlugin({ name: "onboarding", kind: "onboarding" })
       .then(async () => {
@@ -359,6 +366,15 @@ class desk_module extends LetcBox {
         this.warn("Failed to load onboarding plugin. switching to default", e);
         this.loadDefault();
       });
+  }
+
+  /**
+   * 
+   */
+  _showTutorial() {
+    this.ensurePart('overlay').then((p) => {
+      p.feed({ kind: 'desk_tutorial' })
+    })
   }
 
   /**
@@ -381,6 +397,7 @@ class desk_module extends LetcBox {
       return this.loadDefault();
     }
     this._loadOnboarding();
+
   }
 
   /**
@@ -727,7 +744,7 @@ class desk_module extends LetcBox {
         document.documentElement.dataset.theme = next;
         try {
           localStorage.setItem("drumee.theme", next);
-        } catch (e) {}
+        } catch (e) { }
         const wp = { ...(Visitor.wallpaper() || {}), theme: next };
         if (typeof Visitor.setWallpaper === "function")
           Visitor.setWallpaper(wp);

@@ -1,0 +1,93 @@
+  // ── Shared tutorial badge (tutorial__s1-*) ────────────────────────────────
+  // The toolkit uses ui.fig.group ("tutorial") as the BEM root for badge
+  // elements so all tutorial widgets share these rules.
+  .tutorial {
+    &__grid {
+      flex-wrap: wrap;
+      gap: 24px;
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+      align-content: flex-start;
+      pointer-events: none;
+      grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+      grid-auto-rows: var(--grid-cell-h-folder);
+      overflow: visible;
+    }
+
+    &__grid-folder {
+      align-items: center;
+      gap: 8px;
+      width: 110px;
+      cursor: pointer;
+      opacity: 0.55;
+
+      &[data-state="0"] {
+        opacity: 0.45;
+      }
+
+      &[data-state="1"] {
+        opacity: 1;
+      }
+    }
+
+    &__grid-folder-name {
+      font-family: var(--font-main);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--normal-fg);
+      max-width: 110px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+    }
+
+    &__grid-file {
+      align-items: center;
+      gap: 6px;
+      width: 110px;
+      cursor: pointer;
+      opacity: 0.55;
+    }
+
+    &__grid-file-icon-wrap {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      background: var(--normal-bg-90);
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    &__grid-file-icon {
+      width: 40px;
+      height: 40px;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    &__grid-file-name {
+      font-family: var(--font-main);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--normal-fg);
+      max-width: 110px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+    }
+
+    &__grid-file-date {
+      font-family: var(--font-main);
+      font-size: 10px;
+      color: var(--normal-fg-50);
+      text-align: center;
+    }
+  }
