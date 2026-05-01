@@ -507,6 +507,9 @@ module.exports = {
   window_info: function () {
     return import("./builtins/window/info");
   },
+  window_move: function () {
+    return import("./builtins/window/move/move-window");
+  },
   window_launcher: function () {
     return import("./builtins/window/launcher");
   },
