@@ -348,6 +348,17 @@ class __lib_messenger extends LetcBox {
     return result.trim();
   }
 
+  getMentionUserIds() {
+    const content = this.__content;
+    if (!content || !content.content) return [];
+    const ids = [];
+    for (const node of content.content.querySelectorAll('.user-mention')) {
+      const id = node.dataset.drumate_id;
+      if (id && !ids.includes(id)) ids.push(id);
+    }
+    return ids;
+  }
+
   /**
    *
    * @returns

@@ -11,7 +11,7 @@ module.exports = function (ui) {
     body = require('./call-stat')(m)
   } else {
     body = require('./conversation')(m);
-    if (m.author != _a.me) {
+    if (m.author != _a.me && m.type == _a.share) {
       let uname = require('./username')(m);
       body = `${uname}${body}`;
     }

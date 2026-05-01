@@ -103,16 +103,8 @@ class ___widget_chatcontactItem extends LetcBox {
    * 
    */
   updateNotification() {
-    let count = this.mget("room_count") || 0;
-    if (count > 99) {
-      count = "99+";
-    }
-    this.__counter.set({ content: count });
-    if (count === 0) {
-      this.__counter.el.hide();
-    } else {
-      this.__counter.el.show();
-    }
+    const count = ~~(this.mget("room_count") || 0);
+    this.__counter.el.dataset.state = count ? _a.open : _a.closed;
 
     this.trigger(_e.update);
   }

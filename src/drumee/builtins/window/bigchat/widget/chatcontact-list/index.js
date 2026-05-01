@@ -39,7 +39,7 @@ class ___widget_chatcontactList extends LetcBox {
         };
 
         this.__listContacts.collection.on('change:room_count', (model, data) => {
-          const count = this.__listContacts.collection.filter(r => r.get('room_count')).length;
+          const count = this.__listContacts.collection.filter(r => ~~r.get('room_count')).length;
           return this.trigger('change:room_count', count);
         });
         return child.on(EOD, () => {

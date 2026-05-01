@@ -283,6 +283,13 @@ class __panel_activity extends LetcBox {
    *
    */
   updatePriorityList(invitations = [], messages = [], hubInvites = []) {
+    const activeChats = (Wm.getItemsByKind('window_bigchat') || [])
+      .filter((win) => win && !win.isDestroyed() && !win.mget(_a.minimize) && win.currentEntityId)
+      .map((win) => win.currentEntityId);
+    messages = messages.filter((message) => {
+      if (message.category !== 'chat') return true;
+      return !activeChats.includes(message.drumate_id);
+    });
     let list = [];
     for (let e of invitations) {
       let f = e.firstname || ""

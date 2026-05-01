@@ -25,7 +25,7 @@ class __chat_p2p extends LetcBox {
   getCurrentApi() {
     return {
       service: SERVICE.chat.chat_rooms,
-      flag: this._filter,
+      flag: _a.contact,
       option: _a.active,
       hub_id: Visitor.get(_a.id)
     };
@@ -42,14 +42,16 @@ class __chat_p2p extends LetcBox {
   onPartReady(child, pn) {
     switch (pn) {
       case 'contact-list':
+        this._contactList = child;
         if (child.collection) {
           child.collection.comparator = item => -item.get(_a.ctime);
         }
         child.once(_e.eod, async () => {
           this.el.dataset.anim = "in";
+          this._applyFilter();
           await Kind.waitFor('widget_chat')
           const first = child.children && child.children.first && child.children.first();
-          if (first) this.openChat(first);
+          if (first && first.el && first.el.style.display !== 'none') this.openChat(first);
         })
         break;
       default:
@@ -65,6 +67,15 @@ class __chat_p2p extends LetcBox {
    */
   async openChat(contact) {
     if (!contact || !contact.mget) return;
+
+    if (_.isFunction(contact.resetNotification)) {
+      contact.resetNotification();
+    }
+
+    const filter = this._activeFilter || 'all';
+    if (filter !== 'all' && contact.el) {
+      contact.el.style.display = 'none';
+    }
 
     this.ensurePart('contact-list').then(list => {
       if (list.children) {
@@ -183,18 +194,18 @@ class __chat_p2p extends LetcBox {
         break;
 
       case 'filter-all':
-        this._filter = _a.contact;
-        this.ensurePart('contact-list').then(list => list.refresh && list.refresh());
+        this._activeFilter = 'all';
+        this._applyFilter();
         break;
 
       case 'filter-unread':
-        this._filter = 'unread';
-        this.ensurePart('contact-list').then(list => list.refresh && list.refresh());
+        this._activeFilter = 'unread';
+        this._applyFilter();
         break;
 
       case 'filter-mentions':
-        this._filter = 'mentions';
-        this.ensurePart('contact-list').then(list => list.refresh && list.refresh());
+        this._activeFilter = 'mentions';
+        this._applyFilter();
         break;
 
       default:
@@ -254,6 +265,27 @@ class __chat_p2p extends LetcBox {
     if (_.isFunction(item.updateNotification)) item.updateNotification();
 
     if (list.collection && list.collection.sort) list.collection.sort();
+  }
+
+  _applyFilter() {
+    const list = this._contactList;
+    if (!list || !list.children) return;
+    const filter = this._activeFilter || 'all';
+    list.children.forEach(item => {
+      if (!item.el) return;
+      if (filter === 'all') {
+        item.el.style.display = '';
+        return;
+      }
+      const count = ~~(item.mget('room_count') || 0);
+      if (filter === 'unread') {
+        item.el.style.display = count > 0 ? '' : 'none';
+      } else if (filter === 'mentions') {
+        const msg = item.mget(_a.message) || '';
+        const hasMention = /\[@[^\]]+\]\(user:[^)]+\)/.test(msg) && count > 0;
+        item.el.style.display = hasMention ? '' : 'none';
+      }
+    });
   }
 
   _resetContactItemCount(data) {

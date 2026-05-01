@@ -147,21 +147,20 @@
 
   &__digit {
     align-items: center;
-    background-color: var(--active-border);
+    background-color: #847eff;
+    border: 2px solid var(--normal-bg);
     border-radius: 50%;
-    height: 18px;
+    height: 12px;
     justify-content: center;
     position: absolute;
-    width: 18px;
+    width: 12px;
     z-index: 2 !important;
-    right: 0;
-    bottom: 0;
-    @include drumee.typo(
-      $color: #ffffff,
-      $weight: 600,
-      $line: 1,
-      $size: 10px
-    );
+    right: -4px;
+    top: -4px;
+
+    &[data-state="closed"] {
+      display: none;
+    }
   }
 
   .user-profile__ui[data-online="1"]:before,

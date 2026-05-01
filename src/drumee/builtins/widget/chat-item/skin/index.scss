@@ -90,6 +90,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      max-width: min(100%, 560px);
       min-width: 0;
 
       &.me {
@@ -371,7 +372,8 @@
 
   &__conversation-content {
     padding: 16px;
-    width: 100%;
+    width: fit-content;
+    max-width: 100%;
     @include drumee.typo(
       $size: 14px,
       $line: 1.4,
@@ -394,11 +396,10 @@
     }
 
     &.other {
-      background-color: var(--white);
+      background-color: #f2f2f7;
       color: #0b0a21;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
       border-radius: 16px 16px 16px 0;
-      border: 1px solid var(--border-muted);
     }
   }
 }
