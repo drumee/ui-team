@@ -8,7 +8,7 @@ const __window_connect_commands = function (_ui_) {
   const fig = _ui_.fig.family;
 
   const acceptBtn = isCallee ? Skeletons.Button.Svg({
-    className: "ctrl-button accept",
+    className: "ctrl-button accept pickup",
     ico: "telephone_handset",
     sys_pn: "ctrl-pickup",
     name: "pickup",
@@ -33,6 +33,7 @@ const __window_connect_commands = function (_ui_) {
     debug: __filename,
     sys_pn: "commands",
     state: 1,
+    dataset: { mode: "setup" },
     kids: [
       Skeletons.Box.X({
         className: `${fig}__commands`,
