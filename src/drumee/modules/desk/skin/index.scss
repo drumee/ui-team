@@ -86,6 +86,9 @@ html {
     // settings page fully covers the workspace, but below the slide-out
     // panel containers at 10001.
     z-index: 1500;
+    // Self-contained stacking context — defensive against any future
+    // descendants that might otherwise escape and rise above the slot.
+    isolation: isolate;
     pointer-events: none;
 
     >* {

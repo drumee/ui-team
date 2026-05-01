@@ -5,8 +5,8 @@
     height: 75px;
     opacity: 1;
     transform: scale(0.75);
-    //z-index : 10000;
-    z-index: 999999999999999;
+    // See media-grid/skin/helper.scss — must stay below settings-main-slot (1500).
+    z-index: 1450;
     box-shadow: none;
     background-color: transparent;
     overflow: visible;
