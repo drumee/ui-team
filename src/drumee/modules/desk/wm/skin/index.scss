@@ -691,7 +691,7 @@
   }
 }
 
-// ── Workspace + Folder: shorter cells (--grid-cell-h-folder, Figma 120-144) ──
+// ── Workspace + Folder: shorter cells (--grid-cell-h-folder) ──
 .workspace-section,
 .folder-section {
   grid-template-columns: repeat(auto-fill, var(--grid-cell-w));

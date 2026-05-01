@@ -1229,7 +1229,7 @@
     min-width: 0;
 
     // Lock cell width only; height is owned by per-section grid-auto-rows
-    // so workspace/folder rows (120) and file rows (160) coexist without
+    // so compact workspace/folder rows and taller file rows coexist without
     // stretching when section flex:1 fires.
     .media-grid__ui {
       width: var(--grid-cell-w);
