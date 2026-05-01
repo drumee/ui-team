@@ -16,69 +16,156 @@ function getPreview(data) {
   return data.src || data;
 }
 
+function parseJson(value, fallback) {
+  if (!value) return fallback;
+  if (_.isObject(value)) return value;
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function getMentionIds(data) {
+  const ids = parseJson(data.mention_ids, []);
+  return _.isArray(ids) ? ids : [];
+}
+
+function hasAttachment(data) {
+  const attachment = parseJson(data.attachment, data.attachment);
+  if (_.isArray(attachment)) return attachment.length > 0;
+  if (_.isObject(attachment)) return !_.isEmpty(attachment);
+  return !!attachment && String(attachment).trim() !== "" && attachment !== "null";
+}
+
+function isFolder(item = {}) {
+  return item.filetype === _a.folder || item.ftype === _a.folder || item.category === _a.folder;
+}
+
+function getItemName(data, preview) {
+  return preview.filename || preview.name || preview.user_filename || data.link_label || data.surname || data.hub_name || data.message || "item";
+}
+
 function getActivityMeta(data, preview) {
-  const name = preview.filename || preview.name || data.link_label || "item";
-  switch (data.event) {
-    case "media.share":
-      if (preview.accessibility === "restricted") {
-        return {
-          before: "shared a ",
-          label: "Restricted Link",
-          after: " with you",
-          colorClass: "restricted",
-          badge: "share",
-        };
-      }
+  const category = data.category || data.event_type;
+  const name = getItemName(data, preview);
+
+  if (data.event === "media.share" || data.is_forward === 1) {
+    if (preview.accessibility === "restricted") {
       return {
         before: "shared a ",
-        label: preview.filetype === "link" ? "Shared Link" : name,
+        label: "Restricted Link",
         after: " with you",
-        colorClass: "link-share",
-        badge: "share",
-      };
-    case "media.view":
-    case "mention":
-    case "chat.post":
-      return {
-        before: "mentioned you in ",
-        label: name,
-        after: "",
-        colorClass: "mention",
-        badge: "mention",
-      };
-    case "media.new":
-      return {
-        before: preview.ftype === _a.folder ? "created folder " : "uploaded file ",
-        label: name,
-        after: "",
-        colorClass: "mention",
-        badge: "mention",
-      };
-    case "media.remove":
-      return {
-        before: preview.ftype === _a.folder ? "removed folder " : "removed file ",
-        label: name,
-        after: "",
         colorClass: "restricted",
         badge: "share",
       };
-    case "hub.invite_received":
-      return {
-        before: data.action || "invited you to ",
-        label: data.link_label || name,
-        after: "",
-        colorClass: "mention",
-        badge: "mention",
-      };
-    default:
-      return {
-        before: data.action || data.event || "updated ",
-        label: name,
-        after: "",
-        colorClass: "mention",
-        badge: "mention",
-      };
+    }
+    return {
+      before: "shared a ",
+      label: preview.filetype === "link" ? "Shared Link" : name,
+      after: " with you",
+      colorClass: "link-share",
+      badge: "share",
+    };
   }
+
+  if (data.event === "hub.invite_received") {
+    return {
+      before: data.action || "invited you to ",
+      label: data.link_label || name,
+      after: "",
+      colorClass: "mention",
+      badge: "mention",
+    };
+  }
+
+  if (data.event === "media.remove") {
+    return {
+      before: isFolder(preview) ? "removed folder " : "removed file ",
+      label: name,
+      after: "",
+      colorClass: "restricted",
+      badge: "share",
+    };
+  }
+
+  if (data.event === "media.view") {
+    return {
+      before: "viewed ",
+      label: name,
+      after: "",
+      colorClass: "mention",
+      badge: "mention",
+    };
+  }
+
+  if (data.event === "media.new" || category === "media") {
+    return {
+      before: isFolder(preview) ? "created folder " : "uploaded file ",
+      label: name,
+      after: data.cnt > 1 ? ` and ${data.cnt - 1} more` : "",
+      colorClass: "mention",
+      badge: "mention",
+    };
+  }
+
+  if (data.event === "mention" || getMentionIds(data).some((id) => String(id) === String(Visitor.id))) {
+    return {
+      before: "mentioned you in ",
+      label: name,
+      after: "",
+      colorClass: "mention",
+      badge: "mention",
+    };
+  }
+
+  if (hasAttachment(data)) {
+    return {
+      before: "shared a file in ",
+      label: name,
+      after: "",
+      colorClass: "link-share",
+      badge: "share",
+    };
+  }
+
+  if (data.event === "chat.post" || category === "chat") {
+    return {
+      before: "sent you a message",
+      label: data.cnt > 1 ? ` (${data.cnt})` : "",
+      after: "",
+      colorClass: "mention",
+      badge: "mention",
+    };
+  }
+
+  if (data.event === "channel.post" || category === "teamchat") {
+    return {
+      before: "posted in ",
+      label: name,
+      after: data.cnt > 1 ? ` (${data.cnt})` : "",
+      colorClass: "mention",
+      badge: "mention",
+    };
+  }
+
+  if (category === "ticket") {
+    return {
+      before: "updated ticket ",
+      label: name,
+      after: data.cnt > 1 ? ` (${data.cnt})` : "",
+      colorClass: "mention",
+      badge: "mention",
+    };
+  }
+
+  return {
+    before: data.action || data.event || "updated ",
+    label: name,
+    after: "",
+    colorClass: "mention",
+    badge: "mention",
+  };
 }
 
 module.exports = function (ui) {

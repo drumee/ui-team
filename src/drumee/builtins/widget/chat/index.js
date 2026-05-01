@@ -812,6 +812,13 @@ class __widget_chat extends LetcBox {
       api.thread_id = this.threadId;
     }
 
+    if (messenger && _.isFunction(messenger.getMentionUserIds)) {
+      const mentionIds = messenger.getMentionUserIds();
+      if (mentionIds.length) {
+        api.mention_ids = mentionIds;
+      }
+    }
+
     this.echoId = _.uniqueId();
     this.queue.push({ ...api, echoId: this.echoId });
     this.postMessageAPI();

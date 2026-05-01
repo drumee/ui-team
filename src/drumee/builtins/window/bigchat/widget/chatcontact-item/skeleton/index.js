@@ -79,12 +79,9 @@ const __skl_widget_chatcontactItem = function (ui) {
     state = _a.open;
   }
 
-  const counterNote = Skeletons.Note({
-    service: "counter",
+  const counterNote = Skeletons.Box.X({
     sys_pn: "counter",
     className: `${contentFig}__digit`,
-    innerClass: `${contentFig}__btn-counter`,
-    content: value,
     dataset: {
       state
     }

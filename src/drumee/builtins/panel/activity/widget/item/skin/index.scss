@@ -11,7 +11,7 @@
     cursor: pointer;
     gap: 12px;
     min-height: 48px;
-    padding: 0 12px;
+    padding: 8px 12px;
     transition: background-color 0.12s;
     width: 100%;
 
@@ -90,14 +90,23 @@
 
   &__text {
     @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
-    display: block;
     max-width: 100%;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+
+    .note-content {
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      display: -webkit-box;
+      max-width: 100%;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+      text-overflow: ellipsis;
+    }
   }
 
   &__link {
+    margin: 0 3px;
+
     &.mention {
       color: #5950ff;
     }
