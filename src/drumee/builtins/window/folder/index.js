@@ -281,7 +281,11 @@ class __window_folder extends mfsInteract {
         return this.toggleFilesLayout(cmd);
 
       case "leave-meeting":
+      case "close-call-panel":
         return this.showFolderTab("files");
+
+      case "start-meeting":
+        return this._launchMeetingInPanel();
 
       case "meeting":
       case "webinar":
@@ -367,6 +371,27 @@ class __window_folder extends mfsInteract {
       .finally(() => {
         this._creatingFolder = 0;
       });
+  }
+
+  async _launchMeetingInPanel() {
+    if (this._launchingMeeting) return;
+    this._launchingMeeting = true;
+    try {
+      const panel = await this.ensurePart("meeting-panel");
+      panel.feed({
+        kind: "window_meeting",
+        className: `${this.fig.family}__meeting-room-widget`,
+        hub_id: this.mget(_a.hub_id),
+        filename: this.mget(_a.filename),
+        nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
+        trigger: this.mget(_a.media) || this,
+        media: this.mget(_a.media) || this,
+        service: "meeting",
+        uiHandler: [this],
+      });
+    } finally {
+      this._launchingMeeting = false;
+    }
   }
 
   showFolderTab(tab) {

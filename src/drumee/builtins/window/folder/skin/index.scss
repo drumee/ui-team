@@ -957,9 +957,101 @@
   }
 
   &__meeting-room {
-    flex: 1;
+    flex: 1 1 0;
     min-width: 0;
+    min-height: 0;
     overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+
+    // Force every part of widget_meeting to fit its slot. Default skin assumes
+    // a fixed-width side dock; we use !important + maximum specificity here
+    // because flex chains with min-width:auto were leaking through and
+    // pushing the Cancel button (right of footer) past the right edge.
+    > * {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+    }
+
+    .widget-meeting__container,
+    .widget-meeting__header,
+    .widget-meeting__section-label,
+    .widget-meeting__members-list,
+    .widget-meeting__footer,
+    .widget-meeting-member__ui,
+    .widget-meeting-member__member-row {
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    .widget-meeting__ui {
+      border-left: none !important;
+    }
+
+    // Footer: predictable layout — Start grows, Cancel sits at fixed 100px on
+    // the right, gap 8 between, padding 12 inside. No flex-wrap, no spilled
+    // content; both buttons always visible.
+    .widget-meeting__footer {
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      gap: 8px !important;
+      padding: 12px !important;
+      align-items: center !important;
+    }
+
+    .widget-meeting__cancel-btn {
+      flex: 0 0 100px !important;
+      max-width: 100px !important;
+      min-width: 0 !important;
+      padding: 10px !important;
+      overflow: hidden !important;
+    }
+
+    .widget-meeting__start-btn {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      padding: 10px !important;
+      overflow: hidden !important;
+    }
+
+    // Member rows: avatar 36px + info (truncates) + Call (auto)
+    .widget-meeting-member__member-row {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      gap: 8px !important;
+    }
+
+    .widget-meeting-member__member-avatar {
+      flex: 0 0 36px !important;
+      width: 36px !important;
+      height: 36px !important;
+    }
+
+    .widget-meeting-member__member-info {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .widget-meeting-member__member-call-btn {
+      flex: 0 0 auto !important;
+      max-width: 80px !important;
+    }
+
+    // Reduce paddings everywhere so 200-220px wide slots still fit content.
+    .widget-meeting__header { padding: 16px 12px !important; }
+    .widget-meeting__section-label { padding: 12px 12px 4px !important; }
+    .widget-meeting__members-list { padding: 4px 8px !important; }
+    .widget-meeting-member__ui { padding: 8px !important; }
   }
 }
 

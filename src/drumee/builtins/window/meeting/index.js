@@ -78,6 +78,8 @@ class __window_meeting extends __room {
       p.el.show();
     });
     if (this.el) this.el.dataset.ready = "1";
+    this._meetingStartedAt = Date.now();
+    this._maxParticipants = 1;
     this._postMeetingSystemMessage("meeting.start");
   }
 
@@ -167,8 +169,7 @@ class __window_meeting extends __room {
       case "close-dialog":
         this.warning();
         this.__wrapperOverlay.clear();
-        this.triggerHandlers({ service: "leave-meeting" });
-        this.goodbye();
+        this._showFeedbackPopup();
         break;
 
       case "cancel-dialog":
@@ -177,13 +178,91 @@ class __window_meeting extends __room {
         break;
 
       case "leave-meeting":
-        this.triggerHandlers({ service: "leave-meeting" });
-        this.goodbye();
+        this._showFeedbackPopup();
+        break;
+
+      case "rate-meeting":
+        this._setRating(cmd);
+        break;
+
+      case "feedback-skip":
+      case "feedback-submit":
+        if (service === "feedback-submit") this._captureFeedback();
+        this._closeFeedbackAndLeave();
         break;
 
       default:
         super.onUiEvent(cmd, args);
     }
+  }
+
+  /**
+   * Mount the post-meeting feedback popup at the Wm-level wrapper-modal slot
+   * (top of the desk shell) so the blurred backdrop covers the entire app
+   * — including the left sidebar — and the card lands centered on screen
+   * regardless of where window_meeting is embedded.
+   * Skip the popup when the meeting never actually joined (permissionDenied).
+   */
+  _showFeedbackPopup() {
+    if (this._feedbackShown) return;
+    this._feedbackShown = true;
+    if (!this._meetingStartedAt) {
+      return this._closeFeedbackAndLeave();
+    }
+    const elapsed = Math.max(0, Math.floor((Date.now() - this._meetingStartedAt) / 1000));
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    const duration = `${m}:${String(s).padStart(2, "0")}`;
+    const participantCount = (this.__participants && this.__participants.collection)
+      ? Math.max(this._maxParticipants || 0, this.__participants.collection.length)
+      : (this._maxParticipants || 1);
+
+    this._feedback = { rating: 0, comment: "" };
+    Wm.ensurePart("wrapper-modal").then((modal) => {
+      if (!modal) return this._closeFeedbackAndLeave();
+      this._feedbackModal = modal;
+      modal.feed(require("./skeleton/feedback")(this, {
+        duration,
+        participantCount,
+      }));
+    });
+  }
+
+  /** Visually highlight stars 1..N when a star is clicked. */
+  _setRating(cmd) {
+    if (!cmd || !cmd.mget) return;
+    const rating = parseInt(cmd.mget("rating"), 10) || 0;
+    if (!this._feedback) this._feedback = {};
+    this._feedback.rating = rating;
+    for (let i = 1; i <= 5; i++) {
+      this.ensurePart(`feedback-star-${i}`).then((star) => {
+        if (star && star.el) star.el.dataset.on = i <= rating ? "1" : "0";
+      });
+    }
+  }
+
+  /** Pull the comment textarea content into _feedback (frontend-only). */
+  _captureFeedback() {
+    const part = this.getPart && this.getPart("feedback-comment");
+    const el = part && part.el && part.el.querySelector("textarea, input");
+    if (el) this._feedback.comment = (el.value || "").trim();
+    if (this.verbose) {
+      this.verbose("[meeting-feedback]", {
+        rating: (this._feedback && this._feedback.rating) || 0,
+        comment: (this._feedback && this._feedback.comment) || "",
+        room_id: this.mget(_a.room_id),
+        hub_id: this.mget(_a.hub_id),
+      });
+    }
+  }
+
+  _closeFeedbackAndLeave() {
+    if (this._feedbackModal && this._feedbackModal.clear) {
+      this._feedbackModal.clear();
+      this._feedbackModal = null;
+    }
+    this.triggerHandlers({ service: "leave-meeting" });
+    this.goodbye();
   }
 
   stateMessage(s, timeout) {
