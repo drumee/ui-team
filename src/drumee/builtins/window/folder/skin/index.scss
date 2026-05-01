@@ -557,7 +557,7 @@
     color: var(--normal-fg-10);
     font-family: "Geist", sans-serif;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1;
     gap: 6px;
 
@@ -587,6 +587,7 @@
     display: inline-flex;
     align-items: center;
     line-height: 1;
+    pointer-events: none;
   }
 
   &__tab-bar-icon {
@@ -1121,6 +1122,10 @@
     height: 100%;
     background: var(--normal-bg-90);
 
+    .tasks-panel__ui {
+      display: none;
+    }
+
     &[data-view="meeting"] {
       grid-template-columns: 1fr;
     }
@@ -1167,22 +1172,22 @@
     padding: 0 0 4px;
     border-bottom: 2px solid transparent;
     background: transparent;
-    @include drumee.typo($size: 12px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 13px, $line: 1, $weight: 700, $color: var(--normal-fg-10));
 
     .window-folder__filter-tab,
     .note-content {
-      @include drumee.typo($size: 12px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+      @include drumee.typo($size: 13px, $line: 1, $weight: 700, $color: var(--normal-fg-10));
     }
 
     &[data-state="1"],
     &[data-radiotoggle="on"] {
       padding-bottom: 6px;
       border-bottom-color: var(--area-private);
-      @include drumee.typo($size: 12.5px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+      @include drumee.typo($size: 13px, $line: 1, $weight: 800, $color: var(--normal-fg-10));
 
       .window-folder__filter-tab,
       .note-content {
-        @include drumee.typo($size: 12.5px, $line: 1, $weight: 900, $color: var(--normal-fg-10));
+        @include drumee.typo($size: 13px, $line: 1, $weight: 800, $color: var(--normal-fg-10));
       }
     }
   }
@@ -1512,6 +1517,10 @@
   &__split-body[data-view="chat"] {
     grid-template-columns: 1fr;
 
+    .window__files-panel {
+      display: none;
+    }
+
     .window__chat-panel {
       flex: 1 1 100%;
       width: 100%;
@@ -1558,6 +1567,15 @@
   &__split-body[data-view="task"] {
     grid-template-columns: 1fr;
     background: var(--normal-bg-elevated);
+
+    .window__files-panel,
+    .window__chat-panel {
+      display: none;
+    }
+
+    .tasks-panel__ui {
+      display: flex;
+    }
   }
 
   &__tracker-board {
@@ -1651,7 +1669,7 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: var(--grid-gap, 24px);
+    gap: 8px;
     padding: 24px;
   }
 

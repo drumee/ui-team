@@ -1,6 +1,6 @@
 const mfsInteract = require("../interact");
 
-const { folderFilesView, folderChatView, fileTypeFilterBar, gridFilesBrowser } = require("../skeleton/toolkit");
+const { folderFilesView, fileTypeFilterBar, gridFilesBrowser } = require("../skeleton/toolkit");
 
 require("./skin");
 
@@ -158,6 +158,10 @@ class __window_folder extends mfsInteract {
   }
 
   onPartReady(child, pn) {
+    if (pn === "folder-view") {
+      this.__folderView = child;
+      return;
+    }
     if (pn === _a.list) {
       this.iconsList = child;
       if (this.getViewMode && this.getViewMode() !== _a.row) {
@@ -359,36 +363,52 @@ class __window_folder extends mfsInteract {
       });
   }
 
-  /**
-   * Switch the split body between Files / Chat / Task tabs. Re-feeds
-   * the `folder-view` part with the appropriate skeleton subtree so the
-   * task tab mounts the `tasks_panel` widget (hub-scoped), and the chat
-   * tab a full-width chat panel.
-   */
   showFolderTab(tab) {
+    if (this.activeTab === tab) return;
     this.activeTab = tab;
     this.$el.find(".window-folder__tab-bar-item").attr("data-state", 0);
     this.$el.find(`.window-folder__tab-bar-item[data-tab='${tab}']`).attr("data-state", 1);
 
-    return this.ensurePart("folder-view").then((view) => {
+    const switchView = (view) => {
+      if (this._meetingViewActive && tab !== "meeting") {
+        view.feed(folderFilesView(this));
+        this._meetingViewActive = 0;
+        this._taskPanelMounted = 0;
+      }
       view.el.dataset.view = tab;
       switch (tab) {
         case "files":
-          return view.feed(folderFilesView(this));
         case _a.chat:
-          return view.feed(folderChatView(this));
+          return;
         case "meeting":
+          this._meetingViewActive = 1;
+          this._taskPanelMounted = 0;
           return view.feed(require("./skeleton/meeting-panel")(this));
         case _a.task:
-          return view.feed({
-            kind: "tasks_panel",
-            hub_id: this.mget(_a.hub_id),
-            nid: this.mget(_a.nid),
-            uiHandler: [this],
-          });
+          if (!this._taskPanelMounted) {
+            this._taskPanelMounted = 1;
+            return view.append({
+              kind: "tasks_panel",
+              hub_id: this.mget(_a.hub_id),
+              nid: this.mget(_a.nid),
+              uiHandler: [this],
+            });
+          }
+          return;
         default:
-          return view.feed(folderFilesView(this));
+          view.el.dataset.view = "files";
       }
+    };
+
+    if (this.__folderView && !(this.__folderView.isDestroyed && this.__folderView.isDestroyed())) {
+      return switchView(this.__folderView);
+    }
+    const switchId = _.uniqueId("folder-tab-");
+    this._folderTabSwitchId = switchId;
+    return this.ensurePart("folder-view").then((view) => {
+      if (this._folderTabSwitchId !== switchId || !view || (view.isDestroyed && view.isDestroyed())) return;
+      this.__folderView = view;
+      return switchView(view);
     });
   }
 

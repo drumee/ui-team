@@ -289,6 +289,7 @@ class __widget_chat extends LetcBox {
         break;
       case _a.list:
         child.onAddKid = this.handleScroll.bind(this);
+        child.once(_e.ready, () => this.scrollMessagesToBottom(child));
         break;
       case 'chat-content':
         this.waitElement(child.el, () => {
@@ -299,8 +300,14 @@ class __widget_chat extends LetcBox {
     }
   }
 
+  scrollMessagesToBottom(list) {
+    setTimeout(() => {
+      if (list && typeof list.scrollToBottom === "function") list.scrollToBottom();
+    }, 100);
+  }
+
   /**
-   * 
+   *
    */
   hasAttachment() {
     return this.attachmentList.hasAttachment()
