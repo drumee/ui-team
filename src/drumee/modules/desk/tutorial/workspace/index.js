@@ -1,5 +1,5 @@
 const { tooltipBadge } = require('../skeleton/toolkit');
-
+const { getElStablePosition } = require("@drumee/ui-essentials");
 const BADGES = [
   {
     badge_text: 'STEP 1/5',
@@ -49,11 +49,12 @@ class __tutorial_workspace extends LetcBox {
     const card = await this.ensurePart(`workspace-item-${this._stepIndex}`);
     const overlayOffset = overlay.$el.offset();
     const { left, top } = card.$el.offset();
+    let { width, height } = await getElStablePosition(card.el);
     const data = {
       ...step,
       style: {
-        left: left + card.$el.width() / 2 - overlayOffset.left,
-        top: top + card.$el.height() + 20 - overlayOffset.top,
+        left: left + width / 2 - overlayOffset.left,
+        top: top + height + 20 - overlayOffset.top,
       },
     };
     card.setState(1);
