@@ -45,7 +45,8 @@ function videoTile(ui, pfx, { name, muted, isMe }) {
   return Skeletons.Box.Y({
     className: `${pfx}__video-tile${isMe ? ' me' : ''}`,
     kids: [
-      isMe ? Skeletons.Button.Svg({ ico: 'expand', className: `${pfx}__tile-expand` }) : null,
+      isMe ? Skeletons.Button.Svg({ ico: 'menu_expand', className: `${pfx}__tile-expand` }) : null,
+      isMe ? Skeletons.Button.Svg({ ico: 'drumee-tools_pin', className: `${pfx}__tile-pin` }) : null,
       isMe ? Skeletons.Note({ className: `${pfx}__tile-me-label`, content: 'ME' }) : null,
       Skeletons.Box.X({
         className: `${pfx}__tile-footer`,
@@ -54,13 +55,13 @@ function videoTile(ui, pfx, { name, muted, isMe }) {
             className: `${pfx}__tile-footer-left`,
             kids: [
               Skeletons.Button.Svg({
-                ico: muted ? 'mic-muted' : 'mic',
+                ico: muted ? 'meeting-muted-microphone' : 'meeting-mic',
                 className: `${pfx}__tile-mic${muted ? '' : ' active'}`,
               }),
               Skeletons.Note({ className: `${pfx}__tile-name`, content: name }),
             ],
           }),
-          Skeletons.Button.Svg({ ico: 'more-vertical', className: `${pfx}__tile-more` }),
+          Skeletons.Button.Svg({ ico: 'menu_expand', className: `${pfx}__tile-more` }),
         ],
       }),
     ],
@@ -87,15 +88,15 @@ function meetingToolbar(ui, pfx) {
       Skeletons.Box.X({
         className: `${pfx}__toolbar-actions`,
         kids: [
-          Skeletons.Button.Svg({ ico: 'mic', className: `${pfx}__toolbar-btn active` }),
-          Skeletons.Button.Svg({ ico: 'desktop-video', className: `${pfx}__toolbar-btn` }),
-          Skeletons.Button.Svg({ ico: 'hand', className: `${pfx}__toolbar-btn` }),
-          Skeletons.Button.Svg({ ico: 'apps-chat', className: `${pfx}__toolbar-btn` }),
-          Skeletons.Button.Svg({ ico: 'more-vertical', className: `${pfx}__toolbar-btn` }),
+          Skeletons.Button.Svg({ ico: 'meeting-mic', className: `${pfx}__toolbar-btn active` }),
+          Skeletons.Button.Svg({ ico: 'meeting-video', className: `${pfx}__toolbar-btn` }),
+          Skeletons.Button.Svg({ ico: 'metting-hand', className: `${pfx}__toolbar-btn` }),
+          Skeletons.Button.Svg({ ico: 'desktop__chat', className: `${pfx}__toolbar-btn` }),
+          Skeletons.Button.Svg({ ico: 'menu_expand', className: `${pfx}__toolbar-btn` }),
         ],
       }),
       Skeletons.Button.Label({
-        ico: 'log-out',
+        ico: 'meeting-leave',
         className: `${pfx}__leave-btn`,
         label: LOCALE.LEAVE_MEETING || 'Leave Meeting',
       }),

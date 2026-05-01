@@ -541,6 +541,27 @@
     }
   }
 
+  &__tile-pin{
+    position: absolute;
+    top: 8px;
+    right: 40px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    cursor: pointer;
+    z-index: 1;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: #fff;
+    }
+  }
+
   &__tile-me-label {
     font-family: var(--font-main);
     font-size: 42px;

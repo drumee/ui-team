@@ -243,11 +243,12 @@
     flex: 1;
     min-width: 160px;
     max-width: 220px;
-    background: var(--white, #fff);
+    background: var(--normal-bg-90);
     border-radius: 10px;
     padding: 12px;
     gap: 8px;
     flex-shrink: 0;
+    border: 1px solid var(--border-muted);
 
     &.faded {
       opacity: 0.6;
@@ -387,14 +388,11 @@
     color: var(--normal-fg-30, #aaa);
     text-align: center;
     padding: 8px;
-    border: 1.5px dashed var(--border-muted, #e0e0e8);
+    border: 1.5px dashed var(--normal-fg-50);
     border-radius: 6px;
     cursor: pointer;
     flex-shrink: 0;
 
-    &:hover {
-      color: var(--normal-fg-50);
-      border-color: var(--normal-fg-30);
-    }
+   
   }
 }
