@@ -3,6 +3,7 @@
 const { timestamp, loadJS, toggleState } = require("@drumee/ui-essentials")
 const Rectangle = require('rectangle-node');
 const OPEN_NODE = "open-node";
+const ECHO_ID = "echoId";
 require("./skin");
 const media_core = require("./core");
 const { copyToClipboard } = require("@drumee/ui-essentials")
@@ -1041,6 +1042,67 @@ class __media_interact extends media_core {
       socket_id: Visitor.get(_a.socket_id),
     });
     this._waitingForZip = nid;
+  }
+
+  /**
+   * Open move popup, execute move, then refresh grid
+   */
+  move() {
+    const hubName = this.mget(_a.hubName) || this.mget('hubName') ||
+      this.mget(_a.hub_name) || this.mget('hub_name') || LOCALE.WORKSPACE;
+    Wm.move([this], {
+      filename: this.mget(_a.filename),
+      folderName: this.mget(_a.filename),
+      workspaceName: hubName,
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      area: this.mget(_a.area),
+    }).then((result) => {
+      const { destination, items } = result;
+      const item = items[0];
+      const nid = item.mget ? item.mget(_a.nid) : item.nid;
+      const itemHubId = item.mget ? item.mget(_a.hub_id) : item.hub_id;
+      const isCrossHub = destination.hub_id !== itemHubId;
+
+      const doMove = (pid) => {
+        if (isCrossHub) {
+          // Cross-hub = copy to destination + trash source
+          const copyPayload = { service: SERVICE.media.copy, nid, pid, action: _a.copy, hub_id: itemHubId, recipient_id: destination.hub_id, notify: 1, moved_in: 1, async: 1, echoId: this.mget(ECHO_ID) };
+          console.log('[MOVE-API] copy payload:', JSON.stringify(copyPayload));
+          this.postService(copyPayload).then((data) => {
+            console.log('[MOVE-API] copy response:', data);
+            if (!data) return;
+            // Trash source to complete the move
+            const trashPayload = { service: SERVICE.media.trash, nid: [{ nid, hub_id: itemHubId }], hub_id: itemHubId };
+            console.log('[MOVE-API] trash payload:', JSON.stringify(trashPayload));
+            this.postService(trashPayload).then(() => {
+              if (this.model) this.goodbye();
+            }).catch((e) => this.warn("Trash source failed", e));
+          }).catch((e) => this.warn("Copy failed", e));
+        } else {
+          const movePayload = { service: SERVICE.media.move, nid, pid, action: _a.move, hub_id: itemHubId, notify: 1, moved_in: 1 };
+          console.log('[MOVE-API] move payload:', JSON.stringify(movePayload));
+          this.postService(movePayload).then((data) => {
+            if (this.model && data) this.goodbye();
+          }).catch((e) => this.warn("Move failed", e));
+        }
+      };
+
+      if (isCrossHub) {
+        // Fetch destination hub's actual_home_id (same as loadWorkspace does)
+        this.fetchService(SERVICE.hub.get_attributes, { hub_id: destination.hub_id }).then((attrs) => {
+          const pid = (attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid)) || '0';
+          console.log('[MOVE-API] resolved destination pid:', pid);
+          doMove(pid);
+        }).catch(() => doMove('0'));
+      } else {
+        doMove(destination.nid);
+      }
+    }).catch((e) => {
+      if (e.response !== _e.cancel && e.response !== _e.close) {
+        this.warn("Move popup error", e);
+      }
+    });
   }
 }
 __media_interact.initClass();

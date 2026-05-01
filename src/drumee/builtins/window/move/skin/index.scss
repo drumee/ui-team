@@ -1,0 +1,355 @@
+@use "mixins/drumee";
+
+.window-move {
+  // Root widget element (not a Box - explicit display:flex required)
+  &__ui {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--normal-bg-90);
+    border-radius: 12px;
+    padding: 28px 28px 24px;
+    width: auto;
+    height: auto;
+    max-height: 100%;
+    min-height: 0;
+    min-width: 380px;
+    max-width: 440px;
+    overflow: visible;
+    position: absolute;
+    border: 1px solid var(--border-muted);
+    box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
+  }
+
+  // Box.Y skeleton - no display/flex-direction (framework handles)
+  &__main {
+    gap: 24px;
+    width: 100%;
+    flex: 1;
+  }
+
+  &__topbar {
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  &__title {
+    @include drumee.typo(
+      $size: 20px,
+      $line: 28px,
+      $weight: 700,
+      $color: var(--normal-fg-10)
+    );
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__close {
+    cursor: pointer;
+    opacity: 0.5;
+    color: var(--normal-fg-10);
+    flex-shrink: 0;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  &__section {
+    gap: 8px;
+    width: 100%;
+  }
+
+  &__label {
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $color: var(--normal-fg-20)
+    );
+  }
+
+  &__current-location {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    padding: 8px 12px;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  &__folder-icon {
+    width: 48px;
+    height: 38px;
+    flex-shrink: 0;
+
+    // Inline folder-shape SVG - same CSS as media/grid/skin/container.scss
+    .folder-shape {
+      width: 100%;
+      height: 100%;
+      fill: #885eff;
+
+      &.personal  { fill: var(--area-personal); }
+      &.private   { fill: var(--area-private); }
+      &.share,
+      &.dmz       { fill: var(--area-share); }
+      &.public    { fill: var(--area-public); }
+    }
+  }
+
+  &__location-info {
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__location-type {
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__location-path {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 17px,
+      $color: var(--normal-fg-20)
+    );
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__search-bar {
+    width: 100%;
+    position: relative;
+    gap: 0;
+  }
+
+  &__search-field {
+    align-items: center;
+    width: 100%;
+    height: 38px;
+    background-color: var(--default-bg);
+    border: 1px solid var(--border-muted);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  // Force .entry to flex so input fills the container width
+  &__search-input {
+    display: flex !important;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    background-color: transparent;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      padding: 0 12px;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 12px;
+      color: var(--normal-fg-10);
+
+      &::placeholder {
+        color: var(--normal-fg-20);
+      }
+    }
+  }
+
+  &__search-btn {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    flex-shrink: 0;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-50);
+    border-radius: 4px;
+    cursor: pointer;
+    color: #fff;
+    margin-right: 5px;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: #fff;
+    }
+
+    &:hover {
+      background-color: var(--primary-60);
+    }
+  }
+
+  &__suggestions {
+    width: 100%;
+    background-color: var(--default-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-muted);
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 4px;
+
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
+  &__ws-row {
+    padding: 8px 12px;
+    cursor: pointer;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-10));
+
+    &:hover {
+      background-color: var(--border-muted);
+    }
+  }
+
+  &__folder-row {
+    padding: 7px 12px 7px 32px;
+    cursor: pointer;
+    align-items: center;
+    gap: 8px;
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg-10));
+
+    &:hover {
+      background-color: var(--border-muted);
+    }
+
+    &[data-selected="1"] {
+      background-color: var(--primary-10);
+    }
+  }
+
+  &__item-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--normal-fg-20);
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__item-name {
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg-10));
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__move-btn {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 44px;
+    border-radius: 4px;
+    background-color: var(--primary-50);
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: default;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: #ffffff
+    );
+
+    // Only active after destination selected
+    &[data-ready="1"] {
+      opacity: 1;
+      pointer-events: auto;
+      cursor: pointer;
+
+      &:hover {
+        background-color: var(--primary-60);
+      }
+    }
+  }
+
+  &__destination-list {
+    gap: 4px;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  // Static chip - always in DOM, shown/hidden via data-active
+  &__selected-item {
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background-color: var(--primary-10);
+    border: 1px solid var(--primary-20);
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 8px;
+
+    &[data-active="0"] {
+      display: none;
+    }
+  }
+
+  &__selected-info {
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__selected-name {
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 600, $color: var(--normal-fg-10));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__selected-path {
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--normal-fg-20));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__remove-btn {
+    flex-shrink: 0;
+    opacity: 0.4;
+    color: var(--normal-fg-10);
+    cursor: pointer;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &__no-results {
+    padding: 12px;
+    text-align: center;
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg-20));
+  }
+}

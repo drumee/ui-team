@@ -195,10 +195,10 @@
   --area-dmz: #ffa8dc;
 }
 
-/* Grid tokens — Figma fidelity (workspace/folder 121x120, file 120x160) */
+/* Grid tokens — compact workspace/folder rows, taller file rows for metadata */
 :root {
   --grid-cell-w: 120px;
-  --grid-cell-h-folder: 144px;          // 120 cell + 24 for 2-line label
+  --grid-cell-h-folder: 128px;          // compact folder row; file row stays taller for metadata
   --grid-cell-h-file: 184px;             // 119 card + 8 gap + 56 meta (2-line filename + date)
   --grid-icon-file: 60px;
   --grid-icon-folder-badge: 28px;
@@ -207,7 +207,7 @@
   --grid-card-bg-hover: rgba(0, 0, 0, 0.08);
   --grid-selected-bg: rgba(0, 0, 0, 0.06);
   --grid-hover-bg: rgba(0, 0, 0, 0.04);
-  --grid-gap: 24px;
+  --grid-gap: 16px;
   --grid-meta-row-h: 32px;               // single-line baseline; meta-row uses min-height
   --grid-meta-row-h-max: 64px;           // 2-line filename (~34) + 2px gap + date (~14) + 8 padding
   --grid-padding: 40px;
