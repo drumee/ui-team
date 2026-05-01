@@ -19,6 +19,39 @@
     width: 100%;
     height: 100%;
     min-width: auto;
+    position: relative;
+
+    // Loading spinner shown while the meeting layout is still mounting
+    // (between feed(init) and feed(skeleton) after join() resolves).
+    // window/meeting/index.js toggles data-ready on this element.
+    &[data-ready="0"]::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      margin: -12px 0 0 -12px;
+      border-radius: 50%;
+      border: 2px solid var(--default-icon-neutral, #89929e);
+      border-top-color: transparent;
+      animation: window-meeting-load-spin 0.9s linear infinite;
+      z-index: 10;
+    }
+  }
+
+  // Fade in the actual meeting tree only once data-ready=1.
+  &__main {
+    transition: opacity 0.2s ease-out;
+  }
+
+  &__ui[data-ready="0"] &__main {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @keyframes window-meeting-load-spin {
+    to { transform: rotate(360deg); }
   }
 
   // ── Shell: column flex, fills __ui ──────────────────────────────────
@@ -129,7 +162,8 @@
       background-color: var(--primary-50, #433cc5);
     }
 
-    &[data-mode="normal"] {
+    // Solo (only the local user is in the room) — fill the whole area.
+    &[data-mode="normal"][data-remote="1"] {
       .endpoint-local {
         position: relative;
         top: 0;
@@ -138,6 +172,22 @@
         height: 100%;
         min-height: 100px;
         min-width: 100px;
+      }
+    }
+
+    // 2 participants (you + 1 remote) — side-by-side tiles. responsive() clears
+    // the inline grid template for items<=2, so this CSS rule actually applies.
+    &[data-mode="normal"][data-remote="2"] {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr;
+
+      .endpoint-local,
+      .endpoint-remote {
+        position: relative;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
       }
     }
   }

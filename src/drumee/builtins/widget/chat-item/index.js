@@ -225,6 +225,49 @@ class ___widget_chatItem extends LetcBox {
         this.select();
         this.triggerHandlers({ service });
         return;
+
+      case 'join-meeting': {
+        const target = e && (e.target.closest && e.target.closest('[data-service="join-meeting"]'));
+        if (!target) return;
+        if (this._joiningMeeting) return;            // debounce rapid clicks
+        const hub_id = target.dataset.hub_id;
+        const nid = target.dataset.nid || hub_id;
+        if (!hub_id) return;
+        this._joiningMeeting = true;
+        setTimeout(() => { this._joiningMeeting = false; }, 800);
+
+        // Prefer to switch the tab on the folder window the user is already in.
+        // Walk up to the containing window_folder; if it matches, just switch
+        // to the meeting tab — no Wm.launch, no reload.
+        const ownFolder = this.getParentByKind && this.getParentByKind("window_folder");
+        if (ownFolder
+            && ownFolder.mget(_a.hub_id) == hub_id
+            && ownFolder.showFolderTab) {
+          if (ownFolder.activeTab === "meeting") return;
+          ownFolder.showFolderTab("meeting");
+          if (ownFolder.raise) ownFolder.raise();
+          return;
+        }
+
+        // Otherwise reuse any open folder window for the same hub/nid, or open
+        // a new one. wm_unique_id prevents duplicates piling up on re-clicks.
+        const existing = (Wm.getItemsByKind && Wm.getItemsByKind("window_folder") || [])
+          .find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
+        if (existing && existing.showFolderTab) {
+          existing.showFolderTab("meeting");
+          if (existing.raise) existing.raise();
+          return;
+        }
+
+        Wm.launch({
+          kind: "window_folder",
+          hub_id,
+          nid,
+          activeTab: "meeting",
+          wm_unique_id: `window_folder-${hub_id}-${nid}`,
+        }, { explicit: 1, singleton: 1 });
+        return;
+      }
     }
     return false;
   }

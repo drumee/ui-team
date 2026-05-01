@@ -62,10 +62,12 @@ class __window_meeting extends __room {
    */
   async onDomRefresh() {
     this.raise();
+    if (this.el) this.el.dataset.ready = "0";
     this.feed(require("./skeleton/init")(this));
     this.stateMachine("initializing");
     let room = await this.join();
     if (!room || !room.user) {
+      if (this.el) this.el.dataset.ready = "1";
       this.stateMachine("permissionDenied");
       return;
     }
@@ -75,6 +77,51 @@ class __window_meeting extends __room {
     this.ensurePart("commands").then((p) => {
       p.el.show();
     });
+    if (this.el) this.el.dataset.ready = "1";
+    this._postMeetingSystemMessage("meeting.start");
+  }
+
+  onBeforeDestroy() {
+    this._postMeetingSystemMessage("meeting.end");
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  /**
+   * Post a "X started/ended a meeting" system message into the folder's chat
+   * so members discover the meeting from chat history. The backend doesn't
+   * preserve custom `message_type`/`metadata` fields on regular channel.post,
+   * so we encode the payload into the `message` field with a sentinel prefix
+   * (`[[MEETING:start:{json}]]`) which chat-item parses on render.
+   * Skipped on DMZ rooms (no chat channel) and when nid is missing.
+   */
+  _postMeetingSystemMessage(type) {
+    if (this.mget(_a.area) === _a.dmz) return;
+    const hub_id = this.mget(_a.hub_id);
+    const nid = this.mget(_a.nid) || this.mget(_a.actual_home_id);
+    if (!hub_id || !nid) return;
+    if (type === "meeting.start" && this._meetingMessagePosted) return;
+    if (type === "meeting.start") this._meetingMessagePosted = true;
+
+    const payload = {
+      hub_id,
+      nid,
+      room_id: this.mget(_a.room_id) || nid,
+      filename: this.mget(_a.filename),
+      by: (Visitor.fullname && Visitor.fullname()) || "",
+    };
+    const action = type === "meeting.start" ? "start" : "end";
+    const message = `[[MEETING:${action}:${JSON.stringify(payload)}]]`;
+
+    try {
+      this.postService({
+        service: SERVICE.channel.post,
+        hub_id,
+        nid,
+        message,
+      });
+    } catch (e) {
+      if (this.warn) this.warn("Failed to post meeting system message", e);
+    }
   }
 
   /**
