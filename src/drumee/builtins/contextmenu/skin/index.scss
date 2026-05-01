@@ -34,9 +34,10 @@
     &[data-state="disable"] {
       opacity: 0.35;
       cursor: not-allowed;
+      pointer-events: none;
     }
 
-    &:hover {
+    &:not([data-state="disable"]):hover {
       background-color: var(--normal-bg-90);
     }
 

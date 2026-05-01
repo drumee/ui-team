@@ -424,6 +424,7 @@ class __window_folder extends mfsInteract {
 
   prepareFolderMove(target) {
     this.closeFolderSettings();
+    if (typeof target.move === "function") return target.move();
     Wm.unselect && Wm.unselect();
     Wm.storeClipboard(_e.cut, target);
     Wm.acknowledge && Wm.acknowledge();
