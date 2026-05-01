@@ -403,6 +403,47 @@
   }
 }
 
+// "X started a meeting" — compact inline system note with a Join link.
+.widget-chatItem__meeting-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--default-text-color);
+  opacity: 0.75;
+
+  &.end .widget-chatItem__meeting-card-dot {
+    background-color: var(--default-icon-neutral, #89929e);
+    animation: none;
+  }
+}
+
+.widget-chatItem__meeting-card-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--default-border-caution, #ea4d44);
+  flex-shrink: 0;
+}
+
+.widget-chatItem__meeting-card-text {
+  white-space: nowrap;
+}
+
+.widget-chatItem__meeting-card-action {
+  margin-left: 4px;
+  color: var(--button-accept, #18ac72);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover { text-decoration: underline; }
+}
+
 // File mention link in chat messages
 .file-mention {
   text-decoration: underline;
