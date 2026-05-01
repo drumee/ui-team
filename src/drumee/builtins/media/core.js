@@ -1747,21 +1747,15 @@ class __media_core extends DrumeeMFS {
   afterCopy(data) {
     Wm.unselect(2);
     this.unselect();
+    this.service = _a.idle;
+    this.status = _a.idle;
     if (!data) return;
     if (_.isArray(data)) {
       data = data[0];
     }
-    let { args } = data;
-    if (!args) {
-      this.warn("ERR[1731]: missing args", data)
-      return
-    }
-    let { dest } = args;
-    if (!dest) return;
-    this.service = _a.idle;
-    this.status = _a.idle;
-
-    this._onMoveDone(dest);
+    // Don't call _onMoveDone for copy — it's designed for move/cut-paste
+    // where the source widget relocates. For copy, the source stays put
+    // and the new item is added via WS broadcast or HTTP response addMedia().
     this.trigger(_a.copied);
   }
 

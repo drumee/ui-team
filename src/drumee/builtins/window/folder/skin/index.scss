@@ -594,19 +594,27 @@
     transform: translateY(-0.5px);
   }
 
-  &__create-folder-dialog {
+  &__create-folder-dialog,
+  &__rename-folder-dialog {
     width: 360px;
     background: var(--normal-bg-90);
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
   }
 
+  &__rename-folder-dialog {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
   &__create-folder-header,
+  &__rename-folder-header,
   &__settings-action-header {
     align-items: flex-start;
     justify-content: space-between;
   }
 
-  &__create-folder-header {
+  &__create-folder-header,
+  &__rename-folder-header {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     padding: 24px 24px 25px;
   }
@@ -616,6 +624,7 @@
   }
 
   &__create-folder-title,
+  &__rename-folder-title,
   &__settings-action-title,
   &__tracker-title {
     @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--normal-fg-10));
@@ -625,23 +634,30 @@
     @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--normal-fg-20));
   }
 
-  &__create-folder-close {
+  &__create-folder-close,
+  &__rename-folder-close {
     height: 24px;
     width: 14px;
     color: var(--normal-fg-10);
     padding: 0;
   }
 
-  &__create-folder-content {
+  &__create-folder-content,
+  &__rename-folder-content {
     gap: 16px;
     padding: 24px;
+  }
+
+  &__rename-folder-content {
+    padding: 26px 24px 18px;
   }
 
   &__create-folder-label {
     @include drumee.typo($size: 12px, $line: 14px, $weight: 600, $color: var(--normal-fg-10));
   }
 
-  &__create-folder-entry {
+  &__create-folder-entry,
+  &__rename-folder-entry {
     width: 100%;
 
     input {
@@ -654,12 +670,29 @@
     }
   }
 
-  &__create-folder-footer {
+  &__rename-folder-entry {
+    input {
+      min-height: 44px;
+      padding: 12px 14px;
+      border: 1px solid rgba(11, 10, 33, 0.08);
+      border-radius: 10px;
+      box-shadow: 0 1px 2px rgba(11, 10, 33, 0.04);
+      @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--normal-fg-10));
+    }
+  }
+
+  &__create-folder-footer,
+  &__rename-folder-footer {
     padding: 0 24px 24px;
   }
 
-  &__create-folder-button {
-    width: 100%;
+  &__rename-folder-footer {
+    align-items: center;
+    padding: 2px 24px 28px;
+  }
+
+  &__create-folder-button,
+  &__rename-folder-button {
     padding: 8px 24px;
     border-radius: 4px;
     text-align: center;
@@ -671,21 +704,52 @@
     }
   }
 
+  &__create-folder-button {
+    width: 100%;
+  }
+
+  &__rename-folder-button {
+    align-items: center;
+    justify-content: center;
+    width: 152px;
+    min-height: 40px;
+    box-shadow: 0 4px 10px rgba(67, 60, 197, 0.22);
+  }
+
   &__settings-action-panel {
     position: absolute;
     top: 0;
     right: 0;
     width: 360px;
     height: 100%;
-    padding: 16px 24px;
-    gap: 16px;
-    background: var(--normal-bg-100);
-    box-shadow: var(--drumee-shadow-box);
+    gap: 24px;
+    padding: 0 0 24px;
+    overflow-y: auto;
+    background: #f2f2f7;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
   }
 
-  &__settings-action-list {
-    gap: 12px;
+  &__settings-action-header {
+    align-items: center;
+    min-height: 65px;
+    padding: 16px 24px 17px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  &__settings-action-actions,
+  &__settings-action-invite-section,
+  &__settings-action-members-section {
     width: 100%;
+    padding: 0 24px;
+  }
+
+  &__settings-action-actions,
+  &__settings-action-invite-section {
+    gap: 12px;
+  }
+
+  &__settings-action-members-section {
+    gap: 16px;
   }
 
   &__settings-action-item {
@@ -693,45 +757,191 @@
     justify-content: space-between;
     gap: 12px;
     min-height: 32px;
-    padding: 0 12px;
-    border-radius: 8px;
-    color: var(--normal-fg-10);
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #0b0a21;
     cursor: pointer;
 
     &.destructive {
-      color: var(--red-500);
+      color: #0b0a21;
     }
+  }
+
+  &__settings-action-label,
+  &__settings-action-section-title,
+  &__settings-action-member-name {
+    @include drumee.typo($size: 12px, $line: 18px, $weight: 600, $color: #0b0a21);
+  }
+
+  &__settings-action-item &__settings-action-label,
+  &__settings-action-item &__settings-action-icon {
+    pointer-events: none;
   }
 
   &__settings-action-label {
     flex: 1 1 auto;
     min-width: 0;
-    @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: currentColor);
+    line-height: 1;
     @include drumee.overflow-text;
   }
 
   &__settings-action-icon,
-  &__settings-action-close {
+  &__settings-action-close,
+  &__settings-action-role-caret,
+  &__settings-action-member-remove {
     align-items: center;
     justify-content: center;
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+    flex: 0 0 auto;
     padding: 0;
     color: currentColor;
-
-    svg {
-      width: 18px;
-      height: 18px;
-    }
 
     svg * {
       fill: currentColor;
     }
   }
 
+  &__settings-action-icon {
+    width: 16px;
+    height: 16px;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
   &__settings-action-close {
-    color: var(--normal-fg-20);
+    width: 14px;
+    height: 24px;
+    color: #0b0a21;
+
+    svg {
+      width: 14px;
+      height: 24px;
+    }
+  }
+
+  &__settings-action-invite-input-row {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 46px;
+    padding: 12px;
+    border-radius: 4px;
+    background: #ffffff;
+  }
+
+  &__settings-action-invite-entry {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #0b0a21);
+
+      &::placeholder {
+        color: #aeaeb2;
+      }
+    }
+  }
+
+  &__settings-action-role-select {
+    align-items: center;
+    justify-content: space-between;
+    flex: 0 0 88px;
+    width: 88px;
+    min-height: 22px;
+    padding: 4px 4px 4px 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #65656c;
+    cursor: pointer;
+  }
+
+  &__settings-action-role-label {
+    min-width: 0;
+    @include drumee.typo($size: 10px, $line: 14px, $weight: 400, $color: #65656c);
+    @include drumee.overflow-text;
+  }
+
+  &__settings-action-role-caret {
+    width: 12px;
+    height: 12px;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  &__settings-action-send-button {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 36px;
+    padding: 8px 24px;
+    border-radius: 4px;
+    background: #433cc5;
+    cursor: pointer;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+  }
+
+  &__settings-action-member-row {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+  }
+
+  &__settings-action-member-info,
+  &__settings-action-member-actions {
+    align-items: center;
+  }
+
+  &__settings-action-member-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 12px;
+  }
+
+  &__settings-action-member-actions {
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+
+  &__settings-action-avatar {
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 12px;
+    overflow: hidden;
+    @include drumee.typo($size: 10px, $line: 15px, $weight: 600, $color: #e4e3ff);
+
+    &.primary { background: #5950ff; }
+    &.secondary { background: #38a2ce; color: #d8f9fd; }
+    &.dark { background: #3c3989; }
+  }
+
+  &__settings-action-member-name {
+    min-width: 0;
+    @include drumee.overflow-text;
+  }
+
+  &__settings-action-member-remove {
+    width: 21px;
+    height: 22px;
+    color: #d74e49;
+
+    svg {
+      width: 13.33px;
+      height: 15px;
+    }
   }
 
   &__meeting-view {
