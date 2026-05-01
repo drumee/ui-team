@@ -144,7 +144,7 @@ class __webrtc_room extends __room {
   /**
    * That function is called when connection is established successfully
    */
-  onConnectionSuccess() {
+  async onConnectionSuccess() {
     let room_id = this.mget(_a.room_id);
     this.room = this.connection.initJitsiConference(
       room_id,
@@ -160,6 +160,17 @@ class __webrtc_room extends __room {
       JEVENTS.conference.ENDPOINT_STATS_RECEIVED,
       this.onStatsReceived
     );
+
+    // Add tracks before join so they ride the initial Jingle offer.
+    if (this.localTracks.audio) {
+      try { await this.room.addTrack(this.localTracks.audio); }
+      catch (e) { this.warn("addTrack(audio) failed", e); }
+    }
+    if (this.localTracks.video) {
+      try { await this.room.addTrack(this.localTracks.video); }
+      catch (e) { this.warn("addTrack(video) failed", e); }
+    }
+
     this.stateMessage(LOCALE.JOINING_CONFERENCE);
     this.room.join();
   }
@@ -459,6 +470,10 @@ class __webrtc_room extends __room {
       this.loadRemotePresentation(track, 1);
       return;
     }
+
+    // Let remote-user widgets attach without waiting for ENDPOINT_STATS_RECEIVED.
+    this.trigger("TRACK_ADDED", track);
+
     /** Wait a while to ensure HELLO message has arrived */
     setTimeout(() => {
       if (!this._guests.get(participant_id)) {
@@ -495,21 +510,17 @@ class __webrtc_room extends __room {
     this.mset({ participant_id: this.room.myUserId() });
     if (this.isJoined) return;
     this.isJoined = true;
-    let timer = setInterval(async () => {
-      let track = this.getLocalTrack(_a.audio);
-      if (!track && this.localTracks.audio) {
+
+    // Guard against the rare case where the pre-join addTrack didn't register.
+    if (this.localTracks.audio && !this.room.getLocalAudioTrack()) {
+      try {
         await this.room.addTrack(this.localTracks.audio);
-        track = this.getLocalTrack(_a.audio);
-        if (track) {
-          if (track.isMuted(), track.isActive()) {
-            clearInterval(timer)
-            await this.broadcastJoining(args);
-          } else {
-            this.stateMessage(LOCALE.X_MIKE_BEING_UNMUTED.format(LOCALE.MY_COMPUTER));
-          }
-        }
+      } catch (e) {
+        this.warn("Failed to add local audio track", e);
       }
-    }, 2000);
+    }
+
+    await this.broadcastJoining(args);
 
     if (this.__participants.collection.length <= 1) {
       this.stateMessage("waiting");

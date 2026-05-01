@@ -32,6 +32,7 @@ const __window_connect_commands = function (_ui_) {
     className: `${_ui_.fig.family}__commands-container`,
     sys_pn: "commands",
     state: 0,
+    dataset: { mode: "in-call" },
     kids: [
       Skeletons.Box.X({
         className: `${_ui_.fig.family}__commands`,
@@ -54,15 +55,14 @@ const __window_connect_commands = function (_ui_) {
             service: "hand-raise",
             state: 0,
           }),
+          Skeletons.Button.Svg({
+            className: "ctrl-button leave",
+            ico: "meeting-leave",
+            sys_pn: "ctrl-line",
+            service: _e.close,
+            bubble: 0,
+          }),
         ]
-      }),
-      Skeletons.Button.Label({
-        className: "ctrl-button line",
-        ico: "meeting-leave",
-        label: LOCALE.LEAVE_MEETING,
-        sys_pn: "ctrl-line",
-        service: _e.close,
-        bubble: 0,
       }),
     ]
   });

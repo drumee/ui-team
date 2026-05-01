@@ -135,6 +135,9 @@ class __chat_p2p extends LetcBox {
       widget_chat.ticket_id = peer.ticket_id;
     }
 
+    this.activePeer = peer;
+    this.activePeerType = type;
+
     this.ensurePart('chat-header').then(header => {
       header.clear();
       header.feed(require('./skeleton/chat-header')(this, contact));
@@ -145,6 +148,52 @@ class __chat_p2p extends LetcBox {
       panel.feed(widget_chat);
       this.chatWidget = panel.children.last();
     });
+  }
+
+  /**
+   * Start an audio or video call with the currently selected peer.
+   * Routes 1:1 contacts to window_connect (ringing) and share rooms to window_meeting.
+   * @param {Boolean} isVideo
+   */
+  _startCall(isVideo) {
+    const peer = this.activePeer;
+    if (!peer) return;
+
+    const existing =
+      Wm.getItemByKind('window_connect') || Wm.getItemByKind('window_meeting');
+    if (existing) {
+      Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
+      return;
+    }
+
+    const name = peer.display
+      || peer.fullname
+      || `${peer.firstname || ''} ${peer.lastname || ''}`.trim();
+
+    if (this.activePeerType === _a.share) {
+      Wm.launch({
+        kind: 'window_meeting',
+        hub_id: peer.entity_id,
+        nid: peer.nid,
+        room_id: peer.nid,
+        filename: name,
+        display: name,
+        video: isVideo ? 1 : 0,
+        audio: 1,
+      }, { explicit: 1, singleton: 1 });
+      return;
+    }
+
+    Wm.launch({
+      kind: 'window_connect',
+      hub_id: Visitor.id,
+      nid: (peer.home && peer.home.home_id) || peer.nid,
+      filename: name,
+      display: name,
+      callee: peer,
+      video: isVideo ? 1 : 0,
+      audio: 1,
+    }, { explicit: 1, singleton: 1 });
   }
 
   /**
@@ -177,6 +226,12 @@ class __chat_p2p extends LetcBox {
     switch (service) {
       case 'load-conversation':
         return this.openChat(trigger);
+
+      case 'video-call':
+        return this._startCall(true);
+
+      case 'audio-call':
+        return this._startCall(false);
 
       case 'close-chat':
         Desk.togglePanel('chat_p2p', 'chat-panel');
