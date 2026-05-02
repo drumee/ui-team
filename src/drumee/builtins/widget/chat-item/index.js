@@ -60,7 +60,7 @@ class ___widget_chatItem extends LetcBox {
 
         if (!_.isEmpty(this.mget(_a.thread) && this.mget('thread_id'))) {
           let threadMsg = require('./skeleton/reply-message')(this);
-          child.prepend(threadMsg);
+          child.append(threadMsg, 0);
         }
 
         if (this.mget('is_attachment') || !_.isEmpty(this.mget('attachment'))) {
@@ -206,7 +206,7 @@ class ___widget_chatItem extends LetcBox {
         this.menu.el.show();
       }
       const mainEl = this.__main.el;
-      const bubble = mainEl.querySelector(`.${this.fig.family}__conversation-content`) || mainEl;
+      const bubble = mainEl.querySelector(`.${this.fig.family}__message-container`) || mainEl;
       const uiRect = this.el.getBoundingClientRect();
       const bubbleRect = bubble.getBoundingClientRect();
       const left = bubbleRect.left - uiRect.left + bubbleRect.width - 14;
