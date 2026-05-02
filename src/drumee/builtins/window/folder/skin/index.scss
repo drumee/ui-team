@@ -1480,13 +1480,13 @@
     padding: 0;
   }
 
-  .widget-chat__body {
-    padding: 16px;
+  .window__chat-panel .widget-chat__body {
+    padding: 16px 0 16px 16px;
     gap: 16px;
-  }
 
-  .widget-chat__messages .smart-container {
-    padding-right: 12px;
+    & > * {
+      padding-right: 0;
+    }
   }
 
   .widget-chat__messenger-wrapper {
