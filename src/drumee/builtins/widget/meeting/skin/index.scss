@@ -5,9 +5,12 @@
   &__ui {
     height: 100%;
     width: 100%;
+    box-sizing: border-box;
     overflow: hidden;
     background-color: var(--normal-bg-90);
     border-left: 1px solid var(--border-muted);
+
+    *, *::before, *::after { box-sizing: border-box; }
   }
 
   &__container {
@@ -69,6 +72,8 @@
     gap: 8px;
     border-top: 1px solid var(--border-default);
     flex-shrink: 0;
+    flex-wrap: wrap;
+    row-gap: 8px;
     align-items: center;
   }
 
@@ -76,8 +81,10 @@
     display: flex;
     background-color: var(--overlay-bg-05);
     border-radius: 4px;
-    width: 100%;
-    padding: var(--spacer-4);
+    flex: 0 1 120px;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 12px;
     justify-content: center;
     align-items: center;
     cursor: pointer;
@@ -87,10 +94,11 @@
     }
 
     .note-content {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--normal-fg);
       font-family: var(--font-main);
+      white-space: nowrap;
     }
 
     &:hover {
@@ -106,21 +114,27 @@
     align-items: center;
     color: white;
     cursor: pointer;
-    gap: 8px;
-    width: 100%;
-    padding: var(--spacer-4);
+    gap: 6px;
+    flex: 1 1 0;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 12px;
 
     .note-content {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
       color: white;
       font-family: var(--font-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       color: white;
+      flex-shrink: 0;
     }
 
     &:hover {

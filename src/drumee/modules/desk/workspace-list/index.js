@@ -70,7 +70,7 @@ class __desk_workspace extends LetcBox {
       }
 
       case "load-folder":
-        return Wm.loadWorkspaceNode(trigger);
+        return Wm.openWorkspaceFolder(trigger);
 
       case "new-workspace":
         return Wm.launch(

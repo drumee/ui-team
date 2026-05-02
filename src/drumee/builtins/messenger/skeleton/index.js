@@ -5,7 +5,7 @@ const __skl_messenger = function (ui) {
   if (ui.canUpload()) {
     upload = Skeletons.Button.Svg({
       className: `${ui.fig.family}__icon attach`,
-      ico: "message_attach",
+      ico: ui.mget('attach_icon') || "message_attach",
       service: "attach"
     });
   } else {

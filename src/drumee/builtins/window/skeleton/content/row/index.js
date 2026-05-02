@@ -73,7 +73,9 @@ const __media_skl_row = function (_ui_) {
       logicalParent: _ui_,
     },
     vendorOpt: Preset.List.Orange_e,
-    api: _ui_.getCurrentApi,
+    api() {
+      return _ui_.getCurrentApi();
+    },
   });
 
   if (localStorage.getItem("showHidden")) {

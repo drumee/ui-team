@@ -38,6 +38,11 @@ class __widget_meeting extends LetcBox {
 
       case "cancel":
       case _e.close:
+        // Bubble up so a parent window (folder) can switch its tab back to
+        // Files. The team window currently relies on the removeChild event
+        // it receives when this widget goodbye's, so the bubble is additive
+        // and harmless there.
+        this.triggerHandlers({ service: "close-call-panel" });
         this.goodbye();
         break;
 

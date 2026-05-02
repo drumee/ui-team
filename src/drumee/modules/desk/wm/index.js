@@ -276,6 +276,56 @@ class __window_manager extends push {
     this.updateBreadcrumb({ ...data, service: "change-workspace" });
   }
 
+  openWorkspaceFolder(node) {
+    const data = node.model ? node.model.toJSON() : (node || {});
+    const hub_id = data.workspace_hub_id || data.hub_id || data.id;
+    const nid = data.workspace_nid || data.actual_home_id || data.home_id || data.pid;
+
+    if (!hub_id || !nid) return this.loadWorkspaceNode(node);
+
+    if (window.Desk && _.isFunction(window.Desk._closeMainPanels)) {
+      window.Desk._closeMainPanels();
+    }
+
+    const area = data.workspace_area || data.area;
+    this._curWorkspace = { hub_id, nid, area };
+    this.mset({ hub_id, nid, nodeId: nid, area });
+    this.ensurePart(_a.list).then((l) => {
+      l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
+      if (l.collection) l.collection.reset();
+      l.el.style.visibility = 'hidden';
+      const scrollEl = l.el.querySelector('.smart-container');
+      if (scrollEl) {
+        scrollEl.dataset.partitioning = 1;
+        scrollEl.style.visibility = 'hidden';
+      }
+      l.restart();
+      this._prepareListPartition(l);
+    });
+    this.ensurePart("wrapper-modal").then((p) => p.clear());
+    this.windowsLayer.clear();
+    this.updateBreadcrumb({
+      ...data,
+      filename: data.workspace_name || data.filename,
+      hub_id,
+      nid,
+      area,
+      service: "change-workspace",
+    });
+    return this._launchApp(node, {
+      explicit: 1,
+      source: "sidebar-folder",
+      hub_id: data.hub_id || hub_id,
+      nid: data.nid || data.nodeId,
+      nodeId: data.nid || data.nodeId,
+      home_id: nid,
+      filetype: data.filetype || _a.folder,
+      area: data.area || area,
+      filename: data.filename,
+      name: data.filename,
+    });
+  }
+
   // Workspace (hub) clicks from grid views navigate inline via loadWorkspace —
   // same flow the sidebar uses for `load-workspace`. The legacy openHubManager
   // path (window_team / window_website / window_sharebox) stays reserved for

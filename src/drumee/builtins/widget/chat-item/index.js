@@ -134,6 +134,10 @@ class ___widget_chatItem extends LetcBox {
     let area = this.mget(_a.area);
     this.$el.addClass(author);
     this.$el.addClass(area);
+    const messageType = this.mget('message_type');
+    if (messageType === 'meeting.start' || messageType === 'meeting.end') {
+      this.$el.addClass('meeting-event');
+    }
     let html = '';
     let m = {
       fig: this.fig.family,

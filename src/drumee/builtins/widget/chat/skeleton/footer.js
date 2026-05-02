@@ -37,6 +37,7 @@ const __skl_widget_chat_footer = function (ui) {
         placeholder: ui.mget(_a.placeholder),
         no_emoji: ui.mget('no_emoji'),
         send_icon: ui.mget('send_icon'),
+        attach_icon: ui.mget('attach_icon'),
         bubble: 0
       }),
 

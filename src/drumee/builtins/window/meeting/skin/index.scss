@@ -409,4 +409,179 @@
       }
     }
   }
+
+  // ── Post-meeting feedback popup (Figma 172:100435) ───────────────────
+  // Mounted via this.append from window_meeting; we use position:fixed so the
+  // overlay covers the FULL viewport instead of just the meeting tab area —
+  // and so the card lands centered on screen regardless of where window_meeting
+  // is embedded (folder tab right pane, team window dock, or standalone).
+  &__feedback-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    background: rgba(11, 10, 33, 0.40);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    pointer-events: auto;
+  }
+
+  &__feedback-card {
+    width: 450px;
+    max-width: calc(100% - 32px);
+    padding: 32px;
+    gap: 24px;
+    background: #f2f2f7;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  &__feedback-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__feedback-icon {
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(84, 182, 132, 0.15);
+    border-radius: 6px;
+    flex-shrink: 0;
+
+    svg {
+      width: 22px;
+      height: 22px;
+      color: #54B684;
+    }
+  }
+
+  &__feedback-title {
+    @include drumee.typo($size: 20px, $line: 28px, $weight: 700, $color: #0B0A21);
+  }
+
+  &__feedback-stats {
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    align-self: center;
+  }
+
+  &__feedback-stat {
+    @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: #65656C);
+  }
+
+  &__feedback-stats-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #847EFF;
+    flex-shrink: 0;
+  }
+
+  &__feedback-rating {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__feedback-prompt {
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 600, $color: #0B0A21);
+  }
+
+  &__feedback-stars {
+    gap: 4px;
+    align-items: center;
+  }
+
+  &__feedback-star {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    color: #C7C7CC;
+    transition: color 0.12s ease, transform 0.08s ease;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+
+    &[data-on="1"] {
+      color: #FFB400;
+    }
+
+    &:hover {
+      transform: scale(1.08);
+    }
+  }
+
+  &__feedback-comment {
+    align-self: stretch;
+    background: #FFFFFF;
+    border-radius: 4px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+
+    textarea {
+      width: 100%;
+      border: none;
+      outline: none;
+      resize: none;
+      background: transparent;
+      @include drumee.typo($size: 12px, $line: 1.4, $weight: 400, $color: #0B0A21);
+
+      &::placeholder {
+        color: #C7C7CC;
+      }
+    }
+  }
+
+  &__feedback-actions {
+    align-self: stretch;
+    gap: 8px;
+
+    *, *::before, *::after { box-sizing: border-box; }
+  }
+
+  &__feedback-skip,
+  &__feedback-submit {
+    height: 48px;
+    padding: 12px 24px;
+    border-radius: 4px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 600);
+
+    .note-content { white-space: nowrap; }
+  }
+
+  &__feedback-skip {
+    flex: 0 1 120px;
+    min-width: 80px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #000;
+
+    &:hover { background: rgba(0, 0, 0, 0.10); }
+  }
+
+  &__feedback-submit {
+    flex: 1 1 0;
+    min-width: 0;
+    background: #433CC5;
+    color: #FFFFFF;
+
+    &:hover { background: #5950ff; }
+  }
 }
