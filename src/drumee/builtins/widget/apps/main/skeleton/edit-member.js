@@ -24,16 +24,20 @@ function mapDevice(row) {
   return { id, kind: deviceKind(row), name, info };
 }
 
+// Privilege bitmask: Admin=31, Edit=7, Chat=6 (read|write), View=2 (read).
+function roleLabelFor(priv) {
+  const p = parseInt(priv, 10) || 0;
+  if (p >= 31) return "Admin";
+  if (p >= 7)  return "Edit";
+  if (p >= 6)  return "Chat";
+  return "View";
+}
+
 function mapWorkspace(row) {
-  const id = row.id || row.hub_id;
-  const name = row.name || row.full_name || row.label || "Workspace";
-  // permission level 31 = workspace admin (per admin.member_set_workspace_admin docs).
-  const priv = parseInt(row.privilege || row.permission || 0, 10);
-  let role = "Member";
-  if (priv >= 31) role = "Admin";
-  else if (priv >= 4) role = "View & Edit";
-  else if (priv >= 2) role = "View & Chat";
-  return { id, name, role };
+  const id = row.hub_id || row.id;
+  const name = row.hub_name || row.name || row.full_name || row.label || "Workspace";
+  const priv = parseInt(row.privilege || row.permission || 0, 10) || 0;
+  return { id, name, role: roleLabelFor(priv) };
 }
 
 function variantFor(member) {
@@ -45,21 +49,16 @@ function variantFor(member) {
 
 function userCard(ui, member) {
   const pfx = ui.fig.family;
-  const useInitials =
-    member && member.avatar_color && member.avatar_color === "cyan";
-  const avatar = useInitials
-    ? Skeletons.Box.X({
-        className: `${pfx}__edit-avatar ${pfx}__edit-avatar--cyan`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__edit-avatar-initials`,
-            content: member.initials,
-          }),
-        ],
-      })
-    : Skeletons.Box.X({
-        className: `${pfx}__edit-avatar ${pfx}__edit-avatar--photo`,
-      });
+  const color = (member && member.avatar_color) || "cyan";
+  const avatar = Skeletons.Box.X({
+    className: `${pfx}__edit-avatar ${pfx}__edit-avatar--${color}`,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__edit-avatar-initials`,
+        content: (member && member.initials) || "?",
+      }),
+    ],
+  });
 
   return Skeletons.Box.X({
     className: `${pfx}__edit-user`,

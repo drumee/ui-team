@@ -2516,6 +2516,7 @@
   "TARGET_RESOURCE": "Target Resource",
   "TIMESTAMP": "Timestamp",
   "SHOWING_ENTRIES": "Showing 1-25 of 1,492 entries",
+  "SHOWING_OF": "Showing {start}-{end} of {total}",
   "SECURITY_SCORE": "Security Score",
   "HIGH_RISK_ACTIONS": "High-Risk Actions",
   "STORAGE_ACTIVITY": "Storage Activity",
