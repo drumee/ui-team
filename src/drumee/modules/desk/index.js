@@ -685,6 +685,14 @@ class desk_module extends LetcBox {
       // case _e.lock:
       //   return Wm.lock();
       case "onboarding-completed":
+        // Drop the manual override flag so a subsequent reload doesn't push
+        // the user back into the wizard, and mirror onboarded=1 into the
+        // local Visitor profile so route() falls through to loadDefault().
+        try { localStorage.removeItem("force-onboarding"); } catch (e) { }
+        {
+          let p = Visitor.profile && Visitor.profile();
+          if (p) p.onboarded = 1;
+        }
         return this.loadDefault();
 
       case _e.upload:
