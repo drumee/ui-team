@@ -3,37 +3,45 @@
 .window-confirm {
   &__ui {
     background-color: var(--default-bg);
-    border-radius: var(--corner-radius-6);
-    padding: var(--spacer-7);
+    border-radius: 14px;
+    padding: 22px 24px 24px;
     width: auto;
     height: auto;
     max-height: 100%;
     max-width: 100%;
-    min-height: 300px;
-    min-width: 490px;
+    min-height: 0;
+    min-width: 390px;
     overflow: hidden;
     position: absolute;
     justify-content: flex-start;
     align-items: center;
     border: 1px solid var(--border-muted);
+    box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
 
     &[data-device="mobile"] {
       min-width: unset !important;
-      width: 360px !important;
+      width: calc(100vw - 32px) !important;
+      max-width: 360px;
     }
 
     &[data-type="confirm"] {
       background-color: var(--normal-bg-90);
-      border-radius: var(--corner-radius-5);
-      padding: var(--spacer-6);
+      border-radius: 14px;
+      padding: 22px 24px 24px;
       width: auto;
       height: auto;
       max-height: 100%;
       max-width: 100%;
-      min-height: 300px;
-      min-width: 490px;
+      min-height: 0;
+      min-width: 390px;
       overflow: hidden;
       position: absolute;
+    }
+
+    &[data-device="mobile"][data-type="confirm"] {
+      min-width: unset !important;
+      width: calc(100vw - 32px) !important;
+      max-width: 360px;
     }
 
     &[data-maxsize="1"] {
@@ -52,8 +60,8 @@
   &__icon {
     &.logo {
       svg {
-        width: 64px;
-        height: 64px;
+        width: 42px;
+        height: 42px;
       }
     }
   }
@@ -62,14 +70,23 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
     width: 100%;
-    gap: var(--spacer-7);
+    gap: 18px;
   }
 
   &__topbar {
-    height: 40px;
+    height: auto;
     opacity: 1 !important;
+    width: 100%;
+  }
+
+  &-header {
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    justify-content: center;
     width: 100%;
   }
 
@@ -78,16 +95,15 @@
     flex: 1;
     justify-content: center;
     min-height: 0;
-    padding: 0 var(--spacer-4);
+    padding: 0 10px;
     width: 100%;
-    gap: var(--spacer-5);
+    gap: 10px;
 
     > * {
       text-align: center;
       width: 100%;
     }
 
-    // Ensure note-content and child elements are centered
     .note-content,
     .inner,
     p {
@@ -126,20 +142,19 @@
     align-content: center;
     justify-content: center;
     text-align: center;
-    width: 100%;
+    width: auto;
     @include drumee.typo(
-      $size: 16px,
-      $line: 25px,
-      $color: var(--default-text-color)
+      $size: 18px,
+      $line: 26px,
+      $color: var(--default-text-alert)
     );
 
     & .name {
-      top: 24px;
       @include drumee.typo(
-        $size: 22px,
+        $size: 18px,
         $line: 26px,
         $color: var(--default-text-alert)
-      ); // $window-confirm-default-title-color);
+      );
     }
   }
 
@@ -150,13 +165,12 @@
     text-align: center;
     width: 100%;
     @include drumee.typo(
-      $weight: 300,
-      $size: 24px,
-      $line: 26px,
+      $weight: 500,
+      $size: 15px,
+      $line: 22px,
       $color: var(--normal-fg-10)
     );
 
-    // Ensure child elements are centered
     .note-content,
     .inner,
     p {
@@ -183,7 +197,7 @@
 
     &.delete-team {
       display: block;
-      max-width: 450px;
+      max-width: 320px;
       margin: 0 auto;
     }
   }
@@ -196,12 +210,11 @@
     width: 100%;
     @include drumee.typo(
       $weight: 300,
-      $size: 16px,
-      $line: 26px,
+      $size: 13px,
+      $line: 19px,
       $color: var(--neutral-700)
     );
 
-    // Ensure child elements are centered
     .note-content,
     .inner,
     p {
@@ -228,7 +241,7 @@
 
     &.delete-team {
       display: block;
-      max-width: 450px;
+      max-width: 320px;
       margin: 0 auto;
     }
   }
@@ -243,20 +256,25 @@
     align-content: center;
     align-items: center;
     flex-shrink: 0;
-    gap: var(--spacer-4);
+    gap: 12px;
     justify-content: center;
     width: 100%;
 
     .button {
       align-items: center;
-      border-radius: var(--corner-radius-2);
+      border-radius: 12px;
       cursor: pointer;
-      height: 35px;
+      height: 44px;
       justify-content: center;
       text-align: center;
-      width: 115px;
+      width: 120px;
       margin: 0;
-      padding: var(--spacer-4) var(--spacer-6);
+      padding: 0 24px;
+      @include drumee.typo(
+        $size: 16px,
+        $line: 20px,
+        $weight: 500
+      );
     }
 
     &.intro-popup .button {
@@ -267,7 +285,7 @@
 
   &__button-secondary {
     border: 1px solid var(--border-muted);
-    @include drumee.typo($size: 16px, $line: 18px, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 16px, $line: 20px, $color: var(--normal-fg-10));
 
     &:hover {
       color: var(--normal-fg-20);
@@ -285,7 +303,7 @@
     border: 0px;
     @include drumee.typo(
       $size: 16px,
-      $line: 18px,
+      $line: 20px,
       $color: var(--btn-commit-text)
     );
 
@@ -305,7 +323,7 @@
     border: 0px;
     @include drumee.typo(
       $size: 16px,
-      $line: 18px,
+      $line: 20px,
       $color: var(--btn-caution-text)
     );
 

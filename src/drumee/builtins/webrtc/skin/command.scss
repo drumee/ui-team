@@ -40,6 +40,7 @@
 
 
     .ctrl-button {
+      position: relative;
       width: 36px; //48px;
       border-radius: var(--border-radius);
       height: 36px; //30px;
@@ -53,19 +54,27 @@
       flex-direction: row;
       justify-content: center;
       align-items: center;
+      transition: background-color 0.15s ease, opacity 0.15s ease;
 
-      &[data-enabled="0"] {
-        display: none;
+      &:hover {
+        filter: brightness(1.08);
       }
 
-      &[data-muted="1"] {
-        opacity: 0.3;
+      &:active {
+        opacity: 0.85;
+      }
+
+      &[data-muted="1"],
+      &[data-disabled="1"] {
+        opacity: 0.4;
         pointer-events: none;
+        filter: grayscale(0.6);
+        cursor: not-allowed;
       }
 
       &.line {
-        background-color: var(--multimedia-vdo-ctrl-button);
-        color: var(--default-icon-reverse); // #fff;
+        background-color: var(--default-border-caution);
+        color: var(--default-icon-reverse);
         fill: none;
 
         svg {
@@ -75,33 +84,26 @@
         }
       }
 
+      &.leave {
+        background-color: var(--default-border-caution);
+        color: var(--default-icon-reverse);
+        fill: none;
+
+        svg {
+          transform: none;
+        }
+      }
+
       &.reject {
-        background-color: var(--multimedia-vdo-ctrl-button);
+        background-color: var(--default-border-caution);
+        color: var(--default-icon-reverse);
       }
 
       &.screen {
         color: var(--multimedia-vdo-button-accept);
-        padding: 3.5px; //8.5px;
-        //margin-left: 14px;
-        /*  stroke-width: 1px;
-        stroke:$default-icon-reverse;*/
 
         &[data-state="0"] {
           color: var(--multimedia-vdo-icon);
-        }
-
-        &[data-state="0"] {
-          &:before {
-            content: " ";
-            position: absolute;
-            height: 2px;
-            width: 29px;
-            top: 15px; //12px;
-            left: 1px; //10px;
-            background-color: var(--multimedia-vdo-ctrl-button);
-            transform-origin: 50% 50%;
-            transform: rotate(-45deg);
-          }
         }
       }
 
@@ -114,32 +116,33 @@
         }
       }
 
-      &[data-state="0"] {
-        color: var(--multimedia-vdo-icon);
+      &.pickup {
+        background-color: var(--button-accept);
+        color: var(--default-icon-reverse);
+        fill: none;
       }
 
       &[data-state="0"] {
+        color: var(--multimedia-vdo-icon);
+
         &:before {
           content: " ";
           position: absolute;
+          top: calc(50% - 1px);
+          left: 17.5%;
+          width: 65%;
           height: 2px;
-          width: 25px;
-          top: 16px; //12px;
-          left: 3px; //10px;
           background-color: var(--multimedia-vdo-ctrl-button);
-          transform-origin: 50% 50%;
           transform: rotate(-45deg);
+          transform-origin: center center;
+          pointer-events: none;
+          z-index: 2;
         }
       }
 
       &[data-online="1"] {
         background-color: var(--multimedia-vdo-ctrl-button);
         color: var(--default-icon-reverse);
-      }
-
-      &[data-enabled="0"] {
-        opacity: 0.3;
-        pointer-events: none;
       }
     }
   }

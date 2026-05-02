@@ -150,7 +150,11 @@ class __remote_user extends __stream {
    *
    */
   async onDomRefresh() {
-    let loader = this.loaderSkeleton || require('./skeleton/loading');
+    // Render the real skeleton immediately so <audio sys_pn="output"> exists
+    // before tracks arrive. The loader skeleton omitted it.
+    this.feed(require('./skeleton')(this));
+    await this.ensurePart('output');
+
     let timer = setInterval(() => {
       let tracks = this.participant.getTracks();
       if (tracks.length) {
@@ -158,8 +162,6 @@ class __remote_user extends __stream {
         this.onStatsReceived(this.participant);
       }
     }, 1000);
-
-    this.feed(loader(this));
   }
 
   /**
@@ -286,6 +288,14 @@ class __remote_user extends __stream {
         track.detach(s.el);
       } else {
         track.attach(s.el);
+        s.el.muted = false;
+        s.el.volume = 1;
+        s.el.oncanplay = (e) => {
+          const p = e.target.play();
+          if (p && p.catch) p.catch(() => { });
+        };
+        const p = s.el.play();
+        if (p && p.catch) p.catch(() => { });
         this.updateCommandPanel();
         this._audioReady = true;
       }

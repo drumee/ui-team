@@ -90,6 +90,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      max-width: min(100%, 560px);
       min-width: 0;
 
       &.me {
@@ -371,7 +372,8 @@
 
   &__conversation-content {
     padding: 16px;
-    width: 100%;
+    width: fit-content;
+    max-width: 100%;
     @include drumee.typo(
       $size: 14px,
       $line: 1.4,
@@ -394,13 +396,53 @@
     }
 
     &.other {
-      background-color: var(--white);
+      background-color: #f2f2f7;
       color: #0b0a21;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
       border-radius: 16px 16px 16px 0;
-      border: 1px solid var(--border-muted);
     }
   }
+}
+
+// "X started a meeting" — compact inline system note with a Join link.
+.widget-chatItem__meeting-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--default-text-color);
+  opacity: 0.75;
+
+  &.end .widget-chatItem__meeting-card-dot {
+    background-color: var(--default-icon-neutral, #89929e);
+    animation: none;
+  }
+}
+
+.widget-chatItem__meeting-card-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--default-border-caution, #ea4d44);
+  flex-shrink: 0;
+}
+
+.widget-chatItem__meeting-card-text {
+  white-space: nowrap;
+}
+
+.widget-chatItem__meeting-card-action {
+  margin-left: 4px;
+  color: var(--button-accept, #18ac72);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover { text-decoration: underline; }
 }
 
 // File mention link in chat messages

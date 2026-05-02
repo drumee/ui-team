@@ -103,10 +103,12 @@ class __address_book extends LetcBox {
         return this._saveEdit(trigger);
 
       case "edit-add-email":
+        this._syncEditDom();
         this._editEmails.push({ email: "", category: "priv", is_default: 0 });
         return this._refreshDetail();
 
       case "edit-remove-email":
+        this._syncEditDom();
         this._editEmails.splice(trigger.mget("rowIndex"), 1);
         if (this._editEmails.length && !this._editEmails.some((e) => e.is_default === 1)) {
           this._editEmails[0].is_default = 1;
@@ -114,20 +116,24 @@ class __address_book extends LetcBox {
         return this._refreshDetail();
 
       case "edit-set-default-email": {
+        this._syncEditDom();
         const idx = trigger.mget("rowIndex");
         this._editEmails = this._editEmails.map((e, i) => ({ ...e, is_default: i === idx ? 1 : 0 }));
         return this._refreshDetail();
       }
 
       case "edit-add-phone":
+        this._syncEditDom();
         this._editPhones.push({ phone: "", areacode: "", category: "priv" });
         return this._refreshDetail();
 
       case "edit-remove-phone":
+        this._syncEditDom();
         this._editPhones.splice(trigger.mget("rowIndex"), 1);
         return this._refreshDetail();
 
       case "edit-toggle-tag": {
+        this._syncEditDom();
         const tagId = trigger.mget("tagId");
         if (!tagId) return;
         if (this._editTags.includes(tagId)) {
@@ -224,7 +230,11 @@ class __address_book extends LetcBox {
     this._tab = tab;
     this._selectedKey = null;
     this._editing = false;
-    const want = tab === "archived" ? "archived" : tab === "blocked" ? "blocked" : "active";
+    this._serverSearchHits = null;
+    // Backend's show_contact only supports {active, archived, all}.
+    // For "blocked" we load "all" and filter client-side via is_blocked.
+    // For "all" we also load "all" so sent invitations show alongside active.
+    const want = tab === "archived" ? "archived" : "all";
     if (this._contactsOption !== want) {
       await this._loadContacts(want);
     }
@@ -416,13 +426,12 @@ class __address_book extends LetcBox {
   _readEditFields() {
     const root = this.el?.querySelector(`.${this.fig.family}__detail-panel`);
     if (!root) return null;
-    const get = (sel) => root.querySelector(sel)?.value?.trim() || "";
 
     const emails = Array.from(root.querySelectorAll(`[data-row-kind="email"]`)).map((row) => ({
       email: row.querySelector("input")?.value?.trim() || "",
       is_default: row.dataset.default === "1" ? 1 : 0,
       category: row.dataset.category || "priv",
-    })).filter((e) => e.email);
+    }));
 
     const mobile = Array.from(root.querySelectorAll(`[data-row-kind="phone"]`)).map((row) => {
       const inputs = row.querySelectorAll("input");
@@ -431,31 +440,50 @@ class __address_book extends LetcBox {
         phone:    inputs[1]?.value?.trim() || "",
         category: row.dataset.category || "priv",
       };
-    }).filter((p) => p.phone);
+    });
 
     return {
-      firstname: get("input[name='firstname']") || (root.querySelector("[data-field='firstname'] input")?.value || ""),
-      lastname:  get("input[name='lastname']")  || (root.querySelector("[data-field='lastname'] input")?.value || ""),
+      firstname: root.querySelector("[data-field='firstname'] input")?.value?.trim() || "",
+      lastname:  root.querySelector("[data-field='lastname']  input")?.value?.trim() || "",
       comment:   root.querySelector("[data-field='comment'] textarea, [data-field='comment'] input")?.value?.trim() || "",
       email: emails,
       mobile,
     };
   }
 
+  // Pull the current DOM values into _editEmails/_editPhones so that an
+  // upcoming re-render keeps the user's typed text instead of resetting.
+  _syncEditDom() {
+    const dom = this._readEditFields();
+    if (!dom) return;
+    if (dom.email.length === this._editEmails.length) {
+      this._editEmails = dom.email.map((e, i) => ({
+        ...this._editEmails[i],
+        ...e,
+      }));
+    }
+    if (dom.mobile.length === this._editPhones.length) {
+      this._editPhones = dom.mobile.map((p, i) => ({
+        ...this._editPhones[i],
+        ...p,
+      }));
+    }
+  }
+
   async _saveEdit(trigger) {
     const contactId = trigger.mget("contactId");
     if (!contactId) return;
 
-    const fields = (this.getData?.(_a.formItem)) || {};
-    const fallback = this._readEditFields() || {};
+    // DOM is the source of truth — the user might have just typed values
+    // that haven't been reflected in _editEmails/_editPhones yet.
+    const dom = this._readEditFields() || {};
 
-    const firstname = String(fields.firstname || fallback.firstname || "").trim();
-    const lastname  = String(fields.lastname  || fallback.lastname  || "").trim();
-    const comment   = String(fields.comment   || fallback.comment   || "").trim();
+    const firstname = String(dom.firstname || "").trim();
+    const lastname  = String(dom.lastname  || "").trim();
+    const comment   = String(dom.comment   || "").trim();
 
-    // Pick up edit-form arrays from in-memory state (kept in sync with renders).
-    const emails = (this._editEmails || []).filter((e) => e.email && e.email.trim());
-    const mobile = (this._editPhones || []).filter((p) => p.phone && p.phone.trim());
+    const emails = (dom.email  || []).filter((e) => e.email && e.email.trim());
+    const mobile = (dom.mobile || []).filter((p) => p.phone && p.phone.trim());
     if (emails.length && !emails.some((e) => e.is_default === 1)) {
       emails[0].is_default = 1;
     }
@@ -674,6 +702,11 @@ class __address_book extends LetcBox {
     }
     if (this._tab === "blocked") {
       list = list.filter((c) => c.is_blocked === 1 || c.status === "blocked");
+    } else if (this._tab === "archived") {
+      list = list.filter((c) => c.is_archived === 1 || c.status === "archived");
+    } else {
+      // "all": hide blocked from the main list (they have their own tab)
+      list = list.filter((c) => !(c.is_blocked === 1 || c.status === "blocked"));
     }
     if (this._selectedTagId) {
       list = list.filter((c) =>

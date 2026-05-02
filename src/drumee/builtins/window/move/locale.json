@@ -1,0 +1,10 @@
+{
+  "MOVE": "Move",
+  "MOVE_TO": "Move to...",
+  "CURRENT_LOCATION": "Current location:",
+  "SELECT_DESTINATION": "Select a location to move to:",
+  "SEARCH_WORKSPACE_OR_FOLDER": "Search workspace or folder...",
+  "FOLDER": "Folder",
+  "DESTINATION": "Destination",
+  "MOVE_HERE": "Move here"
+}

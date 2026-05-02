@@ -1,6 +1,6 @@
 const mfsInteract = require("../interact");
 
-const { folderFilesView, folderChatView, fileTypeFilterBar, gridFilesBrowser } = require("../skeleton/toolkit");
+const { folderFilesView, fileTypeFilterBar, gridFilesBrowser } = require("../skeleton/toolkit");
 
 require("./skin");
 
@@ -47,6 +47,12 @@ class __window_folder extends mfsInteract {
     this.setupInteract();
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
+    // Honor the launch-time `activeTab` option (e.g. opened from the
+    // sidebar live-meeting badge with activeTab: "meeting").
+    const initialTab = this.mget("activeTab");
+    if (initialTab && initialTab !== "files") {
+      this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
+    }
   }
 
   loadContent() {
@@ -122,11 +128,17 @@ class __window_folder extends mfsInteract {
   newContent(xhr, options = {}) {
     const { data } = xhr || {};
     if (!data) return;
-    const { nid, pid } = data;
+    const { nid, pid, args, src } = data;
     const { echoId } = options || {};
     if (this.updateInnerHubsPreview) this.updateInnerHubsPreview(data);
     if (echoId === this.mget('echoId')) return;
     if (this.mget(_a.nid) != pid) return;
+
+    // Skip WS update if nid matches the source folder (prevents overwriting
+    // the original folder when copying/duplicating). Check both data.src.nid
+    // and data.args.src.nid formats.
+    if (src?.nid && nid === src.nid) return;
+    if (args?.src?.nid && nid === args.src.nid) return;
 
     // Dedup: if the item is already rendered, refresh in place.
     const existing = this.getItemsByAttr(_a.nid, nid).filter((c) => {
@@ -152,6 +164,10 @@ class __window_folder extends mfsInteract {
   }
 
   onPartReady(child, pn) {
+    if (pn === "folder-view") {
+      this.__folderView = child;
+      return;
+    }
     if (pn === _a.list) {
       this.iconsList = child;
       if (this.getViewMode && this.getViewMode() !== _a.row) {
@@ -194,7 +210,7 @@ class __window_folder extends mfsInteract {
         return this.showInfo();
 
       case _e.download:
-        return this.mget(_a.trigger).download();
+        return this.runFolderMediaAction(_e.download);
 
       case _e.settings:
         return this.switchShowFolderSettings(cmd);
@@ -219,20 +235,35 @@ class __window_folder extends mfsInteract {
         return this.openAdvancedSettings(cmd);
 
       case "folder-rename":
-        this.dialogWrapper.clear();
-        return this.mget(_a.trigger)?.rename?.();
+        return this.openFolderRenameDialog();
 
       case "folder-organize":
-        this.dialogWrapper.clear();
-        return this.warn(LOCALE.NOT_YET_IMPLEMENTED);
+        return this.runFolderMediaAction("organize");
 
       case "folder-duplicate":
-        this.dialogWrapper.clear();
-        return this.mget(_a.trigger)?.triggerHandlers?.({ service: _a.duplicate });
+        return this.runFolderMediaAction(_a.duplicate);
 
       case "folder-delete":
-        this.dialogWrapper.clear();
-        return this.mget(_a.trigger)?.delete?.();
+        return this.confirmFolderDelete();
+
+      case "folder-invite-role":
+        return this.setFolderInviteRole(cmd);
+
+      case "folder-member-role":
+        return this.setFolderMemberRole(cmd);
+
+      case "folder-send-invitation":
+        return this.sendFolderInvitation(cmd);
+
+      case "folder-remove-member":
+        return this.removeFolderMember(cmd);
+
+      case "folder-rename-change":
+        this._renameFolderValue = cmd.getValue ? cmd.getValue() : cmd.mget(_a.value);
+        return;
+
+      case "folder-rename-submit":
+        return this.renameFolderTarget(this._renameFolderTarget);
 
       case "tab-files":
         return this.showFolderTab("files");
@@ -338,37 +369,224 @@ class __window_folder extends mfsInteract {
       });
   }
 
-  /**
-   * Switch the split body between Files / Chat / Task tabs. Re-feeds
-   * the `folder-view` part with the appropriate skeleton subtree so the
-   * task tab mounts the `tasks_panel` widget (hub-scoped), and the chat
-   * tab a full-width chat panel.
-   */
   showFolderTab(tab) {
+    if (this.activeTab === tab) return;
     this.activeTab = tab;
     this.$el.find(".window-folder__tab-bar-item").attr("data-state", 0);
     this.$el.find(`.window-folder__tab-bar-item[data-tab='${tab}']`).attr("data-state", 1);
 
-    return this.ensurePart("folder-view").then((view) => {
+    const switchView = (view) => {
+      if (this._meetingViewActive && tab !== "meeting") {
+        view.feed(folderFilesView(this));
+        this._meetingViewActive = 0;
+        this._taskPanelMounted = 0;
+      }
       view.el.dataset.view = tab;
       switch (tab) {
         case "files":
-          return view.feed(folderFilesView(this));
         case _a.chat:
-          return view.feed(folderChatView(this));
+          return;
         case "meeting":
+          this._meetingViewActive = 1;
+          this._taskPanelMounted = 0;
           return view.feed(require("./skeleton/meeting-panel")(this));
         case _a.task:
-          return view.feed({
-            kind: "tasks_panel",
-            hub_id: this.mget(_a.hub_id),
-            nid: this.mget(_a.nid),
-            uiHandler: [this],
-          });
+          if (!this._taskPanelMounted) {
+            this._taskPanelMounted = 1;
+            return view.append({
+              kind: "tasks_panel",
+              hub_id: this.mget(_a.hub_id),
+              nid: this.mget(_a.nid),
+              uiHandler: [this],
+            });
+          }
+          return;
         default:
-          return view.feed(folderFilesView(this));
+          view.el.dataset.view = "files";
       }
+    };
+
+    if (this.__folderView && !(this.__folderView.isDestroyed && this.__folderView.isDestroyed())) {
+      return switchView(this.__folderView);
+    }
+    const switchId = _.uniqueId("folder-tab-");
+    this._folderTabSwitchId = switchId;
+    return this.ensurePart("folder-view").then((view) => {
+      if (this._folderTabSwitchId !== switchId || !view || (view.isDestroyed && view.isDestroyed())) return;
+      this.__folderView = view;
+      return switchView(view);
     });
+  }
+
+  getFolderActionTarget() {
+    return this.mget(_a.trigger) || this.mget(_a.media) || this;
+  }
+
+  closeFolderSettings() {
+    this.isShowSettings = false;
+    return this.dialogWrapper.clear();
+  }
+
+  openFolderDialog(skeleton) {
+    this.isShowSettings = false;
+    this.dialogWrapper.clear();
+    return _.delay(() => this.dialogWrapper.feed(skeleton));
+  }
+
+  runFolderMediaAction(service) {
+    const target = this.getFolderActionTarget();
+    switch (service) {
+      case _e.download:
+        this.closeFolderSettings();
+        return target.download();
+      case "organize":
+        return this.prepareFolderMove(target);
+      case _a.duplicate:
+        return this.duplicateFolderTarget(target);
+      default:
+        return target?.onUiEvent?.({ service, mget: () => service }, { service });
+    }
+  }
+
+  prepareFolderMove(target) {
+    this.closeFolderSettings();
+    if (typeof target.move === "function") return target.move();
+    Wm.unselect && Wm.unselect();
+    Wm.storeClipboard(_e.cut, target);
+    Wm.acknowledge && Wm.acknowledge();
+  }
+
+  duplicateFolderTarget(target) {
+    this.closeFolderSettings();
+    Wm.unselect && Wm.unselect();
+    const echoId = Visitor.get(_a.echoId);
+    return target.postService(SERVICE.media.copy, {
+      service: SERVICE.media.copy,
+      nid: target.mget(_a.nodeId),
+      pid: target.mget(_a.pid),
+      action: _a.copy,
+      recipient_id: target.mget(_a.hub_id),
+      hub_id: target.mget(_a.hub_id),
+      echoId,
+    }, { async: 1 }).then(() => {
+      // Don't add folder here — WS broadcast (newContent) handles adding
+      // the new folder to the grid. Adding from HTTP response causes duplicate.
+      Wm.unselect && Wm.unselect();
+    }).catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
+  }
+
+  openFolderRenameDialog() {
+    const target = this.getFolderActionTarget();
+    const currentName = target?.mget?.(_a.filename) || this.mget(_a.filename) || "";
+    this._renameFolderTarget = target;
+    this._renameFolderValue = currentName;
+    this.openFolderDialog(require("./skeleton/rename-folder-dialog")(this, { value: currentName }));
+    return _.delay(() => this.ensurePart("rename-folder-name").then((entry) => entry.focus && entry.focus()));
+  }
+
+  renameFolderTarget(target) {
+    if (this._renamingFolder) return;
+    const entry = this.getPart && this.getPart("rename-folder-name");
+    const input = entry?.el?.querySelector?.("input");
+    const filename = String(input?.value || entry?.getValue?.() || this._renameFolderValue || "").trim();
+    if (!filename || filename === target?.mget?.(_a.filename)) return this.closeFolderSettings();
+    if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(filename)) return Wm.alert(LOCALE.INVALID_FILENAME);
+    this._renamingFolder = 1;
+    const node = target.actualNode ? target.actualNode() : {};
+    return target.postService(SERVICE.media.rename, {
+      filename,
+      nid: target.mget(_a.nodeId) || node.nid || target.mget(_a.nid),
+      service: SERVICE.media.rename,
+      hub_id: target.isHub ? Visitor.id : (target.mget(_a.hub_id) || node.hub_id),
+      echoId: target.mget("echoId"),
+    }).then((data) => {
+      if (target.afterRename) target.afterRename(data);
+      this.closeFolderSettings();
+    }).catch((e) => {
+      Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
+    }).finally(() => {
+      this._renamingFolder = 0;
+    });
+  }
+
+  confirmFolderDelete() {
+    const target = this.getFolderActionTarget();
+    const filename = target?.mget?.(_a.filename) || this.mget(_a.filename) || "";
+    this.dialogWrapper.feed({
+      kind: "window_confirm",
+      title: LOCALE.DELETE,
+      message: `${LOCALE.CONFIRM_DELETE} ${filename}?`,
+      confirm: LOCALE.DELETE,
+      confirm_type: "danger",
+    });
+    return this.dialogWrapper.children.last().ask().then(() => {
+      this.closeFolderSettings();
+      if (target?.trash) return target.trash();
+      if (target?.delete) return target.delete();
+    }).catch(() => {});
+  }
+
+  getFolderSettingPart() {
+    return this.dialogWrapper && this.dialogWrapper.children && this.dialogWrapper.children.last();
+  }
+
+  getInviteEmail(cmd) {
+    const data = (cmd.getData && cmd.getData()) || this.getData?.() || {};
+    const entry = this.getPart && this.getPart("invite-email");
+    return String(data.email || entry?.getValue?.() || "").trim();
+  }
+
+  getFolderRoleOptions() {
+    return [
+      { label: LOCALE.ROLE_ADMIN, privilege: _K.privilege.admin },
+      { label: LOCALE.ROLE_VIEW_EDIT, privilege: _K.privilege.write },
+      { label: LOCALE.ROLE_VIEW_CHAT, privilege: _K.privilege.read },
+      { label: LOCALE.VIEW, privilege: _K.privilege.guest || _K.privilege.read },
+    ];
+  }
+
+  getNextFolderRole(role) {
+    const options = this.getFolderRoleOptions();
+    const index = options.findIndex((item) => item.label === role);
+    return options[(index + 1) % options.length];
+  }
+
+  updateRoleSelector(cmd, role) {
+    if (!cmd.el) return;
+    cmd.el.dataset.role = role.label;
+    cmd.el.dataset.privilege = role.privilege;
+    const label = cmd.el.querySelector(".window-folder__settings-action-role-label .note-content");
+    if (label) label.textContent = role.label;
+  }
+
+  setFolderInviteRole(cmd) {
+    this._folderInviteRole = this.getNextFolderRole(cmd.el?.dataset?.role || LOCALE.ROLE_ADMIN);
+    this.updateRoleSelector(cmd, this._folderInviteRole);
+  }
+
+  setFolderMemberRole(cmd) {
+    this.updateRoleSelector(cmd, this.getNextFolderRole(cmd.el?.dataset?.role || LOCALE.ROLE_ADMIN));
+  }
+
+  sendFolderInvitation(cmd) {
+    const email = this.getInviteEmail(cmd);
+    if (!email) return Wm.alert(LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL);
+    const { nid, hub_id } = this.actualNode();
+    const permission = this._folderInviteRole?.privilege || _K.privilege.admin;
+    return this.postService(SERVICE.sharebox.assign_permission, {
+      email,
+      hub_id,
+      nid,
+      permission,
+      privilege: permission,
+    })
+      .then(() => Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY))
+      .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
+  }
+
+  removeFolderMember(cmd) {
+    const row = cmd.$el && cmd.$el.closest(".window-folder__settings-action-member-row");
+    if (row && row.remove) row.remove();
   }
 
   openAdvancedSettings(cmd) {

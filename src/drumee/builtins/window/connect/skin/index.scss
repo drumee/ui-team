@@ -62,6 +62,32 @@
         background: var(--default-background);
       }
     }
+
+    // Equal-size zoom + close icons with comfortable spacing.
+    .window-button__icon-button {
+      gap: 14px;
+      padding-right: 14px;
+      align-items: center;
+
+      .icon,
+      .ctrl-close,
+      .ctrl-sizing {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        padding: 0;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        svg {
+          width: 100%;
+          height: 100%;
+          display: block;
+        }
+      }
+    }
   }
 
   &__body {
@@ -88,16 +114,31 @@
     width: 100%;
     height: 100%;
     display: grid;
+    // Default to participants-fills-100% so the body never splits top/bottom
+    // halves before participants/index.js sets data-mode on its own element.
+    grid-template-columns: 0 minmax(0, 1fr);
+    grid-template-rows: 100%;
+
     &[data-mode="normal"]{
-      //grid-template-columns: repeat(auto-fill, 100%);
       grid-template-columns: 0 100%;
       grid-template-rows: 100%;
     }
     &[data-mode="presenter"]{
       grid-template-columns: calc(100% - 200px) 200px;
       grid-template-rows: 100%;
-      //grid-template-columns: repeat(auto-fill, minmax(100px, 100%) 120px);
     }
+  }
+
+  // Lift remote-tile footer above the in-call command bar so it isn't covered.
+  .remote-user__tile-footer {
+    bottom: 86px;
+  }
+
+  // status.scss (which would have positioned it as an absolute overlay) is never
+  // imported, so peer-container flows below the local-user tile and creates a
+  // duplicate avatar. Hide it; message-container handles the "Connecting" text.
+  &__peer-container {
+    display: none !important;
   }
 
   &__avatar-container {
@@ -228,6 +269,167 @@
     }
   }
 
+  &__body {
+    position: relative;
+  }
+
+  &__identity {
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 24px 16px 96px;
+    flex: 1;
+    width: 100%;
+  }
+
+  &__caller-name {
+    @include drumee.typo($size: 22px, $line: 30px, $weight: 600, $color: var(--default-text-color));
+    text-align: center;
+    word-break: break-word;
+  }
+
+  &__avatar.user-profile {
+    width: auto;
+    height: auto;
+    position: relative;
+
+    .user-profile__icon {
+      width: 120px;
+      height: 120px;
+    }
+
+    .user-profile__main {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      overflow: hidden;
+      animation: drumee-call-pulse 1.6s ease-in-out infinite;
+    }
+
+    .user-profile__initiales {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+
+      .note-content {
+        font-size: 42px;
+        font-weight: 600;
+      }
+    }
+  }
+
+  @keyframes drumee-call-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(250, 133, 64, 0.45); }
+    50%      { box-shadow: 0 0 0 16px rgba(250, 133, 64, 0); }
+  }
+
+  &__message-container {
+    pointer-events: none;
+    position: absolute;
+    bottom: 92px;
+    left: 0;
+    right: 0;
+    height: auto;
+    margin: 0;
+    z-index: 10;
+
+    .message-text {
+      margin: 0 auto;
+      background-color: transparent;
+      padding: 6px 14px;
+      @include drumee.typo($color: var(--default-text-color), $weight: 500, $line: 20px, $size: 14px);
+    }
+  }
+
+  &__commands-container {
+    bottom: 18px;
+    height: auto;
+    padding: 0 12px;
+
+    .ctrl-button {
+      flex-shrink: 0;
+    }
+  }
+
+  &__commands {
+    background-color: transparent !important;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 12px;
+  }
+
+  // Pre-call: large prominent circular accept/decline.
+  &__commands-container[data-mode="setup"] {
+    .window-connect__commands {
+      gap: 40px;
+      flex-wrap: nowrap;
+    }
+
+    .ctrl-button {
+      width: 56px;
+      height: 56px;
+      padding: 0;
+      border-radius: 50%;
+      margin: 0;
+
+      svg {
+        width: 24px;
+        height: 24px;
+      }
+    }
+  }
+
+  // In-call: compact rounded toggles + leave, centered as one row.
+  &__commands-container[data-mode="in-call"] {
+    .window-connect__commands {
+      gap: 14px;
+      flex-wrap: nowrap;
+    }
+
+    .ctrl-button {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 12px;
+      margin: 0;
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      // Override the shared red `.leave` styling for the 1:1 call window so it
+      // matches the toggle buttons next to it.
+      &.leave {
+        background-color: var(--default-bg);
+        color: var(--multimedia-vdo-icon);
+        fill: currentColor;
+
+        svg {
+          width: 20px;
+          height: 20px;
+        }
+      }
+    }
+  }
+
+  // Narrow window (mobile): shrink command buttons so all controls stay visible.
+  &__ui[data-device="mobile"] {
+    .window-connect__commands-container[data-mode="in-call"] {
+      .window-connect__commands { gap: 10px; }
+      .ctrl-button {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+      }
+    }
+
+    .window-connect__commands-container[data-mode="setup"] .ctrl-button {
+      width: 52px;
+      height: 52px;
+    }
+  }
+
   &__main {
     display: grid;
     grid-auto-flow: row;
@@ -272,7 +474,6 @@
 
   &__message-container {
     position: absolute;
-    position: absolute;
     height: 100%;
     width: 100%;
     align-items: center;
@@ -281,10 +482,9 @@
 
     .message-text {
       padding: 10px;
-      background-color: var(--default-transparent-black);
+      background-color: transparent;
       margin: auto 10px 90px 10px;
-      border-radius: var(--border-radius); //3px;
-      @include drumee.typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
+      @include drumee.typo($color: var(--default-text-color), $weight: 500, $line: 20px, $size: 16px);
     }
   }
 
