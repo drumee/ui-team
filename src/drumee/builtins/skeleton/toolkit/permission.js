@@ -57,6 +57,7 @@ export function permissionItems(ui, member, service, fig = ui.fig.family) {
  * Permission dropdown for the invite row.
  */
 export function permissionMenu(ui, member, service, fig = ui.fig.family) {
+  const currentRole = resolveRole(member || ui).value;
   const currentItem = roleItems.find(r => r.value === currentRole) || roleItems[0];
   const trigger = Skeletons.Box.X({
     className: `${fig}__role-trigger`,

@@ -1,4 +1,49 @@
-const auditLogs = require("./audit-data").default;
+function initialsFromName(name, email) {
+  const s = (name || email || "").trim();
+  if (!s) return "?";
+  const parts = s.split(/[\s@]+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+const ACTION_VARIANTS = {
+  grant: "grant",
+  share: "share",
+  revoke: "revoke",
+  policy: "policy",
+  create: "neutral",
+  delete: "revoke",
+  update: "neutral",
+};
+
+function mapAuditRow(row) {
+  const name =
+    row.actor_name ||
+    [row.firstname, row.lastname].filter(Boolean).join(" ").trim() ||
+    row.email ||
+    "—";
+  const action = (row.action || row.category || "").toString();
+  const variant = ACTION_VARIANTS[action.toLowerCase()] || "neutral";
+  const ts = row.ctime
+    ? Dayjs(row.ctime * 1000).format("MMM D, YYYY • HH:mm:ss")
+    : "—";
+  return {
+    id: `${row.hub_id || ""}-${row.entity_id || ""}-${row.ctime || ""}`,
+    user: {
+      name,
+      email: row.email || "",
+      initials: initialsFromName(name, row.email),
+      avatar_color: row.uid ? "dark" : "neutral",
+    },
+    action: { label: action || "—", variant },
+    resource: {
+      icon: "dock-folder",
+      label: row.log || row.entity_id || "—",
+    },
+    timestamp: ts,
+  };
+}
 
 function auditHeader(ui) {
   const pfx = ui.fig.family;
@@ -384,7 +429,9 @@ export default function audit_view(ui) {
             auditTableHeader(pfx),
             Skeletons.Box.Y({
               className: `${pfx}__audit-list`,
-              kids: auditLogs.map((log) => auditEntry(ui, log)),
+              kids: (ui._auditLogs || []).map((row) =>
+                auditEntry(ui, mapAuditRow(row))
+              ),
             }),
             auditPagination(ui),
           ],
