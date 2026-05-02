@@ -285,6 +285,10 @@ class __media_core extends DrumeeMFS {
     if (extra.length) {
       fileItems.push(_a.separator, ...extra)
     }
+
+    if (this.getParentByKind && this.getParentByKind('window_folder')) {
+      fileItems.push(_a.separator, 'seeChatThreads');
+    }
     return fileItems;
 
   }
