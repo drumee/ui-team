@@ -1037,11 +1037,9 @@ class __window_core extends __utils {
    * @returns
    */
   getCurrentApi(type) {
-    console.log("AAA:9992", this);
     let api;
     const { nid, hub_id } = this.actualNode();
     const f = type;
-    console.log("AAA:9993", f);
     switch (f) {
       case "all":
       case "docs":

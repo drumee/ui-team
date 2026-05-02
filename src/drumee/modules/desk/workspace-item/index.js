@@ -48,15 +48,22 @@ class __workspace_item extends LetcBox {
       nodeRole: "folder",
       level: (this.mget("level") || 0) + 1,
       radio: "sidebar-radio",
+      workspace_hub_id: this.mget("workspace_hub_id") || this.getHubId(),
+      workspace_nid: this.mget("workspace_nid") || this.getNodeId(),
+      workspace_area: this.mget("workspace_area") || this.mget(_a.area),
+      workspace_name: this.mget("workspace_name") || this.mget(_a.filename),
     };
   }
 
   normalizeFolder(item = {}) {
+    const nid = item.nid || item.actual_home_id || item.home_id || item.id;
     return {
       ...item,
       ...this.childOptions(),
       hub_id: item.hub_id || this.getHubId(),
-      nid: item.nid || item.actual_home_id || item.home_id || item.id,
+      nid,
+      nodeId: nid,
+      filetype: item.filetype || _a.folder,
     };
   }
 

@@ -102,7 +102,7 @@ const __skl_window_application = function (filetype, opt = {}) {
   let r = a[filetype] || {};
   if (media && media.model) {
     let { mimetype, dataType } = media.model.toJSON();
-    if (media.imgCapable()) {
+    if (media.imgCapable && media.imgCapable()) {
       let { kind } = a[filetype] || { kind: "image_viewer" };
       return { kind, ...opt };
     }

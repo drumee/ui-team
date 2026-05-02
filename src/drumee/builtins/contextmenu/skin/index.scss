@@ -37,6 +37,13 @@
       pointer-events: none;
     }
 
+    &.submenu-item[data-state="disable"] {
+      opacity: 1;
+      color: var(--normal-fg-50);
+      cursor: not-allowed;
+      pointer-events: auto;
+    }
+
     &:not([data-state="disable"]):hover {
       background-color: var(--normal-bg-90);
     }
@@ -63,12 +70,27 @@
       display: none;
       position: absolute;
       left: calc(100% - 8px);
-      min-width: 138px;
+      min-width: 220px;
+      min-height: 84px;
       padding: 8px;
       gap: 4px;
+      align-items: stretch;
+      flex-direction: column;
       border-radius: 4px;
       background-color: var(--normal-bg);
       box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
+
+      .contextmenu-item {
+        box-sizing: border-box;
+        min-height: 32px;
+        padding: 8px 16px;
+        width: 100%;
+        background-color: var(--normal-bg);
+      }
+
+      .contextmenu-item:not([data-state="disable"]):hover {
+        background-color: var(--normal-bg-90);
+      }
     }
 
     &:hover > .contextmenu-item__submenu {
