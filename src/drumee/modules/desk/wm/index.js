@@ -139,6 +139,7 @@ class __window_manager extends push {
       notify: 1,
       socket_id: Visitor.get(_a.socket_id),
       seeding: 1,
+      echoId: this.mget('echoId'),
       area: this._curWorkspace?.area || _a.personal,
     }).then((data) => {
       if (data && data.error) {
@@ -146,16 +147,17 @@ class __window_manager extends push {
       }
       this.closeCreateFolderDialog();
       this.ensurePart(_a.list).then((list) => {
-        const { hub_id, nid } = this._curWorkspace || {};
-        list.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
-        list.el.style.visibility = 'hidden';
-        const scrollEl = list.el.querySelector('.smart-container');
-        if (scrollEl) {
-          scrollEl.dataset.partitioning = 1;
-          scrollEl.style.visibility = 'hidden';
+        if (!list || (list.isDestroyed && list.isDestroyed()) || !data) return;
+        if (this._curWorkspace?.hub_id != hub_id || this._curWorkspace?.nid != nid) return;
+        if (data.pid && data.pid != nid) return;
+        data.kind = this._getKind();
+        data.service = "open-node";
+        data.uiHandler = [this];
+        if (data.position >= 0) list.append(data, data.position);
+        else list.append(data);
+        if (this.getViewMode && this.getViewMode() !== _a.row) {
+          this._partitionFoldersAndFiles(list);
         }
-        list.restart();
-        this._prepareListPartition(list);
       });
     }).catch((e) => {
       this.warn("Failed to create folder", e);

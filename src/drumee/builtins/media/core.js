@@ -1697,10 +1697,21 @@ class __media_core extends DrumeeMFS {
       }
       let reopen = this.mget('reopen');
       let widgetId = this.mget(_a.widgetId)
+      let echoId = this.mget(ECHO_ID);
       this.model.clear();
-      data.echoId = this.mget(ECHO_ID);
-      this.model.set({ widgetId, ...data, ...opt, actual_home_id: data.home_id, service: OPEN_NODE });
-      this.restart("media:created");
+      this.model.set({ widgetId, echoId, ...data, ...opt, actual_home_id: data.home_id, service: OPEN_NODE });
+      this._pendingSeed = 0;
+      this.status = null;
+      this.phase = null;
+      this.service = _a.idle;
+      this.el.dataset.status = "";
+      this.initData();
+      this.initURL();
+      this.initContainer();
+      this.feed(this.container);
+      this.unselect();
+      this.trigger(_e.restart);
+      this.trigger("media:created");
       if (reopen) {
         this.triggerHandlers({ service: OPEN_NODE })
       }
