@@ -96,6 +96,7 @@ class ___widget_chatcontactItem extends LetcBox {
    */
   resetNotification() {
     this.mset("room_count", 0);
+    this.mset("has_mention", 0);
     this.updateNotification();
   }
 

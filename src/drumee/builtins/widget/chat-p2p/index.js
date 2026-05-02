@@ -312,6 +312,17 @@ class __chat_p2p extends LetcBox {
     item.mset(_a.message, msg);
     item.mset(_a.ctime, data.ctime);
 
+    // Track has_mention: increment if this message mentions current user
+    if (data.author_id !== Visitor.id) {
+      const mentionIds = data.mention_ids || [];
+      const isMentioned = Array.isArray(mentionIds)
+        ? mentionIds.some(id => String(id) === String(Visitor.id))
+        : false;
+      if (isMentioned) {
+        item.mset('has_mention', ~~(item.mget('has_mention') || 0) + 1);
+      }
+    }
+
     if (item.__message) item.__message.set(_a.content, msg);
     if (item.__msgTime) {
       const t = Dayjs.unix(data.ctime).locale(Visitor.language()).format("HH:mm");
@@ -336,8 +347,7 @@ class __chat_p2p extends LetcBox {
       if (filter === 'unread') {
         item.el.style.display = count > 0 ? '' : 'none';
       } else if (filter === 'mentions') {
-        const msg = item.mget(_a.message) || '';
-        const hasMention = /\[@[^\]]+\]\(user:[^)]+\)/.test(msg) && count > 0;
+        const hasMention = ~~(item.mget('has_mention') || 0) > 0;
         item.el.style.display = hasMention ? '' : 'none';
       }
     });
@@ -350,6 +360,7 @@ class __chat_p2p extends LetcBox {
     item = item && item[0];
     if (!item) return;
     item.mset('room_count', 0);
+    item.mset('has_mention', 0);
     if (_.isFunction(item.updateNotification)) item.updateNotification();
   }
 }
