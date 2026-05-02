@@ -255,6 +255,7 @@ export function chatPanel(ui) {
     placeholder: LOCALE.TYPE_MESSAGE + '...',
     no_emoji: true,
     send_icon: 'raw-send-chat',
+    attach_icon: 'chat-link-simple',
     sys_pn: 'folder-chat',
   };
 

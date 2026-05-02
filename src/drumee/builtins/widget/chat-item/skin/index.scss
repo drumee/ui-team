@@ -128,7 +128,7 @@
 
     &-date {
       @include drumee.typo(
-        $size: 10px,
+        $size: 11px,
         $line: 1.4,
         $weight: 400,
         $color: var(--normal-fg-50)
@@ -404,6 +404,39 @@
   }
 }
 
+// Meeting system messages: centered row, larger text, no timestamp
+// Dual approach: class-based (.meeting-event) + CSS :has() fallback
+.widget-chatItem__ui.meeting-event,
+.widget-chatItem__ui:has(.widget-chatItem__meeting-card) {
+  align-items: center !important;
+  margin-top: 16px;
+
+  .widget-chatItem__main {
+    display: flex !important;
+    justify-content: center !important;
+  }
+
+  .widget-chatItem__message-container {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100%;
+  }
+
+  .widget-chatItem__message-content {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .widget-chatItem__message-footer {
+    display: none !important;
+  }
+
+  .widget-chatItem__avatar-wrapper {
+    display: none !important;
+  }
+}
+
 // "X started a meeting" — compact inline system note with a Join link.
 .widget-chatItem__meeting-card {
   display: inline-flex;
@@ -412,10 +445,10 @@
   padding: 4px 8px;
   border-radius: 6px;
   background: transparent;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.4;
   color: var(--default-text-color);
-  opacity: 0.75;
+  opacity: 0.85;
 
   &.end .widget-chatItem__meeting-card-dot {
     background-color: var(--default-icon-neutral, #89929e);
