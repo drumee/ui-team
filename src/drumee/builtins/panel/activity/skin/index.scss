@@ -64,6 +64,35 @@
     gap: 8px;
   }
 
+  &__topbar-actions {
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__mark-read-btn {
+    display: flex !important;
+    flex-direction: row !important;
+    cursor: pointer;
+    align-items: center;
+    gap: 4px;
+    svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      color: #65656C;
+    }
+    .label, span, section {
+      font-size: 12px;
+      font-weight: 400;
+      color: #65656C;
+      white-space: nowrap;
+    }
+    &:hover {
+      svg { color: #5950FF; }
+      .label, span, section { color: #5950FF; }
+    }
+  }
+
   &__unread-label {
     @include drumee.typo(
       $size: 12px,

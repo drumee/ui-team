@@ -88,7 +88,7 @@ const __skl_chat_item_reply_message = function(_ui_) {
     className : `${chatItemReplyFig}__main`,
     debug     : __filename,
     styleOpt  : {
-      borderLeft  : `2px solid ${colorFromName}`
+      borderLeft  : `2px solid ${color}`
     },
     kids      : [
       Skeletons.Box.X({

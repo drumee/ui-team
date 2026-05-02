@@ -21,8 +21,29 @@ const createNavItem = (
   color = "",
   on_click,
   sys_pn,
+  badgePn,
 ) => {
   const fig = `${ui.fig.family}-sidebar`;
+
+  const kids = [
+    Skeletons.Button.Svg({
+      ico,
+      className: cls(fig, `item-icon ${color}`),
+    }),
+    createText(fig, `item-text ${color}`, label),
+  ];
+
+  if (badgePn) {
+    kids.push(
+      Skeletons.Note({
+        className: cls(fig, "badge"),
+        sys_pn: badgePn,
+        partHandler: ui,
+        content: "",
+        dataset: { count: 0 },
+      })
+    );
+  }
 
   return Skeletons.Box.X({
     className: cls(fig, "item"),
@@ -34,13 +55,7 @@ const createNavItem = (
     kidsOpt: {
       active: 0,
     },
-    kids: [
-      Skeletons.Button.Svg({
-        ico,
-        className: cls(fig, `item-icon ${color}`),
-      }),
-      createText(fig, `item-text ${color}`, label),
-    ],
+    kids,
   });
 };
 
@@ -217,6 +232,10 @@ const createNav = (ui) => {
             "sidebar_notifications",
             LOCALE.NOTIFICATIONS,
             "toggle-activity",
+            "",
+            null,
+            "sidebar-notifications",
+            "activity-count",
           ),
           createNavItem(ui, "sidebar_inbox", LOCALE.INBOX, "toggle-inbox"),
           createNavItem(ui, "sidebar_contacts", LOCALE.CONTACTS, "toggle-contacts"),
