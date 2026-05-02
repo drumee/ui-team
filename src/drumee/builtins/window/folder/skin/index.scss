@@ -1263,9 +1263,9 @@
   }
 
   .window__chat-panel {
-    border-left: 1px solid rgba(0, 0, 0, 0.05);
+    border-left: 1px solid var(--border-muted);
     border-radius: 0;
-    background: #f2f2f7;
+    background: var(--normal-bg-90);
   }
 
   &__filter-bar {
@@ -1456,9 +1456,9 @@
     align-items: center;
     min-height: 50px;
     padding: 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--border-muted);
     font-family: "Geist Mono", monospace;
-    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: #0b0a21);
+    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--normal-fg-10));
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
@@ -1491,7 +1491,7 @@
 
   .widget-chat__messenger-wrapper {
     padding: 16px;
-    background: #f2f2f7;
+    background: var(--normal-bg-90);
   }
 
   .widget-chat__messenger {
@@ -1504,14 +1504,14 @@
       overflow: hidden;
       padding: 10px 12px;
       border-radius: 8px;
-      background: #ffffff;
+      background: var(--normal-bg-elevated);
     }
 
     .lib-messenger__icon.attach {
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #65656c;
+      color: var(--normal-fg-20);
       width: 15px;
       height: 16px;
       margin: 0 4px 0 0;
@@ -1519,8 +1519,8 @@
       svg {
         width: 15px;
         height: 16px;
-        color: #65656c;
-        fill: #65656c;
+        color: var(--normal-fg-20);
+        fill: var(--normal-fg-20);
       }
     }
 
@@ -1531,11 +1531,11 @@
       .note-content {
         min-height: 16px;
         padding: 0 8px;
-        @include drumee.typo($size: 12px, $line: 16.8px, $weight: 400, $color: #0b0a21);
+        @include drumee.typo($size: 12px, $line: 16.8px, $weight: 400, $color: var(--normal-fg-10));
 
         &::before {
-          color: #84848c;
-          @include drumee.typo($size: 12px, $line: 16.8px, $weight: 400, $color: #84848c);
+          color: var(--normal-fg-50);
+          @include drumee.typo($size: 12px, $line: 16.8px, $weight: 400, $color: var(--normal-fg-50));
         }
       }
     }
@@ -1604,11 +1604,11 @@
 
   .widget-chatItem__conversation-content.other,
   .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
-    background: #ffffff;
+    background: var(--normal-bg-elevated);
     border: 0;
     border-radius: 0 16px 16px 16px;
     box-shadow: none;
-    color: #0b0a21;
+    color: var(--normal-fg-10);
 
     .file-mention,
     .user-mention,
@@ -1652,7 +1652,7 @@
   }
 
   .widget-chatItem__message-date {
-    @include drumee.typo($size: 11px, $line: 1.4, $weight: 400, $color: #84848c);
+    @include drumee.typo($size: 11px, $line: 1.4, $weight: 400, $color: var(--normal-fg-50));
   }
 
   &__split-body[data-view="chat"] {

@@ -396,9 +396,9 @@
     }
 
     &.other {
-      background-color: #f2f2f7;
-      color: #0b0a21;
-      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+      background-color: var(--normal-bg-90);
+      color: var(--normal-fg-10);
+      box-shadow: 0 1px 1px var(--border-muted);
       border-radius: 16px 16px 16px 0;
     }
   }
@@ -447,7 +447,7 @@
   background: transparent;
   font-size: 12px;
   line-height: 1.4;
-  color: var(--default-text-color);
+  color: var(--normal-fg-10);
   opacity: 0.85;
 
   &.end .widget-chatItem__meeting-card-dot {
