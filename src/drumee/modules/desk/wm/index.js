@@ -139,6 +139,7 @@ class __window_manager extends push {
       notify: 1,
       socket_id: Visitor.get(_a.socket_id),
       seeding: 1,
+      echoId: this.mget('echoId'),
       area: this._curWorkspace?.area || _a.personal,
     }).then((data) => {
       if (data && data.error) {
@@ -146,16 +147,17 @@ class __window_manager extends push {
       }
       this.closeCreateFolderDialog();
       this.ensurePart(_a.list).then((list) => {
-        const { hub_id, nid } = this._curWorkspace || {};
-        list.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
-        list.el.style.visibility = 'hidden';
-        const scrollEl = list.el.querySelector('.smart-container');
-        if (scrollEl) {
-          scrollEl.dataset.partitioning = 1;
-          scrollEl.style.visibility = 'hidden';
+        if (!list || (list.isDestroyed && list.isDestroyed()) || !data) return;
+        if (this._curWorkspace?.hub_id != hub_id || this._curWorkspace?.nid != nid) return;
+        if (data.pid && data.pid != nid) return;
+        data.kind = this._getKind();
+        data.service = "open-node";
+        data.uiHandler = [this];
+        if (data.position >= 0) list.append(data, data.position);
+        else list.append(data);
+        if (this.getViewMode && this.getViewMode() !== _a.row) {
+          this._partitionFoldersAndFiles(list);
         }
-        list.restart();
-        this._prepareListPartition(list);
       });
     }).catch((e) => {
       this.warn("Failed to create folder", e);
@@ -274,6 +276,56 @@ class __window_manager extends push {
     this.ensurePart("wrapper-modal").then((p) => p.clear());
     this.windowsLayer.clear();
     this.updateBreadcrumb({ ...data, service: "change-workspace" });
+  }
+
+  openWorkspaceFolder(node) {
+    const data = node.model ? node.model.toJSON() : (node || {});
+    const hub_id = data.workspace_hub_id || data.hub_id || data.id;
+    const nid = data.workspace_nid || data.actual_home_id || data.home_id || data.pid;
+
+    if (!hub_id || !nid) return this.loadWorkspaceNode(node);
+
+    if (window.Desk && _.isFunction(window.Desk._closeMainPanels)) {
+      window.Desk._closeMainPanels();
+    }
+
+    const area = data.workspace_area || data.area;
+    this._curWorkspace = { hub_id, nid, area };
+    this.mset({ hub_id, nid, nodeId: nid, area });
+    this.ensurePart(_a.list).then((l) => {
+      l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
+      if (l.collection) l.collection.reset();
+      l.el.style.visibility = 'hidden';
+      const scrollEl = l.el.querySelector('.smart-container');
+      if (scrollEl) {
+        scrollEl.dataset.partitioning = 1;
+        scrollEl.style.visibility = 'hidden';
+      }
+      l.restart();
+      this._prepareListPartition(l);
+    });
+    this.ensurePart("wrapper-modal").then((p) => p.clear());
+    this.windowsLayer.clear();
+    this.updateBreadcrumb({
+      ...data,
+      filename: data.workspace_name || data.filename,
+      hub_id,
+      nid,
+      area,
+      service: "change-workspace",
+    });
+    return this._launchApp(node, {
+      explicit: 1,
+      source: "sidebar-folder",
+      hub_id: data.hub_id || hub_id,
+      nid: data.nid || data.nodeId,
+      nodeId: data.nid || data.nodeId,
+      home_id: nid,
+      filetype: data.filetype || _a.folder,
+      area: data.area || area,
+      filename: data.filename,
+      name: data.filename,
+    });
   }
 
   // Workspace (hub) clicks from grid views navigate inline via loadWorkspace —

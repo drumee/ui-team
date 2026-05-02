@@ -501,7 +501,7 @@
   &__mention-dropdown {
     display: none;
     position: absolute;
-    bottom: 100%;
+    bottom: calc(100% + 8px);
     left: 0;
     right: 0;
     max-height: 220px;
@@ -511,7 +511,7 @@
     border-radius: 8px;
     margin-bottom: 4px;
     padding: 6px 0;
-    z-index: 100;
+    z-index: 1000;
     box-shadow: var(--shadow-top-tiny);
 
     &::-webkit-scrollbar {

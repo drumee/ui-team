@@ -30,6 +30,27 @@ class __window_folder extends mfsInteract {
         filetype: _a.hub,
       });
     }
+    if (!Visitor.isMobile()) {
+      const sidebar = document.querySelector(".desk-module-sidebar__main");
+      const sidebarRight = sidebar ? sidebar.getBoundingClientRect().right : 0;
+      const workspaceWidth = window.innerWidth - sidebarRight;
+      const workspaceHeight = window.innerHeight;
+      const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
+      const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
+      this.size = {
+        ...this.size,
+        width,
+        height,
+        minWidth: 760,
+        minHeight: 480,
+      };
+      this.style.set({
+        left: Math.round(sidebarRight + (workspaceWidth - width) / 2),
+        top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
+        minWidth: this.size.minWidth,
+        minHeight: this.size.minHeight,
+      });
+    }
     this.style.set({
       width: this.size.width,
       height: this.size.height,
@@ -45,6 +66,7 @@ class __window_folder extends mfsInteract {
   buildContent(child) {
     this.__content = child;
     this.setupInteract();
+    this.applyDefaultBounds();
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
     // Honor the launch-time `activeTab` option (e.g. opened from the
@@ -53,6 +75,71 @@ class __window_folder extends mfsInteract {
     if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
     }
+  }
+
+  applyDefaultBounds() {
+    if (this._defaultBoundsApplied || Visitor.isMobile()) return;
+    this._defaultBoundsApplied = 1;
+    const sidebar = document.querySelector(".desk-module-sidebar__main");
+    const sidebarRight = sidebar ? sidebar.getBoundingClientRect().right : 0;
+    const workspaceWidth = window.innerWidth - sidebarRight;
+    const workspaceHeight = window.innerHeight;
+    const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
+    const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
+    const bounds = {
+      left: Math.round(sidebarRight + (workspaceWidth - width) / 2),
+      top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
+      width,
+      height,
+      minWidth: 760,
+      minHeight: 480,
+    };
+    this.size = { ...this.size, ...bounds };
+    this.style.set(bounds);
+    this.$el.css(bounds);
+    try {
+      this.$el.resizable(_a.option, "disabled", false);
+      this.$el.resizable(_a.option, "minWidth", bounds.minWidth);
+      this.$el.resizable(_a.option, "minHeight", bounds.minHeight);
+      this.$el.resizable(_a.option, "handles", this.handles || "all");
+    } catch (e) { }
+    this.syncBounds();
+  }
+
+  getChatScrollElement() {
+    return this.el.querySelector(".window__chat-panel .widget-chat__messages .smart-container");
+  }
+
+  captureChatScroll() {
+    const scroller = this.getChatScrollElement();
+    if (!scroller) return;
+    this._chatScrollState = {
+      bottom: scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop,
+    };
+  }
+
+  restoreChatScroll() {
+    const scroller = this.getChatScrollElement();
+    const state = this._chatScrollState;
+    if (!scroller || !state) return;
+    scroller.scrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight - state.bottom);
+  }
+
+  _resizeStart(e, ui) {
+    this.captureChatScroll();
+    if (super._resizeStart) return super._resizeStart(e, ui);
+  }
+
+  _resize(e, ui, anim) {
+    if (super._resize) super._resize(e, ui, anim);
+    window.requestAnimationFrame(() => this.restoreChatScroll());
+  }
+
+  _resizeStop(e, ui) {
+    if (super._resizeStop) super._resizeStop(e, ui);
+    this.restoreChatScroll();
+    this._chatScrollState = null;
+    return false;
   }
 
   loadContent() {
@@ -204,7 +291,7 @@ class __window_folder extends mfsInteract {
   }
 
   onUiEvent(cmd, args = {}) {
-    const service = args.service || cmd.mget(_a.service);
+    const service = args.service || cmd.service || cmd.mget(_a.service);
     switch (service) {
       case _a.info:
         return this.showInfo();
@@ -269,7 +356,15 @@ class __window_folder extends mfsInteract {
         return this.showFolderTab("files");
 
       case "tab-chat":
+        this.scopeChatToFile(null);
         return this.showFolderTab(_a.chat);
+
+      case _a.chat: {
+        const fileNid = (cmd && cmd._args && cmd._args.nid) || (cmd && cmd.mget && cmd.mget(_a.nid));
+        if (!fileNid) return;
+        this.showFolderTab(_a.chat);
+        return this.scopeChatToFile(fileNid);
+      }
 
       case "tab-task":
         return this.showFolderTab(_a.task);
@@ -281,7 +376,11 @@ class __window_folder extends mfsInteract {
         return this.toggleFilesLayout(cmd);
 
       case "leave-meeting":
+      case "close-call-panel":
         return this.showFolderTab("files");
+
+      case "start-meeting":
+        return this._launchMeetingInPanel();
 
       case "meeting":
       case "webinar":
@@ -367,6 +466,33 @@ class __window_folder extends mfsInteract {
       .finally(() => {
         this._creatingFolder = 0;
       });
+  }
+
+  async _launchMeetingInPanel() {
+    if (this._launchingMeeting) return;
+    this._launchingMeeting = true;
+    try {
+      const panel = await this.ensurePart("meeting-panel");
+      panel.feed({
+        kind: "window_meeting",
+        className: `${this.fig.family}__meeting-room-widget`,
+        hub_id: this.mget(_a.hub_id),
+        filename: this.mget(_a.filename),
+        nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
+        trigger: this.mget(_a.media) || this,
+        media: this.mget(_a.media) || this,
+        service: "meeting",
+        uiHandler: [this],
+      });
+    } finally {
+      this._launchingMeeting = false;
+    }
+  }
+
+  scopeChatToFile(fileNid) {
+    return this.ensurePart('folder-chat').then((chat) => {
+      if (chat && _.isFunction(chat.setScopedFileNid)) chat.setScopedFileNid(fileNid);
+    });
   }
 
   showFolderTab(tab) {

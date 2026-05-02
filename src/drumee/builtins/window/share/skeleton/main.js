@@ -42,6 +42,7 @@ const __skl_sharebox = function(_ui_) {
         placeholder: 'Type a message...',
         no_emoji: true,
         send_icon: 'raw-send-chat',
+        attach_icon: 'chat-link-simple',
         sys_pn: 'folder-chat',
       },
     ],

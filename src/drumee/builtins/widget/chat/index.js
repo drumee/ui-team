@@ -48,6 +48,7 @@ class __widget_chat extends LetcBox {
       this.peerId = '';
       const nid = this.mget(_a.nid) || '';
       this.scopedNid = this.mget('scope') === _a.folder ? nid : '';
+      this.scopedFileNid = '';
       this.storageKey = nid ? `${area}-${this.hubId}-${nid}` : `${area}-${this.hubId}`;
     }
 
@@ -701,6 +702,17 @@ class __widget_chat extends LetcBox {
     }
 
 
+    if (this.scopedFileNid) {
+      // list_by_file returns the full thread in one response; a large
+      // pagelength makes the list widget call `_eod` after the first page.
+      return {
+        service: SERVICE.channel.list_by_file,
+        hub_id: this.hubId,
+        file_nid: this.scopedFileNid,
+        pagelength: 200
+      };
+    }
+
     api = {
       service: SERVICE.channel.messages,
       hub_id: this.hubId,
@@ -710,6 +722,44 @@ class __widget_chat extends LetcBox {
       api.nid = this.getScopedNid();
     }
     return api;
+  }
+
+  // Switch the message list to a file-scoped thread; pass falsy to leave it.
+  setScopedFileNid(fileNid) {
+    const next = fileNid ? `${fileNid}` : '';
+    if (this.scopedFileNid === next) return;
+
+    this._scopedScroll = this._scopedScroll || {};
+    if (this.__list && this.__list.__container) {
+      this._scopedScroll[this.scopedFileNid || ''] = this.__list.__container.scrollTop;
+    }
+    if (this.threadId) this.clearReplyMessage();
+
+    this.scopedFileNid = next;
+    this.ensurePart(_a.list).then((list) => {
+      if (!list || !_.isFunction(list.restart)) return;
+      const prevSpinner = list.mget(_a.spinner);
+      if (prevSpinner) list.mset(_a.spinner, false);
+      list.restart();
+      if (prevSpinner) list.mset(_a.spinner, prevSpinner);
+
+      const targetScroll = this._scopedScroll && this._scopedScroll[next];
+      if (typeof targetScroll === 'number') {
+        list.once(_e.ready, () => {
+          if (list.__container) list.__container.scrollTop = targetScroll;
+        });
+      }
+    });
+  }
+
+  // Server stores the attachment field as a JSON string; normalise to array.
+  parseAttachmentField(raw) {
+    if (_.isArray(raw)) return raw;
+    if (!raw) return [];
+    if (_.isString(raw)) {
+      try { return JSON.parse(raw); } catch (e) { return []; }
+    }
+    return [];
   }
 
   /**
@@ -735,6 +785,10 @@ class __widget_chat extends LetcBox {
    */
   matchesScopedChannel(data = {}) {
     if (_.isArray(data)) data = data[0] || {};
+    if (this.scopedFileNid) {
+      const attachments = this.parseAttachmentField(data.attachment).map(String);
+      return attachments.includes(`${this.scopedFileNid}`);
+    }
     const nid = this.getScopedNid();
     if (!nid) return true;
     const messageNid = data.nid || data.parent_id || data.pid;
@@ -769,7 +823,22 @@ class __widget_chat extends LetcBox {
 
     const replaceChars = { '<': '&#60;', '>': '&#62;' };
     message = message.replace(/[<>]/g, m => replaceChars[m]);
-    let attachments = list.getAttachmentIds();
+    let attachments = list.getAttachmentIds() || [];
+    // Promote file mentions into the attachment array so channel.list_by_file
+    // (which searches that JSON column) can find this message.
+    let mentionedFiles = [];
+    if (messenger && _.isFunction(messenger.getMentionedFileNids)) {
+      mentionedFiles = messenger.getMentionedFileNids();
+    }
+    if (mentionedFiles.length) {
+      const seen = new Set(attachments.map(String));
+      for (const nid of mentionedFiles) {
+        if (!seen.has(`${nid}`)) {
+          attachments.push(nid);
+          seen.add(`${nid}`);
+        }
+      }
+    }
     if (_.isEmpty(attachments) && _.isEmpty(message)) {
       return false;
     }
@@ -783,13 +852,19 @@ class __widget_chat extends LetcBox {
       case _a.private:
       case _a.ticket:
       case 'supportTicket':
+        if (this.scopedFileNid) {
+          attachments = attachments || [];
+          if (!attachments.map(String).includes(`${this.scopedFileNid}`)) {
+            attachments = [this.scopedFileNid, ...attachments];
+          }
+        }
         api = {
           service: SERVICE.channel.post,
           message,
           attachment: attachments,
           hub_id: this.hubId
         };
-        if (this.getScopedNid()) {
+        if (this.getScopedNid() && !this.scopedFileNid) {
           api.nid = this.getScopedNid();
         }
         break;
@@ -840,6 +915,7 @@ class __widget_chat extends LetcBox {
     if (_.isArray(data)) {
       data = data[0]
     }
+    if (!data || _.isEmpty(data)) return;
     if (!this.__list) return;
     data.kind = 'widget_chat_item';
     data.logicalParent = this;
@@ -881,6 +957,9 @@ class __widget_chat extends LetcBox {
       is_readed: 0,
       is_seen: 0,
     }
+    if (api.thread_id && this.threadSnapshot) {
+      tmp.thread = this.threadSnapshot;
+    }
     delete tmp.service;
     if (this.__list) {
       this.__list.append(tmp);
@@ -898,7 +977,7 @@ class __widget_chat extends LetcBox {
       this.queue.unshift(api);
       let errMessage = error.message || LOCALE.MESSAGE_NOT_SENT_RETRY;
       this.showError(errMessage);
-      this.warn("AAA:787 -- Server error", error);
+      this.warn("Server error sending message", error);
     });
   }
 
@@ -941,6 +1020,10 @@ class __widget_chat extends LetcBox {
     this.threadAttachment = '';
     const replyWrapper = this.getPart('reply-wrapper');
     this.threadId = cmd.mget('message_id');
+    // Snapshot the parent so the optimistic placeholder shows the quote right
+    // away. is_attachment stripped — chat-item#setThreadData would refetch.
+    this.threadSnapshot = cmd.model ? cmd.model.toJSON() : null;
+    if (this.threadSnapshot) delete this.threadSnapshot.is_attachment;
 
     if (cmd.mget('is_attachment')) {
       this.threadAttachment = cmd.__list.children != null ? cmd.__list.children.first() : undefined;
@@ -951,12 +1034,13 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   clearReplyMessage() {
     const replyWrapper = this.getPart('reply-wrapper');
     this.threadId = null;
+    this.threadSnapshot = null;
     replyWrapper.feed('');
     return replyWrapper.el.dataset.mode = _a.closed;
   }
@@ -1104,14 +1188,15 @@ class __widget_chat extends LetcBox {
       case SERVICE.channel.post_ticket:
         var isChannel = [_a.dmz, _a.public, _a.share, _a.private].includes(area);
         var hubMatch = isChannel && (this.hubId === data.hub_id);
-        if (hubMatch && !this.matchesScopedChannel(data)) {
-          hubMatch = false;
-        }
+        var inScope = !hubMatch || this.matchesScopedChannel(data);
         var privateMach = isPrivate && (this.peerId === data.entity_id);
         var ticketMach = (area === _a.ticket) && (data.ticket_id === this.mget('ticket_id'));
-        if (hubMatch || privateMach || ticketMach) {
+        if ((hubMatch && inScope) || privateMach || ticketMach) {
           this.handleReceivedMsg(data);
-
+        }
+        // Ack even when out-of-scope so unread counters in the folder feed
+        // don't accumulate while the user views a file-scoped thread.
+        if (hubMatch || privateMach || ticketMach) {
           if (area === _a.share) {
             service = SERVICE.channel.acknowledge;
           } else if (isPrivate) {
@@ -1131,7 +1216,6 @@ class __widget_chat extends LetcBox {
             }
             this.postService(postData);
           }
-
         }
         break;
 
