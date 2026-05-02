@@ -1,6 +1,21 @@
 const idOf = (c) =>
   (c && (c.id || c.contact_id || c.drumate_id || c.entity_id || c.entity)) || null;
 
+// Backend may return c.tag as an array of objects, an array of strings,
+// a single object, a single string, or a comma-separated string. Normalize
+// to an array of { tag_id, name } so the rest of the code is uniform.
+function normalizeTags(raw) {
+  if (raw == null || raw === "") return [];
+  let arr = raw;
+  if (typeof arr === "string") arr = arr.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!Array.isArray(arr)) arr = [arr];
+  return arr.map((t) => {
+    if (t == null) return null;
+    if (typeof t === "string") return { tag_id: t, name: t };
+    return { tag_id: t.tag_id || t.id || "", name: t.name || t.tag_name || "" };
+  }).filter((t) => t && t.tag_id);
+}
+
 class __address_book extends LetcBox {
 
   initialize(opt = {}) {
@@ -25,6 +40,8 @@ class __address_book extends LetcBox {
     this._importing = false;
     this._importError = null;
     this._importProgress = null;
+    this._toast = null;
+    this._toastTimer = null;
     this.bindEvent(_a.live);
   }
 
@@ -194,7 +211,10 @@ class __address_book extends LetcBox {
         hub_id: Visitor.id,
         option,
       });
-      this._contacts = Array.isArray(rows) ? rows : [];
+      this._contacts = (Array.isArray(rows) ? rows : []).map((c) => ({
+        ...c,
+        tag: normalizeTags(c.tag),
+      }));
       this._contactsOption = option;
     } catch (err) {
       this._contacts = [];
@@ -231,13 +251,15 @@ class __address_book extends LetcBox {
     this._selectedKey = null;
     this._editing = false;
     this._serverSearchHits = null;
-    // Backend's show_contact only supports {active, archived, all}.
-    // For "blocked" we load "all" and filter client-side via is_blocked.
-    // For "all" we also load "all" so sent invitations show alongside active.
-    const want = tab === "archived" ? "archived" : "all";
-    if (this._contactsOption !== want) {
-      await this._loadContacts(want);
-    }
+    // The `my_contact_show_next` proc only honours 'active' or 'archived';
+    // anything else returns an empty list. Keep the active set for All,
+    // Pending, and Blocked tabs and filter client-side. Pending uses its own
+    // invitation list; Blocked falls back to client filter on `is_blocked`.
+    const want = tab === "archived" ? "archived" : "active";
+    const tasks = [];
+    if (this._contactsOption !== want) tasks.push(this._loadContacts(want));
+    if (tab === "pending") tasks.push(this._loadInvitations());
+    if (tasks.length) await Promise.all(tasks);
     this._refreshList();
     this._refreshDetail();
   }
@@ -295,6 +317,9 @@ class __address_book extends LetcBox {
       this._inviteError = null;
       this._inviteDraft = { email: "", message: "" };
       this._closeInviteModal();
+      this._showToast(LOCALE.INVITATION_MAIL_SENT
+        ? `${LOCALE.INVITATION_MAIL_SENT} ${email}`
+        : "Invitation sent");
       await this._loadContacts(this._contactsOption || "active");
       this._refreshList();
     } catch (err) {
@@ -417,9 +442,7 @@ class __address_book extends LetcBox {
     this._editPhones = (Array.isArray(c.mobile) ? c.mobile : []).map((p) => ({
       phone: p.phone || "", areacode: p.areacode || "", category: p.category || "priv",
     }));
-    this._editTags = (Array.isArray(c.tag) ? c.tag : [])
-      .map((t) => t.tag_id || t.id || t)
-      .filter(Boolean);
+    this._editTags = (c.tag || []).map((t) => t.tag_id).filter(Boolean);
     this._refreshDetail();
   }
 
@@ -526,6 +549,7 @@ class __address_book extends LetcBox {
       await this._loadContacts(this._contactsOption || "active");
       this._refreshList();
       this._refreshDetail();
+      this._showToast(LOCALE.SAVED || "Saved");
     } catch (err) {
       console.error("[address_book] update failed:", err);
       this._editError = LOCALE.SOMETHING_WENT_WRONG;
@@ -663,6 +687,26 @@ class __address_book extends LetcBox {
     return this.ensurePart("wrapper-invite-modal").then((w) => w.clear());
   }
 
+  _showToast(message, kind = "success") {
+    this._toast = { message, kind };
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      this._toast = null;
+      this._renderToast();
+    }, 3500);
+    this._renderToast();
+  }
+
+  _renderToast() {
+    return this.ensurePart("ab-toast").then((part) => {
+      if (!this._toast) return part.feed([]);
+      part.feed(Skeletons.Note({
+        className: `${this.fig.family}__toast ${this.fig.family}__toast--${this._toast.kind}`,
+        content: this._toast.message,
+      }));
+    });
+  }
+
   _updateSelectionDom() {
     const root = this.el;
     if (!root) return;
@@ -702,15 +746,13 @@ class __address_book extends LetcBox {
     }
     if (this._tab === "blocked") {
       list = list.filter((c) => c.is_blocked === 1 || c.status === "blocked");
-    } else if (this._tab === "archived") {
-      list = list.filter((c) => c.is_archived === 1 || c.status === "archived");
-    } else {
-      // "all": hide blocked from the main list (they have their own tab)
-      list = list.filter((c) => !(c.is_blocked === 1 || c.status === "blocked"));
     }
+    // Archived tab is already filtered server-side (option="archived"); no
+    // extra filter needed. Blocked rows that happen to be in the active set
+    // get filtered out only when needed via the case above.
     if (this._selectedTagId) {
       list = list.filter((c) =>
-        Array.isArray(c.tag) && c.tag.some((t) => (t.tag_id || t.id || t) === this._selectedTagId));
+        (c.tag || []).some((t) => t.tag_id === this._selectedTagId));
     }
     return list;
   }

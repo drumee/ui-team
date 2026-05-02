@@ -720,4 +720,28 @@
     gap: 8px;
     margin-top: 4px;
   }
+
+  // ── Toast ─────────────────────────────────────────────────────
+  &__toast-slot {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    pointer-events: none;
+
+    &:empty { display: none; }
+  }
+
+  &__toast {
+    @include drumee.typo($size: 13px, $weight: 600, $line: 18px, $color: #fff);
+    padding: 10px 18px;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    background: var(--normal-fg-10, #0b0a21);
+    pointer-events: auto;
+
+    &--error { background: #d65f59; }
+    &--success { background: #54b684; }
+  }
 }

@@ -16,14 +16,18 @@ module.exports = function (ui, contacts) {
     return c.fullname || c.surname || c.email_default || c.email || c.entity || "—";
   };
 
+  const looksLikeEmail = (s) => typeof s === "string" && s.includes("@");
+
   const subtitle = (c, name) => {
     let value = "";
-    if (Array.isArray(c.email)) {
+    if (Array.isArray(c.email) && c.email.length) {
       const def = c.email.find((e) => e.is_default === 1) || c.email[0];
-      value = def?.email || "";
-    } else {
-      value = c.email_default || c.email || c.entity || "";
+      const v = def?.email || def || "";
+      if (looksLikeEmail(v)) value = v;
     }
+    if (!value && looksLikeEmail(c.email_default)) value = c.email_default;
+    if (!value && typeof c.email === "string" && looksLikeEmail(c.email)) value = c.email;
+    if (!value && looksLikeEmail(c.entity)) value = c.entity;
     return value && value !== name ? value : "";
   };
 
