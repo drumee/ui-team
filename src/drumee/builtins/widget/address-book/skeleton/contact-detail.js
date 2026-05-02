@@ -8,6 +8,22 @@ module.exports = function (ui, contact) {
   const editing = ui.isEditing();
   const editError = ui.getEditError();
 
+  const looksLikeEmail = (s) => typeof s === "string" && s.includes("@");
+
+  const pickEmail = () => {
+    if (Array.isArray(contact.email) && contact.email.length) {
+      const def = contact.email.find((e) => e.is_default === 1) || contact.email[0];
+      const v = def?.email || def;
+      if (looksLikeEmail(v)) return v;
+    }
+    if (looksLikeEmail(contact.email_default)) return contact.email_default;
+    if (typeof contact.email === "string" && looksLikeEmail(contact.email)) return contact.email;
+    if (looksLikeEmail(contact.entity)) return contact.entity;
+    return "";
+  };
+
+  const senderEmail = pickEmail();
+
   const fullName = (() => {
     const fn = (contact.firstname || "").trim();
     const ln = (contact.lastname || "").trim();
@@ -15,17 +31,10 @@ module.exports = function (ui, contact) {
     if (fn && ln && fn !== ln) parts = `${fn} ${ln}`;
     else parts = fn || ln;
     if (parts) return parts;
-    return contact.fullname || contact.surname || contact.email_default || contact.email || contact.entity || "—";
+    return contact.fullname || contact.surname || senderEmail || "—";
   })();
 
   const initials = (fullName.trim()[0] || "?").toUpperCase();
-  const senderEmail = (() => {
-    if (Array.isArray(contact.email)) {
-      const def = contact.email.find((e) => e.is_default === 1) || contact.email[0];
-      return def?.email || def || "";
-    }
-    return contact.email || contact.entity || "";
-  })();
 
   // ── Edit mode ─────────────────────────────────────────────────────
   if (editing && !isReceivedInvite && !isSentInvite) {
@@ -49,14 +58,18 @@ module.exports = function (ui, contact) {
         })
       : null;
 
-  const emailEntries = emails.length
-    ? emails.map((e) =>
+  const validEmails = emails
+    .map((e) => ({ ...e, email: (e?.email || e || "").toString() }))
+    .filter((e) => looksLikeEmail(e.email));
+
+  const emailEntries = validEmails.length
+    ? validEmails.map((e) =>
         Skeletons.Box.X({
           className: `${fig}__field-multi`,
           kids: [
             Skeletons.Note({
               className: `${fig}__field-value`,
-              content: e.email || e,
+              content: e.email,
             }),
             e.is_default === 1
               ? Skeletons.Note({
@@ -67,8 +80,8 @@ module.exports = function (ui, contact) {
           ].filter(Boolean),
         })
       )
-    : (contact.entity
-        ? [Skeletons.Note({ className: `${fig}__field-value`, content: contact.entity })]
+    : (senderEmail
+        ? [Skeletons.Note({ className: `${fig}__field-value`, content: senderEmail })]
         : []);
 
   const phoneEntries = phones.map((p) =>

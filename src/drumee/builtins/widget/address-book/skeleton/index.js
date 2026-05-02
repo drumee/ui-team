@@ -89,6 +89,10 @@ module.exports = function (ui) {
         uiHandler: [ui],
         bubble: 0,
       }),
+      Skeletons.Box.Y({
+        className: `${fig}__toast-slot`,
+        sys_pn: "ab-toast",
+      }),
     ],
   });
 };
