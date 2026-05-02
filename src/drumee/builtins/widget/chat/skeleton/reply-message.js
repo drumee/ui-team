@@ -7,6 +7,23 @@
 const { Autolinker } = require("autolinker");
 const { colorFromName } = require("@drumee/ui-essentials");
 
+// Mirrors `chat-item/template/conversation.js` mention decode for the preview.
+const decodeMentions = (raw) => {
+  if (!raw) return raw;
+  let text = raw.replace(
+    /\[@([^\]]+)\]\(mention:([^:]+):([^)]+)\)/g,
+    '<a class="file-mention" data-hub_id="$2" data-nid="$3">@$1</a>'
+  );
+  text = text.replace(
+    /\[@([^\]]*)\]\(user:([^)]+)\)/g,
+    (match, name, drumateId) => {
+      const label = (name || '').trim() || '@Unknown';
+      return `<a class="user-mention" data-drumate_id="${drumateId}">${label.startsWith('@') ? label : '@' + label}</a>`;
+    }
+  );
+  return text;
+};
+
 const __skl_chat_reply_message = function(_ui_, msg) {
   
   const chatReplyFig = `${_ui_.fig.family}-reply`;
@@ -35,7 +52,7 @@ const __skl_chat_reply_message = function(_ui_, msg) {
   
   const message = Skeletons.Note({
     className  : `${chatReplyFig}__note conversation ${author}`,
-    content    : Autolinker.link(msg.mget(_a.message))
+    content    : Autolinker.link(decodeMentions(msg.mget(_a.message)))
   });
   
   if (msg.mget('is_attachment')) {

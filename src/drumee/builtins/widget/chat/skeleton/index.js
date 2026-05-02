@@ -19,7 +19,6 @@ const __skl_widget_chat = function (ui) {
       })
     ]
   });
-  ui.debug("AAA:18:API", ui.getCurrentApi())
   const scrollButton = Skeletons.Box.X({
     className: `${chatFig}__button-scroll`,
     state: 0,

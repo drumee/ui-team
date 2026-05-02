@@ -28,7 +28,9 @@ module.exports = function (ui) {
     body = require('./meeting-event')(m);
   } else {
     body = require('./conversation')(m);
-    if (m.author != _a.me && m.type == _a.share) {
+    // Show the author label above every share-area bubble; folder skin hides
+    // avatars, so dropping it on "me" makes the layout asymmetric.
+    if (m.type == _a.share) {
       let uname = require('./username')(m);
       body = `${uname}${body}`;
     }

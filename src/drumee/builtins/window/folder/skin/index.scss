@@ -1566,6 +1566,12 @@
     margin-top: 16px;
   }
 
+  .widget-chatItem-menu__icon.menu-icon {
+    height: 18px;
+    width: 18px;
+    padding: 2px;
+  }
+
   .widget-chatItem__conversation-content {
     max-width: 320px;
     padding: 12px;
@@ -1581,9 +1587,15 @@
 
     .note-content,
     a,
-    .file-mention,
     .user-mention {
       color: #ffffff;
+    }
+
+    .file-mention {
+      color: #ffffff;
+      font-weight: 600;
+      text-decoration: underline;
+      text-decoration-color: rgba(255, 255, 255, 0.7);
     }
   }
 

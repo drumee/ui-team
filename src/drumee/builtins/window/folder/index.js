@@ -291,7 +291,7 @@ class __window_folder extends mfsInteract {
   }
 
   onUiEvent(cmd, args = {}) {
-    const service = args.service || cmd.mget(_a.service);
+    const service = args.service || cmd.service || cmd.mget(_a.service);
     switch (service) {
       case _a.info:
         return this.showInfo();
@@ -356,7 +356,15 @@ class __window_folder extends mfsInteract {
         return this.showFolderTab("files");
 
       case "tab-chat":
+        this.scopeChatToFile(null);
         return this.showFolderTab(_a.chat);
+
+      case _a.chat: {
+        const fileNid = (cmd && cmd._args && cmd._args.nid) || (cmd && cmd.mget && cmd.mget(_a.nid));
+        if (!fileNid) return;
+        this.showFolderTab(_a.chat);
+        return this.scopeChatToFile(fileNid);
+      }
 
       case "tab-task":
         return this.showFolderTab(_a.task);
@@ -479,6 +487,12 @@ class __window_folder extends mfsInteract {
     } finally {
       this._launchingMeeting = false;
     }
+  }
+
+  scopeChatToFile(fileNid) {
+    return this.ensurePart('folder-chat').then((chat) => {
+      if (chat && _.isFunction(chat.setScopedFileNid)) chat.setScopedFileNid(fileNid);
+    });
   }
 
   showFolderTab(tab) {

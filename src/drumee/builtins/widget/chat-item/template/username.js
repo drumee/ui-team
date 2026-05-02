@@ -1,7 +1,10 @@
 // ==================================================================== *
 const { colorFromName } = require("@drumee/ui-essentials");
 const __chat_item_username = function(m) {
-  const e = m.entity || m;
+  // "me" rows carry only author_id; pull names from Visitor for the sender.
+  const e = (m.author === 'me' && typeof Visitor !== 'undefined')
+    ? (Visitor.profile ? Visitor.profile() : (Visitor.toJSON ? Visitor.toJSON() : m))
+    : (m.entity || m);
   const lastname = e.lastname || m.lastname || '';
   const surname = e.surname || m.surname || '';
   const firstname = e.firstname || m.firstname || surname || '';
