@@ -3,15 +3,12 @@ module.exports = function (ui) {
   const state = ui.getState();
   const creating = ui.isCreating();
   const draft = ui.getCreateDraft();
-  const editingId = ui.getEditingId();
   const detail = ui.getDetailTask();
   const priorities = ui.getPriorities();
   const members = ui.getMembers();
   const allLabels = ui.getLabels();
   const labelMap = new Map(allLabels.map((l) => [l.id, l]));
   const pickerOpen = ui.getPickerOpen();
-  const managingLabels = ui.isManagingLabels();
-  const labelDraft = ui.getLabelDraft();
   const fileSearch = ui.getFileSearch();
 
   const formatDue = (d) => {
@@ -34,32 +31,13 @@ module.exports = function (ui) {
   const priorityOf = (key) => priorities.find((p) => p.key === key) || priorities[1];
 
   // ── Card pieces ───────────────────────────────────────────────
-  const titleNode = (task) => {
-    if (editingId === task.id) {
-      return Skeletons.Entry({
-        className: `${pfx}__edit-input`,
-        formItem: "title",
-        value: task.title,
-        require: "text",
-        mode: "commit",
-        preselect: 1,
-        autofocus: 1,
-        removeOnEscape: true,
-        bubble: 0,
-        service: "commit-title",
-        uiHandler: [ui],
-        taskId: task.id,
-      });
-    }
-    return Skeletons.Note({
+  // Title on the card is a plain Note: clicking it bubbles up to the card,
+  // which fires `open-detail`. Title editing lives in the detail panel.
+  const titleNode = (task) =>
+    Skeletons.Note({
       className: `${pfx}__task-title`,
       content: task.title,
-      bubble: 0,
-      service: "edit-title",
-      uiHandler: [ui],
-      taskId: task.id,
     });
-  };
 
   const dueBadge = (task) =>
     Skeletons.Note({
@@ -92,40 +70,93 @@ module.exports = function (ui) {
     });
   };
 
-  const fileNameRow = (f) =>
-    Skeletons.Box.X({
-      className: `${pfx}__task-file`,
-      kids: [
-        Skeletons.Image.Svg({
-          ico: "attachment",
-          className: `${pfx}__task-file-ico`,
-        }),
-        Skeletons.Note({
-          className: `${pfx}__task-file-name`,
-          content: `${f.filename || ""}${f.extension ? "." + f.extension : ""}`,
-        }),
-      ],
-    });
-
   const taskCard = (colKey, task) => {
     const labels = (task.label_ids || [])
-      .map((id) => labelPill(id, task.id))
+      .map((id) => labelMap.get(id))
       .filter(Boolean);
     const linkedFiles = Array.isArray(task.linked_files) ? task.linked_files : [];
-    const visibleFiles = linkedFiles.slice(0, 3);
+    const fileCount = linkedFiles.length;
+    const priority = priorityOf(task.priority || "medium");
+
+    const labelsStrip = labels.length
+      ? Skeletons.Box.X({
+          className: `${pfx}__task-labels`,
+          kids: labels.map((l) =>
+            Skeletons.Note({
+              className: `${pfx}__task-label-pill`,
+              content: l.name,
+              styleOpt: { background: l.color },
+            })
+          ),
+        })
+      : null;
+
+    // Compact linked-files preview — first 2 filenames + "+N more".
+    const visibleFiles = linkedFiles.slice(0, 2);
     const moreFiles = Math.max(0, linkedFiles.length - visibleFiles.length);
+    const filesNode = visibleFiles.length
+      ? Skeletons.Box.Y({
+          className: `${pfx}__task-files`,
+          kids: [
+            ...visibleFiles.map((f) =>
+              Skeletons.Box.X({
+                className: `${pfx}__task-file`,
+                kids: [
+                  Skeletons.Image.Svg({
+                    ico: "attachment",
+                    className: `${pfx}__task-file-ico`,
+                  }),
+                  Skeletons.Note({
+                    className: `${pfx}__task-file-name`,
+                    content: `${f.filename || ""}${f.extension ? "." + f.extension : ""}`,
+                  }),
+                ],
+              })
+            ),
+            moreFiles
+              ? Skeletons.Note({
+                  className: `${pfx}__task-files-more`,
+                  content: `+${moreFiles} ${LOCALE.MORE || "more"}`,
+                })
+              : null,
+          ].filter(Boolean),
+        })
+      : null;
+
+    // Footer: priority dot + due date only. Attachment count badge removed
+    // (the inline file rows above already convey the number visually).
+    // Assignee avatar moves up to the title row (top-right of the card).
+    const footer = Skeletons.Box.X({
+      className: `${pfx}__task-foot`,
+      kids: [
+        Skeletons.Element({
+          tagName: "span",
+          className: `${pfx}__task-priority-dot`,
+          styleOpt: { background: priority.color },
+          attrOpt: { title: LOCALE[priority.label] || priority.key },
+        }),
+        task.due_date ? dueBadge(task) : null,
+      ].filter(Boolean),
+    });
+
     return Skeletons.Box.Y({
       className: `${pfx}__task-card`,
+      attrOpt: { draggable: "true" },
+      // Single-word lowercase dataset keys — `data-taskId` would be
+      // lowercased to `data-taskid` by HTML and `dataset.taskId` would
+      // be undefined (DOMStringMap only camelCase-maps from kebab-cased
+      // attribute names). Drag-start uses `card.dataset.tid` to read this.
       dataset: {
-        taskId: task.id,
+        tid: task.id,
         status: task.status || colKey,
         priority: task.priority || "medium",
       },
       bubble: 0,
-      service: editingId === task.id ? null : "open-detail",
-      uiHandler: editingId === task.id ? null : [ui],
+      service: "open-detail",
+      uiHandler: [ui],
       taskId: task.id,
       kids: [
+        labelsStrip,
         Skeletons.Box.X({
           className: `${pfx}__task-card-row`,
           kids: [
@@ -141,32 +172,8 @@ module.exports = function (ui) {
             }),
           ].filter(Boolean),
         }),
-        labels.length
-          ? Skeletons.Box.X({
-              className: `${pfx}__task-labels`,
-              kids: labels,
-            })
-          : null,
-        visibleFiles.length
-          ? Skeletons.Box.Y({
-              className: `${pfx}__task-files`,
-              kids: [
-                ...visibleFiles.map(fileNameRow),
-                moreFiles
-                  ? Skeletons.Note({
-                      className: `${pfx}__task-files-more`,
-                      content: `+${moreFiles}`,
-                    })
-                  : null,
-              ].filter(Boolean),
-            })
-          : null,
-        task.due_date
-          ? Skeletons.Box.X({
-              className: `${pfx}__task-meta`,
-              kids: [dueBadge(task)],
-            })
-          : null,
+        filesNode,
+        footer,
       ].filter(Boolean),
     });
   };
@@ -193,6 +200,11 @@ module.exports = function (ui) {
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__column-body`,
+          // single-word lowercase key — `dataset.dropcol` works on the DOM
+          // side. (Camel-case keys are silently broken: setAttribute keeps
+          // the cased name, HTML lowercases it, and DOMStringMap expects
+          // hyphen-aware mapping which a single token can't satisfy.)
+          dataset: { dropcol: col.key },
           kids: [
             Skeletons.Box.X({
               className: `${pfx}__column-header`,
@@ -342,28 +354,37 @@ module.exports = function (ui) {
       ...existingFiles.map((f) => f.file_nid || f.nid),
     ]);
 
+    // Whole row is clickable — picking a suggestion adds it to the pending
+    // list. No per-row Link button; the single Link button sits on the
+    // search bar (see below).
     const resultRow = (r) => {
       const linked = linkedNids.has(r.nid);
       return Skeletons.Box.X({
         className: `${pfx}__file-result-row`,
+        dataset: { linked: linked ? 1 : 0 },
+        bubble: 0,
+        service: linked ? null : "link-search-result",
+        uiHandler: linked ? null : [ui],
+        fileNid: r.nid,
+        fileName: r.filename,
+        fileExt: r.ext,
+        searchScope: scope,
         kids: [
+          Skeletons.Image.Svg({
+            ico: "attachment",
+            className: `${pfx}__file-result-ico`,
+          }),
           Skeletons.Note({
             className: `${pfx}__file-result-name`,
             content: `${r.filename || ""}${r.ext ? "." + r.ext : ""}`,
           }),
-          Skeletons.Note({
-            className: `${pfx}__file-result-link`,
-            content: linked ? LOCALE.LINKED : LOCALE.LINK_FILE,
-            dataset: { linked: linked ? 1 : 0 },
-            bubble: 0,
-            service: linked ? null : "link-search-result",
-            uiHandler: linked ? null : [ui],
-            fileNid: r.nid,
-            fileName: r.filename,
-            fileExt: r.ext,
-            searchScope: scope,
-          }),
-        ],
+          linked
+            ? Skeletons.Note({
+                className: `${pfx}__file-result-status`,
+                content: LOCALE.LINKED,
+              })
+            : null,
+        ].filter(Boolean),
       });
     };
 
@@ -386,37 +407,80 @@ module.exports = function (ui) {
         ],
       });
 
-    return Skeletons.Box.Y({
-      className: `${pfx}__file-picker`,
+    // Search field + floating dropdown live in their own positioned wrapper
+    // so the suggestions drop down on top of whatever follows in the form,
+    // mirroring the workspace search bar's UX.
+    const searchField = Skeletons.Box.Y({
+      className: `${pfx}__file-search-field`,
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__file-search-bar`,
           kids: [
             Skeletons.Entry({
               className: `${pfx}__file-search-input`,
+              name: `file-search-${scope}`,
               value: query,
               placeholder: LOCALE.SEARCH_FILES,
               require: "any",
+              // `interactive:1` makes the service fire on every keystroke,
+              // not just on Enter. _scheduleFileSearch already debounces
+              // the actual API call, so this is safe.
               mode: "commit",
+              interactive: 1,
               bubble: 0,
               service: "file-search-input",
               uiHandler: [ui],
               searchScope: scope,
               taskId,
             }),
+            // Link affordance attached to the search bar — text + icon,
+            // matching the Figma. Clicking it forces a search submit so
+            // it works as an Enter-equivalent for users who don't think
+            // to press Enter.
+            Skeletons.Box.X({
+              className: `${pfx}__file-search-link`,
+              bubble: 0,
+              service: "file-search-input",
+              uiHandler: [ui],
+              searchScope: scope,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__file-search-link-text`,
+                  content: LOCALE.LINK_FILE,
+                }),
+                Skeletons.Image.Svg({
+                  ico: "apps-link-simple",
+                  className: `${pfx}__file-search-link-ico`,
+                }),
+              ],
+            }),
           ],
         }),
-        results.length
+        // Dropdown only renders when there's something to show; otherwise it
+        // collapses to nothing and gives the rest of the form its space back.
+        (results.length || (query.length >= 2))
           ? Skeletons.Box.Y({
-              className: `${pfx}__file-search-results`,
-              kids: results.map(resultRow),
+              className: `${pfx}__file-search-dropdown`,
+              kids: [
+                results.length
+                  ? Skeletons.Box.Y({
+                      className: `${pfx}__file-search-results`,
+                      kids: results.map(resultRow),
+                    })
+                  : Skeletons.Note({
+                      className: `${pfx}__file-search-empty`,
+                      content: LOCALE.NO_FILE_RESULTS,
+                    }),
+              ],
             })
-          : (query.length >= 2
-              ? Skeletons.Note({
-                  className: `${pfx}__file-search-empty`,
-                  content: LOCALE.NO_FILE_RESULTS,
-                })
-              : null),
+          : null,
+      ].filter(Boolean),
+    });
+
+    return Skeletons.Box.Y({
+      className: `${pfx}__file-picker`,
+      kids: [
+        searchField,
         pendingFiles.length
           ? Skeletons.Box.Y({
               className: `${pfx}__file-pending-list`,
@@ -459,6 +523,14 @@ module.exports = function (ui) {
   const detailPanel = () => {
     const attachments = ui.getDetailAttachments();
     const cols = ui.getColumns();
+    // Render against the editable draft (seeded from the task on open).
+    // Falls back to the task itself for safety.
+    const dDraft = ui.getDetailDraft() || detail;
+    const dStatus   = dDraft.status   || detail.status   || "todo";
+    const dPriority = dDraft.priority || detail.priority || "medium";
+    const dAssignee = dDraft.assignee_uid != null ? dDraft.assignee_uid : detail.assignee_uid;
+    const dLabels   = Array.isArray(dDraft.labels) ? dDraft.labels : (detail.label_ids || []);
+    const dLabelSet = new Set(dLabels);
 
     const statusSwitcher = Skeletons.Box.X({
       className: `${pfx}__detail-status`,
@@ -466,14 +538,13 @@ module.exports = function (ui) {
         Skeletons.Note({
           className: `${pfx}__detail-status-pill`,
           content: c.label,
-          dataset: { active: detail.status === c.key ? 1 : 0 },
-          styleOpt: detail.status === c.key
+          dataset: { active: dStatus === c.key ? 1 : 0 },
+          styleOpt: dStatus === c.key
             ? { borderColor: c.color, color: c.color }
             : null,
           bubble: 0,
           service: "set-status",
           uiHandler: [ui],
-          taskId: detail.id,
           taskStatus: c.key,
         })
       ),
@@ -486,9 +557,7 @@ module.exports = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.PRIORITY,
         }),
-        priorityPills(detail.priority || "medium", "set-priority", {
-          taskId: detail.id,
-        }),
+        priorityPills(dPriority, "set-priority"),
       ],
     });
 
@@ -502,17 +571,13 @@ module.exports = function (ui) {
         Skeletons.Textarea({
           className: `${pfx}__detail-description`,
           name: "description",
-          value: detail.description || "",
+          value: dDraft.description || "",
           placeholder: LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
           require: "any",
-          mode: "commit",
           rows: 3,
           ignoreEnter: true,
           removeOnEscape: false,
           bubble: 0,
-          service: "commit-description",
-          uiHandler: [ui],
-          taskId: detail.id,
         }),
       ],
     });
@@ -524,33 +589,48 @@ module.exports = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.ASSIGNEE,
         }),
-        assigneeButton(detail, "detail-assignee"),
+        assigneeButton({ assignee_uid: dAssignee }, "detail-assignee"),
         pickerOpen === "detail-assignee"
-          ? memberPicker(detail.assignee_uid, "set-assignee", { taskId: detail.id })
+          ? memberPicker(dAssignee, "set-assignee")
           : null,
       ].filter(Boolean),
     });
 
+    // Detail-scope label chooser uses the draft's labels, not the task's.
+    const detailLabelChooser = (() => {
+      if (!allLabels.length) {
+        return Skeletons.Note({
+          className: `${pfx}__labels-empty`,
+          content: LOCALE.NO_LABELS,
+        });
+      }
+      return Skeletons.Box.X({
+        className: `${pfx}__label-chooser`,
+        kids: allLabels.map((l) =>
+          Skeletons.Note({
+            className: `${pfx}__label-option`,
+            content: l.name,
+            dataset: { selected: dLabelSet.has(l.id) ? 1 : 0 },
+            styleOpt: dLabelSet.has(l.id)
+              ? { background: l.color, borderColor: l.color }
+              : { borderColor: l.color, color: l.color },
+            bubble: 0,
+            service: "toggle-task-label",
+            uiHandler: [ui],
+            labelId: l.id,
+          })
+        ),
+      });
+    })();
+
     const labelsRow = Skeletons.Box.Y({
       className: `${pfx}__detail-row`,
       kids: [
-        Skeletons.Box.X({
-          className: `${pfx}__detail-row-header`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__detail-label`,
-              content: LOCALE.LABELS,
-            }),
-            Skeletons.Note({
-              className: `${pfx}__detail-manage`,
-              content: LOCALE.MANAGE_LABELS,
-              bubble: 0,
-              service: "manage-labels",
-              uiHandler: [ui],
-            }),
-          ],
+        Skeletons.Note({
+          className: `${pfx}__detail-label`,
+          content: LOCALE.LABELS,
         }),
-        taskLabelChooser(detail),
+        detailLabelChooser,
       ],
     });
 
@@ -563,13 +643,10 @@ module.exports = function (ui) {
         }),
         Skeletons.Entry({
           className: `${pfx}__detail-due-input`,
-          attribute: { type: "date" },
-          value: detail.due_date || "",
-          mode: "commit",
+          name: "due_date",
+          type: "date",
+          value: dDraft.due_date || "",
           bubble: 0,
-          service: "commit-due-date",
-          uiHandler: [ui],
-          taskId: detail.id,
         }),
       ],
     });
@@ -623,15 +700,39 @@ module.exports = function (ui) {
       ],
     });
 
+    const actions = Skeletons.Box.X({
+      className: `${pfx}__detail-actions`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__detail-cancel`,
+          content: LOCALE.CANCEL,
+          bubble: 0,
+          service: "cancel-detail",
+          uiHandler: [ui],
+        }),
+        Skeletons.Note({
+          className: `${pfx}__detail-submit`,
+          content: LOCALE.UPDATE,
+          bubble: 0,
+          service: "commit-detail",
+          uiHandler: [ui],
+        }),
+      ],
+    });
+
     return Skeletons.Box.Y({
       className: `${pfx}__detail-panel`,
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__detail-header`,
           kids: [
-            Skeletons.Note({
+            Skeletons.Entry({
               className: `${pfx}__detail-title`,
-              content: detail.title,
+              name: "title",
+              value: dDraft.title || "",
+              placeholder: LOCALE.TASK_TITLE,
+              require: "any",
+              bubble: 0,
             }),
             Skeletons.Button.Svg({
               className: `${pfx}__detail-close`,
@@ -649,6 +750,7 @@ module.exports = function (ui) {
         labelsRow,
         dueRow,
         attachmentsList,
+        actions,
         Skeletons.FileSelector({
           sys_pn: "task-fileselector",
           accept: "*/*",
@@ -769,12 +871,11 @@ module.exports = function (ui) {
             Skeletons.Entry({
               className: `${pfx}__create-input`,
               formItem: "title",
+              name: "title",
               value: draft?.title || "",
               placeholder: LOCALE.TASK_TITLE,
               require: "any",
               mode: "commit",
-              autofocus: 1,
-              preselect: 1,
               bubble: 0,
               service: "commit-task",
               uiHandler: [ui],
@@ -837,21 +938,9 @@ module.exports = function (ui) {
         Skeletons.Box.Y({
           className: `${pfx}__create-field`,
           kids: [
-            Skeletons.Box.X({
-              className: `${pfx}__detail-row-header`,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}__create-label`,
-                  content: LOCALE.LABELS,
-                }),
-                Skeletons.Note({
-                  className: `${pfx}__detail-manage`,
-                  content: LOCALE.MANAGE_LABELS,
-                  bubble: 0,
-                  service: "manage-labels",
-                  uiHandler: [ui],
-                }),
-              ],
+            Skeletons.Note({
+              className: `${pfx}__create-label`,
+              content: LOCALE.LABELS,
             }),
             labelChooser,
           ],
@@ -866,7 +955,8 @@ module.exports = function (ui) {
             Skeletons.Entry({
               className: `${pfx}__create-input`,
               formItem: "due_date",
-              attribute: { type: "date" },
+              name: "due_date",
+              type: "date",
               value: draft?.due_date || "",
               require: "any",
               bubble: 0,
@@ -907,143 +997,14 @@ module.exports = function (ui) {
 
     return Skeletons.Box.Y({
       className: `${pfx}__create-backdrop`,
+      // No service on the backdrop — closing the modal must be explicit
+      // (the X button or the Cancel link in the form footer).
       bubble: 0,
-      service: "cancel-add",
-      uiHandler: [ui],
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__create-modal`,
           bubble: 0,
           kids: [form],
-        }),
-      ],
-    });
-  };
-
-  // ── Label management modal ────────────────────────────────────
-  const COLOR_SWATCHES = [
-    "#54B684", "#65D0EA", "#E8A13B", "#d65f59",
-    "#AEAEB2", "#FA8540", "#7B61FF", "#0B0A21",
-  ];
-
-  const labelManagerModal = () => {
-    const draftRow = labelDraft
-      ? Skeletons.Box.Y({
-          className: `${pfx}__label-draft`,
-          kids: [
-            Skeletons.Entry({
-              className: `${pfx}__create-input`,
-              formItem: "label_name",
-              value: labelDraft.name || "",
-              placeholder: LOCALE.LABEL_NAME,
-              require: "any",
-              mode: "commit",
-              autofocus: 1,
-              bubble: 0,
-              service: "commit-new-label",
-              uiHandler: [ui],
-            }),
-            Skeletons.Box.X({
-              className: `${pfx}__color-swatches`,
-              kids: COLOR_SWATCHES.map((c) =>
-                Skeletons.Note({
-                  className: `${pfx}__color-swatch`,
-                  content: "",
-                  dataset: { active: labelDraft.color === c ? 1 : 0 },
-                  styleOpt: { background: c },
-                  bubble: 0,
-                  service: "pick-label-color",
-                  uiHandler: [ui],
-                  labelColor: c,
-                })
-              ),
-            }),
-            Skeletons.Box.X({
-              className: `${pfx}__create-actions`,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}__create-cancel`,
-                  content: LOCALE.CANCEL,
-                  bubble: 0,
-                  service: "cancel-new-label",
-                  uiHandler: [ui],
-                }),
-                Skeletons.Note({
-                  className: `${pfx}__create-submit`,
-                  content: LOCALE.CREATE,
-                  bubble: 0,
-                  service: "commit-new-label",
-                  uiHandler: [ui],
-                }),
-              ],
-            }),
-          ],
-        })
-      : Skeletons.Note({
-          className: `${pfx}__add-new-label`,
-          content: `+ ${LOCALE.NEW_LABEL}`,
-          bubble: 0,
-          service: "new-label-form",
-          uiHandler: [ui],
-        });
-
-    const labelRow = (l) =>
-      Skeletons.Box.X({
-        className: `${pfx}__label-row`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__task-label-pill`,
-            content: l.name,
-            styleOpt: { background: l.color },
-          }),
-          Skeletons.Button.Svg({
-            className: `${pfx}__attachment-unlink`,
-            ico: "cross",
-            bubble: 0,
-            service: "delete-label",
-            uiHandler: [ui],
-            labelId: l.id,
-          }),
-        ],
-      });
-
-    return Skeletons.Box.Y({
-      className: `${pfx}__create-backdrop`,
-      bubble: 0,
-      service: "close-manage-labels",
-      uiHandler: [ui],
-      kids: [
-        Skeletons.Box.Y({
-          className: `${pfx}__create-modal`,
-          bubble: 0,
-          kids: [
-            Skeletons.Box.X({
-              className: `${pfx}__create-header`,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}__create-title`,
-                  content: LOCALE.MANAGE_LABELS,
-                }),
-                Skeletons.Button.Svg({
-                  className: `${pfx}__create-close`,
-                  ico: "cross",
-                  bubble: 0,
-                  service: "close-manage-labels",
-                  uiHandler: [ui],
-                }),
-              ],
-            }),
-            Skeletons.Box.Y({
-              className: `${pfx}__label-list`,
-              kids: allLabels.length
-                ? allLabels.map(labelRow)
-                : [Skeletons.Note({
-                    className: `${pfx}__attachments-empty`,
-                    content: LOCALE.NO_LABELS,
-                  })],
-            }),
-            draftRow,
-          ],
         }),
       ],
     });
@@ -1067,12 +1028,6 @@ module.exports = function (ui) {
         name: "task-create",
         partHandler: ui,
         kids: creating ? [createModal()] : [],
-      }),
-      Skeletons.Wrapper.Y({
-        className: `${pfx}__label-manager-wrapper`,
-        name: "label-manager",
-        partHandler: ui,
-        kids: managingLabels ? [labelManagerModal()] : [],
       }),
     ],
   });

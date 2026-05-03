@@ -24,13 +24,11 @@ class __tasks_panel extends LetcBox {
     this._labels = [];
     this._creating = false;
     this._createDefaults = null;
-    this._editingId = null;
     this._detailId = null;
+    this._detailDraft = null;
     this._attachments = {};
-    this._managingLabels = false;
-    this._labelDraft = null;
-    this._pickerOpen = null;     // "assignee" | "label" | null
-    this._fileSearch = { query: "", results: [], scope: null }; // scope: "create" | "detail"
+    this._pickerOpen = null;
+    this._fileSearch = { query: "", results: [], scope: null };
     this._fileSearchTimer = null;
     this.bindEvent(_a.live);
   }
@@ -41,6 +39,7 @@ class __tasks_panel extends LetcBox {
   }
 
   async onDomRefresh() {
+    this._installDnd();
     await Promise.all([
       this._loadTasks(),
       this._loadMembers(),
@@ -49,8 +48,116 @@ class __tasks_panel extends LetcBox {
     this._render();
   }
 
+  // Delegated drag-and-drop on this.el — survives every _render()'s feed() rebuild.
+  _installDnd() {
+    if (!this.el || this._dndInstalled) return;
+    this._dndInstalled = true;
+    const root = this.el;
+
+    const findCard = (target) => {
+      if (!target || !target.closest) target = target && target.parentElement;
+      if (!target || !target.closest) return null;
+      const n = target.closest(".tasks-panel__task-card");
+      return n && root.contains(n) ? n : null;
+    };
+    const findColumn = (target) => {
+      if (!target || !target.closest) target = target && target.parentElement;
+      if (!target || !target.closest) return null;
+      const n = target.closest("[data-dropcol]");
+      return n && root.contains(n) ? n : null;
+    };
+
+    root.addEventListener("dragstart", (e) => {
+      const card = findCard(e.target);
+      if (!card) return;
+      const tid = card.dataset.tid;
+      if (!tid) return;
+      this._dragTaskId = tid;
+      card.classList.add("is-dragging");
+      try {
+        e.dataTransfer.setData("text/plain", tid);
+        e.dataTransfer.effectAllowed = "move";
+      } catch (_) { /* ignore */ }
+    });
+
+    root.addEventListener("dragend", (e) => {
+      const card = findCard(e.target);
+      if (card) card.classList.remove("is-dragging");
+      this._dragTaskId = null;
+      root.querySelectorAll(".tasks-panel__column-body.is-drop-target")
+          .forEach((n) => n.classList.remove("is-drop-target"));
+    });
+
+    root.addEventListener("dragover", (e) => {
+      const col = findColumn(e.target);
+      if (!col) return;
+      e.preventDefault();
+      try { e.dataTransfer.dropEffect = "move"; } catch (_) {}
+      root.querySelectorAll(".tasks-panel__column-body.is-drop-target")
+          .forEach((n) => { if (n !== col) n.classList.remove("is-drop-target"); });
+      col.classList.add("is-drop-target");
+    });
+
+    root.addEventListener("dragleave", (e) => {
+      const col = findColumn(e.target);
+      if (col) col.classList.remove("is-drop-target");
+    });
+
+    root.addEventListener("drop", (e) => {
+      const col = findColumn(e.target);
+      if (!col) return;
+      e.preventDefault();
+      const transferId = (() => {
+        try { return e.dataTransfer.getData("text/plain"); } catch (_) { return null; }
+      })();
+      const taskId = this._dragTaskId || transferId;
+      const targetStatus = col.dataset.dropcol;
+      this._dragTaskId = null;
+      root.querySelectorAll(".tasks-panel__column-body.is-drop-target")
+          .forEach((n) => n.classList.remove("is-drop-target"));
+      if (!taskId || !targetStatus) return;
+      this._moveTaskTo(taskId, targetStatus);
+    });
+  }
+
+  async _moveTaskTo(taskId, status) {
+    const task = this._tasks.find((t) => t.id === taskId);
+    if (!task || task.status === status) return;
+    const originalStatus = task.status;
+    task.status = status;
+    this._render();
+    try {
+      const updated = await this.postService({
+        service: SERVICE.task.update_status,
+        hub_id: this._hubId,
+        id: taskId,
+        status,
+      });
+      this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
+    } catch (err) {
+      console.error("[tasks_panel] update_status (drag) failed:", err);
+      task.status = originalStatus;
+      await this._loadTasks();
+    }
+    this._render();
+  }
+
   async onUiEvent(trigger, args = {}) {
-    const service = args.service || trigger.get(_a.service);
+    let service = args.service || (trigger && trigger.get && trigger.get(_a.service));
+    // Drumee dispatches click on the deepest widget; if it has no service of
+    // its own (e.g. a Note inside a card), walk up to find an ancestor that does.
+    if (!service && trigger && trigger.parent) {
+      let p = trigger.parent;
+      let depth = 0;
+      while (p && depth < 8) {
+        const s = p.mget && p.mget(_a.service);
+        if (s) { service = s; trigger = p; break; }
+        p = p.parent;
+        depth += 1;
+      }
+    }
+    if (this._creating) this._captureCreateDraft();
+    if (this._detailDraft) this._captureDetailDraft();
     switch (service) {
       case "add-task":
         this._creating = true;
@@ -91,8 +198,7 @@ class __tasks_panel extends LetcBox {
 
       case "create-assignee":
         if (this._createDefaults) {
-          const uid = trigger.mget("memberUid");
-          this._createDefaults.assignee_uid = uid || null;
+          this._createDefaults.assignee_uid = trigger.mget("memberUid") || null;
           this._pickerOpen = null;
         }
         return this._render();
@@ -115,39 +221,49 @@ class __tasks_panel extends LetcBox {
       case "remove-task":
         return this._removeTask(trigger);
 
-      case "edit-title":
-        this._editingId = trigger.mget("taskId");
+      case "commit-description":
+      case "commit-due-date":
+        // Detail-panel text inputs commit into the local draft only; the
+        // server update happens when "Update" is clicked.
         return this._render();
 
-      case "commit-title":
-        return this._commitTitle(trigger);
-
-      case "commit-description":
-        return this._commitDescription(trigger);
-
-      case "commit-due-date":
-        return this._commitDueDate(trigger);
-
       case "set-status":
-        return this._setStatus(trigger);
+        if (this._detailDraft) this._detailDraft.status = trigger.mget("taskStatus");
+        return this._render();
 
       case "set-priority":
-        return this._setPriority(trigger);
+        if (this._detailDraft) this._detailDraft.priority = trigger.mget("taskPriority");
+        return this._render();
 
       case "set-assignee":
-        return this._setAssignee(trigger);
+        if (this._detailDraft) {
+          this._detailDraft.assignee_uid = trigger.mget("memberUid") || null;
+          this._pickerOpen = null;
+        }
+        return this._render();
 
       case "toggle-task-label":
-        return this._toggleTaskLabel(trigger);
+        if (this._detailDraft) {
+          const id = trigger.mget("labelId");
+          const set = new Set(this._detailDraft.labels || []);
+          if (set.has(id)) set.delete(id); else set.add(id);
+          this._detailDraft.labels = Array.from(set);
+        }
+        return this._render();
 
-      case "open-detail":
-        return this._openDetail(trigger.mget("taskId"));
+      case "commit-detail":
+        return this._commitDetail();
 
+      case "cancel-detail":
       case "close-detail":
         this._detailId = null;
+        this._detailDraft = null;
         this._pickerOpen = null;
         this._resetFileSearch();
         return this._render();
+
+      case "open-detail":
+        return this._openDetail(trigger.mget("taskId"));
 
       case "file-search-input":
         return this._scheduleFileSearch(trigger);
@@ -157,35 +273,6 @@ class __tasks_panel extends LetcBox {
 
       case "remove-pending-file":
         return this._removePendingFile(trigger);
-
-      case "manage-labels":
-        this._managingLabels = true;
-        return this._render();
-
-      case "close-manage-labels":
-        this._managingLabels = false;
-        this._labelDraft = null;
-        return this._render();
-
-      case "new-label-form":
-        this._labelDraft = { name: "", color: "#65D0EA" };
-        return this._render();
-
-      case "cancel-new-label":
-        this._labelDraft = null;
-        return this._render();
-
-      case "pick-label-color":
-        if (this._labelDraft) {
-          this._labelDraft.color = trigger.mget("labelColor");
-        }
-        return this._render();
-
-      case "commit-new-label":
-        return this._commitNewLabel();
-
-      case "delete-label":
-        return this._deleteLabel(trigger);
 
       case "pick-attachment":
         return this._pickAttachment();
@@ -214,6 +301,8 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.update_status:
       case SERVICE.task.update_assignee:
       case SERVICE.task.delete:
+      case SERVICE.task.link_label:
+      case SERVICE.task.unlink_label:
         this._loadTasks().then(() => this._render());
         return;
       case SERVICE.task.link_file:
@@ -221,15 +310,6 @@ class __tasks_panel extends LetcBox {
         if (this._detailId) {
           this._refreshAttachments(this._detailId).then(() => this._render());
         }
-        return;
-      case SERVICE.task.link_label:
-      case SERVICE.task.unlink_label:
-        this._loadTasks().then(() => this._render());
-        return;
-      case SERVICE.label.create:
-      case SERVICE.label.update:
-      case SERVICE.label.delete:
-        this._loadLabels().then(() => this._render());
         return;
       default:
         if (super.onWsMessage) super.onWsMessage(svc, data, options);
@@ -248,16 +328,40 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  // Only normalize fields actually present on `row` — partial responses
+  // (task.update / update_status / update_assignee) omit linked_files;
+  // defaulting to [] would blank the cached files when _mergeTask spreads.
   _normalizeTask(row) {
-    const labels = typeof row.label_ids === "string" && row.label_ids
-      ? row.label_ids.split(",").filter(Boolean)
-      : Array.isArray(row.label_ids) ? row.label_ids : [];
-    let files = row.linked_files;
-    if (typeof files === "string") {
-      try { files = JSON.parse(files); } catch { files = []; }
+    const result = { ...row };
+    const has = (k) => Object.prototype.hasOwnProperty.call(row, k);
+
+    if (has("label_ids")) {
+      result.label_ids = typeof row.label_ids === "string" && row.label_ids
+        ? row.label_ids.split(",").filter(Boolean)
+        : (Array.isArray(row.label_ids) ? row.label_ids : []);
     }
-    if (!Array.isArray(files)) files = [];
-    return { ...row, label_ids: labels, linked_files: files };
+
+    if (has("linked_files")) {
+      let files = row.linked_files;
+      if (typeof files === "string") {
+        try { files = JSON.parse(files); } catch (_) { files = []; }
+      }
+      result.linked_files = Array.isArray(files) ? files : [];
+    }
+
+    // Coerce due_date to YYYY-MM-DD so <input type="date"> renders it cleanly.
+    if (has("due_date")) {
+      let due = row.due_date;
+      if (due) {
+        if (due instanceof Date) due = due.toISOString().slice(0, 10);
+        else if (typeof due === "string" && due.length >= 10) due = due.slice(0, 10);
+      } else {
+        due = null;
+      }
+      result.due_date = due;
+    }
+
+    return result;
   }
 
   async _loadMembers() {
@@ -298,24 +402,45 @@ class __tasks_panel extends LetcBox {
     }
   }
 
-  async _commitTask() {
-    const draft = this._createDefaults || {};
-    const fields = (this.getData?.(_a.formItem)) || {};
-    const title = String(fields.title || "").trim();
-    const dueRaw = String(fields.due_date || "").trim();
-    const description = String(fields.description || "").trim();
+  // Read text-field values straight from the live DOM. The Entry widget only
+  // syncs on blur/commit/keyup; <input type="date"> change events are missed.
+  _captureCreateDraft() {
+    if (!this._createDefaults) return;
+    const root = this.el && this.el.querySelector(".tasks-panel__create-modal");
+    if (!root) return;
+    const draft = this._createDefaults;
+    const title = root.querySelector('input[name="title"]');
+    const desc  = root.querySelector('textarea[name="description"]');
+    const due   = root.querySelector('input[name="due_date"]');
+    if (title) draft.title       = title.value || "";
+    if (desc)  draft.description = desc.value  || "";
+    if (due)   draft.due_date    = due.value   || "";
+  }
 
-    if (!title) {
-      this._createDefaults = { ...draft, title: "", description, due_date: dueRaw };
-      return this._render();
-    }
+  _captureDetailDraft() {
+    if (!this._detailDraft) return;
+    const root = this.el && this.el.querySelector(".tasks-panel__detail-panel");
+    if (!root) return;
+    const draft = this._detailDraft;
+    const title = root.querySelector('input[name="title"]');
+    const desc  = root.querySelector('textarea[name="description"]');
+    const due   = root.querySelector('input[name="due_date"]');
+    if (title) draft.title       = title.value || "";
+    if (desc)  draft.description = desc.value  || "";
+    if (due)   draft.due_date    = due.value   || "";
+  }
+
+  async _commitTask() {
+    this._captureCreateDraft();
+    const draft = this._createDefaults || {};
+    const title = String(draft.title || "").trim();
+    const dueRaw = String(draft.due_date || "").trim();
+    const description = String(draft.description || "").trim();
+
+    if (!title) return this._render();
 
     const labels = Array.isArray(draft.labels) ? draft.labels.slice() : [];
     const pendingFiles = Array.isArray(draft.pending_files) ? draft.pending_files.slice() : [];
-    this._creating = false;
-    this._createDefaults = null;
-    this._pickerOpen = null;
-    this._resetFileSearch();
 
     try {
       const raw = await this.postService({
@@ -330,7 +455,6 @@ class __tasks_panel extends LetcBox {
       });
       const row = Array.isArray(raw) ? raw[0] : raw;
       if (row && row.id) {
-        // Attach selected labels + pending files in parallel.
         await Promise.all([
           ...labels.map((labelId) =>
             this.postService({
@@ -350,6 +474,12 @@ class __tasks_panel extends LetcBox {
           ),
         ]);
       }
+      // Tear down the form only after a successful create — failures keep
+      // the modal open with the user's input intact.
+      this._creating = false;
+      this._createDefaults = null;
+      this._pickerOpen = null;
+      this._resetFileSearch();
       await this._loadTasks();
     } catch (err) {
       console.error("[tasks_panel] task.create failed:", err);
@@ -360,7 +490,6 @@ class __tasks_panel extends LetcBox {
   async _removeTask(trigger) {
     const id = trigger.mget("taskId");
     if (!id) return;
-
     try {
       const resp = await this.postService({
         service: SERVICE.task.delete,
@@ -369,179 +498,115 @@ class __tasks_panel extends LetcBox {
       });
       if (!resp || (resp.affected !== 1 && resp.id !== id)) return;
       this._tasks = this._tasks.filter((t) => t.id !== id);
-      if (this._detailId === id) this._detailId = null;
+      if (this._detailId === id) {
+        this._detailId = null;
+        this._detailDraft = null;
+      }
     } catch (err) {
       console.error("[tasks_panel] task.delete failed:", err);
     }
     this._render();
   }
 
-  async _commitTitle(trigger) {
-    const id = trigger.mget("taskId") || this._editingId;
-    const inputEl = trigger?.el?.querySelector("input");
-    const title = (inputEl?.value || "").trim();
-    this._editingId = null;
-    if (!id || !title) return this._render();
+  async _commitDetail() {
+    if (!this._detailId || !this._detailDraft) return;
+    this._captureDetailDraft();
+    const id = this._detailId;
+    const draft = this._detailDraft;
+    const task = this._tasks.find((t) => t.id === id);
+    if (!task) return;
 
-    const updated = await this.postService({
-      service: SERVICE.task.update,
-      hub_id: this._hubId,
-      id,
-      title,
-    });
-    this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
-    this._render();
-  }
+    const calls = [];
 
-  async _commitDescription(trigger) {
-    const id = trigger.mget("taskId") || this._detailId;
-    const textareaEl = trigger?.el?.querySelector("textarea");
-    if (!id || !textareaEl) return;
-    const description = textareaEl.value || "";
-
-    const updated = await this.postService({
-      service: SERVICE.task.update,
-      hub_id: this._hubId,
-      id,
-      description,
-    });
-    this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
-    this._render();
-  }
-
-  async _commitDueDate(trigger) {
-    const id = trigger.mget("taskId");
-    const inputEl = trigger?.el?.querySelector("input");
-    const due = (inputEl?.value || "").trim() || null;
-    if (!id) return;
-
-    const updated = await this.postService({
-      service: SERVICE.task.update,
-      hub_id: this._hubId,
-      id,
-      due_date: due,
-    });
-    this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
-    this._render();
-  }
-
-  async _setStatus(trigger) {
-    const id = trigger.mget("taskId");
-    const status = trigger.mget("taskStatus");
-    if (!id || !status) return;
-
-    const updated = await this.postService({
-      service: SERVICE.task.update_status,
-      hub_id: this._hubId,
-      id,
-      status,
-    });
-    this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
-    this._render();
-  }
-
-  async _setPriority(trigger) {
-    const id = trigger.mget("taskId");
-    const priority = trigger.mget("taskPriority");
-    if (!id || !priority) return;
-
-    const updated = await this.postService({
-      service: SERVICE.task.update,
-      hub_id: this._hubId,
-      id,
-      priority,
-    });
-    this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
-    this._render();
-  }
-
-  async _setAssignee(trigger) {
-    const id = trigger.mget("taskId") || this._detailId;
-    const uid = trigger.mget("memberUid") || null;
-    if (!id) return;
-    this._pickerOpen = null;
-
-    const updated = await this.postService({
-      service: SERVICE.task.update_assignee,
-      hub_id: this._hubId,
-      id,
-      assignee_uid: uid,
-    });
-    this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
-    this._render();
-  }
-
-  async _toggleTaskLabel(trigger) {
-    const taskId = trigger.mget("taskId") || this._detailId;
-    const labelId = trigger.mget("labelId");
-    if (!taskId || !labelId) return;
-
-    const task = this._tasks.find((t) => t.id === taskId);
-    const has = task && Array.isArray(task.label_ids) && task.label_ids.includes(labelId);
-    const service = has ? SERVICE.task.unlink_label : SERVICE.task.link_label;
-
-    await this.postService({
-      service,
-      hub_id: this._hubId,
-      task_id: taskId,
-      label_id: labelId,
-    });
-    if (task) {
-      const next = new Set(task.label_ids || []);
-      if (has) next.delete(labelId); else next.add(labelId);
-      task.label_ids = Array.from(next);
-    }
-    this._render();
-  }
-
-  async _commitNewLabel() {
-    const draft = this._labelDraft || {};
-    const fields = (this.getData?.(_a.formItem)) || {};
-    const name = String(fields.label_name || draft.name || "").trim();
-    if (!name) return;
-
-    try {
-      await this.postService({
-        service: SERVICE.label.create,
-        hub_id: this._hubId,
-        name,
-        color: draft.color || "#65D0EA",
-      });
-      this._labelDraft = null;
-      await this._loadLabels();
-    } catch (err) {
-      console.error("[tasks_panel] label.create failed:", err);
-    }
-    this._render();
-  }
-
-  async _deleteLabel(trigger) {
-    const id = trigger.mget("labelId");
-    if (!id) return;
-    try {
-      await this.postService({
-        service: SERVICE.label.delete,
+    // task.update — covers title, description, priority, due_date.
+    const upd = {};
+    const draftTitle = String(draft.title || "").trim();
+    const taskTitle  = String(task.title  || "").trim();
+    if (draftTitle && draftTitle !== taskTitle) upd.title = draftTitle;
+    if ((draft.description || "") !== (task.description || "")) upd.description = draft.description || "";
+    if ((draft.priority || "medium") !== (task.priority || "medium")) upd.priority = draft.priority;
+    const draftDue = (draft.due_date || "").trim();
+    const taskDue  = task.due_date || "";
+    if (draftDue !== taskDue) upd.due_date = draftDue || null;
+    if (Object.keys(upd).length) {
+      calls.push(this.postService({
+        service: SERVICE.task.update,
         hub_id: this._hubId,
         id,
-      });
-      this._labels = this._labels.filter((l) => l.id !== id);
-      // Drop the deleted label from any cached tasks.
-      this._tasks.forEach((t) => {
-        if (Array.isArray(t.label_ids)) {
-          t.label_ids = t.label_ids.filter((lid) => lid !== id);
-        }
-      });
-    } catch (err) {
-      console.error("[tasks_panel] label.delete failed:", err);
+        ...upd,
+      }).catch((err) => console.error("[tasks_panel] task.update failed:", err)));
     }
+
+    if ((draft.status || "todo") !== (task.status || "todo")) {
+      calls.push(this.postService({
+        service: SERVICE.task.update_status,
+        hub_id: this._hubId,
+        id,
+        status: draft.status,
+      }).catch((err) => console.error("[tasks_panel] task.update_status failed:", err)));
+    }
+
+    if ((draft.assignee_uid || null) !== (task.assignee_uid || null)) {
+      calls.push(this.postService({
+        service: SERVICE.task.update_assignee,
+        hub_id: this._hubId,
+        id,
+        assignee_uid: draft.assignee_uid || null,
+      }).catch((err) => console.error("[tasks_panel] task.update_assignee failed:", err)));
+    }
+
+    const original = new Set(task.label_ids || []);
+    const next = new Set(draft.labels || []);
+    for (const lid of next) {
+      if (!original.has(lid)) {
+        calls.push(this.postService({
+          service: SERVICE.task.link_label,
+          hub_id: this._hubId,
+          task_id: id,
+          label_id: lid,
+        }).catch(() => null));
+      }
+    }
+    for (const lid of original) {
+      if (!next.has(lid)) {
+        calls.push(this.postService({
+          service: SERVICE.task.unlink_label,
+          hub_id: this._hubId,
+          task_id: id,
+          label_id: lid,
+        }).catch(() => null));
+      }
+    }
+
+    if (calls.length) await Promise.all(calls);
+
+    await this._loadTasks();
+    this._detailId = null;
+    this._detailDraft = null;
+    this._pickerOpen = null;
+    this._resetFileSearch();
     this._render();
   }
 
-  async _openDetail(id) {
+  // Render the detail panel immediately on click; refresh attachments async
+  // so the panel doesn't feel laggy waiting on get_linked_files.
+  _openDetail(id) {
     if (!id) return;
+    const task = this._tasks.find((t) => t.id === id);
     this._detailId = id;
-    await this._refreshAttachments(id);
+    this._detailDraft = task ? {
+      title: task.title || "",
+      description: task.description || "",
+      due_date: task.due_date || "",
+      status: task.status || "todo",
+      priority: task.priority || "medium",
+      assignee_uid: task.assignee_uid || null,
+      labels: Array.isArray(task.label_ids) ? task.label_ids.slice() : [],
+    } : null;
     this._render();
+    this._refreshAttachments(id).then(() => {
+      if (this._detailId === id) this._render();
+    });
   }
 
   _pickAttachment() {
@@ -555,7 +620,6 @@ class __tasks_panel extends LetcBox {
     const file = e.target?.files?.[0];
     if (!file || !this._detailId) return;
     e.target.value = "";
-
     this._pendingLinkTaskId = this._detailId;
     this.uploadFile(file, { hub_id: this._hubId, nid: this._hubId });
   }
@@ -610,8 +674,10 @@ class __tasks_panel extends LetcBox {
 
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (query.length < 2) {
+      const hadResults = (this._fileSearch.results || []).length > 0;
       this._fileSearch.results = [];
-      return this._render();
+      if (hadResults) this._render();
+      return;
     }
     this._fileSearchTimer = setTimeout(() => {
       this._runFileSearch(query, scope);
@@ -619,7 +685,7 @@ class __tasks_panel extends LetcBox {
   }
 
   async _runFileSearch(query, scope) {
-    if (this._fileSearch.query !== query) return; // user moved on
+    if (this._fileSearch.query !== query) return;
     const taskId = scope === "detail" ? this._detailId : null;
     try {
       const rows = await this.fetchService({
@@ -628,7 +694,6 @@ class __tasks_panel extends LetcBox {
         pattern: query,
         task_id: taskId || undefined,
       });
-      // discard stale responses
       if (this._fileSearch.query !== query) return;
       this._fileSearch.results = Array.isArray(rows) ? rows : [];
     } catch (err) {
@@ -645,7 +710,7 @@ class __tasks_panel extends LetcBox {
     if (!nid) return;
 
     if (scope === "create" && this._createDefaults) {
-      // Stash on the draft — the actual link_file call happens after task.create.
+      // Stash on the draft — the actual link_file fires after task.create.
       const set = new Map(
         (this._createDefaults.pending_files || []).map((f) => [f.nid, f])
       );
@@ -653,13 +718,11 @@ class __tasks_panel extends LetcBox {
         set.set(nid, { nid, filename, extension: ext });
         this._createDefaults.pending_files = Array.from(set.values());
       }
-      // Drop the row from the visible search results so the user sees feedback.
-      this._fileSearch.results = (this._fileSearch.results || [])
-        .filter((r) => r.nid !== nid);
+      // Close the suggestion dropdown after a pick.
+      this._resetFileSearch();
       return this._render();
     }
 
-    // Detail-panel scope: link immediately.
     const taskId = this._detailId;
     if (!taskId) return;
     try {
@@ -670,13 +733,11 @@ class __tasks_panel extends LetcBox {
         file_nid: nid,
       });
       this._attachments[taskId] = Array.isArray(links) ? links : [];
-      this._fileSearch.results = (this._fileSearch.results || [])
-        .filter((r) => r.nid !== nid);
-      // Reload tasks so the card picks up the new linked_files entry.
       await this._loadTasks();
     } catch (err) {
       console.error("[tasks_panel] task.link_file failed:", err);
     }
+    this._resetFileSearch();
     this._render();
   }
 
@@ -697,7 +758,43 @@ class __tasks_panel extends LetcBox {
   }
 
   _render() {
+    // Sync typed text into the draft *before* rebuilding so any path that
+    // calls _render (WS broadcast, file-search timer, picker click, …)
+    // preserves what the user is typing.
+    if (this._creating) this._captureCreateDraft();
+    if (this._detailDraft) this._captureDetailDraft();
+
+    // Capture focused input + cursor BEFORE the DOM swap, restore after.
+    let focusName = null;
+    let cursorPos = null;
+    let cursorEnd = null;
+    let scopeSel = "";
+    const active = (typeof document !== "undefined") ? document.activeElement : null;
+    if (active && this.el && this.el.contains(active) && active.getAttribute) {
+      focusName = active.getAttribute("name");
+      const inCreate = this.el.querySelector(".tasks-panel__create-modal");
+      const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
+      if (inCreate && inCreate.contains(active)) scopeSel = ".tasks-panel__create-modal ";
+      else if (inDetail && inDetail.contains(active)) scopeSel = ".tasks-panel__detail-panel ";
+      try {
+        cursorPos = active.selectionStart;
+        cursorEnd = active.selectionEnd;
+      } catch (_) { /* date / number inputs throw here */ }
+    }
+
     this.feed(require("./skeleton")(this));
+
+    if (focusName && typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => {
+        if (!this.el) return;
+        const next = this.el.querySelector(`${scopeSel}[name="${focusName}"]`);
+        if (!next || typeof next.focus !== "function") return;
+        next.focus();
+        if (cursorPos != null && typeof next.setSelectionRange === "function") {
+          try { next.setSelectionRange(cursorPos, cursorEnd != null ? cursorEnd : cursorPos); } catch (_) {}
+        }
+      });
+    }
   }
 
   // ── Skeleton accessors ─────────────────────────────────────────
@@ -717,16 +814,14 @@ class __tasks_panel extends LetcBox {
 
   isCreating() { return this._creating; }
   getCreateDraft() { return this._createDefaults || null; }
-  getEditingId() { return this._editingId; }
   getPickerOpen() { return this._pickerOpen; }
-  isManagingLabels() { return this._managingLabels; }
-  getLabelDraft() { return this._labelDraft; }
   getFileSearch() { return this._fileSearch; }
 
   getDetailTask() {
     if (!this._detailId) return null;
     return this._tasks.find((t) => t.id === this._detailId) || null;
   }
+  getDetailDraft() { return this._detailDraft; }
   getDetailAttachments() {
     return (this._detailId && this._attachments[this._detailId]) || [];
   }
