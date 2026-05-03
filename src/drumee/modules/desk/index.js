@@ -295,7 +295,7 @@ class desk_module extends LetcBox {
       case "overlay":
         if (Visitor.parseModuleArgs().tutorial || this._postOnboardingTutorial) {
           this._postOnboardingTutorial = false;
-          setTimeout(() => { this._showTutorial() }, 1000)
+          setTimeout(() => { this._showTutorial() }, 2000)
         }
         return
     }
