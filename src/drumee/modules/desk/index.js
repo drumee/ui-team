@@ -280,8 +280,9 @@ class desk_module extends LetcBox {
       //   return child.on(_e.done, () => setTimeout(f, 5000));
 
       case "overlay":
-        if (Visitor.parseModuleArgs().tutorial) {
-          setTimeout(() => { this._showTutorial() }, 2000)
+        if (Visitor.parseModuleArgs().tutorial || this._postOnboardingTutorial) {
+          this._postOnboardingTutorial = false;
+          setTimeout(() => { this._showTutorial() }, 1000)
         }
         return
     }
@@ -360,7 +361,10 @@ class desk_module extends LetcBox {
           uiHandler: [this],
         });
         let w = this.children.last();
-        w.once(_e.destroy, this.loadDefault);
+        w.once(_e.destroy, () => {
+          this._postOnboardingTutorial = true;
+          this.loadDefault();
+        });
       })
       .catch((e) => {
         this.warn("Failed to load onboarding plugin. switching to default", e);
