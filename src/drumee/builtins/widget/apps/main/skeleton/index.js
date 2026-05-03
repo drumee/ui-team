@@ -64,7 +64,7 @@ function pageHeader(ui) {
       Skeletons.Box.X({
         className: `${pfx}__search`,
         kids: [
-          Skeletons.Button.Svg({
+          Skeletons.Image.Svg({
             ico: "editbox_search",
             className: `${pfx}__search-ico`,
           }),
@@ -72,7 +72,9 @@ function pageHeader(ui) {
             className: `${pfx}__search-input`,
             placeholder: LOCALE.SEARCH || "Search...",
             name: "apps_search",
+            value: ui._memberQuery || "",
             mode: _a.commit,
+            service: "apps-search",
             uiHandler: [ui],
           }),
         ],
@@ -444,9 +446,31 @@ function tableBodyKids(ui) {
   return kids;
 }
 
+function buildPageList(current, total) {
+  if (total <= 7) {
+    const out = [];
+    for (let i = 1; i <= total; i++) out.push(i);
+    return out;
+  }
+  const window = 1;
+  const start = Math.max(2, current - window);
+  const end = Math.min(total - 1, current + window);
+  const list = [1];
+  if (start > 2) list.push("…");
+  for (let i = start; i <= end; i++) list.push(i);
+  if (end < total - 1) list.push("…");
+  list.push(total);
+  return list;
+}
+
 function pagination(ui) {
   const pfx = ui.fig.family;
-  const pages = [1, 2, 3];
+  const pageSize = ui._membersPageSize || 20;
+  const total = ui._membersTotal || 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(ui._page, totalPages);
+  const pages = buildPageList(current, totalPages);
+
   const pageBtn = (n, active) =>
     Skeletons.Box.X({
       className: `${pfx}__page-btn${active ? ` ${pfx}__page-btn--active` : ""}`,
@@ -461,6 +485,15 @@ function pagination(ui) {
       ],
     });
 
+  const start = total === 0 ? 0 : (current - 1) * pageSize + 1;
+  const end = total === 0 ? 0 : Math.min(total, current * pageSize);
+  const summary = total === 0
+    ? LOCALE.NO_MEMBERS_FOUND || "No members"
+    : (LOCALE.SHOWING_OF || "Showing {start}-{end} of {total}")
+        .replace("{start}", start)
+        .replace("{end}", end)
+        .replace("{total}", total.toLocaleString());
+
   return Skeletons.Box.X({
     className: `${pfx}__footer`,
     kids: [
@@ -472,30 +505,40 @@ function pagination(ui) {
             kids: [
               Skeletons.Note({
                 className: `${pfx}__remove-label`,
-                content: LOCALE.REMOVE_SELECTED || "Remove selected",
+                content:
+                  (LOCALE.REMOVE_SELECTED || "Remove selected") +
+                  ` (${ui._selected.size})`,
               }),
             ],
           })
-        : Skeletons.Box.X({ className: `${pfx}__remove-spacer` }),
+        : Skeletons.Note({
+            className: `${pfx}__pager-summary`,
+            content: summary,
+          }),
       Skeletons.Box.X({
         className: `${pfx}__pager`,
         kids: [
           Skeletons.Button.Svg({
             ico: "mini-arrow-left-new",
-            className: `${pfx}__pager-arrow`,
-            service: "apps-page",
+            className: `${pfx}__pager-arrow${current <= 1 ? ` ${pfx}__pager-arrow--disabled` : ""}`,
+            service: current > 1 ? "apps-page" : null,
             uiHandler: [ui],
-            page_num: Math.max(1, ui._page - 1),
+            page_num: Math.max(1, current - 1),
           }),
-          ...pages.map((p) => pageBtn(p, p === ui._page)),
-          Skeletons.Note({ className: `${pfx}__pager-ellipsis`, content: "..." }),
-          pageBtn(321, ui._page === 321),
+          ...pages.map((p) =>
+            p === "…"
+              ? Skeletons.Note({
+                  className: `${pfx}__pager-ellipsis`,
+                  content: "…",
+                })
+              : pageBtn(p, p === current)
+          ),
           Skeletons.Button.Svg({
             ico: "mini-arrow-right-new",
-            className: `${pfx}__pager-arrow`,
-            service: "apps-page",
+            className: `${pfx}__pager-arrow${current >= totalPages ? ` ${pfx}__pager-arrow--disabled` : ""}`,
+            service: current < totalPages ? "apps-page" : null,
             uiHandler: [ui],
-            page_num: ui._page + 1,
+            page_num: Math.min(totalPages, current + 1),
           }),
         ],
       }),

@@ -7,10 +7,17 @@
       border-radius: 2px 4px 4px 2px;
       height: auto;
       min-width: 100px;
+      max-width: 70%;
       padding: 5px;
-      // width: calc(100% - 10px);
       margin-bottom: 1px;
-      width: 100%;
+      width: fit-content;
+
+      .widget-chatItem__main.me & {
+        align-self: flex-end;
+      }
+      .widget-chatItem__main.other & {
+        align-self: flex-start;
+      }
     }
 
     &__container {

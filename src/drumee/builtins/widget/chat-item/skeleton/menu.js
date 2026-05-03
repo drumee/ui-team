@@ -6,8 +6,8 @@ const __skl_chatiItem_menu = function(_ui_) {
   const handler = _ui_.mget(_a.uiHandler);
 
   const menuTrigger = Skeletons.Button.Svg({
-    ico       : "arrow-down",
-    className : `${chatMenuFig}__icon ${chatMenuFig}__trigger menu-icon arrow-down ${author}`,
+    ico       : "info",
+    className : `${chatMenuFig}__icon ${chatMenuFig}__trigger menu-icon ${author}`,
     service   : 'chat-item-menu',
     uiHandler : _ui_
   });

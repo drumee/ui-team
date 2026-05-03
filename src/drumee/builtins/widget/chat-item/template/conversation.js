@@ -10,12 +10,11 @@ const __chat_dod = function(m) {
     '<a class="file-mention" data-hub_id="$2" data-nid="$3">@$1</a>'
   );
 
-  // Decode contact mentions: [@name](user:drumate_id) → styled <a> tag (empty name → không hiển thị)
+  // Decode contact mentions; fall back to "Unknown" so the link isn't dropped.
   message = message.replace(
     /\[@([^\]]*)\]\(user:([^)]+)\)/g,
     (match, name, drumateId) => {
-      const label = (name || '').trim();
-      if (!label) return '';
+      const label = (name || '').trim() || 'Unknown';
       return `<a class="user-mention" data-drumate_id="${drumateId}">@${label}</a>`;
     }
   );

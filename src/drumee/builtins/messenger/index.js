@@ -51,6 +51,28 @@ class __lib_messenger extends LetcBox {
    */
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
+    this._lastRange = null;
+    this._trackSelection = () => this._saveCursorPosition();
+    this._trackEmojiMouseDown = (e) => {
+      const target = e.target;
+      if (target.closest && target.closest('.emoji')) {
+        this._saveCursorPosition();
+      }
+      if (target.dataset && target.dataset.service === 'emoji') {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('selectionchange', this._trackSelection);
+    this.el.addEventListener('mousedown', this._trackEmojiMouseDown, true);
+  }
+
+  onBeforeDestroy() {
+    if (this._trackSelection) {
+      document.removeEventListener('selectionchange', this._trackSelection);
+    }
+    if (this._trackEmojiMouseDown) {
+      this.el.removeEventListener('mousedown', this._trackEmojiMouseDown, true);
+    }
   }
 
   /**
@@ -144,11 +166,22 @@ class __lib_messenger extends LetcBox {
    * @returns 
    */
   _emoji(id, msg) {
+    this._saveCursorPosition();
     if (this.__wrapperPopup.isEmpty()) {
       this.__wrapperPopup.feed(require('assets/emojis')(this));
       return;
     }
     return this.__wrapperPopup.clear();
+  }
+
+  _saveCursorPosition() {
+    const noteEl = this.__content && this.__content.$el.find('.note-content')[0];
+    if (!noteEl) return;
+    const sel = window.getSelection();
+    const isInContent = sel.anchorNode && noteEl.contains(sel.anchorNode);
+    if (sel.rangeCount > 0 && isInContent) {
+      this._lastRange = sel.getRangeAt(0).cloneRange();
+    }
   }
 
 
@@ -199,17 +232,46 @@ class __lib_messenger extends LetcBox {
       case undefined:
       case null:
         if (args.target.dataset.service == 'emoji') {
-          var cnode = window.getSelection().containsNode(this.__content.el, true);
-          if (!cnode) {
-            this.__content.$el.find('.note-content').focus();
-          }
+          const noteEl = this.__content.$el.find('.note-content')[0];
+          if (!noteEl) break;
+
           let char = args.target.innerText;
+
+          const sel = window.getSelection();
+          let range;
+          const isInContent = sel.anchorNode && noteEl.contains(sel.anchorNode);
+
+          if (this._lastRange) {
+            range = this._lastRange;
+          } else if (sel.rangeCount > 0 && isInContent) {
+            range = sel.getRangeAt(0).cloneRange();
+          } else {
+            range = document.createRange();
+            range.selectNodeContents(noteEl);
+            range.collapse(false);
+          }
+
+          noteEl.focus();
+          sel.removeAllRanges();
+          sel.addRange(range);
+
+          const textNode = document.createTextNode(char);
+          range.deleteContents();
+          range.insertNode(textNode);
+          range.setStartAfter(textNode);
+          range.setEndAfter(textNode);
+          sel.removeAllRanges();
+          sel.addRange(range);
+
+          this._lastRange = range.cloneRange();
+          this.__content.sync();
+
           if (!this.recentEmojis.includes(char)) {
             this.recentEmojis.unshift(char);
             if (this.recentEmojis.length > 8) this.recentEmojis.pop();
           }
           localStorage.recentEmojis = JSON.stringify(this.recentEmojis);
-          this.__content.insert(char);
+
           if (this.__content.isEmpty()) {
             this.hideSend();
           } else {
@@ -219,7 +281,6 @@ class __lib_messenger extends LetcBox {
               text: this.__content.mget(_a.value)
             });
           }
-
         }
     }
   }
@@ -357,6 +418,19 @@ class __lib_messenger extends LetcBox {
       if (id && !ids.includes(id)) ids.push(id);
     }
     return ids;
+  }
+
+  // File nids of every file mentioned in the input — used so chat.sendMessage
+  // can auto-attach them; channel.list_by_file searches attachment, not text.
+  getMentionedFileNids() {
+    const content = this.__content;
+    if (!content || !content.content) return [];
+    const nids = [];
+    for (const node of content.content.querySelectorAll('.file-mention')) {
+      const nid = node.dataset.nid;
+      if (nid && !nids.includes(nid)) nids.push(nid);
+    }
+    return nids;
   }
 
   /**

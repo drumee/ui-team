@@ -60,7 +60,7 @@ class ___widget_chatItem extends LetcBox {
 
         if (!_.isEmpty(this.mget(_a.thread) && this.mget('thread_id'))) {
           let threadMsg = require('./skeleton/reply-message')(this);
-          child.append(threadMsg);
+          child.append(threadMsg, 0);
         }
 
         if (this.mget('is_attachment') || !_.isEmpty(this.mget('attachment'))) {
@@ -198,23 +198,84 @@ class ___widget_chatItem extends LetcBox {
     if (!e) return;
     if (this.selectable == _a.yes) return;
     if (state == _a.on) {
-      if (!this.menu || this.menu.isDestroyed()) {
+      const fresh = !this.menu || this.menu.isDestroyed();
+      if (fresh) {
         this.prepend(require('./skeleton/menu')(this));
         this.menu = this.children.first();
       } else {
         this.menu.el.show();
       }
-      let el = this.__main.el;
-      let width = el.offsetWidth - 14;
+      const mainEl = this.__main.el;
+      const bubble = mainEl.querySelector(`.${this.fig.family}__message-container`) || mainEl;
+      const uiRect = this.el.getBoundingClientRect();
+      const bubbleRect = bubble.getBoundingClientRect();
+      const left = bubbleRect.left - uiRect.left + bubbleRect.width - 14;
+      const top = bubbleRect.top - uiRect.top;
       if (this.menu && !this.menu.isDestroyed()) {
-        this.menu.el.style.left = `${el.offsetLeft + width}px`;
-        this.menu.el.style.top = `${el.offsetTop}px`;
+        this.menu.el.style.left = `${left}px`;
+        this.menu.el.style.top = `${top}px`;
       }
+      if (fresh) this._wireDropdownPositioning();
     } else {
       if (this.menu && !this.menu.isDestroyed()) {
         this.menu.el.hide();
       }
     }
+  }
+
+  // Reposition the action popup as `position: fixed` viewport coords so it
+  // escapes the chat list's overflow clipping and stays inside the panel.
+  _wireDropdownPositioning() {
+    if (!this.menu || this.menu.isDestroyed()) return;
+    const trigger = this.menu.el.querySelector('.menu-icon');
+    const itemsWrapper = this.menu.el.querySelector('.menu-topic-items__wrapper');
+    if (!trigger || !itemsWrapper) return;
+
+    const reposition = () => {
+      if (!this.menu || this.menu.isDestroyed()) return;
+      const triggerRect = trigger.getBoundingClientRect();
+      const wrapperWidth = itemsWrapper.offsetWidth || 140;
+      let right = window.innerWidth - triggerRect.right - 8;
+      if (right < 8) right = 8;
+      const maxRight = window.innerWidth - wrapperWidth - 8;
+      if (right > maxRight) right = Math.max(8, maxRight);
+      itemsWrapper.style.position = 'fixed';
+      itemsWrapper.style.left = 'auto';
+      itemsWrapper.style.right = `${right}px`;
+      itemsWrapper.style.top = `${triggerRect.bottom + 4}px`;
+      itemsWrapper.style.bottom = 'auto';
+      // menu_topic forces inline `overflow: hidden` for its slide animation;
+      // restore visibility so all action icons stay reachable.
+      itemsWrapper.style.overflow = 'visible';
+    };
+
+    const observer = new MutationObserver(() => {
+      if (itemsWrapper.dataset.state === 'open') reposition();
+    });
+    observer.observe(itemsWrapper, { attributes: true, attributeFilter: ['data-state'] });
+    this._dropdownObserver = observer;
+
+    const onLayoutChange = () => {
+      if (itemsWrapper.dataset.state === 'open') reposition();
+    };
+    window.addEventListener('scroll', onLayoutChange, true);
+    window.addEventListener('resize', onLayoutChange);
+    this._dropdownLayoutTeardown = () => {
+      window.removeEventListener('scroll', onLayoutChange, true);
+      window.removeEventListener('resize', onLayoutChange);
+    };
+  }
+
+  onBeforeDestroy() {
+    if (this._dropdownObserver) {
+      this._dropdownObserver.disconnect();
+      this._dropdownObserver = null;
+    }
+    if (this._dropdownLayoutTeardown) {
+      this._dropdownLayoutTeardown();
+      this._dropdownLayoutTeardown = null;
+    }
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**
@@ -356,13 +417,17 @@ class ___widget_chatItem extends LetcBox {
     if (_.isEmpty(this.mget(_a.thread) && this.mget('thread_id'))) {
       return;
     }
-    if (this.mget(_a.thread).is_attachment) {
+    if (!this.mget(_a.thread).is_attachment) return;
+    // initialize() runs before LetcBox binds fetchService; defer to next tick.
+    setTimeout(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (typeof this.fetchService !== 'function') return;
       this.fetchService({
         service: SERVICE.chat.attachment,
         message_id: this.mget(_a.thread).message_id,
         hub_id: this.mget(_a.uiHandler).hubId
       });
-    }
+    }, 0);
   }
 
   /**

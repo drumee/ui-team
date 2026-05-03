@@ -25,6 +25,7 @@ class desk_module extends LetcBox {
     this.disconnectShared = this.disconnectShared.bind(this);
     this.setModuleState = this.setModuleState.bind(this);
     this.lazyClasses = this.lazyClasses.bind(this);
+    this._updateActivityBadge = this._updateActivityBadge.bind(this);
   }
 
   static initClass() {
@@ -51,6 +52,7 @@ class desk_module extends LetcBox {
 
     // this._updateContextMenu = this._updateContextMenu.bind(this);
     RADIO_BROADCAST.on("avatar-changed", this._updateAvatar);
+    RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
     setTimeout(this.lazyClasses, 5000);
   }
 
@@ -65,6 +67,7 @@ class desk_module extends LetcBox {
     if (this._searchBoxInner?.el && this._searchFocusHandler) {
       this._searchBoxInner.el.removeEventListener('focusin', this._searchFocusHandler);
     }
+    RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
   }
 
   /**
@@ -102,6 +105,16 @@ class desk_module extends LetcBox {
   _updateAvatar() {
     this.ensurePart("desk-avatar").then((p) => {
       p.respawn();
+    });
+  }
+
+  _updateActivityBadge(args = {}) {
+    if (args.unread_count == null) return;
+    this.ensurePart("activity-count").then((p) => {
+      let content = args.unread_count || 0;
+      if (parseInt(content) > 99) content = "99+";
+      p.el.innerText = content;
+      p.el.dataset.count = content;
     });
   }
 
@@ -713,8 +726,10 @@ class desk_module extends LetcBox {
 
       case "toggle-activity":
         return this.ensurePart("activity-panel").then((p) => {
-          p.toggleState();
-          if (p.mget(_a.state)) {
+          const state = p.mget(_a.state) ? 0 : 1;
+          p.activityState = state;
+          p.setState(state);
+          if (state) {
             this.ensurePart("trash-panel").then((p) => {
               p.clear();
             });
@@ -898,13 +913,14 @@ class desk_module extends LetcBox {
       // case "set-wallpaper-image":
       //   return uiRouter.setWallpaper(args.data);
 
-      // case "activity-update":
-      //   return this.ensurePart("activity-count").then((p) => {
-      //     let content = args.unread_count || 0;
-      //     if (parseInt(content) > 99) content = "99+";
-      //     p.set({ content });
-      //     p.el.dataset.count = content;
-      //   });
+      case "activity-update":
+        if (args.unread_count == null) return;
+        return this.ensurePart("activity-count").then((p) => {
+          let content = args.unread_count || 0;
+          if (parseInt(content) > 99) content = "99+";
+          p.el.innerText = content;
+          p.el.dataset.count = content;
+        });
 
       // default:
       // Wm.unselect();

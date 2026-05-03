@@ -1,5 +1,51 @@
-const storageUsers = require("./storage-data").default;
 const { storageBodyRow } = require("./storage-shared");
+
+function initialsOf(first, last, fullname, email) {
+  const f = (first || "").trim();
+  const l = (last || "").trim();
+  if (f && l) return (f[0] + l[0]).toUpperCase();
+  const n = (fullname || `${f} ${l}`).trim() || (email || "");
+  const parts = n.split(/[\s@]+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function deriveRoleLabel(p) {
+  const v = parseInt(p, 10) || 0;
+  if (_K && _K.permission) {
+    if (v & _K.permission.owner) return { label: "Owner", variant: "owner" };
+    if (v & _K.permission.admin) return { label: "Admin", variant: "admin" };
+  }
+  return { label: "Member", variant: "member" };
+}
+
+function bytesToGB(b) {
+  const v = (parseFloat(b) || 0) / (1024 * 1024 * 1024);
+  return `${v.toFixed(v < 10 ? 2 : 1)} GB`;
+}
+
+function mapStorageUser(row, totalBytes) {
+  const used = parseFloat(row.used_bytes) || 0;
+  const percent = totalBytes > 0 ? Math.min(100, Math.round((used / totalBytes) * 100)) : 0;
+  const bar_color = percent >= 75 ? "high" : percent >= 40 ? "mid" : "low";
+  const fullname =
+    row.fullname ||
+    [row.firstname, row.lastname].filter(Boolean).join(" ").trim() ||
+    row.email ||
+    "—";
+  return {
+    id: row.uid,
+    initials: initialsOf(row.firstname, row.lastname, fullname, row.email),
+    avatar_color: "dark",
+    name: fullname,
+    email: row.email || "",
+    role: deriveRoleLabel(row.domain_privilege),
+    percent,
+    bar_color,
+    storage: bytesToGB(used),
+  };
+}
 
 function storageHeader(ui) {
   const pfx = ui.fig.family;
@@ -271,7 +317,9 @@ function userTable(ui) {
                   Skeletons.Note({
                     className: `${pfx}__storage-sort-value`,
                     content:
-                      LOCALE.USAGE_HIGH_TO_LOW || "Usage High to Low",
+                      ui._storageSort === "usage_low"
+                        ? LOCALE.USAGE_LOW_TO_HIGH || "Usage Low to High"
+                        : LOCALE.USAGE_HIGH_TO_LOW || "Usage High to Low",
                   }),
                   Skeletons.Button.Svg({
                     ico: "editbox_arrow--down",
@@ -286,7 +334,30 @@ function userTable(ui) {
       storageTableHeader(pfx),
       Skeletons.Box.Y({
         className: `${pfx}__storage-tbody`,
-        kids: storageUsers.map((u) => storageRow(ui, u)),
+        kids: (() => {
+          const rows = ui._orgUserStorage || [];
+          if (ui._storageState === "loading") {
+            return [
+              Skeletons.Note({
+                className: `${pfx}__storage-empty`,
+                content: LOCALE.LOADING || "Loading…",
+              }),
+            ];
+          }
+          if (!rows.length) {
+            return [
+              Skeletons.Note({
+                className: `${pfx}__storage-empty`,
+                content: LOCALE.NO_DATA || "No data.",
+              }),
+            ];
+          }
+          const maxBytes = rows.reduce(
+            (m, r) => Math.max(m, parseFloat(r.used_bytes) || 0),
+            0
+          );
+          return rows.map((r) => storageRow(ui, mapStorageUser(r, maxBytes)));
+        })(),
       }),
       storageTablePagination(ui),
     ],

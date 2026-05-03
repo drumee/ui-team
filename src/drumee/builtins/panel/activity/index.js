@@ -110,18 +110,14 @@ class __panel_activity extends LetcBox {
     this.debug("AAA:103", service, cmd)
     switch (service) {
       case 'open-activity-panel':
-        return this.toggleState();
-
-      case 'close-activity-panel':
-        this.setState(0);
+        this.activityState = 1;
+        this.setState(1);
         return '';
 
-      case 'clear-all':
-        return this.postService(SERVICE.activity.mark_all_read, { hub_id: Visitor.id }).then((data) => {
-          this.__list.clear();
-          this.toggleState();
-          this.triggerHandlers({ service: "activity-update" })
-        })
+      case 'close-activity-panel':
+        this.activityState = 0;
+        this.setState(0);
+        return '';
 
       case 'delete-entity':
         cmd.goodbye();
@@ -131,18 +127,14 @@ class __panel_activity extends LetcBox {
         return this._dismissActivity(cmd);
 
       case 'open-contact':
-        this.toggleState()
+        this.activityState = 0;
+        this.setState(0);
         return Desk.togglePanel('address_book', 'chat-panel');
 
       case 'open-chat':
-        this.toggleState()
+        this.activityState = 0;
+        this.setState(0);
         return Desk.togglePanel('chat_p2p', 'chat-panel');
-
-      case 'open-activity-panel':
-        return this.togglePanel();
-
-      case 'close-activity-panel':
-        return this.closePanel();
 
       case 'toggle-unreads':
         this._unreadsOnly = this._unreadsOnly ? 0 : 1;
@@ -160,7 +152,9 @@ class __panel_activity extends LetcBox {
       case 'clear-all':
         return this.postService(SERVICE.activity.mark_all_read, { hub_id: Visitor.id }).then(() => {
           this.ensurePart(_a.list).then((list) => list.restart());
-          this.triggerHandlers({ service: 'activity-update' });
+          this.postService(SERVICE.activity.get_unread_count, { hub_id: Visitor.id }).then(({ unread_count }) => {
+            RADIO_BROADCAST.trigger('activity-update', { unread_count: unread_count || 0 });
+          });
         });
 
     }
@@ -168,7 +162,7 @@ class __panel_activity extends LetcBox {
       SERVICE.activity.get_unread_count,
       { hub_id: Visitor.id }
     );
-    this.triggerHandlers({ unread_count });
+    RADIO_BROADCAST.trigger('activity-update', { unread_count: unread_count || 0 });
     if (this.__list && !this.__list.isDestroyed()) {
       this.__list.restart();
       return;
@@ -384,7 +378,9 @@ class __panel_activity extends LetcBox {
       parseInt(hubInvites.length) +
       parseInt(unread_count);
     // this.triggerHandlers({ unread_count })
+    RADIO_BROADCAST.trigger('activity-update', { unread_count });
     this.updatePriorityList(invitations, messages, hubInvites)
+    if (!this.mget(_a.state)) return;
     if (this.__list && !this.__list.isDestroyed()) {
       this.__list.restart()
       return
@@ -642,7 +638,7 @@ class __panel_activity extends LetcBox {
       if (this.__list && !this.__list.isDestroyed()) {
         this.__list.restart();
       }
-      this.triggerHandlers({ service: 'activity-update' });
+      this.refreshActivity();
     } catch (e) {
       this.warn('dismiss-activity failed', e);
     }

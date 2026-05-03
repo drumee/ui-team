@@ -78,12 +78,27 @@ class apps_main extends LetcBox {
     this._roleFilter = "all";
     this._filterOpen = false;
     this._page = 1;
+    this._membersPageSize = 20;
+    this._membersTotal = 0;
+    this._memberQuery = "";
     this._selected = new Set();
     this._members = [];
     this._memberStats = null;
     this._membersState = "idle"; // idle | loading | loaded | error
     this._statsState = "idle";
     this._auditUnlocked = false;
+    this._auditLogs = [];
+    this._auditStats = null;
+    this._auditState = "idle";
+    this._auditPage = 1;
+    this._auditUsername = "";
+    this._auditFrom = 0;
+    this._auditTo = 0;
+    this._orgStorageStats = [];
+    this._orgUserStorage = [];
+    this._storageState = "idle";
+    this._storagePage = 1;
+    this._storageSort = "usage_high";
     this._storageView = "main";
     this._retentionDays = 30;
     this._applyImmediately = false;
@@ -154,6 +169,7 @@ class apps_main extends LetcBox {
         : 0;
       const res = await this.postService(SERVICE.adminpanel.member_list, {
         role_id: roleId,
+        key: this._memberQuery || "",
         page: this._page || 1,
         option: "member",
       });
@@ -168,15 +184,116 @@ class apps_main extends LetcBox {
     this._render();
   }
 
+  _loadAuditTab() {
+    this._loadAuditStats();
+    this._loadAuditLogs();
+  }
+
+  async _loadAuditLogs() {
+    this._auditState = "loading";
+    this._render();
+    try {
+      const res = await this.postService(SERVICE.admin.get_audit_logs, {
+        username: this._auditUsername || "",
+        from_time: this._auditFrom || 0,
+        to_time: this._auditTo || 0,
+        page: this._auditPage || 1,
+      });
+      this._auditLogs = Array.isArray(res) ? res : (res && res.data) || [];
+      this._auditState = "loaded";
+    } catch (e) {
+      this.warn && this.warn("get_audit_logs failed", e);
+      this._auditLogs = [];
+      this._auditState = "error";
+    }
+    this._render();
+  }
+
+  async _loadAuditStats() {
+    try {
+      const res = await this.postService(SERVICE.admin.get_audit_stats, {
+        from_time: this._auditFrom || 0,
+        to_time: this._auditTo || 0,
+      });
+      this._auditStats = res || null;
+    } catch (e) {
+      this._auditStats = null;
+    }
+    this._render();
+  }
+
+  async _exportAuditLogs() {
+    try {
+      const res = await this.postService(SERVICE.admin.export_audit_logs, {
+        username: this._auditUsername || "",
+        from_time: this._auditFrom || 0,
+        to_time: this._auditTo || 0,
+      });
+      const rows = Array.isArray(res) ? res : (res && res.data) || [];
+      const cols = ["ctime", "actor_name", "email", "action", "category", "entity_id", "hub_id", "log"];
+      const escape = (v) => {
+        if (v == null) return "";
+        const s = String(v).replace(/"/g, '""');
+        return /[",\n]/.test(s) ? `"${s}"` : s;
+      };
+      const csv = [cols.join(",")]
+        .concat(rows.map((r) => cols.map((c) => escape(r[c])).join(",")))
+        .join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const ts = Dayjs().format("YYYYMMDD-HHmmss");
+      this.getBlob && this.getBlob(blob, `audit-logs-${ts}.csv`);
+    } catch (e) {
+      this.warn && this.warn("export_audit_logs failed", e);
+    }
+  }
+
+  _loadStorageTab() {
+    this._loadOrgStorageStats();
+    this._loadOrgUserStorage();
+  }
+
+  async _loadOrgStorageStats() {
+    try {
+      const res = await this.postService(SERVICE.admin.get_org_storage_stats, {});
+      this._orgStorageStats = Array.isArray(res) ? res : (res && res.data) || [];
+    } catch (e) {
+      this._orgStorageStats = [];
+    }
+    this._render();
+  }
+
+  async _loadOrgUserStorage() {
+    this._storageState = "loading";
+    this._render();
+    try {
+      const res = await this.postService(SERVICE.admin.get_org_user_storage, {
+        sort_by: this._storageSort || "usage_high",
+        page: this._storagePage || 1,
+      });
+      this._orgUserStorage = Array.isArray(res) ? res : (res && res.data) || [];
+      this._storageState = "loaded";
+    } catch (e) {
+      this.warn && this.warn("get_org_user_storage failed", e);
+      this._orgUserStorage = [];
+      this._storageState = "error";
+    }
+    this._render();
+  }
+
   async _loadMemberStats() {
     this._statsState = "loading";
     try {
       const res = await this.postService(SERVICE.admin.member_stats, {});
       this._memberStats = res || {};
+      const t = this._memberStats.total_members != null
+        ? this._memberStats.total_members
+        : this._memberStats.total;
+      this._membersTotal = parseInt(t, 10) || 0;
       this._statsState = "loaded";
     } catch (e) {
       this._statsState = "error";
       this._memberStats = null;
+      this._membersTotal = 0;
     }
     this._render();
   }
@@ -189,6 +306,10 @@ class apps_main extends LetcBox {
     this._render();
     if (tab === "member" && this._membersState !== "loading") {
       this._loadMembersTab();
+    } else if (tab === "audit" && this._auditState !== "loading") {
+      this._loadAuditTab();
+    } else if (tab === "storage" && this._storageState !== "loading") {
+      this._loadStorageTab();
     }
   }
 
@@ -207,8 +328,24 @@ class apps_main extends LetcBox {
     this._render();
   }
 
+  _searchMembers(rawValue) {
+    const next = (rawValue || "").toString().trim();
+    if (next === (this._memberQuery || "")) return;
+    this._memberQuery = next;
+    this._page = 1;
+    this._selected.clear();
+    this._loadMembersTab();
+  }
+
   goToPage(page) {
-    this._page = page;
+    const totalPages = Math.max(
+      1,
+      Math.ceil((this._membersTotal || 0) / (this._membersPageSize || 20))
+    );
+    const next = Math.max(1, Math.min(totalPages, parseInt(page, 10) || 1));
+    if (next === this._page) return;
+    this._page = next;
+    this._selected.clear();
     this._render();
     this._loadMembers();
   }
@@ -230,10 +367,10 @@ class apps_main extends LetcBox {
     try {
       const [devices, workspaces] = await Promise.all([
         this.postService(SERVICE.admin.member_device_list, {
-          user_id: userId,
+          uid: userId,
         }).catch(() => []),
         this.postService(SERVICE.admin.member_list_workspaces, {
-          user_id: userId,
+          uid: userId,
         }).catch(() => []),
       ]);
       this._editDevices = Array.isArray(devices) ? devices : [];
@@ -253,20 +390,7 @@ class apps_main extends LetcBox {
   }
 
   async _saveEdit() {
-    const m = this._editingMember;
-    if (!m || !m.raw) return this._closeEdit();
-    try {
-      await this.postService(SERVICE.adminpanel.member_update, {
-        user_id: m.id,
-        firstname: m.raw.firstname,
-        lastname: m.raw.lastname,
-        email: m.raw.email,
-      });
-    } catch (e) {
-      this.warn && this.warn("member_update failed", e);
-    }
     this._closeEdit();
-    this._loadMembers();
   }
 
   async _removeDevice(deviceId) {
@@ -274,7 +398,7 @@ class apps_main extends LetcBox {
     const userId = this._editingMember.id;
     try {
       await this.postService(SERVICE.admin.member_device_remove, {
-        user_id: userId,
+        uid: userId,
         device_id: deviceId,
       });
       this._editDevices = (this._editDevices || []).filter(
@@ -291,7 +415,7 @@ class apps_main extends LetcBox {
     const userId = this._editingMember.id;
     try {
       await this.postService(SERVICE.admin.member_device_remove_all, {
-        user_id: userId,
+        uid: userId,
       });
       this._editDevices = [];
       this._render();
@@ -312,8 +436,17 @@ class apps_main extends LetcBox {
     } catch (e) {
       this.warn && this.warn("member_delete failed", e);
     }
+    await this._loadMemberStats();
+    this._clampPage();
     this._loadMembers();
-    this._loadMemberStats();
+  }
+
+  _clampPage() {
+    const totalPages = Math.max(
+      1,
+      Math.ceil((this._membersTotal || 0) / (this._membersPageSize || 20))
+    );
+    if (this._page > totalPages) this._page = totalPages;
   }
 
   // ─────────────────────────────────────────────────────────
@@ -324,6 +457,13 @@ class apps_main extends LetcBox {
     switch (service) {
       case "apps-switch-tab":
         return this.switchTab(cmd.mget("tab"));
+
+      case "apps-search":
+        return this._searchMembers(
+          (args && args.value != null
+            ? args.value
+            : cmd && cmd.mget && cmd.mget(_a.value)) || ""
+        );
 
       case "apps-toggle-member":
         return this.toggleMember(cmd.mget("member_id"));
@@ -462,10 +602,21 @@ class apps_main extends LetcBox {
         this._auditUnlocked = true;
         return this._render();
 
-      case "apps-audit-range":
       case "apps-audit-export":
+        return this._exportAuditLogs();
+
       case "apps-audit-prev":
+        if (this._auditPage > 1) {
+          this._auditPage -= 1;
+          this._loadAuditLogs();
+        }
+        return;
+
       case "apps-audit-next":
+        this._auditPage += 1;
+        return this._loadAuditLogs();
+
+      case "apps-audit-range":
         return;
 
       case "apps-storage-retention":
@@ -506,13 +657,28 @@ class apps_main extends LetcBox {
         this._allowEditorsRestore = !this._allowEditorsRestore;
         return this._render();
 
+      case "apps-storage-sort":
+        this._storageSort =
+          this._storageSort === "usage_high" ? "usage_low" : "usage_high";
+        this._storagePage = 1;
+        this._render();
+        return this._loadOrgUserStorage();
+
+      case "apps-storage-prev":
+        if (this._storagePage > 1) {
+          this._storagePage -= 1;
+          this._loadOrgUserStorage();
+        }
+        return;
+
+      case "apps-storage-next":
+        this._storagePage += 1;
+        return this._loadOrgUserStorage();
+
       case "apps-storage-upgrade":
       case "apps-storage-clear-cache":
       case "apps-storage-archive":
       case "apps-storage-row-settings":
-      case "apps-storage-sort":
-      case "apps-storage-prev":
-      case "apps-storage-next":
         return;
 
       case "apps-fv-toggle-row": {
@@ -601,8 +767,9 @@ class apps_main extends LetcBox {
       }
     }
     this._selected.clear();
+    await this._loadMemberStats();
+    this._clampPage();
     this._loadMembers();
-    this._loadMemberStats();
   }
 }
 

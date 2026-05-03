@@ -77,7 +77,17 @@
     }
 
     &-text {
+      display: flex !important;
+      align-items: center;
       color: inherit;
+      min-height: 20px;
+
+      .inner {
+        display: flex;
+        align-items: center;
+        line-height: 20px;
+      }
+
       &.red {
         color: var(--signout-fg, var(--error));
       }
@@ -88,6 +98,29 @@
 
     &.active {
       border: 1px solid var(--active-border);
+    }
+  }
+
+  &__badge {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #E53935;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    margin-left: auto;
+    box-sizing: border-box;
+    transform: translateY(1px);
+
+    &[data-count="0"],
+    &:empty {
+      display: none !important;
     }
   }
 
@@ -139,8 +172,13 @@
 
   &__footer {
     width: 100%;
-    gap: 16px;
+    gap: 0;
     flex-shrink: 0;
+
+    .desk-module-sidebar__item {
+      padding: 5px 24px;
+      min-height: 30px;
+    }
 
     &-user-wrapper {
       position: relative;
