@@ -140,7 +140,7 @@ function generalProfileCard(ui) {
 
 function innerItem(ui, opt) {
   const pfx = `${ui.fig.family}__inner`;
-  const { ico, title, description, trailing, className = "" } = opt;
+  const { ico, title, description, trailing, className = "", descriptionPn } = opt;
   const left = Skeletons.Box.X({
     className: `${pfx}-left`,
     kids: [
@@ -152,7 +152,11 @@ function innerItem(ui, opt) {
         kids: [
           Skeletons.Note({ className: `${pfx}-title`, content: title }),
           description
-            ? Skeletons.Note({ className: `${pfx}-description`, content: description })
+            ? Skeletons.Note({
+                className: `${pfx}-description`,
+                content: description,
+                sys_pn: descriptionPn,
+              })
             : null,
         ].filter(Boolean),
       }),
@@ -240,6 +244,7 @@ function accountCredentialsCard(ui) {
     ico: "mail",
     title: LOCALE.EMAIL_ADDRESS || "Email Address",
     description: profile.email || "",
+    descriptionPn: "credentials-email",
     className: `${pfx}-row`,
     trailing: button(ui, {
       label: LOCALE.CHANGE || "Change",

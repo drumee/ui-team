@@ -267,6 +267,15 @@ class settings_main extends LetcBox {
       case "change-email-done":
         return this.closeOverlay();
 
+      case "change-email-success":
+        // Visitor.profile was already updated inside the modal. Patch
+        // just the email row's description in place — re-rendering the
+        // whole skeleton would tear down the overlay (and the success
+        // modal still showing on top of us).
+        return this.ensurePart("credentials-email").then((p) => {
+          if (p) p.set({ content: (args && args.email) || (Visitor.profile() || {}).email || "" });
+        });
+
       default:
         return;
     }

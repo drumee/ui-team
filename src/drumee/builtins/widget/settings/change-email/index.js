@@ -144,6 +144,10 @@ class settings_change_email extends LetcBox {
       Visitor.set(_a.profile, data.profile);
     }
 
+    // Notify the parent (settings_main) so it can refresh the email row
+    // underneath the modal without waiting for the user to click Done.
+    this.triggerHandlers({ service: "change-email-success", email });
+
     this._step = "success";
     this._submitting = false;
     this._sentTo = email;
