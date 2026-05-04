@@ -612,6 +612,8 @@ class __window_interact_player extends __utils {
         if (_.isFunction(cb)) cb(this);
       },
     };
+    if (to.left < 0) to.left = 50
+    if (to.top < 0) to.top = 50
     if (!Visitor.isMobile()) {
       if (to.left + to.width > window.innerWidth)
         to.left = window.innerWidth - to.width;

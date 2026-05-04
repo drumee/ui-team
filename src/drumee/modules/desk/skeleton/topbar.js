@@ -3,10 +3,11 @@
  * breadcrumb | [add-new | upload | search | invite]
  */
 
-const addMenuItem = (pfx, ui, ico, label, service, opts = {}) =>
+const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
   Skeletons.Button.Label({
     ico,
     label,
+    name,
     className: `${pfx}__add-menu-item ${opts.iconClass || ""}`,
     dataset: { highlight: opts.highlight ? 1 : 0 },
     service,
@@ -32,6 +33,34 @@ module.exports = function (ui) {
         className: `${pfx}__actions-cluster`,
         kids: [
           // "Add new" button + dropdown wrapper
+          // Skeletons.Menu({
+          //   lassName: `${pfx}__add-wrapper`,
+          //   trigger: Skeletons.Button.Label({
+          //     ico: "topbar-add",
+          //     className: `${pfx}__new-workspace-btn`,
+          //     label: LOCALE.ADD_NEW || "Add new",
+          //     persistence: _a.once,
+          //     direction: _a.down,
+          //     offsetY: 20
+          //     // service: "toggle-add-menu",
+          //     // uiHandler: [ui],
+          //   }),
+          //   items: Skeletons.Box.Y({
+          //     className: `${pfx}__add-menu`,
+          //     sys_pn: "add-menu",
+          //     partHandler: ui,
+          //     // dataset: { state: 0 },
+          //     // active: 0,
+          //     kids: [
+          //       addMenuItem(pfx, ui, "addmenu-folder", LOCALE.WORKSPACE || "Workspace", "new-workspace", { highlight: 1, iconClass: "ico-workspace" }),
+          //       addMenuItem(pfx, ui, "addmenu-note", LOCALE.NOTE || "Note", "new-note", { iconClass: "ico-note" }),
+          //       addMenuItem(pfx, ui, "addmenu-document", LOCALE.DOCUMENT || "Document", "new-document", { iconClass: "ico-document" }),
+          //       addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", { iconClass: "ico-spreadsheet" }),
+          //       addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", { iconClass: "ico-presentation" }),
+          //     ],
+          //   }),
+
+          // }),
           Skeletons.Box.Y({
             className: `${pfx}__add-wrapper`,
             kids: [
@@ -50,11 +79,11 @@ module.exports = function (ui) {
                 dataset: { state: 0 },
                 active: 0,
                 kids: [
-                  addMenuItem(pfx, ui, "addmenu-folder", LOCALE.WORKSPACE || "Workspace", "new-workspace", { highlight: 1, iconClass: "ico-workspace" }),
-                  addMenuItem(pfx, ui, "addmenu-note", LOCALE.NOTE || "Note", "new-note", { iconClass: "ico-note" }),
-                  addMenuItem(pfx, ui, "addmenu-document", LOCALE.DOCUMENT || "Document", "new-document", { iconClass: "ico-document" }),
-                  addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", { iconClass: "ico-spreadsheet" }),
-                  addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", { iconClass: "ico-presentation" }),
+                  addMenuItem(pfx, ui, "addmenu-folder", LOCALE.WORKSPACE || "Workspace", "new-workspace", "", { highlight: 1, iconClass: "ico-workspace" }),
+                  addMenuItem(pfx, ui, "addmenu-note", LOCALE.NOTE || "Note", "new-note", "", { iconClass: "ico-note" }),
+                  addMenuItem(pfx, ui, "addmenu-document", LOCALE.DOCUMENT || "Document", "new-document", "document.docx", { iconClass: "ico-document" }),
+                  addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", "spreadsheet.xlsx", { iconClass: "ico-spreadsheet" }),
+                  addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", "presentation.pptx", { iconClass: "ico-presentation" }),
                 ],
               }),
             ],

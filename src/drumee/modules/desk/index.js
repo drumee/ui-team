@@ -841,9 +841,16 @@ class desk_module extends LetcBox {
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
 
       case "new-note":
+        Wm.windowsLayer.append({
+          kind: 'editor_markdown',
+          uiHandler: [this]
+        });
+        this._hideAddMenu();
+        return;
       case "new-document":
       case "new-spreadsheet":
       case "new-presentation":
+        Wm.newDocument(cmd)
         this._hideAddMenu();
         return;
 

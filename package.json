@@ -36,7 +36,7 @@
     "@babel/parser": "^7.28.5",
     "@babel/preset-env": "^7.19.1",
     "@babel/traverse": "^7.28.5",
-    "@drumee/ui-dev-tools": "^1.0.36",
+    "@drumee/ui-dev-tools": "^1.0.37",
     "@eslint/js": "^9.4.0",
     "@phosphor-icons/core": "^2.1.1",
     "argparse": "^2.0.1",
@@ -76,7 +76,7 @@
     "webpack-manifest-plugin": "^6.0.1"
   },
   "dependencies": {
-    "@drumee/ui-core": "^1.1.37",
+    "@drumee/ui-core": "^1.1.39",
     "@drumee/ui-essentials": "^1.0.1",
     "@drumee/ui-styles": "^1.0.6",
     "@drumee/ui-toolkit": "^0.0.20",

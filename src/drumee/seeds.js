@@ -170,6 +170,9 @@ module.exports = {
   editor_markdown: function () {
     return import("./builtins/editor/markdow");
   },
+  editor_note: function () {
+    return import("./builtins/editor/note");
+  },
   email_input_item: function () {
     return import("./builtins/widget/email-input-item/index");
   },
