@@ -90,9 +90,9 @@ class settings_main extends LetcBox {
    *
    */
   async changeEmail() {
-    await Kind.waitFor("settings_account");
+    await Kind.waitFor("settings_change_email");
     return this.ensurePart("overlay").then((p) => {
-      p.feed({ kind: "settings_account" });
+      p.feed({ kind: "settings_change_email", uiHandler: [this] });
     });
   }
 
@@ -263,6 +263,8 @@ class settings_main extends LetcBox {
 
       case "change-password-cancel":
       case "change-password-done":
+      case "change-email-cancel":
+      case "change-email-done":
         return this.closeOverlay();
 
       default:

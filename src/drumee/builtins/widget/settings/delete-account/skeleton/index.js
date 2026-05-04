@@ -4,7 +4,7 @@ function progressDots(pfx, step) {
     kids: [0, 1, 2].map((i) =>
       Skeletons.Box.X({
         className: `${pfx}__progress-dot${i <= step ? ` ${pfx}__progress-dot--active` : ""}`,
-      })
+      }),
     ),
   });
 }
@@ -60,7 +60,10 @@ function consequenceRow(pfx, opt) {
         className: `${pfx}__row-text`,
         kids: [
           Skeletons.Note({ className: `${pfx}__row-title`, content: title }),
-          Skeletons.Note({ className: `${pfx}__row-subtitle`, content: subtitle }),
+          Skeletons.Note({
+            className: `${pfx}__row-subtitle`,
+            content: subtitle,
+          }),
         ],
       }),
     ],
@@ -114,7 +117,8 @@ function step1(ui) {
         icon: xIcon(pfx),
         title: LOCALE.DELETE_ACCOUNT_FILES_TITLE || "Personal files & uploads",
         subtitle:
-          LOCALE.DELETE_ACCOUNT_FILES_DESC || "Purged after 30-day grace period",
+          LOCALE.DELETE_ACCOUNT_FILES_DESC ||
+          "Purged after 30-day grace period",
       }),
       consequenceRow(pfx, {
         variant: "danger",
@@ -126,7 +130,8 @@ function step1(ui) {
       consequenceRow(pfx, {
         variant: "info",
         icon: minusIcon(pfx),
-        title: LOCALE.DELETE_ACCOUNT_SHARED_TITLE || "Files in shared workspaces",
+        title:
+          LOCALE.DELETE_ACCOUNT_SHARED_TITLE || "Files in shared workspaces",
         subtitle:
           LOCALE.DELETE_ACCOUNT_SHARED_DESC ||
           "Remain — they belong to the workspace, not your account",
@@ -136,7 +141,8 @@ function step1(ui) {
         icon: minusIcon(pfx),
         title: LOCALE.DELETE_ACCOUNT_AUDIT_TITLE || "Audit logs",
         subtitle:
-          LOCALE.DELETE_ACCOUNT_AUDIT_DESC || "Retained by Hub Admin for compliance",
+          LOCALE.DELETE_ACCOUNT_AUDIT_DESC ||
+          "Retained by Hub Admin for compliance",
       }),
     ],
   });
@@ -155,8 +161,7 @@ function step1(ui) {
         kids: [
           Skeletons.Note({
             className: `${pfx}__btn-label`,
-            content:
-              LOCALE.DELETE_ACCOUNT_CONTINUE || "I understand, continue",
+            content: LOCALE.DELETE_ACCOUNT_CONTINUE || "I understand, continue",
           }),
           Skeletons.Note({ className: `${pfx}__btn-arrow`, content: "→" }),
         ],
@@ -202,8 +207,7 @@ function step2(ui) {
   const pfx = ui.fig.family;
   const header = modalHeader(ui, {
     title: LOCALE.DELETE_ACCOUNT_TITLE || "Delete Account",
-    subtitle:
-      LOCALE.DELETE_ACCOUNT_EXPORT_TITLE || "Export your data first",
+    subtitle: LOCALE.DELETE_ACCOUNT_EXPORT_TITLE || "Export your data first",
     description:
       LOCALE.DELETE_ACCOUNT_EXPORT_DESC ||
       "We recommend downloading your data before deletion. You can skip this step.",
@@ -299,8 +303,7 @@ function step3(ui) {
   const pfx = ui.fig.family;
   const header = modalHeader(ui, {
     title: LOCALE.DELETE_ACCOUNT_TITLE || "Delete Account",
-    subtitle:
-      LOCALE.DELETE_ACCOUNT_CONFIRM_TITLE || "Confirm account deletion",
+    subtitle: LOCALE.DELETE_ACCOUNT_CONFIRM_TITLE || "Confirm account deletion",
     description:
       LOCALE.DELETE_ACCOUNT_CONFIRM_DESC ||
       "This is your last chance. Type your username to confirm.",
@@ -315,7 +318,7 @@ function step3(ui) {
         className: `${pfx}__warning-icon`,
         kids: [
           Skeletons.Button.Svg({
-            ico: "editbox_triangle",
+            ico: "apps-warning",
             className: `${pfx}__warning-svg`,
           }),
         ],

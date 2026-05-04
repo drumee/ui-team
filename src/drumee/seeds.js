@@ -308,6 +308,9 @@ module.exports = {
   settings_change_password: function () {
     return import("widget/settings/change-password");
   },
+  settings_change_email: function () {
+    return import("widget/settings/change-email");
+  },
   apps_main: function () {
     return import("widget/apps/main");
   },

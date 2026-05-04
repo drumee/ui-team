@@ -4,7 +4,7 @@
   $ink-600: #65656c;
   $ink-500: #84848c;
   $danger: #d64e49;
-  $danger-soft: rgba(226, 69, 64, 0.10);
+  $danger-soft: rgba(226, 69, 64, 0.1);
   $neutral-soft: rgba(0, 0, 0, 0.05);
   $purple-deep: #433cc5;
   $purple-base: #5950ff;
@@ -26,6 +26,8 @@
     background: $bg-modal;
     border-radius: 12px;
     overflow: hidden;
+    box-shadow: 0px 1px 11px 0px #00000021;
+    border: 1px solid var(--border-default);
   }
 
   // ── Header ────────────────────────────────────────────────
@@ -62,7 +64,9 @@
       fill: $ink-900;
 
       .icon-fill-blue,
-      .icon-fill-grey { fill: $ink-900; }
+      .icon-fill-grey {
+        fill: $ink-900;
+      }
     }
   }
 
@@ -83,11 +87,15 @@
       border-radius: 12px;
       background: $neutral-soft;
 
-      &--active { background: $danger; }
+      &--active {
+        background: $danger;
+      }
     }
   }
 
-  &__header-text { gap: 8px; }
+  &__header-text {
+    gap: 8px;
+  }
 
   &__subtitle {
     font-size: 20px;
@@ -118,8 +126,12 @@
     align-items: center;
     gap: 12px;
 
-    &--danger { background: $danger-soft; }
-    &--info { background: $neutral-soft; }
+    &--danger {
+      background: $danger-soft;
+    }
+    &--info {
+      background: $neutral-soft;
+    }
   }
 
   &__row-icon {
@@ -142,7 +154,9 @@
       fill: $danger;
 
       .icon-fill-blue,
-      .icon-fill-grey { fill: $danger; }
+      .icon-fill-grey {
+        fill: $danger;
+      }
     }
   }
 
@@ -187,7 +201,10 @@
     width: 100%;
     gap: 16px;
 
-    > * { flex: 1 1 0; min-width: 0; }
+    > * {
+      flex: 1 1 0;
+      min-width: 0;
+    }
   }
 
   &__export-item {
@@ -200,17 +217,20 @@
     cursor: pointer;
     transition: background 0.15s ease;
 
-    &:hover { background: rgba(0, 0, 0, 0.07); }
+    &:hover {
+      background: rgba(0, 0, 0, 0.07);
+    }
 
     // Inner elements pass clicks through to the row container
-    > * { pointer-events: none; }
+    > * {
+      pointer-events: none;
+    }
   }
 
   &__checkbox {
     width: 20px;
     height: 20px;
     border-radius: 4px;
-    background: var(--white, #fff);
     border: 1.5px solid rgba(0, 0, 0, 0.15);
     display: flex;
     align-items: center;
@@ -240,7 +260,9 @@
         fill: var(--white, #fff);
 
         .icon-fill-blue,
-        .icon-fill-grey { fill: var(--white, #fff); }
+        .icon-fill-grey {
+          fill: var(--white, #fff);
+        }
       }
     }
   }
@@ -282,9 +304,13 @@
     cursor: pointer;
     transition: filter 0.15s ease;
 
-    &:hover { filter: brightness(0.95); }
+    &:hover {
+      filter: brightness(0.95);
+    }
 
-    > * { pointer-events: none; }
+    > * {
+      pointer-events: none;
+    }
 
     &-ico {
       width: 20px;
@@ -296,7 +322,9 @@
         fill: var(--white, #fff);
 
         .icon-fill-blue,
-        .icon-fill-grey { fill: var(--white, #fff); }
+        .icon-fill-grey {
+          fill: var(--white, #fff);
+        }
       }
     }
 
@@ -329,7 +357,6 @@
     width: 21px;
     height: 21px;
     border-radius: 50%;
-    background: var(--white, #fff);
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
@@ -345,7 +372,9 @@
       fill: $danger;
 
       .icon-fill-blue,
-      .icon-fill-grey { fill: $danger; }
+      .icon-fill-grey {
+        fill: $danger;
+      }
     }
   }
 
@@ -393,7 +422,9 @@
       line-height: 20px;
       color: $ink-900;
 
-      &::placeholder { color: $ink-600; }
+      &::placeholder {
+        color: $ink-600;
+      }
     }
   }
 
@@ -409,7 +440,9 @@
       fill: $ink-600;
 
       .icon-fill-blue,
-      .icon-fill-grey { fill: $ink-600; }
+      .icon-fill-grey {
+        fill: $ink-600;
+      }
     }
   }
 
@@ -420,7 +453,9 @@
     gap: 8px;
 
     &--triple {
-      .settings-delete-account__btn--continue { flex: 1; }
+      .settings-delete-account__btn--continue {
+        flex: 1;
+      }
     }
   }
 
@@ -433,9 +468,13 @@
     gap: 8px;
     transition: filter 0.15s ease;
 
-    &:hover { filter: brightness(0.95); }
+    &:hover {
+      filter: brightness(0.95);
+    }
 
-    > * { pointer-events: none; }
+    > * {
+      pointer-events: none;
+    }
 
     &--cancel {
       width: 137px;
@@ -443,7 +482,9 @@
       padding: 0 16px;
       background: $danger;
 
-      .settings-delete-account__btn-label { color: var(--white, #fff); }
+      .settings-delete-account__btn-label {
+        color: var(--white, #fff);
+      }
     }
 
     &--continue {
@@ -452,7 +493,9 @@
       background: $neutral-soft;
 
       .settings-delete-account__btn-label,
-      .settings-delete-account__btn-arrow { color: $ink-900; }
+      .settings-delete-account__btn-arrow {
+        color: $ink-900;
+      }
     }
   }
 

@@ -203,6 +203,22 @@
     padding: 16px 20px;
     gap: 8px;
 
+     border-left: 2px solid $ink-900; 
+
+  
+
+  &.admins {
+    border-left-color: $purple-light;
+  }
+
+  &.guests {
+    border-left-color: $pink;
+  }
+
+  &.pending {
+    border-left-color: $red;
+  }
+
     &-label {
       font-size: 10px;
       line-height: 14px;
