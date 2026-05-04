@@ -1,16 +1,16 @@
 .settings-main {
   // Color tokens used throughout
-  $purple-deep: #433cc5;     // Save Profile button + Edit-avatar pencil bg
-  $purple-base: #5950ff;     // Ghost-button tint base
-  $purple-text: #847dff;     // Ghost-button text
-  $ink-900:     #0b0a21;     // Primary text
-  $ink-600:     #65656c;     // Subtle text / field labels
-  $ink-400:     #aeaeb2;     // Tertiary text
-  $ink-500:     #84848c;     // EDIT AVATAR label
-  $card-bg:     rgba(0, 0, 0, 0.05);
-  $row-bg:      #ffffff;
-  $danger-fg:   #d64e49;     // Delete button + warning glyph
-  $danger-bg:   #f6504a;     // Used at low opacity for warning chip & delete row
+  $purple-deep: #433cc5; // Save Profile button + Edit-avatar pencil bg
+  $purple-base: #5950ff; // Ghost-button tint base
+  $purple-text: #847dff; // Ghost-button text
+  $ink-900: #0b0a21; // Primary text
+  $ink-600: #65656c; // Subtle text / field labels
+  $ink-400: #aeaeb2; // Tertiary text
+  $ink-500: #84848c; // EDIT AVATAR label
+  $card-bg: rgba(0, 0, 0, 0.05);
+  $row-bg: #ffffff;
+  $danger-fg: #d64e49; // Delete button + warning glyph
+  $danger-bg: #f6504a; // Used at low opacity for warning chip & delete row
 
   &__ui {
     width: 100%;
@@ -23,6 +23,12 @@
     flex-direction: column;
     gap: var(--spacer-6);
     font-family: "Geist", system-ui, sans-serif;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   // ── Header row ────────────────────────────────────────────
@@ -66,7 +72,9 @@
         min-width: 140px;
         flex-shrink: 0;
 
-        &:hover { background: var(--primary-purple-60); }
+        &:hover {
+          background: var(--primary-purple-60);
+        }
 
         .btn {
           color: var(--white);
@@ -86,13 +94,25 @@
   }
 
   &__row-1 {
-    .settings-main__profile-card     { flex: 698 1 0; min-width: 0; }
-    .settings-main__preferences-card { flex: 450 1 0; min-width: 0; }
+    .settings-main__profile-card {
+      flex: 698 1 0;
+      min-width: 0;
+    }
+    .settings-main__preferences-card {
+      flex: 450 1 0;
+      min-width: 0;
+    }
   }
 
   &__row-2 {
-    .settings-main__credentials-card { flex: 375 1 0; min-width: 0; }
-    .settings-main__danger-card      { flex: 773 1 0; min-width: 0; }
+    .settings-main__credentials-card {
+      flex: 375 1 0;
+      min-width: 0;
+    }
+    .settings-main__danger-card {
+      flex: 773 1 0;
+      min-width: 0;
+    }
   }
 
   // ── Card shell ────────────────────────────────────────────
@@ -102,7 +122,9 @@
     padding: var(--spacer-6);
     gap: var(--spacer-6);
 
-    &-heading { gap: 8px; }
+    &-heading {
+      gap: 8px;
+    }
 
     &-title {
       font-size: 18px;
@@ -164,7 +186,11 @@
       justify-content: center;
       cursor: pointer;
 
-      svg { width: 14px; height: 14px; fill: var(--white); }
+      svg {
+        width: 14px;
+        height: 14px;
+        fill: var(--white);
+      }
     }
 
     &-avatar-label {
@@ -178,7 +204,8 @@
 
     &-avatar-input {
       position: absolute;
-      width: 0; height: 0;
+      width: 0;
+      height: 0;
       visibility: hidden;
     }
 
@@ -192,7 +219,10 @@
       width: 100%;
       gap: var(--spacer-5);
 
-      > * { flex: 1 1 0; min-width: 0; }
+      > * {
+        flex: 1 1 0;
+        min-width: 0;
+      }
     }
 
     &-bio {
@@ -231,7 +261,11 @@
 
   // Field helpers (shared with other cards)
   &__entry {
-    &-main { gap: 4px; flex: 1; min-width: 0; }
+    &-main {
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
 
     &-label {
       font-size: 12px;
@@ -302,7 +336,9 @@
           fill: $danger-fg;
 
           .icon-fill-blue,
-          .icon-fill-grey { fill: $danger-fg; }
+          .icon-fill-grey {
+            fill: $danger-fg;
+          }
         }
       }
     }
@@ -317,9 +353,11 @@
     }
 
     &-row-delete {
-      background: rgba(246, 81, 75, 0.10);
+      background: rgba(246, 81, 75, 0.1) !important;
 
-      .settings-main__inner-title { color: $danger-fg; }
+      .settings-main__inner-title {
+        color: $danger-fg;
+      }
     }
   }
 
@@ -344,7 +382,7 @@
       width: 36px;
       height: 36px;
       border-radius: 6px;
-      background: rgba(89, 80, 255, 0.10);
+      background: rgba(89, 80, 255, 0.1);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -408,7 +446,9 @@
     &[data-state="1"] {
       background: $purple-deep;
 
-      .settings-main__toggle-knob { transform: translateX(20px); }
+      .settings-main__toggle-knob {
+        transform: translateX(20px);
+      }
     }
   }
 
@@ -416,10 +456,10 @@
   &__preferences-manage-main,
   &__credentials-action-main,
   &__danger-export-btn-main {
+    width: 120px;
     height: 32px;
-    padding: 0 var(--spacer-5);
     border-radius: 4px;
-    background: rgba(89, 80, 255, 0.10);
+    background: rgba(89, 80, 255, 0.1);
     cursor: pointer;
     align-items: center;
     justify-content: center;
@@ -433,12 +473,21 @@
       font-weight: 600;
     }
 
-    .icon svg { fill: $purple-text; width: 14px; height: 14px; }
+    .icon svg {
+      fill: $purple-text;
+      width: 14px;
+      height: 14px;
+    }
 
-    &:hover { background: rgba(89, 80, 255, 0.18); }
+    &:hover {
+      background: rgba(89, 80, 255, 0.18);
+    }
   }
 
-  &__danger-export-btn-main { gap: 8px; padding: 0 var(--spacer-5) 0 var(--spacer-4); }
+  &__danger-export-btn-main {
+    gap: 8px;
+    padding: 0 var(--spacer-5) 0 var(--spacer-4);
+  }
 
   // ── Filled red Delete button ──────────────────────────────
   &__danger-delete-btn-main {
@@ -458,7 +507,9 @@
       font-weight: 600;
     }
 
-    &:hover { background: #c33d38; }
+    &:hover {
+      background: #c33d38;
+    }
   }
 
   // ── Overlay slot for sub-modals ───────────────────────────
@@ -474,7 +525,6 @@
 
     &[data-state="open"] {
       pointer-events: auto;
-      background: rgba(11, 10, 33, 0.40);
       backdrop-filter: blur(30px);
       -webkit-backdrop-filter: blur(30px);
     }
@@ -482,18 +532,30 @@
 
   // Mobile / narrow viewport: stack rows.
   @media (max-width: 960px) {
-    &__ui { padding: var(--spacer-5); }
+    &__ui {
+      padding: var(--spacer-5);
+    }
 
-    &__row { flex-direction: column; }
-    &__row-1, &__row-2 {
+    &__row {
+      flex-direction: column;
+    }
+    &__row-1,
+    &__row-2 {
       .settings-main__profile-card,
       .settings-main__preferences-card,
       .settings-main__credentials-card,
-      .settings-main__danger-card { flex: 1 1 auto; }
+      .settings-main__danger-card {
+        flex: 1 1 auto;
+      }
     }
 
-    &__profile-body { flex-direction: column; align-items: stretch; }
-    &__profile-fields-row { flex-direction: column; }
+    &__profile-body {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    &__profile-fields-row {
+      flex-direction: column;
+    }
   }
 }
 
