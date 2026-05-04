@@ -58,6 +58,10 @@ class settings_change_password extends LetcBox {
       this._error = LOCALE.PASSWORD_FIELDS_REQUIRED;
       return this.rerender();
     }
+    if (next === current) {
+      this._error = LOCALE.PASSWORD_SAME_AS_CURRENT;
+      return this.rerender();
+    }
     if (next.length < 8) {
       this._error = LOCALE.PASSWORD_TOO_SHORT;
       return this.rerender();
@@ -117,7 +121,7 @@ class settings_change_password extends LetcBox {
     switch (service) {
       case "change-password-toggle-current":
         return this.togglePasswordVisibility("current");
-      case "change-password-toggle-new":
+      case "change-password-toggle-next":
         return this.togglePasswordVisibility("next");
       case "change-password-toggle-confirm":
         return this.togglePasswordVisibility("confirm");
