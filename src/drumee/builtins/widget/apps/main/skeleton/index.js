@@ -65,7 +65,7 @@ function pageHeader(ui) {
         className: `${pfx}__search`,
         kids: [
           Skeletons.Image.Svg({
-            ico: "editbox_search",
+            ico: "magnifying-glass",
             className: `${pfx}__search-ico`,
           }),
           Skeletons.Entry({
@@ -84,9 +84,9 @@ function pageHeader(ui) {
 }
 
 function statCard(pfx, opt) {
-  const { label, value, valueClass = "" } = opt;
+  const { label, value, statClass = "", valueClass = "" } = opt;
   return Skeletons.Box.Y({
-    className: `${pfx}__stat`,
+    className: statClass,
     kids: [
       Skeletons.Note({ className: `${pfx}__stat-label`, content: label }),
       Skeletons.Note({
@@ -116,21 +116,25 @@ function statsRow(ui) {
     kids: [
       statCard(pfx, {
         label: LOCALE.TOTAL_MEMBERS || "Total Members",
+        statClass: `${pfx}__stat`,
         value: fmtNum(total),
       }),
       statCard(pfx, {
         label: LOCALE.ADMINS || "Admins",
         value: fmtNum(admins),
+        statClass: `${pfx}__stat admins`,
         valueClass: `${pfx}__stat-value--admins`,
       }),
       statCard(pfx, {
         label: LOCALE.EXTERNAL_GUESTS || "External Guests",
         value: fmtNum(guests),
+        statClass: `${pfx}__stat guests`,
         valueClass: `${pfx}__stat-value--guests`,
       }),
       statCard(pfx, {
         label: LOCALE.PENDING_INVITES || "Pending Invites",
         value: fmtNum(pending),
+        statClass: `${pfx}__stat pending`,
         valueClass: `${pfx}__stat-value--pending`,
       }),
     ],
