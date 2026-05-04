@@ -69,7 +69,7 @@ class __window_folder extends mfsInteract {
     this.applyDefaultBounds();
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
-    // Honor the launch-time `activeTab` option (e.g. opened from the
+    // Honor the launch-time `activeTab` option (e.g. opened from the,
     // sidebar live-meeting badge with activeTab: "meeting").
     const initialTab = this.mget("activeTab");
     if (initialTab && initialTab !== "files") {
