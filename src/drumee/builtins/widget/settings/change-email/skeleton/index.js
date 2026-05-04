@@ -171,6 +171,49 @@ function formView(ui) {
   });
 }
 
+function resendPanel(ui) {
+  const pfx = ui.fig.family;
+  const resending = ui._resending;
+
+  const link = Skeletons.Box.X({
+    className: `${pfx}__success-resend-link${
+      resending ? " is-loading" : ""
+    }`,
+    service: resending ? null : "change-email-resend",
+    uiHandler: [ui],
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__success-resend-link-text`,
+        content: resending ? LOCALE.SENDING : LOCALE.RESEND_EMAIL,
+      }),
+    ],
+  });
+
+  return Skeletons.Box.Y({
+    className: `${pfx}__success-resend`,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__success-resend-title`,
+        content: LOCALE.DIDNT_RECEIVE_EMAIL,
+      }),
+      Skeletons.Box.X({
+        className: `${pfx}__success-resend-body`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__success-resend-prefix`,
+            content: LOCALE.CHECK_SPAM_FOLDER_OR,
+          }),
+          link,
+          Skeletons.Note({
+            className: `${pfx}__success-resend-suffix`,
+            content: ".",
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 function successView(ui) {
   const pfx = ui.fig.family;
 
@@ -207,6 +250,11 @@ function successView(ui) {
     ],
   });
 
+  const resendBlock = Skeletons.Box.Y({
+    className: `${pfx}__success-resend-wrap`,
+    kids: [resendPanel(ui)],
+  });
+
   const footer = Skeletons.Box.X({
     className: `${pfx}__footer ${pfx}__footer--success`,
     kids: [
@@ -226,7 +274,7 @@ function successView(ui) {
 
   return Skeletons.Box.Y({
     className: `${pfx}__modal ${pfx}__modal--success`,
-    kids: [header, footer],
+    kids: [header, resendBlock, footer],
   });
 }
 
