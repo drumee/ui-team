@@ -70,10 +70,21 @@
     "create": "task.create",
     "update": "task.update",
     "update_status": "task.update_status",
+    "update_assignee": "task.update_assignee",
     "delete": "task.delete",
     "link_file": "task.link_file",
     "unlink_file": "task.unlink_file",
-    "get_linked_files": "task.get_linked_files"
+    "get_linked_files": "task.get_linked_files",
+    "link_label": "task.link_label",
+    "unlink_label": "task.unlink_label",
+    "get_labels": "task.get_labels",
+    "search_files": "task.search_files"
+  },
+  "label": {
+    "list": "label.list",
+    "create": "label.create",
+    "update": "label.update",
+    "delete": "label.delete"
   },
   "admin": {
     "member_stats": "admin.member_stats",
