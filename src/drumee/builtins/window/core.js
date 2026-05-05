@@ -820,11 +820,13 @@ class __window_core extends __utils {
     const service = args.service || cmd.service || cmd.model.get(_a.service);
     // if (!args.no_raise) this.raise(cmd);
     switch (service) {
-      case _e.close:
-        if (this.mget(_a.source)) {
-          this.mget(_a.source).el.dataset.isActive = _a.off;
+      case _e.close: {
+        const src = this.mget(_a.source);
+        if (src && src.el && src.el.dataset) {
+          src.el.dataset.isActive = _a.off;
         }
         return this.goodbye();
+      }
 
       case _e.rename:
         return noOperation();

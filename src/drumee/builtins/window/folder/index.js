@@ -44,8 +44,11 @@ class __window_folder extends mfsInteract {
         minWidth: 760,
         minHeight: 480,
       };
+      // The window's parent (.window-manager__layer) starts at sidebar's
+      // right edge; `left` is relative to that parent, so don't add
+      // sidebarRight here — only the leftover gap inside the workspace.
       this.style.set({
-        left: Math.round(sidebarRight + (workspaceWidth - width) / 2),
+        left: Math.max(0, Math.round((workspaceWidth - width) / 2)),
         top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
         minWidth: this.size.minWidth,
         minHeight: this.size.minHeight,
@@ -87,7 +90,9 @@ class __window_folder extends mfsInteract {
     const width = Math.min(Math.max(900, Math.round(workspaceWidth * 0.72)), 1200, workspaceWidth - 96);
     const height = Math.min(Math.max(580, Math.round(workspaceHeight * 0.78)), 760, workspaceHeight - 96);
     const bounds = {
-      left: Math.round(sidebarRight + (workspaceWidth - width) / 2),
+      // left is relative to the windowsLayer parent (already starts at the
+      // sidebar's right edge), so use only the gap inside the workspace.
+      left: Math.max(0, Math.round((workspaceWidth - width) / 2)),
       top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
       width,
       height,
