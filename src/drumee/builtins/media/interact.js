@@ -1050,10 +1050,7 @@ class __media_interact extends media_core {
   move() {
     const hubName = this.mget(_a.hubName) || this.mget('hubName') ||
       this.mget(_a.hub_name) || this.mget('hub_name') || LOCALE.WORKSPACE;
-    const selectedItems = Wm.getGlobalSelection ? Wm.getGlobalSelection() : [];
-    const movingItems = selectedItems.length ? selectedItems : [this];
-
-    Wm.move(movingItems, {
+    Wm.move([this], {
       filename: this.mget(_a.filename),
       folderName: this.mget(_a.filename),
       workspaceName: hubName,
@@ -1061,59 +1058,46 @@ class __media_interact extends media_core {
       nid: this.mget(_a.nid),
       area: this.mget(_a.area),
     }).then((result) => {
-      const { destination, destinations, items } = result;
-      const targetDestinations = destinations || [destination];
+      const { destination, items } = result;
+      const item = items[0];
+      const nid = item.mget ? item.mget(_a.nid) : item.nid;
+      const itemHubId = item.mget ? item.mget(_a.hub_id) : item.hub_id;
+      const isCrossHub = destination.hub_id !== itemHubId;
 
-      const moveItem = (item) => {
-        const nid = item.mget ? item.mget(_a.nid) : item.nid;
-        const itemHubId = item.mget ? item.mget(_a.hub_id) : item.hub_id;
-        const isCrossHub = (dest) => String(dest.hub_id) !== String(itemHubId);
-        const crossHubDestinations = targetDestinations.filter(isCrossHub);
-
-        const resolvePid = (dest) => {
-          if (!isCrossHub(dest)) return Promise.resolve(dest.nid);
-          return this.fetchService(SERVICE.hub.get_attributes, { hub_id: dest.hub_id })
-            .then((attrs) => (attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid)) || '0')
-            .catch(() => '0');
-        };
-
-        const moveToDestination = (dest) => resolvePid(dest).then((pid) => {
-          const payload = isCrossHub(dest) ? {
-            service: SERVICE.media.copy,
-            nid,
-            pid,
-            action: _a.copy,
-            hub_id: itemHubId,
-            recipient_id: dest.hub_id,
-            notify: 1,
-            moved_in: 1,
-            async: 1,
-            echoId: this.mget(ECHO_ID),
-          } : {
-            service: SERVICE.media.move,
-            nid,
-            pid,
-            action: _a.move,
-            hub_id: itemHubId,
-            notify: 1,
-            moved_in: 1,
-          };
-          return this.postService(payload).then((data) => data || Promise.reject(data));
-        });
-
-        return Promise.all(targetDestinations.map(moveToDestination)).then(() => {
-          if (!crossHubDestinations.length) return;
-          return this.postService({
-            service: SERVICE.media.trash,
-            nid: [{ nid, hub_id: itemHubId }],
-            hub_id: itemHubId,
-          });
-        }).then(() => {
-          if (item.goodbye) item.goodbye();
-        });
+      const doMove = (pid) => {
+        if (isCrossHub) {
+          // Cross-hub = copy to destination + trash source
+          const copyPayload = { service: SERVICE.media.copy, nid, pid, action: _a.copy, hub_id: itemHubId, recipient_id: destination.hub_id, notify: 1, moved_in: 1, async: 1, echoId: this.mget(ECHO_ID) };
+          console.log('[MOVE-API] copy payload:', JSON.stringify(copyPayload));
+          this.postService(copyPayload).then((data) => {
+            console.log('[MOVE-API] copy response:', data);
+            if (!data) return;
+            // Trash source to complete the move
+            const trashPayload = { service: SERVICE.media.trash, nid: [{ nid, hub_id: itemHubId }], hub_id: itemHubId };
+            console.log('[MOVE-API] trash payload:', JSON.stringify(trashPayload));
+            this.postService(trashPayload).then(() => {
+              if (this.model) this.goodbye();
+            }).catch((e) => this.warn("Trash source failed", e));
+          }).catch((e) => this.warn("Copy failed", e));
+        } else {
+          const movePayload = { service: SERVICE.media.move, nid, pid, action: _a.move, hub_id: itemHubId, notify: 1, moved_in: 1 };
+          console.log('[MOVE-API] move payload:', JSON.stringify(movePayload));
+          this.postService(movePayload).then((data) => {
+            if (this.model && data) this.goodbye();
+          }).catch((e) => this.warn("Move failed", e));
+        }
       };
 
-      Promise.all(items.map(moveItem)).catch((e) => this.warn("Move failed", e));
+      if (isCrossHub) {
+        // Fetch destination hub's actual_home_id (same as loadWorkspace does)
+        this.fetchService(SERVICE.hub.get_attributes, { hub_id: destination.hub_id }).then((attrs) => {
+          const pid = (attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid)) || '0';
+          console.log('[MOVE-API] resolved destination pid:', pid);
+          doMove(pid);
+        }).catch(() => doMove('0'));
+      } else {
+        doMove(destination.nid);
+      }
     }).catch((e) => {
       if (e.response !== _e.cancel && e.response !== _e.close) {
         this.warn("Move popup error", e);

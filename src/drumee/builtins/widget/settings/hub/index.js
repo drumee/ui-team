@@ -86,7 +86,7 @@ class settings_hub extends DrumeeMFS {
   }
 
   /**
-   *
+   * 
    */
   showMembers() {
     this.feed({
@@ -94,23 +94,6 @@ class settings_hub extends DrumeeMFS {
       uiHandler: [this],
       media: this.mget(_a.media),
       visitor: this.mget('visitor')
-    });
-  }
-
-  _openInvitePopup() {
-    if (typeof Wm === "undefined" || !Wm.__wrapperModal) return;
-    Kind.waitFor("invite_popup").then(() => {
-      Wm.__wrapperModal.feed({
-        kind: "invite_popup",
-        hub_id: this.mget(_a.hub_id),
-        uiHandler: [this],
-      });
-      this._invitePopup = Wm.__wrapperModal.children.last();
-      if (this._invitePopup) {
-        this._invitePopup.once(_e.destroy, () => {
-          this._invitePopup = null;
-        });
-      }
     });
   }
 
@@ -203,10 +186,27 @@ class settings_hub extends DrumeeMFS {
         break;
 
       case "add-members":
-        return this._openInvitePopup();
+        this._tab++;
+        await Kind.waitFor('invitation');
+        this.feed({
+          kind: 'invitation',
+          topbar: 1,
+          topLabel: LOCALE.DOCUMENTS_ACCESS,
+          uiHandler: [this],
+          members: 0,
+          media: this.mget(_a.media)
+        })
+        subWidget = this.children.last();
+        subWidget.once(_e.destroy, () => {
+          this._tab--;
+          return this.route()
+          // this.feed({ kind: "settings_members_list", uiHandler: [this], media: this.mget(_a.media) });
+          // return this.route()
+        })
+        return
 
       case "contributors-added":
-      case "invitation-sent":
+        this._tab--;
         return this.route()
 
       case "prompt-permission":

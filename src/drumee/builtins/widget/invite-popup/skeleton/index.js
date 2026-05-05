@@ -8,22 +8,45 @@
  *  - "+ Add new workspace and role" link
  *  - Send Invitation button
  */
+/**
+ * Permission options shown as checkboxes (multi-select).
+ * Privilege is computed by OR-ing the selected bits.
+ *
+ * Backend bits (lex/constants.js _K.privilege):
+ *   admin = 0b0011111 (31), modify = 0b0001111, write = 0b0000111,
+ *   read  = 0b0000011 (3)
+ *
+ * Chat is a separate resource permission granted via
+ * mfs_home.chat_upload_id (server hub.invite_with_roles already
+ * issues a chat upload grant when present). We surface it as a
+ * dedicated UI checkbox; the bit is mirrored in the privilege
+ * word so role-snapshot stays single-source.
+ */
 const ROLES = [
-  { id: "admin", label: LOCALE.ROLE_ADMIN || "Admin", bit: 0b0011111 },
-  { id: "edit", label: LOCALE.ROLE_VIEW_EDIT || LOCALE.EDIT || "Edit", bit: 0b0000111 },
-  { id: "view", label: LOCALE.VIEW || "View", bit: 0b0000011 },
+  { id: "admin", label: "Admin", bit: 0b0011111 }, // 31
+  { id: "edit",  label: "Edit",  bit: 0b0000111 }, // 7  (write)
+  { id: "chat",  label: "Chat",  bit: 0b0000011 }, // 3  (read)
+  { id: "view",  label: "View",  bit: 0b0000011 }, // 3  (read)
 ];
 
-const DEFAULT_ROLE_IDS = ["edit"];
+/** Default selection ≈ "Edit + Chat" matches typical invitee role */
+const DEFAULT_ROLE_IDS = ["edit", "chat"];
 
 const computePrivilege = (selectedIds) => {
-  const role = ROLES.find((r) => selectedIds.includes(r.id));
-  return role?.bit || 0b0000011;
+  let p = 0;
+  for (const r of ROLES) {
+    if (selectedIds.includes(r.id)) p |= r.bit;
+  }
+  return p || 0b0000011;
 };
 
 const summarizeRoles = (selectedIds) => {
-  const role = ROLES.find((r) => selectedIds.includes(r.id));
-  return role?.label || (LOCALE.SELECT_ROLE || "Select role");
+  const labels = ROLES.filter((r) => selectedIds.includes(r.id)).map((r) => r.label);
+  if (!labels.length) return "Select role";
+  if (labels.length === 1) return labels[0];
+  // Keep summary short to fit the 110px-wide role cell — show first label + count
+  if (labels.length === 2) return labels.join(" & ");
+  return `${labels[0]} +${labels.length - 1}`;
 };
 
 const buildWorkspaceRow = (ui, idx) => {

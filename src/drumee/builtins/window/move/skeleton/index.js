@@ -86,8 +86,30 @@ module.exports = function(ui) {
                 sys_pn: "suggestions",
                 partHandler: ui,
                 className: `${pfx}__suggestions`,
-                dataset: { state: 1 },
+                dataset: { state: 0 },
                 kids: [],
+              }),
+              // Selected destination chip - always in DOM, toggled via data-active
+              Skeletons.Box.X({
+                sys_pn: "selected-chip",
+                partHandler: ui,
+                className: `${pfx}__selected-item`,
+                dataset: { active: 0 },
+                kids: [
+                  Skeletons.Image.Svg({ ico: 'addmenu-folder', className: `${pfx}__item-icon` }),
+                  Skeletons.Note({
+                    sys_pn: "chip-name",
+                    partHandler: ui,
+                    className: `${pfx}__selected-name`,
+                    content: '',
+                  }),
+                  Skeletons.Button.Svg({
+                    className: `${pfx}__remove-btn`,
+                    service: 'remove-destination',
+                    uiHandler: [ui],
+                    ico: 'cross',
+                  }),
+                ],
               }),
             ],
           }),

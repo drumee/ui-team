@@ -821,9 +821,9 @@ class __window_core extends __utils {
     // if (!args.no_raise) this.raise(cmd);
     switch (service) {
       case _e.close: {
-        const source = this.mget(_a.source);
-        if (source && source.el && source.el.dataset) {
-          source.el.dataset.isActive = _a.off;
+        const src = this.mget(_a.source);
+        if (src && src.el && src.el.dataset) {
+          src.el.dataset.isActive = _a.off;
         }
         return this.goodbye();
       }
