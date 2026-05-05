@@ -35,8 +35,8 @@ class __window_folder extends mfsInteract {
       const sidebarRight = sidebar ? sidebar.getBoundingClientRect().right : 0;
       const workspaceWidth = window.innerWidth - sidebarRight;
       const workspaceHeight = window.innerHeight;
-      const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
-      const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
+      const width = Math.min(Math.max(900, Math.round(workspaceWidth * 0.72)), 1200, workspaceWidth - 96);
+      const height = Math.min(Math.max(580, Math.round(workspaceHeight * 0.78)), 760, workspaceHeight - 96);
       this.size = {
         ...this.size,
         width,
@@ -84,8 +84,8 @@ class __window_folder extends mfsInteract {
     const sidebarRight = sidebar ? sidebar.getBoundingClientRect().right : 0;
     const workspaceWidth = window.innerWidth - sidebarRight;
     const workspaceHeight = window.innerHeight;
-    const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
-    const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
+    const width = Math.min(Math.max(900, Math.round(workspaceWidth * 0.72)), 1200, workspaceWidth - 96);
+    const height = Math.min(Math.max(580, Math.round(workspaceHeight * 0.78)), 760, workspaceHeight - 96);
     const bounds = {
       left: Math.round(sidebarRight + (workspaceWidth - width) / 2),
       top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
