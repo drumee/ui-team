@@ -1984,6 +1984,7 @@
   "WORKSPACE_NAME": "Workspace name",
   "PRO_PLAN": "Pro plan",
   "INBOX": "Inbox",
+  "ALL_READ": "All read",
   "TRACKER": "Tracker",
   "TRACKER_UNAVAILABLE": "Task tracker is waiting for backend API.",
   "TRASH": "Trash",
