@@ -662,6 +662,8 @@ class __player_document extends PlayerInteract {
       this.anti_overlap(pos);
       if (pos.top < 10) pos.top = 10;
     }
+    if (pos.left < 0) pos.left = 50
+    if (pos.top < 0) pos.top = 50
     TweenMax.fromTo(this.$el, 1.5,
       { scale: 0.15, opacity: 0 },
       {

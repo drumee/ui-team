@@ -188,11 +188,13 @@ class __invite_popup extends LetcBox {
   _showSuggestions(data) {
     this._suggestions = data;
     if (!this._suggestionsBox) return;
-    if (!data.length) {
+    const ownEmail = ((Visitor.profile() || {}).email || "").toLowerCase();
+    const filtered = data.filter((row) => row.email && row.email.toLowerCase() !== ownEmail);
+    if (!filtered.length) {
       this._hideSuggestions();
       return;
     }
-    const items = data.map((row) => {
+    const items = filtered.map((row) => {
       const fullName = [row.firstname, row.lastname].filter(Boolean).join(" ") || row.email;
       return Skeletons.Box.X({
         className: `${this.fig.family}__suggestion-item`,
@@ -215,6 +217,8 @@ class __invite_popup extends LetcBox {
 
   _addInvitee(data) {
     if (!data || !data.email) return;
+    const ownEmail = (Visitor.profile() || {}).email;
+    if (ownEmail && data.email.toLowerCase() === ownEmail.toLowerCase()) return;
     if (this._invitees.find((i) => i.email === data.email)) return;
     this._invitees.push(data);
     this._renderChips();

@@ -26,16 +26,16 @@
     overflow: visible;
     flex-direction: column;
     display: flex;
+    position: fixed;
+    z-index: 10100 !important;
+    border-radius: 12px;
 
     &[data-device="mobile"] {
       width: 100vw;
       height: 100vh;
       left: 0;
       top: 0;
-    }
-
-    &[data-tmp="1"] {
-      z-index: 9000 !important;
+      border-radius: 0;
     }
   }
 

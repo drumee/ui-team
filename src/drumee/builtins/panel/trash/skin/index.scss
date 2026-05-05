@@ -136,6 +136,10 @@
     flex: 1;
     overflow: hidden;
     background-color: var(--normal-bg-90);
+
+    > .smart-container {
+      height: 100%;
+    }
   }
 
   /* ── Placeholder (empty state) ──────────────────────────── */
