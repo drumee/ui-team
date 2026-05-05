@@ -18,7 +18,14 @@ module.exports = function (ui, data = []) {
     className: `${pfx}__main`,
     debug: __filename,
     kids: [
-      Skeletons.Note({ className: `${pfx}__context`, sys_pn: _a.context }),
+      Skeletons.Note({
+        className: `${pfx}__context`,
+        sys_pn: _a.context,
+        partHandler: ui,
+        uiHandler: [ui],
+        service: "load-home",
+        content: LOCALE.HOME,
+      }),
       Skeletons.Box.X({ className: `${pfx}__content`, sys_pn: _a.content, kids: items })
     ],
   });

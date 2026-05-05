@@ -12,6 +12,23 @@ class __window_folder extends mfsInteract {
     this.onSearchEvent = this.onSearchEvent.bind(this);
   }
 
+  _defaultBounds() {
+    const workspace = document.querySelector(".desk-module__wm-container") || document.querySelector(".desk-module__right-side");
+    const rect = workspace ? workspace.getBoundingClientRect() : {};
+    const workspaceWidth = rect.width || window.innerWidth;
+    const workspaceHeight = rect.height || window.innerHeight;
+    const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
+    const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
+    return {
+      left: Math.round((workspaceWidth - width) / 2),
+      top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
+      width,
+      height,
+      minWidth: 760,
+      minHeight: 480,
+    };
+  }
+
   /**
    * @param {*} opt
    */
@@ -31,24 +48,22 @@ class __window_folder extends mfsInteract {
       });
     }
     if (!Visitor.isMobile()) {
-      const sidebar = document.querySelector(".desk-module-sidebar__main");
-      const sidebarRight = sidebar ? sidebar.getBoundingClientRect().right : 0;
-      const workspaceWidth = window.innerWidth - sidebarRight;
-      const workspaceHeight = window.innerHeight;
-      const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
-      const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
+      const bounds = this._defaultBounds();
       this.size = {
         ...this.size,
-        width,
-        height,
-        minWidth: 760,
-        minHeight: 480,
+        width: bounds.width,
+        height: bounds.height,
+        minWidth: bounds.minWidth,
+        minHeight: bounds.minHeight,
       };
+      // The window's parent (.window-manager__layer) starts at sidebar's
+      // right edge; `left` is relative to that parent, so don't add
+      // sidebarRight here — only the leftover gap inside the workspace.
       this.style.set({
-        left: Math.round(sidebarRight + (workspaceWidth - width) / 2),
-        top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
-        minWidth: this.size.minWidth,
-        minHeight: this.size.minHeight,
+        left: bounds.left,
+        top: bounds.top,
+        minWidth: bounds.minWidth,
+        minHeight: bounds.minHeight,
       });
     }
     this.style.set({
@@ -69,7 +84,7 @@ class __window_folder extends mfsInteract {
     this.applyDefaultBounds();
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
-    // Honor the launch-time `activeTab` option (e.g. opened from the
+    // Honor the launch-time `activeTab` option (e.g. opened from the,
     // sidebar live-meeting badge with activeTab: "meeting").
     const initialTab = this.mget("activeTab");
     if (initialTab && initialTab !== "files") {
@@ -80,20 +95,7 @@ class __window_folder extends mfsInteract {
   applyDefaultBounds() {
     if (this._defaultBoundsApplied || Visitor.isMobile()) return;
     this._defaultBoundsApplied = 1;
-    const sidebar = document.querySelector(".desk-module-sidebar__main");
-    const sidebarRight = sidebar ? sidebar.getBoundingClientRect().right : 0;
-    const workspaceWidth = window.innerWidth - sidebarRight;
-    const workspaceHeight = window.innerHeight;
-    const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
-    const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
-    const bounds = {
-      left: Math.round(sidebarRight + (workspaceWidth - width) / 2),
-      top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
-      width,
-      height,
-      minWidth: 760,
-      minHeight: 480,
-    };
+    const bounds = this._defaultBounds();
     this.size = { ...this.size, ...bounds };
     this.style.set(bounds);
     this.$el.css(bounds);

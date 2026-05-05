@@ -188,11 +188,13 @@ class __invite_popup extends LetcBox {
   _showSuggestions(data) {
     this._suggestions = data;
     if (!this._suggestionsBox) return;
-    if (!data.length) {
+    const ownEmail = ((Visitor.profile() || {}).email || "").toLowerCase();
+    const filtered = data.filter((row) => row.email && row.email.toLowerCase() !== ownEmail);
+    if (!filtered.length) {
       this._hideSuggestions();
       return;
     }
-    const items = data.map((row) => {
+    const items = filtered.map((row) => {
       const fullName = [row.firstname, row.lastname].filter(Boolean).join(" ") || row.email;
       return Skeletons.Box.X({
         className: `${this.fig.family}__suggestion-item`,
@@ -215,6 +217,8 @@ class __invite_popup extends LetcBox {
 
   _addInvitee(data) {
     if (!data || !data.email) return;
+    const ownEmail = (Visitor.profile() || {}).email;
+    if (ownEmail && data.email.toLowerCase() === ownEmail.toLowerCase()) return;
     if (this._invitees.find((i) => i.email === data.email)) return;
     this._invitees.push(data);
     this._renderChips();
@@ -364,18 +368,15 @@ class __invite_popup extends LetcBox {
     if (wsIdx == null) return;
     const ws = this._workspaces[wsIdx];
     if (!ws.roleIds) ws.roleIds = [];
-    const has = ws.roleIds.includes(roleId);
-    ws.roleIds = has
-      ? ws.roleIds.filter((id) => id !== roleId)
-      : ws.roleIds.concat(roleId);
+    ws.roleIds = [roleId];
 
-    // Update checkbox visual state
     const optsBox = this._partRefs.roleOptions[idx];
     if (optsBox) {
-      const node = optsBox.el.querySelector(`.invite-popup__role-option[data-id="${roleId}"]`);
-      if (node) node.dataset.checked = has ? 0 : 1;
+      optsBox.el.querySelectorAll(".invite-popup__role-option").forEach((node) => {
+        node.dataset.checked = node.dataset.id === roleId ? 1 : 0;
+      });
+      optsBox.el.dataset.state = 0;
     }
-    // Update summary label
     if (this._partRefs.roleLabels[idx]) {
       this._partRefs.roleLabels[idx].set({ content: summarizeRoles(ws.roleIds) });
     }

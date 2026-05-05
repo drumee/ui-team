@@ -221,8 +221,9 @@ class __window_manager extends push {
         this._prepareListPartition(l);
       });
       this.ensurePart("wrapper-modal").then((p) => p.clear());
-      this.windowsLayer.clear();
-      this.updateBreadcrumb({ ...data, hub_id, nid: resolvedNid, service: "change-workspace" });
+      // Sidebar nav reloads the desk container in-place; preserve any
+      // already-open folder windows per breadcrumb spec.
+      this.updateBreadcrumb({ ...data, hub_id, nid: resolvedNid, service: "change-workspace" }, this);
     };
 
     // nid often arrives later via the get_attributes fetch below. The
@@ -274,14 +275,22 @@ class __window_manager extends push {
       this._prepareListPartition(l);
     });
     this.ensurePart("wrapper-modal").then((p) => p.clear());
-    this.windowsLayer.clear();
-    this.updateBreadcrumb({ ...data, service: "change-workspace" });
+    // Sidebar nav reloads the desk container in-place; preserve open windows.
+    this.updateBreadcrumb({ ...data, service: "change-workspace" }, this);
   }
 
+  /**
+   * Sidebar sub-folder click: load the folder's contents into the desk
+   * container's grid in-place. Does NOT launch a folder window and does
+   * NOT touch already-open folder windows. Breadcrumb resolves the full
+   * Home › Workspace › Folder path via the change-workspace broadcast.
+   */
   openWorkspaceFolder(node) {
     const data = node.model ? node.model.toJSON() : (node || {});
-    const hub_id = data.workspace_hub_id || data.hub_id || data.id;
-    const nid = data.workspace_nid || data.actual_home_id || data.home_id || data.pid;
+    const hub_id = data.hub_id || data.workspace_hub_id || data.id;
+    // Use the sub-folder's own nid; fall back to workspace root only when
+    // the node carries no nid (e.g. the row clicked is the workspace root).
+    const nid = data.nid || data.actual_home_id || data.home_id || data.workspace_nid;
 
     if (!hub_id || !nid) return this.loadWorkspaceNode(node);
 
@@ -289,7 +298,7 @@ class __window_manager extends push {
       window.Desk._closeMainPanels();
     }
 
-    const area = data.workspace_area || data.area;
+    const area = data.area || data.workspace_area;
     this._curWorkspace = { hub_id, nid, area };
     this.mset({ hub_id, nid, nodeId: nid, area });
     this.ensurePart(_a.list).then((l) => {
@@ -305,27 +314,13 @@ class __window_manager extends push {
       this._prepareListPartition(l);
     });
     this.ensurePart("wrapper-modal").then((p) => p.clear());
-    this.windowsLayer.clear();
     this.updateBreadcrumb({
       ...data,
-      filename: data.workspace_name || data.filename,
       hub_id,
       nid,
       area,
       service: "change-workspace",
-    });
-    return this._launchApp(node, {
-      explicit: 1,
-      source: "sidebar-folder",
-      hub_id: data.hub_id || hub_id,
-      nid: data.nid || data.nodeId,
-      nodeId: data.nid || data.nodeId,
-      home_id: nid,
-      filetype: data.filetype || _a.folder,
-      area: data.area || area,
-      filename: data.filename,
-      name: data.filename,
-    });
+    }, this);
   }
 
   // Workspace (hub) clicks from grid views navigate inline via loadWorkspace —
