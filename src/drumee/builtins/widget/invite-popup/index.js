@@ -368,18 +368,15 @@ class __invite_popup extends LetcBox {
     if (wsIdx == null) return;
     const ws = this._workspaces[wsIdx];
     if (!ws.roleIds) ws.roleIds = [];
-    const has = ws.roleIds.includes(roleId);
-    ws.roleIds = has
-      ? ws.roleIds.filter((id) => id !== roleId)
-      : ws.roleIds.concat(roleId);
+    ws.roleIds = [roleId];
 
-    // Update checkbox visual state
     const optsBox = this._partRefs.roleOptions[idx];
     if (optsBox) {
-      const node = optsBox.el.querySelector(`.invite-popup__role-option[data-id="${roleId}"]`);
-      if (node) node.dataset.checked = has ? 0 : 1;
+      optsBox.el.querySelectorAll(".invite-popup__role-option").forEach((node) => {
+        node.dataset.checked = node.dataset.id === roleId ? 1 : 0;
+      });
+      optsBox.el.dataset.state = 0;
     }
-    // Update summary label
     if (this._partRefs.roleLabels[idx]) {
       this._partRefs.roleLabels[idx].set({ content: summarizeRoles(ws.roleIds) });
     }

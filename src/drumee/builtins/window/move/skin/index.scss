@@ -140,7 +140,7 @@
     height: 38px;
     background-color: var(--default-bg);
     border: 1px solid var(--border-muted);
-    border-radius: 4px;
+    border-radius: 4px 4px 0 0;
     overflow: hidden;
   }
 
@@ -162,7 +162,8 @@
       outline: none;
       background: transparent;
       font-size: 12px;
-      color: var(--normal-fg-10);
+      line-height: 1.4;
+      color: #65656c;
 
       &::placeholder {
         color: var(--normal-fg-20);
@@ -198,12 +199,15 @@
 
   &__suggestions {
     width: 100%;
-    background-color: var(--default-bg);
-    border-radius: 8px;
+    background-color: #ffffff;
+    border-radius: 0 0 4px 4px;
     border: 1px solid var(--border-muted);
+    border-top: none;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    gap: 8px;
     max-height: 200px;
     overflow-y: auto;
-    margin-top: 4px;
+    padding: 8px;
 
     &[data-state="0"] {
       display: none;
@@ -211,16 +215,35 @@
   }
 
   &__ws-row {
-    padding: 8px 12px;
+    min-height: 25px;
+    padding: 4px;
     cursor: pointer;
     align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-10));
+    justify-content: space-between;
+    gap: 12px;
+    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
 
     &:hover {
-      background-color: var(--border-muted);
+      background-color: rgba(89, 80, 255, 0.06);
     }
+  }
+
+  &__checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    border: 0.714px solid #84848c;
+    border-radius: 4px;
+    flex-shrink: 0;
+    @include drumee.typo($size: 8px, $line: 10px, $weight: 700, $color: #ffffff);
+  }
+
+  &__ws-row[data-selected="1"] &__checkbox {
+    background-color: #5950ff;
+    border-color: #5950ff;
   }
 
   &__folder-row {
@@ -252,7 +275,7 @@
   }
 
   &__item-name {
-    @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
     flex: 1;
     white-space: nowrap;
     overflow: hidden;
