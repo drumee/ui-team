@@ -130,7 +130,7 @@ class __window_core extends __utils {
    */
   onDestroy() {
     RADIO_BROADCAST.off(_e.responsive, this._responsive);
-    this.updateBreadcrumb({ event: _e.closed });
+    this.updateBreadcrumb({ event: _e.closed }, this);
   }
 
   /**
@@ -596,7 +596,7 @@ class __window_core extends __utils {
     }
     if (!pointerDragged) {
       this.triggerMethod(CHANGE_RADIO);
-      this.updateBreadcrumb({ ...this.model.toJSON(), event: _e.raised });
+      this.updateBreadcrumb({ ...this.model.toJSON(), event: _e.raised }, this);
     }
     this._raised = 1;
   }
@@ -691,7 +691,7 @@ class __window_core extends __utils {
         }
       }, 1000);
     }
-    this.updateBreadcrumb({ ...m.model.toJSON(), event: _a.browse });
+    this.updateBreadcrumb({ ...m.model.toJSON(), event: _a.browse }, this);
   }
 
   /**
