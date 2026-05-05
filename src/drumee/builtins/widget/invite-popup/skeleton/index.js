@@ -94,6 +94,11 @@ const buildWorkspaceRow = (ui, idx) => {
         ],
       }),
       Skeletons.Note({
+        // Override the row's kidsOpt active:0 so the X Note actually
+        // handles its own click. Without this it inherits active:0 and
+        // the click bubbles to the parent Box.X (which has no service)
+        // — so clicking × did nothing.
+        active: 1,
         className: `${pfx}__row-remove`,
         service: "remove-workspace-row",
         uiHandler: [ui],
