@@ -1232,7 +1232,6 @@ class __window_manager extends mfsInteract {
    * @returns {Promise} resolves with { destination, items }
    */
   move(items, opt = {}) {
-    console.log('[MOVE-WM] Wm.move called, opt:', Object.keys(opt));
     const kind = "window_move";
     let skl = _.isString(items)
       ? { message: items }
@@ -1240,12 +1239,8 @@ class __window_manager extends mfsInteract {
     let w = opt.wrapper || this.__wrapperModal;
     return new Promise(function (resolve, reject) {
       Kind.waitFor(kind).then((a) => {
-        console.log('[MOVE-WM] kind resolved, feeding modal');
         const s = w.feed({ ...skl, kind });
-        s.move(items).then((result) => {
-          console.log('[MOVE-WM] widget.move resolved, destination:', result?.destination);
-          resolve(result);
-        }).catch(reject);
+        s.move(items).then(resolve).catch(reject);
       });
     });
   }
