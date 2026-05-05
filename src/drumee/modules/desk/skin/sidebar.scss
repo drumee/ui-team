@@ -113,10 +113,19 @@
     color: #fff;
     font-size: 11px;
     font-weight: 600;
-    line-height: 1;
+    line-height: 18px;
     margin-left: auto;
     box-sizing: border-box;
-    transform: translateY(1px);
+
+    .note-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      height: 100%;
+      width: 100%;
+      text-align: center;
+    }
 
     &[data-count="0"],
     &:empty {
@@ -172,12 +181,14 @@
 
   &__footer {
     width: 100%;
-    gap: 0;
+    padding-top: 16px;
+    gap: 2px;
     flex-shrink: 0;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
 
     .desk-module-sidebar__item {
-      padding: 5px 24px;
-      min-height: 30px;
+      padding: 8px 24px;
+      min-height: 38px;
     }
 
     &-user-wrapper {
@@ -187,7 +198,7 @@
 
     &-user-btn {
       align-items: center;
-      padding: 16px 24px 0;
+      padding: 6px 24px 6px;
       gap: 12px;
       cursor: pointer;
 
