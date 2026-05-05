@@ -103,14 +103,114 @@
     }
   }
 
+  // ── Admin workspace selector chip ─────────────────────────
+  &__hub-chip-wrap {
+    position: relative;
+    margin-left: auto;
+    margin-right: 12px;
+  }
+
+  &__hub-chip {
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid $line;
+    background: $bg;
+    cursor: pointer;
+
+    > * { pointer-events: none; }
+
+    &--open {
+      border-color: $purple-base;
+    }
+
+    &-prefix {
+      font-size: 11px;
+      line-height: 14px;
+      font-weight: 500;
+      color: $ink-500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    &-name {
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 600;
+      color: $ink-900;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &-chevron {
+      width: 12px;
+      height: 12px;
+
+      svg {
+        width: 12px;
+        height: 12px;
+      }
+    }
+
+    &-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      min-width: 220px;
+      max-height: 280px;
+      overflow-y: auto;
+      background: $bg;
+      border: 1px solid $line;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      padding: 4px;
+      z-index: 10;
+    }
+
+    &-item {
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+
+      &:hover {
+        background: $row-hover;
+      }
+
+      &--active {
+        background: rgba(89, 80, 255, 0.08);
+
+        .apps-main__hub-chip-item-label {
+          color: $purple-base;
+          font-weight: 600;
+        }
+      }
+    }
+
+    &-item-label {
+      font-size: 13px;
+      line-height: 18px;
+      color: $ink-900;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   // ── Page content ──────────────────────────────────────────
   &__content {
+    // min-height: 0 lets inner tables own the vertical scroll instead
+    // of the whole page expanding past the viewport.
     flex: 1;
+    min-height: 0;
     width: 100%;
     padding: 24px;
     gap: 24px;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
   }
 
   // ── Page header ───────────────────────────────────────────
@@ -248,6 +348,8 @@
     padding: 0;
     gap: 0;
     overflow: hidden;
+    flex: 1;
+    min-height: 0;
   }
 
   &__table-header {
@@ -387,6 +489,9 @@
     width: 100%;
     background: $bg;
     gap: 0;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   &__table-empty {
@@ -412,7 +517,11 @@
 
     &--header {
       height: 40px;
-      background: rgba(0, 0, 0, 0.02);
+      // Opaque fill so the sticky header isn't see-through over scrolling rows.
+      background: #fafafa;
+      position: sticky;
+      top: 0;
+      z-index: 1;
 
       .apps-main__col-label {
         font-size: 12px;
@@ -934,6 +1043,8 @@
     border-radius: 8px;
     overflow: hidden;
     gap: 0;
+    flex: 1;
+    min-height: 0;
   }
 
   &__audit-thead {
@@ -965,6 +1076,9 @@
   &__audit-list {
     width: 100%;
     background: $bg;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   &__audit-row {
@@ -1277,6 +1391,8 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    flex: 1;
+    min-height: 0;
   }
 
   &__upsell {
@@ -1803,6 +1919,8 @@
     border-radius: 8px;
     overflow: hidden;
     gap: 0;
+    flex: 1;
+    min-height: 0;
   }
 
   &__storage-table-header {
@@ -1904,6 +2022,9 @@
   &__storage-tbody {
     width: 100%;
     background: $bg;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   &__storage-row {
@@ -3144,6 +3265,10 @@
     align-items: center;
   }
 
+  &__perm-heading-block {
+    gap: 4px;
+  }
+
   &__perm-page-title {
     font-size: 32px;
     line-height: 36px;
@@ -3151,14 +3276,77 @@
     color: $ink-900;
   }
 
+  &__perm-page-subtitle {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__perm-empty {
+    width: 100%;
+    padding: 48px 24px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__perm-empty-label {
+    font-size: 14px;
+    line-height: 20px;
+    color: $ink-500;
+  }
+
+  // ── Admin Member detail back link ─────────────────────────
+  &__member-back {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * { pointer-events: none; }
+
+    &-ico {
+      width: 14px;
+      height: 14px;
+      svg { width: 14px; height: 14px; }
+    }
+
+    &-label {
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 500;
+      color: $ink-600;
+    }
+
+    &-context {
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 600;
+      color: $ink-900;
+      &::before { content: "·"; padding: 0 6px; color: $ink-400; }
+    }
+
+    &:hover &-label,
+    &:hover &-context {
+      color: $purple-base;
+    }
+  }
+
   &__perm-grid {
     width: 100%;
     flex-wrap: wrap;
     gap: 16px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: flex-start;
+    padding-right: 4px; // scrollbar gutter
   }
 
   &__perm-card {
-    flex: 1 1 calc(50% - 8px);
+    // flex-grow: 0 keeps a lone wrapped card at 50% instead of stretching.
+    flex: 0 1 calc(50% - 8px);
     min-width: 0;
     padding: 20px;
     background: $bg-tint;
@@ -3182,19 +3370,35 @@
   }
 
   &__perm-folder {
-    width: 73px;
-    height: 73px;
+    // Inline folder-shape SVG (media/grid/template/folder), tinted by
+    // --area-* CSS vars to match the home/desk view.
+    width: 105px;
+    height: 86px;
     flex-shrink: 0;
+    position: relative;
 
-    svg {
+    .folder-shape {
       display: block;
-      width: 73px;
-      height: 73px;
+      width: 105px;
+      height: 86px;
+      fill: var(--area-private, #885eff);
     }
 
-    &--red    svg path { fill: $perm-red; }
-    &--pink   svg path { fill: $perm-pink; }
-    &--purple svg path { fill: $perm-purple; }
+    .badge {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      bottom: -4px;
+      left: -4px;
+    }
+
+    &.private    .folder-shape { fill: var(--area-private); }
+    &.share,
+    &.dmz        { .folder-shape { fill: var(--area-share); } }
+    &.restricted .folder-shape { fill: var(--area-private); }
+    &.public     .folder-shape { fill: var(--area-public); }
+    &.personal,
+    &.inner-folder { .folder-shape { fill: var(--area-personal); } }
   }
 
   &__perm-meta {
@@ -3384,6 +3588,9 @@
     padding: 0 0 8px;
     gap: 16px;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
   }
 
   &__wsdetail-heading {
@@ -3404,10 +3611,31 @@
 
   &__wsdetail-folder {
     width: 48px;
-    height: 48px;
+    height: 40px;
     flex-shrink: 0;
+    position: relative;
 
-    svg { display: block; width: 48px; height: 48px; }
+    .folder-shape {
+      display: block;
+      width: 48px;
+      height: 40px;
+      fill: var(--area-private, #885eff);
+    }
+
+    .badge {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      bottom: -2px;
+      left: -2px;
+    }
+
+    &.private    .folder-shape { fill: var(--area-private); }
+    &.restricted .folder-shape { fill: var(--area-private); }
+    &.share,
+    &.dmz        { .folder-shape { fill: var(--area-share); } }
+    &.public     .folder-shape { fill: var(--area-public); }
+    &.personal   .folder-shape { fill: var(--area-personal); }
   }
 
   &__wsdetail-title {
@@ -3422,10 +3650,14 @@
     padding: 0 16px;
     flex-wrap: wrap;
     gap: 16px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: flex-start;
   }
 
   &__wsdetail-row {
-    flex: 1 1 calc(50% - 8px);
+    flex: 0 1 calc(50% - 8px);
     min-width: 0;
     height: 88px;
     padding: 20px;
@@ -3449,10 +3681,32 @@
 
   &__wsdetail-row-folder {
     width: 48px;
-    height: 48px;
+    height: 40px;
     flex-shrink: 0;
+    position: relative;
 
-    svg { display: block; width: 48px; height: 48px; }
+    .folder-shape {
+      display: block;
+      width: 48px;
+      height: 40px;
+      fill: var(--area-private, #885eff);
+    }
+
+    .badge {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      bottom: -2px;
+      left: -2px;
+    }
+
+    &.private    .folder-shape { fill: var(--area-private); }
+    &.restricted .folder-shape { fill: var(--area-private); }
+    &.share,
+    &.dmz        { .folder-shape { fill: var(--area-share); } }
+    &.public     .folder-shape { fill: var(--area-public); }
+    &.personal,
+    &.inner-folder { .folder-shape { fill: var(--area-personal); } }
   }
 
   &__wsdetail-row-text {
@@ -3672,10 +3926,32 @@
 
   &__fperm-folder-ico {
     width: 48px;
-    height: 48px;
+    height: 40px;
     flex-shrink: 0;
+    position: relative;
 
-    svg { display: block; width: 48px; height: 48px; }
+    .folder-shape {
+      display: block;
+      width: 48px;
+      height: 40px;
+      fill: var(--area-private, #885eff);
+    }
+
+    .badge {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      bottom: -2px;
+      left: -2px;
+    }
+
+    &.private    .folder-shape { fill: var(--area-private); }
+    &.restricted .folder-shape { fill: var(--area-private); }
+    &.share,
+    &.dmz        { .folder-shape { fill: var(--area-share); } }
+    &.public     .folder-shape { fill: var(--area-public); }
+    &.personal,
+    &.inner-folder { .folder-shape { fill: var(--area-personal); } }
   }
 
   &__fperm-folder-text {
@@ -4055,6 +4331,21 @@
   &__fperm-list {
     width: 100%;
     gap: 0;
+  }
+
+  &__fperm-empty {
+    width: 100%;
+    padding: 16px 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__fperm-empty-label {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-500;
+    font-style: italic;
   }
 
   &__fperm-member-row {

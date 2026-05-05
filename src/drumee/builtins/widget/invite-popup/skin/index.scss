@@ -210,11 +210,22 @@
   &__row-remove {
     @include drumee.typo($size: 16px, $weight: 300, $color: var(--normal-fg-50));
     flex-shrink: 0;
-    margin-top: 10px;
+    margin-top: 4px;
     cursor: pointer;
-    transition: color 0.15s;
-    line-height: 16px;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1;
     text-align: center;
+    // Enlarge the hit target so the × is easy to click. The glyph stays
+    // 16px; padding + min-width/height push the click area to a 28px
+    // square. Border-radius lets us add a subtle hover background.
+    padding: 6px;
+    min-width: 28px;
+    min-height: 28px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 
     .inner {
       pointer-events: none;
@@ -222,6 +233,7 @@
 
     &:hover {
       color: var(--error, #d74e49);
+      background: rgba(0, 0, 0, 0.04);
     }
   }
 
