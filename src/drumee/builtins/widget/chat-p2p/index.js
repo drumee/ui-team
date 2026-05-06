@@ -386,7 +386,9 @@ class __chat_p2p extends LetcBox {
     const list = this.getPart && this.getPart('contact-list');
     if (!list || !data) return;
 
-    let item = list.getItemsByAttr && list.getItemsByAttr(_a.entity_id, data.entity_id);
+    // Message payload now has peer_id, but contact items (from chat_rooms)
+    // still carry entity_id. Match by value.
+    let item = list.getItemsByAttr && list.getItemsByAttr(_a.entity_id, data.peer_id);
     item = item && item[0];
     if (!item && data.hub_id) {
       item = list.getItemsByAttr && list.getItemsByAttr('hub_id', data.hub_id);
@@ -466,7 +468,8 @@ class __chat_p2p extends LetcBox {
   _resetContactItemCount(data) {
     const list = this.getPart && this.getPart('contact-list');
     if (!list || !data) return;
-    let item = list.getItemsByAttr && list.getItemsByAttr(_a.entity_id, data.entity_id);
+    // Message payload has peer_id, contact items have entity_id.
+    let item = list.getItemsByAttr && list.getItemsByAttr(_a.entity_id, data.peer_id);
     item = item && item[0];
     if (!item) return;
     item.mset('room_count', 0);
