@@ -639,6 +639,35 @@ class desk_module extends LetcBox {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (pn) this._pendingKinds[pn] = kind;
   }
+
+  /**
+   * Slots whose mounted widget uses `data-anim` CSS for slide-in/out.
+   * For these we keep the widget alive on close (preserving fetched
+   * data + scroll position), only flipping `data-anim`. Other slots
+   * fall back to the destroy-and-rebuild pattern.
+   */
+  _isKeepAliveSlot(pn) {
+    return pn === "trash-panel" || pn === "chat-panel";
+  }
+
+  _hidePanel(p) {
+    if (!p || p.isEmpty()) return;
+    const child = p.children.last();
+    if (child && child.el && child.el.dataset.anim !== "out") {
+      child.el.dataset.anim = "out";
+    }
+  }
+
+  _showPanel(p) {
+    if (!p || p.isEmpty()) return false;
+    const child = p.children.last();
+    if (child && child.el) {
+      child.el.dataset.anim = "in";
+      return true;
+    }
+    return false;
+  }
+
   /**
    *
    */
@@ -646,8 +675,8 @@ class desk_module extends LetcBox {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
     return this.ensurePart(pn).then((p) => {
-      // Mid-flight close animation: snap the dying child out so the next
-      // kind doesn't render through a fading sibling.
+      // Mid-flight close animation pending: snap the dying child out so
+      // the next kind doesn't paint through a fading sibling.
       if (this._closeTimers[pn]) {
         clearTimeout(this._closeTimers[pn]);
         delete this._closeTimers[pn];
@@ -655,33 +684,47 @@ class desk_module extends LetcBox {
         this._pendingKinds[pn] = null;
       }
 
-      if (p.isEmpty()) {
-        this._closeOtherSidebarPanels(pn);
-        this._loadKind(p, kind, pn);
+      const keepAlive = this._isKeepAliveSlot(pn);
+      const sameKindMounted =
+        this._pendingKinds[pn] === kind && !p.isEmpty();
+
+      if (sameKindMounted && keepAlive) {
+        const child = p.children.last();
+        const isOpen = child && child.el && child.el.dataset.anim === "in";
+        if (isOpen) {
+          this._hidePanel(p);
+        } else {
+          this._closeOtherSidebarPanels(pn);
+          this._showPanel(p);
+        }
         return;
       }
 
-      if (this._pendingKinds[pn] === kind) {
+      // Slot has no slide-out CSS — fall back to animate-then-destroy.
+      if (sameKindMounted && !keepAlive) {
         const child = p.children.last();
         if (child && child.el) child.el.dataset.anim = "out";
         this._closeTimers[pn] = setTimeout(() => {
           delete this._closeTimers[pn];
           this._pendingKinds[pn] = null;
           p.clear();
-        }, 500);
+        }, 250);
         return;
       }
 
+      if (!p.isEmpty()) {
+        p.clear();
+        this._pendingKinds[pn] = null;
+      }
       this._closeOtherSidebarPanels(pn);
       this._loadKind(p, kind, pn);
     });
   }
 
   /**
-   * Enforce mutual exclusion between sidebar panels: close every main
-   * sidebar surface except the one identified by `except`. Activity
-   * panel toggles via setState (it slides), the other slots are content
-   * containers and get cleared.
+   * Enforce mutual exclusion between sidebar panels. Keep-alive slots
+   * just flip `data-anim` to "out"; other slots get cleared. Activity
+   * panel uses `setState` because it predates the anim pattern.
    */
   _closeOtherSidebarPanels(except) {
     if (!this._pendingKinds) this._pendingKinds = {};
@@ -694,9 +737,14 @@ class desk_module extends LetcBox {
           clearTimeout(this._closeTimers[pn]);
           delete this._closeTimers[pn];
         }
-        this._pendingKinds[pn] = null;
         return this.ensurePart(pn).then((p) => {
-          if (p && !p.isEmpty()) p.clear();
+          if (!p || p.isEmpty()) return;
+          if (this._isKeepAliveSlot(pn)) {
+            this._hidePanel(p);
+          } else {
+            this._pendingKinds[pn] = null;
+            p.clear();
+          }
         });
       });
     if (except !== "activity-panel") {
@@ -719,19 +767,22 @@ class desk_module extends LetcBox {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
     const slots = ["settings-main-slot", "trash-panel"];
-    for (const pn of slots) {
-      if (this._closeTimers[pn]) {
-        clearTimeout(this._closeTimers[pn]);
-        delete this._closeTimers[pn];
-      }
-      this._pendingKinds[pn] = null;
-    }
     return Promise.all(
-      slots.map((pn) =>
-        this.ensurePart(pn).then((p) => {
-          if (p && !p.isEmpty()) p.clear();
-        }),
-      ),
+      slots.map((pn) => {
+        if (this._closeTimers[pn]) {
+          clearTimeout(this._closeTimers[pn]);
+          delete this._closeTimers[pn];
+        }
+        return this.ensurePart(pn).then((p) => {
+          if (!p || p.isEmpty()) return;
+          if (this._isKeepAliveSlot(pn)) {
+            this._hidePanel(p);
+          } else {
+            this._pendingKinds[pn] = null;
+            p.clear();
+          }
+        });
+      }),
     );
   }
 
