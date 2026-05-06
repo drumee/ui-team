@@ -8,7 +8,7 @@
     right: -720px;
     background-color: var(--normal-bg-90, #fff);
     border-left: 1px solid var(--border-muted, #e5e5e5);
-    transition: right 0.3s;
+    transition: right 0.5s 0.15s;
     position: absolute;
     box-shadow: var(--shadow-left-big);
 
@@ -429,6 +429,34 @@
       $color: var(--normal-fg-50, #65656c)
     );
     pointer-events: none;
+  }
+
+  &__close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--normal-fg-50, #65656c);
+    transition: background 0.15s, color 0.15s;
+    z-index: 2;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--normal-fg-10, #0b0a21);
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
   }
 
   // ── Tags ──────────────────────────────────────────────────────

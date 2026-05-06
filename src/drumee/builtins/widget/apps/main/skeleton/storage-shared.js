@@ -271,3 +271,201 @@ export function storageBodyRow(ui) {
     ],
   });
 }
+
+// Hub-scoped variants — consume `_hubStorageStats` (single row from
+// get_hub_storage_stats) instead of the org-wide hub list.
+
+const HUB_LEGEND = [
+  { key: "documents", field: "documents_bytes", label: () => LOCALE.DOCUMENTS || "Documents" },
+  { key: "media",     field: "media_bytes",     label: () => LOCALE.MEDIA_ASSETS || "Media" },
+  { key: "other",     field: "other_bytes",     label: () => LOCALE.OTHER || "Other" },
+  { key: "available", field: "available_bytes", label: () => LOCALE.AVAILABLE || "Available" },
+];
+
+function activeHubName(ui) {
+  const list = ui._adminHubs || [];
+  const active = list.find((h) => h.hub_id === ui._activeAdminHub) || list[0];
+  return (active && (active.hub_name || active.hub_id)) || "—";
+}
+
+export function hubCapacityCard(ui) {
+  const pfx = ui.fig.family;
+  const stats = ui._hubStorageStats || {};
+  const used = parseFloat(stats.hub_used_bytes) || 0;
+  const quota = parseFloat(stats.quota_bytes) || 0;
+  const denom = quota > 0 ? quota : used;
+  const usedHuman = bytesToHuman(used);
+  const [usedNum, usedUnit] = usedHuman.split(" ");
+
+  const legendItems = HUB_LEGEND
+    .map((spec) => ({
+      key: spec.key,
+      title: spec.label(),
+      bytes: parseFloat(stats[spec.field]) || 0,
+    }))
+    .filter((it) => it.bytes > 0 || it.key !== "available");
+
+  return Skeletons.Box.Y({
+    className: `${pfx}__capacity-card`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__capacity-top`,
+        kids: [
+          Skeletons.Box.Y({
+            className: `${pfx}__capacity-stat`,
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__capacity-label`,
+                content: LOCALE.HUB_USED_STORAGE || "HUB USED STORAGE",
+              }),
+              Skeletons.Box.X({
+                className: `${pfx}__capacity-amount`,
+                kids: [
+                  Skeletons.Note({
+                    className: `${pfx}__capacity-amount-num`,
+                    content: usedNum || "—",
+                  }),
+                  Skeletons.Note({
+                    className: `${pfx}__capacity-amount-unit`,
+                    content: usedUnit || "",
+                  }),
+                ],
+              }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__upgrade-plan-btn`,
+            service: "apps-storage-upgrade",
+            uiHandler: [ui],
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__upgrade-plan-label`,
+                content: LOCALE.UPGRADE_PLAN || "UPGRADE PLAN",
+              }),
+            ],
+          }),
+        ],
+      }),
+      Skeletons.Box.Y({
+        className: `${pfx}__capacity-trend`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${pfx}__capacity-trend-row`,
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__capacity-trend-label`,
+                content: LOCALE.HUB_BREAKDOWN || "HUB BREAKDOWN",
+              }),
+              Skeletons.Note({
+                className: `${pfx}__capacity-trend-value`,
+                content: activeHubName(ui),
+              }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__capacity-bar`,
+            kids: [
+              Skeletons.Box.X({
+                className: `${pfx}__capacity-bar-fill`,
+                kids: legendItems.map((item) =>
+                  Skeletons.Box.X({
+                    className: `${pfx}__capacity-bar-seg ${pfx}__capacity-bar-seg--${item.key}`,
+                    style: {
+                      width: denom > 0
+                        ? `${(item.bytes / denom) * 100}%`
+                        : "0%",
+                    },
+                  })
+                ),
+              }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__capacity-legend`,
+            kids: legendItems.map((item) => {
+              const pct = denom > 0
+                ? Math.round((item.bytes / denom) * 100)
+                : 0;
+              return Skeletons.Box.X({
+                className: `${pfx}__capacity-legend-item`,
+                kids: [
+                  Skeletons.Box.X({
+                    className: `${pfx}__capacity-legend-dot ${pfx}__capacity-legend-dot--${item.key}`,
+                  }),
+                  Skeletons.Box.Y({
+                    className: `${pfx}__capacity-legend-text`,
+                    kids: [
+                      Skeletons.Note({
+                        className: `${pfx}__capacity-legend-title`,
+                        content: item.title,
+                      }),
+                      Skeletons.Note({
+                        className: `${pfx}__capacity-legend-value`,
+                        content: `${bytesToHuman(item.bytes)} (${pct}%)`,
+                      }),
+                    ],
+                  }),
+                ],
+              });
+            }),
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+export function hubAlertCard(ui) {
+  const pfx = ui.fig.family;
+  const stats = ui._hubStorageStats || {};
+  const low = parseInt(stats.low_storage_alert, 10) === 1;
+  const used = parseFloat(stats.hub_used_bytes) || 0;
+  const available = parseFloat(stats.available_bytes) || 0;
+  const title = low
+    ? (LOCALE.LOW_STORAGE_ALERT || "Low storage alert")
+    : (LOCALE.HUB_USAGE || "Hub usage");
+  const body = `${activeHubName(ui)} — ${bytesToHuman(used)}`
+    + (available > 0 ? ` / ${bytesToHuman(available)} ${LOCALE.AVAILABLE_LC || "available"}` : "");
+  return Skeletons.Box.X({
+    className: `${pfx}__alert-card${low ? ` ${pfx}__alert-card--low` : ""}`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__alert-iconwrap`,
+        kids: [Skeletons.Image.Svg({ ico: "apps-warning", className: `${pfx}__alert-ico` })],
+      }),
+      Skeletons.Box.Y({
+        className: `${pfx}__alert-text`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__alert-title`,
+            content: title,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__alert-body`,
+            content: body,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__alert-action`,
+            content: low
+              ? (LOCALE.UPGRADE_TO_INCREASE_CAPACITY || "Upgrade to increase capacity.")
+              : (LOCALE.MONITOR_USAGE || "Monitor usage to plan capacity."),
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+export function hubStorageBodyRow(ui) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.X({
+    className: `${pfx}__storage-body-row`,
+    kids: [
+      hubCapacityCard(ui),
+      Skeletons.Box.Y({
+        className: `${pfx}__storage-side-col`,
+        kids: [hubAlertCard(ui), optimizationCard(ui)],
+      }),
+    ],
+  });
+}

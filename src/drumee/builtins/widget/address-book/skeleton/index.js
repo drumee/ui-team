@@ -77,6 +77,12 @@ module.exports = function (ui) {
     kids: [
       sidebar,
       detail,
+      Skeletons.Button.Svg({
+        ico: "account_cross",
+        className: `${fig}__close-btn`,
+        service: "close-panel",
+        uiHandler: [ui],
+      }),
       Skeletons.Wrapper.Y({
         className: `${fig}__modal-wrapper`,
         name: "invite-modal",
