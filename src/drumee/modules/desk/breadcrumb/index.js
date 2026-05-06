@@ -57,7 +57,6 @@ class __desk_breadcrumb extends LetcBox {
    * @param {*} data 
    */
   _buildContent(data) {
-    this.debug("AAA:45 _buildContent", data)
     if (_.isEmpty(data)) {
       this._data = [];
       this.ensurePart(_a.content).then((p) => {
@@ -115,7 +114,6 @@ class __desk_breadcrumb extends LetcBox {
       if (_.isEmpty(data)) return;
       this._buildContent(data)
       let { hub_name, home_id, hub_id, nid } = data[0]
-      this.debug("AAA:124", this.__context.mget(_a.hub_id), { hub_name, home_id, hub_id, nid })
       if (this.__context.mget(_a.hub_id) !== hub_id) {
         let filename = (hub_name || LOCALE.HOME)
         this.__context.mset({
@@ -149,7 +147,6 @@ class __desk_breadcrumb extends LetcBox {
    */
   _onBrowse(data) {
     let { nid, hub_id, actual_home_id, filetype } = data;
-    this.debug("AAA:156 _onBrowse", data, { nid, hub_id, actual_home_id, filetype })
     if (filetype == _a.hub && actual_home_id) nid = actual_home_id
     this._updatePath(nid, hub_id)
   }
@@ -160,7 +157,6 @@ class __desk_breadcrumb extends LetcBox {
    * @param {Object} source - The window widget that triggered the broadcast
    */
   _updateContent(data = [], source) {
-    this.debug("AAA:141 _updateContent", data, source)
     switch (data.event) {
       case _a.closed:
         return this._onWindowClosed()
@@ -199,7 +195,6 @@ class __desk_breadcrumb extends LetcBox {
    */
   _updateContext(data) {
     this._context = this._normalizeData(data)[0];
-    this.debug("AAA:66 _updateContext", this._context)
     this._buildContent()
     this.ensurePart(_a.context).then((p) => {
       p.mset(this._context)
@@ -238,7 +233,6 @@ class __desk_breadcrumb extends LetcBox {
   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug("AAA:116", service, cmd)
     switch (service) {
       case "breadcrum-jump":
         return this._loadActiveWindow(cmd);
