@@ -699,14 +699,15 @@ class __window_folder extends mfsInteract {
   sendFolderInvitation(cmd) {
     const email = this.getInviteEmail(cmd);
     if (!email) return Wm.alert(LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL);
-    const { nid, hub_id } = this.actualNode();
-    const permission = this._folderInviteRole?.privilege || _K.privilege.admin;
-    return this.postService(SERVICE.sharebox.assign_permission, {
-      email,
+
+    const { hub_id } = this.actualNode();
+    const privilege = this._folderInviteRole?.privilege || _K.privilege.admin;
+
+    return this.postService(SERVICE.hub.add_contributors, {
       hub_id,
-      nid,
-      permission,
-      privilege: permission,
+      privilege,
+      users: [email],
+      email: [email],
     })
       .then(() => Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY))
       .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
