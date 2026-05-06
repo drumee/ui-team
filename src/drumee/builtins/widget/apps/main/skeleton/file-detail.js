@@ -1,6 +1,20 @@
 // File-detail screen — opened when the user clicks any file row in the
-// Admin Storage / File Versioning views.
-const DATA = require("./file-detail-data").default;
+// Admin Storage / File Versioning views. The structural document body
+// (sections) remains a Figma placeholder; metadata and versions come from
+// admin.get_file_version_detail when loaded into ui._fileDetail.
+const FALLBACK = require("./file-detail-data").default;
+
+function resolve(ui) {
+  const live = ui._fileDetail || {};
+  return {
+    title: live.title || (ui._fvActiveFile && ui._fvActiveFile.name) || FALLBACK.title,
+    filename: live.filename || (ui._fvActiveFile && ui._fvActiveFile.name) || FALLBACK.filename,
+    size: live.size || FALLBACK.size,
+    retention: live.retention || FALLBACK.retention,
+    sections: Array.isArray(live.sections) && live.sections.length ? live.sections : FALLBACK.sections,
+    versions: Array.isArray(live.versions) && live.versions.length ? live.versions : FALLBACK.versions,
+  };
+}
 
 function topBar(ui) {
   const pfx = ui.fig.family;
@@ -26,7 +40,7 @@ function topBar(ui) {
         className: `${pfx}__filed-search`,
         kids: [
           Skeletons.Image.Svg({
-            ico: "editbox_search",
+            ico: "magnifying-glass",
             className: `${pfx}__filed-search-ico`,
           }),
           Skeletons.Entry({
@@ -42,7 +56,7 @@ function topBar(ui) {
   });
 }
 
-function previewHeader(pfx) {
+function previewHeader(pfx, data) {
   return Skeletons.Box.X({
     className: `${pfx}__filed-preview-header`,
     kids: [
@@ -57,7 +71,7 @@ function previewHeader(pfx) {
       }),
       Skeletons.Note({
         className: `${pfx}__filed-preview-name`,
-        content: DATA.filename,
+        content: data.filename,
       }),
     ],
   });
@@ -108,32 +122,32 @@ function section(pfx, sec) {
   });
 }
 
-function previewBody(ui) {
+function previewBody(ui, data) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
     className: `${pfx}__filed-preview-body`,
     kids: [
       Skeletons.Note({
         className: `${pfx}__filed-doc-title`,
-        content: DATA.title,
+        content: data.title,
       }),
-      ...DATA.sections.map((sec) => section(pfx, sec)),
+      ...data.sections.map((sec) => section(pfx, sec)),
     ],
   });
 }
 
-function previewPane(ui) {
+function previewPane(ui, data) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
     className: `${pfx}__filed-preview`,
     kids: [
-      previewHeader(pfx),
+      previewHeader(pfx, data),
       Skeletons.Box.Y({
         className: `${pfx}__filed-preview-card`,
         kids: [
           Skeletons.Box.Y({
             className: `${pfx}__filed-preview-scroll`,
-            kids: [previewBody(ui)],
+            kids: [previewBody(ui, data)],
           }),
           Skeletons.Box.X({
             className: `${pfx}__filed-show-folder`,
@@ -182,7 +196,7 @@ function statCard(pfx, { icon, label, value }) {
   });
 }
 
-function statsRow(ui) {
+function statsRow(ui, data) {
   const pfx = ui.fig.family;
   return Skeletons.Box.X({
     className: `${pfx}__filed-stats`,
@@ -190,12 +204,12 @@ function statsRow(ui) {
       statCard(pfx, {
         icon: "apps-database",
         label: LOCALE.TOTAL_STORAGE || "TOTAL STORAGE",
-        value: DATA.size,
+        value: data.size,
       }),
       statCard(pfx, {
         icon: "apps-clock",
         label: LOCALE.RETENTION || "RETENTION",
-        value: DATA.retention,
+        value: data.retention,
       }),
     ],
   });
@@ -276,7 +290,7 @@ function versionEntry(ui, version) {
   });
 }
 
-function versionHistoryCard(ui) {
+function versionHistoryCard(ui, data) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
     className: `${pfx}__filed-history`,
@@ -314,7 +328,7 @@ function versionHistoryCard(ui) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__filed-version-list`,
-        kids: DATA.versions.map((v) => versionEntry(ui, v)),
+        kids: (data.versions || []).map((v) => versionEntry(ui, v)),
       }),
       Skeletons.Box.Y({
         className: `${pfx}__filed-history-actions`,
@@ -357,21 +371,22 @@ function versionHistoryCard(ui) {
   });
 }
 
-function rightColumn(ui) {
+function rightColumn(ui, data) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
     className: `${pfx}__filed-right`,
-    kids: [statsRow(ui), versionHistoryCard(ui)],
+    kids: [statsRow(ui, data), versionHistoryCard(ui, data)],
   });
 }
 
 export default function file_detail_view(ui) {
   const pfx = ui.fig.family;
+  const data = resolve(ui);
   return [
     topBar(ui),
     Skeletons.Box.X({
       className: `${pfx}__filed-body`,
-      kids: [previewPane(ui), rightColumn(ui)],
+      kids: [previewPane(ui, data), rightColumn(ui, data)],
     }),
   ];
 }

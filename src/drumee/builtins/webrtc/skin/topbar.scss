@@ -1,15 +1,23 @@
-@use 'mixins/drumee';
+@use "mixins/drumee";
 @mixin webrtc-topbar {
   &-topbar {
     &__icon {
-      width: 20px; //40px;
-      height: 20px; //40px;
-      margin: auto 0 auto 15px;
-      color: var(--ewhite);
+      width: 24px;
+      height: 24px;
+      color: var(--white);
+      background-color: var(--primary-40);
       cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 4px;
+      svg {
+        width: 16px;
+        height: 16px;
+      }
 
       &.desktopgroup {
-        margin-top: 11px;
+        // margin-top: 11px;
       }
 
       &:hover {
@@ -45,9 +53,13 @@
         align-items: flex-start;
         margin-left: -30px; //-54px;
         max-width: 100%; //316px;
-        margin-right: 18px;
         justify-content: center;
-        @include drumee.typo($size: 18px, $line: 24px, $weight: 400, $color: var(--default-text-reverse));
+        @include drumee.typo(
+          $size: 18px,
+          $line: 24px,
+          $weight: 400,
+          $color: var(--normal-fg-10)
+        );
         @include drumee.overflow-text;
 
         .note-content {
@@ -71,12 +83,17 @@
 
       &[data-area="dmz"] {
         .inner {
-          @include drumee.typo($size: 10px, $weight: 500, $line: 14px, $color: var(--sharebox-main));
+          @include drumee.typo(
+            $size: 10px,
+            $weight: 500,
+            $line: 14px,
+            $color: var(--sharebox-main)
+          );
         }
 
         &.guest {
           .inner {
-            color: #00B7C4;
+            color: #00b7c4;
           }
         }
       }

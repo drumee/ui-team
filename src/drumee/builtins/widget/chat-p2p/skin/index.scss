@@ -97,7 +97,9 @@
     opacity: 0;
     pointer-events: none;
     transform: translateY(-4px);
-    transition: opacity 0.15s, transform 0.15s;
+    transition:
+      opacity 0.15s,
+      transform 0.15s;
 
     &[data-state="1"] {
       visibility: visible;
@@ -279,11 +281,14 @@
 
   &__header-profile {
     &.user-profile__ui {
-      border-radius: 10px;
+      border-radius: 8px;
       height: 40px;
       min-width: 40px;
       width: 40px;
-      background-color: var(--normal-fg-10);
+      border: 1px solid var(--border-default);
+      & .user-profile__main {
+        border-radius: 8px;
+      }
     }
 
     &.icon {

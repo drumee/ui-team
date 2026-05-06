@@ -10,6 +10,7 @@ class __chat_p2p extends LetcBox {
 
   initialize(opt = {}) {
     require('./skin');
+    opt.dataset = { ...opt.dataset, anim: "out" };
     super.initialize(opt);
     this.declareHandlers();
     this._radioId = `peer-${this.mget(_a.widgetId)}`;

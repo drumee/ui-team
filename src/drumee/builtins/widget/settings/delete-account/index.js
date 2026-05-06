@@ -1,3 +1,4 @@
+
 class settings_delete_account extends LetcBox {
   initialize(opt) {
     require("./skin");
@@ -25,8 +26,7 @@ class settings_delete_account extends LetcBox {
   }
 
   capturePassword() {
-    const input = this.el && this.el.querySelector('input[name="delete_password"]');
-    if (input) this._password = input.value;
+    this._password = this.getData().delete_password;
   }
 
   togglePassword() {
@@ -40,20 +40,74 @@ class settings_delete_account extends LetcBox {
     this.goodbye();
   }
 
+
+  /**
+   * 
+   */
   downloadSelected() {
-    this.triggerHandlers({
-      service: "delete-account-download",
-      selection: Array.from(this._selected),
-    });
+    this.postService(SERVICE.drumate.backup, {
+      hub_id: Visitor.id,
+    }).then((data) => {
+      if (data.status === 'OK') {
+        this.ensurePart('message').then((p) => {
+          p.feed(
+            Skeletons.Note({
+              className: `${this.fig.family}__warning-text`,
+              content: ("A download link will be sent to {0}").format(Visitor.profile().email)
+            })
+          )
+        })
+        this.ensurePart("step2-button").then((p) => {
+          p.setState(1)
+        })
+      }
+    }).catch((e) => {
+      this.warn("Caught error", e)
+    })
   }
 
+  /**
+   * 
+   */
   finalConfirm() {
     this.capturePassword();
-    this.triggerHandlers({
-      service: "delete-account-confirm",
-      password: this._password,
-    });
-    this.goodbye();
+    this.postService(SERVICE.drumate.check_password, {
+      hub_id: Visitor.id,
+      password: this.getData().delete_password,
+    }).then((data) => {
+      if (data.id !== Visitor.id) {
+        this.ensurePart('error-box').then((p) => {
+          p.feed(
+            Skeletons.Note({
+              className: `${this.fig.family}__warning-text`,
+              content: LOCALE.WRONG_PASSOWRD
+            })
+          )
+        })
+      } else {
+        this.postService(SERVICE.drumate.delete_account, {
+          hub_id: Visitor.id,
+          password: this.getData().delete_password,
+        }).then((data) => {
+          if (data.status === 'OK') {
+            location.reload()
+          } else {
+            this.ensurePart('error-box').then((p) => {
+              p.feed(
+                Skeletons.Note({
+                  className: `${this.fig.family}__warning-text`,
+                  content: "Failde to remove the account"
+                })
+              )
+            })
+          }
+        }).catch((e) => {
+          this.warn("Caught error", e)
+        })
+      }
+    }).catch((e) => {
+      this.warn("Caught error", e)
+    })
   }
 
   onUiEvent(cmd, args = {}) {

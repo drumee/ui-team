@@ -1,29 +1,47 @@
-// Folder Permission popup. Opens when the pencil edit icon is clicked on
-// any folder row inside the Permissions tab → Workspace detail view.
+const folderTemplate = require("../../../../media/grid/template/folder");
 
-const SAMPLE_MEMBERS = [
-  { id: "m1", name: "Marcus Thorne",   email: "marcus@drumee.io",  role: "Admin",       avatar: "dark" },
-  { id: "m2", name: "Elena Rodriguez", email: "elena.r@drumee.io", role: "View & Edit", avatar: "dark" },
-  { id: "m3", name: "Samir Al-Fayed",  email: "samir@drumee.io",   role: "View & Chat", avatar: "dark" },
-  { id: "m4", name: "System (Bot)",    email: "automation-service",role: "Edit",        avatar: "neutral", initials: "BT" },
-  { id: "m5", name: "System (Bot)",    email: "automation-service",role: "View",        avatar: "neutral", initials: "BT" },
-];
-
-const SAMPLE_DEVICES = [
-  { id: "fd1", kind: "laptop", name: "Admin MBP 16",     info: "Verified • 10.0.4.1" },
-  { id: "fd2", kind: "laptop", name: "Admin MBP 16",     info: "Verified • 10.0.4.1" },
-  { id: "fd3", kind: "mobile", name: "Iphone 17e",       info: "Verified • 10.0.4.1" },
-  { id: "fd4", kind: "mobile", name: "Iphone 17 promax", info: "Verified • 10.0.4.1" },
-];
+// Maps a BE folder_get_member_list row to the FE memberRow shape.
+function mapMemberRow(row) {
+  const fullname =
+    row.fullname ||
+    [row.firstname, row.lastname].filter(Boolean).join(" ").trim() ||
+    row.email ||
+    "—";
+  const initials = (() => {
+    const f = (row.firstname || "").trim();
+    const l = (row.lastname || "").trim();
+    if (f && l) return (f[0] + l[0]).toUpperCase();
+    const parts = fullname.split(/\s+/).filter(Boolean);
+    if (!parts.length) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  })();
+  return {
+    id: row.uid || row.id,
+    name: fullname,
+    email: row.email || "",
+    role: row.role || "View",
+    avatar: row.uid ? "dark" : "neutral",
+    initials,
+  };
+}
 
 function folderHeader(ui, folder, ws) {
   const pfx = ui.fig.family;
+  const area = (folder && folder.area) || (ws && ws.area) || "private";
   return Skeletons.Box.X({
     className: `${pfx}__fperm-folder-card`,
     kids: [
-      Skeletons.Image.Svg({
-        ico: "apps-folder-card",
-        className: `${pfx}__fperm-folder-ico ${pfx}__perm-folder--${(ws && ws.color) || "purple"}`,
+      Skeletons.Element({
+        tagName: "div",
+        className: `${pfx}__fperm-folder-ico ${area}`,
+        content: folderTemplate({
+          area,
+          filetype: _a.folder,
+          role: "folder",
+          widgetId: `fperm-${folder && folder.id}`,
+          isAttachment: 1,
+        }),
       }),
       Skeletons.Box.Y({
         className: `${pfx}__fperm-folder-text`,
@@ -467,8 +485,21 @@ function oneTimeLinkSection(ui) {
   return block;
 }
 
+function emptyRow(pfx, message) {
+  return Skeletons.Box.X({
+    className: `${pfx}__fperm-empty`,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__fperm-empty-label`,
+        content: message,
+      }),
+    ],
+  });
+}
+
 function deviceSection(ui) {
   const pfx = ui.fig.family;
+  const devices = ui._fpermDevices || [];
   return Skeletons.Box.Y({
     className: `${pfx}__fperm-section`,
     kids: [
@@ -481,7 +512,9 @@ function deviceSection(ui) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__fperm-list`,
-        kids: SAMPLE_DEVICES.map((d) => deviceRow(ui, d)),
+        kids: devices.length
+          ? devices.map((d) => deviceRow(ui, d))
+          : [emptyRow(pfx, LOCALE.NO_DEVICES || "No devices linked.")],
       }),
     ],
   });
@@ -489,6 +522,7 @@ function deviceSection(ui) {
 
 function memberSection(ui) {
   const pfx = ui.fig.family;
+  const members = (ui._fpermMembers || []).map(mapMemberRow);
   return Skeletons.Box.Y({
     className: `${pfx}__fperm-section`,
     kids: [
@@ -501,7 +535,11 @@ function memberSection(ui) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__fperm-list`,
-        kids: SAMPLE_MEMBERS.map((m) => memberRow(ui, m)),
+        kids: ui._fpermLoading
+          ? [emptyRow(pfx, LOCALE.LOADING || "Loading…")]
+          : members.length
+            ? members.map((m) => memberRow(ui, m))
+            : [emptyRow(pfx, LOCALE.NO_FOLDER_MEMBERS || "No member has access yet.")],
       }),
     ],
   });

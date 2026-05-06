@@ -30,6 +30,10 @@ function mapAuditRow(row) {
     : "—";
   return {
     id: `${row.hub_id || ""}-${row.entity_id || ""}-${row.ctime || ""}`,
+    uid: row.uid || null,
+    hub_id: row.hub_id || null,
+    entity_id: row.entity_id || null,
+    category: row.category || null,
     user: {
       name,
       email: row.email || "",
@@ -61,7 +65,7 @@ function auditHeader(ui) {
             className: `${pfx}__audit-search`,
             kids: [
               Skeletons.Button.Svg({
-                ico: "editbox_search",
+                ico: "magnifying-glass",
                 className: `${pfx}__audit-search-ico`,
               }),
               Skeletons.Entry({
@@ -69,7 +73,9 @@ function auditHeader(ui) {
                 placeholder:
                   LOCALE.SEARCH_USERNAME || "Search username",
                 name: "audit_search",
+                value: ui._auditUsername || "",
                 mode: _a.commit,
+                service: "apps-audit-search",
                 uiHandler: [ui],
               }),
             ],
@@ -237,20 +243,32 @@ function auditEntry(ui, log) {
 
 function auditPagination(ui) {
   const pfx = ui.fig.family;
+  const page = ui._auditPage || 1;
+  const rows = (ui._auditLogs || []).length;
+  const total = ui._auditLogsTotal || 0;
+  const pageSize = ui._auditPageSize || 20;
+  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const end = total === 0 ? 0 : Math.min(total, (page - 1) * pageSize + rows);
+  const summary = total === 0
+    ? LOCALE.NO_AUDIT_LOGS || "No entries"
+    : (LOCALE.SHOWING_OF || "Showing {start}-{end} of {total}")
+        .replace("{start}", start)
+        .replace("{end}", end)
+        .replace("{total}", total.toLocaleString());
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return Skeletons.Box.X({
     className: `${pfx}__audit-pagination`,
     kids: [
       Skeletons.Note({
         className: `${pfx}__audit-pagination-label`,
-        content:
-          LOCALE.SHOWING_ENTRIES || "Showing 1-25 of 1,492 entries",
+        content: summary,
       }),
       Skeletons.Box.X({
         className: `${pfx}__audit-pager`,
         kids: [
           Skeletons.Box.X({
-            className: `${pfx}__audit-pager-btn`,
-            service: "apps-audit-prev",
+            className: `${pfx}__audit-pager-btn${page <= 1 ? ` ${pfx}__audit-pager-btn--disabled` : ""}`,
+            service: page > 1 ? "apps-audit-prev" : null,
             uiHandler: [ui],
             kids: [
               Skeletons.Button.Svg({
@@ -260,8 +278,8 @@ function auditPagination(ui) {
             ],
           }),
           Skeletons.Box.X({
-            className: `${pfx}__audit-pager-btn`,
-            service: "apps-audit-next",
+            className: `${pfx}__audit-pager-btn${page >= totalPages ? ` ${pfx}__audit-pager-btn--disabled` : ""}`,
+            service: page < totalPages ? "apps-audit-next" : null,
             uiHandler: [ui],
             kids: [
               Skeletons.Button.Svg({
@@ -330,39 +348,61 @@ function insightCard(pfx, opt) {
   });
 }
 
+function bytesToHuman(b) {
+  const n = parseFloat(b);
+  if (!isFinite(n) || n <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+  let i = 0;
+  let v = n;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i += 1; }
+  return `${v.toFixed(v < 10 && i > 0 ? 2 : 1)} ${units[i]}`;
+}
+
 function insights(ui) {
   const pfx = ui.fig.family;
+  const stats = ui._auditStats || {};
+  const security = stats.security_score != null
+    ? Number(stats.security_score)
+    : null;
+  const highRisk = stats.high_risk_count != null
+    ? parseInt(stats.high_risk_count, 10) || 0
+    : null;
+  const storageBytes = stats.storage_used_bytes != null
+    ? parseFloat(stats.storage_used_bytes) || 0
+    : null;
   return Skeletons.Box.X({
     className: `${pfx}__insights`,
     kids: [
       insightCard(pfx, {
         variant: "security",
         icon: "shield",
-        badge_label:
-          LOCALE.AUDIT_SECURITY_BADGE || "+12% vs last week",
+        badge_label: LOCALE.AUDIT_SECURITY_BADGE || "—",
         label: LOCALE.SECURITY_SCORE || "Security Score",
-        value: "94.2",
-        progress: 87,
+        value: security != null ? security.toFixed(1) : "—",
+        progress: security != null ? Math.max(0, Math.min(100, security)) : null,
       }),
       insightCard(pfx, {
         variant: "risk",
         icon: "editbox_triangle",
-        badge_label: LOCALE.AUDIT_RISK_BADGE || "3 unresolved",
+        badge_label:
+          highRisk != null
+            ? `${highRisk} ${LOCALE.UNRESOLVED || "unresolved"}`
+            : LOCALE.AUDIT_RISK_BADGE || "—",
         label: LOCALE.HIGH_RISK_ACTIONS || "High-Risk Actions",
-        value: "14",
+        value: highRisk != null ? String(highRisk) : "—",
         footer:
           LOCALE.AUDIT_RISK_DESC ||
-          "Mainly involving external folder sharing.",
+          "Tracked policy violations across the organization.",
       }),
       insightCard(pfx, {
         variant: "storage",
         icon: "storage",
-        badge_label: LOCALE.AUDIT_STORAGE_BADGE || "Optimized",
+        badge_label: LOCALE.AUDIT_STORAGE_BADGE || "Live",
         label: LOCALE.STORAGE_ACTIVITY || "Storage Activity",
-        value: "2.4 TB",
+        value: storageBytes != null ? bytesToHuman(storageBytes) : "—",
         footer:
           LOCALE.AUDIT_STORAGE_DESC ||
-          "Total data logged in last 30 days.",
+          "Total bytes consumed across all hubs.",
       }),
     ],
   });

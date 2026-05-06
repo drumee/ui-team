@@ -1,6 +1,63 @@
+function adminHubChip(ui) {
+  const pfx = ui.fig.family;
+  const hubs = ui._adminHubs || [];
+  if (ui._role !== "admin" || !hubs.length) return null;
+  // On the Member tab the overview cards already pick the workspace.
+  if (ui._tab === "member" && ui._memberView === "overview") return null;
+  const active = hubs.find((h) => h.hub_id === ui._activeAdminHub) || hubs[0];
+  const label = (active && (active.hub_name || active.hub_id)) || "—";
+  return Skeletons.Box.Y({
+    className: `${pfx}__hub-chip-wrap`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__hub-chip${ui._adminHubMenuOpen ? ` ${pfx}__hub-chip--open` : ""}`,
+        service: "apps-toggle-admin-hub-menu",
+        uiHandler: [ui],
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__hub-chip-prefix`,
+            content: LOCALE.WORKSPACE || "Workspace",
+          }),
+          Skeletons.Note({
+            className: `${pfx}__hub-chip-name`,
+            content: label,
+          }),
+          Skeletons.Image.Svg({
+            ico: "editbox_arrow--down",
+            className: `${pfx}__hub-chip-chevron`,
+          }),
+        ],
+      }),
+      ui._adminHubMenuOpen
+        ? Skeletons.Box.Y({
+            className: `${pfx}__hub-chip-menu`,
+            kids: hubs.map((h) =>
+              Skeletons.Box.X({
+                className: `${pfx}__hub-chip-item${
+                  h.hub_id === ui._activeAdminHub
+                    ? ` ${pfx}__hub-chip-item--active`
+                    : ""
+                }`,
+                service: "apps-select-admin-hub",
+                uiHandler: [ui],
+                hub_id: h.hub_id,
+                kids: [
+                  Skeletons.Note({
+                    className: `${pfx}__hub-chip-item-label`,
+                    content: h.hub_name || h.hub_id,
+                  }),
+                ],
+              })
+            ),
+          })
+        : null,
+    ].filter(Boolean),
+  });
+}
+
 function tabs(ui) {
   const pfx = ui.fig.family;
-  const tabList = [
+  const allTabs = [
     { key: "member", label: LOCALE.MEMBER || "Member" },
     { key: "permissions", label: LOCALE.PERMISSIONS || "Permissions" },
     { key: "security", label: LOCALE.SECURITY || "Security" },
@@ -8,6 +65,11 @@ function tabs(ui) {
     { key: "storage", label: LOCALE.STORAGE || "Storage" },
     { key: "admin-storage", label: LOCALE.ADMIN_STORAGE || "Admin Storage" },
   ];
+  const visible = ui._visibleTabs && ui._visibleTabs.length
+    ? new Set(ui._visibleTabs)
+    : null;
+  const tabList = visible ? allTabs.filter((t) => visible.has(t.key)) : allTabs;
+  const hubChip = adminHubChip(ui);
   return Skeletons.Box.X({
     className: `${pfx}__tabs`,
     kids: [
@@ -25,6 +87,7 @@ function tabs(ui) {
           })
         ),
       }),
+      hubChip || null,
       Skeletons.Box.X({
         className: `${pfx}__reward`,
         service: "apps-reward",
@@ -37,7 +100,7 @@ function tabs(ui) {
           }),
         ],
       }),
-    ],
+    ].filter(Boolean),
   });
 }
 
@@ -55,9 +118,11 @@ function pageHeader(ui) {
           }),
           Skeletons.Note({
             className: `${pfx}__page-subtitle`,
-            content:
-              LOCALE.MEMBERS_SUBTITLE ||
-              "Manage organization access and define custom roles.",
+            content: ui._role === "admin"
+              ? (LOCALE.MEMBERS_SUBTITLE_ADMIN ||
+                 "Manage workspace access and member roles.")
+              : (LOCALE.MEMBERS_SUBTITLE ||
+                 "Manage organization access and define custom roles."),
           }),
         ],
       }),
@@ -554,6 +619,79 @@ function memberView(ui) {
   return [pageHeader(ui), statsRow(ui), table(ui), pagination(ui)];
 }
 
+function adminMemberDetail(ui) {
+  const pfx = ui.fig.family;
+  const active = (ui._adminHubs || []).find(
+    (h) => h.hub_id === ui._activeAdminHub
+  );
+  const wsName = (active && (active.hub_name || active.hub_id)) || "—";
+  const back = Skeletons.Box.X({
+    className: `${pfx}__member-back`,
+    service: "apps-member-back",
+    uiHandler: [ui],
+    kids: [
+      Skeletons.Image.Svg({
+        ico: "apps-back",
+        className: `${pfx}__member-back-ico`,
+      }),
+      Skeletons.Note({
+        className: `${pfx}__member-back-label`,
+        content: LOCALE.BACK_TO_WORKSPACES || "Back to workspaces",
+      }),
+      Skeletons.Note({
+        className: `${pfx}__member-back-context`,
+        content: wsName,
+      }),
+    ],
+  });
+  return [back, pageHeader(ui), statsRow(ui), table(ui), pagination(ui)];
+}
+
+function adminUpsellOverlay(ui) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__admin-upsell ${pfx}__upsell`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${pfx}__upsell-card`,
+        kids: [
+          Skeletons.Image.Svg({ ico: "cloud-pause", className: `${pfx}__upsell-icon` }),
+          Skeletons.Box.Y({
+            className: `${pfx}__upsell-text`,
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__upsell-title`,
+                content: LOCALE.UNLOCK_ADMIN_CONSOLE || "Unlock Admin Console",
+              }),
+              Skeletons.Note({
+                className: `${pfx}__upsell-desc`,
+                content:
+                  LOCALE.UNLOCK_ADMIN_DESC ||
+                  "Workspace administration — member roles, permissions and storage controls — is part of the Enterprise Premium tier. Upgrade to manage your organization end-to-end.",
+              }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__upsell-btn`,
+            service: "apps-admin-upgrade",
+            uiHandler: [ui],
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__upsell-btn-label`,
+                content: LOCALE.UPGRADE_YOUR_PLAN || "Upgrade your plan",
+              }),
+              Skeletons.Note({
+                className: `${pfx}__upsell-btn-arrow`,
+                content: "→",
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 export default function apps_main_skeleton(ui) {
   const pfx = ui.fig.family;
   let content;
@@ -577,7 +715,13 @@ export default function apps_main_skeleton(ui) {
       break;
     case "member":
     default:
-      content = memberView(ui);
+      if (ui._role === "admin") {
+        content = ui._memberView === "detail"
+          ? adminMemberDetail(ui)
+          : require("./member-overview").default(ui);
+      } else {
+        content = memberView(ui);
+      }
   }
   const root = [
     tabs(ui),
@@ -586,6 +730,9 @@ export default function apps_main_skeleton(ui) {
       kids: content,
     }),
   ];
+  if (ui._role === "admin" && !ui._adminUnlocked) {
+    root.push(adminUpsellOverlay(ui));
+  }
   if (ui._showApplyConfirm) {
     root.push(require("./apply-confirm").default(ui));
   }

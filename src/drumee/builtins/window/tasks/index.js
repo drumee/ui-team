@@ -156,9 +156,10 @@ class __tasks_panel extends LetcBox {
         depth += 1;
       }
     }
-    if (this._creating) this._captureCreateDraft();
-    if (this._detailDraft) this._captureDetailDraft();
     switch (service) {
+      case "task-input-changed":
+        return this._onTaskInputChanged(args);
+
       case "add-task":
         this._creating = true;
         this._createDefaults = {
@@ -430,6 +431,24 @@ class __tasks_panel extends LetcBox {
     if (due)   draft.due_date    = due.value   || "";
   }
 
+  // Push every keystroke straight into the active draft. The Entry widget
+  // sets _input.value asynchronously (~200ms), so a pre-feed DOM read after
+  // a re-render would blank typed text before the value is rebound.
+  _onTaskInputChanged(args) {
+    const value = String(args && args.value != null ? args.value : "");
+    const active = (typeof document !== "undefined") ? document.activeElement : null;
+    if (!active || !active.getAttribute || !this.el || !this.el.contains(active)) return;
+    const name = active.getAttribute("name");
+    if (!name) return;
+    const inCreate = this.el.querySelector(".tasks-panel__create-modal");
+    const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
+    if (this._creating && inCreate && inCreate.contains(active) && this._createDefaults) {
+      this._createDefaults[name] = value;
+    } else if (this._detailDraft && inDetail && inDetail.contains(active)) {
+      this._detailDraft[name] = value;
+    }
+  }
+
   async _commitTask() {
     this._captureCreateDraft();
     const draft = this._createDefaults || {};
@@ -527,8 +546,11 @@ class __tasks_panel extends LetcBox {
     if ((draft.priority || "medium") !== (task.priority || "medium")) upd.priority = draft.priority;
     const draftDue = (draft.due_date || "").trim();
     const taskDue  = task.due_date || "";
-    if (draftDue !== taskDue) upd.due_date = draftDue || null;
-    if (Object.keys(upd).length) {
+    const dueChanged = draftDue !== taskDue;
+    if (Object.keys(upd).length || dueChanged) {
+      // task_update SP overwrites due_date unconditionally — always send
+      // the current value or another-field update would null the date.
+      upd.due_date = draftDue || null;
       calls.push(this.postService({
         service: SERVICE.task.update,
         hub_id: this._hubId,
@@ -758,11 +780,8 @@ class __tasks_panel extends LetcBox {
   }
 
   _render() {
-    // Sync typed text into the draft *before* rebuilding so any path that
-    // calls _render (WS broadcast, file-search timer, picker click, …)
-    // preserves what the user is typing.
-    if (this._creating) this._captureCreateDraft();
-    if (this._detailDraft) this._captureDetailDraft();
+    // Drafts stay in sync via the `task-input-changed` watch — do NOT add
+    // a pre-feed DOM read here; it would race the Entry's async setter.
 
     // Capture focused input + cursor BEFORE the DOM swap, restore after.
     let focusName = null;
