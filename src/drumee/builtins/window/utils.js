@@ -47,13 +47,7 @@ class __window_mfs extends DrumeeMFS {
    * @param {*} data 
    */
   updateBreadcrumb(data, src) {
-    switch (data.filetype) {
-      case _a.hub:
-        RADIO_BROADCAST.trigger("breadcrumb:context", { ...data, service: "change-workspace" }, src);
-        return
-    }
     RADIO_BROADCAST.trigger("breadcrumb:content", data, src);
-
   }
 
   /**

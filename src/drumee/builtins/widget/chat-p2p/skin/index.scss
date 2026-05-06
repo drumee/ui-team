@@ -54,6 +54,11 @@
     line-height: 1.1;
   }
 
+  &__compose-wrapper {
+    position: relative;
+    align-items: center;
+  }
+
   &__compose-btn {
     color: var(--active-border);
     height: 21px;
@@ -72,6 +77,72 @@
 
     &:hover {
       opacity: 0.8;
+    }
+  }
+
+  &__compose-popup {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 320px;
+    max-height: 360px;
+    background-color: var(--normal-bg);
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
+    padding: 8px;
+    gap: 8px;
+    z-index: 99999;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition:
+      opacity 0.15s,
+      transform 0.15s;
+
+    &[data-state="1"] {
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+  }
+
+  &__compose-search {
+    flex-shrink: 0;
+    width: 100%;
+
+    input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-muted);
+      border-radius: 6px;
+      background-color: var(--normal-bg-90);
+      @include drumee.typo($size: 13px, $color: var(--normal-fg-10));
+      outline: none;
+
+      &:focus {
+        border-color: var(--active-border);
+      }
+    }
+  }
+
+  &__compose-list {
+    flex: 1;
+    min-height: 0;
+    max-height: 280px;
+    overflow: hidden;
+
+    .smart-container {
+      height: 100%;
+    }
+
+    .no-contact {
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      @include drumee.typo($size: 13px, $color: var(--normal-fg-50));
     }
   }
 
@@ -137,6 +208,26 @@
     }
   }
 
+  &__all-read-empty {
+    display: none !important;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 0;
+    padding: 24px;
+    text-align: center;
+    @include drumee.typo($size: 13px, $color: var(--normal-fg-50));
+
+    &[data-state="1"] {
+      display: flex !important;
+    }
+  }
+
+  // When all-read is showing, hide the empty contact-list to avoid double space
+  &__sidebar:has(&__all-read-empty[data-state="1"]) &__contact-list {
+    flex: 0 0 auto;
+  }
+
   // ── Right chat area ──────────────────────────────────────────────
 
   &__chat-area {
@@ -190,11 +281,14 @@
 
   &__header-profile {
     &.user-profile__ui {
-      border-radius: 10px;
+      border-radius: 8px;
       height: 40px;
       min-width: 40px;
       width: 40px;
-      background-color: var(--normal-fg-10);
+      border: 1px solid var(--border-default);
+      & .user-profile__main {
+        border-radius: 8px;
+      }
     }
 
     &.icon {

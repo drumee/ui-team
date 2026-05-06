@@ -8,11 +8,7 @@
     min-width: 130px;
     padding: 16px;
     border-radius: 8px;
-    @include drumee.typo(
-      $size: 14px,
-      $line: 20px,
-      $color: var(--normal-fg-10)
-    );
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10));
 
     &:hover {
       background-color: var(--overlay-bg-05);
@@ -21,7 +17,8 @@
     &[data-active="active"],
     &[data-radio="on"] {
       background-color: var(--normal-bg);
-      box-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.1),
+      box-shadow:
+        0px 10px 15px -3px rgba(0, 0, 0, 0.1),
         0px 4px 6px -4px rgba(0, 0, 0, 0.1);
     }
   }
@@ -71,7 +68,7 @@
       height: 48px;
       width: 48px;
       min-width: 48px;
-      background-color: var(--normal-fg-10);
+      border: 1px solid var(--border-default);
 
       &[data-default="1"] {
         background-color: rgba(89, 80, 255, 0.1);
@@ -165,7 +162,7 @@
 
   .user-profile__ui[data-online="1"]:before,
   .user-profile__ui[data-online="2"]:before {
-    background-color: #847EFF;
+    background-color: #847eff;
     border-radius: 50%;
     box-shadow: 0 0 0 2px var(--normal-bg);
     content: " ";

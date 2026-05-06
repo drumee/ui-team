@@ -62,10 +62,16 @@ class desk_module extends LetcBox {
   onDestroy() {
     RADIO_BROADCAST.off(_e.select, this._updateAvatar);
     if (this._searchInputEl && this._searchInputHandler) {
-      this._searchInputEl.removeEventListener('input', this._searchInputHandler);
+      this._searchInputEl.removeEventListener(
+        "input",
+        this._searchInputHandler,
+      );
     }
     if (this._searchBoxInner?.el && this._searchFocusHandler) {
-      this._searchBoxInner.el.removeEventListener('focusin', this._searchFocusHandler);
+      this._searchBoxInner.el.removeEventListener(
+        "focusin",
+        this._searchFocusHandler,
+      );
     }
     RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
   }
@@ -175,13 +181,20 @@ class desk_module extends LetcBox {
 
       case "search-box":
         if (this._searchInputEl && this._searchInputHandler) {
-          this._searchInputEl.removeEventListener('input', this._searchInputHandler);
+          this._searchInputEl.removeEventListener(
+            "input",
+            this._searchInputHandler,
+          );
         }
         if (this._searchBoxInner?.el && this._searchFocusHandler) {
-          this._searchBoxInner.el.removeEventListener('focusin', this._searchFocusHandler);
+          this._searchBoxInner.el.removeEventListener(
+            "focusin",
+            this._searchFocusHandler,
+          );
         }
         this._searchBoxInner = child;
-        this._searchInputEl = child.el.querySelector('input, textarea') || child.el;
+        this._searchInputEl =
+          child.el.querySelector("input, textarea") || child.el;
         this._searchInputHandler = () => {
           if (this._timer) clearTimeout(this._timer);
           this._timer = setTimeout(() => {
@@ -190,8 +203,8 @@ class desk_module extends LetcBox {
           }, 300);
         };
         this._searchFocusHandler = () => this._updateSearchSuggestions(child);
-        this._searchInputEl.addEventListener('input', this._searchInputHandler);
-        child.el.addEventListener('focusin', this._searchFocusHandler);
+        this._searchInputEl.addEventListener("input", this._searchInputHandler);
+        child.el.addEventListener("focusin", this._searchFocusHandler);
         return;
 
       case "search-suggestions":
@@ -293,11 +306,16 @@ class desk_module extends LetcBox {
       //   return child.on(_e.done, () => setTimeout(f, 5000));
 
       case "overlay":
-        if (Visitor.parseModuleArgs().tutorial || this._postOnboardingTutorial) {
+        if (
+          Visitor.parseModuleArgs().tutorial ||
+          this._postOnboardingTutorial
+        ) {
           this._postOnboardingTutorial = false;
-          setTimeout(() => { this._showTutorial() }, 2000)
+          setTimeout(() => {
+            this._showTutorial();
+          }, 2000);
         }
-        return
+        return;
     }
   }
 
@@ -361,7 +379,7 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   _loadOnboarding() {
     Kind.loadPlugin({ name: "onboarding", kind: "onboarding" })
@@ -386,12 +404,12 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   _showTutorial() {
-    this.ensurePart('overlay').then((p) => {
-      p.feed({ kind: 'desk_tutorial' })
-    })
+    this.ensurePart("overlay").then((p) => {
+      p.feed({ kind: "desk_tutorial" });
+    });
   }
 
   /**
@@ -414,7 +432,6 @@ class desk_module extends LetcBox {
       return this.loadDefault();
     }
     this._loadOnboarding();
-
   }
 
   /**
@@ -612,51 +629,84 @@ class desk_module extends LetcBox {
   /**
    *
    * @param {*} kind
+   * @param {*} pn  Slot name; tracked per-slot in `_pendingKinds`.
    */
-  _loadKind(p, kind) {
+  _loadKind(p, kind, pn) {
     p.feed({
       kind,
       uiHandler: [this],
     });
-    this.ensurePart("activity-panel").then((p) => {
-      p.setState(0);
-    });
-    this._pendingKind = kind;
+    if (!this._pendingKinds) this._pendingKinds = {};
+    if (pn) this._pendingKinds[pn] = kind;
   }
   /**
    *
    */
   togglePanel(kind, pn) {
+    if (!this._pendingKinds) this._pendingKinds = {};
+    if (!this._closeTimers) this._closeTimers = {};
     return this.ensurePart(pn).then((p) => {
-      // A close animation is mid-flight: cancel it and snap the dying child
-      // out so we don't render the next kind through a fading sibling
-      // (which is what makes the workspace appear to overlay apps/settings
-      // on the second navigation).
-      if (this._closeTimer) {
-        clearTimeout(this._closeTimer);
-        this._closeTimer = null;
+      // Mid-flight close animation: snap the dying child out so the next
+      // kind doesn't render through a fading sibling.
+      if (this._closeTimers[pn]) {
+        clearTimeout(this._closeTimers[pn]);
+        delete this._closeTimers[pn];
         p.clear();
-        this._pendingKind = null;
+        this._pendingKinds[pn] = null;
       }
 
       if (p.isEmpty()) {
-        this._loadKind(p, kind);
+        this._closeOtherSidebarPanels(pn);
+        this._loadKind(p, kind, pn);
         return;
       }
 
-      if (this._pendingKind == kind) {
+      if (this._pendingKinds[pn] === kind) {
         const child = p.children.last();
         if (child && child.el) child.el.dataset.anim = "out";
-        this._closeTimer = setTimeout(() => {
-          this._closeTimer = null;
-          this._pendingKind = null;
+        this._closeTimers[pn] = setTimeout(() => {
+          delete this._closeTimers[pn];
+          this._pendingKinds[pn] = null;
           p.clear();
         }, 500);
         return;
       }
 
-      this._loadKind(p, kind);
+      this._closeOtherSidebarPanels(pn);
+      this._loadKind(p, kind, pn);
     });
+  }
+
+  /**
+   * Enforce mutual exclusion between sidebar panels: close every main
+   * sidebar surface except the one identified by `except`. Activity
+   * panel toggles via setState (it slides), the other slots are content
+   * containers and get cleared.
+   */
+  _closeOtherSidebarPanels(except) {
+    if (!this._pendingKinds) this._pendingKinds = {};
+    if (!this._closeTimers) this._closeTimers = {};
+    const slots = ["chat-panel", "settings-main-slot", "trash-panel"];
+    const tasks = slots
+      .filter((pn) => pn !== except)
+      .map((pn) => {
+        if (this._closeTimers[pn]) {
+          clearTimeout(this._closeTimers[pn]);
+          delete this._closeTimers[pn];
+        }
+        this._pendingKinds[pn] = null;
+        return this.ensurePart(pn).then((p) => {
+          if (p && !p.isEmpty()) p.clear();
+        });
+      });
+    if (except !== "activity-panel") {
+      tasks.push(
+        this.ensurePart("activity-panel").then((p) => {
+          if (p) p.setState(0);
+        }),
+      );
+    }
+    return Promise.all(tasks);
   }
 
   /**
@@ -666,12 +716,16 @@ class desk_module extends LetcBox {
    * window manager / grid view is not left occluded.
    */
   _closeMainPanels() {
-    this._pendingKind = null;
-    if (this._closeTimer) {
-      clearTimeout(this._closeTimer);
-      this._closeTimer = null;
-    }
+    if (!this._pendingKinds) this._pendingKinds = {};
+    if (!this._closeTimers) this._closeTimers = {};
     const slots = ["settings-main-slot", "trash-panel"];
+    for (const pn of slots) {
+      if (this._closeTimers[pn]) {
+        clearTimeout(this._closeTimers[pn]);
+        delete this._closeTimers[pn];
+      }
+      this._pendingKinds[pn] = null;
+    }
     return Promise.all(
       slots.map((pn) =>
         this.ensurePart(pn).then((p) => {
@@ -705,7 +759,9 @@ class desk_module extends LetcBox {
         // Drop the manual override flag so a subsequent reload doesn't push
         // the user back into the wizard, and mirror onboarded=1 into the
         // local Visitor profile so route() falls through to loadDefault().
-        try { localStorage.removeItem("force-onboarding"); } catch (e) { }
+        try {
+          localStorage.removeItem("force-onboarding");
+        } catch (e) {}
         {
           let p = Visitor.profile && Visitor.profile();
           if (p) p.onboarded = 1;
@@ -730,9 +786,7 @@ class desk_module extends LetcBox {
           p.activityState = state;
           p.setState(state);
           if (state) {
-            this.ensurePart("trash-panel").then((p) => {
-              p.clear();
-            });
+            this._closeOtherSidebarPanels("activity-panel");
           }
         });
 
@@ -741,19 +795,27 @@ class desk_module extends LetcBox {
         return this.togglePanel("chat_p2p", "chat-panel");
 
       case "toggle-contacts":
-        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.CONTACTS });
+        RADIO_BROADCAST.trigger("breadcrumb:context", {
+          filename: LOCALE.CONTACTS,
+        });
         return this.togglePanel("address_book", "chat-panel");
 
       case "toggle-settings":
-        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.SETTINGS });
+        RADIO_BROADCAST.trigger("breadcrumb:context", {
+          filename: LOCALE.SETTINGS,
+        });
         return this.togglePanel("settings_main", "settings-main-slot");
 
       case "toggle-apps":
-        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.APPS });
+        RADIO_BROADCAST.trigger("breadcrumb:context", {
+          filename: LOCALE.APPS,
+        });
         return this.togglePanel("apps_main", "settings-main-slot");
 
       case "toggle-trash":
-        RADIO_BROADCAST.trigger("breadcrumb:context", { filename: LOCALE.TRASH });
+        RADIO_BROADCAST.trigger("breadcrumb:context", {
+          filename: LOCALE.TRASH,
+        });
         return this.togglePanel("panel_trash", "trash-panel");
 
       case "toggle-theme": {
@@ -771,7 +833,7 @@ class desk_module extends LetcBox {
         document.documentElement.dataset.theme = next;
         try {
           localStorage.setItem("drumee.theme", next);
-        } catch (e) { }
+        } catch (e) {}
         const wp = { ...(Visitor.wallpaper() || {}), theme: next };
         if (typeof Visitor.setWallpaper === "function")
           Visitor.setWallpaper(wp);
@@ -842,15 +904,15 @@ class desk_module extends LetcBox {
 
       case "new-note":
         Wm.windowsLayer.append({
-          kind: 'editor_markdown',
-          uiHandler: [this]
+          kind: "editor_markdown",
+          uiHandler: [this],
         });
         this._hideAddMenu();
         return;
       case "new-document":
       case "new-spreadsheet":
       case "new-presentation":
-        Wm.newDocument(cmd)
+        Wm.newDocument(cmd);
         this._hideAddMenu();
         return;
 
@@ -952,7 +1014,10 @@ class desk_module extends LetcBox {
           }
         };
       }
-      setTimeout(() => document.addEventListener("mousedown", this._userMenuDismiss), 0);
+      setTimeout(
+        () => document.addEventListener("mousedown", this._userMenuDismiss),
+        0,
+      );
     } else {
       this._closeUserMenu();
     }
@@ -988,17 +1053,17 @@ class desk_module extends LetcBox {
   }
 
   _getSearchValue(cmd) {
-    if (cmd && _.isFunction(cmd.getValue)) return (cmd.getValue() || '').trim();
+    if (cmd && _.isFunction(cmd.getValue)) return (cmd.getValue() || "").trim();
     if (this._searchBoxInner && _.isFunction(this._searchBoxInner.getValue)) {
-      return (this._searchBoxInner.getValue() || '').trim();
+      return (this._searchBoxInner.getValue() || "").trim();
     }
-    return (cmd?.mget?.(_a.value) || cmd?.mget?.('value') || '').trim();
+    return (cmd?.mget?.(_a.value) || cmd?.mget?.("value") || "").trim();
   }
 
   _updateSearchSuggestions(cmd) {
     const string = this._getSearchValue(cmd);
     this._showSearchSuggestions();
-    return this.ensurePart('suggestions-list').then((list) => {
+    return this.ensurePart("suggestions-list").then((list) => {
       list.setApi({
         service: SERVICE.desk.search,
         hub_id: Visitor.id,
@@ -1016,7 +1081,8 @@ class desk_module extends LetcBox {
     }
     if (this._suggestionsDismiss) return;
     this._suggestionsDismiss = (e) => {
-      const inside = this._searchContainer && this._searchContainer.el.contains(e.target);
+      const inside =
+        this._searchContainer && this._searchContainer.el.contains(e.target);
       if (!inside) this._hideSearchSuggestions();
     };
     document.addEventListener("mousedown", this._suggestionsDismiss);

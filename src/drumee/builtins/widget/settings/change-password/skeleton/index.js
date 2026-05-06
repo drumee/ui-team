@@ -1,6 +1,6 @@
 function passwordField(ui, opt) {
   const pfx = `${ui.fig.family}__field`;
-  const { label, name, fieldKey, value = "" } = opt;
+  const { label, name, fieldKey, placeholder, value = "" } = opt;
   const visible = ui._show[fieldKey];
   return Skeletons.Box.Y({
     className: pfx,
@@ -14,7 +14,7 @@ function passwordField(ui, opt) {
         kids: [
           Skeletons.Entry({
             className: `${pfx}-entry`,
-            placeholder: "••••••••••••",
+            placeholder,
             name,
             type: visible ? "text" : "password",
             value,
@@ -57,18 +57,21 @@ function formView(ui) {
         label: LOCALE.CURRENT_PASSWORD_LABEL,
         name: "current_password",
         fieldKey: "current",
+        placeholder: LOCALE.ENTER_YOUR_CURRENT_PASSWORD,
         value: ui._values.current,
       }),
       passwordField(ui, {
         label: LOCALE.NEW_PASSWORD_LABEL,
         name: "new_password",
-        fieldKey: "new",
+        fieldKey: "next",
+        placeholder: LOCALE.ENTER_YOUR_NEW_PASSWORD,
         value: ui._values.next,
       }),
       passwordField(ui, {
         label: LOCALE.CONFIRM_PASSWORD_LABEL,
         name: "confirm_password",
         fieldKey: "confirm",
+        placeholder: LOCALE.CONFIRM_YOUR_NEW_PASSWORD,
         value: ui._values.confirm,
       }),
       ui._error

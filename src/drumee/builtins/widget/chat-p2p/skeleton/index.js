@@ -8,6 +8,55 @@ module.exports = function (ui) {
 
   // ── Left panel: inbox ────────────────────────────────────────────
 
+  const composePopup = Skeletons.Box.Y({
+    className: `${fig}__compose-popup`,
+    sys_pn: "compose-popup",
+    partHandler: ui,
+    state: 0,
+    kids: [
+      Skeletons.Entry({
+        className: `${fig}__compose-search`,
+        sys_pn: "compose-search",
+        partHandler: ui,
+        placeholder: LOCALE.SEARCH || "Search",
+        require: "any",
+        mode: "interactive",
+        interactive: 1,
+        service: "compose-search",
+        bubble: 0,
+        uiHandler: [ui],
+      }),
+      Skeletons.List.Smart({
+        className: `${fig}__compose-list`,
+        sys_pn: "compose-list",
+        partHandler: ui,
+        spinner: true,
+        spinnerWait: 300,
+        vendorOpt: Preset.List.Orange_e,
+        placeholder: Skeletons.Note(LOCALE.NO_CONTACT || "No contacts", "no-contact"),
+        itemsOpt: {
+          kind: "chat_contact_item",
+          service: "compose-pick",
+          uiHandler: [ui],
+        },
+        api: ui.getContactsApi,
+      }),
+    ],
+  });
+
+  const composeWrapper = Skeletons.Box.Y({
+    className: `${fig}__compose-wrapper`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "dock-note",
+        className: `${fig}__compose-btn`,
+        service: "toggle-compose",
+        uiHandler: ui,
+      }),
+      composePopup,
+    ],
+  });
+
   const sidebarHeader = Skeletons.Box.X({
     className: `${fig}__sidebar-header`,
     kids: [
@@ -15,12 +64,7 @@ module.exports = function (ui) {
         className: `${fig}__inbox-title`,
         content: LOCALE.INBOX || "Inbox",
       }),
-      Skeletons.Button.Svg({
-        ico: "dock-note",
-        className: `${fig}__compose-btn`,
-        service: "new-conversation",
-        uiHandler: ui,
-      }),
+      composeWrapper,
     ],
   });
 
@@ -45,14 +89,6 @@ module.exports = function (ui) {
         service: "filter-unread",
         uiHandler: ui,
       }),
-      Skeletons.Button.Label({
-        className: `${fig}__filter-btn`,
-        label: LOCALE.MENTIONS || "Mentions",
-        radio: filterRadio,
-        initialState: 0,
-        service: "filter-mentions",
-        uiHandler: ui,
-      }),
     ],
   });
 
@@ -72,9 +108,16 @@ module.exports = function (ui) {
     api: ui.getCurrentApi,
   });
 
+  const allReadEmpty = Skeletons.Note({
+    className: `${fig}__all-read-empty`,
+    sys_pn: "all-read-empty",
+    partHandler: ui,
+    content: LOCALE.ALL_READ || "All read",
+  });
+
   const sidebar = Skeletons.Box.Y({
     className: `${fig}__sidebar`,
-    kids: [sidebarHeader, filters, contactList],
+    kids: [sidebarHeader, filters, contactList, allReadEmpty],
   });
 
   // ── Right panel: chat area ───────────────────────────────────────
