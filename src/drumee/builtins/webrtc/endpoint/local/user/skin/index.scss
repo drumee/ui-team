@@ -153,8 +153,12 @@
     }
   }
 
-  &__ui[data-presenting="1"] &__tile-badge--share { display: flex; }
-  &__ui[data-raised="1"]     &__tile-badge--hand  { display: flex; }
+  &__ui[data-presenting="1"] &__tile-badge--share {
+    display: flex;
+  }
+  &__ui[data-raised="1"] &__tile-badge--hand {
+    display: flex;
+  }
 
   // Pinned highlight — bright outline + filled pin icon. The actual
   // spotlight repositioning happens at the meeting-window level via the
