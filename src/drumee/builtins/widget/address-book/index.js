@@ -85,7 +85,7 @@ class __address_book extends LetcBox {
    */
   _onOutsideClick(e) {
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
-      this.el.dataset.anim = "out";
+      Desk.closeAllPanels();
     }
   }
 
