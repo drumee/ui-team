@@ -296,6 +296,7 @@ class __window_connect extends __room {
       case 'offline':
         this.beforeLeavingState = _a.none;
         this.defaultState(_a.cancel);
+        if (this.el) this.el.dataset.callState = 'offline';
         this.stateMessage(LOCALE.X_IS_NOT_ONLINE.format(this.mget('display')));
         Visitor.playSound(_K.dialtones.offline, 1);
         break;

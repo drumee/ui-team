@@ -1,10 +1,10 @@
 @use "mixins/drumee";
-@use 'builtins/webrtc/skin/index' as *;
-@use 'builtins/webrtc/skin/topbar' as *;
-@use 'builtins/webrtc/skin/command' as *;
-@use 'builtins/webrtc/skin/attendee' as *;
-@use 'builtins/webrtc/skin/sound-analyzer' as *;
-@use 'builtins/webrtc/skin/remote' as *;
+@use "builtins/webrtc/skin/index" as *;
+@use "builtins/webrtc/skin/topbar" as *;
+@use "builtins/webrtc/skin/command" as *;
+@use "builtins/webrtc/skin/attendee" as *;
+@use "builtins/webrtc/skin/sound-analyzer" as *;
+@use "builtins/webrtc/skin/remote" as *;
 
 .window-connect {
   @include webrtc-ui;
@@ -27,8 +27,8 @@
     flex-direction: column;
     display: flex;
     position: fixed;
-    z-index: 10100 !important;
-    border-radius: 12px;
+    z-index: 100100 !important;
+    border: 1px solid var(--border-default);
 
     &[data-device="mobile"] {
       width: 100vw;
@@ -47,12 +47,9 @@
     }
   }
 
-
   &__header {
     background-color: var(--connect-header-bg);
     border-bottom: none;
-    height: 44px;
-    min-height: 44px;
     width: 100%;
     z-index: 1000;
 
@@ -66,7 +63,6 @@
     // Equal-size zoom + close icons with comfortable spacing.
     .window-button__icon-button {
       gap: 14px;
-      padding-right: 14px;
       align-items: center;
 
       .icon,
@@ -93,9 +89,11 @@
   &__body {
     align-items: center;
     justify-content: center;
-    background-color: var(--connect-video-background);
-    height: calc(100% - 44px);
+    background-color: var(--normal-bg-100);
+    border-radius: var(--corner-radius-5);
     z-index: 100;
+    width: 100%;
+    height: 100%;
 
     .core-webrtc__ui {
       width: 100%;
@@ -119,11 +117,11 @@
     grid-template-columns: 0 minmax(0, 1fr);
     grid-template-rows: 100%;
 
-    &[data-mode="normal"]{
+    &[data-mode="normal"] {
       grid-template-columns: 0 100%;
       grid-template-rows: 100%;
     }
-    &[data-mode="presenter"]{
+    &[data-mode="presenter"] {
       grid-template-columns: calc(100% - 200px) 200px;
       grid-template-rows: 100%;
     }
@@ -150,7 +148,6 @@
     align-items: center;
 
     .user-profile {
-
       &[data-online="1"],
       &[data-online="2"] {
         &:before {
@@ -167,7 +164,6 @@
   }
 
   &__avatar.user-profile {
-
     &[data-online="1"],
     &[data-online="2"] {
       &:before {
@@ -187,7 +183,6 @@
     }
 
     .user-profile__main {
-      background-color: #5E5E5E !important;
       justify-content: center;
       align-items: center;
 
@@ -198,7 +193,7 @@
     }
 
     .user-profile__initiales {
-      border-radius: 100%;
+      border-radius: 8px;
 
       .note-content {
         font-size: 45px;
@@ -213,13 +208,15 @@
 
   &__uname,
   &__commands {
-    background-color: var(--connect-transparent-background)  !important;
+    background-color: var(--connect-transparent-background) !important;
   }
 
   &__status {
     .text {
       padding: 5px 10px;
-      background-color: var(--connect-transparent-background); //rgba(0,0,0,0.33);
+      background-color: var(
+        --connect-transparent-background
+      ); //rgba(0,0,0,0.33);
       border-radius: var(--border-radius);
     }
   }
@@ -241,11 +238,21 @@
     .confirm-message {
       text-align: center;
       padding: 0 10px;
-      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 400,
+        $color: var(--default-text-color)
+      );
     }
 
     .action-btn {
-      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 400,
+        $color: var(--default-text-color)
+      );
       margin-top: 10px;
 
       .buttons {
@@ -259,11 +266,19 @@
         justify-content: center;
         border-radius: var(--border-radius);
         height: 32px;
-        @include drumee.typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text));
+        @include drumee.typo(
+          $size: 14px,
+          $line: 20px,
+          $color: var(--btn-rollback-text)
+        );
 
         &:hover {
           border: 2px solid var(--btn-rollback-border-hover);
-          @include drumee.typo($size: 14px, $line: 20px, $color: var(--btn-rollback-text)-hover);
+          @include drumee.typo(
+            $size: 14px,
+            $line: 20px,
+            $color: var(--btn-rollback-text)-hover
+          );
         }
       }
     }
@@ -276,14 +291,16 @@
   &__identity {
     align-items: center;
     justify-content: center;
-    gap: 18px;
-    padding: 24px 16px 96px;
-    flex: 1;
-    width: 100%;
+    gap: 12px;
   }
 
   &__caller-name {
-    @include drumee.typo($size: 22px, $line: 30px, $weight: 600, $color: var(--default-text-color));
+    @include drumee.typo(
+      $size: 22px,
+      $line: 30px,
+      $weight: 600,
+      $color: var(--default-text-color)
+    );
     text-align: center;
     word-break: break-word;
   }
@@ -301,7 +318,7 @@
     .user-profile__main {
       width: 120px;
       height: 120px;
-      border-radius: 50%;
+      border-radius: 8px;
       overflow: hidden;
       animation: drumee-call-pulse 1.6s ease-in-out infinite;
     }
@@ -309,7 +326,7 @@
     .user-profile__initiales {
       width: 120px;
       height: 120px;
-      border-radius: 50%;
+      border-radius: 8px;
 
       .note-content {
         font-size: 42px;
@@ -319,25 +336,12 @@
   }
 
   @keyframes drumee-call-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(250, 133, 64, 0.45); }
-    50%      { box-shadow: 0 0 0 16px rgba(250, 133, 64, 0); }
-  }
-
-  &__message-container {
-    pointer-events: none;
-    position: absolute;
-    bottom: 92px;
-    left: 0;
-    right: 0;
-    height: auto;
-    margin: 0;
-    z-index: 10;
-
-    .message-text {
-      margin: 0 auto;
-      background-color: transparent;
-      padding: 6px 14px;
-      @include drumee.typo($color: var(--default-text-color), $weight: 500, $line: 20px, $size: 14px);
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(250, 133, 64, 0.45);
+    }
+    50% {
+      box-shadow: 0 0 0 16px rgba(250, 133, 64, 0);
     }
   }
 
@@ -416,7 +420,9 @@
   // Narrow window (mobile): shrink command buttons so all controls stay visible.
   &__ui[data-device="mobile"] {
     .window-connect__commands-container[data-mode="in-call"] {
-      .window-connect__commands { gap: 10px; }
+      .window-connect__commands {
+        gap: 10px;
+      }
       .ctrl-button {
         width: 40px;
         height: 40px;
@@ -456,12 +462,21 @@
   &__text {
     &.local {
       min-height: 30px;
-      @include drumee.typo($color: var(--default-text-reverse), $weight: 400, $line: 30px, $size: 16px);
+      @include drumee.typo(
+        $color: var(--default-text-reverse),
+        $weight: 400,
+        $line: 30px,
+        $size: 16px
+      );
       justify-content: center;
     }
 
     &.status {
-      @include drumee.typo($color: var(--default-text-color), $line: 30px, $size: 16px);
+      @include drumee.typo(
+        $color: var(--default-text-color),
+        $line: 30px,
+        $size: 16px
+      );
     }
   }
 
@@ -469,23 +484,11 @@
     padding: 10px 0 15px 3px;
     justify-content: center;
     height: 20px;
-    @include drumee.typo($color: var(--default-text-title), $line: 14px, $size: 15px);
-  }
-
-  &__message-container {
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    align-items: center;
-    align-content: center;
-    justify-content: center;
-
-    .message-text {
-      padding: 10px;
-      background-color: transparent;
-      margin: auto 10px 90px 10px;
-      @include drumee.typo($color: var(--default-text-color), $weight: 500, $line: 20px, $size: 16px);
-    }
+    @include drumee.typo(
+      $color: var(--default-text-title),
+      $line: 14px,
+      $size: 15px
+    );
   }
 
   &__timer-container {
@@ -502,7 +505,12 @@
       background-color: var(--default-transparent-black);
       margin: 10px;
       border-radius: var(--border-radius); //3px;
-      @include drumee.typo($color: var(--default-text-reverse), $weight: 400, $line: 20px, $size: 16px);
+      @include drumee.typo(
+        $color: var(--default-text-reverse),
+        $weight: 400,
+        $line: 20px,
+        $size: 16px
+      );
     }
 
     .countdown-timer {
@@ -528,4 +536,43 @@
       }
     }
   }
+
+  // Offline state: callee is not reachable. Stops the calling pulse,
+  // mutes the avatar visually, and emphasises the "X is not online" message
+  // using the Drumee design system tokens (Signal/Error + Primary/100).
+  &__ui[data-call-state="offline"] {
+    .window-connect__avatar.user-profile {
+      .user-profile__main {
+        animation: none;
+        filter: grayscale(1);
+        opacity: 0.55;
+      }
+    }
+
+    .window-connect__caller-name {
+      color: var(--normal-fg, #0b0a21);
+      opacity: 0.9;
+    }
+
+    .ctrl-button.line {
+      background-color: var(--normal-bg-90, #f2f2f7);
+      color: var(--normal-fg, #0b0a21);
+      fill: currentColor;
+
+      svg {
+        transform: none;
+      }
+    }
+  }
+}
+
+.window__message-container {
+  position: absolute;
+  background-color: var(--normal-bg-80);
+  padding: var(--spacer-5);
+  width: 300px;
+  color: var(--normal-fg-10);
+  border-radius: var(--corner-radius-3);
+  align-items: center;
+  top: 40px;
 }

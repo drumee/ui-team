@@ -39,10 +39,6 @@
     }
 
     .user-profile {
-      width: 130px;
-      height: 130px;
-      border-radius: 50%;
-
       &:before {
         visibility: hidden;
       }
@@ -50,7 +46,7 @@
 
     .user-profile__main {
       background-color: rgba(255, 255, 255, 0.08) !important;
-      border-radius: 50%;
+      border-radius: 6%;
       justify-content: center;
       align-items: center;
 
@@ -61,8 +57,6 @@
     }
 
     .user-profile__initiales {
-      border-radius: 100%;
-
       .note-content {
         font-size: 46px;
         font-weight: 500;
@@ -94,7 +88,7 @@
     top: 10px;
     right: 10px;
     gap: 6px;
-    z-index: 10;
+    z-index: 99999;
     justify-content: flex-end;
     align-items: center;
   }
@@ -118,6 +112,9 @@
     z-index: 10;
     width: 100%;
     padding: var(--spacer-4);
+    position: absolute;
+    bottom: 0;
+    z-index: 99999;
   }
 
   &__tile-mic {
@@ -128,6 +125,7 @@
     background-color: var(--signal-error, #d74e49);
     border-radius: 50%;
     color: #fff;
+    z-index: 999999;
 
     &[data-state="1"] {
       background-color: rgba(0, 0, 0, 0.2);
@@ -164,6 +162,7 @@
     backdrop-filter: blur(4px);
     border-radius: 50%;
     color: #fff;
+    z-index: 999999;
   }
 
   // ── Legacy elements (kept for audio but hidden) ──────────────────────

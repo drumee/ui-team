@@ -12,6 +12,7 @@
     position: absolute;
     top: 0;
     left: 0;
+    border-radius: 0 0 var(--corner-radius-5) var(--corner-radius-5);
 
     .endpoint-remote {
       z-index: 1;
@@ -46,10 +47,10 @@
         overflow: hidden;
         background-color: #313132; // var(--default-transparent-black);//rgba(0,0,0,.33);
         position: absolute;
-        top: 10px;
+        top: 50px;
         right: 10px;
-        width: 120px;
-        height: 80px;
+        width: 200px;
+        height: 150px;
         min-height: 0;
         min-width: 0;
       }
