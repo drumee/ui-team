@@ -20,6 +20,7 @@ class __address_book extends LetcBox {
 
   initialize(opt = {}) {
     require("./skin");
+    opt.dataset = { ...opt.dataset, anim: "out" };
     super.initialize(opt);
     this.declareHandlers();
     this._tab = "all";
@@ -51,9 +52,9 @@ class __address_book extends LetcBox {
 
   async onDomRefresh() {
     this.feed(require("./skeleton")(this));
-    this.el.dataset.anim = "in";
     await Promise.all([this._loadContacts(), this._loadInvitations(), this._loadTags()]);
     this._refreshList();
+    this.el.dataset.anim = "in";
   }
 
   onUiEvent(trigger, args = {}) {

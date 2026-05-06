@@ -5,7 +5,7 @@ require('./skin');
 class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
-    opt.dataset = { ...opt.dataset, anim: "out" }
+    opt.dataset = { ...opt.dataset, anim: "out" };
     super.initialize(opt);
     this.declareHandlers();
     this.isTrash = 1;

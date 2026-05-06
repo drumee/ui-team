@@ -656,6 +656,7 @@ class desk_module extends LetcBox {
       }
 
       if (p.isEmpty()) {
+        this._closeOtherSidebarPanels(pn);
         this._loadKind(p, kind, pn);
         return;
       }
@@ -671,6 +672,7 @@ class desk_module extends LetcBox {
         return;
       }
 
+      this._closeOtherSidebarPanels(pn);
       this._loadKind(p, kind, pn);
     });
   }
@@ -682,25 +684,21 @@ class desk_module extends LetcBox {
    * containers and get cleared.
    */
   _closeOtherSidebarPanels(except) {
-    if (
-      except !== "chat-panel" &&
-      except !== "settings-main-slot" &&
-      except !== "trash-panel"
-    ) {
-      this._pendingKind = null;
-      if (this._closeTimer) {
-        clearTimeout(this._closeTimer);
-        this._closeTimer = null;
-      }
-    }
+    if (!this._pendingKinds) this._pendingKinds = {};
+    if (!this._closeTimers) this._closeTimers = {};
     const slots = ["chat-panel", "settings-main-slot", "trash-panel"];
     const tasks = slots
       .filter((pn) => pn !== except)
-      .map((pn) =>
-        this.ensurePart(pn).then((p) => {
+      .map((pn) => {
+        if (this._closeTimers[pn]) {
+          clearTimeout(this._closeTimers[pn]);
+          delete this._closeTimers[pn];
+        }
+        this._pendingKinds[pn] = null;
+        return this.ensurePart(pn).then((p) => {
           if (p && !p.isEmpty()) p.clear();
-        }),
-      );
+        });
+      });
     if (except !== "activity-panel") {
       tasks.push(
         this.ensurePart("activity-panel").then((p) => {
