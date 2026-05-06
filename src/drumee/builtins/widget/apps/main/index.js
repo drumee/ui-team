@@ -153,7 +153,7 @@ class apps_main extends LetcBox {
     this._fvSelected = new Set();
     this._adminStorageView = "main"; // "main" | "all" | "detail"
     this._adminStorageState = "idle";
-    this._hubStorageStats = [];
+    this._hubStorageStats = null;
     this._hubUserStorage = [];
     this._fileVersions = [];
     this._fileVersionsTotal = 0;
@@ -514,9 +514,11 @@ class apps_main extends LetcBox {
       const res = await this.postService(SERVICE.admin.get_hub_storage_stats, {
         hub_id: this._activeAdminHub,
       });
-      this._hubStorageStats = Array.isArray(res) ? res : (res && res.data) || [];
+      // SP returns one row; flatten array-of-one to a plain object.
+      const row = Array.isArray(res) ? res[0] : (res && res.data) || res;
+      this._hubStorageStats = row && typeof row === "object" ? row : null;
     } catch (e) {
-      this._hubStorageStats = [];
+      this._hubStorageStats = null;
     }
     this._render();
   }
@@ -827,7 +829,7 @@ class apps_main extends LetcBox {
         this._page = 1; this._selected.clear();
         this._permWorkspaces = []; this._activeWorkspace = null;
         this._wsFolders = []; this._editingFolder = null;
-        this._hubStorageStats = []; this._hubUserStorage = [];
+        this._hubStorageStats = null; this._hubUserStorage = [];
         this._fileVersions = []; this._fvActiveFile = null;
         this._fileDetail = null;
         this._render();

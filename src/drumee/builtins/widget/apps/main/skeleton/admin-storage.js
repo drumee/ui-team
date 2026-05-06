@@ -1,7 +1,5 @@
-// Admin Storage tab. Shares header chrome (capacity card + alert + optimization)
-// with the regular Storage tab via storage-shared.js, and renders a
-// "File Versioning" table instead of "User Storage Distribution".
-const { storageBodyRow } = require("./storage-shared");
+// Admin Storage tab — hub-scoped header cards + File Versioning table.
+const { hubStorageBodyRow } = require("./storage-shared");
 
 // We currently use a single doc-style file icon for all rows;
 // CSS modifier classes can later swap colour by extension.
@@ -517,5 +515,5 @@ export default function admin_storage_view(ui) {
   if (ui._adminStorageView === "all") {
     return [backLink(ui), fileVersioningAll(ui)];
   }
-  return [adminHeader(ui), storageBodyRow(ui), fileVersioningTable(ui)];
+  return [adminHeader(ui), hubStorageBodyRow(ui), fileVersioningTable(ui)];
 }
