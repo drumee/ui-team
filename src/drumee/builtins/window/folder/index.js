@@ -359,6 +359,7 @@ class __window_folder extends mfsInteract {
 
       case "tab-chat":
         this.scopeChatToFile(null);
+        this.scopeChatToFolder(this.mget(_a.nid));
         return this.showFolderTab(_a.chat);
 
       case _a.chat: {
@@ -495,6 +496,19 @@ class __window_folder extends mfsInteract {
     return this.ensurePart('folder-chat').then((chat) => {
       if (chat && _.isFunction(chat.setScopedFileNid)) chat.setScopedFileNid(fileNid);
     });
+  }
+
+  scopeChatToFolder(folderNid) {
+    return this.ensurePart('folder-chat').then((chat) => {
+      if (chat && _.isFunction(chat.setScopedFolderNid)) chat.setScopedFolderNid(folderNid);
+    });
+  }
+
+  // Keep folder-chat scope in sync with the navigated folder so the right-side
+  // chat panel reflects the current folder's messages even on the Files tab.
+  updateTopbar(m) {
+    super.updateTopbar(m);
+    this.scopeChatToFolder(this.mget(_a.nid));
   }
 
   showFolderTab(tab) {

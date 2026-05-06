@@ -724,6 +724,20 @@ class __widget_chat extends LetcBox {
     return api;
   }
 
+  // Update the folder scope so messages are filtered to a specific sub-folder.
+  setScopedFolderNid(folderNid) {
+    const next = folderNid ? `${folderNid}` : '';
+    if (this.scopedNid === next) return;
+    this.scopedNid = next;
+    this.ensurePart(_a.list).then((list) => {
+      if (!list || !_.isFunction(list.restart)) return;
+      const prevSpinner = list.mget(_a.spinner);
+      if (prevSpinner) list.mset(_a.spinner, false);
+      list.restart();
+      if (prevSpinner) list.mset(_a.spinner, prevSpinner);
+    });
+  }
+
   // Switch the message list to a file-scoped thread; pass falsy to leave it.
   setScopedFileNid(fileNid) {
     const next = fileNid ? `${fileNid}` : '';

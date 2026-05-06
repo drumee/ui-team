@@ -1481,12 +1481,8 @@
   }
 
   .window__chat-panel .widget-chat__body {
-    padding: 16px 0 16px 16px;
+    padding: 16px;
     gap: 16px;
-
-    & > * {
-      padding-right: 0;
-    }
   }
 
   .widget-chat__messenger-wrapper {
