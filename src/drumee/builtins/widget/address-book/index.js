@@ -64,7 +64,6 @@ class __address_book extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
-
   }
 
   async onDomRefresh() {
@@ -81,9 +80,9 @@ class __address_book extends LetcBox {
   }
 
   /**
- * 
- * @param {*} e 
- */
+   *
+   * @param {*} e
+   */
   _onOutsideClick(e) {
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
       this.el.dataset.anim = "out";
