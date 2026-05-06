@@ -129,6 +129,7 @@
     &--danger {
       background: $danger-soft;
     }
+
     &--info {
       background: $neutral-soft;
     }
@@ -201,7 +202,7 @@
     width: 100%;
     gap: 16px;
 
-    > * {
+    >* {
       flex: 1 1 0;
       min-width: 0;
     }
@@ -222,7 +223,7 @@
     }
 
     // Inner elements pass clicks through to the row container
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -304,11 +305,16 @@
     cursor: pointer;
     transition: filter 0.15s ease;
 
+    &[data-state="0"] {
+      opacity: .5;
+      pointer-events: none;
+    }
+
     &:hover {
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -472,7 +478,7 @@
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -495,6 +501,11 @@
       .settings-delete-account__btn-label,
       .settings-delete-account__btn-arrow {
         color: $ink-900;
+      }
+
+      &.step2[data-state="0"] {
+        opacity: .5;
+        pointer-events: none;
       }
     }
   }

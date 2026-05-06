@@ -30,13 +30,6 @@ class __panel_activity extends LetcBox {
 
     window.ActivityHandler = this;
 
-    // this._onOutsideClick = (e, origin) => {
-    //   if (pointerDragged || e?.getService() == 'toggle-activity-panel') return;
-    //   if (e && !this.el.contains(e.currentTarget)) {
-    //     this.debug("AAA:36", this.mget(_a.state))
-    //     // this.closePanel();
-    //   }
-    // }
 
     // RADIO_CLICK.on(_e.click, this._onOutsideClick)
     this._currentCount = 0;
@@ -76,14 +69,12 @@ class __panel_activity extends LetcBox {
    */
   onDomRefresh() {
     this.setState(0);
-    this.debug("AAA:77", this.activityState, this.mget(_a.state))
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
     this.visible = !document.hidden;
     this.feed(require('./skeleton')(this));
     this.ensurePart(_a.list).then((p) => {
       this.refreshActivity()
-      this.debug("AAA:85", this.activityState, this.mget(_a.state))
     })
     Wm.on(WS_EVENT, this.onWsMessage)
   }
@@ -107,7 +98,6 @@ class __panel_activity extends LetcBox {
   */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug("AAA:103", service, cmd)
     switch (service) {
       case 'open-activity-panel':
         this.activityState = 1;
@@ -461,7 +451,6 @@ class __panel_activity extends LetcBox {
    * 
    */
   _buildactivities(data) {
-    this.debug("AAA:_buildactivities", data)
     return data;
   }
 
@@ -471,7 +460,7 @@ class __panel_activity extends LetcBox {
    */
   _addactivitys(data, k) {
     if (!this.summary[k]) {
-      this.warn(`AAA:333 -- unknown category "${k}"`);
+      this.warn(`_addactivitys: unknown category "${k}"`);
       return;
     }
     for (let r of data) {
@@ -517,7 +506,7 @@ class __panel_activity extends LetcBox {
    */
   _removeactivitys(data, k) {
     if (!this.summary[k]) {
-      this.warn(`AAA:339 -- unknown category "${k}"`);
+      this.warn(`_removeactivitys: unknown category "${k}"`);
       return;
     }
     for (let r of data) {
