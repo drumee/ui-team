@@ -730,7 +730,7 @@ export default function apps_main_skeleton(ui) {
       kids: content,
     }),
   ];
-  if (ui._role === "admin") {
+  if (ui._role === "admin" && !ui._adminUnlocked) {
     root.push(adminUpsellOverlay(ui));
   }
   if (ui._showApplyConfirm) {
