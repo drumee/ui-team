@@ -93,17 +93,18 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} args 
-   * @returns 
+   *
+   * @param {*} args
+   * @returns
    */
   openP2Pchat(args = {}) {
     const { drumate_id, message_id } = args;
     if (!drumate_id) return;
-    this.togglePanel('chat_p2p', 'chat-panel').then(() => {
-      this.ensurePart('chat-panel').then(p => {
+    this.togglePanel("chat_p2p", "chat-panel").then(() => {
+      this.ensurePart("chat-panel").then((p) => {
         const widget = p && p.children && p.children.last && p.children.last();
-        if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
+        if (widget && widget.openChatByPeerId)
+          widget.openChatByPeerId(drumate_id, message_id);
       });
     });
   }
@@ -132,7 +133,8 @@ class desk_module extends LetcBox {
     // their avatar/profile in Account settings. Fires on the "avatar-changed"
     // broadcast (no model arg) and on Visitor model changes.
     const changed = model && model.changed;
-    if (changed && !(changed.profile || changed.avatar || changed.mtime)) return;
+    if (changed && !(changed.profile || changed.avatar || changed.mtime))
+      return;
     this.ensurePart("sidebar-avatar").then((p) => {
       if (p && _.isFunction(p.restart)) p.restart(1);
     });
@@ -160,24 +162,24 @@ class desk_module extends LetcBox {
    */
   _updateAddmenu(data = {}) {
     this.ensurePart("addmenu").then((p) => {
-      let item = p.__items.children.first()
+      let item = p.__items.children.first();
       if (data.filetype && data.filetype === _a.hub) {
-        item.setLabel(LOCALE.FOLDER)
+        item.setLabel(LOCALE.FOLDER);
       } else {
-        item.setLabel(LOCALE.WORKSPACE)
+        item.setLabel(LOCALE.WORKSPACE);
       }
-    })
-    this.ensurePart('action-cluster').then((p) => {
-      p.setState(1)
-    })
+    });
+    this.ensurePart("action-cluster").then((p) => {
+      p.setState(1);
+    });
   }
 
   /**
-   * 
+   *
    */
   loadHome(data = {}) {
     this.closeMainPanels();
-    this.ensurePart('action-cluster').then((p) => p && p.setState(1));
+    this.ensurePart("action-cluster").then((p) => p && p.setState(1));
     Wm.reload();
   }
 
@@ -258,9 +260,11 @@ class desk_module extends LetcBox {
             const prepared = original(data) || [];
             return prepared.filter((it) => {
               if (!it || it.filetype !== _a.hub) return true;
-              return it.area === _a.share
-                || it.area === _a.private
-                || it.area === _a.restricted;
+              return (
+                it.area === _a.share ||
+                it.area === _a.private ||
+                it.area === _a.restricted
+              );
             });
           };
         }
@@ -284,7 +288,6 @@ class desk_module extends LetcBox {
 
       case "desk-wrapper":
         return (this.desk_wrapper = child);
-
 
       case "desk-tooltip":
         return (this.tooltip = child);
@@ -421,9 +424,9 @@ class desk_module extends LetcBox {
       this.warn("Use this link #/plugins?name=plugin-name&kind=entry_kind");
       return;
     }
-    let args = Visitor.parseModuleArgs()
-    if (args.hasOwnProperty('wm') && window.Wm) {
-      return window.Wm.route()
+    let args = Visitor.parseModuleArgs();
+    if (args.hasOwnProperty("wm") && window.Wm) {
+      return window.Wm.route();
     }
     this._pending = { available: false };
     if (localStorage.getItem("force-onboarding")) {
@@ -676,13 +679,13 @@ class desk_module extends LetcBox {
     if (!this._closeTimers) this._closeTimers = {};
 
     // Disable actions when the admin console is active
-    this.ensurePart('action-cluster').then((p) => {
-      if (['apps_main', 'settings_main'].includes(kind)) {
-        p.setState(0)
+    this.ensurePart("action-cluster").then((p) => {
+      if (["apps_main", "settings_main"].includes(kind)) {
+        p.setState(0);
       } else {
-        p.setState(1)
+        p.setState(1);
       }
-    })
+    });
 
     return this.ensurePart(pn).then((p) => {
       // Mid-flight close animation pending: snap the dying child out so
@@ -695,8 +698,7 @@ class desk_module extends LetcBox {
       }
 
       const keepAlive = this._isKeepAliveSlot(pn);
-      const sameKindMounted =
-        this._pendingKinds[pn] === kind && !p.isEmpty();
+      const sameKindMounted = this._pendingKinds[pn] === kind && !p.isEmpty();
 
       if (sameKindMounted && keepAlive) {
         const child = p.children.last();
@@ -801,20 +803,24 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   closeAllPanels() {
     this.closeOtherSidebarPanels();
-    return this.closeMainPanels()
+    return this.closeMainPanels();
   }
 
   /**
-   * 
+   *
    */
   onWorkspaceClosed() {
-    this.ensurePart("breadcrumb").then((p) => { p.loadDefault(0) })
-    this.ensurePart("workspace-main").then((p) => { p.collapseTree() })
-    Wm.headlessLayer.clear()
+    this.ensurePart("breadcrumb").then((p) => {
+      p.loadDefault(0);
+    });
+    this.ensurePart("workspace-main").then((p) => {
+      p.collapseTree();
+    });
+    Wm.headlessLayer.clear();
   }
 
   /**
@@ -827,11 +833,11 @@ class desk_module extends LetcBox {
     if (pointerDragged || !window.Wm) {
       return;
     }
-    this.debug("AAA:830", service)
+    this.debug("AAA:830", service);
     switch (service) {
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });
-        this.loadHome()
+        this.loadHome();
         return;
 
       // case _e.lock:
@@ -842,7 +848,7 @@ class desk_module extends LetcBox {
         // local Visitor profile so route() falls through to loadDefault().
         try {
           localStorage.removeItem("force-onboarding");
-        } catch (e) { }
+        } catch (e) {}
         {
           let p = Visitor.profile && Visitor.profile();
           if (p) p.onboarded = 1;
@@ -917,7 +923,7 @@ class desk_module extends LetcBox {
         document.documentElement.dataset.theme = next;
         try {
           localStorage.setItem("drumee.theme", next);
-        } catch (e) { }
+        } catch (e) {}
         const wp = { ...(Visitor.wallpaper() || {}), theme: next };
         if (typeof Visitor.setWallpaper === "function")
           Visitor.setWallpaper(wp);
@@ -978,9 +984,8 @@ class desk_module extends LetcBox {
         // partition-prep visibility flip can bail if the list is still
         // covered by an Apps/Settings panel during restart.
         this.closeAllPanels();
-        Wm.loadWorkspace(cmd)
-        return
-
+        Wm.loadWorkspace(cmd);
+        return;
 
       case "new-workspace":
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
@@ -1317,7 +1322,16 @@ class desk_module extends LetcBox {
    *
    */
   lazyClasses() {
-    for (var k of ["window_confirm", "media_uploader", "panel_trash", "panel_activity", "chat_p2p", "address_book", "apps_main", "settings_main"]) {
+    for (var k of [
+      "window_confirm",
+      "media_uploader",
+      "panel_trash",
+      "panel_activity",
+      "chat_p2p",
+      "address_book",
+      "apps_main",
+      "settings_main",
+    ]) {
       Kind.waitFor(k);
     }
   }
