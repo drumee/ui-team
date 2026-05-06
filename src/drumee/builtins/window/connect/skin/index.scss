@@ -345,20 +345,6 @@
     }
   }
 
-  &__message-container {
-    .message-text {
-      margin: 0 auto;
-      background-color: transparent;
-      padding: 6px 14px;
-      @include drumee.typo(
-        $color: var(--default-text-color),
-        $weight: 500,
-        $line: 20px,
-        $size: 14px
-      );
-    }
-  }
-
   &__commands-container {
     bottom: 18px;
     height: auto;
@@ -504,20 +490,6 @@
     );
   }
 
-  &__message-container {
-    .message-text {
-      padding: 10px;
-      background-color: transparent;
-      margin: auto 10px 90px 10px;
-      @include drumee.typo(
-        $color: var(--default-text-color),
-        $weight: 500,
-        $line: 20px,
-        $size: 16px
-      );
-    }
-  }
-
   &__timer-container {
     position: absolute;
     position: absolute;
@@ -579,17 +551,6 @@
     .window-connect__caller-name {
       color: var(--normal-fg, #0b0a21);
       opacity: 0.9;
-    }
-
-    .window-connect__message-container .message-text {
-      color: #d74e49;
-      font-weight: 600;
-      font-size: 14px;
-      line-height: 20px;
-      letter-spacing: 0;
-      padding: 8px 14px;
-      background-color: rgba(215, 78, 73, 0.08);
-      border-radius: 999px;
     }
 
     .ctrl-button.line {
