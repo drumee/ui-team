@@ -612,50 +612,49 @@ class desk_module extends LetcBox {
   /**
    *
    * @param {*} kind
+   * @param {*} pn  Slot name; tracked per-slot in `_pendingKinds`.
    */
-  _loadKind(p, kind) {
+  _loadKind(p, kind, pn) {
     p.feed({
       kind,
       uiHandler: [this],
     });
-    this.ensurePart("activity-panel").then((p) => {
-      p.setState(0);
-    });
-    this._pendingKind = kind;
+    if (!this._pendingKinds) this._pendingKinds = {};
+    if (pn) this._pendingKinds[pn] = kind;
   }
   /**
    *
    */
   togglePanel(kind, pn) {
+    if (!this._pendingKinds) this._pendingKinds = {};
+    if (!this._closeTimers) this._closeTimers = {};
     return this.ensurePart(pn).then((p) => {
-      // A close animation is mid-flight: cancel it and snap the dying child
-      // out so we don't render the next kind through a fading sibling
-      // (which is what makes the workspace appear to overlay apps/settings
-      // on the second navigation).
-      if (this._closeTimer) {
-        clearTimeout(this._closeTimer);
-        this._closeTimer = null;
+      // Mid-flight close animation: snap the dying child out so the next
+      // kind doesn't render through a fading sibling.
+      if (this._closeTimers[pn]) {
+        clearTimeout(this._closeTimers[pn]);
+        delete this._closeTimers[pn];
         p.clear();
-        this._pendingKind = null;
+        this._pendingKinds[pn] = null;
       }
 
       if (p.isEmpty()) {
-        this._loadKind(p, kind);
+        this._loadKind(p, kind, pn);
         return;
       }
 
-      if (this._pendingKind == kind) {
+      if (this._pendingKinds[pn] === kind) {
         const child = p.children.last();
         if (child && child.el) child.el.dataset.anim = "out";
-        this._closeTimer = setTimeout(() => {
-          this._closeTimer = null;
-          this._pendingKind = null;
+        this._closeTimers[pn] = setTimeout(() => {
+          delete this._closeTimers[pn];
+          this._pendingKinds[pn] = null;
           p.clear();
         }, 500);
         return;
       }
 
-      this._loadKind(p, kind);
+      this._loadKind(p, kind, pn);
     });
   }
 
@@ -666,12 +665,16 @@ class desk_module extends LetcBox {
    * window manager / grid view is not left occluded.
    */
   _closeMainPanels() {
-    this._pendingKind = null;
-    if (this._closeTimer) {
-      clearTimeout(this._closeTimer);
-      this._closeTimer = null;
-    }
+    if (!this._pendingKinds) this._pendingKinds = {};
+    if (!this._closeTimers) this._closeTimers = {};
     const slots = ["settings-main-slot", "trash-panel"];
+    for (const pn of slots) {
+      if (this._closeTimers[pn]) {
+        clearTimeout(this._closeTimers[pn]);
+        delete this._closeTimers[pn];
+      }
+      this._pendingKinds[pn] = null;
+    }
     return Promise.all(
       slots.map((pn) =>
         this.ensurePart(pn).then((p) => {

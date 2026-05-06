@@ -1499,6 +1499,7 @@
   $storage-doc:    #433cc5;
   $storage-media:  #847dff;
   $storage-avail:  #65d0ea;
+  $storage-other:  #b8b8d6;
   $storage-cyan:   #38a2ce;
   $storage-cyan-soft: rgba(137, 228, 246, 0.20);
   $storage-policy-bg: rgba(176, 242, 255, 0.20);
@@ -1746,6 +1747,7 @@
     &--documents { flex: 18; background: $storage-doc; }
     &--media     { flex: 21; background: $storage-media; }
     &--available { flex: 61; background: $storage-avail; }
+    &--other     { background: $storage-other; }
   }
 
   &__capacity-legend {
@@ -1769,6 +1771,7 @@
     &--documents { background: $storage-doc; }
     &--media     { background: $storage-media; }
     &--available { background: $storage-avail; }
+    &--other     { background: $storage-other; }
   }
 
   &__capacity-legend-text { gap: 0; }

@@ -2701,5 +2701,9 @@
   "CAN_EDIT_UPLOAD": "Can Edit & Upload",
   "PUBLIC_LINK": "Public Link",
   "JOIN_WORKSPACE": "Join Workspace",
-  "SHARED_BY_LINK": "Shared by link"
+  "SHARED_BY_LINK": "Shared by link",
+  "HUB_USED_STORAGE": "HUB USED STORAGE",
+  "HUB_USAGE": "Hub usage",
+  "AVAILABLE_LC": "available",
+  "UPGRADE_TO_INCREASE_CAPACITY": "Upgrade to increase capacity."
 }
