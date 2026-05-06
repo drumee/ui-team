@@ -115,6 +115,14 @@ class __lib_messenger extends LetcBox {
     this.__content.reset();
     this.__submit.el.dataset.state = _a.idle;
     this.__wrapperPopup.clear();
+    // The editable template renders whitespace ("\n    \n  ") inside the
+    // contenteditable when content is empty, which the browser briefly lays
+    // out as 3 lines (~72px). Strip it so the input stays at its single-line
+    // height during reset.
+    const inner = this.__content && this.__content.el && this.__content.el.querySelector(".note-content");
+    if (inner && !inner.textContent.trim()) {
+      inner.innerHTML = "";
+    }
   }
 
   /**
@@ -463,7 +471,14 @@ class __lib_messenger extends LetcBox {
   __dispatchRest(method, data, socket) {
     if (this.mget(_a.api) && (this.mget(_a.api).service === method)) {
       if (this.mget('autoclear')) {
-        return this.__content.reset();
+        this.__content.reset();
+        // See resetMessage(): the template's whitespace makes the input
+        // briefly grow to 3 line-heights. Strip it.
+        const inner = this.__content && this.__content.el && this.__content.el.querySelector(".note-content");
+        if (inner && !inner.textContent.trim()) {
+          inner.innerHTML = "";
+        }
+        return;
       }
     }
   }

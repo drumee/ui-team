@@ -3,7 +3,9 @@ class __chat_p2p extends LetcBox {
   constructor(...args) {
     super(...args);
     this.getCurrentApi = this.getCurrentApi.bind(this);
+    this.getContactsApi = this.getContactsApi.bind(this);
     this.openChat = this.openChat.bind(this);
+    this._onDocClick = this._onDocClick.bind(this);
   }
 
   initialize(opt = {}) {
@@ -17,6 +19,7 @@ class __chat_p2p extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    document.removeEventListener("mousedown", this._onDocClick);
   }
 
   /**
@@ -28,6 +31,20 @@ class __chat_p2p extends LetcBox {
       flag: _a.contact,
       option: _a.active,
       hub_id: Visitor.get(_a.id)
+    };
+  }
+
+  /**
+   * Returns the API config for the compose popup's contact list.
+   * Reuses chat_rooms so we get the same data shape as the inbox list,
+   * which feeds straight into openChat().
+   */
+  getContactsApi() {
+    return {
+      service: SERVICE.chat.chat_rooms,
+      flag: _a.contact,
+      option: _a.active,
+      hub_id: Visitor.get(_a.id),
     };
   }
 
@@ -54,9 +71,76 @@ class __chat_p2p extends LetcBox {
           if (first && first.el && first.el.style.display !== 'none') this.openChat(first);
         })
         break;
+
+      case 'compose-popup':
+        this._composePopup = child;
+        document.addEventListener("mousedown", this._onDocClick);
+        break;
+
+      case 'compose-list':
+        this._composeList = child;
+        if (child.collection) {
+          child.collection.comparator = item => -item.get(_a.ctime);
+        }
+        break;
+
+      case 'compose-search':
+        this._composeSearch = child;
+        break;
+
+      case 'all-read-empty':
+        this._allReadEmpty = child;
+        if (child.el) child.el.dataset.state = 0;
+        break;
+
       default:
         if (super.onPartReady) super.onPartReady(child, pn);
     }
+  }
+
+  _toggleComposePopup(force) {
+    if (!this._composePopup || !this._composePopup.el) return;
+    const cur = this._composePopup.el.dataset.state === "1";
+    const next = typeof force === "boolean" ? force : !cur;
+    this._composePopup.el.dataset.state = next ? 1 : 0;
+    if (next) {
+      const inputEl = this._composeSearch && this._composeSearch.el && this._composeSearch.el.querySelector("input");
+      if (inputEl) {
+        inputEl.value = "";
+        setTimeout(() => inputEl.focus(), 0);
+      }
+      if (this._composeList && _.isFunction(this._composeList.restart)) {
+        this._composeList.restart();
+      }
+      this._filterComposeList("");
+    }
+  }
+
+  _onDocClick(e) {
+    if (!this._composePopup || !this._composePopup.el) return;
+    if (this._composePopup.el.dataset.state !== "1") return;
+    if (this._composePopup.el.contains(e.target)) return;
+    if (this.el && this.el.querySelector(`.${this.fig.family}__compose-btn`)?.contains(e.target)) return;
+    this._toggleComposePopup(false);
+  }
+
+  _filterComposeList(text) {
+    if (!this._composeList || !this._composeList.children) return;
+    const q = (text || "").trim().toLowerCase();
+    this._composeList.children.forEach((item) => {
+      if (!item.el) return;
+      if (!q) {
+        item.el.style.display = "";
+        return;
+      }
+      const name = [
+        item.mget && item.mget(_a.firstname),
+        item.mget && item.mget(_a.lastname),
+        item.mget && item.mget(_a.fullname),
+        item.mget && item.mget(_a.email),
+      ].filter(Boolean).join(" ").toLowerCase();
+      item.el.style.display = name.includes(q) ? "" : "none";
+    });
   }
 
   /**
@@ -263,6 +347,20 @@ class __chat_p2p extends LetcBox {
         this._applyFilter();
         break;
 
+      case 'toggle-compose':
+        this._toggleComposePopup();
+        break;
+
+      case 'compose-search': {
+        const v = (args && (args.value || (args.target && args.target.value))) || (trigger.getValue && trigger.getValue()) || "";
+        this._filterComposeList(v);
+        break;
+      }
+
+      case 'compose-pick':
+        this._toggleComposePopup(false);
+        return this.openChat(trigger);
+
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);
     }
@@ -331,26 +429,38 @@ class __chat_p2p extends LetcBox {
     if (_.isFunction(item.updateNotification)) item.updateNotification();
 
     if (list.collection && list.collection.sort) list.collection.sort();
+    this._applyFilter();
   }
 
   _applyFilter() {
     const list = this._contactList;
     if (!list || !list.children) return;
     const filter = this._activeFilter || 'all';
+    let visible = 0;
     list.children.forEach(item => {
       if (!item.el) return;
       if (filter === 'all') {
         item.el.style.display = '';
+        visible += 1;
         return;
       }
       const count = ~~(item.mget('room_count') || 0);
       if (filter === 'unread') {
-        item.el.style.display = count > 0 ? '' : 'none';
+        const show = count > 0;
+        item.el.style.display = show ? '' : 'none';
+        if (show) visible += 1;
       } else if (filter === 'mentions') {
         const hasMention = ~~(item.mget('has_mention') || 0) > 0;
         item.el.style.display = hasMention ? '' : 'none';
+        if (hasMention) visible += 1;
       }
     });
+    // Show "All read" only when the user is on the Unread tab and nothing
+    // matches (i.e. there ARE rooms, just none with unread messages).
+    if (this._allReadEmpty && this._allReadEmpty.el) {
+      const showAllRead = filter === 'unread' && visible === 0 && list.children.length > 0;
+      this._allReadEmpty.el.dataset.state = showAllRead ? 1 : 0;
+    }
   }
 
   _resetContactItemCount(data) {
@@ -362,6 +472,7 @@ class __chat_p2p extends LetcBox {
     item.mset('room_count', 0);
     item.mset('has_mention', 0);
     if (_.isFunction(item.updateNotification)) item.updateNotification();
+    this._applyFilter();
   }
 }
 

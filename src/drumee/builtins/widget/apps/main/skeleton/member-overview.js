@@ -1,3 +1,5 @@
+// Admin Member tab — workspace overview. Reuses the Permissions tab card
+// visual; click drills into the per-hub member list instead of folders.
 const folderTemplate = require("../../../../media/grid/template/folder");
 
 const TAG_DEFS = {
@@ -45,14 +47,18 @@ function workspaceCard(ui, ws) {
   const pfx = ui.fig.family;
   const tags = Array.isArray(ws.tags) ? ws.tags : [];
   const subtitleParts = [];
+  if (ws.member_count != null) {
+    subtitleParts.push(
+      `${ws.member_count} ${LOCALE.MEMBERS_LOWER || "members"}`
+    );
+  }
   if (ws.updated) subtitleParts.push(ws.updated);
-  if (ws.size) subtitleParts.push(ws.size);
   const area = ws.area || "private";
   return Skeletons.Box.X({
     className: `${pfx}__perm-card`,
-    service: "apps-perm-open-workspace",
+    service: "apps-member-open-workspace",
     uiHandler: [ui],
-    workspace_id: ws.id,
+    workspace_id: ws.id || ws.hub_id,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__perm-card-body`,
@@ -64,7 +70,7 @@ function workspaceCard(ui, ws) {
               area,
               filetype: _a.hub,
               role: "desk",
-              widgetId: `perm-${ws.id}`,
+              widgetId: `member-${ws.id || ws.hub_id}`,
               isAttachment: 1,
             }),
           }),
@@ -76,7 +82,7 @@ function workspaceCard(ui, ws) {
                 kids: [
                   Skeletons.Note({
                     className: `${pfx}__perm-title`,
-                    content: ws.name,
+                    content: ws.name || ws.hub_name || ws.hub_id,
                   }),
                   Skeletons.Note({
                     className: `${pfx}__perm-subtitle`,
@@ -113,7 +119,7 @@ function emptyState(ui, message) {
   });
 }
 
-export default function permission_view(ui) {
+export default function member_overview(ui) {
   const pfx = ui.fig.family;
   const workspaces = ui._permWorkspaces || [];
   let body;
@@ -136,9 +142,20 @@ export default function permission_view(ui) {
     Skeletons.Box.X({
       className: `${pfx}__perm-header`,
       kids: [
-        Skeletons.Note({
-          className: `${pfx}__perm-page-title`,
-          content: LOCALE.WORKSPACE_OVERVIEW || "Workspace Overview",
+        Skeletons.Box.Y({
+          className: `${pfx}__perm-heading-block`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__perm-page-title`,
+              content: LOCALE.SELECT_WORKSPACE || "Select a workspace",
+            }),
+            Skeletons.Note({
+              className: `${pfx}__perm-page-subtitle`,
+              content:
+                LOCALE.SELECT_WORKSPACE_TO_MANAGE_MEMBERS ||
+                "Pick a workspace to manage its members.",
+            }),
+          ],
         }),
       ],
     }),
