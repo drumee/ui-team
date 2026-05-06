@@ -647,6 +647,51 @@ function adminMemberDetail(ui) {
   return [back, pageHeader(ui), statsRow(ui), table(ui), pagination(ui)];
 }
 
+function adminUpsellOverlay(ui) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__admin-upsell ${pfx}__upsell`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${pfx}__upsell-card`,
+        kids: [
+          Skeletons.Image.Svg({ ico: "cloud-pause", className: `${pfx}__upsell-icon` }),
+          Skeletons.Box.Y({
+            className: `${pfx}__upsell-text`,
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__upsell-title`,
+                content: LOCALE.UNLOCK_ADMIN_CONSOLE || "Unlock Admin Console",
+              }),
+              Skeletons.Note({
+                className: `${pfx}__upsell-desc`,
+                content:
+                  LOCALE.UNLOCK_ADMIN_DESC ||
+                  "Workspace administration — member roles, permissions and storage controls — is part of the Enterprise Premium tier. Upgrade to manage your organization end-to-end.",
+              }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__upsell-btn`,
+            service: "apps-admin-upgrade",
+            uiHandler: [ui],
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__upsell-btn-label`,
+                content: LOCALE.UPGRADE_YOUR_PLAN || "Upgrade your plan",
+              }),
+              Skeletons.Note({
+                className: `${pfx}__upsell-btn-arrow`,
+                content: "→",
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 export default function apps_main_skeleton(ui) {
   const pfx = ui.fig.family;
   let content;
@@ -685,6 +730,9 @@ export default function apps_main_skeleton(ui) {
       kids: content,
     }),
   ];
+  if (ui._role === "admin" && !ui._adminUnlocked) {
+    root.push(adminUpsellOverlay(ui));
+  }
   if (ui._showApplyConfirm) {
     root.push(require("./apply-confirm").default(ui));
   }

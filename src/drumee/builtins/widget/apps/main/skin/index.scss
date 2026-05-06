@@ -35,7 +35,10 @@
     overflow: hidden;
     background: $bg;
     font-family: "Geist", system-ui, sans-serif;
+    position: relative;
   }
+
+  &__admin-upsell { z-index: 50; }
 
   // ── Tabs bar ──────────────────────────────────────────────
   &__tabs {
@@ -1432,16 +1435,10 @@
     height: 60px;
     flex-shrink: 0;
 
-    // The sprite build strips path fills. The cloud-pause icon has two
-    // paths (outer halo + inner cloud) that need different colors —
-    // restore them by index.
     svg {
       display: block;
       width: 70px;
       height: 60px;
-
-      path:nth-of-type(1) { fill: #ffffff; }
-      path:nth-of-type(2) { fill: $purple-deep; }
     }
   }
 

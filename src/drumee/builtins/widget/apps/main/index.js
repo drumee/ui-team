@@ -997,6 +997,10 @@ class apps_main extends LetcBox {
         this._auditUnlocked = true;
         return this._render();
 
+      case "apps-admin-upgrade":
+        this._adminUnlocked = true;
+        return this._render();
+
       case "apps-audit-export":
         return this._exportAuditLogs();
 
