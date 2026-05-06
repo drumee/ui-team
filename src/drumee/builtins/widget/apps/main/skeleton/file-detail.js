@@ -1,18 +1,17 @@
 // File-detail screen — opened when the user clicks any file row in the
-// Admin Storage / File Versioning views. The structural document body
-// (sections) remains a Figma placeholder; metadata and versions come from
-// admin.get_file_version_detail when loaded into ui._fileDetail.
-const FALLBACK = require("./file-detail-data").default;
+// Admin Storage / File Versioning views. Metadata and versions come from
+// admin.get_file_version_detail; the document body preview is intentionally
+// not rendered (no preview pipeline yet — tracked separately).
 
 function resolve(ui) {
   const live = ui._fileDetail || {};
+  const active = ui._fvActiveFile || {};
   return {
-    title: live.title || (ui._fvActiveFile && ui._fvActiveFile.name) || FALLBACK.title,
-    filename: live.filename || (ui._fvActiveFile && ui._fvActiveFile.name) || FALLBACK.filename,
-    size: live.size || FALLBACK.size,
-    retention: live.retention || FALLBACK.retention,
-    sections: Array.isArray(live.sections) && live.sections.length ? live.sections : FALLBACK.sections,
-    versions: Array.isArray(live.versions) && live.versions.length ? live.versions : FALLBACK.versions,
+    title: live.title || live.filename || active.name || "",
+    filename: live.filename || active.name || "",
+    size: live.size || active.size || "",
+    retention: live.retention || (LOCALE.RETENTION_NONE || "—"),
+    versions: Array.isArray(live.versions) ? live.versions : [],
   };
 }
 
@@ -77,51 +76,6 @@ function previewHeader(pfx, data) {
   });
 }
 
-function bulletList(pfx, items) {
-  return Skeletons.Box.Y({
-    className: `${pfx}__filed-bullets`,
-    kids: items.map((b) =>
-      Skeletons.Note({
-        className: `${pfx}__filed-bullet`,
-        content: `• ${b}`,
-      })
-    ),
-  });
-}
-
-function section(pfx, sec) {
-  const kids = [
-    Skeletons.Note({
-      className: `${pfx}__filed-section-title`,
-      content: sec.heading,
-    }),
-  ];
-  if (sec.body) {
-    kids.push(
-      Skeletons.Note({
-        className: `${pfx}__filed-section-body`,
-        content: sec.body,
-      })
-    );
-  }
-  if (sec.bullets) kids.push(bulletList(pfx, sec.bullets));
-  if (sec.subsections) {
-    sec.subsections.forEach((sub) => {
-      kids.push(
-        Skeletons.Note({
-          className: `${pfx}__filed-subsection-title`,
-          content: sub.title,
-        })
-      );
-      if (sub.bullets) kids.push(bulletList(pfx, sub.bullets));
-    });
-  }
-  return Skeletons.Box.Y({
-    className: `${pfx}__filed-section`,
-    kids,
-  });
-}
-
 function previewBody(ui, data) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
@@ -129,9 +83,13 @@ function previewBody(ui, data) {
     kids: [
       Skeletons.Note({
         className: `${pfx}__filed-doc-title`,
-        content: data.title,
+        content: data.title || data.filename,
       }),
-      ...data.sections.map((sec) => section(pfx, sec)),
+      Skeletons.Note({
+        className: `${pfx}__filed-preview-empty`,
+        content: LOCALE.FILE_PREVIEW_UNAVAILABLE
+          || "Inline preview is not available in the admin console.",
+      }),
     ],
   });
 }
@@ -238,7 +196,7 @@ function versionEntry(ui, version) {
           }),
         ],
       }),
-      // Middle row: file pill (icon + name) + optional trash
+      // Middle row: file pill (icon + name)
       Skeletons.Box.X({
         className: `${pfx}__filed-version-row`,
         kids: [
@@ -260,16 +218,7 @@ function versionEntry(ui, version) {
               }),
             ],
           }),
-          version.active
-            ? null
-            : Skeletons.Button.Svg({
-                ico: "trash",
-                className: `${pfx}__filed-version-delete`,
-                service: "apps-fv-delete-version",
-                uiHandler: [ui],
-                version_id: version.id,
-              }),
-        ].filter(Boolean),
+        ],
       }),
       // Bottom: editor info
       Skeletons.Box.X({
@@ -328,7 +277,14 @@ function versionHistoryCard(ui, data) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__filed-version-list`,
-        kids: (data.versions || []).map((v) => versionEntry(ui, v)),
+        kids: (data.versions || []).length
+          ? data.versions.map((v) => versionEntry(ui, v))
+          : [
+              Skeletons.Note({
+                className: `${pfx}__filed-version-empty`,
+                content: LOCALE.NO_VERSIONS_YET || "No prior versions for this file.",
+              }),
+            ],
       }),
       Skeletons.Box.Y({
         className: `${pfx}__filed-history-actions`,
