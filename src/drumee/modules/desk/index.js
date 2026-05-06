@@ -639,12 +639,7 @@ class desk_module extends LetcBox {
         this._pendingKind = null;
       }
 
-      if (p.isEmpty()) {
-        this._loadKind(p, kind);
-        return;
-      }
-
-      if (this._pendingKind == kind) {
+      if (!p.isEmpty() && this._pendingKind == kind) {
         const child = p.children.last();
         if (child && child.el) child.el.dataset.anim = "out";
         this._closeTimer = setTimeout(() => {
@@ -655,8 +650,41 @@ class desk_module extends LetcBox {
         return;
       }
 
+      this._closeOtherSidebarPanels(pn);
       this._loadKind(p, kind);
     });
+  }
+
+  /**
+   * Enforce mutual exclusion between sidebar panels: close every main
+   * sidebar surface except the one identified by `except`. Activity
+   * panel toggles via setState (it slides), the other slots are content
+   * containers and get cleared.
+   */
+  _closeOtherSidebarPanels(except) {
+    if (except !== "chat-panel" && except !== "settings-main-slot" && except !== "trash-panel") {
+      this._pendingKind = null;
+      if (this._closeTimer) {
+        clearTimeout(this._closeTimer);
+        this._closeTimer = null;
+      }
+    }
+    const slots = ["chat-panel", "settings-main-slot", "trash-panel"];
+    const tasks = slots
+      .filter((pn) => pn !== except)
+      .map((pn) =>
+        this.ensurePart(pn).then((p) => {
+          if (p && !p.isEmpty()) p.clear();
+        }),
+      );
+    if (except !== "activity-panel") {
+      tasks.push(
+        this.ensurePart("activity-panel").then((p) => {
+          if (p) p.setState(0);
+        }),
+      );
+    }
+    return Promise.all(tasks);
   }
 
   /**
@@ -666,19 +694,7 @@ class desk_module extends LetcBox {
    * window manager / grid view is not left occluded.
    */
   _closeMainPanels() {
-    this._pendingKind = null;
-    if (this._closeTimer) {
-      clearTimeout(this._closeTimer);
-      this._closeTimer = null;
-    }
-    const slots = ["settings-main-slot", "trash-panel"];
-    return Promise.all(
-      slots.map((pn) =>
-        this.ensurePart(pn).then((p) => {
-          if (p && !p.isEmpty()) p.clear();
-        }),
-      ),
-    );
+    return this._closeOtherSidebarPanels();
   }
 
   /**
@@ -730,9 +746,7 @@ class desk_module extends LetcBox {
           p.activityState = state;
           p.setState(state);
           if (state) {
-            this.ensurePart("trash-panel").then((p) => {
-              p.clear();
-            });
+            this._closeOtherSidebarPanels("activity-panel");
           }
         });
 
