@@ -154,6 +154,22 @@
     );
   }
 
+  &__message-container {
+    .message-text {
+      padding: 10px;
+      background-color: var(--default-transparent-black);
+      margin: 10px;
+      text-align: center;
+      border-radius: var(--border-radius); //3px;
+      @include drumee.typo(
+        $color: var(--default-text-reverse),
+        $weight: 400,
+        $line: 20px,
+        $size: 16px
+      );
+    }
+  }
+
   &__timer-container {
     position: absolute;
     position: absolute;
