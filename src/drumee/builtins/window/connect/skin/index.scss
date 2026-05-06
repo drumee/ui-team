@@ -89,7 +89,8 @@
   &__body {
     align-items: center;
     justify-content: center;
-    background-color: var(--connect-video-background);
+    background-color: var(--normal-bg-100);
+    border-radius: var(--corner-radius-5);
     z-index: 100;
     width: 100%;
     height: 100%;
@@ -182,7 +183,6 @@
     }
 
     .user-profile__main {
-      background-color: #5e5e5e !important;
       justify-content: center;
       align-items: center;
 
@@ -345,20 +345,6 @@
     }
   }
 
-  &__message-container {
-    .message-text {
-      margin: 0 auto;
-      background-color: transparent;
-      padding: 6px 14px;
-      @include drumee.typo(
-        $color: var(--default-text-color),
-        $weight: 500,
-        $line: 20px,
-        $size: 14px
-      );
-    }
-  }
-
   &__commands-container {
     bottom: 18px;
     height: auto;
@@ -505,20 +491,6 @@
     );
   }
 
-  &__message-container {
-    .message-text {
-      padding: 10px;
-      background-color: transparent;
-      margin: auto 10px 90px 10px;
-      @include drumee.typo(
-        $color: var(--default-text-color),
-        $weight: 500,
-        $line: 20px,
-        $size: 16px
-      );
-    }
-  }
-
   &__timer-container {
     position: absolute;
     position: absolute;
@@ -582,17 +554,6 @@
       opacity: 0.9;
     }
 
-    .window-connect__message-container .message-text {
-      color: #d74e49;
-      font-weight: 600;
-      font-size: 14px;
-      line-height: 20px;
-      letter-spacing: 0;
-      padding: 8px 14px;
-      background-color: rgba(215, 78, 73, 0.08);
-      border-radius: 999px;
-    }
-
     .ctrl-button.line {
       background-color: var(--normal-bg-90, #f2f2f7);
       color: var(--normal-fg, #0b0a21);
@@ -603,4 +564,15 @@
       }
     }
   }
+}
+
+.window__message-container {
+  position: absolute;
+  background-color: var(--normal-bg-80);
+  padding: var(--spacer-5);
+  width: 300px;
+  color: var(--normal-fg-10);
+  border-radius: var(--corner-radius-3);
+  align-items: center;
+  top: 40px;
 }
