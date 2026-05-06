@@ -35,7 +35,10 @@
     overflow: hidden;
     background: $bg;
     font-family: "Geist", system-ui, sans-serif;
+    position: relative;
   }
+
+  &__admin-upsell { z-index: 50; }
 
   // ── Tabs bar ──────────────────────────────────────────────
   &__tabs {
