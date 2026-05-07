@@ -20,6 +20,7 @@
     height: 100%;
     min-width: auto;
     position: relative;
+    border-radius: 0;
 
     // Loading spinner shown while the meeting layout is still mounting
     // (between feed(init) and feed(skeleton) after join() resolves).
@@ -536,7 +537,7 @@
     }
 
     &[data-on="1"] {
-      color: #ffb400;
+      color: #847eff;
     }
 
     &:hover {

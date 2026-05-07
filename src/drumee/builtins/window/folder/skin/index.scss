@@ -99,7 +99,6 @@
       padding: 0 21.9px;
       background-color: var(--normal-bg-80); // Figma Grey/30
       box-sizing: border-box;
-      border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
       overflow: visible;
       position: relative;
       // Body panels sit at z-index 100 (skin/group/body/main.scss).
@@ -407,7 +406,7 @@
       }
 
       .window-folder__control-icon svg {
-        transition: transform .2s ease;
+        transition: transform 0.2s ease;
       }
     }
 
@@ -417,7 +416,7 @@
 
     &__control-icon {
       svg {
-        transition: transform .2s ease;
+        transition: transform 0.2s ease;
       }
 
       &[data-state="1"] svg {
@@ -651,11 +650,21 @@
   &__rename-folder-title,
   &__settings-action-title,
   &__tracker-title {
-    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 18px,
+      $line: 24px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
   }
 
   &__create-folder-subtitle {
-    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--normal-fg-20));
+    @include drumee.typo(
+      $size: 12px,
+      $line: 17px,
+      $weight: 400,
+      $color: var(--normal-fg-20)
+    );
   }
 
   &__create-folder-close,
@@ -677,7 +686,12 @@
   }
 
   &__create-folder-label {
-    @include drumee.typo($size: 12px, $line: 14px, $weight: 600, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 12px,
+      $line: 14px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
   }
 
   &__create-folder-entry,
@@ -690,7 +704,12 @@
       border: 0;
       border-radius: 8px;
       background: var(--normal-bg-elevated);
-      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--normal-fg-20));
+      @include drumee.typo(
+        $size: 12px,
+        $line: 17px,
+        $weight: 400,
+        $color: var(--normal-fg-20)
+      );
     }
   }
 
@@ -701,7 +720,12 @@
       border: 1px solid rgba(11, 10, 33, 0.08);
       border-radius: 10px;
       box-shadow: 0 1px 2px rgba(11, 10, 33, 0.04);
-      @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--normal-fg-10));
+      @include drumee.typo(
+        $size: 13px,
+        $line: 18px,
+        $weight: 500,
+        $color: var(--normal-fg-10)
+      );
     }
   }
 
@@ -721,7 +745,12 @@
     border-radius: 4px;
     text-align: center;
     cursor: pointer;
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: #ffffff
+    );
 
     &.primary {
       background: #433cc5;
@@ -795,7 +824,12 @@
   &__settings-action-label,
   &__settings-action-section-title,
   &__settings-action-member-name {
-    @include drumee.typo($size: 12px, $line: 18px, $weight: 600, $color: #0b0a21);
+    @include drumee.typo(
+      $size: 12px,
+      $line: 18px,
+      $weight: 600,
+      $color: #0b0a21
+    );
   }
 
   &__settings-action-item &__settings-action-label,
@@ -865,7 +899,12 @@
       padding: 0;
       border: 0;
       background: transparent;
-      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #0b0a21);
+      @include drumee.typo(
+        $size: 12px,
+        $line: 17px,
+        $weight: 400,
+        $color: #0b0a21
+      );
 
       &::placeholder {
         color: #aeaeb2;
@@ -888,7 +927,12 @@
 
   &__settings-action-role-label {
     min-width: 0;
-    @include drumee.typo($size: 10px, $line: 14px, $weight: 400, $color: #65656c);
+    @include drumee.typo(
+      $size: 10px,
+      $line: 14px,
+      $weight: 400,
+      $color: #65656c
+    );
     @include drumee.overflow-text;
   }
 
@@ -911,7 +955,12 @@
     border-radius: 4px;
     background: #433cc5;
     cursor: pointer;
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: #ffffff
+    );
   }
 
   &__settings-action-member-row {
@@ -945,11 +994,23 @@
     height: 32px;
     border-radius: 12px;
     overflow: hidden;
-    @include drumee.typo($size: 10px, $line: 15px, $weight: 600, $color: #e4e3ff);
+    @include drumee.typo(
+      $size: 10px,
+      $line: 15px,
+      $weight: 600,
+      $color: #e4e3ff
+    );
 
-    &.primary { background: #5950ff; }
-    &.secondary { background: #38a2ce; color: #d8f9fd; }
-    &.dark { background: #3c3989; }
+    &.primary {
+      background: #5950ff;
+    }
+    &.secondary {
+      background: #38a2ce;
+      color: #d8f9fd;
+    }
+    &.dark {
+      background: #3c3989;
+    }
   }
 
   &__settings-action-member-name {
@@ -1071,10 +1132,18 @@
     }
 
     // Reduce paddings everywhere so 200-220px wide slots still fit content.
-    .widget-meeting__header { padding: 16px 12px !important; }
-    .widget-meeting__section-label { padding: 12px 12px 4px !important; }
-    .widget-meeting__members-list { padding: 4px 8px !important; }
-    .widget-meeting-member__ui { padding: 8px !important; }
+    .widget-meeting__header {
+      padding: 16px 12px !important;
+    }
+    .widget-meeting__section-label {
+      padding: 12px 12px 4px !important;
+    }
+    .widget-meeting__members-list {
+      padding: 4px 8px !important;
+    }
+    .widget-meeting-member__ui {
+      padding: 8px !important;
+    }
   }
 }
 
@@ -1134,7 +1203,12 @@
   .window-topbar-title__wrapper .name {
     max-width: 360px;
     min-width: 0;
-    @include drumee.typo($size: 18px, $line: 26px, $weight: 600, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 18px,
+      $line: 26px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
     @include drumee.overflow-text;
   }
 
@@ -1144,7 +1218,12 @@
     padding: 4px 8px;
     border-radius: 2px;
     background: rgba(150, 99, 255, 0.15);
-    @include drumee.typo($size: 11px, $line: 11px, $weight: 600, $color: #884eff);
+    @include drumee.typo(
+      $size: 11px,
+      $line: 11px,
+      $weight: 600,
+      $color: #884eff
+    );
     letter-spacing: 0.44px;
     text-transform: uppercase;
   }
@@ -1164,7 +1243,12 @@
     border-radius: 4px;
     background: var(--normal-bg-90);
     color: var(--normal-fg-10);
-    @include drumee.typo($size: 13px, $line: 16px, $weight: 600, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 13px,
+      $line: 16px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
 
     svg {
       width: 14px;
@@ -1283,28 +1367,49 @@
     padding: 0 0 4px;
     border-bottom: 2px solid transparent;
     background: transparent;
-    @include drumee.typo($size: 13px, $line: 1, $weight: 700, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 13px,
+      $line: 1,
+      $weight: 700,
+      $color: var(--normal-fg-10)
+    );
 
     .window-folder__filter-tab,
     .note-content {
-      @include drumee.typo($size: 13px, $line: 1, $weight: 700, $color: var(--normal-fg-10));
+      @include drumee.typo(
+        $size: 13px,
+        $line: 1,
+        $weight: 700,
+        $color: var(--normal-fg-10)
+      );
     }
 
     &[data-state="1"],
     &[data-radiotoggle="on"] {
       padding-bottom: 6px;
       border-bottom-color: var(--area-private);
-      @include drumee.typo($size: 13px, $line: 1, $weight: 800, $color: var(--normal-fg-10));
+      @include drumee.typo(
+        $size: 13px,
+        $line: 1,
+        $weight: 800,
+        $color: var(--normal-fg-10)
+      );
 
       .window-folder__filter-tab,
       .note-content {
-        @include drumee.typo($size: 13px, $line: 1, $weight: 800, $color: var(--normal-fg-10));
+        @include drumee.typo(
+          $size: 13px,
+          $line: 1,
+          $weight: 800,
+          $color: var(--normal-fg-10)
+        );
       }
     }
   }
 
   &__filter-bar[data-area="personal"] &__filter-tab-main[data-state="1"],
-  &__filter-bar[data-area="personal"] &__filter-tab-main[data-radiotoggle="on"] {
+  &__filter-bar[data-area="personal"]
+    &__filter-tab-main[data-radiotoggle="on"] {
     border-bottom-color: var(--area-personal);
   }
   &__filter-bar[data-area="share"] &__filter-tab-main[data-state="1"],
@@ -1338,7 +1443,9 @@
     align-items: flex-start;
     justify-content: flex-start;
     grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
-    grid-auto-rows: var(--grid-cell-h-file); // single-list default = file height
+    grid-auto-rows: var(
+      --grid-cell-h-file
+    ); // single-list default = file height
     gap: var(--grid-gap);
     padding: 24px; // folder window dialog uses tighter padding than home
     margin: 0;
@@ -1365,8 +1472,12 @@
       grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
       gap: var(--grid-gap);
     }
-    .workspace-section { grid-auto-rows: var(--grid-cell-h-folder); }
-    .folder-section    { grid-auto-rows: var(--grid-cell-h-folder); }
+    .workspace-section {
+      grid-auto-rows: var(--grid-cell-h-folder);
+    }
+    .folder-section {
+      grid-auto-rows: var(--grid-cell-h-folder);
+    }
     .file-section {
       grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
       grid-auto-rows: var(--grid-cell-h-file);
@@ -1391,7 +1502,10 @@
   .window__filter__main,
   .media-row__main {
     min-width: 0;
-    grid-template-columns: 44px 44px minmax(140px, 1fr) minmax(120px, 150px) 76px 76px;
+    grid-template-columns: 44px 44px minmax(140px, 1fr) minmax(
+        120px,
+        150px
+      ) 76px 76px;
   }
 
   .window__filter__main {
@@ -1406,7 +1520,12 @@
     padding: 0 6px;
     flex-wrap: nowrap;
     overflow: hidden;
-    @include drumee.typo($size: 12px, $line: 16px, $weight: 700, $color: var(--primary-400, #4a90e2));
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 700,
+      $color: var(--primary-400, #4a90e2)
+    );
 
     svg {
       width: 16px;
@@ -1438,7 +1557,12 @@
   }
 
   .media-row__main {
-    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 500,
+      $color: var(--normal-fg-10)
+    );
   }
 
   .media-row__field-filename,
@@ -1449,7 +1573,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 500,
+      $color: var(--normal-fg-10)
+    );
   }
 
   .window__chat-label {
@@ -1458,7 +1587,12 @@
     padding: 16px;
     border-bottom: 1px solid var(--border-muted);
     font-family: "Geist Mono", monospace;
-    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 10px,
+      $line: 1,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
@@ -1527,11 +1661,21 @@
       .note-content {
         min-height: 16px;
         padding: 0 8px;
-        @include drumee.typo($size: 12px, $line: 16.8px, $weight: 400, $color: var(--normal-fg-10));
+        @include drumee.typo(
+          $size: 12px,
+          $line: 16.8px,
+          $weight: 400,
+          $color: var(--normal-fg-10)
+        );
 
         &::before {
           color: var(--normal-fg-50);
-          @include drumee.typo($size: 12px, $line: 16.8px, $weight: 400, $color: var(--normal-fg-50));
+          @include drumee.typo(
+            $size: 12px,
+            $line: 16.8px,
+            $weight: 400,
+            $color: var(--normal-fg-50)
+          );
         }
       }
     }
@@ -1571,7 +1715,12 @@
   .widget-chatItem__conversation-content {
     max-width: 320px;
     padding: 12px;
-    @include drumee.typo($size: 12px, $line: 1.4, $weight: 400, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-10)
+    );
   }
 
   .widget-chatItem__conversation-content.me,
@@ -1595,18 +1744,30 @@
     }
   }
 
-  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
+  .window__chat-panel[data-area="personal"]
+    .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="personal"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content {
     background: var(--area-personal);
   }
-  .window__chat-panel[data-area="share"] .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="share"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content,
-  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
+  .window__chat-panel[data-area="share"]
+    .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="share"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content,
+  .window__chat-panel[data-area="dmz"]
+    .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="dmz"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content {
     background: var(--area-share);
   }
-  .window__chat-panel[data-area="public"] .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="public"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
+  .window__chat-panel[data-area="public"]
+    .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="public"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content {
     background: var(--area-public);
   }
 
@@ -1625,31 +1786,54 @@
     }
   }
 
-  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
+  .window__chat-panel[data-area="personal"]
+    .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="personal"]
+    .widget-chatItem__conversation.other
+    .widget-chatItem__conversation-content {
     .file-mention,
     .user-mention,
-    a { color: var(--area-personal); }
+    a {
+      color: var(--area-personal);
+    }
   }
-  .window__chat-panel[data-area="share"] .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="share"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content,
-  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
+  .window__chat-panel[data-area="share"]
+    .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="share"]
+    .widget-chatItem__conversation.other
+    .widget-chatItem__conversation-content,
+  .window__chat-panel[data-area="dmz"]
+    .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="dmz"]
+    .widget-chatItem__conversation.other
+    .widget-chatItem__conversation-content {
     .file-mention,
     .user-mention,
-    a { color: var(--area-share); }
+    a {
+      color: var(--area-share);
+    }
   }
-  .window__chat-panel[data-area="public"] .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="public"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
+  .window__chat-panel[data-area="public"]
+    .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="public"]
+    .widget-chatItem__conversation.other
+    .widget-chatItem__conversation-content {
     .file-mention,
     .user-mention,
-    a { color: var(--area-public); }
+    a {
+      color: var(--area-public);
+    }
   }
 
   .widget-chatItem__name,
   .widget-chatItem__username-content,
   .widget-chatItem__message-username {
-    @include drumee.typo($size: 10px, $line: 1.4, $weight: 700, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 10px,
+      $line: 1.4,
+      $weight: 700,
+      $color: var(--normal-fg-10)
+    );
   }
 
   .widget-chatItem__username-content {
@@ -1660,7 +1844,12 @@
   }
 
   .widget-chatItem__message-date {
-    @include drumee.typo($size: 11px, $line: 1.4, $weight: 400, $color: var(--normal-fg-50));
+    @include drumee.typo(
+      $size: 11px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-50)
+    );
   }
 
   &__split-body[data-view="chat"] {
@@ -1779,7 +1968,12 @@
     flex: 1 1 auto;
     padding: 0 8px;
     text-align: center;
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
     @include drumee.overflow-text;
   }
 
@@ -1787,7 +1981,12 @@
     min-width: 16px;
     text-align: right;
     letter-spacing: 0.4px;
-    @include drumee.typo($size: 10px, $line: 10px, $weight: 600, $color: var(--normal-fg-50));
+    @include drumee.typo(
+      $size: 10px,
+      $line: 10px,
+      $weight: 600,
+      $color: var(--normal-fg-50)
+    );
   }
 
   &__tracker-card {
@@ -1797,7 +1996,12 @@
     border: 0.5px solid var(--border-default);
     border-radius: 4px;
     background: var(--normal-bg-elevated);
-    @include drumee.typo($size: 12px, $line: 15px, $weight: 600, $color: var(--normal-fg-10));
+    @include drumee.typo(
+      $size: 12px,
+      $line: 15px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
   }
 
   &__tracker-add {
@@ -1808,7 +2012,12 @@
     text-align: center;
     cursor: default;
     opacity: 0.7;
-    @include drumee.typo($size: 10px, $line: 14px, $weight: 400, $color: var(--normal-fg-20));
+    @include drumee.typo(
+      $size: 10px,
+      $line: 14px,
+      $weight: 400,
+      $color: var(--normal-fg-20)
+    );
   }
 
   // --- Partition layout (dual List.Smart — folders above, files below) ---
