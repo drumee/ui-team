@@ -56,7 +56,6 @@ class settings_delete_account extends LetcBox {
    * @returns 
    */
   handleDownload(data) {
-    this.debug("AAA:59", data)
     if (this.mget("zipid") !== data.zipid) return;
     if (this._isDownloading === data.zipid) return;
     let progress = this.getPart('progress')
@@ -68,7 +67,7 @@ class settings_delete_account extends LetcBox {
       let { svc, keysel } = bootstrap();
       let hub_id = this.mget(_a.hub_id);
       let nid = this.mget(_a.nid) || 0;
-      let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${data.zipid}&keysel=${keysel}`;
+      let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${data.zipid}&keysel=${keysel}&zipname=${data.zipname}`;
       let a = document.createElement("a");
       a.href = url;
       a.download = data.zipname || "backup.zip";
@@ -91,13 +90,12 @@ class settings_delete_account extends LetcBox {
       return;
     }
 
-    if (progress && !progress.isDestroyed()) {
+    if (data.message == "BEING_CREATED" && progress && !progress.isDestroyed()) {
       progress.el.style.width = `${data.progress}%`;
     }
   }
 
   onWsMessage(svc, data, options = {}) {
-    this.debug("AAA:97", svc, data, options)
     if (data && data.zipid) {
       this.handleDownload(data);
       // return;
@@ -134,6 +132,9 @@ class settings_delete_account extends LetcBox {
       this.ensurePart("message").then((part) => {
         part.feed(require("./skeleton/progress").default(this));
       });
+      this.ensurePart("step2-button").then((p) => {
+        p.setState(1)
+      })
     }).catch((e) => {
       this.warn("Caught error", e)
     })
@@ -159,18 +160,7 @@ class settings_delete_account extends LetcBox {
           hub_id: Visitor.id,
           password: this.getData().delete_password,
         }).then((data) => {
-          if (data.status === 'OK') {
-            location.reload()
-          } else {
-            this.ensurePart('error-box').then((p) => {
-              p.feed(
-                Skeletons.Note({
-                  className: `${this.fig.family}__warning-text`,
-                  content: "Failde to remove the account"
-                })
-              )
-            })
-          }
+          location.reload()
         }).catch((e) => {
           this.warn("Caught error", e)
         })

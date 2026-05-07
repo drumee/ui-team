@@ -552,9 +552,10 @@
     }
 
     &-bar {
-      height: 3p;
+      height: 3px;
       width: 0;
       background-color: var(--primary-400);
+      border-radius: var(--corner-radius-max);
     }
 
     &-message {

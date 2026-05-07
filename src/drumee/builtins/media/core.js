@@ -2028,7 +2028,7 @@ class __media_core extends DrumeeMFS {
             let nid = this.mget(_a.nid);
             let hub_id = this.mget(_a.hub_id);
             let zip_id = data.zipid;
-            let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}`;
+            let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${data.zipname}`;
             this.getFromUrl(url);
             Wm.alert(
               LOCALE.DOWNLOAD_LONG_TIME.format(
