@@ -339,7 +339,16 @@ class __panel_activity extends LetcBox {
       const rows = await this.postService(SERVICE.hub.invite_received_get, {
         hub_id: Visitor.id
       });
-      return _.isArray(rows) ? rows : [];
+      if (!_.isArray(rows)) return [];
+      const seen = new Set();
+      const deduped = [];
+      for (const row of rows) {
+        const key = `${row.hub_id || ''}::${row.author_id || row.uid || ''}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(row);
+      }
+      return deduped;
     } catch (err) {
       this.warn('[panel_activity] fetch hub invitations failed', err);
       return [];
