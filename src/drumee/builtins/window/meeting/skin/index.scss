@@ -51,7 +51,9 @@
   }
 
   @keyframes window-meeting-load-spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   // ── Shell: column flex, fills __ui ──────────────────────────────────
@@ -259,7 +261,7 @@
     border-radius: 8px;
     box-shadow: 0 4px 25px rgba(0, 0, 0, 0.04);
     padding: 0 4px;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     z-index: 100;
 
@@ -320,7 +322,7 @@
     padding: 0;
     align-items: center;
     display: flex;
-    gap: 2px;
+    gap: 24px;
 
     .device-button {
       .audio.settings {
@@ -331,15 +333,15 @@
         height: 14px;
         border-radius: 50%;
         padding: 1px;
+        color: var(--multimedia-vdo-icon);
       }
     }
 
     .ctrl-button {
-      background-color: var(--grey-white, #fff);
+      background-color: var(--normal-bg-80);
       border: none;
-      border-radius: 25px;
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
       padding: 4px;
       margin: 0;
       color: var(--primary-100, #0b0a21);
@@ -421,7 +423,7 @@
     z-index: 9999;
     align-items: center;
     justify-content: center;
-    background: rgba(11, 10, 33, 0.40);
+    background: rgba(11, 10, 33, 0.4);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     pointer-events: auto;
@@ -458,12 +460,17 @@
     svg {
       width: 22px;
       height: 22px;
-      color: #54B684;
+      color: #54b684;
     }
   }
 
   &__feedback-title {
-    @include drumee.typo($size: 20px, $line: 28px, $weight: 700, $color: #0B0A21);
+    @include drumee.typo(
+      $size: 20px,
+      $line: 28px,
+      $weight: 700,
+      $color: #0b0a21
+    );
   }
 
   &__feedback-stats {
@@ -474,14 +481,19 @@
   }
 
   &__feedback-stat {
-    @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: #65656C);
+    @include drumee.typo(
+      $size: 14px,
+      $line: 1.4,
+      $weight: 400,
+      $color: #65656c
+    );
   }
 
   &__feedback-stats-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #847EFF;
+    background: #847eff;
     flex-shrink: 0;
   }
 
@@ -492,7 +504,12 @@
   }
 
   &__feedback-prompt {
-    @include drumee.typo($size: 16px, $line: 24px, $weight: 600, $color: #0B0A21);
+    @include drumee.typo(
+      $size: 16px,
+      $line: 24px,
+      $weight: 600,
+      $color: #0b0a21
+    );
   }
 
   &__feedback-stars {
@@ -507,8 +524,10 @@
     border-radius: 4px;
     background: transparent;
     cursor: pointer;
-    color: #C7C7CC;
-    transition: color 0.12s ease, transform 0.08s ease;
+    color: #c7c7cc;
+    transition:
+      color 0.12s ease,
+      transform 0.08s ease;
 
     svg {
       width: 100%;
@@ -517,7 +536,7 @@
     }
 
     &[data-on="1"] {
-      color: #FFB400;
+      color: #ffb400;
     }
 
     &:hover {
@@ -527,7 +546,7 @@
 
   &__feedback-comment {
     align-self: stretch;
-    background: #FFFFFF;
+    background: #ffffff;
     border-radius: 4px;
     padding: 8px 12px;
     border: 1px solid transparent;
@@ -538,10 +557,15 @@
       outline: none;
       resize: none;
       background: transparent;
-      @include drumee.typo($size: 12px, $line: 1.4, $weight: 400, $color: #0B0A21);
+      @include drumee.typo(
+        $size: 12px,
+        $line: 1.4,
+        $weight: 400,
+        $color: #0b0a21
+      );
 
       &::placeholder {
-        color: #C7C7CC;
+        color: #c7c7cc;
       }
     }
   }
@@ -550,7 +574,11 @@
     align-self: stretch;
     gap: 8px;
 
-    *, *::before, *::after { box-sizing: border-box; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
   }
 
   &__feedback-skip,
@@ -564,7 +592,9 @@
     cursor: pointer;
     @include drumee.typo($size: 16px, $line: 24px, $weight: 600);
 
-    .note-content { white-space: nowrap; }
+    .note-content {
+      white-space: nowrap;
+    }
   }
 
   &__feedback-skip {
@@ -573,15 +603,39 @@
     background: rgba(0, 0, 0, 0.05);
     color: #000;
 
-    &:hover { background: rgba(0, 0, 0, 0.10); }
+    &:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
   }
 
   &__feedback-submit {
     flex: 1 1 0;
     min-width: 0;
-    background: #433CC5;
-    color: #FFFFFF;
+    background: #433cc5;
+    color: #ffffff;
 
-    &:hover { background: #5950ff; }
+    &:hover {
+      background: #5950ff;
+    }
+  }
+}
+
+.window__message-container {
+  position: absolute;
+  background-color: var(--normal-bg-80);
+  padding: var(--spacer-5);
+  width: 300px;
+  color: var(--normal-fg-10);
+  border-radius: var(--corner-radius-3);
+  align-items: center;
+  top: 40px;
+  transform: translateX(50%);
+  right: 50%;
+}
+.window__dialog-overlay {
+  &[data-state="open"] {
+    height: 100%;
+    top: 0;
+    border-radius: 0;
   }
 }
