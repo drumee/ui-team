@@ -230,8 +230,8 @@ class __window_meeting extends __room {
 
   /** Visually highlight stars 1..N when a star is clicked. */
   _setRating(cmd) {
-    if (!cmd || !cmd.mget) return;
-    const rating = parseInt(cmd.mget("rating"), 10) || 0;
+    if (!cmd || !cmd.el) return;
+    const rating = parseInt(cmd.el.dataset.rating, 10) || 0;
     if (!this._feedback) this._feedback = {};
     this._feedback.rating = rating;
     for (let i = 1; i <= 5; i++) {

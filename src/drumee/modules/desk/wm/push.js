@@ -154,7 +154,7 @@ class __push_manager extends winman {
   dispatchInboundCall(data) {
     let o;
     const currentRoom =
-      Wm.getItemByKind("window_connect") || Wm.getItemByKind("window_meeting");
+      Wm.getItemsByKind("window_connect")[0] || Wm.getItemsByKind("window_meeting")[0];
     data.nid = data.nid || data.room_id;
     const respawn = {
       kind: "window_connect",
@@ -224,12 +224,12 @@ class __push_manager extends winman {
    */
   dispatchRoom(data) {
     const currentRoom =
-      Wm.getItemByKind("window_connect") || Wm.getItemByKind("window_meeting");
+      Wm.getItemsByKind("window_connect")[0] || Wm.getItemsByKind("window_meeting")[0];
     if (!data || !data.room_id) return;
     if (currentRoom && !currentRoom.isDestroyed()) {
       if (currentRoom.mget(_a.hub_id) == data.hub_id) {
         currentRoom.onRemoteDrumateJoined(data);
-        if (_.isEmpty(data.details)) return;
+        return;
       }
       let details = data.details;
       if (details && details.ctime < timestamp() / 1000 - 10) return;
