@@ -1,5 +1,64 @@
+const { filesize } = require("@drumee/ui-essentials");
+
 // Avatar palette cycled by id-hash so initials avatars stay stable per user.
 const AVATAR_COLORS = ["cyan", "purple", "amber", "pink"];
+
+// Map a row from `file_version_list` to the shape the FE skeleton consumes.
+function normalizeFileVersionRow(r) {
+  return {
+    ...r,
+    id: r.id || r.nid,
+    name: r.name || r.filename,
+    ext: r.ext || r.extension,
+    folder: r.folder || r.folder_name || "",
+    workspace: r.workspace || r.workspace_name || "",
+    size: r.size || (r.filesize != null ? filesize(r.filesize) : ""),
+    versions: r.versions != null ? r.versions : (r.version_count || 0),
+  };
+}
+
+// `file_version_get` returns two result sets: file metadata + versions list.
+// Different transports flatten this differently; accept both shapes.
+function normalizeFileVersionDetail(res) {
+  if (!res) return null;
+  let head = null;
+  let versions = [];
+  if (Array.isArray(res)) {
+    // Two-result-set raw form: [[fileRow], [v1, v2, ...]] or [fileRow, [versions]].
+    if (Array.isArray(res[0])) {
+      head = res[0][0] || null;
+      versions = Array.isArray(res[1]) ? res[1] : [];
+    } else {
+      head = res[0] || null;
+      versions = Array.isArray(res[1]) ? res[1] : [];
+    }
+  } else if (typeof res === "object") {
+    head = res.file || res.head || res;
+    versions = Array.isArray(res.versions) ? res.versions
+            : Array.isArray(res.list) ? res.list
+            : [];
+  }
+  if (!head) return null;
+  return {
+    id: head.id || head.nid,
+    nid: head.nid || head.id,
+    title: head.title || head.filename,
+    filename: head.filename,
+    ext: head.ext || head.extension,
+    size: head.size || (head.filesize != null ? filesize(head.filesize) : ""),
+    retention: head.retention || "",
+    versions: versions.map((v) => ({
+      id: v.id,
+      version: v.version || `v${v.version_num}.0`,
+      version_num: v.version_num,
+      timestamp: v.ctime ? Dayjs(v.ctime * 1000).fromNow() : "",
+      file: v.filename,
+      size: v.filesize != null ? filesize(v.filesize) : "",
+      editor: v.editor || v.editor_name || "",
+      active: v.is_active === 1 || v.is_active === true || v.active === true,
+    })),
+  };
+}
 
 function avatarColorFor(id) {
   const s = String(id || "");
@@ -95,6 +154,7 @@ class apps_main extends LetcBox {
     this._activeAdminHub = null;
     this._adminHubsState = "idle";
     this._adminHubMenuOpen = false;
+    this._adminHubSearch = "";
     // overview = workspace cards, detail = members of the picked hub.
     // Owner role ignores this state (always renders the flat list).
     this._memberView = "overview";
@@ -158,8 +218,10 @@ class apps_main extends LetcBox {
     this._fileVersions = [];
     this._fileVersionsTotal = 0;
     this._fileDetail = null;
+    this._fileDetailLoading = false;
     this._fvAllPage = 1;
     this._fvActiveFile = null;
+    this._fvSelectedVersionId = null;
     this._editDevices = [];
     this._editWorkspaces = [];
     this._onDocumentClick = this._onDocumentClick.bind(this);
@@ -503,13 +565,24 @@ class apps_main extends LetcBox {
   }
 
   // ── Admin Storage tab (admin) ────────────────────────────
-  _loadAdminStorageTab() {
-    this._loadHubStorageStats();
-    this._loadHubUserStorage();
-    this._loadFileVersions();
+  // Fetches run in parallel and the loaders skip per-call renders so
+  // we only re-render once at the start (loading state) and once when
+  // everything settles. Otherwise hub switching triggered up to 3 full
+  // skeleton rebuilds.
+  async _loadAdminStorageTab() {
+    this._adminStorageTabLoading = true;
+    this._adminStorageState = "loading";
+    this._render();
+    await Promise.all([
+      this._loadHubStorageStats({ skipRender: true }),
+      this._loadHubUserStorage({ skipRender: true }),
+      this._loadFileVersions({ skipRender: true }),
+    ]);
+    this._adminStorageTabLoading = false;
+    this._render();
   }
 
-  async _loadHubStorageStats() {
+  async _loadHubStorageStats(opts = {}) {
     try {
       const res = await this.postService(SERVICE.admin.get_hub_storage_stats, {
         hub_id: this._activeAdminHub,
@@ -520,10 +593,10 @@ class apps_main extends LetcBox {
     } catch (e) {
       this._hubStorageStats = null;
     }
-    this._render();
+    if (!opts.skipRender) this._render();
   }
 
-  async _loadHubUserStorage() {
+  async _loadHubUserStorage(opts = {}) {
     try {
       const res = await this.postService(SERVICE.admin.get_hub_user_storage, {
         hub_id: this._activeAdminHub,
@@ -534,51 +607,83 @@ class apps_main extends LetcBox {
     } catch (e) {
       this._hubUserStorage = [];
     }
-    this._render();
+    if (!opts.skipRender) this._render();
   }
 
-  async _loadFileVersions() {
+  async _loadFileVersions(opts = {}) {
+    if (!this._activeAdminHub) {
+      this._fileVersions = [];
+      this._fileVersionsTotal = 0;
+      this._adminStorageState = "loaded";
+      if (!opts.skipRender) this._render();
+      return;
+    }
     this._adminStorageState = "loading";
-    this._render();
+    if (!opts.skipRender) this._render();
     try {
       const res = await this.postService(SERVICE.admin.get_file_versions, {
         hub_id: this._activeAdminHub,
         page: this._fvAllPage || 1,
+        search: this._fvSearch || "",
       });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
-      this._fileVersions = rows;
-      this._fileVersionsTotal = (res && res.total) || rows.length;
+      this._fileVersions = rows.map(normalizeFileVersionRow);
+      this._fileVersionsTotal = (res && res.total) || this._fileVersions.length;
       this._adminStorageState = "loaded";
     } catch (e) {
       this.warn && this.warn("get_file_versions failed", e);
       this._fileVersions = [];
       this._adminStorageState = "error";
     }
-    this._render();
+    if (!opts.skipRender) this._render();
   }
 
-  async _loadFileVersionDetail(fileId) {
+  async _loadFileVersionDetail(nid) {
+    if (!this._activeAdminHub || !nid) {
+      this._fileDetail = null;
+      this._fileDetailLoading = false;
+      this._fvSelectedVersionId = null;
+      return this._render();
+    }
+    this._fileDetailLoading = true;
+    this._fileDetail = null;
+    this._fvSelectedVersionId = null;
+    this._render();
     try {
       const res = await this.postService(SERVICE.admin.get_file_version_detail, {
         hub_id: this._activeAdminHub,
-        file_id: fileId,
+        nid,
       });
-      this._fileDetail = (res && res.data) || res || null;
+      this._fileDetail = normalizeFileVersionDetail(res);
+      // Pre-select the active version so the preview pane has something
+      // meaningful to show before the user clicks anything.
+      const versions = (this._fileDetail && this._fileDetail.versions) || [];
+      const active = versions.find((v) => v.active) || versions[0] || null;
+      this._fvSelectedVersionId = active && active.id;
     } catch (e) {
       this.warn && this.warn("get_file_version_detail failed", e);
       this._fileDetail = null;
     }
+    this._fileDetailLoading = false;
     this._render();
   }
 
-  async _deleteOldFileVersions(fileIds) {
-    const ids = Array.isArray(fileIds) ? fileIds : [fileIds];
-    if (!ids.length) return;
+  // Backend takes a single `nid` (or null = purge old across the whole hub).
+  // For multi-select, fan out one request per file, then refresh once.
+  async _deleteOldFileVersions(nidOrNids) {
+    if (!this._activeAdminHub) return;
+    const list = Array.isArray(nidOrNids) ? nidOrNids : [nidOrNids];
+    const nids = list.filter(Boolean);
+    if (!nids.length) return;
     try {
-      await this.postService(SERVICE.admin.delete_file_old_versions, {
-        hub_id: this._activeAdminHub,
-        file_ids: ids,
-      });
+      await Promise.all(
+        nids.map((nid) =>
+          this.postService(SERVICE.admin.delete_file_old_versions, {
+            hub_id: this._activeAdminHub,
+            nid,
+          }),
+        ),
+      );
     } catch (e) {
       this.warn && this.warn("delete_file_old_versions failed", e);
     }
@@ -586,11 +691,27 @@ class apps_main extends LetcBox {
     return this._loadFileVersions();
   }
 
-  async _downloadFileVersions(fileId) {
+  // Purge every old version in the active hub (nid=null).
+  async _deleteAllOldVersionsInHub() {
+    if (!this._activeAdminHub) return;
+    try {
+      await this.postService(SERVICE.admin.delete_file_old_versions, {
+        hub_id: this._activeAdminHub,
+        nid: null,
+      });
+    } catch (e) {
+      this.warn && this.warn("delete_file_old_versions(all) failed", e);
+    }
+    this._fvSelected.clear();
+    return this._loadFileVersions();
+  }
+
+  async _downloadFileVersions(nid) {
+    if (!this._activeAdminHub || !nid) return;
     try {
       await this.postService(SERVICE.admin.download_file_versions, {
         hub_id: this._activeAdminHub,
-        file_id: fileId,
+        nid,
       });
     } catch (e) {
       this.warn && this.warn("download_file_versions failed", e);
@@ -814,16 +935,27 @@ class apps_main extends LetcBox {
 
       case "apps-toggle-admin-hub-menu":
         this._adminHubMenuOpen = !this._adminHubMenuOpen;
+        if (!this._adminHubMenuOpen) this._adminHubSearch = "";
         return this._render();
+
+      case "apps-admin-hub-search": {
+        const value = (args && args.value != null
+          ? args.value
+          : (cmd && cmd.mget && cmd.mget(_a.value))) || "";
+        this._adminHubSearch = String(value).trim();
+        return this._render();
+      }
 
       case "apps-select-admin-hub": {
         const id = cmd.mget("hub_id");
         if (!id || id === this._activeAdminHub) {
           this._adminHubMenuOpen = false;
+          this._adminHubSearch = "";
           return this._render();
         }
         this._activeAdminHub = id;
         this._adminHubMenuOpen = false;
+        this._adminHubSearch = "";
         // Reset per-hub caches so the new context loads fresh.
         this._members = []; this._memberStats = null; this._membersTotal = 0;
         this._page = 1; this._selected.clear();
@@ -1123,15 +1255,25 @@ class apps_main extends LetcBox {
       case "apps-fv-detail-back":
         this._fvActiveFile = null;
         this._fileDetail = null;
+        this._fileDetailLoading = false;
+        this._fvSelectedVersionId = null;
         this._adminStorageView = "all";
         return this._render();
+
+      case "apps-fv-select-version": {
+        const vid = cmd.mget("version_id");
+        if (vid && vid !== this._fvSelectedVersionId) {
+          this._fvSelectedVersionId = vid;
+          this._render();
+        }
+        return;
+      }
 
       case "apps-fv-download-all":
         if (this._fvActiveFile) return this._downloadFileVersions(this._fvActiveFile.id);
         return;
 
       case "apps-fv-delete-old":
-      case "apps-fv-delete-version":
         if (this._fvActiveFile) return this._deleteOldFileVersions(this._fvActiveFile.id);
         return;
 
@@ -1148,9 +1290,15 @@ class apps_main extends LetcBox {
         return;
       }
 
-      case "apps-fv-delete-all": {
-        const ids = (this._fileVersions || []).map((f) => f.id);
-        return this._deleteOldFileVersions(ids);
+      case "apps-fv-delete-all":
+        return this._deleteAllOldVersionsInHub();
+
+      case "apps-fv-search": {
+        const value = (cmd.mget(_a.value) || "").trim();
+        if (this._fvSearch === value) return;
+        this._fvSearch = value;
+        this._fvAllPage = 1;
+        return this._loadFileVersions();
       }
 
       case "apps-fv-delete-row":
