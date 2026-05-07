@@ -198,7 +198,7 @@ function workspaceFilter(ui) {
         className: `${pfx}__storage-sort-value`,
         content: LOCALE.ALL_WORKSPACE || "All workspace",
       }),
-      Skeletons.Button.Svg({
+      Skeletons.Image.Svg({
         ico: "editbox_arrow--down",
         className: `${pfx}__storage-sort-chevron`,
       }),
@@ -219,7 +219,9 @@ function searchBox(ui) {
         className: `${pfx}__fv-search-input`,
         placeholder: LOCALE.SEARCH_FILE || "Search file",
         name: "fv_search",
+        value: ui._fvSearch || "",
         mode: _a.commit,
+        service: "apps-fv-search",
         uiHandler: [ui],
       }),
     ],
