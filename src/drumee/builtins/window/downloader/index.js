@@ -106,7 +106,7 @@ class __window_downloader extends mfsInteract {
     let hub_id = opt.hub_id || this.mget(_a.hub_id) || Visitor.get(_a.id);
     let zip_id = opt.zipid || this._zipid;
     let { svc, keysel } = bootstrap();
-    let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}`;
+    let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${data.zipname}`;
     super.getFromUrl(url);
     Wm.alert(LOCALE.DOWNLOAD_LONG_TIME.format(opt.zipname, filesize(this._zipsize)));
     this.goodbye();

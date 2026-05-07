@@ -1,4 +1,7 @@
 
+const { filesize } = require("@drumee/ui-essentials")
+const MAX_BLOB_SIZE = 100000000;
+
 class settings_delete_account extends LetcBox {
   initialize(opt) {
     require("./skin");
@@ -8,6 +11,11 @@ class settings_delete_account extends LetcBox {
     this._selected = new Set();
     this._showPassword = false;
     this._password = "";
+    this.bindEvent(_a.live);
+  }
+
+  onBeforeDestroy() {
+    this.unbindEvent(_a.live);
   }
 
   onDomRefresh() {
@@ -41,34 +49,97 @@ class settings_delete_account extends LetcBox {
   }
 
 
+
   /**
-   * 
+   * Called by websocket events
+   * @param {*} data 
+   * @returns 
+   */
+  handleDownload(data) {
+    if (this.mget("zipid") !== data.zipid) return;
+    if (this._isDownloading === data.zipid) return;
+    let progress = this.getPart('progress')
+    if (data.exit === 0) {
+      if (progress && !progress.isDestroyed()) {
+        progress.suppress();
+      }
+      this._isDownloading = data.zipid;
+      let { svc, keysel } = bootstrap();
+      let hub_id = this.mget(_a.hub_id);
+      let nid = this.mget(_a.nid) || 0;
+      let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${data.zipid}&keysel=${keysel}&zipname=${data.zipname}`;
+      let a = document.createElement("a");
+      a.href = url;
+      a.download = data.zipname || "backup.zip";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      if (this._zipsize > MAX_BLOB_SIZE) {
+        Wm.alert(LOCALE.DOWNLOAD_LONG_TIME.format(data.zipname, filesize(this._zipsize)));
+      }
+      return;
+    }
+
+    if (data.exit > 0) {
+      if (progress && !progress.isDestroyed()) {
+        progress.feed(Skeletons.Note({
+          className: `${this.fig.family}__progress-message`,
+          content: "An error has occured",
+        }));
+      }
+      return;
+    }
+
+    if (data.message == "BEING_CREATED" && progress && !progress.isDestroyed()) {
+      progress.el.style.width = `${data.progress}%`;
+    }
+  }
+
+  onWsMessage(svc, data, options = {}) {
+    if (data && data.zipid) {
+      this.handleDownload(data);
+      // return;
+    }
+    // if (super.onWsMessage) super.onWsMessage(svc, data, options);
+  }
+
+  /**
+   * This service won't wait for the backup to finish, since it ;ay take a longtime
+   * Backup progress shall be handle through web socket events  
+   * @returns 
    */
   downloadSelected() {
+    if (!this._selected.size) {
+      this.ensurePart("step2-button").then((p) => {
+        p.setState(1)
+      })
+      return
+    }
     this.postService(SERVICE.drumate.backup, {
       hub_id: Visitor.id,
+      flags: this._selected.keys().toArray()
     }).then((data) => {
-      if (data.status === 'OK') {
-        this.ensurePart('message').then((p) => {
-          p.feed(
-            Skeletons.Note({
-              className: `${this.fig.family}__warning-text`,
-              content: ("A download link will be sent to {0}").format(Visitor.profile().email)
-            })
-          )
-        })
-        this.ensurePart("step2-button").then((p) => {
-          p.setState(1)
-        })
+      if (!data.zipid) {
+        this.warn("Got empty data")
+        return;
       }
+      this.mset({
+        zipid: data.zipid,
+        hub_id: Visitor.id,
+        nid: data.nid || 0,
+      });
+      this._zipsize = data.size || 0;
+      this.ensurePart("message").then((part) => {
+        part.feed(require("./skeleton/progress").default(this));
+      });
+      this.ensurePart("step2-button").then((p) => {
+        p.setState(1)
+      })
     }).catch((e) => {
       this.warn("Caught error", e)
     })
   }
 
-  /**
-   * 
-   */
   finalConfirm() {
     this.capturePassword();
     this.postService(SERVICE.drumate.check_password, {
@@ -89,18 +160,7 @@ class settings_delete_account extends LetcBox {
           hub_id: Visitor.id,
           password: this.getData().delete_password,
         }).then((data) => {
-          if (data.status === 'OK') {
-            location.reload()
-          } else {
-            this.ensurePart('error-box').then((p) => {
-              p.feed(
-                Skeletons.Note({
-                  className: `${this.fig.family}__warning-text`,
-                  content: "Failde to remove the account"
-                })
-              )
-            })
-          }
+          location.reload()
         }).catch((e) => {
           this.warn("Caught error", e)
         })
