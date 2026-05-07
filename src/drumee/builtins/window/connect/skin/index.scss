@@ -365,7 +365,6 @@
   // Pre-call: large prominent circular accept/decline.
   &__commands-container[data-mode="setup"] {
     .window-connect__commands {
-      gap: 40px;
       flex-wrap: nowrap;
     }
 
@@ -374,7 +373,7 @@
       height: 56px;
       padding: 0;
       border-radius: 50%;
-      margin: 0;
+      margin: 0 12px;
 
       svg {
         width: 24px;
