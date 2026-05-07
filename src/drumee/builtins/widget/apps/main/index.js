@@ -154,6 +154,7 @@ class apps_main extends LetcBox {
     this._activeAdminHub = null;
     this._adminHubsState = "idle";
     this._adminHubMenuOpen = false;
+    this._adminHubSearch = "";
     // overview = workspace cards, detail = members of the picked hub.
     // Owner role ignores this state (always renders the flat list).
     this._memberView = "overview";
@@ -217,8 +218,10 @@ class apps_main extends LetcBox {
     this._fileVersions = [];
     this._fileVersionsTotal = 0;
     this._fileDetail = null;
+    this._fileDetailLoading = false;
     this._fvAllPage = 1;
     this._fvActiveFile = null;
+    this._fvSelectedVersionId = null;
     this._editDevices = [];
     this._editWorkspaces = [];
     this._onDocumentClick = this._onDocumentClick.bind(this);
@@ -562,13 +565,24 @@ class apps_main extends LetcBox {
   }
 
   // ── Admin Storage tab (admin) ────────────────────────────
-  _loadAdminStorageTab() {
-    this._loadHubStorageStats();
-    this._loadHubUserStorage();
-    this._loadFileVersions();
+  // Fetches run in parallel and the loaders skip per-call renders so
+  // we only re-render once at the start (loading state) and once when
+  // everything settles. Otherwise hub switching triggered up to 3 full
+  // skeleton rebuilds.
+  async _loadAdminStorageTab() {
+    this._adminStorageTabLoading = true;
+    this._adminStorageState = "loading";
+    this._render();
+    await Promise.all([
+      this._loadHubStorageStats({ skipRender: true }),
+      this._loadHubUserStorage({ skipRender: true }),
+      this._loadFileVersions({ skipRender: true }),
+    ]);
+    this._adminStorageTabLoading = false;
+    this._render();
   }
 
-  async _loadHubStorageStats() {
+  async _loadHubStorageStats(opts = {}) {
     try {
       const res = await this.postService(SERVICE.admin.get_hub_storage_stats, {
         hub_id: this._activeAdminHub,
@@ -579,10 +593,10 @@ class apps_main extends LetcBox {
     } catch (e) {
       this._hubStorageStats = null;
     }
-    this._render();
+    if (!opts.skipRender) this._render();
   }
 
-  async _loadHubUserStorage() {
+  async _loadHubUserStorage(opts = {}) {
     try {
       const res = await this.postService(SERVICE.admin.get_hub_user_storage, {
         hub_id: this._activeAdminHub,
@@ -593,18 +607,19 @@ class apps_main extends LetcBox {
     } catch (e) {
       this._hubUserStorage = [];
     }
-    this._render();
+    if (!opts.skipRender) this._render();
   }
 
-  async _loadFileVersions() {
+  async _loadFileVersions(opts = {}) {
     if (!this._activeAdminHub) {
       this._fileVersions = [];
       this._fileVersionsTotal = 0;
       this._adminStorageState = "loaded";
-      return this._render();
+      if (!opts.skipRender) this._render();
+      return;
     }
     this._adminStorageState = "loading";
-    this._render();
+    if (!opts.skipRender) this._render();
     try {
       const res = await this.postService(SERVICE.admin.get_file_versions, {
         hub_id: this._activeAdminHub,
@@ -620,24 +635,36 @@ class apps_main extends LetcBox {
       this._fileVersions = [];
       this._adminStorageState = "error";
     }
-    this._render();
+    if (!opts.skipRender) this._render();
   }
 
   async _loadFileVersionDetail(nid) {
     if (!this._activeAdminHub || !nid) {
       this._fileDetail = null;
+      this._fileDetailLoading = false;
+      this._fvSelectedVersionId = null;
       return this._render();
     }
+    this._fileDetailLoading = true;
+    this._fileDetail = null;
+    this._fvSelectedVersionId = null;
+    this._render();
     try {
       const res = await this.postService(SERVICE.admin.get_file_version_detail, {
         hub_id: this._activeAdminHub,
         nid,
       });
       this._fileDetail = normalizeFileVersionDetail(res);
+      // Pre-select the active version so the preview pane has something
+      // meaningful to show before the user clicks anything.
+      const versions = (this._fileDetail && this._fileDetail.versions) || [];
+      const active = versions.find((v) => v.active) || versions[0] || null;
+      this._fvSelectedVersionId = active && active.id;
     } catch (e) {
       this.warn && this.warn("get_file_version_detail failed", e);
       this._fileDetail = null;
     }
+    this._fileDetailLoading = false;
     this._render();
   }
 
@@ -908,16 +935,27 @@ class apps_main extends LetcBox {
 
       case "apps-toggle-admin-hub-menu":
         this._adminHubMenuOpen = !this._adminHubMenuOpen;
+        if (!this._adminHubMenuOpen) this._adminHubSearch = "";
         return this._render();
+
+      case "apps-admin-hub-search": {
+        const value = (args && args.value != null
+          ? args.value
+          : (cmd && cmd.mget && cmd.mget(_a.value))) || "";
+        this._adminHubSearch = String(value).trim();
+        return this._render();
+      }
 
       case "apps-select-admin-hub": {
         const id = cmd.mget("hub_id");
         if (!id || id === this._activeAdminHub) {
           this._adminHubMenuOpen = false;
+          this._adminHubSearch = "";
           return this._render();
         }
         this._activeAdminHub = id;
         this._adminHubMenuOpen = false;
+        this._adminHubSearch = "";
         // Reset per-hub caches so the new context loads fresh.
         this._members = []; this._memberStats = null; this._membersTotal = 0;
         this._page = 1; this._selected.clear();
@@ -1217,8 +1255,19 @@ class apps_main extends LetcBox {
       case "apps-fv-detail-back":
         this._fvActiveFile = null;
         this._fileDetail = null;
+        this._fileDetailLoading = false;
+        this._fvSelectedVersionId = null;
         this._adminStorageView = "all";
         return this._render();
+
+      case "apps-fv-select-version": {
+        const vid = cmd.mget("version_id");
+        if (vid && vid !== this._fvSelectedVersionId) {
+          this._fvSelectedVersionId = vid;
+          this._render();
+        }
+        return;
+      }
 
       case "apps-fv-download-all":
         if (this._fvActiveFile) return this._downloadFileVersions(this._fvActiveFile.id);

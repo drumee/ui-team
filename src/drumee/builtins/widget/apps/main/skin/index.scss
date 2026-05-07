@@ -161,24 +161,75 @@
 
     &-menu {
       position: absolute;
-      top: calc(100% + 4px);
+      top: calc(100% + 6px);
       right: 0;
-      min-width: 220px;
-      max-height: 280px;
-      overflow-y: auto;
+      min-width: 280px;
+      max-width: 360px;
+      max-height: 380px;
       background: $bg;
       border: 1px solid $line;
-      border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      border-radius: 10px;
+      box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.12),
+        0 2px 6px rgba(0, 0, 0, 0.06);
       padding: 4px;
       z-index: 10;
+      overflow: hidden;
+    }
+
+    &-search {
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      margin: 2px 2px 4px;
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 6px;
+
+      &-ico {
+        width: 14px;
+        height: 14px;
+        color: $ink-500;
+        flex-shrink: 0;
+
+        svg { width: 14px; height: 14px; }
+      }
+
+      &-input {
+        flex: 1;
+        min-width: 0;
+
+        input {
+          width: 100%;
+          background: transparent;
+          border: 0;
+          outline: 0;
+          padding: 0;
+          font-size: 13px;
+          line-height: 18px;
+          color: $ink-900;
+
+          &::placeholder { color: $ink-500; }
+        }
+      }
+    }
+
+    &-list {
+      max-height: 320px;
+      overflow-y: auto;
     }
 
     &-item {
       align-items: center;
-      padding: 8px 10px;
-      border-radius: 4px;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 6px;
       cursor: pointer;
+      transition: background 0.12s;
+
+      // All inner widgets are display-only — the row itself is the
+      // single click target, so cmd.mget('hub_id') always resolves on
+      // the row's hub_id attribute regardless of which pixel is hit.
+      > *, > * * { pointer-events: none; }
 
       &:hover {
         background: $row-hover;
@@ -194,6 +245,12 @@
       }
     }
 
+    &-item-text {
+      flex: 1;
+      min-width: 0;
+      gap: 2px;
+    }
+
     &-item-label {
       font-size: 13px;
       line-height: 18px;
@@ -201,6 +258,32 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    &-item-area {
+      font-size: 11px;
+      line-height: 14px;
+      font-weight: 500;
+      color: $ink-500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    &-item-check {
+      width: 14px;
+      height: 14px;
+      color: $purple-base;
+      flex-shrink: 0;
+
+      svg { width: 14px; height: 14px; }
+    }
+
+    &-empty {
+      font-size: 13px;
+      line-height: 18px;
+      color: $ink-500;
+      text-align: center;
+      padding: 16px 12px;
     }
   }
 
@@ -4826,6 +4909,7 @@
 
   // Action icons (3-dots + trash)
   &__fv-action {
+    display: inline-flex;
     width: 32px;
     height: 32px;
     border-radius: 4px;
@@ -4834,7 +4918,15 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    svg { width: 14px; height: 16px; }
+    svg {
+      width: 14px;
+      height: 16px;
+      // The svg-wrapper element from Skeletons.Button.Svg can be
+      // taller/narrower than the svg itself; explicit centering on
+      // the svg keeps it pinned mid-row regardless.
+      display: block;
+      margin: auto;
+    }
 
     &--more {
       svg {
@@ -5432,8 +5524,76 @@
     background: rgba(0, 0, 0, 0.05);
     border-radius: 8px;
     gap: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: background 0.12s, border-color 0.12s;
+
+    // The whole tile is the click target; inner widgets are display-only.
+    > *, > * * { pointer-events: none; }
+
+    &:hover { background: rgba(0, 0, 0, 0.07); }
 
     &--active { background: rgba(89, 80, 255, 0.10); }
+
+    &--selected {
+      border-color: $purple-base;
+      background: rgba(89, 80, 255, 0.08);
+    }
+  }
+
+  &__filed-loading {
+    align-items: center;
+    justify-content: center;
+    padding: 80px 24px;
+    width: 100%;
+  }
+
+  &__filed-loading-label {
+    font-size: 14px;
+    line-height: 20px;
+    color: $ink-500;
+  }
+
+  &__filed-meta-heading {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 600;
+    color: $ink-900;
+    margin-top: 12px;
+    margin-bottom: 8px;
+  }
+
+  &__filed-meta-row {
+    align-items: baseline;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  &__filed-meta-label {
+    flex: 0 0 110px;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    color: $ink-500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__filed-meta-value {
+    flex: 1;
+    font-size: 13px;
+    line-height: 18px;
+    color: $ink-900;
+    word-break: break-word;
+  }
+
+  &__filed-preview-empty {
+    font-size: 13px;
+    line-height: 18px;
+    color: $ink-500;
+    margin-top: 16px;
+    font-style: italic;
   }
 
   &__filed-version-meta {

@@ -198,7 +198,7 @@ function workspaceFilter(ui) {
         className: `${pfx}__storage-sort-value`,
         content: LOCALE.ALL_WORKSPACE || "All workspace",
       }),
-      Skeletons.Button.Svg({
+      Skeletons.Image.Svg({
         ico: "editbox_arrow--down",
         className: `${pfx}__storage-sort-chevron`,
       }),
