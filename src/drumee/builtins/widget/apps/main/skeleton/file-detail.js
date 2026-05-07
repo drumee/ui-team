@@ -6,12 +6,19 @@
 function resolve(ui) {
   const live = ui._fileDetail || {};
   const active = ui._fvActiveFile || {};
+  const versions = Array.isArray(live.versions) ? live.versions : [];
+  const selected =
+    versions.find((v) => v.id === ui._fvSelectedVersionId) ||
+    versions.find((v) => v.active) ||
+    versions[0] ||
+    null;
   return {
     title: live.title || live.filename || active.name || "",
     filename: live.filename || active.name || "",
     size: live.size || active.size || "",
-    retention: live.retention || (LOCALE.RETENTION_NONE || "—"),
-    versions: Array.isArray(live.versions) ? live.versions : [],
+    retention: live.retention || LOCALE.RETENTION_NONE || "—",
+    versions,
+    selected,
   };
 }
 
@@ -76,21 +83,61 @@ function previewHeader(pfx, data) {
   });
 }
 
+function metaRow(pfx, label, value) {
+  return Skeletons.Box.X({
+    className: `${pfx}__filed-meta-row`,
+    kids: [
+      Skeletons.Note({ className: `${pfx}__filed-meta-label`, content: label }),
+      Skeletons.Note({ className: `${pfx}__filed-meta-value`, content: value || "—" }),
+    ],
+  });
+}
+
 function previewBody(ui, data) {
   const pfx = ui.fig.family;
-  return Skeletons.Box.Y({
-    className: `${pfx}__filed-preview-body`,
-    kids: [
-      Skeletons.Note({
-        className: `${pfx}__filed-doc-title`,
-        content: data.title || data.filename,
-      }),
+  const v = data.selected;
+  const kids = [
+    Skeletons.Note({
+      className: `${pfx}__filed-doc-title`,
+      content: data.title || data.filename,
+    }),
+  ];
+  if (!data.versions.length) {
+    kids.push(
       Skeletons.Note({
         className: `${pfx}__filed-preview-empty`,
-        content: LOCALE.FILE_PREVIEW_UNAVAILABLE
-          || "Inline preview is not available in the admin console.",
+        content: LOCALE.FILE_PREVIEW_UNAVAILABLE,
+      })
+    );
+  } else if (!v) {
+    kids.push(
+      Skeletons.Note({
+        className: `${pfx}__filed-preview-empty`,
+        content: LOCALE.SELECT_VERSION_TO_PREVIEW,
+      })
+    );
+  } else {
+    kids.push(
+      Skeletons.Note({
+        className: `${pfx}__filed-meta-heading`,
+        content: v.active
+          ? `${LOCALE.VERSION_INFO} (${LOCALE.ACTIVE_VERSION})`
+          : LOCALE.VERSION_INFO,
       }),
-    ],
+      metaRow(pfx, LOCALE.VERSIONS, v.version || ""),
+      metaRow(pfx, LOCALE.EDITED_BY, v.editor || ""),
+      metaRow(pfx, LOCALE.VERSION_SAVED, v.timestamp || ""),
+      metaRow(pfx, LOCALE.SIZE, v.size || ""),
+      metaRow(pfx, LOCALE.FILE, v.file || data.filename),
+      Skeletons.Note({
+        className: `${pfx}__filed-preview-empty`,
+        content: LOCALE.FILE_PREVIEW_UNAVAILABLE,
+      })
+    );
+  }
+  return Skeletons.Box.Y({
+    className: `${pfx}__filed-preview-body`,
+    kids,
   });
 }
 
@@ -179,8 +226,17 @@ function avatarDot(pfx) {
 
 function versionEntry(ui, version) {
   const pfx = ui.fig.family;
+  const isSelected = version.id === ui._fvSelectedVersionId;
+  const cn = [
+    `${pfx}__filed-version`,
+    version.active ? `${pfx}__filed-version--active` : "",
+    isSelected ? `${pfx}__filed-version--selected` : "",
+  ].filter(Boolean).join(" ");
   return Skeletons.Box.Y({
-    className: `${pfx}__filed-version${version.active ? ` ${pfx}__filed-version--active` : ""}`,
+    className: cn,
+    service: "apps-fv-select-version",
+    uiHandler: [ui],
+    version_id: version.id,
     kids: [
       // Top row: timestamp + version label
       Skeletons.Box.X({
@@ -337,6 +393,20 @@ function rightColumn(ui, data) {
 
 export default function file_detail_view(ui) {
   const pfx = ui.fig.family;
+  if (ui._fileDetailLoading && !ui._fileDetail) {
+    return [
+      topBar(ui),
+      Skeletons.Box.Y({
+        className: `${pfx}__filed-loading`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__filed-loading-label`,
+            content: LOCALE.LOADING_FILE_DETAIL,
+          }),
+        ],
+      }),
+    ];
+  }
   const data = resolve(ui);
   return [
     topBar(ui),

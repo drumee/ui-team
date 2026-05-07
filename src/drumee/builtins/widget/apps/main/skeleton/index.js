@@ -1,3 +1,45 @@
+const AREA_LABELS = {
+  private: "Restricted",
+  restricted: "Restricted",
+  share: "Shared",
+};
+
+function hubMenuItem(ui, h) {
+  const pfx = ui.fig.family;
+  const isActive = h.hub_id === ui._activeAdminHub;
+  const areaKey = (h.area || "").toLowerCase();
+  const areaLabel = AREA_LABELS[areaKey] || "";
+  return Skeletons.Box.X({
+    className: `${pfx}__hub-chip-item${isActive ? ` ${pfx}__hub-chip-item--active` : ""}`,
+    service: "apps-select-admin-hub",
+    uiHandler: [ui],
+    hub_id: h.hub_id,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${pfx}__hub-chip-item-text`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__hub-chip-item-label`,
+            content: h.hub_name || h.hub_id,
+          }),
+          areaLabel
+            ? Skeletons.Note({
+                className: `${pfx}__hub-chip-item-area`,
+                content: areaLabel,
+              })
+            : null,
+        ].filter(Boolean),
+      }),
+      isActive
+        ? Skeletons.Image.Svg({
+            ico: "editbox_checkmark",
+            className: `${pfx}__hub-chip-item-check`,
+          })
+        : null,
+    ].filter(Boolean),
+  });
+}
+
 function adminHubChip(ui) {
   const pfx = ui.fig.family;
   const hubs = ui._adminHubs || [];
@@ -6,6 +48,13 @@ function adminHubChip(ui) {
   if (ui._tab === "member" && ui._memberView === "overview") return null;
   const active = hubs.find((h) => h.hub_id === ui._activeAdminHub) || hubs[0];
   const label = (active && (active.hub_name || active.hub_id)) || "—";
+
+  const query = (ui._adminHubSearch || "").trim().toLowerCase();
+  const filtered = query
+    ? hubs.filter((h) => (h.hub_name || h.hub_id || "").toLowerCase().includes(query))
+    : hubs;
+  const showSearch = hubs.length > 5;
+
   return Skeletons.Box.Y({
     className: `${pfx}__hub-chip-wrap`,
     kids: [
@@ -31,24 +80,40 @@ function adminHubChip(ui) {
       ui._adminHubMenuOpen
         ? Skeletons.Box.Y({
             className: `${pfx}__hub-chip-menu`,
-            kids: hubs.map((h) =>
-              Skeletons.Box.X({
-                className: `${pfx}__hub-chip-item${
-                  h.hub_id === ui._activeAdminHub
-                    ? ` ${pfx}__hub-chip-item--active`
-                    : ""
-                }`,
-                service: "apps-select-admin-hub",
-                uiHandler: [ui],
-                hub_id: h.hub_id,
-                kids: [
-                  Skeletons.Note({
-                    className: `${pfx}__hub-chip-item-label`,
-                    content: h.hub_name || h.hub_id,
-                  }),
-                ],
-              })
-            ),
+            kids: [
+              showSearch
+                ? Skeletons.Box.X({
+                    className: `${pfx}__hub-chip-search`,
+                    kids: [
+                      Skeletons.Image.Svg({
+                        ico: "magnifying-glass",
+                        className: `${pfx}__hub-chip-search-ico`,
+                      }),
+                      Skeletons.Entry({
+                        className: `${pfx}__hub-chip-search-input`,
+                        placeholder: LOCALE.SEARCH_WORKSPACE || "Search workspaces",
+                        name: "hub_search",
+                        value: ui._adminHubSearch || "",
+                        autofocus: 1,
+                        mode: _a.commit,
+                        service: "apps-admin-hub-search",
+                        uiHandler: [ui],
+                      }),
+                    ],
+                  })
+                : null,
+              Skeletons.Box.Y({
+                className: `${pfx}__hub-chip-list`,
+                kids: filtered.length
+                  ? filtered.map((h) => hubMenuItem(ui, h))
+                  : [
+                      Skeletons.Note({
+                        className: `${pfx}__hub-chip-empty`,
+                        content: LOCALE.NO_WORKSPACES_FOUND || "No matching workspaces",
+                      }),
+                    ],
+              }),
+            ].filter(Boolean),
           })
         : null,
     ].filter(Boolean),
