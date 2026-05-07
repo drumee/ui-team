@@ -640,3 +640,12 @@
     border-radius: 0;
   }
 }
+
+.remote-user {
+  &__tile-footer {
+    width: auto !important;
+  }
+  &__uname {
+    width: 100px !important;
+  }
+}
