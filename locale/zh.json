@@ -630,6 +630,7 @@
   "PUT_WEBSITE_UNDER_MAINTENANCE": "将网站置于维护状态",
   "QnA": "问答",
   "Q_DELETE_ACCOUNT": "删除帐户和所有数据？",
+  "DELETE_ACCOUNT_BACKUP_PREPARING": "您的备份正在准备中。这可能需要一些时间。您可以跳至下一步，稍后通过电子邮件收到下载备份的链接。",
   "Q_DELETE_ALL_FILES": "<p>是否要删除</p><p>回收站中的所有文件？</p>",
   "Q_DELETE_FOLLOWING_CONTRIBUTORS": "想要删除以下贡献者？",
   "Q_FORGOT_PASSWORD": "丢失了密码?",

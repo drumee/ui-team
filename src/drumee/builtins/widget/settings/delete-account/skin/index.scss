@@ -544,4 +544,24 @@
       letter-spacing: 0.04em;
     }
   }
+
+  &__progress {
+    &-wrapper {
+      height: 100%;
+      width: 100%;
+    }
+
+    &-bar {
+      height: 3p;
+      width: 0;
+      background-color: var(--primary-400);
+    }
+
+    &-message {
+      font-size: 10px;
+      line-height: 14px;
+      font-weight: 400;
+      color: #65656c;
+    }
+  }
 }

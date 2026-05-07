@@ -630,6 +630,7 @@
   "PUT_WEBSITE_UNDER_MAINTENANCE": "Mettre le site en maintenance",
   "QnA": "Question & réponse",
   "Q_DELETE_ACCOUNT": "Supprimer le compte et toutes les données ?",
+  "DELETE_ACCOUNT_BACKUP_PREPARING": "Votre sauvegarde est en cours de préparation. Cela peut prendre un certain temps. Vous pouvez passer à l'étape suivante et recevoir ultérieurement un lien par e-mail pour télécharger votre sauvegarde.",
   "Q_DELETE_ALL_FILES": "<p>Voulez-vous supprimer</p><p> tous les fichiers de la poubelle ?</p>",
   "Q_DELETE_FOLLOWING_CONTRIBUTORS": "Vous souhaitez retirer les contributeurs suivants ?",
   "Q_FORGOT_PASSWORD": "Mot de passe oublié?",
