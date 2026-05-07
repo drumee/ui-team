@@ -189,13 +189,6 @@ class settings_main extends LetcBox {
    *
    */
   performDeleteAccount(args = {}) {
-    return this.ensurePart("overlay").then((p) => {
-      p.clear();
-      this.postService(SERVICE.drumate.delete_account, {
-        hub_id: Visitor.id,
-        password: args.password,
-      });
-    });
   }
 
   /**
