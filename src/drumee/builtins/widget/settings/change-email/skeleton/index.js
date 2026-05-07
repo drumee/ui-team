@@ -72,7 +72,7 @@ function passwordField(ui, opt) {
         kids: [
           Skeletons.Entry({
             className: `${pfx}-entry`,
-            placeholder: "••••••••••••",
+            placeholder: LOCALE.ENTER_YOUR_CURRENT_PASSWORD,
             name,
             type: visible ? "text" : "password",
             value,

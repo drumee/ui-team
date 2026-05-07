@@ -130,7 +130,7 @@ class __window_core extends __utils {
    */
   onDestroy() {
     RADIO_BROADCAST.off(_e.responsive, this._responsive);
-    this.updateBreadcrumb({ event: _e.closed });
+    this.updateBreadcrumb({ event: _e.closed }, this);
   }
 
   /**
@@ -596,7 +596,7 @@ class __window_core extends __utils {
     }
     if (!pointerDragged) {
       this.triggerMethod(CHANGE_RADIO);
-      this.updateBreadcrumb({ ...this.model.toJSON(), event: _e.raised });
+      this.updateBreadcrumb({ ...this.model.toJSON(), event: _e.raised }, this);
     }
     this._raised = 1;
   }
@@ -691,7 +691,7 @@ class __window_core extends __utils {
         }
       }, 1000);
     }
-    this.updateBreadcrumb({ ...m.model.toJSON(), event: _a.browse });
+    this.updateBreadcrumb({ ...m.model.toJSON(), event: _a.browse }, this);
   }
 
   /**
@@ -820,11 +820,13 @@ class __window_core extends __utils {
     const service = args.service || cmd.service || cmd.model.get(_a.service);
     // if (!args.no_raise) this.raise(cmd);
     switch (service) {
-      case _e.close:
-        if (this.mget(_a.source)) {
-          this.mget(_a.source).el.dataset.isActive = _a.off;
+      case _e.close: {
+        const source = this.mget(_a.source);
+        if (source && source.el && source.el.dataset) {
+          source.el.dataset.isActive = _a.off;
         }
         return this.goodbye();
+      }
 
       case _e.rename:
         return noOperation();

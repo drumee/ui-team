@@ -249,20 +249,32 @@ function storageTableHeader(pfx) {
 
 function storageTablePagination(ui) {
   const pfx = ui.fig.family;
+  const page = ui._storagePage || 1;
+  const rows = (ui._orgUserStorage || []).length;
+  const total = ui._orgUserStorageTotal || 0;
+  const pageSize = ui._orgUserStoragePageSize || 20;
+  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const end = total === 0 ? 0 : Math.min(total, (page - 1) * pageSize + rows);
+  const summary = total === 0
+    ? LOCALE.NO_USERS || "No users"
+    : (LOCALE.SHOWING_OF || "Showing {start}-{end} of {total}")
+        .replace("{start}", start)
+        .replace("{end}", end)
+        .replace("{total}", total.toLocaleString());
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return Skeletons.Box.X({
     className: `${pfx}__storage-pagination`,
     kids: [
       Skeletons.Note({
         className: `${pfx}__storage-pagination-label`,
-        content:
-          LOCALE.SHOWING_ENTRIES_SHORT || "Showing 1-25 of 1,492 entries",
+        content: summary,
       }),
       Skeletons.Box.X({
         className: `${pfx}__storage-pager`,
         kids: [
           Skeletons.Box.X({
-            className: `${pfx}__storage-pager-btn`,
-            service: "apps-storage-prev",
+            className: `${pfx}__storage-pager-btn${page <= 1 ? ` ${pfx}__storage-pager-btn--disabled` : ""}`,
+            service: page > 1 ? "apps-storage-prev" : null,
             uiHandler: [ui],
             kids: [
               Skeletons.Button.Svg({
@@ -272,8 +284,8 @@ function storageTablePagination(ui) {
             ],
           }),
           Skeletons.Box.X({
-            className: `${pfx}__storage-pager-btn`,
-            service: "apps-storage-next",
+            className: `${pfx}__storage-pager-btn${page >= totalPages ? ` ${pfx}__storage-pager-btn--disabled` : ""}`,
+            service: page < totalPages ? "apps-storage-next" : null,
             uiHandler: [ui],
             kids: [
               Skeletons.Button.Svg({

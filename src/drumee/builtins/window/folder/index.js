@@ -12,6 +12,23 @@ class __window_folder extends mfsInteract {
     this.onSearchEvent = this.onSearchEvent.bind(this);
   }
 
+  _defaultBounds() {
+    const workspace = document.querySelector(".desk-module__wm-container") || document.querySelector(".desk-module__right-side");
+    const rect = workspace ? workspace.getBoundingClientRect() : {};
+    const workspaceWidth = rect.width || window.innerWidth;
+    const workspaceHeight = rect.height || window.innerHeight;
+    const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
+    const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
+    return {
+      left: Math.round((workspaceWidth - width) / 2),
+      top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
+      width,
+      height,
+      minWidth: 760,
+      minHeight: 480,
+    };
+  }
+
   /**
    * @param {*} opt
    */
@@ -31,24 +48,22 @@ class __window_folder extends mfsInteract {
       });
     }
     if (!Visitor.isMobile()) {
-      const sidebar = document.querySelector(".desk-module-sidebar__main");
-      const sidebarRight = sidebar ? sidebar.getBoundingClientRect().right : 0;
-      const workspaceWidth = window.innerWidth - sidebarRight;
-      const workspaceHeight = window.innerHeight;
-      const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
-      const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
+      const bounds = this._defaultBounds();
       this.size = {
         ...this.size,
-        width,
-        height,
-        minWidth: 760,
-        minHeight: 480,
+        width: bounds.width,
+        height: bounds.height,
+        minWidth: bounds.minWidth,
+        minHeight: bounds.minHeight,
       };
+      // The window's parent (.window-manager__layer) starts at sidebar's
+      // right edge; `left` is relative to that parent, so don't add
+      // sidebarRight here — only the leftover gap inside the workspace.
       this.style.set({
-        left: Math.round(sidebarRight + (workspaceWidth - width) / 2),
-        top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
-        minWidth: this.size.minWidth,
-        minHeight: this.size.minHeight,
+        left: bounds.left,
+        top: bounds.top,
+        minWidth: bounds.minWidth,
+        minHeight: bounds.minHeight,
       });
     }
     this.style.set({
@@ -80,20 +95,7 @@ class __window_folder extends mfsInteract {
   applyDefaultBounds() {
     if (this._defaultBoundsApplied || Visitor.isMobile()) return;
     this._defaultBoundsApplied = 1;
-    const sidebar = document.querySelector(".desk-module-sidebar__main");
-    const sidebarRight = sidebar ? sidebar.getBoundingClientRect().right : 0;
-    const workspaceWidth = window.innerWidth - sidebarRight;
-    const workspaceHeight = window.innerHeight;
-    const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
-    const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
-    const bounds = {
-      left: Math.round(sidebarRight + (workspaceWidth - width) / 2),
-      top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
-      width,
-      height,
-      minWidth: 760,
-      minHeight: 480,
-    };
+    const bounds = this._defaultBounds();
     this.size = { ...this.size, ...bounds };
     this.style.set(bounds);
     this.$el.css(bounds);
@@ -357,6 +359,7 @@ class __window_folder extends mfsInteract {
 
       case "tab-chat":
         this.scopeChatToFile(null);
+        this.scopeChatToFolder(this.mget(_a.nid));
         return this.showFolderTab(_a.chat);
 
       case _a.chat: {
@@ -493,6 +496,19 @@ class __window_folder extends mfsInteract {
     return this.ensurePart('folder-chat').then((chat) => {
       if (chat && _.isFunction(chat.setScopedFileNid)) chat.setScopedFileNid(fileNid);
     });
+  }
+
+  scopeChatToFolder(folderNid) {
+    return this.ensurePart('folder-chat').then((chat) => {
+      if (chat && _.isFunction(chat.setScopedFolderNid)) chat.setScopedFolderNid(folderNid);
+    });
+  }
+
+  // Keep folder-chat scope in sync with the navigated folder so the right-side
+  // chat panel reflects the current folder's messages even on the Files tab.
+  updateTopbar(m) {
+    super.updateTopbar(m);
+    this.scopeChatToFolder(this.mget(_a.nid));
   }
 
   showFolderTab(tab) {
@@ -697,14 +713,15 @@ class __window_folder extends mfsInteract {
   sendFolderInvitation(cmd) {
     const email = this.getInviteEmail(cmd);
     if (!email) return Wm.alert(LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL);
-    const { nid, hub_id } = this.actualNode();
-    const permission = this._folderInviteRole?.privilege || _K.privilege.admin;
-    return this.postService(SERVICE.sharebox.assign_permission, {
-      email,
+
+    const { hub_id } = this.actualNode();
+    const privilege = this._folderInviteRole?.privilege || _K.privilege.admin;
+
+    return this.postService(SERVICE.hub.add_contributors, {
       hub_id,
-      nid,
-      permission,
-      privilege: permission,
+      privilege,
+      users: [email],
+      email: [email],
     })
       .then(() => Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY))
       .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));

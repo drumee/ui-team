@@ -26,6 +26,7 @@ module.exports = function (ui) {
         kind: "desk_breadcrumb",
         sys_pn: "breadcrumb",
         className: `${pfx}__breadcrumb`,
+        uiHandler: [ui],
       },
 
       // Actions cluster (right)
