@@ -497,11 +497,13 @@
       display: block;
     }
 
-    &__control-icon[data-state="1"] .window-folder-topbar__control-icon-glyph--list {
+    &__control-icon[data-state="1"]
+      .window-folder-topbar__control-icon-glyph--list {
       display: block;
     }
 
-    &__control-icon[data-state="1"] .window-folder-topbar__control-icon-glyph--grid {
+    &__control-icon[data-state="1"]
+      .window-folder-topbar__control-icon-glyph--grid {
       display: none;
     }
 
