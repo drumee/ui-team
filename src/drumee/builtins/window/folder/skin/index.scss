@@ -1208,12 +1208,10 @@
     &.primary {
       background: #5950ff;
     }
-
     &.secondary {
       background: #38a2ce;
       color: #d8f9fd;
     }
-
     &.dark {
       background: #3c3989;
     }
@@ -1969,7 +1967,6 @@
     .widget-chatItem__conversation-content {
     background: var(--area-personal);
   }
-
   .window__chat-panel[data-area="share"]
     .widget-chatItem__conversation-content.me,
   .window__chat-panel[data-area="share"]
@@ -1982,7 +1979,6 @@
     .widget-chatItem__conversation-content {
     background: var(--area-share);
   }
-
   .window__chat-panel[data-area="public"]
     .widget-chatItem__conversation-content.me,
   .window__chat-panel[data-area="public"]
@@ -2017,7 +2013,6 @@
       color: var(--area-personal);
     }
   }
-
   .window__chat-panel[data-area="share"]
     .widget-chatItem__conversation-content.other,
   .window__chat-panel[data-area="share"]
@@ -2034,7 +2029,6 @@
       color: var(--area-share);
     }
   }
-
   .window__chat-panel[data-area="public"]
     .widget-chatItem__conversation-content.other,
   .window__chat-panel[data-area="public"]
