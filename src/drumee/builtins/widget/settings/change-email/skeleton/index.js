@@ -109,6 +109,11 @@ function formView(ui) {
     ],
   });
 
+  // OAuth-only users (password_set=0) verify via email OTP after
+  // submitting; the password field is skipped entirely.
+  const passwordSet = (Visitor.profile() || {}).password_set;
+  const usePassword = passwordSet === undefined || parseInt(passwordSet) === 1;
+
   const fields = Skeletons.Box.Y({
     className: `${pfx}__fields`,
     kids: [
@@ -121,11 +126,13 @@ function formView(ui) {
         name: "new_email",
         value: ui._values.email,
       }),
-      passwordField(ui, {
-        label: LOCALE.CONFIRM_PASSWORD_LABEL,
-        name: "confirm_password",
-        value: ui._values.password,
-      }),
+      usePassword
+        ? passwordField(ui, {
+            label: LOCALE.CONFIRM_PASSWORD_LABEL,
+            name: "confirm_password",
+            value: ui._values.password,
+          })
+        : null,
       ui._error
         ? Skeletons.Note({
             className: `${pfx}__error`,
@@ -279,7 +286,15 @@ function successView(ui) {
 }
 
 function changeEmailRoot(ui) {
-  return ui._step === "success" ? successView(ui) : formView(ui);
+  const main = ui._step === "success" ? successView(ui) : formView(ui);
+  return [
+    main,
+    // Layered slot for the OTP-gate modal (OAuth-only users).
+    Skeletons.Wrapper.Y({
+      className: `${ui.fig.family}__overlay`,
+      name: "overlay",
+    }),
+  ];
 }
 
 export default changeEmailRoot;

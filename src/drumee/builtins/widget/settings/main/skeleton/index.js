@@ -213,14 +213,15 @@ function preferencesCard(ui) {
     }),
   });
 
+  // Connected apps placeholder. The full feature (Drumee as an OAuth
+  // provider — third-party apps consuming Drumee accounts) isn't built
+  // yet; this row reserves the surface and shows users it's coming.
   const appsRow = innerItem(ui, {
     title: LOCALE.CONNECTED_APPS || "Connected apps",
     description: LOCALE.CONNECTED_APPS_DESC || "Manage third-party app access",
-    trailing: button(ui, {
-      label: LOCALE.MANAGE || "Manage",
-      className: `${pfx}-manage`,
-      priority: "ghost",
-      service: "manage-connected-apps",
+    trailing: Skeletons.Note({
+      className: `${pfx}-coming-soon`,
+      content: LOCALE.COMING_SOON,
     }),
   });
 
@@ -254,18 +255,26 @@ function accountCredentialsCard(ui) {
     }),
   });
 
-  const passwordRow = innerItem(ui, {
-    ico: "account_padlock",
-    title: LOCALE.PASSWORD || "Password",
-    description: "•••••••••••••••",
-    className: `${pfx}-row`,
-    trailing: button(ui, {
-      label: LOCALE.EDIT || "Edit",
-      className: `${pfx}-action`,
-      priority: "ghost",
-      service: "edit-password",
-    }),
-  });
+  // OAuth-only users don't have a real password (just a placeholder
+  // UUID set at signup). Hide the password row entirely; once they
+  // add a password via the linked-accounts flow, password_set flips
+  // to 1 and this row reappears.
+  const passwordSet = profile.password_set;
+  const hasPassword = passwordSet === undefined || parseInt(passwordSet) === 1;
+  const passwordRow = hasPassword
+    ? innerItem(ui, {
+        ico: "account_padlock",
+        title: LOCALE.PASSWORD || "Password",
+        description: "•••••••••••••••",
+        className: `${pfx}-row`,
+        trailing: button(ui, {
+          label: LOCALE.EDIT || "Edit",
+          className: `${pfx}-action`,
+          priority: "ghost",
+          service: "edit-password",
+        }),
+      })
+    : null;
 
   return Skeletons.Box.Y({
     className: `${ui.fig.family}__card ${pfx}-card`,
@@ -278,7 +287,7 @@ function accountCredentialsCard(ui) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}-list`,
-        kids: [emailRow, passwordRow],
+        kids: [emailRow, passwordRow].filter(Boolean),
       }),
     ],
   });
@@ -348,6 +357,67 @@ function dangerZoneCard(ui) {
   });
 }
 
+function linkedAccountsCard(ui) {
+  const pfx = `${ui.fig.family}__linked`;
+  const links = Array.isArray(ui._oauthLinks) ? ui._oauthLinks : [];
+
+  // Provider display data — kept inline so adding a new provider only
+  // needs an entry here + a server-side OAuth handler.
+  const providerMeta = {
+    google: { label: "Google", ico: "logo-google" },
+    apple: { label: "Apple", ico: "logo-apple" },
+    dropbox: { label: "Dropbox", ico: "dropbox" },
+  };
+
+  const rows = links.map((link) => {
+    const meta = providerMeta[link.provider] || { label: link.provider };
+    const linkedAt = link.ctime
+      ? Dayjs.unix(link.ctime).format("MMM D, YYYY")
+      : "";
+    return innerItem(ui, {
+      ico: meta.ico,
+      title: meta.label,
+      description: link.email || linkedAt,
+      className: `${pfx}-row`,
+      trailing: button(ui, {
+        label: LOCALE.DISCONNECT || "Disconnect",
+        className: `${pfx}-disconnect`,
+        priority: "ghost",
+        service: "disconnect-oauth",
+        provider: link.provider,
+      }),
+    });
+  });
+
+  if (!rows.length) {
+    rows.push(
+      innerItem(ui, {
+        title: LOCALE.NO_LINKED_ACCOUNTS || "No linked accounts",
+        description:
+          LOCALE.NO_LINKED_ACCOUNTS_HINT ||
+          "Sign in with Google or Apple from the welcome screen to link an account.",
+        className: `${pfx}-row ${pfx}-row--empty`,
+      })
+    );
+  }
+
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__card ${pfx}-card`,
+    kids: [
+      cardHeading(ui, {
+        title: LOCALE.LINKED_ACCOUNTS || "Linked accounts",
+        subtitle:
+          LOCALE.LINKED_ACCOUNTS_SUBTITLE ||
+          "Sign-in providers connected to your account.",
+      }),
+      Skeletons.Box.Y({
+        className: `${pfx}-list`,
+        kids: rows,
+      }),
+    ],
+  });
+}
+
 function settings_body(ui) {
   const pfx = ui.fig.family;
   return [
@@ -359,6 +429,10 @@ function settings_body(ui) {
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-2`,
       kids: [accountCredentialsCard(ui), dangerZoneCard(ui)],
+    }),
+    Skeletons.Box.X({
+      className: `${pfx}__row ${pfx}__row-3`,
+      kids: [linkedAccountsCard(ui)],
     }),
     Skeletons.Wrapper.Y({
       className: `${pfx}__overlay`,

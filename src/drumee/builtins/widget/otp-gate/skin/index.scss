@@ -1,0 +1,150 @@
+// Shared OTP-gate modal — used by any settings widget that needs an
+// email-OTP step-up confirmation (MFA toggle, OAuth-only delete-account
+// or change-email, etc.).
+//
+// Visual spec follows the "Unlock Activity Insights" Figma popup
+// (file g5V3PjhNMf5bHlsHMvV17w, node 100:53094):
+//   width 450, padding 32, gap 32, radius 12, two-layer shadow,
+//   Geist 20/14 typography, Primary/100 heading, Grey/80 body.
+
+.otp-gate-card {
+  position: relative;
+  flex: 0 0 auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13),
+    0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  width: 450px;
+  max-width: calc(100vw - 32px);
+  padding: 32px;
+  gap: 32px;
+  align-items: center;
+  font-family: "Geist", system-ui, sans-serif;
+  pointer-events: auto;
+
+  &__close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 1;
+    cursor: pointer;
+
+    &-icon {
+      color: #65656c;
+      width: 14px;
+      height: 14px;
+
+      &:hover {
+        color: #0b0a21;
+      }
+    }
+  }
+
+  // Strip dtk_otp's full-screen styling so it sits cleanly inside our
+  // card. dataset:fit=parent already clamps width/height; these
+  // overrides remove its gray background, padding, and outer frame.
+  .dtk-otp__ui {
+    width: 100%;
+    height: auto;
+    background: transparent;
+    padding: 0;
+    gap: 16px;
+    overflow: visible;
+  }
+
+  .dtk-otp__main {
+    width: 100%;
+    max-width: none;
+    background: transparent;
+    border: none;
+    padding: 0;
+    top: 0;
+    gap: 16px;
+  }
+
+  // Heading — dtk_otp renders the title via its `header()` helper.
+  .dtk-otp__title,
+  .dtk-otp__main .header {
+    font-family: "Geist", system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 1.1;
+    color: #0b0a21;
+    text-align: center;
+  }
+
+  // Body / "sent to" message.
+  .dtk-otp__message,
+  .dtk-otp__message-text {
+    font-family: "Geist", system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #65656c;
+    text-align: center;
+  }
+
+  // Compact square OTP digit cells (default is 52×72 rectangle).
+  .dtk-otp__digits {
+    height: auto;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .dtk-otp__digit {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    border: 1px solid #ebecf0;
+    transition: border-color 120ms ease, background-color 120ms ease;
+
+    input {
+      font-family: "Geist", system-ui, sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1;
+      height: 100%;
+      padding: 0;
+      color: #0b0a21;
+    }
+
+    &:focus-within {
+      border-color: #433cc5;
+      background: #f4e7ff;
+    }
+  }
+
+  // Resend link styled to match the small-body palette.
+  .dtk-otp__resend-text {
+    font-family: "Geist", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #65656c;
+
+    &.resend {
+      color: #433cc5;
+      font-weight: 600;
+    }
+  }
+
+  @media (max-width: 560px) {
+    width: calc(100vw - 24px);
+    padding: 24px;
+    gap: 24px;
+
+    .dtk-otp__digit {
+      width: 38px;
+      height: 38px;
+
+      input {
+        font-size: 18px;
+      }
+    }
+  }
+}
+
+html[data-theme="dark"] .otp-gate-card {
+  background: var(--normal-bg-elevated);
+}
