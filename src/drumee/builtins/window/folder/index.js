@@ -719,6 +719,10 @@ class __window_folder extends mfsInteract {
     const { hub_id } = this.actualNode();
     const privilege = this._folderInviteRole?.privilege || _K.privilege.admin;
 
+    const btn = cmd?.el;
+    if (btn?.getAttribute("data-pending") === "1") return;
+    if (btn) btn.setAttribute("data-pending", "1");
+
     return this.postService(SERVICE.hub.add_contributors, {
       hub_id,
       privilege,
@@ -726,7 +730,10 @@ class __window_folder extends mfsInteract {
       email: [email],
     })
       .then(() => Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY))
-      .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
+      .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN))
+      .finally(() => {
+        if (btn) btn.removeAttribute("data-pending");
+      });
   }
 
   removeFolderMember(cmd) {

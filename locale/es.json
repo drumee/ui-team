@@ -384,6 +384,7 @@
   "SEND_LINK_BY_EMAIL": "Enviar enlace por correo",
   "ADD_MEMBERS": "Añadir miembros",
   "ONLY_MEMBERS_CAN_ACCESS": "Solo los miembros de la lista a continuación pueden acceder al contenido de esta carpeta.",
+  "FOLDER_MEMBER": "Miembros de la carpeta",
   "FOLDER_SCOPED_CHAT": "CHAT DE LA CARPETA",
   "TASK_STATUS_TODO": "Por hacer",
   "TASK_STATUS_IN_PROGRESS": "En progreso",
