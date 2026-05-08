@@ -640,6 +640,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 119c6524 (fix ui of player)
 =======
@@ -660,6 +661,8 @@
 =======
 >>>>>>> aba96a82 (fix ui of player)
 =======
+>>>>>>> c39886cc (update style admin console)
+=======
 >>>>>>> 119c6524 (fix ui of player)
 =======
 >>>>>>> 73248fe9 (update style admin console)
@@ -670,7 +673,16 @@
 =======
 >>>>>>> 119c6524 (fix ui of player)
 >>>>>>> 0fd8f6c3 (fix ui of player)
+<<<<<<< HEAD
 >>>>>>> aba96a82 (fix ui of player)
+=======
+=======
+=======
+>>>>>>> 119c6524 (fix ui of player)
+=======
+>>>>>>> cefa7295 (update style admin console)
+>>>>>>> 8654d0d9 (update style admin console)
+>>>>>>> c39886cc (update style admin console)
   <symbol viewBox="0 0 20 20" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet"
     id="--icon-apps-arrow-clockwise">
     <path
