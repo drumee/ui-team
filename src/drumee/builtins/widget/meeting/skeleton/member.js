@@ -3,13 +3,15 @@ module.exports = function (_ui_) {
   const firstname = _ui_.mget(_a.firstname) || "";
   const lastname = _ui_.mget(_a.lastname) || "";
   const fullname = _ui_.mget(_a.fullname) || `${firstname} ${lastname}`.trim();
+  const memberId = _ui_.mget(_a.drumate_id) || _ui_.mget(_a.entity_id);
+  const isSelf = memberId != null && String(memberId) === String(Visitor.id);
 
   return Skeletons.Box.X({
     className: `${pfx}__member-row`,
     kids: [
       Skeletons.UserProfile({
         className: `${pfx}__member-avatar`,
-        id: _ui_.mget(_a.drumate_id) || _ui_.mget(_a.entity_id),
+        id: memberId,
         firstname,
         lastname,
         live_status: 1,
@@ -30,7 +32,7 @@ module.exports = function (_ui_) {
         ],
       }),
 
-      Skeletons.Button.Label({
+      isSelf ? null : Skeletons.Button.Label({
         className: `${pfx}__member-call-btn`,
         ico: "folder-meeting",
         label: LOCALE.CALL || "Call",

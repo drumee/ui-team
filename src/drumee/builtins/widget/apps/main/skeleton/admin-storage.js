@@ -55,15 +55,27 @@ function tableHeader(ui) {
   const allChecked =
     ui._fvSelected && ui._fvSelected.size === rows.length && rows.length > 0;
   const cols = [
-    { className: `${pfx}__fv-col--check`, kids: [
-      checkbox(ui, { checked: allChecked, service: "apps-fv-toggle-all" }),
-    ] },
-    { className: `${pfx}__fv-col--file`,      label: LOCALE.FILE || "File" },
-    { className: `${pfx}__fv-col--folder`,    label: LOCALE.FOLDER || "Folder" },
-    { className: `${pfx}__fv-col--workspace`, label: LOCALE.WORKSPACE || "Workspace" },
-    { className: `${pfx}__fv-col--size`,      label: LOCALE.SIZE || "Size" },
-    { className: `${pfx}__fv-col--versions`,  label: LOCALE.VERSIONS || "Versions" },
-    { className: `${pfx}__fv-col--actions`,   label: LOCALE.ACTIONS || "Actions" },
+    {
+      className: `${pfx}__fv-col--check`,
+      kids: [
+        checkbox(ui, { checked: allChecked, service: "apps-fv-toggle-all" }),
+      ],
+    },
+    { className: `${pfx}__fv-col--file`, label: LOCALE.FILE || "File" },
+    { className: `${pfx}__fv-col--folder`, label: LOCALE.FOLDER || "Folder" },
+    {
+      className: `${pfx}__fv-col--workspace`,
+      label: LOCALE.WORKSPACE || "Workspace",
+    },
+    { className: `${pfx}__fv-col--size`, label: LOCALE.SIZE || "Size" },
+    {
+      className: `${pfx}__fv-col--versions`,
+      label: LOCALE.VERSIONS || "Versions",
+    },
+    {
+      className: `${pfx}__fv-col--actions`,
+      label: LOCALE.ACTIONS || "Actions",
+    },
   ];
   return Skeletons.Box.X({
     className: `${pfx}__fv-row ${pfx}__fv-row--header`,
@@ -76,7 +88,7 @@ function tableHeader(ui) {
             content: c.label,
           }),
         ],
-      })
+      }),
     ),
   });
 }
@@ -199,7 +211,7 @@ function workspaceFilter(ui) {
         content: LOCALE.ALL_WORKSPACE || "All workspace",
       }),
       Skeletons.Image.Svg({
-        ico: "editbox_arrow--down",
+        ico: "desktop_filter",
         className: `${pfx}__storage-sort-chevron`,
       }),
     ],
@@ -311,12 +323,13 @@ function fvFooterPagination(ui) {
   const pages = buildFvPageList(current, totalPages);
   const start = total === 0 ? 0 : (current - 1) * pageSize + 1;
   const end = total === 0 ? 0 : Math.min(total, current * pageSize);
-  const summary = total === 0
-    ? LOCALE.NO_FILES_FOUND || "No files"
-    : (LOCALE.SHOWING_FILES_OF || "Showing {start}-{end} of {total} files")
-        .replace("{start}", start)
-        .replace("{end}", end)
-        .replace("{total}", total.toLocaleString());
+  const summary =
+    total === 0
+      ? LOCALE.NO_FILES_FOUND || "No files"
+      : (LOCALE.SHOWING_FILES_OF || "Showing {start}-{end} of {total} files")
+          .replace("{start}", start)
+          .replace("{end}", end)
+          .replace("{total}", total.toLocaleString());
   const pageBtn = (n) =>
     Skeletons.Box.X({
       className: `${pfx}__fv-page-btn${current === n ? ` ${pfx}__fv-page-btn--active` : ""}`,
@@ -353,7 +366,7 @@ function fvFooterPagination(ui) {
                   className: `${pfx}__fv-page-ellipsis`,
                   content: "…",
                 })
-              : pageBtn(p)
+              : pageBtn(p),
           ),
           Skeletons.Button.Svg({
             ico: "mini-arrow-right-new",
@@ -377,7 +390,12 @@ function fileVersioningTable(ui) {
       tableHeader(ui),
       Skeletons.Box.X({
         className: `${pfx}__fv-empty`,
-        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.LOADING || "Loading…" })],
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__fv-empty-label`,
+            content: LOCALE.LOADING || "Loading…",
+          }),
+        ],
       }),
     ];
   } else if (ui._adminStorageState === "error") {
@@ -385,7 +403,12 @@ function fileVersioningTable(ui) {
       tableHeader(ui),
       Skeletons.Box.X({
         className: `${pfx}__fv-empty`,
-        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.FILES_LOAD_FAILED || "Could not load files." })],
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__fv-empty-label`,
+            content: LOCALE.FILES_LOAD_FAILED || "Could not load files.",
+          }),
+        ],
       }),
     ];
   } else if (!rows.length) {
@@ -393,7 +416,12 @@ function fileVersioningTable(ui) {
       tableHeader(ui),
       Skeletons.Box.X({
         className: `${pfx}__fv-empty`,
-        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.NO_FILES_FOUND || "No files found." })],
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__fv-empty-label`,
+            content: LOCALE.NO_FILES_FOUND || "No files found.",
+          }),
+        ],
       }),
     ];
   } else {
@@ -456,7 +484,12 @@ function fileVersioningAll(ui) {
       tableHeader(ui),
       Skeletons.Box.X({
         className: `${pfx}__fv-empty`,
-        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.LOADING || "Loading…" })],
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__fv-empty-label`,
+            content: LOCALE.LOADING || "Loading…",
+          }),
+        ],
       }),
     ];
   } else if (ui._adminStorageState === "error") {
@@ -464,7 +497,12 @@ function fileVersioningAll(ui) {
       tableHeader(ui),
       Skeletons.Box.X({
         className: `${pfx}__fv-empty`,
-        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.FILES_LOAD_FAILED || "Could not load files." })],
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__fv-empty-label`,
+            content: LOCALE.FILES_LOAD_FAILED || "Could not load files.",
+          }),
+        ],
       }),
     ];
   } else if (!rows.length) {
@@ -472,7 +510,12 @@ function fileVersioningAll(ui) {
       tableHeader(ui),
       Skeletons.Box.X({
         className: `${pfx}__fv-empty`,
-        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.NO_FILES_FOUND || "No files found." })],
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__fv-empty-label`,
+            content: LOCALE.NO_FILES_FOUND || "No files found.",
+          }),
+        ],
       }),
     ];
   } else {
