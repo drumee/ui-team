@@ -415,9 +415,9 @@ class __dmz_wm extends winman {
         } = data;
         var h = data.vhost;
         let { svc, protocol, keysel, main_domain, localhost} = bootstrap();
-        let url = `${protocol}://${h}${svc}/media.zip_download?id=${id}&keysel=${keysel}`;
+        let url = `${protocol}://${h}${svc}/media.zip?id=${id}&keysel=${keysel}&zipname=${data.zipname}`;
         if(localhost){
-           url = `${protocol}://${main_domain}${svc}/@{h}/media.zip_download&id=${id}&keysel=${keysel}`;
+           url = `${protocol}://${main_domain}${svc}/@{h}/media.zip&id=${id}&keysel=${keysel}&zipname=${data.zipname}`;
         }
         return this._getFile(url, id);
     }

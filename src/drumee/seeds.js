@@ -549,6 +549,9 @@ module.exports = {
   window_sharebox: function () {
     return import("./builtins/window/sharebox");
   },
+  window_switchcall: function () {
+    return import("./builtins/window/switchcall");
+  },
   window_team: function () {
     return import("./builtins/window/team");
   },
