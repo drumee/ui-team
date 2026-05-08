@@ -680,9 +680,19 @@
 =======
 >>>>>>> 119c6524 (fix ui of player)
 =======
+<<<<<<< HEAD
 >>>>>>> cefa7295 (update style admin console)
+<<<<<<< HEAD
 >>>>>>> 8654d0d9 (update style admin console)
+<<<<<<< HEAD
 >>>>>>> c39886cc (update style admin console)
+=======
+=======
+=======
+>>>>>>> 73248fe9 (update style admin console)
+>>>>>>> 5675ae4a (update style admin console)
+>>>>>>> dd692f09 (update style admin console)
+>>>>>>> 078ab6c1 (update style admin console)
   <symbol viewBox="0 0 20 20" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet"
     id="--icon-apps-arrow-clockwise">
     <path
