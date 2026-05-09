@@ -1,7 +1,6 @@
 
 require("./skin");
 const { copyToClipboard } = require("@drumee/ui-essentials")
-const { TweenLite, TimelineMax } = gsap;
 let lastClickTime = new Date().getTime();
 const push = require("./push");
 
@@ -1115,8 +1114,9 @@ class __window_manager extends push {
       let trashbin = trash.$el;
       this.$el.append(helper);
       const f = () => {
-        const tl = new TimelineMax();
-        tl.to(trashbin, 0.3, { scale: 1.2 }).to(trashbin, 0.3, { scale: 1 });
+        const tl = anime.timeline();
+        tl.add({ targets: trashbin[0], scale: 1.2, duration: 300 });
+        tl.add({ targets: trashbin[0], scale: 1, duration: 300 });
         trashbin.parent().children(".temp-anim").remove();
         helper.remove();
         resolve()
@@ -1124,12 +1124,13 @@ class __window_manager extends push {
 
       const dest_x = trashbin.offset().left;
       const dest_y = trashbin.offset().top;
-      TweenLite.to(helper, 1.4, {
+      anime({ targets: helper[0],
         left: dest_x,
         top: dest_y,
         scale: 0,
-        alpha: 0,
-        onComplete: f,
+        opacity: 0,
+        duration: 1400,
+        complete: f,
       });
     })
   }

@@ -42,7 +42,6 @@ class __spinner_greensock extends Marionette.View {
 // ============================
   onRender() {
     super.onRender();
-    TweenMax.set(this.$el, dui.request(_REQ.ui.gsSpinner, this._size));
     return this.ui.image.css(dui.request(_REQ.ui.gsSpinner, this._size));
   }
     
@@ -53,7 +52,7 @@ class __spinner_greensock extends Marionette.View {
   onDomRefresh() {
     let tween;
     this.$el.parent().attr(_a.data.state, _a.open);
-    return tween = TweenMax.to(this.$el, 2, {rotation:355, repeat:-1, repeatDelay:0.1, ease:Linear.easeInOut});
+    return anime({ targets: this.el, rotate: 360, duration: 2000, loop: true, endDelay: 100, easing: 'linear' });
   }
 }
 __spinner_greensock.initClass();

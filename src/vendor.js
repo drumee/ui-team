@@ -17,12 +17,12 @@
 
 
 
-const gsap = require("gsap/all");
+const anime = require("animejs/lib/anime.js");
 
 document.addEventListener('readystatechange', () => {
   if (document.readyState == 'complete') {
     console.log(`Loading Vendor...`);
-    window.gsap = gsap;
+    window.anime = anime;
     const event = new Event('drumee:bootstraping');
     event.name = 'vendor'
     document.dispatchEvent(event);

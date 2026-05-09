@@ -4,7 +4,6 @@ const OPEN_NODE = "open-node";
 const WS_EVENT = "ws:event";
 
 const Rectangle = require('rectangle-node');
-const { TweenMax, Expo } = gsap;
 const ViewMode = new Map();
 const DEFAULT = 'default';
 ViewMode.set(DEFAULT, _a.icon);
@@ -858,22 +857,21 @@ class __window_mfs extends DrumeeMFS {
     }
 
     this.mset(_a.minimize, 1);
-    TweenMax.fromTo(this.$el, 1.5, {},
-      {
-        width: 0,
-        height: 0,
-        top: window.innerHeight - 200,
-        left: (window.innerWidth / 2) - 480,
-        scale: 0,
-        opacity: 0,
-        ...minimizeLocation,
-        ease: Expo.easeOut, //Expo.easeIn,
-        onComplete: () => {
-          this.el.dataset.minimize = 1;
-          this.el.dataset.state = 0;
-        }
+    anime({ targets: this.$el[0],
+      width: 0,
+      height: 0,
+      top: window.innerHeight - 200,
+      left: (window.innerWidth / 2) - 480,
+      scale: 0,
+      opacity: 0,
+      ...minimizeLocation,
+      duration: 1500,
+      easing: 'easeOutExpo',
+      complete: () => {
+        this.el.dataset.minimize = 1;
+        this.el.dataset.state = 0;
       }
-    );
+    });
 
 
     const win = Wm.__windowsLayer.children.toArray()
@@ -908,22 +906,18 @@ class __window_mfs extends DrumeeMFS {
       fromVar = { ...cmd.$el.offset() }
     }
 
-    TweenMax.fromTo(this.$el, 1.5,
-      {
-        ...fromVar,
-        immediateRender: true
-      },
-      {
-        ...this.wakeUpState,
-        ease: Expo.easeInOut, //Expo.easeIn,
-        onComplete: () => {
-          this.el.dataset.state = 1;
-          if (callback && _.isFunction(callback)) {
-            callback()
-          }
+    anime.set(this.$el[0], fromVar);
+    anime({ targets: this.$el[0],
+      ...this.wakeUpState,
+      duration: 1500,
+      easing: 'easeInOutExpo',
+      complete: () => {
+        this.el.dataset.state = 1;
+        if (callback && _.isFunction(callback)) {
+          callback()
         }
       }
-    );
+    });
     /**
      * Wake event.
      * @event Wm#wake

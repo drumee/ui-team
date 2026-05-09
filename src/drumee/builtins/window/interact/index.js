@@ -1,6 +1,5 @@
 const CHANGE_RADIO = "change:radio";
 const Rectangle = require('rectangle-node');
-const { TweenMax } = gsap;
 const { copyToClipboard, timestamp } = require("@drumee/ui-essentials")
 
 const windowCore = require("../core");
@@ -375,12 +374,13 @@ class __window_interact extends windowCore {
         return cb(anim.to);
       }
     };
-    TweenMax.to(this.$el, 0.5, {
+    anime({ targets: this.$el[0],
       width: anim.to.width,
       height: anim.to.height,
       left: anim.to.left,
       top: anim.to.top,
-      onComplete: f,
+      duration: 500,
+      complete: f,
     });
   }
 

@@ -1,6 +1,5 @@
 
 const { filesize, fitBoxes } = require("@drumee/ui-essentials")
-const { TweenMax, Expo } = gsap;
 const PlayerInteract = require('player/interact');
 const { loadPdfDocument, initializePdfium, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";
@@ -606,18 +605,8 @@ class __player_document extends PlayerInteract {
       this.size = this.max_size();
       this.size.width = maxWidth;
       this.size.height = maxHeight;
-      TweenMax.fromTo(this.$el, 1.5,
-        { scale: 0.15, opacity: 0 },
-        {
-          scale: 1,
-          opacity: 1,
-          ease: Expo.easeInOut,
-          top: this.offset.top,
-          left: this.size.left,
-          width: this.size.width,
-          height: this.size.height,
-        }
-      );
+      anime.set(this.$el[0], { scale: 0.15, opacity: 0 });
+      anime({ targets: this.$el[0], scale: 1, opacity: 1, top: this.offset.top, left: this.size.left, width: this.size.width, height: this.size.height, duration: 1500, easing: 'easeInOutExpo' });
       return
     }
     this.size = this.max_size();
@@ -664,15 +653,8 @@ class __player_document extends PlayerInteract {
     }
     if (pos.left < 0) pos.left = 50
     if (pos.top < 0) pos.top = 50
-    TweenMax.fromTo(this.$el, 1.5,
-      { scale: 0.15, opacity: 0 },
-      {
-        scale: 1,
-        opacity: 1,
-        ease: Expo.easeInOut,
-        ...pos,
-      }
-    );
+    anime.set(this.$el[0], { scale: 0.15, opacity: 0 });
+    anime({ targets: this.$el[0], scale: 1, opacity: 1, ...pos, duration: 1500, easing: 'easeInOutExpo' });
   }
 
   /**

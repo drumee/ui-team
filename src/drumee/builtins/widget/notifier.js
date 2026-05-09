@@ -1,4 +1,3 @@
-const { TweenMax } = gsap;
 
 class __utils_notifier extends Marionette.View {
   constructor(...args) {
@@ -42,10 +41,11 @@ class __utils_notifier extends Marionette.View {
 
 
   _anim() {
-    TweenMax.set(this.$el, { perspective: 800, transformStyle: "preserve-3d" });
-    return TweenMax.fromTo(this.$el, 2,
-      { rotationX: -180, backgroundColor: "#FCFF1D" },
-      { rotationX: 0, backgroundColor: "#9DCDEF" });
+    this.el.style.transformStyle = "preserve-3d";
+    anime.set(this.el, { perspective: 800 });
+    anime.set(this.el, { rotateX: -180 });
+    this.el.style.backgroundColor = "#FCFF1D";
+    return anime({ targets: this.el, rotateX: 0, backgroundColor: "#9DCDEF", duration: 2000 });
   }
 
 

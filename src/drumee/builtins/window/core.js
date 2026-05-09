@@ -6,7 +6,6 @@ const __utils = require("./utils");
 const TIMERS = {
   reorder: null,
 };
-const { TweenMax } = gsap;
 const {
   copyToClipboard,
   reverseSortBy,
@@ -75,7 +74,7 @@ class __window_core extends __utils {
     window.addEventListener("beforeunload", (e) => {
       try {
         this.onBeforeDestroy();
-      } catch (error) {}
+      } catch (error) { }
     });
     this.contextmenuSkeleton = require("builtins/contextmenu/skeleton");
     this._raised = 0;
@@ -148,7 +147,7 @@ class __window_core extends __utils {
    *
    * Abstrct -- dont remove
    */
-  notify() {}
+  notify() { }
 
   /**
    *
@@ -242,7 +241,7 @@ class __window_core extends __utils {
   /**
    * Abstrcat method
    */
-  setContentSize() {}
+  setContentSize() { }
 
   /**
    *
@@ -268,12 +267,13 @@ class __window_core extends __utils {
     if (to.left < 0) to.left = 0;
     if (to.height > window.innerWidth) to.height = window.innerWidth;
     if (to.height > window.innerHeight) to.height = window.innerHeight;
-    TweenMax.to(this.$el, 0.5, {
+    anime({ targets: this.$el[0],
       width: to.width,
       height: to.height,
       left: to.left,
       top: to.top,
-      onComplete: f,
+      duration: 500,
+      complete: f,
     });
   }
 
@@ -821,7 +821,7 @@ class __window_core extends __utils {
     // if (!args.no_raise) this.raise(cmd);
     switch (service) {
       case _e.close:
-        if (this.mget(_a.source)) {
+        if (this.mget(_a.source) && this.mget(_a.source).el) {
           this.mget(_a.source).el.dataset.isActive = _a.off;
         }
         return this.goodbye();

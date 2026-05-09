@@ -1,5 +1,4 @@
 
-const { TweenMax, Expo } = gsap;
 const { copyToClipboard, fitBoxes } = require("@drumee/ui-essentials")
 
 const __core = require('player/interact');
@@ -308,18 +307,8 @@ class ___player_schedule extends __core {
     }
 
     this.debug("AAA:441", this, `max_height=${max_height}, max_width=${max_width}`, o, s.width);
-    TweenMax.fromTo(this.$el, 1.5,
-      { scale: 0.15, opacity: 0 },
-      {
-        width: s.width,
-        height: height,
-        scale: 1,
-        opacity: 1,
-        ease: Expo.easeInOut,
-        ...pos,
-        onComplete: f
-      }
-    );
+    anime.set(this.$el[0], { scale: 0.15, opacity: 0 });
+    anime({ targets: this.$el[0], width: s.width, height, scale: 1, opacity: 1, ...pos, duration: 1500, easing: 'easeInOutExpo', complete: f });
   }
 
   /* ===========================================================
