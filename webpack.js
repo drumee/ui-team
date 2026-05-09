@@ -58,7 +58,11 @@ function makeOptions(entry, opt) {
 
     optimization: {
       splitChunks: {
-        minSize: 20000, // Minimum size for a chunk to be generated
+        // 'all' deduplicates modules shared between sync entry chunks and async
+        // chunks. Without this, jQuery (278 KB) was bundled in both the sync
+        // `core` entry and the async vendors chunk, costing an extra 278 KB.
+        chunks: 'all',
+        minSize: 20000,
       },
       runtimeChunk: 'single', // Extracts webpack runtime code into a separate file (e.g., runtime~main.[hash].js)
       moduleIds: 'deterministic', // (Webpack 5+) Stable module IDs
