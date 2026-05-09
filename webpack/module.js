@@ -1,33 +1,37 @@
 const { resolve } = require("path");
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const drumee_path = 'src/drumee/';
 
-module.exports = function (basedir) {
+module.exports = function (basedir, mode) {
+  const isProd = /^prod/.test(mode);
+  // Source maps: useful in development, omit in production to save size.
+  const sourceMap = !isProd;
   a = {
     rules: [{
       test: /\.(sa|sc|c)ss$/,
 
       use: [
-        'style-loader',
-        //MiniCssExtractPlugin.loader,
+        MiniCssExtractPlugin.loader,
         {
           loader: 'css-loader',
           options: {
-            sourceMap: true,
+            sourceMap,
             importLoaders: 1
           },
         }, {
           loader: 'postcss-loader',
           options: {
-            sourceMap: true, // Show resource full path
+            sourceMap,
           }
         }, {
           loader: 'sass-loader',
           options: {
-            sourceMap: true,
-            //api: "modern",
+            sourceMap,
             sassOptions: {
-              sourceMap: true,
-              sourceMapEmbed: true,
+              sourceMap,
+              // Never embed source maps inline — keeps CSS output lean and
+              // lets the browser load .map files on demand.
+              sourceMapEmbed: false,
               includePaths: [
                 resolve(basedir, drumee_path, 'skin'),
                 resolve(basedir, 'node_modules')
