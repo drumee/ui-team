@@ -1,0 +1,14 @@
+:root {
+  --z-index-lowest: -3;
+  --z-index-lower: -1;
+  --z-index-normal: 1;
+  --z-index-high: 200;
+  --z-index-higher: 1000;
+  --z-index-draft: --z-index-higher;
+  --z-index-context: 50000;
+  --always-visible: 50010;
+  --z-index-context-upper: 50010;
+  --z-index-preview: 80000;
+  --z-index-modal: 100000;
+  --z-index-highest: 200000;
+}
