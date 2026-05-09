@@ -114,34 +114,28 @@
   cursor: pointer;
 }
 
-@include vendor.margin-list(margin-top, 120);
-@include vendor.margin-list(margin-bottom, 120);
-@include vendor.margin-list(margin-left, 120);
-@include vendor.margin-list(margin-right, 120);
-@include vendor.margin-list(padding-top, 120);
-@include vendor.margin-list(padding-bottom, 120);
-@include vendor.margin-list(padding-left, 120);
-@include vendor.margin-list(padding-right, 120);
-@include vendor.margin-list(padding, 120);
-@include vendor.margin-list(margin, 120);
-@include vendor.margin-list(padding-hor, 120);
-@include vendor.margin-list(margin-hor, 120);
-@include vendor.margin-list(padding-vert, 120);
-@include vendor.margin-list(margin-vert, 120);
-@include vendor.margin-list-md(margin-top, 120);
-@include vendor.margin-list-md(margin-bottom, 120);
-@include vendor.margin-list-md(margin-left, 120);
-@include vendor.margin-list-md(margin-right, 120);
-@include vendor.margin-list-md(padding-top, 120);
-@include vendor.margin-list-md(padding-bottom, 120);
-@include vendor.margin-list-md(padding-left, 120);
-@include vendor.margin-list-md(padding-right, 120);
-@include vendor.margin-list-md(padding, 120);
-@include vendor.margin-list-md(margin, 120);
-@include vendor.margin-list-md(padding-hor, 120);
-@include vendor.margin-list-md(margin-hor, 120);
-@include vendor.margin-list-md(padding-vert, 120);
-@include vendor.margin-list-md(margin-vert, 120);
+// Only the values actually referenced in src/drumee — 49 discrete values
+// instead of a 0-120 range (3146 generated rules → ~637).
+// The margin-list-md variants generated 1573 breakpoint rules that are
+// not used anywhere in the codebase and have been removed entirely.
+$_sp: 0, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 14, 15, 16, 17, 18, 20, 22, 23,
+      24, 25, 26, 28, 30, 32, 33, 34, 35, 38, 40, 41, 45, 47, 50, 53, 55,
+      60, 63, 64, 67, 68, 69, 70, 71, 72, 74, 80, 90, 115;
+
+@include vendor.margin-set(margin-top,    $_sp);
+@include vendor.margin-set(margin-bottom, $_sp);
+@include vendor.margin-set(margin-left,   $_sp);
+@include vendor.margin-set(margin-right,  $_sp);
+@include vendor.margin-set(padding-top,   $_sp);
+@include vendor.margin-set(padding-bottom,$_sp);
+@include vendor.margin-set(padding-left,  $_sp);
+@include vendor.margin-set(padding-right, $_sp);
+@include vendor.margin-set(padding,       $_sp);
+@include vendor.margin-set(margin,        $_sp);
+@include vendor.margin-set(padding-hor,   $_sp);
+@include vendor.margin-set(margin-hor,    $_sp);
+@include vendor.margin-set(padding-vert,  $_sp);
+@include vendor.margin-set(margin-vert,   $_sp);
 @include vendor.z-index(10);
 
 
