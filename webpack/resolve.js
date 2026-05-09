@@ -8,6 +8,34 @@ const builtins = drumee_path + 'builtins/';
 const utils = drumee_path + 'utils/';
 const node_path = 'node_modules';
 const drumee_modules = drumee_path + 'modules/';
+const ui_core = node_path + '/@drumee/ui-core/letc';
+const ui_styles = node_path + '/@drumee/ui-styles/src';
+
+// Local overrides for skin — files that diverge from @drumee/ui-styles.
+// `skin/mixins` (prefix, no $) covers the entire mixins/ subtree which has
+// no equivalent in the package.
+const skin_overrides = {
+  'skin/index$':               'skin/index',
+  'skin/lib/align$':           'skin/lib/align',
+  'skin/lib/button$':          'skin/lib/button',
+  'skin/lib/container$':       'skin/lib/container',
+  'skin/lib/drumee-buttons$':  'skin/lib/drumee-buttons',
+  'skin/lib/input$':           'skin/lib/input',
+  'skin/lib/typo$':            'skin/lib/typo',
+  'skin/lib/utils$':           'skin/lib/utils',
+  'skin/vars/bigchat$':        'skin/vars/bigchat',
+  'skin/vars/box-shadow$':     'skin/vars/box-shadow',
+  'skin/vars/color$':          'skin/vars/color',
+  'skin/vars/default$':        'skin/vars/default',
+  'skin/vars/revamp$':         'skin/vars/revamp',
+  'skin/mixins':               'skin/mixins',   // prefix — whole subtree is local-only
+};
+
+function resolveLocalOverrides(basedir, map, base) {
+  return Object.fromEntries(
+    Object.entries(map).map(([alias, rel]) => [alias, resolve(basedir, drumee_path, rel)])
+  );
+}
 
 module.exports = function (basedir) {
   if (!basedir) {
@@ -16,6 +44,8 @@ module.exports = function (basedir) {
   return {
     extensions: [".coffee", ".js", ".scss", ".css", ".web.coffee", ".web.js", ".json", ".tpl", '.tsx', '.ts',],
     alias: {
+      ...resolveLocalOverrides(basedir, skin_overrides),
+
       env: resolve(node_path, '@embedpdf/pdfium/dist/pdfium.wasm'),
       wasi_snapshot_preview1: resolve(node_path, '@embedpdf/pdfium/dist/pdfium.wasm'),
       api: resolve(basedir, drumee_path, 'api'),
@@ -57,7 +87,6 @@ module.exports = function (basedir) {
       lex: resolve(basedir, drumee_path, 'lex'),
       libs: resolve(basedir, drumee_path, 'libs'),
       locale: resolve(basedir, 'locale'),
-      locale: resolve(basedir, 'locale'),
       // Force all imports of 'lodash' to go to the root version
       lodash: resolve(node_path, 'lodash'),
       // marionette: 'backbone.marionette',
@@ -75,13 +104,13 @@ module.exports = function (basedir) {
       router: resolve(basedir, drumee_path, 'router'),
       sass: resolve(basedir, src_dir, 'sass'),
       skeleton: resolve(basedir, libs, 'skeleton'),
-      skin: resolve(basedir, drumee_path, 'skin'),
+      skin: resolve(node_path, ui_styles),
       slider: resolve(basedir, drumee_modules, 'slider'),
       slurper: resolve(basedir, drumee_modules, 'slurper'),
       src: resolve(basedir, src_dir),
       test: resolve(basedir, utils, 'test'),
       toolbox: resolve(basedir, drumee_modules, 'designer', 'skeleton', 'toolbox'),
-      toolkit: resolve(basedir, drumee_path, 'toolkit'),
+      toolkit: resolve(node_path, ui_core, 'toolkit'),
       type: resolve(basedir, libs, 'type'),
       vendor: resolve(basedir, src_dir, 'vendor'),
       welcome: resolve(basedir, drumee_modules, 'welcome'),
