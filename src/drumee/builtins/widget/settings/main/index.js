@@ -1,4 +1,5 @@
 const { uploadFile } = require("@drumee/ui-essentials");
+const { sendOtp, openOtpModal } = require("../../otp-gate");
 
 /**
  * Full-area Settings page rendered into the desk main center
@@ -20,7 +21,31 @@ class settings_main extends LetcBox {
   /**
    *
    */
-  onDomRefresh() {
+  async onDomRefresh() {
+    this._oauthLinks = await this._loadOauthLinks();
+    this.feed(require("./skeleton").default(this));
+  }
+
+  /**
+   * Fetch the user's linked OAuth providers. Returns an array of
+   * { provider, email, ctime, mtime } rows, or [] if the call fails.
+   */
+  async _loadOauthLinks() {
+    try {
+      const res = await this.fetchService(SERVICE.drumate.list_oauth_links, {
+        hub_id: Visitor.id,
+      });
+      if (Array.isArray(res)) return res;
+      if (res && Array.isArray(res.data)) return res.data;
+      return [];
+    } catch (e) {
+      this.warn("settings_main: list_oauth_links failed", e);
+      return [];
+    }
+  }
+
+  async _refreshOauthLinks() {
+    this._oauthLinks = await this._loadOauthLinks();
     this.feed(require("./skeleton").default(this));
   }
 
@@ -74,16 +99,60 @@ class settings_main extends LetcBox {
   }
 
   /**
-   *
+   * Two-factor toggle requires an OTP step in both directions (enable
+   * AND disable). Server desk.set_mfa() requires {secret, code} so an
+   * attacker on the active session can't silently disable MFA without
+   * also controlling the user's inbox.
    */
-  toggleTwoFactor(cmd) {
-    const next = cmd.mget(_a.state) ? 0 : 1;
+  async toggleTwoFactor(cmd) {
+    if (this._mfaInFlight) return;
+    this._mfaInFlight = true;
+
+    const profile = Visitor.profile() || {};
+    const prev = parseInt(profile.mfa) ? 1 : 0;
+    const next = prev ? 0 : 1;
+
     cmd.setState(next);
-    this.postService({
-      service: SERVICE.desk.set_mfa,
-      hub_id: Visitor.id,
-      mfa: next,
+    this._mfaCmd = cmd;
+    this._mfaPrev = prev;
+    this._mfaNext = next;
+
+    const otp = await sendOtp(this);
+    if (!otp) {
+      return this._cancelMfa(LOCALE.UNKNOWN_ERROR);
+    }
+
+    return openOtpModal(this, {
+      ...otp,
+      api: SERVICE.desk.set_mfa,
+      payload: { mfa: next },
+      successService: "mfa-changed",
+      cancelService: "mfa-cancel",
     });
+  }
+
+  _cancelMfa(errorMessage) {
+    if (this._mfaCmd) this._mfaCmd.setState(this._mfaPrev);
+    this._resetMfaState();
+    if (errorMessage) this.alert(errorMessage);
+    return this.closeOverlay();
+  }
+
+  _finalizeMfa() {
+    const current = Visitor.profile() || {};
+    const next = this._mfaNext;
+    Visitor.set({
+      profile: { ...current, mfa: next, otp: next },
+    });
+    this._resetMfaState();
+    return this.closeOverlay();
+  }
+
+  _resetMfaState() {
+    this._mfaCmd = null;
+    this._mfaPrev = null;
+    this._mfaNext = null;
+    this._mfaInFlight = false;
   }
 
   /**
@@ -158,10 +227,52 @@ class settings_main extends LetcBox {
   }
 
   /**
+   * Disconnect an OAuth provider (Google, Apple, etc.).
+   * Verifier branches on password_set, same as the other step-up flows.
+   * The server refuses to remove the last auth method, so an OAuth-only
+   * user with a single linked provider can't lock themselves out.
    *
+   * @param {string} provider e.g. "google", "apple"
    */
-  manageConnectedApps() {
-    this.alert(LOCALE.COMING_SOON || "Coming soon");
+  async disconnectOauth(provider) {
+    if (!provider) return;
+    const profile = Visitor.profile() || {};
+    const passwordSet = profile.password_set;
+    const usePassword = passwordSet === undefined || parseInt(passwordSet) === 1;
+
+    if (usePassword) {
+      // Password-mode placeholder — uses the native prompt. Replace
+      // with a small password modal when polishing this surface.
+      const password = prompt(LOCALE.CONFIRM_PASSWORD_LABEL || "Password");
+      if (!password) return;
+      try {
+        const res = await this.postService({
+          service: SERVICE.drumate.unlink_oauth,
+          hub_id: Visitor.id,
+          provider,
+          password,
+        });
+        if (res && res.error) {
+          return this.alert(res.error === "WRONG_CREDENTIALS"
+            ? (LOCALE.WRONG_PASSOWRD || "Wrong password")
+            : res.error);
+        }
+        return this._refreshOauthLinks();
+      } catch (e) {
+        this.warn("disconnectOauth (password): failed", e);
+      }
+      return;
+    }
+
+    const otp = await sendOtp(this);
+    if (!otp) return this.alert(LOCALE.UNKNOWN_ERROR);
+    return openOtpModal(this, {
+      ...otp,
+      api: SERVICE.drumate.unlink_oauth,
+      payload: { provider },
+      successService: "unlink-oauth-success",
+      cancelService: "unlink-oauth-cancel",
+    });
   }
 
   /**
@@ -189,13 +300,6 @@ class settings_main extends LetcBox {
    *
    */
   performDeleteAccount(args = {}) {
-    return this.ensurePart("overlay").then((p) => {
-      p.clear();
-      this.postService(SERVICE.drumate.delete_account, {
-        hub_id: Visitor.id,
-        password: args.password,
-      });
-    });
   }
 
   /**
@@ -237,8 +341,21 @@ class settings_main extends LetcBox {
       case "toggle-two-factor":
         return this.toggleTwoFactor(cmd);
 
-      case "manage-connected-apps":
-        return this.manageConnectedApps();
+      case "mfa-changed":
+        return this._finalizeMfa();
+
+      case "mfa-cancel":
+        return this._cancelMfa();
+
+      case "disconnect-oauth":
+        return this.disconnectOauth(cmd && cmd.mget("provider"));
+
+      case "unlink-oauth-success":
+        this.closeOverlay();
+        return this._refreshOauthLinks();
+
+      case "unlink-oauth-cancel":
+        return this.closeOverlay();
 
       case "change-email":
         return this.changeEmail();

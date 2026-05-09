@@ -8,15 +8,7 @@ const __skl_window_note_topbar = function (ui, icon) {
   let save = "";
   const cnEditor = `editor`;
 
-  if (ui.canUpload()) {
-    save = Skeletons.Button.Svg({
-      ico: "floppy",
-      service: _e.save,
-      className: `${cnEditor}-topbar__icon save`,
-      haptic: 1000,
-      tooltips: LOCALE.SAVE_CHANGES,
-    });
-  }
+
   return Skeletons.Box.X({
     className: `${pfx}-${figname}__container ${ui.mget(_a.area)}`,
     sys_pn: _a.topBar,
@@ -55,7 +47,7 @@ const __skl_window_note_topbar = function (ui, icon) {
               }),
             ],
           }),
-          save,
+          require("./menu")(ui),
           Skeletons.Button.Svg({
             ico: "drumee-tools_pin",
             service: "pin-on",

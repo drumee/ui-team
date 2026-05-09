@@ -30,18 +30,12 @@ class __panel_activity extends LetcBox {
 
     window.ActivityHandler = this;
 
-    // this._onOutsideClick = (e, origin) => {
-    //   if (pointerDragged || e?.getService() == 'toggle-activity-panel') return;
-    //   if (e && !this.el.contains(e.currentTarget)) {
-    //     this.debug("AAA:36", this.mget(_a.state))
-    //     // this.closePanel();
-    //   }
-    // }
 
     // RADIO_CLICK.on(_e.click, this._onOutsideClick)
     this._currentCount = 0;
     this._currentPayload = {};
     this._unreadsOnly = 1;
+    this._dismissedKeys = new Set();
     this.details = {};
     this.onVisibilityChange = this.onVisibilityChange.bind(this)
     document.addEventListener("visibilitychange", this.onVisibilityChange);
@@ -76,14 +70,12 @@ class __panel_activity extends LetcBox {
    */
   onDomRefresh() {
     this.setState(0);
-    this.debug("AAA:77", this.activityState, this.mget(_a.state))
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
     this.visible = !document.hidden;
     this.feed(require('./skeleton')(this));
     this.ensurePart(_a.list).then((p) => {
       this.refreshActivity()
-      this.debug("AAA:85", this.activityState, this.mget(_a.state))
     })
     Wm.on(WS_EVENT, this.onWsMessage)
   }
@@ -107,7 +99,6 @@ class __panel_activity extends LetcBox {
   */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug("AAA:103", service, cmd)
     switch (service) {
       case 'open-activity-panel':
         this.activityState = 1;
@@ -124,20 +115,55 @@ class __panel_activity extends LetcBox {
         return this.deleteEntityResponse(cmd);
 
       case 'dismiss-activity':
-        return this._dismissActivity(cmd);
+        return this._dismissActivity(cmd, args);
+
+      case 'toggle-favorite':
+        return this._toggleFavorite(cmd, args);
 
       case 'open-contact':
+        this._dismissFromOpen(cmd, args);
         this.activityState = 0;
         this.setState(0);
         return Desk.togglePanel('address_book', 'chat-panel');
 
       case 'open-chat':
+        this._dismissFromOpen(cmd, args);
         this.activityState = 0;
         this.setState(0);
         return Desk.togglePanel('chat_p2p', 'chat-panel');
 
+      case 'open-activity':
+        this._dismissFromOpen(cmd, args);
+        return;
+
+      case 'open-workspace-invitation':
+      case 'open-folder':
+      case 'open-channel':
+      case 'open-ticket': {
+        // For any "open the underlying entity" service we (1) dismiss the
+        // notification (in-memory + server-side persistence), (2) close
+        // the activity panel, and (3) navigate the desk to the target hub.
+        // Acting on a notification implies "I've seen this" — keeps the
+        // panel and badge in sync with what the user has actually engaged
+        // with, no matter which row category fired the open.
+        const item = this._findActivityItem(cmd);
+        const hubId = (args && args.hub_id)
+          || (item && item.mget && item.mget('hub_id'));
+        this._dismissFromOpen(cmd, args);
+        this.activityState = 0;
+        this.setState(0);
+        if (hubId && typeof Wm !== 'undefined' && Wm.loadWorkspace) {
+          try { Wm.loadWorkspace({ hub_id: hubId }); }
+          catch (e) { this.warn('loadWorkspace failed', e); }
+        }
+        return;
+      }
+
       case 'toggle-unreads':
         this._unreadsOnly = this._unreadsOnly ? 0 : 1;
+        this.ensurePart('unread-toggle').then((p) => {
+          if (p && p.el) p.el.dataset.state = this._unreadsOnly ? '1' : '0';
+        });
         return this.ensurePart(_a.list).then((list) => list.restart());
 
       case 'tab-all':
@@ -150,24 +176,95 @@ class __panel_activity extends LetcBox {
         return this._setTab('shares');
 
       case 'clear-all':
-        return this.postService(SERVICE.activity.mark_all_read, { hub_id: Visitor.id }).then(() => {
-          this.ensurePart(_a.list).then((list) => list.restart());
-          this.postService(SERVICE.activity.get_unread_count, { hub_id: Visitor.id }).then(({ unread_count }) => {
-            RADIO_BROADCAST.trigger('activity-update', { unread_count: unread_count || 0 });
-          });
-        });
+        return this._clearAll();
 
     }
-    const { unread_count } = await this.postService(
-      SERVICE.activity.get_unread_count,
-      { hub_id: Visitor.id }
-    );
-    RADIO_BROADCAST.trigger('activity-update', { unread_count: unread_count || 0 });
-    if (this.__list && !this.__list.isDestroyed()) {
-      this.__list.restart();
+  }
+
+  async _clearAll() {
+    this._dismissedKeys = this._dismissedKeys || new Set();
+    try {
+      const [invitations, messages, hubInvites] = await Promise.all([
+        this.postService(SERVICE.contact.invite_get, { hub_id: Visitor.id }),
+        this.postService(SERVICE.drumate.notification_center, { hub_id: Visitor.id }),
+        this._fetchHubInvitations(),
+      ]);
+      (invitations || []).forEach((e) => this._dismissedKeys.add(`contact_invite:${e.id || e.drumate_id || ''}`));
+      (messages || []).forEach((e) => this._dismissedKeys.add(`chat:${e.key_id || e.drumate_id || e.hub_id || ''}`));
+      (hubInvites || []).forEach((e) => this._dismissedKeys.add(`hub_invite:${e.id || e.hub_id || ''}`));
+    } catch (e) {
+      this.warn('clear-all snapshot failed', e);
+    }
+    try {
+      await this.postService(SERVICE.activity.mark_all_read, { hub_id: Visitor.id });
+    } catch (e) {
+      this.warn('mark_all_read failed', e);
+    }
+    this.ensurePart('priority').then((p) => {
+      if (!p) return;
+      p.feed([]);
+      if (this.el && this.el.dataset) this.el.dataset.hasPriority = '0';
+    });
+    if (this.__list && !this.__list.isDestroyed()) this.__list.restart();
+    RADIO_BROADCAST.trigger('activity-update', { unread_count: 0 });
+  }
+
+  _findActivityItem(cmd) {
+    if (!cmd) return null;
+    if (cmd.mget && cmd.mget('kind') === 'activity_item') return cmd;
+    if (cmd.getParentByKind) return cmd.getParentByKind('activity_item');
+    return null;
+  }
+
+  async _toggleFavorite(cmd, args = {}) {
+    const item = this._findActivityItem(cmd);
+    const messageId = args.message_id
+      || (item && item.mget && (item.mget('message_id') || item.mget(_a.id) || item.mget('id')));
+    const hubId = args.hub_id
+      || (item && item.mget && item.mget('hub_id'))
+      || Visitor.id;
+    const favorited = args.favorited ? 1 : 0;
+    console.log('[activity] toggle-favorite', { favorited, messageId, hubId, item_key: args.item_key });
+    if (!messageId) {
+      console.warn('[activity] toggle-favorite skipped — no message_id on row');
       return;
     }
-    this.feed(require('./skeleton')(this));
+    try {
+      if (favorited) {
+        await this.postService(SERVICE.channel.bookmark_add, { message_id: messageId, hub_id: hubId });
+      } else {
+        // ACL `scope:hub` requires hub_id for the permission check even
+        // though the proc itself ignores it (uniqueness is uid+message_id).
+        await this.postService(SERVICE.channel.bookmark_remove, { message_id: messageId, hub_id: hubId });
+      }
+    } catch (e) {
+      this.warn('toggle-favorite failed', e);
+    }
+  }
+
+  _dismissFromOpen(cmd, args = {}) {
+    // Body-click on a row implies "I've handled this notification". Funnel
+    // through `_dismissActivity` so we get the same server-side persistence
+    // (UPDATE dismissed_at / advance read pointer) as the trash button.
+    // Order matters: read the model + fire API BEFORE goodbye() — once
+    // goodbye() runs the view is destroyed and `mget` returns undefined.
+    const item = this._findActivityItem(cmd);
+    if (item) {
+      const p = this._dismissActivity(item, args);
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    }
+    if (item && item.goodbye) item.goodbye({ duration: 0.3, timeout: 50, now: 1 });
+  }
+
+  _decrementBadge(by = 1) {
+    Desk.ensurePart('activity-count').then((p) => {
+      if (!p || !p.el) return;
+      const cur = parseInt(p.el.dataset.count || p.el.innerText || '0', 10) || 0;
+      const next = Math.max(0, cur - by);
+      const display = next > 99 ? '99+' : String(next);
+      p.el.innerText = next === 0 ? '' : display;
+      p.el.dataset.count = display;
+    });
   }
 
   /**
@@ -277,6 +374,7 @@ class __panel_activity extends LetcBox {
    *
    */
   updatePriorityList(invitations = [], messages = [], hubInvites = []) {
+    const dismissed = this._dismissedKeys || new Set();
     const activeChats = (Wm.getItemsByKind('window_bigchat') || [])
       .filter((win) => win && !win.isDestroyed() && !win.mget(_a.minimize) && win.currentEntityId)
       .map((win) => win.currentEntityId);
@@ -298,7 +396,12 @@ class __panel_activity extends LetcBox {
       e.contact = contact;
       e.service = "open-contact";
       e.type = "invitation";
-      e.uiHandler = [this]
+      e.event_type = 'contact_invite';
+      e.id = e.activity_id || e.id || null;
+      e.item_key = `contact_invite:${e.id || e.drumate_id || ''}`;
+      e.uiHandler = this;
+      e.logicalParent = this;
+      if (dismissed.has(e.item_key)) continue;
       list.push(e)
     }
     for (let e of hubInvites) {
@@ -308,22 +411,35 @@ class __panel_activity extends LetcBox {
         kind: 'activity_item',
         type: 'hub-invitation',
         event: 'hub.invite_received',
+        event_type: 'hub_invite',
+        item_key: `hub_invite:${e.id || e.hub_id || ''}`,
         service: 'open-workspace-invitation',
         action: LOCALE.INVITED_YOU_TO_WORKSPACE || 'invited you to',
         link_label: e.hub_name,
         hub_id: e.hub_id,
         author_id: e.author_id,
         fullname,
-        uiHandler: [this]
+        uiHandler: this,
+        logicalParent: this,
       };
+      if (dismissed.has(item.item_key)) continue;
       list.push(item);
     }
     for (let e of messages) {
       let f = e.firstname || ""
       let l = e.lastname || ""
+      // Preserve the server-side category (chat | contact | media | teamchat | ticket)
+      // so dismiss can route correctly. Default to 'chat' for legacy rows missing category.
+      const category = e.category || 'chat';
       e.kind = 'activity_item';
-      e.service = "open-chat";
-      e.type = "chat";
+      e.service = category === 'media' ? 'open-folder'
+        : category === 'teamchat' ? 'open-channel'
+        : category === 'contact' ? 'open-contact'
+        : category === 'ticket' ? 'open-ticket'
+        : 'open-chat';
+      e.type = category;
+      e.event_type = category;
+      e.item_key = `${category}:${e.key_id || e.drumate_id || e.hub_id || ''}`;
       let contact = {
         ...e,
         event: 'chat.post',
@@ -331,7 +447,9 @@ class __panel_activity extends LetcBox {
         fullname: `${f} ${l}`
       };
       e.contact = contact;
-      e.uiHandler = [this]
+      e.uiHandler = this;
+      e.logicalParent = this;
+      if (dismissed.has(e.item_key)) continue;
       list.push(e)
     }
     this.ensurePart('priority').then((p) => {
@@ -349,7 +467,16 @@ class __panel_activity extends LetcBox {
       const rows = await this.postService(SERVICE.hub.invite_received_get, {
         hub_id: Visitor.id
       });
-      return _.isArray(rows) ? rows : [];
+      if (!_.isArray(rows)) return [];
+      const seen = new Set();
+      const deduped = [];
+      for (const row of rows) {
+        const key = `${row.hub_id || ''}::${row.author_id || row.uid || ''}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(row);
+      }
+      return deduped;
     } catch (err) {
       this.warn('[panel_activity] fetch hub invitations failed', err);
       return [];
@@ -357,8 +484,11 @@ class __panel_activity extends LetcBox {
   }
 
   /**
-   * 
-  */
+   * Single-fetch refresh via activity.list — the consolidated activity API.
+   * Server returns one flat array containing every notification rollup
+   * (chat, contact, media, teamchat, ticket, hub_invite). The badge count is
+   * the sum of cnt across all undismissed rows.
+   */
   async refreshActivity(timeout = 2000) {
     if (!Visitor.id || !Visitor.isOnline()) {
       Visitor.once('online', () => {
@@ -366,26 +496,84 @@ class __panel_activity extends LetcBox {
       })
       return
     }
-
-    let opt = { hub_id: Visitor.id }
-    let { unread_count } = await this.postService(SERVICE.activity.get_unread_count, opt);
-    let invitations = await this.postService(SERVICE.contact.invite_get, { hub_id: Visitor.id });
-    let messages = await this.postService(SERVICE.drumate.notification_center, { hub_id: Visitor.id });
-    let hubInvites = await this._fetchHubInvitations();
-    unread_count =
-      parseInt(messages.length) +
-      parseInt(invitations.length) +
-      parseInt(hubInvites.length) +
-      parseInt(unread_count);
-    // this.triggerHandlers({ unread_count })
+    let items = [];
+    try {
+      const res = await this.postService({
+        service: (SERVICE.activity && SERVICE.activity.list) || 'activity.list',
+        hub_id: Visitor.id,
+      });
+      items = _.isArray(res) ? res : (_.isArray(res?.data) ? res.data : []);
+    } catch (e) {
+      this.warn('[panel_activity] activity.list failed, falling back', e);
+      items = [];
+    }
+    const dismissed = this._dismissedKeys || new Set();
+    const live = items.filter((it) => {
+      const key = `${it.category}:${it.key_id || it.drumate_id || it.hub_id || ''}`;
+      return !dismissed.has(key);
+    });
+    const unread_count = live.reduce((acc, it) => acc + (parseInt(it.cnt, 10) || 0), 0);
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
-    this.updatePriorityList(invitations, messages, hubInvites)
+    this.updatePriorityListUnified(live);
     if (!this.mget(_a.state)) return;
     if (this.__list && !this.__list.isDestroyed()) {
       this.__list.restart()
       return
     }
-    this.feed(require('./skeleton')(this, invitations));
+    this.feed(require('./skeleton')(this));
+  }
+
+  /**
+   * Render the priority section directly from the unified activity.list output.
+   * Each item already carries `category`, `key_id`, `hub_id`, `last_id`, etc.
+   * so we can build activity_item models without category-specific branches.
+   */
+  updatePriorityListUnified(items = []) {
+    const activeChats = (Wm.getItemsByKind('window_bigchat') || [])
+      .filter((win) => win && !win.isDestroyed() && !win.mget(_a.minimize) && win.currentEntityId)
+      .map((win) => win.currentEntityId);
+    const list = [];
+    for (const it of items) {
+      if (it.category === 'chat' && activeChats.includes(it.drumate_id)) continue;
+      const e = { ...it };
+      e.kind = 'activity_item';
+      e.event_type = it.category;
+      e.type = it.category;
+      e.item_key = `${it.category}:${it.key_id || it.drumate_id || it.hub_id || ''}`;
+      switch (it.category) {
+        case 'hub_invite':
+          e.event = 'hub.invite_received';
+          e.service = 'open-workspace-invitation';
+          e.action = LOCALE.INVITED_YOU_TO_WORKSPACE || 'invited you to';
+          e.link_label = it.hub_name;
+          e.fullname = (it.surname || `${it.firstname || ''} ${it.lastname || ''}`).trim();
+          break;
+        case 'contact':
+          e.service = 'open-contact';
+          e.event = 'contact.invite';
+          e.fullname = (it.surname || `${it.firstname || ''} ${it.lastname || ''}`).trim();
+          break;
+        case 'media':
+          e.service = 'open-folder';
+          break;
+        case 'teamchat':
+          e.service = 'open-channel';
+          break;
+        case 'ticket':
+          e.service = 'open-ticket';
+          break;
+        default:
+          e.service = 'open-chat';
+      }
+      e.uiHandler = this;
+      e.logicalParent = this;
+      list.push(e);
+    }
+    this.ensurePart('priority').then((p) => {
+      if (!p) return;
+      p.feed(list);
+      if (this.el && this.el.dataset) this.el.dataset.hasPriority = list.length ? '1' : '0';
+    });
   }
 
   /**
@@ -461,7 +649,6 @@ class __panel_activity extends LetcBox {
    * 
    */
   _buildactivities(data) {
-    this.debug("AAA:_buildactivities", data)
     return data;
   }
 
@@ -471,7 +658,7 @@ class __panel_activity extends LetcBox {
    */
   _addactivitys(data, k) {
     if (!this.summary[k]) {
-      this.warn(`AAA:333 -- unknown category "${k}"`);
+      this.warn(`_addactivitys: unknown category "${k}"`);
       return;
     }
     for (let r of data) {
@@ -517,7 +704,7 @@ class __panel_activity extends LetcBox {
    */
   _removeactivitys(data, k) {
     if (!this.summary[k]) {
-      this.warn(`AAA:339 -- unknown category "${k}"`);
+      this.warn(`_removeactivitys: unknown category "${k}"`);
       return;
     }
     for (let r of data) {
@@ -627,20 +814,98 @@ class __panel_activity extends LetcBox {
     return _.values(this.details) || []
   }
 
-  async _dismissActivity(cmd) {
-    const changelogId = cmd.mget('changelog_id') || cmd.mget(_a.id) || cmd.mget('id');
-    if (!changelogId) return;
-    try {
-      await this.postService(SERVICE.activity.dismiss, {
-        hub_id: Visitor.id,
-        changelog_id: changelogId,
-      });
-      if (this.__list && !this.__list.isDestroyed()) {
-        this.__list.restart();
+  async _dismissActivity(cmd, args = {}) {
+    const itemKey = args.item_key
+      || (cmd && cmd.mget && cmd.mget('item_key'));
+    const itemType = args.item_type
+      || (cmd && cmd.mget && cmd.mget('item_type'))
+      || 'mfs';
+    const changelogId = args.changelog_id
+      || (cmd && cmd.mget && (cmd.mget('changelog_id') || cmd.mget(_a.id) || cmd.mget('id')));
+    console.log('[activity] dismiss', { itemType, itemKey, changelogId });
+
+    if (itemKey) {
+      this._dismissedKeys = this._dismissedKeys || new Set();
+      this._dismissedKeys.add(itemKey);
+    }
+    this._decrementBadge(1);
+
+    if (itemType === 'mfs' && changelogId) {
+      console.log('[activity] → POST activity.dismiss', { changelog_id: changelogId });
+      try {
+        await this.postService(SERVICE.activity.dismiss, {
+          hub_id: Visitor.id,
+          changelog_id: changelogId,
+        });
+      } catch (e) {
+        this.warn('dismiss-activity failed', e);
       }
-      this.refreshActivity();
-    } catch (e) {
-      this.warn('dismiss-activity failed', e);
+    } else if (itemType === 'hub_invite' || itemType === 'contact_invite') {
+      // Resolve the contact_activity row id. activity.list returns it via
+      // `key_id` (string) and `last_id` (number); legacy paths used `id` /
+      // `changelog_id`. Use the first non-empty.
+      const activityId = changelogId
+        || (cmd && cmd.mget && (cmd.mget(_a.id) || cmd.mget('id') || cmd.mget('last_id') || cmd.mget('key_id')));
+      if (activityId) {
+        console.log('[activity] → POST activity.dismiss_contact_event', { activity_id: activityId });
+        try {
+          await this.postService({
+            service: (SERVICE.activity && SERVICE.activity.dismiss_contact_event) || 'activity.dismiss_contact_event',
+            hub_id: Visitor.id,
+            activity_id: activityId,
+          });
+        } catch (e) {
+          this.warn('dismiss contact_activity failed', e);
+        }
+      } else {
+        console.warn('[activity] dismiss skipped — no activity_id on row', { itemType, itemKey });
+      }
+    } else if (['chat', 'media', 'teamchat', 'contact', 'ticket'].includes(itemType)) {
+      // Unified notification dismiss for any rollup from drumate.notification_center.
+      // Server-side `notification_dismiss` routes by category to the correct
+      // read-pointer / status update. The semantic meaning of `key_id` differs
+      // per category (peer_id for chat, hub_id for teamchat/media, contact.id
+      // for contact, ticket_id for ticket), so resolve it explicitly.
+      const m = (k) => (cmd && cmd.mget && cmd.mget(k));
+      let keyId;
+      switch (itemType) {
+        case 'chat':
+          // p2p_read.peer_id is the peer's drumate_id, NOT the contact_id.
+          keyId = m('drumate_id') || m('peer_id') || m('key_id');
+          break;
+        case 'media':
+        case 'teamchat':
+          keyId = m('hub_id') || m('key_id');
+          break;
+        case 'contact':
+          keyId = m('contact_id') || m('key_id');
+          break;
+        case 'ticket':
+        default:
+          keyId = m('key_id') || m('hub_id');
+      }
+      const hubId = m('hub_id') || Visitor.id;
+      const lastId = m('last_id') || 0;
+      if (!keyId) {
+        console.warn('[activity] notification_dismiss skipped — no key_id', { itemType, itemKey });
+      } else {
+        console.log('[activity] → POST activity.dismiss_rollup', { category: itemType, key_id: keyId, hub_id: hubId, last_id: lastId });
+        try {
+          await this.postService({
+            service: (SERVICE.activity && SERVICE.activity.dismiss_rollup)
+              || (SERVICE.activity && SERVICE.activity.notification_dismiss)
+              || 'activity.dismiss_rollup',
+            category: itemType,
+            key_id: keyId,
+            hub_id: hubId,
+            last_id: lastId,
+          });
+        } catch (e) {
+          this.warn('notification_dismiss failed', e);
+        }
+      }
+    } else {
+      console.log('[activity] dismiss UI-only (no API)', { itemType, itemKey });
     }
   }
 

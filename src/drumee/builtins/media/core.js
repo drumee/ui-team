@@ -187,13 +187,13 @@ class __media_core extends DrumeeMFS {
   contextmenuItemsForHub() {
     let fileItems = [];
     if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems = [_a.rename, _a.upload, _a.download, _a.separator, _a.info];
+      fileItems = ['openInWindow', _a.separator, _a.rename, _a.upload, _a.download, _a.separator, _a.info];
       if (this.canShare()) {
         fileItems.push(_a.share)
       }
       fileItems.push(_a.separator, _a.trash)
     } else if (this.canDownload()) {
-      fileItems = [_a.download, _a.separator, _a.info];
+      fileItems = ['openInWindow', _a.separator, _a.download, _a.separator, _a.info];
       if (this.canShare()) fileItems.push(_a.share);
       if (this.canRemove()) fileItems.push(_a.trash);
     }
@@ -2028,7 +2028,7 @@ class __media_core extends DrumeeMFS {
             let nid = this.mget(_a.nid);
             let hub_id = this.mget(_a.hub_id);
             let zip_id = data.zipid;
-            let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}`;
+            let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${data.zipname}`;
             this.getFromUrl(url);
             Wm.alert(
               LOCALE.DOWNLOAD_LONG_TIME.format(

@@ -94,6 +94,8 @@ const __button = function (ui, trigger, k) {
 
     openFileLocation: button({ content: LOCALE.OPEN_FILE_LOCATION, service: 'open-file-location' }),
 
+    openInWindow: button({ content: LOCALE.OPEN_IN_WINDOW, service: 'open-in-window' }),
+
     organize: Skeletons.Box.X({
 
       content: LOCALE.ORGANIZE,

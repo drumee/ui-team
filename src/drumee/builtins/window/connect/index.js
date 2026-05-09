@@ -296,6 +296,7 @@ class __window_connect extends __room {
       case 'offline':
         this.beforeLeavingState = _a.none;
         this.defaultState(_a.cancel);
+        if (this.el) this.el.dataset.callState = 'offline';
         this.stateMessage(LOCALE.X_IS_NOT_ONLINE.format(this.mget('display')));
         Visitor.playSound(_K.dialtones.offline, 1);
         break;
@@ -377,11 +378,14 @@ class __window_connect extends __room {
         break;
 
       case _e.cancel:
-        this.verbose("AAAX:240 -- CANCEL", callee);
-        await this.sendRoomSignaling(SERVICE.conference.cancel);
-        await this.sendRoomSignaling(SERVICE.conference.logCall, {
-          event: _e.cancel,
-          callee: this.callee
+        this.verbose("AAAX:240 -- CANCEL", this.callee);
+        // Mirror the 'reject' path: send the peer data so the server can
+        // route the dismissal directly. conference.cancel relies on a
+        // conference-table lookup that is unreliable pre-pickup, leaving
+        // the callee's ringing window stuck. conference.revoke resolves
+        // the callee's sockets by drumate_id and also writes the call log.
+        await this.sendRoomSignaling(SERVICE.conference.revoke, {
+          callee: this.callee,
         });
         break;
 

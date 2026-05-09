@@ -1,8 +1,5 @@
-// Admin Storage tab. Shares header chrome (capacity card + alert + optimization)
-// with the regular Storage tab via storage-shared.js, and renders a
-// "File Versioning" table instead of "User Storage Distribution".
-const { storageBodyRow } = require("./storage-shared");
-const FILES = require("./admin-storage-data").default;
+// Admin Storage tab — hub-scoped header cards + File Versioning table.
+const { hubStorageBodyRow } = require("./storage-shared");
 
 // We currently use a single doc-style file icon for all rows;
 // CSS modifier classes can later swap colour by extension.
@@ -54,8 +51,9 @@ function checkbox(ui, { checked, service, file_id }) {
 
 function tableHeader(ui) {
   const pfx = ui.fig.family;
+  const rows = ui._fileVersions || [];
   const allChecked =
-    ui._fvSelected && ui._fvSelected.size === FILES.length && FILES.length > 0;
+    ui._fvSelected && ui._fvSelected.size === rows.length && rows.length > 0;
   const cols = [
     { className: `${pfx}__fv-col--check`, kids: [
       checkbox(ui, { checked: allChecked, service: "apps-fv-toggle-all" }),
@@ -200,7 +198,7 @@ function workspaceFilter(ui) {
         className: `${pfx}__storage-sort-value`,
         content: LOCALE.ALL_WORKSPACE || "All workspace",
       }),
-      Skeletons.Button.Svg({
+      Skeletons.Image.Svg({
         ico: "editbox_arrow--down",
         className: `${pfx}__storage-sort-chevron`,
       }),
@@ -214,14 +212,16 @@ function searchBox(ui) {
     className: `${pfx}__fv-search`,
     kids: [
       Skeletons.Image.Svg({
-        ico: "editbox_search",
+        ico: "magnifying-glass",
         className: `${pfx}__fv-search-ico`,
       }),
       Skeletons.Entry({
         className: `${pfx}__fv-search-input`,
         placeholder: LOCALE.SEARCH_FILE || "Search file",
         name: "fv_search",
+        value: ui._fvSearch || "",
         mode: _a.commit,
+        service: "apps-fv-search",
         uiHandler: [ui],
       }),
     ],
@@ -286,10 +286,37 @@ function fvHeader(ui, { extras }) {
   });
 }
 
+function buildFvPageList(current, total) {
+  if (total <= 7) {
+    const out = [];
+    for (let i = 1; i <= total; i++) out.push(i);
+    return out;
+  }
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  const list = [1];
+  if (start > 2) list.push("…");
+  for (let i = start; i <= end; i++) list.push(i);
+  if (end < total - 1) list.push("…");
+  list.push(total);
+  return list;
+}
+
 function fvFooterPagination(ui) {
   const pfx = ui.fig.family;
-  const pages = [1, 2, 3];
-  const current = ui._fvAllPage || 1;
+  const pageSize = 13;
+  const total = ui._fileVersionsTotal || (ui._fileVersions || []).length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(ui._fvAllPage || 1, totalPages);
+  const pages = buildFvPageList(current, totalPages);
+  const start = total === 0 ? 0 : (current - 1) * pageSize + 1;
+  const end = total === 0 ? 0 : Math.min(total, current * pageSize);
+  const summary = total === 0
+    ? LOCALE.NO_FILES_FOUND || "No files"
+    : (LOCALE.SHOWING_FILES_OF || "Showing {start}-{end} of {total} files")
+        .replace("{start}", start)
+        .replace("{end}", end)
+        .replace("{total}", total.toLocaleString());
   const pageBtn = (n) =>
     Skeletons.Box.X({
       className: `${pfx}__fv-page-btn${current === n ? ` ${pfx}__fv-page-btn--active` : ""}`,
@@ -308,8 +335,7 @@ function fvFooterPagination(ui) {
     kids: [
       Skeletons.Note({
         className: `${pfx}__fv-pagination-label`,
-        content:
-          LOCALE.SHOWING_FILES || "Showing 1-13 of 1,284 files",
+        content: summary,
       }),
       Skeletons.Box.X({
         className: `${pfx}__fv-pager`,
@@ -317,22 +343,24 @@ function fvFooterPagination(ui) {
           Skeletons.Button.Svg({
             ico: "mini-arrow-left-new",
             className: `${pfx}__fv-page-arrow`,
-            service: "apps-fv-page",
+            service: current > 1 ? "apps-fv-page" : null,
             uiHandler: [ui],
             page_num: Math.max(1, current - 1),
           }),
-          ...pages.map(pageBtn),
-          Skeletons.Note({
-            className: `${pfx}__fv-page-ellipsis`,
-            content: "…",
-          }),
-          pageBtn(321),
+          ...pages.map((p) =>
+            p === "…"
+              ? Skeletons.Note({
+                  className: `${pfx}__fv-page-ellipsis`,
+                  content: "…",
+                })
+              : pageBtn(p)
+          ),
           Skeletons.Button.Svg({
             ico: "mini-arrow-right-new",
             className: `${pfx}__fv-page-arrow`,
-            service: "apps-fv-page",
+            service: current < totalPages ? "apps-fv-page" : null,
             uiHandler: [ui],
-            page_num: current + 1,
+            page_num: Math.min(totalPages, current + 1),
           }),
         ],
       }),
@@ -342,13 +370,42 @@ function fvFooterPagination(ui) {
 
 function fileVersioningTable(ui) {
   const pfx = ui.fig.family;
+  const rows = ui._fileVersions || [];
+  let tableBody;
+  if (ui._adminStorageState === "loading") {
+    tableBody = [
+      tableHeader(ui),
+      Skeletons.Box.X({
+        className: `${pfx}__fv-empty`,
+        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.LOADING || "Loading…" })],
+      }),
+    ];
+  } else if (ui._adminStorageState === "error") {
+    tableBody = [
+      tableHeader(ui),
+      Skeletons.Box.X({
+        className: `${pfx}__fv-empty`,
+        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.FILES_LOAD_FAILED || "Could not load files." })],
+      }),
+    ];
+  } else if (!rows.length) {
+    tableBody = [
+      tableHeader(ui),
+      Skeletons.Box.X({
+        className: `${pfx}__fv-empty`,
+        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.NO_FILES_FOUND || "No files found." })],
+      }),
+    ];
+  } else {
+    tableBody = [tableHeader(ui), ...rows.map((f) => fileRow(ui, f))];
+  }
   return Skeletons.Box.Y({
     className: `${pfx}__fv-card`,
     kids: [
       fvHeader(ui, { extras: tableFilter(ui) }),
       Skeletons.Box.Y({
         className: `${pfx}__fv-table`,
-        kids: [tableHeader(ui), ...FILES.map((f) => fileRow(ui, f))],
+        kids: tableBody,
       }),
       Skeletons.Box.X({
         className: `${pfx}__fv-footer`,
@@ -392,10 +449,34 @@ function fileVersioningTable(ui) {
 // footer (Showing 1-13 of 1,284 files / 1 2 3 ... 321).
 function fileVersioningAll(ui) {
   const pfx = ui.fig.family;
-  // Repeat the mock 13× to roughly match the Figma's row count.
-  const rows = [];
-  for (let i = 0; i < 3; i++) {
-    FILES.forEach((f) => rows.push({ ...f, id: `${f.id}-${i}` }));
+  const rows = ui._fileVersions || [];
+  let body;
+  if (ui._adminStorageState === "loading") {
+    body = [
+      tableHeader(ui),
+      Skeletons.Box.X({
+        className: `${pfx}__fv-empty`,
+        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.LOADING || "Loading…" })],
+      }),
+    ];
+  } else if (ui._adminStorageState === "error") {
+    body = [
+      tableHeader(ui),
+      Skeletons.Box.X({
+        className: `${pfx}__fv-empty`,
+        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.FILES_LOAD_FAILED || "Could not load files." })],
+      }),
+    ];
+  } else if (!rows.length) {
+    body = [
+      tableHeader(ui),
+      Skeletons.Box.X({
+        className: `${pfx}__fv-empty`,
+        kids: [Skeletons.Note({ className: `${pfx}__fv-empty-label`, content: LOCALE.NO_FILES_FOUND || "No files found." })],
+      }),
+    ];
+  } else {
+    body = [tableHeader(ui), ...rows.map((f) => fileRow(ui, f))];
   }
   return Skeletons.Box.Y({
     className: `${pfx}__fv-card ${pfx}__fv-card--all`,
@@ -403,7 +484,7 @@ function fileVersioningAll(ui) {
       fvHeader(ui, { extras: tableFilterAll(ui) }),
       Skeletons.Box.Y({
         className: `${pfx}__fv-table`,
-        kids: [tableHeader(ui), ...rows.slice(0, 13).map((f) => fileRow(ui, f))],
+        kids: body,
       }),
       fvFooterPagination(ui),
     ],
@@ -436,5 +517,5 @@ export default function admin_storage_view(ui) {
   if (ui._adminStorageView === "all") {
     return [backLink(ui), fileVersioningAll(ui)];
   }
-  return [adminHeader(ui), storageBodyRow(ui), fileVersioningTable(ui)];
+  return [adminHeader(ui), hubStorageBodyRow(ui), fileVersioningTable(ui)];
 }

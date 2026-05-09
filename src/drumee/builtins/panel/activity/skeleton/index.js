@@ -21,7 +21,8 @@ module.exports = function (ui) {
         api: ui.getCurrentApi,
         itemsOpt: {
           kind: 'activity_item',
-          uiHandler: [ui],
+          uiHandler: ui,
+          logicalParent: ui,
         },
         vendorOpt: Preset.List.Orange_e,
         evArgs: Skeletons.Note(LOCALE.NO_NOTIFICATIONS, `${pfx}__empty`),

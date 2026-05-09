@@ -1,13 +1,7 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : __dbg_path
-//   TYPE : Skelton
-// ==================================================================== *
-
-const __skl_window_note_topbar = function (_ui_, icon) {
-  let filename = _ui_.mget(_a.filename);
-  if (_ui_.media) {
-    filename = _ui_.media.mget(_a.filename);
+module.exports = function (ui, icon) {
+  let filename = ui.mget(_a.filename);
+  if (ui.media) {
+    filename = ui.media.mget(_a.filename);
   } else if (!filename) {
     const now = Dayjs().format("DD-MMM-YYYY à HH:MM");
     filename = LOCALE.NOTE_ON_DATE_X.format(now);
@@ -15,19 +9,19 @@ const __skl_window_note_topbar = function (_ui_, icon) {
 
   const figname = "topbar";
   const a = Skeletons.Box.X({
-    className: `${_ui_.fig.family}-${figname}__container ${_ui_.mget(_a.area)}`,
+    className: `${ui.fig.family}-${figname}__container ${ui.mget(_a.area)}`,
     sys_pn: _a.topBar,
     service: _e.raise,
     debug: __filename,
     kids: [
       Skeletons.Box.X({
-        className: `${_ui_.fig.group}-${figname}__title ${_ui_.fig.family}-${figname}__title`,
+        className: `${ui.fig.group}-${figname}__title ${ui.fig.family}-${figname}__title`,
         service: _e.raise,
         kids: [
           Skeletons.Note({
             sys_pn: "ref-window-name",
-            uiHandler: _ui_,
-            partHandler: _ui_,
+            uiHandler: ui,
+            partHandler: ui,
             className: _a.name,
             content: filename,
             active: 0,
@@ -35,18 +29,10 @@ const __skl_window_note_topbar = function (_ui_, icon) {
         ],
       }),
 
-      require("./left")(_ui_),
+      require("./left")(ui),
 
-      // Skeletons.Wrapper.Y({
-      //   className: `${_ui_.fig.group}__wrapper--context dialog__wrapper--context`,
-      //   name: "context",
-      //   uiHandler: _ui_,
-      //   partHandler: _ui_
-      // }),
-
-      require("window/skeleton/topbar/control")(_ui_, "c"),
+      require("window/skeleton/topbar/control")(ui, "c"),
     ],
   });
   return a;
 };
-module.exports = __skl_window_note_topbar;

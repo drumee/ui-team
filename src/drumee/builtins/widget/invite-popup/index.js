@@ -57,6 +57,22 @@ class __invite_popup extends LetcBox {
       setTimeout(() => this._maybeCloseDropdowns(e.target), 0);
     };
     document.addEventListener("mousedown", this._dismissDropdowns);
+    // Delegated click handler for the per-row × button. Two reasons to
+    // delegate at the document level with capture-phase:
+    //   1. The framework wires `service:` click handlers during initial
+    //      feed() but not on rows appended via _workspacesBox.append() —
+    //      so per-row handlers don't fire.
+    //   2. Some inner widget on the bubble path calls stopPropagation,
+    //      so even attaching at the popup root caught the event only
+    //      occasionally. Capture phase fires before any bubble-stop.
+    this._onRowRemoveClick = (e) => {
+      const target = e.target.closest && e.target.closest(".invite-popup__row-remove");
+      if (!target) return;
+      if (this.el && !this.el.contains(target)) return;
+      const idx = parseInt(target.dataset.idx, 10);
+      if (!isNaN(idx)) this._removeWorkspaceRow(idx);
+    };
+    document.addEventListener("click", this._onRowRemoveClick, true);
   }
 
   onBeforeDestroy() {
@@ -66,6 +82,9 @@ class __invite_popup extends LetcBox {
     }
     if (this._dismissDropdowns) {
       document.removeEventListener("mousedown", this._dismissDropdowns);
+    }
+    if (this._onRowRemoveClick) {
+      document.removeEventListener("click", this._onRowRemoveClick, true);
     }
   }
 
@@ -188,11 +207,13 @@ class __invite_popup extends LetcBox {
   _showSuggestions(data) {
     this._suggestions = data;
     if (!this._suggestionsBox) return;
-    if (!data.length) {
+    const ownEmail = ((Visitor.profile() || {}).email || "").toLowerCase();
+    const filtered = data.filter((row) => row.email && row.email.toLowerCase() !== ownEmail);
+    if (!filtered.length) {
       this._hideSuggestions();
       return;
     }
-    const items = data.map((row) => {
+    const items = filtered.map((row) => {
       const fullName = [row.firstname, row.lastname].filter(Boolean).join(" ") || row.email;
       return Skeletons.Box.X({
         className: `${this.fig.family}__suggestion-item`,
@@ -215,6 +236,8 @@ class __invite_popup extends LetcBox {
 
   _addInvitee(data) {
     if (!data || !data.email) return;
+    const ownEmail = (Visitor.profile() || {}).email;
+    if (ownEmail && data.email.toLowerCase() === ownEmail.toLowerCase()) return;
     if (this._invitees.find((i) => i.email === data.email)) return;
     this._invitees.push(data);
     this._renderChips();
@@ -303,10 +326,24 @@ class __invite_popup extends LetcBox {
         this._workspacesCache = list;
       }
       const ADMIN = 0b0011111;
+      // Areas that are NOT user-invitable workspaces:
+      //   - personal: each user's home space, owned by them
+      //   - system / pool / pool/dmz / template / dummy: infra
+      //   - dmz / dmz-public / dmz-private: one-shot share buckets, not workspaces
+      // Everything else (private, restricted, share, public, limited) is a
+      // collaborative workspace the admin can invite into. Earlier this
+      // filter excluded `private` too, which silently dropped most users'
+      // workspaces — `private` and `restricted` are both valid areas and
+      // represent the same UX concept.
+      const NON_INVITEABLE = new Set([
+        _a.personal,
+        "system", "pool", "pool/dmz", "template", "dummy",
+        "dmz", "dmz-public", "dmz-private",
+      ]);
       const inviteable = list.filter((w) => {
         if (((w.privilege | 0) & ADMIN) !== ADMIN) return false;
         const area = w.area || "";
-        if (area === _a.private || area === _a.personal) return false;
+        if (NON_INVITEABLE.has(area)) return false;
         return true;
       });
       const filtered = value
@@ -364,18 +401,15 @@ class __invite_popup extends LetcBox {
     if (wsIdx == null) return;
     const ws = this._workspaces[wsIdx];
     if (!ws.roleIds) ws.roleIds = [];
-    const has = ws.roleIds.includes(roleId);
-    ws.roleIds = has
-      ? ws.roleIds.filter((id) => id !== roleId)
-      : ws.roleIds.concat(roleId);
+    ws.roleIds = [roleId];
 
-    // Update checkbox visual state
     const optsBox = this._partRefs.roleOptions[idx];
     if (optsBox) {
-      const node = optsBox.el.querySelector(`.invite-popup__role-option[data-id="${roleId}"]`);
-      if (node) node.dataset.checked = has ? 0 : 1;
+      optsBox.el.querySelectorAll(".invite-popup__role-option").forEach((node) => {
+        node.dataset.checked = node.dataset.id === roleId ? 1 : 0;
+      });
+      optsBox.el.dataset.state = 0;
     }
-    // Update summary label
     if (this._partRefs.roleLabels[idx]) {
       this._partRefs.roleLabels[idx].set({ content: summarizeRoles(ws.roleIds) });
     }
@@ -414,6 +448,15 @@ class __invite_popup extends LetcBox {
       row.goodbye();
     } else if (row && row.el) {
       row.el.remove();
+    } else {
+      // Fallback when the framework didn't register the row (which is
+      // exactly what's happening for rows appended after initial render):
+      // strip the matching DOM node by data-idx so the click still
+      // succeeds even without a widget reference.
+      const dom = this.el && this.el.querySelector(
+        `.invite-popup__workspace-row[data-idx="${idx}"]`
+      );
+      if (dom) dom.remove();
     }
     delete this._partRefs.workspaceRows[idx];
     delete this._partRefs.workspaceInputs[idx];

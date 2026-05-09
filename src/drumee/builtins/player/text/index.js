@@ -61,6 +61,7 @@ class __player_text extends __player {
         }))
         break;
       case 'text-content':
+        this.__textContent = child;
         this.waitElement(child.el, () => {
           child.el.value = this.mget(_a.content);
         })
@@ -69,6 +70,76 @@ class __player_text extends __player {
         super.onPartReady(child, pn);
     }
   }
+
+  /**
+   *
+   */
+  _saveContent(opt, target) {
+    this.postService(opt, { async: 1 }).then((data) => {
+      this._changed = 0;
+      const msg = `${LOCALE.SAVED} > ${data.file_path}`;
+      this.ensurePart('acknowledgement').then((ack) => {
+        ack.set({ content: msg });
+      });
+      this.ensurePart('acknowledgement-container').then((container) => {
+        container.setState(1);
+        setTimeout(() => container.setState(0), 1000);
+      });
+      let [file] = target.getItemsByAttr(_a.nid, data.nid);
+      if (!file) {
+        const item = {
+          kind: target._getKind ? target._getKind() : undefined,
+          filetype: _a.text,
+          logicalParent: target,
+          ...data,
+        };
+        delete item.replace;
+        if (target.insertMedia) target.insertMedia(item, 0);
+        this.mset(data);
+        return;
+      }
+      if (file.restart) {
+        file.mset(data);
+        file.restart("media:modified");
+      }
+      this.mset(data);
+    });
+  }
+
+  /**
+   *
+   */
+  saveContent() {
+    const content = this.__textContent ? this.__textContent.el.value : (this.mget(_a.content) || "");
+    let target = Wm.getActiveWindow();
+    if (this.media && this.media.logicalParent) {
+      target = this.media.logicalParent;
+    }
+    let { hub_id, nid, pid } = this.actualNode();
+    let filename = this.mget(_a.filename) || LOCALE.NOTE;
+    if (!nid && content) {
+      const firstLine = content.split('\n')[0].trim();
+      if (firstLine) {
+        filename = firstLine.replace(/[/<>!$*&~#"'`^\n]/g, '-').substring(0, 50);
+      }
+    }
+    const replace = nid ? 1 : 0;
+    const opt = {
+      service: SERVICE.media.save,
+      hub_id: hub_id || Visitor.get(_a.id),
+      nid,
+      id: nid,
+      replace,
+      pid: pid || Visitor.get(_a.home_id),
+      filename: `${filename}.txt`,
+      filetype: _a.text,
+      content,
+      convert_to: 'txt',
+    };
+    if (!replace) opt.position = 0;
+    this._saveContent(opt, target);
+  }
+
 
   /**
    * Upon DOM refresh, after element actually insterted into DOM
@@ -110,11 +181,19 @@ class __player_text extends __player {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service);
     switch (service) {
+      case _a.save:
+        return this.saveContent();
+      case "print": {
+        const content = this.__textContent ? this.__textContent.el.value : (this.mget(_a.content) || "");
+        const printJS = require("print-js");
+        const body = `<pre>${content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+        printJS({ printable: body, type: "raw-html" });
+        return;
+      }
       case _e.close:
-        this.goodbye();
+        return this.goodbye();
       default:
-        this.debug("AAA:80");
-        super.onUiEvent(cmd, args)
+        return super.onUiEvent(cmd, args);
     }
   }
 

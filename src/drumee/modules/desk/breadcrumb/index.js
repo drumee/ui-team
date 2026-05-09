@@ -53,27 +53,58 @@ class __desk_breadcrumb extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} data 
+   *
+   */
+  onPartReady(child, pn) {
+    if (pn === _a.context) {
+      this.__context = child;
+      return;
+    }
+    if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  /**
+   * Always render as: Home › <path items>. The first crumb is the permanent
+   * "Home" anchor (rendered in the __context slot). The rest are appended into
+   * the __content slot from the supplied data.
+   * @param {*} data
    */
   _buildContent(data) {
-    this.debug("AAA:45 _buildContent", data)
+    this.ensurePart(_a.context).then((p) => {
+      p.el.dataset.current = _.isEmpty(data) ? 1 : 0;
+      p.el.style.display = "";
+    });
     if (_.isEmpty(data)) {
       this._data = [];
       this.ensurePart(_a.content).then((p) => {
         p.clear();
       })
-      this.ensurePart(_a.context).then((p) => p.el.dataset.current = 1);
       return
     }
     this._data = data;
-    this.ensurePart(_a.context).then((p) => p.el.dataset.current = 0);
     this.ensurePart(_a.content).then((p) => {
+      // mfs_get_path returns the workspace's root with filename "/" (or empty).
+      // Substitute the workspace's display name (hub_name) so the breadcrumb
+      // reads Home › <Workspace> › <Folder> instead of Home › / › <Folder>.
+      const hubName = (data[0] && (data[0].hub_name || data[0].name)) || null;
       const normalized = this._normalizeData(data);
       const items = [];
       normalized.forEach((item, i) => {
-        if (item && (item.filename || item.name)) {
-          items.push({ ...item, kind: "desk_breadcrumb_item", service: "breadcrum-jump", isCurrent: i === normalized.length - 1 });
+        let filename = item && (item.filename || item.name);
+        if ((!filename || filename === "/" || filename === "") && i === 0 && hubName) {
+          filename = hubName;
+          // Treat the workspace root as a hub so clicking it re-opens the
+          // workspace via the hub branch of _loadActiveWindow.
+          item.filetype = _a.hub;
+        }
+        if (filename) {
+          items.push({
+            ...item,
+            filename,
+            kind: "desk_breadcrumb_item",
+            service: "breadcrum-jump",
+            isCurrent: i === normalized.length - 1,
+          });
         }
       });
       p.feed(items);
@@ -82,21 +113,26 @@ class __desk_breadcrumb extends LetcBox {
 
 
   /**
-   * 
+   * Reset to the Home anchor (no path items, context highlighted).
    */
   _loadDefault() {
-    this._updateContext({
-      filename: LOCALE.HOME,
-      hub_id: Wm.mget(_a.hub_id),
-      nid: Wm.mget(_a.home_id),
-      pid: Wm.mget(_a.home_id),
-      filepath: "/",
-      service: "load-home"
-    })
+    this._buildContent();
+    this.ensurePart(_a.context).then((p) => {
+      p.mset({
+        filename: LOCALE.HOME,
+        hub_id: Wm.mget(_a.hub_id),
+        nid: Wm.mget(_a.home_id),
+        pid: Wm.mget(_a.home_id),
+        filepath: "/",
+        service: "load-home",
+      });
+      p.set({ content: LOCALE.HOME });
+      p.el.dataset.current = 1;
+    });
   }
 
   /**
-   * 
+   *
    */
   onDomRefresh() {
     this.feed(require("./skeleton")(this))
@@ -104,7 +140,8 @@ class __desk_breadcrumb extends LetcBox {
   }
 
   /**
-   * 
+   * Resolve a node's full path (workspace → folders) and render it after Home.
+   * Home stays anchored as the leftmost crumb.
    */
   _updatePath(nid, hub_id) {
     if (!nid || !hub_id) {
@@ -114,22 +151,11 @@ class __desk_breadcrumb extends LetcBox {
     this.fetchService(SERVICE.media.get_path, { nid, hub_id }).then((data) => {
       if (_.isEmpty(data)) return;
       this._buildContent(data)
-      let { hub_name, home_id, hub_id, nid } = data[0]
-      this.debug("AAA:124", this.__context.mget(_a.hub_id), { hub_name, home_id, hub_id, nid })
-      if (this.__context.mget(_a.hub_id) !== hub_id) {
-        let filename = (hub_name || LOCALE.HOME)
-        this.__context.mset({
-          filename, home_id, hub_id, nid
-        })
-        this.__context.set({
-          content: filename
-        })
-      }
     })
   }
 
   /**
-   * 
+   *
    */
   _onWindowClosed() {
     let w = Wm.getActiveWindow()
@@ -145,29 +171,39 @@ class __desk_breadcrumb extends LetcBox {
 
 
   /**
-   * 
+   *
    */
   _onBrowse(data) {
     let { nid, hub_id, actual_home_id, filetype } = data;
-    this.debug("AAA:156 _onBrowse", data, { nid, hub_id, actual_home_id, filetype })
     if (filetype == _a.hub && actual_home_id) nid = actual_home_id
     this._updatePath(nid, hub_id)
   }
 
   /**
-   * Called whenever an active window updates its navigation path.
-   * @param {Array}  data   - Array of path items (same format as buildBreadcrumbs)
-   * @param {Object} source - The window widget that triggered the broadcast
+   * Called whenever a window updates its navigation path.
+   * The breadcrumb reflects the DESK CONTAINER's current node, not the
+   * active folder window. So:
+   *  - `event: _e.closed` (a folder window was closed): IGNORE — the desk
+   *    container did not change.
+   *  - `event: _e.home`: reset to Home.
+   *  - any other navigation: only update if the source IS the desk container
+   *    (Wm itself or its grid). Folder window navigation is private to that
+   *    window and must not retitle the breadcrumb.
+   * @param {Array}  data   - Array of path items
+   * @param {Object} source - The widget that triggered the broadcast
    */
   _updateContent(data = [], source) {
-    this.debug("AAA:141 _updateContent", data, source)
     switch (data.event) {
       case _a.closed:
-        return this._onWindowClosed()
+        return;
       case _a.home:
         return this._loadDefault();
     }
-
+    // Only follow navigation broadcasts that came from the desk container
+    // (Wm) or its in-place loadWorkspaceNode flow. Ignore broadcasts that
+    // bubble up from open folder/share/etc. windows — those windows have
+    // their own internal state and should not retitle the desk breadcrumb.
+    if (source && source !== Wm) return;
     this._onBrowse(data)
   }
 
@@ -193,58 +229,101 @@ class __desk_breadcrumb extends LetcBox {
   }
 
   /**
-   * Called when "breadcrumb:context" is broadcast.
-   * Updates the content of the "context" part.
-   * @param {Object} context data 
+   * Called when "breadcrumb:context" is broadcast (Apps / Settings / Contacts /
+   * Trash labels). Render as a single section after the permanent Home anchor
+   * so the user always sees Home › <Section>.
+   * @param {Object} context data
    */
   _updateContext(data) {
     this._context = this._normalizeData(data)[0];
-    this.debug("AAA:66 _updateContext", this._context)
-    this._buildContent()
-    this.ensurePart(_a.context).then((p) => {
-      p.mset(this._context)
-      p.set({ content: this._context.filename || this._context.name });
-    })
+    const filename = this._context && (this._context.filename || this._context.name);
+    if (!filename) return this._loadDefault();
+    this._buildContent([{ ...this._context, filename }]);
   }
 
   /**
-   * Navigate the active window to the breadcrumb item node.
-   * @param {View} cmd - The breadcrumb item view (has nid, hub_id, filetype in model)
+   * Navigate the desk's main container (Wm grid) to the breadcrumb item node.
+   * The currently-open folder window is NOT touched. Clicking a folder/file
+   * icon inside that window keeps its existing in-place / new-window behavior.
+   * @param {View} cmd - The breadcrumb item view (has nid, hub_id, filetype)
    */
   _loadActiveWindow(cmd) {
-    let w = Wm.getActiveWindow();
-    switch (cmd.mget(_a.filetype)) {
-      case _a.hub:
-      case _a.folder:
-        let data = []
-        let nid = cmd.mget(_a.nid);
-        let hub_id = cmd.mget(_a.hub_id);
-        for (let item of this._data) {
-          data.push(item)
-          if (item.nid == nid && item.hub_id == hub_id) {
-            break;
-          }
+    const filetype = cmd.mget(_a.filetype);
+    if (filetype !== _a.hub && filetype !== _a.folder) return;
+
+    // Crop breadcrumb path up to and including the clicked crumb.
+    const nid = cmd.mget(_a.nid);
+    const hub_id = cmd.mget(_a.hub_id);
+    const data = [];
+    for (const item of this._data) {
+      data.push(item);
+      if (item.nid == nid && item.hub_id == hub_id) break;
+    }
+    if (data.length) this._buildContent(data);
+
+    // Drive Wm's main grid in-place. We bypass Wm.loadWorkspaceNode because
+    // it clears the windowsLayer; the breadcrumb spec is to leave already-open
+    // folder windows alone.
+    if (!Wm) return;
+    Wm._curWorkspace = { hub_id, nid, area: cmd.mget(_a.area) };
+    Wm.mset({ hub_id, nid, nodeId: nid, area: cmd.mget(_a.area) });
+    if (typeof Wm.ensurePart === "function") {
+      Wm.ensurePart(_a.list).then((l) => {
+        if (!l || (l.isDestroyed && l.isDestroyed())) return;
+        l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
+        if (l.collection) l.collection.reset();
+        l.el.style.visibility = "hidden";
+        const scrollEl = l.el.querySelector(".smart-container");
+        if (scrollEl) {
+          scrollEl.dataset.partitioning = 1;
+          scrollEl.style.visibility = "hidden";
         }
-        if (data.length) {
-          this._buildContent(data)
+        l.restart();
+        if (typeof Wm._prepareListPartition === "function") {
+          Wm._prepareListPartition(l);
         }
-        return w.openNode(cmd);
+      });
     }
   }
 
   /**
-  * @param {*} cmd 
-  * @param {*} args 
+  * @param {*} cmd
+  * @param {*} args
   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug("AAA:116", service, cmd)
     switch (service) {
       case "breadcrum-jump":
         return this._loadActiveWindow(cmd);
       case "load-home":
+        // In-place reset: reload Wm's main grid back to the user's home
+        // workspace WITHOUT rebuilding the skeleton, so any open folder
+        // windows are preserved per breadcrumb spec.
         this._loadDefault();
-        return Wm.reload();
+        if (Wm) {
+          const hub_id = Visitor.id;
+          const nid = Visitor.get(_a.home_id);
+          Wm._curWorkspace = null;
+          Wm.mset({ hub_id, nid, nodeId: nid, area: _a.personal });
+          if (typeof Wm.ensurePart === "function") {
+            Wm.ensurePart(_a.list).then((l) => {
+              if (!l || (l.isDestroyed && l.isDestroyed())) return;
+              l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
+              if (l.collection) l.collection.reset();
+              l.el.style.visibility = "hidden";
+              const scrollEl = l.el.querySelector(".smart-container");
+              if (scrollEl) {
+                scrollEl.dataset.partitioning = 1;
+                scrollEl.style.visibility = "hidden";
+              }
+              l.restart();
+              if (typeof Wm._prepareListPartition === "function") {
+                Wm._prepareListPartition(l);
+              }
+            });
+          }
+        }
+        return;
       case "change-workspace":
         this._loadActiveWindow(cmd);
         return this._updateContext(cmd.model.toJSON());

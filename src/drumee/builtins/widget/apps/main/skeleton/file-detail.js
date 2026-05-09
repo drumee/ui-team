@@ -1,6 +1,26 @@
 // File-detail screen — opened when the user clicks any file row in the
-// Admin Storage / File Versioning views.
-const DATA = require("./file-detail-data").default;
+// Admin Storage / File Versioning views. Metadata and versions come from
+// admin.get_file_version_detail; the document body preview is intentionally
+// not rendered (no preview pipeline yet — tracked separately).
+
+function resolve(ui) {
+  const live = ui._fileDetail || {};
+  const active = ui._fvActiveFile || {};
+  const versions = Array.isArray(live.versions) ? live.versions : [];
+  const selected =
+    versions.find((v) => v.id === ui._fvSelectedVersionId) ||
+    versions.find((v) => v.active) ||
+    versions[0] ||
+    null;
+  return {
+    title: live.title || live.filename || active.name || "",
+    filename: live.filename || active.name || "",
+    size: live.size || active.size || "",
+    retention: live.retention || LOCALE.RETENTION_NONE || "—",
+    versions,
+    selected,
+  };
+}
 
 function topBar(ui) {
   const pfx = ui.fig.family;
@@ -26,7 +46,7 @@ function topBar(ui) {
         className: `${pfx}__filed-search`,
         kids: [
           Skeletons.Image.Svg({
-            ico: "editbox_search",
+            ico: "magnifying-glass",
             className: `${pfx}__filed-search-ico`,
           }),
           Skeletons.Entry({
@@ -42,7 +62,7 @@ function topBar(ui) {
   });
 }
 
-function previewHeader(pfx) {
+function previewHeader(pfx, data) {
   return Skeletons.Box.X({
     className: `${pfx}__filed-preview-header`,
     kids: [
@@ -57,83 +77,82 @@ function previewHeader(pfx) {
       }),
       Skeletons.Note({
         className: `${pfx}__filed-preview-name`,
-        content: DATA.filename,
+        content: data.filename,
       }),
     ],
   });
 }
 
-function bulletList(pfx, items) {
-  return Skeletons.Box.Y({
-    className: `${pfx}__filed-bullets`,
-    kids: items.map((b) =>
-      Skeletons.Note({
-        className: `${pfx}__filed-bullet`,
-        content: `• ${b}`,
-      })
-    ),
+function metaRow(pfx, label, value) {
+  return Skeletons.Box.X({
+    className: `${pfx}__filed-meta-row`,
+    kids: [
+      Skeletons.Note({ className: `${pfx}__filed-meta-label`, content: label }),
+      Skeletons.Note({ className: `${pfx}__filed-meta-value`, content: value || "—" }),
+    ],
   });
 }
 
-function section(pfx, sec) {
+function previewBody(ui, data) {
+  const pfx = ui.fig.family;
+  const v = data.selected;
   const kids = [
     Skeletons.Note({
-      className: `${pfx}__filed-section-title`,
-      content: sec.heading,
+      className: `${pfx}__filed-doc-title`,
+      content: data.title || data.filename,
     }),
   ];
-  if (sec.body) {
+  if (!data.versions.length) {
     kids.push(
       Skeletons.Note({
-        className: `${pfx}__filed-section-body`,
-        content: sec.body,
+        className: `${pfx}__filed-preview-empty`,
+        content: LOCALE.FILE_PREVIEW_UNAVAILABLE,
+      })
+    );
+  } else if (!v) {
+    kids.push(
+      Skeletons.Note({
+        className: `${pfx}__filed-preview-empty`,
+        content: LOCALE.SELECT_VERSION_TO_PREVIEW,
+      })
+    );
+  } else {
+    kids.push(
+      Skeletons.Note({
+        className: `${pfx}__filed-meta-heading`,
+        content: v.active
+          ? `${LOCALE.VERSION_INFO} (${LOCALE.ACTIVE_VERSION})`
+          : LOCALE.VERSION_INFO,
+      }),
+      metaRow(pfx, LOCALE.VERSIONS, v.version || ""),
+      metaRow(pfx, LOCALE.EDITED_BY, v.editor || ""),
+      metaRow(pfx, LOCALE.VERSION_SAVED, v.timestamp || ""),
+      metaRow(pfx, LOCALE.SIZE, v.size || ""),
+      metaRow(pfx, LOCALE.FILE, v.file || data.filename),
+      Skeletons.Note({
+        className: `${pfx}__filed-preview-empty`,
+        content: LOCALE.FILE_PREVIEW_UNAVAILABLE,
       })
     );
   }
-  if (sec.bullets) kids.push(bulletList(pfx, sec.bullets));
-  if (sec.subsections) {
-    sec.subsections.forEach((sub) => {
-      kids.push(
-        Skeletons.Note({
-          className: `${pfx}__filed-subsection-title`,
-          content: sub.title,
-        })
-      );
-      if (sub.bullets) kids.push(bulletList(pfx, sub.bullets));
-    });
-  }
   return Skeletons.Box.Y({
-    className: `${pfx}__filed-section`,
+    className: `${pfx}__filed-preview-body`,
     kids,
   });
 }
 
-function previewBody(ui) {
-  const pfx = ui.fig.family;
-  return Skeletons.Box.Y({
-    className: `${pfx}__filed-preview-body`,
-    kids: [
-      Skeletons.Note({
-        className: `${pfx}__filed-doc-title`,
-        content: DATA.title,
-      }),
-      ...DATA.sections.map((sec) => section(pfx, sec)),
-    ],
-  });
-}
-
-function previewPane(ui) {
+function previewPane(ui, data) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
     className: `${pfx}__filed-preview`,
     kids: [
-      previewHeader(pfx),
+      previewHeader(pfx, data),
       Skeletons.Box.Y({
         className: `${pfx}__filed-preview-card`,
         kids: [
           Skeletons.Box.Y({
             className: `${pfx}__filed-preview-scroll`,
-            kids: [previewBody(ui)],
+            kids: [previewBody(ui, data)],
           }),
           Skeletons.Box.X({
             className: `${pfx}__filed-show-folder`,
@@ -182,7 +201,7 @@ function statCard(pfx, { icon, label, value }) {
   });
 }
 
-function statsRow(ui) {
+function statsRow(ui, data) {
   const pfx = ui.fig.family;
   return Skeletons.Box.X({
     className: `${pfx}__filed-stats`,
@@ -190,12 +209,12 @@ function statsRow(ui) {
       statCard(pfx, {
         icon: "apps-database",
         label: LOCALE.TOTAL_STORAGE || "TOTAL STORAGE",
-        value: DATA.size,
+        value: data.size,
       }),
       statCard(pfx, {
         icon: "apps-clock",
         label: LOCALE.RETENTION || "RETENTION",
-        value: DATA.retention,
+        value: data.retention,
       }),
     ],
   });
@@ -207,8 +226,17 @@ function avatarDot(pfx) {
 
 function versionEntry(ui, version) {
   const pfx = ui.fig.family;
+  const isSelected = version.id === ui._fvSelectedVersionId;
+  const cn = [
+    `${pfx}__filed-version`,
+    version.active ? `${pfx}__filed-version--active` : "",
+    isSelected ? `${pfx}__filed-version--selected` : "",
+  ].filter(Boolean).join(" ");
   return Skeletons.Box.Y({
-    className: `${pfx}__filed-version${version.active ? ` ${pfx}__filed-version--active` : ""}`,
+    className: cn,
+    service: "apps-fv-select-version",
+    uiHandler: [ui],
+    version_id: version.id,
     kids: [
       // Top row: timestamp + version label
       Skeletons.Box.X({
@@ -224,7 +252,7 @@ function versionEntry(ui, version) {
           }),
         ],
       }),
-      // Middle row: file pill (icon + name) + optional trash
+      // Middle row: file pill (icon + name)
       Skeletons.Box.X({
         className: `${pfx}__filed-version-row`,
         kids: [
@@ -246,16 +274,7 @@ function versionEntry(ui, version) {
               }),
             ],
           }),
-          version.active
-            ? null
-            : Skeletons.Button.Svg({
-                ico: "trash",
-                className: `${pfx}__filed-version-delete`,
-                service: "apps-fv-delete-version",
-                uiHandler: [ui],
-                version_id: version.id,
-              }),
-        ].filter(Boolean),
+        ],
       }),
       // Bottom: editor info
       Skeletons.Box.X({
@@ -276,7 +295,7 @@ function versionEntry(ui, version) {
   });
 }
 
-function versionHistoryCard(ui) {
+function versionHistoryCard(ui, data) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
     className: `${pfx}__filed-history`,
@@ -314,7 +333,14 @@ function versionHistoryCard(ui) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__filed-version-list`,
-        kids: DATA.versions.map((v) => versionEntry(ui, v)),
+        kids: (data.versions || []).length
+          ? data.versions.map((v) => versionEntry(ui, v))
+          : [
+              Skeletons.Note({
+                className: `${pfx}__filed-version-empty`,
+                content: LOCALE.NO_VERSIONS_YET || "No prior versions for this file.",
+              }),
+            ],
       }),
       Skeletons.Box.Y({
         className: `${pfx}__filed-history-actions`,
@@ -357,21 +383,36 @@ function versionHistoryCard(ui) {
   });
 }
 
-function rightColumn(ui) {
+function rightColumn(ui, data) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
     className: `${pfx}__filed-right`,
-    kids: [statsRow(ui), versionHistoryCard(ui)],
+    kids: [statsRow(ui, data), versionHistoryCard(ui, data)],
   });
 }
 
 export default function file_detail_view(ui) {
   const pfx = ui.fig.family;
+  if (ui._fileDetailLoading && !ui._fileDetail) {
+    return [
+      topBar(ui),
+      Skeletons.Box.Y({
+        className: `${pfx}__filed-loading`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__filed-loading-label`,
+            content: LOCALE.LOADING_FILE_DETAIL,
+          }),
+        ],
+      }),
+    ];
+  }
+  const data = resolve(ui);
   return [
     topBar(ui),
     Skeletons.Box.X({
       className: `${pfx}__filed-body`,
-      kids: [previewPane(ui), rightColumn(ui)],
+      kids: [previewPane(ui, data), rightColumn(ui, data)],
     }),
   ];
 }

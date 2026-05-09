@@ -46,13 +46,7 @@ class __window_mfs extends DrumeeMFS {
    * @param {*} data 
    */
   updateBreadcrumb(data, src) {
-    switch (data.filetype) {
-      case _a.hub:
-        RADIO_BROADCAST.trigger("breadcrumb:context", { ...data, service: "change-workspace" }, src);
-        return
-    }
     RADIO_BROADCAST.trigger("breadcrumb:content", data, src);
-
   }
 
   /**
@@ -528,7 +522,7 @@ class __window_mfs extends DrumeeMFS {
     return {
       top: 20,
       left: 10,
-      width: window.innerWidth - 20,
+      width: window.innerWidth - 250, // sidebar width
       height: window.innerHeight - 90
     }
   }

@@ -1,4 +1,4 @@
-function __skl_window_note(ui) {
+module.exports = function (ui) {
   const menu = Skeletons.Box.X({
     debug: __filename,
     className: `${ui.fig.family}__header ${ui.fig.group}__header`,
@@ -9,8 +9,5 @@ function __skl_window_note(ui) {
     },
     kids: [require("./topbar")(ui)],
   });
-  const a = require("window/skeleton/content/main")(ui, menu);
-  a.debug = __filename;
-  return a;
+  return require("window/skeleton/content/main")(ui, menu);
 }
-module.exports = __skl_window_note;

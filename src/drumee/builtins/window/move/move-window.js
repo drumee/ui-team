@@ -7,7 +7,7 @@ class ___window_move extends mfsInteract {
     super.initialize(opt);
     this.declareHandlers();
     this.contextmenuSkeleton = _a.none;
-    this._selectedDestination = null;
+    this._selectedDestinations = [];
     this._workspaces = [];
     this._searchTimer = null;
   }
@@ -35,10 +35,11 @@ class ___window_move extends mfsInteract {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service);
     switch (service) {
-      case 'remove-destination':
-        this._selectedDestination = null;
-        this._renderSelectedList();
-        this._updateMoveButton();
+      case 'select-suggestion':
+        break;
+      case 'browse-destination':
+        this._visibleWorkspaces = this._workspaces.filter((ws) => (ws.hub_id || ws.id) !== this._currentHubId);
+        this._renderSuggestions(this._visibleWorkspaces);
         break;
       case 'confirm-move':
         if (this.onConfirmMove) this.onConfirmMove(cmd, args);
@@ -53,43 +54,51 @@ class ___window_move extends mfsInteract {
 
   // --- Event delegation: single click handler on suggestions container ---
   _setupSuggestionClicks(container) {
-    // Cancel pending search on mousedown — prevents debounce from destroying
-    // the suggestion element before the click event fires
-    container.el.addEventListener('mousedown', () => {
+    container.el.addEventListener('mousedown', (e) => {
       clearTimeout(this._searchTimer);
-    });
-    container.el.addEventListener('click', (e) => {
       const row = e.target.closest('[data-service="select-suggestion"]');
       if (!row) return;
-      const ds = row.dataset;
-      this._selectedDestination = {
-        nid: ds.nid || ds.hub_id,
-        hub_id: ds.hub_id,
-        filename: ds.filename || ds.wsname,
-        wsName: ds.wsname || ds.filename,
-      };
-      this._hideSuggestions();
-      this._renderSelectedList();
-      this._updateMoveButton();
+      e.preventDefault();
+      e.stopPropagation();
+      this._toggleDestination(row.dataset, row);
+    });
+    container.el.addEventListener('click', (e) => {
+      if (!e.target.closest('[data-service="select-suggestion"]')) return;
+      e.preventDefault();
+      e.stopPropagation();
     });
   }
 
-  _renderSelectedList() {
-    const chipEl = this.el.querySelector('.window-move__selected-item');
-    const nameEl = this.el.querySelector('.window-move__selected-name');
-    if (!chipEl) return;
-    if (!this._selectedDestination) {
-      chipEl.dataset.active = 0;
-      return;
+  _toggleDestination(ds = {}, row) {
+    const hubId = ds.hub_id;
+    if (!hubId) return;
+    const index = this._selectedDestinations.findIndex((dest) => String(dest.hub_id) === String(hubId));
+    const selected = index < 0;
+    if (selected) {
+      this._selectedDestinations.push({
+        nid: ds.nid || hubId,
+        hub_id: hubId,
+        filename: ds.filename || ds.wsname,
+        wsName: ds.wsname || ds.filename,
+      });
+    } else {
+      this._selectedDestinations.splice(index, 1);
     }
-    const { filename, wsName } = this._selectedDestination;
-    if (nameEl) nameEl.textContent = filename || wsName || '';
-    chipEl.dataset.active = 1;
+    if (row) {
+      row.dataset.selected = selected ? 1 : 0;
+      const checkbox = row.querySelector(`.${this.fig.group}-move__checkbox`);
+      if (checkbox) checkbox.innerHTML = selected ? '✓' : '&nbsp;';
+    }
+    this._updateMoveButton();
+  }
+
+  _isSelectedDestination(hubId) {
+    return this._selectedDestinations.some((dest) => String(dest.hub_id) === String(hubId));
   }
 
   _updateMoveButton() {
     const btn = this.el.querySelector('.window-move__move-btn');
-    if (btn) btn.dataset.ready = this._selectedDestination ? 1 : 0;
+    if (btn) btn.dataset.ready = this._selectedDestinations.length ? 1 : 0;
   }
 
   _setupSearchInput(entry) {
@@ -98,10 +107,13 @@ class ___window_move extends mfsInteract {
     input.addEventListener('input', (e) => {
       const q = (e.target.value || '').trim();
       clearTimeout(this._searchTimer);
-      if (!q) { this._hideSuggestions(); return; }
+      if (!q) {
+        this._visibleWorkspaces = this._workspaces.filter((ws) => (ws.hub_id || ws.id) !== this._currentHubId);
+        this._renderSuggestions(this._visibleWorkspaces);
+        return;
+      }
       this._searchTimer = setTimeout(() => this._search(q), 100);
     });
-    // Remove blur hide — let user click freely, suggestions hide only on select
   }
 
   // --- Popup lifecycle ---
@@ -120,18 +132,21 @@ class ___window_move extends mfsInteract {
     this._currentHubId = this.mget(_a.hub_id) || this.mget('hub_id');
 
     this.feed(require('./skeleton')(this));
-    this.ensurePart("destination-search").then((entry) => this._setupSearchInput(entry));
     this._loadWorkspaces();
 
     return new Promise((resolve, reject) => {
       this.onConfirmMove = () => {
         this._done = true;
-        if (!this._selectedDestination) {
+        if (!this._selectedDestinations.length) {
           reject({ response: _e.cancel });
           this.goodbye();
           return;
         }
-        resolve({ destination: this._selectedDestination, items: this._items });
+        resolve({
+          destination: this._selectedDestinations[0],
+          destinations: this._selectedDestinations,
+          items: this._items,
+        });
         this.goodbye();
       };
       this.onClose = () => {
@@ -140,6 +155,7 @@ class ___window_move extends mfsInteract {
         this.goodbye();
       };
       this.onBeforeDestroy = () => {
+        clearTimeout(this._searchTimer);
         if (this._done) return;
         reject({ response: _e.close });
       };
@@ -153,6 +169,8 @@ class ___window_move extends mfsInteract {
       type: _a.hub,
     }).then((data) => {
       this._workspaces = _.isArray(data) ? data : (data.data || data.list || data.rows || []);
+      this._visibleWorkspaces = this._workspaces.filter((ws) => (ws.hub_id || ws.id) !== this._currentHubId);
+      this._renderSuggestions(this._visibleWorkspaces);
       const match = this._workspaces.find((ws) => (ws.hub_id || ws.id) === this._currentHubId);
       if (match) {
         const wsName = match.filename || match.name || LOCALE.WORKSPACE;
@@ -172,21 +190,23 @@ class ___window_move extends mfsInteract {
       const name = ws.filename || ws.name || '';
       return name.toLowerCase().includes(lower);
     });
+    this._visibleWorkspaces = matchedWs;
     this._renderSuggestions(matchedWs);
   }
 
   _renderSuggestions(workspaces) {
     const pfx = `${this.fig.group}-move`;
     const kids = workspaces.map((ws) => {
-      const wsName = ws.filename || ws.name || 'Workspace';
+      const wsName = ws.filename || ws.name || LOCALE.WORKSPACE;
       const hubId = ws.hub_id || ws.id;
       const destNid = ws.home_id || ws.actual_home_id || ws.nid || hubId;
+      const selected = this._isSelectedDestination(hubId) ? 1 : 0;
       return Skeletons.Box.X({
         className: `${pfx}__ws-row`,
-        dataset: { service: 'select-suggestion', nid: destNid, hub_id: hubId, filename: wsName, wsname: wsName },
+        dataset: { service: 'select-suggestion', nid: destNid, hub_id: hubId, filename: wsName, wsname: wsName, selected },
         kids: [
-          Skeletons.Image.Svg({ ico: 'addmenu-folder', className: `${pfx}__item-icon` }),
           Skeletons.Note({ className: `${pfx}__item-name`, content: wsName }),
+          Skeletons.Element({ className: `${pfx}__checkbox`, content: selected ? '✓' : '&nbsp;' }),
         ],
       });
     });
@@ -194,7 +214,7 @@ class ___window_move extends mfsInteract {
     if (kids.length === 0) {
       kids.push(Skeletons.Note({
         className: `${pfx}__no-results`,
-        content: LOCALE.NO_RESULTS || 'No results',
+        content: LOCALE.NO_FILE_RESULTS,
       }));
     }
 
@@ -202,11 +222,6 @@ class ___window_move extends mfsInteract {
     if (!s) return;
     s.feed(kids);
     s.el.dataset.state = 1;
-  }
-
-  _hideSuggestions() {
-    const s = this.__suggestionsList;
-    if (s) s.el.dataset.state = 0;
   }
 
 }

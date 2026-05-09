@@ -1,5 +1,64 @@
+const { filesize } = require("@drumee/ui-essentials");
+
 // Avatar palette cycled by id-hash so initials avatars stay stable per user.
 const AVATAR_COLORS = ["cyan", "purple", "amber", "pink"];
+
+// Map a row from `file_version_list` to the shape the FE skeleton consumes.
+function normalizeFileVersionRow(r) {
+  return {
+    ...r,
+    id: r.id || r.nid,
+    name: r.name || r.filename,
+    ext: r.ext || r.extension,
+    folder: r.folder || r.folder_name || "",
+    workspace: r.workspace || r.workspace_name || "",
+    size: r.size || (r.filesize != null ? filesize(r.filesize) : ""),
+    versions: r.versions != null ? r.versions : (r.version_count || 0),
+  };
+}
+
+// `file_version_get` returns two result sets: file metadata + versions list.
+// Different transports flatten this differently; accept both shapes.
+function normalizeFileVersionDetail(res) {
+  if (!res) return null;
+  let head = null;
+  let versions = [];
+  if (Array.isArray(res)) {
+    // Two-result-set raw form: [[fileRow], [v1, v2, ...]] or [fileRow, [versions]].
+    if (Array.isArray(res[0])) {
+      head = res[0][0] || null;
+      versions = Array.isArray(res[1]) ? res[1] : [];
+    } else {
+      head = res[0] || null;
+      versions = Array.isArray(res[1]) ? res[1] : [];
+    }
+  } else if (typeof res === "object") {
+    head = res.file || res.head || res;
+    versions = Array.isArray(res.versions) ? res.versions
+            : Array.isArray(res.list) ? res.list
+            : [];
+  }
+  if (!head) return null;
+  return {
+    id: head.id || head.nid,
+    nid: head.nid || head.id,
+    title: head.title || head.filename,
+    filename: head.filename,
+    ext: head.ext || head.extension,
+    size: head.size || (head.filesize != null ? filesize(head.filesize) : ""),
+    retention: head.retention || "",
+    versions: versions.map((v) => ({
+      id: v.id,
+      version: v.version || `v${v.version_num}.0`,
+      version_num: v.version_num,
+      timestamp: v.ctime ? Dayjs(v.ctime * 1000).fromNow() : "",
+      file: v.filename,
+      size: v.filesize != null ? filesize(v.filesize) : "",
+      editor: v.editor || v.editor_name || "",
+      active: v.is_active === 1 || v.is_active === true || v.active === true,
+    })),
+  };
+}
 
 function avatarColorFor(id) {
   const s = String(id || "");
@@ -30,6 +89,20 @@ function deriveRole(privilege) {
     }
   }
   return { label: "Member", variant: "member" };
+}
+
+const TABS_BY_ROLE = {
+  owner: ["member", "audit", "storage", "security"],
+  admin: ["member", "permissions", "admin-storage"],
+  member: [],
+};
+
+function deriveVisitorRole() {
+  if (typeof Visitor !== "undefined" && Visitor && Visitor.domainCan) {
+    if (Visitor.domainCan(_K.permission.owner)) return "owner";
+    if (Visitor.domainCan(_K.permission.admin)) return "admin";
+  }
+  return "member";
 }
 
 function deriveStatus(row) {
@@ -74,7 +147,17 @@ class apps_main extends LetcBox {
     require("./skin");
     super.initialize(opt);
     this.declareHandlers();
-    this._tab = "member";
+    this._role = deriveVisitorRole();
+    this._visibleTabs = TABS_BY_ROLE[this._role] || [];
+    this._tab = this._visibleTabs[0] || "member";
+    this._adminHubs = [];
+    this._activeAdminHub = null;
+    this._adminHubsState = "idle";
+    this._adminHubMenuOpen = false;
+    this._adminHubSearch = "";
+    // overview = workspace cards, detail = members of the picked hub.
+    // Owner role ignores this state (always renders the flat list).
+    this._memberView = "overview";
     this._roleFilter = "all";
     this._filterOpen = false;
     this._page = 1;
@@ -88,6 +171,8 @@ class apps_main extends LetcBox {
     this._statsState = "idle";
     this._auditUnlocked = false;
     this._auditLogs = [];
+    this._auditLogsTotal = 0;
+    this._auditPageSize = 20;
     this._auditStats = null;
     this._auditState = "idle";
     this._auditPage = 1;
@@ -96,6 +181,8 @@ class apps_main extends LetcBox {
     this._auditTo = 0;
     this._orgStorageStats = [];
     this._orgUserStorage = [];
+    this._orgUserStorageTotal = 0;
+    this._orgUserStoragePageSize = 20;
     this._storageState = "idle";
     this._storagePage = 1;
     this._storageSort = "usage_high";
@@ -109,6 +196,14 @@ class apps_main extends LetcBox {
     this._activeWorkspace = null;
     this._wsDetailPage = 1;
     this._editingFolder = null;
+    this._fpermMembers = [];
+    this._fpermDevices = [];
+    this._permWorkspaces = [];
+    this._permState = "idle"; // idle | loading | loaded | error
+    this._wsFolders = [];
+    this._wsFoldersState = "idle";
+    this._wsFoldersTotal = 0;
+    this._fpermLoading = false;
     this._fpermMode = "restricted"; // "restricted" | "shared"
     this._fpermAutoRevoke = false;
     this._fpermAutoRevokeMins = 30;
@@ -117,8 +212,16 @@ class apps_main extends LetcBox {
     this._fpermAccess = { view: true, edit: false, chat: true };
     this._fvSelected = new Set();
     this._adminStorageView = "main"; // "main" | "all" | "detail"
+    this._adminStorageState = "idle";
+    this._hubStorageStats = null;
+    this._hubUserStorage = [];
+    this._fileVersions = [];
+    this._fileVersionsTotal = 0;
+    this._fileDetail = null;
+    this._fileDetailLoading = false;
     this._fvAllPage = 1;
     this._fvActiveFile = null;
+    this._fvSelectedVersionId = null;
     this._editDevices = [];
     this._editWorkspaces = [];
     this._onDocumentClick = this._onDocumentClick.bind(this);
@@ -130,15 +233,27 @@ class apps_main extends LetcBox {
   }
 
   _onDocumentClick(e) {
-    if (!this._filterOpen) return;
-    const filterEl = this.el && this.el.querySelector(".apps-main__table-filter");
-    const dropdownEl = this.el && this.el.querySelector(".apps-main__filter-menu");
-    if (
-      filterEl && !filterEl.contains(e.target) &&
-      dropdownEl && !dropdownEl.contains(e.target)
-    ) {
-      this._filterOpen = false;
-      this._render();
+    if (this._filterOpen) {
+      const filterEl = this.el && this.el.querySelector(".apps-main__table-filter");
+      const dropdownEl = this.el && this.el.querySelector(".apps-main__filter-menu");
+      if (
+        filterEl && !filterEl.contains(e.target) &&
+        dropdownEl && !dropdownEl.contains(e.target)
+      ) {
+        this._filterOpen = false;
+        this._render();
+      }
+    }
+    if (this._adminHubMenuOpen) {
+      const chipEl = this.el && this.el.querySelector(".apps-main__hub-chip");
+      const menuEl = this.el && this.el.querySelector(".apps-main__hub-chip-menu");
+      if (
+        chipEl && !chipEl.contains(e.target) &&
+        menuEl && !menuEl.contains(e.target)
+      ) {
+        this._adminHubMenuOpen = false;
+        this._render();
+      }
     }
   }
 
@@ -147,15 +262,58 @@ class apps_main extends LetcBox {
     this.feed(require("./skeleton").default(this));
   }
 
-  onDomRefresh() {
+  async onDomRefresh() {
     this._render();
-    if (this._tab === "member") this._loadMembersTab();
+    // Admin role's tabs are hub-scoped — load the workspace list before
+    // bootstrapping so service calls have hub_id available.
+    if (this._role === "admin") await this._loadAdminHubs();
+    this._bootstrapTab();
   }
 
-  // ─────────────────────────────────────────────────────────
-  //  Backend loaders
-  // ─────────────────────────────────────────────────────────
+  _bootstrapTab() {
+    if (this._tab === "member") this._loadMembersTab();
+    else if (this._tab === "audit") this._loadAuditTab();
+    else if (this._tab === "storage") this._loadStorageTab();
+    else if (this._tab === "permissions") this._loadPermissionsTab();
+    else if (this._tab === "admin-storage") this._loadAdminStorageTab();
+  }
+
+  async _loadAdminHubs() {
+    this._adminHubsState = "loading";
+    try {
+      const res = await this.postService(SERVICE.admin.member_list_workspaces, {
+        uid: Visitor.id,
+      });
+      const rows = Array.isArray(res) ? res : (res && res.data) || [];
+      // Keep workspaces where the user has admin perm (>=31) on a real
+      // collaborative area. `private` covers what the UX calls "restricted".
+      const WORKSPACE_AREAS = new Set(["private", "restricted", "share"]);
+      this._adminHubs = rows.filter(
+        (r) =>
+          (parseInt(r.permission, 10) || 0) >= 31 &&
+          WORKSPACE_AREAS.has(r.area)
+      );
+      this._activeAdminHub = this._adminHubs.length
+        ? this._adminHubs[0].hub_id
+        : null;
+      this._adminHubsState = "loaded";
+    } catch (e) {
+      this.warn && this.warn("member_list_workspaces failed", e);
+      this._adminHubs = [];
+      this._activeAdminHub = null;
+      this._adminHubsState = "error";
+    }
+  }
+
   _loadMembersTab() {
+    if (this._role === "admin") {
+      // Admin: workspace overview first, drill-down to per-hub members.
+      // Reuses _permWorkspaces (same source as Permissions tab).
+      if (this._memberView === "overview") return this._loadWorkspaceOverview();
+      this._loadMemberStats();
+      this._loadMembers();
+      return;
+    }
     this._loadMemberStats();
     this._loadMembers();
   }
@@ -167,12 +325,19 @@ class apps_main extends LetcBox {
       const roleId = this._roleFilter && this._roleFilter !== "all"
         ? this._roleFilter
         : 0;
-      const res = await this.postService(SERVICE.adminpanel.member_list, {
-        role_id: roleId,
-        key: this._memberQuery || "",
-        page: this._page || 1,
-        option: "member",
-      });
+      const res = this._role === "admin"
+        ? await this.postService(SERVICE.admin.hub_member_list, {
+            hub_id: this._activeAdminHub,
+            role_id: roleId,
+            key: this._memberQuery || "",
+            page: this._page || 1,
+          })
+        : await this.postService(SERVICE.adminpanel.member_list, {
+            role_id: roleId,
+            key: this._memberQuery || "",
+            page: this._page || 1,
+            option: "member",
+          });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
       this._members = rows.map(mapMember);
       this._membersState = "loaded";
@@ -200,10 +365,15 @@ class apps_main extends LetcBox {
         page: this._auditPage || 1,
       });
       this._auditLogs = Array.isArray(res) ? res : (res && res.data) || [];
+      this._auditLogsTotal = res && res.total != null
+        ? parseInt(res.total, 10) || 0
+        : this._auditLogs.length;
+      if (res && res.page_size) this._auditPageSize = parseInt(res.page_size, 10) || 20;
       this._auditState = "loaded";
     } catch (e) {
       this.warn && this.warn("get_audit_logs failed", e);
       this._auditLogs = [];
+      this._auditLogsTotal = 0;
       this._auditState = "error";
     }
     this._render();
@@ -271,19 +441,293 @@ class apps_main extends LetcBox {
         page: this._storagePage || 1,
       });
       this._orgUserStorage = Array.isArray(res) ? res : (res && res.data) || [];
+      this._orgUserStorageTotal = res && res.total != null
+        ? parseInt(res.total, 10) || 0
+        : this._orgUserStorage.length;
+      if (res && res.page_size) this._orgUserStoragePageSize = parseInt(res.page_size, 10) || 20;
       this._storageState = "loaded";
     } catch (e) {
       this.warn && this.warn("get_org_user_storage failed", e);
       this._orgUserStorage = [];
+      this._orgUserStorageTotal = 0;
       this._storageState = "error";
     }
     this._render();
   }
 
+  // ── Permissions tab (admin) ──────────────────────────────
+  _loadPermissionsTab() {
+    this._loadWorkspaceOverview();
+  }
+
+  async _loadWorkspaceOverview() {
+    this._permState = "loading";
+    this._render();
+    try {
+      const res = await this.postService(SERVICE.admin.get_workspace_overview, {
+        hub_id: this._activeAdminHub,
+      });
+      const rows = Array.isArray(res) ? res : (res && res.data) || [];
+      // Normalize: id<-hub_id, name<-hub_name, mode<-area
+      // (BE 'share' → 'shared' for the icon's visual semantics).
+      this._permWorkspaces = rows.map((w) => ({
+        ...w,
+        id: w.id || w.hub_id,
+        name: w.name || w.hub_name,
+        mode: w.mode || (w.area === "share" ? "shared" : w.area) || null,
+      }));
+      this._permState = "loaded";
+    } catch (e) {
+      this.warn && this.warn("get_workspace_overview failed", e);
+      this._permWorkspaces = [];
+      this._permState = "error";
+    }
+    this._render();
+  }
+
+  async _loadHubFolders(hubId) {
+    this._wsFoldersState = "loading";
+    this._wsFolders = [];
+    this._render();
+    try {
+      const res = await this.postService(SERVICE.admin.get_hub_folders, {
+        hub_id: hubId,
+        page: this._wsDetailPage || 1,
+      });
+      const rows = Array.isArray(res) ? res : (res && res.data) || [];
+      // SP returns nid/filename/mtime/filesize — alias to FE shape.
+      this._wsFolders = rows.map((r) => ({
+        ...r,
+        id: r.id || r.nid,
+        name: r.name || r.filename,
+        updated: r.updated || r.mtime,
+        size: r.size || r.filesize,
+      }));
+      this._wsFoldersTotal = (res && res.total) || this._wsFolders.length;
+      this._wsFoldersState = "loaded";
+    } catch (e) {
+      this.warn && this.warn("get_hub_folders failed", e);
+      this._wsFolders = [];
+      this._wsFoldersState = "error";
+    }
+    this._render();
+  }
+
+  async _loadFolderPermissions(folderId) {
+    this._fpermLoading = true;
+    this._fpermMembers = [];
+    this._fpermDevices = [];
+    this._render();
+    try {
+      const hubId = (this._activeWorkspace && this._activeWorkspace.id)
+        || this._activeAdminHub;
+      const res = await this.postService(SERVICE.admin.get_folder_permissions, {
+        hub_id: hubId,
+        nid: folderId,
+      });
+      const data = res || {};
+      if (data.mode) this._fpermMode = data.mode;
+      if (data.access) this._fpermAccess = { ...this._fpermAccess, ...data.access };
+      if (typeof data.auto_revoke === "boolean") this._fpermAutoRevoke = data.auto_revoke;
+      if (data.auto_revoke_minutes != null) this._fpermAutoRevokeMins = data.auto_revoke_minutes;
+      if (typeof data.one_time === "boolean") this._fpermOneTimeOn = data.one_time;
+      if (data.one_time_url) this._fpermOneTimeUrl = data.one_time_url;
+      this._fpermMembers = Array.isArray(data.members) ? data.members : [];
+      this._fpermDevices = Array.isArray(data.devices) ? data.devices : [];
+    } catch (e) {
+      this.warn && this.warn("get_folder_permissions failed", e);
+    }
+    this._fpermLoading = false;
+    this._render();
+  }
+
+  async _saveFolderPermissions() {
+    if (!this._editingFolder) return;
+    try {
+      const hubId = (this._activeWorkspace && this._activeWorkspace.id)
+        || this._activeAdminHub;
+      await this.postService(SERVICE.admin.save_folder_permissions, {
+        hub_id: hubId,
+        nid: this._editingFolder.id,
+        config: {
+          mode: this._fpermMode,
+          access: this._fpermAccess,
+          auto_revoke: this._fpermAutoRevoke,
+          auto_revoke_minutes: this._fpermAutoRevokeMins,
+          one_time: this._fpermOneTimeOn,
+        },
+      });
+    } catch (e) {
+      this.warn && this.warn("save_folder_permissions failed", e);
+    }
+    this._editingFolder = null;
+    this._render();
+  }
+
+  // ── Admin Storage tab (admin) ────────────────────────────
+  // Fetches run in parallel and the loaders skip per-call renders so
+  // we only re-render once at the start (loading state) and once when
+  // everything settles. Otherwise hub switching triggered up to 3 full
+  // skeleton rebuilds.
+  async _loadAdminStorageTab() {
+    this._adminStorageTabLoading = true;
+    this._adminStorageState = "loading";
+    this._render();
+    await Promise.all([
+      this._loadHubStorageStats({ skipRender: true }),
+      this._loadHubUserStorage({ skipRender: true }),
+      this._loadFileVersions({ skipRender: true }),
+    ]);
+    this._adminStorageTabLoading = false;
+    this._render();
+  }
+
+  async _loadHubStorageStats(opts = {}) {
+    try {
+      const res = await this.postService(SERVICE.admin.get_hub_storage_stats, {
+        hub_id: this._activeAdminHub,
+      });
+      // SP returns one row; flatten array-of-one to a plain object.
+      const row = Array.isArray(res) ? res[0] : (res && res.data) || res;
+      this._hubStorageStats = row && typeof row === "object" ? row : null;
+    } catch (e) {
+      this._hubStorageStats = null;
+    }
+    if (!opts.skipRender) this._render();
+  }
+
+  async _loadHubUserStorage(opts = {}) {
+    try {
+      const res = await this.postService(SERVICE.admin.get_hub_user_storage, {
+        hub_id: this._activeAdminHub,
+        sort_by: this._storageSort || "usage_high",
+        page: this._storagePage || 1,
+      });
+      this._hubUserStorage = Array.isArray(res) ? res : (res && res.data) || [];
+    } catch (e) {
+      this._hubUserStorage = [];
+    }
+    if (!opts.skipRender) this._render();
+  }
+
+  async _loadFileVersions(opts = {}) {
+    if (!this._activeAdminHub) {
+      this._fileVersions = [];
+      this._fileVersionsTotal = 0;
+      this._adminStorageState = "loaded";
+      if (!opts.skipRender) this._render();
+      return;
+    }
+    this._adminStorageState = "loading";
+    if (!opts.skipRender) this._render();
+    try {
+      const res = await this.postService(SERVICE.admin.get_file_versions, {
+        hub_id: this._activeAdminHub,
+        page: this._fvAllPage || 1,
+        search: this._fvSearch || "",
+      });
+      const rows = Array.isArray(res) ? res : (res && res.data) || [];
+      this._fileVersions = rows.map(normalizeFileVersionRow);
+      this._fileVersionsTotal = (res && res.total) || this._fileVersions.length;
+      this._adminStorageState = "loaded";
+    } catch (e) {
+      this.warn && this.warn("get_file_versions failed", e);
+      this._fileVersions = [];
+      this._adminStorageState = "error";
+    }
+    if (!opts.skipRender) this._render();
+  }
+
+  async _loadFileVersionDetail(nid) {
+    if (!this._activeAdminHub || !nid) {
+      this._fileDetail = null;
+      this._fileDetailLoading = false;
+      this._fvSelectedVersionId = null;
+      return this._render();
+    }
+    this._fileDetailLoading = true;
+    this._fileDetail = null;
+    this._fvSelectedVersionId = null;
+    this._render();
+    try {
+      const res = await this.postService(SERVICE.admin.get_file_version_detail, {
+        hub_id: this._activeAdminHub,
+        nid,
+      });
+      this._fileDetail = normalizeFileVersionDetail(res);
+      // Pre-select the active version so the preview pane has something
+      // meaningful to show before the user clicks anything.
+      const versions = (this._fileDetail && this._fileDetail.versions) || [];
+      const active = versions.find((v) => v.active) || versions[0] || null;
+      this._fvSelectedVersionId = active && active.id;
+    } catch (e) {
+      this.warn && this.warn("get_file_version_detail failed", e);
+      this._fileDetail = null;
+    }
+    this._fileDetailLoading = false;
+    this._render();
+  }
+
+  // Backend takes a single `nid` (or null = purge old across the whole hub).
+  // For multi-select, fan out one request per file, then refresh once.
+  async _deleteOldFileVersions(nidOrNids) {
+    if (!this._activeAdminHub) return;
+    const list = Array.isArray(nidOrNids) ? nidOrNids : [nidOrNids];
+    const nids = list.filter(Boolean);
+    if (!nids.length) return;
+    try {
+      await Promise.all(
+        nids.map((nid) =>
+          this.postService(SERVICE.admin.delete_file_old_versions, {
+            hub_id: this._activeAdminHub,
+            nid,
+          }),
+        ),
+      );
+    } catch (e) {
+      this.warn && this.warn("delete_file_old_versions failed", e);
+    }
+    this._fvSelected.clear();
+    return this._loadFileVersions();
+  }
+
+  // Purge every old version in the active hub (nid=null).
+  async _deleteAllOldVersionsInHub() {
+    if (!this._activeAdminHub) return;
+    try {
+      await this.postService(SERVICE.admin.delete_file_old_versions, {
+        hub_id: this._activeAdminHub,
+        nid: null,
+      });
+    } catch (e) {
+      this.warn && this.warn("delete_file_old_versions(all) failed", e);
+    }
+    this._fvSelected.clear();
+    return this._loadFileVersions();
+  }
+
+  async _downloadFileVersions(nid) {
+    if (!this._activeAdminHub || !nid) return;
+    try {
+      await this.postService(SERVICE.admin.download_file_versions, {
+        hub_id: this._activeAdminHub,
+        nid,
+      });
+    } catch (e) {
+      this.warn && this.warn("download_file_versions failed", e);
+    }
+  }
+
   async _loadMemberStats() {
     this._statsState = "loading";
     try {
-      const res = await this.postService(SERVICE.admin.member_stats, {});
+      const svc = this._role === "admin"
+        ? SERVICE.admin.hub_member_stats
+        : SERVICE.admin.member_stats;
+      const payload = this._role === "admin"
+        ? { hub_id: this._activeAdminHub }
+        : {};
+      const res = await this.postService(svc, payload);
       this._memberStats = res || {};
       const t = this._memberStats.total_members != null
         ? this._memberStats.total_members
@@ -298,11 +742,12 @@ class apps_main extends LetcBox {
     this._render();
   }
 
-  // ─────────────────────────────────────────────────────────
-  //  Tabs / table chrome
-  // ─────────────────────────────────────────────────────────
+  // ── Tabs / table chrome ──────────────────────────────────
   switchTab(tab) {
+    if (this._visibleTabs && this._visibleTabs.length && !this._visibleTabs.includes(tab)) return;
     this._tab = tab;
+    // Admin Member tab always re-enters at the workspace overview.
+    if (this._role === "admin" && tab === "member") this._memberView = "overview";
     this._render();
     if (tab === "member" && this._membersState !== "loading") {
       this._loadMembersTab();
@@ -310,6 +755,10 @@ class apps_main extends LetcBox {
       this._loadAuditTab();
     } else if (tab === "storage" && this._storageState !== "loading") {
       this._loadStorageTab();
+    } else if (tab === "permissions" && this._permState !== "loading") {
+      this._loadPermissionsTab();
+    } else if (tab === "admin-storage" && this._adminStorageState !== "loading") {
+      this._loadAdminStorageTab();
     }
   }
 
@@ -429,9 +878,16 @@ class apps_main extends LetcBox {
   // ─────────────────────────────────────────────────────────
   async _deleteMember(memberId) {
     try {
-      await this.postService(SERVICE.adminpanel.member_delete, {
-        user_id: memberId,
-      });
+      if (this._role === "admin") {
+        await this.postService(SERVICE.admin.hub_member_remove, {
+          hub_id: this._activeAdminHub,
+          user_id: memberId,
+        });
+      } else {
+        await this.postService(SERVICE.adminpanel.member_delete, {
+          user_id: memberId,
+        });
+      }
       this._selected.delete(memberId);
     } catch (e) {
       this.warn && this.warn("member_delete failed", e);
@@ -449,14 +905,68 @@ class apps_main extends LetcBox {
     if (this._page > totalPages) this._page = totalPages;
   }
 
-  // ─────────────────────────────────────────────────────────
-  //  Event router
-  // ─────────────────────────────────────────────────────────
+  // ── Event router ─────────────────────────────────────────
   onUiEvent(cmd, args = {}) {
     const service = args.service || (cmd && cmd.mget && cmd.mget(_a.service));
     switch (service) {
       case "apps-switch-tab":
         return this.switchTab(cmd.mget("tab"));
+
+      case "apps-member-open-workspace": {
+        const id = cmd.mget("workspace_id");
+        if (!id) return;
+        this._activeAdminHub = id;
+        this._memberView = "detail";
+        this._page = 1;
+        this._selected.clear();
+        this._members = [];
+        this._memberStats = null;
+        this._render();
+        this._loadMemberStats();
+        return this._loadMembers();
+      }
+
+      case "apps-member-back":
+        this._memberView = "overview";
+        this._members = [];
+        this._memberStats = null;
+        this._selected.clear();
+        return this._render();
+
+      case "apps-toggle-admin-hub-menu":
+        this._adminHubMenuOpen = !this._adminHubMenuOpen;
+        if (!this._adminHubMenuOpen) this._adminHubSearch = "";
+        return this._render();
+
+      case "apps-admin-hub-search": {
+        const value = (args && args.value != null
+          ? args.value
+          : (cmd && cmd.mget && cmd.mget(_a.value))) || "";
+        this._adminHubSearch = String(value).trim();
+        return this._render();
+      }
+
+      case "apps-select-admin-hub": {
+        const id = cmd.mget("hub_id");
+        if (!id || id === this._activeAdminHub) {
+          this._adminHubMenuOpen = false;
+          this._adminHubSearch = "";
+          return this._render();
+        }
+        this._activeAdminHub = id;
+        this._adminHubMenuOpen = false;
+        this._adminHubSearch = "";
+        // Reset per-hub caches so the new context loads fresh.
+        this._members = []; this._memberStats = null; this._membersTotal = 0;
+        this._page = 1; this._selected.clear();
+        this._permWorkspaces = []; this._activeWorkspace = null;
+        this._wsFolders = []; this._editingFolder = null;
+        this._hubStorageStats = null; this._hubUserStorage = [];
+        this._fileVersions = []; this._fvActiveFile = null;
+        this._fileDetail = null;
+        this._render();
+        return this._bootstrapTab();
+      }
 
       case "apps-search":
         return this._searchMembers(
@@ -518,48 +1028,54 @@ class apps_main extends LetcBox {
 
       case "apps-perm-open-workspace": {
         const id = cmd.mget("workspace_id");
-        const data = require("./skeleton/permission-data").default;
-        const ws = data.find((w) => w.id === id);
+        const ws = (this._permWorkspaces || []).find((w) => w.id === id);
         if (ws) {
           this._activeWorkspace = ws;
           this._wsDetailPage = 1;
-          return this._render();
+          this._render();
+          return this._loadHubFolders(ws.id);
         }
         return;
       }
 
       case "apps-perm-back":
         this._activeWorkspace = null;
+        this._wsFolders = [];
+        this._wsFoldersState = "idle";
         return this._render();
 
       case "apps-perm-page": {
         const n = parseInt(cmd.mget("page_num"), 10);
         if (!isNaN(n) && n >= 1) {
           this._wsDetailPage = n;
-          return this._render();
+          this._render();
+          if (this._activeWorkspace) {
+            return this._loadHubFolders(this._activeWorkspace.id);
+          }
         }
         return;
       }
 
       case "apps-perm-edit-folder": {
         const id = cmd.mget("folder_id");
-        const data = require("./skeleton/permission-detail-data").default;
-        const f = data.find((row) => row.id === id);
+        const f = (this._wsFolders || []).find((row) => row.id === id);
         if (f) {
           this._editingFolder = f;
-          // Inherit popup mode from the workspace this folder lives in.
           this._fpermMode =
             (this._activeWorkspace && this._activeWorkspace.mode) ||
             "restricted";
-          return this._render();
+          this._render();
+          return this._loadFolderPermissions(f.id);
         }
         return;
       }
 
       case "apps-fperm-close":
-      case "apps-fperm-save":
         this._editingFolder = null;
         return this._render();
+
+      case "apps-fperm-save":
+        return this._saveFolderPermissions();
 
       case "apps-fperm-toggle-auto":
         this._fpermAutoRevoke = !this._fpermAutoRevoke;
@@ -598,8 +1114,23 @@ class apps_main extends LetcBox {
       case "apps-perm-open-folder":
         return;
 
+      case "apps-audit-search": {
+        const next = ((args && args.value != null
+          ? args.value
+          : cmd && cmd.mget && cmd.mget(_a.value)) || ""
+        ).toString().trim();
+        if (next === (this._auditUsername || "")) return;
+        this._auditUsername = next;
+        this._auditPage = 1;
+        return this._loadAuditLogs();
+      }
+
       case "apps-audit-upgrade":
         this._auditUnlocked = true;
+        return this._render();
+
+      case "apps-admin-upgrade":
+        this._adminUnlocked = true;
         return this._render();
 
       case "apps-audit-export":
@@ -689,18 +1220,19 @@ class apps_main extends LetcBox {
       }
 
       case "apps-fv-toggle-all": {
-        const data = require("./skeleton/admin-storage-data").default;
-        if (this._fvSelected.size === data.length) {
+        const rows = this._fileVersions || [];
+        if (this._fvSelected.size === rows.length) {
           this._fvSelected.clear();
         } else {
-          this._fvSelected = new Set(data.map((f) => f.id));
+          this._fvSelected = new Set(rows.map((f) => f.id));
         }
         return this._render();
       }
 
-      case "apps-fv-delete-selected":
-        this._fvSelected.clear();
-        return this._render();
+      case "apps-fv-delete-selected": {
+        const ids = Array.from(this._fvSelected);
+        return this._deleteOldFileVersions(ids);
+      }
 
       case "apps-fv-view-all":
         this._adminStorageView = "all";
@@ -713,38 +1245,65 @@ class apps_main extends LetcBox {
 
       case "apps-fv-open-detail": {
         const id = cmd.mget("file_id");
-        const data = require("./skeleton/admin-storage-data").default;
-        const f = data.find((row) => row.id === id) || {
-          id,
-          name: "Q2_Growth_Plan_v2.docx",
-        };
+        const f = (this._fileVersions || []).find((row) => row.id === id) || { id };
         this._fvActiveFile = f;
         this._adminStorageView = "detail";
-        return this._render();
+        this._render();
+        return this._loadFileVersionDetail(id);
       }
 
       case "apps-fv-detail-back":
         this._fvActiveFile = null;
+        this._fileDetail = null;
+        this._fileDetailLoading = false;
+        this._fvSelectedVersionId = null;
         this._adminStorageView = "all";
         return this._render();
 
-      case "apps-fv-show-in-folder":
+      case "apps-fv-select-version": {
+        const vid = cmd.mget("version_id");
+        if (vid && vid !== this._fvSelectedVersionId) {
+          this._fvSelectedVersionId = vid;
+          this._render();
+        }
+        return;
+      }
+
       case "apps-fv-download-all":
+        if (this._fvActiveFile) return this._downloadFileVersions(this._fvActiveFile.id);
+        return;
+
       case "apps-fv-delete-old":
-      case "apps-fv-delete-version":
+        if (this._fvActiveFile) return this._deleteOldFileVersions(this._fvActiveFile.id);
+        return;
+
+      case "apps-fv-show-in-folder":
         return;
 
       case "apps-fv-page": {
         const n = parseInt(cmd.mget("page_num"), 10);
         if (!isNaN(n) && n >= 1) {
           this._fvAllPage = n;
-          return this._render();
+          this._render();
+          return this._loadFileVersions();
         }
         return;
       }
 
       case "apps-fv-delete-all":
+        return this._deleteAllOldVersionsInHub();
+
+      case "apps-fv-search": {
+        const value = (cmd.mget(_a.value) || "").trim();
+        if (this._fvSearch === value) return;
+        this._fvSearch = value;
+        this._fvAllPage = 1;
+        return this._loadFileVersions();
+      }
+
       case "apps-fv-delete-row":
+        return this._deleteOldFileVersions(cmd.mget("file_id"));
+
       case "apps-fv-row-menu":
       case "apps-fv-filter-workspace":
         return;
@@ -757,11 +1316,16 @@ class apps_main extends LetcBox {
   async _removeSelected() {
     const ids = Array.from(this._selected);
     if (!ids.length) return;
+    const isAdmin = this._role === "admin";
+    const svc = isAdmin
+      ? SERVICE.admin.hub_member_remove
+      : SERVICE.adminpanel.member_delete;
     for (const id of ids) {
       try {
-        await this.postService(SERVICE.adminpanel.member_delete, {
-          user_id: id,
-        });
+        const payload = isAdmin
+          ? { hub_id: this._activeAdminHub, user_id: id }
+          : { user_id: id };
+        await this.postService(svc, payload);
       } catch (e) {
         this.warn && this.warn(`member_delete ${id} failed`, e);
       }

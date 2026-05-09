@@ -724,6 +724,20 @@ class __widget_chat extends LetcBox {
     return api;
   }
 
+  // Update the folder scope so messages are filtered to a specific sub-folder.
+  setScopedFolderNid(folderNid) {
+    const next = folderNid ? `${folderNid}` : '';
+    if (this.scopedNid === next) return;
+    this.scopedNid = next;
+    this.ensurePart(_a.list).then((list) => {
+      if (!list || !_.isFunction(list.restart)) return;
+      const prevSpinner = list.mget(_a.spinner);
+      if (prevSpinner) list.mset(_a.spinner, false);
+      list.restart();
+      if (prevSpinner) list.mset(_a.spinner, prevSpinner);
+    });
+  }
+
   // Switch the message list to a file-scoped thread; pass falsy to leave it.
   setScopedFileNid(fileNid) {
     const next = fileNid ? `${fileNid}` : '';
@@ -873,7 +887,7 @@ class __widget_chat extends LetcBox {
       case _a.personal:
         api = {
           service: SERVICE.chat.post,
-          entity_id: this.peerId,
+          entity_id: this.peerId,  // server accepts entity_id as alias of peer_id
           attachment: attachments,
           message,
           hub_id: this.hubId
@@ -1094,7 +1108,8 @@ class __widget_chat extends LetcBox {
     let _service;
     const area = this.mget(_a.area);
     if (cmd == null) { cmd = {}; }
-    if (area === _a.personal) {
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
+    if (isPrivate) {
       _service = SERVICE.chat.delete;
     } else if (area === _a.share) {
       _service = SERVICE.channel.delete;
@@ -1105,12 +1120,19 @@ class __widget_chat extends LetcBox {
       _option = 'all';
     }
 
-    this.postService({
+    const payload = {
       service: _service,
       messages: this._selectedMessages,
       option: _option,
-      hub_id: this.hubId
-    }, { async: 1 }).then((data) => {
+      hub_id: this.hubId,
+    };
+    // chat.delete requires peer_id for P2P path. If omitted, server falls
+    // through to hub chat delete (legacy).
+    if (isPrivate && this.peerId) {
+      payload.peer_id = this.peerId;
+    }
+
+    this.postService(payload, { async: 1 }).then((data) => {
       this.disableMessageSelection(data);
       this.clearMessageFromChat(data);
     });
@@ -1189,7 +1211,8 @@ class __widget_chat extends LetcBox {
         var isChannel = [_a.dmz, _a.public, _a.share, _a.private].includes(area);
         var hubMatch = isChannel && (this.hubId === data.hub_id);
         var inScope = !hubMatch || this.matchesScopedChannel(data);
-        var privateMach = isPrivate && (this.peerId === data.entity_id);
+        // P2P message payload now carries peer_id (replaces entity_id).
+        var privateMach = isPrivate && (this.peerId === data.peer_id);
         var ticketMach = (area === _a.ticket) && (data.ticket_id === this.mget('ticket_id'));
         if ((hubMatch && inScope) || privateMach || ticketMach) {
           this.handleReceivedMsg(data);
@@ -1209,10 +1232,18 @@ class __widget_chat extends LetcBox {
             let postData = {
               service,
               hub_id: this.hubId,
-              message_id: data.message_id
-            }
-            if (area === _a.ticket) {
-              postData.ticket_id = data.ticket_id
+            };
+            if (isPrivate) {
+              // chat.acknowledge takes peer_id (required) + optional ref_ctime
+              // — message_id is no longer used for P2P. ref_ctime advances the
+              // read cursor for the whole conversation up to this message.
+              postData.peer_id = this.peerId;
+              if (data.ctime) postData.ref_ctime = data.ctime;
+            } else {
+              postData.message_id = data.message_id;
+              if (area === _a.ticket) {
+                postData.ticket_id = data.ticket_id;
+              }
             }
             this.postService(postData);
           }

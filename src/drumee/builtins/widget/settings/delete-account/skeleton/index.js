@@ -16,11 +16,11 @@ function modalHeader(ui, { title, subtitle, description, step, withBack }) {
     kids: [
       withBack
         ? Skeletons.Button.Svg({
-            ico: "arrow-left",
-            className: `${pfx}__back`,
-            service: "delete-account-back",
-            uiHandler: [ui],
-          })
+          ico: "arrow-left",
+          className: `${pfx}__back`,
+          service: "delete-account-back",
+          uiHandler: [ui],
+        })
         : null,
       Skeletons.Note({ className: `${pfx}__title`, content: title }),
     ].filter(Boolean),
@@ -80,10 +80,12 @@ function minusIcon(pfx) {
 
 function footerButton(ui, opt) {
   const pfx = ui.fig.family;
-  const { label, service, variant, kids } = opt;
+  const { label, service, variant, kids, state, sys_pn } = opt;
   return Skeletons.Box.X({
     className: `${pfx}__btn ${pfx}__btn--${variant}`,
     service,
+    state,
+    sys_pn,
     uiHandler: [ui],
     kids: kids || [
       Skeletons.Note({ className: `${pfx}__btn-label`, content: label }),
@@ -185,11 +187,11 @@ function exportItem(ui, { key, title, size }) {
         className: `${pfx}__checkbox${checked ? ` ${pfx}__checkbox--checked` : ""}`,
         kids: checked
           ? [
-              Skeletons.Image.Svg({
-                ico: "editbox_checkmark",
-                className: `${pfx}__checkbox-mark`,
-              }),
-            ]
+            Skeletons.Image.Svg({
+              ico: "editbox_checkmark",
+              className: `${pfx}__checkbox-mark`,
+            }),
+          ]
           : [],
       }),
       Skeletons.Box.Y({
@@ -255,6 +257,7 @@ function step2(ui) {
           Skeletons.Box.X({
             className: `${pfx}__download`,
             service: "delete-account-download",
+            state: ui._selected.size === 0 ? 0 : 1,
             uiHandler: [ui],
             kids: [
               Skeletons.Button.Svg({
@@ -263,14 +266,15 @@ function step2(ui) {
               }),
               Skeletons.Note({
                 className: `${pfx}__download-label`,
-                content: (
-                  LOCALE.DELETE_ACCOUNT_DOWNLOAD_SELECTED ||
-                  "Download selected ({0})"
-                ).replace("{0}", String(ui._selected.size)),
+                content: (LOCALE.DELETE_ACCOUNT_DOWNLOAD_SELECTED || "Download selected ({0})").format(ui._selected.size)
               }),
             ],
           }),
         ],
+      }),
+      Skeletons.Box.X({
+        className: `${pfx}__export-row`,
+        sys_pn: "message"
       }),
     ],
   });
@@ -289,7 +293,9 @@ function step2(ui) {
         service: "delete-account-step2-skip",
       }),
       footerButton(ui, {
-        variant: "continue",
+        variant: "continue step2",
+        sys_pn: "step2-button",
+        state: ui._selected.size > 0 ? 0 : 1,
         label: LOCALE.CONTINUE || "Continue",
         service: "delete-account-step2-continue",
       }),
@@ -362,6 +368,9 @@ function step3(ui) {
           }),
         ],
       }),
+      Skeletons.Wrapper.X({
+        sys_pn: "error-box"
+      })
     ],
   });
 
@@ -380,6 +389,7 @@ function step3(ui) {
       }),
       footerButton(ui, {
         variant: "continue",
+        sys_pn: "delete-button",
         label: LOCALE.DELETE_ACCOUNT_FINAL || "Delete my account",
         service: "delete-account-final",
       }),
@@ -417,5 +427,11 @@ export default function delete_account_skeleton(ui) {
       kids: renderers[step](ui),
     }),
     stepHint(pfx, step),
+    // Layered slot for the OTP-gate modal that OAuth-only users go
+    // through instead of password verification at the final step.
+    Skeletons.Wrapper.Y({
+      className: `${pfx}__overlay`,
+      name: "overlay",
+    }),
   ];
 }

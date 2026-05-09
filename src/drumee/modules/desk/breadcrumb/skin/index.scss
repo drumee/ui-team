@@ -28,6 +28,10 @@
     cursor: pointer;
     flex-shrink: 0;
 
+    &:hover {
+      text-decoration: underline;
+    }
+
     &[data-current="1"] {
       color: #000000;
       font-weight: 700;

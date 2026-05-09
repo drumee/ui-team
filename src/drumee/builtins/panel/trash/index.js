@@ -5,7 +5,7 @@ require('./skin');
 class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
-    opt.dataset = { ...opt.dataset, anim: "out" }
+    opt.dataset = { ...opt.dataset, anim: "out" };
     super.initialize(opt);
     this.declareHandlers();
     this.isTrash = 1;
@@ -52,11 +52,10 @@ class __panel_trash extends mfsInteract {
             : 0;
           this.el.dataset.empty = count ? 0 : 1;
           this.ensurePart('items-count').then((p) => {
-            p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) })
-            this.el.dataset.anim = "in";
-          })
+            p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
+          });
           this._refreshStorageUsed();
-        })
+        });
         break;
       case 'storage-info':
         this._refreshStorageUsed();
@@ -64,11 +63,13 @@ class __panel_trash extends mfsInteract {
     }
   }
 
-  /**
-   * ss
-   */
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
+    // rAF so the "out" → "in" flip lands in a separate frame and the
+    // CSS transform transition actually engages.
+    requestAnimationFrame(() => {
+      if (this.el) this.el.dataset.anim = "in";
+    });
   }
 
   /**

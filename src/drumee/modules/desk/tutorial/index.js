@@ -51,17 +51,17 @@ class tutorial_main extends LetcBox {
   }
 
   /**
-   * Exit the tutorial, mirroring the standalone onboarding flow:
-   * mark onboarding complete on the backend, push profile, then tear
-   * down the overlay regardless of network outcome.
+   * Exit the tutorial and record that the user has seen it so it doesn't
+   * auto-show again on subsequent sessions via a forced URL param.
    */
   _enterWorkspace() {
     localStorage.onboarding_step = "0";
     const exit = () => this.softDestroy();
-    this.postService(SERVICE.onboarding.mark_complete, {}, SVC_OPT)
-      .then(() => this.postService(SERVICE.onboarding.update_profile, {}, SVC_OPT))
-      .then(exit)
-      .catch(exit);
+    this.postService(
+      SERVICE.drumate.update_settings,
+      { hub_id: Visitor.id, settings: { tutorial_done: true } },
+      SVC_OPT
+    ).then(exit).catch(exit);
   }
 
   onUiEvent(trigger, args = {}) {
@@ -72,7 +72,7 @@ class tutorial_main extends LetcBox {
         this._nextStep()
         break;
       case 'skip-tour':
-        this._nextStep()
+        this._enterWorkspace();
         break;
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);
