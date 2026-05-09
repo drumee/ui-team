@@ -1894,6 +1894,8 @@
   "YEARS": "Годы",
   "HOURS": "Часы",
   "EXPORT_AS_HTML": "Экспорт в HTML",
+  "EXPORT_AS_PDF": "Экспорт в PDF",
+  "EXPORT_AS_DOCX": "Экспорт в документ Word",
   "DIDNT_GET_EMAIL": "Не получили письмо? Проверьте спам.",
   "PASSWORD_CONFIRM": "Подтвердите пароль",
   "PASSWORD_STRENGTH": "Надежность пароля",

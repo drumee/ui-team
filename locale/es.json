@@ -128,6 +128,8 @@
   "YEARS": "Años",
   "HOURS": "Horas",
   "EXPORT_AS_HTML": "Exportar a HTML",
+  "EXPORT_AS_PDF": "Exportar como PDF",
+  "EXPORT_AS_DOCX": "Exportar como documento Word",
   "DIDNT_GET_EMAIL": "¿No recibiste el correo? Revisa tu carpeta de spam.",
   "PASSWORD_CONFIRM": "Confirmar Contraseña",
   "PASSWORD_SAME_AS_CURRENT": "La nueva contraseña debe ser diferente a la actual.",

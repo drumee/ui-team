@@ -523,7 +523,7 @@ class __window_mfs extends DrumeeMFS {
     return {
       top: 20,
       left: 10,
-      width: window.innerWidth - 20,
+      width: window.innerWidth - 250, // sidebar width
       height: window.innerHeight - 90
     }
   }

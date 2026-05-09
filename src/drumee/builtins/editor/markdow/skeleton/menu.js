@@ -1,3 +1,4 @@
+
 function item(ui, service, ico, content) {
   const btn = `${ui.fig.group}`;
   const fig = `${btn}__dropdown-menu`;
@@ -32,10 +33,15 @@ module.exports = function (ui) {
     partHandler: ui,
   });
 
-  let save = "";
-  const print = item(ui, "print", "print", LOCALE.PRINT);
+  let exportHtml = "";
+  let exportPdf = "";
+  let print = item(ui, "print", "print", LOCALE.PRINT);
+  let save = ""
   if (ui.canUpload()) {
     save = item(ui, "save", "floppy", LOCALE.SAVE_CHANGES);
+    exportPdf = item(ui, "save-pdf", "raw-documents_pdf", LOCALE.EXPORT_AS_PDF);
+    exportHtml = item(ui, "save-html", "editbox_link", LOCALE.EXPORT_AS_HTML);
+    exportWord = item(ui, "save-docx", "raw-documents_word", LOCALE.EXPORT_AS_DOCX);
   }
   const separator = Skeletons.Box.X({
     className: `${fig}__separator`,
@@ -46,14 +52,14 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Box.Y({
         className: `${fig}__items`,
-        kids: [save, separator, print],
+        kids: [save, separator, exportHtml, exportPdf, exportWord, separator, print],
       }),
     ],
   });
 
   return {
     kind: KIND.menu.topic,
-    sys_pn: "text-menu",
+    sys_pn: "markdown-menu",
     className: `${fig}__wrapper`,
     flow: _a.y,
     opening: _e.click,

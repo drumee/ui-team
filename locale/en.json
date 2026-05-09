@@ -1957,6 +1957,8 @@
   "YEARS": "Years",
   "HOURS": "Hour(s)",
   "EXPORT_AS_HTML": "Export to HTML",
+  "EXPORT_AS_PDF": "Export as PDF",
+  "EXPORT_AS_DOCX": "Export as Word document",
   "DIDNT_GET_EMAIL": "Didn't get the email? Check spam",
   "PASSWORD_CONFIRM": "Confirm password",
   "PASSWORD_STRENGTH": "Password strength",

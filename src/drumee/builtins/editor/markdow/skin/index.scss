@@ -3,8 +3,6 @@
 
 .editor-markdown {
   &__ui {
-    max-width: 40vw;
-    max-height: 60vh;
     overflow: visible;
     border-radius: var(--corner-radius-5);
     &[data-device="mobile"] {

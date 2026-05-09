@@ -177,9 +177,8 @@
     }
   </style>
   <style>
-      <%= style %>
-    </style>
-    <%= stylesheet %>
+    <%= style %>
+  </style>
   </head>
 
   <body> 

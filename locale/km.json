@@ -1894,6 +1894,8 @@
   "YEARS": "ឆ្នាំ",
   "HOURS": "ម៉ោង",
   "EXPORT_AS_HTML": "នាំចេញទៅ HTML",
+  "EXPORT_AS_PDF": "នាំចេញជា PDF",
+  "EXPORT_AS_DOCX": "នាំចេញជាឯកសារ Word",
   "DIDNT_GET_EMAIL": "មិនបានទទួលអ៊ីមែលទេ? សូមពិនិត្យមើលសារឥតបានការ",
   "PASSWORD_CONFIRM": "បញ្ជាក់ពាក្យសម្ងាត់",
   "PASSWORD_STRENGTH": "ភាពខ្លាំងនៃពាក្យសម្ងាត់",

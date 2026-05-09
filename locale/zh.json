@@ -1894,6 +1894,8 @@
   "YEARS": "年",
   "HOURS": "小时",
   "EXPORT_AS_HTML": "导出为 HTML",
+  "EXPORT_AS_PDF": "导出为 PDF",
+  "EXPORT_AS_DOCX": "导出为 Word 文档",
   "DIDNT_GET_EMAIL": "没收到邮件？检查垃圾邮件。",
   "PASSWORD_CONFIRM": "确认密码",
   "PASSWORD_STRENGTH": "密码强度",
