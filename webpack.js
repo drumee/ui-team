@@ -5,7 +5,7 @@ const Resolve = require('./webpack/resolve');
 const Module = require('./webpack/module');
 const Plugins = require('./webpack/plugins');
 
-const {
+let {
   BUILD_TARGET,
   ENDPOINT,
   OUTPUT_FILENAME,
