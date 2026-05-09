@@ -115,6 +115,44 @@
     }
   }
 
+  &__row-3 {
+    .settings-main__linked-card {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+
+  // ── Linked accounts card ─────────────────────────────────
+  &__linked {
+    &-list {
+      gap: var(--spacer-3);
+    }
+    &-row--empty {
+      opacity: 0.7;
+    }
+    &-disconnect-main {
+      width: 120px;
+      height: 32px;
+      border-radius: 4px;
+      background: rgba(214, 78, 73, 0.1);
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      .btn {
+        color: $danger-fg;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+      }
+
+      &:hover {
+        background: rgba(214, 78, 73, 0.18);
+      }
+    }
+  }
+
   // ── Card shell ────────────────────────────────────────────
   &__card {
     background: $card-bg;
@@ -452,6 +490,20 @@
     }
   }
 
+  // ── "Coming soon" pill used on placeholder rows ───────────
+  &__preferences-coming-soon {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(89, 80, 255, 0.1);
+    color: $purple-text;
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
   // ── Ghost (light-purple) buttons used inside cards ────────
   &__preferences-manage-main,
   &__credentials-action-main,
@@ -513,8 +565,9 @@
   }
 
   // ── Overlay slot for sub-modals ───────────────────────────
-  // position: fixed so the backdrop blur covers the full viewport
-  // (top bar, side panels, chat panel) rather than only the settings slot.
+  // Matches the adminpanel members action-popup pattern: a translucent
+  // gray scrim, no backdrop-filter blur. The fixed positioning lets the
+  // scrim cover the whole viewport regardless of where settings is mounted.
   &__overlay {
     position: fixed;
     inset: 0;
@@ -525,8 +578,7 @@
 
     &[data-state="open"] {
       pointer-events: auto;
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
+      background: var(--transparency-container-overlay);
     }
   }
 
@@ -540,11 +592,13 @@
       flex-direction: column;
     }
     &__row-1,
-    &__row-2 {
+    &__row-2,
+    &__row-3 {
       .settings-main__profile-card,
       .settings-main__preferences-card,
       .settings-main__credentials-card,
-      .settings-main__danger-card {
+      .settings-main__danger-card,
+      .settings-main__linked-card {
         flex: 1 1 auto;
       }
     }

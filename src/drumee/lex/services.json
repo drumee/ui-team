@@ -4,7 +4,8 @@
     "dom": "bootstrap.dom",
     "publicKey": "bootstrap.publicKey",
     "getSyncTimes": "bootstrap.getSyncTimes",
-    "authn": "bootstrap.authn"
+    "authn": "bootstrap.authn",
+    "plugin": "bootstrap.plugin"
   },
   "changelog": {
     "read": "changelog.read"

@@ -675,6 +675,15 @@ class __media_interact extends media_core {
       case _e.download:
         return this.download();
 
+      case 'open-in-window': {
+        // Force-open a workspace (hub) as a window_folder, regardless of its
+        // default kind (window_team / window_sharebox / window_website).
+        const item = Wm.getWindowPreset(this);
+        item.kind = 'window_folder';
+        item.wm_unique_id = `window_folder-${item.hub_id}`;
+        return Wm.launch(item, { explicit: 1, singleton: 1 });
+      }
+
       case _e.delete:
         this.delete();
         return;

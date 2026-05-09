@@ -46,126 +46,147 @@ function getItemName(data, preview) {
   return preview.filename || preview.name || preview.user_filename || data.link_label || data.surname || data.hub_name || data.message || "item";
 }
 
+// Canonical category keys returned by activity.list. The legacy mfs feed
+// (activity.get_feed → activity_get_log) sometimes only has `event_type`;
+// keep both as a fallback chain.
+function getCategory(data) {
+  return data.category || data.event_type || data.type || '';
+}
+
+const COUNT_SUFFIX = (cnt) => (cnt > 1 ? ` (${cnt})` : '');
+
 function getActivityMeta(data, preview) {
-  const category = data.category || data.event_type;
+  const category = getCategory(data);
   const name = getItemName(data, preview);
+  const cnt = parseInt(data.cnt, 10) || 0;
+  const mentioned =
+    data.event === 'mention'
+    || getMentionIds(data).some((id) => String(id) === String(Visitor.id));
 
-  if (data.event === "media.share" || data.is_forward === 1) {
-    if (preview.accessibility === "restricted") {
+  // 1. Mention is special — overrides any category branch.
+  if (mentioned) {
+    return {
+      before: 'mentioned you in ',
+      label: name,
+      after: '',
+      colorClass: 'mention',
+      badge: 'mention',
+    };
+  }
+
+  switch (category) {
+    case 'hub_invite':
       return {
-        before: "shared a ",
-        label: "Restricted Link",
-        after: " with you",
-        colorClass: "restricted",
-        badge: "share",
+        before: data.action || 'invited you to ',
+        label: data.link_label || data.hub_name || name,
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
       };
-    }
-    return {
-      before: "shared a ",
-      label: preview.filetype === "link" ? "Shared Link" : name,
-      after: " with you",
-      colorClass: "link-share",
-      badge: "share",
-    };
-  }
 
-  if (data.event === "hub.invite_received") {
-    return {
-      before: data.action || "invited you to ",
-      label: data.link_label || name,
-      after: "",
-      colorClass: "mention",
-      badge: "mention",
-    };
-  }
+    case 'contact_invite':
+    case 'contact':
+      return {
+        before: 'wants to connect',
+        label: '',
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+      };
 
-  if (data.event === "media.remove") {
-    return {
-      before: isFolder(preview) ? "removed folder " : "removed file ",
-      label: name,
-      after: "",
-      colorClass: "restricted",
-      badge: "share",
-    };
-  }
+    case 'chat':
+      return {
+        before: 'sent you a message',
+        label: COUNT_SUFFIX(cnt),
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+      };
 
-  if (data.event === "media.view") {
-    return {
-      before: "viewed ",
-      label: name,
-      after: "",
-      colorClass: "mention",
-      badge: "mention",
-    };
-  }
+    case 'teamchat':
+      return {
+        before: 'posted in ',
+        label: name,
+        after: COUNT_SUFFIX(cnt),
+        colorClass: 'mention',
+        badge: 'mention',
+      };
 
-  if (data.event === "media.new" || category === "media") {
-    return {
-      before: isFolder(preview) ? "created folder " : "uploaded file ",
-      label: name,
-      after: data.cnt > 1 ? ` and ${data.cnt - 1} more` : "",
-      colorClass: "mention",
-      badge: "mention",
-    };
-  }
+    case 'ticket':
+      return {
+        before: 'updated ticket ',
+        label: name,
+        after: COUNT_SUFFIX(cnt),
+        colorClass: 'mention',
+        badge: 'mention',
+      };
 
-  if (data.event === "mention" || getMentionIds(data).some((id) => String(id) === String(Visitor.id))) {
-    return {
-      before: "mentioned you in ",
-      label: name,
-      after: "",
-      colorClass: "mention",
-      badge: "mention",
-    };
-  }
+    case 'media':
+    case 'mfs':
+      // Sub-routing by `event` for individual mfs_changelog rows from get_feed.
+      if (data.event === 'media.share' || data.is_forward === 1) {
+        if (preview.accessibility === 'restricted') {
+          return {
+            before: 'shared a ',
+            label: 'Restricted Link',
+            after: ' with you',
+            colorClass: 'restricted',
+            badge: 'share',
+          };
+        }
+        return {
+          before: 'shared a ',
+          label: preview.filetype === 'link' ? 'Shared Link' : name,
+          after: ' with you',
+          colorClass: 'link-share',
+          badge: 'share',
+        };
+      }
+      if (data.event === 'media.remove') {
+        return {
+          before: isFolder(preview) ? 'removed folder ' : 'removed file ',
+          label: name,
+          after: '',
+          colorClass: 'restricted',
+          badge: 'share',
+        };
+      }
+      if (data.event === 'media.view') {
+        return {
+          before: 'viewed ',
+          label: name,
+          after: '',
+          colorClass: 'mention',
+          badge: 'mention',
+        };
+      }
+      if (hasAttachment(data) && data.event !== 'media.new') {
+        return {
+          before: 'shared a file in ',
+          label: name,
+          after: '',
+          colorClass: 'link-share',
+          badge: 'share',
+        };
+      }
+      // Default media event (media.new or aggregated rollup)
+      return {
+        before: isFolder(preview) ? 'created folder ' : 'uploaded file ',
+        label: name,
+        after: cnt > 1 ? ` and ${cnt - 1} more` : '',
+        colorClass: 'mention',
+        badge: 'mention',
+      };
 
-  if (hasAttachment(data)) {
-    return {
-      before: "shared a file in ",
-      label: name,
-      after: "",
-      colorClass: "link-share",
-      badge: "share",
-    };
+    default:
+      return {
+        before: data.action || data.event || 'updated ',
+        label: name,
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+      };
   }
-
-  if (data.event === "chat.post" || category === "chat") {
-    return {
-      before: "sent you a message",
-      label: data.cnt > 1 ? ` (${data.cnt})` : "",
-      after: "",
-      colorClass: "mention",
-      badge: "mention",
-    };
-  }
-
-  if (data.event === "channel.post" || category === "teamchat") {
-    return {
-      before: "posted in ",
-      label: name,
-      after: data.cnt > 1 ? ` (${data.cnt})` : "",
-      colorClass: "mention",
-      badge: "mention",
-    };
-  }
-
-  if (category === "ticket") {
-    return {
-      before: "updated ticket ",
-      label: name,
-      after: data.cnt > 1 ? ` (${data.cnt})` : "",
-      colorClass: "mention",
-      badge: "mention",
-    };
-  }
-
-  return {
-    before: data.action || data.event || "updated ",
-    label: name,
-    after: "",
-    colorClass: "mention",
-    badge: "mention",
-  };
 }
 
 module.exports = function (ui) {
@@ -204,19 +225,29 @@ module.exports = function (ui) {
     ],
   });
 
+  // itemType MUST match the canonical `category` returned by activity.list,
+  // so server-side `notification_dismiss` can route correctly.
+  // Valid values: chat | contact | media | teamchat | ticket | hub_invite | contact_invite | mfs
+  const itemType = getCategory(data)
+    || (data.event === 'hub.invite_received' ? 'hub_invite' : 'mfs');
+  const itemKey = `${itemType}:${data.id || data.hub_id || data.drumate_id || data.key_id || ''}`;
+  ui.mset('item_type', itemType);
+  ui.mset('item_key', itemKey);
+
   const actions = Skeletons.Box.X({
     className: `${pfx}__actions`,
     kids: [
       Skeletons.Button.Svg({
         className: `${pfx}__bookmark`,
         ico: 'notification_favorite',
+        service: 'toggle-favorite',
+        uiHandler: ui,
       }),
       Skeletons.Button.Svg({
         className: `${pfx}__trash`,
         ico: 'notification_trash',
         service: 'dismiss-activity',
-        changelog_id: data.id,
-        uiHandler: ui.mget(_a.uiHandler) || [ui],
+        uiHandler: ui,
       }),
     ],
   });

@@ -12,14 +12,17 @@ const __window_meeting_feedback = function (_ui_, opts = {}) {
 
   const stars = [];
   for (let i = 1; i <= 5; i++) {
-    stars.push(Skeletons.Button.Svg({
-      className: `${fig}__feedback-star`,
-      ico: "rating-star",
-      service: "rate-meeting",
-      sys_pn: `feedback-star-${i}`,
-      uiHandler: [_ui_],
-      dataset: { rating: i, on: "0" },
-    }));
+    stars.push(
+      Skeletons.Button.Svg({
+        className: `${fig}__feedback-star`,
+        ico: "rating-star",
+        service: "rate-meeting",
+        sys_pn: `feedback-star-${i}`,
+        uiHandler: [_ui_],
+        partHandler: _ui_,
+        dataset: { rating: i, on: "0" },
+      }),
+    );
   }
 
   const card = Skeletons.Box.Y({
@@ -46,7 +49,10 @@ const __window_meeting_feedback = function (_ui_, opts = {}) {
             className: `${fig}__feedback-stat`,
             content: `${LOCALE.DURATION || "Duration"}: ${duration}`,
           }),
-          Skeletons.Note({ className: `${fig}__feedback-stats-dot`, content: "" }),
+          Skeletons.Note({
+            className: `${fig}__feedback-stats-dot`,
+            content: "",
+          }),
           Skeletons.Note({
             className: `${fig}__feedback-stat`,
             content: `${participantCount} ${LOCALE.PARTICIPANTS || "Participants"}`,
@@ -82,15 +88,15 @@ const __window_meeting_feedback = function (_ui_, opts = {}) {
       Skeletons.Box.X({
         className: `${fig}__feedback-actions`,
         kids: [
-          Skeletons.Button.Label({
+          Skeletons.Note({
             className: `${fig}__feedback-skip`,
-            label: LOCALE.SKIP || "Skip",
+            content: LOCALE.SKIP || "Skip",
             service: "feedback-skip",
             uiHandler: [_ui_],
           }),
-          Skeletons.Button.Label({
+          Skeletons.Note({
             className: `${fig}__feedback-submit`,
-            label: LOCALE.SUBMIT || "Submit",
+            content: LOCALE.SUBMIT || "Submit",
             service: "feedback-submit",
             uiHandler: [_ui_],
           }),

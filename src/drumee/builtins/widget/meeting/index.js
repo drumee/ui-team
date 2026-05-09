@@ -13,24 +13,8 @@ class __widget_meeting extends LetcBox {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
     switch (service) {
-      case "call-member": {
-        const existing = Wm.getItemByKind("window_connect") || Wm.getItemByKind("window_meeting");
-        if (existing) {
-          Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
-          break;
-        }
-        const callee = cmd.getAttr();
-        const name = callee.fullname || `${callee.firstname || ""} ${callee.lastname || ""}`.trim();
-        Wm.launch({
-          kind: "window_connect",
-          hub_id: this.mget(_a.hub_id),
-          nid: this.mget(_a.nid),
-          filename: name,
-          display: name,
-          callee,
-        }, { explicit: 1, singleton: 1 });
-        break;
-      }
+      case "call-member":
+        return this._startCall(cmd.getAttr());
 
       case "start-meeting":
         this.triggerHandlers({ service: "start-meeting" });
@@ -49,6 +33,38 @@ class __widget_meeting extends LetcBox {
       default:
         super.onUiEvent(cmd, args);
     }
+  }
+
+  // hub_id/nid are the caller's identity (Visitor), not the folder — a 1:1
+  // ring originates from the caller's personal home, not the shared folder.
+  // guest_id (used by conference.invite) reads callee.drumate_id, so fall
+  // back to entity_id/uid/id for folder members who aren't drumates yet.
+  _startCall(callee) {
+    if (!callee) return;
+
+    const guest_id = callee.drumate_id || callee.entity_id || callee.uid || callee.id;
+    if (!guest_id) return;
+
+    const existing = Wm.getItemByKind("window_connect") || Wm.getItemByKind("window_meeting");
+    if (existing) {
+      Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
+      return;
+    }
+
+    const name = callee.fullname
+      || callee.display
+      || `${callee.firstname || ""} ${callee.lastname || ""}`.trim();
+
+    Wm.launch({
+      kind: "window_connect",
+      hub_id: Visitor.id,
+      nid: Visitor.get(_a.home_id) || Visitor.get(_a.nid),
+      filename: name,
+      display: name,
+      callee: { ...callee, drumate_id: guest_id },
+      video: 1,
+      audio: 1,
+    }, { explicit: 1, singleton: 1 });
   }
 }
 

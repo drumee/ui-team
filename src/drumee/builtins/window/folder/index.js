@@ -475,6 +475,8 @@ class __window_folder extends mfsInteract {
     if (this._launchingMeeting) return;
     this._launchingMeeting = true;
     try {
+      const switchcall = Wm.getItemByKind("window_switchcall");
+      if (switchcall && !switchcall.isDestroyed()) switchcall.goodbye();
       const panel = await this.ensurePart("meeting-panel");
       panel.feed({
         kind: "window_meeting",

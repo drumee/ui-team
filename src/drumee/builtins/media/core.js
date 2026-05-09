@@ -187,13 +187,13 @@ class __media_core extends DrumeeMFS {
   contextmenuItemsForHub() {
     let fileItems = [];
     if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems = [_a.rename, _a.upload, _a.download, _a.separator, _a.info];
+      fileItems = ['openInWindow', _a.separator, _a.rename, _a.upload, _a.download, _a.separator, _a.info];
       if (this.canShare()) {
         fileItems.push(_a.share)
       }
       fileItems.push(_a.separator, _a.trash)
     } else if (this.canDownload()) {
-      fileItems = [_a.download, _a.separator, _a.info];
+      fileItems = ['openInWindow', _a.separator, _a.download, _a.separator, _a.info];
       if (this.canShare()) fileItems.push(_a.share);
       if (this.canRemove()) fileItems.push(_a.trash);
     }

@@ -427,5 +427,11 @@ export default function delete_account_skeleton(ui) {
       kids: renderers[step](ui),
     }),
     stepHint(pfx, step),
+    // Layered slot for the OTP-gate modal that OAuth-only users go
+    // through instead of password verification at the final step.
+    Skeletons.Wrapper.Y({
+      className: `${pfx}__overlay`,
+      name: "overlay",
+    }),
   ];
 }
