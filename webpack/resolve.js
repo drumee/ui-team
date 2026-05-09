@@ -15,6 +15,7 @@ const ui_styles = node_path + '/@drumee/ui-styles/src';
 // `skin/mixins` (prefix, no $) covers the entire mixins/ subtree which has
 // no equivalent in the package.
 const skin_overrides = {
+  'skin$':                     'skin/index',
   'skin/index$':               'skin/index',
   'skin/lib/align$':           'skin/lib/align',
   'skin/lib/button$':          'skin/lib/button',
@@ -87,8 +88,9 @@ module.exports = function (basedir) {
       lex: resolve(basedir, drumee_path, 'lex'),
       libs: resolve(basedir, drumee_path, 'libs'),
       locale: resolve(basedir, 'locale'),
-      // Force all imports of 'lodash' to go to the root version
-      lodash: resolve(node_path, 'lodash'),
+      // Cherry-picked lodash shim — only the ~40 functions actually used.
+      // Reduces the full 533 KB bundle to ~55 KB.
+      lodash: resolve(basedir, libs, 'lodash'),
       // marionette: 'backbone.marionette',
       media: resolve(basedir, builtins, 'media'),
       menus: resolve(basedir, libs, 'skeleton', 'menus'),
