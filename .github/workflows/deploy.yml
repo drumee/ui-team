@@ -31,9 +31,9 @@ jobs:
           fi
           echo "endpoint=$EP" >> $GITHUB_OUTPUT
           if [ "$EP" = "main" ]; then
-            echo "verify_url=https://drumee.in/-/app/index.json" >> $GITHUB_OUTPUT
+            echo "verify_url=https://${{ vars.DRUMEE_DOMAIN }}/-/app/index.json" >> $GITHUB_OUTPUT
           else
-            echo "verify_url=https://drumee.in/-/$EP/app/index.json" >> $GITHUB_OUTPUT
+            echo "verify_url=https://${{ vars.DRUMEE_DOMAIN }}/-/$EP/app/index.json" >> $GITHUB_OUTPUT
           fi
 
       - name: Show env
@@ -42,6 +42,12 @@ jobs:
           echo "Verify URL: ${{ steps.ep.outputs.verify_url }}"
           node --version
           npm --version
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-${{ github.repository }}-node-${{ hashFiles('package.json') }}
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -52,7 +58,7 @@ jobs:
             --endpoint=${{ steps.ep.outputs.endpoint }} \
             --user=${{ steps.ep.outputs.endpoint }} \
             --build-mode=production
-          echo 'export UI_BUILD_PATH=/tmp/drumee-build/ui' >> .dev-tools.rc/deploy.sh
+          echo 'export UI_BUILD_PATH=${{ vars.DRUMEE_BUILD_TMP }}/ui' >> .dev-tools.rc/deploy.sh
 
       - name: Webpack build
         run: npm run deploy
@@ -64,7 +70,7 @@ jobs:
     timeout-minutes: 10
     env:
       EP: ${{ needs.build.outputs.endpoint }}
-      RUNTIME_DIR: /srv/drumee/runtime/ui
+      RUNTIME_DIR: ${{ vars.DRUMEE_RUNTIME_BASE }}/ui
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,7 +79,7 @@ jobs:
         run: sudo rsync -a --delete $RUNTIME_DIR/$EP/ $RUNTIME_DIR/$EP.backup/
 
       - name: Sync to runtime dir
-        run: sudo rsync -a --delete /tmp/drumee-build/ui/ $RUNTIME_DIR/$EP/
+        run: sudo rsync -a --delete ${{ vars.DRUMEE_BUILD_TMP }}/ui/ $RUNTIME_DIR/$EP/
 
       - name: Restart endpoint
         run: |
@@ -105,4 +111,4 @@ jobs:
         continue-on-error: true
         run: |
           sudo rm -rf $RUNTIME_DIR/$EP.backup/
-          rm -rf /tmp/drumee-build/ui/
+          rm -rf ${{ vars.DRUMEE_BUILD_TMP }}/ui/
