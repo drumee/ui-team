@@ -52,6 +52,7 @@ jobs:
             --endpoint=${{ steps.ep.outputs.endpoint }} \
             --user=${{ steps.ep.outputs.endpoint }} \
             --build-mode=production
+          echo 'export UI_BUILD_PATH=/tmp/drumee-build/ui' >> .dev-tools.rc/deploy.sh
 
       - name: Webpack build
         run: npm run deploy
@@ -63,7 +64,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Sync to runtime dir
-        run: sudo rsync -a --delete $HOME/build/ui/ /srv/drumee/runtime/ui/${{ needs.build.outputs.endpoint }}/
+        run: sudo rsync -a --delete /tmp/drumee-build/ui/ /srv/drumee/runtime/ui/${{ needs.build.outputs.endpoint }}/
 
       - name: Restart endpoint
         run: |
@@ -93,4 +94,4 @@ jobs:
       - name: Cleanup tmp build dir
         if: always()
         continue-on-error: true
-        run: rm -rf $HOME/build/ui/
+        run: rm -rf /tmp/drumee-build/ui/
