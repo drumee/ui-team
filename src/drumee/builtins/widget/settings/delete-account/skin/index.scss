@@ -565,4 +565,19 @@
       color: #65656c;
     }
   }
+
+  // Overlay slot for the OTP-gate modal (OAuth-only finalConfirm).
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+
+    &[data-state="open"] {
+      pointer-events: auto;
+      background: var(--transparency-container-overlay);
+    }
+  }
 }
