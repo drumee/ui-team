@@ -247,8 +247,6 @@ function make() {
       }
     }
   }
-  render(data, 'classes.tpl', `${src_base}/core/kind/seeds/builtins.js`);
-  render(data, 'helper.tpl', `${src_base}/core/kind/seeds/helper.js`);
   write_doc(data)
   if (!isEmpty(not_found)) {
     console.warn("Following files have not been resolved", not_found);
