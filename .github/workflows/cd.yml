@@ -27,7 +27,7 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Setup deploy env
-        run: npm run setup -- --output=deploy --endpoint=liam --user=liam --server=drumee.in
+        run: npm run setup -- --output=deploy --endpoint=liam --user=liam --server=drumee.in --build-mode=production
 
       - name: Deploy (webpack build + sync)
         run: npm run deploy
