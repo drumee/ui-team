@@ -27,9 +27,11 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Setup deploy env
-        run: npm run setup -- --output=deploy --endpoint=liam --user=liam --server=drumee.in --build-mode=production
+        run: |
+          npm run setup -- --output=deploy --endpoint=liam --user=liam --build-mode=production
+          echo 'export UI_BUILD_PATH=/srv/drumee/runtime/ui/liam' >> .dev-tools.rc/deploy.sh
 
-      - name: Deploy (webpack build + sync)
+      - name: Deploy (webpack build → /srv/drumee/runtime/ui/liam)
         run: npm run deploy
 
       - name: Restart endpoint
@@ -40,7 +42,7 @@ jobs:
       - name: Verify deployed commit matches
         run: |
           sleep 5
-          deployed=$(curl -sk https://drumee.in/-/liam/-/app/index.json \
+          deployed=$(curl -sk https://drumee.in/-/liam/app/index.json \
             | python3 -c "import sys,json; print(json.load(sys.stdin)['head'])")
           local=$(git rev-parse --short=8 HEAD)
           echo "deployed head: $deployed"
