@@ -1,0 +1,48 @@
+name: Pilot deploy → drumee.in/-/liam/
+
+on:
+  push:
+    branches: [ci/setup-deploy]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-liam-ui
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, drumee-liam]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show env
+        run: |
+          node --version
+          npm --version
+          whoami
+          pwd
+
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      - name: Setup deploy env
+        run: npm run setup -- --output=deploy --endpoint=liam --user=liam --server=drumee.in
+
+      - name: Build + deploy
+        run: npm run build
+
+      - name: Restart endpoint
+        run: |
+          sudo /usr/sbin/drumee restart liam
+          sudo /usr/sbin/drumee restart liam/service
+
+      - name: Verify deployed commit matches
+        run: |
+          sleep 5
+          deployed=$(curl -sk https://drumee.in/-/liam/-/app/index.json \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['head'])")
+          local=$(git rev-parse --short=8 HEAD)
+          echo "deployed head: $deployed"
+          echo "local    head: $local"
+          [ "$deployed" = "$local" ] && exit 0 || exit 1
