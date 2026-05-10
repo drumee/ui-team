@@ -29,8 +29,8 @@ jobs:
       - name: Setup deploy env
         run: npm run setup -- --output=deploy --endpoint=liam --user=liam --server=drumee.in
 
-      - name: Build + deploy
-        run: npm run build
+      - name: Deploy (webpack build + sync)
+        run: npm run deploy
 
       - name: Restart endpoint
         run: |
