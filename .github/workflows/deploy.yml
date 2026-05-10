@@ -4,25 +4,9 @@ on:
   push:
     branches: [preview, ci/setup-deploy]
   workflow_dispatch:
-    inputs:
-      endpoint:
-        description: 'Target endpoint'
-        type: choice
-        options:
-          - liam
-          - main
-          - stage
-          - devel
-          - somanos
-          - huan
-          - duynguyen
-          - luong
-          - vudangnt
-          - aaron
-        default: liam
 
 concurrency:
-  group: cd-${{ github.workflow }}-${{ github.event.inputs.endpoint || 'auto' }}
+  group: cd-${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -40,9 +24,7 @@ jobs:
       - name: Resolve endpoint
         id: ep
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            EP="${{ inputs.endpoint }}"
-          elif [ "${{ github.ref_name }}" = "ci/setup-deploy" ]; then
+          if [ "${{ github.ref_name }}" = "ci/setup-deploy" ]; then
             EP="liam"
           else
             EP="main"
@@ -85,8 +67,9 @@ jobs:
 
       - name: Restart endpoint
         run: |
-          sudo /usr/sbin/drumee restart ${{ needs.build.outputs.endpoint }}
-          sudo /usr/sbin/drumee restart ${{ needs.build.outputs.endpoint }}/service
+          sudo /usr/sbin/drumee restart ${{ needs.build.outputs.endpoint }} > /dev/null
+          sudo /usr/sbin/drumee restart ${{ needs.build.outputs.endpoint }}/service > /dev/null
+          echo "Restarted endpoint"
 
   verify:
     name: Verify
