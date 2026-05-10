@@ -22,15 +22,20 @@ on:
         default: liam
 
 concurrency:
-  group: cd-${{ github.workflow }}-${{ github.event.inputs.endpoint || 'main' }}
+  group: cd-${{ github.workflow }}-${{ github.event.inputs.endpoint || 'auto' }}
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
+    name: Build
     runs-on: [self-hosted, drumee-liam]
-    timeout-minutes: 25
+    timeout-minutes: 15
+    outputs:
+      endpoint: ${{ steps.ep.outputs.endpoint }}
+      verify_url: ${{ steps.ep.outputs.verify_url }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Resolve endpoint
         id: ep
@@ -55,9 +60,8 @@ jobs:
           echo "Verify URL: ${{ steps.ep.outputs.verify_url }}"
           node --version
           npm --version
-          whoami
 
-      - name: Install
+      - name: Install dependencies
         run: npm install --no-audit --no-fund
 
       - name: Setup deploy env
@@ -67,21 +71,36 @@ jobs:
             --user=${{ steps.ep.outputs.endpoint }} \
             --build-mode=production
 
-      - name: Webpack build (to /home/liam/build/ui)
+      - name: Webpack build
         run: npm run deploy
 
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: [self-hosted, drumee-liam]
+    timeout-minutes: 5
+    steps:
       - name: Sync to runtime dir
-        run: sudo rsync -a --delete /home/liam/build/ui/ /srv/drumee/runtime/ui/${{ steps.ep.outputs.endpoint }}/
+        run: sudo rsync -a --delete /home/liam/build/ui/ /srv/drumee/runtime/ui/${{ needs.build.outputs.endpoint }}/
 
       - name: Restart endpoint
         run: |
-          sudo /usr/sbin/drumee restart ${{ steps.ep.outputs.endpoint }}
-          sudo /usr/sbin/drumee restart ${{ steps.ep.outputs.endpoint }}/service
+          sudo /usr/sbin/drumee restart ${{ needs.build.outputs.endpoint }}
+          sudo /usr/sbin/drumee restart ${{ needs.build.outputs.endpoint }}/service
+
+  verify:
+    name: Verify
+    needs: [build, deploy]
+    runs-on: [self-hosted, drumee-liam]
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Verify deployed commit matches
         run: |
           sleep 5
-          deployed=$(curl -sk ${{ steps.ep.outputs.verify_url }} \
+          deployed=$(curl -sk ${{ needs.build.outputs.verify_url }} \
             | python3 -c "import sys,json; print(json.load(sys.stdin)['head'])")
           local=$(git log -1 --pretty=format:'%h')
           echo "deployed head: $deployed"
