@@ -23,6 +23,7 @@ class settings_main extends LetcBox {
    */
   async onDomRefresh() {
     this._oauthLinks = await this._loadOauthLinks();
+    this._reconcilePasswordSet();
     this.feed(require("./skeleton").default(this));
   }
 
@@ -46,7 +47,23 @@ class settings_main extends LetcBox {
 
   async _refreshOauthLinks() {
     this._oauthLinks = await this._loadOauthLinks();
+    this._reconcilePasswordSet();
     this.feed(require("./skeleton").default(this));
+  }
+
+  /**
+   * Legacy users (signed up before profile.password_set was tracked)
+   * have no flag in their profile. Infer from oauth_accounts membership
+   * so the downstream "if undefined → assume password" fallback in
+   * delete-account / change-email / the password row routes correctly.
+   * No-op once an explicit flag is set by signup or a password setter.
+   */
+  _reconcilePasswordSet() {
+    const profile = { ...(Visitor.profile() || {}) };
+    if (profile.password_set !== undefined) return;
+    const hasOauth = (this._oauthLinks || []).length > 0;
+    profile.password_set = hasOauth ? 0 : 1;
+    Visitor.set({ profile });
   }
 
   /**
