@@ -1,13 +1,29 @@
-name: Pilot deploy → drumee.in/-/liam/
+name: CD - deploy ui-team
 
 on:
   push:
-    branches: [ci/setup-deploy]
+    branches: [preview, main, ci/setup-deploy]
   workflow_dispatch:
+    inputs:
+      endpoint:
+        description: 'Target endpoint'
+        type: choice
+        options:
+          - liam
+          - main
+          - stage
+          - devel
+          - somanos
+          - huan
+          - duynguyen
+          - luong
+          - vudangnt
+          - aaron
+        default: liam
 
 concurrency:
-  group: deploy-liam-ui
-  cancel-in-progress: true
+  group: cd-${{ github.workflow }}-${{ github.event.inputs.endpoint || 'main' }}
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -16,34 +32,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Resolve endpoint
+        id: ep
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            EP="${{ inputs.endpoint }}"
+          elif [ "${{ github.ref_name }}" = "ci/setup-deploy" ]; then
+            EP="liam"
+          else
+            EP="main"
+          fi
+          echo "endpoint=$EP" >> $GITHUB_OUTPUT
+          if [ "$EP" = "main" ]; then
+            echo "verify_url=https://drumee.in/-/app/index.json" >> $GITHUB_OUTPUT
+          else
+            echo "verify_url=https://drumee.in/-/$EP/app/index.json" >> $GITHUB_OUTPUT
+          fi
+
       - name: Show env
         run: |
+          echo "Endpoint: ${{ steps.ep.outputs.endpoint }}"
+          echo "Verify URL: ${{ steps.ep.outputs.verify_url }}"
           node --version
           npm --version
           whoami
-          pwd
 
       - name: Install
         run: npm install --no-audit --no-fund
 
       - name: Setup deploy env
-        run: npm run setup -- --output=deploy --endpoint=liam --user=liam --build-mode=production
+        run: |
+          npm run setup -- --output=deploy \
+            --endpoint=${{ steps.ep.outputs.endpoint }} \
+            --user=${{ steps.ep.outputs.endpoint }} \
+            --build-mode=production
 
       - name: Webpack build (to /home/liam/build/ui)
         run: npm run deploy
 
-      - name: Rsync atomic to runtime dir
-        run: rsync -a --delete /home/liam/build/ui/ /srv/drumee/runtime/ui/liam/
+      - name: Sync to runtime dir
+        run: sudo rsync -a --delete /home/liam/build/ui/ /srv/drumee/runtime/ui/${{ steps.ep.outputs.endpoint }}/
 
       - name: Restart endpoint
         run: |
-          sudo /usr/sbin/drumee restart liam
-          sudo /usr/sbin/drumee restart liam/service
+          sudo /usr/sbin/drumee restart ${{ steps.ep.outputs.endpoint }}
+          sudo /usr/sbin/drumee restart ${{ steps.ep.outputs.endpoint }}/service
 
       - name: Verify deployed commit matches
         run: |
           sleep 5
-          deployed=$(curl -sk https://drumee.in/-/liam/app/index.json \
+          deployed=$(curl -sk ${{ steps.ep.outputs.verify_url }} \
             | python3 -c "import sys,json; print(json.load(sys.stdin)['head'])")
           local=$(git log -1 --pretty=format:'%h')
           echo "deployed head: $deployed"
