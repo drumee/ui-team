@@ -27,12 +27,13 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Setup deploy env
-        run: |
-          npm run setup -- --output=deploy --endpoint=liam --user=liam --build-mode=production
-          echo 'export UI_BUILD_PATH=/srv/drumee/runtime/ui/liam' >> .dev-tools.rc/deploy.sh
+        run: npm run setup -- --output=deploy --endpoint=liam --user=liam --build-mode=production
 
-      - name: Deploy (webpack build → /srv/drumee/runtime/ui/liam)
+      - name: Webpack build (to /home/liam/build/ui)
         run: npm run deploy
+
+      - name: Rsync atomic to runtime dir
+        run: rsync -a --delete /home/liam/build/ui/ /srv/drumee/runtime/ui/liam/
 
       - name: Restart endpoint
         run: |
