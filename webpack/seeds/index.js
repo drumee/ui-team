@@ -102,6 +102,7 @@ function write_doc(items) {
     { table: { headers: ["kind", "path", "repo"], rows } },
   ]
   const repo = resolve(SRC_DIR, 'docs', 'api', 'kind.md');
+  mkdirSync(dirname(repo), { recursive: true });
   writeFileSync(repo, Json2md(model));
   model[4].table.headers = ["kind", "path", "local"]
   let local_docs = resolve(SRC_DIR, 'docs', 'local')
