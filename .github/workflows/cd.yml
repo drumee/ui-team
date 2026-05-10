@@ -44,7 +44,7 @@ jobs:
           sleep 5
           deployed=$(curl -sk https://drumee.in/-/liam/app/index.json \
             | python3 -c "import sys,json; print(json.load(sys.stdin)['head'])")
-          local=$(git rev-parse --short=8 HEAD)
+          local=$(git log -1 --pretty=format:'%h')
           echo "deployed head: $deployed"
           echo "local    head: $local"
           [ "$deployed" = "$local" ] && exit 0 || exit 1
