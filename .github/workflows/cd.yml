@@ -2,7 +2,7 @@ name: CD - deploy ui-team
 
 on:
   push:
-    branches: [preview, main, ci/setup-deploy]
+    branches: [preview, ci/setup-deploy]
   workflow_dispatch:
     inputs:
       endpoint:
