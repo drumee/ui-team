@@ -49,3 +49,8 @@ jobs:
           echo "deployed head: $deployed"
           echo "local    head: $local"
           [ "$deployed" = "$local" ] && exit 0 || exit 1
+
+      - name: Cleanup tmp build dir
+        if: always()
+        continue-on-error: true
+        run: rm -rf /home/liam/build/ui/
