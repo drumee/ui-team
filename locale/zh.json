@@ -2400,5 +2400,10 @@
   "PUBLIC_LINK": "公共链接",
   "ACCESS_LEVEL": "访问级别",
   "JOIN_WORKSPACE": "加入工作区",
-  "SHARED_BY_LINK": "通过链接分享"
+  "SHARED_BY_LINK": "通过链接分享",
+  "FILTER_ALL": "所有角色",
+  "FILTER_OWNER": "组织所有者",
+  "FILTER_ADMIN": "工作区管理员",
+  "FILTER_MEMBER": "成员",
+  "NO_MEMBERS_FOR_FILTER": "没有成员匹配此筛选条件。"
 }

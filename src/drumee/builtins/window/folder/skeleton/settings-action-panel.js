@@ -106,6 +106,7 @@ module.exports = function settingsActionPanel(ui) {
           }),
           Skeletons.Note({
             className: `${pfx}-send-button`,
+            sys_pn: "invite-send",
             content: LOCALE.SEND_INVITATION,
             service: "folder-send-invitation",
             uiHandler: [ui],

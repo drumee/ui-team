@@ -386,6 +386,7 @@
   "SEND_LINK_BY_EMAIL": "Enviar enlace por correo",
   "ADD_MEMBERS": "Añadir miembros",
   "ONLY_MEMBERS_CAN_ACCESS": "Solo los miembros de la lista a continuación pueden acceder al contenido de esta carpeta.",
+  "FOLDER_MEMBER": "Miembros de la carpeta",
   "FOLDER_SCOPED_CHAT": "CHAT DE LA CARPETA",
   "TASK_STATUS_TODO": "Por hacer",
   "TASK_STATUS_IN_PROGRESS": "En progreso",
@@ -403,5 +404,10 @@
   "ACCESS_LEVEL": "Nivel de acceso",
   "JOIN_WORKSPACE": "Unirse al espacio",
   "SHARED_BY_LINK": "Compartido por enlace",
-  "SKIP_TOUR": "Saltar el recorrido"
+  "SKIP_TOUR": "Saltar el recorrido",
+  "FILTER_ALL": "Todos los roles",
+  "FILTER_OWNER": "Propietario de la organización",
+  "FILTER_ADMIN": "Administrador del espacio de trabajo",
+  "FILTER_MEMBER": "Miembro",
+  "NO_MEMBERS_FOR_FILTER": "Ningún miembro coincide con este filtro."
 }

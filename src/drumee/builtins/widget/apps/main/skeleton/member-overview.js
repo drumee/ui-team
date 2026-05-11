@@ -47,12 +47,15 @@ function workspaceCard(ui, ws) {
   const pfx = ui.fig.family;
   const tags = Array.isArray(ws.tags) ? ws.tags : [];
   const subtitleParts = [];
-  if (ws.member_count != null) {
-    subtitleParts.push(
-      `${ws.member_count} ${LOCALE.MEMBERS_LOWER || "members"}`
-    );
+  if (ws.updated) {
+    subtitleParts.push(`${LOCALE.UPDATED || "Updated"} ${ws.updated}`);
   }
-  if (ws.updated) subtitleParts.push(ws.updated);
+  if (ws.storage_size) subtitleParts.push(ws.storage_size);
+  const memberCount = ws.member_count;
+  const memberLabel =
+    memberCount === 1
+      ? LOCALE.MEMBER || "member"
+      : LOCALE.MEMBERS_LOWER || "members";
   const area = ws.area || "private";
   return Skeletons.Box.X({
     className: `${pfx}__perm-card`,
@@ -84,16 +87,35 @@ function workspaceCard(ui, ws) {
                     className: `${pfx}__perm-title`,
                     content: ws.name || ws.hub_name || ws.hub_id,
                   }),
-                  Skeletons.Note({
-                    className: `${pfx}__perm-subtitle`,
-                    content: subtitleParts.join(" • "),
-                  }),
+                  subtitleParts.length
+                    ? Skeletons.Note({
+                        className: `${pfx}__perm-subtitle`,
+                        content: subtitleParts.join(" • "),
+                      })
+                    : null,
+                  memberCount != null
+                    ? Skeletons.Box.X({
+                        className: `${pfx}__perm-members`,
+                        kids: [
+                          Skeletons.Image.Svg({
+                            ico: "desktop_contact",
+                            className: `${pfx}__perm-members-ico`,
+                          }),
+                          Skeletons.Note({
+                            className: `${pfx}__perm-members-label`,
+                            content: `${memberCount} ${memberLabel}`,
+                          }),
+                        ],
+                      })
+                    : null,
                 ],
               }),
-              Skeletons.Box.X({
-                className: `${pfx}__perm-tags`,
-                kids: tags.map((t) => tagChip(pfx, t)).filter(Boolean),
-              }),
+              tags.length
+                ? Skeletons.Box.X({
+                    className: `${pfx}__perm-tags`,
+                    kids: tags.map((t) => tagChip(pfx, t)).filter(Boolean),
+                  })
+                : null,
             ],
           }),
         ],
@@ -128,7 +150,7 @@ export default function member_overview(ui) {
   } else if (ui._permState === "error") {
     body = emptyState(
       ui,
-      LOCALE.WORKSPACES_LOAD_FAILED || "Could not load workspaces."
+      LOCALE.WORKSPACES_LOAD_FAILED || "Could not load workspaces.",
     );
   } else if (!workspaces.length) {
     body = emptyState(ui, LOCALE.NO_WORKSPACES || "No workspaces found.");

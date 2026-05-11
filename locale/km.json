@@ -2400,5 +2400,10 @@
   "PUBLIC_LINK": "តំណសាធារណៈ",
   "ACCESS_LEVEL": "កម្រិតការចូលប្រើ",
   "JOIN_WORKSPACE": "ចូលរួមកន្លែងធ្វើការ",
-  "SHARED_BY_LINK": "ចែករំលែកតាមតំណ"
+  "SHARED_BY_LINK": "ចែករំលែកតាមតំណ",
+  "FILTER_ALL": "តួនាទីទាំងអស់",
+  "FILTER_OWNER": "ម្ចាស់អង្គការ",
+  "FILTER_ADMIN": "អ្នកគ្រប់គ្រងកន្លែងធ្វើការ",
+  "FILTER_MEMBER": "សមាជិក",
+  "NO_MEMBERS_FOR_FILTER": "មិនមានសមាជិកណាមួយត្រូវនឹងតម្រងនេះទេ។"
 }

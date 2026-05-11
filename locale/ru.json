@@ -2400,5 +2400,10 @@
   "PUBLIC_LINK": "Публичная ссылка",
   "ACCESS_LEVEL": "Уровень доступа",
   "JOIN_WORKSPACE": "Присоединиться",
-  "SHARED_BY_LINK": "Доступ по ссылке"
+  "SHARED_BY_LINK": "Доступ по ссылке",
+  "FILTER_ALL": "Все роли",
+  "FILTER_OWNER": "Владелец организации",
+  "FILTER_ADMIN": "Администратор рабочей области",
+  "FILTER_MEMBER": "Участник",
+  "NO_MEMBERS_FOR_FILTER": "Ни один участник не соответствует этому фильтру."
 }
