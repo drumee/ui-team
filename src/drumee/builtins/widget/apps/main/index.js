@@ -475,6 +475,8 @@ class apps_main extends LetcBox {
         id: w.id || w.hub_id,
         name: w.name || w.hub_name,
         mode: w.mode || (w.area === "share" ? "shared" : w.area) || null,
+        updated: w.mtime ? Dayjs.unix(w.mtime).fromNow() : null,
+        storage_size: w.storage_size != null ? filesize(w.storage_size) : null,
       }));
       this._permState = "loaded";
     } catch (e) {

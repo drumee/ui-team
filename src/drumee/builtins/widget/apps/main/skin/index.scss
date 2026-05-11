@@ -4040,6 +4040,35 @@
     color: $ink-600;
   }
 
+  &__perm-members {
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  &__perm-members-ico {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+
+      path {
+        fill: $ink-600;
+      }
+    }
+  }
+
+  &__perm-members-label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
   &__perm-tags {
     flex-wrap: wrap;
     gap: 6px;
