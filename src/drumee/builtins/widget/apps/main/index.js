@@ -328,7 +328,7 @@ class apps_main extends LetcBox {
       const res = this._role === "admin"
         ? await this.postService(SERVICE.admin.hub_member_list, {
             hub_id: this._activeAdminHub,
-            role_id: roleId,
+            role_id: this._roleFilter || "all",
             key: this._memberQuery || "",
             page: this._page || 1,
           })
@@ -974,6 +974,12 @@ class apps_main extends LetcBox {
             ? args.value
             : cmd && cmd.mget && cmd.mget(_a.value)) || ""
         );
+
+      case "apps-search-submit":
+        return this.ensurePart("apps-search-input").then((p) => {
+          const value = p && p.getValue ? p.getValue() : "";
+          this._searchMembers(value);
+        });
 
       case "apps-toggle-member":
         return this.toggleMember(cmd.mget("member_id"));

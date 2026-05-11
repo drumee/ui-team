@@ -194,12 +194,15 @@ function pageHeader(ui) {
       Skeletons.Box.X({
         className: `${pfx}__search`,
         kids: [
-          Skeletons.Image.Svg({
+          Skeletons.Button.Svg({
             ico: "magnifying-glass",
             className: `${pfx}__search-ico`,
+            service: "apps-search-submit",
+            uiHandler: [ui],
           }),
           Skeletons.Entry({
             className: `${pfx}__search-input`,
+            sys_pn: "apps-search-input",
             placeholder: LOCALE.SEARCH || "Search...",
             name: "apps_search",
             value: ui._memberQuery || "",
