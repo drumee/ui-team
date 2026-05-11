@@ -1894,6 +1894,8 @@
   "YEARS": "Années",
   "HOURS": "Heure(s)",
   "EXPORT_AS_HTML": "Exporter en HTML",
+  "EXPORT_AS_PDF": "Exporter en PDF",
+  "EXPORT_AS_DOCX": "Exporter en document Word",
   "DIDNT_GET_EMAIL": "Vous n'avez pas reçu l'e-mail ? Vérifiez vos courriers indésirables.",
   "PASSWORD_CONFIRM": "Confirmez le mot de passe",
   "PASSWORD_STRENGTH": "Force du mot de passe",

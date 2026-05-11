@@ -1,6 +1,7 @@
 const __player = require("player/interact");
 const { marked } = require("marked");
 const { xhRequest } = require("@drumee/ui-essentials");
+const printJS = require("print-js");
 
 const REMINDER_ID = 'reminder_id';
 
@@ -239,6 +240,7 @@ class __editor_markdown extends __player {
    */
   saveContent(content = "", node, ext = 'md') {
     let filetype;
+    let service = SERVICE.media.save;
     switch (ext) {
       case 'md':
         filetype = 'markdown';
@@ -246,6 +248,12 @@ class __editor_markdown extends __player {
       case 'html':
       case 'htm':
         filetype = _a.web;
+        break;
+      case 'pdf':
+        filetype = _a.document;
+        break;
+      case 'docx':
+        filetype = _a.document;
         break;
       default:
         filetype = _a.text;
@@ -272,7 +280,7 @@ class __editor_markdown extends __player {
     let replace = 0;
     if (nid) replace = 1;
     let opt = {
-      service: SERVICE.media.save,
+      service,
       hub_id: hub_id || Visitor.get(_a.id),
       nid,
       id: nid,
@@ -281,6 +289,7 @@ class __editor_markdown extends __player {
       filename: `${filename}.${ext}`,
       filetype,
       content,
+      convert_to: ext
     };
     if (!replace) opt.position = position;
 
@@ -308,7 +317,7 @@ class __editor_markdown extends __player {
   /**
    * 
    */
-  saveHtml() {
+  _getHTML() {
     let title = this.mget(_a.filename);
 
     let description = "description";
@@ -325,23 +334,28 @@ class __editor_markdown extends __player {
     let body = marked.parse(this.__editor.getValue());
     let template = require('./template/index.html.text').default;
     let renderer = _.template(template);
-    let stylesheet = this.__styleSrc.getValue() || this.metadata().stylesheet;
-    if (stylesheet) {
-      stylesheet = `<link rel="stylesheet" href="${stylesheet}" media="screen"></link>`;
-    }
-    let html = renderer({ stylesheet, title, description, keywords, style, body });
-    let ownpath = this.mget(_a.ownpath).replace(/\.(md|html)$/i, '.html');
+    return renderer({ title, description, keywords, style, body });
+  }
+
+
+  /**
+   * 
+   */
+  saveTo(type) {
+    let re = new RegExp(`.(md|${type})$`, 'i')
+    let ownpath = this.mget(_a.ownpath).replace(re, `.${type}`);
+    let html = this._getHTML();
     this.fetchService(SERVICE.media.get_node_stat, {
       hub_id: this.mget(_a.hub_id),
-      nid: ownpath
+      nid: ownpath,
     }).then((data) => {
       if (data.ownpath == ownpath && data.pid == this.mget(_a.pid)) {
-        this.saveContent(html, data, 'html');
+        this.saveContent(html, data, type);
       } else {
         delete data.nid;
         delete data.id;
         data.pid = this.mget(_a.pid);
-        this.saveContent(html, data, 'html');
+        this.saveContent(html, data, type);
       }
     })
   }
@@ -387,14 +401,26 @@ class __editor_markdown extends __player {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    // this.debug("AAA:391", service)
     switch (service) {
       case _a.save:
         this.saveContent();
         break;
       case "save-html":
-        this.saveHtml();
+        this.saveTo('html');
         break;
+      case "save-pdf":
+        this.saveTo('pdf');
+        break;
+      case "save-docx":
+        this.saveTo('docx');
+        break;
+      case "print": {
+        if (!this.__editor) return;
+        const style = require("./template/style.css.txt").default;
+        const body = marked.parse(this.__editor.getValue());
+        printJS({ printable: body, type: "raw-html", style });
+        break;
+      }
       case "preview":
         this.preview(cmd);
         break;

@@ -307,12 +307,18 @@ function step2(ui) {
 
 function step3(ui) {
   const pfx = ui.fig.family;
+  const passwordSet = (Visitor.profile() || {}).password_set;
+  const usePassword =
+    passwordSet === undefined || parseInt(passwordSet) === 1;
+
   const header = modalHeader(ui, {
     title: LOCALE.DELETE_ACCOUNT_TITLE || "Delete Account",
     subtitle: LOCALE.DELETE_ACCOUNT_CONFIRM_TITLE || "Confirm account deletion",
-    description:
-      LOCALE.DELETE_ACCOUNT_CONFIRM_DESC ||
-      "This is your last chance. Type your username to confirm.",
+    description: usePassword
+      ? (LOCALE.DELETE_ACCOUNT_CONFIRM_DESC_PASSWORD ||
+         "This is your last chance. Enter your password to confirm.")
+      : (LOCALE.DELETE_ACCOUNT_CONFIRM_DESC_OTP ||
+         "This is your last chance. We'll send a code to your email."),
     step: 2,
     withBack: true,
   });
@@ -338,45 +344,63 @@ function step3(ui) {
     ],
   });
 
-  const passwordField = Skeletons.Box.Y({
-    className: `${pfx}__password-block`,
-    kids: [
-      Skeletons.Note({
-        className: `${pfx}__password-label`,
-        content:
-          LOCALE.DELETE_ACCOUNT_PASSWORD_LABEL ||
-          "Enter your password to confirm",
-      }),
-      Skeletons.Box.X({
-        className: `${pfx}__password-input`,
+  // OAuth-only users have no password to enter — replace the field
+  // with a short hint; the final-confirm handler routes them through
+  // the email-OTP modal instead.
+  const verifierField = usePassword
+    ? Skeletons.Box.Y({
+        className: `${pfx}__password-block`,
         kids: [
-          Skeletons.Entry({
-            className: `${pfx}__password-entry`,
-            placeholder: LOCALE.ENTER_PASSWORD || "Enter password",
-            name: "delete_password",
-            formItem: "delete_password",
-            type: ui._showPassword ? "text" : "password",
-            value: ui._password || "",
-            mode: _a.commit,
-            uiHandler: [ui],
+          Skeletons.Note({
+            className: `${pfx}__password-label`,
+            content:
+              LOCALE.DELETE_ACCOUNT_PASSWORD_LABEL ||
+              "Enter your password to confirm",
           }),
-          Skeletons.Button.Svg({
-            ico: ui._showPassword ? "eye_closed" : "eye",
-            className: `${pfx}__password-toggle`,
-            service: "delete-account-toggle-password",
-            uiHandler: [ui],
+          Skeletons.Box.X({
+            className: `${pfx}__password-input`,
+            kids: [
+              Skeletons.Entry({
+                className: `${pfx}__password-entry`,
+                placeholder: LOCALE.ENTER_PASSWORD || "Enter password",
+                name: "delete_password",
+                formItem: "delete_password",
+                type: ui._showPassword ? "text" : "password",
+                value: ui._password || "",
+                mode: _a.commit,
+                uiHandler: [ui],
+              }),
+              Skeletons.Button.Svg({
+                ico: ui._showPassword ? "eye_closed" : "eye",
+                className: `${pfx}__password-toggle`,
+                service: "delete-account-toggle-password",
+                uiHandler: [ui],
+              }),
+            ],
+          }),
+          Skeletons.Wrapper.X({
+            sys_pn: "error-box",
           }),
         ],
-      }),
-      Skeletons.Wrapper.X({
-        sys_pn: "error-box"
       })
-    ],
-  });
+    : Skeletons.Box.Y({
+        className: `${pfx}__password-block`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__password-label`,
+            content:
+              LOCALE.DELETE_ACCOUNT_OTP_HINT ||
+              "We'll email you a verification code when you confirm.",
+          }),
+          Skeletons.Wrapper.X({
+            sys_pn: "error-box",
+          }),
+        ],
+      });
 
   const body = Skeletons.Box.Y({
     className: `${pfx}__confirm-body`,
-    kids: [warning, passwordField],
+    kids: [warning, verifierField],
   });
 
   const footer = Skeletons.Box.X({
@@ -431,7 +455,7 @@ export default function delete_account_skeleton(ui) {
     // through instead of password verification at the final step.
     Skeletons.Wrapper.Y({
       className: `${pfx}__overlay`,
-      name: "overlay",
+      sys_pn: "overlay",
     }),
   ];
 }

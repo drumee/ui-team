@@ -292,7 +292,7 @@ function changeEmailRoot(ui) {
     // Layered slot for the OTP-gate modal (OAuth-only users).
     Skeletons.Wrapper.Y({
       className: `${ui.fig.family}__overlay`,
-      name: "overlay",
+      sys_pn: "overlay",
     }),
   ];
 }
