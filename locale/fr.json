@@ -2400,5 +2400,10 @@
   "PUBLIC_LINK": "Lien public",
   "ACCESS_LEVEL": "Niveau d'accès",
   "JOIN_WORKSPACE": "Rejoindre l'espace",
-  "SHARED_BY_LINK": "Partagé par lien"
+  "SHARED_BY_LINK": "Partagé par lien",
+  "FILTER_ALL": "Tous les rôles",
+  "FILTER_OWNER": "Propriétaire de l'organisation",
+  "FILTER_ADMIN": "Administrateur de l'espace de travail",
+  "FILTER_MEMBER": "Membre",
+  "NO_MEMBERS_FOR_FILTER": "Aucun membre ne correspond à ce filtre."
 }

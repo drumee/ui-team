@@ -322,18 +322,15 @@ class apps_main extends LetcBox {
     this._membersState = "loading";
     this._render();
     try {
-      const roleId = this._roleFilter && this._roleFilter !== "all"
-        ? this._roleFilter
-        : 0;
+      // Role facet (_roleFilter) is applied client-side in the skeleton —
+      // the SP expects a numeric map_role.role_id, not these semantic labels.
       const res = this._role === "admin"
         ? await this.postService(SERVICE.admin.hub_member_list, {
             hub_id: this._activeAdminHub,
-            role_id: roleId,
             key: this._memberQuery || "",
             page: this._page || 1,
           })
         : await this.postService(SERVICE.adminpanel.member_list, {
-            role_id: roleId,
             key: this._memberQuery || "",
             page: this._page || 1,
             option: "member",
@@ -771,10 +768,16 @@ class apps_main extends LetcBox {
   }
 
   toggleAll() {
-    if (this._selected.size === this._members.length) {
-      this._selected.clear();
+    // Operate on the visible (role-filtered) subset so the header checkbox
+    // reflects what the user sees.
+    const visible = (this._roleFilter && this._roleFilter !== "all")
+      ? this._members.filter((m) => m && m.role && m.role.variant === this._roleFilter)
+      : this._members;
+    const allSelected = visible.length > 0 && visible.every((m) => this._selected.has(m.id));
+    if (allSelected) {
+      visible.forEach((m) => this._selected.delete(m.id));
     } else {
-      this._selected = new Set(this._members.map((m) => m.id));
+      visible.forEach((m) => this._selected.add(m.id));
     }
     this._render();
   }
@@ -991,11 +994,11 @@ class apps_main extends LetcBox {
         return this._render();
 
       case "apps-select-role":
+        // Client-side filter — no refetch needed; skeleton filters _members.
         this._roleFilter = cmd.mget("role_key");
         this._filterOpen = false;
-        this._page = 1;
-        this._render();
-        return this._loadMembers();
+        this._selected.clear();
+        return this._render();
 
       case "apps-edit-member":
         return this._openEditMember(cmd.mget("member_id"));

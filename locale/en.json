@@ -2733,5 +2733,10 @@
   "AVAILABLE_LC": "available",
   "UPGRADE_TO_INCREASE_CAPACITY": "Upgrade to increase capacity.",
   "UNLOCK_ADMIN_CONSOLE": "Unlock Admin Console",
-  "UNLOCK_ADMIN_DESC": "Workspace administration — member roles, permissions and storage controls — is part of the Enterprise Premium tier. Upgrade to manage your organization end-to-end."
+  "UNLOCK_ADMIN_DESC": "Workspace administration — member roles, permissions and storage controls — is part of the Enterprise Premium tier. Upgrade to manage your organization end-to-end.",
+  "FILTER_ALL": "All roles",
+  "FILTER_OWNER": "Organization Owner",
+  "FILTER_ADMIN": "Workspace Admin",
+  "FILTER_MEMBER": "Member",
+  "NO_MEMBERS_FOR_FILTER": "No members match this filter."
 }

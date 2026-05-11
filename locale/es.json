@@ -404,5 +404,10 @@
   "ACCESS_LEVEL": "Nivel de acceso",
   "JOIN_WORKSPACE": "Unirse al espacio",
   "SHARED_BY_LINK": "Compartido por enlace",
-  "SKIP_TOUR": "Saltar el recorrido"
+  "SKIP_TOUR": "Saltar el recorrido",
+  "FILTER_ALL": "Todos los roles",
+  "FILTER_OWNER": "Propietario de la organización",
+  "FILTER_ADMIN": "Administrador del espacio de trabajo",
+  "FILTER_MEMBER": "Miembro",
+  "NO_MEMBERS_FOR_FILTER": "Ningún miembro coincide con este filtro."
 }

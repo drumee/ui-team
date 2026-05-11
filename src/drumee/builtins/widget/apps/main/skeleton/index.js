@@ -412,8 +412,9 @@ function memberRow(ui, member) {
 
 function tableHeader(ui) {
   const pfx = ui.fig.family;
+  const visible = filterMembers(ui);
   const allChecked =
-    ui._selected.size === ui._members.length && ui._members.length > 0;
+    visible.length > 0 && visible.every((m) => ui._selected.has(m.id));
   const cols = [
     { className: `${pfx}__cell--check`, kids: [
       checkbox(ui, { checked: allChecked, service: "apps-toggle-all" }),
@@ -534,6 +535,16 @@ function table(ui) {
   });
 }
 
+// Server can't filter by these semantic role labels (the SP expects a numeric
+// role_id from map_role), so the role facet is applied client-side using the
+// variant computed by deriveRole().
+function filterMembers(ui) {
+  const list = ui._members || [];
+  const role = ui._roleFilter || "all";
+  if (role === "all") return list;
+  return list.filter((m) => m && m.role && m.role.variant === role);
+}
+
 function tableBodyKids(ui) {
   const pfx = ui.fig.family;
   const kids = [tableHeader(ui)];
@@ -562,20 +573,26 @@ function tableBodyKids(ui) {
         ],
       })
     );
-  } else if (!ui._members.length) {
-    kids.push(
-      Skeletons.Box.X({
-        className: `${pfx}__table-empty`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__table-empty-label`,
-            content: LOCALE.NO_MEMBERS_FOUND || "No members found.",
-          }),
-        ],
-      })
-    );
   } else {
-    ui._members.forEach((m) => kids.push(memberRow(ui, m)));
+    const visible = filterMembers(ui);
+    if (!visible.length) {
+      const filtered = (ui._roleFilter || "all") !== "all";
+      kids.push(
+        Skeletons.Box.X({
+          className: `${pfx}__table-empty`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__table-empty-label`,
+              content: filtered
+                ? (LOCALE.NO_MEMBERS_FOR_FILTER || "No members match this filter.")
+                : (LOCALE.NO_MEMBERS_FOUND || "No members found."),
+            }),
+          ],
+        })
+      );
+    } else {
+      visible.forEach((m) => kids.push(memberRow(ui, m)));
+    }
   }
   return kids;
 }
