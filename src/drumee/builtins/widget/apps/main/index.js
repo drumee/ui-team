@@ -308,8 +308,7 @@ class apps_main extends LetcBox {
       // unreliable (an inner widget on the bubble path stopPropagation's),
       // so we dispatch the click here in capture phase against data-idx.
       const removeEl =
-        e.target.closest &&
-        e.target.closest(".apps-main__edit-ws-remove");
+        e.target.closest && e.target.closest(".apps-main__edit-ws-remove");
       if (removeEl && this.el.contains(removeEl)) {
         const rmIdx = parseInt(removeEl.dataset.idx, 10);
         if (!Number.isNaN(rmIdx)) {
@@ -319,8 +318,7 @@ class apps_main extends LetcBox {
         }
       }
       const optEl =
-        e.target.closest &&
-        e.target.closest(".apps-main__edit-ws-role-option");
+        e.target.closest && e.target.closest(".apps-main__edit-ws-role-option");
       if (optEl && this.el.contains(optEl)) {
         const optIdx = parseInt(optEl.dataset.idx, 10);
         const roleId = optEl.dataset.id;
@@ -372,11 +370,7 @@ class apps_main extends LetcBox {
         this._render();
       }
     }
-    if (
-      this._secCtrl &&
-      this._secCtrl.countryPickerOpen &&
-      this.el
-    ) {
+    if (this._secCtrl && this._secCtrl.countryPickerOpen && this.el) {
       const openRow = this.el.querySelector(".apps-main__ac-country-row--open");
       const dropdown = this.el.querySelector(".apps-main__ac-cdrop");
       const insideRow = openRow && openRow.contains(e.target);
@@ -387,12 +381,10 @@ class apps_main extends LetcBox {
         this._render();
       }
     }
-    if (
-      this._secCtrl &&
-      this._secCtrl.timePickerOpen &&
-      this.el
-    ) {
-      const openField = this.el.querySelector(".apps-main__ac-time-field--open");
+    if (this._secCtrl && this._secCtrl.timePickerOpen && this.el) {
+      const openField = this.el.querySelector(
+        ".apps-main__ac-time-field--open",
+      );
       const tdrop = this.el.querySelector(".apps-main__ac-tdrop");
       const insideField = openField && openField.contains(e.target);
       const insideTdrop = tdrop && tdrop.contains(e.target);
@@ -405,7 +397,9 @@ class apps_main extends LetcBox {
         // open hour/minute flyout (and its pill). Click on the other pill or
         // anywhere else inside the popup closes the flyout.
         const flyout = this.el.querySelector(".apps-main__ac-tdrop-flyout");
-        const openPill = this.el.querySelector(".apps-main__ac-tdrop-pill--open");
+        const openPill = this.el.querySelector(
+          ".apps-main__ac-tdrop-pill--open",
+        );
         const insideFlyout = flyout && flyout.contains(e.target);
         const insidePill = openPill && openPill.contains(e.target);
         if (!insideFlyout && !insidePill) {
@@ -1416,7 +1410,8 @@ class apps_main extends LetcBox {
 
   async _removeEditWorkspace(idx) {
     if (Number.isNaN(idx)) return;
-    if (!Array.isArray(this._editWorkspaces) || !this._editWorkspaces[idx]) return;
+    if (!Array.isArray(this._editWorkspaces) || !this._editWorkspaces[idx])
+      return;
     const ws = this._editWorkspaces[idx];
     const hub_id = ws.hub_id || ws.id || ws.actual_hub_id;
     const uid = this._editingMember && this._editingMember.id;
@@ -1753,7 +1748,8 @@ class apps_main extends LetcBox {
         // Permissions; gains an Access Audit Log section). Everything else
         // defaults to the restricted layout.
         const area = h.area || "private";
-        const mode = area === "share" || area === "dmz" ? "shared" : "restricted";
+        const mode =
+          area === "share" || area === "dmz" ? "shared" : "restricted";
         this._secCtrl = {
           mode,
           geoOn: !!(tags && tags.ipgeo),
