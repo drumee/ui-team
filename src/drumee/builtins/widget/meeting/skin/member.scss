@@ -76,5 +76,24 @@
       color: var(--normal-fg);
       white-space: nowrap;
     }
+
+    &[data-state="calling"],
+    &[data-state="joined"] {
+      cursor: default;
+      pointer-events: none;
+    }
+
+    &[data-state="calling"] {
+      background-color: rgba(250, 133, 64, 0.18);
+      svg { color: #fa8540; }
+      .note-content { color: #fa8540; }
+    }
+
+    &[data-state="joined"] {
+      background-color: rgba(46, 184, 113, 0.18);
+      opacity: 0.75;
+      svg { color: #2eb871; }
+      .note-content { color: #2eb871; }
+    }
   }
 }

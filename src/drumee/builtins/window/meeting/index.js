@@ -20,6 +20,10 @@ class __window_meeting extends __room {
       service_class: this.service_class,
     });
     this.declareHandlers();
+    // Base jitsi class doesn't subscribe to "conference" — without this,
+    // conference.broadcast messages (MEETING_END, HOST_HELLO) bypass us.
+    this.bindEvent("conference");
+
     if (!this.mget(_a.nid) && this.mget(_a.room_id))
       this.mset({ nid: this.mget(_a.room_id) });
     this.isVideo = this.mget(_a.video);
@@ -28,6 +32,17 @@ class __window_meeting extends __room {
       waiting: LOCALE.WAITING_FOR_ATTENDEES,
     };
     this.state = "initialize";
+    this._memberCallStates = new Map();
+
+    if (this.mget("_meeting_standalone") && typeof this._setSize === "function") {
+      this._setSize({
+        width: this.mget("width") || 960,
+        height: this.mget("height") || 600,
+        minWidth: 480,
+        minHeight: 360,
+      });
+    }
+
     this.once("user-left", (id) => {
       if (this.__participants.collection.length > 2) {
         this.stateMessage();
@@ -71,19 +86,64 @@ class __window_meeting extends __room {
       this.stateMachine("permissionDenied");
       return;
     }
+    // sendRoomInfo doesn't forward the host record to non-host clients;
+    // the host self-announces via HOST_HELLO below.
+    this._isHost = !!(room.user && room.user.role === "host");
+    if (this._isHost) {
+      this._hostName = (Visitor.fullname && Visitor.fullname())
+        || `${(Visitor.firstname && Visitor.firstname()) || ""} ${(Visitor.lastname && Visitor.lastname()) || ""}`.trim()
+        || "";
+    }
+
     this.feed(require("./skeleton")(this, room.user));
     await this.prepareConference(room);
     this.responsive();
     this.ensurePart("commands").then((p) => {
       p.el.show();
     });
+    this._renderHostLabel();
+    this._announceHostIfNeeded();
     if (this.el) this.el.dataset.ready = "1";
     this._meetingStartedAt = Date.now();
     this._maxParticipants = 1;
     this._postMeetingSystemMessage("meeting.start");
   }
 
+  _announceHostIfNeeded() {
+    if (!this._isHost || !this._hostName) return;
+    try {
+      this.sendRoomSignaling(SERVICE.conference.broadcast, {
+        event: "HOST_HELLO",
+        payload: {
+          room_id: this.mget(_a.room_id),
+          host_name: this._hostName,
+        },
+      });
+    } catch (e) { }
+  }
+
+  _renderHostLabel() {
+    if (!this._hostName) return;
+    this.ensurePart("host-label").then((p) => {
+      if (!p || !p.el) return;
+      const label = (LOCALE.HOSTED_BY || "Hosted by {0}").replace("{0}", this._hostName);
+      p.el.textContent = label;
+      p.el.dataset.state = 1;
+    });
+  }
+
   onBeforeDestroy() {
+    // Covers teardown paths that bypass _closeFeedbackAndLeave (tab close,
+    // error teardown). _meetingEndedBroadcast keeps it idempotent.
+    if (this._isHost && !this._meetingEndedBroadcast && !this._meetingEndedRemote) {
+      this._meetingEndedBroadcast = 1;
+      try {
+        this.sendRoomSignaling(SERVICE.conference.broadcast, {
+          event: "MEETING_END",
+          payload: { room_id: this.mget(_a.room_id) },
+        });
+      } catch (e) { }
+    }
     this._postMeetingSystemMessage("meeting.end");
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
@@ -145,6 +205,47 @@ class __window_meeting extends __room {
     }
   }
 
+  onWsMessage(service, data, options = {}) {
+    if (options.service === SERVICE.conference.broadcast) {
+      const sameRoom = !data || !data.room_id || data.room_id === this.mget(_a.room_id);
+      if (sameRoom && options.event === "MEETING_END") {
+        if (!this._isHost) this._handleRemoteMeetingEnd();
+        return;
+      }
+      if (sameRoom && options.event === "HOST_HELLO") {
+        if (data && data.host_name && !this._isHost) {
+          this._hostName = data.host_name;
+          this._renderHostLabel();
+        }
+        return;
+      }
+    }
+    if (super.onWsMessage) return super.onWsMessage(service, data, options);
+  }
+
+  _handleRemoteMeetingEnd() {
+    if (this._meetingEndedRemote) return;
+    this._meetingEndedRemote = 1;
+    try {
+      Wm.alert(LOCALE.MEETING_ENDED_BY_HOST || "Meeting ended by host");
+    } catch (e) { }
+    this._closeFeedbackAndLeave();
+  }
+
+  async onRemoteDrumateJoined(data) {
+    if (super.onRemoteDrumateJoined) await super.onRemoteDrumateJoined(data);
+    // Re-announce so late joiners learn who hosts.
+    if (this._isHost) this._announceHostIfNeeded();
+    const id = data && (data.drumate_id || data.uid || data.entity_id);
+    if (id) this._markMemberJoined(id);
+  }
+
+  _markMemberJoined(drumate_id) {
+    if (!this._memberCallStates) this._memberCallStates = new Map();
+    this._memberCallStates.set(String(drumate_id), "joined");
+    this._refreshDashboard();
+  }
+
   /**
    *
    */
@@ -191,9 +292,54 @@ class __window_meeting extends __room {
         this._closeFeedbackAndLeave();
         break;
 
+      case "toggle-dashboard":
+        this._toggleDashboard();
+        break;
+
+      case "call-member":
+        this._inviteToRoom(cmd.getAttr());
+        break;
+
       default:
         super.onUiEvent(cmd, args);
     }
+  }
+
+  async _toggleDashboard() {
+    const wrap = await this.ensurePart("wrapper-dashboard");
+    if (!wrap) return;
+    if (this._dashboardOpen) {
+      wrap.clear();
+      this._dashboardOpen = false;
+      return;
+    }
+    wrap.feed(require("./skeleton/dashboard")(this));
+    this._dashboardOpen = true;
+  }
+
+  async _inviteToRoom(callee) {
+    if (!callee) return;
+    const guest_id = callee.drumate_id || callee.entity_id || callee.uid || callee.id;
+    if (!guest_id) return;
+    const key = String(guest_id);
+    const state = this._memberCallStates && this._memberCallStates.get(key);
+    if (state === "calling" || state === "joined") return;
+    if (!this._memberCallStates) this._memberCallStates = new Map();
+    this._memberCallStates.set(key, "calling");
+    this._refreshDashboard();
+    try {
+      await this.sendRoomSignaling(SERVICE.conference.invite, { guest_id });
+    } catch (e) {
+      this._memberCallStates.delete(key);
+      this._refreshDashboard();
+      if (this.warn) this.warn("conference.invite failed", e);
+    }
+  }
+
+  _refreshDashboard() {
+    if (!this._dashboardOpen) return;
+    const wrap = this.getPart && this.getPart("wrapper-dashboard");
+    if (wrap && wrap.feed) wrap.feed(require("./skeleton/dashboard")(this));
   }
 
   /**
@@ -257,6 +403,17 @@ class __window_meeting extends __room {
   }
 
   _closeFeedbackAndLeave() {
+    // Host leaving ends the meeting for everyone else; non-host leaves
+    // don't broadcast so the rest of the room stays open.
+    if (this._isHost && !this._meetingEndedBroadcast && !this._meetingEndedRemote) {
+      this._meetingEndedBroadcast = 1;
+      try {
+        this.sendRoomSignaling(SERVICE.conference.broadcast, {
+          event: "MEETING_END",
+          payload: { room_id: this.mget(_a.room_id) },
+        });
+      } catch (e) { }
+    }
     if (this._feedbackModal && this._feedbackModal.clear) {
       this._feedbackModal.clear();
       this._feedbackModal = null;
