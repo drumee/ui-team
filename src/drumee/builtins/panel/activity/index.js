@@ -539,6 +539,10 @@ class __panel_activity extends LetcBox {
       e.kind = 'activity_item';
       e.event_type = it.category;
       e.type = it.category;
+      // item_type drives the dismiss routing in _dismissActivity: without it
+      // every row falls back to 'mfs' and persists nothing on hub_invite / chat
+      // / teamchat / etc. Keep this in sync with the category column.
+      e.item_type = it.category;
       e.item_key = `${it.category}:${it.key_id || it.drumate_id || it.hub_id || ''}`;
       switch (it.category) {
         case 'hub_invite':
