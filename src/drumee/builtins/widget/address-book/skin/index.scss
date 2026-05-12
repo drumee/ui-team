@@ -493,6 +493,94 @@
     }
   }
 
+  // Edit-mode chip wrap — hosts the chip + delete (×) button so active state
+  // lives on the wrap (since the inner chip and × are separately clickable).
+  &__tag-chip-wrap {
+    align-items: stretch;
+    border: 1px solid var(--border-default, #d1d1d6);
+    border-radius: 100px;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+
+    > .address-book__tag-chip {
+      border: none;
+      border-radius: 0;
+      padding: 3px 4px 3px 10px;
+    }
+
+    &[data-active="1"] {
+      background: rgba(250, 133, 64, 0.12);
+      border-color: rgba(250, 133, 64, 0.3);
+
+      > .address-book__tag-chip {
+        color: #fa8540;
+        background: transparent;
+        border: none;
+      }
+    }
+  }
+
+  &__tag-chip-remove {
+    @include drumee.typo($size: 13px, $weight: 700, $line: 14px,
+      $color: var(--normal-fg-30, #9c9ca3));
+    padding: 3px 8px 3px 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+
+    &:hover {
+      color: var(--danger-fg, #e74c3c);
+    }
+  }
+
+  &__edit-list-header {
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__tag-help {
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    cursor: help;
+    opacity: 0.6;
+    flex-shrink: 0;
+    position: relative;
+    overflow: visible;
+
+    &:hover { opacity: 1; }
+  }
+
+  // Tooltip box for the TAGS help icon — mirrors the trash panel restore
+  // tooltip: purple background, white text, info icon on the left.
+  &__tag-help-tip {
+    position: absolute;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 250px;
+    left: 22px;
+    top: -4px;
+    padding: var(--spacer-4);
+    background-color: var(--primary-purple-40);
+    color: var(--white);
+    border-radius: var(--corner-radius-1);
+    height: auto;
+    z-index: 2;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  &__tag-help-ico {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    fill: var(--white);
+    color: var(--white);
+  }
+
   &__new-tag-input {
     align-items: center;
     gap: 6px;

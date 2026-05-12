@@ -41,12 +41,13 @@ module.exports = function (ui, contact, ctx) {
       ],
     });
 
-  const emailRow = (e, idx) =>
-    Skeletons.Box.X({
+  const emailRow = (e, idx) => {
+    const isDefault = e.is_default === 1;
+    return Skeletons.Box.X({
       className: `${fig}__edit-row`,
       dataset: {
         rowKind: "email",
-        default: e.is_default === 1 ? 1 : 0,
+        default: isDefault ? 1 : 0,
         category: e.category || "priv",
       },
       kids: [
@@ -57,26 +58,33 @@ module.exports = function (ui, contact, ctx) {
           placeholder: LOCALE.EMAIL_ADDRESS,
           require: "any",
           bubble: 0,
+          // Default email is read-only and cannot be removed — to change it,
+          // add a new email and mark it as the new default.
+          readonly: isDefault ? 1 : undefined,
+          dataset: isDefault ? { disabled: 1 } : undefined,
         }),
         Skeletons.Note({
           className: `${fig}__row-pill`,
-          dataset: { active: e.is_default === 1 ? 1 : 0 },
+          dataset: { active: isDefault ? 1 : 0 },
           content: LOCALE.DEFAULT,
           bubble: 0,
-          service: "edit-set-default-email",
+          service: isDefault ? null : "edit-set-default-email",
           uiHandler: [ui],
           rowIndex: idx,
         }),
-        Skeletons.Note({
-          className: `${fig}__row-remove`,
-          content: "×",
-          bubble: 0,
-          service: "edit-remove-email",
-          uiHandler: [ui],
-          rowIndex: idx,
-        }),
-      ],
+        isDefault
+          ? null
+          : Skeletons.Note({
+              className: `${fig}__row-remove`,
+              content: "×",
+              bubble: 0,
+              service: "edit-remove-email",
+              uiHandler: [ui],
+              rowIndex: idx,
+            }),
+      ].filter(Boolean),
     });
+  };
 
   const phoneRow = (p, idx) =>
     Skeletons.Box.X({
@@ -140,19 +148,45 @@ module.exports = function (ui, contact, ctx) {
   const tagSection = Skeletons.Box.Y({
     className: `${fig}__edit-list`,
     kids: [
-      Skeletons.Note({ className: `${fig}__modal-label`, content: LOCALE.TAGS || "Tags" }),
+      Skeletons.Box.X({
+        className: `${fig}__edit-list-header`,
+        kids: [
+          Skeletons.Note({ className: `${fig}__modal-label`, content: LOCALE.TAGS || "Tags" }),
+          Skeletons.Button.Svg({
+            ico: "info",
+            className: `${fig}__tag-help`,
+            tooltips: {
+              content: `<svg class="${fig}__tag-help-ico"><use href="#--icon-info"></use></svg><span>${LOCALE.TAGS_USAGE_GUIDE}</span>`,
+              className: `${fig}__tag-help-tip`,
+            },
+          }),
+        ],
+      }),
       Skeletons.Box.X({
         className: `${fig}__tag-picker`,
         kids: [
           ...tags.map((t) =>
-            Skeletons.Note({
-              className: `${fig}__tag-chip`,
+            Skeletons.Box.X({
+              className: `${fig}__tag-chip-wrap`,
               dataset: { active: editTags.includes(t.tag_id) ? 1 : 0 },
-              content: t.name || t.tag_name || "",
-              bubble: 0,
-              service: "edit-toggle-tag",
-              uiHandler: [ui],
-              tagId: t.tag_id,
+              kids: [
+                Skeletons.Note({
+                  className: `${fig}__tag-chip`,
+                  content: t.name || t.tag_name || "",
+                  bubble: 0,
+                  service: "edit-toggle-tag",
+                  uiHandler: [ui],
+                  tagId: t.tag_id,
+                }),
+                Skeletons.Note({
+                  className: `${fig}__tag-chip-remove`,
+                  content: "×",
+                  bubble: 0,
+                  service: "delete-tag",
+                  uiHandler: [ui],
+                  tagId: t.tag_id,
+                }),
+              ],
             })
           ),
           Skeletons.Box.X({
@@ -210,12 +244,12 @@ module.exports = function (ui, contact, ctx) {
       Skeletons.Box.Y({
         className: `${fig}__edit-form`,
         kids: [
-          labeledInput(LOCALE.FIRSTNAME, "firstname", contact.firstname),
-          labeledInput(LOCALE.LASTNAME, "lastname", contact.lastname),
+          labeledInput(LOCALE.FIRSTNAME, "firstname", ui.getEditFirstname()),
+          labeledInput(LOCALE.LASTNAME, "lastname", ui.getEditLastname()),
           emailSection,
           phoneSection,
           tagSection,
-          labeledTextarea(LOCALE.COMMENT, "comment", contact.comment),
+          labeledTextarea(LOCALE.COMMENT, "comment", ui.getEditComment()),
         ],
       }),
       Skeletons.Box.X({

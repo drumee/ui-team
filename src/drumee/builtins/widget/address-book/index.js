@@ -37,6 +37,9 @@ class __address_book extends LetcBox {
     this._inviteSubmitting = false;
     this._editing = false;
     this._editError = null;
+    this._editFirstname = "";
+    this._editLastname = "";
+    this._editComment = "";
     this._editEmails = [];
     this._editPhones = [];
     this._editTags = [];
@@ -171,6 +174,9 @@ class __address_book extends LetcBox {
 
       case "create-tag":
         return this._createTag();
+
+      case "delete-tag":
+        return this._deleteTag(trigger);
 
       case "search-input":
         this._search = String(trigger.mget("value") || "").trim();
@@ -503,9 +509,21 @@ class __address_book extends LetcBox {
     if (!c) return;
     this._editing = true;
     this._editError = null;
+    this._editFirstname = c.firstname || "";
+    this._editLastname = c.lastname || "";
+    this._editComment = c.comment || "";
+    const looksLikeEmail = (s) => typeof s === "string" && s.includes("@");
+    // `c.entity` is a UID for drumate contacts (e.g. "1fe9136a1fe9137f") and
+    // only equals the email when the contact isn't a drumate. Prefer the
+    // top-level `email` string so the edit input shows "h0anghu7n@gmail.com"
+    // instead of the entity UID.
+    const primaryEmail = looksLikeEmail(c.email) ? c.email
+      : looksLikeEmail(c.email_default) ? c.email_default
+      : looksLikeEmail(c.entity) ? c.entity
+      : "";
     this._editEmails = (Array.isArray(c.email) && c.email.length
       ? c.email.map((e) => ({ email: e.email || "", category: e.category || "priv", is_default: e.is_default || 0 }))
-      : [{ email: c.entity || c.email || "", category: "priv", is_default: 1 }]);
+      : [{ email: primaryEmail, category: "priv", is_default: 1 }]);
     if (!this._editEmails.some((e) => e.is_default === 1) && this._editEmails.length) {
       this._editEmails[0].is_default = 1;
     }
@@ -549,6 +567,9 @@ class __address_book extends LetcBox {
   _syncEditDom() {
     const dom = this._readEditFields();
     if (!dom) return;
+    this._editFirstname = dom.firstname || "";
+    this._editLastname = dom.lastname || "";
+    this._editComment = dom.comment || "";
     if (dom.email.length === this._editEmails.length) {
       this._editEmails = dom.email.map((e, i) => ({
         ...this._editEmails[i],
@@ -575,11 +596,57 @@ class __address_book extends LetcBox {
     const lastname  = String(dom.lastname  || "").trim();
     const comment   = String(dom.comment   || "").trim();
 
+    // Persist what the user typed so a validation-failure re-render keeps
+    // their values instead of reverting to the original contact data.
+    this._editFirstname = firstname;
+    this._editLastname = lastname;
+    this._editComment = comment;
+    this._editEmails = (dom.email || []).map((e, i) => ({
+      ...(this._editEmails[i] || {}),
+      ...e,
+    }));
+    this._editPhones = (dom.mobile || []).map((p, i) => ({
+      ...(this._editPhones[i] || {}),
+      ...p,
+    }));
+
     const emails = (dom.email  || []).filter((e) => e.email && e.email.trim());
     const mobile = (dom.mobile || []).filter((p) => p.phone && p.phone.trim());
     if (emails.length && !emails.some((e) => e.is_default === 1)) {
       emails[0].is_default = 1;
     }
+
+    if (firstname.length === 0) {
+      this._editError = LOCALE.FIRST_NAME_REQUIRED;
+      return this._refreshDetail();
+    }
+    if (firstname.length < 6) {
+      this._editError = LOCALE.FIRSTNAME_MIN_6_CHARS;
+      return this._refreshDetail();
+    }
+    if (lastname.length === 0) {
+      this._editError = LOCALE.LASTNAME_REQUIRED;
+      return this._refreshDetail();
+    }
+    if (lastname.length < 6) {
+      this._editError = LOCALE.LASTNAME_MIN_6_CHARS;
+      return this._refreshDetail();
+    }
+    if (!emails.length) {
+      this._editError = LOCALE.EMAIL_REQUIRED;
+      return this._refreshDetail();
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (emails.some((e) => !emailRegex.test(e.email.trim()))) {
+      this._editError = LOCALE.INVALID_EMAIL_FORMAT;
+      return this._refreshDetail();
+    }
+    const phoneRegex = /^[+]?[\d\s\-()]{6,}$/;
+    if (mobile.some((p) => !phoneRegex.test(p.phone.trim()))) {
+      this._editError = LOCALE.INVALID_PHONE_FORMAT;
+      return this._refreshDetail();
+    }
+    this._editError = null;
 
     const payload = {
       service: SERVICE.contact.update,
@@ -628,6 +695,10 @@ class __address_book extends LetcBox {
   }
 
   async _createTag() {
+    // Preserve the user's typed firstname/lastname/comment/emails/phones
+    // before the upcoming re-render — otherwise creating a tag would wipe
+    // any in-flight edits in the form.
+    if (this._editing) this._syncEditDom();
     const root = this.el?.querySelector(`.${this.fig.family}__new-tag-input input`);
     const name = root?.value?.trim();
     if (!name) return;
@@ -646,6 +717,36 @@ class __address_book extends LetcBox {
     } catch (err) { console.error("[address_book] tag create failed:", err); }
     if (root) root.value = "";
     this._refreshDetail();
+    this._refreshList();
+  }
+
+  async _deleteTag(trigger) {
+    const tagId = trigger.mget("tagId");
+    if (!tagId) return;
+    if (this._editing) this._syncEditDom();
+    if (!confirm(LOCALE.CONFIRM_DELETE_TAG)) return;
+    try {
+      await this.postService({
+        service: SERVICE.tagcontact.remove,
+        tag_id: tagId,
+        hub_id: Visitor.id,
+      });
+      this._tags = this._tags.filter((t) => t.tag_id !== tagId);
+      this._editTags = (this._editTags || []).filter((id) => id !== tagId);
+      if (this._selectedTagId === tagId) this._selectedTagId = null;
+      // Tag chips also appear in the contact rows — drop the deleted tag
+      // from every loaded contact so the sidebar updates without a refetch.
+      const stripTag = (c) => ({
+        ...c,
+        tag: (c.tag || []).filter((t) => (t.tag_id || t) !== tagId),
+      });
+      this._contacts = this._contacts.map(stripTag);
+      this._sentInvitations = this._sentInvitations.map(stripTag);
+    } catch (err) {
+      console.error("[address_book] tag remove failed:", err);
+    }
+    this._refreshDetail();
+    this._refreshList();
   }
 
   // ─── Import / Google sync ───────────────────────────────────────
@@ -858,6 +959,9 @@ class __address_book extends LetcBox {
   getEditEmails() { return this._editEmails || []; }
   getEditPhones() { return this._editPhones || []; }
   getEditTags()   { return this._editTags || []; }
+  getEditFirstname() { return this._editFirstname || ""; }
+  getEditLastname()  { return this._editLastname || ""; }
+  getEditComment()   { return this._editComment || ""; }
 
   getImportError() { return this._importError; }
   getImportProgress() { return this._importProgress; }
