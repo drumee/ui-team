@@ -893,7 +893,8 @@ class __widget_chat extends LetcBox {
           peer_id: this.peerId,
           attachment: attachments,
           message,
-          hub_id: this.hubId
+          hub_id: this.hubId,
+          nid: this.mget(_a.nid)
         };
         break;
 
