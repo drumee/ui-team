@@ -43,6 +43,7 @@ class __address_book extends LetcBox {
     this._editEmails = [];
     this._editPhones = [];
     this._editTags = [];
+    this._editSubmitting = false;
     this._importing = false;
     this._importError = null;
     this._importProgress = null;
@@ -585,6 +586,7 @@ class __address_book extends LetcBox {
   }
 
   async _saveEdit(trigger) {
+    if (this._editSubmitting) return;
     const contactId = trigger.mget("contactId");
     if (!contactId) return;
 
@@ -657,18 +659,35 @@ class __address_book extends LetcBox {
     if (emails.length) payload.email = emails;
     if (mobile.length) payload.mobile = mobile;
 
+    this._editSubmitting = true;
+    this._refreshDetail();
+
     try {
       const data = await this.postService(payload);
-      const errorMsg = this._inviteErrorMessage(data && data.status);
-      if (errorMsg) {
-        this._editError = errorMsg;
+      const status = data && data.status;
+      // On success the server returns the contact record whose `status` is
+      // the contact's lifecycle state (lowercase: "active", "sent", etc.).
+      // Error responses use SHOUT_CASE codes ("CONACT_NOT_EXIST", etc.).
+      // Only treat SHOUT_CASE statuses as errors so a successful update is
+      // not mistaken for one.
+      const isErrorStatus = typeof status === "string" && /^[A-Z][A-Z0-9_]*$/.test(status);
+      if (isErrorStatus) {
+        this._editError = this._inviteErrorMessage(status)
+          || this._editErrorMessage(status)
+          || LOCALE.SOMETHING_WENT_WRONG;
+        this._editSubmitting = false;
         return this._refreshDetail();
       }
 
       // Tags: assign list via tagcontact.entity_assign.
+      // `entity_id` here is the contact row's id (matches `c.id` from
+      // `my_contact_show_next`), not the linked drumate id. The server
+      // resolves the resource via `my_contact_get_next(_key, null)` which
+      // does `WHERE c.id = _key`; passing the drumate id makes the ACL
+      // framework fail to resolve a node → PERMISSION_DENIED.
       if (SERVICE.tagcontact && SERVICE.tagcontact.entity_assign) {
         const c = this.getSelectedContact();
-        const entityId = (c && (c.entity_id || c.entity || c.uid)) || null;
+        const entityId = (c && (c.id || c.contact_id || c.entity_id)) || contactId;
         if (entityId) {
           try {
             await this.postService({
@@ -683,6 +702,7 @@ class __address_book extends LetcBox {
 
       this._editing = false;
       this._editError = null;
+      this._editSubmitting = false;
       await this._loadContacts(this._contactsOption || "active");
       this._refreshList();
       this._refreshDetail();
@@ -690,7 +710,21 @@ class __address_book extends LetcBox {
     } catch (err) {
       console.error("[address_book] update failed:", err);
       this._editError = LOCALE.SOMETHING_WENT_WRONG;
+      this._editSubmitting = false;
       this._refreshDetail();
+    }
+  }
+
+  _editErrorMessage(status) {
+    switch (status) {
+      case "CONACT_NOT_EXIST":
+      case "CONTACT_NOT_EXIST":  return LOCALE.SOMETHING_WENT_WRONG;
+      case "EMPTY_FIRSTNAME":    return LOCALE.FIRST_NAME_REQUIRED;
+      case "EMPTY_LASTNAME":     return LOCALE.LASTNAME_REQUIRED;
+      case "MANY_DEFAULT_EMAIL": return LOCALE.ONLY_ONE_DEFAULT_EMAIL;
+      case "NO_DEFAULT_MAIL":    return LOCALE.AT_LEAST_ONE_DEFAULT_EMAIL;
+      case "SERVICE_ERROR":      return LOCALE.SOMETHING_WENT_WRONG;
+      default:                   return null;
     }
   }
 
@@ -962,6 +996,7 @@ class __address_book extends LetcBox {
   getEditFirstname() { return this._editFirstname || ""; }
   getEditLastname()  { return this._editLastname || ""; }
   getEditComment()   { return this._editComment || ""; }
+  isEditSubmitting() { return this._editSubmitting === true; }
 
   getImportError() { return this._importError; }
   getImportProgress() { return this._importProgress; }

@@ -5,6 +5,7 @@ module.exports = function (ui, contact, ctx) {
   const editEmails = ui.getEditEmails();
   const editPhones = ui.getEditPhones();
   const editTags = ui.getEditTags();
+  const submitting = ui.isEditSubmitting();
 
   const labeledInput = (label, name, value) =>
     Skeletons.Box.Y({
@@ -46,7 +47,10 @@ module.exports = function (ui, contact, ctx) {
     return Skeletons.Box.X({
       className: `${fig}__edit-row`,
       dataset: {
-        rowKind: "email",
+        // Use kebab key — the framework writes `data-${k}` verbatim, so a
+        // camelCase `rowKind` produces `data-rowkind` (lowercased by the
+        // browser), which the `[data-row-kind=…]` selector wouldn't match.
+        "row-kind": "email",
         default: isDefault ? 1 : 0,
         category: e.category || "priv",
       },
@@ -89,7 +93,7 @@ module.exports = function (ui, contact, ctx) {
   const phoneRow = (p, idx) =>
     Skeletons.Box.X({
       className: `${fig}__edit-row`,
-      dataset: { rowKind: "phone", category: p.category || "priv" },
+      dataset: { "row-kind": "phone", category: p.category || "priv" },
       kids: [
         Skeletons.Entry({
           className: `${fig}__modal-input ${fig}__modal-input--narrow`,
@@ -259,14 +263,18 @@ module.exports = function (ui, contact, ctx) {
             className: `${fig}__btn ${fig}__btn--secondary`,
             content: LOCALE.CANCEL,
             bubble: 0,
-            service: "cancel-edit",
+            service: submitting ? null : "cancel-edit",
+            state: submitting ? 0 : 1,
+            dataset: submitting ? { disabled: 1 } : undefined,
             uiHandler: [ui],
           }),
           Skeletons.Note({
             className: `${fig}__btn ${fig}__btn--primary`,
-            content: LOCALE.SAVE,
+            content: submitting ? (LOCALE.SAVING || `${LOCALE.SAVE}…`) : LOCALE.SAVE,
             bubble: 0,
-            service: "save-edit",
+            service: submitting ? null : "save-edit",
+            state: submitting ? 0 : 1,
+            dataset: submitting ? { disabled: 1, loading: 1 } : undefined,
             uiHandler: [ui],
             contactId,
           }),
