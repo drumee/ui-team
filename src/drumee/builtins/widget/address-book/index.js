@@ -27,17 +27,23 @@ class __address_book extends LetcBox {
     this._search = "";
     this._contacts = [];
     this._invitations = [];
+    this._sentInvitations = [];
     this._tags = [];
     this._selectedTagId = null;
     this._serverSearchHits = null;
     this._selectedKey = null;
     this._inviteDraft = { email: "", message: "" };
     this._inviteError = null;
+    this._inviteSubmitting = false;
     this._editing = false;
     this._editError = null;
+    this._editFirstname = "";
+    this._editLastname = "";
+    this._editComment = "";
     this._editEmails = [];
     this._editPhones = [];
     this._editTags = [];
+    this._editSubmitting = false;
     this._importing = false;
     this._importError = null;
     this._importProgress = null;
@@ -52,7 +58,12 @@ class __address_book extends LetcBox {
 
   async onDomRefresh() {
     this.feed(require("./skeleton")(this));
-    await Promise.all([this._loadContacts(), this._loadInvitations(), this._loadTags()]);
+    await Promise.all([
+      this._loadContacts(),
+      this._loadInvitations(),
+      this._loadSentInvitations(),
+      this._loadTags(),
+    ]);
     this._refreshList();
     this.el.dataset.anim = "in";
   }
@@ -125,13 +136,27 @@ class __address_book extends LetcBox {
         this._editEmails.push({ email: "", category: "priv", is_default: 0 });
         return this._refreshDetail();
 
-      case "edit-remove-email":
+      case "edit-remove-email": {
         this._syncEditDom();
-        this._editEmails.splice(trigger.mget("rowIndex"), 1);
+        const idx = trigger.mget("rowIndex");
+        const row = this._editEmails[idx];
+        // Refuse to drop the only default — the contact must always have a
+        // default email. The UI already hides × on the default row, but this
+        // guards against any other trigger path.
+        const otherDefaults = this._editEmails.some(
+          (e, i) => i !== idx && e.is_default === 1
+        );
+        if (row && row.is_default === 1 && !otherDefaults) {
+          this._editError = LOCALE.CANNOT_REMOVE_ONLY_DEFAULT_EMAIL;
+          return this._refreshDetail();
+        }
+        this._editEmails.splice(idx, 1);
         if (this._editEmails.length && !this._editEmails.some((e) => e.is_default === 1)) {
           this._editEmails[0].is_default = 1;
         }
+        this._editError = null;
         return this._refreshDetail();
+      }
 
       case "edit-set-default-email": {
         this._syncEditDom();
@@ -165,6 +190,9 @@ class __address_book extends LetcBox {
       case "create-tag":
         return this._createTag();
 
+      case "delete-tag":
+        return this._deleteTag(trigger);
+
       case "search-input":
         this._search = String(trigger.mget("value") || "").trim();
         return this._runSearch();
@@ -188,8 +216,11 @@ class __address_book extends LetcBox {
       case SERVICE.contact.change_status:
       case SERVICE.contact.block:
       case SERVICE.contact.unblock:
-        Promise.all([this._loadContacts(this._contactsOption || "active"), this._loadInvitations()])
-          .then(() => { this._refreshList(); this._refreshDetail(); });
+        Promise.all([
+          this._loadContacts(this._contactsOption || "active"),
+          this._loadInvitations(),
+          this._loadSentInvitations(),
+        ]).then(() => { this._refreshList(); this._refreshDetail(); });
         return;
       case SERVICE.contact.load:
         // CSV/VCF import progress
@@ -224,13 +255,34 @@ class __address_book extends LetcBox {
 
   async _loadInvitations() {
     try {
-      const rows = await this.postService({
+      // `invite_get` is a GET endpoint (per `_get` suffix). Using postService
+      // here returned empty silently and left the Pending tab blank for
+      // recipients — the legacy invite-notification widget uses fetchService.
+      const rows = await this.fetchService({
         service: SERVICE.contact.invite_get,
         hub_id: Visitor.id,
       });
       this._invitations = Array.isArray(rows) ? rows : [];
     } catch (err) {
       this._invitations = [];
+    }
+  }
+
+  // Invitations the current user has SENT (rows in `contact` with status='sent').
+  // Distinct from `_loadInvitations` which returns invitations received by us.
+  async _loadSentInvitations() {
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.contact.show_contact,
+        hub_id: Visitor.id,
+        option: "sent",
+      });
+      this._sentInvitations = (Array.isArray(rows) ? rows : []).map((c) => ({
+        ...c,
+        tag: normalizeTags(c.tag),
+      }));
+    } catch (err) {
+      this._sentInvitations = [];
     }
   }
 
@@ -252,14 +304,17 @@ class __address_book extends LetcBox {
     this._selectedKey = null;
     this._editing = false;
     this._serverSearchHits = null;
-    // The `my_contact_show_next` proc only honours 'active' or 'archived';
-    // anything else returns an empty list. Keep the active set for All,
-    // Pending, and Blocked tabs and filter client-side. Pending uses its own
-    // invitation list; Blocked falls back to client filter on `is_blocked`.
+    // `my_contact_show_next` honours 'active', 'archived', or 'sent'. The All
+    // and Blocked tabs share the 'active' fetch (Blocked filters client-side
+    // on `is_blocked`). Pending combines received invitations (notification
+    // proc) with sent ones (option='sent').
     const want = tab === "archived" ? "archived" : "active";
     const tasks = [];
     if (this._contactsOption !== want) tasks.push(this._loadContacts(want));
-    if (tab === "pending") tasks.push(this._loadInvitations());
+    if (tab === "pending") {
+      tasks.push(this._loadInvitations());
+      tasks.push(this._loadSentInvitations());
+    }
     if (tasks.length) await Promise.all(tasks);
     this._refreshList();
     this._refreshDetail();
@@ -292,6 +347,8 @@ class __address_book extends LetcBox {
   // ─── Mutations ──────────────────────────────────────────────────
 
   async _submitInvite() {
+    if (this._inviteSubmitting) return;
+
     const fields = (this.getData?.(_a.formItem)) || {};
     const email = String(fields.email || "").trim();
     const message = String(fields.message || "").trim();
@@ -302,8 +359,35 @@ class __address_book extends LetcBox {
       return this._renderInviteModal();
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this._inviteError = LOCALE.INVALID_EMAIL_FORMAT;
+      this._inviteDraft = { email, message };
+      return this._renderInviteModal();
+    }
+
+    const ownEmail = String((Visitor.profile() || {}).email || "").trim().toLowerCase();
+    if (ownEmail && email.toLowerCase() === ownEmail) {
+      this._inviteError = LOCALE.CANNOT_ADD_SELF_AS_CONTACT;
+      this._inviteDraft = { email, message };
+      return this._renderInviteModal();
+    }
+
     this._inviteDraft = { email, message };
+    this._inviteError = null;
+    this._inviteSubmitting = true;
+    this._renderInviteModal();
+
     try {
+      const { email: exists } = await this.postService({
+        service: SERVICE.yp.email_exists,
+        value: email,
+        hub_id: Visitor.id,
+      }) || {};
+      if (!exists) {
+        this._inviteError = LOCALE.OOPS_EMAIL_NOT_FOUND;
+        this._inviteSubmitting = false;
+        return this._renderInviteModal();
+      }
       const data = await this.postService({
         service: SERVICE.contact.invite,
         email,
@@ -313,18 +397,24 @@ class __address_book extends LetcBox {
       const errorMsg = this._inviteErrorMessage(data && data.status);
       if (errorMsg) {
         this._inviteError = errorMsg;
+        this._inviteSubmitting = false;
         return this._renderInviteModal();
       }
+      this._inviteSubmitting = false;
       this._inviteError = null;
       this._inviteDraft = { email: "", message: "" };
       this._closeInviteModal();
       this._showToast(LOCALE.INVITATION_MAIL_SENT
         ? `${LOCALE.INVITATION_MAIL_SENT} ${email}`
         : "Invitation sent");
-      await this._loadContacts(this._contactsOption || "active");
+      await Promise.all([
+        this._loadContacts(this._contactsOption || "active"),
+        this._loadSentInvitations(),
+      ]);
       this._refreshList();
     } catch (err) {
       console.error("[address_book] contact.invite failed:", err);
+      this._inviteSubmitting = false;
       this._inviteError = LOCALE.SOMETHING_WENT_WRONG;
       this._renderInviteModal();
     }
@@ -434,9 +524,21 @@ class __address_book extends LetcBox {
     if (!c) return;
     this._editing = true;
     this._editError = null;
+    this._editFirstname = c.firstname || "";
+    this._editLastname = c.lastname || "";
+    this._editComment = c.comment || "";
+    const looksLikeEmail = (s) => typeof s === "string" && s.includes("@");
+    // `c.entity` is a UID for drumate contacts (e.g. "1fe9136a1fe9137f") and
+    // only equals the email when the contact isn't a drumate. Prefer the
+    // top-level `email` string so the edit input shows "h0anghu7n@gmail.com"
+    // instead of the entity UID.
+    const primaryEmail = looksLikeEmail(c.email) ? c.email
+      : looksLikeEmail(c.email_default) ? c.email_default
+      : looksLikeEmail(c.entity) ? c.entity
+      : "";
     this._editEmails = (Array.isArray(c.email) && c.email.length
       ? c.email.map((e) => ({ email: e.email || "", category: e.category || "priv", is_default: e.is_default || 0 }))
-      : [{ email: c.entity || c.email || "", category: "priv", is_default: 1 }]);
+      : [{ email: primaryEmail, category: "priv", is_default: 1 }]);
     if (!this._editEmails.some((e) => e.is_default === 1) && this._editEmails.length) {
       this._editEmails[0].is_default = 1;
     }
@@ -480,6 +582,9 @@ class __address_book extends LetcBox {
   _syncEditDom() {
     const dom = this._readEditFields();
     if (!dom) return;
+    this._editFirstname = dom.firstname || "";
+    this._editLastname = dom.lastname || "";
+    this._editComment = dom.comment || "";
     if (dom.email.length === this._editEmails.length) {
       this._editEmails = dom.email.map((e, i) => ({
         ...this._editEmails[i],
@@ -495,6 +600,7 @@ class __address_book extends LetcBox {
   }
 
   async _saveEdit(trigger) {
+    if (this._editSubmitting) return;
     const contactId = trigger.mget("contactId");
     if (!contactId) return;
 
@@ -506,11 +612,74 @@ class __address_book extends LetcBox {
     const lastname  = String(dom.lastname  || "").trim();
     const comment   = String(dom.comment   || "").trim();
 
+    // Persist what the user typed so a validation-failure re-render keeps
+    // their values instead of reverting to the original contact data.
+    this._editFirstname = firstname;
+    this._editLastname = lastname;
+    this._editComment = comment;
+    this._editEmails = (dom.email || []).map((e, i) => ({
+      ...(this._editEmails[i] || {}),
+      ...e,
+    }));
+    this._editPhones = (dom.mobile || []).map((p, i) => ({
+      ...(this._editPhones[i] || {}),
+      ...p,
+    }));
+
     const emails = (dom.email  || []).filter((e) => e.email && e.email.trim());
     const mobile = (dom.mobile || []).filter((p) => p.phone && p.phone.trim());
     if (emails.length && !emails.some((e) => e.is_default === 1)) {
       emails[0].is_default = 1;
     }
+
+    if (firstname.length === 0) {
+      this._editError = LOCALE.FIRST_NAME_REQUIRED;
+      return this._refreshDetail();
+    }
+    if (firstname.length < 6) {
+      this._editError = LOCALE.FIRSTNAME_MIN_6_CHARS;
+      return this._refreshDetail();
+    }
+    if (lastname.length === 0) {
+      this._editError = LOCALE.LASTNAME_REQUIRED;
+      return this._refreshDetail();
+    }
+    if (lastname.length < 6) {
+      this._editError = LOCALE.LASTNAME_MIN_6_CHARS;
+      return this._refreshDetail();
+    }
+    if (!emails.length) {
+      this._editError = LOCALE.EMAIL_REQUIRED;
+      return this._refreshDetail();
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (emails.some((e) => !emailRegex.test(e.email.trim()))) {
+      this._editError = LOCALE.INVALID_EMAIL_FORMAT;
+      return this._refreshDetail();
+    }
+    const defaultEmails = emails.filter((e) => e.is_default === 1);
+    if (defaultEmails.length === 0) {
+      this._editError = LOCALE.AT_LEAST_ONE_DEFAULT_EMAIL;
+      return this._refreshDetail();
+    }
+    if (defaultEmails.length > 1) {
+      this._editError = LOCALE.ONLY_ONE_DEFAULT_EMAIL;
+      return this._refreshDetail();
+    }
+    const defaultValue = defaultEmails[0].email.trim().toLowerCase();
+    const additionalDuplicate = emails.some(
+      (e) => e.is_default !== 1 && e.email.trim().toLowerCase() === defaultValue
+    );
+    if (additionalDuplicate) {
+      this._editError = LOCALE.EMAIL_DUPLICATE_OF_DEFAULT;
+      return this._refreshDetail();
+    }
+    const phoneRegex = /^[+]?[\d\s\-()]{6,}$/;
+    if (mobile.some((p) => !phoneRegex.test(p.phone.trim()))) {
+      this._editError = LOCALE.INVALID_PHONE_FORMAT;
+      return this._refreshDetail();
+    }
+    this._editError = null;
 
     const payload = {
       service: SERVICE.contact.update,
@@ -521,18 +690,35 @@ class __address_book extends LetcBox {
     if (emails.length) payload.email = emails;
     if (mobile.length) payload.mobile = mobile;
 
+    this._editSubmitting = true;
+    this._refreshDetail();
+
     try {
       const data = await this.postService(payload);
-      const errorMsg = this._inviteErrorMessage(data && data.status);
-      if (errorMsg) {
-        this._editError = errorMsg;
+      const status = data && data.status;
+      // On success the server returns the contact record whose `status` is
+      // the contact's lifecycle state (lowercase: "active", "sent", etc.).
+      // Error responses use SHOUT_CASE codes ("CONACT_NOT_EXIST", etc.).
+      // Only treat SHOUT_CASE statuses as errors so a successful update is
+      // not mistaken for one.
+      const isErrorStatus = typeof status === "string" && /^[A-Z][A-Z0-9_]*$/.test(status);
+      if (isErrorStatus) {
+        this._editError = this._inviteErrorMessage(status)
+          || this._editErrorMessage(status)
+          || LOCALE.SOMETHING_WENT_WRONG;
+        this._editSubmitting = false;
         return this._refreshDetail();
       }
 
       // Tags: assign list via tagcontact.entity_assign.
+      // `entity_id` here is the contact row's id (matches `c.id` from
+      // `my_contact_show_next`), not the linked drumate id. The server
+      // resolves the resource via `my_contact_get_next(_key, null)` which
+      // does `WHERE c.id = _key`; passing the drumate id makes the ACL
+      // framework fail to resolve a node → PERMISSION_DENIED.
       if (SERVICE.tagcontact && SERVICE.tagcontact.entity_assign) {
         const c = this.getSelectedContact();
-        const entityId = (c && (c.entity_id || c.entity || c.uid)) || null;
+        const entityId = (c && (c.id || c.contact_id || c.entity_id)) || contactId;
         if (entityId) {
           try {
             await this.postService({
@@ -547,6 +733,7 @@ class __address_book extends LetcBox {
 
       this._editing = false;
       this._editError = null;
+      this._editSubmitting = false;
       await this._loadContacts(this._contactsOption || "active");
       this._refreshList();
       this._refreshDetail();
@@ -554,11 +741,29 @@ class __address_book extends LetcBox {
     } catch (err) {
       console.error("[address_book] update failed:", err);
       this._editError = LOCALE.SOMETHING_WENT_WRONG;
+      this._editSubmitting = false;
       this._refreshDetail();
     }
   }
 
+  _editErrorMessage(status) {
+    switch (status) {
+      case "CONACT_NOT_EXIST":
+      case "CONTACT_NOT_EXIST":  return LOCALE.SOMETHING_WENT_WRONG;
+      case "EMPTY_FIRSTNAME":    return LOCALE.FIRST_NAME_REQUIRED;
+      case "EMPTY_LASTNAME":     return LOCALE.LASTNAME_REQUIRED;
+      case "MANY_DEFAULT_EMAIL": return LOCALE.ONLY_ONE_DEFAULT_EMAIL;
+      case "NO_DEFAULT_MAIL":    return LOCALE.AT_LEAST_ONE_DEFAULT_EMAIL;
+      case "SERVICE_ERROR":      return LOCALE.SOMETHING_WENT_WRONG;
+      default:                   return null;
+    }
+  }
+
   async _createTag() {
+    // Preserve the user's typed firstname/lastname/comment/emails/phones
+    // before the upcoming re-render — otherwise creating a tag would wipe
+    // any in-flight edits in the form.
+    if (this._editing) this._syncEditDom();
     const root = this.el?.querySelector(`.${this.fig.family}__new-tag-input input`);
     const name = root?.value?.trim();
     if (!name) return;
@@ -577,6 +782,36 @@ class __address_book extends LetcBox {
     } catch (err) { console.error("[address_book] tag create failed:", err); }
     if (root) root.value = "";
     this._refreshDetail();
+    this._refreshList();
+  }
+
+  async _deleteTag(trigger) {
+    const tagId = trigger.mget("tagId");
+    if (!tagId) return;
+    if (this._editing) this._syncEditDom();
+    if (!confirm(LOCALE.CONFIRM_DELETE_TAG)) return;
+    try {
+      await this.postService({
+        service: SERVICE.tagcontact.remove,
+        tag_id: tagId,
+        hub_id: Visitor.id,
+      });
+      this._tags = this._tags.filter((t) => t.tag_id !== tagId);
+      this._editTags = (this._editTags || []).filter((id) => id !== tagId);
+      if (this._selectedTagId === tagId) this._selectedTagId = null;
+      // Tag chips also appear in the contact rows — drop the deleted tag
+      // from every loaded contact so the sidebar updates without a refetch.
+      const stripTag = (c) => ({
+        ...c,
+        tag: (c.tag || []).filter((t) => (t.tag_id || t) !== tagId),
+      });
+      this._contacts = this._contacts.map(stripTag);
+      this._sentInvitations = this._sentInvitations.map(stripTag);
+    } catch (err) {
+      console.error("[address_book] tag remove failed:", err);
+    }
+    this._refreshDetail();
+    this._refreshList();
   }
 
   // ─── Import / Google sync ───────────────────────────────────────
@@ -728,7 +963,9 @@ class __address_book extends LetcBox {
   // ─── View accessors ─────────────────────────────────────────────
 
   _listForView() {
-    if (this._tab === "pending") return this._invitations;
+    if (this._tab === "pending") {
+      return [...this._invitations, ...this._sentInvitations];
+    }
     let list;
     if (this._serverSearchHits) {
       list = this._serverSearchHits;
@@ -745,12 +982,15 @@ class __address_book extends LetcBox {
     } else {
       list = this._contacts;
     }
+    const isBlocked = (c) => c.is_blocked === 1 || c.status === "blocked";
     if (this._tab === "blocked") {
-      list = list.filter((c) => c.is_blocked === 1 || c.status === "blocked");
+      list = list.filter(isBlocked);
+    } else if (this._tab === "all") {
+      // Server's my_contact_show_next returns blocked rows inside the active
+      // set; mirror the archived-tab isolation by excluding them from All.
+      list = list.filter((c) => !isBlocked(c));
     }
-    // Archived tab is already filtered server-side (option="archived"); no
-    // extra filter needed. Blocked rows that happen to be in the active set
-    // get filtered out only when needed via the case above.
+    // Archived tab is already filtered server-side (option="archived").
     if (this._selectedTagId) {
       list = list.filter((c) =>
         (c.tag || []).some((t) => t.tag_id === this._selectedTagId));
@@ -761,26 +1001,33 @@ class __address_book extends LetcBox {
   getTab() { return this._tab; }
   getSearch() { return this._search; }
   getSelectedKey() { return this._selectedKey; }
-  getInvitations() { return this._invitations || []; }
+  getInvitations() {
+    return [...(this._invitations || []), ...(this._sentInvitations || [])];
+  }
   getTags() { return this._tags || []; }
   getSelectedTagId() { return this._selectedTagId; }
   keyOf(c) { return idOf(c); }
 
   getSelectedContact() {
     if (!this._selectedKey) return null;
-    return [...this._contacts, ...this._invitations]
+    return [...this._contacts, ...this._invitations, ...this._sentInvitations]
       .find((c) => idOf(c) === this._selectedKey) || null;
   }
 
   isPendingTab() { return this._tab === "pending"; }
   getInviteDraft() { return this._inviteDraft || { email: "", message: "" }; }
   getInviteError() { return this._inviteError; }
+  isInviteSubmitting() { return this._inviteSubmitting === true; }
 
   isEditing() { return this._editing; }
   getEditError() { return this._editError; }
   getEditEmails() { return this._editEmails || []; }
   getEditPhones() { return this._editPhones || []; }
   getEditTags()   { return this._editTags || []; }
+  getEditFirstname() { return this._editFirstname || ""; }
+  getEditLastname()  { return this._editLastname || ""; }
+  getEditComment()   { return this._editComment || ""; }
+  isEditSubmitting() { return this._editSubmitting === true; }
 
   getImportError() { return this._importError; }
   getImportProgress() { return this._importProgress; }
