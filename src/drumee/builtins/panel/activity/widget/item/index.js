@@ -79,8 +79,19 @@ class __activity_item extends LetcBox {
         return;
       }
       default: {
-        if (parent && parent.onUiEvent) parent.onUiEvent(this, { service });
-        else if (super.onUiEvent) super.onUiEvent(cmd, args);
+        const fallback = service || this.mget(_a.service);
+        if (!fallback) return;
+        if (parent && parent.onUiEvent) {
+          parent.onUiEvent(this, {
+            service: fallback,
+            item_type: this.mget('item_type'),
+            item_key: this.mget('item_key'),
+            hub_id: this.mget('hub_id'),
+            drumate_id: this.mget('drumate_id'),
+          });
+        } else if (super.onUiEvent) {
+          super.onUiEvent(cmd, args);
+        }
       }
     }
   }
