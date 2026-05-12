@@ -512,6 +512,9 @@ class __widget_chat extends LetcBox {
       case _e.drop:
         target = this;
         break;
+      default:
+        target = this.getActiveWindow();
+        break;
     }
     if ((target == null)) {
       Butler.say(LOCALE.WRONG_DROP_AREA);
@@ -887,7 +890,7 @@ class __widget_chat extends LetcBox {
       case _a.personal:
         api = {
           service: SERVICE.chat.post,
-          entity_id: this.peerId,  // server accepts entity_id as alias of peer_id
+          peer_id: this.peerId,
           attachment: attachments,
           message,
           hub_id: this.hubId
@@ -1536,7 +1539,7 @@ class __widget_chat extends LetcBox {
     e.stopPropagation();
     this._dragDepth = 0;
     this.el.dataset.dragging = 0;
-    this.upload({ area: _e.drop, dataTransfer: e.dataTransfer });
+    this.upload(e);
   }
 
   static initClass() {
