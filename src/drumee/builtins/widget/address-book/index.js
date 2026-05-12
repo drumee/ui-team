@@ -761,12 +761,15 @@ class __address_book extends LetcBox {
     } else {
       list = this._contacts;
     }
+    const isBlocked = (c) => c.is_blocked === 1 || c.status === "blocked";
     if (this._tab === "blocked") {
-      list = list.filter((c) => c.is_blocked === 1 || c.status === "blocked");
+      list = list.filter(isBlocked);
+    } else if (this._tab === "all") {
+      // Server's my_contact_show_next returns blocked rows inside the active
+      // set; mirror the archived-tab isolation by excluding them from All.
+      list = list.filter((c) => !isBlocked(c));
     }
-    // Archived tab is already filtered server-side (option="archived"); no
-    // extra filter needed. Blocked rows that happen to be in the active set
-    // get filtered out only when needed via the case above.
+    // Archived tab is already filtered server-side (option="archived").
     if (this._selectedTagId) {
       list = list.filter((c) =>
         (c.tag || []).some((t) => t.tag_id === this._selectedTagId));
