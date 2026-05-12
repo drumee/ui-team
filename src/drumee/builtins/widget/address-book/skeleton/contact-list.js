@@ -133,7 +133,7 @@ module.exports = function (ui, contacts) {
               : null,
           ].filter(Boolean),
         }),
-        c.status === "received"
+        (c.status === "received" || c.status === "sent")
           ? Skeletons.Note({
               className: `${fig}__contact-pill`,
               content: LOCALE.PENDING,

@@ -27,6 +27,7 @@ class __address_book extends LetcBox {
     this._search = "";
     this._contacts = [];
     this._invitations = [];
+    this._sentInvitations = [];
     this._tags = [];
     this._selectedTagId = null;
     this._serverSearchHits = null;
@@ -53,7 +54,12 @@ class __address_book extends LetcBox {
 
   async onDomRefresh() {
     this.feed(require("./skeleton")(this));
-    await Promise.all([this._loadContacts(), this._loadInvitations(), this._loadTags()]);
+    await Promise.all([
+      this._loadContacts(),
+      this._loadInvitations(),
+      this._loadSentInvitations(),
+      this._loadTags(),
+    ]);
     this._refreshList();
     this.el.dataset.anim = "in";
   }
@@ -189,8 +195,11 @@ class __address_book extends LetcBox {
       case SERVICE.contact.change_status:
       case SERVICE.contact.block:
       case SERVICE.contact.unblock:
-        Promise.all([this._loadContacts(this._contactsOption || "active"), this._loadInvitations()])
-          .then(() => { this._refreshList(); this._refreshDetail(); });
+        Promise.all([
+          this._loadContacts(this._contactsOption || "active"),
+          this._loadInvitations(),
+          this._loadSentInvitations(),
+        ]).then(() => { this._refreshList(); this._refreshDetail(); });
         return;
       case SERVICE.contact.load:
         // CSV/VCF import progress
@@ -225,13 +234,34 @@ class __address_book extends LetcBox {
 
   async _loadInvitations() {
     try {
-      const rows = await this.postService({
+      // `invite_get` is a GET endpoint (per `_get` suffix). Using postService
+      // here returned empty silently and left the Pending tab blank for
+      // recipients — the legacy invite-notification widget uses fetchService.
+      const rows = await this.fetchService({
         service: SERVICE.contact.invite_get,
         hub_id: Visitor.id,
       });
       this._invitations = Array.isArray(rows) ? rows : [];
     } catch (err) {
       this._invitations = [];
+    }
+  }
+
+  // Invitations the current user has SENT (rows in `contact` with status='sent').
+  // Distinct from `_loadInvitations` which returns invitations received by us.
+  async _loadSentInvitations() {
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.contact.show_contact,
+        hub_id: Visitor.id,
+        option: "sent",
+      });
+      this._sentInvitations = (Array.isArray(rows) ? rows : []).map((c) => ({
+        ...c,
+        tag: normalizeTags(c.tag),
+      }));
+    } catch (err) {
+      this._sentInvitations = [];
     }
   }
 
@@ -253,14 +283,17 @@ class __address_book extends LetcBox {
     this._selectedKey = null;
     this._editing = false;
     this._serverSearchHits = null;
-    // The `my_contact_show_next` proc only honours 'active' or 'archived';
-    // anything else returns an empty list. Keep the active set for All,
-    // Pending, and Blocked tabs and filter client-side. Pending uses its own
-    // invitation list; Blocked falls back to client filter on `is_blocked`.
+    // `my_contact_show_next` honours 'active', 'archived', or 'sent'. The All
+    // and Blocked tabs share the 'active' fetch (Blocked filters client-side
+    // on `is_blocked`). Pending combines received invitations (notification
+    // proc) with sent ones (option='sent').
     const want = tab === "archived" ? "archived" : "active";
     const tasks = [];
     if (this._contactsOption !== want) tasks.push(this._loadContacts(want));
-    if (tab === "pending") tasks.push(this._loadInvitations());
+    if (tab === "pending") {
+      tasks.push(this._loadInvitations());
+      tasks.push(this._loadSentInvitations());
+    }
     if (tasks.length) await Promise.all(tasks);
     this._refreshList();
     this._refreshDetail();
@@ -353,7 +386,10 @@ class __address_book extends LetcBox {
       this._showToast(LOCALE.INVITATION_MAIL_SENT
         ? `${LOCALE.INVITATION_MAIL_SENT} ${email}`
         : "Invitation sent");
-      await this._loadContacts(this._contactsOption || "active");
+      await Promise.all([
+        this._loadContacts(this._contactsOption || "active"),
+        this._loadSentInvitations(),
+      ]);
       this._refreshList();
     } catch (err) {
       console.error("[address_book] contact.invite failed:", err);
@@ -761,7 +797,9 @@ class __address_book extends LetcBox {
   // ─── View accessors ─────────────────────────────────────────────
 
   _listForView() {
-    if (this._tab === "pending") return this._invitations;
+    if (this._tab === "pending") {
+      return [...this._invitations, ...this._sentInvitations];
+    }
     let list;
     if (this._serverSearchHits) {
       list = this._serverSearchHits;
@@ -797,14 +835,16 @@ class __address_book extends LetcBox {
   getTab() { return this._tab; }
   getSearch() { return this._search; }
   getSelectedKey() { return this._selectedKey; }
-  getInvitations() { return this._invitations || []; }
+  getInvitations() {
+    return [...(this._invitations || []), ...(this._sentInvitations || [])];
+  }
   getTags() { return this._tags || []; }
   getSelectedTagId() { return this._selectedTagId; }
   keyOf(c) { return idOf(c); }
 
   getSelectedContact() {
     if (!this._selectedKey) return null;
-    return [...this._contacts, ...this._invitations]
+    return [...this._contacts, ...this._invitations, ...this._sentInvitations]
       .find((c) => idOf(c) === this._selectedKey) || null;
   }
 
