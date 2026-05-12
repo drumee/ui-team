@@ -85,6 +85,22 @@ class __panel_activity extends LetcBox {
    * @returns 
    */
   getCurrentApi() {
+    if (this._filter === 'mentions') {
+      return {
+        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
+        hub_id: Visitor.id,
+        type: 'mention',
+        unread_only: this._unreadsOnly,
+      };
+    }
+    if (this._filter === 'shares') {
+      return {
+        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
+        hub_id: Visitor.id,
+        type: 'share',
+        unread_only: this._unreadsOnly,
+      };
+    }
     return {
       service: SERVICE.activity.get_feed,
       hub_id: Visitor.id,
@@ -510,7 +526,16 @@ class __panel_activity extends LetcBox {
     const dismissed = this._dismissedKeys || new Set();
     const live = items.filter((it) => {
       const key = `${it.category}:${it.key_id || it.drumate_id || it.hub_id || ''}`;
-      return !dismissed.has(key);
+      if (dismissed.has(key)) {
+        const dismissedAt = this._dismissedLastIds && this._dismissedLastIds.get(key);
+        if (it.last_id && Number(it.last_id) > Number(dismissedAt || 0)) {
+          dismissed.delete(key);
+          if (this._dismissedLastIds) this._dismissedLastIds.delete(key);
+          return true;
+        }
+        return false;
+      }
+      return true;
     });
     const unread_count = live.reduce((acc, it) => acc + (parseInt(it.cnt, 10) || 0), 0);
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
@@ -539,6 +564,10 @@ class __panel_activity extends LetcBox {
       e.kind = 'activity_item';
       e.event_type = it.category;
       e.type = it.category;
+      // item_type drives the dismiss routing in _dismissActivity: without it
+      // every row falls back to 'mfs' and persists nothing on hub_invite / chat
+      // / teamchat / etc. Keep this in sync with the category column.
+      e.item_type = it.category;
       e.item_key = `${it.category}:${it.key_id || it.drumate_id || it.hub_id || ''}`;
       switch (it.category) {
         case 'hub_invite':
@@ -624,6 +653,7 @@ class __panel_activity extends LetcBox {
         if (this.timer) return;
         this.timer = setTimeout(() => {
           this.refreshActivity();
+          this.shouldNofity();
           this.timer = null;
         }, 1000);
         break;
@@ -827,6 +857,11 @@ class __panel_activity extends LetcBox {
     if (itemKey) {
       this._dismissedKeys = this._dismissedKeys || new Set();
       this._dismissedKeys.add(itemKey);
+      const lastId = args.last_id
+        || (cmd && cmd.mget && cmd.mget('last_id'))
+        || 0;
+      this._dismissedLastIds = this._dismissedLastIds || new Map();
+      this._dismissedLastIds.set(itemKey, Number(lastId));
     }
     this._decrementBadge(1);
 

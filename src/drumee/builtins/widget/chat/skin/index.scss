@@ -167,10 +167,6 @@
       }
     }
 
-    .lib-messenger__icon.attach {
-      display: none;
-    }
-
     .lib-messenger__ui {
       height: auto;
     }
@@ -664,6 +660,14 @@
       .note-content {
         color: inherit;
       }
+    }
+  }
+}
+
+.widget-chat {
+  &[data-dragging="1"] {
+    & .widget-chat__drag-drop-wrapper {
+      display: flex !important;
     }
   }
 }
