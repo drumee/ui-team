@@ -157,6 +157,8 @@
   "INVALID_PHONE_FORMAT": "Formato de teléfono no válido",
   "TAGS_USAGE_GUIDE": "Haga clic en una etiqueta para asignarla o quitarla. Escriba un nombre y pulse + para crearla. Haga clic en × en una etiqueta para eliminarla de forma permanente.",
   "CONFIRM_DELETE_TAG": "¿Eliminar esta etiqueta? Se quitará de todos los contactos.",
+  "CANNOT_REMOVE_ONLY_DEFAULT_EMAIL": "No puede eliminar el correo predeterminado. Agregue otro correo y márquelo como predeterminado primero.",
+  "EMAIL_DUPLICATE_OF_DEFAULT": "Este correo ya está marcado como predeterminado. Use una dirección diferente.",
   "APPLY_AND_SAVE": "Aplicar y ahorrar",
   "CHANGE_UPLOAD_IMAGE": "Cambiar/Subir imagen",
   "DROP_FILES_HERE": "Suelte los archivos aquí para cargarlos",

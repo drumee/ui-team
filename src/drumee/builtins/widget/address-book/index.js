@@ -136,13 +136,27 @@ class __address_book extends LetcBox {
         this._editEmails.push({ email: "", category: "priv", is_default: 0 });
         return this._refreshDetail();
 
-      case "edit-remove-email":
+      case "edit-remove-email": {
         this._syncEditDom();
-        this._editEmails.splice(trigger.mget("rowIndex"), 1);
+        const idx = trigger.mget("rowIndex");
+        const row = this._editEmails[idx];
+        // Refuse to drop the only default — the contact must always have a
+        // default email. The UI already hides × on the default row, but this
+        // guards against any other trigger path.
+        const otherDefaults = this._editEmails.some(
+          (e, i) => i !== idx && e.is_default === 1
+        );
+        if (row && row.is_default === 1 && !otherDefaults) {
+          this._editError = LOCALE.CANNOT_REMOVE_ONLY_DEFAULT_EMAIL;
+          return this._refreshDetail();
+        }
+        this._editEmails.splice(idx, 1);
         if (this._editEmails.length && !this._editEmails.some((e) => e.is_default === 1)) {
           this._editEmails[0].is_default = 1;
         }
+        this._editError = null;
         return this._refreshDetail();
+      }
 
       case "edit-set-default-email": {
         this._syncEditDom();
@@ -641,6 +655,23 @@ class __address_book extends LetcBox {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (emails.some((e) => !emailRegex.test(e.email.trim()))) {
       this._editError = LOCALE.INVALID_EMAIL_FORMAT;
+      return this._refreshDetail();
+    }
+    const defaultEmails = emails.filter((e) => e.is_default === 1);
+    if (defaultEmails.length === 0) {
+      this._editError = LOCALE.AT_LEAST_ONE_DEFAULT_EMAIL;
+      return this._refreshDetail();
+    }
+    if (defaultEmails.length > 1) {
+      this._editError = LOCALE.ONLY_ONE_DEFAULT_EMAIL;
+      return this._refreshDetail();
+    }
+    const defaultValue = defaultEmails[0].email.trim().toLowerCase();
+    const additionalDuplicate = emails.some(
+      (e) => e.is_default !== 1 && e.email.trim().toLowerCase() === defaultValue
+    );
+    if (additionalDuplicate) {
+      this._editError = LOCALE.EMAIL_DUPLICATE_OF_DEFAULT;
       return this._refreshDetail();
     }
     const phoneRegex = /^[+]?[\d\s\-()]{6,}$/;

@@ -1393,6 +1393,8 @@
   "INVALID_PHONE_FORMAT": "Invalid phone format",
   "TAGS_USAGE_GUIDE": "Click a tag to assign or unassign it. Type a name and press + to create. Click × on a tag to delete it permanently.",
   "CONFIRM_DELETE_TAG": "Delete this tag? It will be removed from every contact.",
+  "CANNOT_REMOVE_ONLY_DEFAULT_EMAIL": "You cannot remove the default email. Add another email and mark it as default first.",
+  "EMAIL_DUPLICATE_OF_DEFAULT": "This email is already set as the default. Use a different address.",
   "MOBILE_NUMBER_REQUIRED": "Mobile number is required",
   "CITY_REQUIRED": "City is required",
   "GENERAL_CONDITIONS_OF_USE": "General conditions of use",

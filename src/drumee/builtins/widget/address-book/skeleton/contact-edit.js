@@ -67,15 +67,16 @@ module.exports = function (ui, contact, ctx) {
           readonly: isDefault ? 1 : undefined,
           dataset: isDefault ? { disabled: 1 } : undefined,
         }),
-        Skeletons.Note({
-          className: `${fig}__row-pill`,
-          dataset: { active: isDefault ? 1 : 0 },
-          content: LOCALE.DEFAULT,
-          bubble: 0,
-          service: isDefault ? null : "edit-set-default-email",
-          uiHandler: [ui],
-          rowIndex: idx,
-        }),
+        isDefault
+          ? Skeletons.Note({
+              className: `${fig}__row-pill`,
+              dataset: { active: 1 },
+              content: LOCALE.DEFAULT,
+              bubble: 0,
+              uiHandler: [ui],
+              rowIndex: idx,
+            })
+          : null,
         isDefault
           ? null
           : Skeletons.Note({
