@@ -33,6 +33,7 @@ class __address_book extends LetcBox {
     this._selectedKey = null;
     this._inviteDraft = { email: "", message: "" };
     this._inviteError = null;
+    this._inviteSubmitting = false;
     this._editing = false;
     this._editError = null;
     this._editEmails = [];
@@ -292,6 +293,8 @@ class __address_book extends LetcBox {
   // ─── Mutations ──────────────────────────────────────────────────
 
   async _submitInvite() {
+    if (this._inviteSubmitting) return;
+
     const fields = (this.getData?.(_a.formItem)) || {};
     const email = String(fields.email || "").trim();
     const message = String(fields.message || "").trim();
@@ -302,7 +305,17 @@ class __address_book extends LetcBox {
       return this._renderInviteModal();
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this._inviteError = LOCALE.INVALID_EMAIL_FORMAT;
+      this._inviteDraft = { email, message };
+      return this._renderInviteModal();
+    }
+
     this._inviteDraft = { email, message };
+    this._inviteError = null;
+    this._inviteSubmitting = true;
+    this._renderInviteModal();
+
     try {
       const data = await this.postService({
         service: SERVICE.contact.invite,
@@ -313,8 +326,10 @@ class __address_book extends LetcBox {
       const errorMsg = this._inviteErrorMessage(data && data.status);
       if (errorMsg) {
         this._inviteError = errorMsg;
+        this._inviteSubmitting = false;
         return this._renderInviteModal();
       }
+      this._inviteSubmitting = false;
       this._inviteError = null;
       this._inviteDraft = { email: "", message: "" };
       this._closeInviteModal();
@@ -325,6 +340,7 @@ class __address_book extends LetcBox {
       this._refreshList();
     } catch (err) {
       console.error("[address_book] contact.invite failed:", err);
+      this._inviteSubmitting = false;
       this._inviteError = LOCALE.SOMETHING_WENT_WRONG;
       this._renderInviteModal();
     }
@@ -775,6 +791,7 @@ class __address_book extends LetcBox {
   isPendingTab() { return this._tab === "pending"; }
   getInviteDraft() { return this._inviteDraft || { email: "", message: "" }; }
   getInviteError() { return this._inviteError; }
+  isInviteSubmitting() { return this._inviteSubmitting === true; }
 
   isEditing() { return this._editing; }
   getEditError() { return this._editError; }

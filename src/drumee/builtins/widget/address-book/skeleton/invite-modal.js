@@ -2,11 +2,12 @@ module.exports = function (ui) {
   const fig = ui.fig.family;
   const draft = ui.getInviteDraft();
   const error = ui.getInviteError();
+  const submitting = ui.isInviteSubmitting();
 
   return Skeletons.Box.Y({
     className: `${fig}__modal-backdrop`,
     bubble: 0,
-    service: "cancel-invite",
+    service: submitting ? null : "cancel-invite",
     uiHandler: [ui],
     kids: [
       Skeletons.Box.Y({
@@ -15,6 +16,7 @@ module.exports = function (ui) {
         kids: [
           Skeletons.Box.Y({
             className: `${fig}__modal-form`,
+            dataset: submitting ? { submitting: 1 } : undefined,
             kids: [
               Skeletons.Box.X({
                 className: `${fig}__modal-header`,
@@ -27,7 +29,9 @@ module.exports = function (ui) {
                     className: `${fig}__modal-close`,
                     ico: "cross",
                     bubble: 0,
-                    service: "cancel-invite",
+                    service: submitting ? null : "cancel-invite",
+                    state: submitting ? 0 : 1,
+                    dataset: submitting ? { disabled: 1 } : undefined,
                     uiHandler: [ui],
                   }),
                 ],
@@ -55,7 +59,8 @@ module.exports = function (ui) {
                     autofocus: 1,
                     preselect: 1,
                     bubble: 0,
-                    service: "submit-invite",
+                    service: submitting ? null : "submit-invite",
+                    dataset: submitting ? { disabled: 1 } : undefined,
                     uiHandler: [ui],
                   }),
                 ],
@@ -76,6 +81,7 @@ module.exports = function (ui) {
                     rows: 3,
                     ignoreEnter: true,
                     bubble: 0,
+                    dataset: submitting ? { disabled: 1 } : undefined,
                   }),
                 ],
               }),
@@ -86,14 +92,18 @@ module.exports = function (ui) {
                     className: `${fig}__btn ${fig}__btn--secondary`,
                     content: LOCALE.CANCEL,
                     bubble: 0,
-                    service: "cancel-invite",
+                    service: submitting ? null : "cancel-invite",
+                    state: submitting ? 0 : 1,
+                    dataset: submitting ? { disabled: 1 } : undefined,
                     uiHandler: [ui],
                   }),
                   Skeletons.Note({
                     className: `${fig}__btn ${fig}__btn--primary`,
-                    content: LOCALE.INVITE,
+                    content: submitting ? LOCALE.SENDING : LOCALE.INVITE,
                     bubble: 0,
-                    service: "submit-invite",
+                    service: submitting ? null : "submit-invite",
+                    state: submitting ? 0 : 1,
+                    dataset: submitting ? { disabled: 1, loading: 1 } : undefined,
                     uiHandler: [ui],
                   }),
                 ],

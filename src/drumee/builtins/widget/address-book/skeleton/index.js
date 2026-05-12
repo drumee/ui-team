@@ -19,7 +19,6 @@ module.exports = function (ui) {
                 bubble: 0,
                 service: "open-import",
                 uiHandler: [ui],
-                tooltips: LOCALE.IMPORT,
                 kids: [
                   Skeletons.Note({
                     className: `${fig}__icon-btn-label`,
@@ -52,6 +51,7 @@ module.exports = function (ui) {
             value: ui.getSearch(),
             require: "any",
             mode: "commit",
+            interactive: 1,
             bubble: 0,
             service: "search-input",
             uiHandler: [ui],

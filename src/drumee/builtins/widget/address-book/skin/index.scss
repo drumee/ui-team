@@ -587,6 +587,39 @@
         border-color: #d65f59;
       }
     }
+
+    &[data-disabled="1"] {
+      cursor: not-allowed;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    &[data-loading="1"] {
+      position: relative;
+      padding-left: 28px;
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        width: 12px;
+        height: 12px;
+        margin-top: -6px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: address-book-spin 0.6s linear infinite;
+      }
+    }
+  }
+
+  &__modal-form[data-submitting="1"] {
+    [data-disabled="1"] { pointer-events: none; }
+  }
+
+  @keyframes address-book-spin {
+    to { transform: rotate(360deg); }
   }
 
   // ── Empty detail ──────────────────────────────────────────────────
