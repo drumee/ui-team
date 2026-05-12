@@ -512,6 +512,9 @@ class __widget_chat extends LetcBox {
       case _e.drop:
         target = this;
         break;
+      default:
+        target = this.getActiveWindow();
+        break;
     }
     if ((target == null)) {
       Butler.say(LOCALE.WRONG_DROP_AREA);
@@ -1536,7 +1539,7 @@ class __widget_chat extends LetcBox {
     e.stopPropagation();
     this._dragDepth = 0;
     this.el.dataset.dragging = 0;
-    this.upload({ area: _e.drop, dataTransfer: e.dataTransfer });
+    this.upload(e);
   }
 
   static initClass() {
