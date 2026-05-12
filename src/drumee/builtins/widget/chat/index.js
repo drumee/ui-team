@@ -984,6 +984,9 @@ class __widget_chat extends LetcBox {
       this.__list.scrollToBottom();
     }
     this.clearMessageBlock();
+    console.log('[DEBUG chat.post] payload:', JSON.stringify(api));
+    console.log('[DEBUG chat.post] attachmentIds:', JSON.stringify(this.attachmentList && this.attachmentList.getAttachmentIds()));
+    console.log('[DEBUG chat.post] hubId:', this.hubId, 'peerId:', this.peerId, 'modelNid:', this.mget(_a.nid), 'home:', JSON.stringify(this.mget(_a.home)));
     this.postService(api).then(data => {
       this.attachmentList.clearAttachment();
       if (_.isEmpty(data)) {
