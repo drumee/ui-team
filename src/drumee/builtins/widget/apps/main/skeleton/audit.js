@@ -49,6 +49,51 @@ function mapAuditRow(row) {
   };
 }
 
+const RANGE_OPTIONS = [
+  { key: "7d", localeKey: "LAST_7_DAYS", fallback: "Last 7 Days" },
+  { key: "30d", localeKey: "LAST_30_DAYS", fallback: "Last 30 Days" },
+  { key: "90d", localeKey: "LAST_90_DAYS", fallback: "Last 90 Days" },
+  { key: "all", localeKey: "ALL_TIME", fallback: "All time" },
+];
+
+function rangeLabel(key) {
+  const opt = RANGE_OPTIONS.find((o) => o.key === key) || RANGE_OPTIONS[1];
+  return LOCALE[opt.localeKey] || opt.fallback;
+}
+
+function rangeMenu(ui) {
+  const pfx = ui.fig.family;
+  const current = ui._auditRangeKey || "30d";
+  return Skeletons.Box.Y({
+    className: `${pfx}__audit-range-menu`,
+    kids: RANGE_OPTIONS.map((opt) =>
+      Skeletons.Box.X({
+        className: `${pfx}__audit-range-item${current === opt.key ? ` ${pfx}__audit-range-item--selected` : ""}`,
+        service: "apps-audit-select-range",
+        uiHandler: [ui],
+        range_key: opt.key,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__audit-range-item-label`,
+            content: LOCALE[opt.localeKey] || opt.fallback,
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__audit-range-item-radio${current === opt.key ? ` ${pfx}__audit-range-item-radio--selected` : ""}`,
+            kids:
+              current === opt.key
+                ? [
+                    Skeletons.Box.X({
+                      className: `${pfx}__audit-range-item-radio-dot`,
+                    }),
+                  ]
+                : [],
+          }),
+        ],
+      }),
+    ),
+  });
+}
+
 function auditHeader(ui) {
   const pfx = ui.fig.family;
   return Skeletons.Box.X({
@@ -80,23 +125,29 @@ function auditHeader(ui) {
             ],
           }),
           Skeletons.Box.X({
-            className: `${pfx}__audit-range`,
-            service: "apps-audit-range",
-            uiHandler: [ui],
+            className: `${pfx}__audit-range-wrap`,
             kids: [
-              Skeletons.Button.Svg({
-                ico: "calendar",
-                className: `${pfx}__audit-range-ico`,
+              Skeletons.Box.X({
+                className: `${pfx}__audit-range${ui._auditRangeOpen ? ` ${pfx}__audit-range--open` : ""}`,
+                service: "apps-audit-range",
+                uiHandler: [ui],
+                kids: [
+                  Skeletons.Button.Svg({
+                    ico: "calendar",
+                    className: `${pfx}__audit-range-ico`,
+                  }),
+                  Skeletons.Note({
+                    className: `${pfx}__audit-range-label`,
+                    content: rangeLabel(ui._auditRangeKey || "30d"),
+                  }),
+                  Skeletons.Button.Svg({
+                    ico: "editbox_arrow--down",
+                    className: `${pfx}__audit-range-chevron`,
+                  }),
+                ],
               }),
-              Skeletons.Note({
-                className: `${pfx}__audit-range-label`,
-                content: LOCALE.LAST_30_DAYS || "Last 30 Days",
-              }),
-              Skeletons.Button.Svg({
-                ico: "editbox_arrow--down",
-                className: `${pfx}__audit-range-chevron`,
-              }),
-            ],
+              ui._auditRangeOpen ? rangeMenu(ui) : null,
+            ].filter(Boolean),
           }),
           Skeletons.Box.X({
             className: `${pfx}__audit-export`,

@@ -127,7 +127,7 @@ function deriveLastActive(row) {
 }
 
 function mapMember(row) {
-  const id = row.drumate_id || row.user_id || row.id;
+  const id = row.drumate_id || row.user_id || row.uid || row.id;
   const fullname =
     row.fullname || `${row.firstname || ""} ${row.lastname || ""}`.trim();
   return {
@@ -180,8 +180,11 @@ class apps_main extends LetcBox {
     this._auditState = "idle";
     this._auditPage = 1;
     this._auditUsername = "";
-    this._auditFrom = 0;
-    this._auditTo = 0;
+    // '7d' | '30d' | '90d' | 'all' — the date-range pill is a preset picker;
+    // _auditFrom/_auditTo are derived from this on every fetch so the key is
+    // the single source of truth.
+    this._auditRangeKey = "30d";
+    this._auditRangeOpen = false;
     this._orgStorageStats = [];
     this._orgUserStorage = [];
     this._orgUserStorageTotal = 0;
@@ -265,6 +268,31 @@ class apps_main extends LetcBox {
         this._render();
       }
     }
+    if (this._auditRangeOpen) {
+      const rangeEl =
+        this.el && this.el.querySelector(".apps-main__audit-range");
+      const menuEl =
+        this.el && this.el.querySelector(".apps-main__audit-range-menu");
+      if (
+        rangeEl &&
+        !rangeEl.contains(e.target) &&
+        menuEl &&
+        !menuEl.contains(e.target)
+      ) {
+        this._auditRangeOpen = false;
+        this._render();
+      }
+    }
+  }
+
+  // Derive Unix-second from_time/to_time from the current preset key. The
+  // backend already treats 0 as "no bound", so 'all' returns {0, 0}.
+  _auditRangeWindow() {
+    const key = this._auditRangeKey || "30d";
+    if (key === "all") return { from: 0, to: 0 };
+    const days = key === "7d" ? 7 : key === "90d" ? 90 : 30;
+    const now = Math.floor(Date.now() / 1000);
+    return { from: now - days * 86400, to: now };
   }
 
   _render() {
@@ -367,10 +395,11 @@ class apps_main extends LetcBox {
     this._auditState = "loading";
     this._render();
     try {
+      const { from, to } = this._auditRangeWindow();
       const res = await this.postService(SERVICE.admin.get_audit_logs, {
         username: this._auditUsername || "",
-        from_time: this._auditFrom || 0,
-        to_time: this._auditTo || 0,
+        from_time: from,
+        to_time: to,
         page: this._auditPage || 1,
       });
       this._auditLogs = Array.isArray(res) ? res : (res && res.data) || [];
@@ -392,9 +421,10 @@ class apps_main extends LetcBox {
 
   async _loadAuditStats() {
     try {
+      const { from, to } = this._auditRangeWindow();
       const res = await this.postService(SERVICE.admin.get_audit_stats, {
-        from_time: this._auditFrom || 0,
-        to_time: this._auditTo || 0,
+        from_time: from,
+        to_time: to,
       });
       this._auditStats = res || null;
     } catch (e) {
@@ -405,10 +435,11 @@ class apps_main extends LetcBox {
 
   async _exportAuditLogs() {
     try {
+      const { from, to } = this._auditRangeWindow();
       const res = await this.postService(SERVICE.admin.export_audit_logs, {
         username: this._auditUsername || "",
-        from_time: this._auditFrom || 0,
-        to_time: this._auditTo || 0,
+        from_time: from,
+        to_time: to,
       });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
       const cols = [
@@ -811,6 +842,7 @@ class apps_main extends LetcBox {
   }
 
   toggleMember(id) {
+    if (this._isSelf(id)) return;
     if (this._selected.has(id)) this._selected.delete(id);
     else this._selected.add(id);
     this._render();
@@ -818,13 +850,15 @@ class apps_main extends LetcBox {
 
   toggleAll() {
     // Operate on the visible (role-filtered) subset so the header checkbox
-    // reflects what the user sees.
-    const visible =
+    // reflects what the user sees. The current visitor is excluded so the
+    // header checkbox can never schedule self-removal.
+    const visible = (
       this._roleFilter && this._roleFilter !== "all"
         ? this._members.filter(
             (m) => m && m.role && m.role.variant === this._roleFilter,
           )
-        : this._members;
+        : this._members
+    ).filter((m) => !this._isSelf(m.id));
     const allSelected =
       visible.length > 0 && visible.every((m) => this._selected.has(m.id));
     if (allSelected) {
@@ -861,6 +895,7 @@ class apps_main extends LetcBox {
   //  Edit-member popup
   // ─────────────────────────────────────────────────────────
   async _openEditMember(memberId) {
+    if (this._isSelf(memberId)) return;
     const member = this._members.find((m) => m.id === memberId);
     if (!member) return;
     this._editingMember = member;
@@ -935,15 +970,20 @@ class apps_main extends LetcBox {
   //  Delete member
   // ─────────────────────────────────────────────────────────
   async _deleteMember(memberId) {
+    if (memberId == null || memberId === "") {
+      this.warn && this.warn("member_delete: missing memberId", memberId);
+      return;
+    }
+    if (this._isSelf(memberId)) return;
     try {
       if (this._role === "admin") {
         await this.postService(SERVICE.admin.hub_member_remove, {
           hub_id: this._activeAdminHub,
-          user_id: memberId,
+          uid: memberId,
         });
       } else {
         await this.postService(SERVICE.adminpanel.member_delete, {
-          user_id: memberId,
+          uid: memberId,
         });
       }
       this._selected.delete(memberId);
@@ -953,6 +993,13 @@ class apps_main extends LetcBox {
     await this._loadMemberStats();
     this._clampPage();
     this._loadMembers();
+  }
+
+  _isSelf(memberId) {
+    if (memberId == null) return false;
+    const me = typeof Visitor !== "undefined" && Visitor ? Visitor.id : null;
+    if (me == null) return false;
+    return String(memberId) === String(me);
   }
 
   _clampPage() {
@@ -1221,7 +1268,19 @@ class apps_main extends LetcBox {
         return this._loadAuditLogs();
 
       case "apps-audit-range":
-        return;
+        this._auditRangeOpen = !this._auditRangeOpen;
+        return this._render();
+
+      case "apps-audit-select-range": {
+        const key = (cmd && cmd.mget && cmd.mget("range_key")) || "30d";
+        this._auditRangeOpen = false;
+        if (key === this._auditRangeKey) return this._render();
+        this._auditRangeKey = key;
+        this._auditPage = 1;
+        this._render();
+        this._loadAuditStats();
+        return this._loadAuditLogs();
+      }
 
       case "apps-storage-retention":
         this._storageView = "retention";
@@ -1391,7 +1450,7 @@ class apps_main extends LetcBox {
   }
 
   async _removeSelected() {
-    const ids = Array.from(this._selected);
+    const ids = Array.from(this._selected).filter((id) => !this._isSelf(id));
     if (!ids.length) return;
     const isAdmin = this._role === "admin";
     const svc = isAdmin
@@ -1400,8 +1459,8 @@ class apps_main extends LetcBox {
     for (const id of ids) {
       try {
         const payload = isAdmin
-          ? { hub_id: this._activeAdminHub, user_id: id }
-          : { user_id: id };
+          ? { hub_id: this._activeAdminHub, uid: id }
+          : { uid: id };
         await this.postService(svc, payload);
       } catch (e) {
         this.warn && this.warn(`member_delete ${id} failed`, e);

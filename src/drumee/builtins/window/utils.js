@@ -760,6 +760,7 @@ class __window_mfs extends DrumeeMFS {
       case SERVICE.desk.create_hub:
       case SERVICE.hub.add_contributors:
       case SERVICE.media.make_dir:
+      case SERVICE.media.restore:
       case SERVICE.media.restore_into:
       case SERVICE.media.upload:
         this.newContent({ data }, options);
