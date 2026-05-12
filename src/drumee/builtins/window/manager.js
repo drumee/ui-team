@@ -195,6 +195,9 @@ class __window_manager extends mfsInteract {
         }
         target.el.dataset.over = _a.off;
         break;
+      default:
+        target = this._target || this.getActiveWindow();
+        break;
     }
 
     if (target == null) {
