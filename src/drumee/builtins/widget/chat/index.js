@@ -1507,7 +1507,46 @@ class __widget_chat extends LetcBox {
     this.clearReplyMessage();
   }
 
+  // ── Drag-and-drop onto the whole chat panel ──────────────────────────────
+  // Uses a depth counter so enter/leave events from child elements don't
+  // cause the overlay to flicker. The window-manager handles drops in
+  // floating windows (window-bigchat, window-channel) via data-over; this
+  // handles the panel context (chat-p2p sidebar) via data-dragging.
 
+  _onDragEnter(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this._dragDepth = (this._dragDepth || 0) + 1;
+    if (this._dragDepth === 1) this.el.dataset.dragging = 1;
+  }
+
+  _onDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  _onDragLeave(e) {
+    e.stopPropagation();
+    this._dragDepth = Math.max(0, (this._dragDepth || 0) - 1);
+    if (this._dragDepth === 0) this.el.dataset.dragging = 0;
+  }
+
+  _onDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this._dragDepth = 0;
+    this.el.dataset.dragging = 0;
+    this.upload({ area: _e.drop, dataTransfer: e.dataTransfer });
+  }
+
+  static initClass() {
+    this.prototype.events = {
+      dragenter: '_onDragEnter',
+      dragover:  '_onDragOver',
+      dragleave: '_onDragLeave',
+      drop:      '_onDrop',
+    };
+  }
 }
 
 
