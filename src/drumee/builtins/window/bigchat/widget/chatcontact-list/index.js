@@ -253,6 +253,9 @@ class ___widget_chatcontactList extends LetcBox {
         if (_.isEmpty(msg)) {
           msg = '_';
         }
+        if (msg && typeof msg === 'string') {
+          msg = msg.replace(/\[@([^\]]+)\]\((?:user|mention)[^)]*\)/g, '@$1');
+        }
 
         item.mset(_a.message, msg);
         item.__message.set(_a.content, msg);
@@ -316,6 +319,9 @@ class ___widget_chatcontactList extends LetcBox {
         msg = data.message;
         if (_.isEmpty(msg) && (data.is_attachment === 1)) {
           msg = LOCALE.ATTACHMENT;
+        }
+        if (msg && typeof msg === 'string') {
+          msg = msg.replace(/\[@([^\]]+)\]\((?:user|mention)[^)]*\)/g, '@$1');
         }
 
         item.mset('room_count', room_count);
