@@ -311,12 +311,29 @@ class __address_book extends LetcBox {
       return this._renderInviteModal();
     }
 
+    const ownEmail = String((Visitor.profile() || {}).email || "").trim().toLowerCase();
+    if (ownEmail && email.toLowerCase() === ownEmail) {
+      this._inviteError = LOCALE.CANNOT_ADD_SELF_AS_CONTACT;
+      this._inviteDraft = { email, message };
+      return this._renderInviteModal();
+    }
+
     this._inviteDraft = { email, message };
     this._inviteError = null;
     this._inviteSubmitting = true;
     this._renderInviteModal();
 
     try {
+      const { email: exists } = await this.postService({
+        service: SERVICE.yp.email_exists,
+        value: email,
+        hub_id: Visitor.id,
+      }) || {};
+      if (!exists) {
+        this._inviteError = LOCALE.OOPS_EMAIL_NOT_FOUND;
+        this._inviteSubmitting = false;
+        return this._renderInviteModal();
+      }
       const data = await this.postService({
         service: SERVICE.contact.invite,
         email,

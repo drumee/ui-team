@@ -1909,6 +1909,7 @@
   "NEW_CODE_RESENT": "Se ha reenviado un nuevo código.",
   "PASSWORD_MATCH": "Пароль совпал",
   "OOPS_EMAIL_NOT_FOUND": "Упс, мы не нашли этот e-mail адрес. Пожалуйста, проверьте.",
+  "CANNOT_ADD_SELF_AS_CONTACT": "Вы не можете добавить себя в контакты",
   "APPLY_AND_SAVE": "Подать заявку и сохранить",
   "CHANGE_UPLOAD_IMAGE": "Изменить/загрузить изображение",
   "DROP_FILES_HERE": "Перетащите файлы сюда для загрузки",

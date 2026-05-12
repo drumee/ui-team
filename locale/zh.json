@@ -1909,6 +1909,7 @@
   "NEW_CODE_RESENT": "已重新发布新代码",
   "PASSWORD_MATCH": "密码匹配",
   "OOPS_EMAIL_NOT_FOUND": "哎呀，我们没有找到这封邮件。 请检查",
+  "CANNOT_ADD_SELF_AS_CONTACT": "您不能将自己添加为联系人",
   "APPLY_AND_SAVE": "申请并保存",
   "CHANGE_UPLOAD_IMAGE": "更改/上传图片",
   "DROP_FILES_HERE": "文件拖放到这里即可上传",

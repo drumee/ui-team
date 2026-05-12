@@ -1909,6 +1909,7 @@
   "NEW_CODE_RESENT": "Un nouveau code a été renvoyé.",
   "PASSWORD_MATCH": "Correspondance du mot de passe",
   "OOPS_EMAIL_NOT_FOUND": "Oups... Nous n'avons pas trouvé l'E-mail saisi. Veuillez vérifier.",
+  "CANNOT_ADD_SELF_AS_CONTACT": "Vous ne pouvez pas vous ajouter vous-même comme contact",
   "APPLY_AND_SAVE": "Appliquer et enregistrer",
   "CHANGE_UPLOAD_IMAGE": "Modifier / Envoyer une image",
   "DROP_FILES_HERE": "Déposez les fichiers ici pour les télécharger.",
