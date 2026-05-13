@@ -142,11 +142,20 @@ class __panel_activity extends LetcBox {
         this.setState(0);
         return Desk.togglePanel('address_book', 'chat-panel');
 
-      case 'open-chat':
+      case 'open-chat': {
+        const drumate_id = args && args.drumate_id;
         this._dismissFromOpen(cmd, args);
         this.activityState = 0;
         this.setState(0);
-        return Desk.togglePanel('chat_p2p', 'chat-panel');
+        Desk.togglePanel('chat_p2p', 'chat-panel').then(() => {
+          if (!drumate_id) return;
+          Desk.ensurePart('chat-panel').then(p => {
+            const widget = p && p.children && p.children.last && p.children.last();
+            if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id);
+          });
+        });
+        return;
+      }
 
       case 'open-activity':
         this._dismissFromOpen(cmd, args);

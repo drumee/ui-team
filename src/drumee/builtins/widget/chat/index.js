@@ -890,11 +890,10 @@ class __widget_chat extends LetcBox {
       case _a.personal:
         api = {
           service: SERVICE.chat.post,
-          peer_id: this.peerId,
+          hub_id: this.hubId,
+          entity_id: this.peerId,
           attachment: attachments,
           message,
-          hub_id: this.hubId,
-          nid: this.mget(_a.nid)
         };
         break;
 
