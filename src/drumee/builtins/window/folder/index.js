@@ -479,7 +479,15 @@ class __window_folder extends mfsInteract {
       area: this.mget(_a.area),
     };
 
-    const service = [_a.public, _a.share, _a.private].includes(this.mget(_a.area))
+    // The user is INSIDE a folder window — "Add new → Folder" means create a
+    // sub-folder, not a new top-level hub. `desk.create_hub` is restricted to
+    // admin-level callers and was returning 403 for ordinary members. Only
+    // route to `desk.create_hub` when we are still at the hub root (nid ==
+    // hub_id) AND the area is one of the desk-managed areas; otherwise use
+    // the regular `media.make_dir` sub-folder path.
+    const atHubRoot = String(nid) === String(hub_id);
+    const isDeskArea = [_a.public, _a.share, _a.private].includes(this.mget(_a.area));
+    const service = (atHubRoot && isDeskArea)
       ? SERVICE.desk.create_hub
       : SERVICE.media.make_dir;
 

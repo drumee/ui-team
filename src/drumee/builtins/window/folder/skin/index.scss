@@ -745,12 +745,24 @@
     border-radius: 4px;
     text-align: center;
     cursor: pointer;
+    // Skeletons.Note renders a `.note-content` wrapper inside this Box; the
+    // wrapper picks up the Box's default left alignment, so the visible
+    // label sits at the left edge. Center both the wrapper and the inner
+    // text so the "Create" label sits in the middle of the full-width button.
+    align-items: center;
+    justify-content: center;
     @include drumee.typo(
       $size: 14px,
       $line: 20px,
       $weight: 600,
       $color: #ffffff
     );
+
+    .note-content {
+      width: 100%;
+      text-align: center;
+      justify-content: center;
+    }
 
     &.primary {
       background: #433cc5;
