@@ -402,8 +402,47 @@ class __window_folder extends mfsInteract {
       case "remove-selection":
         return Wm.removeMediaSelection(cmd);
 
+      case "forward-message":
+        return this.openForwardDialog();
+
+      case "close-overlay":
+        return this.closeForwardDialog();
+
       default:
         super.onUiEvent(cmd, args);
+    }
+  }
+
+  /**
+   * Open forward picker dialog. Reuses widget_chat_item_forward from bigchat.
+   * Pulls selected messages + hub from the folder chat widget.
+   */
+  openForwardDialog() {
+    const chat = this.getPart && this.getPart("folder-chat");
+    if (!chat || _.isEmpty(chat._selectedMessages)) return;
+    this.ensurePart("wrapper-dialog").then((wrapper) => {
+      this.dialogWrapper = wrapper;
+      wrapper.clear();
+      // chat-item-forward's closeOverlay does source.getItemsByKind('widget_chat'),
+      // so source must be a container holding the chat widget — this window-folder.
+      wrapper.feed({
+        kind: "widget_chat_item_forward",
+        source: this,
+        messages: chat._selectedMessages,
+        msghubID: chat.hubId,
+        uiHandler: [this],
+      });
+    });
+  }
+
+  /**
+   * Close the forward picker overlay and reset chat selection state.
+   */
+  closeForwardDialog() {
+    if (this.dialogWrapper) this.dialogWrapper.clear();
+    const chat = this.getPart && this.getPart("folder-chat");
+    if (chat && _.isFunction(chat.disableMessageSelection)) {
+      chat.disableMessageSelection();
     }
   }
 
