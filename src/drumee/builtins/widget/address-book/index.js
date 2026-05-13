@@ -686,16 +686,16 @@ class __address_book extends LetcBox {
       this._editError = LOCALE.FIRST_NAME_REQUIRED;
       return this._refreshDetail();
     }
-    if (firstname.length < 6) {
-      this._editError = LOCALE.FIRSTNAME_MIN_6_CHARS;
+    if (firstname.length < 2) {
+      this._editError = LOCALE.FIRSTNAME_MIN_2_CHARS;
       return this._refreshDetail();
     }
     if (lastname.length === 0) {
       this._editError = LOCALE.LASTNAME_REQUIRED;
       return this._refreshDetail();
     }
-    if (lastname.length < 6) {
-      this._editError = LOCALE.LASTNAME_MIN_6_CHARS;
+    if (lastname.length < 2) {
+      this._editError = LOCALE.LASTNAME_MIN_2_CHARS;
       return this._refreshDetail();
     }
     if (!emails.length) {
@@ -729,6 +729,73 @@ class __address_book extends LetcBox {
       this._editError = LOCALE.INVALID_PHONE_FORMAT;
       return this._refreshDetail();
     }
+
+    // Cross-contact email dedup. Two layers, both run before submit so we
+    // never reach `contact.update` (which clears the email list before
+    // reinserting it, so a mid-update collision would leave a partial state):
+    //
+    //   1. Local pass against `_contacts` — catches the common "this email is
+    //      another contact's default" case using the data already in memory,
+    //      and works even before the server endpoint is deployed.
+    //   2. Server pass via `contact.email_in_use` — comprehensive (checks
+    //      every contact_email row, not just defaults). Skipped silently if
+    //      the endpoint isn't registered yet.
+    const seenEmails = new Set();
+    const uniqueEmails = [];
+    for (const e of emails) {
+      const v = (e.email || "").trim().toLowerCase();
+      if (v && !seenEmails.has(v)) { seenEmails.add(v); uniqueEmails.push(v); }
+    }
+
+    const reportConflict = (email, conflict) => {
+      const who = [conflict.firstname, conflict.lastname].filter(Boolean).join(" ").trim()
+        || conflict.entity
+        || conflict.email
+        || "";
+      const tmpl = LOCALE.EMAIL_ALREADY_USED_BY_CONTACT;
+      this._editError = tmpl
+        ? (typeof tmpl === "function" ? tmpl(email, who) : tmpl.replace("{email}", email).replace("{name}", who))
+        : `${email} is already used by ${who || "another contact"}`;
+      return this._refreshDetail();
+    };
+
+    // Local pass.
+    const localContactEmail = (c) => {
+      if (!c) return "";
+      if (typeof c.email === "string") return c.email.trim().toLowerCase();
+      if (Array.isArray(c.email)) {
+        const def = c.email.find((x) => x && x.is_default === 1) || c.email[0];
+        return ((def && (def.email || def)) || "").toString().trim().toLowerCase();
+      }
+      if (typeof c.email_default === "string") return c.email_default.trim().toLowerCase();
+      return "";
+    };
+    for (const v of uniqueEmails) {
+      const conflict = (this._contacts || []).find(
+        (c) => idOf(c) !== contactId && localContactEmail(c) === v
+      );
+      if (conflict) return reportConflict(v, conflict);
+    }
+
+    // Server pass.
+    if (SERVICE.contact && SERVICE.contact.email_in_use) {
+      try {
+        for (const v of uniqueEmails) {
+          const hit = await this.fetchService({
+            service: SERVICE.contact.email_in_use,
+            email: v,
+            contact_id: contactId,
+            hub_id: Visitor.id,
+          });
+          if (hit && hit.id) return reportConflict(v, hit);
+        }
+      } catch (err) {
+        // Don't hard-block on a check-call failure; `contact.update`'s own
+        // ALREADY_IN_CONTACT check still backstops entity-level collisions.
+        console.warn("[address_book] email_in_use check failed:", err);
+      }
+    }
+
     this._editError = null;
 
     const payload = {
