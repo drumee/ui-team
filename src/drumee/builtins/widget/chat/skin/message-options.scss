@@ -19,12 +19,11 @@
 
     &[data-selected="1"] {
       & .widget-chatItem {
-        &__main.me {
-          margin-right: 60px
-        }
-
-        &__message-content {
-          margin-right: 35px; // 30px;
+        // Push the whole __main left to make room for the absolute checkbox.
+        // Applies uniformly to both reply quote and bubble (both anchor to
+        // __main's right edge) so they stay aligned in selection mode.
+        &__main {
+          margin-right: 40px;
         }
 
         &__message-selector-wrapper {

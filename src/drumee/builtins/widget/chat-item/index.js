@@ -35,62 +35,81 @@ class ___widget_chatItem extends LetcBox {
   buildContent(child) {
     let id = `content-${this.mget(_a.widgetId)}`;
     child.escapeContextmenu = true;
-    child.append(Skeletons.Element({
-      flow: _a.x,
-      className: `${this.fig.family}__message-container ${this.mget(_a.author)}`,
-      content: this.innerContent,
-      escapeContextmenu: true,
-    }));
     child.onAddKid = () => {
       child.el.dataset.preattachment = '0';
     }
-    this.waitElement(id, () => {
-      let el = document.getElementById(id);
-      this.messageEl = el;
-      el.onclick = Wm.onAnchorClick.bind(Wm);
-      setTimeout(() => {
-        let author = this.mget(_a.author);
-        let fig = this.fig.family;
-        if (this.mget(_a.type) == _a.share && this.mget(_a.author) != _a.me) {
-          child.append(Skeletons.UserProfile({
-            className: `${fig}__profile other`,
-            id: this.mget(_a.author_id)
-          }))
-        }
+    // Defer body appends so we can control order:
+    //   1) Reply quote (if any)   — prepend
+    //   2) Media attachment (if any)
+    //   3) Message bubble (only if message text or special message type)
+    setTimeout(() => {
+      const fig = this.fig.family;
+      const author = this.mget(_a.author);
+      const hasThread = !_.isEmpty(this.mget('thread')) && this.mget('thread_id');
+      const hasAttachment = this.mget('is_attachment') || !_.isEmpty(this.mget('attachment'));
+      const messageType = this.mget('message_type');
+      const isSpecialType = messageType === _a.call
+        || messageType === 'meeting.start'
+        || messageType === 'meeting.end'
+        || this.mget('is_ticket');
+      const hasMessageText = !_.isEmpty((this.mget('message') || '').trim());
+      const showBubble = hasMessageText || isSpecialType;
 
-        if (!_.isEmpty(this.mget(_a.thread) && this.mget('thread_id'))) {
-          let threadMsg = require('./skeleton/reply-message')(this);
-          child.append(threadMsg, 0);
-        }
+      if (hasAttachment) {
+        child.append(Skeletons.Wrapper.X({
+          className: `${fig}__attachment-wrapper ${author}`,
+          kids: [
+            Skeletons.List.Smart({
+              sys_pn: _a.list,
+              flow: _a.none,
+              axis: _a.x,
+              timer: 50,
+              className: `${fig}__attachment-wrapper-list`,
+              uiHandler: this,
+              partHandler: this,
+              itemsOpt: {
+                kind: 'media_grid',
+                isAttachment: 1,
+                origin: _a.chat,
+                uiHandler: Wm,
+                logicalParent: Wm,
+              },
+              vendorOpt: Preset.List.Orange_e,
+              api: this.getAttachments.bind(this),
+            }),
+          ],
+        }));
+      }
 
-        if (this.mget('is_attachment') || !_.isEmpty(this.mget('attachment'))) {
-          child.append(Skeletons.Wrapper.X({
-            className: `${fig}__attachment-wrapper ${author}`,
-            kids: [
-              Skeletons.List.Smart({
-                sys_pn: _a.list,
-                flow: _a.none,
-                axis: _a.x,
-                timer: 50,
-                className: `${fig}__attachment-wrapper-list`,
-                uiHandler: this,
-                partHandler: this,
-                itemsOpt: {
-                  kind: 'media_grid',
-                  isAttachment: 1,
-                  origin: _a.chat,
-                  uiHandler: Wm,
-                  logicalParent:Wm
-                },
-                vendorOpt: Preset.List.Orange_e,
-                api: this.getAttachments.bind(this),
-              })
-            ]
-          }));
-        }
-      }, 300);
+      if (showBubble) {
+        child.append(Skeletons.Element({
+          flow: _a.x,
+          className: `${fig}__message-container ${author}`,
+          content: this.innerContent,
+          escapeContextmenu: true,
+        }));
+      }
 
-    })
+      if (this.mget(_a.type) == _a.share && author != _a.me) {
+        child.append(Skeletons.UserProfile({
+          className: `${fig}__profile other`,
+          id: this.mget(_a.author_id),
+        }));
+      }
+
+      // Prepend reply quote last so it sits above attachment + bubble.
+      if (hasThread) {
+        const threadMsg = require('./skeleton/reply-message')(this);
+        child.prepend(threadMsg);
+      }
+
+      this.waitElement(id, () => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        this.messageEl = el;
+        el.onclick = Wm.onAnchorClick.bind(Wm);
+      });
+    }, 0);
   }
 
   /**
@@ -130,6 +149,14 @@ class ___widget_chatItem extends LetcBox {
   onDomRefresh() {
     this.model.on(_e.change, this._onDataChanged.bind(this))
     this.el.onclick = this.dispatchUiEvent.bind(this);
+    // Selection-mode whole-row click — captured BEFORE inner Box widgets'
+    // bubble-phase onclick (which calls e.stopPropagation in framework's
+    // __handleClick). Without capture, clicks on the bubble body die at
+    // the nearest Box ancestor and the first click never reaches our outer
+    // onclick — the user had to double-click to bypass the framework's
+    // 300ms click debounce. See letc.js __handleClick.
+    this._selectClickCapture = this._handleSelectionClick.bind(this);
+    this.el.addEventListener('click', this._selectClickCapture, true);
     let author = this.mget(_a.author);
     let area = this.mget(_a.area);
     this.$el.addClass(author);
@@ -275,6 +302,10 @@ class ___widget_chatItem extends LetcBox {
       this._dropdownLayoutTeardown();
       this._dropdownLayoutTeardown = null;
     }
+    if (this._selectClickCapture && this.el) {
+      this.el.removeEventListener('click', this._selectClickCapture, true);
+      this._selectClickCapture = null;
+    }
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -282,6 +313,38 @@ class ___widget_chatItem extends LetcBox {
    * 
    * @param {*} e 
    * @returns 
+   */
+  /**
+   * Capture-phase click handler — toggles selection on the whole row when
+   * chat is in selection mode. Runs BEFORE inner Box widgets' bubble-phase
+   * onclick so we never lose the first click to e.stopPropagation() from
+   * the framework's __handleClick on inner widgets.
+   *
+   * Skips when:
+   *   - chat is not in selection mode
+   *   - target is an interactive element (link/input/button)
+   *   - target sits inside a node with its own data-service (checkbox etc.)
+   */
+  _handleSelectionClick(e) {
+    const chatRoot = this.el.closest && this.el.closest('.widget-chat__main[data-selected="1"]');
+    if (!chatRoot) return;
+
+    const target = e && e.target;
+    if (!target) return;
+    const tag = (target.tagName || '').toUpperCase();
+    if (tag === 'A' || tag === 'INPUT' || tag === 'BUTTON') return;
+    if (target.closest && target.closest('[data-service]')) return;
+
+    this.select();
+    this.triggerHandlers({ service: 'select-message' });
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  /**
+   *
+   * @param {*} e
+   * @returns
    */
   dispatchUiEvent(e) {
     const service = this.el.getService(e); //e.target.dataset.service
@@ -389,6 +452,9 @@ class ___widget_chatItem extends LetcBox {
     }
     this.mset({ selected: s });
     this.__main.el.dataset.selected = s;
+    // Mirror state to the chat-item root so the highlight (background tint)
+    // spans the full row (incl. checkbox), regardless of "me"/"other" bubble width.
+    this.el.dataset.selected = s;
   }
 
   /**
@@ -414,17 +480,17 @@ class ___widget_chatItem extends LetcBox {
    * @returns 
    */
   setThreadData() {
-    if (_.isEmpty(this.mget(_a.thread) && this.mget('thread_id'))) {
+    if (_.isEmpty(this.mget('thread')) || !this.mget('thread_id')) {
       return;
     }
-    if (!this.mget(_a.thread).is_attachment) return;
+    if (!this.mget('thread').is_attachment) return;
     // initialize() runs before LetcBox binds fetchService; defer to next tick.
     setTimeout(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
       if (typeof this.fetchService !== 'function') return;
       this.fetchService({
         service: SERVICE.chat.attachment,
-        message_id: this.mget(_a.thread).message_id,
+        message_id: this.mget('thread').message_id,
         hub_id: this.mget(_a.uiHandler).hubId
       });
     }, 0);

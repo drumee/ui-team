@@ -18,11 +18,21 @@
   }
 
   &__ui {
-    border-radius:var(--border-radius);
-    background-color: var(--default-background); 
-    max-height: calc(100% - 48px);//calc(100% - 80px);
-    max-width: 410px;//360px;
+    // position: relative — keeps the absolutely-positioned close icon
+    // contained inside the popup instead of escaping to the modal wrapper
+    // (the chat-item-forward__icon.close rule below is position: absolute).
+    position: relative;
+    border-radius: var(--border-radius);
+    background-color: var(--default-background);
+    max-height: calc(100% - 48px);
+    max-width: 410px;
     min-width: 300px;
+    // Soft shadow + outline so the modal stays distinguishable from the
+    // folder panel behind it in both light and dark modes.
+    box-shadow:
+      0 18px 38px rgba(0, 0, 0, 0.16),
+      0 6px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--default-separator, rgba(0, 0, 0, 0.08));
   }
 
   &__main {
@@ -183,11 +193,17 @@
 
     &.close {
       color:var(--default-thinline-icon);
-      height: 12px;
+      // Larger hit target — 12px icon was too small to reliably click.
+      height: 20px;
+      width: 20px;
+      padding: 4px;
       position: absolute;
-      right: 10px;
-      top: 10px;
-      width: 12px;
+      right: 8px;
+      top: 8px;
+      // Lift above header note so click reaches the button itself.
+      z-index: 2;
+      cursor: pointer;
+      pointer-events: auto;
       &:hover{
         color:var(--default-thinline-icon-hover);
       }
@@ -221,22 +237,27 @@
 
   &__button-confirm {
     border-radius:var(--border-radius);
-    @include drumee.typo($size: 16px, $line: 19px, $color: var(--btn-commit-text)); //$size: 14px,
+    // Use the modern primary palette directly — the legacy --btn-commit-*
+    // vars in skin/vars/default.scss are written as `-primary-500` (missing
+    // the var() wrapper) so they resolve to invalid CSS and the button has
+    // no background. Bypass them with --primary-* tokens, which are themed.
+    @include drumee.typo($size: 16px, $line: 19px, $color: #ffffff);
     align-items: center;
-    background-color: var(--btn-commit-background);
-    border: 1px solid var(--btn-commit-border);
+    background-color: var(--primary-500, #5950ff);
+    border: 1px solid var(--primary-500, #5950ff);
     height: 100%;
     justify-content: center;
-    //margin-right: 132px;
     max-height: 35px;
     max-width: 115px;
     width: 100%;
     margin-bottom: 10px;
     margin-left: 2%;
     padding: 7px;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
     &:hover{
-      background-color: var(--btn-commit-background-hover);
-      border: 1px solid var(--btn-commit-border-hover);
+      background-color: var(--primary-600, #4642a9);
+      border: 1px solid var(--primary-600, #4642a9);
     }
   }
 
@@ -257,6 +278,79 @@
 
     &[data-mode="closed"] {
       display: none;
+    }
+  }
+}
+
+// Dark-mode override — the popup uses the legacy `--default-*` palette which
+// is hard-coded to white in vars/default.scss and never re-declared inside
+// the dark theme block. Without this override the modal stays bright-white
+// on top of the dark folder panel.
+html[data-theme="dark"] {
+  .chat-item-forward {
+    &__ui {
+      background-color: var(--normal-bg-90, #282538);
+      border: 1px solid var(--border-default, rgba(255, 255, 255, 0.08));
+      box-shadow:
+        0 18px 38px rgba(0, 0, 0, 0.6),
+        0 6px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    &__main,
+    &__container,
+    &__search-result-wrapper {
+      background-color: var(--normal-bg-90, #282538);
+    }
+
+    &__note {
+      &.title { color: var(--reverse-bg, #e4e3ff); }
+      &.search-title,
+      &.counter { color: var(--normal-fg-10, #e4e3ff); }
+      &.switch-title {
+        color: var(--normal-fg-50, #84848c);
+        &[data-state="1"] {
+          color: var(--normal-fg-10, #e4e3ff);
+          background-color: var(--hover-bg-40, rgba(89, 80, 255, 0.15));
+        }
+      }
+    }
+
+    &__search input {
+      color: var(--normal-fg-10, #e4e3ff);
+      border-bottom-color: var(--border-default, rgba(255, 255, 255, 0.12));
+      &::placeholder { color: var(--placeholder-fg, #c7c7cc); }
+    }
+
+    &__icon {
+      &.close,
+      &.search-close-icon { color: var(--normal-fg-50, #c7c7cc); }
+      &.close:hover,
+      &.search-close-icon:hover { color: var(--normal-fg-10, #ffffff); }
+      &.search-icon { color: var(--normal-fg-50, #c7c7cc); }
+    }
+  }
+
+  // List items inside the forward popup
+  .chat-forward-list-item {
+    &__ui {
+      &:hover {
+        background-color: var(--hover-bg-40, rgba(89, 80, 255, 0.15));
+        & .room-name { color: var(--normal-fg-10, #ffffff); }
+      }
+    }
+
+    &__name {
+      color: var(--normal-fg-10, #e4e3ff);
+    }
+
+    &__icon.checkbox {
+      color: var(--normal-fg-50, #c7c7cc);
+      border-color: var(--border-default, rgba(255, 255, 255, 0.2));
+
+      &[data-state="1"] {
+        color: var(--reverse-bg, #e4e3ff);
+        border-color: var(--active-border, #5950ff);
+      }
     }
   }
 }
