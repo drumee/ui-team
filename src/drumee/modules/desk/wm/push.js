@@ -97,7 +97,9 @@ class __push_manager extends winman {
         // goodbye and is unreliable post-pickup).
         Visitor.muteSound();
         for (let c of this.getItemsByAttr(_a.room_id, data.room_id)) {
-          if (c && !c.isDestroyed && !c.isDestroyed()) c.goodbye();
+          if (c && (typeof c.isDestroyed !== 'function' || !c.isDestroyed())) {
+            c.goodbye();
+          }
         }
         return;
 
