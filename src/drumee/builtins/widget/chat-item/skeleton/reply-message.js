@@ -23,7 +23,7 @@ const __skl_chat_item_reply_message = function(_ui_) {
   let _message, attachmentWrapper, color, userName;
   const chatItemReplyFig = `${_ui_.fig.family}-reply`;
 
-  const data = _ui_.mget(_a.thread);
+  const data = _ui_.mget('thread');
 
   if ((data.message === 'DELETED') && _.isEmpty(data.entity)) {
     const username = '';
@@ -32,9 +32,9 @@ const __skl_chat_item_reply_message = function(_ui_) {
     color = '#2F2F2f';
   
   } else {
-    const {
-      entity
-    } = data;
+    // Optimistic UI may snapshot the parent before `entity` is populated by the
+    // server response — guard against undefined to avoid render crash.
+    const entity = data.entity || {};
     const {
       author_id
     } = data;
@@ -45,18 +45,18 @@ const __skl_chat_item_reply_message = function(_ui_) {
 
     if (author_id === Visitor.get(_a.id)) {
       fullname = Visitor.get(_a.fullname)|| (Visitor.get(_a.firstname) + ' ' + Visitor.get(_a.lastname));
-      displayName = 'You';
-    
+      displayName = LOCALE.YOU || 'You';
+
     } else {
       if (entity.fullname != null) {
         ({
           fullname
         } = entity);
       } else {
-        fullname    = (entity.firstname + ' ' + entity.lastname) || '';
+        fullname = `${entity.firstname || ''} ${entity.lastname || ''}`.trim();
       }
-      
-      displayName = entity.surname;
+
+      displayName = entity.surname || fullname;
     }
 
     color = colorFromName(fullname);
@@ -102,12 +102,17 @@ const __skl_chat_item_reply_message = function(_ui_) {
       attachmentWrapper
     ]});
   
+  // Carry the chat-item author class so SCSS can mirror the quote alignment
+  // (own replies on the right, others on the left) — same pattern as bubble.
+  const author = _ui_.mget('author') || '';
+  // Mirror the colored border: own replies show the bar on the right edge.
+  const borderStyle = author === 'me'
+    ? { borderRight: `2px solid ${color}` }
+    : { borderLeft : `2px solid ${color}` };
   const a = Skeletons.Box.X({
-    className : `${chatItemReplyFig}__main`,
+    className : `${chatItemReplyFig}__main ${author}`,
     debug     : __filename,
-    styleOpt  : {
-      borderLeft  : `2px solid ${color}`
-    },
+    styleOpt  : borderStyle,
     kids      : [
       Skeletons.Box.X({
         className  : `${chatItemReplyFig}__container`,
