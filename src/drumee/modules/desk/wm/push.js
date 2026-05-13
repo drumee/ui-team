@@ -90,6 +90,17 @@ class __push_manager extends winman {
         }
         return;
 
+      case SERVICE.conference.leave:
+        // Other party left the call. Close every open call window bound to
+        // the same room_id so the receiver's connect/meeting window doesn't
+        // stay stuck waiting on Jitsi USER_LEFT (which races with the local
+        // goodbye and is unreliable post-pickup).
+        Visitor.muteSound();
+        for (let c of this.getItemsByAttr(_a.room_id, data.room_id)) {
+          if (c && !c.isDestroyed && !c.isDestroyed()) c.goodbye();
+        }
+        return;
+
       case SERVICE.conference.update:
       case SERVICE.conference.broadcast:
         return;

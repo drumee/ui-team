@@ -60,6 +60,7 @@ const __window_connect_commands = function (_ui_) {
             ico: "meeting-leave",
             sys_pn: "ctrl-line",
             service: _e.close,
+            uiHandler: [_ui_],
             bubble: 0,
           }),
         ]
