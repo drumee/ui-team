@@ -84,7 +84,7 @@ class __address_book extends LetcBox {
         this._selectedKey = trigger.mget("contactKey");
         this._editing = false;
         this._updateSelectionDom();
-        return this._refreshDetail();
+        return this._selectContact();
 
       case "open-invite":
         this._inviteDraft = { email: "", message: "" };
@@ -287,10 +287,14 @@ class __address_book extends LetcBox {
   }
 
   async _loadTags() {
-    if (!SERVICE.tagcontact || !SERVICE.tagcontact.tag_get_next) return;
+    // The public service is `show_tag_by` (defined in `server-team/acl/tagcontact.json`),
+    // which is routed to the underlying `tag_get_next` stored procedure. The method
+    // name itself isn't exposed as a service, so calling `tag_get_next` silently
+    // no-ops and leaves the tag picker empty.
+    if (!SERVICE.tagcontact || !SERVICE.tagcontact.show_tag_by) return;
     try {
       const rows = await this.postService({
-        service: SERVICE.tagcontact.tag_get_next,
+        service: SERVICE.tagcontact.show_tag_by,
         hub_id: Visitor.id,
       });
       this._tags = Array.isArray(rows) ? rows : [];
@@ -519,33 +523,79 @@ class __address_book extends LetcBox {
 
   // ─── Edit form ──────────────────────────────────────────────────
 
-  _beginEdit() {
+  // `show_contact` (used by `_loadContacts`) only returns scalar columns,
+  // so `_contacts[i]` has no `mobile`, `tag`, `address`, or multi-`email`
+  // arrays. Hydrate those from `get_contact` whenever the detail/edit view
+  // needs them — otherwise the edit form opens blank and freshly-saved
+  // phones/tags don't reappear after the post-save reload.
+  async _loadSelectedContactDetails(contactId) {
+    if (!contactId || !SERVICE.contact || !SERVICE.contact.get_contact) return null;
+    let full;
+    try {
+      full = await this.fetchService({
+        service: SERVICE.contact.get_contact,
+        contact_id: contactId,
+        hub_id: Visitor.id,
+      });
+    } catch (err) {
+      console.error("[address_book] get_contact failed:", err);
+      return null;
+    }
+    // Auto-generated "colleague" rows (drumate union in `my_contact_show_next`)
+    // have no row in the contact table, so `_show` returns nothing usable.
+    if (!full || !full.id) return null;
+    const merged = { ...full, tag: normalizeTags(full.tag) };
+    const idx = this._contacts.findIndex((c) => idOf(c) === idOf(full));
+    if (idx >= 0) {
+      this._contacts[idx] = { ...this._contacts[idx], ...merged };
+    }
+    return merged;
+  }
+
+  // Paint the detail panel immediately with the scalar data we already have,
+  // then hydrate phones/tags/etc. via `get_contact` and repaint. Without the
+  // hydration step, first-time clicks on a sidebar item leave Mobile/Tags
+  // blank because `show_contact` (used by `_loadContacts`) omits those arrays.
+  async _selectContact() {
+    this._refreshDetail();
+    const sel = this.getSelectedContact();
+    if (!sel) return;
+    const contactId = sel.id || sel.contact_id;
+    const hydrated = await this._loadSelectedContactDetails(contactId);
+    if (hydrated && this._selectedKey === idOf(sel)) {
+      this._refreshDetail();
+    }
+  }
+
+  async _beginEdit() {
     const c = this.getSelectedContact();
     if (!c) return;
+    await this._loadSelectedContactDetails(c.id || c.contact_id);
+    const full = this.getSelectedContact() || c;
     this._editing = true;
     this._editError = null;
-    this._editFirstname = c.firstname || "";
-    this._editLastname = c.lastname || "";
-    this._editComment = c.comment || "";
+    this._editFirstname = full.firstname || "";
+    this._editLastname = full.lastname || "";
+    this._editComment = full.comment || "";
     const looksLikeEmail = (s) => typeof s === "string" && s.includes("@");
-    // `c.entity` is a UID for drumate contacts (e.g. "1fe9136a1fe9137f") and
-    // only equals the email when the contact isn't a drumate. Prefer the
+    // `full.entity` is a UID for drumate contacts (e.g. "1fe9136a1fe9137f")
+    // and only equals the email when the contact isn't a drumate. Prefer the
     // top-level `email` string so the edit input shows "h0anghu7n@gmail.com"
     // instead of the entity UID.
-    const primaryEmail = looksLikeEmail(c.email) ? c.email
-      : looksLikeEmail(c.email_default) ? c.email_default
-      : looksLikeEmail(c.entity) ? c.entity
+    const primaryEmail = looksLikeEmail(full.email) ? full.email
+      : looksLikeEmail(full.email_default) ? full.email_default
+      : looksLikeEmail(full.entity) ? full.entity
       : "";
-    this._editEmails = (Array.isArray(c.email) && c.email.length
-      ? c.email.map((e) => ({ email: e.email || "", category: e.category || "priv", is_default: e.is_default || 0 }))
+    this._editEmails = (Array.isArray(full.email) && full.email.length
+      ? full.email.map((e) => ({ email: e.email || "", category: e.category || "priv", is_default: e.is_default || 0 }))
       : [{ email: primaryEmail, category: "priv", is_default: 1 }]);
     if (!this._editEmails.some((e) => e.is_default === 1) && this._editEmails.length) {
       this._editEmails[0].is_default = 1;
     }
-    this._editPhones = (Array.isArray(c.mobile) ? c.mobile : []).map((p) => ({
+    this._editPhones = (Array.isArray(full.mobile) ? full.mobile : []).map((p) => ({
       phone: p.phone || "", areacode: p.areacode || "", category: p.category || "priv",
     }));
-    this._editTags = (c.tag || []).map((t) => t.tag_id).filter(Boolean);
+    this._editTags = (full.tag || []).map((t) => t.tag_id).filter(Boolean);
     this._refreshDetail();
   }
 
@@ -735,6 +785,7 @@ class __address_book extends LetcBox {
       this._editError = null;
       this._editSubmitting = false;
       await this._loadContacts(this._contactsOption || "active");
+      await this._loadSelectedContactDetails(contactId);
       this._refreshList();
       this._refreshDetail();
       this._showToast(LOCALE.SAVED || "Saved");
