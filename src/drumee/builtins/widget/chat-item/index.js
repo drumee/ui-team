@@ -462,7 +462,7 @@ class ___widget_chatItem extends LetcBox {
    * @returns 
    */
   getAttachments() {
-    let { hubId } = this.mget(_a.uiHandler);
+    let { hubId, peerId } = this.mget(_a.uiHandler);
     if ((this.mget('message_type') === _a.ticket) && this.mget('hub_id')) {
       hubId = this.mget('hub_id');
     }
@@ -471,6 +471,8 @@ class ___widget_chatItem extends LetcBox {
       message_id: this.mget('message_id'),
       hub_id: hubId
     };
+    // P2P: message stored in sender's DB — pass peer_id so server can do cross-DB lookup
+    if (peerId) api.peer_id = peerId;
 
     return api;
   }
