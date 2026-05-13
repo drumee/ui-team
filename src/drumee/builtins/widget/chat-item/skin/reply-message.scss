@@ -12,11 +12,22 @@
       margin-bottom: 1px;
       width: fit-content;
 
-      .widget-chatItem__main.me & {
-        align-self: flex-end;
+      // __main parent is block layout (width:100%), align-self không có hiệu lực.
+      // Tận dụng width:fit-content sẵn có + margin-left auto để đẩy preview sang
+      // phải khi mình reply (author=me), giữ trái khi người khác reply.
+      &.me {
+        margin-left: auto;
+        margin-right: 0;
+        text-align: right;
+        // Border switches to the right side via inline style in skeleton.
+        padding-left: 5px;
+        padding-right: 8px;
       }
-      .widget-chatItem__main.other & {
-        align-self: flex-start;
+
+      &.other {
+        margin-right: auto;
+        margin-left: 0;
+        text-align: left;
       }
     }
 

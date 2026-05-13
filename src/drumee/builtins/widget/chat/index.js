@@ -318,7 +318,16 @@ class __widget_chat extends LetcBox {
    * 
    */
   checkPendingContent() {
-    if (this.attachmentList.hasAttachment() || this.getStoredMessage()) {
+    const has = this.attachmentList && this.attachmentList.hasAttachment();
+    // Toggle explicit state on the attachment-wrapper so CSS can collapse
+    // it cleanly after clearAttachment() — `:has(.media-grid__ui)` was
+    // proving unreliable across Marionette collection.reset() + browser
+    // `:has()` invalidation timing.
+    if (this.attachmentList && this.attachmentList.el && this.attachmentList.el.closest) {
+      const wrapper = this.attachmentList.el.closest('.widget-chat__attachment-wrapper');
+      if (wrapper) wrapper.dataset.hasAttachment = has ? '1' : '0';
+    }
+    if (has || this.getStoredMessage()) {
       this.showSend()
     } else {
       this.ensurePart(_a.message).then((p) => {
@@ -427,7 +436,7 @@ class __widget_chat extends LetcBox {
         break;
 
       case 'show-message-selector':
-        this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.area));
+        this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.type));
         setTimeout(() => {
           this.showMsgCount(cmd);
         }, 300);
@@ -662,6 +671,9 @@ class __widget_chat extends LetcBox {
     let list = this.attachmentList;
     if (list && !list.isDestroyed()) {
       list.addNewMedia(items);
+      // Drive `data-has-attachment` directly — same deterministic path as
+      // the post-send branch in postMessageAPI.
+      this.checkPendingContent();
       return;
     }
     //this.attachMediaWrapper(this.__wrapperAttachment, items);
@@ -986,6 +998,11 @@ class __widget_chat extends LetcBox {
     this.clearMessageBlock();
     this.postService(api).then(data => {
       this.attachmentList.clearAttachment();
+      // Deterministic — drive `data-has-attachment` directly instead of
+      // relying on the `_e.update` event chain, which raced with Backbone's
+      // built-in collection 'update' event and sometimes fired before
+      // sessionStorage was actually cleared.
+      this.checkPendingContent();
       if (_.isEmpty(data)) {
         this.showError(LOCALE.MESSAGE_NOT_SENT_RETRY);
         return;

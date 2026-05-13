@@ -13,6 +13,10 @@
     margin-top: 32px;
     min-height: 38px;
     padding: 0 4px;
+    // Establish a positioning context so the absolutely-positioned __main
+    // overlay measures its right edge from __ui — keeping quote and bubble
+    // anchored to the same right boundary.
+    position: relative;
 
     &.me {
       align-items: flex-end;
@@ -39,18 +43,25 @@
     &.forward {
       background-color: var(--dgc-chat-reply-bg);
     }
+  }
 
-    &[data-selected="1"] {
-      background-color: var(--default-background-hover);
-      color: var(--default-text-reverse);
+  // Selected-mode highlight on chat-item root (__ui) so the tint spans the full
+  // row — covers bubble + checkbox area uniformly for both "me" and "other".
+  // The root receives data-selected via chat-item.select().
+  &__ui[data-selected="1"] {
+    background-color: rgba(250, 133, 64, 0.1);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
 
-      & a {
-        color: var(--default-text-reverse);
+  // When chat widget is in selection mode, every message becomes clickable —
+  // not just the small checkbox.
+  .widget-chat__main[data-selected="1"] & {
+    cursor: pointer;
 
-        &:hover {
-          color: var(--egrey-e8);
-        }
-      }
+    &__main:hover {
+      background-color: rgba(250, 133, 64, 0.04);
+      border-radius: 6px;
     }
   }
 
@@ -71,6 +82,11 @@
       &.me {
         flex-direction: row-reverse;
         margin-left: auto;
+        margin-right: 0;
+        // Shrink to bubble width so the right edge matches the reply quote
+        // (which uses the same width:fit-content + margin-left:auto trick).
+        width: max-content;
+        gap: 0;
       }
     }
 
@@ -95,6 +111,10 @@
 
       &.me {
         align-items: flex-end;
+        // Same trick as the reply quote — shrink to bubble width so the
+        // container right edge sits exactly where the quote's right edge sits.
+        width: max-content;
+        margin-left: auto;
       }
 
       &.other {
@@ -237,6 +257,13 @@
     height: 32px;
     flex-shrink: 0;
     align-self: flex-end;
+
+    // For own messages avatar isn't shown — hide it entirely so the bubble
+    // (and any reply quote) can sit flush with the right edge instead of
+    // leaving a 48px (32px avatar + 16px gap) gutter.
+    &.me {
+      display: none;
+    }
 
     &-image {
       width: 32px;
