@@ -177,7 +177,6 @@ class __player_audio extends __window_interact_player {
   changeSource(src) {
     this.__audio.el.pause();
     this.spinner(1);
-    this.debug('changeSource', src, this)
     this.media = src;
     const { nid, hub_id } = src.actualNode();
     this.mset({ nid, hub_id });
@@ -205,7 +204,6 @@ class __player_audio extends __window_interact_player {
   */
   onUiEvent(cmd) {
     const service = cmd.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
     switch (service) {
       case _a.play:
         return this._play(cmd);

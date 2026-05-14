@@ -1,5 +1,4 @@
 const __skl_contact_invitationForm = function (ui) {
-  this.debug("__skl_contact_invitationForm", ui);
 
   const inviteFormFig = ui.fig.family;
   const { mode } = ui.model.toJSON();

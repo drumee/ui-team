@@ -86,7 +86,6 @@ class __support_feedback extends LetcBox {
 //
 // ===========================================================
   _updateLocaleRow(cmd) {
-    this.debug("ZZZZZZZZZZ 81", cmd);
     const data = cmd.getData() || {};
     data.key_code = data.key_code.toUpperCase();
     data.service = SERVICE.yp.update_locale;
@@ -109,7 +108,6 @@ class __support_feedback extends LetcBox {
       service = cmd.model.get(_a.service);
     }
 
-    this.debug(`onUiEvent service=${service}`, cmd, cmd.get(_a.status));
     switch (service) {
       case "update-locale-row":
         if (cmd.status === _e.submit) { 
@@ -225,7 +223,6 @@ class __support_feedback extends LetcBox {
 //
 // ===========================================================
   __dispatchRest(method, data) {
-    this.debug(">>TTT BACK 0", method, data);
     switch (method) {
       case SERVICE.yp.update_locale:
         return this._refreshRow(data);

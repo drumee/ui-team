@@ -68,7 +68,6 @@ class __welcome_password_meter extends __core {
    *
   */
   clearError() {
-    this.debug('clearError', this);
     if (this._message.isEmpty()) {
       return;
     }
@@ -88,7 +87,6 @@ class __welcome_password_meter extends __core {
    * @param {LetcBox} pn
   */
   onPartReady(child, pn) {
-    this.debug("AAAA:91", child, pn)
     switch (pn) {
       case 'ref-pwm':
         return this.pw_meter = child;

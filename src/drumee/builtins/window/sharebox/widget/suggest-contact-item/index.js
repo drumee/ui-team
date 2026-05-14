@@ -40,7 +40,6 @@ class ___suggestion_contact_item extends LetcBox {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this)
     this.source = cmd;
     this.service = service;
     return this.triggerHandlers();

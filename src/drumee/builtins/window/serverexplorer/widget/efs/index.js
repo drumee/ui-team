@@ -56,7 +56,6 @@ class __media_efs extends LetcBox {
   */
   onUiEvent(cmd, args={}) {
     const service = args.service || cmd.mget(_a.service)
-    this.debug(`onUiEvent service = ${service}`, cmd, this)
     switch (service) {
       case 'select-file': case _a.openLocation:
         this.source = cmd;

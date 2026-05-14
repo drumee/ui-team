@@ -94,7 +94,6 @@ class ___window_switchcall extends mfsInteract {
   /**
    */
   async decline(cmd) {
-    this.debug("AAA:59 -- decline", this.peerData);
     if (!this.currentRoom || this.peerData.room_type != _e.connect) {
       return;
     }
@@ -133,7 +132,6 @@ class ___window_switchcall extends mfsInteract {
    * 
    */
   onWsMessage(service, data, options) {
-    this.debug("AAA:136", service, data, options, this);
     switch (options.service) {
       case SERVICE.chat.post:
         if (this.peerData.origin.uid != data.entity_id) return;

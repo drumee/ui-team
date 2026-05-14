@@ -45,7 +45,6 @@ class __widget_members_search extends LetcBox {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
     let status = cmd.get(_a.status);
 
-    this.debug("onUiEvent", cmd, this);
     if (pointerDragged) {
       return;
     }
@@ -75,7 +74,6 @@ class __widget_members_search extends LetcBox {
 // getCurrentApi
 // ===========================================================
   getCurrentApi() {
-    this.debug("getCurrentApi", this);
     
     const api = { 
       service : SERVICE.adminpanel.member_list,

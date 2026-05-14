@@ -86,12 +86,10 @@ class __webrtc_room extends __room {
     if (!configs || !configs.domain) {
       throw ("Conference server has not been properly set up");
     }
-    this.debug("ORIGIN CONFIGS", configs)
     const options = {
       init: require("./configs/init")(),
       connection: require("./configs/connection")(configs),
     }
-    this.debug("TEST CONFIGS", configs)
     this.conferenceConfig = require("./configs/conference")(configs);
 
     return new Promise(async (resolve, reject) => {
@@ -235,7 +233,6 @@ class __webrtc_room extends __room {
     const opt = require("./configs/tracks")({ devices, micDeviceId });
     if (this.isDestroyed()) {
       this.warn("Attemptiing to create tracks with destroyed view");
-      this.debug("AAA:227", this, JitsiMeetJS);
       console.trace();
       return
     }
@@ -686,7 +683,6 @@ class __webrtc_room extends __room {
    *
    */
   onWrongState() {
-    this.debug("AAA:401 -- TO DO handle onWrongState");
   }
 
   /**

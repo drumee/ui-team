@@ -31,7 +31,6 @@ class __desk_user_contributor extends LetcBox {
 // ===========================================================
   initialize(opt) {
     super.initialize();
-    this.debug('user.view.model', this.model.get(_a.id));
     const id = this.model.get(_a.id) || this.model.get(_a.uid) || 'default';
     return this.model.atLeast({
       flow       : _a.x,
@@ -61,7 +60,6 @@ class __desk_user_contributor extends LetcBox {
 //
 // ===========================================================
   onDomRefresh() { 
-    this.debug("USER 115", this, this.model.attributes);
     this.$delete = this.$el.find(`#${this._id}-delete`);
     const g = ()=> {
       return this.$delete.on(_e.click, this._delete); 
@@ -98,7 +96,6 @@ class __desk_user_contributor extends LetcBox {
 //
 // ===========================================================
   _delete(e) {
-    this.debug("<<vvMANAGER _delete", e, this, this.model.get(_a.id));
     const hub_id = this.model.get(_a.hub_id);
     const uid = this.model.get(_a.id);
     return this.postService({
@@ -117,7 +114,6 @@ class __desk_user_contributor extends LetcBox {
 //
 // ===========================================================
   _rights(e) {
-    this.debug("user-rights user", e, this, this.model.get(_a.id), this.model.get(_a.privilege));
     if (this.el.getAttribute(_a.data.state) === "opened") {
       this.el.setAttribute(_a.data.state, "");
       return Pr._resetSettingsModal(this);
@@ -144,7 +140,6 @@ class __desk_user_contributor extends LetcBox {
   __dispatchRest(method, data, socket) {
     switch (method) {
       case SERVICE.hub.delete_contributor:
-        this.debug("SERVICE.hub.delete_contributor", data);
         var list = [];
         for (var i of Array.from(data)) {
           var item = {

@@ -299,7 +299,6 @@ class __account_data extends DrumeeMFS {
     this._isDownloading = 1;
     this.download_zip({ ...this._downloadData, progress: this.__progress, backup: 1 })
       .then(() => {
-        this.debug("DOWNLOAD TENIMATED");
       })
       .catch((e) => {
         this.warn("GOT ERRO WHILE DOWNLOADING", e);

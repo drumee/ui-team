@@ -95,7 +95,6 @@ function entry(ui) {
  * @returns 
  */
 function menu_input(ui) {
-  ui.debug("AAA:57")
   let Container, Main, Items;
   if (ui.mget(_a.axis == _a.x)) {
     Container = Skeletons.Box.X;

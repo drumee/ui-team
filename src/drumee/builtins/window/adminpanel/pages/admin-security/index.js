@@ -31,11 +31,9 @@ class ___admin_security_page extends LetcBox {
   onPartReady(child, pn) {
     switch (pn) {
       case _a.none:
-        this.debug("Created by kind builder", child);
         break;
       default:
         super.onPartReady(child, pn);
-        this.debug("Created by kind builder");
     }
   }
 
@@ -54,15 +52,12 @@ class ___admin_security_page extends LetcBox {
   onUiEvent(cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
-    this.debug("onUiEvent", cmd, service, this, this.model.attribute)
 
     switch (service) {
       case 'change-option':
         this.saveOptions(cmd);
       case _a.none:
-        this.debug("Created by kind builder");
       default:
-        this.debug("Created by kind builder");
         // super.onUiEvent(cmd, args)
     }
 
@@ -95,7 +90,6 @@ class ___admin_security_page extends LetcBox {
         })
         break;
       default:
-        this.debug('undefined option')
 
     }
 
@@ -117,7 +111,6 @@ class ___admin_security_page extends LetcBox {
         this.triggerHandlers();
         this.service = '';
       case SERVICE.no_service:
-        this.debug("Created by kind builder", service, data)
     }
   }
 }

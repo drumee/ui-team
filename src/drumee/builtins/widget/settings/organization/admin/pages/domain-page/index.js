@@ -32,11 +32,9 @@ class ___domain_page extends LetcBox {
   onPartReady(child, pn) {
     switch (pn) {
       case _a.none:
-        this.debug("onPartReady", child);
         break;
 
       default:
-        this.debug("onPartReady");
     }
   }
 
@@ -52,7 +50,6 @@ class ___domain_page extends LetcBox {
    * @param {*} cmd 
    */
   onValidateError(cmd) {
-    this.debug(cmd, this)
   }
 
   /**
@@ -60,7 +57,6 @@ class ___domain_page extends LetcBox {
    * @param {*} cmd 
    */
   onValidateSuccess(cmd) {
-    this.debug(cmd, this)
   }
 
   /**
@@ -124,12 +120,10 @@ class ___domain_page extends LetcBox {
   submitDomain() {
     this.validateData()
     if (this.formStatus == _a.error) {
-      this.debug("invalid data")
       return
     }
 
     let data = this.getData(_a.formItem);
-    this.debug(data)
     let service = SERVICE.adminpanel.organisation_add;
     if (this.mode == _a.edit) {
       service = SERVICE.adminpanel.organisation_update;

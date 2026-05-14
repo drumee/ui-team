@@ -197,7 +197,6 @@ class __hub_administrator extends LetcBox {
 //
 // ===========================================================
   __dispatchRest(method, data, socket) {
-    this.debug("AAAAAAAAAAAAAA 731", method, data, socket);
     switch (method) {
       
       case SERVICE.sharebox.assign_permission:

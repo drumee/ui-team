@@ -240,7 +240,6 @@ class __account_searchbox extends LetcBox {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.service || cmd.mget(_a.service);
-    this.debug(`AAAAAA FFF 96 menuEvents service 165=${service}`, this, cmd);
     switch (service.toLowerCase()) {
       case "items-found":
         return this._showResults(cmd);

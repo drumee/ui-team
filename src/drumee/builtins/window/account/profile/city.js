@@ -107,7 +107,6 @@ class __account_country extends LetcBox {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.status || cmd.service || cmd.model.get(_a.service);
-    this.debug(`AAAAAA FFF 96service=${service}`, cmd.model.get(_a.state), this, cmd);
     switch (service) {
       case _e.edit:
         this._edit(cmd);
@@ -135,7 +134,6 @@ class __account_country extends LetcBox {
 //
 // ===========================================================
   __dispatchRest(method, data, socket) {
-    this.debug("AAAAAAAAAAAAAA 731", method, data, socket, this);
     switch (method) {      
       case SERVICE.hub.update_name:
         this.mset(_a.content, data.name);

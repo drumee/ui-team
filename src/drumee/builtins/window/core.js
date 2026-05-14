@@ -6,7 +6,9 @@ const __utils = require("./utils");
 const TIMERS = {
   reorder: null,
 };
-const { TweenMax } = gsap;
+
+const { TweenLite, TimelineMax } = require("@drumee/ui-core/vendor");
+
 const {
   copyToClipboard,
   reverseSortBy,

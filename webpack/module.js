@@ -16,11 +16,6 @@ module.exports = function (basedir) {
             importLoaders: 1
           },
         }, {
-          loader: 'postcss-loader',
-          options: {
-            sourceMap: true, // Show resource full path
-          }
-        }, {
           loader: 'sass-loader',
           options: {
             sourceMap: true,

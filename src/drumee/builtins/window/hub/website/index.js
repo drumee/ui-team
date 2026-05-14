@@ -144,7 +144,6 @@ class __hub_website extends LetcBox {
         break;
 
       case 'hub-ident':
-        this.debug("aaaa 96", cmd.status, cmd.results);
         if (cmd.status === _a.error) {
           commandsRef.el.dataset.state = 0;
           this._data.ident = null;
@@ -165,7 +164,6 @@ class __hub_website extends LetcBox {
         break;
 
       case _e.create:
-        this.debug("aaaa CR", cmd);
         if (this._checkSanity()) {
           return this._create(cmd);
         }

@@ -61,7 +61,6 @@ class ___widget_chatcontactItem extends LetcBox {
    */
   updateNotificationCount(args) {
     let id = this.mget(_a.drumate_id) || this.mget(_a.entity_id);
-    //this.debug("AAA:62", id, args[id], this, this.el);
     if (args[id]) {
       this.mset({ room_count: args[id].cnt });
       this.updateNotification();
@@ -85,7 +84,6 @@ class ___widget_chatcontactItem extends LetcBox {
    */
   onUiEvent(cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`SERVICE=${service}`);
     this.source = cmd;
     this.service = service;
     this.triggerHandlers({ ...args, service });

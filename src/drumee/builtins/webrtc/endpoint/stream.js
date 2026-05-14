@@ -10,7 +10,6 @@ class __webrtc_stream extends LetcBox {
     this.declareHandlers();
     if (opt.logicalParent) this.viewerLink = opt.logicalParent.bind(opt.logicalParent);
     this.service_class = opt.service_class || opt.logicalParent.service_class;
-    //this.debug("AAA:21 BINDING", this.service_class, opt);
     this.bindEvent(this.service_class);
   }
 
@@ -61,7 +60,6 @@ class __webrtc_stream extends LetcBox {
       };
       options.sendSource = _a.screen;
     }
-    //this.debug("AAA:351 createUpstream", video, options, this);
     // this.webRtcPeer = WebRtcPeer.WebRtcPeerSendonly(options,
     //   function (e) {
     //     if (e) {
@@ -101,7 +99,6 @@ class __webrtc_stream extends LetcBox {
       }
       let track = this.screenStream.getTracks()[0];
       // track.stop();
-      //this.debug("AAA:89 startDisplayMedia TRACK ", track);
       track.onended = (t) => {
         this.triggerHandlers({ service: 'screenshare-stopped' });
         track.stop();
@@ -130,9 +127,7 @@ class __webrtc_stream extends LetcBox {
   //  * @param {*} offerSdp 
   //  */
   // sendUpstreamOffer(error, offerSdp) {
-  //   //this.debug("AAA:106 sendUpstreamOffer 273", this);
   //   if (error) throw error;
-  //   //this.debug("AAA:108 sendUpstreamOffer 275", this);
   //   var message = {
   //     service: 'upstream-offer',
   //     //peer_id: this.webRtcPeer.id,
@@ -159,7 +154,6 @@ class __webrtc_stream extends LetcBox {
   //     return;
   //   }
 
-  //   this.debug("XAAA:168 createDownstream 122", this, video, video.muted);
   //   let self = this;
   //   if (!this.webRtcPeer || force) {
   //     let options = {
@@ -226,7 +220,6 @@ class __webrtc_stream extends LetcBox {
    * @param {*} pn 
    */
   onPartReady(child, pn) {
-    //this.debug("AAA:220 onPartReady", pn);
     let micro_state;
     const video_state = toggleState(this.mget(_a.video));
     const audio_state = toggleState(this.mget(_a.audio));
@@ -279,7 +272,6 @@ class __webrtc_stream extends LetcBox {
     let svc = this.serviceName(service);
     this.warn(WARNING.method.unprocessed.format(svc))
 
-    // if (svc != "downstream-icecandidate") this.debug(`AAA:312 __dispatchPush svc=${svc}`, data);
     // switch (svc) {
     //   case 'downstream-icecandidate':
     //     this.processIceCandidate(data);

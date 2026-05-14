@@ -158,7 +158,6 @@ class ___widget_members_list extends LetcBox {
    * @returns 
    */
   updateMemberItem(member, source) {
-    this.debug('updateMemberItem', member, this)
 
     if (_.isEmpty(member.drumate_id)) {
       this.warn('Member ID is required.');

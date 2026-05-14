@@ -64,7 +64,6 @@ class ___email_input_item extends LetcBox {
     const service = cmd.service || cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
     // @debug "SERVI CE=#{service}"
-    this.debug(`___email_input_item onUiEvent SERVICE=${service}`,cmd, this);
 
     switch (service) {
       case _e.destroy:

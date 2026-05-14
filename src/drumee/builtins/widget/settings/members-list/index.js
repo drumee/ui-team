@@ -42,7 +42,6 @@ class settings_members_list extends DrumeeMFS {
       (cmd.mget && (cmd.mget(_a.service) || cmd.mget(_a.name))) ||
       (cmd.get && (cmd.get(_a.service) || cmd.get(_a.name))) ||
       cmd.name;
-    this.debug("AAA:45", service, cmd, args)
     switch (service) {
       case _a.back:
       case _e.close:

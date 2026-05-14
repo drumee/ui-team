@@ -60,7 +60,6 @@ class ___simple_invitation extends LetcBox {
         break;
 
       default:
-        this.debug("onPartReady");
     }
   }
 
@@ -77,13 +76,11 @@ class ___simple_invitation extends LetcBox {
   # onValidateError 
   # ===========================================================*/
   onValidateError(cmd) {
-    this.debug(cmd, this)
   }
   /* ===========================================================
   # onValidateSuccess
   # =========================================================== */
   onValidateSuccess(cmd) {
-    this.debug(cmd, this)
   }
 
 
@@ -93,7 +90,6 @@ class ___simple_invitation extends LetcBox {
   onUiEvent(cmd, args = {}) {
     let service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
-    this.debug("onUiEvent", service, status, this)
 
     switch (service) {
       case "add-item":
@@ -106,7 +102,6 @@ class ___simple_invitation extends LetcBox {
       case 'delete':
         return this.deleteUser(cmd);
       case 'invitation-item':
-        this.debug('invitation-item-ranjith',cmd,args)
         if(args.item && _.isObject(args.item)){
           args.items = [args.item];
         } 
@@ -119,7 +114,6 @@ class ___simple_invitation extends LetcBox {
         }
 
       default:
-        this.debug("Created by kind builder");
     }
   }
 

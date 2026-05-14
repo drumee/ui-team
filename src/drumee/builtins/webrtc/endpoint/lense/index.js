@@ -156,14 +156,12 @@ class __endpoint_lense extends LetcBox {
       let size = fitBoxes(inner, {width:window.outerWidth, height:window.innerHeight});
       const ratio = inner.width/inner.height;
       this.videoRatio = ratio;
-      this.debug("PLUG::166", e, size);
       this.triggerHandlers({service: 'lense-size', ...size, video:1, ratio});
       this.videoBox = inner;
       this.__sound.plug(this.stream);
     };
     let v = this.stream.getVideoTracks()[0];
     // if(v){
-    this.debug("PLUG::172",v.muted && v.enabled, v.muted, v.enabled);
     //   //v.enabled = true;
       _.delay(()=>{
         this.__video.el.srcObject = this.stream;
@@ -177,11 +175,8 @@ class __endpoint_lense extends LetcBox {
    */
   onlyAudio(args) {
     let v = this.stream.getVideoTracks()[0];
-    this.debug("PLUG::187",v.muted && v.enabled, v.muted, v.enabled);
     if(v){
-      this.debug("PLUG::189",v.muted && v.enabled, v.muted, v.enabled);
       if(!v.muted && v.enabled){
-        this.debug("PLUG::191",this.__video.el.srcObject, this.stream, args);
         v.enabled = false;
       } 
       _.delay(()=>{
@@ -207,7 +202,6 @@ class __endpoint_lense extends LetcBox {
    */
   handleVideotrack(args) {
     let v = this.stream.getVideoTracks()[0];
-    this.debug("PLUG::: 190", args, v.enabled);
     if(!v){
       this.showAvatar(args);
       return;
@@ -228,28 +222,23 @@ class __endpoint_lense extends LetcBox {
   handleTracks(args) {
     let v = this.stream.getVideoTracks()[0];
     //let a = this.stream.getAudioTracks()[0];
-    this.debug("PLUG::238", args.phase, args.source_id);
     if(!v){
       this.warn("NO TRACK GIVEN!!!");
       return false;
     }
 
-    this.debug("PLUG::244", args);
     if(args.phase == 'connecting-remote'){
       this.source_id = args.source_id;
-      this.debug("PLUG::247", args);
       if(args.screen){
         args.name = _a.screen;
         this.handleVideotrack(args);
         return true;
       }
-      this.debug("PLUG::253", args);
       if(args.video){
         args.name = _a.video;
         this.handleVideotrack(args)
         return true;        
       }
-      this.debug("PLUG::259", args);
       this.onlyAudio(args);
       this.handleAudiotrack(args);
       this.showAvatar(args);
@@ -289,7 +278,6 @@ class __endpoint_lense extends LetcBox {
     let audio = args.stream.getAudioTracks()[0] || {id:null};
     // Sound analyser trigger plug when speaking. Skip if same speaker.
     delete args.service;
-    this.debug("AAA:299 PLUG", args, `name=${args.name}`, `source=${args.source_id}`, this.source_id, audio.source_id, this);
     if(args.source_id){
       if (this.source_id == args.source_id) return;
       this.source_id = args.source_id;

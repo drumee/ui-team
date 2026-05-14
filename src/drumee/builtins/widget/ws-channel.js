@@ -48,7 +48,6 @@ class __websocket_channel extends ws {
 //
 // ===========================================================
   on_ws_data(service, data){
-    this.debug("DATA EVENT RECEIVED", service, data);
     return this.trigger(service, data);
   }
 }

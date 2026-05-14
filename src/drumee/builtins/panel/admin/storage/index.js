@@ -16,7 +16,6 @@ class __admin_storage extends LetcBox {
       const data = await this.fetchService(SERVICE.admin.get_storage_stats, {});
       this.model.set(data);
     } catch (e) {
-      this.debug('storage stats error', e);
     }
     this.feed(require('./skeleton')(this));
   }

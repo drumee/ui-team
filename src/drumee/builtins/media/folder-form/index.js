@@ -78,7 +78,11 @@ class __folder_form extends LetcBox {
     const data = this.getData(_a.formItem) || {};
     const filename = (data.filename || "").trim();
     if (!filename) {
-      Wm.alert(LOCALE.REQUIRE_THIS_FIELD || "Please enter a name");
+      this.ensurePart("error").then((p) => {
+        p.setState(1);
+        p.set({ content: LOCALE.REQUIRE_THIS_FIELD || "Please enter a name" })
+      })
+      // Wm.alert(LOCALE.REQUIRE_THIS_FIELD || "Please enter a name");
       return;
     }
 

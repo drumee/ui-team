@@ -40,7 +40,6 @@ class __utils_x_progress extends LetcBox {
 // ===========================================================
   initialize(opt) {
     this.declareHandlers(); //s({part:@, ui:@})
-    this.debug("AAAAAAAAA 43");
     super.initialize();
     this.model.set({
       widgetId : _.uniqueId('canvas-'),
@@ -70,7 +69,6 @@ class __utils_x_progress extends LetcBox {
   onDomRefresh(){
     this.declareHandlers(); //s {part:@, ui:@}, {fork:yes, recycle:yes}
     if (this._mouseEvt != null) {
-      this.debug("UPLOADING .... onUploaded FTYPE", this, this._mouseEvt);
       this.el.style.position = _a.absolute;
       this.el.style.left =  this._mouseEvt.pageX.px();
       this.el.style.top  =  this._mouseEvt.pageY.px();
@@ -121,7 +119,6 @@ class __utils_x_progress extends LetcBox {
 // ===========================================================
   onUploadProgress(e, total) {
     let rate;
-    this.debug("onUploadProgress", e, total, this, this._handler);
     if (e.lengthComputable) {
       rate = e.loaded / e.total;
     } else if (_.isFinite(total) && (total > 0)) {
@@ -130,10 +127,8 @@ class __utils_x_progress extends LetcBox {
     const p = `${parseInt(100 * rate)}%`;
     const radius = Math.min(this._viewportWidth/2, this._viewportHeight/2);
     if (!this.ctx) {
-      this.debug("NO canvasEl", this.model.get(_a.widgetId), this);
       return;
     }
-    this.debug("onUploadProgress", this._viewportWidth/2, this._viewportHeight/2, radius - 16, 0, rate);
     this.ctx.beginPath();
     this.ctx.arc(this._viewportWidth/2, this._viewportHeight/2, radius - 16, 0, rate * 2 * Math.PI);
     this.ctx.stroke();
@@ -152,7 +147,6 @@ class __utils_x_progress extends LetcBox {
 //
 // ===========================================================
   onUploadEnd(data, socket) {
-    this.debug("onUploadEnd", data, this._handler, this);
     if (data._status_ === _a.error) {
       RADIO_BROADCAST.trigger(_e.error, data.content);
       return;

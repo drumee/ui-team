@@ -1,30 +1,11 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2020
-//   FILE : /home/somanos/devel/ui/letc/template/index.coffee
-//   TYPE : Component
-// ==================================================================== *
-
-//########################################
 
 class ___media_devices extends LetcBox {
-// ===========================================================
-//
-// ===========================================================
   initialize(opt={}) {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
   }
     
-// # ===========================================================
-// # 
-// # ===========================================================
-//   onPartReady: (child, pn, section) ->
-//     switch pn
-//       when _a.none
-//         @debug "Created by kind builder"
-//       else
-//         @debug "Created by kind builder"
 
   /**
    * 
@@ -42,14 +23,8 @@ class ___media_devices extends LetcBox {
    */
   async getDevicesList(){
     navigator.mediaDevices.enumerateDevices().then((devices)=>{
-      this.debug("serviceWWWWWWWWWAAA 32", devices);
       this.mset({devices});
-      devices.forEach((device)=> {
-        this.debug("serviceWWWWWWWWWAAA 34", device.kind + ": " + device.label +
-          " id = " + device.deviceId);
-      });
     }).catch((err)=> {
-      this.debug(err.name + ": " + err.message);
     });
   }
 
@@ -66,9 +41,7 @@ class ___media_devices extends LetcBox {
    * 
    */
   onDomRefresh(){
-    this.debug("serviceWWWWWWWWWAAA ", this);
     navigator.mediaDevices.enumerateDevices().then((devices)=>{
-      this.debug("serviceWWWWWWWWWAAA 32", devices);
       this.mset({devices});
       this.feed(require('./skeleton')(this));
       const l = this.children.last();
@@ -78,26 +51,17 @@ class ___media_devices extends LetcBox {
       let dev = {};
       for(var device of devices){
         
-        this.debug("serviceWWWWWWWWWAAA 34", device);
       }
     }).catch((err)=> {
-      this.debug(err.name + ": " + err.message);
     });
   }
     
-// ===========================================================
-// 
-// ===========================================================
   onDeviceSelect(cmd) {
-    return this.debug("serviceWWWWWWWWW ", this);
+    
   }
  
- // ===========================================================
-// 
-// ===========================================================
   onUiEvent(cmd) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`SERVICEQQQQ=${service}`, cmd, this);
     if (!this.__menu || !this.__menu._ready) { 
       return; 
     }

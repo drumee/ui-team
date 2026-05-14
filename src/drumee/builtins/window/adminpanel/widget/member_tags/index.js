@@ -41,7 +41,6 @@ class ___widget_member_tags extends LetcBox {
    */
   onUiEvent(cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug("AAA:44", service, cmd, this)
     switch (service) {
       case 'add-tag':
         var dataOpt = {

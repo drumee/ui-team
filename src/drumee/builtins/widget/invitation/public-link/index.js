@@ -140,7 +140,6 @@ class __invitation_publiclink extends __recipient {
         return openLink(this.mget(_a.link));
 
       case _e.update:
-        this.debug("AAAA", cmd.getData());
         if (this.mget(_a.share_id)) {
           return this.debug("CHANGE PERMISSION", cmd.getData(), this);
         }

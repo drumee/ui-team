@@ -1,0 +1,46 @@
+// Cherry-picked lodash shim — only the functions used across src/drumee and
+// @drumee/ui-core. Replaces the full 533 KB bundle via the `lodash` webpack alias.
+// window._ is set for code that relies on lodash as a global.
+const _ = {
+  after:     require('lodash/after'),
+  camelCase: require('lodash/camelCase'),
+  clone:     require('lodash/clone'),
+  compact:   require('lodash/compact'),
+  debounce:  require('lodash/debounce'),
+  delay:     require('lodash/delay'),
+  escape:    require('lodash/escape'),
+  extend:    require('lodash/extend'),
+  filter:    require('lodash/filter'),
+  find:      require('lodash/find'),
+  groupBy:   require('lodash/groupBy'),
+  includes:  require('lodash/includes'),
+  isArray:   require('lodash/isArray'),
+  isBoolean: require('lodash/isBoolean'),
+  isEmpty:   require('lodash/isEmpty'),
+  isEqual:   require('lodash/isEqual'),
+  isFinite:  require('lodash/isFinite'),
+  isFunction:require('lodash/isFunction'),
+  isInteger: require('lodash/isInteger'),
+  isNaN:     require('lodash/isNaN'),
+  isNumber:  require('lodash/isNumber'),
+  isObject:  require('lodash/isObject'),
+  isString:  require('lodash/isString'),
+  keys:      require('lodash/keys'),
+  last:      require('lodash/last'),
+  map:       require('lodash/map'),
+  merge:     require('lodash/merge'),
+  min:       require('lodash/min'),
+  orderBy:   require('lodash/orderBy'),
+  random:    require('lodash/random'),
+  some:      require('lodash/some'),
+  sortBy:    require('lodash/sortBy'),
+  take:      require('lodash/take'),
+  template:  require('lodash/template'),
+  throttle:  require('lodash/throttle'),
+  uniq:      require('lodash/uniq'),
+  uniqueId:  require('lodash/uniqueId'),
+  values:    require('lodash/values'),
+};
+
+if (typeof window !== 'undefined') window._ = _;
+module.exports = _;

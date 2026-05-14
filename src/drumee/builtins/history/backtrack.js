@@ -53,7 +53,6 @@ class backtrack extends Backbone.Model {
       action
     } = row;
     let letc = null;
-    this.debug(`Serialized : action=${action}`, view);
     switch (action) {
       case _e.reorder: case _e.add:
         data = view.serializeData(_a.kids);
@@ -184,7 +183,6 @@ class backtrack extends Backbone.Model {
     if (cid !== data.cid) {
       this.warn("cid don't match", data);
     }
-    this.debug(`RESTORE pointer=${cid}`);
     for (var row of Array.from(data.rows)) {
       this._unserialize(row);
     }
@@ -287,7 +285,6 @@ class backtrack extends Backbone.Model {
     this._restore(cid);
     this._pointer = ptr;
     this._last = 'undo';
-    this.debug(`Backward to cid=${cid}`);
     return cid;
   }
 // ==================== *
@@ -310,7 +307,6 @@ class backtrack extends Backbone.Model {
     this._restore(cid);
     this._pointer = ptr;
     this._last = 'redo';
-    this.debug(`Forward to cid=${cid}`);
     return cid;
   }
 // ==================== *

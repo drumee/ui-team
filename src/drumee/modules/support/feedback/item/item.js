@@ -30,7 +30,6 @@ class __feedback_item_ui extends LetcBox {
 // ===========================================================
   initialize(opt) {
     super.initialize();
-    this.debug('user.view.model', this.model.get(_a.id));
     const id = this.model.get(_a.id) || this.model.get(_a.uid) || 'default';
     return this.model.atLeast({
       flow       : _a.x,
@@ -56,7 +55,6 @@ class __feedback_item_ui extends LetcBox {
 //
 // ===========================================================
   onDomRefresh() { 
-    this.debug("USER 115", this, this.model.attributes);
     return this.feed(require('./skeleton/main')(this));
   }
 

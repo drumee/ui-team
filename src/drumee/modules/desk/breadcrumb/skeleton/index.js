@@ -7,7 +7,6 @@
 module.exports = function (ui, data = []) {
   const pfx = ui.fig.family;
   const items = [];
-  ui.debug("AAA:14", data)
   if (!_.isArray(data)) data = [data]
   data.forEach((item, i) => {
     if (item && (item.filename || item.name)) {
