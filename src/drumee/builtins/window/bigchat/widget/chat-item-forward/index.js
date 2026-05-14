@@ -99,17 +99,22 @@ class ___chat_item_forward extends LetcBox {
 // ===========================================================
   forwardMessage(cmd) {
     this._selectedRooms = this._seletecdContacts.concat(this._selectedShareRooms);
-    const messageData = { 
+    const messageData = {
       hub_id    : this._msgHubID,
       messages  : this._seletecdMessages
     };
 
-    return this.postService({
+    const payload = {
       service   : SERVICE.chat.forward,
       entities  : this._selectedRooms,
       nodes     : messageData,
       hub_id    : Visitor.get(_a.id)
-    });
+    };
+    // P2P context: pass peer_id so server can fetch messages from peer's DB
+    const peerId = this.mget(_a.peer_id);
+    if (peerId) payload.peer_id = peerId;
+
+    return this.postService(payload);
   }
 
 // ===========================================================
