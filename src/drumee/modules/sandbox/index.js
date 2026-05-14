@@ -263,7 +263,6 @@ class __module_sandbox extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = cmd.model.get(_a.service) || args.service;
-    this.debug(` service=${service} -->`, cmd, args);
     switch (service) {
       case 'run':
         this._preview.feed(this._editor.get());

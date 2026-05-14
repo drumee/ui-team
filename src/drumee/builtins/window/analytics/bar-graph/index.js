@@ -40,7 +40,6 @@ class __window_bar_graph extends __window_analytics {
         };
         let time_format = '%y-%m-%d';
         let opt = _.map(this.mget(_a.view), (item)=>{
-          this.debug('checking the opt value', item);
           if(!data[item.data]){
             this.warn(`Dataset not found for key ${item.data}`, item);
           };
@@ -59,7 +58,6 @@ class __window_bar_graph extends __window_analytics {
           return r;
         })
 
-        this.debug('checking the opt value', opt);
         this.raise();
         //let aaa = [];
         //opt.shift()

@@ -62,7 +62,6 @@ class __player_document extends PlayerInteract {
     let { service, data, options } = args
     switch (options.service) {
       case "media.status":
-        this.debug("onWsMessage:62", { service, data, options })
         this.checkPreview(args)
         break;
     }

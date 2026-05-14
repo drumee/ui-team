@@ -184,7 +184,6 @@ class __webrtc_local_display extends __stream {
         break;
 
       case 'downstream-peer-leave':
-        this.debug("LEAVE", data);
         break;
 
       default:

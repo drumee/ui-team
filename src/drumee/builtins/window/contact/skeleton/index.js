@@ -5,7 +5,6 @@
 // ==================================================================== *
 
 const __skl_window_contact = function(_ui_) {
-  this.debug("__skl_window_contact", _ui_);
 
   const menu = Skeletons.Box.X({ 
     debug     : __filename,

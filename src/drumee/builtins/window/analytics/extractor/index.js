@@ -72,7 +72,6 @@ class __window_analytics_extractor extends __window_analytics {
       url : origURL,
     }).then(blob => {
       const url = URL.createObjectURL(blob);
-      this.debug("preLoad:483", url);
     })
   }
   
@@ -158,7 +157,6 @@ class __window_analytics_extractor extends __window_analytics {
   onUiEvent(cmd, args) {
     let service = cmd.get(_a.service) || cmd.get(_a.status);
     const status = cmd.get(_a.status);
-    this.debug("onUiEvent", service, status, this)
     switch (service) {
       case _e.submit:
         this.submit();

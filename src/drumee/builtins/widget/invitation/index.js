@@ -239,7 +239,6 @@ class __invitation_settings extends __recipient {
    * @returns 
    */
   _actionState(s) {
-    this.debug('aaa:222', s)
     if (this.__addMemberButton) {
       this.__addMemberButton.el.dataset.state = s;
     }
@@ -552,7 +551,6 @@ class __invitation_settings extends __recipient {
       }
     }
     this.pendingChanges = this.__settings.getData();
-    this.debug('toggleValidityMode', this.pendingChanges, formData, cmd.mget('expiry'), cmd, this);
 
     // Re-render immediately to show the change
     const part = this.getPart('validity-content');

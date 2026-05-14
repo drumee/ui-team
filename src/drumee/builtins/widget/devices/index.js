@@ -25,7 +25,6 @@ class ___media_devices extends LetcBox {
     navigator.mediaDevices.enumerateDevices().then((devices)=>{
       this.mset({devices});
     }).catch((err)=> {
-      this.debug(err.name + ": " + err.message);
     });
   }
 
@@ -54,7 +53,6 @@ class ___media_devices extends LetcBox {
         
       }
     }).catch((err)=> {
-      this.debug(err.name + ": " + err.message);
     });
   }
     

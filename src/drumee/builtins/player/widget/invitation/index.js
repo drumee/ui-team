@@ -33,7 +33,6 @@ class __schedule_invitation extends mfsInteract {
    */
   addRecipent(item) {
     let opt;
-    this.debug(`bbaaaa 81 `, opt, this);
     if(_.isString(item)){
       opt = {id:_.uniqueId('guest-'), email:item};
     }else if(item && item.model){
@@ -60,7 +59,6 @@ class __schedule_invitation extends mfsInteract {
    * 
    */
   handleError(args) {
-    this.debug(`bbaaaa 81 handleError`, args, this);
     if(args.error){
       this.__wrapperError.feed(
         Skeletons.Note(LOCALE.INVALID_EMAIL_FORMAT, `${this.fig.family}__error`)
@@ -81,7 +79,6 @@ class __schedule_invitation extends mfsInteract {
   /** */
   onUiEvent(cmd, args={}) {
     const service = args.service || cmd.service || cmd.model.get(_a.service);
-    this.debug(`bbaaaa 81 onUiEvent=${service}`, args, cmd.get(_a.state), cmd, this);
     if(!args.no_raise) this.raise(cmd);
     switch (service) {
       case _a.update:
@@ -123,14 +120,12 @@ class __schedule_invitation extends mfsInteract {
    * @param {*} data 
    */
   __dispatchRest(service, data){
-    this.debug("__dispatchRest GGGF", service, data);
     switch (service) {
       case SERVICE.wicket.create_external_meeting:
     }
   }
 
   update_attendees(data) {
-    this.debug("ATTENDEES", data);
   }
 
 

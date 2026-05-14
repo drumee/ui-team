@@ -32,7 +32,6 @@ const _devices = function(_ui_, devices, type) {
   for (var k in devices) {
     var v = devices[k];
     var item = {};
-    this.debug("JJJJ DEVICES 40  =>", v);
     var object = v[0].toJSON();
     for (var kk in object) {
       var vv = object[kk];
@@ -61,7 +60,6 @@ const _items = function(_ui_) {
   const radio_list   = _.uniqueId("list-");
   for (var type in devices) {
     var list = devices[type];
-    this.debug(`JJJJ DEVICES  45 => type=${type}`, list);
     devices_type.push(Skeletons.Note({
       className : `${_ui_.fig.family}__tab`,
       content   : _device_name[type],
@@ -95,7 +93,6 @@ const _items = function(_ui_) {
         kids      : devices_list
       })
     ]});
-  this.debug("JJJJ DEVICES  80", a);
   return a; 
 };
 

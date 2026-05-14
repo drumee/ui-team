@@ -115,7 +115,6 @@ class __account_apps extends DrumeeMFS {
   */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this)
     switch (service) {
       case _a.show:
         if (this.__others) {

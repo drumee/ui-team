@@ -69,7 +69,6 @@ class settings_member extends DrumeeMFS {
   onUiEvent(cmd, args = {}) {
     const service = cmd.mget(_a.service);
 
-    this.debug("===77== settings_member.onUiEvent ===", this, service);
     switch (service) {
       case "change-permission":
         this.triggerHandlers({

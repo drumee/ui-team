@@ -14,7 +14,6 @@ class ___widget_efs_list extends LetcBox {
     this.currentPath = opt.path;
     this.type  = opt.type;
     this._parent = opt.uiHandler;
-    this.debug('efs_list', opt, this);
     this.declareHandlers();
   }
 
@@ -35,7 +34,6 @@ class ___widget_efs_list extends LetcBox {
    */
   onUiEvent (cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service=${service}`, cmd, this);
 
     switch(service) {
       case  _a.none:

@@ -5,7 +5,6 @@
 // ==================================================================== *
 
 const __skl_window_contact_acknowledge = function(_ui_) {
-  this.debug("__skl_window_contact_acknowledge", _ui_);
   
   const ackFig = _ui_.fig.family;
   const data = _ui_.source;

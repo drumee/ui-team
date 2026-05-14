@@ -337,7 +337,6 @@ class settings_account extends LetcBox {
       }
     }
     
-    this.debug("updateAutoLockTimeout", cmd, timeout, data);
     
     const settings = {
       auto_lock_timeout: timeout

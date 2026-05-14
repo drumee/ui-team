@@ -158,7 +158,6 @@ class __welcome_reset extends __welcome_interact {
     }, { async: 1 }).then((data) => {
       this.checkTokenResponse(data);
     }).catch((e) => {
-      this.debug("Caught error in createPassword:", e, this)
     });
 
     const data = this._input.getData()

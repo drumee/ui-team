@@ -95,7 +95,6 @@ class settings_helpcenter extends LetcBox {
   onUiEvent(cmd, args = {}) {
     const service =
       args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug("onUiEvent:65", service);
     switch (service) {
       case _e.close:
       case "close-popup":

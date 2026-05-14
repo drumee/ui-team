@@ -47,7 +47,6 @@ class __account_subscription extends LetcBox {
 
       Visitor.set('plan_detail', data.renewal); // to set the Visitor plan_detail - do not remove
 
-      this.debug('plan data', data, this);
       return this.feed(require('./skeleton').default(this));
     }).catch((e) => {
       return Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
@@ -74,7 +73,6 @@ class __account_subscription extends LetcBox {
   */
   onUiEvent (cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this)
 
     switch(service) {
       case 'upgrade-plan': case 'subscribe-again':
@@ -236,7 +234,6 @@ class __account_subscription extends LetcBox {
         return Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
       }
 
-      this.debug('change subscription response', data, this);
       this._newValidityEndDate = data.current_period_end;
       this.openOverlay(require('./skeleton/change-subscription-ack').default(this));
 
@@ -304,7 +301,6 @@ class __account_subscription extends LetcBox {
       if (_.isEmpty(data)) {
         return Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
       }
-      this.debug('cancel subscription', data, this);
       this.closeOverlay();
       cmd.el.dataset.wait = _a.no;
       return this.fetchPlanData();
@@ -327,7 +323,6 @@ class __account_subscription extends LetcBox {
         return Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
       }
       this.__proBtnWrapper.el.dataset.wait = _a.no;
-      this.debug('resume subscription', data, this);
       return this.fetchPlanData();
     }).catch((e) => {
       this.__proBtnWrapper.el.dataset.wait = _a.no;

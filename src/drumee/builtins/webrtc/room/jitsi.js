@@ -86,12 +86,10 @@ class __webrtc_room extends __room {
     if (!configs || !configs.domain) {
       throw ("Conference server has not been properly set up");
     }
-    this.debug("ORIGIN CONFIGS", configs)
     const options = {
       init: require("./configs/init")(),
       connection: require("./configs/connection")(configs),
     }
-    this.debug("TEST CONFIGS", configs)
     this.conferenceConfig = require("./configs/conference")(configs);
 
     return new Promise(async (resolve, reject) => {

@@ -101,7 +101,6 @@ class __notifier_generic extends LetcBox {
 //
 // ===========================================================
   __dispatchRest(service, data){
-    this.debug("generic notifier __dispatchRest ", service, data);
     return this.update(data);
   }
 }

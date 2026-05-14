@@ -224,7 +224,6 @@ const urlSeparator = new RegExp(/[\/&\?]/g);
       opt.shift();
       const section = opt[0];
       const tab = opt[1];
-      this.debug(`route section=${section}, tab=${tab}`, opt);
       switch (tab) {
         case "feedback":
           return this.feed({kind: 'feedback'}); //@feed require('./skeleton/user/add')(@)
@@ -305,7 +304,6 @@ const urlSeparator = new RegExp(/[\/&\?]/g);
 //
 // >>===========================================================
     __dispatchRest(method, data) {
-      this.debug(">>TTT BACK 0", method, data);
       switch (method) {
         case SERVICE.yp.update_locale:
           return this._refreshRow(data);
@@ -339,7 +337,6 @@ const urlSeparator = new RegExp(/[\/&\?]/g);
     _openMenu(cmd) {
       //Type.setMapName(_a.reader)
       //editor.select cmd.parent
-      this.debug("AZAQ PAGE MANAGER  _openMenu");
       const menu = require("hub/skeleton/settings")(this, cmd);
       const style = menu.styleOpt || {};
       style.left = cmd.$el.offset().left + cmd.$el.outerWidth() + 10;

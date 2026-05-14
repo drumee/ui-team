@@ -89,7 +89,6 @@ class __window_analytics_main_website extends __window_analytics {
   onUiEvent(cmd, args) {
     let service = cmd.get(_a.service) || cmd.get(_a.status);
     const status = cmd.get(_a.status);
-    this.debug("onUiEvent", service, status, this)
     switch (service) {
       case 'change_option':
         this.changeOption(cmd);
@@ -125,14 +124,12 @@ class __window_analytics_main_website extends __window_analytics {
       case _a.button:
         return this.selectedAreaOption = [selectedValue ] || ['drumee'];
     }
-    this.debug('change options dropdown', cmd, this);
   }
 
   /**
    * 
   */
   selectDate (cmd) {
-    this.debug('selectDate 111', cmd, this);
     this.customStartDate = cmd.mget('startDate');
     this.customEndDate = cmd.mget('endDate');
     this.customLabel = cmd.mget('selectedLabel');
@@ -143,7 +140,6 @@ class __window_analytics_main_website extends __window_analytics {
    * 
   */
   async submit () {
-    this.debug('submit form', this.selectedValue, this);
     let opt = this.calculatePeriod();
 
     opt.toDate = moment(opt.toDate).add(1, 'days').format("Y-MM-DD"); // to match with the UTC time data - do not remove
@@ -253,7 +249,6 @@ class __window_analytics_main_website extends __window_analytics {
     const view = this.mget(_a.view);
 
     let opt = _.map(view, (item)=> {
-      this.debug('checking the opt value', item);
       let r = {
         title: {
           text: item.title, 

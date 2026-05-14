@@ -42,7 +42,6 @@ class __drumee_api_popup extends LetcBox {
         break;
 
       default:
-        this.debug("onPartReady");
     }
   }
 
@@ -96,7 +95,6 @@ class __drumee_api_popup extends LetcBox {
    * @returns 
    */
   route() {
-    this.debug("ROUTE!!!", location.hash)
     if (/popup.open/.test(location.hash)) {
       this._hash = location.hash;
       this.openPopup();
@@ -165,7 +163,6 @@ class __drumee_api_popup extends LetcBox {
   }
 
   closePopup() {
-    this.debug("close-popup", this)
     this.overlayEl.setAttribute(_a.data.state, _a.closed);
     if (this._hash) {
       location.hash = this._initialHash;

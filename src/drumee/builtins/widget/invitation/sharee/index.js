@@ -124,7 +124,6 @@ class __invitation_sharee extends __recipient {
     const p = this.dialogWrapper.children.first();
     return p.selfDestroy({
       callback: () => {
-        this.debug("RESTART", this.mget(_a.hub));
         return this.mget(_a.hub).restart();
       }
     });
@@ -173,7 +172,6 @@ class __invitation_sharee extends __recipient {
   // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.mget(_a.service);
-    this.debug(`aaaa 112 svc=${service}`, cmd, this);
     switch (service) {
       case _e.remove:
         return this.removeOrrevoke(cmd);

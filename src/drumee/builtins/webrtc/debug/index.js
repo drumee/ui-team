@@ -34,7 +34,6 @@ class __webrtc_debug extends LetcBox {
   //
   // ===========================================================
   onDomRefresh() {
-    this.debug("OOOOOOOOOYYYYYYYYYY! DEBUG", this);
     this.ratio = this.$el.width() / this.$el.height(); 
   }
 
@@ -88,7 +87,6 @@ class __webrtc_debug extends LetcBox {
   onUiEvent(cmd, args={}) {
     let service = args.service || cmd.mget(_a.service);
     let state   = cmd.mget(_a.state)
-    this.debug("ZZZZZZZZZ", this, cmd, args);
     switch(service){
       case "devices-list":
         this.localStream = args.stream;
@@ -138,7 +136,6 @@ class __webrtc_debug extends LetcBox {
   // ===========================================================
   __dispatchPush(service, data){
     if(service != SERVICE.signaling.message) return;
-    this.debug("HHHHHHHHHHHHHHH PUSH ", service, data.type, data);
     let stream;
     switch(data.type){
       case _e.hello:
@@ -199,13 +196,11 @@ class __webrtc_debug extends LetcBox {
       //   //this.update(data);
       //   break;
     }
-    this.debug("ZZZZZ PUSH ", this._callers, this._callees);
   }
   //===========================================================
   //
   //===========================================================
   __dispatchRest(service, data){
-    this.debug("HHHHHHHHHHHHHHH  REST ", this, service, data);
     // switch(service){
     //   case SERVICE.signaling.message:
     //     if(data.type == _e.callback){

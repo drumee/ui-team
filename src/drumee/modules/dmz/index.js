@@ -77,7 +77,6 @@ class __dmz_router extends LetcBox {
           location.href = _K.module.desk;
           location.reload();
         } else {
-          this.debug('load no content', args);
           opt = require('./skeleton/no-content').default(this);
           this.feed(require('./skeleton').default(this, opt));
         }
@@ -93,7 +92,6 @@ class __dmz_router extends LetcBox {
   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug(`onUiEvent service=${service}`, cmd, this);
 
     switch (service) {
       case 'close-popup':

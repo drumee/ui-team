@@ -75,7 +75,6 @@ class __editor_json extends LetcBox {
   //
   // ===========================================================
   _onChange(a) {
-    this.debug("_onChange : TBD", a);
     return this.changed = true;
   }
 

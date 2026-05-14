@@ -46,7 +46,6 @@ class __security_ip extends __pad {
 
   onUiEvent(cmd) {
     const service = cmd.mget(_a.service);
-    this.debug("QQQQQQQQQQQ", service, cmd);
     switch (service) {
       case _e.change:
         var opt =

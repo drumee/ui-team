@@ -65,7 +65,6 @@ class ___window_transfer_box extends __window_interact_singleton {
    * @param {any} pn
    */
   onPartReady(child, pn) {
-    this.debug('onPartReady', child, pn, this)
     this.raise()
 
     switch (pn) {
@@ -77,7 +76,6 @@ class ___window_transfer_box extends __window_interact_singleton {
 
       default:
         super.onPartReady(child, pn);
-        this.debug("Created by kind builder");
     }
   }
 
@@ -127,7 +125,6 @@ class ___window_transfer_box extends __window_interact_singleton {
    */
   onUiEvent(cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this)
 
     switch (service) {
       case 'switch-box':
@@ -138,7 +135,6 @@ class ___window_transfer_box extends __window_interact_singleton {
       case 'close-model':
         return this.closeModel();
       default:
-        this.debug("Created by kind builder");
         // super.onUiEvent(cmd, args)
     }
     super.onUiEvent(cmd, args)
@@ -150,22 +146,18 @@ class ___window_transfer_box extends __window_interact_singleton {
    * @param  {} options={}
    */
   router(page = _a.outbound, options = {}) {
-    this.debug('router', page, options)
     let route = () => {
       this.route = page;
       switch (page) {
         case _a.outbound:
-          this.debug("load Inbound page");
           this.loadOutboundPage()
           break
 
         case _a.inbound:
-          this.debug("load Inbound page");
           this.loadInboundPage()
           break
 
         default:
-          this.debug("Created by kind builder");
           this.loadingPage()
       }
     }

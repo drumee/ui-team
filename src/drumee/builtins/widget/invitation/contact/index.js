@@ -71,7 +71,6 @@ class __invitation_contact extends LetcBox {
   _showDetails(cmd) {
     let modify;
     const el_height = 41; //36 height 5 margin
-    this.debug("aaa 72", this);
     const offsetTop = this.$el.position().top + el_height;
     if (this.mget(_a.email) === '*') {
       modify = _a.no; 
@@ -127,7 +126,6 @@ class __invitation_contact extends LetcBox {
       this.softDestroy();
       return; 
     }
-    this.debug("aaa 92", this, cmd); 
     if (this.mget(_a.share_id) != null) {
       return this.postService({
         service     : SERVICE.sharebox.remove_link,
@@ -160,7 +158,6 @@ class __invitation_contact extends LetcBox {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.mget(_a.service);
-    this.debug(`aaaa 112 svc=${service}`, cmd, this);
     switch (service) {
       case _e.remove:
         return this._removeOrrevoke(cmd);

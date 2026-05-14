@@ -144,7 +144,6 @@ class settings_share_hub extends DrumeeMFS {
   getNodeSettingsApi() {
     const hubId = this.mget(_a.hub_id);
     if (!hubId) {
-      this.debug("No hub_id found");
       return;
     }
     this.fetchService({
@@ -158,7 +157,6 @@ class settings_share_hub extends DrumeeMFS {
       this.mset(data)
       this.feed(require('./skeleton').default(this, this.data(), _a.edit));
     }).catch((err) => {
-      this.debug("Error fetching settings:", err);
       this.mset({ privilege: _K.privilege.read, days: 0, hours: 0 });
       this.feed(require('./skeleton').default(this));
     });

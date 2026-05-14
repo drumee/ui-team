@@ -1146,7 +1146,6 @@ class __window_manager extends push {
    */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.status || cmd.mget(_a.service);
-    this.debug("onUiEvent:879", cmd, args, service)
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);

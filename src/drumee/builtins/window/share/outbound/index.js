@@ -162,7 +162,6 @@ class __share_outbound extends LetcBox {
     args.service = SERVICE.sharebox.assign_permission;
     args.hub_id  = this.mget(_a.hub_id);
     args.nid     = args.nid || this._selectedFiles();
-    this.debug("GGGGGGGGG", args, cmd.getData(), cmd);
     if (_.isEmpty(args.email)) {
       Butler.say(LOCALE.PLZ_SELECT_CONTACT);
       return; 

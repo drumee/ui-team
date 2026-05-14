@@ -68,7 +68,6 @@ class __welcome_password_meter extends __core {
    *
   */
   clearError() {
-    this.debug('clearError', this);
     if (this._message.isEmpty()) {
       return;
     }

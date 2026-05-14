@@ -136,7 +136,6 @@ class __welcome_core extends LetcBox {
       const err = xhr.error || xhr.responseJSON.message;
       return this.msg(err, _a.error);
     } catch (error) { 
-      this.debug('unknown error', xhr);
       return this.msg('unknown error', _a.error);
     }
   }

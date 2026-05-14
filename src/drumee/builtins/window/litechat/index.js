@@ -56,7 +56,6 @@ class __window_litechat extends __room {
     if (args == null) { args = {}; }
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
-    this.debug(`SERVICE=${service}`, cmd, this);
 
     switch (service) {
 

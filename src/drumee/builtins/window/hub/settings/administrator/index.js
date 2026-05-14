@@ -87,7 +87,6 @@ class __hub_administrator extends __core {
 //
 // ===========================================================
   _edit(cmd) {
-    this.debug("QQQQQQQ", this, cmd);
     const w = this.dialogWrapper;
     if (!w.isEmpty()) {
       w.clear();

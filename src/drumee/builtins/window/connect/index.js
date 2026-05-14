@@ -187,7 +187,6 @@ class __window_connect extends __room {
           },
           target: opt.origin
         });
-        this.debug("XWWW ::228 BUSY 222", this.state);
         return true;
     }
   }
@@ -524,7 +523,6 @@ class __window_connect extends __room {
    * @param {*} data 
    */
   onServerComplain(data) {
-    this.debug("__ERRRRR", data);
   }
 
 

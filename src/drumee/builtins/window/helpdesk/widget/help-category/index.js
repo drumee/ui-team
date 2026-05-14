@@ -40,7 +40,6 @@ class ___widget_help_category extends LetcBox {
   */
   onUiEvent (cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
 
     switch(service) {
       case _a.none:

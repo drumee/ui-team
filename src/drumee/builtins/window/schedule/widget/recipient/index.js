@@ -57,7 +57,6 @@ class __schedule_recipient extends LetcBox{
         this.triggerHandlers()
         return
       default:
-        this.debug("Created by kind builder");
         this.source = this
         this.service = service
         this.triggerHandlers()

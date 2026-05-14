@@ -133,7 +133,6 @@ class ___chat_room extends LetcBox {
         break;
 
       default:
-        this.debug('invalid type loaded');
         return
     }
     content.feed(widget_chat);

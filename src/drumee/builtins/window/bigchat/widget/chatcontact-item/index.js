@@ -84,7 +84,6 @@ class ___widget_chatcontactItem extends LetcBox {
    */
   onUiEvent(cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`SERVICE=${service}`);
     this.source = cmd;
     this.service = service;
     this.triggerHandlers({ ...args, service });

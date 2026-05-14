@@ -68,7 +68,6 @@ class __hub_name extends __core {
 //
 // ===========================================================
   _onDocumentClick(a) { 
-    this.debug("aaaa 58", this, a); 
     if (this.contains(a)) {
       return;
     }

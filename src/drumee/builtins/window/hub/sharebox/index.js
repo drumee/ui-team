@@ -187,7 +187,6 @@ class __window_hub_sharebox extends mfsInteract {
         return this.toggleValidityMode(cmd);
 
       case _e.create:
-        this.debug("aaaa CR", cmd);
         if (this._checkSanity()) {
           return this._create();
         }

@@ -42,7 +42,6 @@ class ___address_input_item extends LetcBox {
   onUiEvent(cmd) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
-    this.debug(`SERVICE=${service}`);
 
     switch (service) {
       case _e.destroy:

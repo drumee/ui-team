@@ -257,7 +257,6 @@ class __window_schedule extends __interact {
    * @param {*} data 
    */
   update_attendees(data) {
-    this.debug("ATTENDEES", data);
   }
 
 

@@ -47,7 +47,6 @@ class __security_usb extends __pad {
 // ===========================================================
   _set(cmd) {
     const val = this.findPart('ref-input').getValue();
-    this.debug(`PW =${val}`);
     // RSA    = require('hybrid-crypto-js').RSA
     // Crypt  = require('hybrid-crypto-js').Crypt
     // AES256 = require('aes256')
@@ -58,16 +57,12 @@ class __security_usb extends __pad {
     });
 
     rsa.generateKeypair(k=> { 
-      this.debug(" publicKey  = ", k.publicKey);
-      this.debug(" privateKey = ", k.privateKey);
 
       const key    = val;
       const plaintext = k.privateKey;
-      this.debug(`CYPHERED WITH ${key}`);
       const cipher    = AES256.createCipher(key);
       const encrypted = cipher.encrypt(plaintext);
       const decrypted = cipher.decrypt(encrypted);
-      this.debug(" encrypted = ", encrypted);
       return this.debug(" decrypted = ", decrypted);
     });
 
@@ -101,7 +96,6 @@ class __security_usb extends __pad {
 
   onUiEvent(cmd) {
     const service = cmd.mget(_a.service);
-    this.debug("QQQQQQQQQQQ", service, cmd);
     switch (service) {
       case "close-tooltips":
         return this._tooltips.clear();

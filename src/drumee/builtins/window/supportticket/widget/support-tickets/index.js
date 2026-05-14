@@ -63,7 +63,6 @@ class ___widget_support_tickets extends LetcBox {
   onUiEvent(cmd) {
     const service = cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
     const status = cmd.get(_a.status);
-    this.debug(`onUiEvent service=${service}`, cmd, this);
     switch (service) {
       case 'trigger-tickets-filter':
         var data = this.getData(_a.formItem);

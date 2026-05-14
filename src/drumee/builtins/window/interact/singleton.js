@@ -219,7 +219,6 @@ class __window_interact_singleton extends __window_chatInteract {
         break;
 
       default:
-        this.debug(`changeWindowSize not available - ${changeSize}`);
     }
 
     return this.sizeUpdated(newSize, oldSize);

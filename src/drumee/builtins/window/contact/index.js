@@ -42,7 +42,6 @@ class __window_contact extends __window_interact {
    * @returns 
    */
   onPartReady(child, pn, section) {
-    this.debug(`__window_contact onPartReady pn = ${pn}`, child);
     this.raise();
     switch (pn) {
       case _a.content:
@@ -66,7 +65,6 @@ class __window_contact extends __window_interact {
       status
     } = cmd;
 
-    this.debug(`__window_contact onUiEvent Service = ${service}`, status, cmd, this);
     
     if (pointerDragged) {
       return;
@@ -121,7 +119,6 @@ class __window_contact extends __window_interact {
    * @returns 
    */
   getCurrentLabel() {
-    this.debug("__window_contact getCurrentLabel", this);
     if (this.mget(_a.trigger)) {
       return this.mget(_a.trigger).mget(_a.label);
     }
@@ -135,7 +132,6 @@ class __window_contact extends __window_interact {
    * @returns 
    */
   _inviteResponse(data) {
-    this.debug("__window_contact _inviteResponse", data , this);
     this.source = data;
     return this.__content.feed(require('./skeleton/acknowledge')(this));
   }
@@ -148,7 +144,6 @@ class __window_contact extends __window_interact {
    * @returns 
    */
   __dispatchRest(method, data) {
-    this.debug(`__window_contact _dispatchRest method = ${method}`, method, data,this);
     switch (method) {
       case SERVICE.drumate.my_contacts:
         return this._isDrumee(data);

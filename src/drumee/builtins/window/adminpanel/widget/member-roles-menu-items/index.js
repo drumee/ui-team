@@ -46,7 +46,6 @@ class ___widget_member_rolesMenu_items extends LetcBox {
   * ===========================================================*/
   onUiEvent(cmd) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent Service = ${service}`, cmd, this);
 
     switch (service) {
       case 'trigger-role-select':
@@ -66,7 +65,6 @@ class ___widget_member_rolesMenu_items extends LetcBox {
   __dispatchPush (service, data) {
     switch (service) {
       case SERVICE.no_service:
-        this.debug('Created by kind builder', service, data)
     }
   }
 

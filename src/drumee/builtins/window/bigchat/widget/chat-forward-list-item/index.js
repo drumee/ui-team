@@ -38,7 +38,6 @@ class ___chat_forward_list_item extends LetcBox {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`OnUiEvent service = ${service}`, cmd, this);
 
     switch (service) {
       case _a.none:

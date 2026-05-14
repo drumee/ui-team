@@ -20,13 +20,10 @@ class __module_plugins extends LetcBox {
   route() {
     let opt = Visitor.parseModuleArgs();
     let { name, kind, title } = opt;
-    this.debug(`Loading plugin name=${name} to be used as kind=${kind}`)
     this.feed(require("./skeleton").default(this, title || name))
     Kind.loadPlugin({ name, kind }).then(async (p) => {
-      this.debug("Waiting plugin router to be loaded")
       await Kind.waitFor(kind)
       this.feed({ ...opt, kind })
-      this.debug("Plugins router loaded")
       const event = new Event('drumee:plugins:ready');
       document.dispatchEvent(event);
     }).catch((e) => {

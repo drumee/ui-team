@@ -33,7 +33,6 @@ class __addressbook_widget_contact_detail extends LetcBox {
    */
   onUiEvent(cmd) {
     const service = cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
 
     switch (service) {
       case _a.edit:

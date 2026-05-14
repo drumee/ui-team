@@ -325,7 +325,6 @@ class ___player_schedule extends __core {
   __dispatchPush(service, data, socket) {
     switch (service) {
       case SERVICE.no_service:
-        this.debug("Created by kind builder", service, data)
     }
   }
 

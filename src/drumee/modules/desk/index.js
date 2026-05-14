@@ -785,7 +785,6 @@ class desk_module extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
-    this.debug(`SERVICE=${service}`, cmd, args);
     if (pointerDragged || !window.Wm) {
       return;
     }

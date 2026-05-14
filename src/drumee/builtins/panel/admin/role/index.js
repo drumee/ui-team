@@ -28,7 +28,6 @@ class __admin_roles extends LetcBox {
       this.mset('collab_rule',       data.collab_rule);
       this.mset('sender_rule',       data.sender_rule);
     } catch (e) {
-      this.debug('_loadStats error', e);
     }
   }
 
@@ -82,7 +81,6 @@ class __admin_roles extends LetcBox {
     try {
       await this.postService(SERVICE.admin.save_roles_settings, this._settings);
     } catch (e) {
-      this.debug('_saveSettings error', e);
     }
   }
 
@@ -91,7 +89,6 @@ class __admin_roles extends LetcBox {
       await this.postService(SERVICE.admin.handle_workspace_request, { action, ...data });
       if (this._pendingList) this._pendingList.reload();
     } catch (e) {
-      this.debug('_handleRequest error', e);
     }
   }
 }

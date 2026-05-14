@@ -19,7 +19,6 @@ class __drumee_api_image_tag extends LetcBox {
     });
     super.initialize(opt);
     this.declareHandlers();
-    this.debug("STARTING", this.fig.family);
   }
 
   /**

@@ -86,7 +86,6 @@ class __module_test extends LetcBox {
         service: this.cursor.upstream.service,
         details: r
       }
-      this.debug('PROCESSING FAILURE RESPONSE', this.cursor, o, r);
       if (this.cursor.downstream.expect == _a.error) {
         o.status = _a.ok;
         o.error = `${o.error} (as expected)`;
@@ -115,7 +114,6 @@ class __module_test extends LetcBox {
       } else {
         o.status = _a.error;
       }
-      this.debug('PROCESSING SUCCESS RESPONSE', this.cursor, o, r);
       this.__results.append(o);
       walk();
     }

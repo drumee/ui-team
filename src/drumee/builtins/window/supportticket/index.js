@@ -84,7 +84,6 @@ class ___window_support_ticket extends __window_support_ticket_interact {
         return this.breadcrumbsContainer = child;
       
       case 'support_ticket_list':
-        this.debug('support ticket list')
         return this.waitElement(child.el, this.loadAfterWidgetTickets.bind(this), child);
       
       case _a.content:
@@ -147,7 +146,6 @@ class ___window_support_ticket extends __window_support_ticket_interact {
     }
 
     widgetTickets.on(EOD, f);
-    this.debug('its coming here 44444', this)
     widgetTickets.on('change:room_count', (count) => {
       this.currentPageListCount = count;
     })
