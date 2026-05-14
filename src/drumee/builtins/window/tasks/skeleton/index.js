@@ -230,7 +230,7 @@ module.exports = function (ui) {
                     }),
                     Skeletons.Note({
                       className: `${pfx}__column-title`,
-                      content: col.label,
+                      content: LOCALE[col.label] || col.key,
                     }),
                   ],
                 }),
@@ -449,23 +449,23 @@ module.exports = function (ui) {
             // matching the Figma. Clicking it forces a search submit so
             // it works as an Enter-equivalent for users who don't think
             // to press Enter.
-            Skeletons.Box.X({
-              className: `${pfx}__file-search-link`,
-              bubble: 0,
-              service: "file-search-input",
-              uiHandler: [ui],
-              searchScope: scope,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}__file-search-link-text`,
-                  content: LOCALE.LINK_FILE,
-                }),
-                Skeletons.Image.Svg({
-                  ico: "apps-link-simple",
-                  className: `${pfx}__file-search-link-ico`,
-                }),
-              ],
-            }),
+            // Skeletons.Box.X({
+            //   className: `${pfx}__file-search-link`,
+            //   bubble: 0,
+            //   service: "file-search-input",
+            //   uiHandler: [ui],
+            //   searchScope: scope,
+            //   kids: [
+            //     Skeletons.Note({
+            //       className: `${pfx}__file-search-link-text`,
+            //       content: LOCALE.LINK_FILE,
+            //     }),
+            //     Skeletons.Image.Svg({
+            //       ico: "apps-link-simple",
+            //       className: `${pfx}__file-search-link-ico`,
+            //     }),
+            //   ],
+            // }),
           ],
         }),
         // Dropdown only renders when there's something to show; otherwise it
@@ -552,7 +552,7 @@ module.exports = function (ui) {
       kids: cols.map((c) =>
         Skeletons.Note({
           className: `${pfx}__detail-status-pill`,
-          content: c.label,
+          content: LOCALE[c.label] || c.key,
           dataset: { active: dStatus === c.key ? 1 : 0 },
           styleOpt:
             dStatus === c.key ? { borderColor: c.color, color: c.color } : null,
@@ -801,7 +801,7 @@ module.exports = function (ui) {
       kids: cols.map((c) =>
         Skeletons.Note({
           className: `${pfx}__create-status-pill`,
-          content: c.label,
+          content: LOCALE[c.label] || c.key,
           dataset: { active: selectedStatus === c.key ? 1 : 0 },
           styleOpt:
             selectedStatus === c.key

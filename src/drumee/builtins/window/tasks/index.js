@@ -1,8 +1,8 @@
 const COLUMNS = [
-  { key: "todo", label: "To Do", color: "#AEAEB2" },
-  { key: "in_progress", label: "In Progress", color: "#65D0EA" },
-  { key: "to_review", label: "To review", color: "#E8A13B" },
-  { key: "complete", label: "Complete", color: "#54B684" },
+  { key: "todo",        label: "STATUS_TODO",        color: "#AEAEB2" },
+  { key: "in_progress", label: "STATUS_IN_PROGRESS", color: "#65D0EA" },
+  { key: "to_review",   label: "STATUS_TO_REVIEW",   color: "#E8A13B" },
+  { key: "complete",    label: "STATUS_COMPLETE",    color: "#54B684" },
 ];
 
 const PRIORITIES = [
