@@ -107,6 +107,7 @@
     "events": "^3.3.0",
     "filesize": "^9.0.11",
     "findup-sync": "^5.0.0",
+    "flatpickr": "^4.6.13",
     "gojs": "^2.3.7",
     "gsap": "^3.15.0",
     "handlebars": "^4.7.8",
