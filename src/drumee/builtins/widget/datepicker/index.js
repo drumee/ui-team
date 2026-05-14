@@ -1,5 +1,5 @@
 
-const { today } = require("core/utils")
+const { today } = require("@drumee/ui-essentials")
 /**
  * @param {*} view 
  * @returns 
