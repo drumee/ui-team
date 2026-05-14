@@ -5,19 +5,20 @@
     width: 880px;
     height: 100vh;
     top: 0px;
-    // Keep the panel inside the layout (right: 0) and use transform for
-    // the slide animation. Parking with `right: -880px` extends
-    // __body.scrollWidth by 880px and gives the desk a phantom
-    // horizontal scrollbar — touchpad / two-finger swipe can still
-    // surface it even with overflow:hidden on the body. Transform
-    // doesn't push the parent's scroll box, so the off-screen position
-    // is invisible to scroll calculations.
     right: 0;
+    // position:fixed + transform parking keeps the closed panel out of
+    // every ancestor's scroll box. position:absolute (containing block:
+    // the 0-width slot inside __body) still leaks into body.scrollWidth
+    // because layout includes positioned descendants, so __main and
+    // __body remain horizontally scrollable via touchpad gesture even
+    // with overflow:hidden — that's the "scroll ngang vẫn thấy inbox"
+    // bug. Fixed positioning is relative to the viewport and never
+    // contributes to any ancestor scrollWidth.
+    position: fixed;
     transform: translateX(100%);
     background-color: var(--normal-bg);
     border-left: 1px solid var(--border-muted);
     transition: transform 0.5s;
-    position: absolute;
     box-shadow: var(--shadow-left-big);
 
     &[data-anim="in"] {
