@@ -5,19 +5,27 @@
     width: 880px;
     height: 100vh;
     top: 0px;
-    right: -880px;
+    // Keep the panel inside the layout (right: 0) and use transform for
+    // the slide animation. Parking with `right: -880px` extends
+    // __body.scrollWidth by 880px and gives the desk a phantom
+    // horizontal scrollbar — touchpad / two-finger swipe can still
+    // surface it even with overflow:hidden on the body. Transform
+    // doesn't push the parent's scroll box, so the off-screen position
+    // is invisible to scroll calculations.
+    right: 0;
+    transform: translateX(100%);
     background-color: var(--normal-bg);
     border-left: 1px solid var(--border-muted);
-    transition: right 0.5s;
+    transition: transform 0.5s;
     position: absolute;
     box-shadow: var(--shadow-left-big);
 
     &[data-anim="in"] {
-      right: 0;
+      transform: translateX(0);
     }
 
     &[data-anim="out"] {
-      right: -880px;
+      transform: translateX(100%);
     }
   }
 

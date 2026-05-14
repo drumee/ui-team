@@ -5,18 +5,22 @@
     width: 720px;
     height: 100vh;
     top: 0;
-    right: -720px;
+    // See chat-p2p skin for the rationale: use transform instead of
+    // `right: -720px` so the closed panel doesn't push __body.scrollWidth
+    // and surface a phantom horizontal scrollbar on the desk.
+    right: 0;
+    transform: translateX(100%);
     background-color: var(--normal-bg-90, #fff);
     border-left: 1px solid var(--border-muted, #e5e5e5);
-    transition: right 0.5s;
+    transition: transform 0.5s;
     position: absolute;
     box-shadow: var(--shadow-left-big);
 
     &[data-anim="in"] {
-      right: 0;
+      transform: translateX(0);
     }
     &[data-anim="out"] {
-      right: -720px;
+      transform: translateX(100%);
     }
   }
 
