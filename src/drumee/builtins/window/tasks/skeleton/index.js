@@ -665,7 +665,7 @@ module.exports = function (ui) {
           value: dDraft.due_date || "",
           service: "task-input-changed",
           uiHandler: [ui],
-          vendorOpt: { dateFormat: "Y-m-d" },
+          vendorOpt: { dateFormat: "Y-m-d", minDate: "today" },
         },
       ],
     });
@@ -700,13 +700,13 @@ module.exports = function (ui) {
               className: `${pfx}__detail-label`,
               content: LOCALE.ATTACHMENTS,
             }),
-            Skeletons.Note({
-              className: `${pfx}__attachment-add`,
-              content: `+ ${LOCALE.ATTACH_FILE}`,
-              bubble: 0,
-              service: "pick-attachment",
-              uiHandler: [ui],
-            }),
+            // Skeletons.Note({
+            //   className: `${pfx}__attachment-add`,
+            //   content: `+ ${LOCALE.ATTACH_FILE}`,
+            //   bubble: 0,
+            //   service: "pick-attachment",
+            //   uiHandler: [ui],
+            // }),
           ],
         }),
         ...(attachments.length
@@ -990,7 +990,7 @@ module.exports = function (ui) {
               value: draft?.due_date || "",
               service: "task-input-changed",
               uiHandler: [ui],
-              vendorOpt: { dateFormat: "Y-m-d" },
+              vendorOpt: { dateFormat: "Y-m-d", minDate: "today" },
             },
           ],
         }),
