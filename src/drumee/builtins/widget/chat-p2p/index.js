@@ -326,7 +326,9 @@ class __chat_p2p extends LetcBox {
    * @param {Object} args
    */
   onUiEvent(trigger, args = {}) {
-    const service = args.service || trigger.get(_a.service);
+    // trigger.service is the JS property set by widget_chat before calling
+    // triggerHandlers — args.service is absent when widget_chat passes raw args.
+    const service = args.service || trigger.get(_a.service) || trigger.service;
     switch (service) {
       case 'load-conversation':
         return this.openChat(trigger);
@@ -369,6 +371,39 @@ class __chat_p2p extends LetcBox {
       case 'compose-pick':
         this._toggleComposePopup(false);
         return this.openChat(trigger);
+
+      case 'forward-message': {
+        // In chat-p2p there is no intermediate chat_room widget, so `trigger`
+        // is widget_chat itself (it holds _selectedMessages, hubId, peerId).
+        // window_bigchat uses cmd.source because chat_room sets source=widget_chat
+        // before bubbling up; here we skip that extra hop.
+        const chatWidget = trigger;
+        if (!chatWidget || !chatWidget._selectedMessages) return;
+        this.ensurePart('overlay-wrapper').then(overlay => {
+          overlay.el.dataset.mode = _a.open;
+          this.ensurePart('wrapper-chat-overlay').then(chatOverlay => {
+            chatOverlay.feed({
+              kind: 'widget_chat_item_forward',
+              source: trigger,
+              messages: chatWidget._selectedMessages,
+              msghubID: chatWidget.hubId,
+              peer_id: chatWidget.peerId || '',
+            });
+          });
+        });
+        return;
+      }
+
+      case 'close-overlay': {
+        this.ensurePart('overlay-wrapper').then(overlay => {
+          overlay.el.dataset.mode = _a.closed;
+          this.ensurePart('wrapper-chat-overlay').then(chatOverlay => {
+            chatOverlay.clear();
+            chatOverlay.el.dataset.state = _a.closed;
+          });
+        });
+        return;
+      }
 
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);
@@ -421,9 +456,13 @@ class __chat_p2p extends LetcBox {
     item.mset(_a.message, msg);
     item.mset(_a.ctime, data.ctime);
 
-    // Track has_mention: increment if this message mentions current user
+    // Track has_mention: increment if this message mentions current user.
+    // mention_ids may arrive as a JSON string from the DB — normalise first.
     if (data.author_id !== Visitor.id) {
-      const mentionIds = data.mention_ids || [];
+      let mentionIds = data.mention_ids || [];
+      if (typeof mentionIds === 'string') {
+        try { mentionIds = JSON.parse(mentionIds); } catch (e) { mentionIds = []; }
+      }
       const isMentioned = Array.isArray(mentionIds)
         ? mentionIds.some(id => String(id) === String(Visitor.id))
         : false;
