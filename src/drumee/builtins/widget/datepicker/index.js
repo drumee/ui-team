@@ -1,162 +1,83 @@
 
-const { today } = require("@drumee/ui-essentials")
-/**
- * @param {*} view 
- * @returns 
-*/
-const _template = function (view) {
-  let html;
-  return html = `<input id=\"${view._id}-input\" \
-    class=\"${view.mget(_a.innerClass)}\" \
-    name=\"${view.mget(_a.name)}\" \
-    type=\"text\" value=\"${view.mget(_a.value)}\" />\
-    `;
-};
+const { today } = require("@drumee/ui-essentials");
 
-/**
- * 
-*/
 class __datepicker extends LetcBox {
   constructor(...args) {
     super(...args);
     this.onDomRefresh = this.onDomRefresh.bind(this);
-    this._update = this._update.bind(this);
-    this._on_select = this._on_select.bind(this);
-    this._on_apply = this._on_apply.bind(this);
-    this._start = this._start.bind(this);
+    this._on_change = this._on_change.bind(this);
   }
 
   static initClass() {
     this.prototype.className = "datepicker";
   }
 
-  /**
-   * @param {*} opt
-  */
-  initialize(opt) {
-    super.initialize();
+  initialize(opt = {}) {
+    super.initialize(opt);
     this.model.atLeast({
       aspect: _a.grid,
       justify: _a.left,
       innerClass: "",
       name: "daterange",
-      value: today()
+      value: today(),
     });
-    this.declareHandlers(); //s()
-    this._id = _.uniqueId('dp-');
-    this.model.set({
-      widgetId: this._id,
-      sys_pn: 'date-range-picker'
-    });
-
-    this._countdown = _.after(3, this._start);
-    return require.ensure(['application'], () => {
-      require('daterangepicker');
-      require('daterangepicker/daterangepicker.css');
-      return this._countdown();
-    });
+    this.declareHandlers();
+    this._id = _.uniqueId("dp-");
+    this.model.set({ widgetId: this._id, sys_pn: "date-range-picker" });
   }
 
+  async onDomRefresh() {
+    const flatpickr = (await import("flatpickr")).default;
+    await import("flatpickr/dist/flatpickr.min.css");
 
-  // ===========================================================
-  //
-  // ===========================================================
-  onDomRefresh() {
-    this.declareHandlers(); //s()
-    this.debug("AAAA 22222222", this, this.el);
-    this.el.setAttribute(_a.id, this._id);
-    this.$el.append(_template(this));
-    this._input = $(`#${this._id}-input`);
-    this._countdown();
-    const f = () => {
-      this._countdown();
-      this._input.on('outsideClick.daterangepicker', this._outsideClick)
-      this._input.on('apply.daterangepicker', this._on_apply);
-      return
+    this._input = document.createElement("input");
+    this._input.id = `${this._id}-input`;
+    this._input.className = this.mget(_a.innerClass) || "";
+    this._input.name = this.mget(_a.name);
+    this._input.type = "text";
+    this.el.appendChild(this._input);
+
+    const isRange = !!this.mget("ranges");
+    const placement = this.mget("placement") === "up" ? "above" : "below";
+
+    const opt = {
+      appendTo: this.el,
+      dateFormat: "d/m/Y",
+      position: placement,
+      onChange: this._on_change,
+      ...(isRange
+        ? {
+            mode: "range",
+            defaultDate: [
+              Dayjs().subtract(29, "days").toDate(),
+              Dayjs().toDate(),
+            ],
+          }
+        : {
+            defaultDate: this.mget(_a.value) || today(),
+          }),
+      ...this.mget(_a.vendorOpt),
     };
-    return this.waitElement(this._input[0], f);
+
+    this._picker = flatpickr(this._input, opt);
   }
 
-  // ===========================================================
-  //
-  // ===========================================================
-  _update(start, end, label) {
-    this.debug('_update datepicker', start, end, label, this);
-    const f = Visitor.dateformat();
+  _on_change(selectedDates, dateStr) {
+    const [start, end] = selectedDates;
     this.mset({
       startDate: start,
-      endDate: end,
-      selectedLabel: label
+      endDate: end || start,
+      selectedLabel: dateStr,
+      value: dateStr,
     });
-    return this._input[0].dataset.state = _a.open;
-  }
-
-  // ===========================================================
-  //
-  // ===========================================================
-  _on_select(instance, date) {
-    return this.debug('aaa 90: ', instance, date);
-  }
-
-  // ===========================================================
-  //
-  // ===========================================================
-  _on_apply(instance, date) {
-    // Something is setting state to closed?
-    this._input[0].dataset.state = _a.open;
-    return this.triggerHandlers();
-  }
-
-  /**
-   * 
-  */
-  _outsideClick() {
-    // to override the default behavior of hide by the library
-    return this.show();
-  }
-  // ===========================================================
-  //
-  // ===========================================================
-  _start() {
-    this.debug("AAAA 3333333", this, this.el);
-
-    let opt = {
-      parentEl: this.$el,
-      singleDatePicker: true,
-      showDropdowns: true,
-      drops: this.mget('placement') || 'up',
-      autoApply: true,
-      onSelect: this.on_select,
-      locale: {
-        format: "DD/MM/YYYY"
-      },
-      opens: this.mget('openPosition') || 'center'
-    };
-
-    if (this.mget('ranges')) {
-      delete opt.singleDatePicker;
-      opt.startDate = Dayjs().subtract(29, 'days').format('DD/MM/YYYY');
-      opt.endDate = Dayjs().format('DD/MM/YYYY');
-      opt.alwaysShowCalendars = true;
-      opt.locale.separator = ' to ';
-      opt.ranges = {
-        'Yesterday': [Dayjs().subtract(1, 'days'), Dayjs().subtract(1, 'days')],
-        'Last Week': [Dayjs().subtract(6, 'days'), Dayjs()],
-        'Last 30 Days': [Dayjs().subtract(29, 'days'), Dayjs()],
-        'This Month': [Dayjs().startOf('month'), Dayjs().endOf('month')],
-        'Last Month': [Dayjs().subtract(1, 'month').startOf('month'), Dayjs().subtract(1, 'month').endOf('month')],
-        'Last Year': [Dayjs().subtract(11, 'month').startOf('month'), Dayjs().endOf('month')]
-      }
+    // for range mode, only fire when both ends are picked
+    if (!this.mget("ranges") || end) {
+      this.triggerHandlers();
     }
+  }
 
-    opt = _.merge(opt, this.model.get(_a.vendorOpt));
-    this._input.daterangepicker(opt, this._update);
-
-    // to over-ride and fix a css bug - do not remove
-    this.el.firstChild.remove();
-    this.el.lastChild.style.display = _a.none;
-
-    return
+  onBeforeDestroy() {
+    if (this._picker) this._picker.destroy();
   }
 }
 __datepicker.initClass();
