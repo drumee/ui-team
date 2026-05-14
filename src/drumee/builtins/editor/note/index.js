@@ -106,7 +106,6 @@ class ___editor_note extends __player {
           className: `${this.fig.family}__text-content`,
           ...opt
         }))
-        //this.debug("AAA:31", child);
         break;
       case 'pin':
         if (!this.media || this.mget(REMINDER_ID)) return;
@@ -301,7 +300,6 @@ class ___editor_note extends __player {
    * 
    */
   pin(cmd) {
-    this.debug("AAAA:142", this.mget(REMINDER_ID), cmd.mget(_a.state));
     let task = {
       nid: this.mget(_a.nid),
       hub_id: this.mget(_a.hub_id),
@@ -322,7 +320,6 @@ class ___editor_note extends __player {
       })
     } else {
       let id = this.mget(REMINDER_ID);
-      this.debug("AAAA:162", id, this.mget(REMINDER_ID), cmd.mget(_a.state));
       if (!id) return;
       this.postService({ service: SERVICE.reminder.remove, hub_id: Visitor.id, id }, { async: 1 }).then((data) => {
         /** */

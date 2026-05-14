@@ -33,7 +33,6 @@ class ___notification_message extends LetcBox {
     //   type   : _a.channel
     //   nid    : "0"
     //   hub_id : @mget(_a.hub_id)
-    this.debug("HHHHHHHHHHH", this);
     //@bubbleService("new-messages", args)
     const args = { 
       service : "new-messages",

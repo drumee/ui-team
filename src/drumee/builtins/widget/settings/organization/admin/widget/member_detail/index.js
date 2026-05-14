@@ -20,11 +20,9 @@ class ___member_detail extends LetcBox {
   onPartReady (child, pn){
     switch(pn){
       case _a.none:
-        this.debug("Created by kind builder", child);
         break;
       
       default:
-        this.debug("Created by kind builder");
     }
   }
 

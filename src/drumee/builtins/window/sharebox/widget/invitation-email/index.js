@@ -49,7 +49,6 @@ class ___invitation_email extends LetcBox {
         break;
 
       default:
-        this.debug("onPartReady");
     }
   }
 
@@ -66,13 +65,11 @@ class ___invitation_email extends LetcBox {
   # onValidateError 
   # ===========================================================*/
   onValidateError(cmd) {
-    this.debug(cmd, this)
   }
   /* ===========================================================
   # onValidateSuccess
   # =========================================================== */
   onValidateSuccess(cmd) {
-    this.debug(cmd, this)
   }
 
   /* ===========================================================
@@ -81,7 +78,6 @@ class ___invitation_email extends LetcBox {
   onUiEvent(cmd, args) {
     let service = cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
-    this.debug("onUiEvent", service, status, this)
 
     switch (service) {
       case "add-item":
@@ -115,7 +111,6 @@ class ___invitation_email extends LetcBox {
         }
         break;
       default:
-        this.debug("Created by kind builder");
     }
   }
 

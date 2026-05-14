@@ -62,7 +62,6 @@ class __window_wallpaper_settings extends __window_interact {
    * The file will only be actually applied as bg once the validation buton fired
    */
   sendFile(file) {
-    this.debug("sendFile wallpaper settings", file);
     if (!file || !(file instanceof File)) {
       this.warning("Invalid file for upload", file);
       return;
@@ -75,7 +74,6 @@ class __window_wallpaper_settings extends __window_interact {
       ownpath: `/${LOCALE.DESKTOP_WALLPAPER}`,
       metadata: { folder_type: "wallpapers" }
     }).then((data) => {
-      this.debug("make_dir response", data);
       if (!data || !data.nid) {
         this.warning("Failed to create wallpaper folder", data);
         return;
@@ -94,7 +92,6 @@ class __window_wallpaper_settings extends __window_interact {
         uiHandler: [this],
       });
       let queue = this.children.last();
-      this.debug("Upload queue", queue);
       if (!queue) {
         this.warning("Failed to create uploader queue");
         return;
@@ -123,7 +120,6 @@ class __window_wallpaper_settings extends __window_interact {
       })
 
       queue.once("upload:response", (data) => {
-        this.debug("Upload response - got authorization", data);
         const { nid, hub_id } = data;
         
         // Mark upload as completed in progress window
@@ -195,7 +191,6 @@ class __window_wallpaper_settings extends __window_interact {
       p.el.dataset.error = error;
       this._error = error;
     }).catch((err) => {
-      this.debug("Could not update file size text", err);
     });
     if (error) return
     this.ensurePart("uploader").then((uploaderPart) => {
@@ -210,7 +205,6 @@ class __window_wallpaper_settings extends __window_interact {
         this._previewObjectUrl = url;
       }
     }).catch((err) => {
-      this.debug("Could not preview file image", err);
     });
 
   }
@@ -344,7 +338,6 @@ class __window_wallpaper_settings extends __window_interact {
       settings: opt,
       hub_id: Visitor.id,
     }).then((data) => {
-      this.debug("Wallpaper image updated successfully", data);
       this.triggerHandlers({ data, service: "set-wallpaper-image" });
       if (quit) {
         this.goodbye()
@@ -375,7 +368,6 @@ class __window_wallpaper_settings extends __window_interact {
       settings: opt,
       hub_id: Visitor.id,
     }).then((data) => {
-      this.debug("Wallpaper color updated successfully", data);
       this.triggerHandlers({ data, service: "set-wallpaper-color" });
     })
       .catch((error) => {
@@ -395,7 +387,6 @@ class __window_wallpaper_settings extends __window_interact {
       settings: opt,
       hub_id: Visitor.id,
     }).then((data) => {
-      this.debug("Wallpaper color updated successfully", data);
       let service = "set-wallpaper-image";
       if (opt.wallpaper.color) service = "set-wallpaper-color";
       this.triggerHandlers({ data, service })

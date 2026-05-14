@@ -59,7 +59,6 @@ class ___members_page extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug("AAA:50", args, cmd, service)
     switch (service) {
       case 'see-desktop':
         this.invokeSeeDesktop(cmd)
@@ -97,7 +96,6 @@ class ___members_page extends LetcBox {
       case 'member-added':
         this.addNewMember(args)
         this.loadMembersList()
-        // this.debug("AAA:86", args, cmd, this)
         break;
       case 'show-member-detail':
         this.loadMemberDetail(cmd)
@@ -285,7 +283,6 @@ class ___members_page extends LetcBox {
    * @param {(any|null)} source
   */
   loadMemberDetail(cmd) {
-    this.debug("AAAA:289", cmd)
     let data = {}
     if (cmd) {
       data = cmd.data()
@@ -956,7 +953,6 @@ class ___members_page extends LetcBox {
         return this.updateMemberStatusResponse(data[0])
 
       // case SERVICE.adminpanel.members_import:
-      //   this.debug("AAA:948", data)
       //   if (data.valid) {
       //     this.getItemsByKind("widget_member_tags")[0]
       //       .getItemsByAttr('type', 'allMembers')[0]

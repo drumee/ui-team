@@ -107,7 +107,6 @@ class __notifier_share extends LetcBox {
    * @returns 
    */
   __dispatchPush(service, data) {
-    this.debug("aaa 71__dispatchPush", service, data);
     switch (service) {
       case SERVICE.sharebox.assign_permission:
         return this.getNotification();
@@ -121,7 +120,6 @@ class __notifier_share extends LetcBox {
    * @returns 
    */
   __dispatchRest(service, data) {
-    this.debug("aaa 71__dispatchRest ", service, data);
     switch (service) {
       case SERVICE.sharebox.notification_count:
         return this.update(data);

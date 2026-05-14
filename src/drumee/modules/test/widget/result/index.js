@@ -28,11 +28,9 @@ class ___test_result extends LetcBox{
   onPartReady (child, pn){
     /*switch(pn){
       case _a.none:
-        this.debug("Created by kind builder", child);
         break;
       default:
         super.onPartReady(child, pn);
-        this.debug("Created by kind builder");
     }*/
   }
 
@@ -51,13 +49,10 @@ class ___test_result extends LetcBox{
   onUiEvent (cmd, args){
     let service = cmd.get(_a.service) || cmd.get(_a.name);
     let status = cmd.get(_a.status);
-    this.debug('service', service, cmd);
     switch(service){
       case  _a.none:
-        this.debug("Created by kind builder");
       break;
       default:
-        this.debug("Created by kind builder");
         this.triggerHandlers();
         // if(super.onUiEvent) super.onUiEvent(cmd, args)
     }

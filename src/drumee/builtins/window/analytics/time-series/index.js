@@ -62,7 +62,6 @@ class __window_chart_timeseries extends __window_analytics {
         //opt.shift()
         //aaa.push(opt.shift());
         //aaa.push(opt);
-        //this.debug("AAA:58 aaa", opt[0],opt[1], opt[2]);
         this.feed(require('../skeleton')(this, opt));
       }).catch((e) => {
         this.warn(e);

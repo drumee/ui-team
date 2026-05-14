@@ -41,15 +41,12 @@ class ___outbound_page extends LetcBox {
    */
   onUiEvent (cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug('onUiEvent', service, cmd, this);
 
     switch(service) {
       case _a.none:
-        this.debug(' ui event is none ')
         return;
       
       default:
-        this.debug("Created by kind builder 222");
     }
   }
 }

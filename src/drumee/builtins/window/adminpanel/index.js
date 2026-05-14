@@ -179,7 +179,6 @@ class ___window_admin_panel extends __window_interact_singleton {
    * @param {LetcBox} cmd
    */
   loadMemberDetail(cmd) {
-    this.debug("AAA:182", cmd, this)
     if (!this.__content || this.__content.isDestroyed()) return;
     let child = this.__content.children.first()
     if (child && child.loadMemberDetail && _.isFunction(child.loadMemberDetail)) {

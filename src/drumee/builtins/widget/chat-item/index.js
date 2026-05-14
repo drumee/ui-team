@@ -554,7 +554,6 @@ class ___widget_chatItem extends LetcBox {
     }
     if (data && data.metadata && data.message_id && data.message_id == this.mget('message_id')) {
       seen = JSON.parse(data.metadata)._seen_[data.entity_id] || 0;
-      //this.debug("AAA:327", data, this);
     }
     this.waitElement(id, () => {
       el = document.getElementById(id);

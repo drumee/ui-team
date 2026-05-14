@@ -11,7 +11,6 @@ class ___members_room extends LetcBox {
     this.declareHandlers();
     this._type = this.mget(_a.type)
     // this._currentData = this.mget(_a.source)
-    this.debug("AAA:14", opt.source)
     this._currentTag = this.mget('currentTag') || null;
     this._drumateId = ''
   }

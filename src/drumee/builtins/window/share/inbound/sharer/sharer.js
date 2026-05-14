@@ -99,7 +99,6 @@ class __inbound_sharer extends LetcBox {
         return this._showMessage(cmd);
 
       case "hide-inbound-msg":
-        this.debug("hide-inbound-msg", this.model);
         return this.dialogWrapper.$el.fadeOut();
 
       case "accept_notification":

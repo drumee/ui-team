@@ -1,7 +1,7 @@
 module.exports = function (ui, contact) {
   const fig = ui.fig.family;
   const isReceivedInvite = contact.status === "received";
-  const isSentInvite = contact.status === "invitation";
+  const isSentInvite = contact.status === "sent";
   const isArchived = contact.is_archived === 1 || contact.status === "archived";
   const isBlocked = contact.is_blocked === 1 || contact.status === "blocked";
   const contactId = contact.id || contact.contact_id;

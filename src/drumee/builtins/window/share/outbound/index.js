@@ -162,7 +162,6 @@ class __share_outbound extends LetcBox {
     args.service = SERVICE.sharebox.assign_permission;
     args.hub_id  = this.mget(_a.hub_id);
     args.nid     = args.nid || this._selectedFiles();
-    this.debug("GGGGGGGGG", args, cmd.getData(), cmd);
     if (_.isEmpty(args.email)) {
       Butler.say(LOCALE.PLZ_SELECT_CONTACT);
       return; 
@@ -179,7 +178,6 @@ class __share_outbound extends LetcBox {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug(`AAAAAA 166 rvice=${service}`, this, cmd, cmd.mget(_a.state), cmd);
     switch (service) {
       case _e.close: 
         this.goodbye();
@@ -262,7 +260,6 @@ class __share_outbound extends LetcBox {
 // ===========================================================
   __dispatchRest(method, data, socket) {
     let msg;
-    this.debug("AAAAAAAAAAAAAA 731", method, data, socket);
     switch (method) {
       
       case SERVICE.sharebox.assign_permission:

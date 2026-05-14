@@ -63,7 +63,6 @@ class ___widget_support_tickets extends LetcBox {
   onUiEvent(cmd) {
     const service = cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
     const status = cmd.get(_a.status);
-    this.debug(`onUiEvent service=${service}`, cmd, this);
     switch (service) {
       case 'trigger-tickets-filter':
         var data = this.getData(_a.formItem);
@@ -177,7 +176,6 @@ class ___widget_support_tickets extends LetcBox {
    * @returns
   */
   onWsMessage (service, data, options) {
-    this.debug('AAA:180', service, data, options, this);
     switch (options.service) {
       case SERVICE.channel.send_ticket:
         if (data.is_ticket) {

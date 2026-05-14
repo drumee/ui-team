@@ -70,7 +70,6 @@ class ___widget_member_tagItem extends LetcBox {
   onUiEvent (cmd, args) {
     let type = this.mget(_a.type);
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
 
     switch(service) {
       case 'edit-tag':

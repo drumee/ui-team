@@ -74,7 +74,6 @@ class __invitation_core extends DrumeeMFS {
       }
     }
     api.hub_id = this.mget(_a.hub_id);
-    this.debug("aaa 37 122 136", api);
     return api;
   }
 

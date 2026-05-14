@@ -158,11 +158,9 @@ class __welcome_reset extends __welcome_interact {
     }, { async: 1 }).then((data) => {
       this.checkTokenResponse(data);
     }).catch((e) => {
-      this.debug("Caught error in createPassword:", e, this)
     });
 
     const data = this._input.getData()
-    this.debug("AAA:165", data, this)
     // return
     // this.postService({
     //   service: SERVICE.butler.set_password,
@@ -273,7 +271,6 @@ class __welcome_reset extends __welcome_interact {
    * @param {object} data
   */
   checkTokenResponse(data) {
-    this.debug("AAAA:261", data)
     if (!data) {
       return this.renderMessage(LOCALE.SOMETHING_WENT_WRONG)
     }
@@ -290,9 +287,7 @@ class __welcome_reset extends __welcome_interact {
           password,
           id: this.mget(_a.uid)
         }).then(async (resp) => {
-          this.debug("AAAA:293", resp)
           let params = await this.fetchService(SERVICE.yp.get_env);
-          this.debug("AAAA:293", resp)
           if (params.user && params.user.signed_in) {
             Visitor.set(params.user);
             location.hash = '#/desk';

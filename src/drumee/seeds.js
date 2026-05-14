@@ -101,6 +101,9 @@ module.exports = {
   custom_logo: function () {
     return import("./builtins/widget/logo");
   },
+  date_picker: function () {
+    return import("./builtins/widget/datepicker");
+  },
   devel_icons: function () {
     return import("./modules/devel/icons");
   },

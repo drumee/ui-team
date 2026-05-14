@@ -50,7 +50,6 @@ class __editor_diagram extends __player {
    * Upon DOM refresh, after element actually insterted into DOM
    */
   onDomRefresh() {
-    this.debug("AAAXX:38 -- onDomRefresh", this);
     this.feed(require("./skeleton")(this));
   }
 
@@ -66,10 +65,8 @@ class __editor_diagram extends __player {
         this._diagram.save();
         break;
       case _e.load:
-        this.debug("AAA:56 -- onUiEvent", location);
         break;
       default:
-        this.debug("AAA:59 -- onUiEvent");
         if (super.onUiEvent) super.onUiEvent(cmd, args);
     }
   }

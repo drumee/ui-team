@@ -139,7 +139,6 @@ class __security_ident extends __pad {
   }
 
   __dispatchRest(method, data, socket) {
-    this.debug("AAAAAAAAAAA", method, this, data, data.profile);
     switch (method) {
       case SERVICE.drumate.update_ident:
         // Visitor.respawn(data)

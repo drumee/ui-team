@@ -117,7 +117,6 @@ class __invitation_settings extends __recipient {
     await Kind.waitFor('invitation_contact');
     await Kind.waitFor('invitation_search');
     await Kind.waitFor('invitation_shareeroll');
-    this.debug("AAA:89", this)
     this.recipientItem = {
       kind: 'invitation_recipient',
       className: _a.destination,
@@ -173,17 +172,14 @@ class __invitation_settings extends __recipient {
 
       case "roll-recipients":
         this.recipientsRoll = child;
-        this.debug("AAAA:155", child)
         var c = child.collection;
         c.on(_e.remove, () => {
-          this.debug("AAAA:remove 155", child)
           if (c.length === 0) {
             // this.feed(this._skeleton(this));
             return this._actionState(0);
           }
         });
         return c.on(_e.add, () => {
-          this.debug("AAAA:155 ADD", child)
           let s = 0;
           const f = c.filter(m => !m.get(_a.idle));
           if (f.length) {
@@ -243,7 +239,6 @@ class __invitation_settings extends __recipient {
    * @returns 
    */
   _actionState(s) {
-    this.debug('aaa:222', s)
     if (this.__addMemberButton) {
       this.__addMemberButton.el.dataset.state = s;
     }
@@ -527,7 +522,6 @@ class __invitation_settings extends __recipient {
         if (this.__existingMembers) this.__existingMembers.feed(usersList);
         this.recipientsRoll.clear();
         this.triggerHandlers({ service: "contributors-added" });
-        this.debug("AAAA:498", usersList);
       })
       .catch((err) => {
         this.warn("[invitation] hub.add_contributors failed", err);
@@ -557,7 +551,6 @@ class __invitation_settings extends __recipient {
       }
     }
     this.pendingChanges = this.__settings.getData();
-    this.debug('toggleValidityMode', this.pendingChanges, formData, cmd.mget('expiry'), cmd, this);
 
     // Re-render immediately to show the change
     const part = this.getPart('validity-content');
@@ -604,7 +597,6 @@ class __invitation_settings extends __recipient {
           break
         default:
       }
-      this.debug("AAA:603", this._tab, args, p.getData(), privilege, cmd, this.pendingMember)
       this.pendingMember.mset({ privilege })
       p.feed(require("./skeleton/permission").default(this, this.pendingMember))
       const validity = this.getPart('validity-content');
@@ -637,7 +629,6 @@ class __invitation_settings extends __recipient {
     }
     this.__settings.clear();
     this.postService(SERVICE.hub.set_member_privilege, args).then((users) => {
-      this.debug("AAA:605", users)
       this.mset({ sharees: users })
       if (this.__existingMembers) {
         this.__existingMembers.restart()
@@ -658,7 +649,6 @@ class __invitation_settings extends __recipient {
     // }
     // this.__settings.clear();
     // this.postService(SERVICE.hub.set_member_privilege, args).then((users) => {
-    //   this.debug("AAA:6196", users)
     //   this.mset({ sharees: users })
     //   this.__existingMembers.feed(users)
     // })
@@ -671,7 +661,6 @@ class __invitation_settings extends __recipient {
     let s;
     const service = args.service || cmd.service || cmd.mget(_a.service);
     this.service = service;
-    this.debug("AAA:544", service, cmd, args)
     switch (service) {
       case _e.update:
         return this._updateData(cmd);
@@ -713,7 +702,6 @@ class __invitation_settings extends __recipient {
         this._service = "set-recipients-permission"
         this.ensurePart("settings").then((p) => {
           this.pendingMember = this.recipientsRoll.children.first();
-          this.debug("AAAA:567", this.pendingMember)
           p.feed(require("./skeleton/permission").default(this, this.pendingMember, this._service))
         })
         break;
@@ -746,7 +734,6 @@ class __invitation_settings extends __recipient {
         return
 
       case "permission-changed":
-        this.debug("AAA:680", cmd, args)
         if (this._service == "set-recipients-permission") {
           return this.__updatePermission.setState(args.valid)
         }

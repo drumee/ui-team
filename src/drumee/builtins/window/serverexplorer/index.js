@@ -87,7 +87,6 @@ class __window_serverexplorer extends __window_singleton_interact {
   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service)
-    this.debug(`onUiEvent service = ${service}`, cmd, this, args)
 
     switch (service) {
       case _a.openLocation:
@@ -139,7 +138,6 @@ class __window_serverexplorer extends __window_singleton_interact {
    * 
    */
   openLocation (source) {
-    this.debug('openLocation', source, this);
     let path = source.mget(_a.path);
     const fileList = {
       kind : 'widget_efs_list',
@@ -412,7 +410,6 @@ class __window_serverexplorer extends __window_singleton_interact {
    * @param {*} options 
   */
   onWsMessage(service, data, options) {
-    this.debug(`AAA:415 ServerExplorer service=${service}`, data);
     switch(options.service) {
       case 'mfs.serverimport': 
       case 'mfs.serverexport':

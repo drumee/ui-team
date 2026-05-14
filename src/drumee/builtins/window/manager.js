@@ -74,7 +74,6 @@ class __window_manager extends mfsInteract {
    *
    */
   _kbHandler(e) {
-    this.debug("AAAA:69", e);
   }
 
   /**

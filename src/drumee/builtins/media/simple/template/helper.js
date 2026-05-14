@@ -19,7 +19,6 @@ ${preview} \
 ${filename} \
 </div>\
 `;
-  this.debug("ZZOOOO", $(html));
   return $(html);
 };
 

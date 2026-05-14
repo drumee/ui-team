@@ -28,7 +28,6 @@ class __hub_name extends __core {
   doCommit(data) {
     let media = this.hub.media;
 
-    //this.debug("AAAA:28 -- DO COMMIT ", data, this);
     let args = {
       filename: data.value,
       nid: media.mget(_a.nodeId),
@@ -37,7 +36,6 @@ class __hub_name extends __core {
     };
 
     this.postService(args).then((data) => {
-      this.debug("AAAA:28 -- DO COMMIT ", data, this);
       media.afterRename(data);
       //this.hub.mget(_a.source).update_name(_a.filename, data.filename);
       this.mset(_a.name, data.args.dest.filename);

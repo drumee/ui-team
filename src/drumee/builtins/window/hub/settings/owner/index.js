@@ -113,7 +113,6 @@ class __hub_owner extends __core {
       //   @_add(cmd)
 
       case _e.commit:
-        this.debug(`AAAAAA QQFFF 96service=${service}`, cmd, cmd.mget(_a.fullname));
         var uid = cmd.mget(_a.id);
         if (uid === this.mget(_a.id)) {
           this.dialogWrapper.softClear();

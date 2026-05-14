@@ -31,7 +31,6 @@ class ___widget_member_form extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug("AAA:34", service)
     switch (service) {
       case 'choose-who-can-see-member':
         return this.chooseWhoCanSeeMember()
@@ -136,7 +135,6 @@ class ___widget_member_form extends LetcBox {
     }
     this.validateData()
     if (this.formStatus == _a.error) {
-      this.debug('invalid data')
       return
     }
 
@@ -264,7 +262,6 @@ class ___widget_member_form extends LetcBox {
         break
 
       default:
-        this.debug(`${method} not available !!!`)
     }
   }
 }

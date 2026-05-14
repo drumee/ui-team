@@ -1,6 +1,6 @@
 
 require('./skin');
-const { TweenLite } = gsap;
+const { TweenLite } = require("@drumee/ui-core/vendor");
 
 const media_core = require('../interact');
 

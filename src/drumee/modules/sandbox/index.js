@@ -5,7 +5,7 @@
 // ==================================================================== *
 
 const JSONEditor = require('jsoneditor');
-require('jsoneditor/dist/jsoneditor.css');
+// require('jsoneditor/dist/jsoneditor.css');
 require('./skin');
 /**
  * 
@@ -60,7 +60,6 @@ class __module_sandbox extends LetcBox {
     }
     const name = opt[1];
     this._name = name || 'text';
-    this.debug(`AAA:63 name = ${name}`, opt, this, data);
     switch (name) {
       case "text":
         data = this._draft[name] || require('./skeleton/text')(this);
@@ -264,7 +263,6 @@ class __module_sandbox extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = cmd.model.get(_a.service) || args.service;
-    this.debug(` service=${service} -->`, cmd, args);
     switch (service) {
       case 'run':
         this._preview.feed(this._editor.get());
@@ -297,7 +295,6 @@ class __module_sandbox extends LetcBox {
             this.__console.el.dataset.poke = 0;
           }, 2000)
         }
-        this.debug("AAA:277", cmd);
         break;
     }
   }
@@ -307,7 +304,6 @@ class __module_sandbox extends LetcBox {
    * @returns 
    */
   _onChange() {
-    return this.debug("AAA:283 _onChange", this._editor.get());
   }
 
   /**
@@ -315,7 +311,6 @@ class __module_sandbox extends LetcBox {
    * @returns 
    */
   _onModeChange() {
-    return this.debug("AAA:291 _onModeChange");
   }
 
 

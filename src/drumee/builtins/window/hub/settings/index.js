@@ -59,14 +59,12 @@ class __hub_settings extends LetcBox {
    * 
    */
   onDomRefresh() {
-    this.debug("AAA:62", this)
     const { hub_id } = this.actualNode();
     this.hub_id = hub_id;
     this.fetchService({
       service: SERVICE.hub.get_settings,
       hub_id
     }).then((data) => {
-      this.debug("AAA:69", data)
       this.mset(data);
       // this.owner.set(data.owner);
       this.visitor.set(data.visitor);

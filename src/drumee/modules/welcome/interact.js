@@ -78,7 +78,6 @@ class __welcome_interact extends __password_meter {
    *
   */
   hello() {
-    //this.debug("AAA:99 :: Loading module hello");
     Visitor.clear();
     Visitor.set(this.data);
   }

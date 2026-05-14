@@ -78,7 +78,6 @@ class __history_handler extends Backbone.Model {
 //
 // ===========================================================
   stop(){
-    this.debug("LOG stop");
     return this.set(_a.active, 0);
   }
 // ==================== *
@@ -90,7 +89,6 @@ class __history_handler extends Backbone.Model {
 //
 // ===========================================================
   start(){
-    this.debug("LOG start");
     return this.set(_a.active, 1);
   }
 // ==================== *
@@ -124,7 +122,6 @@ class __history_handler extends Backbone.Model {
     if (this._pointer>0) {
       const cur = this._log[this._pointer-1];
       this._pointer--;
-      this.debug(('undo '+this._log.length+" "+this._pointer));
       return cur;
     }
   }
@@ -159,7 +156,6 @@ class __history_handler extends Backbone.Model {
     const cur = this._log[this._pointer+1];
     if (cur) {
       this._pointer++;
-      this.debug(('redo '+this._log.length+" "+this._pointer));
       return cur;
     }
   }
@@ -193,7 +189,6 @@ class __history_handler extends Backbone.Model {
     if (!this.get(_a.active)) {
       return;
     }
-    this.debug("_onChange");
     return (() => {
       const result = [];
       const object = this.changedAttributes();

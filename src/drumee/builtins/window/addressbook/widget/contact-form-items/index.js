@@ -48,7 +48,6 @@ class __addressbook_widget_contact_formItems extends LetcBox {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent Service = ${service}`, cmd, this);
 
     switch (service) {
       case 'trigger-tag-select':

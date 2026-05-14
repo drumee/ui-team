@@ -24,11 +24,9 @@ class ___broadcast_message_page extends LetcBox {
   onPartReady (child, pn) {
     switch(pn) {
       case _a.none:
-        this.debug("Created by kind builder", child);
         break
       
       default:
-        this.debug("Created by kind builder");
     }
   }
 
@@ -44,15 +42,12 @@ class ___broadcast_message_page extends LetcBox {
    * ===========================================================*/
   onUiEvent (cmd, args) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this)
 
     switch(service) {
       case _e.submit:
-        this.debug('sendBroadCastMessage');
         break
       
       default:
-        this.debug("Created by kind builder");
     }
   }
 

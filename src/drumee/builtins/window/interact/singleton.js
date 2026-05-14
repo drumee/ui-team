@@ -67,7 +67,6 @@ class __window_interact_singleton extends __window_chatInteract {
       h = window.innerHeight;
       opt.height = h;
     }
-    //this.debug("AAA:82 72 ", opt);
     this.size = {
       left: x,
       top: y,
@@ -77,7 +76,6 @@ class __window_interact_singleton extends __window_chatInteract {
       width: opt.width || Math.round(w)
     };
     this.size = { ...this.size, ...opt };
-    //this.debug("AAA:82 ", this.size);
     this.style.set(this.size);
   }
 
@@ -221,7 +219,6 @@ class __window_interact_singleton extends __window_chatInteract {
         break;
 
       default:
-        this.debug(`changeWindowSize not available - ${changeSize}`);
     }
 
     return this.sizeUpdated(newSize, oldSize);

@@ -15,7 +15,6 @@ class __addressbook_widget_contact_detail extends LetcBox {
   onDomRefresh() {
     this._parent = this.getParentByKind('window_addressbook');
     const src = this.mget(_a.source);
-    this.debug("AAA:18", src)
     this._currentContact = src;
     if (!src) {
       return this.warn("No contact");
@@ -34,7 +33,6 @@ class __addressbook_widget_contact_detail extends LetcBox {
    */
   onUiEvent(cmd) {
     const service = cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
 
     switch (service) {
       case _a.edit:

@@ -56,7 +56,6 @@ class __security_pass extends __pad {
     }
     this.__refPwm.el.style.left = toPercent(r/100);
     const button = this.findPart('ref-button');
-    this.debug(`HHHHH 32 r=${r} v=${v}`,  button);
     if (r > 59) {
       button.el.dataset.state = 1;
       return v;

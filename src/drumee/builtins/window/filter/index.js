@@ -45,7 +45,6 @@ class __window_filter extends mfsInteract {
       height : this.size.height
     });
 
-    this.debug("aaaa 33", this); 
     return this.skeleton = require("./skeleton/main")(this);
   }
 
@@ -79,7 +78,6 @@ class __window_filter extends mfsInteract {
     const service = cmd.service || cmd.model.get(_a.service);
     // try 
     //   service = @mget(_a.itemsOpt).service
-    this.debug(`388388 menuEvents -->2222 service=${service}`, cmd, this);
     switch (service) {
       case _e.select: case "change-avatar":
         this.service = service;

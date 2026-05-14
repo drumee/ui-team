@@ -125,14 +125,12 @@ class __media_notifications extends LetcBox {
     if (args == null) { args = {}; }
     const service = args.service || cmd.get(_a.service);
     const status = cmd.get(_a.status);
-    this.debug(`FFFFFFFFF svc=${service}`, status, cmd, this);
 
     switch (service) {
       case _e.close:
         return this.goodbye();
 
       case _e.clear:
-        this.debug("CLEAR", this);
         return this._clearAll();
 
       case "new-media": case "new-messages":

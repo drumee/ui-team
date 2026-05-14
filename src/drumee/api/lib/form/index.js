@@ -18,7 +18,6 @@ class __drumee_api_form extends LetcBox {
     });
     super.initialize(opt);
     this.declareHandlers();
-    //this.debug("AAA:21 STARTING", this.fig.family);
   }
   
   /**
@@ -81,7 +80,6 @@ class __drumee_api_form extends LetcBox {
    */
   async submit() {
     const data = this.getData(_a.formItem);
-    this.debug(data);
     if (!this.validateData()) {
       // if(this.formError.email.errorList.length){
       //   this.showErrorMessage(LOCALE.FILL_REQUIRED_FIELDS);
@@ -111,7 +109,6 @@ class __drumee_api_form extends LetcBox {
   onUiEvent(cmd, args) {
     let service = cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
-    this.debug("onUiEvent", service, status, this)
     switch (service) {
       case _e.submit:
         this.submit();

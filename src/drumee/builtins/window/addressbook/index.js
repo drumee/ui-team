@@ -204,13 +204,11 @@ class __window_addressbook extends __window_addressbook_interact {
     try {
       const widgetContacts = this._widgetContacts || this.getItemsByKind('widget_contacts')[0];
       if (!widgetContacts) {
-        this.debug('_updateContactCount: widgetContacts not found');
         return;
       }
 
       const listContacts = widgetContacts.getPart('list-contacts');
       if (!listContacts) {
-        this.debug('_updateContactCount: list-contacts not found');
         return;
       }
 
@@ -227,12 +225,9 @@ class __window_addressbook extends __window_addressbook_interact {
       if (countPart) {
         const text = count === 1 ? '1 contact' : `${count} contacts`;
         countPart.set({ content: text });
-        this.debug('_updateContactCount: Updated to', text);
       } else {
-        this.debug('_updateContactCount: contact-count part not found');
       }
     } catch (e) {
-      this.debug('Error updating contact count:', e);
     }
   }
 
@@ -721,7 +716,6 @@ class __window_addressbook extends __window_addressbook_interact {
   loadContactDetailView(cmd) {
     let contactsDetail;
     const contact = cmd.source || this.source;
-    this.debug("AAA:724", contact)
     if ((cmd != null ? cmd.kind : undefined) === 'widget_contact_detail') {
       contactsDetail = cmd;
 
@@ -819,7 +813,6 @@ class __window_addressbook extends __window_addressbook_interact {
    * @returns 
    */
   _getInviteNotifications() {
-    this.debug("_getInviteNotifications", this);
     this.fetchService({
       service: SERVICE.contact.invite_get,
       hub_id: Visitor.get(_a.id)
@@ -835,7 +828,6 @@ class __window_addressbook extends __window_addressbook_interact {
    * 
   */
   onServerComplain(xhr) {
-    this.debug('ERROR DISPATCED', xhr);
     return this.__wrapperPopup.feed(Skeletons.Note(LOCALE.TRY_AGAIN));
   }
 

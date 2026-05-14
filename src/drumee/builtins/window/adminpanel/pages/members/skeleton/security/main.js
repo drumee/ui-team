@@ -61,7 +61,6 @@ function __skl_members_security(ui) {
     ]
   })
   let state = 1;
-  ui.debug("AAAA:64", ui, data.otp)
   if (data.otp == 0) {
     state = 0
   }

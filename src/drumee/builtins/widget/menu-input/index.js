@@ -30,7 +30,6 @@ class __menu_input extends LetcBox {
       }
     }
     this.mset({ items })
-    // this.debug("AAA:19", items, this.mget('items'), emojiFlags)
   }
 
   /**
@@ -159,7 +158,6 @@ class __menu_input extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = cmd.mget(_a.service);
-    this.debug("AAA:45", service, cmd, args);
     let name = this.mget(_a.name);
     switch (service) {
       case "item-selected":
@@ -274,7 +272,6 @@ class __menu_input extends LetcBox {
    * 
    */
   commitSelection(cmd) {
-    this.debug("AAA:181", cmd)
     // Get value from item - support refLabel, value, country_code (for country), and name
     let refLabel = this.mget('refLabel');
     let value = cmd.mget(refLabel) || cmd.mget('value') || cmd.mget('country_code') || cmd.mget(_a.name);

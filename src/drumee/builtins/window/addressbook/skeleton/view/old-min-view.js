@@ -5,7 +5,6 @@
 // ==================================================================== *
 
 const __skl_addressbook_view_min_view = function(_ui_) {
-  this.debug("__skl_addressbook_view_min_view", _ui_);
   
   const tags = { 
     kind      : "widget_tag",

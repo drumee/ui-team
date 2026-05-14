@@ -108,7 +108,6 @@ class ___player_schedule extends __core {
           media: this.media,
           mode: 'host',
         }
-        this.debug('AAAAA 104', opt);
         Wm.launch(opt, { explicit: 1, singleton: 1 });
         let window_schedule = Wm.getItemByKind("window_schedule");
         if (window_schedule)
@@ -270,7 +269,6 @@ class ___player_schedule extends __core {
    * @param {Function} cb
   */
   display(size, cb) {
-    this.debug('AAA:19 250 display size', size, this)
 
     this.raise();
     let o = require("window/configs/default")();
@@ -307,7 +305,6 @@ class ___player_schedule extends __core {
       }
     }
 
-    this.debug("AAA:441", this, `max_height=${max_height}, max_width=${max_width}`, o, s.width);
     TweenMax.fromTo(this.$el, 1.5,
       { scale: 0.15, opacity: 0 },
       {
@@ -328,7 +325,6 @@ class ___player_schedule extends __core {
   __dispatchPush(service, data, socket) {
     switch (service) {
       case SERVICE.no_service:
-        this.debug("Created by kind builder", service, data)
     }
   }
 

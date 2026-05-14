@@ -101,7 +101,6 @@ class __addressbook_widget_tag_item extends LetcBox {
   onUiEvent(cmd) {
     const type = this.mget(_a.type);
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
 
     switch (service) {
       case 'edit-tag':

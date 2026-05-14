@@ -23,7 +23,6 @@ class __drumee_api_b2b_signup extends LetcBox {
     this.mset({flow : _a.y}); 
     super.initialize(opt);
     this.declareHandlers();
-    this.debug("STARTING", this.fig.family);
     return
   }
 
@@ -75,7 +74,6 @@ class __drumee_api_b2b_signup extends LetcBox {
 // ===========================================================
   b2bSignup() {
     const data = this.getData(_a.formItem); 
-    this.debug(data);
     if (!this.validateData()) {
       if(this.formError.name.errorList.length){
         this.showErrorMessage(this.formError.name.errorList[0].reason);
@@ -103,7 +101,6 @@ class __drumee_api_b2b_signup extends LetcBox {
   onUiEvent(cmd, args) {
     let service = cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
-    this.debug("onUiEvent",service,status, this)
     switch (service) {
       case 'b2b-signup-submit':
         this.b2bSignup();

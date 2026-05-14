@@ -14,7 +14,6 @@ class __addressbook_widget_search extends LetcBox {
     if (opt == null) { opt = {}; }
     super.initialize();
     require('./skin');
-    this.debug("initialize", this, opt);
     this.type = this.mget(_a.type);
     return this.declareHandlers();
   }
@@ -45,7 +44,6 @@ class __addressbook_widget_search extends LetcBox {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
     let status = cmd.get(_a.status);
 
-    this.debug("onUiEvent", cmd, this);
     if (pointerDragged) {
       return;
     }
@@ -81,7 +79,6 @@ class __addressbook_widget_search extends LetcBox {
 // getCurrentApi
 // ===========================================================
   getCurrentApi() {
-    this.debug("getCurrentApi", this);
     const api = {
       service : SERVICE.contact.search,
       key     : this.mget(_a.search),

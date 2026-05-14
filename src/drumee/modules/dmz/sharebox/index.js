@@ -155,7 +155,6 @@ class __dmz_sharebox extends LetcBox {
     this.postService(this.nodeInfoService, opt)
       .then((data) => {
         if (data && _.isEmpty(data.status)) {
-          this.debug("AAAA:141", data)
           this.__header.feed(this.headerSkeleton(this));
           this.loadDeskContent();
         } else {
@@ -257,7 +256,6 @@ class __dmz_sharebox extends LetcBox {
       password: inputData.value
     }
     this.postService(SERVICE.dmz.login, opt).then((data) => {
-      this.debug("AAAA:224", data)
       if (data && data.is_verified) {
         this.mset(data);
         localStorage.setItem('token', data.token);

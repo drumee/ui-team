@@ -166,7 +166,6 @@ class __media_origin extends LetcBox {
     if (args == null) { args = {}; }
     const service = args.service || cmd.get(_a.service);
     const status = cmd.get(_a.status);
-    this.debug("NOTIFICATION ORIG", service, this);
 
     switch (service) {
       case _e.clear:
@@ -207,7 +206,6 @@ class __media_origin extends LetcBox {
 //
 // ===========================================================
   __dispatchRest(service, data, socket) {
-    this.debug("SSSSSSSS", service, this, data); 
     switch (service) {
       case SERVICE.notification.clear_all:
         return this.goodbye();

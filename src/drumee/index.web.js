@@ -37,7 +37,7 @@ function load_app() {
  */
 function preload(e) {
   bunldes.set(e.name, 1);
-  if (bunldes.size > 3) {
+  if (bunldes.size > 2) {
     load_app()
   }
 }

@@ -25,11 +25,9 @@ class ___locale_language extends LetcBox {
   // onPartReady (child, pn){
   //   switch(pn){
   //     case _a.none:
-  //       this.debug("AAA:31", child);
   //       break;
   //     default:
   //       super.onPartReady(child, pn);
-  //       this.debug("AAA:35");
   //   }
   // }
   contextmenuItems(trigger, e) {
@@ -38,7 +36,6 @@ class ___locale_language extends LetcBox {
       return items;
     }
     items = [_a.update];
-    this.debug("AAA:36", items, trigger);
     this._currentItem = trigger;
     return items;
   }
@@ -58,7 +55,6 @@ class ___locale_language extends LetcBox {
    */
   onUiEvent(cmd, args) {
     let service = cmd.mget(_a.service) || cmd.get(_a.name);
-    this.debug("AAAA:64", service, cmd, args);
     switch (service) {
       case _a.toggle:
         if (this.__content.isEmpty()) {

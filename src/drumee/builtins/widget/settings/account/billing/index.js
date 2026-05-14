@@ -776,7 +776,6 @@ class settings_billing extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     let service = args.service || cmd.mget(_a.service);
-    this.debug("AAA:811", service, args, cmd)
     switch (service) {
       case "select-plan":
         return this.handleSelectPlan(cmd);

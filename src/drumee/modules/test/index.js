@@ -33,7 +33,6 @@ class __module_test extends LetcBox {
    * @returns 
    */
   onPartReady(child, pn) {
-    this.debug(`AAA:84 onPartReady AAAAA sys_pn=${pn} -->`, child);
     /*switch (pn) {
       case "editor":
         this._editorWrapper = child;
@@ -66,14 +65,11 @@ class __module_test extends LetcBox {
     this.__serviceTitle.el.dataset.state = 1;
     this.cursor = {};
     for (var item of items) {
-      this.debug("AAA:68", item);
       task.push(item);
     }
     //let t = task.shift();
-    this.debug("AAA:72", task);
     let walk = () => {
       let t = task.shift();
-      this.debug("AAA:76", t);
       if (t) {
         this.__serviceName.set({ content: t.upstream.service });
         this.cursor = t;
@@ -90,7 +86,6 @@ class __module_test extends LetcBox {
         service: this.cursor.upstream.service,
         details: r
       }
-      this.debug('PROCESSING FAILURE RESPONSE', this.cursor, o, r);
       if (this.cursor.downstream.expect == _a.error) {
         o.status = _a.ok;
         o.error = `${o.error} (as expected)`;
@@ -105,7 +100,6 @@ class __module_test extends LetcBox {
 
 
     let succeeded = (r, s) => {
-      this.debug("AAA:103", r)
       r.kind = 'test_result';
       r.status = _a.ok;
       let o = {
@@ -120,7 +114,6 @@ class __module_test extends LetcBox {
       } else {
         o.status = _a.error;
       }
-      this.debug('PROCESSING SUCCESS RESPONSE', this.cursor, o, r);
       this.__results.append(o);
       walk();
     }
@@ -136,7 +129,6 @@ class __module_test extends LetcBox {
    */
   async onUiEvent(cmd) {
     const service = cmd.model.get(_a.service) || cmd.model.get(_a.name);
-    this.debug(`AAA:84 menuEvents AAAAA service=${service} -->`, cmd);
     switch (service) {
       case _e.start:
         this.start();

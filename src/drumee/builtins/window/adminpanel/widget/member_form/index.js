@@ -135,7 +135,6 @@ class ___widget_member_form extends LetcBox {
     }
     this.validateData()
     if (this.formStatus == _a.error) {
-      this.debug('invalid data')
       return
     }
 
@@ -270,7 +269,6 @@ class ___widget_member_form extends LetcBox {
         break
 
       default:
-        this.debug(`${method} not available !!!`)
     }
   }
 }

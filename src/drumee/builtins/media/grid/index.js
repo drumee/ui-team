@@ -1,4 +1,5 @@
-const { TweenLite } = gsap;
+const { TweenLite, TimelineMax } = require("@drumee/ui-core/vendor");
+
 const Rectangle = require('rectangle-node');
 
 class __media_grid extends DrumeeMediaInteract {

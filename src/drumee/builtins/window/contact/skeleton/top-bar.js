@@ -5,7 +5,6 @@
 // ==================================================================== *
 
 const __skl_window_contact_topBar = function(_ui_) {
-  this.debug("__skl_window_contact_topBar", _ui_);
 
   const name =  _ui_.getCurrentLabel() ||  "???";
   

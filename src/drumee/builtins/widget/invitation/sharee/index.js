@@ -124,7 +124,6 @@ class __invitation_sharee extends __recipient {
     const p = this.dialogWrapper.children.first();
     return p.selfDestroy({
       callback: () => {
-        this.debug("RESTART", this.mget(_a.hub));
         return this.mget(_a.hub).restart();
       }
     });
@@ -135,7 +134,6 @@ class __invitation_sharee extends __recipient {
   // ===========================================================
   _showDetails(cmd) {
     const c = this._options.children.last();
-    this.debug("AAA:138", cmd, c)
     if (c) {
       return c.goodbye()
     }
@@ -151,7 +149,6 @@ class __invitation_sharee extends __recipient {
     // }
     // this.dialogWrapper.append(require('./skeleton/permission')(this, cmd));
     return c.once(_e.destroy, () => {
-      this.debug("AAAA:145", c.model.toJSON())
       return this.model.set({
         permission: c.mget(_a.permission),
         days: c.mget(_a.days),
@@ -175,7 +172,6 @@ class __invitation_sharee extends __recipient {
   // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.mget(_a.service);
-    this.debug(`aaaa 112 svc=${service}`, cmd, this);
     switch (service) {
       case _e.remove:
         return this.removeOrrevoke(cmd);

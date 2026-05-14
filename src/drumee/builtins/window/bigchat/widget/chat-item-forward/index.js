@@ -61,7 +61,6 @@ class ___chat_item_forward extends LetcBox {
   onUiEvent(cmd) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
 
     if (pointerDragged) {
       return;

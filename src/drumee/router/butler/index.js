@@ -411,7 +411,6 @@ class __router_butler extends LetcBox {
         } else {
           location.hostname = main_domain
         }
-        this.debug("AAA:409", this)
       }, Visitor.timeout(1000));
     };
 

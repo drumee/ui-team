@@ -25,11 +25,9 @@ class ___widget_member_chooseAdmins extends LetcBox {
   onPartReady (child, pn) {
     switch(pn) {
       case _a.none:
-        this.debug("Created by kind builder", child);
         break;
       
       default:
-        this.debug('onPartready default');
     }
   }
 
@@ -45,7 +43,6 @@ class ___widget_member_chooseAdmins extends LetcBox {
   */
   onUiEvent (cmd, args={} ) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this)
 
     switch(service) {
       case _e.search:

@@ -47,7 +47,6 @@ class ___widget_dropdown_menu extends LetcBox {
      *  @type {[{display: string, value: ?, mode?: string,selected ?: boolean }]}
      **/
     let options = this.mget('options')
-    this.debug('init', options, this)
     if (options.length > 0) {
       this.selected = options.find((row) => row.selected);
       if (!this.selected) {
@@ -65,7 +64,6 @@ class ___widget_dropdown_menu extends LetcBox {
   onPartReady(child, pn) {
     switch (pn) {
       case _a.none:
-        this.debug("Created by kind builder", child);
         break;
         // default:
         // super.onPartReady(child, pn, section);
@@ -85,7 +83,6 @@ class ___widget_dropdown_menu extends LetcBox {
   onUiEvent(cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
-    this.debug(service, status, this);
     this.mget('options')[cmd.el.dataset.id];
 
     switch (service) {
@@ -97,11 +94,8 @@ class ___widget_dropdown_menu extends LetcBox {
         this.service = service
         this.triggerHandlers()
         this.service = ''
-        this.debug("Created by kind builder");
       case undefined:
-        this.debug("service is undefined");
       default:
-        this.debug("Created by kind builder");
     }
   }
 }

@@ -228,7 +228,6 @@ class __addressbook_widget_invite_notification extends LetcBox {
         this.triggerHandlers({ service: 'empty-notification-handler' });
         break;
       default:
-        this.debug("unknown Status");
     }
 
     return this.mset("notificationList", notificationList);

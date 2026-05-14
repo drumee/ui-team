@@ -199,7 +199,6 @@ class __invitation_permission extends LetcBox {
    * @returns 
    */
   __dispatchRest(method, data, socket) {
-    this.debug("AAAAAAAAAAAAAA 117", method, data, socket);
     switch (method) {
       case SERVICE.sharebox.update_link:
         this.model.set(data);
@@ -208,7 +207,6 @@ class __invitation_permission extends LetcBox {
       case SERVICE.sharebox.assign_permission:
         for (var d of Array.from(data)) {
           if (d.email === this.mget(_a.email)) {
-            this.debug("AAAAAAAAAAAAAA 124", this.mget(_a.email), d.days);
             this.model.set(d);
             break;
           }

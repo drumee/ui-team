@@ -296,13 +296,11 @@ class __panel_activity extends LetcBox {
    * 
    */
   // toggleState() {
-  //   this.debug("AAA:179", this.activityState, this.mget(_a.state))
   //   if (this.activityState == 0) {
   //     this.activityState = 1;
   //     // this.refreshActivity()
   //     // this.el.dataset.state = 1;
   //     // this.setState(1);
-  //     this.debug("AAA:185", this.activityState)
   //     return;
   //   }
   //   return this.closePanel();
