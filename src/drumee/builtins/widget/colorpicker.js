@@ -179,7 +179,6 @@ class __color_picker extends Marionette.View {
     } else if (x > this._canvasRect.w) {
       x = this._canvasRect.w;
     }
-    this.debug("canvasOffset AAAA", x, y, this, this._canvasRect); //, @$canvas[0].getBoundingClientRect()
     const imageData = this._ctx.getImageData(x, y, 1, 1);
     const pixel = imageData.data;
     const color = new Color(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, ${pixel[3]})`);

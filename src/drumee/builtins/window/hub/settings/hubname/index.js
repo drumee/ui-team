@@ -98,7 +98,6 @@ class __hub_name extends __core {
       hub_id: this.hub.media.mget(_a.hub_id),
       name,
     }).then((data) => {
-      this.debug("AAA:90", data)
       if (data.error) {
         let msg = LOCALE[data.error] || data.error;
         return this.showError(msg.format(name))
@@ -141,7 +140,6 @@ class __hub_name extends __core {
    */
   onUiEvent(cmd) {
     const service = cmd.status || cmd.service || cmd.model.get(_a.service);
-    this.debug(`AAAA:130 96service=${service}`, cmd.model.get(_a.state), this, cmd);
     switch (service) {
       case _e.edit:
         this.edit(cmd);

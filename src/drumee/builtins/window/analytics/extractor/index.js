@@ -150,7 +150,6 @@ class __window_analytics_extractor extends __window_analytics {
       let msg = e.error || e.toString();
       Wm.alert(`Ooops! (${msg})`);
     })
-    //this.debug("AAA:46", date);
   }
 
   // >>===========================================================

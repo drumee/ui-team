@@ -533,7 +533,6 @@ class __window_manager extends push {
    * To do : allow copy/paste/supp through keyboard short cut
    */
   _handelKbdEvents(e) {
-    // this.debug("AAA:240", e)
   }
 
 
@@ -917,7 +916,6 @@ class __window_manager extends push {
    * @param {*} cmd
    */
   confirmLeaveHub(media) {
-    this.debug("AAA:554", this, media)
     this.ensurePart('wrapper-modal').then(async (p) => {
       await Kind.waitFor('window_confirm')
       p.feed({
@@ -1038,7 +1036,6 @@ class __window_manager extends push {
         rejected.push(m)
       }
     }
-    this.debug("AAA:684", selection)
     return {
       own_hubs, other_hubs, hubs_inside, allowed, rejected, locked
     }
@@ -1085,7 +1082,6 @@ class __window_manager extends push {
       r.actionDenied(LOCALE.FILE_NOT_DISPOSABLE);
     }
 
-    this.debug("AAA:684", { own_hubs, other_hubs, hubs_inside, allowed, rejected })
   }
 
   /**
@@ -1171,7 +1167,6 @@ class __window_manager extends push {
 
       case "confirm-remove-selection":
         for (let hub of args.selection) {
-          this.debug("AAA:714", hub, hub.isHub)
           if (!hub.isHub) continue;
           if (hub.isGranted(_K.permission.owner)) {
             await this.confirmRemoveHub(hub, args);

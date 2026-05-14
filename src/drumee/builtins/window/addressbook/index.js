@@ -721,7 +721,6 @@ class __window_addressbook extends __window_addressbook_interact {
   loadContactDetailView(cmd) {
     let contactsDetail;
     const contact = cmd.source || this.source;
-    this.debug("AAA:724", contact)
     if ((cmd != null ? cmd.kind : undefined) === 'widget_contact_detail') {
       contactsDetail = cmd;
 

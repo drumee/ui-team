@@ -293,7 +293,6 @@ class __media_interact extends media_core {
         return;
     }
     this._clickTimestap = timestamp();
-    this.debug("AAA:295", service)
     switch (service) {
       case "open-creator":
       case "open-settings":
@@ -546,7 +545,6 @@ class __media_interact extends media_core {
    * @param {*} service
    */
   async _createInput(value, opt) {
-    this.debug("AAA:653", opt)
     if (value == null) {
       value = "no name";
     }
@@ -606,7 +604,6 @@ class __media_interact extends media_core {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     let { nid, hub_id } = this.actualNode();
-    this.debug("AAAX:622", service, cmd, args)
     switch (service) {
       case _e.rename:
         this.service = service;

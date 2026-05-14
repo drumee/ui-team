@@ -64,7 +64,6 @@ class __account_apps extends DrumeeMFS {
       let packages = await this.fetchService(SERVICE.media.show_node_by, {
         nid: `/${pf}/release`, vhost: APP_HOST
       });
-      this.debug("AAA:68", packages);
       this.packages[pf] = packages.filter(function (e) {
         return /^(exe|smi|deb|rpm|snap|dmg)$/i.test(e.ext)
       });
@@ -93,14 +92,12 @@ class __account_apps extends DrumeeMFS {
    * 
   */
   onFetchProgress(e) {
-    this.debug(`AAA:79 onFetchProgress`, e)
   }
 
   /**
    * 
   */
   onEndOfData(e) {
-    this.debug(`AAA:88 onEndOfData`, e)
   }
 
   /**
@@ -128,10 +125,8 @@ class __account_apps extends DrumeeMFS {
       case _a.download:
         let opt = this.getUrl();
         let { stats } = await this.fetchService(SERVICE.media.info, opt);
-        this.debug(`AAAA:117`, stats);
         // let opt = { url };
         // this.fetchFile(opt).then((blob) => {
-        //   this.debug(`AAAA:117`, blob);
         // })
         break;
     }

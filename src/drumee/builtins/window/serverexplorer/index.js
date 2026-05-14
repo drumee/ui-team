@@ -412,7 +412,6 @@ class __window_serverexplorer extends __window_singleton_interact {
    * @param {*} options 
   */
   onWsMessage(service, data, options) {
-    this.debug(`AAA:415 ServerExplorer service=${service}`, data);
     switch(options.service) {
       case 'mfs.serverimport': 
       case 'mfs.serverexport':

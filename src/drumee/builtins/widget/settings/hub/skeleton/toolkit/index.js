@@ -85,7 +85,6 @@ export function validity(ui, formData = {}) {
     _validitySwitchState = 1;
     _validityMode = _a.closed;
   }
-  ui.debug("AAAA:formData 76", ui.activeMode, mode, validity_mode, formData)
 
   // Radio button options
   const unlimitedOption = {

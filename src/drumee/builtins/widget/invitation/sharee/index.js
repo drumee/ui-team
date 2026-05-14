@@ -135,7 +135,6 @@ class __invitation_sharee extends __recipient {
   // ===========================================================
   _showDetails(cmd) {
     const c = this._options.children.last();
-    this.debug("AAA:138", cmd, c)
     if (c) {
       return c.goodbye()
     }
@@ -151,7 +150,6 @@ class __invitation_sharee extends __recipient {
     // }
     // this.dialogWrapper.append(require('./skeleton/permission')(this, cmd));
     return c.once(_e.destroy, () => {
-      this.debug("AAAA:145", c.model.toJSON())
       return this.model.set({
         permission: c.mget(_a.permission),
         days: c.mget(_a.days),

@@ -63,7 +63,6 @@ class ___window_help_desk extends __window_interact_singleton{
             let opt = await this.postService(SERVICE.yp.sys_var, {name:"helpdesk_link"});
             try{
               opt = JSON.parse(opt.value);
-              this.debug("AAA:77", opt);
             }catch(e){
 
             }

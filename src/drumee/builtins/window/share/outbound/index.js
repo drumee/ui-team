@@ -179,7 +179,6 @@ class __share_outbound extends LetcBox {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug(`AAAAAA 166 rvice=${service}`, this, cmd, cmd.mget(_a.state), cmd);
     switch (service) {
       case _e.close: 
         this.goodbye();
@@ -262,7 +261,6 @@ class __share_outbound extends LetcBox {
 // ===========================================================
   __dispatchRest(method, data, socket) {
     let msg;
-    this.debug("AAAAAAAAAAAAAA 731", method, data, socket);
     switch (method) {
       
       case SERVICE.sharebox.assign_permission:

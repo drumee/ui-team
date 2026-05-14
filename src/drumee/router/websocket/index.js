@@ -165,7 +165,6 @@ class __router_websocket extends LetcBox {
       this.socket = null;
     }
     if (client) this.socket = client;
-    //this.debug("AAAX:153 Binding", this.socket, this);
   }
 
   /**

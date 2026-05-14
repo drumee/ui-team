@@ -18,7 +18,6 @@ class __participants_manager extends LetcBox {
     this._queue = [];
     this.logicalParent = opt.logicalParent;
     this.declareHandlers();
-    //this.debug("XAAA:AAA:17", this, opt);
     this.collection.on(_e.add, () => {
       if (this.collection.length < 2) {
         this.logicalParent.stateMachine('waiting');
@@ -42,8 +41,8 @@ class __participants_manager extends LetcBox {
     let c = this.collection.filter(function (e) {
       let firstname = e.get(_a.firstname);
       let participant_id = e.get(PARTICIPANT_ID);
-      //console.debug("AAA:172 29", e.get(_a.quota), firstname, e.get('muted'), participant_id);
       let q = parseInt(e.get(_a.quota));
+      //console.debug("AAA:172 29", e.get(_a.quota), firstname, e.get('muted'), participant_id);
       if (e.get('muted')) {
         if (participant_id) muted[participant_id] = e;
       }

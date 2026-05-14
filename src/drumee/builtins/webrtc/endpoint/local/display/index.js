@@ -14,7 +14,6 @@ class __webrtc_local_display extends __stream {
     });
     this._configs = {};
     this.origin_name = opt.firstname || opt.lastname || opt.email;
-    //this.debug(`AAA:17`, this, opt);
     this.isShower = opt.isShower;
     this.model.set({
       video: 0,
@@ -108,7 +107,6 @@ class __webrtc_local_display extends __stream {
       //       }
       //     }
       //   }
-      //   this.debug("AAA:66 SEND SCREEN", this.mget(_a.room_id));
       //   // Ensure that the others won't get the presenter role
       //   _.delay(() => {
       //     this.triggerHandlers({
@@ -147,7 +145,6 @@ class __webrtc_local_display extends __stream {
       return;
     }
     let track = this.stream.getTracks()[0];
-    //this.debug("AAA:89 startDisplayMedia TRACK ", track);
     track.onended = (t) => {
       this.triggerHandlers({ service: 'screenshare-stopped' });
       track.stop();

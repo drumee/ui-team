@@ -133,7 +133,6 @@ class __window_hub extends mfsInteract {
     }
     this.isShowSettings = true;
     let kind;
-    this.debug("AAA:120", this.mget(_a.area), this);
     switch (this.mget(_a.area)) {
       case _a.share:
       case _a.dmz:
@@ -250,7 +249,6 @@ class __window_hub extends mfsInteract {
       args = {};
     }
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug("AAA:236", service, this.mget(_a.area), this);
     switch (service) {
       case "tab-files":
         return this.showFolderTab(_a.files);

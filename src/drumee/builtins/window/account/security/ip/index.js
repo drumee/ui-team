@@ -67,7 +67,6 @@ class __security_ip extends __pad {
 // ===========================================================
 
   __dispatchRest(method, data, socket) {
-    return this.debug("AAAAAAAAAAA", method, this, data);
   }
 }
 __security_ip.initClass();

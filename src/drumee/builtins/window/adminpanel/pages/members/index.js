@@ -59,7 +59,6 @@ class ___members_page extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug("AAA:50", args, cmd, service)
     switch (service) {
       case 'see-desktop':
         this.invokeSeeDesktop(cmd)
@@ -97,7 +96,6 @@ class ___members_page extends LetcBox {
       case 'member-added':
         this.addNewMember(args)
         this.loadMembersList()
-        // this.debug("AAA:86", args, cmd, this)
         break;
       case 'show-member-detail':
         this.loadMemberDetail(cmd)
@@ -225,7 +223,6 @@ class ___members_page extends LetcBox {
    * to open the popup for security option of a member
    */
   loadSecurityOption(cmd) {
-    this.debug("AAA:227", cmd, cmd.mget(_a.member))
     this.pendingRoom = cmd;
     this.mset(_a.member, cmd.mget(_a.member))
     return this.openOverlay(require('./skeleton/security/main').default(this))
@@ -484,7 +481,6 @@ class ___members_page extends LetcBox {
       this.warn("Invalid data", data)
       return
     }
-    this.debug("AAA:487:commitActionFromPopup", service)
     switch (service) {
       case 'commit-delete-inactive-member':
         return this.deleteInviteMember(data)

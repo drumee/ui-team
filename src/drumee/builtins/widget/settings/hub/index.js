@@ -47,7 +47,6 @@ class settings_hub extends DrumeeMFS {
       uid: this.pendingMember.mget(_a.id),
       hub_id: this.mget(_a.hub_id),
     }
-    this.debug("AAA:46", args)
     this.postService(SERVICE.hub.set_member_privilege, args).then((users) => {
       this._tab--;
       this.route()
@@ -132,7 +131,6 @@ class settings_hub extends DrumeeMFS {
    */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug("AAA:50", this, service, cmd, args)
     let subWidget;
     switch (service) {
       case _e.close:
@@ -230,7 +228,6 @@ class settings_hub extends DrumeeMFS {
         return
 
       case "set-user-permission":
-        this.debug("AAA:203", service, cmd);
         this.set_member_privilege()
         break;
 
@@ -247,7 +244,6 @@ class settings_hub extends DrumeeMFS {
         return
 
       case "permission-changed":
-        this.debug("AAA:680", cmd, args)
         if (this._service == "set-recipients-permission") {
           return this.__updatePermission.setState(args.valid)
         }
@@ -262,7 +258,6 @@ class settings_hub extends DrumeeMFS {
         break;
 
       default:
-        this.debug("AAA:210", service, cmd)
     }
   }
 

@@ -42,7 +42,6 @@ class __welcome_router extends LetcBox {
       return
     }
     let plugins = Platform.get('plugins');
-    this.debug("AAA:54 GOT plugin", plugins)
     if (!plugins) {
       this.loadDefault()
       return;
@@ -145,7 +144,6 @@ class __welcome_router extends LetcBox {
     if (!plugins || !plugins.signin) {
       return loadDefault();
     }
-    this.debug("AAA:GOT signin plugin", plugins.signin)
     let { name, kind } = plugins.signin;
     Kind.loadPlugin({ name, kind }).then(() => {
       Kind.waitFor(kind).then((k) => {
@@ -168,7 +166,6 @@ class __welcome_router extends LetcBox {
       this.el.dataset.tab = this.tab;
     });
     let require_logout = 0;
-    this.debug("AAA:40", this.tab)
     switch (this.tab) {
       case 'signup':
         return this.loadSignup();

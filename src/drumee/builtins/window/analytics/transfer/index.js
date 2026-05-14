@@ -30,7 +30,6 @@ class __window_analytics_transfer extends __window_analytics {
   onDomRefresh() {
     this.postService(SERVICE.analytics.transfer, { hub_id: Visitor.id }, { async: 1 })
       .then((data) => {
-        this.debug("AAA:32", data);
         let margin = {
           top: 50,
           right: 20,

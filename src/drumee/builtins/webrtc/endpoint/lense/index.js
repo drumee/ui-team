@@ -289,7 +289,6 @@ class __endpoint_lense extends LetcBox {
     let audio = args.stream.getAudioTracks()[0] || {id:null};
     // Sound analyser trigger plug when speaking. Skip if same speaker.
     delete args.service;
-    this.debug("AAA:299 PLUG", args, `name=${args.name}`, `source=${args.source_id}`, this.source_id, audio.source_id, this);
     if(args.source_id){
       if (this.source_id == args.source_id) return;
       this.source_id = args.source_id;

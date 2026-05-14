@@ -173,7 +173,6 @@ class ___window_support_ticket extends __window_support_ticket_interact {
   */
   onUiEvent (cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.service || cmd.get(_a.name);
-    this.debug(`AAA:85 onUiEvent SERVICE=${service}`, cmd, this);
 
     if (pointerDragged) { return; }
 

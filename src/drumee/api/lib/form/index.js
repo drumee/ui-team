@@ -18,7 +18,6 @@ class __drumee_api_form extends LetcBox {
     });
     super.initialize(opt);
     this.declareHandlers();
-    //this.debug("AAA:21 STARTING", this.fig.family);
   }
   
   /**

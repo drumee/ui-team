@@ -132,7 +132,6 @@ class __drumee_api_popup extends LetcBox {
         let cb = this.mget('onclose');
         if (cb) {
           if (_.isFunction(cb)) {
-            this.debug("AAAA:111 onUiEvent", cb)
             cb();
           } else if (_.isString(cb)) {
             location.href = cb;

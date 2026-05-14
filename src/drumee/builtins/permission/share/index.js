@@ -44,7 +44,6 @@ class __permission_share extends DrumeeMFS {
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
     setTimeout(() => {
-      this.debug("AAA:47")
       this.el.dataset.position = "in";
     }, 300)
   }

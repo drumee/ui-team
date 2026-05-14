@@ -147,7 +147,6 @@ class settings_account extends LetcBox {
    */
   async updatePassword() {
     let { old_password, password: new_password, password2 } = this.getData();
-    this.debug("AAA:83", old_password, new_password);
     if (!new_password) {
       return this.showError(LOCALE.UNCOMPLIANT_PASSWORD);
     }
@@ -159,7 +158,6 @@ class settings_account extends LetcBox {
       new_password,
       hub_id: Visitor.id,
     }).then((data) => {
-      this.debug("AAA:101", data);
       if (!data || data.error) {
         switch (data.error) {
           case "wrong_password":
@@ -184,7 +182,6 @@ class settings_account extends LetcBox {
     const data = this.getData();
     let { dateformat, timezone } = data;
     
-    this.debug("AAA:192", data);
     // Build settings object
     const settings = {};
     if (dateformat) {
@@ -244,7 +241,6 @@ class settings_account extends LetcBox {
         email,
         hub_id: Visitor.id,
       });
-      this.debug("AAAA:194", secret)
       this._secret = secret;
       return this.__overlay.feed(
         require("./skeleton/form-otp").default(this, "update-profile")
@@ -434,7 +430,6 @@ class settings_account extends LetcBox {
       }
     }
     
-    this.debug("AAA:191", cmd, args, service);
     switch (service) {
       case "close-overlay":
         return this.__overlay.clear();
@@ -468,7 +463,6 @@ class settings_account extends LetcBox {
         this._onPlanChanged(cmd)
         break;
       case "otp-signined":
-        this.debug("AAA:282", args);
         if (args.data) Visitor.respawn(args.data);
         this.__overlay.softClear()
         setTimeout(() => {

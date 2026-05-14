@@ -40,7 +40,6 @@ class __utils_x_progress extends LetcBox {
 // ===========================================================
   initialize(opt) {
     this.declareHandlers(); //s({part:@, ui:@})
-    this.debug("AAAAAAAAA 43");
     super.initialize();
     this.model.set({
       widgetId : _.uniqueId('canvas-'),

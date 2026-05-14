@@ -76,7 +76,6 @@ class __admin_audit extends LetcBox{
   //  const {service} = options || svc;
   //  switch(service){
   //  case  "my-service":
-  //      this.debug("AAA:94",service, data)
   //    break;
   //    default:
   //      /** Delegate to parent if any **/

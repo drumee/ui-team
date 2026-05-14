@@ -32,7 +32,6 @@ class settings_share_hub extends DrumeeMFS {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service)
-    this.debug('AAA:35 onUiEvent', service, cmd, args);
     switch (service) {
       case _e.close:
       case 'close-popup':
@@ -85,10 +84,8 @@ class settings_share_hub extends DrumeeMFS {
       ...this.__permissionForm.gatherData()
     }
     args.permission = args.privilege;
-    this.debug("AAA:102", args)
     this.__passwordInputWrapper.el.dataset.status = ""
     if (args.passwordSet && !args.password && !this.mget('hasPassword')) {
-      this.debug("AAA:90", args)
       this.__passwordInputWrapper.el.dataset.status = _a.error
       return
     }
@@ -109,7 +106,6 @@ class settings_share_hub extends DrumeeMFS {
       return this.goodbye();
     }
     return this.postService(opt).then((responseData) => {
-      this.debug("AAA:106", responseData)
       completed()
     }).catch((err) => {
       this.warn('Error saving settings:', err);
@@ -155,7 +151,6 @@ class settings_share_hub extends DrumeeMFS {
       service: SERVICE.hub.get_external_room_attr,
       hub_id: hubId
     }).then((data = {}) => {
-      this.debug('AAA:164', data)
       // Handle API typo: hasPaswword (2 w's) -> hasPassword (1 w)
       if (data.hasPaswword !== undefined) {
         data.hasPassword = data.hasPaswword;

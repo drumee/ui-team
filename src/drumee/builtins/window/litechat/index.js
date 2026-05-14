@@ -11,7 +11,6 @@ class __window_litechat extends __room {
     require('./skin');
     this.service_class = opt.service_class;
     super.initialize(opt);
-    // this.debug('AAA:19', opt);
     this.declareHandlers();
     this.media = opt.media;
     this.user = opt.user;
@@ -97,7 +96,6 @@ class __window_litechat extends __room {
   // sendMessage - Send the the chat message 
   // ===========================================================
   sendMessage(cmd) {
-    this.debug("AAA:341 --- sendMessage", cmd.getMessage(), cmd);
 
     let opt = {
       kind: 'litechat_message',
@@ -107,7 +105,6 @@ class __window_litechat extends __room {
       ctime: timestamp(1),
       //author : 
     }
-    this.debug("AAA:401", this, opt);
     this.__list.append(opt);
     this.send({
       service: 'upstream-live-message',
@@ -126,7 +123,6 @@ class __window_litechat extends __room {
    */
   __dispatchPush(service, data) {
     let svc = this.serviceName(service);
-    this.debug(`AAA:132 service=${svc}`, data, this);
     switch (svc) {
       case 'downstream-live-message':
         let opt = {
@@ -134,7 +130,6 @@ class __window_litechat extends __room {
           author: _a.other,
           ...data
         }
-        this.debug("AAA:553", this, opt, data);
         this.__list.append(opt);
         break;
 
@@ -143,7 +138,6 @@ class __window_litechat extends __room {
         data.messages.map((e) => { 
           e.kind = 'litechat_message';
         })
-        //this.debug("AAA:147", this, data);
         this.__list.reset();
         this.__list.append(data.messages);
         break;

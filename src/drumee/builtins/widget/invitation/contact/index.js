@@ -37,7 +37,6 @@ class __invitation_contact extends LetcBox {
     }
     return this.url = Visitor.avatar(m);
   }
-    //this.debug("AAAAAAAAAAAAAAA", this)
 // ===========================================================
 // onDomRefresh
 // ===========================================================

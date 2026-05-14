@@ -267,7 +267,6 @@ class __remote_user extends __stream {
    */
   handleAudioMuteChange(track) {
     if (!track) {
-      this.debug("AAA:338 No track to handle", track);
       return;
     }
     this.mset({

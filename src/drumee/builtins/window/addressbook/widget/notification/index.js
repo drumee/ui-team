@@ -42,9 +42,7 @@ class __addressbook_widget_notification extends LetcBox {
     if (data && data.content && data.content.contact) {
       count = data.content.contact.cnt || data.cnt;
     }
-    //this.debug("AAAA:45 49", this, data);
     this.ensurePart('counter').then((p) => {
-      //this.debug("AAAA:45 51", count, p);
       p.set({ content: count });
       p.el.dataset.count = count;
       return this.trigger(_e.update);

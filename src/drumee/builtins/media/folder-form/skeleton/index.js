@@ -44,6 +44,13 @@ module.exports = function (ui) {
         service: "create-folder",
         uiHandler: [ui],
       }),
+      Skeletons.Note({
+        sys_pn: "error",
+        partHandler: [ui],
+        className: `${pfx}__field-error`,
+        state: 0,
+        content: "",
+      }),
     ],
   });
 

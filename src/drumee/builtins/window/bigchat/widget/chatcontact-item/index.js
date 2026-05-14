@@ -61,7 +61,6 @@ class ___widget_chatcontactItem extends LetcBox {
    */
   updateNotificationCount(args) {
     let id = this.mget(_a.drumate_id) || this.mget(_a.entity_id);
-    //this.debug("AAA:62", id, args[id], this, this.el);
     if (args[id]) {
       this.mset({ room_count: args[id].cnt });
       this.updateNotification();

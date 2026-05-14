@@ -136,7 +136,6 @@ class ___chat_room extends LetcBox {
         this.debug('invalid type loaded');
         return
     }
-    //this.debug("AAA:148", widget_chat, this.peer);
     content.feed(widget_chat);
   }
 
@@ -163,7 +162,6 @@ class ___chat_room extends LetcBox {
         flag: this.mget('flag') || 'all',
         option: _a.active
       })
-      //this.debug("AAAA:AAA:2229", rooms);
       if (rooms && !rooms[0]) {
         this.peer = {}
       } else {

@@ -31,7 +31,6 @@ class ___widget_member_form extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug("AAA:34", service)
     switch (service) {
       case 'choose-who-can-see-member':
         return this.chooseWhoCanSeeMember()

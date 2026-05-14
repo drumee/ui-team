@@ -142,7 +142,6 @@ class __security_usb extends __pad {
 // ===========================================================
 
   __dispatchRest(method, data, socket) {
-    this.debug("AAAAAAAAAAA", method, this, data);
     switch (method) {
       case SERVICE.drumate.update_profile:
         Visitor.set(_a.profile, data.profile);

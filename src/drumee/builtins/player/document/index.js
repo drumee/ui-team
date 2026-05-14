@@ -382,7 +382,6 @@ class __player_document extends PlayerInteract {
     };
 
     this.fetchService(opt).then((data) => {
-      this.debug("AAA:378, data", data)
       if (m) m.wait(0);
       if (_.isEmpty(data)) {
         this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW);
@@ -713,7 +712,6 @@ class __player_document extends PlayerInteract {
         let f = filename.split('.')
         f.pop()
         filename = f.join() + '.pdf'
-        this.debug("AAAA:678", url, filename)
         this.fetchFile({ url, download: filename })
         break;
 

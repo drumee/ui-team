@@ -235,7 +235,6 @@ class __webrtc_room extends __room {
     const opt = require("./configs/tracks")({ devices, micDeviceId });
     if (this.isDestroyed()) {
       this.warn("Attemptiing to create tracks with destroyed view");
-      this.debug("AAA:227", this, JitsiMeetJS);
       console.trace();
       return
     }
@@ -686,7 +685,6 @@ class __webrtc_room extends __room {
    *
    */
   onWrongState() {
-    this.debug("AAA:401 -- TO DO handle onWrongState");
   }
 
   /**

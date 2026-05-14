@@ -32,12 +32,15 @@ module.exports = function (ui) {
       // Actions cluster (right)
       Skeletons.Box.X({
         className: `${pfx}__actions-cluster`,
+
         kids: [
           Skeletons.Menu({
             className: `${pfx}__add-wrapper`,
             direction: _a.down,
             opening: _e.click,
             persistence: _a.once,
+            sys_pn: "addmenu",
+            partHandler: [ui],
             trigger: Skeletons.Button.Label({
               ico: "topbar-add",
               className: `${pfx}__new-workspace-btn`,
