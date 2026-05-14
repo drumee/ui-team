@@ -420,6 +420,8 @@
   &__create-input {
     width: 100%;
     background: transparent;
+    position: relative;
+    box-sizing: border-box;
 
     input {
       width: 100%;
@@ -428,6 +430,7 @@
       border-radius: 6px;
       outline: none;
       background: #ffffff;
+      box-sizing: border-box;
       @include drumee.typo(
         $size: 13px,
         $weight: 500,
@@ -446,6 +449,46 @@
       &::placeholder {
         color: #aeaeb2;
         font-weight: 400;
+      }
+
+      &.flatpickr-input,
+      &[readonly] {
+        cursor: pointer;
+        caret-color: transparent;
+      }
+    }
+
+    .flatpickr-calendar {
+      position: fixed;
+      top: 100px !important;
+      left: 40px !important;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.18);
+      font-family: Manrope, system-ui, sans-serif;
+
+      &.arrowTop::before,
+      &.arrowTop::after {
+        display: none;
+      }
+
+      .flatpickr-day {
+        border-radius: 6px;
+
+        &.selected,
+        &.selected:hover {
+          background: #433cc5;
+          border-color: #433cc5;
+        }
+
+        &.today {
+          border-color: #433cc5;
+
+          &:hover {
+            background: rgba(67, 60, 197, 0.08);
+            color: #433cc5;
+          }
+        }
       }
     }
   }
@@ -682,6 +725,8 @@
   &__detail-due-input {
     flex: 1 1 auto;
     background: transparent;
+    position: relative;
+    box-sizing: border-box;
 
     input {
       width: 100%;
@@ -689,6 +734,7 @@
       border: 1px solid var(--border-default, #d1d1d6);
       border-radius: 6px;
       outline: none;
+      box-sizing: border-box;
       @include drumee.typo(
         $size: 13px,
         $weight: 500,
@@ -699,6 +745,46 @@
       &:focus {
         border-color: #fa8540;
         box-shadow: 0 0 0 3px rgba(250, 133, 64, 0.15);
+      }
+
+      &.flatpickr-input,
+      &[readonly] {
+        cursor: pointer;
+        caret-color: transparent;
+      }
+    }
+
+    .flatpickr-calendar {
+      position: fixed;
+      top: 300px !important;
+      left: 800px !important;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.18);
+      font-family: Manrope, system-ui, sans-serif;
+
+      &.arrowTop::before,
+      &.arrowTop::after {
+        display: none;
+      }
+
+      .flatpickr-day {
+        border-radius: 6px;
+
+        &.selected,
+        &.selected:hover {
+          background: #fa8540;
+          border-color: #fa8540;
+        }
+
+        &.today {
+          border-color: #fa8540;
+
+          &:hover {
+            background: rgba(250, 133, 64, 0.08);
+            color: #fa8540;
+          }
+        }
       }
     }
   }
