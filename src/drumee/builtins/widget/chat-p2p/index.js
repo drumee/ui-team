@@ -280,13 +280,21 @@ class __chat_p2p extends LetcBox {
       return;
     }
 
+    // Contact items in chat-p2p often carry only `entity_id`; `drumate_id` is
+    // null for users who chat with us but aren't saved as a contact yet.
+    // window_connect uses callee.drumate_id verbatim as the server's
+    // `guest_id`, so without this fallback the invite reaches the SQL proc
+    // as guest_id=null → 0 active sockets → caller sees "is not currently
+    // online" even when the peer is online. Mirror the same fallback used
+    // for peer_id in openChat() above.
+    const drumate_id = peer.drumate_id || peer.entity_id;
     Wm.launch({
       kind: 'window_connect',
       hub_id: Visitor.id,
       nid: (peer.home && peer.home.home_id) || peer.nid,
       filename: name,
       display: name,
-      callee: peer,
+      callee: { ...peer, drumate_id, uid: peer.uid || drumate_id },
       video: isVideo ? 1 : 0,
       audio: 1,
     }, { explicit: 1, singleton: 1 });

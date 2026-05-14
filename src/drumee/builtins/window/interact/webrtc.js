@@ -1,5 +1,6 @@
 
 const windowCore = require('./index');
+const { TweenMax } = gsap;
 
 class __window_webrtc extends windowCore {
 
@@ -123,11 +124,13 @@ class __window_webrtc extends windowCore {
     }
 
     this._prepareChange(anim);
-    anime({ targets: this.$el[0], ...anim, duration: 500, complete: () => {
+    anim.onComplete = () => {
       let ui = { size: this.defaultSize };
       this.responsive && this.responsive(this.el.dataset.mode, ui);
       this.setContentSize && this.setContentSize();
-    }});
+    };
+
+    TweenMax.to(this.$el, 0.5, anim);
   }
 
   /**

@@ -1,3 +1,5 @@
+const { TweenLite, TimelineMax } = require("@drumee/ui-core/vendor");
+
 const Rectangle = require('rectangle-node');
 
 class __media_grid extends DrumeeMediaInteract {
@@ -215,7 +217,11 @@ class __media_grid extends DrumeeMediaInteract {
         x = 0;
     }
     this._shiftX = x;
-    anime({ targets: this.$el[0], translateX: x, duration: 200, begin: this._onStartShifting, complete: this._onStopShifting });
+    TweenLite.to(this.$el, .2, {
+      x,
+      onStart: this._onStartShifting,
+      onComplete: this._onStopShifting
+    });
     return this;
   }
 

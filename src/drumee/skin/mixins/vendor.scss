@@ -92,30 +92,8 @@
   }
 }
 
-// Range-based generator (kept for back-compat; prefer margin-set for new code).
 @mixin margin-list($direction, $num, $pref:'') {
   @for $i from 0 through $num {
-    @if $direction == margin-top           { .mt-#{$i} { #{$direction}: #{$i}px !important; } }
-    @else if $direction == margin-bottom   { .mb-#{$i} { #{$direction}: #{$i}px !important; } }
-    @else if $direction == margin-left     { .ml-#{$i} { #{$direction}: #{$i}px !important; } }
-    @else if $direction == margin-right    { .mr-#{$i} { #{$direction}: #{$i}px !important; } }
-    @else if $direction == margin-hor      { .mx-#{$i} { margin-left: #{$i}px !important; margin-right: #{$i}px !important; } }
-    @else if $direction == margin-vert     { .my-#{$i} { margin-top: #{$i}px !important; margin-bottom: #{$i}px !important; } }
-    @else if $direction == padding-top     { .pt-#{$i} { #{$direction}: #{$i}px !important; } }
-    @else if $direction == padding-hor     { .px-#{$i} { padding-left: #{$i}px !important; padding-right: #{$i}px !important; } }
-    @else if $direction == padding-vert    { .py-#{$i} { padding-top: #{$i}px !important; padding-bottom: #{$i}px !important; } }
-    @else if $direction == padding-bottom  { .pb-#{$i} { #{$direction}: #{$i}px !important; } }
-    @else if $direction == padding-left    { .pl-#{$i} { #{$direction}: #{$i}px !important; } }
-    @else if $direction == padding-right   { .pr-#{$i} { #{$direction}: #{$i}px !important; } }
-    @else if $direction == margin          { .m-#{$i} { #{$direction}: #{$i}px !important; } }
-    @else if $direction == padding         { .p-#{$i} { #{$direction}: #{$i}px !important; } }
-  }
-}
-
-// Discrete-value generator — only emits classes for the values in $values.
-// Use this instead of margin-list to avoid generating hundreds of unused rules.
-@mixin margin-set($direction, $values) {
-  @each $i in $values {
     @if $direction == margin-top           { .mt-#{$i} { #{$direction}: #{$i}px !important; } }
     @else if $direction == margin-bottom   { .mb-#{$i} { #{$direction}: #{$i}px !important; } }
     @else if $direction == margin-left     { .ml-#{$i} { #{$direction}: #{$i}px !important; } }

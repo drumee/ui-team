@@ -1,4 +1,5 @@
 const __window_chatInteract = require('./chat');
+const { TweenMax } = gsap;
 
 class __window_interact_singleton extends __window_chatInteract {
   constructor(...args) {
@@ -266,13 +267,12 @@ class __window_interact_singleton extends __window_chatInteract {
       });
     };
 
-    return anime({ targets: this.$el[0],
+    return TweenMax.to(this.$el, 0.5, {
       width: anim.to.width,
       height: anim.to.height,
       left: anim.to.left,
       top: anim.to.top,
-      duration: 500,
-      complete: f,
+      onComplete: f
     });
   }
 

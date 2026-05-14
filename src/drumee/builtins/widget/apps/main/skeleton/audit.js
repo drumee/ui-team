@@ -49,6 +49,51 @@ function mapAuditRow(row) {
   };
 }
 
+const RANGE_OPTIONS = [
+  { key: "7d", localeKey: "LAST_7_DAYS", fallback: "Last 7 Days" },
+  { key: "30d", localeKey: "LAST_30_DAYS", fallback: "Last 30 Days" },
+  { key: "90d", localeKey: "LAST_90_DAYS", fallback: "Last 90 Days" },
+  { key: "all", localeKey: "ALL_TIME", fallback: "All time" },
+];
+
+function rangeLabel(key) {
+  const opt = RANGE_OPTIONS.find((o) => o.key === key) || RANGE_OPTIONS[1];
+  return LOCALE[opt.localeKey] || opt.fallback;
+}
+
+function rangeMenu(ui) {
+  const pfx = ui.fig.family;
+  const current = ui._auditRangeKey || "30d";
+  return Skeletons.Box.Y({
+    className: `${pfx}__audit-range-menu`,
+    kids: RANGE_OPTIONS.map((opt) =>
+      Skeletons.Box.X({
+        className: `${pfx}__audit-range-item${current === opt.key ? ` ${pfx}__audit-range-item--selected` : ""}`,
+        service: "apps-audit-select-range",
+        uiHandler: [ui],
+        range_key: opt.key,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__audit-range-item-label`,
+            content: LOCALE[opt.localeKey] || opt.fallback,
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__audit-range-item-radio${current === opt.key ? ` ${pfx}__audit-range-item-radio--selected` : ""}`,
+            kids:
+              current === opt.key
+                ? [
+                    Skeletons.Box.X({
+                      className: `${pfx}__audit-range-item-radio-dot`,
+                    }),
+                  ]
+                : [],
+          }),
+        ],
+      }),
+    ),
+  });
+}
+
 function auditHeader(ui) {
   const pfx = ui.fig.family;
   return Skeletons.Box.X({
@@ -70,8 +115,7 @@ function auditHeader(ui) {
               }),
               Skeletons.Entry({
                 className: `${pfx}__audit-search-input`,
-                placeholder:
-                  LOCALE.SEARCH_USERNAME || "Search username",
+                placeholder: LOCALE.SEARCH_USERNAME || "Search username",
                 name: "audit_search",
                 value: ui._auditUsername || "",
                 mode: _a.commit,
@@ -81,23 +125,29 @@ function auditHeader(ui) {
             ],
           }),
           Skeletons.Box.X({
-            className: `${pfx}__audit-range`,
-            service: "apps-audit-range",
-            uiHandler: [ui],
+            className: `${pfx}__audit-range-wrap`,
             kids: [
-              Skeletons.Button.Svg({
-                ico: "calendar",
-                className: `${pfx}__audit-range-ico`,
+              Skeletons.Box.X({
+                className: `${pfx}__audit-range${ui._auditRangeOpen ? ` ${pfx}__audit-range--open` : ""}`,
+                service: "apps-audit-range",
+                uiHandler: [ui],
+                kids: [
+                  Skeletons.Button.Svg({
+                    ico: "calendar",
+                    className: `${pfx}__audit-range-ico`,
+                  }),
+                  Skeletons.Note({
+                    className: `${pfx}__audit-range-label`,
+                    content: rangeLabel(ui._auditRangeKey || "30d"),
+                  }),
+                  Skeletons.Button.Svg({
+                    ico: "editbox_arrow--down",
+                    className: `${pfx}__audit-range-chevron`,
+                  }),
+                ],
               }),
-              Skeletons.Note({
-                className: `${pfx}__audit-range-label`,
-                content: LOCALE.LAST_30_DAYS || "Last 30 Days",
-              }),
-              Skeletons.Button.Svg({
-                ico: "editbox_arrow--down",
-                className: `${pfx}__audit-range-chevron`,
-              }),
-            ],
+              ui._auditRangeOpen ? rangeMenu(ui) : null,
+            ].filter(Boolean),
           }),
           Skeletons.Box.X({
             className: `${pfx}__audit-export`,
@@ -136,19 +186,19 @@ function auditTableHeader(pfx) {
     kids: [
       headerCell(
         `${pfx}__audit-col ${pfx}__audit-col--user`,
-        LOCALE.USER || "User"
+        LOCALE.USER || "User",
       ),
       headerCell(
         `${pfx}__audit-col ${pfx}__audit-col--action`,
-        LOCALE.ACTION || "Action"
+        LOCALE.ACTION || "Action",
       ),
       headerCell(
         `${pfx}__audit-col ${pfx}__audit-col--resource`,
-        LOCALE.TARGET_RESOURCE || "Target Resource"
+        LOCALE.TARGET_RESOURCE || "Target Resource",
       ),
       headerCell(
         `${pfx}__audit-col ${pfx}__audit-col--timestamp`,
-        LOCALE.TIMESTAMP || "Timestamp"
+        LOCALE.TIMESTAMP || "Timestamp",
       ),
     ],
   });
@@ -249,12 +299,13 @@ function auditPagination(ui) {
   const pageSize = ui._auditPageSize || 20;
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = total === 0 ? 0 : Math.min(total, (page - 1) * pageSize + rows);
-  const summary = total === 0
-    ? LOCALE.NO_AUDIT_LOGS || "No entries"
-    : (LOCALE.SHOWING_OF || "Showing {start}-{end} of {total}")
-        .replace("{start}", start)
-        .replace("{end}", end)
-        .replace("{total}", total.toLocaleString());
+  const summary =
+    total === 0
+      ? LOCALE.NO_AUDIT_LOGS || "No entries"
+      : (LOCALE.SHOWING_OF || "Showing {start}-{end} of {total}")
+          .replace("{start}", start)
+          .replace("{end}", end)
+          .replace("{total}", total.toLocaleString());
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return Skeletons.Box.X({
     className: `${pfx}__audit-pagination`,
@@ -354,22 +405,26 @@ function bytesToHuman(b) {
   const units = ["B", "KB", "MB", "GB", "TB", "PB"];
   let i = 0;
   let v = n;
-  while (v >= 1024 && i < units.length - 1) { v /= 1024; i += 1; }
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i += 1;
+  }
   return `${v.toFixed(v < 10 && i > 0 ? 2 : 1)} ${units[i]}`;
 }
 
 function insights(ui) {
   const pfx = ui.fig.family;
   const stats = ui._auditStats || {};
-  const security = stats.security_score != null
-    ? Number(stats.security_score)
-    : null;
-  const highRisk = stats.high_risk_count != null
-    ? parseInt(stats.high_risk_count, 10) || 0
-    : null;
-  const storageBytes = stats.storage_used_bytes != null
-    ? parseFloat(stats.storage_used_bytes) || 0
-    : null;
+  const security =
+    stats.security_score != null ? Number(stats.security_score) : null;
+  const highRisk =
+    stats.high_risk_count != null
+      ? parseInt(stats.high_risk_count, 10) || 0
+      : null;
+  const storageBytes =
+    stats.storage_used_bytes != null
+      ? parseFloat(stats.storage_used_bytes) || 0
+      : null;
   return Skeletons.Box.X({
     className: `${pfx}__insights`,
     kids: [
@@ -379,11 +434,12 @@ function insights(ui) {
         badge_label: LOCALE.AUDIT_SECURITY_BADGE || "—",
         label: LOCALE.SECURITY_SCORE || "Security Score",
         value: security != null ? security.toFixed(1) : "—",
-        progress: security != null ? Math.max(0, Math.min(100, security)) : null,
+        progress:
+          security != null ? Math.max(0, Math.min(100, security)) : null,
       }),
       insightCard(pfx, {
         variant: "risk",
-        icon: "editbox_triangle",
+        icon: "apps-warning",
         badge_label:
           highRisk != null
             ? `${highRisk} ${LOCALE.UNRESOLVED || "unresolved"}`
@@ -401,8 +457,7 @@ function insights(ui) {
         label: LOCALE.STORAGE_ACTIVITY || "Storage Activity",
         value: storageBytes != null ? bytesToHuman(storageBytes) : "—",
         footer:
-          LOCALE.AUDIT_STORAGE_DESC ||
-          "Total bytes consumed across all hubs.",
+          LOCALE.AUDIT_STORAGE_DESC || "Total bytes consumed across all hubs.",
       }),
     ],
   });
@@ -416,15 +471,17 @@ function upsellOverlay(ui) {
       Skeletons.Box.Y({
         className: `${pfx}__upsell-card`,
         kids: [
-          Skeletons.Image.Svg({ ico: "cloud-pause", className: `${pfx}__upsell-icon` }),
+          Skeletons.Image.Svg({
+            ico: "cloud-pause",
+            className: `${pfx}__upsell-icon`,
+          }),
           Skeletons.Box.Y({
             className: `${pfx}__upsell-text`,
             kids: [
               Skeletons.Note({
                 className: `${pfx}__upsell-title`,
                 content:
-                  LOCALE.UNLOCK_ACTIVITY_INSIGHTS ||
-                  "Unlock Activity Insights",
+                  LOCALE.UNLOCK_ACTIVITY_INSIGHTS || "Unlock Activity Insights",
               }),
               Skeletons.Note({
                 className: `${pfx}__upsell-desc`,
@@ -470,7 +527,7 @@ export default function audit_view(ui) {
             Skeletons.Box.Y({
               className: `${pfx}__audit-list`,
               kids: (ui._auditLogs || []).map((row) =>
-                auditEntry(ui, mapAuditRow(row))
+                auditEntry(ui, mapAuditRow(row)),
               ),
             }),
             auditPagination(ui),

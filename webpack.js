@@ -5,7 +5,7 @@ const Resolve = require('./webpack/resolve');
 const Module = require('./webpack/module');
 const Plugins = require('./webpack/plugins');
 
-let {
+const {
   BUILD_TARGET,
   ENDPOINT,
   OUTPUT_FILENAME,
@@ -58,11 +58,7 @@ function makeOptions(entry, opt) {
 
     optimization: {
       splitChunks: {
-        // 'all' deduplicates modules shared between sync entry chunks and async
-        // chunks. Without this, jQuery (278 KB) was bundled in both the sync
-        // `core` entry and the async vendors chunk, costing an extra 278 KB.
-        chunks: 'all',
-        minSize: 20000,
+        minSize: 20000, // Minimum size for a chunk to be generated
       },
       runtimeChunk: 'single', // Extracts webpack runtime code into a separate file (e.g., runtime~main.[hash].js)
       moduleIds: 'deterministic', // (Webpack 5+) Stable module IDs

@@ -3,9 +3,39 @@
 .widget-chat {
 
   &__attachment-wrapper {
-    background-color: var(--default-bg);
-    max-height: 100px;
-    width: 100%;
+    // Collapse entirely unless `chat.checkPendingContent` has flagged a
+    // pending upload via `data-has-attachment="1"`. !important is required
+    // because Skeletons.Wrapper.Y auto-adds `.dialog__wrapper` + sets
+    // `data-state="open"`, and the framework's
+    // `.dialog__wrapper[data-state="open"] { display: flex }` rule beats
+    // a single-class selector on specificity (0,2,0 vs 0,1,0).
+    display: none !important;
+
+    &[data-has-attachment="1"] {
+      display: flex !important;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      background-color: var(--default-bg);
+      width: 100%;
+      height: 80px;
+      flex: 0 0 80px;
+      overflow: hidden;
+      padding: 8px;
+      gap: 8px;
+
+      // Inner skeleton has inline style="height: 100" on its list, plus
+      // default rules at 100% — both would overflow the 64px slot. Force
+      // a uniform 64px height inside the visible preview only.
+      .media-wrapper__ui,
+      .list-smart,
+      .smart-container {
+        height: 64px !important;
+        max-height: 64px !important;
+        min-height: 0 !important;
+        width: auto !important;
+      }
+    }
 
     .drumee-spinner {
       width: 48px;
@@ -13,27 +43,19 @@
       position: absolute;
     }
 
-    & .media-wrapper__ui {
-      background-color: inherit;
-      height: inherit;
-      width: inherit;
-    }
-
-    & .list-smart {
-      height: inherit !important;
-      width: inherit;
-    }
-
     & .media-grid {
       &__ui {
         background-color: inherit;
         border-radius: var(--border-radius-small);
         box-shadow: none;
-        height: 48px;
-        min-height: unset;
-        margin: 0 6px 6px; //6px;
+        height: 64px !important;
+        max-height: 64px !important;
+        min-height: unset !important;
+        margin: 0;
         min-width: unset;
-        width: 50px;
+        width: 64px !important;
+        max-width: 64px !important;
+        flex: 0 0 64px;
 
         &[data-drag="on"] {
           .media-grid__remove {
@@ -80,25 +102,19 @@
       }
 
       & .preview.image-capable {
-        height: 50px;
-        width: 50px;
+        height: 64px;
+        width: 64px;
+        object-fit: cover;
       }
 
-      & .filename {
-        border-radius: var(--border-radius-bottom); //0 0 6px 6px;
-        // bottom: 1px;
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-        max-height: 26px;
-        overflow: hidden;
-        padding: 4px 1px;
-        position: absolute;
-        text-align: center;
-        text-overflow: ellipsis;
-        top: 30px;
-        width: 100%;
-        @include drumee.typo($size: 9px, $line: 12px, $weight: 300, $color: var(--default-text-color));
+      // Preview ở chat input chỉ cần thumb nhận diện — ẩn mọi filename/meta
+      // overlay để tránh bị clip nửa text dưới ảnh.
+      & .filename,
+      & .filename-wrapper,
+      &__meta-row,
+      &__meta-row-top,
+      &__date {
+        display: none !important;
       }
 
       &__remove {
@@ -162,6 +178,45 @@
           padding: 0;
           left: calc(50% - 5px);
           top: calc(50% - 7px);
+        }
+      }
+    }
+  }
+}
+
+// Dark mode — `--default-bg` is hardcoded `#fff` and never overridden, so
+// the upload preview panel was rendering bright white on top of the dark
+// messenger. Map it to the theme surface so it blends with the input row.
+html[data-theme="dark"] {
+  .widget-chat {
+    &__attachment-wrapper {
+      background-color: var(--normal-bg-90, #282538);
+    }
+
+    // media-wrapper widget skin hardcodes background-color: var(--default-background)
+    // which has no dark theme override (always #fff). Force dark surface here so
+    // the inner list area doesn't flash white during/after upload.
+    .media-wrapper__ui {
+      background-color: transparent !important;
+    }
+
+    .media-grid {
+      &__container {
+        background-color: var(--normal-bg-80, #333042);
+      }
+
+      &__remove {
+        background-color: var(--normal-bg-80, #333042);
+        border-color: var(--border-default, rgba(255, 255, 255, 0.2));
+        color: var(--normal-fg-10, #e4e3ff);
+
+        &--icon {
+          color: var(--normal-fg-50, #c7c7cc);
+
+          &:hover,
+          &:focus {
+            color: var(--normal-fg-10, #ffffff);
+          }
         }
       }
     }

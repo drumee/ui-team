@@ -58,6 +58,10 @@ const __skl_widget_chatcontactItem = function (ui) {
     msg = LOCALE.ATTACHMENT;
   }
 
+  if (msg && typeof msg === 'string') {
+    msg = msg.replace(/\[@([^\]]+)\]\((?:user|mention)[^)]*\)/g, '@$1');
+  }
+
   const chatMessage = Skeletons.Note({
     className: `${contentFig}__note message`,
     sys_pn: _a.message,

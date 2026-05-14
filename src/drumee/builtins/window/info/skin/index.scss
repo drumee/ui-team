@@ -27,6 +27,7 @@
 
   &__main {
     padding: var(--spacer-5);
+    min-height: 300px;
   }
 
   // &-topbar {
@@ -66,10 +67,12 @@
       //  white-space: break-spaces;
       //  line-break: anywhere;
       word-wrap: break-word;
-      @include drumee.typo($weight: 300,
+      @include drumee.typo(
+        $weight: 300,
         $size: 18px,
         $line: 33px,
-        $color: var(--default-text-color)); //24px
+        $color: var(--default-text-color)
+      ); //24px
 
       p {
         text-align: center;
@@ -77,10 +80,12 @@
 
       &.primary-color {
         padding: 5px;
-        @include drumee.typo($weight: 300,
+        @include drumee.typo(
+          $weight: 300,
           $size: 24px,
           $line: 33px,
-          $color: var(--secondary-text-color)); //var(--eblue));
+          $color: var(--secondary-text-color)
+        ); //var(--eblue));
       }
     }
   }
@@ -92,10 +97,12 @@
     margin-right: auto;
     margin-left: auto;
     margin-bottom: 6px;
-    @include drumee.typo($weight: 300,
+    @include drumee.typo(
+      $weight: 300,
       $size: 24px,
       $line: 33px,
-      $color: var(--default-text-color));
+      $color: var(--default-text-color)
+    );
 
     p {
       text-align: center;
@@ -135,5 +142,15 @@
   &__buttons {
     justify-content: center;
     padding: 10px;
+  }
+
+  &__button-main {
+    opacity: 1;
+    height: 100%;
+    gap: var(--spacer-4);
+    border-radius: var(--corner-radius-2);
+    padding: var(--spacer-4) var(--spacer-6);
+    cursor: pointer;
+    background-color: var(--normal-bg-80);
   }
 }

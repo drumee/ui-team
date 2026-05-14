@@ -13,7 +13,7 @@ function normalizeFileVersionRow(r) {
     folder: r.folder || r.folder_name || "",
     workspace: r.workspace || r.workspace_name || "",
     size: r.size || (r.filesize != null ? filesize(r.filesize) : ""),
-    versions: r.versions != null ? r.versions : (r.version_count || 0),
+    versions: r.versions != null ? r.versions : r.version_count || 0,
   };
 }
 
@@ -34,9 +34,11 @@ function normalizeFileVersionDetail(res) {
     }
   } else if (typeof res === "object") {
     head = res.file || res.head || res;
-    versions = Array.isArray(res.versions) ? res.versions
-            : Array.isArray(res.list) ? res.list
-            : [];
+    versions = Array.isArray(res.versions)
+      ? res.versions
+      : Array.isArray(res.list)
+        ? res.list
+        : [];
   }
   if (!head) return null;
   return {
@@ -125,8 +127,9 @@ function deriveLastActive(row) {
 }
 
 function mapMember(row) {
-  const id = row.drumate_id || row.user_id || row.id;
-  const fullname = row.fullname || `${row.firstname || ""} ${row.lastname || ""}`.trim();
+  const id = row.drumate_id || row.user_id || row.uid || row.id;
+  const fullname =
+    row.fullname || `${row.firstname || ""} ${row.lastname || ""}`.trim();
   return {
     id,
     raw: row,
@@ -177,8 +180,11 @@ class apps_main extends LetcBox {
     this._auditState = "idle";
     this._auditPage = 1;
     this._auditUsername = "";
-    this._auditFrom = 0;
-    this._auditTo = 0;
+    // '7d' | '30d' | '90d' | 'all' — the date-range pill is a preset picker;
+    // _auditFrom/_auditTo are derived from this on every fetch so the key is
+    // the single source of truth.
+    this._auditRangeKey = "30d";
+    this._auditRangeOpen = false;
     this._orgStorageStats = [];
     this._orgUserStorage = [];
     this._orgUserStorageTotal = 0;
@@ -234,11 +240,15 @@ class apps_main extends LetcBox {
 
   _onDocumentClick(e) {
     if (this._filterOpen) {
-      const filterEl = this.el && this.el.querySelector(".apps-main__table-filter");
-      const dropdownEl = this.el && this.el.querySelector(".apps-main__filter-menu");
+      const filterEl =
+        this.el && this.el.querySelector(".apps-main__table-filter");
+      const dropdownEl =
+        this.el && this.el.querySelector(".apps-main__filter-menu");
       if (
-        filterEl && !filterEl.contains(e.target) &&
-        dropdownEl && !dropdownEl.contains(e.target)
+        filterEl &&
+        !filterEl.contains(e.target) &&
+        dropdownEl &&
+        !dropdownEl.contains(e.target)
       ) {
         this._filterOpen = false;
         this._render();
@@ -246,15 +256,43 @@ class apps_main extends LetcBox {
     }
     if (this._adminHubMenuOpen) {
       const chipEl = this.el && this.el.querySelector(".apps-main__hub-chip");
-      const menuEl = this.el && this.el.querySelector(".apps-main__hub-chip-menu");
+      const menuEl =
+        this.el && this.el.querySelector(".apps-main__hub-chip-menu");
       if (
-        chipEl && !chipEl.contains(e.target) &&
-        menuEl && !menuEl.contains(e.target)
+        chipEl &&
+        !chipEl.contains(e.target) &&
+        menuEl &&
+        !menuEl.contains(e.target)
       ) {
         this._adminHubMenuOpen = false;
         this._render();
       }
     }
+    if (this._auditRangeOpen) {
+      const rangeEl =
+        this.el && this.el.querySelector(".apps-main__audit-range");
+      const menuEl =
+        this.el && this.el.querySelector(".apps-main__audit-range-menu");
+      if (
+        rangeEl &&
+        !rangeEl.contains(e.target) &&
+        menuEl &&
+        !menuEl.contains(e.target)
+      ) {
+        this._auditRangeOpen = false;
+        this._render();
+      }
+    }
+  }
+
+  // Derive Unix-second from_time/to_time from the current preset key. The
+  // backend already treats 0 as "no bound", so 'all' returns {0, 0}.
+  _auditRangeWindow() {
+    const key = this._auditRangeKey || "30d";
+    if (key === "all") return { from: 0, to: 0 };
+    const days = key === "7d" ? 7 : key === "90d" ? 90 : 30;
+    const now = Math.floor(Date.now() / 1000);
+    return { from: now - days * 86400, to: now };
   }
 
   _render() {
@@ -291,7 +329,7 @@ class apps_main extends LetcBox {
       this._adminHubs = rows.filter(
         (r) =>
           (parseInt(r.permission, 10) || 0) >= 31 &&
-          WORKSPACE_AREAS.has(r.area)
+          WORKSPACE_AREAS.has(r.area),
       );
       this._activeAdminHub = this._adminHubs.length
         ? this._adminHubs[0].hub_id
@@ -322,22 +360,21 @@ class apps_main extends LetcBox {
     this._membersState = "loading";
     this._render();
     try {
-      const roleId = this._roleFilter && this._roleFilter !== "all"
-        ? this._roleFilter
-        : 0;
-      const res = this._role === "admin"
-        ? await this.postService(SERVICE.admin.hub_member_list, {
-            hub_id: this._activeAdminHub,
-            role_id: roleId,
-            key: this._memberQuery || "",
-            page: this._page || 1,
-          })
-        : await this.postService(SERVICE.adminpanel.member_list, {
-            role_id: roleId,
-            key: this._memberQuery || "",
-            page: this._page || 1,
-            option: "member",
-          });
+      // Role facet (_roleFilter) is applied client-side in the skeleton —
+      // the SP expects a numeric map_role.role_id, not these semantic labels.
+      const res =
+        this._role === "admin"
+          ? await this.postService(SERVICE.admin.hub_member_list, {
+              hub_id: this._activeAdminHub,
+              role_id: this._roleFilter || "all",
+              key: this._memberQuery || "",
+              page: this._page || 1,
+            })
+          : await this.postService(SERVICE.adminpanel.member_list, {
+              key: this._memberQuery || "",
+              page: this._page || 1,
+              option: "member",
+            });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
       this._members = rows.map(mapMember);
       this._membersState = "loaded";
@@ -358,17 +395,20 @@ class apps_main extends LetcBox {
     this._auditState = "loading";
     this._render();
     try {
+      const { from, to } = this._auditRangeWindow();
       const res = await this.postService(SERVICE.admin.get_audit_logs, {
         username: this._auditUsername || "",
-        from_time: this._auditFrom || 0,
-        to_time: this._auditTo || 0,
+        from_time: from,
+        to_time: to,
         page: this._auditPage || 1,
       });
       this._auditLogs = Array.isArray(res) ? res : (res && res.data) || [];
-      this._auditLogsTotal = res && res.total != null
-        ? parseInt(res.total, 10) || 0
-        : this._auditLogs.length;
-      if (res && res.page_size) this._auditPageSize = parseInt(res.page_size, 10) || 20;
+      this._auditLogsTotal =
+        res && res.total != null
+          ? parseInt(res.total, 10) || 0
+          : this._auditLogs.length;
+      if (res && res.page_size)
+        this._auditPageSize = parseInt(res.page_size, 10) || 20;
       this._auditState = "loaded";
     } catch (e) {
       this.warn && this.warn("get_audit_logs failed", e);
@@ -381,9 +421,10 @@ class apps_main extends LetcBox {
 
   async _loadAuditStats() {
     try {
+      const { from, to } = this._auditRangeWindow();
       const res = await this.postService(SERVICE.admin.get_audit_stats, {
-        from_time: this._auditFrom || 0,
-        to_time: this._auditTo || 0,
+        from_time: from,
+        to_time: to,
       });
       this._auditStats = res || null;
     } catch (e) {
@@ -394,13 +435,23 @@ class apps_main extends LetcBox {
 
   async _exportAuditLogs() {
     try {
+      const { from, to } = this._auditRangeWindow();
       const res = await this.postService(SERVICE.admin.export_audit_logs, {
         username: this._auditUsername || "",
-        from_time: this._auditFrom || 0,
-        to_time: this._auditTo || 0,
+        from_time: from,
+        to_time: to,
       });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
-      const cols = ["ctime", "actor_name", "email", "action", "category", "entity_id", "hub_id", "log"];
+      const cols = [
+        "ctime",
+        "actor_name",
+        "email",
+        "action",
+        "category",
+        "entity_id",
+        "hub_id",
+        "log",
+      ];
       const escape = (v) => {
         if (v == null) return "";
         const s = String(v).replace(/"/g, '""');
@@ -424,8 +475,13 @@ class apps_main extends LetcBox {
 
   async _loadOrgStorageStats() {
     try {
-      const res = await this.postService(SERVICE.admin.get_org_storage_stats, {});
-      this._orgStorageStats = Array.isArray(res) ? res : (res && res.data) || [];
+      const res = await this.postService(
+        SERVICE.admin.get_org_storage_stats,
+        {},
+      );
+      this._orgStorageStats = Array.isArray(res)
+        ? res
+        : (res && res.data) || [];
     } catch (e) {
       this._orgStorageStats = [];
     }
@@ -441,10 +497,12 @@ class apps_main extends LetcBox {
         page: this._storagePage || 1,
       });
       this._orgUserStorage = Array.isArray(res) ? res : (res && res.data) || [];
-      this._orgUserStorageTotal = res && res.total != null
-        ? parseInt(res.total, 10) || 0
-        : this._orgUserStorage.length;
-      if (res && res.page_size) this._orgUserStoragePageSize = parseInt(res.page_size, 10) || 20;
+      this._orgUserStorageTotal =
+        res && res.total != null
+          ? parseInt(res.total, 10) || 0
+          : this._orgUserStorage.length;
+      if (res && res.page_size)
+        this._orgUserStoragePageSize = parseInt(res.page_size, 10) || 20;
       this._storageState = "loaded";
     } catch (e) {
       this.warn && this.warn("get_org_user_storage failed", e);
@@ -475,6 +533,8 @@ class apps_main extends LetcBox {
         id: w.id || w.hub_id,
         name: w.name || w.hub_name,
         mode: w.mode || (w.area === "share" ? "shared" : w.area) || null,
+        updated: w.mtime ? Dayjs.unix(w.mtime).fromNow() : null,
+        storage_size: w.storage_size != null ? filesize(w.storage_size) : null,
       }));
       this._permState = "loaded";
     } catch (e) {
@@ -519,18 +579,23 @@ class apps_main extends LetcBox {
     this._fpermDevices = [];
     this._render();
     try {
-      const hubId = (this._activeWorkspace && this._activeWorkspace.id)
-        || this._activeAdminHub;
+      const hubId =
+        (this._activeWorkspace && this._activeWorkspace.id) ||
+        this._activeAdminHub;
       const res = await this.postService(SERVICE.admin.get_folder_permissions, {
         hub_id: hubId,
         nid: folderId,
       });
       const data = res || {};
       if (data.mode) this._fpermMode = data.mode;
-      if (data.access) this._fpermAccess = { ...this._fpermAccess, ...data.access };
-      if (typeof data.auto_revoke === "boolean") this._fpermAutoRevoke = data.auto_revoke;
-      if (data.auto_revoke_minutes != null) this._fpermAutoRevokeMins = data.auto_revoke_minutes;
-      if (typeof data.one_time === "boolean") this._fpermOneTimeOn = data.one_time;
+      if (data.access)
+        this._fpermAccess = { ...this._fpermAccess, ...data.access };
+      if (typeof data.auto_revoke === "boolean")
+        this._fpermAutoRevoke = data.auto_revoke;
+      if (data.auto_revoke_minutes != null)
+        this._fpermAutoRevokeMins = data.auto_revoke_minutes;
+      if (typeof data.one_time === "boolean")
+        this._fpermOneTimeOn = data.one_time;
       if (data.one_time_url) this._fpermOneTimeUrl = data.one_time_url;
       this._fpermMembers = Array.isArray(data.members) ? data.members : [];
       this._fpermDevices = Array.isArray(data.devices) ? data.devices : [];
@@ -544,8 +609,9 @@ class apps_main extends LetcBox {
   async _saveFolderPermissions() {
     if (!this._editingFolder) return;
     try {
-      const hubId = (this._activeWorkspace && this._activeWorkspace.id)
-        || this._activeAdminHub;
+      const hubId =
+        (this._activeWorkspace && this._activeWorkspace.id) ||
+        this._activeAdminHub;
       await this.postService(SERVICE.admin.save_folder_permissions, {
         hub_id: hubId,
         nid: this._editingFolder.id,
@@ -650,10 +716,13 @@ class apps_main extends LetcBox {
     this._fvSelectedVersionId = null;
     this._render();
     try {
-      const res = await this.postService(SERVICE.admin.get_file_version_detail, {
-        hub_id: this._activeAdminHub,
-        nid,
-      });
+      const res = await this.postService(
+        SERVICE.admin.get_file_version_detail,
+        {
+          hub_id: this._activeAdminHub,
+          nid,
+        },
+      );
       this._fileDetail = normalizeFileVersionDetail(res);
       // Pre-select the active version so the preview pane has something
       // meaningful to show before the user clicks anything.
@@ -721,17 +790,18 @@ class apps_main extends LetcBox {
   async _loadMemberStats() {
     this._statsState = "loading";
     try {
-      const svc = this._role === "admin"
-        ? SERVICE.admin.hub_member_stats
-        : SERVICE.admin.member_stats;
-      const payload = this._role === "admin"
-        ? { hub_id: this._activeAdminHub }
-        : {};
+      const svc =
+        this._role === "admin"
+          ? SERVICE.admin.hub_member_stats
+          : SERVICE.admin.member_stats;
+      const payload =
+        this._role === "admin" ? { hub_id: this._activeAdminHub } : {};
       const res = await this.postService(svc, payload);
       this._memberStats = res || {};
-      const t = this._memberStats.total_members != null
-        ? this._memberStats.total_members
-        : this._memberStats.total;
+      const t =
+        this._memberStats.total_members != null
+          ? this._memberStats.total_members
+          : this._memberStats.total;
       this._membersTotal = parseInt(t, 10) || 0;
       this._statsState = "loaded";
     } catch (e) {
@@ -744,10 +814,16 @@ class apps_main extends LetcBox {
 
   // ── Tabs / table chrome ──────────────────────────────────
   switchTab(tab) {
-    if (this._visibleTabs && this._visibleTabs.length && !this._visibleTabs.includes(tab)) return;
+    if (
+      this._visibleTabs &&
+      this._visibleTabs.length &&
+      !this._visibleTabs.includes(tab)
+    )
+      return;
     this._tab = tab;
     // Admin Member tab always re-enters at the workspace overview.
-    if (this._role === "admin" && tab === "member") this._memberView = "overview";
+    if (this._role === "admin" && tab === "member")
+      this._memberView = "overview";
     this._render();
     if (tab === "member" && this._membersState !== "loading") {
       this._loadMembersTab();
@@ -757,22 +833,38 @@ class apps_main extends LetcBox {
       this._loadStorageTab();
     } else if (tab === "permissions" && this._permState !== "loading") {
       this._loadPermissionsTab();
-    } else if (tab === "admin-storage" && this._adminStorageState !== "loading") {
+    } else if (
+      tab === "admin-storage" &&
+      this._adminStorageState !== "loading"
+    ) {
       this._loadAdminStorageTab();
     }
   }
 
   toggleMember(id) {
+    if (this._isSelf(id)) return;
     if (this._selected.has(id)) this._selected.delete(id);
     else this._selected.add(id);
     this._render();
   }
 
   toggleAll() {
-    if (this._selected.size === this._members.length) {
-      this._selected.clear();
+    // Operate on the visible (role-filtered) subset so the header checkbox
+    // reflects what the user sees. The current visitor is excluded so the
+    // header checkbox can never schedule self-removal.
+    const visible = (
+      this._roleFilter && this._roleFilter !== "all"
+        ? this._members.filter(
+            (m) => m && m.role && m.role.variant === this._roleFilter,
+          )
+        : this._members
+    ).filter((m) => !this._isSelf(m.id));
+    const allSelected =
+      visible.length > 0 && visible.every((m) => this._selected.has(m.id));
+    if (allSelected) {
+      visible.forEach((m) => this._selected.delete(m.id));
     } else {
-      this._selected = new Set(this._members.map((m) => m.id));
+      visible.forEach((m) => this._selected.add(m.id));
     }
     this._render();
   }
@@ -789,7 +881,7 @@ class apps_main extends LetcBox {
   goToPage(page) {
     const totalPages = Math.max(
       1,
-      Math.ceil((this._membersTotal || 0) / (this._membersPageSize || 20))
+      Math.ceil((this._membersTotal || 0) / (this._membersPageSize || 20)),
     );
     const next = Math.max(1, Math.min(totalPages, parseInt(page, 10) || 1));
     if (next === this._page) return;
@@ -803,6 +895,7 @@ class apps_main extends LetcBox {
   //  Edit-member popup
   // ─────────────────────────────────────────────────────────
   async _openEditMember(memberId) {
+    if (this._isSelf(memberId)) return;
     const member = this._members.find((m) => m.id === memberId);
     if (!member) return;
     this._editingMember = member;
@@ -851,7 +944,7 @@ class apps_main extends LetcBox {
         device_id: deviceId,
       });
       this._editDevices = (this._editDevices || []).filter(
-        (d) => (d.id || d.sys_id) !== deviceId
+        (d) => (d.id || d.sys_id) !== deviceId,
       );
       this._render();
     } catch (e) {
@@ -877,15 +970,20 @@ class apps_main extends LetcBox {
   //  Delete member
   // ─────────────────────────────────────────────────────────
   async _deleteMember(memberId) {
+    if (memberId == null || memberId === "") {
+      this.warn && this.warn("member_delete: missing memberId", memberId);
+      return;
+    }
+    if (this._isSelf(memberId)) return;
     try {
       if (this._role === "admin") {
         await this.postService(SERVICE.admin.hub_member_remove, {
           hub_id: this._activeAdminHub,
-          user_id: memberId,
+          uid: memberId,
         });
       } else {
         await this.postService(SERVICE.adminpanel.member_delete, {
-          user_id: memberId,
+          uid: memberId,
         });
       }
       this._selected.delete(memberId);
@@ -897,10 +995,17 @@ class apps_main extends LetcBox {
     this._loadMembers();
   }
 
+  _isSelf(memberId) {
+    if (memberId == null) return false;
+    const me = typeof Visitor !== "undefined" && Visitor ? Visitor.id : null;
+    if (me == null) return false;
+    return String(memberId) === String(me);
+  }
+
   _clampPage() {
     const totalPages = Math.max(
       1,
-      Math.ceil((this._membersTotal || 0) / (this._membersPageSize || 20))
+      Math.ceil((this._membersTotal || 0) / (this._membersPageSize || 20)),
     );
     if (this._page > totalPages) this._page = totalPages;
   }
@@ -939,9 +1044,10 @@ class apps_main extends LetcBox {
         return this._render();
 
       case "apps-admin-hub-search": {
-        const value = (args && args.value != null
-          ? args.value
-          : (cmd && cmd.mget && cmd.mget(_a.value))) || "";
+        const value =
+          (args && args.value != null
+            ? args.value
+            : cmd && cmd.mget && cmd.mget(_a.value)) || "";
         this._adminHubSearch = String(value).trim();
         return this._render();
       }
@@ -957,12 +1063,19 @@ class apps_main extends LetcBox {
         this._adminHubMenuOpen = false;
         this._adminHubSearch = "";
         // Reset per-hub caches so the new context loads fresh.
-        this._members = []; this._memberStats = null; this._membersTotal = 0;
-        this._page = 1; this._selected.clear();
-        this._permWorkspaces = []; this._activeWorkspace = null;
-        this._wsFolders = []; this._editingFolder = null;
-        this._hubStorageStats = null; this._hubUserStorage = [];
-        this._fileVersions = []; this._fvActiveFile = null;
+        this._members = [];
+        this._memberStats = null;
+        this._membersTotal = 0;
+        this._page = 1;
+        this._selected.clear();
+        this._permWorkspaces = [];
+        this._activeWorkspace = null;
+        this._wsFolders = [];
+        this._editingFolder = null;
+        this._hubStorageStats = null;
+        this._hubUserStorage = [];
+        this._fileVersions = [];
+        this._fvActiveFile = null;
         this._fileDetail = null;
         this._render();
         return this._bootstrapTab();
@@ -972,8 +1085,14 @@ class apps_main extends LetcBox {
         return this._searchMembers(
           (args && args.value != null
             ? args.value
-            : cmd && cmd.mget && cmd.mget(_a.value)) || ""
+            : cmd && cmd.mget && cmd.mget(_a.value)) || "",
         );
+
+      case "apps-search-submit":
+        return this.ensurePart("apps-search-input").then((p) => {
+          const value = p && p.getValue ? p.getValue() : "";
+          this._searchMembers(value);
+        });
 
       case "apps-toggle-member":
         return this.toggleMember(cmd.mget("member_id"));
@@ -989,11 +1108,11 @@ class apps_main extends LetcBox {
         return this._render();
 
       case "apps-select-role":
+        // Client-side filter — no refetch needed; skeleton filters _members.
         this._roleFilter = cmd.mget("role_key");
         this._filterOpen = false;
-        this._page = 1;
-        this._render();
-        return this._loadMembers();
+        this._selected.clear();
+        return this._render();
 
       case "apps-edit-member":
         return this._openEditMember(cmd.mget("member_id"));
@@ -1087,9 +1206,7 @@ class apps_main extends LetcBox {
 
       case "apps-fperm-copy-link":
         if (this._fpermOneTimeUrl && navigator && navigator.clipboard) {
-          navigator.clipboard
-            .writeText(this._fpermOneTimeUrl)
-            .catch(() => {});
+          navigator.clipboard.writeText(this._fpermOneTimeUrl).catch(() => {});
         }
         return;
 
@@ -1115,10 +1232,13 @@ class apps_main extends LetcBox {
         return;
 
       case "apps-audit-search": {
-        const next = ((args && args.value != null
-          ? args.value
-          : cmd && cmd.mget && cmd.mget(_a.value)) || ""
-        ).toString().trim();
+        const next = (
+          (args && args.value != null
+            ? args.value
+            : cmd && cmd.mget && cmd.mget(_a.value)) || ""
+        )
+          .toString()
+          .trim();
         if (next === (this._auditUsername || "")) return;
         this._auditUsername = next;
         this._auditPage = 1;
@@ -1148,7 +1268,19 @@ class apps_main extends LetcBox {
         return this._loadAuditLogs();
 
       case "apps-audit-range":
-        return;
+        this._auditRangeOpen = !this._auditRangeOpen;
+        return this._render();
+
+      case "apps-audit-select-range": {
+        const key = (cmd && cmd.mget && cmd.mget("range_key")) || "30d";
+        this._auditRangeOpen = false;
+        if (key === this._auditRangeKey) return this._render();
+        this._auditRangeKey = key;
+        this._auditPage = 1;
+        this._render();
+        this._loadAuditStats();
+        return this._loadAuditLogs();
+      }
 
       case "apps-storage-retention":
         this._storageView = "retention";
@@ -1245,7 +1377,9 @@ class apps_main extends LetcBox {
 
       case "apps-fv-open-detail": {
         const id = cmd.mget("file_id");
-        const f = (this._fileVersions || []).find((row) => row.id === id) || { id };
+        const f = (this._fileVersions || []).find((row) => row.id === id) || {
+          id,
+        };
         this._fvActiveFile = f;
         this._adminStorageView = "detail";
         this._render();
@@ -1270,11 +1404,13 @@ class apps_main extends LetcBox {
       }
 
       case "apps-fv-download-all":
-        if (this._fvActiveFile) return this._downloadFileVersions(this._fvActiveFile.id);
+        if (this._fvActiveFile)
+          return this._downloadFileVersions(this._fvActiveFile.id);
         return;
 
       case "apps-fv-delete-old":
-        if (this._fvActiveFile) return this._deleteOldFileVersions(this._fvActiveFile.id);
+        if (this._fvActiveFile)
+          return this._deleteOldFileVersions(this._fvActiveFile.id);
         return;
 
       case "apps-fv-show-in-folder":
@@ -1314,7 +1450,7 @@ class apps_main extends LetcBox {
   }
 
   async _removeSelected() {
-    const ids = Array.from(this._selected);
+    const ids = Array.from(this._selected).filter((id) => !this._isSelf(id));
     if (!ids.length) return;
     const isAdmin = this._role === "admin";
     const svc = isAdmin
@@ -1323,8 +1459,8 @@ class apps_main extends LetcBox {
     for (const id of ids) {
       try {
         const payload = isAdmin
-          ? { hub_id: this._activeAdminHub, user_id: id }
-          : { user_id: id };
+          ? { hub_id: this._activeAdminHub, uid: id }
+          : { uid: id };
         await this.postService(svc, payload);
       } catch (e) {
         this.warn && this.warn(`member_delete ${id} failed`, e);

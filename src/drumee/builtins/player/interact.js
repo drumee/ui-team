@@ -1,5 +1,6 @@
 
 const { fitBoxes } = require("@drumee/ui-essentials")
+const { TweenMax, Expo } = gsap;
 const Rectangle = require('rectangle-node');
 const CHANGE_RADIO = "change:radio";
 const __utils = require("window/utils");
@@ -216,9 +217,11 @@ class __window_interact_player extends __utils {
     }
 
     this._prepareChange(anim);
-    anime({ targets: this.$el[0], ...anim, duration: 500, easing: 'easeOutExpo', complete: () => {
+    anim.onComplete = () => {
       this.setContentSize();
-    }});
+    };
+    anim.ease = Expo.easeOut;
+    TweenMax.to(this.$el, 0.5, anim);
   }
 
   /**
@@ -601,7 +604,13 @@ class __window_interact_player extends __utils {
       height: height,
       scale: 1,
       opacity: 1,
+      ease: Expo.easeInOut,
       ...pos,
+      onComplete: () => {
+        this.$el.width(s.width);
+        this.$el.height(height);
+        if (_.isFunction(cb)) cb(this);
+      },
     };
     if (to.left < 0) to.left = 50
     if (to.top < 0) to.top = 50
@@ -611,12 +620,7 @@ class __window_interact_player extends __utils {
       if (to.top + to.height > window.innerHeight)
         to.top = window.innerHeight - to.height;
     }
-    anime.set(this.$el[0], from);
-    anime({ targets: this.$el[0], ...to, duration: 1500, easing: 'easeInOutExpo', complete: () => {
-      this.$el.width(s.width);
-      this.$el.height(height);
-      if (_.isFunction(cb)) cb(this);
-    }});
+    TweenMax.fromTo(this.$el, 1.5, from, to);
   }
 
   /**

@@ -6,6 +6,9 @@ const __utils = require("./utils");
 const TIMERS = {
   reorder: null,
 };
+
+const { TweenLite, TimelineMax } = require("@drumee/ui-core/vendor");
+
 const {
   copyToClipboard,
   reverseSortBy,
@@ -74,7 +77,7 @@ class __window_core extends __utils {
     window.addEventListener("beforeunload", (e) => {
       try {
         this.onBeforeDestroy();
-      } catch (error) { }
+      } catch (error) {}
     });
     this.contextmenuSkeleton = require("builtins/contextmenu/skeleton");
     this._raised = 0;
@@ -147,7 +150,7 @@ class __window_core extends __utils {
    *
    * Abstrct -- dont remove
    */
-  notify() { }
+  notify() {}
 
   /**
    *
@@ -241,7 +244,7 @@ class __window_core extends __utils {
   /**
    * Abstrcat method
    */
-  setContentSize() { }
+  setContentSize() {}
 
   /**
    *
@@ -267,13 +270,12 @@ class __window_core extends __utils {
     if (to.left < 0) to.left = 0;
     if (to.height > window.innerWidth) to.height = window.innerWidth;
     if (to.height > window.innerHeight) to.height = window.innerHeight;
-    anime({ targets: this.$el[0],
+    TweenMax.to(this.$el, 0.5, {
       width: to.width,
       height: to.height,
       left: to.left,
       top: to.top,
-      duration: 500,
-      complete: f,
+      onComplete: f,
     });
   }
 

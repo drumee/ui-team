@@ -1,5 +1,6 @@
 
 require('./skin');
+const { TweenLite } = require("@drumee/ui-core/vendor");
 
 const media_core = require('../interact');
 
@@ -108,7 +109,11 @@ class __media_simple extends media_core {
         y = 0;
     }
     this._shiftY = y;
-    return anime({ targets: this.$el[0], translateY: y, duration: 200, begin: this._onStartShifting, complete: this._onStopShifting });
+    return TweenLite.to(this.$el, .2, {
+      y,
+      onStart: this._onStartShifting,
+      onComplete: this._onStopShifting
+    });
   }
 
 

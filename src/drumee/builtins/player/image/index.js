@@ -3,6 +3,7 @@ const { fitBoxes } = require("@drumee/ui-essentials")
 require('../skin');
 require('./skin');
 
+const { TweenMax, Cubic } = gsap;
 const __core = require('player/interact');
 class __player_image extends __core {
 
@@ -353,11 +354,11 @@ class __player_image extends __core {
       this.__prevSlider.$el.css({
         opacity: 1
       });
-      anime({ targets: this.__prevSlider.$el[0], opacity: 0, duration: this._duration * 1000, easing: 'easeInCubic', complete: f });
+      TweenMax.to(this.__prevSlider.$el, this._duration, { opacity: 0, onComplete: f, ease: Cubic.easeIn });
     } else {
       f();
     }
-    anime({ targets: this.__slider.$el[0], opacity: 1, duration: this._duration * 1000, easing: 'easeInCubic' });
+    TweenMax.to(this.__slider.$el, this._duration, { opacity: 1, ease: Cubic.easeIn });
   }
 
 
@@ -452,10 +453,10 @@ class __player_image extends __core {
     this._pos = { top, left };
     this.anti_overlap(this._pos);
     if (this._isPlaying) {
-      anime({ targets: this.$el[0], width, height, duration: 1500 });
+      TweenMax.to(this.$el, 1.5, { width, height })
     } else {
       this.$el.css({ width, height, ...this._pos });
-      anime({ targets: this.$el[0], opacity: 1, duration: 500 });
+      TweenMax.to(this.$el, 0.5, { alpha: 1 })
     }
 
   }

@@ -745,12 +745,24 @@
     border-radius: 4px;
     text-align: center;
     cursor: pointer;
+    // Skeletons.Note renders a `.note-content` wrapper inside this Box; the
+    // wrapper picks up the Box's default left alignment, so the visible
+    // label sits at the left edge. Center both the wrapper and the inner
+    // text so the "Create" label sits in the middle of the full-width button.
+    align-items: center;
+    justify-content: center;
     @include drumee.typo(
       $size: 14px,
       $line: 20px,
       $weight: 600,
       $color: #ffffff
     );
+
+    .note-content {
+      width: 100%;
+      text-align: center;
+      justify-content: center;
+    }
 
     &.primary {
       background: #433cc5;
@@ -780,6 +792,13 @@
     overflow-y: auto;
     background: #f2f2f7;
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   &__settings-action-header {
@@ -955,12 +974,41 @@
     border-radius: 4px;
     background: #433cc5;
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
     @include drumee.typo(
       $size: 14px,
       $line: 20px,
       $weight: 600,
       $color: #ffffff
     );
+
+    &[data-pending="1"] {
+      cursor: progress;
+      pointer-events: none;
+      background: #5b54d1;
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.25) 50%,
+          transparent 100%
+        );
+        animation: window-folder__send-button-shimmer 1.1s ease-in-out infinite;
+      }
+    }
+  }
+
+  @keyframes window-folder__send-button-shimmer {
+    from { transform: translateX(0); }
+    to { transform: translateX(200%); }
   }
 
   &__settings-action-member-row {

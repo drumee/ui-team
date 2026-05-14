@@ -5,7 +5,7 @@
 // ==================================================================== *
 
 const JSONEditor = require('jsoneditor');
-require('jsoneditor/dist/jsoneditor.css');
+// require('jsoneditor/dist/jsoneditor.css');
 require('./skin');
 /**
  * 

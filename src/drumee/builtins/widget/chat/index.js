@@ -318,7 +318,16 @@ class __widget_chat extends LetcBox {
    * 
    */
   checkPendingContent() {
-    if (this.attachmentList.hasAttachment() || this.getStoredMessage()) {
+    const has = this.attachmentList && this.attachmentList.hasAttachment();
+    // Toggle explicit state on the attachment-wrapper so CSS can collapse
+    // it cleanly after clearAttachment() — `:has(.media-grid__ui)` was
+    // proving unreliable across Marionette collection.reset() + browser
+    // `:has()` invalidation timing.
+    if (this.attachmentList && this.attachmentList.el && this.attachmentList.el.closest) {
+      const wrapper = this.attachmentList.el.closest('.widget-chat__attachment-wrapper');
+      if (wrapper) wrapper.dataset.hasAttachment = has ? '1' : '0';
+    }
+    if (has || this.getStoredMessage()) {
       this.showSend()
     } else {
       this.ensurePart(_a.message).then((p) => {
@@ -427,7 +436,7 @@ class __widget_chat extends LetcBox {
         break;
 
       case 'show-message-selector':
-        this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.area));
+        this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.type));
         setTimeout(() => {
           this.showMsgCount(cmd);
         }, 300);
@@ -511,6 +520,9 @@ class __widget_chat extends LetcBox {
         break;
       case _e.drop:
         target = this;
+        break;
+      default:
+        target = this.getActiveWindow();
         break;
     }
     if ((target == null)) {
@@ -659,6 +671,9 @@ class __widget_chat extends LetcBox {
     let list = this.attachmentList;
     if (list && !list.isDestroyed()) {
       list.addNewMedia(items);
+      // Drive `data-has-attachment` directly — same deterministic path as
+      // the post-send branch in postMessageAPI.
+      this.checkPendingContent();
       return;
     }
     //this.attachMediaWrapper(this.__wrapperAttachment, items);
@@ -887,10 +902,10 @@ class __widget_chat extends LetcBox {
       case _a.personal:
         api = {
           service: SERVICE.chat.post,
-          entity_id: this.peerId,  // server accepts entity_id as alias of peer_id
+          hub_id: this.hubId,
+          entity_id: this.peerId,
           attachment: attachments,
           message,
-          hub_id: this.hubId
         };
         break;
 
@@ -982,6 +997,11 @@ class __widget_chat extends LetcBox {
     this.clearMessageBlock();
     this.postService(api).then(data => {
       this.attachmentList.clearAttachment();
+      // Deterministic — drive `data-has-attachment` directly instead of
+      // relying on the `_e.update` event chain, which raced with Backbone's
+      // built-in collection 'update' event and sometimes fired before
+      // sessionStorage was actually cleared.
+      this.checkPendingContent();
       if (_.isEmpty(data)) {
         this.showError(LOCALE.MESSAGE_NOT_SENT_RETRY);
         return;
@@ -1507,7 +1527,46 @@ class __widget_chat extends LetcBox {
     this.clearReplyMessage();
   }
 
+  // ── Drag-and-drop onto the whole chat panel ──────────────────────────────
+  // Uses a depth counter so enter/leave events from child elements don't
+  // cause the overlay to flicker. The window-manager handles drops in
+  // floating windows (window-bigchat, window-channel) via data-over; this
+  // handles the panel context (chat-p2p sidebar) via data-dragging.
 
+  _onDragEnter(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this._dragDepth = (this._dragDepth || 0) + 1;
+    if (this._dragDepth === 1) this.el.dataset.dragging = 1;
+  }
+
+  _onDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  _onDragLeave(e) {
+    e.stopPropagation();
+    this._dragDepth = Math.max(0, (this._dragDepth || 0) - 1);
+    if (this._dragDepth === 0) this.el.dataset.dragging = 0;
+  }
+
+  _onDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this._dragDepth = 0;
+    this.el.dataset.dragging = 0;
+    this.upload(e);
+  }
+
+  static initClass() {
+    this.prototype.events = {
+      dragenter: '_onDragEnter',
+      dragover:  '_onDragOver',
+      dragleave: '_onDragLeave',
+      drop:      '_onDrop',
+    };
+  }
 }
 
 

@@ -194,12 +194,15 @@ function pageHeader(ui) {
       Skeletons.Box.X({
         className: `${pfx}__search`,
         kids: [
-          Skeletons.Image.Svg({
+          Skeletons.Button.Svg({
             ico: "magnifying-glass",
             className: `${pfx}__search-ico`,
+            service: "apps-search-submit",
+            uiHandler: [ui],
           }),
           Skeletons.Entry({
             className: `${pfx}__search-input`,
+            sys_pn: "apps-search-input",
             placeholder: LOCALE.SEARCH || "Search...",
             name: "apps_search",
             value: ui._memberQuery || "",
@@ -310,18 +313,21 @@ function workspacePill(pfx, { label }) {
 function memberRow(ui, member) {
   const pfx = ui.fig.family;
   const checked = ui._selected.has(member.id);
+  const isSelf = ui._isSelf && ui._isSelf(member.id);
   return Skeletons.Box.X({
-    className: `${pfx}__row${checked ? ` ${pfx}__row--checked` : ""}`,
+    className: `${pfx}__row${checked ? ` ${pfx}__row--checked` : ""}${isSelf ? ` ${pfx}__row--self` : ""}`,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__cell ${pfx}__cell--check`,
-        kids: [
-          checkbox(ui, {
-            checked,
-            service: "apps-toggle-member",
-            member_id: member.id,
-          }),
-        ],
+        kids: isSelf
+          ? []
+          : [
+              checkbox(ui, {
+                checked,
+                service: "apps-toggle-member",
+                member_id: member.id,
+              }),
+            ],
       }),
       Skeletons.Box.X({
         className: `${pfx}__cell ${pfx}__cell--member`,
@@ -389,22 +395,24 @@ function memberRow(ui, member) {
       }),
       Skeletons.Box.X({
         className: `${pfx}__cell ${pfx}__cell--actions`,
-        kids: [
-          Skeletons.Button.Svg({
-            ico: "editbox_pencil",
-            className: `${pfx}__action ${pfx}__action--edit`,
-            service: "apps-edit-member",
-            uiHandler: [ui],
-            member_id: member.id,
-          }),
-          Skeletons.Button.Svg({
-            ico: "trash",
-            className: `${pfx}__action ${pfx}__action--delete`,
-            service: "apps-delete-member",
-            uiHandler: [ui],
-            member_id: member.id,
-          }),
-        ],
+        kids: isSelf
+          ? []
+          : [
+              Skeletons.Button.Svg({
+                ico: "editbox_pencil",
+                className: `${pfx}__action ${pfx}__action--edit`,
+                service: "apps-edit-member",
+                uiHandler: [ui],
+                member_id: member.id,
+              }),
+              Skeletons.Button.Svg({
+                ico: "trash",
+                className: `${pfx}__action ${pfx}__action--delete`,
+                service: "apps-delete-member",
+                uiHandler: [ui],
+                member_id: member.id,
+              }),
+            ],
       }),
     ],
   });
@@ -412,8 +420,9 @@ function memberRow(ui, member) {
 
 function tableHeader(ui) {
   const pfx = ui.fig.family;
+  const visible = filterMembers(ui);
   const allChecked =
-    ui._selected.size === ui._members.length && ui._members.length > 0;
+    visible.length > 0 && visible.every((m) => ui._selected.has(m.id));
   const cols = [
     { className: `${pfx}__cell--check`, kids: [
       checkbox(ui, { checked: allChecked, service: "apps-toggle-all" }),
@@ -534,6 +543,16 @@ function table(ui) {
   });
 }
 
+// Server can't filter by these semantic role labels (the SP expects a numeric
+// role_id from map_role), so the role facet is applied client-side using the
+// variant computed by deriveRole().
+function filterMembers(ui) {
+  const list = ui._members || [];
+  const role = ui._roleFilter || "all";
+  if (role === "all") return list;
+  return list.filter((m) => m && m.role && m.role.variant === role);
+}
+
 function tableBodyKids(ui) {
   const pfx = ui.fig.family;
   const kids = [tableHeader(ui)];
@@ -562,20 +581,26 @@ function tableBodyKids(ui) {
         ],
       })
     );
-  } else if (!ui._members.length) {
-    kids.push(
-      Skeletons.Box.X({
-        className: `${pfx}__table-empty`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__table-empty-label`,
-            content: LOCALE.NO_MEMBERS_FOUND || "No members found.",
-          }),
-        ],
-      })
-    );
   } else {
-    ui._members.forEach((m) => kids.push(memberRow(ui, m)));
+    const visible = filterMembers(ui);
+    if (!visible.length) {
+      const filtered = (ui._roleFilter || "all") !== "all";
+      kids.push(
+        Skeletons.Box.X({
+          className: `${pfx}__table-empty`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__table-empty-label`,
+              content: filtered
+                ? (LOCALE.NO_MEMBERS_FOR_FILTER || "No members match this filter.")
+                : (LOCALE.NO_MEMBERS_FOUND || "No members found."),
+            }),
+          ],
+        })
+      );
+    } else {
+      visible.forEach((m) => kids.push(memberRow(ui, m)));
+    }
   }
   return kids;
 }

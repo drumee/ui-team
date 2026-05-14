@@ -5,6 +5,7 @@ module.exports = function (ui, contact, ctx) {
   const editEmails = ui.getEditEmails();
   const editPhones = ui.getEditPhones();
   const editTags = ui.getEditTags();
+  const submitting = ui.isEditSubmitting();
 
   const labeledInput = (label, name, value) =>
     Skeletons.Box.Y({
@@ -41,12 +42,16 @@ module.exports = function (ui, contact, ctx) {
       ],
     });
 
-  const emailRow = (e, idx) =>
-    Skeletons.Box.X({
+  const emailRow = (e, idx) => {
+    const isDefault = e.is_default === 1;
+    return Skeletons.Box.X({
       className: `${fig}__edit-row`,
       dataset: {
-        rowKind: "email",
-        default: e.is_default === 1 ? 1 : 0,
+        // Use kebab key — the framework writes `data-${k}` verbatim, so a
+        // camelCase `rowKind` produces `data-rowkind` (lowercased by the
+        // browser), which the `[data-row-kind=…]` selector wouldn't match.
+        "row-kind": "email",
+        default: isDefault ? 1 : 0,
         category: e.category || "priv",
       },
       kids: [
@@ -57,31 +62,39 @@ module.exports = function (ui, contact, ctx) {
           placeholder: LOCALE.EMAIL_ADDRESS,
           require: "any",
           bubble: 0,
+          // Default email is read-only and cannot be removed — to change it,
+          // add a new email and mark it as the new default.
+          readonly: isDefault ? 1 : undefined,
+          dataset: isDefault ? { disabled: 1 } : undefined,
         }),
-        Skeletons.Note({
-          className: `${fig}__row-pill`,
-          dataset: { active: e.is_default === 1 ? 1 : 0 },
-          content: LOCALE.DEFAULT,
-          bubble: 0,
-          service: "edit-set-default-email",
-          uiHandler: [ui],
-          rowIndex: idx,
-        }),
-        Skeletons.Note({
-          className: `${fig}__row-remove`,
-          content: "×",
-          bubble: 0,
-          service: "edit-remove-email",
-          uiHandler: [ui],
-          rowIndex: idx,
-        }),
-      ],
+        isDefault
+          ? Skeletons.Note({
+              className: `${fig}__row-pill`,
+              dataset: { active: 1 },
+              content: LOCALE.DEFAULT,
+              bubble: 0,
+              uiHandler: [ui],
+              rowIndex: idx,
+            })
+          : null,
+        isDefault
+          ? null
+          : Skeletons.Note({
+              className: `${fig}__row-remove`,
+              content: "×",
+              bubble: 0,
+              service: "edit-remove-email",
+              uiHandler: [ui],
+              rowIndex: idx,
+            }),
+      ].filter(Boolean),
     });
+  };
 
   const phoneRow = (p, idx) =>
     Skeletons.Box.X({
       className: `${fig}__edit-row`,
-      dataset: { rowKind: "phone", category: p.category || "priv" },
+      dataset: { "row-kind": "phone", category: p.category || "priv" },
       kids: [
         Skeletons.Entry({
           className: `${fig}__modal-input ${fig}__modal-input--narrow`,
@@ -140,19 +153,45 @@ module.exports = function (ui, contact, ctx) {
   const tagSection = Skeletons.Box.Y({
     className: `${fig}__edit-list`,
     kids: [
-      Skeletons.Note({ className: `${fig}__modal-label`, content: LOCALE.TAGS || "Tags" }),
+      Skeletons.Box.X({
+        className: `${fig}__edit-list-header`,
+        kids: [
+          Skeletons.Note({ className: `${fig}__modal-label`, content: LOCALE.TAGS || "Tags" }),
+          Skeletons.Button.Svg({
+            ico: "info",
+            className: `${fig}__tag-help`,
+            tooltips: {
+              content: `<svg class="${fig}__tag-help-ico"><use href="#--icon-info"></use></svg><span>${LOCALE.TAGS_USAGE_GUIDE}</span>`,
+              className: `${fig}__tag-help-tip`,
+            },
+          }),
+        ],
+      }),
       Skeletons.Box.X({
         className: `${fig}__tag-picker`,
         kids: [
           ...tags.map((t) =>
-            Skeletons.Note({
-              className: `${fig}__tag-chip`,
+            Skeletons.Box.X({
+              className: `${fig}__tag-chip-wrap`,
               dataset: { active: editTags.includes(t.tag_id) ? 1 : 0 },
-              content: t.name || t.tag_name || "",
-              bubble: 0,
-              service: "edit-toggle-tag",
-              uiHandler: [ui],
-              tagId: t.tag_id,
+              kids: [
+                Skeletons.Note({
+                  className: `${fig}__tag-chip`,
+                  content: t.name || t.tag_name || "",
+                  bubble: 0,
+                  service: "edit-toggle-tag",
+                  uiHandler: [ui],
+                  tagId: t.tag_id,
+                }),
+                Skeletons.Note({
+                  className: `${fig}__tag-chip-remove`,
+                  content: "×",
+                  bubble: 0,
+                  service: "delete-tag",
+                  uiHandler: [ui],
+                  tagId: t.tag_id,
+                }),
+              ],
             })
           ),
           Skeletons.Box.X({
@@ -210,12 +249,12 @@ module.exports = function (ui, contact, ctx) {
       Skeletons.Box.Y({
         className: `${fig}__edit-form`,
         kids: [
-          labeledInput(LOCALE.FIRSTNAME, "firstname", contact.firstname),
-          labeledInput(LOCALE.LASTNAME, "lastname", contact.lastname),
+          labeledInput(LOCALE.FIRSTNAME, "firstname", ui.getEditFirstname()),
+          labeledInput(LOCALE.LASTNAME, "lastname", ui.getEditLastname()),
           emailSection,
           phoneSection,
           tagSection,
-          labeledTextarea(LOCALE.COMMENT, "comment", contact.comment),
+          labeledTextarea(LOCALE.COMMENT, "comment", ui.getEditComment()),
         ],
       }),
       Skeletons.Box.X({
@@ -225,14 +264,18 @@ module.exports = function (ui, contact, ctx) {
             className: `${fig}__btn ${fig}__btn--secondary`,
             content: LOCALE.CANCEL,
             bubble: 0,
-            service: "cancel-edit",
+            service: submitting ? null : "cancel-edit",
+            state: submitting ? 0 : 1,
+            dataset: submitting ? { disabled: 1 } : undefined,
             uiHandler: [ui],
           }),
           Skeletons.Note({
             className: `${fig}__btn ${fig}__btn--primary`,
-            content: LOCALE.SAVE,
+            content: submitting ? (LOCALE.SAVING || `${LOCALE.SAVE}…`) : LOCALE.SAVE,
             bubble: 0,
-            service: "save-edit",
+            service: submitting ? null : "save-edit",
+            state: submitting ? 0 : 1,
+            dataset: submitting ? { disabled: 1, loading: 1 } : undefined,
             uiHandler: [ui],
             contactId,
           }),

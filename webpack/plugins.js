@@ -28,7 +28,7 @@ module.exports = function (webpack, opt) {
   let chunkFilename = '[id].css';
   if (/^prod/.test(mode)) {
     filename,
-    chunkFilename = '[id].[hash].css';
+      chunkFilename = '[id].[hash].css';
   }
   const cssExtract = new MiniCssExtractPlugin({
     ignoreOrder: true, // Enable to remove warnings about conflicting order

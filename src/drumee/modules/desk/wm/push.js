@@ -61,6 +61,9 @@ class __push_manager extends winman {
     switch (options.service) {
 
       case SERVICE.conference.invite:
+        if (data.room_type == _a.meeting) {
+          return this.dispatchRoom(data, options);
+        }
         return this.dispatchInboundCall(data);
 
       case SERVICE.conference.join:
@@ -84,6 +87,19 @@ class __push_manager extends winman {
         Visitor.muteSound();
         for (let c of this.getItemsByAttr(_a.room_id, data.room_id)) {
           c.goodbye();
+        }
+        return;
+
+      case SERVICE.conference.leave:
+        // Other party left the call. Close every open call window bound to
+        // the same room_id so the receiver's connect/meeting window doesn't
+        // stay stuck waiting on Jitsi USER_LEFT (which races with the local
+        // goodbye and is unreliable post-pickup).
+        Visitor.muteSound();
+        for (let c of this.getItemsByAttr(_a.room_id, data.room_id)) {
+          if (c && (typeof c.isDestroyed !== 'function' || !c.isDestroyed())) {
+            c.goodbye();
+          }
         }
         return;
 
@@ -235,11 +251,22 @@ class __push_manager extends winman {
       if (details && details.ctime < timestamp() / 1000 - 10) return;
     }
 
+    // Open the folder window on the meeting tab so the callee lands in the
+    // same shell the caller sees, rather than a detached window_meeting.
+    const { details, uid, username } = data;
+    const folderNid = data.nid || (details && (details.nid || details.actual_home_id)) || data.room_id;
+    const folderName = (details && details.filename) || data.filename || "";
+    const folderArea = (details && details.area) || data.area;
     const respawn = {
-      ...data,
-      kind: "window_meeting",
+      kind: "window_folder",
+      hub_id: data.hub_id,
+      nid: folderNid,
+      filename: folderName,
+      area: folderArea,
+      activeTab: "meeting",
+      room_id: data.room_id,
+      room_type: data.room_type,
     };
-    let { details, uid, username } = data;
     let message = LOCALE.FIRST_PARTICIPANTS_ARRIVED;
     let title = `${LOCALE.MEETING}`;
     if (username && details) {

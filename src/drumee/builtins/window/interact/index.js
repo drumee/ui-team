@@ -1,6 +1,7 @@
 const CHANGE_RADIO = "change:radio";
 const Rectangle = require('rectangle-node');
 const { copyToClipboard, timestamp } = require("@drumee/ui-essentials")
+const { TimelineMax } = require("@drumee/ui-core/vendor");
 
 const windowCore = require("../core");
 class __window_interact extends windowCore {
@@ -374,13 +375,12 @@ class __window_interact extends windowCore {
         return cb(anim.to);
       }
     };
-    anime({ targets: this.$el[0],
+    TweenMax.to(this.$el, 0.5, {
       width: anim.to.width,
       height: anim.to.height,
       left: anim.to.left,
       top: anim.to.top,
-      duration: 500,
-      complete: f,
+      onComplete: f,
     });
   }
 

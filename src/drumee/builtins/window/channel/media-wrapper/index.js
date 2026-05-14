@@ -42,7 +42,12 @@ class __media_wrapper extends LetcBox {
       this.saveAttachment(attachment);
     }
     if (_.isEmpty(items)) return;
-    return this.__content.append(items);
+    const result = this.__content.append(items);
+    // Notify listeners (chat widget's checkPendingContent) so the
+    // attachment-wrapper data-state flips to "has attachment" and CSS
+    // expands the preview slot. Matches the trigger in clearAttachment().
+    this.trigger(_e.update);
+    return result;
   }
 
   /**
@@ -93,6 +98,10 @@ class __media_wrapper extends LetcBox {
     sessionStorage.setItem(storageKey, JSON.stringify(data));
     this._pendingUpload = 0;
     this.__content.clear();
+    // Notify listeners (chat widget's checkPendingContent) so the
+    // attachment-wrapper data-state can flip back to "no attachment"
+    // and CSS collapses the preview slot.
+    this.trigger(_e.update);
   }
 
   /**

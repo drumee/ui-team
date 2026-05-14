@@ -33,8 +33,7 @@ module.exports = function (ui) {
       Skeletons.Box.X({
         className: `${pfx}__actions-cluster`,
         kids: [
-          {
-            kind: "menu_topic",
+          Skeletons.Menu({
             className: `${pfx}__add-wrapper`,
             direction: _a.down,
             opening: _e.click,
@@ -51,8 +50,7 @@ module.exports = function (ui) {
               addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", "spreadsheet.xlsx", { iconClass: "ico-spreadsheet" }),
               addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", "presentation.pptx", { iconClass: "ico-presentation" }),
             ],
-          },
-
+          }),
           Skeletons.Button.Label({
             ico: "desktop_upload",
             className: `${pfx}__upload-btn`,

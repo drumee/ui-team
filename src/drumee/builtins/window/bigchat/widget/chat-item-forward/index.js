@@ -211,10 +211,22 @@ class ___chat_item_forward extends LetcBox {
 //
 // ===========================================================
   closeOverlay(cmd) {
-    const chatSource = this.mget('source');
-    const widgetChat = chatSource.getItemsByKind('widget_chat')[0];
-    widgetChat.disableMessageSelection();
+    // Hardened: missing source / kind-mismatch / disable hook absence
+    // must not block the close — silently swallow and proceed to dismiss.
+    try {
+      const chatSource = this.mget('source');
+      if (chatSource && _.isFunction(chatSource.getItemsByKind)) {
+        const widgetChat = chatSource.getItemsByKind('widget_chat')[0];
+        if (widgetChat && _.isFunction(widgetChat.disableMessageSelection)) {
+          widgetChat.disableMessageSelection();
+        }
+      }
+    } catch (e) { /* swallow */ }
 
+    // Set service on the model so handlers that read via cmd.mget(_a.service)
+    // see 'close-overlay' (folder window uses this path; bigchat reads
+    // cmd.service JS property and worked accidentally).
+    this.mset({ service: 'close-overlay' });
     this.source = cmd;
     this.service = 'close-overlay';
     return this.triggerHandlers();

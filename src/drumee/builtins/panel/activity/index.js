@@ -85,6 +85,22 @@ class __panel_activity extends LetcBox {
    * @returns 
    */
   getCurrentApi() {
+    if (this._filter === 'mentions') {
+      return {
+        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
+        hub_id: Visitor.id,
+        type: 'mention',
+        unread_only: this._unreadsOnly,
+      };
+    }
+    if (this._filter === 'shares') {
+      return {
+        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
+        hub_id: Visitor.id,
+        type: 'share',
+        unread_only: this._unreadsOnly,
+      };
+    }
     return {
       service: SERVICE.activity.get_feed,
       hub_id: Visitor.id,
@@ -126,11 +142,20 @@ class __panel_activity extends LetcBox {
         this.setState(0);
         return Desk.togglePanel('address_book', 'chat-panel');
 
-      case 'open-chat':
+      case 'open-chat': {
+        const drumate_id = args && args.drumate_id;
         this._dismissFromOpen(cmd, args);
         this.activityState = 0;
         this.setState(0);
-        return Desk.togglePanel('chat_p2p', 'chat-panel');
+        Desk.togglePanel('chat_p2p', 'chat-panel').then(() => {
+          if (!drumate_id) return;
+          Desk.ensurePart('chat-panel').then(p => {
+            const widget = p && p.children && p.children.last && p.children.last();
+            if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id);
+          });
+        });
+        return;
+      }
 
       case 'open-activity':
         this._dismissFromOpen(cmd, args);
@@ -510,7 +535,16 @@ class __panel_activity extends LetcBox {
     const dismissed = this._dismissedKeys || new Set();
     const live = items.filter((it) => {
       const key = `${it.category}:${it.key_id || it.drumate_id || it.hub_id || ''}`;
-      return !dismissed.has(key);
+      if (dismissed.has(key)) {
+        const dismissedAt = this._dismissedLastIds && this._dismissedLastIds.get(key);
+        if (it.last_id && Number(it.last_id) > Number(dismissedAt || 0)) {
+          dismissed.delete(key);
+          if (this._dismissedLastIds) this._dismissedLastIds.delete(key);
+          return true;
+        }
+        return false;
+      }
+      return true;
     });
     const unread_count = live.reduce((acc, it) => acc + (parseInt(it.cnt, 10) || 0), 0);
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
@@ -539,6 +573,10 @@ class __panel_activity extends LetcBox {
       e.kind = 'activity_item';
       e.event_type = it.category;
       e.type = it.category;
+      // item_type drives the dismiss routing in _dismissActivity: without it
+      // every row falls back to 'mfs' and persists nothing on hub_invite / chat
+      // / teamchat / etc. Keep this in sync with the category column.
+      e.item_type = it.category;
       e.item_key = `${it.category}:${it.key_id || it.drumate_id || it.hub_id || ''}`;
       switch (it.category) {
         case 'hub_invite':
@@ -624,6 +662,7 @@ class __panel_activity extends LetcBox {
         if (this.timer) return;
         this.timer = setTimeout(() => {
           this.refreshActivity();
+          this.shouldNofity();
           this.timer = null;
         }, 1000);
         break;
@@ -747,7 +786,7 @@ class __panel_activity extends LetcBox {
     let author_id = content.author_id || sender.uid || sender.id;
     if (!author_id) return;
     if (author_id == this._lastSender || author_id == Visitor.id) return;
-    Visitor.playSound(_K.activitys.drip, 0);
+    Visitor.playSound(_K.notifications.drip, 0);
     this._lastSender = author_id;
     let preview = content.message || options.service || content.action || options.action;
     if (preview) {
@@ -827,6 +866,11 @@ class __panel_activity extends LetcBox {
     if (itemKey) {
       this._dismissedKeys = this._dismissedKeys || new Set();
       this._dismissedKeys.add(itemKey);
+      const lastId = args.last_id
+        || (cmd && cmd.mget && cmd.mget('last_id'))
+        || 0;
+      this._dismissedLastIds = this._dismissedLastIds || new Map();
+      this._dismissedLastIds.set(itemKey, Number(lastId));
     }
     this._decrementBadge(1);
 

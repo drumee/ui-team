@@ -1,7 +1,7 @@
 @use "sass:meta";
-@use 'mixins/drumee';
-@use 'builtins/webrtc/skin/topbar' as *;
-@use 'builtins/webrtc/skin/command' as *;
+@use "mixins/drumee";
+@use "builtins/webrtc/skin/topbar" as *;
+@use "builtins/webrtc/skin/command" as *;
 
 .window-switchcall {
   &__ui {
@@ -14,6 +14,7 @@
     left: calc(50vw - 200px);
     top: calc(50vh - 200px);
     z-index: 10000;
+    border: 1px solid var(--border-strong);
   }
 
   &__main {
@@ -34,7 +35,12 @@
   &-topbar__container {
     width: 100%;
     justify-content: center;
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-reverse));
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 400,
+      $color: var(--default-text-reverse)
+    );
   }
 
   &__body {
@@ -75,24 +81,44 @@
 
     &__title {
       margin: 10px auto 20px;
-      @include drumee.typo($size: 18px, $line: 20px, $weight: 500, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 18px,
+        $line: 20px,
+        $weight: 500,
+        $color: var(--default-text-color)
+      );
     }
 
     &__name {
       margin: 0px auto 45px;
-      @include drumee.typo($size: 16px, $line: 20px, $weight: 500, $color: var(--secondary-text-color));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 20px,
+        $weight: 500,
+        $color: var(--secondary-text-color)
+      );
     }
 
     &__static {
       //margin: 0 auto 50px;
-      @include drumee.typo($size: 16px, $line: 20px, $weight: 400, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 20px,
+        $weight: 400,
+        $color: var(--default-text-color)
+      );
     }
 
     &.drumee-text {
       width: auto;
       min-width: 200px;
       border-radius: 4px;
-      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 400,
+        $color: var(--default-text-color)
+      );
     }
   }
 
@@ -108,12 +134,17 @@
       height: 35px;
       align-items: center;
       justify-content: center;
-      background-color: var(--btn-commit-background);
+      background-color: var(--primary-40);
+      border-radius: var(--corner-radius-2);
       margin-right: 30px;
-      @include drumee.typo($size: 16px, $line: 20px, $color: var(--btn-commit-text));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 20px,
+        $color: var(--btn-commit-text)
+      );
 
       &:hover {
-        background-color: var(--btn-commit-background-hover);
+        background-color: var(--primary-50);
       }
     }
 
@@ -123,9 +154,14 @@
       min-width: 115px;
       align-items: center;
       justify-content: center;
+      border-radius: var(--corner-radius-2);
       border: 1px solid var(--btn-rollback-border);
       background-color: var(--btn-rollback-background);
-      @include drumee.typo($size: 16px, $line: 20px, $color: var(--btn-rollback-text));
+      @include drumee.typo(
+        $size: 16px,
+        $line: 20px,
+        $color: var(--btn-rollback-text)
+      );
 
       &:hover {
         color: var(--btn-rollback-text-hover);
@@ -133,6 +169,4 @@
       }
     }
   }
-
-
 }
