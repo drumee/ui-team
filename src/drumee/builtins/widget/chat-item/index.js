@@ -408,6 +408,7 @@ class ___widget_chatItem extends LetcBox {
    */
   onUiEvent(cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
+    console.log('[chat-item] onUiEvent', service);
     switch (service) {
       case 'chat-item-menu':
         /**  DO NOT REMOVE */
