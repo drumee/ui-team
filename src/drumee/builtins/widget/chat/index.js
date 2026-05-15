@@ -437,6 +437,7 @@ class __widget_chat extends LetcBox {
         break;
 
       case 'show-message-selector':
+        console.log('[widget-chat] show-message-selector', { type: args.type, hasActionButtons: !!this.getPart('message-action-buttons') });
         this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.type));
         setTimeout(() => {
           this.showMsgCount(cmd);
@@ -1133,6 +1134,7 @@ class __widget_chat extends LetcBox {
     const area = this.mget(_a.area);
     if (cmd == null) { cmd = {}; }
     const isPrivate = area === _a.personal || area === _a.privateRoom;
+    console.log('[chat.deleteMessage]', { service, area, isPrivate, peerId: this.peerId, selected: this._selectedMessages });
     if (isPrivate) {
       _service = SERVICE.chat.delete;
     } else if (area === _a.share) {
