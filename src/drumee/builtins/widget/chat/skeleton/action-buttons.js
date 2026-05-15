@@ -9,47 +9,21 @@ const __skl_chat_action_button = function(ui, type) {
     uiHandler : ui
   });
 
-  const deleteForMeButton = Skeletons.Box.X({
+  const deleteForMeButton = Skeletons.Note({
     className : `${chatBtnFig}__button-delete button-delete delete-for-me button clickable`,
+    content   : LOCALE.FOR_ME,
     service   : 'delete-for-me',
-    uiHandler : ui,
-    kidsOpt   : {
-      active    : 0
-    },
-    kids      : [
-      Skeletons.Button.Svg({
-        ico         : 'chat_delete',
-        className   : `${chatBtnFig}__icon delete-icon chat_delete`
-      }),
-      
-      Skeletons.Note({
-        className : `${chatBtnFig}__note delete-button`,
-        content   : LOCALE.FOR_ME
-      }) //'for me'
-    ]});
-  
-  const deleteForAllButton = Skeletons.Box.X({
+    uiHandler : ui
+  });
+
+  const deleteForAllButton = Skeletons.Note({
     className : `${chatBtnFig}__button-delete button-delete delete-for-all button clickable`,
     sys_pn    : 'delete-for-all-button',
-    dataset   : {
-      active    : _a.yes
-    },
+    dataset   : { active: _a.yes },
+    content   : LOCALE.FOR_ALL,
     service   : 'delete-for-all',
-    uiHandler : ui,
-    kidsOpt   : {
-      active    : 0
-    },
-    kids      : [
-      Skeletons.Button.Svg({
-        ico         : 'chat_delete',
-        className   : `${chatBtnFig}__icon delete-icon chat_delete`
-      }),
-      
-      Skeletons.Note({
-        className : `${chatBtnFig}__note delete-button`,
-        content   : LOCALE.FOR_ALL
-      }) //'for all'
-    ]});
+    uiHandler : ui
+  });
 
   const cancelButton = Skeletons.Note({
     className : `${chatBtnFig}__button-cancel button-cancel button clickable`,
