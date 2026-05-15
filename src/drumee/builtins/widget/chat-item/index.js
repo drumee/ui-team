@@ -408,7 +408,6 @@ class ___widget_chatItem extends LetcBox {
    */
   onUiEvent(cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    console.log('[chat-item] onUiEvent', service);
     switch (service) {
       case 'chat-item-menu':
         /**  DO NOT REMOVE */
@@ -416,7 +415,6 @@ class ___widget_chatItem extends LetcBox {
 
       case _a.forward:
       case 'chat-item-delete':
-        console.log('[chat-item] delete/forward', { service, hasMain: !!this.__main, hasMessageEl: !!this.messageEl });
         try { this.select(1); } catch(e) { console.error('[chat-item] select(1) threw:', e); }
         this.triggerHandlers({
           service: 'show-message-selector',
