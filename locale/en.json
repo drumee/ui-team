@@ -990,6 +990,8 @@
   "UNREADS": "Unreads",
   "ALL_ACTIVITY": "All activity",
   "MENTIONS": "Mentions",
+  "MENTIONED_YOU": "mentioned you",
+  "FORWARD_DONE": "Message forwarded",
   "SHARES": "Shares",
   "NO_NOTIFICATIONS": "No notifications",
   "WORKSPACES": "Workspaces",

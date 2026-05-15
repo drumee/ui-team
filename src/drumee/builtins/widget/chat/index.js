@@ -1337,9 +1337,9 @@ class __widget_chat extends LetcBox {
 
     if (mentionType === 'contact') {
       contactsPromise = this.fetchService({
-        service: SERVICE.chat.chat_rooms,
-        flag: 'contact',
-        hub_id: Visitor.get(_a.id)
+        service: SERVICE.chat.contact_rooms,
+        hub_id: Visitor.get(_a.id),
+        key: filter || ''
       }).catch(() => null);
     }
 

@@ -917,6 +917,8 @@
   "UNREADS": "未读",
   "ALL_ACTIVITY": "全部动态",
   "MENTIONS": "提及",
+  "MENTIONED_YOU": "提到了你",
+  "FORWARD_DONE": "消息已转发",
   "SHARES": "分享",
   "NO_NOTIFICATIONS": "暂无通知",
   "WORKSPACES": "工作区",

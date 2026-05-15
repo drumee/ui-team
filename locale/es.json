@@ -111,6 +111,8 @@
   "UNREADS": "No leídos",
   "ALL_ACTIVITY": "Toda la actividad",
   "MENTIONS": "Menciones",
+  "MENTIONED_YOU": "te mencionó",
+  "FORWARD_DONE": "Mensaje reenviado",
   "SHARES": "Compartidos",
   "NO_NOTIFICATIONS": "Sin notificaciones",
   "WORKSPACES": "Espacios de trabajo",

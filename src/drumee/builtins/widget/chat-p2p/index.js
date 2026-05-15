@@ -468,6 +468,11 @@ class __chat_p2p extends LetcBox {
         : false;
       if (isMentioned) {
         item.mset('has_mention', ~~(item.mget('has_mention') || 0) + 1);
+        const senderName = (data.firstname || data.surname || '').trim();
+        const msg = senderName
+          ? `${senderName} ${LOCALE.MENTIONED_YOU}`
+          : LOCALE.MENTIONS;
+        Wm.alert(msg, 3000);
       }
     }
 

@@ -917,6 +917,8 @@
   "UNREADS": "Непрочитанные",
   "ALL_ACTIVITY": "Вся активность",
   "MENTIONS": "Упоминания",
+  "MENTIONED_YOU": "упомянул вас",
+  "FORWARD_DONE": "Сообщение переслано",
   "SHARES": "Общий доступ",
   "NO_NOTIFICATIONS": "Нет уведомлений",
   "WORKSPACES": "Рабочие пространства",

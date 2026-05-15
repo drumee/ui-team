@@ -917,6 +917,8 @@
   "UNREADS": "Non lus",
   "ALL_ACTIVITY": "Toute l'activité",
   "MENTIONS": "Mentions",
+  "MENTIONED_YOU": "vous a mentionné",
+  "FORWARD_DONE": "Message transmis",
   "SHARES": "Partages",
   "NO_NOTIFICATIONS": "Aucune notification",
   "WORKSPACES": "Espaces de travail",

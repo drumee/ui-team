@@ -445,7 +445,7 @@ class ___widget_chatItem extends LetcBox {
       s = toggleState(this.mget('selected')) ^ 1;
     }
 
-    this.messageEl.dataset.selected = s;
+    if (this.messageEl) this.messageEl.dataset.selected = s;
     const el = document.getElementById(`${this.mget(_a.widgetId)}-checkbox`);
     if (el != null) {
       el.dataset.selected = s;

@@ -917,6 +917,8 @@
   "UNREADS": "មិនទាន់អាន",
   "ALL_ACTIVITY": "សកម្មភាពទាំងអស់",
   "MENTIONS": "ការលើកឡើង",
+  "MENTIONED_YOU": "បានលើកឡើងអំពីអ្នក",
+  "FORWARD_DONE": "សាររំផ្ញើបានរួចរាល់",
   "SHARES": "ការចែករំលែក",
   "NO_NOTIFICATIONS": "គ្មានការជូនដំណឹង",
   "WORKSPACES": "កន្លែងធ្វើការ",
