@@ -5,18 +5,23 @@
     width: 720px;
     height: 100vh;
     top: 0;
-    right: -720px;
+    right: 0;
+    // See chat-p2p skin for the rationale: position:fixed + transform
+    // is the only combination that keeps the closed panel out of every
+    // ancestor's scroll box. position:absolute leaks into
+    // __body.scrollWidth and lets touchpad gesture reveal the panel.
+    position: fixed;
+    transform: translateX(100%);
     background-color: var(--normal-bg-90, #fff);
     border-left: 1px solid var(--border-muted, #e5e5e5);
-    transition: right 0.5s;
-    position: absolute;
+    transition: transform 0.5s;
     box-shadow: var(--shadow-left-big);
 
     &[data-anim="in"] {
-      right: 0;
+      transform: translateX(0);
     }
     &[data-anim="out"] {
-      right: -720px;
+      transform: translateX(100%);
     }
   }
 
