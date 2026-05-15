@@ -35,6 +35,7 @@ class __widget_chat extends LetcBox {
     super.initialize();
     this.view = this.mget(_a.view);
     this._selectedMessages = [];
+    this._selectedViews = [];
     this.peer = this.mget('peer') || null;
     this.updateChatUserStatus();
     this.queue = [];
@@ -1087,22 +1088,25 @@ class __widget_chat extends LetcBox {
    */
   showMsgCount(cmd) {
     this._selectedMessages = [];
-    const messages = this.__list.children.filter((e) => {
-      if (e.mget('selected')) {
-        this._selectedMessages.push(e.mget('message_id'))
-      }
-    })
+    this._selectedViews = [];
+    const chatItems = this.__list.getItemsByKind('widget_chat_item');
+    const selected = chatItems.filter(e => e.mget('selected'));
+    for (const e of selected) {
+      const mid = e.mget('message_id');
+      if (mid) this._selectedMessages.push(mid);
+      this._selectedViews.push(e);
+    }
 
     /* for enable/disable delte-for-all button */
     const delteForAllBtn = this.getPart('delete-for-all-button');
     if (delteForAllBtn) {
       delteForAllBtn.el.dataset.active = _a.yes;
-      messages.filter(row => {
-        if (row.author === 'other') {
+      for (const row of selected) {
+        if (row.mget('author') === 'other') {
           delteForAllBtn.el.dataset.active = _a.no;
-          return row;
+          break;
         }
-      });
+      }
     }
 
     const msgCount = this._selectedMessages.length;
@@ -1154,9 +1158,12 @@ class __widget_chat extends LetcBox {
       payload.peer_id = this.peerId;
     }
 
+    const viewsToRemove = (this._selectedViews || []).slice();
     this.postService(payload, { async: 1 }).then((data) => {
-      this.disableMessageSelection(data);
-      this.clearMessageFromChat(data);
+      this.disableMessageSelection();
+      for (const view of viewsToRemove) {
+        if (view && _.isFunction(view.goodbye)) view.goodbye();
+      }
     });
   }
 
