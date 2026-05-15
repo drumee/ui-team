@@ -139,6 +139,16 @@
     padding-bottom: 10px;
   }
 
+  &__main[data-state="1"] {
+    .widget-chat__message-options-wrapper {
+      display: flex !important;
+      flex-direction: column;
+    }
+    .widget-chat__messenger-wrapper {
+      display: none !important;
+    }
+  }
+
   &__messenger-wrapper {
     // Match the Figma "Chat Input" frame (272:49274;3806:43659): 12px
     // vertical / 16px horizontal padding. The previous 24px-all
