@@ -42,10 +42,10 @@ const __skl_chat_action_button = function(ui, type) {
       type === _a.forward ?
         fowardButton : undefined,
       
-      type === _a.delete ?
+      type === 'chat-item-delete' ?
         deleteForMeButton : undefined,
       
-      type === _a.delete ?
+      type === 'chat-item-delete' ?
         deleteForAllButton : undefined
       
       //cancelButton

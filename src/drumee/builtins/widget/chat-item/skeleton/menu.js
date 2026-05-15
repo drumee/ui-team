@@ -41,7 +41,7 @@ const __skl_chatiItem_menu = function(_ui_) {
   const deleteMsg = Skeletons.Button.Svg({
     className : `${chatMenuFig}__item delete-for-me`,
     ico       : 'chat_delete',
-    service   : _a.delete,
+    service   : 'chat-item-delete',
     uiHandler : _ui_
   });
   
