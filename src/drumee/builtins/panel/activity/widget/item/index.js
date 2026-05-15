@@ -80,8 +80,13 @@ class __activity_item extends LetcBox {
         return;
       }
       default: {
-        const fallback = service || this.mget(_a.service);
-        console.log('[activity_item] default fallback', { fallback, drumate_id: this.mget('drumate_id'), message_id: this.mget('message_id'), has_parent: !!(parent && parent.onUiEvent) });
+        const category = this.mget('item_type') || this.mget('category') || this.mget(_a.type);
+        const derived = category === 'media' ? 'open-folder'
+          : category === 'teamchat' ? 'open-channel'
+          : category === 'contact' ? 'open-contact'
+          : category === 'ticket' ? 'open-ticket'
+          : 'open-chat';
+        const fallback = service || this.mget(_a.service) || derived;
         if (!fallback) return;
         if (parent && parent.onUiEvent) {
           parent.onUiEvent(this, {
