@@ -1129,6 +1129,7 @@ class __widget_chat extends LetcBox {
     const area = this.mget(_a.area);
     if (cmd == null) { cmd = {}; }
     const isPrivate = area === _a.personal || area === _a.privateRoom;
+    console.log('[chat.deleteMessage]', { service, area, isPrivate, peerId: this.peerId, selected: this._selectedMessages });
     if (isPrivate) {
       _service = SERVICE.chat.delete;
     } else if (area === _a.share) {
@@ -1156,6 +1157,25 @@ class __widget_chat extends LetcBox {
       this.disableMessageSelection(data);
       this.clearMessageFromChat(data);
     });
+  }
+
+  /**
+   * Scroll to a specific message by ID, retrying until it appears in the list.
+   * @param {string} message_id
+   */
+  scrollToMessage(message_id, retries = 25) {
+    if (!message_id) return;
+    const tryScroll = (r) => {
+      const item = this.__list && this.__list.getItemsByAttr('message_id', message_id)[0];
+      if (item && item.el) {
+        item.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        item.el.dataset.highlighted = '1';
+        setTimeout(() => { if (item.el) delete item.el.dataset.highlighted; }, 2500);
+        return;
+      }
+      if (r > 0) setTimeout(() => tryScroll(r - 1), 200);
+    };
+    tryScroll(retries);
   }
 
   /**

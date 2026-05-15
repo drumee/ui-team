@@ -305,7 +305,7 @@ class __chat_p2p extends LetcBox {
    * Waits for the contact list to load, then triggers the matching item.
    * @param {String} drumate_id
    */
-  openChatByPeerId(drumate_id) {
+  openChatByPeerId(drumate_id, message_id) {
     if (!drumate_id) return;
     const tryOpen = (retries = 20) => {
       this.ensurePart('contact-list').then(list => {
@@ -313,6 +313,13 @@ class __chat_p2p extends LetcBox {
         const match = items.find(it => it.mget && it.mget(_a.drumate_id) == drumate_id);
         if (match) {
           this.openChat(match);
+          if (message_id) {
+            setTimeout(() => {
+              if (this.chatWidget && this.chatWidget.scrollToMessage) {
+                this.chatWidget.scrollToMessage(message_id);
+              }
+            }, 800);
+          }
           return;
         }
         if (retries > 0) setTimeout(() => tryOpen(retries - 1), 200);

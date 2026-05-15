@@ -74,6 +74,7 @@ class __activity_item extends LetcBox {
             item_key: this.mget('item_key'),
             hub_id: this.mget('hub_id'),
             drumate_id: this.mget('drumate_id'),
+            message_id: this.mget('message_id'),
           });
         }
         return;
