@@ -81,6 +81,7 @@ class __activity_item extends LetcBox {
       }
       default: {
         const fallback = service || this.mget(_a.service);
+        console.log('[activity_item] default fallback', { fallback, drumate_id: this.mget('drumate_id'), message_id: this.mget('message_id'), has_parent: !!(parent && parent.onUiEvent) });
         if (!fallback) return;
         if (parent && parent.onUiEvent) {
           parent.onUiEvent(this, {

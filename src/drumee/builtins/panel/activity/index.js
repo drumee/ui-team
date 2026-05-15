@@ -145,6 +145,7 @@ class __panel_activity extends LetcBox {
       case 'open-chat': {
         const drumate_id = args && args.drumate_id;
         const message_id = args && args.message_id;
+        console.log('[panel_activity] open-chat', { drumate_id, message_id });
         this._dismissFromOpen(cmd, args);
         this.activityState = 0;
         this.setState(0);
