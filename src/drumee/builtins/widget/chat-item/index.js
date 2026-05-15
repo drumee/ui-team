@@ -415,7 +415,8 @@ class ___widget_chatItem extends LetcBox {
 
       case _a.forward:
       case _a.delete:
-        this.select(1);
+        console.log('[chat-item] delete/forward', { service, hasMain: !!this.__main, hasMessageEl: !!this.messageEl });
+        try { this.select(1); } catch(e) { console.error('[chat-item] select(1) threw:', e); }
         this.triggerHandlers({
           service: 'show-message-selector',
           type: service

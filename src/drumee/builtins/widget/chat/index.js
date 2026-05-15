@@ -436,6 +436,7 @@ class __widget_chat extends LetcBox {
         break;
 
       case 'show-message-selector':
+        console.log('[widget-chat] show-message-selector', { type: args.type, hasActionButtons: !!this.getPart('message-action-buttons') });
         this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.type));
         setTimeout(() => {
           this.showMsgCount(cmd);
