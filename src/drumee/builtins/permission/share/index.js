@@ -14,6 +14,11 @@ class __permission_share extends DrumeeMFS {
 
   // ── Helpers ───────────────────────────────────────────────────
 
+  _render() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this.feed(require('./skeleton')(this));
+  }
+
   _expiryLabel() {
     const days = parseInt(this.mget(_a.days)) || 0;
     if (!days) return LOCALE.NO_EXPIRATION || 'No expiration';
@@ -27,8 +32,9 @@ class __permission_share extends DrumeeMFS {
     if (!bit) return;
     let privilege = this.mget(_a.privilege) || 0;
     privilege ^= bit;
+    this._dirtyPermission = true;
     this.mset({ privilege });
-    this.feed(require('./skeleton')(this));
+    this._render();
   }
 
   _copyLink() {
@@ -39,13 +45,83 @@ class __permission_share extends DrumeeMFS {
     }
   }
 
+  // A share-area workspace exposes its public URL intrinsically via
+  // get_external_room_attr — there is no create-link step like the
+  // sharebox outbound flow (sharebox.create_link returns WRONG_API for
+  // share hubs). The "Public" toggle therefore just shows/hides the
+  // URL the workspace already has.
+
+  _loadSettings() {
+    const hub_id = this.mget(_a.hub_id);
+    if (!hub_id) return;
+    this.postService(SERVICE.hub.get_external_room_attr, { hub_id })
+      .then((data) => {
+        if (!data) return;
+        const share_url = data.link || '';
+        this.mset({
+          public_link: share_url ? 1 : 0,
+          share_url,
+          privilege: data.permission != null ? data.permission : (this.mget(_a.privilege) || 0),
+          days: data.days || 0,
+          hours: data.hours || 0,
+        });
+        this._render();
+      })
+      .catch((e) => this.warn && this.warn('get_external_room_attr failed', e));
+  }
+
+  _applyChanges() {
+    if (this._applyBusy) return;
+    this._applyBusy = 1;
+    const hub_id = this.mget(_a.hub_id);
+    const privilege = this.mget(_a.privilege) || 0;
+    const days = parseInt(this.mget(_a.days)) || 0;
+    const hours = parseInt(this.mget(_a.hours)) || 0;
+
+    const tasks = [
+      this.postService(SERVICE.hub.update_external_settings, {
+        hub_id, flag: _a.permission, permission: privilege,
+      }),
+      this.postService(SERVICE.hub.update_external_settings, {
+        hub_id, flag: _a.expiry, days, hours,
+        validity_mode: days || hours ? _a.limited : _a.infinity,
+      }),
+    ];
+
+    Promise.all(tasks)
+      .then(() => {
+        this._dirtyPermission = false;
+        this._closeSidebar();
+      })
+      .catch((e) => this.warn && this.warn('apply failed', e))
+      .finally(() => { this._applyBusy = 0; });
+  }
+
+  // Clear persists immediately — separate from Apply so "No expiration"
+  // sticks without forcing the user back to the Apply button.
+  _clearExpiry() {
+    this.mset({ days: 0, hours: 0 });
+    this._render();
+    const hub_id = this.mget(_a.hub_id);
+    if (!hub_id) return;
+    this.postService(SERVICE.hub.update_external_settings, {
+      hub_id, flag: _a.expiry, days: 0, hours: 0, validity_mode: _a.infinity,
+    }).catch((e) => this.warn && this.warn('clear-expiry failed', e));
+  }
+
+  _closeSidebar() {
+    this.el.dataset.position = "out";
+    setTimeout(() => this.suppress(), 500);
+  }
+
   // ── Lifecycle ─────────────────────────────────────────────────
 
   onDomRefresh() {
-    this.feed(require('./skeleton')(this));
+    this._render();
     setTimeout(() => {
       this.el.dataset.position = "in";
-    }, 300)
+    }, 300);
+    this._loadSettings();
   }
 
   // ── UI events ─────────────────────────────────────────────────
@@ -56,37 +132,23 @@ class __permission_share extends DrumeeMFS {
       case 'toggle-public-link': {
         const current = this.mget('public_link');
         this.mset({ public_link: current ? 0 : 1 });
-        this.feed(require('./skeleton')(this));
-        break;
+        return this._render();
       }
+
       case 'copy-link':
-        this._copyLink();
-        break;
+        return this._copyLink();
 
       case 'toggle-access':
-        this._toggleAccess(cmd);
-        break;
+        return this._toggleAccess(cmd);
 
       case 'clear-expiry':
-        this.mset({ days: 0, hours: 0 });
-        this.feed(require('./skeleton')(this));
-        break;
+        return this._clearExpiry();
 
       case 'apply':
-        this.triggerHandlers({
-          service: 'permission-changed',
-          privilege: this.mget(_a.privilege) || 0,
-          days: parseInt(this.mget(_a.days)) || 0,
-          public_link: this.mget('public_link') ? 1 : 0,
-        });
-        break;
+        return this._applyChanges();
 
       case _e.close:
-        this.el.dataset.position = "out";
-        setTimeout(() => {
-          this.suppress();
-        }, 500)
-        return
+        return this._closeSidebar();
 
       default:
         if (super.onUiEvent) super.onUiEvent(cmd, args);

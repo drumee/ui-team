@@ -1228,6 +1228,8 @@
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
+  "WANTS_TO_CONNECT": "хочет добавить вас в контакты",
+  "ACCEPTED_YOUR_INVITATION": "принял ваше приглашение",
   "ZOOM": "Zoom",
   "JOIN": "Join",
   "STARTED_A_MEETING": "started a meeting",

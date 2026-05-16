@@ -85,14 +85,22 @@ function getActivityMeta(data, preview) {
       };
 
     case 'contact_invite':
-    case 'contact':
+    case 'contact': {
+      // status === 'informed' marks the post-accept handshake half.
+      const status = data.status || data.contact_status;
+      const accepted = status === 'informed'
+        || data.event === 'contact.accept_informed'
+        || data.event_subtype === 'accepted';
       return {
-        before: 'wants to connect',
+        before: accepted
+          ? (LOCALE.ACCEPTED_YOUR_INVITATION || 'accepted your invitation')
+          : (LOCALE.WANTS_TO_CONNECT || 'wants to connect'),
         label: '',
         after: '',
         colorClass: 'mention',
         badge: 'mention',
       };
+    }
 
     case 'chat':
       return {

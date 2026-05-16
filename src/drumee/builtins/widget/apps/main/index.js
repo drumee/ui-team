@@ -983,7 +983,8 @@ class apps_main extends LetcBox {
         });
       } else {
         await this.postService(SERVICE.adminpanel.member_delete, {
-          uid: memberId,
+          orgid: Visitor.get("org_id"),
+          user_id: memberId,
         });
       }
       this._selected.delete(memberId);
@@ -1456,11 +1457,12 @@ class apps_main extends LetcBox {
     const svc = isAdmin
       ? SERVICE.admin.hub_member_remove
       : SERVICE.adminpanel.member_delete;
+    const orgId = isAdmin ? null : Visitor.get("org_id");
     for (const id of ids) {
       try {
         const payload = isAdmin
           ? { hub_id: this._activeAdminHub, uid: id }
-          : { uid: id };
+          : { orgid: orgId, user_id: id };
         await this.postService(svc, payload);
       } catch (e) {
         this.warn && this.warn(`member_delete ${id} failed`, e);

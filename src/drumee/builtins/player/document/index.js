@@ -1,6 +1,6 @@
 
 const { filesize, fitBoxes } = require("@drumee/ui-essentials")
-const { TweenMax, Expo } = gsap;
+const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
 const { loadPdfDocument, initializePdfium, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";

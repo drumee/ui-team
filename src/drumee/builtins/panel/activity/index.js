@@ -565,8 +565,29 @@ class __panel_activity extends LetcBox {
     const activeChats = (Wm.getItemsByKind('window_bigchat') || [])
       .filter((win) => win && !win.isDestroyed() && !win.mget(_a.minimize) && win.currentEntityId)
       .map((win) => win.currentEntityId);
-    const list = [];
+    // Dedupe contact rows by peer — server returns both the invite and the
+    // post-accept "informed" row; prefer the accepted one.
+    const seenContactPeers = new Map();
+    const dedupedItems = [];
     for (const it of items) {
+      if (it.category === 'contact') {
+        const peerKey = String(it.drumate_id || it.key_id || it.email || '');
+        if (peerKey) {
+          const existingIdx = seenContactPeers.get(peerKey);
+          if (existingIdx !== undefined) {
+            const existing = dedupedItems[existingIdx];
+            const incomingAccepted = it.status === 'informed';
+            const existingAccepted = existing.status === 'informed';
+            if (incomingAccepted && !existingAccepted) dedupedItems[existingIdx] = it;
+            continue;
+          }
+          seenContactPeers.set(peerKey, dedupedItems.length);
+        }
+      }
+      dedupedItems.push(it);
+    }
+    const list = [];
+    for (const it of dedupedItems) {
       if (it.category === 'chat' && activeChats.includes(it.drumate_id)) continue;
       const e = { ...it };
       e.kind = 'activity_item';
@@ -587,7 +608,8 @@ class __panel_activity extends LetcBox {
           break;
         case 'contact':
           e.service = 'open-contact';
-          e.event = 'contact.invite';
+          e.event = (it.status === 'informed') ? 'contact.accept_informed' : 'contact.invite';
+          e.status = it.status;
           e.fullname = (it.surname || `${it.firstname || ''} ${it.lastname || ''}`).trim();
           break;
         case 'media':
@@ -640,6 +662,23 @@ class __panel_activity extends LetcBox {
       case "hub.invite_received":
         this.refreshActivity()
         break;
+      case "contact.invite_accept":
+      case "contact.accept_informed":
+        // Mark the peer dismissed before refreshing — activity.list still
+        // includes pending 'informed' rows and would re-render the old
+        // "wants to connect" line otherwise.
+        this._dismissedKeys = this._dismissedKeys || new Set();
+        for (const row of data) {
+          const peerId = row && (row.drumate_id || row.uid || row.email);
+          if (peerId) this._dismissedKeys.add(`contact:${peerId}`);
+        }
+        if (this.timer) {
+          clearTimeout(this.timer);
+          this.timer = null;
+        }
+        this.refreshActivity();
+        this.shouldNofity();
+        break;
       case "messages.read":
         this._buildactivities(data);
         this.updateactivityCount();
@@ -655,7 +694,6 @@ class __panel_activity extends LetcBox {
       case "channel.acknowledge":
       case "chat.acknowledge":
       case "contact.delete_contact":
-      case "contact.accept_informed":
       case "media.remove":
       case "media.new":
         if (this.timer) return;

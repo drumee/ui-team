@@ -679,6 +679,8 @@
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
+  "WANTS_TO_CONNECT": "quiere conectar contigo",
+  "ACCEPTED_YOUR_INVITATION": "ha aceptado tu invitación",
   "NOTES": "Notes:",
   "NO_CONTACT_FOUND": "No contact found",
   "REFUSE": "Refuse",

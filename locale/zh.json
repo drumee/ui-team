@@ -1228,6 +1228,8 @@
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
+  "WANTS_TO_CONNECT": "想要与您建立联系",
+  "ACCEPTED_YOUR_INVITATION": "已接受您的邀请",
   "ZOOM": "Zoom",
   "JOIN": "Join",
   "STARTED_A_MEETING": "started a meeting",

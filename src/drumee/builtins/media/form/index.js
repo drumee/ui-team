@@ -51,7 +51,7 @@ class __form_folder extends LetcBox {
     }
 
     const target = Wm.getActiveWindow(1);
-    const status = this._status || "personal";
+    const status = this._status || "team";
 
     const FLOW = {
       team: { area: "private", post: "permission_restricted" },
@@ -69,20 +69,16 @@ class __form_folder extends LetcBox {
       .then((res) => {
         RADIO_BROADCAST.trigger("workspace:refresh");
         const hub = _.isArray(res) ? res[0] : res;
-        if (!post || !hub) {
+        const closeForm = () => {
           if (this.parent && _.isFunction(this.parent.clear)) {
             return this.parent.clear();
           }
           return this.goodbye();
-        }
+        };
+        if (!post || !hub) return closeForm();
 
         const parent = this.parent;
-        if (!parent || !_.isFunction(parent.feed)) {
-          if (this.parent && _.isFunction(this.parent.clear)) {
-            return this.parent.clear();
-          }
-          return this.goodbye();
-        }
+        if (!parent || !_.isFunction(parent.feed)) return closeForm();
 
         // permission_* dialogs call media.mget(...); wrap the plain
         // server response in a Backbone.View to satisfy that interface.
