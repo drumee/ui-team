@@ -74,12 +74,19 @@ class __activity_item extends LetcBox {
             item_key: this.mget('item_key'),
             hub_id: this.mget('hub_id'),
             drumate_id: this.mget('drumate_id'),
+            message_id: this.mget('message_id'),
           });
         }
         return;
       }
       default: {
-        const fallback = service || this.mget(_a.service);
+        const category = this.mget('item_type') || this.mget('category') || this.mget(_a.type);
+        const derived = category === 'media' ? 'open-folder'
+          : category === 'teamchat' ? 'open-channel'
+          : category === 'contact' ? 'open-contact'
+          : category === 'ticket' ? 'open-ticket'
+          : 'open-chat';
+        const fallback = service || this.mget(_a.service) || derived;
         if (!fallback) return;
         if (parent && parent.onUiEvent) {
           parent.onUiEvent(this, {
@@ -88,6 +95,7 @@ class __activity_item extends LetcBox {
             item_key: this.mget('item_key'),
             hub_id: this.mget('hub_id'),
             drumate_id: this.mget('drumate_id'),
+            message_id: this.mget('message_id'),
           });
         } else if (super.onUiEvent) {
           super.onUiEvent(cmd, args);

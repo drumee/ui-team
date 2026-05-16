@@ -35,6 +35,7 @@ class __widget_chat extends LetcBox {
     super.initialize();
     this.view = this.mget(_a.view);
     this._selectedMessages = [];
+    this._selectedViews = [];
     this.peer = this.mget('peer') || null;
     this.updateChatUserStatus();
     this.queue = [];
@@ -436,6 +437,7 @@ class __widget_chat extends LetcBox {
         break;
 
       case 'show-message-selector':
+        console.log('[widget-chat] show-message-selector', { type: args.type, hasActionButtons: !!this.getPart('message-action-buttons') });
         this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.type));
         setTimeout(() => {
           this.showMsgCount(cmd);
@@ -1086,22 +1088,25 @@ class __widget_chat extends LetcBox {
    */
   showMsgCount(cmd) {
     this._selectedMessages = [];
-    const messages = this.__list.children.filter((e) => {
-      if (e.mget('selected')) {
-        this._selectedMessages.push(e.mget('message_id'))
-      }
-    })
+    this._selectedViews = [];
+    const chatItems = this.__list.getItemsByKind('widget_chat_item');
+    const selected = chatItems.filter(e => e.mget('selected'));
+    for (const e of selected) {
+      const mid = e.mget('message_id');
+      if (mid) this._selectedMessages.push(mid);
+      this._selectedViews.push(e);
+    }
 
     /* for enable/disable delte-for-all button */
     const delteForAllBtn = this.getPart('delete-for-all-button');
     if (delteForAllBtn) {
       delteForAllBtn.el.dataset.active = _a.yes;
-      messages.filter(row => {
-        if (row.author === 'other') {
+      for (const row of selected) {
+        if (row.mget('author') === 'other') {
           delteForAllBtn.el.dataset.active = _a.no;
-          return row;
+          break;
         }
-      });
+      }
     }
 
     const msgCount = this._selectedMessages.length;
@@ -1129,6 +1134,7 @@ class __widget_chat extends LetcBox {
     const area = this.mget(_a.area);
     if (cmd == null) { cmd = {}; }
     const isPrivate = area === _a.personal || area === _a.privateRoom;
+    console.log('[chat.deleteMessage]', { service, area, isPrivate, peerId: this.peerId, selected: this._selectedMessages });
     if (isPrivate) {
       _service = SERVICE.chat.delete;
     } else if (area === _a.share) {
@@ -1152,10 +1158,32 @@ class __widget_chat extends LetcBox {
       payload.peer_id = this.peerId;
     }
 
+    const viewsToRemove = (this._selectedViews || []).slice();
     this.postService(payload, { async: 1 }).then((data) => {
-      this.disableMessageSelection(data);
-      this.clearMessageFromChat(data);
+      this.disableMessageSelection();
+      for (const view of viewsToRemove) {
+        if (view && _.isFunction(view.goodbye)) view.goodbye();
+      }
     });
+  }
+
+  /**
+   * Scroll to a specific message by ID, retrying until it appears in the list.
+   * @param {string} message_id
+   */
+  scrollToMessage(message_id, retries = 25) {
+    if (!message_id) return;
+    const tryScroll = (r) => {
+      const item = this.__list && this.__list.getItemsByAttr('message_id', message_id)[0];
+      if (item && item.el) {
+        item.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        item.el.dataset.highlighted = '1';
+        setTimeout(() => { if (item.el) delete item.el.dataset.highlighted; }, 2500);
+        return;
+      }
+      if (r > 0) setTimeout(() => tryScroll(r - 1), 200);
+    };
+    tryScroll(retries);
   }
 
   /**
@@ -1337,9 +1365,9 @@ class __widget_chat extends LetcBox {
 
     if (mentionType === 'contact') {
       contactsPromise = this.fetchService({
-        service: SERVICE.chat.chat_rooms,
-        flag: 'contact',
-        hub_id: Visitor.get(_a.id)
+        service: SERVICE.chat.contact_rooms,
+        hub_id: Visitor.get(_a.id),
+        key: filter || ''
       }).catch(() => null);
     }
 

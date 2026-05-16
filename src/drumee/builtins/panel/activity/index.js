@@ -144,6 +144,7 @@ class __panel_activity extends LetcBox {
 
       case 'open-chat': {
         const drumate_id = args && args.drumate_id;
+        const message_id = args && args.message_id;
         this._dismissFromOpen(cmd, args);
         this.activityState = 0;
         this.setState(0);
@@ -151,7 +152,7 @@ class __panel_activity extends LetcBox {
           if (!drumate_id) return;
           Desk.ensurePart('chat-panel').then(p => {
             const widget = p && p.children && p.children.last && p.children.last();
-            if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id);
+            if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
           });
         });
         return;

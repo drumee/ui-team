@@ -113,7 +113,12 @@ class ___chat_item_forward extends LetcBox {
     const peerId = this.mget(_a.peer_id);
     if (peerId) payload.peer_id = peerId;
 
-    return this.postService(payload);
+    return this.postService(payload).then(() => {
+      Wm.alert(LOCALE.FORWARD_DONE, 2000);
+      this.closeOverlay(cmd);
+    }).catch(() => {
+      Wm.alert(LOCALE.TRY_AGAIN);
+    });
   }
 
 // ===========================================================
