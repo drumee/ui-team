@@ -90,6 +90,10 @@ class __window_folder extends mfsInteract {
     if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
     }
+    // "Get info" launches the window with this flag to pre-select settings.
+    if (this.mget("showSettings")) {
+      this.openSettingsPanel();
+    }
   }
 
   applyDefaultBounds() {
@@ -800,6 +804,18 @@ class __window_folder extends mfsInteract {
       hub_id: this.mget(_a.hub_id),
       source: this,
       persistence: _a.once,
+    });
+  }
+
+  /**
+   * Ensure the dialog wrapper part exists, then open the folder settings
+   * panel. Used by the `showSettings` launch option ("Get info") and to
+   * surface settings on an already-open window.
+   */
+  openSettingsPanel() {
+    return this.ensurePart("wrapper-dialog").then((wrapper) => {
+      this.dialogWrapper = wrapper;
+      if (!this.isShowSettings) this.switchShowFolderSettings();
     });
   }
 

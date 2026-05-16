@@ -1510,5 +1510,7 @@
   "ONBOARDING_GOAL_CLIENTS": "ធ្វើការជាមួយអតិថិជន",
   "ONBOARDING_GOAL_STORE": "រក្សាទុកទិន្នន័យរសើប",
   "ONBOARDING_GOAL_WORKFLOWS": "បង្កើតលំហូរការងាររបស់អ្នក",
-  "ONBOARDING_GOAL_PERSONAL": "គ្រប់គ្រងឯកសារផ្ទាល់ខ្លួន"
+  "ONBOARDING_GOAL_PERSONAL": "គ្រប់គ្រងឯកសារផ្ទាល់ខ្លួន",
+  "ONBOARDING_INVITE_PLACEHOLDER": "សមាជិក@ក្រុមហ៊ុន.com",
+  "INVITE_PLACEHOLDER": "ឈ្មោះ@ក្រុមហ៊ុន.com"
 }

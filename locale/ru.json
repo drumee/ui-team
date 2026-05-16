@@ -1510,5 +1510,7 @@
   "ONBOARDING_GOAL_CLIENTS": "Работа с клиентами - контекстные папки",
   "ONBOARDING_GOAL_STORE": "Хранение данных - полный контроль",
   "ONBOARDING_GOAL_WORKFLOWS": "Создание рабочих процессов на ваших данных",
-  "ONBOARDING_GOAL_PERSONAL": "Личное управление файлами - одна система"
+  "ONBOARDING_GOAL_PERSONAL": "Личное управление файлами - одна система",
+  "ONBOARDING_INVITE_PLACEHOLDER": "коллега@компания.com",
+  "INVITE_PLACEHOLDER": "имя@компания.com"
 }
