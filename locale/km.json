@@ -1227,6 +1227,7 @@
   "PERMISSIONS_MATRIX": "Permissions Matrix",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
+  "INVITE_PARTIAL_FAILED": "បានផ្ញើការអញ្ជើញ {0}, បរាជ័យ {1}",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
   "WANTS_TO_CONNECT": "ចង់ភ្ជាប់ទំនាក់ទំនង",
   "ACCEPTED_YOUR_INVITATION": "បានទទួលយកការអញ្ជើញរបស់អ្នក",

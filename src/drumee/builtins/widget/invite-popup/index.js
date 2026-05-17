@@ -509,44 +509,46 @@ class __invite_popup extends LetcBox {
     this._addPendingEmailFromInput();
     if (!this._invitees.length) return;
 
-    const users = this._invitees.map((i) => i.email || i.id || i.uid);
+    const emails = this._invitees.map((i) => i.email || i.id || i.uid);
     const assignments = this._workspaces
       .filter((w) => w && w.hub_id)
       .map((w) => ({
         hub_id: w.hub_id,
-        privilege: computePrivilege(w.roleIds || []),
+        permission: computePrivilege(w.roleIds || DEFAULT_ROLE_IDS),
       }));
-
     if (!assignments.length) {
-      const fallback = this.mget("hub_id") || Visitor.id;
       assignments.push({
-        hub_id: fallback,
-        privilege: computePrivilege(this._workspaces[0]?.roleIds || DEFAULT_ROLE_IDS),
+        hub_id: this.mget("hub_id") || Visitor.id,
+        permission: computePrivilege(this._workspaces[0]?.roleIds || DEFAULT_ROLE_IDS),
       });
     }
-
     if (this._sendBtn) this._sendBtn.el.dataset.state = 0;
 
     const promises = assignments.map((a) =>
-      this.postService(SERVICE.hub.add_contributors, {
+      this.postService(SERVICE.hub.invite, {
         hub_id: a.hub_id,
-        privilege: a.privilege,
-        users,
-        email: users,
+        invitees: emails,
+        permission: a.permission,
       }),
     );
 
     Promise.all(promises)
       .then((results) => {
+        const flat = [].concat(...results.map((r) => (r && r.results) || []));
+        const failed = flat.filter((r) => r.status === "failed");
         this.triggerHandlers({
           service: "invitation-sent",
           invitees: this._invitees,
-          results,
+          results: flat,
         });
+        if (failed.length) {
+          Wm.alert(LOCALE.INVITE_PARTIAL_FAILED.format(
+            flat.length - failed.length, failed.length));
+        }
         this._closePopup();
       })
       .catch((err) => {
-        this.warn("[invite-popup] hub.add_contributors failed", err);
+        this.warn("[invite-popup] hub.invite failed", err);
         if (this._sendBtn) this._sendBtn.el.dataset.state = 1;
       });
   }

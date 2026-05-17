@@ -377,6 +377,7 @@
   "PERMISSIONS_MATRIX": "Permissions Matrix",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
+  "INVITE_PARTIAL_FAILED": "Sent {0} invitation(s), {1} failed",
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
   "WANTS_TO_CONNECT": "wants to connect",
   "ACCEPTED_YOUR_INVITATION": "accepted your invitation",
