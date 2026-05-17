@@ -169,9 +169,11 @@ class __lib_messenger extends LetcBox {
 
   _showAttachMenu() {
     if (!this.__wrapperPopup.isEmpty()) {
+      this.__wrapperPopup.el.removeAttribute('data-mode');
       this.__wrapperPopup.clear();
       return;
     }
+    this.__wrapperPopup.el.dataset.mode = 'attach';
     const fig = this.fig.family;
     this.__wrapperPopup.feed([
       Skeletons.Note({
@@ -248,10 +250,12 @@ class __lib_messenger extends LetcBox {
         return this._showAttachMenu();
 
       case 'attach-from-device':
+        this.__wrapperPopup.el.removeAttribute('data-mode');
         this.__wrapperPopup.clear();
         return this.__fileselector.open(this._upload.bind(this));
 
       case 'attach-from-workspace':
+        this.__wrapperPopup.el.removeAttribute('data-mode');
         this.__wrapperPopup.clear();
         return this.triggerHandlers({ service: 'attach-from-desk' });
 
