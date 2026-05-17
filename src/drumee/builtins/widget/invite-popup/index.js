@@ -555,6 +555,8 @@ class __invite_popup extends LetcBox {
         if (failed.length) {
           Wm.alert(LOCALE.INVITE_PARTIAL_FAILED.format(
             flat.length - failed.length, failed.length));
+        } else {
+          Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY);
         }
         this._closePopup();
       })

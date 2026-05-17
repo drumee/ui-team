@@ -48,6 +48,7 @@ module.exports = function (ui) {
             }),
             items: [
               addMenuItem(pfx, ui, "addmenu-folder", LOCALE.WORKSPACE || "Workspace", "new-workspace", "", { highlight: 1, iconClass: "ico-workspace" }),
+              addMenuItem(pfx, ui, "addmenu-folder", LOCALE.PRIVATE_FOLDER || "Private folder", "add-private-folder", "", { iconClass: "ico-private-folder" }),
               addMenuItem(pfx, ui, "addmenu-note", LOCALE.NOTE || "Note", "new-note", "", { iconClass: "ico-note" }),
               addMenuItem(pfx, ui, "addmenu-document", LOCALE.DOCUMENT || "Document", "new-document", "document.docx", { iconClass: "ico-document" }),
               addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", "spreadsheet.xlsx", { iconClass: "ico-spreadsheet" }),

@@ -942,8 +942,11 @@ class desk_module extends LetcBox {
       //   return this._toggleAddMenu();
 
       case "new-workspace":
-        // this._hideAddMenu(); 
+        // this._hideAddMenu();
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
+
+      case "add-private-folder":
+        return Wm.onUiEvent(cmd, { ...args, service: "add-private-folder" });
 
       case "new-note":
         Wm.windowsLayer.append({

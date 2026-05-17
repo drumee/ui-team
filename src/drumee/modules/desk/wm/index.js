@@ -113,6 +113,7 @@ class __window_manager extends push {
   }
 
   closeCreateFolderDialog() {
+    this._pendingFolderArea = null;
     return this.ensurePart("wrapper-modal").then((p) => {
       p.el.dataset.mode = "";
       p.clear();
@@ -129,8 +130,36 @@ class __window_manager extends push {
       this._creatingFolder = 0;
       return this.alert(LOCALE.INVALID_FILENAME);
     }
+
+    // "Private folder" from the desk "Add new" menu → create a private hub
+    // via desk.create_hub. media.make_dir cannot create a top-level directory
+    // under the hub root (returns 403); private/share/public "folders" are
+    // hubs, not plain MFS directories.
+    if (this._pendingFolderArea === _a.private) {
+      this._pendingFolderArea = null;
+      return this.postService(SERVICE.desk.create_hub, {
+        area: _a.private,
+        filename,
+        hub_id: Visitor.id,
+        pid: Visitor.id,
+      }).then((res) => {
+        const hub = Array.isArray(res) ? res[0] : res;
+        if (hub && (hub.error || hub.error_code)) {
+          return this.alert(LOCALE[hub.error] || hub.reason || hub.error);
+        }
+        this.closeCreateFolderDialog();
+        RADIO_BROADCAST.trigger("workspace:refresh");
+      }).catch((e) => {
+        this.warn("Failed to create private folder", e);
+        this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
+      }).finally(() => {
+        this._creatingFolder = 0;
+      });
+    }
+
     const hub_id = this._curWorkspace?.hub_id || Visitor.id;
     const nid = this._curWorkspace?.nid || Visitor.id;
+    const area = this._curWorkspace?.area || _a.personal;
     return this.postService(SERVICE.media.make_dir, {
       hub_id,
       dirname: filename,
@@ -140,7 +169,7 @@ class __window_manager extends push {
       socket_id: Visitor.get(_a.socket_id),
       seeding: 1,
       echoId: this.mget('echoId'),
-      area: this._curWorkspace?.area || _a.personal,
+      area,
     }).then((data) => {
       if (data && data.error) {
         return this.alert(LOCALE[data.error] || data.error);
@@ -1341,6 +1370,11 @@ class __window_manager extends push {
         return this.closeDialog();
 
       case "add-folder":
+        this._pendingFolderArea = null;
+        return this.openCreateFolderDialog();
+
+      case "add-private-folder":
+        this._pendingFolderArea = _a.private;
         return this.openCreateFolderDialog();
 
       case "create-folder-submit":
