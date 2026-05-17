@@ -201,21 +201,26 @@
     height: 170px;
   }
 
-  &__wrapper-popup.dialog__wrapper[data-mode="attach"] {
+  &__attach-menu.dialog__wrapper {
+    background: var(--default-bg);
+    border-radius: var(--border-radius);
+    bottom: calc(100% + 6px);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
     left: 0;
-    right: auto;
-    width: auto !important;
     min-width: 160px;
     padding: 4px;
+    position: absolute;
+    width: auto;
+    z-index: 200;
   }
 
   &__attach-option {
-    display: block;
-    padding: 8px 14px;
-    cursor: pointer;
-    white-space: nowrap;
     border-radius: var(--border-radius);
+    cursor: pointer;
+    display: block;
     font-size: 13px;
+    padding: 9px 14px;
+    white-space: nowrap;
 
     &:hover {
       background: var(--normal-bg-10);

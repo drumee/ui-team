@@ -168,14 +168,14 @@ class __lib_messenger extends LetcBox {
   }
 
   _showAttachMenu() {
-    if (!this.__wrapperPopup.isEmpty()) {
-      this.__wrapperPopup.el.removeAttribute('data-mode');
-      this.__wrapperPopup.clear();
+    const menu = this.__wrapperAttachMenu;
+    if (!menu) return;
+    if (!menu.isEmpty()) {
+      menu.clear();
       return;
     }
-    this.__wrapperPopup.el.dataset.mode = 'attach';
     const fig = this.fig.family;
-    this.__wrapperPopup.feed([
+    menu.feed([
       Skeletons.Note({
         className: `${fig}__attach-option`,
         content: LOCALE.FROM_DEVICE,
@@ -250,13 +250,11 @@ class __lib_messenger extends LetcBox {
         return this._showAttachMenu();
 
       case 'attach-from-device':
-        this.__wrapperPopup.el.removeAttribute('data-mode');
-        this.__wrapperPopup.clear();
+        if (this.__wrapperAttachMenu) this.__wrapperAttachMenu.clear();
         return this.__fileselector.open(this._upload.bind(this));
 
       case 'attach-from-workspace':
-        this.__wrapperPopup.el.removeAttribute('data-mode');
-        this.__wrapperPopup.clear();
+        if (this.__wrapperAttachMenu) this.__wrapperAttachMenu.clear();
         return this.triggerHandlers({ service: 'attach-from-desk' });
 
       case _e.submit:

@@ -548,12 +548,6 @@ class __widget_chat extends LetcBox {
               className: `${fig}__desk-picker-title`,
               content: LOCALE.FROM_WORKSPACE
             }),
-            Skeletons.Note({
-              className: `${fig}__desk-picker-close clickable`,
-              content: '×',
-              service: 'close-desk-picker',
-              uiHandler: [this]
-            })
           ]
         }),
         Skeletons.List.Smart({
@@ -570,10 +564,16 @@ class __widget_chat extends LetcBox {
             uiHandler: [this]
           },
           itemsMap: { filename: 'content' },
-          evArgs: Skeletons.Note(LOCALE.NO_FILES_YET || 'No files', 'no-content'),
+          evArgs: Skeletons.Note(LOCALE.NO_FILES_YET || LOCALE.NO_DISCUSSIONS_YET, 'no-content'),
           vendorOpt: Preset.List.Orange_e,
           spinner: true,
           spinnerWait: 300
+        }),
+        Skeletons.Note({
+          className: `${fig}__desk-picker-cancel`,
+          content: LOCALE.CANCEL,
+          service: 'close-desk-picker',
+          uiHandler: [this]
         })
       ]
     }));
