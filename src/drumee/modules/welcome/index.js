@@ -278,7 +278,7 @@ class __welcome_router extends LetcBox {
   async _redeemInviteThenEnter() {
     if (this._inviteToken) {
       try {
-        const res = await this.postService('loby.accept_invite', {
+        const res = await this.postService('invite.accept_invite', {
           token: this._inviteToken,
         });
         this._inviteToken = null;
