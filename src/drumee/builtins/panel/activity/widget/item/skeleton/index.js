@@ -46,11 +46,16 @@ function getItemName(data, preview) {
   return preview.filename || preview.name || preview.user_filename || data.link_label || data.surname || data.hub_name || data.message || "item";
 }
 
-// Canonical category keys returned by activity.list. The legacy mfs feed
-// (activity.get_feed → activity_get_log) sometimes only has `event_type`;
-// keep both as a fallback chain.
+// Canonical category keys returned by activity.list. activity.get_feed
+// rows (from mfs_changelog) only carry `event` like "media.remove" — fall
+// back to inferring the category from that prefix so the switch matches.
 function getCategory(data) {
-  return data.category || data.event_type || data.type || '';
+  const direct = data.category || data.event_type || data.type;
+  if (direct) return direct;
+  const ev = String(data.event || '');
+  if (ev === 'hub.invite_received') return 'hub_invite';
+  const dot = ev.indexOf('.');
+  return dot > 0 ? ev.slice(0, dot) : '';
 }
 
 const COUNT_SUFFIX = (cnt) => (cnt > 1 ? ` (${cnt})` : '');
@@ -76,9 +81,12 @@ function getActivityMeta(data, preview) {
 
   switch (category) {
     case 'hub_invite':
+      // Never fall back to `name` for hub_invite — that resolver chains
+      // through surname/sender fields and ends up showing the inviter's
+      // own name (e.g. "invited you to workspace<InviterName>").
       return {
         before: data.action || 'invited you to ',
-        label: data.link_label || data.hub_name || name,
+        label: data.link_label || data.hub_name || data.hub_headline || data.hub_ident || '',
         after: '',
         colorClass: 'mention',
         badge: 'mention',
