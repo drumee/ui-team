@@ -129,8 +129,14 @@ class __window_manager extends push {
       this._creatingFolder = 0;
       return this.alert(LOCALE.INVALID_FILENAME);
     }
-    const hub_id = this._curWorkspace?.hub_id || Visitor.id;
-    const nid = this._curWorkspace?.nid || Visitor.id;
+    const onHome = !this._curWorkspace;
+    const hub_id = onHome ? Visitor.id : this._curWorkspace.hub_id;
+    const nid = onHome ? Visitor.get(_a.home_id) : this._curWorkspace.nid;
+    const area = onHome ? _a.personal : this._curWorkspace.area;
+    if (!nid) {
+      this._creatingFolder = 0;
+      return this.alert(LOCALE.TRY_AGAIN);
+    }
     return this.postService(SERVICE.media.make_dir, {
       hub_id,
       dirname: filename,
@@ -140,7 +146,7 @@ class __window_manager extends push {
       socket_id: Visitor.get(_a.socket_id),
       seeding: 1,
       echoId: this.mget('echoId'),
-      area: this._curWorkspace?.area || _a.personal,
+      area,
     }).then((data) => {
       if (data && data.error) {
         return this.alert(LOCALE[data.error] || data.error);
@@ -148,7 +154,9 @@ class __window_manager extends push {
       this.closeCreateFolderDialog();
       this.ensurePart(_a.list).then((list) => {
         if (!list || (list.isDestroyed && list.isDestroyed()) || !data) return;
-        if (this._curWorkspace?.hub_id != hub_id || this._curWorkspace?.nid != nid) return;
+        const curHubId = this._curWorkspace ? this._curWorkspace.hub_id : Visitor.id;
+        const curNid = this._curWorkspace ? this._curWorkspace.nid : Visitor.get(_a.home_id);
+        if (curHubId != hub_id || curNid != nid) return;
         if (data.pid && data.pid != nid) return;
         data.kind = this._getKind();
         data.service = "open-node";
