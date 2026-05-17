@@ -477,24 +477,29 @@ class apps_main extends LetcBox {
       const csv = [cols.map((c) => escape(c.header)).join(",")]
         .concat(rows.map((r) => cols.map((c) => escape(cellValue(r, c.key))).join(",")))
         .join("\n");
-      // BOM so Excel opens UTF-8 cleanly.
       const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
       const ts = Dayjs().format("YYYYMMDD-HHmmss");
       const filename = `audit-logs-${ts}.csv`;
-      // apps_main extends LetcBox (not DrumeeMFS), so getBlob isn't on the
-      // prototype — inline the anchor-click trick instead.
       const url = URL.createObjectURL(blob);
+      console.log("[audit-export] rows:", rows.length, "bytes:", blob.size, "url:", url);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
+      a.rel = "noopener";
       a.style.display = "none";
       document.body.appendChild(a);
-      a.click();
+      try {
+        a.click();
+      } catch (clickErr) {
+        console.warn("[audit-export] a.click() failed, falling back to window.open", clickErr);
+        window.open(url, "_blank");
+      }
       setTimeout(() => {
-        document.body.removeChild(a);
+        if (a.parentNode) a.parentNode.removeChild(a);
         URL.revokeObjectURL(url);
-      }, 0);
+      }, 1000);
     } catch (e) {
+      console.warn("[audit-export] export_audit_logs failed", e);
       this.warn && this.warn("export_audit_logs failed", e);
     }
   }
