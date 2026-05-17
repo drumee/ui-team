@@ -86,7 +86,6 @@
     margin-top: 4px;
   }
 
-  /* Email input row: chips + entry on one line, bottom underline */
   &__email-row {
     align-items: center;
     flex-wrap: wrap;
@@ -97,9 +96,8 @@
   }
 
   &__chips {
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
+    // `!important` overrides the framework's `.box[data-flow="x"] { display: flex }`.
+    display: contents !important;
   }
 
   &__chip {
