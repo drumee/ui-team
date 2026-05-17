@@ -204,6 +204,28 @@ class desk_module extends LetcBox {
         this._searchSuggestions = child;
         return;
 
+      case "suggestions-list":
+        // Topbar search must not surface the user's hidden personal hub
+        // (area='personal') or the auto-created wicket/dmz. Filter hub
+        // rows to the collaborative set {share, private, restricted}.
+        // Folders/files (filetype !== _a.hub) always pass — they may
+        // physically live INSIDE the personal hub but they're legitimate
+        // hits. Same predicate as the home-grid filter in wm/index.js.
+        if (child && !child._suggestionsFilterInstalled) {
+          child._suggestionsFilterInstalled = 1;
+          const original = child.prepareData.bind(child);
+          child.prepareData = function (data) {
+            const prepared = original(data) || [];
+            return prepared.filter((it) => {
+              if (!it || it.filetype !== _a.hub) return true;
+              return it.area === _a.share
+                || it.area === _a.private
+                || it.area === _a.restricted;
+            });
+          };
+        }
+        return;
+
       case "add-menu":
         this._addMenu = child;
         return;
