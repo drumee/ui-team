@@ -579,30 +579,59 @@ class __widget_chat extends LetcBox {
     }));
   }
 
-  _pickDeskFile(cmd) {
+  async _pickDeskFile(cmd) {
     const o = cmd.model.toJSON();
     const home = this.mget(_a.home);
     if ([_a.hub, _a.folder].includes(o.filetype) || o.ext === 'lnk') {
       Wm.alert(LOCALE.FILE_TYPE_NOT_SUPPORTED || LOCALE.ACTION_NOT_PERMITTED);
       return;
     }
-    o.kind = 'media_grid';
-    o.phase = _a.copied;
-    o.isAttachment = 1;
-    o.origin = _a.chat;
-    o.destination = {
-      hub_id: this.hubId,
-      nid: home && home.chat_upload_id,
-      home_id: home && home.home_id
+    this._closeDeskPicker();
+
+    // Copy the file to the chat staging folder first, so the original stays on the desk.
+    // move_attachemnt (in chat.post) will then move only the staging copy to the sbox.
+    let stagedNid;
+    try {
+      const copyResult = await this.postService({
+        service: SERVICE.media.copy,
+        nid: o.nid,
+        pid: home && home.chat_upload_id,
+        action: _a.copy,
+        // recipient_id = the entity that owns the staging folder (home.hub_id).
+        // For P2P this is Visitor.id; for channel chats it is the channel hub.
+        // Must match the DB where chat_upload_id lives.
+        recipient_id: home && home.hub_id || this.hubId,
+        hub_id: o.hub_id || this.hubId,
+      });
+      const first = Array.isArray(copyResult) ? copyResult[0] : copyResult;
+      stagedNid = first && first.nid;
+    } catch (e) {
+      this.warn('[chat] _pickDeskFile: copy to staging failed', e);
+    }
+
+    if (!stagedNid) {
+      Wm.alert(LOCALE.ACTION_NOT_PERMITTED);
+      return;
+    }
+
+    const item = {
+      ...o,
+      nid: stagedNid,
+      hub_id: home && home.hub_id || this.hubId,
+      kind: 'media_grid',
+      // phase: _a.local prevents syncData from triggering another media.copy
+      phase: _a.local,
+      isAttachment: 1,
+      origin: _a.chat,
+      uiHandler: [this],
+      logicalParent: this,
     };
-    o.uiHandler = [this];
-    o.logicalParent = this;
+
     if (this.attachmentList && !this.attachmentList.isDestroyed()) {
-      this.attachmentList.addNewMedia([o]);
+      this.attachmentList.addNewMedia([item]);
       this.checkPendingContent();
       this.showSend();
     }
-    this._closeDeskPicker();
   }
 
   _closeDeskPicker() {
