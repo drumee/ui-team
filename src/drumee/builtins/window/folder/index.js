@@ -780,6 +780,11 @@ class __window_folder extends mfsInteract {
       permission: privilege,
     })
       .then((res) => {
+        // hub.invite trả {results:[...]} khi OK; khi lỗi (vd ACL 403) trả
+        // {error, error_code, reason} — phải bắt lỗi top-level này.
+        if (res && (res.error || res.error_code)) {
+          return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+        }
         const r = (res && res.results && res.results[0]) || {};
         if (r.status === "failed") {
           return Wm.alert(r.reason || LOCALE.TRY_AGAIN);

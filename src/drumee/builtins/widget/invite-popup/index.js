@@ -534,6 +534,17 @@ class __invite_popup extends LetcBox {
 
     Promise.all(promises)
       .then((results) => {
+        // hub.invite trả {results:[...]} khi OK; khi lỗi (vd ACL 403) trả
+        // {error, error_code, reason}. Một lần gửi lỗi top-level => báo lỗi,
+        // không đóng popup để người dùng thử lại.
+        const errored = results.filter((r) => r && (r.error || r.error_code));
+        if (errored.length) {
+          this.warn("[invite-popup] hub.invite error", errored);
+          Wm.alert((errored[0] && (errored[0].reason || errored[0].error))
+            || LOCALE.TRY_AGAIN);
+          if (this._sendBtn) this._sendBtn.el.dataset.state = 1;
+          return;
+        }
         const flat = [].concat(...results.map((r) => (r && r.results) || []));
         const failed = flat.filter((r) => r.status === "failed");
         this.triggerHandlers({
