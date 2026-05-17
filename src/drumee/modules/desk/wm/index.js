@@ -537,8 +537,36 @@ class __window_manager extends push {
 
 
   /**
-   *
+   * Home-grid filter — drop hub-symlinks for non-collaborative areas
+   * (personal, dmz/wicket, public, …). Folders/files at home root must
+   * pass through unchanged: mfs_show_node_by's IFNULL(area, _hub_area)
+   * stamps them with the home hub's area='personal', so a flat area
+   * filter would erase them. Hence the filetype guard.
+   * Collaborative set is {share, private, restricted} — `private` here
+   * is the UX "restricted" workspace, not the personal hub.
+   * No-op once the user has navigated into a sub-workspace.
    */
+  onPartReady(child, pn) {
+    if (pn === _a.list && child && !child._homeGridFilterInstalled) {
+      child._homeGridFilterInstalled = 1;
+      const original = child.prepareData.bind(child);
+      const wm = this;
+      child.prepareData = function (data) {
+        const prepared = original(data) || [];
+        const atHome = !wm._curWorkspace
+          || wm._curWorkspace.hub_id === Visitor.id;
+        if (!atHome) return prepared;
+        return prepared.filter((it) => {
+          if (!it || it.filetype !== _a.hub) return true;
+          return it.area === _a.share
+            || it.area === _a.private
+            || it.area === _a.restricted;
+        });
+      };
+    }
+    if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
   onDomRefresh() {
     this.feed(require("./skeleton")(this));
     this.fetchService(SERVICE.desk.get_env,

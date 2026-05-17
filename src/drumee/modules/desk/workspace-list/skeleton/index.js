@@ -32,6 +32,9 @@ module.exports = function (ui) {
       hub_id: Visitor.id,
       type: _a.hub
     },
+    // Collaborative workspaces only — `private` is the UX "restricted".
+    // Excludes personal hub and the default dmz/wicket.
+    skip: { area: /^(?!(share|private|restricted)$).*$/ },
   });
 
   return list;

@@ -133,6 +133,9 @@ class __desk_workspace extends LetcBox {
 
   _addHub(data) {
     if (this._findHubModel(data)) return;
+    // Mirror the skeleton's skip filter — `private` is the UX "restricted".
+    const area = data && data.area;
+    if (area !== _a.share && area !== _a.private && area !== _a.restricted) return;
     this.__list.append(data);
   }
 
