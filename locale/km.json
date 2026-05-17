@@ -1524,5 +1524,6 @@
   "ONBOARDING_GOAL_WORKFLOWS": "បង្កើតលំហូរការងាររបស់អ្នក",
   "ONBOARDING_GOAL_PERSONAL": "គ្រប់គ្រងឯកសារផ្ទាល់ខ្លួន",
   "ONBOARDING_INVITE_PLACEHOLDER": "សមាជិក@ក្រុមហ៊ុន.com",
-  "INVITE_PLACEHOLDER": "ឈ្មោះ@ក្រុមហ៊ុន.com"
+  "INVITE_PLACEHOLDER": "ឈ្មោះ@ក្រុមហ៊ុន.com",
+  "INVITE_LINK_INVALID": "តំណអញ្ជើញនេះលែងមានសុពលភាពទៀតហើយ។"
 }

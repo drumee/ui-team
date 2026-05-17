@@ -1522,5 +1522,6 @@
   "ONBOARDING_GOAL_WORKFLOWS": "Build your own workflows on your data",
   "ONBOARDING_GOAL_PERSONAL": "Personal file management - one system",
   "ONBOARDING_INVITE_PLACEHOLDER": "colleague@company.com",
-  "INVITE_PLACEHOLDER": "name@company.com"
+  "INVITE_PLACEHOLDER": "name@company.com",
+  "INVITE_LINK_INVALID": "Este enlace de invitación ya no es válido."
 }

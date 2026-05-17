@@ -1524,5 +1524,6 @@
   "ONBOARDING_GOAL_WORKFLOWS": "Создание рабочих процессов на ваших данных",
   "ONBOARDING_GOAL_PERSONAL": "Личное управление файлами - одна система",
   "ONBOARDING_INVITE_PLACEHOLDER": "коллега@компания.com",
-  "INVITE_PLACEHOLDER": "имя@компания.com"
+  "INVITE_PLACEHOLDER": "имя@компания.com",
+  "INVITE_LINK_INVALID": "Эта пригласительная ссылка больше недействительна."
 }
