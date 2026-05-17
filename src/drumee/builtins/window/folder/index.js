@@ -774,13 +774,18 @@ class __window_folder extends mfsInteract {
     if (btn?.getAttribute("data-pending") === "1") return;
     if (btn) btn.setAttribute("data-pending", "1");
 
-    return this.postService(SERVICE.hub.add_contributors, {
+    return this.postService(SERVICE.hub.invite, {
       hub_id,
-      privilege,
-      users: [email],
-      email: [email],
+      invitees: [email],
+      permission: privilege,
     })
-      .then(() => Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY))
+      .then((res) => {
+        const r = (res && res.results && res.results[0]) || {};
+        if (r.status === "failed") {
+          return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
+        }
+        Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY);
+      })
       .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN))
       .finally(() => {
         if (btn) btn.removeAttribute("data-pending");
