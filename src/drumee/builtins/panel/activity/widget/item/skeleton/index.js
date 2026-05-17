@@ -241,14 +241,19 @@ module.exports = function (ui) {
     ],
   });
 
-  // itemType MUST match the canonical `category` returned by activity.list,
-  // so server-side `notification_dismiss` can route correctly.
-  // Valid values: chat | contact | media | teamchat | ticket | hub_invite | contact_invite | mfs
-  const itemType = getCategory(data)
+  // itemType routes the dismiss handler — DO NOT use the inferred
+  // getCategory() here. Rollup rows from activity.list carry an explicit
+  // `data.category` and dismiss via activity.dismiss_rollup. Raw
+  // mfs_changelog rows from activity.get_feed have no category, only
+  // `event`, and must dismiss via activity.dismiss with changelog_id —
+  // they MUST stay tagged as 'mfs' so the dismiss handler takes the
+  // per-changelog branch.
+  const itemType = data.category
     || (data.event === 'hub.invite_received' ? 'hub_invite' : 'mfs');
   const itemKey = `${itemType}:${data.id || data.hub_id || data.drumate_id || data.key_id || ''}`;
   ui.mset('item_type', itemType);
   ui.mset('item_key', itemKey);
+  if (data.id != null) ui.mset('changelog_id', data.id);
 
   const actions = Skeletons.Box.X({
     className: `${pfx}__actions`,

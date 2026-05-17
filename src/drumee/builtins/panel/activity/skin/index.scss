@@ -208,12 +208,26 @@
     }
   }
 
-  /* ── Notification list ───────────────────────────────────── */
-  &__list {
+  /* ── Notification feed (priority section + smart list) ──── */
+  /* The scroll lives on __feed so the pinned priority items and the
+     paginated list both scroll together and share horizontal padding. */
+  &__feed {
     flex: 1;
     overflow-y: auto;
     max-height: calc(100vh - 102px);
     padding: 0 8px 16px;
+  }
+
+  &__priority {
+    width: 100%;
+  }
+
+  &__list {
+    flex: none;
+    overflow-y: visible;
+    max-height: none;
+    padding: 0;
+    width: 100%;
 
     .smart-container {
       display: flex;
