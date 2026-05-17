@@ -334,6 +334,46 @@
     }
   }
 
+  &__desk-picker.dialog__wrapper[data-state="open"] {
+    border-top: 1px solid var(--normal-bg-10);
+    max-height: 240px;
+    overflow: hidden;
+  }
+
+  &__desk-picker-panel {
+    height: 100%;
+  }
+
+  &__desk-picker-header {
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--normal-bg-10);
+  }
+
+  &__desk-picker-close {
+    font-size: 18px;
+    padding: 0 6px;
+    color: var(--normal-fg-10);
+    &:hover { color: var(--normal-fg-20); }
+  }
+
+  &__desk-picker-list {
+    flex: 1;
+    overflow-y: auto;
+
+    .note {
+      display: block;
+      padding: 6px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      &:hover { background: var(--normal-bg-10); }
+    }
+  }
+
   &__ack-wrapper {
     bottom: 5px;
     height: 100%;

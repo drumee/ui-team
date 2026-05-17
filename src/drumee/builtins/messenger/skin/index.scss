@@ -201,6 +201,18 @@
     height: 170px;
   }
 
+  &__attach-option {
+    display: block;
+    padding: 8px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-radius: var(--border-radius);
+
+    &:hover {
+      background: var(--normal-bg-10);
+    }
+  }
+
   &__icon {
     height: 23px;
     margin: 5px 8px;
