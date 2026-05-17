@@ -201,6 +201,27 @@
     height: 170px;
   }
 
+  &__wrapper-popup.dialog__wrapper[data-mode="attach"] {
+    left: 0;
+    right: auto;
+    width: auto !important;
+    min-width: 160px;
+    padding: 4px;
+  }
+
+  &__attach-option {
+    display: block;
+    padding: 8px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-radius: var(--border-radius);
+    font-size: 13px;
+
+    &:hover {
+      background: var(--normal-bg-10);
+    }
+  }
+
   &__icon {
     height: 23px;
     margin: 5px 8px;

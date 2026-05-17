@@ -394,6 +394,15 @@ class __widget_chat extends LetcBox {
       case 'remove-upload':
         return this.removeUpload(cmd);
 
+      case 'attach-from-desk':
+        return this._openDeskPicker();
+
+      case 'pick-desk-file':
+        return this._pickDeskFile(cmd);
+
+      case 'close-desk-picker':
+        return this._closeDeskPicker();
+
       case _a.interactive:
         return this.onInputChange(args);
 
@@ -514,6 +523,94 @@ class __widget_chat extends LetcBox {
    * @param {*} token 
    * @returns 
    */
+  async _openDeskPicker() {
+    const picker = await this.ensurePart('wrapper-desk-picker');
+    if (!picker.isEmpty()) {
+      picker.clear();
+      return;
+    }
+    let home;
+    try {
+      home = await this.fetchService(SERVICE.media.home, { hub_id: Visitor.id });
+    } catch (e) {
+      this.warn('[chat] _openDeskPicker: failed to fetch home', e);
+      return;
+    }
+    if (!home || !home.home_id) return;
+    const fig = this.fig.family;
+    picker.feed(Skeletons.Box.Y({
+      className: `${fig}__desk-picker-panel`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${fig}__desk-picker-header`,
+          kids: [
+            Skeletons.Note({
+              className: `${fig}__desk-picker-title`,
+              content: LOCALE.FROM_WORKSPACE
+            }),
+            Skeletons.Note({
+              className: `${fig}__desk-picker-close clickable`,
+              content: '×',
+              service: 'close-desk-picker',
+              uiHandler: [this]
+            })
+          ]
+        }),
+        Skeletons.List.Smart({
+          className: `${fig}__desk-picker-list`,
+          api: {
+            service: SERVICE.media.show_node_by,
+            hub_id: home.hub_id || Visitor.id,
+            nid: home.home_id,
+            page: 1
+          },
+          itemsOpt: {
+            kind: KIND.note,
+            service: 'pick-desk-file',
+            uiHandler: [this]
+          },
+          itemsMap: { filename: 'content' },
+          evArgs: Skeletons.Note(LOCALE.NO_FILES_YET || 'No files', 'no-content'),
+          vendorOpt: Preset.List.Orange_e,
+          spinner: true,
+          spinnerWait: 300
+        })
+      ]
+    }));
+  }
+
+  _pickDeskFile(cmd) {
+    const o = cmd.model.toJSON();
+    const home = this.mget(_a.home);
+    if ([_a.hub, _a.folder].includes(o.filetype) || o.ext === 'lnk') {
+      Wm.alert(LOCALE.FILE_TYPE_NOT_SUPPORTED || LOCALE.ACTION_NOT_PERMITTED);
+      return;
+    }
+    o.kind = 'media_grid';
+    o.phase = _a.copied;
+    o.isAttachment = 1;
+    o.origin = _a.chat;
+    o.destination = {
+      hub_id: this.hubId,
+      nid: home && home.chat_upload_id,
+      home_id: home && home.home_id
+    };
+    o.uiHandler = [this];
+    o.logicalParent = this;
+    if (this.attachmentList && !this.attachmentList.isDestroyed()) {
+      this.attachmentList.addNewMedia([o]);
+      this.checkPendingContent();
+      this.showSend();
+    }
+    this._closeDeskPicker();
+  }
+
+  _closeDeskPicker() {
+    this.ensurePart('wrapper-desk-picker').then(picker => {
+      if (picker && !picker.isDestroyed()) picker.clear();
+    });
+  }
+
   upload(e, token) {
     let target;
     switch (e.area) {

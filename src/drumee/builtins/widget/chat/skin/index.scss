@@ -29,6 +29,7 @@
 
   &__container {
     height: 100%;
+    position: relative;
     width: 100%;
 
     .drumee-spinner {
@@ -331,6 +332,76 @@
         $weight: 300,
         $color: var(--default-text-color)
       );
+    }
+  }
+
+  &__desk-picker.dialog__wrapper[data-state="open"] {
+    background: var(--default-bg);
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: var(--border-radius);
+    bottom: 55px;
+    box-shadow: var(--drumee-shadow-box, 0 -2px 12px rgba(0,0,0,0.15));
+    display: flex !important;
+    flex-direction: column;
+    left: 8px;
+    max-height: 240px;
+    overflow: hidden;
+    position: absolute;
+    right: 8px;
+    z-index: 100;
+  }
+
+  &__desk-picker-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  &__desk-picker-header {
+    align-items: center;
+    background: var(--default-bg);
+    border-bottom: 1px solid var(--normal-bg-10, #eee);
+    flex-shrink: 0;
+    justify-content: space-between;
+    padding: 8px 12px;
+
+    .widget-chat__desk-picker-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+  }
+
+  &__desk-picker-close {
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 4px;
+    color: var(--normal-fg-10);
+    &:hover { color: var(--normal-fg-20); }
+  }
+
+  &__desk-picker-list {
+    flex: 1;
+    overflow-y: auto;
+
+    .list-smart__container {
+      display: flex;
+      flex-direction: column;
+      padding: 4px 0;
+
+      > * {
+        cursor: pointer;
+        display: block;
+        overflow: hidden;
+        padding: 7px 14px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        &:hover {
+          background: var(--normal-bg-10, #f5f5f5);
+        }
+      }
     }
   }
 

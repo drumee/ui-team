@@ -105,6 +105,10 @@ const __skl_widget_chat = function (ui) {
           body,
           ackWrapper,
           Skeletons.Wrapper.Y({
+            className: `${chatFig}__desk-picker`,
+            name: 'desk-picker',
+          }),
+          Skeletons.Wrapper.Y({
             className: `${chatFig}_chat_footer ack-wrapper`,
             sys_pn: 'chat-footer',
             kids: require('./footer')(ui)

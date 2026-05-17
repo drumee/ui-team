@@ -130,36 +130,14 @@ class __window_manager extends push {
       this._creatingFolder = 0;
       return this.alert(LOCALE.INVALID_FILENAME);
     }
-
-    // "Private folder" from the desk "Add new" menu → create a private hub
-    // via desk.create_hub. media.make_dir cannot create a top-level directory
-    // under the hub root (returns 403); private/share/public "folders" are
-    // hubs, not plain MFS directories.
-    if (this._pendingFolderArea === _a.private) {
-      this._pendingFolderArea = null;
-      return this.postService(SERVICE.desk.create_hub, {
-        area: _a.private,
-        filename,
-        hub_id: Visitor.id,
-        pid: Visitor.id,
-      }).then((res) => {
-        const hub = Array.isArray(res) ? res[0] : res;
-        if (hub && (hub.error || hub.error_code)) {
-          return this.alert(LOCALE[hub.error] || hub.reason || hub.error);
-        }
-        this.closeCreateFolderDialog();
-        RADIO_BROADCAST.trigger("workspace:refresh");
-      }).catch((e) => {
-        this.warn("Failed to create private folder", e);
-        this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
-      }).finally(() => {
-        this._creatingFolder = 0;
-      });
+    const onHome = !this._curWorkspace;
+    const hub_id = onHome ? Visitor.id : this._curWorkspace.hub_id;
+    const nid = onHome ? Visitor.get(_a.home_id) : this._curWorkspace.nid;
+    const area = onHome ? _a.personal : this._curWorkspace.area;
+    if (!nid) {
+      this._creatingFolder = 0;
+      return this.alert(LOCALE.TRY_AGAIN);
     }
-
-    const hub_id = this._curWorkspace?.hub_id || Visitor.id;
-    const nid = this._curWorkspace?.nid || Visitor.id;
-    const area = this._curWorkspace?.area || _a.personal;
     return this.postService(SERVICE.media.make_dir, {
       hub_id,
       dirname: filename,
@@ -177,7 +155,9 @@ class __window_manager extends push {
       this.closeCreateFolderDialog();
       this.ensurePart(_a.list).then((list) => {
         if (!list || (list.isDestroyed && list.isDestroyed()) || !data) return;
-        if (this._curWorkspace?.hub_id != hub_id || this._curWorkspace?.nid != nid) return;
+        const curHubId = this._curWorkspace ? this._curWorkspace.hub_id : Visitor.id;
+        const curNid = this._curWorkspace ? this._curWorkspace.nid : Visitor.get(_a.home_id);
+        if (curHubId != hub_id || curNid != nid) return;
         if (data.pid && data.pid != nid) return;
         data.kind = this._getKind();
         data.service = "open-node";
