@@ -3,7 +3,7 @@ const { fitBoxes } = require("@drumee/ui-essentials")
 require('../skin');
 require('./skin');
 
-const { TweenMax, Cubic } = gsap;
+const { TweenMax, Cubic } = require("@drumee/ui-core/vendor");
 const __core = require('player/interact');
 class __player_image extends __core {
 

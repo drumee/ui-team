@@ -1,5 +1,5 @@
 
-const { TweenMax, Expo } = gsap;
+const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const { copyToClipboard, fitBoxes } = require("@drumee/ui-essentials")
 
 const __core = require('player/interact');

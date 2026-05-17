@@ -1198,12 +1198,18 @@ class __window_manager extends push {
             ? { kind: 'folder_form', hub_id: this._curWorkspace.hub_id, nid: this._curWorkspace.nid }
             : { kind: 'media_form' };
           p.feed(skel);
-          const child = p.children.last();
-          if (child) {
-            child.once(_e.destroy, () => {
-              p.el.dataset.state = "closed";
-              delete p.el.dataset.overlay;
-            });
+          // Reset the wrapper only when the whole dialog chain is gone.
+          // media_form chains to permission_* via parent.feed(); collection
+          // "update" fires once after the swap so length reflects the final
+          // state — using per-child destroy would close the wrapper mid-swap.
+          if (!p._closeWhenEmpty) {
+            p._closeWhenEmpty = () => {
+              if (p.collection && p.collection.length === 0) {
+                p.el.dataset.state = "closed";
+                delete p.el.dataset.overlay;
+              }
+            };
+            p.collection.on("update reset", p._closeWhenEmpty);
           }
         });
 

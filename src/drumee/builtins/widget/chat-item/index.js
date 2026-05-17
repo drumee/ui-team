@@ -408,14 +408,16 @@ class ___widget_chatItem extends LetcBox {
    */
   onUiEvent(cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
+    console.log('[chat-item] onUiEvent', service);
     switch (service) {
       case 'chat-item-menu':
         /**  DO NOT REMOVE */
         return;
 
       case _a.forward:
-      case _a.delete:
-        this.select(1);
+      case 'chat-item-delete':
+        console.log('[chat-item] delete/forward', { service, hasMain: !!this.__main, hasMessageEl: !!this.messageEl });
+        try { this.select(1); } catch(e) { console.error('[chat-item] select(1) threw:', e); }
         this.triggerHandlers({
           service: 'show-message-selector',
           type: service
@@ -445,7 +447,7 @@ class ___widget_chatItem extends LetcBox {
       s = toggleState(this.mget('selected')) ^ 1;
     }
 
-    this.messageEl.dataset.selected = s;
+    if (this.messageEl) this.messageEl.dataset.selected = s;
     const el = document.getElementById(`${this.mget(_a.widgetId)}-checkbox`);
     if (el != null) {
       el.dataset.selected = s;

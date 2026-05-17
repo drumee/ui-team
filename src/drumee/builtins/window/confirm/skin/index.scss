@@ -2,67 +2,39 @@
 
 .window-confirm {
   &__ui {
-    background-color: var(--default-bg);
-    border-radius: 14px;
-    padding: 22px 24px 24px;
+    background-color: var(--normal-bg-90);
+    border-radius: var(--corner-radius-4);
+    padding: 16px 20px 20px;
     width: auto;
     height: auto;
     max-height: 100%;
     max-width: 100%;
     min-height: 0;
-    min-width: 390px;
+    min-width: 340px;
     overflow: hidden;
     position: absolute;
     justify-content: flex-start;
     align-items: center;
-    border: 1px solid var(--border-muted);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
 
     &[data-device="mobile"] {
       min-width: unset !important;
       width: calc(100vw - 32px) !important;
-      max-width: 360px;
+      max-width: 340px;
     }
 
     &[data-type="confirm"] {
       background-color: var(--normal-bg-90);
-      border-radius: 14px;
-      padding: 22px 24px 24px;
-      width: auto;
-      height: auto;
-      max-height: 100%;
-      max-width: 100%;
-      min-height: 0;
-      min-width: 390px;
-      overflow: hidden;
-      position: absolute;
-    }
-
-    &[data-device="mobile"][data-type="confirm"] {
-      min-width: unset !important;
-      width: calc(100vw - 32px) !important;
-      max-width: 360px;
     }
 
     &[data-maxsize="1"] {
-      max-height: 400px;
-      max-width: 600px;
-      background-color: var(--normal-bg-90);
+      max-width: 380px;
     }
 
-    &[data-maxsize="0"] {
-      max-height: 400px;
-      max-width: 560px;
-      background-color: var(--normal-bg-90);
-    }
-  }
-
-  &__icon {
-    &.logo {
-      svg {
-        width: 42px;
-        height: 42px;
-      }
+    &[data-maxsize="0"],
+    &[data-maxsize="2"] {
+      max-width: 360px;
     }
   }
 
@@ -72,223 +44,189 @@
     height: 100%;
     justify-content: flex-start;
     width: 100%;
-    gap: 18px;
+    gap: 12px;
   }
 
   &__topbar {
-    height: auto;
-    opacity: 1 !important;
     width: 100%;
+    opacity: 1 !important;
   }
 
-  &-header {
-    align-items: center;
-    display: flex;
-    flex-direction: row;
-    gap: 12px;
-    justify-content: center;
+  &-topbar__container {
     width: 100%;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  &__close {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    margin-left: auto;
+    border-radius: 6px;
+    transition: background-color 120ms ease;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  }
+
+  &__icon-bubble {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &-svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &--danger {
+      background-color: rgba(214, 95, 89, 0.12);
+      color: var(--restricted, #d65f59);
+    }
+
+    &--primary {
+      background-color: rgba(178, 81, 251, 0.12);
+      color: var(--primary-50, #433cc5);
+    }
+
+    &--warn {
+      background-color: rgba(255, 168, 0, 0.14);
+      color: #f3a712;
+    }
+
+    &--info {
+      background-color: rgba(0, 122, 204, 0.12);
+      color: #007acc;
+    }
   }
 
   &__body {
-    align-items: center;
+    align-items: flex-start;
     flex: 1;
-    justify-content: center;
+    justify-content: flex-start;
     min-height: 0;
-    padding: 0 10px;
     width: 100%;
-    gap: 10px;
-
-    > * {
-      text-align: center;
-      width: 100%;
-    }
-
-    .note-content,
-    .inner,
-    p {
-      text-align: center !important;
-      margin: 0 auto;
-      width: 100%;
-    }
-
-    p {
-      display: block;
-      margin: 0 auto;
-    }
-  }
-
-  &-topbar {
-    &__container {
-      border-bottom: 1px solid transparent;
-      border-radius: var(--default-border-radius-top);
-      flex: 1;
-    }
-
-    &__control {
-      height: 100%;
-      position: absolute;
-      right: 0;
-
-      .icon {
-        color: var(--egrey-b6);
-        margin: 10px;
-        opacity: 0.5;
-      }
-    }
+    gap: 6px;
   }
 
   &__title {
-    align-content: center;
-    justify-content: center;
-    text-align: center;
-    width: auto;
+    width: 100%;
+    text-align: left;
     @include drumee.typo(
-      $size: 18px,
-      $line: 26px,
-      $color: var(--default-text-alert)
+      $size: 16px,
+      $line: 22px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
     );
-
-    & .name {
-      @include drumee.typo(
-        $size: 18px,
-        $line: 26px,
-        $color: var(--default-text-alert)
-      );
-    }
   }
 
   &__message {
     display: block;
-    font-weight: 600;
-    margin: 0 auto;
-    text-align: center;
     width: 100%;
+    text-align: left;
     @include drumee.typo(
-      $weight: 500,
-      $size: 15px,
-      $line: 22px,
-      $color: var(--normal-fg-10)
+      $weight: 400,
+      $size: 13px,
+      $line: 19px,
+      $color: var(--neutral-700, #5b5b6e)
     );
 
     .note-content,
     .inner,
     p {
-      text-align: center;
-      margin: 0 auto;
+      text-align: left;
+      margin: 0;
       width: 100%;
     }
 
     p {
       display: block;
-      margin: 0 auto;
-    }
-
-    &.trash {
-      width: 50px;
-      margin: 10px auto;
-      @include drumee.typo(
-        $weight: 300,
-        $size: 16px,
-        $line: 26px,
-        $color: violet
-      );
-    }
-
-    &.delete-team {
-      display: block;
-      max-width: 320px;
-      margin: 0 auto;
+      margin: 0;
     }
   }
 
   &__submessage {
     display: block;
-    font-weight: 400;
-    margin: 0 auto;
-    text-align: center;
     width: 100%;
+    text-align: left;
+    margin-top: 4px;
     @include drumee.typo(
-      $weight: 300,
-      $size: 13px,
-      $line: 19px,
-      $color: var(--neutral-700)
+      $weight: 400,
+      $size: 12px,
+      $line: 17px,
+      $color: var(--neutral-500)
     );
 
     .note-content,
     .inner,
     p {
-      text-align: center;
-      margin: 0 auto;
+      text-align: left;
+      margin: 0;
       width: 100%;
     }
 
     p {
       display: block;
-      margin: 0 auto;
-    }
-
-    &.trash {
-      width: 50px;
-      margin: 10px auto;
-      @include drumee.typo(
-        $weight: 300,
-        $size: 16px,
-        $line: 26px,
-        $color: violet
-      );
-    }
-
-    &.delete-team {
-      display: block;
-      max-width: 320px;
-      margin: 0 auto;
-    }
-  }
-
-  @media (max-width: var(--medium-width)) {
-    &__message {
-      margin: 0 26px;
+      margin: 0;
     }
   }
 
   &__buttons {
-    align-content: center;
     align-items: center;
     flex-shrink: 0;
-    gap: 12px;
-    justify-content: center;
+    gap: 8px;
+    justify-content: flex-end;
     width: 100%;
+    padding-top: 2px;
 
     .button {
       align-items: center;
-      border-radius: 12px;
+      border-radius: var(--corner-radius-2, 8px);
       cursor: pointer;
-      height: 44px;
+      height: 34px;
       justify-content: center;
       text-align: center;
-      width: 120px;
+      min-width: 84px;
       margin: 0;
-      padding: 0 24px;
-      @include drumee.typo(
-        $size: 16px,
-        $line: 20px,
-        $weight: 500
-      );
+      padding: 0 14px;
+      box-sizing: border-box;
+      transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+      @include drumee.typo($size: 13px, $line: 18px, $weight: 600);
     }
 
     &.intro-popup .button {
       height: 56px;
-      width: 200px;
+      min-width: 200px;
     }
   }
 
   &__button-secondary {
-    border: 1px solid var(--border-muted);
-    @include drumee.typo($size: 16px, $line: 20px, $color: var(--normal-fg-10));
+    background-color: transparent;
+    border: 1px solid var(--neutral-300, rgba(0, 0, 0, 0.12));
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
 
     &:hover {
-      color: var(--normal-fg-20);
+      background-color: var(--normal-bg-100);
     }
 
     &.forbiden {
@@ -299,36 +237,38 @@
   }
 
   &__button-primary {
-    background-color: var(--btn-commit-background);
-    border: 0px;
+    background-color: var(--btn-commit-background, var(--primary-50, #433cc5));
+    border: 0;
     @include drumee.typo(
-      $size: 16px,
+      $size: 14px,
       $line: 20px,
-      $color: var(--btn-commit-text)
+      $weight: 600,
+      $color: var(--btn-commit-text, #fff)
     );
 
     &:hover {
-      background-color: var(--btn-commit-background-hover);
+      background-color: var(--btn-commit-background-hover, var(--primary-40, #5950ff));
     }
 
     &.large {
       min-width: 115px;
-      padding: 0 10px;
+      padding: 0 14px;
       width: auto;
     }
   }
 
   &__button-danger {
-    background-color: var(--btn-caution-background);
-    border: 0px;
+    background-color: var(--btn-caution-background, #d74e49);
+    border: 0;
     @include drumee.typo(
-      $size: 16px,
+      $size: 14px,
       $line: 20px,
-      $color: var(--btn-caution-text)
+      $weight: 600,
+      $color: var(--btn-caution-text, #fff)
     );
 
     &:hover {
-      background-color: var(--btn-caution-background-hover);
+      background-color: var(--btn-caution-background-hover, #c74641);
     }
 
     &.trash-delete {

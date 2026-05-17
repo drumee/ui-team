@@ -193,9 +193,10 @@
   }
 
   &__role-menu {
-    background-color: var(--primary-purple-80);
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--neutral-200);
     border-radius: var(--corner-radius-2);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     min-width: 130px;
     overflow: hidden;
     padding: 4px;
@@ -211,12 +212,12 @@
     transition: background-color 120ms ease;
 
     &[data-state="1"] {
-      background-color: rgba(255, 255, 255, 0.08);
+      background-color: var(--normal-bg-100);
 
       .option-radio {
         border-color: var(--primary-40);
         box-shadow:
-          inset 0 0 0 4px var(--primary-purple-90, #1b1b2e),
+          inset 0 0 0 4px var(--normal-bg-90),
           inset 0 0 0 8px var(--primary-40);
       }
     }
@@ -234,16 +235,11 @@
   }
 
   &__role-option-radio {
-    border: 2px solid var(--neutral-500);
+    border: 2px solid var(--neutral-400);
     border-radius: 50%;
     flex-shrink: 0;
     height: 14px;
     width: 14px;
-
-    // &.active {
-    //   border-color: var(--primary-40);
-    //   box-shadow: inset 0 0 0 3px var(--primary-purple-80), inset 0 0 0 6px var(--primary-40);
-    // }
   }
 
   &__send-btn {
@@ -293,44 +289,55 @@
   &__role-overlay {
     position: absolute;
   }
+
+  // Scoped under .permission-restricted to avoid leaking onto other
+  // menu_topic dropdowns (notably the topbar Add-new). Positioning only —
+  // the role-menu provides its own background, so no white outer frame
+  // and no leftover sliver after the close animation.
+  .menu-topic-items__wrapper[data-direction="down"] {
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background: transparent;
+    padding: 0;
+    border: none;
+
+    &[data-state="closed"] {
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
+
+  .menu-topic-items {
+    background: transparent;
+    padding: 0;
+    border: none;
+  }
+
+  .select-invite-role {
+    &__role-menu {
+      gap: var(--spacer-4);
+    }
+
+    &__role-option {
+      padding: var(--spacer-2) var(--spacer-4);
+      border-radius: var(--corner-radius-1);
+      cursor: pointer;
+      &[data-state="1"] {
+        background-color: var(--primary-40);
+        &:hover {
+          background-color: var(--primary-40);
+        }
+      }
+      &:hover {
+        background-color: var(--primary-40);
+      }
+    }
+  }
 }
 
 .window__wrapper-modal {
   &[data-state="open"] {
     border-radius: var(--corner-radius-5);
-  }
-}
-
-.menu-topic-items__wrapper {
-  &[data-direction="down"] {
-    top: 100%;
-    right: 0;
-    background-color: var(--normal-bg-100);
-    color: var(--normal-fg-10);
-    padding: var(--spacer-4) var(--spacer-6);
-    margin-top: 10px;
-    border-radius: var(--corner-radius-2);
-    border: 1px solid var(--neutral-800);
-  }
-}
-
-.select-invite-role {
-  &__role-menu {
-    gap: var(--spacer-4);
-  }
-
-  &__role-option {
-    padding: var(--spacer-2) var(--spacer-4);
-    border-radius: var(--corner-radius-1);
-    cursor: pointer;
-    &[data-state="1"] {
-      background-color: var(--primary-40);
-      &:hover {
-        background-color: var(--primary-40);
-      }
-    }
-    &:hover {
-      background-color: var(--primary-40);
-    }
   }
 }
