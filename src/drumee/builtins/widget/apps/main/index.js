@@ -446,26 +446,54 @@ class apps_main extends LetcBox {
       });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
       const cols = [
-        "ctime",
-        "actor_name",
-        "email",
-        "action",
-        "category",
-        "entity_id",
-        "hub_id",
-        "log",
+        { key: "ctime",       header: LOCALE.TIMESTAMP       || "Timestamp" },
+        { key: "actor_name",  header: LOCALE.USER            || "User" },
+        { key: "email",       header: LOCALE.EMAIL           || "Email" },
+        { key: "action",      header: LOCALE.ACTION          || "Action" },
+        { key: "category",    header: LOCALE.CATEGORY        || "Category" },
+        { key: "entity_id",   header: LOCALE.TARGET_RESOURCE || "Target Resource" },
+        { key: "hub_id",      header: LOCALE.WORKSPACE       || "Workspace" },
+        { key: "log",         header: LOCALE.MESSAGE         || "Message" },
       ];
+      const titleCase = (s) => {
+        if (!s) return "";
+        const t = String(s).replace(/_/g, " ");
+        return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+      };
+      const cellValue = (row, key) => {
+        if (key === "ctime") {
+          const t = parseInt(row.ctime, 10);
+          if (!t) return "";
+          return Dayjs.unix(t).format("YYYY-MM-DD HH:mm:ss");
+        }
+        if (key === "action" || key === "category") return titleCase(row[key]);
+        return row[key];
+      };
       const escape = (v) => {
         if (v == null) return "";
         const s = String(v).replace(/"/g, '""');
         return /[",\n]/.test(s) ? `"${s}"` : s;
       };
-      const csv = [cols.join(",")]
-        .concat(rows.map((r) => cols.map((c) => escape(r[c])).join(",")))
+      const csv = [cols.map((c) => escape(c.header)).join(",")]
+        .concat(rows.map((r) => cols.map((c) => escape(cellValue(r, c.key))).join(",")))
         .join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      // BOM so Excel opens UTF-8 cleanly.
+      const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
       const ts = Dayjs().format("YYYYMMDD-HHmmss");
-      this.getBlob && this.getBlob(blob, `audit-logs-${ts}.csv`);
+      const filename = `audit-logs-${ts}.csv`;
+      // apps_main extends LetcBox (not DrumeeMFS), so getBlob isn't on the
+      // prototype — inline the anchor-click trick instead.
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
     } catch (e) {
       this.warn && this.warn("export_audit_logs failed", e);
     }
