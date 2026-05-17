@@ -7,7 +7,21 @@ function initialsFromName(name, email) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+// Keys must stay in sync with the action_log.action enum in
+// schemas/common/tables/action_log.sql + alter_action_log_add_actions.sql.
 const ACTION_VARIANTS = {
+  added: "neutral",
+  deleted: "revoke",
+  changed: "policy",
+  left: "neutral",
+  removed: "revoke",
+  backup: "neutral",
+  connection: "neutral",
+  grant_access: "grant",
+  change_policy: "policy",
+  share_link: "share",
+  create_workspace: "grant",
+  // legacy short-form values kept for compatibility with older rows
   grant: "grant",
   share: "share",
   revoke: "revoke",
@@ -17,14 +31,30 @@ const ACTION_VARIANTS = {
   update: "neutral",
 };
 
+const CATEGORY_ICONS = {
+  media: "dock-folder",
+  permission: "account_padlock",
+  member: "user-plus",
+  admin: "settings",
+  title: "editbox_edit",
+};
+
+function humanizeAction(raw) {
+  if (!raw) return "—";
+  const s = String(raw).replace(/_/g, " ").trim();
+  if (!s) return "—";
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
 function mapAuditRow(row) {
   const name =
     row.actor_name ||
     [row.firstname, row.lastname].filter(Boolean).join(" ").trim() ||
     row.email ||
     "—";
-  const action = (row.action || row.category || "").toString();
-  const variant = ACTION_VARIANTS[action.toLowerCase()] || "neutral";
+  const rawAction = (row.action || row.category || "").toString();
+  const variant = ACTION_VARIANTS[rawAction.toLowerCase()] || "neutral";
+  const icon = CATEGORY_ICONS[(row.category || "").toLowerCase()] || "dock-folder";
   const ts = row.ctime
     ? Dayjs(row.ctime * 1000).format("MMM D, YYYY • HH:mm:ss")
     : "—";
@@ -40,9 +70,9 @@ function mapAuditRow(row) {
       initials: initialsFromName(name, row.email),
       avatar_color: row.uid ? "dark" : "neutral",
     },
-    action: { label: action || "—", variant },
+    action: { label: humanizeAction(rawAction), variant },
     resource: {
-      icon: "dock-folder",
+      icon,
       label: row.log || row.entity_id || "—",
     },
     timestamp: ts,

@@ -94,7 +94,8 @@ function deriveRole(privilege) {
 }
 
 const TABS_BY_ROLE = {
-  owner: ["member", "audit", "storage", "security"],
+  // 'security' temporarily hidden — backend SPs not yet wired up.
+  owner: ["member", "audit", "storage"],
   admin: ["member", "permissions", "admin-storage"],
   member: [],
 };
@@ -172,7 +173,9 @@ class apps_main extends LetcBox {
     this._memberStats = null;
     this._membersState = "idle"; // idle | loading | loaded | error
     this._statsState = "idle";
-    this._auditUnlocked = false;
+    // Default unlocked — the upsell overlay was a placeholder; reintroduce
+    // when billing wires up a real plan gate.
+    this._auditUnlocked = true;
     this._auditLogs = [];
     this._auditLogsTotal = 0;
     this._auditPageSize = 20;
