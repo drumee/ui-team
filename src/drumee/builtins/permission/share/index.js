@@ -42,7 +42,9 @@ class __permission_share extends DrumeeMFS {
     if (!url) return;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url);
-      Butler.say(LOCALE.COPIED_TO_CLIPBOARD || 'Copied to clipboard');
+      // Transient toast (auto-dismisses) — not a popup. Same copy-link
+      // acknowledgement window/core.js uses; defaults to ACK_COPY_LINK.
+      Wm.acknowledge();
     }
   }
 
