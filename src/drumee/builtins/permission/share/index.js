@@ -42,6 +42,9 @@ class __permission_share extends DrumeeMFS {
     if (!url) return;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url);
+      // Transient toast (auto-dismisses) — not a popup. Same copy-link
+      // acknowledgement window/core.js uses; defaults to ACK_COPY_LINK.
+      Wm.acknowledge();
     }
   }
 
@@ -73,22 +76,9 @@ class __permission_share extends DrumeeMFS {
   _applyChanges() {
     if (this._applyBusy) return;
     this._applyBusy = 1;
-    const hub_id = this.mget(_a.hub_id);
-    const privilege = this.mget(_a.privilege) || 0;
-    const days = parseInt(this.mget(_a.days)) || 0;
-    const hours = parseInt(this.mget(_a.hours)) || 0;
-
-    const tasks = [
-      this.postService(SERVICE.hub.update_external_settings, {
-        hub_id, flag: _a.permission, permission: privilege,
-      }),
-      this.postService(SERVICE.hub.update_external_settings, {
-        hub_id, flag: _a.expiry, days, hours,
-        validity_mode: days || hours ? _a.limited : _a.infinity,
-      }),
-    ];
-
-    Promise.all(tasks)
+    // Single call with the full state — access level (permission) and
+    // expiry (days/hours) must travel together, see _persistSettings.
+    this._persistSettings()
       .then(() => {
         this._dirtyPermission = false;
         this._closeSidebar();
@@ -97,16 +87,36 @@ class __permission_share extends DrumeeMFS {
       .finally(() => { this._applyBusy = 0; });
   }
 
-  // Clear persists immediately — separate from Apply so "No expiration"
-  // sticks without forcing the user back to the Apply button.
-  _clearExpiry() {
-    this.mset({ days: 0, hours: 0 });
-    this._render();
+  // One server round-trip carrying the COMPLETE state. The server's
+  // update_external_settings applies BOTH permission and expiry on every
+  // call and defaults a missing `permission` to GUEST — so a partial call
+  // silently resets the other setting. Always send permission + days +
+  // hours together. (`flag` is not read by the server.)
+  _persistSettings() {
     const hub_id = this.mget(_a.hub_id);
-    if (!hub_id) return;
-    this.postService(SERVICE.hub.update_external_settings, {
-      hub_id, flag: _a.expiry, days: 0, hours: 0, validity_mode: _a.infinity,
-    }).catch((e) => this.warn && this.warn('clear-expiry failed', e));
+    if (!hub_id) return Promise.resolve();
+    const permission = this.mget(_a.privilege) || 0;
+    const days = parseInt(this.mget(_a.days)) || 0;
+    const hours = parseInt(this.mget(_a.hours)) || 0;
+    return this.postService(SERVICE.hub.update_external_settings, {
+      hub_id,
+      permission,
+      days,
+      hours,
+      validity_mode: days || hours ? _a.limited : _a.infinity,
+    });
+  }
+
+  _setExpiry(days) {
+    this._expiryMenuOpen = false;
+    this.mset({ days: parseInt(days) || 0, hours: 0 });
+    this._render();
+    return this._persistSettings()
+      .catch((e) => this.warn && this.warn('persist expiry failed', e));
+  }
+
+  _clearExpiry() {
+    return this._setExpiry(0);
   }
 
   _closeSidebar() {
@@ -140,6 +150,13 @@ class __permission_share extends DrumeeMFS {
 
       case 'toggle-access':
         return this._toggleAccess(cmd);
+
+      case 'set-expiry':
+        this._expiryMenuOpen = !this._expiryMenuOpen;
+        return this._render();
+
+      case 'pick-expiry':
+        return this._setExpiry(cmd.mget('days'));
 
       case 'clear-expiry':
         return this._clearExpiry();

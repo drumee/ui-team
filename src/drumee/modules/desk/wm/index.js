@@ -130,6 +130,32 @@ class __window_manager extends push {
       this._creatingFolder = 0;
       return this.alert(LOCALE.INVALID_FILENAME);
     }
+
+    // "Private folder" (Add-new menu) → create a private hub via
+    // desk.create_hub. media.make_dir cannot create a top-level private
+    // directory; _pendingFolderArea is set by the add-private-folder handler.
+    if (this._pendingFolderArea === _a.private) {
+      this._pendingFolderArea = null;
+      return this.postService(SERVICE.desk.create_hub, {
+        area: _a.private,
+        filename,
+        hub_id: Visitor.id,
+        pid: Visitor.id,
+      }).then((res) => {
+        const hub = Array.isArray(res) ? res[0] : res;
+        if (hub && (hub.error || hub.error_code)) {
+          return this.alert(LOCALE[hub.error] || hub.reason || hub.error);
+        }
+        this.closeCreateFolderDialog();
+        RADIO_BROADCAST.trigger("workspace:refresh");
+      }).catch((e) => {
+        this.warn("Failed to create private folder", e);
+        this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
+      }).finally(() => {
+        this._creatingFolder = 0;
+      });
+    }
+
     const onHome = !this._curWorkspace;
     const hub_id = onHome ? Visitor.id : this._curWorkspace.hub_id;
     const nid = onHome ? Visitor.get(_a.home_id) : this._curWorkspace.nid;

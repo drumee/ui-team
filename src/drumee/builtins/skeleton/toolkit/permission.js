@@ -17,12 +17,17 @@ export function resolveRole(ui) {
 }
 
 /**
- *
  * @param {*} ui
+ * @param {*} member  resolve the current role from this widget's privilege
+ * @param {string} service
+ * @param {string} fig
+ * @param {string} [currentRoleValue]  explicit selected role ('admin'|'edit'|
+ *   'view'). When set, it wins over resolveRole — used by the invite row,
+ *   where the role is a pending choice (ui._inviteRole), not a privilege bitmask.
  * @returns
  */
-export function permissionItems(ui, member, service, fig = ui.fig.family) {
-  const currentRole = resolveRole(member || ui).value;
+export function permissionItems(ui, member, service, fig = ui.fig.family, currentRoleValue) {
+  const currentRole = currentRoleValue || resolveRole(member || ui).value;
   return Skeletons.Box.Y({
     className: `${fig}__role-menu`,
     kids: roleItems.map((role) =>
@@ -51,9 +56,10 @@ export function permissionItems(ui, member, service, fig = ui.fig.family) {
 
 /**
  * Permission dropdown for the invite row.
+ * @param {string} [currentRoleValue]  explicit selected role — see permissionItems.
  */
-export function permissionMenu(ui, member, service, fig = ui.fig.family) {
-  const currentRole = resolveRole(member || ui).value;
+export function permissionMenu(ui, member, service, fig = ui.fig.family, currentRoleValue) {
+  const currentRole = currentRoleValue || resolveRole(member || ui).value;
   const currentItem = roleItems.find(r => r.value === currentRole) || roleItems[0];
   const trigger = Skeletons.Box.X({
     className: `${fig}__role-trigger`,
@@ -76,7 +82,7 @@ export function permissionMenu(ui, member, service, fig = ui.fig.family) {
     opening: _e.click,
     persistence: _a.once,
     trigger,
-    items: permissionItems(ui, member, service, fig),
+    items: permissionItems(ui, member, service, fig, currentRoleValue),
     offsetY: 4,
   };
 }

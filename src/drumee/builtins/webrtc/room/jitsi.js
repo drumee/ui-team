@@ -396,6 +396,7 @@ class __webrtc_room extends __room {
         } else {
           this.isVideo = !track.isMuted();
           this.__ctrlVideo.setState(this.isVideo);
+          this.__ctrlVideo.el.dataset.muted = this.isVideo ? 0 : 1;
           if (this.isVideo) {
             this.toggleAvatarVideo(0, 1);
           } else {
@@ -944,6 +945,7 @@ class __webrtc_room extends __room {
       this.toggleAvatarVideo(0, 1);
       try {
         await this.createLocalTracks(_a.video);
+        if (this.__ctrlVideo) this.__ctrlVideo.el.dataset.muted = 0;
       } catch (e) {
         this.isVideo = false;
         this.toggleAvatarVideo(1, 0);
