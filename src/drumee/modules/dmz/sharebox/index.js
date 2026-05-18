@@ -201,6 +201,14 @@ class __dmz_sharebox extends LetcBox {
         this.wm.download();
         return;
 
+      // "Add new" lives in the sharebox topbar (uiHandler = this sharebox),
+      // but folder creation belongs to the window manager child — delegate.
+      case "add-folder":
+        if (this.wm && this.wm.onUiEvent) {
+          this.wm.onUiEvent(cmd, { service: "add-folder" });
+        }
+        return;
+
       case 'open-signup':
         this.append({
           kind: 'drumee_api_popup',
