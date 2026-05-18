@@ -1215,18 +1215,22 @@ class apps_main extends LetcBox {
       return;
     }
     const pfx = this.fig.family;
-    const items = list.map((row) =>
-      Skeletons.Note({
+    const items = list.map((row) => {
+      const hub_id = row.hub_id || row.id || row.actual_hub_id;
+      const hub_name = row.filename || row.name;
+      return Skeletons.Note({
         className: `${pfx}__edit-ws-suggestion`,
-        content: row.filename || row.name,
-        dataset: {
-          hub_id: row.hub_id || row.id || row.actual_hub_id,
-          name: row.filename || row.name,
-        },
+        content: hub_name,
+        // Top-level props — consistent with how other apps/main Notes pass
+        // data (e.g. apps-edit-remove-ws uses `idx`, `hub_id`). cmd.mget()
+        // reads the widget model; raw `dataset:` keys are not always
+        // mirrored there, which is why invite-popup needs a getter helper.
+        hub_id,
+        hub_name,
         service: "apps-edit-pick-workspace",
         uiHandler: [this],
-      }),
-    );
+      });
+    });
     box.feed(items);
     this._positionEditWsSuggestions();
     box.el.dataset.state = 1;
@@ -1505,7 +1509,7 @@ class apps_main extends LetcBox {
       case "apps-edit-pick-workspace":
         return this._pickEditWorkspace(
           cmd.mget("hub_id"),
-          cmd.mget("name"),
+          cmd.mget("hub_name"),
         );
 
       case "apps-delete-member":
