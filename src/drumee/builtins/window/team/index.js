@@ -134,7 +134,7 @@ class __window_team extends __hub {
     if (this._callPanelOpening) return;
 
     const meetingPanel = await this.ensurePart("meeting-panel");
-    const splitBody = await this.ensurePart("split-body");
+    const splitBody = await this.ensurePart("folder-view");
 
     if (this._callPanel) {
       const panel = this._callPanel;
