@@ -593,9 +593,7 @@ class __window_manager extends push {
         if (!atHome) return prepared;
         return prepared.filter((it) => {
           if (!it || it.filetype !== _a.hub) return true;
-          return it.area === _a.share
-            || it.area === _a.private
-            || it.area === _a.restricted;
+          return /^(share|private|restricted|public)$/.test(it.area);
         });
       };
     }

@@ -7,11 +7,12 @@ module.exports = function (_ui_) {
   const isSelf = memberId != null && String(memberId) === String(Visitor.id);
 
   // Look in both options and model — smart-list itemsOpt can land in either.
-  const meetingUi = (_ui_.getOption && _ui_.getOption("_meetingUi"))
-    || _ui_.mget("_meetingUi");
-  const callState = meetingUi && meetingUi._memberCallStates && memberId != null
-    ? meetingUi._memberCallStates.get(String(memberId))
-    : null;
+  const meetingUi =
+    (_ui_.getOption && _ui_.getOption("_meetingUi")) || _ui_.mget("_meetingUi");
+  const callState =
+    meetingUi && meetingUi._memberCallStates && memberId != null
+      ? meetingUi._memberCallStates.get(String(memberId))
+      : null;
   let callLabel = LOCALE.CALL || "Call";
   let callService = "call-member";
   let btnDataset;
@@ -51,14 +52,16 @@ module.exports = function (_ui_) {
         ],
       }),
 
-      isSelf ? null : Skeletons.Button.Label({
-        className: `${pfx}__member-call-btn`,
-        ico: "folder-meeting",
-        label: callLabel,
-        service: callService,
-        dataset: btnDataset,
-        uiHandler: [_ui_],
-      }),
+      isSelf
+        ? null
+        : Skeletons.Button.Label({
+            className: `${pfx}__member-call-btn`,
+            ico: "folder-meeting",
+            label: callLabel,
+            service: callService,
+            dataset: btnDataset,
+            uiHandler: [_ui_],
+          }),
     ],
   });
 };

@@ -397,12 +397,17 @@ class __invite_popup extends LetcBox {
   _showWorkspaceSuggestions(idx, list) {
     const sugBox = this._partRefs.workspaceSuggestions[idx];
     if (!sugBox) return;
-    if (!list.length) {
+    const picked = this._pickedHubIds(idx);
+    const dedup = list.filter((row) => {
+      const id = String(row.hub_id || row.id || row.actual_hub_id || "");
+      return id && !picked.has(id);
+    });
+    if (!dedup.length) {
       this._hideWorkspaceSuggestions(idx);
       return;
     }
     const pfx = this.fig.family;
-    const items = list.map((row) =>
+    const items = dedup.map((row) =>
       Skeletons.Note({
         className: `${pfx}__workspace-option`,
         content: row.filename || row.name,
@@ -413,6 +418,16 @@ class __invite_popup extends LetcBox {
     );
     sugBox.feed(items);
     sugBox.el.dataset.state = 1;
+  }
+
+  _pickedHubIds(excludeIdx) {
+    const set = new Set();
+    Object.entries(this._workspaces).forEach(([k, w]) => {
+      if (!w || !w.hub_id) return;
+      if (excludeIdx != null && String(k) === String(excludeIdx)) return;
+      set.add(String(w.hub_id));
+    });
+    return set;
   }
 
   _hideWorkspaceSuggestions(idx) {
@@ -457,6 +472,14 @@ class __invite_popup extends LetcBox {
   _pickWorkspace(idx, hub_id, name) {
     const wsIdx = this._workspaceIdxByRowIdx(idx);
     if (wsIdx == null) return;
+    if (this._pickedHubIds(wsIdx).has(String(hub_id))) {
+      Wm.alert(
+        LOCALE.INVITE_WORKSPACE_ALREADY_SELECTED
+          || "This workspace is already selected.",
+      );
+      this._hideWorkspaceSuggestions(idx);
+      return;
+    }
     this._workspaces[wsIdx].hub_id = hub_id;
     this._workspaces[wsIdx].name = name;
     const inputEl = this._partRefs.workspaceInputs[idx]?.el?.querySelector("input");
@@ -470,6 +493,16 @@ class __invite_popup extends LetcBox {
 
   _addWorkspaceRow() {
     if (!this._workspacesBox) return;
+    const hasEmpty = Object.values(this._workspaces).some(
+      (w) => w && !w.hub_id,
+    );
+    if (hasEmpty) {
+      Wm.alert(
+        LOCALE.INVITE_WORKSPACE_PICK_FIRST
+          || "Please pick a workspace before adding another.",
+      );
+      return;
+    }
     const idx = this._nextRowIdx++;
     this._workspaces[idx] = {
       hub_id: null,

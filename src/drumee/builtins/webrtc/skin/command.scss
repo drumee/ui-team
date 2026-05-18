@@ -122,6 +122,12 @@
         fill: none;
       }
 
+      &[data-ctrl="video"][data-state="1"] {
+        svg path:last-child {
+          display: none;
+        }
+      }
+
       &[data-state="0"] {
         color: var(--multimedia-vdo-icon);
 
