@@ -77,7 +77,7 @@ class __media_grid extends DrumeeMediaInteract {
       this.container.push(
         Skeletons.Element({
           className: `${this.fig.family}__areas`,
-          flow: _a.y,
+          flow: _a.x,
           content: require('./template/folder/areas')(this)
         })
       )
