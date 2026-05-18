@@ -24,20 +24,31 @@ function mapDevice(row) {
   return { id, kind: deviceKind(row), name, info };
 }
 
-// Privilege bitmask: Admin=31, Edit=7, Chat=6 (read|write), View=2 (read).
-function roleLabelFor(priv) {
+// Privilege bitmask: Admin=31, Edit=7, View=2. Anything below 7 collapses to View.
+const ROLES = [
+  { id: "admin", label: LOCALE.ROLE_ADMIN || "Admin", bit: 31 },
+  { id: "edit",  label: LOCALE.ROLE_VIEW_EDIT || LOCALE.EDIT || "Edit", bit: 7 },
+  { id: "view",  label: LOCALE.VIEW || "View", bit: 2 },
+];
+
+function roleIdFor(priv) {
   const p = parseInt(priv, 10) || 0;
-  if (p >= 31) return "Admin";
-  if (p >= 7)  return "Edit";
-  if (p >= 6)  return "Chat";
-  return "View";
+  if (p >= 31) return "admin";
+  if (p >= 7)  return "edit";
+  return "view";
+}
+
+function roleLabelFor(priv) {
+  const role = ROLES.find((r) => r.id === roleIdFor(priv));
+  return role ? role.label : (LOCALE.VIEW || "View");
 }
 
 function mapWorkspace(row) {
   const id = row.hub_id || row.id;
   const name = row.hub_name || row.name || row.full_name || row.label || "Workspace";
   const priv = parseInt(row.privilege || row.permission || 0, 10) || 0;
-  return { id, name, role: roleLabelFor(priv) };
+  const roleId = roleIdFor(priv);
+  return { id, name, priv, roleId, role: roleLabelFor(priv) };
 }
 
 function variantFor(member) {
@@ -126,10 +137,16 @@ function ownerRoleSection(ui) {
   });
 }
 
-function workspaceRow(ui, ws) {
+function workspaceRow(ui, ws, idx) {
   const pfx = ui.fig.family;
+  const selectedId = ws.roleId || "view";
   return Skeletons.Box.X({
     className: `${pfx}__edit-ws-row`,
+    sys_pn: `edit-ws-row:${idx}`,
+    partHandler: ui,
+    dataset: { idx, hub_id: ws.id },
+    active: 0,
+    kidsOpt: { active: 0 },
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__edit-ws-name`,
@@ -144,9 +161,54 @@ function workspaceRow(ui, ws) {
           }),
         ],
       }),
-      selectField(ui, {
-        value: ws.role,
-        service: "apps-edit-ws-role",
+      Skeletons.Box.Y({
+        className: `${pfx}__edit-ws-role-cell`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${pfx}__edit-ws-role-select`,
+            service: "apps-edit-toggle-ws-role",
+            uiHandler: [ui],
+            idx,
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__edit-ws-role-label`,
+                sys_pn: `edit-ws-role-label:${idx}`,
+                partHandler: ui,
+                content: ws.role,
+              }),
+              Skeletons.Image.Svg({
+                ico: "apps-caret-down",
+                className: `${pfx}__edit-ws-role-caret`,
+              }),
+            ],
+          }),
+          Skeletons.Box.Y({
+            className: `${pfx}__edit-ws-role-options`,
+            sys_pn: `edit-ws-role-options:${idx}`,
+            partHandler: ui,
+            dataset: { idx, state: 0 },
+            kids: ROLES.map((r) =>
+              Skeletons.Note({
+                className: `${pfx}__edit-ws-role-option`,
+                dataset: {
+                  id: r.id,
+                  idx,
+                  checked: r.id === selectedId ? 1 : 0,
+                },
+                content: r.label,
+              }),
+            ),
+          }),
+        ],
+      }),
+      Skeletons.Note({
+        active: 1,
+        className: `${pfx}__edit-ws-remove`,
+        service: "apps-edit-remove-ws",
+        uiHandler: [ui],
+        idx,
+        hub_id: ws.id,
+        content: "×",
       }),
     ],
   });
@@ -157,7 +219,7 @@ function workspaceList(ui, list) {
   return Skeletons.Box.Y({
     className: `${pfx}__edit-ws-list`,
     kids: [
-      ...list.map((ws) => workspaceRow(ui, ws)),
+      ...list.map((ws, idx) => workspaceRow(ui, ws, idx)),
       Skeletons.Box.X({
         className: `${pfx}__edit-ws-search`,
         kids: [

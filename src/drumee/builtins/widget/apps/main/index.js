@@ -284,6 +284,36 @@ class apps_main extends LetcBox {
   }
 
   _onDocumentClick(e) {
+    // Edit-member workspace role dropdown: options have no `service` so they
+    // need delegated handling, and clicks outside an open panel close it.
+    if (this._editingMember && this.el) {
+      const optEl =
+        e.target.closest &&
+        e.target.closest(".apps-main__edit-ws-role-option");
+      if (optEl && this.el.contains(optEl)) {
+        const optIdx = parseInt(optEl.dataset.idx, 10);
+        const roleId = optEl.dataset.id;
+        if (!Number.isNaN(optIdx) && roleId) {
+          e.stopPropagation();
+          this._pickEditWsRole(optIdx, roleId);
+          return;
+        }
+      }
+      const openOpts = this.el.querySelectorAll(
+        '.apps-main__edit-ws-role-options[data-state="1"]',
+      );
+      if (openOpts.length) {
+        const inSelect =
+          e.target.closest &&
+          e.target.closest(".apps-main__edit-ws-role-select");
+        const inOpts =
+          e.target.closest &&
+          e.target.closest(".apps-main__edit-ws-role-options");
+        if (!inSelect && !inOpts) {
+          openOpts.forEach((node) => (node.dataset.state = "0"));
+        }
+      }
+    }
     if (this._filterOpen) {
       const filterEl =
         this.el && this.el.querySelector(".apps-main__table-filter");
@@ -1062,6 +1092,44 @@ class apps_main extends LetcBox {
     }
   }
 
+  // Toggle a workspace-row role dropdown open/closed. The skeleton hardcodes
+  // data-state=0 on render, so we mutate the DOM directly to avoid losing
+  // the open state on every _render(). Other open dropdowns are closed first.
+  _toggleEditWsRole(idx) {
+    if (!this.el || Number.isNaN(idx)) return;
+    const all = this.el.querySelectorAll(".apps-main__edit-ws-role-options");
+    let target = null;
+    all.forEach((node) => {
+      const nodeIdx = parseInt(node.dataset.idx, 10);
+      if (nodeIdx === idx) {
+        target = node;
+      } else {
+        node.dataset.state = "0";
+      }
+    });
+    if (!target) return;
+    target.dataset.state = target.dataset.state === "1" ? "0" : "1";
+  }
+
+  _pickEditWsRole(idx, roleId) {
+    if (Number.isNaN(idx) || !roleId) return;
+    const ws = (this._editWorkspaces || [])[idx];
+    if (!ws) return;
+    const bits = { admin: 31, edit: 7, view: 2 };
+    const bit = bits[roleId];
+    if (bit == null) return;
+    ws.privilege = bit;
+    ws.permission = bit;
+    this._render();
+  }
+
+  _removeEditWorkspace(idx) {
+    if (Number.isNaN(idx)) return;
+    if (!Array.isArray(this._editWorkspaces) || !this._editWorkspaces[idx]) return;
+    this._editWorkspaces.splice(idx, 1);
+    this._render();
+  }
+
   // ─────────────────────────────────────────────────────────
   //  Delete member
   // ─────────────────────────────────────────────────────────
@@ -1225,6 +1293,12 @@ class apps_main extends LetcBox {
 
       case "apps-edit-remove-all-devices":
         return this._removeAllDevices();
+
+      case "apps-edit-toggle-ws-role":
+        return this._toggleEditWsRole(parseInt(cmd.mget("idx"), 10));
+
+      case "apps-edit-remove-ws":
+        return this._removeEditWorkspace(parseInt(cmd.mget("idx"), 10));
 
       case "apps-edit-role-select":
       case "apps-edit-ws-role":
