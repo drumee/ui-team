@@ -2,15 +2,23 @@
  * Manage Access panel — public link toggle, access level, link expiry, apply.
  * @param {Object} ui
  */
+// Preset link-expiry durations (in days). 0 = no expiration.
+const EXPIRY_PRESETS = [0, 1, 7, 30, 90];
+
+// Shared formatter so the expiry-row label and each menu option render the
+// same text. Matches the previous inline `expiryLabel` logic.
+const formatExpiry = (days) =>
+  days
+    ? `In ${days} Day${days !== 1 ? "s" : ""}`
+    : LOCALE.NO_EXPIRATION || "No expiration";
+
 module.exports = function (ui) {
   const fig = ui.fig.family;
   const publicLink = ui.mget("public_link");
   const privilege = ui.mget(_a.privilege) || 0;
 
   const days = parseInt(ui.mget(_a.days)) || 0;
-  const expiryLabel = days
-    ? `In ${days} Day${days !== 1 ? "s" : ""}`
-    : LOCALE.NO_EXPIRATION || "No expiration";
+  const expiryLabel = formatExpiry(days);
 
   const accessItems = [
     {
@@ -173,6 +181,21 @@ module.exports = function (ui) {
                   }),
                 ],
               }),
+              ui._expiryMenuOpen
+                ? Skeletons.Box.Y({
+                    className: `${fig}__expiry-menu`,
+                    kids: EXPIRY_PRESETS.map((preset) =>
+                      Skeletons.Note({
+                        className: `${fig}__expiry-option`,
+                        content: formatExpiry(preset),
+                        days: preset,
+                        state: days === preset ? 1 : 0,
+                        service: "pick-expiry",
+                        uiHandler: [ui],
+                      }),
+                    ),
+                  })
+                : null,
             ],
           }),
         ],

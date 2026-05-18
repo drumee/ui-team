@@ -97,16 +97,31 @@ class __permission_share extends DrumeeMFS {
       .finally(() => { this._applyBusy = 0; });
   }
 
-  // Clear persists immediately — separate from Apply so "No expiration"
-  // sticks without forcing the user back to the Apply button.
-  _clearExpiry() {
-    this.mset({ days: 0, hours: 0 });
-    this._render();
+  // Persist the current days/hours to the server. Expiry is committed
+  // immediately (separate from Apply) so set/clear both stick at once.
+  _persistExpiry() {
     const hub_id = this.mget(_a.hub_id);
     if (!hub_id) return;
-    this.postService(SERVICE.hub.update_external_settings, {
-      hub_id, flag: _a.expiry, days: 0, hours: 0, validity_mode: _a.infinity,
-    }).catch((e) => this.warn && this.warn('clear-expiry failed', e));
+    const days = parseInt(this.mget(_a.days)) || 0;
+    const hours = parseInt(this.mget(_a.hours)) || 0;
+    return this.postService(SERVICE.hub.update_external_settings, {
+      hub_id,
+      flag: _a.expiry,
+      days,
+      hours,
+      validity_mode: days || hours ? _a.limited : _a.infinity,
+    }).catch((e) => this.warn && this.warn('persist expiry failed', e));
+  }
+
+  _setExpiry(days) {
+    this._expiryMenuOpen = false;
+    this.mset({ days: parseInt(days) || 0, hours: 0 });
+    this._render();
+    return this._persistExpiry();
+  }
+
+  _clearExpiry() {
+    return this._setExpiry(0);
   }
 
   _closeSidebar() {
@@ -140,6 +155,13 @@ class __permission_share extends DrumeeMFS {
 
       case 'toggle-access':
         return this._toggleAccess(cmd);
+
+      case 'set-expiry':
+        this._expiryMenuOpen = !this._expiryMenuOpen;
+        return this._render();
+
+      case 'pick-expiry':
+        return this._setExpiry(cmd.mget('days'));
 
       case 'clear-expiry':
         return this._clearExpiry();

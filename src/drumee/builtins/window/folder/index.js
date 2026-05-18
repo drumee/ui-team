@@ -838,17 +838,69 @@ class __window_folder extends mfsInteract {
       return this.dialogWrapper.clear();
     }
     this.isShowSettings = true;
-    this.dialogWrapper.feed(require("./skeleton/settings-action-panel")(this));
-    var c = this.dialogWrapper.children.last();
-    c.once(_e.destroy, () => {
-      this.isShowSettings = false;
-      return this.unselect();
-    });
-    return c.on(_e.show, () => {
-      return this.once(_e.unselect, () => {
-        return this.dialogWrapper.clear();
+
+    // share-area folders open the same "Manage Access" panel shown at
+    // folder-creation time, instead of the generic folder-settings panel.
+    if (this.mget(_a.area) === _a.share) {
+      this.dialogWrapper.feed({
+        kind: "permission_shared",
+        media: this.mget(_a.media) || this.media,
+        hub_id: this.mget(_a.hub_id),
+        uiHandler: [this],
+        persistence: _a.once,
       });
-    });
+      const c = this.dialogWrapper.children.last();
+      if (c) {
+        c.once(_e.destroy, () => {
+          this.isShowSettings = false;
+          return this.unselect();
+        });
+      }
+      return;
+    }
+
+    this._folderMembers = [];
+    this._folderMembersLoaded = false;
+
+    const render = () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (!this.isShowSettings || !this.dialogWrapper) return;
+      this.dialogWrapper.feed(require("./skeleton/settings-action-panel")(this));
+      const c = this.dialogWrapper.children.last();
+      if (!c) return;
+      c.once(_e.destroy, () => {
+        this.isShowSettings = false;
+        return this.unselect();
+      });
+      return c.on(_e.show, () => {
+        return this.once(_e.unselect, () => {
+          return this.dialogWrapper.clear();
+        });
+      });
+    };
+
+    // Load the real folder members (hub.get_members_by_type) before
+    // rendering — the panel previously showed hardcoded placeholder names.
+    const { hub_id } = this.actualNode();
+    if (!hub_id) {
+      this._folderMembersLoaded = true;
+      return render();
+    }
+    return this.fetchService(SERVICE.hub.get_members_by_type, {
+      hub_id,
+      type: "all",
+    })
+      .then((rows) => {
+        this._folderMembers = Array.isArray(rows) ? rows : [];
+      })
+      .catch((e) => {
+        this.warn("Failed to load folder members", e);
+        this._folderMembers = [];
+      })
+      .finally(() => {
+        this._folderMembersLoaded = true;
+        render();
+      });
   }
 
   showInfo() {
