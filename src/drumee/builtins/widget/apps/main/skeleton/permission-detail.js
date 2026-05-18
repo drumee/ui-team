@@ -1,4 +1,5 @@
 const folderTemplate = require("../../../../media/grid/template/folder");
+const { filesize } = require("@drumee/ui-essentials");
 
 const TAG_DEFS = {
   "ip-geo": { icon: "apps-globe",          variant: "purple",  label: () => LOCALE.PERM_IP_GEO || "IP/GEO" },
@@ -47,7 +48,9 @@ function topBar(ui) {
             className: `${pfx}__wsdetail-search-input`,
             placeholder: LOCALE.SEARCH_WORKSPACE || "Search workspace",
             name: "ws_search",
+            value: ui._wsFolderQuery || "",
             mode: _a.commit,
+            service: "apps-ws-search",
             uiHandler: [ui],
           }),
         ],
@@ -93,11 +96,18 @@ function workspaceHeading(ui, ws) {
 function folderItem(ui, ws, folder) {
   const pfx = ui.fig.family;
   const area = folder.area || ws.area || "private";
+  const id = folder.id || folder.nid;
+  const name = folder.name || folder.filename;
+  const ts = folder.updated || folder.mtime;
+  const bytes = folder.filesize != null ? folder.filesize : folder.size;
+  const updated = ts ? Dayjs.unix(ts).fromNow() : "";
+  const size = bytes != null ? filesize(bytes) : "";
+  const meta = [updated, size].filter(Boolean).join(" • ");
   return Skeletons.Box.X({
     className: `${pfx}__wsdetail-row`,
     service: "apps-perm-open-folder",
     uiHandler: [ui],
-    folder_id: folder.id,
+    folder_id: id,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__wsdetail-row-body`,
@@ -109,7 +119,7 @@ function folderItem(ui, ws, folder) {
               area,
               filetype: _a.folder,
               role: "folder",
-              widgetId: `folder-${folder.id}`,
+              widgetId: `folder-${id}`,
               isAttachment: 1,
             }),
           }),
@@ -118,11 +128,11 @@ function folderItem(ui, ws, folder) {
             kids: [
               Skeletons.Note({
                 className: `${pfx}__wsdetail-row-title`,
-                content: folder.name,
+                content: name,
               }),
               Skeletons.Note({
                 className: `${pfx}__wsdetail-row-meta`,
-                content: `${folder.updated} • ${folder.size}`,
+                content: meta,
               }),
             ],
           }),
@@ -133,7 +143,7 @@ function folderItem(ui, ws, folder) {
         className: `${pfx}__wsdetail-row-edit`,
         service: "apps-perm-edit-folder",
         uiHandler: [ui],
-        folder_id: folder.id,
+        folder_id: id,
       }),
     ],
   });

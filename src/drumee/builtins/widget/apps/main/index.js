@@ -648,6 +648,7 @@ class apps_main extends LetcBox {
       const res = await this.postService(SERVICE.admin.get_hub_folders, {
         hub_id: hubId,
         page: this._wsDetailPage || 1,
+        query: this._wsFolderQuery || "",
       });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
       // SP returns nid/filename/mtime/filesize — alias to FE shape.
@@ -1247,6 +1248,7 @@ class apps_main extends LetcBox {
         if (ws) {
           this._activeWorkspace = ws;
           this._wsDetailPage = 1;
+          this._wsFolderQuery = "";
           this._render();
           return this._loadHubFolders(ws.id);
         }
@@ -1257,7 +1259,25 @@ class apps_main extends LetcBox {
         this._activeWorkspace = null;
         this._wsFolders = [];
         this._wsFoldersState = "idle";
+        this._wsFolderQuery = "";
         return this._render();
+
+      case "apps-ws-search": {
+        const next = (
+          (args && args.value != null
+            ? args.value
+            : cmd && cmd.mget && cmd.mget(_a.value)) || ""
+        )
+          .toString()
+          .trim();
+        if (next === (this._wsFolderQuery || "")) return;
+        this._wsFolderQuery = next;
+        this._wsDetailPage = 1;
+        if (this._activeWorkspace) {
+          return this._loadHubFolders(this._activeWorkspace.id);
+        }
+        return;
+      }
 
       case "apps-perm-page": {
         const n = parseInt(cmd.mget("page_num"), 10);
