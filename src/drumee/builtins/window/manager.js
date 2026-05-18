@@ -74,7 +74,6 @@ class __window_manager extends mfsInteract {
    *
    */
   _kbHandler(e) {
-    this.debug("AAAA:69", e);
   }
 
   /**
@@ -194,6 +193,9 @@ class __window_manager extends mfsInteract {
           return;
         }
         target.el.dataset.over = _a.off;
+        break;
+      default:
+        target = this._target || this.getActiveWindow();
         break;
     }
 

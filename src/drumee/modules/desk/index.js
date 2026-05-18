@@ -4,7 +4,7 @@ require("builtins/window/confirm/skin");
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
-    this.refreshContextMenu = this.refreshContextMenu.bind(this);
+    this._updateAddmenu = this._updateAddmenu.bind(this);
     this.onPartReady = this.onPartReady.bind(this);
     this.mediaDragLeaveAvatar = this.mediaDragLeaveAvatar.bind(this);
     this.mediaDragOverAvatar = this.mediaDragOverAvatar.bind(this);
@@ -50,7 +50,6 @@ class desk_module extends LetcBox {
     this.declareHandlers();
     this._updateAvatar = this._updateAvatar.bind(this);
 
-    // this._updateContextMenu = this._updateContextMenu.bind(this);
     RADIO_BROADCAST.on("avatar-changed", this._updateAvatar);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
     setTimeout(this.lazyClasses, 5000);
@@ -74,6 +73,7 @@ class desk_module extends LetcBox {
       );
     }
     RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
+    RADIO_BROADCAST.off("breadcrumb:content", this._updateAddmenu);
   }
 
   /**
@@ -95,6 +95,7 @@ class desk_module extends LetcBox {
    */
   async onDomRefresh() {
     this.route();
+    RADIO_BROADCAST.on("breadcrumb:content", this._updateAddmenu);
   }
 
   /**
@@ -125,27 +126,19 @@ class desk_module extends LetcBox {
   }
 
   /**
-   *
+   * Change the add type depending of the context
    * @returns
    */
-  refreshContextMenu() {
-    const selected = Wm.getGlobalSelection();
-    const protectBtn = this.__topProtectedBtn;
-    let count = 0;
-    if (!selected.length) return;
-    for (var s of selected) {
-      if (s.mget(_a.status) === _a.locked) {
-        count = count + 1;
+  _updateAddmenu(data = {}) {
+
+    this.ensurePart("addmenu").then((p) => {
+      let item = p.__items.children.first()
+      if (data.filetype && data.filetype === _a.hub) {
+        item.setLabel(LOCALE.FOLDER)
+      } else {
+        item.setLabel(LOCALE.WORKSPACE)
       }
-    }
-    let locked = count === selected.length;
-    if (locked) {
-      protectBtn.mset(_a.chartId, "protected-unlock");
-      protectBtn.setLabel(LOCALE.UNPROTECTED);
-    } else {
-      protectBtn.mset(_a.chartId, "protected-lock");
-      protectBtn.setLabel(LOCALE.PROTECTED);
-    }
+    })
   }
 
   /**
@@ -209,6 +202,28 @@ class desk_module extends LetcBox {
 
       case "search-suggestions":
         this._searchSuggestions = child;
+        return;
+
+      case "suggestions-list":
+        // Topbar search must not surface the user's hidden personal hub
+        // (area='personal') or the auto-created wicket/dmz. Filter hub
+        // rows to the collaborative set {share, private, restricted}.
+        // Folders/files (filetype !== _a.hub) always pass — they may
+        // physically live INSIDE the personal hub but they're legitimate
+        // hits. Same predicate as the home-grid filter in wm/index.js.
+        if (child && !child._suggestionsFilterInstalled) {
+          child._suggestionsFilterInstalled = 1;
+          const original = child.prepareData.bind(child);
+          child.prepareData = function (data) {
+            const prepared = original(data) || [];
+            return prepared.filter((it) => {
+              if (!it || it.filetype !== _a.hub) return true;
+              return it.area === _a.share
+                || it.area === _a.private
+                || it.area === _a.restricted;
+            });
+          };
+        }
         return;
 
       case "add-menu":
@@ -463,7 +478,6 @@ class desk_module extends LetcBox {
    * Show onboarding widget if user hasn't completed onboarding
    */
   checkUserOnBoarding(c) {
-    this.debug("AAA:341", Visitor.profile().onboarded);
     if (Visitor.profile().onboarded) return;
   }
 
@@ -793,7 +807,6 @@ class desk_module extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
-    this.debug(`SERVICE=${service}`, cmd, args);
     if (pointerDragged || !window.Wm) {
       return;
     }
@@ -812,7 +825,7 @@ class desk_module extends LetcBox {
         // local Visitor profile so route() falls through to loadDefault().
         try {
           localStorage.removeItem("force-onboarding");
-        } catch (e) {}
+        } catch (e) { }
         {
           let p = Visitor.profile && Visitor.profile();
           if (p) p.onboarded = 1;
@@ -884,7 +897,7 @@ class desk_module extends LetcBox {
         document.documentElement.dataset.theme = next;
         try {
           localStorage.setItem("drumee.theme", next);
-        } catch (e) {}
+        } catch (e) { }
         const wp = { ...(Visitor.wallpaper() || {}), theme: next };
         if (typeof Visitor.setWallpaper === "function")
           Visitor.setWallpaper(wp);
@@ -946,25 +959,29 @@ class desk_module extends LetcBox {
         // covered by an Apps/Settings panel during restart.
         return this._closeMainPanels().then(() => Wm.loadWorkspace(cmd));
 
-      case "toggle-add-menu":
-        return this._toggleAddMenu();
+      /** No need - use menu  widget */
+      // case "toggle-add-menu":
+      //   return this._toggleAddMenu();
 
       case "new-workspace":
-        this._hideAddMenu();
+        // this._hideAddMenu();
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
+
+      case "add-private-folder":
+        return Wm.onUiEvent(cmd, { ...args, service: "add-private-folder" });
 
       case "new-note":
         Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
         });
-        this._hideAddMenu();
+        // this._hideAddMenu();
         return;
       case "new-document":
       case "new-spreadsheet":
       case "new-presentation":
         Wm.newDocument(cmd);
-        this._hideAddMenu();
+        // this._hideAddMenu();
         return;
 
       case "invite-member":
@@ -1147,30 +1164,32 @@ class desk_module extends LetcBox {
     }
   }
 
-  _toggleAddMenu() {
-    if (!this._addMenu) return;
-    const open = this._addMenu.el.dataset.state === "1";
-    if (open) {
-      this._hideAddMenu();
-    } else {
-      this._addMenu.el.dataset.state = 1;
-      if (!this._addMenuDismiss) {
-        this._addMenuDismiss = (e) => {
-          const wrapper = this._addMenu.el.parentElement;
-          if (wrapper && !wrapper.contains(e.target)) this._hideAddMenu();
-        };
-        document.addEventListener("mousedown", this._addMenuDismiss);
-      }
-    }
-  }
+  /** No need - use menu  widget */
+  // _toggleAddMenu() {
+  //   if (!this._addMenu) return;
+  //   const open = this._addMenu.el.dataset.state === "1";
+  //   if (open) {
+  //     this._hideAddMenu();
+  //   } else {
+  //     this._addMenu.el.dataset.state = 1;
+  //     if (!this._addMenuDismiss) {
+  //       this._addMenuDismiss = (e) => {
+  //         const wrapper = this._addMenu.el.parentElement;
+  //         if (wrapper && !wrapper.contains(e.target)) this._hideAddMenu();
+  //       };
+  //       document.addEventListener("mousedown", this._addMenuDismiss);
+  //     }
+  //   }
+  // }
 
-  _hideAddMenu() {
-    if (this._addMenu) this._addMenu.el.dataset.state = 0;
-    if (this._addMenuDismiss) {
-      document.removeEventListener("mousedown", this._addMenuDismiss);
-      this._addMenuDismiss = null;
-    }
-  }
+  /** No need - use menu  widget, persitence : once */
+  // _hideAddMenu() {
+  //   if (this._addMenu) this._addMenu.el.dataset.state = 0;
+  //   if (this._addMenuDismiss) {
+  //     document.removeEventListener("mousedown", this._addMenuDismiss);
+  //     this._addMenuDismiss = null;
+  //   }
+  // }
 
   /**
    *

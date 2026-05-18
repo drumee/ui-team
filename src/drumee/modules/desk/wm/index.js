@@ -1,7 +1,7 @@
 
 require("./skin");
 const { copyToClipboard } = require("@drumee/ui-essentials")
-const { TweenLite, TimelineMax } = gsap;
+const { TweenLite, TimelineMax } = require("@drumee/ui-core/vendor");
 let lastClickTime = new Date().getTime();
 const push = require("./push");
 
@@ -113,6 +113,7 @@ class __window_manager extends push {
   }
 
   closeCreateFolderDialog() {
+    this._pendingFolderArea = null;
     return this.ensurePart("wrapper-modal").then((p) => {
       p.el.dataset.mode = "";
       p.clear();
@@ -129,8 +130,14 @@ class __window_manager extends push {
       this._creatingFolder = 0;
       return this.alert(LOCALE.INVALID_FILENAME);
     }
-    const hub_id = this._curWorkspace?.hub_id || Visitor.id;
-    const nid = this._curWorkspace?.nid || Visitor.id;
+    const onHome = !this._curWorkspace;
+    const hub_id = onHome ? Visitor.id : this._curWorkspace.hub_id;
+    const nid = onHome ? Visitor.get(_a.home_id) : this._curWorkspace.nid;
+    const area = onHome ? _a.personal : this._curWorkspace.area;
+    if (!nid) {
+      this._creatingFolder = 0;
+      return this.alert(LOCALE.TRY_AGAIN);
+    }
     return this.postService(SERVICE.media.make_dir, {
       hub_id,
       dirname: filename,
@@ -140,7 +147,7 @@ class __window_manager extends push {
       socket_id: Visitor.get(_a.socket_id),
       seeding: 1,
       echoId: this.mget('echoId'),
-      area: this._curWorkspace?.area || _a.personal,
+      area,
     }).then((data) => {
       if (data && data.error) {
         return this.alert(LOCALE[data.error] || data.error);
@@ -148,7 +155,9 @@ class __window_manager extends push {
       this.closeCreateFolderDialog();
       this.ensurePart(_a.list).then((list) => {
         if (!list || (list.isDestroyed && list.isDestroyed()) || !data) return;
-        if (this._curWorkspace?.hub_id != hub_id || this._curWorkspace?.nid != nid) return;
+        const curHubId = this._curWorkspace ? this._curWorkspace.hub_id : Visitor.id;
+        const curNid = this._curWorkspace ? this._curWorkspace.nid : Visitor.get(_a.home_id);
+        if (curHubId != hub_id || curNid != nid) return;
         if (data.pid && data.pid != nid) return;
         data.kind = this._getKind();
         data.service = "open-node";
@@ -533,13 +542,40 @@ class __window_manager extends push {
    * To do : allow copy/paste/supp through keyboard short cut
    */
   _handelKbdEvents(e) {
-    // this.debug("AAA:240", e)
   }
 
 
   /**
-   *
+   * Home-grid filter — drop hub-symlinks for non-collaborative areas
+   * (personal, dmz/wicket, public, …). Folders/files at home root must
+   * pass through unchanged: mfs_show_node_by's IFNULL(area, _hub_area)
+   * stamps them with the home hub's area='personal', so a flat area
+   * filter would erase them. Hence the filetype guard.
+   * Collaborative set is {share, private, restricted} — `private` here
+   * is the UX "restricted" workspace, not the personal hub.
+   * No-op once the user has navigated into a sub-workspace.
    */
+  onPartReady(child, pn) {
+    if (pn === _a.list && child && !child._homeGridFilterInstalled) {
+      child._homeGridFilterInstalled = 1;
+      const original = child.prepareData.bind(child);
+      const wm = this;
+      child.prepareData = function (data) {
+        const prepared = original(data) || [];
+        const atHome = !wm._curWorkspace
+          || wm._curWorkspace.hub_id === Visitor.id;
+        if (!atHome) return prepared;
+        return prepared.filter((it) => {
+          if (!it || it.filetype !== _a.hub) return true;
+          return it.area === _a.share
+            || it.area === _a.private
+            || it.area === _a.restricted;
+        });
+      };
+    }
+    if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
   onDomRefresh() {
     this.feed(require("./skeleton")(this));
     this.fetchService(SERVICE.desk.get_env,
@@ -917,7 +953,6 @@ class __window_manager extends push {
    * @param {*} cmd
    */
   confirmLeaveHub(media) {
-    this.debug("AAA:554", this, media)
     this.ensurePart('wrapper-modal').then(async (p) => {
       await Kind.waitFor('window_confirm')
       p.feed({
@@ -1038,7 +1073,6 @@ class __window_manager extends push {
         rejected.push(m)
       }
     }
-    this.debug("AAA:684", selection)
     return {
       own_hubs, other_hubs, hubs_inside, allowed, rejected, locked
     }
@@ -1085,7 +1119,6 @@ class __window_manager extends push {
       r.actionDenied(LOCALE.FILE_NOT_DISPOSABLE);
     }
 
-    this.debug("AAA:684", { own_hubs, other_hubs, hubs_inside, allowed, rejected })
   }
 
   /**
@@ -1150,7 +1183,6 @@ class __window_manager extends push {
    */
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.status || cmd.mget(_a.service);
-    this.debug("onUiEvent:879", cmd, args, service)
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
@@ -1171,7 +1203,6 @@ class __window_manager extends push {
 
       case "confirm-remove-selection":
         for (let hub of args.selection) {
-          this.debug("AAA:714", hub, hub.isHub)
           if (!hub.isHub) continue;
           if (hub.isGranted(_K.permission.owner)) {
             await this.confirmRemoveHub(hub, args);
@@ -1204,12 +1235,18 @@ class __window_manager extends push {
             ? { kind: 'folder_form', hub_id: this._curWorkspace.hub_id, nid: this._curWorkspace.nid }
             : { kind: 'media_form' };
           p.feed(skel);
-          const child = p.children.last();
-          if (child) {
-            child.once(_e.destroy, () => {
-              p.el.dataset.state = "closed";
-              delete p.el.dataset.overlay;
-            });
+          // Reset the wrapper only when the whole dialog chain is gone.
+          // media_form chains to permission_* via parent.feed(); collection
+          // "update" fires once after the swap so length reflects the final
+          // state — using per-child destroy would close the wrapper mid-swap.
+          if (!p._closeWhenEmpty) {
+            p._closeWhenEmpty = () => {
+              if (p.collection && p.collection.length === 0) {
+                p.el.dataset.state = "closed";
+                delete p.el.dataset.overlay;
+              }
+            };
+            p.collection.on("update reset", p._closeWhenEmpty);
           }
         });
 
@@ -1313,6 +1350,11 @@ class __window_manager extends push {
         return this.closeDialog();
 
       case "add-folder":
+        this._pendingFolderArea = null;
+        return this.openCreateFolderDialog();
+
+      case "add-private-folder":
+        this._pendingFolderArea = _a.private;
         return this.openCreateFolderDialog();
 
       case "create-folder-submit":

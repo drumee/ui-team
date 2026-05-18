@@ -22,7 +22,6 @@ class __admin_members extends LetcBox {
       this.mset('guest_count',     data.guest_count);
       this.mset('pending_invites', data.pending_invites);
     } catch (e) {
-      this.debug('_loadStats error', e);
     }
   }
 

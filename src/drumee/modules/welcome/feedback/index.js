@@ -37,7 +37,6 @@ class __welcome_feedback extends __welcome_interact {
       service : SERVICE.locale.group,
       name    : '_account'
     }).then((data)=>{
-      this.debug("EZEZZEZEZE", data);
       for(let row of data){
         let key = Visitor.language();
         LOCALE[row.key_code]= row[key];  
@@ -55,7 +54,6 @@ class __welcome_feedback extends __welcome_interact {
   */
   onUiEvent(cmd, args) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
 
     switch (service) {
       case _e.submit: 

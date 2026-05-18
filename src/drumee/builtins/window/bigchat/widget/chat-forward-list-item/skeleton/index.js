@@ -13,11 +13,18 @@ const __skl_chat_forward_list_item = function(_ui_) {
   const chatFrwdListFig = _ui_.fig.family;
   const type = _ui_.mget(_a.type);
 
-  if (type === 'private-room') {
+  // _a.privateRoom/_a.shareRoom come from createSafeObject proxy and resolve
+  // to the camelCase keys 'privateRoom'/'shareRoom' — NOT 'private-room'.
+  // The previous string-literal compare never matched so both branches were
+  // skipped and rows rendered with only the checkbox visible.
+  if (type === _a.privateRoom) {
     const fname = _ui_.mget(_a.firstname)  || '';
     const lname = _ui_.mget(_a.lastname)  || '';
-    const fullname = _ui_.mget(_a.fullname) || (fname  + " " + lname);
-    displayName = _ui_.mget(_a.surname);
+    const fullname = _ui_.mget(_a.fullname) || `${fname} ${lname}`.trim();
+    displayName = fullname
+      || _ui_.mget(_a.name)
+      || _ui_.mget(_a.email)
+      || LOCALE.NAME_CONTACT;
 
     displayIcon = Skeletons.UserProfile({
       className : `${chatFrwdListFig}__profile ${type}`,
@@ -26,9 +33,9 @@ const __skl_chat_forward_list_item = function(_ui_) {
       lastname  : lname,
       fullname
     });
-  
-  } else if (type === 'share-room') {
-    displayName = _ui_.mget('group_name');
+
+  } else if (type === _a.shareRoom) {
+    displayName = _ui_.mget('group_name') || _ui_.mget(_a.name) || '';
 
     displayIcon = Skeletons.Button.Svg({
       ico       : "raw-drumee_projectroom",

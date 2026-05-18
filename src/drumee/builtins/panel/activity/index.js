@@ -85,6 +85,22 @@ class __panel_activity extends LetcBox {
    * @returns 
    */
   getCurrentApi() {
+    if (this._filter === 'mentions') {
+      return {
+        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
+        hub_id: Visitor.id,
+        type: 'mention',
+        unread_only: this._unreadsOnly,
+      };
+    }
+    if (this._filter === 'shares') {
+      return {
+        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
+        hub_id: Visitor.id,
+        type: 'share',
+        unread_only: this._unreadsOnly,
+      };
+    }
     return {
       service: SERVICE.activity.get_feed,
       hub_id: Visitor.id,
@@ -126,11 +142,21 @@ class __panel_activity extends LetcBox {
         this.setState(0);
         return Desk.togglePanel('address_book', 'chat-panel');
 
-      case 'open-chat':
+      case 'open-chat': {
+        const drumate_id = args && args.drumate_id;
+        const message_id = args && args.message_id;
         this._dismissFromOpen(cmd, args);
         this.activityState = 0;
         this.setState(0);
-        return Desk.togglePanel('chat_p2p', 'chat-panel');
+        Desk.togglePanel('chat_p2p', 'chat-panel').then(() => {
+          if (!drumate_id) return;
+          Desk.ensurePart('chat-panel').then(p => {
+            const widget = p && p.children && p.children.last && p.children.last();
+            if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
+          });
+        });
+        return;
+      }
 
       case 'open-activity':
         this._dismissFromOpen(cmd, args);
@@ -271,13 +297,11 @@ class __panel_activity extends LetcBox {
    * 
    */
   // toggleState() {
-  //   this.debug("AAA:179", this.activityState, this.mget(_a.state))
   //   if (this.activityState == 0) {
   //     this.activityState = 1;
   //     // this.refreshActivity()
   //     // this.el.dataset.state = 1;
   //     // this.setState(1);
-  //     this.debug("AAA:185", this.activityState)
   //     return;
   //   }
   //   return this.closePanel();
@@ -510,7 +534,16 @@ class __panel_activity extends LetcBox {
     const dismissed = this._dismissedKeys || new Set();
     const live = items.filter((it) => {
       const key = `${it.category}:${it.key_id || it.drumate_id || it.hub_id || ''}`;
-      return !dismissed.has(key);
+      if (dismissed.has(key)) {
+        const dismissedAt = this._dismissedLastIds && this._dismissedLastIds.get(key);
+        if (it.last_id && Number(it.last_id) > Number(dismissedAt || 0)) {
+          dismissed.delete(key);
+          if (this._dismissedLastIds) this._dismissedLastIds.delete(key);
+          return true;
+        }
+        return false;
+      }
+      return true;
     });
     const unread_count = live.reduce((acc, it) => acc + (parseInt(it.cnt, 10) || 0), 0);
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
@@ -532,13 +565,38 @@ class __panel_activity extends LetcBox {
     const activeChats = (Wm.getItemsByKind('window_bigchat') || [])
       .filter((win) => win && !win.isDestroyed() && !win.mget(_a.minimize) && win.currentEntityId)
       .map((win) => win.currentEntityId);
-    const list = [];
+    // Dedupe contact rows by peer — server returns both the invite and the
+    // post-accept "informed" row; prefer the accepted one.
+    const seenContactPeers = new Map();
+    const dedupedItems = [];
     for (const it of items) {
+      if (it.category === 'contact') {
+        const peerKey = String(it.drumate_id || it.key_id || it.email || '');
+        if (peerKey) {
+          const existingIdx = seenContactPeers.get(peerKey);
+          if (existingIdx !== undefined) {
+            const existing = dedupedItems[existingIdx];
+            const incomingAccepted = it.status === 'informed';
+            const existingAccepted = existing.status === 'informed';
+            if (incomingAccepted && !existingAccepted) dedupedItems[existingIdx] = it;
+            continue;
+          }
+          seenContactPeers.set(peerKey, dedupedItems.length);
+        }
+      }
+      dedupedItems.push(it);
+    }
+    const list = [];
+    for (const it of dedupedItems) {
       if (it.category === 'chat' && activeChats.includes(it.drumate_id)) continue;
       const e = { ...it };
       e.kind = 'activity_item';
       e.event_type = it.category;
       e.type = it.category;
+      // item_type drives the dismiss routing in _dismissActivity: without it
+      // every row falls back to 'mfs' and persists nothing on hub_invite / chat
+      // / teamchat / etc. Keep this in sync with the category column.
+      e.item_type = it.category;
       e.item_key = `${it.category}:${it.key_id || it.drumate_id || it.hub_id || ''}`;
       switch (it.category) {
         case 'hub_invite':
@@ -550,7 +608,8 @@ class __panel_activity extends LetcBox {
           break;
         case 'contact':
           e.service = 'open-contact';
-          e.event = 'contact.invite';
+          e.event = (it.status === 'informed') ? 'contact.accept_informed' : 'contact.invite';
+          e.status = it.status;
           e.fullname = (it.surname || `${it.firstname || ''} ${it.lastname || ''}`).trim();
           break;
         case 'media':
@@ -603,6 +662,23 @@ class __panel_activity extends LetcBox {
       case "hub.invite_received":
         this.refreshActivity()
         break;
+      case "contact.invite_accept":
+      case "contact.accept_informed":
+        // Mark the peer dismissed before refreshing — activity.list still
+        // includes pending 'informed' rows and would re-render the old
+        // "wants to connect" line otherwise.
+        this._dismissedKeys = this._dismissedKeys || new Set();
+        for (const row of data) {
+          const peerId = row && (row.drumate_id || row.uid || row.email);
+          if (peerId) this._dismissedKeys.add(`contact:${peerId}`);
+        }
+        if (this.timer) {
+          clearTimeout(this.timer);
+          this.timer = null;
+        }
+        this.refreshActivity();
+        this.shouldNofity();
+        break;
       case "messages.read":
         this._buildactivities(data);
         this.updateactivityCount();
@@ -618,12 +694,12 @@ class __panel_activity extends LetcBox {
       case "channel.acknowledge":
       case "chat.acknowledge":
       case "contact.delete_contact":
-      case "contact.accept_informed":
       case "media.remove":
       case "media.new":
         if (this.timer) return;
         this.timer = setTimeout(() => {
           this.refreshActivity();
+          this.shouldNofity();
           this.timer = null;
         }, 1000);
         break;
@@ -747,7 +823,7 @@ class __panel_activity extends LetcBox {
     let author_id = content.author_id || sender.uid || sender.id;
     if (!author_id) return;
     if (author_id == this._lastSender || author_id == Visitor.id) return;
-    Visitor.playSound(_K.activitys.drip, 0);
+    Visitor.playSound(_K.notifications.drip, 0);
     this._lastSender = author_id;
     let preview = content.message || options.service || content.action || options.action;
     if (preview) {
@@ -827,6 +903,11 @@ class __panel_activity extends LetcBox {
     if (itemKey) {
       this._dismissedKeys = this._dismissedKeys || new Set();
       this._dismissedKeys.add(itemKey);
+      const lastId = args.last_id
+        || (cmd && cmd.mget && cmd.mget('last_id'))
+        || 0;
+      this._dismissedLastIds = this._dismissedLastIds || new Map();
+      this._dismissedLastIds.set(itemKey, Number(lastId));
     }
     this._decrementBadge(1);
 

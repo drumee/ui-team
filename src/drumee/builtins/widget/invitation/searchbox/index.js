@@ -276,7 +276,6 @@ class __invitation_searchbox extends LetcBox {
   _showResults(cmd, args = {}) {
     const raw = (args && args.results) != null ? args.results : (cmd && cmd.results);
     const data = Array.isArray(raw) ? raw : (raw && raw.data) || [];
-    this.debug("AAA:270", this, cmd, args, raw)
     this.results = data;
     let sharees = this.getSharees()
     if (_.isEmpty(data)) {
@@ -383,7 +382,6 @@ class __invitation_searchbox extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug(`AAA 376service=${service}`, cmd.service, this, cmd);
 
     switch (service) {
       case "items-found":

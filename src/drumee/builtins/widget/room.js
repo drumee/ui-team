@@ -50,7 +50,6 @@ class __room extends Marionette.View {
     const entity = this.getOption(_a.entity);
     const name = `/${entity.get(_a.id)}`;
     this._room = socket.io.socket(name);
-    this.debug(`QQQQ _start namespace ns=${name}`, this, this._room, socket);
     this._error = false;
     this._room.on(_e.connect, ()=> {
       return this.debug("QQQQ Eshtablishing connection", this._room);
@@ -60,17 +59,14 @@ class __room extends Marionette.View {
     });
       //@_room.emit 'hello', "ZRZZR", "SSS"
     this._room.on('connect_error', ()=> {
-      this.debug("QQQQ Connection lost... ", this._room);
       return this._error = true;
     });
     this._room.on('user_message', message=> {
-      this.debug("QQQQ message... ", message);
       return this._error = true;
     });
     return this._room.on(_e.error, msg=> {
       this._error = true;
       if (msg.match(/invalid.namespace/i)) {
-        this.debug(`QQQQ trying to create name ${name} // ${this._room.nsp}`, this._room.connected, this._error);
         this.triggerMethod(_e.service.post, {service: SERVICE.room.open});
       } else {
         this.warn(`QQQQ unexpected error ${msg}`);
@@ -90,11 +86,9 @@ class __room extends Marionette.View {
 //
 // ===========================================================
   __dispatchRest(service, data) {
-    this.debug(`QQQ >>TTTT __dispatchRest service=${service}`, data, this._room.connected, this._error);
     switch (service) {
       case SERVICE.room.open:
         if (!this._room.connected && this._error) {
-          this.debug("Trying to reconnect after restart");
           this._error = false;
           return this._room.connect();
         }
@@ -109,7 +103,6 @@ class __room extends Marionette.View {
 //
 // ===========================================================
   handle_error(xhr) {
-    this.debug("QQQ >>TTTT DISCONNECTING", xhr);
     return this._room.disconnect();
   }
 }

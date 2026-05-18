@@ -1,6 +1,6 @@
 
 const { filesize, fitBoxes } = require("@drumee/ui-essentials")
-const { TweenMax, Expo } = gsap;
+const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
 const { loadPdfDocument, initializePdfium, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";
@@ -62,7 +62,6 @@ class __player_document extends PlayerInteract {
     let { service, data, options } = args
     switch (options.service) {
       case "media.status":
-        this.debug("onWsMessage:62", { service, data, options })
         this.checkPreview(args)
         break;
     }
@@ -382,7 +381,6 @@ class __player_document extends PlayerInteract {
     };
 
     this.fetchService(opt).then((data) => {
-      this.debug("AAA:378, data", data)
       if (m) m.wait(0);
       if (_.isEmpty(data)) {
         this.crash(LOCALE.UNABLE_TO_GENERATE_PREVIEW);
@@ -713,7 +711,6 @@ class __player_document extends PlayerInteract {
         let f = filename.split('.')
         f.pop()
         filename = f.join() + '.pdf'
-        this.debug("AAAA:678", url, filename)
         this.fetchFile({ url, download: filename })
         break;
 

@@ -37,7 +37,6 @@ class ___widget_sharebox_email_notification extends LetcBox {
         break;
 
       default:
-        this.debug("Created by kind builder");
     }
   }
 
@@ -56,7 +55,6 @@ class ___widget_sharebox_email_notification extends LetcBox {
   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service=${service}`, cmd, this);
 
     switch (service) {
       case 'send-email-notification':

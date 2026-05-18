@@ -92,7 +92,6 @@ class __window_hub_sharebox extends mfsInteract {
       hub_id: Visitor.id,
       pid: this.mget(_a.nid)
     }).then((data) => {
-      this.debug("AAAA:955", data)
       this._checkCreation(data);
     }).catch((err) => {
       this.onServerError(err);
@@ -188,7 +187,6 @@ class __window_hub_sharebox extends mfsInteract {
         return this.toggleValidityMode(cmd);
 
       case _e.create:
-        this.debug("aaaa CR", cmd);
         if (this._checkSanity()) {
           return this._create();
         }

@@ -25,7 +25,6 @@ class __window_screenshare extends __room {
         parent_type: this.mget('parent_type'),
       }
     }
-    this.debug(`AAA:22`, this, this.mget(_a.area), this.roomInfoSvc);
     this.declareHandlers();
     this._state = 1;
     opt.uiHandler.once(_e.destroy, this.goodbye.bind(this));
@@ -72,7 +71,6 @@ class __window_screenshare extends __room {
    * 
    */
   async onAccessGranted(data) {
-    this.debug("GAAA:42", this.room, data);
     await Kind.waitFor('webrtc_local_display');
     await Kind.waitFor('webrtc_remote_display');
     if (this.isShower) {
@@ -101,7 +99,6 @@ class __window_screenshare extends __room {
  */
   onUiEvent(cmd, args = {}) {
     let service = args.service || cmd.get(_a.service)
-    //this.debug("AAA:55 ", args);
     switch (service) {
       case 'upstream-start-screenshare':
         this.$el.hide();
@@ -130,10 +127,8 @@ class __window_screenshare extends __room {
 */
   __dispatchPush(service, data) {
     let svc = this.serviceName(service);
-    this.debug("AAA:134", svc, data);
     switch (svc) {
       case 'downstream-stop-screenshare': case 'room-shutdown':
-        this.debug("AAA:136", svc, data);
         this.goodbye();
         break;
       default:

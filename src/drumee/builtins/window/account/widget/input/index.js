@@ -91,7 +91,6 @@ class __account_entry extends LetcBox {
   onUiEvent(cmd, args) {
     if (args == null) { args = {}; }
     const service = args.service || cmd.mget(_a.service);
-    this.debug(`onUiEvent service = ${service}`, args, cmd, this);
 
     switch (service) {
       case _e.edit:
@@ -133,7 +132,6 @@ class __account_entry extends LetcBox {
     if (method === this.mget(_a.check)) {
       if (!_.isEmpty(data)) { 
         const name = this.mget(_a.name);
-        this.debug("daa", this.mget(_a.value), data[name], this, socket);
         this._value = null;
         if (this.mget(_a.value) === data[name]) {
           return; 

@@ -48,7 +48,6 @@ class organization_form extends LetcBox {
    */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug("AAA:33", service)
     switch (service) {
       case 'create-organization':
         return this.checkDomain()
@@ -92,7 +91,6 @@ class organization_form extends LetcBox {
       default:
         location.reload()
     }
-    this.debug("AAA:50", host, domain)
   }
 
 

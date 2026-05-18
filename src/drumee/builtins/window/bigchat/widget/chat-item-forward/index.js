@@ -61,7 +61,6 @@ class ___chat_item_forward extends LetcBox {
   onUiEvent(cmd) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
     const status = cmd.get(_a.status);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
 
     if (pointerDragged) {
       return;
@@ -99,16 +98,26 @@ class ___chat_item_forward extends LetcBox {
 // ===========================================================
   forwardMessage(cmd) {
     this._selectedRooms = this._seletecdContacts.concat(this._selectedShareRooms);
-    const messageData = { 
+    const messageData = {
       hub_id    : this._msgHubID,
       messages  : this._seletecdMessages
     };
 
-    return this.postService({
+    const payload = {
       service   : SERVICE.chat.forward,
       entities  : this._selectedRooms,
       nodes     : messageData,
       hub_id    : Visitor.get(_a.id)
+    };
+    // P2P context: pass peer_id so server can fetch messages from peer's DB
+    const peerId = this.mget(_a.peer_id);
+    if (peerId) payload.peer_id = peerId;
+
+    return this.postService(payload).then(() => {
+      Wm.alert(LOCALE.FORWARD_DONE, 2000);
+      this.closeOverlay(cmd);
+    }).catch(() => {
+      Wm.alert(LOCALE.TRY_AGAIN);
     });
   }
 
@@ -211,10 +220,22 @@ class ___chat_item_forward extends LetcBox {
 //
 // ===========================================================
   closeOverlay(cmd) {
-    const chatSource = this.mget('source');
-    const widgetChat = chatSource.getItemsByKind('widget_chat')[0];
-    widgetChat.disableMessageSelection();
+    // Hardened: missing source / kind-mismatch / disable hook absence
+    // must not block the close — silently swallow and proceed to dismiss.
+    try {
+      const chatSource = this.mget('source');
+      if (chatSource && _.isFunction(chatSource.getItemsByKind)) {
+        const widgetChat = chatSource.getItemsByKind('widget_chat')[0];
+        if (widgetChat && _.isFunction(widgetChat.disableMessageSelection)) {
+          widgetChat.disableMessageSelection();
+        }
+      }
+    } catch (e) { /* swallow */ }
 
+    // Set service on the model so handlers that read via cmd.mget(_a.service)
+    // see 'close-overlay' (folder window uses this path; bigchat reads
+    // cmd.service JS property and worked accidentally).
+    this.mset({ service: 'close-overlay' });
     this.source = cmd;
     this.service = 'close-overlay';
     return this.triggerHandlers();

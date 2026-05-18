@@ -3,6 +3,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { DuplicatesPlugin } = require("inspectpack/plugin");
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
+const { StatsWriterPlugin } = require("webpack-stats-plugin");
 
 const { join } = require('path')
 const Sync = require('./sync');
@@ -27,7 +28,7 @@ module.exports = function (webpack, opt) {
   let chunkFilename = '[id].css';
   if (/^prod/.test(mode)) {
     filename,
-    chunkFilename = '[id].[hash].css';
+      chunkFilename = '[id].[hash].css';
   }
   const cssExtract = new MiniCssExtractPlugin({
     ignoreOrder: true, // Enable to remove warnings about conflicting order
@@ -49,6 +50,12 @@ module.exports = function (webpack, opt) {
     new webpack.DefinePlugin(pluginsOptions),
     new WebpackManifestPlugin({
       fileName: 'manifest.json'
+    }),
+    new StatsWriterPlugin({
+      fields: ["assets", "modules"],
+      stats: {
+        source: true // Needed for webpack5+
+      }
     }),
     new Sync(opt)
   ];

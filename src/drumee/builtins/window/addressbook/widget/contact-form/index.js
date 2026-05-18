@@ -97,7 +97,6 @@ class __addressbook_widget_contactForm extends LetcBox {
    * @returns 
    */
   onDomRefresh() {
-    this.debug(" onDomRefresh", this);
     return this.feed(require('./skeleton')(this));
   }
 
@@ -149,7 +148,6 @@ class __addressbook_widget_contactForm extends LetcBox {
    */
   _addItem(name, data) {
     if (data == null) { data = {}; }
-    this.debug(" _addItem", name, data);
     const currentlist = this.getPart(name);
     kidData = {
       ...currentlist.mget(_a.itemsOpt),
@@ -199,7 +197,6 @@ class __addressbook_widget_contactForm extends LetcBox {
   _submitContact() {
     this.validateData();
     if (this.formStatus === _a.error) {
-      this.debug("invalid data");
       return;
     }
 
@@ -376,7 +373,6 @@ class __addressbook_widget_contactForm extends LetcBox {
       this.triggerHandlers();
 
     } else {
-      this.debug("_cancelContactForm add form", cmd);
     }
 
     this.forceClose = true;

@@ -44,6 +44,9 @@ const __skl_widget_chat_footer = function (ui) {
       Skeletons.Wrapper.Y({
         className: `${chatFig}__attachment-wrapper`,
         sys_pn: 'attachment-container',
+        // Start collapsed; chat.checkPendingContent flips this when a file
+        // is queued via media-wrapper's add/clear `_e.update` trigger.
+        dataset: { hasAttachment: '0' },
         kids: {
           kind: 'media_wrapper',
           storageKey: ui.storageKey,

@@ -167,6 +167,30 @@ class __lib_messenger extends LetcBox {
     this.service = '';
   }
 
+  _showAttachMenu() {
+    const menu = this.__wrapperAttachMenu;
+    if (!menu) return;
+    if (!menu.isEmpty()) {
+      menu.clear();
+      return;
+    }
+    const fig = this.fig.family;
+    menu.feed([
+      Skeletons.Note({
+        className: `${fig}__attach-option`,
+        content: LOCALE.FROM_DEVICE,
+        service: 'attach-from-device',
+        uiHandler: [this]
+      }),
+      Skeletons.Note({
+        className: `${fig}__attach-option`,
+        content: LOCALE.FROM_WORKSPACE,
+        service: 'attach-from-workspace',
+        uiHandler: [this]
+      })
+    ]);
+  }
+
   /**
    * 
    * @param {*} id 
@@ -223,7 +247,15 @@ class __lib_messenger extends LetcBox {
         return;
 
       case _e.attach:
+        return this._showAttachMenu();
+
+      case 'attach-from-device':
+        if (this.__wrapperAttachMenu) this.__wrapperAttachMenu.clear();
         return this.__fileselector.open(this._upload.bind(this));
+
+      case 'attach-from-workspace':
+        if (this.__wrapperAttachMenu) this.__wrapperAttachMenu.clear();
+        return this.triggerHandlers({ service: 'attach-from-desk' });
 
       case _e.submit:
         return this.triggerHandlers({

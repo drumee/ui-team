@@ -628,7 +628,6 @@ class ___window_bigchat extends __window_bigchat_interact {
           }
         });
       }).catch((err) => {
-        this.debug('Error fetching contact count:', err);
         // Fallback to collection length if API fails
         const contactCount = collection.length || 0;
         const countText = contactCount === 1 ? '1 contact' : `${contactCount} contacts`;
@@ -672,7 +671,6 @@ class ___window_bigchat extends __window_bigchat_interact {
               }
             });
           }).catch((err) => {
-            this.debug('Error fetching latest message:', err);
             // Fallback to collection first item ctime if API fails
             const ctime = firstItem.get('ctime');
             let lastUpdatedText = '';
@@ -703,7 +701,6 @@ class ___window_bigchat extends __window_bigchat_interact {
         });
       }
     } catch (e) {
-      this.debug('Error updating topbar:', e);
     }
   }
 

@@ -57,7 +57,6 @@ class __widget_members_search extends LetcBox {
    * @returns 
    */
   getCurrentApi() {
-    this.debug("getCurrentApi", this);
 
     const api = {
       service: SERVICE.adminpanel.member_list,

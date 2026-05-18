@@ -1182,6 +1182,10 @@
     }
   }
 
+  &__audit-range-wrap {
+    position: relative;
+  }
+
   &__audit-range {
     height: 32px;
     padding: 8px 16px;
@@ -1190,6 +1194,12 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    transition: background 0.1s ease;
+
+    &:hover,
+    &--open {
+      background: rgba(0, 0, 0, 0.08);
+    }
 
     > * {
       pointer-events: none;
@@ -1231,6 +1241,71 @@
         .icon-fill-grey {
           fill: $purple-base;
         }
+      }
+    }
+  }
+
+  &__audit-range-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    width: 168px;
+    padding: 12px 8px;
+    gap: 8px;
+    background: var(--white, #ffffff);
+    border-radius: 6px;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.1),
+      0 1px 3px rgba(0, 0, 0, 0.06);
+    z-index: 100;
+  }
+
+  &__audit-range-item {
+    width: 100%;
+    height: 25px;
+    padding: 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.1s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+
+    &-label {
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 400;
+      color: $ink-900;
+    }
+
+    &-radio {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid $ink-600;
+      box-sizing: border-box;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: var(--white, #ffffff);
+
+      &--selected {
+        border-color: $purple-deep;
+      }
+
+      &-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: $purple-deep;
       }
     }
   }
@@ -4289,6 +4364,13 @@
     gap: 16px;
   }
 
+  &__wsdetail-empty {
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacer-8);
+  }
+
   &__wsdetail-heading-left {
     align-items: center;
     gap: 8px;
@@ -6645,10 +6727,8 @@
   }
 }
 
-// ── Dark mode overrides ─────────────────────────────────────────
-// The Apps panel was authored with hardcoded light-mode SCSS variables.
-// This block remaps the prominent surfaces, lines, and text to the
-// theme-aware tokens defined in router/skin/themes/dark.scss.
+// Dark mode overrides — remap hardcoded light tokens onto the theme
+// variables defined in router/skin/themes/dark.scss.
 html[data-theme="dark"] {
   .apps-main {
     &__ui,
@@ -6866,6 +6946,390 @@ html[data-theme="dark"] {
 
     &__audit-avatar--neutral {
       background: var(--overlay-bg-05);
+    }
+
+    // ── Admin workspace selector chip ───────────────────────
+    &__hub-chip {
+      background: var(--overlay-bg-05);
+      border-color: var(--border-muted);
+
+      &-prefix {
+        color: var(--normal-fg-20);
+      }
+
+      &-name {
+        color: var(--normal-fg-10);
+      }
+
+      &-chevron svg {
+        fill: var(--normal-fg-20);
+      }
+
+      &-menu {
+        background: var(--normal-bg-elevated);
+        border-color: var(--border-muted);
+        box-shadow:
+          var(--shadow-top-tiny),
+          0 4px 16px rgba(0, 0, 0, 0.5);
+      }
+
+      &-search {
+        background: var(--overlay-bg-05);
+
+        input {
+          color: var(--normal-fg-10);
+          &::placeholder {
+            color: var(--placeholder-fg);
+          }
+        }
+      }
+
+      &-item:hover {
+        background: var(--hover-bg-40);
+      }
+
+      &-item-label {
+        color: var(--normal-fg-10);
+      }
+
+      &-item-area {
+        color: var(--normal-fg-20);
+      }
+
+      &-empty {
+        color: var(--normal-fg-50);
+      }
+    }
+
+    // ── Workspace detail (Permissions tab → workspace card) ──
+    &__wsdetail-window {
+      background: var(--normal-bg);
+      box-shadow: 0 0 0 1px var(--border-muted);
+    }
+
+    &__wsdetail-heading {
+      background: var(--overlay-bg-05);
+      border-bottom-color: var(--border-muted);
+    }
+
+    &__wsdetail-title,
+    &__wsdetail-row-title,
+    &__wsdetail-page-num {
+      color: var(--normal-fg-10);
+    }
+
+    &__wsdetail-back-label,
+    &__wsdetail-row-meta,
+    &__wsdetail-footer-label,
+    &__wsdetail-page-ellipsis {
+      color: var(--normal-fg-20);
+    }
+
+    &__wsdetail-back-ico svg,
+    &__wsdetail-page-arrow svg {
+      fill: var(--normal-fg-20);
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: var(--normal-fg-20);
+      }
+    }
+
+    &__wsdetail-search {
+      background: var(--overlay-bg-05);
+
+      input {
+        color: var(--normal-fg-10);
+        &::placeholder {
+          color: var(--placeholder-fg);
+        }
+      }
+    }
+
+    &__wsdetail-row {
+      background: var(--overlay-bg-05);
+      &:hover {
+        background: var(--hover-bg-40);
+      }
+    }
+
+    &__wsdetail-page-arrow:hover,
+    &__wsdetail-page-btn:hover {
+      background: var(--hover-bg-40);
+    }
+
+    &__wsdetail-page-btn--active {
+      background: var(--active-item-bg);
+    }
+
+    // ── Folder permission popup (pencil click) ───────────────
+    &__fperm-card {
+      background: var(--normal-bg-elevated);
+      box-shadow:
+        0 24px 48px rgba(0, 0, 0, 0.55),
+        0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    &__fperm-title,
+    &__fperm-folder-title,
+    &__fperm-sec-label,
+    &__fperm-access-label,
+    &__fperm-member-name,
+    &__fperm-device-name,
+    &__fperm-slider-label {
+      color: var(--normal-fg-10);
+    }
+
+    &__fperm-folder-meta,
+    &__fperm-onetime-sub,
+    &__fperm-add-placeholder,
+    &__fperm-role-pill-label,
+    &__fperm-member-email,
+    &__fperm-avatar-initials,
+    &__fperm-device-info {
+      color: var(--normal-fg-20);
+    }
+
+    &__fperm-empty-label,
+    &__fperm-link-text {
+      color: var(--normal-fg-50);
+    }
+
+    &__fperm-close-ico svg {
+      fill: var(--normal-fg-20);
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: var(--normal-fg-20);
+      }
+    }
+
+    &__fperm-folder-card,
+    &__fperm-access-row,
+    &__fperm-role-pill {
+      background: var(--overlay-bg-05);
+    }
+
+    &__fperm-access-row:hover,
+    &__fperm-role-pill:hover {
+      background: var(--hover-bg-40);
+    }
+
+    &__fperm-link-field,
+    &__fperm-add-input,
+    &__fperm-device-row {
+      background: var(--overlay-bg-05);
+      border-color: var(--border-muted);
+    }
+
+    &__fperm-access-check {
+      background: var(--normal-bg-elevated);
+      border-color: var(--border-strong);
+    }
+
+    &__fperm-slider {
+      background: var(--overlay-bg-05);
+    }
+
+    &__fperm-slider-thumb {
+      background: var(--normal-fg-10);
+    }
+
+    &__fperm-toggle {
+      background: var(--normal-bg-40);
+    }
+
+    &__fperm-device-ico svg {
+      fill: var(--normal-fg-10);
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: var(--normal-fg-10);
+      }
+    }
+
+    // ── Admin storage / File Versioning table ────────────────
+    &__fv-card {
+      background: var(--normal-bg);
+      border-color: var(--border-muted);
+    }
+
+    &__fv-table-header,
+    &__fv-footer {
+      background: var(--normal-bg-elevated);
+    }
+
+    &__fv-table {
+      background: var(--normal-bg);
+    }
+
+    &__fv-row {
+      border-bottom-color: var(--border-muted);
+
+      &--header {
+        background: var(--overlay-bg-05);
+
+        .apps-main__fv-col-label {
+          color: var(--normal-fg-20);
+        }
+      }
+
+      &:hover:not(.apps-main__fv-row--header) {
+        background: var(--hover-bg-40);
+      }
+    }
+
+    &__fv-heading-title,
+    &__fv-filename,
+    &__fv-size,
+    &__fv-page-num {
+      color: var(--normal-fg-10);
+    }
+
+    &__fv-heading-sub,
+    &__fv-col-label,
+    &__fv-pill-label,
+    &__fv-versions,
+    &__fv-view-all,
+    &__fv-back-label,
+    &__fv-pagination-label,
+    &__fv-page-ellipsis {
+      color: var(--normal-fg-20);
+    }
+
+    &__fv-view-all:hover {
+      color: var(--normal-fg-10);
+    }
+
+    &__fv-search {
+      background: var(--overlay-bg-05);
+
+      input {
+        color: var(--normal-fg-10);
+        &::placeholder {
+          color: var(--placeholder-fg);
+        }
+      }
+    }
+
+    &__fv-pill,
+    &__fv-fileico {
+      background: var(--overlay-bg-05);
+    }
+
+    &__fv-checkbox {
+      background: var(--normal-bg-elevated);
+      border-color: var(--border-strong);
+    }
+
+    &__fv-action--more svg {
+      fill: var(--normal-fg-10);
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: var(--normal-fg-10);
+      }
+    }
+
+    &__fv-action--more:hover,
+    &__fv-page-arrow:hover,
+    &__fv-page-btn:hover {
+      background: var(--hover-bg-40);
+    }
+
+    &__fv-page-arrow svg,
+    &__fv-back-ico svg {
+      fill: var(--normal-fg-20);
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: var(--normal-fg-20);
+      }
+    }
+
+    &__fv-page-btn--active {
+      background: var(--active-item-bg);
+    }
+
+    &__fv-pagination {
+      background: var(--overlay-bg-05);
+    }
+
+    // ── File detail screen (clicking a row in File Versioning)
+    &__filed-back-label,
+    &__filed-history-sub,
+    &__filed-version-time,
+    &__filed-version-tag,
+    &__filed-version-editor-by,
+    &__filed-stat-label {
+      color: var(--normal-fg-20);
+    }
+
+    &__filed-back-ico svg,
+    &__filed-history-close-ico svg {
+      fill: var(--normal-fg-20);
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: var(--normal-fg-20);
+      }
+    }
+
+    &__filed-preview-name,
+    &__filed-doc-title,
+    &__filed-section-title,
+    &__filed-subsection-title,
+    &__filed-meta-heading,
+    &__filed-meta-value,
+    &__filed-history-title,
+    &__filed-version-filename,
+    &__filed-version-editor-name {
+      color: var(--normal-fg-10);
+    }
+
+    &__filed-section-body,
+    &__filed-bullet {
+      color: var(--normal-fg-20);
+    }
+
+    &__filed-loading-label,
+    &__filed-preview-empty,
+    &__filed-meta-label {
+      color: var(--normal-fg-50);
+    }
+
+    &__filed-search {
+      background: var(--overlay-bg-05);
+
+      input {
+        color: var(--normal-fg-10);
+        &::placeholder {
+          color: var(--placeholder-fg);
+        }
+      }
+    }
+
+    &__filed-preview-header,
+    &__filed-preview-card,
+    &__filed-show-folder {
+      background: var(--normal-bg);
+      border-color: var(--border-muted);
+    }
+
+    &__filed-show-folder:hover {
+      background: var(--hover-bg-40);
+    }
+
+    &__filed-section {
+      border-top-color: var(--border-muted);
+    }
+
+    &__filed-stat,
+    &__filed-history,
+    &__filed-version {
+      background: var(--overlay-bg-05);
+    }
+
+    &__filed-version:hover {
+      background: var(--hover-bg-40);
+    }
+
+    &__filed-meta-row {
+      border-bottom-color: var(--border-muted);
     }
   }
 }

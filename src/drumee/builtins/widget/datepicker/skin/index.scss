@@ -1,0 +1,122 @@
+@use 'mixins/drumee';
+
+// Host widget
+.datepicker {
+  position: relative;
+
+  input {
+    background: var(--white);
+    border: 1px solid var(--egrey-e8);
+    border-radius: 6px;
+    color: var(--egrey-4a);
+    cursor: pointer;
+    font-size: 13px;
+    height: 36px;
+    outline: none;
+    padding: 0 10px;
+    width: 100%;
+
+    &:focus {
+      border-color: var(--eorange);
+    }
+  }
+}
+
+// Flatpickr calendar overrides — scoped to keep specificity low
+.flatpickr-calendar {
+  border: 1px solid var(--egrey-e8);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+
+  &.arrowTop::before,
+  &.arrowTop::after {
+    border-bottom-color: var(--egrey-e8);
+  }
+
+  &.arrowBottom::before,
+  &.arrowBottom::after {
+    border-top-color: var(--egrey-e8);
+  }
+}
+
+.flatpickr-month {
+  background: var(--eorange);
+  border-radius: 7px 7px 0 0;
+  color: var(--white);
+  fill: var(--white);
+}
+
+.flatpickr-current-month {
+  color: var(--white);
+  font-size: 14px;
+
+  .numInputWrapper span {
+    border-color: rgba(255, 255, 255, 0.3);
+
+    &.arrowUp::after  { border-bottom-color: var(--white); }
+    &.arrowDown::after { border-top-color: var(--white); }
+  }
+
+  select,
+  input.cur-year {
+    color: var(--white);
+  }
+}
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+  color: var(--white);
+  fill: var(--white);
+
+  &:hover svg { fill: rgba(255, 255, 255, 0.7); }
+}
+
+.flatpickr-weekdays {
+  background: var(--eorange);
+}
+
+span.flatpickr-weekday {
+  background: var(--eorange);
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+}
+
+.flatpickr-day {
+  border-radius: 4px;
+  color: var(--egrey-4a);
+
+  &:hover,
+  &.prevMonthDay:hover,
+  &.nextMonthDay:hover {
+    background: var(--egrey-f1);
+    border-color: var(--egrey-f1);
+  }
+
+  &.today {
+    border-color: var(--eorange-light);
+    color: var(--eorange);
+  }
+
+  &.selected,
+  &.startRange,
+  &.endRange {
+    background: var(--eorange);
+    border-color: var(--eorange);
+    color: var(--white);
+
+    &:hover { background: var(--eorange-dark); }
+  }
+
+  &.inRange {
+    background: var(--egrey-f1);
+    border-color: var(--egrey-f1);
+    box-shadow: -5px 0 0 var(--egrey-f1), 5px 0 0 var(--egrey-f1);
+  }
+
+  &.flatpickr-disabled,
+  &.prevMonthDay,
+  &.nextMonthDay {
+    color: var(--egrey-b6);
+  }
+}

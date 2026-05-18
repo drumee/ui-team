@@ -1,8 +1,8 @@
 const COLUMNS = [
-  { key: "todo", label: "To Do", color: "#AEAEB2" },
-  { key: "in_progress", label: "In Progress", color: "#65D0EA" },
-  { key: "to_review", label: "To review", color: "#E8A13B" },
-  { key: "complete", label: "Complete", color: "#54B684" },
+  { key: "todo",        label: "STATUS_TODO",        color: "#AEAEB2" },
+  { key: "in_progress", label: "STATUS_IN_PROGRESS", color: "#65D0EA" },
+  { key: "to_review",   label: "STATUS_TO_REVIEW",   color: "#E8A13B" },
+  { key: "complete",    label: "STATUS_COMPLETE",    color: "#54B684" },
 ];
 
 const PRIORITIES = [
@@ -158,7 +158,7 @@ class __tasks_panel extends LetcBox {
     }
     switch (service) {
       case "task-input-changed":
-        return this._onTaskInputChanged(args);
+        return this._onTaskInputChanged(args, trigger);
 
       case "add-task":
         this._creating = true;
@@ -434,17 +434,31 @@ class __tasks_panel extends LetcBox {
   // Push every keystroke straight into the active draft. The Entry widget
   // sets _input.value asynchronously (~200ms), so a pre-feed DOM read after
   // a re-render would blank typed text before the value is rebound.
-  _onTaskInputChanged(args) {
-    const value = String(args && args.value != null ? args.value : "");
+  // For widget-driven inputs (e.g. the datepicker) the firing element is not
+  // focused, so fall back to reading name/value from the trigger model.
+  _onTaskInputChanged(args, trigger) {
+    let value = args && args.value != null ? String(args.value) : null;
+    let name = null;
+    let scopeEl = null;
     const active = (typeof document !== "undefined") ? document.activeElement : null;
-    if (!active || !active.getAttribute || !this.el || !this.el.contains(active)) return;
-    const name = active.getAttribute("name");
-    if (!name) return;
+    if (active && active.getAttribute && this.el && this.el.contains(active)) {
+      name = active.getAttribute("name");
+      scopeEl = active;
+    } else if (trigger && trigger.mget) {
+      name = trigger.mget(_a.name) || trigger.mget("name");
+      if (value == null) {
+        const v = trigger.mget(_a.value);
+        value = v != null ? String(v) : "";
+      }
+      scopeEl = trigger.el;
+    }
+    if (!name || !scopeEl) return;
+    if (value == null) value = "";
     const inCreate = this.el.querySelector(".tasks-panel__create-modal");
     const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
-    if (this._creating && inCreate && inCreate.contains(active) && this._createDefaults) {
+    if (this._creating && inCreate && inCreate.contains(scopeEl) && this._createDefaults) {
       this._createDefaults[name] = value;
-    } else if (this._detailDraft && inDetail && inDetail.contains(active)) {
+    } else if (this._detailDraft && inDetail && inDetail.contains(scopeEl)) {
       this._detailDraft[name] = value;
     }
   }

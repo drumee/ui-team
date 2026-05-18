@@ -104,7 +104,6 @@ class __window_search extends __window_interact {
   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service) || cmd.mget(_a.name);
-    this.debug(`onUiEvent service=${service}`, cmd, this);
 
     switch (service) {
       case 'open-file-location':

@@ -58,7 +58,6 @@ class ___widget_dock_minifier extends LetcBox {
    * @param  {} instance
    */
   onMinify(event ,winInstance) {
-    this.debug('onMinify',winInstance,this.__list);
     const itemsOpt = this.__list.mget(_a.itemsOpt);
     if(!winInstance.mget(_a.media)) return;
     let data = winInstance.mget(_a.media).model.toJSON()

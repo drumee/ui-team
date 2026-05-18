@@ -42,7 +42,6 @@ class __admin_permissions extends LetcBox{
         require_approval: data.require_approval,
       };
     } catch (e) {
-      this.debug('_loadData error', e);
     }
   }
 
@@ -87,7 +86,6 @@ class __admin_permissions extends LetcBox{
     try {
       await this.postService(SERVICE.admin.save_permissions, this._settings);
     } catch (e) {
-      this.debug('_saveSettings error', e);
     }
   }
 
@@ -96,7 +94,6 @@ class __admin_permissions extends LetcBox{
       await this.postService(SERVICE.admin.handle_workspace_request, { action, ...data });
       if (this._pendingList) this._pendingList.reload();
     } catch (e) {
-      this.debug('_handleRequest error', e);
     }
   }
 }

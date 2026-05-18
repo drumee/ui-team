@@ -231,26 +231,33 @@
   &__add-wrapper {
     position: relative;
     flex-shrink: 0;
-  }
+  
 
-  // "Add new" dropdown menu
-  &__add-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    min-width: 130px;
-    background: var(--white);
-    border-radius: 4px;
-    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
-    padding: 8px;
-    gap: 4px;
-    z-index: 99999;
-    visibility: hidden;
-    pointer-events: none;
+    // Items container: background, padding, radius
+    .menu-topic-items {
+      background: var(--white);
+      border-radius: 4px;
+      padding: 8px;
+      gap: 4px;
+      min-width: 130px;
+    }
 
-    &[data-state="1"] {
-      visibility: visible;
-      pointer-events: auto;
+    // Dropdown wrapper: position, shadow, z-index
+    .menu-topic-items__wrapper {
+      box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+      border-radius: 4px;
+      left: 0;
+      min-width: 130px;
+      z-index: 99999;
+
+      &[data-direction="down"] {
+        top: calc(100% + 4px);
+      }
+    }
+
+    // Hidden when closed (data-state="1" is set by menu_topic on open)
+    &:not([data-state="1"]) .menu-topic-items__wrapper {
+      visibility: hidden;
     }
   }
 
@@ -299,6 +306,7 @@
     }
 
     &.ico-workspace svg { fill: #5950ff; color: #5950ff; }
+    &.ico-private-folder svg { fill: #54b684; color: #54b684; }
     &.ico-note svg { fill: #e8a13b; color: #e8a13b; }
     &.ico-document svg { fill: #847eff; color: #847eff; }
     &.ico-spreadsheet svg { fill: #54b684; color: #54b684; }

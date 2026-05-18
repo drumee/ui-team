@@ -1914,7 +1914,6 @@ class __media_core extends DrumeeMFS {
         this.cut()
       })
     }).catch(async (r) => {
-      this.debug("ERROR[1799]: failed to upload folder", r)
       let { response } = r;
       if (response == _e.close) {
         this.goodbye();

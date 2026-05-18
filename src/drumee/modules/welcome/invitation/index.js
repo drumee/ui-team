@@ -54,7 +54,6 @@ class __welcome_invitation extends __welcome_interact {
   */
   onUiEvent(cmd) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
 
     switch (service) {
       case _a.none:

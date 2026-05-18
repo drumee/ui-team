@@ -45,7 +45,6 @@ class __media_paste extends media_gird {
   _checkUpload(){
     if(this._done) return;
     let handler = this.mget(_a.uiHandler) || this.getLogicalParent() || Wm;
-    //this.debug("AAA:45 --- _checkUpload", this.mget(_a.src));
     this.postService(SERVICE.media.upload_base64, {
       filename : this.mget(_a.filename),
       mimetype: this.mget(_a.mimetype),
@@ -53,7 +52,6 @@ class __media_paste extends media_gird {
       image:this.mget(_a.src),
       hub_id: this.mget(_a.hub_id)
     }).then((data)=>{
-      //this.debug("AAA:53", this.mget('destination'), data, this);
       this._done = 1;
       this.status = null;
       data.kind = this._getKind();

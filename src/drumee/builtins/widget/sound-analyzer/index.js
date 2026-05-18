@@ -81,10 +81,8 @@ class __sound_analyzer extends LetcBox {
     if (!stream) {
       return;
     }
-    //this.debug("AAA:192 93 PLUG SOUND --> ", this, stream);
     this.waitElement(`${this._id}-canvas`, async () => {
       const c = await this.ensurePart('canvas');
-      //this.debug("AAA:192 96 CANVAS SOUND --> ", c);
       this.width = this.$el.width();
       this.height = this.$el.height();
       c.el.width = this.width;

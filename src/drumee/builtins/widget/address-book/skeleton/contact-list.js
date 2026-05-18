@@ -3,8 +3,6 @@ module.exports = function (ui, contacts) {
   const selectedKey = ui.getSelectedKey();
   const tab = ui.getTab();
   const pendingCount = ui.getInvitations().length;
-  const tags = ui.getTags();
-  const selectedTagId = ui.getSelectedTagId();
 
   const fullName = (c) => {
     const fn = (c.firstname || "").trim();
@@ -64,34 +62,6 @@ module.exports = function (ui, contacts) {
     ],
   });
 
-  const tagFilter = tags.length
-    ? Skeletons.Box.X({
-        className: `${fig}__tag-filter`,
-        kids: [
-          Skeletons.Note({
-            className: `${fig}__tag-chip ${fig}__tag-chip--filter`,
-            dataset: { active: !selectedTagId ? 1 : 0 },
-            content: LOCALE.ALL,
-            bubble: 0,
-            service: "filter-tag",
-            uiHandler: [ui],
-            tagId: "",
-          }),
-          ...tags.map((t) =>
-            Skeletons.Note({
-              className: `${fig}__tag-chip ${fig}__tag-chip--filter`,
-              dataset: { active: selectedTagId === t.tag_id ? 1 : 0 },
-              content: t.name || t.tag_name || "",
-              bubble: 0,
-              service: "filter-tag",
-              uiHandler: [ui],
-              tagId: t.tag_id,
-            })
-          ),
-        ],
-      })
-    : null;
-
   const item = (c) => {
     const key = ui.keyOf(c);
     const name = fullName(c);
@@ -133,7 +103,7 @@ module.exports = function (ui, contacts) {
               : null,
           ].filter(Boolean),
         }),
-        c.status === "received"
+        (c.status === "received" || c.status === "sent")
           ? Skeletons.Note({
               className: `${fig}__contact-pill`,
               content: LOCALE.PENDING,
@@ -155,6 +125,6 @@ module.exports = function (ui, contacts) {
 
   return Skeletons.Box.Y({
     className: `${fig}__sidebar-stack`,
-    kids: [tabsBar, tagFilter, listBody].filter(Boolean),
+    kids: [tabsBar, listBody].filter(Boolean),
   });
 };

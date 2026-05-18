@@ -139,7 +139,6 @@ class ___widget_sharebox_setting extends LetcBox {
   */
   toggleValidityMode (cmd) {
     const mode = cmd.mget(_a.value);
-    this.debug('toggleValidityMode', mode, cmd, this);
 
     if (mode == _a.limited) {
       this.__setValidityWrapper.el.dataset.mode = _a.open;
@@ -302,7 +301,6 @@ class ___widget_sharebox_setting extends LetcBox {
       return;
     }
     let data = cmd.source;
-    this.debug(data)
     let opt = {
       service : SERVICE.hub.delete_external_member,
       hub_id: this.mget(_a.media).mget('hub_id'),

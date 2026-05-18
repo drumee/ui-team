@@ -63,7 +63,6 @@ class ___window_help_desk extends __window_interact_singleton{
             let opt = await this.postService(SERVICE.yp.sys_var, {name:"helpdesk_link"});
             try{
               opt = JSON.parse(opt.value);
-              this.debug("AAA:77", opt);
             }catch(e){
 
             }
@@ -72,7 +71,6 @@ class ___window_help_desk extends __window_interact_singleton{
        break;
       default:
         super.onPartReady(child, pn);
-        this.debug("Created by kind builder");
     }
   }
 
@@ -88,7 +86,6 @@ class ___window_help_desk extends __window_interact_singleton{
    */
   onUiEvent (cmd, args){
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this)
 
     switch(service){
       case _e.close:
@@ -100,7 +97,6 @@ class ___window_help_desk extends __window_interact_singleton{
           this.goodbye();
         });
       default:
-        this.debug("Created by kind builder");
         super.onUiEvent(cmd, args)
     }
   }

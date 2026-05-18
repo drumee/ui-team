@@ -54,7 +54,6 @@ class __window_schedule extends __interact {
     if (!this.mget(_a.hub_id)) {
       this.postService(SERVICE.desk.create_wicket, { hub_id: Visitor.id })
         .then((data) => {
-          this.debug("AAA:57", data);
           Wm.mset({ wicket_id: data.hub_id });
           start(data);
         });
@@ -64,7 +63,6 @@ class __window_schedule extends __interact {
         nid: this.mget(_a.nid)
       }, { async: 1 })
         .then((data) => {
-          this.debug("AAA:63", data);
           start(data);
         });
     }
@@ -202,7 +200,6 @@ class __window_schedule extends __interact {
       media,
       mode: 'host'
     }
-    //this.debug('AAAAA 104', opt);
     Wm.launch(opt, { explicit: 1, singleton: 1 });
     return
   }
@@ -260,7 +257,6 @@ class __window_schedule extends __interact {
    * @param {*} data 
    */
   update_attendees(data) {
-    this.debug("ATTENDEES", data);
   }
 
 

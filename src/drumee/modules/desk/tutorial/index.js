@@ -66,7 +66,6 @@ class tutorial_main extends LetcBox {
 
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
-    this.debug("NEXT", service)
     switch (service) {
       case 'next-step':
         this._nextStep()

@@ -21,7 +21,6 @@ class ___widget_sv_new_folder extends LetcBox {
     this.currentPath = opt.path;
     this.type  = opt.type;
     this._parent = opt.uiHandler;
-    this.debug('sv_new_folder', opt, this);
     this.declareHandlers();
   }
 
@@ -51,7 +50,6 @@ class ___widget_sv_new_folder extends LetcBox {
    */
   onUiEvent (cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service=${service}`, cmd, this);
 
     switch(service) {
       case  _a.none:
@@ -74,7 +72,6 @@ class ___widget_sv_new_folder extends LetcBox {
   createDirectory() {
     this.validateData()
     if (this.formStatus == _a.error) {
-      this.debug('invalid data', this)
       return
     }
     const data = this.getData(_a.formItem)
@@ -87,7 +84,6 @@ class ___widget_sv_new_folder extends LetcBox {
       name: data.name,
       hub_id: Visitor.id
     }, { async: 1 }).then((res) => {
-      this.debug('exportFiles api response', res, this);
       if (_.isEmpty(res)) return;
       let list = serExplorer.getItemsByKind("widget_efs_list")[0];
       list.__list.append(res);

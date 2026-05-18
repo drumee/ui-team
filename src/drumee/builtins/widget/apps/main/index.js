@@ -80,21 +80,59 @@ function initialsFor(firstname, lastname, fullname) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function deriveRole(privilege) {
-  const p = parseInt(privilege, 10) || 0;
+// role_label is the canonical signal from hub_member_list ("OWNER" |
+// "HUB_ADMIN" | "MEMBER"). hub_permission is a fallback for endpoints that
+// only return the bitmask.
+function deriveRole(row) {
+  const label = String(
+    (row && (row.role_label || row.role)) || "",
+  ).toUpperCase();
+  if (label === "OWNER") {
+    return {
+      label: LOCALE.ORGANIZATION_OWNER || "Organization Owner",
+      variant: "owner",
+    };
+  }
+  if (
+    label === "HUB_ADMIN" ||
+    label === "ADMIN" ||
+    label === "WORKSPACE_ADMIN"
+  ) {
+    return {
+      label: LOCALE.WORKSPACE_ADMIN || "Workspace Admin",
+      variant: "admin",
+    };
+  }
+  if (label === "MEMBER") {
+    return { label: LOCALE.MEMBER || "Member", variant: "member" };
+  }
+  const p =
+    parseInt(
+      (row &&
+        (row.hub_permission != null ? row.hub_permission : row.privilege)) ||
+        0,
+      10,
+    ) || 0;
   if (_K && _K.permission) {
     if (p & _K.permission.owner) {
-      return { label: "organization name owner", variant: "owner" };
+      return {
+        label: LOCALE.ORGANIZATION_OWNER || "Organization Owner",
+        variant: "owner",
+      };
     }
     if (p & _K.permission.admin) {
-      return { label: "Workspace Admin", variant: "admin" };
+      return {
+        label: LOCALE.WORKSPACE_ADMIN || "Workspace Admin",
+        variant: "admin",
+      };
     }
   }
-  return { label: "Member", variant: "member" };
+  return { label: LOCALE.MEMBER || "Member", variant: "member" };
 }
 
 const TABS_BY_ROLE = {
-  owner: ["member", "audit", "storage", "security"],
+  // 'security' temporarily hidden — backend SPs not yet wired up.
+  owner: ["member", "audit", "storage"],
   admin: ["member", "permissions", "admin-storage"],
   member: [],
 };
@@ -108,17 +146,21 @@ function deriveVisitorRole() {
 }
 
 function deriveStatus(row) {
+  const s = String((row && row.status) || "").toLowerCase();
+  if (s === "online" || s === "away" || s === "offline") return s;
   if (row && (row.online === 1 || row.online === true)) return "online";
   if (row && row.connected === 0) return "offline";
-  return "online";
+  return "offline";
 }
 
+// last_active arrives as a unix timestamp in seconds (e.g. 1779085588) or null.
 function deriveLastActive(row) {
   if (!row) return "—";
-  const t = row.last_login || row.mtime || row.ctime;
+  const t = row.last_active || row.last_login || row.mtime || row.ctime;
   if (!t) return "—";
   try {
-    const d = Dayjs(t);
+    const ms = Number(t) > 1e12 ? Number(t) : Number(t) * 1000;
+    const d = Dayjs(ms);
     if (!d.isValid()) return String(t);
     return d.fromNow();
   } catch (e) {
@@ -127,7 +169,7 @@ function deriveLastActive(row) {
 }
 
 function mapMember(row) {
-  const id = row.drumate_id || row.user_id || row.id;
+  const id = row.uid || row.drumate_id || row.user_id || row.id;
   const fullname =
     row.fullname || `${row.firstname || ""} ${row.lastname || ""}`.trim();
   return {
@@ -137,11 +179,12 @@ function mapMember(row) {
     avatar_color: avatarColorFor(id),
     name: fullname || row.email || "—",
     email: row.email || "",
-    role: deriveRole(row.privilege),
+    role: deriveRole(row),
     workspaces: [],
     status: deriveStatus(row),
     last_active: deriveLastActive(row),
-    privilege: row.privilege || 0,
+    hub_permission:
+      row.hub_permission != null ? row.hub_permission : row.privilege || 0,
   };
 }
 
@@ -172,7 +215,9 @@ class apps_main extends LetcBox {
     this._memberStats = null;
     this._membersState = "idle"; // idle | loading | loaded | error
     this._statsState = "idle";
-    this._auditUnlocked = false;
+    // Default unlocked — the upsell overlay was a placeholder; reintroduce
+    // when billing wires up a real plan gate.
+    this._auditUnlocked = true;
     this._auditLogs = [];
     this._auditLogsTotal = 0;
     this._auditPageSize = 20;
@@ -180,8 +225,11 @@ class apps_main extends LetcBox {
     this._auditState = "idle";
     this._auditPage = 1;
     this._auditUsername = "";
-    this._auditFrom = 0;
-    this._auditTo = 0;
+    // '7d' | '30d' | '90d' | 'all' — the date-range pill is a preset picker;
+    // _auditFrom/_auditTo are derived from this on every fetch so the key is
+    // the single source of truth.
+    this._auditRangeKey = "30d";
+    this._auditRangeOpen = false;
     this._orgStorageStats = [];
     this._orgUserStorage = [];
     this._orgUserStorageTotal = 0;
@@ -265,6 +313,31 @@ class apps_main extends LetcBox {
         this._render();
       }
     }
+    if (this._auditRangeOpen) {
+      const rangeEl =
+        this.el && this.el.querySelector(".apps-main__audit-range");
+      const menuEl =
+        this.el && this.el.querySelector(".apps-main__audit-range-menu");
+      if (
+        rangeEl &&
+        !rangeEl.contains(e.target) &&
+        menuEl &&
+        !menuEl.contains(e.target)
+      ) {
+        this._auditRangeOpen = false;
+        this._render();
+      }
+    }
+  }
+
+  // Derive Unix-second from_time/to_time from the current preset key. The
+  // backend already treats 0 as "no bound", so 'all' returns {0, 0}.
+  _auditRangeWindow() {
+    const key = this._auditRangeKey || "30d";
+    if (key === "all") return { from: 0, to: 0 };
+    const days = key === "7d" ? 7 : key === "90d" ? 90 : 30;
+    const now = Math.floor(Date.now() / 1000);
+    return { from: now - days * 86400, to: now };
   }
 
   _render() {
@@ -367,10 +440,11 @@ class apps_main extends LetcBox {
     this._auditState = "loading";
     this._render();
     try {
+      const { from, to } = this._auditRangeWindow();
       const res = await this.postService(SERVICE.admin.get_audit_logs, {
         username: this._auditUsername || "",
-        from_time: this._auditFrom || 0,
-        to_time: this._auditTo || 0,
+        from_time: from,
+        to_time: to,
         page: this._auditPage || 1,
       });
       this._auditLogs = Array.isArray(res) ? res : (res && res.data) || [];
@@ -392,9 +466,10 @@ class apps_main extends LetcBox {
 
   async _loadAuditStats() {
     try {
+      const { from, to } = this._auditRangeWindow();
       const res = await this.postService(SERVICE.admin.get_audit_stats, {
-        from_time: this._auditFrom || 0,
-        to_time: this._auditTo || 0,
+        from_time: from,
+        to_time: to,
       });
       this._auditStats = res || null;
     } catch (e) {
@@ -405,34 +480,85 @@ class apps_main extends LetcBox {
 
   async _exportAuditLogs() {
     try {
+      const { from, to } = this._auditRangeWindow();
       const res = await this.postService(SERVICE.admin.export_audit_logs, {
         username: this._auditUsername || "",
-        from_time: this._auditFrom || 0,
-        to_time: this._auditTo || 0,
+        from_time: from,
+        to_time: to,
       });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
       const cols = [
-        "ctime",
-        "actor_name",
-        "email",
-        "action",
-        "category",
-        "entity_id",
-        "hub_id",
-        "log",
+        { key: "ctime", header: LOCALE.TIMESTAMP || "Timestamp" },
+        { key: "actor_name", header: LOCALE.USER || "User" },
+        { key: "email", header: LOCALE.EMAIL || "Email" },
+        { key: "action", header: LOCALE.ACTION || "Action" },
+        { key: "category", header: LOCALE.CATEGORY || "Category" },
+        {
+          key: "entity_id",
+          header: LOCALE.TARGET_RESOURCE || "Target Resource",
+        },
+        { key: "hub_id", header: LOCALE.WORKSPACE || "Workspace" },
+        { key: "log", header: LOCALE.MESSAGE || "Message" },
       ];
+      const titleCase = (s) => {
+        if (!s) return "";
+        const t = String(s).replace(/_/g, " ");
+        return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+      };
+      const cellValue = (row, key) => {
+        if (key === "ctime") {
+          const t = parseInt(row.ctime, 10);
+          if (!t) return "";
+          return Dayjs.unix(t).format("YYYY-MM-DD HH:mm:ss");
+        }
+        if (key === "action" || key === "category") return titleCase(row[key]);
+        return row[key];
+      };
       const escape = (v) => {
         if (v == null) return "";
         const s = String(v).replace(/"/g, '""');
         return /[",\n]/.test(s) ? `"${s}"` : s;
       };
-      const csv = [cols.join(",")]
-        .concat(rows.map((r) => cols.map((c) => escape(r[c])).join(",")))
+      const csv = [cols.map((c) => escape(c.header)).join(",")]
+        .concat(
+          rows.map((r) =>
+            cols.map((c) => escape(cellValue(r, c.key))).join(","),
+          ),
+        )
         .join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
       const ts = Dayjs().format("YYYYMMDD-HHmmss");
-      this.getBlob && this.getBlob(blob, `audit-logs-${ts}.csv`);
+      const filename = `audit-logs-${ts}.csv`;
+      const url = URL.createObjectURL(blob);
+      console.log(
+        "[audit-export] rows:",
+        rows.length,
+        "bytes:",
+        blob.size,
+        "url:",
+        url,
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.rel = "noopener";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      try {
+        a.click();
+      } catch (clickErr) {
+        console.warn(
+          "[audit-export] a.click() failed, falling back to window.open",
+          clickErr,
+        );
+        window.open(url, "_blank");
+      }
+      setTimeout(() => {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
     } catch (e) {
+      console.warn("[audit-export] export_audit_logs failed", e);
       this.warn && this.warn("export_audit_logs failed", e);
     }
   }
@@ -811,6 +937,7 @@ class apps_main extends LetcBox {
   }
 
   toggleMember(id) {
+    if (this._isSelf(id)) return;
     if (this._selected.has(id)) this._selected.delete(id);
     else this._selected.add(id);
     this._render();
@@ -818,13 +945,15 @@ class apps_main extends LetcBox {
 
   toggleAll() {
     // Operate on the visible (role-filtered) subset so the header checkbox
-    // reflects what the user sees.
-    const visible =
+    // reflects what the user sees. The current visitor is excluded so the
+    // header checkbox can never schedule self-removal.
+    const visible = (
       this._roleFilter && this._roleFilter !== "all"
         ? this._members.filter(
             (m) => m && m.role && m.role.variant === this._roleFilter,
           )
-        : this._members;
+        : this._members
+    ).filter((m) => !this._isSelf(m.id));
     const allSelected =
       visible.length > 0 && visible.every((m) => this._selected.has(m.id));
     if (allSelected) {
@@ -861,6 +990,7 @@ class apps_main extends LetcBox {
   //  Edit-member popup
   // ─────────────────────────────────────────────────────────
   async _openEditMember(memberId) {
+    if (this._isSelf(memberId)) return;
     const member = this._members.find((m) => m.id === memberId);
     if (!member) return;
     this._editingMember = member;
@@ -935,14 +1065,20 @@ class apps_main extends LetcBox {
   //  Delete member
   // ─────────────────────────────────────────────────────────
   async _deleteMember(memberId) {
+    if (memberId == null || memberId === "") {
+      this.warn && this.warn("member_delete: missing memberId", memberId);
+      return;
+    }
+    if (this._isSelf(memberId)) return;
     try {
       if (this._role === "admin") {
         await this.postService(SERVICE.admin.hub_member_remove, {
           hub_id: this._activeAdminHub,
-          user_id: memberId,
+          uid: memberId,
         });
       } else {
         await this.postService(SERVICE.adminpanel.member_delete, {
+          orgid: Visitor.get("org_id"),
           user_id: memberId,
         });
       }
@@ -953,6 +1089,13 @@ class apps_main extends LetcBox {
     await this._loadMemberStats();
     this._clampPage();
     this._loadMembers();
+  }
+
+  _isSelf(memberId) {
+    if (memberId == null) return false;
+    const me = typeof Visitor !== "undefined" && Visitor ? Visitor.id : null;
+    if (me == null) return false;
+    return String(memberId) === String(me);
   }
 
   _clampPage() {
@@ -1221,7 +1364,19 @@ class apps_main extends LetcBox {
         return this._loadAuditLogs();
 
       case "apps-audit-range":
-        return;
+        this._auditRangeOpen = !this._auditRangeOpen;
+        return this._render();
+
+      case "apps-audit-select-range": {
+        const key = (cmd && cmd.mget && cmd.mget("range_key")) || "30d";
+        this._auditRangeOpen = false;
+        if (key === this._auditRangeKey) return this._render();
+        this._auditRangeKey = key;
+        this._auditPage = 1;
+        this._render();
+        this._loadAuditStats();
+        return this._loadAuditLogs();
+      }
 
       case "apps-storage-retention":
         this._storageView = "retention";
@@ -1391,17 +1546,18 @@ class apps_main extends LetcBox {
   }
 
   async _removeSelected() {
-    const ids = Array.from(this._selected);
+    const ids = Array.from(this._selected).filter((id) => !this._isSelf(id));
     if (!ids.length) return;
     const isAdmin = this._role === "admin";
     const svc = isAdmin
       ? SERVICE.admin.hub_member_remove
       : SERVICE.adminpanel.member_delete;
+    const orgId = isAdmin ? null : Visitor.get("org_id");
     for (const id of ids) {
       try {
         const payload = isAdmin
-          ? { hub_id: this._activeAdminHub, user_id: id }
-          : { user_id: id };
+          ? { hub_id: this._activeAdminHub, uid: id }
+          : { orgid: orgId, user_id: id };
         await this.postService(svc, payload);
       } catch (e) {
         this.warn && this.warn(`member_delete ${id} failed`, e);

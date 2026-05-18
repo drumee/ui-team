@@ -144,9 +144,22 @@ module.exports = function (ui) {
     kids: [chatHeader, chatPanel],
   });
 
+  // Forward overlay — mirrors window_bigchat overlay structure so that
+  // widget_chat_item_forward (which calls 'close-overlay') works unchanged.
+  const overlayWrapper = Skeletons.Box.X({
+    className: `${fig}__overlay-wrapper`,
+    sys_pn: 'overlay-wrapper',
+    partHandler: ui,
+    dataset: { mode: _a.closed },
+    kids: [
+      Skeletons.Box.X({ className: 'overlay' }),
+      Skeletons.Wrapper.X({ className: 'chat-overlay', name: 'chat-overlay' }),
+    ],
+  });
+
   return Skeletons.Box.X({
     className: `${fig}__main`,
     debug: __filename,
-    kids: [sidebar, chatArea],
+    kids: [sidebar, chatArea, overlayWrapper],
   });
 };

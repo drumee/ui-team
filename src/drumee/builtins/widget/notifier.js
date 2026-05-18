@@ -1,4 +1,4 @@
-const { TweenMax } = gsap;
+const { TweenMax } = require("@drumee/ui-core/vendor");
 
 class __utils_notifier extends Marionette.View {
   constructor(...args) {

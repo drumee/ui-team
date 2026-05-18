@@ -13,12 +13,20 @@ module.exports = function (ui) {
 
   const formatDue = (d) => {
     if (!d) return "";
-    try { return Dayjs(d).format("MMM D"); } catch { return d; }
+    try {
+      return Dayjs(d).format("MMM D");
+    } catch {
+      return d;
+    }
   };
 
   const isOverdue = (d) => {
     if (!d) return false;
-    try { return Dayjs(d).isBefore(Dayjs(), "day"); } catch { return false; }
+    try {
+      return Dayjs(d).isBefore(Dayjs(), "day");
+    } catch {
+      return false;
+    }
   };
 
   const fullName = (m) => {
@@ -28,7 +36,8 @@ module.exports = function (ui) {
     return (first + " " + last).trim() || m.email || m.id || m.uid || "";
   };
 
-  const priorityOf = (key) => priorities.find((p) => p.key === key) || priorities[1];
+  const priorityOf = (key) =>
+    priorities.find((p) => p.key === key) || priorities[1];
 
   // ── Card pieces ───────────────────────────────────────────────
   // Title on the card is a plain Note: clicking it bubbles up to the card,
@@ -74,7 +83,9 @@ module.exports = function (ui) {
     const labels = (task.label_ids || [])
       .map((id) => labelMap.get(id))
       .filter(Boolean);
-    const linkedFiles = Array.isArray(task.linked_files) ? task.linked_files : [];
+    const linkedFiles = Array.isArray(task.linked_files)
+      ? task.linked_files
+      : [];
     const fileCount = linkedFiles.length;
     const priority = priorityOf(task.priority || "medium");
 
@@ -86,7 +97,7 @@ module.exports = function (ui) {
               className: `${pfx}__task-label-pill`,
               content: l.name,
               styleOpt: { background: l.color },
-            })
+            }),
           ),
         })
       : null;
@@ -111,7 +122,7 @@ module.exports = function (ui) {
                     content: `${f.filename || ""}${f.extension ? "." + f.extension : ""}`,
                   }),
                 ],
-              })
+              }),
             ),
             moreFiles
               ? Skeletons.Note({
@@ -219,7 +230,7 @@ module.exports = function (ui) {
                     }),
                     Skeletons.Note({
                       className: `${pfx}__column-title`,
-                      content: col.label,
+                      content: LOCALE[col.label] || col.key,
                     }),
                   ],
                 }),
@@ -234,7 +245,7 @@ module.exports = function (ui) {
                 }),
               ],
             }),
-            ...((state[col.key] || []).map((t) => taskCard(col.key, t))),
+            ...(state[col.key] || []).map((t) => taskCard(col.key, t)),
           ],
         }),
         addButton(col.key),
@@ -250,15 +261,16 @@ module.exports = function (ui) {
           className: `${pfx}__priority-pill`,
           content: LOCALE[p.label] || p.key,
           dataset: { active: selected === p.key ? 1 : 0, priority: p.key },
-          styleOpt: selected === p.key
-            ? { borderColor: p.color, color: p.color }
-            : null,
+          styleOpt:
+            selected === p.key
+              ? { borderColor: p.color, color: p.color }
+              : null,
           bubble: 0,
           service: serviceName,
           uiHandler: [ui],
           taskPriority: p.key,
           ...extra,
-        })
+        }),
       ),
     });
 
@@ -302,7 +314,7 @@ module.exports = function (ui) {
               content: fullName(m),
             }),
           ],
-        })
+        }),
       ),
     ];
     return Skeletons.Box.Y({
@@ -347,8 +359,8 @@ module.exports = function (ui) {
   const filePickerBlock = (scope, opt = {}) => {
     const { taskId = null, pendingFiles = [], existingFiles = [] } = opt;
     const isActiveScope = fileSearch && fileSearch.scope === scope;
-    const query = isActiveScope ? (fileSearch.query || "") : "";
-    const results = isActiveScope ? (fileSearch.results || []) : [];
+    const query = isActiveScope ? fileSearch.query || "" : "";
+    const results = isActiveScope ? fileSearch.results || [] : [];
     const linkedNids = new Set([
       ...pendingFiles.map((f) => f.nid),
       ...existingFiles.map((f) => f.file_nid || f.nid),
@@ -437,28 +449,28 @@ module.exports = function (ui) {
             // matching the Figma. Clicking it forces a search submit so
             // it works as an Enter-equivalent for users who don't think
             // to press Enter.
-            Skeletons.Box.X({
-              className: `${pfx}__file-search-link`,
-              bubble: 0,
-              service: "file-search-input",
-              uiHandler: [ui],
-              searchScope: scope,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}__file-search-link-text`,
-                  content: LOCALE.LINK_FILE,
-                }),
-                Skeletons.Image.Svg({
-                  ico: "apps-link-simple",
-                  className: `${pfx}__file-search-link-ico`,
-                }),
-              ],
-            }),
+            // Skeletons.Box.X({
+            //   className: `${pfx}__file-search-link`,
+            //   bubble: 0,
+            //   service: "file-search-input",
+            //   uiHandler: [ui],
+            //   searchScope: scope,
+            //   kids: [
+            //     Skeletons.Note({
+            //       className: `${pfx}__file-search-link-text`,
+            //       content: LOCALE.LINK_FILE,
+            //     }),
+            //     Skeletons.Image.Svg({
+            //       ico: "apps-link-simple",
+            //       className: `${pfx}__file-search-link-ico`,
+            //     }),
+            //   ],
+            // }),
           ],
         }),
         // Dropdown only renders when there's something to show; otherwise it
         // collapses to nothing and gives the rest of the form its space back.
-        (results.length || (query.length >= 2))
+        results.length || query.length >= 2
           ? Skeletons.Box.Y({
               className: `${pfx}__file-search-dropdown`,
               kids: [
@@ -514,7 +526,7 @@ module.exports = function (ui) {
           uiHandler: [ui],
           taskId: task.id,
           labelId: l.id,
-        })
+        }),
       ),
     });
   };
@@ -526,10 +538,13 @@ module.exports = function (ui) {
     // Render against the editable draft (seeded from the task on open).
     // Falls back to the task itself for safety.
     const dDraft = ui.getDetailDraft() || detail;
-    const dStatus   = dDraft.status   || detail.status   || "todo";
+    const dStatus = dDraft.status || detail.status || "todo";
     const dPriority = dDraft.priority || detail.priority || "medium";
-    const dAssignee = dDraft.assignee_uid != null ? dDraft.assignee_uid : detail.assignee_uid;
-    const dLabels   = Array.isArray(dDraft.labels) ? dDraft.labels : (detail.label_ids || []);
+    const dAssignee =
+      dDraft.assignee_uid != null ? dDraft.assignee_uid : detail.assignee_uid;
+    const dLabels = Array.isArray(dDraft.labels)
+      ? dDraft.labels
+      : detail.label_ids || [];
     const dLabelSet = new Set(dLabels);
 
     const statusSwitcher = Skeletons.Box.X({
@@ -537,16 +552,15 @@ module.exports = function (ui) {
       kids: cols.map((c) =>
         Skeletons.Note({
           className: `${pfx}__detail-status-pill`,
-          content: c.label,
+          content: LOCALE[c.label] || c.key,
           dataset: { active: dStatus === c.key ? 1 : 0 },
-          styleOpt: dStatus === c.key
-            ? { borderColor: c.color, color: c.color }
-            : null,
+          styleOpt:
+            dStatus === c.key ? { borderColor: c.color, color: c.color } : null,
           bubble: 0,
           service: "set-status",
           uiHandler: [ui],
           taskStatus: c.key,
-        })
+        }),
       ),
     });
 
@@ -620,7 +634,7 @@ module.exports = function (ui) {
             service: "toggle-task-label",
             uiHandler: [ui],
             labelId: l.id,
-          })
+          }),
         ),
       });
     })();
@@ -643,15 +657,16 @@ module.exports = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.DUE_DATE,
         }),
-        Skeletons.Entry({
+        {
+          kind: "date_picker",
           className: `${pfx}__detail-due-input`,
+          innerClass: `${pfx}__detail-due-input-inner`,
           name: "due_date",
-          type: "date",
           value: dDraft.due_date || "",
-          bubble: 0,
-          watch: "task-input-changed",
+          service: "task-input-changed",
           uiHandler: [ui],
-        }),
+          vendorOpt: { dateFormat: "Y-m-d", minDate: "today" },
+        },
       ],
     });
 
@@ -685,22 +700,27 @@ module.exports = function (ui) {
               className: `${pfx}__detail-label`,
               content: LOCALE.ATTACHMENTS,
             }),
-            Skeletons.Note({
-              className: `${pfx}__attachment-add`,
-              content: `+ ${LOCALE.ATTACH_FILE}`,
-              bubble: 0,
-              service: "pick-attachment",
-              uiHandler: [ui],
-            }),
+            // Skeletons.Note({
+            //   className: `${pfx}__attachment-add`,
+            //   content: `+ ${LOCALE.ATTACH_FILE}`,
+            //   bubble: 0,
+            //   service: "pick-attachment",
+            //   uiHandler: [ui],
+            // }),
           ],
         }),
         ...(attachments.length
           ? attachments.map(attachmentRow)
-          : [Skeletons.Note({
-              className: `${pfx}__attachments-empty`,
-              content: LOCALE.NO_ATTACHMENTS,
-            })]),
-        filePickerBlock("detail", { taskId: detail.id, existingFiles: attachments }),
+          : [
+              Skeletons.Note({
+                className: `${pfx}__attachments-empty`,
+                content: LOCALE.NO_ATTACHMENTS,
+              }),
+            ]),
+        filePickerBlock("detail", {
+          taskId: detail.id,
+          existingFiles: attachments,
+        }),
       ],
     });
 
@@ -781,16 +801,17 @@ module.exports = function (ui) {
       kids: cols.map((c) =>
         Skeletons.Note({
           className: `${pfx}__create-status-pill`,
-          content: c.label,
+          content: LOCALE[c.label] || c.key,
           dataset: { active: selectedStatus === c.key ? 1 : 0 },
-          styleOpt: selectedStatus === c.key
-            ? { borderColor: c.color, color: c.color }
-            : null,
+          styleOpt:
+            selectedStatus === c.key
+              ? { borderColor: c.color, color: c.color }
+              : null,
           bubble: 0,
           service: "create-status",
           uiHandler: [ui],
           taskStatus: c.key,
-        })
+        }),
       ),
     });
 
@@ -809,7 +830,7 @@ module.exports = function (ui) {
               service: "create-toggle-label",
               uiHandler: [ui],
               labelId: l.id,
-            })
+            }),
           ),
         })
       : Skeletons.Note({
@@ -961,17 +982,16 @@ module.exports = function (ui) {
               className: `${pfx}__create-label`,
               content: LOCALE.DUE_DATE,
             }),
-            Skeletons.Entry({
+            {
+              kind: "date_picker",
               className: `${pfx}__create-input`,
-              formItem: "due_date",
+              innerClass: `${pfx}__create-input-inner`,
               name: "due_date",
-              type: "date",
               value: draft?.due_date || "",
-              require: "any",
-              bubble: 0,
-              watch: "task-input-changed",
+              service: "task-input-changed",
               uiHandler: [ui],
-            }),
+              vendorOpt: { dateFormat: "Y-m-d", minDate: "today" },
+            },
           ],
         }),
         Skeletons.Box.Y({
@@ -981,7 +1001,9 @@ module.exports = function (ui) {
               className: `${pfx}__create-label`,
               content: LOCALE.LINKED_FILES,
             }),
-            filePickerBlock("create", { pendingFiles: draft?.pending_files || [] }),
+            filePickerBlock("create", {
+              pendingFiles: draft?.pending_files || [],
+            }),
           ],
         }),
         Skeletons.Box.X({

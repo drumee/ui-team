@@ -60,7 +60,6 @@ class __window_analytics extends __window_interact {
   }
 
   onPartReady(child, pn) {
-    //this.debug("AAAX:103", this.state, child, pn);
     switch (pn) {
       case _a.header:
         let pos = this.$el.position();

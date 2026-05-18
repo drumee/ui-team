@@ -5,7 +5,6 @@
 // ==================================================================== *
 
 const __skl_chat_action_button = function(_ui_, type) {
-  this.debug("action button", _ui_);
   
   const chatBtnFig = `${_ui_.fig.family}`;
 

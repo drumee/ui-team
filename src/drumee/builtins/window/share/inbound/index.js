@@ -46,7 +46,6 @@ class __share_inbound extends LetcBox {
 //
 // ===========================================================
   shareIn() { 
-    this.debug("ZZZZZZZZ", this.__content);
     if (this.__content && !this.__content.isDestroyed()) { //and c.mget(_a.mode) is 'share-in'
       return;
     }
@@ -90,7 +89,6 @@ class __share_inbound extends LetcBox {
     const args = cmd.getData();
     args.hub_id  = Visitor.get('sb_id');
     args.nid  = this.logicalParent.mget(_a.nodeId);
-    this.debug("zzzzssszJJJJJJJJJ", args, cmd, this.logicalParent);
     return this.postService(SERVICE.sharebox.create_inbound_link, args); 
   }
 
@@ -121,7 +119,6 @@ class __share_inbound extends LetcBox {
   onUiEvent(cmd, args) {
     if (args == null) { args = {}; }
     const service = cmd.mget(_a.service);
-    this.debug(`zzzzz service=${service}`, cmd, lastClick);
     switch (service) {
       case _e.close: 
         return this.softDestroy();

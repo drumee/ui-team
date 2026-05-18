@@ -293,7 +293,6 @@ class __media_interact extends media_core {
         return;
     }
     this._clickTimestap = timestamp();
-    this.debug("AAA:295", service)
     switch (service) {
       case "open-creator":
       case "open-settings":
@@ -546,7 +545,6 @@ class __media_interact extends media_core {
    * @param {*} service
    */
   async _createInput(value, opt) {
-    this.debug("AAA:653", opt)
     if (value == null) {
       value = "no name";
     }
@@ -606,7 +604,6 @@ class __media_interact extends media_core {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     let { nid, hub_id } = this.actualNode();
-    this.debug("AAAX:622", service, cmd, args)
     switch (service) {
       case _e.rename:
         this.service = service;
@@ -826,6 +823,11 @@ class __media_interact extends media_core {
         break;
 
       case _e.settings:
+        // "Get info" on a workspace: open it as a window_folder with the
+        // settings panel pre-selected, instead of the standalone popup.
+        if (this.mget(_a.filetype) === _a.hub) {
+          return this.openInfoWindow();
+        }
         this.emitServiceToHandler("hub-settings", args);
         break;
 
@@ -859,6 +861,25 @@ class __media_interact extends media_core {
     args.trigger = this;
     args.service = service;
     return this.triggerHandlers(args);
+  }
+
+  /**
+   * "Get info" on a workspace — open it as a window_folder with the
+   * settings panel pre-selected (mirrors the `open-in-window` path).
+   * Replaces the standalone settings_hub popup.
+   */
+  openInfoWindow() {
+    const item = Wm.getWindowPreset(this);
+    item.kind = "window_folder";
+    item.wm_unique_id = `window_folder-${item.hub_id}`;
+    item.showSettings = 1;
+    // singleton:1 only raises an already-open window_folder; buildContent
+    // won't re-run, so open its settings panel directly in that case.
+    const existing = Wm.getItemsByKind("window_folder")[0];
+    if (existing && !existing.isDestroyed()) {
+      existing.openSettingsPanel();
+    }
+    return Wm.launch(item, { explicit: 1, singleton: 1 });
   }
 
   /**

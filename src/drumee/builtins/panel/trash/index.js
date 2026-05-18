@@ -16,7 +16,8 @@ class __panel_trash extends mfsInteract {
       filename: LOCALE.TRASH,
     }
     this.mset(data);
-    window.Trash = this
+    window.Trash = this;
+    this._refreshStorageUsed = _.debounce(this._refreshStorageUsed.bind(this), 3000, { leading: true, trailing: false });
   }
 
   _refreshStorageUsed() {
@@ -96,25 +97,49 @@ class __panel_trash extends mfsInteract {
     }).catch(() => {});
   }
 
-  _restoreFile(media) {
+  async _restoreFile(media) {
     if (!media) return;
-    return this.postService({
-      service: SERVICE.media.restore_into,
-      hub_id: Visitor.id,
-      recipient_id: Visitor.id,
-      pid: Visitor.get(_a.home_id),
-      list: [{
-        nid: media.mget(_a.nid),
-        pid: Visitor.get(_a.home_id),
-        hub_id: media.mget(_a.hub_id),
+    const nid = media.mget(_a.nid);
+    const hub_id = media.mget(_a.hub_id);
+
+    const data = await this.postService({
+      service: SERVICE.media.restore,
+      nid,
+      hub_id,
+    }).catch(() => null);
+
+    if (!data) return;
+
+    if (data.parent_missing) {
+      // Original parent folder is gone — ask user before falling back to home
+      const confirmed = await Wm.confirm({
+        title: LOCALE.RESTORE,
+        message: LOCALE.Q_RESTORE_TO_HOME || 'Original folder no longer exists. Restore to home folder instead?',
+        confirm: LOCALE.RESTORE || 'Restore',
+        confirm_type: 'primary',
+        cancel: LOCALE.CANCEL || 'Cancel',
+        cancel_type: 'secondary',
+        mode: 'hbf',
+      }).then(() => true).catch(() => false);
+      if (!confirmed) return;
+
+      await this.postService({
+        service: SERVICE.media.restore_into,
+        hub_id: Visitor.id,
         recipient_id: Visitor.id,
-      }],
-    }).then(() => {
-      media.suppress();
-      this._updateItemsCount();
-      this._refreshStorageUsed();
-      Wm.reloadAll();
-    });
+        pid: Visitor.get(_a.home_id),
+        list: [{
+          nid,
+          pid: Visitor.get(_a.home_id),
+          hub_id,
+          recipient_id: Visitor.id,
+        }],
+      });
+    }
+
+    media.suppress();
+    this._updateItemsCount();
+    this._refreshStorageUsed();
   }
 
   deleteFilePermanently(media) {

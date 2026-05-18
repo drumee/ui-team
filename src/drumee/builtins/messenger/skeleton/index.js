@@ -75,6 +75,11 @@ const __skl_messenger = function (ui) {
     Skeletons.Wrapper.Y({
       className: `${ui.fig.family}__wrapper-popup`,
       name: "popup"
+    }),
+
+    Skeletons.Wrapper.Y({
+      className: `${ui.fig.family}__attach-menu`,
+      name: "attach-menu"
     })
 
   ];

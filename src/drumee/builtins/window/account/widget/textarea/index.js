@@ -39,7 +39,6 @@ class __account_textarea extends LetcBox {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.service || cmd.mget(_a.service);
-    this.debug(`AAAAAA FFF 96service=${service}`, cmd, cmd.mget(_a.state), cmd);
     switch (service) {
       case _e.update:
         this.service = service;

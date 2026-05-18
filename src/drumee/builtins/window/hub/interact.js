@@ -16,7 +16,6 @@ class __hub_interact extends __hubInteract {
     this.isMfs = 1;
     this._data = {}
 		this.feed(this._skeleton(this));
-		//this.debug("AAA:18");
     this.setupInteract();
 	}
 

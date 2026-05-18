@@ -52,7 +52,6 @@ class __admin_roles extends LetcBox{
    */  
   onUiEvent (trigger, args={}){
     const service = args.service || trigger.get(_a.service);
-    this.debug(`onUiEvent service was called with : `, {service, args, trigger})
     //switch(service){
     //  case  "my-service":
     //    /** Do something **/
@@ -76,7 +75,6 @@ class __admin_roles extends LetcBox{
   //  const {service} = options || svc;
   //  switch(service){
   //  case  "my-service":
-  //      this.debug("AAA:94",service, data)
   //    break;
   //    default:
   //      /** Delegate to parent if any **/

@@ -74,7 +74,6 @@ class __account_avatar extends LetcBox {
     let data;
     if (args == null) { args = {}; }
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug(`onUiEvent profile service = ${service}`, args, cmd, this);
     switch (service) {
       case _e.change:
         return this._avatar.selectFile();

@@ -1,11 +1,14 @@
 const mfsInteract = require("../interact");
 
-const { folderFilesView, fileTypeFilterBar, gridFilesBrowser } = require("../skeleton/toolkit");
+const {
+  folderFilesView,
+  fileTypeFilterBar,
+  gridFilesBrowser,
+} = require("../skeleton/toolkit");
 
 require("./skin");
 
 class __window_folder extends mfsInteract {
-
   constructor(...args) {
     super(...args);
     this.onChildBubble = this.onChildBubble.bind(this);
@@ -13,12 +16,20 @@ class __window_folder extends mfsInteract {
   }
 
   _defaultBounds() {
-    const workspace = document.querySelector(".desk-module__wm-container") || document.querySelector(".desk-module__right-side");
+    const workspace =
+      document.querySelector(".desk-module__wm-container") ||
+      document.querySelector(".desk-module__right-side");
     const rect = workspace ? workspace.getBoundingClientRect() : {};
     const workspaceWidth = rect.width || window.innerWidth;
     const workspaceHeight = rect.height || window.innerHeight;
-    const width = Math.min(Math.max(900, workspaceWidth - 180), workspaceWidth - 96);
-    const height = Math.min(Math.max(580, workspaceHeight - 150), workspaceHeight - 96);
+    const width = Math.min(
+      Math.max(900, workspaceWidth - 180),
+      workspaceWidth - 96,
+    );
+    const height = Math.min(
+      Math.max(580, workspaceHeight - 150),
+      workspaceHeight - 96,
+    );
     return {
       left: Math.round((workspaceWidth - width) / 2),
       top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
@@ -90,6 +101,10 @@ class __window_folder extends mfsInteract {
     if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
     }
+    // "Get info" launches the window with this flag to pre-select settings.
+    if (this.mget("showSettings")) {
+      this.openSettingsPanel();
+    }
   }
 
   applyDefaultBounds() {
@@ -104,19 +119,22 @@ class __window_folder extends mfsInteract {
       this.$el.resizable(_a.option, "minWidth", bounds.minWidth);
       this.$el.resizable(_a.option, "minHeight", bounds.minHeight);
       this.$el.resizable(_a.option, "handles", this.handles || "all");
-    } catch (e) { }
+    } catch (e) {}
     this.syncBounds();
   }
 
   getChatScrollElement() {
-    return this.el.querySelector(".window__chat-panel .widget-chat__messages .smart-container");
+    return this.el.querySelector(
+      ".window__chat-panel .widget-chat__messages .smart-container",
+    );
   }
 
   captureChatScroll() {
     const scroller = this.getChatScrollElement();
     if (!scroller) return;
     this._chatScrollState = {
-      bottom: scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop,
+      bottom:
+        scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop,
     };
   }
 
@@ -124,7 +142,10 @@ class __window_folder extends mfsInteract {
     const scroller = this.getChatScrollElement();
     const state = this._chatScrollState;
     if (!scroller || !state) return;
-    scroller.scrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight - state.bottom);
+    scroller.scrollTop = Math.max(
+      0,
+      scroller.scrollHeight - scroller.clientHeight - state.bottom,
+    );
   }
 
   _resizeStart(e, ui) {
@@ -175,9 +196,13 @@ class __window_folder extends mfsInteract {
       return;
     }
 
-    if (opt.phase === _a.upload && opt.file && typeof RADIO_MEDIA !== 'undefined') {
+    if (
+      opt.phase === _a.upload &&
+      opt.file &&
+      typeof RADIO_MEDIA !== "undefined"
+    ) {
       let destination = opt.destination;
-      if (!destination && typeof this._getDestination === 'function') {
+      if (!destination && typeof this._getDestination === "function") {
         destination = this._getDestination();
       }
       RADIO_MEDIA.trigger("upload:start", {
@@ -220,7 +245,7 @@ class __window_folder extends mfsInteract {
     const { nid, pid, args, src } = data;
     const { echoId } = options || {};
     if (this.updateInnerHubsPreview) this.updateInnerHubsPreview(data);
-    if (echoId === this.mget('echoId')) return;
+    if (echoId === this.mget("echoId")) return;
     if (this.mget(_a.nid) != pid) return;
 
     // Skip WS update if nid matches the source folder (prevents overwriting
@@ -240,7 +265,7 @@ class __window_folder extends mfsInteract {
 
     data.format = this.mget(_a.format) || _a.card;
     data.kind = this._getKind();
-    data.service = 'open-node';
+    data.service = "open-node";
     this.ensurePart(_a.list).then((l) => {
       if (!l || (l.isDestroyed && l.isDestroyed())) return;
       if (data.position >= 0) l.append(data, data.position);
@@ -278,7 +303,8 @@ class __window_folder extends mfsInteract {
   }
 
   toggleFilesLayout(cmd) {
-    const mode = this.getViewMode && this.getViewMode() === _a.row ? _a.icon : _a.row;
+    const mode =
+      this.getViewMode && this.getViewMode() === _a.row ? _a.icon : _a.row;
     this.setViewMode(mode);
     this.ensurePart(_a.content).then((content) => {
       if (!content || (content.isDestroyed && content.isDestroyed())) return;
@@ -308,7 +334,10 @@ class __window_folder extends mfsInteract {
         return this.openCreateFolderDialog();
 
       case "add-note":
-        return Wm.windowsLayer.append({ kind: "editor_markdown", uiHandler: [this] });
+        return Wm.windowsLayer.append({
+          kind: "editor_markdown",
+          uiHandler: [this],
+        });
 
       case "new-document":
         return this.newDocument(cmd);
@@ -348,7 +377,9 @@ class __window_folder extends mfsInteract {
         return this.removeFolderMember(cmd);
 
       case "folder-rename-change":
-        this._renameFolderValue = cmd.getValue ? cmd.getValue() : cmd.mget(_a.value);
+        this._renameFolderValue = cmd.getValue
+          ? cmd.getValue()
+          : cmd.mget(_a.value);
         return;
 
       case "folder-rename-submit":
@@ -363,7 +394,9 @@ class __window_folder extends mfsInteract {
         return this.showFolderTab(_a.chat);
 
       case _a.chat: {
-        const fileNid = (cmd && cmd._args && cmd._args.nid) || (cmd && cmd.mget && cmd.mget(_a.nid));
+        const fileNid =
+          (cmd && cmd._args && cmd._args.nid) ||
+          (cmd && cmd.mget && cmd.mget(_a.nid));
         if (!fileNid) return;
         this.showFolderTab(_a.chat);
         return this.scopeChatToFile(fileNid);
@@ -388,22 +421,64 @@ class __window_folder extends mfsInteract {
       case "meeting":
       case "webinar":
       case "channel":
-        return Wm.launch({
-          kind: `window_${service}`,
-          hub_id: this.mget(_a.hub_id),
-          filename: this.mget(_a.filename),
-          nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
-          trigger: this.mget(_a.media) || this,
-          media: this.mget(_a.media) || this,
-          service,
-          wm_unique_id: `window_${service}-${this.mget(_a.hub_id)}`,
-        }, { explicit: 1, singleton: 1 });
+        return Wm.launch(
+          {
+            kind: `window_${service}`,
+            hub_id: this.mget(_a.hub_id),
+            filename: this.mget(_a.filename),
+            nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
+            trigger: this.mget(_a.media) || this,
+            media: this.mget(_a.media) || this,
+            service,
+            wm_unique_id: `window_${service}-${this.mget(_a.hub_id)}`,
+          },
+          { explicit: 1, singleton: 1 },
+        );
 
       case "remove-selection":
         return Wm.removeMediaSelection(cmd);
 
+      case "forward-message":
+        return this.openForwardDialog();
+
+      case "close-overlay":
+        return this.closeForwardDialog();
+
       default:
         super.onUiEvent(cmd, args);
+    }
+  }
+
+  /**
+   * Open forward picker dialog. Reuses widget_chat_item_forward from bigchat.
+   * Pulls selected messages + hub from the folder chat widget.
+   */
+  openForwardDialog() {
+    const chat = this.getPart && this.getPart("folder-chat");
+    if (!chat || _.isEmpty(chat._selectedMessages)) return;
+    this.ensurePart("wrapper-dialog").then((wrapper) => {
+      this.dialogWrapper = wrapper;
+      wrapper.clear();
+      // chat-item-forward's closeOverlay does source.getItemsByKind('widget_chat'),
+      // so source must be a container holding the chat widget — this window-folder.
+      wrapper.feed({
+        kind: "widget_chat_item_forward",
+        source: this,
+        messages: chat._selectedMessages,
+        msghubID: chat.hubId,
+        uiHandler: [this],
+      });
+    });
+  }
+
+  /**
+   * Close the forward picker overlay and reset chat selection state.
+   */
+  closeForwardDialog() {
+    if (this.dialogWrapper) this.dialogWrapper.clear();
+    const chat = this.getPart && this.getPart("folder-chat");
+    if (chat && _.isFunction(chat.disableMessageSelection)) {
+      chat.disableMessageSelection();
     }
   }
 
@@ -411,7 +486,9 @@ class __window_folder extends mfsInteract {
     return this.ensurePart("wrapper-dialog").then((wrapper) => {
       this.dialogWrapper = wrapper;
       wrapper.feed(require("./skeleton/create-folder-dialog")(this));
-      return this.ensurePart("create-folder-name").then((entry) => entry.focus && entry.focus());
+      return this.ensurePart("create-folder-name").then(
+        (entry) => entry.focus && entry.focus(),
+      );
     });
   }
 
@@ -420,7 +497,10 @@ class __window_folder extends mfsInteract {
     this._creatingFolder = 1;
 
     const entry = this.getPart("create-folder-name");
-    const value = (cmd.getValue && cmd.getValue()) || (entry && entry.getValue && entry.getValue()) || LOCALE.NEW_FOLDER;
+    const value =
+      (cmd.getValue && cmd.getValue()) ||
+      (entry && entry.getValue && entry.getValue()) ||
+      LOCALE.NEW_FOLDER;
     const filename = String(value).trim() || LOCALE.NEW_FOLDER;
 
     if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(filename)) {
@@ -440,9 +520,20 @@ class __window_folder extends mfsInteract {
       area: this.mget(_a.area),
     };
 
-    const service = [_a.public, _a.share, _a.private].includes(this.mget(_a.area))
-      ? SERVICE.desk.create_hub
-      : SERVICE.media.make_dir;
+    // The user is INSIDE a folder window — "Add new → Folder" means create a
+    // sub-folder, not a new top-level hub. `desk.create_hub` is restricted to
+    // admin-level callers and was returning 403 for ordinary members. Only
+    // route to `desk.create_hub` when we are still at the hub root (nid ==
+    // hub_id) AND the area is one of the desk-managed areas; otherwise use
+    // the regular `media.make_dir` sub-folder path.
+    const atHubRoot = String(nid) === String(hub_id);
+    const isDeskArea = [_a.public, _a.share, _a.private].includes(
+      this.mget(_a.area),
+    );
+    const service =
+      atHubRoot && isDeskArea
+        ? SERVICE.desk.create_hub
+        : SERVICE.media.make_dir;
 
     if (service === SERVICE.desk.create_hub) {
       args.pid = args.nid;
@@ -495,14 +586,16 @@ class __window_folder extends mfsInteract {
   }
 
   scopeChatToFile(fileNid) {
-    return this.ensurePart('folder-chat').then((chat) => {
-      if (chat && _.isFunction(chat.setScopedFileNid)) chat.setScopedFileNid(fileNid);
+    return this.ensurePart("folder-chat").then((chat) => {
+      if (chat && _.isFunction(chat.setScopedFileNid))
+        chat.setScopedFileNid(fileNid);
     });
   }
 
   scopeChatToFolder(folderNid) {
-    return this.ensurePart('folder-chat').then((chat) => {
-      if (chat && _.isFunction(chat.setScopedFolderNid)) chat.setScopedFolderNid(folderNid);
+    return this.ensurePart("folder-chat").then((chat) => {
+      if (chat && _.isFunction(chat.setScopedFolderNid))
+        chat.setScopedFolderNid(folderNid);
     });
   }
 
@@ -517,7 +610,9 @@ class __window_folder extends mfsInteract {
     if (this.activeTab === tab) return;
     this.activeTab = tab;
     this.$el.find(".window-folder__tab-bar-item").attr("data-state", 0);
-    this.$el.find(`.window-folder__tab-bar-item[data-tab='${tab}']`).attr("data-state", 1);
+    this.$el
+      .find(`.window-folder__tab-bar-item[data-tab='${tab}']`)
+      .attr("data-state", 1);
 
     const switchView = (view) => {
       if (this._meetingViewActive && tab !== "meeting") {
@@ -550,13 +645,21 @@ class __window_folder extends mfsInteract {
       }
     };
 
-    if (this.__folderView && !(this.__folderView.isDestroyed && this.__folderView.isDestroyed())) {
+    if (
+      this.__folderView &&
+      !(this.__folderView.isDestroyed && this.__folderView.isDestroyed())
+    ) {
       return switchView(this.__folderView);
     }
     const switchId = _.uniqueId("folder-tab-");
     this._folderTabSwitchId = switchId;
     return this.ensurePart("folder-view").then((view) => {
-      if (this._folderTabSwitchId !== switchId || !view || (view.isDestroyed && view.isDestroyed())) return;
+      if (
+        this._folderTabSwitchId !== switchId ||
+        !view ||
+        (view.isDestroyed && view.isDestroyed())
+      )
+        return;
       this.__folderView = view;
       return switchView(view);
     });
@@ -588,7 +691,10 @@ class __window_folder extends mfsInteract {
       case _a.duplicate:
         return this.duplicateFolderTarget(target);
       default:
-        return target?.onUiEvent?.({ service, mget: () => service }, { service });
+        return target?.onUiEvent?.(
+          { service, mget: () => service },
+          { service },
+        );
     }
   }
 
@@ -604,58 +710,83 @@ class __window_folder extends mfsInteract {
     this.closeFolderSettings();
     Wm.unselect && Wm.unselect();
     const echoId = Visitor.get(_a.echoId);
-    return target.postService(SERVICE.media.copy, {
-      service: SERVICE.media.copy,
-      nid: target.mget(_a.nodeId),
-      pid: target.mget(_a.pid),
-      action: _a.copy,
-      recipient_id: target.mget(_a.hub_id),
-      hub_id: target.mget(_a.hub_id),
-      echoId,
-    }, { async: 1 }).then(() => {
-      // Don't add folder here — WS broadcast (newContent) handles adding
-      // the new folder to the grid. Adding from HTTP response causes duplicate.
-      Wm.unselect && Wm.unselect();
-    }).catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
+    return target
+      .postService(
+        SERVICE.media.copy,
+        {
+          service: SERVICE.media.copy,
+          nid: target.mget(_a.nodeId),
+          pid: target.mget(_a.pid),
+          action: _a.copy,
+          recipient_id: target.mget(_a.hub_id),
+          hub_id: target.mget(_a.hub_id),
+          echoId,
+        },
+        { async: 1 },
+      )
+      .then(() => {
+        // Don't add folder here — WS broadcast (newContent) handles adding
+        // the new folder to the grid. Adding from HTTP response causes duplicate.
+        Wm.unselect && Wm.unselect();
+      })
+      .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
   }
 
   openFolderRenameDialog() {
     const target = this.getFolderActionTarget();
-    const currentName = target?.mget?.(_a.filename) || this.mget(_a.filename) || "";
+    const currentName =
+      target?.mget?.(_a.filename) || this.mget(_a.filename) || "";
     this._renameFolderTarget = target;
     this._renameFolderValue = currentName;
-    this.openFolderDialog(require("./skeleton/rename-folder-dialog")(this, { value: currentName }));
-    return _.delay(() => this.ensurePart("rename-folder-name").then((entry) => entry.focus && entry.focus()));
+    this.openFolderDialog(
+      require("./skeleton/rename-folder-dialog")(this, { value: currentName }),
+    );
+    return _.delay(() =>
+      this.ensurePart("rename-folder-name").then(
+        (entry) => entry.focus && entry.focus(),
+      ),
+    );
   }
 
   renameFolderTarget(target) {
     if (this._renamingFolder) return;
     const entry = this.getPart && this.getPart("rename-folder-name");
     const input = entry?.el?.querySelector?.("input");
-    const filename = String(input?.value || entry?.getValue?.() || this._renameFolderValue || "").trim();
-    if (!filename || filename === target?.mget?.(_a.filename)) return this.closeFolderSettings();
-    if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(filename)) return Wm.alert(LOCALE.INVALID_FILENAME);
+    const filename = String(
+      input?.value || entry?.getValue?.() || this._renameFolderValue || "",
+    ).trim();
+    if (!filename || filename === target?.mget?.(_a.filename))
+      return this.closeFolderSettings();
+    if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(filename))
+      return Wm.alert(LOCALE.INVALID_FILENAME);
     this._renamingFolder = 1;
     const node = target.actualNode ? target.actualNode() : {};
-    return target.postService(SERVICE.media.rename, {
-      filename,
-      nid: target.mget(_a.nodeId) || node.nid || target.mget(_a.nid),
-      service: SERVICE.media.rename,
-      hub_id: target.isHub ? Visitor.id : (target.mget(_a.hub_id) || node.hub_id),
-      echoId: target.mget("echoId"),
-    }).then((data) => {
-      if (target.afterRename) target.afterRename(data);
-      this.closeFolderSettings();
-    }).catch((e) => {
-      Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
-    }).finally(() => {
-      this._renamingFolder = 0;
-    });
+    return target
+      .postService(SERVICE.media.rename, {
+        filename,
+        nid: target.mget(_a.nodeId) || node.nid || target.mget(_a.nid),
+        service: SERVICE.media.rename,
+        hub_id: target.isHub
+          ? Visitor.id
+          : target.mget(_a.hub_id) || node.hub_id,
+        echoId: target.mget("echoId"),
+      })
+      .then((data) => {
+        if (target.afterRename) target.afterRename(data);
+        this.closeFolderSettings();
+      })
+      .catch((e) => {
+        Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
+      })
+      .finally(() => {
+        this._renamingFolder = 0;
+      });
   }
 
   confirmFolderDelete() {
     const target = this.getFolderActionTarget();
-    const filename = target?.mget?.(_a.filename) || this.mget(_a.filename) || "";
+    const filename =
+      target?.mget?.(_a.filename) || this.mget(_a.filename) || "";
     this.dialogWrapper.feed({
       kind: "window_confirm",
       title: LOCALE.DELETE,
@@ -663,15 +794,23 @@ class __window_folder extends mfsInteract {
       confirm: LOCALE.DELETE,
       confirm_type: "danger",
     });
-    return this.dialogWrapper.children.last().ask().then(() => {
-      this.closeFolderSettings();
-      if (target?.trash) return target.trash();
-      if (target?.delete) return target.delete();
-    }).catch(() => {});
+    return this.dialogWrapper.children
+      .last()
+      .ask()
+      .then(() => {
+        this.closeFolderSettings();
+        if (target?.trash) return target.trash();
+        if (target?.delete) return target.delete();
+      })
+      .catch(() => {});
   }
 
   getFolderSettingPart() {
-    return this.dialogWrapper && this.dialogWrapper.children && this.dialogWrapper.children.last();
+    return (
+      this.dialogWrapper &&
+      this.dialogWrapper.children &&
+      this.dialogWrapper.children.last()
+    );
   }
 
   getInviteEmail(cmd) {
@@ -685,7 +824,10 @@ class __window_folder extends mfsInteract {
       { label: LOCALE.ROLE_ADMIN, privilege: _K.privilege.admin },
       { label: LOCALE.ROLE_VIEW_EDIT, privilege: _K.privilege.write },
       { label: LOCALE.ROLE_VIEW_CHAT, privilege: _K.privilege.read },
-      { label: LOCALE.VIEW, privilege: _K.privilege.guest || _K.privilege.read },
+      {
+        label: LOCALE.VIEW,
+        privilege: _K.privilege.guest || _K.privilege.read,
+      },
     ];
   }
 
@@ -699,22 +841,30 @@ class __window_folder extends mfsInteract {
     if (!cmd.el) return;
     cmd.el.dataset.role = role.label;
     cmd.el.dataset.privilege = role.privilege;
-    const label = cmd.el.querySelector(".window-folder__settings-action-role-label .note-content");
+    const label = cmd.el.querySelector(
+      ".window-folder__settings-action-role-label .note-content",
+    );
     if (label) label.textContent = role.label;
   }
 
   setFolderInviteRole(cmd) {
-    this._folderInviteRole = this.getNextFolderRole(cmd.el?.dataset?.role || LOCALE.ROLE_ADMIN);
+    this._folderInviteRole = this.getNextFolderRole(
+      cmd.el?.dataset?.role || LOCALE.ROLE_ADMIN,
+    );
     this.updateRoleSelector(cmd, this._folderInviteRole);
   }
 
   setFolderMemberRole(cmd) {
-    this.updateRoleSelector(cmd, this.getNextFolderRole(cmd.el?.dataset?.role || LOCALE.ROLE_ADMIN));
+    this.updateRoleSelector(
+      cmd,
+      this.getNextFolderRole(cmd.el?.dataset?.role || LOCALE.ROLE_ADMIN),
+    );
   }
 
   sendFolderInvitation(cmd) {
     const email = this.getInviteEmail(cmd);
-    if (!email) return Wm.alert(LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL);
+    if (!email)
+      return Wm.alert(LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL);
 
     const { hub_id } = this.actualNode();
     const privilege = this._folderInviteRole?.privilege || _K.privilege.admin;
@@ -723,13 +873,23 @@ class __window_folder extends mfsInteract {
     if (btn?.getAttribute("data-pending") === "1") return;
     if (btn) btn.setAttribute("data-pending", "1");
 
-    return this.postService(SERVICE.hub.add_contributors, {
+    return this.postService(SERVICE.hub.invite, {
       hub_id,
-      privilege,
-      users: [email],
-      email: [email],
+      invitees: [email],
+      permission: privilege,
     })
-      .then(() => Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY))
+      .then((res) => {
+        // hub.invite trả {results:[...]} khi OK; khi lỗi (vd ACL 403) trả
+        // {error, error_code, reason} — phải bắt lỗi top-level này.
+        if (res && (res.error || res.error_code)) {
+          return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+        }
+        const r = (res && res.results && res.results[0]) || {};
+        if (r.status === "failed") {
+          return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
+        }
+        Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY);
+      })
       .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN))
       .finally(() => {
         if (btn) btn.removeAttribute("data-pending");
@@ -737,7 +897,8 @@ class __window_folder extends mfsInteract {
   }
 
   removeFolderMember(cmd) {
-    const row = cmd.$el && cmd.$el.closest(".window-folder__settings-action-member-row");
+    const row =
+      cmd.$el && cmd.$el.closest(".window-folder__settings-action-member-row");
     if (row && row.remove) row.remove();
   }
 
@@ -753,6 +914,18 @@ class __window_folder extends mfsInteract {
       hub_id: this.mget(_a.hub_id),
       source: this,
       persistence: _a.once,
+    });
+  }
+
+  /**
+   * Ensure the dialog wrapper part exists, then open the folder settings
+   * panel. Used by the `showSettings` launch option ("Get info") and to
+   * surface settings on an already-open window.
+   */
+  openSettingsPanel() {
+    return this.ensurePart("wrapper-dialog").then((wrapper) => {
+      this.dialogWrapper = wrapper;
+      if (!this.isShowSettings) this.switchShowFolderSettings();
     });
   }
 

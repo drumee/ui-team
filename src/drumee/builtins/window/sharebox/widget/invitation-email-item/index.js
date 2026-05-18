@@ -29,11 +29,9 @@ class ___widget_invitation_email_item extends LetcBox {
   onPartReady (child, pn){
     switch(pn){
       case _a.none:
-        this.debug("Created by kind builder", child);
         break;
       
       default:
-        this.debug("Created by kind builder");
     }
   }
 
@@ -50,12 +48,10 @@ class ___widget_invitation_email_item extends LetcBox {
    * ===========================================================*/
   onUiEvent (cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service=${service}`, cmd, this);
 
     switch(service) {
       case _a.none:
         // this.goodbye()
-        this.debug('none')
       default:
         this.source = cmd;
         this.service = service;

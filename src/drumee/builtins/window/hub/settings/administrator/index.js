@@ -87,7 +87,6 @@ class __hub_administrator extends __core {
 //
 // ===========================================================
   _edit(cmd) {
-    this.debug("QQQQQQQ", this, cmd);
     const w = this.dialogWrapper;
     if (!w.isEmpty()) {
       w.clear();
@@ -128,7 +127,6 @@ class __hub_administrator extends __core {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.service || cmd.mget(_a.service);
-    this.debug(`AAAAAA FFF 96service=${service} edit=${this._isEditing}`,cmd.mget(_a.state), this, cmd);
     switch (service) {
       case _e.edit:
         this.mode = _a.admin;
@@ -148,7 +146,6 @@ class __hub_administrator extends __core {
         this.mode = 'direct';
         this._addPending = 1;
         cmd.once(_e.destroy, ()=> {
-          this.debug("AAAAAA FFF DESTROYED");
           return this.dialogWrapper.clear();
         });
         break;

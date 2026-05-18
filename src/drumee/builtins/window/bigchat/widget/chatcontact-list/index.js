@@ -108,7 +108,6 @@ class ___widget_chatcontactList extends LetcBox {
     if (_.isEmpty(id)) {
       const firstEl = this.__listContacts.children.first();
       firstEl.triggerHandlers();
-      //this.debug("AAA:2229", firstEl);
       return;
     }
 
@@ -235,7 +234,6 @@ class ___widget_chatcontactList extends LetcBox {
       case SERVICE.chat.acknowledge:
       case SERVICE.channel.acknowledge:
         item = this.selectItem(data, 'entity_id', 'hub_id');
-        //this.debug("AAA:269", item);
         if (!item) return;
         item.mset('room_count', 0);
         item.updateNotification();
@@ -244,7 +242,6 @@ class ___widget_chatcontactList extends LetcBox {
       case 'chat.roominfo':
       case 'channel.roominfo':
         item = this.selectItem(data, 'entity_id', 'hub_id');
-        //this.debug("AAA:278", item);
         if (!item) return;
         msg = data.message;
         if (_.isEmpty(msg) && !_.isEmpty(data.attachment)) {
@@ -252,6 +249,9 @@ class ___widget_chatcontactList extends LetcBox {
         }
         if (_.isEmpty(msg)) {
           msg = '_';
+        }
+        if (msg && typeof msg === 'string') {
+          msg = msg.replace(/\[@([^\]]+)\]\((?:user|mention)[^)]*\)/g, '@$1');
         }
 
         item.mset(_a.message, msg);
@@ -263,7 +263,6 @@ class ___widget_chatcontactList extends LetcBox {
 
       case SERVICE.contact.invite_accept:
         item = this.selectItem(data, 'contact_id', 'drumate_id');
-        //this.debug("QQAAA:297", item);
         if (item) {
           item.mset(_a.ctime, timestamp());
           list.collection.sort();
@@ -283,7 +282,6 @@ class ___widget_chatcontactList extends LetcBox {
               radio: 'contact_selected_' + this.mget(_a.widgetId)
             });
             newContact = list.children.first();
-            //this.debug("QQAAA:319", newContact, list);
             if(newContact.$el.click){
               setTimeout(()=>{newContact.$el.click()}, 300);
             }else{
@@ -295,7 +293,6 @@ class ___widget_chatcontactList extends LetcBox {
 
       case SERVICE.contact.accept_informed:
         item = this.selectItem(data, 'drumate_id');
-        //this.debug("AAA:297", item);
         if (!item) return;
         item.mset(_a.ctime, timestamp());
         list.collection.sort();
@@ -305,7 +302,6 @@ class ___widget_chatcontactList extends LetcBox {
       case SERVICE.channel.post:
         item = this.selectItem(data, 'entity_id', 'hub_id');
         if (!item || !item.__msgTime || !item.__message) return;
-        //this.debug("AAA:306", item, data);
         let room_count = item.mget('room_count') || 0;
         if (item.mget(_a.state) === 1) {
           room_count = 0;
@@ -316,6 +312,9 @@ class ___widget_chatcontactList extends LetcBox {
         msg = data.message;
         if (_.isEmpty(msg) && (data.is_attachment === 1)) {
           msg = LOCALE.ATTACHMENT;
+        }
+        if (msg && typeof msg === 'string') {
+          msg = msg.replace(/\[@([^\]]+)\]\((?:user|mention)[^)]*\)/g, '@$1');
         }
 
         item.mset('room_count', room_count);

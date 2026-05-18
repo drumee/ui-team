@@ -19,7 +19,6 @@
 // ===========================================================
 const __skl_administrator_main = function(_ui_) {
   let edit;
-  this.debug("AAAAA 16", _ui_); 
   const edit_icon = { 
     width: 26,
     height: 26,

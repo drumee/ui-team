@@ -123,7 +123,6 @@ class __hub_members extends LetcBox {
 // ===========================================================
   onUiEvent(cmd) {
     const service = cmd.service || cmd.model.get(_a.service);
-    this.debug(`AAAAAA FFF 96service=${service}`, cmd.model.get(_a.state), cmd);
     switch (service) {
       case _e.close:
         return this.softDestroy();
@@ -140,7 +139,6 @@ class __hub_members extends LetcBox {
 //
 // ===========================================================
   __dispatchRest(method, data, socket) {
-    this.debug("AAAA:111", method, data, socket);
     switch (method) {      
       case SERVICE.hub.get_contributors:
         return this._start(data);

@@ -32,7 +32,6 @@ class __window_bar_graph extends __window_analytics {
     let vars = this.mget(_a.vars);
     this.postService(api, { hub_id: Visitor.id, vars }, { async: 1 })
       .then((data) => {
-        //this.debug("AAA:32", data);
         let margin = {
           top: 50,
           right: 20,
@@ -41,8 +40,6 @@ class __window_bar_graph extends __window_analytics {
         };
         let time_format = '%y-%m-%d';
         let opt = _.map(this.mget(_a.view), (item)=>{
-          this.debug("AAA:43", item.data, item);
-          this.debug('checking the opt value', item);
           if(!data[item.data]){
             this.warn(`Dataset not found for key ${item.data}`, item);
           };
@@ -61,14 +58,12 @@ class __window_bar_graph extends __window_analytics {
           return r;
         })
 
-        this.debug('checking the opt value', opt);
         this.raise();
         //let aaa = [];
         //opt.shift()
         //opt.shift()
         //aaa.push(opt.shift());
         //aaa.push(opt);
-        //this.debug("AAA:58 aaa", opt[0],opt[1], opt[2]);
         this.feed(require('../skeleton')(this, opt));
       }).catch((e) => {
         this.warn(e);

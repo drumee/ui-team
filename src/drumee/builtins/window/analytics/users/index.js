@@ -29,7 +29,6 @@ class __window_analytics_users extends __window_analytics {
    */
   onDomRefresh() {
     this.postService(SERVICE.analytics.users, { hub_id: Visitor.id }, { async: 1 }).then((data) => {
-      //this.debug("AAAA:DATA", data);
       let opt = [{
         kind: 'chart_line',
         title: {text:"Drumates Growth", textAnchor: _a.left},

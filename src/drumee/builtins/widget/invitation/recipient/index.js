@@ -150,7 +150,6 @@ class __invitation_recipient extends __recipient {
    */
   onUiEvent(cmd) {
     const service = cmd.service || cmd.mget(_a.service);
-    this.debug(`bbaaaa 105 96service=${service}`, cmd, this);
     switch (service) {
       case _e.remove:
         return this.softDestroy();

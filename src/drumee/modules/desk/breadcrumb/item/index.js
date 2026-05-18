@@ -28,7 +28,6 @@ class __breadcrumb_item extends DrumeeMFS {
    * Upon DOM refresh, after element actually insterted into DOM
    */
   onDomRefresh() {
-    this.debug("AAA:23", this)
     this.feed(require('./skeleton')(this));
   }
 

@@ -55,7 +55,6 @@ class ___window_launcher extends LetcBox {
    * @returns 
    */
   run(data, args, opt) {
-    this.debug("AAA:68 -- run", data, args, opt, this);
     this.model.clear();
     opt = _.merge(data, args);
     data = require('./applications')(opt);

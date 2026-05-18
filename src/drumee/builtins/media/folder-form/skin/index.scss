@@ -29,21 +29,17 @@
   }
 
   &__title {
-    @include drumee.typo(
-      $size: 18px,
+    @include drumee.typo($size: 18px,
       $weight: 600,
       $line: 24px,
-      $color: var(--normal-fg-10)
-    );
+      $color: var(--normal-fg-10));
   }
 
   &__subtitle {
-    @include drumee.typo(
-      $color: var(--neutral-500),
+    @include drumee.typo($color: var(--neutral-500),
       $size: 12px,
       $weight: 400,
-      $line: 17px
-    );
+      $line: 17px);
   }
 
   &__close {
@@ -66,12 +62,21 @@
   }
 
   &__field-label {
-    @include drumee.typo(
-      $color: var(--normal-fg-10),
+    @include drumee.typo($color: var(--normal-fg-10),
       $size: 12px,
       $weight: 600,
-      $line: normal
-    );
+      $line: normal);
+  }
+
+  &__field-error {
+    &[data-state="0"] {
+      display: none;
+    }
+
+    @include drumee.typo($color: var(--red-500),
+      $size: 12px,
+      $weight: 600,
+      $line: normal);
   }
 
   &__input {

@@ -280,13 +280,21 @@ class __chat_p2p extends LetcBox {
       return;
     }
 
+    // Contact items in chat-p2p often carry only `entity_id`; `drumate_id` is
+    // null for users who chat with us but aren't saved as a contact yet.
+    // window_connect uses callee.drumate_id verbatim as the server's
+    // `guest_id`, so without this fallback the invite reaches the SQL proc
+    // as guest_id=null → 0 active sockets → caller sees "is not currently
+    // online" even when the peer is online. Mirror the same fallback used
+    // for peer_id in openChat() above.
+    const drumate_id = peer.drumate_id || peer.entity_id;
     Wm.launch({
       kind: 'window_connect',
       hub_id: Visitor.id,
       nid: (peer.home && peer.home.home_id) || peer.nid,
       filename: name,
       display: name,
-      callee: peer,
+      callee: { ...peer, drumate_id, uid: peer.uid || drumate_id },
       video: isVideo ? 1 : 0,
       audio: 1,
     }, { explicit: 1, singleton: 1 });
@@ -297,7 +305,7 @@ class __chat_p2p extends LetcBox {
    * Waits for the contact list to load, then triggers the matching item.
    * @param {String} drumate_id
    */
-  openChatByPeerId(drumate_id) {
+  openChatByPeerId(drumate_id, message_id) {
     if (!drumate_id) return;
     const tryOpen = (retries = 20) => {
       this.ensurePart('contact-list').then(list => {
@@ -305,6 +313,13 @@ class __chat_p2p extends LetcBox {
         const match = items.find(it => it.mget && it.mget(_a.drumate_id) == drumate_id);
         if (match) {
           this.openChat(match);
+          if (message_id) {
+            setTimeout(() => {
+              if (this.chatWidget && this.chatWidget.scrollToMessage) {
+                this.chatWidget.scrollToMessage(message_id);
+              }
+            }, 800);
+          }
           return;
         }
         if (retries > 0) setTimeout(() => tryOpen(retries - 1), 200);
@@ -318,7 +333,9 @@ class __chat_p2p extends LetcBox {
    * @param {Object} args
    */
   onUiEvent(trigger, args = {}) {
-    const service = args.service || trigger.get(_a.service);
+    // trigger.service is the JS property set by widget_chat before calling
+    // triggerHandlers — args.service is absent when widget_chat passes raw args.
+    const service = args.service || trigger.get(_a.service) || trigger.service;
     switch (service) {
       case 'load-conversation':
         return this.openChat(trigger);
@@ -361,6 +378,39 @@ class __chat_p2p extends LetcBox {
       case 'compose-pick':
         this._toggleComposePopup(false);
         return this.openChat(trigger);
+
+      case 'forward-message': {
+        // In chat-p2p there is no intermediate chat_room widget, so `trigger`
+        // is widget_chat itself (it holds _selectedMessages, hubId, peerId).
+        // window_bigchat uses cmd.source because chat_room sets source=widget_chat
+        // before bubbling up; here we skip that extra hop.
+        const chatWidget = trigger;
+        if (!chatWidget || !chatWidget._selectedMessages) return;
+        this.ensurePart('overlay-wrapper').then(overlay => {
+          overlay.el.dataset.mode = _a.open;
+          this.ensurePart('wrapper-chat-overlay').then(chatOverlay => {
+            chatOverlay.feed({
+              kind: 'widget_chat_item_forward',
+              source: trigger,
+              messages: chatWidget._selectedMessages,
+              msghubID: chatWidget.hubId,
+              peer_id: chatWidget.peerId || '',
+            });
+          });
+        });
+        return;
+      }
+
+      case 'close-overlay': {
+        this.ensurePart('overlay-wrapper').then(overlay => {
+          overlay.el.dataset.mode = _a.closed;
+          this.ensurePart('wrapper-chat-overlay').then(chatOverlay => {
+            chatOverlay.clear();
+            chatOverlay.el.dataset.state = _a.closed;
+          });
+        });
+        return;
+      }
 
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);
@@ -413,14 +463,23 @@ class __chat_p2p extends LetcBox {
     item.mset(_a.message, msg);
     item.mset(_a.ctime, data.ctime);
 
-    // Track has_mention: increment if this message mentions current user
+    // Track has_mention: increment if this message mentions current user.
+    // mention_ids may arrive as a JSON string from the DB — normalise first.
     if (data.author_id !== Visitor.id) {
-      const mentionIds = data.mention_ids || [];
+      let mentionIds = data.mention_ids || [];
+      if (typeof mentionIds === 'string') {
+        try { mentionIds = JSON.parse(mentionIds); } catch (e) { mentionIds = []; }
+      }
       const isMentioned = Array.isArray(mentionIds)
         ? mentionIds.some(id => String(id) === String(Visitor.id))
         : false;
       if (isMentioned) {
         item.mset('has_mention', ~~(item.mget('has_mention') || 0) + 1);
+        const senderName = (data.firstname || data.surname || '').trim();
+        const msg = senderName
+          ? `${senderName} ${LOCALE.MENTIONED_YOU}`
+          : LOCALE.MENTIONS;
+        Wm.alert(msg, 3000);
       }
     }
 

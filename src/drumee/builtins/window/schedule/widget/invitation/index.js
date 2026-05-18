@@ -83,7 +83,6 @@ class __schedule_invitation extends mfsInteract {
    * 
    */
   handleError(args) {
-    this.debug(`bbaaaa 81 handleError`, args, this);
     if (args.error) {
       this.__wrapperError.feed(
         Skeletons.Note(LOCALE.INVALID_EMAIL_FORMAT, `${this.fig.family}__error`)
@@ -223,7 +222,6 @@ class __schedule_invitation extends mfsInteract {
 
 
   update_attendees(data) {
-    this.debug("ATTENDEES", data);
   }
 
 

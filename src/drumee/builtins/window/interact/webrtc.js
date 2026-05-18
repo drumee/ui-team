@@ -1,6 +1,6 @@
 
 const windowCore = require('./index');
-const { TweenMax } = gsap;
+const { TweenMax } = require("@drumee/ui-core/vendor");
 
 class __window_webrtc extends windowCore {
 

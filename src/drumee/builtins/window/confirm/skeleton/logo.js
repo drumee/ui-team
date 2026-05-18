@@ -1,20 +1,18 @@
-const {
-  badgePersonal,
-} = require("builtins/media/grid/template/folder/badge-personal");
-
-function gradient_logo(ui, c) {
+function confirm_icon(ui) {
+  const pfx = `${ui.fig.family}__icon-bubble`;
+  const variant = ui.mget("icon_variant") || "primary";
+  const ico = ui.mget("icon") || "raw-logo-drumee-icon";
   return Skeletons.Box.X({
-    className: `${ui.fig.family}__logo`,
+    className: `${pfx} ${pfx}--${variant}`,
+    kidsOpt: { active: 0 },
     kids: [
-      Skeletons.Element({
-        content: badgePersonal({
-          area: _a.personal,
-          widgetId: `${ui.mget(_a.widgetId)}-${c}`,
-        }),
-        className: `${ui.fig.family}__icon logo ${c}`,
+      Skeletons.Image.Svg({
+        ico,
+        className: `${pfx}-svg`,
       }),
     ],
   });
 }
 
-export default gradient_logo;
+module.exports = confirm_icon;
+module.exports.default = confirm_icon;

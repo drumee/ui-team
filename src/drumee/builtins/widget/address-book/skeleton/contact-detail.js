@@ -1,7 +1,7 @@
 module.exports = function (ui, contact) {
   const fig = ui.fig.family;
   const isReceivedInvite = contact.status === "received";
-  const isSentInvite = contact.status === "invitation";
+  const isSentInvite = contact.status === "sent";
   const isArchived = contact.is_archived === 1 || contact.status === "archived";
   const isBlocked = contact.is_blocked === 1 || contact.status === "blocked";
   const contactId = contact.id || contact.contact_id;
@@ -99,7 +99,7 @@ module.exports = function (ui, contact) {
     });
   });
 
-  const tagChips = tags.length
+  const tagEntries = tags.length
     ? [Skeletons.Box.X({
         className: `${fig}__tag-chips`,
         kids: tags.map((t) =>
@@ -175,10 +175,10 @@ module.exports = function (ui, contact) {
       Skeletons.Box.Y({
         className: `${fig}__detail-fields`,
         kids: [
-          ...tagChips,
           fieldGroup(LOCALE.EMAIL, emailEntries),
           fieldGroup(LOCALE.MOBILE, phoneEntries),
           fieldGroup(LOCALE.ADDRESS || "Address", addressEntries),
+          fieldGroup(LOCALE.TAGS || "Tags", tagEntries),
           contact.comment
             ? fieldGroup(LOCALE.COMMENT, [
                 Skeletons.Note({

@@ -35,6 +35,7 @@ class __widget_chat extends LetcBox {
     super.initialize();
     this.view = this.mget(_a.view);
     this._selectedMessages = [];
+    this._selectedViews = [];
     this.peer = this.mget('peer') || null;
     this.updateChatUserStatus();
     this.queue = [];
@@ -318,7 +319,16 @@ class __widget_chat extends LetcBox {
    * 
    */
   checkPendingContent() {
-    if (this.attachmentList.hasAttachment() || this.getStoredMessage()) {
+    const has = this.attachmentList && this.attachmentList.hasAttachment();
+    // Toggle explicit state on the attachment-wrapper so CSS can collapse
+    // it cleanly after clearAttachment() — `:has(.media-grid__ui)` was
+    // proving unreliable across Marionette collection.reset() + browser
+    // `:has()` invalidation timing.
+    if (this.attachmentList && this.attachmentList.el && this.attachmentList.el.closest) {
+      const wrapper = this.attachmentList.el.closest('.widget-chat__attachment-wrapper');
+      if (wrapper) wrapper.dataset.hasAttachment = has ? '1' : '0';
+    }
+    if (has || this.getStoredMessage()) {
       this.showSend()
     } else {
       this.ensurePart(_a.message).then((p) => {
@@ -384,6 +394,15 @@ class __widget_chat extends LetcBox {
       case 'remove-upload':
         return this.removeUpload(cmd);
 
+      case 'attach-from-desk':
+        return this._openDeskPicker();
+
+      case 'pick-desk-file':
+        return this._pickDeskFile(cmd);
+
+      case 'close-desk-picker':
+        return this._closeDeskPicker();
+
       case _a.interactive:
         return this.onInputChange(args);
 
@@ -427,7 +446,8 @@ class __widget_chat extends LetcBox {
         break;
 
       case 'show-message-selector':
-        this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.area));
+        console.log('[widget-chat] show-message-selector', { type: args.type, hasActionButtons: !!this.getPart('message-action-buttons') });
+        this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.type));
         setTimeout(() => {
           this.showMsgCount(cmd);
         }, 300);
@@ -503,6 +523,123 @@ class __widget_chat extends LetcBox {
    * @param {*} token 
    * @returns 
    */
+  async _openDeskPicker() {
+    const picker = await this.ensurePart('wrapper-desk-picker');
+    if (!picker.isEmpty()) {
+      picker.clear();
+      return;
+    }
+    let home;
+    try {
+      home = await this.fetchService(SERVICE.media.home, { hub_id: Visitor.id });
+    } catch (e) {
+      this.warn('[chat] _openDeskPicker: failed to fetch home', e);
+      return;
+    }
+    if (!home || !home.home_id) return;
+    const fig = this.fig.family;
+    picker.feed(Skeletons.Box.Y({
+      className: `${fig}__desk-picker-panel`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${fig}__desk-picker-header`,
+          kids: [
+            Skeletons.Note({
+              className: `${fig}__desk-picker-title`,
+              content: LOCALE.FROM_WORKSPACE
+            }),
+          ]
+        }),
+        Skeletons.List.Smart({
+          className: `${fig}__desk-picker-list`,
+          api: {
+            service: SERVICE.media.show_node_by,
+            hub_id: home.hub_id || Visitor.id,
+            nid: home.home_id,
+            page: 1
+          },
+          itemsOpt: {
+            kind: KIND.note,
+            service: 'pick-desk-file',
+            uiHandler: [this]
+          },
+          itemsMap: { filename: 'content' },
+          evArgs: Skeletons.Note(LOCALE.NO_FILES_YET || LOCALE.NO_DISCUSSIONS_YET, 'no-content'),
+          vendorOpt: Preset.List.Orange_e,
+          spinner: true,
+          spinnerWait: 300
+        }),
+        Skeletons.Note({
+          className: `${fig}__desk-picker-cancel`,
+          content: LOCALE.CANCEL,
+          service: 'close-desk-picker',
+          uiHandler: [this]
+        })
+      ]
+    }));
+  }
+
+  async _pickDeskFile(cmd) {
+    const o = cmd.model.toJSON();
+    const home = this.mget(_a.home);
+    if ([_a.hub, _a.folder].includes(o.filetype) || o.ext === 'lnk') {
+      Wm.alert(LOCALE.FILE_TYPE_NOT_SUPPORTED || LOCALE.ACTION_NOT_PERMITTED);
+      return;
+    }
+    this._closeDeskPicker();
+
+    // Copy the file to the chat staging folder first, so the original stays on the desk.
+    // move_attachemnt (in chat.post) will then move only the staging copy to the sbox.
+    let stagedNid;
+    try {
+      const copyResult = await this.postService({
+        service: SERVICE.media.copy,
+        nid: o.nid,
+        pid: home && home.chat_upload_id,
+        action: _a.copy,
+        // recipient_id = the entity that owns the staging folder (home.hub_id).
+        // For P2P this is Visitor.id; for channel chats it is the channel hub.
+        // Must match the DB where chat_upload_id lives.
+        recipient_id: home && home.hub_id || this.hubId,
+        hub_id: o.hub_id || this.hubId,
+      });
+      const first = Array.isArray(copyResult) ? copyResult[0] : copyResult;
+      stagedNid = first && first.nid;
+    } catch (e) {
+      this.warn('[chat] _pickDeskFile: copy to staging failed', e);
+    }
+
+    if (!stagedNid) {
+      Wm.alert(LOCALE.ACTION_NOT_PERMITTED);
+      return;
+    }
+
+    const item = {
+      ...o,
+      nid: stagedNid,
+      hub_id: home && home.hub_id || this.hubId,
+      kind: 'media_grid',
+      // phase: _a.local prevents syncData from triggering another media.copy
+      phase: _a.local,
+      isAttachment: 1,
+      origin: _a.chat,
+      uiHandler: [this],
+      logicalParent: this,
+    };
+
+    if (this.attachmentList && !this.attachmentList.isDestroyed()) {
+      this.attachmentList.addNewMedia([item]);
+      this.checkPendingContent();
+      this.showSend();
+    }
+  }
+
+  _closeDeskPicker() {
+    this.ensurePart('wrapper-desk-picker').then(picker => {
+      if (picker && !picker.isDestroyed()) picker.clear();
+    });
+  }
+
   upload(e, token) {
     let target;
     switch (e.area) {
@@ -511,6 +648,9 @@ class __widget_chat extends LetcBox {
         break;
       case _e.drop:
         target = this;
+        break;
+      default:
+        target = this.getActiveWindow();
         break;
     }
     if ((target == null)) {
@@ -659,6 +799,9 @@ class __widget_chat extends LetcBox {
     let list = this.attachmentList;
     if (list && !list.isDestroyed()) {
       list.addNewMedia(items);
+      // Drive `data-has-attachment` directly — same deterministic path as
+      // the post-send branch in postMessageAPI.
+      this.checkPendingContent();
       return;
     }
     //this.attachMediaWrapper(this.__wrapperAttachment, items);
@@ -887,10 +1030,10 @@ class __widget_chat extends LetcBox {
       case _a.personal:
         api = {
           service: SERVICE.chat.post,
-          entity_id: this.peerId,  // server accepts entity_id as alias of peer_id
+          hub_id: this.hubId,
+          entity_id: this.peerId,
           attachment: attachments,
           message,
-          hub_id: this.hubId
         };
         break;
 
@@ -982,6 +1125,11 @@ class __widget_chat extends LetcBox {
     this.clearMessageBlock();
     this.postService(api).then(data => {
       this.attachmentList.clearAttachment();
+      // Deterministic — drive `data-has-attachment` directly instead of
+      // relying on the `_e.update` event chain, which raced with Backbone's
+      // built-in collection 'update' event and sometimes fired before
+      // sessionStorage was actually cleared.
+      this.checkPendingContent();
       if (_.isEmpty(data)) {
         this.showError(LOCALE.MESSAGE_NOT_SENT_RETRY);
         return;
@@ -1066,22 +1214,25 @@ class __widget_chat extends LetcBox {
    */
   showMsgCount(cmd) {
     this._selectedMessages = [];
-    const messages = this.__list.children.filter((e) => {
-      if (e.mget('selected')) {
-        this._selectedMessages.push(e.mget('message_id'))
-      }
-    })
+    this._selectedViews = [];
+    const chatItems = this.__list.getItemsByKind('widget_chat_item');
+    const selected = chatItems.filter(e => e.mget('selected'));
+    for (const e of selected) {
+      const mid = e.mget('message_id');
+      if (mid) this._selectedMessages.push(mid);
+      this._selectedViews.push(e);
+    }
 
     /* for enable/disable delte-for-all button */
     const delteForAllBtn = this.getPart('delete-for-all-button');
     if (delteForAllBtn) {
       delteForAllBtn.el.dataset.active = _a.yes;
-      messages.filter(row => {
-        if (row.author === 'other') {
+      for (const row of selected) {
+        if (row.mget('author') === 'other') {
           delteForAllBtn.el.dataset.active = _a.no;
-          return row;
+          break;
         }
-      });
+      }
     }
 
     const msgCount = this._selectedMessages.length;
@@ -1109,6 +1260,7 @@ class __widget_chat extends LetcBox {
     const area = this.mget(_a.area);
     if (cmd == null) { cmd = {}; }
     const isPrivate = area === _a.personal || area === _a.privateRoom;
+    console.log('[chat.deleteMessage]', { service, area, isPrivate, peerId: this.peerId, selected: this._selectedMessages });
     if (isPrivate) {
       _service = SERVICE.chat.delete;
     } else if (area === _a.share) {
@@ -1132,10 +1284,32 @@ class __widget_chat extends LetcBox {
       payload.peer_id = this.peerId;
     }
 
+    const viewsToRemove = (this._selectedViews || []).slice();
     this.postService(payload, { async: 1 }).then((data) => {
-      this.disableMessageSelection(data);
-      this.clearMessageFromChat(data);
+      this.disableMessageSelection();
+      for (const view of viewsToRemove) {
+        if (view && _.isFunction(view.goodbye)) view.goodbye();
+      }
     });
+  }
+
+  /**
+   * Scroll to a specific message by ID, retrying until it appears in the list.
+   * @param {string} message_id
+   */
+  scrollToMessage(message_id, retries = 25) {
+    if (!message_id) return;
+    const tryScroll = (r) => {
+      const item = this.__list && this.__list.getItemsByAttr('message_id', message_id)[0];
+      if (item && item.el) {
+        item.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        item.el.dataset.highlighted = '1';
+        setTimeout(() => { if (item.el) delete item.el.dataset.highlighted; }, 2500);
+        return;
+      }
+      if (r > 0) setTimeout(() => tryScroll(r - 1), 200);
+    };
+    tryScroll(retries);
   }
 
   /**
@@ -1317,9 +1491,9 @@ class __widget_chat extends LetcBox {
 
     if (mentionType === 'contact') {
       contactsPromise = this.fetchService({
-        service: SERVICE.chat.chat_rooms,
-        flag: 'contact',
-        hub_id: Visitor.get(_a.id)
+        service: SERVICE.chat.contact_rooms,
+        hub_id: Visitor.get(_a.id),
+        key: filter || ''
       }).catch(() => null);
     }
 
@@ -1507,7 +1681,46 @@ class __widget_chat extends LetcBox {
     this.clearReplyMessage();
   }
 
+  // ── Drag-and-drop onto the whole chat panel ──────────────────────────────
+  // Uses a depth counter so enter/leave events from child elements don't
+  // cause the overlay to flicker. The window-manager handles drops in
+  // floating windows (window-bigchat, window-channel) via data-over; this
+  // handles the panel context (chat-p2p sidebar) via data-dragging.
 
+  _onDragEnter(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this._dragDepth = (this._dragDepth || 0) + 1;
+    if (this._dragDepth === 1) this.el.dataset.dragging = 1;
+  }
+
+  _onDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  _onDragLeave(e) {
+    e.stopPropagation();
+    this._dragDepth = Math.max(0, (this._dragDepth || 0) - 1);
+    if (this._dragDepth === 0) this.el.dataset.dragging = 0;
+  }
+
+  _onDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this._dragDepth = 0;
+    this.el.dataset.dragging = 0;
+    this.upload(e);
+  }
+
+  static initClass() {
+    this.prototype.events = {
+      dragenter: '_onDragEnter',
+      dragover:  '_onDragOver',
+      dragleave: '_onDragLeave',
+      drop:      '_onDrop',
+    };
+  }
 }
 
 

@@ -19,10 +19,16 @@ class __welcome_router extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   onDomRefresh() {
-    const args = Visitor.parseModule();
+    const args = Visitor.parseModuleArgs() || {};
+    if (args.invite) {
+      this._inviteToken = args.invite;
+      RADIO_BROADCAST.once('user:signed:in', () => {
+        this._redeemInviteThenEnter();
+      });
+    }
     this.route();
   }
 
@@ -36,13 +42,12 @@ class __welcome_router extends LetcBox {
 
     if (Visitor.isOnline()) {
       const f = () => {
-        location.hash = _K.module.desk;
+        this._redeemInviteThenEnter();
       }
       setTimeout(f, Visitor.timeout(700));
       return
     }
     let plugins = Platform.get('plugins');
-    this.debug("AAA:54 GOT plugin", plugins)
     if (!plugins) {
       this.loadDefault()
       return;
@@ -86,7 +91,7 @@ class __welcome_router extends LetcBox {
 
     if (Visitor.isOnline()) {
       const f = () => {
-        location.hash = _K.module.desk;
+        this._redeemInviteThenEnter();
       }
       setTimeout(f, Visitor.timeout(700));
       return
@@ -145,7 +150,6 @@ class __welcome_router extends LetcBox {
     if (!plugins || !plugins.signin) {
       return loadDefault();
     }
-    this.debug("AAA:GOT signin plugin", plugins.signin)
     let { name, kind } = plugins.signin;
     Kind.loadPlugin({ name, kind }).then(() => {
       Kind.waitFor(kind).then((k) => {
@@ -168,7 +172,6 @@ class __welcome_router extends LetcBox {
       this.el.dataset.tab = this.tab;
     });
     let require_logout = 0;
-    this.debug("AAA:40", this.tab)
     switch (this.tab) {
       case 'signup':
         return this.loadSignup();
@@ -267,6 +270,30 @@ class __welcome_router extends LetcBox {
       case 'keep-current-connection':
         return location.hash = _K.module.desk;
     }
+  }
+
+  /**
+   * Redeem a pending invite token then navigate to the target hub (or plain desk on failure).
+   */
+  async _redeemInviteThenEnter() {
+    if (this._inviteToken) {
+      try {
+        const res = await this.postService('invite.accept_invite', {
+          token: this._inviteToken,
+        });
+        this._inviteToken = null;
+        if (res && res.hub_id) {
+          location.hash = `${_K.module.desk}/@${res.hub_id}`;
+          return;
+        }
+      } catch (e) {
+        this._inviteToken = null;
+        if (window.Wm && Wm.alert) {
+          Wm.alert(LOCALE.INVITE_LINK_INVALID);
+        }
+      }
+    }
+    location.hash = _K.module.desk;
   }
 
   /**

@@ -66,6 +66,11 @@ html {
 
   &__body {
     height: 100vh;
+    // Right-side slide-out panels (chat-p2p, address-book) park themselves
+    // at `right: -880px` / `-720px` while closed. Without clipping here,
+    // those off-screen panels widen the document and __main's
+    // `overflow: auto` exposes a phantom horizontal scrollbar.
+    overflow: hidden;
   }
 
   &__right-side {

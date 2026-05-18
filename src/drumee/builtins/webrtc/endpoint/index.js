@@ -14,7 +14,6 @@ class __endpoint extends LetcBox {
     this._queue = [];
     this.logicalParent = opt.logicalParent;
     this.declareHandlers();
-    //this.debug("XAAA:AAA:17", this, opt);
   }
 
 

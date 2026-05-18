@@ -43,7 +43,6 @@ class __widget_member_whoCanSee extends LetcBox {
         break;
 
       default:
-        this.debug("Created by kind builder");
     }
   }
 
@@ -111,7 +110,6 @@ class __widget_member_whoCanSee extends LetcBox {
   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
-    this.debug(`onUiEvent service = ${service}`, cmd, this);
 
     switch (service) {
       case 'change_option':
@@ -224,7 +222,6 @@ class __widget_member_whoCanSee extends LetcBox {
       users: this.membersSelected,
       //hub_id  : Visitor.get(_a.id)
     }).then(data => {
-      this.debug('submitWhoCanSee', data, this) //error response should be handled
       return this.triggerHandlers({ service: 'close-overlay' })
     }).catch(this.debug('Something went wrong'))
   }

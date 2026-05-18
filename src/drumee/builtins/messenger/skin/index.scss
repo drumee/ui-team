@@ -201,6 +201,32 @@
     height: 170px;
   }
 
+  &__attach-menu.dialog__wrapper {
+    background: var(--default-bg);
+    border-radius: var(--border-radius);
+    bottom: calc(100% + 6px);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+    left: 0;
+    min-width: 160px;
+    padding: 4px;
+    position: absolute;
+    width: auto;
+    z-index: 200;
+  }
+
+  &__attach-option {
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    display: block;
+    font-size: 13px;
+    padding: 9px 14px;
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--normal-bg-10);
+    }
+  }
+
   &__icon {
     height: 23px;
     margin: 5px 8px;

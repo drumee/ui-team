@@ -127,7 +127,6 @@ class __window_share extends mfsInteract {
 // ===========================================================
   onChildBubble(o) {
     super.onChildBubble(o);
-    this.debug("aaaa XXXXXXXX496 392", o, lastClick, this);
     if ((typeof lastClick !== 'undefined' && lastClick !== null ? lastClick.shiftKey : undefined) && this.el.contains(lastClick.target)) {
       if (this._inbound != null) {
         return this._inbound.shareIn();
@@ -482,12 +481,10 @@ class __window_share extends mfsInteract {
           if ((this._outbound != null) && !this._outbound.isDestroyed()) {
             this._outbound.suppress();
           }
-          this.debug("INBOUND");
         } else { 
           this.model.set({ 
             way   : _a.outbound});
           this.model.unset(_a.mode); 
-          this.debug("OUTBOUND");
         }
         return Wm.openContent(this);
 
@@ -537,7 +534,6 @@ class __window_share extends mfsInteract {
         return this.reload(data, 'direct');
  
       case SERVICE.sharebox.get_outbound_node_attr:
-        this.debug("aaaaaaa 282 419", data);
         return this._openOutbound(data);
 
       case SERVICE.sharebox.notification_count:

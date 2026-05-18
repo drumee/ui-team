@@ -29,7 +29,6 @@ class __admin_security extends LetcBox{
       const data = await this.fetchService(SERVICE.admin.get_security_settings, {});
       Object.entries(data).forEach(([k, v]) => this.mset(k, v));
     } catch (e) {
-      this.debug('_loadSettings error', e);
     }
   }
 

@@ -46,11 +46,16 @@ function getItemName(data, preview) {
   return preview.filename || preview.name || preview.user_filename || data.link_label || data.surname || data.hub_name || data.message || "item";
 }
 
-// Canonical category keys returned by activity.list. The legacy mfs feed
-// (activity.get_feed → activity_get_log) sometimes only has `event_type`;
-// keep both as a fallback chain.
+// Canonical category keys returned by activity.list. activity.get_feed
+// rows (from mfs_changelog) only carry `event` like "media.remove" — fall
+// back to inferring the category from that prefix so the switch matches.
 function getCategory(data) {
-  return data.category || data.event_type || data.type || '';
+  const direct = data.category || data.event_type || data.type;
+  if (direct) return direct;
+  const ev = String(data.event || '');
+  if (ev === 'hub.invite_received') return 'hub_invite';
+  const dot = ev.indexOf('.');
+  return dot > 0 ? ev.slice(0, dot) : '';
 }
 
 const COUNT_SUFFIX = (cnt) => (cnt > 1 ? ` (${cnt})` : '');
@@ -76,23 +81,34 @@ function getActivityMeta(data, preview) {
 
   switch (category) {
     case 'hub_invite':
+      // Never fall back to `name` for hub_invite — that resolver chains
+      // through surname/sender fields and ends up showing the inviter's
+      // own name (e.g. "invited you to workspace<InviterName>").
       return {
         before: data.action || 'invited you to ',
-        label: data.link_label || data.hub_name || name,
+        label: data.link_label || data.hub_name || data.hub_headline || data.hub_ident || '',
         after: '',
         colorClass: 'mention',
         badge: 'mention',
       };
 
     case 'contact_invite':
-    case 'contact':
+    case 'contact': {
+      // status === 'informed' marks the post-accept handshake half.
+      const status = data.status || data.contact_status;
+      const accepted = status === 'informed'
+        || data.event === 'contact.accept_informed'
+        || data.event_subtype === 'accepted';
       return {
-        before: 'wants to connect',
+        before: accepted
+          ? (LOCALE.ACCEPTED_YOUR_INVITATION || 'accepted your invitation')
+          : (LOCALE.WANTS_TO_CONNECT || 'wants to connect'),
         label: '',
         after: '',
         colorClass: 'mention',
         badge: 'mention',
       };
+    }
 
     case 'chat':
       return {
@@ -225,14 +241,19 @@ module.exports = function (ui) {
     ],
   });
 
-  // itemType MUST match the canonical `category` returned by activity.list,
-  // so server-side `notification_dismiss` can route correctly.
-  // Valid values: chat | contact | media | teamchat | ticket | hub_invite | contact_invite | mfs
-  const itemType = getCategory(data)
+  // itemType routes the dismiss handler — DO NOT use the inferred
+  // getCategory() here. Rollup rows from activity.list carry an explicit
+  // `data.category` and dismiss via activity.dismiss_rollup. Raw
+  // mfs_changelog rows from activity.get_feed have no category, only
+  // `event`, and must dismiss via activity.dismiss with changelog_id —
+  // they MUST stay tagged as 'mfs' so the dismiss handler takes the
+  // per-changelog branch.
+  const itemType = data.category
     || (data.event === 'hub.invite_received' ? 'hub_invite' : 'mfs');
   const itemKey = `${itemType}:${data.id || data.hub_id || data.drumate_id || data.key_id || ''}`;
   ui.mset('item_type', itemType);
   ui.mset('item_key', itemKey);
+  if (data.id != null) ui.mset('changelog_id', data.id);
 
   const actions = Skeletons.Box.X({
     className: `${pfx}__actions`,

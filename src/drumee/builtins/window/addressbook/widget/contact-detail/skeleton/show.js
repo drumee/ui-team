@@ -11,7 +11,6 @@ module.exports = function (ui) {
   const firstname = contact[_a.firstname] || '';
   const lastname = contact[_a.lastname] || '';
   const fullname = contact[_a.fullname] || (firstname + ' ' + lastname);
-  ui.debug("AAA:14", status)
   switch (status) {
     case _a.active:
     case _a.informed:

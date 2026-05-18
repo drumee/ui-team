@@ -77,7 +77,6 @@ class __devel_log extends LetcBox {
 //
 // ===========================================================
   __dispatchRest(method, data) {
-    this.debug(">>TTT BACK 0", method, data);
     switch (method) {
       case SERVICE.locale.update:
         return this._refreshRow(data);

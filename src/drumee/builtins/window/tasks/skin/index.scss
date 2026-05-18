@@ -46,11 +46,15 @@
     border-radius: 8px;
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
-    transition: background-color 0.15s, outline-color 0.15s;
+    transition:
+      background-color 0.15s,
+      outline-color 0.15s;
     outline: 2px dashed transparent;
     outline-offset: -2px;
 
-    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
     &::-webkit-scrollbar-thumb {
       background-color: rgba(0, 0, 0, 0.15);
       border-radius: 4px;
@@ -85,7 +89,9 @@
 
   &__column-title {
     @include drumee.typo(
-      $size: 13px, $weight: 600, $line: 18px,
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
       $color: var(--normal-fg-10, #0b0a21)
     );
     text-transform: uppercase;
@@ -103,7 +109,9 @@
 
   &__column-count-text {
     @include drumee.typo(
-      $size: 11px, $weight: 600, $line: 16px,
+      $size: 11px,
+      $weight: 600,
+      $line: 16px,
       $color: var(--normal-fg-50, #65656c)
     );
   }
@@ -118,17 +126,24 @@
     background-color: #ffffff;
     box-shadow: 0 1px 0 rgba(9, 30, 66, 0.08);
     cursor: pointer;
-    transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
+    transition:
+      box-shadow 0.15s,
+      border-color 0.15s,
+      transform 0.1s;
     user-select: none;
 
     &:hover {
       border-color: rgba(11, 10, 33, 0.12);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
-      .tasks-panel__task-remove { opacity: 1; }
+      .tasks-panel__task-remove {
+        opacity: 1;
+      }
     }
 
-    &:active { cursor: grabbing; }
+    &:active {
+      cursor: grabbing;
+    }
 
     &.is-dragging {
       opacity: 0.5;
@@ -143,7 +158,9 @@
 
   &__task-title {
     @include drumee.typo(
-      $size: 14px, $weight: 600, $line: 20px,
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
       $color: #0b0a21
     );
     flex: 1 1 auto;
@@ -189,12 +206,18 @@
     flex-shrink: 0;
     color: #84848c;
 
-    svg { width: 100%; height: 100%; display: block; }
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
   }
 
   &__task-file-name {
     @include drumee.typo(
-      $size: 12px, $weight: 500, $line: 16px,
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
       $color: #0b0a21
     );
     overflow: hidden;
@@ -206,7 +229,9 @@
 
   &__task-files-more {
     @include drumee.typo(
-      $size: 11px, $weight: 500, $line: 14px,
+      $size: 11px,
+      $weight: 500,
+      $line: 14px,
       $color: #65656c
     );
   }
@@ -219,7 +244,10 @@
     border-radius: 4px;
     color: var(--normal-fg-50, #84848c);
     opacity: 0;
-    transition: opacity 0.15s, color 0.15s, background 0.15s;
+    transition:
+      opacity 0.15s,
+      color 0.15s,
+      background 0.15s;
     cursor: pointer;
     // Constrain SVG strictly — defends against any stray text child.
     overflow: hidden;
@@ -239,7 +267,9 @@
 
   &__task-due {
     @include drumee.typo(
-      $size: 11px, $weight: 500, $line: 14px,
+      $size: 11px,
+      $weight: 500,
+      $line: 14px,
       $color: var(--normal-fg-50, #65656c)
     );
     padding: 2px 8px;
@@ -264,19 +294,26 @@
     background-color: transparent;
     cursor: pointer;
     flex-shrink: 0;
-    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    transition:
+      background-color 0.15s,
+      border-color 0.15s,
+      color 0.15s;
 
     &:hover {
       background-color: rgba(0, 0, 0, 0.03);
       border-color: rgba(11, 10, 33, 0.4);
 
-      .tasks-panel__add-label { color: var(--normal-fg-10, #0b0a21); }
+      .tasks-panel__add-label {
+        color: var(--normal-fg-10, #0b0a21);
+      }
     }
   }
 
   &__add-label {
     @include drumee.typo(
-      $size: 12px, $weight: 500, $line: 16px,
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
       $color: var(--normal-fg-50, #65656c)
     );
   }
@@ -288,7 +325,9 @@
     z-index: 10;
 
     &:empty,
-    &[data-state="closed"] { display: none; }
+    &[data-state="closed"] {
+      display: none;
+    }
   }
 
   &__create-backdrop {
@@ -303,7 +342,7 @@
   &__create-modal {
     width: 380px;
     max-width: 92%;
-    max-height: 86vh;
+    max-height: 50vh;
     background: #f2f2f7;
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 12px;
@@ -317,6 +356,13 @@
     overflow-y: auto;
     max-height: 86vh;
     box-sizing: border-box;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   &__create-header {
@@ -340,11 +386,17 @@
     border-radius: 6px;
     color: var(--normal-fg-50, #84848c);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
     overflow: hidden;
     font-size: 0;
 
-    svg { width: 16px; height: 16px; display: block; }
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
 
     &:hover {
       color: var(--normal-fg-10, #0b0a21);
@@ -358,7 +410,9 @@
 
   &__create-label {
     @include drumee.typo(
-      $size: 12px, $weight: 500, $line: 16px,
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
       $color: #65656c
     );
   }
@@ -366,6 +420,8 @@
   &__create-input {
     width: 100%;
     background: transparent;
+    position: relative;
+    box-sizing: border-box;
 
     input {
       width: 100%;
@@ -374,20 +430,65 @@
       border-radius: 6px;
       outline: none;
       background: #ffffff;
+      box-sizing: border-box;
       @include drumee.typo(
-        $size: 13px, $weight: 500, $line: 18px,
+        $size: 13px,
+        $weight: 500,
+        $line: 18px,
         $color: #0b0a21
       );
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
 
       &:focus {
-        border-color: #433CC5;
+        border-color: #433cc5;
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
 
       &::placeholder {
         color: #aeaeb2;
         font-weight: 400;
+      }
+
+      &.flatpickr-input,
+      &[readonly] {
+        cursor: pointer;
+        caret-color: transparent;
+      }
+    }
+
+    .flatpickr-calendar {
+      position: fixed;
+      top: 100px !important;
+      left: 40px !important;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.18);
+      font-family: Manrope, system-ui, sans-serif;
+
+      &.arrowTop::before,
+      &.arrowTop::after {
+        display: none;
+      }
+
+      .flatpickr-day {
+        border-radius: 6px;
+
+        &.selected,
+        &.selected:hover {
+          background: #433cc5;
+          border-color: #433cc5;
+        }
+
+        &.today {
+          border-color: #433cc5;
+
+          &:hover {
+            background: rgba(67, 60, 197, 0.08);
+            color: #433cc5;
+          }
+        }
       }
     }
   }
@@ -399,7 +500,9 @@
 
   &__create-status-pill {
     @include drumee.typo(
-      $size: 14px, $weight: 600, $line: 20px,
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
       $color: #65656c
     );
     padding: 5px 12px;
@@ -408,9 +511,14 @@
     background: #ffffff;
     cursor: pointer;
     user-select: none;
-    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    transition:
+      border-color 0.15s,
+      color 0.15s,
+      background 0.15s;
 
-    &:hover { background: #f2f2f7; }
+    &:hover {
+      background: #f2f2f7;
+    }
 
     &[data-active="1"] {
       background: #ffffff;
@@ -427,14 +535,18 @@
 
   &__create-cancel {
     @include drumee.typo(
-      $size: 14px, $weight: 600, $line: 20px,
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
       $color: #65656c
     );
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
     user-select: none;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     &:hover {
       background: rgba(0, 0, 0, 0.05);
@@ -444,15 +556,19 @@
 
   &__create-submit {
     @include drumee.typo(
-      $size: 14px, $weight: 600, $line: 20px,
-      $color: #E4E3FF
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: #e4e3ff
     );
     padding: 8px 16px;
     border-radius: 4px;
-    background: #433CC5;
+    background: #433cc5;
     cursor: pointer;
     user-select: none;
-    transition: background 0.15s, box-shadow 0.15s;
+    transition:
+      background 0.15s,
+      box-shadow 0.15s;
 
     &:hover {
       background: #322a9b;
@@ -474,7 +590,9 @@
     z-index: 5;
 
     &[data-state="closed"],
-    &:empty { display: none; }
+    &:empty {
+      display: none;
+    }
   }
 
   &__detail-panel {
@@ -484,6 +602,12 @@
     gap: 12px;
     box-sizing: border-box;
     overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   &__detail-header {
@@ -504,15 +628,21 @@
       outline: none;
       background: transparent;
       @include drumee.typo(
-        $size: 16px, $weight: 600, $line: 22px,
+        $size: 16px,
+        $weight: 600,
+        $line: 22px,
         $color: var(--normal-fg-10, #0b0a21)
       );
-      transition: background 0.15s, border-color 0.15s;
+      transition:
+        background 0.15s,
+        border-color 0.15s;
 
-      &:hover { background: rgba(0, 0, 0, 0.03); }
+      &:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
       &:focus {
         background: #ffffff;
-        border-color: #433CC5;
+        border-color: #433cc5;
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
     }
@@ -526,11 +656,17 @@
     border-radius: 6px;
     color: var(--normal-fg-50, #84848c);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
     overflow: hidden;
     font-size: 0;
 
-    svg { width: 16px; height: 16px; display: block; }
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
 
     &:hover {
       color: var(--normal-fg-10, #0b0a21);
@@ -540,7 +676,9 @@
 
   &__detail-label {
     @include drumee.typo(
-      $size: 11px, $weight: 600, $line: 14px,
+      $size: 11px,
+      $weight: 600,
+      $line: 14px,
       $color: var(--normal-fg-50, #65656c)
     );
     text-transform: uppercase;
@@ -554,7 +692,9 @@
 
   &__detail-status-pill {
     @include drumee.typo(
-      $size: 12px, $weight: 500, $line: 16px,
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
       $color: var(--normal-fg-50, #65656c)
     );
     padding: 5px 12px;
@@ -562,9 +702,14 @@
     border-radius: 100px;
     cursor: pointer;
     user-select: none;
-    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    transition:
+      border-color 0.15s,
+      color 0.15s,
+      background 0.15s;
 
-    &:hover { background: rgba(0, 0, 0, 0.03); }
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
 
     &[data-active="1"] {
       background: rgba(250, 133, 64, 0.08);
@@ -580,6 +725,8 @@
   &__detail-due-input {
     flex: 1 1 auto;
     background: transparent;
+    position: relative;
+    box-sizing: border-box;
 
     input {
       width: 100%;
@@ -587,14 +734,57 @@
       border: 1px solid var(--border-default, #d1d1d6);
       border-radius: 6px;
       outline: none;
+      box-sizing: border-box;
       @include drumee.typo(
-        $size: 13px, $weight: 500, $line: 18px,
+        $size: 13px,
+        $weight: 500,
+        $line: 18px,
         $color: var(--normal-fg-10, #0b0a21)
       );
 
       &:focus {
         border-color: #fa8540;
         box-shadow: 0 0 0 3px rgba(250, 133, 64, 0.15);
+      }
+
+      &.flatpickr-input,
+      &[readonly] {
+        cursor: pointer;
+        caret-color: transparent;
+      }
+    }
+
+    .flatpickr-calendar {
+      position: fixed;
+      top: 300px !important;
+      left: 800px !important;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.18);
+      font-family: Manrope, system-ui, sans-serif;
+
+      &.arrowTop::before,
+      &.arrowTop::after {
+        display: none;
+      }
+
+      .flatpickr-day {
+        border-radius: 6px;
+
+        &.selected,
+        &.selected:hover {
+          background: #fa8540;
+          border-color: #fa8540;
+        }
+
+        &.today {
+          border-color: #fa8540;
+
+          &:hover {
+            background: rgba(250, 133, 64, 0.08);
+            color: #fa8540;
+          }
+        }
       }
     }
   }
@@ -610,13 +800,17 @@
 
   &__attachment-add {
     @include drumee.typo(
-      $size: 12px, $weight: 600, $line: 16px,
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
       $color: #fa8540
     );
     cursor: pointer;
     user-select: none;
 
-    &:hover { text-decoration: underline; }
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   &__attachment-row {
@@ -630,7 +824,9 @@
 
   &__attachment-name {
     @include drumee.typo(
-      $size: 13px, $weight: 500, $line: 18px,
+      $size: 13px,
+      $weight: 500,
+      $line: 18px,
       $color: var(--normal-fg-10, #0b0a21)
     );
     flex: 1 1 auto;
@@ -645,11 +841,17 @@
     border-radius: 4px;
     color: var(--normal-fg-50, #84848c);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
     overflow: hidden;
     font-size: 0;
 
-    svg { width: 14px; height: 14px; display: block; }
+    svg {
+      width: 14px;
+      height: 14px;
+      display: block;
+    }
 
     &:hover {
       color: #d65f59;
@@ -659,7 +861,9 @@
 
   &__attachments-empty {
     @include drumee.typo(
-      $size: 12px, $weight: 400, $line: 16px,
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
       $color: var(--normal-fg-50, #aeaeb2)
     );
     font-style: italic;
@@ -673,12 +877,10 @@
   }
 
   &__task-label-pill {
-    @include drumee.typo(
-      $size: 11px, $weight: 500, $line: 14px, $color: #fff
-    );
+    @include drumee.typo($size: 11px, $weight: 500, $line: 14px, $color: #fff);
     padding: 2px 8px;
     border-radius: 10px;
-    background: #AEAEB2;
+    background: #aeaeb2;
     white-space: nowrap;
   }
 
@@ -689,7 +891,7 @@
     flex-shrink: 0;
     border-radius: 50%;
     overflow: hidden;
-    margin-left: auto;  // push it to the right of the title row
+    margin-left: auto; // push it to the right of the title row
   }
 
   // ── Priority pills (create + detail) ──────────────────────────
@@ -700,17 +902,26 @@
 
   &__priority-pill {
     @include drumee.typo(
-      $size: 12px, $weight: 500, $line: 16px,
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
       $color: var(--normal-fg-30, #84848c)
     );
     padding: 4px 10px;
     border: 1px solid var(--normal-fg-70, #d6d6dc);
     border-radius: 12px;
     cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
+    transition:
+      border-color 0.15s,
+      color 0.15s;
 
-    &[data-active="1"] { font-weight: 600; }
-    &:hover { border-color: #FA8540; color: #FA8540; }
+    &[data-active="1"] {
+      font-weight: 600;
+    }
+    &:hover {
+      border-color: #fa8540;
+      color: #fa8540;
+    }
   }
 
   // ── Detail panel rows ─────────────────────────────────────────
@@ -735,20 +946,26 @@
       box-sizing: border-box;
       resize: vertical;
       @include drumee.typo(
-        $size: 13px, $weight: 400, $line: 18px,
+        $size: 13px,
+        $weight: 400,
+        $line: 18px,
         $color: #0b0a21
       );
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
 
       &::placeholder {
         color: #aeaeb2;
         font-weight: 400;
       }
 
-      &:hover { border-color: rgba(0, 0, 0, 0.16); }
+      &:hover {
+        border-color: rgba(0, 0, 0, 0.16);
+      }
 
       &:focus {
-        border-color: #433CC5;
+        border-color: #433cc5;
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
     }
@@ -764,14 +981,24 @@
     cursor: pointer;
     transition: border-color 0.15s;
 
-    &:hover { border-color: #FA8540; }
-    &[data-open="1"] { border-color: #FA8540; }
+    &:hover {
+      border-color: #fa8540;
+    }
+    &[data-open="1"] {
+      border-color: #fa8540;
+    }
   }
 
-  &__assignee-button-avatar { width: 24px; height: 24px; border-radius: 50%; overflow: hidden; }
+  &__assignee-button-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
 
   &__assignee-button-placeholder {
-    width: 24px; height: 24px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: var(--normal-bg-80, #ebebeb);
     color: var(--normal-fg-50, #84848c);
@@ -784,7 +1011,9 @@
 
   &__assignee-button-label {
     @include drumee.typo(
-      $size: 13px, $weight: 500, $line: 18px,
+      $size: 13px,
+      $weight: 500,
+      $line: 18px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
@@ -808,15 +1037,27 @@
     cursor: pointer;
     transition: background 0.15s;
 
-    &:hover { background: var(--normal-bg-80, rgba(0, 0, 0, 0.04)); }
-    &[data-active="1"] { background: rgba(250, 133, 64, 0.1); }
+    &:hover {
+      background: var(--normal-bg-80, rgba(0, 0, 0, 0.04));
+    }
+    &[data-active="1"] {
+      background: rgba(250, 133, 64, 0.1);
+    }
   }
 
-  &__member-avatar { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+  &__member-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
 
   &__member-name {
     @include drumee.typo(
-      $size: 13px, $weight: 500, $line: 18px,
+      $size: 13px,
+      $weight: 500,
+      $line: 18px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
@@ -828,23 +1069,27 @@
   }
 
   &__label-option {
-    @include drumee.typo(
-      $size: 12px, $weight: 500, $line: 16px
-    );
+    @include drumee.typo($size: 12px, $weight: 500, $line: 16px);
     padding: 3px 10px;
-    border: 1px solid #AEAEB2;
+    border: 1px solid #aeaeb2;
     border-radius: 12px;
     cursor: pointer;
     background: transparent;
     transition: opacity 0.15s;
 
-    &[data-selected="1"] { color: #fff; }
-    &:hover { opacity: 0.85; }
+    &[data-selected="1"] {
+      color: #fff;
+    }
+    &:hover {
+      opacity: 0.85;
+    }
   }
 
   &__labels-empty {
     @include drumee.typo(
-      $size: 12px, $weight: 400, $line: 16px,
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
       $color: var(--normal-fg-50, #aeaeb2)
     );
     font-style: italic;
@@ -866,20 +1111,26 @@
       box-sizing: border-box;
       resize: vertical;
       @include drumee.typo(
-        $size: 13px, $weight: 400, $line: 18px,
+        $size: 13px,
+        $weight: 400,
+        $line: 18px,
         $color: #0b0a21
       );
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
 
       &::placeholder {
         color: #aeaeb2;
         font-weight: 400;
       }
 
-      &:hover { border-color: rgba(0, 0, 0, 0.16); }
+      &:hover {
+        border-color: rgba(0, 0, 0, 0.16);
+      }
 
       &:focus {
-        border-color: #433CC5;
+        border-color: #433cc5;
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
     }
@@ -913,11 +1164,19 @@
     background: #ffffff;
     font: inherit;
     box-sizing: border-box;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
 
-    input { width: 100%; border: none; outline: none; background: transparent; font: inherit; }
+    input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      font: inherit;
+    }
     &:focus-within {
-      border-color: #433CC5;
+      border-color: #433cc5;
       box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
     }
   }
@@ -929,28 +1188,37 @@
     flex-shrink: 0;
     padding: 0 14px;
     border-radius: 8px;
-    background: #433CC5;
+    background: #433cc5;
     cursor: pointer;
     transition: background 0.15s;
     user-select: none;
 
-    &:hover { background: #322a9b; }
+    &:hover {
+      background: #322a9b;
+    }
   }
 
   &__file-search-link-text {
     @include drumee.typo(
-      $size: 12px, $weight: 600, $line: 16px,
-      $color: #E4E3FF
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: #e4e3ff
     );
   }
 
   &__file-search-link-ico {
     width: 12px;
     height: 12px;
-    color: #E4E3FF;
+    color: #e4e3ff;
     flex-shrink: 0;
 
-    svg { width: 100%; height: 100%; display: block; fill: currentColor; }
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      fill: currentColor;
+    }
   }
 
   // Floating dropdown panel — sits below the input, on top of subsequent
@@ -985,14 +1253,20 @@
     user-select: none;
     transition: background 0.15s;
 
-    &:last-child { border-bottom: none; }
-    &:hover { background: #f3f1ff; }
+    &:last-child {
+      border-bottom: none;
+    }
+    &:hover {
+      background: #f3f1ff;
+    }
     &[data-linked="1"] {
       background: #f7f7fa;
       cursor: default;
       opacity: 0.7;
 
-      &:hover { background: #f7f7fa; }
+      &:hover {
+        background: #f7f7fa;
+      }
     }
   }
 
@@ -1002,12 +1276,19 @@
     flex-shrink: 0;
     color: #84848c;
 
-    svg { width: 100%; height: 100%; display: block; fill: currentColor; }
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      fill: currentColor;
+    }
   }
 
   &__file-result-name {
     @include drumee.typo(
-      $size: 13px, $weight: 500, $line: 18px,
+      $size: 13px,
+      $weight: 500,
+      $line: 18px,
       $color: #0b0a21
     );
     flex: 1 1 auto;
@@ -1019,7 +1300,9 @@
 
   &__file-result-status {
     @include drumee.typo(
-      $size: 11px, $weight: 600, $line: 14px,
+      $size: 11px,
+      $weight: 600,
+      $line: 14px,
       $color: #65656c
     );
     flex-shrink: 0;
@@ -1032,7 +1315,9 @@
 
   &__file-search-empty {
     @include drumee.typo(
-      $size: 12px, $weight: 400, $line: 16px,
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
       $color: #aeaeb2
     );
     font-style: italic;
@@ -1055,7 +1340,9 @@
 
     .tasks-panel__file-result-name {
       @include drumee.typo(
-        $size: 12px, $weight: 600, $line: 16px,
+        $size: 12px,
+        $weight: 600,
+        $line: 16px,
         $color: #0b0a21
       );
     }
@@ -1068,7 +1355,10 @@
       background: rgba(215, 78, 73, 0.1);
       color: #d74e49;
 
-      svg { width: 12px; height: 12px; }
+      svg {
+        width: 12px;
+        height: 12px;
+      }
 
       &:hover {
         background: rgba(215, 78, 73, 0.18);
@@ -1088,14 +1378,18 @@
 
   &__detail-cancel {
     @include drumee.typo(
-      $size: 14px, $weight: 600, $line: 20px,
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
       $color: #65656c
     );
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
     user-select: none;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     &:hover {
       background: rgba(0, 0, 0, 0.05);
@@ -1105,20 +1399,23 @@
 
   &__detail-submit {
     @include drumee.typo(
-      $size: 14px, $weight: 600, $line: 20px,
-      $color: #E4E3FF
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: #e4e3ff
     );
     padding: 8px 16px;
     border-radius: 4px;
-    background: #433CC5;
+    background: #433cc5;
     cursor: pointer;
     user-select: none;
-    transition: background 0.15s, box-shadow 0.15s;
+    transition:
+      background 0.15s,
+      box-shadow 0.15s;
 
     &:hover {
       background: #322a9b;
       box-shadow: 0 4px 12px rgba(67, 60, 197, 0.3);
     }
   }
-
 }

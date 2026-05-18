@@ -92,7 +92,6 @@ class __color_picker extends Marionette.View {
    * @returns 
    */
   _start() {
-    this.debug("START __colorpicker", this);
 
     this.$canvas = this.$el.find(`#${this._id}`);
     this._canvas = this.$canvas[0];
@@ -179,7 +178,6 @@ class __color_picker extends Marionette.View {
     } else if (x > this._canvasRect.w) {
       x = this._canvasRect.w;
     }
-    this.debug("canvasOffset AAAA", x, y, this, this._canvasRect); //, @$canvas[0].getBoundingClientRect()
     const imageData = this._ctx.getImageData(x, y, 1, 1);
     const pixel = imageData.data;
     const color = new Color(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, ${pixel[3]})`);
@@ -194,7 +192,6 @@ class __color_picker extends Marionette.View {
    */
   _triggerUiEvent(e) {
     const hexString = this._getPixel(e);
-    this.debug(`_triggerUiEvent __colorpicker hstr=${hexString}`, e, this);
     if ((this._handler != null ? this._handler.ui : undefined) != null) {
       this.model.set(_a.value, hexString);
       this.model.set(_a.type, _e.click);
@@ -210,7 +207,6 @@ class __color_picker extends Marionette.View {
    * @returns 
    */
   _mousemove(e) {
-    this.debug("START _mousemove", this);
     const hexString = this._getPixel(e);
     return this.debug(`_mousemove __colorpicker hstr=${hexString}`);
   }
