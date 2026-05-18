@@ -4364,6 +4364,13 @@
     gap: 16px;
   }
 
+  &__wsdetail-empty {
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacer-8);
+  }
+
   &__wsdetail-heading-left {
     align-items: center;
     gap: 8px;
@@ -6971,7 +6978,9 @@ html[data-theme="dark"] {
 
         input {
           color: var(--normal-fg-10);
-          &::placeholder { color: var(--placeholder-fg); }
+          &::placeholder {
+            color: var(--placeholder-fg);
+          }
         }
       }
 
@@ -7020,7 +7029,9 @@ html[data-theme="dark"] {
     &__wsdetail-page-arrow svg {
       fill: var(--normal-fg-20);
       .icon-fill-blue,
-      .icon-fill-grey { fill: var(--normal-fg-20); }
+      .icon-fill-grey {
+        fill: var(--normal-fg-20);
+      }
     }
 
     &__wsdetail-search {
@@ -7028,13 +7039,17 @@ html[data-theme="dark"] {
 
       input {
         color: var(--normal-fg-10);
-        &::placeholder { color: var(--placeholder-fg); }
+        &::placeholder {
+          color: var(--placeholder-fg);
+        }
       }
     }
 
     &__wsdetail-row {
       background: var(--overlay-bg-05);
-      &:hover { background: var(--hover-bg-40); }
+      &:hover {
+        background: var(--hover-bg-40);
+      }
     }
 
     &__wsdetail-page-arrow:hover,
@@ -7082,7 +7097,9 @@ html[data-theme="dark"] {
     &__fperm-close-ico svg {
       fill: var(--normal-fg-20);
       .icon-fill-blue,
-      .icon-fill-grey { fill: var(--normal-fg-20); }
+      .icon-fill-grey {
+        fill: var(--normal-fg-20);
+      }
     }
 
     &__fperm-folder-card,
@@ -7123,7 +7140,9 @@ html[data-theme="dark"] {
     &__fperm-device-ico svg {
       fill: var(--normal-fg-10);
       .icon-fill-blue,
-      .icon-fill-grey { fill: var(--normal-fg-10); }
+      .icon-fill-grey {
+        fill: var(--normal-fg-10);
+      }
     }
 
     // ── Admin storage / File Versioning table ────────────────
@@ -7147,7 +7166,9 @@ html[data-theme="dark"] {
       &--header {
         background: var(--overlay-bg-05);
 
-        .apps-main__fv-col-label { color: var(--normal-fg-20); }
+        .apps-main__fv-col-label {
+          color: var(--normal-fg-20);
+        }
       }
 
       &:hover:not(.apps-main__fv-row--header) {
@@ -7182,7 +7203,9 @@ html[data-theme="dark"] {
 
       input {
         color: var(--normal-fg-10);
-        &::placeholder { color: var(--placeholder-fg); }
+        &::placeholder {
+          color: var(--placeholder-fg);
+        }
       }
     }
 
@@ -7199,7 +7222,9 @@ html[data-theme="dark"] {
     &__fv-action--more svg {
       fill: var(--normal-fg-10);
       .icon-fill-blue,
-      .icon-fill-grey { fill: var(--normal-fg-10); }
+      .icon-fill-grey {
+        fill: var(--normal-fg-10);
+      }
     }
 
     &__fv-action--more:hover,
@@ -7212,7 +7237,9 @@ html[data-theme="dark"] {
     &__fv-back-ico svg {
       fill: var(--normal-fg-20);
       .icon-fill-blue,
-      .icon-fill-grey { fill: var(--normal-fg-20); }
+      .icon-fill-grey {
+        fill: var(--normal-fg-20);
+      }
     }
 
     &__fv-page-btn--active {
@@ -7237,7 +7264,9 @@ html[data-theme="dark"] {
     &__filed-history-close-ico svg {
       fill: var(--normal-fg-20);
       .icon-fill-blue,
-      .icon-fill-grey { fill: var(--normal-fg-20); }
+      .icon-fill-grey {
+        fill: var(--normal-fg-20);
+      }
     }
 
     &__filed-preview-name,
@@ -7268,7 +7297,9 @@ html[data-theme="dark"] {
 
       input {
         color: var(--normal-fg-10);
-        &::placeholder { color: var(--placeholder-fg); }
+        &::placeholder {
+          color: var(--placeholder-fg);
+        }
       }
     }
 

@@ -80,17 +80,54 @@ function initialsFor(firstname, lastname, fullname) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function deriveRole(privilege) {
-  const p = parseInt(privilege, 10) || 0;
+// role_label is the canonical signal from hub_member_list ("OWNER" |
+// "HUB_ADMIN" | "MEMBER"). hub_permission is a fallback for endpoints that
+// only return the bitmask.
+function deriveRole(row) {
+  const label = String(
+    (row && (row.role_label || row.role)) || "",
+  ).toUpperCase();
+  if (label === "OWNER") {
+    return {
+      label: LOCALE.ORGANIZATION_OWNER || "Organization Owner",
+      variant: "owner",
+    };
+  }
+  if (
+    label === "HUB_ADMIN" ||
+    label === "ADMIN" ||
+    label === "WORKSPACE_ADMIN"
+  ) {
+    return {
+      label: LOCALE.WORKSPACE_ADMIN || "Workspace Admin",
+      variant: "admin",
+    };
+  }
+  if (label === "MEMBER") {
+    return { label: LOCALE.MEMBER || "Member", variant: "member" };
+  }
+  const p =
+    parseInt(
+      (row &&
+        (row.hub_permission != null ? row.hub_permission : row.privilege)) ||
+        0,
+      10,
+    ) || 0;
   if (_K && _K.permission) {
     if (p & _K.permission.owner) {
-      return { label: "organization name owner", variant: "owner" };
+      return {
+        label: LOCALE.ORGANIZATION_OWNER || "Organization Owner",
+        variant: "owner",
+      };
     }
     if (p & _K.permission.admin) {
-      return { label: "Workspace Admin", variant: "admin" };
+      return {
+        label: LOCALE.WORKSPACE_ADMIN || "Workspace Admin",
+        variant: "admin",
+      };
     }
   }
-  return { label: "Member", variant: "member" };
+  return { label: LOCALE.MEMBER || "Member", variant: "member" };
 }
 
 const TABS_BY_ROLE = {
@@ -109,17 +146,21 @@ function deriveVisitorRole() {
 }
 
 function deriveStatus(row) {
+  const s = String((row && row.status) || "").toLowerCase();
+  if (s === "online" || s === "away" || s === "offline") return s;
   if (row && (row.online === 1 || row.online === true)) return "online";
   if (row && row.connected === 0) return "offline";
-  return "online";
+  return "offline";
 }
 
+// last_active arrives as a unix timestamp in seconds (e.g. 1779085588) or null.
 function deriveLastActive(row) {
   if (!row) return "—";
-  const t = row.last_login || row.mtime || row.ctime;
+  const t = row.last_active || row.last_login || row.mtime || row.ctime;
   if (!t) return "—";
   try {
-    const d = Dayjs(t);
+    const ms = Number(t) > 1e12 ? Number(t) : Number(t) * 1000;
+    const d = Dayjs(ms);
     if (!d.isValid()) return String(t);
     return d.fromNow();
   } catch (e) {
@@ -128,7 +169,7 @@ function deriveLastActive(row) {
 }
 
 function mapMember(row) {
-  const id = row.drumate_id || row.user_id || row.uid || row.id;
+  const id = row.uid || row.drumate_id || row.user_id || row.id;
   const fullname =
     row.fullname || `${row.firstname || ""} ${row.lastname || ""}`.trim();
   return {
@@ -138,11 +179,12 @@ function mapMember(row) {
     avatar_color: avatarColorFor(id),
     name: fullname || row.email || "—",
     email: row.email || "",
-    role: deriveRole(row.privilege),
+    role: deriveRole(row),
     workspaces: [],
     status: deriveStatus(row),
     last_active: deriveLastActive(row),
-    privilege: row.privilege || 0,
+    hub_permission:
+      row.hub_permission != null ? row.hub_permission : row.privilege || 0,
   };
 }
 
@@ -446,14 +488,17 @@ class apps_main extends LetcBox {
       });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
       const cols = [
-        { key: "ctime",       header: LOCALE.TIMESTAMP       || "Timestamp" },
-        { key: "actor_name",  header: LOCALE.USER            || "User" },
-        { key: "email",       header: LOCALE.EMAIL           || "Email" },
-        { key: "action",      header: LOCALE.ACTION          || "Action" },
-        { key: "category",    header: LOCALE.CATEGORY        || "Category" },
-        { key: "entity_id",   header: LOCALE.TARGET_RESOURCE || "Target Resource" },
-        { key: "hub_id",      header: LOCALE.WORKSPACE       || "Workspace" },
-        { key: "log",         header: LOCALE.MESSAGE         || "Message" },
+        { key: "ctime", header: LOCALE.TIMESTAMP || "Timestamp" },
+        { key: "actor_name", header: LOCALE.USER || "User" },
+        { key: "email", header: LOCALE.EMAIL || "Email" },
+        { key: "action", header: LOCALE.ACTION || "Action" },
+        { key: "category", header: LOCALE.CATEGORY || "Category" },
+        {
+          key: "entity_id",
+          header: LOCALE.TARGET_RESOURCE || "Target Resource",
+        },
+        { key: "hub_id", header: LOCALE.WORKSPACE || "Workspace" },
+        { key: "log", header: LOCALE.MESSAGE || "Message" },
       ];
       const titleCase = (s) => {
         if (!s) return "";
@@ -475,13 +520,24 @@ class apps_main extends LetcBox {
         return /[",\n]/.test(s) ? `"${s}"` : s;
       };
       const csv = [cols.map((c) => escape(c.header)).join(",")]
-        .concat(rows.map((r) => cols.map((c) => escape(cellValue(r, c.key))).join(",")))
+        .concat(
+          rows.map((r) =>
+            cols.map((c) => escape(cellValue(r, c.key))).join(","),
+          ),
+        )
         .join("\n");
       const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
       const ts = Dayjs().format("YYYYMMDD-HHmmss");
       const filename = `audit-logs-${ts}.csv`;
       const url = URL.createObjectURL(blob);
-      console.log("[audit-export] rows:", rows.length, "bytes:", blob.size, "url:", url);
+      console.log(
+        "[audit-export] rows:",
+        rows.length,
+        "bytes:",
+        blob.size,
+        "url:",
+        url,
+      );
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -491,7 +547,10 @@ class apps_main extends LetcBox {
       try {
         a.click();
       } catch (clickErr) {
-        console.warn("[audit-export] a.click() failed, falling back to window.open", clickErr);
+        console.warn(
+          "[audit-export] a.click() failed, falling back to window.open",
+          clickErr,
+        );
         window.open(url, "_blank");
       }
       setTimeout(() => {
@@ -589,6 +648,7 @@ class apps_main extends LetcBox {
       const res = await this.postService(SERVICE.admin.get_hub_folders, {
         hub_id: hubId,
         page: this._wsDetailPage || 1,
+        query: this._wsFolderQuery || "",
       });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
       // SP returns nid/filename/mtime/filesize — alias to FE shape.
@@ -1188,6 +1248,7 @@ class apps_main extends LetcBox {
         if (ws) {
           this._activeWorkspace = ws;
           this._wsDetailPage = 1;
+          this._wsFolderQuery = "";
           this._render();
           return this._loadHubFolders(ws.id);
         }
@@ -1198,7 +1259,25 @@ class apps_main extends LetcBox {
         this._activeWorkspace = null;
         this._wsFolders = [];
         this._wsFoldersState = "idle";
+        this._wsFolderQuery = "";
         return this._render();
+
+      case "apps-ws-search": {
+        const next = (
+          (args && args.value != null
+            ? args.value
+            : cmd && cmd.mget && cmd.mget(_a.value)) || ""
+        )
+          .toString()
+          .trim();
+        if (next === (this._wsFolderQuery || "")) return;
+        this._wsFolderQuery = next;
+        this._wsDetailPage = 1;
+        if (this._activeWorkspace) {
+          return this._loadHubFolders(this._activeWorkspace.id);
+        }
+        return;
+      }
 
       case "apps-perm-page": {
         const n = parseInt(cmd.mget("page_num"), 10);

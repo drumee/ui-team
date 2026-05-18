@@ -10,7 +10,11 @@
  */
 const ROLES = [
   { id: "admin", label: LOCALE.ROLE_ADMIN || "Admin", bit: 0b0011111 },
-  { id: "edit", label: LOCALE.ROLE_VIEW_EDIT || LOCALE.EDIT || "Edit", bit: 0b0000111 },
+  {
+    id: "edit",
+    label: LOCALE.ROLE_VIEW_EDIT || LOCALE.EDIT || "Edit",
+    bit: 0b0000111,
+  },
   { id: "view", label: LOCALE.VIEW || "View", bit: 0b0000011 },
 ];
 
@@ -23,7 +27,7 @@ const computePrivilege = (selectedIds) => {
 
 const summarizeRoles = (selectedIds) => {
   const role = ROLES.find((r) => selectedIds.includes(r.id));
-  return role?.label || (LOCALE.SELECT_ROLE || "Select role");
+  return role?.label || LOCALE.SELECT_ROLE || "Select role";
 };
 
 const buildWorkspaceRow = (ui, idx) => {
@@ -47,7 +51,8 @@ const buildWorkspaceRow = (ui, idx) => {
             partHandler: ui,
             uiHandler: [ui],
             dataset: { idx },
-            placeholder: LOCALE.INVITE_WORKSPACE_PLACEHOLDER || "Search workspace to add",
+            placeholder:
+              LOCALE.INVITE_WORKSPACE_PLACEHOLDER || "Search workspace to add",
             require: "any",
             mode: "commit",
             service: "search-workspace",
@@ -65,14 +70,23 @@ const buildWorkspaceRow = (ui, idx) => {
       Skeletons.Box.Y({
         className: `${pfx}__role-cell`,
         kids: [
-          Skeletons.Note({
+          Skeletons.Box.X({
             className: `${pfx}__role-select`,
-            sys_pn: `role-label:${idx}`,
-            partHandler: ui,
             service: "toggle-role",
             uiHandler: [ui],
             dataset: { idx },
-            content: summarizeRoles(DEFAULT_ROLE_IDS),
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__role-select-label`,
+                sys_pn: `role-label:${idx}`,
+                partHandler: ui,
+                content: summarizeRoles(DEFAULT_ROLE_IDS),
+              }),
+              Skeletons.Button.Svg({
+                ico: "apps-caret-down",
+                className: `${pfx}__role-caret`,
+              }),
+            ],
           }),
           Skeletons.Box.Y({
             className: `${pfx}__role-options`,
