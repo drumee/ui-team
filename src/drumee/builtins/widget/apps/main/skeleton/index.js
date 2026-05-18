@@ -51,7 +51,9 @@ function adminHubChip(ui) {
 
   const query = (ui._adminHubSearch || "").trim().toLowerCase();
   const filtered = query
-    ? hubs.filter((h) => (h.hub_name || h.hub_id || "").toLowerCase().includes(query))
+    ? hubs.filter((h) =>
+        (h.hub_name || h.hub_id || "").toLowerCase().includes(query),
+      )
     : hubs;
   const showSearch = hubs.length > 5;
 
@@ -91,7 +93,8 @@ function adminHubChip(ui) {
                       }),
                       Skeletons.Entry({
                         className: `${pfx}__hub-chip-search-input`,
-                        placeholder: LOCALE.SEARCH_WORKSPACE || "Search workspaces",
+                        placeholder:
+                          LOCALE.SEARCH_WORKSPACE || "Search workspaces",
                         name: "hub_search",
                         value: ui._adminHubSearch || "",
                         autofocus: 1,
@@ -109,7 +112,9 @@ function adminHubChip(ui) {
                   : [
                       Skeletons.Note({
                         className: `${pfx}__hub-chip-empty`,
-                        content: LOCALE.NO_WORKSPACES_FOUND || "No matching workspaces",
+                        content:
+                          LOCALE.NO_WORKSPACES_FOUND ||
+                          "No matching workspaces",
                       }),
                     ],
               }),
@@ -130,9 +135,8 @@ function tabs(ui) {
     { key: "storage", label: LOCALE.STORAGE || "Storage" },
     { key: "admin-storage", label: LOCALE.ADMIN_STORAGE || "Admin Storage" },
   ];
-  const visible = ui._visibleTabs && ui._visibleTabs.length
-    ? new Set(ui._visibleTabs)
-    : null;
+  const visible =
+    ui._visibleTabs && ui._visibleTabs.length ? new Set(ui._visibleTabs) : null;
   const tabList = visible ? allTabs.filter((t) => visible.has(t.key)) : allTabs;
   const hubChip = adminHubChip(ui);
   return Skeletons.Box.X({
@@ -147,9 +151,12 @@ function tabs(ui) {
             uiHandler: [ui],
             tab: t.key,
             kids: [
-              Skeletons.Note({ className: `${pfx}__tab-label`, content: t.label }),
+              Skeletons.Note({
+                className: `${pfx}__tab-label`,
+                content: t.label,
+              }),
             ],
-          })
+          }),
         ),
       }),
       hubChip || null,
@@ -183,11 +190,12 @@ function pageHeader(ui) {
           }),
           Skeletons.Note({
             className: `${pfx}__page-subtitle`,
-            content: ui._role === "admin"
-              ? (LOCALE.MEMBERS_SUBTITLE_ADMIN ||
-                 "Manage workspace access and member roles.")
-              : (LOCALE.MEMBERS_SUBTITLE ||
-                 "Manage organization access and define custom roles."),
+            content:
+              ui._role === "admin"
+                ? LOCALE.MEMBERS_SUBTITLE_ADMIN ||
+                  "Manage workspace access and member roles."
+                : LOCALE.MEMBERS_SUBTITLE ||
+                  "Manage organization access and define custom roles.",
           }),
         ],
       }),
@@ -295,9 +303,7 @@ function checkbox(ui, { id, checked, service, member_id }) {
 function pillBadge(pfx, { label, variant }) {
   return Skeletons.Box.X({
     className: `${pfx}__pill ${pfx}__pill--${variant || "default"}`,
-    kids: [
-      Skeletons.Note({ className: `${pfx}__pill-label`, content: label }),
-    ],
+    kids: [Skeletons.Note({ className: `${pfx}__pill-label`, content: label })],
   });
 }
 
@@ -360,10 +366,10 @@ function memberRow(ui, member) {
         className: `${pfx}__cell ${pfx}__cell--role`,
         kids: [pillBadge(pfx, member.role)],
       }),
-      Skeletons.Box.X({
-        className: `${pfx}__cell ${pfx}__cell--workspaces`,
-        kids: member.workspaces.map((w) => workspacePill(pfx, w)),
-      }),
+      // Skeletons.Box.X({
+      //   className: `${pfx}__cell ${pfx}__cell--workspaces`,
+      //   kids: member.workspaces.map((w) => workspacePill(pfx, w)),
+      // }),
       Skeletons.Box.X({
         className: `${pfx}__cell ${pfx}__cell--status`,
         kids: [
@@ -377,8 +383,8 @@ function memberRow(ui, member) {
                   member.status === "online"
                     ? LOCALE.ONLINE || "Online"
                     : member.status === "away"
-                    ? LOCALE.AWAY || "Away"
-                    : member.status,
+                      ? LOCALE.AWAY || "Away"
+                      : member.status,
               }),
             ],
           }),
@@ -424,14 +430,18 @@ function tableHeader(ui) {
   const allChecked =
     visible.length > 0 && visible.every((m) => ui._selected.has(m.id));
   const cols = [
-    { className: `${pfx}__cell--check`, kids: [
-      checkbox(ui, { checked: allChecked, service: "apps-toggle-all" }),
-    ] },
+    {
+      className: `${pfx}__cell--check`,
+      kids: [checkbox(ui, { checked: allChecked, service: "apps-toggle-all" })],
+    },
     { className: `${pfx}__cell--member`, label: LOCALE.MEMBER || "Member" },
     { className: `${pfx}__cell--role`, label: LOCALE.ROLE || "Role" },
-    { className: `${pfx}__cell--workspaces`, label: LOCALE.WORKSPACES || "Workspaces" },
+
     { className: `${pfx}__cell--status`, label: LOCALE.STATUS || "Status" },
-    { className: `${pfx}__cell--last-active`, label: LOCALE.LAST_ACTIVE || "Last Active" },
+    {
+      className: `${pfx}__cell--last-active`,
+      label: LOCALE.LAST_ACTIVE || "Last Active",
+    },
     { className: `${pfx}__cell--actions`, label: LOCALE.ACTIONS || "Actions" },
   ];
   return Skeletons.Box.X({
@@ -445,7 +455,7 @@ function tableHeader(ui) {
             content: c.label,
           }),
         ],
-      })
+      }),
     ),
   });
 }
@@ -473,12 +483,17 @@ function filterMenu(ui) {
           }),
           Skeletons.Box.X({
             className: `${pfx}__filter-item-radio${ui._roleFilter === item.key ? ` ${pfx}__filter-item-radio--selected` : ""}`,
-            kids: ui._roleFilter === item.key
-              ? [Skeletons.Box.X({ className: `${pfx}__filter-item-radio-dot` })]
-              : [],
+            kids:
+              ui._roleFilter === item.key
+                ? [
+                    Skeletons.Box.X({
+                      className: `${pfx}__filter-item-radio-dot`,
+                    }),
+                  ]
+                : [],
           }),
         ],
-      })
+      }),
     ),
   });
 }
@@ -493,7 +508,7 @@ const FILTER_LABELS = {
 function table(ui) {
   const pfx = ui.fig.family;
   const currentLabel =
-    (LOCALE[`FILTER_${ui._roleFilter.toUpperCase()}`]) ||
+    LOCALE[`FILTER_${ui._roleFilter.toUpperCase()}`] ||
     FILTER_LABELS[ui._roleFilter] ||
     FILTER_LABELS.all;
 
@@ -566,7 +581,7 @@ function tableBodyKids(ui) {
             content: LOCALE.LOADING || "Loading…",
           }),
         ],
-      })
+      }),
     );
   } else if (ui._membersState === "error") {
     kids.push(
@@ -575,11 +590,10 @@ function tableBodyKids(ui) {
         kids: [
           Skeletons.Note({
             className: `${pfx}__table-empty-label`,
-            content:
-              LOCALE.MEMBERS_LOAD_FAILED || "Could not load members.",
+            content: LOCALE.MEMBERS_LOAD_FAILED || "Could not load members.",
           }),
         ],
-      })
+      }),
     );
   } else {
     const visible = filterMembers(ui);
@@ -592,11 +606,12 @@ function tableBodyKids(ui) {
             Skeletons.Note({
               className: `${pfx}__table-empty-label`,
               content: filtered
-                ? (LOCALE.NO_MEMBERS_FOR_FILTER || "No members match this filter.")
-                : (LOCALE.NO_MEMBERS_FOUND || "No members found."),
+                ? LOCALE.NO_MEMBERS_FOR_FILTER ||
+                  "No members match this filter."
+                : LOCALE.NO_MEMBERS_FOUND || "No members found.",
             }),
           ],
-        })
+        }),
       );
     } else {
       visible.forEach((m) => kids.push(memberRow(ui, m)));
@@ -646,12 +661,13 @@ function pagination(ui) {
 
   const start = total === 0 ? 0 : (current - 1) * pageSize + 1;
   const end = total === 0 ? 0 : Math.min(total, current * pageSize);
-  const summary = total === 0
-    ? LOCALE.NO_MEMBERS_FOUND || "No members"
-    : (LOCALE.SHOWING_OF || "Showing {start}-{end} of {total}")
-        .replace("{start}", start)
-        .replace("{end}", end)
-        .replace("{total}", total.toLocaleString());
+  const summary =
+    total === 0
+      ? LOCALE.NO_MEMBERS_FOUND || "No members"
+      : (LOCALE.SHOWING_OF || "Showing {start}-{end} of {total}")
+          .replace("{start}", start)
+          .replace("{end}", end)
+          .replace("{total}", total.toLocaleString());
 
   return Skeletons.Box.X({
     className: `${pfx}__footer`,
@@ -690,7 +706,7 @@ function pagination(ui) {
                   className: `${pfx}__pager-ellipsis`,
                   content: "…",
                 })
-              : pageBtn(p, p === current)
+              : pageBtn(p, p === current),
           ),
           Skeletons.Button.Svg({
             ico: "mini-arrow-right-new",
@@ -712,7 +728,7 @@ function memberView(ui) {
 function adminMemberDetail(ui) {
   const pfx = ui.fig.family;
   const active = (ui._adminHubs || []).find(
-    (h) => h.hub_id === ui._activeAdminHub
+    (h) => h.hub_id === ui._activeAdminHub,
   );
   const wsName = (active && (active.hub_name || active.hub_id)) || "—";
   const back = Skeletons.Box.X({
@@ -745,7 +761,10 @@ function adminUpsellOverlay(ui) {
       Skeletons.Box.Y({
         className: `${pfx}__upsell-card`,
         kids: [
-          Skeletons.Image.Svg({ ico: "cloud-pause", className: `${pfx}__upsell-icon` }),
+          Skeletons.Image.Svg({
+            ico: "cloud-pause",
+            className: `${pfx}__upsell-icon`,
+          }),
           Skeletons.Box.Y({
             className: `${pfx}__upsell-text`,
             kids: [
@@ -806,9 +825,10 @@ export default function apps_main_skeleton(ui) {
     case "member":
     default:
       if (ui._role === "admin") {
-        content = ui._memberView === "detail"
-          ? adminMemberDetail(ui)
-          : require("./member-overview").default(ui);
+        content =
+          ui._memberView === "detail"
+            ? adminMemberDetail(ui)
+            : require("./member-overview").default(ui);
       } else {
         content = memberView(ui);
       }

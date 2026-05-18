@@ -80,17 +80,47 @@ function initialsFor(firstname, lastname, fullname) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function deriveRole(privilege) {
-  const p = parseInt(privilege, 10) || 0;
+// role_label is the canonical signal from hub_member_list ("OWNER" |
+// "HUB_ADMIN" | "MEMBER"). hub_permission is a fallback for endpoints that
+// only return the bitmask.
+function deriveRole(row) {
+  const label = String(
+    (row && (row.role_label || row.role)) || ""
+  ).toUpperCase();
+  if (label === "OWNER") {
+    return {
+      label: LOCALE.ORGANIZATION_OWNER || "Organization Owner",
+      variant: "owner",
+    };
+  }
+  if (label === "HUB_ADMIN" || label === "ADMIN" || label === "WORKSPACE_ADMIN") {
+    return {
+      label: LOCALE.WORKSPACE_ADMIN || "Workspace Admin",
+      variant: "admin",
+    };
+  }
+  if (label === "MEMBER") {
+    return { label: LOCALE.MEMBER || "Member", variant: "member" };
+  }
+  const p = parseInt(
+    (row && (row.hub_permission != null ? row.hub_permission : row.privilege)) || 0,
+    10,
+  ) || 0;
   if (_K && _K.permission) {
     if (p & _K.permission.owner) {
-      return { label: "organization name owner", variant: "owner" };
+      return {
+        label: LOCALE.ORGANIZATION_OWNER || "Organization Owner",
+        variant: "owner",
+      };
     }
     if (p & _K.permission.admin) {
-      return { label: "Workspace Admin", variant: "admin" };
+      return {
+        label: LOCALE.WORKSPACE_ADMIN || "Workspace Admin",
+        variant: "admin",
+      };
     }
   }
-  return { label: "Member", variant: "member" };
+  return { label: LOCALE.MEMBER || "Member", variant: "member" };
 }
 
 const TABS_BY_ROLE = {
@@ -109,17 +139,21 @@ function deriveVisitorRole() {
 }
 
 function deriveStatus(row) {
+  const s = String((row && row.status) || "").toLowerCase();
+  if (s === "online" || s === "away" || s === "offline") return s;
   if (row && (row.online === 1 || row.online === true)) return "online";
   if (row && row.connected === 0) return "offline";
-  return "online";
+  return "offline";
 }
 
+// last_active arrives as a unix timestamp in seconds (e.g. 1779085588) or null.
 function deriveLastActive(row) {
   if (!row) return "—";
-  const t = row.last_login || row.mtime || row.ctime;
+  const t = row.last_active || row.last_login || row.mtime || row.ctime;
   if (!t) return "—";
   try {
-    const d = Dayjs(t);
+    const ms = Number(t) > 1e12 ? Number(t) : Number(t) * 1000;
+    const d = Dayjs(ms);
     if (!d.isValid()) return String(t);
     return d.fromNow();
   } catch (e) {
@@ -128,7 +162,7 @@ function deriveLastActive(row) {
 }
 
 function mapMember(row) {
-  const id = row.drumate_id || row.user_id || row.uid || row.id;
+  const id = row.uid || row.drumate_id || row.user_id || row.id;
   const fullname =
     row.fullname || `${row.firstname || ""} ${row.lastname || ""}`.trim();
   return {
@@ -138,11 +172,11 @@ function mapMember(row) {
     avatar_color: avatarColorFor(id),
     name: fullname || row.email || "—",
     email: row.email || "",
-    role: deriveRole(row.privilege),
+    role: deriveRole(row),
     workspaces: [],
     status: deriveStatus(row),
     last_active: deriveLastActive(row),
-    privilege: row.privilege || 0,
+    hub_permission: row.hub_permission != null ? row.hub_permission : (row.privilege || 0),
   };
 }
 
