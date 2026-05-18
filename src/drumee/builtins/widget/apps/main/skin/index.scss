@@ -3859,6 +3859,66 @@
     color: var(--white, #fff);
   }
 
+  &__edit-ws-search-wrap {
+    width: 100%;
+    position: relative;
+  }
+
+  &__edit-ws-search-input {
+    flex: 1;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 400;
+      color: $ink-900;
+
+      &::placeholder {
+        color: $ink-500;
+      }
+    }
+  }
+
+  &__edit-ws-suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 10;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--white, #fff);
+    border: 1px solid var(--white, #fff);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+    &[data-state="0"] {
+      display: none;
+    }
+    &[data-state="1"] {
+      display: flex;
+    }
+  }
+
+  &__edit-ws-suggestion {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-900;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+  }
+
   // Devices section
   &__edit-devices {
     width: 100%;

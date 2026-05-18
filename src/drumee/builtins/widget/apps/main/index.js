@@ -275,6 +275,11 @@ class apps_main extends LetcBox {
     this._fvSelectedVersionId = null;
     this._editDevices = [];
     this._editWorkspaces = [];
+    this._editWorkspacesCache = null;
+    this._editWsSearchTimer = null;
+    this._editWsSearchInput = null;
+    this._editWsSuggestionsBox = null;
+    this._editWsBound = new WeakSet();
     this._onDocumentClick = this._onDocumentClick.bind(this);
     document.addEventListener("click", this._onDocumentClick, true);
   }
@@ -312,6 +317,18 @@ class apps_main extends LetcBox {
         if (!inSelect && !inOpts) {
           openOpts.forEach((node) => (node.dataset.state = "0"));
         }
+      }
+      const openSug = this.el.querySelector(
+        '.apps-main__edit-ws-suggestions[data-state="1"]',
+      );
+      if (openSug) {
+        const inInput =
+          e.target.closest &&
+          e.target.closest(".apps-main__edit-ws-search-input");
+        const inSug =
+          e.target.closest &&
+          e.target.closest(".apps-main__edit-ws-suggestions");
+        if (!inInput && !inSug) this._hideEditWsSuggestions();
       }
     }
     if (this._filterOpen) {
@@ -1027,6 +1044,7 @@ class apps_main extends LetcBox {
     this._editingMember = member;
     this._editDevices = [];
     this._editWorkspaces = [];
+    this._editWorkspacesCache = null;
     this._render();
     this._loadEditMemberData(memberId);
   }
@@ -1054,6 +1072,13 @@ class apps_main extends LetcBox {
     this._editingMember = null;
     this._editDevices = [];
     this._editWorkspaces = [];
+    this._editWorkspacesCache = null;
+    this._editWsSearchInput = null;
+    this._editWsSuggestionsBox = null;
+    if (this._editWsSearchTimer) {
+      clearTimeout(this._editWsSearchTimer);
+      this._editWsSearchTimer = null;
+    }
     this._render();
   }
 
@@ -1090,6 +1115,150 @@ class apps_main extends LetcBox {
     } catch (e) {
       this.warn && this.warn("member_device_remove_all failed", e);
     }
+  }
+
+  // Framework hook: fires after each child widget tagged with partHandler:ui
+  // is rendered. The popup re-builds its skeleton on every _render(), so we
+  // re-bind DOM listeners each time the Entry is recreated. Guarded by a
+  // WeakSet to skip if the same child instance is reported twice.
+  onPartReady(child, pn) {
+    if (!child || this._editWsBound.has(child)) return;
+    if (pn === "edit-ws-search-input") {
+      this._editWsBound.add(child);
+      this._editWsSearchInput = child;
+      const bind = () => {
+        const inputEl = child.el && child.el.querySelector("input");
+        if (!inputEl) return;
+        inputEl.setAttribute("autocomplete", "off");
+        inputEl.addEventListener("input", (e) =>
+          this._fetchEditWsSuggestions((e.target.value || "").trim()),
+        );
+        inputEl.addEventListener("focus", () =>
+          this._fetchEditWsSuggestions(inputEl.value.trim()),
+        );
+        inputEl.addEventListener("click", () =>
+          this._fetchEditWsSuggestions(inputEl.value.trim()),
+        );
+      };
+      bind();
+      if (!child.el || !child.el.querySelector("input")) setTimeout(bind, 50);
+    } else if (pn === "edit-ws-suggestions") {
+      this._editWsBound.add(child);
+      this._editWsSuggestionsBox = child;
+    }
+  }
+
+  // Inviteable-workspace filter: privilege bitmask must include admin (31),
+  // and the area must be a real collaborative workspace — not personal,
+  // infra, or one-shot dmz buckets. Mirrors invite-popup's NON_INVITEABLE.
+  static get _EDIT_WS_NON_INVITEABLE() {
+    return new Set([
+      _a.personal,
+      "system",
+      "pool",
+      "pool/dmz",
+      "template",
+      "dummy",
+      "dmz",
+      "dmz-public",
+      "dmz-private",
+    ]);
+  }
+
+  _fetchEditWsSuggestions(value) {
+    if (!this._editingMember) return;
+    if (this._editWsSearchTimer) clearTimeout(this._editWsSearchTimer);
+    const delay = value ? 200 : 0;
+    this._editWsSearchTimer = setTimeout(async () => {
+      let list = this._editWorkspacesCache;
+      if (!list) {
+        const data = await this.fetchService(
+          {
+            service: SERVICE.desk.home,
+            hub_id: Visitor.id,
+            type: _a.hub,
+          },
+          { async: 1 },
+        ).catch(() => []);
+        list = Array.isArray(data) ? data : [];
+        this._editWorkspacesCache = list;
+      }
+      const ADMIN = 0b0011111;
+      const NON_INVITEABLE = apps_main._EDIT_WS_NON_INVITEABLE;
+      const picked = new Set(
+        (this._editWorkspaces || [])
+          .map((w) => String(w.hub_id || w.id || ""))
+          .filter(Boolean),
+      );
+      const inviteable = list.filter((w) => {
+        if (((w.privilege | 0) & ADMIN) !== ADMIN) return false;
+        if (NON_INVITEABLE.has(w.area || "")) return false;
+        const id = String(w.hub_id || w.id || w.actual_hub_id || "");
+        if (id && picked.has(id)) return false;
+        return true;
+      });
+      const q = (value || "").toLowerCase();
+      const filtered = q
+        ? inviteable.filter((w) =>
+            (w.filename || w.name || "").toLowerCase().includes(q),
+          )
+        : inviteable;
+      this._showEditWsSuggestions(filtered);
+    }, delay);
+  }
+
+  _showEditWsSuggestions(list) {
+    const box = this._editWsSuggestionsBox;
+    if (!box || !box.el) return;
+    if (!list.length) {
+      this._hideEditWsSuggestions();
+      return;
+    }
+    const pfx = this.fig.family;
+    const items = list.map((row) =>
+      Skeletons.Note({
+        className: `${pfx}__edit-ws-suggestion`,
+        content: row.filename || row.name,
+        dataset: {
+          hub_id: row.hub_id || row.id || row.actual_hub_id,
+          name: row.filename || row.name,
+        },
+        service: "apps-edit-pick-workspace",
+        uiHandler: [this],
+      }),
+    );
+    box.feed(items);
+    box.el.dataset.state = 1;
+  }
+
+  _hideEditWsSuggestions() {
+    const box = this._editWsSuggestionsBox;
+    if (!box || !box.el) return;
+    box.el.dataset.state = 0;
+    if (typeof box.clear === "function") box.clear();
+  }
+
+  _pickEditWorkspace(hub_id, name) {
+    if (!hub_id) return;
+    const id = String(hub_id);
+    const already = (this._editWorkspaces || []).some(
+      (w) => String(w.hub_id || w.id || "") === id,
+    );
+    if (already) {
+      this._hideEditWsSuggestions();
+      return;
+    }
+    this._editWorkspaces = this._editWorkspaces || [];
+    // Default privilege = view (bit 2). The user picks a different role via
+    // the per-row role dropdown rendered by workspaceRow().
+    this._editWorkspaces.push({
+      hub_id,
+      hub_name: name,
+      name,
+      privilege: 2,
+      permission: 2,
+    });
+    this._render();
   }
 
   // Toggle a workspace-row role dropdown open/closed. The skeleton hardcodes
@@ -1304,6 +1473,17 @@ class apps_main extends LetcBox {
       case "apps-edit-ws-role":
       case "apps-edit-ws-add":
         return;
+
+      case "apps-edit-ws-search":
+        // Keystrokes are handled by the DOM input listener bound in
+        // onPartReady; Entry's "commit" event (Enter key) is a no-op here.
+        return;
+
+      case "apps-edit-pick-workspace":
+        return this._pickEditWorkspace(
+          cmd.mget("hub_id"),
+          cmd.mget("name"),
+        );
 
       case "apps-delete-member":
         return this._deleteMember(cmd.mget("member_id"));
