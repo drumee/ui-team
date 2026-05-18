@@ -5,12 +5,19 @@
 // Preset link-expiry durations (in days). 0 = no expiration.
 const EXPIRY_PRESETS = [0, 1, 7, 30, 90];
 
-// Shared formatter so the expiry-row label and each menu option render the
-// same text. Matches the previous inline `expiryLabel` logic.
-const formatExpiry = (days) =>
-  days
-    ? `In ${days} Day${days !== 1 ? "s" : ""}`
-    : LOCALE.NO_EXPIRATION || "No expiration";
+// Shared formatter for the expiry-row label and each preset menu option.
+// Accepts both days and hours — the server returns a remaining duration that
+// decays, so a "1 day" expiry reads back as e.g. 0 days / 23 hours.
+const formatExpiry = (days, hours) => {
+  const d = ~~days;
+  const h = ~~hours;
+  if (d && h) {
+    return `In ${d} Day${d !== 1 ? "s" : ""} ${h} Hour${h !== 1 ? "s" : ""}`;
+  }
+  if (d) return `In ${d} Day${d !== 1 ? "s" : ""}`;
+  if (h) return `In ${h} Hour${h !== 1 ? "s" : ""}`;
+  return LOCALE.NO_EXPIRATION || "No expiration";
+};
 
 module.exports = function (ui) {
   const fig = ui.fig.family;
@@ -18,7 +25,8 @@ module.exports = function (ui) {
   const privilege = ui.mget(_a.privilege) || 0;
 
   const days = parseInt(ui.mget(_a.days)) || 0;
-  const expiryLabel = formatExpiry(days);
+  const hours = parseInt(ui.mget(_a.hours)) || 0;
+  const expiryLabel = formatExpiry(days, hours);
 
   const accessItems = [
     {
