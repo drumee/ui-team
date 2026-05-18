@@ -199,14 +199,20 @@ export function dropdownMenuButton(ui, opt = {}) {
         className: `${cnDropdown}__item`,
         uiHandler: [ui],
         service,
+        // active:0 on every child so a click on the icon/label passes
+        // through to this row (which carries `service`) instead of being
+        // swallowed by the interactive Button.Svg / Note.
+        kidsOpt: { active: 0 },
         ...extra,
         kids: [
           Skeletons.Button.Svg({
             ico,
+            active: 0,
             className: `${cnDropdown}__icon`,
           }),
           Skeletons.Note({
             content,
+            active: 0,
             className: `${cnDropdown}__name`,
           }),
         ],
