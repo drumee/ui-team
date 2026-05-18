@@ -11,6 +11,7 @@ const {
   tabBar,
   chatPanel,
   visioMenu,
+  newFileMenu,
   getAreaLabel,
 } = require("../../../../builtins/window/skeleton/toolkit/index");
 
@@ -21,6 +22,7 @@ function dmzTopbar(ui) {
   const area = ui.mget(_a.area);
   const name = ui.mget(_a.title) || ui.mget(_a.filename) || ui.mget(_a.name) || "";
   const canUpload = ui.havePermission(_K.permission.upload, ui.mget(_a.privilege));
+  const canEdit = ui.havePermission(_K.permission.write, ui.mget(_a.privilege));
 
   const titleWrapper = Skeletons.Box.X({
     className: `${cnTopbarTitle}__wrapper`,
@@ -56,10 +58,10 @@ function dmzTopbar(ui) {
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       // visioMenu(ui),
-      // "Add new" (newFileMenu) is intentionally omitted: __dmz_wm does not
-      // support creating folders/notes/documents in a share view
-      // (see __dmz_wm.onNewHub — "not allowed within DMZ"). Guests only
-      // upload into a shared folder.
+      // "Add new" is Folder-only in DMZ: __dmz_wm supports creating a
+      // sub-folder (media.make_dir) but not notes/documents. Shown only to
+      // guests whose access role grants write permission.
+      canEdit ? newFileMenu(ui, { items: ["add-folder"] }) : null,
       canUpload
         ? Skeletons.Button.Label({
             className: `${cnWindowButton}__label-button`,

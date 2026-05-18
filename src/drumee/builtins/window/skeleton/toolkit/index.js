@@ -392,6 +392,43 @@ export function newFileMenu(ui, opt = {}) {
   const cnWindowButton = `${ui.fig.group}-button`;
   const cnWindowBody = `${ui.fig.group}-split-body`;
   const triggerIco = opt.triggerIco || "editbox_list-plus";
+  const allItems = [
+    {
+      service: "add-folder",
+      ico: "dock-folder",
+      content: LOCALE.FOLDER,
+      area: ui.mget(_a.area) || _a.personal,
+      filename: LOCALE.NEW_FOLDER,
+    },
+    {
+      service: "add-note",
+      ico: "raw-note",
+      content: LOCALE.NOTE,
+    },
+    {
+      service: "new-document",
+      name: "document.docx",
+      ico: "raw-documents_word",
+      content: LOCALE.DOCUMENT,
+    },
+    {
+      service: "new-document",
+      name: "spreadsheet.xlsx",
+      ico: "raw-documents_excel",
+      content: LOCALE.SPREADSHEET,
+    },
+    {
+      service: "new-document",
+      name: "presentation.pptx",
+      ico: "raw-documents_powerpoint",
+      content: LOCALE.PRESENTATION,
+    },
+  ];
+  // opt.items — optional whitelist of service names. When set, only those
+  // menu items render (e.g. DMZ share passes ["add-folder"]).
+  const menuItems = opt.items
+    ? allItems.filter((it) => opt.items.includes(it.service))
+    : allItems;
   return Skeletons.Box.X({
     className: `${cnWindowBody}__buttons-container`,
     kids: [
@@ -406,38 +443,7 @@ export function newFileMenu(ui, opt = {}) {
           partHandler: ui,
         }),
 
-        menuItems: [
-          {
-            service: "add-folder",
-            ico: "dock-folder",
-            content: LOCALE.FOLDER,
-            area: ui.mget(_a.area) || _a.personal,
-            filename: LOCALE.NEW_FOLDER,
-          },
-          {
-            service: "add-note",
-            ico: "raw-note",
-            content: LOCALE.NOTE,
-          },
-          {
-            service: "new-document",
-            name: "document.docx",
-            ico: "raw-documents_word",
-            content: LOCALE.DOCUMENT,
-          },
-          {
-            service: "new-document",
-            name: "spreadsheet.xlsx",
-            ico: "raw-documents_excel",
-            content: LOCALE.SPREADSHEET,
-          },
-          {
-            service: "new-document",
-            name: "presentation.pptx",
-            ico: "raw-documents_powerpoint",
-            content: LOCALE.PRESENTATION,
-          },
-        ],
+        menuItems,
       }),
     ]
   })
