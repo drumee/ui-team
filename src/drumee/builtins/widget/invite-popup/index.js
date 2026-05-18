@@ -4,7 +4,8 @@
  * drumate.my_contacts (autocomplete) + hub.add_contributors (invite) APIs.
  */
 const skeletonModule = require("./skeleton");
-const { ROLES, DEFAULT_ROLE_IDS, computePrivilege, summarizeRoles } = skeletonModule;
+const { ROLES, DEFAULT_ROLE_IDS, computePrivilege, summarizeRoles } =
+  skeletonModule;
 
 class __invite_popup extends LetcBox {
   constructor(...args) {
@@ -73,7 +74,12 @@ class __invite_popup extends LetcBox {
       const inputEl = this._emailInput?.el.querySelector("input");
       if (!inputEl || e.target !== inputEl) return;
       const next = e.relatedTarget;
-      if (next && this._suggestionsBox && this._suggestionsBox.el.contains(next)) return;
+      if (
+        next &&
+        this._suggestionsBox &&
+        this._suggestionsBox.el.contains(next)
+      )
+        return;
       this._addPendingEmailFromInput();
       this._hideSuggestions();
       this._refreshSendState();
@@ -88,7 +94,8 @@ class __invite_popup extends LetcBox {
     //      so even attaching at the popup root caught the event only
     //      occasionally. Capture phase fires before any bubble-stop.
     this._onRowRemoveClick = (e) => {
-      const target = e.target.closest && e.target.closest(".invite-popup__row-remove");
+      const target =
+        e.target.closest && e.target.closest(".invite-popup__row-remove");
       if (!target) return;
       if (this.el && !this.el.contains(target)) return;
       const idx = parseInt(target.dataset.idx, 10);
@@ -117,7 +124,8 @@ class __invite_popup extends LetcBox {
     const inputEl = this._emailInput?.el.querySelector("input");
     if (!inputEl) return;
     if (this._emailInput.el.contains(target)) return;
-    if (this._suggestionsBox && this._suggestionsBox.el.contains(target)) return;
+    if (this._suggestionsBox && this._suggestionsBox.el.contains(target))
+      return;
     this._addPendingEmailFromInput();
     this._refreshSendState();
   }
@@ -126,16 +134,29 @@ class __invite_popup extends LetcBox {
     Object.entries(this._partRefs.roleOptions).forEach(([idx, optBox]) => {
       const label = this._partRefs.roleLabels[idx]?.el;
       const cell = label?.parentElement;
-      if (optBox && optBox.el?.dataset.state === "1" && cell && !cell.contains(target)) {
+      if (
+        optBox &&
+        optBox.el?.dataset.state === "1" &&
+        cell &&
+        !cell.contains(target)
+      ) {
         optBox.el.dataset.state = 0;
       }
     });
-    Object.entries(this._partRefs.workspaceSuggestions).forEach(([idx, sugBox]) => {
-      const inputEl = this._partRefs.workspaceInputs[idx]?.el;
-      if (sugBox && sugBox.el?.dataset.state === "1" && inputEl && !inputEl.contains(target) && !sugBox.el.contains(target)) {
-        sugBox.el.dataset.state = 0;
-      }
-    });
+    Object.entries(this._partRefs.workspaceSuggestions).forEach(
+      ([idx, sugBox]) => {
+        const inputEl = this._partRefs.workspaceInputs[idx]?.el;
+        if (
+          sugBox &&
+          sugBox.el?.dataset.state === "1" &&
+          inputEl &&
+          !inputEl.contains(target) &&
+          !sugBox.el.contains(target)
+        ) {
+          sugBox.el.dataset.state = 0;
+        }
+      },
+    );
   }
 
   _setError(ref, message) {
@@ -175,7 +196,11 @@ class __invite_popup extends LetcBox {
         inputEl.setAttribute("autocomplete", "off");
         inputEl.addEventListener("input", this._onSearchInput);
         inputEl.addEventListener("keydown", (e) => {
-          if (e.key === "Backspace" && !inputEl.value && this._invitees.length) {
+          if (
+            e.key === "Backspace" &&
+            !inputEl.value &&
+            this._invitees.length
+          ) {
             this._removeInvitee(this._invitees.length - 1);
           }
         });
@@ -196,7 +221,9 @@ class __invite_popup extends LetcBox {
       const bind = () => {
         const inputEl = child.el.querySelector("input");
         if (!inputEl) return;
-        inputEl.addEventListener("input", (e) => this._onWorkspaceInput(idx, e));
+        inputEl.addEventListener("input", (e) =>
+          this._onWorkspaceInput(idx, e),
+        );
         inputEl.addEventListener("focus", () => {
           this._fetchWorkspaces(idx, inputEl.value.trim());
         });
@@ -216,8 +243,9 @@ class __invite_popup extends LetcBox {
       const idx = pn.split(":")[1];
       this._partRefs.roleOptions[idx] = child;
       child.el.addEventListener("mousedown", (e) => {
-        const opt = e.target.closest(".invite-popup__role-option")
-          || e.target.closest(".inner")?.parentElement;
+        const opt =
+          e.target.closest(".invite-popup__role-option") ||
+          e.target.closest(".inner")?.parentElement;
         if (!opt || !opt.dataset.id) return;
         e.stopPropagation();
         e.preventDefault();
@@ -254,7 +282,7 @@ class __invite_popup extends LetcBox {
           filter: this._invitees.map((i) => i.email),
           hub_id: Visitor.id,
         },
-        { async: 1 }
+        { async: 1 },
       ).then((data) => {
         this._showSuggestions(_.isArray(data) ? data : []);
       });
@@ -265,13 +293,16 @@ class __invite_popup extends LetcBox {
     this._suggestions = data;
     if (!this._suggestionsBox) return;
     const ownEmail = ((Visitor.profile() || {}).email || "").toLowerCase();
-    const filtered = data.filter((row) => row.email && row.email.toLowerCase() !== ownEmail);
+    const filtered = data.filter(
+      (row) => row.email && row.email.toLowerCase() !== ownEmail,
+    );
     if (!filtered.length) {
       this._hideSuggestions();
       return;
     }
     const items = filtered.map((row) => {
-      const fullName = [row.firstname, row.lastname].filter(Boolean).join(" ") || row.email;
+      const fullName =
+        [row.firstname, row.lastname].filter(Boolean).join(" ") || row.email;
       return Skeletons.Box.X({
         className: `${this.fig.family}__suggestion-item`,
         dataset: { email: row.email, uid: row.id || row.uid || "" },
@@ -295,11 +326,15 @@ class __invite_popup extends LetcBox {
     if (!data || !data.email) return;
     const ownEmail = (Visitor.profile() || {}).email;
     if (ownEmail && data.email.toLowerCase() === ownEmail.toLowerCase()) {
-      this._setEmailError(LOCALE.INVITE_EMAIL_SELF || "You cannot invite yourself.");
+      this._setEmailError(
+        LOCALE.INVITE_EMAIL_SELF || "You cannot invite yourself.",
+      );
       return;
     }
     if (this._invitees.find((i) => i.email === data.email)) {
-      this._setEmailError(LOCALE.INVITE_EMAIL_DUPLICATE || "This email is already in the list.");
+      this._setEmailError(
+        LOCALE.INVITE_EMAIL_DUPLICATE || "This email is already in the list.",
+      );
       return;
     }
     this._invitees.push(data);
@@ -326,9 +361,10 @@ class __invite_popup extends LetcBox {
     if (!this._chipsBox) return;
     const pfx = this.fig.family;
     const chips = this._invitees.map((inv, idx) => {
-      const label = inv.firstname || inv.lastname
-        ? [inv.firstname, inv.lastname].filter(Boolean).join(" ")
-        : inv.email;
+      const label =
+        inv.firstname || inv.lastname
+          ? [inv.firstname, inv.lastname].filter(Boolean).join(" ")
+          : inv.email;
       return Skeletons.Box.X({
         className: `${pfx}__chip`,
         kids: [
@@ -350,9 +386,13 @@ class __invite_popup extends LetcBox {
     if (!this._sendBtn) return;
     const hasInvitee = this._invitees.length > 0;
     const inputVal = this._emailInput?.el.querySelector("input")?.value?.trim();
-    const hasPendingEmail = inputVal && __invite_popup._splitEmails(inputVal).length > 0;
-    const hasWorkspace = Object.values(this._workspaces).some((w) => w && w.hub_id);
-    this._sendBtn.el.dataset.state = (hasInvitee || hasPendingEmail) && hasWorkspace ? 1 : 0;
+    const hasPendingEmail =
+      inputVal && __invite_popup._splitEmails(inputVal).length > 0;
+    const hasWorkspace = Object.values(this._workspaces).some(
+      (w) => w && w.hub_id,
+    );
+    this._sendBtn.el.dataset.state =
+      (hasInvitee || hasPendingEmail) && hasWorkspace ? 1 : 0;
   }
 
   _addPendingEmailFromInput() {
@@ -371,7 +411,9 @@ class __invite_popup extends LetcBox {
     }
     if (inputEl) inputEl.value = leftovers.join(" ");
     if (leftovers.length) {
-      this._setEmailError(LOCALE.INVITE_EMAIL_INVALID || "Please enter a valid email address.");
+      this._setEmailError(
+        LOCALE.INVITE_EMAIL_INVALID || "Please enter a valid email address.",
+      );
     }
   }
 
@@ -388,48 +430,59 @@ class __invite_popup extends LetcBox {
    */
   _fetchWorkspaces(idx, value) {
     clearTimeout(this._workspaceSearchTimers[idx]);
-    this._workspaceSearchTimers[idx] = setTimeout(async () => {
-      let list = this._workspacesCache;
-      if (!list) {
-        const data = await this.fetchService(
-          {
-            service: SERVICE.desk.home,
-            hub_id: Visitor.id,
-            type: _a.hub,
-          },
-          { async: 1 },
-        );
-        list = _.isArray(data) ? data : [];
-        this._workspacesCache = list;
-      }
-      const ADMIN = 0b0011111;
-      // Areas that are NOT user-invitable workspaces:
-      //   - personal: each user's home space, owned by them
-      //   - system / pool / pool/dmz / template / dummy: infra
-      //   - dmz / dmz-public / dmz-private: one-shot share buckets, not workspaces
-      // Everything else (private, restricted, share, public, limited) is a
-      // collaborative workspace the admin can invite into. Earlier this
-      // filter excluded `private` too, which silently dropped most users'
-      // workspaces — `private` and `restricted` are both valid areas and
-      // represent the same UX concept.
-      const NON_INVITEABLE = new Set([
-        _a.personal,
-        "system", "pool", "pool/dmz", "template", "dummy",
-        "dmz", "dmz-public", "dmz-private",
-      ]);
-      const inviteable = list.filter((w) => {
-        if (((w.privilege | 0) & ADMIN) !== ADMIN) return false;
-        const area = w.area || "";
-        if (NON_INVITEABLE.has(area)) return false;
-        return true;
-      });
-      const filtered = value
-        ? inviteable.filter((w) =>
-          (w.filename || w.name || "").toLowerCase().includes(value.toLowerCase()),
-        )
-        : inviteable;
-      this._showWorkspaceSuggestions(idx, filtered);
-    }, value ? 200 : 0);
+    this._workspaceSearchTimers[idx] = setTimeout(
+      async () => {
+        let list = this._workspacesCache;
+        if (!list) {
+          const data = await this.fetchService(
+            {
+              service: SERVICE.desk.home,
+              hub_id: Visitor.id,
+              type: _a.hub,
+            },
+            { async: 1 },
+          );
+          list = _.isArray(data) ? data : [];
+          this._workspacesCache = list;
+        }
+        const ADMIN = 0b0011111;
+        // Areas that are NOT user-invitable workspaces:
+        //   - personal: each user's home space, owned by them
+        //   - system / pool / pool/dmz / template / dummy: infra
+        //   - dmz / dmz-public / dmz-private: one-shot share buckets, not workspaces
+        // Everything else (private, restricted, share, public, limited) is a
+        // collaborative workspace the admin can invite into. Earlier this
+        // filter excluded `private` too, which silently dropped most users'
+        // workspaces — `private` and `restricted` are both valid areas and
+        // represent the same UX concept.
+        const NON_INVITEABLE = new Set([
+          _a.personal,
+          "system",
+          "pool",
+          "pool/dmz",
+          "template",
+          "dummy",
+          "dmz",
+          "dmz-public",
+          "dmz-private",
+        ]);
+        const inviteable = list.filter((w) => {
+          if (((w.privilege | 0) & ADMIN) !== ADMIN) return false;
+          const area = w.area || "";
+          if (NON_INVITEABLE.has(area)) return false;
+          return true;
+        });
+        const filtered = value
+          ? inviteable.filter((w) =>
+              (w.filename || w.name || "")
+                .toLowerCase()
+                .includes(value.toLowerCase()),
+            )
+          : inviteable;
+        this._showWorkspaceSuggestions(idx, filtered);
+      },
+      value ? 200 : 0,
+    );
   }
 
   _showWorkspaceSuggestions(idx, list) {
@@ -449,7 +502,11 @@ class __invite_popup extends LetcBox {
       Skeletons.Note({
         className: `${pfx}__workspace-option`,
         content: row.filename || row.name,
-        dataset: { idx, hub_id: row.hub_id || row.id || row.actual_hub_id, name: row.filename || row.name },
+        dataset: {
+          idx,
+          hub_id: row.hub_id || row.id || row.actual_hub_id,
+          name: row.filename || row.name,
+        },
         service: "pick-workspace",
         uiHandler: [this],
       }),
@@ -482,7 +539,9 @@ class __invite_popup extends LetcBox {
     const opt = this._partRefs.roleOptions[idx];
     if (!opt) return;
     const cur = opt.el.dataset.state === "1";
-    Object.values(this._partRefs.roleOptions).forEach((o) => (o.el.dataset.state = 0));
+    Object.values(this._partRefs.roleOptions).forEach(
+      (o) => (o.el.dataset.state = 0),
+    );
     opt.el.dataset.state = cur ? 0 : 1;
   }
 
@@ -497,13 +556,17 @@ class __invite_popup extends LetcBox {
 
     const optsBox = this._partRefs.roleOptions[idx];
     if (optsBox) {
-      optsBox.el.querySelectorAll(".invite-popup__role-option").forEach((node) => {
-        node.dataset.checked = node.dataset.id === roleId ? 1 : 0;
-      });
+      optsBox.el
+        .querySelectorAll(".invite-popup__role-option")
+        .forEach((node) => {
+          node.dataset.checked = node.dataset.id === roleId ? 1 : 0;
+        });
       optsBox.el.dataset.state = 0;
     }
     if (this._partRefs.roleLabels[idx]) {
-      this._partRefs.roleLabels[idx].set({ content: summarizeRoles(ws.roleIds) });
+      this._partRefs.roleLabels[idx].set({
+        content: summarizeRoles(ws.roleIds),
+      });
     }
   }
 
@@ -514,15 +577,16 @@ class __invite_popup extends LetcBox {
       // Inline error, not Wm.alert: Wm.alert replaces __wrapperModal's
       // content with a window_info dialog, which destroys this popup.
       this._setWorkspaceError(
-        LOCALE.INVITE_WORKSPACE_ALREADY_SELECTED
-        || "This workspace is already selected.",
+        LOCALE.INVITE_WORKSPACE_ALREADY_SELECTED ||
+          "This workspace is already selected.",
       );
       this._hideWorkspaceSuggestions(idx);
       return;
     }
     this._workspaces[wsIdx].hub_id = hub_id;
     this._workspaces[wsIdx].name = name;
-    const inputEl = this._partRefs.workspaceInputs[idx]?.el?.querySelector("input");
+    const inputEl =
+      this._partRefs.workspaceInputs[idx]?.el?.querySelector("input");
     if (inputEl) inputEl.value = name;
     this._hideWorkspaceSuggestions(idx);
     this._setWorkspaceError(null);
@@ -542,8 +606,8 @@ class __invite_popup extends LetcBox {
       // Inline error, not Wm.alert: Wm.alert replaces __wrapperModal's
       // content with a window_info dialog, which destroys this popup.
       this._setWorkspaceError(
-        LOCALE.INVITE_WORKSPACE_PICK_FIRST
-        || "Please pick a workspace before adding another.",
+        LOCALE.INVITE_WORKSPACE_PICK_FIRST ||
+          "Please pick a workspace before adding another.",
       );
       return;
     }
@@ -569,9 +633,11 @@ class __invite_popup extends LetcBox {
       // exactly what's happening for rows appended after initial render):
       // strip the matching DOM node by data-idx so the click still
       // succeeds even without a widget reference.
-      const dom = this.el && this.el.querySelector(
-        `.invite-popup__workspace-row[data-idx="${idx}"]`
-      );
+      const dom =
+        this.el &&
+        this.el.querySelector(
+          `.invite-popup__workspace-row[data-idx="${idx}"]`,
+        );
       if (dom) dom.remove();
     }
     delete this._partRefs.workspaceRows[idx];
@@ -586,7 +652,9 @@ class __invite_popup extends LetcBox {
   _sendInvitation() {
     this._addPendingEmailFromInput();
     if (!this._invitees.length) {
-      this._setEmailError(LOCALE.INVITE_EMAIL_INVALID || "Please enter a valid email address.");
+      this._setEmailError(
+        LOCALE.INVITE_EMAIL_INVALID || "Please enter a valid email address.",
+      );
       return;
     }
 
@@ -599,7 +667,8 @@ class __invite_popup extends LetcBox {
       }));
     if (!assignments.length) {
       this._setWorkspaceError(
-        LOCALE.INVITE_WORKSPACE_REQUIRED || "Please select at least one workspace.",
+        LOCALE.INVITE_WORKSPACE_REQUIRED ||
+          "Please select at least one workspace.",
       );
       return;
     }
@@ -622,8 +691,10 @@ class __invite_popup extends LetcBox {
         const errored = results.filter((r) => r && (r.error || r.error_code));
         if (errored.length) {
           this.warn("[invite-popup] hub.invite error", errored);
-          Wm.alert((errored[0] && (errored[0].reason || errored[0].error))
-            || LOCALE.TRY_AGAIN);
+          Wm.alert(
+            (errored[0] && (errored[0].reason || errored[0].error)) ||
+              LOCALE.TRY_AGAIN,
+          );
           if (this._sendBtn) delete this._sendBtn.el.dataset.loading;
           return;
         }
@@ -635,8 +706,12 @@ class __invite_popup extends LetcBox {
           results: flat,
         });
         if (failed.length) {
-          Wm.alert(LOCALE.INVITE_PARTIAL_FAILED.format(
-            flat.length - failed.length, failed.length));
+          Wm.alert(
+            LOCALE.INVITE_PARTIAL_FAILED.format(
+              flat.length - failed.length,
+              failed.length,
+            ),
+          );
         } else {
           Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY);
         }
