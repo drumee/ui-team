@@ -11,7 +11,6 @@ const {
   tabBar,
   chatPanel,
   visioMenu,
-  newFileMenu,
   getAreaLabel,
 } = require("../../../../builtins/window/skeleton/toolkit/index");
 
@@ -58,10 +57,20 @@ function dmzTopbar(ui) {
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       // visioMenu(ui),
-      // "Add new" is Folder-only in DMZ: __dmz_wm supports creating a
-      // sub-folder (media.make_dir) but not notes/documents. Shown only to
-      // guests whose access role grants write permission.
-      canEdit ? newFileMenu(ui, { items: ["add-folder"] }) : null,
+      // "Add new" in DMZ creates a sub-folder (media.make_dir) — a plain
+      // button, not a dropdown: __dmz_wm only supports folders here, and a
+      // direct-service button routes reliably to __dmz_wm.onUiEvent (a
+      // menu_topic item does not deliver its service through the bubble
+      // chain). Shown only to guests whose role grants write permission.
+      canEdit
+        ? Skeletons.Button.Label({
+            className: `${cnWindowButton}__label-button secondary`,
+            label: LOCALE.ADD_NEW || "Add new",
+            ico: "editbox_list-plus",
+            service: "add-folder",
+            uiHandler: ui,
+          })
+        : null,
       canUpload
         ? Skeletons.Button.Label({
             className: `${cnWindowButton}__label-button`,
