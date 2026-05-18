@@ -942,7 +942,13 @@ class __webrtc_room extends __room {
       }
       this.isVideo = true;
       this.toggleAvatarVideo(0, 1);
-      await this.createLocalTracks(_a.video);
+      try {
+        await this.createLocalTracks(_a.video);
+      } catch (e) {
+        this.isVideo = false;
+        this.toggleAvatarVideo(1, 0);
+        if (this.__ctrlVideo) this.__ctrlVideo.setState(0);
+      }
     } else {
       this.isVideo = false;
       this.toggleAvatarVideo(1, 0);
