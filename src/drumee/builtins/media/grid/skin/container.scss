@@ -1,25 +1,19 @@
 .media-grid {
 
+  /** In case workspaces are nested within personal folders, show tips*/
   &__areas {
-    width: 22px;
-    position: absolute;
-    right: 3px;
-    bottom: 23px;
-    display: grid;
     z-index: 102;
     justify-content: flex-end;
     gap: var(--spacer-1);
     overflow: visible;
+    width: 52px;
+    height: 15px;
+    position: absolute;
+    left: 16px;
+    top: 18px;
 
     .child {
-      width: 22px;
-      height: 22px;
-
-      &-share,
-      &-dmz {
-        width: 20px;
-        height: 20px;
-      }
+      height: 100%;
     }
   }
 
@@ -230,6 +224,7 @@
         // text label (e.g. "pdf", "dsc"). Shape stays purple; text flips
         // white for contrast (was inheriting purple → invisible on shape).
         fill: var(--grid-color-icon-file);
+
         text {
           fill: var(--grid-color-icon-extension);
         }
