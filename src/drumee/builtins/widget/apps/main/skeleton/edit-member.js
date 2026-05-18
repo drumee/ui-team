@@ -233,8 +233,8 @@ function workspaceList(ui, list) {
     className: `${pfx}__edit-ws-list`,
     kids: [
       ...list.map((ws, idx) => workspaceRow(ui, ws, idx)),
-      Skeletons.Box.Y({
-        className: `${pfx}__edit-ws-search-wrap`,
+      Skeletons.Box.X({
+        className: `${pfx}__edit-ws-search`,
         kids: [
           Skeletons.Entry({
             className: `${pfx}__edit-ws-search-input`,
@@ -251,35 +251,11 @@ function workspaceList(ui, list) {
           Skeletons.Box.X({
             className: `${pfx}__edit-ws-search-add`,
             kids: [
-              Skeletons.Entry({
-                className: `${pfx}__edit-ws-search-input`,
-                sys_pn: "edit-ws-search-input",
-                partHandler: ui,
-                uiHandler: [ui],
-                placeholder:
-                  LOCALE.SEARCH_WORKSPACE_TO_ADD || "Search workspace to add",
-                require: "any",
-                mode: "commit",
-                service: "apps-edit-ws-search",
-                bubble: 0,
-              }),
-              Skeletons.Box.X({
-                className: `${pfx}__edit-ws-search-add`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${pfx}__edit-ws-search-plus`,
-                    content: "+",
-                  }),
-                ],
+              Skeletons.Note({
+                className: `${pfx}__edit-ws-search-plus`,
+                content: "+",
               }),
             ],
-          }),
-          Skeletons.Box.Y({
-            className: `${pfx}__edit-ws-suggestions`,
-            sys_pn: "edit-ws-suggestions",
-            partHandler: ui,
-            dataset: { state: 0 },
-            active: 0,
           }),
         ],
       }),
