@@ -1126,6 +1126,7 @@
   "PEOPLE_WITH_ACCESS": "People with access",
   "VIEW_ALL_INVITED_MEMBERS": "View all invited members ({0})",
   "COPY_LINK": "Copy Link",
+  "COPIED_TO_CLIPBOARD": "Copied to clipboard",
   "SHOW_QR_CODE": "Show QR code",
   "SETTING": "Setting",
   "CUSTOMIZE_DATE_FORMAT": "Customize date format",
