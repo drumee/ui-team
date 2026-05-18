@@ -11,7 +11,6 @@ const {
   tabBar,
   chatPanel,
   visioMenu,
-  newFileMenu,
   getAreaLabel,
 } = require("../../../../builtins/window/skeleton/toolkit/index");
 
@@ -57,7 +56,10 @@ function dmzTopbar(ui) {
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       // visioMenu(ui),
-      canUpload ? newFileMenu(ui) : null,
+      // "Add new" (newFileMenu) is intentionally omitted: __dmz_wm does not
+      // support creating folders/notes/documents in a share view
+      // (see __dmz_wm.onNewHub — "not allowed within DMZ"). Guests only
+      // upload into a shared folder.
       canUpload
         ? Skeletons.Button.Label({
             className: `${cnWindowButton}__label-button`,
