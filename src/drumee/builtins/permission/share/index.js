@@ -73,22 +73,9 @@ class __permission_share extends DrumeeMFS {
   _applyChanges() {
     if (this._applyBusy) return;
     this._applyBusy = 1;
-    const hub_id = this.mget(_a.hub_id);
-    const privilege = this.mget(_a.privilege) || 0;
-    const days = parseInt(this.mget(_a.days)) || 0;
-    const hours = parseInt(this.mget(_a.hours)) || 0;
-
-    const tasks = [
-      this.postService(SERVICE.hub.update_external_settings, {
-        hub_id, flag: _a.permission, permission: privilege,
-      }),
-      this.postService(SERVICE.hub.update_external_settings, {
-        hub_id, flag: _a.expiry, days, hours,
-        validity_mode: days || hours ? _a.limited : _a.infinity,
-      }),
-    ];
-
-    Promise.all(tasks)
+    // Single call with the full state — access level (permission) and
+    // expiry (days/hours) must travel together, see _persistSettings.
+    this._persistSettings()
       .then(() => {
         this._dirtyPermission = false;
         this._closeSidebar();
@@ -97,27 +84,32 @@ class __permission_share extends DrumeeMFS {
       .finally(() => { this._applyBusy = 0; });
   }
 
-  // Persist the current days/hours to the server. Expiry is committed
-  // immediately (separate from Apply) so set/clear both stick at once.
-  _persistExpiry() {
+  // One server round-trip carrying the COMPLETE state. The server's
+  // update_external_settings applies BOTH permission and expiry on every
+  // call and defaults a missing `permission` to GUEST — so a partial call
+  // silently resets the other setting. Always send permission + days +
+  // hours together. (`flag` is not read by the server.)
+  _persistSettings() {
     const hub_id = this.mget(_a.hub_id);
-    if (!hub_id) return;
+    if (!hub_id) return Promise.resolve();
+    const permission = this.mget(_a.privilege) || 0;
     const days = parseInt(this.mget(_a.days)) || 0;
     const hours = parseInt(this.mget(_a.hours)) || 0;
     return this.postService(SERVICE.hub.update_external_settings, {
       hub_id,
-      flag: _a.expiry,
+      permission,
       days,
       hours,
       validity_mode: days || hours ? _a.limited : _a.infinity,
-    }).catch((e) => this.warn && this.warn('persist expiry failed', e));
+    });
   }
 
   _setExpiry(days) {
     this._expiryMenuOpen = false;
     this.mset({ days: parseInt(days) || 0, hours: 0 });
     this._render();
-    return this._persistExpiry();
+    return this._persistSettings()
+      .catch((e) => this.warn && this.warn('persist expiry failed', e));
   }
 
   _clearExpiry() {
