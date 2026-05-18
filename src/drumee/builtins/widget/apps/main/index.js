@@ -1228,7 +1228,30 @@ class apps_main extends LetcBox {
       }),
     );
     box.feed(items);
+    this._positionEditWsSuggestions();
     box.el.dataset.state = 1;
+  }
+
+  // The suggestions box is a direct child of __edit-card (not __edit-body)
+  // so it isn't clipped by the body's overflow scroll. Position it under
+  // the search input each time we open it, with max-height clamped to the
+  // remaining space inside the card.
+  _positionEditWsSuggestions() {
+    const box = this._editWsSuggestionsBox;
+    const inputWidget = this._editWsSearchInput;
+    if (!box || !box.el || !inputWidget || !inputWidget.el) return;
+    const card = this.el && this.el.querySelector(".apps-main__edit-card");
+    if (!card) return;
+    const cardRect = card.getBoundingClientRect();
+    const inputRect = inputWidget.el.getBoundingClientRect();
+    const top = inputRect.bottom - cardRect.top + 4;
+    const left = inputRect.left - cardRect.left;
+    const width = inputRect.width;
+    const availableBelow = cardRect.bottom - inputRect.bottom - 16;
+    box.el.style.top = `${top}px`;
+    box.el.style.left = `${left}px`;
+    box.el.style.width = `${width}px`;
+    box.el.style.maxHeight = `${Math.max(80, Math.min(240, availableBelow))}px`;
   }
 
   _hideEditWsSuggestions() {
