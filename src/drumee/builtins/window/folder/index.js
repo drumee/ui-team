@@ -352,6 +352,9 @@ class __window_folder extends mfsInteract {
       case "open-advanced-settings":
         return this.openAdvancedSettings(cmd);
 
+      case "folder-manage-access":
+        return this.openManageAccess();
+
       case "folder-rename":
         return this.openFolderRenameDialog();
 
@@ -938,27 +941,6 @@ class __window_folder extends mfsInteract {
       return this.dialogWrapper.clear();
     }
     this.isShowSettings = true;
-
-    // share-area folders open the same "Manage Access" panel shown at
-    // folder-creation time, instead of the generic folder-settings panel.
-    if (this.mget(_a.area) === _a.share) {
-      this.dialogWrapper.feed({
-        kind: "permission_shared",
-        media: this.mget(_a.media) || this.media,
-        hub_id: this.mget(_a.hub_id),
-        uiHandler: [this],
-        persistence: _a.once,
-      });
-      const c = this.dialogWrapper.children.last();
-      if (c) {
-        c.once(_e.destroy, () => {
-          this.isShowSettings = false;
-          return this.unselect();
-        });
-      }
-      return;
-    }
-
     this._folderMembers = [];
     this._folderMembersLoaded = false;
 
@@ -1001,6 +983,33 @@ class __window_folder extends mfsInteract {
         this._folderMembersLoaded = true;
         render();
       });
+  }
+
+  /**
+   * Open the "Manage Access" (permission_shared) panel — triggered by the
+   * topbar share icon, which the skeleton renders only for share-area
+   * folders. Separate from Folder Settings (the gear icon).
+   */
+  openManageAccess() {
+    if (this.isShowSettings) {
+      this.isShowSettings = false;
+      return this.dialogWrapper.clear();
+    }
+    this.isShowSettings = true;
+    this.dialogWrapper.feed({
+      kind: "permission_shared",
+      media: this.mget(_a.media) || this.media,
+      hub_id: this.mget(_a.hub_id),
+      uiHandler: [this],
+      persistence: _a.once,
+    });
+    const c = this.dialogWrapper.children.last();
+    if (c) {
+      c.once(_e.destroy, () => {
+        this.isShowSettings = false;
+        return this.unselect();
+      });
+    }
   }
 
   showInfo() {

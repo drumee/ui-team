@@ -82,6 +82,18 @@ const __skl_folder_topbar = function (ui) {
       })
     : "";
 
+  // Share-area folders get a dedicated "Manage Access" icon next to the
+  // settings gear; other folder types do not show it.
+  const shareBtn =
+    area === _a.share
+      ? Skeletons.Button.Svg({
+          className: `${cnFolder}__control-icon share`,
+          ico: "share",
+          service: "folder-manage-access",
+          uiHandler: ui,
+        })
+      : "";
+
   const settingsBtn = Skeletons.Button.Svg({
     className: `${cnFolder}__control-icon settings`,
     ico: "gear-header",
@@ -102,7 +114,7 @@ const __skl_folder_topbar = function (ui) {
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [videoBtn, uploadBtn, addNew, settingsBtn, splitBtn, controls],
+    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────
