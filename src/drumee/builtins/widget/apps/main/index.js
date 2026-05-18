@@ -292,6 +292,20 @@ class apps_main extends LetcBox {
     // Edit-member workspace role dropdown: options have no `service` so they
     // need delegated handling, and clicks outside an open panel close it.
     if (this._editingMember && this.el) {
+      // Per-row × button. The framework's service routing on this Note is
+      // unreliable (an inner widget on the bubble path stopPropagation's),
+      // so we dispatch the click here in capture phase against data-idx.
+      const removeEl =
+        e.target.closest &&
+        e.target.closest(".apps-main__edit-ws-remove");
+      if (removeEl && this.el.contains(removeEl)) {
+        const rmIdx = parseInt(removeEl.dataset.idx, 10);
+        if (!Number.isNaN(rmIdx)) {
+          e.stopPropagation();
+          this._removeEditWorkspace(rmIdx);
+          return;
+        }
+      }
       const optEl =
         e.target.closest &&
         e.target.closest(".apps-main__edit-ws-role-option");
@@ -1278,12 +1292,15 @@ class apps_main extends LetcBox {
     this._editWorkspaces = this._editWorkspaces || [];
     // Default privilege = view (bit 2). The user picks a different role via
     // the per-row role dropdown rendered by workspaceRow().
+    // `_pending: true` marks this as a client-only addition that hasn't been
+    // persisted yet — _removeEditWorkspace uses it to skip the server call.
     this._editWorkspaces.push({
       hub_id,
       hub_name: name,
       name,
       privilege: 2,
       permission: 2,
+      _pending: true,
     });
     this._render();
   }
@@ -1319,11 +1336,36 @@ class apps_main extends LetcBox {
     this._render();
   }
 
-  _removeEditWorkspace(idx) {
+  async _removeEditWorkspace(idx) {
     if (Number.isNaN(idx)) return;
     if (!Array.isArray(this._editWorkspaces) || !this._editWorkspaces[idx]) return;
-    this._editWorkspaces.splice(idx, 1);
+    const ws = this._editWorkspaces[idx];
+    const hub_id = ws.hub_id || ws.id || ws.actual_hub_id;
+    const uid = this._editingMember && this._editingMember.id;
+
+    // _pending = the row was added client-side via the search dropdown and
+    // hasn't been persisted yet, so there's nothing to revoke server-side.
+    if (ws._pending || !hub_id || !uid) {
+      this._editWorkspaces.splice(idx, 1);
+      this._render();
+      return;
+    }
+
+    // Optimistic remove — mirrors the device-remove flow's pattern of
+    // re-rendering on success, leaving state untouched (and surfacing a warn)
+    // on failure so the row reappears on the next render via _editWorkspaces.
+    const removed = this._editWorkspaces.splice(idx, 1)[0];
     this._render();
+    try {
+      await this.postService(SERVICE.admin.hub_member_remove, {
+        hub_id,
+        uid,
+      });
+    } catch (e) {
+      this.warn && this.warn("hub_member_remove failed", e);
+      this._editWorkspaces.splice(idx, 0, removed);
+      this._render();
+    }
   }
 
   // ─────────────────────────────────────────────────────────

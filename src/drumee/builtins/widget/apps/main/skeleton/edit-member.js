@@ -202,12 +202,17 @@ function workspaceRow(ui, ws, idx) {
         ],
       }),
       Skeletons.Note({
+        // active:1 overrides the row's kidsOpt active:0, but the framework's
+        // service routing still doesn't reach this Note reliably — some inner
+        // widget on the bubble path stops propagation. The actual click is
+        // dispatched by a delegated capture-phase listener in _onDocumentClick
+        // that reads idx from data-idx. Service/uiHandler are kept as
+        // semantic intent and a fallback if delegation ever misses.
         active: 1,
         className: `${pfx}__edit-ws-remove`,
         service: "apps-edit-remove-ws",
         uiHandler: [ui],
-        idx,
-        hub_id: ws.id,
+        dataset: { idx, hub_id: ws.id },
         content: "×",
       }),
     ],
