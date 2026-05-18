@@ -1,6 +1,5 @@
 @use "mixins/drumee";
 
-
 .invite-popup {
   /* All interactive Notes: inner div must not intercept clicks */
   &__role-select > *,
@@ -206,11 +205,17 @@
   }
 
   &__row-remove {
-    @include drumee.typo($size: 16px, $weight: 300, $color: var(--normal-fg-50));
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 300,
+      $color: var(--normal-fg-50)
+    );
     flex-shrink: 0;
     margin-top: 4px;
     cursor: pointer;
-    transition: color 0.15s, background 0.15s;
+    transition:
+      color 0.15s,
+      background 0.15s;
     line-height: 1;
     text-align: center;
     // Enlarge the hit target so the × is easy to click. The glyph stays
@@ -308,18 +313,40 @@
     height: 36px;
     width: 100%;
     cursor: pointer;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__role-select-label {
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    box-sizing: border-box;
-    align-items: center;
+    line-height: 36px;
 
     .inner {
-      pointer-events: none;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       line-height: 36px;
+    }
+  }
+
+  &__role-caret {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2px;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: var(--normal-fg-50);
     }
   }
 
@@ -443,7 +470,9 @@
     padding: 12px 24px;
     text-align: center;
     cursor: pointer;
-    transition: opacity 0.2s, background-color 0.2s;
+    transition:
+      opacity 0.2s,
+      background-color 0.2s;
     margin-top: 8px;
 
     .inner {
