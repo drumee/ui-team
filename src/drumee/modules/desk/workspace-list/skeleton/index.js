@@ -34,7 +34,7 @@ module.exports = function (ui) {
     },
     // Collaborative workspaces only — `private` is the UX "restricted".
     // Excludes personal hub and the default dmz/wicket.
-    skip: { area: /^(?!(share|private|restricted)$).*$/ },
+    skip: { area: /^(?!(share|private|restricted|public)$).*$/ },
   });
 
   return list;
