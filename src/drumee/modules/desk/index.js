@@ -51,6 +51,7 @@ class desk_module extends LetcBox {
     this._updateAvatar = this._updateAvatar.bind(this);
 
     RADIO_BROADCAST.on("avatar-changed", this._updateAvatar);
+    Visitor.on(_e.change, this._updateAvatar);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
     setTimeout(this.lazyClasses, 5000);
   }
@@ -59,7 +60,8 @@ class desk_module extends LetcBox {
    *
    */
   onDestroy() {
-    RADIO_BROADCAST.off(_e.select, this._updateAvatar);
+    RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
+    Visitor.off(_e.change, this._updateAvatar);
     if (this._searchInputEl && this._searchInputHandler) {
       this._searchInputEl.removeEventListener(
         "input",
@@ -109,12 +111,20 @@ class desk_module extends LetcBox {
   /**
    *
    */
-  _updateAvatar() {
-    // Refresh the sidebar-bottom avatar after the user changes their photo
-    // in Settings ("avatar-changed" broadcast). UserProfile.restart(1) re-renders
-    // it — same refresh the Settings account widget uses on its own profile.
+  _updateAvatar(model) {
+    // Refresh the sidebar-bottom avatar + user name after the user updates
+    // their avatar/profile in Account settings. Fires on the "avatar-changed"
+    // broadcast (no model arg) and on Visitor model changes.
+    const changed = model && model.changed;
+    if (changed && !(changed.profile || changed.avatar || changed.mtime)) return;
     this.ensurePart("sidebar-avatar").then((p) => {
       if (p && _.isFunction(p.restart)) p.restart(1);
+    });
+    this.ensurePart("sidebar-username").then((p) => {
+      if (p && p.el) {
+        const el = p.el.querySelector(".note-content") || p.el;
+        el.textContent = Visitor.firstname() || "";
+      }
     });
   }
 

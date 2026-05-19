@@ -136,7 +136,7 @@ const createFooter = (ui, username) => {
             className: cls(fig, "footer-user-btn"),
             sys_pn: "user-menu-trigger",
             partHandler: ui,
-            service: "open-account",
+            service: "toggle-settings",
             uiHandler: [ui],
             kidsOpt: { active: 0 },
             kids: [
@@ -151,7 +151,13 @@ const createFooter = (ui, username) => {
                 className: cls(fig, "footer-name-wrapper"),
                 kidsOpt: { active: 0 },
                 kids: [
-                  createText(fig, "footer-username", username),
+                  Skeletons.Note({
+                    className: cls(fig, "footer-username"),
+                    content: username,
+                    active: 0,
+                    sys_pn: "sidebar-username",
+                    partHandler: ui,
+                  }),
                   createText(fig, "footer-user-plan", LOCALE.PRO_PLAN),
                 ],
               }),
