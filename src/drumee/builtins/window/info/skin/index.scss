@@ -152,3 +152,17 @@
     background-color: var(--normal-bg-80) !important;
   }
 }
+
+// Dark-mode override — base rules use --default-text-color (#2F2F2F) which is
+// not redefined in dark.scss, so message text disappears on the dark popup
+// surface. Remap to --normal-fg-10 (light lavender in dark mode).
+html[data-theme="dark"] .window-info {
+  &__message,
+  &__container .note-reader {
+    color: var(--normal-fg-10);
+  }
+
+  &__container .note-reader.primary-color {
+    color: var(--normal-fg-20);
+  }
+}
