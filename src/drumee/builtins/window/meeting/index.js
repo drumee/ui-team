@@ -63,6 +63,18 @@ class __window_meeting extends __room {
     super._resize(e, ui, anim);
   }
 
+  // Embedded meeting: skip the base TweenMax window resize on screen-share;
+  // CSS owns the layout, only flip data-mode.
+  fitScreenSize(mode) {
+    if (this.el) this.el.dataset.mode = mode;
+    if (this.responsive) this.responsive(mode);
+  }
+
+  change_size(cmd, max_size) {
+    const mode = (this.el && this.el.dataset.mode) || "normal";
+    if (this.responsive) this.responsive(mode);
+  }
+
   /**
    *
    * @returns

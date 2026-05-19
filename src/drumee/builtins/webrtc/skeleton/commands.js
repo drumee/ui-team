@@ -48,6 +48,16 @@ const __window_connect_commands = function (_ui_) {
             dataset: { muted: 1, ctrl: "video" }
           }),
           Skeletons.Button.Svg({
+            className: "ctrl-button screen",
+            ico: "screen_share",
+            state: 0,
+            sys_pn: "ctrl-screen",
+            name: _a.screen,
+            service: "start-screenshare",
+            attrOpt: { title: LOCALE.SHARE_SCREEN },
+            dataset: { muted: 1 }
+          }),
+          Skeletons.Button.Svg({
             className: "ctrl-button hand-raise",
             ico: "hand-raise",
             sys_pn: "ctrl-hand",
