@@ -22,7 +22,17 @@
   }
 
   &__logo {
-    align-items: center;
+    align-items: end;
+    gap: var(--spacer-2);
+    &-ico {
+      width: 40px;
+      height: 40px;
+      color: var(--primary-50);
+    }
+    &-text {
+      font-weight: bold;
+      font-size: 24px;
+    }
   }
 
   &__main {
@@ -151,6 +161,6 @@
     border-radius: var(--corner-radius-2);
     padding: var(--spacer-4) var(--spacer-6);
     cursor: pointer;
-    background-color: var(--normal-bg-80);
+    background-color: var(--normal-bg-80) !important;
   }
 }
