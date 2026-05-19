@@ -23,14 +23,9 @@
     padding: 10px;
     white-space: nowrap;
     @include drumee.typo($color:var(--default-text-color), $size: 12px, $line: 16px);
-    &:hover{
-      background-color: var(--default-bg-hover);//var(--folder-main);
-      color: var(--default-text-reverse);
-      svg{
-        color: var(--default-text-reverse);
-        opacity: 1;
-      }
-    } 
+    // Hover state is owned by the redesigned context-menu skin
+    // (builtins/contextmenu/skin/index.scss). The legacy white-on-hover
+    // text here was invisible on that skin's light hover background.
     &.flip-x{
       svg{
         transform:scaleX(-1);
