@@ -113,16 +113,16 @@ class __window_connect extends __room {
 
 
   /**
-   * 
+   *
    */
-  async startConnection() {
+  async startConnection(args = {}) {
     //let user = this.callee || this.caller;
     if (this.isOnine) return;
     let isCallee = 0;
     if (this.caller) {
       isCallee = 1;
     }
-    let room = await this.join({ isCallee });
+    let room = await this.join({ isCallee, ...args });
     if (!room || !room.user) {
       this.stateMachine('permissionDenied');
       return;
@@ -327,12 +327,22 @@ class __window_connect extends __room {
           hub_id: Visitor.id,
           drumate_id: this.caller.drumate_id || this.caller.uid,
         });
-        let c = await this.startConnection();
+        // The conference room was created in the caller's hub context and
+        // the callee's permission was granted in the caller's hub DB.
+        // Use the caller's hub_id for join and accept so the permission
+        // check (fast_check: user_permission) runs in the correct DB.
+        // The model hub_id stays as Visitor.id for subsequent leave/update
+        // signals which use fast_check: public-api and don't need it.
+        const callerHubId = this.caller.hub_id;
+        let c = await this.startConnection({ hub_id: callerHubId });
         if (!c) {
           this.defaultState(_a.cancel);
           return;
         }
-        await this.sendRoomSignaling(SERVICE.conference.accept, { caller: this.caller });
+        await this.sendRoomSignaling(SERVICE.conference.accept, {
+          caller: this.caller,
+          hub_id: callerHubId,
+        });
         break;
 
       case _e.reject:
