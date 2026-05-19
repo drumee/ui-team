@@ -239,7 +239,11 @@ class __window_manager extends push {
     const apply = (resolvedNid) => {
       if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: resolvedNid, area: data.area };
-      this.mset({ hub_id, nid: resolvedNid, nodeId: resolvedNid, area: data.area });
+      // ownpath '/' for a workspace root — needed so drag-drop uploads here
+      // resolve to the workspace top, not a stale subfolder path inherited
+      // from a previous navigation. _getDestination reads ownpath from the
+      // logical parent (this) when building the upload destpath.
+      this.mset({ hub_id, nid: resolvedNid, nodeId: resolvedNid, area: data.area, ownpath: '/' });
       this.ensurePart(_a.list).then((l) => {
         l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid: resolvedNid });
         if (l.collection) l.collection.reset();
@@ -265,7 +269,7 @@ class __window_manager extends push {
     // topbar's "+ Add new" check only needs hub_id to flip to folder
     // creation mode — nid can fill in asynchronously.
     this._curWorkspace = { hub_id, nid, area: data.area };
-    this.mset({ hub_id, nid, nodeId: nid, area: data.area });
+    this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath: '/' });
 
     if (nid) {
       apply(nid);
@@ -295,8 +299,12 @@ class __window_manager extends push {
     const nid = isWorkspace
       ? data.actual_home_id || data.home_id || data.nid
       : data.nid || data.actual_home_id || data.home_id;
+    // Workspace root → '/'; folder → its own ownpath/filepath as reported by
+    // show_node_by. Without this, uploads dropped here inherit a stale path
+    // and the server stores them at the previous parent.
+    const ownpath = isWorkspace ? '/' : (data.ownpath || data.filepath || '/');
     this._curWorkspace = { hub_id, nid, area: data.area };
-    this.mset({ hub_id, nid, nodeId: nid, area: data.area });
+    this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath });
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
       if (l.collection) l.collection.reset();
@@ -334,8 +342,13 @@ class __window_manager extends push {
     }
 
     const area = data.area || data.workspace_area;
+    // Subfolder ownpath comes from show_node_by (sidebar feeds workspace_item
+    // with the server item; ownpath/filepath is the per-hub path). Required
+    // so drag-drop uploads target THIS subfolder — without it, the destpath
+    // resolved by _getDestination stays at the previous workspace root.
+    const ownpath = data.ownpath || data.filepath || '/';
     this._curWorkspace = { hub_id, nid, area };
-    this.mset({ hub_id, nid, nodeId: nid, area });
+    this.mset({ hub_id, nid, nodeId: nid, area, ownpath });
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
       if (l.collection) l.collection.reset();

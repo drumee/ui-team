@@ -918,6 +918,18 @@ class __window_interact extends windowCore {
       default:
         this.__list.collection.add(opt, { at: position });
     }
+
+    // Wm (workspace inline) relies on a MutationObserver to partition new
+    // children into .file-section / .folder-section. The observer can miss
+    // the first drop when a pseudo lands during the empty-folder retry loop
+    // — leaving uploading items as direct children of .smart-container
+    // (flex-column) so concurrent drops stack vertically until refresh.
+    // Explicit partition kick after append removes that race; folder window
+    // already does this in its own override.
+    if (this.isWm && typeof this._partitionFoldersAndFiles === "function"
+        && this.getViewMode && this.getViewMode() !== _a.row) {
+      this._partitionFoldersAndFiles(this.__list);
+    }
   }
 
   /**

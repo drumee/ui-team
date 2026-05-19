@@ -104,6 +104,10 @@
 
         &[data-state="0"] {
           color: var(--multimedia-vdo-icon);
+
+          &:before {
+            display: none;
+          }
         }
       }
 
