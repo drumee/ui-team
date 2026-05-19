@@ -283,6 +283,8 @@
   "VIDEO_CONFERENCE": "{0}视讯会议",
   "CLEAR_NOTIFICATIONS": "清除通知",
   "NEW_MESSAGES": "新讯息",
+  "NEW_MESSAGE": "新消息",
+  "NOTIFICATION_NOT_GRANTED": "通知未被允许。请在浏览器设置中启用它们。",
   "X_FILES": "{0}档案",
   "FILE_NOT_DISPOSABLE": "该文件不是一次性的",
   "NO_VIEWER": "该文件无法显示",

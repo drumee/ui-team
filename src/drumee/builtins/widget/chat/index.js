@@ -1063,6 +1063,7 @@ class __widget_chat extends LetcBox {
     this.postMessageAPI();
   }
 
+
   /**
    * 
    * @param {*} data 
@@ -1093,6 +1094,7 @@ class __widget_chat extends LetcBox {
       this._newMsgCount++;
       this.__buttonScroll.el.dataset.count = this._newMsgCount;
       this.__list.append(data);
+      RADIO_BROADCAST.trigger('activity:notify', data);
       return;
     }
     messageArr.mset(data);
@@ -1327,8 +1329,8 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-* @param {*} data
-*/
+  * @param {*} data
+  */
   acknowledge(data) {
     if (!this.__list) return;
     if (!_.isArray(data)) {
@@ -1364,6 +1366,7 @@ class __widget_chat extends LetcBox {
   onWsMessage(service, data, options) {
     const area = this.mget(_a.area) || this.mget(_a.type);
     const isPrivate = area === _a.personal || area === _a.privateRoom;
+    this.debug("AAA:1367", this, this.getHandlers(_a.ui)[0].isHidden(), this.mget(_a.state), this.el.dataset.anim, service, data, options)
     switch (options.service) {
       case SERVICE.contact.block:
       case SERVICE.contact.unblock:
@@ -1391,6 +1394,9 @@ class __widget_chat extends LetcBox {
         if ((hubMatch && inScope) || privateMach || ticketMach) {
           this.handleReceivedMsg(data);
         }
+
+        // If the widget id hiddent, don't acknowledge
+        if(this.getHandlers(_a.ui)[0].isHidden()) return
         // Ack even when out-of-scope so unread counters in the folder feed
         // don't accumulate while the user views a file-scoped thread.
         if (hubMatch || privateMach || ticketMach) {
@@ -1716,9 +1722,9 @@ class __widget_chat extends LetcBox {
   static initClass() {
     this.prototype.events = {
       dragenter: '_onDragEnter',
-      dragover:  '_onDragOver',
+      dragover: '_onDragOver',
       dragleave: '_onDragLeave',
-      drop:      '_onDrop',
+      drop: '_onDrop',
     };
   }
 }

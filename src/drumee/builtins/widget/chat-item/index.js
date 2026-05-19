@@ -1,4 +1,4 @@
-const { toggleState } = require("@drumee/ui-essentials")
+const { toggleState, colorFromName } = require("@drumee/ui-essentials")
 require('./skin');
 class ___widget_chatItem extends LetcBox {
 
@@ -25,7 +25,6 @@ class ___widget_chatItem extends LetcBox {
     this.innerContent = require('./template')(this);
     this.model.unset(_a.state);
   }
-
 
   /**
  * 
@@ -136,12 +135,61 @@ class ___widget_chatItem extends LetcBox {
     let { is_seen, is_readed } = changed;
     if (is_seen || is_readed) {
       let readstatus = document.getElementById(`${this._id}-readstatus`);
-      if(readstatus){
-        if(is_readed != null) readstatus.dataset.is_readed = is_readed;
-        if(is_seen != null) readstatus.dataset.is_seen = is_seen;
+      if (readstatus) {
+        if (is_readed != null) readstatus.dataset.is_readed = is_readed;
+        if (is_seen != null) readstatus.dataset.is_seen = is_seen;
       }
     }
   }
+
+  /**
+   *
+   */
+  _initiales() {
+    const m = this.model.toJSON();
+    const e = m.entity || m;
+    let firstname = '';
+    let lastname = '';
+    try { firstname = (e.firstname || m.firstname || '')[0] || ''; } catch (_) { }
+    try { lastname = (e.lastname || m.lastname || '')[0] || ''; } catch (_) { }
+    if (!firstname && !lastname) {
+      try {
+        const parts = (e.surname || m.surname || '').split(' ');
+        firstname = (parts[0] || '')[0] || '';
+        lastname = (parts[1] || '')[0] || '';
+      } catch (_) { }
+    }
+    return (firstname + lastname).toUpperCase() || '?';
+  }
+
+  /**
+   *
+   */
+  _loadAvatar(img) {
+    if (!img) return;
+    const url = Visitor.avatar(this.mget(_a.author_id), _a.vignette);
+    const profile = img.parentElement;
+    img.style.display = 'none';
+    img.onerror = () => {
+      if (!profile) return;
+      profile.dataset.default = 1;
+      const initiales = this._initiales();
+      const span = document.createElement('span');
+      span.className = `${this.fig.family}__profile-initiales`;
+      span.textContent = initiales;
+      span.style.backgroundColor = colorFromName(initiales || '??');
+      profile.appendChild(span);
+    };
+    img.onload = () => {
+      img.style.display = '';
+      if (profile) {
+        profile.dataset.quality = _a.high;
+        profile.dataset.default = 0;
+      }
+    };
+    img.src = url;
+  }
+
 
   /**
    * 
@@ -193,6 +241,16 @@ class ___widget_chatItem extends LetcBox {
     this.el.onmouseleave = this._mouseleave.bind(this);
     this.el.oncontextmenu = null;
     this.acknowledge();
+    let img_id = `${this.mget(_a.widgetId)}-avatar`;
+    this.ensureElement(img_id).then((img) => {
+      this._loadAvatar(img)
+    }).catch((e) => {
+      this.ensureElement(img_id).then((img) => {
+        this._loadAvatar(img)
+      }).catch((e) => {
+        this._loadAvatar()
+      })
+    })
   }
 
   /**
@@ -369,8 +427,8 @@ class ___widget_chatItem extends LetcBox {
         // to the meeting tab — no Wm.launch, no reload.
         const ownFolder = this.getParentByKind && this.getParentByKind("window_folder");
         if (ownFolder
-            && ownFolder.mget(_a.hub_id) == hub_id
-            && ownFolder.showFolderTab) {
+          && ownFolder.mget(_a.hub_id) == hub_id
+          && ownFolder.showFolderTab) {
           if (ownFolder.activeTab === "meeting") return;
           ownFolder.showFolderTab("meeting");
           if (ownFolder.raise) ownFolder.raise();
@@ -417,7 +475,7 @@ class ___widget_chatItem extends LetcBox {
       case _a.forward:
       case 'chat-item-delete':
         console.log('[chat-item] delete/forward', { service, hasMain: !!this.__main, hasMessageEl: !!this.messageEl });
-        try { this.select(1); } catch(e) { console.error('[chat-item] select(1) threw:', e); }
+        try { this.select(1); } catch (e) { console.error('[chat-item] select(1) threw:', e); }
         this.triggerHandlers({
           service: 'show-message-selector',
           type: service

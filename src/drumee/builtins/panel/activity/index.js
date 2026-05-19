@@ -16,6 +16,7 @@ class __panel_activity extends LetcBox {
     this.onWsMessage = this.onWsMessage.bind(this);
     this.onVisibilityChange = this.onVisibilityChange.bind(this);
     this.getCurrentApi = this.getCurrentApi.bind(this);
+    this._notify = this._notify.bind(this);
   }
 
   /**
@@ -40,6 +41,7 @@ class __panel_activity extends LetcBox {
     this.onVisibilityChange = this.onVisibilityChange.bind(this)
     document.addEventListener("visibilitychange", this.onVisibilityChange);
     this.onWsMessage = this.onWsMessage.bind(this)
+    this._last_notified = 0;
   }
 
 
@@ -50,6 +52,7 @@ class __panel_activity extends LetcBox {
   onDestroy() {
     // RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
+    RADIO_BROADCAST.off('activity:notify', this._notify);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
   }
 
@@ -71,6 +74,7 @@ class __panel_activity extends LetcBox {
   onDomRefresh() {
     this.setState(0);
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
+    RADIO_BROADCAST.on('activity:notify', this._notify);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
     this.visible = !document.hidden;
     this.feed(require('./skeleton')(this));
@@ -277,7 +281,7 @@ class __panel_activity extends LetcBox {
     const item = this._findActivityItem(cmd);
     if (item) {
       const p = this._dismissActivity(item, args);
-      if (p && typeof p.catch === 'function') p.catch(() => {});
+      if (p && typeof p.catch === 'function') p.catch(() => { });
     }
     if (item && item.goodbye) item.goodbye({ duration: 0.3, timeout: 50, now: 1 });
   }
@@ -458,9 +462,9 @@ class __panel_activity extends LetcBox {
       e.kind = 'activity_item';
       e.service = category === 'media' ? 'open-folder'
         : category === 'teamchat' ? 'open-channel'
-        : category === 'contact' ? 'open-contact'
-        : category === 'ticket' ? 'open-ticket'
-        : 'open-chat';
+          : category === 'contact' ? 'open-contact'
+            : category === 'ticket' ? 'open-ticket'
+              : 'open-chat';
       e.type = category;
       e.event_type = category;
       e.item_key = `${category}:${e.key_id || e.drumate_id || e.hub_id || ''}`;
@@ -807,6 +811,29 @@ class __panel_activity extends LetcBox {
     }
 
   }
+  /**
+   * 
+   */
+  _notify(data) {
+    if (!window.Notification) return;
+    let now = new Date().getTime()
+    if ((now - this._last_notified) < 3000) return
+    this._last_notified = now;
+    const title = data.firstname || LOCALE.NEW_MESSAGE
+    const notif = {
+      body: data.message || "",
+      icon: Visitor.avatar(data.author_id),
+    };
+    // Request permission
+    Notification.requestPermission()
+      .then(permission => {
+        if (permission === "granted") {
+          new Notification(title, notif);
+        } else {
+          alert(LOCALE.NOTIFICATION_NOT_GRANTED)
+        }
+      });
+  }
 
   /**
  * 
@@ -841,8 +868,11 @@ class __panel_activity extends LetcBox {
       notif.title = title;
       return notif;
     }
-    if (!window.activity) return;
-    new activity(title, notif);
+    if (_.isArray(data)) {
+      this._notify(data[0])
+    } else {
+      this._notify(data)
+    }
   }
 
   /**

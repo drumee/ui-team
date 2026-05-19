@@ -331,6 +331,8 @@
   "VIDEO_CONFERENCE": "{0} videoconference",
   "CLEAR_NOTIFICATIONS": "Clear notifications",
   "NEW_MESSAGES": "New messages\n",
+  "NEW_MESSAGE": "New message",
+  "NOTIFICATION_NOT_GRANTED": "Notifications are not allowed. Please enable them in your browser settings.",
   "X_FILES": "{0} file(s)",
   "FILE_NOT_DISPOSABLE": "This file is not disposable",
   "NO_VIEWER": "This file cannot be displayed\n",

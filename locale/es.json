@@ -646,6 +646,8 @@
   "VIDEO_CONFERENCE": "{0} videoconference",
   "CLEAR_NOTIFICATIONS": "Clear notifications",
   "NEW_MESSAGES": "New messages\n",
+  "NEW_MESSAGE": "Nuevo mensaje",
+  "NOTIFICATION_NOT_GRANTED": "Las notificaciones no están permitidas. Por favor, actívalas en la configuración de tu navegador.",
   "FILE_NOT_DISPOSABLE": "This file is not disposable",
   "NO_VIEWER": "This file cannot be displayed\n",
   "CONFERENCE_HAS_NOT_STARTED": "The conference has not yet started. Please wait for the organizer.",
