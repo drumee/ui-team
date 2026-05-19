@@ -40,27 +40,74 @@ function mapFolderMember(row) {
   return {
     id: row.entity_id || row.drumate_id || row.id,
     name: isSelf ? `${name} (${LOCALE.YOU || "You"})` : name,
+    rawName: name,
     initials,
     role: roleFromPrivilege(row.privilege),
     color: isSelf ? "user" : "primary",
+    isSelf,
   };
 }
 
+// Render the role pill as a real KIND.menu.topic dropdown — click on the
+// trigger opens a positioned menu listing every roleOption; picking one fires
+// `service` with the target role embedded as dataset (member_id, privilege,
+// role_label). Replaces the previous cycle-on-click UX that contradicted the
+// caret-down affordance.
 function roleDropdown(pfx, role, service, extra = {}) {
-  return Skeletons.Box.X({
+  const ui = extra.uiHandler;
+  const memberId = extra.dataset?.member_id;
+  const radioGroup = memberId
+    ? `folder-role-${service}-${memberId}`
+    : `folder-role-${service}`;
+
+  const trigger = Skeletons.Box.X({
     className: `${pfx}-role-select`,
-    service,
-    uiHandler: extra.uiHandler ? [extra.uiHandler] : undefined,
-    dataset: {
-      role: role.label,
-      privilege: role.privilege,
-      ...(extra.dataset || {}),
-    },
     kids: [
       Skeletons.Note({ className: `${pfx}-role-label`, content: role.label }),
-      Skeletons.Button.Svg({ className: `${pfx}-role-caret`, ico: "apps-caret-down" }),
+      Skeletons.Button.Svg({
+        className: `${pfx}-role-caret`,
+        ico: "apps-caret-down",
+      }),
     ],
   });
+
+  // No radio dot — selected option uses background highlight (data-state="1")
+  // instead. Keeps menu narrow enough to stay inside the panel.
+  const items = Skeletons.Box.Y({
+    className: `${pfx}-role-menu`,
+    kids: roleOptions.map((opt) =>
+      Skeletons.Box.X({
+        className: `${pfx}-role-option`,
+        service,
+        radio: radioGroup,
+        name: opt.label,
+        uiHandler: ui ? [ui] : undefined,
+        dataset: {
+          ...(memberId ? { member_id: memberId } : {}),
+          privilege: opt.privilege,
+          role_label: opt.label,
+        },
+        state: opt.label === role.label ? 1 : 0,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}-role-option-label`,
+            content: opt.label,
+          }),
+        ],
+      }),
+    ),
+  });
+
+  return {
+    kind: KIND.menu.topic,
+    className: `${pfx}-role-dropdown`,
+    flow: _a.y,
+    opening: _e.click,
+    persistence: _a.once,
+    trigger,
+    offsetY: 4,
+    items,
+  };
 }
 
 function memberAvatar(pfx, member) {
@@ -81,8 +128,15 @@ function memberAvatar(pfx, member) {
 // Build the "Permissions Matrix" rows from the real member list the folder
 // window loaded via hub.get_members_by_type (ui._folderMembers). Falls back
 // to a loading / empty note while the fetch is pending or returns nothing.
+// Pure link rows (no entity_id / drumate_id / id) are filtered — they are
+// not folder members and have no destructive controls in this matrix.
 function memberRows(ui, pfx) {
-  const list = (ui._folderMembers || []).map(mapFolderMember);
+  // hub.get_members_by_type returns workspace members. Each row carries a
+  // uid (entity_id/drumate_id/id) — link/anonymous rows would lack any of
+  // those, so we filter them out defensively.
+  const list = (ui._folderMembers || [])
+    .filter((row) => row.entity_id || row.drumate_id || row.id)
+    .map(mapFolderMember);
   if (!list.length) {
     return [
       Skeletons.Note({
@@ -93,8 +147,30 @@ function memberRows(ui, pfx) {
       }),
     ];
   }
-  return list.map((member, index) =>
-    Skeletons.Box.X({
+  return list.map((member, index) => {
+    // Self row: show role label read-only, omit delete button — server also
+    // rejects self-removal but UX hides the controls to prevent confusion.
+    const actions = member.isSelf
+      ? [
+          Skeletons.Note({
+            className: `${pfx}-role-label ${pfx}-role-readonly`,
+            content: member.role.label,
+          }),
+        ]
+      : [
+          roleDropdown(pfx, member.role, "folder-member-role", {
+            uiHandler: ui,
+            dataset: { index, member_id: member.id },
+          }),
+          Skeletons.Button.Svg({
+            className: `${pfx}-member-remove`,
+            ico: "trash-action",
+            service: "folder-remove-member",
+            dataset: { index, member_id: member.id },
+            uiHandler: [ui],
+          }),
+        ];
+    return Skeletons.Box.X({
       className: `${pfx}-member-row`,
       dataset: { index, member_id: member.id },
       kids: [
@@ -107,23 +183,11 @@ function memberRows(ui, pfx) {
         }),
         Skeletons.Box.X({
           className: `${pfx}-member-actions`,
-          kids: [
-            roleDropdown(pfx, member.role, "folder-member-role", {
-              uiHandler: ui,
-              dataset: { index, member_id: member.id },
-            }),
-            Skeletons.Button.Svg({
-              className: `${pfx}-member-remove`,
-              ico: "trash-action",
-              service: "folder-remove-member",
-              dataset: { index, member_id: member.id },
-              uiHandler: [ui],
-            }),
-          ],
+          kids: actions,
         }),
       ],
-    }),
-  );
+    });
+  });
 }
 
 module.exports = function settingsActionPanel(ui) {
