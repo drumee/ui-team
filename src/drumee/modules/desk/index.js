@@ -110,8 +110,11 @@ class desk_module extends LetcBox {
    *
    */
   _updateAvatar() {
-    this.ensurePart("desk-avatar").then((p) => {
-      p.respawn();
+    // Refresh the sidebar-bottom avatar after the user changes their photo
+    // in Settings ("avatar-changed" broadcast). UserProfile.restart(1) re-renders
+    // it — same refresh the Settings account widget uses on its own profile.
+    this.ensurePart("sidebar-avatar").then((p) => {
+      if (p && _.isFunction(p.restart)) p.restart(1);
     });
   }
 
