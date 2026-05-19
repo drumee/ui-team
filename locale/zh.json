@@ -875,7 +875,7 @@
   "DMZ_SHAREBOX_FOOTER_CONTENT": "<p>专注于机密和隐私的“一体式”专有云将属于您。</p>\n<p><span>文件管理</span>、<span>聊天</span>、<span>视频</span>、<span>团队合作</span>以及<span>新一代界面</span> >.</p>",
   "MANAGE_SECURITY": "管理安全和服务器",
   "X_SCREEN_PREPARING": "{0} 正准备共享其屏幕",
-  "APPS": "应用",
+  "APPS": "仪表板",
   "SHOW_QRCODE": "显示二维码",
   "NEED_DEVICES_PERMISSION": "Drumee 需要使用您的麦克风和摄像头。 请允许他们访问。",
   "CONFERENCE_CONNECTION_FAILED": "连接会议服务器失败",

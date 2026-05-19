@@ -952,7 +952,7 @@
   "DMZ_SHAREBOX_FOOTER_CONTENT": "<p>A \"all in one\" proprietary cloud focused on confidential & privacy, which will be yours.</p>\n<p><span>File management</span>, <span>Chat</span>, <span>Video</span>, <span>Teamwork</span> with a <span>new generation interface</span>.</p>",
   "MANAGE_SECURITY": "Manage security and Server",
   "X_SCREEN_PREPARING": "{0} is preparing to share his/her screen",
-  "APPS": "Apps",
+  "APPS": "Dashboard",
   "SHOW_QRCODE": "Show QR code",
   "NEED_DEVICES_PERMISSION": "Drumee needs to use your microphone and camera. Please allow their access.",
   "CONFERENCE_CONNECTION_FAILED": "Connection to conference server failed",
