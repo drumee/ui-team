@@ -61,15 +61,26 @@ class __permission_restricted extends DrumeeMFS {
         this.ensurePart("ref-invite-email").then((entry) => {
           const email = entry.el.querySelector("input")?.value?.trim();
           if (!email) return;
-          this.postService({
-            service: SERVICE.hub.add_contributors,
+          const rolePrivilege = {
+            admin: _K.privilege.admin,
+            edit: _K.privilege.write,
+            view: _K.privilege.read,
+          };
+          const permission = rolePrivilege[this._inviteRole] || _K.privilege.admin;
+          this.postService(SERVICE.hub.invite, {
             hub_id: this.mget(_a.hub_id),
-            email,
-            role: this._inviteRole || "admin",
-          }).then((users) => {
-            this.mset(_a.users, users);
-            this.feed(require("./skeleton")(this));
-          });
+            invitees: [email],
+            permission,
+          }).then((res) => {
+            if (res && (res.error || res.error_code)) {
+              return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+            }
+            const r = (res && res.results && res.results[0]) || {};
+            if (r.status === "failed") {
+              return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
+            }
+            Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY);
+          }).catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
         });
         break;
 

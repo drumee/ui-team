@@ -31,7 +31,11 @@
     &:hover,
     &[data-radio="on"] {
       background-color: var(--default-bg-hover);
-      color: var(--default-text-reverse);
+      // Hover bg is light (--neutral-200 #ebecf0); the previous
+      // --default-text-reverse / --default-text-hover are both white and
+      // disappeared on it. Use the normal dark text so the filename stays
+      // readable on hover and on radio-selected state.
+      color: var(--default-text-color);
     }
 
     &:hover {
@@ -51,7 +55,7 @@
 
     &[data-radio="on"] {
       & .filename {
-        color: var(--default-text-reverse);
+        color: var(--default-text-color);
       }
     }
 
@@ -174,7 +178,9 @@
       }
 
       &:hover {
-        color: var(--default-text-hover); //white;
+        // Row-mode hover bg is light gray; --default-text-hover (#fff)
+        // makes the filename invisible. Keep normal dark text.
+        color: var(--default-text-color);
       }
 
       .edit {

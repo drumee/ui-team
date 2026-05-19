@@ -111,6 +111,7 @@ function generalProfileCard(ui) {
             name: "bio",
             formItem: "bio",
             value: profile.bio || "",
+            placeholder: LOCALE.BIO_PLACEHOLDER,
             rows: 3,
             mode: _a.commit,
             ignoreEnter: true,

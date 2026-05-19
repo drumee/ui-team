@@ -6,7 +6,7 @@ const __button = function (ui, trigger, k) {
 
   // let button = Skeletons.Button.content;
 
-  // const icon = require('./icons')(ui);
+  const icon = require('./icons')(ui);
 
 
 
@@ -202,23 +202,81 @@ const __button = function (ui, trigger, k) {
 
     const r = a[k];
 
-    r.className = `${pfx}`;
+    const cls = cn[k] ? `${pfx} ${cn[k]}` : `${pfx}`;
 
-    r.uiHandler = [ui];
+    // separator: a 1px divider — never an icon row.
 
-    if (cn[k]) {
+    if (k === 'separator') {
 
-      r.className = `${pfx} ${cn[k]}`;
+      r.className = cls;
+
+      return r;
 
     }
 
-    // if (icon[k]) {
+    // organize: already a Box.X; its first kid is the __label Note.
 
-    //   r.chartId = icon[k];
+    // Just prepend the icon when one is mapped.
 
-    // }
+    if (k === 'organize') {
 
-    return r;
+      r.className = cls;
+
+      r.uiHandler = [ui];
+
+      if (icon[k]) {
+
+        r.kids.unshift(Skeletons.Image.Svg({
+
+          ico: icon[k],
+
+          className: `${pfx}__icon`,
+
+        }));
+
+      }
+
+      return r;
+
+    }
+
+    // Regular item: wrap the Note into a Box.X of [icon?, label].
+
+    // Interaction props move onto the Box.X so onUiEvent reads them
+
+    // off the clicked element; children are inert (active: 0).
+
+    return Skeletons.Box.X({
+
+      className: cls,
+
+      service: r.service,
+
+      mode: r.mode,
+
+      type: r.type,
+
+      value: r.value,
+
+      dataset: r.dataset,
+
+      uiHandler: [ui],
+
+      kidsOpt: { active: 0 },
+
+      kids: [
+
+        icon[k]
+
+          ? Skeletons.Image.Svg({ ico: icon[k], className: `${pfx}__icon` })
+
+          : null,
+
+        Skeletons.Note({ content: r.content, className: `${pfx}__label` }),
+
+      ],
+
+    });
 
   }
 

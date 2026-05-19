@@ -194,6 +194,7 @@ class apps_main extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
     this._role = deriveVisitorRole();
+    this._isPrivileged = this._role === "owner" || this._role === "admin";
     this._visibleTabs = TABS_BY_ROLE[this._role] || [];
     this._tab = this._visibleTabs[0] || "member";
     this._adminHubs = [];

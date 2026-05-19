@@ -243,7 +243,10 @@ class __window_manager extends push {
       // resolve to the workspace top, not a stale subfolder path inherited
       // from a previous navigation. _getDestination reads ownpath from the
       // logical parent (this) when building the upload destpath.
-      this.mset({ hub_id, nid: resolvedNid, nodeId: resolvedNid, area: data.area, ownpath: '/' });
+      // home_id mirrors the workspace root nid so cross-window drops from a
+      // folder window into Wm classify as MOVE (not COPY) in makeOptions —
+      // see window/interact/index.js:808 (item.actual_home_id === home_id).
+      this.mset({ hub_id, nid: resolvedNid, nodeId: resolvedNid, area: data.area, ownpath: '/', home_id: resolvedNid });
       this.ensurePart(_a.list).then((l) => {
         l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid: resolvedNid });
         if (l.collection) l.collection.reset();
@@ -269,7 +272,7 @@ class __window_manager extends push {
     // topbar's "+ Add new" check only needs hub_id to flip to folder
     // creation mode — nid can fill in asynchronously.
     this._curWorkspace = { hub_id, nid, area: data.area };
-    this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath: '/' });
+    this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath: '/', home_id: nid });
 
     if (nid) {
       apply(nid);
@@ -303,8 +306,13 @@ class __window_manager extends push {
     // show_node_by. Without this, uploads dropped here inherit a stale path
     // and the server stores them at the previous parent.
     const ownpath = isWorkspace ? '/' : (data.ownpath || data.filepath || '/');
+    // home_id stays at the workspace root nid even when navigating into a
+    // subfolder, so cross-window drops keep classifying as MOVE.
+    const home_id = isWorkspace
+      ? nid
+      : (data.actual_home_id || data.home_id || data.workspace_nid || this.mget(_a.home_id) || nid);
     this._curWorkspace = { hub_id, nid, area: data.area };
-    this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath });
+    this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath, home_id });
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
       if (l.collection) l.collection.reset();
@@ -347,8 +355,11 @@ class __window_manager extends push {
     // so drag-drop uploads target THIS subfolder — without it, the destpath
     // resolved by _getDestination stays at the previous workspace root.
     const ownpath = data.ownpath || data.filepath || '/';
+    // home_id = workspace root nid (preserved across subfolder navigation) so
+    // makeOptions classifies cross-window drops as MOVE not COPY.
+    const home_id = data.actual_home_id || data.workspace_nid || data.home_id || this.mget(_a.home_id) || nid;
     this._curWorkspace = { hub_id, nid, area };
-    this.mset({ hub_id, nid, nodeId: nid, area, ownpath });
+    this.mset({ hub_id, nid, nodeId: nid, area, ownpath, home_id });
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
       if (l.collection) l.collection.reset();
