@@ -15,7 +15,7 @@ const __window_meeting_feedback = function (_ui_, opts = {}) {
     stars.push(
       Skeletons.Button.Svg({
         className: `${fig}__feedback-star`,
-        ico: "rating-star",
+        ico: "app-rating-star",
         service: "rate-meeting",
         sys_pn: `feedback-star-${i}`,
         uiHandler: [_ui_],
@@ -33,7 +33,7 @@ const __window_meeting_feedback = function (_ui_, opts = {}) {
         kids: [
           Skeletons.Box.X({
             className: `${fig}__feedback-icon`,
-            kids: [Skeletons.Image.Svg({ ico: "apps-check-circle" })],
+            kids: [Skeletons.Image.Svg({ ico: "app-check" })],
           }),
           Skeletons.Note({
             className: `${fig}__feedback-title`,
