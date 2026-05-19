@@ -27,6 +27,13 @@ class __media_pseudo extends LetcBox {
       filename: LOCALE.PROCESSING
     });
 
+    // Partition logic (window/utils.js _doPartition) filters DOM children by
+    // data-filetype; without it the pseudo lands as a direct child of
+    // .smart-container (flex-column) instead of .file-section (row) so
+    // concurrent drops stack vertically. __media_core sets this attribute in
+    // its initialize; pseudo extends LetcBox directly so we must set it here.
+    this.el.dataset.filetype = _a.pseudo;
+
     this.logicalParent = this;
   }
 
