@@ -334,14 +334,15 @@ class __window_connect extends __room {
         // The model hub_id stays as Visitor.id for subsequent leave/update
         // signals which use fast_check: public-api and don't need it.
         const callerHubId = this.caller.hub_id;
-        let c = await this.startConnection({ hub_id: callerHubId });
+        const hubOverride = callerHubId ? { hub_id: callerHubId } : {};
+        let c = await this.startConnection(hubOverride);
         if (!c) {
           this.defaultState(_a.cancel);
           return;
         }
         await this.sendRoomSignaling(SERVICE.conference.accept, {
           caller: this.caller,
-          hub_id: callerHubId,
+          ...hubOverride,
         });
         break;
 
