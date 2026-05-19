@@ -28,6 +28,13 @@
     }
   }
 
+  &__actions-cluster {
+    &[data-state="0"] {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+  }
+
   &__user-menu {
     align-items: center;
     justify-content: center;
@@ -54,12 +61,10 @@
     }
 
     &-username {
-      @include drumee.typo(
-        $line: 22px,
+      @include drumee.typo($line: 22px,
         $size: 16px,
         $weight: 400,
-        $color: var(--neutral-900)
-      );
+        $color: var(--neutral-900));
       height: 40px;
       align-content: center;
       flex-wrap: wrap;
@@ -104,12 +109,10 @@
       border-radius: var(--corner-radius-3);
       width: 100%;
       gap: var(--spacer-2);
-      @include drumee.typo(
-        $line: 22px,
+      @include drumee.typo($line: 22px,
         $size: 16px,
         $weight: 400,
-        $color: var(--neutral-600)
-      );
+        $color: var(--neutral-600));
 
       span.label {
         display: flex;
@@ -193,7 +196,7 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       display: inline-flex;
       align-items: center;
     }
@@ -231,7 +234,7 @@
   &__add-wrapper {
     position: relative;
     flex-shrink: 0;
-  
+
 
     // Items container: background, padding, radius
     .menu-topic-items {
@@ -273,7 +276,7 @@
     width: 100%;
     box-sizing: border-box;
 
-    > * {
+    >* {
       display: inline-flex;
       align-items: center;
     }
@@ -305,12 +308,35 @@
       align-items: center;
     }
 
-    &.ico-workspace svg { fill: #5950ff; color: #5950ff; }
-    &.ico-private-folder svg { fill: #54b684; color: #54b684; }
-    &.ico-note svg { fill: #e8a13b; color: #e8a13b; }
-    &.ico-document svg { fill: #847eff; color: #847eff; }
-    &.ico-spreadsheet svg { fill: #54b684; color: #54b684; }
-    &.ico-presentation svg { fill: #ffa8dc; color: #ffa8dc; }
+    &.ico-workspace svg {
+      fill: #5950ff;
+      color: #5950ff;
+    }
+
+    &.ico-private-folder svg {
+      fill: #54b684;
+      color: #54b684;
+    }
+
+    &.ico-note svg {
+      fill: #e8a13b;
+      color: #e8a13b;
+    }
+
+    &.ico-document svg {
+      fill: #847eff;
+      color: #847eff;
+    }
+
+    &.ico-spreadsheet svg {
+      fill: #54b684;
+      color: #54b684;
+    }
+
+    &.ico-presentation svg {
+      fill: #ffa8dc;
+      color: #ffa8dc;
+    }
   }
 
   &__upload-btn {
@@ -325,7 +351,7 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       display: inline-flex;
       align-items: center;
     }
@@ -649,6 +675,7 @@ html[data-theme="dark"] {
     }
 
     &__add-menu-item {
+
       span.label,
       section.label {
         color: var(--normal-fg);

@@ -17,6 +17,7 @@
     &[data-anim="in"] {
       transform: translateX(0);
     }
+
     &[data-anim="out"] {
       transform: translateX(-100%);
     }
@@ -36,6 +37,7 @@
   }
 
   &__ui[data-empty="1"] {
+
     .panel-trash__status-bar,
     .panel-trash__footer {
       display: none;
@@ -84,12 +86,10 @@
   }
 
   &__header-title {
-    @include drumee.typo(
-      $size: 18px,
+    @include drumee.typo($size: 18px,
       $weight: 700,
       $line: 20px,
-      $color: var(--normal-fg-10)
-    );
+      $color: var(--normal-fg-10));
     align-items: center;
     display: flex;
     letter-spacing: -0.45px;
@@ -103,24 +103,20 @@
   }
 
   &__selection-count {
-    @include drumee.typo(
-      $color: var(--normal-fg-50),
+    @include drumee.typo($color: var(--normal-fg-50),
       $size: 10px,
       $weight: 600,
-      $line: 1
-    );
+      $line: 1);
     font-family: var(--font-mono, var(--font-medium));
     text-transform: uppercase;
     letter-spacing: 0.4px;
   }
 
   &__empty-btn {
-    @include drumee.typo(
-      $color: var(--active-border),
+    @include drumee.typo($color: var(--active-border),
       $size: 10px,
       $weight: 600,
-      $line: 1
-    );
+      $line: 1);
     font-family: var(--font-mono, var(--font-medium));
     text-transform: uppercase;
     letter-spacing: 0.4px;
@@ -140,7 +136,7 @@
     overflow: hidden;
     background-color: var(--normal-bg-90);
 
-    > .smart-container {
+    >.smart-container {
       height: 100%;
     }
   }
@@ -212,23 +208,19 @@
   }
 
   &__placeholder-title {
-    @include drumee.typo(
-      $size: 24px,
+    @include drumee.typo($size: 24px,
       $weight: 600,
       $line: 1.1,
-      $color: var(--normal-fg-10)
-    );
+      $color: var(--normal-fg-10));
     text-align: center;
     margin-top: 32px;
     margin-bottom: 8px;
   }
 
   &__placeholder-hint {
-    @include drumee.typo(
-      $color: var(--normal-fg-50),
+    @include drumee.typo($color: var(--normal-fg-50),
       $size: 14px,
-      $line: 1.4
-    );
+      $line: 1.4);
     text-align: center;
     max-width: 240px;
     margin-bottom: 40px;
@@ -260,12 +252,10 @@
     .inner,
     .note-content,
     .drumee-text {
-      @include drumee.typo(
-        $size: 14px,
+      @include drumee.typo($size: 14px,
         $weight: 600,
         $line: 20px,
-        $color: #e4e3ff
-      );
+        $color: #e4e3ff);
     }
 
     &:hover {
@@ -274,12 +264,10 @@
   }
 
   &__placeholder-history {
-    @include drumee.typo(
-      $color: var(--normal-fg-50),
+    @include drumee.typo($color: var(--normal-fg-50),
       $size: 12px,
       $weight: 600,
-      $line: 1.4
-    );
+      $line: 1.4);
     font-family: var(--font-mono, var(--font-medium));
     text-transform: uppercase;
     letter-spacing: 0.48px;
@@ -305,15 +293,20 @@
 
   &__placeholder-storage,
   &__placeholder-policy {
-    @include drumee.typo(
-      $color: var(--normal-fg-50),
+    @include drumee.typo($color: var(--normal-fg-50),
       $size: 10px,
       $weight: 600,
-      $line: 1
-    );
+      $line: 1);
     font-family: var(--font-mono, var(--font-medium));
     text-transform: uppercase;
     letter-spacing: 0.4px;
+  }
+
+
+  &__overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
   }
 
   /* ── Footer row ──────────────────────────────────────────── */
@@ -360,10 +353,6 @@
   }
 
   &__purge {
-    &-header {
-      width: 100%;
-    }
-
     &-container {
       position: absolute;
       width: 100%;
@@ -372,28 +361,124 @@
       justify-content: center;
       top: 46px;
       background-color: rgba(137, 146, 158, 0.4);
-      padding: 10px;
+      padding: 16px;
     }
 
-    &-content {
-      height: 200px;
+    &-dialog {
       width: 100%;
-      background: var(--normal-bg);
+      background: var(--normal-bg-90);
+      border-radius: 12px;
+      padding: 20px 24px 24px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    &-dialog-top {
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    &-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background-color: rgba(117, 126, 255, 0.12);
+      align-items: center;
       justify-content: center;
-      border-radius: var(--border-radius);
-      padding: 10px;
+      flex-shrink: 0;
+    }
+
+    &-avatar-icon {
+      color: var(--indigo-400);
+      width: 24px;
+      height: 24px;
+
+      svg {
+        width: 100%;
+        height: 100%;
+        fill: currentColor;
+      }
+    }
+
+    &-close {
+      color: var(--normal-fg-30);
+      cursor: pointer;
+
+      .svg-wrapper,
+      .drumee-svg,
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      &:hover {
+        color: var(--normal-fg-10);
+      }
+    }
+
+    &-title {
+      @include drumee.typo($size: 16px, $line: 1.4, $weight: 500, $color: var(--normal-fg-10));
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    &-message {
+      @include drumee.typo($size: 13px, $line: 1.5, $weight: 400, $color: var(--normal-fg-20));
+      padding: 0 4px;
+
+      p {
+        margin: 0;
+      }
+    }
+
+    &-spacer {
+      flex: 1;
+      min-height: 24px;
+    }
+
+    &-actions {
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    &-btn {
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.4;
+      transition: opacity 0.15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+
+      &--cancel {
+        background: var(--normal-bg);
+        border: 1px solid var(--border-muted);
+        color: var(--normal-fg-20);
+
+        &:hover {
+          background-color: var(--normal-bg-100);
+        }
+      }
+
+      &--danger {
+        background: #c74641;
+        color: #fff;
+        border: 1px solid transparent;
+
+        &::hover {
+          background-color: #c74641;
+        }
+      }
     }
 
     &-progress {
       background-color: var(--normal-bg);
-    }
-
-    &-title {
-      @include drumee.typo($size: 16px, $line: 22px, $weight: 400);
-      padding: 0 7px;
-      justify-content: center;
-      display: flex;
-      flex-direction: row;
     }
   }
 }
