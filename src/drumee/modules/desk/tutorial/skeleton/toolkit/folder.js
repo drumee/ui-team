@@ -32,8 +32,13 @@ const MESSAGES = [
 
 const WORKSPACES = [
   { name: "Private Folder", area: _a.personal, variant: "purple", state: 1 },
-  { name: "Restricted Folder", area: _a.private, variant: "salmon", state: 0 },
-  { name: "Shared Folder", area: _a.share, variant: "pink", state: 0 },
+  {
+    name: "Restricted Workspace",
+    area: _a.private,
+    variant: "salmon",
+    state: 0,
+  },
+  { name: "Shared Workspace", area: _a.share, variant: "pink", state: 0 },
 ];
 
 /**
