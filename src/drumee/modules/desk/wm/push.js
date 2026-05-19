@@ -319,7 +319,7 @@ class __push_manager extends winman {
       case SERVICE.conference.accept:
         this.verbose("AAA:364", currentRoom, currentRoom.state, _a.invite, data)
         state = "connect";
-        if (currentRoom.state == _a.invite) {
+        if (currentRoom.state == _a.invite || currentRoom.state == 'connect') {
           return;
         }
         break;

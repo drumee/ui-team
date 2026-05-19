@@ -20,6 +20,39 @@
       height: 0;
       width: 18px;
     }
+
+    // Per-area folder color overrides — mirrors the grid-mode
+    // .folder-shape.{area} variants (see media/grid/skin/container.scss).
+    // Tab (:before) uses a lighter shade for the 3D folder-tab effect.
+    &.personal {
+      background-color: var(--area-personal);
+      &:before {
+        border-top-color: #6c66d2;
+        border-right-color: #6c66d2;
+      }
+    }
+    &.private {
+      background-color: var(--area-private);
+      &:before {
+        border-top-color: #f08983;
+        border-right-color: #f08983;
+      }
+    }
+    &.share,
+    &.dmz {
+      background-color: var(--area-share);
+      &:before {
+        border-top-color: #ffc6e7;
+        border-right-color: #ffc6e7;
+      }
+    }
+    &.public {
+      background-color: var(--area-public);
+      &:before {
+        border-top-color: #76cdff;
+        border-right-color: #76cdff;
+      }
+    }
   }
   .media-checkbox-wrapper {
     border-color: var(--ewhite);
