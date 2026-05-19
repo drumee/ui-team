@@ -45,14 +45,21 @@ function workspaceCard(ui, ws) {
   const pfx = ui.fig.family;
   const tags = Array.isArray(ws.tags) ? ws.tags : [];
   const subtitleParts = [];
-  if (ws.updated) subtitleParts.push(ws.updated);
-  if (ws.size) subtitleParts.push(ws.size);
+  if (ws.updated) {
+    subtitleParts.push(`${LOCALE.UPDATED || "Updated"} ${ws.updated}`);
+  }
+  if (ws.storage_size) subtitleParts.push(ws.storage_size);
+  const memberCount = ws.member_count;
+  const memberLabel =
+    memberCount === 1
+      ? LOCALE.MEMBER || "member"
+      : LOCALE.MEMBERS_LOWER || "members";
   const area = ws.area || "private";
   return Skeletons.Box.X({
     className: `${pfx}__perm-card`,
     service: "apps-perm-open-workspace",
     uiHandler: [ui],
-    workspace_id: ws.id,
+    workspace_id: ws.id || ws.hub_id,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__perm-card-body`,
@@ -64,7 +71,7 @@ function workspaceCard(ui, ws) {
               area,
               filetype: _a.hub,
               role: "desk",
-              widgetId: `perm-${ws.id}`,
+              widgetId: `perm-${ws.id || ws.hub_id}`,
               isAttachment: 1,
             }),
           }),
@@ -76,18 +83,37 @@ function workspaceCard(ui, ws) {
                 kids: [
                   Skeletons.Note({
                     className: `${pfx}__perm-title`,
-                    content: ws.name,
+                    content: ws.name || ws.hub_name || ws.hub_id,
                   }),
-                  Skeletons.Note({
-                    className: `${pfx}__perm-subtitle`,
-                    content: subtitleParts.join(" • "),
-                  }),
+                  subtitleParts.length
+                    ? Skeletons.Note({
+                        className: `${pfx}__perm-subtitle`,
+                        content: subtitleParts.join(" • "),
+                      })
+                    : null,
+                  memberCount != null
+                    ? Skeletons.Box.X({
+                        className: `${pfx}__perm-members`,
+                        kids: [
+                          Skeletons.Image.Svg({
+                            ico: "desktop_contact",
+                            className: `${pfx}__perm-members-ico`,
+                          }),
+                          Skeletons.Note({
+                            className: `${pfx}__perm-members-label`,
+                            content: `${memberCount} ${memberLabel}`,
+                          }),
+                        ],
+                      })
+                    : null,
                 ],
               }),
-              Skeletons.Box.X({
-                className: `${pfx}__perm-tags`,
-                kids: tags.map((t) => tagChip(pfx, t)).filter(Boolean),
-              }),
+              tags.length
+                ? Skeletons.Box.X({
+                    className: `${pfx}__perm-tags`,
+                    kids: tags.map((t) => tagChip(pfx, t)).filter(Boolean),
+                  })
+                : null,
             ],
           }),
         ],
