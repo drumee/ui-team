@@ -879,7 +879,7 @@ class __window_folder extends mfsInteract {
     return this.postService(SERVICE.hub.invite, {
       hub_id,
       invitees: [email],
-      permission: privilege,
+      privilege,
     })
       .then((res) => {
         // hub.invite trả {results:[...]} khi OK; khi lỗi (vd ACL 403) trả

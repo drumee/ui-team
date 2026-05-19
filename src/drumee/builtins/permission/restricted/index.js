@@ -66,11 +66,11 @@ class __permission_restricted extends DrumeeMFS {
             edit: _K.privilege.write,
             view: _K.privilege.read,
           };
-          const permission = rolePrivilege[this._inviteRole] || _K.privilege.admin;
+          const privilege = rolePrivilege[this._inviteRole] || _K.privilege.admin;
           this.postService(SERVICE.hub.invite, {
             hub_id: this.mget(_a.hub_id),
             invitees: [email],
-            permission,
+            privilege,
           }).then((res) => {
             if (res && (res.error || res.error_code)) {
               return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
