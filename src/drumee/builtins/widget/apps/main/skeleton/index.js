@@ -165,18 +165,6 @@ function tabs(ui) {
         ),
       }),
       hubChip || null,
-      Skeletons.Box.X({
-        className: `${pfx}__reward`,
-        service: "apps-reward",
-        uiHandler: [ui],
-        kids: [
-          Skeletons.Note({ className: `${pfx}__reward-emoji`, content: "🏆" }),
-          Skeletons.Note({
-            className: `${pfx}__reward-label`,
-            content: LOCALE.REWARD_HUB || "Reward Hub",
-          }),
-        ],
-      }),
     ].filter(Boolean),
   });
 }
