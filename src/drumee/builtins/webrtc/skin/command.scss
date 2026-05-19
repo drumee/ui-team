@@ -154,6 +154,20 @@
         background-color: var(--multimedia-vdo-ctrl-button);
         color: var(--default-icon-reverse);
       }
+
+      &.hand-raise {
+        color: var(--multimedia-vdo-icon);
+
+        &[data-state="0"]:before,
+        &[data-state="1"]:before {
+          display: none;
+        }
+
+        &[data-raised="1"] {
+          background-color: var(--button-accept, #18ac72);
+          color: var(--default-icon-reverse);
+        }
+      }
     }
   }
 
