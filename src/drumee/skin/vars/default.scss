@@ -59,6 +59,13 @@
   --default-text-notification: #ffffff;
   --neutral-text-notification: #626262;
 
+  /**folder accent (used by row-mode folder preview, notify badge,
+   * forbiden badge — vars previously only defined in the orphan file
+   * window/skin/vars/folder.scss, so they resolved to "unset" and the
+   * row-mode folder icon rendered blank.) **/
+  --folder-main: #1D8AEA;
+  --folder-main-light: #61AAF2;
+
   /**icon**/
   --default-user-icon: #B6BFCA;
   --background-user-icon: hsla(0, 0%, 78.4%, .5);
