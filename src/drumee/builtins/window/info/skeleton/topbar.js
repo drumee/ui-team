@@ -1,6 +1,3 @@
-const { badge_logo } = require("builtins/skeleton/toolkit");
-
-
 module.exports = function (ui) {
   const figname = "topbar";
   const pfx = `${ui.fig.group}`;
@@ -10,7 +7,19 @@ module.exports = function (ui) {
     debug: __filename,
     service: _e.raise,
     kids: [
-      badge_logo(ui, "c1"),
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__logo`,
+        kids: [
+          Skeletons.Button.Svg({
+            ico: "logo-upload",
+            className: `${ui.fig.family}__logo-ico`,
+          }),
+          Skeletons.Note({
+            content: "drumee",
+            className: `${ui.fig.family}__logo-text`,
+          }),
+        ],
+      }),
       Skeletons.Box.X({
         className: `${pfx}__title forbiden`,
         kids: [
