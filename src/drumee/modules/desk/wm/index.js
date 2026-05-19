@@ -1377,7 +1377,6 @@ class __window_manager extends push {
         return this.openCreateFolderDialog();
 
       case "add-private-folder":
-        this._pendingFolderArea = _a.private;
         return this.openCreateFolderDialog();
 
       case "create-folder-submit":
