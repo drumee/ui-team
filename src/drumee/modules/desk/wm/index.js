@@ -364,8 +364,8 @@ class __window_manager extends push {
   // explicit settings entry points that pass a `start` argument.
   openContent(media, args) {
     if (media && media.mget
-        && media.mget(_a.filetype) === _a.hub
-        && media.mget(_a.status) !== _a.deleted) {
+      && media.mget(_a.filetype) === _a.hub
+      && media.mget(_a.status) !== _a.deleted) {
       return this.loadWorkspace(media);
     }
     return super.openContent(media, args);
@@ -959,7 +959,6 @@ class __window_manager extends push {
             hub_id: media.mget(_a.hub_id)
           }).then((data) => {
             media.suppress();
-            this.reload();
             resolve(data)
           });
           this.animateMediaToTrash(media).then(deleteHub).catch(deleteHub);
@@ -1274,7 +1273,7 @@ class __window_manager extends push {
           }
         });
 
-        case "new-sub-folder":
+      case "new-sub-folder":
         return this.addFolder({ position: 0, area: _a.personal, filename: LOCALE.NEW_FOLDER })
 
       case _a.helpdesk:
@@ -1378,10 +1377,10 @@ class __window_manager extends push {
         return this.openCreateFolderDialog();
 
       case "add-private-folder":
-        this._pendingFolderArea = _a.private;
         return this.openCreateFolderDialog();
 
       case "create-folder-submit":
+        this._pendingFolderArea = _a.personal;
         return this.createFolderFromDialog(cmd);
 
       case "close-folder-dialog":
