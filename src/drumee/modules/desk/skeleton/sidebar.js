@@ -124,76 +124,41 @@ const createFooter = (ui, username) => {
         "red",
         Butler.logout,
       ),
-      // userMenu(ui)
-      // Skeletons.UserProfile({ auto_color:1, oneLetter:1, className: cls(fig, "footer-user-btn") }),
+      // Bottom profile item: shows the user's avatar (UserProfile widget —
+      // photo with auto-letter fallback) and opens the Settings layout on
+      // click. Refreshed on the "avatar-changed" broadcast by desk_module.
       Skeletons.Box.Y({
         className: cls(fig, "footer-user-wrapper"),
         sys_pn: "user-menu-anchor",
         partHandler: ui,
-        kidsOpt: { active: 0 },
         kids: [
           Skeletons.Box.X({
             className: cls(fig, "footer-user-btn"),
             sys_pn: "user-menu-trigger",
             partHandler: ui,
-            service: "toggle-user-menu",
+            service: "toggle-settings",
             uiHandler: [ui],
             kidsOpt: { active: 0 },
             kids: [
-              Skeletons.Box.X({
+              Skeletons.UserProfile({
                 className: cls(fig, "footer-avatar"),
-                kidsOpt: { active: 0 },
-                kids: [
-                  createText(fig, "footer-avatar-note", getInitials(username)),
-                ],
+                sys_pn: "sidebar-avatar",
+                partHandler: ui,
+                auto_color: 0,
+                oneLetter: 1,
               }),
               Skeletons.Box.Y({
                 className: cls(fig, "footer-name-wrapper"),
                 kidsOpt: { active: 0 },
                 kids: [
-                  createText(fig, "footer-username", username),
+                  Skeletons.Note({
+                    className: cls(fig, "footer-username"),
+                    content: username,
+                    active: 0,
+                    sys_pn: "sidebar-username",
+                    partHandler: ui,
+                  }),
                   createText(fig, "footer-user-plan", LOCALE.PRO_PLAN),
-                ],
-              }),
-            ],
-          }),
-          Skeletons.Box.Y({
-            className: cls(fig, "footer-user-menu"),
-            sys_pn: "user-menu-items",
-            partHandler: ui,
-            dataset: { state: "closed" },
-            kidsOpt: {
-              active: 0,
-            },
-            kids: [
-              Skeletons.Box.X({
-                className: `${cls(fig, "footer-user-menu-item")} account`,
-                service: "open-account",
-                uiHandler: [ui],
-                kidsOpt: {
-                  active: 0,
-                },
-                kids: [
-                  Skeletons.Image.Svg({
-                    ico: "desktop_account--white",
-                    className: cls(fig, "footer-user-menu-icon"),
-                  }),
-                  createText(fig, "footer-user-menu-label", LOCALE.MY_ACCOUNT || "My account"),
-                ],
-              }),
-              Skeletons.Box.X({
-                className: `${cls(fig, "footer-user-menu-item")} helpdesk`,
-                service: _a.helpdesk,
-                uiHandler: [ui],
-                kidsOpt: {
-                  active: 0,
-                },
-                kids: [
-                  Skeletons.Image.Svg({
-                    ico: "desktop_questionmark",
-                    className: cls(fig, "footer-user-menu-icon"),
-                  }),
-                  createText(fig, "footer-user-menu-label", LOCALE.HELPDESK || "Helpdesk"),
                 ],
               }),
             ],

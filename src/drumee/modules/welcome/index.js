@@ -64,11 +64,14 @@ class __welcome_router extends LetcBox {
     }
     let { name, kind } = plugins.signup;
     if (Kind.get(kind)) {
-      return this.feed({ kind });
+      this.feed({ kind });
+      this._preloadCounterpart('signin');
+      return;
     }
     Kind.loadPlugin({ name, kind }).then(() => {
       Kind.waitFor(kind).then((k) => {
         this.feed({ kind });
+        this._preloadCounterpart('signin');
       })
     }).catch((e) => {
       return loadDefault();
@@ -76,7 +79,7 @@ class __welcome_router extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   loadSignin() {
     const loadDefault = (opt = {}) => {
@@ -109,11 +112,14 @@ class __welcome_router extends LetcBox {
     }
     let { name, kind } = plugins.signin;
     if (Kind.get(kind)) {
-      return this.feed({ kind });
+      this.feed({ kind });
+      this._preloadCounterpart('signup');
+      return;
     }
     Kind.loadPlugin({ name, kind }).then(() => {
       Kind.waitFor(kind).then((k) => {
         this.feed({ kind });
+        this._preloadCounterpart('signup');
       })
     }).catch((e) => {
       return loadDefault();
@@ -121,7 +127,19 @@ class __welcome_router extends LetcBox {
   }
 
   /**
-   * 
+   * Prefetch the opposite welcome plugin (signin while showing signup, or vice
+   * versa) so the cross-link transition is instant on the next click. Silent
+   * on failure: this is a perf optimization, not a correctness requirement.
+   */
+  _preloadCounterpart(name) {
+    const plugins = Platform.get('plugins');
+    const cfg = plugins && plugins[name];
+    if (!cfg || !cfg.kind || Kind.exists(cfg.kind)) return;
+    Kind.loadPlugin(cfg).catch(() => {});
+  }
+
+  /**
+   *
    */
   loadReset() {
     const loadDefault = (opt = {}) => {

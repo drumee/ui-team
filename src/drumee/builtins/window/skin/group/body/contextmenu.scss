@@ -9,15 +9,6 @@
       display: flex;
       cursor: pointer;
 
-      &:hover {
-        background-color: var(--folder-main);
-        color: var(--default-text-reverse);
-
-        svg {
-          color: var(--default-text-reverse);
-        }
-      }
-
       svg {
         height: 20px;
         width: 20px;

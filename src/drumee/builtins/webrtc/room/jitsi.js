@@ -710,7 +710,8 @@ class __webrtc_room extends __room {
       if (!this._joining) this.stateMessage("waiting");
     }
     this.stateMessage(
-      LOCALE.X_HAS_JOINED_MEETING.format(participant.getDisplayName(), "")
+      LOCALE.X_HAS_JOINED_MEETING.format(participant.getDisplayName(), ""),
+      3000
     );
     this.__participants.append(
       require("builtins/webrtc/skeleton/remote-user")(this, {

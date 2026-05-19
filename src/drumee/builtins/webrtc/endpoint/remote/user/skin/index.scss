@@ -22,6 +22,7 @@
     background-color: var(--multimedia-background);
     overflow: hidden;
     border-radius: 12px;
+    container-type: size;
   }
 
   &__avatar {
@@ -37,19 +38,32 @@
       display: none;
     }
 
+    .user-profile__ui {
+      width: min(60cqmin, 180px);
+      height: min(60cqmin, 180px);
+      max-width: calc(100% - 24px);
+      max-height: calc(100% - 64px);
+      flex: none;
+    }
+
     .user-profile__icon {
-      width: 120px;
-      height: 120px;
+      width: 100%;
+      height: 100%;
     }
 
     .user-profile__main {
+      width: 100%;
+      height: 100%;
       background-color: #5e5e5e !important;
+      border-radius: 50%;
+      overflow: hidden;
       justify-content: center;
       align-items: center;
 
       img {
         width: 100%;
         height: 100%;
+        object-fit: cover;
       }
     }
 
@@ -57,7 +71,7 @@
       border-radius: 100%;
 
       .note-content {
-        font-size: 45px;
+        font-size: clamp(18px, 25cqmin, 45px);
         font-weight: bold;
       }
     }
@@ -90,14 +104,13 @@
   // ── Tile footer bar (mute + name pill + dots) ──────────────────────────
   &__tile-footer {
     position: absolute;
-    bottom: 10px;
-    right: 50%;
-    transform: translateX(50%);
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
     gap: 6px;
     align-items: center;
     justify-content: center;
     z-index: 10;
-    width: 300px;
   }
 
   &__tile-mic {
@@ -151,6 +164,34 @@
     border-radius: 50%;
     flex-shrink: 0;
     color: #fff;
+  }
+
+  &__hand-raise-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 32px;
+    height: 32px;
+    padding: 7px;
+    border-radius: 50%;
+    background-color: var(--button-accept, #18ac72);
+    color: #fff;
+    z-index: 30;
+    display: none;
+    animation: hand-raise-pulse 1.8s ease-in-out infinite;
+  }
+
+  &__ui[data-raised="1"] &__hand-raise-badge {
+    display: flex;
+  }
+
+  @keyframes hand-raise-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(24, 172, 114, 0.6);
+    }
+    50% {
+      box-shadow: 0 0 0 6px rgba(24, 172, 114, 0);
+    }
   }
 
   // ── Legacy audio mute (hidden — replaced by tile-mic) ─────────────────

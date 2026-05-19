@@ -88,6 +88,11 @@ const __skl_stream_remote = function (_ui_) {
         dataset: { error: 0 }
       }),
 
+      Skeletons.Button.Svg({
+        className: `${_ui_.fig.family}__hand-raise-badge`,
+        ico: "hand-raise",
+      }),
+
       sound,
       footer,
     ]
