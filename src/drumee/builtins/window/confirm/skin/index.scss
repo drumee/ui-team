@@ -267,22 +267,10 @@
     // we don't depend on that broken token.
     background-color: var(--primary-50, #433cc5);
     border: 0;
-    @include drumee.typo(
-      $size: 14px,
-      $line: 20px,
-      $weight: 600,
-      $color: #fff
-    );
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #fff);
 
     &:hover {
-<<<<<<< HEAD
-      background-color: var(
-        --btn-commit-background-hover,
-        var(--primary-40, #5950ff)
-      );
-=======
       background-color: var(--primary-40, #5950ff);
->>>>>>> e5c7ffe8c93a29323d890166151272fb1b797d57
     }
 
     &.large {
