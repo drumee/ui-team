@@ -141,7 +141,8 @@ function tabs(ui) {
   ];
   const visible =
     ui._visibleTabs && ui._visibleTabs.length ? new Set(ui._visibleTabs) : null;
-  const tabList = visible ? allTabs.filter((t) => visible.has(t.key)) : allTabs;
+  let tabList = visible ? allTabs.filter((t) => visible.has(t.key)) : allTabs;
+  if (!ui._isPrivileged) tabList = tabList.filter((t) => t.key !== "security");
   const hubChip = adminHubChip(ui);
   return Skeletons.Box.X({
     className: `${pfx}__tabs`,
@@ -844,7 +845,7 @@ export default function apps_main_skeleton(ui) {
       kids: content,
     }),
   ];
-  if (ui._role === "admin" && !ui._adminUnlocked) {
+  if ((ui._role === "admin" || !ui._isPrivileged) && !ui._adminUnlocked) {
     root.push(adminUpsellOverlay(ui));
   }
   if (ui._showApplyConfirm) {

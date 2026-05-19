@@ -1297,6 +1297,7 @@
   "AVATAR_UPLOAD_FAILED": "Could not upload avatar. Please try again.",
   "DISPLAY_NAME": "Display Name",
   "BIO": "Bio",
+  "BIO_PLACEHOLDER": "Tell us a bit about yourself",
   "GENERAL_PROFILE": "General Profile",
   "GENERAL_PROFILE_SUBTITLE": "Manage your public identity and profile visuals.",
   "EMAIL_NOTIFICATIONS": "Email notifications",
