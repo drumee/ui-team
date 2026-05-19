@@ -45,7 +45,11 @@ function adminHubChip(ui) {
   const hubs = ui._adminHubs || [];
   if (ui._role !== "admin" || !hubs.length) return null;
   // On the Member tab the overview cards already pick the workspace.
-  if (ui._tab === "member" && ui._memberView === "overview") return null;
+  if (
+    (ui._tab === "member" || ui._tab === "permissions") &&
+    ui._memberView === "overview"
+  )
+    return null;
   const active = hubs.find((h) => h.hub_id === ui._activeAdminHub) || hubs[0];
   const label = (active && (active.hub_name || active.hub_id)) || "—";
 
