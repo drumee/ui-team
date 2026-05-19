@@ -577,7 +577,7 @@ class __window_manager extends push {
    * pass through unchanged: mfs_show_node_by's IFNULL(area, _hub_area)
    * stamps them with the home hub's area='personal', so a flat area
    * filter would erase them. Hence the filetype guard.
-   * Collaborative set is {share, private, restricted} — `private` here
+   * Collaborative set is {share, private, restricted, public} — `private` here
    * is the UX "restricted" workspace, not the personal hub.
    * No-op once the user has navigated into a sub-workspace.
    */
