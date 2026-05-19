@@ -71,7 +71,8 @@ class drumee_router extends LetcBox {
     RADIO_BROADCAST.on("user:signed:in", this.restart.bind(this));
     window.uiRouter = this;
 
-    window.onhashchange = this.route.bind(this);
+    this._boundRoute = this.route.bind(this);
+    window.onhashchange = this._boundRoute;
   }
 
   /**
@@ -125,7 +126,9 @@ class drumee_router extends LetcBox {
    */
   onBeforeDestroy() {
     RADIO_BROADCAST.off(_e.responsive, this._responsive);
-    window.onhashchange = null;
+    if (window.onhashchange === this._boundRoute) {
+      window.onhashchange = null;
+    }
   }
 
   /**
