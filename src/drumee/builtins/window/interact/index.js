@@ -465,6 +465,22 @@ class __window_interact extends windowCore {
    */
   syncContent() {
     this.__list._renderChildren();
+    // _renderChildren reattaches every child view as a direct descendant of
+    // .smart-container, undoing the .workspace-section / .folder-section /
+    // .file-section partition. Empirically the MutationObserver from
+    // _setupPartitionObserver does NOT fire reliably here — likely because
+    // _renderChildren batches into a documentFragment then a single append,
+    // and our async rAF debounce skips while a Marionette destroy handler
+    // is still on the stack (afterUpload → syncOrder → _syncOrder → syncAll
+    // calls us synchronously from a child destroy chain). Without an
+    // explicit re-partition the items reflow into the scrollEl flex-column
+    // layout. Folder + Wm both need this; gate on isWm / isFolder to keep
+    // non-partitioned surfaces (share/search/meeting) untouched.
+    if ((this.isWm || this.isFolder)
+        && typeof this._partitionFoldersAndFiles === "function"
+        && this.getViewMode && this.getViewMode() !== _a.row) {
+      this._partitionFoldersAndFiles(this.__list);
+    }
   }
 
   /**
