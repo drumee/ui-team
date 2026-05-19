@@ -231,6 +231,10 @@ class __window_meeting extends __room {
         }
         return;
       }
+      if (sameRoom && options.event === "HAND_RAISE") {
+        this._applyRemoteHandRaise(data);
+        return;
+      }
     }
     if (super.onWsMessage) return super.onWsMessage(service, data, options);
   }
@@ -312,8 +316,42 @@ class __window_meeting extends __room {
         this._inviteToRoom(cmd.getAttr());
         break;
 
+      case "hand-raise":
+        this._toggleHandRaise(cmd);
+        break;
+
       default:
         super.onUiEvent(cmd, args);
+    }
+  }
+
+  _applyRemoteHandRaise(data) {
+    if (!data) return;
+    const pid = data.participant_id;
+    if (!pid || !this.endpoints) return;
+    const endpoint = this.endpoints[pid];
+    if (!endpoint || endpoint.isDestroyed() || !endpoint.el) return;
+    endpoint.el.dataset.raised = data.state ? 1 : 0;
+  }
+
+  _toggleHandRaise(cmd) {
+    const raised = cmd.el.dataset.raised === "1" ? 0 : 1;
+    cmd.el.dataset.raised = raised;
+    if (cmd.el) {
+      cmd.el.setAttribute("title", raised ? (LOCALE.LOWER_HAND || "Lower hand") : (LOCALE.RAISE_HAND || "Raise hand"));
+    }
+    try {
+      this.sendRoomSignaling(SERVICE.conference.broadcast, {
+        event: "HAND_RAISE",
+        payload: {
+          room_id: this.mget(_a.room_id),
+          participant_id: this.room && this.room.myUserId && this.room.myUserId(),
+          uid: Visitor.id,
+          state: raised,
+        },
+      });
+    } catch (e) {
+      if (this.warn) this.warn("hand-raise broadcast failed", e);
     }
   }
 

@@ -94,7 +94,7 @@ class __panel_trash extends mfsInteract {
       return this.ensurePart('items-count').then((p) => {
         p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
       });
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   async _restoreFile(media) {
@@ -155,31 +155,33 @@ class __panel_trash extends mfsInteract {
     });
   }
 
-  _emptyBin() {
-    return Wm.confirm({
-      title: LOCALE.TRASH,
-      message: LOCALE.Q_DELETE_ALL_FILES,
-      confirm: LOCALE.DELETE || 'Delete',
-      confirm_type: 'danger trash-delete',
-      cancel: LOCALE.CANCEL || 'Cancel',
-      cancel_type: 'secondary',
-      mode: 'hbf'
-    }).then(() => {
-      return this.postService({
-        service: SERVICE.media.empty_bin,
-        hub_id: Visitor.id,
-      }).then((data) => {
-        this.feed(require('./skeleton')(this));
-        RADIO_MEDIA.trigger(_a.free, data);
-      });
-    }).catch(() => {});
+  async _emptyBin() {
+    const overlay = await this.ensurePart('overlay');
+    overlay.feed(require('./skeleton/confirm')(this));
   }
+
+  async _confirmEmptyBin() {
+    const data = await this.postService({
+      service: SERVICE.media.empty_bin,
+      hub_id: Visitor.id,
+    }).catch(() => null);
+    const overlay = await this.ensurePart('overlay');
+    overlay.clear();
+    if (data) RADIO_MEDIA.trigger(_a.free, data);
+    this.feed(require('./skeleton')(this));
+  }
+
 
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
       case 'empty-bin':
         return this._emptyBin();
+      case 'confirm-empty-bin':
+        return this._confirmEmptyBin();
+      case 'cancel-empty-bin':
+        this.ensurePart('overlay').then(p => p.clear());
+        return;
       case 'delete-permanently':
         return this.deleteFilePermanently(args.media || cmd);
       case 'restore-to-desk':

@@ -29,6 +29,10 @@ module.exports = function (ui) {
           }),
         ],
       }),
+      Skeletons.Wrapper.Y({
+        className: `${pfx}__overlay`,
+        sys_pn: "overlay"
+      }),
     ],
   });
 };

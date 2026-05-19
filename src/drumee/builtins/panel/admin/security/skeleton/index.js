@@ -21,7 +21,6 @@ module.exports = function (ui) {
         kids: [
           require('./tfa')(ui),
           require('./sso')(ui),
-          require('./reward')(ui),
         ],
       }),
       Skeletons.Box.Y({

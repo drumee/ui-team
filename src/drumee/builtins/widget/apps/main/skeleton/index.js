@@ -141,7 +141,8 @@ function tabs(ui) {
   ];
   const visible =
     ui._visibleTabs && ui._visibleTabs.length ? new Set(ui._visibleTabs) : null;
-  const tabList = visible ? allTabs.filter((t) => visible.has(t.key)) : allTabs;
+  let tabList = visible ? allTabs.filter((t) => visible.has(t.key)) : allTabs;
+  if (!ui._isPrivileged) tabList = tabList.filter((t) => t.key !== "security");
   const hubChip = adminHubChip(ui);
   return Skeletons.Box.X({
     className: `${pfx}__tabs`,
@@ -164,18 +165,6 @@ function tabs(ui) {
         ),
       }),
       hubChip || null,
-      Skeletons.Box.X({
-        className: `${pfx}__reward`,
-        service: "apps-reward",
-        uiHandler: [ui],
-        kids: [
-          Skeletons.Note({ className: `${pfx}__reward-emoji`, content: "🏆" }),
-          Skeletons.Note({
-            className: `${pfx}__reward-label`,
-            content: LOCALE.REWARD_HUB || "Reward Hub",
-          }),
-        ],
-      }),
     ].filter(Boolean),
   });
 }
@@ -844,7 +833,7 @@ export default function apps_main_skeleton(ui) {
       kids: content,
     }),
   ];
-  if (ui._role === "admin" && !ui._adminUnlocked) {
+  if ((ui._role === "admin" || !ui._isPrivileged) && !ui._adminUnlocked) {
     root.push(adminUpsellOverlay(ui));
   }
   if (ui._showApplyConfirm) {

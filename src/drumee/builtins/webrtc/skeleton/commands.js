@@ -63,7 +63,8 @@ const __window_connect_commands = function (_ui_) {
             sys_pn: "ctrl-hand",
             name: "hand-raise",
             service: "hand-raise",
-            state: 0,
+            attrOpt: { title: LOCALE.RAISE_HAND },
+            dataset: { raised: 0 },
           }),
           Skeletons.Button.Svg({
             className: "ctrl-button leave",
