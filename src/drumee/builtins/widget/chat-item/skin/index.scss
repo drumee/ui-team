@@ -147,12 +147,10 @@
     }
 
     &-date {
-      @include drumee.typo(
-        $size: 11px,
+      @include drumee.typo($size: 11px,
         $line: 1.4,
         $weight: 400,
-        $color: var(--normal-fg-50)
-      );
+        $color: var(--normal-fg-50));
     }
   }
 
@@ -201,11 +199,9 @@
       padding-left: 4px;
       padding-top: 4px;
       text-transform: capitalize;
-      @include drumee.typo(
-        $size: 12px,
+      @include drumee.typo($size: 12px,
         $line: 12px,
-        $color: var(--secondary-text-color)
-      );
+        $color: var(--secondary-text-color));
     }
   }
 
@@ -219,11 +215,9 @@
       margin: auto;
       max-width: 200px;
       width: 82px;
-      @include drumee.typo(
-        $size: 11px,
+      @include drumee.typo($size: 11px,
         $line: 20px,
-        $color: var(--tertiary-text-color)
-      );
+        $color: var(--tertiary-text-color));
       display: flex;
       flex-direction: row;
       justify-content: center;
@@ -244,11 +238,9 @@
     margin: auto;
     max-width: 200px;
     width: 82px;
-    @include drumee.typo(
-      $size: 11px,
+    @include drumee.typo($size: 11px,
       $line: 12px,
-      $color: var(--tertiary-text-color)
-    );
+      $color: var(--tertiary-text-color));
   }
 
   &__profile {
@@ -270,6 +262,21 @@
       height: 32px;
       border-radius: 12px;
       object-fit: cover;
+    }
+
+    &-initiales {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      user-select: none;
+      line-height: 2;
     }
 
     &.user-profile {
@@ -300,12 +307,10 @@
     text-transform: capitalize;
     white-space: nowrap;
     width: 121px;
-    @include drumee.typo(
-      $size: 11px,
+    @include drumee.typo($size: 11px,
       $line: 10px,
       $weight: 400,
-      $color: var(--default-text-color)
-    );
+      $color: var(--default-text-color));
 
     & .inner.note-content {
       overflow: hidden;
@@ -345,12 +350,10 @@
     &-content {
       overflow: hidden;
       word-wrap: break-word;
-      @include drumee.typo(
-        $size: 12px,
+      @include drumee.typo($size: 12px,
         $line: 14px,
         $weight: 400,
-        $color: var(--normal-fg-10)
-      );
+        $color: var(--normal-fg-10));
 
       & a {
         color: var(--secondary-text-color);
@@ -377,12 +380,10 @@
 
   &__call-duration {
     margin-left: 10px;
-    @include drumee.typo(
-      $size: 13px,
+    @include drumee.typo($size: 13px,
       $line: 14px,
       $weight: 400,
-      $color: var(--default-text-title)
-    );
+      $color: var(--default-text-title));
   }
 
   &__media-attachment {
@@ -401,12 +402,10 @@
     padding: 16px;
     width: fit-content;
     max-width: 100%;
-    @include drumee.typo(
-      $size: 14px,
+    @include drumee.typo($size: 14px,
       $line: 1.4,
       $weight: 400,
-      $color: var(--normal-fg-10)
-    );
+      $color: var(--normal-fg-10));
 
     &.me {
       background-color: var(--chat-bubble-me-bg, #433cc5);
@@ -502,7 +501,9 @@
   cursor: pointer;
   user-select: none;
 
-  &:hover { text-decoration: underline; }
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 // File mention link in chat messages

@@ -283,6 +283,8 @@
   "VIDEO_CONFERENCE": "Visioconférence de {0}",
   "CLEAR_NOTIFICATIONS": "Effacer les notifications",
   "NEW_MESSAGES": "Nouveaux messages",
+  "NEW_MESSAGE": "Nouveau message",
+  "NOTIFICATION_NOT_GRANTED": "Les notifications ne sont pas autorisées. Veuillez les activer dans les paramètres de votre navigateur.",
   "X_FILES": "{0} fichier(s)",
   "FILE_NOT_DISPOSABLE": "Ce fichier n'est pas jetable",
   "NO_VIEWER": "Ce fichier ne peut être affiché.",
