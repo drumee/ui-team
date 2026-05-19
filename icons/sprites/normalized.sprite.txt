@@ -636,6 +636,7 @@
   </symbol>
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 119c6524 (fix ui of player)
 =======
@@ -646,6 +647,10 @@
 >>>>>>> 5675ae4a (update style admin console)
 =======
 >>>>>>> 35e1fc8c (update style admin console)
+=======
+=======
+>>>>>>> 119c6524 (fix ui of player)
+>>>>>>> af718311 (fix ui of player)
   <symbol viewBox="0 0 20 20" x="0" y="0" version="1.1" preserveAspectRatio="xMidYMid meet"
     id="--icon-apps-arrow-clockwise">
     <path
