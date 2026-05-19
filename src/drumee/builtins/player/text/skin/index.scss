@@ -29,7 +29,6 @@
     &__buttons {
       overflow: visible;
       gap: var(--spacer-4);
-      min-width: 315px;
       justify-content: space-between;
 
       .tooltips {
@@ -56,6 +55,8 @@
 
   &__header {
     padding: var(--spacer-4) var(--spacer-6);
+    position: relative;
+    z-index: 2;
 
     &[data-header="0"] {
       display: none;
@@ -71,7 +72,7 @@
     width: 100%;
     height: 100%;
     align-items: center;
-    overflow: hidden;
+    overflow: visible;
   }
 
   &__body {
@@ -117,9 +118,11 @@
         position: absolute;
         padding: 7px;
         top: 18px;
-        @include drumee.typo($line: 15px,
+        @include drumee.typo(
+          $line: 15px,
           $size: 12px,
-          $color: var(--default-text-color));
+          $color: var(--default-text-color)
+        );
       }
     }
   }
@@ -128,10 +131,12 @@
     width: 100%;
     height: 100%;
 
-    @include drumee.typo($size: 13px,
+    @include drumee.typo(
+      $size: 13px,
       $line: 18px,
       $weight: 300,
-      $color: var(--default-text-color));
+      $color: var(--default-text-color)
+    );
     padding: var(--spacer-6) var(--spacer-8);
     user-select: text;
     border: none;
@@ -154,10 +159,12 @@
 
     &__title {
       align-items: center;
-      @include drumee.typo($size: 16px,
+      @include drumee.typo(
+        $size: 16px,
         $line: 24px,
         $weight: 400,
-        $color: var(--normal-fg-10));
+        $color: var(--normal-fg-10)
+      );
       @include drumee.overflow-text;
 
       .icon {
@@ -198,7 +205,7 @@
         background-color: var(--normal-bg-100);
         width: 200px;
         padding: var(--spacer-4);
-        border: 1px solid var(--neutral-800);
+        border: 1px solid var(--border-default);
 
         &__wrapper {
           padding: var(--spacer-4);
@@ -219,14 +226,18 @@
 
     &__item {
       cursor: pointer;
-      padding: var(--spacer-2) var(--spacer-4);
+      padding: var(--spacer-3) var(--spacer-4);
       align-items: center;
       border-radius: var(--corner-radius-1);
       gap: var(--spacer-5);
 
       &:hover {
-        background-color: var(--primary-500);
+        background-color: var(--primary-50);
         color: var(--white);
+
+        .player__dropdown-menu__name {
+          color: var(--white);
+        }
 
         svg {
           fill: var(--white);
@@ -235,8 +246,8 @@
     }
 
     &__icon {
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
 
       svg {
         fill: var(--normal-fg-10);

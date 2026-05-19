@@ -62,7 +62,12 @@ module.exports = function (ui) {
   if (ui.mget(_a.ext) == _a.pdf) {
     downloadPDF = null;
   } else {
-    downloadPDF = item(ui, "download-pdf", "file-pdf", LOCALE.DOWNLOAD_AS_PDF);
+    downloadPDF = item(
+      ui,
+      "download-pdf",
+      "app-pdf-file",
+      LOCALE.DOWNLOAD_AS_PDF,
+    );
   }
 
   if (ui.canUpload() && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
@@ -70,7 +75,7 @@ module.exports = function (ui) {
       edit = item(ui, "preview", "desktop_preview", LOCALE.PREVIEW);
     } else {
       if (Platform.get("doc_editor")) {
-        edit = item(ui, _a.edit, "desktop_edit", LOCALE.EDIT);
+        edit = item(ui, _a.edit, "app-edit", LOCALE.EDIT);
       } else {
         edit = null;
       }

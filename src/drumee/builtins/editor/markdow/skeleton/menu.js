@@ -1,4 +1,3 @@
-
 function item(ui, service, ico, content) {
   const btn = `${ui.fig.group}`;
   const fig = `${btn}__dropdown-menu`;
@@ -36,12 +35,12 @@ module.exports = function (ui) {
   let exportHtml = "";
   let exportPdf = "";
   let print = item(ui, "print", "print", LOCALE.PRINT);
-  let save = ""
+  let save = "";
   if (ui.canUpload()) {
     save = item(ui, "save", "floppy", LOCALE.SAVE_CHANGES);
-    exportPdf = item(ui, "save-pdf", "raw-documents_pdf", LOCALE.EXPORT_AS_PDF);
-    exportHtml = item(ui, "save-html", "editbox_link", LOCALE.EXPORT_AS_HTML);
-    exportWord = item(ui, "save-docx", "raw-documents_word", LOCALE.EXPORT_AS_DOCX);
+    exportPdf = item(ui, "save-pdf", "app-pdf-file", LOCALE.EXPORT_AS_PDF);
+    exportHtml = item(ui, "save-html", "app-html-file", LOCALE.EXPORT_AS_HTML);
+    exportWord = item(ui, "save-docx", "app-doc-file", LOCALE.EXPORT_AS_DOCX);
   }
   const separator = Skeletons.Box.X({
     className: `${fig}__separator`,
@@ -52,7 +51,15 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Box.Y({
         className: `${fig}__items`,
-        kids: [save, separator, exportHtml, exportPdf, exportWord, separator, print],
+        kids: [
+          save,
+          separator,
+          exportHtml,
+          exportPdf,
+          exportWord,
+          separator,
+          print,
+        ],
       }),
     ],
   });
