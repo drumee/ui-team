@@ -875,7 +875,7 @@
   "DMZ_SHAREBOX_FOOTER_CONTENT": "<p>Un cloud propriétaire \"tout en un\" confidentiel entièrement sous votre contrôle.</p>\n<p><span>Gestion de fichiers</span>, <span>Chat</span>, <span>Vidéo</span>, <span>Travail d'équipe</span> avec une <span>interface de nouvelle génération</span >, etc.</p>",
   "MANAGE_SECURITY": "Gérer la sécurité et le serveur",
   "X_SCREEN_PREPARING": "{0} se prépare à partager son écran",
-  "APPS": "Applications",
+  "APPS": "Tableau de bord",
   "SHOW_QRCODE": "Afficher le QR code",
   "NEED_DEVICES_PERMISSION": "Drumee a besoin d'utiliser votre microphone et votre caméra. Veuillez autoriser leur accès.",
   "CONFERENCE_CONNECTION_FAILED": "La connexion au serveur de conférence a échoué",

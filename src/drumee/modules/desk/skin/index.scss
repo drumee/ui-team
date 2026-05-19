@@ -112,3 +112,11 @@ html {
     }
   }
 }
+
+// Lift window_manager above the settings/apps slot (z 1500–20001) while
+// its modal is open; otherwise the modal stays trapped behind Settings/Apps.
+.desk-module__wm-container:has(.window-manager__wrapper-modal[data-state="open"]) {
+  .window-manager__ui {
+    z-index: 30000 !important;
+  }
+}

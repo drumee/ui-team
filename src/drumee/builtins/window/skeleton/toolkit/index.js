@@ -271,6 +271,8 @@ export function chatPanel(ui) {
     chat.area = _a.share;
     chat.hub_id = ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id);
     chat.nid = ui.mget(_a.nid);
+    chat.home_id = ui.mget(_a.home_id);
+    chat.ownpath = ui.mget(_a.ownpath);
   }
 
   return Skeletons.Box.Y({
