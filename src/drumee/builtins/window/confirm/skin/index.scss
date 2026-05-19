@@ -34,7 +34,9 @@
 
     &[data-maxsize="0"],
     &[data-maxsize="2"] {
-      max-width: 360px;
+      min-width: unset;
+      min-height: unset;
+      width: 500px;
     }
   }
 
@@ -50,6 +52,22 @@
   &__topbar {
     width: 100%;
     opacity: 1 !important;
+  }
+
+  &-topbar {
+    &__logo {
+      align-items: end;
+      gap: var(--spacer-2);
+      &-ico {
+        width: 40px;
+        height: 40px;
+        color: var(--primary-50);
+      }
+      &-text {
+        font-weight: bold;
+        font-size: 24px;
+      }
+    }
   }
 
   &-topbar__container {
@@ -193,6 +211,7 @@
     justify-content: flex-end;
     width: 100%;
     padding-top: 2px;
+    height: auto !important;
 
     .button {
       align-items: center;
@@ -205,7 +224,10 @@
       margin: 0;
       padding: 0 14px;
       box-sizing: border-box;
-      transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+      transition:
+        background-color 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease;
       @include drumee.typo($size: 13px, $line: 18px, $weight: 600);
     }
 
@@ -247,7 +269,10 @@
     );
 
     &:hover {
-      background-color: var(--btn-commit-background-hover, var(--primary-40, #5950ff));
+      background-color: var(
+        --btn-commit-background-hover,
+        var(--primary-40, #5950ff)
+      );
     }
 
     &.large {
