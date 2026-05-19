@@ -235,7 +235,7 @@ class __widget_chat extends LetcBox {
    */
   onPasteBase64(args) {
     if (args.area && /^data:image/.test(args.area)) {
-      let { chat_upload_id: nid, hub_id, home_id } = this.mget(_a.home);
+      const { nid, hub_id, home_id } = this._getUploadDestination();
       let pm = {
         respawn: 'media_paste',
         area: args.area,
@@ -247,6 +247,26 @@ class __widget_chat extends LetcBox {
       this.insertMedia(pm);
     }
     this.showSend();
+  }
+
+  _getUploadDestination() {
+    // onDomRefresh overwrites mget(_a.nid) with chat_upload_id, so use the
+    // scopedNid captured at init time to recover the folder nid.
+    if (this.scopedNid) {
+      return {
+        nid: this.scopedNid,
+        hub_id: this.hubId,
+        home_id: this.mget(_a.home_id),
+        destpath: this.mget(_a.ownpath) || '/',
+      };
+    }
+    const home = this.mget(_a.home) || {};
+    return {
+      nid: home.chat_upload_id,
+      hub_id: home.hub_id || this.hubId,
+      home_id: home.home_id,
+      destpath: '/',
+    };
   }
 
   /**
@@ -498,7 +518,6 @@ class __widget_chat extends LetcBox {
    * @param  {File} args
    */
   pasteFile(file) {
-    let { chat_upload_id: nid, hub_id, home_id } = this.mget(_a.home);
     let pm = {
       kind: 'media_grid',
       phase: _a.upload,
@@ -507,12 +526,7 @@ class __widget_chat extends LetcBox {
       origin: _a.chat,
       uiHandler: [this],
       file: file,
-      destination: {
-        destpath: "/",
-        nid,
-        hub_id,
-        home_id
-      }
+      destination: this._getUploadDestination(),
     };
     this.insertMedia(pm);
   }
@@ -705,6 +719,7 @@ class __widget_chat extends LetcBox {
     let f, pm;
     const a = [];
     const r = dataTransfer(e);
+    const destination = this._getUploadDestination();
 
     for (f of Array.from(r.files)) {
       pm = {
@@ -714,10 +729,7 @@ class __widget_chat extends LetcBox {
         origin: _a.chat,
         uiHandler: [this],
         file: f,
-        destination: {
-          nid: this.mget(_a.home).chat_upload_id,
-          hub_id: this.hubId
-        }
+        destination,
       };
       a.push(pm);
     }
@@ -730,10 +742,7 @@ class __widget_chat extends LetcBox {
         origin: _a.chat,
         uiHandler: [this],
         folder: f,
-        destination: {
-          nid: this.mget(_a.home).chat_upload_id,
-          hub_id: this.hubId
-        }
+        destination,
       };
       a.push(pm);
     }
