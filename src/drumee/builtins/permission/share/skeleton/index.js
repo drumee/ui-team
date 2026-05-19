@@ -2,15 +2,37 @@
  * Manage Access panel — public link toggle, access level, link expiry, apply.
  * @param {Object} ui
  */
+// Preset link-expiry durations (in days). 0 = no expiration.
+const EXPIRY_PRESETS = [0, 1, 7, 30, 90];
+
+// Shared formatter for the expiry-row label and each preset menu option.
+// Accepts both days and hours — the server returns a remaining duration that
+// decays, so a "1 day" expiry reads back as e.g. 0 days / 23 hours.
+const formatExpiry = (days, hours) => {
+  let d = ~~days;
+  let h = ~~hours;
+  // duration_hours() can return 24 (CEIL of a near-full day) — roll it up so
+  // a 7-day expiry reads "In 7 Days", not "In 6 Days 24 Hours".
+  if (h >= 24) {
+    d += Math.floor(h / 24);
+    h = h % 24;
+  }
+  if (d && h) {
+    return `In ${d} Day${d !== 1 ? "s" : ""} ${h} Hour${h !== 1 ? "s" : ""}`;
+  }
+  if (d) return `In ${d} Day${d !== 1 ? "s" : ""}`;
+  if (h) return `In ${h} Hour${h !== 1 ? "s" : ""}`;
+  return LOCALE.NO_EXPIRATION || "No expiration";
+};
+
 module.exports = function (ui) {
   const fig = ui.fig.family;
   const publicLink = ui.mget("public_link");
   const privilege = ui.mget(_a.privilege) || 0;
 
   const days = parseInt(ui.mget(_a.days)) || 0;
-  const expiryLabel = days
-    ? `In ${days} Day${days !== 1 ? "s" : ""}`
-    : LOCALE.NO_EXPIRATION || "No expiration";
+  const hours = parseInt(ui.mget(_a.hours)) || 0;
+  const expiryLabel = formatExpiry(days, hours);
 
   const accessItems = [
     {
@@ -173,6 +195,21 @@ module.exports = function (ui) {
                   }),
                 ],
               }),
+              ui._expiryMenuOpen
+                ? Skeletons.Box.Y({
+                    className: `${fig}__expiry-menu`,
+                    kids: EXPIRY_PRESETS.map((preset) =>
+                      Skeletons.Note({
+                        className: `${fig}__expiry-option`,
+                        content: formatExpiry(preset),
+                        days: preset,
+                        state: days === preset ? 1 : 0,
+                        service: "pick-expiry",
+                        uiHandler: [ui],
+                      }),
+                    ),
+                  })
+                : null,
             ],
           }),
         ],

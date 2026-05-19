@@ -11,7 +11,6 @@ const {
   tabBar,
   chatPanel,
   visioMenu,
-  newFileMenu,
   getAreaLabel,
 } = require("../../../../builtins/window/skeleton/toolkit/index");
 
@@ -22,6 +21,7 @@ function dmzTopbar(ui) {
   const area = ui.mget(_a.area);
   const name = ui.mget(_a.title) || ui.mget(_a.filename) || ui.mget(_a.name) || "";
   const canUpload = ui.havePermission(_K.permission.upload, ui.mget(_a.privilege));
+  const canEdit = ui.havePermission(_K.permission.write, ui.mget(_a.privilege));
 
   const titleWrapper = Skeletons.Box.X({
     className: `${cnTopbarTitle}__wrapper`,
@@ -57,7 +57,20 @@ function dmzTopbar(ui) {
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       // visioMenu(ui),
-      canUpload ? newFileMenu(ui) : null,
+      // "Add new" in DMZ creates a sub-folder (media.make_dir) — a plain
+      // button, not a dropdown: __dmz_wm only supports folders here, and a
+      // direct-service button routes reliably to __dmz_wm.onUiEvent (a
+      // menu_topic item does not deliver its service through the bubble
+      // chain). Shown only to guests whose role grants write permission.
+      canEdit
+        ? Skeletons.Button.Label({
+            className: `${cnWindowButton}__label-button secondary`,
+            label: LOCALE.ADD_NEW || "Add new",
+            ico: "editbox_list-plus",
+            service: "add-folder",
+            uiHandler: ui,
+          })
+        : null,
       canUpload
         ? Skeletons.Button.Label({
             className: `${cnWindowButton}__label-button`,

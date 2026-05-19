@@ -80,17 +80,54 @@ function initialsFor(firstname, lastname, fullname) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function deriveRole(privilege) {
-  const p = parseInt(privilege, 10) || 0;
+// role_label is the canonical signal from hub_member_list ("OWNER" |
+// "HUB_ADMIN" | "MEMBER"). hub_permission is a fallback for endpoints that
+// only return the bitmask.
+function deriveRole(row) {
+  const label = String(
+    (row && (row.role_label || row.role)) || "",
+  ).toUpperCase();
+  if (label === "OWNER") {
+    return {
+      label: LOCALE.ORGANIZATION_OWNER || "Organization Owner",
+      variant: "owner",
+    };
+  }
+  if (
+    label === "HUB_ADMIN" ||
+    label === "ADMIN" ||
+    label === "WORKSPACE_ADMIN"
+  ) {
+    return {
+      label: LOCALE.WORKSPACE_ADMIN || "Workspace Admin",
+      variant: "admin",
+    };
+  }
+  if (label === "MEMBER") {
+    return { label: LOCALE.MEMBER || "Member", variant: "member" };
+  }
+  const p =
+    parseInt(
+      (row &&
+        (row.hub_permission != null ? row.hub_permission : row.privilege)) ||
+        0,
+      10,
+    ) || 0;
   if (_K && _K.permission) {
     if (p & _K.permission.owner) {
-      return { label: "organization name owner", variant: "owner" };
+      return {
+        label: LOCALE.ORGANIZATION_OWNER || "Organization Owner",
+        variant: "owner",
+      };
     }
     if (p & _K.permission.admin) {
-      return { label: "Workspace Admin", variant: "admin" };
+      return {
+        label: LOCALE.WORKSPACE_ADMIN || "Workspace Admin",
+        variant: "admin",
+      };
     }
   }
-  return { label: "Member", variant: "member" };
+  return { label: LOCALE.MEMBER || "Member", variant: "member" };
 }
 
 const TABS_BY_ROLE = {
@@ -109,17 +146,21 @@ function deriveVisitorRole() {
 }
 
 function deriveStatus(row) {
+  const s = String((row && row.status) || "").toLowerCase();
+  if (s === "online" || s === "away" || s === "offline") return s;
   if (row && (row.online === 1 || row.online === true)) return "online";
   if (row && row.connected === 0) return "offline";
-  return "online";
+  return "offline";
 }
 
+// last_active arrives as a unix timestamp in seconds (e.g. 1779085588) or null.
 function deriveLastActive(row) {
   if (!row) return "—";
-  const t = row.last_login || row.mtime || row.ctime;
+  const t = row.last_active || row.last_login || row.mtime || row.ctime;
   if (!t) return "—";
   try {
-    const d = Dayjs(t);
+    const ms = Number(t) > 1e12 ? Number(t) : Number(t) * 1000;
+    const d = Dayjs(ms);
     if (!d.isValid()) return String(t);
     return d.fromNow();
   } catch (e) {
@@ -128,7 +169,7 @@ function deriveLastActive(row) {
 }
 
 function mapMember(row) {
-  const id = row.drumate_id || row.user_id || row.uid || row.id;
+  const id = row.uid || row.drumate_id || row.user_id || row.id;
   const fullname =
     row.fullname || `${row.firstname || ""} ${row.lastname || ""}`.trim();
   return {
@@ -138,11 +179,12 @@ function mapMember(row) {
     avatar_color: avatarColorFor(id),
     name: fullname || row.email || "—",
     email: row.email || "",
-    role: deriveRole(row.privilege),
+    role: deriveRole(row),
     workspaces: [],
     status: deriveStatus(row),
     last_active: deriveLastActive(row),
-    privilege: row.privilege || 0,
+    hub_permission:
+      row.hub_permission != null ? row.hub_permission : row.privilege || 0,
   };
 }
 
@@ -233,6 +275,11 @@ class apps_main extends LetcBox {
     this._fvSelectedVersionId = null;
     this._editDevices = [];
     this._editWorkspaces = [];
+    this._editWorkspacesCache = null;
+    this._editWsSearchTimer = null;
+    this._editWsSearchInput = null;
+    this._editWsSuggestionsBox = null;
+    this._editWsBound = new WeakSet();
     this._onDocumentClick = this._onDocumentClick.bind(this);
     document.addEventListener("click", this._onDocumentClick, true);
   }
@@ -242,6 +289,62 @@ class apps_main extends LetcBox {
   }
 
   _onDocumentClick(e) {
+    // Edit-member workspace role dropdown: options have no `service` so they
+    // need delegated handling, and clicks outside an open panel close it.
+    if (this._editingMember && this.el) {
+      // Per-row × button. The framework's service routing on this Note is
+      // unreliable (an inner widget on the bubble path stopPropagation's),
+      // so we dispatch the click here in capture phase against data-idx.
+      const removeEl =
+        e.target.closest &&
+        e.target.closest(".apps-main__edit-ws-remove");
+      if (removeEl && this.el.contains(removeEl)) {
+        const rmIdx = parseInt(removeEl.dataset.idx, 10);
+        if (!Number.isNaN(rmIdx)) {
+          e.stopPropagation();
+          this._removeEditWorkspace(rmIdx);
+          return;
+        }
+      }
+      const optEl =
+        e.target.closest &&
+        e.target.closest(".apps-main__edit-ws-role-option");
+      if (optEl && this.el.contains(optEl)) {
+        const optIdx = parseInt(optEl.dataset.idx, 10);
+        const roleId = optEl.dataset.id;
+        if (!Number.isNaN(optIdx) && roleId) {
+          e.stopPropagation();
+          this._pickEditWsRole(optIdx, roleId);
+          return;
+        }
+      }
+      const openOpts = this.el.querySelectorAll(
+        '.apps-main__edit-ws-role-options[data-state="1"]',
+      );
+      if (openOpts.length) {
+        const inSelect =
+          e.target.closest &&
+          e.target.closest(".apps-main__edit-ws-role-select");
+        const inOpts =
+          e.target.closest &&
+          e.target.closest(".apps-main__edit-ws-role-options");
+        if (!inSelect && !inOpts) {
+          openOpts.forEach((node) => (node.dataset.state = "0"));
+        }
+      }
+      const openSug = this.el.querySelector(
+        '.apps-main__edit-ws-suggestions[data-state="1"]',
+      );
+      if (openSug) {
+        const inInput =
+          e.target.closest &&
+          e.target.closest(".apps-main__edit-ws-search-input");
+        const inSug =
+          e.target.closest &&
+          e.target.closest(".apps-main__edit-ws-suggestions");
+        if (!inInput && !inSug) this._hideEditWsSuggestions();
+      }
+    }
     if (this._filterOpen) {
       const filterEl =
         this.el && this.el.querySelector(".apps-main__table-filter");
@@ -446,14 +549,17 @@ class apps_main extends LetcBox {
       });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
       const cols = [
-        { key: "ctime",       header: LOCALE.TIMESTAMP       || "Timestamp" },
-        { key: "actor_name",  header: LOCALE.USER            || "User" },
-        { key: "email",       header: LOCALE.EMAIL           || "Email" },
-        { key: "action",      header: LOCALE.ACTION          || "Action" },
-        { key: "category",    header: LOCALE.CATEGORY        || "Category" },
-        { key: "entity_id",   header: LOCALE.TARGET_RESOURCE || "Target Resource" },
-        { key: "hub_id",      header: LOCALE.WORKSPACE       || "Workspace" },
-        { key: "log",         header: LOCALE.MESSAGE         || "Message" },
+        { key: "ctime", header: LOCALE.TIMESTAMP || "Timestamp" },
+        { key: "actor_name", header: LOCALE.USER || "User" },
+        { key: "email", header: LOCALE.EMAIL || "Email" },
+        { key: "action", header: LOCALE.ACTION || "Action" },
+        { key: "category", header: LOCALE.CATEGORY || "Category" },
+        {
+          key: "entity_id",
+          header: LOCALE.TARGET_RESOURCE || "Target Resource",
+        },
+        { key: "hub_id", header: LOCALE.WORKSPACE || "Workspace" },
+        { key: "log", header: LOCALE.MESSAGE || "Message" },
       ];
       const titleCase = (s) => {
         if (!s) return "";
@@ -475,13 +581,24 @@ class apps_main extends LetcBox {
         return /[",\n]/.test(s) ? `"${s}"` : s;
       };
       const csv = [cols.map((c) => escape(c.header)).join(",")]
-        .concat(rows.map((r) => cols.map((c) => escape(cellValue(r, c.key))).join(",")))
+        .concat(
+          rows.map((r) =>
+            cols.map((c) => escape(cellValue(r, c.key))).join(","),
+          ),
+        )
         .join("\n");
       const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
       const ts = Dayjs().format("YYYYMMDD-HHmmss");
       const filename = `audit-logs-${ts}.csv`;
       const url = URL.createObjectURL(blob);
-      console.log("[audit-export] rows:", rows.length, "bytes:", blob.size, "url:", url);
+      console.log(
+        "[audit-export] rows:",
+        rows.length,
+        "bytes:",
+        blob.size,
+        "url:",
+        url,
+      );
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -491,7 +608,10 @@ class apps_main extends LetcBox {
       try {
         a.click();
       } catch (clickErr) {
-        console.warn("[audit-export] a.click() failed, falling back to window.open", clickErr);
+        console.warn(
+          "[audit-export] a.click() failed, falling back to window.open",
+          clickErr,
+        );
         window.open(url, "_blank");
       }
       setTimeout(() => {
@@ -589,6 +709,7 @@ class apps_main extends LetcBox {
       const res = await this.postService(SERVICE.admin.get_hub_folders, {
         hub_id: hubId,
         page: this._wsDetailPage || 1,
+        query: this._wsFolderQuery || "",
       });
       const rows = Array.isArray(res) ? res : (res && res.data) || [];
       // SP returns nid/filename/mtime/filesize — alias to FE shape.
@@ -937,6 +1058,7 @@ class apps_main extends LetcBox {
     this._editingMember = member;
     this._editDevices = [];
     this._editWorkspaces = [];
+    this._editWorkspacesCache = null;
     this._render();
     this._loadEditMemberData(memberId);
   }
@@ -964,6 +1086,13 @@ class apps_main extends LetcBox {
     this._editingMember = null;
     this._editDevices = [];
     this._editWorkspaces = [];
+    this._editWorkspacesCache = null;
+    this._editWsSearchInput = null;
+    this._editWsSuggestionsBox = null;
+    if (this._editWsSearchTimer) {
+      clearTimeout(this._editWsSearchTimer);
+      this._editWsSearchTimer = null;
+    }
     this._render();
   }
 
@@ -999,6 +1128,243 @@ class apps_main extends LetcBox {
       this._render();
     } catch (e) {
       this.warn && this.warn("member_device_remove_all failed", e);
+    }
+  }
+
+  // Framework hook: fires after each child widget tagged with partHandler:ui
+  // is rendered. The popup re-builds its skeleton on every _render(), so we
+  // re-bind DOM listeners each time the Entry is recreated. Guarded by a
+  // WeakSet to skip if the same child instance is reported twice.
+  onPartReady(child, pn) {
+    if (!child || this._editWsBound.has(child)) return;
+    if (pn === "edit-ws-search-input") {
+      this._editWsBound.add(child);
+      this._editWsSearchInput = child;
+      const bind = () => {
+        const inputEl = child.el && child.el.querySelector("input");
+        if (!inputEl) return;
+        inputEl.setAttribute("autocomplete", "off");
+        inputEl.addEventListener("input", (e) =>
+          this._fetchEditWsSuggestions((e.target.value || "").trim()),
+        );
+        inputEl.addEventListener("focus", () =>
+          this._fetchEditWsSuggestions(inputEl.value.trim()),
+        );
+        inputEl.addEventListener("click", () =>
+          this._fetchEditWsSuggestions(inputEl.value.trim()),
+        );
+      };
+      bind();
+      if (!child.el || !child.el.querySelector("input")) setTimeout(bind, 50);
+    } else if (pn === "edit-ws-suggestions") {
+      this._editWsBound.add(child);
+      this._editWsSuggestionsBox = child;
+    }
+  }
+
+  // Inviteable-workspace filter: privilege bitmask must include admin (31),
+  // and the area must be a real collaborative workspace — not personal,
+  // infra, or one-shot dmz buckets. Mirrors invite-popup's NON_INVITEABLE.
+  static get _EDIT_WS_NON_INVITEABLE() {
+    return new Set([
+      _a.personal,
+      "system",
+      "pool",
+      "pool/dmz",
+      "template",
+      "dummy",
+      "dmz",
+      "dmz-public",
+      "dmz-private",
+    ]);
+  }
+
+  _fetchEditWsSuggestions(value) {
+    if (!this._editingMember) return;
+    if (this._editWsSearchTimer) clearTimeout(this._editWsSearchTimer);
+    const delay = value ? 200 : 0;
+    this._editWsSearchTimer = setTimeout(async () => {
+      let list = this._editWorkspacesCache;
+      if (!list) {
+        const data = await this.fetchService(
+          {
+            service: SERVICE.desk.home,
+            hub_id: Visitor.id,
+            type: _a.hub,
+          },
+          { async: 1 },
+        ).catch(() => []);
+        list = Array.isArray(data) ? data : [];
+        this._editWorkspacesCache = list;
+      }
+      const ADMIN = 0b0011111;
+      const NON_INVITEABLE = apps_main._EDIT_WS_NON_INVITEABLE;
+      const picked = new Set(
+        (this._editWorkspaces || [])
+          .map((w) => String(w.hub_id || w.id || ""))
+          .filter(Boolean),
+      );
+      const inviteable = list.filter((w) => {
+        if (((w.privilege | 0) & ADMIN) !== ADMIN) return false;
+        if (NON_INVITEABLE.has(w.area || "")) return false;
+        const id = String(w.hub_id || w.id || w.actual_hub_id || "");
+        if (id && picked.has(id)) return false;
+        return true;
+      });
+      const q = (value || "").toLowerCase();
+      const filtered = q
+        ? inviteable.filter((w) =>
+            (w.filename || w.name || "").toLowerCase().includes(q),
+          )
+        : inviteable;
+      this._showEditWsSuggestions(filtered);
+    }, delay);
+  }
+
+  _showEditWsSuggestions(list) {
+    const box = this._editWsSuggestionsBox;
+    if (!box || !box.el) return;
+    if (!list.length) {
+      this._hideEditWsSuggestions();
+      return;
+    }
+    const pfx = this.fig.family;
+    const items = list.map((row) => {
+      const hub_id = row.hub_id || row.id || row.actual_hub_id;
+      const hub_name = row.filename || row.name;
+      return Skeletons.Note({
+        className: `${pfx}__edit-ws-suggestion`,
+        content: hub_name,
+        // Top-level props — consistent with how other apps/main Notes pass
+        // data (e.g. apps-edit-remove-ws uses `idx`, `hub_id`). cmd.mget()
+        // reads the widget model; raw `dataset:` keys are not always
+        // mirrored there, which is why invite-popup needs a getter helper.
+        hub_id,
+        hub_name,
+        service: "apps-edit-pick-workspace",
+        uiHandler: [this],
+      });
+    });
+    box.feed(items);
+    this._positionEditWsSuggestions();
+    box.el.dataset.state = 1;
+  }
+
+  // The suggestions box is a direct child of __edit-card (not __edit-body)
+  // so it isn't clipped by the body's overflow scroll. Position it under
+  // the search input each time we open it, with max-height clamped to the
+  // remaining space inside the card.
+  _positionEditWsSuggestions() {
+    const box = this._editWsSuggestionsBox;
+    const inputWidget = this._editWsSearchInput;
+    if (!box || !box.el || !inputWidget || !inputWidget.el) return;
+    const card = this.el && this.el.querySelector(".apps-main__edit-card");
+    if (!card) return;
+    const cardRect = card.getBoundingClientRect();
+    const inputRect = inputWidget.el.getBoundingClientRect();
+    const top = inputRect.bottom - cardRect.top + 4;
+    const left = inputRect.left - cardRect.left;
+    const width = inputRect.width;
+    const availableBelow = cardRect.bottom - inputRect.bottom - 16;
+    box.el.style.top = `${top}px`;
+    box.el.style.left = `${left}px`;
+    box.el.style.width = `${width}px`;
+    box.el.style.maxHeight = `${Math.max(80, Math.min(240, availableBelow))}px`;
+  }
+
+  _hideEditWsSuggestions() {
+    const box = this._editWsSuggestionsBox;
+    if (!box || !box.el) return;
+    box.el.dataset.state = 0;
+    if (typeof box.clear === "function") box.clear();
+  }
+
+  _pickEditWorkspace(hub_id, name) {
+    if (!hub_id) return;
+    const id = String(hub_id);
+    const already = (this._editWorkspaces || []).some(
+      (w) => String(w.hub_id || w.id || "") === id,
+    );
+    if (already) {
+      this._hideEditWsSuggestions();
+      return;
+    }
+    this._editWorkspaces = this._editWorkspaces || [];
+    // Default privilege = view (bit 2). The user picks a different role via
+    // the per-row role dropdown rendered by workspaceRow().
+    // `_pending: true` marks this as a client-only addition that hasn't been
+    // persisted yet — _removeEditWorkspace uses it to skip the server call.
+    this._editWorkspaces.push({
+      hub_id,
+      hub_name: name,
+      name,
+      privilege: 2,
+      permission: 2,
+      _pending: true,
+    });
+    this._render();
+  }
+
+  // Toggle a workspace-row role dropdown open/closed. The skeleton hardcodes
+  // data-state=0 on render, so we mutate the DOM directly to avoid losing
+  // the open state on every _render(). Other open dropdowns are closed first.
+  _toggleEditWsRole(idx) {
+    if (!this.el || Number.isNaN(idx)) return;
+    const all = this.el.querySelectorAll(".apps-main__edit-ws-role-options");
+    let target = null;
+    all.forEach((node) => {
+      const nodeIdx = parseInt(node.dataset.idx, 10);
+      if (nodeIdx === idx) {
+        target = node;
+      } else {
+        node.dataset.state = "0";
+      }
+    });
+    if (!target) return;
+    target.dataset.state = target.dataset.state === "1" ? "0" : "1";
+  }
+
+  _pickEditWsRole(idx, roleId) {
+    if (Number.isNaN(idx) || !roleId) return;
+    const ws = (this._editWorkspaces || [])[idx];
+    if (!ws) return;
+    const bits = { admin: 31, edit: 7, view: 2 };
+    const bit = bits[roleId];
+    if (bit == null) return;
+    ws.privilege = bit;
+    ws.permission = bit;
+    this._render();
+  }
+
+  async _removeEditWorkspace(idx) {
+    if (Number.isNaN(idx)) return;
+    if (!Array.isArray(this._editWorkspaces) || !this._editWorkspaces[idx]) return;
+    const ws = this._editWorkspaces[idx];
+    const hub_id = ws.hub_id || ws.id || ws.actual_hub_id;
+    const uid = this._editingMember && this._editingMember.id;
+
+    // _pending = the row was added client-side via the search dropdown and
+    // hasn't been persisted yet, so there's nothing to revoke server-side.
+    if (ws._pending || !hub_id || !uid) {
+      this._editWorkspaces.splice(idx, 1);
+      this._render();
+      return;
+    }
+
+    // Optimistic remove — mirrors the device-remove flow's pattern of
+    // re-rendering on success, leaving state untouched (and surfacing a warn)
+    // on failure so the row reappears on the next render via _editWorkspaces.
+    const removed = this._editWorkspaces.splice(idx, 1)[0];
+    this._render();
+    try {
+      await this.postService(SERVICE.admin.hub_member_remove, {
+        hub_id,
+        uid,
+      });
+    } catch (e) {
+      this.warn && this.warn("hub_member_remove failed", e);
+      this._editWorkspaces.splice(idx, 0, removed);
+      this._render();
     }
   }
 
@@ -1166,10 +1532,27 @@ class apps_main extends LetcBox {
       case "apps-edit-remove-all-devices":
         return this._removeAllDevices();
 
+      case "apps-edit-toggle-ws-role":
+        return this._toggleEditWsRole(parseInt(cmd.mget("idx"), 10));
+
+      case "apps-edit-remove-ws":
+        return this._removeEditWorkspace(parseInt(cmd.mget("idx"), 10));
+
       case "apps-edit-role-select":
       case "apps-edit-ws-role":
       case "apps-edit-ws-add":
         return;
+
+      case "apps-edit-ws-search":
+        // Keystrokes are handled by the DOM input listener bound in
+        // onPartReady; Entry's "commit" event (Enter key) is a no-op here.
+        return;
+
+      case "apps-edit-pick-workspace":
+        return this._pickEditWorkspace(
+          cmd.mget("hub_id"),
+          cmd.mget("hub_name"),
+        );
 
       case "apps-delete-member":
         return this._deleteMember(cmd.mget("member_id"));
@@ -1188,6 +1571,7 @@ class apps_main extends LetcBox {
         if (ws) {
           this._activeWorkspace = ws;
           this._wsDetailPage = 1;
+          this._wsFolderQuery = "";
           this._render();
           return this._loadHubFolders(ws.id);
         }
@@ -1198,7 +1582,25 @@ class apps_main extends LetcBox {
         this._activeWorkspace = null;
         this._wsFolders = [];
         this._wsFoldersState = "idle";
+        this._wsFolderQuery = "";
         return this._render();
+
+      case "apps-ws-search": {
+        const next = (
+          (args && args.value != null
+            ? args.value
+            : cmd && cmd.mget && cmd.mget(_a.value)) || ""
+        )
+          .toString()
+          .trim();
+        if (next === (this._wsFolderQuery || "")) return;
+        this._wsFolderQuery = next;
+        this._wsDetailPage = 1;
+        if (this._activeWorkspace) {
+          return this._loadHubFolders(this._activeWorkspace.id);
+        }
+        return;
+      }
 
       case "apps-perm-page": {
         const n = parseInt(cmd.mget("page_num"), 10);

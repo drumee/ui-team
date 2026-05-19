@@ -128,6 +128,12 @@ class __dmz_sharebox extends LetcBox {
     this.feed(this.defaultSkeleton(this));
     await this.ensurePart(_a.content);
 
+    // An expired share must not load content — handleInfoStatus maps
+    // dmz_expiry==='expired' to the TICKET_EXPIRED "link expired" message.
+    if (data.dmz_expiry === _a.expired) {
+      return this.handleInfoStatus(data);
+    }
+
     switch (data.status) {
       case 'REQUIRED_PASSWORD':
         this.promptPassword();
@@ -199,6 +205,14 @@ class __dmz_sharebox extends LetcBox {
 
       case _e.download:
         this.wm.download();
+        return;
+
+      // "Add new" lives in the sharebox topbar (uiHandler = this sharebox),
+      // but folder creation belongs to the window manager child — delegate.
+      case "add-folder":
+        if (this.wm && this.wm.onUiEvent) {
+          this.wm.onUiEvent(cmd, { service: "add-folder" });
+        }
         return;
 
       case 'open-signup':

@@ -1,7 +1,9 @@
+// Public marketing site — the share page links out to drumee.com, not the
+// Drumee instance domain the share link is served from.
+const DRUMEE_SITE = "https://drumee.com";
+
 function __skl_dmz_sharebox_top_nav(_ui_) {
   const navFig = `${_ui_.fig.family}-top-nav`;
-  const { protocol } = bootstrap();
-  const mainDomain = Host.get("main_domain");
 
   const logo = Skeletons.Box.X({
     className: `${navFig}__logo`,
@@ -13,9 +15,11 @@ function __skl_dmz_sharebox_top_nav(_ui_) {
     ],
   });
 
-  const navLink = (label) =>
+  const navLink = (label, href) =>
     Skeletons.Box.X({
       className: `${navFig}__link`,
+      href,
+      attrOpt: { target: "_blank" },
       kids: [
         Skeletons.Note({
           className: `${navFig}__link-label`,
@@ -24,22 +28,13 @@ function __skl_dmz_sharebox_top_nav(_ui_) {
       ],
     });
 
+  // FEATURES has no dedicated page on drumee.com — only PRODUCT (homepage)
+  // and PRICING are linked.
   const links = Skeletons.Box.X({
     className: `${navFig}__links`,
     kids: [
-      Skeletons.Box.X({
-        className: `${navFig}__link`,
-        href: `${protocol}://${mainDomain}`,
-        attrOpt: { target: "_blank" },
-        kids: [
-          Skeletons.Note({
-            className: `${navFig}__link-label`,
-            content: LOCALE.PRODUCT || "Product",
-          }),
-        ],
-      }),
-      navLink(LOCALE.FEATURES || "Features"),
-      navLink(LOCALE.PRICING || "Pricing"),
+      navLink(LOCALE.PRODUCT || "Product", DRUMEE_SITE),
+      navLink(LOCALE.PRICING || "Pricing", `${DRUMEE_SITE}/pricing`),
     ],
   });
 

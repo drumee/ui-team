@@ -1,4 +1,5 @@
 const folderTemplate = require("../../../../media/grid/template/folder");
+const { filesize } = require("@drumee/ui-essentials");
 
 // Maps a BE folder_get_member_list row to the FE memberRow shape.
 function mapMemberRow(row) {
@@ -29,6 +30,14 @@ function mapMemberRow(row) {
 function folderHeader(ui, folder, ws) {
   const pfx = ui.fig.family;
   const area = (folder && folder.area) || (ws && ws.area) || "private";
+  const id = (folder && (folder.id || folder.nid)) || "";
+  const name = (folder && (folder.name || folder.filename)) || "";
+  const ts = folder && (folder.updated || folder.mtime);
+  const bytes =
+    folder && (folder.filesize != null ? folder.filesize : folder.size);
+  const updated = ts ? Dayjs.unix(ts).fromNow() : "";
+  const size = bytes != null ? filesize(bytes) : "";
+  const meta = [updated, size].filter(Boolean).join(" • ");
   return Skeletons.Box.X({
     className: `${pfx}__fperm-folder-card`,
     kids: [
@@ -39,7 +48,7 @@ function folderHeader(ui, folder, ws) {
           area,
           filetype: _a.folder,
           role: "folder",
-          widgetId: `fperm-${folder && folder.id}`,
+          widgetId: `fperm-${id}`,
           isAttachment: 1,
         }),
       }),
@@ -48,11 +57,11 @@ function folderHeader(ui, folder, ws) {
         kids: [
           Skeletons.Note({
             className: `${pfx}__fperm-folder-title`,
-            content: folder.name,
+            content: name,
           }),
           Skeletons.Note({
             className: `${pfx}__fperm-folder-meta`,
-            content: `${folder.updated} • ${folder.size}`,
+            content: meta,
           }),
         ],
       }),

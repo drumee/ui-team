@@ -293,7 +293,10 @@ class __dmz_wm extends winman {
    */
   onUiEvent(cmd, args) {
     if (args == null) { args = {}; }
-    const service = cmd.service || cmd.model.get(_a.service);
+    const service =
+      args.service ||
+      cmd.service ||
+      (cmd.model && cmd.model.get(_a.service));
     switch (service) {
       case _e.download:
         return this.download();
@@ -311,9 +314,73 @@ class __dmz_wm extends winman {
         });
         return;
 
+      case "add-folder":
+        return this.ensurePart("wrapper-modal").then((p) => {
+          p.feed(require("builtins/window/folder/skeleton/create-folder-dialog")(this));
+          p.el.dataset.mode = "create-folder";
+          this.ensurePart("create-folder-name").then(
+            (entry) => entry.focus && entry.focus(),
+          );
+        });
+
+      case "close-folder-dialog":
+        return this.ensurePart("wrapper-modal").then((p) => {
+          p.el.dataset.mode = "";
+          p.clear();
+        });
+
+      case "create-folder-submit":
+        return this._createFolder(cmd);
+
       default:
         return this.warn(WARNING.method.unprocessed.format(service));
     }
+  }
+
+  /**
+   * Create a sub-folder in the shared folder. media.make_dir has the same
+   * ACL as media.upload (scope:hub, write) — a write-capable DMZ guest can
+   * call it with the share token.
+   *
+   * @param {*} cmd — the create-folder-submit command (EntryBox or button)
+   */
+  _createFolder(cmd) {
+    if (this._creatingFolder) return;
+    this._creatingFolder = 1;
+    const entry = this.getPart("create-folder-name");
+    const value =
+      (cmd.getValue && cmd.getValue()) ||
+      (entry && entry.getValue && entry.getValue()) ||
+      LOCALE.NEW_FOLDER;
+    const filename = String(value).trim() || LOCALE.NEW_FOLDER;
+    if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(filename)) {
+      this._creatingFolder = 0;
+      return Butler.say(LOCALE.INVALID_FILENAME);
+    }
+    return this.postService(SERVICE.media.make_dir, {
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      dirname: filename,
+      filename,
+      token: this.mget(_a.token),
+    })
+      .then((data) => {
+        if (data && (data.error || data.error_code)) {
+          return Butler.say(LOCALE[data.error] || data.reason || data.error);
+        }
+        this.ensurePart("wrapper-modal").then((p) => {
+          p.el.dataset.mode = "";
+          p.clear();
+        });
+        this.ensurePart(_a.list).then((l) => l && l.restart && l.restart());
+      })
+      .catch((e) => {
+        this.warn("DMZ create folder failed", e);
+        Butler.say(e.reason || e.error || LOCALE.TRY_AGAIN);
+      })
+      .finally(() => {
+        this._creatingFolder = 0;
+      });
   }
 
   /**

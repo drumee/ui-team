@@ -45,7 +45,7 @@ const __window_connect_commands = function (_ui_) {
             sys_pn: "ctrl-video",
             name: _a.video,
             service: _a.settings,
-            dataset: { muted: 1 }
+            dataset: { muted: 1, ctrl: "video" }
           }),
           Skeletons.Button.Svg({
             className: "ctrl-button hand-raise",

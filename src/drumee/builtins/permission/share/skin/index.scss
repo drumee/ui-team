@@ -246,6 +246,32 @@
     }
   }
 
+  &__expiry-menu {
+    gap: var(--spacer-2);
+    width: 100%;
+    padding: var(--spacer-2);
+    border-radius: var(--corner-radius-3);
+    background-color: var(--normal-bg-100);
+    box-shadow: var(--shadow-left-big);
+  }
+
+  &__expiry-option {
+    padding: var(--spacer-3) var(--spacer-4);
+    border-radius: var(--corner-radius-2);
+    cursor: pointer;
+    transition: background-color 120ms ease;
+    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 22px);
+
+    &:hover {
+      background-color: var(--primary-20);
+    }
+
+    &[data-state="1"] {
+      background-color: var(--primary-20);
+      color: var(--primary-40);
+    }
+  }
+
   // ── Apply button ─────────────────────────────────────────────
 
   &__apply-btn {
