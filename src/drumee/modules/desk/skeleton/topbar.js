@@ -32,7 +32,7 @@ module.exports = function (ui) {
       // Actions cluster (right)
       Skeletons.Box.X({
         className: `${pfx}__actions-cluster`,
-
+        sys_pn :"action-cluster",
         kids: [
           Skeletons.Menu({
             className: `${pfx}__add-wrapper`,

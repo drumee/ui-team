@@ -1375,7 +1375,6 @@ class __widget_chat extends LetcBox {
   onWsMessage(service, data, options) {
     const area = this.mget(_a.area) || this.mget(_a.type);
     const isPrivate = area === _a.personal || area === _a.privateRoom;
-    this.debug("AAA:1367", this, this.getHandlers(_a.ui)[0].isHidden(), this.mget(_a.state), this.el.dataset.anim, service, data, options)
     switch (options.service) {
       case SERVICE.contact.block:
       case SERVICE.contact.unblock:
@@ -1405,7 +1404,11 @@ class __widget_chat extends LetcBox {
         }
 
         // If the widget id hiddent, don't acknowledge
-        if(this.getHandlers(_a.ui)[0].isHidden()) return
+        try {
+          if (this.getHandlers(_a.ui)[0].isHidden()) return
+        }catch(e){
+          
+        }
         // Ack even when out-of-scope so unread counters in the folder feed
         // don't accumulate while the user views a file-scoped thread.
         if (hubMatch || privateMach || ticketMach) {

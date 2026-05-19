@@ -688,6 +688,16 @@ class desk_module extends LetcBox {
   togglePanel(kind, pn) {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
+
+    // Disable actions when the admin console is active
+    this.ensurePart('action-cluster').then((p) => {
+      if (kind === 'apps_main') {
+        p.setState(0)
+      } else {
+        p.setState(1)
+      }
+    })
+
     return this.ensurePart(pn).then((p) => {
       // Mid-flight close animation pending: snap the dying child out so
       // the next kind doesn't paint through a fading sibling.
@@ -872,7 +882,7 @@ class desk_module extends LetcBox {
 
       case "toggle-apps":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
-          filename: LOCALE.APPS,
+          filename: LOCALE.ADMIN_CONSOLE,
         });
         return this.togglePanel("apps_main", "settings-main-slot");
 
