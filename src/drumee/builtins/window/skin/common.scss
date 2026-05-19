@@ -176,7 +176,7 @@
         background-color: var(--normal-bg-100);
         width: 200px;
         padding: var(--spacer-4);
-        border: 1px solid var(--neutral-800);
+        border: 1px solid var(--border-default);
 
         &__wrapper {
           padding: var(--spacer-4);
@@ -197,13 +197,13 @@
 
     &__item {
       cursor: pointer;
-      padding: var(--spacer-2) var(--spacer-4);
+      padding: var(--spacer-3) var(--spacer-4);
       align-items: center;
       border-radius: var(--corner-radius-1);
       gap: var(--spacer-5);
 
       &:hover {
-        background-color: var(--primary-500);
+        background-color: var(--primary-50);
         color: var(--white);
 
         .window-button__dropdown-menu__name {
@@ -217,8 +217,8 @@
     }
 
     &__icon {
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
 
       svg {
         fill: var(--normal-fg-10);

@@ -9,8 +9,8 @@ function bytesToHuman(b) {
   const units = ["B", "KB", "MB", "GB", "TB", "PB"];
   let i = 0;
   let v = n;
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024;
+  while (v >= 1000 && i < units.length - 1) {
+    v /= 1000;
     i += 1;
   }
   return `${v.toFixed(v < 10 && i > 0 ? 2 : 1)} ${units[i]}`;
@@ -297,11 +297,6 @@ const HUB_LEGEND = [
     label: () => LOCALE.MEDIA_ASSETS || "Media",
   },
   { key: "other", field: "other_bytes", label: () => LOCALE.OTHER || "Other" },
-  {
-    key: "available",
-    field: "available_bytes",
-    label: () => LOCALE.AVAILABLE || "Available",
-  },
 ];
 
 function activeHubName(ui) {
@@ -314,8 +309,7 @@ export function hubCapacityCard(ui) {
   const pfx = ui.fig.family;
   const stats = ui._hubStorageStats || {};
   const used = parseFloat(stats.hub_used_bytes) || 0;
-  const quota = parseFloat(stats.quota_bytes) || 0;
-  const denom = quota > 0 ? quota : used;
+  const denom = used;
   const usedHuman = bytesToHuman(used);
   const [usedNum, usedUnit] = usedHuman.split(" ");
 
@@ -323,7 +317,7 @@ export function hubCapacityCard(ui) {
     key: spec.key,
     title: spec.label(),
     bytes: parseFloat(stats[spec.field]) || 0,
-  })).filter((it) => it.bytes > 0 || it.key !== "available");
+  }));
 
   return Skeletons.Box.Y({
     className: `${pfx}__capacity-card`,

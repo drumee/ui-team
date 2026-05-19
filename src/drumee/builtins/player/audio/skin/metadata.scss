@@ -42,7 +42,7 @@
         @include drumee.typo(
           $size: 13px,
           $line: 15px,
-          $color: var(--default-text-reverse)
+          $color: var(--normal-fg-10)
         );
       }
 
@@ -50,7 +50,7 @@
         @include drumee.typo(
           $size: 11px,
           $line: 13px,
-          $color: var(--default-text-reverse)
+          $color: var(--normal-fg-10)
         );
       }
     }

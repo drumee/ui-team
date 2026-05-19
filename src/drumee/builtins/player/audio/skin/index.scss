@@ -43,7 +43,10 @@
 
   &__audio {
     width: 100%;
-    padding: 0 var(--spacer-4);
+    margin: 0 var(--spacer-2);
+    padding: var(--spacer-2);
+    background-color: var(--normal-bg-80);
+    border-radius: 8px;
   }
 
   &__footer {

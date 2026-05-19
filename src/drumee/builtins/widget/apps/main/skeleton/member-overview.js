@@ -169,13 +169,7 @@ export default function member_overview(ui) {
           kids: [
             Skeletons.Note({
               className: `${pfx}__perm-page-title`,
-              content: LOCALE.SELECT_WORKSPACE || "Select a workspace",
-            }),
-            Skeletons.Note({
-              className: `${pfx}__perm-page-subtitle`,
-              content:
-                LOCALE.SELECT_WORKSPACE_TO_MANAGE_MEMBERS ||
-                "Pick a workspace to manage its members.",
+              content: LOCALE.WORKSPACE_OVERVIEW || "Workspace Overview",
             }),
           ],
         }),

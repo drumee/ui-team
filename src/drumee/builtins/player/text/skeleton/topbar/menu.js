@@ -51,14 +51,20 @@ module.exports = function (ui) {
     ],
   });
 
-  return {
-    kind: KIND.menu.topic,
-    sys_pn: "text-menu",
-    className: `${fig}__wrapper`,
-    flow: _a.y,
-    opening: _e.click,
-    persistence: _a.none,
-    trigger: menuTrigger,
-    items: menuItems,
-  };
+  return Skeletons.Box.X({
+    debug: __filename,
+    className: `${btn}__buttons-wrapper`,
+    kids: [
+      {
+        kind: KIND.menu.topic,
+        sys_pn: "text-menu",
+        className: `${fig}__wrapper`,
+        flow: _a.y,
+        opening: _e.click,
+        persistence: _a.none,
+        trigger: menuTrigger,
+        items: menuItems,
+      },
+    ],
+  });
 };
