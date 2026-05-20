@@ -16,11 +16,6 @@ class settings_main extends LetcBox {
     // LetcBox auto-binds fetchService/postService but not uploadFile.
     this.uploadFile = uploadFile.bind(this);
     this.model.set({ hub_id: Visitor.id });
-    this.bindEvent(_a.live);
-  }
-
-  onBeforeDestroy() {
-    this.unbindEvent(_a.live);
   }
 
   /**
@@ -297,43 +292,13 @@ class settings_main extends LetcBox {
     });
   }
 
-  handleDownload(data) {
-    if (this.mget("zipid") !== data.zipid) return;
-    if (this._isDownloading === data.zipid) return;
-    if (data.exit === 0) {
-      this._isDownloading = data.zipid;
-      let { svc, keysel } = bootstrap();
-      let hub_id = this.mget(_a.hub_id);
-      let nid = this.mget(_a.nid) || 0;
-      let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${data.zipid}&keysel=${keysel}&zipname=${data.zipname}`;
-      let a = document.createElement("a");
-      a.href = url;
-      a.download = data.zipname || "backup.zip";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  }
-
-  onWsMessage(svc, data, options = {}) {
-    if (data && data.zipid) {
-      this.handleDownload(data);
-    }
-  }
-
   /**
    *
    */
-  exportData() {
-    this.postService(SERVICE.drumate.backup, {
-      hub_id: Visitor.id,
-      flags: ["files", "chat", "workspace", "activity"],
-    }).then((data) => {
-      if (!data || !data.zipid) return;
-      this.mset({ zipid: data.zipid, hub_id: Visitor.id, nid: data.nid || 0 });
-      this._zipsize = data.size || 0;
-    }).catch((e) => {
-      this.warn("exportData: backup failed", e);
+  async exportData() {
+    await Kind.waitFor("settings_delete_account");
+    return this.ensurePart("overlay").then((p) => {
+      p.feed({ kind: "settings_delete_account", export_only: true, uiHandler: [this] });
     });
   }
 
