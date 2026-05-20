@@ -37,6 +37,7 @@ class __panel_activity extends LetcBox {
     this._currentPayload = {};
     this._unreadsOnly = 1;
     this._dismissedKeys = new Set();
+    this._meetingItems = [];
     this.details = {};
     this.onVisibilityChange = this.onVisibilityChange.bind(this)
     document.addEventListener("visibilitychange", this.onVisibilityChange);
@@ -208,6 +209,16 @@ class __panel_activity extends LetcBox {
       case 'clear-all':
         return this._clearAll();
 
+      case 'join-meeting': {
+        const hub_id = args && args.hub_id;
+        if (hub_id && typeof Wm !== 'undefined' && Wm.loadWorkspace) {
+          try { Wm.loadWorkspace({ hub_id, activeTab: 'meeting' }); }
+          catch (e) { this.warn('loadWorkspace failed', e); }
+        }
+        this.activityState = 0;
+        this.setState(0);
+        return;
+      }
     }
   }
 
@@ -632,10 +643,13 @@ class __panel_activity extends LetcBox {
       e.logicalParent = this;
       list.push(e);
     }
+    const dismissed = this._dismissedKeys || new Set();
+    const meetingItems = (this._meetingItems || []).filter(m => !dismissed.has(m.item_key));
+    const combined = [...meetingItems, ...list];
     this.ensurePart('priority').then((p) => {
       if (!p) return;
-      p.feed(list);
-      if (this.el && this.el.dataset) this.el.dataset.hasPriority = list.length ? '1' : '0';
+      p.feed(combined);
+      if (this.el && this.el.dataset) this.el.dataset.hasPriority = combined.length ? '1' : '0';
     });
   }
 
@@ -662,6 +676,9 @@ class __panel_activity extends LetcBox {
       data = [data]
     }
     switch (options.service) {
+      case "conference.start":
+        this._addMeetingNotification(data[0] || data);
+        break;
       case "contact.invite":
       case "hub.invite_received":
         this.refreshActivity()
@@ -812,7 +829,31 @@ class __panel_activity extends LetcBox {
 
   }
   /**
-   * 
+   *
+   */
+  _addMeetingNotification(data) {
+    if (!data) return;
+    const hub_id = data.hub_id;
+    if (!hub_id) return;
+    const key = `meeting:${hub_id}`;
+    this._meetingItems = (this._meetingItems || []).filter(m => m.item_key !== key);
+    this._meetingItems.unshift({
+      ...data,
+      kind: 'activity_item',
+      category: 'meeting',
+      type: 'meeting',
+      event_type: 'meeting',
+      item_type: 'meeting',
+      item_key: key,
+      service: 'join-meeting',
+      uiHandler: this,
+      logicalParent: this,
+    });
+    this.refreshActivity(0);
+  }
+
+  /**
+   *
    */
   _notify(data = {}) {
     if (!window.Notification) return;
