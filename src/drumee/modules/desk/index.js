@@ -463,7 +463,11 @@ class desk_module extends LetcBox {
       this.warn("Use this link #/plugins?name=plugin-name&kind=entry_kind");
       return;
     }
-    this.debug("AAA:3335", Visitor.parseModuleArgs().submodule)
+    let args = Visitor.parseModuleArgs()
+    this.debug("AAA:3335", args)
+    if (args.hasOwnProperty('wm') && window.Wm) {
+      return window.Wm.route()
+    }
     this._pending = { available: false };
     if (localStorage.getItem("force-onboarding")) {
       return this._loadOnboarding();

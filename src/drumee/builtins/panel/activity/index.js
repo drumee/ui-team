@@ -819,6 +819,7 @@ class __panel_activity extends LetcBox {
     let opt = data[0] || data;
     let meeting;
     let meetingHash;
+    const now = Date.now();
 
     if (/MEETING:/.test(opt.message)) {
       if (/MEETING:end/.test(opt.message)) return;
@@ -830,8 +831,8 @@ class __panel_activity extends LetcBox {
         const { hub_id, nid } = meeting;
         if (hub_id) {
           meetingHash = nid
-            ? `#/desk/meeting?hub_id=${hub_id}&nid=${nid}`
-            : `#/desk/meeting?hub_id=${hub_id}`;
+            ? `#/desk/wm/meeting?nid=${hub_id}&ts=${now}`
+            : `#/desk/wm/meeting?nid=${hub_id}&ts=${now}`;
         }
       } catch (e) {
         this.warn("Failed to parse", meeting)
@@ -840,7 +841,6 @@ class __panel_activity extends LetcBox {
     if (Notification.permission === "denied") return;
     if (Notification.permission === "default" && this._permission_asked) return;
 
-    const now = Date.now();
     if ((now - this._last_notified) < 5000) return;
     this._last_notified = now;
 

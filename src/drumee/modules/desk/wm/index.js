@@ -56,9 +56,9 @@ class __window_manager extends push {
    */
   openSharedLink(opt) {
     const fileTypes = [_a.audio, _a.video, _a.image, _a.video, _a.document];
-    setTimeout(() => {
-      Backbone.history.navigate(_K.module.desk);
-    }, 1000);
+    // setTimeout(() => {
+    //   Backbone.history.navigate(_K.module.desk);
+    // }, 1000);
     if (opt.kind == _a.media || fileTypes.includes(opt.filetype)) {
       return this.fetchMediaAttributes(opt);
     }
@@ -85,6 +85,16 @@ class __window_manager extends push {
    * @returns
    */
   route(l) {
+    let args = Visitor.parseModuleArgs() || {};
+    this.debug("AAA:89", args)
+    if (args.hasOwnProperty('meeting') && args.nid) {
+      let media = this.getItemsByAttr(_a.nid, args.nid)[0]
+      this.debug("AAA:89", media)
+      if (media && media.triggerHandlers) {
+        media.triggerHandlers({ service: "open-node", start_meeting: 1 })
+        return
+      }
+    }
     const loc = JSON.parse(localStorage.getItem("locationOnStart")); //"locationOnStart";
     this.debug("locationOnStart", loc)
     if (loc) {
@@ -92,17 +102,6 @@ class __window_manager extends push {
       if (hash) {
         const savedPath = Visitor.parseModule(hash);
         const savedArgs = Visitor.parseModuleArgs(hash);
-        if (savedPath[1] === 'meeting' && savedArgs.nid) {
-          let media = this.getItemsByAttr(_a.nid, savedArgs.nid)
-          if (media) {
-            media.triggerHandlers({ service: "open-node", start_meeting: 1 })
-          }
-          // Kind.waitFor('window_folder').then(() => {
-          //   this.debug("AAA:97", { kind: 'window_folder', start_meeting: 1, hub_id: savedArgs.hub_id, nid: savedArgs.nid })
-          //   this.launch({ kind: 'window_folder', start_meeting: 1, hub_id: savedArgs.hub_id, nid: savedArgs.nid }, { explicit: 1 });
-          // });
-          return;
-        }
         this.openSharedLink(savedArgs);
       }
     }

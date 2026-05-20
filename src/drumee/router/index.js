@@ -364,7 +364,6 @@ class drumee_router extends LetcBox {
    */
   route() {
     let page = /^\/.*(.+)\.htm?/;
-    this.debug("AAA:366", moduleName(), this.currentModule)
     if (page.test(location.pathname) || page.test(Host.get(_a.homepage))) {
       this.loadBootstrap();
       return true;
@@ -377,9 +376,6 @@ class drumee_router extends LetcBox {
     }
     let name = moduleName();
     const cm = this.currentModule;
-    if (cm) {
-      this.debug("AAA:366", moduleName(), !cm.isDestroyed(), cm.mget(_a.name), cm.mget(_a.name) == name)
-    }
     if (cm && !cm.isDestroyed() && cm.mget(_a.name) == name) {
       return cm.route()
     }
