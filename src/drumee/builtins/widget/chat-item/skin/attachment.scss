@@ -15,13 +15,15 @@
 
     // Square attachment thumb — same width/height keeps grid uniform between
     // image previews (image-capable fills) and document icons (centered SVG).
+    // $attach-row = thumb + filename row below (4px margin + ~20px text).
     $attach-size: 96px;
+    $attach-row: $attach-size + 24px;
 
     &-list {
       flex: 1;
       margin-top: 5px;
-      max-height: $attach-size;
-      min-height: $attach-size;
+      max-height: $attach-row;
+      min-height: $attach-row;
       width: 100%;
 
       & .smart-container {
@@ -48,32 +50,28 @@
           background-color: inherit;
           border-radius: 8px;
           box-shadow: none;
-          height: $attach-size;
+          height: $attach-row;
           margin: 0 4px;
           min-width: $attach-size;
           width: $attach-size;
+          display: flex;
+          flex-direction: column;
         }
 
         &__container {
-          background-color: var(--default-bg);
-          border-radius: 8px;
-          overflow: hidden;
-          height: $attach-size;
+          // Bg + radius + overflow moved to &__background so the filename
+          // row below the thumb isn't clipped (and isn't trapped inside
+          // the colored rounded card).
+          background-color: transparent;
+          height: auto;
           width: $attach-size;
           display: flex;
+          flex-direction: column;
           align-items: center;
-          justify-content: center;
+          justify-content: flex-start;
 
           &[data-hover="on"] {
             box-shadow: none;
-          }
-
-          &[data-icontype="vignette"] {
-            background: transparent;
-
-            & .filename {
-              display: none;
-            }
           }
 
           & .icon {
@@ -85,10 +83,20 @@
         }
 
         &__content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-start;
+          width: $attach-size;
+        }
+
+        &__background {
+          background-color: var(--default-bg);
+          border-radius: 8px;
+          overflow: hidden;
+          display: flex;
           align-items: center;
           justify-content: center;
-          height: $attach-size;
-          width: $attach-size;
         }
 
         &-notify__container {
@@ -102,16 +110,43 @@
           object-fit: cover;
         }
 
-        // Filename overlay + meta row (date/kebab) disabled in chat context —
-        // uniform square thumb is enough; native media-grid meta would overflow
-        // below the 96px box and clip into next message bubble.
-        & .filename,
-        &__meta-row,
-        &__meta-row-top,
-        &__date {
+        // Show filename below the thumb so identical-looking attachments
+        // (multiple files of the same format) stay distinguishable. Date /
+        // kebab stay hidden — they would push the row past the message
+        // bubble.
+        &__meta-row {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: $attach-size;
+          margin-top: 0;
+        }
+
+        &__meta-row-top {
+          display: block;
+          width: 100%;
+        }
+
+        & .filename {
+          display: block;
+          width: 100%;
+          max-width: $attach-size;
+          font-size: 11px;
+          line-height: 1.3;
+          text-align: center;
+          color: var(--normal-fg-10);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        &__date,
+        .media-context-menu__trigger {
           display: none !important;
         }
 
+        // Sizing for &__background is consolidated in the earlier rule above
+        // (it also carries the bg + rounded-card clip moved off of __container).
         &__background {
           height: $attach-size;
           width: $attach-size;
