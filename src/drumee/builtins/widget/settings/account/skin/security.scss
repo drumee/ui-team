@@ -153,6 +153,114 @@
     }
   }
 
+  &__danger {
+    &-zone {
+      width: 100%;
+      border: 1px solid var(--neutral-200);
+      border-radius: var(--corner-radius-3);
+      overflow: hidden;
+
+      &-header {
+        padding: var(--spacer-4) var(--spacer-5);
+        background-color: var(--neutral-50);
+        border-bottom: 1px solid var(--neutral-200);
+        align-items: center;
+        gap: var(--spacer-3);
+      }
+
+      &-icon {
+        width: 20px;
+        height: 20px;
+        color: var(--red-500);
+        flex-shrink: 0;
+      }
+
+      &-title {
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 22px;
+        color: var(--red-500);
+      }
+
+      &-body {
+        width: 100%;
+      }
+    }
+
+    &-row {
+      width: 100%;
+      padding: var(--spacer-5);
+      align-items: center;
+      gap: var(--spacer-4);
+      border-bottom: 1px solid var(--neutral-200);
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    &-text {
+      flex: 1;
+      gap: var(--spacer-1);
+    }
+
+    &-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 22px;
+      color: var(--neutral-900);
+    }
+
+    &-desc {
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 20px;
+      color: var(--neutral-500);
+    }
+
+    &-btn {
+      flex-shrink: 0;
+      align-items: center;
+      gap: var(--spacer-2);
+      padding: var(--spacer-3) var(--spacer-4);
+      border: 1px solid var(--neutral-300);
+      border-radius: var(--corner-radius-3);
+      cursor: pointer;
+      background-color: transparent;
+
+      &:hover {
+        background-color: var(--default-bg-hover);
+      }
+
+      &-ico {
+        width: 16px;
+        height: 16px;
+        color: var(--neutral-700);
+      }
+
+      &-label {
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 22px;
+        color: var(--neutral-700);
+        white-space: nowrap;
+      }
+
+      &--danger {
+        border-color: var(--red-300);
+        background-color: var(--red-500);
+
+        &:hover {
+          background-color: var(--red-600);
+        }
+
+        .settings-account-security__danger-btn-label {
+          color: var(--white);
+        }
+      }
+    }
+  }
+
   &__auto-lock-input {
     &-container {
       width: 100%;

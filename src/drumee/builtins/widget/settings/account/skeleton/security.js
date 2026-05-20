@@ -156,6 +156,68 @@ function autoLockMenu(ui) {
  * @param {*} ui 
  * @returns 
  */
+function dangerZoneRow(ui, { title, description, buttonLabel, service, danger }) {
+  const pfx = `${ui.fig.family}-security__danger`;
+  return Skeletons.Box.X({
+    className: `${pfx}-row${danger ? ` ${pfx}-row--danger` : ""}`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${pfx}-text`,
+        kids: [
+          Skeletons.Note({ className: `${pfx}-title`, content: title }),
+          Skeletons.Note({ className: `${pfx}-desc`, content: description }),
+        ],
+      }),
+      Skeletons.Box.X({
+        className: `${pfx}-btn${danger ? ` ${pfx}-btn--danger` : ""}`,
+        service,
+        uiHandler: [ui],
+        kids: [
+          danger
+            ? null
+            : Skeletons.Button.Svg({ ico: "download", className: `${pfx}-btn-ico` }),
+          Skeletons.Note({ className: `${pfx}-btn-label`, content: buttonLabel }),
+        ].filter(Boolean),
+      }),
+    ],
+  });
+}
+
+function dangerZone(ui) {
+  const pfx = `${ui.fig.family}-security__danger`;
+  return Skeletons.Box.Y({
+    className: `${pfx}-zone`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}-zone-header`,
+        kids: [
+          Skeletons.Button.Svg({ ico: "apps-warning", className: `${pfx}-zone-icon` }),
+          Skeletons.Note({ className: `${pfx}-zone-title`, content: LOCALE.DANGER_ZONE || "Danger zone" }),
+        ],
+      }),
+      Skeletons.Box.Y({
+        className: `${pfx}-zone-body`,
+        kids: [
+          dangerZoneRow(ui, {
+            title: LOCALE.EXPORT_ALL_DATA_TITLE || "Export all my data",
+            description: LOCALE.EXPORT_ALL_DATA_DESC || "Download all your files, chat history, and workspace data as a .zip archive.",
+            buttonLabel: LOCALE.EXPORT_DATA || "Export data",
+            service: "export-data",
+            danger: false,
+          }),
+          dangerZoneRow(ui, {
+            title: LOCALE.DELETE_MY_ACCOUNT_TITLE || "Delete my account",
+            description: LOCALE.DELETE_MY_ACCOUNT_DESC || "Permanently delete your account and all associated data. This cannot be undone.",
+            buttonLabel: LOCALE.DELETE_ACCOUNT || "Delete account",
+            service: "delete-account-open",
+            danger: true,
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 function content(ui) {
   const fig = `${ui.fig.family}-security__content`;
   return Skeletons.Box.Y({
@@ -183,7 +245,9 @@ function content(ui) {
           control(ui, LOCALE.LOGOUT, LOCALE.LOGOUT_TIPS),
           Skeletons.Element({ content: LOCALE.LOGOUT, className: `button text`, on_click: Butler.logout })
         ]
-      })
+      }),
+      Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
+      dangerZone(ui),
     ]
   })
 }
