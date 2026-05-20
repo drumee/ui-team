@@ -210,10 +210,30 @@ class __panel_activity extends LetcBox {
         return this._clearAll();
 
       case 'join-meeting': {
-        const hub_id = args && args.hub_id;
-        if (hub_id && typeof Wm !== 'undefined' && Wm.loadWorkspace) {
-          try { Wm.loadWorkspace({ hub_id, activeTab: 'meeting' }); }
-          catch (e) { this.warn('loadWorkspace failed', e); }
+        const item = this._findActivityItem(cmd);
+        const hub_id = (args && args.hub_id) || (item && item.mget && item.mget('hub_id'));
+        const details = (item && item.mget && item.mget('details')) || {};
+        const room_id = (item && item.mget && item.mget('room_id')) || details.nid;
+        const room_type = (item && item.mget && item.mget('room_type')) || 'meeting';
+        if (hub_id && typeof Wm !== 'undefined' && Wm.addWindow) {
+          const folderNid = details.nid || details.actual_home_id || room_id;
+          try {
+            Wm.addWindow({
+              kind: 'window_folder',
+              hub_id,
+              nid: folderNid,
+              filename: details.filename || details.user_filename || '',
+              area: details.area,
+              activeTab: 'meeting',
+              room_id,
+              room_type,
+            });
+          } catch (e) { this.warn('join-meeting: addWindow failed', e); }
+        }
+        const item_key = item && item.mget && item.mget('item_key');
+        if (item_key) {
+          this._meetingItems = (this._meetingItems || []).filter(m => m.item_key !== item_key);
+          this.refreshActivity(0);
         }
         this.activityState = 0;
         this.setState(0);
