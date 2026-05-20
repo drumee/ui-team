@@ -8,6 +8,10 @@
   &__ui {
     height: 100%;
     width: 100%;
+    // Anchor for the absolute-positioned __drag-drop-wrapper overlay.
+    // Without this, the overlay (width/height 100%) escapes to the
+    // nearest positioned ancestor and overflows the chat panel.
+    position: relative;
   }
 
   &__main {
