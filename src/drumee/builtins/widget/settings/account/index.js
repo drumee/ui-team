@@ -14,6 +14,7 @@ class settings_account extends LetcBox {
     });
     this.declareHandlers();
     this.getApi = this.getApi.bind(this);
+    this.bindEvent(_a.live);
     this.skeletons = [
       require("./skeleton/profile").default,
       function (ui) { return { kind: "settings_billing", uiHandler: [ui] } },
@@ -67,6 +68,10 @@ class settings_account extends LetcBox {
     }
   }
 
+  onBeforeDestroy() {
+    this.unbindEvent(_a.live);
+  }
+
   /**
    *
    */
@@ -74,6 +79,22 @@ class settings_account extends LetcBox {
     this._page = 0;
     this._category = "*";
     this.feed(require("./skeleton").default(this));
+  }
+
+  onWsMessage(svc, data) {
+    if (!data || !data.zipid || data.zipid !== this._exportZipId) return;
+    if (data.exit === 0) {
+      this._exportZipId = null;
+      const { svc: endpoint, keysel } = bootstrap();
+      const nid = this._exportNid || 0;
+      const url = `${endpoint}media.zip?hub_id=${Visitor.id}&nid=${nid}&id=${data.zipid}&keysel=${keysel}&zipname=${data.zipname}`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = data.zipname || "backup.zip";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
   }
 
   /**
@@ -511,16 +532,16 @@ class settings_account extends LetcBox {
       case "change-password":
         return this.updatePassword(cmd);
 
-      case "export-data": {
-        const SettingsDeleteAccount = require("../delete-account");
-        Kind.register("settings_delete_account", SettingsDeleteAccount);
-        this.__overlay.feed({
-          kind: "settings_delete_account",
-          export_only: 1,
-          uiHandler: [this],
+      case "export-data":
+        this.postService(SERVICE.drumate.backup, {
+          hub_id: Visitor.id,
+          flags: ["files", "chat", "workspace", "activity"],
+        }).then((data) => {
+          if (!data || !data.zipid) return;
+          this._exportZipId = data.zipid;
+          this._exportNid = data.nid || 0;
         });
         return;
-      }
 
       case "manage-seats":
         return this.handSeatsManager()
