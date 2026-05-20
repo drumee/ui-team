@@ -26,7 +26,7 @@ const __icon = function (_ui_) {
     lock: "protected-lock",
     makeACopy: "ctxmenu-copy",
     modify: "editbox_pencil",
-    newFolder: "raw-drumee-folder-blue",
+    newFolder: "ctxmenu-new-folder",
     organize: "ctxmenu-organize",
     openFileLocation: "desktop_drumeefolders",
     openInWindow: "ctxmenu-open-window",
