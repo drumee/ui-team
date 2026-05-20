@@ -1721,8 +1721,11 @@
 
   .window__chat-label {
     align-items: center;
-    min-height: 50px;
-    padding: 16px;
+    // Match the file-type filter bar's effective height (~40.5px) so the
+    // chat sidebar header sits flush with the menu bar across the divider.
+    min-height: 40px;
+    padding: 8px 16px;
+    box-sizing: border-box;
     border-bottom: 1px solid var(--border-muted);
     font-family: "Geist Mono", monospace;
     @include drumee.typo(
