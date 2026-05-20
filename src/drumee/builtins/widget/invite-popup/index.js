@@ -555,7 +555,9 @@ class __invite_popup extends LetcBox {
         permission: computePrivilege(this._workspaces[0]?.roleIds || DEFAULT_ROLE_IDS),
       });
     }
-    if (this._sendBtn) this._sendBtn.el.dataset.state = 0;
+    // Show the in-button loading spinner while hub.invite is in flight
+    // (data-loading also disables pointer events — prevents double submit).
+    if (this._sendBtn) this._sendBtn.el.dataset.loading = 1;
 
     const promises = assignments.map((a) =>
       this.postService(SERVICE.hub.invite, {
@@ -567,15 +569,14 @@ class __invite_popup extends LetcBox {
 
     Promise.all(promises)
       .then((results) => {
-        // hub.invite trả {results:[...]} khi OK; khi lỗi (vd ACL 403) trả
-        // {error, error_code, reason}. Một lần gửi lỗi top-level => báo lỗi,
-        // không đóng popup để người dùng thử lại.
+        // {error, error_code, reason}. One top-level error => alert,
+        // don't close popup to let user retry.
         const errored = results.filter((r) => r && (r.error || r.error_code));
         if (errored.length) {
           this.warn("[invite-popup] hub.invite error", errored);
           Wm.alert((errored[0] && (errored[0].reason || errored[0].error))
             || LOCALE.TRY_AGAIN);
-          if (this._sendBtn) this._sendBtn.el.dataset.state = 1;
+          if (this._sendBtn) delete this._sendBtn.el.dataset.loading;
           return;
         }
         const flat = [].concat(...results.map((r) => (r && r.results) || []));
@@ -595,7 +596,7 @@ class __invite_popup extends LetcBox {
       })
       .catch((err) => {
         this.warn("[invite-popup] hub.invite failed", err);
-        if (this._sendBtn) this._sendBtn.el.dataset.state = 1;
+        if (this._sendBtn) delete this._sendBtn.el.dataset.loading;
       });
   }
 

@@ -931,6 +931,25 @@
     }
   }
 
+  // Wrapper around the KIND.menu.topic root — must be position:relative so
+  // the menu items wrapper anchors to the trigger, overflow:visible so the
+  // popover can extend outside its row, and z-index high so it stacks above
+  // the folder window's chrome instead of being hidden behind it.
+  &__settings-action-role-dropdown {
+    position: relative;
+    overflow: visible;
+    z-index: 9999;
+
+    // Right-align the popover with the trigger so the menu grows LEFT into
+    // the panel interior rather than overflowing past the panel's right
+    // edge (which is clipped by the folder window frame).
+    .menu-topic-items__wrapper {
+      right: 0;
+      left: auto;
+      z-index: 9999;
+    }
+  }
+
   &__settings-action-role-select {
     align-items: center;
     justify-content: space-between;
@@ -942,6 +961,15 @@
     background: rgba(0, 0, 0, 0.05);
     color: #65656c;
     cursor: pointer;
+  }
+
+  // Member row and its action group must not clip — they sit inside the
+  // scrollable panel root, and the role popover renders as an absolutely
+  // positioned descendant that needs to overflow the row's bounding box.
+  &__settings-action-member-row,
+  &__settings-action-member-actions,
+  &__settings-action-members-section {
+    overflow: visible;
   }
 
   &__settings-action-role-label {
@@ -963,6 +991,67 @@
       width: 12px;
       height: 12px;
     }
+  }
+
+  // Read-only role label used for the self row in the Permissions Matrix —
+  // server rejects self-mutation, so we hide the dropdown and delete button
+  // and surface the current role as plain text instead.
+  &__settings-action-role-readonly {
+    flex: 0 0 88px;
+    padding: 4px 8px;
+    cursor: default;
+    background: transparent;
+  }
+
+  // Popover menu shown when the user clicks the role pill. Positioned by the
+  // KIND.menu.topic framework via offsetY:4; styles below cover the menu
+  // surface and per-option layout (radio-style row).
+  &__settings-action-role-menu {
+    background-color: var(--default-bg, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    min-width: 130px;
+    padding: 4px;
+  }
+
+  // Each role option — selected state shown via background highlight only
+  // (no radio dot, per UX request). Selected row uses the primary brand
+  // tint and bold text so it stands out at a glance.
+  &__settings-action-role-option {
+    align-items: center;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 8px 12px;
+    transition: background-color 120ms ease;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: rgba(29, 138, 234, 0.08);
+    }
+
+    &[data-state="1"] {
+      background-color: rgba(29, 138, 234, 0.12);
+
+      .window-folder__settings-action-role-option-label {
+        color: #1d8aea;
+        font-weight: 500;
+      }
+    }
+  }
+
+  &__settings-action-role-option-label {
+    // Disable hit-testing on the label so a click on the text passes through
+    // to the parent role-option Box.X, which is the element wired with the
+    // `service` handler. Without this, Skeletons.Note swallows the click
+    // and the menu doesn't react.
+    pointer-events: none;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 400,
+      $color: var(--default-text-color)
+    );
   }
 
   &__settings-action-send-button {
@@ -2096,5 +2185,91 @@
   &__folder-list,
   &__file-list {
     flex: 1 1 auto;
+  }
+}
+
+// Dark-mode overrides for the Folder Settings side panel. The base rules
+// hard-code light surface/text colors (e.g. #f2f2f7 panel bg, #0b0a21 text)
+// because the panel was authored before this widget supported dark mode.
+// This block remaps every hard-coded color to the matching CSS variable so
+// the panel follows the system theme. Confirm popups (Wm.confirm) already
+// use the CSS variables in builtins/window/confirm/skin/index.scss — no
+// change needed there.
+html[data-theme="dark"] {
+  .window-folder {
+    &__settings-action-panel {
+      background: var(--normal-bg-90);
+      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.5);
+    }
+
+    &__settings-action-header {
+      border-bottom-color: var(--border-default);
+    }
+
+    &__settings-action-item {
+      background: var(--overlay-bg-05);
+      color: var(--normal-fg-10);
+
+      &.destructive {
+        color: var(--normal-fg-10);
+      }
+    }
+
+    &__settings-action-label,
+    &__settings-action-section-title,
+    &__settings-action-member-name {
+      color: var(--normal-fg-10);
+    }
+
+    &__settings-action-close {
+      color: var(--normal-fg-10);
+    }
+
+    &__settings-action-invite-input-row {
+      background: var(--normal-bg-elevated);
+    }
+
+    &__settings-action-invite-entry input {
+      color: var(--normal-fg-10);
+
+      &::placeholder {
+        color: var(--normal-fg-50);
+      }
+    }
+
+    &__settings-action-role-select {
+      background: var(--overlay-bg-05);
+      color: var(--normal-fg-20);
+    }
+
+    &__settings-action-role-label {
+      color: var(--normal-fg-20);
+    }
+
+    // The role popover menu — dark surface, subtle border, options use the
+    // same hover/selected tints as the rest of the dark UI.
+    &__settings-action-role-menu {
+      background-color: var(--normal-bg-elevated);
+      border-color: var(--border-default);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    &__settings-action-role-option {
+      &:hover {
+        background-color: var(--hover-bg-40);
+      }
+
+      &[data-state="1"] {
+        background-color: var(--active-item-bg);
+
+        .window-folder__settings-action-role-option-label {
+          color: var(--normal-fg-800);
+        }
+      }
+    }
+
+    &__settings-action-role-option-label {
+      color: var(--normal-fg-10);
+    }
   }
 }

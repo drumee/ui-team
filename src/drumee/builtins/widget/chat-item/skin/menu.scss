@@ -33,14 +33,26 @@
 
     &__icon {
       &.menu-icon {
-        background-color: var(--default-bg-hover);
-        border-radius: var(--border-radius-tiny);
-        border: 1px solid var(--eviolet);
-        color: var(--ewhite);
+        background-color: var(--default-bg, #ffffff);
+        border-radius: 50%;
+        border: 1px solid var(--border-default, var(--eviolet));
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+        color: var(--normal-fg-60, #5a5a5a);
         cursor: pointer;
-        height: 10px;
-        width: 10px;
+        height: 24px;
+        width: 24px;
+        padding: 4px;
         display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.15s ease, box-shadow 0.15s ease,
+          background-color 0.15s ease;
+
+        &:hover {
+          background-color: var(--default-bg-hover);
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+          transform: scale(1.05);
+        }
       }
     }
 

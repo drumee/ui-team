@@ -90,8 +90,11 @@
   }
 
   &__compose-popup {
-    position: absolute;
-    top: calc(100% + 8px);
+    // position:fixed escapes the sidebar's overflow:hidden box.
+    // top/right are set inline by _toggleComposePopup based on the
+    // compose-btn's viewport rect (the 0/0 here are placeholders).
+    position: fixed;
+    top: 0;
     right: 0;
     width: 320px;
     max-height: 360px;

@@ -92,9 +92,18 @@ class __chat_p2p extends LetcBox {
         }
         break;
 
-      case 'compose-search':
+      case 'compose-search': {
         this._composeSearch = child;
+        // The Entry widget does NOT fire `service` on every keystroke,
+        // so wire a native `input` listener that drives the live filter.
+        const inputEl = child.el && child.el.querySelector("input");
+        if (inputEl) {
+          inputEl.addEventListener("input", () => {
+            this._filterComposeList(inputEl.value || "");
+          });
+        }
         break;
+      }
 
       case 'all-read-empty':
         this._allReadEmpty = child;
@@ -112,6 +121,20 @@ class __chat_p2p extends LetcBox {
     const next = typeof force === "boolean" ? force : !cur;
     this._composePopup.el.dataset.state = next ? 1 : 0;
     if (next) {
+      // The popup uses position:fixed (escapes the sidebar's overflow:hidden
+      // box). Place it under the compose button vertically, but anchor its
+      // right edge to the SIDEBAR's right edge (not the button's). The
+      // sidebar header has 24px padding, so anchoring to the button would
+      // overflow the 320px popup past the sidebar's LEFT edge by 24px.
+      const btn = this.el && this.el.querySelector(`.${this.fig.family}__compose-btn`);
+      const sidebar = this.el && this.el.querySelector(`.${this.fig.family}__sidebar`);
+      if (btn) {
+        const btnRect = btn.getBoundingClientRect();
+        const sidebarRect = sidebar && sidebar.getBoundingClientRect();
+        const rightAnchor = sidebarRect ? sidebarRect.right : btnRect.right;
+        this._composePopup.el.style.top = `${Math.round(btnRect.bottom + 8)}px`;
+        this._composePopup.el.style.right = `${Math.round(Math.max(0, window.innerWidth - rightAnchor))}px`;
+      }
       const inputEl = this._composeSearch && this._composeSearch.el && this._composeSearch.el.querySelector("input");
       if (inputEl) {
         inputEl.value = "";
@@ -141,13 +164,27 @@ class __chat_p2p extends LetcBox {
         item.el.style.display = "";
         return;
       }
-      const name = [
-        item.mget && item.mget(_a.firstname),
-        item.mget && item.mget(_a.lastname),
-        item.mget && item.mget(_a.fullname),
-        item.mget && item.mget(_a.email),
-      ].filter(Boolean).join(" ").toLowerCase();
-      item.el.style.display = name.includes(q) ? "" : "none";
+      // Read the DISPLAYED name from the item's rendered DOM — this is the
+      // ground truth no matter which model field fed it (firstname,
+      // fullname, name, display_name, etc.). Fall back to a wide net of
+      // common model keys to cover items rendered before their DOM is
+      // ready or with non-text avatars.
+      let haystack = "";
+      const nameEl = item.el.querySelector(".widget-chatcontactItem__note.name");
+      if (nameEl) haystack += " " + (nameEl.textContent || "");
+      if (item.mget) {
+        haystack += " " + [
+          item.mget(_a.firstname),
+          item.mget(_a.lastname),
+          item.mget(_a.fullname),
+          item.mget(_a.name),
+          item.mget(_a.email),
+          item.mget("display_name"),
+          item.mget("username"),
+          item.mget("hubname"),
+        ].filter(Boolean).join(" ");
+      }
+      item.el.style.display = haystack.toLowerCase().includes(q) ? "" : "none";
     });
   }
 

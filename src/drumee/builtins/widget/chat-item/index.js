@@ -294,8 +294,11 @@ class ___widget_chatItem extends LetcBox {
       const bubble = mainEl.querySelector(`.${this.fig.family}__message-container`) || mainEl;
       const uiRect = this.el.getBoundingClientRect();
       const bubbleRect = bubble.getBoundingClientRect();
-      const left = bubbleRect.left - uiRect.left + bubbleRect.width - 14;
-      const top = bubbleRect.top - uiRect.top;
+      // 24px trigger sits half-overlapping the bubble's top-right corner
+      // (badge style) so the full hit area stays inside the row hover zone
+      // while being clearly visible against any bubble color.
+      const left = bubbleRect.left - uiRect.left + bubbleRect.width - 12;
+      const top = bubbleRect.top - uiRect.top - 12;
       if (this.menu && !this.menu.isDestroyed()) {
         this.menu.el.style.left = `${left}px`;
         this.menu.el.style.top = `${top}px`;
