@@ -382,6 +382,9 @@ class settings_main extends LetcBox {
       case "export-data":
         return this.exportData();
 
+      case "export-data-cancel":
+        return this.closeOverlay();
+
       case "delete-account":
         return this.confirmDeleteAccount();
 
