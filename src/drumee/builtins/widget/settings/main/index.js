@@ -296,9 +296,9 @@ class settings_main extends LetcBox {
    *
    */
   async exportData() {
-    await Kind.waitFor("settings_delete_account");
+    await Kind.waitFor("settings_export_data");
     return this.ensurePart("overlay").then((p) => {
-      p.feed({ kind: "settings_delete_account", export_only: true, uiHandler: [this] });
+      p.feed({ kind: "settings_export_data", uiHandler: [this] });
     });
   }
 

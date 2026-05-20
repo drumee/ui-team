@@ -311,6 +311,9 @@ module.exports = {
   settings_delete_account: function () {
     return import("widget/settings/delete-account");
   },
+  settings_export_data: function () {
+    return import("widget/settings/export-data");
+  },
   settings_change_password: function () {
     return import("widget/settings/change-password");
   },
