@@ -133,10 +133,12 @@ class settings_helpcenter extends LetcBox {
         break;
       case "load-page":
         this.load_page(cmd);
+        break;
       case "change-mfa":
         this.ensurePart("current-mfa").then((p) => {
           p.restart(1);
         });
+        break;
       case _e.sort:
         this._category = cmd.mget(_a.type);
         this.ensurePart(_a.list).then((p) => {
