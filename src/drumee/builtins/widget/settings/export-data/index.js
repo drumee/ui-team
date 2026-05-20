@@ -123,9 +123,37 @@ class settings_export_data extends LetcBox {
       case "export-download":
         return this.downloadSelected();
 
+      case "export-download-all":
+        return this.downloadAll();
+
       default:
         return;
     }
+  }
+
+  downloadAll() {
+    this.postService(SERVICE.drumate.backup, {
+      hub_id: Visitor.id,
+      flags: ["files", "chat", "workspace", "activity"],
+    })
+      .then((data) => {
+        if (!data.zipid) {
+          this.warn("Got empty data");
+          return;
+        }
+        this.mset({
+          zipid: data.zipid,
+          hub_id: Visitor.id,
+          nid: data.nid || 0,
+        });
+        this._zipsize = data.size || 0;
+        this.ensurePart("message").then((part) => {
+          part.feed(require("./skeleton/progress").default(this));
+        });
+      })
+      .catch((e) => {
+        this.warn("downloadAll: backup failed", e);
+      });
   }
 }
 

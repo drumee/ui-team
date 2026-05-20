@@ -137,10 +137,8 @@ export default function export_data_skeleton(ui) {
       }),
       footerButton(ui, {
         variant: "continue",
-        sys_pn: "download-button",
-        state: ui._selected.size > 0 ? 0 : 1,
-        label: LOCALE.DOWNLOAD || "Download",
-        service: "export-download",
+        label: LOCALE.DOWNLOAD_ALL || "Download all",
+        service: "export-download-all",
       }),
     ],
   });
