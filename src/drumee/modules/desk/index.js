@@ -841,6 +841,7 @@ class desk_module extends LetcBox {
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });
         this._closeMainPanels();
+        this.ensurePart('action-cluster').then((p) => p && p.setState(1));
         Wm.reload();
         return;
 

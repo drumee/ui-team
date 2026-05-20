@@ -210,9 +210,11 @@
 
       .note-content {
         padding: 0;
-        min-height: 24px;
+        min-height: 28px;
         max-height: 96px;
         overflow-y: auto;
+        font-size: 14px;
+        line-height: 1.4;
         color: var(--normal-fg-10);
         outline: none;
         border: none;
@@ -271,10 +273,16 @@
 
   &__drag-drop-wrapper {
     background: var(--default-bg);
+    // box-sizing:border-box so the 10px padding is INCLUDED in 100% width.
+    // Without it, width:100% + padding adds 20px outside the parent and
+    // the right edge (dashed border) is clipped by the chat panel's overflow.
+    box-sizing: border-box;
     display: none !important;
     height: 100%;
     padding: 10px;
     position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     z-index: 99999;
   }
