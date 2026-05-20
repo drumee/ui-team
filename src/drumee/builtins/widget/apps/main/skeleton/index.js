@@ -794,6 +794,16 @@ function adminUpsellOverlay(ui) {
   });
 }
 
+function comingSoonOverlay(ui) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__coming-soon-overlay`,
+    kids: [
+      Skeletons.Note({ className: `${pfx}__coming-soon`, content: LOCALE.COMING_SOON }),
+    ],
+  });
+}
+
 export default function apps_main_skeleton(ui) {
   const pfx = ui.fig.family;
   let content;
@@ -847,5 +857,6 @@ export default function apps_main_skeleton(ui) {
     const fpermOverlay = require("./folder-permission").default(ui);
     if (fpermOverlay) root.push(fpermOverlay);
   }
+  root.push(comingSoonOverlay(ui));
   return root;
 }

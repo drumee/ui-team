@@ -42,6 +42,29 @@
     z-index: 50;
   }
 
+  // ── Coming-soon blur overlay ──────────────────────────────
+  &__coming-soon-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    background-color: rgba(255, 255, 255, 0.45);
+    z-index: 60;
+    pointer-events: none;
+  }
+
+  &__coming-soon {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 32px;
+    letter-spacing: 0.04em;
+    color: $ink-900;
+    text-align: center;
+  }
+
   // ── Tabs bar ──────────────────────────────────────────────
   &__tabs {
     width: 100%;
