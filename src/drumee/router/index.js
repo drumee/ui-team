@@ -336,10 +336,16 @@ class drumee_router extends LetcBox {
         kind = 'module_welcome';
       }
     }
+    this.debug("AAA:8887", moduleName(), this.currentModule)
     this.ensurePart('body').then(async (p) => {
       await Kind.waitFor(kind);
+      if (this.currentKind === kind) {
+        this.debug("AAA:342", kind, moduleName(), this.currentModule)
+        return;
+      }
       p.feed({ kind, name });
       this.currentModule = p.children.last();
+      this.currentKind = kind;
     })
   }
 

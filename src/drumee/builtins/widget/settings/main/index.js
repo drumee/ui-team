@@ -295,11 +295,10 @@ class settings_main extends LetcBox {
   /**
    *
    */
-  exportData() {
-    return this.postService({
-      service: SERVICE.desk.disk_usage,
-      hub_id: Visitor.id,
-      list: 1,
+  async exportData() {
+    await Kind.waitFor("settings_export_data");
+    return this.ensurePart("overlay").then((p) => {
+      p.feed({ kind: "settings_export_data", uiHandler: [this] });
     });
   }
 
@@ -382,6 +381,9 @@ class settings_main extends LetcBox {
 
       case "export-data":
         return this.exportData();
+
+      case "export-data-cancel":
+        return this.closeOverlay();
 
       case "delete-account":
         return this.confirmDeleteAccount();

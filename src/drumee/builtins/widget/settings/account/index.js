@@ -14,9 +14,6 @@ class settings_account extends LetcBox {
     });
     this.declareHandlers();
     this.getApi = this.getApi.bind(this);
-    this._exportZipId = null;
-    this._isExporting = null;
-    this.bindEvent(_a.live);
     this.skeletons = [
       require("./skeleton/profile").default,
       function (ui) { return { kind: "settings_billing", uiHandler: [ui] } },
@@ -35,43 +32,6 @@ class settings_account extends LetcBox {
       this.tab_name.push("My seats");
       this.skeletons.push(require("./skeleton/seats").default)
     }
-  }
-
-  onBeforeDestroy() {
-    this.unbindEvent(_a.live);
-  }
-
-  onWsMessage(svc, data, options = {}) {
-    if (data && data.zipid && data.zipid === this._exportZipId && data.exit === 0 && !this._isExporting) {
-      this._isExporting = data.zipid;
-      const { svc: svcUrl, keysel } = bootstrap();
-      const hub_id = this.mget(_a.hub_id);
-      const nid = this.mget(_a.nid) || 0;
-      const url = `${svcUrl}media.zip?hub_id=${hub_id}&nid=${nid}&id=${data.zipid}&keysel=${keysel}&zipname=${data.zipname}`;
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = data.zipname || "backup.zip";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      this._exportZipId = null;
-      this._isExporting = null;
-      return;
-    }
-    if (super.onWsMessage) super.onWsMessage(svc, data, options);
-  }
-
-  exportData() {
-    this.postService(SERVICE.drumate.backup, {
-      hub_id: Visitor.id,
-      flags: ["files", "chat", "workspace", "activity"],
-    }).then((data) => {
-      if (!data || !data.zipid) return;
-      this._exportZipId = data.zipid;
-      this.mset({ nid: data.nid || 0 });
-    }).catch((e) => {
-      this.warn("Export data failed", e);
-    });
   }
 
   /**
@@ -552,7 +512,13 @@ class settings_account extends LetcBox {
         return this.updatePassword(cmd);
 
       case "export-data":
-        return this.exportData();
+        Kind.waitFor("settings_export_data").then(() => {
+          this.__overlay.feed({ kind: "settings_export_data", uiHandler: [this] });
+        });
+        return;
+
+      case "export-data-cancel":
+        return this.__overlay.clear();
 
       case "manage-seats":
         return this.handSeatsManager()

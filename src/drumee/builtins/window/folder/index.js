@@ -122,7 +122,7 @@ class __window_folder extends mfsInteract {
       this.$el.resizable(_a.option, "minWidth", bounds.minWidth);
       this.$el.resizable(_a.option, "minHeight", bounds.minHeight);
       this.$el.resizable(_a.option, "handles", this.handles || "all");
-    } catch (e) {}
+    } catch (e) { }
     this.syncBounds();
   }
 
@@ -290,6 +290,10 @@ class __window_folder extends mfsInteract {
       if (this.getViewMode && this.getViewMode() !== _a.row) {
         this._prepareListPartition(child);
       }
+      return;
+    }
+    if (pn == "meeting-panel" && this.mget(_a.start_meeting)) {
+      this._launchMeetingInPanel()
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
@@ -808,7 +812,7 @@ class __window_folder extends mfsInteract {
         if (target?.trash) return target.trash();
         if (target?.delete) return target.delete();
       })
-      .catch(() => {});
+      .catch(() => { });
   }
 
   getFolderSettingPart() {

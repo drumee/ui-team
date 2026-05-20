@@ -56,9 +56,9 @@ class __window_manager extends push {
    */
   openSharedLink(opt) {
     const fileTypes = [_a.audio, _a.video, _a.image, _a.video, _a.document];
-    setTimeout(() => {
-      Backbone.history.navigate(_K.module.desk);
-    }, 1000);
+    // setTimeout(() => {
+    //   Backbone.history.navigate(_K.module.desk);
+    // }, 1000);
     if (opt.kind == _a.media || fileTypes.includes(opt.filetype)) {
       return this.fetchMediaAttributes(opt);
     }
@@ -85,12 +85,34 @@ class __window_manager extends push {
    * @returns
    */
   route(l) {
+    let args = Visitor.parseModuleArgs() || {};
+    this.debug("AAA:89", args)
+    if (args.hasOwnProperty('meeting') && args.nid) {
+      let media = this.getItemsByAttr(_a.nid, args.nid)[0]
+      this.debug("AAA:89", media)
+      if (media && media.triggerHandlers) {
+        media.triggerHandlers({ service: "open-node", start_meeting: 1 })
+        return
+      }
+    }
     const loc = JSON.parse(localStorage.getItem("locationOnStart")); //"locationOnStart";
+    this.debug("locationOnStart", loc)
     if (loc) {
       let { hash } = loc;
       if (hash) {
-        let opt = Visitor.parseModuleArgs(hash);
-        this.openSharedLink(opt);
+        const savedPath = Visitor.parseModule(hash);
+        const savedArgs = Visitor.parseModuleArgs(hash);
+        this.openSharedLink(savedArgs);
+      }
+    }
+    // Direct folder URL deep link: #@desk/folder?hub_id=HUB_ID[&nid=NID]
+    const pathArgs = Visitor.parseModule();
+    if (pathArgs[1] === 'folder') {
+      const params = Visitor.parseModuleArgs();
+      if (params.hub_id) {
+        Kind.waitFor('window_folder').then(() => {
+          this.launch({ kind: 'window_folder', hub_id: params.hub_id, nid: params.nid }, { explicit: 1 });
+        });
       }
     }
   }
@@ -624,6 +646,7 @@ class __window_manager extends push {
   }
 
   onDomRefresh() {
+    this.debug("AAA:7650", this)
     this.feed(require("./skeleton")(this));
     this.fetchService(SERVICE.desk.get_env,
       { hub_id: Visitor.id },
@@ -635,7 +658,7 @@ class __window_manager extends push {
         Visitor.set({ wicket_id: data.wicket_id });
       }
       this.trigger(_e.ready);
-      this.route();
+      // this.route();
       Visitor.set({ disk: data.disk });
       this.bindWsEvents()
     });
@@ -648,7 +671,7 @@ class __window_manager extends push {
       }
       this.visible = !document.hidden;
     };
-    this.loadReminders();
+    // this.loadReminders();
 
     window.addEventListener("online", () => {
       ActivityHandler && ActivityHandler.resync();
@@ -1424,6 +1447,10 @@ class __window_manager extends push {
           return;
         }
         this.unselect(1);
+        if (this.el.contains(lastClick.target)) {
+          Desk.closeMainPanels()
+          Desk.closeOtherSidebarPanels()
+        }
         return this.warn("AAA:471", WARNING.method.unprocessed.format(service));
     }
   }

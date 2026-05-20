@@ -910,6 +910,7 @@ class __window_manager extends mfsInteract {
     if (pointerDragged) {
       return;
     }
+    this.debug("AAA:913", media, args)
     const fType = media.mget(_a.filetype);
     switch (fType) {
       case _a.hub:

@@ -211,7 +211,6 @@ class __welcome_router extends LetcBox {
         }).catch(noOperation);
         return;
       }
-
       const f = () => {
         location.hash = _K.module.desk;
       }
