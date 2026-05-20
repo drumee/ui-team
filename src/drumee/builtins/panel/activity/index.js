@@ -866,6 +866,7 @@ class __panel_activity extends LetcBox {
       item_type: 'meeting',
       item_key: key,
       service: 'join-meeting',
+      timestamp: Math.floor(Date.now() / 1000),
       uiHandler: this,
       logicalParent: this,
     });
