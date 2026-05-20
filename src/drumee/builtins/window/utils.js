@@ -764,6 +764,7 @@ class __window_mfs extends DrumeeMFS {
       case SERVICE.media.restore:
       case SERVICE.media.restore_into:
       case SERVICE.media.upload:
+      case SERVICE.hub.invite:
         this.newContent({ data }, options);
         break;
 
