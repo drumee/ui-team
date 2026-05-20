@@ -989,22 +989,15 @@ class __widget_chat extends LetcBox {
 
     const replaceChars = { '<': '&#60;', '>': '&#62;' };
     message = message.replace(/[<>]/g, m => replaceChars[m]);
-    let attachments = list.getAttachmentIds() || [];
-    // Promote file mentions into the attachment array so channel.list_by_file
-    // (which searches that JSON column) can find this message.
-    let mentionedFiles = [];
-    if (messenger && _.isFunction(messenger.getMentionedFileNids)) {
-      mentionedFiles = messenger.getMentionedFileNids();
-    }
-    if (mentionedFiles.length) {
-      const seen = new Set(attachments.map(String));
-      for (const nid of mentionedFiles) {
-        if (!seen.has(`${nid}`)) {
-          attachments.push(nid);
-          seen.add(`${nid}`);
-        }
-      }
-    }
+    const attachments = list.getAttachmentIds() || [];
+    // DO NOT promote mentioned files into `attachments`. The server's
+    // channel.post moves every attachment nid into a per-message chat
+    // subfolder (mfs_move_all → physical move), which is correct for
+    // uploaded files but DELETES mentioned files from their original
+    // location. The mention stays as an inline anchor in the message
+    // body, so the reference UX still works; channel.list_by_file
+    // indexing of mentions requires a separate server field (e.g.
+    // `mention_file_ids`) and is out of scope for this safety fix.
     if (_.isEmpty(attachments) && _.isEmpty(message)) {
       return false;
     }
@@ -1087,6 +1080,11 @@ class __widget_chat extends LetcBox {
     data.kind = 'widget_chat_item';
     data.logicalParent = this;
     data.uiHandler = this;
+    // Propagate chat container's `type` to each message so the chat-item
+    // template's `m.type == _a.share` gate renders the sender name
+    // (otherwise rows arrive with `type` undefined and the username header
+    // never appears in folder-chat / share-mode chats).
+    if (data.type == null) data.type = this.mget(_a.type);
     let messageArr;
     if (data.echoId && this.echoId == data.echoId) {
       messageArr = this.__list.getItemsByAttr('echoId', data.echoId)[0];
@@ -1125,6 +1123,10 @@ class __widget_chat extends LetcBox {
       is_readed: 0,
       is_seen: 0,
     }
+    // Same propagation as handleReceivedMsg — locally-posted optimistic
+    // rows must also inherit the chat container's `type` so the username
+    // header renders for them immediately (before the server echo).
+    if (tmp.type == null) tmp.type = this.mget(_a.type);
     if (api.thread_id && this.threadSnapshot) {
       tmp.thread = this.threadSnapshot;
     }
@@ -1470,12 +1472,42 @@ class __widget_chat extends LetcBox {
    * @param {string} mentionType - 'contact' (from @) or 'file' (from /)
    */
   _showMentionFiles(filter, mentionType) {
-    const dropdown = this.getPart('mention-dropdown');
-    if (!dropdown) return;
+    console.log('[mention] _showMentionFiles entry', {
+      filter,
+      mentionType,
+      scope: this.mget('scope'),
+      hubId: this.hubId,
+      hasGetPart: !!this.getPart,
+      fig: this.fig && this.fig.family,
+    });
+    // mention-dropdown is rendered nested inside chat-footer → getPart may
+    // not resolve it through the part registry depending on partHandler
+    // wiring. Fall back to a direct DOM lookup so folder-chat and bigchat
+    // both find it. Downstream code touches `.el.dataset` and `.el.innerHTML`,
+    // so we normalize on the DOM node.
+    let dropdownEl;
+    const dropdownPart = this.getPart && this.getPart('mention-dropdown');
+    if (dropdownPart && dropdownPart.el) {
+      dropdownEl = dropdownPart.el;
+      console.log('[mention] dropdown via getPart ✓');
+    } else if (this.el) {
+      dropdownEl = this.el.querySelector(
+        `.${this.fig.family}__mention-dropdown`,
+      );
+      console.log('[mention] dropdown via querySelector', { found: !!dropdownEl });
+    }
+    if (!dropdownEl) {
+      console.warn('[mention] NO DROPDOWN ELEMENT — aborting');
+      return;
+    }
+    const dropdown = { el: dropdownEl };
 
     const hubId = this.hubId;
+    // `home` may be unset in folder-chat (toolkit/index.js passes `home_id`
+    // as a primitive, not the full `home` object). Don't early-return —
+    // `home` is only used as a fallback for file-mention's folderNid below,
+    // and that path is safely guarded.
     const home = this.mget(_a.home);
-    if (!home) return;
 
     const mediaGridPreview = require('builtins/media/grid/template/preview');
 
@@ -1498,7 +1530,7 @@ class __widget_chat extends LetcBox {
           if (winHubId) folderHubId = winHubId;
         }
       } catch (e) { }
-      if (!folderNid) folderNid = home.home_id;
+      if (!folderNid) folderNid = (home && home.home_id) || folderHubId;
 
       filesPromise = this.fetchService({
         service: SERVICE.media.show_node_by,
@@ -1508,14 +1540,32 @@ class __widget_chat extends LetcBox {
     }
 
     if (mentionType === 'contact') {
-      contactsPromise = this.fetchService({
-        service: SERVICE.chat.contact_rooms,
-        hub_id: Visitor.get(_a.id),
-        key: filter || ''
-      }).catch(() => null);
+      // Folder-chat scope: mention workspace members (people who can see
+      // this folder), not the visitor's personal chat rooms. Falls back to
+      // contact_rooms when not in folder scope (bigchat / direct chat).
+      if (this.mget('scope') === _a.folder && folderHubId) {
+        console.log('[mention] fetching hub members', { hub_id: folderHubId });
+        contactsPromise = this.fetchService({
+          service: SERVICE.hub.get_members_by_type,
+          hub_id: folderHubId,
+          type: 'all',
+        }).catch((e) => { console.warn('[mention] hub members fetch failed', e); return null; });
+      } else {
+        console.log('[mention] fetching contact_rooms', { hub_id: Visitor.get(_a.id) });
+        contactsPromise = this.fetchService({
+          service: SERVICE.chat.contact_rooms,
+          hub_id: Visitor.get(_a.id),
+          key: filter || ''
+        }).catch((e) => { console.warn('[mention] contact_rooms fetch failed', e); return null; });
+      }
     }
 
     Promise.all([filesPromise, contactsPromise]).then(([filesData, contactsData]) => {
+      console.log('[mention] fetch resolved', {
+        filesRaw: filesData,
+        contactsRaw: contactsData,
+        contactsType: Array.isArray(contactsData) ? 'array' : typeof contactsData,
+      });
       const toRows = (d) => {
         if (!d) return [];
         if (Array.isArray(d)) return d;
@@ -1523,6 +1573,7 @@ class __widget_chat extends LetcBox {
       };
       let files = toRows(filesData);
       let contacts = toRows(contactsData);
+      console.log('[mention] toRows', { files: files.length, contacts: contacts.length });
 
       files = files.filter(f => f.filetype !== _a.hub);
 
@@ -1604,13 +1655,20 @@ class __widget_chat extends LetcBox {
         });
       }
 
+      console.log('[mention] html length', html.length);
       if (!html) {
+        console.warn('[mention] empty html → closing dropdown');
         dropdown.el.dataset.state = _a.closed;
         return;
       }
 
       dropdown.el.innerHTML = html;
       dropdown.el.dataset.state = _a.open;
+      console.log('[mention] dropdown OPENED', {
+        state: dropdown.el.dataset.state,
+        visible: dropdown.el.offsetParent !== null,
+        rect: dropdown.el.getBoundingClientRect(),
+      });
 
       const self = this;
       dropdown.el.querySelectorAll('.mention-item').forEach(el => {

@@ -816,23 +816,32 @@ class __panel_activity extends LetcBox {
    */
   _notify(data) {
     if (!window.Notification) return;
-    let now = new Date().getTime()
-    if ((now - this._last_notified) < 3000) return
+    if (Notification.permission === "denied") return;
+    if (Notification.permission === "default" && this._permission_asked) return;
+
+    const now = Date.now();
+    if ((now - this._last_notified) < 3000) return;
     this._last_notified = now;
-    const title = data.firstname || LOCALE.NEW_MESSAGE
+
+    const title = data.firstname || LOCALE.NEW_MESSAGE;
     const notif = {
       body: data.message || "",
       icon: Visitor.avatar(data.author_id),
     };
-    // Request permission
-    Notification.requestPermission()
-      .then(permission => {
-        if (permission === "granted") {
-          new Notification(title, notif);
-        } else {
-          alert(LOCALE.NOTIFICATION_NOT_GRANTED)
-        }
-      });
+
+    if (Notification.permission === "granted") {
+      new Notification(title, notif);
+      Visitor.playSound(_K.notifications.drip, 0);
+      return;
+    }
+
+    this._permission_asked = true;
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") {
+        new Notification(title, notif);
+        Visitor.playSound(_K.notifications.drip, 0);
+      }
+    });
   }
 
   /**
@@ -850,7 +859,6 @@ class __panel_activity extends LetcBox {
     let author_id = content.author_id || sender.uid || sender.id;
     if (!author_id) return;
     if (author_id == this._lastSender || author_id == Visitor.id) return;
-    Visitor.playSound(_K.notifications.drip, 0);
     this._lastSender = author_id;
     let preview = content.message || options.service || content.action || options.action;
     if (preview) {

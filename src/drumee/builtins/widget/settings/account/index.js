@@ -14,6 +14,9 @@ class settings_account extends LetcBox {
     });
     this.declareHandlers();
     this.getApi = this.getApi.bind(this);
+    this._exportZipId = null;
+    this._isExporting = null;
+    this.bindEvent(_a.live);
     this.skeletons = [
       require("./skeleton/profile").default,
       function (ui) { return { kind: "settings_billing", uiHandler: [ui] } },
@@ -34,8 +37,45 @@ class settings_account extends LetcBox {
     }
   }
 
+  onBeforeDestroy() {
+    this.unbindEvent(_a.live);
+  }
+
+  onWsMessage(svc, data, options = {}) {
+    if (data && data.zipid && data.zipid === this._exportZipId && data.exit === 0 && !this._isExporting) {
+      this._isExporting = data.zipid;
+      const { svc: svcUrl, keysel } = bootstrap();
+      const hub_id = this.mget(_a.hub_id);
+      const nid = this.mget(_a.nid) || 0;
+      const url = `${svcUrl}media.zip?hub_id=${hub_id}&nid=${nid}&id=${data.zipid}&keysel=${keysel}&zipname=${data.zipname}`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = data.zipname || "backup.zip";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      this._exportZipId = null;
+      this._isExporting = null;
+      return;
+    }
+    if (super.onWsMessage) super.onWsMessage(svc, data, options);
+  }
+
+  exportData() {
+    this.postService(SERVICE.drumate.backup, {
+      hub_id: Visitor.id,
+      flags: ["files", "chat", "workspace", "activity"],
+    }).then((data) => {
+      if (!data || !data.zipid) return;
+      this._exportZipId = data.zipid;
+      this.mset({ nid: data.nid || 0 });
+    }).catch((e) => {
+      this.warn("Export data failed", e);
+    });
+  }
+
   /**
-   * 
+   *
    */
   canAdmin() {
     if (!/^pro$/i.test(Visitor.quota()?.plan)) return false;
@@ -510,6 +550,9 @@ class settings_account extends LetcBox {
 
       case "change-password":
         return this.updatePassword(cmd);
+
+      case "export-data":
+        return this.exportData();
 
       case "manage-seats":
         return this.handSeatsManager()

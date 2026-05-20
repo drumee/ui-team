@@ -58,6 +58,9 @@ class __window_folder extends mfsInteract {
         filetype: _a.hub,
       });
     }
+    if (this.model.get(_a.filetype) === _a.hub) {
+      this.isHub = 1;
+    }
     if (!Visitor.isMobile()) {
       const bounds = this._defaultBounds();
       this.size = {
