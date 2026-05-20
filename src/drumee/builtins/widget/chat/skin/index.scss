@@ -271,10 +271,16 @@
 
   &__drag-drop-wrapper {
     background: var(--default-bg);
+    // box-sizing:border-box so the 10px padding is INCLUDED in 100% width.
+    // Without it, width:100% + padding adds 20px outside the parent and
+    // the right edge (dashed border) is clipped by the chat panel's overflow.
+    box-sizing: border-box;
     display: none !important;
     height: 100%;
     padding: 10px;
     position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     z-index: 99999;
   }
