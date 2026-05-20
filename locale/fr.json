@@ -148,6 +148,7 @@
   "QnA": "Question & réponse",
   "Q_DELETE_ACCOUNT": "Supprimer le compte et toutes les données ?",
   "DELETE_ACCOUNT_BACKUP_PREPARING": "Votre sauvegarde est en cours de préparation. Cela peut prendre un certain temps. Vous pouvez passer à l'étape suivante et recevoir ultérieurement un lien par e-mail pour télécharger votre sauvegarde.",
+  "EXPORT_BACKUP_PREPARING": "Your backup is being prepared. This may take a long time. You will receive an email with a download link when it is ready.",
   "Q_DELETE_ALL_FILES": "<p>Voulez-vous supprimer</p><p> tous les fichiers de la poubelle ?</p>",
   "Q_FORGOT_PASSWORD": "Mot de passe oublié?",
   "REMOVE": "Supprimer",

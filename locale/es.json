@@ -308,6 +308,7 @@
   "VIEW_ALL": "Ver todo",
   "DELETE_SELECTED": "Eliminar seleccionados",
   "DELETE_ACCOUNT_BACKUP_PREPARING": "Tu copia de seguridad se está preparando. Esto puede tardar un tiempo. Puedes pasar al siguiente paso y recibir más tarde un enlace por correo electrónico para descargar tu copia de seguridad.",
+  "EXPORT_BACKUP_PREPARING": "Your backup is being prepared. This may take a long time. You will receive an email with a download link when it is ready.",
   "NO_FILES": "No se encontraron archivos",
   "USER_STORAGE_DISTRIBUTION": "Distribución de almacenamiento de usuarios",
   "USAGE_HIGH_TO_LOW": "Uso de mayor a menor",
