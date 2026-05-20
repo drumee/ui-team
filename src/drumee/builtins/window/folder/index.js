@@ -850,18 +850,91 @@ class __window_folder extends mfsInteract {
     if (label) label.textContent = role.label;
   }
 
+  // Menu pick from the invite-row role dropdown — set _folderInviteRole and
+  // re-render the panel so the trigger label refreshes. (No server call until
+  // the user actually clicks Send Invitation.)
   setFolderInviteRole(cmd) {
-    this._folderInviteRole = this.getNextFolderRole(
-      cmd.el?.dataset?.role || LOCALE.ROLE_ADMIN,
-    );
-    this.updateRoleSelector(cmd, this._folderInviteRole);
+    const privilegeAttr = cmd.el?.dataset?.privilege;
+    const roleLabel = cmd.el?.dataset?.role_label;
+    if (privilegeAttr == null) return;
+    this._folderInviteRole = {
+      label: roleLabel || LOCALE.ROLE_ADMIN || "Admin",
+      privilege: Number(privilegeAttr),
+    };
+    if (this.isShowSettings && this.dialogWrapper) {
+      this.dialogWrapper.feed(
+        require("./skeleton/settings-action-panel")(this),
+      );
+    }
   }
 
-  setFolderMemberRole(cmd) {
-    this.updateRoleSelector(
-      cmd,
-      this.getNextFolderRole(cmd.el?.dataset?.role || LOCALE.ROLE_ADMIN),
-    );
+  // Menu pick from a member-row role dropdown — confirm and persist the
+  // picked role across the workspace. DOM only updates AFTER server ACK +
+  // refetch so Cancel is a true no-op and a failed POST never leaves a
+  // stale label.
+  async setFolderMemberRole(cmd) {
+    if (this._folderConfirmInFlight) return;
+
+    const memberId = cmd.el?.dataset?.member_id;
+    const privilegeAttr = cmd.el?.dataset?.privilege;
+    const roleLabel = cmd.el?.dataset?.role_label;
+    if (!memberId || privilegeAttr == null) return;
+
+    const raw = this._findFolderMemberRow(memberId);
+    if (!raw) return;
+    if (raw.id === Visitor.id || raw.entity_id === Visitor.id) return;
+
+    const privilege = Number(privilegeAttr);
+    if (Number.isNaN(privilege)) return;
+    // No-op when the picked role equals the current — saves a confirm popup
+    // and a wasted round-trip for the most common menu interaction.
+    if (Number(raw.privilege) === privilege) return;
+
+    const nextRole = { label: roleLabel || "", privilege };
+    const name = this._formatFolderMemberName(raw);
+
+    this._folderConfirmInFlight = true;
+    try {
+      await Wm.confirm({
+        title: LOCALE.CHANGE_MEMBER_ROLE_TITLE || "Change member role",
+        message: (
+          LOCALE.CHANGE_MEMBER_ROLE_MESSAGE || "Change {name} to {role}?"
+        )
+          .replace("{name}", name)
+          .replace("{role}", nextRole.label),
+        confirm: LOCALE.CONFIRM || "Confirm",
+        confirm_type: "primary",
+        cancel: LOCALE.CANCEL || "Cancel",
+        cancel_type: "secondary",
+        mode: "hbf",
+      });
+    } catch (_) {
+      this._folderConfirmInFlight = false;
+      return;
+    }
+
+    const { hub_id } = this.actualNode();
+    try {
+      // hub.set_privilege (permission_set) REPLACES the workspace privilege
+      // bitmask — works for both upgrade and downgrade. Affects every
+      // folder under this workspace via inheritance, which matches what
+      // the "Folder Settings → Permissions Matrix" UX surfaces.
+      const res = await this.postService(SERVICE.hub.set_privilege, {
+        hub_id,
+        users: [memberId],
+        privilege: nextRole.privilege,
+      });
+      if (res && (res.error || res.error_code)) {
+        Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+        return;
+      }
+      await this._refreshFolderMembers();
+      Wm.alert(LOCALE.ROLE_UPDATED_SUCCESSFULLY || "Role updated.");
+    } catch (e) {
+      Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
+    } finally {
+      this._folderConfirmInFlight = false;
+    }
   }
 
   sendFolderInvitation(cmd) {
@@ -881,9 +954,9 @@ class __window_folder extends mfsInteract {
       invitees: [email],
       privilege,
     })
-      .then((res) => {
-        // hub.invite trả {results:[...]} khi OK; khi lỗi (vd ACL 403) trả
-        // {error, error_code, reason} — phải bắt lỗi top-level này.
+      .then(async (res) => {
+        // hub.invite returns {results:[...]} on success; on error returns
+        // {error, error_code, reason} — catch top-level errors first.
         if (res && (res.error || res.error_code)) {
           return Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
         }
@@ -891,6 +964,7 @@ class __window_folder extends mfsInteract {
         if (r.status === "failed") {
           return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
         }
+        await this._refreshFolderMembers();
         Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY);
       })
       .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN))
@@ -899,10 +973,101 @@ class __window_folder extends mfsInteract {
       });
   }
 
-  removeFolderMember(cmd) {
-    const row =
-      cmd.$el && cmd.$el.closest(".window-folder__settings-action-member-row");
-    if (row && row.remove) row.remove();
+  // Open a destructive Wm.confirm popup; on confirm POST
+  // hub.delete_contributor and refresh the matrix from the server (no
+  // optimistic DOM removal). Workspace-scoped: removes the user from the
+  // workspace entirely — they lose access to every folder.
+  async removeFolderMember(cmd) {
+    if (this._folderConfirmInFlight) return;
+
+    const memberId = cmd.el?.dataset?.member_id;
+    if (!memberId) return;
+
+    const raw = this._findFolderMemberRow(memberId);
+    if (!raw) return;
+    if (raw.id === Visitor.id || raw.entity_id === Visitor.id) return;
+
+    const name = this._formatFolderMemberName(raw);
+
+    this._folderConfirmInFlight = true;
+    try {
+      await Wm.confirm({
+        title: LOCALE.REMOVE_MEMBER_TITLE || "Remove member",
+        message: (
+          LOCALE.REMOVE_MEMBER_MESSAGE ||
+          "Remove {name} from this folder? They will lose all access."
+        ).replace("{name}", name),
+        confirm: LOCALE.REMOVE || "Remove",
+        confirm_type: "danger",
+        cancel: LOCALE.CANCEL || "Cancel",
+        cancel_type: "secondary",
+        mode: "hbf",
+      });
+    } catch (_) {
+      this._folderConfirmInFlight = false;
+      return;
+    }
+
+    const { hub_id } = this.actualNode();
+    try {
+      const res = await this.postService(SERVICE.hub.delete_contributor, {
+        hub_id,
+        users: [memberId],
+      });
+      if (res && (res.error || res.error_code)) {
+        Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
+        return;
+      }
+      await this._refreshFolderMembers();
+      Wm.alert(LOCALE.MEMBER_REMOVED_SUCCESSFULLY || "Member removed.");
+    } catch (e) {
+      Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
+    } finally {
+      this._folderConfirmInFlight = false;
+    }
+  }
+
+  _findFolderMemberRow(memberId) {
+    if (!memberId) return null;
+    const list = this._folderMembers || [];
+    const key = String(memberId);
+    return (
+      list.find(
+        (r) =>
+          String(r.entity_id || r.drumate_id || r.id || "") === key,
+      ) || null
+    );
+  }
+
+  _formatFolderMemberName(row) {
+    return (
+      row.fullname ||
+      [row.firstname, row.lastname].filter(Boolean).join(" ") ||
+      row.surname ||
+      row.email ||
+      ""
+    ).trim();
+  }
+
+  async _refreshFolderMembers() {
+    if (!this.isShowSettings || !this.dialogWrapper) return;
+    const { hub_id } = this.actualNode();
+    if (!hub_id) return;
+    try {
+      const rows = await this.fetchService(SERVICE.hub.get_members_by_type, {
+        hub_id,
+        type: "all",
+      });
+      this._folderMembers = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      if (this.warn) this.warn("Failed to refresh folder members", e);
+    } finally {
+      if (this.isShowSettings && this.dialogWrapper) {
+        this.dialogWrapper.feed(
+          require("./skeleton/settings-action-panel")(this),
+        );
+      }
+    }
   }
 
   openAdvancedSettings(cmd) {
@@ -961,8 +1126,11 @@ class __window_folder extends mfsInteract {
       });
     };
 
-    // Load the real folder members (hub.get_members_by_type) before
-    // rendering — the panel previously showed hardcoded placeholder names.
+    // Workspace-scoped membership: hub.get_members_by_type returns every
+    // user with workspace-level access (which is also what grants implicit
+    // access to this folder). The folder window's settings panel manages
+    // workspace membership in context — sharebox per-node grants are a
+    // separate flow (Manage Access) not exposed here.
     const { hub_id } = this.actualNode();
     if (!hub_id) {
       this._folderMembersLoaded = true;

@@ -1406,8 +1406,8 @@ class __widget_chat extends LetcBox {
         // If the widget id hiddent, don't acknowledge
         try {
           if (this.getHandlers(_a.ui)[0].isHidden()) return
-        }catch(e){
-          
+        } catch (e) {
+
         }
         // Ack even when out-of-scope so unread counters in the folder feed
         // don't accumulate while the user views a file-scoped thread.

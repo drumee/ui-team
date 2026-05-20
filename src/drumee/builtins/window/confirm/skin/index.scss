@@ -34,7 +34,9 @@
 
     &[data-maxsize="0"],
     &[data-maxsize="2"] {
-      max-width: 360px;
+      min-width: unset;
+      min-height: unset;
+      width: 500px;
     }
   }
 
@@ -50,6 +52,22 @@
   &__topbar {
     width: 100%;
     opacity: 1 !important;
+  }
+
+  &-topbar {
+    &__logo {
+      align-items: end;
+      gap: var(--spacer-2);
+      &-ico {
+        width: 40px;
+        height: 40px;
+        color: var(--primary-50);
+      }
+      &-text {
+        font-weight: bold;
+        font-size: 24px;
+      }
+    }
   }
 
   &-topbar__container {
@@ -193,6 +211,7 @@
     justify-content: flex-end;
     width: 100%;
     padding-top: 2px;
+    height: auto !important;
 
     .button {
       align-items: center;
@@ -205,7 +224,10 @@
       margin: 0;
       padding: 0 14px;
       box-sizing: border-box;
-      transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+      transition:
+        background-color 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease;
       @include drumee.typo($size: 13px, $line: 18px, $weight: 600);
     }
 
@@ -237,17 +259,18 @@
   }
 
   &__button-primary {
-    background-color: var(--btn-commit-background, var(--primary-50, #433cc5));
+    // NB: skin/vars/default.scss has --btn-commit-background defined as the
+    // bare literal "-primary-500" (missing the var() wrapper). CSS resolves
+    // that to an invalid color and the background-color declaration is
+    // dropped, leaving the button visually transparent (white-on-white in
+    // light mode, white-text-only in dark). Pin to --primary-50 directly so
+    // we don't depend on that broken token.
+    background-color: var(--primary-50, #433cc5);
     border: 0;
-    @include drumee.typo(
-      $size: 14px,
-      $line: 20px,
-      $weight: 600,
-      $color: var(--btn-commit-text, #fff)
-    );
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #fff);
 
     &:hover {
-      background-color: var(--btn-commit-background-hover, var(--primary-40, #5950ff));
+      background-color: var(--primary-40, #5950ff);
     }
 
     &.large {
@@ -280,4 +303,12 @@
       }
     }
   }
+}
+
+// Dark-mode tweaks for the confirm dialog title — the default
+// var(--normal-fg-10) resolves to #e4e3ff in dark mode, which has noticeably
+// lower contrast on the dark popup surface than the body uses. Bump it to
+// pure white so the title reads as the strongest element in the dialog.
+html[data-theme="dark"] .window-confirm__title {
+  color: var(--normal-fg-800, #ffffff);
 }
