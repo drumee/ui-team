@@ -175,7 +175,7 @@ function dangerZoneRow(ui, { title, description, buttonLabel, service, danger })
         kids: [
           danger
             ? null
-            : Skeletons.Button.Svg({ ico: "download", className: `${pfx}-btn-ico` }),
+            : Skeletons.Image.Svg({ ico: "download", className: `${pfx}-btn-ico` }),
           Skeletons.Note({ className: `${pfx}-btn-label`, content: buttonLabel }),
         ].filter(Boolean),
       }),
