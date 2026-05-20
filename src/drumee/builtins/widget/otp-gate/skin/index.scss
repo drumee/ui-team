@@ -62,6 +62,10 @@
     gap: 16px;
   }
 
+  .dtk-otp__header{
+    gap: 12px;
+  }
+
   // Heading — dtk_otp renders the title via its `header()` helper.
   .dtk-otp__title,
   .dtk-otp__main .header {
@@ -97,7 +101,7 @@
     padding: 0;
     aspect-ratio: 1 / 1;
     border-radius: 8px;
-    border: 1px solid #ebecf0;
+    border: 1px solid var(--border-strong);
     transition: border-color 120ms ease, background-color 120ms ease;
 
     input {
@@ -107,6 +111,7 @@
       line-height: 1;
       height: 100%;
       padding: 0;
+    border-radius: 8px;
       color: #0b0a21;
     }
 
@@ -116,12 +121,20 @@
     }
   }
 
+  .dtk-otp__resend{
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
   // Resend link styled to match the small-body palette.
   .dtk-otp__resend-text {
     font-family: "Geist", system-ui, sans-serif;
     font-size: 14px;
     line-height: 1.4;
     color: #65656c;
+    justify-content: center;
 
     &.resend {
       color: #433cc5;
