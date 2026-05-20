@@ -382,15 +382,14 @@ class __window_manager extends push {
     }, this);
   }
 
-  // Workspace (hub) clicks from grid views navigate inline via loadWorkspace —
-  // same flow the sidebar uses for `load-workspace`. The legacy openHubManager
-  // path (window_team / window_website / window_sharebox) stays reserved for
-  // explicit settings entry points that pass a `start` argument.
   openContent(media, args) {
     if (media && media.mget
       && media.mget(_a.filetype) === _a.hub
       && media.mget(_a.status) !== _a.deleted) {
-      return this.loadWorkspace(media);
+      const item = this.getWindowPreset(media);
+      item.kind = "window_folder";
+      item.wm_unique_id = `window_folder-${item.hub_id}`;
+      return this.launch(item, { explicit: 1, singleton: 1 });
     }
     return super.openContent(media, args);
   }
