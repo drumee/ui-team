@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : ../src/drumee/libs/skeleton/upload-progress
-//   TYPE : 
-// ==================================================================== *
-
 const __media_progress = function(_ui_, loader, ext) {
   const target = {
     kind       : KIND.progress,

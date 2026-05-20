@@ -29,7 +29,7 @@ class __chat_p2p extends LetcBox {
   isHidden() {
     return this.el.dataset.anim === 'out'
   }
-  
+
   /**
    * Returns the API config for the contact list.
    */

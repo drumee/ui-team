@@ -704,7 +704,7 @@ class desk_module extends LetcBox {
 
     // Disable actions when the admin console is active
     this.ensurePart('action-cluster').then((p) => {
-      if (kind === 'apps_main') {
+      if (['apps_main', 'settings_main'].includes(kind)) {
         p.setState(0)
       } else {
         p.setState(1)
