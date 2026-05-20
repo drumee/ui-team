@@ -89,6 +89,14 @@ class __desk_workspace extends LetcBox {
    */
   onWsMessage(svc, data, options = {}) {
     const { service } = options || svc;
+
+    // Handle before the data/list guard — refreshList() uses ensurePart and
+    // is safe regardless of data or this.__list state.
+    if (service === "hub.invite_received") {
+      this.refreshList();
+      return;
+    }
+
     if (!data || !this.__list) {
       if (super.onWsMessage) super.onWsMessage(svc, data, options);
       return;
