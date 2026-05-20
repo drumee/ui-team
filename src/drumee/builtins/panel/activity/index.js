@@ -824,8 +824,14 @@ class __panel_activity extends LetcBox {
     this._last_notified = now;
 
     const title = data.firstname || LOCALE.NEW_MESSAGE;
+    let body = data.message || "";
+    if (data.message_type === 'meeting.start' || data.message_type === 'meeting.end') {
+      body = data.message_type === 'meeting.start'
+        ? (LOCALE.STARTED_A_MEETING || 'started a meeting')
+        : (LOCALE.ENDED_THE_MEETING || 'ended the meeting');
+    }
     const notif = {
-      body: data.message || "",
+      body,
       icon: Visitor.avatar(data.author_id),
     };
 
