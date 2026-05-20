@@ -291,7 +291,7 @@ function accountCredentialsCard(ui) {
     title: LOCALE.EMAIL_ADDRESS || "Email Address",
     description: profile.email || "",
     descriptionPn: "credentials-email",
-    className: `${pfx}-row`,
+    className: `${pfx}-row email-row`,
     trailing: button(ui, {
       label: LOCALE.CHANGE || "Change",
       className: `${pfx}-action`,
