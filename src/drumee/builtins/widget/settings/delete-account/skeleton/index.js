@@ -279,28 +279,46 @@ function step2(ui) {
     ],
   });
 
-  const footer = Skeletons.Box.X({
-    className: `${pfx}__footer ${pfx}__footer--triple`,
-    kids: [
-      footerButton(ui, {
-        variant: "cancel",
-        label: LOCALE.CANCEL || "Cancel",
-        service: "delete-account-cancel",
-      }),
-      footerButton(ui, {
-        variant: "continue",
-        label: LOCALE.DELETE_ACCOUNT_SKIP_EXPORT || "Skip export",
-        service: "delete-account-step2-skip",
-      }),
-      footerButton(ui, {
-        variant: "continue step2",
-        sys_pn: "step2-button",
-        state: ui._selected.size > 0 ? 0 : 1,
-        label: LOCALE.CONTINUE || "Continue",
-        service: "delete-account-step2-continue",
-      }),
-    ],
-  });
+  const footer = ui._export_only
+    ? Skeletons.Box.X({
+        className: `${pfx}__footer`,
+        kids: [
+          footerButton(ui, {
+            variant: "cancel",
+            label: LOCALE.CLOSE || "Close",
+            service: "delete-account-cancel",
+          }),
+          footerButton(ui, {
+            variant: "continue step2",
+            sys_pn: "step2-button",
+            state: ui._selected.size > 0 ? 0 : 1,
+            label: LOCALE.DOWNLOAD || "Download",
+            service: "delete-account-download",
+          }),
+        ],
+      })
+    : Skeletons.Box.X({
+        className: `${pfx}__footer ${pfx}__footer--triple`,
+        kids: [
+          footerButton(ui, {
+            variant: "cancel",
+            label: LOCALE.CANCEL || "Cancel",
+            service: "delete-account-cancel",
+          }),
+          footerButton(ui, {
+            variant: "continue",
+            label: LOCALE.DELETE_ACCOUNT_SKIP_EXPORT || "Skip export",
+            service: "delete-account-step2-skip",
+          }),
+          footerButton(ui, {
+            variant: "continue step2",
+            sys_pn: "step2-button",
+            state: ui._selected.size > 0 ? 0 : 1,
+            label: LOCALE.CONTINUE || "Continue",
+            service: "delete-account-step2-continue",
+          }),
+        ],
+      });
 
   return [header, grid, footer];
 }
