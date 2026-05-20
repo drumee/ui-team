@@ -47,6 +47,7 @@ class __window_folder extends mfsInteract {
     this.isFolder = 1;
     super.initialize(opt);
     this._path = [];
+    this._navStack = [];
 
     this._flow = _a.horizontal;
     this.model.atLeast({
@@ -309,6 +310,93 @@ class __window_folder extends mfsInteract {
     }
   }
 
+  _captureNavState() {
+    return {
+      area: this.mget(_a.area),
+      ext: this.mget(_a.ext),
+      filename: this.mget(_a.filename),
+      filepath: this.mget(_a.filepath),
+      filetype: this.mget(_a.filetype),
+      home_id: this.mget(_a.home_id),
+      hub_id: this.mget(_a.hub_id),
+      md5Hash: this.mget(_a.md5Hash),
+      nid: this.mget(_a.nid),
+      ownpath: this.mget(_a.ownpath),
+      pid: this.mget(_a.pid),
+      privilege: this.mget(_a.privilege),
+    };
+  }
+
+  _navigateToStackIndex(idx) {
+    const i = Number(idx);
+    if (!Number.isFinite(i) || i < 0 || i >= this._navStack.length) return;
+    const target = this._navStack[i];
+    this._navStack = this._navStack.slice(0, i);
+    this._restoreNavState(target);
+  }
+
+  // Do NOT call l.setApi() here — the list was built with a dynamic
+  // `() => ui.getCurrentApi()` api function; replacing it with a static
+  // object would freeze the fetch at the restored nid and break every
+  // subsequent forward navigation (loadContent → restart would keep
+  // replaying the static api instead of reading the new child's nid).
+  _restoreNavState(state) {
+    if (!state) return;
+    this._navRestoring = 1;
+    try {
+      this.mset(state);
+      if (this.__refWindowName) {
+        this.__refWindowName.set({ content: state.filename });
+      }
+      this.scopeChatToFolder(state.nid);
+      this.loadContent();
+      this.updateBreadcrumb({ ...state, event: _a.browse }, this);
+    } finally {
+      this._navRestoring = 0;
+    }
+    this._refreshBreadcrumbsUI();
+  }
+
+  _refreshBreadcrumbsUI() {
+    const depth = this._navStack.length;
+    this.ensurePart("folder-breadcrumb-path").then((box) => {
+      if (!box || (box.isDestroyed && box.isDestroyed())) return;
+      box.el.dataset.state = depth ? 1 : 0;
+      if (!depth) {
+        box.feed([]);
+        return;
+      }
+      const cnFolder = `${this.fig.family}-topbar`;
+      const crumbs = [];
+      this._navStack.forEach((state, i) => {
+        if (i > 0) {
+          crumbs.push(
+            Skeletons.Note({
+              className: `${cnFolder}__breadcrumb-sep`,
+              content: "›",
+            }),
+          );
+        }
+        crumbs.push(
+          Skeletons.Note({
+            className: `${cnFolder}__breadcrumb-crumb`,
+            content: state.filename || "/",
+            service: "breadcrumb-jump",
+            stackIndex: i,
+            uiHandler: [this],
+          }),
+        );
+      });
+      crumbs.push(
+        Skeletons.Note({
+          className: `${cnFolder}__breadcrumb-sep`,
+          content: "›",
+        }),
+      );
+      box.feed(crumbs);
+    });
+  }
+
   toggleFilesLayout(cmd) {
     const mode =
       this.getViewMode && this.getViewMode() === _a.row ? _a.icon : _a.row;
@@ -394,6 +482,9 @@ class __window_folder extends mfsInteract {
 
       case "folder-rename-submit":
         return this.renameFolderTarget(this._renameFolderTarget);
+
+      case "breadcrumb-jump":
+        return this._navigateToStackIndex(cmd.mget("stackIndex"));
 
       case "tab-files":
         return this.showFolderTab("files");
@@ -611,9 +702,20 @@ class __window_folder extends mfsInteract {
 
   // Keep folder-chat scope in sync with the navigated folder so the right-side
   // chat panel reflects the current folder's messages even on the Files tab.
+  // Snapshot must run before super (which overwrites the model via
+  // copyPropertiesFrom), otherwise the stack would record the destination
+  // instead of the ancestor we just left.
   updateTopbar(m) {
+    if (!this._navRestoring) {
+      const prev = this._captureNavState();
+      const nextNid = m && m.mget && m.mget(_a.nid);
+      if (prev && prev.nid != null && nextNid != null && prev.nid != nextNid) {
+        this._navStack.push(prev);
+      }
+    }
     super.updateTopbar(m);
     this.scopeChatToFolder(this.mget(_a.nid));
+    this._refreshBreadcrumbsUI();
   }
 
   showFolderTab(tab) {

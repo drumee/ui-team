@@ -115,6 +115,60 @@
       min-width: 0;
     }
 
+    &__breadcrumb-path {
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+      max-width: 50%;
+      overflow: hidden;
+      display: none;
+
+      &[data-state="1"] {
+        display: flex;
+      }
+    }
+
+    // Opacity (not a hardcoded rgba) so the muted shade follows
+    // --normal-fg-10 when the dark theme inverts it.
+    &__breadcrumb-crumb {
+      font-family: "Geist", sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      line-height: 24px;
+      color: var(--normal-fg-10);
+      opacity: 0.65;
+      cursor: pointer;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0 4px;
+      border-radius: 4px;
+      flex-shrink: 0;
+
+      &:hover {
+        background-color: var(--normal-bg-90);
+        opacity: 1;
+      }
+    }
+
+    &__breadcrumb-sep {
+      font-family: "Geist", sans-serif;
+      font-size: 14px;
+      line-height: 24px;
+      color: var(--normal-fg-10);
+      opacity: 0.45;
+      flex-shrink: 0;
+      pointer-events: none;
+      padding: 0;
+    }
+
+    // Margin (not flex gap) so the "...crumb › Title" pair stays tight
+    // while the badge keeps its breathing room.
+    &__badge {
+      margin-left: 6px;
+    }
+
     &__logo {
       width: 20px;
       height: 16px;
@@ -140,9 +194,11 @@
 
     &__heading {
       align-items: center;
-      gap: 12px;
+      gap: 4px;
       padding-left: 12px;
       min-width: 0;
+      flex-wrap: nowrap;
+      overflow: hidden;
     }
 
     &__title {
