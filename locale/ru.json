@@ -1330,6 +1330,8 @@
   "EXPORT_ALL_MY_DATA": "Export all my data",
   "EXPORT_DATA": "Export data",
   "EXPORT_DATA_DESC": "Download all your files, chat history, and workspace data as a .zip archive.",
+  "EXPORT_SELECT_DATA": "Select the data you want to download",
+  "DOWNLOAD_ALL": "Download all",
   "DELETE_ACCOUNT": "Delete account",
   "DELETE_ACCOUNT_DESC": "Permanently delete your account and all associated data. This cannot be undone.",
   "DANGER_ZONE": "Danger zone",
