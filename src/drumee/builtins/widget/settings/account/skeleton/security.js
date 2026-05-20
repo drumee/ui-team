@@ -168,17 +168,11 @@ function dangerZoneRow(ui, { title, description, buttonLabel, service, danger })
           Skeletons.Note({ className: `${pfx}-desc`, content: description }),
         ],
       }),
-      Skeletons.Box.X({
+      Skeletons.Element({
         className: `${pfx}-btn${danger ? ` ${pfx}-btn--danger` : ""}`,
         service,
         uiHandler: [ui],
-        kidsOpt: { active: 0 },
-        kids: [
-          danger
-            ? null
-            : Skeletons.Image.Svg({ ico: "download", className: `${pfx}-btn-ico` }),
-          Skeletons.Note({ className: `${pfx}-btn-label`, content: buttonLabel }),
-        ].filter(Boolean),
+        content: buttonLabel,
       }),
     ],
   });
