@@ -54,6 +54,10 @@
     background-color: rgba(255, 255, 255, 0.45);
     z-index: 60;
     pointer-events: none;
+    height: 100%;
+    width: 100%;
+    z-index: 100000;
+
   }
 
   &__coming-soon {
@@ -63,6 +67,7 @@
     letter-spacing: 0.04em;
     color: $ink-900;
     text-align: center;
+    color: #885eff;
   }
 
   // ── Tabs bar ──────────────────────────────────────────────
@@ -91,7 +96,7 @@
     padding: 0 2px;
     transition: color 0.15s ease;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -120,7 +125,7 @@
     cursor: pointer;
     height: 22px;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -154,7 +159,7 @@
     background: $bg;
     cursor: pointer;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -268,8 +273,8 @@
       // All inner widgets are display-only — the row itself is the
       // single click target, so cmd.mget('hub_id') always resolves on
       // the row's hub_id attribute regardless of which pixel is hit.
-      > *,
-      > * * {
+      >*,
+      >* * {
         pointer-events: none;
       }
 
@@ -477,9 +482,11 @@
       &--admins {
         color: $purple-light;
       }
+
       &--guests {
         color: $pink;
       }
+
       &--pending {
         color: $red;
       }
@@ -527,7 +534,7 @@
     cursor: pointer;
     height: 21px;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -572,6 +579,7 @@
     &:hover .apps-main__table-filter-btn {
       background: rgba(0, 0, 0, 0.06);
     }
+
     &--open .apps-main__table-filter-btn {
       background: rgba(0, 0, 0, 0.08);
     }
@@ -608,7 +616,7 @@
       background: rgba(0, 0, 0, 0.03);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -715,30 +723,36 @@
       padding-left: 24px;
       padding-right: 0;
     }
+
     &--member {
       flex: 240;
       min-width: 0;
       gap: 12px;
     }
+
     &--role {
       flex: 155;
       min-width: 0;
     }
+
     &--workspaces {
       flex: 225;
       min-width: 0;
       gap: 6px;
       flex-wrap: wrap;
     }
+
     &--status {
       flex: 88;
       min-width: 0;
       gap: 8px;
     }
+
     &--last-active {
       flex: 120;
       min-width: 0;
     }
+
     &--actions {
       flex: 123;
       min-width: 0;
@@ -761,7 +775,7 @@
     cursor: pointer;
     box-sizing: border-box;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -805,24 +819,31 @@
     // Color variants for initials avatars (deterministic per-name in JS)
     &--cyan {
       background: $cyan-soft;
+
       .apps-main__avatar-initials {
         color: $cyan-text;
       }
     }
+
     &--purple {
       background: rgba(89, 80, 255, 0.18);
+
       .apps-main__avatar-initials {
         color: $purple-deep;
       }
     }
+
     &--pink {
       background: rgba(255, 168, 220, 0.3);
+
       .apps-main__avatar-initials {
         color: #c54e95;
       }
     }
+
     &--amber {
       background: rgba(245, 166, 35, 0.2);
+
       .apps-main__avatar-initials {
         color: #b8780f;
       }
@@ -882,6 +903,7 @@
     &--owner,
     &--admin {
       background: $purple-soft;
+
       .apps-main__pill-label {
         color: $purple-deep;
       }
@@ -889,6 +911,7 @@
 
     &--member {
       background: $bg-tint;
+
       .apps-main__pill-label {
         color: $ink-600;
       }
@@ -936,6 +959,7 @@
     &--away .apps-main__status-dot {
       background: $ink-500;
     }
+
     &--offline .apps-main__status-dot {
       background: $ink-400;
     }
@@ -972,6 +996,7 @@
     &--edit {
       svg {
         fill: $purple-light;
+
         .icon-fill-blue,
         .icon-fill-grey {
           fill: $purple-light;
@@ -980,6 +1005,7 @@
 
       &:hover svg {
         fill: $purple-deep;
+
         .icon-fill-blue,
         .icon-fill-grey {
           fill: $purple-deep;
@@ -990,6 +1016,7 @@
     &--delete {
       svg {
         fill: $red;
+
         .icon-fill-blue,
         .icon-fill-grey {
           fill: $red;
@@ -1030,7 +1057,7 @@
       filter: brightness(0.97);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -1097,7 +1124,7 @@
     cursor: pointer;
     box-sizing: border-box;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -1224,7 +1251,7 @@
       background: rgba(0, 0, 0, 0.08);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -1298,7 +1325,7 @@
       background: rgba(0, 0, 0, 0.03);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -1347,7 +1374,7 @@
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -1403,14 +1430,17 @@
       flex: 292 1 0;
       min-width: 0;
     }
+
     &--action {
       flex: 194 1 0;
       min-width: 0;
     }
+
     &--resource {
       flex: 389 1 0;
       min-width: 0;
     }
+
     &--timestamp {
       flex: 233 1 0;
       min-width: 0;
@@ -1442,6 +1472,7 @@
     &:hover {
       background: $row-hover;
     }
+
     &:last-child {
       border-bottom: none;
     }
@@ -1521,6 +1552,7 @@
 
     &--grant {
       background: $audit-grant-bg;
+
       .apps-main__audit-action-label {
         color: $audit-grant-text;
       }
@@ -1528,6 +1560,7 @@
 
     &--policy {
       background: $audit-policy-bg;
+
       .apps-main__audit-action-label {
         color: $audit-policy-text;
       }
@@ -1535,6 +1568,7 @@
 
     &--share {
       background: $audit-share-bg;
+
       .apps-main__audit-action-label {
         color: $audit-share-text;
       }
@@ -1542,6 +1576,7 @@
 
     &--neutral {
       background: $audit-neutral-bg;
+
       .apps-main__audit-action-label {
         color: $ink-600;
       }
@@ -1619,7 +1654,7 @@
       background: rgba(0, 0, 0, 0.08);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -1661,9 +1696,11 @@
     &--security {
       border-left-color: $purple-base;
     }
+
     &--risk {
       border-left-color: $red;
     }
+
     &--storage {
       border-left-color: $pink;
     }
@@ -1688,9 +1725,11 @@
     &--security .apps-main__insight-iconwrap {
       background: rgba(89, 80, 255, 0.1);
     }
+
     &--risk .apps-main__insight-iconwrap {
       background: rgba(255, 179, 173, 0.2);
     }
+
     &--storage .apps-main__insight-iconwrap {
       background: rgba(255, 168, 220, 0.2);
     }
@@ -1707,20 +1746,25 @@
 
     &--security .apps-main__insight-ico svg {
       fill: $purple-base;
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: $purple-base;
       }
     }
+
     &--risk .apps-main__insight-ico svg {
       fill: $red;
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: $red;
       }
     }
+
     &--storage .apps-main__insight-ico svg {
       fill: #b43481;
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: #b43481;
@@ -1736,9 +1780,11 @@
     &--security .apps-main__insight-badge {
       color: $purple-base;
     }
+
     &--risk .apps-main__insight-badge {
       color: $red;
     }
+
     &--storage .apps-main__insight-badge {
       color: #b43481;
     }
@@ -1766,9 +1812,11 @@
     &--security .apps-main__insight-value {
       color: $purple-base;
     }
+
     &--risk .apps-main__insight-value {
       color: $red;
     }
+
     &--storage .apps-main__insight-value {
       color: #b43481;
     }
@@ -1821,6 +1869,7 @@
 
   // Visually relax the table/insights underneath while locked
   &__audit-locked-wrap--locked {
+
     .apps-main__audit-window,
     .apps-main__insights {
       user-select: none;
@@ -1890,7 +1939,7 @@
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -2019,7 +2068,7 @@
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -2119,7 +2168,7 @@
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -2181,14 +2230,17 @@
       flex: 18;
       background: $storage-doc;
     }
+
     &--media {
       flex: 21;
       background: $storage-media;
     }
+
     &--available {
       flex: 61;
       background: $storage-avail;
     }
+
     &--other {
       background: $storage-other;
     }
@@ -2215,12 +2267,15 @@
     &--documents {
       background: $storage-doc;
     }
+
     &--media {
       background: $storage-media;
     }
+
     &--available {
       background: $storage-avail;
     }
+
     &--other {
       background: $storage-other;
     }
@@ -2336,7 +2391,7 @@
     gap: 16px;
     cursor: pointer;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -2430,7 +2485,7 @@
       background: rgba(0, 0, 0, 0.04);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -2471,19 +2526,23 @@
       flex: 290 1 0;
       min-width: 0;
     }
+
     &--role {
       flex: 141 1 0;
       min-width: 0;
     }
+
     &--usage {
       flex: 256 1 0;
       min-width: 0;
       gap: 16px;
     }
+
     &--storage {
       flex: 181 1 0;
       min-width: 0;
     }
+
     &--action {
       flex: 128 1 0;
       min-width: 0;
@@ -2507,6 +2566,7 @@
     &.apps-main__storage-col--user {
       padding-left: 24px;
     }
+
     &.apps-main__storage-col--action {
       padding-right: 24px;
     }
@@ -2529,6 +2589,7 @@
     &:hover {
       background: $row-hover;
     }
+
     &:last-child {
       border-bottom: none;
     }
@@ -2558,6 +2619,7 @@
     &--light {
       color: var(--white, #fff);
     }
+
     &--cyan {
       color: $storage-cyan;
     }
@@ -2606,6 +2668,7 @@
 
     &--admin {
       background: $purple-soft;
+
       .apps-main__storage-pill-label {
         color: $purple-deep;
       }
@@ -2613,6 +2676,7 @@
 
     &--member {
       background: $storage-policy-bg;
+
       .apps-main__storage-pill-label {
         color: $storage-cyan;
       }
@@ -2637,9 +2701,11 @@
     &--high {
       background: $storage-media;
     }
+
     &--mid {
       background: $storage-doc;
     }
+
     &--low {
       background: $storage-avail;
     }
@@ -2721,7 +2787,7 @@
       background: rgba(0, 0, 0, 0.08);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -2761,7 +2827,7 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -2857,10 +2923,12 @@
     &--storage {
       background: rgba(89, 80, 255, 0.1);
     }
+
     &--readonly {
       background: rgba(246, 81, 75, 0.1);
       gap: 12px;
     }
+
     &--impact {
       background: $bg-tint;
     }
@@ -2892,6 +2960,7 @@
     &--db {
       width: 14px;
       height: 14px;
+
       svg {
         width: 14px;
         height: 14px;
@@ -2902,6 +2971,7 @@
     &--lock-red {
       width: 16px;
       height: 21px;
+
       svg {
         width: 16px;
         height: 21px;
@@ -3049,7 +3119,7 @@
     border: 2px solid transparent;
     transition: border-color 0.15s ease;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -3142,7 +3212,7 @@
     justify-content: flex-start;
     transition: background 0.2s ease;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -3241,7 +3311,7 @@
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -3310,7 +3380,7 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -3394,7 +3464,7 @@
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -3460,9 +3530,10 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       opacity: 0.75;
     }
@@ -3509,12 +3580,15 @@
     &--cyan {
       background: rgba(137, 228, 246, 0.2);
     }
+
     &--purple {
       background: rgba(89, 80, 255, 0.18);
     }
+
     &--amber {
       background: rgba(255, 183, 77, 0.22);
     }
+
     &--pink {
       background: rgba(255, 168, 220, 0.3);
     }
@@ -3529,9 +3603,11 @@
     .apps-main__edit-avatar--purple & {
       color: $purple-deep;
     }
+
     .apps-main__edit-avatar--amber & {
       color: #b87a1d;
     }
+
     .apps-main__edit-avatar--pink & {
       color: #b04a87;
     }
@@ -3570,9 +3646,11 @@
     &::-webkit-scrollbar {
       width: 4px;
     }
+
     &::-webkit-scrollbar-track {
       background: transparent;
     }
+
     &::-webkit-scrollbar-thumb {
       background: $purple-base;
       border-radius: 4px;
@@ -3623,7 +3701,7 @@
     gap: 8px;
     cursor: pointer;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -3711,7 +3789,7 @@
     cursor: pointer;
     box-sizing: border-box;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -3780,7 +3858,7 @@
     font-weight: 400;
     color: $ink-600;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -3828,7 +3906,7 @@
       color 0.15s,
       background 0.15s;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -3868,9 +3946,10 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       filter: brightness(0.95);
     }
@@ -3925,6 +4004,7 @@
     &[data-state="0"] {
       display: none;
     }
+
     &[data-state="1"] {
       display: flex;
     }
@@ -3966,7 +4046,7 @@
     gap: 4px;
     cursor: pointer;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -4062,9 +4142,10 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       opacity: 0.75;
     }
@@ -4105,7 +4186,7 @@
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -4192,13 +4273,14 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
     &-ico {
       width: 14px;
       height: 14px;
+
       svg {
         width: 14px;
         height: 14px;
@@ -4217,6 +4299,7 @@
       line-height: 18px;
       font-weight: 600;
       color: $ink-900;
+
       &::before {
         content: "·";
         padding: 0 6px;
@@ -4265,7 +4348,7 @@
       background: rgba(0, 0, 0, 0.07);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -4303,18 +4386,22 @@
     &.private .folder-shape {
       fill: var(--area-private);
     }
+
     &.share,
     &.dmz {
       .folder-shape {
         fill: var(--area-share);
       }
     }
+
     &.restricted .folder-shape {
       fill: var(--area-private);
     }
+
     &.public .folder-shape {
       fill: var(--area-public);
     }
+
     &.personal,
     &.inner-folder {
       .folder-shape {
@@ -4392,36 +4479,47 @@
 
     &--purple {
       background: rgba(89, 80, 255, 0.08);
+
       .apps-main__perm-tag-label {
         color: $perm-purple;
       }
+
       .apps-main__perm-tag-ico svg path {
         fill: $perm-purple;
       }
     }
+
     &--magenta {
       background: rgba(180, 52, 129, 0.08);
+
       .apps-main__perm-tag-label {
         color: $perm-magenta;
       }
+
       .apps-main__perm-tag-ico svg path {
         fill: $perm-magenta;
       }
     }
+
     &--green {
       background: rgba(84, 182, 132, 0.1);
+
       .apps-main__perm-tag-label {
         color: $perm-green;
       }
+
       .apps-main__perm-tag-ico svg path {
         fill: $perm-green;
       }
     }
+
     &--neutral {
       background: rgba(0, 0, 0, 0.04);
+
       .apps-main__perm-tag-label {
         color: $ink-600;
       }
+
       .apps-main__perm-tag-ico svg path {
         fill: $ink-600;
       }
@@ -4491,7 +4589,7 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -4632,18 +4730,22 @@
     &.private .folder-shape {
       fill: var(--area-private);
     }
+
     &.restricted .folder-shape {
       fill: var(--area-private);
     }
+
     &.share,
     &.dmz {
       .folder-shape {
         fill: var(--area-share);
       }
     }
+
     &.public .folder-shape {
       fill: var(--area-public);
     }
+
     &.personal .folder-shape {
       fill: var(--area-personal);
     }
@@ -4716,18 +4818,22 @@
     &.private .folder-shape {
       fill: var(--area-private);
     }
+
     &.restricted .folder-shape {
       fill: var(--area-private);
     }
+
     &.share,
     &.dmz {
       .folder-shape {
         fill: var(--area-share);
       }
     }
+
     &.public .folder-shape {
       fill: var(--area-public);
     }
+
     &.personal,
     &.inner-folder {
       .folder-shape {
@@ -4837,7 +4943,7 @@
     justify-content: center;
     cursor: pointer;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -4937,9 +5043,10 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       opacity: 0.75;
     }
@@ -4996,18 +5103,22 @@
     &.private .folder-shape {
       fill: var(--area-private);
     }
+
     &.restricted .folder-shape {
       fill: var(--area-private);
     }
+
     &.share,
     &.dmz {
       .folder-shape {
         fill: var(--area-share);
       }
     }
+
     &.public .folder-shape {
       fill: var(--area-public);
     }
+
     &.personal,
     &.inner-folder {
       .folder-shape {
@@ -5049,13 +5160,16 @@
     &::-webkit-scrollbar {
       width: 4px;
     }
+
     &::-webkit-scrollbar-track {
       background: transparent;
     }
+
     &::-webkit-scrollbar-thumb {
       background: $purple-base;
       border-radius: 4px;
     }
+
     scrollbar-width: none;
     -ms-overflow-style: none;
 
@@ -5168,7 +5282,7 @@
     cursor: pointer;
     transition: background 0.15s ease;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -5303,9 +5417,10 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       opacity: 0.75;
     }
@@ -5340,7 +5455,7 @@
     justify-content: flex-start;
     transition: background 0.2s ease;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -5373,7 +5488,7 @@
     gap: 24px;
     cursor: pointer;
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -5411,9 +5526,10 @@
     cursor: pointer;
     transition: filter 0.15s ease;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       filter: brightness(0.97);
     }
@@ -5515,9 +5631,10 @@
     min-width: 100px;
     cursor: pointer;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       background: rgba(0, 0, 0, 0.07);
     }
@@ -5551,9 +5668,10 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       opacity: 0.75;
     }
@@ -5632,9 +5750,10 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       opacity: 0.75;
     }
@@ -5675,7 +5794,7 @@
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -5855,6 +5974,7 @@
       padding: 12px 24px;
       gap: 0;
     }
+
     &.apps-main__fv-col--actions {
       padding-right: 24px;
       gap: 4px;
@@ -5869,28 +5989,34 @@
       flex: 68 0 0;
       min-width: 0;
     }
+
     &--file {
       flex: 300 1 0;
       min-width: 0;
       gap: 16px;
     }
+
     &--folder {
       flex: 155 1 0;
       min-width: 0;
     }
+
     &--workspace {
       flex: 174 1 0;
       min-width: 0;
     }
+
     &--size {
       flex: 88 1 0;
       min-width: 0;
     }
+
     &--versions {
       flex: 120 1 0;
       min-width: 0;
       padding: 0 24px;
     }
+
     &--actions {
       flex: 123 0 0;
       min-width: 0;
@@ -5918,7 +6044,7 @@
     cursor: pointer;
     box-sizing: border-box;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -6040,11 +6166,13 @@
     &--more {
       svg {
         fill: $ink-900;
+
         .icon-fill-blue,
         .icon-fill-grey {
           fill: $ink-900;
         }
       }
+
       &:hover {
         background: rgba(0, 0, 0, 0.04);
       }
@@ -6053,11 +6181,13 @@
     &--delete {
       svg {
         fill: $red;
+
         .icon-fill-blue,
         .icon-fill-grey {
           fill: $red;
         }
       }
+
       &:hover {
         background: rgba(214, 78, 73, 0.1);
       }
@@ -6101,7 +6231,7 @@
       filter: brightness(0.97);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -6128,9 +6258,10 @@
     flex-shrink: 0;
     width: fit-content;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       opacity: 0.8;
     }
@@ -6175,7 +6306,7 @@
       filter: brightness(0.97);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
   }
@@ -6243,7 +6374,7 @@
     justify-content: center;
     cursor: pointer;
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
@@ -6281,6 +6412,7 @@
   &__fv-cell--clickable {
     cursor: pointer;
     transition: opacity 0.1s ease;
+
     &:hover {
       opacity: 0.85;
     }
@@ -6304,9 +6436,10 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       opacity: 0.8;
     }
@@ -6442,6 +6575,7 @@
     &::-webkit-scrollbar {
       width: 4px;
     }
+
     &::-webkit-scrollbar-thumb {
       background: rgba(0, 0, 0, 0.15);
       border-radius: 4px;
@@ -6518,9 +6652,10 @@
     justify-content: center;
     cursor: pointer;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       background: rgba(0, 0, 0, 0.02);
     }
@@ -6653,9 +6788,10 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    > * {
+    >* {
       pointer-events: none;
     }
+
     &:hover {
       opacity: 0.75;
     }
@@ -6690,6 +6826,7 @@
     &::-webkit-scrollbar {
       width: 4px;
     }
+
     &::-webkit-scrollbar-thumb {
       background: rgba(0, 0, 0, 0.15);
       border-radius: 4px;
@@ -6710,8 +6847,8 @@
       border-color 0.12s;
 
     // The whole tile is the click target; inner widgets are display-only.
-    > *,
-    > * * {
+    >*,
+    >* * {
       pointer-events: none;
     }
 
@@ -6898,13 +7035,14 @@
       filter: brightness(0.95);
     }
 
-    > * {
+    >* {
       pointer-events: none;
     }
 
     &--primary {
       background: $purple-deep;
     }
+
     &--danger {
       background: rgba(246, 81, 75, 0.1);
     }
@@ -6928,6 +7066,7 @@
 
     &--danger svg {
       fill: $red;
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: $red;
@@ -6951,6 +7090,7 @@
     &__filed-body {
       flex-direction: column;
     }
+
     &__filed-preview,
     &__filed-right {
       width: 100%;
@@ -6963,6 +7103,7 @@
 // variables defined in router/skin/themes/dark.scss.
 html[data-theme="dark"] {
   .apps-main {
+
     &__ui,
     &__tabs,
     &__table,
@@ -7112,6 +7253,7 @@ html[data-theme="dark"] {
     &__audit-pager-ico svg,
     &__storage-pager-ico svg {
       fill: var(--normal-fg-10);
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: var(--normal-fg-10);
@@ -7210,6 +7352,7 @@ html[data-theme="dark"] {
 
         input {
           color: var(--normal-fg-10);
+
           &::placeholder {
             color: var(--placeholder-fg);
           }
@@ -7260,6 +7403,7 @@ html[data-theme="dark"] {
     &__wsdetail-back-ico svg,
     &__wsdetail-page-arrow svg {
       fill: var(--normal-fg-20);
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: var(--normal-fg-20);
@@ -7271,6 +7415,7 @@ html[data-theme="dark"] {
 
       input {
         color: var(--normal-fg-10);
+
         &::placeholder {
           color: var(--placeholder-fg);
         }
@@ -7279,6 +7424,7 @@ html[data-theme="dark"] {
 
     &__wsdetail-row {
       background: var(--overlay-bg-05);
+
       &:hover {
         background: var(--hover-bg-40);
       }
@@ -7328,6 +7474,7 @@ html[data-theme="dark"] {
 
     &__fperm-close-ico svg {
       fill: var(--normal-fg-20);
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: var(--normal-fg-20);
@@ -7371,6 +7518,7 @@ html[data-theme="dark"] {
 
     &__fperm-device-ico svg {
       fill: var(--normal-fg-10);
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: var(--normal-fg-10);
@@ -7435,6 +7583,7 @@ html[data-theme="dark"] {
 
       input {
         color: var(--normal-fg-10);
+
         &::placeholder {
           color: var(--placeholder-fg);
         }
@@ -7453,6 +7602,7 @@ html[data-theme="dark"] {
 
     &__fv-action--more svg {
       fill: var(--normal-fg-10);
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: var(--normal-fg-10);
@@ -7468,6 +7618,7 @@ html[data-theme="dark"] {
     &__fv-page-arrow svg,
     &__fv-back-ico svg {
       fill: var(--normal-fg-20);
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: var(--normal-fg-20);
@@ -7495,6 +7646,7 @@ html[data-theme="dark"] {
     &__filed-back-ico svg,
     &__filed-history-close-ico svg {
       fill: var(--normal-fg-20);
+
       .icon-fill-blue,
       .icon-fill-grey {
         fill: var(--normal-fg-20);
@@ -7529,6 +7681,7 @@ html[data-theme="dark"] {
 
       input {
         color: var(--normal-fg-10);
+
         &::placeholder {
           color: var(--placeholder-fg);
         }
