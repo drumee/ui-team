@@ -878,14 +878,18 @@ class __webrtc_room extends __room {
       }
     }
 
-    if (this.room) {
-      try {
-        await this.room.leave();
-        await this.connection.disconnect();
-      } catch (e) { }
-      this.room = null;
-      this.connection = null;
-    }
+    const room = this.room;
+    const connection = this.connection;
+    this.room = null;
+    this.connection = null;
+    setTimeout(async () => {
+      if (room) {
+        try {
+          await room.leave();
+          await connection.disconnect();
+        } catch (e) { }
+      }
+    }, 0);
     if (this.retryTimer) clearInterval(this.retryTimer);
   }
 
