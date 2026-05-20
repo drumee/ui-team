@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2018
-//   FILE : src/drumee/builtins/desk/mfs/pseudo-media
-//   TYPE : 
-// ==================================================================== *
-
 const Rectangle = require('rectangle-node');
 
 class __media_pseudo extends LetcBox {

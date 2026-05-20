@@ -143,9 +143,11 @@ class __push_manager extends winman {
         })
         return;
 
+      case SERVICE.contact.connection_status:
       case "user.connection_status":
         this.myContactsStatus.set(data.user_id, data);
         this.trigger(options.service, data);
+        RADIO_BROADCAST.trigger(_e.peerData, data);
         break;
 
       case "subscription.paid":
@@ -158,6 +160,7 @@ class __push_manager extends winman {
 
       case "subscription.deleted":
         return Desk.checkForSubscriptionStatus({ status: _a.deleted });
+
 
       default:
         this.trigger(WS_EVENT, { service, data, options })

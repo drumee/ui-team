@@ -387,8 +387,8 @@ class __invite_popup extends LetcBox {
       });
       const filtered = value
         ? inviteable.filter((w) =>
-            (w.filename || w.name || "").toLowerCase().includes(value.toLowerCase()),
-          )
+          (w.filename || w.name || "").toLowerCase().includes(value.toLowerCase()),
+        )
         : inviteable;
       this._showWorkspaceSuggestions(idx, filtered);
     }, value ? 200 : 0);
@@ -475,7 +475,7 @@ class __invite_popup extends LetcBox {
     if (this._pickedHubIds(wsIdx).has(String(hub_id))) {
       Wm.alert(
         LOCALE.INVITE_WORKSPACE_ALREADY_SELECTED
-          || "This workspace is already selected.",
+        || "This workspace is already selected.",
       );
       this._hideWorkspaceSuggestions(idx);
       return;
@@ -499,7 +499,7 @@ class __invite_popup extends LetcBox {
     if (hasEmpty) {
       Wm.alert(
         LOCALE.INVITE_WORKSPACE_PICK_FIRST
-          || "Please pick a workspace before adding another.",
+        || "Please pick a workspace before adding another.",
       );
       return;
     }
