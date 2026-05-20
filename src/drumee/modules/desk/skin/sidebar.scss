@@ -109,7 +109,7 @@
     height: 18px;
     padding: 0 5px;
     border-radius: 9px;
-    background: #E53935;
+    background: #e53935;
     color: #fff;
     font-size: 11px;
     font-weight: 600;
@@ -222,7 +222,9 @@
       opacity: 0;
       pointer-events: none;
       transform: translateY(4px);
-      transition: opacity 0.15s, transform 0.15s;
+      transition:
+        opacity 0.15s,
+        transform 0.15s;
 
       &[data-state="open"] {
         visibility: visible;
@@ -273,14 +275,13 @@
     }
 
     &-avatar {
-      width: 32px;
-      height: 32px;
       flex-shrink: 0;
-      background-color: var(--reverse-bg);
+      background-color: var(--normal-bg-80);
       align-items: center;
       justify-content: center;
-      border-radius: 8px;
+      border-radius: 8px !important;
       overflow: hidden;
+      padding: 10px !important;
 
       img,
       svg {
