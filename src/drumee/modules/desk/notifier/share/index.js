@@ -56,11 +56,8 @@ class __notifier_share extends LetcBox {
     this.counter = this.children.last();
     this.getNotification();
     if (!window.Notification) return;
-    Notification.requestPermission(function (status) {
-      if (Notification.permission !== status) {
-        return Notification.permission = status;
-      }
-    });
+    if (Notification.permission !== "default") return;
+    Notification.requestPermission();
   }
 
   /**
