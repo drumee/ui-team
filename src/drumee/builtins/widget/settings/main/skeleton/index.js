@@ -141,13 +141,18 @@ function generalProfileCard(ui) {
 
 function innerItem(ui, opt) {
   const pfx = `${ui.fig.family}__inner`;
-  const { ico, title, description, trailing, className = "", descriptionPn } = opt;
+  const {
+    ico,
+    title,
+    description,
+    trailing,
+    className = "",
+    descriptionPn,
+  } = opt;
   const left = Skeletons.Box.X({
     className: `${pfx}-left`,
     kids: [
-      ico
-        ? Skeletons.Button.Svg({ ico, className: `${pfx}-ico` })
-        : null,
+      ico ? Skeletons.Button.Svg({ ico, className: `${pfx}-ico` }) : null,
       Skeletons.Box.Y({
         className: `${pfx}-text`,
         kids: [
@@ -247,7 +252,7 @@ function accountCredentialsCard(ui) {
     title: LOCALE.EMAIL_ADDRESS || "Email Address",
     description: profile.email || "",
     descriptionPn: "credentials-email",
-    className: `${pfx}-row`,
+    className: `${pfx}-row email-row`,
     trailing: button(ui, {
       label: LOCALE.CHANGE || "Change",
       className: `${pfx}-action`,
@@ -398,7 +403,7 @@ function linkedAccountsCard(ui) {
           LOCALE.NO_LINKED_ACCOUNTS_HINT ||
           "Sign in with Google or Apple from the welcome screen to link an account.",
         className: `${pfx}-row ${pfx}-row--empty`,
-      })
+      }),
     );
   }
 
