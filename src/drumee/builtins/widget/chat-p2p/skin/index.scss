@@ -345,6 +345,10 @@
     gap: 16px;
   }
 
+  &__header--empty {
+    justify-content: flex-end;
+  }
+
   &__header-btn {
     color: var(--normal-fg-50);
     cursor: pointer;

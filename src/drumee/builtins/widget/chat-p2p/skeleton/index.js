@@ -125,6 +125,7 @@ module.exports = function (ui) {
   const chatHeader = Skeletons.Box.X({
     className: `${fig}__chat-header`,
     sys_pn: "chat-header",
+    kids: [require('./chat-header')(ui, null)],
   });
 
   const chatPanel = Skeletons.Box.Y({
