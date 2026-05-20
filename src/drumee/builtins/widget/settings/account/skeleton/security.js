@@ -171,6 +171,7 @@ function dangerZoneRow(ui, { title, description, buttonLabel, service, danger })
       Skeletons.Element({
         className: `${pfx}-btn${danger ? ` ${pfx}-btn--danger` : ""}`,
         service,
+        uiHandler: [ui],
         content: buttonLabel,
       }),
     ],

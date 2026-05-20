@@ -512,11 +512,14 @@ class settings_account extends LetcBox {
         return this.updatePassword(cmd);
 
       case "export-data":
-        return this.__overlay.feed({
-          kind: "settings_delete_account",
-          export_only: 1,
-          uiHandler: [this],
+        Kind.waitFor("settings_delete_account").then(() => {
+          this.__overlay.feed({
+            kind: "settings_delete_account",
+            export_only: 1,
+            uiHandler: [this],
+          });
         });
+        return;
 
       case "manage-seats":
         return this.handSeatsManager()
