@@ -152,6 +152,10 @@ class desk_module extends LetcBox {
         item.setLabel(LOCALE.WORKSPACE)
       }
     })
+    this.ensurePart('action-cluster').then((p) => {
+      p.setState(1)
+    })
+
   }
 
   /**
