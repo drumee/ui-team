@@ -820,7 +820,7 @@ class __panel_activity extends LetcBox {
     let meeting;
     let meetingHash;
     const now = Date.now();
-
+    this.debug("AAA:766", data)
     if (/MEETING:/.test(opt.message)) {
       if (/MEETING:end/.test(opt.message)) return;
       meeting = opt.message.replace(/(^\[\[MEETING:(start):)|(\]\]$)/, '')
@@ -837,6 +837,8 @@ class __panel_activity extends LetcBox {
       } catch (e) {
         this.warn("Failed to parse", meeting)
       }
+    }else if(opt.hasOwnProperty('mention_ids')){
+      
     }
     if (Notification.permission === "denied") return;
     if (Notification.permission === "default" && this._permission_asked) return;
