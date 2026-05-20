@@ -143,7 +143,6 @@ class desk_module extends LetcBox {
    * @returns
    */
   _updateAddmenu(data = {}) {
-
     this.ensurePart("addmenu").then((p) => {
       let item = p.__items.children.first()
       if (data.filetype && data.filetype === _a.hub) {
@@ -155,7 +154,15 @@ class desk_module extends LetcBox {
     this.ensurePart('action-cluster').then((p) => {
       p.setState(1)
     })
+  }
 
+  /**
+   * 
+   */
+  loadHome(data = {}) {
+    this._closeMainPanels();
+    this.ensurePart('action-cluster').then((p) => p && p.setState(1));
+    Wm.reload();
   }
 
   /**
@@ -840,9 +847,7 @@ class desk_module extends LetcBox {
     switch (service) {
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });
-        this._closeMainPanels();
-        this.ensurePart('action-cluster').then((p) => p && p.setState(1));
-        Wm.reload();
+        this.loadHome()
         return;
 
       // case _e.lock:
