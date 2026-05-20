@@ -8,7 +8,8 @@ class settings_delete_account extends LetcBox {
     require("./skin");
     super.initialize(opt);
     this.declareHandlers();
-    this._step = 0;
+    this._export_only = !!this.mget("export_only");
+    this._step = this._export_only ? 1 : 0;
     this._selected = new Set();
     this._showPassword = false;
     this._password = "";

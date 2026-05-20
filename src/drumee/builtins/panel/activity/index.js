@@ -817,34 +817,60 @@ class __panel_activity extends LetcBox {
   _notify(data = {}) {
     if (!window.Notification) return;
     let opt = data[0] || data;
-    let now = new Date().getTime()
-    if ((now - this._last_notified) < 3000) return
-    this._last_notified = now;
-    const title = opt.firstname || LOCALE.NEW_MESSAGE
     let meeting;
+    let meetingHash;
+
     if (/MEETING:/.test(opt.message)) {
-      meeting = opt.message.replace(/(^\[\[MEETING:start:)|(\]\]$)/, '')
+      if (/MEETING:end/.test(opt.message)) return;
+      meeting = opt.message.replace(/(^\[\[MEETING:(start):)|(\]\]$)/, '')
       meeting = meeting.replace(/(\]\]$)/, '')
       try {
         meeting = JSON.parse(meeting)
+        opt.message = LOCALE.X_JOINED_MEETING_X.format(meeting.by, meeting.filename)
+        const { hub_id, nid } = meeting;
+        if (hub_id) {
+          meetingHash = nid
+            ? `#/desk/meeting?hub_id=${hub_id}&nid=${nid}`
+            : `#/desk/meeting?hub_id=${hub_id}`;
+        }
       } catch (e) {
         this.warn("Failed to parse", meeting)
       }
     }
-    this.debug("AAA:842", opt, meeting)
+    if (Notification.permission === "denied") return;
+    if (Notification.permission === "default" && this._permission_asked) return;
+
+    const now = Date.now();
+    if ((now - this._last_notified) < 5000) return;
+    this._last_notified = now;
+
+    const title = opt.firstname || LOCALE.NEW_MESSAGE;
     const notif = {
       body: opt.message || "",
-      icon: Visitor.avatar(data.author_id),
+      icon: Visitor.avatar(opt.author_id),
     };
-    // Request permission
-    Notification.requestPermission()
-      .then(permission => {
-        if (permission === "granted") {
-          new Notification(title, notif);
-        } else {
-          alert(LOCALE.NOTIFICATION_NOT_GRANTED)
-        }
-      });
+
+    const fire = () => {
+      const n = new Notification(title, notif);
+      if (meetingHash) {
+        n.onclick = () => {
+          window.focus();
+          this.debug("AAA:www", meetingHash)
+          location.hash = meetingHash;
+        };
+      }
+      Visitor.playSound(_K.notifications.drip, 0);
+    };
+
+    if (Notification.permission === "granted") {
+      fire();
+      return;
+    }
+
+    this._permission_asked = true;
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") fire();
+    });
   }
 
   /**
@@ -862,7 +888,6 @@ class __panel_activity extends LetcBox {
     let author_id = content.author_id || sender.uid || sender.id;
     if (!author_id) return;
     if (author_id == this._lastSender || author_id == Visitor.id) return;
-    Visitor.playSound(_K.notifications.drip, 0);
     this._lastSender = author_id;
     let preview = content.message || options.service || content.action || options.action;
     if (preview) {

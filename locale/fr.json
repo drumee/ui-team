@@ -880,6 +880,7 @@
   "NEED_DEVICES_PERMISSION": "Drumee a besoin d'utiliser votre microphone et votre caméra. Veuillez autoriser leur accès.",
   "CONFERENCE_CONNECTION_FAILED": "La connexion au serveur de conférence a échoué",
   "X_HAS_JOINED_MEETING": "{0} vient de rejoindre la réunion {1}",
+  "X_JOINED_MEETING_X": "{0} a rejoint la réunion dans l'espace de travail {1}",
   "NETWORK_IS_OFF": "Vous n'êtes plus connecté à Internet.",
   "CHECK_HARDWARE": "Vérifier le matétiel",
   "JOIN_CONFERENCE": "Rejoindre la conférence",

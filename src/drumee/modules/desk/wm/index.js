@@ -92,10 +92,15 @@ class __window_manager extends push {
       if (hash) {
         const savedPath = Visitor.parseModule(hash);
         const savedArgs = Visitor.parseModuleArgs(hash);
-        if (savedPath[1] === 'folder' && savedArgs.hub_id) {
-          Kind.waitFor('window_folder').then(() => {
-            this.launch({ kind: 'window_folder', hub_id: savedArgs.hub_id, nid: savedArgs.nid }, { explicit: 1 });
-          });
+        if (savedPath[1] === 'meeting' && savedArgs.nid) {
+          let media = this.getItemsByAttr(_a.nid, savedArgs.nid)
+          if (media) {
+            media.triggerHandlers({ service: "open-node", start_meeting: 1 })
+          }
+          // Kind.waitFor('window_folder').then(() => {
+          //   this.debug("AAA:97", { kind: 'window_folder', start_meeting: 1, hub_id: savedArgs.hub_id, nid: savedArgs.nid })
+          //   this.launch({ kind: 'window_folder', start_meeting: 1, hub_id: savedArgs.hub_id, nid: savedArgs.nid }, { explicit: 1 });
+          // });
           return;
         }
         this.openSharedLink(savedArgs);
@@ -400,15 +405,14 @@ class __window_manager extends push {
     }, this);
   }
 
-  // Workspace (hub) clicks from grid views navigate inline via loadWorkspace —
-  // same flow the sidebar uses for `load-workspace`. The legacy openHubManager
-  // path (window_team / window_website / window_sharebox) stays reserved for
-  // explicit settings entry points that pass a `start` argument.
   openContent(media, args) {
     if (media && media.mget
       && media.mget(_a.filetype) === _a.hub
       && media.mget(_a.status) !== _a.deleted) {
-      return this.loadWorkspace(media);
+      const item = this.getWindowPreset(media);
+      item.kind = "window_folder";
+      item.wm_unique_id = `window_folder-${item.hub_id}`;
+      return this.launch(item, { explicit: 1, singleton: 1 });
     }
     return super.openContent(media, args);
   }
@@ -643,6 +647,7 @@ class __window_manager extends push {
   }
 
   onDomRefresh() {
+    this.debug("AAA:7650", this)
     this.feed(require("./skeleton")(this));
     this.fetchService(SERVICE.desk.get_env,
       { hub_id: Visitor.id },
@@ -654,7 +659,7 @@ class __window_manager extends push {
         Visitor.set({ wicket_id: data.wicket_id });
       }
       this.trigger(_e.ready);
-      this.route();
+      // this.route();
       Visitor.set({ disk: data.disk });
       this.bindWsEvents()
     });

@@ -959,6 +959,7 @@
   "NEED_DEVICES_PERMISSION": "Drumee needs to use your microphone and camera. Please allow their access.",
   "CONFERENCE_CONNECTION_FAILED": "Connection to conference server failed",
   "X_HAS_JOINED_MEETING": "{0} has just joined the meeting {1}",
+  "X_JOINED_MEETING_X": "{0} has joined the meeting in the workspace {1}",
   "NETWORK_IS_OFF": "You are no longer connected to the Internet.",
   "CHECK_HARDWARE": "Check the hardware",
   "JOIN_CONFERENCE": "Join the conference",

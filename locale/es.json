@@ -38,6 +38,7 @@
   "CONFERENCE_CONNECTION_FAILED": "Error de conexión al servidor de conferencias",
   "JOINING_CONFERENCE": "Esperando para unirme a la conferencia",
   "X_HAS_JOINED_MEETING": "{0} acaba de unirse a la reunión {1}",
+  "X_JOINED_MEETING_X": "{0} se ha unido a la reunión en el espacio de trabajo {1}",
   "NETWORK_IS_OFF": "Ya no estás conectado a Internet.",
   "DEVICES_PERMISSION_DENIED": "No se puede obtener permiso para usar {0} desde su navegador. Verifique que haya otorgado el permiso adecuado.",
   "CHECK_HARDWARE": "comprobar el hardware",
