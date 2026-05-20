@@ -113,6 +113,17 @@ html {
   }
 }
 
+// While a window-connect (call popup) is open, lift the WM above the
+// slide-out panel containers (z 10001 — chat-p2p inbox, address-book…)
+// and the settings slot. window-connect's own z-index 100100 is inert
+// because it lives inside the WM's __layer (z 1300), so the elevation
+// has to happen at the WM-container level.
+.desk-module__wm-container:has(.window-connect[data-state="1"]) {
+  .window-manager__ui {
+    z-index: 30000 !important;
+  }
+}
+
 // Lift window_manager above the settings/apps slot (z 1500–20001) while
 // its modal is open; otherwise the modal stays trapped behind Settings/Apps.
 .desk-module__wm-container:has(.window-manager__wrapper-modal[data-state="open"]) {

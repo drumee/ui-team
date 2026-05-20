@@ -13,6 +13,7 @@ const __icon = function (_ui_) {
     duplicate: "file-copy",
     directUrl: "backoffice_public",
     download: "ctxmenu-download",
+    edit: "ctxmenu-edit",
     execute: "code-js",
     exitFullScreen: "desktop_reduce",
     export: "server-export",
