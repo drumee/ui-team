@@ -19,6 +19,11 @@ html[data-theme="dark"] {
   --normal-fg-800: #ffffff;
   --placeholder-fg: #c7c7cc;
 
+  /* Override legacy text vars so any consumer of var(--default-text-color)
+   * (and its aliases --main-default-text / --main-default-typo) inherits a
+   * dark-mode-readable value automatically — no per-component patching. */
+  --default-text-color: #e4e3ff;
+
   /* Reverse */
   --reverse-bg: #e4e3ff;
   --reverse-fg: #282538;
