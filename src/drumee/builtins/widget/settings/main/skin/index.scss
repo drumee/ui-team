@@ -345,6 +345,12 @@
       width: 100%;
       gap: var(--spacer-5);
     }
+    &-row.email-row {
+      .settings-main__inner-description {
+        max-width: 150px;
+        overflow: hidden;
+      }
+    }
   }
 
   // ── Danger zone card ──────────────────────────────────────
