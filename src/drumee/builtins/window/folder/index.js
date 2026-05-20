@@ -1108,6 +1108,10 @@ class __window_folder extends mfsInteract {
     this.isShowSettings = true;
     this._folderMembers = [];
     this._folderMembersLoaded = false;
+    // Reset invite role to default (Admin) on every open — otherwise a prior
+    // session's pick persists silently and the next invite uses the stale
+    // privilege even though the trigger label visually shows the default.
+    this._folderInviteRole = null;
 
     const render = () => {
       if (this.isDestroyed && this.isDestroyed()) return;

@@ -73,11 +73,16 @@ function roleDropdown(pfx, role, service, extra = {}) {
 
   // No radio dot — selected option uses background highlight (data-state="1")
   // instead. Keeps menu narrow enough to stay inside the panel.
+  // Render each option as a single Note (the actual click target) — putting
+  // service/dataset directly on the element that receives the click avoids
+  // the ambiguity of a Box.X wrapper whose child Note's own click handler
+  // would stopPropagation before the wrapper's service ever fires.
   const items = Skeletons.Box.Y({
     className: `${pfx}-role-menu`,
     kids: roleOptions.map((opt) =>
-      Skeletons.Box.X({
+      Skeletons.Note({
         className: `${pfx}-role-option`,
+        content: opt.label,
         service,
         radio: radioGroup,
         name: opt.label,
@@ -88,12 +93,6 @@ function roleDropdown(pfx, role, service, extra = {}) {
           role_label: opt.label,
         },
         state: opt.label === role.label ? 1 : 0,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}-role-option-label`,
-            content: opt.label,
-          }),
-        ],
       }),
     ),
   });
