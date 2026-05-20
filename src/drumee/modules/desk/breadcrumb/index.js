@@ -129,6 +129,7 @@ class __desk_breadcrumb extends LetcBox {
       p.set({ content: LOCALE.HOME });
       p.el.dataset.current = 1;
     });
+    Desk.loadHome()
   }
 
   /**

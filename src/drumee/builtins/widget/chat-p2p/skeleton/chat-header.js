@@ -7,6 +7,25 @@
 module.exports = function (ui, contact) {
   const fig = ui.fig.family;
 
+  const closeBtn = Skeletons.Button.Svg({
+    ico: 'account_cross',
+    className: `${fig}__header-btn`,
+    service: 'close-chat',
+    uiHandler: [ui]
+  });
+
+  if (!contact) {
+    return Skeletons.Box.X({
+      className: `${fig}__header ${fig}__header--empty`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${fig}__header-actions`,
+          kids: [closeBtn]
+        })
+      ]
+    });
+  }
+
   const fname = contact.mget(_a.firstname) || '';
   const lname = contact.mget(_a.lastname) || '';
   const fullname = contact.mget(_a.fullname) || `${fname} ${lname}`.trim();
@@ -79,12 +98,7 @@ module.exports = function (ui, contact) {
         service: 'show-more',
         uiHandler: [ui]
       }),
-      Skeletons.Button.Svg({
-        ico: 'account_cross',
-        className: `${fig}__header-btn`,
-        service: 'close-chat',
-        uiHandler: [ui]
-      })
+      closeBtn
     ]
   });
 

@@ -159,7 +159,7 @@ class settings_main extends LetcBox {
     const current = Visitor.profile() || {};
     const next = this._mfaNext;
     Visitor.set({
-      profile: { ...current, mfa: next, otp: next },
+      profile: { ...current, mfa: next, otp: next ? "email" : 0 },
     });
     this._resetMfaState();
     return this.closeOverlay();

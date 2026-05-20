@@ -267,31 +267,34 @@ class settings_account extends LetcBox {
    * 
    * @param {*} cmd 
    */
-  changeMFA(cmd) {
+  async changeMFA(cmd) {
     let MFA = [LOCALE.OFF, LOCALE.ON];
     let { email } = Visitor.profile();
-    return this.ensurePart("current-mfa").then(async (p) => {
-      let { secret } = await this.postService(SERVICE.otp.send, { id: Visitor.id, email })
-      p.mset({ value: cmd.mget('mfa'), content: MFA[cmd.mget('mfa')] })
-      let payload = {
-        hub_id: Visitor.id,
-        mfa: cmd.mget('mfa'),
-        secret
-      }
-      await Kind.waitFor('dtk_otp');
-      this.__overlay.feed({
-        payload,
-        dataset: {
-          fit: "parent"
-        },
-        kind: 'dtk_otp',
-        api: SERVICE.desk.set_mfa,
-        title: "Multi factor athentication",
-        message: "We have sent a code to {0} validate you new settings".format(),
-        service: 'otp-signined'
-      });
+    const result = await this.postService(SERVICE.otp.send, { hub_id: Visitor.id, email });
+    if (!result || !result.sent || !result.secret) return;
+    const { secret } = result;
+    const payload = {
+      hub_id: Visitor.id,
+      mfa: cmd.mget('mfa'),
+      secret,
+    };
+    if (!Kind.get('dtk_otp')) {
+      Kind.registerAddons({ dtk_otp: import("@drumee/ui-toolkit/widgets/otp") });
+    }
+    await Kind.waitFor('dtk_otp');
+    this.ensurePart("current-mfa").then((p) => {
+      p.mset({ value: cmd.mget('mfa'), content: MFA[cmd.mget('mfa')] });
     });
-
+    this.__overlay.feed({
+      payload,
+      dataset: { fit: "parent" },
+      kind: 'dtk_otp',
+      api: SERVICE.desk.set_mfa,
+      title: LOCALE.MULTI_FACTOR_AUTH || "Multi factor authentication",
+      message: (LOCALE.VALIDATION_SENT_TO || "We have sent a code to {0}").format(email),
+      service: 'otp-signined',
+      uiHandler: [this],
+    });
   }
 
   /**

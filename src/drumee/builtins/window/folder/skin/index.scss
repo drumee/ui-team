@@ -1025,6 +1025,12 @@
     padding: 8px 12px;
     transition: background-color 120ms ease;
     white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 400,
+      $color: var(--default-text-color)
+    );
 
     &:hover {
       background-color: rgba(29, 138, 234, 0.08);
@@ -1032,26 +1038,9 @@
 
     &[data-state="1"] {
       background-color: rgba(29, 138, 234, 0.12);
-
-      .window-folder__settings-action-role-option-label {
-        color: #1d8aea;
-        font-weight: 500;
-      }
+      color: #1d8aea;
+      font-weight: 500;
     }
-  }
-
-  &__settings-action-role-option-label {
-    // Disable hit-testing on the label so a click on the text passes through
-    // to the parent role-option Box.X, which is the element wired with the
-    // `service` handler. Without this, Skeletons.Note swallows the click
-    // and the menu doesn't react.
-    pointer-events: none;
-    @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
-      $weight: 400,
-      $color: var(--default-text-color)
-    );
   }
 
   &__settings-action-send-button {
@@ -2258,21 +2247,16 @@ html[data-theme="dark"] {
     }
 
     &__settings-action-role-option {
+      color: var(--normal-fg-10);
+
       &:hover {
         background-color: var(--hover-bg-40);
       }
 
       &[data-state="1"] {
         background-color: var(--active-item-bg);
-
-        .window-folder__settings-action-role-option-label {
-          color: var(--normal-fg-800);
-        }
+        color: var(--normal-fg-800);
       }
-    }
-
-    &__settings-action-role-option-label {
-      color: var(--normal-fg-10);
     }
   }
 }
