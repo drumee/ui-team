@@ -86,11 +86,29 @@ class __window_manager extends push {
    */
   route(l) {
     const loc = JSON.parse(localStorage.getItem("locationOnStart")); //"locationOnStart";
+    this.debug("locationOnStart", loc)
     if (loc) {
       let { hash } = loc;
       if (hash) {
-        let opt = Visitor.parseModuleArgs(hash);
-        this.openSharedLink(opt);
+        const savedPath = Visitor.parseModule(hash);
+        const savedArgs = Visitor.parseModuleArgs(hash);
+        if (savedPath[1] === 'folder' && savedArgs.hub_id) {
+          Kind.waitFor('window_folder').then(() => {
+            this.launch({ kind: 'window_folder', hub_id: savedArgs.hub_id, nid: savedArgs.nid }, { explicit: 1 });
+          });
+          return;
+        }
+        this.openSharedLink(savedArgs);
+      }
+    }
+    // Direct folder URL deep link: #@desk/folder?hub_id=HUB_ID[&nid=NID]
+    const pathArgs = Visitor.parseModule();
+    if (pathArgs[1] === 'folder') {
+      const params = Visitor.parseModuleArgs();
+      if (params.hub_id) {
+        Kind.waitFor('window_folder').then(() => {
+          this.launch({ kind: 'window_folder', hub_id: params.hub_id, nid: params.nid }, { explicit: 1 });
+        });
       }
     }
   }
@@ -649,7 +667,7 @@ class __window_manager extends push {
       }
       this.visible = !document.hidden;
     };
-    this.loadReminders();
+    // this.loadReminders();
 
     window.addEventListener("online", () => {
       ActivityHandler && ActivityHandler.resync();
@@ -1425,6 +1443,10 @@ class __window_manager extends push {
           return;
         }
         this.unselect(1);
+        if (this.el.contains(lastClick.target)) {
+          Desk.closeMainPanels()
+          Desk.closeOtherSidebarPanels()
+        }
         return this.warn("AAA:471", WARNING.method.unprocessed.format(service));
     }
   }

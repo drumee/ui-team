@@ -814,14 +814,26 @@ class __panel_activity extends LetcBox {
   /**
    * 
    */
-  _notify(data) {
+  _notify(data = {}) {
     if (!window.Notification) return;
+    let opt = data[0] || data;
     let now = new Date().getTime()
     if ((now - this._last_notified) < 3000) return
     this._last_notified = now;
-    const title = data.firstname || LOCALE.NEW_MESSAGE
+    const title = opt.firstname || LOCALE.NEW_MESSAGE
+    let meeting;
+    if (/MEETING:/.test(opt.message)) {
+      meeting = opt.message.replace(/(^\[\[MEETING:start:)|(\]\]$)/, '')
+      meeting = meeting.replace(/(\]\]$)/, '')
+      try {
+        meeting = JSON.parse(meeting)
+      } catch (e) {
+        this.warn("Failed to parse", meeting)
+      }
+    }
+    this.debug("AAA:842", opt, meeting)
     const notif = {
-      body: data.message || "",
+      body: opt.message || "",
       icon: Visitor.avatar(data.author_id),
     };
     // Request permission

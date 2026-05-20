@@ -160,7 +160,7 @@ class desk_module extends LetcBox {
    * 
    */
   loadHome(data = {}) {
-    this._closeMainPanels();
+    this.closeMainPanels();
     this.ensurePart('action-cluster').then((p) => p && p.setState(1));
     Wm.reload();
   }
@@ -742,7 +742,7 @@ class desk_module extends LetcBox {
         if (isOpen) {
           this._hidePanel(p);
         } else {
-          this._closeOtherSidebarPanels(pn);
+          this.closeOtherSidebarPanels(pn);
           this._showPanel(p);
         }
         return;
@@ -764,7 +764,7 @@ class desk_module extends LetcBox {
         p.clear();
         this._pendingKinds[pn] = null;
       }
-      this._closeOtherSidebarPanels(pn);
+      this.closeOtherSidebarPanels(pn);
       this._loadKind(p, kind, pn);
     });
   }
@@ -774,7 +774,7 @@ class desk_module extends LetcBox {
    * just flip `data-anim` to "out"; other slots get cleared. Activity
    * panel uses `setState` because it predates the anim pattern.
    */
-  _closeOtherSidebarPanels(except) {
+  closeOtherSidebarPanels(except) {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
     const slots = ["chat-panel", "settings-main-slot", "trash-panel"];
@@ -811,10 +811,10 @@ class desk_module extends LetcBox {
    * before navigating to Home or another workspace so the underlying
    * window manager / grid view is not left occluded.
    */
-  _closeMainPanels() {
+  closeMainPanels() {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
-    const slots = ["settings-main-slot", "trash-panel"];
+    const slots = ["settings-main-slot", "trash-panel", "chat-panel"];
     return Promise.all(
       slots.map((pn) => {
         if (this._closeTimers[pn]) {
@@ -883,7 +883,7 @@ class desk_module extends LetcBox {
           p.activityState = state;
           p.setState(state);
           if (state) {
-            this._closeOtherSidebarPanels("activity-panel");
+            this.closeOtherSidebarPanels("activity-panel");
           }
         });
 
@@ -990,7 +990,7 @@ class desk_module extends LetcBox {
         // promise — loadWorkspace only updates list.setApi() and the
         // partition-prep visibility flip can bail if the list is still
         // covered by an Apps/Settings panel during restart.
-        return this._closeMainPanels().then(() => Wm.loadWorkspace(cmd));
+        return this.closeMainPanels().then(() => Wm.loadWorkspace(cmd));
 
       /** No need - use menu  widget */
       // case "toggle-add-menu":
