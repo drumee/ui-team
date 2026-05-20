@@ -248,11 +248,6 @@
       .settings-export-data__btn-label {
         color: var(--white, #fff);
       }
-
-      &[data-state="0"] {
-        opacity: .5;
-        pointer-events: none;
-      }
     }
   }
 
