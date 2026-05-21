@@ -236,7 +236,6 @@ class __window_manager extends push {
    * directory id; falls back to hub.get_attributes when none is set.
    */
   loadWorkspace(workspace) {
-    console.trace()
     const data = workspace.model ? workspace.model.toJSON() : (workspace || {});
     const hub_id = data.hub_id || data.id;
     let nid = data.actual_home_id || data.home_id || data.nid;
@@ -269,7 +268,7 @@ class __window_manager extends push {
       this._curWorkspace = { hub_id, nid: resolvedNid, area: data.area };
       this.mset({ hub_id, nid: resolvedNid, nodeId: resolvedNid, area: data.area, ownpath: '/', home_id: resolvedNid });
 
-      this.__wmContainer.feed({
+      this.windowsLayer.append({
         kind: 'window_folder',
         hub_id,
         nid: resolvedNid,
@@ -278,6 +277,8 @@ class __window_manager extends push {
         filename: data.filename || data.name,
         wm_unique_id: `window_folder-${hub_id}`,
       });
+      this.windowsLayer.el.dataset.headless = "1";
+      this.iconsList.clear()
       this.ensurePart("wrapper-modal").then((p) => p.clear());
       this.updateBreadcrumb({ ...data, hub_id, nid: resolvedNid, service: "change-workspace" }, this);
     };
