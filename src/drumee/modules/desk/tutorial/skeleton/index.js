@@ -17,6 +17,7 @@ module.exports = function (ui) {
           })
         ],
       }),
+      { kind: 'tutorial_spotlight', sys_pn: 'spotlight', partHandler: ui },
     ],
   });
 };

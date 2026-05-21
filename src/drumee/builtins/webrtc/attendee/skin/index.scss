@@ -163,4 +163,23 @@
       background-color: rgba(89, 80, 255, 0.18);
     }
   }
+
+  // Read-only state badges shown between name and call button when the
+  // parent passes `_meetingUi` (only window_meeting/attendees.js does).
+  &__badge {
+    width: 16px;
+    height: 16px;
+    margin: 0 4px;
+    flex-shrink: 0;
+    cursor: default;
+    pointer-events: none;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &--hand svg { color: #fa8540; }
+    &--share svg { color: #5950ff; }
+  }
 }

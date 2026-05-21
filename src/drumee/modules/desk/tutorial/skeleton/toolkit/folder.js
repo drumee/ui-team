@@ -1,5 +1,3 @@
-const { tooltip } = require("./tooltip");
-
 // ── Static data ───────────────────────────────────────────────────────────────
 const SUB_FOLDERS = [
   "Sub-folder v1",
@@ -280,25 +278,10 @@ export function chatMessage(pfx, msg) {
 }
 
 export function chatPanel(ui, pfx) {
-  let tt = null;
-  if (ui.mget(_a.service)) {
-    const opt = {
-      badge_text: "STEP 2/5",
-      title: "Chat lives in folder",
-      desc: `Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.`,
-      direction: "east",
-    };
-    tt = tooltip(ui, opt);
-    // tooltip = Skeletons.Box.Y({
-    //   className: `${pfx}__tooltip-anchor`,
-    //   partHandler: ui,
-    //   kids: [tooltipBadge(ui, opt)],
-    // });
-  }
-
   return Skeletons.Box.Y({
     className: `${pfx}__chat-panel`,
     sys_pn: "chat-panel",
+    partHandler: ui,
     kids: [
       Skeletons.Note({
         className: `${pfx}__chat-header`,
@@ -308,7 +291,6 @@ export function chatPanel(ui, pfx) {
         className: `${pfx}__chat-messages`,
         kids: MESSAGES.map((msg) => chatMessage(pfx, msg)),
       }),
-      tt,
       Skeletons.Box.X({
         className: `${pfx}__chat-input-bar`,
         kids: [

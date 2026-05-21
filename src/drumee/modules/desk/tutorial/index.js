@@ -42,6 +42,7 @@ class tutorial_main extends LetcBox {
   _nextStep() {
     this._stepIndex++;
     if (this._widgets[this._stepIndex]) {
+      this.ensurePart('spotlight').then((s) => s.clear && s.clear());
       this.ensurePart(_a.content).then((p) => {
         p.feed(this._widgets[this._stepIndex])
       })
@@ -72,6 +73,12 @@ class tutorial_main extends LetcBox {
         break;
       case 'skip-tour':
         this._enterWorkspace();
+        break;
+      case 'spotlight:focus':
+        this.ensurePart('spotlight').then((s) => s.focus(args));
+        break;
+      case 'spotlight:clear':
+        this.ensurePart('spotlight').then((s) => s.clear());
         break;
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);

@@ -235,6 +235,29 @@
         min-width: 0;
         flex-shrink: 0;
       }
+
+      // Pinned tile gets the spotlight: it stays in the participants
+      // sidebar column but expands to fill the column width and pushes
+      // siblings into a row below it. The visual cue (purple outline)
+      // is shared with all modes; here we also make it physically
+      // larger so the user reads it as the focused tile.
+      .endpoint-local[data-pinned="1"],
+      .remote-user[data-pinned="1"] {
+        max-width: 100%;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        order: -1;
+      }
+    }
+  }
+
+  // When ANY tile is pinned, force presenter (sidebar) mode regardless
+  // of screen-share state so the pinned tile is the visual focus.
+  &__ui[data-pinned-mode="1"] {
+    .participants-manager__ui {
+      // Reuse the existing presenter-mode grid (200px sidebar). The
+      // .endpoint-local[data-pinned="1"] / .remote-user[data-pinned="1"]
+      // rules above expand the pinned tile to fill that column at 16:9.
     }
   }
 
@@ -803,6 +826,77 @@
   top: 40px;
   transform: translateX(50%);
   right: 50%;
+  gap: var(--spacer-3);
+}
+
+// Solo-call preview overlay: when join() fails (denied / network / device),
+// window/meeting/index.js sets data-denied="1" on __ui. Expand the
+// message-container to cover the body so it reads like a normal 1-person
+// call view — avatar centered, name + denial text below, X in the corner.
+.window-meeting__ui[data-denied="1"] {
+  .window__message-container {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    right: auto;
+    transform: none;
+    background: var(--normal-bg-90);
+    border-radius: 0;
+    padding: 0;
+    gap: var(--spacer-4);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .message-close-x {
+    position: absolute;
+    top: var(--spacer-4);
+    right: var(--spacer-4);
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--normal-fg-30);
+    background: var(--normal-bg-80);
+    box-sizing: border-box;
+    z-index: 2;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover {
+      background-color: var(--normal-bg-70);
+      color: var(--normal-fg-10);
+    }
+  }
+
+  .message-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .message-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--normal-fg-10);
+  }
+
+  .message-text {
+    font-size: 13px;
+    color: var(--normal-fg-30);
+    text-align: center;
+    line-height: 1.4;
+    max-width: 320px;
+    padding: 0 var(--spacer-5);
+  }
 }
 .window__dialog-overlay {
   &[data-state="open"] {

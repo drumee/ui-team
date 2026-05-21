@@ -1,13 +1,10 @@
 const { folder, chatPanel } = require('../skeleton/toolkit');
 
-const BADGES = [
-  {
-    badge_text: 'STEP 2/5',
-    title: 'Chat lives in folder',
-    desc: `Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.`,
-    direction: 'north',
-  },
-];
+const CHAT_BADGE = {
+  badge_text: 'STEP 2/5',
+  title: 'Chat lives in folder',
+  desc: 'Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.',
+};
 
 class __tutorial_folder extends LetcBox {
 
@@ -15,12 +12,19 @@ class __tutorial_folder extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
-    this._stepIndex = 0;
   }
 
-  onDomRefresh() {
+  async onDomRefresh() {
     if (this.mget(_a.service)) {
       this.feed(folder(this, chatPanel));
+      const panel = await this.ensurePart('chat-panel');
+      this.triggerHandlers({
+        service: 'spotlight:focus',
+        target: panel.el,
+        tooltip: CHAT_BADGE,
+        direction: 'east',
+        owner: this,
+      });
     } else {
       this.feed(folder(this));
     }
@@ -33,7 +37,6 @@ class __tutorial_folder extends LetcBox {
     }
   }
 
-
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
@@ -41,7 +44,6 @@ class __tutorial_folder extends LetcBox {
         return this.triggerHandlers();
       case 'skip-tour':
         return this.triggerHandlers({ service: 'skip-tour' });
-        break;
     }
   }
 }

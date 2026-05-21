@@ -33,6 +33,17 @@ class __window_meeting extends __room {
     };
     this.state = "initialize";
     this._memberCallStates = new Map();
+    // Maps drumate uid → 1 for participants whose hand is raised or who
+    // are currently presenting. Populated by hand-raise broadcasts and the
+    // screen-share lifecycle hooks below. The dashboard / attendees cards
+    // read these via `_meetingUi` to render badges and the self-actions.
+    this._memberHandRaised = new Map();
+    this._memberPresenting = new Map();
+    // presenterId is participant_id (jitsi), but the dashboard cards are
+    // keyed by drumate uid. Remember the presenter's uid separately so we
+    // can clear `_memberPresenting` on STOP_REMOTE_SCREEN, by which time
+    // `presenterId` has already been nulled by the base class.
+    this._currentPresenterUid = null;
 
     if (this.mget("_meeting_standalone") && typeof this._setSize === "function") {
       this._setSize({
@@ -92,33 +103,44 @@ class __window_meeting extends __room {
     if (this.el) this.el.dataset.ready = "0";
     this.feed(require("./skeleton/init")(this));
     this.stateMachine("initializing");
-    let room = await this.join();
-    if (!room || !room.user) {
-      if (this.el) this.el.dataset.ready = "1";
-      this.stateMachine("permissionDenied");
-      return;
-    }
-    // sendRoomInfo doesn't forward the host record to non-host clients;
-    // the host self-announces via HOST_HELLO below.
-    this._isHost = !!(room.user && room.user.role === "host");
-    if (this._isHost) {
-      this._hostName = (Visitor.fullname && Visitor.fullname())
-        || `${(Visitor.firstname && Visitor.firstname()) || ""} ${(Visitor.lastname && Visitor.lastname()) || ""}`.trim()
-        || "";
-    }
+    // Any rejection from join() / prepareConference() (privilege denial that
+    // surfaces as a thrown error, device permission denial, network/socket
+    // failure, conference bind failure) must still flip data-ready to "1" —
+    // otherwise __main stays opacity:0 and the user sees an infinite spinner
+    // with no reachable close button.
+    let room;
+    try {
+      room = await this.join();
+      if (!room || !room.user) {
+        this.stateMachine("permissionDenied");
+        return;
+      }
+      // sendRoomInfo doesn't forward the host record to non-host clients;
+      // the host self-announces via HOST_HELLO below.
+      this._isHost = !!(room.user && room.user.role === "host");
+      if (this._isHost) {
+        this._hostName = (Visitor.fullname && Visitor.fullname())
+          || `${(Visitor.firstname && Visitor.firstname()) || ""} ${(Visitor.lastname && Visitor.lastname()) || ""}`.trim()
+          || "";
+      }
 
-    this.feed(require("./skeleton")(this, room.user));
-    await this.prepareConference(room);
-    this.responsive();
-    this.ensurePart("commands").then((p) => {
-      p.el.show();
-    });
-    this._renderHostLabel();
-    this._announceHostIfNeeded();
-    if (this.el) this.el.dataset.ready = "1";
-    this._meetingStartedAt = Date.now();
-    this._maxParticipants = 1;
-    this._postMeetingSystemMessage("meeting.start");
+      this.feed(require("./skeleton")(this, room.user));
+      await this.prepareConference(room);
+      this.responsive();
+      this.ensurePart("commands").then((p) => {
+        p.el.show();
+      });
+      this._renderHostLabel();
+      this._announceHostIfNeeded();
+      this._meetingStartedAt = Date.now();
+      this._maxParticipants = 1;
+      this._postMeetingSystemMessage("meeting.start");
+    } catch (e) {
+      if (this.warn) this.warn("meeting onDomRefresh failed", e);
+      this.stateMachine("permissionDenied");
+    } finally {
+      if (this.el) this.el.dataset.ready = "1";
+    }
   }
 
   _announceHostIfNeeded() {
@@ -324,9 +346,159 @@ class __window_meeting extends __room {
         this._toggleHandRaise(cmd);
         break;
 
+      case "lower-hand-self":
+        this._lowerOwnHand();
+        break;
+
+      case "stop-share-self":
+        this._stopOwnPresentation();
+        break;
+
+      case "pin-tile":
+        this._togglePinnedTile(args);
+        break;
+
+      case "togglefullscreen":
+        // The base webrtc room handler calls `document.body.requestFullscreen()`,
+        // which puts the entire host page into fullscreen — including the
+        // folder window's file list and chrome. For embedded meetings we
+        // only want the screen-share widget itself to expand, so target
+        // the `webrtc_remote_display` widget element directly.
+        this._toggleScreenShareFullscreen();
+        break;
+
       default:
         super.onUiEvent(cmd, args);
     }
+  }
+
+  _toggleScreenShareFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+      return;
+    }
+    if (!this.__presenter || this.__presenter.isEmpty()) {
+      // Nothing is being presented — clicking fullscreen on an empty slot
+      // would maximize a black void. Bail.
+      return;
+    }
+    const child = this.__presenter.children && this.__presenter.children.last();
+    if (!child || child.isDestroyed() || !child.el) return;
+    if (typeof child.el.requestFullscreen !== "function") return;
+    child.el.requestFullscreen().catch((e) => {
+      if (this.warn) this.warn("requestFullscreen failed", e);
+    });
+  }
+
+  // participant_id (jitsi) -> drumate uid. The dashboard cards are keyed
+  // by uid, and HAND_RAISE/screen-share events carry participant_id, so
+  // every state map update goes through this. Returns null for the local
+  // user's own participant id (we don't store ourselves in this.endpoints).
+  _uidForParticipant(pid) {
+    if (!pid || !this.endpoints) return null;
+    const ep = this.endpoints[pid];
+    if (!ep || ep.isDestroyed()) return null;
+    return ep.mget && ep.mget(_a.uid);
+  }
+
+  _setMemberHandRaised(uid, on) {
+    if (!uid) return;
+    const key = String(uid);
+    if (on) this._memberHandRaised.set(key, 1);
+    else this._memberHandRaised.delete(key);
+    this._applyTileDataset(uid, "raised", on);
+    this._refreshDashboard();
+  }
+
+  _setMemberPresenting(uid, on) {
+    if (!uid) return;
+    const key = String(uid);
+    if (on) this._memberPresenting.set(key, 1);
+    else this._memberPresenting.delete(key);
+    this._applyTileDataset(uid, "presenting", on);
+    this._refreshDashboard();
+  }
+
+  // Flip a data-attr on the video tile so the tile skin shows the
+  // corresponding badge. Handles both local (own visitor id) and remote
+  // tiles. Safe to call before the tile exists — the next render reads
+  // the same state maps and applies the attr.
+  _applyTileDataset(uid, attr, on) {
+    if (!uid || !attr) return;
+    const value = on ? 1 : 0;
+    if (String(uid) === String(Visitor.id)) {
+      if (typeof this.getLocalParts !== "function") return;
+      this.getLocalParts().then((parts) => {
+        if (parts && parts.local && parts.local.el && !parts.local.isDestroyed()) {
+          parts.local.el.dataset[attr] = value;
+        }
+      }).catch(() => { /* local tile not ready yet — next render will pick up */ });
+      return;
+    }
+    if (!this.endpoints) return;
+    for (const pid of Object.keys(this.endpoints)) {
+      const ep = this.endpoints[pid];
+      if (!ep || ep.isDestroyed()) continue;
+      if (String(ep.mget(_a.uid)) !== String(uid)) continue;
+      if (ep.el) ep.el.dataset[attr] = value;
+      break;
+    }
+  }
+
+  // Toggle pin on a participant's tile. Only one pinned tile at a time —
+  // clicking pin on a different participant moves the spotlight; clicking
+  // again on the same one un-pins. The visible effect is driven by
+  // CSS rules keyed on data-pinned (on the tile root) and data-pinned-mode
+  // (on the meeting window root), which scale the pinned tile up and
+  // switch __endpoints into presenter mode so __participants becomes a
+  // sidebar — even when no one is sharing screen.
+  _togglePinnedTile(args) {
+    const pid = args && args.participant_id;
+    if (!pid) return;
+    const wasSame = this._pinnedParticipantId === pid;
+    // Clear previous pin (if any) before setting the new one.
+    if (this._pinnedParticipantId) {
+      const prev = this._tileForPin(this._pinnedParticipantId, this._pinnedIsLocal);
+      if (prev && prev.el) prev.el.dataset.pinned = 0;
+    }
+    if (wasSame) {
+      this._pinnedParticipantId = null;
+      this._pinnedIsLocal = false;
+      if (this.el) this.el.dataset["pinned-mode"] = 0;
+      return;
+    }
+    this._pinnedParticipantId = pid;
+    this._pinnedIsLocal = !!(args && args.isLocal);
+    const tile = this._tileForPin(pid, this._pinnedIsLocal);
+    if (tile && tile.el) tile.el.dataset.pinned = 1;
+    if (this.el) this.el.dataset["pinned-mode"] = 1;
+    // NOTE: do NOT call responsive("presenter") here. Forcing presenter
+    // mode when no one is actually sharing leaves the __presenter slot
+    // visible but empty — rendering as a huge black rectangle. The pin
+    // is now purely a visual highlight on the existing grid; participants
+    // sizing follows the natural mode (normal / presenter on real share).
+  }
+
+  // Resolve a tile widget for the pin highlight. Local tile lives in
+  // __participants alongside remote tiles; remote tiles are indexed by
+  // participant_id in `this.endpoints`. Local has no entry there so we
+  // walk the children to find the endpoint_local kind.
+  _tileForPin(pid, isLocal) {
+    if (!isLocal && this.endpoints && this.endpoints[pid]) {
+      const ep = this.endpoints[pid];
+      if (ep && !ep.isDestroyed()) return ep;
+    }
+    if (this.__participants && this.__participants.children) {
+      const list = this.__participants.children.toArray
+        ? this.__participants.children.toArray()
+        : [];
+      for (const c of list) {
+        if (c.isDestroyed && c.isDestroyed()) continue;
+        if (isLocal && c.kind === "endpoint_local") return c;
+        if (!isLocal && c.mget && c.mget("participant_id") === pid) return c;
+      }
+    }
+    return null;
   }
 
   _applyRemoteHandRaise(data) {
@@ -336,6 +508,8 @@ class __window_meeting extends __room {
     const endpoint = this.endpoints[pid];
     if (!endpoint || endpoint.isDestroyed() || !endpoint.el) return;
     endpoint.el.dataset.raised = data.state ? 1 : 0;
+    const uid = (data.uid != null) ? data.uid : this._uidForParticipant(pid);
+    this._setMemberHandRaised(uid, !!data.state);
   }
 
   _toggleHandRaise(cmd) {
@@ -344,6 +518,9 @@ class __window_meeting extends __room {
     if (cmd.el) {
       cmd.el.setAttribute("title", raised ? (LOCALE.LOWER_HAND || "Lower hand") : (LOCALE.RAISE_HAND || "Raise hand"));
     }
+    // Mirror the new state for the local user on the dashboard card. The
+    // broadcast below tells other peers; this updates our own UI.
+    this._setMemberHandRaised(Visitor.id, !!raised);
     try {
       this.sendRoomSignaling(SERVICE.conference.broadcast, {
         event: "HAND_RAISE",
@@ -357,6 +534,63 @@ class __window_meeting extends __room {
     } catch (e) {
       if (this.warn) this.warn("hand-raise broadcast failed", e);
     }
+  }
+
+  // Triggered from a member card's "Lower hand" action. The local
+  // raise-hand button lives in __ctrlHandRaise (the top-bar control); we
+  // toggle through it so its dataset and the broadcast payload stay in
+  // sync with `_toggleHandRaise` above.
+  _lowerOwnHand() {
+    const cmd = this.__ctrlHandRaise;
+    if (!cmd || !cmd.el) {
+      this._setMemberHandRaised(Visitor.id, false);
+      return;
+    }
+    if (cmd.el.dataset.raised !== "1") return;
+    this._toggleHandRaise(cmd);
+  }
+
+  // Triggered from the local member card's "Stop sharing" action. Defers
+  // to the inherited stopPresentation() which already publishes the
+  // STOP_REMOTE_SCREEN broadcast.
+  _stopOwnPresentation() {
+    if (typeof this.stopPresentation === "function") {
+      try { this.stopPresentation(); } catch (e) { if (this.warn) this.warn(e); }
+    }
+    this._setMemberPresenting(Visitor.id, false);
+  }
+
+  // Override: remote user just started screen sharing. The base impl
+  // sets `this.presenterId = data.id` before invoking this; we capture
+  // the corresponding uid so STOP_REMOTE_SCREEN (which nulls presenterId
+  // before calling onRemoteScreenStop) can still clear the right entry.
+  prepareRemoteScreen(args) {
+    if (super.prepareRemoteScreen) super.prepareRemoteScreen(args);
+    const uid = (args && args.uid) || this._uidForParticipant(args && args.id);
+    if (uid) {
+      this._currentPresenterUid = String(uid);
+      this._setMemberPresenting(uid, true);
+    }
+  }
+
+  onRemoteScreenStop() {
+    if (super.onRemoteScreenStop) super.onRemoteScreenStop();
+    if (this._currentPresenterUid) {
+      this._setMemberPresenting(this._currentPresenterUid, false);
+      this._currentPresenterUid = null;
+    }
+  }
+
+  // Local desktop track mute/unmute is the only signal we get for our own
+  // share lifecycle (we don't receive our own START/STOP broadcast). Hook
+  // it to mirror the same uid-keyed state the dashboard reads.
+  onTrackMuteChange(track) {
+    if (super.onTrackMuteChange) super.onTrackMuteChange(track);
+    if (!track || typeof track.getType !== "function") return;
+    if (track.getType() !== _a.video) return;
+    if (typeof track.getVideoType !== "function") return;
+    if (track.getVideoType() !== _a.desktop) return;
+    this._setMemberPresenting(Visitor.id, !track.isMuted());
   }
 
   async _toggleDashboard() {
@@ -487,6 +721,40 @@ class __window_meeting extends __room {
       return super.stateMessage(s, timeout);
     }
     const message = this.statusMessages[s] || s;
+    // permissionDenied is terminal — the conference never bound, so the
+    // real local-user webrtc widget can't render. Build a static "solo
+    // call" preview (Visitor avatar + name) and overlay the denial text,
+    // matching the look of a normal 1-participant call. A small icon-only
+    // X in the corner exits back to the widget_meeting panel.
+    if (s === "permissionDenied") {
+      const fullname = (Visitor.fullname && Visitor.fullname())
+        || `${Visitor.get(_a.firstname) || ""} ${Visitor.get(_a.lastname) || ""}`.trim()
+        || Visitor.get(_a.username) || "";
+      // Flag the widget for the solo-preview layout so SCSS can expand the
+      // message-container to fill the body (avatar centered, denial text
+      // beneath) instead of the small floating tooltip used by other states.
+      if (this.el) this.el.dataset.denied = "1";
+      this.ensurePart("message-container").then((c) => {
+        c.feed([
+          Skeletons.Button.Svg({
+            ico: "cross",
+            className: "message-close-x",
+            service: "leave-meeting",
+            uiHandler: [this],
+          }),
+          Skeletons.UserProfile({
+            className: "message-avatar",
+            id: Visitor.id,
+            fullname,
+            live_status: 0,
+            auto_color: 1,
+          }),
+          Skeletons.Note({ className: "message-name", content: fullname }),
+          Skeletons.Note({ className: "message-text", content: message }),
+        ]);
+      });
+      return;
+    }
     this.ensurePart("message-container").then((c) => {
       c.feed([
         Skeletons.Note({ className: "message-text", content: message }),

@@ -111,12 +111,13 @@ class __webrtc_room extends __room {
         return reject(e);
       }
 
+      this._onConnectionEstablished = (args) => {
+        this.onConnectionSuccess();
+        resolve();
+      };
       this.connection.addEventListener(
         JEVENTS.connection.CONNECTION_ESTABLISHED,
-        (args) => {
-          this.onConnectionSuccess();
-          resolve();
-        }
+        this._onConnectionEstablished
       );
       this.connection.addEventListener(
         JEVENTS.connection.CONNECTION_FAILED,
@@ -143,6 +144,7 @@ class __webrtc_room extends __room {
    * That function is called when connection is established successfully
    */
   async onConnectionSuccess() {
+    if (this.isLeaving || this.isDestroyed()) return;
     let room_id = this.mget(_a.room_id);
     this.room = this.connection.initJitsiConference(
       room_id,
@@ -189,22 +191,24 @@ class __webrtc_room extends __room {
    * This function is called when we disconnect.
    */
   disconnect() {
-    this.connection.removeEventListener(
-      JEVENTS.connection.CONNECTION_ESTABLISHED,
-      this.onConnectionSuccess
-    );
-    this.connection.removeEventListener(
-      JEVENTS.connection.CONNECTION_FAILED,
-      this.onConnectionFailed
-    );
-    this.connection.removeEventListener(
-      JEVENTS.connection.CONNECTION_DISCONNECTED,
-      this.disconnect
-    );
-    this.connection.removeEventListener(
-      JEVENTS.connection.WRONG_STATE,
-      this.onWrongState
-    );
+    if (this.connection) {
+      this.connection.removeEventListener(
+        JEVENTS.connection.CONNECTION_ESTABLISHED,
+        this._onConnectionEstablished || this.onConnectionSuccess
+      );
+      this.connection.removeEventListener(
+        JEVENTS.connection.CONNECTION_FAILED,
+        this.onConnectionFailed
+      );
+      this.connection.removeEventListener(
+        JEVENTS.connection.CONNECTION_DISCONNECTED,
+        this.disconnect
+      );
+      this.connection.removeEventListener(
+        JEVENTS.connection.WRONG_STATE,
+        this.onWrongState
+      );
+    }
     JitsiMeetJS.mediaDevices.removeEventListener(
       JEVENTS.mediaDevices.DEVICE_LIST_CHANGED,
       this.onDeviceListChanged
@@ -213,15 +217,17 @@ class __webrtc_room extends __room {
       JEVENTS.mediaDevices.USER_MEDIA_SLOW_PROMISE_TIMEOUT,
       this.onPermissionPrompted
     );
-    this.room.off(JEVENTS.conference.TRACK_ADDED, this.onStreamReceived);
-    this.room.off(JEVENTS.conference.TRACK_REMOVED, this.onTrackRemoved);
-    this.room.off(JEVENTS.conference.CONFERENCE_JOINED, this.onLocalUserJoined);
-    this.room.off(JEVENTS.conference.USER_JOINED, this.onRemoteUserJoined);
-    this.room.off(JEVENTS.conference.USER_LEFT, this.onUserLeft);
-    this.room.off(
-      JEVENTS.conference.ENDPOINT_STATS_RECEIVED,
-      this.onStatsReceived
-    );
+    if (this.room) {
+      this.room.off(JEVENTS.conference.TRACK_ADDED, this.onStreamReceived);
+      this.room.off(JEVENTS.conference.TRACK_REMOVED, this.onTrackRemoved);
+      this.room.off(JEVENTS.conference.CONFERENCE_JOINED, this.onLocalUserJoined);
+      this.room.off(JEVENTS.conference.USER_JOINED, this.onRemoteUserJoined);
+      this.room.off(JEVENTS.conference.USER_LEFT, this.onUserLeft);
+      this.room.off(
+        JEVENTS.conference.ENDPOINT_STATS_RECEIVED,
+        this.onStatsReceived
+      );
+    }
   }
 
   /**
@@ -877,6 +883,10 @@ class __webrtc_room extends __room {
         await t.stop();
       }
     }
+
+    // Remove all Jitsi event listeners while references are still valid,
+    // so the CONNECTION_DISCONNECTED callback below does not re-enter our handlers.
+    this.disconnect();
 
     const room = this.room;
     const connection = this.connection;

@@ -518,6 +518,7 @@ class __window_folder extends mfsInteract {
 
       case "leave-meeting":
       case "close-call-panel":
+        this.mset("activeTab", "files");
         return this.showFolderTab("files");
 
       case "start-meeting":

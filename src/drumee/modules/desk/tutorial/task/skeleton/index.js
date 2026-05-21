@@ -1,11 +1,4 @@
-const { folderHeader, tabBar, tooltip } = require('../../skeleton/toolkit');
-
-const BADGE = {
-  badge_text: 'STEP 5/5',
-  title: 'Tasks in folder',
-  desc: `Every folder has a built-in task board. Create tasks, track status, and stay on top of work — all without leaving your workspace.`,
-  direction: 'east',
-};
+const { folderHeader, tabBar } = require('../../skeleton/toolkit');
 
 const COLUMNS = [
   {
@@ -111,8 +104,9 @@ function kanbanColumn(ui, pfx, col) {
 function kanbanBoard(ui, pfx) {
   return Skeletons.Box.Y({
     className: `${pfx}__kanban-wrap`,
+    sys_pn: 'kanban',
+    partHandler: ui,
     kids: [
-      tooltip(ui, BADGE),
       Skeletons.Box.X({
         className: `${pfx}__kanban`,
         kids: COLUMNS.map((col) => kanbanColumn(ui, pfx, col)),
