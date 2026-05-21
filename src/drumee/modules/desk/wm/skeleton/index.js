@@ -42,7 +42,10 @@ const ___window_manager = function (ui) {
   }
 
   const cnWindowMangerActions = `${ui.fig.family}-actions`;
-
+  let headless = 0;
+  if (ui.mget(_a.headless)) {
+    headless = 1;
+  }
   const a = Skeletons.Box.Y({
     sys_pn: "wm-container",
     className: `${ui.fig.family}__main desk-window-wrapper`,
@@ -98,6 +101,8 @@ const ___window_manager = function (ui) {
         sys_pn: "windows-layer",
         className: `${ui.fig.family}__layer ${ui.fig.group}__layer`,
         sortWithCollection: false,
+        dataset: { headless }
+
       }),
 
       Skeletons.Wrapper.Y({

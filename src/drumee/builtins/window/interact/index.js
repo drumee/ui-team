@@ -100,9 +100,6 @@ class __window_interact extends windowCore {
   onDomRefresh() {
     this.initBounds();
     this.el.dataset.name = this.mget(_a.filename) || this.mget(_a.name);
-    if (this.mget(_a.headless)) {
-      this.$el.addClass('headless')
-    }
   }
 
   /**
@@ -736,6 +733,8 @@ class __window_interact extends windowCore {
         }
       }
     }
+    if (!this._shifted) this._shifted = []
+    if (!_.isArray(this._shifted)) this._shifted = [this._shifted]
     for (var s of this._shifted) {
       if (s == this.captured.left) continue;
       if (s == this.captured.right) continue;
