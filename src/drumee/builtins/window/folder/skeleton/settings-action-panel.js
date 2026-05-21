@@ -134,18 +134,11 @@ function viewerIsFolderAdmin(list) {
   return self.role.label === LOCALE.ROLE_ADMIN;
 }
 
-// Build the "Permissions Matrix" rows from the real member list the folder
-// window loaded via hub.get_members_by_type (ui._folderMembers). Falls back
-// to a loading / empty note while the fetch is pending or returns nothing.
-// Pure link rows (no entity_id / drumate_id / id) are filtered — they are
-// not folder members and have no destructive controls in this matrix.
-function memberRows(ui, pfx, isAdmin) {
-  // hub.get_members_by_type returns workspace members. Each row carries a
-  // uid (entity_id/drumate_id/id) — link/anonymous rows would lack any of
-  // those, so we filter them out defensively.
-  const list = (ui._folderMembers || [])
-    .filter((row) => row.entity_id || row.drumate_id || row.id)
-    .map(mapFolderMember);
+// Build the "Permissions Matrix" rows from the pre-mapped member list. The
+// caller filters link/anonymous rows (no entity_id / drumate_id / id) and
+// applies mapFolderMember — keep that single source of truth so the admin
+// gate and the rendered rows always agree.
+function memberRows(list, ui, pfx, isAdmin) {
   if (!list.length) {
     return [
       Skeletons.Note({
@@ -204,14 +197,12 @@ module.exports = function settingsActionPanel(ui) {
   const pfx = `${ui.fig.family}__settings-action`;
   const inviteRole = ui._folderInviteRole || roleOptions[0];
 
-  // Resolve viewer's role from the loaded member list — same source of truth
-  // the matrix renders so the gate is consistent with what's on screen.
+  // Filter link/anonymous rows then map once; reuse for both the admin gate
+  // and the rendered rows so they can't diverge.
   const mappedMembers = (ui._folderMembers || [])
     .filter((row) => row.entity_id || row.drumate_id || row.id)
     .map(mapFolderMember);
   const isAdmin = viewerIsFolderAdmin(mappedMembers);
-  // eslint-disable-next-line no-console
-  console.log('[folder-perm-gate] isAdmin=', isAdmin, 'visitorId=', Visitor.id, 'ROLE_ADMIN=', LOCALE.ROLE_ADMIN, 'self=', mappedMembers.find((m) => m.isSelf), 'allRows=', ui._folderMembers);
 
   const inviteSection = isAdmin
     ? Skeletons.Box.Y({
@@ -278,7 +269,7 @@ module.exports = function settingsActionPanel(ui) {
         className: `${pfx}-members-section`,
         kids: [
           Skeletons.Note({ className: `${pfx}-section-title`, content: LOCALE.PERMISSIONS_MATRIX }),
-          ...memberRows(ui, pfx, isAdmin),
+          ...memberRows(mappedMembers, ui, pfx, isAdmin),
         ],
       }),
     ].filter(Boolean),
