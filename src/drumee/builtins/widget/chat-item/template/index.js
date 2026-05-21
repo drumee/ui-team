@@ -28,13 +28,9 @@ module.exports = function (ui) {
     body = require('./meeting-event')(m);
   } else {
     body = require('./conversation')(m);
-    // Show the author label above every share-area bubble; folder skin hides
-    // avatars, so dropping it on "me" makes the layout asymmetric.
-    // eslint-disable-next-line no-console
-    console.log('[chat-sender] m.type=', m.type, 'expected=', _a.share, 'match=', m.type == _a.share, 'author=', m.author, 'author_id=', m.author_id, 'area=', m.area);
-    if (m.type == _a.share) {
-      let uname = require('./username')(m);
-      body = `${uname}${body}`;
+    const isP2P = m.type === _a.private || m.type === _a.privateRoom || m.area === _a.personal;
+    if (!isP2P && m.author !== _a.me) {
+      body = `${require('./username')(m)}${body}`;
     }
   }
   const footer = require('./footer')(m);

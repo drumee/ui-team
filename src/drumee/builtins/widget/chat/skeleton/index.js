@@ -58,19 +58,16 @@ const __skl_widget_chat = function (ui) {
     spinnerWait: 500,
     spinner: true,
     placeholder: Skeletons.Note(LOCALE.NO_DISCUSSIONS_YET, 'no-content'),
-    itemsOpt: (() => {
-      const a = ui.mget(_a.area);
-      const t = ui.mget(_a.type) || a;
-      // eslint-disable-next-line no-console
-      console.log('[chat-sender] chat skeleton itemsOpt build: ui.mget(type)=', ui.mget(_a.type), 'area=', a, 'effective_type=', t, 'view=', ui.mget(_a.view));
-      return {
-        kind: 'widget_chat_item',
-        area: a,
-        type: t,
-        logicalParent: ui,
-        uiHandler: ui
-      };
-    })(),
+    itemsOpt: {
+      kind: 'widget_chat_item',
+      area: ui.mget(_a.area),
+      // Fall back to `area` when type is missing so chat-item template's
+      // `m.type == _a.share` gate fires for folder/share-room messages
+      // loaded via channel.messages (the api row has no type field).
+      type: ui.mget(_a.type) || ui.mget(_a.area),
+      logicalParent: ui,
+      uiHandler: ui
+    },
     vendorOpt: Preset.List.Orange_e,
     api: ui.getCurrentApi
   });
