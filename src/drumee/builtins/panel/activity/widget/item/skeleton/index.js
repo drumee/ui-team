@@ -194,6 +194,17 @@ function getActivityMeta(data, preview) {
         badge: 'mention',
       };
 
+    case 'meeting': {
+      const meetingName = (data.details && (data.details.filename || data.details.user_filename)) || data.hub_name || '';
+      return {
+        before: 'started a meeting in ',
+        label: meetingName,
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+      };
+    }
+
     default:
       return {
         before: data.action || data.event || 'updated ',
@@ -255,22 +266,39 @@ module.exports = function (ui) {
   ui.mset('item_key', itemKey);
   if (data.id != null) ui.mset('changelog_id', data.id);
 
+  const category = getCategory(data);
+  const actionKids = category === 'meeting'
+    ? [
+        Skeletons.Button.Svg({
+          className: `${pfx}__join`,
+          ico: 'drumee-phone-cam',
+          service: 'join-meeting',
+          uiHandler: ui,
+        }),
+        Skeletons.Button.Svg({
+          className: `${pfx}__trash`,
+          ico: 'notification_trash',
+          service: 'dismiss-activity',
+          uiHandler: ui,
+        }),
+      ]
+    : [
+        Skeletons.Button.Svg({
+          className: `${pfx}__bookmark`,
+          ico: 'notification_favorite',
+          service: 'toggle-favorite',
+          uiHandler: ui,
+        }),
+        Skeletons.Button.Svg({
+          className: `${pfx}__trash`,
+          ico: 'notification_trash',
+          service: 'dismiss-activity',
+          uiHandler: ui,
+        }),
+      ];
   const actions = Skeletons.Box.X({
     className: `${pfx}__actions`,
-    kids: [
-      Skeletons.Button.Svg({
-        className: `${pfx}__bookmark`,
-        ico: 'notification_favorite',
-        service: 'toggle-favorite',
-        uiHandler: ui,
-      }),
-      Skeletons.Button.Svg({
-        className: `${pfx}__trash`,
-        ico: 'notification_trash',
-        service: 'dismiss-activity',
-        uiHandler: ui,
-      }),
-    ],
+    kids: actionKids,
   });
 
   return Skeletons.Box.Y({
