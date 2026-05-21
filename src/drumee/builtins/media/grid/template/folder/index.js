@@ -48,6 +48,9 @@ module.exports = function (model) {
   if ((area === 'inner-folder' || model.isAttachment) && filetype != _a.hub) {
     return `<div class="media-grid__folder-art">${main}${kebab}</div>`;
   }
+  if (filetype != _a.hub) {
+    return `<div class="media-grid__folder-art">${main}${kebab}</div>`;
+  }
   let badge = '';
   switch (area) {
     case _a.personal:
