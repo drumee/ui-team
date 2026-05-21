@@ -17,7 +17,7 @@
 
 .window-connect {
   &__ui {
-    background-color: var(--default-background);
+    background-color: var(--normal-bg);
     width: 440px;
     height: 480px;
     top: 85px;
@@ -89,8 +89,8 @@
   &__body {
     align-items: center;
     justify-content: center;
-    background-color: var(--normal-bg-100);
-    border-radius: var(--corner-radius-5);
+    background-color: var(--normal-bg);
+    border-radius: 0 0 var(--corner-radius-5) var(--corner-radius-5);
     z-index: 100;
     width: 100%;
     height: 100%;
@@ -222,7 +222,7 @@
   }
 
   &__confirm-container {
-    background-color: var(--default-bg);
+    background-color: var(--normal-bg-90);
     padding: 0 20px;
     width: 260px;
     height: 150px;

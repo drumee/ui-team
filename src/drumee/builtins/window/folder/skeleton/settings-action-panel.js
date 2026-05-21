@@ -124,12 +124,22 @@ function memberAvatar(pfx, member) {
   });
 }
 
+// Returns true when the logged-in user has the admin bit in this folder.
+// Server-side hub.delete_contributor and hub.set_privilege reject non-admin
+// callers anyway, but the UI gates role-change and remove controls so a
+// non-admin viewer never sees destructive affordances they can't use.
+function viewerIsFolderAdmin(list) {
+  const self = list.find((m) => m.isSelf);
+  if (!self) return false;
+  return self.role.label === LOCALE.ROLE_ADMIN;
+}
+
 // Build the "Permissions Matrix" rows from the real member list the folder
 // window loaded via hub.get_members_by_type (ui._folderMembers). Falls back
 // to a loading / empty note while the fetch is pending or returns nothing.
 // Pure link rows (no entity_id / drumate_id / id) are filtered — they are
 // not folder members and have no destructive controls in this matrix.
-function memberRows(ui, pfx) {
+function memberRows(ui, pfx, isAdmin) {
   // hub.get_members_by_type returns workspace members. Each row carries a
   // uid (entity_id/drumate_id/id) — link/anonymous rows would lack any of
   // those, so we filter them out defensively.
@@ -147,9 +157,10 @@ function memberRows(ui, pfx) {
     ];
   }
   return list.map((member, index) => {
-    // Self row: show role label read-only, omit delete button — server also
-    // rejects self-removal but UX hides the controls to prevent confusion.
-    const actions = member.isSelf
+    // Self row: always read-only label.
+    // Other members + viewer is admin: editable role + remove button.
+    // Other members + viewer NOT admin: read-only role label only (no remove).
+    const actions = member.isSelf || !isAdmin
       ? [
           Skeletons.Note({
             className: `${pfx}-role-label ${pfx}-role-readonly`,
@@ -193,6 +204,43 @@ module.exports = function settingsActionPanel(ui) {
   const pfx = `${ui.fig.family}__settings-action`;
   const inviteRole = ui._folderInviteRole || roleOptions[0];
 
+  // Resolve viewer's role from the loaded member list — same source of truth
+  // the matrix renders so the gate is consistent with what's on screen.
+  const mappedMembers = (ui._folderMembers || [])
+    .filter((row) => row.entity_id || row.drumate_id || row.id)
+    .map(mapFolderMember);
+  const isAdmin = viewerIsFolderAdmin(mappedMembers);
+
+  const inviteSection = isAdmin
+    ? Skeletons.Box.Y({
+        className: `${pfx}-invite-section`,
+        kids: [
+          Skeletons.Note({ className: `${pfx}-section-title`, content: LOCALE.INVITE_MEMBER }),
+          Skeletons.Box.X({
+            className: `${pfx}-invite-input-row`,
+            kids: [
+              Skeletons.Entry({
+                className: `${pfx}-invite-entry`,
+                sys_pn: "invite-email",
+                formItem: _a.email,
+                placeholder: LOCALE.INVITE_EMAIL_LABEL,
+                require: _a.email,
+                bubble: 0,
+              }),
+              roleDropdown(pfx, inviteRole, "folder-invite-role", { uiHandler: ui }),
+            ],
+          }),
+          Skeletons.Note({
+            className: `${pfx}-send-button`,
+            sys_pn: "invite-send",
+            content: LOCALE.SEND_INVITATION,
+            service: "folder-send-invitation",
+            uiHandler: [ui],
+          }),
+        ],
+      })
+    : null;
+
   return Skeletons.Box.Y({
     className: `${pfx}-panel`,
     debug: __filename,
@@ -223,40 +271,14 @@ module.exports = function settingsActionPanel(ui) {
           }),
         ),
       }),
-      Skeletons.Box.Y({
-        className: `${pfx}-invite-section`,
-        kids: [
-          Skeletons.Note({ className: `${pfx}-section-title`, content: LOCALE.INVITE_MEMBER }),
-          Skeletons.Box.X({
-            className: `${pfx}-invite-input-row`,
-            kids: [
-              Skeletons.Entry({
-                className: `${pfx}-invite-entry`,
-                sys_pn: "invite-email",
-                formItem: _a.email,
-                placeholder: LOCALE.INVITE_EMAIL_LABEL,
-                require: _a.email,
-                bubble: 0,
-              }),
-              roleDropdown(pfx, inviteRole, "folder-invite-role", { uiHandler: ui }),
-            ],
-          }),
-          Skeletons.Note({
-            className: `${pfx}-send-button`,
-            sys_pn: "invite-send",
-            content: LOCALE.SEND_INVITATION,
-            service: "folder-send-invitation",
-            uiHandler: [ui],
-          }),
-        ],
-      }),
+      inviteSection,
       Skeletons.Box.Y({
         className: `${pfx}-members-section`,
         kids: [
           Skeletons.Note({ className: `${pfx}-section-title`, content: LOCALE.PERMISSIONS_MATRIX }),
-          ...memberRows(ui, pfx),
+          ...memberRows(ui, pfx, isAdmin),
         ],
       }),
-    ],
+    ].filter(Boolean),
   });
 };
