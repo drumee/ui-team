@@ -133,7 +133,7 @@
 
   // ── Body: column flex with padding, fills remaining height ───────────
   &__body {
-    background-color: var(--grey-20, #f2f2f7);
+    background-color: var(--normal-bg-90);
     flex: 1;
     min-height: 0;
     flex-direction: column;
@@ -164,7 +164,7 @@
   // participants/skin selectors are stale and the widget falls back to
   // defaults unless we target the real class.
   .participants-manager__ui {
-    background-color: var(--grey-20, #f2f2f7);
+    background-color: var(--normal-bg-90);
     gap: 10px;
     position: relative;
     top: auto;
@@ -301,7 +301,7 @@
     bottom: auto;
     flex-shrink: 0;
     height: 48px;
-    background-color: var(--grey-white, #fff);
+    background-color: var(--normal-bg-elevated);
     border-radius: 8px;
     box-shadow: 0 4px 25px rgba(0, 0, 0, 0.04);
     padding: 0 4px;
@@ -382,8 +382,8 @@
     }
 
     .ctrl-button {
-      background-color: var(--normal-bg-80);
-      border: none;
+      background-color: var(--normal-bg-90);
+      border: 1px solid var(--border-default);
       width: 32px;
       height: 32px;
       padding: 4px;
@@ -478,7 +478,7 @@
     max-width: calc(100% - 32px);
     padding: 32px;
     gap: 24px;
-    background: #f2f2f7;
+    background: var(--normal-bg);
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 12px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -513,7 +513,7 @@
       $size: 20px,
       $line: 28px,
       $weight: 700,
-      $color: #0b0a21
+      $color: var(--normal-fg)
     );
   }
 
@@ -553,7 +553,7 @@
       $size: 16px,
       $line: 24px,
       $weight: 600,
-      $color: #0b0a21
+      $color: var(--normal-fg)
     );
   }
 
@@ -591,7 +591,7 @@
 
   &__feedback-comment {
     align-self: stretch;
-    background: #ffffff;
+    background: var(--normal-bg-90);
     border-radius: 4px;
     padding: 8px 12px;
     border: 1px solid transparent;
@@ -606,11 +606,11 @@
         $size: 12px,
         $line: 1.4,
         $weight: 400,
-        $color: #0b0a21
+        $color: var(--normal-fg)
       );
 
       &::placeholder {
-        color: #c7c7cc;
+        color: var(--normal-fg);
       }
     }
   }
@@ -645,8 +645,9 @@
   &__feedback-skip {
     flex: 0 1 120px;
     min-width: 80px;
-    background: rgba(0, 0, 0, 0.05);
-    color: #000;
+    background: var(--normal-bg-90);
+    color: var(--normal-fg);
+    border: 1px solid var(--border-default);
 
     &:hover {
       background: rgba(0, 0, 0, 0.1);

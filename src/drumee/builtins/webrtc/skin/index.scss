@@ -4,7 +4,7 @@
 
 @mixin webrtc-ui {
   &__ui {
-    background-color: var(--default-bg);
+    background-color: var(--normal-bg-90);
     width: 440px;
     height: 480px;
     box-shadow: var(--shadow-container);
@@ -46,7 +46,7 @@
   }
 
   &__confirm-container {
-    background-color: var(--default-bg);
+    background-color: var(--normal-bg-elevated);
     padding: 0 20px;
     width: 260px;
     height: 150px;
@@ -66,7 +66,7 @@
         $size: 14px,
         $line: 20px,
         $weight: 400,
-        $color: var(--default-text-color)
+        $color: var(--normal-fg)
       );
     }
 
@@ -81,7 +81,7 @@
 
       .buttons {
         margin: 5px 10px;
-        border: 1px solid var(--btn-rollback-border); // #bdbdbd;
+        border: 1px solid var(--border-default); // #bdbdbd;
         flex: 1;
         align-items: center;
         width: 100%;
@@ -90,18 +90,19 @@
         justify-content: center;
         border-radius: var(--border-radius);
         height: 32px;
+        background-color: var(--normal-bg);
+        cursor: pointer;
         @include drumee.typo(
           $size: 14px,
           $line: 20px,
-          $color: var(--btn-rollback-text)
+          $color: var(--normal-fg)
         );
 
         &:hover {
-          border: 2px solid var(--btn-rollback-border-hover);
           @include drumee.typo(
             $size: 14px,
             $line: 20px,
-            $color: var(--btn-rollback-text)-hover
+            $color: var(--normal-fg-20)
           );
         }
       }
