@@ -22,21 +22,30 @@
   font-family: "Geist", system-ui, sans-serif;
   pointer-events: auto;
 
-  &__close {
+  // Close button: 32×32 hit target with 16×16 icon, top-right corner.
+  // Visible border on hover so it reads as the dismiss control — the rest
+  // of the card is click-sunk (bubble:0) so users have no other way out.
+  &__close-btn {
     position: absolute;
-    top: 16px;
-    right: 16px;
+    top: 12px;
+    right: 12px;
     z-index: 1;
+    width: 32px;
+    height: 32px;
+    padding: 8px;
+    border-radius: 8px;
+    color: #65656c;
     cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
 
-    &-icon {
-      color: #65656c;
-      width: 14px;
-      height: 14px;
+    svg {
+      width: 16px;
+      height: 16px;
+    }
 
-      &:hover {
-        color: #0b0a21;
-      }
+    &:hover {
+      color: #0b0a21;
+      background: rgba(11, 10, 33, 0.06);
     }
   }
 

@@ -237,8 +237,10 @@ class __window_manager extends push {
    */
   loadWorkspace(workspace) {
     const data = workspace.model ? workspace.model.toJSON() : (workspace || {});
+    this.debug("AAA:240", data)
     const hub_id = data.hub_id || data.id;
     let nid = data.actual_home_id || data.home_id || data.nid;
+    data.nid = nid;
     if (!hub_id) {
       this.warn("loadWorkspace: missing hub_id", data);
       return;
@@ -262,59 +264,42 @@ class __window_manager extends push {
     // nid often arrives later via the get_attributes fetch below.
     this._wsGeneration = (this._wsGeneration || 0) + 1;
     const gen = this._wsGeneration;
-
-    const apply = (resolvedNid) => {
+    const apply = (data) => {
       if (gen !== this._wsGeneration) return;
-      this._curWorkspace = { hub_id, nid: resolvedNid, area: data.area };
-      // ownpath '/' for a workspace root — needed so drag-drop uploads here
-      // resolve to the workspace top, not a stale subfolder path inherited
-      // from a previous navigation. _getDestination reads ownpath from the
-      // logical parent (this) when building the upload destpath.
-      // home_id mirrors the workspace root nid so cross-window drops from a
-      // folder window into Wm classify as MOVE (not COPY) in makeOptions —
-      // see window/interact/index.js:808 (item.actual_home_id === home_id).
-      this.mset({ hub_id, nid: resolvedNid, nodeId: resolvedNid, area: data.area, ownpath: '/', home_id: resolvedNid });
-      this.ensurePart(_a.list).then((l) => {
-        l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid: resolvedNid });
-        if (l.collection) l.collection.reset();
-        // Hide the list while partitioning, then restart and let the
-        // partition prep logic (added in v2) drive the visibility flip
-        // on EOD.
-        l.el.style.visibility = 'hidden';
-        const scrollEl = l.el.querySelector('.smart-container');
-        if (scrollEl) {
-          scrollEl.dataset.partitioning = 1;
-          scrollEl.style.visibility = 'hidden';
-        }
-        l.restart();
-        this._prepareListPartition(l);
+      this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
+      this.mset(data);
+
+      this.windowsLayer.feed({
+        kind: 'window_folder',
+        hub_id,
+        ...data,
+        headless: 1,
+        filename: data.filename || data.name,
+        wm_unique_id: `window_folder-${hub_id}`,
       });
+      this.windowsLayer.el.dataset.headless = "1";
+      this.iconsList.clear()
       this.ensurePart("wrapper-modal").then((p) => p.clear());
-      // Sidebar nav reloads the desk container in-place; preserve any
-      // already-open folder windows per breadcrumb spec.
-      this.updateBreadcrumb({ ...data, hub_id, nid: resolvedNid, service: "change-workspace" }, this);
+      this.updateBreadcrumb({ ...data, hub_id, service: "change-workspace" }, this);
     };
 
-    // nid often arrives later via the get_attributes fetch below. The
+    // nid often arrives later via the media.attributes fetch below. The
     // topbar's "+ Add new" check only needs hub_id to flip to folder
     // creation mode — nid can fill in asynchronously.
     this._curWorkspace = { hub_id, nid, area: data.area };
     this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath: '/', home_id: nid });
 
-    if (nid) {
-      apply(nid);
-      return;
-    }
 
     // Fall back to fetching the hub's attributes to get its root nid.
-    this.fetchService(SERVICE.hub.get_attributes, { hub_id }).then((attrs) => {
+    this.fetchService(SERVICE.media.attributes, { hub_id, nid }).then((attrs) => {
       const resolved = attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
+      this.debug("AAA:298", data)
       if (!resolved) {
         this.warn("loadWorkspace: cannot resolve workspace root", { hub_id, attrs });
         return;
       }
       try { workspace.model && workspace.model.set(attrs); } catch (e) { }
-      apply(resolved);
+      apply(attrs);
     }).catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
   }
 
@@ -364,7 +349,13 @@ class __window_manager extends push {
    * Home › Workspace › Folder path via the change-workspace broadcast.
    */
   openWorkspaceFolder(node) {
+    this.debug("AAA:314", node)
+
     const data = node.model ? node.model.toJSON() : (node || {});
+    let media = Wm.getItemsByAttr(_a.nid, data.nid)[0]
+    if (media) {
+      return media.triggerHandlers({ service: "open-node" });
+    }
     const hub_id = data.hub_id || data.workspace_hub_id || data.id;
     // Use the sub-folder's own nid; fall back to workspace root only when
     // the node carries no nid (e.g. the row clicked is the workspace root).

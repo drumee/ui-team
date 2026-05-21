@@ -62,6 +62,12 @@ class __window_folder extends mfsInteract {
     if (this.model.get(_a.filetype) === _a.hub) {
       this.isHub = 1;
     }
+    this.skeleton = require("./skeleton")(this);
+    if (this.mget(_a.trigger) && this.mget(_a.privilege) == null) {
+      this.mset({
+        privilege: this.mget(_a.trigger).mget(_a.privilege),
+      });
+    }
     if (!Visitor.isMobile()) {
       const bounds = this._defaultBounds();
       this.size = {
@@ -85,12 +91,6 @@ class __window_folder extends mfsInteract {
       width: this.size.width,
       height: this.size.height,
     });
-    this.skeleton = require("./skeleton")(this);
-    if (this.mget(_a.trigger) && this.mget(_a.privilege) == null) {
-      this.mset({
-        privilege: this.mget(_a.trigger).mget(_a.privilege),
-      });
-    }
   }
 
   buildContent(child) {
@@ -108,6 +108,9 @@ class __window_folder extends mfsInteract {
     // "Get info" launches the window with this flag to pre-select settings.
     if (this.mget("showSettings")) {
       this.openSettingsPanel();
+    }
+    if (this.mget(_a.headless)) {
+      this.el.dataset.headless = "1"
     }
   }
 
@@ -415,6 +418,7 @@ class __window_folder extends mfsInteract {
 
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
+    this.debug("AAA:421", service)
     switch (service) {
       case _a.info:
         return this.showInfo();

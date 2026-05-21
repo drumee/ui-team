@@ -90,21 +90,35 @@ async function openOtpModal(widget, opts) {
   }
 
   overlay.feed(
+    // bubble:0 + service:"otp-gate-noop" makes the card root a click sink:
+    // the framework attaches an onclick that stops propagation, so clicks
+    // anywhere inside the popup (including stray bubbles from digit cells
+    // or resend link) never reach an ancestor that might dismiss the
+    // overlay. Only the explicit close button below carries cancelService.
     Skeletons.Box.Y({
       className: "otp-gate-card",
+      service: "otp-gate-noop",
+      bubble: 0,
+      uiHandler: [widget],
       kids: [
-        Skeletons.Box.X({
-          className: "otp-gate-card__close",
-          kids: [
-            Skeletons.Button.Svg({
-              ico: "cross",
-              className: "otp-gate-card__close-icon",
-              service: cancelService,
-              uiHandler: [widget],
-            }),
-          ],
+        Skeletons.Button.Svg({
+          ico: "cross",
+          className: "otp-gate-card__close-btn",
+          service: cancelService,
+          bubble: 0,
+          uiHandler: [widget],
         }),
         {
+          // NOTE: dtk_otp emits its success event via `this.mget(_a.service)`
+          // — the SAME attribute the framework's __handleClick reads to
+          // dispatch click events. So clicks on dtk_otp's empty space would
+          // fire successService (e.g. "mfa-changed") and prematurely close
+          // the modal. Setting `active:0` here is NOT a fix because line
+          // 843 of letc.js (`if (mget('active') === 0) return`) also kills
+          // the legitimate checkForm.triggerHandlers() success dispatch.
+          // The guard lives in the consumer's onUiEvent: success cases
+          // require `args.data` (present only on programmatic triggers,
+          // absent on raw MouseEvents). See settings/main/index.js.
           kind: "dtk_otp",
           payload: {
             ...payload,

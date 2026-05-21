@@ -178,11 +178,17 @@ function innerItem(ui, opt) {
 function toggle(ui, opt) {
   const pfx = `${ui.fig.family}__toggle`;
   const { service, sys_pn, state = 0 } = opt;
+  // Use `toggle:1` (per-widget toggle), NOT `radiotoggle:1`. The latter
+  // wires every toggle with the same channel ID (= the value passed to
+  // radiotoggle) into the same RADIO_BROADCAST channel, so clicking the
+  // Email-notifications switch was broadcasting to channel `1` and the
+  // 2FA switch (also on channel `1`) reset its own state to 0 in
+  // response. `toggle:1` toggles state independently per widget.
   return Skeletons.Box.X({
     className: pfx,
     sys_pn,
     state,
-    radiotoggle: 1,
+    toggle: 1,
     service,
     uiHandler: [ui],
     kids: [Skeletons.Box.X({ className: `${pfx}-knob` })],

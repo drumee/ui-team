@@ -41,15 +41,15 @@ const __skl_folder_topbar = function (ui) {
   const badge =
     area && badgeLabel
       ? Skeletons.Box.X({
-          className: `${cnFolder}__badge`,
-          dataset: { area },
-          kids: [
-            Skeletons.Note({
-              className: `${cnFolder}__badge-label`,
-              content: badgeLabel,
-            }),
-          ],
-        })
+        className: `${cnFolder}__badge`,
+        dataset: { area },
+        kids: [
+          Skeletons.Note({
+            className: `${cnFolder}__badge-label`,
+            content: badgeLabel,
+          }),
+        ],
+      })
       : "";
 
   const heading = Skeletons.Box.X({
@@ -74,19 +74,19 @@ const __skl_folder_topbar = function (ui) {
 
   const uploadBtn = canUpload
     ? Skeletons.Button.Label({
-        className: `${cnFolder}__upload-btn`,
-        label: LOCALE.UPLOAD,
-        ico: "desktop_upload",
-        service: _e.upload,
-        uiHandler: ui,
-      })
+      className: `${cnFolder}__upload-btn`,
+      label: LOCALE.UPLOAD,
+      ico: "desktop_upload",
+      service: _e.upload,
+      uiHandler: ui,
+    })
     : "";
 
   const addNew = canUpload
     ? Skeletons.Box.X({
-        className: `${cnFolder}__add-new-wrapper`,
-        kids: [newFileMenu(ui, { triggerIco: "plus-header" })],
-      })
+      className: `${cnFolder}__add-new-wrapper`,
+      kids: [newFileMenu(ui, { triggerIco: "plus-header" })],
+    })
     : "";
 
   // Share-area folders get a dedicated "Manage Access" icon next to the
@@ -94,11 +94,11 @@ const __skl_folder_topbar = function (ui) {
   const shareBtn =
     area === _a.share
       ? Skeletons.Button.Svg({
-          className: `${cnFolder}__control-icon share`,
-          ico: "share",
-          service: "folder-manage-access",
-          uiHandler: ui,
-        })
+        className: `${cnFolder}__control-icon share`,
+        ico: "share",
+        service: "folder-manage-access",
+        uiHandler: ui,
+      })
       : "";
 
   const settingsBtn = Skeletons.Button.Svg({
@@ -117,7 +117,12 @@ const __skl_folder_topbar = function (ui) {
     uiHandler: [ui],
   });
 
-  const controls = require("window/skeleton/topbar/control")(ui, "c");
+  let controls = require("window/skeleton/topbar/control")(ui, "c");
+  if (ui.mget(_a.headless)) {
+    controls = ""
+  } else {
+    controls = require("window/skeleton/topbar/control")(ui, "c");
+  }
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,

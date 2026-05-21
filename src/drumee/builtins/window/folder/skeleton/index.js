@@ -2,6 +2,7 @@ const { dialog, tooltips, tabBar, splitBody } = require("../../skeleton/toolkit"
 
 
 function grid(ui) {
+
   const header = Skeletons.Box.X({
     className: `${ui.fig.family}__header ${ui.fig.group}__header`,
     kidsOpt: {
@@ -11,7 +12,6 @@ function grid(ui) {
     service: _e.raise,
     kids: [require("./topbar")(ui)],
   });
-
   return Skeletons.Box.Y({
     className: `${ui.fig.family}__main ${ui.fig.group}__main drive-popup`,
     radio: _a.parent,

@@ -37,6 +37,10 @@ class __window_interact extends windowCore {
     this.isFileUpdated = 0;
 
     this.declareHandlers();
+    if (opt.headless) {
+      return
+    }
+
     let width = _K.docViewer.width;
     let height = _K.docViewer.height;
     let minWidth = 700;
@@ -357,6 +361,10 @@ class __window_interact extends windowCore {
    * @param {*} cb
    */
   _resizeAnimation(anim, change, cb) {
+    if (this.mget(_a.headless)) {
+      return;
+    }
+
     change = change || 0;
     anim.to.height = anim.to.height - change;
     if (anim.to.left < 0) {
@@ -477,8 +485,8 @@ class __window_interact extends windowCore {
     // layout. Folder + Wm both need this; gate on isWm / isFolder to keep
     // non-partitioned surfaces (share/search/meeting) untouched.
     if ((this.isWm || this.isFolder)
-        && typeof this._partitionFoldersAndFiles === "function"
-        && this.getViewMode && this.getViewMode() !== _a.row) {
+      && typeof this._partitionFoldersAndFiles === "function"
+      && this.getViewMode && this.getViewMode() !== _a.row) {
       this._partitionFoldersAndFiles(this.__list);
     }
   }
@@ -725,10 +733,12 @@ class __window_interact extends windowCore {
         }
       }
     }
-    for (var s of this._shifted) {
-      if (s == this.captured.left) continue;
-      if (s == this.captured.right) continue;
-      s.shift();
+    if (this._shifted && _.isArray(this._shifted)) {
+      for (var s of this._shifted) {
+        if (s == this.captured.left) continue;
+        if (s == this.captured.right) continue;
+        s.shift();
+      }
     }
     switch (captured.length) {
       case 0:
@@ -943,7 +953,7 @@ class __window_interact extends windowCore {
     // Explicit partition kick after append removes that race; folder window
     // already does this in its own override.
     if (this.isWm && typeof this._partitionFoldersAndFiles === "function"
-        && this.getViewMode && this.getViewMode() !== _a.row) {
+      && this.getViewMode && this.getViewMode() !== _a.row) {
       this._partitionFoldersAndFiles(this.__list);
     }
   }
