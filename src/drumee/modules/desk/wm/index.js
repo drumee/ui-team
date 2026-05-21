@@ -267,7 +267,7 @@ class __window_manager extends push {
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
       this.mset(data);
 
-      this.windowsLayer.feed({
+      this.windowsLayer.append({
         kind: 'window_folder',
         hub_id,
         ...data,
