@@ -86,17 +86,23 @@ class __window_manager extends push {
    */
   route(l) {
     let args = Visitor.parseModuleArgs() || {};
-    this.debug("AAA:89", args)
-    if (args.hasOwnProperty('meeting') && args.nid) {
-      let media = this.getItemsByAttr(_a.nid, args.nid)[0]
-      this.debug("AAA:89", media)
-      if (media && media.triggerHandlers) {
-        media.triggerHandlers({ service: "open-node", start_meeting: 1 })
-        return
-      }
+    let path = Visitor.parseModule() || []
+    switch (path[2]) {
+      case _a.meeting:
+        let media = this.getItemsByAttr(_a.nid, args.nid)[0]
+        if (media && media.triggerHandlers) {
+          media.triggerHandlers({ service: "open-node", start_meeting: 1 })
+          return
+        }
+      case _a.chat:
+        Desk.openP2Pchat(args)
+        return;
+      case _a.channel:
+        // this.openFileLocation(args)
+        this.loadWorkspace(args)
+        return;
     }
     const loc = JSON.parse(localStorage.getItem("locationOnStart")); //"locationOnStart";
-    this.debug("locationOnStart", loc)
     if (loc) {
       let { hash } = loc;
       if (hash) {
@@ -233,7 +239,6 @@ class __window_manager extends push {
     const data = workspace.model ? workspace.model.toJSON() : (workspace || {});
     const hub_id = data.hub_id || data.id;
     let nid = data.actual_home_id || data.home_id || data.nid;
-
     if (!hub_id) {
       this.warn("loadWorkspace: missing hub_id", data);
       return;
@@ -646,7 +651,6 @@ class __window_manager extends push {
   }
 
   onDomRefresh() {
-    this.debug("AAA:7650", this)
     this.feed(require("./skeleton")(this));
     this.fetchService(SERVICE.desk.get_env,
       { hub_id: Visitor.id },

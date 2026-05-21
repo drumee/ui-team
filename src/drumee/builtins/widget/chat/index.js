@@ -1101,7 +1101,7 @@ class __widget_chat extends LetcBox {
       this._newMsgCount++;
       this.__buttonScroll.el.dataset.count = this._newMsgCount;
       this.__list.append(data);
-      RADIO_BROADCAST.trigger('activity:notify', data);
+      // RADIO_BROADCAST.trigger('activity:notify', {type:"chat", ...data});
       return;
     }
     messageArr.mset(data);
