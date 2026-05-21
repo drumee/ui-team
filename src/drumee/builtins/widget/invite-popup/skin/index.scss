@@ -241,7 +241,7 @@
   }
 
   &__workspace-input {
-    background-color: var(--white);
+    background-color: var(--normal-bg-elevated);
     border-radius: 6px;
     padding: 8px 12px;
     height: 36px;
@@ -272,7 +272,7 @@
     top: calc(100% + 4px);
     left: 0;
     width: 100%;
-    background-color: var(--white);
+    background-color: var(--normal-bg-elevated);
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
     max-height: 180px;

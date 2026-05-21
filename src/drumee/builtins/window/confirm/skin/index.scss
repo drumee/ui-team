@@ -26,6 +26,7 @@
 
     &[data-type="confirm"] {
       background-color: var(--normal-bg-90);
+      border: 1px solid var(--border-default);
     }
 
     &[data-maxsize="1"] {
@@ -66,6 +67,7 @@
       &-text {
         font-weight: bold;
         font-size: 24px;
+        color: var(--normal-fg);
       }
     }
   }
@@ -149,7 +151,7 @@
       $size: 16px,
       $line: 22px,
       $weight: 600,
-      $color: var(--normal-fg-10)
+      $color: var(--normal-fg)
     );
   }
 
@@ -161,7 +163,7 @@
       $weight: 400,
       $size: 13px,
       $line: 19px,
-      $color: var(--neutral-700, #5b5b6e)
+      $color: var(--normal-fg)
     );
 
     .note-content,

@@ -61,6 +61,10 @@ const __skl_widget_chat = function (ui) {
     itemsOpt: {
       kind: 'widget_chat_item',
       area: ui.mget(_a.area),
+      // Fall back to `area` when type is missing so chat-item template's
+      // `m.type == _a.share` gate fires for folder/share-room messages
+      // loaded via channel.messages (the api row has no type field).
+      type: ui.mget(_a.type) || ui.mget(_a.area),
       logicalParent: ui,
       uiHandler: ui
     },
