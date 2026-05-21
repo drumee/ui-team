@@ -364,6 +364,17 @@ class __remote_user extends __stream {
       case "togglefullscreen":
         this.triggerHandlers({ service, state: cmd.mget(_a.state) });
         return;
+      case "pin-tile":
+        // Forward to the meeting window with the participant identity so
+        // it can mark the right tile as pinned. uid is the drumate id;
+        // participant_id is the jitsi room handle — pass both for the
+        // benefit of the dashboard refresh path.
+        this.triggerHandlers({
+          service: "pin-tile",
+          participant_id: this.mget("participant_id"),
+          uid: this.mget(_a.uid),
+        });
+        return;
     }
   }
 

@@ -37,6 +37,25 @@ class __endpoint_local extends __stream {
     this.showAvatar();
   }
 
+  onUiEvent(cmd) {
+    const service = cmd.get && cmd.get(_a.service);
+    switch (service) {
+      case "pin-tile":
+        // Local user pin — uid is the visitor, no jitsi participant_id
+        // when we haven't joined yet, fall back to room.myUserId.
+        this.triggerHandlers({
+          service: "pin-tile",
+          participant_id: this.room && this.room.myUserId && this.room.myUserId(),
+          uid: Visitor.id,
+          isLocal: 1,
+        });
+        return;
+      case "togglefullscreen":
+        this.triggerHandlers({ service, state: cmd.mget(_a.state) });
+        return;
+    }
+  }
+
 }
 
 module.exports = __endpoint_local;

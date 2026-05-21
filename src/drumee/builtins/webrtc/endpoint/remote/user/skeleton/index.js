@@ -22,6 +22,26 @@ const __skl_stream_remote = function (_ui_) {
     lastname: _ui_.mget(_a.lastname) || ''
   };
 
+  const topActions = Skeletons.Box.X({
+    className: `${_ui_.fig.family}__tile-top-actions`,
+    kids: [
+      Skeletons.Button.Svg({
+        className: `${_ui_.fig.family}__tile-badge ${_ui_.fig.family}__tile-badge--share`,
+        ico: "presentation",
+        tooltips: LOCALE.SHARING_SCREEN || "Sharing screen",
+        active: 0,
+      }),
+      Skeletons.Button.Svg({
+        className: `${_ui_.fig.family}__tile-pin`,
+        ico: "drumee-tools_pin",
+        sys_pn: "tile-pin",
+        service: "pin-tile",
+        tooltips: LOCALE.PIN_TILE || "Pin to spotlight",
+        uiHandler: [_ui_],
+      }),
+    ]
+  });
+
   const footer = Skeletons.Box.X({
     className: `${_ui_.fig.family}__tile-footer`,
     kids: [
@@ -93,6 +113,7 @@ const __skl_stream_remote = function (_ui_) {
         ico: "hand-raise",
       }),
 
+      topActions,
       sound,
       footer,
     ]

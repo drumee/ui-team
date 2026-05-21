@@ -4,28 +4,58 @@
 
 .remote-display {
   @include webrtc-avatar;
-  @include webrtc-video;
+  // NOTE: `@include webrtc-video` is intentionally NOT used here. The
+  // shared mixin applies `object-fit: cover` (crops to fill) and a
+  // horizontal-mirror transform — both correct for selfie-camera tiles
+  // but wrong for screen-share. We define our own video rules below
+  // that preserve the source aspect ratio and don't mirror.
 
   &__ui {
-    // height: 120px;
-    // width: 220px;
-    min-height: 220px;
-    min-width: 220px;
-    height: 100%;
     width: 100%;
+    height: 100%;
     overflow: hidden;
+    background-color: #000;
+    // Center the video horizontally and vertically inside the slot so
+    // letterbox bands fall evenly on both sides / top + bottom.
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   &__main {
-    height: 100%;
     width: 100%;
-    justify-content: center;
+    height: 100%;
+    display: flex;
     align-items: center;
+    justify-content: center;
+    background-color: #000;
+  }
 
-    video {
-      height: 100%;
-      width: 100%;
-    }
+  // Video element rule — applies both to `.remote-display__video` (class
+  // on the <video>) and the descendant `__main video` fallback.
+  //
+  // Sizing: `width: 100%; height: auto` lets the browser compute height
+  // from the intrinsic aspect ratio of the desktop track. `max-height:
+  // 100%` caps overflow when the parent is shorter than the computed
+  // height (e.g., a portrait source in a wide slot). `object-fit:
+  // contain` makes the cap behave like a letterbox instead of squashing
+  // the frame. The combination preserves the source ratio in every
+  // parent shape — normal sidebar mode, fullscreen, pinned.
+  //
+  // `transform: none` resets the selfie-mirror that would otherwise
+  // bleed in from the participants tile mixin if a future refactor
+  // pulls webrtc-video back in.
+  &__video,
+  &__main video {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center;
+    transform: none;
+    background-color: #000;
+    display: block;
   }
 
   &__user {
@@ -74,6 +104,44 @@
     top: 10px;
     right: 10px;
     cursor: pointer;
+    z-index: 10;
+
+    &:hover {
+      background: rgb(0, 0, 0, 0.7);
+    }
+  }
+
+  // When the widget itself is the browser's fullscreen element (triggered
+  // by window_meeting._toggleScreenShareFullscreen), the UA makes it
+  // 100vw × 100vh and gives it a default black background. Make sure the
+  // inner video still letterboxes correctly at viewport size and the
+  // fullscreen button stays visible/clickable so the user can exit.
+  &:fullscreen,
+  &:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    background-color: #000;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &:fullscreen &__main video,
+  &:fullscreen &__video,
+  &:-webkit-full-screen &__main video,
+  &:-webkit-full-screen &__video {
+    width: 100vw;
+    height: auto;
+    max-height: 100vh;
+    object-fit: contain;
+  }
+
+  &:fullscreen &__fullscreen,
+  &:-webkit-full-screen &__fullscreen {
+    // Bump z-index above any sibling so the exit-fullscreen control is
+    // always clickable, even in front of a maxed-out video element.
+    z-index: 2147483647;
   }
 
 }

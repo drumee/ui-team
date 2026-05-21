@@ -20,9 +20,28 @@ const __skl_stream_local = function (_ui_) {
   const topActions = Skeletons.Box.X({
     className: `${_ui_.fig.family}__tile-top-actions`,
     kids: [
+      // Status badges — visibility driven by data-attrs on the tile root
+      // (data-presenting, data-raised) which window_meeting flips from
+      // _setMemberPresenting / _toggleHandRaise.
+      Skeletons.Button.Svg({
+        className: `${_ui_.fig.family}__tile-badge ${_ui_.fig.family}__tile-badge--share`,
+        ico: "presentation",
+        tooltips: LOCALE.SHARING_SCREEN || "Sharing screen",
+        active: 0,
+      }),
+      Skeletons.Button.Svg({
+        className: `${_ui_.fig.family}__tile-badge ${_ui_.fig.family}__tile-badge--hand`,
+        ico: "hand-raise",
+        tooltips: LOCALE.HAND_RAISED || "Hand raised",
+        active: 0,
+      }),
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-pin`,
         ico: "drumee-tools_pin",
+        sys_pn: "tile-pin",
+        service: "pin-tile",
+        tooltips: LOCALE.PIN_TILE || "Pin to spotlight",
+        uiHandler: [_ui_],
       }),
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-dots`,

@@ -194,6 +194,62 @@
     }
   }
 
+  // Pin button + share-screen badge live in a top-right action stack so
+  // the existing hand-raise badge keeps its top-left anchor.
+  &__tile-top-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    gap: 6px;
+    z-index: 30;
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  &__tile-pin {
+    width: 28px;
+    height: 28px;
+    padding: 7px;
+    background-color: rgba(20, 17, 35, 0.4);
+    backdrop-filter: blur(4px);
+    border-radius: 50%;
+    flex-shrink: 0;
+    color: #fff;
+    cursor: pointer;
+
+    &:hover { background-color: rgba(20, 17, 35, 0.65); }
+  }
+
+  &__tile-badge {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: none;
+    cursor: default;
+    pointer-events: none;
+
+    svg { width: 16px; height: 16px; }
+
+    &--share {
+      background-color: rgba(89, 80, 255, 0.85);
+      color: #fff;
+    }
+  }
+
+  &__ui[data-presenting="1"] &__tile-badge--share { display: flex; }
+
+  // Pinned highlight (synced with local-user skin).
+  &__ui[data-pinned="1"] {
+    outline: 3px solid var(--primary-50, #5950ff);
+    outline-offset: -3px;
+  }
+  &__ui[data-pinned="1"] &__tile-pin {
+    background-color: #5950ff;
+    color: #fff;
+  }
+
   // ── Legacy audio mute (hidden — replaced by tile-mic) ─────────────────
   &__audio.remote {
     display: none;
