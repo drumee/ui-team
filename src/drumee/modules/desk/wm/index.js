@@ -236,6 +236,7 @@ class __window_manager extends push {
    * directory id; falls back to hub.get_attributes when none is set.
    */
   loadWorkspace(workspace) {
+    console.trace()
     const data = workspace.model ? workspace.model.toJSON() : (workspace || {});
     const hub_id = data.hub_id || data.id;
     let nid = data.actual_home_id || data.home_id || data.nid;
@@ -266,32 +267,18 @@ class __window_manager extends push {
     const apply = (resolvedNid) => {
       if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: resolvedNid, area: data.area };
-      // ownpath '/' for a workspace root — needed so drag-drop uploads here
-      // resolve to the workspace top, not a stale subfolder path inherited
-      // from a previous navigation. _getDestination reads ownpath from the
-      // logical parent (this) when building the upload destpath.
-      // home_id mirrors the workspace root nid so cross-window drops from a
-      // folder window into Wm classify as MOVE (not COPY) in makeOptions —
-      // see window/interact/index.js:808 (item.actual_home_id === home_id).
       this.mset({ hub_id, nid: resolvedNid, nodeId: resolvedNid, area: data.area, ownpath: '/', home_id: resolvedNid });
-      this.ensurePart(_a.list).then((l) => {
-        l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid: resolvedNid });
-        if (l.collection) l.collection.reset();
-        // Hide the list while partitioning, then restart and let the
-        // partition prep logic (added in v2) drive the visibility flip
-        // on EOD.
-        l.el.style.visibility = 'hidden';
-        const scrollEl = l.el.querySelector('.smart-container');
-        if (scrollEl) {
-          scrollEl.dataset.partitioning = 1;
-          scrollEl.style.visibility = 'hidden';
-        }
-        l.restart();
-        this._prepareListPartition(l);
+
+      this.__wmContainer.feed({
+        kind: 'window_folder',
+        hub_id,
+        nid: resolvedNid,
+        area: data.area,
+        headless: 1,
+        filename: data.filename || data.name,
+        wm_unique_id: `window_folder-${hub_id}`,
       });
       this.ensurePart("wrapper-modal").then((p) => p.clear());
-      // Sidebar nav reloads the desk container in-place; preserve any
-      // already-open folder windows per breadcrumb spec.
       this.updateBreadcrumb({ ...data, hub_id, nid: resolvedNid, service: "change-workspace" }, this);
     };
 

@@ -1082,6 +1082,8 @@ class __window_manager extends mfsInteract {
     if (o == null) {
       o = {};
     }
+    this.debug("AAAA:112", arg, o)
+
     if (o.singleton) {
       let w = this.getItemsByKind(arg.kind)[0];
       if (w && o.unique) {
