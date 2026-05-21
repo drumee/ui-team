@@ -84,7 +84,16 @@ class __editor_markdown extends __player {
    * 
    */
   display() {
-    this.size = this.max_size();
+    const width = 600;
+    const height = 400;
+    const ww = Wm.$el.width();
+    const wh = Wm.$el.height();
+    this.size = {
+      width,
+      height,
+      left: Math.max(0, (ww - width) / 2),
+      top: Math.max(0, (wh - height) / 2),
+    };
     super.display(this.size, this.preview.bind(this), { scale: 0.55, opacity: 0 });
   }
 

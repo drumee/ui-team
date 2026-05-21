@@ -61,10 +61,12 @@
     }
 
     &-username {
-      @include drumee.typo($line: 22px,
+      @include drumee.typo(
+        $line: 22px,
         $size: 16px,
         $weight: 400,
-        $color: var(--neutral-900));
+        $color: var(--neutral-900)
+      );
       height: 40px;
       align-content: center;
       flex-wrap: wrap;
@@ -109,10 +111,12 @@
       border-radius: var(--corner-radius-3);
       width: 100%;
       gap: var(--spacer-2);
-      @include drumee.typo($line: 22px,
+      @include drumee.typo(
+        $line: 22px,
         $size: 16px,
         $weight: 400,
-        $color: var(--neutral-600));
+        $color: var(--neutral-600)
+      );
 
       span.label {
         display: flex;
@@ -196,7 +200,7 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    >* {
+    > * {
       display: inline-flex;
       align-items: center;
     }
@@ -235,14 +239,14 @@
     position: relative;
     flex-shrink: 0;
 
-
     // Items container: background, padding, radius
     .menu-topic-items {
-      background: var(--white);
+      background: var(--normal-bg);
       border-radius: 4px;
       padding: 8px;
       gap: 4px;
       min-width: 130px;
+      border: 1px solid var(--border-default);
     }
 
     // Dropdown wrapper: position, shadow, z-index
@@ -276,7 +280,7 @@
     width: 100%;
     box-sizing: border-box;
 
-    >* {
+    > * {
       display: inline-flex;
       align-items: center;
     }
@@ -351,7 +355,7 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    >* {
+    > * {
       display: inline-flex;
       align-items: center;
     }
@@ -454,8 +458,8 @@
         flex-shrink: 0;
 
         svg {
-          width: 16px;
-          height: 16px;
+          width: 20px;
+          height: 20px;
         }
 
         &.file {
@@ -653,9 +657,9 @@ html[data-theme="dark"] {
           color: var(--normal-fg);
         }
 
-        &__icon svg {
-          fill: var(--normal-fg-20);
-        }
+        // &__icon svg {
+        //   fill: var(--normal-fg-20);
+        // }
 
         &__row {
           color: var(--normal-fg);
@@ -675,7 +679,6 @@ html[data-theme="dark"] {
     }
 
     &__add-menu-item {
-
       span.label,
       section.label {
         color: var(--normal-fg);

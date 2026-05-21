@@ -47,6 +47,16 @@ const __skl_window_note_topbar = function (ui, icon) {
               }),
             ],
           }),
+          ui.canUpload()
+            ? Skeletons.Button.Svg({
+                ico: "floppy",
+                service: "save",
+                uiHandler: ui,
+                className: `${cnEditor}-topbar__icon save`,
+                tooltips: LOCALE.SAVE_CHANGES,
+                haptic: 1000,
+              })
+            : null,
           require("./menu")(ui),
           Skeletons.Button.Svg({
             ico: "drumee-tools_pin",
