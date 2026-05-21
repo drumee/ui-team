@@ -1,4 +1,4 @@
-const { tooltip, folder } = require('../../skeleton/toolkit');
+const { folder } = require('../../skeleton/toolkit');
 
 const PARTICIPANTS = [
   { name: 'Lucas Zoe', muted: true, isMe: false },
@@ -6,12 +6,6 @@ const PARTICIPANTS = [
   { name: 'Earnest Hirthe', muted: true, isMe: false },
   { name: 'Maddy Ernest', muted: false, isMe: true },
 ];
-const BADGE = {
-  badge_text: 'STEP 4/5',
-  title: 'Meeting in folder',
-  desc: `Every folder has its own meeting space. Start a call directly from the folder you're working in, your files and conversations stay in the same place.`,
-  direction: 'east',
-};
 
 function meetingHeader(ui, pfx) {
   return Skeletons.Box.X({
@@ -41,13 +35,29 @@ function meetingHeader(ui, pfx) {
   });
 }
 
+function tileAvatar(pfx, name) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return Skeletons.Box.Y({
+    className: `${pfx}__tile-avatar`,
+    kids: [
+      Skeletons.Note({ className: `${pfx}__tile-avatar-initials`, content: initials }),
+    ],
+  });
+}
+
 function videoTile(ui, pfx, { name, muted, isMe }) {
   return Skeletons.Box.Y({
     className: `${pfx}__video-tile${isMe ? ' me' : ''}`,
     kids: [
       isMe ? Skeletons.Button.Svg({ ico: 'menu_expand', className: `${pfx}__tile-expand` }) : null,
       isMe ? Skeletons.Button.Svg({ ico: 'drumee-tools_pin', className: `${pfx}__tile-pin` }) : null,
-      isMe ? Skeletons.Note({ className: `${pfx}__tile-me-label`, content: 'ME' }) : null,
+      tileAvatar(pfx, name),
       Skeletons.Box.X({
         className: `${pfx}__tile-footer`,
         kids: [
@@ -109,9 +119,9 @@ function meetingPanel(ui, pfx) {
   return Skeletons.Box.Y({
     className: `${pfx}__meeting-panel`,
     sys_pn: 'meeting-panel',
+    partHandler: ui,
     kids: [
       meetingHeader(ui, pfx),
-      tooltip(ui, BADGE),
       videoGrid(ui, pfx),
       meetingToolbar(ui, pfx),
     ],

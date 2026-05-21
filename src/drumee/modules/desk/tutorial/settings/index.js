@@ -1,3 +1,9 @@
+const BADGE = {
+  badge_text: 'STEP 3/5',
+  title: 'Set who sees what',
+  desc: 'Precision control at your fingertips. Choose between private, restricted, or open collaboration for every folder you curate.',
+};
+
 class __tutorial_settings extends LetcBox {
 
   initialize(opt = {}) {
@@ -8,6 +14,13 @@ class __tutorial_settings extends LetcBox {
 
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
+    this.triggerHandlers({
+      service: 'spotlight:focus',
+      target: this.el,
+      tooltip: BADGE,
+      direction: 'east',
+      owner: this,
+    });
   }
 
   onPartReady(child, pn) {

@@ -1,5 +1,3 @@
-const { tooltipBadge } = require('../skeleton/toolkit');
-const { getElStablePosition } = require("@drumee/ui-essentials");
 const BADGES = [
   {
     badge_text: 'STEP 1/5',
@@ -45,21 +43,16 @@ class __tutorial_workspace extends LetcBox {
       this.warn(`Data not found for step ${this._stepIndex}`);
       return;
     }
-    const overlay = await this.ensurePart('overlay');
     const card = await this.ensurePart(`workspace-item-${this._stepIndex}`);
-    const overlayOffset = overlay.$el.offset();
-    const { left, top } = card.$el.offset();
-    let { width, height } = await getElStablePosition(card.el);
-    const data = {
-      ...step,
-      style: {
-        left: left + width / 2 - overlayOffset.left,
-        top: top + height + 20 - overlayOffset.top,
-      },
-    };
     card.setState(1);
-    card.triggerMethod("also:click") // Propagate state to the others
-    overlay.feed(tooltipBadge(this, data));
+    card.triggerMethod('also:click'); // Propagate state to siblings
+    this.triggerHandlers({
+      service: 'spotlight:focus',
+      target: card.el,
+      tooltip: step,
+      direction: 'north',
+      owner: this,
+    });
   }
 
   onUiEvent(trigger, args = {}) {
@@ -70,12 +63,12 @@ class __tutorial_workspace extends LetcBox {
         this._stepIndex = this._stepIndex + 1;
         if (this._stepIndex > max) {
           this._stepIndex = -1;
-          return this.triggerHandlers()
+          return this.triggerHandlers();
         }
         this._showBadge();
         break;
       case 'skip-tour':
-        this.ensurePart('overlay').then((overlay) => overlay.feed(null));
+        this.triggerHandlers({ service: 'skip-tour' });
         break;
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);

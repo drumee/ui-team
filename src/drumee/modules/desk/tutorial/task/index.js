@@ -1,3 +1,9 @@
+const BADGE = {
+  badge_text: 'STEP 5/5',
+  title: 'Project tracker in folder',
+  desc: `Track tasks, deadlines, and progress without leaving your folder. Every folder has its own project tracker so your team stays aligned on what's happening inside.`,
+};
+
 class __tutorial_task extends LetcBox {
 
   initialize(opt = {}) {
@@ -6,8 +12,16 @@ class __tutorial_task extends LetcBox {
     this.declareHandlers();
   }
 
-  onDomRefresh() {
+  async onDomRefresh() {
     this.feed(require('./skeleton')(this));
+    const board = await this.ensurePart('kanban');
+    this.triggerHandlers({
+      service: 'spotlight:focus',
+      target: board.el,
+      tooltip: BADGE,
+      direction: 'east',
+      owner: this,
+    });
   }
 
   onPartReady(child, pn) {

@@ -1,5 +1,3 @@
-const { tooltip } = require('../../skeleton/toolkit');
-
 const ACTIONS = [
   { label: LOCALE.DOWNLOAD || 'Download', ico: 'desktop_download' },
   { label: LOCALE.RENAME || 'Rename', ico: 'apps-pencil-simple' },
@@ -13,13 +11,6 @@ const ACCESS_ITEMS = [
   { label: LOCALE.CAN_EDIT_UPLOAD || 'Can Edit & Upload', ico: 'apps-pencil-simple', checked: false },
   { label: LOCALE.CAN_CHAT || 'Can Chat', ico: 'apps-chat', checked: true },
 ];
-
-const BADGE = {
-  badge_text: 'STEP 3/5',
-  title: 'Folder Settings',
-  desc: 'Control access, sharing, and permissions for this folder from one place.',
-  direction: 'east',
-};
 
 // ── Action rows ───────────────────────────────────────────────────────────────
 function actionItem(pfx, { label, ico, danger }) {
@@ -113,7 +104,6 @@ module.exports = function (ui) {
           Skeletons.Button.Svg({ ico: 'cross', className: `${pfx}__header-close` }),
         ],
       }),
-      tooltip(ui, BADGE),
       // Scrollable body
       Skeletons.Box.Y({
         className: `${pfx}__body`,

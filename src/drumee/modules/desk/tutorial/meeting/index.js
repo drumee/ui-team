@@ -1,3 +1,9 @@
+const BADGE = {
+  badge_text: 'STEP 4/5',
+  title: 'Meeting in folder',
+  desc: `Every folder has its own meeting space. Start a call directly from the folder you're working in, your files and conversations stay in the same place.`,
+};
+
 class __tutorial_meeting extends LetcBox {
 
   initialize(opt = {}) {
@@ -6,8 +12,15 @@ class __tutorial_meeting extends LetcBox {
     this.declareHandlers();
   }
 
-  onDomRefresh() {
+  async onDomRefresh() {
     this.feed(require('./skeleton')(this));
+    this.triggerHandlers({
+      service: 'spotlight:focus',
+      target: this.el,
+      tooltip: BADGE,
+      direction: 'east',
+      owner: this,
+    });
   }
 
   onPartReady(child, pn) {
