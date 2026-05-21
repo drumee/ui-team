@@ -98,7 +98,6 @@ class __window_manager extends push {
         Desk.openP2Pchat(args)
         return;
       case _a.channel:
-        // this.openFileLocation(args)
         this.loadWorkspace(args)
         return;
     }
@@ -277,7 +276,7 @@ class __window_manager extends push {
         wm_unique_id: `window_folder-${hub_id}`,
       });
       this.windowsLayer.el.dataset.headless = "1";
-      this.iconsList.clear()
+      // this.iconsList.clear()
       this.ensurePart("wrapper-modal").then((p) => p.clear());
       this.updateBreadcrumb({ ...data, hub_id, service: "change-workspace" }, this);
     };

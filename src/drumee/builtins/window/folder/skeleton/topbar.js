@@ -119,11 +119,8 @@ const __skl_folder_topbar = function (ui) {
 
   let controls = require("window/skeleton/topbar/control")(ui, "c");
   if (ui.mget(_a.headless)) {
-    controls = "";
     uploadBtn = "";
     addNew = "";
-  } else {
-    controls = require("window/skeleton/topbar/control")(ui, "c");
   }
 
   const rightCluster = Skeletons.Box.X({

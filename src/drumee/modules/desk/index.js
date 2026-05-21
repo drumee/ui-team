@@ -270,20 +270,6 @@ class desk_module extends LetcBox {
         this._addMenu = child;
         return;
 
-      // case "wrapper-popup":
-      //   this.popup = child;
-      //   return this.popup.collection.on(_e.remove, () => {
-      //     const c = this.popup.children.last();
-      //     if (c.isLazyClass || this.popup.isEmpty()) {
-      //       return;
-      //     }
-      //     const f = () => {
-      //       Wm.windowsLayer.$el.removeClass("creating-hub");
-      //       return (this.popup.el.dataset.state = _a.closed);
-      //     };
-      //     return setTimeout(f, Visitor.timeout(300));
-      //   });
-
       case "main-menu":
         return (this._mainMenu = child);
 
@@ -299,38 +285,6 @@ class desk_module extends LetcBox {
       case "desk-wrapper":
         return (this.desk_wrapper = child);
 
-      // case "user-dropdown":
-      //   child.on(_e.open, () => {
-      //     try {
-      //       return (this.__userContainer.el.dataset.state = 1);
-      //     } catch (error) { }
-      //   });
-      //   if (!Visitor.get(_a.privilege)) {
-      //     Visitor.once("online", () => {
-      //       child.restart();
-      //     });
-      //   }
-      //   return child.on(_e.close, () => {
-      //     try {
-      //       return (this.__userContainer.el.dataset.state = 0);
-      //     } catch (error) { }
-      //   });
-
-      // case "wrapper-module":
-      //   this.moduleWrapper = child;
-      //   child.collection.on(_e.remove, (c) => {
-      //     if (this._swapping) {
-      //       return;
-      //     }
-      //     if (child.collection.length === 0) {
-      //       Backbone.history.navigate(_K.module.desk);
-      //       this.getPart("top-bar").el.dataset.state = 0;
-      //     }
-      //     this._mainMenu.el.setAttribute(_a.data.state, "");
-      //     child.el.hide();
-      //     return Wm.showIcons();
-      //   });
-      //   return;
 
       case "desk-tooltip":
         return (this.tooltip = child);
@@ -347,18 +301,6 @@ class desk_module extends LetcBox {
       case "user-menu-items":
         this._userMenuItems = child;
         return;
-
-      // case "share-bar-countdown-timer":
-      //   var f = () => {
-      //     const data = {
-      //       service: SERVICE.adminpanel.mimic_end_bytime,
-      //       hub_id: Visitor.get(_a.id),
-      //       orgid: Visitor.get("org_id"),
-      //       mimic_id: Visitor.get("mimic_id"),
-      //     };
-      //     this.postService(data);
-      //   };
-      //   return child.on(_e.done, () => setTimeout(f, 5000));
 
       case "overlay":
         if (
@@ -868,6 +810,13 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * 
+   */
+  onWorkspaceClosed() {
+    this.ensurePart("breadcrumb").then((p) => { p.loadDefault(0) })
+  }
+
+  /**
    *
    * @param {*} cmd
    * @param {*} args
@@ -1034,7 +983,6 @@ class desk_module extends LetcBox {
       //   return this._toggleAddMenu();
 
       case "new-workspace":
-        // this._hideAddMenu();
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
 
       case "add-private-folder":

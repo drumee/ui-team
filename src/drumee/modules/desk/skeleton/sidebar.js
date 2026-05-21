@@ -71,6 +71,7 @@ const createWorkspaceSection = (ui) => {
         kind: "workspace_list",
         className: cls(fig, "workspace-main"),
         uiHandler: [ui],
+        sys_pn:"workspace-main"
       },
     ],
   });
