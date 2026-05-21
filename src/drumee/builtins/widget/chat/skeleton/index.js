@@ -61,6 +61,7 @@ const __skl_widget_chat = function (ui) {
     itemsOpt: {
       kind: 'widget_chat_item',
       area: ui.mget(_a.area),
+      type: ui.mget(_a.type),
       logicalParent: ui,
       uiHandler: ui
     },
