@@ -1,7 +1,7 @@
-const __media_skl_row = function (_ui_) {
+const __media_skl_row = function (ui) {
   let a;
-  const type = _ui_.mget(_a.type);
-  const pfx = `${_ui_.fig.group}__filter`;
+  const type = ui.mget(_a.type);
+  const pfx = `${ui.fig.group}__filter`;
 
   const header = Skeletons.Box.G({
     className: `${pfx}__main`,
@@ -52,7 +52,7 @@ const __media_skl_row = function (_ui_) {
   });
 
   const list = Skeletons.List.Smart({
-    className: `${_ui_.fig.group}__content-row`,
+    className: `${ui.fig.group}__content-row`,
     innerClass: "drive-content-scroll",
     sys_pn: _a.list,
     flow: _a.none,
@@ -67,15 +67,16 @@ const __media_skl_row = function (_ui_) {
     itemsOpt: {
       kind: "media_row",
       flow: _a.x,
-      service: _ui_.mget("itemService") || "open-node",
+      service: ui.mget("itemService") || "open-node",
       type,
-      role: _ui_.mget(_a.role) || "",
-      logicalParent: _ui_,
+      role: ui.mget(_a.role) || "",
+      logicalParent: ui,
     },
     vendorOpt: Preset.List.Orange_e,
-    api() {
-      return _ui_.getCurrentApi();
-    },
+    // api: function () {
+    //   return ui.getCurrentApi();
+    // },
+    api:ui.getCurrentApi
   });
 
   if (localStorage.getItem("showHidden")) {
@@ -84,7 +85,7 @@ const __media_skl_row = function (_ui_) {
 
   return (a = Skeletons.Box.Y({
     debug: __filename,
-    className: `${_ui_.fig.group}__content-main`,
+    className: `${ui.fig.group}__content-main`,
     kids: [header, list],
   }));
 };

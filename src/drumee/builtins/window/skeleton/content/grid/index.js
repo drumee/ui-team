@@ -30,9 +30,10 @@ const __media_skl_grid = function (ui) {
       filename: /^\./,
     },
     vendorOpt: Preset.List.Orange_e,
-    api() {
-      return ui.getCurrentApi();
-    },
+    // api: function () {
+    //   return ui.getCurrentApi();
+    // },
+    api: ui.getCurrentApi
   });
 
   if (localStorage.getItem("showHidden")) {

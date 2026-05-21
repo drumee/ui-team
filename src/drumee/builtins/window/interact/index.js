@@ -733,12 +733,12 @@ class __window_interact extends windowCore {
         }
       }
     }
-    if (this._shifted && _.isArray(this._shifted)) {
-      for (var s of this._shifted) {
-        if (s == this.captured.left) continue;
-        if (s == this.captured.right) continue;
-        s.shift();
-      }
+    if (!this._shifted) this._shifted = []
+    if (!_.isArray(this._shifted)) this._shifted = [this._shifted]
+    for (var s of this._shifted) {
+      if (s == this.captured.left) continue;
+      if (s == this.captured.right) continue;
+      s.shift();
     }
     switch (captured.length) {
       case 0:
