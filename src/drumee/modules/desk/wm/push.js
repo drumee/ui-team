@@ -284,12 +284,13 @@ class __push_manager extends winman {
     };
 
     try {
-      const notif = {
-        body: message,
-        icon: Visitor.avatar(uid)
-      };
-      if (!window.Notification) return;
-      new Notification(title, notif);
+      if (window.Notification) {
+        const notif = {
+          body: message,
+          icon: Visitor.avatar(uid)
+        };
+        new Notification(title, notif);
+      }
     } catch (e) {
       this.warn("Failed to notify", e)
     }
