@@ -10,10 +10,16 @@ const navItem = (ui, ico, label, opts = {}) => {
   const p = pfx(ui);
   return Skeletons.Box.X({
     className: `${p}-item`,
-    radio: 'tutorial-sidebar-radio',
+    radio: "tutorial-sidebar-radio",
     kids: [
-      Skeletons.Image.Svg({ ico, className: `${p}-item-icon ${opts.color || ''}` }),
-      Skeletons.Note({ className: `${p}-item-text ${opts.color || ''}`, content: label }),
+      Skeletons.Image.Svg({
+        ico,
+        className: `${p}-item-icon ${opts.color || ""}`,
+      }),
+      Skeletons.Note({
+        className: `${p}-item-text ${opts.color || ""}`,
+        content: label,
+      }),
     ],
   });
 };
@@ -23,7 +29,10 @@ const workspaceItem = (ui, name) => {
   return Skeletons.Box.X({
     className: `${p}-workspace-item`,
     kids: [
-      Skeletons.Image.Svg({ ico: 'phosphor-folder', className: `${p}-workspace-item-icon` }),
+      Skeletons.Image.Svg({
+        ico: "phosphor-folder",
+        className: `${p}-workspace-item-icon`,
+      }),
       Skeletons.Note({ className: `${p}-workspace-item-name`, content: name }),
     ],
   });
@@ -34,30 +43,38 @@ const workspaceSection = (ui) => {
   return Skeletons.Box.Y({
     className: `${p}-workspace`,
     kids: [
-      Skeletons.Note({ className: `${p}-workspace-title`, content: LOCALE.WORKSPACES }),
+      Skeletons.Note({
+        className: `${p}-workspace-title`,
+        content: LOCALE.WORKSPACES,
+      }),
       Skeletons.Box.Y({
         className: `${p}-workspace-main`,
         kids: [
-          workspaceItem(ui, 'Workspace 1'),
-          workspaceItem(ui, 'Workspace 2'),
-          workspaceItem(ui, 'Workspace 3'),
+          workspaceItem(ui, "Workspace 1"),
+          workspaceItem(ui, "Workspace 2"),
+          workspaceItem(ui, "Workspace 3"),
         ],
       }),
     ],
   });
 };
 
-const getInitials = (name = '') =>
-  name.trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase();
+const getInitials = (name = "") =>
+  name
+    .trim()
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
 
 const footer = (ui, username) => {
   const p = pfx(ui);
   return Skeletons.Box.Y({
     className: `${p}-footer`,
     kids: [
-      navItem(ui, 'sidebar_settings', LOCALE.SETTINGS),
-      navItem(ui, 'raw-light', LOCALE.DISPLAY_MODE),
-      navItem(ui, 'sidebar_signout', LOCALE.SIGN_OUT, { color: 'red' }),
+      navItem(ui, "sidebar_settings", LOCALE.SETTINGS),
+      navItem(ui, "raw-light", LOCALE.DISPLAY_MODE),
+      navItem(ui, "sidebar_signout", LOCALE.SIGN_OUT, { color: "red" }),
       Skeletons.Box.Y({
         className: `${p}-footer-user-wrapper`,
         kids: [
@@ -67,14 +84,23 @@ const footer = (ui, username) => {
               Skeletons.Box.X({
                 className: `${p}-footer-avatar`,
                 kids: [
-                  Skeletons.Note({ className: `${p}-footer-avatar-note`, content: getInitials(username) }),
+                  Skeletons.Note({
+                    className: `${p}-footer-avatar-note`,
+                    content: getInitials(username),
+                  }),
                 ],
               }),
               Skeletons.Box.Y({
                 className: `${p}-footer-name-wrapper`,
                 kids: [
-                  Skeletons.Note({ className: `${p}-footer-username`, content: username }),
-                  Skeletons.Note({ className: `${p}-footer-user-plan`, content: LOCALE.PRO_PLAN }),
+                  Skeletons.Note({
+                    className: `${p}-footer-username`,
+                    content: username,
+                  }),
+                  Skeletons.Note({
+                    className: `${p}-footer-user-plan`,
+                    content: LOCALE.PRO_PLAN,
+                  }),
                 ],
               }),
             ],
@@ -93,18 +119,25 @@ const nav = (ui) => {
       Skeletons.Box.Y({
         className: `${p}-logo`,
         kids: [
-          Skeletons.Image.Svg({ ico: 'raw-logo-drumee-full', className: `${p}-logo-icon` }),
-          Skeletons.Note({ className: `${p}-header`, content: Organization.name() || LOCALE.WORKSPACE_NAME }),
+          Skeletons.Image.Svg({
+            ico: "raw-logo-drumee-full",
+            className: `${p}-logo-icon`,
+          }),
+          Skeletons.Note({
+            className: `${p}-header`,
+            content: Organization.name() || LOCALE.WORKSPACE_NAME,
+          }),
         ],
       }),
       Skeletons.Box.Y({
         className: `${p}-nav-main`,
         kids: [
-          navItem(ui, 'sidebar_home', LOCALE.HOME),
-          navItem(ui, 'sidebar_notifications', LOCALE.NOTIFICATIONS),
-          navItem(ui, 'sidebar_inbox', LOCALE.INBOX),
-          navItem(ui, 'sidebar_trash', LOCALE.TRASH),
-          navItem(ui, 'sidebar_apps', LOCALE.APPS),
+          navItem(ui, "sidebar_home", LOCALE.HOME),
+          navItem(ui, "sidebar_notifications", LOCALE.NOTIFICATIONS),
+          navItem(ui, "sidebar_inbox", LOCALE.INBOX),
+          navItem(ui, "sidebar_contacts", LOCALE.CONTACTS),
+          navItem(ui, "sidebar_trash", LOCALE.TRASH),
+          navItem(ui, "sidebar_apps", LOCALE.APPS),
         ],
       }),
       workspaceSection(ui),

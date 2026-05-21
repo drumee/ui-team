@@ -128,6 +128,9 @@ module.exports = {
   tutorial_workspace: function () {
     return import("./modules/desk/tutorial/workspace");
   },
+  tutorial_spotlight: function () {
+    return import("./modules/desk/tutorial/spotlight");
+  },
   tutorial_folder: function () {
     return import("./modules/desk/tutorial/folder");
   },

@@ -1,0 +1,67 @@
+@use 'mixins/drumee';
+
+// Animatable CSS variables for the spotlight center + radius.
+@property --spot-x {
+  syntax: '<length-percentage>';
+  inherits: true;
+  initial-value: 50%;
+}
+
+@property --spot-y {
+  syntax: '<length-percentage>';
+  inherits: true;
+  initial-value: 50%;
+}
+
+@property --spot-radius {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 230px;
+}
+
+.tutorial-spotlight {
+  &__ui {
+    position: absolute;
+    inset: 0;
+    z-index: 10003;
+    pointer-events: none;
+    overflow: visible;
+    opacity: 0;
+    visibility: hidden;
+    --spot-x: 50%;
+    --spot-y: 50%;
+    --spot-radius: 230px;
+    transition: opacity 220ms ease, visibility 0s linear 220ms;
+
+    &[data-state="1"] {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 220ms ease, visibility 0s linear 0s;
+    }
+  }
+
+  &__vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      circle var(--spot-radius) at var(--spot-x) var(--spot-y),
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0) 55%,
+      rgba(255, 255, 255, 0.85) 100%
+    );
+    transition: --spot-x 280ms ease, --spot-y 280ms ease, --spot-radius 280ms ease;
+  }
+
+  &__callout {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+
+    > * {
+      pointer-events: auto;
+      transition: top 280ms ease, left 280ms ease, right 280ms ease, bottom 280ms ease;
+    }
+  }
+}
