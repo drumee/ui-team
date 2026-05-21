@@ -386,6 +386,13 @@ class settings_main extends LetcBox {
         return this.toggleTwoFactor(cmd);
 
       case "mfa-changed":
+        // dtk_otp emits success via this.mget(_a.service) — the same attr
+        // the framework's __handleClick reads. Bare clicks on the dtk_otp
+        // root therefore reach this case with `args` being a MouseEvent
+        // (no `data`). The real success path passes {data, service} from
+        // checkForm. Filter on the discriminator so stray clicks don't
+        // close the modal.
+        if (!args || !args.data) return;
         return this._finalizeMfa();
 
       case "mfa-cancel":
@@ -395,6 +402,9 @@ class settings_main extends LetcBox {
         return this.disconnectOauth(cmd && cmd.mget("provider"));
 
       case "unlink-oauth-success":
+        // Same shape constraint as "mfa-changed" — only act on the
+        // programmatic checkForm trigger, not on stray dtk_otp clicks.
+        if (!args || !args.data) return;
         this.closeOverlay();
         return this._refreshOauthLinks();
 

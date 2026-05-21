@@ -210,6 +210,8 @@ module.exports = function settingsActionPanel(ui) {
     .filter((row) => row.entity_id || row.drumate_id || row.id)
     .map(mapFolderMember);
   const isAdmin = viewerIsFolderAdmin(mappedMembers);
+  // eslint-disable-next-line no-console
+  console.log('[folder-perm-gate] isAdmin=', isAdmin, 'visitorId=', Visitor.id, 'ROLE_ADMIN=', LOCALE.ROLE_ADMIN, 'self=', mappedMembers.find((m) => m.isSelf), 'allRows=', ui._folderMembers);
 
   const inviteSection = isAdmin
     ? Skeletons.Box.Y({
