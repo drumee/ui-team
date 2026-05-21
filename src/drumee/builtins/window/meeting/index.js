@@ -286,7 +286,11 @@ class __window_meeting extends __room {
       case "close-dialog":
         this.warning();
         this.__wrapperOverlay.clear();
-        this._showFeedbackPopup();
+        if (this._isHost) {
+          this._showFeedbackPopup();
+        } else {
+          this._closeFeedbackAndLeave();
+        }
         break;
 
       case "cancel-dialog":
